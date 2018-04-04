@@ -6,4 +6,8 @@ setlevel!(getlogger(PowerModels), "error")
 
 using Ipopt
 
+using Base.Test
+
+@testset "ThreePhasePowerModels" begin
+
 end

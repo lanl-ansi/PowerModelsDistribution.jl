@@ -4,6 +4,8 @@ module ThreePhasePowerModels
 
 using JuMP
 using PowerModels
+using Memento
+
 PMs = PowerModels
 
 const LOGGER = getlogger(PowerModels)
