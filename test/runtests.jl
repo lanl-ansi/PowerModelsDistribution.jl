@@ -10,4 +10,8 @@ using Base.Test
 
 @testset "ThreePhasePowerModels" begin
 
+include("matlab.jl")
+
+include("data.jl")
+
 end
