@@ -1,7 +1,7 @@
-% 3 independent network test
-% tests bus_names
+% 3 independent radial networks
+% tests shunts
 
-function tppmc = case5
+function tppmc = case5_i_r_b
 
 tppmc.baseMVA = 100.0;
 tppmc.baseKV = 230.0;
@@ -22,6 +22,13 @@ tppmc.load = [
 	2	 300.0	 100.0	 300.0	 100.0	 300.0	 100.0	 1;
 	3	 300.0	 100.0	 300.0	 100.0	 300.0	 100.0	 1;
 	4	 400.0	 130.0	 400.0	 130.0	 400.0	 130.0	 1;
+];
+
+%% shunt data
+%	shunt_bus	gs_1	bs_1	gs_2	bs_2	gs_3	bs_3	status
+tppmc.shunt = [
+	 4	 6.0	 50.0	 5.0	 50.0	 5.0	 50.0	 1;
+	10	 2.0	 25.0	 2.0	 25.0	 2.0	 25.0	 1;
 ];
 
 %% generator data
@@ -53,35 +60,26 @@ tppmc.branch = [
 	2	 3	 0.00108	 0.0108	 0.0	 0.0	 0.0	 0.0	 0.00108	 0.0108	 0.0	 0.0	 0.00108	 0.0108	 426	 426	 426	 -30.0	 30.0	 1;
 ];
 
-%% bus names
-tppmc.bus_name = {
-	'Bus A -';
-	'Bus B @';
-	'Bus C $';
-	'Bus D *';
-	'Bus E ^';
-};
-
 
 % exspected solution per phase
 % 
-% Objective Cost: 18483.9
+% Objective Cost: 18706.7
 %
 % Table: bus
-%             vm,    va
-%       1: 1.098, 0.103
-%       2: 1.086, 0.049
-%       3: 1.095, 0.055
-%       4: 1.086, 0.000
-%      10: 1.100, 0.125
+%             vm,     va
+%       1: 1.031,  0.098
+%       2: 1.012,  0.020
+%       3: 1.020,  0.020
+%       4: 1.013, -0.000
+%      10: 1.034,  0.123
 %
 %
 % Table: gen
 %             pg,     qg
-%       1: 0.400,  0.040
-%       2: 1.700,  0.580
-%       3: 3.705,  1.831
-%       4: 0.000,  1.500
-%       5: 4.260, -0.004
+%       1: 0.400,  0.107
+%       2: 1.700,  0.958
+%       3: 3.772,  1.913
+%       4: 0.000,  0.510
+%       5: 4.281, -0.267
 
 
