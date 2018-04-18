@@ -3,7 +3,7 @@
     @testset "5-bus minimal data" begin
         data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_a.m")
 
-        @test length(data) == 12
+        @test length(data) == 13
 
         @test length(data["bus"]) == 5
         @test length(data["load"]) == 3
@@ -23,7 +23,7 @@
     @testset "5-bus shunt data" begin
         data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m")
 
-        @test length(data) == 12
+        @test length(data) == 13
 
         @test length(data["bus"]) == 5
         @test length(data["load"]) == 3

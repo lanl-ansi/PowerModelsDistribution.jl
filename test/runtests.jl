@@ -12,4 +12,6 @@ using Base.Test
 
 include("matlab.jl")
 
+include("data.jl")
+
 end
