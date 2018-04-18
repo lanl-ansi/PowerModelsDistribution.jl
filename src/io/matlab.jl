@@ -10,7 +10,6 @@ function parse_matlab(file_string::String)
 end
 
 ### Data and functions specific to Matlab format ###
-
 tppm_data_names = [
     "tppmc.baseMVA", "tppmc.baseKV", "tppmc.bus", "tppmc.load", "tppmc.shunt",
     "tppmc.gen", "tppmc.branch", "tppmc.bus_name", "tppmc.gencost"
@@ -228,7 +227,6 @@ function parse_matlab_string(data_string::String)
 end
 
 
-
 """
 Converts a Matlab dict into a ThreePhasePowerModels dict
 """
@@ -270,40 +268,44 @@ end
 "convert raw bus data into arrays"
 function ml2pm_bus(data::Dict{String,Any})
     for bus in data["bus"]
-        make_array(bus, "vmin", ["vmin_1", "vmin_2", "vmin_3"])
-        make_array(bus, "vmax", ["vmax_1", "vmax_2", "vmax_3"])
-        make_array(bus,   "vm", ["vm_1", "vm_2", "vm_3"])
-        make_array(bus,   "va", ["va_1", "va_2", "va_3"])
+        make_array!(bus, "vmin", ["vmin_1", "vmin_2", "vmin_3"])
+        make_array!(bus, "vmax", ["vmax_1", "vmax_2", "vmax_3"])
+        make_array!(bus,   "vm", ["vm_1", "vm_2", "vm_3"])
+        make_array!(bus,   "va", ["va_1", "va_2", "va_3"])
     end
 end
+
 
 "convert raw load data into arrays"
 function ml2pm_load(data::Dict{String,Any})
     for load in data["load"]
-        make_array(load, "pd", ["pd_1", "pd_2", "pd_3"])
-        make_array(load, "qd", ["qd_1", "qd_2", "qd_3"])
+        make_array!(load, "pd", ["pd_1", "pd_2", "pd_3"])
+        make_array!(load, "qd", ["qd_1", "qd_2", "qd_3"])
     end
 end
+
 
 "convert raw shunt data into arrays"
 function ml2pm_shunt(data::Dict{String,Any})
     for load in data["shunt"]
-        make_array(load, "gs", ["gs_1", "gs_2", "gs_3"])
-        make_array(load, "bs", ["bs_1", "bs_2", "bs_3"])
+        make_array!(load, "gs", ["gs_1", "gs_2", "gs_3"])
+        make_array!(load, "bs", ["bs_1", "bs_2", "bs_3"])
     end
 end
+
 
 "convert raw generator data into arrays"
 function ml2pm_gen(data::Dict{String,Any})
     for gen in data["gen"]
-        make_array(gen, "pmin", ["pmin_1", "pmin_2", "pmin_3"])
-        make_array(gen, "pmax", ["pmax_1", "pmax_2", "pmax_3"])
-        make_array(gen, "qmin", ["qmin_1", "qmin_2", "qmin_3"])
-        make_array(gen, "qmax", ["qmax_1", "qmax_2", "qmax_3"])
-        make_array(gen, "pg", ["pg_1", "pg_2", "pg_3"])
-        make_array(gen, "qg", ["qg_1", "qg_2", "qg_3"])
+        make_array!(gen, "pmin", ["pmin_1", "pmin_2", "pmin_3"])
+        make_array!(gen, "pmax", ["pmax_1", "pmax_2", "pmax_3"])
+        make_array!(gen, "qmin", ["qmin_1", "qmin_2", "qmin_3"])
+        make_array!(gen, "qmax", ["qmax_1", "qmax_2", "qmax_3"])
+        make_array!(gen, "pg", ["pg_1", "pg_2", "pg_3"])
+        make_array!(gen, "qg", ["qg_1", "qg_2", "qg_3"])
     end
 end
+
 
 "convert raw branch data into arrays"
 function ml2pm_branch(data::Dict{String,Any})
@@ -322,10 +324,10 @@ function ml2pm_branch(data::Dict{String,Any})
         set_default(branch, "g_to_3", 0.0)
         set_default(branch, "b_to_3", 0.0)
 
-        make_array(branch, "g_fr", ["g_fr_1", "g_fr_2", "g_fr_3"])
-        make_array(branch, "b_fr", ["b_fr_1", "b_fr_2", "b_fr_3"])
-        make_array(branch, "g_to", ["g_to_1", "g_to_2", "g_to_3"])
-        make_array(branch, "b_to", ["b_to_1", "b_to_2", "b_to_3"])
+        make_array!(branch, "g_fr", ["g_fr_1", "g_fr_2", "g_fr_3"])
+        make_array!(branch, "b_fr", ["b_fr_1", "b_fr_2", "b_fr_3"])
+        make_array!(branch, "g_to", ["g_to_1", "g_to_2", "g_to_3"])
+        make_array!(branch, "b_to", ["b_to_1", "b_to_2", "b_to_3"])
 
         r_matrix = Array[
             [branch["r_11"]     branch["r_12"]/2.0 branch["r_13"]/2.0],
@@ -349,7 +351,8 @@ function ml2pm_branch(data::Dict{String,Any})
 end
 
 
-function make_array(data::Dict{String,Any}, to_key::String, from_keys::Array{String,1})
+"collects several from_keys in an array and sets it to the to_key, removes from_keys"
+function make_array!(data::Dict{String,Any}, to_key::String, from_keys::Array{String,1})
     assert(!(haskey(data, to_key)))
     data[to_key] = [data[k] for k in from_keys]
     for k in from_keys
@@ -357,6 +360,8 @@ function make_array(data::Dict{String,Any}, to_key::String, from_keys::Array{Str
     end
 end
 
+
+"checks if the given dict has a value, if not, sets a default value"
 function set_default(data::Dict{String,Any}, key::String, default_value)
     if !(haskey(data, key))
         data[key] = default_value

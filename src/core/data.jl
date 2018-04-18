@@ -10,6 +10,7 @@ function apply_func_array(data::Dict{String,Any}, key::String, func)
     end
 end
 
+
 "Transforms network data into per-unit"
 function make_per_unit(data::Dict{String,Any})
     if haskey(data, "multiphase") && data["multiphase"]
@@ -28,6 +29,7 @@ function make_per_unit(data::Dict{String,Any})
         error(LOGGER, "this version of make_per_unit requires multiphase data")
     end
 end
+
 
 function _make_per_unit(data::Dict{String,Any}, mva_base::Real)
     rescale      = x -> x/mva_base
@@ -119,6 +121,7 @@ function make_mixed_units(data::Dict{String,Any})
         error(LOGGER, "this version of make_mixed_units requires multiphase data")
     end
 end
+
 
 function _make_mixed_units(data::Dict{String,Any}, mva_base::Real)
     rescale      = x -> x*mva_base

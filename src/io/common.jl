@@ -1,7 +1,7 @@
 """
     parse_file(file)
 
-Parses a matlab .m `file` into a ThreePhase PowerModels data structure.
+Parses a matlab .m `file` into a Three Phase PowerModels data structure.
 """
 function parse_file(file::String)
     if endswith(file, ".m")
