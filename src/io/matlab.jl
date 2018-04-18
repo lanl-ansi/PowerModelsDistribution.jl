@@ -11,8 +11,9 @@ end
 
 ### Data and functions specific to Matlab format ###
 
-tppm_data_names = ["tppmc.baseMVA", "tppmc.baseKV", "tppmc.bus", "tppmc.load", "tppmc.gen", "tppmc.branch", "tppmc.bus_name"
-#    "tppmc.shunt", "tppmc.gencost",
+tppm_data_names = [
+    "tppmc.baseMVA", "tppmc.baseKV", "tppmc.bus", "tppmc.load", "tppmc.shunt",
+    "tppmc.gen", "tppmc.branch", "tppmc.bus_name", "tppmc.gencost"
 ]
 
 tppm_bus_columns = [
@@ -36,6 +37,14 @@ tppm_load_columns = [
     ("pd_1", Float64), ("qd_1", Float64),
     ("pd_2", Float64), ("qd_2", Float64),
     ("pd_3", Float64), ("qd_3", Float64),
+    ("status", Int)
+]
+
+tppm_shunt_columns = [
+    ("shunt_bus", Int),
+    ("gs_1", Float64), ("bs_1", Float64),
+    ("gs_2", Float64), ("bs_2", Float64),
+    ("gs_3", Float64), ("bs_3", Float64),
     ("status", Int)
 ]
 
@@ -115,14 +124,24 @@ function parse_matlab_string(data_string::String)
 
     if haskey(matlab_data, "tppmc.load")
         loads = []
-        for load_row in matlab_data["tppmc.load"]
+        for (i,load_row) in enumerate(matlab_data["tppmc.load"])
             load_data = PMs.row_to_typed_dict(load_row, tppm_load_columns)
-            load_data["index"] = InfrastructureModels.check_type(Int, load_row[1])
+            load_data["index"] = i
             push!(loads, load_data)
         end
         case["load"] = loads
     else
         error(string("no load table found in matlab file.  The file seems to be missing \"tppmc.load = [...];\""))
+    end
+
+    if haskey(matlab_data, "tppmc.shunt")
+        shunts = []
+        for (i,shunt_row) in enumerate(matlab_data["tppmc.shunt"])
+            shunt_data = PMs.row_to_typed_dict(shunt_row, tppm_shunt_columns)
+            shunt_data["index"] = i
+            push!(shunts, shunt_data)
+        end
+        case["shunt"] = shunts
     end
 
     if haskey(matlab_data, "tppmc.gen")
@@ -164,23 +183,19 @@ function parse_matlab_string(data_string::String)
         end
     end
 
-
-    #=
-    # TODO integrate this
     if haskey(matlab_data, "tppmc.gencost")
         gencost = []
         for (i, gencost_row) in enumerate(matlab_data["tppmc.gencost"])
-            gencost_data = tppm_cost_data(gencost_row)
+            gencost_data = PMs.mp_cost_data(gencost_row)
             gencost_data["index"] = i
             push!(gencost, gencost_data)
         end
         case["gencost"] = gencost
 
-        if length(case["gencost"]) != length(case["gen"]) && length(case["gencost"]) != 2*length(case["gen"])
-            error("incorrect Matpower file, the number of generator cost functions ($(length(case["gencost"]))) is inconsistent with the number of generators ($(length(case["gen"]))).\n")
+        if length(case["gencost"]) != length(case["gen"])
+            error("incorrect matlab file, the number of generator cost functions ($(length(case["gencost"]))) is inconsistent with the number of generators ($(length(case["gen"]))).\n")
         end
     end
-    =#
 
     for k in keys(matlab_data)
         if !in(k, tppm_data_names) && startswith(k, "tppmc.")
@@ -224,42 +239,29 @@ function matlab_to_tppm(ml_data::Dict{String,Any})
     ml_data["per_unit"] = false
     ml_data["multiphase"] = true
 
+    # required default values
+    #if !haskey(ml_data, "shunt")
+    #    ml_data["shunt"] = []
+    #end
+    #if !haskey(pm_data, "gencost")
+    #    pm_data["gencost"] = []
+    #end
+
     ml2pm_bus(ml_data)
     ml2pm_load(ml_data)
+    ml2pm_shunt(ml_data)
     ml2pm_gen(ml_data)
     ml2pm_branch(ml_data)
 
-    PMs.merge_bus_name_data(ml_data)
-
-    #=
-    # required default values
-    if !haskey(pm_data, "dcline")
-        pm_data["dcline"] = []
-    end
-    if !haskey(pm_data, "gencost")
-        pm_data["gencost"] = []
-    end
-    if !haskey(pm_data, "dclinecost")
-        pm_data["dclinecost"] = []
-    end
-
-    # translate component models
-    mp2pm_branch(pm_data)
-    mp2pm_dcline(pm_data)
-
     # translate cost models
-    add_dcline_costs(pm_data)
-    standardize_cost_terms(pm_data)
+    PMs.standardize_cost_terms(ml_data)
 
-    # merge data tables
-    merge_generator_cost_data(pm_data)
-    merge_generic_data(pm_data)
+    PMs.merge_bus_name_data(ml_data)
+    PMs.merge_generator_cost_data(ml_data)
 
-    # split loads and shunts from buses
-    split_loads_shunts(pm_data)
-    =#
+    PMs.merge_generic_data(ml_data)
 
-    InfrastructureModels.arrays_to_dicts(ml_data)
+    InfrastructureModels.arrays_to_dicts!(ml_data)
 
     return ml_data
 end
@@ -280,6 +282,14 @@ function ml2pm_load(data::Dict{String,Any})
     for load in data["load"]
         make_array(load, "pd", ["pd_1", "pd_2", "pd_3"])
         make_array(load, "qd", ["qd_1", "qd_2", "qd_3"])
+    end
+end
+
+"convert raw shunt data into arrays"
+function ml2pm_shunt(data::Dict{String,Any})
+    for load in data["shunt"]
+        make_array(load, "gs", ["gs_1", "gs_2", "gs_3"])
+        make_array(load, "bs", ["bs_1", "bs_2", "bs_3"])
     end
 end
 
