@@ -1,7 +1,7 @@
 % 3 independent radial networks
 % tests bus_names
 
-function tppmc = case5_i_t_a
+function tppmc = case5_i_r_a
 
 tppmc.baseMVA = 100.0;
 tppmc.baseKV = 230.0;

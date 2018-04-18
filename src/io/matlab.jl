@@ -240,9 +240,9 @@ function matlab_to_tppm(ml_data::Dict{String,Any})
     ml_data["multiphase"] = true
 
     # required default values
-    #if !haskey(ml_data, "shunt")
-    #    ml_data["shunt"] = []
-    #end
+    if !haskey(ml_data, "shunt")
+        ml_data["shunt"] = []
+    end
     #if !haskey(pm_data, "gencost")
     #    pm_data["gencost"] = []
     #end
