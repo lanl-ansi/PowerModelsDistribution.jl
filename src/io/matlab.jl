@@ -339,7 +339,7 @@ function ml2pm_branch(data::Dict{String,Any})
             [branch["x_12"]/2.0 branch["x_22"]     branch["x_23"]/2.0],
             [branch["x_13"]/2.0 branch["x_23"]/2.0 branch["x_33"]]
         ]
-        branch["x"] = r_matrix
+        branch["x"] = x_matrix
 
         for k in ["r_11", "r_12", "r_13", "r_22", "r_23", "r_33",
             "x_11", "x_12", "x_13", "x_22", "x_23", "x_33"]

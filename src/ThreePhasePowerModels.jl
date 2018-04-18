@@ -15,4 +15,6 @@ setlevel!(LOGGER, "info")
 include("io/matlab.jl")
 include("io/common.jl")
 
+include("core/data.jl")
+
 end

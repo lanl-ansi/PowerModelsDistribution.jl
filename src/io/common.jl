@@ -10,8 +10,28 @@ function parse_file(file::String)
         error(LOGGER, "only .m files are supported")
     end
 
-    # TODO integrate network checks
-    #check_network_data(tppm_data)
+    check_network_data(tppm_data)
 
     return tppm_data
+end
+
+
+""
+function check_network_data(data::Dict{String,Any})
+    data["version"] = Pkg.installed("ThreePhasePowerModels")
+    make_per_unit(data)
+
+    # TODO see which of these can be reused
+    #=
+    PMs.check_connectivity(data)
+    PMs.check_transformer_parameters(data)
+    PMs.check_voltage_angle_differences(data)
+    PMs.check_thermal_limits(data)
+    PMs.check_branch_directions(data)
+    PMs.check_branch_loops(data)
+    PMs.check_bus_types(data)
+    PMs.check_dcline_limits(data)
+    PMs.check_voltage_setpoints(data)
+    PMs.check_cost_functions(data)
+    =#
 end
