@@ -34,6 +34,16 @@ tppmc.gen = [
 	10	 0.0	 600.0	 -450.0	 450.0	 0.0	 600.0	 -450.0	 450.0	 0.0	 600.0	 -450.0	 450.0	 470.0	-165.0	 470.0	-165.0	 470.0	-165.0	 1;
 ];
 
+%% generator cost data
+%	2	startup	shutdown	n	c(n-1)	...	c0
+tppmc.gencost = [
+	2	 0.0	 0.0	 3	 0.0	 14.0	 0.0;
+	2	 0.0	 0.0	 3	 0.0	 15.0	 0.0;
+	2	 0.0	 0.0	 3	 0.0	 30.0	 0.0;
+	2	 0.0	 0.0	 3	 0.0	 40.0	 0.0;
+	2	 0.0	 0.0	 3	 0.0	 10.0	 0.0;
+];
+
 %% branch data
 %	f_bus	t_bus	r_11	x_11	r_12	x_12	r_13	x_13	r_22	x_22	r_23	x_23	r_33	x_33	rate_a	rate_b	rate_c	angmin	angmax	status
 tppmc.branch = [
