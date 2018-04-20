@@ -23,8 +23,7 @@ tppm_bus_columns = [
     ("vmin_3", Float64), ("vmax_3", Float64),
     ("vm_1", Float64), ("va_1", Float64),
     ("vm_2", Float64), ("va_2", Float64),
-    ("vm_3", Float64), ("va_3", Float64),
-    ("status", Int)
+    ("vm_3", Float64), ("va_3", Float64)
 ]
 
 tppm_bus_name_columns = [
@@ -58,7 +57,7 @@ tppm_gen_columns = [
     ("pg_1", Float64), ("qg_1", Float64),
     ("pg_2", Float64), ("qg_2", Float64),
     ("pg_3", Float64), ("qg_3", Float64),
-    ("status", Int)
+    ("gen_status", Int)
 ]
 
 tppm_branch_columns = [
@@ -74,7 +73,7 @@ tppm_branch_columns = [
     ("rate_b", Float64),
     ("rate_c", Float64),
     ("angmin", Float64), ("angmax", Float64),
-    ("status", Int)
+    ("br_status", Int)
 ]
 
 
@@ -236,13 +235,15 @@ function matlab_to_tppm(ml_data::Dict{String,Any})
     ml_data["multinetwork"] = false
     ml_data["per_unit"] = false
     ml_data["multiphase"] = true
+    ml_data["dcline"] = []
 
     # required default values
     if !haskey(ml_data, "shunt")
         ml_data["shunt"] = []
     end
-    #if !haskey(pm_data, "gencost")
-    #    pm_data["gencost"] = []
+
+    #if !haskey(ml_data, "gencost")
+    #    ml_data["gencost"] = []
     #end
 
     ml2pm_bus(ml_data)
@@ -329,19 +330,22 @@ function ml2pm_branch(data::Dict{String,Any})
         make_array!(branch, "g_to", ["g_to_1", "g_to_2", "g_to_3"])
         make_array!(branch, "b_to", ["b_to_1", "b_to_2", "b_to_3"])
 
+        branch["tap"] = [1.0, 1.0, 1.0]
+        branch["shift"] = [0.0, 0.0, 0.0]
+
         r_matrix = Array[
             [branch["r_11"]     branch["r_12"]/2.0 branch["r_13"]/2.0],
             [branch["r_12"]/2.0 branch["r_22"]     branch["r_23"]/2.0],
             [branch["r_13"]/2.0 branch["r_23"]/2.0 branch["r_33"]]
         ]
-        branch["r"] = r_matrix
+        branch["br_r"] = r_matrix
 
         x_matrix = Array[
             [branch["x_11"]     branch["x_12"]/2.0 branch["x_13"]/2.0],
             [branch["x_12"]/2.0 branch["x_22"]     branch["x_23"]/2.0],
             [branch["x_13"]/2.0 branch["x_23"]/2.0 branch["x_33"]]
         ]
-        branch["x"] = x_matrix
+        branch["br_x"] = x_matrix
 
         for k in ["r_11", "r_12", "r_13", "r_22", "r_23", "r_33",
             "x_11", "x_12", "x_13", "x_22", "x_23", "x_33"]
