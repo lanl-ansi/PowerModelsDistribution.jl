@@ -24,6 +24,7 @@ include("form/wr.jl")
 
 include("io/matlab.jl")
 include("io/common.jl")
+include("io/opendss.jl")
 
 include("prob/tp_opf.jl")
 include("prob/tp_opf_bf.jl")

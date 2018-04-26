@@ -6,8 +6,11 @@ Parses a matlab .m `file` into a Three Phase PowerModels data structure.
 function parse_file(file::String)
     if endswith(file, ".m")
         tppm_data = ThreePhasePowerModels.parse_matlab(file)
+    elseif endswith(lowercase(file), ".dss")
+        warn(LOGGER, "Not all OpenDSS features are supported, currently only raw data is loaded.")
+        tppm_data = ThreePhasePowerModels.parse_opendss(file)
     else
-        error(LOGGER, "only .m files are supported")
+        error(LOGGER, "only .m and .dss files are supported")
     end
 
     check_network_data(tppm_data)
