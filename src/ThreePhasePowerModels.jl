@@ -17,4 +17,6 @@ include("io/common.jl")
 
 include("core/data.jl")
 
+include("prob/tp_opf.jl")
+
 end
