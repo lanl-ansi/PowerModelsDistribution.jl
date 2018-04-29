@@ -7,7 +7,7 @@ using PowerModels
 using InfrastructureModels
 using Memento
 
-PMs = PowerModels
+const PMs = PowerModels
 
 const LOGGER = getlogger(PowerModels)
 setlevel!(LOGGER, "info")

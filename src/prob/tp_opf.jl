@@ -39,7 +39,7 @@ function post_tp_opf(pm::GenericPowerModel)
         end
 
         for i in ids(pm, :dcline)
-            PMs.constraint_tp_dcline(pm, i, ph=h)
+            PMs.constraint_dcline(pm, i, ph=h)
         end
     end
 
