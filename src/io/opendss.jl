@@ -18,8 +18,11 @@ function get_prop_default(ctype::AbstractString)::Array
     ctypes = Dict{String, Array}("line" => line,
                                  "load" => load,
                                  "transformer" => transformer)
-
-    return ctypes[ctype]
+    try
+        return ctypes[ctype]
+    catch KeyError
+        return []
+    end
 end
 
 
@@ -53,7 +56,11 @@ function get_prop_name(ctype::AbstractString)::Array
                                  "load" => load,
                                  "transformer" => transformer)
 
-    return ctypes[ctype]
+    try
+        return ctypes[ctype]
+    catch KeyError
+        return []
+    end
 end
 
 
@@ -64,7 +71,7 @@ end
 
 
 ""
-function parse_array(dtype::Type, data::AbstractString)::Array
+function parse_matrix(dtype::Type, data::AbstractString)::Array
     rows = []
     for line in split(strip(data, ['[', ']', '(', ')']), '|')
         cols = []
@@ -82,6 +89,19 @@ function parse_array(dtype::Type, data::AbstractString)::Array
     end
 
     return matrix
+end
+
+
+""
+function parse_array(dtype::Type, data::AbstractString)::Array
+    elements = split(strip(data, ['\"', '\'', '[', ']', '(', ')']))
+    array = zeros(dtype, length(elements))
+
+    for (i, el) in enumerate(elements)
+        array[i] = parse(dtype, el)
+    end
+
+    return array
 end
 
 
@@ -172,7 +192,7 @@ end
 
 
 ""
-function parse_component(component::AbstractString, properties::AbstractString, compDict=Dict{String,Any}())
+function parse_component(component::AbstractString, properties::AbstractString, compDict::Dict=Dict{String,Any}())
     debug(LOGGER, "Properties: $properties")
     ctype, name = split(lowercase(component), '.'; limit=2)
 
@@ -181,10 +201,15 @@ function parse_component(component::AbstractString, properties::AbstractString, 
     end
 
     propArray = parse_properties(properties)
+    debug(LOGGER, "propArray: $propArray")
+
+    propNames = get_prop_name(ctype)
 
     for (n, property) in enumerate(propArray)
         if !contains(property, "=")
-            property = join([get_prop_name(ctype, n), property], '=')
+            property = join([shift!(propNames), property], '=')
+        else
+            filter!(e->e!=lowercase(split(property,'=')[1]), propNames)
         end
         key, value = split(property, '='; limit=2)
         compDict[lowercase(key)] = value
@@ -248,7 +273,6 @@ end
 
 ""
 function parse_dss(filename::AbstractString)::Dict
-    # TODO: how to parse changing properties? e.g. "Load.s860.vminpu=.85"
     # TODO: parse transformers special case
     path = join(split(filename, '/')[1:end-1], '/')
     dss_str = readstring(open(filename))
@@ -259,21 +283,25 @@ function parse_dss(filename::AbstractString)::Dict
     curCompDict = Dict{String,Any}()
     curCtypeName = ""
 
-    stripped_lines = []
     lines = split(dss_str, '\n')
+
+    stripped_lines = []
     for line in lines
         if !startswith(line, '!') && line != ""
             push!(stripped_lines, line)
         end
     end
 
+    nlines = length(stripped_lines)
+
     for (n, line) in enumerate(stripped_lines)
         debug(LOGGER, "LINE $(find(lines .== line)): $line")
         line = strip_comments(line)
 
-        if startswith(strip(line, ' '), '~')
+        if startswith(strip(line), '~')
             curCompDict = parse_component(curCtypeName, strip(strip(line, '~')), curCompDict)
-            if n < length(stripped_lines) && startswith(strip(stripped_lines[n+1]), '~')
+
+            if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')
                 continue
             else
                 add_component!(dss_data, curCtypeName, curCompDict)
@@ -301,9 +329,12 @@ function parse_dss(filename::AbstractString)::Dict
                     property, value = line_elements[2], strip(strip(line_elements[3], '='))
                 end
 
-                curCtypeName = "options.$(property)"
-                curCompDict["$property"] = value
-                debug(LOGGER, "option property $property")
+                if !haskey(dss_data, "options")
+                    dss_data["options"] = [Dict{String,Any}()]
+                end
+
+                dss_data["options"][1]["$property"] = value
+                continue
 
             elseif cmd == "buscoords"
                 file = line_elements[2]
@@ -321,18 +352,16 @@ function parse_dss(filename::AbstractString)::Dict
                     warn(LOGGER, "Command \"$cmd\" not supported, skipping.")
                 end
             end
-        end
 
-        debug(LOGGER, "size curCompDict: $(length(curCompDict))")
-        if n < length(stripped_lines) && startswith(strip(stripped_lines[n + 1]), '~')
-            continue
-        elseif length(curCompDict) > 0
-            add_component!(dss_data, curCtypeName, curCompDict)
-            curCompDict = Dict{String,Any}()
-        else
-            continue
+            debug(LOGGER, "size curCompDict: $(length(curCompDict))")
+            if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')
+                continue
+            elseif length(curCompDict) > 0
+                add_component!(dss_data, curCtypeName, curCompDict)
+            else
+                continue
+            end
         end
-
     end
 
     return dss_data
@@ -402,6 +431,41 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict)
 
         push!(tppm_data["bus"], busDict)
     end
+end
+
+
+""
+function dss2tppm_load!(tppm_data::Dict, dss_data::Dict)
+    if !haskey(tppm_data, "load")
+        tppm_data["load"] = []
+    end
+
+    if haskey(dss_data, "load")
+        for load in dss_data["load"]
+            loadDict = Dict{String,Any}()
+
+
+            push!()
+        end
+    end
+end
+
+
+""
+function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict)
+    
+end
+
+
+""
+function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict)
+    
+end
+
+
+""
+function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict)
+    
 end
 
 
