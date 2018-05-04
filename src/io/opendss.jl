@@ -66,9 +66,13 @@ function get_prop_name(ctype::AbstractString)::Array
 
     transformer = ["phases", "windings"]
 
+    energymeter = ["element", "terminal", "action", "clear", "save",
+                   "take", "option"]
+
     ctypes = Dict{String, Array}("line" => line,
                                  "load" => load,
-                                 "transformer" => transformer)
+                                 "transformer" => transformer,
+                                 "energymeter" => energymeter)
 
     try
         return ctypes[ctype]
@@ -283,10 +287,12 @@ function parse_component(component::AbstractString, properties::AbstractString, 
     propArray = parse_properties(properties)
     debug(LOGGER, "propArray: $propArray")
 
-    propNames = get_prop_name(ctype)
+    propNames = get_prop_name(lowercase(ctype))
 
     for (n, property) in enumerate(propArray)
-        if !contains(property, "=")
+        if property == ""
+            continue
+        elseif !contains(property, "=")
             property = join([shift!(propNames), property], '=')
         else
             filter!(e->e!=lowercase(split(property,'=')[1]), propNames)
@@ -344,7 +350,7 @@ function parse_line(elements::Array, curCompDict::Dict=Dict{String,Any}())
 end
 
 
-"Strips comments, defined by "!" from the ends of lines"
+"Strips comments, defined by \"!\" from the ends of lines"
 function strip_comments(line::AbstractString)::String
     return split(line, r"\s*!")[1]
 end
@@ -379,21 +385,24 @@ Will also parse files defined inside of the originating DSS file via the
 "compile", "redirect" or "buscoords" commands.
 """
 function parse_dss(filename::AbstractString)::Dict
-    # TODO: parse transformers special case
+    currentFile = split(filename, "/")[end]
     path = join(split(filename, '/')[1:end-1], '/')
     dss_str = readstring(open(filename))
     dss_data = Dict{String,Array}()
 
-    dss_data["filename"] = [split(filename, "/")[end]]
+    dss_data["filename"] = [currentFile]
 
     curCompDict = Dict{String,Any}()
     curCtypeName = ""
 
     lines = split(dss_str, '\n')
 
+    blockComment = false
     stripped_lines = []
     for line in lines
-        if !startswith(line, '!') && line != ""
+        if startswith(strip(line), "/*") || endswith(strip(line), "*/")
+            blockComment = !blockComment
+        elseif !startswith(line, '!') && !startswith(line, "//") && strip(line) != "" && !blockComment
             push!(stripped_lines, line)
         end
     end
@@ -401,10 +410,14 @@ function parse_dss(filename::AbstractString)::Dict
     nlines = length(stripped_lines)
 
     for (n, line) in enumerate(stripped_lines)
-        debug(LOGGER, "LINE $(find(lines .== line)): $line")
+        real_line_num = find(lines .== line)[1]
+        debug(LOGGER, "LINE $real_line_num: $line")
         line = strip_comments(line)
 
-        if startswith(strip(line), '~')
+        if contains(line, "{") || contains(line, "}")
+            warn(LOGGER, "Line $real_line_num in \"$currentFile\" contains an unsupported symbol, skipping")
+            continue
+        elseif startswith(strip(line), '~')
             curCompDict = parse_component(curCtypeName, strip(strip(line, '~')), curCompDict)
 
             if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')
@@ -417,15 +430,24 @@ function parse_dss(filename::AbstractString)::Dict
             line_elements = split(line, r"\s+"; limit=3)
             cmd = lowercase(line_elements[1])
 
-            if cmd == "redirect"
+            if cmd == "clear"
+                info(LOGGER, "`dss_data` has been reset with the \"clear\" command.")
+                dss_data = Dict{String,Array}()
+                continue
+
+            elseif cmd == "redirect"
                 file = line_elements[2]
                 fullpath = path == "" ? file : join([path, file], '/')
+                info(LOGGER, "Redirecting to file \"$file\"")
                 merge_dss!(dss_data, parse_dss(fullpath))
+                continue
 
             elseif cmd == "compile"
                 file = split(strip(line_elements[2], ['(',')']), '\\')[end]
                 fullpath = path == "" ? file : join([path, file], '/')
+                info(LOGGER, "Compiling file \"$file\"")
                 merge_dss!(dss_data, parse_dss(fullpath))
+                continue
 
             elseif cmd == "set"
                 debug(LOGGER, "set command: $line_elements")
@@ -455,7 +477,7 @@ function parse_dss(filename::AbstractString)::Dict
                     propName, propValue = split(prop, '=')
                     assign_property!(dss_data, cType, cName, propName, propValue)
                 catch
-                    warn(LOGGER, "Command \"$cmd\" not supported, skipping.")
+                    warn(LOGGER, "Command \"$cmd\" on line $real_line_num in \"$currentFile\" is not supported, skipping.")
                 end
             end
 
@@ -634,8 +656,11 @@ function parse_opendss(dss_data::Dict)::Dict
     tppm_data["source_version"] = VersionNumber("0")
     tppm_data["name"] = haskey(dss_data, "circuit") ? dss_data["circuit"]["id"] : dss_data["filename"]
 
-    # TODO: add dss2tppm conversions
     dss2tppm_bus!(tppm_data, dss_data)
+    dss2tppm_load!(tppm_data, dss_data)
+    dss2tppm_shunt!(tppm_data, dss_data)
+    dss2tppm_branch!(tppm_data, dss_data)
+    dss2tppm_gen!(tppm_data, dss_data)
 
     update_lookup_structure!(tppm_data)
 
