@@ -19,7 +19,7 @@ end
 ""
 function check_network_data(data::Dict{String,Any})
     data["version"] = Pkg.installed("ThreePhasePowerModels")
-    make_per_unit(data)
+    PMs.make_per_unit(data)
 
     # TODO see which of these can be reused
     #=

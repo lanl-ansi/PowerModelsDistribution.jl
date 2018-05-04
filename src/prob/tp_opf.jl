@@ -12,7 +12,7 @@ end
 
 ""
 function post_tp_opf(pm::GenericPowerModel)
-    for h in ph_ids(pm)
+    for h in PMs.phase_ids(pm)
         PMs.variable_voltage(pm, ph=h)
         PMs.variable_generation(pm, ph=h)
         PMs.variable_branch_flow(pm, ph=h)
@@ -20,15 +20,15 @@ function post_tp_opf(pm::GenericPowerModel)
 
         PMs.constraint_voltage(pm, ph=h)
 
-        for i in ids(pm, :ref_buses, ph=h)
+        for i in ids(pm, :ref_buses)
             PMs.constraint_theta_ref(pm, i, ph=h)
         end
 
-        for i in ids(pm, :bus, ph=h)
+        for i in ids(pm, :bus)
             PMs.constraint_kcl_shunt(pm, i, ph=h)
         end
 
-        for i in ids(pm, :branch, ph=h)
+        for i in ids(pm, :branch)
             PMs.constraint_ohms_yt_from(pm, i, ph=h)
             PMs.constraint_ohms_yt_to(pm, i, ph=h)
 
@@ -38,8 +38,8 @@ function post_tp_opf(pm::GenericPowerModel)
             PMs.constraint_thermal_limit_to(pm, i, ph=h)
         end
 
-        for i in ids(pm, :dcline, ph=h)
-            PMs.constraint_tp_dcline(pm, i, ph=h)
+        for i in ids(pm, :dcline)
+            PMs.constraint_dcline(pm, i, ph=h)
         end
     end
 
