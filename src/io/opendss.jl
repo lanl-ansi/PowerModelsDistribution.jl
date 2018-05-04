@@ -8,7 +8,12 @@ components = ["linecode", "linegeometry", "line", "linespacing", "loadshape",
               "storage", "capcontrol", "regcontrol", "energymeter", "monitor"]
 
 
-""
+"""
+    get_prop_default(ctype)
+
+Returns the default property values, or the expected Types if no default is
+known, for a given component type `ctype`.
+"""
 function get_prop_default(ctype::AbstractString)::Array
 
     line = []
@@ -26,13 +31,22 @@ function get_prop_default(ctype::AbstractString)::Array
 end
 
 
-""
+"""
+    get_prop_default(ctype, i)
+
+Returns the default property value, or the expected Type if no default is
+known, of the `i`th property, for a given component type `ctype`.
+"""
 function get_prop_default(ctype::AbstractString, i::Int)
     return get_prop_default(ctype)[i]
 end
 
 
-""
+"""
+    get_prop_name(ctype)
+
+Returns the property names in order for a given component type `ctype`.
+"""
 function get_prop_name(ctype::AbstractString)::Array
     line = ["bus1", "bus2", "linecode", "length", "phases",
             "r1", "x1", "r0", "x0", "c1", "c0", "b1",
@@ -64,13 +78,23 @@ function get_prop_name(ctype::AbstractString)::Array
 end
 
 
-""
+"""
+    get_prop_name(ctype, i)
+
+Returns the `i`th property name for a given component type `ctype`.
+"""
 function get_prop_name(ctype::AbstractString, i::Int)::String
     return get_prop_name(ctype)[i]
 end
 
 
-""
+"""
+    parse_matrix(dtype, data)
+
+Parses a OpenDSS style triangular matrix string `data` into a two dimensional
+array of type `dtype`. Matrix strings are capped by either parenthesis or
+brackets, rows are separated by "|", and columns are separated by spaces.
+"""
 function parse_matrix(dtype::Type, data::AbstractString)::Array
     rows = []
     for line in split(strip(data, ['[', ']', '(', ')']), '|')
@@ -92,7 +116,13 @@ function parse_matrix(dtype::Type, data::AbstractString)::Array
 end
 
 
-""
+"""
+    parse_array(dtype, data)
+
+Parses a OpenDSS style array string `data` into a one dimensional array of type
+`dtype`. Array strings are capped by either brackets, single quotes, or double
+quotes, and elements are separated by spaces.
+"""
 function parse_array(dtype::Type, data::AbstractString)::Array
     elements = split(strip(data, ['\"', '\'', '[', ']', '(', ')']))
     array = zeros(dtype, length(elements))
@@ -105,7 +135,13 @@ function parse_array(dtype::Type, data::AbstractString)::Array
 end
 
 
-""
+"""
+    parse_buscoords(file)
+
+Parses a Bus Coordinate `file`, in either "dat" or "csv" formats, where in
+"dat", columns are separated by spaces, and in "csv" by commas. File expected
+to contain "bus,x,y" on each line.
+"""
 function parse_buscoords(file::AbstractString)::Array
     file_str = readstring(open(file))
     regex = r"\s+"
@@ -124,7 +160,13 @@ function parse_buscoords(file::AbstractString)::Array
 end
 
 
-""
+"""
+    parse_properties(properties)
+
+Parses a string of `properties` of a component type, character by character
+into an array with each element containing (if present) the property name, "=",
+and the property value.
+"""
 function parse_properties(properties::AbstractString)::Array
     propsOut = []
     endArray = true
@@ -179,7 +221,14 @@ function parse_properties(properties::AbstractString)::Array
 end
 
 
-""
+"""
+    add_component!(dss_data, ctype_name, compDict)
+
+Adds a component of type `ctype_name` with properties given by `compDict` to
+the existing `dss_data` structure. If a component of the same type has already
+been added to `dss_data`, the new component is appeneded to the existing array
+of components of that type, otherwise a new array is created.
+"""
 function add_component!(dss_data::Dict, ctype_name::AbstractString, compDict::Dict)
     debug(LOGGER, "add_component! $ctype_name")
     ctype = split(lowercase(ctype_name), '.'; limit=2)[1]
@@ -191,7 +240,14 @@ function add_component!(dss_data::Dict, ctype_name::AbstractString, compDict::Di
 end
 
 
-""
+"""
+    add_property(compDict, key, value)
+
+Adds a property to an existing component properties dictionary `compDict` given
+the `key` and `value` of the property. If a property of the same name already
+exists inside `compDict`, the `key` is renamed to have `_\d` appended to the
+end.
+"""
 function add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
     if haskey(compDict, lowercase(key))
         rmatch = match(r"_(\d+)$", key)
@@ -209,7 +265,13 @@ function add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
 end
 
 
-""
+"""
+    parse_component(component, properies, compDict=Dict{String,Any}())
+
+Parses a `component` with `properties` into a `compDict`. If `compDict` is not
+defined, an empty dictionary will be used. Assumes that unnamed properties are
+given in order, but named properties can be given anywhere.
+"""
 function parse_component(component::AbstractString, properties::AbstractString, compDict::Dict=Dict{String,Any}())
     debug(LOGGER, "Properties: $properties")
     ctype, name = split(lowercase(component), '.'; limit=2)
@@ -239,7 +301,13 @@ function parse_component(component::AbstractString, properties::AbstractString, 
 end
 
 
-""
+"""
+    merge_dss!(dss_prime, dss_to_add)
+
+Merges two (partially) parsed OpenDSS files to the same dictionary `dss_prime`.
+Used in cases where files are referenced via the "compile" or "redirect"
+OpenDSS commands inside the originating file.
+"""
 function merge_dss!(dss_prime::Dict{String,Array}, dss_to_add::Dict{String,Array})
     for (k, v) in dss_to_add
         if k in keys(dss_prime)
@@ -251,8 +319,13 @@ function merge_dss!(dss_prime::Dict{String,Array}, dss_to_add::Dict{String,Array
 end
 
 
-""
-function parse_line(elements::Array, curCtypeName::AbstractString, curCompDict::Dict=Dict{String,Any}())
+"""
+    parse_line(elements, curCompDict=Dict{String,Any}())
+
+Parses an already separated line given by `elements` (an array) of an OpenDSS
+file into `curCompDict`. If not defined, `curCompDict` is an empty dictionary.
+"""
+function parse_line(elements::Array, curCompDict::Dict=Dict{String,Any}())
     curCtypeName = elements[2]
     if startswith(lowercase(curCtypeName), "object")
         curCtypeName = split(curCtypeName, '=')[2]
@@ -271,13 +344,18 @@ function parse_line(elements::Array, curCtypeName::AbstractString, curCompDict::
 end
 
 
-""
+"Strips comments, defined by "!" from the ends of lines"
 function strip_comments(line::AbstractString)::String
     return split(line, r"\s*!")[1]
 end
 
 
-""
+"""
+    assign_property!(dss_data, cType, cName, propName, propValue)
+
+Assigns a property with name `propName` and value `propValue` to the component
+of type `cType` named `cName` in `dss_data`.
+"""
 function assign_property!(dss_data::Dict, cType::AbstractString, cName::AbstractString,
                           propName::AbstractString, propValue::Any)
     if haskey(dss_data, cType)
@@ -292,7 +370,14 @@ function assign_property!(dss_data::Dict, cType::AbstractString, cName::Abstract
 end
 
 
-""
+"""
+    parse_dss(filename)
+
+Parses a OpenDSS file given by `filename` into a Dict{Array{Dict}}. Only
+supports components and options, but not commands, e.g. "plot" or "solve".
+Will also parse files defined inside of the originating DSS file via the
+"compile", "redirect" or "buscoords" commands.
+"""
 function parse_dss(filename::AbstractString)::Dict
     # TODO: parse transformers special case
     path = join(split(filename, '/')[1:end-1], '/')
@@ -363,7 +448,7 @@ function parse_dss(filename::AbstractString)::Dict
                 dss_data["buscoords"] = parse_buscoords(fullpath)
 
             elseif cmd == "new"
-                curCtypeName, curCompDict = parse_line(line_elements, curCtypeName)
+                curCtypeName, curCompDict = parse_line(line_elements)
             else
                 try
                     cType, cName, prop = split(lowercase(line), '.'; limit=3)
@@ -389,7 +474,11 @@ function parse_dss(filename::AbstractString)::Dict
 end
 
 
-""
+"""
+    parse_busname(busname)
+
+Parses busnames as defined in OpenDSS, e.g. "primary.1.2.3.0".
+"""
 function parse_busname(busname::AbstractString)
     name, elements = split(busname,'.'; limit=2)
     nodes = Array{Bool}([0 0 0 0])
@@ -408,7 +497,11 @@ function parse_busname(busname::AbstractString)
 end
 
 
-""
+"""
+    discover_buses(dss_data)
+
+Discovers all of the buses (not separately defined in OpenDSS), from "lines".
+"""
 function discover_buses(dss_data::Dict)::Array
     bus_names = []
     buses = []
@@ -429,7 +522,11 @@ function discover_buses(dss_data::Dict)::Array
 end
 
 
-""
+"""
+    dss2tppm_bus!(tppm_data, dss_data)
+
+Adds PowerModels-style buses to `tppm_data` from `dss_data`.
+"""
 function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict)
     if !haskey(tppm_data, "bus")
         tppm_data["bus"] = []
@@ -455,7 +552,11 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict)
 end
 
 
-""
+"""
+    dss2tppm_load!(tppm_data, dss_data)
+
+Adds PowerModels-style loads to `tppm_data` from `dss_data`.
+"""
 function dss2tppm_load!(tppm_data::Dict, dss_data::Dict)
     if !haskey(tppm_data, "load")
         tppm_data["load"] = []
@@ -472,25 +573,43 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict)
 end
 
 
-""
+"""
+    dss2tppm_shunt!(tppm_data, dss_data)
+
+Adds PowerModels-style shunts to `tppm_data` from `dss_data`.
+"""
 function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict)
 
 end
 
 
-""
+"""
+    dss2tppm_branch!(tppm_data, dss_data)
+
+Adds PowerModels-style branches to `tppm_data` from `dss_data`.
+"""
 function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict)
 
 end
 
 
-""
+"""
+    dss2tppm_gen!(tppm_data, dss_data)
+
+Adds PowerModels-style generators to `tppm_data` from `dss_data`.
+"""
 function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict)
 
 end
 
 
-""
+"""
+    update_lookup_structure!(tppm_data)
+
+Updates the Dict lookup structure from Dict{Array{Dict{String,Any}}} to
+Dict{String,Dict{String,Any}}, requiring the presence of `"index"` in each
+component.
+"""
 function update_lookup_structure!(tppm_data::Dict)
     for (k, v) in tppm_data
         if isa(v, Array)
@@ -506,7 +625,7 @@ function update_lookup_structure!(tppm_data::Dict)
 end
 
 
-""
+"Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format."
 function parse_opendss(dss_data::Dict)::Dict
     tppm_data = Dict{String,Any}()
 
@@ -524,7 +643,7 @@ function parse_opendss(dss_data::Dict)::Dict
 end
 
 
-""
+"Parses a DSS file into a PowerModels usable format."
 function parse_opendss(filename::String)::Dict
     dss_data = parse_dss(filename)
 
