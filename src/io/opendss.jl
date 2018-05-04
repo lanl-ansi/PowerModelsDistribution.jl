@@ -192,6 +192,24 @@ end
 
 
 ""
+function add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
+    if haskey(compDict, lowercase(key))
+        rmatch = match(r"_(\d+)$", key)
+        if typeof(rmatch) != Void
+            endNum = parse(Int, rmatch.captures[1]) + 1
+            key = replace(key, r"_(\d+)$", "_$endNum")
+        else
+            key = string(key, "_2")
+        end
+    end
+
+    compDict[lowercase(key)] = value
+
+    return compDict
+end
+
+
+""
 function parse_component(component::AbstractString, properties::AbstractString, compDict::Dict=Dict{String,Any}())
     debug(LOGGER, "Properties: $properties")
     ctype, name = split(lowercase(component), '.'; limit=2)
@@ -211,8 +229,10 @@ function parse_component(component::AbstractString, properties::AbstractString, 
         else
             filter!(e->e!=lowercase(split(property,'=')[1]), propNames)
         end
+
         key, value = split(property, '='; limit=2)
-        compDict[lowercase(key)] = value
+
+        add_property(compDict, key, value)
     end
 
     return compDict
@@ -243,6 +263,7 @@ function parse_line(elements::Array, curCtypeName::AbstractString, curCompDict::
         else
             properties = elements[3]
         end
+
         curCompDict = parse_component(curCtypeName, properties)
     end
 
@@ -453,19 +474,19 @@ end
 
 ""
 function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict)
-    
+
 end
 
 
 ""
 function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict)
-    
+
 end
 
 
 ""
 function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict)
-    
+
 end
 
 
