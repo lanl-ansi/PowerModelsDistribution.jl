@@ -70,9 +70,9 @@ function get_prop_default(ctype::AbstractString)::Dict
 
     linecode = Dict{String,Any}("nphases" => 3, "r1" => 0.058, "x1" => 0.1206, "r0" => 0.1784,
                                 "x0" => 0.4047, "c1" => 3.4, "c0" => 1.6, "units" => "none",
-                                "rmatrix" => ,
-                                "xmatrix" => ,
-                                "cmatrix" => ,
+                                "rmatrix" => "[0.09813333 |0.04013333 0.09813333 |0.04013333 0.04013333 0.09813333 ]",
+                                "xmatrix" => "[0.2153 |0.0947 0.2153 |0.0947 0.0947 0.2153 ]",
+                                "cmatrix" => "[2.8 |-0.6 2.8 |-0.6 -0.6 2.8 ]",
                                 "basefreq" => 60, "normamps" => 400, "emergamps" => 600,
                                 "faultrate" => 0.1, "pctperm" => 20, "repair" => 3,
                                 "kron" => "N", "rg" => 0.01805, "xg" => 0.15508,
@@ -132,15 +132,35 @@ function get_prop_name(ctype::AbstractString)::Array
             "zipv", "%seriesrl", "relweight", "vlowpu", "puxharm",
             "xrharm", "spectrum", "basefreq", "like"]
 
+    gen = ["bus1", "phases", "kv", "kw", "pf", "model", "yearly",
+           "daily", "duty", "dispvalue", "conn", "kvar", "rneut",
+           "xneut", "status", "class", "maxkvar", "minkvar", "pvfactor",
+           "debugtrace", "vminpu", "vmaxpu", "forceon", "kva", "mva",
+           "xd", "xdp", "xdpp", "h", "d", "usermodel", "userdata",
+           "shaftmodel", "shaftdata", "dutystart", "balanced", "xrdp",
+           "spectrum", "basefreq", "like"]
+
     transformer = ["phases", "windings"]
 
     energymeter = ["element", "terminal", "action", "clear", "save",
                    "take", "option"]
 
+    linecode = ["nphases", "r1", "x1", "r0", "x0", "c1", "c0", "units",
+                "rmatrix", "xmatrix", "cmatrix", "basefreq", "normamps",
+                "emergamps", "faultrate", "pctperm", "kron", "rg", "xg",
+                "rho", "neutral", "b1", "b0", "like"]
+
+    capacitor = ["bus1", "bus2", "phases", "kvar", "kv", "conn", "cmatrix",
+                 "cuf", "r", "xl", "harm", "numsteps", "states", "normamps",
+                 "emergamps", "faultrate", "pctperm", "basefreq", "like"]
+
     ctypes = Dict{String, Array}("line" => line,
                                  "load" => load,
                                  "transformer" => transformer,
-                                 "energymeter" => energymeter)
+                                 "energymeter" => energymeter,
+                                 "linecode" => linecode,
+                                 "generator" => gen,
+                                 "capacitor" => capacitor)
 
     try
         return ctypes[ctype]
@@ -624,20 +644,41 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict)
 
     buses = discover_buses(dss_data)
 
+    # TODO: merge with defaults, overriding where necessary
     for (n, (bus, nodes)) in enumerate(buses)
         busDict = Dict{String,Any}()
+
+        nphases = sum(nodes[1:3])
 
         busDict["bus_i"] = n  # TODO: how to properly index?
         busDict["index"] = n  # TODO: how to properly index?
         busDict["name"] = bus
 
-        busDict["vm"]  # TODO: zeros(numPhases)?
-        busDict["va"]  # TODO: zeros(numPhases)?
+        busDict["vm"] = ones(nphases)  # TODO: zeros(numPhases)?
+        busDict["va"] = zeros(nphases)  # TODO: zeros(numPhases)?
 
-        busDict["vmin"]  # TODO: implicit limits?
-        busDict["vmax"]  # TODO: implicit limits?
+        busDict["vmin"] = 0.9 * ones(nphases)  # TODO: implicit limits? 10%
+        busDict["vmax"] = 1.1 * ones(nphases)  # TODO: implicit limits?
+
+        busDict["base_kv"]
 
         push!(tppm_data["bus"], busDict)
+    end
+end
+
+
+"""
+    find_bus(busname, tppm_data)
+
+Finds the index number of the bus in existing data from the given `busname`.
+"""
+function find_bus(busname::AbstractString, tppm_data::Dict)::Int
+    for bus in tppm_data["bus"]
+        if bus["name"] == busname
+            return bus["bus_i"]
+        else
+            return 0
+        end
     end
 end
 
@@ -652,12 +693,19 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict)
         tppm_data["load"] = []
     end
 
+    # TODO: merge with defaults, overriding where necessary
     if haskey(dss_data, "load")
         for load in dss_data["load"]
             loadDict = Dict{String,Any}()
 
+            loadDict["load_bus"] = find_bus(load["bus1"], tppm_data)
+            loadDict["pd"]
+            loadDict["qd"]
+            loadDict["status"] = Int(load["enabled"])  # TODO: or check bus?
 
-            push!()
+            loadDict["index"] = length(tppm_data["load"]) + 1
+
+            push!(tppm_data["load"], loadDict)
         end
     end
 end
@@ -669,17 +717,26 @@ end
 Adds PowerModels-style shunts to `tppm_data` from `dss_data`.
 """
 function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict)
+    if !haskey(tppm_data, "shunt")
+        tppm_data["shunt"] = []
+    end
 
-end
+    # TODO: merge with defaults, overriding where necessary
+    # TODO: which component most closely relates to shunts?
+    if haskey(dss_data, "???")
+        for shunt in dss_data["???"]
+            shuntDict = Dict{String,Any}()
 
+            shuntDict["shunt_bus"] = find_bus(shunt["bus1"], tppm_data)
+            shuntDict["gs"]
+            shuntDict["bs"]
+            shuntDict["status"]
 
-"""
-    dss2tppm_branch!(tppm_data, dss_data)
+            shuntDict["index"] = length(tppm["shunt"]) + 1
 
-Adds PowerModels-style branches to `tppm_data` from `dss_data`.
-"""
-function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict)
-
+            push!(tppm_data["shunt"], shuntDict)
+        end
+    end
 end
 
 
@@ -689,7 +746,101 @@ end
 Adds PowerModels-style generators to `tppm_data` from `dss_data`.
 """
 function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict)
+    if !haskey(tppm_data, "gen")
+        tppm_data["gen"] = []
+    end
 
+    # TODO: merge with defaults, overriding where necessary
+    if haskey(dss_data, "generator")
+        for gen in dss_data["generator"]
+            genDict = Dict{String,Any}()
+
+            genDict["gen_bus"] = find_bus(gen["bus1"])
+            genDict["gen_status"]
+            genDict["pg"]
+            genDict["qg"]
+            genDict["vg"]
+            genDict["mbase"]
+            genDict["ramp_agc"]
+            genDict["ramp_q"]
+            genDict["ramp_10"]
+            genDict["ramp_30"]
+            genDict["pmin"]
+            genDict["pmax"]
+            genDict["apf"]
+            genDict["qmin"]
+            genDict["qmax"]
+            genDict["pc1"]
+            genDict["pc2"]
+            genDict["qc1min"]
+            genDict["qc1max"]
+            genDict["qc2min"]
+            genDict["qc2max"]
+
+            genDict["model"]
+            genDict["startup"]
+            genDict["shutdown"]
+            genDict["ncost"]
+            genDict["cost"]
+
+            genDict["index"] = length(tppm_data["gen"]) + 1
+
+            push!(tppm_data["gen"], genDict)
+        end
+    end
+end
+
+
+"""
+    dss2tppm_branch!(tppm_data, dss_data)
+
+Adds PowerModels-style branches to `tppm_data` from `dss_data`.
+"""
+function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict)
+    if !haskey(tppm_data, "branch")
+        tppm_data["branch"] = []
+    end
+
+    # TODO: merge with defaults, overriding where necessary
+    if haskey(dss_data, "line")
+        for line in dss_data["line"]
+            branchDict = Dict{String,Any}()
+
+            nphases = line["phases"]
+
+            branchDict["name"] = line["id"]
+
+            branchDict["f_bus"] = find_bus(line["bus1"], tppm_data)
+            branchDict["t_bus"] = find_bus(line["bus2"], tppm_data)
+
+            branchDict["br_r"] = parse_matrix(line["rmatrix"])
+            branchDict["br_x"] = parse_matrix(line["xmatrix"])
+
+            # TODO: cmatrix, from linecode?
+            branchDict["g_fr"] = zeros(nphases, nphases)
+            branchDict["b_fr"] = zeros(nphases, nphases)
+            branchDict["g_to"] = zeros(nphases, nphases)
+            branchDict["b_to"] = zeros(nphases, nphases)
+
+            branchDict["rate_a"]
+            branchDict["rate_b"]
+            branchDict["rate_c"]
+
+            branchDict["tap"]
+            branchDict["shift"]
+
+            branchDict["br_status"]
+
+            branchDict["angmin"]
+            branchDict["angmax"]
+
+            branchDict["transformer"] = false
+
+            branchDict["index"] = length(tppm_data["branch"]) + 1
+
+            push!(tppm_data["branch"], branchDict)
+        end
+    end
 end
 
 
@@ -723,6 +874,12 @@ function parse_opendss(dss_data::Dict)::Dict
     tppm_data["source_type"] = "dss"
     tppm_data["source_version"] = VersionNumber("0")
     tppm_data["name"] = haskey(dss_data, "circuit") ? dss_data["circuit"]["id"] : dss_data["filename"]
+    tppm_data["baseMVA"] = 0.001
+
+    if haskey(dss_data, "circuit")
+        tppm_data["basekv"] = pop!(dss_data["circuit"], "basekv", NaN)
+        tppm_data["pu"] = pop!(dss_data["circuit"], "pu", NaN)
+    end
 
     dss2tppm_bus!(tppm_data, dss_data)
     dss2tppm_load!(tppm_data, dss_data)
