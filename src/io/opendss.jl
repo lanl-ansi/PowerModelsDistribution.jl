@@ -14,18 +14,83 @@ components = ["linecode", "linegeometry", "line", "linespacing", "loadshape",
 Returns the default property values, or the expected Types if no default is
 known, for a given component type `ctype`.
 """
-function get_prop_default(ctype::AbstractString)::Array
+function get_prop_default(ctype::AbstractString)::Dict
 
-    line = [String, String, 8.0, 3, 0.0580, 0.1206, 0.1784, 0.4047, 3.4e-9,
-            1.6e-9, Float64, Float64, Float64, Float64, Float64, 60.0, Array,
-            Array, Array, Bool, 0.01805, 0.15508, 100, String, String, "None",
-            String]
-    load = []
-    transformer = []
+    line = Dict{String,Any}("length" => 1.0, "phases" => 3, "r1" => 0.058,
+                            "x1" => 0.1206, "r0" => 0.1784, "x0" => 0.4047,
+                            "c1" => 3.4, "c0" => 1.6,
+                            "rmatrix" => "[0.09813333 |0.04013333 0.09813333 |0.04013333 0.04013333 0.09813333 ]",
+                            "xmatrix" => "[0.2153 |0.0947 0.2153 |0.0947 0.0947 0.2153 ]",
+                            "cmatrix" => "[2.8 |-0.6 2.8 |-0.6 -0.6 2.8 ]",
+                            "switch" => false, "rg" => 0.01805, "xg" => 0.155081,
+                            "rho" => 100, "units" => "none", "earthmodel" => "Deri",
+                            "b1" => 1.28177, "b0" => 0.6031858, "normamps" => 400,
+                            "emergamps" => 600, "faultrate" => 0.1, "pctperm" => 20,
+                            "repair" => 3, "basefreq" => 60, "enabled" => true)
+
+    load = Dict{String, Any}("phases" => 3, "kv" => 12.47, "kw" => 10, "pf" => 0.88,
+                             "model" => 1, "conn" => "wye", "kvar" => 5.39742822138087,
+                             "rneut" => -1, "xneut" => 0, "status" => "variable",
+                             "class" => 1, "vminpu" => 0.95, "vmaxpu" => 1.05,
+                             "vminnorm" => 0.0, "vminemerg" => 0.0, "xfkva" => 0.0,
+                             "allocationfactor" => 0.5, "kva" => 11.3636363636364,
+                             "%mean" => 50, "%stddev" => 10, "cvrwatts" => 1,
+                             "cvrvars" => 2, "kwh" => 0, "kwhdays" => 30,
+                             "cfactor" => 4, "numcust" => 1, "%seriesrl" => 50,
+                             "refweight" => 1, "vlowpu" => 0.5, "puxharm" => 0,
+                             "xrharm" => 6, "spectrum" => "defaultload",
+                             "basefreq" => 60, "enabled" => true)
+
+    transformer2 = Dict{String,Any}("phases" => 3, "windings" => 2, "wdg" => 1, "conn" => "wye",
+                                    "kv" => 12.47, "kva" => 1000, "tap" => 1, "%r" => 0.2,
+                                    "rneut" => -1, "xneut" => 0, "conns" => ["wye", "wye"],
+                                    "kvs" => [12.47, 12.47], "kvas" => [1000, 1000],
+                                    "taps" => [1, 1], "xhl" => 7, "xht" => 35, "xlt" => 30,
+                                    "xscarray" => [7], "thermal" => 2, "n" => 0.8, "m" => 0.8,
+                                    "flrise" => 65, "hsrise" => 15, "%loadloss" => 0.4,
+                                    "%noloadloss" => 0, "normhkva" => 1100, "emerghkva" => 1500,
+                                    "sub" => "n", "maxtap" => 1.1, "mintap" => 0.9, "numtaps" => 32,
+                                    "%imag" => 0, "ppm_antifloat" => 1, "%rs" => [0.2, 0.2],
+                                    "xrconst" => "NO", "x12" => 7, "x13" => 35, "x23" => 30,
+                                    "leadlag" => "Lag", "normamps" => 50.929, "emergamps" => 69.449,
+                                    "faultrate" => 0.007, "pctperm" => 100, "repair" => 36,
+                                    "basefreq" => 60, "enabled" => true)
+
+    transformer3 = Dict{String,Any}()
+
+    gen = Dict{String,Any}("phases" => 3, "kv" => 12.47, "kw" => 1000, "pf" => 0.88,
+                           "kvar" => 60, "model" => 1, "vminpu" => 0.90, "vmaxpu" => 1.10,
+                           "dispmode" => "Default", "dispvalue" => 0.0, "conn" => "wye",
+                           "rneut" => 0, "xneut" => 0, "status" => "variable", "class" => 1,
+                           "vpu" => 1.0, "maxkvar" => 120, "minkvar" => -120, "pvfactor" => 0.1,
+                           "forceon" => "No", "kva" => 1200, "mva" => 1.2, "xd" => 1,
+                           "xdpp" => 0.2, "h" => 1, "d" => 0, "debugtrace" => "no",
+                           "balanced" => "No", "xrdp" => 20, "spectrum" => "defaultgen",
+                           "basefreq" => 60, "enabled" => true)
+
+    linecode = Dict{String,Any}("nphases" => 3, "r1" => 0.058, "x1" => 0.1206, "r0" => 0.1784,
+                                "x0" => 0.4047, "c1" => 3.4, "c0" => 1.6, "units" => "none",
+                                "rmatrix" => ,
+                                "xmatrix" => ,
+                                "cmatrix" => ,
+                                "basefreq" => 60, "normamps" => 400, "emergamps" => 600,
+                                "faultrate" => 0.1, "pctperm" => 20, "repair" => 3,
+                                "kron" => "N", "rg" => 0.01805, "xg" => 0.15508,
+                                "neutral" => 3, "b1" => 1.2818, "b0" => 0.60319)
+
+    capacitor = Dict{String,Any}("phases" => 3, "kvar" => [1200], "kv" => 12.47, "conn" => "wye",
+                                 "cuf" => [20.47], "r" => [0], "xl" => [0], "harm" => [0],
+                                 "numsteps" => 1, "states" => [1], "normamps" => 75.0046059412345,
+                                 "emergamps" => 100.006141254979, "faultrate" => 0,
+                                 "pctperm" => 1e2, "repair" => 3, "basefreq" => 60, "enabled" => true)
 
     ctypes = Dict{String, Array}("line" => line,
                                  "load" => load,
-                                 "transformer" => transformer)
+                                 "linecode" => linecode,
+                                 "generator" => gen,
+                                 "capacitor" => capacitor,
+                                 "transformer2" => transformer2,
+                                 "transformer3" => transformer3)
     try
         return ctypes[ctype]
     catch KeyError
