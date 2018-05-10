@@ -16,7 +16,10 @@ known, for a given component type `ctype`.
 """
 function get_prop_default(ctype::AbstractString)::Array
 
-    line = []
+    line = [String, String, 8.0, 3, 0.0580, 0.1206, 0.1784, 0.4047, 3.4e-9,
+            1.6e-9, Float64, Float64, Float64, Float64, Float64, 60.0, Array,
+            Array, Array, Bool, 0.01805, 0.15508, 100, String, String, "None",
+            String]
     load = []
     transformer = []
 
