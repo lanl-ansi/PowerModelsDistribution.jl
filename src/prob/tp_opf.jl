@@ -7,7 +7,7 @@ end
 
 ""
 function run_tp_opf(file, model_constructor, solver; kwargs...)
-    return PMs.run_generic_model(file, model_constructor, solver, post_tp_opf; multiphase=true, kwargs...)
+    return run_generic_tp_model(file, model_constructor, solver, post_tp_opf; kwargs...)
 end
 
 ""
