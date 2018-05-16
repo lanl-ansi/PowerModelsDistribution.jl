@@ -29,8 +29,8 @@ function post_tp_opf(pm::GenericPowerModel)
         end
 
         for i in ids(pm, :branch)
-            PMs.constraint_ohms_yt_from(pm, i, ph=h)
-            PMs.constraint_ohms_yt_to(pm, i, ph=h)
+            constraint_ohms_yt_from(pm, i, ph=h)
+            constraint_ohms_yt_to(pm, i, ph=h)
 
             PMs.constraint_voltage_angle_difference(pm, i, ph=h)
 
