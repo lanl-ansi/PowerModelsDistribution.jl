@@ -15,14 +15,14 @@
         @test isapprox(result["objective"], 17720.6; atol=1e-1)
     end
 
-    @testset "5-bus 3-phase case" begin
-        mp_data = PMs.parse_file("../test/data/matlab/case5.m")
-        PMs.make_multiphase(mp_data, 3)
-        result = run_tp_ots(mp_data, PMs.ACPPowerModel, juniper_solver)
+    # @testset "5-bus 3-phase case" begin
+    #     mp_data = PMs.parse_file("../test/data/matlab/case5.m")
+    #     PMs.make_multiphase(mp_data, 3)
+    #     result = run_tp_ots(mp_data, PMs.ACPPowerModel, juniper_solver)
 
-        @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 45522.1; atol=1e-1)
-    end
+    #     @test result["status"] == :LocalOptimal
+    #     @test isapprox(result["objective"], 45522.1; atol=1e-1)
+    # end
 
 end
 

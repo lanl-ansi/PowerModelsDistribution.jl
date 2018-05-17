@@ -25,10 +25,10 @@ function constraint_ohms_yt_from_on_off(pm::GenericPowerModel{T}, n::Int, h::Int
     p_fr  = var(pm, n, h,  :p, f_idx)
     va_fr = [var(pm, n, i, :va, f_bus) for i in PMs.phase_ids(pm)]
     va_to = [var(pm, n, i, :va, t_bus) for i in PMs.phase_ids(pm)]
-    z = [var(pm, n, h, :branch_z, i) for i in PMs.phase_ids(pm)]
+    z = [var(pm, n, j, :branch_z, i) for j in PMs.phase_ids(pm)]
 
-    @constraint(pm.model, p_fr <= -sum(b[h,i]*(va_fr[i] - va_to[i] + vad_max[i]*(1-z[h])) for i in PMs.phase_ids(pm)) )
-    @constraint(pm.model, p_fr >= -sum(b[h,i]*(va_fr[i] - va_to[i] + vad_min[i]*(1-z[h])) for i in PMs.phase_ids(pm)) )
+    @constraint(pm.model, p_fr <= sum(-b[h,i]*(va_fr[i] - va_to[i] + vad_max[i]*(1-z[i])) for i in PMs.phase_ids(pm)) )
+    @constraint(pm.model, p_fr >= sum(-b[h,i]*(va_fr[i] - va_to[i] + vad_min[i]*(1-z[i])) for i in PMs.phase_ids(pm)) )
 end
 
 
