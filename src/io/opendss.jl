@@ -124,6 +124,16 @@ function get_prop_default(ctype::String)::Dict
                                "emergamps" => 6.0, "faultrate" => 0, "pctperm" => 1.0e2, "repair" => 3,
                                "basefreq" => 60.0, "enabled" => true)
 
+    circuit = Dict{String,Any}("bus1" => "sourcebus", "basekv" => 115.0, "pu" => 1.0, "angle" => 0.0,
+                               "frequency" => 60.0, "phases" => 3, "mvasc3" => 2000.0, "mvasc1" => 2100.0,
+                               "x1r1" => 4.0, "x0r0" => 3.0, "lsc3" => 10041.0, "lsc1" => 10543.0,
+                               "r1" => 1.6038, "x1" => 6.4151, "r0" => 1.796, "x0" => 5.3881, "scantype" => "Pos",
+                               "sequence" => "Pos", "bus2" => "sourcebus.0.0.0", "z1" => [1.6037668, 6.4150673],
+                               "z0" => [1.7960358, 5.3881075], "z2" => [1.6037668, 6.4150673],
+                               "puz1" => [0.012126781, 0.048507125], "puz0" => [0.013580611, 0.040741834],
+                               "puz2" => [0.012126781, 0.048507125], "basemva" => 100.0, "spectrum" => "defaultvsource",
+                               "basefreq" => 60.0, "enabled" => true)
+
     ctypes = Dict{String, Dict}("line" => line,
                                 "load" => load,
                                 "linecode" => linecode,
@@ -137,17 +147,6 @@ function get_prop_default(ctype::String)::Dict
     catch KeyError
         return Dict{String,Any}()
     end
-end
-
-
-"""
-    get_prop_default(ctype, i)
-
-Returns the default property value, or the expected Type if no default is
-known, of the `i`th property, for a given component type `ctype`.
-"""
-function get_prop_default(ctype::AbstractString, i::Int)
-    return get_prop_default(ctype)[i]
 end
 
 
@@ -1040,7 +1039,6 @@ component.
 function update_lookup_structure!(tppm_data::Dict)
     for (k, v) in tppm_data
         if isa(v, Array)
-            #println("updating $(k)")
             dict = Dict{String,Any}()
             for item in v
                 assert("index" in keys(item))
@@ -1062,11 +1060,17 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false)::Dict
     tppm_data["source_type"] = "dss"
     tppm_data["source_version"] = VersionNumber("0")
     tppm_data["name"] = haskey(dss_data, "circuit") ? dss_data["circuit"][1]["id"] : dss_data["filename"]
-    tppm_data["baseMVA"] = 0.001
+
 
     if haskey(dss_data, "circuit")
-        tppm_data["basekv"] = pop!(dss_data["circuit"][1], "basekv", NaN)
-        tppm_data["pu"] = pop!(dss_data["circuit"][1], "pu", NaN)
+        defaults = get_prop_default("circuit")
+        merge!(defaults, dss_data["circuit"][1])
+
+        tppm_data["basekv"] = defaults["basekv"]
+        tppm_data["baseMVA"] = defaults["basemva"]
+        tppm_data["pu"] = defaults["pu"]
+    else
+        error(LOGGER, "Circuit not defined, not valid DSS file!")
     end
 
     dss2tppm_bus!(tppm_data, dss_data, import_all)
