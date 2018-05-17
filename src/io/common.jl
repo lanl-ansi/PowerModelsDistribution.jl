@@ -3,7 +3,7 @@
 
 Parses a matlab .m `file` into a Three Phase PowerModels data structure.
 """
-function parse_file(file::String)
+function parse_file(file::String; import_all::Bool=false)
     if endswith(file, ".m")
         tppm_data = ThreePhasePowerModels.parse_matlab(file)
     elseif endswith(lowercase(file), ".dss")

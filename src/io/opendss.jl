@@ -14,7 +14,7 @@ components = ["linecode", "linegeometry", "line", "linespacing", "loadshape",
 Returns the default property values, or the expected Types if no default is
 known, for a given component type `ctype`.
 """
-function get_prop_default(ctype::AbstractString)::Dict
+function get_prop_default(ctype::String)::Dict
 
     line = Dict{String,Any}("length" => 1.0, "phases" => 3, "r1" => 0.058,
                             "x1" => 0.1206, "r0" => 0.1784, "x0" => 0.4047,
@@ -84,17 +84,17 @@ function get_prop_default(ctype::AbstractString)::Dict
                                  "emergamps" => 100.006141254979, "faultrate" => 0,
                                  "pctperm" => 1e2, "repair" => 3, "basefreq" => 60, "enabled" => true)
 
-    ctypes = Dict{String, Array}("line" => line,
-                                 "load" => load,
-                                 "linecode" => linecode,
-                                 "generator" => gen,
-                                 "capacitor" => capacitor,
-                                 "transformer2" => transformer2,
-                                 "transformer3" => transformer3)
+    ctypes = Dict{String, Dict}("line" => line,
+                                "load" => load,
+                                "linecode" => linecode,
+                                "generator" => gen,
+                                "capacitor" => capacitor,
+                                "transformer2" => transformer2,
+                                "transformer3" => transformer3)
     try
         return ctypes[ctype]
     catch KeyError
-        return []
+        return Dict{String,Any}()
     end
 end
 
@@ -637,7 +637,7 @@ end
 
 Adds PowerModels-style buses to `tppm_data` from `dss_data`.
 """
-function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict)
+function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if !haskey(tppm_data, "bus")
         tppm_data["bus"] = []
     end
@@ -660,7 +660,7 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict)
         busDict["vmin"] = 0.9 * ones(nphases)  # TODO: implicit limits? 10%
         busDict["vmax"] = 1.1 * ones(nphases)  # TODO: implicit limits?
 
-        busDict["base_kv"]
+        busDict["base_kv"] = NaN  # TODO:
 
         push!(tppm_data["bus"], busDict)
     end
@@ -688,22 +688,30 @@ end
 
 Adds PowerModels-style loads to `tppm_data` from `dss_data`.
 """
-function dss2tppm_load!(tppm_data::Dict, dss_data::Dict)
+function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if !haskey(tppm_data, "load")
         tppm_data["load"] = []
     end
 
-    # TODO: merge with defaults, overriding where necessary
+    defaults = get_prop_default("load")
+
     if haskey(dss_data, "load")
         for load in dss_data["load"]
+            merge!(defaults, load)
+
             loadDict = Dict{String,Any}()
 
-            loadDict["load_bus"] = find_bus(load["bus1"], tppm_data)
-            loadDict["pd"]
-            loadDict["qd"]
-            loadDict["status"] = Int(load["enabled"])  # TODO: or check bus?
+            nphases = parse(Int, defaults["phases"])
+
+            loadDict["load_bus"] = find_bus(defaults["bus1"], tppm_data)
+            loadDict["pd"] = zeros(nphases)  # TODO:
+            loadDict["qd"] = zeros(nphases)  # TODO:
+            loadDict["status"] = convert(Int, defaults["enabled"])  # TODO: or check bus?
 
             loadDict["index"] = length(tppm_data["load"]) + 1
+
+            used = ["phases", "bus1", "id"]
+            PMs.import_remaining!(loadDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["load"], loadDict)
         end
@@ -716,23 +724,32 @@ end
 
 Adds PowerModels-style shunts to `tppm_data` from `dss_data`.
 """
-function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict)
+function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if !haskey(tppm_data, "shunt")
         tppm_data["shunt"] = []
     end
 
-    # TODO: merge with defaults, overriding where necessary
     # TODO: which component most closely relates to shunts?
+    defaults = Dict()
+
     if haskey(dss_data, "???")
         for shunt in dss_data["???"]
+            merge!(defaults, shunt)
+
             shuntDict = Dict{String,Any}()
 
+            nphases = parse(Int, pop!(shunt, "phases"))
+
             shuntDict["shunt_bus"] = find_bus(shunt["bus1"], tppm_data)
-            shuntDict["gs"]
-            shuntDict["bs"]
-            shuntDict["status"]
+            shuntDict["name"] = defaults["id"]
+            shuntDict["gs"] = zeros(nphases)  # TODO:
+            shuntDict["bs"] = zeros(nphases)  # TODO:
+            shuntDict["status"] = 1  # TODO:
 
             shuntDict["index"] = length(tppm["shunt"]) + 1
+
+            used = ["bus1", "phases", "id"]
+            PMs.import_remaining!(shuntDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["shunt"], shuntDict)
         end
@@ -745,45 +762,54 @@ end
 
 Adds PowerModels-style generators to `tppm_data` from `dss_data`.
 """
-function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict)
+function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if !haskey(tppm_data, "gen")
         tppm_data["gen"] = []
     end
 
-    # TODO: merge with defaults, overriding where necessary
+    defaults = get_prop_default("generator")
+
     if haskey(dss_data, "generator")
         for gen in dss_data["generator"]
+            merge!(defaults, gen)
+
             genDict = Dict{String,Any}()
 
-            genDict["gen_bus"] = find_bus(gen["bus1"])
-            genDict["gen_status"]
-            genDict["pg"]
-            genDict["qg"]
-            genDict["vg"]
-            genDict["mbase"]
-            genDict["ramp_agc"]
-            genDict["ramp_q"]
-            genDict["ramp_10"]
-            genDict["ramp_30"]
-            genDict["pmin"]
-            genDict["pmax"]
-            genDict["apf"]
-            genDict["qmin"]
-            genDict["qmax"]
-            genDict["pc1"]
-            genDict["pc2"]
-            genDict["qc1min"]
-            genDict["qc1max"]
-            genDict["qc2min"]
-            genDict["qc2max"]
+            nphases = parse(Int, defaults["phases"])
 
-            genDict["model"]
-            genDict["startup"]
-            genDict["shutdown"]
-            genDict["ncost"]
-            genDict["cost"]
+            genDict["gen_bus"] = find_bus(defaults["bus1"])
+            genDict["name"] = defaults["id"]
+            genDict["gen_status"] = 1  # TODO:
+            genDict["pg"] = zeros(nphases)  # TODO:
+            genDict["qg"] = zeros(nphases)  # TODO:
+            genDict["vg"] = ones(nphases)  # TODO:
+            genDict["mbase"] = NaN  # TODO:
+            genDict["ramp_agc"] = zeros(nphases)  # TODO:
+            genDict["ramp_q"] = zeros(nphases)  # TODO:
+            genDict["ramp_10"] = zeros(nphases)  # TODO:
+            genDict["ramp_30"] = zeros(nphases)  # TODO:
+            genDict["pmin"] = zeros(nphases)  # TODO:
+            genDict["pmax"] = zeros(nphases)  # TODO:
+            genDict["apf"] = zeros(nphases)  # TODO:
+            genDict["qmin"] = zeros(nphases)  # TODO:
+            genDict["qmax"] = zeros(nphases)  # TODO:
+            genDict["pc1"] = zeros(nphases)  # TODO:
+            genDict["pc2"] = zeros(nphases)  # TODO:
+            genDict["qc1min"] = zeros(nphases)  # TODO:
+            genDict["qc1max"] = zeros(nphases)  # TODO:
+            genDict["qc2min"] = zeros(nphases)  # TODO:
+            genDict["qc2max"] = zeros(nphases)  # TODO:
+
+            genDict["model"] = 2 * ones(nphases)  # TODO:
+            genDict["startup"] = zeros(nphases)  # TODO:
+            genDict["shutdown"] = zeros(nphases)  # TODO:
+            genDict["ncost"] = 3 * ones(nphases)  # TODO:
+            genDict["cost"] = [0.0 1.0 0.0; 0.0 1.0 0.0; 0.0 1.0 0.0]
 
             genDict["index"] = length(tppm_data["gen"]) + 1
+
+            used = ["id", "phases", "bus1"]
+            PMs.import_remaining!(genDict, defaults, import_all; exlude=used)
 
             push!(tppm_data["gen"], genDict)
         end
@@ -796,47 +822,53 @@ end
 
 Adds PowerModels-style branches to `tppm_data` from `dss_data`.
 """
-function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict)
+function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if !haskey(tppm_data, "branch")
         tppm_data["branch"] = []
     end
 
-    # TODO: merge with defaults, overriding where necessary
+    defaults = get_prop_default("line")
+
     if haskey(dss_data, "line")
         for line in dss_data["line"]
+            merge!(defaults, line)
+
             branchDict = Dict{String,Any}()
 
-            nphases = line["phases"]
+            nphases = parse(Int, defaults["phases"])
 
-            branchDict["name"] = line["id"]
+            branchDict["name"] = defaults["id"]
 
-            branchDict["f_bus"] = find_bus(line["bus1"], tppm_data)
-            branchDict["t_bus"] = find_bus(line["bus2"], tppm_data)
+            branchDict["f_bus"] = find_bus(defaults["bus1"], tppm_data)
+            branchDict["t_bus"] = find_bus(defaults["bus2"], tppm_data)
 
-            branchDict["br_r"] = parse_matrix(line["rmatrix"])
-            branchDict["br_x"] = parse_matrix(line["xmatrix"])
+            branchDict["br_r"] = parse_matrix(Float64, defaults["rmatrix"])
+            branchDict["br_x"] = parse_matrix(Float64, defaults["xmatrix"])
 
             # TODO: cmatrix, from linecode?
-            branchDict["g_fr"] = zeros(nphases, nphases)
-            branchDict["b_fr"] = zeros(nphases, nphases)
-            branchDict["g_to"] = zeros(nphases, nphases)
-            branchDict["b_to"] = zeros(nphases, nphases)
+            branchDict["g_fr"] = zeros(nphases, nphases)  # TODO:
+            branchDict["b_fr"] = zeros(nphases, nphases)  # TODO:
+            branchDict["g_to"] = zeros(nphases, nphases)  # TODO:
+            branchDict["b_to"] = zeros(nphases, nphases)  # TODO:
 
-            branchDict["rate_a"]
-            branchDict["rate_b"]
-            branchDict["rate_c"]
+            branchDict["rate_a"] = zeros(nphases)  # TODO:
+            branchDict["rate_b"] = zeros(nphases)  # TODO:
+            branchDict["rate_c"] = zeros(nphases)  # TODO:
 
-            branchDict["tap"]
-            branchDict["shift"]
+            branchDict["tap"] = zeros(nphases)  # TODO:
+            branchDict["shift"] = zeros(nphases)  # TODO:
 
-            branchDict["br_status"]
+            branchDict["br_status"] = 1  # TODO:
 
-            branchDict["angmin"]
-            branchDict["angmax"]
+            branchDict["angmin"] = zeros(nphases)  # TODO:
+            branchDict["angmax"] = zeros(nphases)  # TODO:
 
             branchDict["transformer"] = false
 
             branchDict["index"] = length(tppm_data["branch"]) + 1
+
+            used = ["id", "phases", "bus1", "bus2", "rmatrix", "xmatrix"]
+            PMs.import_remaining!(branchDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["branch"], branchDict)
         end
@@ -867,25 +899,25 @@ end
 
 
 "Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format."
-function parse_opendss(dss_data::Dict)::Dict
+function parse_opendss(dss_data::Dict; import_all::Bool=false)::Dict
     tppm_data = Dict{String,Any}()
 
     tppm_data["per_unit"] = false
     tppm_data["source_type"] = "dss"
     tppm_data["source_version"] = VersionNumber("0")
-    tppm_data["name"] = haskey(dss_data, "circuit") ? dss_data["circuit"]["id"] : dss_data["filename"]
+    tppm_data["name"] = haskey(dss_data, "circuit") ? dss_data["circuit"][1]["id"] : dss_data["filename"]
     tppm_data["baseMVA"] = 0.001
 
     if haskey(dss_data, "circuit")
-        tppm_data["basekv"] = pop!(dss_data["circuit"], "basekv", NaN)
-        tppm_data["pu"] = pop!(dss_data["circuit"], "pu", NaN)
+        tppm_data["basekv"] = pop!(dss_data["circuit"][1], "basekv", NaN)
+        tppm_data["pu"] = pop!(dss_data["circuit"][1], "pu", NaN)
     end
 
-    dss2tppm_bus!(tppm_data, dss_data)
-    dss2tppm_load!(tppm_data, dss_data)
-    dss2tppm_shunt!(tppm_data, dss_data)
-    dss2tppm_branch!(tppm_data, dss_data)
-    dss2tppm_gen!(tppm_data, dss_data)
+    dss2tppm_bus!(tppm_data, dss_data, import_all)
+    dss2tppm_load!(tppm_data, dss_data, import_all)
+    dss2tppm_shunt!(tppm_data, dss_data, import_all)
+    dss2tppm_branch!(tppm_data, dss_data, import_all)
+    dss2tppm_gen!(tppm_data, dss_data, import_all)
 
     update_lookup_structure!(tppm_data)
 
@@ -894,8 +926,8 @@ end
 
 
 "Parses a DSS file into a PowerModels usable format."
-function parse_opendss(filename::String)::Dict
+function parse_opendss(filename::String; import_all::Bool=false)::Dict
     dss_data = parse_dss(filename)
 
-    return parse_opendss(dss_data)::Dict
+    return parse_opendss(dss_data; import_all=import_all)
 end
