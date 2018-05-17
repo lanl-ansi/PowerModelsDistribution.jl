@@ -17,13 +17,16 @@ function constraint_ohms_yt_from(pm::GenericPowerModel{T}, n::Int, h::Int, f_bus
     va_fr = var(pm, n, h, :va, f_bus)
     va_to = var(pm, n, h, :va, t_bus)
 
-    ggfr = (g .+ g_fr') ./ tm'.^2
-    bbfr = (b .+ b_fr') ./ tm'.^2
+    ggfr = (g + diagm(g_fr)) ./ tm'.^2
+    bbfr = (b + diagm(b_fr)) ./ tm'.^2
 
     vec1 = (-g*tr + b*ti) ./ tm'.^2
     vec2 = (-b*tr - g*ti) ./ tm'.^2
 
-    @NLconstraint(pm.model, p_fr == sum(ggfr[h, i] * vm_fr[i]^2 for i in PMs.phase_ids(pm)) + vec1[h] * (vm_fr[h] * vm_to[h]) * cos(va_fr-va_to) + vec2[h] * (vm_fr[h] * vm_to[h]) * sin(va_fr-va_to) )
+    # warn(sum(ggfr[h, i] * vm_fr[i]^2 for i in PMs.phase_ids(pm)))
+    # warn(sum(bbfr[h, i] * vm_fr[i]^2 for i in PMs.phase_ids(pm)))
+
+    @NLconstraint(pm.model, p_fr ==  sum(ggfr[h, i] * vm_fr[i]^2 for i in PMs.phase_ids(pm)) + vec1[h] * (vm_fr[h] * vm_to[h]) * cos(va_fr-va_to) + vec2[h] * (vm_fr[h] * vm_to[h]) * sin(va_fr-va_to) )
     @NLconstraint(pm.model, q_fr == -sum(bbfr[h, i] * vm_fr[i]^2 for i in PMs.phase_ids(pm)) - vec2[h] * (vm_fr[h] * vm_to[h]) * cos(va_fr-va_to) + vec1[h] * (vm_fr[h] * vm_to[h]) * sin(va_fr-va_to) )
 end
 
@@ -43,8 +46,8 @@ function constraint_ohms_yt_to(pm::GenericPowerModel{T}, n::Int, h::Int, f_bus, 
     va_fr = var(pm, n, h, :va, f_bus)
     va_to = var(pm, n, h, :va, t_bus)
 
-    ggto = (g .+ g_to')
-    bbto = (b .+ b_to')
+    ggto = (g + diagm(g_to))
+    bbto = (b + diagm(b_to))
 
     vec1 = (-g*tr + b*ti) ./ tm'.^2
     vec2 = (-b*tr - g*ti) ./ tm'.^2
@@ -69,8 +72,8 @@ function constraint_ohms_yt_from_on_off(pm::GenericPowerModel{T}, n::Int, h::Int
     va_to = var(pm, n, h, :va, t_bus)
     z = var(pm, n, h, :branch_z, i)
 
-    ggfr = (g .+ g_fr') ./ tm'.^2
-    bbfr = (b .+ b_fr') ./ tm'.^2
+    ggfr = (g + diagm(g_fr)) ./ tm'.^2
+    bbfr = (b + diagm(b_fr)) ./ tm'.^2
 
     vec1 = (-g*tr + b*ti) ./ tm'.^2
     vec2 = (-b*tr - g*ti) ./ tm'.^2
@@ -94,8 +97,8 @@ function constraint_ohms_yt_to_on_off(pm::GenericPowerModel{T}, n::Int, h::Int, 
     va_to = var(pm, n, h, :va, t_bus)
     z = var(pm, n, h, :branch_z, i)
 
-    ggto = g .+ g_to'
-    bbto = b .+ b_to'
+    ggto = g + diagm(g_to)
+    bbto = b + diagm(b_to)
 
     vec1 = (-g*tr + b*ti) ./ tm'.^2
     vec2 = (-b*tr - g*ti) ./ tm'.^2
