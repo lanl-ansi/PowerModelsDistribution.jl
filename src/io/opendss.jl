@@ -84,13 +84,21 @@ function get_prop_default(ctype::String)::Dict
                                  "emergamps" => 100.006141254979, "faultrate" => 0,
                                  "pctperm" => 1e2, "repair" => 3, "basefreq" => 60, "enabled" => true)
 
+    reactor = Dict{String,Any}("phases" => 3, "kvar" => 1200.0, "kv" => 12.47, "conn" => "wye",
+                               "parallel" => "NO", "r" => 0.0, "x" => 1555.009, "Rp" => 0.0,
+                               "z1" => [0.0, 0.0], "z2" => [0.0, 0.0], "z0" => [0.0, 0.0],
+                               "z" => [0.0, 1555.009], "lmh" => 4124.7895, "normamps" => 5.0,
+                               "emergamps" => 6.0, "faultrate" => 0, "pctperm" => 1.0e2, "repair" => 3,
+                               "basefreq" => 60.0, "enabled" => true)
+
     ctypes = Dict{String, Dict}("line" => line,
                                 "load" => load,
                                 "linecode" => linecode,
                                 "generator" => gen,
                                 "capacitor" => capacitor,
                                 "transformer2" => transformer2,
-                                "transformer3" => transformer3)
+                                "transformer3" => transformer3,
+                                "reactor" => reactor)
     try
         return ctypes[ctype]
     catch KeyError
@@ -593,11 +601,18 @@ function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
                 defaults = get_prop_default(compType)
                 for (k, v) in item
                     if haskey(defaults, k)
-                        if isa(v, AbstractString) && ~isa(defaults[k], String)
+                        if isa(defaults[k], Array)
+                            try
+                                item[k] = parse_array(Float64, v)
+                            catch err
+                                debug(LOGGER, "$compType $k")
+                                error(LOGGER, err)
+                            end
+                        elseif isa(v, AbstractString) && ~isa(defaults[k], String)
                             try
                                 item[k] = parse(typeof(defaults[k]), v)
                             catch err
-                                warn(LOGGER, "$compType $k")
+                                debug(LOGGER, "$compType $k")
                                 error(LOGGER, err)
                             end
                         end
@@ -754,11 +769,10 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
         tppm_data["shunt"] = []
     end
 
-    # TODO: which component most closely relates to shunts?
-    defaults = Dict()
+    defaults = get_prop_default("capacitor")
 
-    if haskey(dss_data, "???")
-        for shunt in dss_data["???"]
+    if haskey(dss_data, "capacitor")
+        for shunt in dss_data["capacitor"]
             merge!(defaults, shunt)
 
             shuntDict = Dict{String,Any}()
@@ -771,7 +785,32 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             shuntDict["bs"] = zeros(nphases)  # TODO:
             shuntDict["status"] = 1  # TODO:
 
-            shuntDict["index"] = length(tppm["shunt"]) + 1
+            shuntDict["index"] = length(tppm_data["shunt"]) + 1
+
+            used = ["bus1", "phases", "id"]
+            PMs.import_remaining!(shuntDict, defaults, import_all; exclude=used)
+
+            push!(tppm_data["shunt"], shuntDict)
+        end
+    end
+
+    defaults = get_prop_default("reactor")
+
+    if haskey(dss_data, "reactor")
+        for shunt in dss_data["reactor"]
+            merge!(defaults, shunt)
+
+            shuntDict = Dict{String,Any}()
+
+            nphases = defaults["phases"]
+
+            shuntDict["shunt_bus"] = find_bus(shunt["bus1"], tppm_data)
+            shuntDict["name"] = defaults["id"]
+            shuntDict["gs"] = zeros(nphases)  # TODO:
+            shuntDict["bs"] = zeros(nphases)  # TODO:
+            shuntDict["status"] = 1  # TODO:
+
+            shuntDict["index"] = length(tppm_data["shunt"]) + 1
 
             used = ["bus1", "phases", "id"]
             PMs.import_remaining!(shuntDict, defaults, import_all; exclude=used)
@@ -984,7 +1023,7 @@ end
 function parse_opendss(dss_data::Dict; import_all::Bool=false)::Dict
     tppm_data = Dict{String,Any}()
 
-    parse_dss_with_dtypes!(dss_data, ["line", "load", "generator"])
+    parse_dss_with_dtypes!(dss_data, ["line", "load", "generator", "capacitor", "reactor"])
 
     tppm_data["per_unit"] = false
     tppm_data["source_type"] = "dss"
