@@ -28,7 +28,7 @@ function get_prop_default(ctype::String)::Dict
                             "emergamps" => 600, "faultrate" => 0.1, "pctperm" => 20,
                             "repair" => 3, "basefreq" => 60, "enabled" => true)
 
-    load = Dict{String, Any}("phases" => 3, "kv" => 12.47, "kw" => 10, "pf" => 0.88,
+    load = Dict{String, Any}("phases" => 3, "kv" => 12.47, "kw" => 10.0, "pf" => 0.88,
                              "model" => 1, "conn" => "wye", "kvar" => 5.39742822138087,
                              "rneut" => -1, "xneut" => 0, "status" => "variable",
                              "class" => 1, "vminpu" => 0.95, "vmaxpu" => 1.05,
@@ -585,6 +585,31 @@ end
 
 
 """
+"""
+function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
+    for compType in toParse
+        if haskey(dss_data, compType)
+            for item in dss_data[compType]
+                defaults = get_prop_default(compType)
+                for (k, v) in item
+                    if haskey(defaults, k)
+                        if isa(v, AbstractString) && ~isa(defaults[k], String)
+                            try
+                                item[k] = parse(typeof(defaults[k]), v)
+                            catch err
+                                warn(LOGGER, "$compType $k")
+                                error(LOGGER, err)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+
+"""
     parse_busname(busname)
 
 Parses busnames as defined in OpenDSS, e.g. "primary.1.2.3.0".
@@ -701,7 +726,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             loadDict = Dict{String,Any}()
 
-            nphases = parse(Int, defaults["phases"])
+            nphases = defaults["phases"]
 
             loadDict["load_bus"] = find_bus(defaults["bus1"], tppm_data)
             loadDict["pd"] = zeros(nphases)  # TODO:
@@ -738,7 +763,7 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             shuntDict = Dict{String,Any}()
 
-            nphases = parse(Int, pop!(shunt, "phases"))
+            nphases = defaults["phases"]
 
             shuntDict["shunt_bus"] = find_bus(shunt["bus1"], tppm_data)
             shuntDict["name"] = defaults["id"]
@@ -775,7 +800,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             genDict = Dict{String,Any}()
 
-            nphases = parse(Int, defaults["phases"])
+            nphases = defaults["phases"]
 
             genDict["gen_bus"] = find_bus(defaults["bus1"])
             genDict["name"] = defaults["id"]
@@ -835,7 +860,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict = Dict{String,Any}()
 
-            nphases = parse(Int, defaults["phases"])
+            nphases = defaults["phases"]
 
             branchDict["name"] = defaults["id"]
 
@@ -901,6 +926,8 @@ end
 "Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format."
 function parse_opendss(dss_data::Dict; import_all::Bool=false)::Dict
     tppm_data = Dict{String,Any}()
+
+    parse_dss_with_dtypes!(dss_data, ["line", "load", "generator"])
 
     tppm_data["per_unit"] = false
     tppm_data["source_type"] = "dss"
