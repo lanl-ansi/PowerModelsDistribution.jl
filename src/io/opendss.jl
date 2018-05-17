@@ -7,6 +7,39 @@ components = ["linecode", "linegeometry", "line", "linespacing", "loadshape",
               "gictransformer", "gicline", "load", "generator", "indmach012",
               "storage", "capcontrol", "regcontrol", "energymeter", "monitor"]
 
+function warn_get(data, fname, default; dtype=nothing)
+    value = default
+
+    if haskey(data, fname)
+        value = data[fname]
+    else
+        warn("field $fname isn't present, setting to $default")
+    end
+
+    if dtype === nothing
+        return value
+    end
+
+    return parse(dtype, value)
+end
+
+
+function warn_pop!(data, fname, default; dtype=nothing)
+    value = default
+
+    if haskey(data, fname)
+        value = pop!(data, fname)
+    else
+        warn("field $fname isn't present, setting to $default")
+    end
+
+    if dtype === nothing
+        return value
+    end
+
+    return parse(dtype, value)
+end
+
 
 """
     get_prop_default(ctype)
@@ -955,7 +988,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["tap"] = zeros(nphases)  # TODO:
             branchDict["shift"] = zeros(nphases)  # TODO:
 
-            branchDict["br_status"] = 1  # TODO:
+            branchDict["br_status"] = warn_get(dss_data, "active", 1)
 
             branchDict["angmin"] = zeros(nphases)  # TODO:
             branchDict["angmax"] = zeros(nphases)  # TODO:
