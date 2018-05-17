@@ -26,7 +26,9 @@ function post_tp_pf(pm::GenericPowerModel)
         PMs.variable_generation(pm, bounded=false, ph=h)
         PMs.variable_branch_flow(pm, bounded=false, ph=h)
         PMs.variable_dcline_flow(pm, bounded=false, ph=h)
+    end
 
+    for h in PMs.phase_ids(pm)
         PMs.constraint_voltage(pm, ph=h)
 
         for (i,bus) in ref(pm, :ref_buses)

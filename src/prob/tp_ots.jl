@@ -14,7 +14,9 @@ function post_tp_ots(pm::GenericPowerModel)
         PMs.variable_generation(pm, ph=h)
         PMs.variable_branch_flow(pm, ph=h)
         PMs.variable_dcline_flow(pm, ph=h)
+    end
 
+    for h in PMs.phase_ids(pm)
         PMs.constraint_voltage_on_off(pm, ph=h)
 
         for i in ids(pm, :ref_buses)
