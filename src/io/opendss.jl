@@ -800,6 +800,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             genDict = Dict{String,Any}()
 
+<<<<<<< HEAD
             nphases = defaults["phases"]
 
             genDict["gen_bus"] = find_bus(defaults["bus1"])
@@ -830,6 +831,37 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             genDict["shutdown"] = zeros(nphases)  # TODO:
             genDict["ncost"] = 3 * ones(nphases)  # TODO:
             genDict["cost"] = [0.0 1.0 0.0; 0.0 1.0 0.0; 0.0 1.0 0.0]
+=======
+            genDict["gen_bus"] = find_bus(gen["bus1"])
+            genDict["gen_status"]
+
+            genDict["pg"]
+            genDict["qg"]
+            genDict["vg"]
+            genDict["mbase"]  
+            genDict["ramp_agc"]
+            genDict["ramp_q"]
+            genDict["ramp_10"]
+            genDict["ramp_30"]
+            genDict["pmin"]
+            # Are units MVA or pu?
+            genDict["pmax"] = gen["kw"]/1e3
+            genDict["apf"]
+            genDict["qmin"]
+            genDict["qmax"] = gen["kvar"]/1e3
+            genDict["pc1"]
+            genDict["pc2"]
+            genDict["qc1min"]
+            genDict["qc1max"]
+            genDict["qc2min"]
+            genDict["qc2max"]
+
+            genDict["model"]
+            genDict["startup"]
+            genDict["shutdown"]
+            genDict["ncost"]
+            genDict["cost"]
+>>>>>>> adding opendss line fields
 
             genDict["index"] = length(tppm_data["gen"]) + 1
 
@@ -871,6 +903,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["br_x"] = parse_matrix(Float64, defaults["xmatrix"])
 
             # TODO: cmatrix, from linecode?
+<<<<<<< HEAD
             branchDict["g_fr"] = zeros(nphases, nphases)  # TODO:
             branchDict["b_fr"] = zeros(nphases, nphases)  # TODO:
             branchDict["g_to"] = zeros(nphases, nphases)  # TODO:
@@ -887,6 +920,30 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict["angmin"] = zeros(nphases)  # TODO:
             branchDict["angmax"] = zeros(nphases)  # TODO:
+=======
+            # yes, b comes from cmatrix
+            branchDict["g_fr"] = zeros(nphases, nphases)
+            branchDict["b_fr"] = zeros(nphases, nphases)
+            branchDict["g_to"] = zeros(nphases, nphases)
+            branchDict["b_to"] = zeros(nphases, nphases)
+
+            # not in dss line object
+            # TODO: opendss is case-insensitive, so change all keywords to lowercase 
+            branchDict["rate_a"] = 7200.0*line["normamps"] # multiply this by bus1 nominal line-neutral voltage to get power limit
+            branchDict["rate_b"] = 7200.0*line["emergamps"]
+            branchDict["rate_c"] = 7200.0*line["emergamps"]
+
+
+            # not in dss line object
+            branchDict["tap"] = 1
+            branchDict["shift"] = 0
+
+            branchDict["br_status"] = 1
+
+            # no argmin or argmax here
+            branchDict["angmin"]
+            branchDict["angmax"]
+>>>>>>> adding opendss line fields
 
             branchDict["transformer"] = false
 
@@ -956,5 +1013,10 @@ end
 function parse_opendss(filename::String; import_all::Bool=false)::Dict
     dss_data = parse_dss(filename)
 
+<<<<<<< HEAD
     return parse_opendss(dss_data; import_all=import_all)
 end
+=======
+    return parse_opendss(dss_data)::Dict
+end
+>>>>>>> adding opendss line fields
