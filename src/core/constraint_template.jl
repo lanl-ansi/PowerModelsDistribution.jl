@@ -10,14 +10,10 @@ function constraint_ohms_yt_from(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, 
     t_idx = (i, t_bus, f_bus)
 
     g, b = PMs.calc_branch_y(branch)
-    g, b = g.values, b.values
-
     tr, ti = PMs.calc_branch_t(branch)
-    tr, ti = tr.values, ti.values
-
-    g_fr = branch["g_fr"].values
-    b_fr = branch["b_fr"].values
-    tm = branch["tap"].values
+    g_fr = branch["g_fr"]
+    b_fr = branch["b_fr"]
+    tm = branch["tap"]
 
     constraint_ohms_yt_from(pm, nw, ph, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
 end
@@ -32,14 +28,10 @@ function constraint_ohms_yt_to(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, ph
     t_idx = (i, t_bus, f_bus)
 
     g, b = PMs.calc_branch_y(branch)
-    g, b = g.values, b.values
-
     tr, ti = PMs.calc_branch_t(branch)
-    tr, ti = tr.values, ti.values
-
-    g_to = branch["g_to"].values
-    b_to = branch["b_to"].values
-    tm = branch["tap"].values
+    g_to = branch["g_to"]
+    b_to = branch["b_to"]
+    tm = branch["tap"]
 
     constraint_ohms_yt_to(pm, nw, ph, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
 end
@@ -54,14 +46,10 @@ function constraint_ohms_yt_from_on_off(pm::GenericPowerModel, i::Int; nw::Int=p
     t_idx = (i, t_bus, f_bus)
 
     g, b = PMs.calc_branch_y(branch)
-    g, b = g.values, b.values
-
     tr, ti = PMs.calc_branch_t(branch)
-    tr, ti = tr.values, ti.values
-
-    g_fr = branch["g_fr"].values
-    b_fr = branch["b_fr"].values
-    tm = branch["tap"].values
+    g_fr = branch["g_fr"]
+    b_fr = branch["b_fr"]
+    tm = branch["tap"]
 
     vad_min = [ref(pm, nw, :off_angmin, j) for j in PMs.phase_ids(pm)]
     vad_max = [ref(pm, nw, :off_angmax, j) for j in PMs.phase_ids(pm)]
@@ -79,14 +67,10 @@ function constraint_ohms_yt_to_on_off(pm::GenericPowerModel, i::Int; nw::Int=pm.
     t_idx = (i, t_bus, f_bus)
 
     g, b = PMs.calc_branch_y(branch)
-    g, b = g.values, b.values
-
     tr, ti = PMs.calc_branch_t(branch)
-    tr, ti = tr.values, ti.values
-
-    g_to = branch["g_to"].values
-    b_to = branch["b_to"].values
-    tm = branch["tap"].values
+    g_to = branch["g_to"]
+    b_to = branch["b_to"]
+    tm = branch["tap"]
 
     vad_min = [ref(pm, nw, :off_angmin, j) for j in PMs.phase_ids(pm)]
     vad_max = [ref(pm, nw, :off_angmax, j) for j in PMs.phase_ids(pm)]
