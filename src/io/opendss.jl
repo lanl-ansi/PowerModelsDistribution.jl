@@ -134,6 +134,10 @@ function get_prop_default(ctype::String)::Dict
                                "puz2" => [0.012126781, 0.048507125], "basemva" => 100.0, "spectrum" => "defaultvsource",
                                "basefreq" => 60.0, "enabled" => true)
 
+    vsource = Dict{String,Any}()
+
+    linecode = Dict{String,Any}()
+
     ctypes = Dict{String, Dict}("line" => line,
                                 "load" => load,
                                 "linecode" => linecode,
@@ -141,7 +145,10 @@ function get_prop_default(ctype::String)::Dict
                                 "capacitor" => capacitor,
                                 "transformer2" => transformer2,
                                 "transformer3" => transformer3,
-                                "reactor" => reactor)
+                                "reactor" => reactor,
+                                "circuit" => circuit,
+                                "linecode" => linecode,
+                                "vsource" => vsource)
     try
         return ctypes[ctype]
     catch KeyError
@@ -717,6 +724,7 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     buses = discover_buses(dss_data)
 
     # TODO: merge with defaults, overriding where necessary
+    # TODO: handle "sourcebus" (created with the circuit object)
     for (n, (bus, nodes)) in enumerate(buses)
         busDict = Dict{String,Any}()
 
@@ -1059,18 +1067,19 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false)::Dict
     tppm_data["per_unit"] = false
     tppm_data["source_type"] = "dss"
     tppm_data["source_version"] = VersionNumber("0")
-    tppm_data["name"] = haskey(dss_data, "circuit") ? dss_data["circuit"][1]["id"] : dss_data["filename"]
+    tppm_data["files"] = dss_data["filename"]
 
 
     if haskey(dss_data, "circuit")
         defaults = get_prop_default("circuit")
         merge!(defaults, dss_data["circuit"][1])
 
+        tppm_data["name"] = defaults["id"]
         tppm_data["basekv"] = defaults["basekv"]
         tppm_data["baseMVA"] = defaults["basemva"]
         tppm_data["pu"] = defaults["pu"]
     else
-        error(LOGGER, "Circuit not defined, not valid DSS file!")
+        error(LOGGER, "Circuit not defined, not a valid circuit!")
     end
 
     dss2tppm_bus!(tppm_data, dss_data, import_all)
