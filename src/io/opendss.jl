@@ -7,20 +7,32 @@ components = ["linecode", "linegeometry", "line", "linespacing", "loadshape",
               "gictransformer", "gicline", "load", "generator", "indmach012",
               "storage", "capcontrol", "regcontrol", "energymeter", "monitor"]
 
-function warn_get(data, fname, default; dtype=nothing)
+function warn_get(data, fname, default; valid = x -> true)
     value = default
 
     if haskey(data, fname)
         value = data[fname]
     else
         warn("field $fname isn't present, setting to $default")
+        return default
     end
 
-    if dtype === nothing
+    if typeof(default) === String
         return value
     end
 
-    return parse(dtype, value)
+    x = parse(typeof(default), value)
+
+    if allow_zero
+        return x
+    end
+
+    if valid(x)
+        warn("$fname of $x <=, setting to $default")
+        return default
+    end 
+
+    return x
 end
 
 
@@ -879,7 +891,6 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             genDict = Dict{String,Any}()
 
-<<<<<<< HEAD
             nphases = defaults["phases"]
 
             genDict["gen_bus"] = find_bus(defaults["bus1"])
@@ -910,37 +921,6 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             genDict["shutdown"] = zeros(nphases)  # TODO:
             genDict["ncost"] = 3 * ones(nphases)  # TODO:
             genDict["cost"] = [0.0 1.0 0.0; 0.0 1.0 0.0; 0.0 1.0 0.0]
-=======
-            genDict["gen_bus"] = find_bus(gen["bus1"])
-            genDict["gen_status"]
-
-            genDict["pg"]
-            genDict["qg"]
-            genDict["vg"]
-            genDict["mbase"]  
-            genDict["ramp_agc"]
-            genDict["ramp_q"]
-            genDict["ramp_10"]
-            genDict["ramp_30"]
-            genDict["pmin"]
-            # Are units MVA or pu?
-            genDict["pmax"] = gen["kw"]/1e3
-            genDict["apf"]
-            genDict["qmin"]
-            genDict["qmax"] = gen["kvar"]/1e3
-            genDict["pc1"]
-            genDict["pc2"]
-            genDict["qc1min"]
-            genDict["qc1max"]
-            genDict["qc2min"]
-            genDict["qc2max"]
-
-            genDict["model"]
-            genDict["startup"]
-            genDict["shutdown"]
-            genDict["ncost"]
-            genDict["cost"]
->>>>>>> adding opendss line fields
 
             genDict["index"] = length(tppm_data["gen"]) + 1
 
@@ -978,51 +958,30 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["f_bus"] = find_bus(defaults["bus1"], tppm_data)
             branchDict["t_bus"] = find_bus(defaults["bus2"], tppm_data)
 
-            branchDict["br_r"] = parse_matrix(Float64, defaults["rmatrix"])
-            branchDict["br_x"] = parse_matrix(Float64, defaults["xmatrix"])
+            line_length = warn_get(dss_data, "length", 1.0)
+
+            branchDict["br_r"] = parse_matrix(Float64, defaults["rmatrix"])*line_length
+            branchDict["br_x"] = parse_matrix(Float64, defaults["xmatrix"])*line_length
 
             # TODO: cmatrix, from linecode?
-<<<<<<< HEAD
             branchDict["g_fr"] = zeros(nphases, nphases)  # TODO:
             branchDict["b_fr"] = zeros(nphases, nphases)  # TODO:
             branchDict["g_to"] = zeros(nphases, nphases)  # TODO:
             branchDict["b_to"] = zeros(nphases, nphases)  # TODO:
 
-            branchDict["rate_a"] = zeros(nphases)  # TODO:
-            branchDict["rate_b"] = zeros(nphases)  # TODO:
-            branchDict["rate_c"] = zeros(nphases)  # TODO:
+            # TODO: find out if this is per phase limit or across all phases
+            # TODO: pick a better value for emergamps
+            branchDict["rate_a"] = ones(nphases)*warn_get(dss_data, "normamps", 600.0; valid = x -> x > 0.0)
+            branchDict["rate_b"] = ones(nphases)*warn_get(dss_data, "emergamps", 600.0; valid = x -> x > 0.0)
+            branchDict["rate_c"] = ones(nphases)*warn_get(dss_data, "emergamps", 600.0; valid = x -> x > 0.0)
 
-            branchDict["tap"] = zeros(nphases)  # TODO:
-            branchDict["shift"] = zeros(nphases)  # TODO:
+            branchDict["tap"] = ones(nphases)  
+            branchDict["shift"] = zeros(nphases)  
 
             branchDict["br_status"] = warn_get(dss_data, "active", 1)
 
-            branchDict["angmin"] = zeros(nphases)  # TODO:
-            branchDict["angmax"] = zeros(nphases)  # TODO:
-=======
-            # yes, b comes from cmatrix
-            branchDict["g_fr"] = zeros(nphases, nphases)
-            branchDict["b_fr"] = zeros(nphases, nphases)
-            branchDict["g_to"] = zeros(nphases, nphases)
-            branchDict["b_to"] = zeros(nphases, nphases)
-
-            # not in dss line object
-            # TODO: opendss is case-insensitive, so change all keywords to lowercase 
-            branchDict["rate_a"] = 7200.0*line["normamps"] # multiply this by bus1 nominal line-neutral voltage to get power limit
-            branchDict["rate_b"] = 7200.0*line["emergamps"]
-            branchDict["rate_c"] = 7200.0*line["emergamps"]
-
-
-            # not in dss line object
-            branchDict["tap"] = 1
-            branchDict["shift"] = 0
-
-            branchDict["br_status"] = 1
-
-            # no argmin or argmax here
-            branchDict["angmin"]
-            branchDict["angmax"]
->>>>>>> adding opendss line fields
+            branchDict["angmin"] = zeros(nphases)  
+            branchDict["angmax"] = zeros(nphases) 
 
             branchDict["transformer"] = false
 
@@ -1098,10 +1057,5 @@ end
 function parse_opendss(filename::String; import_all::Bool=false)::Dict
     dss_data = parse_dss(filename)
 
-<<<<<<< HEAD
     return parse_opendss(dss_data; import_all=import_all)
 end
-=======
-    return parse_opendss(dss_data)::Dict
-end
->>>>>>> adding opendss line fields
