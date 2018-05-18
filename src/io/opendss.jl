@@ -8,8 +8,6 @@ components = ["linecode", "linegeometry", "line", "linespacing", "loadshape",
               "storage", "capcontrol", "regcontrol", "energymeter", "monitor"]
 
 function warn_get(data, fname, default; valid = x -> true)
-    value = default
-
     if haskey(data, fname)
         value = data[fname]
     else
@@ -17,22 +15,21 @@ function warn_get(data, fname, default; valid = x -> true)
         return default
     end
 
-    if typeof(default) === String
-        return value
-    end
-
-    x = parse(typeof(default), value)
-
-    if allow_zero
-        return x
+    if isa(value, typeof(default)) || isa(default, String)
+        x = value
+    elseif isa(value, String)
+        x = parse(typeof(default), value)
+    else
+        warn("Invalid type $(typeof(value)) of $fname, setting to $default")
+        return default
     end
 
     if valid(x)
-        warn("$fname of $x <=, setting to $default")
-        return default
+        return x
     end 
 
-    return x
+    warn("Invalid value $x of $fname, setting to $default")
+    return default
 end
 
 
@@ -951,23 +948,51 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict = Dict{String,Any}()
 
-            nphases = defaults["phases"]
+            nphases = warn_get(dss_data, "phases", 3, valid = x -> x > 0)
 
             branchDict["name"] = defaults["id"]
 
             branchDict["f_bus"] = find_bus(defaults["bus1"], tppm_data)
             branchDict["t_bus"] = find_bus(defaults["bus2"], tppm_data)
 
-            line_length = warn_get(dss_data, "length", 1.0)
+            line_length = warn_get(line, "length", 1.0, valid = x -> x > 0.0)
+            branchDict["length"] = line_length
+            linecode = warn_get(line, "linecode", "oh_horiz_3ph_4/0ph_1/0neu")
+            branchDict["linecode"] = linecode
+
+            # need to read in impedance matrices from linecode
 
             branchDict["br_r"] = parse_matrix(Float64, defaults["rmatrix"])*line_length
             branchDict["br_x"] = parse_matrix(Float64, defaults["xmatrix"])*line_length
+
+            if haskey(dss_data, "rmatrix")
+                branchDict["br_r"] = parse_matrix(Float64, dss_data["rmatrix"])*line_length
+            else
+                warn("rmatrix not present, setting to default")
+            end
+
+            if haskey(dss_data, "xmatrix")
+                branchDict["br_"] = parse_matrix(Float64, dss_data["matrix"])*line_length
+            else
+                warn("matrix not present, setting to default")
+            end
+
 
             # TODO: cmatrix, from linecode?
             branchDict["g_fr"] = zeros(nphases, nphases)  # TODO:
             branchDict["b_fr"] = zeros(nphases, nphases)  # TODO:
             branchDict["g_to"] = zeros(nphases, nphases)  # TODO:
             branchDict["b_to"] = zeros(nphases, nphases)  # TODO:
+
+            if haskey(dss_data, "cmatrix")
+                C_nf = parse_matrix(Float64, dss_data["cmatrix"])*line_length
+                C = C/1e9
+                G = 1.0/(2.0*pi*60.0*C)
+                Gpu = Zbase*G
+                branchDict["g_fr"] = Gpu/2.0
+                branchDict["g_to"] = Gpu/2.0
+            end
+
 
             # TODO: find out if this is per phase limit or across all phases
             # TODO: pick a better value for emergamps
