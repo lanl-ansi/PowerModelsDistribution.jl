@@ -14,6 +14,7 @@ setlevel!(LOGGER, "info")
 
 include("core/base.jl")
 include("core/constraint_template.jl")
+include("core/data.jl")
 
 include("form/acp.jl")
 include("form/dcp.jl")

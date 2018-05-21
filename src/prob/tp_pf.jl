@@ -33,7 +33,7 @@ function post_tp_pf(pm::GenericPowerModel)
 
         for (i,bus) in ref(pm, :ref_buses)
             @assert bus["bus_type"] == 3
-            PMs.constraint_theta_ref(pm, i, ph=h)
+            constraint_tp_theta_ref(pm, i, ph=h)
             PMs.constraint_voltage_magnitude_setpoint(pm, i, ph=h)
         end
 
@@ -53,8 +53,8 @@ function post_tp_pf(pm::GenericPowerModel)
         end
 
         for i in ids(pm, :branch)
-            constraint_ohms_yt_from(pm, i, ph=h)
-            constraint_ohms_yt_to(pm, i, ph=h)
+            constraint_ohms_tp_yt_from(pm, i, ph=h)
+            constraint_ohms_tp_yt_to(pm, i, ph=h)
         end
 
         for (i,dcline) in ref(pm, :dcline)

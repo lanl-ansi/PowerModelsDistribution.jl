@@ -26,7 +26,7 @@
         end
     end
     @testset "30-bus 3-phase case" begin
-        mp_data = PMs.parse_file("\.\./test/data/matlab/case30.m")
+        mp_data = PMs.parse_file("../test/data/matlab/case30.m")
         PMs.make_multiphase(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 

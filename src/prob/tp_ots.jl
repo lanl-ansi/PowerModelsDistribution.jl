@@ -20,7 +20,7 @@ function post_tp_ots(pm::GenericPowerModel)
         PMs.constraint_voltage_on_off(pm, ph=h)
 
         for i in ids(pm, :ref_buses)
-            PMs.constraint_theta_ref(pm, i, ph=h)
+            constraint_tp_theta_ref(pm, i, ph=h)
         end
 
         for i in ids(pm, :bus)
@@ -28,8 +28,8 @@ function post_tp_ots(pm::GenericPowerModel)
         end
 
         for i in ids(pm, :branch)
-            constraint_ohms_yt_from_on_off(pm, i, ph=h)
-            constraint_ohms_yt_to_on_off(pm, i, ph=h)
+            constraint_ohms_tp_yt_from_on_off(pm, i, ph=h)
+            constraint_ohms_tp_yt_to_on_off(pm, i, ph=h)
 
             PMs.constraint_voltage_angle_difference_on_off(pm, i, ph=h)
 
