@@ -23,8 +23,8 @@ function constraint_ohms_tp_yt_from(pm::GenericPowerModel{T}, n::Int, h::Int, f_
     g = g ./ tm^2
     b = b ./ tm^2
 
-    @NLconstraint(pm.model, p_fr ==  g_fr[h]*vm_fr[h]^2 + sum(g[h,i]*vm_fr[h]*vm_fr[i]*cos(va_fr[h]-va_fr[i]) for i in PMs.phase_ids(pm)) - sum((g[h,i]*ti[h]*cos(vm_fr[h]-vm_to[i])+b[h,i]*tr[h]*sin(vm_fr[h]-vm_to[i]))*vm_fr[h]*vm_to[i] for i in PMs.phase_ids(pm)) )
-    @NLconstraint(pm.model, q_fr == -b_fr[h]*vm_fr[h]^2 - sum(b[h,i]*vm_fr[h]*vm_fr[i]*cos(va_fr[h]-va_fr[i]) for i in PMs.phase_ids(pm)) - sum((g[h,i]*tr[h]*sin(vm_fr[h]-vm_to[i])-b[h,i]*ti[h]*cos(vm_fr[h]-vm_to[i]))*vm_fr[h]*vm_to[i] for i in PMs.phase_ids(pm)) )
+    @NLconstraint(pm.model, p_fr ==  g_fr[h]*vm_fr[h]^2 + sum(g[h,i]*vm_fr[h]*vm_fr[i]*cos(va_fr[h]-va_fr[i]) for i in PMs.phase_ids(pm)) + sum((-g[h,i]*tr[h]+b[h,i]*ti[h])*vm_fr[h]*vm_to[i]*cos(va_fr[h]-va_to[i]) + (-b[h,i]*tr[h]-g[h,i]*ti[h])*vm_fr[h]*vm_to[i]*sin(va_fr[h]-va_to[i]) for i in PMs.phase_ids(pm)) )
+    @NLconstraint(pm.model, q_fr == -b_fr[h]*vm_fr[h]^2 - sum(b[h,i]*vm_fr[h]*vm_fr[i]*cos(va_fr[h]-va_fr[i]) for i in PMs.phase_ids(pm)) - sum((-b[h,i]*tr[h]-g[h,i]*ti[h])*vm_fr[h]*vm_to[i]*cos(va_fr[h]-va_to[i]) - (-g[h,i]*tr[h]+b[h,i]*ti[h])*vm_fr[h]*vm_to[i]*sin(va_fr[h]-va_to[i]) for i in PMs.phase_ids(pm)) )
 end
 
 
@@ -47,8 +47,8 @@ function constraint_ohms_tp_yt_to(pm::GenericPowerModel{T}, n::Int, h::Int, f_bu
     g = g ./ tm^2
     b = b ./ tm^2
 
-    @NLconstraint(pm.model, p_to ==  g_to[h]*vm_to[h]^2 + sum(g[h, i]*vm_to[h]*vm_to[i]*cos(va_to[h]-va_to[i]) for i in PMs.phase_ids(pm)) - sum((g[h,i]*tr[h]*cos(vm_to[h]-vm_fr[i])+b[h,i]*ti[h]*sin(vm_to[h]-vm_fr[i]))*vm_to[h]*vm_fr[i] for i in PMs.phase_ids(pm)) )
-    @NLconstraint(pm.model, q_to == -b_to[h]*vm_to[h]^2 - sum(b[h, i]*vm_to[h]*vm_to[i]*cos(va_to[h]-va_to[i]) for i in PMs.phase_ids(pm)) - sum((g[h,i]*ti[h]*sin(vm_to[h]-vm_fr[i])-b[h,i]*tr[h]*cos(vm_to[h]-vm_fr[i]))*vm_to[h]*vm_fr[i] for i in PMs.phase_ids(pm)) )
+    @NLconstraint(pm.model, p_to ==  g_to[h]*vm_to[h]^2 + sum(g[h,i]*tm[h]^2*vm_to[h]*vm_to[i]*cos(va_to[h]-va_to[i]) for i in PMs.phase_ids(pm)) + sum((-g[h,i]*tr[h]-b[h,i]*ti[h])*vm_to[h]*vm_fr[i]*cos(va_to[h]-va_fr[i]) + (-b[h,i]*tr[h]+g[h,i]*ti[h])*vm_to[h]*vm_fr[i]*sin(va_to[h]-va_fr[i]) for i in PMs.phase_ids(pm)) )
+    @NLconstraint(pm.model, q_to == -b_to[h]*vm_to[h]^2 - sum(b[h,i]*tm[h]^2*vm_to[h]*vm_to[i]*cos(va_to[h]-va_to[i]) for i in PMs.phase_ids(pm)) - sum((-b[h,i]*tr[h]+g[h,i]*ti[h])*vm_to[h]*vm_fr[i]*cos(va_to[h]-va_fr[i]) - (-g[h,i]*tr[h]-b[h,i]*ti[h])*vm_to[h]*vm_fr[i]*sin(va_to[h]-va_fr[i]) for i in PMs.phase_ids(pm)) )
 end
 
 
@@ -73,8 +73,8 @@ function constraint_ohms_tp_yt_from_on_off(pm::GenericPowerModel{T}, n::Int, h::
     g = g ./ tm^2
     b = b ./ tm^2
 
-    @NLconstraint(pm.model, p_fr == z*( g_fr[h]*vm_fr[h]^2 + sum(g[h,i]*vm_fr[h]*vm_fr[i]*cos(va_fr[h]-va_fr[i]) for i in PMs.phase_ids(pm)) - sum((g[h,i]*ti[h]*cos(vm_fr[h]-vm_to[i])+b[h,i]*tr[h]*sin(vm_fr[h]-vm_to[i]))*vm_fr[h]*vm_to[i] for i in PMs.phase_ids(pm)) )
-    @NLconstraint(pm.model, q_fr == z*(-b_fr[h]*vm_fr[h]^2 - sum(b[h,i]*vm_fr[h]*vm_fr[i]*cos(va_fr[h]-va_fr[i]) for i in PMs.phase_ids(pm)) - sum((g[h,i]*tr[h]*sin(vm_fr[h]-vm_to[i])-b[h,i]*ti[h]*cos(vm_fr[h]-vm_to[i]))*vm_fr[h]*vm_to[i] for i in PMs.phase_ids(pm)) )
+    @NLconstraint(pm.model, p_fr == z*( g_fr[h]*vm_fr[h]^2 + sum(g[h,i]*vm_fr[h]*vm_fr[i]*cos(va_fr[h]-va_fr[i]) for i in PMs.phase_ids(pm)) + sum((-g[h,i]*tr[h]+b[h,i]*ti[h])*vm_fr[h]*vm_to[i]*cos(va_fr[h]-va_to[i]) + (-b[h,i]*tr[h]-g[h,i]*ti[h])*vm_fr[h]*vm_to[i]*sin(va_fr[h]-va_to[i]) for i in PMs.phase_ids(pm))) )
+    @NLconstraint(pm.model, q_fr == z*(-b_fr[h]*vm_fr[h]^2 - sum(b[h,i]*vm_fr[h]*vm_fr[i]*cos(va_fr[h]-va_fr[i]) for i in PMs.phase_ids(pm)) - sum((-b[h,i]*tr[h]-g[h,i]*ti[h])*vm_fr[h]*vm_to[i]*cos(va_fr[h]-va_to[i]) - (-g[h,i]*tr[h]+b[h,i]*ti[h])*vm_fr[h]*vm_to[i]*sin(va_fr[h]-va_to[i]) for i in PMs.phase_ids(pm))) )
 end
 
 """
@@ -95,8 +95,8 @@ function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel{T}, n::Int, h::In
     g = g ./ tm^2
     b = b ./ tm^2
 
-    @NLconstraint(pm.model, p_to == z*( g_to[h]*vm_to[h]^2 + sum(g[h, i]*vm_to[h]*vm_to[i]*cos(va_to[h]-va_to[i]) for i in PMs.phase_ids(pm)) - sum((g[h,i]*tr[h]*cos(vm_to[h]-vm_fr[i])+b[h,i]*ti[h]*sin(vm_to[h]-vm_fr[i]))*vm_to[h]*vm_fr[i] for i in PMs.phase_ids(pm)) )
-    @NLconstraint(pm.model, q_to == z*(-b_to[h]*vm_to[h]^2 - sum(b[h, i]*vm_to[h]*vm_to[i]*cos(va_to[h]-va_to[i]) for i in PMs.phase_ids(pm)) - sum((g[h,i]*ti[h]*sin(vm_to[h]-vm_fr[i])-b[h,i]*tr[h]*cos(vm_to[h]-vm_fr[i]))*vm_to[h]*vm_fr[i] for i in PMs.phase_ids(pm)) )
+    @NLconstraint(pm.model, p_to == z*( g_to[h]*vm_to[h]^2 + sum(g[h,i]*tm[h]^2*vm_to[h]*vm_to[i]*cos(va_to[h]-va_to[i]) for i in PMs.phase_ids(pm)) + sum((-g[h,i]*tr[h]-b[h,i]*ti[h])*vm_to[h]*vm_fr[i]*cos(va_to[h]-va_fr[i]) + (-b[h,i]*tr[h]+g[h,i]*ti[h])*vm_to[h]*vm_fr[i]*sin(va_to[h]-va_fr[i]) for i in PMs.phase_ids(pm))) )
+    @NLconstraint(pm.model, q_to == z*(-b_to[h]*vm_to[h]^2 - sum(b[h,i]*tm[h]^2*vm_to[h]*vm_to[i]*cos(va_to[h]-va_to[i]) for i in PMs.phase_ids(pm)) - sum((-b[h,i]*tr[h]+g[h,i]*ti[h])*vm_to[h]*vm_fr[i]*cos(va_to[h]-va_fr[i]) - (-g[h,i]*tr[h]-b[h,i]*ti[h])*vm_to[h]*vm_fr[i]*sin(va_to[h]-va_fr[i]) for i in PMs.phase_ids(pm))) )
 end
 
 
@@ -105,5 +105,5 @@ function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i) wh
     va = var(pm, n, h, :va, i)
     nphases = length(PMs.phase_ids(pm))
 
-    @constraint(pm.model, va == 2 * pi / nphases * (h - 1))
+    @constraint(pm.model, va == 0)#2 * pi / nphases * (h - 1))
 end

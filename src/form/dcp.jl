@@ -10,7 +10,7 @@ function constraint_ohms_tp_yt_from(pm::GenericPowerModel{T}, n::Int, h::Int, f_
     va_fr = [var(pm, n, i, :va, f_bus) for i in PMs.phase_ids(pm)]
     va_to = [var(pm, n, i, :va, t_bus) for i in PMs.phase_ids(pm)]
 
-    @constraint(pm.model, p_fr == -sum(b[h,i]*(va_fr[i] - va_to[i]) for i in PMs.phase_ids(pm)))
+    @constraint(pm.model, p_fr == -sum(b[h,i]*(va_fr[h] - va_to[i]) for i in PMs.phase_ids(pm)))
     # omit reactive constraint
 end
 
@@ -34,4 +34,12 @@ end
 
 "Do nothing, this model is symmetric"
 function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel{T}, n::Int, h::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max) where T <: PMs.AbstractDCPForm
+end
+
+
+function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i) where T <: PMs.AbstractDCPForm
+    va = var(pm, n, h, :va, i)
+    nphases = length(PMs.phase_ids(pm))
+
+    @constraint(pm.model, va == 0)#2 * pi / nphases * (h - 1))
 end
