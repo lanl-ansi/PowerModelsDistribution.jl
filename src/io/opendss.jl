@@ -7,48 +7,6 @@ components = ["linecode", "linegeometry", "line", "linespacing", "loadshape",
               "gictransformer", "gicline", "load", "generator", "indmach012",
               "storage", "capcontrol", "regcontrol", "energymeter", "monitor"]
 
-function warn_get(data, fname, default; valid = x -> true)
-    if haskey(data, fname)
-        value = data[fname]
-    else
-        warn("field $fname isn't present, setting to $default")
-        return default
-    end
-
-    if isa(value, typeof(default)) || isa(default, String)
-        x = value
-    elseif isa(value, String)
-        x = parse(typeof(default), value)
-    else
-        warn("Invalid type $(typeof(value)) of $fname, setting to $default")
-        return default
-    end
-
-    if valid(x)
-        return x
-    end 
-
-    warn("Invalid value $x of $fname, setting to $default")
-    return default
-end
-
-
-function warn_pop!(data, fname, default; dtype=nothing)
-    value = default
-
-    if haskey(data, fname)
-        value = pop!(data, fname)
-    else
-        warn("field $fname isn't present, setting to $default")
-    end
-
-    if dtype === nothing
-        return value
-    end
-
-    return parse(dtype, value)
-end
-
 
 """
     get_prop_default(ctype)
@@ -145,8 +103,6 @@ function get_prop_default(ctype::String)::Dict
 
     vsource = Dict{String,Any}()
 
-    linecode = Dict{String,Any}()
-
     ctypes = Dict{String, Dict}("line" => line,
                                 "load" => load,
                                 "linecode" => linecode,
@@ -233,6 +189,37 @@ Returns the `i`th property name for a given component type `ctype`.
 """
 function get_prop_name(ctype::AbstractString, i::Int)::String
     return get_prop_name(ctype)[i]
+end
+
+
+"""
+    warn_get(data, fname, default; valid)
+
+TODO: add docstring explanation
+"""
+function warn_get(data, field, default; valid = x -> true)
+    if haskey(data, field)
+        value = data[field]
+    else
+        warn("field $field isn't present, setting to $default")
+        return default
+    end
+
+    if isa(value, typeof(default)) || isa(default, String)
+        x = value
+    elseif isa(value, String)
+        x = parse(typeof(default), value)
+    else
+        warn("Invalid type $(typeof(value)) of $field, setting to $default")
+        return default
+    end
+
+    if valid(x)
+        return x
+    else
+        warn("Invalid value $x of $field, setting to $default")
+        return default
+    end
 end
 
 
@@ -739,8 +726,8 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
         nphases = sum(nodes[1:3])
 
-        busDict["bus_i"] = n  # TODO: how to properly index?
-        busDict["index"] = n  # TODO: how to properly index?
+        busDict["bus_i"] = n
+        busDict["index"] = n
         busDict["name"] = bus
 
         busDict["vm"] = ones(nphases)  # TODO: zeros(numPhases)?
@@ -948,65 +935,39 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict = Dict{String,Any}()
 
-            nphases = warn_get(dss_data, "phases", 3, valid = x -> x > 0)
+            nphases = defaults["phases"]
 
             branchDict["name"] = defaults["id"]
 
             branchDict["f_bus"] = find_bus(defaults["bus1"], tppm_data)
             branchDict["t_bus"] = find_bus(defaults["bus2"], tppm_data)
 
-            line_length = warn_get(line, "length", 1.0, valid = x -> x > 0.0)
-            branchDict["length"] = line_length
-            linecode = warn_get(line, "linecode", "oh_horiz_3ph_4/0ph_1/0neu")
-            branchDict["linecode"] = linecode
-
-            # need to read in impedance matrices from linecode
+            branchDict["length"] = line_length = defaults["length"]
+            branchDict["linecode"] = linecode = warn_get(defaults, "linecode", "oh_horiz_3ph_4/0ph_1/0neu")
 
             branchDict["br_r"] = parse_matrix(Float64, defaults["rmatrix"])*line_length
             branchDict["br_x"] = parse_matrix(Float64, defaults["xmatrix"])*line_length
 
-            if haskey(dss_data, "rmatrix")
-                branchDict["br_r"] = parse_matrix(Float64, dss_data["rmatrix"])*line_length
-            else
-                warn("rmatrix not present, setting to default")
-            end
-
-            if haskey(dss_data, "xmatrix")
-                branchDict["br_"] = parse_matrix(Float64, dss_data["matrix"])*line_length
-            else
-                warn("matrix not present, setting to default")
-            end
-
-
-            # TODO: cmatrix, from linecode?
-            branchDict["g_fr"] = zeros(nphases, nphases)  # TODO:
-            branchDict["b_fr"] = zeros(nphases, nphases)  # TODO:
-            branchDict["g_to"] = zeros(nphases, nphases)  # TODO:
-            branchDict["b_to"] = zeros(nphases, nphases)  # TODO:
-
-            if haskey(dss_data, "cmatrix")
-                C_nf = parse_matrix(Float64, dss_data["cmatrix"])*line_length
-                C = C/1e9
-                G = 1.0/(2.0*pi*60.0*C)
-                Gpu = Zbase*G
-                branchDict["g_fr"] = Gpu/2.0
-                branchDict["g_to"] = Gpu/2.0
-            end
-
+            c_nf = parse_matrix(Float64, defaults["cmatrix"])
+            Zbase = 1.0  # TODO: need to define
+            branchDict["g_fr"] = Zbase*1.0./(2.0*pi*60.0*c_nf*line_length/1e9)/2.0
+            branchDict["g_to"] = Zbase*1.0./(2.0*pi*60.0*c_nf*line_length/1e9)/2.0
+            branchDict["b_fr"] = zeros(nphases, nphases)  # TODO: need to derive
+            branchDict["b_to"] = zeros(nphases, nphases)  # TODO: need to derive
 
             # TODO: find out if this is per phase limit or across all phases
             # TODO: pick a better value for emergamps
-            branchDict["rate_a"] = ones(nphases)*warn_get(dss_data, "normamps", 600.0; valid = x -> x > 0.0)
-            branchDict["rate_b"] = ones(nphases)*warn_get(dss_data, "emergamps", 600.0; valid = x -> x > 0.0)
-            branchDict["rate_c"] = ones(nphases)*warn_get(dss_data, "emergamps", 600.0; valid = x -> x > 0.0)
+            branchDict["rate_a"] = ones(nphases)*defaults["normamps"]
+            branchDict["rate_b"] = ones(nphases)*defaults["emergamps"]
+            branchDict["rate_c"] = ones(nphases)*defaults["emergamps"]
 
-            branchDict["tap"] = ones(nphases)  
-            branchDict["shift"] = zeros(nphases)  
+            branchDict["tap"] = ones(nphases)
+            branchDict["shift"] = zeros(nphases)
 
-            branchDict["br_status"] = warn_get(dss_data, "active", 1)
+            branchDict["br_status"] = convert(Int, defaults["enabled"])
 
-            branchDict["angmin"] = zeros(nphases)  
-            branchDict["angmax"] = zeros(nphases) 
+            branchDict["angmin"] = zeros(nphases)
+            branchDict["angmax"] = zeros(nphases)
 
             branchDict["transformer"] = false
 
@@ -1030,7 +991,7 @@ component.
 """
 function update_lookup_structure!(tppm_data::Dict)
     for (k, v) in tppm_data
-        if isa(v, Array)
+        if isa(v, Array) && k != "files"
             dict = Dict{String,Any}()
             for item in v
                 assert("index" in keys(item))
@@ -1046,7 +1007,9 @@ end
 function parse_opendss(dss_data::Dict; import_all::Bool=false)::Dict
     tppm_data = Dict{String,Any}()
 
-    parse_dss_with_dtypes!(dss_data, ["line", "load", "generator", "capacitor", "reactor"])
+    parse_dss_with_dtypes!(dss_data, ["line", "linecode", "load", "generator", "capacitor",
+                                      "reactor"
+                                     ])
 
     tppm_data["per_unit"] = false
     tppm_data["source_type"] = "dss"
