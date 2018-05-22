@@ -17,14 +17,16 @@ function constraint_ohms_tp_yt_from(pm::GenericPowerModel{T}, n::Int, h::Int, f_
     va_fr = [var(pm, n, j, :va, f_bus) for j in PMs.phase_ids(pm)]
     va_to = [var(pm, n, j, :va, t_bus) for j in PMs.phase_ids(pm)]
 
-    g_fr = g_fr ./ tm^2
-    b_fr = b_fr ./ tm^2
-
-    g = g ./ tm^2
-    b = b ./ tm^2
-
-    @NLconstraint(pm.model, p_fr ==  g_fr[h]*vm_fr[h]^2 + sum(g[h,i]*vm_fr[h]*vm_fr[i]*cos(va_fr[h]-va_fr[i]) for i in PMs.phase_ids(pm)) + sum((-g[h,i]*tr[h]+b[h,i]*ti[h])*vm_fr[h]*vm_to[i]*cos(va_fr[h]-va_to[i]) + (-b[h,i]*tr[h]-g[h,i]*ti[h])*vm_fr[h]*vm_to[i]*sin(va_fr[h]-va_to[i]) for i in PMs.phase_ids(pm)) )
-    @NLconstraint(pm.model, q_fr == -b_fr[h]*vm_fr[h]^2 - sum(b[h,i]*vm_fr[h]*vm_fr[i]*cos(va_fr[h]-va_fr[i]) for i in PMs.phase_ids(pm)) - sum((-b[h,i]*tr[h]-g[h,i]*ti[h])*vm_fr[h]*vm_to[i]*cos(va_fr[h]-va_to[i]) - (-g[h,i]*tr[h]+b[h,i]*ti[h])*vm_fr[h]*vm_to[i]*sin(va_fr[h]-va_to[i]) for i in PMs.phase_ids(pm)) )
+    @NLconstraint(pm.model, p_fr ==  g_fr[h]*vm_fr[h]^2 + sum(
+                                        g[h,i]*vm_fr[h]*vm_fr[i]*cos(va_fr[h]-va_fr[i]) +
+                                        b[h,i]*vm_fr[h]*vm_fr[i]*sin(va_fr[h]-va_fr[i]) -
+                                        g[h,i]*vm_fr[h]*vm_to[i]*cos(va_fr[h]-va_to[i]) -
+                                        b[h,i]*vm_fr[h]*vm_to[i]*sin(va_fr[h]-va_to[i]) for i in PMs.phase_ids(pm)) )
+    @NLconstraint(pm.model, q_fr == -b_fr[h]*vm_fr[h]^2 - sum(
+                                        b[h,i]*vm_fr[h]*vm_fr[i]*cos(va_fr[h]-va_fr[i]) -
+                                        g[h,i]*vm_fr[h]*vm_fr[i]*sin(va_fr[h]-va_fr[i]) -
+                                        b[h,i]*vm_fr[h]*vm_to[i]*cos(va_fr[h]-va_to[i]) +
+                                        g[h,i]*vm_fr[h]*vm_to[i]*sin(va_fr[h]-va_to[i]) for i in PMs.phase_ids(pm)) )
 end
 
 
@@ -44,11 +46,16 @@ function constraint_ohms_tp_yt_to(pm::GenericPowerModel{T}, n::Int, h::Int, f_bu
     va_fr = [var(pm, n, j, :va, f_bus) for j in PMs.phase_ids(pm)]
     va_to = [var(pm, n, j, :va, t_bus) for j in PMs.phase_ids(pm)]
 
-    g = g ./ tm^2
-    b = b ./ tm^2
-
-    @NLconstraint(pm.model, p_to ==  g_to[h]*vm_to[h]^2 + sum(g[h,i]*tm[h]^2*vm_to[h]*vm_to[i]*cos(va_to[h]-va_to[i]) for i in PMs.phase_ids(pm)) + sum((-g[h,i]*tr[h]-b[h,i]*ti[h])*vm_to[h]*vm_fr[i]*cos(va_to[h]-va_fr[i]) + (-b[h,i]*tr[h]+g[h,i]*ti[h])*vm_to[h]*vm_fr[i]*sin(va_to[h]-va_fr[i]) for i in PMs.phase_ids(pm)) )
-    @NLconstraint(pm.model, q_to == -b_to[h]*vm_to[h]^2 - sum(b[h,i]*tm[h]^2*vm_to[h]*vm_to[i]*cos(va_to[h]-va_to[i]) for i in PMs.phase_ids(pm)) - sum((-b[h,i]*tr[h]+g[h,i]*ti[h])*vm_to[h]*vm_fr[i]*cos(va_to[h]-va_fr[i]) - (-g[h,i]*tr[h]-b[h,i]*ti[h])*vm_to[h]*vm_fr[i]*sin(va_to[h]-va_fr[i]) for i in PMs.phase_ids(pm)) )
+    @NLconstraint(pm.model, p_to ==  g_to[h]*vm_to[h]^2 + sum(
+                                        g[h,i]*vm_to[h]*vm_to[i]*cos(va_to[h]-va_to[i]) +
+                                        b[h,i]*vm_to[h]*vm_to[i]*sin(va_to[h]-va_to[i]) -
+                                        g[h,i]*vm_to[h]*vm_fr[i]*cos(va_to[h]-va_fr[i]) -
+                                        b[h,i]*vm_to[h]*vm_fr[i]*sin(va_to[h]-va_fr[i]) for i in PMs.phase_ids(pm)) )
+    @NLconstraint(pm.model, q_to == -b_to[h]*vm_to[h]^2 - sum(
+                                        b[h,i]*vm_to[h]*vm_to[i]*cos(va_to[h]-va_to[i]) -
+                                        g[h,i]*vm_to[h]*vm_to[i]*sin(va_to[h]-va_to[i]) -
+                                        b[h,i]*vm_to[h]*vm_fr[i]*cos(va_to[h]-va_fr[i]) +
+                                        g[h,i]*vm_to[h]*vm_fr[i]*sin(va_to[h]-va_fr[i]) for i in PMs.phase_ids(pm)) )
 end
 
 
