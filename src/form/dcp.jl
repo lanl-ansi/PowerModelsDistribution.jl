@@ -41,5 +41,5 @@ function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i) wh
     va = var(pm, n, h, :va, i)
     nphases = length(PMs.phase_ids(pm))
 
-    @constraint(pm.model, va == 0)#2 * pi / nphases * (h - 1))
+    @constraint(pm.model, va == 2 * pi / nphases * (h - 1))
 end

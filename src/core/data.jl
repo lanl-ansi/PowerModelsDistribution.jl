@@ -9,20 +9,10 @@ function shift_phase_angles!(data::Dict{String,Any})
         for k in keys(data["bus"])
             data["bus"][k]["va"] += angshift
         end
-
-        for k in keys(data["branch"])
-            data["branch"][k]["angmin"] += angshift
-            data["branch"][k]["angmax"] += angshift
-        end
         data["phases_offset"] = true
     elseif data["phases_offset"]
         for k in keys(data["bus"])
             data["bus"][k]["va"] -= angshift
-        end
-
-        for k in keys(data["branch"])
-            data["branch"][k]["angmin"] -= angshift
-            data["branch"][k]["angmax"] -= angshift
         end
         data["phases_offset"] = false
     end
