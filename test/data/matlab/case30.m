@@ -1,4 +1,4 @@
-% NESTA v0.6.0
+% NESTA v0.6.0, transformers removed
 function mpc = nesta_case30_ieee
 mpc.version = '2';
 mpc.baseMVA = 100.0;

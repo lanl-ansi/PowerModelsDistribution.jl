@@ -1,9 +1,6 @@
-% NESTA v0.6.0
+% NESTA v0.6.0, transformers removed
 % used in tests of,
-% - non-contiguous bus ids
-% - tranformer orentation swapping
-% - dual values 
-%
+% - three phase creation with make_multiphase
 
 function mpc = nesta_case5_pjm
 mpc.version = '2';
