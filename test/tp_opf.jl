@@ -3,7 +3,6 @@
     @testset "3-bus 3-phase case" begin
         mp_data = PMs.parse_file("../test/data/matlab/case3.m")
         PMs.make_multiphase(mp_data, 3)
-        ThreePhasePowerModels.shift_phase_angles!(mp_data)
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
@@ -17,7 +16,6 @@
     @testset "5-bus 5-phase ac case" begin
         mp_data = PMs.parse_file("../test/data/matlab/case5.m")
         PMs.make_multiphase(mp_data, 3)
-        ThreePhasePowerModels.shift_phase_angles!(mp_data)
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
@@ -31,7 +29,6 @@
     @testset "5-bus 5-phase soc case" begin
         mp_data = PMs.parse_file("../test/data/matlab/case5.m")
         PMs.make_multiphase(mp_data, 3)
-        ThreePhasePowerModels.shift_phase_angles!(mp_data)
         result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
@@ -44,7 +41,6 @@
     @testset "30-bus 3-phase ac case" begin
         mp_data = PMs.parse_file("../test/data/matlab/case30.m")
         PMs.make_multiphase(mp_data, 3)
-        ThreePhasePowerModels.shift_phase_angles!(mp_data)
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
@@ -59,7 +55,6 @@
     @testset "30-bus 3-phase soc case" begin
         mp_data = PMs.parse_file("../test/data/matlab/case30.m")
         PMs.make_multiphase(mp_data, 3)
-        ThreePhasePowerModels.shift_phase_angles!(mp_data)
         result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal

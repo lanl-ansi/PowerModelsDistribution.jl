@@ -2,7 +2,6 @@
     @testset "3-bus 3-phase case" begin
         mp_data = PMs.parse_file("../test/data/matlab/case3.m")
         PMs.make_multiphase(mp_data, 3)
-        ThreePhasePowerModels.shift_phase_angles!(mp_data)
         result = run_tp_ots(mp_data, PMs.ACPPowerModel, juniper_solver)
 
         @test result["status"] == :LocalOptimal
@@ -29,7 +28,6 @@ end
         @testset "3-bus 3-phase case" begin
             mp_data = PMs.parse_file("../test/data/matlab/case3.m")
             PMs.make_multiphase(mp_data, 3)
-            ThreePhasePowerModels.shift_phase_angles!(mp_data)
             result = run_tp_ots(mp_data, PMs.DCPPowerModel, pajarito_solver)
 
             @test result["status"] == :Optimal
@@ -39,7 +37,6 @@ end
         @testset "5-bus 3-phase case" begin
             mp_data = PMs.parse_file("../test/data/matlab/case5.m")
             PMs.make_multiphase(mp_data, 3)
-            ThreePhasePowerModels.shift_phase_angles!(mp_data)
             result = run_tp_ots(mp_data, PMs.DCPPowerModel, pajarito_solver)
 
             @test result["status"] == :Optimal
