@@ -101,9 +101,6 @@ function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel{T}, n::Int, h::In
     va_to = [var(pm, n, j, :va, t_bus) for j in PMs.phase_ids(pm)]
     z = var(pm, n, h, :branch_z, i)
 
-    g = g ./ tm^2
-    b = b ./ tm^2
-
     @NLconstraint(pm.model, p_to == z*( g_to[h]*vm_to[h]^2 + sum(
                                         g[h,i]*vm_to[h]*vm_to[i]*cos(va_to[h]-va_to[i]) +
                                         b[h,i]*vm_to[h]*vm_to[i]*sin(va_to[h]-va_to[i]) -
