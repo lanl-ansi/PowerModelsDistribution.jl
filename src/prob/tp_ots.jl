@@ -2,7 +2,7 @@ export run_tp_ots
 
 ""
 function run_tp_ots(file, model_constructor, solver; kwargs...)
-    return run_generic_tp_model(file, model_constructor, solver, post_tp_ots; solution_builder=get_ots_solution, kwargs...)
+    return run_generic_tp_model(file, model_constructor, solver, post_tp_ots; solution_builder=PMs.get_ots_solution, kwargs...)
 end
 
 
@@ -43,13 +43,4 @@ function post_tp_ots(pm::GenericPowerModel)
     end
 
     PMs.objective_min_fuel_cost(pm)
-end
-
-
-""
-function get_ots_solution(pm::GenericPowerModel, sol::Dict{String,Any})
-    PMs.add_bus_voltage_setpoint(sol, pm)
-    PMs.add_generator_power_setpoint(sol, pm)
-    PMs.add_branch_flow_setpoint(sol, pm)
-    PMs.add_branch_status_setpoint(sol, pm)
 end
