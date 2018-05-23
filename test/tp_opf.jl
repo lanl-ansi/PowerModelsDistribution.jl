@@ -16,15 +16,15 @@
     end
     @testset "5-bus 5-phase case" begin
         mp_data = PMs.parse_file("../test/data/matlab/case5.m")
-        PMs.make_multiphase(mp_data, 5)
+        PMs.make_multiphase(mp_data, 3)
         ThreePhasePowerModels.shift_phase_angles!(mp_data)
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 91345.5; atol = 1e-1)
+        @test isapprox(result["objective"], 45522.096; atol = 1e-1)
         for ph in 1:mp_data["phases"]
-            @test isapprox(result["solution"]["gen"]["1"]["pg"][ph],  0.4; atol = 1e-3)
-            @test isapprox(result["solution"]["bus"]["2"]["va"][ph], -0.00103692+2*pi/mp_data["phases"]*(ph-1); atol = 1e-5)
+            @test isapprox(result["solution"]["gen"]["1"]["pg"][ph],  0.3999999; atol = 1e-3)
+            @test isapprox(result["solution"]["bus"]["2"]["va"][ph], -0.0538204+2*pi/mp_data["phases"]*(ph-1); atol = 1e-5)
         end
     end
     @testset "30-bus 3-phase case" begin
@@ -34,11 +34,11 @@
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 614.905; atol = 1e-1)
+        @test isapprox(result["objective"], 614.007; atol = 1e-1)
 
         for ph in 1:mp_data["phases"]
-            @test isapprox(result["solution"]["gen"]["1"]["pg"][ph],  2.18839; atol = 1e-3)
-            @test isapprox(result["solution"]["bus"]["2"]["va"][ph], -0.071759+2*pi/mp_data["phases"]*(ph-1); atol = 1e-4)
+            @test isapprox(result["solution"]["gen"]["1"]["pg"][ph],  2.192189; atol = 1e-3)
+            @test isapprox(result["solution"]["bus"]["2"]["va"][ph], -0.071853+2*pi/mp_data["phases"]*(ph-1); atol = 1e-4)
         end
     end
 end

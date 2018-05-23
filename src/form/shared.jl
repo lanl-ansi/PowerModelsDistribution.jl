@@ -11,8 +11,14 @@ function constraint_ohms_tp_yt_from(pm::GenericPowerModel{T}, n::Int, h::Int, f_
     wr   = [var(pm, n, j, :wr, (f_bus, t_bus)) for j in PMs.phase_ids(pm)]
     wi   = [var(pm, n, j, :wi, (f_bus, t_bus)) for j in PMs.phase_ids(pm)]
 
-    @constraint(pm.model, p_fr ==  g_fr[h]/tm[h]^2*w_fr[h] + sum(g[h,i]/tm[h]^2*w_fr[i] for i in PMs.phase_ids(pm)) + sum((-g[h,i]*tr[h]+b[h,i]*ti[h])/tm[h]^2*wr[i] + (-b[h,i]*tr[h]-g[h,i]*ti[h])/tm[h]^2*wi[i] for i in PMs.phase_ids(pm)) )
-    @constraint(pm.model, q_fr == -b_fr[h]/tm[h]^2*w_fr[h] - sum(b[h,i]/tm[h]^2*w_fr[i] for i in PMs.phase_ids(pm)) - sum((-b[h,i]*tr[h]-g[h,i]*ti[h])/tm[h]^2*wr[i] + (-g[h,i]*tr[h]+b[h,i]*ti[h])/tm[h]^2*wi[i] for i in PMs.phase_ids(pm)) )
+    @constraint(pm.model, p_fr ==  g_fr[h]*w_fr[h] + sum(
+                                    g[h,i]*w_fr[i] -
+                                    g[h,i]*wr[i] -
+                                    b[h,i]*wi[i] for i in PMs.phase_ids(pm)) )
+    @constraint(pm.model, q_fr == -b_fr[h]*w_fr[h] + sum(
+                                   -b[h,i]*w_fr[i] +
+                                    b[h,i]*wr[i] -
+                                    g[h,i]*wi[i] for i in PMs.phase_ids(pm)) )
 end
 
 
@@ -26,8 +32,14 @@ function constraint_ohms_tp_yt_to(pm::GenericPowerModel{T}, n::Int, h::Int, f_bu
     wr   = [var(pm, n, j, :wr, (f_bus, t_bus)) for j in PMs.phase_ids(pm)]
     wi   = [var(pm, n, j, :wi, (f_bus, t_bus)) for j in PMs.phase_ids(pm)]
 
-    @constraint(pm.model, p_to ==  g_to[h]*w_to[h] + sum(g[h,i]*w_to[i] for i in PMs.phase_ids(pm)) + sum((-g[h,i]*tr[h]-b[h,i]*ti[h])/tm[h]^2*wr[i] + (-b[h,i]*tr[h]+g[h,i]*ti[h])/tm[h]^2*-wi[i] for i in PMs.phase_ids(pm)) )
-    @constraint(pm.model, q_to == -b_to[h]*w_to[h] - sum(b[h,i]*w_to[i] for i in PMs.phase_ids(pm)) - sum((-b[h,i]*tr[h]+g[h,i]*ti[h])/tm[h]^2*wr[i] + (-g[h,i]*tr[h]-b[h,i]*ti[h])/tm[h]^2*-wi[i] for i in PMs.phase_ids(pm)) )
+    @constraint(pm.model, p_to ==  g_to[h]*w_to[h] + sum(
+                                    g[h,i]*w_to[i] -
+                                    g[h,i]*wr[i] -
+                                    b[h,i]*-wi[i] for i in PMs.phase_ids(pm)) )
+    @constraint(pm.model, q_to == -b_to[h]*w_to[h] + sum(
+                                   -b[h,i]*w_to[i] +
+                                    b[h,i]*wr[i] -
+                                    g[h,i]*-wi[i] for i in PMs.phase_ids(pm)) )
 end
 
 
