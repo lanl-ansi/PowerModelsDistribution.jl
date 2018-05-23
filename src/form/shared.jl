@@ -44,5 +44,14 @@ end
 
 
 "do nothing, no way to represent this in these variables"
-function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i) where T <: PMs.AbstractWRForms
+function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i) where T <: PMs.AbstractWForms
+end
+
+
+"Creates phase angle constraints at reference buses"
+function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i) where T <: PMs.AbstractPForms
+    va = var(pm, n, h, :va, i)
+    nphases = length(PMs.phase_ids(pm))
+
+    @constraint(pm.model, va == 2 * pi / nphases * (h - 1))
 end

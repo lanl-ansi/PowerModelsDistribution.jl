@@ -112,12 +112,3 @@ function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel{T}, n::Int, h::In
                                         b[h,i]*vm_to[h]*vm_fr[i]*cos(va_to[h]-va_fr[i]) +
                                         g[h,i]*vm_to[h]*vm_fr[i]*sin(va_to[h]-va_fr[i]) for i in PMs.phase_ids(pm)) ) )
 end
-
-
-""
-function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i) where T <: PMs.AbstractACPForm
-    va = var(pm, n, h, :va, i)
-    nphases = length(PMs.phase_ids(pm))
-
-    @constraint(pm.model, va == 2 * pi / nphases * (h - 1))
-end
