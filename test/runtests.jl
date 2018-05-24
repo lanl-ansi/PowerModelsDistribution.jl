@@ -34,4 +34,6 @@ pajarito_solver = PajaritoSolver(mip_solver=cbc_solver, cont_solver=ipopt_solver
     include("tp_ots.jl")
 
     include("tp_pf.jl")
+
+    include("tp_opf_bf.jl")
 end

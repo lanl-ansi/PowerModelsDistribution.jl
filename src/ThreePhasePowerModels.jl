@@ -17,6 +17,7 @@ include("core/constraint_template.jl")
 
 include("form/acp.jl")
 include("form/dcp.jl")
+include("form/df.jl")
 include("form/shared.jl")
 include("form/wr.jl")
 
@@ -24,6 +25,7 @@ include("io/matlab.jl")
 include("io/common.jl")
 
 include("prob/tp_opf.jl")
+include("prob/tp_opf_bf.jl")
 include("prob/tp_ots.jl")
 include("prob/tp_pf.jl")
 

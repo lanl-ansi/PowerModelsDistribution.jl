@@ -83,3 +83,21 @@ end
 function constraint_tp_theta_ref(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, ph::Int=pm.cph)
     constraint_tp_theta_ref(pm, nw, ph, i)
 end
+
+
+""
+function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, ph::Int=pm.cph)
+    branch = ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+    t_idx = (i, t_bus, f_bus)
+
+    r = branch["br_r"]
+    x = branch["br_x"]
+    g_sh_fr = branch["g_fr"]
+    b_sh_fr = branch["b_fr"]
+    tm = branch["tap"]
+
+    constraint_tp_voltage_magnitude_difference(pm, nw, ph, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
+end
