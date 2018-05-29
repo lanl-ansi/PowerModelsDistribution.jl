@@ -15,6 +15,12 @@ function roll(array::Array{T, 1}, idx::Int; right=true) where T <: Number
 end
 
 
+""
+function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: PMs.AbstractDFForm
+    PMs.variable_voltage_magnitude_sqr(pm; kwargs...)
+end
+
+
 """
 Defines voltage drop over a branch, linking from and to side voltage magnitude
 """

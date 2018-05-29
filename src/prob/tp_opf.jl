@@ -13,14 +13,14 @@ end
 ""
 function post_tp_opf(pm::GenericPowerModel)
     for h in PMs.phase_ids(pm)
-        PMs.variable_voltage(pm, ph=h)
+        variable_tp_voltage(pm, ph=h)
         PMs.variable_generation(pm, ph=h)
         PMs.variable_branch_flow(pm, ph=h)
         PMs.variable_dcline_flow(pm, ph=h)
     end
 
     for h in PMs.phase_ids(pm)
-        PMs.constraint_voltage(pm, ph=h)
+        constraint_tp_voltage(pm, ph=h)
 
         for i in ids(pm, :ref_buses)
             constraint_tp_theta_ref(pm, i, ph=h)

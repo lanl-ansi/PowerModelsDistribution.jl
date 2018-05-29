@@ -1,6 +1,36 @@
 # Three-phase specific constraints
 
 
+""
+function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: PMs.AbstractWRForm
+    variable_tp_voltage_magnitude_sqr(pm; kwargs...)
+    variable_tp_voltage_product(pm; kwargs...)
+
+    # PMs.variable_voltage_magnitude_sqr(pm; kwargs...)
+    # PMs.variable_voltage_product(pm; kwargs...)
+end
+
+
+""
+function constraint_tp_voltage(pm::GenericPowerModel{T}, n::Int, h::Int) where T <: PMs.AbstractWRForm
+    w  = var(pm, n,  :w)
+    wr = var(pm, n, :wr)
+    wi = var(pm, n, :wi)
+
+    for g in PMs.phase_ids(pm)
+        for (i,j) in ids(pm, n, :buspairs)
+            InfrastructureModels.relaxation_complex_product(pm.model, w[(i,g)], w[(j,h)], wr[(i,j,h,g)], wi[(i,j,h,g)])
+        end
+
+        if g != h
+            for i in ids(pm, n, :bus)
+                InfrastructureModels.relaxation_complex_product(pm.model, w[(i,g)], w[(i,h)], wr[(i,i,h,g)], wi[(i,i,h,g)])
+            end
+        end
+    end
+end
+
+
 """
 Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
 

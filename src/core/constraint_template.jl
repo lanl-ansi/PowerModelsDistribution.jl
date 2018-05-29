@@ -2,6 +2,12 @@
 
 
 ""
+function constraint_tp_voltage(pm::GenericPowerModel; nw::Int=pm.cnw, ph::Int=pm.cph)
+    constraint_tp_voltage(pm, nw, ph)
+end
+
+
+""
 function constraint_ohms_tp_yt_from(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, ph::Int=pm.cph)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
