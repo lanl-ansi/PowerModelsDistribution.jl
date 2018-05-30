@@ -192,6 +192,20 @@ function get_prop_name(ctype::AbstractString, i::Int)::String
 end
 
 
+""
+function get_linecode(dss_data::Dict, id::String)
+    if haskey(dss_data, "linecode")
+        for item in dss_data["linecode"]
+            if item["id"] == id
+                return item
+            end
+        end
+    end
+
+    return Void
+end
+
+
 """
     warn_get(data, fname, default; valid)
 
@@ -928,10 +942,16 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     end
 
     defaults = get_prop_default("line")
+    lc_defaults = get_prop_default("linecode")
 
     if haskey(dss_data, "line")
         for line in dss_data["line"]
             merge!(defaults, line)
+
+            linecode = get_linecode(defaults["id"])
+            if linecode != Void
+                merge!(lc_defaults, linecode)
+            end
 
             branchDict = Dict{String,Any}()
 
