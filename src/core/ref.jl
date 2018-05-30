@@ -8,8 +8,8 @@ function calc_tp_voltage_product_bounds(pm::GenericPowerModel, buspairs; nw::Int
     for (i, j, h, g) in buspairs
         if i == j
             bus = ref(pm, nw, :bus)[i]
-            angmin = 0
-            angmax = pi/2
+            angmin = -1.0472
+            angmax =  1.0472
             vm_fr_max = getmpv(bus["vmax"], h)
             vm_to_max = getmpv(bus["vmax"], g)
             vm_fr_min = getmpv(bus["vmin"], h)
