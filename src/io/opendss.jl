@@ -734,7 +734,6 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     buses = discover_buses(dss_data)
 
     # TODO: merge with defaults, overriding where necessary
-    # TODO: handle "sourcebus" (created with the circuit object)
     for (n, (bus, nodes)) in enumerate(buses)
         busDict = Dict{String,Any}()
 
@@ -744,13 +743,15 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
         busDict["index"] = n
         busDict["name"] = bus
 
-        busDict["vm"] = ones(nphases)  # TODO: zeros(numPhases)?
-        busDict["va"] = zeros(nphases)  # TODO: zeros(numPhases)?
+        busDict["bus_type"] = bus == "sourcebus" ? 3 : 1
 
-        busDict["vmin"] = 0.9 * ones(nphases)  # TODO: implicit limits? 10%
-        busDict["vmax"] = 1.1 * ones(nphases)  # TODO: implicit limits?
+        busDict["vm"] = ones(nphases)
+        busDict["va"] = zeros(nphases)
 
-        busDict["base_kv"] = NaN  # TODO:
+        busDict["vmin"] = 0.9 * ones(nphases)
+        busDict["vmax"] = 1.1 * ones(nphases)
+
+        busDict["base_kv"] = tppm_data["basekv"]
 
         push!(tppm_data["bus"], busDict)
     end
