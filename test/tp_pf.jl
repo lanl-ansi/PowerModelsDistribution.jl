@@ -1,6 +1,13 @@
 @testset "test ac polar pf" begin
-    @testset "5-bus meshed networks" begin
+    @testset "5-bus meshed network diagonal" begin
         result = run_ac_tp_pf("../test/data/matlab/case5_i_m_b.m", ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.0; atol=1e-2)
+    end
+
+    @testset "5-bus meshed network off-diagonal" begin
+        result = run_ac_tp_pf("../test/data/matlab/case5_i_m_c.m", ipopt_solver)
 
         @test result["status"] == :LocalOptimal
         @test isapprox(result["objective"], 0.0; atol=1e-2)

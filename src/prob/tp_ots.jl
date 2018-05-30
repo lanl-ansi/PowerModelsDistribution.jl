@@ -1,8 +1,15 @@
 export run_tp_ots
 
 ""
-function run_tp_ots(file, model_constructor, solver; kwargs...)
-    return run_generic_tp_model(file, model_constructor, solver, post_tp_ots; solution_builder=PMs.get_ots_solution, kwargs...)
+function run_tp_ots(data::Dict{String,Any}, model_constructor, solver; kwargs...)
+    return PMs.run_generic_model(data, model_constructor, solver, post_tp_ots; multiphase=true, solution_builder=PMs.get_ots_solution, kwargs...)
+end
+
+
+""
+function run_tp_ots(file::String, model_constructor, solver; kwargs...)
+    data = ThreePhasePowerModels.parse_file(file)
+    return PMs.run_generic_model(data, model_constructor, solver, post_tp_ots; multiphase=true, solution_builder=PMs.get_ots_solution, kwargs...)
 end
 
 

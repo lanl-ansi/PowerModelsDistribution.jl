@@ -26,7 +26,7 @@ end
 
 ""
 function variable_tp_voltage_product(pm::GenericPowerModel; nw::Int=pm.cnw, ph::Int=pm.cph, bounded=true)
-    bp_phf_pht = [(i..., h, g) for i in keys(ref(pm, nw, :buspairs)) for h in PMs.phase_ids(pm) for g in PMs.phase_ids(pm)]
+    bp_phf_pht = [(i, j, h, g) for (i,j) in keys(ref(pm, nw, :buspairs)) for h in PMs.phase_ids(pm) for g in PMs.phase_ids(pm)]
     bus_ph = [(i, i, h, g) for i in ids(pm, nw, :bus) for h in PMs.phase_ids(pm) for g in PMs.phase_ids(pm) if h != g]
     append!(bus_ph, bp_phf_pht)
 

@@ -14,22 +14,29 @@ end
 
 
 ""
-function run_tp_pf(file, model_constructor, solver; kwargs...)
-    return run_generic_tp_model(file, model_constructor, solver, post_tp_pf; multiphase=true, kwargs...)
+function run_tp_pf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
+    return PMs.run_generic_model(data, model_constructor, solver, post_tp_pf; multiphase=true, kwargs...)
+end
+
+
+""
+function run_tp_pf(file::String, model_constructor, solver; kwargs...)
+    data = ThreePhasePowerModels.parse_file(file)
+    return PMs.run_generic_model(data, model_constructor, solver, post_tp_pf; multiphase=true, kwargs...)
 end
 
 
 ""
 function post_tp_pf(pm::GenericPowerModel)
     for h in PMs.phase_ids(pm)
-        PMs.variable_voltage(pm, bounded=false, ph=h)
+        variable_tp_voltage(pm, bounded=false, ph=h)
         PMs.variable_generation(pm, bounded=false, ph=h)
         PMs.variable_branch_flow(pm, bounded=false, ph=h)
         PMs.variable_dcline_flow(pm, bounded=false, ph=h)
     end
 
     for h in PMs.phase_ids(pm)
-        PMs.constraint_voltage(pm, ph=h)
+        constraint_tp_voltage(pm, ph=h)
 
         for (i,bus) in ref(pm, :ref_buses)
             @assert bus["bus_type"] == 3

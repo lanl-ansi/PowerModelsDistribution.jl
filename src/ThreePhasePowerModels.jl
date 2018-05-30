@@ -12,7 +12,6 @@ const PMs = PowerModels
 const LOGGER = getlogger(PowerModels)
 setlevel!(LOGGER, "info")
 
-include("core/base.jl")
 include("core/constraint_template.jl")
 include("core/ref.jl")
 include("core/variable.jl")

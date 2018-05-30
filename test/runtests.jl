@@ -31,7 +31,7 @@ pajarito_solver = PajaritoSolver(mip_solver=cbc_solver, cont_solver=ipopt_solver
 
     include("tp_opf.jl")
 
-    include("tp_ots.jl")
+    # include("tp_ots.jl")
 
     include("tp_pf.jl")
 
