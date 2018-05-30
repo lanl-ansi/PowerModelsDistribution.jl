@@ -5,9 +5,6 @@
 function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: PMs.AbstractWRForm
     variable_tp_voltage_magnitude_sqr(pm; kwargs...)
     variable_tp_voltage_product(pm; kwargs...)
-
-    # PMs.variable_voltage_magnitude_sqr(pm; kwargs...)
-    # PMs.variable_voltage_product(pm; kwargs...)
 end
 
 

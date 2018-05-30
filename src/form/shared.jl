@@ -11,20 +11,16 @@ function constraint_ohms_tp_yt_from(pm::GenericPowerModel{T}, n::Int, h::Int, f_
     wr   = var(pm, n, :wr)
     wi   = var(pm, n, :wi)
 
-    @constraint(pm.model, p_fr ==  (g_fr[h]+g[h,h]) * w[(f_bus, h)] +
-                                    g[h,h] * wr[(f_bus, t_bus, h, h)] -
-                                    b[h,h] * wi[(f_bus, t_bus, h, h)] +
-                                sum(g[h,i] * wr[(f_bus, f_bus, h, i)] +
-                                    b[h,i] * wi[(f_bus, f_bus, h, i)] -
-                                    g[h,i] * wr[(f_bus, t_bus, h, i)] -
-                                    b[h,i] * wi[(f_bus, t_bus, h, i)] for i in PMs.phase_ids(pm) if i != h) )
-    @constraint(pm.model, q_fr == -(b_fr[h]+b[h,h]) * w[(f_bus, h)] +
-                                    b[h,h] * wr[(f_bus, t_bus, h, h)] -
-                                    g[h,h] * wi[(f_bus, t_bus, h, h)] -
-                                sum(b[h,i] * wr[(f_bus, f_bus, h, i)] -
-                                    g[h,i] * wi[(f_bus, f_bus, h, i)] -
-                                    b[h,i] * wr[(f_bus, t_bus, h, i)] +
-                                    g[h,i] * wi[(f_bus, t_bus, h, i)] for i in PMs.phase_ids(pm) if i != h) )
+    @constraint(pm.model, p_fr ==  ( g_fr[h]+g[h,h]) * w[(f_bus, h)] +
+                                sum( g[h,i] * wr[(f_bus, f_bus, h, i)] +
+                                     b[h,i] * wi[(f_bus, f_bus, h, i)] for i in PMs.phase_ids(pm) if i != h) +
+                                sum(-g[h,i] * wr[(f_bus, t_bus, h, i)] +
+                                    -b[h,i] * wi[(f_bus, t_bus, h, i)] for i in PMs.phase_ids(pm)) )
+    @constraint(pm.model, q_fr == -( b_fr[h]+b[h,h]) * w[(f_bus, h)] -
+                                sum( b[h,i] * wr[(f_bus, f_bus, h, i)] -
+                                     g[h,i] * wi[(f_bus, f_bus, h, i)] for i in PMs.phase_ids(pm) if i != h) -
+                                sum(-b[h,i] * wr[(f_bus, t_bus, h, i)] +
+                                     g[h,i] * wi[(f_bus, t_bus, h, i)] for i in PMs.phase_ids(pm)) )
 end
 
 
@@ -38,20 +34,16 @@ function constraint_ohms_tp_yt_to(pm::GenericPowerModel{T}, n::Int, h::Int, f_bu
     wr   = var(pm, n, :wr)
     wi   = var(pm, n, :wi)
 
-    @constraint(pm.model, p_to ==  (g_to[h]+g[h,h]) * w[(t_bus, h)] +
-                                    g[h,h] * wr[(f_bus, t_bus, h, h)] -
-                                    b[h,h] * wi[(f_bus, t_bus, h, h)] +
-                                sum(g[h,i] * wr[(t_bus, t_bus, h, i)] +
-                                    b[h,i] * wi[(t_bus, t_bus, h, i)] -
-                                    g[h,i] * wr[(f_bus, t_bus, h, i)] -
-                                    b[h,i] * wi[(f_bus, t_bus, h, i)] for i in PMs.phase_ids(pm) if i != h) )
-    @constraint(pm.model, q_to == -(b_to[h]+b[h,h]) * w[(t_bus, h)] -
-                                    b[h,h] * wr[(f_bus, t_bus, h, h)] +
-                                    g[h,h] * wi[(f_bus, t_bus, h, h)] -
-                                sum(b[h,i] * wr[(t_bus, t_bus, h, i)] -
-                                    g[h,i] * wi[(t_bus, t_bus, h, i)] -
-                                    b[h,i] * wr[(f_bus, t_bus, h, i)] +
-                                    g[h,i] * wi[(f_bus, t_bus, h, i)] for i in PMs.phase_ids(pm) if i != h) )
+    @constraint(pm.model, p_to ==  ( g_to[h]+g[h,h]) * w[(t_bus, h)] +
+                                sum( g[h,i] * wr[(t_bus, t_bus, h, i)] +
+                                     b[h,i] *-wi[(t_bus, t_bus, h, i)] for i in PMs.phase_ids(pm) if i != h) +
+                                sum(-g[h,i] * wr[(f_bus, t_bus, h, i)] +
+                                    -b[h,i] *-wi[(f_bus, t_bus, h, i)] for i in PMs.phase_ids(pm)) )
+    @constraint(pm.model, q_to == -( b_to[h]+b[h,h]) * w[(t_bus, h)] -
+                                sum( b[h,i] * wr[(t_bus, t_bus, h, i)] -
+                                     g[h,i] *-wi[(t_bus, t_bus, h, i)] for i in PMs.phase_ids(pm) if i != h) -
+                                sum(-b[h,i] * wr[(f_bus, t_bus, h, i)] +
+                                     g[h,i] *-wi[(f_bus, t_bus, h, i)] for i in PMs.phase_ids(pm)) )
 end
 
 
