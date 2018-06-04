@@ -767,10 +767,10 @@ function find_bus(busname::AbstractString, tppm_data::Dict)::Int
     for bus in tppm_data["bus"]
         if bus["name"] == busname
             return bus["bus_i"]
-        else
-            return 0
         end
     end
+
+    return 0
 end
 
 
@@ -999,7 +999,6 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             bf = parse_busname(defaults["bus1"])[1]
             bt = parse_busname(defaults["bus2"])[1]
-            println("line $(defaults["id"]): $(defaults["bus1"]), $(defaults["bus2"])")
 
             branchDict = Dict{String,Any}()
 
@@ -1007,8 +1006,12 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict["name"] = defaults["id"]
 
-            branchDict["f_bus"] = find_bus(parse_busname(defaults["bus1"])[1], tppm_data)
-            branchDict["t_bus"] = find_bus(parse_busname(defaults["bus2"])[1], tppm_data)
+            println("\nBuses:")
+            println([x["name"] for x in tppm_data["bus"]])
+            println("Searching for buses:")
+            branchDict["f_bus"] = find_bus(bf, tppm_data)
+            branchDict["t_bus"] = find_bus(bt, tppm_data)
+            println("line $(defaults["id"]): $bf/$(branchDict["f_bus"]), $bt/$(branchDict["t_bus"])")
 
             #defaults["length"] = 1.0
             branchDict["length"] = defaults["length"]
@@ -1107,11 +1110,11 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false)::Dict
         error(LOGGER, "Circuit not defined, not a valid circuit!")
     end
 
-    println(keys(dss_data))
     dss2tppm_bus!(tppm_data, dss_data, import_all)
     dss2tppm_load!(tppm_data, dss_data, import_all)
     dss2tppm_shunt!(tppm_data, dss_data, import_all)
     #dss2tppm_linecode!(tppm_data, dss_data, import_all)
+    #println([x["name"] for x in tppm_data["bus"]])
     dss2tppm_branch!(tppm_data, dss_data, import_all)
     dss2tppm_gen!(tppm_data, dss_data, import_all)
 
