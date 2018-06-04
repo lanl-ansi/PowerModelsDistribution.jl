@@ -193,7 +193,7 @@ end
 
 
 ""
-function get_linecode(dss_data::Dict, id::String)
+function get_linecode(dss_data, id)
     if haskey(dss_data, "linecode")
         for item in dss_data["linecode"]
             if item["id"] == id
@@ -931,6 +931,26 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     end
 end
 
+function dss2tppm_linecode!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
+    if !haskey(tppm_data, "linecode")
+        tppm_data["linecode"] = []
+    end
+
+    defaults = get_prop_default("linecode")
+
+    if haskey(dss_data, "linecode")
+        for linecode in dss_data["linecode"]
+            linecodeDict = Dict{String,Any}()
+            merge!(defaults, linecode)
+
+            print(keys(linecode))
+
+
+            push!(tppm_data["linecode"], linecodeDict)
+        end
+    end
+end
+
 
 """
     dss2tppm_branch!(tppm_data, dss_data)
@@ -949,10 +969,12 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
         for line in dss_data["line"]
             merge!(defaults, line)
 
-            linecode = get_linecode(defaults["id"])
+            linecode = get_linecode(dss_data, defaults["id"])
             if linecode != Void
                 merge!(lc_defaults, linecode)
             end
+
+            print(keys(line))
 
             branchDict = Dict{String,Any}()
 
@@ -963,7 +985,8 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["f_bus"] = find_bus(defaults["bus1"], tppm_data)
             branchDict["t_bus"] = find_bus(defaults["bus2"], tppm_data)
 
-            branchDict["length"] = line_length = defaults["length"]
+            line_length = warn_get(line, "length", defaults["length"])
+            branchDict["length"] = line_length
             branchDict["linecode"] = linecode = warn_get(defaults, "linecode", "oh_horiz_3ph_4/0ph_1/0neu")
 
             branchDict["br_r"] = parse_matrix(Float64, defaults["rmatrix"])*line_length
@@ -1053,6 +1076,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false)::Dict
     dss2tppm_bus!(tppm_data, dss_data, import_all)
     dss2tppm_load!(tppm_data, dss_data, import_all)
     dss2tppm_shunt!(tppm_data, dss_data, import_all)
+    dss2tppm_linecode!(tppm_data, dss_data, import_all)
     dss2tppm_branch!(tppm_data, dss_data, import_all)
     dss2tppm_gen!(tppm_data, dss_data, import_all)
 
