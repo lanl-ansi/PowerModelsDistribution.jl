@@ -18,10 +18,10 @@ function get_prop_default(ctype::String)::Dict
 
     line = Dict{String,Any}("length" => 1.0, "phases" => 3, "r1" => 0.058,
                             "x1" => 0.1206, "r0" => 0.1784, "x0" => 0.4047,
-                            "c1" => 3.4, "c0" => 1.6,
+                            "c1" => 0.0, "c0" => 0.0,
                             "rmatrix" => "[0.09813333 |0.04013333 0.09813333 |0.04013333 0.04013333 0.09813333 ]",
                             "xmatrix" => "[0.2153 |0.0947 0.2153 |0.0947 0.0947 0.2153 ]",
-                            "cmatrix" => "[2.8 |-0.6 2.8 |-0.6 -0.6 2.8 ]",
+                            "cmatrix" => "[0.0 | 0.0 0.0 | 0.0 0.0 0.0 ]",
                             "switch" => false, "rg" => 0.01805, "xg" => 0.155081,
                             "rho" => 100, "units" => "none", "earthmodel" => "Deri",
                             "b1" => 1.28177, "b0" => 0.6031858, "normamps" => 400,
@@ -72,7 +72,7 @@ function get_prop_default(ctype::String)::Dict
                                 "x0" => 0.4047, "c1" => 3.4, "c0" => 1.6, "units" => "none",
                                 "rmatrix" => "[0.09813333 |0.04013333 0.09813333 |0.04013333 0.04013333 0.09813333 ]",
                                 "xmatrix" => "[0.2153 |0.0947 0.2153 |0.0947 0.0947 0.2153 ]",
-                                "cmatrix" => "[2.8 |-0.6 2.8 |-0.6 -0.6 2.8 ]",
+                                "cmatrix" => "[0.0 | 0.0 0.0 | 0.0 0.0 0.0 ]",
                                 "basefreq" => 60, "normamps" => 400, "emergamps" => 600,
                                 "faultrate" => 0.1, "pctperm" => 20, "repair" => 3,
                                 "kron" => "N", "rg" => 0.01805, "xg" => 0.15508,
@@ -931,6 +931,22 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     end
 end
 
+# New linecode.300 nphases=3 basefreq=60   ! ohms per 1000ft  Corrected 11/30/05
+# ~ rmatrix = [0.253181818   |  0.039791667     0.250719697  |   0.040340909      0.039128788     0.251780303]  !ABC ORDER
+# ~ xmatrix = [0.252708333   |  0.109450758     0.256988636  |   0.094981061      0.086950758     0.255132576]
+# ~ CMATRIX = [2.680150309   | -0.769281006     2.5610381    |  -0.499507676     -0.312072984     2.455590387]
+
+#    linecode = Dict{String,Any}("nphases" => 3, "r1" => 0.058, "x1" => 0.1206, "r0" => 0.1784,
+#                                "x0" => 0.4047, "c1" => 3.4, "c0" => 1.6, "units" => "none",
+#                                "rmatrix" => "[0.09813333 |0.04013333 0.09813333 |0.04013333 0.04013333 0.09813333 ]",
+#                                "xmatrix" => "[0.2153 |0.0947 0.2153 |0.0947 0.0947 0.2153 ]",
+#                                "cmatrix" => "[2.8 |-0.6 2.8 |-0.6 -0.6 2.8 ]",
+#                                "basefreq" => 60, "normamps" => 400, "emergamps" => 600,
+#                                "faultrate" => 0.1, "pctperm" => 20, "repair" => 3,
+#                                "kron" => "N", "rg" => 0.01805, "xg" => 0.15508,
+#                                "neutral" => 3, "b1" => 1.2818, "b0" => 0.60319)
+
+
 function dss2tppm_linecode!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if !haskey(tppm_data, "linecode")
         tppm_data["linecode"] = []
@@ -969,12 +985,21 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
         for line in dss_data["line"]
             merge!(defaults, line)
 
-            linecode = get_linecode(dss_data, defaults["id"])
+            linecode = get_linecode(dss_data, defaults["linecode"])
             if linecode != Void
                 merge!(lc_defaults, linecode)
+    
+                for k in ("rmatrix","cmatrix","xmatrix")
+                    if k in keys(lc_defaults)
+                        defaults[k] = lc_defaults[k]
+                    end
+                end
             end
 
-            print(keys(line))
+
+            bf = parse_busname(defaults["bus1"])[1]
+            bt = parse_busname(defaults["bus2"])[1]
+            println("line $(defaults["id"]): $(defaults["bus1"]), $(defaults["bus2"])")
 
             branchDict = Dict{String,Any}()
 
@@ -982,20 +1007,29 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict["name"] = defaults["id"]
 
-            branchDict["f_bus"] = find_bus(defaults["bus1"], tppm_data)
-            branchDict["t_bus"] = find_bus(defaults["bus2"], tppm_data)
+            branchDict["f_bus"] = find_bus(parse_busname(defaults["bus1"])[1], tppm_data)
+            branchDict["t_bus"] = find_bus(parse_busname(defaults["bus2"])[1], tppm_data)
 
-            line_length = warn_get(line, "length", defaults["length"])
-            branchDict["length"] = line_length
-            branchDict["linecode"] = linecode = warn_get(defaults, "linecode", "oh_horiz_3ph_4/0ph_1/0neu")
+            #defaults["length"] = 1.0
+            branchDict["length"] = defaults["length"]
+            branchDict["linecode"] = defaults["linecode"]
 
-            branchDict["br_r"] = parse_matrix(Float64, defaults["rmatrix"])*line_length
-            branchDict["br_x"] = parse_matrix(Float64, defaults["xmatrix"])*line_length
+            branchDict["br_r"] = parse_matrix(Float64, defaults["rmatrix"])*defaults["length"]
+            branchDict["br_x"] = parse_matrix(Float64, defaults["xmatrix"])*defaults["length"]
 
             c_nf = parse_matrix(Float64, defaults["cmatrix"])
-            Zbase = 1.0  # TODO: need to define
-            branchDict["g_fr"] = Zbase*1.0./(2.0*pi*60.0*c_nf*line_length/1e9)/2.0
-            branchDict["g_to"] = Zbase*1.0./(2.0*pi*60.0*c_nf*line_length/1e9)/2.0
+
+            vll = parse(Float64, tppm_data["basekv"])
+            vln = vll/sqrt(3.0)
+            mva = tppm_data["baseMVA"]
+            Zbase = vln^2/mva # TODO: check that this is OK for 2ph lines 
+
+            if nphases == 3
+                Zbase = vll^2/mva # TODO: should I use line bases or system bases 
+            end
+
+            branchDict["g_fr"] = Zbase*1.0./(2.0*pi*60.0*c_nf*defaults["length"]/1e9)/2.0
+            branchDict["g_to"] = Zbase*1.0./(2.0*pi*60.0*c_nf*defaults["length"]/1e9)/2.0
             branchDict["b_fr"] = zeros(nphases, nphases)  # TODO: need to derive
             branchDict["b_to"] = zeros(nphases, nphases)  # TODO: need to derive
 
@@ -1073,10 +1107,11 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false)::Dict
         error(LOGGER, "Circuit not defined, not a valid circuit!")
     end
 
+    println(keys(dss_data))
     dss2tppm_bus!(tppm_data, dss_data, import_all)
     dss2tppm_load!(tppm_data, dss_data, import_all)
     dss2tppm_shunt!(tppm_data, dss_data, import_all)
-    dss2tppm_linecode!(tppm_data, dss_data, import_all)
+    #dss2tppm_linecode!(tppm_data, dss_data, import_all)
     dss2tppm_branch!(tppm_data, dss_data, import_all)
     dss2tppm_gen!(tppm_data, dss_data, import_all)
 
