@@ -1006,12 +1006,8 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict["name"] = defaults["id"]
 
-            println("\nBuses:")
-            println([x["name"] for x in tppm_data["bus"]])
-            println("Searching for buses:")
             branchDict["f_bus"] = find_bus(bf, tppm_data)
             branchDict["t_bus"] = find_bus(bt, tppm_data)
-            println("line $(defaults["id"]): $bf/$(branchDict["f_bus"]), $bt/$(branchDict["t_bus"])")
 
             #defaults["length"] = 1.0
             branchDict["length"] = defaults["length"]
