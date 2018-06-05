@@ -1,4 +1,7 @@
 # OpenDSS parser
+using Logging
+#Logging.configure(level=DEBUG)
+Logging.configure(level=INFO)
 
 
 components = ["linecode", "linegeometry", "line", "linespacing", "loadshape",
@@ -379,7 +382,7 @@ been added to `dss_data`, the new component is appeneded to the existing array
 of components of that type, otherwise a new array is created.
 """
 function add_component!(dss_data::Dict, ctype_name::AbstractString, compDict::Dict)
-    debug(LOGGER, "add_component! $ctype_name")
+    Logging.info("add_component! $ctype_name")
     ctype = split(lowercase(ctype_name), '.'; limit=2)[1]
     if haskey(dss_data, ctype)
         push!(dss_data[ctype], compDict)
@@ -422,7 +425,7 @@ defined, an empty dictionary will be used. Assumes that unnamed properties are
 given in order, but named properties can be given anywhere.
 """
 function parse_component(component::AbstractString, properties::AbstractString, compDict::Dict=Dict{String,Any}())
-    debug(LOGGER, "Properties: $properties")
+    Logging.debug("Properties: $properties")
     ctype, name = split(lowercase(component), '.'; limit=2)
 
     if !haskey(compDict, "id")
@@ -430,7 +433,7 @@ function parse_component(component::AbstractString, properties::AbstractString, 
     end
 
     propArray = parse_properties(properties)
-    debug(LOGGER, "propArray: $propArray")
+    Logging.debug("propArray: $propArray")
 
     propNames = get_prop_name(lowercase(ctype))
 
@@ -530,6 +533,7 @@ Will also parse files defined inside of the originating DSS file via the
 "compile", "redirect" or "buscoords" commands.
 """
 function parse_dss(filename::AbstractString)::Dict
+    Logging.info("Calling parse_dss on $filename\n")
     currentFile = split(filename, "/")[end]
     path = join(split(filename, '/')[1:end-1], '/')
     dss_str = readstring(open(filename))
@@ -556,7 +560,7 @@ function parse_dss(filename::AbstractString)::Dict
 
     for (n, line) in enumerate(stripped_lines)
         real_line_num = find(lines .== line)[1]
-        debug(LOGGER, "LINE $real_line_num: $line")
+        Logging.debug("LINE $real_line_num: $line")
         line = strip_comments(line)
 
         if contains(line, "{") || contains(line, "}")
@@ -574,6 +578,12 @@ function parse_dss(filename::AbstractString)::Dict
             curCompDict = Dict{String,Any}()
             line_elements = split(line, r"\s+"; limit=3)
             cmd = lowercase(line_elements[1])
+
+            if startswith(curCtypeName, "Capacitor")
+                println(curCtypeName)
+                #print(curCompDict)
+            end
+
 
             if cmd == "clear"
                 info(LOGGER, "`dss_data` has been reset with the \"clear\" command.")
@@ -595,7 +605,7 @@ function parse_dss(filename::AbstractString)::Dict
                 continue
 
             elseif cmd == "set"
-                debug(LOGGER, "set command: $line_elements")
+                Logging.debug("set command: $line_elements")
                 if length(line_elements) == 2
                     property, value = split(line_elements[2], '='; limit=2)
                 else
@@ -626,7 +636,7 @@ function parse_dss(filename::AbstractString)::Dict
                 end
             end
 
-            debug(LOGGER, "size curCompDict: $(length(curCompDict))")
+            Logging.debug("size curCompDict: $(length(curCompDict))")
             if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')
                 continue
             elseif length(curCompDict) > 0
@@ -637,6 +647,7 @@ function parse_dss(filename::AbstractString)::Dict
         end
     end
 
+    Logging.info("Done parsing $filename\n") 
     return dss_data
 end
 
@@ -654,14 +665,14 @@ function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
                             try
                                 item[k] = parse_array(Float64, v)
                             catch err
-                                debug(LOGGER, "$compType $k")
+                                Logging.debug("$compType $k")
                                 error(LOGGER, err)
                             end
                         elseif isa(v, AbstractString) && ~isa(defaults[k], String)
                             try
                                 item[k] = parse(typeof(defaults[k]), v)
                             catch err
-                                debug(LOGGER, "$compType $k")
+                                Logging.debug("$compType $k")
                                 error(LOGGER, err)
                             end
                         end
@@ -793,10 +804,12 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             loadDict = Dict{String,Any}()
 
             nphases = defaults["phases"]
+            mva = tppm_data["baseMVA"]
 
+            loadDict["name"] = defaults["id"]
             loadDict["load_bus"] = find_bus(defaults["bus1"], tppm_data)
-            loadDict["pd"] = zeros(nphases)  # TODO:
-            loadDict["qd"] = zeros(nphases)  # TODO:
+            loadDict["pd"] = ones(nphases)*defaults["kw"]*1e3/mva
+            loadDict["qd"] = ones(nphases)*defaults["kvar"]*1e3/mva
             loadDict["status"] = convert(Int, defaults["enabled"])  # TODO: or check bus?
 
             loadDict["index"] = length(tppm_data["load"]) + 1
@@ -815,13 +828,17 @@ end
 
 Adds PowerModels-style shunts to `tppm_data` from `dss_data`.
 """
+
+# 60 New Capacitor.C844      Bus1=844        Phases=3        kVAR=300        kV=24.9
+# 61 New Capacitor.C848      Bus1=848        Phases=3        kVAR=450        kV=24.9
+
 function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if !haskey(tppm_data, "shunt")
         tppm_data["shunt"] = []
     end
 
     defaults = get_prop_default("capacitor")
-
+    
     if haskey(dss_data, "capacitor")
         for shunt in dss_data["capacitor"]
             merge!(defaults, shunt)
@@ -830,12 +847,18 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             nphases = defaults["phases"]
 
+            vll = parse(Float64, tppm_data["basekv"])
+            vln = vll/sqrt(3.0)
+            mva = tppm_data["baseMVA"]
+            Zbase = vln^2*nphases/mva # use single-phase base impedance for each phase
+
+            Gcap = Zbase*sum(defaults["kvar"])/(nphases*1000.0*vln^2)
+
             shuntDict["shunt_bus"] = find_bus(shunt["bus1"], tppm_data)
             shuntDict["name"] = defaults["id"]
             shuntDict["gs"] = zeros(nphases)  # TODO:
-            shuntDict["bs"] = zeros(nphases)  # TODO:
-            shuntDict["status"] = 1  # TODO:
-
+            shuntDict["bs"] = ones(nphases)*Gcap  # TODO:
+            shuntDict["status"] = convert(Int, defaults["enabled"])  # TODO: or check bus?
             shuntDict["index"] = length(tppm_data["shunt"]) + 1
 
             used = ["bus1", "phases", "id"]
@@ -1013,19 +1036,15 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["length"] = defaults["length"]
             branchDict["linecode"] = defaults["linecode"]
 
-            branchDict["br_r"] = parse_matrix(Float64, defaults["rmatrix"])*defaults["length"]
-            branchDict["br_x"] = parse_matrix(Float64, defaults["xmatrix"])*defaults["length"]
-
             c_nf = parse_matrix(Float64, defaults["cmatrix"])
 
             vll = parse(Float64, tppm_data["basekv"])
             vln = vll/sqrt(3.0)
             mva = tppm_data["baseMVA"]
-            Zbase = vln^2/mva # TODO: check that this is OK for 2ph lines 
+            Zbase = vln^2*nphases/mva 
 
-            if nphases == 3
-                Zbase = vll^2/mva # TODO: should I use line bases or system bases 
-            end
+            branchDict["br_r"] = parse_matrix(Float64, defaults["rmatrix"])*defaults["length"]/Zbase
+            branchDict["br_x"] = parse_matrix(Float64, defaults["xmatrix"])*defaults["length"]/Zbase
 
             branchDict["g_fr"] = Zbase*1.0./(2.0*pi*60.0*c_nf*defaults["length"]/1e9)/2.0
             branchDict["g_to"] = Zbase*1.0./(2.0*pi*60.0*c_nf*defaults["length"]/1e9)/2.0
@@ -1083,7 +1102,6 @@ end
 "Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format."
 function parse_opendss(dss_data::Dict; import_all::Bool=false)::Dict
     tppm_data = Dict{String,Any}()
-
     parse_dss_with_dtypes!(dss_data, ["line", "linecode", "load", "generator", "capacitor",
                                       "reactor"
                                      ])
@@ -1109,8 +1127,6 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false)::Dict
     dss2tppm_bus!(tppm_data, dss_data, import_all)
     dss2tppm_load!(tppm_data, dss_data, import_all)
     dss2tppm_shunt!(tppm_data, dss_data, import_all)
-    #dss2tppm_linecode!(tppm_data, dss_data, import_all)
-    #println([x["name"] for x in tppm_data["bus"]])
     dss2tppm_branch!(tppm_data, dss_data, import_all)
     dss2tppm_gen!(tppm_data, dss_data, import_all)
 
