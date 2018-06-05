@@ -241,23 +241,6 @@ function warn_get(data, field, default; valid = x -> true)
     end
 end
 
-function parse_list(dtype::Type, data::AbstractString)::Array
-    cols = []
-
-    for line in split(strip(data, ['[', ']', '(', ')']), ',')
-        for item in split(line)
-            if dtype <: String
-                push!(cols, item)
-            else
-                push!(cols, parse(dtype, item))
-            end
-        end
-    end
-
-    return cols
-end
-
-
 
 """
     parse_matrix(dtype, data)
@@ -295,7 +278,13 @@ Parses a OpenDSS style array string `data` into a one dimensional array of type
 quotes, and elements are separated by spaces.
 """
 function parse_array(dtype::Type, data::AbstractString)::Array
-    elements = split(strip(data, ['\"', '\'', '[', ']', '(', ')']))
+    if contains(data, ",")
+        split_char = ','
+    else
+        split_char = ' '
+    end
+
+    elements = split(strip(data, ['\"', '\'', '[', ']', '(', ')']), split_char)
     array = zeros(dtype, length(elements))
 
     for (i, el) in enumerate(elements)
@@ -410,18 +399,6 @@ of components of that type, otherwise a new array is created.
 """
 function add_component!(dss_data::Dict, ctype_name::AbstractString, compDict::Dict)
     ctype = split(lowercase(ctype_name), '.'; limit=2)[1]
-
-    # # TODO: get rid of this ugly hack
-    # if ctype == "transformer"
-    #     buses = parse_list(String, compDict["buses"])
-    #     b1 = buses[1]
-    #     b2 = buses[2]
-    #     compDict["bus1"] = b1
-    #     compDict["bus2"] = b2
-
-    #     ctype = "line"
-    # end
-
     if haskey(dss_data, ctype)
         push!(dss_data[ctype], compDict)
     else
@@ -648,7 +625,7 @@ function parse_dss(filename::AbstractString)::Dict
                     dss_data["options"] = [Dict{String,Any}()]
                 end
 
-                dss_data["options"][1]["$property"] = value
+                dss_data["options"][1]["$(lowercase(property))"] = value
                 continue
 
             elseif cmd == "buscoords"
@@ -684,6 +661,7 @@ function parse_dss(filename::AbstractString)::Dict
     return dss_data
 end
 
+
 """
 """
 function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
@@ -714,9 +692,6 @@ function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
         end
     end
 end
-
-
-
 
 
 """
@@ -1048,17 +1023,9 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     end
 end
 
-#    linecode = Dict{String,Any}("nphases" => 3, "r1" => 0.058, "x1" => 0.1206, "r0" => 0.1784,
-#                                "x0" => 0.4047, "c1" => 3.4, "c0" => 1.6, "units" => "none",
-#                                "rmatrix" => "[0.09813333 |0.04013333 0.09813333 |0.04013333 0.04013333 0.09813333 ]",
-#                                "xmatrix" => "[0.2153 |0.0947 0.2153 |0.0947 0.0947 0.2153 ]",
-#                                "cmatrix" => "[2.8 |-0.6 2.8 |-0.6 -0.6 2.8 ]",
-#                                "basefreq" => 60, "normamps" => 400, "emergamps" => 600,
-#                                "faultrate" => 0.1, "pctperm" => 20, "repair" => 3,
-#                                "kron" => "N", "rg" => 0.01805, "xg" => 0.15508,
-#                                "neutral" => 3, "b1" => 1.2818, "b0" => 0.60319)
 
-
+"""
+"""
 function dss2tppm_linecode!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if !haskey(tppm_data, "linecode")
         tppm_data["linecode"] = []
@@ -1164,6 +1131,32 @@ end
 
 
 """
+    dss2tppm_transformer!(tppm_data, dss_data, import_all)
+
+Adds PowerModels-style transformers (branches) to `tppm_data` from `dss_data`.
+"""
+function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
+    if !haskey(tppm_data, "branch")
+        tppm_data["branch"] = []
+    end
+
+    if haskey(dss_data, "transformer")
+        warn(LOGGER, "transformers are not yet supported, skipping")
+        for transformer in dss_data["transformer"]
+            defaults = get_prop_default("transformer")
+            merge!(defaults, transformer)
+
+            transDict = Dict{String,Any}()
+
+
+            used = []
+            PMs.import_remaining!(transDict, defaults, import_all; exclude=used)
+        end
+    end
+end
+
+
+"""
     where_is_comp(data, comp_id)
 
 Finds existing component of id `comp_id` in array of `data` and returns index.
@@ -1206,6 +1199,20 @@ function check_duplicate_components!(dss_data::Dict)
 end
 
 
+"""
+    parse_options(options)
+
+Parses options defined with the `set` command in OpenDSS.
+"""
+function parse_options(options)
+    out = Dict{String,Any}()
+    if haskey(options, "voltagebases")
+        out["voltagebases"] = parse_array(Float64, options["voltagebases"])
+    end
+    return out
+end
+
+
 "Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format."
 function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1)::Dict
     tppm_data = Dict{String,Any}()
@@ -1216,6 +1223,15 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
                                       "reactor", "circuit"
                                      ])
 
+    if haskey(dss_data, "options")
+        condensed_opts = [Dict{String,Any}()]
+        for opt in dss_data["options"]
+            merge!(condensed_opts[1], opt)
+        end
+        dss_data["options"] = condensed_opts
+    end
+
+    tppm_data["options"] = parse_options(dss_data["options"][1])
     tppm_data["per_unit"] = false
     tppm_data["source_type"] = "dss"
     tppm_data["source_version"] = VersionNumber("0")
@@ -1237,6 +1253,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     dss2tppm_load!(tppm_data, dss_data, import_all)
     dss2tppm_shunt!(tppm_data, dss_data, import_all)
     dss2tppm_branch!(tppm_data, dss_data, import_all)
+    dss2tppm_transformer!(tppm_data, dss_data, import_all)
     dss2tppm_gen!(tppm_data, dss_data, import_all)
 
     InfrastructureModels.arrays_to_dicts!(tppm_data)
