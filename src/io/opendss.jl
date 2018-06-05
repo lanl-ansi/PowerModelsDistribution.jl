@@ -196,7 +196,11 @@ end
 
 
 ""
+<<<<<<< HEAD
 function get_linecode(dss_data, id)
+=======
+function get_linecode(dss_data::Dict, id::AbstractString)
+>>>>>>> FIX: Handles duplicate component entries
     if haskey(dss_data, "linecode")
         for item in dss_data["linecode"]
             if item["id"] == id
@@ -305,7 +309,10 @@ function parse_buscoords(file::AbstractString)::Array
     for line in split(file_str, '\n')
         if line != ""
             bus, x, y = split(line, regex; limit=3)
-            push!(coordArray, Dict{String,Any}("bus"=>bus, "x"=>x, "y"=>y))
+            push!(coordArray, Dict{String,Any}("bus"=>strip(bus, [',']),
+                                               "id"=>strip(bus, [',']),
+                                               "x"=>parse(Float64, strip(x, [','])),
+                                               "y"=>parse(Float64, strip(y, [',', '\r']))))
         end
     end
     return coordArray
@@ -776,12 +783,16 @@ Finds the index number of the bus in existing data from the given `busname`.
 """
 function find_bus(busname::AbstractString, tppm_data::Dict)::Int
     for bus in tppm_data["bus"]
-        if bus["name"] == busname
+        if bus["name"] == split(busname, '.')[1]
             return bus["bus_i"]
         end
     end
+<<<<<<< HEAD
 
     return 0
+=======
+    error("cannot find connected bus with id $(split(busname, '.')[1])")
+>>>>>>> FIX: Handles duplicate component entries
 end
 
 
@@ -1008,7 +1019,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
         for line in dss_data["line"]
             merge!(defaults, line)
 
-            linecode = get_linecode(dss_data, defaults["linecode"])
+            linecode = get_linecode(dss_data, defaults["id"])
             if linecode != Void
                 merge!(lc_defaults, linecode)
     
@@ -1079,29 +1090,53 @@ end
 
 
 """
-    update_lookup_structure!(tppm_data)
+    where_is_comp(data, comp_id)
 
-Updates the Dict lookup structure from Dict{Array{Dict{String,Any}}} to
-Dict{String,Dict{String,Any}}, requiring the presence of `"index"` in each
-component.
+Finds existing component of id `comp_id` in array of `data` and returns index.
+Assumes all components in `data` are unique.
 """
-function update_lookup_structure!(tppm_data::Dict)
-    for (k, v) in tppm_data
-        if isa(v, Array) && k != "files"
-            dict = Dict{String,Any}()
-            for item in v
-                assert("index" in keys(item))
-                dict[string(item["index"])] = item
-            end
-            tppm_data[k] = dict
+function where_is_comp(data::Array, comp_id::AbstractString)::Int
+    for (i, e) in enumerate(data)
+        if e["id"] == comp_id
+            return i
         end
     end
+    return 0
+end
+
+
+"""
+    check_duplicate_components!(dss_data)
+
+Finds duplicate components in `dss_data` and merges up, meaning that older
+data (lower indices) is always overwritten by newer data (higher indices).
+"""
+function check_duplicate_components!(dss_data::Dict)
+    out = Dict{String,Array}()
+    for (k, v) in dss_data
+        out[k] = []
+        warn(k)
+        for comp in v
+            if isa(comp, Dict)
+                idx = where_is_comp(out[k], comp["id"])
+                if idx > 0
+                    merge!(out[k][idx], comp)
+                else
+                    push!(out[k], comp)
+                end
+            end
+        end
+    end
+    merge!(dss_data, out)
 end
 
 
 "Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format."
 function parse_opendss(dss_data::Dict; import_all::Bool=false)::Dict
     tppm_data = Dict{String,Any}()
+
+    check_duplicate_components!(dss_data)
+
     parse_dss_with_dtypes!(dss_data, ["line", "linecode", "load", "generator", "capacitor",
                                       "reactor"
                                      ])
@@ -1130,7 +1165,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false)::Dict
     dss2tppm_branch!(tppm_data, dss_data, import_all)
     dss2tppm_gen!(tppm_data, dss_data, import_all)
 
-    update_lookup_structure!(tppm_data)
+    InfrastructureModels.arrays_to_dicts!(tppm_data)
 
     return tppm_data
 end

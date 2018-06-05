@@ -7,11 +7,9 @@ using PowerModels
 using InfrastructureModels
 using Memento
 
-import Compat: @__MODULE__
-
 const PMs = PowerModels
 
-const LOGGER = getlogger(@__MODULE__)
+const LOGGER = getlogger(PowerModels)
 setlevel!(LOGGER, "info")
 
 include("core/constraint_template.jl")
