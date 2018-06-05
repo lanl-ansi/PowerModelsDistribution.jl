@@ -1,7 +1,7 @@
 # OpenDSS parser
-using Logging
+# using Logging
 #Logging.configure(level=DEBUG)
-Logging.configure(level=INFO)
+# Logging.configure(level=INFO)
 
 
 components = ["linecode", "linegeometry", "line", "linespacing", "loadshape",
@@ -414,16 +414,16 @@ of components of that type, otherwise a new array is created.
 function add_component!(dss_data::Dict, ctype_name::AbstractString, compDict::Dict)
     ctype = split(lowercase(ctype_name), '.'; limit=2)[1]
 
-    # TODO: get rid of this ugly hack
-    if ctype == "transformer"
-        buses = parse_list(String, compDict["buses"])
-        b1 = buses[1]
-        b2 = buses[2]
-        compDict["bus1"] = b1
-        compDict["bus2"] = b2
+    # # TODO: get rid of this ugly hack
+    # if ctype == "transformer"
+    #     buses = parse_list(String, compDict["buses"])
+    #     b1 = buses[1]
+    #     b2 = buses[2]
+    #     compDict["bus1"] = b1
+    #     compDict["bus2"] = b2
 
-        ctype = "line"
-    end
+    #     ctype = "line"
+    # end
 
     if haskey(dss_data, ctype)
         push!(dss_data[ctype], compDict)
@@ -466,7 +466,7 @@ defined, an empty dictionary will be used. Assumes that unnamed properties are
 given in order, but named properties can be given anywhere.
 """
 function parse_component(component::AbstractString, properties::AbstractString, compDict::Dict=Dict{String,Any}())
-    Logging.debug("Properties: $properties")
+    debug(LOGGER, "Properties: $properties")
     ctype, name = split(lowercase(component), '.'; limit=2)
 
     if !haskey(compDict, "id")
@@ -474,7 +474,7 @@ function parse_component(component::AbstractString, properties::AbstractString, 
     end
 
     propArray = parse_properties(properties)
-    Logging.debug("propArray: $propArray")
+    debug(LOGGER, "propArray: $propArray")
 
     propNames = get_prop_name(lowercase(ctype))
 
@@ -574,7 +574,7 @@ Will also parse files defined inside of the originating DSS file via the
 "compile", "redirect" or "buscoords" commands.
 """
 function parse_dss(filename::AbstractString)::Dict
-    Logging.info("Calling parse_dss on $filename")
+    info(LOGGER, "Calling parse_dss on $filename")
     currentFile = split(filename, "/")[end]
     path = join(split(filename, '/')[1:end-1], '/')
     dss_str = readstring(open(filename))
@@ -601,7 +601,7 @@ function parse_dss(filename::AbstractString)::Dict
 
     for (n, line) in enumerate(stripped_lines)
         real_line_num = find(lines .== line)[1]
-        Logging.debug("LINE $real_line_num: $line")
+        debug(LOGGER, "LINE $real_line_num: $line")
         line = strip_comments(line)
 
         if contains(line, "{") || contains(line, "}")
@@ -640,7 +640,7 @@ function parse_dss(filename::AbstractString)::Dict
                 continue
 
             elseif cmd == "set"
-                Logging.debug("set command: $line_elements")
+                debug(LOGGER, "set command: $line_elements")
                 if length(line_elements) == 2
                     property, value = split(line_elements[2], '='; limit=2)
                 else
@@ -657,7 +657,7 @@ function parse_dss(filename::AbstractString)::Dict
             elseif cmd == "buscoords"
                 file = line_elements[2]
                 fullpath = path == "" ? file : join([path, file], '/')
-                Logging.debug("Buscoords path: $fullpath")
+                debug(LOGGER, "Buscoords path: $fullpath")
                 dss_data["buscoords"] = parse_buscoords(fullpath)
 
             elseif cmd == "new"
@@ -672,7 +672,7 @@ function parse_dss(filename::AbstractString)::Dict
                 end
             end
 
-            Logging.debug("size curCompDict: $(length(curCompDict))")
+            debug(LOGGER, "size curCompDict: $(length(curCompDict))")
             if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')
                 continue
             elseif length(curCompDict) > 0
@@ -683,7 +683,7 @@ function parse_dss(filename::AbstractString)::Dict
         end
     end
 
-    Logging.info("Done parsing $filename") 
+    info(LOGGER, "Done parsing $filename")
     return dss_data
 end
 
@@ -885,7 +885,6 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
         tppm_data["shunt"] = []
     end
 
-    
     if haskey(dss_data, "capacitor")
         for shunt in dss_data["capacitor"]
             defaults = get_prop_default("capacitor")
@@ -958,9 +957,9 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
         for gen in dss_data["generator"]
             defaults = get_prop_default("generator")
             if "phases" in keys(gen)
-                Logging.info("Gen $(gen["id"]) phases = $(gen["phases"]), dflt_phase = $(defaults["phases"])")
+                info(LOGGER, "Gen $(gen["id"]) phases = $(gen["phases"]), dflt_phase = $(defaults["phases"])")
             end
-            Logging.info("Gen $(gen["id"]) dflt_phase = $(defaults["phases"])")
+            info(LOGGER, "Gen $(gen["id"]) dflt_phase = $(defaults["phases"])")
             merge!(defaults, gen)
 
             genDict = Dict{String,Any}()
@@ -1004,7 +1003,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 genDict["qmin"] = min(genDict["qmin"], -1.0*abs(genDict["pg"]))
             end
 
-            genDict["pc1"] = genDict["pmax"] 
+            genDict["pc1"] = genDict["pmax"]
             genDict["pc2"] = genDict["pmin"]
             genDict["qc1min"] = genDict["qmin"]
             genDict["qc1max"] = genDict["qmax"]
@@ -1013,24 +1012,24 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             # For distributed generation ramp rates are not usually an issue
             # and they are not supported in OpenDSS
-            # TODO: Do we want to extend the OpenDSS format to include ramp 
+            # TODO: Do we want to extend the OpenDSS format to include ramp
             # rates similar to the "enabled" property
-            genDict["ramp_agc"] = genDict["pmax"]  
+            genDict["ramp_agc"] = genDict["pmax"]
             genDict["ramp_q"] = max(abs(genDict["qmin"]), genDict["qmax"])
-            genDict["ramp_10"] = genDict["pmax"]  
-            genDict["ramp_30"] = genDict["pmax"]  
+            genDict["ramp_10"] = genDict["pmax"]
+            genDict["ramp_30"] = genDict["pmax"]
 
             genDict["control_model"] = defaults["model"]
 
-            # if generator is in voltage control mode 
+            # if generator is in voltage control mode
             # convert its attached bus to a PV bus
             if genDict["control_model"] == 3
                 tppm_data["bus"][genDict["gen_bus"]]["bus_type"] = 2
             end
 
             # TODO: do we want to extend opendss format to include gen costs?
-            genDict["model"] = defaults["model"] * ones(nphases)  
-            genDict["startup"] = zeros(nphases)  
+            genDict["model"] = defaults["model"] * ones(nphases)
+            genDict["startup"] = zeros(nphases)
             genDict["shutdown"] = zeros(nphases)
             genDict["ncost"] = defaults["ncost"] * ones(nphases)
 
@@ -1100,7 +1099,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             linecode = get_linecode(dss_data, defaults["id"])
             if linecode != Void
                 merge!(lc_defaults, linecode)
-    
+
                 for k in ("rmatrix","cmatrix","xmatrix")
                     if k in keys(lc_defaults)
                         defaults[k] = lc_defaults[k]
@@ -1128,12 +1127,9 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             c_nf = parse_matrix(Float64, defaults["cmatrix"])
 
             vll = tppm_data["basekv"]
-            if !isa(vll, Number)
-                vll = parse(Float64, tppm_data["basekv"])
-            end
             vln = vll/sqrt(3.0)
             mva = tppm_data["baseMVA"]
-            Zbase = vln^2*nphases/mva 
+            Zbase = vln^2*nphases/mva
 
             branchDict["br_r"] = parse_matrix(Float64, defaults["rmatrix"])*defaults["length"]/Zbase
             branchDict["br_x"] = parse_matrix(Float64, defaults["xmatrix"])*defaults["length"]/Zbase
@@ -1195,15 +1191,16 @@ data (lower indices) is always overwritten by newer data (higher indices).
 function check_duplicate_components!(dss_data::Dict)
     out = Dict{String,Array}()
     for (k, v) in dss_data
-        out[k] = []
-        warn(k)
-        for comp in v
-            if isa(comp, Dict)
-                idx = where_is_comp(out[k], comp["id"])
-                if idx > 0
-                    merge!(out[k][idx], comp)
-                else
-                    push!(out[k], comp)
+        if !(k in ["options"])
+            out[k] = []
+            for comp in v
+                if isa(comp, Dict)
+                    idx = where_is_comp(out[k], comp["id"])
+                    if idx > 0
+                        merge!(out[k][idx], comp)
+                    else
+                        push!(out[k], comp)
+                    end
                 end
             end
         end
@@ -1219,14 +1216,13 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false)::Dict
     check_duplicate_components!(dss_data)
 
     parse_dss_with_dtypes!(dss_data, ["line", "linecode", "load", "generator", "capacitor",
-                                      "reactor"
+                                      "reactor", "circuit"
                                      ])
 
     tppm_data["per_unit"] = false
     tppm_data["source_type"] = "dss"
     tppm_data["source_version"] = VersionNumber("0")
     tppm_data["files"] = dss_data["filename"]
-
 
     if haskey(dss_data, "circuit")
         defaults = get_prop_default("circuit")
