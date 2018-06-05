@@ -29,7 +29,7 @@ function get_prop_default(ctype::String)::Dict
                             "rho" => 100, "units" => "none", "earthmodel" => "Deri",
                             "b1" => 1.28177, "b0" => 0.6031858, "normamps" => 400,
                             "emergamps" => 600, "faultrate" => 0.1, "pctperm" => 20,
-                            "repair" => 3, "basefreq" => 60, "enabled" => true)
+                            "repair" => 3, "basefreq" => 60, "enabled" => true, "linecode" => "0")
 
     load = Dict{String, Any}("phases" => 3, "kv" => 12.47, "kw" => 10.0, "pf" => 0.88,
                              "model" => 1, "conn" => "wye", "kvar" => 5.39742822138087,
@@ -70,7 +70,7 @@ function get_prop_default(ctype::String)::Dict
                            "forceon" => "No", "kva" => 1200, "mva" => 1.2, "xd" => 1,
                            "xdpp" => 0.2, "h" => 1, "d" => 0, "debugtrace" => "no",
                            "balanced" => "No", "xrdp" => 20, "spectrum" => "defaultgen",
-                           "basefreq" => 60, "enabled" => true)
+                           "basefreq" => 60, "enabled" => true, "model" => 3, "ncost" => 3, "cost" => [0.0 1.0 0.0])
 
     linecode = Dict{String,Any}("nphases" => 3, "r1" => 0.058, "x1" => 0.1206, "r0" => 0.1784,
                                 "x0" => 0.4047, "c1" => 3.4, "c0" => 1.6, "units" => "none",
@@ -318,7 +318,7 @@ to contain "bus,x,y" on each line.
 """
 function parse_buscoords(file::AbstractString)::Array
     file_str = readstring(open(file))
-    regex = r"\s+"
+    regex = r",\s*"
     if endswith(lowercase(file), "csv")
         regex = r","
     end
@@ -416,17 +416,13 @@ function add_component!(dss_data::Dict, ctype_name::AbstractString, compDict::Di
 
     # TODO: get rid of this ugly hack
     if ctype == "transformer"
-        Logging.info("add_component! $ctype_name -> $ctype -> line")
         buses = parse_list(String, compDict["buses"])
         b1 = buses[1]
         b2 = buses[2]
-        println("b1: $b1, b2: $b2")
         compDict["bus1"] = b1
         compDict["bus2"] = b2
 
         ctype = "line"
-    else
-        Logging.info("add_component! $ctype_name -> [$ctype]")
     end
 
     if haskey(dss_data, ctype)
@@ -578,7 +574,7 @@ Will also parse files defined inside of the originating DSS file via the
 "compile", "redirect" or "buscoords" commands.
 """
 function parse_dss(filename::AbstractString)::Dict
-    Logging.info("Calling parse_dss on $filename\n")
+    Logging.info("Calling parse_dss on $filename")
     currentFile = split(filename, "/")[end]
     path = join(split(filename, '/')[1:end-1], '/')
     dss_str = readstring(open(filename))
@@ -624,12 +620,6 @@ function parse_dss(filename::AbstractString)::Dict
             line_elements = split(line, r"\s+"; limit=3)
             cmd = lowercase(line_elements[1])
 
-            if startswith(curCtypeName, "Capacitor")
-                println(curCtypeName)
-                #print(curCompDict)
-            end
-
-
             if cmd == "clear"
                 info(LOGGER, "`dss_data` has been reset with the \"clear\" command.")
                 dss_data = Dict{String,Array}()
@@ -667,7 +657,7 @@ function parse_dss(filename::AbstractString)::Dict
             elseif cmd == "buscoords"
                 file = line_elements[2]
                 fullpath = path == "" ? file : join([path, file], '/')
-                print("Buscoords path: $fullpath\n")
+                Logging.debug("Buscoords path: $fullpath")
                 dss_data["buscoords"] = parse_buscoords(fullpath)
 
             elseif cmd == "new"
@@ -693,7 +683,7 @@ function parse_dss(filename::AbstractString)::Dict
         end
     end
 
-    Logging.info("Done parsing $filename\n") 
+    Logging.info("Done parsing $filename") 
     return dss_data
 end
 
@@ -776,7 +766,6 @@ function discover_buses(dss_data::Dict)::Array
             n1 = branch["bus1"]
             n2 = branch["bus2"]
 
-            print("$bid: $n1,$n2\n")
             for key in ["bus1", "bus2"]
                 name, nodes = parse_busname(branch[key])
                 if !(name in bus_names)
@@ -854,10 +843,10 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
         tppm_data["load"] = []
     end
 
-    defaults = get_prop_default("load")
 
     if haskey(dss_data, "load")
         for load in dss_data["load"]
+            defaults = get_prop_default("load")
             merge!(defaults, load)
 
             loadDict = Dict{String,Any}()
@@ -896,17 +885,17 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
         tppm_data["shunt"] = []
     end
 
-    defaults = get_prop_default("capacitor")
     
     if haskey(dss_data, "capacitor")
         for shunt in dss_data["capacitor"]
+            defaults = get_prop_default("capacitor")
             merge!(defaults, shunt)
 
             shuntDict = Dict{String,Any}()
 
             nphases = defaults["phases"]
 
-            vll = parse(Float64, tppm_data["basekv"])
+            vll = tppm_data["basekv"]
             vln = vll/sqrt(3.0)
             mva = tppm_data["baseMVA"]
             Zbase = vln^2*nphases/mva # use single-phase base impedance for each phase
@@ -927,10 +916,10 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
         end
     end
 
-    defaults = get_prop_default("reactor")
 
     if haskey(dss_data, "reactor")
         for shunt in dss_data["reactor"]
+            defaults = get_prop_default("reactor")
             merge!(defaults, shunt)
 
             shuntDict = Dict{String,Any}()
@@ -964,22 +953,22 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
         tppm_data["gen"] = []
     end
 
-    defaults = get_prop_default("generator")
 
     if haskey(dss_data, "generator")
         for gen in dss_data["generator"]
+            defaults = get_prop_default("generator")
+            if "phases" in keys(gen)
+                Logging.info("Gen $(gen["id"]) phases = $(gen["phases"]), dflt_phase = $(defaults["phases"])")
+            end
+            Logging.info("Gen $(gen["id"]) dflt_phase = $(defaults["phases"])")
             merge!(defaults, gen)
 
             genDict = Dict{String,Any}()
 
             nphases = defaults["phases"]
-
             kvll = tppm_data["baseMVA"]
 
             bg = parse_busname(defaults["bus1"])[1]
-            println("Buses:")
-            println([b["name"] for b in tppm_data["bus"]])
-            println("gen bus: $bg")
             genDict["gen_bus"] = find_bus(bg, tppm_data)
             genDict["name"] = defaults["id"]
             genDict["gen_status"] = 1  # TODO:
@@ -1040,11 +1029,18 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             end
 
             # TODO: do we want to extend opendss format to include gen costs?
-            genDict["model"] = 2 * ones(nphases)  
+            genDict["model"] = defaults["model"] * ones(nphases)  
             genDict["startup"] = zeros(nphases)  
             genDict["shutdown"] = zeros(nphases)
-            genDict["ncost"] = 3 * ones(nphases)
-            genDict["cost"] = [0.0 1.0 0.0; 0.0 1.0 0.0; 0.0 1.0 0.0]
+            genDict["ncost"] = defaults["ncost"] * ones(nphases)
+
+            cost = defaults["cost"]
+
+            for i in 1:(nphases-1)
+                cost = vcat(cost, defaults["cost"])
+            end
+
+            genDict["cost"] = cost
 
             genDict["index"] = length(tppm_data["gen"]) + 1
 
@@ -1078,10 +1074,6 @@ function dss2tppm_linecode!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
         for linecode in dss_data["linecode"]
             linecodeDict = Dict{String,Any}()
             merge!(defaults, linecode)
-
-            print(keys(linecode))
-
-
             push!(tppm_data["linecode"], linecodeDict)
         end
     end
@@ -1098,11 +1090,11 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
         tppm_data["branch"] = []
     end
 
-    defaults = get_prop_default("line")
-    lc_defaults = get_prop_default("linecode")
 
     if haskey(dss_data, "line")
         for line in dss_data["line"]
+            defaults = get_prop_default("line")
+            lc_defaults = get_prop_default("linecode")
             merge!(defaults, line)
 
             linecode = get_linecode(dss_data, defaults["id"])
