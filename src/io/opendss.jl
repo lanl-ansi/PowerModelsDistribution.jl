@@ -480,7 +480,7 @@ Parses an already separated line given by `elements` (an array) of an OpenDSS
 file into `curCompDict`. If not defined, `curCompDict` is an empty dictionary.
 """
 function parse_line(elements::Array, curCompDict::Dict=Dict{String,Any}())
-    curCtypeName = elements[2]
+    curCtypeName = strip(elements[2], ['\"', '\''])
     if startswith(lowercase(curCtypeName), "object")
         curCtypeName = split(curCtypeName, '=')[2]
         curCompDict["id"] = split(curCtypeName, '.')[2]
