@@ -66,6 +66,7 @@ function get_prop_default(ctype::String)::Dict
                            "dispmode" => "Default", "dispvalue" => 0.0, "conn" => "wye",
                            "rneut" => 0, "xneut" => 0, "status" => "variable", "class" => 1,
                            "vpu" => 1.0, "maxkvar" => 120, "minkvar" => -120, "pvfactor" => 0.1,
+                           "maxkw" => 2000, "minkw" => 500,
                            "forceon" => "No", "kva" => 1200, "mva" => 1.2, "xd" => 1,
                            "xdpp" => 0.2, "h" => 1, "d" => 0, "debugtrace" => "no",
                            "balanced" => "No", "xrdp" => 20, "spectrum" => "defaultgen",
@@ -243,6 +244,23 @@ function warn_get(data, field, default; valid = x -> true)
     end
 end
 
+function parse_list(dtype::Type, data::AbstractString)::Array
+    cols = []
+
+    for line in split(strip(data, ['[', ']', '(', ')']), ',')
+        for item in split(line)
+            if dtype <: String
+                push!(cols, item)
+            else
+                push!(cols, parse(dtype, item))
+            end
+        end
+    end
+
+    return cols
+end
+
+
 
 """
     parse_matrix(dtype, data)
@@ -308,11 +326,16 @@ function parse_buscoords(file::AbstractString)::Array
     coordArray = []
     for line in split(file_str, '\n')
         if line != ""
+<<<<<<< HEAD
             bus, x, y = split(line, regex; limit=3)
             push!(coordArray, Dict{String,Any}("bus"=>strip(bus, [',']),
                                                "id"=>strip(bus, [',']),
                                                "x"=>parse(Float64, strip(x, [','])),
                                                "y"=>parse(Float64, strip(y, [',', '\r']))))
+=======
+            bus, x, y = split(line, ","; limit=3)
+            push!(coordArray, Dict{String,Any}("bus"=>bus, "x"=>x, "y"=>y))
+>>>>>>> fixed generator buses
         end
     end
     return coordArray
@@ -389,8 +412,23 @@ been added to `dss_data`, the new component is appeneded to the existing array
 of components of that type, otherwise a new array is created.
 """
 function add_component!(dss_data::Dict, ctype_name::AbstractString, compDict::Dict)
-    Logging.info("add_component! $ctype_name")
     ctype = split(lowercase(ctype_name), '.'; limit=2)[1]
+
+    # TODO: get rid of this ugly hack
+    if ctype == "transformer"
+        Logging.info("add_component! $ctype_name -> $ctype -> line")
+        buses = parse_list(String, compDict["buses"])
+        b1 = buses[1]
+        b2 = buses[2]
+        println("b1: $b1, b2: $b2")
+        compDict["bus1"] = b1
+        compDict["bus2"] = b2
+
+        ctype = "line"
+    else
+        Logging.info("add_component! $ctype_name -> [$ctype]")
+    end
+
     if haskey(dss_data, ctype)
         push!(dss_data[ctype], compDict)
     else
@@ -629,6 +667,7 @@ function parse_dss(filename::AbstractString)::Dict
             elseif cmd == "buscoords"
                 file = line_elements[2]
                 fullpath = path == "" ? file : join([path, file], '/')
+                print("Buscoords path: $fullpath\n")
                 dss_data["buscoords"] = parse_buscoords(fullpath)
 
             elseif cmd == "new"
@@ -658,7 +697,6 @@ function parse_dss(filename::AbstractString)::Dict
     return dss_data
 end
 
-
 """
 """
 function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
@@ -672,14 +710,14 @@ function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
                             try
                                 item[k] = parse_array(Float64, v)
                             catch err
-                                Logging.debug("$compType $k")
+                                debug(LOGGER, "$compType $k")
                                 error(LOGGER, err)
                             end
                         elseif isa(v, AbstractString) && ~isa(defaults[k], String)
                             try
                                 item[k] = parse(typeof(defaults[k]), v)
                             catch err
-                                Logging.debug("$compType $k")
+                                debug(LOGGER, "$compType $k")
                                 error(LOGGER, err)
                             end
                         end
@@ -691,13 +729,23 @@ function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
 end
 
 
+
+
+
 """
     parse_busname(busname)
 
 Parses busnames as defined in OpenDSS, e.g. "primary.1.2.3.0".
 """
 function parse_busname(busname::AbstractString)
-    name, elements = split(busname,'.'; limit=2)
+    parts = split(busname,'.'; limit=2)
+    name = parts[1]
+    elements = "1.2.3"
+
+    if length(parts) >= 2
+        name, elements = split(busname,'.'; limit=2)
+    end
+
     nodes = Array{Bool}([0 0 0 0])
 
     for num in range(1,3)
@@ -724,6 +772,11 @@ function discover_buses(dss_data::Dict)::Array
     buses = []
     if haskey(dss_data, "line")
         for branch in dss_data["line"]
+            bid = branch["id"]
+            n1 = branch["bus1"]
+            n2 = branch["bus2"]
+
+            print("$bid: $n1,$n2\n")
             for key in ["bus1", "bus2"]
                 name, nodes = parse_busname(branch[key])
                 if !(name in bus_names)
@@ -781,18 +834,13 @@ end
 
 Finds the index number of the bus in existing data from the given `busname`.
 """
-function find_bus(busname::AbstractString, tppm_data::Dict)::Int
+function find_bus(busname, tppm_data)
     for bus in tppm_data["bus"]
         if bus["name"] == split(busname, '.')[1]
             return bus["bus_i"]
         end
     end
-<<<<<<< HEAD
-
-    return 0
-=======
     error("cannot find connected bus with id $(split(busname, '.')[1])")
->>>>>>> FIX: Handles duplicate component entries
 end
 
 
@@ -815,12 +863,12 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             loadDict = Dict{String,Any}()
 
             nphases = defaults["phases"]
-            mva = tppm_data["baseMVA"]
+            #mva = tppm_data["baseMVA"]
 
             loadDict["name"] = defaults["id"]
             loadDict["load_bus"] = find_bus(defaults["bus1"], tppm_data)
-            loadDict["pd"] = ones(nphases)*defaults["kw"]*1e3/mva
-            loadDict["qd"] = ones(nphases)*defaults["kvar"]*1e3/mva
+            loadDict["pd"] = ones(nphases)*defaults["kw"]*1e3/1e3
+            loadDict["qd"] = ones(nphases)*defaults["kvar"]*1e3/1e3
             loadDict["status"] = convert(Int, defaults["enabled"])  # TODO: or check bus?
 
             loadDict["index"] = length(tppm_data["load"]) + 1
@@ -926,49 +974,87 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             nphases = defaults["phases"]
 
-            genDict["gen_bus"] = find_bus(defaults["bus1"])
+            kvll = tppm_data["baseMVA"]
+
+            bg = parse_busname(defaults["bus1"])[1]
+            println("Buses:")
+            println([b["name"] for b in tppm_data["bus"]])
+            println("gen bus: $bg")
+            genDict["gen_bus"] = find_bus(bg, tppm_data)
             genDict["name"] = defaults["id"]
             genDict["gen_status"] = 1  # TODO:
-            genDict["pg"] = zeros(nphases)  # TODO:
-            genDict["qg"] = zeros(nphases)  # TODO:
-            genDict["vg"] = ones(nphases)  # TODO:
-            genDict["mbase"] = NaN  # TODO:
-            genDict["ramp_agc"] = zeros(nphases)  # TODO:
-            genDict["ramp_q"] = zeros(nphases)  # TODO:
-            genDict["ramp_10"] = zeros(nphases)  # TODO:
-            genDict["ramp_30"] = zeros(nphases)  # TODO:
-            genDict["pmin"] = zeros(nphases)  # TODO:
-            genDict["pmax"] = zeros(nphases)  # TODO:
+            genDict["pg"] = ones(nphases)*defaults["kw"]/(1e3*nphases)
+            genDict["qg"] =  ones(nphases)*defaults["kvar"]/(1e3*nphases)
+            genDict["vg"] = ones(nphases)*defaults["kv"]/kvll
+            genDict["mbase"] = tppm_data["baseMVA"]
+            # TODO: OK to extend the OpenDSS format to specify
+            # real power limits? This seems important to have
+            genDict["pmin"] = ones(nphases)*defaults["minkw"]/(1e3*nphases)
+            genDict["pmax"] = ones(nphases)*defaults["maxkw"]/(1e3*nphases)
             genDict["apf"] = zeros(nphases)  # TODO:
-            genDict["qmin"] = zeros(nphases)  # TODO:
-            genDict["qmax"] = zeros(nphases)  # TODO:
-            genDict["pc1"] = zeros(nphases)  # TODO:
-            genDict["pc2"] = zeros(nphases)  # TODO:
-            genDict["qc1min"] = zeros(nphases)  # TODO:
-            genDict["qc1max"] = zeros(nphases)  # TODO:
-            genDict["qc2min"] = zeros(nphases)  # TODO:
-            genDict["qc2max"] = zeros(nphases)  # TODO:
+            genDict["qmin"] = ones(nphases)*defaults["minkvar"]/(1e3*nphases)
+            genDict["qmax"] = ones(nphases)*defaults["maxkvar"]/(1e3*nphases)
 
-            genDict["model"] = 2 * ones(nphases)  # TODO:
-            genDict["startup"] = zeros(nphases)  # TODO:
-            genDict["shutdown"] = zeros(nphases)  # TODO:
-            genDict["ncost"] = 3 * ones(nphases)  # TODO:
+            # TODO: Not sure the best way to handle this
+            # The default kw & kvar limits won't make sense
+            # if pg & qg are specified
+            if !("maxkw" in keys(gen))
+                genDict["pmax"] = max(genDict["pmax"], genDict["pg"])
+            end
+
+            if !("minkw" in keys(gen))
+                genDict["pmin"] = min(genDict["pmax"], genDict["pg"])
+            end
+
+
+            if !("maxkvar" in keys(gen))
+                genDict["qmax"] = max(genDict["pmax"], abs(genDict["pg"]))
+            end
+
+            if !("minkvar" in keys(gen))
+                genDict["qmin"] = min(genDict["qmin"], -1.0*abs(genDict["pg"]))
+            end
+
+            genDict["pc1"] = genDict["pmax"] 
+            genDict["pc2"] = genDict["pmin"]
+            genDict["qc1min"] = genDict["qmin"]
+            genDict["qc1max"] = genDict["qmax"]
+            genDict["qc2min"] = genDict["qmin"]
+            genDict["qc2max"] = genDict["qmax"]
+
+            # For distributed generation ramp rates are not usually an issue
+            # and they are not supported in OpenDSS
+            # TODO: Do we want to extend the OpenDSS format to include ramp 
+            # rates similar to the "enabled" property
+            genDict["ramp_agc"] = genDict["pmax"]  
+            genDict["ramp_q"] = max(abs(genDict["qmin"]), genDict["qmax"])
+            genDict["ramp_10"] = genDict["pmax"]  
+            genDict["ramp_30"] = genDict["pmax"]  
+
+            genDict["control_model"] = defaults["model"]
+
+            # if generator is in voltage control mode 
+            # convert its attached bus to a PV bus
+            if genDict["control_model"] == 3
+                tppm_data["bus"][genDict["gen_bus"]]["bus_type"] = 2
+            end
+
+            # TODO: do we want to extend opendss format to include gen costs?
+            genDict["model"] = 2 * ones(nphases)  
+            genDict["startup"] = zeros(nphases)  
+            genDict["shutdown"] = zeros(nphases)
+            genDict["ncost"] = 3 * ones(nphases)
             genDict["cost"] = [0.0 1.0 0.0; 0.0 1.0 0.0; 0.0 1.0 0.0]
 
             genDict["index"] = length(tppm_data["gen"]) + 1
 
             used = ["id", "phases", "bus1"]
-            PMs.import_remaining!(genDict, defaults, import_all; exlude=used)
+            PMs.import_remaining!(genDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["gen"], genDict)
         end
     end
 end
-
-# New linecode.300 nphases=3 basefreq=60   ! ohms per 1000ft  Corrected 11/30/05
-# ~ rmatrix = [0.253181818   |  0.039791667     0.250719697  |   0.040340909      0.039128788     0.251780303]  !ABC ORDER
-# ~ xmatrix = [0.252708333   |  0.109450758     0.256988636  |   0.094981061      0.086950758     0.255132576]
-# ~ CMATRIX = [2.680150309   | -0.769281006     2.5610381    |  -0.499507676     -0.312072984     2.455590387]
 
 #    linecode = Dict{String,Any}("nphases" => 3, "r1" => 0.058, "x1" => 0.1206, "r0" => 0.1784,
 #                                "x0" => 0.4047, "c1" => 3.4, "c0" => 1.6, "units" => "none",
@@ -1049,7 +1135,10 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             c_nf = parse_matrix(Float64, defaults["cmatrix"])
 
-            vll = parse(Float64, tppm_data["basekv"])
+            vll = tppm_data["basekv"]
+            if !isa(vll, Number)
+                vll = parse(Float64, tppm_data["basekv"])
+            end
             vln = vll/sqrt(3.0)
             mva = tppm_data["baseMVA"]
             Zbase = vln^2*nphases/mva 
