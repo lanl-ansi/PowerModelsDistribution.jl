@@ -281,10 +281,16 @@ function parse_array(dtype::Type, data::AbstractString)::Array
     end
 
     elements = split(strip(data, ['\"', '\'', '[', ']', '(', ')']), split_char)
-    array = zeros(dtype, length(elements))
-
-    for (i, el) in enumerate(elements)
-        array[i] = parse(dtype, el)
+    if dtype == String
+        array = []
+        for el in elements
+            push!(array, el)
+        end
+    else
+        array = zeros(dtype, length(elements))
+        for (i, el) in enumerate(elements)
+            array[i] = parse(dtype, el)
+        end
     end
 
     return array
@@ -715,6 +721,22 @@ function parse_busname(busname::AbstractString)
 end
 
 
+""
+function split_transformer_buses!(transformer::Dict)
+    if haskey(transformer, "buses")
+        n1, n2 = parse_array(String, transformer["buses"])
+        transformer["bus1"] = n1
+        transformer["bus2"] = n2
+    elseif haskey(transformer, "bus")
+        transformer["bus1"] = transformer["bus"]
+        transformer["bus2"] = transformer["bus_2"]
+        if haskey(transformer, "bus_3")
+            transformer["bus3"] = transformer["bus3"]
+        end
+    end
+end
+
+
 """
     discover_buses(dss_data)
 
@@ -725,10 +747,6 @@ function discover_buses(dss_data::Dict)::Array
     buses = []
     if haskey(dss_data, "line")
         for branch in dss_data["line"]
-            bid = branch["id"]
-            n1 = branch["bus1"]
-            n2 = branch["bus2"]
-
             for key in ["bus1", "bus2"]
                 name, nodes = parse_busname(branch[key])
                 if !(name in bus_names)
@@ -737,10 +755,27 @@ function discover_buses(dss_data::Dict)::Array
                 end
             end
         end
-    else
-        error(LOGGER, "dss_data has no branches!")
     end
-    return buses
+
+    if haskey(dss_data, "transformer")
+        for transformer in dss_data["transformer"]
+            tid = transformer["id"]
+            split_transformer_buses!(transformer)
+            for key in ["bus1", "bus2"]
+                name, nodes = parse_busname(transformer[key])
+                if !(name in bus_names)
+                    push!(bus_names, name)
+                    push!(buses, (name, nodes))
+                end
+            end
+        end
+    end
+
+    if length(buses) == 0
+        error(LOGGER, "dss_data has no branches!")
+    else
+        return buses
+    end
 end
 
 
@@ -1133,16 +1168,50 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
     end
 
     if haskey(dss_data, "transformer")
-        warn(LOGGER, "transformers are not yet supported, skipping")
+        warn(LOGGER, "transformers are not yet supported, treating like non-transformer lines")
         for transformer in dss_data["transformer"]
-            defaults = get_prop_default("transformer")
+            defaults = get_prop_default("transformer2")
+            split_transformer_buses!(transformer)
             merge!(defaults, transformer)
 
             transDict = Dict{String,Any}()
 
+            nphases = parse(Int, defaults["phases"])
+
+            transDict["name"] = defaults["id"]
+
+            transDict["f_bus"] = find_bus(parse_busname(defaults["bus1"])[1], tppm_data)
+            transDict["t_bus"] = find_bus(parse_busname(defaults["bus2"])[1], tppm_data)
+
+            transDict["br_r"] = PMs.MultiPhaseMatrix(zeros(nphases, nphases))
+            transDict["br_x"] = PMs.MultiPhaseMatrix(zeros(nphases, nphases))
+
+            transDict["g_fr"] = PMs.MultiPhaseMatrix(zeros(nphases, nphases))
+            transDict["g_to"] = PMs.MultiPhaseMatrix(zeros(nphases, nphases))
+            transDict["b_fr"] = PMs.MultiPhaseMatrix(zeros(nphases, nphases))
+            transDict["b_to"] = PMs.MultiPhaseMatrix(zeros(nphases, nphases))
+
+            transDict["rate_a"] = PMs.MultiPhaseVector(ones(nphases)*defaults["normamps"])
+            transDict["rate_b"] = PMs.MultiPhaseVector(ones(nphases)*defaults["emergamps"])
+            transDict["rate_c"] = PMs.MultiPhaseVector(ones(nphases)*defaults["emergamps"])
+
+            transDict["tap"] = PMs.MultiPhaseVector(ones(nphases))
+            transDict["shift"] = PMs.MultiPhaseVector(zeros(nphases))
+
+            transDict["br_status"] = convert(Int, defaults["enabled"])
+
+            default_pad = 1.0472
+            transDict["angmin"] = PMs.MultiPhaseVector(ones(nphases) * -default_pad)
+            transDict["angmax"] = PMs.MultiPhaseVector(ones(nphases) *  default_pad)
+
+            transDict["transformer"] = false
+
+            transDict["index"] = length(tppm_data["branch"]) + 1
 
             used = []
             PMs.import_remaining!(transDict, defaults, import_all; exclude=used)
+
+            push!(tppm_data["branch"], transDict)
         end
     end
 end
@@ -1212,7 +1281,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     check_duplicate_components!(dss_data)
 
     parse_dss_with_dtypes!(dss_data, ["line", "linecode", "load", "generator", "capacitor",
-                                      "reactor", "circuit"
+                                      "reactor", "circuit", "transformer"
                                      ])
 
     if haskey(dss_data, "options")
@@ -1223,7 +1292,8 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         dss_data["options"] = condensed_opts
     end
 
-    tppm_data["options"] = parse_options(get(dss_data, "options", [Dict{String,Any}()])[1])
+    merge!(tppm_data, parse_options(get(dss_data, "options", [Dict{String,Any}()])[1]))
+
     tppm_data["per_unit"] = false
     tppm_data["source_type"] = "dss"
     tppm_data["source_version"] = VersionNumber("0")
