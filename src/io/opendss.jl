@@ -194,11 +194,7 @@ end
 
 
 ""
-<<<<<<< HEAD
-function get_linecode(dss_data, id)
-=======
 function get_linecode(dss_data::Dict, id::AbstractString)
->>>>>>> FIX: Handles duplicate component entries
     if haskey(dss_data, "linecode")
         for item in dss_data["linecode"]
             if item["id"] == id
@@ -312,16 +308,11 @@ function parse_buscoords(file::AbstractString)::Array
     coordArray = []
     for line in split(file_str, '\n')
         if line != ""
-<<<<<<< HEAD
             bus, x, y = split(line, regex; limit=3)
             push!(coordArray, Dict{String,Any}("bus"=>strip(bus, [',']),
                                                "id"=>strip(bus, [',']),
                                                "x"=>parse(Float64, strip(x, [','])),
                                                "y"=>parse(Float64, strip(y, [',', '\r']))))
-=======
-            bus, x, y = split(line, ","; limit=3)
-            push!(coordArray, Dict{String,Any}("bus"=>bus, "x"=>x, "y"=>y))
->>>>>>> fixed generator buses
         end
     end
     return coordArray
@@ -515,7 +506,7 @@ end
 
 "Strips comments, defined by \"!\" from the ends of lines"
 function strip_comments(line::AbstractString)::String
-    return split(line, r"\s*!")[1]
+    return strip(split(line, r"\s*!")[1], ['\r', '\n'])
 end
 
 
@@ -1114,8 +1105,9 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict["br_status"] = convert(Int, defaults["enabled"])
 
-            branchDict["angmin"] = PMs.MultiPhaseVector(zeros(nphases))
-            branchDict["angmax"] = PMs.MultiPhaseVector(zeros(nphases))
+            default_pad = 1.0472
+            branchDict["angmin"] = PMs.MultiPhaseVector(ones(nphases) * -default_pad)
+            branchDict["angmax"] = PMs.MultiPhaseVector(ones(nphases) *  default_pad)
 
             branchDict["transformer"] = false
 
@@ -1231,7 +1223,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         dss_data["options"] = condensed_opts
     end
 
-    tppm_data["options"] = parse_options(dss_data["options"][1])
+    tppm_data["options"] = parse_options(get(dss_data, "options", [Dict{String,Any}()])[1])
     tppm_data["per_unit"] = false
     tppm_data["source_type"] = "dss"
     tppm_data["source_version"] = VersionNumber("0")
@@ -1256,6 +1248,8 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     dss2tppm_transformer!(tppm_data, dss_data, import_all)
     dss2tppm_gen!(tppm_data, dss_data, import_all)
 
+    tppm_data["dcline"] = []
+
     InfrastructureModels.arrays_to_dicts!(tppm_data)
 
     return tppm_data
@@ -1263,7 +1257,7 @@ end
 
 
 "Parses a DSS file into a PowerModels usable format."
-function parse_opendss(filename::String; import_all::Bool=false)::Dict
+function parse_opendss(filename::String; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1)::Dict
     dss_data = parse_dss(filename)
 
     return parse_opendss(dss_data; import_all=import_all)
