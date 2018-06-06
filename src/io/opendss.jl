@@ -41,20 +41,20 @@ function get_prop_default(ctype::String)::Dict
                              "xrharm" => 6, "spectrum" => "defaultload",
                              "basefreq" => 60, "enabled" => true)
 
-    transformer2 = Dict{String,Any}("phases" => 3, "windings" => 2, "wdg" => 1, "conn" => "wye",
-                                    "kv" => 12.47, "kva" => 1000, "tap" => 1, "%r" => 0.2,
-                                    "rneut" => -1, "xneut" => 0, "conns" => ["wye", "wye"],
-                                    "kvs" => [12.47, 12.47], "kvas" => [1000, 1000],
-                                    "taps" => [1, 1], "xhl" => 7, "xht" => 35, "xlt" => 30,
-                                    "xscarray" => [7], "thermal" => 2, "n" => 0.8, "m" => 0.8,
-                                    "flrise" => 65, "hsrise" => 15, "%loadloss" => 0.4,
-                                    "%noloadloss" => 0, "normhkva" => 1100, "emerghkva" => 1500,
-                                    "sub" => "n", "maxtap" => 1.1, "mintap" => 0.9, "numtaps" => 32,
-                                    "%imag" => 0, "ppm_antifloat" => 1, "%rs" => [0.2, 0.2],
-                                    "xrconst" => "NO", "x12" => 7, "x13" => 35, "x23" => 30,
-                                    "leadlag" => "Lag", "normamps" => 50.929, "emergamps" => 69.449,
-                                    "faultrate" => 0.007, "pctperm" => 100, "repair" => 36,
-                                    "basefreq" => 60, "enabled" => true)
+    transformer = Dict{String,Any}("phases" => 3, "windings" => 2, "wdg" => 1, "conn" => "wye",
+                                   "kv" => 12.47, "kva" => 1000, "tap" => 1.0, "%r" => 0.2,
+                                   "rneut" => -1, "xneut" => 0, "conns" => ["wye", "wye"],
+                                   "kvs" => [12.47, 12.47], "kvas" => [1000.0, 1000.0],
+                                   "taps" => [1.0, 1.0], "xhl" => 7.0, "xht" => 35.0, "xlt" => 30.0,
+                                   "xscarray" => [7], "thermal" => 2, "n" => 0.8, "m" => 0.8,
+                                   "flrise" => 65, "hsrise" => 15, "%loadloss" => 0.4,
+                                   "%noloadloss" => 0, "normhkva" => 1100, "emerghkva" => 1500,
+                                   "sub" => "n", "maxtap" => 1.1, "mintap" => 0.9, "numtaps" => 32,
+                                   "%imag" => 0, "ppm_antifloat" => 1, "%rs" => [0.2, 0.2],
+                                   "xrconst" => "NO", "x12" => 7, "x13" => 35, "x23" => 30,
+                                   "leadlag" => "Lag", "normamps" => 50.929, "emergamps" => 69.449,
+                                   "faultrate" => 0.007, "pctperm" => 100, "repair" => 36,
+                                   "basefreq" => 60, "enabled" => true)
 
     transformer3 = Dict{String,Any}()
 
@@ -109,7 +109,7 @@ function get_prop_default(ctype::String)::Dict
                                 "linecode" => linecode,
                                 "generator" => gen,
                                 "capacitor" => capacitor,
-                                "transformer2" => transformer2,
+                                "transformer" => transformer,
                                 "transformer3" => transformer3,
                                 "reactor" => reactor,
                                 "circuit" => circuit,
@@ -635,9 +635,12 @@ function parse_dss(filename::AbstractString)::Dict
                 curCtypeName, curCompDict = parse_line(line_elements)
             else
                 try
-                    cType, cName, prop = split(lowercase(line), '.'; limit=3)
-                    propName, propValue = split(prop, '=')
-                    assign_property!(dss_data, cType, cName, propName, propValue)
+                    cType, cName, props = split(lowercase(line), '.'; limit=3)
+                    propsOut = parse_properties(props)
+                    for prop in propsOut
+                        propName, propValue = split(prop, '=')
+                        assign_property!(dss_data, cType, cName, propName, propValue)
+                    end
                 catch
                     warn(LOGGER, "Command \"$cmd\" on line $real_line_num in \"$currentFile\" is not supported, skipping.")
                 end
@@ -670,17 +673,17 @@ function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
                     if haskey(defaults, k)
                         if isa(defaults[k], Array)
                             try
-                                item[k] = parse_array(Float64, v)
+                                item[k] = parse_array(eltype(defaults[k]), v)
                             catch err
                                 debug(LOGGER, "$compType $k")
                                 error(LOGGER, err)
                             end
-                        elseif isa(v, AbstractString) && ~isa(defaults[k], String)
+                        elseif isa(v, AbstractString) && !isa(defaults[k], String)
                             try
                                 item[k] = parse(typeof(defaults[k]), v)
                             catch err
                                 debug(LOGGER, "$compType $k")
-                                error(LOGGER, err)
+                                warn(LOGGER, "cannot parse \"$k=$v\" as $(typeof(defaults[k])), leaving as String.")
                             end
                         end
                     end
@@ -1170,13 +1173,13 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
     if haskey(dss_data, "transformer")
         warn(LOGGER, "transformers are not yet supported, treating like non-transformer lines")
         for transformer in dss_data["transformer"]
-            defaults = get_prop_default("transformer2")
+            defaults = get_prop_default("transformer")
             split_transformer_buses!(transformer)
             merge!(defaults, transformer)
 
             transDict = Dict{String,Any}()
 
-            nphases = parse(Int, defaults["phases"])
+            nphases = defaults["phases"]
 
             transDict["name"] = defaults["id"]
 
