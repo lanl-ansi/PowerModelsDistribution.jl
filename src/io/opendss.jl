@@ -830,12 +830,12 @@ end
 Finds the index number of the bus in existing data from the given `busname`.
 """
 function find_bus(busname, tppm_data)
-    for bus in tppm_data["bus"]
-        if lowercase(bus["name"]) == lowercase(split(busname, '.')[1])
+    for bus in values(tppm_data["bus"])
+        if lowercase(bus["name"]) == lowercase(busname)
             return bus["bus_i"]
         end
     end
-    error("cannot find connected bus with id $(lowercase(split(busname, '.')[1]))")
+    error("cannot find connected bus with id $(lowercase(busname))")
 end
 
 

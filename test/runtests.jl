@@ -25,6 +25,8 @@ pajarito_solver = PajaritoSolver(mip_solver=cbc_solver, cont_solver=ipopt_solver
 
     include("matlab.jl")
 
+    include("opendss.jl")
+
     include("data.jl")
 
     include("base.jl")
