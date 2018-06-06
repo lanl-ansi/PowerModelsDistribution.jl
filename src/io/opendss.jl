@@ -42,15 +42,15 @@ function get_prop_default(ctype::String)::Dict
                              "basefreq" => 60, "enabled" => true)
 
     transformer = Dict{String,Any}("phases" => 3, "windings" => 2, "wdg" => 1, "conn" => "wye",
-                                   "kv" => 12.47, "kva" => 1000, "tap" => 1.0, "%r" => 0.2,
+                                   "kv" => 12.47, "kva" => 1000.0, "tap" => 1.0, "%r" => 0.2,
                                    "rneut" => -1, "xneut" => 0, "conns" => ["wye", "wye"],
                                    "kvs" => [12.47, 12.47], "kvas" => [1000.0, 1000.0],
                                    "taps" => [1.0, 1.0], "xhl" => 7.0, "xht" => 35.0, "xlt" => 30.0,
                                    "xscarray" => [7], "thermal" => 2, "n" => 0.8, "m" => 0.8,
                                    "flrise" => 65, "hsrise" => 15, "%loadloss" => 0.4,
-                                   "%noloadloss" => 0, "normhkva" => 1100, "emerghkva" => 1500,
+                                   "%noloadloss" => 0.0, "normhkva" => 1100, "emerghkva" => 1500,
                                    "sub" => "n", "maxtap" => 1.1, "mintap" => 0.9, "numtaps" => 32,
-                                   "%imag" => 0, "ppm_antifloat" => 1, "%rs" => [0.2, 0.2],
+                                   "%imag" => 0.0, "ppm_antifloat" => 1, "%rs" => [0.2, 0.2],
                                    "xrconst" => "NO", "x12" => 7, "x13" => 35, "x23" => 30,
                                    "leadlag" => "Lag", "normamps" => 50.929, "emergamps" => 69.449,
                                    "faultrate" => 0.007, "pctperm" => 100, "repair" => 36,
@@ -277,13 +277,13 @@ to contain "bus,x,y" on each line.
 function parse_buscoords(file::AbstractString)::Array
     file_str = readstring(open(file))
     regex = r",\s*"
-    if endswith(lowercase(file), "csv")
+    if endswith(lowercase(file), "csv") || endswith(lowercase(file), "dss")
         regex = r","
     end
 
     coordArray = []
     for line in split(file_str, '\n')
-        if line != ""
+        if line != "" && !startswith(strip(line), "/")
             bus, x, y = split(line, regex; limit=3)
             push!(coordArray, Dict{String,Any}("bus"=>strip(bus, [',']),
                                                "id"=>strip(bus, [',']),
@@ -644,17 +644,22 @@ function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
             for item in dss_data[compType]
                 defaults = get_prop_default(compType)
                 for (k, v) in item
+                    if lowercase(v) in ["n", "no"]
+                        v = "false"
+                    elseif lowercase(v) in ["y", "yes"]
+                        v = "true"
+                    end
                     if haskey(defaults, k)
                         if isa(defaults[k], Array)
                             try
-                                item[k] = parse_array(eltype(defaults[k]), v)
+                                item[k] = parse_array(eltype(defaults[k]), lowercase(v))
                             catch err
                                 debug(LOGGER, "$compType $k")
                                 error(LOGGER, err)
                             end
                         elseif isa(v, AbstractString) && !isa(defaults[k], String)
                             try
-                                item[k] = parse(typeof(defaults[k]), v)
+                                item[k] = parse(typeof(defaults[k]), lowercase(v))
                             catch err
                                 debug(LOGGER, "$compType $k")
                                 warn(LOGGER, "cannot parse \"$k=$v\" as $(typeof(defaults[k])) in $(compType), leaving as String.")
@@ -728,31 +733,25 @@ Discovers all of the buses (not separately defined in OpenDSS), from "lines".
 function discover_buses(dss_data::Dict)::Array
     bus_names = []
     buses = []
-    if haskey(dss_data, "line")
-        for branch in dss_data["line"]
-            for key in ["bus1", "bus2"]
-                name, nodes = parse_busname(branch[key])
-                if !(name in bus_names)
-                    push!(bus_names, name)
-                    push!(buses, (name, nodes))
+    for compType in ["line", "transformer", "reactor"]
+        if haskey(dss_data, compType)
+            compList = dss_data[compType]
+            for compObj in compList
+                if compType == "transformer"
+                    split_transformer_buses!(compObj)
+                end
+                if haskey(compObj, "bus2")
+                    for key in ["bus1", "bus2"]
+                        name, nodes = parse_busname(compObj[key])
+                        if !(name in bus_names)
+                            push!(bus_names, name)
+                            push!(buses, (name, nodes))
+                        end
+                    end
                 end
             end
         end
     end
-
-    if haskey(dss_data, "transformer")
-        for transformer in dss_data["transformer"]
-            split_transformer_buses!(transformer)
-            for key in ["bus1", "bus2"]
-                name, nodes = parse_busname(transformer[key])
-                if !(name in bus_names)
-                    push!(bus_names, name)
-                    push!(buses, (name, nodes))
-                end
-            end
-        end
-    end
-
     if length(buses) == 0
         error(LOGGER, "dss_data has no branches!")
     else
@@ -826,11 +825,11 @@ Finds the index number of the bus in existing data from the given `busname`.
 """
 function find_bus(busname, tppm_data)
     for bus in tppm_data["bus"]
-        if bus["name"] == split(busname, '.')[1]
+        if lowercase(bus["name"]) == lowercase(split(busname, '.')[1])
             return bus["bus_i"]
         end
     end
-    error("cannot find connected bus with id $(split(busname, '.')[1])")
+    error("cannot find connected bus with id $(lowercase(split(busname, '.')[1]))")
 end
 
 
@@ -916,26 +915,28 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if haskey(dss_data, "reactor")
         warn(LOGGER, "reactors as shunts is not yet supported, defaulting to gs=bs=0")
         for shunt in dss_data["reactor"]
-            defaults = get_prop_default("reactor")
-            merge!(defaults, shunt)
+            if !haskey(shunt, "bus2")
+                defaults = get_prop_default("reactor")
+                merge!(defaults, shunt)
 
-            shuntDict = Dict{String,Any}()
+                shuntDict = Dict{String,Any}()
 
-            nphases = tppm_data["phases"]
-            name, nodes = parse_busname(defaults["bus1"])
+                nphases = tppm_data["phases"]
+                name, nodes = parse_busname(defaults["bus1"])
 
-            shuntDict["shunt_bus"] = find_bus(name, tppm_data)
-            shuntDict["name"] = defaults["id"]
-            shuntDict["gs"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))  # TODO:
-            shuntDict["bs"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))  # TODO:
-            shuntDict["status"] = convert(Int, defaults["enabled"])
+                shuntDict["shunt_bus"] = find_bus(name, tppm_data)
+                shuntDict["name"] = defaults["id"]
+                shuntDict["gs"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))  # TODO:
+                shuntDict["bs"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))  # TODO:
+                shuntDict["status"] = convert(Int, defaults["enabled"])
 
-            shuntDict["index"] = length(tppm_data["shunt"]) + 1
+                shuntDict["index"] = length(tppm_data["shunt"]) + 1
 
-            used = ["bus1", "phases", "id"]
-            PMs.import_remaining!(shuntDict, defaults, import_all; exclude=used)
+                used = ["bus1", "phases", "id"]
+                PMs.import_remaining!(shuntDict, defaults, import_all; exclude=used)
 
-            push!(tppm_data["shunt"], shuntDict)
+                push!(tppm_data["shunt"], shuntDict)
+            end
         end
     end
 end
@@ -1156,6 +1157,55 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             PMs.import_remaining!(transDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["branch"], transDict)
+        end
+    end
+
+    if haskey(dss_data, "reactor")
+        warn(LOGGER, "reactors as constant impedance elements is not yet supported, treating like line")
+        for reactor in dss_data["reactor"]
+            if haskey(reactor, "bus2")
+                defaults = get_prop_default("reactor")
+                merge!(defaults, reactor)
+
+                reactDict = Dict{String,Any}()
+
+                nphases = tppm_data["phases"]
+
+                f_bus, nodes = parse_busname(defaults["bus1"])
+                t_bus = parse_busname(defaults["bus2"])[1]
+
+                reactDict["f_bus"] = find_bus(f_bus, tppm_data)
+                reactDict["t_bus"] = find_bus(t_bus, tppm_data)
+
+                reactDict["br_r"] = PMs.MultiPhaseMatrix(phase_on_off(diagm(fill(0.2, nphases)), nodes, nphases))
+                reactDict["br_x"] = PMs.MultiPhaseMatrix(phase_on_off(zeros(nphases, nphases), nodes, nphases))
+
+                reactDict["g_fr"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))
+                reactDict["g_to"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))
+                reactDict["b_fr"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))
+                reactDict["b_to"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))
+
+                reactDict["rate_a"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["normamps"], nphases), nodes, nphases, NaN))
+                reactDict["rate_b"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["emergamps"], nphases), nodes, nphases, NaN))
+                reactDict["rate_c"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["emergamps"], nphases), nodes, nphases, NaN))
+
+                reactDict["tap"] = PMs.MultiPhaseVector(phase_on_off(ones(nphases), nodes, nphases, NaN))
+                reactDict["shift"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))
+
+                reactDict["br_status"] = convert(Int, defaults["enabled"])
+
+                reactDict["angmin"] = PMs.MultiPhaseVector(phase_on_off(fill(-1.0472, nphases), nodes, nphases, -1.0472))
+                reactDict["angmax"] = PMs.MultiPhaseVector(phase_on_off(fill( 1.0472, nphases), nodes, nphases,  1.0472))
+
+                reactDict["transformer"] = true
+
+                reactDict["index"] = length(tppm_data["branch"]) + 1
+
+                used = []
+                PMs.import_remaining!(reactDict, defaults, import_all; exclude=used)
+
+                push!(tppm_data["branch"], reactDict)
+            end
         end
     end
 end
