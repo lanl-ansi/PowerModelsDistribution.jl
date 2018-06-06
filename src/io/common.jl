@@ -7,7 +7,9 @@ function parse_file(file::String; import_all::Bool=false, vmin::Float64=0.9, vma
     if endswith(file, ".m")
         tppm_data = ThreePhasePowerModels.parse_matlab(file)
     elseif endswith(lowercase(file), ".dss")
-        warn(LOGGER, "Not all OpenDSS features are supported, currently only raw data is loaded.")
+        warn(LOGGER, "Not all OpenDSS features are supported, currently only minimal support for \
+                      lines, loads, generators, and capacitors as shunts. Transformers and reactors \
+                      as transformer branches are included, but value translation is not fully supported.")
         tppm_data = ThreePhasePowerModels.parse_opendss(file; import_all=import_all, vmin=vmin, vmax=vmax)
     else
         error(LOGGER, "only .m and .dss files are supported")

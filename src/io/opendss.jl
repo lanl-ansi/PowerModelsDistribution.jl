@@ -267,6 +267,21 @@ function parse_array(dtype::Type, data::AbstractString)::Array
 end
 
 
+"strips lines that are either commented (block or single) or empty"
+function strip_lines(lines::Array)::Array
+    blockComment = false
+    stripped_lines = []
+    for line in lines
+        if startswith(strip(line), "/*") || endswith(strip(line), "*/")
+            blockComment = !blockComment
+        elseif !startswith(line, '!') && !startswith(line, "//") && strip(line) != "" && !blockComment
+            push!(stripped_lines, line)
+        end
+    end
+    return stripped_lines
+end
+
+
 """
     parse_buscoords(file)
 
@@ -281,15 +296,15 @@ function parse_buscoords(file::AbstractString)::Array
         regex = r","
     end
 
+    lines = strip_lines(split(file_str, '\n'))
+
     coordArray = []
-    for line in split(file_str, '\n')
-        if line != "" && !startswith(strip(line), "/")
-            bus, x, y = split(line, regex; limit=3)
-            push!(coordArray, Dict{String,Any}("bus"=>strip(bus, [',']),
-                                               "id"=>strip(bus, [',']),
-                                               "x"=>parse(Float64, strip(x, [','])),
-                                               "y"=>parse(Float64, strip(y, [',', '\r']))))
-        end
+    for line in lines
+        bus, x, y = split(line, regex; limit=3)
+        push!(coordArray, Dict{String,Any}("bus"=>strip(bus, [',']),
+                                            "id"=>strip(bus, [',']),
+                                            "x"=>parse(Float64, strip(x, [','])),
+                                            "y"=>parse(Float64, strip(y, [',', '\r']))))
     end
     return coordArray
 end
@@ -528,16 +543,7 @@ function parse_dss(filename::AbstractString)::Dict
 
     lines = split(dss_str, '\n')
 
-    blockComment = false
-    stripped_lines = []
-    for line in lines
-        if startswith(strip(line), "/*") || endswith(strip(line), "*/")
-            blockComment = !blockComment
-        elseif !startswith(line, '!') && !startswith(line, "//") && strip(line) != "" && !blockComment
-            push!(stripped_lines, line)
-        end
-    end
-
+    stripped_lines = strip_lines(lines)
     nlines = length(stripped_lines)
 
     for (n, line) in enumerate(stripped_lines)
