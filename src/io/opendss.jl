@@ -201,8 +201,7 @@ function get_linecode(dss_data::Dict, id::AbstractString)
             end
         end
     end
-
-    return Void
+    return Dict{String,Any}()
 end
 
 
@@ -881,10 +880,6 @@ end
 
 Adds PowerModels-style shunts to `tppm_data` from `dss_data`.
 """
-
-# 60 New Capacitor.C844      Bus1=844        Phases=3        kVAR=300        kV=24.9
-# 61 New Capacitor.C848      Bus1=848        Phases=3        kVAR=450        kV=24.9
-
 function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if !haskey(tppm_data, "shunt")
         tppm_data["shunt"] = []
@@ -901,7 +896,7 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             name, nodes = parse_busname(defaults["bus1"])
 
             Zbase = (tppm_data["basekv"] / sqrt(3.0))^2 * nphases / tppm_data["baseMVA"]  # Use single-phase base impedance for each phase
-            Gcap = Zbase * sum(defaults["kvar"]) / (nphases * 1000.0 * (tppm_data["basekv"] / sqrt(3.0))^2)
+            Gcap = -Zbase * sum(defaults["kvar"]) / (nphases * 1e3 * (tppm_data["basekv"] / sqrt(3.0))^2)
 
             shuntDict["shunt_bus"] = find_bus(name, tppm_data)
             shuntDict["name"] = defaults["id"]
@@ -919,7 +914,6 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
 
     if haskey(dss_data, "reactor")
-        warn(LOGGER, "reactors as shunts is not yet supported, defaulting to gs=bs=0")
         for shunt in dss_data["reactor"]
             if !haskey(shunt, "bus2")
                 defaults = get_prop_default("reactor")
@@ -930,10 +924,13 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 nphases = tppm_data["phases"]
                 name, nodes = parse_busname(defaults["bus1"])
 
+                Zbase = (tppm_data["basekv"] / sqrt(3.0))^2 * nphases / tppm_data["baseMVA"]  # Use single-phase base impedance for each phase
+                Gcap = Zbase * sum(defaults["kvar"]) / (nphases * 1e3 * (tppm_data["basekv"] / sqrt(3.0))^2)
+
                 shuntDict["shunt_bus"] = find_bus(name, tppm_data)
                 shuntDict["name"] = defaults["id"]
                 shuntDict["gs"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))  # TODO:
-                shuntDict["bs"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))  # TODO:
+                shuntDict["bs"] = PMs.MultiPhaseVector(phase_on_off(fill(Gcap, nphases), nodes, nphases))
                 shuntDict["status"] = convert(Int, defaults["enabled"])
 
                 shuntDict["index"] = length(tppm_data["shunt"]) + 1
@@ -974,8 +971,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             genDict["gen_status"] = convert(Int, defaults["enabled"])
             genDict["pg"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["kw"] / (1e3 * nphases), nphases), nodes, nphases))
             genDict["qg"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["kvar"] / (1e3 * nphases), nphases), nodes, nphases))
-            genDict["vg"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["kv"] / tppm_data["baseMVA"], nphases), nodes, nphases))
-            genDict["mbase"] = tppm_data["baseMVA"]
+            genDict["vg"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["kv"] / tppm_data["basekv"], nphases), nodes, nphases))
 
             genDict["qmin"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["minkvar"] / (1e3 * nphases), nphases), nodes, nphases))
             genDict["qmax"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["maxkvar"] / (1e3 * nphases), nphases), nodes, nphases))
@@ -1038,20 +1034,12 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if haskey(dss_data, "line")
         for line in dss_data["line"]
             defaults = get_prop_default("line")
-            lc_defaults = get_prop_default("linecode")
             merge!(defaults, line)
 
-            linecode = get_linecode(dss_data, defaults["id"])
-            if linecode != Void
-                merge!(lc_defaults, linecode)
-
-                for k in ("rmatrix","cmatrix","xmatrix")
-                    if k in keys(lc_defaults)
-                        defaults[k] = lc_defaults[k]
+            linecode = merge(get_prop_default("linecode"), get_linecode(dss_data, get(defaults, "linecode", "")))
+            for k in ("rmatrix", "cmatrix", "xmatrix")
+                defaults[k] = linecode[k]
                     end
-                end
-            end
-
 
             bf, nodes = parse_busname(defaults["bus1"])
             bt = parse_busname(defaults["bus2"])[1]
@@ -1065,20 +1053,21 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["f_bus"] = find_bus(bf, tppm_data)
             branchDict["t_bus"] = find_bus(bt, tppm_data)
 
-            #defaults["length"] = 1.0
+            defaults["length"] = 1.0
             branchDict["length"] = defaults["length"]
 
             c_nf = parse_matrix(Float64, defaults["cmatrix"])
             Zbase = (tppm_data["basekv"] / sqrt(3.0))^2 * nphases / tppm_data["baseMVA"]
 
-            branchDict["br_r"] = PMs.MultiPhaseMatrix(phase_on_off(parse_matrix(Float64, defaults["rmatrix"])*defaults["length"]/Zbase, nodes, nphases))
-            branchDict["br_x"] = PMs.MultiPhaseMatrix(phase_on_off(parse_matrix(Float64, defaults["xmatrix"])*defaults["length"]/Zbase, nodes, nphases))
+            branchDict["br_r"] = PMs.MultiPhaseMatrix(phase_on_off(parse_matrix(Float64, defaults["rmatrix"]) * defaults["length"] / Zbase, nodes, nphases))
+            branchDict["br_x"] = PMs.MultiPhaseMatrix(phase_on_off(parse_matrix(Float64, defaults["xmatrix"]) * defaults["length"] / Zbase, nodes, nphases))
 
             # CHECK: Do we need to reformulate to use a matrix instead of a vector for g, b?
-            branchDict["g_fr"] = PMs.MultiPhaseVector(phase_on_off(diag(Zbase * 1.0 ./ (2.0 * pi * 60.0 * c_nf * defaults["length"] / 1e9) / 2.0), nodes, nphases))
-            branchDict["g_to"] = PMs.MultiPhaseVector(phase_on_off(diag(Zbase * 1.0 ./ (2.0 * pi * 60.0 * c_nf * defaults["length"] / 1e9) / 2.0), nodes, nphases))
-            branchDict["b_fr"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))  # TODO: need to derive
-            branchDict["b_to"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))  # TODO: need to derive
+            branchDict["g_fr"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))  # TODO: need to derive
+            branchDict["g_to"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))  # TODO: need to derive
+
+            branchDict["b_fr"] = PMs.MultiPhaseVector(phase_on_off(diag(Zbase .* (2.0 * pi * defaults["basefreq"] * c_nf * defaults["length"] / 1e9) / 2.0), nodes, nphases))
+            branchDict["b_to"] = PMs.MultiPhaseVector(phase_on_off(diag(Zbase .* (2.0 * pi * defaults["basefreq"] * c_nf * defaults["length"] / 1e9) / 2.0), nodes, nphases))
 
             # TODO: pick a better value for emergamps
             branchDict["rate_a"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["normamps"], nphases), nodes, nphases, NaN))
@@ -1090,8 +1079,8 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict["br_status"] = convert(Int, defaults["enabled"])
 
-            branchDict["angmin"] = PMs.MultiPhaseVector(phase_on_off(fill(-1.0472, nphases), nodes, nphases, -1.0472))
-            branchDict["angmax"] = PMs.MultiPhaseVector(phase_on_off(fill( 1.0472, nphases), nodes, nphases,  1.0472))
+            branchDict["angmin"] = PMs.MultiPhaseVector(phase_on_off(fill(-60.0, nphases), nodes, nphases, -60.0))
+            branchDict["angmax"] = PMs.MultiPhaseVector(phase_on_off(fill( 60.0, nphases), nodes, nphases,  60.0))
 
             branchDict["transformer"] = false
 
@@ -1152,8 +1141,8 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
 
             transDict["br_status"] = convert(Int, defaults["enabled"])
 
-            transDict["angmin"] = PMs.MultiPhaseVector(phase_on_off(fill(-1.0472, nphases), nodes, nphases, -1.0472))
-            transDict["angmax"] = PMs.MultiPhaseVector(phase_on_off(fill( 1.0472, nphases), nodes, nphases,  1.0472))
+            transDict["angmin"] = PMs.MultiPhaseVector(phase_on_off(fill(-60.0, nphases), nodes, nphases, -60.0))
+            transDict["angmax"] = PMs.MultiPhaseVector(phase_on_off(fill( 60.0, nphases), nodes, nphases,  60.0))
 
             transDict["transformer"] = true
 
@@ -1200,8 +1189,8 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
 
                 reactDict["br_status"] = convert(Int, defaults["enabled"])
 
-                reactDict["angmin"] = PMs.MultiPhaseVector(phase_on_off(fill(-1.0472, nphases), nodes, nphases, -1.0472))
-                reactDict["angmax"] = PMs.MultiPhaseVector(phase_on_off(fill( 1.0472, nphases), nodes, nphases,  1.0472))
+                reactDict["angmin"] = PMs.MultiPhaseVector(phase_on_off(fill(-60.0, nphases), nodes, nphases, -60.0))
+                reactDict["angmax"] = PMs.MultiPhaseVector(phase_on_off(fill( 60.0, nphases), nodes, nphases,  60.0))
 
                 reactDict["transformer"] = true
 
