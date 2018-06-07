@@ -212,7 +212,7 @@ Parses a OpenDSS style triangular matrix string `data` into a two dimensional
 array of type `dtype`. Matrix strings are capped by either parenthesis or
 brackets, rows are separated by "|", and columns are separated by spaces.
 """
-function parse_matrix(dtype::Type, data::AbstractString)::Array
+function parse_matrix(dtype::Type, data::AbstractString, nphases::Int=3)::Array
     rows = []
     for line in split(strip(data, ['[', ']', '(', ')']), '|')
         cols = []
@@ -222,10 +222,22 @@ function parse_matrix(dtype::Type, data::AbstractString)::Array
         push!(rows, cols)
     end
 
-    matrix = zeros(dtype, length(rows), length(rows[end]))
-    for (i, row) in enumerate(rows)
-        for (j, col) in enumerate(row)
-            matrix[i, j] = matrix[j, i] = col
+    matrix = zeros(dtype, nphases, nphases)
+    if length(rows) == 1
+        for i in 1:nphases
+            matrix[i, i] = rows[1][1]
+        end
+    elseif all([length(row) for row in rows] .== [i for i in 1:nphases])
+        for (i, row) in enumerate(rows)
+            for (j, col) in enumerate(row)
+                matrix[i, j] = matrix[j, i] = col
+            end
+        end
+    elseif all([length(row) for row in rows] .== nphases)
+        for (i, row) in enumerate(rows)
+            for (j, col) in enumerate(row)
+                matrix[i, j] = col
+            end
         end
     end
 
@@ -684,12 +696,12 @@ end
 Parses busnames as defined in OpenDSS, e.g. "primary.1.2.3.0".
 """
 function parse_busname(busname::AbstractString)
-    parts = split(busname,'.'; limit=2)
+    parts = split(lowercase(busname), '.'; limit=2)
     name = parts[1]
     elements = "1.2.3"
 
     if length(parts) >= 2
-        name, elements = split(busname,'.'; limit=2)
+        name, elements = split(lowercase(busname), '.'; limit=2)
     end
 
     nodes = Array{Bool}([0 0 0 0])
@@ -1059,8 +1071,8 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             c_nf = parse_matrix(Float64, defaults["cmatrix"])
             Zbase = (tppm_data["basekv"] / sqrt(3.0))^2 * nphases / tppm_data["baseMVA"]
 
-            branchDict["br_r"] = PMs.MultiPhaseMatrix(phase_on_off(parse_matrix(Float64, defaults["rmatrix"]) * defaults["length"] / Zbase, nodes, nphases))
-            branchDict["br_x"] = PMs.MultiPhaseMatrix(phase_on_off(parse_matrix(Float64, defaults["xmatrix"]) * defaults["length"] / Zbase, nodes, nphases))
+            branchDict["br_r"] = PMs.MultiPhaseMatrix(phase_on_off(parse_matrix(Float64, defaults["rmatrix"]) .* defaults["length"] ./ Zbase, nodes, nphases))
+            branchDict["br_x"] = PMs.MultiPhaseMatrix(phase_on_off(parse_matrix(Float64, defaults["xmatrix"]) .* defaults["length"] ./ Zbase, nodes, nphases))
 
             # CHECK: Do we need to reformulate to use a matrix instead of a vector for g, b?
             branchDict["g_fr"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))  # TODO: need to derive
@@ -1286,7 +1298,6 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     tppm_data["per_unit"] = false
     tppm_data["source_type"] = "dss"
     tppm_data["source_version"] = VersionNumber("0")
-    tppm_data["files"] = dss_data["filename"]
 
     if haskey(dss_data, "circuit")
         defaults = get_prop_default("circuit")
@@ -1311,6 +1322,8 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     tppm_data["dcline"] = []
 
     InfrastructureModels.arrays_to_dicts!(tppm_data)
+
+    tppm_data["files"] = dss_data["filename"]
 
     return tppm_data
 end
