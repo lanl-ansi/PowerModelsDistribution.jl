@@ -2,26 +2,37 @@ export run_tp_opf, run_ac_tp_opf
 
 ""
 function run_ac_tp_opf(file, solver; kwargs...)
-    return run_tp_opf(file, PMs.ACPPowerModel, solver; kwargs...)
+    return run_tp_opf(file, PMs.ACPPowerModel, solver; multiphase=true, kwargs...)
 end
 
+
 ""
-function run_tp_opf(file, model_constructor, solver; kwargs...)
-    return PMs.run_generic_model(file, model_constructor, solver, post_tp_opf; multiphase=true, kwargs...)
+function run_tp_opf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
+    return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf; multiphase=true, kwargs...)
 end
+
+
+""
+function run_tp_opf(file::String, model_constructor, solver; kwargs...)
+    data = ThreePhasePowerModels.parse_file(file)
+    return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf; multiphase=true, kwargs...)
+end
+
 
 ""
 function post_tp_opf(pm::GenericPowerModel)
     for h in PMs.phase_ids(pm)
-        PMs.variable_voltage(pm, ph=h)
+        variable_tp_voltage(pm, ph=h)
         PMs.variable_generation(pm, ph=h)
         PMs.variable_branch_flow(pm, ph=h)
         PMs.variable_dcline_flow(pm, ph=h)
+    end
 
-        PMs.constraint_voltage(pm, ph=h)
+    for h in PMs.phase_ids(pm)
+        constraint_tp_voltage(pm, ph=h)
 
         for i in ids(pm, :ref_buses)
-            PMs.constraint_theta_ref(pm, i, ph=h)
+            constraint_tp_theta_ref(pm, i, ph=h)
         end
 
         for i in ids(pm, :bus)
@@ -29,8 +40,8 @@ function post_tp_opf(pm::GenericPowerModel)
         end
 
         for i in ids(pm, :branch)
-            PMs.constraint_ohms_yt_from(pm, i, ph=h)
-            PMs.constraint_ohms_yt_to(pm, i, ph=h)
+            constraint_ohms_tp_yt_from(pm, i, ph=h)
+            constraint_ohms_tp_yt_to(pm, i, ph=h)
 
             PMs.constraint_voltage_angle_difference(pm, i, ph=h)
 
