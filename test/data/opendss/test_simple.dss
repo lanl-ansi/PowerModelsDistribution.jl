@@ -1,0 +1,10 @@
+! Simple 1 gen, 2 bus, 1 load circuit
+
+
+new circuit.Simple
+
+new line.branch1 bus1=sourcebus bus2=2
+
+new generator.gen1 bus1=sourcebus
+
+new load.load1 bus1=2
