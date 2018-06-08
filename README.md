@@ -1,7 +1,7 @@
 # ThreePhasePowerModels.jl
 A Julia/JuMP Package for Three Phase Power Network Optimization
 
-*Warning:* this package is under active development and can change drastically without warning.
+**Warning:** This package is under active development and may change drastically without warning.
 
 
 ## License
