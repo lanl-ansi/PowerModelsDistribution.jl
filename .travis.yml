@@ -20,13 +20,13 @@ before_install:
     # don't keep an old version of the code in the cache
   - julia -e 'if "ThreePhasePowerModels" in keys(Pkg.installed()) Pkg.rm("ThreePhasePowerModels"); Pkg.rm("ThreePhasePowerModels") end'
   - julia -e 'Pkg.update()' #make sure we get the latest version of METADATA
-  - julia -e 'Pkg.checkout("PowerModels")' # need the master version
   - julia -e 'if !("Coverage" in keys(Pkg.installed())) Pkg.add("Coverage") end'
   #- julia -e 'if !("Documenter" in keys(Pkg.installed())) Pkg.add("Documenter") end'
 
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
   - julia -e 'Pkg.clone(pwd())'
+  - julia -e 'Pkg.checkout("PowerModels")' # need the master version
   - julia -e 'Pkg.test("ThreePhasePowerModels", coverage=true)'
 
 after_success:
