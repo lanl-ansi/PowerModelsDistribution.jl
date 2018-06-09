@@ -8,6 +8,10 @@ A Julia/JuMP Package for Three Phase Power Network Optimization
 
 **Warning:** This package is under active development and may change drastically without warning.
 
+This package can be installed with the following command,
+```
+Pkg.clone("git@github.com:lanl-ansi/ThreePhasePowerModels.jl.git")
+```
 
 ## License
 
