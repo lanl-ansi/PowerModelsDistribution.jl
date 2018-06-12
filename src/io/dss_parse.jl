@@ -277,7 +277,7 @@ Parses a OpenDSS style triangular matrix string `data` into a two dimensional
 array of type `dtype`. Matrix strings are capped by either parenthesis or
 brackets, rows are separated by "|", and columns are separated by spaces.
 """
-function parse_matrix(dtype::Type, data::AbstractString, nphases::Int=3)::Array
+function parse_matrix(dtype::Type, data::AbstractString)::Array
     rows = []
     for line in split(strip(data, ['[', ']', '(', ')']), '|')
         cols = []
@@ -286,6 +286,8 @@ function parse_matrix(dtype::Type, data::AbstractString, nphases::Int=3)::Array
         end
         push!(rows, cols)
     end
+
+    nphases = maximum([length(row) for row in rows])
 
     matrix = zeros(dtype, nphases, nphases)
     if length(rows) == 1
@@ -307,6 +309,12 @@ function parse_matrix(dtype::Type, data::AbstractString, nphases::Int=3)::Array
     end
 
     return matrix
+end
+
+
+"pass-through for already parsed matrices"
+function parse_matrix(dtype::Type, data::Array)::Array
+    return data
 end
 
 
@@ -340,6 +348,12 @@ function parse_array(dtype::Type, data::AbstractString)::Array
     end
 
     return array
+end
+
+
+"pass-through for already parsed arrays"
+function parse_array(dtype::Type, data::Array)::Array
+    return data
 end
 
 
