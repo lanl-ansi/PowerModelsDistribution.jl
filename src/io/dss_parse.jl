@@ -177,7 +177,6 @@ function get_prop_default(ctype::String)::Dict
                                 "transformer3" => transformer3,
                                 "reactor" => reactor,
                                 "circuit" => circuit,
-                                "linecode" => linecode,
                                 "vsource" => vsource)
     try
         return ctypes[ctype]
@@ -277,7 +276,7 @@ Parses a OpenDSS style triangular matrix string `data` into a two dimensional
 array of type `dtype`. Matrix strings are capped by either parenthesis or
 brackets, rows are separated by "|", and columns are separated by spaces.
 """
-function parse_matrix(dtype::Type, data::AbstractString)::Array
+function parse_matrix(dtype::Type, data::AbstractString, nphases::Int=3)::Array
     rows = []
     for line in split(strip(data, ['[', ']', '(', ')']), '|')
         cols = []
@@ -287,7 +286,7 @@ function parse_matrix(dtype::Type, data::AbstractString)::Array
         push!(rows, cols)
     end
 
-    nphases = maximum([length(row) for row in rows])
+    # nphases = maximum([length(row) for row in rows])
 
     matrix = zeros(dtype, nphases, nphases)
     if length(rows) == 1

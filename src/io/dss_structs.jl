@@ -2,7 +2,20 @@
 
 
 ""
-function createLoad(bus1::Int, name::AbstractString; kwargs...)
+function parse_conn(conn::String)::String
+    if conn in ["wye", "y", "ln"]
+        return "wye"
+    elseif conn in ["delta", "ll"]
+        return "delta"
+    else
+        warn(LOGGER, "Unsupported connection $conn, defaulting to \"wye\"")
+        return "wye"
+    end
+end
+
+
+""
+function createLoad(bus1::Int, name::String; kwargs...)
     kv = get(kwargs, "kv", 12.47)
     kw = get(kwargs, "kw", 10.0)
     pf = get(kwargs, "pf", 0.88)
@@ -77,14 +90,15 @@ function createLoad(bus1::Int, name::AbstractString; kwargs...)
                             # Inherited Properties
                             "spectrum" => get(kwargs, "spectrum", "defaultload"),
                             "basefreq" => get(kwargs, "basefreq", 60.0)
-                            )
+                            "enabled" => get(kwargs, "enabled", true)
+                           )
 
     return load
 end
 
 
 ""
-function createLine(bus1, bus2, name; kwargs...)
+function createLine(bus1::Int, bus2::Int, name::String; kwargs...)
     phases = get(kwargs, "phases", 3)
     basefreq = get(kwargs, "basefreq", 60.0)
 
@@ -127,9 +141,9 @@ function createLine(bus1, bus2, name; kwargs...)
         end
     end
 
-    rmatrix = parse_matrix(get(kwargs, "rmatrix", real(Z)))
-    xmatrix = parse_matrix(get(kwargs, "xmatrix", imag(Z)))
-    cmatrix = parse_matrix(get(kwargs, "cmatrix", imag(Yc)))
+    rmatrix = parse_matrix(Float64, get(kwargs, "rmatrix", real(Z)))
+    xmatrix = parse_matrix(Float64, get(kwargs, "xmatrix", imag(Z)))
+    cmatrix = parse_matrix(Float64, get(kwargs, "cmatrix", imag(Yc)))
 
     # TODO: rg, xg
     rg = get(kwargs, "rg", 0.01805)
@@ -179,8 +193,232 @@ function createLine(bus1, bus2, name; kwargs...)
                             "pctperm" => get(kwargs, "pctperm", 20.0)
                             "repair" => get(kwargs, "repair", 3.0)
                             "basefreq" => basefreq
-                            "enabled" => true
-                            )
+                            "enabled" => get(kwargs, "enabled", true)
+                           )
 
     return line
 end
+
+
+""
+function createGenerator(bus1::Int, name::String; kwargs...)
+    conn = parse_conn(get(kwargs, "conn", "wye"))
+
+    kw = get(kwargs, "kw", 100.0)
+    kva = get(kwargs, "kva", kw * 1.2)
+    kvar = get(kwargs, "kvar", 60.0)
+    kvarmax = get(kwargs, "maxkvar", kvar * 2.0)
+    kvarmin = get(kwargs, "minkvar", -kvarmax)
+
+    gen = Dict{String,Any}("name" => name,
+                           "phases" => get(kwargs, "phases", 3),
+                           "bus1" => bus1,
+                           "kv" => get(kwargs, "kv", 12.47),
+                           "kw" => kw,
+                           "pf" => get(kwargs, "pf", 0.80),
+                           "model" => get(kwargs, "model", 1),
+                           "yearly" => get(kwargs, "yearly", get(kwargs, "daily", complex(0.0, 0.0))),
+                           "daily" => get(kwargs, "daily", get(kwargs, "daily", complex(0.0, 0.0))),
+                           "duty" => get(kwargs, "duty", ""),
+                           "dispmode" => get(kwargs, "dispmode", "default"),
+                           "disvalue" => get(kwargs, "dispvalue", 0.0),
+                           "conn" => conn,
+                           "kvar" => kvar,
+                           "rneut" => get(kwargs, "rneut", 0.0),
+                           "xneut" => get(kwargs, "xneut", 0.0),
+                           "status" => get(kwargs, "status", "variable"),
+                           "class" => get(kwargs, "class", 1),
+                           "vpu" => get(kwargs, "vpu", 1.0),
+                           "maxkvar" => kvarmax,
+                           "minkvar" => kvarmin,
+                           "pvfactor" => get(kwargs, "pvfactor", 0.1),
+                           "debugtrace" => get(kwargs, "debugtrace", false),
+                           "vminpu" => get(kwargs, "", 0.9),
+                           "vmaxpu" => get(kwargs, "", 1.10),
+                           "forceon" => get(kwargs, "forceon", false),
+                           "kva" => kva,
+                           "mva" => kva * 0.001,
+                           "xd" => get(kwargs, "xd", 1.0),
+                           "xdp" => get(kwargs, "xdp", 0.28),
+                           "xdpp" => get(kwargs, "xdpp", 0.20),
+                           "h" => get(kwargs, "h", 1.0),
+                           "d" => get(kwargs, "d", 1.0),
+                           "usermodel" => get(kwargs, "usermodel", ""),
+                           "userdata" => get(kwargs, "userdata", ""),
+                           "shaftmodel" => get(kwargs, "shaftmodel", ""),
+                           "shaftdata" => get(kwargs, "shaftdata", ""),
+                           "dutystart" => get(kwargs, "dutystart", 0.0),
+                           "balanced" => get(kwargs, "balanced", false),
+                           "xrdp" => get(kwargs, "xrdp", 20.0),
+                           # Inherited Properties
+                           "spectrum" => get(kwargs, "spectrum", "defaultgen"),
+                           "basefreq" => get(kwargs, "basefreq", 60.0),
+                           "enabled" => get(kwargs, "enabled", true)
+                          )
+    return gen
+end
+
+
+""
+function createCapacitor(bus1::Int, name::String, bus2::Int=0; kwargs...)
+    phases = get(kwargs, "phases", 3)
+
+    capacitor = Dict{String,Any}("bus1" => bus1,
+                                 "bus2" => bus2,
+                                 "phases" => phases,
+                                 "kvar" => get(kwargs, "kvar", 1200.0),
+                                 "kv" => get(kwargs, "kv", 12.47),
+                                 "conn" => parse_conn(get(kwargs, "conn", "wye")),
+                                 "cmatrix" => parse_matrix(Float64, get(kwargs, "cmatrix", zeros(phases, phases))),
+                                 "cuf" => parse_array(Float64, get(kwargs, "cuf", zeros(phases))),
+                                 "r" => parse_array(Float64, get(kwargs, "r", zeros(phases))),
+                                 "xl" => parse_array(Float64, get(kwargs, "xl", zeros(phases))),
+                                 "harm" => parse_array(Float64, get(kwargs, "harm", zeros(phases))),
+                                 "numsteps" => get(kwargs, "numsteps", 1),
+                                 "states" => parse_array(Bool, get(kwargs, "states", zeros(Bool, phases))),
+                                 # Inherited Properties
+                                 "normamps" => get(kwargs, "normamps", 400.0)
+                                 "emergamps" => get(kwargs, "emergamps", 600.0)
+                                 "faultrate" => get(kwargs, "faultrate", 0.1)
+                                 "pctperm" => get(kwargs, "pctperm", 20.0)
+                                 "basefreq" => get(kwargs, "basefreq", 60.0)
+                                 "enabled" => get(kwargs, "enabled", true)
+                                )
+    return capacitor
+end
+
+
+""
+function createReactor(bus1::Int, name::String, bus2::Int=0; kwargs...)
+    phases = get(kwargs, "phases", 3)
+    kvar = get(kwargs, "kvar", 1200.0)
+    kv = get(kwargs, "kv", 12.47)
+    conn = parse_conn(get(kwargs, "conn", "wye"))
+    parallel = get(kwargs, "parallel", false)
+
+    normamps = get(kwargs, "normamps", 400.0)
+    emergamps = get(kwargs, "emergamps", 600.0)
+
+    rp = get(kwargs, "rp", 0.0)
+
+    if (haskey(kwargs, "kv") && haskey(kwargs, "kvar")) || haskey(kwargs, "x") || haskey(kwargs, "lmh") || haskey(kwargs, "z")
+        r = get(kwargs, "r")
+
+        if haskey(kwargs, "kvar") && haskey("kv")
+            kvarperphase = kvar / phases
+            if conn == "delta"
+                phasekv = kv
+            else
+                if phases == 2 || phases == 3
+                    phasekv = kv / sqrt(3.0)
+                else
+                    phasekv = kv
+                end
+            end
+
+            x = phasekv^2 * 1.0e3 / kvarperphase
+            l = x / (2 * pi) / basefreq
+            normamps = kvarperphase / phasekv
+            emergamps = normamps * 1.35
+
+        elseif haskey(kwargs, "x")
+            x = get(kwargs, "x")
+            l = x / (2 * pi) / basefreq
+
+        elseif haskey(kwargs, "lmh")
+            l = get(kwargs, "lmh") / 1.0e3
+            x = l * 2 * pi * basefreq
+
+        elseif haskey(kwargs, "z")
+            z = complex(parse_array(Float64, get(kwargs, "z")...))
+            r = real(z)
+            x = imag(z)
+            l = x / (2 * pi) / basefreq
+        end
+
+        Value = inv(complex(r, l * 2 * pi * FYpriFreq))
+
+        if rp != 0.0
+            Caccum(Value, complex(Gp, 0.0))
+        end
+
+        Value2 = Value * 2.0
+
+        Value = -Value
+
+        YPrimTemp = zeros(phases, phases)
+
+        if conn == "delta"
+            for i in 1:phases
+                YPrimTemp[i,i] = Value2
+                for j in 1:i-1
+                    YPrimTemp[i,j] = YPrimTemp[j,i] = Value
+                end
+            end
+        else
+            for i in 1:phases
+                YPrimTemp[i,i] = Value
+            end
+        end
+
+
+
+
+    elseif haskey(kwargs, "rmatrix") && haskey(kwargs, "xmatrix")
+        rmatrix = parse_matrix(Float64, get(kwargs, "rmatrix"))
+        xmatrix = parse_matrix(Float64, get(kwargs, "xmatrix"))
+    elseif haskey(kwargs, "z1")
+        z1 = get(kwargs, "z1")
+        z2 = get(kwargs, "z2", z1)
+        z0 = get(kwargs, "z0", z1)
+    else
+        warn(LOGGER, "Reactor $name is not adequately defined")
+    end
+
+    reactor = Dict{String,Any}("bus1" => bus1,
+                               "bus2" => bus2,
+                               "phases" => phases,
+                               "kvar" => kvar
+                               "kv" => kv
+                               "conn" = conn,
+                               "rmatrix" => rmatrix,
+                               "xmatrix" => xmatrix,
+                               "parallel" => parallel
+                               "r" => r,
+                               "x" => x,
+                               "rp" => rp,
+                               "z1" => z1,
+                               "z2" => z2,
+                               "z0" => z0,
+                               "z" => z,
+                               "rcurve" => get(kwargs, "rcurve", ""),
+                               "lcurve" => get(kwargs, "lcurve", ""),
+                               "lmh" => lmh,
+                               # Inherited Properties
+                               "normamps" => get(kwargs, "normamps", 400.0),
+                               "emergamps" => get(kwargs, "emergamps", 600.0),
+                               "repair" = get(kwargs, "repair", 3.0),
+                               "faultrate" => get(kwargs, "faultrate", 0.1),
+                               "pctperm" => get(kwargs, "pctperm", 20.0),
+                               "basefreq" => get(kwargs, "basefreq", 60.0),
+                               "enabled" => get(kwargs, "enabled", false)
+                              )
+    return reactor
+end
+
+""
+function get_dtypes(comp::String)::Dict
+    default_dicts = Dict{String,Any}("line" => createLine(0, 0, ""),
+                                     "load" => createLoad(0, "")
+                                     "generator" => createGenerator(0, "")
+                                     "capacitor" => createCapacitor(0, "")
+                                     "reactor" => createReactor(0, "")
+                                     "transformer" => createTransformer(0, 0, "")
+                                     "linecode" => createLinecode(0, 0, "")
+                                     "circuit" => createCircuit("")
+                                    )
+
+    return Dict{String,Type}((k, typeof(v) for (k, v) in default_dicts[comp]))
+end
+
+get_dtypes(comp::String, key::String)::Type = get_dtypes(comp)[key]
