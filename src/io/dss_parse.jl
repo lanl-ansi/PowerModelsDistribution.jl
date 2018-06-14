@@ -198,12 +198,74 @@ end
 Returns the property names in order for a given component type `ctype`.
 """
 function get_prop_name(ctype::AbstractString)::Array
+    linecode = ["nphases", "r1", "x1", "r0", "x0", "c1", "c0", "units",
+                "rmatrix", "xmatrix", "cmatrix", "basefreq", "normamps",
+                "emergamps", "faultrate", "pctperm", "kron", "rg", "xg",
+                "rho", "neutral", "b1", "b0", "like"]
+
+    linegeometry = ["nconds", "nphases", "cond", "wire", "x", "h", "units",
+                    "normamps", "emergamps", "reduce", "spacing", "wires",
+                    "cncable", "tscable", "cncables", "tscables", "like"]
+
+    linespacing = ["nconds", "nphases", "x", "h", "units"]
+
+    loadshape = ["npts", "interval", "minterval", "sinterval", "pmult",
+                 "qmult", "hour", "mean", "stddev", "csvfile", "sngfile",
+                 "pqcsvfile", "action", "useactual", "pmax", "qmax",
+                 "pbase", "like"]
+
+    growthshape = ["npts", "year", "mult", "csvfile", "sngfile", "dblfile",
+                   "like"]
+
+    tcc_curve = ["npts", "c_array", "t_array", "like"]
+
+    cndata = []
+
+    tsdata = []
+
+    wiredata = ["rdc", "rac", "runits", "gmrac", "gmrunits", "radius",
+                "radunits", "normamps", "emergamps", "diam", "like"]
+
+    xfmrcode = []
+
+    vsource = ["bus1", "bus2", "basekv", "pu", "angle", "frequency", "phases",
+               "mvac3", "mvac1", "x1r1", "x0r0", "isc3", "isc1", "r1", "x1",
+               "r0", "x0", "scantype", "sequence", "spectrum", "z1", "z2", "z0",
+               "puz1", "puz2", "puz0", "basemva", "basefreq", "like"]
+
+    isource = ["phases", "bus1", "amps", "angle", "frequency", "scantype",
+               "sequence", "spectrum", "basefreq", "enabled", "like"]
+
+    fault = ["phases", "bus1", "bus2", "r", "gmatrix", "minamps", "ontime",
+             "pctperm", "temporary", "%stddev", "normamps", "emergamps",
+             "basefreq", "faultrate", "repair", "enabled", "like"]
+
+    capacitor = ["bus1", "bus2", "phases", "kvar", "kv", "conn", "cmatrix",
+                 "cuf", "r", "xl", "harm", "numsteps", "states", "normamps",
+                 "emergamps", "faultrate", "pctperm", "basefreq", "like"]
+
     line = ["bus1", "bus2", "linecode", "length", "phases",
             "r1", "x1", "r0", "x0", "c1", "c0", "b1",
             "b0", "normamps", "emergamps", "faultrate", "pctperm",
             "repair", "basefreq", "rmatrix", "xmatrix", "cmatrix",
             "switch", "rg", "xg", "rho", "geometry", "earthmodel",
             "units", "like"]
+
+    reactor = ["phases", "bus1", "bus2", "kv", "kvar", "conn", "parallel",
+               "r", "rmatrix", "rp", "x", "xmatrix", "z", "z1", "z2", "z0",
+               "rcurve", "lcurve", "lmh", "normamps", "emergamps", "repair",
+               "faultrate", "pctperm", "basefreq", "enabled", "like"]
+
+    transformer = ["phases", "windings"]
+
+    gictransformer = ["basefreq", "bush", "busnh", "busnx", "busx"
+                      "emergamps", "enabled", "phases", "r1", "r2", "type",
+                      "mva", "kvll1", "kvll2", "%r1", "%r2", "k", "varcurve",
+                      "like", "normamps", "emergamps", "pctperm", "repair"]
+
+    gicline = ["angle", "bus1", "bus2", "c", "ee", "en", "frequency", "lat1",
+               "lat2", "lon1", "lon2", "phases", "r", "volts", "x", "like",
+               "basefreq", "enabled", "spectrum"]
 
     load = ["bus1", "phases", "kv", "kw", "pf", "model",
             "yearly", "daily", "duty", "growth", "conn", "kvar",
@@ -214,40 +276,76 @@ function get_prop_name(ctype::AbstractString)::Array
             "zipv", "%seriesrl", "relweight", "vlowpu", "puxharm",
             "xrharm", "spectrum", "basefreq", "like"]
 
-    gen = ["bus1", "phases", "kv", "kw", "pf", "model", "yearly",
-           "daily", "duty", "dispvalue", "conn", "kvar", "rneut",
-           "xneut", "status", "class", "maxkvar", "minkvar", "pvfactor",
-           "debugtrace", "vminpu", "vmaxpu", "forceon", "kva", "mva",
-           "xd", "xdp", "xdpp", "h", "d", "usermodel", "userdata",
-           "shaftmodel", "shaftdata", "dutystart", "balanced", "xrdp",
-           "spectrum", "basefreq", "like"]
+    generator = ["bus1", "phases", "kv", "kw", "pf", "model", "yearly",
+                 "daily", "duty", "dispvalue", "conn", "kvar", "rneut",
+                 "xneut", "status", "class", "maxkvar", "minkvar", "pvfactor",
+                 "debugtrace", "vminpu", "vmaxpu", "forceon", "kva", "mva",
+                 "xd", "xdp", "xdpp", "h", "d", "usermodel", "userdata",
+                 "shaftmodel", "shaftdata", "dutystart", "balanced", "xrdp",
+                 "spectrum", "basefreq", "like"]
 
-    transformer = ["phases", "windings"]
+    indmach012 = ["phases", "bus1", "kv", "kw", "pf", "conn", "kva", "h",
+                  "d", "purs", "puxs", "purr", "puxr", "puxm", "slip",
+                  "maxslip", "slipoption", "spectrum"]
 
-    energymeter = ["element", "terminal", "action", "clear", "save",
-                   "take", "option"]
+    storage = ["%charge", "%discharge", "%effcharge", "%idlingkvar", "idlingkw",
+               "%r", "%reserve", "%stored", "%x", "basefreq", "bus1", "chargetrigger",
+               "class", "conn", "daily", "yearly", "debugtrace", "dischargetrigger",
+               "dispmode", "duty", "dynadata", "dynadll", "enabled", "kv", "kva",
+               "kvar", "kw", "kwhrated", "kwhstored", "kwrated", "like", "model",
+               "pf", "phases", "spectrum", "state", "timechargetrig", "userdata",
+               "usermodel", "vmaxpu", "vminpu", "yearly"]
 
-    linecode = ["nphases", "r1", "x1", "r0", "x0", "c1", "c0", "units",
-                "rmatrix", "xmatrix", "cmatrix", "basefreq", "normamps",
-                "emergamps", "faultrate", "pctperm", "kron", "rg", "xg",
-                "rho", "neutral", "b1", "b0", "like"]
+    capcontrol = ["element", "capacitor", "type", "ctphase", "ctratio", "deadtime",
+                  "delay", "delayoff", "eventlog", "offsetting", "onsetting",
+                  "ptphase", "ptratio", "terminal", "vbus", "vmax", "vmin",
+                  "voltoverride"]
 
-    capacitor = ["bus1", "bus2", "phases", "kvar", "kv", "conn", "cmatrix",
-                 "cuf", "r", "xl", "harm", "numsteps", "states", "normamps",
-                 "emergamps", "faultrate", "pctperm", "basefreq", "like"]
+    regcontrol = ["transformer", "winding", "vreg", "band", "delay", "ptratio",
+                  "ctprim", "r", "x", "pthase", "tapwinding", "bus",
+                  "remoteptratio", "debugtrace", "eventlog", "inversetime",
+                  "maxtapchange", "revband", "revdelay", "reversible",
+                  "revneutral", "revr", "revthreshold", "revvreg", "revx",
+                  "tapdelay", "tapnum", "vlimit", "ldc_z", "rev_z", "cogen"]
 
-    ctypes = Dict{String, Array}("line" => line,
-                                 "load" => load,
+    energymeter = ["element", "terminal", "action", "clear", "save", "take",
+                   "option", "kwnorm", "kwemerg", "peakcurrent", "zonelist",
+                   "zonelist", "zonelist", "localonly", "mask", "losses",
+                   "linelosses", "xfmrlosses", "seqlosses", "3phaselosses",
+                   "vbaselosses", "basefreq", "enabled", "like"]
+
+    ctypes = Dict{String, Array}("linecode" => linecode,
+                                 "linegeometry" => linegeometry,
+                                 "linespacing" =>linespacing,
+                                 "loadshape" => loadshape,
+                                 "growthshape" => growthshape,
+                                 "tcc_curve" => tcc_curve,
+                                 "cndata" => cndata,
+                                 "tsdata" => tsdata,
+                                 "wiredata" => wiredata,
+                                 "xfmrcode" => xfmrcode,
+                                 "vsource" => vsource,
+                                 "isource" => isource,
+                                 "fault" => fault,
+                                 "capacitor" => capacitor,
+                                 "line" => line,
+                                 "reactor" => reactor,
                                  "transformer" => transformer,
-                                 "energymeter" => energymeter,
-                                 "linecode" => linecode,
-                                 "generator" => gen,
-                                 "capacitor" => capacitor)
+                                 "gictransformer" => gictransformer,
+                                 "gicline" => gicline,
+                                 "load" => load,
+                                 "generator" => generator,
+                                 "indmach012" => indmach012,
+                                 "storage" => storage,
+                                 "capcontrol" => capcontrol,
+                                 "regcontrol" => regcontrol,
+                                 "energymeter" => energymeter
+                                )
 
     try
         return ctypes[ctype]
-    catch KeyError
-        return []
+    catch e
+        throw(e)
     end
 end
 
