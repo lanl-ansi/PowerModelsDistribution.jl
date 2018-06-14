@@ -66,11 +66,17 @@ function isa_rpn(expr::AbstractString)
 end
 
 
-components = ["linecode", "linegeometry", "line", "linespacing", "loadshape",
-              "growthshape", "tcc_curve", "wiredata", "xfmrcode", "vsource",
-              "isource", "fault", "capacitor", "reactor", "transformer",
-              "gictransformer", "gicline", "load", "generator", "indmach012",
-              "storage", "capcontrol", "regcontrol", "energymeter", "monitor"]
+"parses connection \"conn\" specification reducing to wye or delta"
+function parse_conn(conn::String)::String
+    if conn in ["wye", "y", "ln"]
+        return "wye"
+    elseif conn in ["delta", "ll"]
+        return "delta"
+    else
+        warn(LOGGER, "Unsupported connection $conn, defaulting to \"wye\"")
+        return "wye"
+    end
+end
 
 
 """

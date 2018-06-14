@@ -2,19 +2,6 @@
 
 
 ""
-function parse_conn(conn::String)::String
-    if conn in ["wye", "y", "ln"]
-        return "wye"
-    elseif conn in ["delta", "ll"]
-        return "delta"
-    else
-        warn(LOGGER, "Unsupported connection $conn, defaulting to \"wye\"")
-        return "wye"
-    end
-end
-
-
-""
 function createLoad(bus1::Int, name::String; kwargs...)
     kv = get(kwargs, "kv", 12.47)
     kw = get(kwargs, "kw", 10.0)
@@ -124,11 +111,8 @@ function createLine(bus1::Int, bus2::Int, name::String; kwargs...)
     Zs = (Ztemp + complex(r0, x0)) / 3.0
     Zm = (complex(r0, x0) - complex(r1, x1)) / 3.0
 
-    Yc1 = 2 * pi * basefreq * c1
-    Yc0 = 2 * pi * basefreq * c0
-
-    Ys = (complex(0., Yc1) * 2.0 + complex(0.0, Yc0)) / 3.0
-    Ym = (complex(0.0, Yc0) - complex(0.0, Yc1)) / 3.0
+    Ys = (complex(0.0, 2 * pi * basefreq * c1) * 2.0 + complex(0.0, 2 * pi * basefreq * c0)) / 3.0
+    Ym = (complex(0.0, 2 * pi * basefreq * c0) - complex(0.0, 2 * pi * basefreq * c1)) / 3.0
 
     Z = zeros(Complex64, phases, phases)
     Yc = zeros(Complex64, phases, phases)
@@ -336,41 +320,32 @@ function createReactor(bus1::Int, name::String, bus2::Int=0; kwargs...)
             l = x / (2 * pi) / basefreq
         end
 
-        Value = inv(complex(r, l * 2 * pi * FYpriFreq))
-
-        if rp != 0.0
-            Caccum(Value, complex(Gp, 0.0))
-        end
-
-        Value2 = Value * 2.0
-
-        Value = -Value
-
-        YPrimTemp = zeros(phases, phases)
-
-        if conn == "delta"
-            for i in 1:phases
-                YPrimTemp[i,i] = Value2
-                for j in 1:i-1
-                    YPrimTemp[i,j] = YPrimTemp[j,i] = Value
-                end
-            end
-        else
-            for i in 1:phases
-                YPrimTemp[i,i] = Value
-            end
-        end
-
-
-
-
+        # TODO: convert to rmatrix, xmatrix?
     elseif haskey(kwargs, "rmatrix") && haskey(kwargs, "xmatrix")
         rmatrix = parse_matrix(Float64, get(kwargs, "rmatrix"))
         xmatrix = parse_matrix(Float64, get(kwargs, "xmatrix"))
     elseif haskey(kwargs, "z1")
-        z1 = get(kwargs, "z1")
-        z2 = get(kwargs, "z2", z1)
-        z0 = get(kwargs, "z0", z1)
+        z1 = complex(parse_array(Float64, get(kwargs, "z1"))...)
+        z2 = complex(parse_array(Float64, get(kwargs, "z2", z1))...)
+        z0 = complex(parse_array(Float64, get(kwargs, "z0", z1))...)
+
+        Z = zeros(Complex64, phases, phases)
+
+        for i in 1:phases
+            if phases == 1
+                Z[i,i] = complex(z1...) / 3.0
+            else
+                Z[i,i] = (complex(z2...) + complex(z1...) + complex(z0...)) / 3.0
+            end
+        end
+
+        if phases == 3
+            Z[2, 1] = Z[3, 2] = Z[1, 3] = (conj(exp(-2*pi*im/3))^2 * z2 + conj(exp(-2*pi*im/3)) * z1 + z0) / 3
+            Z[3, 1] = Z[1, 2] = Z[2, 3] = (conj(exp(-2*pi*im/3))^2 * z1 + conj(exp(-2*pi*im/3)) * z2 + z0) / 3
+        end
+
+        rmatrix = real(Z)
+        xmatrix = imag(Z)
     else
         warn(LOGGER, "Reactor $name is not adequately defined")
     end
@@ -387,23 +362,237 @@ function createReactor(bus1::Int, name::String, bus2::Int=0; kwargs...)
                                "r" => r,
                                "x" => x,
                                "rp" => rp,
-                               "z1" => z1,
-                               "z2" => z2,
-                               "z0" => z0,
-                               "z" => z,
+                               "z1" => [real(z1), imag(z1)],
+                               "z2" => [real(z2), imag(z2)],
+                               "z0" => [real(z0) imag(z0)],
+                               "z" => [real(z), imag(z)],
                                "rcurve" => get(kwargs, "rcurve", ""),
                                "lcurve" => get(kwargs, "lcurve", ""),
                                "lmh" => lmh,
                                # Inherited Properties
                                "normamps" => get(kwargs, "normamps", 400.0),
                                "emergamps" => get(kwargs, "emergamps", 600.0),
-                               "repair" = get(kwargs, "repair", 3.0),
+                               "repair" => get(kwargs, "repair", 3.0),
                                "faultrate" => get(kwargs, "faultrate", 0.1),
                                "pctperm" => get(kwargs, "pctperm", 20.0),
                                "basefreq" => get(kwargs, "basefreq", 60.0),
                                "enabled" => get(kwargs, "enabled", false)
                               )
     return reactor
+end
+
+
+""
+function createVSource(bus1::Int, name::String, bus2::Int=0; kwargs...)
+    x1r1 = get(kwargs, "x1r1", 4.0)
+    x0r0 = get(kwargs, "x0r0", 3.0)
+
+    basekv = get(kwargs, "basekv", 115.0)
+    pu = get(kwargs, "pu", 1.0)
+    rs = 0.0
+    rm = 0.0
+    xs = 0.1
+    xm = 0.0
+
+    phases = get(kwargs, "phases", 3)
+    factor = phases == 1 ? 1.0 : sqrt(3.0)
+
+    mvasc3 = get(kwargs, "mvasc3", 2000.0)
+    mvasc1 = get(kwargs, "mvasc1", 2100.0)
+
+    isc3 = get(kwargs, "isc3", 10000.0)
+    isc1 = get(kwargs, "isc1", 10500.0)
+
+    r1 = get(kwargs, "r1", 1.65)
+    x1 = get(kwargs, "x1", 6.6)
+    r0 = get(kwargs, "r0", 1.9)
+    x0 = get(kwargs, "x0", 5.7)
+    r2 = r1
+    x2 = x1
+
+    z1 = parse_array(Float64, get(kwargs, "z1", [0.0, 0.0]))
+    z2 = parse_array(Float64, get(kwargs, "z2", [0.0, 0.0]))
+    z0 = parse_array(Float64, get(kwargs, "z0", [0.0, 0.0]))
+
+    puz1 = parse_array(Float64, get(kwargs, "puz1", [0.0, 0.0]))
+    puz2 = parse_array(Float64, get(kwargs, "puz2", [0.0, 0.0]))
+    puz0 = parse_array(Float64, get(kwargs, "puz0", [0.0, 0.0]))
+
+    basemva = get(kwargs, "basemva", 100.0)
+
+    Zbase = basekv^2 / basemva
+
+    if (haskey(kwargs, "mvasc3") && haskey(kwargs, "mvasc1")) || (haskey(kwargs, "isc3") && haskey(isc1, "isc1"))
+        if haskey(kwargs, "mvasc3") && haskey(kwargs, "mvasc1")
+            mvasc3 = get(kwargs, "mvasc3")
+            mvasc1 = get(kwargs, "mvasc1")
+
+            isc3 = mvasc3 * 1e3 / (basekv * sqrt(3.0))
+            isc1 = mvasc1 * 1e3 / (basekv * factor)
+        elseif haskey(kwargs, "isc3") && haskey(isc1, "isc1")
+            isc3 = get(kwargs, "isc3")
+            isc1 = get(kwargs, "isc1")
+
+            mvasc3 = sqrt(3) * basekv * isc3 / 1e3
+            mvasc1 = factor * basekv * isc1 / 1e3
+        end
+
+        x1 = basekv^2 / mvasc3 / sqrt(1.0 + 1.0 / x1r1^2)
+
+        r1 = x1 / x1r
+        r2 = r1
+        x2 = x1
+
+        a = 1.0 + x0r0^2
+        b = 4.0*(r1 + x1 * x0r0)
+        c = 4.0 * (r1^2 + x1^2)- (3.0 * basekv * 1000.0 / factor / Isc1)^2
+        r0 = max((-b + sqrt(b^2 - 4 * a * c)) / (2 * a), (-b - sqrt(b^2 - 4 * a * c)) / (2 * a))
+        x0 = r0 * x0r0
+
+        xs = (2.0 * x1 + x0) / 3.0
+        rs = (2.0 * r1 + r0) / 3.0
+
+        rm = (r0 - r1) / 3.0
+        xm = (x0 - x1) / 3.0
+    elseif any([haskey(kwargs, key) for key in ["r1", "x1", "z1", "puz1"]])
+        if haskey(kwargs, "puz1")
+            puz1 = complex(parse_array(Float64, get(kwargs, "puz1"))...)
+            puz2 = complex(parse_array(Float64, get(kwargs, "puz2", puz1))...)
+            puz0 = complex(parse_array(Float64, get(kwargs, "puz0", puz1))...)
+
+            r1 = real(puz1) * Zbase
+            x1 = imag(puz1) * Zbase
+            r2 = real(puz2) * Zbase
+            x2 = imag(puz2) * Zbase
+            r0 = real(puz0) * Zbase
+            x1 = imag(puz0) * Zbase
+        elseif (haskey(kwargs, "r1") && haskey(kwargs, "x1"))
+            r1 = get(kwargs, "r1")
+            x1 = get(kwargs, "x1")
+
+            r2 = get(kwargs, "r2", r1)
+            x2 = get(kwargs, "x2", x1)
+            r0 = get(kwargs, "r0", r1)
+            x0 = get(kwargs, "x0", x1)
+        elseif haskey(kwargs, "z1")
+            z1 = complex(parse_array(Float64, get(kwargs, "z1")))
+            z2 = complex(parse_array(Float64, get(kwargs, "z2"), z1))
+            z0 = complex(parse_array(Float64, get(kwargs, "z0"), z1))
+
+            r1 = real(z1)
+            x1 = imag(z1)
+            r2 = real(z2)
+            x2 = imag(z2)
+            r0 = real(z0)
+            x0 = imag(z0)
+        end
+
+        isc3 = basekv * 1e3 / sqrt(3.0) * abs(complex(r1, x1))
+
+        if phases == 1
+            r0 = r1
+            x0 = x1
+            r2 = r1
+            x2 = x1
+        end
+
+        rs = (2.0 * r1 + r0) / 3.0
+        xs = (2.0 * x1 + x0) / 3.0
+
+        isc1 = basekv * 1e3 / factor / abs(complex(rs, xs))
+
+        mvasc3 = sqrt(3) * basekv * isc3 / 1e3
+        mvasc1 = factor * basekv * isc1 / 1e3
+
+        xm = xs - x1
+
+        rs = (2.0 * r1 + r0) / 3.0
+        rm = (r0 - r1) / 3.0
+    end
+
+    Z = zeros(Complex64, phases, phases)
+    if r1 == r2 && x1 == x2
+        Zs = complex(Rs, Xs)
+        Zm = complex(Rm, Xm)
+
+        for i in 1:phases
+            Z[i,i] = Zs
+            for j in 1:i-1
+                Z[i, j] = Z[j, i] = Zm
+            end
+        end
+    else
+        z1 = complex(r1, x1)
+        z2 = complex(r2, x2)
+        z0 = complex(r0, x0)
+
+        for i in 1:phases
+            Z[i,i] = (z1 + z2 + z0) / 3.0
+        end
+
+        if phases == 3
+            Z[2, 1] = Z[3, 2] = Z[1, 3] = (conj(exp(-2*pi*im/3))^2 * z2 + conj(exp(-2*pi*im/3)) * z1 + z0) / 3
+            Z[3, 1] = Z[1, 2] = Z[2, 3] = (conj(exp(-2*pi*im/3))^2 * z1 + conj(exp(-2*pi*im/3)) * z2 + z0) / 3
+        end
+    end
+
+    Vmag = phases == 1 ? basekv * pu * 1e3 : basekv * pu * 1e3 / 2 / sin(pi / phases)
+
+    if !haskey(kwargs, "puz1") && Zbase > 0.0
+        puz1 = complex(r1 / Zbase, x1 / Zbase)
+        puz2 = complex(r2 / Zbase, x2 / Zbase)
+        puz0 = complex(r0 / Zbase, x0 / Zbase)
+    end
+
+    vsource = Dict{String,Any}("bus1" => bus1,
+                               "basekv" => basekv,
+                               "pu" => pu,
+                               "angle" => get(kwargs, "angle", 0.0),
+                               "frequency" => get(kwargs, "frequency"),
+                               "phases" => phases,
+                               "mvasc3" => mvasc3,
+                               "mvasc1" => mvasc1,
+                               "x1r1" => x1r1,
+                               "x0r0" => x0r0,
+                               "isc3" => isc3,
+                               "isc1" => isc1,
+                               "r1" => r1,
+                               "x1" => x1,
+                               "r0" => r0,
+                               "x0" => x0,
+                               "scantype" => get(kwargs, "scantype", "pos"),
+                               "sequence" => get(kwargs, "sequence", "pos"),
+                               "bus2" => bus2,
+                               "z1" => [real(z1), imag(z1)],
+                               "z0" => [real(z0), imag(z0)],
+                               "z2" => [real(z2), imag(z2)],
+                               "puz1" => [real(puz1), imag(puz1)],
+                               "puz0" => [real(puz0), imag(puz0)],
+                               "puz2" => [real(puz2), imag(puz2)],
+                               "basemva" => basemva,
+                               "yearly" => parse_array(Float64, get(kwargs, "yearly", get(kwargs, "daily", [1.0, 1.0]))),
+                               "daily" => parse_array(Float64, get(kwargs, "daily", [1.0, 1.0])),
+                               "duty" => get(kwargs, "duty", ""),
+                               # Inherited Properties
+                               "spectrum" => get(kwargs, "spectrum", "defaultvsource"),
+                               "basefreq" => get(kwargs, "basefreq", 60.0),
+                               "enabled" => get(kwargs, "enabled", false)
+                               # Derived Properties
+                               "rmatrix" => real(Z),
+                               "xmatrix" => imag(Z),
+                               "vmag" => Vmag,
+                              )
+
+    return vsource
+end
+
+
+""
+function createTransformer(bus1, bus2, name, bus3::Int=0; kwargs...)
+    
+    transformer = Dict{String,Any}()
+
+    return transformer
 end
 
 ""

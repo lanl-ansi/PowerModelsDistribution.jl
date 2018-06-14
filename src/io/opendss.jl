@@ -384,6 +384,12 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             push!(tppm_data["gen"], genDict)
         end
+
+        if haskey(dss_data, "vsource")
+            for vsource in dss_data["vsource"]
+                # TODO: Add VSOURCE AS GENERATOR
+            end
+        end
     end
 end
 
