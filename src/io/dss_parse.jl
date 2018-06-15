@@ -92,119 +92,6 @@ end
 
 
 """
-    get_prop_default(ctype)
-
-Returns the default property values, or the expected Types if no default is
-known, for a given component type `ctype`.
-"""
-function get_prop_default(ctype::String)::Dict
-
-    line = Dict{String,Any}("length" => 1.0, "phases" => 3, "r1" => 0.058,
-                            "x1" => 0.1206, "r0" => 0.1784, "x0" => 0.4047,
-                            "c1" => 0.0, "c0" => 0.0,
-                            "rmatrix" => "[0.09813333 |0.04013333 0.09813333 |0.04013333 0.04013333 0.09813333 ]",
-                            "xmatrix" => "[0.2153 |0.0947 0.2153 |0.0947 0.0947 0.2153 ]",
-                            "cmatrix" => "[0.0 | 0.0 0.0 | 0.0 0.0 0.0 ]",
-                            "switch" => false, "rg" => 0.01805, "xg" => 0.155081,
-                            "rho" => 100, "units" => "none", "earthmodel" => "Deri",
-                            "b1" => 1.28177, "b0" => 0.6031858, "normamps" => 400.0,
-                            "emergamps" => 600.0, "faultrate" => 0.1, "pctperm" => 20,
-                            "repair" => 3, "basefreq" => 60, "enabled" => true)
-
-    load = Dict{String, Any}("phases" => 3, "kv" => 12.47, "kw" => 10.0, "pf" => 0.88,
-                             "model" => 1, "conn" => "wye", "kvar" => 5.39742822138087,
-                             "rneut" => -1, "xneut" => 0, "status" => "variable",
-                             "class" => 1, "vminpu" => 0.95, "vmaxpu" => 1.05,
-                             "vminnorm" => 0.0, "vminemerg" => 0.0, "xfkva" => 0.0,
-                             "allocationfactor" => 0.5, "kva" => 11.3636363636364,
-                             "%mean" => 50, "%stddev" => 10, "cvrwatts" => 1,
-                             "cvrvars" => 2, "kwh" => 0, "kwhdays" => 30,
-                             "cfactor" => 4, "numcust" => 1, "%seriesrl" => 50,
-                             "refweight" => 1, "vlowpu" => 0.5, "puxharm" => 0,
-                             "xrharm" => 6, "spectrum" => "defaultload",
-                             "basefreq" => 60, "enabled" => true)
-
-    transformer = Dict{String,Any}("phases" => 3, "windings" => 2, "wdg" => 1, "conn" => "wye",
-                                   "kv" => 12.47, "kva" => 1000.0, "tap" => 1.0, "%r" => 0.2,
-                                   "rneut" => -1, "xneut" => 0, "conns" => ["wye", "wye"],
-                                   "kvs" => [12.47, 12.47], "kvas" => [1000.0, 1000.0],
-                                   "taps" => [1.0, 1.0], "xhl" => 7.0, "xht" => 35.0, "xlt" => 30.0,
-                                   "xscarray" => [7], "thermal" => 2, "n" => 0.8, "m" => 0.8,
-                                   "flrise" => 65, "hsrise" => 15, "%loadloss" => 0.4,
-                                   "%noloadloss" => 0.0, "normhkva" => 1100, "emerghkva" => 1500,
-                                   "sub" => "n", "maxtap" => 1.1, "mintap" => 0.9, "numtaps" => 32,
-                                   "%imag" => 0.0, "ppm_antifloat" => 1, "%rs" => [0.2, 0.2],
-                                   "xrconst" => "NO", "x12" => 7, "x13" => 35, "x23" => 30,
-                                   "leadlag" => "Lag", "normamps" => 50.929, "emergamps" => 69.449,
-                                   "faultrate" => 0.007, "pctperm" => 100, "repair" => 36,
-                                   "basefreq" => 60, "enabled" => true)
-
-    transformer3 = Dict{String,Any}()
-
-    gen = Dict{String,Any}("phases" => 3, "kv" => 12.47, "kw" => 1000, "pf" => 0.88,
-                           "kvar" => 60, "model" => 1, "vminpu" => 0.90, "vmaxpu" => 1.10,
-                           "dispmode" => "Default", "dispvalue" => 0.0, "conn" => "wye",
-                           "rneut" => 0, "xneut" => 0, "status" => "variable", "class" => 1,
-                           "vpu" => 1.0, "maxkvar" => 120, "minkvar" => -120, "pvfactor" => 0.1,
-                           "forceon" => "No", "kva" => 1200, "mva" => 1.2, "xd" => 1,
-                           "xdpp" => 0.2, "h" => 1, "d" => 0, "debugtrace" => "no",
-                           "balanced" => "No", "xrdp" => 20, "spectrum" => "defaultgen",
-                           "basefreq" => 60, "enabled" => true)
-
-    linecode = Dict{String,Any}("nphases" => 3, "r1" => 0.058, "x1" => 0.1206, "r0" => 0.1784,
-                                "x0" => 0.4047, "c1" => 3.4, "c0" => 1.6, "units" => "none",
-                                "rmatrix" => "[0.09813333 |0.04013333 0.09813333 |0.04013333 0.04013333 0.09813333 ]",
-                                "xmatrix" => "[0.2153 |0.0947 0.2153 |0.0947 0.0947 0.2153 ]",
-                                "cmatrix" => "[0.0 | 0.0 0.0 | 0.0 0.0 0.0 ]",
-                                "basefreq" => 60, "normamps" => 400, "emergamps" => 600,
-                                "faultrate" => 0.1, "pctperm" => 20, "repair" => 3,
-                                "kron" => "N", "rg" => 0.01805, "xg" => 0.15508,
-                                "neutral" => 3, "b1" => 1.2818, "b0" => 0.60319)
-
-    capacitor = Dict{String,Any}("phases" => 3, "kvar" => [1200], "kv" => 12.47, "conn" => "wye",
-                                 "cuf" => [20.47], "r" => [0], "xl" => [0], "harm" => [0],
-                                 "numsteps" => 1, "states" => [1], "normamps" => 75.0046059412345,
-                                 "emergamps" => 100.006141254979, "faultrate" => 0,
-                                 "pctperm" => 1e2, "repair" => 3, "basefreq" => 60, "enabled" => true)
-
-    reactor = Dict{String,Any}("phases" => 3, "kvar" => 1200.0, "kv" => 12.47, "conn" => "wye",
-                               "parallel" => "NO", "r" => 0.0, "x" => 1555.009, "Rp" => 0.0,
-                               "z1" => [0.0, 0.0], "z2" => [0.0, 0.0], "z0" => [0.0, 0.0],
-                               "z" => [0.0, 1555.009], "lmh" => 4124.7895, "normamps" => 5.0,
-                               "emergamps" => 6.0, "faultrate" => 0, "pctperm" => 1.0e2, "repair" => 3,
-                               "basefreq" => 60.0, "enabled" => true)
-
-    circuit = Dict{String,Any}("bus1" => "sourcebus", "basekv" => 115.0, "pu" => 1.0, "angle" => 0.0,
-                               "frequency" => 60.0, "phases" => 3, "mvasc3" => 2000.0, "mvasc1" => 2100.0,
-                               "x1r1" => 4.0, "x0r0" => 3.0, "lsc3" => 10041.0, "lsc1" => 10543.0,
-                               "r1" => 1.6038, "x1" => 6.4151, "r0" => 1.796, "x0" => 5.3881, "scantype" => "Pos",
-                               "sequence" => "Pos", "bus2" => "sourcebus.0.0.0", "z1" => [1.6037668, 6.4150673],
-                               "z0" => [1.7960358, 5.3881075], "z2" => [1.6037668, 6.4150673],
-                               "puz1" => [0.012126781, 0.048507125], "puz0" => [0.013580611, 0.040741834],
-                               "puz2" => [0.012126781, 0.048507125], "basemva" => 100.0, "spectrum" => "defaultvsource",
-                               "basefreq" => 60.0, "enabled" => true)
-
-    vsource = Dict{String,Any}()
-
-    ctypes = Dict{String, Dict}("line" => line,
-                                "load" => load,
-                                "linecode" => linecode,
-                                "generator" => gen,
-                                "capacitor" => capacitor,
-                                "transformer" => transformer,
-                                "transformer3" => transformer3,
-                                "reactor" => reactor,
-                                "circuit" => circuit,
-                                "vsource" => vsource)
-    try
-        return ctypes[ctype]
-    catch KeyError
-        return Dict{String,Any}()
-    end
-end
-
-
-"""
     get_prop_name(ctype)
 
 Returns the property names in order for a given component type `ctype`.
@@ -373,19 +260,6 @@ function get_prop_name(ctype::AbstractString, i::Int)::String
 end
 
 
-""
-function get_linecode(dss_data::Dict, id::AbstractString)
-    if haskey(dss_data, "linecode")
-        for item in dss_data["linecode"]
-            if item["name"] == id
-                return item
-            end
-        end
-    end
-    return Dict{String,Any}()
-end
-
-
 """
     parse_matrix(dtype, data)
 
@@ -393,7 +267,7 @@ Parses a OpenDSS style triangular matrix string `data` into a two dimensional
 array of type `dtype`. Matrix strings are capped by either parenthesis or
 brackets, rows are separated by "|", and columns are separated by spaces.
 """
-function parse_matrix(dtype::Type, data::AbstractString, nphases::Int=3)::Array
+function parse_matrix(dtype::Type, data::AbstractString)::Array
     rows = []
     for line in split(strip(data, ['[', ']', '(', ')']), '|')
         cols = []
@@ -403,7 +277,7 @@ function parse_matrix(dtype::Type, data::AbstractString, nphases::Int=3)::Array
         push!(rows, cols)
     end
 
-    # nphases = maximum([length(row) for row in rows])
+    nphases = maximum([length(row) for row in rows])
 
     matrix = zeros(dtype, nphases, nphases)
     if length(rows) == 1
@@ -431,7 +305,7 @@ end
 "pass-through for already parsed matrices"
 function parse_matrix(dtype::Type, data::Array, nphases::Int=3)::Array
     if length(data) == 1 && nphases > 1
-        data = fill(data[1], nphases, nphases)
+        data = fill(dtype, data[1], nphases, nphases)
     end
 
     return data
@@ -639,14 +513,17 @@ exists inside `compDict`, the original value is converted to an array, and the
 new value is appended to the end.
 """
 function add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
-    if haskey(compDict, key)
-        if !isa(compDict[key], Array)
-            compDict[key] = [compDict[key]]
+    if haskey(compDict, lowercase(key))
+        rmatch = match(r"_(\d+)$", key)
+        if typeof(rmatch) != Void
+            endNum = parse(Int, rmatch.captures[1]) + 1
+            key = replace(key, r"_(\d+)$", "_$endNum")
+        else
+            key = string(key, "_2")
         end
-        push!(compDict[key], value)
-    else
-        compDict[key] = value
     end
+
+    compDict[lowercase(key)] = value
 
     return compDict
 end
@@ -926,9 +803,19 @@ function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
                     if haskey(dtypes, k)
                         debug(LOGGER, "key: $k")
                         if isa(v, Array)
-                            item[k] = [parse_element_with_dtype(dtypes[k], el) for el in v]
-                        else
+                            arrout = []
+                            for el in v
+                                if isa(v, AbstractString)
+                                    push!(arrout, parse_element_with_dtype(dtypes[k], el))
+                                else
+                                    push!(arrout, el)
+                                end
+                            end
+                            item[k] = arrout
+                        elseif isa(v, AbstractString)
                             item[k] = parse_element_with_dtype(dtypes[k], v)
+                        else
+                            error(LOGGER, "dtype unknown $compType, $k, $v")
                         end
                     end
                 end
@@ -965,4 +852,10 @@ function parse_busname(busname::AbstractString)
     end
 
     return name, nodes
+end
+
+
+""
+function to_sym_keys(data::Dict{String,Any})::Dict{Symbol,Any}
+    return Dict{Symbol,Any}((Symbol(k), v) for (k, v) in data)
 end

@@ -6,7 +6,7 @@ end
 
 
 ""
-function createLinecode(name::String; kwargs...)
+function createLinecode(name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :nphases, 3)
     basefreq = get(kwargs, :basefreq, 60.0)
@@ -86,7 +86,7 @@ end
 
 
 ""
-function createLine(bus1, bus2, name::String; kwargs...)
+function createLine(bus1, bus2, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
     basefreq = get(kwargs, :basefreq, 60.0)
@@ -186,7 +186,7 @@ end
 
 
 ""
-function createLoad(bus1, name::String; kwargs...)
+function createLoad(bus1, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     kv = get(kwargs, :kv, 12.47)
     kw = get(kwargs, :kw, 10.0)
@@ -227,8 +227,8 @@ function createLoad(bus1, name::String; kwargs...)
                             "kw" => kw,
                             "pf" => pf,
                             "model" => get(kwargs, :model, 1),
-                            "yearly" => get(kwargs, :yearly, get(kwargs, :daily, complex(1.0, 1.0))),
-                            "daily" => get(kwargs, :daily, complex(1.0, 1.0)),
+                            "yearly" => get(kwargs, :yearly, get(kwargs, :daily, [1.0, 1.0])),
+                            "daily" => get(kwargs, :daily, [1.0, 1.0]),
                             "duty" => get(kwargs, :duty, ""),
                             "growth" => get(kwargs, :growth, ""),
                             "conn" => get(kwargs, :conn, "wye"),
@@ -270,7 +270,7 @@ end
 
 
 ""
-function createGenerator(bus1, name::String; kwargs...)
+function createGenerator(bus1, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     conn = get(kwargs, :conn, "wye")
 
@@ -287,8 +287,8 @@ function createGenerator(bus1, name::String; kwargs...)
                             "kw" => kw,
                             "pf" => get(kwargs, :pf, 0.80),
                             "model" => get(kwargs, :model, 1),
-                            "yearly" => get(kwargs, :yearly, get(kwargs, :daily, complex(0.0, 0.0))),
-                            "daily" => get(kwargs, :daily, complex(0.0, 0.0)),
+                            "yearly" => get(kwargs, :yearly, get(kwargs, :daily, [0.0, 0.0])),
+                            "daily" => get(kwargs, :daily, [0.0, 0.0]),
                             "duty" => get(kwargs, "duty", ""),
                             "dispmode" => get(kwargs, :dispmode, "default"),
                             "disvalue" => get(kwargs, :dispvalue, 0.0),
@@ -329,7 +329,7 @@ end
 
 
 ""
-function createCapacitor(bus1, name::String, bus2=0; kwargs...)
+function createCapacitor(bus1, name::AbstractString, bus2=0; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
 
@@ -359,7 +359,7 @@ end
 
 
 ""
-function createReactor(bus1, name::String, bus2=0; kwargs...)
+function createReactor(bus1, name::AbstractString, bus2=0; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
     kvar = get(kwargs, :kvar, 1200.0)
@@ -369,6 +369,7 @@ function createReactor(bus1, name::String, bus2=0; kwargs...)
 
     normamps = get(kwargs, :normamps, 400.0)
     emergamps = get(kwargs, :emergamps, 600.0)
+    basefreq = get(kwargs, :basefreq, 60.0)
 
     # CHECK: Default rmatrix, xmatrix
     rmatrix = zeros(phases, phases)
@@ -376,18 +377,16 @@ function createReactor(bus1, name::String, bus2=0; kwargs...)
 
     # CHECK: default r, x
     r = get(kwargs, :r, 0.0)
-    x = get(kwargs, :x, 0.0)
+    x = get(kwargs, :x, abs(kv*1e3))
 
     rp = get(kwargs, :rp, 0.0)
 
-    # CHECK: defaults for z values
     z1 = get(kwargs, :z1, [0.0, 0.0])
     z0 = get(kwargs, :z0, [0.0, 0.0])
     z2 = get(kwargs, :z2, [0.0, 0.0])
     z = get(kwargs, :z, [0.0, 0.0])
 
-    # CHECK: lmh default value
-    lmh = get(kwargs, :lmh, 0.0)
+    lmh = get(kwargs, :lmh, x / 2 / pi / basefreq * 1e3)
 
     if (haskey(kwargs, :kv) && haskey(kwargs, :kvar)) || haskey(kwargs, :x) || haskey(kwargs, :lmh) || haskey(kwargs, :z)
         r = kwargs[:r]
@@ -480,14 +479,14 @@ function createReactor(bus1, name::String, bus2=0; kwargs...)
                             "repair" => get(kwargs, :repair, 3.0),
                             "faultrate" => get(kwargs, :faultrate, 0.1),
                             "pctperm" => get(kwargs, :pctperm, 20.0),
-                            "basefreq" => get(kwargs, :basefreq, 60.0),
-                            "enabled" => get(kwargs, :enabled, false)
+                            "basefreq" => basefreq,
+                            "enabled" => get(kwargs, :enabled, true)
                            )
 end
 
 
 ""
-function createVSource(bus1, name::String, bus2=0; kwargs...)
+function createVSource(bus1, name::AbstractString, bus2=0; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     x1r1 = get(kwargs, :x1r1, 4.0)
     x0r0 = get(kwargs, :x0r0, 3.0)
@@ -658,7 +657,7 @@ function createVSource(bus1, name::String, bus2=0; kwargs...)
                             "basekv" => basekv,
                             "pu" => pu,
                             "angle" => get(kwargs, :angle, 0.0),
-                            "frequency" => get(kwargs, :frequency, 0.0),  # CHECK: default value
+                            "frequency" => get(kwargs, :frequency, get(kwargs, :basefreq, 60.0)),
                             "phases" => phases,
                             "mvasc3" => mvasc3,
                             "mvasc1" => mvasc1,
@@ -686,7 +685,7 @@ function createVSource(bus1, name::String, bus2=0; kwargs...)
                             # Inherited Properties
                             "spectrum" => get(kwargs, :spectrum, "defaultvsource"),
                             "basefreq" => get(kwargs, :basefreq, 60.0),
-                            "enabled" => get(kwargs, :enabled, false),
+                            "enabled" => get(kwargs, :enabled, true),
                             # Derived Properties
                             "rmatrix" => real(Z),
                             "xmatrix" => imag(Z),
@@ -696,82 +695,92 @@ end
 
 
 ""
-function createTransformer(buses::Array, name::String; kwargs...)
+function createTransformer(buses::Array, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
-    conn = get(kwargs, :conn, "wye")
+    windings = get(kwargs, :windings, 2)
     phases = get(kwargs, :phases, 3)
+
+    kvas = get(kwargs, :kvas, fill(12.47, windings))
+    rpu = get(kwargs, Symbol("%r"), 0.0)
 
     return Dict{String,Any}("name" => name,
                             "phases" => phases,
-                            "windings" => get(kwargs, :windings, 2),
+                            "windings" => windings,
                             # Per wdg
                             "wdg" => get(kwargs, :wdg, 1),
                             "bus" => get(kwargs, :bus, ""),
-                            "conn" => conn,
+                            "conn" => get(kwargs, :conn, "wye"),
                             "kv" => get(kwargs, :kv, 12.47),
                             "kva" => get(kwargs, :kva, 1000.0),
                             "tap" => get(kwargs, :tap, 1.0),
-                            "%r" => get(kwargs, Symbol("%r"), 0.0),
+                            "%r" => rpu,
                             "rneut" => get(kwargs, :rneut, 0.0),
                             "xneut" => get(kwargs, :xneut, 0.0),
+
+                            "wdg_2" => get(kwargs, :wdg_2, 2),
+                            "bus_2" => get(kwargs, :bus_2, ""),
+                            "conn_2" => get(kwargs, :conn_2, "wye"),
+                            "kv_2" => get(kwargs, :kv_2, 12.47),
+                            "kva_2" => get(kwargs, :kva_2, 1000.0),
+                            "tap_2" => get(kwargs, :tap_2, 1.0),
+                            "%r_2" => get(kwargs, Symbol("%r_2"), 0.0),
+                            "rneut_2" => get(kwargs, :rneut_2, 0.0),
+                            "xneut_2" => get(kwargs, :xneut_2, 0.0),
+
+                            "wdg_3" => get(kwargs, :wdg_3, 3),
+                            "bus_3" => get(kwargs, :bus_3, ""),
+                            "conn_3" => get(kwargs, :conn_3, "wye"),
+                            "kv_3" => get(kwargs, :kv_3, 12.47),
+                            "kva_3" => get(kwargs, :kva_3, 1000.0),
+                            "tap_3" => get(kwargs, :tap_3, 1.0),
+                            "%r_3" => get(kwargs, Symbol("%r_3"), 0.0),
+                            "rneut_3" => get(kwargs, :rneut_3, 0.0),
+                            "xneut_3" => get(kwargs, :xneut_3, 0.0),
+
                             # General
                             "buses" => buses,
-                            # "conns"
-                            # "kvs"
-                            # "kvas"
-                            # "taps"
-                            # "xhl"
-                            # "xht"
-                            # "xlt"
-                            # "xscarray"
-                            # "thermal"
-                            # "n"
-                            # "m"
-                            # "flrise"
-                            # "hsrise"
-                            # "%loadloss"
-                            # "%noloadloss"
-                            # "normhkva"
-                            # "emerghkva"
-                            # "sub"
-                            # "maxtap"
-                            # "mintap"
-                            # "numtaps"
-                            # "subname"
-                            # "%imag"
-                            # "ppm_antifloat"
-                            # "%rs"
-                            # "bank"
-                            # "xfmrcode"
-                            # "xrconst"
-                            # "x12"
-                            # "x13"
-                            # "x23"
-                            # # Inherited Properties
-                            # "faultrate"
-                            # "basefreq"
-                            # "like"
+                            "conns" => get(kwargs, :conns, fill("wye", windings)),
+                            "kvs" => get(kwargs, :kvs, fill(12.47, windings)),
+                            "kvas" => kvas,
+                            "taps" => get(kwargs, :taps, fill(1.0, windings)),
+                            "xhl" => get(kwargs, :xhl, 7.0),
+                            "xht" => get(kwargs, :xht, 35.0),
+                            "xlt" => get(kwargs, :xlt, 30.0),
+                            "xscarray" => get(kwargs, :xscarry, ""),
+                            "thermal" => get(kwargs, :thermal, 2.0),
+                            "n" => get(kwargs, :n, 0.8),
+                            "m" => get(kwargs, :m, 0.8),
+                            "flrise" => get(kwargs, :flrise, 65.0),
+                            "hsrise" => get(kwargs, :hsrise, 15.0),
+                            "%loadloss" => get(kwargs, Symbol("%loadloss"), 2.0 * rpu * 100.0),
+                            "%noloadloss" => get(kwargs, Symbol("%noloadloss"), 0.0),
+                            "normhkva" => get(kwargs, :normhkva, 1.1 * kvas[1]),
+                            "emerghkva" => get(kwargs, :emerghkva, 1.5 * kvas[1]),
+                            "sub" => get(kwargs, :sub, false),
+                            "maxtap" => get(kwargs, :maxtap, 1.10),
+                            "mintap" => get(kwargs, :mintap, 0.90),
+                            "numtaps" => get(kwargs, :numtaps, 32),
+                            "subname" => get(kwargs, :subname, ""),
+                            "%imag" => get(kwargs, Symbol("%imag"), 0.0),
+                            "ppm_antifloat" => get(kwargs, :ppm_antifloat, 1.0),
+                            "%rs" => get(kwargs, Symbol("%rs"), fill(0.0, windings)),
+                            "bank" => get(kwargs, :bank, ""),
+                            "xfmrcode" => get(kwargs, :xfmrcode, ""),
+                            "xrconst" => get(kwargs, :xrconst, false),
+                            "x12" => get(kwargs, :x12, 7.0),
+                            "x13" => get(kwargs, :x13, 35.0),
+                            "x23" => get(kwargs, :x23, 30.0),
+                            "leadlag" => get(kwargs, :leadlag, "lag"),
+                            # Inherited Properties
+                            "faultrate" => get(kwargs, :faultrate, 0.1),
+                            "basefreq" => get(kwargs, :basefreq, 60.0),
+                            "enabled" => get(kwargs, :enabled, true)
                            )
 end
 
 
 ""
-function createComponent(ctype::String, args...; kwargs...)
-    component = Dict{String,Any}("line" => createLine,
-                                 "linecode" => createLinecode,
-                                 "gen" => createGenerator,
-                                 "load" => createLoad,
-                                 "capacitor" => createCapacitor,
-                                 "reactor" => createReactor,
-                                 "vsource" => createVSource,
-                                #  "transformer" => createTransformer
-                                )
-    return component[ctype](args...; kwargs...)
-end
-
-
-""
-function get_dtypes(comp::String)::Dict
+function get_dtypes(comp::AbstractString)::Dict
     default_dicts = Dict{String,Any}("line" => createLine("", "", ""),
                                      "load" => createLoad("", ""),
                                      "generator" => createGenerator("", ""),

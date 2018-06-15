@@ -1,23 +1,34 @@
 # OpenDSS parser
 
 
+""
+function get_linecode(dss_data::Dict, id::AbstractString)
+    if haskey(dss_data, "linecode")
+        for item in dss_data["linecode"]
+            if item["name"] == id
+                return item
+            end
+        end
+    end
+    return Dict{String,Any}()
+end
+
+
 """
     split_transformer_buses!(transformer)
 
-Normalizes the names of buses in `transformer` to "bus1", "bus2" and "bus3" (if
-three winding). OpenDSS allows for use of 3 "bus" keywords, or a "buses" keyword,
-which is an array of bus names.
+Normalizes the names of buses in `transformer` to "buses". OpenDSS allows for
+use of 3 "bus" keywords, or a "buses" keyword, which is an array of bus names.
 """
 function split_transformer_buses!(transformer::Dict)
     if haskey(transformer, "buses")
         n1, n2 = parse_array(String, transformer["buses"])
-        transformer["bus1"] = n1
-        transformer["bus2"] = n2
+        transformer["bus"] = n1
+        transformer["bus_2"] = n2
     elseif haskey(transformer, "bus")
-        transformer["bus1"] = transformer["bus"]
-        transformer["bus2"] = transformer["bus_2"]
+        transformer["buses"] = [tranformer["bus"], transformer["bus_2"]]
         if haskey(transformer, "bus_3")
-            transformer["bus3"] = transformer["bus3"]
+            push!(transformer["buses"], transformer["bus_3"])
         end
     end
 end
@@ -143,8 +154,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "load")
         for load in dss_data["load"]
-            defaults = get_prop_default("load")
-            merge!(defaults, load)
+            defaults = createLoad(load["bus1"], load["name"]; to_sym_keys(load)...)
 
             loadDict = Dict{String,Any}()
 
@@ -180,8 +190,7 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "capacitor")
         for shunt in dss_data["capacitor"]
-            defaults = get_prop_default("capacitor")
-            merge!(defaults, shunt)
+            defaults = createCapacitor(shunt["bus1"], shunt["name"]; to_sym_keys(shunt)...)
 
             shuntDict = Dict{String,Any}()
 
@@ -209,8 +218,7 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if haskey(dss_data, "reactor")
         for shunt in dss_data["reactor"]
             if !haskey(shunt, "bus2")
-                defaults = get_prop_default("reactor")
-                merge!(defaults, shunt)
+                defaults = createReactor(shunt["bus1"], shunt["name"]; to_sym_keys(shunt)...)
 
                 shuntDict = Dict{String,Any}()
 
@@ -251,8 +259,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "generator")
         for gen in dss_data["generator"]
-            defaults = get_prop_default("generator")
-            merge!(defaults, gen)
+            defaults = createGenerator(gen["bus1"], gen["name"]; to_sym_keys(gen)...)
 
             genDict = Dict{String,Any}()
 
@@ -332,13 +339,12 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "line")
         for line in dss_data["line"]
-            defaults = get_prop_default("line")
-            merge!(defaults, line)
+            defaults = createLine(line["bus1"], line["bus2"], line["name"]; to_sym_keys(line)...)
 
-            linecode = merge(get_prop_default("linecode"), get_linecode(dss_data, get(defaults, "linecode", "")))
+            linecode = createLinecode(defaults["linecode"]; to_sym_keys(get_linecode(tppm_data, defaults["linecode"]))...)
             for k in ("rmatrix", "cmatrix", "xmatrix")
                 defaults[k] = linecode[k]
-                    end
+            end
 
             bf, nodes = parse_busname(defaults["bus1"])
             bt = parse_busname(defaults["bus2"])[1]
@@ -407,9 +413,8 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
     if haskey(dss_data, "transformer")
         warn(LOGGER, "transformers are not yet supported, treating like non-transformer lines")
         for transformer in dss_data["transformer"]
-            defaults = get_prop_default("transformer")
             split_transformer_buses!(transformer)
-            merge!(defaults, transformer)
+            defaults = createTransformer(transformer["buses"], transformer["name"]; to_sym_keys(transformer)...)
 
             transDict = Dict{String,Any}()
 
@@ -417,8 +422,9 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
 
             transDict["name"] = defaults["name"]
 
-            f_bus, nodes = parse_busname(defaults["bus1"])
-            t_bus = parse_busname(defaults["bus2"])[1]
+
+            f_bus, nodes = parse_busname(defaults["buses"][1])
+            t_bus = parse_busname(defaults["buses"][2])[1]
 
             transDict["f_bus"] = find_bus(f_bus, tppm_data)
             transDict["t_bus"] = find_bus(t_bus, tppm_data)
@@ -431,9 +437,10 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             transDict["b_fr"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))
             transDict["b_to"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))
 
-            transDict["rate_a"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["normamps"], nphases), nodes, nphases, NaN))
-            transDict["rate_b"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["emergamps"], nphases), nodes, nphases, NaN))
-            transDict["rate_c"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["emergamps"], nphases), nodes, nphases, NaN))
+            # CHECK: unit conversion?
+            transDict["rate_a"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["normhkva"], nphases), nodes, nphases, NaN))
+            transDict["rate_b"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["emerghkva"], nphases), nodes, nphases, NaN))
+            transDict["rate_c"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["emerghkva"], nphases), nodes, nphases, NaN))
 
             transDict["tap"] = PMs.MultiPhaseVector(phase_on_off(ones(nphases), nodes, nphases, NaN))
             transDict["shift"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))
@@ -458,8 +465,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
         warn(LOGGER, "reactors as constant impedance elements is not yet supported, treating like line")
         for reactor in dss_data["reactor"]
             if haskey(reactor, "bus2")
-                defaults = get_prop_default("reactor")
-                merge!(defaults, reactor)
+                defaults = createReactor(reactor["bus1"], reactor["name"], reactor["bus2"]; to_sym_keys(reactor)...)
 
                 reactDict = Dict{String,Any}()
 
@@ -569,8 +575,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     check_duplicate_components!(dss_data)
 
     parse_dss_with_dtypes!(dss_data, ["line", "linecode", "load", "generator", "capacitor",
-                                      "reactor", "circuit", "transformer"
-                                     ])
+                                      "reactor", "circuit", "transformer"])
 
     if haskey(dss_data, "options")
         condensed_opts = [Dict{String,Any}()]
@@ -587,8 +592,8 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     tppm_data["source_version"] = VersionNumber("0")
 
     if haskey(dss_data, "circuit")
-        defaults = get_prop_default("circuit")
-        merge!(defaults, dss_data["circuit"][1])
+        circuit = dss_data["circuit"][1]
+        defaults = createVSource("", circuit["name"]; to_sym_keys(circuit)...)
 
         tppm_data["name"] = defaults["name"]
         tppm_data["basekv"] = defaults["basekv"]
