@@ -48,8 +48,14 @@ function discover_buses(dss_data::Dict)::Array
             for compObj in compList
                 if compType == "transformer"
                     split_transformer_buses!(compObj)
-                end
-                if haskey(compObj, "bus2")
+                    for bus in compObj["buses"]
+                        name, nodes = parse_busname(bus)
+                        if !(name in bus_names)
+                            push!(bus_names, name)
+                            push!(buses, (name, nodes))
+                        end
+                    end
+                elseif haskey(compObj, "bus2")
                     for key in ["bus1", "bus2"]
                         name, nodes = parse_busname(compObj[key])
                         if !(name in bus_names)
