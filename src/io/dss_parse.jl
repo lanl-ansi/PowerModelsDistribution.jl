@@ -302,17 +302,27 @@ function parse_matrix(dtype::Type, data::AbstractString)::Array
 end
 
 
-"pass-through for already parsed matrices"
-function parse_matrix(dtype::Type, data::Array, nphases::Int=3)::Array
-    if length(data) == 1 && nphases > 1
-        data = fill(dtype, data[1], nphases, nphases)
+"parse matrices according to active nodes"
+function parse_matrix(data::Array{T}, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array where T
+    mat = fill(fill_val, (nph, nph))
+    idxs = find(nodes[1:nph])
+
+    if size(data) == size(mat)
+        return data
+    else
+        for i in 1:size(data)[1]
+            mat[idxs[i], idxs[i]] = data[i, i]
+            for j in 1:i-1
+                mat[idxs[i],idxs[j]] = mat[idxs[j],idxs[i]] = data[i, j]
+            end
+        end
     end
 
-    return data
+    return mat
 end
 
 
-""
+"checks if `data` is an opendss-style matrix string"
 function isa_matrix(data::AbstractString)::Bool
     if contains(data, "|")
         return true
@@ -355,13 +365,28 @@ function parse_array(dtype::Type, data::AbstractString)::Array
 end
 
 
-"pass-through for already parsed arrays"
-function parse_array(dtype::Type, data::Array)::Array
-    return data
+"parse matrices according to active nodes"
+function parse_array(data, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array
+    mat = fill(fill_val, nph)
+    idxs = find(nodes[1:nph])
+
+    if size(data) == size(mat)
+        return data
+    elseif length(data) == 1 && nph > 1
+        for i in idxs
+            mat[i] = data[1]
+        end
+    else
+        for i in 1:length(data)
+            mat[idxs[i]] = data[i]
+        end
+    end
+
+    return mat
 end
 
 
-""
+"checks if `data` is an opendss-style array string"
 function isa_array(data::AbstractString)::Bool
     clean_data = strip(data)
     if !contains(clean_data, "|")
