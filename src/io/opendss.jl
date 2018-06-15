@@ -2,81 +2,6 @@
 
 
 """
-    parse_dss_with_dtypes!(dss_data, toParse)
-
-Parses the data in keys defined by `toParse` in `dss_data` using types given by
-the default properties from the `get_prop_default` function.
-"""
-function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
-    for compType in toParse
-        if haskey(dss_data, compType)
-            for item in dss_data[compType]
-                defaults = get_prop_default(compType)
-                for (k, v) in item
-                    if lowercase(v) in ["n", "no"]
-                        v = "false"
-                    elseif lowercase(v) in ["y", "yes"]
-                        v = "true"
-                    end
-                    if haskey(defaults, k)
-                        if isa(defaults[k], Array)
-                            try
-                                item[k] = parse_array(eltype(defaults[k]), lowercase(v))
-                            catch err
-                                debug(LOGGER, "$compType $k")
-                                error(LOGGER, err)
-                            end
-                        elseif isa(v, AbstractString) && !isa(defaults[k], String)
-                            if isa_rpn(v)
-                                item[k] = parse_rpn(v)
-                            else
-                                try
-                                    item[k] = parse(typeof(defaults[k]), lowercase(v))
-                                catch err
-                                    debug(LOGGER, "$compType $k")
-                                    warn(LOGGER, "cannot parse \"$k=$v\" as $(typeof(defaults[k])) in $(compType), leaving as String.")
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
-
-"""
-    parse_busname(busname)
-
-Parses busnames as defined in OpenDSS, e.g. "primary.1.2.3.0".
-"""
-function parse_busname(busname::AbstractString)
-    parts = split(lowercase(busname), '.'; limit=2)
-    name = parts[1]
-    elements = "1.2.3"
-
-    if length(parts) >= 2
-        name, elements = split(lowercase(busname), '.'; limit=2)
-    end
-
-    nodes = Array{Bool}([0 0 0 0])
-
-    for num in range(1,3)
-        if contains(elements, "$num")
-            nodes[num] = true
-        end
-    end
-
-    if contains(elements, "0") || sum(nodes[1:3]) == 1
-        nodes[4] = true
-    end
-
-    return name, nodes
-end
-
-
-"""
     split_transformer_buses!(transformer)
 
 Normalizes the names of buses in `transformer` to "bus1", "bus2" and "bus3" (if
@@ -198,11 +123,11 @@ Finds the index number of the bus in existing data from the given `busname`.
 """
 function find_bus(busname, tppm_data)
     for bus in values(tppm_data["bus"])
-        if lowercase(bus["name"]) == lowercase(busname)
+        if bus["name"] == busname
             return bus["bus_i"]
         end
     end
-    error("cannot find connected bus with id $(lowercase(busname))")
+    error("cannot find connected bus with id $busname")
 end
 
 
@@ -226,7 +151,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             nphases = tppm_data["phases"]
             name, nodes = parse_busname(defaults["bus1"])
 
-            loadDict["name"] = defaults["id"]
+            loadDict["name"] = defaults["name"]
             loadDict["load_bus"] = find_bus(name, tppm_data)
             loadDict["pd"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["kw"], nphases), nodes, nphases))
             loadDict["qd"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["kvar"], nphases), nodes, nphases))
@@ -234,7 +159,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             loadDict["index"] = length(tppm_data["load"]) + 1
 
-            used = ["phases", "bus1", "id"]
+            used = ["phases", "bus1", "name"]
             PMs.import_remaining!(loadDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["load"], loadDict)
@@ -267,13 +192,13 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             Gcap = -Zbase * sum(defaults["kvar"]) / (nphases * 1e3 * (tppm_data["basekv"] / sqrt(3.0))^2)
 
             shuntDict["shunt_bus"] = find_bus(name, tppm_data)
-            shuntDict["name"] = defaults["id"]
+            shuntDict["name"] = defaults["name"]
             shuntDict["gs"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))  # TODO:
             shuntDict["bs"] = PMs.MultiPhaseVector(phase_on_off(fill(Gcap, nphases), nodes, nphases))
             shuntDict["status"] = convert(Int, defaults["enabled"])
             shuntDict["index"] = length(tppm_data["shunt"]) + 1
 
-            used = ["bus1", "phases", "id"]
+            used = ["bus1", "phases", "name"]
             PMs.import_remaining!(shuntDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["shunt"], shuntDict)
@@ -296,14 +221,14 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 Gcap = Zbase * sum(defaults["kvar"]) / (nphases * 1e3 * (tppm_data["basekv"] / sqrt(3.0))^2)
 
                 shuntDict["shunt_bus"] = find_bus(name, tppm_data)
-                shuntDict["name"] = defaults["id"]
+                shuntDict["name"] = defaults["name"]
                 shuntDict["gs"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))  # TODO:
                 shuntDict["bs"] = PMs.MultiPhaseVector(phase_on_off(fill(Gcap, nphases), nodes, nphases))
                 shuntDict["status"] = convert(Int, defaults["enabled"])
 
                 shuntDict["index"] = length(tppm_data["shunt"]) + 1
 
-                used = ["bus1", "phases", "id"]
+                used = ["bus1", "phases", "name"]
                 PMs.import_remaining!(shuntDict, defaults, import_all; exclude=used)
 
                 push!(tppm_data["shunt"], shuntDict)
@@ -335,7 +260,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             name, nodes = parse_busname(defaults["bus1"])
 
             genDict["gen_bus"] = find_bus(name, tppm_data)
-            genDict["name"] = defaults["id"]
+            genDict["name"] = defaults["name"]
             genDict["gen_status"] = convert(Int, defaults["enabled"])
             genDict["pg"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["kw"] / (1e3 * nphases), nphases), nodes, nphases))
             genDict["qg"] = PMs.MultiPhaseVector(phase_on_off(fill(defaults["kvar"] / (1e3 * nphases), nphases), nodes, nphases))
@@ -379,7 +304,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             genDict["index"] = length(tppm_data["gen"]) + 1
 
-            used = ["id", "phases", "bus1"]
+            used = ["name", "phases", "bus1"]
             PMs.import_remaining!(genDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["gen"], genDict)
@@ -422,7 +347,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             nphases = tppm_data["phases"]
 
-            branchDict["name"] = defaults["id"]
+            branchDict["name"] = defaults["name"]
 
             branchDict["f_bus"] = find_bus(bf, tppm_data)
             branchDict["t_bus"] = find_bus(bt, tppm_data)
@@ -430,11 +355,11 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             defaults["length"] = 1.0
             branchDict["length"] = defaults["length"]
 
-            c_nf = parse_matrix(Float64, defaults["cmatrix"])
+            c_nf = parse_matrix(Float64, defaults["cmatrix"], nphases)
             Zbase = (tppm_data["basekv"] / sqrt(3.0))^2 * nphases / tppm_data["baseMVA"]
 
-            branchDict["br_r"] = PMs.MultiPhaseMatrix(phase_on_off(parse_matrix(Float64, defaults["rmatrix"]) .* defaults["length"] ./ Zbase, nodes, nphases))
-            branchDict["br_x"] = PMs.MultiPhaseMatrix(phase_on_off(parse_matrix(Float64, defaults["xmatrix"]) .* defaults["length"] ./ Zbase, nodes, nphases))
+            branchDict["br_r"] = PMs.MultiPhaseMatrix(phase_on_off(parse_matrix(Float64, defaults["rmatrix"], nphases) .* defaults["length"] ./ Zbase, nodes, nphases))
+            branchDict["br_x"] = PMs.MultiPhaseMatrix(phase_on_off(parse_matrix(Float64, defaults["xmatrix"], nphases) .* defaults["length"] ./ Zbase, nodes, nphases))
 
             # CHECK: Do we need to reformulate to use a matrix instead of a vector for g, b?
             branchDict["g_fr"] = PMs.MultiPhaseVector(phase_on_off(zeros(nphases), nodes, nphases))  # TODO: need to derive
@@ -460,7 +385,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict["index"] = length(tppm_data["branch"]) + 1
 
-            used = ["id", "phases", "bus1", "bus2", "rmatrix", "xmatrix"]
+            used = ["name", "phases", "bus1", "bus2", "rmatrix", "xmatrix"]
             PMs.import_remaining!(branchDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["branch"], branchDict)
@@ -490,7 +415,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
 
             nphases = tppm_data["phases"]
 
-            transDict["name"] = defaults["id"]
+            transDict["name"] = defaults["name"]
 
             f_bus, nodes = parse_busname(defaults["bus1"])
             t_bus = parse_busname(defaults["bus2"])[1]
@@ -588,7 +513,7 @@ Assumes all components in `data` are unique.
 """
 function where_is_comp(data::Array, comp_id::AbstractString)::Int
     for (i, e) in enumerate(data)
-        if e["id"] == comp_id
+        if e["name"] == comp_id
             return i
         end
     end
@@ -609,7 +534,7 @@ function check_duplicate_components!(dss_data::Dict)
             out[k] = []
             for comp in v
                 if isa(comp, Dict)
-                    idx = where_is_comp(out[k], comp["id"])
+                    idx = where_is_comp(out[k], comp["name"])
                     if idx > 0
                         merge!(out[k][idx], comp)
                     else
@@ -665,7 +590,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         defaults = get_prop_default("circuit")
         merge!(defaults, dss_data["circuit"][1])
 
-        tppm_data["name"] = defaults["id"]
+        tppm_data["name"] = defaults["name"]
         tppm_data["basekv"] = defaults["basekv"]
         tppm_data["baseMVA"] = defaults["basemva"]
         tppm_data["pu"] = defaults["pu"]

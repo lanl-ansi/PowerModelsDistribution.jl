@@ -14,7 +14,7 @@ single_operators = Dict("sqr" => sqr, "sqrt" => sqrt, "inv" => inv, "ln" => log,
 
 "parses Reverse Polish Notation `expr`"
 function parse_rpn(expr::AbstractString)
-    clean_expr = lowercase(strip(expr, ['(', ')']))
+    clean_expr = strip(expr, ['(', ')'])
 
     if contains(clean_expr, "rollup") || contains(clean_expr, "rolldn") || contains(clean_expr, "swap")
         warn(LOGGER, "parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String")
@@ -56,9 +56,11 @@ end
 
 
 "detects if `expr` is Reverse Polish Notation expression"
-function isa_rpn(expr::AbstractString)
-    for key in keys(merge(double_operators, single_operators))
-        if contains(expr, key)
+function isa_rpn(expr::AbstractString)::Bool
+    expr = split(strip(expr))
+    opkeys = keys(merge(double_operators, single_operators))
+    for item in expr
+        if item in opkeys
             return true
         end
     end
@@ -75,6 +77,16 @@ function parse_conn(conn::String)::String
     else
         warn(LOGGER, "Unsupported connection $conn, defaulting to \"wye\"")
         return "wye"
+    end
+end
+
+
+""
+function isa_conn(expr::AbstractString)::Bool
+    if expr in ["wye", "y", "ln", "delta", "ll"]
+        return true
+    else
+        return false
     end
 end
 
@@ -258,7 +270,7 @@ function get_prop_name(ctype::AbstractString)::Array
 
     transformer = ["phases", "windings"]
 
-    gictransformer = ["basefreq", "bush", "busnh", "busnx", "busx"
+    gictransformer = ["basefreq", "bush", "busnh", "busnx", "busx",
                       "emergamps", "enabled", "phases", "r1", "r2", "type",
                       "mva", "kvll1", "kvll2", "%r1", "%r2", "k", "varcurve",
                       "like", "normamps", "emergamps", "pctperm", "repair"]
@@ -339,7 +351,8 @@ function get_prop_name(ctype::AbstractString)::Array
                                  "storage" => storage,
                                  "capcontrol" => capcontrol,
                                  "regcontrol" => regcontrol,
-                                 "energymeter" => energymeter
+                                 "energymeter" => energymeter,
+                                 "circuit" => vsource
                                 )
 
     try
@@ -364,7 +377,7 @@ end
 function get_linecode(dss_data::Dict, id::AbstractString)
     if haskey(dss_data, "linecode")
         for item in dss_data["linecode"]
-            if item["id"] == id
+            if item["name"] == id
                 return item
             end
         end
@@ -416,8 +429,22 @@ end
 
 
 "pass-through for already parsed matrices"
-function parse_matrix(dtype::Type, data::Array)::Array
+function parse_matrix(dtype::Type, data::Array, nphases::Int=3)::Array
+    if length(data) == 1 && nphases > 1
+        data = fill(data[1], nphases, nphases)
+    end
+
     return data
+end
+
+
+""
+function isa_matrix(data::AbstractString)::Bool
+    if contains(data, "|")
+        return true
+    else
+        return false
+    end
 end
 
 
@@ -460,6 +487,27 @@ function parse_array(dtype::Type, data::Array)::Array
 end
 
 
+""
+function isa_array(data::AbstractString)::Bool
+    clean_data = strip(data)
+    if !contains(clean_data, "|")
+        if startswith(clean_data, "[") && endswith(clean_data, "]")
+            return true
+        elseif startswith(clean_data, "\"") && endswith(clean_data, "\"")
+            return true
+        elseif startswith(clean_data, "\'") && endswith(clean_data, "\'")
+            return true
+        elseif startswith(clean_data, "(") && endswith(clean_data, ")") && !isa_rpn(clean_data)
+            return true
+        else
+            return false
+        end
+    else
+        return false
+    end
+end
+
+
 "strips lines that are either commented (block or single) or empty"
 function strip_lines(lines::Array)::Array
     blockComment = false
@@ -495,7 +543,7 @@ function parse_buscoords(file::AbstractString)::Array
     for line in lines
         bus, x, y = split(line, regex; limit=3)
         push!(coordArray, Dict{String,Any}("bus"=>strip(bus, [',']),
-                                            "id"=>strip(bus, [',']),
+                                            "name"=>strip(bus, [',']),
                                             "x"=>parse(Float64, strip(x, [','])),
                                             "y"=>parse(Float64, strip(y, [',', '\r']))))
     end
@@ -573,7 +621,7 @@ been added to `dss_data`, the new component is appeneded to the existing array
 of components of that type, otherwise a new array is created.
 """
 function add_component!(dss_data::Dict, ctype_name::AbstractString, compDict::Dict)
-    ctype = split(lowercase(ctype_name), '.'; limit=2)[1]
+    ctype = split(ctype_name, '.'; limit=2)[1]
     if haskey(dss_data, ctype)
         push!(dss_data[ctype], compDict)
     else
@@ -587,21 +635,18 @@ end
 
 Adds a property to an existing component properties dictionary `compDict` given
 the `key` and `value` of the property. If a property of the same name already
-exists inside `compDict`, the `key` is renamed to have `_\d` appended to the
-end.
+exists inside `compDict`, the original value is converted to an array, and the
+new value is appended to the end.
 """
 function add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
-    if haskey(compDict, lowercase(key))
-        rmatch = match(r"_(\d+)$", key)
-        if typeof(rmatch) != Void
-            endNum = parse(Int, rmatch.captures[1]) + 1
-            key = replace(key, r"_(\d+)$", "_$endNum")
-        else
-            key = string(key, "_2")
+    if haskey(compDict, key)
+        if !isa(compDict[key], Array)
+            compDict[key] = [compDict[key]]
         end
+        push!(compDict[key], value)
+    else
+        compDict[key] = value
     end
-
-    compDict[lowercase(key)] = value
 
     return compDict
 end
@@ -616,16 +661,16 @@ given in order, but named properties can be given anywhere.
 """
 function parse_component(component::AbstractString, properties::AbstractString, compDict::Dict=Dict{String,Any}())
     debug(LOGGER, "Properties: $properties")
-    ctype, name = split(lowercase(component), '.'; limit=2)
+    ctype, name = split(component, '.'; limit=2)
 
-    if !haskey(compDict, "id")
-        compDict["id"] = name
+    if !haskey(compDict, "name")
+        compDict["name"] = name
     end
 
     propArray = parse_properties(properties)
     debug(LOGGER, "propArray: $propArray")
 
-    propNames = get_prop_name(lowercase(ctype))
+    propNames = get_prop_name(ctype)
 
     for (n, property) in enumerate(propArray)
         if property == ""
@@ -633,7 +678,7 @@ function parse_component(component::AbstractString, properties::AbstractString, 
         elseif !contains(property, "=")
             property = join([shift!(propNames), property], '=')
         else
-            filter!(e->e!=lowercase(split(property,'=')[1]), propNames)
+            filter!(e->e!=split(property,'=')[1], propNames)
         end
 
         key, value = split(property, '='; limit=2)
@@ -671,9 +716,9 @@ file into `curCompDict`. If not defined, `curCompDict` is an empty dictionary.
 """
 function parse_line(elements::Array, curCompDict::Dict=Dict{String,Any}())
     curCtypeName = strip(elements[2], ['\"', '\''])
-    if startswith(lowercase(curCtypeName), "object")
+    if startswith(curCtypeName, "object")
         curCtypeName = split(curCtypeName, '=')[2]
-        curCompDict["id"] = split(curCtypeName, '.')[2]
+        curCompDict["name"] = split(curCtypeName, '.')[2]
     else
         if length(elements) != 3
             properties = ""
@@ -704,7 +749,7 @@ function assign_property!(dss_data::Dict, cType::AbstractString, cName::Abstract
                           propName::AbstractString, propValue::Any)
     if haskey(dss_data, cType)
         for obj in dss_data[cType]
-            if lowercase(obj["id"]) == cName
+            if obj["name"] == cName
                 obj[propName] = propValue
             end
         end
@@ -742,7 +787,7 @@ function parse_dss(filename::AbstractString)::Dict
     for (n, line) in enumerate(stripped_lines)
         real_line_num = find(lines .== line)[1]
         debug(LOGGER, "LINE $real_line_num: $line")
-        line = strip_comments(line)
+        line = lowercase(strip_comments(line))
 
         if contains(line, "{") || contains(line, "}")
             warn(LOGGER, "Line $real_line_num in \"$currentFile\" contains an unsupported symbol, skipping")
@@ -758,7 +803,7 @@ function parse_dss(filename::AbstractString)::Dict
         else
             curCompDict = Dict{String,Any}()
             line_elements = split(line, r"\s+"; limit=3)
-            cmd = lowercase(line_elements[1])
+            cmd = line_elements[1]
 
             if cmd == "clear"
                 info(LOGGER, "`dss_data` has been reset with the \"clear\" command.")
@@ -791,7 +836,7 @@ function parse_dss(filename::AbstractString)::Dict
                     dss_data["options"] = [Dict{String,Any}()]
                 end
 
-                dss_data["options"][1]["$(lowercase(property))"] = value
+                dss_data["options"][1]["$(property)"] = value
                 continue
 
             elseif cmd == "buscoords"
@@ -804,7 +849,7 @@ function parse_dss(filename::AbstractString)::Dict
                 curCtypeName, curCompDict = parse_line(line_elements)
             else
                 try
-                    cType, cName, props = split(lowercase(line), '.'; limit=3)
+                    cType, cName, props = split(line, '.'; limit=3)
                     propsOut = parse_properties(props)
                     for prop in propsOut
                         propName, propValue = split(prop, '=')
@@ -828,4 +873,96 @@ function parse_dss(filename::AbstractString)::Dict
 
     info(LOGGER, "Done parsing $filename")
     return dss_data
+end
+
+
+""
+function parse_element_with_dtype(dtype, element)
+    if isa_matrix(element)
+        out = parse_matrix(eltype(dtype), element)
+    elseif isa_array(element)
+        out = parse_array(eltype(dtype), element)
+    elseif dtype <: Bool
+        if element in ["n", "no"]
+            element = "false"
+        elseif element in ["y", "yes"]
+            element = "true"
+        end
+        out = parse(dtype, element)
+    elseif isa_rpn(element)
+        out = parse_rpn(element)
+    elseif dtype == String
+        out = element
+    else
+        if isa_conn(element)
+            out = parse_conn(element)
+        else
+            try
+                out = parse(dtype, element)
+            catch
+                warn(LOGGER, "cannot parse $element as $dtype, leaving as String.")
+                out = element
+            end
+        end
+    end
+
+    return out
+end
+
+
+"""
+    parse_dss_with_dtypes!(dss_data, toParse)
+
+Parses the data in keys defined by `toParse` in `dss_data` using types given by
+the default properties from the `get_prop_default` function.
+"""
+function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
+    for compType in toParse
+        if haskey(dss_data, compType)
+            debug(LOGGER, "type: $compType")
+            for item in dss_data[compType]
+                dtypes = get_dtypes(compType)
+                for (k, v) in item
+                    if haskey(dtypes, k)
+                        debug(LOGGER, "key: $k")
+                        if isa(v, Array)
+                            item[k] = [parse_element_with_dtype(dtypes[k], el) for el in v]
+                        else
+                            item[k] = parse_element_with_dtype(dtypes[k], v)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+
+"""
+    parse_busname(busname)
+
+Parses busnames as defined in OpenDSS, e.g. "primary.1.2.3.0".
+"""
+function parse_busname(busname::AbstractString)
+    parts = split(busname, '.'; limit=2)
+    name = parts[1]
+    elements = "1.2.3"
+
+    if length(parts) >= 2
+        name, elements = split(busname, '.'; limit=2)
+    end
+
+    nodes = Array{Bool}([0 0 0 0])
+
+    for num in range(1,3)
+        if contains(elements, "$num")
+            nodes[num] = true
+        end
+    end
+
+    if contains(elements, "0") || sum(nodes[1:3]) == 1
+        nodes[4] = true
+    end
+
+    return name, nodes
 end

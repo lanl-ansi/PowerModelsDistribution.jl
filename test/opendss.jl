@@ -84,7 +84,7 @@ TPPMs = ThreePhasePowerModels
         dss = TPPMs.parse_dss("../test/data/opendss/test2_master.dss")
         tppm = TPPMs.parse_file("../test/data/opendss/test2_master.dss")
 
-        @test tppm["name"] == "TEST2"
+        @test tppm["name"] == "test2"
         @test length(tppm) == 16
         @test length(dss) == 12
 
