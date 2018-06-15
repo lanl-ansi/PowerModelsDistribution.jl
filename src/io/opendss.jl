@@ -202,7 +202,7 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if haskey(dss_data, "reactor")
         for shunt in dss_data["reactor"]
             if !haskey(shunt, "bus2")
-                defaults = createReactor(shunt["bus1"], shunt["name"]; to_sym_keys(shunt)...)
+                defaults = createReactor(find_bus(shunt["bus1"]), shunt["name"]; to_sym_keys(shunt)...)
 
                 shuntDict = Dict{String,Any}()
 
@@ -239,6 +239,67 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if !haskey(tppm_data, "gen")
         tppm_data["gen"] = []
     end
+
+    # sourcebus generator (created by circuit)
+    if haskey(dss_data, "circuit")
+        circuit = dss_data["circuit"][1]
+        defaults = createVSource("sourcebus", "sourcebus"; to_sym_keys(circuit)...)
+
+        genDict = Dict{String,Any}()
+
+        nphases = tppm_data["phases"]
+        name, nodes = parse_busname(defaults["bus1"])
+
+        genDict["gen_bus"] = find_bus(name, tppm_data)
+        genDict["name"] = defaults["name"]
+        genDict["gen_status"] = convert(Int, defaults["enabled"])
+
+        # TODO: populate with VSOURCE properties
+        genDict["pg"] = PMs.MultiPhaseVector(parse_array(0.0 / (1e3 * nphases), nodes, nphases))
+        genDict["qg"] = PMs.MultiPhaseVector(parse_array(0.0 / (1e3 * nphases), nodes, nphases))
+        genDict["vg"] = PMs.MultiPhaseVector(parse_array(0.0 / defaults["basekv"], nodes, nphases))
+
+        genDict["qmin"] = PMs.MultiPhaseVector(parse_array(0.0 / (1e3 * nphases), nodes, nphases))
+        genDict["qmax"] = PMs.MultiPhaseVector(parse_array(0.0 / (1e3 * nphases), nodes, nphases))
+
+        genDict["apf"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
+
+        genDict["pmax"] = genDict["pg"]  # Assumes generator is at rated power
+        genDict["pmin"] = 0.3 * genDict["pg"]  # 30% of pmax
+
+        genDict["pc1"] = genDict["pmax"]
+        genDict["pc2"] = genDict["pmin"]
+        genDict["qc1min"] = genDict["qmin"]
+        genDict["qc1max"] = genDict["qmax"]
+        genDict["qc2min"] = genDict["qmin"]
+        genDict["qc2max"] = genDict["qmax"]
+
+        # For distributed generation ramp rates are not usually an issue
+        # and they are not supported in OpenDSS
+        genDict["ramp_agc"] = genDict["pmax"]
+
+        genDict["ramp_q"] = PMs.MultiPhaseVector(parse_array(max.(abs.(genDict["qmin"].values), abs.(genDict["qmax"].values)), nodes, nphases))
+        genDict["ramp_10"] = genDict["pmax"]
+        genDict["ramp_30"] = genDict["pmax"]
+
+        genDict["control_model"] = 3
+
+        genDict["model"] = PMs.MultiPhaseVector(parse_array(2, nodes, nphases, 2))
+        genDict["startup"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
+        genDict["shutdown"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
+        genDict["ncost"] = PMs.MultiPhaseVector(parse_array(3, nodes, nphases, 3))
+        genDict["cost"] = PMs.MultiPhaseVector(parse_array([[0.0, 1.0, 0.0]], nodes, nphases, [0.0, 1.0, 0.0]))
+
+        genDict["index"] = length(tppm_data["gen"]) + 1
+
+        used = ["name", "phases", "bus1"]
+        PMs.import_remaining!(genDict, defaults, import_all; exclude=used)
+
+        push!(tppm_data["gen"], genDict)
+    else
+        error(LOGGER, "sourcebus, as created by circuit object, is required in opendss")
+    end
+
 
 
     if haskey(dss_data, "generator")
@@ -299,12 +360,6 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             PMs.import_remaining!(genDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["gen"], genDict)
-        end
-
-        if haskey(dss_data, "vsource")
-            for vsource in dss_data["vsource"]
-                # TODO: Add VSOURCE AS GENERATOR
-            end
         end
     end
 end
@@ -411,7 +466,6 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             nphases = tppm_data["phases"]
 
             transDict["name"] = defaults["name"]
-
 
             f_bus, nodes = parse_busname(defaults["buses"][1])
             t_bus = parse_busname(defaults["buses"][2])[1]

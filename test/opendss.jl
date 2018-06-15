@@ -43,7 +43,7 @@ TPPMs = ThreePhasePowerModels
         dss = TPPMs.parse_dss("../test/data/opendss/test_simple.dss")
         tppm = TPPMs.parse_file("../test/data/opendss/test_simple.dss")
 
-        for (key, len) in zip(["bus", "gen", "branch", "load", "dcline"], [2, 1, 1, 1, 0])
+        for (key, len) in zip(["bus", "gen", "branch", "load", "dcline"], [2, 2, 1, 1, 0])
             @test haskey(tppm, key)
             @test length(tppm[key]) == len
         end
@@ -88,7 +88,7 @@ TPPMs = ThreePhasePowerModels
         @test length(tppm) == 16
         @test length(dss) == 12
 
-        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline"], [11, 3, 2, 10, 2, 0])
+        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline"], [11, 3, 2, 10, 3, 0])
             @test haskey(tppm, key)
             @test length(tppm[key]) == len
         end
