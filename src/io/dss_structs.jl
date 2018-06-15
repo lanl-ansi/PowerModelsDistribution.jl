@@ -543,13 +543,13 @@ function createVSource(bus1, name::AbstractString, bus2=0; kwargs...)
 
         x1 = basekv^2 / mvasc3 / sqrt(1.0 + 1.0 / x1r1^2)
 
-        r1 = x1 / x1r
+        r1 = x1 / x1r1
         r2 = r1
         x2 = x1
 
         a = 1.0 + x0r0^2
         b = 4.0*(r1 + x1 * x0r0)
-        c = 4.0 * (r1^2 + x1^2)- (3.0 * basekv * 1000.0 / factor / Isc1)^2
+        c = 4.0 * (r1^2 + x1^2)- (3.0 * basekv * 1000.0 / factor / isc1)^2
         r0 = max((-b + sqrt(b^2 - 4 * a * c)) / (2 * a), (-b - sqrt(b^2 - 4 * a * c)) / (2 * a))
         x0 = r0 * x0r0
 

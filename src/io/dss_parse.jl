@@ -709,7 +709,7 @@ function parse_dss(filename::AbstractString)::Dict
 
             if cmd == "clear"
                 info(LOGGER, "`dss_data` has been reset with the \"clear\" command.")
-                dss_data = Dict{String,Array}()
+                dss_data = Dict{String,Array}("filename"=>dss_data["filename"])
                 continue
 
             elseif cmd == "redirect"
