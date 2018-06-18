@@ -7,6 +7,7 @@ TPPMs = ThreePhasePowerModels
         @test isapprox(TPPMs.parse_rpn("2 pi * 60 * .001 *"), 2 * pi * 60 * .001; atol=1e-12)
         @test isapprox(TPPMs.parse_rpn("(14.4 13.8 / sqr 300 *"), (14.4 / 13.8)^2 * 300; atol=1e-12)
         @test isapprox(TPPMs.parse_rpn("24.9 3 sqrt /"), 24.9 / sqrt(3); atol=1e-12)
+        @test all(isapprox.(TPPMs.parse_array(Float64, "(\"24.9 3 sqrt /\" \"10 2 *\")"), [24.9 / sqrt(3), 10 * 2.0]; atol=1e-12))
 
         @test TPPMs.isa_rpn("2 pi * 60 * .001 *")
         @test !TPPMs.isa_rpn("[ 2 10 ]")
@@ -54,9 +55,6 @@ TPPMs = ThreePhasePowerModels
     end
     @testset "parser cases" begin
         setlevel!(TESTLOG, "info")
-
-        @test_warn(TESTLOG, "Line 27 in \"test2_linecodes.dss\" contains an unsupported symbol, skipping",
-                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
         @test_warn(TESTLOG, "Command \"solve\" on line 57 in \"test2_master.dss\" is not supported, skipping.",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))

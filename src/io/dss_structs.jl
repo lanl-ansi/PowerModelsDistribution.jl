@@ -767,9 +767,9 @@ function createTransformer(buses::Array, name::AbstractString; kwargs...)
                             "bank" => get(kwargs, :bank, ""),
                             "xfmrcode" => get(kwargs, :xfmrcode, ""),
                             "xrconst" => get(kwargs, :xrconst, false),
-                            "x12" => get(kwargs, :x12, 7.0),
-                            "x13" => get(kwargs, :x13, 35.0),
-                            "x23" => get(kwargs, :x23, 30.0),
+                            "x12" => get(kwargs, :xhl, 7.0),
+                            "x13" => get(kwargs, :xht, 35.0),
+                            "x23" => get(kwargs, :xlt, 30.0),
                             "leadlag" => get(kwargs, :leadlag, "lag"),
                             # Inherited Properties
                             "faultrate" => get(kwargs, :faultrate, 0.1),

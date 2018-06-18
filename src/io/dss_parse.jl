@@ -11,10 +11,11 @@ single_operators = Dict("sqr" => sqr, "sqrt" => sqrt, "inv" => inv, "ln" => log,
                         "exp" => exp, "log10" => log10, "sin" => sind, "cos" => cosd,
                         "tan" => tand, "asin" => asind, "acos" => acosd, "atan" => atand)
 
+array_delimiters = ['\"', '\'', '[', '{', '(', ']', '}', ')']
 
 "parses Reverse Polish Notation `expr`"
-function parse_rpn(expr::AbstractString)
-    clean_expr = strip(expr, ['(', ')'])
+function parse_rpn(expr::AbstractString, dtype::Type=Float64)
+    clean_expr = strip(expr, array_delimiters)
 
     if contains(clean_expr, "rollup") || contains(clean_expr, "rolldn") || contains(clean_expr, "swap")
         warn(LOGGER, "parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String")
@@ -36,7 +37,7 @@ function parse_rpn(expr::AbstractString)
                 if item == "pi"
                     push!(stack, pi)
                 else
-                    push!(stack, parse(Float64, item))
+                    push!(stack, parse(dtype, item))
                 end
             end
         catch error
@@ -57,7 +58,7 @@ end
 
 "detects if `expr` is Reverse Polish Notation expression"
 function isa_rpn(expr::AbstractString)::Bool
-    expr = split(strip(expr))
+    expr = split(strip(expr, array_delimiters))
     opkeys = keys(merge(double_operators, single_operators))
     for item in expr
         if item in opkeys
@@ -99,8 +100,8 @@ Returns the property names in order for a given component type `ctype`.
 function get_prop_name(ctype::AbstractString)::Array
     linecode = ["nphases", "r1", "x1", "r0", "x0", "c1", "c0", "units",
                 "rmatrix", "xmatrix", "cmatrix", "basefreq", "normamps",
-                "emergamps", "faultrate", "pctperm", "kron", "rg", "xg",
-                "rho", "neutral", "b1", "b0", "like"]
+                "emergamps", "faultrate", "pctperm", "repair", "kron",
+                "rg", "xg", "rho", "neutral", "b1", "b0", "like"]
 
     linegeometry = ["nconds", "nphases", "cond", "wire", "x", "h", "units",
                     "normamps", "emergamps", "reduce", "spacing", "wires",
@@ -155,7 +156,14 @@ function get_prop_name(ctype::AbstractString)::Array
                "rcurve", "lcurve", "lmh", "normamps", "emergamps", "repair",
                "faultrate", "pctperm", "basefreq", "enabled", "like"]
 
-    transformer = ["phases", "windings"]
+    transformer = ["phases", "windings", "wdg", "bus", "conn", "kv", "kva",
+                   "tap", "%r", "rneut", "xneut", "buses", "conns", "kvs",
+                   "kvas", "taps", "%rs", "xhl", "xlt", "xht", "xscarray",
+                   "thermal", "n", "m", "flrise", "hsrise", "%loadloss",
+                   "%noloadloss", "%imag", "ppm_antifloat", "normhkva",
+                   "emerghkva", "sub", "maxtap", "mintap", "numtaps",
+                   "subname", "bank", "xfmrcode", "xrconst", "leadlag",
+                   "faultrate", "basefreq", "like"]
 
     gictransformer = ["basefreq", "bush", "busnh", "busnx", "busx",
                       "emergamps", "enabled", "phases", "r1", "r2", "type",
@@ -177,11 +185,11 @@ function get_prop_name(ctype::AbstractString)::Array
 
     generator = ["bus1", "phases", "kv", "kw", "pf", "model", "yearly",
                  "daily", "duty", "dispvalue", "conn", "kvar", "rneut",
-                 "xneut", "status", "class", "maxkvar", "minkvar", "pvfactor",
-                 "debugtrace", "vminpu", "vmaxpu", "forceon", "kva", "mva",
-                 "xd", "xdp", "xdpp", "h", "d", "usermodel", "userdata",
-                 "shaftmodel", "shaftdata", "dutystart", "balanced", "xrdp",
-                 "spectrum", "basefreq", "like"]
+                 "xneut", "status", "class", "vpu", "maxkvar", "minkvar",
+                 "pvfactor", "debugtrace", "vminpu", "vmaxpu", "forceon",
+                 "kva", "mva", "xd", "xdp", "xdpp", "h", "d", "usermodel",
+                 "userdata", "shaftmodel", "shaftdata", "dutystart", "balanced",
+                 "xrdp", "spectrum", "basefreq", "like"]
 
     indmach012 = ["phases", "bus1", "kv", "kw", "pf", "conn", "kva", "h",
                   "d", "purs", "puxs", "purr", "puxr", "puxm", "slip",
@@ -269,7 +277,7 @@ brackets, rows are separated by "|", and columns are separated by spaces.
 """
 function parse_matrix(dtype::Type, data::AbstractString)::Array
     rows = []
-    for line in split(strip(data, ['[', ']', '(', ')']), '|')
+    for line in split(strip(data, array_delimiters), '|')
         cols = []
         for item in split(line)
             push!(cols, parse(dtype, item))
@@ -339,15 +347,28 @@ Parses a OpenDSS style array string `data` into a one dimensional array of type
 `dtype`. Array strings are capped by either brackets, single quotes, or double
 quotes, and elements are separated by spaces.
 """
-function parse_array(dtype::Type, data::AbstractString)::Array
+function parse_array(dtype::Type, data::AbstractString)
     if contains(data, ",")
         split_char = ','
     else
         split_char = ' '
     end
 
-    elements = split(strip(data, ['\"', '\'', '[', ']', '(', ')']), split_char)
-    elements = [strip(el) for el in elements if strip(el) != ""]
+    if isa_rpn(data)
+        if length(matchall(Regex(string("[",join(array_delimiters, '\\'),"]")),data)) == 2
+            if dtype == String
+                return data
+            else
+                return parse_rpn(data, dtype)
+            end
+
+        else
+            elements = parse_properties(data[2:end-1])
+        end
+    else
+        elements = split(strip(data, array_delimiters), split_char)
+        elements = [strip(el) for el in elements if strip(el) != ""]
+    end
 
     if dtype == String
         array = []
@@ -357,7 +378,11 @@ function parse_array(dtype::Type, data::AbstractString)::Array
     else
         array = zeros(dtype, length(elements))
         for (i, el) in enumerate(elements)
-            array[i] = parse(dtype, el)
+            if isa_rpn(data)
+                array[i] = parse_rpn(el, dtype)
+            else
+                array[i] = parse(dtype, el)
+            end
         end
     end
 
@@ -390,13 +415,17 @@ end
 function isa_array(data::AbstractString)::Bool
     clean_data = strip(data)
     if !contains(clean_data, "|")
-        if startswith(clean_data, "[") && endswith(clean_data, "]")
+        if contains(clean_data, ",")
+            return true
+        elseif startswith(clean_data, "[") && endswith(clean_data, "]")
             return true
         elseif startswith(clean_data, "\"") && endswith(clean_data, "\"")
             return true
         elseif startswith(clean_data, "\'") && endswith(clean_data, "\'")
             return true
-        elseif startswith(clean_data, "(") && endswith(clean_data, ")") && !isa_rpn(clean_data)
+        elseif startswith(clean_data, "(") && endswith(clean_data, ")")
+            return true
+        elseif startswith(clean_data, "{") && endswith(clean_data, ")")
             return true
         else
             return false
@@ -485,9 +514,9 @@ function parse_properties(properties::AbstractString)::Array
             endProp = false
         end
 
-        if char in ['[', '(']
+        if char in ['[', '(', '{']
             endArray = false
-        elseif char in [']', ')']
+        elseif char in [']', ')', '}']
             endArray = true
         end
 
@@ -573,14 +602,37 @@ function parse_component(component::AbstractString, properties::AbstractString, 
     debug(LOGGER, "propArray: $propArray")
 
     propNames = get_prop_name(ctype)
+    propIdx = 1
 
     for (n, property) in enumerate(propArray)
         if property == ""
             continue
         elseif !contains(property, "=")
-            property = join([shift!(propNames), property], '=')
+            property = join([propNames[propIdx], property], '=')
+            propIdx += 1
         else
-            filter!(e->e!=split(property,'=')[1], propNames)
+            if split(component,'.')[1] == "loadshape" && startswith(property, "mult")
+                property = replace(property, "mult", "pmult")
+            end
+
+            try
+                propIdx = find(e->e==split(property,'=')[1], propNames)[1] + 1
+            catch e
+                if split(component,'.')[1] == "transformer"
+                    if split(property,'=')[1] == "ppm"
+                        property = replace(property, "ppm", "ppm_antifloat")
+                    elseif split(property,'=')[1] == "x12"
+                        property = replace(property, "x12", "xhl")
+                    elseif split(property,'=')[1] == "x23"
+                        property = replace(property, "x23", "xlt")
+                    elseif split(property,'=')[1] == "x13"
+                        property = replace(property, "x13", "xht")
+                    end
+                else
+                    throw(e)
+                end
+                propIdx = find(e->e==split(property,'=')[1], propNames)[1] + 1
+            end
         end
 
         key, value = split(property, '='; limit=2)
@@ -691,10 +743,7 @@ function parse_dss(filename::AbstractString)::Dict
         debug(LOGGER, "LINE $real_line_num: $line")
         line = lowercase(strip_comments(line))
 
-        if contains(line, "{") || contains(line, "}")
-            warn(LOGGER, "Line $real_line_num in \"$currentFile\" contains an unsupported symbol, skipping")
-            continue
-        elseif startswith(strip(line), '~')
+        if startswith(strip(line), '~')
             curCompDict = parse_component(curCtypeName, strip(strip(line, '~')), curCompDict)
 
             if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')
