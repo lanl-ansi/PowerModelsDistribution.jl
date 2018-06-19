@@ -25,6 +25,7 @@ TPPMs = ThreePhasePowerModels
 
         setlevel!(TESTLOG, "error")
     end
+
     @testset "simple generator branch load" begin
         setlevel!(TESTLOG, "info")
 
@@ -53,6 +54,7 @@ TPPMs = ThreePhasePowerModels
 
         @test sol["status"] == :LocalOptimal
     end
+
     @testset "parser cases" begin
         setlevel!(TESTLOG, "info")
 
@@ -93,6 +95,52 @@ TPPMs = ThreePhasePowerModels
 
         for key in ["loadshape", "linecode", "buscoords", "options", "filename"]
             @test haskey(dss, key)
+        end
+
+        sol = TPPMs.run_tp_opf(tppm, PMs.SOCWRPowerModel, ipopt_solver)
+        @test sol["status"] == :LocalOptimal
+    end
+
+    @testset "3-bus balanced" begin
+        tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced.dss")
+        @testset "OPF" begin
+            @testset "ACP" begin
+                sol = TPPMs.run_tp_opf(tppm, PMs.ACPPowerModel, ipopt_solver)
+
+                @test sol["status"] == :LocalOptimal
+            end
+            @testset "SOC" begin
+                sol = TPPMs.run_tp_opf(tppm, PMs.SOCWRPowerModel, ipopt_solver)
+
+                @test sol["status"] == :LocalOptimal
+            end
+            @testset "LDF" begin
+                sol = TPPMs.run_tp_opf_bf(tppm, PMs.SOCDFPowerModel, ipopt_solver)
+
+                @test sol["status"] == :LocalOptimal
+            end
+        end
+    end
+
+    @testset "3-bus unbalanced" begin
+    tppm = TPPMs.parse_file("../test/data/opendss/case3_unbalanced.dss")
+
+        @testset "OPF" begin
+            @testset "ACP" begin
+                sol = TPPMs.run_tp_opf(tppm, PMs.ACPPowerModel, ipopt_solver)
+
+                @test sol["status"] == :LocalOptimal
+            end
+            @testset "SOC" begin
+                sol = TPPMs.run_tp_opf(tppm, PMs.SOCWRPowerModel, ipopt_solver)
+
+                @test sol["status"] == :LocalOptimal
+            end
+            @testset "LDF" begin
+                sol = TPPMs.run_tp_opf_bf(tppm, PMs.SOCDFPowerModel, ipopt_solver)
+
+                @test sol["status"] == :LocalOptimal
+            end
         end
     end
 end
