@@ -129,7 +129,7 @@ function get_prop_name(ctype::AbstractString)::Array
     xfmrcode = []
 
     vsource = ["bus1", "bus2", "basekv", "pu", "angle", "frequency", "phases",
-               "mvac3", "mvac1", "x1r1", "x0r0", "isc3", "isc1", "r1", "x1",
+               "mvasc3", "mvasc1", "x1r1", "x0r0", "isc3", "isc1", "r1", "x1",
                "r0", "x0", "scantype", "sequence", "spectrum", "z1", "z2", "z0",
                "puz1", "puz2", "puz0", "basemva", "basefreq", "like"]
 
@@ -174,7 +174,7 @@ function get_prop_name(ctype::AbstractString)::Array
                "lat2", "lon1", "lon2", "phases", "r", "volts", "x", "like",
                "basefreq", "enabled", "spectrum"]
 
-    load = ["bus1", "phases", "kv", "kw", "pf", "model",
+    load = ["phases", "bus1", "kv", "kw", "pf", "model",
             "yearly", "daily", "duty", "growth", "conn", "kvar",
             "rneut", "xneut", "status", "class", "vminpu", "vmaxpu",
             "vminnorm", "vminemerg", "xfkva", "allocationfactor",
