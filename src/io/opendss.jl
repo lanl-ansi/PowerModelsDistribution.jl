@@ -14,6 +14,29 @@ function get_linecode(dss_data::Dict, id::AbstractString)
 end
 
 
+""
+function create_starbus(tppm_data::Dict, transformer::Dict)::Dict
+    starbus = Dict{String,Any}()
+
+    base = convert(Int, 10^ceil(log10(abs(PMs.find_max_bus_id(tppm_data)))))
+    name, nodes = parse_busname(transformer["buses"][1])
+    phases = tppm_data["phases"]
+    starbus_id = find_bus(name, tppm_data) + base
+
+    starbus["bus_i"] = starbus_id
+    starbus["base_kv"] = 1.0
+    starbus["vmin"] = PMs.MultiPhaseVector(parse_array(0.9, nodes, phases))
+    starbus["vmax"] = PMs.MultiPhaseVector(parse_array(1.1, nodes, phases))
+    starbus["name"] = "$(transformer["name"]) starbus"
+    starbus["vm"] = PMs.MultiPhaseVector(parse_array(1.0, nodes, phases))
+    starbus["va"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, phases))
+    starbus["bus_type"] = 1
+    starbus["index"] = starbus_id
+
+    return starbus
+end
+
+
 """
     discover_buses(dss_data)
 
@@ -377,6 +400,9 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["g_fr"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases) / tppm_data["baseMVA"])
             branchDict["g_to"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases) / tppm_data["baseMVA"])
 
+            if !isdiag(cmatrix)
+                info(LOGGER, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`")
+            end
             branchDict["b_fr"] = PMs.MultiPhaseVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0) / tppm_data["baseMVA"] )
             branchDict["b_to"] = PMs.MultiPhaseVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0) / tppm_data["baseMVA"] )
 
@@ -421,47 +447,97 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
         for transformer in dss_data["transformer"]
             defaults = createTransformer(transformer["name"]; to_sym_keys(transformer)...)
 
-            transDict = Dict{String,Any}()
-
             nphases = tppm_data["phases"]
+            windings = defaults["windings"]
 
-            transDict["name"] = defaults["name"]
+            if windings == 2
+                transDict = Dict{String,Any}()
+                transDict["name"] = defaults["name"]
 
-            f_bus, nodes = parse_busname(defaults["buses"][1])
-            t_bus = parse_busname(defaults["buses"][2])[1]
+                f_bus, nodes = parse_busname(defaults["buses"][1])
+                t_bus = parse_busname(defaults["buses"][2])[1]
 
-            transDict["f_bus"] = find_bus(f_bus, tppm_data)
-            transDict["t_bus"] = find_bus(t_bus, tppm_data)
+                transDict["f_bus"] = find_bus(f_bus, tppm_data)
+                transDict["t_bus"] = find_bus(t_bus, tppm_data)
 
-            transDict["br_r"] = PMs.MultiPhaseMatrix(parse_matrix(diagm(fill(0.2, nphases)), nodes, nphases))
-            transDict["br_x"] = PMs.MultiPhaseMatrix(parse_matrix(zeros(nphases, nphases), nodes, nphases))
+                transDict["br_r"] = PMs.MultiPhaseMatrix(parse_matrix(diagm(fill(0.2, nphases)), nodes, nphases))
+                transDict["br_x"] = PMs.MultiPhaseMatrix(parse_matrix(zeros(nphases, nphases), nodes, nphases))
 
-            transDict["g_fr"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
-            transDict["g_to"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
-            transDict["b_fr"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
-            transDict["b_to"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
+                transDict["g_fr"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
+                transDict["g_to"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
+                transDict["b_fr"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
+                transDict["b_to"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
 
-            # CHECK: unit conversion?
-            transDict["rate_a"] = PMs.MultiPhaseVector(parse_array(defaults["normhkva"], nodes, nphases, NaN))
-            transDict["rate_b"] = PMs.MultiPhaseVector(parse_array(defaults["emerghkva"], nodes, nphases, NaN))
-            transDict["rate_c"] = PMs.MultiPhaseVector(parse_array(defaults["emerghkva"], nodes, nphases, NaN))
+                # CHECK: unit conversion?
+                transDict["rate_a"] = PMs.MultiPhaseVector(parse_array(defaults["normhkva"], nodes, nphases, NaN))
+                transDict["rate_b"] = PMs.MultiPhaseVector(parse_array(defaults["emerghkva"], nodes, nphases, NaN))
+                transDict["rate_c"] = PMs.MultiPhaseVector(parse_array(defaults["emerghkva"], nodes, nphases, NaN))
 
-            transDict["tap"] = PMs.MultiPhaseVector(parse_array(1.0, nodes, nphases, 1.0))
-            transDict["shift"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
+                transDict["tap"] = PMs.MultiPhaseVector(parse_array(/(defaults["taps"]...), nodes, nphases, 1.0))
+                transDict["shift"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
 
-            transDict["br_status"] = convert(Int, defaults["enabled"])
+                transDict["br_status"] = convert(Int, defaults["enabled"])
 
-            transDict["angmin"] = PMs.MultiPhaseVector(parse_array(-60.0, nodes, nphases, -60.0))
-            transDict["angmax"] = PMs.MultiPhaseVector(parse_array( 60.0, nodes, nphases,  60.0))
+                transDict["angmin"] = PMs.MultiPhaseVector(parse_array(-60.0, nodes, nphases, -60.0))
+                transDict["angmax"] = PMs.MultiPhaseVector(parse_array( 60.0, nodes, nphases,  60.0))
 
-            transDict["transformer"] = true
+                transDict["transformer"] = true
 
-            transDict["index"] = length(tppm_data["branch"]) + 1
+                transDict["index"] = length(tppm_data["branch"]) + 1
 
-            used = []
-            PMs.import_remaining!(transDict, defaults, import_all; exclude=used)
+                used = []
+                PMs.import_remaining!(transDict, defaults, import_all; exclude=used)
 
-            push!(tppm_data["branch"], transDict)
+                push!(tppm_data["branch"], transDict)
+            else
+                warn(LOGGER, "3-winding transformers are not yet supported, treating like two non-transformer lines connected through a starbus")
+
+                starbus = create_starbus(tppm_data, defaults)
+                push!(tppm_data["bus"], starbus)
+
+                bus1, nodes1 = parse_busname(defaults["buses"][1])
+                bus2, nodes2 = parse_busname(defaults["buses"][2])
+                bus3, nodes3 = parse_busname(defaults["buses"][3])
+
+                for (m, (bus, nodes)) in enumerate(zip([bus1, bus2, bus3], [nodes1, nodes2, nodes3]))
+                    transDict = Dict{String,Any}()
+
+                    transDict["f_bus"] = find_bus(bus, tppm_data)
+                    transDict["t_bus"] = starbus["bus_i"]
+
+                    transDict["name"] = "$(defaults["name"]) winding $m"
+
+                    transDict["br_r"] = PMs.MultiPhaseMatrix(parse_matrix(diagm(fill(0.2, nphases)), nodes, nphases))
+                    transDict["br_x"] = PMs.MultiPhaseMatrix(parse_matrix(zeros(nphases, nphases), nodes, nphases))
+
+                    transDict["g_fr"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
+                    transDict["g_to"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
+                    transDict["b_fr"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
+                    transDict["b_to"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
+
+                    # CHECK: unit conversion?
+                    transDict["rate_a"] = PMs.MultiPhaseVector(parse_array(defaults["normhkva"], nodes, nphases, NaN))
+                    transDict["rate_b"] = PMs.MultiPhaseVector(parse_array(defaults["emerghkva"], nodes, nphases, NaN))
+                    transDict["rate_c"] = PMs.MultiPhaseVector(parse_array(defaults["emerghkva"], nodes, nphases, NaN))
+
+                    transDict["tap"] = PMs.MultiPhaseVector(parse_array(defaults["taps"][m], nodes, nphases, 1.0))
+                    transDict["shift"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
+
+                    transDict["br_status"] = convert(Int, defaults["enabled"])
+
+                    transDict["angmin"] = PMs.MultiPhaseVector(parse_array(-60.0, nodes, nphases, -60.0))
+                    transDict["angmax"] = PMs.MultiPhaseVector(parse_array( 60.0, nodes, nphases,  60.0))
+
+                    transDict["transformer"] = true
+
+                    transDict["index"] = length(tppm_data["branch"]) + 1
+
+                    used = []
+                    PMs.import_remaining!(transDict, defaults, import_all; exclude=used)
+
+                    push!(tppm_data["branch"], transDict)
+                end
+            end
         end
     end
 

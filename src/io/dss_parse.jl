@@ -131,7 +131,7 @@ function get_prop_name(ctype::AbstractString)::Array
     vsource = ["bus1", "bus2", "basekv", "pu", "angle", "frequency", "phases",
                "mvasc3", "mvasc1", "x1r1", "x0r0", "isc3", "isc1", "r1", "x1",
                "r0", "x0", "scantype", "sequence", "spectrum", "z1", "z2", "z0",
-               "puz1", "puz2", "puz0", "basemva", "basefreq", "like"]
+               "puz1", "puz2", "puz0", "basemva", "basefreq", "like", "enabled"]
 
     isource = ["phases", "bus1", "amps", "angle", "frequency", "scantype",
                "sequence", "spectrum", "basefreq", "enabled", "like"]
@@ -142,14 +142,15 @@ function get_prop_name(ctype::AbstractString)::Array
 
     capacitor = ["bus1", "bus2", "phases", "kvar", "kv", "conn", "cmatrix",
                  "cuf", "r", "xl", "harm", "numsteps", "states", "normamps",
-                 "emergamps", "faultrate", "pctperm", "basefreq", "like"]
+                 "emergamps", "faultrate", "pctperm", "basefreq", "enabled",
+                 "like"]
 
     line = ["bus1", "bus2", "linecode", "length", "phases",
             "r1", "x1", "r0", "x0", "c1", "c0", "b1",
             "b0", "normamps", "emergamps", "faultrate", "pctperm",
             "repair", "basefreq", "rmatrix", "xmatrix", "cmatrix",
             "switch", "rg", "xg", "rho", "geometry", "earthmodel",
-            "units", "like"]
+            "units", "enabled", "like"]
 
     reactor = ["phases", "bus1", "bus2", "kv", "kvar", "conn", "parallel",
                "r", "rmatrix", "rp", "x", "xmatrix", "z", "z1", "z2", "z0",
@@ -163,7 +164,7 @@ function get_prop_name(ctype::AbstractString)::Array
                    "%noloadloss", "%imag", "ppm_antifloat", "normhkva",
                    "emerghkva", "sub", "maxtap", "mintap", "numtaps",
                    "subname", "bank", "xfmrcode", "xrconst", "leadlag",
-                   "faultrate", "basefreq", "like"]
+                   "faultrate", "basefreq", "enabled", "like"]
 
     gictransformer = ["basefreq", "bush", "busnh", "busnx", "busx",
                       "emergamps", "enabled", "phases", "r1", "r2", "type",
@@ -181,7 +182,7 @@ function get_prop_name(ctype::AbstractString)::Array
             "kva", "%mean", "%stddev", "cvrwatts", "cvrvars", "kwh",
             "kwhdays", "cfactor", "cvrcurve", "numcust", "spectrum",
             "zipv", "%seriesrl", "relweight", "vlowpu", "puxharm",
-            "xrharm", "spectrum", "basefreq", "like"]
+            "xrharm", "spectrum", "basefreq", "enabled", "like"]
 
     generator = ["bus1", "phases", "kv", "kw", "pf", "model", "yearly",
                  "daily", "duty", "dispvalue", "conn", "kvar", "rneut",
@@ -189,11 +190,11 @@ function get_prop_name(ctype::AbstractString)::Array
                  "pvfactor", "debugtrace", "vminpu", "vmaxpu", "forceon",
                  "kva", "mva", "xd", "xdp", "xdpp", "h", "d", "usermodel",
                  "userdata", "shaftmodel", "shaftdata", "dutystart", "balanced",
-                 "xrdp", "spectrum", "basefreq", "like"]
+                 "xrdp", "spectrum", "basefreq", "enabled", "like"]
 
     indmach012 = ["phases", "bus1", "kv", "kw", "pf", "conn", "kva", "h",
                   "d", "purs", "puxs", "purr", "puxr", "puxm", "slip",
-                  "maxslip", "slipoption", "spectrum"]
+                  "maxslip", "slipoption", "spectrum", "enabled"]
 
     storage = ["%charge", "%discharge", "%effcharge", "%idlingkvar", "idlingkw",
                "%r", "%reserve", "%stored", "%x", "basefreq", "bus1", "chargetrigger",
@@ -206,14 +207,15 @@ function get_prop_name(ctype::AbstractString)::Array
     capcontrol = ["element", "capacitor", "type", "ctphase", "ctratio", "deadtime",
                   "delay", "delayoff", "eventlog", "offsetting", "onsetting",
                   "ptphase", "ptratio", "terminal", "vbus", "vmax", "vmin",
-                  "voltoverride"]
+                  "voltoverride", "enabled"]
 
     regcontrol = ["transformer", "winding", "vreg", "band", "delay", "ptratio",
                   "ctprim", "r", "x", "pthase", "tapwinding", "bus",
                   "remoteptratio", "debugtrace", "eventlog", "inversetime",
                   "maxtapchange", "revband", "revdelay", "reversible",
                   "revneutral", "revr", "revthreshold", "revvreg", "revx",
-                  "tapdelay", "tapnum", "vlimit", "ldc_z", "rev_z", "cogen"]
+                  "tapdelay", "tapnum", "vlimit", "ldc_z", "rev_z", "cogen",
+                  "enabled"]
 
     energymeter = ["element", "terminal", "action", "clear", "save", "take",
                    "option", "kwnorm", "kwemerg", "peakcurrent", "zonelist",
