@@ -15,26 +15,6 @@ end
 
 
 """
-    split_transformer_buses!(transformer)
-
-Normalizes the names of buses in `transformer` to "buses". OpenDSS allows for
-use of 3 "bus" keywords, or a "buses" keyword, which is an array of bus names.
-"""
-function split_transformer_buses!(transformer::Dict)
-    if haskey(transformer, "buses")
-        n1, n2 = transformer["buses"]
-        transformer["bus"] = n1
-        transformer["bus_2"] = n2
-    elseif haskey(transformer, "bus")
-        transformer["buses"] = [transformer["bus"], transformer["bus_2"]]
-        if haskey(transformer, "bus_3")
-            push!(transformer["buses"], transformer["bus_3"])
-        end
-    end
-end
-
-
-"""
     discover_buses(dss_data)
 
 Discovers all of the buses (not separately defined in OpenDSS), from "lines".
@@ -47,7 +27,7 @@ function discover_buses(dss_data::Dict)::Array
             compList = dss_data[compType]
             for compObj in compList
                 if compType == "transformer"
-                    split_transformer_buses!(compObj)
+                    compObj = createTransformer(compObj["name"]; to_sym_keys(compObj)...)
                     for bus in compObj["buses"]
                         name, nodes = parse_busname(bus)
                         if !(name in bus_names)
@@ -401,9 +381,9 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["b_to"] = PMs.MultiPhaseVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0) / tppm_data["baseMVA"] )
 
             # TODO: pick a better value for emergamps
-            branchDict["rate_a"] = PMs.MultiPhaseVector(parse_array(defaults["normamps"], nodes, nphases))
-            branchDict["rate_b"] = PMs.MultiPhaseVector(parse_array(defaults["emergamps"], nodes, nphases))
-            branchDict["rate_c"] = PMs.MultiPhaseVector(parse_array(defaults["emergamps"], nodes, nphases))
+            branchDict["rate_a"] = PMs.MultiPhaseVector(parse_array(defaults["normamps"], nodes, nphases, NaN))
+            branchDict["rate_b"] = PMs.MultiPhaseVector(parse_array(defaults["emergamps"], nodes, nphases, NaN))
+            branchDict["rate_c"] = PMs.MultiPhaseVector(parse_array(defaults["emergamps"], nodes, nphases, NaN))
 
             branchDict["tap"] = PMs.MultiPhaseVector(parse_array(1.0, nodes, nphases, 1.0))
             branchDict["shift"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
@@ -439,8 +419,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
     if haskey(dss_data, "transformer")
         warn(LOGGER, "transformers are not yet supported, treating like non-transformer lines")
         for transformer in dss_data["transformer"]
-            split_transformer_buses!(transformer)
-            defaults = createTransformer(transformer["buses"], transformer["name"]; to_sym_keys(transformer)...)
+            defaults = createTransformer(transformer["name"]; to_sym_keys(transformer)...)
 
             transDict = Dict{String,Any}()
 
@@ -463,9 +442,9 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             transDict["b_to"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
 
             # CHECK: unit conversion?
-            transDict["rate_a"] = PMs.MultiPhaseVector(parse_array(defaults["normhkva"], nodes, nphases))
-            transDict["rate_b"] = PMs.MultiPhaseVector(parse_array(defaults["emerghkva"], nodes, nphases))
-            transDict["rate_c"] = PMs.MultiPhaseVector(parse_array(defaults["emerghkva"], nodes, nphases))
+            transDict["rate_a"] = PMs.MultiPhaseVector(parse_array(defaults["normhkva"], nodes, nphases, NaN))
+            transDict["rate_b"] = PMs.MultiPhaseVector(parse_array(defaults["emerghkva"], nodes, nphases, NaN))
+            transDict["rate_c"] = PMs.MultiPhaseVector(parse_array(defaults["emerghkva"], nodes, nphases, NaN))
 
             transDict["tap"] = PMs.MultiPhaseVector(parse_array(1.0, nodes, nphases, 1.0))
             transDict["shift"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
@@ -510,9 +489,9 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 reactDict["b_fr"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
                 reactDict["b_to"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
 
-                reactDict["rate_a"] = PMs.MultiPhaseVector(parse_array(defaults["normamps"], nodes, nphases))
-                reactDict["rate_b"] = PMs.MultiPhaseVector(parse_array(defaults["emergamps"], nodes, nphases))
-                reactDict["rate_c"] = PMs.MultiPhaseVector(parse_array(defaults["emergamps"], nodes, nphases))
+                reactDict["rate_a"] = PMs.MultiPhaseVector(parse_array(defaults["normamps"], nodes, nphases, NaN))
+                reactDict["rate_b"] = PMs.MultiPhaseVector(parse_array(defaults["emergamps"], nodes, nphases, NaN))
+                reactDict["rate_c"] = PMs.MultiPhaseVector(parse_array(defaults["emergamps"], nodes, nphases, NaN))
 
                 reactDict["tap"] = PMs.MultiPhaseVector(parse_array(1.0, nodes, nphases, NaN))
                 reactDict["shift"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))

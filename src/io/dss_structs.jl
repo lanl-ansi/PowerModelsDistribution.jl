@@ -695,54 +695,64 @@ end
 
 
 ""
-function createTransformer(buses::Array, name::AbstractString; kwargs...)
+function createTransformer(name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     windings = get(kwargs, :windings, 2)
     phases = get(kwargs, :phases, 3)
 
-    kvas = get(kwargs, :kvas, fill(12.47, windings))
-    rpu = get(kwargs, Symbol("%r"), 0.0)
+    temp = Dict{String,Any}("buss" => get(kwargs, :buses, fill("", windings)),
+                            "taps" => get(kwargs, :taps, fill(1.0, windings)),
+                            "conns" => get(kwargs, :conns, fill("wye", windings)),
+                            "kvs" => get(kwargs, :kvs, fill(12.47, windings)),
+                            "kvas" => get(kwargs, :kvas, fill(10.0, windings)),
+                            "%rs" => fill(0.0, windings),
+                            "rneuts" => fill(0.0, windings),
+                            "xneuts" => fill(0.0, windings)
+                           )
 
-    return Dict{String,Any}("name" => name,
+    for wdg in [:wdg, :wdg_2, :wdg_3]
+        if haskey(kwargs, wdg)
+            smat = match(r"_\d", String(wdg))
+            suffix = isa(smat, Void) ? "" : smat.match
+            for key in [:bus, :tap, :conn, :kv, :kva, Symbol("%r"), :rneut, :xneut]
+                subkey = Symbol(string(key, suffix))
+                if haskey(kwargs, subkey)
+                    temp[string(key, "s")][kwargs[wdg]] = kwargs[subkey]
+                end
+            end
+        end
+    end
+
+    trfm = Dict{String,Any}("name" => name,
                             "phases" => phases,
                             "windings" => windings,
                             # Per wdg
-                            "wdg" => get(kwargs, :wdg, 1),
-                            "bus" => get(kwargs, :bus, ""),
-                            "conn" => get(kwargs, :conn, "wye"),
-                            "kv" => get(kwargs, :kv, 12.47),
-                            "kva" => get(kwargs, :kva, 1000.0),
-                            "tap" => get(kwargs, :tap, 1.0),
-                            "%r" => rpu,
-                            "rneut" => get(kwargs, :rneut, 0.0),
-                            "xneut" => get(kwargs, :xneut, 0.0),
+                            "wdg" => 1,
+                            "bus" => temp["buss"][1],
+                            "conn" => temp["conns"][1],
+                            "kv" => temp["kvs"][1],
+                            "kva" => temp["kvas"][1],
+                            "tap" => temp["taps"][1],
+                            "%r" => temp["%rs"][1],
+                            "rneut" => temp["rneuts"][1],
+                            "xneut" => temp["xneuts"][1],
 
-                            "wdg_2" => get(kwargs, :wdg_2, 2),
-                            "bus_2" => get(kwargs, :bus_2, ""),
-                            "conn_2" => get(kwargs, :conn_2, "wye"),
-                            "kv_2" => get(kwargs, :kv_2, 12.47),
-                            "kva_2" => get(kwargs, :kva_2, 1000.0),
-                            "tap_2" => get(kwargs, :tap_2, 1.0),
-                            "%r_2" => get(kwargs, Symbol("%r_2"), 0.0),
-                            "rneut_2" => get(kwargs, :rneut_2, 0.0),
-                            "xneut_2" => get(kwargs, :xneut_2, 0.0),
-
-                            "wdg_3" => get(kwargs, :wdg_3, 3),
-                            "bus_3" => get(kwargs, :bus_3, ""),
-                            "conn_3" => get(kwargs, :conn_3, "wye"),
-                            "kv_3" => get(kwargs, :kv_3, 12.47),
-                            "kva_3" => get(kwargs, :kva_3, 1000.0),
-                            "tap_3" => get(kwargs, :tap_3, 1.0),
-                            "%r_3" => get(kwargs, Symbol("%r_3"), 0.0),
-                            "rneut_3" => get(kwargs, :rneut_3, 0.0),
-                            "xneut_3" => get(kwargs, :xneut_3, 0.0),
+                            "wdg_2" => 2,
+                            "bus_2" => temp["buss"][2],
+                            "conn_2" => temp["conns"][2],
+                            "kv_2" => temp["kvs"][2],
+                            "kva_2" => temp["kvas"][2],
+                            "tap_2" => temp["taps"][2],
+                            "%r_2" => temp["%rs"][2],
+                            "rneut_2" => temp["rneuts"][2],
+                            "xneut_2" => temp["xneuts"][2],
 
                             # General
-                            "buses" => buses,
-                            "conns" => get(kwargs, :conns, fill("wye", windings)),
-                            "kvs" => get(kwargs, :kvs, fill(12.47, windings)),
-                            "kvas" => kvas,
-                            "taps" => get(kwargs, :taps, fill(1.0, windings)),
+                            "buses" => temp["buss"],
+                            "conns" => temp["conns"],
+                            "kvs" => temp["kvs"],
+                            "kvas" => temp["kvas"],
+                            "taps" => temp["taps"],
                             "xhl" => get(kwargs, :xhl, 7.0),
                             "xht" => get(kwargs, :xht, 35.0),
                             "xlt" => get(kwargs, :xlt, 30.0),
@@ -752,10 +762,10 @@ function createTransformer(buses::Array, name::AbstractString; kwargs...)
                             "m" => get(kwargs, :m, 0.8),
                             "flrise" => get(kwargs, :flrise, 65.0),
                             "hsrise" => get(kwargs, :hsrise, 15.0),
-                            "%loadloss" => get(kwargs, Symbol("%loadloss"), 2.0 * rpu * 100.0),
+                            "%loadloss" => get(kwargs, Symbol("%loadloss"), 2.0 * temp["%rs"][1] * 100.0),  # CHECK:
                             "%noloadloss" => get(kwargs, Symbol("%noloadloss"), 0.0),
-                            "normhkva" => get(kwargs, :normhkva, 1.1 * kvas[1]),
-                            "emerghkva" => get(kwargs, :emerghkva, 1.5 * kvas[1]),
+                            "normhkva" => get(kwargs, :normhkva, 1.1 * temp["kvas"][1]),
+                            "emerghkva" => get(kwargs, :emerghkva, 1.5 * temp["kvas"][1]),
                             "sub" => get(kwargs, :sub, false),
                             "maxtap" => get(kwargs, :maxtap, 1.10),
                             "mintap" => get(kwargs, :mintap, 0.90),
@@ -776,6 +786,23 @@ function createTransformer(buses::Array, name::AbstractString; kwargs...)
                             "basefreq" => get(kwargs, :basefreq, 60.0),
                             "enabled" => get(kwargs, :enabled, true)
                            )
+
+    if windings == 3
+        trfm3 = Dict{String,Any}("wdg_3" => 3,
+                                 "bus_3" => temp["buss"][3],
+                                 "conn_3" => temp["conns"][3],
+                                 "kv_3" => temp["kvs"][3],
+                                 "kva_3" => temp["kvas"][3],
+                                 "tap_3" => temp["taps"][3],
+                                 "%r_3" => temp["%rs"][3],
+                                 "rneut_3" => temp["rneuts"][3],
+                                 "xneut_3" => temp["xneuts"][3],
+                                )
+
+        merge!(trfm, trfm3)
+    end
+
+    return trfm
 end
 
 
@@ -786,7 +813,7 @@ function get_dtypes(comp::AbstractString)::Dict
                                      "generator" => createGenerator("", ""),
                                      "capacitor" => createCapacitor("", "", ""),
                                      "reactor" => createReactor("", "", ""),
-                                     "transformer" => createTransformer(["" "" ""], ""),
+                                     "transformer" => createTransformer(""),
                                      "linecode" => createLinecode(""),
                                      "circuit" => createVSource("", ""),
                                      "vsource" => createVSource("", "", "")
