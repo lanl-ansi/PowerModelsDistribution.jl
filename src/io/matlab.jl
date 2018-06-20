@@ -242,15 +242,10 @@ function matlab_to_tppm(ml_data::Dict{String,Any})
         ml_data["shunt"] = []
     end
 
-    #if !haskey(ml_data, "gencost")
-    #    ml_data["gencost"] = []
-    #end
-
     ml2pm_bus(ml_data)
     ml2pm_load(ml_data)
     ml2pm_shunt(ml_data)
     ml2pm_gen(ml_data)
-    ml2pm_gencost(ml_data)
     ml2pm_branch(ml_data)
 
     # translate cost models
@@ -308,19 +303,6 @@ function ml2pm_gen(data::Dict{String,Any})
     end
 end
 
-"convert raw generator data into arrays"
-function ml2pm_gencost(data::Dict{String,Any})
-    if haskey(data, "gencost") 
-        for gencost in data["gencost"]
-            for (k,v) in gencost
-                if k != "index"
-                    # deepcopy needed becouse might be vectors
-                    gencost[k] = PMs.MultiPhaseVector([deepcopy(v), deepcopy(v), deepcopy(v)])
-                end
-            end
-        end
-    end
-end
 
 "convert raw branch data into arrays"
 function ml2pm_branch(data::Dict{String,Any})

@@ -6,7 +6,7 @@
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 17720.6; atol = 1e-1)
+        @test isapprox(result["objective"], 47267.9; atol = 1e-1)
 
         for ph in 1:mp_data["phases"]
             @test isapprox(result["solution"]["gen"]["1"]["pg"][ph], 1.58067; atol = 1e-3)

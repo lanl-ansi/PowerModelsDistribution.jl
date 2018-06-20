@@ -5,7 +5,7 @@
         result = run_tp_opf_bf(mp_data, PMs.SOCDFPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 17050.80; atol = 1e0)
+        @test isapprox(result["objective"], 45819.1 ; atol = 1e0)
     end
     @testset "5-bus case" begin
         mp_data = PowerModels.parse_file("../test/data/matlab/case5.m")
