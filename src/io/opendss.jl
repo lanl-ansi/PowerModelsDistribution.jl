@@ -89,13 +89,16 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool=false, 
     end
 
     buses = discover_buses(dss_data)
-    circuit = dss_data["circuit"][1]
+    circuit = createVSource("", dss_data["circuit"][1]["name"]; to_sym_keys(dss_data["circuit"][1])...)
 
     for (n, (bus, nodes)) in enumerate(buses)
         busDict = Dict{String,Any}()
 
         nphases = tppm_data["phases"]
-        ph1_ang = bus == "sourcebus" ? createVSource("", circuit["name"]; to_sym_keys(circuit)...)["angle"] : 0.0
+        ph1_ang = bus == "sourcebus" ? circuit["angle"] : 0.0
+        vm = bus == "sourcebus" ? circuit["pu"] : 1.0
+        vmin = bus == "sourcebus" ? circuit["pu"] - circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmin
+        vmax = bus == "sourcebus" ? circuit["pu"] + circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmax
 
         busDict["bus_i"] = n
         busDict["index"] = n
@@ -103,7 +106,7 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool=false, 
 
         busDict["bus_type"] = bus == "sourcebus" ? 3 : 1
 
-        busDict["vm"] = PMs.MultiPhaseVector(parse_array(1.0, nodes, nphases))
+        busDict["vm"] = PMs.MultiPhaseVector(parse_array(vm, nodes, nphases))
         busDict["va"] = PMs.MultiPhaseVector(parse_array([rad2deg(2*pi/nphases*(i-1))+ph1_ang for i in 1:nphases], nodes, nphases))
 
         busDict["vmin"] = PMs.MultiPhaseVector(parse_array(vmin, nodes, nphases))
@@ -152,8 +155,8 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             loadDict["name"] = defaults["name"]
             loadDict["load_bus"] = find_bus(name, tppm_data)
-            loadDict["pd"] = PMs.MultiPhaseVector(parse_array(defaults["kw"], nodes, nphases))
-            loadDict["qd"] = PMs.MultiPhaseVector(parse_array(defaults["kvar"], nodes, nphases))
+            loadDict["pd"] = PMs.MultiPhaseVector(parse_array(defaults["kw"] / 1e3, nodes, nphases))
+            loadDict["qd"] = PMs.MultiPhaseVector(parse_array(defaults["kvar"] / 1e3, nodes, nphases))
             loadDict["status"] = convert(Int, defaults["enabled"])
 
             loadDict["index"] = length(tppm_data["load"]) + 1
@@ -270,11 +273,11 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
         genDict["pmin"] = PMs.MultiPhaseVector(parse_array(-Inf, nodes, nphases))
 
 
-        genDict["model"] = PMs.MultiPhaseVector(parse_array(2, nodes, nphases, 2))
-        genDict["startup"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
-        genDict["shutdown"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
-        genDict["ncost"] = PMs.MultiPhaseVector(parse_array(3, nodes, nphases, 3))
-        genDict["cost"] = PMs.MultiPhaseVector(parse_array([[0.0, 1.0, 0.0]], nodes, nphases, [0.0, 1.0, 0.0]))
+        genDict["model"] = 2
+        genDict["startup"] = 0.0
+        genDict["shutdown"] = 0.0
+        genDict["ncost"] = 3
+        genDict["cost"] = [0.0, 1.0, 0.0]
 
         genDict["index"] = length(tppm_data["gen"]) + 1
 
@@ -332,11 +335,11 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 tppm_data["bus"][genDict["gen_bus"]]["bus_type"] = 2
             end
 
-            genDict["model"] = PMs.MultiPhaseVector(parse_array(2, nodes, nphases, 2))
-            genDict["startup"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
-            genDict["shutdown"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
-            genDict["ncost"] = PMs.MultiPhaseVector(parse_array(3, nodes, nphases, 3))
-            genDict["cost"] = PMs.MultiPhaseVector(parse_array([[0.0, 1.0, 0.0]], nodes, nphases, [0.0, 1.0, 0.0]))
+            genDict["model"] = 2
+            genDict["startup"] = 0.0
+            genDict["shutdown"] = 0.0
+            genDict["ncost"] = 3
+            genDict["cost"] = [0.0, 1.0, 0.0]
 
             genDict["index"] = length(tppm_data["gen"]) + 1
 
