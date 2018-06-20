@@ -82,7 +82,7 @@ function parse_conn(conn::String)::String
 end
 
 
-""
+"checks is a string is a connection by checking the values"
 function isa_conn(expr::AbstractString)::Bool
     if expr in ["wye", "y", "ln", "delta", "ll"]
         return true
@@ -829,7 +829,7 @@ function parse_dss(filename::AbstractString)::Dict
 end
 
 
-""
+"parses the raw dss values into their expected data types"
 function parse_element_with_dtype(dtype, element)
     if isa_matrix(element)
         out = parse_matrix(eltype(dtype), element)
@@ -931,7 +931,7 @@ function parse_busname(busname::AbstractString)
 end
 
 
-""
+"converts Dict{String,Any} to Dict{Symbol,Any} for passing as kwargs"
 function to_sym_keys(data::Dict{String,Any})::Dict{Symbol,Any}
     return Dict{Symbol,Any}((Symbol(k), v) for (k, v) in data)
 end

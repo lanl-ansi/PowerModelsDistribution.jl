@@ -1,7 +1,13 @@
 # Defines data structures (defaults) for OpenDSS objects
 
 
-""
+"""
+    createLinecode(name; kwargs...)
+
+Creates a Dict{String,Any} containing all of the properties of a Linecode. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
+"""
 function createLinecode(name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :nphases, 3)
@@ -81,7 +87,13 @@ function createLinecode(name::AbstractString; kwargs...)
 end
 
 
-""
+"""
+    createLine(bus1, bus2, name; kwargs...)
+
+Creates a Dict{String,Any} containing all of the properties for a Line. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
+"""
 function createLine(bus1, bus2, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
@@ -181,7 +193,13 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
 end
 
 
-""
+"""
+    createLoad(bus1, name; kwargs...)
+
+Creates a Dict{String,Any} containing all of the expected properties for a
+Load. See OpenDSS documentation for valid fields and ways to specify the
+different properties.
+"""
 function createLoad(bus1, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     kv = get(kwargs, :kv, 12.47)
@@ -265,7 +283,13 @@ function createLoad(bus1, name::AbstractString; kwargs...)
 end
 
 
-""
+"""
+    createGenerator(bus1, name; kwargs...)
+
+Creates a Dict{String,Any} containing all of the expected properties for a
+Generator. See OpenDSS documentation for valid fields and ways to specify the
+different properties.
+"""
 function createGenerator(bus1, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     conn = get(kwargs, :conn, "wye")
@@ -324,7 +348,14 @@ function createGenerator(bus1, name::AbstractString; kwargs...)
 end
 
 
-""
+"""
+    createCapacitor(bus1, name, bus2=0; kwargs)
+
+Creates a Dict{String,Any} containing all of the expected properties for a
+Capacitor. If `bus2` is not specified, the capacitor will be treated as a shunt.
+See OpenDSS documentation for valid fields and ways to specify the
+different properties.
+"""
 function createCapacitor(bus1, name::AbstractString, bus2=0; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
@@ -354,7 +385,14 @@ function createCapacitor(bus1, name::AbstractString, bus2=0; kwargs...)
 end
 
 
-""
+"""
+    createReactor(bus1, name, bus2=0; kwargs...)
+
+Creates a Dict{String,Any} containing all of the expected properties for a
+Reactor. If `bus2` is not specified Reactor is treated like a shunt. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
+"""
 function createReactor(bus1, name::AbstractString, bus2=0; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
@@ -491,7 +529,15 @@ function createReactor(bus1, name::AbstractString, bus2=0; kwargs...)
 end
 
 
-""
+"""
+    createVSource(bus1, name, bus2=0; kwargs...)
+
+Creates a Dict{String,Any} containing all of the expected properties for a
+Voltage Source. If `bus2` is not specified, VSource will be treated like a
+generator. Mostly used as `sourcebus` which represents the circuit. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
+"""
 function createVSource(bus1, name::AbstractString, bus2=0; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     x1r1 = get(kwargs, :x1r1, 4.0)
@@ -700,7 +746,13 @@ function createVSource(bus1, name::AbstractString, bus2=0; kwargs...)
 end
 
 
-""
+"""
+    createTransformer(name; kwargs...)
+
+Creates a Dict{String,Any} containing all of the expected properties for a
+Transformer. See OpenDSS documentation for valid fields and ways to specify the
+different properties.
+"""
 function createTransformer(name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     windings = get(kwargs, :windings, 2)
@@ -812,7 +864,7 @@ function createTransformer(name::AbstractString; kwargs...)
 end
 
 
-""
+"Returns a Dict{String,Type} for the desired component `comp`, giving all of the expected data types"
 function get_dtypes(comp::AbstractString)::Dict
     default_dicts = Dict{String,Any}("line" => createLine("", "", ""),
                                      "load" => createLoad("", ""),

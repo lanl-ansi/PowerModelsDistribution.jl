@@ -1,7 +1,7 @@
 # OpenDSS parser
 
 
-""
+"returns the linecode with name `id`"
 function get_linecode(dss_data::Dict, id::AbstractString)
     if haskey(dss_data, "linecode")
         for item in dss_data["linecode"]
@@ -14,7 +14,7 @@ function get_linecode(dss_data::Dict, id::AbstractString)
 end
 
 
-""
+"creates a starbus from a 3-winding transformer"
 function create_starbus(tppm_data::Dict, transformer::Dict)::Dict
     starbus = Dict{String,Any}()
 
