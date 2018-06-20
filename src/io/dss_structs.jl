@@ -1,9 +1,5 @@
 # Defines data structures (defaults) for OpenDSS objects
 
-""
-function createCircuit(name; kwargs...)
-end
-
 
 ""
 function createLinecode(name::AbstractString; kwargs...)
@@ -47,7 +43,7 @@ function createLinecode(name::AbstractString; kwargs...)
 
     rmatrix = get(kwargs, :rmatrix, real(Z))
     xmatrix = get(kwargs, :xmatrix, imag(Z))
-    cmatrix = get(kwargs, :cmatrix, imag(Yc))
+    cmatrix = get(kwargs, :cmatrix, imag(Yc) / (2 * pi * basefreq))
 
     # TODO: rg, xg
     rg = get(kwargs, :rg, 0.01805)
@@ -127,7 +123,7 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
 
     rmatrix = get(kwargs, :rmatrix, real(Z))
     xmatrix = get(kwargs, :xmatrix, imag(Z))
-    cmatrix = get(kwargs, :cmatrix, imag(Yc))
+    cmatrix = get(kwargs, :cmatrix, imag(Yc) / (2 * pi * basefreq))
 
     # TODO: rg, xg
     rg = get(kwargs, :rg, 0.01805)
@@ -371,26 +367,20 @@ function createReactor(bus1, name::AbstractString, bus2=0; kwargs...)
     emergamps = get(kwargs, :emergamps, 600.0)
     basefreq = get(kwargs, :basefreq, 60.0)
 
-    # CHECK: Default rmatrix, xmatrix
-    rmatrix = zeros(phases, phases)
-    xmatrix = zeros(phases, phases)
-
-    # CHECK: default r, x
     r = get(kwargs, :r, 0.0)
     x = get(kwargs, :x, abs(kv*1e3))
 
     rp = get(kwargs, :rp, 0.0)
 
-    z1 = get(kwargs, :z1, [0.0, 0.0])
+    z1 = get(kwargs, :z1, [r, x])
     z0 = get(kwargs, :z0, [0.0, 0.0])
     z2 = get(kwargs, :z2, [0.0, 0.0])
-    z = get(kwargs, :z, [0.0, 0.0])
+    z = get(kwargs, :z, [r, x])
 
     lmh = get(kwargs, :lmh, x / 2 / pi / basefreq * 1e3)
 
+    # TODO: handle `parallel`
     if (haskey(kwargs, :kv) && haskey(kwargs, :kvar)) || haskey(kwargs, :x) || haskey(kwargs, :lmh) || haskey(kwargs, :z)
-        r = kwargs[:r]
-
         if haskey(kwargs, :kvar) && haskey(:kv)
             kvarperphase = kvar / phases
             if conn == "delta"
@@ -405,12 +395,14 @@ function createReactor(bus1, name::AbstractString, bus2=0; kwargs...)
 
             x = phasekv^2 * 1.0e3 / kvarperphase
             l = x / (2 * pi) / basefreq
+            lmh = l * 1e3
             normamps = kvarperphase / phasekv
             emergamps = normamps * 1.35
 
         elseif haskey(kwargs, :x)
             x = kwargs[:x]
             l = x / (2 * pi) / basefreq
+            lmh = l * 1e3
 
         elseif haskey(kwargs, :lmh)
             l = kwargs[:lmh] / 1.0e3
@@ -421,12 +413,21 @@ function createReactor(bus1, name::AbstractString, bus2=0; kwargs...)
             r = real(z)
             x = imag(z)
             l = x / (2 * pi) / basefreq
+            lmh = l * 1e3
         end
 
-        # TODO: convert to rmatrix, xmatrix?
+        rmatrix = diagm(fill(r, phases))
+        xmatrix = diagm(fill(x, phases))
     elseif haskey(kwargs, :rmatrix) && haskey(kwargs, :xmatrix)
         rmatrix = kwargs[:rmatrix]
         xmatrix = kwargs[:xmatrix]
+
+        r = rmatrix[1, 1]
+        x = xmatrix[1, 1]
+
+        # TODO: account for off-diagonal and single phase
+        z = z1 = z2 = z0 = complex(r, x)
+        lmh = x / (2 * pi) / basefreq * 1e3
     elseif haskey(kwargs, :z1)
         z1 = complex(kwargs[:z1]...)
         z2 = complex(get(kwargs, :z2, z1)...)
@@ -449,8 +450,13 @@ function createReactor(bus1, name::AbstractString, bus2=0; kwargs...)
 
         rmatrix = real(Z)
         xmatrix = imag(Z)
+
+        r = rmatrix[1,1]
+        x = xmatrix[1,1]
+        lmh = x / 2 / pi / basefreq * 1e3
     else
-        # warn(LOGGER, "Reactor $name is not adequately defined")
+        rmatrix = diagm(fill(r, phases))
+        xmatrix = diagm(fill(x, phases))
     end
 
     return Dict{String,Any}("name" => name,
@@ -474,8 +480,8 @@ function createReactor(bus1, name::AbstractString, bus2=0; kwargs...)
                             "lcurve" => get(kwargs, :lcurve, ""),
                             "lmh" => lmh,
                             # Inherited Properties
-                            "normamps" => get(kwargs, :normamps, 400.0),
-                            "emergamps" => get(kwargs, :emergamps, 600.0),
+                            "normamps" => normamps,
+                            "emergamps" => emergamps,
                             "repair" => get(kwargs, :repair, 3.0),
                             "faultrate" => get(kwargs, :faultrate, 0.1),
                             "pctperm" => get(kwargs, :pctperm, 20.0),
