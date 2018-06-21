@@ -30,6 +30,7 @@ end
 function post_tp_pf(pm::GenericPowerModel)
     for h in PMs.phase_ids(pm)
         variable_tp_voltage(pm, bounded=false, ph=h)
+        # PMs.variable_voltage(pm, bounded=false, ph=h)
         PMs.variable_generation(pm, bounded=false, ph=h)
         PMs.variable_branch_flow(pm, bounded=false, ph=h)
         PMs.variable_dcline_flow(pm, bounded=false, ph=h)
@@ -37,10 +38,12 @@ function post_tp_pf(pm::GenericPowerModel)
 
     for h in PMs.phase_ids(pm)
         constraint_tp_voltage(pm, ph=h)
+        # PMs.constraint_voltage(pm, ph=h)
 
         for (i,bus) in ref(pm, :ref_buses)
             @assert bus["bus_type"] == 3
             constraint_tp_theta_ref(pm, i, ph=h)
+            # PMs.constraint_theta_ref(pm, i, ph=h)
             PMs.constraint_voltage_magnitude_setpoint(pm, i, ph=h)
         end
 
@@ -62,6 +65,8 @@ function post_tp_pf(pm::GenericPowerModel)
         for i in ids(pm, :branch)
             constraint_ohms_tp_yt_from(pm, i, ph=h)
             constraint_ohms_tp_yt_to(pm, i, ph=h)
+            # PMs.constraint_ohms_yt_from(pm, i, ph=h)
+            # PMs.constraint_ohms_yt_to(pm, i, ph=h)
         end
 
         for (i,dcline) in ref(pm, :dcline)
