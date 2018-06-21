@@ -723,7 +723,8 @@ supports components and options, but not commands, e.g. "plot" or "solve".
 Will also parse files defined inside of the originating DSS file via the
 "compile", "redirect" or "buscoords" commands.
 """
-function parse_dss(filename::AbstractString)::Dict
+function parse_dss(io::IOStream)::Dict
+    filename = match(r"^<file\s(.+)>$", io.name).captures[1]
     info(LOGGER, "Calling parse_dss on $filename")
     currentFile = split(filename, "/")[end]
     path = join(split(filename, '/')[1:end-1], '/')
@@ -825,6 +826,15 @@ function parse_dss(filename::AbstractString)::Dict
     end
 
     info(LOGGER, "Done parsing $filename")
+    return dss_data
+end
+
+
+""
+function parse_dss(filename::AbstractString)::Dict
+    dss_data = open(filename) do io
+        parse_dss(io)
+    end
     return dss_data
 end
 

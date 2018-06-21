@@ -705,8 +705,8 @@ end
 
 
 "Parses a DSS file into a PowerModels usable format."
-function parse_opendss(filename::String; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1)::Dict
-    dss_data = parse_dss(filename)
+function parse_opendss(io::IOStream; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1)::Dict
+    dss_data = parse_dss(io)
 
     return parse_opendss(dss_data; import_all=import_all)
 end

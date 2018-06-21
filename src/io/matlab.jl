@@ -1,13 +1,22 @@
-
 ""
-function parse_matlab(file_string::String)
-    data_string = readstring(open(file_string))
+function parse_matlab(io::IOStream)
+    data_string = readstring(io)
     ml_data = parse_matlab_string(data_string)
 
    	pm_data = matlab_to_tppm(ml_data)
 
     return pm_data
 end
+
+
+""
+function parse_matlab(file_string::String)
+    pm_data = open(file_string) do io
+        parse_matlab(io)
+    end
+    return pm_data
+end
+
 
 ### Data and functions specific to Matlab format ###
 tppm_data_names = [

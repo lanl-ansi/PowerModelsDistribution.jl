@@ -1,22 +1,31 @@
 """
-    parse_file(file)
+    parse_file(io)
 
-Parses a matlab .m `file` into a Three Phase PowerModels data structure.
+Parses the IOStream of a file into a Three-Phase PowerModels data structure.
 """
-function parse_file(file::String; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1)
-    if endswith(file, ".m")
-        tppm_data = ThreePhasePowerModels.parse_matlab(file)
-    elseif endswith(lowercase(file), ".dss")
+function parse_file(io::IOStream; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1)
+    if endswith(lowercase(strip(io.name,['>'])), ".m")
+        tppm_data = ThreePhasePowerModels.parse_matlab(io)
+    elseif endswith(lowercase(strip(io.name,['>'])), ".dss")
         warn(LOGGER, "Not all OpenDSS features are supported, currently only minimal support for \
                       lines, loads, generators, and capacitors as shunts. Transformers and reactors \
                       as transformer branches are included, but value translation is not fully supported.")
-        tppm_data = ThreePhasePowerModels.parse_opendss(file; import_all=import_all, vmin=vmin, vmax=vmax)
+        tppm_data = ThreePhasePowerModels.parse_opendss(io; import_all=import_all, vmin=vmin, vmax=vmax)
     else
         error(LOGGER, "only .m and .dss files are supported")
     end
 
     check_network_data(tppm_data)
 
+    return tppm_data
+end
+
+
+""
+function parse_file(filename::String; kwargs...)
+    tppm_data = open(filename) do io
+        parse_file(io; kwargs...)
+    end
     return tppm_data
 end
 
