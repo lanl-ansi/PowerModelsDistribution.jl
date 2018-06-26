@@ -96,9 +96,6 @@ TPPMs = ThreePhasePowerModels
         for key in ["loadshape", "linecode", "buscoords", "options", "filename"]
             @test haskey(dss, key)
         end
-
-        sol = TPPMs.run_tp_opf(tppm, PMs.SOCWRPowerModel, ipopt_solver)
-        @test sol["status"] == :LocalOptimal
     end
 
     @testset "3-bus balanced" begin
