@@ -181,7 +181,7 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
     xgmod = xg != 0.0 ?  0.5 * kxg * log(freq / basefreq) : 0.0
 
     units = get(kwargs, :units, "none")
-    length = get(kwargs, :length, 1.0) * to_meters[units]
+    len = get(kwargs, :length, 1.0) * to_meters[units]
 
     if haskey(kwargs, :rg)
         warn(LOGGER, "Rg,Xg are not fully supported")
@@ -210,7 +210,7 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
                             "bus1" => bus1,
                             "bus2" => bus2,
                             "linecode" => get(kwargs, :linecode, ""),
-                            "length" => length,
+                            "length" => len,
                             "phases" => phases,
                             "r1" => r1 / to_meters[units],
                             "x1" => x1 / to_meters[units],
