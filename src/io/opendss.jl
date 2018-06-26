@@ -365,7 +365,9 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "line")
         for line in dss_data["line"]
-            merge!(line, get_linecode(dss_data, get(line, "linecode", "")))
+            linecode = deepcopy(get_linecode(dss_data, get(line, "linecode", "")))
+            linecode["linecode"] = pop!(linecode, "name", "")
+            merge!(line, linecode)
             defaults = createLine(line["bus1"], line["bus2"], line["name"]; to_sym_keys(line)...)
 
             bf, nodes = parse_busname(defaults["bus1"])
