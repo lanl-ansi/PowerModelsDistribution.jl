@@ -96,6 +96,15 @@ TPPMs = ThreePhasePowerModels
         for key in ["loadshape", "linecode", "buscoords", "options", "filename"]
             @test haskey(dss, key)
         end
+
+        len = 0.013516796
+        rmatrix=TPPMs.parse_matrix(Float64, "[1.5000  |0.200000  1.50000  |0.250000  0.25000  2.00000  ]")
+        xmatrix=TPPMs.parse_matrix(Float64, "[1.0000  |0.500000  0.50000  |0.500000  0.50000  1.000000  ]")
+        cmatrix = TPPMs.parse_matrix(Float64, "[8.0000  |-2.00000  9.000000  |-1.75000  -2.50000  8.00000  ]")
+
+        @test all(isapprox.(tppm["branch"]["3"]["br_r"].values, rmatrix * len / tppm["basekv"]^2; atol=1e-6))
+        @test all(isapprox.(tppm["branch"]["3"]["br_x"].values, xmatrix * len / tppm["basekv"]^2; atol=1e-6))
+        @test all(isapprox.(tppm["branch"]["3"]["b_fr"].values, diag(tppm["basekv"]^2 / tppm["baseMVA"]^2 * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0; atol=1e-6))
     end
 
     @testset "3-bus balanced" begin
