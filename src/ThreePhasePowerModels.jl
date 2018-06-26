@@ -18,7 +18,7 @@ include("core/variable.jl")
 
 include("form/acp.jl")
 include("form/dcp.jl")
-include("form/df.jl")
+include("form/bf.jl")
 include("form/shared.jl")
 include("form/wr.jl")
 
