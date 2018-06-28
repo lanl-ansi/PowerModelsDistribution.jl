@@ -58,10 +58,10 @@ TPPMs = ThreePhasePowerModels
     @testset "parser cases" begin
         setlevel!(TESTLOG, "info")
 
-        @test_warn(TESTLOG, "Command \"solve\" on line 57 in \"test2_master.dss\" is not supported, skipping.",
+        @test_warn(TESTLOG, "Command \"solve\" on line 59 in \"test2_master.dss\" is not supported, skipping.",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        @test_warn(TESTLOG, "Command \"show\" on line 59 in \"test2_master.dss\" is not supported, skipping.",
+        @test_warn(TESTLOG, "Command \"show\" on line 61 in \"test2_master.dss\" is not supported, skipping.",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
         @test_warn(TESTLOG, "transformers are not yet supported, treating like non-transformer lines",
@@ -88,7 +88,7 @@ TPPMs = ThreePhasePowerModels
         @test length(tppm) == 16
         @test length(dss) == 12
 
-        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline"], [11, 3, 2, 10, 3, 0])
+        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline"], [11, 3, 2, 12, 3, 0])
             @test haskey(tppm, key)
             @test length(tppm[key]) == len
         end
@@ -105,6 +105,10 @@ TPPMs = ThreePhasePowerModels
         @test all(isapprox.(tppm["branch"]["3"]["br_r"].values, rmatrix * len / tppm["basekv"]^2; atol=1e-6))
         @test all(isapprox.(tppm["branch"]["3"]["br_x"].values, xmatrix * len / tppm["basekv"]^2; atol=1e-6))
         @test all(isapprox.(tppm["branch"]["3"]["b_fr"].values, diag(tppm["basekv"]^2 / tppm["baseMVA"]^2 * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0; atol=1e-6))
+
+        for i in 6:7
+            @test all(isapprox.(tppm["branch"]["$i"]["b_fr"].values, (3.4 * 2.0 + 1.6) / 3.0 * (tppm["basekv"]^2 / tppm["baseMVA"]^2 * 2.0 * pi * 60.0 / 1e9) / 2.0; atol=1e-6))
+        end
     end
 
     @testset "3-bus balanced" begin

@@ -47,15 +47,12 @@ function createLinecode(name::AbstractString; kwargs...)
         x0 = get(kwargs, :x0, 0.4047)
         if haskey(kwargs, :b0)
             b0 = kwargs[:b0]
-            c0 = b0 / (2 * pi / basefreq)
+            c0 = b0 / (2 * pi * basefreq)
         else
             c0 = get(kwargs, :c0, 1.6)
-            b0 = c0 * (2 * pi / basefreq)
+            b0 = c0 * (2 * pi * basefreq)
         end
     end
-
-    c1 = haskey(kwargs, :b1) ? get(kwargs, :b1) / (2 * pi * basefreq) * 1.0e-6 : c1
-    c0 = haskey(kwargs, :b0) ? get(kwargs, :b0) / (2 * pi * basefreq) * 1.0e-6 : c0
 
     Zs = (complex(r1, x1) * 2.0 + complex(r0, x0)) / 3.0
     Zm = (complex(r0, x0) - complex(r1, x1)) / 3.0
@@ -144,10 +141,10 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
         x0 = get(kwargs, :x0, 0.4047)
         if haskey(kwargs, :b0)
             b0 = kwargs[:b0]
-            c0 = b0 / (2 * pi / basefreq)
+            c0 = b0 / (2 * pi * basefreq)
         else
             c0 = get(kwargs, :c0, 1.6)
-            b0 = c0 * (2 * pi / basefreq)
+            b0 = c0 * (2 * pi * basefreq)
         end
     end
 
@@ -468,7 +465,7 @@ function createReactor(bus1, name::AbstractString, bus2=0; kwargs...)
     z2 = get(kwargs, :z2, [0.0, 0.0])
     z = get(kwargs, :z, [r, x])
 
-    lmh = get(kwargs, :lmh, x / 2 / pi / basefreq * 1e3)
+    lmh = get(kwargs, :lmh, x / (2 * pi * basefreq) * 1e3)
 
     # TODO: handle `parallel`
     if (haskey(kwargs, :kv) && haskey(kwargs, :kvar)) || haskey(kwargs, :x) || haskey(kwargs, :lmh) || haskey(kwargs, :z)
@@ -544,7 +541,7 @@ function createReactor(bus1, name::AbstractString, bus2=0; kwargs...)
 
         r = rmatrix[1,1]
         x = xmatrix[1,1]
-        lmh = x / 2 / pi / basefreq * 1e3
+        lmh = x / (2 * pi * basefreq) * 1e3
     else
         rmatrix = diagm(fill(r, phases))
         xmatrix = diagm(fill(x, phases))
