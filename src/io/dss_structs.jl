@@ -1,12 +1,25 @@
 # Defines data structures (defaults) for OpenDSS objects
 
+to_meters = Dict{String,Any}("mi" => 1609.3,
+                             "km" => 1000.0,
+                             "kft" => 304.8,
+                             "m" => 1.0,
+                             "ft" => 0.3048,
+                             "in" => 0.0254,
+                             "cm" => 0.01,
+                             "mm" => 0.001,
+                             "none" => 1.0
+                            )
+
 
 """
     createLinecode(name; kwargs...)
 
 Creates a Dict{String,Any} containing all of the properties of a Linecode. See
 OpenDSS documentation for valid fields and ways to specify the different
-properties.
+properties. DEPRECIATED: Calculation all done inside of createLine() due to Rg,
+Xg. Merge linecode values into line kwargs values BEFORE calling createLine().
+This is now mainly used for parsing linecode dicts into correct data types.
 """
 function createLinecode(name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
@@ -15,20 +28,31 @@ function createLinecode(name::AbstractString; kwargs...)
 
     r1 = get(kwargs, :r1, 0.058)
     x1 = get(kwargs, :x1, 0.1206)
-    c1 = get(kwargs, :c1, 3.4)
+
+    if haskey(kwargs, :b1)
+        b1 = kwargs[:b1]
+        c1 = b1 / (2 * pi * basefreq)
+    else
+        c1 = get(kwargs, :c1, 3.4)
+        b1 = c1 * (2 * pi * basefreq)
+    end
 
     if phases == 1
         r0 = r1
         x0 = x1
         c0 = c1
+        b0 = b1
     else
         r0 = get(kwargs, :r0, 0.1784)
         x0 = get(kwargs, :x0, 0.4047)
-        c0 = get(kwargs, :c0, 1.6)
+        if haskey(kwargs, :b0)
+            b0 = kwargs[:b0]
+            c0 = b0 / (2 * pi * basefreq)
+        else
+            c0 = get(kwargs, :c0, 1.6)
+            b0 = c0 * (2 * pi * basefreq)
+        end
     end
-
-    c1 = haskey(kwargs, :b1) ? get(kwargs, :b1) / (2 * pi * basefreq) * 1.0e-6 : c1
-    c0 = haskey(kwargs, :b0) ? get(kwargs, :b0) / (2 * pi * basefreq) * 1.0e-6 : c0
 
     Zs = (complex(r1, x1) * 2.0 + complex(r0, x0)) / 3.0
     Zm = (complex(r0, x0) - complex(r1, x1)) / 3.0
@@ -51,25 +75,22 @@ function createLinecode(name::AbstractString; kwargs...)
     xmatrix = get(kwargs, :xmatrix, imag(Z))
     cmatrix = get(kwargs, :cmatrix, imag(Yc) / (2 * pi * basefreq))
 
-    # TODO: rg, xg
-    rg = get(kwargs, :rg, 0.01805)
-    xg = get(kwargs, :xg, 0.155081)
+    # TODO: Rg, Xg cannot be handled at the LineCode level!
 
-    b1 = get(kwargs, :b1, 1.2818)
-    b0 = get(kwargs, :b0, 0.60319)
+    units = get(kwargs, :units, "none")
 
     return Dict{String,Any}("name" => name,
                             "nphases" => phases,
-                            "r1" => r1,
-                            "x1" => x1,
-                            "r0" => r0,
-                            "x0" => x0,
-                            "c1" => c1,
-                            "c0" => c0,
-                            "units" => get(kwargs, :units, "none"),
-                            "rmatrix" => rmatrix,
-                            "xmatrix" => xmatrix,
-                            "cmatrix" => cmatrix,
+                            "r1" => r1 / to_meters[units],
+                            "x1" => x1 / to_meters[units],
+                            "r0" => r0 / to_meters[units],
+                            "x0" => x0 / to_meters[units],
+                            "c1" => c1 / to_meters[units],
+                            "c0" => c0 / to_meters[units],
+                            "units" => "m",
+                            "rmatrix" => rmatrix / to_meters[units],
+                            "xmatrix" => xmatrix / to_meters[units],
+                            "cmatrix" => cmatrix / to_meters[units],
                             "basefreq" => basefreq,
                             "normamps" => get(kwargs, :normamps, 400.0),
                             "emergamps" => get(kwargs, :emergamps, 600.0),
@@ -81,8 +102,8 @@ function createLinecode(name::AbstractString; kwargs...)
                             "xg" => get(kwargs, :xg, 0.155081),
                             "rho" => get(kwargs, :rho, 100.0),
                             "neutral" => get(kwargs, :neutral, 3),
-                            "b1" => b1,
-                            "b0" => b0
+                            "b1" => b1 / to_meters[units],
+                            "b0" => b0 / to_meters[units]
                             )
 end
 
@@ -101,20 +122,31 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
 
     r1 = get(kwargs, :r1, 0.058)
     x1 = get(kwargs, :x1, 0.1206)
-    c1 = get(kwargs, :c1, 3.4)
+
+    if haskey(kwargs, :b1)
+        b1 = kwargs[:b1]
+        c1 = b1 / (2 * pi * basefreq)
+    else
+        c1 = get(kwargs, :c1, 3.4)
+        b1 = c1 * (2 * pi * basefreq)
+    end
 
     if phases == 1
         r0 = r1
         x0 = x1
         c0 = c1
+        b0 = b1
     else
         r0 = get(kwargs, :r0, 0.1784)
         x0 = get(kwargs, :x0, 0.4047)
-        c0 = get(kwargs, :c0, 1.6)
+        if haskey(kwargs, :b0)
+            b0 = kwargs[:b0]
+            c0 = b0 / (2 * pi * basefreq)
+        else
+            c0 = get(kwargs, :c0, 1.6)
+            b0 = c0 * (2 * pi * basefreq)
+        end
     end
-
-    c1 = haskey(kwargs, :b1) ? kwargs[:b1] / (2 * pi * basefreq) * 1.0e-6 : c1
-    c0 = haskey(kwargs, :b0) ? kwargs[:b0] / (2 * pi * basefreq) * 1.0e-6 : c0
 
     Zs = (complex(r1, x1) * 2.0 + complex(r0, x0)) / 3.0
     Zm = (complex(r0, x0) - complex(r1, x1)) / 3.0
@@ -133,16 +165,34 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
         end
     end
 
+    rg = get(kwargs, :rg, 0.01805)
+    xg = get(kwargs, :xg, 0.155081)
+    rho = get(kwargs, :rho, 100.0)
+
+    # TODO: calculate freq solution for circuit to use rg, xg
+    # TODO: support length mismatch between line and linecode?
+    freq = basefreq
+    lenmult = 1.0
+
+    kxg = xg / log(658.5 * sqrt(rho / basefreq))
+    xgmod = xg != 0.0 ?  0.5 * kxg * log(freq / basefreq) : 0.0
+
+    units = get(kwargs, :units, "none")
+    len = get(kwargs, :length, 1.0) * to_meters[units]
+
+    if haskey(kwargs, :rg)
+        warn(LOGGER, "Rg,Xg are not fully supported")
+    end
+
+    for i in 1:phases
+        for j in 1:phases
+            Z[i,j] = complex(real(Z[i,j]) + rg * (freq / basefreq - 1.0) * lenmult, (imag(Z[i,j]) - xgmod) * lenmult * freq / basefreq)
+        end
+    end
+
     rmatrix = get(kwargs, :rmatrix, real(Z))
     xmatrix = get(kwargs, :xmatrix, imag(Z))
     cmatrix = get(kwargs, :cmatrix, imag(Yc) / (2 * pi * basefreq))
-
-    # TODO: rg, xg
-    rg = get(kwargs, :rg, 0.01805)
-    xg = get(kwargs, :xg, 0.155081)
-
-    b1 = get(kwargs, :b1, 1.2818)
-    b0 = get(kwargs, :b0, 0.60319)
 
     # TODO: switch
     if get(kwargs, :switch, false)
@@ -150,37 +200,37 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
     end
 
     if haskey(kwargs, :like)
-        warn(LOGGER, "\"like\" keyword on load $name is not supported.")
+        warn(LOGGER, "\"like\" keyword on line $name is not supported.")
     end
 
     return Dict{String,Any}("name" => name,
                             "bus1" => bus1,
                             "bus2" => bus2,
                             "linecode" => get(kwargs, :linecode, ""),
-                            "length" => get(kwargs, :length, 1.0),
+                            "length" => len,
                             "phases" => phases,
-                            "r1" => r1,
-                            "x1" => x1,
-                            "r0" => r0,
-                            "x0" => x0,
-                            "c1" => c1,
-                            "c0" => c0,
-                            "rmatrix" => rmatrix,
-                            "xmatrix" => xmatrix,
-                            "cmatrix" => cmatrix,
+                            "r1" => r1 / to_meters[units],
+                            "x1" => x1 / to_meters[units],
+                            "r0" => r0 / to_meters[units],
+                            "x0" => x0 / to_meters[units],
+                            "c1" => c1 / to_meters[units],
+                            "c0" => c0 / to_meters[units],
+                            "rmatrix" => rmatrix / to_meters[units],
+                            "xmatrix" => xmatrix / to_meters[units],
+                            "cmatrix" => cmatrix / to_meters[units],
                             "switch" => get(kwargs, :switch, false),
-                            "rg" => rg,
-                            "xg" => xg,
+                            "rg" => rg / to_meters[units],
+                            "xg" => xg / to_meters[units],
                             "rho" => get(kwargs, :rho, 100),
                             "geometry" => get(kwargs, :geometry, ""),
-                            "units" => get(kwargs, :units, "none"),
+                            "units" => "m",
                             "spacing" => get(kwargs, :spacing, ""),
                             "wires" => get(kwargs, :wires, ""),
                             "earthmodel" => get(kwargs, :earthmodel, ""),
                             "cncables" => get(kwargs, :cncables, ""),
                             "tscables" => get(kwargs, :tscables, ""),
-                            "b1" => b1,
-                            "b0" => b0,
+                            "b1" => b1 / to_meters[units],
+                            "b0" => b0 / to_meters[units],
                             # Inherited Properties
                             "normamps" => get(kwargs, :normamps, 400.0),
                             "emergamps" => get(kwargs, :emergamps, 600.0),
@@ -415,7 +465,7 @@ function createReactor(bus1, name::AbstractString, bus2=0; kwargs...)
     z2 = get(kwargs, :z2, [0.0, 0.0])
     z = get(kwargs, :z, [r, x])
 
-    lmh = get(kwargs, :lmh, x / 2 / pi / basefreq * 1e3)
+    lmh = get(kwargs, :lmh, x / (2 * pi * basefreq) * 1e3)
 
     # TODO: handle `parallel`
     if (haskey(kwargs, :kv) && haskey(kwargs, :kvar)) || haskey(kwargs, :x) || haskey(kwargs, :lmh) || haskey(kwargs, :z)
@@ -491,7 +541,7 @@ function createReactor(bus1, name::AbstractString, bus2=0; kwargs...)
 
         r = rmatrix[1,1]
         x = xmatrix[1,1]
-        lmh = x / 2 / pi / basefreq * 1e3
+        lmh = x / (2 * pi * basefreq) * 1e3
     else
         rmatrix = diagm(fill(r, phases))
         xmatrix = diagm(fill(x, phases))

@@ -365,9 +365,10 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "line")
         for line in dss_data["line"]
+            linecode = deepcopy(get_linecode(dss_data, get(line, "linecode", "")))
+            linecode["linecode"] = pop!(linecode, "name", "")
+            merge!(line, linecode)
             defaults = createLine(line["bus1"], line["bus2"], line["name"]; to_sym_keys(line)...)
-            linecode = createLinecode(defaults["linecode"]; to_sym_keys(get_linecode(dss_data, defaults["linecode"]))...)
-            merge!(defaults, linecode)
 
             bf, nodes = parse_busname(defaults["bus1"])
             bt = parse_busname(defaults["bus2"])[1]
@@ -380,14 +381,6 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict["f_bus"] = find_bus(bf, tppm_data)
             branchDict["t_bus"] = find_bus(bt, tppm_data)
-
-            # TODO: Handle different lengths and units
-            # Set length to 1.0 and units to none for now
-            if defaults["length"] != 1.0 || defaults["units"] != "none"
-                warn(LOGGER, "length=$(defaults["length"]) and/or units=$(defaults["units"]) not supported, setting to 1.0 and \"none\"")
-                defaults["length"] = 1.0
-                defaults["units"] = "none"
-            end
 
             branchDict["length"] = defaults["length"]
 

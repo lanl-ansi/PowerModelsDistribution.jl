@@ -25,3 +25,7 @@ New Linecode.lc7 nphases=2 units=kft      !ohms per 1000 ft
 ~ xmatrix=[  0.25000000   0.00000000 |  0.00000000   0.00000000 ]
 ~ cmatrix=[  5.00000000  -2.50000000 | -2.50000000   5.00000000 ]
 ~ Normamps=250  {250 5.0 *}
+
+New Linecode.lc8 nphases=3 units=km b1=(3.4 2 pi 60.0 * * *)
+
+New Linecode.lc9 nphases=3 b1=(3.4 2 pi 60.0 * * *) b0=(1.6 2 pi 60 * * *)

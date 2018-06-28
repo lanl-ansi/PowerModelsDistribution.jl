@@ -2,8 +2,8 @@ export run_tp_opf_bf
 
 ""
 function run_tp_opf_bf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    if model_constructor != PMs.SOCDFPowerModel
-        error(LOGGER, "The problem type opf_bf at the moment only supports the SOCDFForm formulation")
+    if model_constructor != PMs.SOCBFPowerModel
+        error(LOGGER, "The problem type opf_bf at the moment only supports the SOCBFForm formulation")
     end
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf_bf; multiphase=true, kwargs...)
 end
@@ -11,8 +11,8 @@ end
 
 ""
 function run_tp_opf_bf(file::String, model_constructor, solver; kwargs...)
-    if model_constructor != PMs.SOCDFPowerModel
-        error(LOGGER, "The problem type opf_bf at the moment only supports the SOCDFForm formulation")
+    if model_constructor != PMs.SOCBFPowerModel
+        error(LOGGER, "The problem type opf_bf at the moment only supports the SOCBFForm formulation")
     end
     data = ThreePhasePowerModels.parse_file(file)
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf_bf; multiphase=true, kwargs...)

@@ -16,7 +16,7 @@ end
 
 
 ""
-function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: PMs.AbstractDFForm
+function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: PMs.AbstractBFForm
     PMs.variable_voltage_magnitude_sqr(pm; kwargs...)
 end
 
@@ -24,7 +24,7 @@ end
 """
 Defines voltage drop over a branch, linking from and to side voltage magnitude
 """
-function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, n::Int, h::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: PMs.AbstractDFForm
+function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, n::Int, h::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: PMs.AbstractBFForm
     p_fr = [var(pm, n, j, :p, f_idx) for j in PMs.phase_ids(pm)]
     q_fr = [var(pm, n, j, :q, f_idx) for j in PMs.phase_ids(pm)]
     w_fr = var(pm, n, h, :w, f_bus)

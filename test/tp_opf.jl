@@ -114,11 +114,10 @@ end
             result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
             @test result["status"] == :LocalOptimal
-            @test isapprox(result["objective"], 53350.44; atol = 1e-1)
+            @test isapprox(result["objective"], 53273.28; atol = 1e-1)
 
-            for ph in 1:mp_data["phases"]
-                @test isapprox(result["solution"]["gen"]["1"]["qg"][ph],  0.29999999; atol = 1e-3)
-            end
+            @test all(isapprox.(result["solution"]["gen"]["1"]["qg"].values, 0.3; atol = 1e-3))
+
             @test isapprox(result["solution"]["bus"]["2"]["va"][1], -0.0135573; atol = 1e-3)
             @test isapprox(result["solution"]["bus"]["2"]["va"][2], -0.0123172+2*pi/mp_data["phases"]; atol = 1e-3)
             @test isapprox(result["solution"]["bus"]["2"]["va"][3], -0.0136547+4*pi/mp_data["phases"]; atol = 1e-3)
@@ -128,11 +127,11 @@ end
             result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
 
             @test result["status"] == :LocalOptimal
-            @test isapprox(result["objective"], 21553.9; atol = 1e-1)
+            @test isapprox(result["objective"], -0.000272; atol = 1e-3)
 
-            @test isapprox(result["solution"]["gen"]["1"]["qg"][1], -0.037881; atol = 1e-3)
-            @test isapprox(result["solution"]["gen"]["1"]["qg"][2], -0.299998; atol = 1e-3)
-            @test isapprox(result["solution"]["gen"]["1"]["qg"][3], -0.075929; atol = 1e-3)
+            @test isapprox(result["solution"]["gen"]["1"]["qg"][1], 0.0472219; atol = 1e-3)
+            @test isapprox(result["solution"]["gen"]["1"]["qg"][2], 0.0325493; atol = 1e-3)
+            @test isapprox(result["solution"]["gen"]["1"]["qg"][3], 0.0357746; atol = 1e-3)
         end
     end
     @testset "5-bus coupled radial no shunt case" begin
@@ -140,7 +139,7 @@ end
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 55448.1; atol = 1e-1)
+        @test isapprox(result["objective"], 55436.1; atol = 1e-1)
 
         for ph in 1:mp_data["phases"]
             @test isapprox(result["solution"]["gen"]["1"]["pg"][ph], 0.4; atol = 1e-3)
@@ -153,7 +152,7 @@ end
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 56087.4; atol = 1e-1)
+        @test isapprox(result["objective"], 56075.1; atol = 1e-1)
 
         for ph in 1:mp_data["phases"]
             @test isapprox(result["solution"]["gen"]["1"]["pg"][ph],  0.4; atol = 1e-3)
