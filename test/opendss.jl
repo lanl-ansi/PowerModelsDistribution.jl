@@ -70,6 +70,9 @@ TPPMs = ThreePhasePowerModels
         @test_warn(TESTLOG, "reactors as constant impedance elements is not yet supported, treating like line",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
+        @test_warn(TESTLOG, "Rg,Xg are not fully supported",
+                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+
         Memento.Test.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
@@ -109,6 +112,9 @@ TPPMs = ThreePhasePowerModels
         for i in 6:7
             @test all(isapprox.(tppm["branch"]["$i"]["b_fr"].values, (3.4 * 2.0 + 1.6) / 3.0 * (tppm["basekv"]^2 / tppm["baseMVA"]^2 * 2.0 * pi * 60.0 / 1e9) / 2.0; atol=1e-6))
         end
+
+        @test all(isapprox.(tppm["branch"]["1"]["br_r"].values, diagm(fill(2.1004e-10, 3)); atol=1e-12))
+        @test all(isapprox.(tppm["branch"]["1"]["br_x"].values, diagm(fill(2.1004e-9, 3)); atol=1e-12))
     end
 
     @testset "3-bus balanced" begin
