@@ -1,0 +1,5 @@
+new object=circuit.test3
+
+new line.l1 bus1=sourcebus bus2=b1
+
+new load.ld1 bus1=b2

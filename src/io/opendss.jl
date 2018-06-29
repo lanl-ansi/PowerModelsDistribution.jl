@@ -131,7 +131,7 @@ function find_component(data::Dict, name::AbstractString, compType::AbstractStri
             return comp
         end
     end
-    warn(LOGGER, "Could find $compType $name")
+    warn(LOGGER, "Could not find $compType \"$name\"")
     return Dict{String,Any}()
 end
 
@@ -146,7 +146,7 @@ function find_bus(busname::AbstractString, tppm_data::Dict)
     if haskey(bus, "bus_i")
         return bus["bus_i"]
     else
-        error("cannot find connected bus with id $busname")
+        error("cannot find connected bus with id \"$busname\"")
     end
 end
 
@@ -278,45 +278,41 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     end
 
     # sourcebus generator (created by circuit)
-    if haskey(dss_data, "circuit")
-        circuit = dss_data["circuit"][1]
-        defaults = createVSource("sourcebus", "sourcebus"; to_sym_keys(circuit)...)
+    circuit = dss_data["circuit"][1]
+    defaults = createVSource("sourcebus", "sourcebus"; to_sym_keys(circuit)...)
 
-        genDict = Dict{String,Any}()
+    genDict = Dict{String,Any}()
 
-        nphases = tppm_data["phases"]
-        name, nodes = parse_busname(defaults["bus1"])
+    nphases = tppm_data["phases"]
+    name, nodes = parse_busname(defaults["bus1"])
 
-        genDict["gen_bus"] = find_bus(name, tppm_data)
-        genDict["name"] = defaults["name"]
-        genDict["gen_status"] = convert(Int, defaults["enabled"])
+    genDict["gen_bus"] = find_bus(name, tppm_data)
+    genDict["name"] = defaults["name"]
+    genDict["gen_status"] = convert(Int, defaults["enabled"])
 
-        # TODO: populate with VSOURCE properties
-        genDict["pg"] = PMs.MultiPhaseVector(parse_array( 0.0, nodes, nphases))
-        genDict["qg"] = PMs.MultiPhaseVector(parse_array( 0.0, nodes, nphases))
+    # TODO: populate with VSOURCE properties
+    genDict["pg"] = PMs.MultiPhaseVector(parse_array( 0.0, nodes, nphases))
+    genDict["qg"] = PMs.MultiPhaseVector(parse_array( 0.0, nodes, nphases))
 
-        genDict["qmin"] = PMs.MultiPhaseVector(parse_array(-Inf, nodes, nphases))
-        genDict["qmax"] = PMs.MultiPhaseVector(parse_array( Inf, nodes, nphases))
+    genDict["qmin"] = PMs.MultiPhaseVector(parse_array(-Inf, nodes, nphases))
+    genDict["qmax"] = PMs.MultiPhaseVector(parse_array( Inf, nodes, nphases))
 
-        genDict["pmax"] = PMs.MultiPhaseVector(parse_array( Inf, nodes, nphases))
-        genDict["pmin"] = PMs.MultiPhaseVector(parse_array(-Inf, nodes, nphases))
+    genDict["pmax"] = PMs.MultiPhaseVector(parse_array( Inf, nodes, nphases))
+    genDict["pmin"] = PMs.MultiPhaseVector(parse_array(-Inf, nodes, nphases))
 
 
-        genDict["model"] = 2
-        genDict["startup"] = 0.0
-        genDict["shutdown"] = 0.0
-        genDict["ncost"] = 3
-        genDict["cost"] = [0.0, 1.0, 0.0]
+    genDict["model"] = 2
+    genDict["startup"] = 0.0
+    genDict["shutdown"] = 0.0
+    genDict["ncost"] = 3
+    genDict["cost"] = [0.0, 1.0, 0.0]
 
-        genDict["index"] = length(tppm_data["gen"]) + 1
+    genDict["index"] = length(tppm_data["gen"]) + 1
 
-        used = ["name", "phases", "bus1"]
-        PMs.import_remaining!(genDict, defaults, import_all; exclude=used)
+    used = ["name", "phases", "bus1"]
+    PMs.import_remaining!(genDict, defaults, import_all; exclude=used)
 
-        push!(tppm_data["gen"], genDict)
-    else
-        error(LOGGER, "sourcebus, as created by circuit object, is required in opendss")
-    end
+    push!(tppm_data["gen"], genDict)
 
     if haskey(dss_data, "generator")
         for gen in dss_data["generator"]

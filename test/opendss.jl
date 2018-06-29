@@ -58,6 +58,12 @@ TPPMs = ThreePhasePowerModels
     @testset "parser cases" begin
         setlevel!(TESTLOG, "info")
 
+        @test_throws(TESTLOG, ErrorException,
+                     TPPMs.parse_file("../test/data/opendss/test_simple3.dss"))
+
+        @test_throws(TESTLOG, ErrorException,
+                     TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
+
         @test_warn(TESTLOG, "Command \"solve\" on line 68 in \"test2_master.dss\" is not supported, skipping.",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
@@ -71,6 +77,9 @@ TPPMs = ThreePhasePowerModels
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
         @test_warn(TESTLOG, "Rg,Xg are not fully supported",
+                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+
+        @test_warn(TESTLOG, "Could not find line \"something\"",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
         Memento.Test.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
