@@ -58,10 +58,16 @@ TPPMs = ThreePhasePowerModels
     @testset "parser cases" begin
         setlevel!(TESTLOG, "info")
 
-        @test_warn(TESTLOG, "Command \"solve\" on line 59 in \"test2_master.dss\" is not supported, skipping.",
+        @test_throws(TESTLOG, ErrorException,
+                     TPPMs.parse_file("../test/data/opendss/test_simple3.dss"))
+
+        @test_throws(TESTLOG, ErrorException,
+                     TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
+
+        @test_warn(TESTLOG, "Command \"solve\" on line 68 in \"test2_master.dss\" is not supported, skipping.",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        @test_warn(TESTLOG, "Command \"show\" on line 61 in \"test2_master.dss\" is not supported, skipping.",
+        @test_warn(TESTLOG, "Command \"show\" on line 70 in \"test2_master.dss\" is not supported, skipping.",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
         @test_warn(TESTLOG, "transformers are not yet supported, treating like non-transformer lines",
@@ -71,6 +77,9 @@ TPPMs = ThreePhasePowerModels
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
         @test_warn(TESTLOG, "Rg,Xg are not fully supported",
+                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+
+        @test_warn(TESTLOG, "Could not find line \"something\"",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
         Memento.Test.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
@@ -91,7 +100,7 @@ TPPMs = ThreePhasePowerModels
         @test length(tppm) == 16
         @test length(dss) == 12
 
-        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline"], [11, 3, 2, 12, 3, 0])
+        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline"], [11, 4, 5, 15, 4, 0])
             @test haskey(tppm, key)
             @test length(tppm[key]) == len
         end
@@ -115,6 +124,42 @@ TPPMs = ThreePhasePowerModels
 
         @test all(isapprox.(tppm["branch"]["1"]["br_r"].values, diagm(fill(2.1004e-10, 3)); atol=1e-12))
         @test all(isapprox.(tppm["branch"]["1"]["br_x"].values, diagm(fill(2.1004e-9, 3)); atol=1e-12))
+
+        for k in ["qd", "pd"]
+            @test all(isapprox.(tppm["load"]["4"][k].values, tppm["load"]["2"][k].values; atol=1e-12))
+        end
+
+        for k in ["gs", "bs"]
+            @test all(isapprox.(tppm["shunt"]["2"][k].values, tppm["shunt"]["3"][k].values; atol=1e-12))
+            @test all(isapprox.(tppm["shunt"]["4"][k].values, tppm["shunt"]["5"][k].values; atol=1e-12))
+        end
+
+        for k in keys(tppm["gen"]["3"])
+            if !(k in ["gen_bus", "index", "name"])
+                if isa(tppm["gen"]["3"][k], PMs.MultiPhaseValue)
+                    @test all(isapprox.(tppm["gen"]["4"][k].values, tppm["gen"]["3"][k].values; atol=1e-12))
+                else
+                    @test all(isapprox.(tppm["gen"]["4"][k], tppm["gen"]["3"][k]; atol=1e-12))
+                end
+            end
+        end
+
+        for k in keys(tppm["branch"]["15"])
+            if !(k in ["f_bus", "t_bus", "index", "name", "linecode"])
+                if isa(tppm["branch"]["15"][k], PMs.MultiPhaseValue)
+                    @test all(isapprox.(tppm["branch"]["14"][k].values, tppm["branch"]["15"][k].values; atol=1e-12))
+                    @test all(isapprox.(tppm["branch"]["12"][k].values, tppm["branch"]["13"][k].values; atol=1e-12))
+                    @test all(isapprox.(tppm["branch"]["3"][k].values, tppm["branch"]["8"][k].values; atol=1e-12))
+                else
+                    @test all(isapprox.(tppm["branch"]["14"][k], tppm["branch"]["15"][k]; atol=1e-12))
+                    @test all(isapprox.(tppm["branch"]["12"][k], tppm["branch"]["13"][k]; atol=1e-12))
+                    @test all(isapprox.(tppm["branch"]["3"][k], tppm["branch"]["8"][k]; atol=1e-12))
+                end
+            end
+        end
+
+        tppm2 = TPPMs.parse_file("../test/data/opendss/test_simple4.dss")
+        @test length(tppm2["bus"]) == 4
     end
 
     @testset "3-bus balanced" begin
