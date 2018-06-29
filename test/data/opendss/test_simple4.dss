@@ -1,0 +1,3 @@
+new circuit.c1
+
+new transformer.t1 windings=3 phases=3 buses=(sourcebus, b1, b2)

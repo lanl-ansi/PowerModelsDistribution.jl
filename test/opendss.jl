@@ -157,6 +157,9 @@ TPPMs = ThreePhasePowerModels
                 end
             end
         end
+
+        tppm2 = TPPMs.parse_file("../test/data/opendss/test_simple4.dss")
+        @test length(tppm2["bus"]) == 4
     end
 
     @testset "3-bus balanced" begin
