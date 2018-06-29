@@ -120,17 +120,34 @@ end
 
 
 """
+    find_component(tppm_data, name, compType)
+
+Returns the component of `compType` with `name` from `data` of type
+Dict{String,Array}.
+"""
+function find_component(data::Dict, name::AbstractString, compType::AbstractString)::Dict
+    for comp in values(data[compType])
+        if comp["name"] == name
+            return comp
+        end
+    end
+    warn(LOGGER, "Could find $compType $name")
+    return Dict{String,Any}()
+end
+
+
+"""
     find_bus(busname, tppm_data)
 
 Finds the index number of the bus in existing data from the given `busname`.
 """
-function find_bus(busname, tppm_data)
-    for bus in values(tppm_data["bus"])
-        if bus["name"] == busname
-            return bus["bus_i"]
-        end
+function find_bus(busname::AbstractString, tppm_data::Dict)
+    bus = find_component(tppm_data, busname, "bus")
+    if haskey(bus, "bus_i")
+        return bus["bus_i"]
+    else
+        error("cannot find connected bus with id $busname")
     end
-    error("cannot find connected bus with id $busname")
 end
 
 
@@ -146,6 +163,10 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "load")
         for load in dss_data["load"]
+            if haskey(load, "like")
+                load = merge(find_component(dss_data, load["like"], "load"), load)
+            end
+
             defaults = createLoad(load["bus1"], load["name"]; to_sym_keys(load)...)
 
             loadDict = Dict{String,Any}()
@@ -182,6 +203,10 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "capacitor")
         for shunt in dss_data["capacitor"]
+            if haskey(shunt, "like")
+                shunt = merge(find_component(dss_data, shunt["like"], "capacitor"), shunt)
+            end
+
             defaults = createCapacitor(shunt["bus1"], shunt["name"]; to_sym_keys(shunt)...)
 
             shuntDict = Dict{String,Any}()
@@ -210,6 +235,10 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     if haskey(dss_data, "reactor")
         for shunt in dss_data["reactor"]
             if !haskey(shunt, "bus2")
+                if haskey(shunt, "like")
+                    shunt = merge(find_component(dss_data, shunt["like"], "reactor"), shunt)
+                end
+
                 defaults = createReactor(find_bus(shunt["bus1"]), shunt["name"]; to_sym_keys(shunt)...)
 
                 shuntDict = Dict{String,Any}()
@@ -291,6 +320,10 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "generator")
         for gen in dss_data["generator"]
+            if haskey(gen, "like")
+                gen = merge(find_component(dss_data, gen["like"], "generator"), gen)
+            end
+
             defaults = createGenerator(gen["bus1"], gen["name"]; to_sym_keys(gen)...)
 
             genDict = Dict{String,Any}()
@@ -365,9 +398,18 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "line")
         for line in dss_data["line"]
+            if haskey(line, "like")
+                line = merge(find_component(dss_data, line["like"], "line"), line)
+            end
+
             linecode = deepcopy(get_linecode(dss_data, get(line, "linecode", "")))
             linecode["linecode"] = pop!(linecode, "name", "")
+            if haskey(linecode, "like")
+                linecode = merge(find_component(dss_data, linecode["like"], "linecode"), linecode)
+            end
+
             merge!(line, linecode)
+
             defaults = createLine(line["bus1"], line["bus2"], line["name"]; to_sym_keys(line)...)
 
             bf, nodes = parse_busname(defaults["bus1"])
@@ -441,6 +483,10 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
     if haskey(dss_data, "transformer")
         warn(LOGGER, "transformers are not yet supported, treating like non-transformer lines")
         for transformer in dss_data["transformer"]
+            if haskey(transformer, "like")
+                transformer = merge(find_component(dss_data, transformer["like"], "transformer"), transformer)
+            end
+
             defaults = createTransformer(transformer["name"]; to_sym_keys(transformer)...)
 
             nphases = tppm_data["phases"]
@@ -541,6 +587,10 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
         warn(LOGGER, "reactors as constant impedance elements is not yet supported, treating like line")
         for reactor in dss_data["reactor"]
             if haskey(reactor, "bus2")
+                if haskey(reactor, "like")
+                    reactor = merge(find_component(dss_data, reactor["like"], "reactor"), reactor)
+                end
+
                 defaults = createReactor(reactor["bus1"], reactor["name"], reactor["bus2"]; to_sym_keys(reactor)...)
 
                 reactDict = Dict{String,Any}()
@@ -550,6 +600,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 f_bus, nodes = parse_busname(defaults["bus1"])
                 t_bus = parse_busname(defaults["bus2"])[1]
 
+                reactDict["name"] = defaults["name"]
                 reactDict["f_bus"] = find_bus(f_bus, tppm_data)
                 reactDict["t_bus"] = find_bus(t_bus, tppm_data)
 

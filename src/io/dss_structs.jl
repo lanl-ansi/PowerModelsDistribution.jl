@@ -199,10 +199,6 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
         warn(LOGGER, "\"switch\" keyword in line $name is not supported.")
     end
 
-    if haskey(kwargs, :like)
-        warn(LOGGER, "\"like\" keyword on line $name is not supported.")
-    end
-
     return Dict{String,Any}("name" => name,
                             "bus1" => bus1,
                             "bus2" => bus2,
@@ -279,10 +275,6 @@ function createLoad(bus1, name::AbstractString; kwargs...)
 
     # TODO: yearly, daily, duty, growth, model
     # TODO: ZIPV (7 coefficient array, depends on model keyword)
-
-    if haskey(kwargs, :like)
-        warn(LOGGER, "\"like\" keyword on load $name is not supported.")
-    end
 
     load = Dict{String,Any}("name" => name,
                             "phases" => get(kwargs, :phases, 3),
