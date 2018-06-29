@@ -239,7 +239,7 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                     shunt = merge(find_component(dss_data, shunt["like"], "reactor"), shunt)
                 end
 
-                defaults = createReactor(find_bus(shunt["bus1"]), shunt["name"]; to_sym_keys(shunt)...)
+                defaults = createReactor(shunt["bus1"], shunt["name"]; to_sym_keys(shunt)...)
 
                 shuntDict = Dict{String,Any}()
 

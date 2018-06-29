@@ -435,7 +435,7 @@ Reactor. If `bus2` is not specified Reactor is treated like a shunt. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
-function createReactor(bus1, name::AbstractString, bus2=0; kwargs...)
+function createReactor(bus1, name::AbstractString, bus2=""; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
     kvar = get(kwargs, :kvar, 1200.0)

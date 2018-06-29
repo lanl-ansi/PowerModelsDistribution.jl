@@ -29,3 +29,5 @@ New Linecode.lc7 nphases=2 units=kft      !ohms per 1000 ft
 New Linecode.lc8 nphases=3 units=km b1=(3.4 2 pi 60.0 * * *)
 
 New Linecode.lc9 nphases=3 b1=(3.4 2 pi 60.0 * * *) b0=(1.6 2 pi 60 * * *)
+
+new linecode.lc10 like=lc/2
