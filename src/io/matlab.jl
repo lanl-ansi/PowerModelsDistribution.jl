@@ -1,3 +1,5 @@
+current_version = v"1"
+
 ""
 function parse_matlab(io::IOStream)
     data_string = readstring(io)
@@ -78,6 +80,9 @@ tppm_branch_columns = [
     ("r_22", Float64), ("x_22", Float64),
     ("r_23", Float64), ("x_23", Float64),
     ("r_33", Float64), ("x_33", Float64),
+    ("b_1", Float64),
+    ("b_2", Float64),
+    ("b_3", Float64),
     ("rate_a", Float64),
     ("rate_b", Float64),
     ("rate_c", Float64),
@@ -102,6 +107,12 @@ function parse_matlab_string(data_string::String)
     end
 
     case["source_type"] = "matlab"
+    if haskey(matlab_data, "tppmc.version")
+        case["source_version"] = VersionNumber(matlab_data["tppmc.version"])
+    else
+        warn(LOGGER, "No version number found, file may not be compatible with parser.")
+        case["source_version"] = v"0"
+    end
 
     if haskey(matlab_data, "tppmc.baseMVA")
         case["baseMVA"] = matlab_data["tppmc.baseMVA"]
@@ -235,11 +246,25 @@ function parse_matlab_string(data_string::String)
 end
 
 
+"Translates legacy versions into current version format"
+function translate_version!(ml_data::Dict{String,Any})
+    # Future Version translation here
+    if ml_data["source_version"] == current_version
+        return ml_data
+    else
+        warn(LOGGER, "matlab source data has unrecognized version $(ml_data["source_version"]), cannot translate to version $current_version, parse may be invalid")
+        return ml_data
+    end
+end
+
+
 """
 Converts a Matlab dict into a ThreePhasePowerModels dict
 """
 function matlab_to_tppm(ml_data::Dict{String,Any})
     ml_data = deepcopy(ml_data)
+
+    translate_version!(ml_data)
 
     ml_data["multinetwork"] = false
     ml_data["per_unit"] = false
@@ -338,9 +363,10 @@ function ml2pm_branch(data::Dict{String,Any})
         set_default(branch, "b_to_3", 0.0)
 
         make_mpv!(branch, "g_fr", ["g_fr_1", "g_fr_2", "g_fr_3"])
-        make_mpv!(branch, "b_fr", ["b_fr_1", "b_fr_2", "b_fr_3"])
         make_mpv!(branch, "g_to", ["g_to_1", "g_to_2", "g_to_3"])
-        make_mpv!(branch, "b_to", ["b_to_1", "b_to_2", "b_to_3"])
+
+        branch["b_fr"] = PMs.MultiPhaseVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
+        branch["b_to"] = PMs.MultiPhaseVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
 
         branch["tap"] = PMs.MultiPhaseVector(1.0, 3)
         branch["shift"] = PMs.MultiPhaseVector(0.0, 3)
