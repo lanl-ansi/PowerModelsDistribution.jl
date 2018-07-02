@@ -78,6 +78,9 @@ tppm_branch_columns = [
     ("r_22", Float64), ("x_22", Float64),
     ("r_23", Float64), ("x_23", Float64),
     ("r_33", Float64), ("x_33", Float64),
+    ("b_1", Float64),
+    ("b_2", Float64),
+    ("b_3", Float64),
     ("rate_a", Float64),
     ("rate_b", Float64),
     ("rate_c", Float64),
@@ -338,9 +341,10 @@ function ml2pm_branch(data::Dict{String,Any})
         set_default(branch, "b_to_3", 0.0)
 
         make_mpv!(branch, "g_fr", ["g_fr_1", "g_fr_2", "g_fr_3"])
-        make_mpv!(branch, "b_fr", ["b_fr_1", "b_fr_2", "b_fr_3"])
         make_mpv!(branch, "g_to", ["g_to_1", "g_to_2", "g_to_3"])
-        make_mpv!(branch, "b_to", ["b_to_1", "b_to_2", "b_to_3"])
+
+        branch["b_fr"] = PMs.MultiPhaseVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
+        branch["b_to"] = PMs.MultiPhaseVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
 
         branch["tap"] = PMs.MultiPhaseVector(1.0, 3)
         branch["shift"] = PMs.MultiPhaseVector(0.0, 3)
