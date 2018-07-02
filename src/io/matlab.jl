@@ -1,3 +1,5 @@
+current_version = v"1"
+
 ""
 function parse_matlab(io::IOStream)
     data_string = readstring(io)
@@ -105,6 +107,12 @@ function parse_matlab_string(data_string::String)
     end
 
     case["source_type"] = "matlab"
+    if haskey(matlab_data, "tppmc.version")
+        case["source_version"] = VersionNumber(matlab_data["tppmc.version"])
+    else
+        warn(LOGGER, "No version number found, file may not be compatible with parser.")
+        case["source_version"] = v"0"
+    end
 
     if haskey(matlab_data, "tppmc.baseMVA")
         case["baseMVA"] = matlab_data["tppmc.baseMVA"]
@@ -238,11 +246,25 @@ function parse_matlab_string(data_string::String)
 end
 
 
+"Translates legacy versions into current version format"
+function translate_version!(ml_data::Dict{String,Any})
+    # Future Version translation here
+    if ml_data["source_version"] == current_version
+        return ml_data
+    else
+        warn(LOGGER, "matlab source data has unrecognized version $(ml_data["source_version"]), cannot translate to version $current_version, parse may be invalid")
+        return ml_data
+    end
+end
+
+
 """
 Converts a Matlab dict into a ThreePhasePowerModels dict
 """
 function matlab_to_tppm(ml_data::Dict{String,Any})
     ml_data = deepcopy(ml_data)
+
+    translate_version!(ml_data)
 
     ml_data["multinetwork"] = false
     ml_data["per_unit"] = false

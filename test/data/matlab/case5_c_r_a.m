@@ -2,6 +2,7 @@
 % no shunts
 
 function tppmc = case5_i_r_a
+tppmc.version = '1'
 
 tppmc.baseMVA = 100.0;
 tppmc.baseKV = 230.0;

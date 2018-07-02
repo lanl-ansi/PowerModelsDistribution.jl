@@ -2,6 +2,7 @@
 % tests meshed network
 
 function tppmc = case5_i_m_b
+tppmc.version = '1'
 
 tppmc.baseMVA = 100.0;
 tppmc.baseKV = 230.0;
