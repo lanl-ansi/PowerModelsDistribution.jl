@@ -165,12 +165,18 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
         end
     end
 
+    rmatrix = get(kwargs, :rmatrix, real(Z))
+    xmatrix = get(kwargs, :xmatrix, imag(Z))
+    cmatrix = get(kwargs, :cmatrix, imag(Yc) / (2 * pi * basefreq))
+
     rg = get(kwargs, :rg, 0.01805)
     xg = get(kwargs, :xg, 0.155081)
     rho = get(kwargs, :rho, 100.0)
 
     # TODO: calculate freq solution for circuit to use rg, xg
     # TODO: support length mismatch between line and linecode?
+    # Currently this does not change the values of rmatrix and xmatrix due to
+    # freq=basefreq and lenmult=1, code is only in place for future use.
     freq = basefreq
     lenmult = 1.0
 
@@ -184,15 +190,10 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
         warn(LOGGER, "Rg,Xg are not fully supported")
     end
 
-    for i in 1:phases
-        for j in 1:phases
-            Z[i,j] = complex(real(Z[i,j]) + rg * (freq / basefreq - 1.0) * lenmult, (imag(Z[i,j]) - xgmod) * lenmult * freq / basefreq)
-        end
-    end
-
-    rmatrix = get(kwargs, :rmatrix, real(Z))
-    xmatrix = get(kwargs, :xmatrix, imag(Z))
-    cmatrix = get(kwargs, :cmatrix, imag(Yc) / (2 * pi * basefreq))
+    rmatrix .+= rg * (freq/basefreq - 1.0)
+    rmatrix .*= lenmult
+    xmatrix .-= xgmod
+    xmatrix .*= lenmult * (freq / basefreq)
 
     # TODO: switch
     if get(kwargs, :switch, false)
@@ -234,7 +235,9 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
                             "pctperm" => get(kwargs, :pctperm, 20.0),
                             "repair" => get(kwargs, :repair, 3.0),
                             "basefreq" => basefreq,
-                            "enabled" => get(kwargs, :enabled, true)
+                            "enabled" => get(kwargs, :enabled, true),
+                            # Added properties
+                            "freq" => freq
                            )
 end
 

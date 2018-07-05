@@ -1,0 +1,29 @@
+Clear
+New Circuit.3Bus_example
+!  define a really stiff source
+~ basekv=0.4   pu=0.9959  MVAsc1=1e6  MVAsc3=1e6
+
+!Define Linecodes
+
+
+New linecode.556MCM nphases=3 basefreq=50 ! ohms per 5 mile
+~ rmatrix = ( 0.1000 | 0.000    0.1000 |  0.000    0.000    0.1000)
+~ xmatrix = ( 0.1 |  0.0    0.1 | 0.0    0.0    0.1)
+~ cmatrix = ( 0  | -0  0 | -0 -0 0  ) ! small capacitance
+
+!Define lines
+
+New Line.OHLine  bus1=sourcebus.1.2.3.0  Primary.1.2.3.0  linecode = 556MCM   length=1  ! 5 mile line
+
+!Loads - single phase
+
+New Load.L1 phases=1  Primary.1.0   0.23   kW=6   kvar=0  model=1
+New Load.L2 phases=1  Primary.2.0   0.23   kW=6   kvar=0  model=1
+New Load.L3 phases=1  Primary.3.0   0.23   kW=6   kvar=0  model=1
+
+
+Set voltagebases=[0.4]
+Set tolerance=0.000001
+Calcvoltagebases
+
+Solve

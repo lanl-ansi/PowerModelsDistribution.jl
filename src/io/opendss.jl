@@ -97,8 +97,8 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool=false, 
         nphases = tppm_data["phases"]
         ph1_ang = bus == "sourcebus" ? circuit["angle"] : 0.0
         vm = bus == "sourcebus" ? circuit["pu"] : 1.0
-        vmin = bus == "sourcebus" ? circuit["pu"] - circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmin
-        vmax = bus == "sourcebus" ? circuit["pu"] + circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmax
+        vmi = bus == "sourcebus" ? circuit["pu"] - circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmin
+        vma = bus == "sourcebus" ? circuit["pu"] + circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmax
 
         busDict["bus_i"] = n
         busDict["index"] = n
@@ -109,8 +109,8 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool=false, 
         busDict["vm"] = PMs.MultiPhaseVector(parse_array(vm, nodes, nphases))
         busDict["va"] = PMs.MultiPhaseVector(parse_array([rad2deg(2*pi/nphases*(i-1))+ph1_ang for i in 1:nphases], nodes, nphases))
 
-        busDict["vmin"] = PMs.MultiPhaseVector(parse_array(vmin, nodes, nphases))
-        busDict["vmax"] = PMs.MultiPhaseVector(parse_array(vmax, nodes, nphases))
+        busDict["vmin"] = PMs.MultiPhaseVector(parse_array(vmi, nodes, nphases))
+        busDict["vmax"] = PMs.MultiPhaseVector(parse_array(vma, nodes, nphases))
 
         busDict["base_kv"] = tppm_data["basekv"]
 
@@ -406,6 +406,11 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             merge!(line, linecode)
 
+            if haskey(line, "basefreq") && line["basefreq"] != tppm_data["basefreq"]
+                line["freq"] = deepcopy(line["basefreq"])
+                line["basefreq"] = deepcopy(tppm_data["basefreq"])
+            end
+
             defaults = createLine(line["bus1"], line["bus2"], line["name"]; to_sym_keys(line)...)
 
             bf, nodes = parse_busname(defaults["bus1"])
@@ -422,23 +427,23 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict["length"] = defaults["length"]
 
-            rmatrix = parse_matrix(defaults["rmatrix"], nodes, nphases)
-            xmatrix = parse_matrix(defaults["xmatrix"], nodes, nphases)
+            rmatrix = parse_matrix(defaults["rmatrix"], nodes, nphases) * 3  # why?
+            xmatrix = parse_matrix(defaults["xmatrix"], nodes, nphases) * 3  # why?
             cmatrix = parse_matrix(defaults["cmatrix"], nodes, nphases)
-            Zbase = (tppm_data["basekv"] * 1e3)^2 / (tppm_data["baseMVA"] * 1e6)
+            Zbase = (tppm_data["basekv"] / sqrt(3))^2 * nphases / (tppm_data["baseMVA"])
 
-            branchDict["br_r"] = PMs.MultiPhaseMatrix(rmatrix * defaults["length"] / Zbase / tppm_data["baseMVA"])
-            branchDict["br_x"] = PMs.MultiPhaseMatrix(xmatrix * defaults["length"] / Zbase / tppm_data["baseMVA"])
+            branchDict["br_r"] = PMs.MultiPhaseMatrix(rmatrix * defaults["length"] / Zbase)
+            branchDict["br_x"] = PMs.MultiPhaseMatrix(xmatrix * defaults["length"] / Zbase)
 
             # CHECK: Do we need to reformulate to use a matrix instead of a vector for g, b?
-            branchDict["g_fr"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases) / tppm_data["baseMVA"])
-            branchDict["g_to"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases) / tppm_data["baseMVA"])
+            branchDict["g_fr"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
+            branchDict["g_to"] = PMs.MultiPhaseVector(parse_array(0.0, nodes, nphases))
 
             if !isdiag(cmatrix)
                 info(LOGGER, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`")
             end
-            branchDict["b_fr"] = PMs.MultiPhaseVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0) / tppm_data["baseMVA"] )
-            branchDict["b_to"] = PMs.MultiPhaseVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0) / tppm_data["baseMVA"] )
+            branchDict["b_fr"] = PMs.MultiPhaseVector(diag(Zbase * (2.0 * pi * defaults["freq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
+            branchDict["b_to"] = PMs.MultiPhaseVector(diag(Zbase * (2.0 * pi * defaults["freq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
 
             # TODO: pick a better value for emergamps
             branchDict["rate_a"] = PMs.MultiPhaseVector(parse_array(defaults["normamps"], nodes, nphases, NaN))
@@ -721,6 +726,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         tppm_data["name"] = defaults["name"]
         tppm_data["basekv"] = defaults["basekv"]
         tppm_data["baseMVA"] = defaults["basemva"]
+        tppm_data["basefreq"] = defaults["basefreq"]
         tppm_data["pu"] = defaults["pu"]
         tppm_data["phases"] = defaults["phases"]
     else
