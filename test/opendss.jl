@@ -97,7 +97,7 @@ TPPMs = ThreePhasePowerModels
         tppm = TPPMs.parse_file("../test/data/opendss/test2_master.dss")
 
         @test tppm["name"] == "test2"
-        @test length(tppm) == 16
+        @test length(tppm) == 17
         @test length(dss) == 12
 
         for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline"], [11, 4, 5, 15, 4, 0])
@@ -110,20 +110,20 @@ TPPMs = ThreePhasePowerModels
         end
 
         len = 0.013516796
-        rmatrix=TPPMs.parse_matrix(Float64, "[1.5000  |0.200000  1.50000  |0.250000  0.25000  2.00000  ]")
-        xmatrix=TPPMs.parse_matrix(Float64, "[1.0000  |0.500000  0.50000  |0.500000  0.50000  1.000000  ]")
+        rmatrix=TPPMs.parse_matrix(Float64, "[1.5000  |0.200000  1.50000  |0.250000  0.25000  2.00000  ]") * 3
+        xmatrix=TPPMs.parse_matrix(Float64, "[1.0000  |0.500000  0.50000  |0.500000  0.50000  1.000000  ]") * 3
         cmatrix = TPPMs.parse_matrix(Float64, "[8.0000  |-2.00000  9.000000  |-1.75000  -2.50000  8.00000  ]")
 
-        @test all(isapprox.(tppm["branch"]["3"]["br_r"].values, rmatrix * len / tppm["basekv"]^2; atol=1e-6))
-        @test all(isapprox.(tppm["branch"]["3"]["br_x"].values, xmatrix * len / tppm["basekv"]^2; atol=1e-6))
-        @test all(isapprox.(tppm["branch"]["3"]["b_fr"].values, diag(tppm["basekv"]^2 / tppm["baseMVA"]^2 * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0; atol=1e-6))
+        @test all(isapprox.(tppm["branch"]["3"]["br_r"].values, rmatrix * len / tppm["basekv"]^2 * tppm["baseMVA"]; atol=1e-6))
+        @test all(isapprox.(tppm["branch"]["3"]["br_x"].values, xmatrix * len / tppm["basekv"]^2 * tppm["baseMVA"]; atol=1e-6))
+        @test all(isapprox.(tppm["branch"]["3"]["b_fr"].values, diag(tppm["basekv"]^2 / tppm["baseMVA"] * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0; atol=1e-6))
 
         for i in 6:7
-            @test all(isapprox.(tppm["branch"]["$i"]["b_fr"].values, (3.4 * 2.0 + 1.6) / 3.0 * (tppm["basekv"]^2 / tppm["baseMVA"]^2 * 2.0 * pi * 60.0 / 1e9) / 2.0; atol=1e-6))
+            @test all(isapprox.(tppm["branch"]["$i"]["b_fr"].values, (3.4 * 2.0 + 1.6) / 3.0 * (tppm["basekv"]^2 / tppm["baseMVA"] * 2.0 * pi * 60.0 / 1e9) / 2.0; atol=1e-6))
         end
 
-        @test all(isapprox.(tppm["branch"]["1"]["br_r"].values, diagm(fill(2.1004e-10, 3)); atol=1e-12))
-        @test all(isapprox.(tppm["branch"]["1"]["br_x"].values, diagm(fill(2.1004e-9, 3)); atol=1e-12))
+        @test all(isapprox.(tppm["branch"]["1"]["br_r"].values, diagm(fill(6.3012e-8, 3)); atol=1e-12))
+        @test all(isapprox.(tppm["branch"]["1"]["br_x"].values, diagm(fill(6.3012e-7, 3)); atol=1e-12))
 
         for k in ["qd", "pd"]
             @test all(isapprox.(tppm["load"]["4"][k].values, tppm["load"]["2"][k].values; atol=1e-12))
@@ -162,6 +162,23 @@ TPPMs = ThreePhasePowerModels
         @test length(tppm2["bus"]) == 4
     end
 
+    @testset "2-bus diagonal" begin
+        tppm = TPPMs.parse_file("../test/data/opendss/case2_diag.dss")
+        @testset "OPF" begin
+            @testset "ACP" begin
+                sol = TPPMs.run_tp_opf(tppm, PMs.ACPPowerModel, ipopt_solver)
+
+                @test sol["status"] == :LocalOptimal
+
+                @test all(isapprox.(sol["solution"]["bus"]["2"]["vm"].values, 0.984377; atol=1e-4))
+                @test all(isapprox.(sol["solution"]["bus"]["2"]["va"].values, [2 * pi / tppm["phases"] * (ph - 1) - deg2rad(0.79) for ph in 1:tppm["phases"]]; atol=deg2rad(0.2)))
+
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.018209; atol=1e-5)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.000208979; atol=1e-5)
+            end
+        end
+    end
+
     @testset "3-bus balanced" begin
         tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced.dss")
         @testset "OPF" begin
@@ -170,13 +187,13 @@ TPPMs = ThreePhasePowerModels
 
                 @test sol["status"] == :LocalOptimal
 
-                for bus in values(sol["solution"]["bus"])
-                    @test all(isapprox.(bus["va"].values, [2 * pi / tppm["phases"] * (ph - 1) for ph in 1:tppm["phases"]]; atol=2e-2))
-                    @test all(isapprox.(bus["vm"].values, 0.9959; atol=5e-1))
+                for (bus, va, vm) in zip(["1", "2", "3"], [0.0, deg2rad(-0.08), deg2rad(-0.17)], [0.9959, 0.986559, 0.97572])
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, [2 * pi / tppm["phases"] * (ph - 1) + va for ph in 1:tppm["phases"]]; atol=deg2rad(0.2)))
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-3))
                 end
 
-                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183456; atol=1e-3)
-                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00923328; atol=1e-3)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183456; atol=1e-5)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00923328; atol=1e-4)
             end
             @testset "SOC" begin
                 sol = TPPMs.run_tp_opf(tppm, PMs.SOCWRPowerModel, ipopt_solver)
@@ -187,28 +204,29 @@ TPPMs = ThreePhasePowerModels
                 sol = TPPMs.run_tp_opf_bf(tppm, PMs.SOCBFPowerModel, ipopt_solver)
 
                 @test sol["status"] == :LocalOptimal
-                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183456; atol=1e-3)
-                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00923328; atol=1e-3)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183456; atol=2e-3)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00923328; atol=2e-3)
             end
         end
     end
 
     @testset "3-bus unbalanced" begin
-    tppm = TPPMs.parse_file("../test/data/opendss/case3_unbalanced.dss")
-
+        tppm = TPPMs.parse_file("../test/data/opendss/case3_unbalanced.dss")
         @testset "OPF" begin
             @testset "ACP" begin
                 sol = TPPMs.run_tp_opf(tppm, PMs.ACPPowerModel, ipopt_solver)
 
                 @test sol["status"] == :LocalOptimal
 
-                for bus in values(sol["solution"]["bus"])
-                    @test all(isapprox.(bus["va"].values, [2 * pi / tppm["phases"] * (ph - 1) for ph in 1:tppm["phases"]]; atol=2e-2))
-                    @test all(isapprox.(bus["vm"].values, 0.9959; atol=5e-1))
+                for (bus, va, vm) in zip(["1", "2", "3"],
+                                         [0.0, deg2rad.([-0.30, 0.09, -0.17]), deg2rad.([-0.65, 0.20, -0.36])],
+                                         [0.9959, [0.980269, 0.986645, 0.989161], [0.962159, 0.975897, 0.981341]])
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, [2 * pi / tppm["phases"] * (ph - 1) for ph in 1:tppm["phases"]] + va; atol=deg2rad(0.2)))
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=2e-3))
                 end
 
-                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214835; atol=1e-3)
-                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00932693; atol=1e-3)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214835; atol=1e-5)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00932693; atol=1e-4)
             end
             @testset "SOC" begin
                 sol = TPPMs.run_tp_opf(tppm, PMs.SOCWRPowerModel, ipopt_solver)
@@ -219,8 +237,8 @@ TPPMs = ThreePhasePowerModels
                 sol = TPPMs.run_tp_opf_bf(tppm, PMs.SOCBFPowerModel, ipopt_solver)
 
                 @test sol["status"] == :LocalOptimal
-                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214835; atol=1e-3)
-                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00932693; atol=1e-3)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214835; atol=2e-3)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00932693; atol=2e-3)
             end
         end
     end
