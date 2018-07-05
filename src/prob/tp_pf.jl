@@ -48,7 +48,7 @@ function post_tp_pf(pm::GenericPowerModel)
         end
 
         for (i,bus) in ref(pm, :bus)
-            PMs.constraint_kcl_shunt(pm, i)
+            PMs.constraint_kcl_shunt(pm, i, ph=h)
 
             # PV Bus Constraints
             if length(ref(pm, :bus_gens, i)) > 0 && !(i in ids(pm,:ref_buses))
