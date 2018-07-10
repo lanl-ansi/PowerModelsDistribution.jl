@@ -48,14 +48,22 @@ end
 
 
 "do nothing, no way to represent this in these variables"
-function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i) where T <: PMs.AbstractWForms
+function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i, varef) where T <: PMs.AbstractWForms
+end
+
+function constraint_tp_voltage_magnitude_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i, vmref) where T <: PMs.AbstractWForms
+    w = var(pm, n, h, :w, i)
+    @constraint(pm.model, w == vmref^2)
 end
 
 
 "Creates phase angle constraints at reference buses"
-function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i) where T <: PMs.AbstractPForms
+function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i, varef) where T <: PMs.AbstractPForms
     va = var(pm, n, h, :va, i)
-    nphases = length(PMs.phase_ids(pm))
+    @constraint(pm.model, va == varef)
+end
 
-    @constraint(pm.model, va == 2 * pi / nphases * (h - 1))
+function constraint_tp_voltage_magnitude_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i, vmref) where T <: PMs.AbstractPForms
+    vm = var(pm, n, h, :vm, i)
+    @constraint(pm.model, vm == vmref)
 end

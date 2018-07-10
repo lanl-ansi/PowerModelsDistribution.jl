@@ -87,7 +87,17 @@ end
 
 ""
 function constraint_tp_theta_ref(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, ph::Int=pm.cph)
-    constraint_tp_theta_ref(pm, nw, ph, i)
+    bus = ref(pm, nw, :bus, i)
+    varef = bus["va"][ph]
+    constraint_tp_theta_ref(pm, nw, ph, i, varef)
+end
+
+
+""
+function constraint_tp_voltage_magnitude_ref(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, ph::Int=pm.cph)
+    bus = ref(pm, nw, :bus, i)
+    vmref = bus["vm"][ph]
+    constraint_tp_voltage_magnitude_ref(pm, nw, ph, i, vmref)
 end
 
 

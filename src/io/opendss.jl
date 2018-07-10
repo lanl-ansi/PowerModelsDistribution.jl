@@ -107,7 +107,7 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool=false, 
         busDict["bus_type"] = bus == "sourcebus" ? 3 : 1
 
         busDict["vm"] = PMs.MultiPhaseVector(parse_array(vm, nodes, nphases))
-        busDict["va"] = PMs.MultiPhaseVector(parse_array([rad2deg(2*pi/nphases*(i-1))+ph1_ang for i in 1:nphases], nodes, nphases))
+        busDict["va"] = PMs.MultiPhaseVector(parse_array([wrapto180(rad2deg(2*pi/nphases*(1-i)))+ph1_ang for i in 1:nphases], nodes, nphases))
 
         busDict["vmin"] = PMs.MultiPhaseVector(parse_array(vmi, nodes, nphases))
         busDict["vmax"] = PMs.MultiPhaseVector(parse_array(vma, nodes, nphases))

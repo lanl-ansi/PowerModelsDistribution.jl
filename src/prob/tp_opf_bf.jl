@@ -32,6 +32,7 @@ function post_tp_opf_bf(pm::GenericPowerModel)
     for h in PMs.phase_ids(pm)
         for i in ids(pm, :ref_buses)
             constraint_tp_theta_ref(pm, i, ph=h)
+            constraint_tp_voltage_magnitude_ref(pm, i, ph=h)
         end
 
         for i in ids(pm, :bus)
