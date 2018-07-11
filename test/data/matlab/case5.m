@@ -1,6 +1,6 @@
 % NESTA v0.6.0, transformers removed
 % used in tests of,
-% - three phase creation with make_multiphase
+% - three phase creation with make_multiconductor
 
 function mpc = nesta_case5_pjm
 mpc.version = '2';
