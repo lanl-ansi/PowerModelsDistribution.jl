@@ -20,16 +20,16 @@ function create_starbus(tppm_data::Dict, transformer::Dict)::Dict
 
     base = convert(Int, 10^ceil(log10(abs(PMs.find_max_bus_id(tppm_data)))))
     name, nodes = parse_busname(transformer["buses"][1])
-    phases = tppm_data["conductors"]
+    nconductors = tppm_data["conductors"]
     starbus_id = find_bus(name, tppm_data) + base
 
     starbus["bus_i"] = starbus_id
     starbus["base_kv"] = 1.0
-    starbus["vmin"] = PMs.MultiConductorVector(parse_array(0.9, nodes, phases))
-    starbus["vmax"] = PMs.MultiConductorVector(parse_array(1.1, nodes, phases))
+    starbus["vmin"] = PMs.MultiConductorVector(parse_array(0.9, nodes, nconductors))
+    starbus["vmax"] = PMs.MultiConductorVector(parse_array(1.1, nodes, nconductors))
     starbus["name"] = "$(transformer["name"]) starbus"
-    starbus["vm"] = PMs.MultiConductorVector(parse_array(1.0, nodes, phases))
-    starbus["va"] = PMs.MultiConductorVector(parse_array(0.0, nodes, phases))
+    starbus["vm"] = PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors))
+    starbus["va"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
     starbus["bus_type"] = 1
     starbus["index"] = starbus_id
 
