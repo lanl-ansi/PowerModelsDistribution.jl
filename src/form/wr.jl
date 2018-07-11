@@ -9,19 +9,19 @@ end
 
 
 ""
-function constraint_tp_voltage(pm::GenericPowerModel{T}, n::Int, h::Int) where T <: PMs.AbstractWRForm
+function constraint_tp_voltage(pm::GenericPowerModel{T}, n::Int, c::Int) where T <: PMs.AbstractWRForm
     w  = var(pm, n,  :w)
     wr = var(pm, n, :wr)
     wi = var(pm, n, :wi)
 
-    for g in h:length(PMs.conductor_ids(pm))
+    for d in c:length(PMs.conductor_ids(pm))
         for (i,j) in ids(pm, n, :buspairs)
-            InfrastructureModels.relaxation_complex_product(pm.model, w[(i,g)], w[(j,h)], wr[(i,j,h,g)], wi[(i,j,h,g)])
+            InfrastructureModels.relaxation_complex_product(pm.model, w[(i,d)], w[(j,c)], wr[(i,j,c,d)], wi[(i,j,c,d)])
         end
 
-        if g != h
+        if d != c
             for i in ids(pm, n, :bus)
-                InfrastructureModels.relaxation_complex_product(pm.model, w[(i,g)], w[(i,h)], wr[(i,i,h,g)], wi[(i,i,h,g)])
+                InfrastructureModels.relaxation_complex_product(pm.model, w[(i,d)], w[(i,c)], wr[(i,i,c,d)], wi[(i,i,c,d)])
             end
         end
     end
@@ -36,23 +36,23 @@ p[f_idx] ==        g/tm*w_fr[i] + (-g*tr+b*ti)/tm*(wr[i]) + (-b*tr-g*ti)/tm*(wi[
 q[f_idx] == -(b+c/2)/tm*w_fr[i] - (-b*tr-g*ti)/tm*(wr[i]) + (-g*tr+b*ti)/tm*(wi[i])
 ```
 """
-function constraint_ohms_tp_yt_from_on_off(pm::GenericPowerModel{T}, n::Int, h::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm, vad_min, vad_max) where T <: PMs.AbstractWRForm
-    p_fr = var(pm, n, h, :p, f_idx)
-    q_fr = var(pm, n, h, :q, f_idx)
+function constraint_ohms_tp_yt_from_on_off(pm::GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm, vad_min, vad_max) where T <: PMs.AbstractWRForm
+    p_fr = var(pm, n, c, :p, f_idx)
+    q_fr = var(pm, n, c, :q, f_idx)
     w    = var(pm, n, :w)
     wr   = var(pm, n, :wr)
     wi   = var(pm, n, :wi)
 
-    @constraint(pm.model, p_fr ==  ( g_fr[h]+g[h,h]) * w[(f_bus, h)] +
-                                sum( g[h,i] * wr[(f_bus, f_bus, h, i)] +
-                                     b[h,i] * wi[(f_bus, f_bus, h, i)] for i in PMs.conductor_ids(pm) if i != h) +
-                                sum(-g[h,i] * wr[(f_bus, t_bus, h, i)] +
-                                    -b[h,i] * wi[(f_bus, t_bus, h, i)] for i in PMs.conductor_ids(pm)) )
-    @constraint(pm.model, q_fr == -( b_fr[h]+b[h,h]) * w[(f_bus, h)] -
-                                sum( b[h,i] * wr[(f_bus, f_bus, h, i)] -
-                                     g[h,i] * wi[(f_bus, f_bus, h, i)] for i in PMs.conductor_ids(pm) if i != h) -
-                                sum(-b[h,i] * wr[(f_bus, t_bus, h, i)] +
-                                     g[h,i] * wi[(f_bus, t_bus, h, i)] for i in PMs.conductor_ids(pm)) )
+    @constraint(pm.model, p_fr ==  ( g_fr[c]+g[c,c]) * w[(f_bus, c)] +
+                                sum( g[c,i] * wr[(f_bus, f_bus, c, i)] +
+                                     b[c,i] * wi[(f_bus, f_bus, c, i)] for i in PMs.conductor_ids(pm) if i != c) +
+                                sum(-g[c,i] * wr[(f_bus, t_bus, c, i)] +
+                                    -b[c,i] * wi[(f_bus, t_bus, c, i)] for i in PMs.conductor_ids(pm)) )
+    @constraint(pm.model, q_fr == -( b_fr[c]+b[c,c]) * w[(f_bus, c)] -
+                                sum( b[c,i] * wr[(f_bus, f_bus, c, i)] -
+                                     g[c,i] * wi[(f_bus, f_bus, c, i)] for i in PMs.conductor_ids(pm) if i != c) -
+                                sum(-b[c,i] * wr[(f_bus, t_bus, c, i)] +
+                                     g[c,i] * wi[(f_bus, t_bus, c, i)] for i in PMs.conductor_ids(pm)) )
 end
 
 """
@@ -63,21 +63,21 @@ p[t_idx] ==        g*w_to[i] + (-g*tr-b*ti)/tm*(wr[i]) + (-b*tr+g*ti)/tm*(-wi[i]
 q[t_idx] == -(b+c/2)*w_to[i] - (-b*tr+g*ti)/tm*(wr[i]) + (-g*tr-b*ti)/tm*(-wi[i])
 ```
 """
-function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel{T}, n::Int, h::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max) where T <: PMs.AbstractWRForm
-    p_to = var(pm, n, h, :p, t_idx)
-    q_to = var(pm, n, h, :q, t_idx)
+function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max) where T <: PMs.AbstractWRForm
+    p_to = var(pm, n, c, :p, t_idx)
+    q_to = var(pm, n, c, :q, t_idx)
     w    = var(pm, n, :w)
     wr   = var(pm, n, :wr)
     wi   = var(pm, n, :wi)
 
-    @constraint(pm.model, p_to ==  ( g_to[h]+g[h,h]) * w[(t_bus, h)] +
-                                sum( g[h,i] * wr[(t_bus, t_bus, h, i)] +
-                                     b[h,i] *-wi[(t_bus, t_bus, h, i)] for i in PMs.conductor_ids(pm) if i != h) +
-                                sum(-g[h,i] * wr[(f_bus, t_bus, h, i)] +
-                                    -b[h,i] *-wi[(f_bus, t_bus, h, i)] for i in PMs.conductor_ids(pm)) )
-    @constraint(pm.model, q_to == -( b_to[h]+b[h,h]) * w[(t_bus, h)] -
-                                sum( b[h,i] * wr[(t_bus, t_bus, h, i)] -
-                                     g[h,i] *-wi[(t_bus, t_bus, h, i)] for i in PMs.conductor_ids(pm) if i != h) -
-                                sum(-b[h,i] * wr[(f_bus, t_bus, h, i)] +
-                                     g[h,i] *-wi[(f_bus, t_bus, h, i)] for i in PMs.conductor_ids(pm)) )
+    @constraint(pm.model, p_to ==  ( g_to[c]+g[c,c]) * w[(t_bus, c)] +
+                                sum( g[c,i] * wr[(t_bus, t_bus, c, i)] +
+                                     b[c,i] *-wi[(t_bus, t_bus, c, i)] for i in PMs.conductor_ids(pm) if i != c) +
+                                sum(-g[c,i] * wr[(f_bus, t_bus, c, i)] +
+                                    -b[c,i] *-wi[(f_bus, t_bus, c, i)] for i in PMs.conductor_ids(pm)) )
+    @constraint(pm.model, q_to == -( b_to[c]+b[c,c]) * w[(t_bus, c)] -
+                                sum( b[c,i] * wr[(t_bus, t_bus, c, i)] -
+                                     g[c,i] *-wi[(t_bus, t_bus, c, i)] for i in PMs.conductor_ids(pm) if i != c) -
+                                sum(-b[c,i] * wr[(f_bus, t_bus, c, i)] +
+                                     g[c,i] *-wi[(f_bus, t_bus, c, i)] for i in PMs.conductor_ids(pm)) )
 end

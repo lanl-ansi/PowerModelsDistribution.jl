@@ -57,8 +57,8 @@ function constraint_ohms_tp_yt_from_on_off(pm::GenericPowerModel, i::Int; nw::In
     b_fr = branch["b_fr"]
     tm = branch["tap"]
 
-    vad_min = [ref(pm, nw, :off_angmin, j) for j in PMs.conductor_ids(pm)]
-    vad_max = [ref(pm, nw, :off_angmax, j) for j in PMs.conductor_ids(pm)]
+    vad_min = [ref(pm, nw, :off_angmin, c) for c in PMs.conductor_ids(pm)]
+    vad_max = [ref(pm, nw, :off_angmax, c) for c in PMs.conductor_ids(pm)]
 
     constraint_ohms_tp_yt_from_on_off(pm, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm, vad_min, vad_max)
 end
@@ -78,8 +78,8 @@ function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel, i::Int; nw::Int=
     b_to = branch["b_to"]
     tm = branch["tap"]
 
-    vad_min = [ref(pm, nw, :off_angmin, j) for j in PMs.conductor_ids(pm)]
-    vad_max = [ref(pm, nw, :off_angmax, j) for j in PMs.conductor_ids(pm)]
+    vad_min = [ref(pm, nw, :off_angmin, c) for c in PMs.conductor_ids(pm)]
+    vad_max = [ref(pm, nw, :off_angmax, c) for c in PMs.conductor_ids(pm)]
 
     constraint_ohms_tp_yt_to_on_off(pm, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max)
 end
