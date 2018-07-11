@@ -55,7 +55,7 @@ end
 "Creates phase angle constraints at reference buses"
 function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, c::Int, i) where T <: PMs.AbstractPForms
     va = var(pm, n, c, :va, i)
-    num_conductors = length(PMs.conductor_ids(pm))
+    nconductors = length(PMs.conductor_ids(pm))
 
-    @constraint(pm.model, va == 2 * pi / num_conductors * (c - 1))
+    @constraint(pm.model, va == 2 * pi / nconductors * (c - 1))
 end
