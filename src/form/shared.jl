@@ -13,14 +13,14 @@ function constraint_ohms_tp_yt_from(pm::GenericPowerModel{T}, n::Int, h::Int, f_
 
     @constraint(pm.model, p_fr ==  ( g_fr[h]+g[h,h]) * w[(f_bus, h)] +
                                 sum( g[h,i] * wr[(f_bus, f_bus, h, i)] +
-                                     b[h,i] * wi[(f_bus, f_bus, h, i)] for i in PMs.phase_ids(pm) if i != h) +
+                                     b[h,i] * wi[(f_bus, f_bus, h, i)] for i in PMs.conductor_ids(pm) if i != h) +
                                 sum(-g[h,i] * wr[(f_bus, t_bus, h, i)] +
-                                    -b[h,i] * wi[(f_bus, t_bus, h, i)] for i in PMs.phase_ids(pm)) )
+                                    -b[h,i] * wi[(f_bus, t_bus, h, i)] for i in PMs.conductor_ids(pm)) )
     @constraint(pm.model, q_fr == -( b_fr[h]+b[h,h]) * w[(f_bus, h)] -
                                 sum( b[h,i] * wr[(f_bus, f_bus, h, i)] -
-                                     g[h,i] * wi[(f_bus, f_bus, h, i)] for i in PMs.phase_ids(pm) if i != h) -
+                                     g[h,i] * wi[(f_bus, f_bus, h, i)] for i in PMs.conductor_ids(pm) if i != h) -
                                 sum(-b[h,i] * wr[(f_bus, t_bus, h, i)] +
-                                     g[h,i] * wi[(f_bus, t_bus, h, i)] for i in PMs.phase_ids(pm)) )
+                                     g[h,i] * wi[(f_bus, t_bus, h, i)] for i in PMs.conductor_ids(pm)) )
 end
 
 
@@ -36,14 +36,14 @@ function constraint_ohms_tp_yt_to(pm::GenericPowerModel{T}, n::Int, h::Int, f_bu
 
     @constraint(pm.model, p_to ==  ( g_to[h]+g[h,h]) * w[(t_bus, h)] +
                                 sum( g[h,i] * wr[(t_bus, t_bus, h, i)] +
-                                     b[h,i] *-wi[(t_bus, t_bus, h, i)] for i in PMs.phase_ids(pm) if i != h) +
+                                     b[h,i] *-wi[(t_bus, t_bus, h, i)] for i in PMs.conductor_ids(pm) if i != h) +
                                 sum(-g[h,i] * wr[(f_bus, t_bus, h, i)] +
-                                    -b[h,i] *-wi[(f_bus, t_bus, h, i)] for i in PMs.phase_ids(pm)) )
+                                    -b[h,i] *-wi[(f_bus, t_bus, h, i)] for i in PMs.conductor_ids(pm)) )
     @constraint(pm.model, q_to == -( b_to[h]+b[h,h]) * w[(t_bus, h)] -
                                 sum( b[h,i] * wr[(t_bus, t_bus, h, i)] -
-                                     g[h,i] *-wi[(t_bus, t_bus, h, i)] for i in PMs.phase_ids(pm) if i != h) -
+                                     g[h,i] *-wi[(t_bus, t_bus, h, i)] for i in PMs.conductor_ids(pm) if i != h) -
                                 sum(-b[h,i] * wr[(f_bus, t_bus, h, i)] +
-                                     g[h,i] *-wi[(f_bus, t_bus, h, i)] for i in PMs.phase_ids(pm)) )
+                                     g[h,i] *-wi[(f_bus, t_bus, h, i)] for i in PMs.conductor_ids(pm)) )
 end
 
 
@@ -55,7 +55,7 @@ end
 "Creates phase angle constraints at reference buses"
 function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i) where T <: PMs.AbstractPForms
     va = var(pm, n, h, :va, i)
-    nphases = length(PMs.phase_ids(pm))
+    num_conductors = length(PMs.conductor_ids(pm))
 
-    @constraint(pm.model, va == 2 * pi / nphases * (h - 1))
+    @constraint(pm.model, va == 2 * pi / num_conductors * (h - 1))
 end

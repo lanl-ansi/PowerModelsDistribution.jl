@@ -268,7 +268,7 @@ function matlab_to_tppm(ml_data::Dict{String,Any})
 
     ml_data["multinetwork"] = false
     ml_data["per_unit"] = false
-    ml_data["phases"] = 3
+    ml_data["conductors"] = 3
     ml_data["dcline"] = []
 
     # required default values
@@ -341,12 +341,12 @@ end
 "convert raw branch data into arrays"
 function ml2pm_branch(data::Dict{String,Any})
     for branch in data["branch"]
-        branch["rate_a"] = PMs.MultiPhaseVector(branch["rate_a"], 3)
-        branch["rate_b"] = PMs.MultiPhaseVector(branch["rate_b"], 3)
-        branch["rate_c"] = PMs.MultiPhaseVector(branch["rate_c"], 3)
+        branch["rate_a"] = PMs.MultiConductorVector(branch["rate_a"], 3)
+        branch["rate_b"] = PMs.MultiConductorVector(branch["rate_b"], 3)
+        branch["rate_c"] = PMs.MultiConductorVector(branch["rate_c"], 3)
 
-        branch["angmin"] = PMs.MultiPhaseVector(branch["angmin"], 3)
-        branch["angmax"] = PMs.MultiPhaseVector(branch["angmax"], 3)
+        branch["angmin"] = PMs.MultiConductorVector(branch["angmin"], 3)
+        branch["angmax"] = PMs.MultiConductorVector(branch["angmax"], 3)
 
         set_default(branch, "g_fr_1", 0.0)
         set_default(branch, "b_fr_1", 0.0)
@@ -365,20 +365,20 @@ function ml2pm_branch(data::Dict{String,Any})
         make_mpv!(branch, "g_fr", ["g_fr_1", "g_fr_2", "g_fr_3"])
         make_mpv!(branch, "g_to", ["g_to_1", "g_to_2", "g_to_3"])
 
-        branch["b_fr"] = PMs.MultiPhaseVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
-        branch["b_to"] = PMs.MultiPhaseVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
+        branch["b_fr"] = PMs.MultiConductorVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
+        branch["b_to"] = PMs.MultiConductorVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
 
-        branch["tap"] = PMs.MultiPhaseVector(1.0, 3)
-        branch["shift"] = PMs.MultiPhaseVector(0.0, 3)
-        branch["transformer"] = PMs.MultiPhaseVector(false, 3)
+        branch["tap"] = PMs.MultiConductorVector(1.0, 3)
+        branch["shift"] = PMs.MultiConductorVector(0.0, 3)
+        branch["transformer"] = PMs.MultiConductorVector(false, 3)
 
-        branch["br_r"] = PMs.MultiPhaseMatrix([
+        branch["br_r"] = PMs.MultiConductorMatrix([
             branch["r_11"]     branch["r_12"]/2.0 branch["r_13"]/2.0;
             branch["r_12"]/2.0 branch["r_22"]     branch["r_23"]/2.0;
             branch["r_13"]/2.0 branch["r_23"]/2.0 branch["r_33"];
         ])
 
-        branch["br_x"] = PMs.MultiPhaseMatrix([
+        branch["br_x"] = PMs.MultiConductorMatrix([
             branch["x_11"]     branch["x_12"]/2.0 branch["x_13"]/2.0;
             branch["x_12"]/2.0 branch["x_22"]     branch["x_23"]/2.0;
             branch["x_13"]/2.0 branch["x_23"]/2.0 branch["x_33"];
@@ -395,7 +395,7 @@ end
 "collects several from_keys in an array and sets it to the to_key, removes from_keys"
 function make_mpv!(data::Dict{String,Any}, to_key::String, from_keys::Array{String,1})
     assert(!(haskey(data, to_key)))
-    data[to_key] = PMs.MultiPhaseVector([data[k] for k in from_keys])
+    data[to_key] = PMs.MultiConductorVector([data[k] for k in from_keys])
     for k in from_keys
         delete!(data, k)
     end

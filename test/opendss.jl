@@ -1,5 +1,4 @@
 TESTLOG = getlogger(PowerModels)
-TPPMs = ThreePhasePowerModels
 
 @testset "opendss parser" begin
     @testset "reverse polish notation" begin
@@ -136,7 +135,7 @@ TPPMs = ThreePhasePowerModels
 
         for k in keys(tppm["gen"]["3"])
             if !(k in ["gen_bus", "index", "name"])
-                if isa(tppm["gen"]["3"][k], PMs.MultiPhaseValue)
+                if isa(tppm["gen"]["3"][k], PMs.MultiConductorValue)
                     @test all(isapprox.(tppm["gen"]["4"][k].values, tppm["gen"]["3"][k].values; atol=1e-12))
                 else
                     @test all(isapprox.(tppm["gen"]["4"][k], tppm["gen"]["3"][k]; atol=1e-12))
@@ -146,7 +145,7 @@ TPPMs = ThreePhasePowerModels
 
         for k in keys(tppm["branch"]["15"])
             if !(k in ["f_bus", "t_bus", "index", "name", "linecode"])
-                if isa(tppm["branch"]["15"][k], PMs.MultiPhaseValue)
+                if isa(tppm["branch"]["15"][k], PMs.MultiConductorValue)
                     @test all(isapprox.(tppm["branch"]["14"][k].values, tppm["branch"]["15"][k].values; atol=1e-12))
                     @test all(isapprox.(tppm["branch"]["12"][k].values, tppm["branch"]["13"][k].values; atol=1e-12))
                     @test all(isapprox.(tppm["branch"]["3"][k].values, tppm["branch"]["8"][k].values; atol=1e-12))
@@ -171,7 +170,7 @@ TPPMs = ThreePhasePowerModels
                 @test sol["status"] == :LocalOptimal
 
                 @test all(isapprox.(sol["solution"]["bus"]["2"]["vm"].values, 0.984377; atol=1e-4))
-                @test all(isapprox.(sol["solution"]["bus"]["2"]["va"].values, [2 * pi / tppm["phases"] * (ph - 1) - deg2rad(0.79) for ph in 1:tppm["phases"]]; atol=deg2rad(0.2)))
+                @test all(isapprox.(sol["solution"]["bus"]["2"]["va"].values, [2 * pi / tppm["conductors"] * (c - 1) - deg2rad(0.79) for c in 1:tppm["conductors"]]; atol=deg2rad(0.2)))
 
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.018209; atol=1e-5)
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.000208979; atol=1e-5)
@@ -188,7 +187,7 @@ TPPMs = ThreePhasePowerModels
                 @test sol["status"] == :LocalOptimal
 
                 for (bus, va, vm) in zip(["1", "2", "3"], [0.0, deg2rad(-0.08), deg2rad(-0.17)], [0.9959, 0.986559, 0.97572])
-                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, [2 * pi / tppm["phases"] * (ph - 1) + va for ph in 1:tppm["phases"]]; atol=deg2rad(0.2)))
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, [2 * pi / tppm["conductors"] * (c - 1) + va for c in 1:tppm["conductors"]]; atol=deg2rad(0.2)))
                     @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-3))
                 end
 
@@ -221,7 +220,7 @@ TPPMs = ThreePhasePowerModels
                 for (bus, va, vm) in zip(["1", "2", "3"],
                                          [0.0, deg2rad.([-0.30, 0.09, -0.17]), deg2rad.([-0.65, 0.20, -0.36])],
                                          [0.9959, [0.980269, 0.986645, 0.989161], [0.962159, 0.975897, 0.981341]])
-                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, [2 * pi / tppm["phases"] * (ph - 1) for ph in 1:tppm["phases"]] + va; atol=deg2rad(0.2)))
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, [2 * pi / tppm["conductors"] * (c - 1) for c in 1:tppm["conductors"]] + va; atol=deg2rad(0.2)))
                     @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=2e-3))
                 end
 
