@@ -1,7 +1,7 @@
 @testset "test soc distflow opf_bf" begin
     @testset "3-bus case" begin
         mp_data = PowerModels.parse_file("../../PowerModels/test/data/matpower/case3.m")
-        PowerModels.make_multiphase(mp_data, 3)
+        PowerModels.make_multiconductor(mp_data, 3)
         result = run_tp_opf_bf(mp_data, PMs.SOCBFPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
@@ -9,7 +9,7 @@
     end
     @testset "5-bus case" begin
         mp_data = PowerModels.parse_file("../test/data/matlab/case5.m")
-        PowerModels.make_multiphase(mp_data, 3)
+        PowerModels.make_multiconductor(mp_data, 3)
         result = run_tp_opf_bf(mp_data, PMs.SOCBFPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal

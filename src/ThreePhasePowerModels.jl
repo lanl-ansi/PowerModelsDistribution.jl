@@ -10,7 +10,6 @@ using Memento
 const PMs = PowerModels
 
 const LOGGER = getlogger(PowerModels)
-setlevel!(LOGGER, "info")
 
 include("core/constraint_template.jl")
 include("core/ref.jl")

@@ -1,4 +1,6 @@
 using ThreePhasePowerModels
+const TPPMs = ThreePhasePowerModels
+
 using Memento
 
 using PowerModels
