@@ -57,5 +57,5 @@ function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, c::Int, d) wh
     va = var(pm, n, c, :va, d)
     nconductors = length(PMs.conductor_ids(pm))
 
-    @constraint(pm.model, va == 2 * pi / nconductors * (c - 1))
+    @constraint(pm.model, va == wraptopi(2 * pi / nconductors * (1-c)))
 end

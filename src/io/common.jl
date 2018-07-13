@@ -46,3 +46,11 @@ function check_network_data(data::Dict{String,Any})
     # PMs.check_voltage_setpoints(data)
     PMs.check_cost_functions(data)
 end
+
+function wrapto180(degrees)
+    return degrees - 360*floor.((degrees + 180)/360)
+end
+
+function wraptopi(radians)
+    return radians - 2*pi*floor.((radians+pi)/(2*pi))
+end
