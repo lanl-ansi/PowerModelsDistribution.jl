@@ -134,6 +134,23 @@ end
             @test isapprox(result["solution"]["gen"]["1"]["qg"][3], 0.0357746; atol = 1e-3)
         end
     end
+    @testset "5-bus coupled meshed infeasible case" begin
+        @testset "ac case" begin
+            mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_c_m_b.m")
+            result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
+
+            @test result["status"] == :LocalInfeasible
+        end
+        #=
+        # omit due to large number of terminal warnings
+        @testset "soc case" begin
+            mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_c_m_b.m")
+            result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
+
+            @test result["status"] == :LocalInfeasible
+        end
+        =#
+    end
     @testset "5-bus coupled radial no shunt case" begin
         mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_c_r_a.m")
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)

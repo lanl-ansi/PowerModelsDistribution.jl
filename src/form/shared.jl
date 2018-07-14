@@ -1,6 +1,24 @@
 # Three-phase specific constraints
 
 
+""
+function constraint_kcl_shunt_slack(pm::GenericPowerModel{T}, n::Int, c::Int, i, bus_arcs, bus_arcs_dc, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: PMs.AbstractWForms
+    w    = var(pm, n, c, :w, i)
+    p_slack = var(pm, n, c, :p_slack, i)
+    q_slack = var(pm, n, c, :q_slack, i)
+    pg   = var(pm, n, c, :pg)
+    qg   = var(pm, n, c, :qg)
+    p    = var(pm, n, c, :p)
+    q    = var(pm, n, c, :q)
+    p_dc = var(pm, n, c, :p_dc)
+    q_dc = var(pm, n, c, :q_dc)
+
+    @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*w + p_slack)
+    @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*w + q_slack)
+end
+
+
+
 """
 Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
 """
