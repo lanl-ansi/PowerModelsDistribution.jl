@@ -6,8 +6,15 @@
         @test isapprox(result["objective"], 0.0; atol=1e-2)
     end
 
-    @testset "5-bus coupled meshed network" begin
+    @testset "5-bus coupled meshed network (a)" begin
         result = run_ac_tp_pf("../test/data/matlab/case5_c_m_a.m", ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.0; atol=1e-2)
+    end
+
+    @testset "5-bus coupled meshed network (b)" begin
+        result = run_ac_tp_pf("../test/data/matlab/case5_c_m_b.m", ipopt_solver)
 
         @test result["status"] == :LocalOptimal
         @test isapprox(result["objective"], 0.0; atol=1e-2)
@@ -63,5 +70,15 @@
 
         @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214835; atol=1e-5)
         @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00932693; atol=1e-4)
+    end
+end
+
+
+@testset "test soc pf" begin
+    @testset "5-bus coupled meshed network (b)" begin
+        result = run_tp_pf("../test/data/matlab/case5_c_m_b.m", PMs.SOCWRPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.0; atol=1e-2)
     end
 end

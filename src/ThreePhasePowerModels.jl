@@ -14,6 +14,7 @@ const LOGGER = getlogger(PowerModels)
 include("core/constraint_template.jl")
 include("core/ref.jl")
 include("core/variable.jl")
+include("core/objective.jl")
 
 include("form/acp.jl")
 include("form/dcp.jl")
@@ -31,5 +32,6 @@ include("prob/tp_opf.jl")
 include("prob/tp_opf_bf.jl")
 include("prob/tp_ots.jl")
 include("prob/tp_pf.jl")
+include("prob/tp_debug.jl")
 
 end

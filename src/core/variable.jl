@@ -1,3 +1,28 @@
+"generates variables for both `active` and `reactive` slack at each bus"
+function variable_bus_power_slack(pm::GenericPowerModel; kwargs...)
+    variable_active_bus_power_slack(pm; kwargs...)
+    variable_reactive_bus_power_slack(pm; kwargs...)
+end
+
+""
+function variable_active_bus_power_slack(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    var(pm, nw, cnd)[:p_slack] = @variable(pm.model,
+        [i in ids(pm, nw, :bus)], basename="$(nw)_$(cnd)_p_slack",
+        start = PMs.getval(ref(pm, nw, :bus, i), "p_slack_start", cnd)
+    )
+end
+
+""
+function variable_reactive_bus_power_slack(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    var(pm, nw, cnd)[:q_slack] = @variable(pm.model,
+        [i in ids(pm, nw, :bus)], basename="$(nw)_$(cnd)_q_slack",
+        start = PMs.getval(ref(pm, nw, :bus, i), "q_slack_start", cnd)
+    )
+end
+
+
+
+
 "variable: `w[i] >= 0` for `i` in `bus`es"
 function variable_tp_voltage_magnitude_sqr(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
     bus_cnd = [(i, c) for i in ids(pm, nw, :bus) for c in PMs.conductor_ids(pm)]
