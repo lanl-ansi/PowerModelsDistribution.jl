@@ -909,6 +909,85 @@ function createTransformer(name::AbstractString; kwargs...)
 end
 
 
+
+"""
+    createPVSystem(bus1, name; kwargs...)
+
+Creates a Dict{String,Any} containing all of the expected properties for a
+PVSystem. See OpenDSS document
+https://github.com/tshort/OpenDSS/blob/master/Doc/OpenDSS%20PVSystem%20Model.doc
+for valid fields and ways to specify the different properties.
+"""
+function createPVSystem(bus1, name::AbstractString; kwargs...)
+    kwargs = Dict{Symbol,Any}(kwargs)
+    kv = get(kwargs, :kv, 12.47)
+    kw = get(kwargs, :kw, 10.0)
+    pf = get(kwargs, :pf, 0.88)
+    kvar = get(kwargs, :kvar, 5.0)
+    kva = get(kwargs, :kva, kw / pf)
+
+
+    if haskey(kwargs, :kw) && haskey(kwargs, :pf)
+        kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
+        kva = abs(kw) + kvar^2
+    elseif haskey(kwargs, :kw) && haskey(kwargs, :kvar)
+        kva = abs(kw) + kvar^2
+        if kva > 0.0
+            pf = kw / kva
+            if kvar != 0.0
+                pf *= sign(kw * kvar)
+            end
+        end
+    elseif haskey(kwargs, :kva) && haskey(kwargs, :pf)
+        kw = kva * abs(pf)
+        kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
+    elseif haskey(kwargs, :pf) && kwargs[:pf] != 0.88
+            kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
+            kva = abs(kw) + kvar^2
+    end
+
+    if haskey(kwargs, :like)
+        warn(LOGGER, "\"like\" keyword on pvsystem $name is not supported.")
+    end
+
+    pvsystem = Dict{String,Any}("name" => name,
+                            "phases" => get(kwargs, :phases, 3),
+                            "bus1" => bus1,
+                            "kv" => kv,
+                            "kw" => kw,
+                            "pf" => pf,
+                            "model" => get(kwargs, :model, 1),
+                            "yearly" => get(kwargs, :yearly, get(kwargs, :daily, [1.0, 1.0])),
+                            "daily" => get(kwargs, :daily, [1.0, 1.0]),
+                            "duty" => get(kwargs, :duty, ""),
+                            "irradiance" => get(kwargs, :irradiance, 0),
+                            "pmpp" => get(kwargs, :pmpp, 0),
+                            "temperature" => get(kwargs, :temperature, 0),
+                            "conn" => get(kwargs, :conn, "wye"),
+                            "kvar" => kvar,
+                            "kva" => kva,
+                            "%cutin" => get(kwargs, :cutin, 0), #TODO not sure what to do with this
+                            "%cutout" => get(kwargs, :cutout, 0), #TODO not sure what to do with this
+                            "effcurve" => get(kwargs, :effcurve, ""),
+                            "p-tcurve" => get(kwargs, :ptcurve, ""),
+                            "%r" => get(kwargs, :r, 0),
+                            "%x" => get(kwargs, :x, 0.50),
+                            "vminpu" => get(kwargs, :vminpu, 0.9),
+                            "vmaxpu" => get(kwargs, :vmaxpu, 1.1),
+                            "tyearly" => get(kwargs, :tyearly, 0),
+                            "tduty" => get(kwargs, :tduty, 0),
+                            "class" => get(kwargs, :class, 0),
+                            "usermodel" => get(kwargs, :usermodel, ""),
+                            "userdata" => get(kwargs, :userdata, ""),
+                            "debugtrace" => get(kwargs, :debugtrace, "no"),
+                            "spectrum" => get(kwargs, :spectrum, "defaultpvsystem"),
+                            # Inherited Properties
+                            "basefreq" => get(kwargs, :basefreq, 60.0),
+                            "enabled" => get(kwargs, :enabled, true)
+                           )
+    return pvsystem
+end
+
 "Returns a Dict{String,Type} for the desired component `comp`, giving all of the expected data types"
 function get_dtypes(comp::AbstractString)::Dict
     default_dicts = Dict{String,Any}("line" => createLine("", "", ""),
@@ -919,6 +998,7 @@ function get_dtypes(comp::AbstractString)::Dict
                                      "transformer" => createTransformer(""),
                                      "linecode" => createLinecode(""),
                                      "circuit" => createVSource("", ""),
+                                     "pvsystem" => createPVSystem("", ""),
                                      "vsource" => createVSource("", "", "")
                                     )
 

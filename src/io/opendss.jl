@@ -640,6 +640,42 @@ end
 
 
 """
+    dss2tppm_pvsystem!(tppm_data, dss_data)
+
+Adds PowerModels-style pvsystems to `tppm_data` from `dss_data`.
+"""
+function dss2tppm_pvsystem!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
+    if !haskey(tppm_data, "pvsystem")
+        tppm_data["pvsystem"] = []
+    end
+
+    if haskey(dss_data, "pvsystem")
+        for pvsystem in dss_data["pvsystem"]
+            defaults = createPVSystem(pvsystem["bus1"], pvsystem["name"]; to_sym_keys(pvsystem)...)
+
+            pvsystemDict = Dict{String,Any}()
+
+            nconductors = tppm_data["conductors"]
+            name, nodes = parse_busname(defaults["bus1"])
+
+            pvsystemDict["name"] = defaults["name"]
+            pvsystemDict["pv_bus"] = find_bus(name, tppm_data)
+            pvsystemDict["p"] = PMs.MultiConductorVector(parse_array(defaults["kw"] / 1e3, nodes, nconductors))
+            pvsystemDict["q"] = PMs.MultiConductorVector(parse_array(defaults["kvar"] / 1e3, nodes, nconductors))
+            pvsystemDict["status"] = convert(Int, defaults["enabled"])
+
+            pvsystemDict["index"] = length(tppm_data["pvsystem"]) + 1
+
+            used = ["phases", "bus1", "name"]
+            PMs.import_remaining!(pvsystemDict, defaults, import_all; exclude=used)
+
+            push!(tppm_data["pvsystem"], pvsystemDict)
+        end
+    end
+end
+
+
+"""
     where_is_comp(data, comp_id)
 
 Finds existing component of id `comp_id` in array of `data` and returns index.
@@ -702,8 +738,10 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
 
     check_duplicate_components!(dss_data)
 
+    # parse_dss_with_dtypes!(dss_data, ["line", "linecode", "load", "generator", "capacitor",
+    #                                   "reactor", "circuit", "transformer"])
     parse_dss_with_dtypes!(dss_data, ["line", "linecode", "load", "generator", "capacitor",
-                                      "reactor", "circuit", "transformer"])
+                                      "reactor", "circuit", "transformer", "pvsystem"])
 
     if haskey(dss_data, "options")
         condensed_opts = [Dict{String,Any}()]
@@ -739,6 +777,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     dss2tppm_branch!(tppm_data, dss_data, import_all)
     dss2tppm_transformer!(tppm_data, dss_data, import_all)
     dss2tppm_gen!(tppm_data, dss_data, import_all)
+    dss2tppm_pvsystem!(tppm_data, dss_data, import_all)
 
     tppm_data["dcline"] = []
 
