@@ -5,7 +5,7 @@
         result = run_tp_opf_bf(mp_data, PMs.SOCBFPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 45829.6 ; atol = 1e0)
+        @test isapprox(result["objective"], 45500.2 ; atol = 1e0)
     end
     @testset "5-bus case" begin
         mp_data = PowerModels.parse_file("../test/data/matlab/case5.m")
@@ -13,20 +13,20 @@
         result = run_tp_opf_bf(mp_data, PMs.SOCBFPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 45040; atol = 1e0)
+        @test isapprox(result["objective"], 44880; atol = 1e0)
     end
     @testset "5-bus independent radial identical case" begin
         mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_a.m")
         result = run_tp_opf_bf(mp_data, PMs.SOCBFPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 55063.7; atol = 1e-1)
+        @test isapprox(result["objective"], 54870.0; atol = 1e-1)
     end
     @testset "5-bus independent radial different case" begin
         mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m")
         result = run_tp_opf_bf(mp_data, PMs.SOCBFPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 55572.1; atol = 1e-1)
+        @test isapprox(result["objective"], 55307.7; atol = 1e-1)
     end
 end
