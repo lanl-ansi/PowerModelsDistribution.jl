@@ -43,7 +43,7 @@ function post_tp_opf_bf(pm::GenericPowerModel)
 
             constraint_tp_voltage_magnitude_difference(pm, i, cnd=c)
 
-            PMs.constraint_branch_current(pm, i, cnd=c)
+            constraint_tp_branch_current(pm, i, cnd=c)
 
             PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
 

@@ -37,3 +37,27 @@ function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, n:
     @constraint(pm.model, w_to == w_fr - 2*sum((r[c,d]*cos(rot[d])-x[c,d]*sin(rot[d]))*p_fr[d] +
                                                (r[c,d]*sin(rot[d])+x[c,d]*cos(rot[d]))*q_fr[d] for d in PMs.conductor_ids(pm)) )
 end
+
+
+""
+function constraint_tp_branch_current(pm::GenericPowerModel{T}, n::Int, c::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr, tm) where T <: PMs.AbstractBFForm
+    cm = var(pm, n, c, :cm, i)
+    #linearised branchflow
+    @constraint(pm.model, cm == 0)
+end
+
+
+"""
+Defines branch flow model power flow equations
+"""
+function constraint_tp_flow_losses(pm::GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm) where T <: PMs.AbstractBFForm
+    p_fr = var(pm, n, c, :p, f_idx)
+    q_fr = var(pm, n, c, :q, f_idx)
+    p_to = var(pm, n, c, :p, t_idx)
+    q_to = var(pm, n, c, :q, t_idx)
+    w_fr = var(pm, n, c, :w, f_bus)
+    w_to = var(pm, n, c, :w, t_bus)
+
+    @constraint(pm.model, p_fr + p_to ==  g_sh_fr*w_fr +  g_sh_to*w_to)
+    @constraint(pm.model, q_fr + q_to == -b_sh_fr*w_fr + -b_sh_to*w_to)
+end
