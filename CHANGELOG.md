@@ -2,7 +2,7 @@ ThreePhasePowerModels.jl Change Log
 ===================================
 
 ### Staged
-- nothing
+- Updated SOCBFPowerModel to more closely match published refrence model
 
 ### v0.1.0
 - Initial release
