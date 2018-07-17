@@ -25,7 +25,7 @@ function post_tp_opf_bf(pm::GenericPowerModel)
         variable_tp_voltage(pm, cnd=c)
         PMs.variable_generation(pm, cnd=c)
         PMs.variable_branch_flow(pm, cnd=c)
-        PMs.variable_branch_current(pm, cnd=c)
+        variable_tp_branch_current(pm, cnd=c)
         PMs.variable_dcline_flow(pm, cnd=c)
     end
 
@@ -39,11 +39,11 @@ function post_tp_opf_bf(pm::GenericPowerModel)
         end
 
         for i in ids(pm, :branch)
-            PMs.constraint_flow_losses(pm, i, cnd=c)
+            constraint_tp_flow_losses(pm, i, cnd=c)
 
             constraint_tp_voltage_magnitude_difference(pm, i, cnd=c)
 
-            PMs.constraint_branch_current(pm, i, cnd=c)
+            constraint_tp_branch_current(pm, i, cnd=c)
 
             PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
 
