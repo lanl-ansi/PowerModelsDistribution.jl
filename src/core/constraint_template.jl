@@ -134,6 +134,22 @@ function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel, i::In
     constraint_tp_voltage_magnitude_difference(pm, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
 end
 
+function constraint_tp_voltage_magnitude_difference_mat(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    branch = ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+    t_idx = (i, t_bus, f_bus)
+
+    r = branch["br_r"].values #TODO avoid MultiPhaseMatrix issue #313
+    x = branch["br_x"].values
+    g_sh_fr = diagm(branch["g_fr"]).values
+    b_sh_fr = diagm(branch["b_fr"]).values
+    tm = branch["tap"]
+
+    constraint_tp_voltage_magnitude_difference_mat(pm, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
+end
+
 
 function constraint_tp_branch_current(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     branch = ref(pm, nw, :branch, i)
@@ -145,6 +161,18 @@ function constraint_tp_branch_current(pm::GenericPowerModel, i::Int; nw::Int=pm.
     g_sh_fr = branch["g_fr"][cnd]
     b_sh_fr = branch["b_fr"][cnd]
     constraint_tp_branch_current(pm, nw, cnd, i, f_bus, f_idx, g_sh_fr, b_sh_fr, tm)
+end
+
+function constraint_tp_branch_current_mat(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    branch = ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+
+    g_sh_fr = diagm(branch["g_fr"]).values #TODO avoid MultiPhaseMatrix issue #313
+    b_sh_fr = diagm(branch["b_fr"]).values
+
+    constraint_tp_branch_current_mat(pm, nw, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
 end
 
 
@@ -164,4 +192,71 @@ function constraint_tp_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw
     b_sh_to = branch["b_to"][cnd]
 
     constraint_tp_flow_losses(pm::GenericPowerModel, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
+end
+
+function constraint_tp_flow_losses_mat(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    branch = ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+    t_idx = (i, t_bus, f_bus)
+
+    r = branch["br_r"].values #TODO avoid MultiPhaseMatrix issue #313
+    x = branch["br_x"].values
+    g_sh_fr = diagm(branch["g_fr"]).values
+    g_sh_to = diagm(branch["g_to"]).values
+    b_sh_fr = diagm(branch["b_fr"]).values
+    b_sh_to = diagm(branch["b_to"]).values
+
+    constraint_tp_flow_losses_mat(pm::GenericPowerModel, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
+end
+
+
+function constraint_tp_valid_inquality_branch(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    branch = ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+    t_idx = (i, t_bus, f_bus)
+
+    constraint_tp_valid_inquality_branch(pm, nw, i, f_idx, t_idx)
+end
+
+function constraint_tp_valid_inquality_bus(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    bus = ref(pm, nw, :bus, i)
+    constraint_tp_valid_inquality_bus(pm, nw, i, bus["vmax"])
+end
+
+""
+function constraint_tp_kcl_shunt(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    if !haskey(PMs.con(pm, nw, cnd), :kcl_p)
+        PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,ConstraintRef}()
+    end
+    if !haskey(PMs.con(pm, nw, cnd), :kcl_q)
+        PMs.con(pm, nw, cnd)[:kcl_q] = Dict{Int,ConstraintRef}()
+    end
+
+    bus = ref(pm, nw, :bus, i)
+    bus_arcs = ref(pm, nw, :bus_arcs, i)
+    bus_arcs_dc = ref(pm, nw, :bus_arcs_dc, i)
+    bus_gens = ref(pm, nw, :bus_gens, i)
+    bus_loads = ref(pm, nw, :bus_loads, i)
+    bus_shunts = ref(pm, nw, :bus_shunts, i)
+
+    bus_pd = Dict(k => ref(pm, nw, :load, k, "pd", cnd) for k in bus_loads)
+    bus_qd = Dict(k => ref(pm, nw, :load, k, "qd", cnd) for k in bus_loads)
+
+    bus_gs = Dict(k => ref(pm, nw, :shunt, k, "gs", cnd) for k in bus_shunts)
+    bus_bs = Dict(k => ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
+
+    constraint_tp_kcl_shunt(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
+end
+
+""
+# function constraint_tp_voltage_ref(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw, ph::Int=pm.cph) where T <: AbstractUBFForm
+function constraint_tp_voltage_ref(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    bus = ref(pm, nw, :bus, i)
+    vmref = bus["vm"].values
+    varef = bus["va"].values
+    constraint_tp_voltage_ref(pm, nw, i, vmref, varef)
 end

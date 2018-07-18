@@ -38,8 +38,8 @@ function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, n:
     rot = roll([wraptopi(2*pi/np*(1-d)) for d in PMs.conductor_ids(pm)], c-1)
 
     #KVL over the line:
-    @constraint(pm.model, w_to == w_fr - 2*sum((r[c,d]*cos(rot[d])-x[c,d]*sin(rot[d]))*p_fr[d] +
-                                               (r[c,d]*sin(rot[d])+x[c,d]*cos(rot[d]))*q_fr[d] for d in PMs.conductor_ids(pm)) )
+    @constraint(pm.model, w_to == w_fr - 2*sum((r[c,d]*cos(rot[d])-x[c,d]*sin(rot[d]))*(p_fr[d] - g_sh_fr[c]*(w_fr/tm[c]^2)) +
+                                               (r[c,d]*sin(rot[d])+x[c,d]*cos(rot[d]))*(q_fr[d] + b_sh_fr[c]*(w_fr/tm[c]^2)) for d in PMs.conductor_ids(pm)) )
 end
 
 ""
