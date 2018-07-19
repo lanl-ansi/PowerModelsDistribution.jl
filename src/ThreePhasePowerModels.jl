@@ -13,7 +13,7 @@ const LOGGER = getlogger(PowerModels)
 
 include("core/ref.jl")
 include("core/variable.jl")
-include("core/multiphase.jl")
+include("core/multiconductor.jl")
 include("core/objective.jl")
 
 include("form/acp.jl")
