@@ -1,4 +1,4 @@
-# These problem formulations are used to debug Three Phase datasets 
+# These problem formulations are used to debug Three Phase datasets
 # that do not converge using the standard formulations
 
 export run_tp_opf_pbs, run_tp_pf_pbs
@@ -28,16 +28,21 @@ function post_tp_opf_pbs(pm::GenericPowerModel)
 
     for c in PMs.conductor_ids(pm)
         constraint_tp_voltage(pm, cnd=c)
+    end
 
-        for i in ids(pm, :ref_buses)
-            constraint_tp_theta_ref(pm, i, cnd=c)
-        end
+    for i in ids(pm, :ref_buses)
+        constraint_tp_theta_ref(pm, i)
+    end
 
-        for i in ids(pm, :bus)
+    for i in ids(pm, :bus)
+        for c in PMs.conductor_ids(pm)
             constraint_kcl_shunt_slack(pm, i, cnd=c)
         end
+    end
 
-        for i in ids(pm, :branch)
+    for i in ids(pm, :branch)
+        for c in PMs.conductor_ids(pm)
+
             constraint_ohms_tp_yt_from(pm, i, cnd=c)
             constraint_ohms_tp_yt_to(pm, i, cnd=c)
 
@@ -46,12 +51,13 @@ function post_tp_opf_pbs(pm::GenericPowerModel)
             PMs.constraint_thermal_limit_from(pm, i, cnd=c)
             PMs.constraint_thermal_limit_to(pm, i, cnd=c)
         end
+    end
 
-        for i in ids(pm, :dcline)
+    for i in ids(pm, :dcline)
+        for c in PMs.conductor_ids(pm)
             PMs.constraint_dcline(pm, i, cnd=c)
         end
     end
-
     objective_min_bus_power_slack(pm)
 end
 
@@ -81,14 +87,19 @@ function post_tp_pf_pbs(pm::GenericPowerModel)
 
     for c in PMs.conductor_ids(pm)
         constraint_tp_voltage(pm, cnd=c)
+    end
 
-        for (i,bus) in ref(pm, :ref_buses)
+    for (i,bus) in ref(pm, :ref_buses)
+        constraint_tp_theta_ref(pm, i)
+        for c in PMs.conductor_ids(pm)
+
             @assert bus["bus_type"] == 3
-            constraint_tp_theta_ref(pm, i, cnd=c)
             PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
         end
+    end
 
-        for (i,bus) in ref(pm, :bus)
+    for (i,bus) in ref(pm, :bus)
+        for c in PMs.conductor_ids(pm)
             constraint_kcl_shunt_slack(pm, i, cnd=c)
 
             # PV Bus Constraints
@@ -102,13 +113,17 @@ function post_tp_pf_pbs(pm::GenericPowerModel)
                 end
             end
         end
+    end
 
-        for i in ids(pm, :branch)
+    for i in ids(pm, :branch)
+        for c in PMs.conductor_ids(pm)
             constraint_ohms_tp_yt_from(pm, i, cnd=c)
             constraint_ohms_tp_yt_to(pm, i, cnd=c)
         end
+    end
 
-        for (i,dcline) in ref(pm, :dcline)
+    for (i,dcline) in ref(pm, :dcline)
+        for c in PMs.conductor_ids(pm)
             PMs.constraint_active_dcline_setpoint(pm, i, cnd=c)
 
             f_bus = ref(pm, :bus)[dcline["f_bus"]]
@@ -121,9 +136,7 @@ function post_tp_pf_pbs(pm::GenericPowerModel)
                 PMs.constraint_voltage_magnitude_setpoint(pm, t_bus["index"], cnd=c)
             end
         end
-
     end
-
     objective_min_bus_power_slack(pm)
 end
 
@@ -142,5 +155,3 @@ function add_bus_slack_setpoint(sol, pm::GenericPowerModel)
     PMs.add_setpoint(sol, pm, "bus", "p_slack", :p_slack)
     PMs.add_setpoint(sol, pm, "bus", "q_slack", :q_slack)
 end
-
-
