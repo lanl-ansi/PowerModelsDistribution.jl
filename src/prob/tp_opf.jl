@@ -30,16 +30,19 @@ function post_tp_opf(pm::GenericPowerModel)
 
     for c in PMs.conductor_ids(pm)
         constraint_tp_voltage(pm, cnd=c)
+    end
+    for i in ids(pm, :ref_buses)
+        constraint_tp_theta_ref(pm, i)
+    end
 
-        for i in ids(pm, :ref_buses)
-            constraint_tp_theta_ref(pm, i, cnd=c)
-        end
-
-        for i in ids(pm, :bus)
+    for i in ids(pm, :bus)
+        for c in PMs.conductor_ids(pm)
             PMs.constraint_kcl_shunt(pm, i, cnd=c)
         end
+    end
 
-        for i in ids(pm, :branch)
+    for i in ids(pm, :branch)
+        for c in PMs.conductor_ids(pm)
             constraint_ohms_tp_yt_from(pm, i, cnd=c)
             constraint_ohms_tp_yt_to(pm, i, cnd=c)
 
@@ -48,8 +51,10 @@ function post_tp_opf(pm::GenericPowerModel)
             PMs.constraint_thermal_limit_from(pm, i, cnd=c)
             PMs.constraint_thermal_limit_to(pm, i, cnd=c)
         end
+    end
 
-        for i in ids(pm, :dcline)
+    for i in ids(pm, :dcline)
+        for c in PMs.conductor_ids(pm)
             PMs.constraint_dcline(pm, i, cnd=c)
         end
     end

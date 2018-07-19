@@ -11,7 +11,6 @@ const PMs = PowerModels
 
 const LOGGER = getlogger(PowerModels)
 
-include("core/constraint_template.jl")
 include("core/ref.jl")
 include("core/variable.jl")
 include("core/multiphase.jl")
@@ -27,6 +26,7 @@ include("form/bf_mat_sdp.jl")
 include("form/shared.jl")
 include("form/wr.jl")
 
+include("core/constraint_template.jl")
 include("core/relaxation_scheme.jl")
 
 
@@ -38,7 +38,6 @@ include("io/opendss.jl")
 
 include("prob/tp_opf.jl")
 include("prob/tp_opf_bf.jl")
-include("prob/tp_opf_bf_mat.jl")
 include("prob/tp_ots.jl")
 include("prob/tp_pf.jl")
 include("prob/tp_debug.jl")

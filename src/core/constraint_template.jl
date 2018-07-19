@@ -110,14 +110,11 @@ function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel, i::Int; nw::Int=
 end
 
 
-""
-function constraint_tp_theta_ref(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    constraint_tp_theta_ref(pm, nw, cnd, i)
-end
+
 
 
 ""
-function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+function constraint_voltage_magnitude_difference(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -130,10 +127,10 @@ function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel, i::In
     b_sh_fr = branch["b_fr"]
     tm = branch["tap"]
 
-    constraint_tp_voltage_magnitude_difference(pm, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
+    constraint_voltage_magnitude_difference(pm, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
 end
 
-function constraint_tp_voltage_magnitude_difference_mat(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -146,11 +143,22 @@ function constraint_tp_voltage_magnitude_difference_mat(pm::GenericPowerModel, i
     b_sh_fr = diagm(branch["b_fr"].values)
     tm = branch["tap"].values
 
-    constraint_tp_voltage_magnitude_difference_mat(pm, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
+    constraint_tp_voltage_magnitude_difference(pm, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
 end
 
 
-function constraint_tp_branch_current(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+function constraint_voltage_angle_difference(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd) where T <:PowerModels.SOCBFForm
+        PMs.constraint_voltage_angle_difference(pm, i, nw=nw, cnd=cnd)
+end
+
+function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <:PowerModels.SOCBFForm
+    for cnd in PMs.conductor_ids(pm)
+        constraint_voltage_magnitude_difference(pm, i, nw=nw, cnd=cnd)
+    end
+end
+
+
+function constraint_branch_current(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -159,10 +167,10 @@ function constraint_tp_branch_current(pm::GenericPowerModel, i::Int; nw::Int=pm.
     tm = branch["tap"][cnd]
     g_sh_fr = branch["g_fr"][cnd]
     b_sh_fr = branch["b_fr"][cnd]
-    constraint_tp_branch_current(pm, nw, cnd, i, f_bus, f_idx, g_sh_fr, b_sh_fr, tm)
+    constraint_branch_current(pm, nw, cnd, i, f_bus, f_idx, g_sh_fr, b_sh_fr, tm)
 end
 
-function constraint_tp_branch_current_mat(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_tp_branch_current(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -171,11 +179,18 @@ function constraint_tp_branch_current_mat(pm::GenericPowerModel, i::Int; nw::Int
     g_sh_fr = diagm(branch["g_fr"].values)
     b_sh_fr = diagm(branch["b_fr"].values)
 
-    constraint_tp_branch_current_mat(pm, nw, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
+    constraint_tp_branch_current(pm, nw, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
 end
 
 
-function constraint_tp_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+function constraint_tp_branch_current(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    for cnd in PMs.conductor_ids(pm)
+        constraint_branch_current(pm, i, nw=nw, cnd=cnd)
+    end
+end
+
+
+function constraint_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -190,10 +205,10 @@ function constraint_tp_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw
     b_sh_fr = branch["b_fr"][cnd]
     b_sh_to = branch["b_to"][cnd]
 
-    constraint_tp_flow_losses(pm::GenericPowerModel, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
+    constraint_flow_losses(pm::GenericPowerModel, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
 end
 
-function constraint_tp_flow_losses_mat(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_tp_flow_losses(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -207,36 +222,43 @@ function constraint_tp_flow_losses_mat(pm::GenericPowerModel, i::Int; nw::Int=pm
     b_sh_fr = diagm(branch["b_fr"]).values
     b_sh_to = diagm(branch["b_to"]).values
 
-    constraint_tp_flow_losses_mat(pm::GenericPowerModel, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
+    constraint_tp_flow_losses(pm::GenericPowerModel, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
+end
+
+function constraint_tp_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    for cnd in PMs.conductor_ids(pm)
+        constraint_flow_losses(pm, i, nw=nw, cnd=cnd)
+    end
+end
+
+
+""
+function constraint_tp_kcl_shunt(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    for cnd in PMs.conductor_ids(pm)
+        constraint_kcl_shunt(pm, i, nw=nw, cnd=cnd)
+    end
 end
 
 ""
-function constraint_tp_kcl_shunt(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    if !haskey(PMs.con(pm, nw, cnd), :kcl_p)
-        PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,ConstraintRef}()
+function constraint_tp_kcl_shunt(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <:PowerModels.SOCBFForm
+    for cnd in PMs.conductor_ids(pm)
+        PMs.constraint_kcl_shunt(pm, i, nw=nw, cnd=cnd)
     end
-    if !haskey(PMs.con(pm, nw, cnd), :kcl_q)
-        PMs.con(pm, nw, cnd)[:kcl_q] = Dict{Int,ConstraintRef}()
+end
+
+# ""
+# function constraint_tp_theta_ref(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+#     constraint_tp_theta_ref(pm, nw, cnd, i)
+# end
+
+""
+function constraint_tp_theta_ref(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    for cnd in PMs.conductor_ids(pm)
+        constraint_theta_ref(pm, nw, cnd, i)
     end
-
-    bus = ref(pm, nw, :bus, i)
-    bus_arcs = ref(pm, nw, :bus_arcs, i)
-    bus_arcs_dc = ref(pm, nw, :bus_arcs_dc, i)
-    bus_gens = ref(pm, nw, :bus_gens, i)
-    bus_loads = ref(pm, nw, :bus_loads, i)
-    bus_shunts = ref(pm, nw, :bus_shunts, i)
-
-    bus_pd = Dict(k => ref(pm, nw, :load, k, "pd", cnd) for k in bus_loads)
-    bus_qd = Dict(k => ref(pm, nw, :load, k, "qd", cnd) for k in bus_loads)
-
-    bus_gs = Dict(k => ref(pm, nw, :shunt, k, "gs", cnd) for k in bus_shunts)
-    bus_bs = Dict(k => ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
-
-    constraint_tp_kcl_shunt(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
 end
 
 ""
-function constraint_tp_theta_ref_mat(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
-    bus = ref(pm, nw, :bus, i)
-    constraint_tp_theta_ref_mat(pm, nw, i)
+function constraint_tp_theta_ref(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
+    constraint_tp_theta_ref(pm, nw, i)
 end

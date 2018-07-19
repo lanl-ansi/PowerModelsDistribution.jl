@@ -17,7 +17,9 @@ end
 
 ""
 function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: PMs.AbstractBFForm
-    PMs.variable_voltage_magnitude_sqr(pm; kwargs...)
+    for cnd in PMs.conductor_ids(pm)
+        PMs.variable_voltage_magnitude_sqr(pm; cnd=cnd, kwargs...)
+    end
 end
 
 function variable_tp_branch_current(pm::GenericPowerModel{T}; kwargs...) where T <: PMs.AbstractBFForm
@@ -28,7 +30,7 @@ end
 """
 Defines voltage drop over a branch, linking from and to side voltage magnitude
 """
-function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: PMs.AbstractBFForm
+function constraint_voltage_magnitude_difference(pm::GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: PMs.AbstractBFForm
     p_fr = [var(pm, n, d, :p, f_idx) for d in PMs.conductor_ids(pm)]
     q_fr = [var(pm, n, d, :q, f_idx) for d in PMs.conductor_ids(pm)]
     w_fr = var(pm, n, c, :w, f_bus)
@@ -43,13 +45,13 @@ function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, n:
 end
 
 ""
-function constraint_tp_branch_current(pm::GenericPowerModel{T}, n::Int, c::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr, tm) where T <: PMs.AbstractBFForm
+function constraint_branch_current(pm::GenericPowerModel{T}, n::Int, c::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr, tm) where T <: PMs.AbstractBFForm
 end
 
 """
 Defines branch flow model power flow equations
 """
-function constraint_tp_flow_losses(pm::GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm) where T <: PMs.AbstractBFForm
+function constraint_flow_losses(pm::GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm) where T <: PMs.AbstractBFForm
     p_fr = var(pm, n, c, :p, f_idx)
     q_fr = var(pm, n, c, :q, f_idx)
     p_to = var(pm, n, c, :p, t_idx)

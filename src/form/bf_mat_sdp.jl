@@ -1,7 +1,7 @@
 """
 Defines relationship between branch (series) power flow, branch (series) current and node voltage magnitude
 """
-function constraint_tp_branch_current_mat(pm::GenericPowerModel{T}, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr) where T <: SDPUBFForm
+function constraint_tp_branch_current(pm::GenericPowerModel{T}, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr) where T <: SDPUBFForm
     p_fr = var(pm, n, :p_mat)[f_idx]
     q_fr = var(pm, n, :q_mat)[f_idx]
 
