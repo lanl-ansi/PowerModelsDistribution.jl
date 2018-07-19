@@ -2,7 +2,7 @@
 # Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. https://doi.org/10.1080/1055678031000148696
 function psd_to_soc(pm::GenericPowerModel{T}, mat) where T<:AbstractConicUBFForm
     assert(size(mat,1) == size(mat,2))
-    n_cond = 3
+    n_cond = size(mat,1)/4
     for i in 1:length(diag(mat))-1
         for j in i+1:length(diag(mat))
             if j!=i+2*n_cond # trivial constraints
@@ -16,7 +16,7 @@ end
 # Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. https://doi.org/10.1080/1055678031000148696
 function psd_to_soc(pm::GenericPowerModel{T}, mat) where T<:AbstractNLPUBFForm
     assert(size(mat,1) == size(mat,2))
-    n_cond = 3
+    n_cond = size(mat,1)/4
     for i in 1:length(diag(mat))-1
         for j in i+1:length(diag(mat))
             if j!=i+2*n_cond # trivial constraints
@@ -28,15 +28,15 @@ end
 
 # See section 4.3 in:
 #Fazel, M., Hindi, H., & Boyd, S. P. (2001). A rank minimization heuristic with application to minimum order system approximation. Proc. American Control Conf., 6(2), 4734–4739. https://doi.org/10.1109/ACC.2001.945730
-function psd_to_soc(mp, varreal, varimag)
-    assert(size(varreal) == size(varimag))
-    mat =
+function psd_to_soc(mp, matrixreal, matriximag)
+    assert(size(matrixreal) == size(matriximag))
+    matrix =
         [
-        varreal -varimag;
-        varimag varreal
+        matrixreal -matriximag;
+        matriximag matrixreal
         ]
 
-    psd_to_soc(mp, mat)
+    psd_to_soc(mp, matrix)
 end
 
 # convexification of complex power definition in indivual phases

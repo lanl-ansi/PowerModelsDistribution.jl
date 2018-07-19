@@ -21,19 +21,5 @@ function constraint_tp_branch_current_mat(pm::GenericPowerModel{T}, n::Int, i, f
     w_fr_im    q_s_fr    w_fr_re    p_s_fr;
     -q_s_fr'   ccm_im    p_s_fr'    ccm_re
     ] >=0)
-    @show "SDP ADDED"
-    # psd_to_soc_diag(pm, p_s_fr, q_s_fr, w_fr_re, ccm_re)
-end
 
-function constraint_tp_valid_inquality_branch(pm::GenericPowerModel{T}, n::Int, i, f_idx, t_idx) where  T <: SDPUBFForm
-    p_fr = var(pm, n, :p_mat)[f_idx]
-    p_to = var(pm, n, :p_mat)[t_idx]
-
-    @constraint(pm.model, trace(p_fr) + trace(p_to) >= 0)
-    #@constraint(pm.model, diag(p_fr)  + diag(p_to) .>= 0)
-end
-
-
-function constraint_tp_valid_inquality_bus(pm::GenericPowerModel{T}, n::Int, i, vmax) where  T <: SDPUBFForm
-    #not needed, line is lossless already
 end

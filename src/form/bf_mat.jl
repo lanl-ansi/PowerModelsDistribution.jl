@@ -10,29 +10,28 @@ abstract type AbstractNLPUBFForm <: PMs.AbstractPowerFormulation end
 ""
 abstract type AbstractConicUBFForm <: PMs.AbstractConicPowerFormulation end
 
+AbstractUBFForm = Union{AbstractNLPUBFForm, AbstractConicUBFForm}
 
-""
+"SDP BFM per Gan and Low 2014, PSCC"
+abstract type SDPUBFForm <: AbstractConicUBFForm end
+
+
+"SOC relaxation of SDPUBFForm per Kim, Kojima, & Yamashita 2003, cast as an NLP"
 abstract type SOCNLPUBFForm <: AbstractNLPUBFForm end
 
-""
+"SOC relaxation of SDPUBFForm per Kim, Kojima, & Yamashita 2003, cast as a SOC"
 abstract type SOCConicUBFForm <: AbstractConicUBFForm end
 
 SOCUBFForm = Union{SOCNLPUBFForm, SOCConicUBFForm}
 
 
-""
+"Simplified BFM per Gan and Low 2014, PSCC, using matrix variables for power, voltage and current"
 abstract type LPfullUBFForm <: AbstractNLPUBFForm end
 
-""
+"LinDist3Flow per Sankur et al 2016, using vector variables for power, voltage and current"
 abstract type LPdiagUBFForm <: AbstractNLPUBFForm end
 
 LPUBFForm = Union{LPfullUBFForm, LPdiagUBFForm}
-
-""
-abstract type SDPUBFForm <: AbstractConicUBFForm end
-
-AbstractUBFForm = Union{AbstractNLPUBFForm, AbstractConicUBFForm}
-
 
 ""
 const SDPUBFPowerModel = GenericPowerModel{SDPUBFForm}
@@ -69,8 +68,6 @@ const LPdiagUBFPowerModel = GenericPowerModel{LPdiagUBFForm}
 LPdiagUBFPowerModel(data::Dict{String,Any}; kwargs...) =
     GenericPowerModel(data, LPdiagUBFForm; kwargs...)
 
-
-
 function variable_branch_current(pm::GenericPowerModel{T}; kwargs...) where T <: AbstractUBFForm
     variable_tp_branch_series_current_prod_hermitian(pm; kwargs...)
 end
@@ -78,11 +75,6 @@ end
 function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: AbstractUBFForm
     variable_tp_voltage_prod_hermitian(pm; kwargs...)
 end
-
-"do nothing, no way to represent this in these variables"
-function constraint_tp_voltage_angle_ref(pm::GenericPowerModel{T}, n::Int, h::Int, i, varef) where T <: PMs.AbstractWForms
-end
-
 
 ""
 function variable_tp_voltage_prod_hermitian(pm::GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
@@ -349,18 +341,21 @@ function constraint_tp_flow_losses_mat(pm::GenericPowerModel{T}, n::Int, i, f_bu
 end
 
 ""
-function constraint_tp_voltage_ref(pm::GenericPowerModel{T}, n::Int, i, vmref, varef) where T <: AbstractUBFForm
-    vref = vmref.*exp.(im*varef)
+function constraint_tp_theta_ref_mat(pm::GenericPowerModel{T}, n::Int, i) where T <: AbstractUBFForm
+    nconductors = length(PMs.conductor_ids(pm))
 
     w_re = var(pm, n, :w_re)[i]
     w_im = var(pm, n, :w_im)[i]
 
-    wref_re = real(vref*vref')
-    wref_im = imag(vref*vref')
+    alpha = exp(-im*ThreePhasePowerModels.wraptopi(2 * pi / nconductors ))
+    beta = (alpha*ones(nconductors)).^(0:nconductors-1)
+    gamma = beta*beta'
 
-    @constraint(pm.model, diag(w_re)        .==        diag(wref_re))
-    @constraint(pm.model, mat2utrivec(w_re) .== mat2utrivec(wref_re))
-    @constraint(pm.model, mat2utrivec(w_im) .== mat2utrivec(wref_im))
+    w_re_ref = real(gamma).*w_re[1,1]
+    w_im_ref = imag(gamma).*w_re[1,1]
+    @constraint(pm.model, diag(w_re)[2:3]        .== diag(w_re_ref)[2:3]) # first equality is implied
+    @constraint(pm.model, mat2utrivec(w_re) .== mat2utrivec(w_re_ref))
+    @constraint(pm.model, mat2utrivec(w_im) .== mat2utrivec(w_im_ref))
 end
 
 """
@@ -375,13 +370,11 @@ function constraint_tp_kcl_shunt(pm::GenericPowerModel{T}, n::Int, c::Int, i::In
     q = var(pm, n, c, :q)
     pg = var(pm, n, c, :pg)
     qg = var(pm, n, c, :qg)
-    # p_dc = var(pm, n, h, :p_dc)
-    # q_dc = var(pm, n, h, :q_dc)
+    p_dc = var(pm, n, c, :p_dc)
+    q_dc = var(pm, n, c, :q_dc)
 
-    PMs.con(pm, n, c, :kcl_p)[i] = @constraint(pm.model, sum(p[a] for a in bus_arcs) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*w)
-    PMs.con(pm, n, c, :kcl_q)[i] = @constraint(pm.model, sum(q[a] for a in bus_arcs) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*w)
-    # PMs.con(pm, n, h, :kcl_p)[i] = @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*w)
-    # PMs.con(pm, n, h, :kcl_q)[i] = @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*w)
+    PMs.con(pm, n, c, :kcl_p)[i] = @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*w)
+    PMs.con(pm, n, c, :kcl_q)[i] = @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*w)
 end
 
 
@@ -417,51 +410,12 @@ function constraint_tp_voltage_magnitude_difference_mat(pm::GenericPowerModel{T}
 end
 
 
-
-
-"""
-Defines voltage drop over a branch, linking from and to side voltage
-"""
-function objective_min_losses(pm::GenericPowerModel{T}) where T <: AbstractUBFForm
-    from_idx = Dict()
-    to_idx = Dict()
-    for (n, nw_ref) in nws(pm)
-        from_idx[n] = Dict(arc[1] => arc for arc in nw_ref[:arcs_from])
-        to_idx[n] = Dict(arc[1] => arc for arc in nw_ref[:arcs_to])
-    end
-
-    return @objective(pm.model, Min,
-        sum(
-            sum(
-                sum(
-                    var(pm, n, c, :p, from_idx[n][i]) + var(pm, n, c, :p, to_idx[n][i])
-                for c in conductor_ids(pm, n))
-            for (i, arc) in nw_ref[:branch])
-        for (n, nw_ref) in nws(pm))
-    )
-end
-
-"""
-Defines voltage drop over a branch, linking from and to side voltage
-"""
-function objective_min_slack(pm::GenericPowerModel)
-    slackgen = 1
-    return @objective(pm.model, Min,
-        sum(
-            sum(
-                var(pm, n, c, :pg, 1)
-            for c in conductor_ids(pm, n))
-        for (n, nw_ref) in nws(pm))
-    )
-end
-
-
 ""
 function get_solution_tp(pm::GenericPowerModel, sol::Dict{String,Any})
     add_bus_voltage_setpoint(sol, pm)
     PMs.add_generator_power_setpoint(sol, pm)
     add_branch_flow_setpoint(sol, pm)
-    # add_dcline_flow_setpoint(sol, pm)
+    PMs.add_dcline_flow_setpoint(sol, pm)
 
     PMs.add_kcl_duals(sol, pm)
     PMs.add_sm_duals(sol, pm) # Adds the duals of the transmission lines' thermal limits.
