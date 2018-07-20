@@ -31,5 +31,5 @@ function constraint_tp_branch_current(pm::GenericPowerModel{T}, n::Int, i, f_bus
     p_to = var(pm, n, :p_mat)[t_idx]
     # total losses are positive when g_fr, g_to and r are positive
     # not guaranteed for individual phases though when matrix obtained through Kron's reduction
-    @constraint(pm.model, trace(p_fr) + trace(p_to) >= 0)
+    # @constraint(pm.model, trace(p_fr) + trace(p_to) >= 0)
 end

@@ -32,12 +32,12 @@ function post_tp_pf_bf(pm::GenericPowerModel)
     end
 
     # Constraints
-    for i in ids(pm, :ref_buses)
+    for (i,bus) in ref(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)
 
         for c in PMs.conductor_ids(pm)
             @assert bus["bus_type"] == 3
-            PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
+            # PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c) #TODO add back
         end
     end
 
