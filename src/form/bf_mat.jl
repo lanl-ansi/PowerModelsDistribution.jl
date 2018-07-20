@@ -81,20 +81,28 @@ function variable_tp_voltage_prod_hermitian(pm::GenericPowerModel{T}; n_cond::In
     n_diag_el = n_cond
     n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
     for c in 1:n_diag_el
-        PowerModels.variable_voltage_magnitude_sqr(pm, nw=nw, cnd=c)
+        PowerModels.variable_voltage_magnitude_sqr(pm, nw=nw, cnd=c, bounded=bounded)
     end
+
+    wmaxdict = Dict{Int64, Any}()
+    for i in ids(pm, nw, :bus)
+        wmax = ref(pm, nw, :bus, i, "vmax").values*ref(pm, nw, :bus, i, "vmax").values'
+        wmaxltri = ThreePhasePowerModels.mat2ltrivec(wmax)
+        wmaxdict[i] = wmaxltri
+    end
+
     for c in 1:n_lower_triangle_el
         if bounded
             var(pm, nw, c)[:wr] = @variable(pm.model,
                 [i in ids(pm, nw, :bus)], basename="$(nw)_$(c)_wr",
-                lowerbound = -ref(pm, nw, :bus, i, "vmax", c)^2,
-                upperbound =  ref(pm, nw, :bus, i, "vmax", c)^2,
+                lowerbound = -wmaxdict[i][c],
+                upperbound =  wmaxdict[i][c],
                 start = PMs.getval(ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
             var(pm, nw, c)[:wi] = @variable(pm.model,
                 [i in ids(pm, nw, :bus)], basename="$(nw)_$(c)_wi",
-                lowerbound = -ref(pm, nw, :bus, i, "vmax", c)^2,
-                upperbound =  ref(pm, nw, :bus, i, "vmax", c)^2,
+                lowerbound = -wmaxdict[i][c],
+                upperbound =  wmaxdict[i][c],
                 start = PMs.getval(ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
         else
@@ -128,24 +136,30 @@ end
 function variable_tp_branch_series_current_prod_hermitian(pm::GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
     branches = ref(pm, nw, :branch)
     buses = ref(pm, nw, :bus)
-    assert(n_cond<=5)
 
     n_diag_el = n_cond
     n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
 
-    cmax = Dict([(key, 0.0) for key in keys(branches)])
+    cmax = Dict([(key, zeros(n_cond)) for key in keys(branches)])
 
     for (key, branch) in branches
         bus_fr = buses[branch["f_bus"]]
         bus_to = buses[branch["t_bus"]]
 
-        vmin_fr = minimum(bus_fr["vmin"])
-        vmin_to = minimum(bus_fr["vmin"])
+        vmin_fr = bus_fr["vmin"].values
+        vmin_to = bus_to["vmin"].values
 
-        smax = maximum(branch["rate_a"])
+        vmax_fr = bus_fr["vmax"].values
+        vmax_to = bus_to["vmax"].values
 
-        M = 2
-        cmax[key] = M*smax/min(vmin_fr, vmin_to)
+        y_fr_mag = abs.(branch["g_fr"].values + im* branch["b_fr"].values)
+        y_to_mag = abs.(branch["g_to"].values + im* branch["b_to"].values)
+
+        smax = branch["rate_a"].values
+        cmaxfr = smax./vmin_fr + vmax_fr.*y_fr_mag
+        cmaxto = smax./vmin_to + vmax_to.*y_to_mag
+
+        cmax[key] = max.(cmaxfr, cmaxto)
     end
 
 
@@ -154,7 +168,7 @@ function variable_tp_branch_series_current_prod_hermitian(pm::GenericPowerModel{
             var(pm, nw, c)[:cm] = @variable(pm.model,
                 [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_cm",
                 lowerbound = 0,
-                upperbound = (cmax[l])^2,
+                upperbound = (cmax[l][c])^2,
                 start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
             )
         else
@@ -171,14 +185,14 @@ function variable_tp_branch_series_current_prod_hermitian(pm::GenericPowerModel{
         if bounded
             var(pm, nw, c)[:ccmr] = @variable(pm.model,
                 [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmr",
-                lowerbound = -(cmax[l])^2,
-                upperbound = (cmax[l])^2,
+                lowerbound = -(cmax[l][c])^2,
+                upperbound = (cmax[l][c])^2,
                 start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
             )
             var(pm, nw, c)[:ccmi] = @variable(pm.model,
                 [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmi",
-                lowerbound = -(cmax[l])^2,
-                upperbound = (cmax[l])^2,
+                lowerbound = -(cmax[l][c])^2,
+                upperbound = (cmax[l][c])^2,
                 start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c)
             )
         else
@@ -254,11 +268,20 @@ end
 
 "variable: `p_lt[l,i,j]` for `(l,i,j)` in `arcs`"
 function variable_lower_triangle_active_branch_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
+    smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
+
+    for (l,i,j) in ref(pm, nw, :arcs)
+        cmax = ref(pm, nw, :branch, l, "rate_a").values./ref(pm, nw, :bus, i, "vmin").values
+        smax = ref(pm, nw, :bus, i, "vmax").values.*cmax'
+        smaxltri = ThreePhasePowerModels.mat2ltrivec(smax)
+        smaxdict[(l,i,j)] = smaxltri
+    end
+
     if bounded
         var(pm, nw, cnd)[:p_lt] = @variable(pm.model,
             [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_lt",
-            lowerbound = -ref(pm, nw, :branch, l, "rate_a", cnd),
-            upperbound =  ref(pm, nw, :branch, l, "rate_a", cnd),
+            lowerbound = -smaxdict[(l,i,j)][cnd],
+            upperbound =  smaxdict[(l,i,j)][cnd],
             start = PMs.getval(ref(pm, nw, :branch, l), "p_start", cnd)
         )
     else
@@ -271,11 +294,20 @@ end
 
 "variable: `q_lt[l,i,j]` for `(l,i,j)` in `arcs`"
 function variable_lower_triangle_reactive_branch_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
+    smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
+
+    for (l,i,j) in ref(pm, nw, :arcs)
+        cmax = ref(pm, nw, :branch, l, "rate_a").values./ref(pm, nw, :bus, i, "vmin").values
+        smax = ref(pm, nw, :bus, i, "vmax").values.*cmax'
+        smaxltri = ThreePhasePowerModels.mat2ltrivec(smax)
+        smaxdict[(l,i,j)] = smaxltri
+    end
+
     if bounded
         var(pm, nw, cnd)[:q_lt] = @variable(pm.model,
             [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_lt",
-            lowerbound = -ref(pm, nw, :branch, l, "rate_a", cnd),
-            upperbound =  ref(pm, nw, :branch, l, "rate_a", cnd),
+            lowerbound = -smaxdict[(l,i,j)][cnd],
+            upperbound =  smaxdict[(l,i,j)][cnd],
             start = PMs.getval(ref(pm, nw, :branch, l), "q_start", cnd)
         )
     else
@@ -288,11 +320,20 @@ end
 
 "variable: `p_ut[l,i,j]` for `(l,i,j)` in `arcs`"
 function variable_upper_triangle_active_branch_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
+    smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
+
+    for (l,i,j) in ref(pm, nw, :arcs)
+        cmax = ref(pm, nw, :branch, l, "rate_a").values./ref(pm, nw, :bus, i, "vmin").values
+        smax = ref(pm, nw, :bus, i, "vmax").values.*cmax'
+        smaxutri = ThreePhasePowerModels.mat2utrivec(smax)
+        smaxdict[(l,i,j)] = smaxutri
+    end
+
     if bounded
         var(pm, nw, cnd)[:p_ut] = @variable(pm.model,
             [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_ut",
-            lowerbound = -ref(pm, nw, :branch, l, "rate_a", cnd),
-            upperbound =  ref(pm, nw, :branch, l, "rate_a", cnd),
+            lowerbound = -smaxdict[(l,i,j)][cnd],
+            upperbound =  smaxdict[(l,i,j)][cnd],
             start = PMs.getval(ref(pm, nw, :branch, l), "p_start", cnd)
         )
     else
@@ -305,11 +346,19 @@ end
 
 "variable: `q_ut[l,i,j]` for `(l,i,j)` in `arcs`"
 function variable_upper_triangle_reactive_branch_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
+    smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
+
+    for (l,i,j) in ref(pm, nw, :arcs)
+        cmax = ref(pm, nw, :branch, l, "rate_a").values./ref(pm, nw, :bus, i, "vmin").values
+        smax = ref(pm, nw, :bus, i, "vmax").values.*cmax'
+        smaxutri = ThreePhasePowerModels.mat2utrivec(smax)
+        smaxdict[(l,i,j)] = smaxutri
+    end
     if bounded
         var(pm, nw, cnd)[:q_ut] = @variable(pm.model,
             [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_ut",
-            lowerbound = -ref(pm, nw, :branch, l, "rate_a", cnd),
-            upperbound =  ref(pm, nw, :branch, l, "rate_a", cnd),
+            lowerbound = -smaxdict[(l,i,j)][cnd],
+            upperbound =  smaxdict[(l,i,j)][cnd],
             start = PMs.getval(ref(pm, nw, :branch, l), "q_start", cnd)
         )
     else

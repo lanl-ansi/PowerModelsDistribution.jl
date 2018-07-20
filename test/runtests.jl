@@ -13,12 +13,14 @@ using Ipopt
 using Cbc
 using Pajarito
 using Juniper
+using SCS
 
 using Base.Test
 
 
 ipopt_solver = IpoptSolver(tol=1e-6, print_level=0)
 cbc_solver = CbcSolver()
+scs_solver = SCSSolver()
 juniper_solver = JuniperSolver(IpoptSolver(tol=1e-4, print_level=0), mip_solver=cbc_solver, log_levels=[])
 pajarito_solver = PajaritoSolver(mip_solver=cbc_solver, cont_solver=ipopt_solver, log_level=0)
 
