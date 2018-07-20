@@ -15,17 +15,27 @@ function constraint_tp_branch_current(pm::GenericPowerModel{T}, n::Int, i, f_bus
     p_s_fr = p_fr - g_sh_fr*w_fr_re
     q_s_fr = q_fr + b_sh_fr*w_fr_re
 
-    mat = [
-    w_fr_re    p_s_fr   -w_fr_im   -q_s_fr;
-    p_s_fr'    ccm_re    q_s_fr'   -ccm_im;
-    w_fr_im    q_s_fr    w_fr_re    p_s_fr;
-    -q_s_fr'   ccm_im    p_s_fr'    ccm_re
+    mat_real = [
+    w_fr_re     p_s_fr  ;
+    p_s_fr'    ccm_re  ;
     ]
 
-    psd_to_soc(pm, mat)
-    # psd_to_soc_diag(pm, p_s_fr, q_s_fr, w_fr_re, ccm_re)
+    mat_imag = [
+    w_fr_im     q_s_fr  ;
+    -q_s_fr'    ccm_im  ;
+    ]
 
-    #TODO Required to make the SOC-NLP formulation more accurate
+    # mat = [
+    # w_fr_re    p_s_fr   -w_fr_im   -q_s_fr;
+    # p_s_fr'    ccm_re    q_s_fr'   -ccm_im;
+    # w_fr_im    q_s_fr    w_fr_re    p_s_fr;
+    # -q_s_fr'   ccm_im    p_s_fr'    ccm_re
+    # ]
+
+    psd_to_soc(pm, mat_real, mat_imag, complex=true)
+    # psd_to_soc(pm, mat_real, mat_imag, complex=false)
+
+    #TODO valid inequality equired to make the SOC formulation more accurate
     (l,i,j) = f_idx
     t_idx = (l,j,i)
     p_to = var(pm, n, :p_mat)[t_idx]
