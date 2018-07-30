@@ -25,17 +25,12 @@ function constraint_tp_branch_current(pm::GenericPowerModel{T}, n::Int, i, f_bus
     -q_s_fr'    ccm_im  ;
     ]
 
-    # mat = [
-    # w_fr_re    p_s_fr   -w_fr_im   -q_s_fr;
-    # p_s_fr'    ccm_re    q_s_fr'   -ccm_im;
-    # w_fr_im    q_s_fr    w_fr_re    p_s_fr;
-    # -q_s_fr'   ccm_im    p_s_fr'    ccm_re
-    # ]
-
     psd_to_soc(pm, mat_real, mat_imag, complex=true)
-    # psd_to_soc(pm, mat_real, mat_imag, complex=false)
 
-    #TODO valid inequality equired to make the SOC formulation more accurate
+    # psd_to_psd_complex(pm, w_fr_re, w_fr_im)
+    # psd_to_psd_complex(pm, ccm_re, ccm_im)
+
+    #TODO valid inequality equired to make the SOC-NLP formulation more accurate
     (l,i,j) = f_idx
     t_idx = (l,j,i)
     p_to = var(pm, n, :p_mat)[t_idx]

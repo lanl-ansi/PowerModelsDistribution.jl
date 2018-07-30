@@ -383,11 +383,14 @@ function constraint_tp_flow_losses(pm::GenericPowerModel{T}, n::Int, i, f_bus, t
     w_to_re = var(pm, n, :w_re)[t_bus]
     w_fr_re = var(pm, n, :w_re)[f_bus]
 
+    w_to_im = var(pm, n, :w_im)[t_bus]
+    w_fr_im = var(pm, n, :w_im)[f_bus]
+
     ccm_re =  var(pm, n, :ccm_re)[i]
     ccm_im =  var(pm, n, :ccm_im)[i]
 
-    @constraint(pm.model, p_fr + p_to .==  g_sh_fr*(w_fr_re) + r*ccm_re - x*ccm_im +  g_sh_to*w_to_re)
-    @constraint(pm.model, q_fr + q_to .== -b_sh_fr*(w_fr_re) + x*ccm_re + r*ccm_im + -b_sh_to*w_to_re)
+    @constraint(pm.model, p_fr + p_to .==  w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)' + r*ccm_re - x*ccm_im +  w_to_re*(g_sh_to)'  + w_to_im*(b_sh_to)')
+    @constraint(pm.model, q_fr + q_to .==  w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)' + x*ccm_re + r*ccm_im +  w_to_im*(g_sh_to)'  - w_to_re*(b_sh_to)')
 end
 
 ""
@@ -444,8 +447,8 @@ function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, n:
     p_fr = var(pm, n, :p_mat)[f_idx]
     q_fr = var(pm, n, :q_mat)[f_idx]
 
-    p_s_fr = p_fr - g_sh_fr*w_fr_re
-    q_s_fr = q_fr + b_sh_fr*w_fr_re
+    p_s_fr = p_fr - (w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)')
+    q_s_fr = q_fr - (w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)')
 
     ccm_re =  var(pm, n, :ccm_re)[i]
     ccm_im =  var(pm, n, :ccm_im)[i]

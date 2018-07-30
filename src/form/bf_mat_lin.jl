@@ -51,13 +51,14 @@ function variable_tp_branch_flow(pm::GenericPowerModel{T}; n_cond::Int=3, nw::In
         ps_mat = real(Gamma)*diagm(p_d) - imag(Gamma)*diagm(q_d)
         qs_mat = imag(Gamma)*diagm(p_d) + real(Gamma)*diagm(q_d)
 
-        g_fr = diagm(branch["g_fr"].values)
-        b_fr = diagm(branch["b_fr"].values)
+        g_sh_fr = diagm(branch["g_fr"].values)
+        b_sh_fr = diagm(branch["b_fr"].values)
 
         w_fr_re = var(pm, nw, :w_re)[f_bus]
+        w_fr_im = var(pm, nw, :w_im)[f_bus]
 
-        p_mat = ps_mat + g_fr*w_fr_re
-        q_mat = qs_mat - b_fr*w_fr_re
+        p_mat = ps_mat + (w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)')
+        q_mat = qs_mat + (w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)')
 
         p_mat_dict[i] = p_mat
         q_mat_dict[i] = q_mat
@@ -89,13 +90,14 @@ function variable_tp_branch_flow(pm::GenericPowerModel{T}; n_cond::Int=3, nw::In
         ps_mat = p_d
         qs_mat = q_d
 
-        g_fr = diagm(branch["g_fr"].values)
-        b_fr = diagm(branch["b_fr"].values)
+        g_sh_fr = diagm(branch["g_fr"].values)
+        b_sh_fr = diagm(branch["b_fr"].values)
 
         w_fr_re = var(pm, nw, :w_re)[f_bus]
 
-        p_mat = ps_mat + g_fr*w_fr_re
-        q_mat = qs_mat - b_fr*w_fr_re
+        p_mat = ps_mat + diag(( diagm(w_fr_re)*(g_sh_fr)'))
+        q_mat = qs_mat + diag((-diagm(w_fr_re)*(b_sh_fr)'))
+
 
         p_mat_dict[i] = p_mat
         q_mat_dict[i] = q_mat
@@ -117,8 +119,15 @@ function constraint_tp_flow_losses(pm::GenericPowerModel{T}, n::Int, i, f_bus, t
     w_fr_re = var(pm, n, :w_re)[f_bus]
     w_to_re = var(pm, n, :w_re)[t_bus]
 
-    @constraint(pm.model, diag(p_fr) + diag(p_to) .==  diag( g_sh_fr*(w_fr_re) +  g_sh_to*w_to_re))
-    @constraint(pm.model, diag(q_fr) + diag(q_to) .==  diag(-b_sh_fr*(w_fr_re) + -b_sh_to*w_to_re))
+    w_fr_im = var(pm, n, :w_im)[f_bus]
+    w_to_im = var(pm, n, :w_im)[t_bus]
+
+
+    # @constraint(pm.model, diag(p_fr) + diag(p_to) .==  diag( g_sh_fr*(w_fr_re) +  g_sh_to*w_to_re))
+    # @constraint(pm.model, diag(q_fr) + diag(q_to) .==  diag(-b_sh_fr*(w_fr_re) + -b_sh_to*w_to_re))
+
+    @constraint(pm.model, diag(p_fr) + diag(p_to) .==  diag(w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)' +  w_to_re*(g_sh_to)'  + w_to_im*(b_sh_to)'))
+    @constraint(pm.model, diag(q_fr) + diag(q_to) .==  diag(w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)' +  w_to_im*(g_sh_to)'  - w_to_re*(b_sh_to)'))
 end
 
 
@@ -153,8 +162,10 @@ function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, n:
     p_fr = var(pm, n, :p_mat)[f_idx]
     q_fr = var(pm, n, :q_mat)[f_idx]
 
-    p_s_fr = p_fr - g_sh_fr*w_fr_re
-    q_s_fr = q_fr + b_sh_fr*w_fr_re
+    # p_s_fr = p_fr - g_sh_fr*w_fr_re
+    # q_s_fr = q_fr + b_sh_fr*w_fr_re
+    p_s_fr = p_fr - (w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)')
+    q_s_fr = q_fr - (w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)')
 
         #KVL over the line:
     @constraint(pm.model, diag(w_to_re)        .==        diag(w_fr_re   - p_s_fr  *r' - q_s_fr*x'        - r*p_s_fr'    - x*q_s_fr'))
@@ -171,6 +182,8 @@ function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, n:
 
     p_fr = var(pm, n, :p_mat)[f_idx]
     q_fr = var(pm, n, :q_mat)[f_idx]
+
+
 
     p_s_fr = p_fr - diag(g_sh_fr).*w_fr_re
     q_s_fr = q_fr + diag(b_sh_fr).*w_fr_re

@@ -82,3 +82,28 @@ function psd_to_soc(pm::GenericPowerModel, matrixreal, matriximag; complex=true)
         psd_to_soc_complex(pm, matrixreal, matriximag)
     end
 end
+
+
+
+"""
+complex SDP to SDP relaxation based on PSDness of principal minors
+"""
+function psd_to_psd_complex(pm::GenericPowerModel{T}, matreal, matimag; ndim=3) where T<:AbstractConicUBFForm
+    assert(size(matreal) == size(matimag))
+    assert(size(matreal,1) >= ndim)
+    n_elements = size(matreal,1)
+    for i in 1:n_elements-(ndim-1)
+        j = i+(ndim-1)
+        mr = matreal[i:j, i:j]
+        mi = matimag[i:j, i:j]
+        @SDconstraint(pm.model, [mr -mi; mi mr] >=0)
+    end
+end
+
+
+"""
+complex SDP to SDP relaxation based on PSDness of principal minors
+"""
+function psd_to_psd_complex(pm::GenericPowerModel{T}, matreal, matimag; ndim=3) where T<:AbstractNLPUBFForm
+
+end
