@@ -289,7 +289,14 @@ function parse_matrix(dtype::Type, data::AbstractString)::Array
 
     nphases = maximum([length(row) for row in rows])
 
-    matrix = zeros(dtype, nphases, nphases)
+    if dtype == AbstractString || dtype == String
+        matrix = fill("", nphases, nphases)
+    elseif dtype == Char
+        matrix = fill(' ', nphases, nphases)
+    else
+        matrix = zeros(dtype, nphases, nphases)
+    end
+
     if length(rows) == 1
         for i in 1:nphases
             matrix[i, i] = rows[1][1]
@@ -372,7 +379,7 @@ function parse_array(dtype::Type, data::AbstractString)
         elements = [strip(el) for el in elements if strip(el) != ""]
     end
 
-    if dtype == String
+    if dtype == String || dtype == AbstractString || dtype == Char
         array = []
         for el in elements
             push!(array, el)
@@ -618,7 +625,10 @@ function parse_component(component::AbstractString, properties::AbstractString, 
             end
 
             try
-                propIdx = find(e->e==split(property,'=')[1], propNames)[1] + 1
+                propIdxs = find(e->e==split(property,'=')[1], propNames)
+                if length(propIdxs) > 0
+                    propIdx = find(e->e==split(property,'=')[1], propNames)[1] + 1
+                end
             catch e
                 if split(component,'.')[1] == "transformer"
                     if split(property,'=')[1] == "ppm"
