@@ -300,12 +300,11 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     genDict["pg"] = PMs.MultiConductorVector(parse_array( 0.0, nodes, nconductors))
     genDict["qg"] = PMs.MultiConductorVector(parse_array( 0.0, nodes, nconductors))
 
-    genDict["qmin"] = PMs.MultiConductorVector(parse_array(-Inf, nodes, nconductors))
-    genDict["qmax"] = PMs.MultiConductorVector(parse_array( Inf, nodes, nconductors))
+    genDict["qmin"] = PMs.MultiConductorVector(parse_array(-NaN, nodes, nconductors))
+    genDict["qmax"] = PMs.MultiConductorVector(parse_array( NaN, nodes, nconductors))
 
-    genDict["pmax"] = PMs.MultiConductorVector(parse_array( Inf, nodes, nconductors))
-    genDict["pmin"] = PMs.MultiConductorVector(parse_array(-Inf, nodes, nconductors))
-
+    genDict["pmin"] = PMs.MultiConductorVector(parse_array(-NaN, nodes, nconductors))
+    genDict["pmax"] = PMs.MultiConductorVector(parse_array( NaN, nodes, nconductors))
 
     genDict["model"] = 2
     genDict["startup"] = 0.0
@@ -647,6 +646,35 @@ end
 
 
 """
+    adjust_sourcegen_bounds!(tppm_data)
+
+Changes the bounds for the sourcebus generator by checking the normamps of all
+of the branches attached to the sourcebus and taking the sum of non-infinite
+values. Defaults to Inf if all normamps connected to sourcebus are also Inf.
+"""
+function adjust_sourcegen_bounds!(tppm_data)
+    normamps = Array{Float64,1}()
+    sourcebus_n = find_bus("sourcebus", tppm_data)
+    for line in tppm_data["branch"]
+        if line["f_bus"] == sourcebus_n || line["t_bus"] == sourcebus_n
+            append!(normamps, line["rate_a"].values)
+        end
+    end
+
+    bound = Inf
+    try
+        bound = sum(normamps[!isinf.(normamps)])
+    catch e
+    end
+
+    tppm_data["gen"][1]["pmin"] = PMs.MultiConductorVector(fill(-bound, size(tppm_data["gen"][1]["pmin"])))
+    tppm_data["gen"][1]["pmax"] = PMs.MultiConductorVector(fill( bound, size(tppm_data["gen"][1]["pmin"])))
+    tppm_data["gen"][1]["qmin"] = PMs.MultiConductorVector(fill(-bound, size(tppm_data["gen"][1]["pmin"])))
+    tppm_data["gen"][1]["qmax"] = PMs.MultiConductorVector(fill( bound, size(tppm_data["gen"][1]["pmin"])))
+end
+
+
+"""
     where_is_comp(data, comp_id)
 
 Finds existing component of id `comp_id` in array of `data` and returns index.
@@ -754,6 +782,8 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     dss2tppm_branch!(tppm_data, dss_data, import_all)
     dss2tppm_transformer!(tppm_data, dss_data, import_all)
     dss2tppm_gen!(tppm_data, dss_data, import_all)
+
+    adjust_sourcegen_bounds!(tppm_data)
 
     tppm_data["dcline"] = []
 
