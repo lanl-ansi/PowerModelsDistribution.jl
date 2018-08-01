@@ -324,14 +324,10 @@ function parse_matrix(data::Array{T}, nodes::Array{Bool}, nph::Int=3, fill_val=0
     mat = fill(fill_val, (nph, nph))
     idxs = find(nodes[1:nph])
 
-    if size(data) == size(mat)
-        return data
-    else
-        for i in 1:size(data)[1]
-            mat[idxs[i], idxs[i]] = data[i, i]
-            for j in 1:i-1
-                mat[idxs[i],idxs[j]] = mat[idxs[j],idxs[i]] = data[i, j]
-            end
+    for i in 1:size(idxs)[1]
+        mat[idxs[i], idxs[i]] = data[i, i]
+        for j in 1:i-1
+            mat[idxs[i],idxs[j]] = mat[idxs[j],idxs[i]] = data[i, j]
         end
     end
 
@@ -404,14 +400,12 @@ function parse_array(data, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array
     mat = fill(fill_val, nph)
     idxs = find(nodes[1:nph])
 
-    if size(data) == size(mat)
-        return data
-    elseif length(data) == 1 && nph > 1
+    if length(data) == 1 && nph > 1
         for i in idxs
             mat[i] = data[1]
         end
     else
-        for i in 1:length(data)
+        for i in 1:length(idxs)
             mat[idxs[i]] = data[i]
         end
     end
