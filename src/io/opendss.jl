@@ -452,9 +452,9 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["b_to"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
 
             # TODO: pick a better value for emergamps
-            branchDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors, NaN))
-            branchDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors, NaN))
-            branchDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors, NaN))
+            branchDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors))
+            branchDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
+            branchDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
 
             branchDict["tap"] = PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors, 1.0))
             branchDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
@@ -518,9 +518,9 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 transDict["b_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
 
                 # CHECK: unit conversion?
-                transDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normhkva"], nodes, nconductors, NaN))
-                transDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors, NaN))
-                transDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors, NaN))
+                transDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normhkva"], nodes, nconductors))
+                transDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
+                transDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
 
                 transDict["tap"] = PMs.MultiConductorVector(parse_array(/(defaults["taps"]...), nodes, nconductors, 1.0))
                 transDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
@@ -565,9 +565,9 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                     transDict["b_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
 
                     # CHECK: unit conversion?
-                    transDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normhkva"], nodes, nconductors, NaN))
-                    transDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors, NaN))
-                    transDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors, NaN))
+                    transDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normhkva"], nodes, nconductors))
+                    transDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
+                    transDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
 
                     transDict["tap"] = PMs.MultiConductorVector(parse_array(defaults["taps"][m], nodes, nconductors, 1.0))
                     transDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
@@ -619,9 +619,9 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 reactDict["b_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
                 reactDict["b_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
 
-                reactDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors, NaN))
-                reactDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors, NaN))
-                reactDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors, NaN))
+                reactDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors))
+                reactDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
+                reactDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
 
                 reactDict["tap"] = PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors, NaN))
                 reactDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
@@ -648,24 +648,20 @@ end
 """
     adjust_sourcegen_bounds!(tppm_data)
 
-Changes the bounds for the sourcebus generator by checking the normamps of all
+Changes the bounds for the sourcebus generator by checking the emergamps of all
 of the branches attached to the sourcebus and taking the sum of non-infinite
-values. Defaults to Inf if all normamps connected to sourcebus are also Inf.
+values. Defaults to Inf if all emergamps connected to sourcebus are also Inf.
 """
 function adjust_sourcegen_bounds!(tppm_data)
-    normamps = Array{Float64,1}()
+    emergamps = Array{Float64,1}()
     sourcebus_n = find_bus("sourcebus", tppm_data)
     for line in tppm_data["branch"]
         if line["f_bus"] == sourcebus_n || line["t_bus"] == sourcebus_n
-            append!(normamps, line["rate_a"].values)
+            append!(emergamps, line["rate_b"].values)
         end
     end
 
-    bound = Inf
-    try
-        bound = sum(normamps[!isinf.(normamps)])
-    catch e
-    end
+    bound = sum(emergamps)
 
     tppm_data["gen"][1]["pmin"] = PMs.MultiConductorVector(fill(-bound, size(tppm_data["gen"][1]["pmin"])))
     tppm_data["gen"][1]["pmax"] = PMs.MultiConductorVector(fill( bound, size(tppm_data["gen"][1]["pmin"])))
