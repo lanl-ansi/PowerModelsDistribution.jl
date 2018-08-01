@@ -174,6 +174,12 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             nconductors = tppm_data["conductors"]
             name, nodes = parse_busname(defaults["bus1"])
 
+            kv = defaults["kv"]
+            expected_kv = tppm_data["basekv"] / sqrt(tppm_data["conductors"])
+            if !isapprox(kv, expected_kv; atol=expected_kv * 0.01)
+                warn(LOGGER, "Load has kv=$kv, not the expected kv=$(@sprintf("%.3f", expected_kv)). Results may not match OpenDSS")
+            end
+
             loadDict["name"] = defaults["name"]
             loadDict["load_bus"] = find_bus(name, tppm_data)
             loadDict["pd"] = PMs.MultiConductorVector(parse_array(defaults["kw"] / 1e3, nodes, nconductors))
