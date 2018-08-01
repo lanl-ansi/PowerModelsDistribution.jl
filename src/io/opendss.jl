@@ -413,6 +413,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             merge!(line, linecode)
 
             if haskey(line, "basefreq") && line["basefreq"] != tppm_data["basefreq"]
+                warn(LOGGER, "basefreq=$(line["basefreq"]) on line $(line["name"]) does not match circuit basefreq=$(tppm_data["basefreq"])")
                 line["freq"] = deepcopy(line["basefreq"])
                 line["basefreq"] = deepcopy(tppm_data["basefreq"])
             end
@@ -448,8 +449,8 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             if !isdiag(cmatrix)
                 info(LOGGER, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`")
             end
-            branchDict["b_fr"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["freq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
-            branchDict["b_to"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["freq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
+            branchDict["b_fr"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
+            branchDict["b_to"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
 
             # TODO: pick a better value for emergamps
             branchDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors, NaN))
@@ -698,6 +699,14 @@ function parse_options(options)
     if haskey(options, "voltagebases")
         out["voltagebases"] = parse_array(Float64, options["voltagebases"])
     end
+
+    if !haskey(options, "defaultbasefreq")
+        warn(LOGGER, "defaultbasefreq is not defined, default for circuit set to 60 Hz")
+        out["defaultbasefreq"] = 60.0
+    else
+        out["defaultbasefreq"] = parse(Float64, options["defaultbasefreq"])
+    end
+
     return out
 end
 
@@ -732,7 +741,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         tppm_data["name"] = defaults["name"]
         tppm_data["basekv"] = defaults["basekv"]
         tppm_data["baseMVA"] = defaults["basemva"]
-        tppm_data["basefreq"] = defaults["basefreq"]
+        tppm_data["basefreq"] = pop!(tppm_data, "defaultbasefreq")
         tppm_data["pu"] = defaults["pu"]
         tppm_data["conductors"] = defaults["phases"]
     else
