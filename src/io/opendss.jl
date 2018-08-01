@@ -25,8 +25,8 @@ function create_starbus(tppm_data::Dict, transformer::Dict)::Dict
 
     starbus["bus_i"] = starbus_id
     starbus["base_kv"] = 1.0
-    starbus["vmin"] = PMs.MultiConductorVector(parse_array(0.9, nodes, nconductors))
-    starbus["vmax"] = PMs.MultiConductorVector(parse_array(1.1, nodes, nconductors))
+    starbus["vmin"] = PMs.MultiConductorVector(parse_array(0.9, nodes, nconductors, 0.9))
+    starbus["vmax"] = PMs.MultiConductorVector(parse_array(1.1, nodes, nconductors, 1.1))
     starbus["name"] = "$(transformer["name"]) starbus"
     starbus["vm"] = PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors))
     starbus["va"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
@@ -109,8 +109,8 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool=false, 
         busDict["vm"] = PMs.MultiConductorVector(parse_array(vm, nodes, nconductors))
         busDict["va"] = PMs.MultiConductorVector(parse_array([rad2deg(2*pi/nconductors*(i-1))+ph1_ang for i in 1:nconductors], nodes, nconductors))
 
-        busDict["vmin"] = PMs.MultiConductorVector(parse_array(vmi, nodes, nconductors))
-        busDict["vmax"] = PMs.MultiConductorVector(parse_array(vma, nodes, nconductors))
+        busDict["vmin"] = PMs.MultiConductorVector(parse_array(vmi, nodes, nconductors, vmi))
+        busDict["vmax"] = PMs.MultiConductorVector(parse_array(vma, nodes, nconductors, vma))
 
         busDict["base_kv"] = tppm_data["basekv"]
 
