@@ -25,8 +25,8 @@ function create_starbus(tppm_data::Dict, transformer::Dict)::Dict
 
     starbus["bus_i"] = starbus_id
     starbus["base_kv"] = 1.0
-    starbus["vmin"] = PMs.MultiConductorVector(parse_array(0.9, nodes, nconductors))
-    starbus["vmax"] = PMs.MultiConductorVector(parse_array(1.1, nodes, nconductors))
+    starbus["vmin"] = PMs.MultiConductorVector(parse_array(0.9, nodes, nconductors, 0.9))
+    starbus["vmax"] = PMs.MultiConductorVector(parse_array(1.1, nodes, nconductors, 1.1))
     starbus["name"] = "$(transformer["name"]) starbus"
     starbus["vm"] = PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors))
     starbus["va"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
@@ -109,8 +109,8 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool=false, 
         busDict["vm"] = PMs.MultiConductorVector(parse_array(vm, nodes, nconductors))
         busDict["va"] = PMs.MultiConductorVector(parse_array([rad2deg(2*pi/nconductors*(i-1))+ph1_ang for i in 1:nconductors], nodes, nconductors))
 
-        busDict["vmin"] = PMs.MultiConductorVector(parse_array(vmi, nodes, nconductors))
-        busDict["vmax"] = PMs.MultiConductorVector(parse_array(vma, nodes, nconductors))
+        busDict["vmin"] = PMs.MultiConductorVector(parse_array(vmi, nodes, nconductors, vmi))
+        busDict["vmax"] = PMs.MultiConductorVector(parse_array(vma, nodes, nconductors, vma))
 
         busDict["base_kv"] = tppm_data["basekv"]
 
@@ -173,6 +173,12 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             nconductors = tppm_data["conductors"]
             name, nodes = parse_busname(defaults["bus1"])
+
+            kv = defaults["kv"]
+            expected_kv = tppm_data["basekv"] / sqrt(tppm_data["conductors"])
+            if !isapprox(kv, expected_kv; atol=expected_kv * 0.01)
+                warn(LOGGER, "Load has kv=$kv, not the expected kv=$(@sprintf("%.3f", expected_kv)). Results may not match OpenDSS")
+            end
 
             loadDict["name"] = defaults["name"]
             loadDict["load_bus"] = find_bus(name, tppm_data)
@@ -294,12 +300,11 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     genDict["pg"] = PMs.MultiConductorVector(parse_array( 0.0, nodes, nconductors))
     genDict["qg"] = PMs.MultiConductorVector(parse_array( 0.0, nodes, nconductors))
 
-    genDict["qmin"] = PMs.MultiConductorVector(parse_array(-Inf, nodes, nconductors))
-    genDict["qmax"] = PMs.MultiConductorVector(parse_array( Inf, nodes, nconductors))
+    genDict["qmin"] = PMs.MultiConductorVector(parse_array(-NaN, nodes, nconductors))
+    genDict["qmax"] = PMs.MultiConductorVector(parse_array( NaN, nodes, nconductors))
 
-    genDict["pmax"] = PMs.MultiConductorVector(parse_array( Inf, nodes, nconductors))
-    genDict["pmin"] = PMs.MultiConductorVector(parse_array(-Inf, nodes, nconductors))
-
+    genDict["pmin"] = PMs.MultiConductorVector(parse_array(-NaN, nodes, nconductors))
+    genDict["pmax"] = PMs.MultiConductorVector(parse_array( NaN, nodes, nconductors))
 
     genDict["model"] = 2
     genDict["startup"] = 0.0
@@ -407,6 +412,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             merge!(line, linecode)
 
             if haskey(line, "basefreq") && line["basefreq"] != tppm_data["basefreq"]
+                warn(LOGGER, "basefreq=$(line["basefreq"]) on line $(line["name"]) does not match circuit basefreq=$(tppm_data["basefreq"])")
                 line["freq"] = deepcopy(line["basefreq"])
                 line["basefreq"] = deepcopy(tppm_data["basefreq"])
             end
@@ -442,13 +448,13 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             if !isdiag(cmatrix)
                 info(LOGGER, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`")
             end
-            branchDict["b_fr"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["freq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
-            branchDict["b_to"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["freq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
+            branchDict["b_fr"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
+            branchDict["b_to"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
 
             # TODO: pick a better value for emergamps
-            branchDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors, NaN))
-            branchDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors, NaN))
-            branchDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors, NaN))
+            branchDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors))
+            branchDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
+            branchDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
 
             branchDict["tap"] = PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors, 1.0))
             branchDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
@@ -512,9 +518,9 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 transDict["b_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
 
                 # CHECK: unit conversion?
-                transDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normhkva"], nodes, nconductors, NaN))
-                transDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors, NaN))
-                transDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors, NaN))
+                transDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normhkva"], nodes, nconductors))
+                transDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
+                transDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
 
                 transDict["tap"] = PMs.MultiConductorVector(parse_array(/(defaults["taps"]...), nodes, nconductors, 1.0))
                 transDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
@@ -559,9 +565,9 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                     transDict["b_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
 
                     # CHECK: unit conversion?
-                    transDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normhkva"], nodes, nconductors, NaN))
-                    transDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors, NaN))
-                    transDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors, NaN))
+                    transDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normhkva"], nodes, nconductors))
+                    transDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
+                    transDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
 
                     transDict["tap"] = PMs.MultiConductorVector(parse_array(defaults["taps"][m], nodes, nconductors, 1.0))
                     transDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
@@ -613,9 +619,9 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 reactDict["b_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
                 reactDict["b_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
 
-                reactDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors, NaN))
-                reactDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors, NaN))
-                reactDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors, NaN))
+                reactDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors))
+                reactDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
+                reactDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
 
                 reactDict["tap"] = PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors, NaN))
                 reactDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
@@ -636,6 +642,31 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             end
         end
     end
+end
+
+
+"""
+    adjust_sourcegen_bounds!(tppm_data)
+
+Changes the bounds for the sourcebus generator by checking the emergamps of all
+of the branches attached to the sourcebus and taking the sum of non-infinite
+values. Defaults to Inf if all emergamps connected to sourcebus are also Inf.
+"""
+function adjust_sourcegen_bounds!(tppm_data)
+    emergamps = Array{Float64,1}()
+    sourcebus_n = find_bus("sourcebus", tppm_data)
+    for line in tppm_data["branch"]
+        if line["f_bus"] == sourcebus_n || line["t_bus"] == sourcebus_n
+            append!(emergamps, line["rate_b"].values)
+        end
+    end
+
+    bound = sum(emergamps)
+
+    tppm_data["gen"][1]["pmin"] = PMs.MultiConductorVector(fill(-bound, size(tppm_data["gen"][1]["pmin"])))
+    tppm_data["gen"][1]["pmax"] = PMs.MultiConductorVector(fill( bound, size(tppm_data["gen"][1]["pmin"])))
+    tppm_data["gen"][1]["qmin"] = PMs.MultiConductorVector(fill(-bound, size(tppm_data["gen"][1]["pmin"])))
+    tppm_data["gen"][1]["qmax"] = PMs.MultiConductorVector(fill( bound, size(tppm_data["gen"][1]["pmin"])))
 end
 
 
@@ -692,6 +723,14 @@ function parse_options(options)
     if haskey(options, "voltagebases")
         out["voltagebases"] = parse_array(Float64, options["voltagebases"])
     end
+
+    if !haskey(options, "defaultbasefreq")
+        warn(LOGGER, "defaultbasefreq is not defined, default for circuit set to 60 Hz")
+        out["defaultbasefreq"] = 60.0
+    else
+        out["defaultbasefreq"] = parse(Float64, options["defaultbasefreq"])
+    end
+
     return out
 end
 
@@ -726,7 +765,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         tppm_data["name"] = defaults["name"]
         tppm_data["basekv"] = defaults["basekv"]
         tppm_data["baseMVA"] = defaults["basemva"]
-        tppm_data["basefreq"] = defaults["basefreq"]
+        tppm_data["basefreq"] = pop!(tppm_data, "defaultbasefreq")
         tppm_data["pu"] = defaults["pu"]
         tppm_data["conductors"] = defaults["phases"]
     else
@@ -739,6 +778,8 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     dss2tppm_branch!(tppm_data, dss_data, import_all)
     dss2tppm_transformer!(tppm_data, dss_data, import_all)
     dss2tppm_gen!(tppm_data, dss_data, import_all)
+
+    adjust_sourcegen_bounds!(tppm_data)
 
     tppm_data["dcline"] = []
 

@@ -289,7 +289,14 @@ function parse_matrix(dtype::Type, data::AbstractString)::Array
 
     nphases = maximum([length(row) for row in rows])
 
-    matrix = zeros(dtype, nphases, nphases)
+    if dtype == AbstractString || dtype == String
+        matrix = fill("", nphases, nphases)
+    elseif dtype == Char
+        matrix = fill(' ', nphases, nphases)
+    else
+        matrix = zeros(dtype, nphases, nphases)
+    end
+
     if length(rows) == 1
         for i in 1:nphases
             matrix[i, i] = rows[1][1]
@@ -317,14 +324,10 @@ function parse_matrix(data::Array{T}, nodes::Array{Bool}, nph::Int=3, fill_val=0
     mat = fill(fill_val, (nph, nph))
     idxs = find(nodes[1:nph])
 
-    if size(data) == size(mat)
-        return data
-    else
-        for i in 1:size(data)[1]
-            mat[idxs[i], idxs[i]] = data[i, i]
-            for j in 1:i-1
-                mat[idxs[i],idxs[j]] = mat[idxs[j],idxs[i]] = data[i, j]
-            end
+    for i in 1:size(idxs)[1]
+        mat[idxs[i], idxs[i]] = data[i, i]
+        for j in 1:i-1
+            mat[idxs[i],idxs[j]] = mat[idxs[j],idxs[i]] = data[i, j]
         end
     end
 
@@ -372,7 +375,7 @@ function parse_array(dtype::Type, data::AbstractString)
         elements = [strip(el) for el in elements if strip(el) != ""]
     end
 
-    if dtype == String
+    if dtype == String || dtype == AbstractString || dtype == Char
         array = []
         for el in elements
             push!(array, el)
@@ -397,14 +400,12 @@ function parse_array(data, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array
     mat = fill(fill_val, nph)
     idxs = find(nodes[1:nph])
 
-    if size(data) == size(mat)
-        return data
-    elseif length(data) == 1 && nph > 1
+    if length(data) == 1 && nph > 1
         for i in idxs
             mat[i] = data[1]
         end
     else
-        for i in 1:length(data)
+        for i in 1:length(idxs)
             mat[idxs[i]] = data[i]
         end
     end
@@ -618,7 +619,10 @@ function parse_component(component::AbstractString, properties::AbstractString, 
             end
 
             try
-                propIdx = find(e->e==split(property,'=')[1], propNames)[1] + 1
+                propIdxs = find(e->e==split(property,'=')[1], propNames)
+                if length(propIdxs) > 0
+                    propIdx = find(e->e==split(property,'=')[1], propNames)[1] + 1
+                end
             catch e
                 if split(component,'.')[1] == "transformer"
                     if split(property,'=')[1] == "ppm"
