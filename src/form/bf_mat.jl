@@ -406,7 +406,7 @@ function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, i) where T <:
 
     w_re_ref = real(gamma).*w_re[1,1]
     w_im_ref = imag(gamma).*w_re[1,1]
-    @constraint(pm.model, diag(w_re)[2:3]        .== diag(w_re_ref)[2:3]) # first equality is implied
+    @constraint(pm.model, diag(w_re)[2:nconductors]        .== diag(w_re_ref)[2:nconductors]) # first equality is implied
     @constraint(pm.model, mat2utrivec(w_re) .== mat2utrivec(w_re_ref))
     @constraint(pm.model, mat2utrivec(w_im) .== mat2utrivec(w_im_ref))
 end
