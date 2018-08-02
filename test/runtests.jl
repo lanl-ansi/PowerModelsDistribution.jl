@@ -12,6 +12,7 @@ setlevel!(getlogger(PowerModels), "error")
 using Ipopt
 using Cbc
 using Pajarito
+using Pavito
 using Juniper
 using SCS
 
@@ -22,7 +23,7 @@ ipopt_solver = IpoptSolver(tol=1e-6, print_level=0)
 cbc_solver = CbcSolver()
 scs_solver = SCSSolver()
 juniper_solver = JuniperSolver(IpoptSolver(tol=1e-4, print_level=0), mip_solver=cbc_solver, log_levels=[])
-pajarito_solver = PajaritoSolver(mip_solver=cbc_solver, cont_solver=ipopt_solver, log_level=0)
+pavito_solver = PavitoSolver(mip_solver=cbc_solver, cont_solver=ipopt_solver, mip_solver_drives = false, log_level=0)
 
 
 @testset "ThreePhasePowerModels" begin
