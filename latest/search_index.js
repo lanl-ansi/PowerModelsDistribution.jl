@@ -833,6 +833,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library.html#ThreePhasePowerModels.createPVSystem-Tuple{Any,AbstractString}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.createPVSystem",
+    "category": "method",
+    "text": "createPVSystem(bus1, name; kwargs...)\n\nCreates a Dict{String,Any} containing all of the expected properties for a PVSystem. See OpenDSS document https://github.com/tshort/OpenDSS/blob/master/Doc/OpenDSS%20PVSystem%20Model.doc for valid fields and ways to specify the different properties.\n\n\n\n"
+},
+
+{
     "location": "library.html#ThreePhasePowerModels.createReactor",
     "page": "Library",
     "title": "ThreePhasePowerModels.createReactor",
@@ -902,6 +910,14 @@ var documenterSearchIndex = {"docs": [
     "title": "ThreePhasePowerModels.dss2tppm_load!",
     "category": "method",
     "text": "dss2tppm_load!(tppm_data, dss_data)\n\nAdds PowerModels-style loads to tppm_data from dss_data.\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.dss2tppm_pvsystem!-Tuple{Dict,Dict,Bool}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.dss2tppm_pvsystem!",
+    "category": "method",
+    "text": "dss2tppm_pvsystem!(tppm_data, dss_data)\n\nAdds PowerModels-style pvsystems to tppm_data from dss_data.\n\n\n\n"
 },
 
 {
