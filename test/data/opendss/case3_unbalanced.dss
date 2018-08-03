@@ -24,13 +24,14 @@ New Line.Quad    Bus1=Primary.1.2.3.0  loadbus.1.2.3.0  linecode = 4/0QUAD  leng
 
 !Loads - single phase
 
-New Load.L1 phases=1  loadbus.1.0   0.23   kW=9   kvar=3  model=1
-New Load.L2 phases=1  loadbus.2.0   0.23   kW=6   kvar=3  model=1
-New Load.L3 phases=1  loadbus.3.0   0.23   kW=6   kvar=3  model=1
+New Load.L1 phases=1  loadbus.1.0   ( 0.4 3 sqrt / )   kW=9   kvar=3  model=1
+New Load.L2 phases=1  loadbus.2.0   ( 0.4 3 sqrt / )   kW=6   kvar=3  model=1
+New Load.L3 phases=1  loadbus.3.0   ( 0.4 3 sqrt / )   kW=6   kvar=3  model=1
 
 
 Set voltagebases=[0.4]
 Set tolerance=0.000001
+set defaultbasefreq=50
 Calcvoltagebases
 
 Solve
