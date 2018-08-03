@@ -223,6 +223,12 @@ function get_prop_name(ctype::AbstractString)::Array
                    "linelosses", "xfmrlosses", "seqlosses", "3phaselosses",
                    "vbaselosses", "basefreq", "enabled", "like"]
 
+   pvsystem =    ["phases", "bus1", "kv", "irradiance", "pmpp", "temperature",
+                  "pf", "conn", "kvar", "kva", "%cutin", "%cutout",
+                  "effcurve", "p-tcurve", "%r", "%x", "model", "vminpu",
+                  "vmaxpu", "yearly", "daily", "duty", "tyearly", "tduty",
+                  "class", "usermodel", "userdata", "debugtrace", "spectrum"]
+
     ctypes = Dict{String, Array}("linecode" => linecode,
                                  "linegeometry" => linegeometry,
                                  "linespacing" =>linespacing,
@@ -249,6 +255,7 @@ function get_prop_name(ctype::AbstractString)::Array
                                  "capcontrol" => capcontrol,
                                  "regcontrol" => regcontrol,
                                  "energymeter" => energymeter,
+                                 "pvsystem" => pvsystem,
                                  "circuit" => vsource
                                 )
 
