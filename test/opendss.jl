@@ -186,13 +186,13 @@ TESTLOG = getlogger(PowerModels)
 
                 @test sol["status"] == :LocalOptimal
 
-                for (bus, va, vm) in zip(["1", "2", "3"], [0.0, deg2rad(-0.08), deg2rad(-0.17)], [0.9959, 0.986559, 0.97572])
-                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs.wraptopi.([2 * pi / tppm["conductors"] * (1 - c) + va for c in 1:tppm["conductors"]]); atol=deg2rad(0.2)))
-                    @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-3))
+                for (bus, va, vm) in zip(["1", "2", "3"], [0.0, deg2rad(-0.03), deg2rad(-0.07)], [0.9959, 0.986973, 0.976605])
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs.wraptopi.([2 * pi / tppm["conductors"] * (1 - c) + va for c in 1:tppm["conductors"]]); atol=deg2rad(0.01)))
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-5))
                 end
 
-                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183456; atol=1e-5)
-                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00923328; atol=1e-4)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.018345; atol=1e-6)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00919404; atol=1.2e-5)
             end
             @testset "SOC" begin
                 sol = TPPMs.run_tp_opf(tppm, PMs.SOCWRPowerModel, ipopt_solver)
@@ -200,7 +200,7 @@ TESTLOG = getlogger(PowerModels)
                 @test sol["status"] == :LocalOptimal
             end
             @testset "LDF" begin
-                sol = TPPMs.run_tp_opf_bf(tppm, PMs.SOCBFPowerModel, ipopt_solver)
+                sol = TPPMs.run_tp_opf_bf(tppm, LPLinUBFPowerModel, ipopt_solver)
 
                 @test sol["status"] == :LocalOptimal
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183456; atol=2e-3)
@@ -218,14 +218,14 @@ TESTLOG = getlogger(PowerModels)
                 @test sol["status"] == :LocalOptimal
 
                 for (bus, va, vm) in zip(["1", "2", "3"],
-                                         [0.0, deg2rad.([-0.30, -0.17, 0.09]), deg2rad.([-0.65, -0.36, 0.20])],
-                                         [0.9959, [0.980269, 0.989161, 0.986645], [0.962159, 0.981341, 0.975897]])
-                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs.wraptopi.([2 * pi / tppm["conductors"] * (1 - c) for c in 1:tppm["conductors"]]) + va; atol=deg2rad(0.2)))
-                    @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=2e-3))
+                                         [0.0, deg2rad.([-0.22, -0.11, 0.12]), deg2rad.([-0.48, -0.24, 0.27])],
+                                         [0.9959, [0.980937, 0.98936, 0.987039], [0.963546, 0.981757, 0.976779]])
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs.wraptopi.([2 * pi / tppm["conductors"] * (1 - c) for c in 1:tppm["conductors"]]) + va; atol=deg2rad(0.01)))
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-5))
                 end
 
-                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214835; atol=1e-5)
-                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00932693; atol=1e-4)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214812; atol=1e-6)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00927263; atol=1e-5)
             end
             @testset "SOC" begin
                 sol = TPPMs.run_tp_opf(tppm, PMs.SOCWRPowerModel, ipopt_solver)
@@ -233,11 +233,11 @@ TESTLOG = getlogger(PowerModels)
                 @test sol["status"] == :LocalOptimal
             end
             @testset "LDF" begin
-                sol = TPPMs.run_tp_opf_bf(tppm, PMs.SOCBFPowerModel, ipopt_solver)
+                sol = TPPMs.run_tp_opf_bf(tppm, LPLinUBFPowerModel, ipopt_solver)
 
                 @test sol["status"] == :LocalOptimal
-                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214835; atol=2e-3)
-                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00932693; atol=2e-3)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214812; atol=2e-3)
+                @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00927263; atol=2e-3)
             end
         end
     end

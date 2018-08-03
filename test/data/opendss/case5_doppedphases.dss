@@ -1,0 +1,25 @@
+clear
+
+new circuit.c3
+~ basekv=0.4 pu=1 MVAsc1=1e6 MVAsc3=1e6
+
+new linecode.lc1
+~ rmatrix = [ 0.1 | 0.0 0.1 | 0.0 0.0 0.1 ]
+~ xmatrix = [ 0.01 | 0.0 0.01 | 0.0 0.0 0.01 ]
+~ cmatrix = [ 50 | 0 50 | 0 0 50 ]
+
+new line.line1 bus1=sourcebus.1.2.3.0 bus2=midbus.1.2.3.0 linecode=lc1
+new line.line2 bus1=midbus.1 bus2=l1.1 linecode=lc1
+new line.line3 bus1=midbus.2.3 bus2=l2.2.3 linecode=lc1
+new line.line4 bus1=midbus.3 bus2=cap1.3 linecode=lc1
+
+new load.load1 phases=1 bus1=l1.1 kv=( 0.4 3 sqrt / ) kw=6 kvar=3
+new load.load2 phases=1 bus1=l2.2 kv=( 0.4 3 sqrt / ) kw=6 kvar=3
+new load.load3 phases=1 bus1=l2.3 kv=( 0.4 3 sqrt / ) kw=6 kvar=3
+
+new capacitor.capac1 phases=1 bus1=cap1.3 kvar=4.5 kv=( 0.4 3 sqrt / )
+
+set voltagebases=[0.4]
+calcvoltagebases
+
+solve

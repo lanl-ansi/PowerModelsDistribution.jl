@@ -100,16 +100,16 @@ function constraint_ohms_tp_yt_from_on_off(pm::GenericPowerModel{T}, n::Int, c::
     va_to = [var(pm, n, d, :va, t_bus) for d in PMs.conductor_ids(pm)]
     z = var(pm, n, c, :branch_z, i)
 
-    @NLconstraint(pm.model, p_fr == z*( g_fr[c]*vm_fr[c]^2 + sum(
-                                            g[c,i]*vm_fr[c]*vm_fr[i]*cos(va_fr[c]-va_fr[i]) +
-                                            b[c,i]*vm_fr[c]*vm_fr[i]*sin(va_fr[c]-va_fr[i]) -
-                                            g[c,i]*vm_fr[c]*vm_to[i]*cos(va_fr[c]-va_to[i]) -
-                                            b[c,i]*vm_fr[c]*vm_to[i]*sin(va_fr[c]-va_to[i]) for i in PMs.conductor_ids(pm)) ) )
-    @NLconstraint(pm.model, q_fr == z*(-b_fr[c]*vm_fr[c]^2 - sum(
-                                            b[c,i]*vm_fr[c]*vm_fr[i]*cos(va_fr[c]-va_fr[i]) -
-                                            g[c,i]*vm_fr[c]*vm_fr[i]*sin(va_fr[c]-va_fr[i]) -
-                                            b[c,i]*vm_fr[c]*vm_to[i]*cos(va_fr[c]-va_to[i]) +
-                                            g[c,i]*vm_fr[c]*vm_to[i]*sin(va_fr[c]-va_to[i]) for i in PMs.conductor_ids(pm)) ) )
+    @NLconstraint(pm.model, p_fr == z*((g_fr[c]+g[c,c]) * vm_fr[c]^2 +
+                                        sum( g[c,d]*vm_fr[c]*vm_fr[d]*cos(va_fr[c]-va_fr[d]) +
+                                             b[c,d]*vm_fr[c]*vm_fr[d]*sin(va_fr[c]-va_fr[d]) for d in PMs.conductor_ids(pm) if d != c) +
+                                        sum(-g[c,d]*vm_fr[c]*vm_to[d]*cos(va_fr[c]-va_to[d]) +
+                                            -b[c,d]*vm_fr[c]*vm_to[d]*sin(va_fr[c]-va_to[d]) for d in PMs.conductor_ids(pm))) )
+    @NLconstraint(pm.model, q_fr == z*(-(b_fr[c]+b[c,c]) *vm_fr[c]^2 -
+                                        sum( b[c,d]*vm_fr[c]*vm_fr[d]*cos(va_fr[c]-va_fr[d]) -
+                                             g[c,d]*vm_fr[c]*vm_fr[d]*sin(va_fr[c]-va_fr[d]) for d in PMs.conductor_ids(pm) if d != c) -
+                                        sum(-b[c,d]*vm_fr[c]*vm_to[d]*cos(va_fr[c]-va_to[d]) +
+                                             g[c,d]*vm_fr[c]*vm_to[d]*sin(va_fr[c]-va_to[d]) for d in PMs.conductor_ids(pm))) )
 end
 
 """
@@ -127,14 +127,14 @@ function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel{T}, n::Int, c::In
     va_to = [var(pm, n, d, :va, t_bus) for d in PMs.conductor_ids(pm)]
     z = var(pm, n, c, :branch_z, i)
 
-    @NLconstraint(pm.model, p_to == z*( g_to[c]*vm_to[c]^2 + sum(
-                                        g[c,i]*vm_to[c]*vm_to[i]*cos(va_to[c]-va_to[i]) +
-                                        b[c,i]*vm_to[c]*vm_to[i]*sin(va_to[c]-va_to[i]) -
-                                        g[c,i]*vm_to[c]*vm_fr[i]*cos(va_to[c]-va_fr[i]) -
-                                        b[c,i]*vm_to[c]*vm_fr[i]*sin(va_to[c]-va_fr[i]) for i in PMs.conductor_ids(pm)) ) )
-    @NLconstraint(pm.model, q_to == z*(-b_to[c]*vm_to[c]^2 - sum(
-                                        b[c,i]*vm_to[c]*vm_to[i]*cos(va_to[c]-va_to[i]) -
-                                        g[c,i]*vm_to[c]*vm_to[i]*sin(va_to[c]-va_to[i]) -
-                                        b[c,i]*vm_to[c]*vm_fr[i]*cos(va_to[c]-va_fr[i]) +
-                                        g[c,i]*vm_to[c]*vm_fr[i]*sin(va_to[c]-va_fr[i]) for i in PMs.conductor_ids(pm)) ) )
+    @NLconstraint(pm.model, p_to == z*((g_to[c]+g[c,c])*vm_to[c]^2 +
+                                        sum( g[c,d]*vm_to[c]*vm_to[d]*cos(va_to[c]-va_to[d]) +
+                                             b[c,d]*vm_to[c]*vm_to[d]*sin(va_to[c]-va_to[d]) for d in PMs.conductor_ids(pm) if d != c) +
+                                        sum(-g[c,d]*vm_to[c]*vm_fr[d]*cos(va_to[c]-va_fr[d]) +
+                                            -b[c,d]*vm_to[c]*vm_fr[d]*sin(va_to[c]-va_fr[d]) for d in PMs.conductor_ids(pm))) )
+    @NLconstraint(pm.model, q_to == z*(-(b_to[c]+b[c,c])*vm_to[c]^2 -
+                                        sum( b[c,d]*vm_to[c]*vm_to[d]*cos(va_to[c]-va_to[d]) -
+                                             g[c,d]*vm_to[c]*vm_to[d]*sin(va_to[c]-va_to[d]) for d in PMs.conductor_ids(pm) if d != c) -
+                                        sum(-b[c,d]*vm_to[c]*vm_fr[d]*cos(va_to[c]-va_fr[d]) +
+                                             g[c,d]*vm_to[c]*vm_fr[d]*sin(va_to[c]-va_fr[d]) for d in PMs.conductor_ids(pm))) )
 end
