@@ -57,6 +57,150 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library.html#ThreePhasePowerModels.LPLinUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.LPLinUBFForm",
+    "category": "type",
+    "text": "LinDist3Flow per Sankur et al 2016, using vector variables for power, voltage and current in scalar form\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.LPLinUBFPowerModel",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.LPLinUBFPowerModel",
+    "category": "type",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.LPLinUBFPowerModel-Tuple{Dict{String,Any}}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.LPLinUBFPowerModel",
+    "category": "method",
+    "text": "default Lin3Distflow constructor for scalar form\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.LPdiagUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.LPdiagUBFForm",
+    "category": "type",
+    "text": "LinDist3Flow per Sankur et al 2016, using vector variables for power, voltage and current\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.LPdiagUBFPowerModel",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.LPdiagUBFPowerModel",
+    "category": "type",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.LPdiagUBFPowerModel-Tuple{Dict{String,Any}}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.LPdiagUBFPowerModel",
+    "category": "method",
+    "text": "default LP unbalanced DistFlow constructor\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.LPfullUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.LPfullUBFForm",
+    "category": "type",
+    "text": "Simplified BFM per Gan and Low 2014, PSCC, using matrix variables for power, voltage and current\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.LPfullUBFPowerModel",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.LPfullUBFPowerModel",
+    "category": "type",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.LPfullUBFPowerModel-Tuple{Dict{String,Any}}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.LPfullUBFPowerModel",
+    "category": "method",
+    "text": "default LP unbalanced DistFlow constructor\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.SDPUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.SDPUBFForm",
+    "category": "type",
+    "text": "SDP BFM per Gan and Low 2014, PSCC\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.SDPUBFPowerModel",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.SDPUBFPowerModel",
+    "category": "type",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.SDPUBFPowerModel-Tuple{Dict{String,Any}}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.SDPUBFPowerModel",
+    "category": "method",
+    "text": "default SDP unbalanced DistFlow constructor\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.SOCConicUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.SOCConicUBFForm",
+    "category": "type",
+    "text": "SOC relaxation of SDPUBFForm per Kim, Kojima, & Yamashita 2003, cast as a SOC\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.SOCConicUBFPowerModel",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.SOCConicUBFPowerModel",
+    "category": "type",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.SOCConicUBFPowerModel-Tuple{Dict{String,Any}}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.SOCConicUBFPowerModel",
+    "category": "method",
+    "text": "default SOC unbalanced DistFlow constructor\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.SOCNLPUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.SOCNLPUBFForm",
+    "category": "type",
+    "text": "SOC relaxation of SDPUBFForm per Kim, Kojima, & Yamashita 2003, cast as an QCP\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.SOCNLPUBFPowerModel",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.SOCNLPUBFPowerModel",
+    "category": "type",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.SOCNLPUBFPowerModel-Tuple{Dict{String,Any}}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.SOCNLPUBFPowerModel",
+    "category": "method",
+    "text": "default SOC unbalanced DistFlow constructor\n\n\n\n"
+},
+
+{
     "location": "library.html#ThreePhasePowerModels.run_ac_tp_opf-Tuple{Any,Any}",
     "page": "Library",
     "title": "ThreePhasePowerModels.run_ac_tp_opf",
@@ -153,6 +297,22 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library.html#ThreePhasePowerModels.run_tp_pf_bf-Tuple{Dict{String,Any},Any,Any}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.run_tp_pf_bf",
+    "category": "method",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.run_tp_pf_bf-Tuple{String,Any,Any}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.run_tp_pf_bf",
+    "category": "method",
+    "text": "\n\n"
+},
+
+{
     "location": "library.html#ThreePhasePowerModels.run_tp_pf_pbs-Tuple{Dict{String,Any},Any,Any}",
     "page": "Library",
     "title": "ThreePhasePowerModels.run_tp_pf_pbs",
@@ -169,9 +329,49 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library.html#ThreePhasePowerModels.AbstractConicUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.AbstractConicUBFForm",
+    "category": "type",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.AbstractLPUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.AbstractLPUBFForm",
+    "category": "type",
+    "text": "Abstract form for linear unbalanced power flow models\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.AbstractNLPUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.AbstractNLPUBFForm",
+    "category": "type",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.add_branch_flow_setpoint-Tuple{Any,PowerModels.GenericPowerModel}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.add_branch_flow_setpoint",
+    "category": "method",
+    "text": "\n\n"
+},
+
+{
     "location": "library.html#ThreePhasePowerModels.add_bus_slack_setpoint-Tuple{Any,PowerModels.GenericPowerModel}",
     "page": "Library",
     "title": "ThreePhasePowerModels.add_bus_slack_setpoint",
+    "category": "method",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.add_bus_voltage_setpoint-Tuple{Any,PowerModels.GenericPowerModel}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.add_bus_voltage_setpoint",
     "category": "method",
     "text": "\n\n"
 },
@@ -230,6 +430,22 @@ var documenterSearchIndex = {"docs": [
     "title": "ThreePhasePowerModels.check_network_data",
     "category": "method",
     "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_branch_current-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.LPLinUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_branch_current",
+    "category": "method",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_flow_losses-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.LPLinUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_flow_losses",
+    "category": "method",
+    "text": "Defines branch flow model power flow equations\n\n\n\n"
 },
 
 {
@@ -385,19 +601,91 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.constraint_tp_branch_current-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:PowerModels.AbstractBFForm",
+    "location": "library.html#ThreePhasePowerModels.constraint_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACPForm, PowerModels.AbstractACTForm, PowerModels.AbstractDCPForm}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_theta_ref",
+    "category": "method",
+    "text": "Creates phase angle constraints at reference buses\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACTForm, PowerModels.AbstractBFForm, PowerModels.AbstractWRForm, PowerModels.AbstractWRMForm}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_theta_ref",
+    "category": "method",
+    "text": "do nothing, no way to represent this in these variables\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_branch_current-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.AbstractLPUBFForm",
     "page": "Library",
     "title": "ThreePhasePowerModels.constraint_tp_branch_current",
+    "category": "method",
+    "text": "Defines relationship between branch (series) power flow, branch (series) current and node voltage magnitude\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_branch_current-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.SDPUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_tp_branch_current",
+    "category": "method",
+    "text": "Defines relationship between branch (series) power flow, branch (series) current and node voltage magnitude\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_branch_current-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any,Any,Any,Any,Any}, Tuple{T}} where T<:Union{ThreePhasePowerModels.SOCConicUBFForm, ThreePhasePowerModels.SOCNLPUBFForm}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_tp_branch_current",
+    "category": "method",
+    "text": "Defines relationship between branch (series) power flow, branch (series) current and node voltage magnitude\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_flow_losses-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.LPLinUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_tp_flow_losses",
+    "category": "method",
+    "text": "Defines branch flow model power flow loss equations\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_flow_losses-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.LPdiagUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_tp_flow_losses",
+    "category": "method",
+    "text": "Defines branch flow model power flow equations\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_flow_losses-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.LPfullUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_tp_flow_losses",
+    "category": "method",
+    "text": "Defines branch flow model power flow equations\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_flow_losses-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:Union{ThreePhasePowerModels.AbstractConicUBFForm, ThreePhasePowerModels.AbstractNLPUBFForm}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_tp_flow_losses",
+    "category": "method",
+    "text": "Defines branch flow model power flow equations\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_kcl_shunt-Tuple{PowerModels.GenericPowerModel,Int64}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_tp_kcl_shunt",
     "category": "method",
     "text": "\n\n"
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.constraint_tp_flow_losses-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:PowerModels.AbstractBFForm",
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_kcl_shunt-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:Union{ThreePhasePowerModels.AbstractConicUBFForm, ThreePhasePowerModels.AbstractNLPUBFForm}",
     "page": "Library",
-    "title": "ThreePhasePowerModels.constraint_tp_flow_losses",
+    "title": "ThreePhasePowerModels.constraint_tp_kcl_shunt",
     "category": "method",
-    "text": "Defines branch flow model power flow equations\n\n\n\n"
+    "text": "sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) == sum(pg[g] for g in bus_gens) - sum(pd[d] for d in bus_loads) - sum(gs[s] for s in bus_shunts)*v^2\nsum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) == sum(qg[g] for g in bus_gens) - sum(qd[d] for d in bus_loads) + sum(bs[s] for s in bus_shunts)*v^2\n\n\n\n"
 },
 
 {
@@ -409,19 +697,27 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.constraint_tp_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACPForm, PowerModels.AbstractACTForm, PowerModels.AbstractDCPForm}",
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any}, Tuple{T}} where T<:ThreePhasePowerModels.LPdiagUBFForm",
     "page": "Library",
     "title": "ThreePhasePowerModels.constraint_tp_theta_ref",
     "category": "method",
-    "text": "Creates phase angle constraints at reference buses\n\n\n\n"
+    "text": "\n\n"
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.constraint_tp_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACTForm, PowerModels.AbstractBFForm, PowerModels.AbstractWRForm, PowerModels.AbstractWRMForm}",
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any}, Tuple{T}} where T<:Union{ThreePhasePowerModels.AbstractConicUBFForm, ThreePhasePowerModels.AbstractNLPUBFForm}",
     "page": "Library",
     "title": "ThreePhasePowerModels.constraint_tp_theta_ref",
     "category": "method",
-    "text": "do nothing, no way to represent this in these variables\n\n\n\n"
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64}, Tuple{T}} where T<:Union{ThreePhasePowerModels.AbstractConicUBFForm, ThreePhasePowerModels.AbstractNLPUBFForm}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_tp_theta_ref",
+    "category": "method",
+    "text": "\n\n"
 },
 
 {
@@ -449,17 +745,49 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.constraint_tp_voltage_magnitude_difference-Tuple{PowerModels.GenericPowerModel,Int64}",
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_voltage_magnitude_difference-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.LPLinUBFForm",
     "page": "Library",
     "title": "ThreePhasePowerModels.constraint_tp_voltage_magnitude_difference",
+    "category": "method",
+    "text": "Defines branch flow model power flow equations\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_voltage_magnitude_difference-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.LPdiagUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_tp_voltage_magnitude_difference",
+    "category": "method",
+    "text": "Defines voltage drop over a branch, linking from and to side voltage\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_voltage_magnitude_difference-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.LPfullUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_tp_voltage_magnitude_difference",
+    "category": "method",
+    "text": "Defines voltage drop over a branch, linking from and to side voltage\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_voltage_magnitude_difference-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:Union{ThreePhasePowerModels.AbstractConicUBFForm, ThreePhasePowerModels.AbstractNLPUBFForm}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_tp_voltage_magnitude_difference",
+    "category": "method",
+    "text": "Defines voltage drop over a branch, linking from and to side voltage\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_voltage_magnitude_difference-Tuple{PowerModels.GenericPowerModel,Int64}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_voltage_magnitude_difference",
     "category": "method",
     "text": "\n\n"
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.constraint_tp_voltage_magnitude_difference-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:PowerModels.AbstractBFForm",
+    "location": "library.html#ThreePhasePowerModels.constraint_voltage_magnitude_difference-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.LPLinUBFForm",
     "page": "Library",
-    "title": "ThreePhasePowerModels.constraint_tp_voltage_magnitude_difference",
+    "title": "ThreePhasePowerModels.constraint_voltage_magnitude_difference",
     "category": "method",
     "text": "Defines voltage drop over a branch, linking from and to side voltage magnitude\n\n\n\n"
 },
@@ -646,6 +974,14 @@ var documenterSearchIndex = {"docs": [
     "title": "ThreePhasePowerModels.get_prop_name",
     "category": "method",
     "text": "get_prop_name(ctype)\n\nReturns the property names in order for a given component type ctype.\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.get_solution_tp-Tuple{PowerModels.GenericPowerModel,Dict{String,Any}}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.get_solution_tp",
+    "category": "method",
+    "text": "\n\n"
 },
 
 {
@@ -977,11 +1313,75 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library.html#ThreePhasePowerModels.post_tp_pf_bf-Tuple{PowerModels.GenericPowerModel}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.post_tp_pf_bf",
+    "category": "method",
+    "text": "\n\n"
+},
+
+{
     "location": "library.html#ThreePhasePowerModels.post_tp_pf_pbs-Tuple{PowerModels.GenericPowerModel}",
     "page": "Library",
     "title": "ThreePhasePowerModels.post_tp_pf_pbs",
     "category": "method",
     "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.psd_to_psd_complex-Tuple{PowerModels.GenericPowerModel,Any,Any}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.psd_to_psd_complex",
+    "category": "method",
+    "text": "complex SDP to SDP relaxation based on PSDness of principal minors\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.psd_to_psd_complex-Union{Tuple{PowerModels.GenericPowerModel{T},Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.AbstractConicUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.psd_to_psd_complex",
+    "category": "method",
+    "text": "complex SDP to SDP relaxation based on PSDness of principal minors, default is 3x3 SDP relaxation\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.psd_to_soc-Tuple{PowerModels.GenericPowerModel,Any,Any}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.psd_to_soc",
+    "category": "method",
+    "text": "See section 4.3 in: Fazel, M., Hindi, H., & Boyd, S. P. (2001). A rank minimization heuristic with application to minimum order system approximation. Proc. American Control Conf., 6(2), 4734–4739. https://doi.org/10.1109/ACC.2001.945730\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.psd_to_soc-Tuple{PowerModels.GenericPowerModel,Any}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.psd_to_soc",
+    "category": "method",
+    "text": "SDP to SOC relaxation of type 2 as described in: Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. https://doi.org/10.1080/1055678031000148696 Applied to real-value matrix\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.psd_to_soc-Union{Tuple{PowerModels.GenericPowerModel{T},Any}, Tuple{T}} where T<:ThreePhasePowerModels.AbstractConicUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.psd_to_soc",
+    "category": "method",
+    "text": "SDP to SOC relaxation of type 2 as described in: Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. https://doi.org/10.1080/1055678031000148696 Applied to real-value matrix\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.psd_to_soc_complex-Tuple{PowerModels.GenericPowerModel,Any,Any}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.psd_to_soc_complex",
+    "category": "method",
+    "text": "SDP to SOC relaxation of type 2 as described in: Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. https://doi.org/10.1080/1055678031000148696\n\nApplied to complex-value matrix to obtain SOC: Andersen, M. S., Hansson, A., & Vandenberghe, L. (2014). Reduced-complexity semidefinite relaxations of optimal power flow problems. IEEE Trans. Power Syst., 29(4), 1855–1863.\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.psd_to_soc_complex-Union{Tuple{PowerModels.GenericPowerModel{T},Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.AbstractConicUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.psd_to_soc_complex",
+    "category": "method",
+    "text": "SDP to SOC relaxation of type 2 as described in: Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. https://doi.org/10.1080/1055678031000148696\n\nApplied to complex-value matrix to obtain SOC: Andersen, M. S., Hansson, A., & Vandenberghe, L. (2014). Reduced-complexity semidefinite relaxations of optimal power flow problems. IEEE Trans. Power Syst., 29(4), 1855–1863.\n\n\n\n"
 },
 
 {
@@ -1065,6 +1465,22 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library.html#ThreePhasePowerModels.variable_lower_triangle_active_branch_flow-Tuple{PowerModels.GenericPowerModel}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.variable_lower_triangle_active_branch_flow",
+    "category": "method",
+    "text": "variable: p_lt[l,i,j] for (l,i,j) in arcs\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.variable_lower_triangle_reactive_branch_flow-Tuple{PowerModels.GenericPowerModel}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.variable_lower_triangle_reactive_branch_flow",
+    "category": "method",
+    "text": "variable: q_lt[l,i,j] for (l,i,j) in arcs\n\n\n\n"
+},
+
+{
     "location": "library.html#ThreePhasePowerModels.variable_reactive_bus_power_slack-Tuple{PowerModels.GenericPowerModel}",
     "page": "Library",
     "title": "ThreePhasePowerModels.variable_reactive_bus_power_slack",
@@ -1073,15 +1489,31 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.variable_tp_voltage-Union{Tuple{PowerModels.GenericPowerModel{T}}, Tuple{T}} where T<:PowerModels.AbstractACPForm",
+    "location": "library.html#ThreePhasePowerModels.variable_tp_branch_flow-Tuple{PowerModels.GenericPowerModel}",
     "page": "Library",
-    "title": "ThreePhasePowerModels.variable_tp_voltage",
+    "title": "ThreePhasePowerModels.variable_tp_branch_flow",
     "category": "method",
     "text": "\n\n"
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.variable_tp_voltage-Union{Tuple{PowerModels.GenericPowerModel{T}}, Tuple{T}} where T<:PowerModels.AbstractBFForm",
+    "location": "library.html#ThreePhasePowerModels.variable_tp_branch_flow-Union{Tuple{PowerModels.GenericPowerModel{T}}, Tuple{T}} where T<:ThreePhasePowerModels.LPdiagUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.variable_tp_branch_flow",
+    "category": "method",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.variable_tp_branch_flow-Union{Tuple{PowerModels.GenericPowerModel{T}}, Tuple{T}} where T<:ThreePhasePowerModels.LPfullUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.variable_tp_branch_flow",
+    "category": "method",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.variable_tp_voltage-Union{Tuple{PowerModels.GenericPowerModel{T}}, Tuple{T}} where T<:PowerModels.AbstractACPForm",
     "page": "Library",
     "title": "ThreePhasePowerModels.variable_tp_voltage",
     "category": "method",
@@ -1097,6 +1529,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library.html#ThreePhasePowerModels.variable_tp_voltage-Union{Tuple{PowerModels.GenericPowerModel{T}}, Tuple{T}} where T<:ThreePhasePowerModels.LPLinUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.variable_tp_voltage",
+    "category": "method",
+    "text": "\n\n"
+},
+
+{
     "location": "library.html#ThreePhasePowerModels.variable_tp_voltage_magnitude_sqr-Tuple{PowerModels.GenericPowerModel}",
     "page": "Library",
     "title": "ThreePhasePowerModels.variable_tp_voltage_magnitude_sqr",
@@ -1105,11 +1545,43 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library.html#ThreePhasePowerModels.variable_tp_voltage_prod_hermitian-Union{Tuple{PowerModels.GenericPowerModel{T}}, Tuple{T}} where T<:ThreePhasePowerModels.LPdiagUBFForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.variable_tp_voltage_prod_hermitian",
+    "category": "method",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.variable_tp_voltage_prod_hermitian-Union{Tuple{PowerModels.GenericPowerModel{T}}, Tuple{T}} where T<:Union{ThreePhasePowerModels.AbstractConicUBFForm, ThreePhasePowerModels.AbstractNLPUBFForm}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.variable_tp_voltage_prod_hermitian",
+    "category": "method",
+    "text": "\n\n"
+},
+
+{
     "location": "library.html#ThreePhasePowerModels.variable_tp_voltage_product-Tuple{PowerModels.GenericPowerModel}",
     "page": "Library",
     "title": "ThreePhasePowerModels.variable_tp_voltage_product",
     "category": "method",
     "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.variable_upper_triangle_active_branch_flow-Tuple{PowerModels.GenericPowerModel}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.variable_upper_triangle_active_branch_flow",
+    "category": "method",
+    "text": "variable: p_ut[l,i,j] for (l,i,j) in arcs\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.variable_upper_triangle_reactive_branch_flow-Tuple{PowerModels.GenericPowerModel}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.variable_upper_triangle_reactive_branch_flow",
+    "category": "method",
+    "text": "variable: q_ut[l,i,j] for (l,i,j) in arcs\n\n\n\n"
 },
 
 {
