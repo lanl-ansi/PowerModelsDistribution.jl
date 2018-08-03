@@ -68,7 +68,7 @@ end
 
 
 
-@testset "test multi-phase parser" begin
+@testset "test multi-phase matlab parser" begin
     @testset "5-bus independent radial identical case" begin
         mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_a.m")
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
@@ -176,4 +176,76 @@ end
             @test isapprox(result["solution"]["bus"]["2"]["va"][c], TPPMs.wraptopi(0.055338-2*pi/mp_data["conductors"]*(c-1)); atol = 5e-3)
         end
     end
+end
+
+
+@testset "test dropped phases" begin
+    @testset "4-bus 3-phase ac opf case" begin
+        mp_data = TPPMs.parse_file("../test/data/opendss/case4_phase_drop.dss")
+        result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.0182595; atol = 1e-4)
+
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 5.06513e-5; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 6.0865e-5; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 7.1119e-5; atol = 1e-7)
+
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.990023; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 1.000000; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 1.000000; atol = 1e-4)
+    end
+
+    @testset "5-bus 3-phase ac opf case" begin
+        mp_data = TPPMs.parse_file("../test/data/opendss/case5_phase_drop.dss")
+        result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.0185406; atol = 1e-4)
+
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 5.132752553077026e-5; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 6.177139067714014e-5; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 7.230678136903121e-5; atol = 1e-7)
+
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9899205823173715; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9879617649716861; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9859780454153353; atol = 1e-4)
+    end
+
+
+    #=
+    # causes a solve error in Ipopt, probably due to an issue with redundant constraints
+    @testset "4-bus 3-phase ac pf case" begin
+        mp_data = TPPMs.parse_file("../test/data/opendss/case4_phase_drop.dss")
+        result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.0182595; atol = 1e-4)
+
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 5.06513e-5; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 6.0865e-5; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 7.1119e-5; atol = 1e-7)
+
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.990023; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 1.000000; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 1.000000; atol = 1e-4)
+    end
+    =#
+
+    @testset "5-bus 3-phase ac pf case" begin
+        mp_data = TPPMs.parse_file("../test/data/opendss/case5_phase_drop.dss")
+        result = run_tp_pf(mp_data, PMs.ACPPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.0; atol = 1e-4)
+
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 5.212637770319941e-5; atol = 1e-6)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 6.260652896080654e-5; atol = 1e-6)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 7.386742805776751e-5; atol = 1e-6)
+
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9896729458699312; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9877087792522306; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9855803487865942; atol = 1e-4)
+    end
+
 end
