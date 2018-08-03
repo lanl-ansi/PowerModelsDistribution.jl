@@ -4,7 +4,7 @@ makedocs(
     modules = [ThreePhasePowerModels],
     format = :html,
     sitename = "ThreePhasePowerModels",
-    authors = "Carleton Coffrin, David Fobes, and contributors.",
+    authors = "Carleton Coffrin, David Fobes, Frederik Geth and contributors.",
     analytics = "",
     pages = [
         "Home" => "index.md",
