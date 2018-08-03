@@ -239,13 +239,13 @@ end
         @test result["status"] == :LocalOptimal
         @test isapprox(result["objective"], 0.0; atol = 1e-4)
 
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 5.13385961984349e-5; atol = 1e-7)
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 6.17829534652931e-5; atol = 1e-7)
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 7.23305690855803e-5; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 5.212637770319941e-5; atol = 1e-6)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 6.260652896080654e-5; atol = 1e-6)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 7.386742805776751e-5; atol = 1e-6)
 
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9898208875771091; atol = 1e-4)
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9878608864128781; atol = 1e-4)
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9858740381554243; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9896729458699312; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9877087792522306; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9855803487865942; atol = 1e-4)
     end
 
 end
