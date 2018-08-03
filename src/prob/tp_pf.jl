@@ -38,16 +38,19 @@ function post_tp_pf(pm::GenericPowerModel)
 
     for c in PMs.conductor_ids(pm)
         constraint_tp_voltage(pm, cnd=c)
-        # PMs.constraint_voltage(pm, cnd=c)
+    end
 
-        for (i,bus) in ref(pm, :ref_buses)
+    for (i,bus) in ref(pm, :ref_buses)
+        constraint_tp_theta_ref(pm, i)
+
+        for c in PMs.conductor_ids(pm)
             @assert bus["bus_type"] == 3
-            constraint_tp_theta_ref(pm, i, cnd=c)
-            # PMs.constraint_theta_ref(pm, i, cnd=c)
             PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
         end
+    end
 
-        for (i,bus) in ref(pm, :bus)
+    for (i,bus) in ref(pm, :bus)
+        for c in PMs.conductor_ids(pm)
             PMs.constraint_kcl_shunt(pm, i, cnd=c)
 
             # PV Bus Constraints
@@ -61,15 +64,20 @@ function post_tp_pf(pm::GenericPowerModel)
                 end
             end
         end
+    end
 
-        for i in ids(pm, :branch)
+    for i in ids(pm, :branch)
+        for c in PMs.conductor_ids(pm)
             constraint_ohms_tp_yt_from(pm, i, cnd=c)
             constraint_ohms_tp_yt_to(pm, i, cnd=c)
             # PMs.constraint_ohms_yt_from(pm, i, cnd=c)
             # PMs.constraint_ohms_yt_to(pm, i, cnd=c)
         end
+    end
 
-        for (i,dcline) in ref(pm, :dcline)
+    for (i,dcline) in ref(pm, :dcline)
+        for c in PMs.conductor_ids(pm)
+
             PMs.constraint_active_dcline_setpoint(pm, i, cnd=c)
 
             f_bus = ref(pm, :bus)[dcline["f_bus"]]
@@ -82,6 +90,5 @@ function post_tp_pf(pm::GenericPowerModel)
                 PMs.constraint_voltage_magnitude_setpoint(pm, t_bus["index"], cnd=c)
             end
         end
-
     end
 end
