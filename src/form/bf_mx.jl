@@ -1,22 +1,22 @@
 export
-    AbstractConicUBFForm, AbstractNLPUBFForm,
     SDPUBFPowerModel, SDPUBFForm,
-    LPUBFForm, LPUBFPowerModel, LPfullUBFForm, LPdiagUBFPowerModel, LPdiagUBFForm,
+    LPUBFForm, LPfullUBFPowerModel, LPfullUBFForm, LPdiagUBFPowerModel, LPdiagUBFForm,
     SOCUBFForm, SOCConicUBFPowerModel, SOCNLPUBFPowerModel, SOCConicUBFForm, SOCNLPUBFForm
 
 ""
-abstract type AbstractNLPUBFForm <: PMs.AbstractPowerFormulation end
+abstract type AbstractNLPUBFForm <: PMs.AbstractBFQPForm end
 
 ""
-abstract type AbstractConicUBFForm <: PMs.AbstractConicPowerFormulation end
+abstract type AbstractConicUBFForm <: PMs.AbstractBFConicForm end
 
 AbstractUBFForm = Union{AbstractNLPUBFForm, AbstractConicUBFForm}
+
 
 "SDP BFM per Gan and Low 2014, PSCC"
 abstract type SDPUBFForm <: AbstractConicUBFForm end
 
 
-"SOC relaxation of SDPUBFForm per Kim, Kojima, & Yamashita 2003, cast as an NLP"
+"SOC relaxation of SDPUBFForm per Kim, Kojima, & Yamashita 2003, cast as an QCP"
 abstract type SOCNLPUBFForm <: AbstractNLPUBFForm end
 
 "SOC relaxation of SDPUBFForm per Kim, Kojima, & Yamashita 2003, cast as a SOC"
@@ -25,13 +25,15 @@ abstract type SOCConicUBFForm <: AbstractConicUBFForm end
 SOCUBFForm = Union{SOCNLPUBFForm, SOCConicUBFForm}
 
 
+"Abstract form for linear unbalanced power flow models"
+abstract type AbstractLPUBFForm <: AbstractNLPUBFForm end
+
 "Simplified BFM per Gan and Low 2014, PSCC, using matrix variables for power, voltage and current"
-abstract type LPfullUBFForm <: AbstractNLPUBFForm end
+abstract type LPfullUBFForm <: AbstractLPUBFForm end
 
 "LinDist3Flow per Sankur et al 2016, using vector variables for power, voltage and current"
-abstract type LPdiagUBFForm <: AbstractNLPUBFForm end
+abstract type LPdiagUBFForm <: AbstractLPUBFForm end
 
-LPUBFForm = Union{LPfullUBFForm, LPdiagUBFForm}
 
 ""
 const SDPUBFPowerModel = GenericPowerModel{SDPUBFForm}
@@ -55,10 +57,10 @@ SOCConicUBFPowerModel(data::Dict{String,Any}; kwargs...) =
 GenericPowerModel(data, SOCConicUBFForm; kwargs...)
 
 ""
-const LPUBFPowerModel = GenericPowerModel{LPfullUBFForm}
+const LPfullUBFPowerModel = GenericPowerModel{LPfullUBFForm}
 
 "default LP unbalanced DistFlow constructor"
-LPUBFPowerModel(data::Dict{String,Any}; kwargs...) =
+LPfullUBFPowerModel(data::Dict{String,Any}; kwargs...) =
     GenericPowerModel(data, LPfullUBFForm; kwargs...)
 
 ""
@@ -129,8 +131,8 @@ function variable_tp_voltage_prod_hermitian(pm::GenericPowerModel{T}; n_cond::In
         w_re_dict[i] = w_re
         w_im_dict[i] = w_im
     end
-    var(pm, nw)[:w_re] = w_re_dict
-    var(pm, nw)[:w_im] = w_im_dict
+    var(pm, nw)[:W_re] = w_re_dict
+    var(pm, nw)[:W_im] = w_im_dict
 end
 
 function variable_tp_branch_series_current_prod_hermitian(pm::GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
@@ -221,8 +223,8 @@ function variable_tp_branch_series_current_prod_hermitian(pm::GenericPowerModel{
         ccm_re_dict[i] = ccm_re
         ccm_im_dict[i] = ccm_im
     end
-    var(pm, nw)[:ccm_re] = ccm_re_dict
-    var(pm, nw)[:ccm_im] = ccm_im_dict
+    var(pm, nw)[:CC_re] = ccm_re_dict
+    var(pm, nw)[:CC_im] = ccm_im_dict
 end
 
 ""
@@ -261,8 +263,8 @@ function variable_tp_branch_flow(pm::GenericPowerModel; n_cond::Int=3, nw::Int=p
         p_mat_dict[i] = p_mat
         q_mat_dict[i] = q_mat
     end
-    var(pm, nw)[:p_mat] = p_mat_dict
-    var(pm, nw)[:q_mat] = q_mat_dict
+    var(pm, nw)[:P_mx] = p_mat_dict
+    var(pm, nw)[:Q_mx] = q_mat_dict
 end
 
 
@@ -369,25 +371,30 @@ function variable_upper_triangle_reactive_branch_flow(pm::GenericPowerModel; nw:
     end
 end
 
+""
+function constraint_tp_theta_ref(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
+    constraint_tp_theta_ref(pm, nw, i)
+end
+
 
 """
 Defines branch flow model power flow equations
 """
 function constraint_tp_flow_losses(pm::GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to) where T <: AbstractUBFForm
-    p_to = var(pm, n, :p_mat)[t_idx]
-    q_to = var(pm, n, :q_mat)[t_idx]
+    p_to = var(pm, n, :P_mx)[t_idx]
+    q_to = var(pm, n, :Q_mx)[t_idx]
 
-    p_fr = var(pm, n, :p_mat)[f_idx]
-    q_fr = var(pm, n, :q_mat)[f_idx]
+    p_fr = var(pm, n, :P_mx)[f_idx]
+    q_fr = var(pm, n, :Q_mx)[f_idx]
 
-    w_to_re = var(pm, n, :w_re)[t_bus]
-    w_fr_re = var(pm, n, :w_re)[f_bus]
+    w_to_re = var(pm, n, :W_re)[t_bus]
+    w_fr_re = var(pm, n, :W_re)[f_bus]
 
-    w_to_im = var(pm, n, :w_im)[t_bus]
-    w_fr_im = var(pm, n, :w_im)[f_bus]
+    w_to_im = var(pm, n, :W_im)[t_bus]
+    w_fr_im = var(pm, n, :W_im)[f_bus]
 
-    ccm_re =  var(pm, n, :ccm_re)[i]
-    ccm_im =  var(pm, n, :ccm_im)[i]
+    ccm_re =  var(pm, n, :CC_re)[i]
+    ccm_im =  var(pm, n, :CC_im)[i]
 
     @constraint(pm.model, p_fr + p_to .==  w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)' + r*ccm_re - x*ccm_im +  w_to_re*(g_sh_to)'  + w_to_im*(b_sh_to)')
     @constraint(pm.model, q_fr + q_to .==  w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)' + x*ccm_re + r*ccm_im +  w_to_im*(g_sh_to)'  - w_to_re*(b_sh_to)')
@@ -397,8 +404,8 @@ end
 function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, i) where T <: AbstractUBFForm
     nconductors = length(PMs.conductor_ids(pm))
 
-    w_re = var(pm, n, :w_re)[i]
-    w_im = var(pm, n, :w_im)[i]
+    w_re = var(pm, n, :W_re)[i]
+    w_im = var(pm, n, :W_im)[i]
 
     alpha = exp(-im*ThreePhasePowerModels.wraptopi(2 * pi / nconductors ))
     beta = (alpha*ones(nconductors)).^(0:nconductors-1)
@@ -438,20 +445,20 @@ end
 Defines voltage drop over a branch, linking from and to side voltage
 """
 function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: AbstractUBFForm
-    w_fr_re = var(pm, n, :w_re)[f_bus]
-    w_fr_im = var(pm, n, :w_im)[f_bus]
+    w_fr_re = var(pm, n, :W_re)[f_bus]
+    w_fr_im = var(pm, n, :W_im)[f_bus]
 
-    w_to_re = var(pm, n, :w_re)[t_bus]
-    w_to_im = var(pm, n, :w_im)[t_bus]
+    w_to_re = var(pm, n, :W_re)[t_bus]
+    w_to_im = var(pm, n, :W_im)[t_bus]
 
-    p_fr = var(pm, n, :p_mat)[f_idx]
-    q_fr = var(pm, n, :q_mat)[f_idx]
+    p_fr = var(pm, n, :P_mx)[f_idx]
+    q_fr = var(pm, n, :Q_mx)[f_idx]
 
     p_s_fr = p_fr - (w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)')
     q_s_fr = q_fr - (w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)')
 
-    ccm_re =  var(pm, n, :ccm_re)[i]
-    ccm_im =  var(pm, n, :ccm_im)[i]
+    ccm_re =  var(pm, n, :CC_re)[i]
+    ccm_im =  var(pm, n, :CC_im)[i]
 
         #KVL over the line:
     @constraint(pm.model, diag(w_to_re) .== diag(
@@ -507,111 +514,4 @@ function add_branch_flow_setpoint(sol, pm::GenericPowerModel)
         PMs.add_setpoint(sol, pm, "branch", "ccmr", :ccmr)
         PMs.add_setpoint(sol, pm, "branch", "ccmi", :ccmi)
     end
-end
-
-
-
-
-
-
-
-
-## Functions below for ompatibility as unbalanced W-space formulations are not yet <: AbstractWForms
-
-""
-function constraint_kcl_shunt(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    if !haskey(con(pm, nw, cnd), :kcl_p)
-        con(pm, nw, cnd)[:kcl_p] = Dict{Int,ConstraintRef}()
-    end
-    if !haskey(con(pm, nw, cnd), :kcl_q)
-        con(pm, nw, cnd)[:kcl_q] = Dict{Int,ConstraintRef}()
-    end
-
-    bus = ref(pm, nw, :bus, i)
-    bus_arcs = ref(pm, nw, :bus_arcs, i)
-    bus_arcs_dc = ref(pm, nw, :bus_arcs_dc, i)
-    bus_gens = ref(pm, nw, :bus_gens, i)
-    bus_loads = ref(pm, nw, :bus_loads, i)
-    bus_shunts = ref(pm, nw, :bus_shunts, i)
-
-    bus_pd = Dict(k => ref(pm, nw, :load, k, "pd", cnd) for k in bus_loads)
-    bus_qd = Dict(k => ref(pm, nw, :load, k, "qd", cnd) for k in bus_loads)
-
-    bus_gs = Dict(k => ref(pm, nw, :shunt, k, "gs", cnd) for k in bus_shunts)
-    bus_bs = Dict(k => ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
-
-    constraint_kcl_shunt(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
-end
-"""
-```
-sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) == sum(pg[g] for g in bus_gens) - sum(pd[d] for d in bus_loads) - sum(gs[s] for d in bus_shunts)*w[i]
-sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) == sum(qg[g] for g in bus_gens) - sum(qd[d] for d in bus_loads) + sum(bs[s] for d in bus_shunts)*w[i]
-```
-"""
-function constraint_kcl_shunt(pm::GenericPowerModel{T}, n::Int, c::Int, i, bus_arcs, bus_arcs_dc, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: AbstractUBFForm
-    w    = var(pm, n, c, :w, i)
-    pg   = var(pm, n, c, :pg)
-    qg   = var(pm, n, c, :qg)
-    p    = var(pm, n, c, :p)
-    q    = var(pm, n, c, :q)
-    p_dc = var(pm, n, c, :p_dc)
-    q_dc = var(pm, n, c, :q_dc)
-
-    @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*w)
-    @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*w)
-end
-
-
-""
-function constraint_voltage_angle_difference(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    branch = ref(pm, nw, :branch, i)
-    f_bus = branch["f_bus"]
-    t_bus = branch["t_bus"]
-    f_idx = (i, f_bus, t_bus)
-    pair = (f_bus, t_bus)
-    buspair = ref(pm, nw, :buspairs, pair)
-
-    if buspair["branch"] == i
-        constraint_voltage_angle_difference(pm, nw, cnd, f_idx, buspair["angmin"][cnd], buspair["angmax"][cnd])
-    end
-end
-
-
-function constraint_voltage_angle_difference(pm::GenericPowerModel{T}, n::Int, c::Int, f_idx, angmin, angmax) where T <: AbstractUBFForm
-    i, f_bus, t_bus = f_idx
-    t_idx = (i, t_bus, f_bus)
-
-    branch = ref(pm, n, :branch, i)
-    tm = branch["tap"][c]
-    g, b = PowerModels.calc_branch_y(branch)
-    g, b = g[c,c], b[c,c]
-    g_fr = branch["g_fr"][c]
-    g_to = branch["g_to"][c]
-    b_fr = branch["b_fr"][c]
-    b_to = branch["b_to"][c]
-
-    tr, ti = PowerModels.calc_branch_t(branch)
-    tr, ti = tr[c], ti[c]
-
-    # convert series admittance to impedance
-    z = 1/(g + im*b)
-    r = real(z)
-    x = imag(z)
-
-    # getting the variables
-    w_fr = var(pm, n, c, :w, f_bus)
-    p_fr = var(pm, n, c, :p, f_idx)
-    q_fr = var(pm, n, c, :q, f_idx)
-
-    tzr = r*tr + x*ti
-    tzi = r*ti - x*tr
-
-    @constraint(pm.model,
-        tan(angmin)*((tr + tzr*g_fr + tzi*b_fr)*(w_fr/tm^2) - tzr*p_fr + tzi*q_fr)
-                 <= ((ti + tzi*g_fr - tzr*b_fr)*(w_fr/tm^2) - tzi*p_fr - tzr*q_fr)
-        )
-    @constraint(pm.model,
-        tan(angmax)*((tr + tzr*g_fr + tzi*b_fr)*(w_fr/tm^2) - tzr*p_fr + tzi*q_fr)
-                 >= ((ti + tzi*g_fr - tzr*b_fr)*(w_fr/tm^2) - tzi*p_fr - tzr*q_fr)
-        )
 end

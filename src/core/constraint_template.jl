@@ -109,10 +109,6 @@ function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel, i::Int; nw::Int=
     constraint_ohms_tp_yt_to_on_off(pm, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max)
 end
 
-
-
-
-
 ""
 function constraint_voltage_magnitude_difference(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     branch = ref(pm, nw, :branch, i)
@@ -130,7 +126,7 @@ function constraint_voltage_magnitude_difference(pm::GenericPowerModel, i::Int; 
     constraint_voltage_magnitude_difference(pm, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
 end
 
-function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
+function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -145,18 +141,6 @@ function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, i:
 
     constraint_tp_voltage_magnitude_difference(pm, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
 end
-
-
-function constraint_voltage_angle_difference(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd) where T <:PowerModels.SOCBFForm
-        PMs.constraint_voltage_angle_difference(pm, i, nw=nw, cnd=cnd)
-end
-
-function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <:PowerModels.SOCBFForm
-    for cnd in PMs.conductor_ids(pm)
-        constraint_voltage_magnitude_difference(pm, i, nw=nw, cnd=cnd)
-    end
-end
-
 
 function constraint_branch_current(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     branch = ref(pm, nw, :branch, i)
@@ -183,13 +167,6 @@ function constraint_tp_branch_current(pm::GenericPowerModel{T}, i::Int; nw::Int=
 end
 
 
-function constraint_tp_branch_current(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
-    for cnd in PMs.conductor_ids(pm)
-        constraint_branch_current(pm, i, nw=nw, cnd=cnd)
-    end
-end
-
-
 function constraint_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
@@ -208,7 +185,7 @@ function constraint_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, c
     constraint_flow_losses(pm::GenericPowerModel, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
 end
 
-function constraint_tp_flow_losses(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
+function constraint_tp_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -225,40 +202,23 @@ function constraint_tp_flow_losses(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.
     constraint_tp_flow_losses(pm::GenericPowerModel, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
 end
 
-function constraint_tp_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+
+function constraint_tp_branch_current(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     for cnd in PMs.conductor_ids(pm)
-        constraint_flow_losses(pm, i, nw=nw, cnd=cnd)
+        constraint_branch_current(pm, i, nw=nw, cnd=cnd)
     end
 end
-
 
 ""
 function constraint_tp_kcl_shunt(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     for cnd in PMs.conductor_ids(pm)
-        constraint_kcl_shunt(pm, i, nw=nw, cnd=cnd)
-    end
-end
-
-""
-function constraint_tp_kcl_shunt(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <:PowerModels.SOCBFForm
-    for cnd in PMs.conductor_ids(pm)
         PMs.constraint_kcl_shunt(pm, i, nw=nw, cnd=cnd)
     end
 end
-
-# ""
-# function constraint_tp_theta_ref(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-#     constraint_tp_theta_ref(pm, nw, cnd, i)
-# end
 
 ""
 function constraint_tp_theta_ref(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     for cnd in PMs.conductor_ids(pm)
         constraint_theta_ref(pm, nw, cnd, i)
     end
-end
-
-""
-function constraint_tp_theta_ref(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
-    constraint_tp_theta_ref(pm, nw, i)
 end

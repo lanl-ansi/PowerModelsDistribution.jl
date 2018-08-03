@@ -200,7 +200,7 @@ TESTLOG = getlogger(PowerModels)
                 @test sol["status"] == :LocalOptimal
             end
             @testset "LDF" begin
-                sol = TPPMs.run_tp_opf_bf(tppm, PMs.SOCBFPowerModel, ipopt_solver)
+                sol = TPPMs.run_tp_opf_bf(tppm, LPLinUBFPowerModel, ipopt_solver)
 
                 @test sol["status"] == :LocalOptimal
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183456; atol=2e-3)
@@ -233,7 +233,7 @@ TESTLOG = getlogger(PowerModels)
                 @test sol["status"] == :LocalOptimal
             end
             @testset "LDF" begin
-                sol = TPPMs.run_tp_opf_bf(tppm, PMs.SOCBFPowerModel, ipopt_solver)
+                sol = TPPMs.run_tp_opf_bf(tppm, LPLinUBFPowerModel, ipopt_solver)
 
                 @test sol["status"] == :LocalOptimal
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214835; atol=2e-3)
