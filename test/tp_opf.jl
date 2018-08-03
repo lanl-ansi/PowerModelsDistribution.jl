@@ -212,4 +212,40 @@ end
         @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9859780454153353; atol = 1e-4)
     end
 
+
+    #=
+    # causes a solve error in Ipopt, probably due to an issue with redundant constraints
+    @testset "4-bus 3-phase ac pf case" begin
+        mp_data = TPPMs.parse_file("../test/data/opendss/case4_phase_drop.dss")
+        result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.0182595; atol = 1e-4)
+
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 5.06513e-5; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 6.0865e-5; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 7.1119e-5; atol = 1e-7)
+
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.990023; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 1.000000; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 1.000000; atol = 1e-4)
+    end
+    =#
+
+    @testset "5-bus 3-phase ac pf case" begin
+        mp_data = TPPMs.parse_file("../test/data/opendss/case5_phase_drop.dss")
+        result = run_tp_pf(mp_data, PMs.ACPPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.0; atol = 1e-4)
+
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 5.13385961984349e-5; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 6.17829534652931e-5; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 7.23305690855803e-5; atol = 1e-7)
+
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9898208875771091; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9878608864128781; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9858740381554243; atol = 1e-4)
+    end
+
 end
