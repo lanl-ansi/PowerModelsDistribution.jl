@@ -815,7 +815,9 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     dss2tppm_branch!(tppm_data, dss_data, import_all)
     dss2tppm_transformer!(tppm_data, dss_data, import_all)
     dss2tppm_gen!(tppm_data, dss_data, import_all)
-    dss2tppm_pvsystem!(tppm_data, dss_data, import_all)
+    if import_all
+        dss2tppm_pvsystem!(tppm_data, dss_data,import_all)
+    end
 
     adjust_sourcegen_bounds!(tppm_data)
 
