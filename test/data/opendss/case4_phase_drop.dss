@@ -1,0 +1,29 @@
+clear
+
+new circuit.c2
+~ basekv=0.4 pu=1 MVAsc1=1e6 MVAsc3=1e6
+
+new line.OHLine1 phases=1 bus1=sourcebus.1 bus2=loadbus1.1
+~ rmatrix = ( 0.1 )
+~ xmatrix = ( 0.01 )
+~ cmatrix = ( 50 )
+
+new line.OHLine2 phases=1 bus1=sourcebus.2 bus2=loadbus2.2
+~ rmatrix = ( 0.1 )
+~ xmatrix = ( 0.01 )
+~ cmatrix = ( 50 )
+
+new line.OHLine3 phases=1 bus1=sourcebus.3 bus2=loadbus3.3
+~ rmatrix = ( 0.1 )
+~ xmatrix = ( 0.01 )
+~ cmatrix = ( 50 )
+
+new load.L1 phases=1 loadbus1.1 kw=5 kvar=3 kv=( 0.4 3 sqrt / )
+new load.L2 phases=1 loadbus2.2 kw=6 kvar=3 kv=( 0.4 3 sqrt / )
+new load.L3 phases=1 loadbus3.3 kw=7 kvar=3 kv=( 0.4 3 sqrt / )
+
+set voltagebases=[0.4]
+set tolerance=0.000001
+Calcvoltagebases
+
+solve
