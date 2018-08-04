@@ -26,7 +26,7 @@ before_install:
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
   - julia -e 'Pkg.clone(pwd())'
-  - julia -e 'Pkg.checkout("PowerModels")' # need the master version
+#  - julia -e 'Pkg.checkout("PowerModels")' # use if master version is needed
   - julia -e 'Pkg.test("ThreePhasePowerModels", coverage=true)'
 
 after_success:
