@@ -1,7 +1,7 @@
 export
-    SDPUBFPowerModel, SDPUBFForm,
-    LPUBFForm, LPfullUBFPowerModel, LPfullUBFForm, LPdiagUBFPowerModel, LPdiagUBFForm,
-    SOCUBFForm, SOCConicUBFPowerModel, SOCNLPUBFPowerModel, SOCConicUBFForm, SOCNLPUBFForm
+SDPUBFPowerModel, SDPUBFForm,
+LPUBFForm, LPfullUBFPowerModel, LPfullUBFForm, LPdiagUBFPowerModel, LPdiagUBFForm,
+SOCUBFForm, SOCConicUBFPowerModel, SOCNLPUBFPowerModel, SOCConicUBFForm, SOCNLPUBFForm
 
 ""
 abstract type AbstractNLPUBFForm <: PMs.AbstractBFQPForm end
@@ -40,7 +40,7 @@ const SDPUBFPowerModel = GenericPowerModel{SDPUBFForm}
 
 "default SDP unbalanced DistFlow constructor"
 SDPUBFPowerModel(data::Dict{String,Any}; kwargs...) =
-    GenericPowerModel(data, SDPUBFForm; kwargs...)
+GenericPowerModel(data, SDPUBFForm; kwargs...)
 
 ""
 const SOCNLPUBFPowerModel = GenericPowerModel{SOCNLPUBFForm}
@@ -61,14 +61,14 @@ const LPfullUBFPowerModel = GenericPowerModel{LPfullUBFForm}
 
 "default LP unbalanced DistFlow constructor"
 LPfullUBFPowerModel(data::Dict{String,Any}; kwargs...) =
-    GenericPowerModel(data, LPfullUBFForm; kwargs...)
+GenericPowerModel(data, LPfullUBFForm; kwargs...)
 
 ""
 const LPdiagUBFPowerModel = GenericPowerModel{LPdiagUBFForm}
 
 "default LP unbalanced DistFlow constructor"
 LPdiagUBFPowerModel(data::Dict{String,Any}; kwargs...) =
-    GenericPowerModel(data, LPdiagUBFForm; kwargs...)
+GenericPowerModel(data, LPdiagUBFForm; kwargs...)
 
 function variable_tp_branch_current(pm::GenericPowerModel{T}; kwargs...) where T <: AbstractUBFForm
     variable_tp_branch_series_current_prod_hermitian(pm; kwargs...)
@@ -96,25 +96,25 @@ function variable_tp_voltage_prod_hermitian(pm::GenericPowerModel{T}; n_cond::In
     for c in 1:n_lower_triangle_el
         if bounded
             var(pm, nw, c)[:wr] = @variable(pm.model,
-                [i in ids(pm, nw, :bus)], basename="$(nw)_$(c)_wr",
-                lowerbound = -wmaxdict[i][c],
-                upperbound =  wmaxdict[i][c],
-                start = PMs.getval(ref(pm, nw, :bus, i), "w_start", c, 1.001)
+            [i in ids(pm, nw, :bus)], basename="$(nw)_$(c)_wr",
+            lowerbound = -wmaxdict[i][c],
+            upperbound =  wmaxdict[i][c],
+            start = PMs.getval(ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
             var(pm, nw, c)[:wi] = @variable(pm.model,
-                [i in ids(pm, nw, :bus)], basename="$(nw)_$(c)_wi",
-                lowerbound = -wmaxdict[i][c],
-                upperbound =  wmaxdict[i][c],
-                start = PMs.getval(ref(pm, nw, :bus, i), "w_start", c, 1.001)
+            [i in ids(pm, nw, :bus)], basename="$(nw)_$(c)_wi",
+            lowerbound = -wmaxdict[i][c],
+            upperbound =  wmaxdict[i][c],
+            start = PMs.getval(ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
         else
             var(pm, nw, c)[:wr] = @variable(pm.model,
-                [i in ids(pm, nw, :bus)], basename="$(nw)_$(c)_wr",
-                start = PMs.getval(ref(pm, nw, :bus, i), "w_start", c, 1.001)
+            [i in ids(pm, nw, :bus)], basename="$(nw)_$(c)_wr",
+            start = PMs.getval(ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
             var(pm, nw, c)[:wi] = @variable(pm.model,
-                [i in ids(pm, nw, :bus)], basename="$(nw)_$(c)_wi",
-                start = PMs.getval(ref(pm, nw, :bus, i), "w_start", c, 1.001)
+            [i in ids(pm, nw, :bus)], basename="$(nw)_$(c)_wi",
+            start = PMs.getval(ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
         end
     end
@@ -168,16 +168,16 @@ function variable_tp_branch_series_current_prod_hermitian(pm::GenericPowerModel{
     for c in 1:n_diag_el
         if bounded
             var(pm, nw, c)[:cm] = @variable(pm.model,
-                [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_cm",
-                lowerbound = 0,
-                upperbound = (cmax[l][c])^2,
-                start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
+            [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_cm",
+            lowerbound = 0,
+            upperbound = (cmax[l][c])^2,
+            start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
             )
         else
             var(pm, nw, c)[:cm] = @variable(pm.model,
-                [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_cm",
-                lowerbound = 0,
-                start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c)
+            [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_cm",
+            lowerbound = 0,
+            start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c)
             )
         end
         # PowerModels.variable_current_magnitude_sqr(pm, nw=nw, cnd=c)
@@ -186,27 +186,27 @@ function variable_tp_branch_series_current_prod_hermitian(pm::GenericPowerModel{
     for c in 1:n_lower_triangle_el
         if bounded
             var(pm, nw, c)[:ccmr] = @variable(pm.model,
-                [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmr",
-                lowerbound = -(cmax[l][c])^2,
-                upperbound = (cmax[l][c])^2,
-                start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
+            [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmr",
+            lowerbound = -(cmax[l][c])^2,
+            upperbound = (cmax[l][c])^2,
+            start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
             )
             var(pm, nw, c)[:ccmi] = @variable(pm.model,
-                [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmi",
-                lowerbound = -(cmax[l][c])^2,
-                upperbound = (cmax[l][c])^2,
-                start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c)
+            [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmi",
+            lowerbound = -(cmax[l][c])^2,
+            upperbound = (cmax[l][c])^2,
+            start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c)
             )
         else
             var(pm, nw, c)[:ccmr] = @variable(pm.model,
-                [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmr",
-                # lowerbound = 0,
-                start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c)
+            [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmr",
+            # lowerbound = 0,
+            start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c)
             )
             var(pm, nw, c)[:ccmi] = @variable(pm.model,
-                [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmi",
-                # lowerbound = 0,
-                start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c)
+            [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmi",
+            # lowerbound = 0,
+            start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c)
             )
         end
     end
@@ -281,15 +281,15 @@ function variable_lower_triangle_active_branch_flow(pm::GenericPowerModel; nw::I
 
     if bounded
         var(pm, nw, cnd)[:p_lt] = @variable(pm.model,
-            [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_lt",
-            lowerbound = -smaxdict[(l,i,j)][cnd],
-            upperbound =  smaxdict[(l,i,j)][cnd],
-            start = PMs.getval(ref(pm, nw, :branch, l), "p_start", cnd)
+        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_lt",
+        lowerbound = -smaxdict[(l,i,j)][cnd],
+        upperbound =  smaxdict[(l,i,j)][cnd],
+        start = PMs.getval(ref(pm, nw, :branch, l), "p_start", cnd)
         )
     else
         var(pm, nw, cnd)[:p_lt] = @variable(pm.model,
-            [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_lt",
-            start = PMs.getval(ref(pm, nw, :branch, l), "p_start", cnd)
+        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_lt",
+        start = PMs.getval(ref(pm, nw, :branch, l), "p_start", cnd)
         )
     end
 end
@@ -307,15 +307,15 @@ function variable_lower_triangle_reactive_branch_flow(pm::GenericPowerModel; nw:
 
     if bounded
         var(pm, nw, cnd)[:q_lt] = @variable(pm.model,
-            [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_lt",
-            lowerbound = -smaxdict[(l,i,j)][cnd],
-            upperbound =  smaxdict[(l,i,j)][cnd],
-            start = PMs.getval(ref(pm, nw, :branch, l), "q_start", cnd)
+        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_lt",
+        lowerbound = -smaxdict[(l,i,j)][cnd],
+        upperbound =  smaxdict[(l,i,j)][cnd],
+        start = PMs.getval(ref(pm, nw, :branch, l), "q_start", cnd)
         )
     else
         var(pm, nw, cnd)[:q_lt] = @variable(pm.model,
-            [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_lt",
-            start = PMs.getval(ref(pm, nw, :branch, l), "q_start", cnd)
+        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_lt",
+        start = PMs.getval(ref(pm, nw, :branch, l), "q_start", cnd)
         )
     end
 end
@@ -333,15 +333,15 @@ function variable_upper_triangle_active_branch_flow(pm::GenericPowerModel; nw::I
 
     if bounded
         var(pm, nw, cnd)[:p_ut] = @variable(pm.model,
-            [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_ut",
-            lowerbound = -smaxdict[(l,i,j)][cnd],
-            upperbound =  smaxdict[(l,i,j)][cnd],
-            start = PMs.getval(ref(pm, nw, :branch, l), "p_start", cnd)
+        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_ut",
+        lowerbound = -smaxdict[(l,i,j)][cnd],
+        upperbound =  smaxdict[(l,i,j)][cnd],
+        start = PMs.getval(ref(pm, nw, :branch, l), "p_start", cnd)
         )
     else
         var(pm, nw, cnd)[:p_ut] = @variable(pm.model,
-            [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_ut",
-            start = PMs.getval(ref(pm, nw, :branch, l), "p_start", cnd)
+        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_ut",
+        start = PMs.getval(ref(pm, nw, :branch, l), "p_start", cnd)
         )
     end
 end
@@ -358,15 +358,15 @@ function variable_upper_triangle_reactive_branch_flow(pm::GenericPowerModel; nw:
     end
     if bounded
         var(pm, nw, cnd)[:q_ut] = @variable(pm.model,
-            [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_ut",
-            lowerbound = -smaxdict[(l,i,j)][cnd],
-            upperbound =  smaxdict[(l,i,j)][cnd],
-            start = PMs.getval(ref(pm, nw, :branch, l), "q_start", cnd)
+        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_ut",
+        lowerbound = -smaxdict[(l,i,j)][cnd],
+        upperbound =  smaxdict[(l,i,j)][cnd],
+        start = PMs.getval(ref(pm, nw, :branch, l), "q_start", cnd)
         )
     else
         var(pm, nw, cnd)[:q_ut] = @variable(pm.model,
-            [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_ut",
-            start = PMs.getval(ref(pm, nw, :branch, l), "q_start", cnd)
+        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_ut",
+        start = PMs.getval(ref(pm, nw, :branch, l), "q_start", cnd)
         )
     end
 end
@@ -460,16 +460,16 @@ function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, n:
     ccm_re =  var(pm, n, :CC_re)[i]
     ccm_im =  var(pm, n, :CC_im)[i]
 
-        #KVL over the line:
+    #KVL over the line:
     @constraint(pm.model, diag(w_to_re) .== diag(
-                                      w_fr_re   - p_s_fr  *r' - q_s_fr*x'        - r*p_s_fr'    - x*q_s_fr'
-                                                + r*ccm_re*r' - x     *ccm_im*r' + x*ccm_re *x' + r*ccm_im *x'))
+    w_fr_re   - p_s_fr  *r' - q_s_fr*x'        - r*p_s_fr'    - x*q_s_fr'
+    + r*ccm_re*r' - x     *ccm_im*r' + x*ccm_re *x' + r*ccm_im *x'))
     @constraint(pm.model, mat2utrivec(w_to_re) .== mat2utrivec(
-                                      w_fr_re   - p_s_fr  *r' - q_s_fr*x'        - r*p_s_fr'    - x*q_s_fr'
-                                                + r*ccm_re*r' - x     *ccm_im*r' + x*ccm_re *x' + r*ccm_im *x'))
+    w_fr_re   - p_s_fr  *r' - q_s_fr*x'        - r*p_s_fr'    - x*q_s_fr'
+    + r*ccm_re*r' - x     *ccm_im*r' + x*ccm_re *x' + r*ccm_im *x'))
     @constraint(pm.model, mat2utrivec(w_to_im) .== mat2utrivec(
-                                      w_fr_im   - q_s_fr  *r' + p_s_fr*x'        - x*p_s_fr'    + r*q_s_fr'
-                                                + x*ccm_re*r' + r     *ccm_im*r' - r*ccm_re *x' + x*ccm_im *x'))
+    w_fr_im   - q_s_fr  *r' + p_s_fr*x'        - x*p_s_fr'    + r*q_s_fr'
+    + x*ccm_re*r' + r     *ccm_im*r' - r*ccm_re *x' + x*ccm_im *x'))
 end
 
 ""
@@ -477,18 +477,23 @@ function get_solution_tp(pm::GenericPowerModel, sol::Dict{String,Any})
     add_bus_voltage_setpoint(sol, pm)
     PMs.add_generator_power_setpoint(sol, pm)
     add_branch_flow_setpoint(sol, pm)
+    add_branch_current_setpoint(sol, pm)
     PMs.add_dcline_flow_setpoint(sol, pm)
 
     PMs.add_kcl_duals(sol, pm)
     PMs.add_sm_duals(sol, pm) # Adds the duals of the transmission lines' thermal limits.
 
-    add_original_variables(sol, pm)
+    if haskey(pm.setting, "output") && haskey(pm.setting["output"], "original_variables") && pm.setting["output"]["original_variables"] == true
+        add_rank(sol, pm)
+        add_is_ac_feasible(sol, pm)
+        add_original_variables(sol, pm)
+    end
 end
 
 
 ""
 function add_bus_voltage_setpoint(sol, pm::GenericPowerModel)
-    # PMs.add_setpoint(sol, pm, "bus", "vm_p", :w; scale = (x,item) -> sqrt(x))
+    PMs.add_setpoint(sol, pm, "bus", "vm", :w; scale = (x,item) -> sqrt(x))
     PMs.add_setpoint(sol, pm, "bus", "w",  :w)
     PMs.add_setpoint(sol, pm, "bus", "wr", :wr)
     PMs.add_setpoint(sol, pm, "bus", "wi", :wi)
@@ -510,158 +515,237 @@ function add_branch_flow_setpoint(sol, pm::GenericPowerModel)
         PMs.add_setpoint(sol, pm, "branch", "qt_ut", :q_ut; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])])
         PMs.add_setpoint(sol, pm, "branch", "pt_lt", :p_lt; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])])
         PMs.add_setpoint(sol, pm, "branch", "qt_lt", :q_lt; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])])
-
-        # PMs.add_setpoint(sol, pm, "branch", "cm_p", :cm; scale = (x,item) -> sqrt(x))
-        # PMs.add_setpoint(sol, pm, "branch", "ccm", :cm)
-        # PMs.add_setpoint(sol, pm, "branch", "ccmr", :ccmr)
-        # PMs.add_setpoint(sol, pm, "branch", "ccmi", :ccmi)
     end
 end
 
 
 ""
+function add_branch_current_setpoint(sol, pm::GenericPowerModel)
+    if haskey(pm.setting, "output") && haskey(pm.setting["output"], "branch_flows") && pm.setting["output"]["branch_flows"] == true
+        PMs.add_setpoint(sol, pm, "branch", "cm", :cm; scale = (x,item) -> sqrt(x))
+        PMs.add_setpoint(sol, pm, "branch", "cc", :cm)
+        PMs.add_setpoint(sol, pm, "branch", "ccr", :ccmr)
+        PMs.add_setpoint(sol, pm, "branch", "cci", :ccmi)
+    end
+end
+
+
+function add_rank(sol, pm::GenericPowerModel; tol = 1e-6)
+    add_voltage_variable_rank(sol, pm; tol=tol)
+    add_current_variable_rank(sol, pm; tol=tol)
+    add_branch_flow_rank(sol, pm; tol=tol)
+end
+
+function add_voltage_variable_rank(sol, pm::GenericPowerModel; tol = 1e-6)
+end
+
+function add_current_variable_rank(sol, pm::GenericPowerModel; tol = 1e-6)
+end
+
+function add_branch_flow_rank(sol, pm::GenericPowerModel; tol = 1e-6)
+end
+
+function add_is_ac_feasible(sol, pm::GenericPowerModel)
+end
+
+function add_is_ac_feasible(sol, pm::GenericPowerModel{T}) where T <: AbstractUBFForm
+    for (nw, network) in pm.ref[:nw]
+        branch_feasibilities = [branch["rank"] <= 1 for (b, branch) in sol["branch"]]
+        branch_feasbility = all(branch_feasibilities)
+        bus_feasibilities = [bus["rank"] <= 1 for (b, bus) in sol["bus"]]
+        bus_feasibility = all(bus_feasibilities)
+
+        ac_feasibility = bus_feasibility && branch_feasbility
+        sol["is_ac_feasible_if_radial"] = ac_feasibility
+    end
+end
+        
+function add_voltage_variable_rank(sol, pm::GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
+    for (nw, network) in pm.ref[:nw]
+        buses       = ref(pm, nw, :bus)
+        for (b, bus) in buses
+            Wre, Wim = make_hermitian_matrix_variable(sol["bus"]["$b"]["w"].values, sol["bus"]["$b"]["wr"].values, sol["bus"]["$b"]["wi"].values)
+            W = Wre + im*Wim
+            sol["bus"]["$b"]["rank"] = rank(W, tol)
+        end
+    end
+end
+
+function add_current_variable_rank(sol, pm::GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
+    for (nw, network) in pm.ref[:nw]
+        branches       = ref(pm, nw, :branch)
+        for (b, branch) in branches
+            CCre, CCim = make_hermitian_matrix_variable(sol["branch"]["$b"]["cc"].values, sol["branch"]["$b"]["ccr"].values, sol["branch"]["$b"]["cci"].values)
+            CC = CCre + im*CCim
+            sol["branch"]["$b"]["CC_rank"] = rank(CC, tol)
+        end
+    end
+end
+
+function add_branch_flow_rank(sol, pm::GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
+    for (nw, network) in pm.ref[:nw]
+        buses       = ref(pm, nw, :bus)
+        for (b, branch) in ref(pm, nw, :branch)
+            g_fr = diagm(branch["g_fr"].values)
+            b_fr = diagm(branch["b_fr"].values)
+            y_fr = g_fr + im* b_fr
+
+            fbus = branch["f_bus"]
+            Wre, Wim = make_hermitian_matrix_variable(sol["bus"]["$fbus"]["w"].values, sol["bus"]["$fbus"]["wr"].values, sol["bus"]["$fbus"]["wi"].values)
+            W = Wre + im*Wim
+
+            CCre, CCim = make_hermitian_matrix_variable(sol["branch"]["$b"]["cc"].values, sol["branch"]["$b"]["ccr"].values, sol["branch"]["$b"]["cci"].values)
+            CC = CCre + im*CCim
+
+            Pij = make_full_matrix_variable(sol["branch"]["$b"]["pf"].values, sol["branch"]["$b"]["pf_lt"].values, sol["branch"]["$b"]["pf_ut"].values)
+            Qij = make_full_matrix_variable(sol["branch"]["$b"]["qf"].values, sol["branch"]["$b"]["qf_lt"].values, sol["branch"]["$b"]["qf_ut"].values)
+            Sij = Pij + im*Qij
+            Ssij = Sij - W'*y_fr'
+
+            f = [W Ssij; Ssij' CC]
+            sol["branch"]["$b"]["rank"] = rank(f, tol)
+        end
+    end
+end
+
+
+
+""
 function add_original_variables(sol, pm::GenericPowerModel)
-    if haskey(pm.setting, "output") && haskey(pm.setting["output"], "original_variables") && pm.setting["output"]["original_variables"] == true
-        if !haskey(pm.setting, "output") || !haskey(pm.setting["output"], "branch_flows") || pm.setting["output"]["branch_flows"] == false
-            error(LOGGER, "deriving the original variables requires setting: branch_flows = true")
+    if !haskey(pm.setting, "output") || !haskey(pm.setting["output"], "branch_flows") || pm.setting["output"]["branch_flows"] == false
+        error(LOGGER, "deriving the original variables requires setting: branch_flows => true")
+    end
+
+    for (nw, network) in pm.ref[:nw]
+        #find rank-1 starting points
+        ref_buses   = find_ref_buses(pm, nw)
+        #TODO develop code to start with any rank-1 W variable
+        buses       = ref(pm, nw, :bus)
+        arcs        = ref(pm, nw, :arcs)
+        branches    = ref(pm, nw, :branch)
+        #define sets to explore
+        all_bus_ids             = Set([b for (b, bus)      in ref(pm, nw, :bus)])
+        all_arc_from_ids        = Set([(l,i,j) for (l,i,j) in ref(pm, nw, :arcs_from)])
+        all_arc_to_ids          = Set([(l,i,j) for (l,i,j) in ref(pm, nw, :arcs_to)])
+        all_branch_ids          = Set([l for (l,i,j)       in ref(pm, nw, :arcs_from)])
+        visited_arc_from_ids    = Set()
+        visited_arc_to_ids      = Set()
+        visited_bus_ids         = Set()
+        visited_branch_ids      = Set()
+
+        for b in ref_buses
+            sol["bus"]["$b"]["va"] = [0, -2*pi/3, 2*pi/3] #TODO support arbitrary angles at the reference bus
+            sol["bus"]["$b"]["vm"] = ref(pm, nw, :bus, b)["vm"].values
+            push!(visited_bus_ids, b)
         end
 
-        for (nw, network) in pm.ref[:nw]
-            #find rank-1 starting point
-            ref_buses = find_ref_buses(pm, nw)
-            #TODO develop code to start with any rank-1 W variable
-            buses   = ref(pm, nw, :bus)
-            arcs    = ref(pm, nw, :arcs)
-            branches    = ref(pm, nw, :branch)
-            #define sets to explore
-            all_bus_ids             = Set([b for (b, bus)    in ref(pm, nw, :bus)])
-            all_arc_from_ids        = Set([(l,i,j) for (l,i,j) in ref(pm, nw, :arcs_from)])
-            all_arc_to_ids          = Set([(l,i,j) for (l,i,j) in ref(pm, nw, :arcs_to)])
-            all_branch_ids          = Set([l for (l,i,j) in ref(pm, nw, :arcs_from)])
-            visited_arc_from_ids    = Set()
-            visited_arc_to_ids      = Set()
-            visited_bus_ids         = Set()
-            visited_branch_ids      = Set()
-
-            for b in ref_buses
-                # sol["bus"]["$b"]["va"] = wraptopi(ref(pm, nw, :bus, b)["va"].values)
-                sol["bus"]["$b"]["va"] = [0, -2*pi/3, 2*pi/3] #TODO support arbitrary angles at the reference bus
-
-                sol["bus"]["$b"]["vm"] = ref(pm, nw, :bus, b)["vm"].values
-                # sol["bus"]["$b"]["v"] =  ref(pm, nw, :bus, b)["vm"].values.* exp.(im*sol["bus"]["$b"]["va"])
-                push!(visited_bus_ids, b)
+        tt = 0
+        while visited_branch_ids != all_branch_ids && visited_bus_ids != all_bus_ids
+            tt = tt+1
+            if tt >10000
+                break
             end
 
-            tt = 0
-            while visited_branch_ids != all_branch_ids && visited_bus_ids != all_bus_ids
-                tt = tt+1
-                if tt >100
-                    @show "break while"
-                    break
-                end
+            remaining_arc_from_ids = setdiff(all_arc_from_ids, visited_arc_from_ids)
+            remaining_arc_to_ids = setdiff(all_arc_to_ids, visited_arc_to_ids)
 
-                remaining_arc_from_ids = setdiff(all_arc_from_ids, visited_arc_from_ids)
-                remaining_arc_to_ids = setdiff(all_arc_to_ids, visited_arc_to_ids)
+            candidate_arcs_from = [(l,i,j) for (l,i,j) in remaining_arc_from_ids if i in visited_bus_ids && !(j in visited_bus_ids)]
+            candidate_arcs_to   = [(l,i,j) for (l,i,j) in remaining_arc_to_ids   if i in visited_bus_ids && !(j in visited_bus_ids)]
 
-                candidate_arcs_from = [(l,i,j) for (l,i,j) in remaining_arc_from_ids if i in visited_bus_ids && !(j in visited_bus_ids)]
-                candidate_arcs_to   = [(l,i,j) for (l,i,j) in remaining_arc_to_ids   if i in visited_bus_ids && !(j in visited_bus_ids)]
+            if !isempty(candidate_arcs_from)
+                (l,i,j) = arc = candidate_arcs_from[1]
+                g_fr = diagm(branches[l]["g_fr"].values)
+                b_fr = diagm(branches[l]["b_fr"].values)
+                y_fr = g_fr + im* b_fr
+                g_to = diagm(branches[l]["g_to"].values)
+                b_to = diagm(branches[l]["b_to"].values)
+                y_to = g_to + im* b_to
+                r = branches[l]["br_r"].values
+                x = branches[l]["br_x"].values
+                z = (r + im*x)
+                Ui = sol["bus"]["$i"]["vm"].*exp.(im*sol["bus"]["$i"]["va"])
 
+                Pij = make_full_matrix_variable(sol["branch"]["$l"]["pf"].values, sol["branch"]["$l"]["pf_lt"].values, sol["branch"]["$l"]["pf_ut"].values)
+                Qij = make_full_matrix_variable(sol["branch"]["$l"]["qf"].values, sol["branch"]["$l"]["qf_lt"].values, sol["branch"]["$l"]["qf_ut"].values)
+                Sij = Pij + im*Qij
 
-                if !isempty(candidate_arcs_from)
-                    (l,i,j) = arc = candidate_arcs_from[1]
-                    g_fr = diagm(branches[l]["g_fr"].values)
-                    b_fr = diagm(branches[l]["b_fr"].values)
-                    y_fr = g_fr + im* b_fr
-                    g_to = diagm(branches[l]["g_to"].values)
-                    b_to = diagm(branches[l]["b_to"].values)
-                    y_to = g_to + im* b_to
-                    r = branches[l]["br_r"].values
-                    x = branches[l]["br_x"].values
-                    z = (r + im*x)
-                    Ui = sol["bus"]["$i"]["vm"].*exp.(im*sol["bus"]["$i"]["va"])
+                Ssij = Sij - Ui*Ui'*y_fr'
+                Isij = (1/trace(Ui*Ui'))*(Ssij')*Ui
+                Uj = Ui - z*Isij
+                Iij = Isij + y_fr*Ui
 
-                    Pij = make_full_matrix_variable(sol["branch"]["$l"]["pf"].values, sol["branch"]["$l"]["pf_lt"].values, sol["branch"]["$l"]["pf_ut"].values)
-                    Qij = make_full_matrix_variable(sol["branch"]["$l"]["qf"].values, sol["branch"]["$l"]["qf_lt"].values, sol["branch"]["$l"]["qf_ut"].values)
-                    Sij = Pij + im*Qij
-
-                    Ssij = Sij - Ui*Ui'*y_fr'
-                    Isij = (1/trace(Ui*Ui'))*(Ssij')*Ui
-                    Uj = Ui - z*Isij
-                    Iij = Isij + y_fr*Ui
-
-                    Isji = -Isij
-                    Iji = Isji + y_to*Uj
+                Isji = -Isij
+                Iji = Isji + y_to*Uj
 
 
-                    sol["bus"]["$j"]["vm"] = abs.(Uj)
-                    sol["bus"]["$j"]["va"] = wraptopi(angle.(Uj))
+                sol["bus"]["$j"]["vm"] = abs.(Uj)
+                sol["bus"]["$j"]["va"] = wraptopi(angle.(Uj))
 
-                    sol["branch"]["$l"]["cfm"] = abs.(Iij)
-                    sol["branch"]["$l"]["cfa"] = wraptopi(angle.(Iij))
-                    sol["branch"]["$l"]["ctm"] = abs.(Iji)
-                    sol["branch"]["$l"]["cta"] = wraptopi(angle.(Iji))
-#
-                    push!(visited_arc_from_ids, arc)
-                    push!(visited_branch_ids, l)
-                    push!(visited_bus_ids, j)
-                    
-                elseif !isempty(candidate_arcs_to)
-                    (l,i,j) = arc = candidate_arcs_to[1]
-                    g_fr = diagm(branches[l]["g_to"].values)
-                    b_fr = diagm(branches[l]["b_to"].values)
-                    y_fr = g_fr + im* b_fr
-                    g_to = diagm(branches[l]["g_fr"].values)
-                    b_to = diagm(branches[l]["b_fr"].values)
-                    y_to = g_to + im* b_to
-                    r = branches[l]["br_r"].values
-                    x = branches[l]["br_x"].values
-                    z = (r + im*x)
-                    @show l, i, j
-                    Ui = sol["bus"]["$i"]["vm"].*exp.(im*sol["bus"]["$i"]["va"])
+                sol["branch"]["$l"]["cfm"] = abs.(Iij)
+                sol["branch"]["$l"]["cfa"] = wraptopi(angle.(Iij))
+                sol["branch"]["$l"]["ctm"] = abs.(Iji)
+                sol["branch"]["$l"]["cta"] = wraptopi(angle.(Iji))
+                #
+                push!(visited_arc_from_ids, arc)
+                push!(visited_branch_ids, l)
+                push!(visited_bus_ids, j)
 
-                    Pij = make_full_matrix_variable(sol["branch"]["$l"]["pt"].values, sol["branch"]["$l"]["pt_lt"].values, sol["branch"]["$l"]["pt_ut"].values)
-                    Qij = make_full_matrix_variable(sol["branch"]["$l"]["qt"].values, sol["branch"]["$l"]["qt_lt"].values, sol["branch"]["$l"]["qt_ut"].values)
-                    Sij = Pij + im*Qij
+            elseif !isempty(candidate_arcs_to)
+                (l,i,j) = arc = candidate_arcs_to[1]
+                g_fr = diagm(branches[l]["g_to"].values)
+                b_fr = diagm(branches[l]["b_to"].values)
+                y_fr = g_fr + im* b_fr
+                g_to = diagm(branches[l]["g_fr"].values)
+                b_to = diagm(branches[l]["b_fr"].values)
+                y_to = g_to + im* b_to
+                r = branches[l]["br_r"].values
+                x = branches[l]["br_x"].values
+                z = (r + im*x)
+                @show l, i, j
+                Ui = sol["bus"]["$i"]["vm"].*exp.(im*sol["bus"]["$i"]["va"])
 
-                    Ssij = Sij - Ui*Ui'*y_fr'
-                    Isij = (1/trace(Ui*Ui'))*(Ssij')*Ui
-                    Uj = Ui - z*Isij
-                    Iij = Isij + y_fr*Ui
+                Pij = make_full_matrix_variable(sol["branch"]["$l"]["pt"].values, sol["branch"]["$l"]["pt_lt"].values, sol["branch"]["$l"]["pt_ut"].values)
+                Qij = make_full_matrix_variable(sol["branch"]["$l"]["qt"].values, sol["branch"]["$l"]["qt_lt"].values, sol["branch"]["$l"]["qt_ut"].values)
+                Sij = Pij + im*Qij
 
-                    Isji = -Isij
-                    Iji = Isji + y_to*Uj
+                Ssij = Sij - Ui*Ui'*y_fr'
+                Isij = (1/trace(Ui*Ui'))*(Ssij')*Ui
+                Uj = Ui - z*Isij
+                Iij = Isij + y_fr*Ui
+
+                Isji = -Isij
+                Iji = Isji + y_to*Uj
 
 
-                    sol["bus"]["$j"]["vm"] = abs.(Uj)
-                    sol["bus"]["$j"]["va"] = wraptopi(angle.(Uj))
+                sol["bus"]["$j"]["vm"] = abs.(Uj)
+                sol["bus"]["$j"]["va"] = wraptopi(angle.(Uj))
 
-                    sol["branch"]["$l"]["ctm"] = abs.(Iij)
-                    sol["branch"]["$l"]["cta"] = wraptopi(angle.(Iij))
-                    sol["branch"]["$l"]["cfm"] = abs.(Iji)
-                    sol["branch"]["$l"]["cfa"] = wraptopi(angle.(Iji))
-#
-                    push!(visited_arc_to_ids, arc)
-                    push!(visited_branch_ids, l)
-                    push!(visited_bus_ids, j)
+                sol["branch"]["$l"]["ctm"] = abs.(Iij)
+                sol["branch"]["$l"]["cta"] = wraptopi(angle.(Iij))
+                sol["branch"]["$l"]["cfm"] = abs.(Iji)
+                sol["branch"]["$l"]["cfa"] = wraptopi(angle.(Iji))
+                #
+                push!(visited_arc_to_ids, arc)
+                push!(visited_branch_ids, l)
+                push!(visited_bus_ids, j)
 
-                else
-                    candidate_arcs = [(l,i,j) for (l,i,j) in remaining_arc_from_ids if i in visited_bus_ids && j in visited_bus_ids]
-                    (l,i,j) = arc = candidate_arcs[1]
-                    Sij = sol["branch"]["$l"]["pf"] + im* sol["branch"]["$l"]["qf"]
-                    Sji = sol["branch"]["$l"]["pt"] + im* sol["branch"]["$l"]["qt"]
-                    Ui = sol["bus"]["$i"]["vm"].*exp.(im*sol["bus"]["$i"]["va"])
-                    Uj = sol["bus"]["$j"]["vm"].*exp.(im*sol["bus"]["$j"]["va"])
+            else #in case you have loops or multiple reference buses
+                candidate_arcs = [(l,i,j) for (l,i,j) in remaining_arc_from_ids if i in visited_bus_ids && j in visited_bus_ids]
+                (l,i,j) = arc = candidate_arcs[1]
+                Sij = sol["branch"]["$l"]["pf"] + im* sol["branch"]["$l"]["qf"]
+                Sji = sol["branch"]["$l"]["pt"] + im* sol["branch"]["$l"]["qt"]
+                Ui = sol["bus"]["$i"]["vm"].*exp.(im*sol["bus"]["$i"]["va"])
+                Uj = sol["bus"]["$j"]["vm"].*exp.(im*sol["bus"]["$j"]["va"])
 
-                    Iij = Sij./Ui
-                    Iji = Sji./Uj
-                    sol["branch"]["$l"]["cfm"] = abs.(Iij)
-                    sol["branch"]["$l"]["cfa"] = wraptopi(angle.(Iij))
-                    sol["branch"]["$l"]["ctm"] = abs.(Iji)
-                    sol["branch"]["$l"]["cta"] = wraptopi(angle.(Iji))
-                    push!(visited_arc_from_ids, arc)
-                    push!(visited_arc_to_ids, (l,j,i))
-                    push!(visited_branch_ids, l)
-                end
+                Iij = Sij./Ui
+                Iji = Sji./Uj
+                sol["branch"]["$l"]["cfm"] = abs.(Iij)
+                sol["branch"]["$l"]["cfa"] = wraptopi(angle.(Iij))
+                sol["branch"]["$l"]["ctm"] = abs.(Iji)
+                sol["branch"]["$l"]["cta"] = wraptopi(angle.(Iji))
+                push!(visited_arc_from_ids, arc)
+                push!(visited_arc_to_ids, (l,j,i))
+                push!(visited_branch_ids, l)
             end
         end
     end
