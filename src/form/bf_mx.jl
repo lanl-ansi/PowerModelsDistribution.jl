@@ -515,6 +515,7 @@ function add_branch_flow_setpoint(sol, pm::GenericPowerModel)
         PMs.add_setpoint(sol, pm, "branch", "qt_ut", :q_ut; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])])
         PMs.add_setpoint(sol, pm, "branch", "pt_lt", :p_lt; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])])
         PMs.add_setpoint(sol, pm, "branch", "qt_lt", :q_lt; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])])
+
     end
 end
 
@@ -559,7 +560,7 @@ function add_is_ac_feasible(sol, pm::GenericPowerModel{T}) where T <: AbstractUB
         sol["is_ac_feasible_if_radial"] = ac_feasibility
     end
 end
-        
+
 function add_voltage_variable_rank(sol, pm::GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
     for (nw, network) in pm.ref[:nw]
         buses       = ref(pm, nw, :bus)
@@ -677,7 +678,6 @@ function add_original_variables(sol, pm::GenericPowerModel)
                 Isji = -Isij
                 Iji = Isji + y_to*Uj
 
-
                 sol["bus"]["$j"]["vm"] = abs.(Uj)
                 sol["bus"]["$j"]["va"] = wraptopi(angle.(Uj))
 
@@ -701,7 +701,6 @@ function add_original_variables(sol, pm::GenericPowerModel)
                 r = branches[l]["br_r"].values
                 x = branches[l]["br_x"].values
                 z = (r + im*x)
-                @show l, i, j
                 Ui = sol["bus"]["$i"]["vm"].*exp.(im*sol["bus"]["$i"]["va"])
 
                 Pij = make_full_matrix_variable(sol["branch"]["$l"]["pt"].values, sol["branch"]["$l"]["pt_lt"].values, sol["branch"]["$l"]["pt_ut"].values)
