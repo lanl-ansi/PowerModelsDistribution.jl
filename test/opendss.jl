@@ -96,7 +96,7 @@ TESTLOG = getlogger(PowerModels)
         tppm = TPPMs.parse_file("../test/data/opendss/test2_master.dss")
 
         @test tppm["name"] == "test2"
-        @test length(tppm) == 17
+        @test length(tppm) == 18
         @test length(dss) == 12
 
         for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline"], [11, 4, 5, 15, 4, 0])
