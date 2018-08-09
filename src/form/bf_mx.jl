@@ -482,7 +482,7 @@ function get_solution_tp(pm::GenericPowerModel, sol::Dict{String,Any})
     PMs.add_kcl_duals(sol, pm)
     PMs.add_sm_duals(sol, pm) # Adds the duals of the transmission lines' thermal limits.
 
-    add_original_variables(sol, pm) 
+    add_original_variables(sol, pm)
 end
 
 
@@ -529,26 +529,29 @@ function add_original_variables(sol, pm::GenericPowerModel)
         for (nw, network) in pm.ref[:nw]
             #find rank-1 starting point
             ref_buses = find_ref_buses(pm, nw)
-            #TODO develop code to
+            #TODO develop code to start with any rank-1 W variable
             buses   = ref(pm, nw, :bus)
             arcs    = ref(pm, nw, :arcs)
             branches    = ref(pm, nw, :branch)
             #define sets to explore
             all_bus_ids             = Set([b for (b, bus)    in ref(pm, nw, :bus)])
-            all_arc_ids             = Set([(l,i,j) for (l,i,j) in ref(pm, nw, :arcs)])
+            all_arc_from_ids        = Set([(l,i,j) for (l,i,j) in ref(pm, nw, :arcs_from)])
+            all_arc_to_ids          = Set([(l,i,j) for (l,i,j) in ref(pm, nw, :arcs_to)])
             all_branch_ids          = Set([l for (l,i,j) in ref(pm, nw, :arcs_from)])
-            visited_arc_ids         = Set()
+            visited_arc_from_ids    = Set()
+            visited_arc_to_ids      = Set()
             visited_bus_ids         = Set()
             visited_branch_ids      = Set()
 
             for b in ref_buses
-                push!(visited_bus_ids, b)
                 # sol["bus"]["$b"]["va"] = wraptopi(ref(pm, nw, :bus, b)["va"].values)
-                # sol["bus"]["$b"]["va"] = [0, -2*pi/3, 2*pi/3]
+                sol["bus"]["$b"]["va"] = [0, -2*pi/3, 2*pi/3] #TODO support arbitrary angles at the reference bus
 
                 sol["bus"]["$b"]["vm"] = ref(pm, nw, :bus, b)["vm"].values
-                sol["bus"]["$b"]["v"] =  ref(pm, nw, :bus, b)["vm"].values.* exp.(im*sol["bus"]["$b"]["va"])
+                # sol["bus"]["$b"]["v"] =  ref(pm, nw, :bus, b)["vm"].values.* exp.(im*sol["bus"]["$b"]["va"])
+                push!(visited_bus_ids, b)
             end
+
             tt = 0
             while visited_branch_ids != all_branch_ids && visited_bus_ids != all_bus_ids
                 tt = tt+1
@@ -557,10 +560,15 @@ function add_original_variables(sol, pm::GenericPowerModel)
                     break
                 end
 
-                remaining_arc_ids = setdiff(all_arc_ids, visited_arc_ids)
-                candidate_arcs = [(l,i,j) for (l,i,j) in remaining_arc_ids if i in visited_bus_ids && !(j in visited_bus_ids)]
-                if !isempty(candidate_arcs)
-                    (l,i,j) = arc = candidate_arcs[1]
+                remaining_arc_from_ids = setdiff(all_arc_from_ids, visited_arc_from_ids)
+                remaining_arc_to_ids = setdiff(all_arc_to_ids, visited_arc_to_ids)
+
+                candidate_arcs_from = [(l,i,j) for (l,i,j) in remaining_arc_from_ids if i in visited_bus_ids && !(j in visited_bus_ids)]
+                candidate_arcs_to   = [(l,i,j) for (l,i,j) in remaining_arc_to_ids   if i in visited_bus_ids && !(j in visited_bus_ids)]
+
+
+                if !isempty(candidate_arcs_from)
+                    (l,i,j) = arc = candidate_arcs_from[1]
                     g_fr = diagm(branches[l]["g_fr"].values)
                     b_fr = diagm(branches[l]["b_fr"].values)
                     y_fr = g_fr + im* b_fr
@@ -593,11 +601,51 @@ function add_original_variables(sol, pm::GenericPowerModel)
                     sol["branch"]["$l"]["ctm"] = abs.(Iji)
                     sol["branch"]["$l"]["cta"] = wraptopi(angle.(Iji))
 #
-                    push!(visited_arc_ids, arc)
+                    push!(visited_arc_from_ids, arc)
                     push!(visited_branch_ids, l)
                     push!(visited_bus_ids, j)
+                    
+                elseif !isempty(candidate_arcs_to)
+                    (l,i,j) = arc = candidate_arcs_to[1]
+                    g_fr = diagm(branches[l]["g_to"].values)
+                    b_fr = diagm(branches[l]["b_to"].values)
+                    y_fr = g_fr + im* b_fr
+                    g_to = diagm(branches[l]["g_fr"].values)
+                    b_to = diagm(branches[l]["b_fr"].values)
+                    y_to = g_to + im* b_to
+                    r = branches[l]["br_r"].values
+                    x = branches[l]["br_x"].values
+                    z = (r + im*x)
+                    @show l, i, j
+                    Ui = sol["bus"]["$i"]["vm"].*exp.(im*sol["bus"]["$i"]["va"])
+
+                    Pij = make_full_matrix_variable(sol["branch"]["$l"]["pt"].values, sol["branch"]["$l"]["pt_lt"].values, sol["branch"]["$l"]["pt_ut"].values)
+                    Qij = make_full_matrix_variable(sol["branch"]["$l"]["qt"].values, sol["branch"]["$l"]["qt_lt"].values, sol["branch"]["$l"]["qt_ut"].values)
+                    Sij = Pij + im*Qij
+
+                    Ssij = Sij - Ui*Ui'*y_fr'
+                    Isij = (1/trace(Ui*Ui'))*(Ssij')*Ui
+                    Uj = Ui - z*Isij
+                    Iij = Isij + y_fr*Ui
+
+                    Isji = -Isij
+                    Iji = Isji + y_to*Uj
+
+
+                    sol["bus"]["$j"]["vm"] = abs.(Uj)
+                    sol["bus"]["$j"]["va"] = wraptopi(angle.(Uj))
+
+                    sol["branch"]["$l"]["ctm"] = abs.(Iij)
+                    sol["branch"]["$l"]["cta"] = wraptopi(angle.(Iij))
+                    sol["branch"]["$l"]["cfm"] = abs.(Iji)
+                    sol["branch"]["$l"]["cfa"] = wraptopi(angle.(Iji))
+#
+                    push!(visited_arc_to_ids, arc)
+                    push!(visited_branch_ids, l)
+                    push!(visited_bus_ids, j)
+
                 else
-                    candidate_arcs = [(l,i,j) for (l,i,j) in remaining_arc_ids if i in visited_bus_ids && j in visited_bus_ids]
+                    candidate_arcs = [(l,i,j) for (l,i,j) in remaining_arc_from_ids if i in visited_bus_ids && j in visited_bus_ids]
                     (l,i,j) = arc = candidate_arcs[1]
                     Sij = sol["branch"]["$l"]["pf"] + im* sol["branch"]["$l"]["qf"]
                     Sji = sol["branch"]["$l"]["pt"] + im* sol["branch"]["$l"]["qt"]
@@ -610,10 +658,10 @@ function add_original_variables(sol, pm::GenericPowerModel)
                     sol["branch"]["$l"]["cfa"] = wraptopi(angle.(Iij))
                     sol["branch"]["$l"]["ctm"] = abs.(Iji)
                     sol["branch"]["$l"]["cta"] = wraptopi(angle.(Iji))
-                    push!(visited_arc_ids, arc)
+                    push!(visited_arc_from_ids, arc)
+                    push!(visited_arc_to_ids, (l,j,i))
                     push!(visited_branch_ids, l)
                 end
-                @show visited_arc_ids, visited_branch_ids, visited_bus_ids
             end
         end
     end
