@@ -27,8 +27,10 @@ end
 
 
 ""
-function constraint_tp_voltage(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    constraint_tp_voltage(pm, nw, cnd)
+function constraint_tp_voltage(pm::GenericPowerModel; nw::Int=pm.cnw)
+    for c in PMs.conductor_ids(pm)
+        constraint_tp_voltage(pm, nw, c)
+    end
 end
 
 
