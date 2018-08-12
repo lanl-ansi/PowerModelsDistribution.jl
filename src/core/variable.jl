@@ -5,6 +5,14 @@ function variable_tp_voltage(pm::GenericPowerModel; kwargs...)
     end
 end
 
+""
+function variable_tp_branch_flow(pm::GenericPowerModel; kwargs...)
+    for c in PMs.conductor_ids(pm)
+        PMs.variable_branch_flow(pm, cnd=c; kwargs...)
+    end
+end
+
+
 
 ""
 function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: PMs.AbstractWRForm

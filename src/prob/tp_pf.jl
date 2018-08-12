@@ -29,10 +29,10 @@ end
 ""
 function post_tp_pf(pm::GenericPowerModel)
     variable_tp_voltage(pm, bounded=false)
+    variable_tp_branch_flow(pm, bounded=false)
 
     for c in PMs.conductor_ids(pm)
         PMs.variable_generation(pm, bounded=false, cnd=c)
-        PMs.variable_branch_flow(pm, bounded=false, cnd=c)
         PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
     end
 

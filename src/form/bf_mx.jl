@@ -228,7 +228,7 @@ function variable_tp_branch_series_current_prod_hermitian(pm::GenericPowerModel{
 end
 
 ""
-function variable_tp_branch_flow(pm::GenericPowerModel; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
+function variable_tp_branch_flow(pm::GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
     n_diag_el = n_cond
     n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
     assert(n_cond<=5)
