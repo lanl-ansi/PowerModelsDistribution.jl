@@ -193,10 +193,3 @@ function constraint_tp_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw
     constraint_tp_flow_losses(pm::GenericPowerModel, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
 end
 
-
-""
-function constraint_tp_theta_ref(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
-    for cnd in PMs.conductor_ids(pm)
-        constraint_tp_theta_ref(pm, nw, cnd, i)
-    end
-end

@@ -6,3 +6,8 @@ function constraint_tp_branch_current(pm::GenericPowerModel, i::Int; kwargs...)
 end
 
 
+function constraint_tp_theta_ref(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    for cnd in PMs.conductor_ids(pm)
+        constraint_tp_theta_ref(pm, nw, cnd, i)
+    end
+end
