@@ -12,8 +12,9 @@ const PMs = PowerModels
 const LOGGER = getlogger(PowerModels)
 
 include("core/ref.jl")
-include("core/variable.jl")
 include("core/multiconductor.jl")
+include("core/variable.jl")
+include("core/constraint.jl")
 include("core/objective.jl")
 
 include("form/acp.jl")
