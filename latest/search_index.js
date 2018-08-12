@@ -353,6 +353,22 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library.html#PowerModels.constraint_branch_current-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.LPLinUBFForm",
+    "page": "Library",
+    "title": "PowerModels.constraint_branch_current",
+    "category": "method",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.add_branch_current_setpoint-Tuple{Any,PowerModels.GenericPowerModel}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.add_branch_current_setpoint",
+    "category": "method",
+    "text": "\n\n"
+},
+
+{
     "location": "library.html#ThreePhasePowerModels.add_branch_flow_setpoint-Tuple{Any,PowerModels.GenericPowerModel}",
     "page": "Library",
     "title": "ThreePhasePowerModels.add_branch_flow_setpoint",
@@ -382,6 +398,14 @@ var documenterSearchIndex = {"docs": [
     "title": "ThreePhasePowerModels.add_component!",
     "category": "method",
     "text": "add_component!(dss_data, ctype_name, compDict)\n\nAdds a component of type ctype_name with properties given by compDict to the existing dss_data structure. If a component of the same type has already been added to dss_data, the new component is appeneded to the existing array of components of that type, otherwise a new array is created.\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.add_original_variables-Tuple{Any,PowerModels.GenericPowerModel}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.add_original_variables",
+    "category": "method",
+    "text": "\n\n"
 },
 
 {
@@ -428,14 +452,6 @@ var documenterSearchIndex = {"docs": [
     "location": "library.html#ThreePhasePowerModels.check_network_data-Tuple{Dict{String,Any}}",
     "page": "Library",
     "title": "ThreePhasePowerModels.check_network_data",
-    "category": "method",
-    "text": "\n\n"
-},
-
-{
-    "location": "library.html#ThreePhasePowerModels.constraint_branch_current-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.LPLinUBFForm",
-    "page": "Library",
-    "title": "ThreePhasePowerModels.constraint_branch_current",
     "category": "method",
     "text": "\n\n"
 },
@@ -601,22 +617,6 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.constraint_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACPForm, PowerModels.AbstractACTForm, PowerModels.AbstractDCPForm}",
-    "page": "Library",
-    "title": "ThreePhasePowerModels.constraint_theta_ref",
-    "category": "method",
-    "text": "Creates phase angle constraints at reference buses\n\n\n\n"
-},
-
-{
-    "location": "library.html#ThreePhasePowerModels.constraint_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACTForm, PowerModels.AbstractBFForm, PowerModels.AbstractWRForm, PowerModels.AbstractWRMForm}",
-    "page": "Library",
-    "title": "ThreePhasePowerModels.constraint_theta_ref",
-    "category": "method",
-    "text": "do nothing, no way to represent this in these variables\n\n\n\n"
-},
-
-{
     "location": "library.html#ThreePhasePowerModels.constraint_tp_branch_current-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.AbstractLPUBFForm",
     "page": "Library",
     "title": "ThreePhasePowerModels.constraint_tp_branch_current",
@@ -673,30 +673,6 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.constraint_tp_kcl_shunt-Tuple{PowerModels.GenericPowerModel,Int64}",
-    "page": "Library",
-    "title": "ThreePhasePowerModels.constraint_tp_kcl_shunt",
-    "category": "method",
-    "text": "\n\n"
-},
-
-{
-    "location": "library.html#ThreePhasePowerModels.constraint_tp_kcl_shunt-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:Union{ThreePhasePowerModels.AbstractConicUBFForm, ThreePhasePowerModels.AbstractNLPUBFForm}",
-    "page": "Library",
-    "title": "ThreePhasePowerModels.constraint_tp_kcl_shunt",
-    "category": "method",
-    "text": "sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) == sum(pg[g] for g in bus_gens) - sum(pd[d] for d in bus_loads) - sum(gs[s] for s in bus_shunts)*v^2\nsum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) == sum(qg[g] for g in bus_gens) - sum(qd[d] for d in bus_loads) + sum(bs[s] for s in bus_shunts)*v^2\n\n\n\n"
-},
-
-{
-    "location": "library.html#ThreePhasePowerModels.constraint_tp_theta_ref-Tuple{PowerModels.GenericPowerModel,Int64}",
-    "page": "Library",
-    "title": "ThreePhasePowerModels.constraint_tp_theta_ref",
-    "category": "method",
-    "text": "\n\n"
-},
-
-{
     "location": "library.html#ThreePhasePowerModels.constraint_tp_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any}, Tuple{T}} where T<:ThreePhasePowerModels.LPdiagUBFForm",
     "page": "Library",
     "title": "ThreePhasePowerModels.constraint_tp_theta_ref",
@@ -710,6 +686,22 @@ var documenterSearchIndex = {"docs": [
     "title": "ThreePhasePowerModels.constraint_tp_theta_ref",
     "category": "method",
     "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACPForm, PowerModels.AbstractACTForm, PowerModels.AbstractDCPForm}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_tp_theta_ref",
+    "category": "method",
+    "text": "Creates phase angle constraints at reference buses\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACTForm, PowerModels.AbstractBFForm, PowerModels.AbstractWRForm, PowerModels.AbstractWRMForm}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_tp_theta_ref",
+    "category": "method",
+    "text": "do nothing, no way to represent this in these variables\n\n\n\n"
 },
 
 {
@@ -729,19 +721,19 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_voltage-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64}, Tuple{T}} where T<:PowerModels.AbstractACPForm",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.constraint_tp_voltage",
+    "category": "method",
+    "text": "do nothing, this model does not have complex voltage constraints\n\n\n\n"
+},
+
+{
     "location": "library.html#ThreePhasePowerModels.constraint_tp_voltage-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64}, Tuple{T}} where T<:PowerModels.AbstractWRForm",
     "page": "Library",
     "title": "ThreePhasePowerModels.constraint_tp_voltage",
     "category": "method",
     "text": "\n\n"
-},
-
-{
-    "location": "library.html#ThreePhasePowerModels.constraint_tp_voltage-Union{Tuple{PowerModels.GenericPowerModel{T}}, Tuple{T}} where T<:PowerModels.AbstractACPForm",
-    "page": "Library",
-    "title": "ThreePhasePowerModels.constraint_tp_voltage",
-    "category": "method",
-    "text": "do nothing, this model does not have complex voltage constraints\n\n\n\n"
 },
 
 {
@@ -1529,7 +1521,15 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.variable_tp_voltage-Union{Tuple{PowerModels.GenericPowerModel{T}}, Tuple{T}} where T<:PowerModels.AbstractACPForm",
+    "location": "library.html#ThreePhasePowerModels.variable_tp_branch_flow-Union{Tuple{PowerModels.GenericPowerModel{T}}, Tuple{T}} where T<:Union{ThreePhasePowerModels.AbstractConicUBFForm, ThreePhasePowerModels.AbstractNLPUBFForm}",
+    "page": "Library",
+    "title": "ThreePhasePowerModels.variable_tp_branch_flow",
+    "category": "method",
+    "text": "\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.variable_tp_voltage-Tuple{PowerModels.GenericPowerModel}",
     "page": "Library",
     "title": "ThreePhasePowerModels.variable_tp_voltage",
     "category": "method",
