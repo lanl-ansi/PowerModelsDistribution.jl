@@ -21,24 +21,22 @@ end
 
 ""
 function post_tp_opf(pm::GenericPowerModel)
+    variable_tp_voltage(pm)
+    variable_tp_branch_flow(pm)
+
     for c in PMs.conductor_ids(pm)
-        variable_tp_voltage(pm, cnd=c)
         PMs.variable_generation(pm, cnd=c)
-        PMs.variable_branch_flow(pm, cnd=c)
         PMs.variable_dcline_flow(pm, cnd=c)
     end
 
-    for c in PMs.conductor_ids(pm)
-        constraint_tp_voltage(pm, cnd=c)
-    end
+    constraint_tp_voltage(pm)
+
     for i in ids(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)
     end
 
-    for i in ids(pm, :bus)
-        for c in PMs.conductor_ids(pm)
-            PMs.constraint_kcl_shunt(pm, i, cnd=c)
-        end
+    for i in ids(pm, :bus), c in PMs.conductor_ids(pm)
+        PMs.constraint_kcl_shunt(pm, i, cnd=c)
     end
 
     for i in ids(pm, :branch)
@@ -53,10 +51,8 @@ function post_tp_opf(pm::GenericPowerModel)
         end
     end
 
-    for i in ids(pm, :dcline)
-        for c in PMs.conductor_ids(pm)
-            PMs.constraint_dcline(pm, i, cnd=c)
-        end
+    for i in ids(pm, :dcline), c in PMs.conductor_ids(pm)
+        PMs.constraint_dcline(pm, i, cnd=c)
     end
 
     PMs.objective_min_fuel_cost(pm)

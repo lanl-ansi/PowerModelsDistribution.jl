@@ -28,3 +28,9 @@ function calc_tp_voltage_product_bounds(pm::GenericPowerModel, buspairs; nw::Int
 
     return wr_min, wr_max, wi_min, wi_max
 end
+
+function find_ref_buses(pm::GenericPowerModel, nw)
+    buses = ref(pm, nw, :bus)
+    return [b for (b,bus) in buses if bus["bus_type"]==3]
+    # return [bus for (b,bus) in buses ]
+end

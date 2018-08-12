@@ -1,12 +1,7 @@
 # Three-phase specific constraints
-""
-function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: PMs.AbstractACPForm
-    PMs.variable_voltage_angle(pm; kwargs...)
-    PMs.variable_voltage_magnitude(pm; kwargs...)
-end
 
 "do nothing, this model does not have complex voltage constraints"
-function constraint_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: PMs.AbstractACPForm
+function constraint_tp_voltage(pm::GenericPowerModel{T}, n::Int, c::Int) where T <: PMs.AbstractACPForm
 end
 
 
