@@ -2,7 +2,7 @@ ThreePhasePowerModels.jl Change Log
 ===================================
 
 ### Staged
-- nothing
+- Updates to problem specifications
 
 ### v0.1.1
 - Added a variety of matrix-based branch flow formulations
