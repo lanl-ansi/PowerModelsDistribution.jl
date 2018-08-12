@@ -2,13 +2,6 @@
 
 
 ""
-function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: PMs.AbstractWRForm
-    variable_tp_voltage_magnitude_sqr(pm; kwargs...)
-    variable_tp_voltage_product(pm; kwargs...)
-end
-
-
-""
 function constraint_tp_voltage(pm::GenericPowerModel{T}, n::Int, c::Int) where T <: PMs.AbstractWRForm
     w  = var(pm, n,  :w)
     wr = var(pm, n, :wr)

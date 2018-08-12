@@ -66,12 +66,12 @@ end
 
 
 "do nothing, no way to represent this in these variables"
-function constraint_theta_ref(pm::GenericPowerModel{T}, n::Int, c::Int, d) where T <: PMs.AbstractWForms
+function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, c::Int, d) where T <: PMs.AbstractWForms
 end
 
 
 "Creates phase angle constraints at reference buses"
-function constraint_theta_ref(pm::GenericPowerModel{T}, n::Int, c::Int, d) where T <: PMs.AbstractPForms
+function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, c::Int, d) where T <: PMs.AbstractPForms
     va = var(pm, n, c, :va, d)
     nconductors = length(PMs.conductor_ids(pm))
 

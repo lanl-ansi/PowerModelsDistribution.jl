@@ -195,6 +195,6 @@ end
 ""
 function constraint_tp_theta_ref(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     for cnd in PMs.conductor_ids(pm)
-        constraint_theta_ref(pm, nw, cnd, i)
+        constraint_tp_theta_ref(pm, nw, cnd, i)
     end
 end

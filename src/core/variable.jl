@@ -1,26 +1,18 @@
-"generates variables for both `active` and `reactive` slack at each bus"
-function variable_bus_power_slack(pm::GenericPowerModel; kwargs...)
-    variable_active_bus_power_slack(pm; kwargs...)
-    variable_reactive_bus_power_slack(pm; kwargs...)
+""
+function variable_tp_voltage(pm::GenericPowerModel; kwargs...)
+    for c in PMs.conductor_ids(pm)
+        PMs.variable_voltage(pm, cnd=c; kwargs...)
+    end
 end
+
 
 ""
-function variable_active_bus_power_slack(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    var(pm, nw, cnd)[:p_slack] = @variable(pm.model,
-        [i in ids(pm, nw, :bus)], basename="$(nw)_$(cnd)_p_slack",
-        start = PMs.getval(ref(pm, nw, :bus, i), "p_slack_start", cnd)
-    )
+function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: PMs.AbstractWRForm
+    for c in PMs.conductor_ids(pm)
+        variable_tp_voltage_magnitude_sqr(pm, cnd=c; kwargs...)
+        variable_tp_voltage_product(pm, cnd=c; kwargs...)
+    end
 end
-
-""
-function variable_reactive_bus_power_slack(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    var(pm, nw, cnd)[:q_slack] = @variable(pm.model,
-        [i in ids(pm, nw, :bus)], basename="$(nw)_$(cnd)_q_slack",
-        start = PMs.getval(ref(pm, nw, :bus, i), "q_slack_start", cnd)
-    )
-end
-
-
 
 
 "variable: `w[i] >= 0` for `i` in `bus`es"
@@ -97,4 +89,28 @@ function variable_tp_voltage_product(pm::GenericPowerModel; nw::Int=pm.cnw, cnd:
         var(pm, nw, cnd, :wr)[(i,j)] = WR[(i, j, cnd, cnd)]
         var(pm, nw, cnd, :wi)[(i,j)] = WI[(i, j, cnd, cnd)]
     end
+end
+
+
+
+"generates variables for both `active` and `reactive` slack at each bus"
+function variable_bus_power_slack(pm::GenericPowerModel; kwargs...)
+    variable_active_bus_power_slack(pm; kwargs...)
+    variable_reactive_bus_power_slack(pm; kwargs...)
+end
+
+""
+function variable_active_bus_power_slack(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    var(pm, nw, cnd)[:p_slack] = @variable(pm.model,
+        [i in ids(pm, nw, :bus)], basename="$(nw)_$(cnd)_p_slack",
+        start = PMs.getval(ref(pm, nw, :bus, i), "p_slack_start", cnd)
+    )
+end
+
+""
+function variable_reactive_bus_power_slack(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    var(pm, nw, cnd)[:q_slack] = @variable(pm.model,
+        [i in ids(pm, nw, :bus)], basename="$(nw)_$(cnd)_q_slack",
+        start = PMs.getval(ref(pm, nw, :bus, i), "q_slack_start", cnd)
+    )
 end
