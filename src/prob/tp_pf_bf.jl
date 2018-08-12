@@ -41,19 +41,17 @@ function post_tp_pf_bf(pm::GenericPowerModel)
         end
     end
 
-    for i in ids(pm, :bus)
-        constraint_tp_kcl_shunt(pm, i)
+    for i in ids(pm, :bus), c in PMs.conductor_ids(pm)
+        PMs.constraint_kcl_shunt(pm, i, cnd=c)
 
-        for c in PMs.conductor_ids(pm)
-            # PV Bus Constraints
-            if length(ref(pm, :bus_gens, i)) > 0 && !(i in ids(pm,:ref_buses))
-                # this assumes inactive generators are filtered out of bus_gens
-                @assert bus["bus_type"] == 2
+        # PV Bus Constraints
+        if length(ref(pm, :bus_gens, i)) > 0 && !(i in ids(pm,:ref_buses))
+            # this assumes inactive generators are filtered out of bus_gens
+            @assert bus["bus_type"] == 2
 
-                PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
-                for j in ref(pm, :bus_gens, i)
-                    PMs.constraint_active_gen_setpoint(pm, j, cnd=c)
-                end
+            PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
+            for j in ref(pm, :bus_gens, i)
+                PMs.constraint_active_gen_setpoint(pm, j, cnd=c)
             end
         end
     end

@@ -30,8 +30,8 @@ function post_tp_opf_bf(pm::GenericPowerModel)
         constraint_tp_theta_ref(pm, i)
     end
 
-    for i in ids(pm, :bus)
-        constraint_tp_kcl_shunt(pm, i)
+    for i in ids(pm, :bus), c in PMs.conductor_ids(pm)
+        PMs.constraint_kcl_shunt(pm, i, cnd=c)
     end
 
     for i in ids(pm, :branch)
@@ -50,11 +50,9 @@ function post_tp_opf_bf(pm::GenericPowerModel)
         end
     end
 
-    for i in ids(pm, :dcline)
-        for c in PMs.conductor_ids(pm)
-            PMs.constraint_dcline(pm, i, cnd=c)
-        end
+    for i in ids(pm, :dcline), c in PMs.conductor_ids(pm)
+        PMs.constraint_dcline(pm, i, cnd=c)
     end
 
-     PMs.objective_min_fuel_cost(pm)
+    PMs.objective_min_fuel_cost(pm)
 end

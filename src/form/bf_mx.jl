@@ -418,28 +418,6 @@ function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, i) where T <:
     @constraint(pm.model, mat2utrivec(w_im) .== mat2utrivec(w_im_ref))
 end
 
-"""
-```
-sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) == sum(pg[g] for g in bus_gens) - sum(pd[d] for d in bus_loads) - sum(gs[s] for s in bus_shunts)*v^2
-sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) == sum(qg[g] for g in bus_gens) - sum(qd[d] for d in bus_loads) + sum(bs[s] for s in bus_shunts)*v^2
-```
-"""
-function constraint_tp_kcl_shunt(pm::GenericPowerModel{T}, n::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: AbstractUBFForm
-    for c in PMs.conductor_ids(pm)
-        w = [var(pm, n, c, :w,  i)]
-
-        p = [var(pm, n, c, :p, a) for a in bus_arcs]
-        q = [var(pm, n, c, :q, a) for a in bus_arcs]
-        pg = [var(pm, n, c, :pg, g) for g in bus_gens]
-        qg = [var(pm, n, c, :qg, g) for g in bus_gens]
-        p_dc = [var(pm, n, c, :p_dc, d) for d in bus_arcs_dc]
-        q_dc = [var(pm, n, c, :q_dc, d) for d in bus_arcs_dc]
-
-        PMs.con(pm, n, c, :kcl_p)[i] = @constraint(pm.model, sum(pac for (i, pac) in enumerate(p)) + sum(pdc for (i, pdc) in enumerate(p_dc)) == sum(pgen for (i, pgen) in enumerate(pg)) - sum(pd[c] for pd in values(bus_pd)) - sum(gs[c] for gs in values(bus_gs))*w)
-        PMs.con(pm, n, c, :kcl_q)[i] = @constraint(pm.model, sum(qac for (i, qac) in enumerate(q)) + sum(qdc for (i, qdc) in enumerate(q_dc)) == sum(qgen for (i, qgen) in enumerate(qg)) - sum(qd[c] for qd in values(bus_qd)) + sum(bs[c] for bs in values(bus_bs))*w)
-    end
-end
-
 
 """
 Defines voltage drop over a branch, linking from and to side voltage

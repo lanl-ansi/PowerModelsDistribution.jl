@@ -209,12 +209,12 @@ function constraint_tp_branch_current(pm::GenericPowerModel, i::Int; nw::Int=pm.
     end
 end
 
-""
-function constraint_tp_kcl_shunt(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
-    for cnd in PMs.conductor_ids(pm)
-        PMs.constraint_kcl_shunt(pm, i, nw=nw, cnd=cnd)
-    end
-end
+#""
+#function constraint_tp_kcl_shunt(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+#    for cnd in PMs.conductor_ids(pm)
+#        PMs.constraint_kcl_shunt(pm, i, nw=nw, cnd=cnd)
+#    end
+#end
 
 ""
 function constraint_tp_theta_ref(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
