@@ -3,65 +3,63 @@
 ## Type Hierarchy
 We begin with the top of the hierarchy, where we can distinguish between conic and non-conic power flow models.
 ```julia
-AbstractConicForms = Union{AbstractConicPowerFormulation, AbstractBFConicForm}
-AbstractConicPowerFormulation <: PowerModels.AbstractPowerFormulation
-AbstractBFForm <: PowerModels.AbstractPowerFormulation
-AbstractBFQPForm <: PowerModels.AbstractBFForm
-AbstractBFConicForm <: PowerModels.AbstractBFForm
+PowerModels.AbstractConicForms = Union{PowerModels.AbstractConicPowerFormulation, PowerModels.AbstractBFConicForm}
+PowerModels.AbstractConicPowerFormulation <: PowerModels.AbstractPowerFormulation
+PowerModels.AbstractBFForm <: PowerModels.AbstractPowerFormulation
+PowerModels.AbstractBFQPForm <: PowerModels.AbstractBFForm
+PowerModels.AbstractBFConicForm <: PowerModels.AbstractBFForm
 ```
 
 We begin with the top of the hierarchy, where we can distinguish between AC and DC power flow models.
 ```julia
-AbstractACPForm <: PowerModels.AbstractPowerFormulation
-AbstractDCPForm <: PowerModels.AbstractPowerFormulation
-AbstractWRForm <: PowerModels.AbstractPowerFormulation
-AbstractNLPUBFForm <: PowerModels.AbstractBFQPForm
-AbstractConicUBFForm <: PowerModels.AbstractBFConicForm
-AbstractLPUBFForm <: AbstractNLPUBFForm
+PowerModels.AbstractACPForm <: PowerModels.AbstractPowerFormulation
+PowerModels.AbstractDCPForm <: PowerModels.AbstractPowerFormulation
+PowerModels.AbstractWRForm <: PowerModels.AbstractPowerFormulation
+ThreePhasePowerModels.AbstractNLPUBFForm <: PowerModels.AbstractBFQPForm
+ThreePhasePowerModels.AbstractConicUBFForm <: PowerModels.AbstractBFConicForm
+ThreePhasePowerModels.AbstractLPUBFForm <: ThreePhasePowerModels.AbstractNLPUBFForm
 ```
 
 From there, different forms are possible:
 ```julia
-StandardACPForm <: PowerModels.AbstractACPForm
-StandardDCPForm <: PowerModels.AbstractDCPForm
+#Bus injection models:
+PowerModels.StandardACPForm <: PowerModels.AbstractACPForm
+PowerModels.StandardDCPForm <: PowerModels.AbstractDCPForm
+PowerModels.SOCWRForm <: PowerModels.AbstractWRForm
 
-SOCWRForm <: AbstractWRForm
+#Branch flow models:
+ThreePhasePowerModels.SDPUBFForm <: ThreePhasePowerModels.AbstractConicUBFForm
+ThreePhasePowerModels.SOCNLPUBFForm <: ThreePhasePowerModels.AbstractNLPUBFForm
+ThreePhasePowerModels.SOCConicUBFForm <: ThreePhasePowerModels.AbstractConicUBFForm
 
-SDPUBFForm <: AbstractConicUBFForm
-SOCNLPUBFForm <: AbstractNLPUBFForm
-SOCConicUBFForm <: AbstractConicUBFForm
-
-LPLinUBFForm <: PowerModels.AbstractBFForm
-LPfullUBFForm <: AbstractLPUBFForm
-LPdiagUBFForm <: AbstractLPUBFForm
+ThreePhasePowerModels.LPLinUBFForm <: PowerModels.AbstractBFForm
+ThreePhasePowerModels.LPfullUBFForm <: ThreePhasePowerModels.AbstractLPUBFForm
+ThreePhasePowerModels.LPdiagUBFForm <: ThreePhasePowerModels.AbstractLPUBFForm
 ```
-
 
 ## Power Models
 Each of these forms can be used as the type parameter for a PowerModel:
 ```julia
-ACPPowerModel = GenericPowerModel{PowerModels.StandardACPForm}
-DCPPowerModel = GenericPowerModel{PowerModels.StandardDCPForm}
+PowerModels.ACPPowerModel = GenericPowerModel{PowerModels.StandardACPForm}
+PowerModels.DCPPowerModel = GenericPowerModel{PowerModels.StandardDCPForm}
 
-SOCWRPowerModel = GenericPowerModel{SOCWRForm}
+PowerModels.SOCWRPowerModel = GenericPowerModel{PowerModels.SOCWRForm}
 
-SDPUBFPowerModel = GenericPowerModel{SDPUBFForm}
-SOCNLPUBFPowerModel = GenericPowerModel{SOCNLPUBFForm}
-SOCConicUBFPowerModel = GenericPowerModel{SOCConicUBFForm}
+ThreePhasePowerModels.SDPUBFPowerModel = GenericPowerModel{ThreePhasePowerModels.SDPUBFForm}
+ThreePhasePowerModels.SOCNLPUBFPowerModel = GenericPowerModel{ThreePhasePowerModels.SOCNLPUBFForm}
+ThreePhasePowerModels.SOCConicUBFPowerModel = GenericPowerModel{ThreePhasePowerModels.SOCConicUBFForm}
 
-LPfullUBFPowerModel = GenericPowerModel{LPfullUBFForm}
-LPdiagUBFPowerModel = GenericPowerModel{LPdiagUBFForm}
-LPLinUBFPowerModel = PMs.GenericPowerModel{LPLinUBFForm}
+ThreePhasePowerModels.LPfullUBFPowerModel = GenericPowerModel{ThreePhasePowerModels.LPfullUBFForm}
+ThreePhasePowerModels.LPdiagUBFPowerModel = GenericPowerModel{ThreePhasePowerModels.LPdiagUBFForm}
+ThreePhasePowerModels.LPLinUBFPowerModel = GenericPowerModel{ThreePhasePowerModels.LPLinUBFForm}
 ```
-
 
 ## Union Types
 
-To support both conic and quadratically-constrained formulation variants for the unbalanced branch flow model, the union type `AbstractUBFForm` is defined. These formulations extend `AbstractBFForm` and are therefore also `AbstractWForms`.
+To support both conic and quadratically-constrained formulation variants for the unbalanced branch flow model, the union type `AbstractUBFForm` is defined. These formulations extend `AbstractBFForm` and are therefore also `AbstractWForms` (as defined in PowerModels proper).
 
 ```julia
 AbstractUBFForm = Union{AbstractNLPUBFForm, AbstractConicUBFForm}
-AbstractWForms = Union{AbstractWRForms, AbstractBFForm}
 ```
 
 ## Complexity classes
