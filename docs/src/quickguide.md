@@ -27,13 +27,12 @@ using PowerModels
 run_tp_opf("case3_unbalanced.dss", ACPPowerModel, IpoptSolver())
 ```
 
-Note that PowerModels needs to be loaded to access formulations which are extended by ThreePhasePowerModels, here "ACPPowerModel". The PowerModel "ACPPowerModel" indicates an AC formulation in polar coordinates.  This more generic `run_tp_opf()` allows one to solve an OPF problem with any power network formulation implemented in PowerModels or ThreePhasePowerModels.  For example, the SDP relaxation of unbalanced Optimal Power Flow can be run with,
+Note that PowerModels needs to be loaded to access formulations which are extended by ThreePhasePowerModels, here "ACPPowerModel". The PowerModel "ACPPowerModel" indicates an AC formulation in polar coordinates.  This more generic `run_tp_opf()` allows one to solve an OPF problem with any power network formulation implemented in PowerModels or ThreePhasePowerModels.  For example, the SDP relaxation of unbalanced Optimal Power Flow (branch flow model) can be run with,
 
 ```julia
 using SCS
-run_tp_opf("case3_unbalanced.dss", SDPUBFPowerModel, SCSSolver())
+run_tp_opf_bf("case3_unbalanced.dss", SDPUBFPowerModel, SCSSolver())
 ```
-
 Note that you have to use a SDP-capable solver, e.g. the open-source solver SCS, to solve SDP models.
 
 ## Inspecting the Formulation

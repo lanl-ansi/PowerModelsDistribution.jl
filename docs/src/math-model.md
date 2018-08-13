@@ -13,8 +13,10 @@ ThreePhasePowerModels implements a  generalized version of the AC Optimal Power 
 In the mathematical description below,
 - Bold typeface indicates a vector ($\in \mathbb{C}^c$) or matrix ($\in \mathbb{C}^{c\times c}$)
 - Operator $diag$ takes the diagonal (vector) from a square matrix
-- Superscript $H$ indicates complex conjugate transpose
-- Note that complex power is defined as $\mathbf{S}_{ij} = \mathbf{V}_{i} \mathbf{I}_{ij}^H$ and is therefore a complex matrix with dimensions $c \times c$.
+- The set of complex numbers is $\mathbb{C}$ and real numbers is $\mathbb{R}$
+- Superscript $H$ indicates complex conjugate transpose (Hermitian adjoint)
+- Note that complex power is defined as $\mathbf{S}_{ij} = \mathbf{V}_{i} \mathbf{I}_{ij}^H$ and is therefore a complex matrix of dimension $c \times c$
+- The line $\mathbf{Y}^c_{ij}, \mathbf{Y}^c_{ji}$ and bus $\mathbf{Y}^s_{k}$ shunt matrices do not need to be diagonal
 
 
 ### Sets
@@ -51,20 +53,21 @@ where the set of conductors $C$ typically equals $\{ a,b,c\}$.
 %
 \end{align}
 ```
+where the notation $\mathbf{v}^l_{i} := [v^l_{i,c}]_{c \in C}$ reflects that the vector $\mathbf{v}^l_{i}$ is constructed by putting the individual phase values $v^l_{i,c}$ in a vector (in order $a,b,c$). 
 
 Alternatively, the series impedance of a line can be written in impedance form:
 ```math
 \mathbf{Z}_{ij} \in \mathbb{C}^{c\times c} \;\; \forall (i,j) \in E \nonumber, \mathbf{Y}_{ij} = ( \mathbf{Z}_{ij})^{-1}
 ```
-where superscript $-1$ indicates the matrix inverse. Note that $\mathbf{Y}_{ij}$ or $\mathbf{Z}_{ij}$ may not be invertible, e.g. in case ofsingle-phase branches in a three-phase grid. In this case the [pseudo-inverse](https://en.wikipedia.org/wiki/Moore%E2%80%93Penrose_inverse) can be used.
+where superscript $-1$ indicates the matrix inverse. Note that $\mathbf{Y}_{ij}$ or $\mathbf{Z}_{ij}$ may not be invertible, e.g. in case of single-phase branches in a three-phase grid. In this case the [pseudo-inverse](https://en.wikipedia.org/wiki/Moore%E2%80%93Penrose_inverse) can be used.
 
 ### Variables for a Bus Injection Model
 
 ```math
 \begin{align}
-& S^g_{k,c} \;\; \forall k\in G, \forall c \in C \nonumber; \mathbf{S}^g_{k} := [S^g_{k,c}]_{c \in C} \\
-& V_{i,c} \;\; \forall i\in N, \forall c \in C \nonumber; \mathbf{V}_{i} := [V_{i,c}]_{c \in C} \\
-& \mathbf{S}_{ij} \;\; \forall (i,j) \in E \cup E^R \\
+& S^g_{k,c}  \in \mathbb{C} \;\; \forall k\in G, \forall c \in C \nonumber; \mathbf{S}^g_{k} := [S^g_{k,c}]_{c \in C} \\
+& V_{i,c}  \in \mathbb{C} \;\; \forall i\in N, \forall c \in C \nonumber; \mathbf{V}_{i} := [V_{i,c}]_{c \in C} \\
+& \mathbf{S}_{ij}  \in \mathbb{C}^{c\times c} \;\; \forall (i,j) \in E \cup E^R \\
 %
 \end{align}
 ```
@@ -97,10 +100,10 @@ A complete mathematical model is as follows,
 
 ```math
 \begin{align}
-& S^g_{k,c} \;\; \forall k\in G, \forall c \in C \nonumber; \mathbf{S}^g_{k} := [S^g_{k,c}]_{c \in C} \\
-& V_{i,c} \;\; \forall i\in N, \forall c \in C \nonumber; \mathbf{V}_{i} := [V_{i,c}]_{c \in C} \\
-& I^{s}_{ij,c} \;\; \forall e \in E, \forall c \in C \nonumber; \mathbf{I}^{s}_{ij} := [{I}^{s}_{ij,c}]_{c \in C} \\
-& \mathbf{S}_{ij} \;\; \forall (i,j) \in E \cup E^R \\
+& S^g_{k,c}  \in \mathbb{C}\;\; \forall k\in G, \forall c \in C \nonumber; \mathbf{S}^g_{k} := [S^g_{k,c}]_{c \in C} \\
+& V_{i,c} \in \mathbb{C} \;\; \forall i\in N, \forall c \in C \nonumber; \mathbf{V}_{i} := [V_{i,c}]_{c \in C} \\
+& I^{s}_{ij,c}  \in \mathbb{C}\;\; \forall e \in E, \forall c \in C \nonumber; \mathbf{I}^{s}_{ij} := [{I}^{s}_{ij,c}]_{c \in C} \\
+& \mathbf{S}_{ij}  \in \mathbb{C}^{c\times c} \;\; \forall (i,j) \in E \cup E^R \\
 %
 \end{align}
 ```
@@ -128,6 +131,14 @@ A complete mathematical model is as follows,
 %
 \end{align}
 ```
+
+### Main references for formulations
+
+- Gan, L., & Low, S. H. (2014). Convex relaxations and linear approximation for optimal power flow in multiphase radial networks. In PSSC (pp. 1–9). Wroclaw, Poland. https://doi.org/10.1109/PSCC.2014.7038399
+- Sankur, M. D., Dobbe, R., Stewart, E., Callaway, D. S., & Arnold, D. B. (2016). A linearized power flow model for optimization in unbalanced distribution systems. https://arxiv.org/abs/1606.04492v2
+- Anese, E. D., Giannakis, G. B., & Wollenberg, B. F. (2012). Optimization of unbalanced power distribution networks via semidefinite relaxation. In North American Power Symp. (pp. 1–6). Champaign, IL, USA. https://doi.org/10.1109/NAPS.2012.6336350
+
+
 
 
 [^1] Gan, L., & Low, S. H. (2014). Convex relaxations and linear approximation for optimal power flow in multiphase radial networks. In PSSC (pp. 1–9). Wroclaw, Poland. https://doi.org/10.1109/PSCC.2014.7038399

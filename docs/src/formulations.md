@@ -14,6 +14,7 @@ We begin with the top of the hierarchy, where we can distinguish between AC and 
 ```julia
 AbstractACPForm <: PowerModels.AbstractPowerFormulation
 AbstractDCPForm <: PowerModels.AbstractPowerFormulation
+AbstractWRForm <: PowerModels.AbstractPowerFormulation
 AbstractNLPUBFForm <: PowerModels.AbstractBFQPForm
 AbstractConicUBFForm <: PowerModels.AbstractBFConicForm
 AbstractLPUBFForm <: AbstractNLPUBFForm
@@ -24,14 +25,16 @@ From there, different forms are possible:
 StandardACPForm <: PowerModels.AbstractACPForm
 StandardDCPForm <: PowerModels.AbstractDCPForm
 
+SOCWRForm <: AbstractWRForm
+
 SDPUBFForm <: AbstractConicUBFForm
 SOCNLPUBFForm <: AbstractNLPUBFForm
 SOCConicUBFForm <: AbstractConicUBFForm
 
+LPLinUBFForm <: PowerModels.AbstractBFForm
 LPfullUBFForm <: AbstractLPUBFForm
 LPdiagUBFForm <: AbstractLPUBFForm
 ```
-
 
 
 ## Power Models
@@ -39,6 +42,8 @@ Each of these forms can be used as the type parameter for a PowerModel:
 ```julia
 ACPPowerModel = GenericPowerModel{PowerModels.StandardACPForm}
 DCPPowerModel = GenericPowerModel{PowerModels.StandardDCPForm}
+
+SOCWRPowerModel = GenericPowerModel{SOCWRForm}
 
 SDPUBFPowerModel = GenericPowerModel{SDPUBFForm}
 SOCNLPUBFPowerModel = GenericPowerModel{SOCNLPUBFForm}
@@ -58,3 +63,14 @@ To support both conic and quadratically-constrained formulation variants for the
 AbstractUBFForm = Union{AbstractNLPUBFForm, AbstractConicUBFForm}
 AbstractWForms = Union{AbstractWRForms, AbstractBFForm}
 ```
+
+## Computational complexity
+- Nonconvex: ACPPowerModel
+- SDP: SDPUBFPowerModel
+- SOC(-representable): SOCWRPowerModel, SOCNLPUBFPowerModel, SOCConicUBFPowerModel
+- Linear: LPfullUBFPowerModel, LPdiagUBFPowerModel, LPLinUBFPowerModel, DCPPowerModel
+
+## Matrix equations versus scalar equations
+JuMP supports vectorized syntax, but not for nonlinear constraints. Therefore, certain formulations must be implemented in a scalar fashion. Other formulations can be written as matrix (in)equalities.
+- Scalar: ACPPowerModel, DCPPowerModel, LPLinUBFPowerModel, SOCWRPowerModel
+- Matrix: SDPUBFPowerModel, SOCNLPUBFPowerModel, SOCConicUBFPowerModel, LPfullUBFPowerModel, LPdiagUBFPowerModel
