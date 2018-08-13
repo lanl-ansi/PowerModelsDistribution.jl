@@ -62,11 +62,12 @@ To support both conic and quadratically-constrained formulation variants for the
 AbstractUBFForm = Union{AbstractNLPUBFForm, AbstractConicUBFForm}
 ```
 
-## Complexity classes
+## Optimization problem classes
 - NLP (nonconvex): ACPPowerModel
 - SDP: SDPUBFPowerModel
 - SOC(-representable): SOCWRPowerModel, SOCNLPUBFPowerModel, SOCConicUBFPowerModel
 - Linear: LPfullUBFPowerModel, LPdiagUBFPowerModel, LPLinUBFPowerModel, DCPPowerModel
+
 
 ## Matrix equations versus scalar equations
 JuMP supports vectorized syntax, but not for nonlinear constraints. Therefore, certain formulations must be implemented in a scalar fashion. Other formulations can be written as matrix (in)equalities. The current implementations are categorized as follows:
