@@ -1,6 +1,6 @@
 # ThreePhasePowerModels.jl
 
-Release: 
+Release:
 [![ThreePhasePowerModels](http://pkg.julialang.org/badges/ThreePhasePowerModels_0.6.svg)](http://pkg.julialang.org/detail/ThreePhasePowerModels)
 [![docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://lanl-ansi.github.io/ThreePhasePowerModels.jl/stable/)
 
@@ -16,14 +16,16 @@ This enables the definition of a wide variety of power network formulations and 
 
 **Core Problem Specifications**
 * Power Flow (pf)
-* Optimal Power Flow (opf)
+* Optimal Power Flow (opf), for the Bus Injection Model (BIM) as well as the Branch Flow Model (BFM)
 
 **Core Network Formulations**
-* AC (polar and rectangular coordinates)
-* SOC Relaxation (W-space)
+* AC (polar coordinates)
+* SDP BFM relaxation
+* SOC BFM and BIM relaxation (W-space)
+* Linear approximation (LinDist3Flow and simplified unbalanced DistFlow)
 
 **Network Data Formats**
-* Matlab ".m" files
+* Matlab ".m" files (extended for three-phase)
 * OpenDSS ".dss" files
 
 **Warning:** This package is under active development and may change drastically without warning.

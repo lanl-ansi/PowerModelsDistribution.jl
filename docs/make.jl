@@ -10,9 +10,16 @@ makedocs(
         "Home" => "index.md",
         "Manual" => [
             "Getting Started" => "quickguide.md",
+            "Mathematical Model" => "math-model.md",
         ],
-        "Library" => "library.md",
-        "Developer" => "developer.md",
+        "Library" => [
+            "Network Formulations" => "formulations.md",
+            "Modeling Components" => "library.md",
+        ],
+        "Developer" => [
+            "Developer" => "developer.md",
+            "Formulation Details" => "formulation-details.md",
+        ],
     ]
 )
 
