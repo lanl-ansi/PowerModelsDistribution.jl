@@ -5,7 +5,7 @@ As ThreePhasePowerModels implements a variety of power network optimization prob
 
 ## Unbalanced AC Optimal Power Flow
 
-ThreePhasePowerModels implements a slightly generalized version of the AC Optimal Power Flow problem, from [Matpower](http://www.pserc.cornell.edu/matpower/) but extended to take into account phase unbalance [^1].  These generalizations make it possible for ThreePhasePowerModels to more accurately capture real-world distribution network datasets.  The core generalizations are,
+ThreePhasePowerModels implements a  generalized version of the AC Optimal Power Flow problem, from [Matpower](http://www.pserc.cornell.edu/matpower/) but extended to take into account phase unbalance [^1].  These generalizations make it possible for ThreePhasePowerModels to more accurately capture real-world distribution network datasets.  The core generalizations are,
 
 - Support for multiple load and shunt components on each bus
 - Line charging (shunt) that supports a conductance and asymmetrical values
@@ -14,7 +14,7 @@ In the mathematical description below,
 - Bold typeface indicates a vector ($\in \mathbb{C}^c$) or matrix ($\in \mathbb{C}^{c\times c}$)
 - Operator $diag$ takes the diagonal (vector) from a square matrix
 - Superscript $H$ indicates complex conjugate transpose
-- Note that complex power is defined as $\mathbf{S}_{ij} = \mathbf{V}_{i} \mathbf{I}_{ij}^H$
+- Note that complex power is defined as $\mathbf{S}_{ij} = \mathbf{V}_{i} \mathbf{I}_{ij}^H$ and is therefore a complex matrix with dimensions $c \times c$.
 
 
 ### Sets
@@ -52,8 +52,13 @@ where the set of conductors $C$ typically equals $\{ a,b,c\}$.
 \end{align}
 ```
 
+Alternatively, the series impedance of a line can be written in impedance form:
+```math
+\mathbf{Z}_{ij} \in \mathbb{C}^{c\times c} \;\; \forall (i,j) \in E \nonumber, \mathbf{Y}_{ij} = ( \mathbf{Z}_{ij})^{-1}
+```
+where superscript $-1$ indicates the matrix inverse. Note that $\mathbf{Y}_{ij}$ or $\mathbf{Z}_{ij}$ may not be invertible, e.g. in case ofsingle-phase branches in a three-phase grid. In this case the [pseudo-inverse](https://en.wikipedia.org/wiki/Moore%E2%80%93Penrose_inverse) can be used.
 
-### Variables
+### Variables for a Bus Injection Model
 
 ```math
 \begin{align}
@@ -64,7 +69,8 @@ where the set of conductors $C$ typically equals $\{ a,b,c\}$.
 \end{align}
 ```
 
-### Mathematical Model
+
+###  Mathematical Formulation of a Bus Injection Model
 
 A complete mathematical model is as follows,
 
@@ -80,6 +86,43 @@ A complete mathematical model is as follows,
 & \sum_{\substack{k \in G_i}} \mathbf{S}^g_k - \sum_{\substack{k \in L_i}} \mathbf{S}^d_k - \sum_{\substack{k \in S_i}}  \mathbf{V}_i \mathbf{V}^H_i (\mathbf{Y}^s_k)^H = \sum_{\substack{(i,j)\in E_i \cup E_i^R}} diag(\mathbf{S}_{ij}) \;\; \forall i\in N \\
 & \mathbf{S}_{ij} =  {\mathbf{V}_i \mathbf{V}_i^H} \left( \mathbf{Y}_{ij} + \mathbf{Y}^c_{ij}\right)^H - {\mathbf{V}_i \mathbf{V}^H_j} \mathbf{Y}^H_{ij}  \;\; \forall (i,j)\in E \\
 & \mathbf{S}_{ji} = \mathbf{V}_j \mathbf{V}_j^H \left( \mathbf{Y}_{ij} + \mathbf{Y}^c_{ji} \right)^H - {\mathbf{V}^H_i \mathbf{V}_j} \mathbf{Y}^H_{ij} \;\; \forall (i,j)\in E \\
+& |diag(\mathbf{S}_{ij})| \leq \mathbf{s}^u_{ij} \;\; \forall (i,j) \in E \cup E^R \\
+& \theta^{\Delta l}_{ij,c} \leq \angle (V_{i,c} V^*_{j,c}) \leq \theta^{\Delta u}_{ij,c} \;\; \forall (i,j) \in E, \forall c \in C
+%
+\end{align}
+```
+
+
+### Variables for a Branch Flow Model
+
+```math
+\begin{align}
+& S^g_{k,c} \;\; \forall k\in G, \forall c \in C \nonumber; \mathbf{S}^g_{k} := [S^g_{k,c}]_{c \in C} \\
+& V_{i,c} \;\; \forall i\in N, \forall c \in C \nonumber; \mathbf{V}_{i} := [V_{i,c}]_{c \in C} \\
+& I^{s}_{ij,c} \;\; \forall e \in E, \forall c \in C \nonumber; \mathbf{I}^{s}_{ij} := [{I}^{s}_{ij,c}]_{c \in C} \\
+& \mathbf{S}_{ij} \;\; \forall (i,j) \in E \cup E^R \\
+%
+\end{align}
+```
+
+
+###  Mathematical Formulation of a Branch Flow Model
+
+A complete mathematical model is as follows,
+
+```math
+\begin{align}
+\mbox{minimize: } & \sum_{k \in G} c_{2k} \left( \sum_{c \in C} \Re(S^g_{k,c}) \right)^2 + c_{1k}  \sum_{c \in C} \Re(S^g_{k,c}) + c_{0k} \\
+%
+\mbox{subject to: } & \nonumber \\
+& \mathbf{V}_{i} = \mathbf{V}^{\text{ref}}_{i}   \;\; \forall r \in R \\
+& S^{gl}_{k,c} \leq S^g_{k,c} \leq S^{gu}_{k,c} \;\; \forall k \in G, \forall c \in C  \\
+& v^l_{i,c} \leq |V_{i,c}| \leq v^u_{i,c} \;\; \forall i \in N, \forall c \in C \\
+& \sum_{\substack{k \in G_i}} \mathbf{S}^g_k - \sum_{\substack{k \in L_i}} \mathbf{S}^d_k - \sum_{\substack{k \in S_i}}  \mathbf{V}_i \mathbf{V}^H_i (\mathbf{Y}^s_k)^H = \sum_{\substack{(i,j)\in E_i \cup E_i^R}} diag(\mathbf{S}_{ij}) \;\; \forall i\in N \\
+& \mathbf{S}_{ij} + \mathbf{S}_{ji} =  \mathbf{V}_i \mathbf{V}_i^H (\mathbf{Y}^c_{ij})^H + \mathbf{Z}_{ij} \mathbf{I}^{s}_{ij}(\mathbf{I}^{s}_{ij})^H + \mathbf{V}_j \mathbf{V}_j^H (\mathbf{Y}^c_{ji})^H  \;\; \forall (i,j)\in E \\
+& \mathbf{S}^{s}_{ij} = \mathbf{S}_{ij} + \mathbf{V}_i \mathbf{V}_i^H (\mathbf{Y}^c_{ij})^H  \;\; \forall (i,j) \in E \cup E^R \\
+& \mathbf{S}^{s}_{ij} = \mathbf{V}_i (\mathbf{I}^{s}_{ij})^H  \;\; \forall (i,j) \in E \cup E^R\\
+& \mathbf{V}_i = \mathbf{V}_j - \mathbf{Z}_{ij} \mathbf{I}^{s}_{ij} \forall (i,j)\in E \\
 & |diag(\mathbf{S}_{ij})| \leq \mathbf{s}^u_{ij} \;\; \forall (i,j) \in E \cup E^R \\
 & \theta^{\Delta l}_{ij,c} \leq \angle (V_{i,c} V^*_{j,c}) \leq \theta^{\Delta u}_{ij,c} \;\; \forall (i,j) \in E, \forall c \in C
 %

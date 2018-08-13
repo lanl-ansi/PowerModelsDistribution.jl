@@ -23,12 +23,15 @@ From there, different forms are possible:
 ```julia
 StandardACPForm <: PowerModels.AbstractACPForm
 StandardDCPForm <: PowerModels.AbstractDCPForm
+
 SDPUBFForm <: AbstractConicUBFForm
 SOCNLPUBFForm <: AbstractNLPUBFForm
 SOCConicUBFForm <: AbstractConicUBFForm
+
 LPfullUBFForm <: AbstractLPUBFForm
 LPdiagUBFForm <: AbstractLPUBFForm
 ```
+
 
 
 ## Power Models
@@ -36,9 +39,11 @@ Each of these forms can be used as the type parameter for a PowerModel:
 ```julia
 ACPPowerModel = GenericPowerModel{PowerModels.StandardACPForm}
 DCPPowerModel = GenericPowerModel{PowerModels.StandardDCPForm}
+
 SDPUBFPowerModel = GenericPowerModel{SDPUBFForm}
 SOCNLPUBFPowerModel = GenericPowerModel{SOCNLPUBFForm}
 SOCConicUBFPowerModel = GenericPowerModel{SOCConicUBFForm}
+
 LPfullUBFPowerModel = GenericPowerModel{LPfullUBFForm}
 LPdiagUBFPowerModel = GenericPowerModel{LPdiagUBFForm}
 LPLinUBFPowerModel = PMs.GenericPowerModel{LPLinUBFForm}
