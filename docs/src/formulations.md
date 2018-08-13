@@ -64,13 +64,13 @@ AbstractUBFForm = Union{AbstractNLPUBFForm, AbstractConicUBFForm}
 AbstractWForms = Union{AbstractWRForms, AbstractBFForm}
 ```
 
-## Computational complexity
-- Nonconvex: ACPPowerModel
+## Complexity classes
+- NLP (nonconvex): ACPPowerModel
 - SDP: SDPUBFPowerModel
 - SOC(-representable): SOCWRPowerModel, SOCNLPUBFPowerModel, SOCConicUBFPowerModel
 - Linear: LPfullUBFPowerModel, LPdiagUBFPowerModel, LPLinUBFPowerModel, DCPPowerModel
 
 ## Matrix equations versus scalar equations
-JuMP supports vectorized syntax, but not for nonlinear constraints. Therefore, certain formulations must be implemented in a scalar fashion. Other formulations can be written as matrix (in)equalities.
+JuMP supports vectorized syntax, but not for nonlinear constraints. Therefore, certain formulations must be implemented in a scalar fashion. Other formulations can be written as matrix (in)equalities. The current implementations are categorized as follows:
 - Scalar: ACPPowerModel, DCPPowerModel, LPLinUBFPowerModel, SOCWRPowerModel
 - Matrix: SDPUBFPowerModel, SOCNLPUBFPowerModel, SOCConicUBFPowerModel, LPfullUBFPowerModel, LPdiagUBFPowerModel

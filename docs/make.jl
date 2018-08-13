@@ -16,7 +16,10 @@ makedocs(
             "Network Formulations" => "formulations.md",
             "Modeling Components" => "library.md",
         ],
-        "Developer" => "developer.md",
+        "Developer" => [
+            "Developer" => "developer.md",
+            "Formulation Details" => "formulation-details.md",
+        ],
     ]
 )
 

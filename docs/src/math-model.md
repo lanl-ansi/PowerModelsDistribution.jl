@@ -53,7 +53,7 @@ where the set of conductors $C$ typically equals $\{ a,b,c\}$.
 %
 \end{align}
 ```
-where the notation $\mathbf{v}^l_{i} := [v^l_{i,c}]_{c \in C}$ reflects that the vector $\mathbf{v}^l_{i}$ is constructed by putting the individual phase values $v^l_{i,c}$ in a vector (in order $a,b,c$). 
+where the notation $\mathbf{v}^l_{i} := [v^l_{i,c}]_{c \in C}$ reflects that the vector $\mathbf{v}^l_{i}$ is constructed by putting the individual phase values $v^l_{i,c}$ in a vector (in order $a,b,c$).
 
 Alternatively, the series impedance of a line can be written in impedance form:
 ```math
@@ -131,14 +131,6 @@ A complete mathematical model is as follows,
 %
 \end{align}
 ```
-
-### Main references for formulations
-
-- Gan, L., & Low, S. H. (2014). Convex relaxations and linear approximation for optimal power flow in multiphase radial networks. In PSSC (pp. 1–9). Wroclaw, Poland. https://doi.org/10.1109/PSCC.2014.7038399
-- Sankur, M. D., Dobbe, R., Stewart, E., Callaway, D. S., & Arnold, D. B. (2016). A linearized power flow model for optimization in unbalanced distribution systems. https://arxiv.org/abs/1606.04492v2
-- Anese, E. D., Giannakis, G. B., & Wollenberg, B. F. (2012). Optimization of unbalanced power distribution networks via semidefinite relaxation. In North American Power Symp. (pp. 1–6). Champaign, IL, USA. https://doi.org/10.1109/NAPS.2012.6336350
-
-
 
 
 [^1] Gan, L., & Low, S. H. (2014). Convex relaxations and linear approximation for optimal power flow in multiphase radial networks. In PSSC (pp. 1–9). Wroclaw, Poland. https://doi.org/10.1109/PSCC.2014.7038399
