@@ -11,9 +11,9 @@ ThreePhasePowerModels implements a  generalized version of the AC Optimal Power 
 - Line charging (shunt) that supports a conductance and asymmetrical values
 
 In the mathematical description below,
-- Bold typeface indicates a vector ($\in \mathbb{C}^c$) or matrix ($\in \mathbb{C}^{c\times c}$)
-- Operator $diag$ takes the diagonal (vector) from a square matrix
 - The set of complex numbers is $\mathbb{C}$ and real numbers is $\mathbb{R}$
+- Bold typeface indicates a vector ($\in \mathbb{C}^c$) or matrix ($\in \mathbb{C}^{c\times c}$); for scalar variables a normal font type is used
+- Operator $diag$ takes the diagonal (vector) from a square matrix
 - Superscript $H$ indicates complex conjugate transpose (Hermitian adjoint)
 - Note that complex power is defined as $\mathbf{S}_{ij} = \mathbf{V}_{i} \mathbf{I}_{ij}^H$ and is therefore a complex matrix of dimension $c \times c$
 - The line $\mathbf{Y}^c_{ij}, \mathbf{Y}^c_{ji}$ and bus $\mathbf{Y}^s_{k}$ shunt matrices do not need to be diagonal
@@ -80,20 +80,33 @@ A complete mathematical model is as follows,
 ```math
 
 \begin{align}
-\mbox{minimize: } & \sum_{k \in G} c_{2k} \left( \sum_{c \in C} \Re(S^g_{k,c}) \right)^2 + c_{1k}  \sum_{c \in C} \Re(S^g_{k,c}) + c_{0k} \\
+\mbox{minimize: } & \sum_{k \in G} c_{2k} \left( \sum_{c \in C} \Re(S^g_{k,c}) \right)^2 + c_{1k}  \sum_{c \in C} \Re(S^g_{k,c}) + c_{0k} \label{eq_objective}\\
 %
 \mbox{subject to: } & \nonumber \\
-& \mathbf{V}_{i} = \mathbf{V}^{\text{ref}}_{i}   \;\; \forall r \in R \\
-& S^{gl}_{k,c} \leq S^g_{k,c} \leq S^{gu}_{k,c} \;\; \forall k \in G, \forall c \in C  \\
-& v^l_{i,c} \leq |V_{i,c}| \leq v^u_{i,c} \;\; \forall i \in N, \forall c \in C \\
-& \sum_{\substack{k \in G_i}} \mathbf{S}^g_k - \sum_{\substack{k \in L_i}} \mathbf{S}^d_k - \sum_{\substack{k \in S_i}}  \mathbf{V}_i \mathbf{V}^H_i (\mathbf{Y}^s_k)^H = \sum_{\substack{(i,j)\in E_i \cup E_i^R}} diag(\mathbf{S}_{ij}) \;\; \forall i\in N \\
-& \mathbf{S}_{ij} =  {\mathbf{V}_i \mathbf{V}_i^H} \left( \mathbf{Y}_{ij} + \mathbf{Y}^c_{ij}\right)^H - {\mathbf{V}_i \mathbf{V}^H_j} \mathbf{Y}^H_{ij}  \;\; \forall (i,j)\in E \\
-& \mathbf{S}_{ji} = \mathbf{V}_j \mathbf{V}_j^H \left( \mathbf{Y}_{ij} + \mathbf{Y}^c_{ji} \right)^H - {\mathbf{V}^H_i \mathbf{V}_j} \mathbf{Y}^H_{ij} \;\; \forall (i,j)\in E \\
-& |diag(\mathbf{S}_{ij})| \leq \mathbf{s}^u_{ij} \;\; \forall (i,j) \in E \cup E^R \\
-& \theta^{\Delta l}_{ij,c} \leq \angle (V_{i,c} V^*_{j,c}) \leq \theta^{\Delta u}_{ij,c} \;\; \forall (i,j) \in E, \forall c \in C
+& \mathbf{V}_{i} = \mathbf{V}^{\text{ref}}_{i}   \;\; \forall r \in R \label{eq_ref_bus}\\
+& S^{gl}_{k,c} \leq S^g_{k,c} \leq S^{gu}_{k,c} \;\; \forall k \in G, \forall c \in C  \label{eq_gen_bounds}\\
+& v^l_{i,c} \leq |V_{i,c}| \leq v^u_{i,c} \;\; \forall i \in N, \forall c \in C \label{eq_voltage_bounds}\\
+& \sum_{\substack{k \in G_i}} \mathbf{S}^g_k - \sum_{\substack{k \in L_i}} \mathbf{S}^d_k - \sum_{\substack{k \in S_i}}  \mathbf{V}_i \mathbf{V}^H_i (\mathbf{Y}^s_k)^H = \sum_{\substack{(i,j)\in E_i \cup E_i^R}} diag(\mathbf{S}_{ij}) \;\; \forall i\in N \label{eq_kcl_shunt}\\
+& \mathbf{S}_{ij} =  {\mathbf{V}_i \mathbf{V}_i^H} \left( \mathbf{Y}_{ij} + \mathbf{Y}^c_{ij}\right)^H - {\mathbf{V}_i \mathbf{V}^H_j} \mathbf{Y}^H_{ij}  \;\; \forall (i,j)\in E \label{eq_power_from}\\
+& \mathbf{S}_{ji} = \mathbf{V}_j \mathbf{V}_j^H \left( \mathbf{Y}_{ij} + \mathbf{Y}^c_{ji} \right)^H - {\mathbf{V}^H_i \mathbf{V}_j} \mathbf{Y}^H_{ij} \;\; \forall (i,j)\in E \label{eq_power_to}\\
+& |diag(\mathbf{S}_{ij})| \leq \mathbf{s}^u_{ij} \;\; \forall (i,j) \in E \cup E^R \label{eq_thermal_limit}\\
+& \theta^{\Delta l}_{ij,c} \leq \angle (V_{i,c} V^*_{j,c}) \leq \theta^{\Delta u}_{ij,c} \;\; \forall (i,j) \in E, \forall c \in C \label{eq_angle_difference}
 %
 \end{align}
 ```
+
+### Mapping to function names
+- Eq. $\eqref{eq_objective}$ - `PowerModels.objective_min_fuel_cost`
+- Eq. $\eqref{eq_ref_bus}$ - `constraint_tp_theta_ref` in `constraint_template.jl`
+- Eq. $\eqref{eq_gen_bounds}$ - bounds of `PowerModels.variable_generation`
+- Eq. $\eqref{eq_voltage_bounds}$ - bounds of `variable_tp_voltage`
+- Eq. $\eqref{eq_kcl_shunt}$ - `PowerModels.constraint_kcl_shunt`
+- Eq. $\eqref{eq_power_from}$ - `constraint_ohms_tp_yt_from` in `constraint_template.jl`
+- Eq. $\eqref{eq_power_to}$ - `constraint_ohms_tp_yt_to` in `constraint_template.jl`
+- Eq. $\eqref{eq_thermal_limit}$ - `PowerModels.constraint_thermal_limit_from` and `PowerModels.constraint_thermal_limit_to`
+- Eq. $\eqref{eq_angle_difference}$ - `PowerModels.constraint_voltage_angle_difference`
+
+
 
 
 ### Variables for a Branch Flow Model
@@ -118,19 +131,25 @@ A complete mathematical model is as follows,
 \mbox{minimize: } & \sum_{k \in G} c_{2k} \left( \sum_{c \in C} \Re(S^g_{k,c}) \right)^2 + c_{1k}  \sum_{c \in C} \Re(S^g_{k,c}) + c_{0k} \\
 %
 \mbox{subject to: } & \nonumber \\
-& \mathbf{V}_{i} = \mathbf{V}^{\text{ref}}_{i}   \;\; \forall r \in R \\
-& S^{gl}_{k,c} \leq S^g_{k,c} \leq S^{gu}_{k,c} \;\; \forall k \in G, \forall c \in C  \\
-& v^l_{i,c} \leq |V_{i,c}| \leq v^u_{i,c} \;\; \forall i \in N, \forall c \in C \\
-& \sum_{\substack{k \in G_i}} \mathbf{S}^g_k - \sum_{\substack{k \in L_i}} \mathbf{S}^d_k - \sum_{\substack{k \in S_i}}  \mathbf{V}_i \mathbf{V}^H_i (\mathbf{Y}^s_k)^H = \sum_{\substack{(i,j)\in E_i \cup E_i^R}} diag(\mathbf{S}_{ij}) \;\; \forall i\in N \\
-& \mathbf{S}_{ij} + \mathbf{S}_{ji} =  \mathbf{V}_i \mathbf{V}_i^H (\mathbf{Y}^c_{ij})^H + \mathbf{Z}_{ij} \mathbf{I}^{s}_{ij}(\mathbf{I}^{s}_{ij})^H + \mathbf{V}_j \mathbf{V}_j^H (\mathbf{Y}^c_{ji})^H  \;\; \forall (i,j)\in E \\
-& \mathbf{S}^{s}_{ij} = \mathbf{S}_{ij} + \mathbf{V}_i \mathbf{V}_i^H (\mathbf{Y}^c_{ij})^H  \;\; \forall (i,j) \in E \cup E^R \\
-& \mathbf{S}^{s}_{ij} = \mathbf{V}_i (\mathbf{I}^{s}_{ij})^H  \;\; \forall (i,j) \in E \cup E^R\\
-& \mathbf{V}_i = \mathbf{V}_j - \mathbf{Z}_{ij} \mathbf{I}^{s}_{ij} \forall (i,j)\in E \\
-& |diag(\mathbf{S}_{ij})| \leq \mathbf{s}^u_{ij} \;\; \forall (i,j) \in E \cup E^R \\
-& \theta^{\Delta l}_{ij,c} \leq \angle (V_{i,c} V^*_{j,c}) \leq \theta^{\Delta u}_{ij,c} \;\; \forall (i,j) \in E, \forall c \in C
+& \mathbf{V}_{i} = \mathbf{V}^{\text{ref}}_{i}   \;\; \forall r \in R \nonumber\\
+& S^{gl}_{k,c} \leq S^g_{k,c} \leq S^{gu}_{k,c} \;\; \forall k \in G, \forall c \in C   \nonumber\\
+& v^l_{i,c} \leq |V_{i,c}| \leq v^u_{i,c} \;\; \forall i \in N, \forall c \in C  \nonumber\\
+& \sum_{\substack{k \in G_i}} \mathbf{S}^g_k - \sum_{\substack{k \in L_i}} \mathbf{S}^d_k - \sum_{\substack{k \in S_i}}  \mathbf{V}_i \mathbf{V}^H_i (\mathbf{Y}^s_k)^H = \sum_{\substack{(i,j)\in E_i \cup E_i^R}} diag(\mathbf{S}_{ij}) \;\; \forall i\in N  \nonumber\\
+& \mathbf{S}_{ij} + \mathbf{S}_{ji} =  \mathbf{V}_i \mathbf{V}_i^H (\mathbf{Y}^c_{ij})^H + \mathbf{Z}_{ij} \mathbf{I}^{s}_{ij}(\mathbf{I}^{s}_{ij})^H + \mathbf{V}_j \mathbf{V}_j^H (\mathbf{Y}^c_{ji})^H  \;\; \forall (i,j)\in E \label{eq_line_losses}\\
+& \mathbf{S}^{s}_{ij} = \mathbf{S}_{ij} + \mathbf{V}_i \mathbf{V}_i^H (\mathbf{Y}^c_{ij})^H  \;\; \forall (i,j) \in E \cup E^R  \label{eq_series_power_flow} \\
+& \mathbf{S}^{s}_{ij} = \mathbf{V}_i (\mathbf{I}^{s}_{ij})^H  \;\; \forall (i,j) \in E \cup E^R  \label{eq_complex_power_definition}\\
+& \mathbf{V}_i = \mathbf{V}_j - \mathbf{Z}_{ij} \mathbf{I}^{s}_{ij} \forall (i,j)\in E  \label{eq_ohms_bfm}\\
+& |diag(\mathbf{S}_{ij})| \leq \mathbf{s}^u_{ij} \;\; \forall (i,j) \in E \cup E^R  \nonumber\\
+& \theta^{\Delta l}_{ij,c} \leq \angle (V_{i,c} V^*_{j,c}) \leq \theta^{\Delta u}_{ij,c} \;\; \forall (i,j) \in E, \forall c \in C  \nonumber
 %
 \end{align}
 ```
+
+### Mapping to function names
+- Eq. $\eqref{eq_line_losses}$ - `constraint_tp_flow_losses` in `constraint_template.jl`
+- Eq. $\eqref{eq_series_power_flow}$ - implicit, substituted out in implementation
+- Eq. $\eqref{eq_complex_power_definition}$ - `constraint_tp_branch_current` in `constraint_template.jl`
+- Eq. $\eqref{eq_ohms_bfm}$ - `constraint_tp_voltage_magnitude_difference` in `constraint_template.jl`
 
 
 [^1] Gan, L., & Low, S. H. (2014). Convex relaxations and linear approximation for optimal power flow in multiphase radial networks. In PSSC (pp. 1–9). Wroclaw, Poland. https://doi.org/10.1109/PSCC.2014.7038399
