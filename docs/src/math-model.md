@@ -95,6 +95,7 @@ A complete mathematical model is as follows,
 \end{align}
 ```
 
+
 ### Mapping to function names
 - Eq. $\eqref{eq_objective}$ - `PowerModels.objective_min_fuel_cost`
 - Eq. $\eqref{eq_ref_bus}$ - `constraint_tp_theta_ref` in `constraint_template.jl`
@@ -105,8 +106,6 @@ A complete mathematical model is as follows,
 - Eq. $\eqref{eq_power_to}$ - `constraint_ohms_tp_yt_to` in `constraint_template.jl`
 - Eq. $\eqref{eq_thermal_limit}$ - `PowerModels.constraint_thermal_limit_from` and `PowerModels.constraint_thermal_limit_to`
 - Eq. $\eqref{eq_angle_difference}$ - `PowerModels.constraint_voltage_angle_difference`
-
-
 
 
 ### Variables for a Branch Flow Model
