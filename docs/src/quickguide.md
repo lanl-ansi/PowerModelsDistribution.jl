@@ -19,7 +19,7 @@ result = run_ac_tp_opf("case3_unbalanced.dss", IpoptSolver())
 
 ## Accessing Different Formulations
 
-The function "run_ac_tp_opf" is a shorthands for a more general formulation-independent OPF execution, "run_tp_opf".
+The function "run_ac_tp_opf" is a shorthand for a more general formulation-independent OPF execution, "run_tp_opf".
 For example, `run_ac_tp_opf` is equivalent to,
 
 ```julia
