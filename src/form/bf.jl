@@ -1,12 +1,25 @@
 export LPLinUBFPowerModel, LPLinUBFForm
 
-"LinDist3Flow per Sankur et al 2016, using vector variables for power, voltage and current in scalar form"
 abstract type LPLinUBFForm <: PMs.AbstractBFForm end
 
-""
+"""
+Linear approximation of unbalanced optimal power flow (branch flow model)
+
+The implementation casts this problem in scalar form.
+
+"LinDist3Flow" from:
+```
+@misc{1606.04492v2,
+  author = {Michael D. Sankur and Roel Dobbe and Emma Stewart and Duncan S. Callaway and Daniel B. Arnold},
+  title = {A Linearized Power Flow Model for Optimization in Unbalanced Distribution Systems},
+  year = {2016},
+  eprint = {arXiv:1606.04492v2},
+  url = {https://arxiv.org/abs/1606.04492v2}
+}
+```
+"""
 const LPLinUBFPowerModel = PMs.GenericPowerModel{LPLinUBFForm}
 
-"default Lin3Distflow constructor for scalar form"
 LPLinUBFPowerModel(data::Dict{String,Any}; kwargs...) =
     GenericPowerModel(data, LPLinUBFForm; kwargs...)
 

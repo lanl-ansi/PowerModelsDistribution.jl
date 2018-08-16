@@ -11,62 +11,161 @@ abstract type AbstractConicUBFForm <: PMs.AbstractBFConicForm end
 
 AbstractUBFForm = Union{AbstractNLPUBFForm, AbstractConicUBFForm}
 
-
-"SDP BFM per Gan and Low 2014, PSCC"
 abstract type SDPUBFForm <: AbstractConicUBFForm end
 
-
-"SOC relaxation of SDPUBFForm per Kim, Kojima, & Yamashita 2003, cast as an QCP"
 abstract type SOCNLPUBFForm <: AbstractNLPUBFForm end
 
-"SOC relaxation of SDPUBFForm per Kim, Kojima, & Yamashita 2003, cast as a SOC"
 abstract type SOCConicUBFForm <: AbstractConicUBFForm end
 
 SOCUBFForm = Union{SOCNLPUBFForm, SOCConicUBFForm}
 
-
-"Abstract form for linear unbalanced power flow models"
 abstract type AbstractLPUBFForm <: AbstractNLPUBFForm end
 
-"Simplified BFM per Gan and Low 2014, PSCC, using matrix variables for power, voltage and current"
 abstract type LPfullUBFForm <: AbstractLPUBFForm end
 
-"LinDist3Flow per Sankur et al 2016, using vector variables for power, voltage and current"
 abstract type LPdiagUBFForm <: AbstractLPUBFForm end
 
+"""
+Semi-definite relaxation of unbalanced optimal power flow (branch flow model)
 
-""
+Note that this formulation is complex-valued and additional steps are needed to implement this in JuMP.
+```
+@INPROCEEDINGS{7038399,
+author={L. Gan and S. H. Low},
+booktitle={2014 Power Systems Computation Conference},
+title={Convex relaxations and linear approximation for optimal power flow in multiphase radial networks},
+year={2014},
+pages={1-9},
+doi={10.1109/PSCC.2014.7038399},
+month={Aug},}
+```
+"""
 const SDPUBFPowerModel = GenericPowerModel{SDPUBFForm}
 
-"default SDP unbalanced DistFlow constructor"
+""
 SDPUBFPowerModel(data::Dict{String,Any}; kwargs...) =
 GenericPowerModel(data, SDPUBFForm; kwargs...)
 
-""
+"""
+Second-order cone relaxation of semi-definite relaxation of unbalanced optimal power flow (branch flow model)
+
+The implementation casts this as a convex quadratically constrained problem (NLP).
+Note that this formulation is complex-valued and additional steps are needed to implement this in JuMP.
+
+
+SDP BFM from:
+```
+@INPROCEEDINGS{7038399,
+author={L. Gan and S. H. Low},
+booktitle={2014 Power Systems Computation Conference},
+title={Convex relaxations and linear approximation for optimal power flow in multiphase radial networks},
+year={2014},
+pages={1-9},
+doi={10.1109/PSCC.2014.7038399},
+month={Aug},}
+```
+
+SDP to SOC relaxation from:
+@article{doi:10.1080/1055678031000148696,
+author = {Sunyoung   Kim  and  Masakazu   Kojima  and  Makoto   Yamashita },
+title = {Second Order Cone Programming Relaxation of a Positive Semidefinite Constraint},
+journal = {Optimization Methods and Software},
+volume = {18},
+number = {5},
+pages = {535-541},
+year  = {2003},
+publisher = {Taylor & Francis},
+doi = {10.1080/1055678031000148696},
+URL = {https://doi.org/10.1080/1055678031000148696},
+}
+"""
 const SOCNLPUBFPowerModel = GenericPowerModel{SOCNLPUBFForm}
 
-"default SOC unbalanced DistFlow constructor"
+""
 SOCNLPUBFPowerModel(data::Dict{String,Any}; kwargs...) =
 GenericPowerModel(data, SOCNLPUBFForm; kwargs...)
 
-""
+"""
+Second-order cone relaxation of semi-definite relaxation of unbalanced optimal power flow (branch flow model)
+
+The implementation casts this problem in conic form.
+Note that this formulation is complex-valued and additional steps are needed to implement this in JuMP.
+
+
+SDP BFM from:
+```
+@INPROCEEDINGS{7038399,
+author={L. Gan and S. H. Low},
+booktitle={2014 Power Systems Computation Conference},
+title={Convex relaxations and linear approximation for optimal power flow in multiphase radial networks},
+year={2014},
+pages={1-9},
+doi={10.1109/PSCC.2014.7038399},
+month={Aug},}
+```
+
+SDP to SOC relaxation from:
+@article{doi:10.1080/1055678031000148696,
+author = {Sunyoung Kim  and  Masakazu Kojima  and  Makoto Yamashita},
+title = {Second Order Cone Programming Relaxation of a Positive Semidefinite Constraint},
+journal = {Optimization Methods and Software},
+volume = {18},
+number = {5},
+pages = {535-541},
+year  = {2003},
+publisher = {Taylor & Francis},
+doi = {10.1080/1055678031000148696},
+URL = {https://doi.org/10.1080/1055678031000148696},}
+"""
 const SOCConicUBFPowerModel = GenericPowerModel{SOCConicUBFForm}
 
-"default SOC unbalanced DistFlow constructor"
+""
 SOCConicUBFPowerModel(data::Dict{String,Any}; kwargs...) =
 GenericPowerModel(data, SOCConicUBFForm; kwargs...)
 
-""
+"""
+Linear approximation of unbalanced optimal power flow (branch flow model)
+
+The implementation casts this problem in matrix form.
+
+Extension of "Simplified DistFlow" to the unbalanced case from:
+```
+@INPROCEEDINGS{7038399,
+author={L. Gan and S. H. Low},
+booktitle={2014 Power Systems Computation Conference},
+title={Convex relaxations and linear approximation for optimal power flow in multiphase radial networks},
+year={2014},
+pages={1-9},
+doi={10.1109/PSCC.2014.7038399},
+month={Aug},}
+```
+"""
 const LPfullUBFPowerModel = GenericPowerModel{LPfullUBFForm}
 
-"default LP unbalanced DistFlow constructor"
+""
 LPfullUBFPowerModel(data::Dict{String,Any}; kwargs...) =
 GenericPowerModel(data, LPfullUBFForm; kwargs...)
 
-""
+"""
+Linear approximation of unbalanced optimal power flow (branch flow model)
+
+The implementation casts this problem in vector form, considering only the diagonal vectors of matrix variables in `LPfullUBFPowerModel`.
+This leads to the imaginary part of the lifted node voltage variable W being redundant and substituted out.
+
+"LinDist3Flow" from:
+```
+@misc{1606.04492v2,
+  author = {Michael D. Sankur and Roel Dobbe and Emma Stewart and Duncan S. Callaway and Daniel B. Arnold},
+  title = {A Linearized Power Flow Model for Optimization in Unbalanced Distribution Systems},
+  year = {2016},
+  eprint = {arXiv:1606.04492v2},
+  url = {https://arxiv.org/abs/1606.04492v2}
+}
+```
+"""
 const LPdiagUBFPowerModel = GenericPowerModel{LPdiagUBFForm}
 
-"default LP unbalanced DistFlow constructor"
+""
 LPdiagUBFPowerModel(data::Dict{String,Any}; kwargs...) =
 GenericPowerModel(data, LPdiagUBFForm; kwargs...)
 
