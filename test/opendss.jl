@@ -241,4 +241,12 @@ TESTLOG = getlogger(PowerModels)
             end
         end
     end
+
+    @testset "3-bus unbalanced isc" begin
+        tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced_isc.dss")
+        sol = TPPMs.run_tp_opf(tppm, PMs.ACPPowerModel, ipopt_solver)
+
+        @test sol["status"] == :LocalOptimal
+        @test isapprox(sol["objective"], 0.0182769; atol = 1e-4)
+    end
 end

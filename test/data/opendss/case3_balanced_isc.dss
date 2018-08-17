@@ -1,7 +1,7 @@
 Clear
 New Circuit.3Bus_example
 !  define a really stiff source
-~ basekv=0.4   pu=0.9959  ISC1=1e9  ISC3=1e9
+~ basekv=0.4   pu=0.9959  ISC1=1e3  ISC3=1e3
 
 !Define Linecodes
 
