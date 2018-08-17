@@ -4,6 +4,7 @@ ThreePhasePowerModels.jl Change Log
 ### Staged
 - Updates to problem specifications
 - Expanded documentation (quickguide, mathematical model, formulations, references for formulations)
+- Minor improvements to OpenDSS parser
 
 ### v0.1.1
 - Added a variety of matrix-based branch flow formulations

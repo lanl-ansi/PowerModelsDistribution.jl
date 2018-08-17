@@ -623,14 +623,14 @@ function createVSource(bus1, name::AbstractString, bus2=0; kwargs...)
 
     Zbase = basekv^2 / basemva
 
-    if (haskey(kwargs, :mvasc3) && haskey(kwargs, :mvasc1)) || (haskey(kwargs, :isc3) && haskey(isc1, :isc1))
+    if (haskey(kwargs, :mvasc3) && haskey(kwargs, :mvasc1)) || (haskey(kwargs, :isc3) && haskey(kwargs, :isc1))
         if haskey(kwargs, :mvasc3) && haskey(kwargs, :mvasc1)
             mvasc3 = kwargs[:mvasc3]
             mvasc1 = kwargs[:mvasc1]
 
             isc3 = mvasc3 * 1e3 / (basekv * sqrt(3.0))
             isc1 = mvasc1 * 1e3 / (basekv * factor)
-        elseif haskey(kwargs, :isc3) && haskey(isc1, :isc1)
+        elseif haskey(kwargs, :isc3) && haskey(kwargs, :isc1)
             isc3 = kwargs[:isc3]
             isc1 = kwargs[:isc1]
 
