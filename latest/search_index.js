@@ -625,7 +625,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.constraint_kcl_shunt_slack-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACTForm, PowerModels.AbstractBFForm, PowerModels.AbstractWRForm, PowerModels.AbstractWRMForm}",
+    "location": "library.html#ThreePhasePowerModels.constraint_kcl_shunt_slack-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACTForm, PowerModels.AbstractBFForm, PowerModels.AbstractWRConicForm, PowerModels.AbstractWRForm, PowerModels.AbstractWRMForm}",
     "page": "Modeling Components",
     "title": "ThreePhasePowerModels.constraint_kcl_shunt_slack",
     "category": "method",
@@ -665,7 +665,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.constraint_ohms_tp_yt_from-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACTForm, PowerModels.AbstractWRForm, PowerModels.AbstractWRMForm}",
+    "location": "library.html#ThreePhasePowerModels.constraint_ohms_tp_yt_from-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACTForm, PowerModels.AbstractWRConicForm, PowerModels.AbstractWRForm, PowerModels.AbstractWRMForm}",
     "page": "Modeling Components",
     "title": "ThreePhasePowerModels.constraint_ohms_tp_yt_from",
     "category": "method",
@@ -729,7 +729,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.constraint_ohms_tp_yt_to-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACTForm, PowerModels.AbstractWRForm, PowerModels.AbstractWRMForm}",
+    "location": "library.html#ThreePhasePowerModels.constraint_ohms_tp_yt_to-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACTForm, PowerModels.AbstractWRConicForm, PowerModels.AbstractWRForm, PowerModels.AbstractWRMForm}",
     "page": "Modeling Components",
     "title": "ThreePhasePowerModels.constraint_ohms_tp_yt_to",
     "category": "method",
@@ -849,7 +849,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.constraint_tp_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACTForm, PowerModels.AbstractBFForm, PowerModels.AbstractWRForm, PowerModels.AbstractWRMForm}",
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACTForm, PowerModels.AbstractBFForm, PowerModels.AbstractWRConicForm, PowerModels.AbstractWRForm, PowerModels.AbstractWRMForm}",
     "page": "Modeling Components",
     "title": "ThreePhasePowerModels.constraint_tp_theta_ref",
     "category": "method",
