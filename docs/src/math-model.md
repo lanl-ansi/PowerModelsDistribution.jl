@@ -18,7 +18,7 @@ In the mathematical description below,
 - Note that complex power is defined as $\mathbf{S}_{ij} = \mathbf{V}_{i} \mathbf{I}_{ij}^H$ and is therefore a complex matrix of dimension $|C| \times |C|$.
 - The branch series impedance $\mathbf{Z}_{ij}$ or admittance $\mathbf{Y}_{ij}$  is a complex matrix of dimension $|C| \times |C|$.
 - Series impedance and admittance are interchangeable through the matrix inverse $\mathbf{Y}_{ij} = ( \mathbf{Z}_{ij})^{-1}$.  Note that $\mathbf{Y}_{ij}$ or $\mathbf{Z}_{ij}$ may not be invertible, e.g. in case of single-phase branches in a three-phase grid. Therefore, case the [pseudo-inverse](https://en.wikipedia.org/wiki/Moore%E2%80%93Penrose_inverse) is used.
-- The branch $\mathbf{Y}^c_{ij}, \mathbf{Y}^c_{ji}$ and bus $\mathbf{Y}^s_{k}$ shunt matrices do not need to be diagonal.
+- The branch $\mathbf{Y}^c_{ij}, \mathbf{Y}^c_{ji}$ and bus $\mathbf{Y}^s_{k}$ shunt matrices do not need to be diagonal or symmetric.
 
 
 ## Sets

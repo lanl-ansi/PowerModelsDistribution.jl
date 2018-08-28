@@ -11,18 +11,24 @@ abstract type AbstractConicUBFForm <: PMs.AbstractBFConicForm end
 
 AbstractUBFForm = Union{AbstractNLPUBFForm, AbstractConicUBFForm}
 
+""
 abstract type SDPUBFForm <: AbstractConicUBFForm end
 
+""
 abstract type SOCNLPUBFForm <: AbstractNLPUBFForm end
 
+""
 abstract type SOCConicUBFForm <: AbstractConicUBFForm end
 
 SOCUBFForm = Union{SOCNLPUBFForm, SOCConicUBFForm}
 
+""
 abstract type AbstractLPUBFForm <: AbstractNLPUBFForm end
 
+""
 abstract type LPfullUBFForm <: AbstractLPUBFForm end
 
+""
 abstract type LPdiagUBFForm <: AbstractLPUBFForm end
 
 """
@@ -42,7 +48,7 @@ month={Aug},}
 """
 const SDPUBFPowerModel = GenericPowerModel{SDPUBFForm}
 
-""
+"default SDPUBFPowerModel constructor"
 SDPUBFPowerModel(data::Dict{String,Any}; kwargs...) =
 GenericPowerModel(data, SDPUBFForm; kwargs...)
 
@@ -66,6 +72,7 @@ month={Aug},}
 ```
 
 SDP to SOC relaxation from:
+```
 @article{doi:10.1080/1055678031000148696,
 author = {Sunyoung   Kim  and  Masakazu   Kojima  and  Makoto   Yamashita },
 title = {Second Order Cone Programming Relaxation of a Positive Semidefinite Constraint},
@@ -78,10 +85,11 @@ publisher = {Taylor & Francis},
 doi = {10.1080/1055678031000148696},
 URL = {https://doi.org/10.1080/1055678031000148696},
 }
+```
 """
 const SOCNLPUBFPowerModel = GenericPowerModel{SOCNLPUBFForm}
 
-""
+"default SOCNLPUBFPowerModel constructor"
 SOCNLPUBFPowerModel(data::Dict{String,Any}; kwargs...) =
 GenericPowerModel(data, SOCNLPUBFForm; kwargs...)
 
@@ -105,6 +113,7 @@ month={Aug},}
 ```
 
 SDP to SOC relaxation from:
+```
 @article{doi:10.1080/1055678031000148696,
 author = {Sunyoung Kim  and  Masakazu Kojima  and  Makoto Yamashita},
 title = {Second Order Cone Programming Relaxation of a Positive Semidefinite Constraint},
@@ -116,10 +125,11 @@ year  = {2003},
 publisher = {Taylor & Francis},
 doi = {10.1080/1055678031000148696},
 URL = {https://doi.org/10.1080/1055678031000148696},}
+```
 """
 const SOCConicUBFPowerModel = GenericPowerModel{SOCConicUBFForm}
 
-""
+"default SOCConicUBFPowerModel constructor"
 SOCConicUBFPowerModel(data::Dict{String,Any}; kwargs...) =
 GenericPowerModel(data, SOCConicUBFForm; kwargs...)
 
@@ -128,7 +138,7 @@ Linear approximation of unbalanced optimal power flow (branch flow model)
 
 The implementation casts this problem in matrix form.
 
-Extension of "Simplified DistFlow" to the unbalanced case from:
+Extension of "Simplified DistFlow" to the unbalanced case as first proposed by:
 ```
 @INPROCEEDINGS{7038399,
 author={L. Gan and S. H. Low},
@@ -142,7 +152,7 @@ month={Aug},}
 """
 const LPfullUBFPowerModel = GenericPowerModel{LPfullUBFForm}
 
-""
+"default LPfullUBFPowerModel constructor"
 LPfullUBFPowerModel(data::Dict{String,Any}; kwargs...) =
 GenericPowerModel(data, LPfullUBFForm; kwargs...)
 
@@ -152,7 +162,7 @@ Linear approximation of unbalanced optimal power flow (branch flow model)
 The implementation casts this problem in vector form, considering only the diagonal vectors of matrix variables in `LPfullUBFPowerModel`.
 This leads to the imaginary part of the lifted node voltage variable W being redundant and substituted out.
 
-"LinDist3Flow" from:
+"LinDist3Flow" as proposed in:
 ```
 @misc{1606.04492v2,
   author = {Michael D. Sankur and Roel Dobbe and Emma Stewart and Duncan S. Callaway and Daniel B. Arnold},
@@ -165,7 +175,7 @@ This leads to the imaginary part of the lifted node voltage variable W being red
 """
 const LPdiagUBFPowerModel = GenericPowerModel{LPdiagUBFForm}
 
-""
+"default LPdiagUBFPowerModel constructor"
 LPdiagUBFPowerModel(data::Dict{String,Any}; kwargs...) =
 GenericPowerModel(data, LPdiagUBFForm; kwargs...)
 

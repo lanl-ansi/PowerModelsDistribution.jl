@@ -1,5 +1,8 @@
 # Formulation details
 
+```@meta
+CurrentModule = ThreePhasePowerModels
+```
 
 ## `ACPPowerModel`
 Real-valued formulation from (extended with shunts):
@@ -10,7 +13,7 @@ booktitle={IECON 2006 - 32nd Annual Conference on IEEE Industrial Electronics},
 title={A Three-Phase Power Flow Modelization: A Tool for Optimal Location and Control of FACTS Devices in Unbalanced Power Systems},
 year={2006},
 pages={2238-2243},
-doi={10.1109/IECON.2006.347766}, 
+doi={10.1109/IECON.2006.347766},
 ISSN={1553-572X},
 month={Nov},}
 ```
@@ -25,6 +28,7 @@ Applying the standard BIM voltage cross-product (sine and cosine) substitution t
 
 ## `SDPUBFPowerModel`
 ```@docs
+Order = [:type]
 SDPUBFPowerModel
 ```
 
