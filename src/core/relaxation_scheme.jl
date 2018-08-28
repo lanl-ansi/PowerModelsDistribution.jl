@@ -1,109 +1,176 @@
 """
-SDP to SOC relaxation of type 2 as described in:
-Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. https://doi.org/10.1080/1055678031000148696
-Applied to real-value matrix
+SDP to SOC relaxation of type 2, applied to real-value matrix,  as described in:
+```
+@article{Kim2003,
+author = {Kim, S and Kojima, M and Yamashita, M},
+title = {{Second order cone programming relaxation of a positive semidefinite constraint}},
+doi = {10.1080/1055678031000148696},
+journal = {Optimization Methods and Software},
+number = {5},
+pages = {535--541},
+volume = {18},
+year = {2003}
+}
+```
 """
-
-function psd_to_soc(pm::GenericPowerModel{T}, mat) where T<:AbstractConicUBFForm
-    assert(size(mat,1) == size(mat,2))
-    n_elements = size(mat,1)
+function relaxation_psd_to_soc_real(m, mx)
+    assert(size(mx,1) == size(mx,2))
+    n_elements = size(mx,1)
     for i in 1:n_elements-1
         for j in i+1:n_elements
-            @constraint(pm.model, norm([2*mat[i,j], mat[i,i]-mat[j,j]]) <= mat[i,i]+mat[j,j])
+            @constraint(m, mx[i,j]^2 <= mx[i,i]*mx[j,j])
         end
     end
 end
 
 """
-SDP to SOC relaxation of type 2 as described in:
-Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. https://doi.org/10.1080/1055678031000148696
-Applied to real-value matrix
+SDP to SOC relaxation of type 2, applied to complex-value matrix,  as described in:
+```
+@article{Kim2003,
+author = {Kim, S and Kojima, M and Yamashita, M},
+title = {{Second order cone programming relaxation of a positive semidefinite constraint}},
+doi = {10.1080/1055678031000148696},
+journal = {Optimization Methods and Software},
+number = {5},
+pages = {535--541},
+volume = {18},
+year = {2003}
+}
+```
 """
-function psd_to_soc(pm::GenericPowerModel, mat)
-    assert(size(mat,1) == size(mat,2))
-    n_elements = size(mat,1)
+function relaxation_psd_to_soc_complex(m, mxreal, mximag)
+    assert(size(mxreal) == size(mximag))
+    n_elements = size(mxreal,1)
     for i in 1:n_elements-1
         for j in i+1:n_elements
-            @constraint(pm.model, mat[i,j]^2 <= mat[i,i]*mat[j,j])
+            @constraint(m, mxreal[i,j]^2 + mximag[i,j]^2 <= mxreal[i,i]*mxreal[j,j])
         end
     end
 end
 
 """
-SDP to SOC relaxation of type 2 as described in:
-Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. https://doi.org/10.1080/1055678031000148696
-
-Applied to complex-value matrix to obtain SOC:
-Andersen, M. S., Hansson, A., & Vandenberghe, L. (2014). Reduced-complexity semidefinite relaxations of optimal power flow problems. IEEE Trans. Power Syst., 29(4), 1855–1863.
+SDP to SOC relaxation of type 2, applied to real-value matrix,  as described in:
+```
+@article{Kim2003,
+author = {Kim, S and Kojima, M and Yamashita, M},
+title = {{Second order cone programming relaxation of a positive semidefinite constraint}},
+doi = {10.1080/1055678031000148696},
+journal = {Optimization Methods and Software},
+number = {5},
+pages = {535--541},
+volume = {18},
+year = {2003}
+}
+```
 """
-function psd_to_soc_complex(pm::GenericPowerModel{T}, matreal, matimag) where T<:AbstractConicUBFForm
-    assert(size(matreal) == size(matimag))
-    n_elements = size(matreal,1)
+function relaxation_psd_to_soc_real_conic(m, mx)
+    assert(size(mx,1) == size(mx,2))
+    n_elements = size(mx,1)
     for i in 1:n_elements-1
         for j in i+1:n_elements
-            @constraint(pm.model, norm([2*matreal[i,j], 2*matimag[i,j], matreal[i,i]-matreal[j,j]]) <= matreal[i,i]+matreal[j,j])
+            @constraint(m, norm([2*mx[i,j], mx[i,i]-mx[j,j]]) <= mx[i,i]+mx[j,j])
         end
     end
 end
 
 """
-SDP to SOC relaxation of type 2 as described in:
-Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. https://doi.org/10.1080/1055678031000148696
-
-Applied to complex-value matrix to obtain SOC:
-Andersen, M. S., Hansson, A., & Vandenberghe, L. (2014). Reduced-complexity semidefinite relaxations of optimal power flow problems. IEEE Trans. Power Syst., 29(4), 1855–1863.
+SDP to SOC relaxation of type 2, applied to complex-value matrix,  as described in:
+```
+@article{Kim2003,
+author = {Kim, S and Kojima, M and Yamashita, M},
+title = {{Second order cone programming relaxation of a positive semidefinite constraint}},
+doi = {10.1080/1055678031000148696},
+journal = {Optimization Methods and Software},
+number = {5},
+pages = {535--541},
+volume = {18},
+year = {2003}
+}
+```
 """
-function psd_to_soc_complex(pm::GenericPowerModel, matreal, matimag)
-    assert(size(matreal) == size(matimag))
-    n_elements = size(matreal,1)
+function relaxation_psd_to_soc_complex_conic(m, mxreal, mximag)
+    assert(size(mxreal) == size(mximag))
+    n_elements = size(mxreal,1)
     for i in 1:n_elements-1
         for j in i+1:n_elements
-            @constraint(pm.model, matreal[i,j]^2 + matimag[i,j]^2 <= matreal[i,i]*matreal[j,j])
+            @constraint(m, norm([2*mxreal[i,j], 2*mximag[i,j], mxreal[i,i]-mxreal[j,j]]) <= mxreal[i,i]+mxreal[j,j])
         end
     end
 end
 
 
 """
-See section 4.3 in:
-Fazel, M., Hindi, H., & Boyd, S. P. (2001). A rank minimization heuristic with application to minimum order system approximation. Proc. American Control Conf., 6(2), 4734–4739. https://doi.org/10.1109/ACC.2001.945730
+See section 4.3 for complex to real PSD constraint transformation:
+@article{Fazel2001,
+author = {Fazel, M. and Hindi, H. and Boyd, S.P.},
+title = {{A rank minimization heuristic with application to minimum order system approximation}},
+doi = {10.1109/ACC.2001.945730},
+journal = {Proc. American Control Conf.},
+number = {2},
+pages = {4734--4739},
+url = {http://ieeexplore.ieee.org/lpdocs/epic03/wrapper.htm?arnumber=945730},
+volume = {6},
+year = {2001}
+}
 """
-function psd_to_soc(pm::GenericPowerModel, matrixreal, matriximag; complex=true)
+function relaxation_psd_to_soc(m, mxreal, mximag; complex=true)
     if complex==false
-        assert(size(matrixreal) == size(matriximag))
-        matrix =
+        assert(size(mxreal) == size(mximag))
+        mx =
             [
-            matrixreal -matriximag;
-            matriximag  matrixreal
+            mxreal -mximag;
+            mximag  mxreal
             ]
 
-        psd_to_soc(pm, matrix)
+        relaxation_psd_to_soc_real(m, mx)
     else
-        psd_to_soc_complex(pm, matrixreal, matriximag)
+        relaxation_psd_to_soc_complex(m, mxreal, mximag)
     end
 end
 
 
+"""
+See section 4.3 for complex to real PSD constraint transformation:
+@article{Fazel2001,
+author = {Fazel, M. and Hindi, H. and Boyd, S.P.},
+title = {{A rank minimization heuristic with application to minimum order system approximation}},
+doi = {10.1109/ACC.2001.945730},
+journal = {Proc. American Control Conf.},
+number = {2},
+pages = {4734--4739},
+url = {http://ieeexplore.ieee.org/lpdocs/epic03/wrapper.htm?arnumber=945730},
+volume = {6},
+year = {2001}
+}
+"""
+function relaxation_psd_to_soc_conic(m, mxreal, mximag; complex=true)
+    if complex==false
+        assert(size(mxreal) == size(mximag))
+        mx =
+            [
+            mxreal -mximag;
+            mximag  mxreal
+            ]
 
+        relaxation_psd_to_soc_real_conic(m, mx)
+    else
+        relaxation_psd_to_soc_complex_conic(m, mxreal, mximag)
+    end
+end
+
+
+#for debugging / exploration:
 """
 complex SDP to SDP relaxation based on PSDness of principal minors, default is 3x3 SDP relaxation
 """
-function psd_to_psd_complex(pm::GenericPowerModel{T}, matreal, matimag; ndim=3) where T<:AbstractConicUBFForm
-    assert(size(matreal) == size(matimag))
-    assert(size(matreal,1) >= ndim)
-    n_elements = size(matreal,1)
+function relaxation_psd_to_psd_real(pm::GenericPowerModel{T}, mxreal, mximag; ndim=3)
+    assert(size(mxreal) == size(mximag))
+    assert(size(mxreal,1) >= ndim)
+    n_elements = size(mxreal,1)
     for i in 1:n_elements-(ndim-1)
         j = i+(ndim-1)
-        mr = matreal[i:j, i:j]
-        mi = matimag[i:j, i:j]
+        mr = mxreal[i:j, i:j]
+        mi = mximag[i:j, i:j]
         @SDconstraint(pm.model, [mr -mi; mi mr] >=0)
     end
-end
-
-
-"""
-complex SDP to SDP relaxation based on PSDness of principal minors
-"""
-function psd_to_psd_complex(pm::GenericPowerModel, matreal, matimag; ndim=3)
-
 end
