@@ -1,5 +1,6 @@
 export LPLinUBFPowerModel, LPLinUBFForm
 
+""
 abstract type LPLinUBFForm <: PMs.AbstractBFForm end
 
 """
@@ -20,6 +21,7 @@ The implementation casts this problem in scalar form.
 """
 const LPLinUBFPowerModel = PMs.GenericPowerModel{LPLinUBFForm}
 
+"default LPLinUBFPowerModel constructor"
 LPLinUBFPowerModel(data::Dict{String,Any}; kwargs...) =
     GenericPowerModel(data, LPLinUBFForm; kwargs...)
 

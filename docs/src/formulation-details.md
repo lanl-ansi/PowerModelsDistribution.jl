@@ -20,15 +20,17 @@ month={Nov},}
 
 
 ## `DCPPowerModel`
-Applying all of the standard DC linearization tricks to the `StandardACPForm`
+This formulation applies all of the standard DC linearization tricks to the `StandardACPForm`:
+- Taylor expansion of sine: $\sin(x) \approx x$
+- Approximation of cosine: $\cos(x) \approx 1$
+- Voltage magnitude approximated as one pu: $|V_{i,a}| \approx |V_{i,b}| \approx |V_{i,c}| \approx 1$pu.
 
 ## `SOCWRPowerModel`
-Applying the standard BIM voltage cross-product (sine and cosine) substitution tricks to `StandardACPForm` results immediately in a SOC formulation.
+This formulation applies the standard BIM voltage cross-product (sine and cosine) substitution tricks to the `StandardACPForm`, which results immediately in a SOC formulation.
 
 
 ## `SDPUBFPowerModel`
 ```@docs
-Order = [:type]
 SDPUBFPowerModel
 ```
 
