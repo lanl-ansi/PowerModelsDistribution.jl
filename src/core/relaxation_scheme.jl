@@ -161,9 +161,9 @@ end
 
 #for debugging / exploration:
 """
-complex SDP to SDP relaxation based on PSDness of principal minors, default is 3x3 SDP relaxation
+real-valued SDP to SDP relaxation based on PSDness of principal minors, default is 3x3 SDP relaxation
 """
-function relaxation_psd_to_psd_real(pm::GenericPowerModel{T}, mxreal, mximag; ndim=3)
+function relaxation_psd_to_psd_real(m, mxreal, mximag; ndim=3)
     assert(size(mxreal) == size(mximag))
     assert(size(mxreal,1) >= ndim)
     n_elements = size(mxreal,1)
@@ -171,6 +171,6 @@ function relaxation_psd_to_psd_real(pm::GenericPowerModel{T}, mxreal, mximag; nd
         j = i+(ndim-1)
         mr = mxreal[i:j, i:j]
         mi = mximag[i:j, i:j]
-        @SDconstraint(pm.model, [mr -mi; mi mr] >=0)
+        @SDconstraint(m, [mr -mi; mi mr] >=0)
     end
 end
