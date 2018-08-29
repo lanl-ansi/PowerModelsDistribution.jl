@@ -785,6 +785,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_branch_current-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any,Any,Any,Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.SOCConicUBFForm",
+    "page": "Modeling Components",
+    "title": "ThreePhasePowerModels.constraint_tp_branch_current",
+    "category": "method",
+    "text": "Defines relationship between branch (series) power flow, branch (series) current and node voltage magnitude\n\n\n\n"
+},
+
+{
     "location": "library.html#ThreePhasePowerModels.constraint_tp_branch_current-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Any,Any,Any,Any,Any}, Tuple{T}} where T<:Union{ThreePhasePowerModels.SOCConicUBFForm, ThreePhasePowerModels.SOCNLPUBFForm}",
     "page": "Modeling Components",
     "title": "ThreePhasePowerModels.constraint_tp_branch_current",
@@ -1489,59 +1497,59 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.psd_to_psd_complex-Tuple{PowerModels.GenericPowerModel,Any,Any}",
+    "location": "library.html#ThreePhasePowerModels.relaxation_psd_to_psd_real-Tuple{Any,Any,Any}",
     "page": "Modeling Components",
-    "title": "ThreePhasePowerModels.psd_to_psd_complex",
+    "title": "ThreePhasePowerModels.relaxation_psd_to_psd_real",
     "category": "method",
-    "text": "complex SDP to SDP relaxation based on PSDness of principal minors\n\n\n\n"
+    "text": "real-valued SDP to SDP relaxation based on PSDness of principal minors, default is 3x3 SDP relaxation\n\n\n\n"
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.psd_to_psd_complex-Union{Tuple{PowerModels.GenericPowerModel{T},Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.AbstractConicUBFForm",
+    "location": "library.html#ThreePhasePowerModels.relaxation_psd_to_soc-Tuple{Any,Any,Any}",
     "page": "Modeling Components",
-    "title": "ThreePhasePowerModels.psd_to_psd_complex",
+    "title": "ThreePhasePowerModels.relaxation_psd_to_soc",
     "category": "method",
-    "text": "complex SDP to SDP relaxation based on PSDness of principal minors, default is 3x3 SDP relaxation\n\n\n\n"
+    "text": "See section 4.3 for complex to real PSD constraint transformation: @article{Fazel2001, author = {Fazel, M. and Hindi, H. and Boyd, S.P.}, title = {{A rank minimization heuristic with application to minimum order system approximation}}, doi = {10.1109/ACC.2001.945730}, journal = {Proc. American Control Conf.}, number = {2}, pages = {4734–4739}, url = {http://ieeexplore.ieee.org/lpdocs/epic03/wrapper.htm?arnumber=945730}, volume = {6}, year = {2001} }\n\n\n\n"
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.psd_to_soc-Tuple{PowerModels.GenericPowerModel,Any,Any}",
+    "location": "library.html#ThreePhasePowerModels.relaxation_psd_to_soc_complex-Tuple{Any,Any,Any}",
     "page": "Modeling Components",
-    "title": "ThreePhasePowerModels.psd_to_soc",
+    "title": "ThreePhasePowerModels.relaxation_psd_to_soc_complex",
     "category": "method",
-    "text": "See section 4.3 in: Fazel, M., Hindi, H., & Boyd, S. P. (2001). A rank minimization heuristic with application to minimum order system approximation. Proc. American Control Conf., 6(2), 4734–4739. https://doi.org/10.1109/ACC.2001.945730\n\n\n\n"
+    "text": "SDP to SOC relaxation of type 2, applied to complex-value matrix,  as described in:\n\n@article{Kim2003,\nauthor = {Kim, S and Kojima, M and Yamashita, M},\ntitle = {{Second order cone programming relaxation of a positive semidefinite constraint}},\ndoi = {10.1080/1055678031000148696},\njournal = {Optimization Methods and Software},\nnumber = {5},\npages = {535--541},\nvolume = {18},\nyear = {2003}\n}\n\n\n\n"
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.psd_to_soc-Tuple{PowerModels.GenericPowerModel,Any}",
+    "location": "library.html#ThreePhasePowerModels.relaxation_psd_to_soc_complex_conic-Tuple{Any,Any,Any}",
     "page": "Modeling Components",
-    "title": "ThreePhasePowerModels.psd_to_soc",
+    "title": "ThreePhasePowerModels.relaxation_psd_to_soc_complex_conic",
     "category": "method",
-    "text": "SDP to SOC relaxation of type 2 as described in: Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. https://doi.org/10.1080/1055678031000148696 Applied to real-value matrix\n\n\n\n"
+    "text": "SDP to SOC relaxation of type 2, applied to complex-value matrix,  as described in:\n\n@article{Kim2003,\nauthor = {Kim, S and Kojima, M and Yamashita, M},\ntitle = {{Second order cone programming relaxation of a positive semidefinite constraint}},\ndoi = {10.1080/1055678031000148696},\njournal = {Optimization Methods and Software},\nnumber = {5},\npages = {535--541},\nvolume = {18},\nyear = {2003}\n}\n\n\n\n"
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.psd_to_soc-Union{Tuple{PowerModels.GenericPowerModel{T},Any}, Tuple{T}} where T<:ThreePhasePowerModels.AbstractConicUBFForm",
+    "location": "library.html#ThreePhasePowerModels.relaxation_psd_to_soc_conic-Tuple{Any,Any,Any}",
     "page": "Modeling Components",
-    "title": "ThreePhasePowerModels.psd_to_soc",
+    "title": "ThreePhasePowerModels.relaxation_psd_to_soc_conic",
     "category": "method",
-    "text": "SDP to SOC relaxation of type 2 as described in: Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. https://doi.org/10.1080/1055678031000148696 Applied to real-value matrix\n\n\n\n"
+    "text": "See section 4.3 for complex to real PSD constraint transformation: @article{Fazel2001, author = {Fazel, M. and Hindi, H. and Boyd, S.P.}, title = {{A rank minimization heuristic with application to minimum order system approximation}}, doi = {10.1109/ACC.2001.945730}, journal = {Proc. American Control Conf.}, number = {2}, pages = {4734–4739}, url = {http://ieeexplore.ieee.org/lpdocs/epic03/wrapper.htm?arnumber=945730}, volume = {6}, year = {2001} }\n\n\n\n"
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.psd_to_soc_complex-Tuple{PowerModels.GenericPowerModel,Any,Any}",
+    "location": "library.html#ThreePhasePowerModels.relaxation_psd_to_soc_real-Tuple{Any,Any}",
     "page": "Modeling Components",
-    "title": "ThreePhasePowerModels.psd_to_soc_complex",
+    "title": "ThreePhasePowerModels.relaxation_psd_to_soc_real",
     "category": "method",
-    "text": "SDP to SOC relaxation of type 2 as described in: Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. https://doi.org/10.1080/1055678031000148696\n\nApplied to complex-value matrix to obtain SOC: Andersen, M. S., Hansson, A., & Vandenberghe, L. (2014). Reduced-complexity semidefinite relaxations of optimal power flow problems. IEEE Trans. Power Syst., 29(4), 1855–1863.\n\n\n\n"
+    "text": "SDP to SOC relaxation of type 2, applied to real-value matrix,  as described in:\n\n@article{Kim2003,\nauthor = {Kim, S and Kojima, M and Yamashita, M},\ntitle = {{Second order cone programming relaxation of a positive semidefinite constraint}},\ndoi = {10.1080/1055678031000148696},\njournal = {Optimization Methods and Software},\nnumber = {5},\npages = {535--541},\nvolume = {18},\nyear = {2003}\n}\n\n\n\n"
 },
 
 {
-    "location": "library.html#ThreePhasePowerModels.psd_to_soc_complex-Union{Tuple{PowerModels.GenericPowerModel{T},Any,Any}, Tuple{T}} where T<:ThreePhasePowerModels.AbstractConicUBFForm",
+    "location": "library.html#ThreePhasePowerModels.relaxation_psd_to_soc_real_conic-Tuple{Any,Any}",
     "page": "Modeling Components",
-    "title": "ThreePhasePowerModels.psd_to_soc_complex",
+    "title": "ThreePhasePowerModels.relaxation_psd_to_soc_real_conic",
     "category": "method",
-    "text": "SDP to SOC relaxation of type 2 as described in: Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. https://doi.org/10.1080/1055678031000148696\n\nApplied to complex-value matrix to obtain SOC: Andersen, M. S., Hansson, A., & Vandenberghe, L. (2014). Reduced-complexity semidefinite relaxations of optimal power flow problems. IEEE Trans. Power Syst., 29(4), 1855–1863.\n\n\n\n"
+    "text": "SDP to SOC relaxation of type 2, applied to real-value matrix,  as described in:\n\n@article{Kim2003,\nauthor = {Kim, S and Kojima, M and Yamashita, M},\ntitle = {{Second order cone programming relaxation of a positive semidefinite constraint}},\ndoi = {10.1080/1055678031000148696},\njournal = {Optimization Methods and Software},\nnumber = {5},\npages = {535--541},\nvolume = {18},\nyear = {2003}\n}\n\n\n\n"
 },
 
 {
