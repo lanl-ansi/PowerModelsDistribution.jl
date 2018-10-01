@@ -11,7 +11,6 @@ setlevel!(getlogger(PowerModels), "error")
 
 using Ipopt
 using Cbc
-using Pajarito
 using Pavito
 using Juniper
 using SCS
