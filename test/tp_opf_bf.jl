@@ -124,7 +124,7 @@ end
         result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
         @test result["status"] == :Optimal
-        @test isapprox(result["objective"], 55451.2; atol = 1e0)
+        @test isapprox(result["objective"], 55451.2; atol = 2e0)
 
         for c in 1:mp_data["conductors"]
             # @test isapprox(result["solution"]["gen"]["1"]["qg"][c], 0.039742; atol = 1e-4)
@@ -138,9 +138,9 @@ end
         @test result["status"] == :Optimal
         @test isapprox(result["objective"], 56091.7; atol = 1e0)
 
-        @test isapprox(result["solution"]["gen"]["1"]["qg"][1],  0.0786126; atol = 1e-3)
-        @test isapprox(result["solution"]["gen"]["1"]["qg"][2],  0.00710213; atol = 1e-3)
-        @test isapprox(result["solution"]["gen"]["1"]["qg"][3],  0.0436545; atol = 1e-3)
+        @test isapprox(result["solution"]["gen"]["1"]["qg"][1],  0.0786126; atol = 1e-2)
+        @test isapprox(result["solution"]["gen"]["1"]["qg"][2],  0.00710213; atol = 1e-2)
+        @test isapprox(result["solution"]["gen"]["1"]["qg"][3],  0.0436545; atol = 1e-2)
         # @test isapprox(result["solution"]["gen"]["1"]["qg"][1],  0.105276; atol = 1e-3)
         # @test isapprox(result["solution"]["bus"]["2"]["va"][1],  0.0575114; atol = 1e-3)
 
@@ -167,10 +167,10 @@ end
             result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
             @test result["status"] == :Optimal
-            @test isapprox(result["objective"], 45555.1; atol = 1e0)
+            @test isapprox(result["objective"], 45555.1; atol = 2e0)
 
             # @test all(isapprox.(result["solution"]["gen"]["1"]["qg"].values, 0.3; atol = 1e-3))
-            @test all(isapprox.(result["solution"]["gen"]["1"]["qg"].values, [-0.0734112, 0.295086, 0.0909662]; atol = 1e-3))
+            @test all(isapprox.(result["solution"]["gen"]["1"]["qg"].values, [-0.0734112, 0.295086, 0.0909662]; atol = 1e-2))
         end
     end
     @testset "5-bus coupled meshed infeasible case" begin
@@ -210,7 +210,7 @@ end
         result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
         @test result["status"] == :Optimal
-        @test isapprox(result["objective"], 56075.9; atol = 1e0)
+        @test isapprox(result["objective"], 56075.9; atol = 2e0)
 
         for c in 1:mp_data["conductors"]
             @test isapprox(result["solution"]["gen"]["1"]["pg"][c],  0.4; atol = 1e-3)
