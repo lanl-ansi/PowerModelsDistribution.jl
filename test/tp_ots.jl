@@ -52,7 +52,7 @@ end
         end
 
         @testset "5-bus 3-phase case" begin
-            mp_data = PMs.parse_file("../test/data/matlab/case5.m")
+            mp_data = PMs.parse_file("../test/data/matpower/case5.m")
             PMs.make_multiconductor(mp_data, 3)
             result = run_tp_ots(mp_data, PMs.DCPPowerModel, pavito_solver)
 

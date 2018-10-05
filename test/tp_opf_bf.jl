@@ -9,7 +9,7 @@
         @test isapprox(result["solution"]["bus"]["3"]["vm"].values, 0.992977*[1,1,1]; atol = 1e-3)
     end
     @testset "5-bus case" begin
-        mp_data = PowerModels.parse_file("../test/data/matlab/case5.m")
+        mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
         PowerModels.make_multiconductor(mp_data, 3)
         result = run_tp_opf_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
 
@@ -48,7 +48,7 @@ end
         # @test isapprox(result["solution"]["bus"]["3"]["vm"].values, 0.974398*[1,1,1]; atol = 1e-3)
     end
     @testset "5-bus case" begin
-        mp_data = PowerModels.parse_file("../test/data/matlab/case5.m")
+        mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
         PowerModels.make_multiconductor(mp_data, 3)
         result = run_tp_opf_bf(mp_data, LPdiagUBFPowerModel, ipopt_solver)
 
@@ -89,7 +89,7 @@ end
 
     end
     @testset "5-bus case" begin
-        mp_data = PowerModels.parse_file("../test/data/matlab/case5.m")
+        mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
         PowerModels.make_multiconductor(mp_data, 3)
         result = run_tp_opf_bf(mp_data, LPfullUBFPowerModel, ipopt_solver)
 

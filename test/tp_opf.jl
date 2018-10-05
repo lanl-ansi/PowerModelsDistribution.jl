@@ -14,7 +14,7 @@
         end
     end
     @testset "5-bus 5-phase ac case" begin
-        mp_data = PMs.parse_file("../test/data/matlab/case5.m")
+        mp_data = PMs.parse_file("../test/data/matpower/case5.m")
         PMs.make_multiconductor(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
@@ -27,7 +27,7 @@
     end
 
     @testset "5-bus 5-phase soc case" begin
-        mp_data = PMs.parse_file("../test/data/matlab/case5.m")
+        mp_data = PMs.parse_file("../test/data/matpower/case5.m")
         PMs.make_multiconductor(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
 
@@ -39,7 +39,7 @@
     end
 
     @testset "30-bus 3-phase ac case" begin
-        mp_data = PMs.parse_file("../test/data/matlab/case30.m")
+        mp_data = PMs.parse_file("../test/data/matpower/case30.m")
         PMs.make_multiconductor(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
@@ -53,7 +53,7 @@
     end
 
     @testset "30-bus 3-phase soc case" begin
-        mp_data = PMs.parse_file("../test/data/matlab/case30.m")
+        mp_data = PMs.parse_file("../test/data/matpower/case30.m")
         PMs.make_multiconductor(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
 
@@ -239,7 +239,7 @@ end
 
 @testset "test ac polar opf" begin
     @testset "30-bus make-3-phase case" begin
-        mp_data = PMs.parse_file("../test/data/matlab/case30.m")
+        mp_data = PMs.parse_file("../test/data/matpower/case30.m")
         PMs.make_multiconductor(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
@@ -267,7 +267,7 @@ end
 
 @testset "test dc opf" begin
      @testset "30-bus make-3-phase case" begin
-        mp_data = PMs.parse_file("../test/data/matlab/case30.m")
+        mp_data = PMs.parse_file("../test/data/matpower/case30.m")
         PMs.make_multiconductor(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.DCPPowerModel, ipopt_solver)
 
@@ -295,7 +295,7 @@ end
 
 @testset "test nfa opf" begin
      @testset "30-bus make-3-phase case" begin
-        mp_data = PMs.parse_file("../test/data/matlab/case30.m")
+        mp_data = PMs.parse_file("../test/data/matpower/case30.m")
         PMs.make_multiconductor(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.NFAPowerModel, ipopt_solver)
 
@@ -323,7 +323,7 @@ end
 
 @testset "test soc (BIM) opf" begin
      @testset "30-bus make-3-phase case" begin
-        mp_data = PMs.parse_file("../test/data/matlab/case30.m")
+        mp_data = PMs.parse_file("../test/data/matpower/case30.m")
         PMs.make_multiconductor(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
 
