@@ -1,3 +1,11 @@
+
+"nothing to do, these models do not have complex voltage constraints"
+function constraint_tp_voltage(pm::GenericPowerModel{T}, n::Int, c::Int) where T <: PMs.AbstractDCPForm
+end
+
+
+### DC Power Flow Approximation ###
+
 """
 Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
 
@@ -35,3 +43,21 @@ end
 "Do nothing, this model is symmetric"
 function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max) where T <: PMs.AbstractDCPForm
 end
+
+
+
+
+### Network Flow Approximation ###
+
+"nothing to do, no voltage angle variables"
+function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, c::Int, d) where T <: PMs.NFAForm
+end
+
+"nothing to do, no voltage angle variables"
+function constraint_ohms_tp_yt_from(pm::GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm) where T <: PMs.NFAForm
+end
+
+"nothing to do, this model is symmetric"
+function constraint_ohms_tp_yt_to(pm::GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm) where T <: PMs.NFAForm
+end
+
