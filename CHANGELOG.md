@@ -2,7 +2,9 @@ ThreePhasePowerModels.jl Change Log
 ===================================
 
 ### Staged
+- Add support for network flow approximation formulation, NFAPowerModel 
 - Updates to problem specifications
+- Update tests for SCS v0.4
 - Minor improvements to OpenDSS parser
 
 ### v0.1.1
