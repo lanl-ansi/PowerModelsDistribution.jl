@@ -665,6 +665,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library.html#ThreePhasePowerModels.constraint_ohms_tp_yt_from-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:PowerModels.NFAForm",
+    "page": "Modeling Components",
+    "title": "ThreePhasePowerModels.constraint_ohms_tp_yt_from",
+    "category": "method",
+    "text": "nothing to do, no voltage angle variables\n\n\n\n"
+},
+
+{
     "location": "library.html#ThreePhasePowerModels.constraint_ohms_tp_yt_from-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACTForm, PowerModels.AbstractWRConicForm, PowerModels.AbstractWRForm, PowerModels.AbstractWRMForm}",
     "page": "Modeling Components",
     "title": "ThreePhasePowerModels.constraint_ohms_tp_yt_from",
@@ -726,6 +734,14 @@ var documenterSearchIndex = {"docs": [
     "title": "ThreePhasePowerModels.constraint_ohms_tp_yt_to",
     "category": "method",
     "text": "Do nothing, this model is symmetric\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_ohms_tp_yt_to-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any}, Tuple{T}} where T<:PowerModels.NFAForm",
+    "page": "Modeling Components",
+    "title": "ThreePhasePowerModels.constraint_ohms_tp_yt_to",
+    "category": "method",
+    "text": "nothing to do, this model is symmetric\n\n\n\n"
 },
 
 {
@@ -849,6 +865,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any}, Tuple{T}} where T<:PowerModels.NFAForm",
+    "page": "Modeling Components",
+    "title": "ThreePhasePowerModels.constraint_tp_theta_ref",
+    "category": "method",
+    "text": "nothing to do, no voltage angle variables\n\n\n\n"
+},
+
+{
     "location": "library.html#ThreePhasePowerModels.constraint_tp_theta_ref-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64,Any}, Tuple{T}} where T<:Union{PowerModels.AbstractACPForm, PowerModels.AbstractACTForm, PowerModels.AbstractDCPForm}",
     "page": "Modeling Components",
     "title": "ThreePhasePowerModels.constraint_tp_theta_ref",
@@ -886,6 +910,14 @@ var documenterSearchIndex = {"docs": [
     "title": "ThreePhasePowerModels.constraint_tp_voltage",
     "category": "method",
     "text": "do nothing, this model does not have complex voltage constraints\n\n\n\n"
+},
+
+{
+    "location": "library.html#ThreePhasePowerModels.constraint_tp_voltage-Union{Tuple{PowerModels.GenericPowerModel{T},Int64,Int64}, Tuple{T}} where T<:PowerModels.AbstractDCPForm",
+    "page": "Modeling Components",
+    "title": "ThreePhasePowerModels.constraint_tp_voltage",
+    "category": "method",
+    "text": "nothing to do, these models do not have complex voltage constraints\n\n\n\n"
 },
 
 {
