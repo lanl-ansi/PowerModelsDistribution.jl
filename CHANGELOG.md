@@ -2,6 +2,9 @@ ThreePhasePowerModels.jl Change Log
 ===================================
 
 ### Staged
+- nothing
+
+### v0.1.2
 - Add support for network flow approximation formulation, NFAPowerModel 
 - Updates to problem specifications
 - Update tests for SCS v0.4
