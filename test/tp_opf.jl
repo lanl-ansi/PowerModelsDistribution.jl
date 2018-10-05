@@ -201,15 +201,15 @@ end
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 0.0185406; atol = 1e-4)
+        @test isapprox(result["objective"], 0.0597017; atol = 1e-4)
 
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 5.132752553077026e-5; atol = 1e-7)
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 6.177139067714014e-5; atol = 1e-7)
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 7.230678136903121e-5; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 0.00015236280779412599; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 0.00019836795302238667; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 0.0002462858630022115; atol = 1e-7)
 
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9899205823173715; atol = 1e-4)
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9879617649716861; atol = 1e-4)
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9859780454153353; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9736211293005391; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9650040745702724; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9560168246207609; atol = 1e-4)
     end
 
 
@@ -231,21 +231,119 @@ end
         @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 1.000000; atol = 1e-4)
     end
     =#
+end
 
-    @testset "5-bus 3-phase ac pf case" begin
-        mp_data = TPPMs.parse_file("../test/data/opendss/case5_phase_drop.dss")
-        result = run_tp_pf(mp_data, PMs.ACPPowerModel, ipopt_solver)
+
+
+
+
+@testset "test ac polar opf" begin
+    @testset "30-bus make-3-phase case" begin
+        mp_data = PMs.parse_file("../test/data/matlab/case30.m")
+        PMs.make_multiconductor(mp_data, 3)
+        result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 0.0; atol = 1e-4)
-
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 5.212637770319941e-5; atol = 1e-6)
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 6.260652896080654e-5; atol = 1e-6)
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 7.386742805776751e-5; atol = 1e-6)
-
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9896729458699312; atol = 1e-4)
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9877087792522306; atol = 1e-4)
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9855803487865942; atol = 1e-4)
+        @test isapprox(result["objective"], 614.007; atol = 1e-1)
     end
+    @testset "5-bus coupled meshed case" begin
+        @testset "ac case" begin
+            mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_c_m_a.m")
+            result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
+            @test result["status"] == :LocalOptimal
+            @test isapprox(result["objective"], 53273.3; atol = 1e-1)
+        end
+    end
+    @testset "5-bus phase drop case" begin
+        mp_data = ThreePhasePowerModels.parse_file("../test/data/opendss/case5_phase_drop.dss")
+        result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.0597017; atol = 1e-4)
+    end
+end
+
+
+@testset "test dc opf" begin
+     @testset "30-bus make-3-phase case" begin
+        mp_data = PMs.parse_file("../test/data/matlab/case30.m")
+        PMs.make_multiconductor(mp_data, 3)
+        result = run_tp_opf(mp_data, PMs.DCPPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 566.112; atol = 1e-1)
+    end
+    @testset "5-bus coupled meshed case" begin
+        @testset "ac case" begin
+            mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_c_m_a.m")
+            result = run_tp_opf(mp_data, PMs.DCPPowerModel, ipopt_solver)
+
+            @test result["status"] == :LocalOptimal
+            @test isapprox(result["objective"], 55640.2; atol = 1e-1)
+        end
+    end
+    @testset "5-bus phase drop case" begin
+        mp_data = ThreePhasePowerModels.parse_file("../test/data/opendss/case5_phase_drop.dss")
+        result = run_tp_opf(mp_data, PMs.DCPPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.0540021; atol = 1e-4)
+    end
+end
+
+
+@testset "test nfa opf" begin
+     @testset "30-bus make-3-phase case" begin
+        mp_data = PMs.parse_file("../test/data/matlab/case30.m")
+        PMs.make_multiconductor(mp_data, 3)
+        result = run_tp_opf(mp_data, PMs.NFAPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 458.006; atol = 1e-1)
+    end
+    @testset "5-bus coupled meshed case" begin
+        @testset "ac case" begin
+            mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_c_m_a.m")
+            result = run_tp_opf(mp_data, PMs.NFAPowerModel, ipopt_solver)
+
+            @test result["status"] == :LocalOptimal
+            @test isapprox(result["objective"], 44700.0; atol = 1e-1)
+        end
+    end
+    @testset "5-bus phase drop case" begin
+        mp_data = ThreePhasePowerModels.parse_file("../test/data/opendss/case5_phase_drop.dss")
+        result = run_tp_opf(mp_data, PMs.NFAPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.054; atol = 1e-4)
+    end
+end
+
+
+@testset "test soc (BIM) opf" begin
+     @testset "30-bus make-3-phase case" begin
+        mp_data = PMs.parse_file("../test/data/matlab/case30.m")
+        PMs.make_multiconductor(mp_data, 3)
+        result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 517.563; atol = 1e-1)
+    end
+    @testset "5-bus coupled meshed case" begin
+        @testset "ac case" begin
+            mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_c_m_a.m")
+            result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
+
+            @test result["status"] == :LocalOptimal
+            @test isapprox(result["objective"], -0.000325497; atol = 1e-1)
+        end
+    end
+    @testset "5-bus phase drop case" begin
+        mp_data = ThreePhasePowerModels.parse_file("../test/data/opendss/case5_phase_drop.dss")
+        result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.0597016; atol = 1e-4)
+    end
 end

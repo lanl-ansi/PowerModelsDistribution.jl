@@ -71,6 +71,22 @@
         @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214835; atol=1e-5)
         @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00932693; atol=1e-4)
     end
+
+    @testset "5-bus 3-phase ac pf case" begin
+        mp_data = TPPMs.parse_file("../test/data/opendss/case5_phase_drop.dss")
+        result = run_tp_pf(mp_data, PMs.ACPPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.0; atol = 1e-4)
+
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 0.00015328882711864364; atol = 1e-5)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 0.0001993266190368713; atol = 1e-5)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 0.0002480554356591965; atol = 1e-5)
+
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9733455037213229; atol = 1e-3)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9647241898338335; atol = 1e-3)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9555739064829893; atol = 1e-3)
+    end
 end
 
 
