@@ -465,6 +465,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["angmax"] = PMs.MultiConductorVector(parse_array( 60.0, nodes, nconductors,  60.0))
 
             branchDict["transformer"] = false
+            branchDict["switch"] = defaults["switch"]
 
             branchDict["index"] = length(tppm_data["branch"]) + 1
 
@@ -531,6 +532,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 transDict["angmax"] = PMs.MultiConductorVector(parse_array( 60.0, nodes, nconductors,  60.0))
 
                 transDict["transformer"] = true
+                transDict["switch"] = false
 
                 transDict["index"] = length(tppm_data["branch"]) + 1
 
@@ -578,6 +580,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                     transDict["angmax"] = PMs.MultiConductorVector(parse_array( 60.0, nodes, nconductors,  60.0))
 
                     transDict["transformer"] = true
+                    transDict["switch"] = false
 
                     transDict["index"] = length(tppm_data["branch"]) + 1
 

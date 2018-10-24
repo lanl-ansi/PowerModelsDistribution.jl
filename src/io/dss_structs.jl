@@ -195,11 +195,6 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
     xmatrix .-= xgmod
     xmatrix .*= lenmult * (freq / basefreq)
 
-    # TODO: switch
-    if get(kwargs, :switch, false)
-        warn(LOGGER, "\"switch\" keyword in line $name is not supported.")
-    end
-
     return Dict{String,Any}("name" => name,
                             "bus1" => bus1,
                             "bus2" => bus2,
