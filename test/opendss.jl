@@ -159,6 +159,11 @@ TESTLOG = getlogger(PowerModels)
 
         tppm2 = TPPMs.parse_file("../test/data/opendss/test_simple4.dss")
         @test length(tppm2["bus"]) == 4
+
+        @testset "branches with switches" begin
+            @test tppm["branch"]["8"]["switch"]
+            @test all([tppm["branch"]["$i"]["switch"] == false for i in 1:6])
+        end
     end
 
     @testset "2-bus diagonal" begin
