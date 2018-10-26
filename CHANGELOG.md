@@ -2,7 +2,7 @@ ThreePhasePowerModels.jl Change Log
 ===================================
 
 ### Staged
-- nothing
+- Minor fix to branch parsing in matlab format
 
 ### v0.1.2
 - Add support for network flow approximation formulation, NFAPowerModel 
