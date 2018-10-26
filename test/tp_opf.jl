@@ -114,13 +114,13 @@ end
             result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
             @test result["status"] == :LocalOptimal
-            @test isapprox(result["objective"], 53273.28; atol = 1e-1)
+            @test isapprox(result["objective"], 53272.9; atol = 1e-1)
 
             @test all(isapprox.(result["solution"]["gen"]["1"]["qg"].values, 0.3; atol = 1e-3))
 
-            @test isapprox(result["solution"]["bus"]["2"]["va"][1], TPPMs.wraptopi(-0.0135573); atol = 1e-3)
-            @test isapprox(result["solution"]["bus"]["2"]["va"][2], TPPMs.wraptopi(-0.0123172-2*pi/mp_data["conductors"]); atol = 1e-3)
-            @test isapprox(result["solution"]["bus"]["2"]["va"][3], TPPMs.wraptopi(-0.0136547-4*pi/mp_data["conductors"]); atol = 1e-3)
+            @test isapprox(result["solution"]["bus"]["2"]["va"][1], -0.0139580; atol = 1e-3)
+            @test isapprox(result["solution"]["bus"]["2"]["va"][2], -2.1069476; atol = 1e-3)
+            @test isapprox(result["solution"]["bus"]["2"]["va"][3],  2.0808321; atol = 1e-3)
         end
         @testset "soc case" begin
             mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_c_m_a.m")
@@ -129,9 +129,9 @@ end
             @test result["status"] == :LocalOptimal
             @test isapprox(result["objective"], -0.000272; atol = 1e-3)
 
-            @test isapprox(result["solution"]["gen"]["1"]["qg"][1], 0.0472219; atol = 1e-3)
-            @test isapprox(result["solution"]["gen"]["1"]["qg"][2], 0.0325493; atol = 1e-3)
-            @test isapprox(result["solution"]["gen"]["1"]["qg"][3], 0.0357746; atol = 1e-3)
+            @test isapprox(result["solution"]["gen"]["1"]["qg"][1], 0.0451820; atol = 1e-3)
+            @test isapprox(result["solution"]["gen"]["1"]["qg"][2], 0.0290373; atol = 1e-3)
+            @test isapprox(result["solution"]["gen"]["1"]["qg"][3], 0.0343748; atol = 1e-3)
         end
     end
     @testset "5-bus coupled meshed infeasible case" begin
@@ -252,7 +252,7 @@ end
             result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
             @test result["status"] == :LocalOptimal
-            @test isapprox(result["objective"], 53273.3; atol = 1e-1)
+            @test isapprox(result["objective"], 53272.9; atol = 1e-1)
         end
     end
     @testset "5-bus phase drop case" begin

@@ -349,18 +349,12 @@ function ml2pm_branch(data::Dict{String,Any})
         branch["angmax"] = PMs.MultiConductorVector(branch["angmax"], 3)
 
         set_default(branch, "g_fr_1", 0.0)
-        set_default(branch, "b_fr_1", 0.0)
         set_default(branch, "g_fr_2", 0.0)
-        set_default(branch, "b_fr_2", 0.0)
         set_default(branch, "g_fr_3", 0.0)
-        set_default(branch, "b_fr_3", 0.0)
 
         set_default(branch, "g_to_1", 0.0)
-        set_default(branch, "b_to_1", 0.0)
         set_default(branch, "g_to_2", 0.0)
-        set_default(branch, "b_to_2", 0.0)
         set_default(branch, "g_to_3", 0.0)
-        set_default(branch, "b_to_3", 0.0)
 
         make_mpv!(branch, "g_fr", ["g_fr_1", "g_fr_2", "g_fr_3"])
         make_mpv!(branch, "g_to", ["g_to_1", "g_to_2", "g_to_3"])
@@ -368,9 +362,13 @@ function ml2pm_branch(data::Dict{String,Any})
         branch["b_fr"] = PMs.MultiConductorVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
         branch["b_to"] = PMs.MultiConductorVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
 
+        delete!(branch, "b_1")
+        delete!(branch, "b_2")
+        delete!(branch, "b_3")
+
         branch["tap"] = PMs.MultiConductorVector(1.0, 3)
         branch["shift"] = PMs.MultiConductorVector(0.0, 3)
-        branch["transformer"] = PMs.MultiConductorVector(false, 3)
+        branch["transformer"] = false
 
         branch["br_r"] = PMs.MultiConductorMatrix([
             branch["r_11"]     branch["r_12"]/2.0 branch["r_13"]/2.0;
