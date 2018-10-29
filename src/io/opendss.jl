@@ -345,7 +345,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             genDict["apf"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
 
             genDict["pmax"] = genDict["pg"]  # Assumes generator is at rated power
-            genDict["pmin"] = 0.3 * genDict["pg"]  # 30% of pmax
+            genDict["pmin"] = 0.0 * genDict["pg"]  # 0% of pmax
 
             genDict["pc1"] = genDict["pmax"]
             genDict["pc2"] = genDict["pmin"]
