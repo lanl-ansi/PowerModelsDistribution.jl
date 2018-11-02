@@ -758,7 +758,7 @@ function parse_dss(io::IOStream)::Dict
         line = lowercase(strip_comments(line))
 
         if startswith(strip(line), '~')
-            curCompDict = parse_component(curCtypeName, strip(strip(line, '~')), curCompDict)
+            curCompDict = parse_component(curCtypeName, strip(strip(line),  '~'), curCompDict)
 
             if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')
                 continue
