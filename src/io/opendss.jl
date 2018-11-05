@@ -683,6 +683,48 @@ function dss2tppm_pvsystem!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     end
 end
 
+
+function dss2tppm_storage!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
+    if !haskey(tppm_data, "storage")
+        tppm_data["storage"] = []
+    end
+
+    if haskey(dss_data, "storage")
+        for storage in dss_data["storage"]
+            defaults = createStorage(storage["bus1"], storage["name"]; to_sym_keys(storage)...)
+
+            storageDict = Dict{String,Any}()
+
+            nconductors = tppm_data["conductors"]
+            name, nodes = parse_busname(defaults["bus1"])
+
+            storageDict["name"] = defaults["name"]
+            storageDict["storage_bus"] = find_bus(name, tppm_data)
+            storageDict["energy"] = defaults["kwhstored"] / 1e3
+            storageDict["energy_rating"] = defaults["kwhrated"] / 1e3
+            storageDict["charge_rating"] = defaults["%charge"] * defaults["kwrated"] / 1e3
+            storageDict["discharge_rating"] = defaults["%discharge"] * defaults["kwrated"] / 1e3
+            storageDict["charge_efficiency"] = defaults["%effcharge"] * defaults["kwrated"] / 1e3
+            storageDict["discharge_efficiency"] = defaults["%effdischarge"] * defaults["kwrated"] / 1e3
+            storageDict["thermal_rating"] = defaults["kva"] / 1e3
+            storageDict["qmin"] = -defaults["kvar"] / 1e3
+            storageDict["qmax"] =  defaults["kvar"] / 1e3
+            storageDict["r"] = defaults["%r"]  # TODO:
+            storageDict["x"] = defaults["%x"]  # TODO:
+            storageDict["standby_loss"] = defaults["%idlingkw"] * defaults["kwrated"] / 1e3
+            storageDict["status"] = defaults["enabled"]
+
+            storageDict["index"] = length(tppm_data["storage"]) + 1
+
+            used = ["phases", "bus1", "name"]
+            PMs.import_remaining!(storageDict, defaults, import_all; exclude=used)
+
+            push!(tppm_data["storage"], storageDict)
+        end
+    end
+end
+
+
 """
     adjust_sourcegen_bounds!(tppm_data)
 
