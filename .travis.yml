@@ -4,31 +4,20 @@ os:
   - osx
 julia:
   - 0.6
-  - nightly
+  - 0.7
+  - 1.0
 matrix:
   allow_failures:
-    - julia: nightly
+    - julia: 0.7
+    - julia: 1.0
 cache:
  directories:
    - /home/travis/.julia
-sudo: false
 addons:
   apt_packages:
     - gfortran
-
 before_install:
-    # don't keep an old version of the code in the cache
-  - julia -e 'if "ThreePhasePowerModels" in keys(Pkg.installed()) Pkg.rm("ThreePhasePowerModels"); Pkg.rm("ThreePhasePowerModels") end'
-  - julia -e 'Pkg.update()' #make sure we get the latest version of METADATA
-  - julia -e 'if !("Coverage" in keys(Pkg.installed())) Pkg.add("Coverage") end'
-  - julia -e 'if !("Documenter" in keys(Pkg.installed())) Pkg.add("Documenter") end'
-
-script:
-  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia -e 'Pkg.clone(pwd())'
-#  - julia -e 'Pkg.checkout("PowerModels")' # use if master version is needed
-  - julia -e 'Pkg.test("ThreePhasePowerModels", coverage=true)'
-
+  - julia -e '(VERSION >= v"0.7" && using Pkg); Pkg.update()'
 after_success:
-  - julia -e 'using Coverage; cd(Pkg.dir("ThreePhasePowerModels")); Codecov.submit(process_folder("."));'
-  - julia -e 'cd(Pkg.dir("ThreePhasePowerModels")); include(joinpath("docs", "make.jl"))'
+  - julia -e '(VERSION >= v"0.7" && using Pkg); Pkg.add("Coverage"); cd(Pkg.dir("ThreePhasePowerModels")); using Coverage; Codecov.submit(process_folder())'
+  - julia -e 'if VERSION >= v"0.7" using Pkg; Pkg.add("Documenter"); import ThreePhasePowerModels; include(joinpath(dirname(pathof(ThreePhasePowerModels)), "..", "docs", "make.jl")) end'
