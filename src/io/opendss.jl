@@ -779,10 +779,9 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
 
     check_duplicate_components!(dss_data)
 
-    # parse_dss_with_dtypes!(dss_data, ["line", "linecode", "load", "generator", "capacitor",
-    #                                   "reactor", "circuit", "transformer"])
     parse_dss_with_dtypes!(dss_data, ["line", "linecode", "load", "generator", "capacitor",
-                                      "reactor", "circuit", "transformer", "pvsystem"])
+                                      "reactor", "circuit", "transformer", "pvsystem",
+                                      "storage"])
 
     if haskey(dss_data, "options")
         condensed_opts = [Dict{String,Any}()]
