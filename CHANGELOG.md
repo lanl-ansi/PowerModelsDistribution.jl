@@ -3,9 +3,10 @@ ThreePhasePowerModels.jl Change Log
 
 ### Staged
 - Minor fix to branch parsing in matlab format
+- Minor fix to OpenDSS parser (parsing ~ lines with preceeding whitespace)
 
 ### v0.1.2
-- Add support for network flow approximation formulation, NFAPowerModel 
+- Add support for network flow approximation formulation, NFAPowerModel
 - Updates to problem specifications
 - Update tests for SCS v0.4
 - Minor improvements to OpenDSS parser

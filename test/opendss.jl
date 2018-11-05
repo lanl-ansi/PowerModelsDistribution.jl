@@ -164,6 +164,11 @@ TESTLOG = getlogger(PowerModels)
             @test tppm["branch"]["8"]["switch"]
             @test all([tppm["branch"]["$i"]["switch"] == false for i in 1:6])
         end
+
+        @testset "whitespace before ~" begin
+            dss_data = TPPMs.parse_dss("../test/data/opendss/test_transformer_formatting.dss")
+            @test dss_data["transformer"][1]["phases"] == "3"
+        end
     end
 
     @testset "2-bus diagonal" begin
