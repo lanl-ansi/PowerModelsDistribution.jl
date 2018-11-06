@@ -992,6 +992,8 @@ element. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
 function createStorage(bus1, name::AbstractString; kwargs...)
+    kwargs = Dict{Symbol,Any}(kwargs)
+
     storage = Dict{String,Any}("name" => name,
                                "%charge" => get(kwargs, :charge, 100.0),
                                "%discharge" => get(kwargs, :discharge, 100.0),
