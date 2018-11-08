@@ -5,7 +5,7 @@ end
 
 
 double_operators = Dict("+" => +, "-" => -, "*" => *, "/" => /, "^" => ^,
-                        "atan2" => f(x, y) = rad2deg(atan2(y, x)))
+                        "atan2" => (x, y) -> rad2deg(atan2(y, x)))
 
 single_operators = Dict("sqr" => sqr, "sqrt" => sqrt, "inv" => inv, "ln" => log,
                         "exp" => exp, "log10" => log10, "sin" => sind, "cos" => cosd,
