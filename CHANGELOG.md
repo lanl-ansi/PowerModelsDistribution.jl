@@ -2,6 +2,7 @@ ThreePhasePowerModels.jl Change Log
 ===================================
 
 ### Staged
+- Add support for parsing OpenDSS Storage objects
 - Minor fix to branch parsing in matlab format
 - Minor fix to OpenDSS parser (parsing ~ lines with preceeding whitespace)
 

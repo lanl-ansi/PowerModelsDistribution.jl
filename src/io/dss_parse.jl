@@ -196,12 +196,12 @@ function get_prop_name(ctype::AbstractString)::Array
                   "d", "purs", "puxs", "purr", "puxr", "puxm", "slip",
                   "maxslip", "slipoption", "spectrum", "enabled"]
 
-    storage = ["%charge", "%discharge", "%effcharge", "%idlingkvar", "idlingkw",
-               "%r", "%reserve", "%stored", "%x", "basefreq", "bus1", "chargetrigger",
-               "class", "conn", "daily", "yearly", "debugtrace", "dischargetrigger",
-               "dispmode", "duty", "dynadata", "dynadll", "enabled", "kv", "kva",
-               "kvar", "kw", "kwhrated", "kwhstored", "kwrated", "like", "model",
-               "pf", "phases", "spectrum", "state", "timechargetrig", "userdata",
+    storage = ["phases", "bus1", "%charge", "%discharge", "%effcharge", "%idlingkvar",
+               "idlingkw", "%r", "%reserve", "%stored", "%x", "basefreq",
+               "chargetrigger", "class", "conn", "daily", "yearly", "debugtrace",
+               "dischargetrigger", "dispmode", "duty", "dynadata", "dynadll", "enabled",
+               "kv", "kva", "kvar", "kw", "kwhrated", "kwhstored", "kwrated", "like",
+               "model", "pf", "spectrum", "state", "timechargetrig", "userdata",
                "usermodel", "vmaxpu", "vminpu", "yearly"]
 
     capcontrol = ["element", "capacitor", "type", "ctphase", "ctratio", "deadtime",

@@ -983,6 +983,64 @@ function createPVSystem(bus1, name::AbstractString; kwargs...)
     return pvsystem
 end
 
+
+"""
+    createStorage(bus1, name; kwargs...)
+
+Creates a Dict{String,Any} containing all expected properties for a storage
+element. See OpenDSS documentation for valid fields and ways to specify the
+different properties.
+"""
+function createStorage(bus1, name::AbstractString; kwargs...)
+    kwargs = Dict{Symbol,Any}(kwargs)
+
+    storage = Dict{String,Any}("name" => name,
+                               "%charge" => get(kwargs, :charge, 100.0),
+                               "%discharge" => get(kwargs, :discharge, 100.0),
+                               "%effcharge" => get(kwargs, :effcharge, 90.0),
+                               "%effdischarge" => get(kwargs, :effdischarge, 90.0),
+                               "%idlingkvar" => get(kwargs, :idlingkvar, 0.0),
+                               "%idlingkw" => get(kwargs, :idlingkw, 1.0),
+                               "%r" => get(kwargs, :r, 0.0),
+                               "%reserve" => get(kwargs, :reserve, 20.0),
+                               "%stored" => get(kwargs, :stored, 100.0),
+                               "%x" => get(kwargs, :x, 50.0),
+                               "basefreq" => get(kwargs, :basefreq, 60.0),
+                               "bus1" => bus1,
+                               "chargetrigger" => get(kwargs, :chargetrigger, 0.0),
+                               "class" => get(kwargs, :class, 0),
+                               "conn" => get(kwargs, :conn, "wye"),
+                               "daily" => get(kwargs, :daily, [1.0, 1.0]),
+                               "debugtrace" => get(kwargs, :debugtrace, false),
+                               "dischargetrigger" => get(kwargs, :dischargetrigger, 0.0),
+                               "dispmode" => get(kwargs, :dispmode, "default"),
+                               "duty" => get(kwargs, :duty, ""),
+                               "dynadata" => get(kwargs, :dynadata, ""),
+                               "dynadll" => get(kwargs, :dynadll, "none"),
+                               "enabled" => get(kwargs, :enabled, true),
+                               "kv" => get(kwargs, :kv, 12.47),
+                               "kw" => get(kwargs, :kw, 0.0),
+                               "kva" => get(kwargs, :kva, 25.0),
+                               "kvar" => get(kwargs, :kvar, 0.0),
+                               "kwhrated" => get(kwargs, :kwhrated, 50.0),
+                               "kwhstored" => get(kwargs, :kwhstored, 50.0),
+                               "kwrated" => get(kwargs, :kwrated, 50.0),
+                               "model" => get(kwargs, :model, 1),
+                               "pf" => get(kwargs, :pf, 1.0),
+                               "phases" => get(kwargs, :phases, 3),
+                               "spectrum" => get(kwargs, :spectrum, "default"),
+                               "state" => get(kwargs, :state, "idling"),
+                               "timechargetrig" => get(kwargs, :timechargetrig, 2.0),
+                               "userdata" => get(kwargs, :userdata, ""),
+                               "usermodel" => get(kwargs, :usermodel, "none"),
+                               "vmaxpu" => get(kwargs, :vmaxpu, 1.1),
+                               "vminpu" => get(kwargs, :vimpu, 0.9),
+                               "yearly" => get(kwargs, :yearly, [1.0, 1.0]),
+                              )
+    return storage
+end
+
+
 "Returns a Dict{String,Type} for the desired component `comp`, giving all of the expected data types"
 function get_dtypes(comp::AbstractString)::Dict
     default_dicts = Dict{String,Any}("line" => createLine("", "", ""),
@@ -994,7 +1052,8 @@ function get_dtypes(comp::AbstractString)::Dict
                                      "linecode" => createLinecode(""),
                                      "circuit" => createVSource("", ""),
                                      "pvsystem" => createPVSystem("", ""),
-                                     "vsource" => createVSource("", "", "")
+                                     "vsource" => createVSource("", "", ""),
+                                     "storage" => createStorage("", "")
                                     )
 
     return Dict{String,Type}((k, typeof(v)) for (k, v) in default_dicts[comp])

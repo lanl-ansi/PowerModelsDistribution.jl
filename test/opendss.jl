@@ -96,7 +96,7 @@ TESTLOG = getlogger(PowerModels)
         tppm = TPPMs.parse_file("../test/data/opendss/test2_master.dss")
 
         @test tppm["name"] == "test2"
-        @test length(tppm) == 18
+        @test length(tppm) == 19
         @test length(dss) == 12
 
         for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline"], [11, 4, 5, 15, 4, 0])
@@ -168,6 +168,20 @@ TESTLOG = getlogger(PowerModels)
         @testset "whitespace before ~" begin
             dss_data = TPPMs.parse_dss("../test/data/opendss/test_transformer_formatting.dss")
             @test dss_data["transformer"][1]["phases"] == "3"
+        end
+
+        @testset "storage parse" begin
+            tppm_storage = TPPMs.parse_file("../test/data/opendss/case3_balanced_battery.dss")
+            for bat in values(tppm_storage["storage"])
+                for key in ["energy", "storage_bus", "energy_rating", "charge_rating", "discharge_rating",
+                            "charge_efficiency", "discharge_efficiency", "thermal_rating", "qmin", "qmax",
+                            "r", "x", "standby_loss", "status"]
+                    @test haskey(bat, key)
+                    if key in ["x", "r", "qmin", "qmax", "thermal_rating"]
+                        @test isa(bat[key], PowerModels.MultiConductorVector)
+                    end
+                end
+            end
         end
     end
 

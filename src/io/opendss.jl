@@ -146,7 +146,7 @@ function find_bus(busname::AbstractString, tppm_data::Dict)
     if haskey(bus, "bus_i")
         return bus["bus_i"]
     else
-        error("cannot find connected bus with id \"$busname\"")
+        error(LOGGER, "cannot find connected bus with id \"$busname\"")
     end
 end
 
@@ -683,6 +683,48 @@ function dss2tppm_pvsystem!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     end
 end
 
+
+function dss2tppm_storage!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
+    if !haskey(tppm_data, "storage")
+        tppm_data["storage"] = []
+    end
+
+    if haskey(dss_data, "storage")
+        for storage in dss_data["storage"]
+            defaults = createStorage(storage["bus1"], storage["name"]; to_sym_keys(storage)...)
+
+            storageDict = Dict{String,Any}()
+
+            nconductors = tppm_data["conductors"]
+            name, nodes = parse_busname(defaults["bus1"])
+
+            storageDict["name"] = defaults["name"]
+            storageDict["storage_bus"] = find_bus(name, tppm_data)
+            storageDict["energy"] = defaults["kwhstored"] / 1e3
+            storageDict["energy_rating"] = defaults["kwhrated"] / 1e3
+            storageDict["charge_rating"] = defaults["%charge"] * defaults["kwrated"] / 1e3 / 100.0
+            storageDict["discharge_rating"] = defaults["%discharge"] * defaults["kwrated"] / 1e3 / 100.0
+            storageDict["charge_efficiency"] = defaults["%effcharge"] / 100.0
+            storageDict["discharge_efficiency"] = defaults["%effdischarge"] / 100.0
+            storageDict["thermal_rating"] = PMs.MultiConductorVector(parse_array(defaults["kva"] / 1e3, nodes, nconductors))
+            storageDict["qmin"] = PMs.MultiConductorVector(parse_array(-defaults["kvar"] / 1e3, nodes, nconductors))
+            storageDict["qmax"] = PMs.MultiConductorVector(parse_array( defaults["kvar"] / 1e3, nodes, nconductors))
+            storageDict["r"] = PMs.MultiConductorVector(parse_array(defaults["%r"] / 100.0, nodes, nconductors))
+            storageDict["x"] = PMs.MultiConductorVector(parse_array(defaults["%x"] / 100.0, nodes, nconductors))
+            storageDict["standby_loss"] = defaults["%idlingkw"] * defaults["kwrated"] / 1e3
+            storageDict["status"] = convert(Int, defaults["enabled"])
+
+            storageDict["index"] = length(tppm_data["storage"]) + 1
+
+            used = ["phases", "bus1", "name"]
+            PMs.import_remaining!(storageDict, defaults, import_all; exclude=used)
+
+            push!(tppm_data["storage"], storageDict)
+        end
+    end
+end
+
+
 """
     adjust_sourcegen_bounds!(tppm_data)
 
@@ -779,10 +821,9 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
 
     check_duplicate_components!(dss_data)
 
-    # parse_dss_with_dtypes!(dss_data, ["line", "linecode", "load", "generator", "capacitor",
-    #                                   "reactor", "circuit", "transformer"])
     parse_dss_with_dtypes!(dss_data, ["line", "linecode", "load", "generator", "capacitor",
-                                      "reactor", "circuit", "transformer", "pvsystem"])
+                                      "reactor", "circuit", "transformer", "pvsystem",
+                                      "storage"])
 
     if haskey(dss_data, "options")
         condensed_opts = [Dict{String,Any}()]
@@ -818,7 +859,8 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     dss2tppm_branch!(tppm_data, dss_data, import_all)
     dss2tppm_transformer!(tppm_data, dss_data, import_all)
     dss2tppm_gen!(tppm_data, dss_data, import_all)
-    dss2tppm_pvsystem!(tppm_data, dss_data,import_all)
+    dss2tppm_pvsystem!(tppm_data, dss_data, import_all)
+    dss2tppm_storage!(tppm_data, dss_data, import_all)
 
     adjust_sourcegen_bounds!(tppm_data)
 
