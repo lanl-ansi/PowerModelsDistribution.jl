@@ -4,8 +4,6 @@ TESTLOG = getlogger(PowerModels)
     @testset "5-bus minimal data" begin
         data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_a.m")
 
-        @test length(data) == 15
-
         @test length(data["bus"]) == 5
         @test length(data["load"]) == 3
         @test length(data["shunt"]) == 0
@@ -23,8 +21,6 @@ TESTLOG = getlogger(PowerModels)
 
     @testset "5-bus shunt data" begin
         data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m")
-
-        @test length(data) == 15
 
         @test length(data["bus"]) == 5
         @test length(data["load"]) == 3

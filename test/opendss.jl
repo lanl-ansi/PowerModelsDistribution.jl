@@ -28,9 +28,7 @@ TESTLOG = getlogger(PowerModels)
     @testset "simple generator branch load" begin
         setlevel!(TESTLOG, "info")
 
-        @test_warn(TESTLOG, "Not all OpenDSS features are supported, currently only minimal support for \
-                      lines, loads, generators, and capacitors as shunts. Transformers and reactors \
-                      as transformer branches are included, but value translation is not fully supported.",
+        @test_warn(TESTLOG, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported.",
                       TPPMs.parse_file("../test/data/opendss/test_simple.dss"))
 
         Memento.Test.@test_log(TESTLOG, "info", "Calling parse_dss on ../test/data/opendss/test_simple.dss",

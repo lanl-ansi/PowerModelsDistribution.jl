@@ -1,11 +1,11 @@
-# isdefined(Base, :__precompile__) && __precompile__()
-
 module ThreePhasePowerModels
 
 using JuMP
 using PowerModels
 using InfrastructureModels
 using Memento
+
+using Compat.LinearAlgebra
 
 const PMs = PowerModels
 

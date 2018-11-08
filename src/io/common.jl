@@ -30,7 +30,6 @@ end
 
 ""
 function check_network_data(data::Dict{String,Any})
-    data["version"] = Pkg.installed("ThreePhasePowerModels")
     PMs.make_per_unit(data)
 
     PMs.check_connectivity(data)

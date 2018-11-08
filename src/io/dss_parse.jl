@@ -329,7 +329,7 @@ end
 "parse matrices according to active nodes"
 function parse_matrix(data::Array{T}, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array where T
     mat = fill(fill_val, (nph, nph))
-    idxs = find(nodes[1:nph])
+    idxs = findall(nodes[1:nph])
 
     for i in 1:size(idxs)[1]
         mat[idxs[i], idxs[i]] = data[i, i]
@@ -405,7 +405,7 @@ end
 "parse matrices according to active nodes"
 function parse_array(data, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array
     mat = fill(fill_val, nph)
-    idxs = find(nodes[1:nph])
+    idxs = findall(nodes[1:nph])
 
     if length(data) == 1 && nph > 1
         for i in idxs
@@ -469,7 +469,7 @@ Parses a Bus Coordinate `file`, in either "dat" or "csv" formats, where in
 to contain "bus,x,y" on each line.
 """
 function parse_buscoords(file::AbstractString)::Array
-    file_str = readstring(open(file))
+    file_str = read(open(file), String)
     regex = r",\s*"
     if endswith(lowercase(file), "csv") || endswith(lowercase(file), "dss")
         regex = r","
@@ -505,7 +505,7 @@ function parse_properties(properties::AbstractString)::Array
     endDQuot = true
     str_out = ""
 
-    properties = replace(properties, r"\s*=\s*", "=")
+    properties = replace(properties, r"\s*=\s*" => "=")
     nchars = length(properties)
 
     for (n, char) in enumerate(properties)
@@ -579,9 +579,9 @@ new value is appended to the end.
 function add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
     if haskey(compDict, lowercase(key))
         rmatch = match(r"_(\d+)$", key)
-        if typeof(rmatch) != Void
+        if typeof(rmatch) != Nothing
             endNum = parse(Int, rmatch.captures[1]) + 1
-            key = replace(key, r"_(\d+)$", "_$endNum")
+            key = replace(key, r"_(\d+)$" => "_$endNum")
         else
             key = string(key, "_2")
         end
@@ -622,29 +622,29 @@ function parse_component(component::AbstractString, properties::AbstractString, 
             propIdx += 1
         else
             if split(component,'.')[1] == "loadshape" && startswith(property, "mult")
-                property = replace(property, "mult", "pmult")
+                property = replace(property, "mult" => "pmult")
             end
 
             try
-                propIdxs = find(e->e==split(property,'=')[1], propNames)
+                propIdxs = findall(e->e==split(property,'=')[1], propNames)
                 if length(propIdxs) > 0
-                    propIdx = find(e->e==split(property,'=')[1], propNames)[1] + 1
+                    propIdx = findall(e->e==split(property,'=')[1], propNames)[1] + 1
                 end
             catch e
                 if split(component,'.')[1] == "transformer"
                     if split(property,'=')[1] == "ppm"
-                        property = replace(property, "ppm", "ppm_antifloat")
+                        property = replace(property, "ppm" => "ppm_antifloat")
                     elseif split(property,'=')[1] == "x12"
-                        property = replace(property, "x12", "xhl")
+                        property = replace(property, "x12" => "xhl")
                     elseif split(property,'=')[1] == "x23"
-                        property = replace(property, "x23", "xlt")
+                        property = replace(property, "x23" => "xlt")
                     elseif split(property,'=')[1] == "x13"
-                        property = replace(property, "x13", "xht")
+                        property = replace(property, "x13" => "xht")
                     end
                 else
                     throw(e)
                 end
-                propIdx = find(e->e==split(property,'=')[1], propNames)[1] + 1
+                propIdx = findall(e->e==split(property,'=')[1], propNames)[1] + 1
             end
         end
 
@@ -739,7 +739,7 @@ function parse_dss(io::IOStream)::Dict
     info(LOGGER, "Calling parse_dss on $filename")
     currentFile = split(filename, "/")[end]
     path = join(split(filename, '/')[1:end-1], '/')
-    dss_str = readstring(open(filename))
+    dss_str = read(open(filename), String)
     dss_data = Dict{String,Array}()
 
     dss_data["filename"] = [currentFile]
@@ -753,7 +753,7 @@ function parse_dss(io::IOStream)::Dict
     nlines = length(stripped_lines)
 
     for (n, line) in enumerate(stripped_lines)
-        real_line_num = find(lines .== line)[1]
+        real_line_num = findall(lines .== line)[1]
         debug(LOGGER, "LINE $real_line_num: $line")
         line = lowercase(strip_comments(line))
 
@@ -938,7 +938,7 @@ function parse_busname(busname::AbstractString)
 
     nodes = Array{Bool}([0 0 0 0])
 
-    for num in range(1,3)
+    for num in range(1, length=3)
         if contains(elements, "$num")
             nodes[num] = true
         end

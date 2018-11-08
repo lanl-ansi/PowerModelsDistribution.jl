@@ -2,10 +2,10 @@ current_version = v"1"
 
 ""
 function parse_matlab(io::IOStream)
-    data_string = readstring(io)
+    data_string = read(io, String)
     ml_data = parse_matlab_string(data_string)
 
-   	pm_data = matlab_to_tppm(ml_data)
+    pm_data = matlab_to_tppm(ml_data)
 
     return pm_data
 end
@@ -392,7 +392,7 @@ end
 
 "collects several from_keys in an array and sets it to the to_key, removes from_keys"
 function make_mpv!(data::Dict{String,Any}, to_key::String, from_keys::Array{String,1})
-    assert(!(haskey(data, to_key)))
+    @assert !(haskey(data, to_key))
     data[to_key] = PMs.MultiConductorVector([data[k] for k in from_keys])
     for k in from_keys
         delete!(data, k)

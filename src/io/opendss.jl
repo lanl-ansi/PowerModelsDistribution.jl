@@ -177,7 +177,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             kv = defaults["kv"]
             expected_kv = tppm_data["basekv"] / sqrt(tppm_data["conductors"])
             if !isapprox(kv, expected_kv; atol=expected_kv * 0.01)
-                warn(LOGGER, "Load has kv=$kv, not the expected kv=$(@sprintf("%.3f", expected_kv)). Results may not match OpenDSS")
+                warn(LOGGER, "Load has kv=$kv, not the expected kv=$(expected_kv). Results may not match OpenDSS")
             end
 
             loadDict["name"] = defaults["name"]

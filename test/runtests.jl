@@ -15,7 +15,7 @@ using Pavito
 using Juniper
 using SCS
 
-using Base.Test
+using Compat.Test
 
 
 ipopt_solver = IpoptSolver(tol=1e-6, print_level=0)

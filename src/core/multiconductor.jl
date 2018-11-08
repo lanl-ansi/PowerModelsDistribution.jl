@@ -1,23 +1,23 @@
 # https://stackoverflow.com/questions/39039553/lower-triangular-matrix-in-julia
-function vec2utri{T}(v::Vector{T})
+function vec2utri(v::Vector{T}) where T
     d = length(v)
     n = Int((sqrt(8d+1)+1)/2)
     n*(n-1)/2 == d || error("vec2utri: length of vector is not triangular")
     [ i<j ? v[Int((j-1)*(j-2)/2)+i] : 0 for i=1:n, j=1:n ]
 end
 
-function vec2ltri{T}(v::Vector{T})
+function vec2ltri(v::Vector{T}) where T
     vec2utri(v)'
 end
 
-function mat2utrivec{T}(m::Matrix{T})
-    assert(size(m,1) == size(m,2))
+function mat2utrivec(m::Matrix{T}) where T
+    @assert size(m,1) == size(m,2)
     n = size(m,1)
     [m[i,j] for i=1:n, j=1:n if i < j]
 end
 
-function mat2ltrivec{T}(m::Matrix{T})
-    assert(size(m,1) == size(m,2))
+function mat2ltrivec(m::Matrix{T}) where T
+    @assert size(m,1) == size(m,2)
     n = size(m,1)
     [m[j,i] for i=1:n, j=1:n if i < j]
 end
