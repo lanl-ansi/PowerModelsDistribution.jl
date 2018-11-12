@@ -100,6 +100,17 @@ function variable_tp_voltage_product(pm::GenericPowerModel; nw::Int=pm.cnw, cnd:
 end
 
 
+"variables for modeling storage units, includes grid injection and internal variables"
+function variable_tp_storage(pm::GenericPowerModel; kwargs...)
+    for c in PMs.conductor_ids(pm)
+        PMs.variable_active_storage(pm, cnd=c; kwargs...)
+        PMs.variable_reactive_storage(pm, cnd=c; kwargs...)
+    end
+    PMs.variable_storage_energy(pm; kwargs...)
+    PMs.variable_storage_charge(pm; kwargs...)
+    PMs.variable_storage_discharge(pm; kwargs...)
+end
+
 
 "generates variables for both `active` and `reactive` slack at each bus"
 function variable_bus_power_slack(pm::GenericPowerModel; kwargs...)
