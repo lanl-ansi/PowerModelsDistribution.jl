@@ -17,6 +17,7 @@ addons:
   apt_packages:
     - gfortran
 before_install:
+  - julia -e '(VERSION >= v"0.7" && using Pkg); Pkg.rm("ThreePhasePowerModels"); Pkg.rm("ThreePhasePowerModels")'
   - julia -e '(VERSION >= v"0.7" && using Pkg); Pkg.update()'
 after_success:
   - julia -e '(VERSION >= v"0.7" && using Pkg); Pkg.add("Coverage"); cd(Pkg.dir("ThreePhasePowerModels")); using Coverage; Codecov.submit(process_folder())'
