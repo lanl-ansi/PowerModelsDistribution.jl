@@ -134,7 +134,7 @@ TESTLOG = getlogger(PowerModels)
         end
 
         for k in keys(tppm["gen"]["3"])
-            if !(k in ["gen_bus", "index", "name"])
+            if !(k in ["gen_bus", "index", "name", "source_id"])
                 if isa(tppm["gen"]["3"][k], PMs.MultiConductorValue)
                     @test all(isapprox.(tppm["gen"]["4"][k].values, tppm["gen"]["3"][k].values; atol=1e-12))
                 else
@@ -144,7 +144,7 @@ TESTLOG = getlogger(PowerModels)
         end
 
         for k in keys(tppm["branch"]["15"])
-            if !(k in ["f_bus", "t_bus", "index", "name", "linecode"])
+            if !(k in ["f_bus", "t_bus", "index", "name", "linecode", "source_id"])
                 if isa(tppm["branch"]["15"][k], PMs.MultiConductorValue)
                     @test all(isapprox.(tppm["branch"]["14"][k].values, tppm["branch"]["15"][k].values; atol=1e-12))
                     @test all(isapprox.(tppm["branch"]["12"][k].values, tppm["branch"]["13"][k].values; atol=1e-12))
@@ -175,11 +175,38 @@ TESTLOG = getlogger(PowerModels)
             for bat in values(tppm_storage["storage"])
                 for key in ["energy", "storage_bus", "energy_rating", "charge_rating", "discharge_rating",
                             "charge_efficiency", "discharge_efficiency", "thermal_rating", "qmin", "qmax",
-                            "r", "x", "standby_loss", "status"]
+                            "r", "x", "standby_loss", "status", "source_id"]
                     @test haskey(bat, key)
                     if key in ["x", "r", "qmin", "qmax", "thermal_rating"]
                         @test isa(bat[key], PowerModels.MultiConductorVector)
                     end
+                end
+            end
+
+            @test tppm_storage["storage"]["1"]["source_id"] == "storage.s1.1.2.3"
+        end
+
+        @testset "source_id check" begin
+            @test tppm["load"]["1"]["source_id"] == "load.ld1.1.2"
+
+            @test tppm["shunt"]["1"]["source_id"] == "capacitor.c1.1.2.3"
+            @test tppm["shunt"]["4"]["source_id"] == "reactor.reactor3.1.2.3"
+
+            @test tppm["branch"]["1"]["source_id"] == "line.l1.1.2.3"
+            @test tppm["branch"]["13"]["source_id"] == "transformer.t5.1.2.3"
+            @test tppm["branch"]["14"]["source_id"] == "reactor.reactor1.1.2.3"
+
+            @test tppm["gen"]["1"]["source_id"] == "vsource.sourcebus.1.2.3"
+            @test tppm["gen"]["2"]["source_id"] == "generator.g1.1.2.3"
+
+            source_id = TPPMs.parse_source_id(tppm["load"]["1"]["source_id"])
+            @test source_id["type"] == "load"
+            @test source_id["name"] == "ld1"
+            @test all(source_id["phases"] .== [true, true, false])
+
+            for component_type in ["load", "branch", "shunt", "gen", "storage", "pvsystem"]
+                for component in values(get(tppm, component_type, Dict()))
+                    @test haskey(component, "source_id")
                 end
             end
         end
