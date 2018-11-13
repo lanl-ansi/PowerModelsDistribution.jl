@@ -6,8 +6,8 @@ new object=Circuit.TEST2
 ! Test circuit properties
 ~ pu=1.1  r1=0.001  x1=0.01  r0=0.001  x0=0.01  basekv=69  angle=30
 
-Redirect test2_linecodes.dss
-Compile test2_loadshape.dss
+Redirect test2_Linecodes.dss
+Compile test2_Loadshape.dss
 
 ! Lines
 New Line.L1  bus1=b1 bus2=_b2 length=0.001 units=mi r1=0.001 r0=0.001 x1=0.01 x0=0.01 c1=0 c0=0 rg=0.01805 xg=0.155081 like=something
@@ -63,7 +63,7 @@ Load.s844.vminpu=.85
 Transformer.t1.wdg=2 Tap=(0.01000  15 * 1 +)   ! Tap
 Transformer.t4.wdg=2 Tap=(0.00500   5 * 1 +)    ! Tap
 
-Buscoords test2_buscoords.dss
+Buscoords test2_Buscoords.dss
 
 Solve
 

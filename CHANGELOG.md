@@ -9,6 +9,7 @@ ThreePhasePowerModels.jl Change Log
 - Add support for parsing OpenDSS Storage objects
 - Minor fix to branch parsing in matlab format
 - Minor fix to OpenDSS parser (parsing ~ lines with preceeding whitespace)
+- Fixed parsing OpenDSS files containing redirect/compile/buscoords on case-sensitive filesystems
 
 ### v0.1.2
 - Add support for network flow approximation formulation, NFAPowerModel
