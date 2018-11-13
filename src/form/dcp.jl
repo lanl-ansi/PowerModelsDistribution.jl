@@ -46,6 +46,16 @@ end
 
 
 
+function constraint_tp_storage_loss(pm::GenericPowerModel{T}, n::Int, i, bus, r, x, standby_loss) where T <: PMs.AbstractDCPForm
+    conductors = PMs.conductor_ids(pm)
+    ps = [var(pm, n, c, :ps, i) for c in conductors]
+    sc = var(pm, n, :sc, i)
+    sd = var(pm, n, :sd, i)
+
+    @NLconstraint(pm.model, sum(ps[c] for c in conductors) + (sd - sc) == standby_loss + sum( r[c]*ps[c]^2 for c in conductors) )
+end
+
+
 
 ### Network Flow Approximation ###
 
