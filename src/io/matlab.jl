@@ -38,7 +38,7 @@ tppm_bus_columns = [
 ]
 
 tppm_bus_name_columns = [
-    ("bus_name", String)
+    ("bus_name", AbstractString)
 ]
 
 tppm_load_columns = [
