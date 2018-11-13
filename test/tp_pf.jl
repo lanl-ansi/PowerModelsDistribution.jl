@@ -47,7 +47,7 @@
         @test sol["status"] == :LocalOptimal
 
         for (bus, va, vm) in zip(["1", "2", "3"], [0.0, deg2rad(-0.08), deg2rad(-0.17)], [0.9959, 0.986976, 0.976611])
-            @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, [TPPMs.wraptopi(2*pi/tppm["conductors"]*(1-c) + va) for c in 1:tppm["conductors"]]; atol=deg2rad(0.2)))
+            @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, [TPPMs.wraptopi(2*pi/tppm["conductors"]*(1-c) .+ va) for c in 1:tppm["conductors"]]; atol=deg2rad(0.2)))
             @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-3))
         end
 
@@ -64,7 +64,7 @@
         for (bus, va, vm) in zip(["1", "2", "3"],
                                 [0.0, deg2rad.([-0.22, -0.11, 0.12]), deg2rad.([-0.48, -0.24, 0.27])],
                                 [0.9959, [0.98094, 0.989365, 0.987043], [0.96355, 0.981767, 0.976786]])
-            @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs.wraptopi([2*pi/tppm["conductors"]*(1-c) for c in 1:tppm["conductors"]] + va); atol=deg2rad(0.2)))
+            @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs.wraptopi([2*pi/tppm["conductors"]*(1-c) for c in 1:tppm["conductors"]] .+ va); atol=deg2rad(0.2)))
             @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=2e-3))
         end
 

@@ -10,7 +10,6 @@ const PMs = PowerModels
 
 # Suppress warnings during testing.
 setlevel!(getlogger(PowerModels), "error")
-setlevel!(getlogger(ThreePhasePowerModels), "error")
 
 using Ipopt
 using Cbc

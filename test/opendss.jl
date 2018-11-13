@@ -228,7 +228,7 @@ TESTLOG = getlogger(PowerModels)
                 for (bus, va, vm) in zip(["1", "2", "3"],
                                          [0.0, deg2rad.([-0.22, -0.11, 0.12]), deg2rad.([-0.48, -0.24, 0.27])],
                                          [0.9959, [0.980937, 0.98936, 0.987039], [0.963546, 0.981757, 0.976779]])
-                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs.wraptopi.([2 * pi / tppm["conductors"] * (1 - c) for c in 1:tppm["conductors"]]) + va; atol=deg2rad(0.01)))
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs.wraptopi.([2 * pi / tppm["conductors"] * (1 - c) for c in 1:tppm["conductors"]]) .+ va; atol=deg2rad(0.01)))
                     @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-5))
                 end
 
