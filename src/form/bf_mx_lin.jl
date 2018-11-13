@@ -48,11 +48,11 @@ function variable_tp_branch_flow(pm::GenericPowerModel{T}; n_cond::Int=3, nw::In
         alpha = exp(-im*2*pi/3)
         Gamma = [1 alpha^2 alpha; alpha 1 alpha^2; alpha^2 alpha 1]
 
-        ps_mat = real(Gamma)*diagm(p_d) - imag(Gamma)*diagm(q_d)
-        qs_mat = imag(Gamma)*diagm(p_d) + real(Gamma)*diagm(q_d)
+        ps_mat = real(Gamma)*diagm(0 => p_d) - imag(Gamma)*diagm(0 => q_d)
+        qs_mat = imag(Gamma)*diagm(0 => p_d) + real(Gamma)*diagm(0 => q_d)
 
-        g_sh_fr = diagm(branch["g_fr"].values)
-        b_sh_fr = diagm(branch["b_fr"].values)
+        g_sh_fr = diagm(0 => branch["g_fr"].values)
+        b_sh_fr = diagm(0 => branch["b_fr"].values)
 
         w_fr_re = var(pm, nw, :W_re)[f_bus]
         w_fr_im = var(pm, nw, :W_im)[f_bus]
@@ -90,13 +90,13 @@ function variable_tp_branch_flow(pm::GenericPowerModel{T}; n_cond::Int=3, nw::In
         ps_mat = p_d
         qs_mat = q_d
 
-        g_sh_fr = diagm(branch["g_fr"].values)
-        b_sh_fr = diagm(branch["b_fr"].values)
+        g_sh_fr = diagm(0 => branch["g_fr"].values)
+        b_sh_fr = diagm(0 => branch["b_fr"].values)
 
         w_fr_re = var(pm, nw, :W_re)[f_bus]
 
-        p_mat = ps_mat + diag(( diagm(w_fr_re)*(g_sh_fr)'))
-        q_mat = qs_mat + diag((-diagm(w_fr_re)*(b_sh_fr)'))
+        p_mat = ps_mat + diag(( diagm(0 => w_fr_re)*(g_sh_fr)'))
+        q_mat = qs_mat + diag((-diagm(0 => w_fr_re)*(b_sh_fr)'))
 
 
         p_mat_dict[i] = p_mat

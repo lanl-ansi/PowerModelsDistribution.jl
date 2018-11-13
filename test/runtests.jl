@@ -3,6 +3,8 @@ const TPPMs = ThreePhasePowerModels
 
 using Memento
 
+using InfrastructureModels
+
 using PowerModels
 const PMs = PowerModels
 
@@ -16,6 +18,7 @@ using Juniper
 using SCS
 
 using Compat.Test
+using Compat.LinearAlgebra
 
 
 ipopt_solver = IpoptSolver(tol=1e-6, print_level=0)

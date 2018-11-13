@@ -23,13 +23,13 @@ function mat2ltrivec(m::Matrix{T}) where T
 end
 
 function make_hermitian_matrix_variable(diag, lowertrianglereal, lowertriangleimag)
-    matrixreal = diagm(  diag) + vec2ltri(lowertrianglereal) + vec2utri(lowertrianglereal)
-    matriximag = diagm(0*diag) + vec2ltri(lowertriangleimag) - vec2utri(lowertriangleimag)
+    matrixreal = diagm(0 =>   diag) + vec2ltri(lowertrianglereal) + vec2utri(lowertrianglereal)
+    matriximag = diagm(0 => 0*diag) + vec2ltri(lowertriangleimag) - vec2utri(lowertriangleimag)
     #TODO if not multiplied with 0, array is not a JuMP type
     return matrixreal, matriximag
 end
 
 function make_full_matrix_variable(diag, lowertriangle, uppertriangle)
-    matrix = diagm(diag) + vec2ltri(lowertriangle) + vec2utri(uppertriangle)
+    matrix = diagm(0 => diag) + vec2ltri(lowertriangle) + vec2utri(uppertriangle)
     return matrix
 end

@@ -10,6 +10,7 @@ using Compat.LinearAlgebra
 const PMs = PowerModels
 
 const LOGGER = getlogger(PowerModels)
+__init__() = Memento.register(LOGGER)
 
 include("core/ref.jl")
 include("core/multiconductor.jl")

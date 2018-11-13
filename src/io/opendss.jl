@@ -510,7 +510,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 transDict["f_bus"] = find_bus(f_bus, tppm_data)
                 transDict["t_bus"] = find_bus(t_bus, tppm_data)
 
-                transDict["br_r"] = PMs.MultiConductorMatrix(parse_matrix(diagm(fill(0.2, nconductors)), nodes, nconductors))
+                transDict["br_r"] = PMs.MultiConductorMatrix(parse_matrix(diagm(0 => fill(0.2, nconductors)), nodes, nconductors))
                 transDict["br_x"] = PMs.MultiConductorMatrix(parse_matrix(zeros(nconductors, nconductors), nodes, nconductors))
 
                 transDict["g_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
@@ -558,7 +558,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
 
                     transDict["name"] = "$(defaults["name"]) winding $m"
 
-                    transDict["br_r"] = PMs.MultiConductorMatrix(parse_matrix(diagm(fill(0.2, nconductors)), nodes, nconductors))
+                    transDict["br_r"] = PMs.MultiConductorMatrix(parse_matrix(diagm(0 => fill(0.2, nconductors)), nodes, nconductors))
                     transDict["br_x"] = PMs.MultiConductorMatrix(parse_matrix(zeros(nconductors, nconductors), nodes, nconductors))
 
                     transDict["g_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
@@ -614,7 +614,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 reactDict["f_bus"] = find_bus(f_bus, tppm_data)
                 reactDict["t_bus"] = find_bus(t_bus, tppm_data)
 
-                reactDict["br_r"] = PMs.MultiConductorMatrix(parse_matrix(diagm(fill(0.2, nconductors)), nodes, nconductors))
+                reactDict["br_r"] = PMs.MultiConductorMatrix(parse_matrix(diagm(0 => fill(0.2, nconductors)), nodes, nconductors))
                 reactDict["br_x"] = PMs.MultiConductorMatrix(parse_matrix(zeros(nconductors, nconductors), nodes, nconductors))
 
                 reactDict["g_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))

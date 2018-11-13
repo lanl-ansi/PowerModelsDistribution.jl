@@ -29,7 +29,7 @@ end
         @test isapprox(utrivec, [2, 3, 6])
         ltrivec = TPPMs.mat2ltrivec(A)
         @test isapprox(ltrivec, [4, 7, 8])
-        @test isapprox(A, diagm(diag(A)) + TPPMs.vec2utri(utrivec) + TPPMs.vec2ltri(ltrivec))
+        @test isapprox(A, diagm(0 => diag(A)) + TPPMs.vec2utri(utrivec) + TPPMs.vec2ltri(ltrivec))
     end
     @testset "5x5 matrix" begin
         A = [1 2 3 4 5; 6 7 8 9 10; 11 12 13 14 15; 16 17 18 19 20; 21 22 23 24 25]
@@ -37,7 +37,7 @@ end
         utrivec = TPPMs.mat2utrivec(A)
         @test isapprox(length(utrivec), (n^2-n)/2)
         ltrivec = TPPMs.mat2ltrivec(A)
-        @test isapprox(A, diagm(diag(A)) + TPPMs.vec2utri(utrivec) + TPPMs.vec2ltri(ltrivec))
+        @test isapprox(A, diagm(0 => diag(A)) + TPPMs.vec2utri(utrivec) + TPPMs.vec2ltri(ltrivec))
     end
     @testset "3x3 Hermitian matrix" begin
         A = [1 2 3; 4 5 6; 7 8.0 9]
