@@ -367,7 +367,8 @@ function parse_array(dtype::Type, data::AbstractString)
     end
 
     if isa_rpn(data)
-        if length(matchall(Regex(string("[",join(array_delimiters, '\\'),"]")),data)) == 2
+        matches = collect((m.match for m = eachmatch(Regex(string("[",join(array_delimiters, '\\'),"]")), data, overlap=false)))
+        if length(matches) == 2
             if dtype == String
                 return data
             else
