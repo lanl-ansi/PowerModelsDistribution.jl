@@ -84,10 +84,10 @@ TESTLOG = getlogger(PowerModels)
         Memento.Test.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Redirecting to file \"test2_linecodes.dss\"",
+        Memento.Test.@test_log(TESTLOG, "info", "Redirecting to file \"test2_Linecodes.dss\"",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Compiling file \"test2_loadshape.dss\"",
+        Memento.Test.@test_log(TESTLOG, "info", "Compiling file \"test2_Loadshape.dss\"",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
         setlevel!(TESTLOG, "error")
