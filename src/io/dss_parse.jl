@@ -17,13 +17,13 @@ array_delimiters = ['\"', '\'', '[', '{', '(', ']', '}', ')']
 function parse_rpn(expr::AbstractString, dtype::Type=Float64)
     clean_expr = strip(expr, array_delimiters)
 
-    if contains(clean_expr, "rollup") || contains(clean_expr, "rolldn") || contains(clean_expr, "swap")
+    if occursin("rollup", clean_expr) || occursin("rolldn", clean_expr) || occursin("swap", clean_expr)
         warn(LOGGER, "parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String")
         return expr
     end
 
     stack = []
-    split_expr = contains(clean_expr, ",") ? split(clean_expr, ',') : split(clean_expr)
+    split_expr = occursin(",", clean_expr) ? split(clean_expr, ',') : split(clean_expr)
 
     for item in split_expr
         try
@@ -344,7 +344,7 @@ end
 
 "checks if `data` is an opendss-style matrix string"
 function isa_matrix(data::AbstractString)::Bool
-    if contains(data, "|")
+    if occursin("|", data)
         return true
     else
         return false
@@ -360,7 +360,7 @@ Parses a OpenDSS style array string `data` into a one dimensional array of type
 quotes, and elements are separated by spaces.
 """
 function parse_array(dtype::Type, data::AbstractString)
-    if contains(data, ",")
+    if occursin(",", data)
         split_char = ','
     else
         split_char = ' '
@@ -424,8 +424,8 @@ end
 "checks if `data` is an opendss-style array string"
 function isa_array(data::AbstractString)::Bool
     clean_data = strip(data)
-    if !contains(clean_data, "|")
-        if contains(clean_data, ",")
+    if !occursin("|", clean_data)
+        if occursin(",", clean_data)
             return true
         elseif startswith(clean_data, "[") && endswith(clean_data, "]")
             return true
@@ -512,7 +512,7 @@ function parse_properties(properties::AbstractString)::Array
         sstr_out = split(str_out, "=")
         if length(sstr_out) == 2 && sstr_out[2] != ""
             endEquality = true
-        elseif !contains(str_out, "=") && (char == ' ' || n == nchars)
+        elseif !occursin("=", str_out) && (char == ' ' || n == nchars)
             endEquality = true
         else
             endEquality = false
@@ -617,7 +617,7 @@ function parse_component(component::AbstractString, properties::AbstractString, 
     for (n, property) in enumerate(propArray)
         if property == ""
             continue
-        elseif !contains(property, "=")
+        elseif !occursin("=", property)
             property = join([propNames[propIdx], property], '=')
             propIdx += 1
         else
@@ -939,12 +939,12 @@ function parse_busname(busname::AbstractString)
     nodes = Array{Bool}([0 0 0 0])
 
     for num in range(1, length=3)
-        if contains(elements, "$num")
+        if occursin("$num", elements)
             nodes[num] = true
         end
     end
 
-    if contains(elements, "0") || sum(nodes[1:3]) == 1
+    if occursin("0", elements) || sum(nodes[1:3]) == 1
         nodes[4] = true
     end
 
