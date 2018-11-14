@@ -1,6 +1,21 @@
 # OpenDSS parser
 
 
+"Structure representing OpenDSS `dss_source_id` giving the type of the component `dss_type`, its name `dss_name`, and the active phases `active_phases`"
+struct DSSSourceId
+    dss_type::AbstractString
+    dss_name::AbstractString
+    active_phases::Set{Int}
+end
+
+
+"Parses a component's OpenDSS source information into the `dss_source_id` struct"
+function parse_dss_source_id(component::Dict)::DSSSourceId
+    dss_type, dss_name = split(component["source_id"], '.')
+    return DSSSourceId(dss_type, dss_name, Set(component["active_phases"]))
+end
+
+
 "returns the linecode with name `id`"
 function get_linecode(dss_data::Dict, id::AbstractString)
     if haskey(dss_data, "linecode")
@@ -32,6 +47,10 @@ function create_starbus(tppm_data::Dict, transformer::Dict)::Dict
     starbus["va"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
     starbus["bus_type"] = 1
     starbus["index"] = starbus_id
+
+    nodes = .+([parse_busname(transformer["buses"][n])[2] for n in length(transformer["buses"])]...)
+    starbus["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+    starbus["source_id"] = "transformer.$(transformer["name"])"
 
     return starbus
 end
@@ -186,6 +205,9 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             loadDict["qd"] = PMs.MultiConductorVector(parse_array(defaults["kvar"] / 1e3, nodes, nconductors))
             loadDict["status"] = convert(Int, defaults["enabled"])
 
+            loadDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+            loadDict["source_id"] = "load.$(defaults["name"])"
+
             loadDict["index"] = length(tppm_data["load"]) + 1
 
             used = ["phases", "bus1", "name"]
@@ -230,6 +252,9 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             shuntDict["status"] = convert(Int, defaults["enabled"])
             shuntDict["index"] = length(tppm_data["shunt"]) + 1
 
+            shuntDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+            shuntDict["source_id"] = "capacitor.$(defaults["name"])"
+
             used = ["bus1", "phases", "name"]
             PMs.import_remaining!(shuntDict, defaults, import_all; exclude=used)
 
@@ -260,8 +285,10 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 shuntDict["gs"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))  # TODO:
                 shuntDict["bs"] = PMs.MultiConductorVector(parse_array(Gcap, nodes, nconductors))
                 shuntDict["status"] = convert(Int, defaults["enabled"])
-
                 shuntDict["index"] = length(tppm_data["shunt"]) + 1
+
+                shuntDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+                shuntDict["source_id"] = "reactor.$(defaults["name"])"
 
                 used = ["bus1", "phases", "name"]
                 PMs.import_remaining!(shuntDict, defaults, import_all; exclude=used)
@@ -313,6 +340,9 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     genDict["cost"] = [0.0, 1.0, 0.0]
 
     genDict["index"] = length(tppm_data["gen"]) + 1
+
+    genDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+    genDict["source_id"] = "vsource.$(defaults["name"])"
 
     used = ["name", "phases", "bus1"]
     PMs.import_remaining!(genDict, defaults, import_all; exclude=used)
@@ -376,6 +406,9 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             genDict["cost"] = [0.0, 1.0, 0.0]
 
             genDict["index"] = length(tppm_data["gen"]) + 1
+
+            genDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+            genDict["source_id"] = "generator.$(defaults["name"])"
 
             used = ["name", "phases", "bus1"]
             PMs.import_remaining!(genDict, defaults, import_all; exclude=used)
@@ -469,6 +502,10 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict["index"] = length(tppm_data["branch"]) + 1
 
+            nodes = .+([parse_busname(defaults[n])[2] for n in ["bus1", "bus2"]]...)
+            branchDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+            branchDict["source_id"] = "line.$(defaults["name"])"
+
             used = ["name", "bus1", "bus2", "rmatrix", "xmatrix"]
             PMs.import_remaining!(branchDict, defaults, import_all; exclude=used)
 
@@ -536,6 +573,10 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
 
                 transDict["index"] = length(tppm_data["branch"]) + 1
 
+                nodes = .+([parse_busname(defaults["buses"][n])[2] for n in length(defaults["buses"])]...)
+                transDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+                transDict["source_id"] = "transformer.$(defaults["name"])"
+
                 used = []
                 PMs.import_remaining!(transDict, defaults, import_all; exclude=used)
 
@@ -583,6 +624,10 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                     transDict["switch"] = false
 
                     transDict["index"] = length(tppm_data["branch"]) + 1
+
+                    nodes = .+([parse_busname(defaults["buses"][n])[2] for n in length(defaults["buses"])]...)
+                    transDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+                    transDict["source_id"] = "transformer.$(defaults["name"])"
 
                     used = []
                     PMs.import_remaining!(transDict, defaults, import_all; exclude=used)
@@ -638,6 +683,10 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
 
                 reactDict["index"] = length(tppm_data["branch"]) + 1
 
+                nodes = .+([parse_busname(defaults[n])[2] for n in ["bus1", "bus2"]]...)
+                reactDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+                reactDict["source_id"] = "reactor.$(defaults["name"])"
+
                 used = []
                 PMs.import_remaining!(reactDict, defaults, import_all; exclude=used)
 
@@ -674,6 +723,9 @@ function dss2tppm_pvsystem!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             pvsystemDict["status"] = convert(Int, defaults["enabled"])
 
             pvsystemDict["index"] = length(tppm_data["pvsystem"]) + 1
+
+            pvsystemDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+            pvsystemDict["source_id"] = "pvsystem.$(defaults["name"])"
 
             used = ["phases", "bus1", "name"]
             PMs.import_remaining!(pvsystemDict, defaults, import_all; exclude=used)
@@ -715,6 +767,9 @@ function dss2tppm_storage!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             storageDict["status"] = convert(Int, defaults["enabled"])
 
             storageDict["index"] = length(tppm_data["storage"]) + 1
+
+            storageDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+            storageDict["source_id"] = "storage.$(defaults["name"])"
 
             used = ["phases", "bus1", "name"]
             PMs.import_remaining!(storageDict, defaults, import_all; exclude=used)
