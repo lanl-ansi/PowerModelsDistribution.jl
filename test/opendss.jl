@@ -299,4 +299,15 @@ TESTLOG = getlogger(PowerModels)
         @test sol["status"] == :LocalOptimal
         @test isapprox(sol["objective"], 0.0182769; atol = 1e-4)
     end
+
+    @testset "3-bus balanced pv" begin
+        tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced_pv.dss")
+        sol = TPPMs.run_tp_opf(tppm, PMs.ACPPowerModel, ipopt_solver)
+
+        @test sol["status"] == :LocalOptimal
+        @test sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]) < 0.0
+        @test sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]) < 0.0
+        @test isapprox(sum(sol["solution"]["gen"]["2"]["pg"] * sol["solution"]["baseMVA"]), 0.018345; atol=1e-4)
+        @test isapprox(sum(sol["solution"]["gen"]["2"]["qg"] * sol["solution"]["baseMVA"]), 0.00919404; atol=1e-4)
+    end
 end

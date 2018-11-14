@@ -1,0 +1,38 @@
+Clear
+New Circuit.3Bus_example
+!  define a really stiff source
+~ basekv=0.4   pu=0.9959  MVAsc1=1e6  MVAsc3=1e6
+
+!Define Linecodes
+
+
+New linecode.556MCM nphases=3 basefreq=50  ! ohms per 5 mile
+~ rmatrix = ( 0.1000 | 0.0400    0.1000 |  0.0400    0.0400    0.1000)
+~ xmatrix = ( 0.0583 |  0.0233    0.0583 | 0.0233    0.0233    0.0583)
+~ cmatrix = (50.92958178940651  | -0  50.92958178940651 | -0 -0 50.92958178940651  ) ! small capacitance
+
+
+New linecode.4/0QUAD nphases=3 basefreq=50  ! ohms per 100ft
+~ rmatrix = ( 0.1167 | 0.0467    0.1167 | 0.0467    0.0467    0.1167)
+~ xmatrix = (0.0667  |  0.0267    0.0667  |  0.0267    0.0267    0.0667 )
+~ cmatrix = (50.92958178940651  | -0  50.92958178940651 | -0 -0 50.92958178940651  )  ! small capacitance
+
+!Define lines
+
+New Line.OHLine  bus1=sourcebus.1.2.3.0  Primary.1.2.3.0  linecode = 556MCM   length=1  ! 5 mile line
+New Line.Quad    Bus1=Primary.1.2.3.0  loadbus.1.2.3.0  linecode = 4/0QUAD  length=1   ! 100 ft
+
+!Loads - single phase
+
+New Load.L1 phases=1  loadbus.1.0   ( 0.4 3 sqrt / )   kW=6   kvar=3  model=1
+New Load.L2 phases=1  loadbus.2.0   ( 0.4 3 sqrt / )   kW=6   kvar=3  model=1
+New Load.L3 phases=1  loadbus.3.0   ( 0.4 3 sqrt / )   kW=6   kvar=3  model=1
+
+New PVSystem.PV1 phases=3 bus1=primary.1.2.3 kv=0.4 kva=25
+
+Set voltagebases=[0.4]
+Set tolerance=0.000001
+set defaultbasefreq=50
+Calcvoltagebases
+
+Solve
