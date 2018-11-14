@@ -134,7 +134,7 @@ TESTLOG = getlogger(PowerModels)
         end
 
         for k in keys(tppm["gen"]["3"])
-            if !(k in ["gen_bus", "index", "name", "source_type", "source_name", "active_phases"])
+            if !(k in ["gen_bus", "index", "name", "source_id", "active_phases"])
                 if isa(tppm["gen"]["3"][k], PMs.MultiConductorValue)
                     @test all(isapprox.(tppm["gen"]["4"][k].values, tppm["gen"]["3"][k].values; atol=1e-12))
                 else
@@ -144,7 +144,7 @@ TESTLOG = getlogger(PowerModels)
         end
 
         for k in keys(tppm["branch"]["15"])
-            if !(k in ["f_bus", "t_bus", "index", "name", "linecode", "source_type", "source_name", "active_phases"])
+            if !(k in ["f_bus", "t_bus", "index", "name", "linecode", "source_id", "active_phases"])
                 if isa(tppm["branch"]["15"][k], PMs.MultiConductorValue)
                     @test all(isapprox.(tppm["branch"]["14"][k].values, tppm["branch"]["15"][k].values; atol=1e-12))
                     @test all(isapprox.(tppm["branch"]["12"][k].values, tppm["branch"]["13"][k].values; atol=1e-12))
@@ -175,7 +175,7 @@ TESTLOG = getlogger(PowerModels)
             for bat in values(tppm_storage["storage"])
                 for key in ["energy", "storage_bus", "energy_rating", "charge_rating", "discharge_rating",
                             "charge_efficiency", "discharge_efficiency", "thermal_rating", "qmin", "qmax",
-                            "r", "x", "standby_loss", "status", "source_type", "source_name", "active_phases"]
+                            "r", "x", "standby_loss", "status", "source_id", "active_phases"]
                     @test haskey(bat, key)
                     if key in ["x", "r", "qmin", "qmax", "thermal_rating"]
                         @test isa(bat[key], PowerModels.MultiConductorVector)
@@ -183,19 +183,19 @@ TESTLOG = getlogger(PowerModels)
                 end
             end
 
-            @test tppm_storage["storage"]["1"]["source_type"] == "storage" && tppm_storage["storage"]["1"]["source_name"] == "s1" && sum(tppm_storage["storage"]["1"]["active_phases"]) == 3
+            @test tppm_storage["storage"]["1"]["source_id"] == "storage.s1" && sum(tppm_storage["storage"]["1"]["active_phases"]) == 3
         end
 
         @testset "source_id check" begin
-            @test tppm["shunt"]["1"]["source_type"] == "capacitor" && tppm["shunt"]["1"]["source_name"] == "c1" && sum(tppm["shunt"]["1"]["active_phases"]) == 3
-            @test tppm["shunt"]["4"]["source_type"] == "reactor" && tppm["shunt"]["4"]["source_name"] == "reactor3" && sum(tppm["shunt"]["4"]["active_phases"]) == 3
+            @test tppm["shunt"]["1"]["source_id"] == "capacitor.c1" && sum(tppm["shunt"]["1"]["active_phases"]) == 3
+            @test tppm["shunt"]["4"]["source_id"] == "reactor.reactor3" && sum(tppm["shunt"]["4"]["active_phases"]) == 3
 
-            @test tppm["branch"]["1"]["source_type"] == "line" && tppm["branch"]["1"]["source_name"] == "l1" && sum(tppm["branch"]["1"]["active_phases"]) == 3
-            @test tppm["branch"]["13"]["source_type"] == "transformer" && tppm["branch"]["13"]["source_name"] == "t5" && sum(tppm["branch"]["13"]["active_phases"]) == 3
-            @test tppm["branch"]["14"]["source_type"] == "reactor" && tppm["branch"]["14"]["source_name"] == "reactor1" && sum(tppm["branch"]["14"]["active_phases"]) == 3
+            @test tppm["branch"]["1"]["source_id"] == "line.l1" && sum(tppm["branch"]["1"]["active_phases"]) == 3
+            @test tppm["branch"]["13"]["source_id"] == "transformer.t5" && sum(tppm["branch"]["13"]["active_phases"]) == 3
+            @test tppm["branch"]["14"]["source_id"] == "reactor.reactor1" && sum(tppm["branch"]["14"]["active_phases"]) == 3
 
-            @test tppm["gen"]["1"]["source_type"] == "vsource" && tppm["gen"]["1"]["source_name"] == "sourcebus" && sum(tppm["gen"]["1"]["active_phases"]) == 3
-            @test tppm["gen"]["2"]["source_type"] == "generator" &&tppm["gen"]["2"]["source_name"] == "g1" && sum(tppm["gen"]["2"]["active_phases"]) == 3
+            @test tppm["gen"]["1"]["source_id"] == "vsource.sourcebus" && sum(tppm["gen"]["1"]["active_phases"]) == 3
+            @test tppm["gen"]["2"]["source_id"] == "generator.g1" && sum(tppm["gen"]["2"]["active_phases"]) == 3
 
             source_id = TPPMs.parse_dss_source_id(tppm["load"]["1"])
             @test source_id.dss_type == "load"
@@ -204,8 +204,7 @@ TESTLOG = getlogger(PowerModels)
 
             for component_type in ["load", "branch", "shunt", "gen", "storage", "pvsystem"]
                 for component in values(get(tppm, component_type, Dict()))
-                    @test haskey(component, "source_type")
-                    @test haskey(component, "source_name")
+                    @test haskey(component, "source_id")
                     @test haskey(component, "active_phases")
                 end
             end
