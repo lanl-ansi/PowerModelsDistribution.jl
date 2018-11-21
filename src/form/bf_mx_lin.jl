@@ -47,9 +47,12 @@ function variable_tp_branch_flow(pm::GenericPowerModel{T}; n_cond::Int=3, nw::In
 
         alpha = exp(-im*2*pi/3)
         Gamma = [1 alpha^2 alpha; alpha 1 alpha^2; alpha^2 alpha 1]
+        p_d_mx = [p_d[1] 0 0; 0 p_d[2] 0; 0 0 p_d[3]]
+        q_d_mx = [q_d[1] 0 0; 0 q_d[2] 0; 0 0 q_d[3]]
 
-        ps_mat = real(Gamma)*diagm(p_d) - imag(Gamma)*diagm(q_d)
-        qs_mat = imag(Gamma)*diagm(p_d) + real(Gamma)*diagm(q_d)
+
+        ps_mat = real(Gamma)*p_d_mx - imag(Gamma)*q_d_mx
+        qs_mat = imag(Gamma)*p_d_mx + real(Gamma)*q_d_mx
 
         g_sh_fr = diagm(0 => branch["g_fr"].values)
         b_sh_fr = diagm(0 => branch["b_fr"].values)
@@ -94,9 +97,10 @@ function variable_tp_branch_flow(pm::GenericPowerModel{T}; n_cond::Int=3, nw::In
         b_sh_fr = diagm(0 => branch["b_fr"].values)
 
         w_fr_re = var(pm, nw, :W_re)[f_bus]
+        w_fr_re_mx = [w_fr_re[1] 0 0; 0 w_fr_re[2] 0; 0 0 w_fr_re[3]]
 
-        p_mat = ps_mat + diag(( diagm(w_fr_re)*(g_sh_fr)'))
-        q_mat = qs_mat + diag((-diagm(w_fr_re)*(b_sh_fr)'))
+        p_mat = ps_mat + diag(( w_fr_re_mx*(g_sh_fr)'))
+        q_mat = qs_mat + diag((-w_fr_re_mx*(b_sh_fr)'))
 
 
         p_mat_dict[i] = p_mat
@@ -195,6 +199,6 @@ function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, i) where T <:
     nconductors = length(PMs.conductor_ids(pm))
 
     w_re = var(pm, n, :W_re)[i]
-    # balanced fasor
+    # balanced three-phase phasor
     @constraint(pm.model, w_re[2:3]   .== w_re[1])
 end
