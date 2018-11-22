@@ -16,9 +16,9 @@ end
 
 const PMs = PowerModels
 
-const LOGGER = getlogger(PowerModels)
-
-__init__() = Memento.register(LOGGER)
+function __init__()
+    global LOGGER = getlogger(PowerModels)
+end
 
 include("core/ref.jl")
 include("core/multiconductor.jl")
