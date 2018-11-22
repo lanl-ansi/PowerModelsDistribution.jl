@@ -60,8 +60,8 @@ function createLinecode(name::AbstractString; kwargs...)
     Ys = (complex(0.0, 2 * pi * basefreq * c1) * 2.0 + complex(0.0, 2 * pi * basefreq * c0)) / 3.0
     Ym = (complex(0.0, 2 * pi * basefreq * c0) - complex(0.0, 2 * pi * basefreq * c1)) / 3.0
 
-    Z = zeros(ComplexF32, phases, phases)
-    Yc = zeros(ComplexF32, phases, phases)
+    Z = zeros(Complex{Float16}, phases, phases)
+    Yc = zeros(Complex{Float16}, phases, phases)
     for i in 1:phases
         Z[i,i] = Zs
         Yc[i,i] = Ys
@@ -154,8 +154,8 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
     Ys = (complex(0.0, 2 * pi * basefreq * c1) * 2.0 + complex(0.0, 2 * pi * basefreq * c0)) / 3.0
     Ym = (complex(0.0, 2 * pi * basefreq * c0) - complex(0.0, 2 * pi * basefreq * c1)) / 3.0
 
-    Z = zeros(ComplexF32, phases, phases)
-    Yc = zeros(ComplexF32, phases, phases)
+    Z = zeros(Complex{Float16}, phases, phases)
+    Yc = zeros(Complex{Float16}, phases, phases)
     for i in 1:phases
         Z[i,i] = Zs
         Yc[i,i] = Ys
@@ -511,7 +511,7 @@ function createReactor(bus1, name::AbstractString, bus2=""; kwargs...)
         z2 = complex(get(kwargs, :z2, z1)...)
         z0 = complex(get(kwargs, :z0, z1)...)
 
-        Z = zeros(ComplexF32, phases, phases)
+        Z = zeros(Complex{Float16}, phases, phases)
 
         for i in 1:phases
             if phases == 1
@@ -710,7 +710,7 @@ function createVSource(bus1, name::AbstractString, bus2=0; kwargs...)
         xm = (x0 - x1) / 3.0
     end
 
-    Z = zeros(ComplexF32, phases, phases)
+    Z = zeros(Complex{Float16}, phases, phases)
     if r1 == r2 && x1 == x2
         Zs = complex(rs, xs)
         Zm = complex(rm, xm)

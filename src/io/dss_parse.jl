@@ -939,7 +939,7 @@ function parse_busname(busname::AbstractString)
 
     nodes = Array{Bool}([0 0 0 0])
 
-    for num in range(1, length=3)
+    for num in 1:3
         if occursin("$num", elements)
             nodes[num] = true
         end

@@ -119,8 +119,8 @@ TESTLOG = getlogger(PowerModels)
             @test all(isapprox.(tppm["branch"]["$i"]["b_fr"].values, (3.4 * 2.0 + 1.6) / 3.0 * (tppm["basekv"]^2 / tppm["baseMVA"] * 2.0 * pi * 60.0 / 1e9) / 2.0; atol=1e-6))
         end
 
-        @test all(isapprox.(tppm["branch"]["1"]["br_r"].values, diagm(0 => fill(6.3012e-8, 3)); atol=1e-12))
-        @test all(isapprox.(tppm["branch"]["1"]["br_x"].values, diagm(0 => fill(6.3012e-7, 3)); atol=1e-12))
+        @test all(isapprox.(tppm["branch"]["1"]["br_r"].values, diagm(0 => fill(6.30375e-8, 3)); atol=1e-12))
+        @test all(isapprox.(tppm["branch"]["1"]["br_x"].values, diagm(0 => fill(6.30254e-7, 3)); atol=1e-12))
 
         for k in ["qd", "pd"]
             @test all(isapprox.(tppm["load"]["4"][k].values, tppm["load"]["2"][k].values; atol=1e-12))

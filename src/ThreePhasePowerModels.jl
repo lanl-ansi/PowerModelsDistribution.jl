@@ -7,6 +7,13 @@ using Memento
 
 using Compat.LinearAlgebra
 
+if VERSION < v"0.7.0-"
+    import Compat: occursin
+    import Compat: findall
+    import Compat: undef
+    import Compat: Nothing
+end
+
 const PMs = PowerModels
 
 const LOGGER = getlogger(PowerModels)
