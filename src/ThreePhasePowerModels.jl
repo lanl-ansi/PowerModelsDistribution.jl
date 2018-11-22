@@ -11,8 +11,7 @@ const PMs = PowerModels
 
 const LOGGER = getlogger(PowerModels)
 
-# this can be used to suppress test issues
-#__init__() = Memento.register(LOGGER)
+__init__() = Memento.register(LOGGER)
 
 include("core/ref.jl")
 include("core/multiconductor.jl")
