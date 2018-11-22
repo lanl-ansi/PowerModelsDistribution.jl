@@ -20,6 +20,13 @@ using SCS
 using Compat.Test
 using Compat.LinearAlgebra
 
+if VERSION < v"0.7.0-"
+    pms_path = Pkg.dir("PowerModels")
+end
+
+if VERSION > v"0.7.0-"
+    pms_path = joinpath(dirname(pathof(PowerModels)), "..")
+end
 
 ipopt_solver = IpoptSolver(tol=1e-6, print_level=0)
 cbc_solver = CbcSolver()
