@@ -31,6 +31,7 @@ TESTLOG = getlogger(PowerModels)
         @test isa(data["shunt"]["1"]["bs"], PMs.MultiConductorVector{Float64})
     end
 
+    #=
     @testset "version warning" begin
         setlevel!(TESTLOG, "warn")
 
@@ -42,4 +43,5 @@ TESTLOG = getlogger(PowerModels)
 
         setlevel!(TESTLOG, "error")
     end
+    =#
 end
