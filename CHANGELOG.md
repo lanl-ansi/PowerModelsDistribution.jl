@@ -2,8 +2,15 @@ ThreePhasePowerModels.jl Change Log
 ===================================
 
 ### Staged
+- nothing
+
+### v0.1.3
+- Add opf with multi-phase storage model
+- Add support for parsing OpenDSS Storage objects
 - Minor fix to branch parsing in matlab format
 - Minor fix to OpenDSS parser (parsing ~ lines with preceeding whitespace)
+- Fixed parsing OpenDSS files containing redirect/compile/buscoords on case-sensitive filesystems
+- Add 'source_id' field to components parsed from OpenDSS, to help determine origin and active phases
 
 ### v0.1.2
 - Add support for network flow approximation formulation, NFAPowerModel

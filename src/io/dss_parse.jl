@@ -196,12 +196,12 @@ function get_prop_name(ctype::AbstractString)::Array
                   "d", "purs", "puxs", "purr", "puxr", "puxm", "slip",
                   "maxslip", "slipoption", "spectrum", "enabled"]
 
-    storage = ["%charge", "%discharge", "%effcharge", "%idlingkvar", "idlingkw",
-               "%r", "%reserve", "%stored", "%x", "basefreq", "bus1", "chargetrigger",
-               "class", "conn", "daily", "yearly", "debugtrace", "dischargetrigger",
-               "dispmode", "duty", "dynadata", "dynadll", "enabled", "kv", "kva",
-               "kvar", "kw", "kwhrated", "kwhstored", "kwrated", "like", "model",
-               "pf", "phases", "spectrum", "state", "timechargetrig", "userdata",
+    storage = ["phases", "bus1", "%charge", "%discharge", "%effcharge", "%idlingkvar",
+               "idlingkw", "%r", "%reserve", "%stored", "%x", "basefreq",
+               "chargetrigger", "class", "conn", "daily", "yearly", "debugtrace",
+               "dischargetrigger", "dispmode", "duty", "dynadata", "dynadll", "enabled",
+               "kv", "kva", "kvar", "kw", "kwhrated", "kwhstored", "kwrated", "like",
+               "model", "pf", "spectrum", "state", "timechargetrig", "userdata",
                "usermodel", "vmaxpu", "vminpu", "yearly"]
 
     capcontrol = ["element", "capacitor", "type", "ctphase", "ctratio", "deadtime",
@@ -756,10 +756,10 @@ function parse_dss(io::IOStream)::Dict
     for (n, line) in enumerate(stripped_lines)
         real_line_num = findall(lines .== line)[1]
         debug(LOGGER, "LINE $real_line_num: $line")
-        line = lowercase(strip_comments(line))
+        line = strip_comments(line)
 
         if startswith(strip(line), '~')
-            curCompDict = parse_component(curCtypeName, strip(strip(line),  '~'), curCompDict)
+            curCompDict = parse_component(curCtypeName, strip(strip(lowercase(line)),  '~'), curCompDict)
 
             if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')
                 continue
@@ -769,7 +769,7 @@ function parse_dss(io::IOStream)::Dict
         else
             curCompDict = Dict{String,Any}()
             line_elements = split(line, r"\s+"; limit=3)
-            cmd = line_elements[1]
+            cmd = lowercase(line_elements[1])
 
             if cmd == "clear"
                 info(LOGGER, "`dss_data` has been reset with the \"clear\" command.")
@@ -793,9 +793,9 @@ function parse_dss(io::IOStream)::Dict
             elseif cmd == "set"
                 debug(LOGGER, "set command: $line_elements")
                 if length(line_elements) == 2
-                    property, value = split(line_elements[2], '='; limit=2)
+                    property, value = split(lowercase(line_elements[2]), '='; limit=2)
                 else
-                    property, value = line_elements[2], strip(strip(line_elements[3], '='))
+                    property, value = lowercase(line_elements[2]), strip(strip(lowercase(line_elements[3]), '='))
                 end
 
                 if !haskey(dss_data, "options")
@@ -812,10 +812,10 @@ function parse_dss(io::IOStream)::Dict
                 dss_data["buscoords"] = parse_buscoords(fullpath)
 
             elseif cmd == "new"
-                curCtypeName, curCompDict = parse_line(line_elements)
+                curCtypeName, curCompDict = parse_line([lowercase(line_element) for line_element in line_elements])
             else
                 try
-                    cType, cName, props = split(line, '.'; limit=3)
+                    cType, cName, props = split(lowercase(line), '.'; limit=3)
                     propsOut = parse_properties(props)
                     for prop in propsOut
                         propName, propValue = split(prop, '=')

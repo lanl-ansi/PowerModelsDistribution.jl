@@ -52,5 +52,6 @@ include("prob/tp_ots.jl")
 include("prob/tp_pf.jl")
 include("prob/tp_pf_bf.jl")
 include("prob/tp_debug.jl")
+include("prob/tp_test.jl")
 
 end

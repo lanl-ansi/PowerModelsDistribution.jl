@@ -82,10 +82,10 @@ TESTLOG = getlogger(PowerModels)
         Memento.Test.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Redirecting to file \"test2_linecodes.dss\"",
+        Memento.Test.@test_log(TESTLOG, "info", "Redirecting to file \"test2_Linecodes.dss\"",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Compiling file \"test2_loadshape.dss\"",
+        Memento.Test.@test_log(TESTLOG, "info", "Compiling file \"test2_Loadshape.dss\"",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
         setlevel!(TESTLOG, "error")
@@ -94,7 +94,8 @@ TESTLOG = getlogger(PowerModels)
         tppm = TPPMs.parse_file("../test/data/opendss/test2_master.dss")
 
         @test tppm["name"] == "test2"
-        @test length(tppm) == 17
+
+        @test length(tppm) == 18
         @test length(dss) == 12
 
         for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline"], [11, 4, 5, 15, 4, 0])
@@ -132,7 +133,7 @@ TESTLOG = getlogger(PowerModels)
         end
 
         for k in keys(tppm["gen"]["3"])
-            if !(k in ["gen_bus", "index", "name"])
+            if !(k in ["gen_bus", "index", "name", "source_id", "active_phases"])
                 if isa(tppm["gen"]["3"][k], PMs.MultiConductorValue)
                     @test all(isapprox.(tppm["gen"]["4"][k].values, tppm["gen"]["3"][k].values; atol=1e-12))
                 else
@@ -142,7 +143,7 @@ TESTLOG = getlogger(PowerModels)
         end
 
         for k in keys(tppm["branch"]["15"])
-            if !(k in ["f_bus", "t_bus", "index", "name", "linecode"])
+            if !(k in ["f_bus", "t_bus", "index", "name", "linecode", "source_id", "active_phases"])
                 if isa(tppm["branch"]["15"][k], PMs.MultiConductorValue)
                     @test all(isapprox.(tppm["branch"]["14"][k].values, tppm["branch"]["15"][k].values; atol=1e-12))
                     @test all(isapprox.(tppm["branch"]["12"][k].values, tppm["branch"]["13"][k].values; atol=1e-12))
@@ -166,6 +167,46 @@ TESTLOG = getlogger(PowerModels)
         @testset "whitespace before ~" begin
             dss_data = TPPMs.parse_dss("../test/data/opendss/test_transformer_formatting.dss")
             @test dss_data["transformer"][1]["phases"] == "3"
+        end
+
+        @testset "storage parse" begin
+            tppm_storage = TPPMs.parse_file("../test/data/opendss/case3_balanced_battery.dss")
+            for bat in values(tppm_storage["storage"])
+                for key in ["energy", "storage_bus", "energy_rating", "charge_rating", "discharge_rating",
+                            "charge_efficiency", "discharge_efficiency", "thermal_rating", "qmin", "qmax",
+                            "r", "x", "standby_loss", "status", "source_id", "active_phases"]
+                    @test haskey(bat, key)
+                    if key in ["x", "r", "qmin", "qmax", "thermal_rating"]
+                        @test isa(bat[key], PowerModels.MultiConductorVector)
+                    end
+                end
+            end
+
+            @test tppm_storage["storage"]["1"]["source_id"] == "storage.s1" && length(tppm_storage["storage"]["1"]["active_phases"]) == 3
+        end
+
+        @testset "source_id check" begin
+            @test tppm["shunt"]["1"]["source_id"] == "capacitor.c1" && length(tppm["shunt"]["1"]["active_phases"]) == 3
+            @test tppm["shunt"]["4"]["source_id"] == "reactor.reactor3" && length(tppm["shunt"]["4"]["active_phases"]) == 3
+
+            @test tppm["branch"]["1"]["source_id"] == "line.l1" && length(tppm["branch"]["1"]["active_phases"]) == 3
+            @test tppm["branch"]["13"]["source_id"] == "transformer.t5" && length(tppm["branch"]["13"]["active_phases"]) == 3
+            @test tppm["branch"]["14"]["source_id"] == "reactor.reactor1" && length(tppm["branch"]["14"]["active_phases"]) == 3
+
+            @test tppm["gen"]["1"]["source_id"] == "vsource.sourcebus" && length(tppm["gen"]["1"]["active_phases"]) == 3
+            @test tppm["gen"]["2"]["source_id"] == "generator.g1" && length(tppm["gen"]["2"]["active_phases"]) == 3
+
+            source_id = TPPMs.parse_dss_source_id(tppm["load"]["1"])
+            @test source_id.dss_type == "load"
+            @test source_id.dss_name == "ld1"
+            @test all([n in source_id.active_phases for n in 1:2])
+
+            for component_type in ["load", "branch", "shunt", "gen", "storage", "pvsystem"]
+                for component in values(get(tppm, component_type, Dict()))
+                    @test haskey(component, "source_id")
+                    @test haskey(component, "active_phases")
+                end
+            end
         end
     end
 
