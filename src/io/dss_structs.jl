@@ -60,8 +60,8 @@ function createLinecode(name::AbstractString; kwargs...)
     Ys = (complex(0.0, 2 * pi * basefreq * c1) * 2.0 + complex(0.0, 2 * pi * basefreq * c0)) / 3.0
     Ym = (complex(0.0, 2 * pi * basefreq * c0) - complex(0.0, 2 * pi * basefreq * c1)) / 3.0
 
-    Z = zeros(Complex64, phases, phases)
-    Yc = zeros(Complex64, phases, phases)
+    Z = zeros(Complex{Float16}, phases, phases)
+    Yc = zeros(Complex{Float16}, phases, phases)
     for i in 1:phases
         Z[i,i] = Zs
         Yc[i,i] = Ys
@@ -154,8 +154,8 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
     Ys = (complex(0.0, 2 * pi * basefreq * c1) * 2.0 + complex(0.0, 2 * pi * basefreq * c0)) / 3.0
     Ym = (complex(0.0, 2 * pi * basefreq * c0) - complex(0.0, 2 * pi * basefreq * c1)) / 3.0
 
-    Z = zeros(Complex64, phases, phases)
-    Yc = zeros(Complex64, phases, phases)
+    Z = zeros(Complex{Float16}, phases, phases)
+    Yc = zeros(Complex{Float16}, phases, phases)
     for i in 1:phases
         Z[i,i] = Zs
         Yc[i,i] = Ys
@@ -494,8 +494,8 @@ function createReactor(bus1, name::AbstractString, bus2=""; kwargs...)
             lmh = l * 1e3
         end
 
-        rmatrix = diagm(fill(r, phases))
-        xmatrix = diagm(fill(x, phases))
+        rmatrix = diagm(0 => fill(r, phases))
+        xmatrix = diagm(0 => fill(x, phases))
     elseif haskey(kwargs, :rmatrix) && haskey(kwargs, :xmatrix)
         rmatrix = kwargs[:rmatrix]
         xmatrix = kwargs[:xmatrix]
@@ -511,7 +511,7 @@ function createReactor(bus1, name::AbstractString, bus2=""; kwargs...)
         z2 = complex(get(kwargs, :z2, z1)...)
         z0 = complex(get(kwargs, :z0, z1)...)
 
-        Z = zeros(Complex64, phases, phases)
+        Z = zeros(Complex{Float16}, phases, phases)
 
         for i in 1:phases
             if phases == 1
@@ -533,8 +533,8 @@ function createReactor(bus1, name::AbstractString, bus2=""; kwargs...)
         x = xmatrix[1,1]
         lmh = x / (2 * pi * basefreq) * 1e3
     else
-        rmatrix = diagm(fill(r, phases))
-        xmatrix = diagm(fill(x, phases))
+        rmatrix = diagm(0 => fill(r, phases))
+        xmatrix = diagm(0 => fill(x, phases))
     end
 
     return Dict{String,Any}("name" => name,
@@ -710,7 +710,7 @@ function createVSource(bus1, name::AbstractString, bus2=0; kwargs...)
         xm = (x0 - x1) / 3.0
     end
 
-    Z = zeros(Complex64, phases, phases)
+    Z = zeros(Complex{Float16}, phases, phases)
     if r1 == r2 && x1 == x2
         Zs = complex(rs, xs)
         Zm = complex(rm, xm)
@@ -811,7 +811,7 @@ function createTransformer(name::AbstractString; kwargs...)
     for wdg in [:wdg, :wdg_2, :wdg_3]
         if haskey(kwargs, wdg)
             smat = match(r"_\d", String(wdg))
-            suffix = isa(smat, Void) ? "" : smat.match
+            suffix = isa(smat, Nothing) ? "" : smat.match
             for key in [:bus, :tap, :conn, :kv, :kva, Symbol("%r"), :rneut, :xneut]
                 subkey = Symbol(string(key, suffix))
                 if haskey(kwargs, subkey)

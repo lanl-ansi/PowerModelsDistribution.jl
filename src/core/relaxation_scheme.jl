@@ -14,7 +14,7 @@ year = {2003}
 ```
 """
 function relaxation_psd_to_soc_real(m, mx)
-    assert(size(mx,1) == size(mx,2))
+    @assert size(mx,1) == size(mx,2)
     n_elements = size(mx,1)
     for i in 1:n_elements-1
         for j in i+1:n_elements
@@ -39,7 +39,7 @@ year = {2003}
 ```
 """
 function relaxation_psd_to_soc_complex(m, mxreal, mximag)
-    assert(size(mxreal) == size(mximag))
+    @assert size(mxreal) == size(mximag)
     n_elements = size(mxreal,1)
     for i in 1:n_elements-1
         for j in i+1:n_elements
@@ -64,7 +64,7 @@ year = {2003}
 ```
 """
 function relaxation_psd_to_soc_real_conic(m, mx)
-    assert(size(mx,1) == size(mx,2))
+    @assert size(mx,1) == size(mx,2)
     n_elements = size(mx,1)
     for i in 1:n_elements-1
         for j in i+1:n_elements
@@ -89,7 +89,7 @@ year = {2003}
 ```
 """
 function relaxation_psd_to_soc_complex_conic(m, mxreal, mximag)
-    assert(size(mxreal) == size(mximag))
+    @assert size(mxreal) == size(mximag)
     n_elements = size(mxreal,1)
     for i in 1:n_elements-1
         for j in i+1:n_elements
@@ -115,7 +115,7 @@ year = {2001}
 """
 function relaxation_psd_to_soc(m, mxreal, mximag; complex=true)
     if complex==false
-        assert(size(mxreal) == size(mximag))
+        @assert size(mxreal) == size(mximag)
         mx =
             [
             mxreal -mximag;
@@ -145,7 +145,7 @@ year = {2001}
 """
 function relaxation_psd_to_soc_conic(m, mxreal, mximag; complex=true)
     if complex==false
-        assert(size(mxreal) == size(mximag))
+        @assert size(mxreal) == size(mximag)
         mx =
             [
             mxreal -mximag;
@@ -164,8 +164,8 @@ end
 real-valued SDP to SDP relaxation based on PSDness of principal minors, default is 3x3 SDP relaxation
 """
 function relaxation_psd_to_psd_real(m, mxreal, mximag; ndim=3)
-    assert(size(mxreal) == size(mximag))
-    assert(size(mxreal,1) >= ndim)
+    @assert size(mxreal) == size(mximag)
+    @assert size(mxreal,1) >= ndim
     n_elements = size(mxreal,1)
     for i in 1:n_elements-(ndim-1)
         j = i+(ndim-1)

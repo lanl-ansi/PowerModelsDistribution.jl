@@ -137,8 +137,8 @@ function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel, i::In
 
     r = branch["br_r"].values
     x = branch["br_x"].values
-    g_sh_fr = diagm(branch["g_fr"].values)
-    b_sh_fr = diagm(branch["b_fr"].values)
+    g_sh_fr = diagm(0 => branch["g_fr"].values)
+    b_sh_fr = diagm(0 => branch["b_fr"].values)
     tm = branch["tap"].values
 
     constraint_tp_voltage_magnitude_difference(pm, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
@@ -151,8 +151,8 @@ function constraint_tp_branch_current(pm::GenericPowerModel{T}, i::Int; nw::Int=
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
 
-    g_sh_fr = diagm(branch["g_fr"].values)
-    b_sh_fr = diagm(branch["b_fr"].values)
+    g_sh_fr = diagm(0 => branch["g_fr"].values)
+    b_sh_fr = diagm(0 => branch["b_fr"].values)
 
     constraint_tp_branch_current(pm, nw, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
 end
@@ -185,10 +185,10 @@ function constraint_tp_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw
 
     r = branch["br_r"].values
     x = branch["br_x"].values
-    g_sh_fr = diagm(branch["g_fr"]).values
-    g_sh_to = diagm(branch["g_to"]).values
-    b_sh_fr = diagm(branch["b_fr"]).values
-    b_sh_to = diagm(branch["b_to"]).values
+    g_sh_fr = diagm(0 => branch["g_fr"]).values
+    g_sh_to = diagm(0 => branch["g_to"]).values
+    b_sh_fr = diagm(0 => branch["b_fr"]).values
+    b_sh_to = diagm(0 => branch["b_to"]).values
 
     constraint_tp_flow_losses(pm::GenericPowerModel, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
 end

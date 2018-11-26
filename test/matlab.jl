@@ -4,8 +4,6 @@ TESTLOG = getlogger(PowerModels)
     @testset "5-bus minimal data" begin
         data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_a.m")
 
-        @test length(data) == 15
-
         @test length(data["bus"]) == 5
         @test length(data["load"]) == 3
         @test length(data["shunt"]) == 0
@@ -24,8 +22,6 @@ TESTLOG = getlogger(PowerModels)
     @testset "5-bus shunt data" begin
         data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m")
 
-        @test length(data) == 15
-
         @test length(data["bus"]) == 5
         @test length(data["load"]) == 3
         @test length(data["shunt"]) == 2
@@ -35,6 +31,7 @@ TESTLOG = getlogger(PowerModels)
         @test isa(data["shunt"]["1"]["bs"], PMs.MultiConductorVector{Float64})
     end
 
+    #=
     @testset "version warning" begin
         setlevel!(TESTLOG, "warn")
 
@@ -46,4 +43,5 @@ TESTLOG = getlogger(PowerModels)
 
         setlevel!(TESTLOG, "error")
     end
+    =#
 end

@@ -1,5 +1,3 @@
-# isdefined(Base, :__precompile__) && __precompile__()
-
 module ThreePhasePowerModels
 
 using JuMP
@@ -7,9 +5,20 @@ using PowerModels
 using InfrastructureModels
 using Memento
 
+using Compat.LinearAlgebra
+
+if VERSION < v"0.7.0-"
+    import Compat: occursin
+    import Compat: findall
+    import Compat: undef
+    import Compat: Nothing
+end
+
 const PMs = PowerModels
 
-const LOGGER = getlogger(PowerModels)
+function __init__()
+    global LOGGER = getlogger(PowerModels)
+end
 
 include("core/ref.jl")
 include("core/multiconductor.jl")

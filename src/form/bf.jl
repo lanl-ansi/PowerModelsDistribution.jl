@@ -13,7 +13,7 @@ LPLinUBFPowerModel(data::Dict{String,Any}; kwargs...) =
 
 "rolls a 1d array left or right by idx"
 function roll(array::Array{T, 1}, idx::Int; right=true) where T <: Number
-    out = Array{T}(size(array))
+    out = Array{T}(undef, size(array))
     pos = idx % length(out)
 
     if right

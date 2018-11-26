@@ -7,9 +7,7 @@ function parse_file(io::IOStream; import_all::Bool=false, vmin::Float64=0.9, vma
     if endswith(lowercase(strip(io.name,['>'])), ".m")
         tppm_data = ThreePhasePowerModels.parse_matlab(io)
     elseif endswith(lowercase(strip(io.name,['>'])), ".dss")
-        warn(LOGGER, "Not all OpenDSS features are supported, currently only minimal support for \
-                      lines, loads, generators, and capacitors as shunts. Transformers and reactors \
-                      as transformer branches are included, but value translation is not fully supported.")
+        warn(LOGGER, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported.")
         tppm_data = ThreePhasePowerModels.parse_opendss(io; import_all=import_all, vmin=vmin, vmax=vmax)
     else
         error(LOGGER, "only .m and .dss files are supported")
@@ -32,7 +30,6 @@ end
 
 ""
 function check_network_data(data::Dict{String,Any})
-    data["version"] = Pkg.installed("ThreePhasePowerModels")
     PMs.make_per_unit(data)
 
     PMs.check_connectivity(data)
@@ -48,9 +45,9 @@ function check_network_data(data::Dict{String,Any})
 end
 
 function wrapto180(degrees)
-    return degrees - 360*floor.((degrees + 180)/360)
+    return degrees - 360*floor.((degrees .+ 180)/360)
 end
 
 function wraptopi(radians)
-    return radians - 2*pi*floor.((radians+pi)/(2*pi))
+    return radians - 2*pi*floor.((radians .+ pi)/(2*pi))
 end
