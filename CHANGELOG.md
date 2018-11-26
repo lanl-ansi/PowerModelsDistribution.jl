@@ -11,6 +11,7 @@ ThreePhasePowerModels.jl Change Log
 - Minor fix to OpenDSS parser (parsing ~ lines with preceeding whitespace)
 - Fixed parsing OpenDSS files containing redirect/compile/buscoords on case-sensitive filesystems
 - Add 'source_id' field to components parsed from OpenDSS, to help determine origin and active phases
+- Add conversion of OpenDSS PVSystem objects into generators, using KVA for generator limits
 
 ### v0.1.2
 - Add support for network flow approximation formulation, NFAPowerModel
