@@ -419,6 +419,8 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "pvsystem")
         for pv in dss_data["pvsystem"]
+            warn(LOGGER, "Converting PVSystem \"$(pv["name"])\" into generator with limits determined by OpenDSS property 'kVA'")
+
             if haskey(pv, "like")
                 pv = merge(find_component(dss_data, pv["like"], "pvsystem"), pv)
             end
