@@ -12,13 +12,25 @@ if VERSION < v"0.7.0-"
     import Compat: findall
     import Compat: undef
     import Compat: Nothing
+
+    function __init__()
+        global LOGGER = getlogger(PowerModels)
+    end
+
+    macro warn(message)
+        :(Memento.warn(LOGGER, $(esc(message))))
+    end
+
+    macro debug(message)
+        :(Memento.debug(LOGGER, $(esc(message))))
+    end
+
+    macro info(message)
+        :(Memento.info(LOGGER, $(esc(message))))
+    end
 end
 
 const PMs = PowerModels
-
-function __init__()
-    global LOGGER = getlogger(PowerModels)
-end
 
 include("core/ref.jl")
 include("core/multiconductor.jl")

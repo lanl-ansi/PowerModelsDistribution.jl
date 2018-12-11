@@ -90,7 +90,7 @@ function discover_buses(dss_data::Dict)::Array
         end
     end
     if length(buses) == 0
-        error(LOGGER, "dss_data has no branches!")
+        throw(error("dss_data has no branches!"))
     else
         return buses
     end
@@ -150,7 +150,7 @@ function find_component(data::Dict, name::AbstractString, compType::AbstractStri
             return comp
         end
     end
-    warn(LOGGER, "Could not find $compType \"$name\"")
+    @warn "Could not find $compType \"$name\""
     return Dict{String,Any}()
 end
 
@@ -165,7 +165,7 @@ function find_bus(busname::AbstractString, tppm_data::Dict)
     if haskey(bus, "bus_i")
         return bus["bus_i"]
     else
-        error(LOGGER, "cannot find connected bus with id \"$busname\"")
+        throw(error("cannot find connected bus with id \"$busname\""))
     end
 end
 
@@ -196,7 +196,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             kv = defaults["kv"]
             expected_kv = tppm_data["basekv"] / sqrt(tppm_data["conductors"])
             if !isapprox(kv, expected_kv; atol=expected_kv * 0.01)
-                warn(LOGGER, "Load has kv=$kv, not the expected kv=$(expected_kv). Results may not match OpenDSS")
+                @warn "Load has kv=$kv, not the expected kv=$(expected_kv). Results may not match OpenDSS"
             end
 
             loadDict["name"] = defaults["name"]
@@ -419,7 +419,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "pvsystem")
         for pv in dss_data["pvsystem"]
-            warn(LOGGER, "Converting PVSystem \"$(pv["name"])\" into generator with limits determined by OpenDSS property 'kVA'")
+            @warn "Converting PVSystem \"$(pv["name"])\" into generator with limits determined by OpenDSS property 'kVA'"
 
             if haskey(pv, "like")
                 pv = merge(find_component(dss_data, pv["like"], "pvsystem"), pv)
@@ -493,7 +493,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             merge!(line, linecode)
 
             if haskey(line, "basefreq") && line["basefreq"] != tppm_data["basefreq"]
-                warn(LOGGER, "basefreq=$(line["basefreq"]) on line $(line["name"]) does not match circuit basefreq=$(tppm_data["basefreq"])")
+                @warn "basefreq=$(line["basefreq"]) on line $(line["name"]) does not match circuit basefreq=$(tppm_data["basefreq"])"
                 line["freq"] = deepcopy(line["basefreq"])
                 line["basefreq"] = deepcopy(tppm_data["basefreq"])
             end
@@ -527,7 +527,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["g_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
 
             if !isdiag(cmatrix)
-                info(LOGGER, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`")
+                @info "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`"
             end
             branchDict["b_fr"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
             branchDict["b_to"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
@@ -574,7 +574,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
     end
 
     if haskey(dss_data, "transformer")
-        warn(LOGGER, "transformers are not yet supported, treating like non-transformer lines")
+        @warn "transformers are not yet supported, treating like non-transformer lines"
         for transformer in dss_data["transformer"]
             if haskey(transformer, "like")
                 transformer = merge(find_component(dss_data, transformer["like"], "transformer"), transformer)
@@ -630,7 +630,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
 
                 push!(tppm_data["branch"], transDict)
             else
-                warn(LOGGER, "3-winding transformers are not yet supported, treating like two non-transformer lines connected through a starbus")
+                @warn "3-winding transformers are not yet supported, treating like two non-transformer lines connected through a starbus"
 
                 starbus = create_starbus(tppm_data, defaults)
                 push!(tppm_data["bus"], starbus)
@@ -687,7 +687,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
     end
 
     if haskey(dss_data, "reactor")
-        warn(LOGGER, "reactors as constant impedance elements is not yet supported, treating like line")
+        @warn "reactors as constant impedance elements is not yet supported, treating like line"
         for reactor in dss_data["reactor"]
             if haskey(reactor, "bus2")
                 if haskey(reactor, "like")
@@ -908,7 +908,7 @@ function parse_options(options)
     end
 
     if !haskey(options, "defaultbasefreq")
-        warn(LOGGER, "defaultbasefreq is not defined, default for circuit set to 60 Hz")
+        @warn "defaultbasefreq is not defined, default for circuit set to 60 Hz"
         out["defaultbasefreq"] = 60.0
     else
         out["defaultbasefreq"] = parse(Float64, options["defaultbasefreq"])
@@ -953,7 +953,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         tppm_data["pu"] = defaults["pu"]
         tppm_data["conductors"] = defaults["phases"]
     else
-        error(LOGGER, "Circuit not defined, not a valid circuit!")
+        throw(error("Circuit not defined, not a valid circuit!"))
     end
 
     dss2tppm_bus!(tppm_data, dss_data, import_all, vmin, vmax)

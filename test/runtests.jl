@@ -3,13 +3,22 @@ const TPPMs = ThreePhasePowerModels
 
 using Memento
 
+if VERSION < v"0.7.0-"
+    setlevel!(getlogger(PowerModels), "error")
+
+    macro test_logs(exs...)
+    end
+else
+    using Test
+    using Logging
+    Logging.disable_logging(LogLevel(Logging.Warn))
+end
+
 using InfrastructureModels
 
 using PowerModels
 const PMs = PowerModels
 
-# Suppress warnings during testing.
-setlevel!(getlogger(PowerModels), "error")
 
 using Ipopt
 using Cbc

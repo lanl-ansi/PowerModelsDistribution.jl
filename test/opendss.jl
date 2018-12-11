@@ -1,4 +1,6 @@
-TESTLOG = getlogger(PowerModels)
+if VERSION < v"0.7.0-"
+    TESTLOG = getlogger(PowerModels)
+end
 
 @testset "opendss parser" begin
     @testset "reverse polish notation" begin
@@ -11,33 +13,54 @@ TESTLOG = getlogger(PowerModels)
         @test TPPMs.isa_rpn("2 pi * 60 * .001 *")
         @test !TPPMs.isa_rpn("[ 2 10 ]")
 
-        setlevel!(TESTLOG, "warn")
+        if VERSION < v"0.7.0-"
+            setlevel!(TESTLOG, "warn")
 
-        @test_warn(TESTLOG, "parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String",
-                   TPPMs.parse_rpn("1 2 swap atan2"))
+            @test_warn(TESTLOG, "parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String",
+                       TPPMs.parse_rpn("1 2 swap atan2"))
 
-        @test_warn(TESTLOG, "\" 1 2 + - \" is not valid Reverse Polish Notation, leaving as String",
-                   TPPMs.parse_rpn(" 1 2 + - "))
+            @test_warn(TESTLOG, "\" 1 2 + - \" is not valid Reverse Polish Notation, leaving as String",
+                       TPPMs.parse_rpn(" 1 2 + - "))
 
-        @test_warn(TESTLOG, "\"1 2 3 +\" is not valid Reverse Polish Notation, leaving as String",
-                   TPPMs.parse_rpn("1 2 3 +"))
+            @test_warn(TESTLOG, "\"1 2 3 +\" is not valid Reverse Polish Notation, leaving as String",
+                       TPPMs.parse_rpn("1 2 3 +"))
 
-        setlevel!(TESTLOG, "error")
+            setlevel!(TESTLOG, "error")
+        else
+            Logging.disable_logging(Logging.Info)
+            @test_logs (:warn, "parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String") TPPMs.parse_rpn("1 2 swap atan2")
+            @test_logs (:warn, "\" 1 2 + - \" is not valid Reverse Polish Notation, leaving as String") TPPMs.parse_rpn(" 1 2 + - ")
+            @test_logs (:warn, "\"1 2 3 +\" is not valid Reverse Polish Notation, leaving as String") TPPMs.parse_rpn("1 2 3 +")
+            Logging.disable_logging(Logging.Warn)
+        end
     end
 
     @testset "simple generator branch load" begin
-        setlevel!(TESTLOG, "info")
+        if VERSION < v"0.7.0-"
+            setlevel!(TESTLOG, "info")
 
-        @test_warn(TESTLOG, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported.",
-                      TPPMs.parse_file("../test/data/opendss/test_simple.dss"))
+            @test_warn(TESTLOG, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported.",
+                        TPPMs.parse_file("../test/data/opendss/test_simple.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Calling parse_dss on ../test/data/opendss/test_simple.dss",
-                               TPPMs.parse_file("../test/data/opendss/test_simple.dss"))
+            Memento.Test.@test_log(TESTLOG, "info", "Calling parse_dss on ../test/data/opendss/test_simple.dss",
+                        TPPMs.parse_file("../test/data/opendss/test_simple.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Done parsing ../test/data/opendss/test_simple.dss",
-                               TPPMs.parse_file("../test/data/opendss/test_simple.dss"))
+            Memento.Test.@test_log(TESTLOG, "info", "Done parsing ../test/data/opendss/test_simple.dss",
+            TPPMs.parse_file("../test/data/opendss/test_simple.dss"))
 
-        setlevel!(TESTLOG, "error")
+            setlevel!(TESTLOG, "error")
+        else
+            Logging.disable_logging(Logging.Debug)
+            @test_logs((:warn, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported."),
+                       (:info, "Calling parse_dss on ../test/data/opendss/test_simple.dss"),
+                       (:info, "Done parsing ../test/data/opendss/test_simple.dss"),
+                       (:warn, "defaultbasefreq is not defined, default for circuit set to 60 Hz"),
+                       (:warn, "Load has kv=12.47, not the expected kv=66.39528095680697. Results may not match OpenDSS"),
+                       (:info, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`"),
+                       (:warn, "active generators found at bus 2, updating to bus type from 1 to 2"),
+                       TPPMs.parse_file("../test/data/opendss/test_simple.dss"))
+            Logging.disable_logging(Logging.Warn)
+        end
 
         dss = TPPMs.parse_dss("../test/data/opendss/test_simple.dss")
         tppm = TPPMs.parse_file("../test/data/opendss/test_simple.dss")
@@ -53,42 +76,85 @@ TESTLOG = getlogger(PowerModels)
     end
 
     @testset "parser cases" begin
-        setlevel!(TESTLOG, "info")
+        if VERSION < v"0.7.0-"
+            setlevel!(TESTLOG, "info")
 
-        @test_throws(TESTLOG, ErrorException,
-                     TPPMs.parse_file("../test/data/opendss/test_simple3.dss"))
+            @test_throws(TESTLOG, ErrorException,
+                         TPPMs.parse_file("../test/data/opendss/test_simple3.dss"))
 
-        @test_throws(TESTLOG, ErrorException,
-                     TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
+            @test_throws(TESTLOG, ErrorException,
+                         TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
 
-        @test_warn(TESTLOG, "Command \"solve\" on line 68 in \"test2_master.dss\" is not supported, skipping.",
-                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+            @test_warn(TESTLOG, "Command \"solve\" on line 68 in \"test2_master.dss\" is not supported, skipping.",
+                       TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        @test_warn(TESTLOG, "Command \"show\" on line 70 in \"test2_master.dss\" is not supported, skipping.",
-                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+            @test_warn(TESTLOG, "Command \"show\" on line 70 in \"test2_master.dss\" is not supported, skipping.",
+                       TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        @test_warn(TESTLOG, "transformers are not yet supported, treating like non-transformer lines",
-                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+            @test_warn(TESTLOG, "transformers are not yet supported, treating like non-transformer lines",
+                       TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        @test_warn(TESTLOG, "reactors as constant impedance elements is not yet supported, treating like line",
-                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+            @test_warn(TESTLOG, "reactors as constant impedance elements is not yet supported, treating like line",
+                       TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        @test_warn(TESTLOG, "Rg,Xg are not fully supported",
-                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+            @test_warn(TESTLOG, "Rg,Xg are not fully supported",
+                       TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        @test_warn(TESTLOG, "Could not find line \"something\"",
-                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+            @test_warn(TESTLOG, "Could not find line \"something\"",
+                       TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
-                               TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+            Memento.Test.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
+                                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Redirecting to file \"test2_Linecodes.dss\"",
-                               TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+            Memento.Test.@test_log(TESTLOG, "info", "Redirecting to file \"test2_Linecodes.dss\"",
+                                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Compiling file \"test2_Loadshape.dss\"",
-                               TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+            Memento.Test.@test_log(TESTLOG, "info", "Compiling file \"test2_Loadshape.dss\"",
+                                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        setlevel!(TESTLOG, "error")
+            setlevel!(TESTLOG, "error")
+        else
+            @test_throws ErrorException TPPMs.parse_file("../test/data/opendss/test_simple3.dss")
+            @test_throws ErrorException TPPMs.parse_file("../test/data/opendss/test_simple2.dss")
+
+            Logging.disable_logging(Logging.Debug)
+            @test_logs((:warn, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported."),
+                       (:info, "Calling parse_dss on ../test/data/opendss/test2_master.dss"),
+                       (:info, "`dss_data` has been reset with the \"clear\" command."),
+                       (:info, "Redirecting to file \"test2_Linecodes.dss\""),
+                       (:info, "Calling parse_dss on ../test/data/opendss/test2_Linecodes.dss"),
+                       (:info, "Done parsing ../test/data/opendss/test2_Linecodes.dss"),
+                       (:info, "Compiling file \"test2_Loadshape.dss\""),
+                       (:info, "Calling parse_dss on ../test/data/opendss/test2_Loadshape.dss"),
+                       (:info, "Done parsing ../test/data/opendss/test2_Loadshape.dss"),
+                       (:warn, "Command \"solve\" on line 68 in \"test2_master.dss\" is not supported, skipping."),
+                       (:warn, "Command \"show\" on line 70 in \"test2_master.dss\" is not supported, skipping."),
+                       (:info, "Done parsing ../test/data/opendss/test2_master.dss"),
+                       (:warn, "defaultbasefreq is not defined, default for circuit set to 60 Hz"),
+                       (:warn, "Load has kv=0.208, not the expected kv=39.83716857408418. Results may not match OpenDSS"),
+                       (:warn, "Load has kv=24.9, not the expected kv=39.83716857408418. Results may not match OpenDSS"),
+                       (:warn, "Load has kv=24.9, not the expected kv=39.83716857408418. Results may not match OpenDSS"),
+                       (:warn, "Load has kv=24.9, not the expected kv=39.83716857408418. Results may not match OpenDSS"),
+                       (:warn, "Could not find line \"something\""),
+                       (:warn, "Rg,Xg are not fully supported"),
+                       (:info, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`"),
+                       (:info, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`"),
+                       (:info, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`"),
+                       (:info, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`"),
+                       (:info, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`"),
+                       (:info, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`"),
+                       (:warn, "transformers are not yet supported, treating like non-transformer lines"),
+                       (:warn, "reactors as constant impedance elements is not yet supported, treating like line"),
+                       (:warn, "this code only supports positive rate_a values, changing the value on branch 2, conductor 1 to 0.0"),
+                       (:warn, "this code only supports positive rate_a values, changing the value on branch 2, conductor 3 to 0.0"),
+                       (:warn, "this code only supports positive rate_a values, changing the value on branch 11, conductor 2 to 0.0"),
+                       (:warn, "this code only supports positive rate_a values, changing the value on branch 11, conductor 3 to 0.0"),
+                       TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+            Logging.disable_logging(Logging.Warn)
+        end
+
+
+
 
         dss = TPPMs.parse_dss("../test/data/opendss/test2_master.dss")
         tppm = TPPMs.parse_file("../test/data/opendss/test2_master.dss")
@@ -110,7 +176,7 @@ TESTLOG = getlogger(PowerModels)
         len = 0.013516796
         rmatrix=TPPMs.parse_matrix(Float64, "[1.5000  |0.200000  1.50000  |0.250000  0.25000  2.00000  ]") * 3
         xmatrix=TPPMs.parse_matrix(Float64, "[1.0000  |0.500000  0.50000  |0.500000  0.50000  1.000000  ]") * 3
-        cmatrix = TPPMs.parse_matrix(Float64, "[8.0000  |-2.00000  9.000000  |-1.75000  -2.50000  8.00000  ]")
+        cmatrix=TPPMs.parse_matrix(Float64, "[8.0000  |-2.00000  9.000000  |-1.75000  -2.50000  8.00000  ]")
 
         @test all(isapprox.(tppm["branch"]["3"]["br_r"].values, rmatrix * len / tppm["basekv"]^2 * tppm["baseMVA"]; atol=1e-6))
         @test all(isapprox.(tppm["branch"]["3"]["br_x"].values, xmatrix * len / tppm["basekv"]^2 * tppm["baseMVA"]; atol=1e-6))
@@ -300,10 +366,21 @@ TESTLOG = getlogger(PowerModels)
     end
 
     @testset "3-bus balanced pv" begin
-        setlevel!(TESTLOG, "warn")
-        @test_warn(TESTLOG, "Converting PVSystem \"pv1\" into generator with limits determined by OpenDSS property 'kVA'",
-                   TPPMs.parse_file("../test/data/opendss/case3_balanced_pv.dss"))
-        setlevel!(TESTLOG, "error")
+        if VERSION < v"0.7.0-"
+            setlevel!(TESTLOG, "warn")
+            @test_warn(TESTLOG, "Converting PVSystem \"pv1\" into generator with limits determined by OpenDSS property 'kVA'",
+                       TPPMs.parse_file("../test/data/opendss/case3_balanced_pv.dss"))
+            setlevel!(TESTLOG, "error")
+        else
+            Logging.disable_logging(Logging.Info)
+            @test_logs((:warn, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported."),
+                       (:warn, "Command \"calcvoltagebases\" on line 36 in \"case3_balanced_pv.dss\" is not supported, skipping."),
+                       (:warn, "Command \"solve\" on line 38 in \"case3_balanced_pv.dss\" is not supported, skipping."),
+                       (:warn, "Converting PVSystem \"pv1\" into generator with limits determined by OpenDSS property 'kVA'"),
+                       (:warn, "active generators found at bus 2, updating to bus type from 1 to 2"),
+                       TPPMs.parse_file("../test/data/opendss/case3_balanced_pv.dss"))
+            Logging.disable_logging(Logging.Warn)
+        end
 
         tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced_pv.dss")
 

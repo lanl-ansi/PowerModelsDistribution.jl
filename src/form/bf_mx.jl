@@ -592,7 +592,7 @@ end
 ""
 function add_original_variables(sol, pm::GenericPowerModel)
     if !haskey(pm.setting, "output") || !haskey(pm.setting["output"], "branch_flows") || pm.setting["output"]["branch_flows"] == false
-        error(LOGGER, "deriving the original variables requires setting: branch_flows => true")
+        throw(error("deriving the original variables requires setting: branch_flows => true"))
     end
 
     for (nw, network) in pm.ref[:nw]

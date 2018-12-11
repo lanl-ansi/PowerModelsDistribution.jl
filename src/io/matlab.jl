@@ -110,7 +110,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "tppmc.version")
         case["source_version"] = VersionNumber(matlab_data["tppmc.version"])
     else
-        warn(LOGGER, "No version number found, file may not be compatible with parser.")
+        @warn "No version number found, file may not be compatible with parser."
         case["source_version"] = v"0"
     end
 
@@ -137,7 +137,7 @@ function parse_matlab_string(data_string::String)
         end
         case["bus"] = buses
     else
-        error(string("no bus table found in matlab file.  The file seems to be missing \"tppmc.bus = [...];\""))
+        throw(error(string("no bus table found in matlab file.  The file seems to be missing \"tppmc.bus = [...];\"")))
     end
 
     if haskey(matlab_data, "tppmc.load")
@@ -149,7 +149,7 @@ function parse_matlab_string(data_string::String)
         end
         case["load"] = loads
     else
-        error(string("no load table found in matlab file.  The file seems to be missing \"tppmc.load = [...];\""))
+        throw(error(string("no load table found in matlab file.  The file seems to be missing \"tppmc.load = [...];\"")))
     end
 
     if haskey(matlab_data, "tppmc.shunt")
@@ -171,7 +171,7 @@ function parse_matlab_string(data_string::String)
         end
         case["gen"] = gens
     else
-        error(string("no gen table found in matlab file.  The file seems to be missing \"tppmc.gen = [...];\""))
+        throw(error(string("no gen table found in matlab file.  The file seems to be missing \"tppmc.gen = [...];\"")))
     end
 
     if haskey(matlab_data, "tppmc.branch")
@@ -183,7 +183,7 @@ function parse_matlab_string(data_string::String)
         end
         case["branch"] = branches
     else
-        error(string("no branch table found in matlab file.  The file seems to be missing \"tppmc.branch = [...];\""))
+        throw(error(string("no branch table found in matlab file.  The file seems to be missing \"tppmc.branch = [...];\"")))
     end
 
 
@@ -197,7 +197,7 @@ function parse_matlab_string(data_string::String)
         case["bus_name"] = bus_names
 
         if length(case["bus_name"]) != length(case["bus"])
-            error("incorrect Matpower file, the number of bus names ($(length(case["bus_name"]))) is inconsistent with the number of buses ($(length(case["bus"]))).\n")
+            throw(error("incorrect Matpower file, the number of bus names ($(length(case["bus_name"]))) is inconsistent with the number of buses ($(length(case["bus"]))).\n"))
         end
     end
 
@@ -211,7 +211,7 @@ function parse_matlab_string(data_string::String)
         case["gencost"] = gencost
 
         if length(case["gencost"]) != length(case["gen"])
-            error("incorrect matlab file, the number of generator cost functions ($(length(case["gencost"]))) is inconsistent with the number of generators ($(length(case["gen"]))).\n")
+            throw(error("incorrect matlab file, the number of generator cost functions ($(length(case["gencost"]))) is inconsistent with the number of generators ($(length(case["gen"]))).\n"))
         end
     end
 
@@ -231,10 +231,10 @@ function parse_matlab_string(data_string::String)
                     push!(tbl, row_data)
                 end
                 case[case_name] = tbl
-                info(LOGGER, "extending matlab format with data: $(case_name) $(length(tbl))x$(length(tbl[1])-1)")
+                @info "extending matlab format with data: $(case_name) $(length(tbl))x$(length(tbl[1])-1)"
             else
                 case[case_name] = value
-                info(LOGGER, "extending matlab format with constant data: $(case_name)")
+                @info "extending matlab format with constant data: $(case_name)"
             end
         end
     end
@@ -252,7 +252,7 @@ function translate_version!(ml_data::Dict{String,Any})
     if ml_data["source_version"] == current_version
         return ml_data
     else
-        warn(LOGGER, "matlab source data has unrecognized version $(ml_data["source_version"]), cannot translate to version $current_version, parse may be invalid")
+        @warn "matlab source data has unrecognized version $(ml_data["source_version"]), cannot translate to version $current_version, parse may be invalid"
         return ml_data
     end
 end

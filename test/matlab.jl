@@ -1,5 +1,3 @@
-TESTLOG = getlogger(PowerModels)
-
 @testset "test matlab data parser" begin
     @testset "5-bus minimal data" begin
         data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_a.m")
@@ -33,15 +31,22 @@ TESTLOG = getlogger(PowerModels)
 
     #=
     @testset "version warning" begin
-        setlevel!(TESTLOG, "warn")
+        if VERSION < v"0.7.0-"
+            setlevel!(TESTLOG, "warn")
 
-        @test_warn(TESTLOG, "matlab source data has unrecognized version 0.0.0, cannot translate to version 1.0.0, parse may be invalid",
-                   ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m"))
+            @test_warn(TESTLOG, "matlab source data has unrecognized version 0.0.0, cannot translate to version 1.0.0, parse may be invalid",
+                    ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m"))
 
-        @test_warn(TESTLOG, "No version number found, file may not be compatible with parser.",
-                   ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m"))
+            @test_warn(TESTLOG, "No version number found, file may not be compatible with parser.",
+                    ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m"))
 
-        setlevel!(TESTLOG, "error")
+            setlevel!(TESTLOG, "error")
+        else
+            Logging.disable_logging(Logging.Info)
+            @test_logs (:warm, "matlab source data has unrecognized version 0.0.0, cannot translate to version 1.0.0, parse may be invalid" ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m")
+            @test_logs (:warn, "No version number found, file may not be compatible with parser.") ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m")
+            Logging.disable_logging(Logging.Warn)
+        end
     end
     =#
 end
