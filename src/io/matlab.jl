@@ -270,6 +270,7 @@ function matlab_to_tppm(ml_data::Dict{String,Any})
     ml_data["per_unit"] = false
     ml_data["conductors"] = 3
     ml_data["dcline"] = []
+    ml_data["storage"] = []
 
     # required default values
     if !haskey(ml_data, "shunt")
@@ -282,15 +283,18 @@ function matlab_to_tppm(ml_data::Dict{String,Any})
     ml2pm_gen(ml_data)
     ml2pm_branch(ml_data)
 
-    # translate cost models
-    PMs.standardize_cost_terms(ml_data)
-
     PMs.merge_bus_name_data(ml_data)
     PMs.merge_generator_cost_data(ml_data)
 
     PMs.merge_generic_data(ml_data)
 
     InfrastructureModels.arrays_to_dicts!(ml_data)
+
+    for optional in ["dcline", "load", "shunt", "storage"]
+        if length(ml_data[optional]) == 0
+            ml_data[optional] = Dict{String,Any}()
+        end
+    end
 
     return ml_data
 end
