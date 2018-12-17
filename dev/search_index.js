@@ -889,7 +889,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "library/#ThreePhasePowerModels.constraint_tp_theta_ref-Union{Tuple{T}, Tuple{GenericPowerModel{T},Int64,Int64,Any}} where T<:Union{AbstractACPForm, AbstractACTForm, AbstractDCPForm}",
+    "location": "library/#ThreePhasePowerModels.constraint_tp_theta_ref-Union{Tuple{T}, Tuple{GenericPowerModel{T},Int64,Int64,Any}} where T<:Union{AbstractACPForm, AbstractACTForm, AbstractDCPForm, AbstractLPACForm}",
     "page": "Modeling Components",
     "title": "ThreePhasePowerModels.constraint_tp_theta_ref",
     "category": "method",
