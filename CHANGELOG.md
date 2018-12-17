@@ -2,7 +2,7 @@ ThreePhasePowerModels.jl Change Log
 ===================================
 
 ### Staged
-- nothing
+- Update to PowerModels v0.9
 
 ### v0.1.3
 - Add opf with multi-phase storage model

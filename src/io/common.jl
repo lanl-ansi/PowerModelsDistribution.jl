@@ -42,6 +42,7 @@ function check_network_data(data::Dict{String,Any})
     PMs.check_dcline_limits(data)
     # PMs.check_voltage_setpoints(data)
     PMs.check_cost_functions(data)
+    PMs.standardize_cost_terms(data)
 end
 
 function wrapto180(degrees)

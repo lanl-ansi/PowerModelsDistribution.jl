@@ -471,7 +471,7 @@ end
 
 ""
 function add_bus_voltage_setpoint(sol, pm::GenericPowerModel)
-    PMs.add_setpoint(sol, pm, "bus", "vm", :w; scale = (x,item) -> sqrt(x))
+    PMs.add_setpoint(sol, pm, "bus", "vm", :w; scale = (x,item,i) -> sqrt(x))
     PMs.add_setpoint(sol, pm, "bus", "w",  :w)
     PMs.add_setpoint(sol, pm, "bus", "wr", :wr)
     PMs.add_setpoint(sol, pm, "bus", "wi", :wi)
@@ -501,7 +501,7 @@ end
 ""
 function add_branch_current_setpoint(sol, pm::GenericPowerModel)
     if haskey(pm.setting, "output") && haskey(pm.setting["output"], "branch_flows") && pm.setting["output"]["branch_flows"] == true
-        PMs.add_setpoint(sol, pm, "branch", "cm", :cm; scale = (x,item) -> sqrt(x))
+        PMs.add_setpoint(sol, pm, "branch", "cm", :cm; scale = (x,item,i) -> sqrt(x))
         PMs.add_setpoint(sol, pm, "branch", "cc", :cm)
         PMs.add_setpoint(sol, pm, "branch", "ccr", :ccmr)
         PMs.add_setpoint(sol, pm, "branch", "cci", :ccmi)

@@ -971,6 +971,12 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
 
     InfrastructureModels.arrays_to_dicts!(tppm_data)
 
+    for optional in ["dcline", "load", "shunt", "storage", "pvsystem"]
+        if length(tppm_data[optional]) == 0
+            tppm_data[optional] = Dict{String,Any}()
+        end
+    end
+
     tppm_data["files"] = dss_data["filename"]
 
     return tppm_data
