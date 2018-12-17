@@ -2,6 +2,9 @@ ThreePhasePowerModels.jl Change Log
 ===================================
 
 ### Staged
+- nothing
+
+### v0.1.4
 - Update to PowerModels v0.9
 
 ### v0.1.3
