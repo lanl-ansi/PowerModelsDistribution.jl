@@ -98,7 +98,7 @@ TESTLOG = getlogger(PowerModels)
         @test length(tppm) == 18
         @test length(dss) == 12
 
-        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline"], [11, 4, 5, 15, 4, 0])
+        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline"], [12, 4, 5, 16, 4, 0])
             @test haskey(tppm, key)
             @test length(tppm[key]) == len
         end
@@ -142,18 +142,25 @@ TESTLOG = getlogger(PowerModels)
             end
         end
 
-        for k in keys(tppm["branch"]["15"])
+        for k in keys(tppm["branch"]["16"])
             if !(k in ["f_bus", "t_bus", "index", "name", "linecode", "source_id", "active_phases"])
-                if isa(tppm["branch"]["15"][k], PMs.MultiConductorValue)
-                    @test all(isapprox.(tppm["branch"]["14"][k].values, tppm["branch"]["15"][k].values; atol=1e-12))
-                    @test all(isapprox.(tppm["branch"]["12"][k].values, tppm["branch"]["13"][k].values; atol=1e-12))
+                if isa(tppm["branch"]["16"][k], PMs.MultiConductorValue)
+                    @test all(isapprox.(tppm["branch"]["15"][k].values, tppm["branch"]["16"][k].values; atol=1e-12))
+                    @test all(isapprox.(tppm["branch"]["13"][k].values, tppm["branch"]["14"][k].values; atol=1e-12))
                     @test all(isapprox.(tppm["branch"]["3"][k].values, tppm["branch"]["8"][k].values; atol=1e-12))
                 else
-                    @test all(isapprox.(tppm["branch"]["14"][k], tppm["branch"]["15"][k]; atol=1e-12))
-                    @test all(isapprox.(tppm["branch"]["12"][k], tppm["branch"]["13"][k]; atol=1e-12))
+                    @test all(isapprox.(tppm["branch"]["15"][k], tppm["branch"]["16"][k]; atol=1e-12))
+                    @test all(isapprox.(tppm["branch"]["13"][k], tppm["branch"]["14"][k]; atol=1e-12))
                     @test all(isapprox.(tppm["branch"]["3"][k], tppm["branch"]["8"][k]; atol=1e-12))
                 end
             end
+        end
+
+        @testset "length units parsing" begin
+            @test tppm["branch"]["9"]["length"] == 1000.0 * len
+            @test all(isapprox.(tppm["branch"]["9"]["br_r"].values, rmatrix * len / tppm["basekv"]^2 * tppm["baseMVA"]; atol=1e-6))
+            @test all(isapprox.(tppm["branch"]["9"]["br_x"].values, xmatrix * len / tppm["basekv"]^2 * tppm["baseMVA"]; atol=1e-6))
+            @test all(isapprox.(tppm["branch"]["9"]["b_fr"].values, diag(tppm["basekv"]^2 / tppm["baseMVA"] * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0; atol=1e-6))
         end
 
         tppm2 = TPPMs.parse_file("../test/data/opendss/test_simple4.dss")
@@ -190,8 +197,8 @@ TESTLOG = getlogger(PowerModels)
             @test tppm["shunt"]["4"]["source_id"] == "reactor.reactor3" && length(tppm["shunt"]["4"]["active_phases"]) == 3
 
             @test tppm["branch"]["1"]["source_id"] == "line.l1" && length(tppm["branch"]["1"]["active_phases"]) == 3
-            @test tppm["branch"]["13"]["source_id"] == "transformer.t5" && length(tppm["branch"]["13"]["active_phases"]) == 3
-            @test tppm["branch"]["14"]["source_id"] == "reactor.reactor1" && length(tppm["branch"]["14"]["active_phases"]) == 3
+            @test tppm["branch"]["14"]["source_id"] == "transformer.t5" && length(tppm["branch"]["14"]["active_phases"]) == 3
+            @test tppm["branch"]["15"]["source_id"] == "reactor.reactor1" && length(tppm["branch"]["15"]["active_phases"]) == 3
 
             @test tppm["gen"]["1"]["source_id"] == "vsource.sourcebus" && length(tppm["gen"]["1"]["active_phases"]) == 3
             @test tppm["gen"]["2"]["source_id"] == "generator.g1" && length(tppm["gen"]["2"]["active_phases"]) == 3

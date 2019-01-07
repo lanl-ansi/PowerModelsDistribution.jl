@@ -484,13 +484,19 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 line = merge(find_component(dss_data, line["like"], "line"), line)
             end
 
-            linecode = deepcopy(get_linecode(dss_data, get(line, "linecode", "")))
-            linecode["linecode"] = pop!(linecode, "name", "")
-            if haskey(linecode, "like")
-                linecode = merge(find_component(dss_data, linecode["like"], "linecode"), linecode)
-            end
+            if haskey(line, "linecode")
+                linecode = deepcopy(get_linecode(dss_data, get(line, "linecode", "")))
+                if haskey(linecode, "like")
+                    linecode = merge(find_component(dss_data, linecode["like"], "linecode"), linecode)
+                end
 
-            merge!(line, linecode)
+                linecode["units"] = get(line, "units", "none") == "none" ? "none" : get(linecode, "units", "none")
+
+                linecode = createLinecode(get(linecode, "name", ""); to_sym_keys(linecode)...)
+                delete!(linecode, "name")
+            else
+                linecode = Dict{String,Any}()
+            end
 
             if haskey(line, "basefreq") && line["basefreq"] != tppm_data["basefreq"]
                 warn(LOGGER, "basefreq=$(line["basefreq"]) on line $(line["name"]) does not match circuit basefreq=$(tppm_data["basefreq"])")
@@ -499,6 +505,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             end
 
             defaults = createLine(line["bus1"], line["bus2"], line["name"]; to_sym_keys(line)...)
+            merge!(defaults, linecode)
 
             bf, nodes = parse_busname(defaults["bus1"])
             bt = parse_busname(defaults["bus2"])[1]
