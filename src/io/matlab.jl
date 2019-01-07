@@ -131,7 +131,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "tppmc.bus")
         buses = []
         for bus_row in matlab_data["tppmc.bus"]
-            bus_data = PMs.row_to_typed_dict(bus_row, tppm_bus_columns)
+            bus_data = InfrastructureModels.row_to_typed_dict(bus_row, tppm_bus_columns)
             bus_data["index"] = InfrastructureModels.check_type(Int, bus_row[1])
             push!(buses, bus_data)
         end
@@ -143,7 +143,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "tppmc.load")
         loads = []
         for (i,load_row) in enumerate(matlab_data["tppmc.load"])
-            load_data = PMs.row_to_typed_dict(load_row, tppm_load_columns)
+            load_data = InfrastructureModels.row_to_typed_dict(load_row, tppm_load_columns)
             load_data["index"] = i
             push!(loads, load_data)
         end
@@ -155,7 +155,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "tppmc.shunt")
         shunts = []
         for (i,shunt_row) in enumerate(matlab_data["tppmc.shunt"])
-            shunt_data = PMs.row_to_typed_dict(shunt_row, tppm_shunt_columns)
+            shunt_data = InfrastructureModels.row_to_typed_dict(shunt_row, tppm_shunt_columns)
             shunt_data["index"] = i
             push!(shunts, shunt_data)
         end
@@ -165,7 +165,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "tppmc.gen")
         gens = []
         for (i, gen_row) in enumerate(matlab_data["tppmc.gen"])
-            gen_data = PMs.row_to_typed_dict(gen_row, tppm_gen_columns)
+            gen_data = InfrastructureModels.row_to_typed_dict(gen_row, tppm_gen_columns)
             gen_data["index"] = i
             push!(gens, gen_data)
         end
@@ -177,7 +177,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "tppmc.branch")
         branches = []
         for (i, branch_row) in enumerate(matlab_data["tppmc.branch"])
-            branch_data = PMs.row_to_typed_dict(branch_row, tppm_branch_columns)
+            branch_data = InfrastructureModels.row_to_typed_dict(branch_row, tppm_branch_columns)
             branch_data["index"] = i
             push!(branches, branch_data)
         end
@@ -190,7 +190,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "tppmc.bus_name")
         bus_names = []
         for (i, bus_name_row) in enumerate(matlab_data["tppmc.bus_name"])
-            bus_name_data = PMs.row_to_typed_dict(bus_name_row, tppm_bus_name_columns)
+            bus_name_data = InfrastructureModels.row_to_typed_dict(bus_name_row, tppm_bus_name_columns)
             bus_name_data["index"] = i
             push!(bus_names, bus_name_data)
         end
