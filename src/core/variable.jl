@@ -30,15 +30,15 @@ function variable_tp_voltage_magnitude_sqr(pm::PMs.GenericPowerModel; nw::Int=pm
 
     if bounded
         W = PMs.var(pm, nw)[:w] = JuMP.@variable(pm.model,
-            [i in bus_cnd], basename="$(nw)_w",
-            lowerbound = PMs.ref(pm, nw, :bus, i[1], "vmin", i[2])^2,
-            upperbound = PMs.ref(pm, nw, :bus, i[1], "vmax", i[2])^2,
+            [i in bus_cnd], base_name="$(nw)_w",
+            lower_bound = PMs.ref(pm, nw, :bus, i[1], "vmin", i[2])^2,
+            upper_bound = PMs.ref(pm, nw, :bus, i[1], "vmax", i[2])^2,
             start = PMs.getval(PMs.ref(pm, nw, :bus, i[1]), "w_start", i[2], 1.001)
         )
     else
         W = PMs.var(pm, nw)[:w] = JuMP.@variable(pm.model,
-            [i in bus_cnd], basename="$(nw)_w",
-            lowerbound = 0,
+            [i in bus_cnd], base_name="$(nw)_w",
+            lower_bound = 0,
             start = PMs.getval(PMs.ref(pm, nw, :bus, i[1]), "w_start", i[2], 1.001)
         )
     end
@@ -57,12 +57,12 @@ function variable_tp_voltage_product(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, 
     append!(bus_cnd, bp_cndf_cndt)
 
     WR = PMs.var(pm, nw)[:wr] = JuMP.@variable(pm.model,
-        [b in bus_cnd], basename="$(nw)_wr",
+        [b in bus_cnd], base_name="$(nw)_wr",
         start = PMs.getval(b[1] != b[2] ? PMs.ref(pm, nw, :buspairs, b[1:2]) : PMs.ref(pm, nw, :bus, b[1]), "wr_start", b[3], 1.0)
     )
 
     WI = PMs.var(pm, nw)[:wi] = JuMP.@variable(pm.model,
-        [b in bus_cnd], basename="$(nw)_wi",
+        [b in bus_cnd], base_name="$(nw)_wi",
         start = PMs.getval(b[1] != b[2] ? PMs.ref(pm, nw, :buspairs, b[1:2]) : PMs.ref(pm, nw, :bus, b[1]), "wi_start", b[3])
     )
 
@@ -70,11 +70,11 @@ function variable_tp_voltage_product(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, 
         # Diagonal bounds
         wr_min, wr_max, wi_min, wi_max = PMs.calc_voltage_product_bounds(PMs.ref(pm, nw, :buspairs), cnd)
         for (i, j) in PMs.ids(pm, nw, :buspairs)
-            PMs.JuMP.setupperbound(WR[(i, j, cnd, cnd)], wr_max[(i,j)])
-            PMs.JuMP.setupperbound(WI[(i, j, cnd, cnd)], wi_max[(i,j)])
+            JuMP.set_upper_bound(WR[(i, j, cnd, cnd)], wr_max[(i,j)])
+            JuMP.set_upper_bound(WI[(i, j, cnd, cnd)], wi_max[(i,j)])
 
-            JuMP.setlowerbound(WR[(i, j, cnd, cnd)], wr_min[(i,j)])
-            JuMP.setlowerbound(WI[(i, j, cnd, cnd)], wi_min[(i,j)])
+            JuMP.set_lower_bound(WR[(i, j, cnd, cnd)], wr_min[(i,j)])
+            JuMP.set_lower_bound(WI[(i, j, cnd, cnd)], wi_min[(i,j)])
         end
 
         # Off-diagonal bounds
@@ -82,11 +82,11 @@ function variable_tp_voltage_product(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, 
             if c != cnd
                 wr_min, wr_max, wi_min, wi_max = calc_tp_voltage_product_bounds(pm, bus_cnd)
                 for k in bus_cnd
-                    PMs.JuMP.setupperbound(WR[k], wr_max[k])
-                    PMs.JuMP.setupperbound(WI[k], wi_max[k])
+                    JuMP.set_upper_bound(WR[k], wr_max[k])
+                    JuMP.set_upper_bound(WI[k], wi_max[k])
 
-                    JuMP.setlowerbound(WR[k], wr_min[k])
-                    JuMP.setlowerbound(WI[k], wi_min[k])
+                    JuMP.set_lower_bound(WR[k], wr_min[k])
+                    JuMP.set_lower_bound(WI[k], wi_min[k])
                 end
             end
         end
@@ -123,7 +123,7 @@ end
 ""
 function variable_active_bus_power_slack(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     PMs.var(pm, nw, cnd)[:p_slack] = JuMP.@variable(pm.model,
-        [i in PMs.ids(pm, nw, :bus)], basename="$(nw)_$(cnd)_p_slack",
+        [i in PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(cnd)_p_slack",
         start = PMs.getval(PMs.ref(pm, nw, :bus, i), "p_slack_start", cnd)
     )
 end
@@ -132,7 +132,7 @@ end
 ""
 function variable_reactive_bus_power_slack(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     PMs.var(pm, nw, cnd)[:q_slack] = JuMP.@variable(pm.model,
-        [i in PMs.ids(pm, nw, :bus)], basename="$(nw)_$(cnd)_q_slack",
+        [i in PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(cnd)_q_slack",
         start = PMs.getval(PMs.ref(pm, nw, :bus, i), "q_slack_start", cnd)
     )
 end
