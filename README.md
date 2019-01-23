@@ -1,7 +1,7 @@
 # ThreePhasePowerModels.jl
 
 Release:
-[![ThreePhasePowerModels](http://pkg.julialang.org/badges/ThreePhasePowerModels_0.6.svg)](http://pkg.julialang.org/detail/ThreePhasePowerModels)
+<!-- [![ThreePhasePowerModels](http://pkg.julialang.org/badges/ThreePhasePowerModels_0.6.svg)](http://pkg.julialang.org/detail/ThreePhasePowerModels) -->
 [![docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://lanl-ansi.github.io/ThreePhasePowerModels.jl/stable/)
 
 Dev:

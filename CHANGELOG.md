@@ -8,6 +8,7 @@ ThreePhasePowerModels.jl Change Log
 - Add transformer parsing to OpenDSS, including mapping of loss model
 - Add voltage base calculation, and corresponding change of base
 - Add AC rectangular formulation
+- Remove support for Julia versions < 1.0
 
 ### v0.1.4
 - Update to PowerModels v0.9

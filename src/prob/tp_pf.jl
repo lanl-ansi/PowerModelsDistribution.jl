@@ -27,7 +27,7 @@ end
 
 
 ""
-function post_tp_pf(pm::GenericPowerModel)
+function post_tp_pf(pm::PMs.GenericPowerModel)
     add_arcs_trans!(pm)
 
     variable_tp_voltage(pm, bounded=false)
@@ -42,7 +42,7 @@ function post_tp_pf(pm::GenericPowerModel)
 
     constraint_tp_voltage(pm)
 
-    for (i,bus) in ref(pm, :ref_buses)
+    for (i,bus) in PMs.ref(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)
 
         for c in PMs.conductor_ids(pm)
@@ -51,38 +51,38 @@ function post_tp_pf(pm::GenericPowerModel)
         end
     end
 
-    for (i,bus) in ref(pm, :bus), c in PMs.conductor_ids(pm)
-        constraint_kcl_shunt_trans(pm, i, cnd=c)
+    for (i,bus) in PMs.ref(pm, :bus), c in PMs.conductor_ids(pm)
+        PMs.constraint_kcl_shunt_trans(pm, i, cnd=c)
 
         # PV Bus Constraints
-        if length(ref(pm, :bus_gens, i)) > 0 && !(i in ids(pm,:ref_buses))
+        if length(PMs.ref(pm, :bus_gens, i)) > 0 && !(i in PMs.ids(pm,:ref_buses))
             # this assumes inactive generators are filtered out of bus_gens
             @assert bus["bus_type"] == 2
 
             PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
-            for j in ref(pm, :bus_gens, i)
+            for j in PMs.ref(pm, :bus_gens, i)
                 PMs.constraint_active_gen_setpoint(pm, j, cnd=c)
             end
         end
     end
 
-    for i in ids(pm, :branch), c in PMs.conductor_ids(pm)
+    for i in PMs.ids(pm, :branch), c in PMs.conductor_ids(pm)
         constraint_ohms_tp_yt_from(pm, i, cnd=c)
         constraint_ohms_tp_yt_to(pm, i, cnd=c)
         # PMs.constraint_ohms_yt_from(pm, i, cnd=c)
         # PMs.constraint_ohms_yt_to(pm, i, cnd=c)
     end
 
-    for (i,dcline) in ref(pm, :dcline), c in PMs.conductor_ids(pm)
+    for (i,dcline) in PMs.ref(pm, :dcline), c in PMs.conductor_ids(pm)
 
         PMs.constraint_active_dcline_setpoint(pm, i, cnd=c)
 
-        f_bus = ref(pm, :bus)[dcline["f_bus"]]
+        f_bus = PMs.ref(pm, :bus)[dcline["f_bus"]]
         if f_bus["bus_type"] == 1
             PMs.constraint_voltage_magnitude_setpoint(pm, f_bus["index"], cnd=c)
         end
 
-        t_bus = ref(pm, :bus)[dcline["t_bus"]]
+        t_bus = PMs.ref(pm, :bus)[dcline["t_bus"]]
         if t_bus["bus_type"] == 1
             PMs.constraint_voltage_magnitude_setpoint(pm, t_bus["index"], cnd=c)
         end

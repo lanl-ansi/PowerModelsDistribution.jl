@@ -1,23 +1,16 @@
 module ThreePhasePowerModels
 
-using JuMP
-using PowerModels
-using InfrastructureModels
-using Memento
+import JuMP
+import PowerModels
+import InfrastructureModels
+import Memento
 
-using Compat.LinearAlgebra
-
-if VERSION < v"0.7.0-"
-    import Compat: occursin
-    import Compat: findall
-    import Compat: undef
-    import Compat: Nothing
-end
+import LinearAlgebra
 
 const PMs = PowerModels
 
 function __init__()
-    global LOGGER = getlogger(PowerModels)
+    global LOGGER = Memento.getlogger(PowerModels)
 end
 
 include("core/ref.jl")
@@ -39,7 +32,6 @@ include("form/wr.jl")
 
 include("core/constraint_template.jl")
 include("core/relaxation_scheme.jl")
-
 
 include("io/matlab.jl")
 include("io/common.jl")

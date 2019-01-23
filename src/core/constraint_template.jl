@@ -1,33 +1,33 @@
 # Three-phase specific constraints
 
 ""
-function constraint_kcl_shunt_slack(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    if !haskey(con(pm, nw, cnd), :kcl_p)
-        con(pm, nw, cnd)[:kcl_p] = Dict{Int,ConstraintRef}()
+function constraint_kcl_shunt_slack(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    if !haskey(PMs.con(pm, nw, cnd), :kcl_p)
+        PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,JuMP.ConstraintRef}()
     end
-    if !haskey(con(pm, nw, cnd), :kcl_q)
-        con(pm, nw, cnd)[:kcl_q] = Dict{Int,ConstraintRef}()
+    if !haskey(PMs.con(pm, nw, cnd), :kcl_q)
+        PMs.con(pm, nw, cnd)[:kcl_q] = Dict{Int,JuMP.ConstraintRef}()
     end
 
-    bus = ref(pm, nw, :bus, i)
-    bus_arcs = ref(pm, nw, :bus_arcs, i)
-    bus_arcs_dc = ref(pm, nw, :bus_arcs_dc, i)
-    bus_gens = ref(pm, nw, :bus_gens, i)
-    bus_loads = ref(pm, nw, :bus_loads, i)
-    bus_shunts = ref(pm, nw, :bus_shunts, i)
+    bus = PMs.ref(pm, nw, :bus, i)
+    bus_arcs = PMs.ref(pm, nw, :bus_arcs, i)
+    bus_arcs_dc = PMs.ref(pm, nw, :bus_arcs_dc, i)
+    bus_gens = PMs.ref(pm, nw, :bus_gens, i)
+    bus_loads = PMs.ref(pm, nw, :bus_loads, i)
+    bus_shunts = PMs.ref(pm, nw, :bus_shunts, i)
 
-    bus_pd = Dict(k => ref(pm, nw, :load, k, "pd", cnd) for k in bus_loads)
-    bus_qd = Dict(k => ref(pm, nw, :load, k, "qd", cnd) for k in bus_loads)
+    bus_pd = Dict(k => PMs.ref(pm, nw, :load, k, "pd", cnd) for k in bus_loads)
+    bus_qd = Dict(k => PMs.ref(pm, nw, :load, k, "qd", cnd) for k in bus_loads)
 
-    bus_gs = Dict(k => ref(pm, nw, :shunt, k, "gs", cnd) for k in bus_shunts)
-    bus_bs = Dict(k => ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
+    bus_gs = Dict(k => PMs.ref(pm, nw, :shunt, k, "gs", cnd) for k in bus_shunts)
+    bus_bs = Dict(k => PMs.ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
 
     constraint_kcl_shunt_slack(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
 end
 
 
 ""
-function constraint_tp_voltage(pm::GenericPowerModel; nw::Int=pm.cnw)
+function constraint_tp_voltage(pm::PMs.GenericPowerModel; nw::Int=pm.cnw)
     for c in PMs.conductor_ids(pm)
         constraint_tp_voltage(pm, nw, c)
     end
@@ -35,8 +35,8 @@ end
 
 
 ""
-function constraint_ohms_tp_yt_from(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    branch = ref(pm, nw, :branch, i)
+function constraint_ohms_tp_yt_from(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    branch = PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
@@ -53,8 +53,8 @@ end
 
 
 ""
-function constraint_ohms_tp_yt_to(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    branch = ref(pm, nw, :branch, i)
+function constraint_ohms_tp_yt_to(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    branch = PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
@@ -71,8 +71,8 @@ end
 
 
 ""
-function constraint_ohms_tp_yt_from_on_off(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    branch = ref(pm, nw, :branch, i)
+function constraint_ohms_tp_yt_from_on_off(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    branch = PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
@@ -84,16 +84,16 @@ function constraint_ohms_tp_yt_from_on_off(pm::GenericPowerModel, i::Int; nw::In
     b_fr = branch["b_fr"]
     tm = branch["tap"]
 
-    vad_min = [ref(pm, nw, :off_angmin, c) for c in PMs.conductor_ids(pm)]
-    vad_max = [ref(pm, nw, :off_angmax, c) for c in PMs.conductor_ids(pm)]
+    vad_min = [PMs.ref(pm, nw, :off_angmin, c) for c in PMs.conductor_ids(pm)]
+    vad_max = [PMs.ref(pm, nw, :off_angmax, c) for c in PMs.conductor_ids(pm)]
 
     constraint_ohms_tp_yt_from_on_off(pm, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm, vad_min, vad_max)
 end
 
 
 ""
-function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    branch = ref(pm, nw, :branch, i)
+function constraint_ohms_tp_yt_to_on_off(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    branch = PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
@@ -105,16 +105,16 @@ function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel, i::Int; nw::Int=
     b_to = branch["b_to"]
     tm = branch["tap"]
 
-    vad_min = [ref(pm, nw, :off_angmin, c) for c in PMs.conductor_ids(pm)]
-    vad_max = [ref(pm, nw, :off_angmax, c) for c in PMs.conductor_ids(pm)]
+    vad_min = [PMs.ref(pm, nw, :off_angmin, c) for c in PMs.conductor_ids(pm)]
+    vad_max = [PMs.ref(pm, nw, :off_angmax, c) for c in PMs.conductor_ids(pm)]
 
     constraint_ohms_tp_yt_to_on_off(pm, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max)
 end
 
 
 ""
-function constraint_voltage_magnitude_difference(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    branch = ref(pm, nw, :branch, i)
+function constraint_voltage_magnitude_difference(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    branch = PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
@@ -129,8 +129,8 @@ function constraint_voltage_magnitude_difference(pm::GenericPowerModel, i::Int; 
     constraint_voltage_magnitude_difference(pm, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
 end
 
-function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
-    branch = ref(pm, nw, :branch, i)
+function constraint_tp_voltage_magnitude_difference(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    branch = PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
@@ -146,8 +146,8 @@ function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel, i::In
 end
 
 
-function constraint_tp_branch_current(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
-    branch = ref(pm, nw, :branch, i)
+function constraint_tp_branch_current(pm::PMs.GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
+    branch = PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
@@ -159,8 +159,8 @@ function constraint_tp_branch_current(pm::GenericPowerModel{T}, i::Int; nw::Int=
 end
 
 
-function constraint_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    branch = ref(pm, nw, :branch, i)
+function constraint_flow_losses(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    branch = PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
@@ -174,11 +174,11 @@ function constraint_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, c
     b_sh_fr = branch["b_fr"][cnd]
     b_sh_to = branch["b_to"][cnd]
 
-    constraint_flow_losses(pm::GenericPowerModel, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
+    constraint_flow_losses(pm::PMs.GenericPowerModel, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
 end
 
-function constraint_tp_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
-    branch = ref(pm, nw, :branch, i)
+function constraint_tp_flow_losses(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    branch = PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
@@ -191,13 +191,13 @@ function constraint_tp_flow_losses(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw
     b_sh_fr = diagm(0 => branch["b_fr"]).values
     b_sh_to = diagm(0 => branch["b_to"]).values
 
-    constraint_tp_flow_losses(pm::GenericPowerModel, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
+    constraint_tp_flow_losses(pm::PMs.GenericPowerModel, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
 end
 
 
 ""
-function constraint_tp_storage_exchange(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
-    storage = ref(pm, nw, :storage, i)
+function constraint_tp_storage_exchange(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    storage = PMs.ref(pm, nw, :storage, i)
 
     PMs.constraint_storage_complementarity(pm, nw, i)
     constraint_tp_storage_loss(pm, nw, i, storage["storage_bus"], storage["r"], storage["x"], storage["standby_loss"])

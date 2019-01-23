@@ -1,3 +1,6 @@
+import LinearAlgebra: diag
+
+
 export
 SDPUBFPowerModel, SDPUBFForm,
 LPUBFForm, LPfullUBFPowerModel, LPfullUBFForm, LPdiagUBFPowerModel, LPdiagUBFForm,
@@ -36,50 +39,50 @@ abstract type LPdiagUBFForm <: AbstractLPUBFForm end
 
 
 ""
-const SDPUBFPowerModel = GenericPowerModel{SDPUBFForm}
+const SDPUBFPowerModel = PMs.GenericPowerModel{SDPUBFForm}
 
 "default SDP unbalanced DistFlow constructor"
 SDPUBFPowerModel(data::Dict{String,Any}; kwargs...) =
-GenericPowerModel(data, SDPUBFForm; kwargs...)
+PMs.GenericPowerModel(data, SDPUBFForm; kwargs...)
 
 ""
-const SOCNLPUBFPowerModel = GenericPowerModel{SOCNLPUBFForm}
+const SOCNLPUBFPowerModel = PMs.GenericPowerModel{SOCNLPUBFForm}
 
 "default SOC unbalanced DistFlow constructor"
 SOCNLPUBFPowerModel(data::Dict{String,Any}; kwargs...) =
-GenericPowerModel(data, SOCNLPUBFForm; kwargs...)
+PMs.GenericPowerModel(data, SOCNLPUBFForm; kwargs...)
 
 ""
-const SOCConicUBFPowerModel = GenericPowerModel{SOCConicUBFForm}
+const SOCConicUBFPowerModel = PMs.GenericPowerModel{SOCConicUBFForm}
 
 "default SOC unbalanced DistFlow constructor"
 SOCConicUBFPowerModel(data::Dict{String,Any}; kwargs...) =
-GenericPowerModel(data, SOCConicUBFForm; kwargs...)
+PMs.GenericPowerModel(data, SOCConicUBFForm; kwargs...)
 
 ""
-const LPfullUBFPowerModel = GenericPowerModel{LPfullUBFForm}
+const LPfullUBFPowerModel = PMs.GenericPowerModel{LPfullUBFForm}
 
 "default LP unbalanced DistFlow constructor"
 LPfullUBFPowerModel(data::Dict{String,Any}; kwargs...) =
-GenericPowerModel(data, LPfullUBFForm; kwargs...)
+PMs.GenericPowerModel(data, LPfullUBFForm; kwargs...)
 
 ""
-const LPdiagUBFPowerModel = GenericPowerModel{LPdiagUBFForm}
+const LPdiagUBFPowerModel = PMs.GenericPowerModel{LPdiagUBFForm}
 
 "default LP unbalanced DistFlow constructor"
 LPdiagUBFPowerModel(data::Dict{String,Any}; kwargs...) =
-GenericPowerModel(data, LPdiagUBFForm; kwargs...)
+PMs.GenericPowerModel(data, LPdiagUBFForm; kwargs...)
 
-function variable_tp_branch_current(pm::GenericPowerModel{T}; kwargs...) where T <: AbstractUBFForm
+function variable_tp_branch_current(pm::PMs.GenericPowerModel{T}; kwargs...) where T <: AbstractUBFForm
     variable_tp_branch_series_current_prod_hermitian(pm; kwargs...)
 end
 
-function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: AbstractUBFForm
+function variable_tp_voltage(pm::PMs.GenericPowerModel{T}; kwargs...) where T <: AbstractUBFForm
     variable_tp_voltage_prod_hermitian(pm; kwargs...)
 end
 
 ""
-function variable_tp_voltage_prod_hermitian(pm::GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
+function variable_tp_voltage_prod_hermitian(pm::PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
     n_diag_el = n_cond
     n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
     for c in 1:n_diag_el
@@ -87,34 +90,34 @@ function variable_tp_voltage_prod_hermitian(pm::GenericPowerModel{T}; n_cond::In
     end
 
     wmaxdict = Dict{Int64, Any}()
-    for i in ids(pm, nw, :bus)
-        wmax = ref(pm, nw, :bus, i, "vmax").values*ref(pm, nw, :bus, i, "vmax").values'
+    for i in PMs.ids(pm, nw, :bus)
+        wmax = PMs.ref(pm, nw, :bus, i, "vmax").values*PMs.ref(pm, nw, :bus, i, "vmax").values'
         wmaxltri = ThreePhasePowerModels.mat2ltrivec(wmax)
         wmaxdict[i] = wmaxltri
     end
 
     for c in 1:n_lower_triangle_el
         if bounded
-            var(pm, nw, c)[:wr] = @variable(pm.model,
-            [i in ids(pm, nw, :bus)], basename="$(nw)_$(c)_wr",
+            PMs.var(pm, nw, c)[:wr] = JuMP.@variable(pm.model,
+            [i in PMs.ids(pm, nw, :bus)], basename="$(nw)_$(c)_wr",
             lowerbound = -wmaxdict[i][c],
             upperbound =  wmaxdict[i][c],
-            start = PMs.getval(ref(pm, nw, :bus, i), "w_start", c, 1.001)
+            start = PMs.getval(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
-            var(pm, nw, c)[:wi] = @variable(pm.model,
-            [i in ids(pm, nw, :bus)], basename="$(nw)_$(c)_wi",
+            PMs.var(pm, nw, c)[:wi] = JuMP.@variable(pm.model,
+            [i in PMs.ids(pm, nw, :bus)], basename="$(nw)_$(c)_wi",
             lowerbound = -wmaxdict[i][c],
             upperbound =  wmaxdict[i][c],
-            start = PMs.getval(ref(pm, nw, :bus, i), "w_start", c, 1.001)
+            start = PMs.getval(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
         else
-            var(pm, nw, c)[:wr] = @variable(pm.model,
-            [i in ids(pm, nw, :bus)], basename="$(nw)_$(c)_wr",
-            start = PMs.getval(ref(pm, nw, :bus, i), "w_start", c, 1.001)
+            PMs.var(pm, nw, c)[:wr] = JuMP.@variable(pm.model,
+            [i in PMs.ids(pm, nw, :bus)], basename="$(nw)_$(c)_wr",
+            start = PMs.getval(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
-            var(pm, nw, c)[:wi] = @variable(pm.model,
-            [i in ids(pm, nw, :bus)], basename="$(nw)_$(c)_wi",
-            start = PMs.getval(ref(pm, nw, :bus, i), "w_start", c, 1.001)
+            PMs.var(pm, nw, c)[:wi] = JuMP.@variable(pm.model,
+            [i in PMs.ids(pm, nw, :bus)], basename="$(nw)_$(c)_wi",
+            start = PMs.getval(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
         end
     end
@@ -122,22 +125,22 @@ function variable_tp_voltage_prod_hermitian(pm::GenericPowerModel{T}; n_cond::In
     #Store dictionary with matrix variables by bus
     w_re_dict = Dict{Int64, Any}()
     w_im_dict = Dict{Int64, Any}()
-    for i in ids(pm, nw, :bus)
-        w =  [var(pm, nw, h, :w,  i) for h in 1:n_diag_el]
-        wr = [var(pm, nw, h, :wr, i) for h in 1:n_lower_triangle_el]
-        wi = [var(pm, nw, h, :wi, i) for h in 1:n_lower_triangle_el]
+    for i in PMs.ids(pm, nw, :bus)
+        w =  [PMs.var(pm, nw, h, :w,  i) for h in 1:n_diag_el]
+        wr = [PMs.var(pm, nw, h, :wr, i) for h in 1:n_lower_triangle_el]
+        wi = [PMs.var(pm, nw, h, :wi, i) for h in 1:n_lower_triangle_el]
 
         (w_re, w_im) = make_hermitian_matrix_variable(w, wr, wi)
         w_re_dict[i] = w_re
         w_im_dict[i] = w_im
     end
-    var(pm, nw)[:W_re] = w_re_dict
-    var(pm, nw)[:W_im] = w_im_dict
+    PMs.var(pm, nw)[:W_re] = w_re_dict
+    PMs.var(pm, nw)[:W_im] = w_im_dict
 end
 
-function variable_tp_branch_series_current_prod_hermitian(pm::GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
-    branches = ref(pm, nw, :branch)
-    buses = ref(pm, nw, :bus)
+function variable_tp_branch_series_current_prod_hermitian(pm::PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
+    branches = PMs.ref(pm, nw, :branch)
+    buses = PMs.ref(pm, nw, :bus)
 
     n_diag_el = n_cond
     n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
@@ -167,17 +170,17 @@ function variable_tp_branch_series_current_prod_hermitian(pm::GenericPowerModel{
 
     for c in 1:n_diag_el
         if bounded
-            var(pm, nw, c)[:cm] = @variable(pm.model,
-            [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_cm",
+            PMs.var(pm, nw, c)[:cm] = JuMP.@variable(pm.model,
+            [l in PMs.ids(pm, nw, :branch)], basename="$(nw)_$(c)_cm",
             lowerbound = 0,
             upperbound = (cmax[l][c])^2,
-            start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
+            start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
             )
         else
-            var(pm, nw, c)[:cm] = @variable(pm.model,
-            [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_cm",
+            PMs.var(pm, nw, c)[:cm] = JuMP.@variable(pm.model,
+            [l in PMs.ids(pm, nw, :branch)], basename="$(nw)_$(c)_cm",
             lowerbound = 0,
-            start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c)
+            start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c)
             )
         end
         # PowerModels.variable_current_magnitude_sqr(pm, nw=nw, cnd=c)
@@ -185,28 +188,28 @@ function variable_tp_branch_series_current_prod_hermitian(pm::GenericPowerModel{
 
     for c in 1:n_lower_triangle_el
         if bounded
-            var(pm, nw, c)[:ccmr] = @variable(pm.model,
-            [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmr",
+            PMs.var(pm, nw, c)[:ccmr] = JuMP.@variable(pm.model,
+            [l in PMs.ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmr",
             lowerbound = -(cmax[l][c])^2,
             upperbound = (cmax[l][c])^2,
-            start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
+            start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
             )
-            var(pm, nw, c)[:ccmi] = @variable(pm.model,
-            [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmi",
+            PMs.var(pm, nw, c)[:ccmi] = JuMP.@variable(pm.model,
+            [l in PMs.ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmi",
             lowerbound = -(cmax[l][c])^2,
             upperbound = (cmax[l][c])^2,
-            start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c)
+            start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c)
             )
         else
-            var(pm, nw, c)[:ccmr] = @variable(pm.model,
-            [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmr",
+            PMs.var(pm, nw, c)[:ccmr] = JuMP.@variable(pm.model,
+            [l in PMs.ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmr",
             # lowerbound = 0,
-            start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c)
+            start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c)
             )
-            var(pm, nw, c)[:ccmi] = @variable(pm.model,
-            [l in ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmi",
+            PMs.var(pm, nw, c)[:ccmi] = JuMP.@variable(pm.model,
+            [l in PMs.ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmi",
             # lowerbound = 0,
-            start = PMs.getval(ref(pm, nw, :branch, l), "i_start", c)
+            start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c)
             )
         end
     end
@@ -214,21 +217,21 @@ function variable_tp_branch_series_current_prod_hermitian(pm::GenericPowerModel{
     #Store dictionary with matrix variables by branch
     ccm_re_dict = Dict{Int64, Any}()
     ccm_im_dict = Dict{Int64, Any}()
-    for i in ids(pm, nw, :branch)
-        ccm =  [var(pm, nw, h, :cm,  i) for h in 1:n_diag_el]
-        ccmr = [var(pm, nw, h, :ccmr, i) for h in 1:n_lower_triangle_el]
-        ccmi = [var(pm, nw, h, :ccmi, i) for h in 1:n_lower_triangle_el]
+    for i in PMs.ids(pm, nw, :branch)
+        ccm =  [PMs.var(pm, nw, h, :cm,  i) for h in 1:n_diag_el]
+        ccmr = [PMs.var(pm, nw, h, :ccmr, i) for h in 1:n_lower_triangle_el]
+        ccmi = [PMs.var(pm, nw, h, :ccmi, i) for h in 1:n_lower_triangle_el]
 
         (ccm_re, ccm_im) = make_hermitian_matrix_variable(ccm, ccmr, ccmi)
         ccm_re_dict[i] = ccm_re
         ccm_im_dict[i] = ccm_im
     end
-    var(pm, nw)[:CC_re] = ccm_re_dict
-    var(pm, nw)[:CC_im] = ccm_im_dict
+    PMs.var(pm, nw)[:CC_re] = ccm_re_dict
+    PMs.var(pm, nw)[:CC_im] = ccm_im_dict
 end
 
 ""
-function variable_tp_branch_flow(pm::GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
+function variable_tp_branch_flow(pm::PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
     n_diag_el = n_cond
     n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
     @assert n_cond<=5
@@ -248,14 +251,14 @@ function variable_tp_branch_flow(pm::GenericPowerModel{T}; n_cond::Int=3, nw::In
     p_mat_dict = Dict{Tuple{Int64,Int64,Int64}, Any}()
     q_mat_dict = Dict{Tuple{Int64,Int64,Int64}, Any}()
 
-    for i in ref(pm, nw, :arcs)
-        p_d =  [var(pm, nw, c, :p,    i) for c in 1:n_diag_el]
-        p_ut = [var(pm, nw, c, :p_ut, i) for c in 1:n_lower_triangle_el]
-        p_lt = [var(pm, nw, c, :p_lt, i) for c in 1:n_lower_triangle_el]
+    for i in PMs.ref(pm, nw, :arcs)
+        p_d =  [PMs.var(pm, nw, c, :p,    i) for c in 1:n_diag_el]
+        p_ut = [PMs.var(pm, nw, c, :p_ut, i) for c in 1:n_lower_triangle_el]
+        p_lt = [PMs.var(pm, nw, c, :p_lt, i) for c in 1:n_lower_triangle_el]
 
-        q_d =  [var(pm, nw, c, :q,    i) for c in 1:n_diag_el]
-        q_ut = [var(pm, nw, c, :q_ut, i) for c in 1:n_lower_triangle_el]
-        q_lt = [var(pm, nw, c, :q_lt, i) for c in 1:n_lower_triangle_el]
+        q_d =  [PMs.var(pm, nw, c, :q,    i) for c in 1:n_diag_el]
+        q_ut = [PMs.var(pm, nw, c, :q_ut, i) for c in 1:n_lower_triangle_el]
+        q_lt = [PMs.var(pm, nw, c, :q_lt, i) for c in 1:n_lower_triangle_el]
 
         p_mat = make_full_matrix_variable(p_d, p_lt, p_ut)
         q_mat = make_full_matrix_variable(q_d, q_lt, q_ut)
@@ -263,116 +266,116 @@ function variable_tp_branch_flow(pm::GenericPowerModel{T}; n_cond::Int=3, nw::In
         p_mat_dict[i] = p_mat
         q_mat_dict[i] = q_mat
     end
-    var(pm, nw)[:P_mx] = p_mat_dict
-    var(pm, nw)[:Q_mx] = q_mat_dict
+    PMs.var(pm, nw)[:P_mx] = p_mat_dict
+    PMs.var(pm, nw)[:Q_mx] = q_mat_dict
 end
 
 
 "variable: `p_lt[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_lower_triangle_active_branch_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
+function variable_lower_triangle_active_branch_flow(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
     smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
 
-    for (l,i,j) in ref(pm, nw, :arcs)
-        cmax = ref(pm, nw, :branch, l, "rate_a").values./ref(pm, nw, :bus, i, "vmin").values
-        smax = ref(pm, nw, :bus, i, "vmax").values.*cmax'
+    for (l,i,j) in PMs.ref(pm, nw, :arcs)
+        cmax = PMs.ref(pm, nw, :branch, l, "rate_a").values./PMs.ref(pm, nw, :bus, i, "vmin").values
+        smax = PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
         smaxltri = ThreePhasePowerModels.mat2ltrivec(smax)
         smaxdict[(l,i,j)] = smaxltri
     end
 
     if bounded
-        var(pm, nw, cnd)[:p_lt] = @variable(pm.model,
-        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_lt",
+        PMs.var(pm, nw, cnd)[:p_lt] = JuMP.@variable(pm.model,
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_lt",
         lowerbound = -smaxdict[(l,i,j)][cnd],
         upperbound =  smaxdict[(l,i,j)][cnd],
-        start = PMs.getval(ref(pm, nw, :branch, l), "p_start", cnd)
+        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
         )
     else
-        var(pm, nw, cnd)[:p_lt] = @variable(pm.model,
-        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_lt",
-        start = PMs.getval(ref(pm, nw, :branch, l), "p_start", cnd)
+        PMs.var(pm, nw, cnd)[:p_lt] = JuMP.@variable(pm.model,
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_lt",
+        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
         )
     end
 end
 
 "variable: `q_lt[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_lower_triangle_reactive_branch_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
+function variable_lower_triangle_reactive_branch_flow(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
     smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
 
-    for (l,i,j) in ref(pm, nw, :arcs)
-        cmax = ref(pm, nw, :branch, l, "rate_a").values./ref(pm, nw, :bus, i, "vmin").values
-        smax = ref(pm, nw, :bus, i, "vmax").values.*cmax'
+    for (l,i,j) in PMs.ref(pm, nw, :arcs)
+        cmax = PMs.ref(pm, nw, :branch, l, "rate_a").values./PMs.ref(pm, nw, :bus, i, "vmin").values
+        smax = PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
         smaxltri = ThreePhasePowerModels.mat2ltrivec(smax)
         smaxdict[(l,i,j)] = smaxltri
     end
 
     if bounded
-        var(pm, nw, cnd)[:q_lt] = @variable(pm.model,
-        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_lt",
+        PMs.var(pm, nw, cnd)[:q_lt] = JuMP.@variable(pm.model,
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_lt",
         lowerbound = -smaxdict[(l,i,j)][cnd],
         upperbound =  smaxdict[(l,i,j)][cnd],
-        start = PMs.getval(ref(pm, nw, :branch, l), "q_start", cnd)
+        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
         )
     else
-        var(pm, nw, cnd)[:q_lt] = @variable(pm.model,
-        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_lt",
-        start = PMs.getval(ref(pm, nw, :branch, l), "q_start", cnd)
+        PMs.var(pm, nw, cnd)[:q_lt] = JuMP.@variable(pm.model,
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_lt",
+        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
         )
     end
 end
 
 "variable: `p_ut[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_upper_triangle_active_branch_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
+function variable_upper_triangle_active_branch_flow(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
     smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
 
-    for (l,i,j) in ref(pm, nw, :arcs)
-        cmax = ref(pm, nw, :branch, l, "rate_a").values./ref(pm, nw, :bus, i, "vmin").values
-        smax = ref(pm, nw, :bus, i, "vmax").values.*cmax'
+    for (l,i,j) in PMs.ref(pm, nw, :arcs)
+        cmax = PMs.ref(pm, nw, :branch, l, "rate_a").values./PMs.ref(pm, nw, :bus, i, "vmin").values
+        smax = PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
         smaxutri = ThreePhasePowerModels.mat2utrivec(smax)
         smaxdict[(l,i,j)] = smaxutri
     end
 
     if bounded
-        var(pm, nw, cnd)[:p_ut] = @variable(pm.model,
-        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_ut",
+        PMs.var(pm, nw, cnd)[:p_ut] = JuMP.@variable(pm.model,
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_ut",
         lowerbound = -smaxdict[(l,i,j)][cnd],
         upperbound =  smaxdict[(l,i,j)][cnd],
-        start = PMs.getval(ref(pm, nw, :branch, l), "p_start", cnd)
+        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
         )
     else
-        var(pm, nw, cnd)[:p_ut] = @variable(pm.model,
-        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_ut",
-        start = PMs.getval(ref(pm, nw, :branch, l), "p_start", cnd)
+        PMs.var(pm, nw, cnd)[:p_ut] = JuMP.@variable(pm.model,
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_ut",
+        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
         )
     end
 end
 
 "variable: `q_ut[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_upper_triangle_reactive_branch_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
+function variable_upper_triangle_reactive_branch_flow(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
     smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
 
-    for (l,i,j) in ref(pm, nw, :arcs)
-        cmax = ref(pm, nw, :branch, l, "rate_a").values./ref(pm, nw, :bus, i, "vmin").values
-        smax = ref(pm, nw, :bus, i, "vmax").values.*cmax'
+    for (l,i,j) in PMs.ref(pm, nw, :arcs)
+        cmax = PMs.ref(pm, nw, :branch, l, "rate_a").values./PMs.ref(pm, nw, :bus, i, "vmin").values
+        smax = PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
         smaxutri = ThreePhasePowerModels.mat2utrivec(smax)
         smaxdict[(l,i,j)] = smaxutri
     end
     if bounded
-        var(pm, nw, cnd)[:q_ut] = @variable(pm.model,
-        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_ut",
+        PMs.var(pm, nw, cnd)[:q_ut] = JuMP.@variable(pm.model,
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_ut",
         lowerbound = -smaxdict[(l,i,j)][cnd],
         upperbound =  smaxdict[(l,i,j)][cnd],
-        start = PMs.getval(ref(pm, nw, :branch, l), "q_start", cnd)
+        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
         )
     else
-        var(pm, nw, cnd)[:q_ut] = @variable(pm.model,
-        [(l,i,j) in ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_ut",
-        start = PMs.getval(ref(pm, nw, :branch, l), "q_start", cnd)
+        PMs.var(pm, nw, cnd)[:q_ut] = JuMP.@variable(pm.model,
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_ut",
+        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
         )
     end
 end
 
 ""
-function constraint_tp_theta_ref(pm::GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
+function constraint_tp_theta_ref(pm::PMs.GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
     constraint_tp_theta_ref(pm, nw, i)
 end
 
@@ -380,32 +383,32 @@ end
 """
 Defines branch flow model power flow equations
 """
-function constraint_tp_flow_losses(pm::GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to) where T <: AbstractUBFForm
-    p_to = var(pm, n, :P_mx)[t_idx]
-    q_to = var(pm, n, :Q_mx)[t_idx]
+function constraint_tp_flow_losses(pm::PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to) where T <: AbstractUBFForm
+    p_to = PMs.var(pm, n, :P_mx)[t_idx]
+    q_to = PMs.var(pm, n, :Q_mx)[t_idx]
 
-    p_fr = var(pm, n, :P_mx)[f_idx]
-    q_fr = var(pm, n, :Q_mx)[f_idx]
+    p_fr = PMs.var(pm, n, :P_mx)[f_idx]
+    q_fr = PMs.var(pm, n, :Q_mx)[f_idx]
 
-    w_to_re = var(pm, n, :W_re)[t_bus]
-    w_fr_re = var(pm, n, :W_re)[f_bus]
+    w_to_re = PMs.var(pm, n, :W_re)[t_bus]
+    w_fr_re = PMs.var(pm, n, :W_re)[f_bus]
 
-    w_to_im = var(pm, n, :W_im)[t_bus]
-    w_fr_im = var(pm, n, :W_im)[f_bus]
+    w_to_im = PMs.var(pm, n, :W_im)[t_bus]
+    w_fr_im = PMs.var(pm, n, :W_im)[f_bus]
 
-    ccm_re =  var(pm, n, :CC_re)[i]
-    ccm_im =  var(pm, n, :CC_im)[i]
+    ccm_re =  PMs.var(pm, n, :CC_re)[i]
+    ccm_im =  PMs.var(pm, n, :CC_im)[i]
 
-    @constraint(pm.model, p_fr + p_to .==  w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)' + r*ccm_re - x*ccm_im +  w_to_re*(g_sh_to)'  + w_to_im*(b_sh_to)')
-    @constraint(pm.model, q_fr + q_to .==  w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)' + x*ccm_re + r*ccm_im +  w_to_im*(g_sh_to)'  - w_to_re*(b_sh_to)')
+    JuMP.@constraint(pm.model, p_fr + p_to .==  w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)' + r*ccm_re - x*ccm_im +  w_to_re*(g_sh_to)'  + w_to_im*(b_sh_to)')
+    JuMP.@constraint(pm.model, q_fr + q_to .==  w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)' + x*ccm_re + r*ccm_im +  w_to_im*(g_sh_to)'  - w_to_re*(b_sh_to)')
 end
 
 ""
-function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, i) where T <: AbstractUBFForm
+function constraint_tp_theta_ref(pm::PMs.GenericPowerModel{T}, n::Int, i) where T <: AbstractUBFForm
     nconductors = length(PMs.conductor_ids(pm))
 
-    w_re = var(pm, n, :W_re)[i]
-    w_im = var(pm, n, :W_im)[i]
+    w_re = PMs.var(pm, n, :W_re)[i]
+    w_im = PMs.var(pm, n, :W_im)[i]
 
     alpha = exp(-im*ThreePhasePowerModels.wraptopi(2 * pi / nconductors ))
     beta = (alpha*ones(nconductors)).^(0:nconductors-1)
@@ -413,45 +416,45 @@ function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, i) where T <:
 
     w_re_ref = real(gamma).*w_re[1,1]
     w_im_ref = imag(gamma).*w_re[1,1]
-    @constraint(pm.model, diag(w_re)[2:nconductors]        .== diag(w_re_ref)[2:nconductors]) # first equality is implied
-    @constraint(pm.model, mat2utrivec(w_re) .== mat2utrivec(w_re_ref))
-    @constraint(pm.model, mat2utrivec(w_im) .== mat2utrivec(w_im_ref))
+    JuMP.@constraint(pm.model, diag(w_re)[2:nconductors]        .== diag(w_re_ref)[2:nconductors]) # first equality is implied
+    JuMP.@constraint(pm.model, mat2utrivec(w_re) .== mat2utrivec(w_re_ref))
+    JuMP.@constraint(pm.model, mat2utrivec(w_im) .== mat2utrivec(w_im_ref))
 end
 
 
 """
 Defines voltage drop over a branch, linking from and to side voltage
 """
-function constraint_tp_voltage_magnitude_difference(pm::GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: AbstractUBFForm
-    w_fr_re = var(pm, n, :W_re)[f_bus]
-    w_fr_im = var(pm, n, :W_im)[f_bus]
+function constraint_tp_voltage_magnitude_difference(pm::PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: AbstractUBFForm
+    w_fr_re = PMs.var(pm, n, :W_re)[f_bus]
+    w_fr_im = PMs.var(pm, n, :W_im)[f_bus]
 
-    w_to_re = var(pm, n, :W_re)[t_bus]
-    w_to_im = var(pm, n, :W_im)[t_bus]
+    w_to_re = PMs.var(pm, n, :W_re)[t_bus]
+    w_to_im = PMs.var(pm, n, :W_im)[t_bus]
 
-    p_fr = var(pm, n, :P_mx)[f_idx]
-    q_fr = var(pm, n, :Q_mx)[f_idx]
+    p_fr = PMs.var(pm, n, :P_mx)[f_idx]
+    q_fr = PMs.var(pm, n, :Q_mx)[f_idx]
 
     p_s_fr = p_fr - (w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)')
     q_s_fr = q_fr - (w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)')
 
-    ccm_re =  var(pm, n, :CC_re)[i]
-    ccm_im =  var(pm, n, :CC_im)[i]
+    ccm_re =  PMs.var(pm, n, :CC_re)[i]
+    ccm_im =  PMs.var(pm, n, :CC_im)[i]
 
     #KVL over the line:
-    @constraint(pm.model, diag(w_to_re) .== diag(
+    JuMP.@constraint(pm.model, diag(w_to_re) .== diag(
     w_fr_re   - p_s_fr  *r' - q_s_fr*x'        - r*p_s_fr'    - x*q_s_fr'
     + r*ccm_re*r' - x     *ccm_im*r' + x*ccm_re *x' + r*ccm_im *x'))
-    @constraint(pm.model, mat2utrivec(w_to_re) .== mat2utrivec(
+    JuMP.@constraint(pm.model, mat2utrivec(w_to_re) .== mat2utrivec(
     w_fr_re   - p_s_fr  *r' - q_s_fr*x'        - r*p_s_fr'    - x*q_s_fr'
     + r*ccm_re*r' - x     *ccm_im*r' + x*ccm_re *x' + r*ccm_im *x'))
-    @constraint(pm.model, mat2utrivec(w_to_im) .== mat2utrivec(
+    JuMP.@constraint(pm.model, mat2utrivec(w_to_im) .== mat2utrivec(
     w_fr_im   - q_s_fr  *r' + p_s_fr*x'        - x*p_s_fr'    + r*q_s_fr'
     + x*ccm_re*r' + r     *ccm_im*r' - r*ccm_re *x' + x*ccm_im *x'))
 end
 
 ""
-function get_solution_tp(pm::GenericPowerModel, sol::Dict{String,Any})
+function get_solution_tp(pm::PMs.GenericPowerModel, sol::Dict{String,Any})
     add_bus_voltage_setpoint(sol, pm)
     PMs.add_generator_power_setpoint(sol, pm)
     add_branch_flow_setpoint(sol, pm)
@@ -470,7 +473,7 @@ end
 
 
 ""
-function add_bus_voltage_setpoint(sol, pm::GenericPowerModel)
+function add_bus_voltage_setpoint(sol, pm::PMs.GenericPowerModel)
     PMs.add_setpoint(sol, pm, "bus", "vm", :w; scale = (x,item,i) -> sqrt(x))
     PMs.add_setpoint(sol, pm, "bus", "w",  :w)
     PMs.add_setpoint(sol, pm, "bus", "wr", :wr)
@@ -478,7 +481,7 @@ function add_bus_voltage_setpoint(sol, pm::GenericPowerModel)
 end
 
 ""
-function add_branch_flow_setpoint(sol, pm::GenericPowerModel)
+function add_branch_flow_setpoint(sol, pm::PMs.GenericPowerModel)
     if haskey(pm.setting, "output") && haskey(pm.setting["output"], "branch_flows") && pm.setting["output"]["branch_flows"] == true
         PMs.add_setpoint(sol, pm, "branch", "pf", :p; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])])
         PMs.add_setpoint(sol, pm, "branch", "qf", :q; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])])
@@ -499,7 +502,7 @@ end
 
 
 ""
-function add_branch_current_setpoint(sol, pm::GenericPowerModel)
+function add_branch_current_setpoint(sol, pm::PMs.GenericPowerModel)
     if haskey(pm.setting, "output") && haskey(pm.setting["output"], "branch_flows") && pm.setting["output"]["branch_flows"] == true
         PMs.add_setpoint(sol, pm, "branch", "cm", :cm; scale = (x,item,i) -> sqrt(x))
         PMs.add_setpoint(sol, pm, "branch", "cc", :cm)
@@ -509,26 +512,26 @@ function add_branch_current_setpoint(sol, pm::GenericPowerModel)
 end
 
 
-function add_rank(sol, pm::GenericPowerModel; tol = 1e-6)
+function add_rank(sol, pm::PMs.GenericPowerModel; tol = 1e-6)
     add_voltage_variable_rank(sol, pm; tol=tol)
     add_current_variable_rank(sol, pm; tol=tol)
     add_branch_flow_rank(sol, pm; tol=tol)
 end
 
-function add_voltage_variable_rank(sol, pm::GenericPowerModel; tol = 1e-6)
+function add_voltage_variable_rank(sol, pm::PMs.GenericPowerModel; tol = 1e-6)
 end
 
-function add_current_variable_rank(sol, pm::GenericPowerModel; tol = 1e-6)
+function add_current_variable_rank(sol, pm::PMs.GenericPowerModel; tol = 1e-6)
 end
 
-function add_branch_flow_rank(sol, pm::GenericPowerModel; tol = 1e-6)
+function add_branch_flow_rank(sol, pm::PMs.GenericPowerModel; tol = 1e-6)
 end
 
-function add_is_ac_feasible(sol, pm::GenericPowerModel)
+function add_is_ac_feasible(sol, pm::PMs.GenericPowerModel)
 end
 
-function add_is_ac_feasible(sol, pm::GenericPowerModel{T}) where T <: AbstractUBFForm
-    for (nw, network) in pm.ref[:nw]
+function add_is_ac_feasible(sol, pm::PMs.GenericPowerModel{T}) where T <: AbstractUBFForm
+    for (nw, network) in pm.PMs.ref[:nw]
         branch_feasibilities = [branch["rank"] <= 1 for (b, branch) in sol["branch"]]
         branch_feasbility = all(branch_feasibilities)
         bus_feasibilities = [bus["rank"] <= 1 for (b, bus) in sol["bus"]]
@@ -539,9 +542,9 @@ function add_is_ac_feasible(sol, pm::GenericPowerModel{T}) where T <: AbstractUB
     end
 end
 
-function add_voltage_variable_rank(sol, pm::GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
-    for (nw, network) in pm.ref[:nw]
-        buses       = ref(pm, nw, :bus)
+function add_voltage_variable_rank(sol, pm::PMs.GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
+    for (nw, network) in pm.PMs.ref[:nw]
+        buses       = PMs.ref(pm, nw, :bus)
         for (b, bus) in buses
             Wre, Wim = make_hermitian_matrix_variable(sol["bus"]["$b"]["w"].values, sol["bus"]["$b"]["wr"].values, sol["bus"]["$b"]["wi"].values)
             W = Wre + im*Wim
@@ -550,9 +553,9 @@ function add_voltage_variable_rank(sol, pm::GenericPowerModel{T}; tol = 1e-6) wh
     end
 end
 
-function add_current_variable_rank(sol, pm::GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
-    for (nw, network) in pm.ref[:nw]
-        branches       = ref(pm, nw, :branch)
+function add_current_variable_rank(sol, pm::PMs.GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
+    for (nw, network) in pm.PMs.ref[:nw]
+        branches       = PMs.ref(pm, nw, :branch)
         for (b, branch) in branches
             CCre, CCim = make_hermitian_matrix_variable(sol["branch"]["$b"]["cc"].values, sol["branch"]["$b"]["ccr"].values, sol["branch"]["$b"]["cci"].values)
             CC = CCre + im*CCim
@@ -561,10 +564,10 @@ function add_current_variable_rank(sol, pm::GenericPowerModel{T}; tol = 1e-6) wh
     end
 end
 
-function add_branch_flow_rank(sol, pm::GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
-    for (nw, network) in pm.ref[:nw]
-        buses       = ref(pm, nw, :bus)
-        for (b, branch) in ref(pm, nw, :branch)
+function add_branch_flow_rank(sol, pm::PMs.GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
+    for (nw, network) in pm.PMs.ref[:nw]
+        buses       = PMs.ref(pm, nw, :bus)
+        for (b, branch) in PMs.ref(pm, nw, :branch)
             g_fr = diagm(0 => branch["g_fr"].values)
             b_fr = diagm(0 => branch["b_fr"].values)
             y_fr = g_fr + im* b_fr
@@ -590,23 +593,23 @@ end
 
 
 ""
-function add_original_variables(sol, pm::GenericPowerModel)
+function add_original_variables(sol, pm::PMs.GenericPowerModel)
     if !haskey(pm.setting, "output") || !haskey(pm.setting["output"], "branch_flows") || pm.setting["output"]["branch_flows"] == false
-        error(LOGGER, "deriving the original variables requires setting: branch_flows => true")
+        Memento.error(LOGGER, "deriving the original variables requires setting: branch_flows => true")
     end
 
-    for (nw, network) in pm.ref[:nw]
+    for (nw, network) in pm.PMs.ref[:nw]
         #find rank-1 starting points
         ref_buses   = find_ref_buses(pm, nw)
         #TODO develop code to start with any rank-1 W variable
-        buses       = ref(pm, nw, :bus)
-        arcs        = ref(pm, nw, :arcs)
-        branches    = ref(pm, nw, :branch)
+        buses       = PMs.ref(pm, nw, :bus)
+        arcs        = PMs.ref(pm, nw, :arcs)
+        branches    = PMs.ref(pm, nw, :branch)
         #define sets to explore
-        all_bus_ids             = Set([b for (b, bus)      in ref(pm, nw, :bus)])
-        all_arc_from_ids        = Set([(l,i,j) for (l,i,j) in ref(pm, nw, :arcs_from)])
-        all_arc_to_ids          = Set([(l,i,j) for (l,i,j) in ref(pm, nw, :arcs_to)])
-        all_branch_ids          = Set([l for (l,i,j)       in ref(pm, nw, :arcs_from)])
+        all_bus_ids             = Set([b for (b, bus)      in PMs.ref(pm, nw, :bus)])
+        all_arc_from_ids        = Set([(l,i,j) for (l,i,j) in PMs.ref(pm, nw, :arcs_from)])
+        all_arc_to_ids          = Set([(l,i,j) for (l,i,j) in PMs.ref(pm, nw, :arcs_to)])
+        all_branch_ids          = Set([l for (l,i,j)       in PMs.ref(pm, nw, :arcs_from)])
         visited_arc_from_ids    = Set()
         visited_arc_to_ids      = Set()
         visited_bus_ids         = Set()
@@ -614,7 +617,7 @@ function add_original_variables(sol, pm::GenericPowerModel)
 
         for b in ref_buses
             sol["bus"]["$b"]["va"] = [0, -2*pi/3, 2*pi/3] #TODO support arbitrary angles at the reference bus
-            sol["bus"]["$b"]["vm"] = ref(pm, nw, :bus, b)["vm"].values
+            sol["bus"]["$b"]["vm"] = PMs.ref(pm, nw, :bus, b)["vm"].values
             push!(visited_bus_ids, b)
         end
 

@@ -1,4 +1,5 @@
 # Defines data structures (defaults) for OpenDSS objects
+import LinearAlgebra: diagm
 
 to_meters = Dict{String,Any}("mi" => 1609.3,
                              "km" => 1000.0,
@@ -187,7 +188,7 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
     len = get(kwargs, :length, 1.0) * to_meters[units]
 
     if haskey(kwargs, :rg)
-        warn(LOGGER, "Rg,Xg are not fully supported")
+        Memento.warn(LOGGER, "Rg,Xg are not fully supported")
     end
 
     rmatrix .+= rg * (freq/basefreq - 1.0)
@@ -942,7 +943,7 @@ function createPVSystem(bus1, name::AbstractString; kwargs...)
     end
 
     if haskey(kwargs, :like)
-        warn(LOGGER, "\"like\" keyword on pvsystem $name is not supported.")
+        Memento.warn(LOGGER, "\"like\" keyword on pvsystem $name is not supported.")
     end
 
     pvsystem = Dict{String,Any}("name" => name,

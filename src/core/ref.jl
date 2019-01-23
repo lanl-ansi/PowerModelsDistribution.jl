@@ -1,5 +1,5 @@
 ""
-function calc_tp_voltage_product_bounds(pm::GenericPowerModel, buspairs; nw::Int=pm.cnw)
+function calc_tp_voltage_product_bounds(pm::PMs.GenericPowerModel, buspairs; nw::Int=pm.cnw)
     wr_min = Dict([(bp, -Inf) for bp in buspairs])
     wr_max = Dict([(bp,  Inf) for bp in buspairs])
     wi_min = Dict([(bp, -Inf) for bp in buspairs])
@@ -7,13 +7,13 @@ function calc_tp_voltage_product_bounds(pm::GenericPowerModel, buspairs; nw::Int
 
     for (i, j, c, d) in buspairs
         if i == j
-            bus = ref(pm, nw, :bus)[i]
+            bus = PMs.ref(pm, nw, :bus)[i]
             vm_fr_max = bus["vmax"][c]
             vm_to_max = bus["vmax"][d]
             vm_fr_min = bus["vmin"][c]
             vm_to_min = bus["vmin"][d]
         else
-            buspair = ref(pm, nw, :buspairs)[(i, j)]
+            buspair = PMs.ref(pm, nw, :buspairs)[(i, j)]
             vm_fr_max = buspair["vm_fr_max"][c]
             vm_to_max = buspair["vm_to_max"][d]
             vm_fr_min = buspair["vm_fr_min"][c]
@@ -29,8 +29,8 @@ function calc_tp_voltage_product_bounds(pm::GenericPowerModel, buspairs; nw::Int
     return wr_min, wr_max, wi_min, wi_max
 end
 
-function find_ref_buses(pm::GenericPowerModel, nw)
-    buses = ref(pm, nw, :bus)
+function find_ref_buses(pm::PMs.GenericPowerModel, nw)
+    buses = PMs.ref(pm, nw, :bus)
     return [b for (b,bus) in buses if bus["bus_type"]==3]
     # return [bus for (b,bus) in buses ]
 end
