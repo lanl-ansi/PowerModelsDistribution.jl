@@ -588,9 +588,13 @@ Adds PowerModels-style transformers (branches) to `tppm_data` from `dss_data`.
 function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "transformer")
+<<<<<<< HEAD
         if !haskey(tppm_data, "trans_comp")
             tppm_data["trans_comp"] = Array{Any,1}()
         end
+=======
+        Memento.warn(LOGGER, "transformers are not yet supported, treating like non-transformer lines")
+>>>>>>> REF: Remove support for Julia < v1.0
         for transformer in dss_data["transformer"]
             if haskey(transformer, "like")
                 transformer = merge(find_component(dss_data, transformer["like"], "transformer"), transformer)
@@ -599,6 +603,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             defaults = createTransformer(transformer["name"]; to_sym_keys(transformer)...)
 
             nconductors = tppm_data["conductors"]
+<<<<<<< HEAD
             nrw = defaults["windings"]
             prop_suffix_w = ["", ["_$w" for w in 2:nrw]...]
             if nrw>3
@@ -606,6 +611,87 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 # except for the parsing of the loss model (the pair-wise reactance)
                 Memento.error(LOGGER, "For now parsing of xscarray is not supported. At most 3 windings are allowed, not $nrw.")
             end
+=======
+            windings = defaults["windings"]
+
+            if windings == 2
+                transDict = Dict{String,Any}()
+                transDict["name"] = defaults["name"]
+
+                f_bus, nodes = parse_busname(defaults["buses"][1])
+                t_bus = parse_busname(defaults["buses"][2])[1]
+
+                transDict["f_bus"] = find_bus(f_bus, tppm_data)
+                transDict["t_bus"] = find_bus(t_bus, tppm_data)
+
+                transDict["br_r"] = PMs.MultiConductorMatrix(parse_matrix(diagm(0 => fill(0.2, nconductors)), nodes, nconductors))
+                transDict["br_x"] = PMs.MultiConductorMatrix(parse_matrix(zeros(nconductors, nconductors), nodes, nconductors))
+
+                transDict["g_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+                transDict["g_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+                transDict["b_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+                transDict["b_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+
+                # CHECK: unit conversion?
+                transDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normhkva"], nodes, nconductors))
+                transDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
+                transDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
+
+                transDict["tap"] = PMs.MultiConductorVector(parse_array(/(defaults["taps"]...), nodes, nconductors, 1.0))
+                transDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+
+                transDict["br_status"] = convert(Int, defaults["enabled"])
+
+                transDict["angmin"] = PMs.MultiConductorVector(parse_array(-60.0, nodes, nconductors, -60.0))
+                transDict["angmax"] = PMs.MultiConductorVector(parse_array( 60.0, nodes, nconductors,  60.0))
+
+                transDict["transformer"] = true
+                transDict["switch"] = false
+
+                transDict["index"] = length(tppm_data["branch"]) + 1
+
+                nodes = .+([parse_busname(defaults["buses"][n])[2] for n in length(defaults["buses"])]...)
+                transDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+                transDict["source_id"] = "transformer.$(defaults["name"])"
+
+                used = []
+                PMs.import_remaining!(transDict, defaults, import_all; exclude=used)
+
+                push!(tppm_data["branch"], transDict)
+            else
+                Memento.warn(LOGGER, "3-winding transformers are not yet supported, treating like two non-transformer lines connected through a starbus")
+
+                starbus = create_starbus(tppm_data, defaults)
+                push!(tppm_data["bus"], starbus)
+
+                bus1, nodes1 = parse_busname(defaults["buses"][1])
+                bus2, nodes2 = parse_busname(defaults["buses"][2])
+                bus3, nodes3 = parse_busname(defaults["buses"][3])
+
+                for (m, (bus, nodes)) in enumerate(zip([bus1, bus2, bus3], [nodes1, nodes2, nodes3]))
+                    transDict = Dict{String,Any}()
+
+                    transDict["f_bus"] = find_bus(bus, tppm_data)
+                    transDict["t_bus"] = starbus["bus_i"]
+
+                    transDict["name"] = "$(defaults["name"]) winding $m"
+
+                    transDict["br_r"] = PMs.MultiConductorMatrix(parse_matrix(diagm(0 => fill(0.2, nconductors)), nodes, nconductors))
+                    transDict["br_x"] = PMs.MultiConductorMatrix(parse_matrix(zeros(nconductors, nconductors), nodes, nconductors))
+
+                    transDict["g_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+                    transDict["g_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+                    transDict["b_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+                    transDict["b_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+
+                    # CHECK: unit conversion?
+                    transDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normhkva"], nodes, nconductors))
+                    transDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
+                    transDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
+
+                    transDict["tap"] = PMs.MultiConductorVector(parse_array(defaults["taps"][m], nodes, nconductors, 1.0))
+                    transDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+>>>>>>> REF: Remove support for Julia < v1.0
 
             transDict = Dict{String,Any}()
             transDict["name"] = defaults["name"]
