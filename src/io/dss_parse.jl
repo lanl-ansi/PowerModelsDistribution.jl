@@ -740,7 +740,6 @@ function parse_dss(io::IOStream)::Dict
     Memento.info(LOGGER, "Calling parse_dss on $filename")
     currentFile = split(filename, "/")[end]
     path = join(split(filename, '/')[1:end-1], '/')
-    dss_str = read(open(filename), String)
     dss_data = Dict{String,Array}()
 
     dss_data["filename"] = [currentFile]
@@ -748,7 +747,7 @@ function parse_dss(io::IOStream)::Dict
     curCompDict = Dict{String,Any}()
     curCtypeName = ""
 
-    lines = split(dss_str, '\n')
+    lines = readlines(io)
 
     stripped_lines = strip_lines(lines)
     nlines = length(stripped_lines)
