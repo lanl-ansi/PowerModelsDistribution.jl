@@ -691,64 +691,64 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
     #             end
     #         end
     #     end
-    end
-
-    if haskey(dss_data, "reactor")
-        warn(LOGGER, "reactors as constant impedance elements is not yet supported, treating like line")
-        for reactor in dss_data["reactor"]
-            if haskey(reactor, "bus2")
-                if haskey(reactor, "like")
-                    reactor = merge(find_component(dss_data, reactor["like"], "reactor"), reactor)
-                end
-
-                defaults = createReactor(reactor["bus1"], reactor["name"], reactor["bus2"]; to_sym_keys(reactor)...)
-
-                reactDict = Dict{String,Any}()
-
-                nconductors = tppm_data["conductors"]
-
-                f_bus, nodes = parse_busname(defaults["bus1"])
-                t_bus = parse_busname(defaults["bus2"])[1]
-
-                reactDict["name"] = defaults["name"]
-                reactDict["f_bus"] = find_bus(f_bus, tppm_data)
-                reactDict["t_bus"] = find_bus(t_bus, tppm_data)
-
-                reactDict["br_r"] = PMs.MultiConductorMatrix(parse_matrix(diagm(0 => fill(0.2, nconductors)), nodes, nconductors))
-                reactDict["br_x"] = PMs.MultiConductorMatrix(parse_matrix(zeros(nconductors, nconductors), nodes, nconductors))
-
-                reactDict["g_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-                reactDict["g_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-                reactDict["b_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-                reactDict["b_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-
-                reactDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors))
-                reactDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
-                reactDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
-
-                reactDict["tap"] = PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors, NaN))
-                reactDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-
-                reactDict["br_status"] = convert(Int, defaults["enabled"])
-
-                reactDict["angmin"] = PMs.MultiConductorVector(parse_array(-60.0, nodes, nconductors, -60.0))
-                reactDict["angmax"] = PMs.MultiConductorVector(parse_array( 60.0, nodes, nconductors,  60.0))
-
-                reactDict["transformer"] = true
-
-                reactDict["index"] = length(tppm_data["branch"]) + 1
-
-                nodes = .+([parse_busname(defaults[n])[2] for n in ["bus1", "bus2"]]...)
-                reactDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-                reactDict["source_id"] = "reactor.$(defaults["name"])"
-
-                used = []
-                PMs.import_remaining!(reactDict, defaults, import_all; exclude=used)
-
-                push!(tppm_data["branch"], reactDict)
-            end
-        end
-    end
+    # end
+    #
+    # if haskey(dss_data, "reactor")
+    #     warn(LOGGER, "reactors as constant impedance elements is not yet supported, treating like line")
+    #     for reactor in dss_data["reactor"]
+    #         if haskey(reactor, "bus2")
+    #             if haskey(reactor, "like")
+    #                 reactor = merge(find_component(dss_data, reactor["like"], "reactor"), reactor)
+    #             end
+    #
+    #             defaults = createReactor(reactor["bus1"], reactor["name"], reactor["bus2"]; to_sym_keys(reactor)...)
+    #
+    #             reactDict = Dict{String,Any}()
+    #
+    #             nconductors = tppm_data["conductors"]
+    #
+    #             f_bus, nodes = parse_busname(defaults["bus1"])
+    #             t_bus = parse_busname(defaults["bus2"])[1]
+    #
+    #             reactDict["name"] = defaults["name"]
+    #             reactDict["f_bus"] = find_bus(f_bus, tppm_data)
+    #             reactDict["t_bus"] = find_bus(t_bus, tppm_data)
+    #
+    #             reactDict["br_r"] = PMs.MultiConductorMatrix(parse_matrix(diagm(0 => fill(0.2, nconductors)), nodes, nconductors))
+    #             reactDict["br_x"] = PMs.MultiConductorMatrix(parse_matrix(zeros(nconductors, nconductors), nodes, nconductors))
+    #
+    #             reactDict["g_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+    #             reactDict["g_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+    #             reactDict["b_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+    #             reactDict["b_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+    #
+    #             reactDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors))
+    #             reactDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
+    #             reactDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
+    #
+    #             reactDict["tap"] = PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors, NaN))
+    #             reactDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+    #
+    #             reactDict["br_status"] = convert(Int, defaults["enabled"])
+    #
+    #             reactDict["angmin"] = PMs.MultiConductorVector(parse_array(-60.0, nodes, nconductors, -60.0))
+    #             reactDict["angmax"] = PMs.MultiConductorVector(parse_array( 60.0, nodes, nconductors,  60.0))
+    #
+    #             reactDict["transformer"] = true
+    #
+    #             reactDict["index"] = length(tppm_data["branch"]) + 1
+    #
+    #             nodes = .+([parse_busname(defaults[n])[2] for n in ["bus1", "bus2"]]...)
+    #             reactDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+    #             reactDict["source_id"] = "reactor.$(defaults["name"])"
+    #
+    #             used = []
+    #             PMs.import_remaining!(reactDict, defaults, import_all; exclude=used)
+    #
+    #             push!(tppm_data["branch"], reactDict)
+    #         end
+    #     end
+    # end
 end
 
 
