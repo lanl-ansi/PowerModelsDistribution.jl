@@ -576,12 +576,11 @@ end
 Adds PowerModels-style transformers (branches) to `tppm_data` from `dss_data`.
 """
 function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
-    if !haskey(tppm_data, "branch")
-        tppm_data["branch"] = []
-    end
 
     if haskey(dss_data, "transformer")
-        warn(LOGGER, "transformers are not yet supported, treating like non-transformer lines")
+        if !haskey(tppm_data, "trans")
+            tppm_data["trans"] = Array{Any,1}()
+        end
         for transformer in dss_data["transformer"]
             if haskey(transformer, "like")
                 transformer = merge(find_component(dss_data, transformer["like"], "transformer"), transformer)
@@ -590,106 +589,94 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             defaults = createTransformer(transformer["name"]; to_sym_keys(transformer)...)
 
             nconductors = tppm_data["conductors"]
-            windings = defaults["windings"]
+            nrw = defaults["windings"]
+            if nrw>3
+                # All of the code is compatible with any number of windings,
+                # except for the parsing of the loss model (the pair-wise reactance)
+                error(LOGGER, "For now parsing of xscarray is not supported. At most 3 windings are allowed, not $nrw.")
+            end
 
-            if windings == 2
-                transDict = Dict{String,Any}()
-                transDict["name"] = defaults["name"]
+            transDict = Dict{String,Any}()
+            transDict["name"] = defaults["name"]
+            transDict["buses"] = [find_bus(parse_busname(x)[1], tppm_data) for x in defaults["buses"]]
 
-                f_bus, nodes = parse_busname(defaults["buses"][1])
-                t_bus = parse_busname(defaults["buses"][2])[1]
+            # voltage and power ratings
+            transDict["vnom_kv"] = defaults["kvs"]
+            transDict["snom_kva"] = defaults["kvas"]
+            transDict["smax_kv"] = defaults["normhkva"]
+            #TODO should this value be retained?
+            transDict["smax_emergency_kva"] = defaults["emerghkva"]
 
-                transDict["f_bus"] = find_bus(f_bus, tppm_data)
-                transDict["t_bus"] = find_bus(t_bus, tppm_data)
+            # connection properties
+            dyz_map = Dict("wye"=>"y", "delta"=>"d", "ll"=>"d", "ln"=>"y")
+            dyz_primary = dyz_map[defaults["conns"][1]]
+            transDict["conns"] = Array{String,1}(undef, nrw)
+            transDict["conns"][1] = string("123+", dyz_primary)
+            for w in 2:nrw
+                dyz_w = dyz_map[defaults["conns"][w]]
+                if dyz_primary==dyz_w
+                    pp_w = "123+"
+                else
+                    if defaults["leadlag"] in ["ansi", "lag"]
+                        #Yd1 => (123+y,123+d)
+                        #Dy1 => (123+d,312-y)
+                        pp_w = (dyz_w=="d") ? "123+" : "312-"
+                    else # hence defaults["leadlag"] in ["euro", "lead"]
+                        #Yd11 => (123+y,231-d)
+                        #Dy11 => (123+d,123+y)
+                        pp_w = (dyz_w=="d") ? "231-" : "123+"
+                    end
+                end
+                transDict["conns"][w] = string(pp_w, dyz_w)
+            end
 
-                transDict["br_r"] = PMs.MultiConductorMatrix(parse_matrix(diagm(0 => fill(0.2, nconductors)), nodes, nconductors))
-                transDict["br_x"] = PMs.MultiConductorMatrix(parse_matrix(zeros(nconductors, nconductors), nodes, nconductors))
+            # tap properties
+            transDict["tapset"] = [PMs.MultiConductorVector(ones(Float64,3))*defaults["taps"][i] for i in 1:nrw]
+            transDict["tapmin"] = [PMs.MultiConductorVector(ones(Float64,3))*defaults["maxtap"] for i in 1:nrw]
+            transDict["tapmax"] = [PMs.MultiConductorVector(ones(Float64,3))*defaults["mintap"] for i in 1:nrw]
+            transDict["tapnum"] = [PMs.MultiConductorVector(ones(Int,3))*defaults["numtaps"] for i in 1:nrw]
 
-                transDict["g_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-                transDict["g_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-                transDict["b_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-                transDict["b_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-
-                # CHECK: unit conversion?
-                transDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normhkva"], nodes, nconductors))
-                transDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
-                transDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
-
-                transDict["tap"] = PMs.MultiConductorVector(parse_array(/(defaults["taps"]...), nodes, nconductors, 1.0))
-                transDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-
-                transDict["br_status"] = convert(Int, defaults["enabled"])
-
-                transDict["angmin"] = PMs.MultiConductorVector(parse_array(-60.0, nodes, nconductors, -60.0))
-                transDict["angmax"] = PMs.MultiConductorVector(parse_array( 60.0, nodes, nconductors,  60.0))
-
-                transDict["transformer"] = true
-                transDict["switch"] = false
-
-                transDict["index"] = length(tppm_data["branch"]) + 1
-
-                nodes = .+([parse_busname(defaults["buses"][n])[2] for n in length(defaults["buses"])]...)
-                transDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-                transDict["source_id"] = "transformer.$(defaults["name"])"
-
-                used = []
-                PMs.import_remaining!(transDict, defaults, import_all; exclude=used)
-
-                push!(tppm_data["branch"], transDict)
-            else
-                warn(LOGGER, "3-winding transformers are not yet supported, treating like two non-transformer lines connected through a starbus")
-
-                starbus = create_starbus(tppm_data, defaults)
-                push!(tppm_data["bus"], starbus)
-
-                bus1, nodes1 = parse_busname(defaults["buses"][1])
-                bus2, nodes2 = parse_busname(defaults["buses"][2])
-                bus3, nodes3 = parse_busname(defaults["buses"][3])
-
-                for (m, (bus, nodes)) in enumerate(zip([bus1, bus2, bus3], [nodes1, nodes2, nodes3]))
-                    transDict = Dict{String,Any}()
-
-                    transDict["f_bus"] = find_bus(bus, tppm_data)
-                    transDict["t_bus"] = starbus["bus_i"]
-
-                    transDict["name"] = "$(defaults["name"]) winding $m"
-
-                    transDict["br_r"] = PMs.MultiConductorMatrix(parse_matrix(diagm(0 => fill(0.2, nconductors)), nodes, nconductors))
-                    transDict["br_x"] = PMs.MultiConductorMatrix(parse_matrix(zeros(nconductors, nconductors), nodes, nconductors))
-
-                    transDict["g_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-                    transDict["g_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-                    transDict["b_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-                    transDict["b_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-
-                    # CHECK: unit conversion?
-                    transDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normhkva"], nodes, nconductors))
-                    transDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
-                    transDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emerghkva"], nodes, nconductors))
-
-                    transDict["tap"] = PMs.MultiConductorVector(parse_array(defaults["taps"][m], nodes, nconductors, 1.0))
-                    transDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-
-                    transDict["br_status"] = convert(Int, defaults["enabled"])
-
-                    transDict["angmin"] = PMs.MultiConductorVector(parse_array(-60.0, nodes, nconductors, -60.0))
-                    transDict["angmax"] = PMs.MultiConductorVector(parse_array( 60.0, nodes, nconductors,  60.0))
-
-                    transDict["transformer"] = true
-                    transDict["switch"] = false
-
-                    transDict["index"] = length(tppm_data["branch"]) + 1
-
-                    nodes = .+([parse_busname(defaults["buses"][n])[2] for n in length(defaults["buses"])]...)
-                    transDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-                    transDict["source_id"] = "transformer.$(defaults["name"])"
-
-                    used = []
-                    PMs.import_remaining!(transDict, defaults, import_all; exclude=used)
-
-                    push!(tppm_data["branch"], transDict)
+            # loss model (converted to SI units)
+            function zpn_to_abc(z, p, n)
+                a = exp(im*2*pi/3)
+                C = 1/sqrt(3)*[1 1 1; 1 a a^2; 1 a^2 a]
+                res = inv(C)*[z 0 0; 0 p 0; 0 0 n]*C
+                return res
+            end
+            pos_to_abc(p) = zpn_to_abc(p, p, p)
+            zbase = transDict["vnom_kv"][1]^2/transDict["snom_kva"][1]
+            transDict["rs"] = Array{MultiConductorMatrix{Float64}, 1}(undef, nrw)
+            transDict["gsh"] = Array{MultiConductorMatrix{Float64}, 1}(undef, nrw)
+            transDict["bsh"] = Array{MultiConductorMatrix{Float64}, 1}(undef, nrw)
+            for w in 1:nrw
+                zs_w_p = defaults["%rs"][w]
+                Zs_w = pos_to_abc(zs_w_p)
+                #TODO handle %loadloss property
+                transDict["rs"][w] = MultiConductorMatrix(real.(Zs_w))
+                # shunt elements are added at second winding
+                if w==2
+                    ysh_w_p = defaults["%noloadloss"]/zbase-im*defaults["%imag"]/zbase
+                    Ysh_w = pos_to_abc(ysh_w_p)
+                    transDict["gsh"][w] = MultiConductorMatrix(real.(Ysh_w))
+                    transDict["bsh"][w] = MultiConductorMatrix(imag.(Ysh_w))
+                else
+                    transDict["gsh"][w] = MultiConductorMatrix(zeros(Float64, 3, 3))
+                    transDict["bsh"][w] = MultiConductorMatrix(zeros(Float64, 3, 3))
                 end
             end
+            transDict["xs"] = Dict{String, MultiConductorMatrix{Float64}}()
+            if nrw==2
+                xs_map = Dict("xhl"=>"12")
+            elseif nrw==3
+                xs_map = Dict("xhl"=>"12", "xht"=>"13", "xlt"=>"23")
+            end
+            for (k,v) in xs_map
+                zs_ij_p = im*defaults[k]*zbase
+                Zs_ij = pos_to_abc(zs_ij_p)
+                transDict["xs"][v] = MultiConductorMatrix(imag.(Zs_ij))
+            end
+
+            push!(tppm_data["trans"], transDict)
         end
     end
 end
@@ -1064,7 +1051,9 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         end
     end
 
-    adjust_base!()
+    if haskey(tppm_data, "trans")
+        #adjust_base!(tppm_data)
+    end
 
     tppm_data["files"] = dss_data["filename"]
 
