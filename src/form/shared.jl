@@ -41,6 +41,22 @@ function constraint_ohms_tp_yt_from(pm::GenericPowerModel{T}, n::Int, c::Int, f_
                                      g[c,d] * wi[(f_bus, t_bus, c, d)] for d in PMs.conductor_ids(pm)) )
 end
 
+"""
+Creates Ohms constraints for zero series impedance branches
+"""
+function constraint_ohms_tp_yt_from_impzero(pm::GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g_fr, b_fr, g_to, b_to, tr, ti, tm) where T <: PMs.AbstractWRForms
+    p_fr = var(pm, n, c, :p, f_idx)
+    p_to = var(pm, n, c, :p, t_idx)
+    q_fr = var(pm, n, c, :q, f_idx)
+    q_to = var(pm, n, c, :q, t_idx)
+    w    = var(pm, n, :w)
+    wr   = var(pm, n, :wr)
+    wi   = var(pm, n, :wi)
+
+    @constraint(pm.model, p_fr - g_fr[c]*w[(f_bus, c)] + p_to - g_to[c]*w[(t_bus, c)] == 0)
+    @constraint(pm.model, q_fr + b_fr[c]*w[(f_bus, c)] + q_to + b_to[c]*w[(t_bus, c)] == 0)
+end
+
 
 """
 Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)

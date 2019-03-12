@@ -22,6 +22,21 @@ function constraint_ohms_tp_yt_from(pm::GenericPowerModel{T}, n::Int, c::Int, f_
     # omit reactive constraint
 end
 
+"""
+Creates Ohms constraints for zero series impedance branches
+
+```
+p[f_idx] + p[t_idx] == 0
+```
+"""
+function constraint_ohms_tp_yt_from_impzero(pm::GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g_fr, b_fr, g_to, b_to, tr, ti, tm) where T <: PMs.AbstractDCPForm
+    va_fr = [var(pm, n, d, :va, f_bus) for d in PMs.conductor_ids(pm)]
+    va_to = [var(pm, n, d, :va, t_bus) for d in PMs.conductor_ids(pm)]
+    # p[f_idx] + p[t_idx] == 0
+    # this is already implied by construction of p[t_idx]
+    # set zero angle difference:
+    @constraint(pm.model, va_fr[c] == va_to[c])
+end
 
 "Do nothing, this model is symmetric"
 function constraint_ohms_tp_yt_to(pm::GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm) where T <: PMs.AbstractDCPForm
@@ -70,4 +85,3 @@ end
 "nothing to do, this model is symmetric"
 function constraint_ohms_tp_yt_to(pm::GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm) where T <: PMs.NFAForm
 end
-
