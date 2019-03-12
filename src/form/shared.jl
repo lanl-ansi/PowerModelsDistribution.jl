@@ -42,7 +42,7 @@ function constraint_ohms_tp_yt_from(pm::GenericPowerModel{T}, n::Int, c::Int, f_
 end
 
 """
-Creates Ohms constraints for zero series impedance
+Creates Ohms constraints for zero series impedance branches
 """
 function constraint_ohms_tp_yt_from_impzero(pm::GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g_fr, b_fr, g_to, b_to, tr, ti, tm) where T <: PMs.AbstractWRForms
     p_fr = var(pm, n, c, :p, f_idx)

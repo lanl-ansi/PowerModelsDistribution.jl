@@ -52,7 +52,7 @@ end
 
 
 """
-Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
+Creates Ohms constraints for zero series impedance branches
 
 ```
 p[f_idx] - g_fr/tm*v[f_bus]^2 + p[t_idx] - g_to*v[t_bus]^2 == 0

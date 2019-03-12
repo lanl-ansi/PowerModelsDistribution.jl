@@ -23,7 +23,7 @@ function constraint_ohms_tp_yt_from(pm::GenericPowerModel{T}, n::Int, c::Int, f_
 end
 
 """
-Creates Ohms constraints for zero impedance branches
+Creates Ohms constraints for zero series impedance branches
 
 ```
 p[f_idx] + p[t_idx] == 0
