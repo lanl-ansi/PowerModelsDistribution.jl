@@ -55,6 +55,27 @@ end
 Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
 
 ```
+p[f_idx] - g_fr/tm*v[f_bus]^2 + p[t_idx] - g_to*v[t_bus]^2 == 0
+q[f_idx] + b_fr/tm*v[f_bus]^2 + q[t_idx] + b_to*v[t_bus]^2 == 0
+"""
+function constraint_ohms_tp_yt_from_impzero(pm::GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g_fr, b_fr, g_to, b_to, tr, ti, tm) where T <: PMs.AbstractACPForm
+    p_fr  = var(pm, n, c,  :p, f_idx)
+    p_to  = var(pm, n, c,  :p, t_idx)
+    q_fr  = var(pm, n, c,  :q, f_idx)
+    q_to  = var(pm, n, c,  :q, t_idx)
+    vm_fr = [var(pm, n, d, :vm, f_bus) for d in PMs.conductor_ids(pm)]
+    vm_to = [var(pm, n, d, :vm, t_bus) for d in PMs.conductor_ids(pm)]
+    va_fr = [var(pm, n, d, :va, f_bus) for d in PMs.conductor_ids(pm)]
+    va_to = [var(pm, n, d, :va, t_bus) for d in PMs.conductor_ids(pm)]
+
+    @NLconstraint(pm.model, p_fr - g_fr[c]*vm_fr[c]^2 + p_to - g_to[c]*vm_to[c]^2 == 0)
+    @NLconstraint(pm.model, q_fr + b_fr[c]*vm_fr[c]^2 + q_to + b_to[c]*vm_to[c]^2 == 0)
+end
+
+"""
+Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
+
+```
 p[t_idx] ==  (g+g_to)*v[t_bus]^2 + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[t_bus]-t[f_bus])) + (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus]))
 q[t_idx] == -(b+b_to)*v[t_bus]^2 - (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[f_bus]-t[t_bus])) + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus]))
 ```
