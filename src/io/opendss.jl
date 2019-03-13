@@ -619,12 +619,12 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 else
                     if defaults["leadlag"] in ["ansi", "lag"]
                         #Yd1 => (123+y,123+d)
-                        #Dy1 => (123+d,312-y)
-                        pp_w = (dyz_w=="d") ? "123+" : "312-"
+                        #Dy1 => (123+d,231-y)
+                        pp_w = (dyz_w=="d") ? "123+" : "231-"
                     else # hence defaults["leadlag"] in ["euro", "lead"]
-                        #Yd11 => (123+y,231-d)
+                        #Yd11 => (123+y,312-d)
                         #Dy11 => (123+d,123+y)
-                        pp_w = (dyz_w=="d") ? "231-" : "123+"
+                        pp_w = (dyz_w=="d") ? "312-" : "123+"
                     end
                 end
                 transDict["conns"][w] = string(pp_w, dyz_w)
@@ -1068,17 +1068,16 @@ function adjust_base!(tppm_data)
     end
     adjust_base_rec!(tppm_data, source, base_kv_new, nodes_visited, edges_br, edges_br_visited, edges_tr, edges_tr_visited)
     if !all(nodes_visited)
-        println(nodes_visited)
         warn(LOGGER, "The network contains buses which are not reachable from the start node for the change of voltage base.")
     end
 end
 function adjust_base_rec!(tppm_data, source::Int, base_kv_new::Float64, nodes_visited, edges_br, edges_br_visited, edges_tr, edges_tr_visited)
     source_dict = tppm_data["bus"][string(source)]
     base_kv_prev = source_dict["base_kv"]
-    if base_kv_prev!=base_kv_new
+    if !(base_kv_prev≈base_kv_new)
         # only possible when meshed; ensure consistency
         if nodes_visited[source]
-            error(LOGGER, "Transformer ratings lead to an inconsistent definition for the voltage base at bus $source.")
+            warn(LOGGER, "Transformer ratings lead to an inconsistent definition for the voltage base at bus $source.")
         end
         source_dict["base_kv"] = base_kv_new
         if source_dict["bus_type"]==3

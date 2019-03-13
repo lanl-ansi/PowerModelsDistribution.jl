@@ -212,3 +212,192 @@ function constraint_tp_storage_exchange(pm::GenericPowerModel, i::Int; nw::Int=p
     PMs.constraint_storage_complementarity(pm, nw, i)
     constraint_tp_storage_loss(pm, nw, i, storage["storage_bus"], storage["r"], storage["x"], storage["standby_loss"])
 end
+
+function constraint_tp_trans_voltage(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    (Tv_fr,Tv_to,Ti_fr,Ti_to) = calc_tp_trans_Tvi(pm, i)
+    f_bus = ref(pm, :trans, i)["f_bus"]
+    t_bus = ref(pm, :trans, i)["t_bus"]
+    constraint_tp_trans_voltage(pm, f_bus, t_bus, Tv_fr, Tv_to)
+end
+function constraint_tp_trans_voltage(pm::GenericPowerModel, f_bus::Int, t_bus::Int, Tv_fr, Tv_to; nw::Int=pm.cnw)
+    ncnd  = 3
+    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
+    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    for n in 1:size(Tv_fr)[1]
+        @NLconstraint(pm.model,
+              sum(Tv_fr[n,c]*vm_fr[c]*cos(va_fr[c]) for c in 1:ncnd)
+            ==sum(Tv_to[n,c]*vm_to[c]*cos(va_to[c]) for c in 1:ncnd)
+        )
+        @NLconstraint(pm.model,
+              sum(Tv_fr[n,c]*vm_fr[c]*sin(va_fr[c]) for c in 1:ncnd)
+            ==sum(Tv_to[n,c]*vm_to[c]*sin(va_to[c]) for c in 1:ncnd)
+        )
+    end
+end
+function constraint_tp_trans_power(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    (Tv_fr,Tv_to,Ti_fr,Ti_to) = calc_tp_trans_Tvi(pm, i)
+    f_bus = ref(pm, :trans, i)["f_bus"]
+    t_bus = ref(pm, :trans, i)["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+    t_idx = (i, t_bus, f_bus)
+    constraint_tp_trans_power(pm, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_to)
+end
+function constraint_tp_trans_power(pm::GenericPowerModel, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_to; nw::Int=pm.cnw)
+    ncnd  = 3
+    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
+    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    p_fr = [var(pm, nw, c, :p_trans, f_idx) for c in 1:ncnd]
+    q_fr = [var(pm, nw, c, :q_trans, f_idx) for c in 1:ncnd]
+    p_to = [var(pm, nw, c, :p_trans, t_idx) for c in 1:ncnd]
+    q_to = [var(pm, nw, c, :q_trans, t_idx) for c in 1:ncnd]
+    for n in 1:size(Ti_fr)[1]
+        # i_fr_re[c] = 1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c]))
+        # i_fr_im[c] = 1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c]))
+        # i_to_re[c] = 1/vm_to[c]*(p_to[c]*cos(va_to[c])+q_to[c]*sin(va_to[c]))
+        # i_to_im[c] = 1/vm_to[c]*(p_to[c]*sin(va_to[c])-q_to[c]*cos(va_to[c]))
+        @NLconstraint(pm.model,
+              sum(Ti_fr[n,c]*
+                    1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c])) # i_fr_re[c]
+              for c in 1:ncnd)
+            + sum(Ti_to[n,c]*
+                    1/vm_to[c]*(p_to[c]*cos(va_to[c])+q_to[c]*sin(va_to[c])) # i_to_re[c]
+              for c in 1:ncnd)
+            == 0
+        )
+        @NLconstraint(pm.model,
+              sum(Ti_fr[n,c]*
+                    1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c])) # i_fr_im[c]
+              for c in 1:ncnd)
+            + sum(Ti_to[n,c]*
+                    1/vm_to[c]*(p_to[c]*sin(va_to[c])-q_to[c]*cos(va_to[c])) # i_to_im[c]
+              for c in 1:ncnd)
+            == 0
+        )
+    end
+end
+function constraint_tp_trans_vartap_fix(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    tapset = ref(pm, nw, :trans, i)["tapset"]
+    tapfix = ref(pm, nw, :trans, i)["tapfix"]
+    constraint_tp_trans_vartap_fix(pm, i, tapset, tapfix, nw=nw)
+end
+function constraint_tp_trans_vartap_fix(pm::GenericPowerModel, i::Int, tapset, tapfix; nw::Int=pm.cnw)
+    for cnd in 1:3
+        if tapfix[cnd]
+            @constraint(pm.model, var(pm, nw, :tap)[(i,cnd)] == tapset[cnd])
+        end
+    end
+end
+function constraint_tp_trans_voltage_vartap(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    f_bus = ref(pm, :trans, i)["f_bus"]
+    t_bus = ref(pm, :trans, i)["t_bus"]
+    bkv_fr = ref(pm, :bus, f_bus)["base_kv"]
+    bkv_to = ref(pm, :bus, t_bus)["base_kv"]
+    vnom_kv_fr = ref(pm, :trans, i)["vnom_kv"][1]
+    vnom_kv_to = ref(pm, :trans, i)["vnom_kv"][2]
+    constraint_tp_trans_voltage_vartap(pm, i, f_bus, t_bus, bkv_fr, bkv_to, vnom_kv_fr, vnom_kv_to)
+end
+function constraint_tp_trans_voltage_vartap(pm::GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, bkv_fr::Float64, bkv_to::Float64, vnom_kv_fr::Float64, vnom_kv_to::Float64; nw::Int=pm.cnw)
+    ncnd  = 3
+    # vm_fr = append_zero([var(pm, nw, c, :vm, f_bus) for c in 1:ncnd])
+    # va_fr = append_zero([var(pm, nw, c, :va, f_bus) for c in 1:ncnd])
+    # vm_to = append_zero([var(pm, nw, c, :vm, t_bus) for c in 1:ncnd])
+    # va_to = append_zero([var(pm, nw, c, :va, t_bus) for c in 1:ncnd])
+    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
+    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    for n in 1:ncnd
+        @NLconstraint(pm.model,
+            bkv_fr/bkv_to*vm_fr[n]
+            # 4 wire: bkv_fr/bkv_to*(vm_fr[n]-vm_fr[end])
+            ==
+            var(pm, nw, :tap)[(i,n)]*vnom_kv_fr/vnom_kv_to*vm_to[n]
+            # 4 wire: var(pm, nw, :tap)[(i,n)]*vnom_kv_fr/vnom_kv_to*(vm_to[n]-vm_to[end])
+        )
+        @constraint(pm.model,
+            va_fr[n]
+            # 4 wire: va_fr[n]-va_fr[end]
+            ==
+            va_to[n]
+            # 4 wire: va_to[n]-va_to[end]
+        )
+    end
+end
+function constraint_tp_trans_power_vartap(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    f_bus = ref(pm, :trans, i)["f_bus"]
+    t_bus = ref(pm, :trans, i)["t_bus"]
+    bkv_fr = ref(pm, :bus, f_bus)["base_kv"]
+    bkv_to = ref(pm, :bus, t_bus)["base_kv"]
+    f_idx = (i, f_bus,  t_bus)
+    t_idx = (i, t_bus,  f_bus)
+    f_vnom_kv = ref(pm, :trans, i)["vnom_kv"][1]
+    t_vnom_kv = ref(pm, :trans, i)["vnom_kv"][2]
+    constraint_tp_trans_power_vartap(pm, i, f_bus, t_bus, f_idx, t_idx, bkv_fr, bkv_to, f_vnom_kv, t_vnom_kv)
+end
+function constraint_tp_trans_power_vartap(pm::GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, bkv_fr::Float64, bkv_to::Float64, f_vnom_kv::Float64, t_vnom_kv::Float64; nw::Int=pm.cnw)
+    ncnd  = 3
+    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
+    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    p_fr = [var(pm, nw, c, :p_trans, f_idx) for c in 1:ncnd]
+    q_fr = [var(pm, nw, c, :q_trans, f_idx) for c in 1:ncnd]
+    p_to = [var(pm, nw, c, :p_trans, t_idx) for c in 1:ncnd]
+    q_to = [var(pm, nw, c, :q_trans, t_idx) for c in 1:ncnd]
+
+    for n in 1:ncnd
+        @NLconstraint(pm.model,
+            var(pm, nw, :tap)[(i,n)]*bkv_to/bkv_fr*f_vnom_kv/t_vnom_kv
+            *vm_to[n]*(p_fr[n]*cos(va_to[n])-q_fr[n]*sin(va_to[n]))
+            +vm_fr[n]*(p_to[n]*cos(va_fr[n])-q_to[n]*sin(va_fr[n]))
+            == 0
+        )
+        @NLconstraint(pm.model,
+            var(pm, nw, :tap)[(i,n)]*bkv_to/bkv_fr*f_vnom_kv/t_vnom_kv
+            *vm_to[n]*(p_fr[n]*sin(va_to[n])+q_fr[n]*cos(va_to[n]))
+            +vm_fr[n]*(p_to[n]*sin(va_fr[n])+q_to[n]*cos(va_fr[n]))
+            == 0
+        )
+    end
+end
+function constraint_kcl_shunt_trans(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    if !haskey(con(pm, nw, cnd), :kcl_p)
+        con(pm, nw, cnd)[:kcl_p] = Dict{Int,ConstraintRef}()
+    end
+    if !haskey(con(pm, nw, cnd), :kcl_q)
+        con(pm, nw, cnd)[:kcl_q] = Dict{Int,ConstraintRef}()
+    end
+
+    bus = ref(pm, nw, :bus, i)
+    bus_arcs = ref(pm, nw, :bus_arcs, i)
+    bus_arcs_dc = ref(pm, nw, :bus_arcs_dc, i)
+    bus_gens = ref(pm, nw, :bus_gens, i)
+    bus_loads = ref(pm, nw, :bus_loads, i)
+    bus_shunts = ref(pm, nw, :bus_shunts, i)
+    bus_arcs_trans = ref(pm, nw, :bus_arcs_trans, i)
+
+    bus_pd = Dict(k => ref(pm, nw, :load, k, "pd", cnd) for k in bus_loads)
+    bus_qd = Dict(k => ref(pm, nw, :load, k, "qd", cnd) for k in bus_loads)
+
+    bus_gs = Dict(k => ref(pm, nw, :shunt, k, "gs", cnd) for k in bus_shunts)
+    bus_bs = Dict(k => ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
+
+    constraint_kcl_shunt_trans(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
+end
+function constraint_kcl_shunt_trans(pm::GenericPowerModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
+    vm = var(pm, nw, c, :vm, i)
+    p = var(pm, nw, c, :p)
+    q = var(pm, nw, c, :q)
+    pg = var(pm, nw, c, :pg)
+    qg = var(pm, nw, c, :qg)
+    p_dc = var(pm, nw, c, :p_dc)
+    q_dc = var(pm, nw, c, :q_dc)
+    p_trans = var(pm, nw, c, :p_trans)
+    q_trans = var(pm,  nw, c, :q_trans)
+    con(pm, nw, c, :kcl_p)[i] = @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*vm^2)
+    con(pm, nw, c, :kcl_q)[i] = @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(q_trans[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*vm^2)
+end
