@@ -356,12 +356,6 @@ end
         @test result["status"] == :LocalOptimal
         @test isapprox(result["objective"], 0.0214811; atol = 1e-4)
     end
-    @testset "wr case" begin
-        tppm_data = TPPMs.parse_file("../test/data/opendss/case3_unbalanced_impzero.dss")
-        result = TPPMs.run_tp_opf(tppm_data, PMs.SOCWRPowerModel, ipopt_solver)
-        @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], -2.85166366; atol = 1e-5)
-    end
     @testset "dc case" begin
         tppm_data = TPPMs.parse_file("../test/data/opendss/case2_diag_impzero.dss")
         result = TPPMs.run_tp_opf(tppm_data, PMs.DCPPowerModel, ipopt_solver)

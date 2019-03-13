@@ -5,6 +5,11 @@ New Circuit.3Bus_example
 
 !Define Linecodes
 
+! move capacitor in new line with (close to) zero series impedance
+New linecode.impzero nphases=3 basefreq=50
+~ rmatrix = ( 0.0 | 0.0    0.0 |  1E-14    0.0    0.0)
+~ xmatrix = ( 1E-14 |  1E-14    0.0 | 0.0    0.0    0.0)
+~ cmatrix = (0.0  | -0  0.0 | -0 -0 0.0  )
 
 New linecode.556MCM nphases=3 basefreq=50  ! ohms per 5 mile
 ~ rmatrix = ( 0.1000 | 0.0400    0.1000 |  0.0400    0.0400    0.1000)
@@ -14,19 +19,13 @@ New linecode.556MCM nphases=3 basefreq=50  ! ohms per 5 mile
 New linecode.4/0QUAD nphases=3 basefreq=50  ! ohms per 100ft
 ~ rmatrix = ( 0.1167 | 0.0467    0.1167 | 0.0467    0.0467    0.1167)
 ~ xmatrix = (0.0667  |  0.0267    0.0667  |  0.0267    0.0267    0.0667 )
-~ cmatrix = (0.0  | 0.0  0.0 | 0.0 0.0 0.0  )  ! small capacitance
-
-! move capacitor in new line with (close to) zero series impedance
-New linecode.impzero nphases=3 basefreq=50  ! ohms per 5 mile
-~ rmatrix = ( 0.0 | 0.0    0.0 |  1E-14    0.0    0.0)
-~ xmatrix = ( 1E-14 |  1E-14    0.0 | 0.0    0.0    0.0)
 ~ cmatrix = (50.92958178940651  | -0  50.92958178940651 | -0 -0 50.92958178940651  ) ! small capacitance
 
 !Define lines
 
-New Line.OHLine  bus1=sourcebus.1.2.3.0  Primary.1.2.3.0  linecode = 556MCM   length=1  ! 5 mile line
-New Line.Quad    Bus1=Primary.1.2.3.0  Intm.1.2.3.0  linecode = 4/0QUAD  length=1   ! 100 ft
-New Line.impzero    Bus1=Intm.1.2.3.0  loadbus.1.2.3.0  linecode = impzero  length=1   ! 100 ft
+New Line.impzero    Bus1=sourcebus.1.2.3.0  Intm.1.2.3.0  linecode = impzero  length=1   ! 100 ft
+New Line.OHLine  bus1=Intm.1.2.3.0  Primary.1.2.3.0  linecode = 556MCM   length=1  ! 5 mile line
+New Line.Quad    Bus1=Primary.1.2.3.0  loadbus.1.2.3.0  linecode = 4/0QUAD  length=1   ! 100 ft
 
 !Loads - single phase
 
