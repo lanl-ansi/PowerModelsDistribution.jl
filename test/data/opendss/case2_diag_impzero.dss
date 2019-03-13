@@ -18,8 +18,8 @@ New linecode.impzero nphases=3 basefreq=50 ! ohms per 5 mile
 
 !Define lines
 
-New Line.OHLine  bus1=sourcebus.1.2.3.0  Intm.1.2.3.0  linecode = 556MCM   length=1  ! 5 mile line
-New Line.impzero  bus1=Intm.1.2.3.0  Primary.1.2.3.0  linecode = 556MCM   length=1  ! 5 mile line
+New Line.impzero  bus1=sourcebus.1.2.3.0  Intm.1.2.3.0  linecode = 556MCM   length=1  ! 5 mile line
+New Line.OHLine  bus1=Intm.1.2.3.0  Primary.1.2.3.0  linecode = 556MCM   length=1  ! 5 mile line
 
 !Loads - single phase
 
