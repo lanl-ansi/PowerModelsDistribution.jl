@@ -36,6 +36,12 @@ function post_tp_pf(pm::GenericPowerModel)
         PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
     end
 
+    if haskey(ref(pm), :trans)
+        add_arcs_trans!(pm)
+        variable_tp_trans_flow(pm)
+        variable_tp_trans_tap(pm)
+    end
+
     constraint_tp_voltage(pm)
 
     for (i,bus) in ref(pm, :ref_buses)
@@ -48,7 +54,11 @@ function post_tp_pf(pm::GenericPowerModel)
     end
 
     for (i,bus) in ref(pm, :bus), c in PMs.conductor_ids(pm)
-        PMs.constraint_kcl_shunt(pm, i, cnd=c)
+        if haskey(ref(pm), :trans)
+            constraint_kcl_shunt_trans(pm, i, cnd=c)
+        else
+            PMs.constraint_kcl_shunt(pm, i, cnd=c)
+        end
 
         # PV Bus Constraints
         if length(ref(pm, :bus_gens, i)) > 0 && !(i in ids(pm,:ref_buses))
@@ -83,4 +93,17 @@ function post_tp_pf(pm::GenericPowerModel)
             PMs.constraint_voltage_magnitude_setpoint(pm, t_bus["index"], cnd=c)
         end
     end
+
+    if haskey(ref(pm), :trans)
+        for i in ids(pm, :trans)
+            trans = ref(pm, :trans, i)
+            if trans["type"]=="conn"|| trans["type"]=="tap"
+                constraint_tp_trans_voltage(pm, i)
+                constraint_tp_trans_power(pm, i)
+            else
+                error(LOGGER, string("Unknown transformer of type ", trans["type"]))
+            end
+        end
+    end
+
 end
