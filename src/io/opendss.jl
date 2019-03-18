@@ -1,5 +1,5 @@
 # OpenDSS parser
-
+using LinearAlgebra
 
 "Structure representing OpenDSS `dss_source_id` giving the type of the component `dss_type`, its name `dss_name`, and the active phases `active_phases`"
 struct DSSSourceId
@@ -658,7 +658,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 transDict["rs"][w] = MultiConductorMatrix(real.(Zs_w))
                 # shunt elements are added at second winding
                 if w==2
-                    ysh_w_p = defaults["%noloadloss"]/100/zbase-im*defaults["%imag"]/100/zbase
+                    ysh_w_p = (defaults["%noloadloss"]-im*defaults["%imag"])/100/zbase
                     Ysh_w = pos_to_abc(ysh_w_p)
                     transDict["gsh"][w] = MultiConductorMatrix(real.(Ysh_w))
                     transDict["bsh"][w] = MultiConductorMatrix(imag.(Ysh_w))
@@ -668,20 +668,63 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 end
             end
             transDict["xs"] = Dict{String, MultiConductorMatrix{Float64}}()
+
+            Zsc = Dict{Tuple{Int,Int}, Complex}()
             if nrw==2
-                xs_map = Dict("xhl"=>"1-2")
+                xs_map = Dict("xhl"=>(1,2))
             elseif nrw==3
-                xs_map = Dict("xhl"=>"1-2", "xht"=>"1-3", "xlt"=>"2-3")
+                xs_map = Dict("xhl"=>(1,2), "xht"=>(1,3), "xlt"=>(2,3))
             end
             for (k,v) in xs_map
-                zs_ij_p = im*defaults[k]/100*zbase
+                Zsc[(v)] = im*defaults[k]/100*zbase
+            end
+            Zbr = sc2br_impedance(Zsc)
+            for (k,zs_ij_p) in Zbr
                 Zs_ij = pos_to_abc(zs_ij_p)
-                transDict["xs"][v] = MultiConductorMatrix(imag.(Zs_ij))
+                transDict["xs"]["$(k[1])-$(k[2])"] = MultiConductorMatrix(imag.(Zs_ij))
             end
 
             push!(tppm_data["trans"], transDict)
         end
     end
+end
+function sc2br_impedance(Zsc)
+    N = maximum([maximum(k) for k in keys(Zsc)])
+    # check whether no keys are missing
+    # Zsc should contain tupples for upper triangle of NxN
+    for i in 1:N
+        for j in i+1:N
+            if !haskey(Zsc, (i,j))
+                if haskey(Zsc, (j,i))
+                    # Zsc is symmetric; use value of lower triangle if defined
+                    Zsc[(i,j)] =  Zsc[(j,i)]
+                else
+                    error(LOGGER, "Short-circuit impedance between winding $i and $j is missing.")
+                end
+            end
+        end
+    end
+    # make Zb
+    Zb = zeros(Complex{Float64}, N-1,N-1)
+    for i in 1:N-1
+        Zb[i,i] = Zsc[(1,i+1)]
+    end
+    for i in 1:N-1
+        for j in 1:i-1
+            Zb[i,j] = (Zb[i,i]+Zb[j,j]-Zsc[(j+1,i+1)])/2
+            Zb[j,i] = Zb[i,j]
+        end
+    end
+    # get Ybus
+    Y = pinv(Zb)
+    Y = [-Y*ones(N-1) Y]
+    Y = [-ones(1,N-1)*Y; Y]
+    # extract elements
+    Zbr = Dict()
+    for k in keys(Zsc)
+        Zbr[k] = (abs(Y[k...])==0) ? Inf : -1/Y[k...]
+    end
+    return Zbr
 end
 
 function dss2tppm_reactor!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
@@ -841,6 +884,7 @@ values. Defaults to Inf if all emergamps connected to sourcebus are also Inf.
 function adjust_sourcegen_bounds!(tppm_data)
     emergamps = Array{Float64,1}()
     sourcebus_n = find_bus("sourcebus", tppm_data)
+    # TODO include transformers here
     for line in tppm_data["branch"]
         if line["f_bus"] == sourcebus_n || line["t_bus"] == sourcebus_n
             append!(emergamps, line["rate_b"].values)
@@ -928,8 +972,8 @@ function decompose_transformers!(tppm_data)
                     tppm_data, last_bus_id, t_bus_id,
                     vbase=1.0,
                     br_r=trans["rs"][w],
-                    g_to=trans["gsh"][w],
-                    b_to=trans["bsh"][w],
+                    g_fr=diag(trans["gsh"][w]),
+                    b_fr=diag(trans["bsh"][w]),
                     rate_a=s_bigM,
                     rate_b=s_bigM,
                     rate_c=s_bigM,
@@ -985,7 +1029,11 @@ function create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; kwargs...)
     vbranch = Dict{String, Any}("f_bus"=>f_bus, "t_bus"=>t_bus)
     for k in [:br_r, :br_x, :g_fr, :g_to, :b_fr, :b_to]
         if !haskey(kwargs, k)
-            vbranch[string(k)] = MultiConductorMatrix(zeros(ncnd, ncnd))
+            if k in [:br_r, :br_x]
+                vbranch[string(k)] = MultiConductorMatrix(zeros(ncnd, ncnd))
+            else
+                vbranch[string(k)] = MultiConductorVector(zeros(ncnd))
+            end
         else
             if k in [:br_r, :br_x]
                 vbranch[string(k)] = kwargs[k]./zbase
