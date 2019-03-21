@@ -159,3 +159,125 @@ function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel{T}, n::Int, c::In
                                         sum(-b[c,d]*vm_to[c]*vm_fr[d]*cos(va_to[c]-va_fr[d]) +
                                              g[c,d]*vm_to[c]*vm_fr[d]*sin(va_to[c]-va_fr[d]) for d in PMs.conductor_ids(pm))) )
 end
+
+""
+function constraint_tp_trans_voltage(pm::GenericPowerModel, f_bus::Int, t_bus::Int, Tv_fr, Tv_to; nw::Int=pm.cnw)
+    ncnd  = 3
+    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
+    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    for n in 1:size(Tv_fr)[1]
+        @NLconstraint(pm.model,
+              sum(Tv_fr[n,c]*vm_fr[c]*cos(va_fr[c]) for c in 1:ncnd)
+            ==sum(Tv_to[n,c]*vm_to[c]*cos(va_to[c]) for c in 1:ncnd)
+        )
+        @NLconstraint(pm.model,
+              sum(Tv_fr[n,c]*vm_fr[c]*sin(va_fr[c]) for c in 1:ncnd)
+            ==sum(Tv_to[n,c]*vm_to[c]*sin(va_to[c]) for c in 1:ncnd)
+        )
+    end
+end
+
+""
+function constraint_tp_trans_power(pm::GenericPowerModel, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_to; nw::Int=pm.cnw)
+    ncnd  = 3
+    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
+    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    p_fr = [var(pm, nw, c, :p_trans, f_idx) for c in 1:ncnd]
+    q_fr = [var(pm, nw, c, :q_trans, f_idx) for c in 1:ncnd]
+    p_to = [var(pm, nw, c, :p_trans, t_idx) for c in 1:ncnd]
+    q_to = [var(pm, nw, c, :q_trans, t_idx) for c in 1:ncnd]
+    for n in 1:size(Ti_fr)[1]
+        # i_fr_re[c] = 1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c]))
+        # i_fr_im[c] = 1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c]))
+        # i_to_re[c] = 1/vm_to[c]*(p_to[c]*cos(va_to[c])+q_to[c]*sin(va_to[c]))
+        # i_to_im[c] = 1/vm_to[c]*(p_to[c]*sin(va_to[c])-q_to[c]*cos(va_to[c]))
+        @NLconstraint(pm.model,
+              sum(Ti_fr[n,c]*
+                    1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c])) # i_fr_re[c]
+              for c in 1:ncnd)
+            + sum(Ti_to[n,c]*
+                    1/vm_to[c]*(p_to[c]*cos(va_to[c])+q_to[c]*sin(va_to[c])) # i_to_re[c]
+              for c in 1:ncnd)
+            == 0
+        )
+        @NLconstraint(pm.model,
+              sum(Ti_fr[n,c]*
+                    1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c])) # i_fr_im[c]
+              for c in 1:ncnd)
+            + sum(Ti_to[n,c]*
+                    1/vm_to[c]*(p_to[c]*sin(va_to[c])-q_to[c]*cos(va_to[c])) # i_to_im[c]
+              for c in 1:ncnd)
+            == 0
+        )
+    end
+end
+
+""
+function constraint_tp_trans_vartap_fix(pm::GenericPowerModel, i::Int, tapset, tapfix; nw::Int=pm.cnw)
+    for cnd in 1:3
+        if tapfix[cnd]
+            @constraint(pm.model, var(pm, nw, :tap)[(i,cnd)] == tapset[cnd])
+        end
+    end
+end
+
+""
+function constraint_tp_trans_voltage_vartap(pm::GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, bkv_fr::Float64, bkv_to::Float64, vnom_kv_fr::Float64, vnom_kv_to::Float64; nw::Int=pm.cnw)
+    ncnd  = 3
+    # vm_fr = append_zero([var(pm, nw, c, :vm, f_bus) for c in 1:ncnd])
+    # va_fr = append_zero([var(pm, nw, c, :va, f_bus) for c in 1:ncnd])
+    # vm_to = append_zero([var(pm, nw, c, :vm, t_bus) for c in 1:ncnd])
+    # va_to = append_zero([var(pm, nw, c, :va, t_bus) for c in 1:ncnd])
+    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
+    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    for n in 1:ncnd
+        @NLconstraint(pm.model,
+            bkv_fr/bkv_to*vm_fr[n]
+            # 4 wire: bkv_fr/bkv_to*(vm_fr[n]-vm_fr[end])
+            ==
+            var(pm, nw, :tap)[(i,n)]*vnom_kv_fr/vnom_kv_to*vm_to[n]
+            # 4 wire: var(pm, nw, :tap)[(i,n)]*vnom_kv_fr/vnom_kv_to*(vm_to[n]-vm_to[end])
+        )
+        @constraint(pm.model,
+            va_fr[n]
+            # 4 wire: va_fr[n]-va_fr[end]
+            ==
+            va_to[n]
+            # 4 wire: va_to[n]-va_to[end]
+        )
+    end
+end
+
+""
+function constraint_tp_trans_power_vartap(pm::GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, bkv_fr::Float64, bkv_to::Float64, f_vnom_kv::Float64, t_vnom_kv::Float64; nw::Int=pm.cnw)
+    ncnd  = 3
+    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
+    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    p_fr = [var(pm, nw, c, :p_trans, f_idx) for c in 1:ncnd]
+    q_fr = [var(pm, nw, c, :q_trans, f_idx) for c in 1:ncnd]
+    p_to = [var(pm, nw, c, :p_trans, t_idx) for c in 1:ncnd]
+    q_to = [var(pm, nw, c, :q_trans, t_idx) for c in 1:ncnd]
+
+    for n in 1:ncnd
+        @NLconstraint(pm.model,
+            var(pm, nw, :tap)[(i,n)]*bkv_to/bkv_fr*f_vnom_kv/t_vnom_kv
+            *vm_to[n]*(p_fr[n]*cos(va_to[n])-q_fr[n]*sin(va_to[n]))
+            +vm_fr[n]*(p_to[n]*cos(va_fr[n])-q_to[n]*sin(va_fr[n]))
+            == 0
+        )
+        @NLconstraint(pm.model,
+            var(pm, nw, :tap)[(i,n)]*bkv_to/bkv_fr*f_vnom_kv/t_vnom_kv
+            *vm_to[n]*(p_fr[n]*sin(va_to[n])+q_fr[n]*cos(va_to[n]))
+            +vm_fr[n]*(p_to[n]*sin(va_fr[n])+q_to[n]*cos(va_fr[n]))
+            == 0
+        )
+    end
+end
