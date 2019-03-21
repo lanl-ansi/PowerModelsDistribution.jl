@@ -578,8 +578,8 @@ Adds PowerModels-style transformers (branches) to `tppm_data` from `dss_data`.
 function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "transformer")
-        if !haskey(tppm_data, "trans")
-            tppm_data["trans"] = Array{Any,1}()
+        if !haskey(tppm_data, "trans_comp")
+            tppm_data["trans_comp"] = Array{Any,1}()
         end
         for transformer in dss_data["transformer"]
             if haskey(transformer, "like")
@@ -684,7 +684,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 transDict["xs"]["$(k[1])-$(k[2])"] = MultiConductorMatrix(imag.(Zs_ij))
             end
 
-            push!(tppm_data["trans"], transDict)
+            push!(tppm_data["trans_comp"], transDict)
         end
     end
 end
@@ -907,10 +907,11 @@ Replaces complex transformers with a composition of ideal transformers and branc
 which model losses. New buses (virtual, no physical meaning) are added.
 """
 function decompose_transformers!(tppm_data)
-    trans_dict = Dict{String,Any}()
-    trans_dec_dict = Dict{String, Any}()
+    if !haskey(tppm_data, "trans")
+        tppm_data["trans"] = Dict{String, Any}()
+    end
     ncnds = tppm_data["conductors"]
-    for (tr_id, trans) in tppm_data["trans"]
+    for (tr_id, trans) in tppm_data["trans_comp"]
         if !haskey(trans, "type") || trans["type"]=="complex"
             #TODO big M for flows
             #s_bigM = calc_bigM_flows(trans)
@@ -922,6 +923,8 @@ function decompose_transformers!(tppm_data)
             #TODO issue: ID not defined yet
             trans["dec_map"]["trans_conn"] = Array{Any,1}(undef,nrw)
             trans["dec_map"]["trans_tap"] = Array{Any,1}(undef,nrw)
+            bus_list = []
+            branch_list = []
             for w in 1:nrw
                 last_bus_id = trans["buses"][w]
                 last_bus = tppm_data["bus"][string(last_bus_id)]
@@ -946,7 +949,7 @@ function decompose_transformers!(tppm_data)
                     #TODO handle zig-zag case
                     trans_conn["vnom_kv"] = [last_vnom, last_vnom*vmult]
                     # push transformer and save reference
-                    trans_conn_id = push_dict_ret_key!(trans_dict, trans_conn)
+                    trans_conn_id = push_dict_ret_key!(tppm_data["trans"], trans_conn)
                     trans["dec_map"]["trans_conn"][w] = trans_conn_id
                     # shift the trailing bus and rated voltage
                     last_bus_id = t_bus_id
@@ -963,12 +966,14 @@ function decompose_transformers!(tppm_data)
                 trans_tap["tapmax"] = trans["tapmax"][w]
                 trans_tap["tapmin"] = trans["tapmin"][w]
                 trans_tap["tapnum"] = trans["tapnum"][w]
-                trans_tap_id = push_dict_ret_key!(trans_dict, trans_tap)
+                trans_tap_id = push_dict_ret_key!(tppm_data["trans"], trans_tap)
                 trans["dec_map"]["trans_tap"][w] = trans_tap_id
                 last_bus_id = t_bus_id
+                append!(bus_list, last_bus_id) #save for reduction
                 # now we add the series resistance and shunt in p.u.
                 t_bus_id = create_vbus!(tppm_data, vmin, vmax, basekv=1.0)["index"]
-                create_vbranch!(
+                append!(bus_list, t_bus_id) #save for reduction
+                br = create_vbranch!(
                     tppm_data, last_bus_id, t_bus_id,
                     vbase=1.0,
                     br_r=trans["rs"][w],
@@ -978,6 +983,7 @@ function decompose_transformers!(tppm_data)
                     rate_b=s_bigM,
                     rate_c=s_bigM,
                 )
+                append!(branch_list, br["index"])
                 # save the last node for the reactance model
                 endnode_id_w[w] = t_bus_id
             end
@@ -985,7 +991,7 @@ function decompose_transformers!(tppm_data)
             # these branches are virtual; their flow limits should never be binding
             for w in 1:nrw
                 for v in w+1:nrw
-                    create_vbranch!(
+                    br = create_vbranch!(
                         tppm_data, endnode_id_w[w], endnode_id_w[v],
                         vbase=1.0,
                         br_x=trans["xs"][string(w,"-",v)],
@@ -993,18 +999,16 @@ function decompose_transformers!(tppm_data)
                         rate_b=s_bigM,
                         rate_c=s_bigM,
                     )
+                    append!(branch_list, br["index"])
                 end
             end
-            # save the decomposed transformer for solution building
-            push_dict_ret_key!(trans_dec_dict, trans)
+            rm_redundant_pd_elements!(tppm_data, buses=bus_list, branches=branch_list)
         else
             warn(LOGGER, string("Transformer \"", trans["name"], "\" was not decomposed!"))
             push_dict_ret_key!(trans_dict, trans)
         end
     end
-    # overwrite old transformer dictionary
-    tppm_data["trans"] = trans_dict
-    tppm_data["trans_dec"] = trans_dec_dict
+    # reduce network
 end
 function create_vbus!(tppm_data, vmin, vmax; basekv=tppm_data["basekv"])
     vbus = Dict{String, Any}("bus_type"=>"1")
@@ -1055,8 +1059,15 @@ function create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; kwargs...)
     push_dict_ret_key!(tppm_data["branch"], vbranch)
     return vbranch
 end
-function push_dict_ret_key!(dict::Dict{String, Any}, v::Dict{String, Any})
-    k = length(keys(dict))+1
+function push_dict_ret_key!(dict::Dict{String, Any}, v::Dict{String, Any}; assume_no_gaps=false)
+    if isempty(dict)
+        k = 1
+    elseif assume_no_gaps
+        k = length(keys(dict))+1
+    else
+        k = maximum([parse(Int, x) for x  in keys(dict)])+1
+    end
+
     dict[string(k)] = v
     v["index"] = k
     return k
@@ -1086,6 +1097,99 @@ function calc_bigM_flows(tppm_data, trans, Shmax)
     Smax = Shmax + Slossmax
     return Smax
 end
+function rm_redundant_pd_elements!(tppm_data; buses=keys(tppm_data["bus"]), branches=keys(tppm_data["branch"]))
+    # temporary dictionary for pi-model shunt elements
+    shunts_g = Dict{Int, Any}()
+    shunts_b = Dict{Int, Any}()
+    for (br_id, br) in tppm_data["branch"]
+        f_bus = br["f_bus"]
+        t_bus = br["t_bus"]
+        # if branch is flagged
+        if br_id in branches
+            # flags for convenience
+            is_selfloop = f_bus==t_bus # guaranteed  to be reducable because branch is flagged
+            is_shorted = all(br["br_r"] .==0) && all(br["br_x"] .==0)
+            is_reducable = string(f_bus) in buses || string(t_bus) in buses
+            if is_shorted && is_reducable
+                # choose bus to remove
+                rm_bus = (f_bus in buses)  ? f_bus :  t_bus
+                kp_bus = (rm_bus==f_bus) ? t_bus : f_bus
+            elseif is_selfloop
+                kp_bus = t_bus
+            else
+                # nothing to do, go to next branch
+                continue
+            end
+            # move shunts to the bus that will be left
+            if !haskey(shunts_g, kp_bus)
+                shunts_g[kp_bus] =  MultiConductorMatrix(zeros(3, 3))
+                shunts_b[kp_bus] =  MultiConductorMatrix(zeros(3, 3))
+            end
+            shunts_g[kp_bus] .+= br["g_fr"]
+            shunts_g[kp_bus] .+= br["g_to"]
+            shunts_b[kp_bus] .+= br["b_fr"]
+            shunts_b[kp_bus] .+= br["b_to"]
+            # remove branch from tppm_data
+            delete!(tppm_data["branch"], string(br_id))
+            if is_shorted && is_reducable
+                # remove bus from tppm_data
+                delete!(tppm_data["bus"], string(rm_bus))
+                # replace bus references in branches
+                for (br_id, br) in  tppm_data["branch"]
+                    if br["f_bus"] == rm_bus
+                        br["f_bus"] = kp_bus
+                    end
+                    if br["t_bus"] == rm_bus
+                        br["t_bus"] = kp_bus
+                    end
+                end
+                # replace bus references in transformers
+                for (tr_id, tr) in tppm_data["trans"]
+                    if tr["f_bus"] == rm_bus
+                        tr["f_bus"] = kp_bus
+                    end
+                    if tr["t_bus"] == rm_bus
+                        tr["t_bus"] = kp_bus
+                    end
+                end
+                # TODO clean up other references to the removed bus
+                # like for example loads, generators, ...
+                # skipped  for now, not relevant for transformer loss model
+                # + LOADS
+                # + shunts
+                # ...
+            end
+        elseif f_bus==t_bus
+            # this might occur if not all buses and branches are marked for removal
+            # a branch in parallel with a removed branch can turn into a self-loop
+            # and if that branch is not marked for removal, we end up here
+            error(LOGGER, "Specified set of buses and branches leads to a self-loop.")
+        end
+    end
+    # create shunts for lumped pi-model shunts
+    for (bus, shunt_g) in shunts_g
+        shunt_b = shunts_b[bus]
+        if !all(shunt_g .==0) || !all(shunt_b  .==0)
+            warn(LOGGER, "Pi-model shunt was moved to a bus shunt. Off-diagonals will be discarded in the data model.")
+            # The shunts are part of PM, and will be scaled later on by make_per_unit,
+            # unlike TPPM level components. The shunts here originate from TPPM level
+            # components which were already scaled. Therefore, we have to undo the
+            # scaling here to prevent double scaling later on.
+            gs = diag(shunt_g)*1/tppm_data["baseMVA"]
+            bs = diag(shunt_b)*1/tppm_data["baseMVA"]
+            add_shunt!(tppm_data, bus, gs=gs,  bs=bs)
+        end
+    end
+end
+function add_shunt!(tppm_data, bus; gs=MultiConductorVector(zeros(3)), bs=MultiConductorVector(zeros(3)), vbase_kv=1, sbase_mva=1)
+    # TODO check whether keys are consistent with the actual data model
+    shunt_dict = Dict{String, Any}("status"=>1, "shunt_bus"=>bus)
+    zbase  = vbase_kv^2/sbase_mva
+    shunt_dict["gs"] = gs*zbase
+    shunt_dict["bs"] = bs*zbase
+    push_dict_ret_key!(tppm_data["shunt"], shunt_dict, assume_no_gaps=false)
+end
+
 """
 
     function adjust_base!(tppm_data)
@@ -1100,9 +1204,10 @@ function adjust_base!(tppm_data)
     # initialize arrays etc. for the recursive part
     edges_br = [(br["index"], br["f_bus"], br["t_bus"]) for (br_id_str, br) in tppm_data["branch"]]
     edges_tr = [(tr["index"], tr["f_bus"], tr["t_bus"]) for (tr_id_str, tr) in tppm_data["trans"]]
-    edges_br_visited = zeros(Bool, length(edges_br))
-    edges_tr_visited = zeros(Bool, length(edges_tr))
-    nodes_visited = zeros(Bool, length(keys(tppm_data["bus"])))
+    edges_br_visited = Dict{Int, Bool}([(edge[1], false) for edge in edges_br])
+    edges_tr_visited = Dict{Int, Bool}([(edge[1], false) for edge in edges_tr])
+    bus_ids = [parse(Int, x) for x in keys(tppm_data["bus"])]
+    nodes_visited = Dict{Int, Bool}([(bus_id, false) for  bus_id in bus_ids])
     # start from the primary of the first transformer
     if haskey(tppm_data, "trans") && haskey(tppm_data["trans"], "1")
         trans_first = tppm_data["trans"]["1"]
@@ -1115,7 +1220,7 @@ function adjust_base!(tppm_data)
         # condition checked before call to adjust_base!
     end
     adjust_base_rec!(tppm_data, source, base_kv_new, nodes_visited, edges_br, edges_br_visited, edges_tr, edges_tr_visited)
-    if !all(nodes_visited)
+    if !all(values(nodes_visited))
         warn(LOGGER, "The network contains buses which are not reachable from the start node for the change of voltage base.")
     end
 end
@@ -1148,7 +1253,7 @@ function adjust_base_rec!(tppm_data, source::Int, base_kv_new::Float64, nodes_vi
             # this edge will be visited
             edges_br_visited[br_id] = true
             source_new = (f_bus==source) ? t_bus : f_bus
-            # assume the branch was undimensiolised with the basekv of the node
+            # assume the branch was undimensionalised with the basekv of the node
             # it is connected to; ideally this will be a property of the branch
             # itself in the future to ensure consistency
             base_kv_branch_prev = tppm_data["bus"][string(source_new)]["base_kv"]
@@ -1315,7 +1420,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         end
     end
 
-    if haskey(tppm_data, "trans")
+    if haskey(tppm_data, "trans_comp")
         decompose_transformers!(tppm_data)
         adjust_base!(tppm_data)
     end
