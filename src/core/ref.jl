@@ -58,49 +58,47 @@ function calc_tp_trans_Tvi(pm::GenericPowerModel, i::Int; nw=pm.cnw)
     Tbr = [0 0 1; 1 0 0; 0 1 0]                             # barrel roll
     Tdelt  = [1 -1 0; 0 1 -1; -1 0 1]                       # delta transform
     # connection transformers
-    if trans["type"]=="conn"
-        perm = trans["conn"][1:3]
-        #TODO allow this finally or not?
-        @assert(!(perm in ["213", "321", "132"]))
-        polarity = trans["conn"][4]
-        dyz = trans["conn"][5]
-        # Tw will contain transformations related to permutation and polarity
-        perm_to_trans = Dict(
-            "123"=>diagm(0=>ones(Float64, 3)),
-            "312"=>Tbr,
-            "231"=>Tbr*Tbr
-        )
-        Tw = perm_to_trans[perm]
-        Tw = (polarity=='+') ? Tw : -Tw
-        #Tw = diagm(0=>ones(Float64, 3))
-        if dyz=='y'
-            Tv_fr = Tw*Tminn
-            Tv_to = Tminn
-            Ti_fr = Tw*Tnoz
-            Ti_to = Tnoz
-        elseif dyz=='d'
-            Tv_fr = Tdelt*Tw*Tminn
-            Tv_to = Tminn
-            Ti_fr = Tw*Tnoz
-            Ti_to = Tdelt'*Tnoz
-        end
-    elseif trans["type"]=="tap"
-        Tv_fr = diagm(0=>ones(Float64, 3))*Tminn
-        Tv_to = diagm(0=>trans["tapset"]).*trans["vnom_kv"][1]./trans["vnom_kv"][2]*Tminn
-        Ti_fr = deepcopy(Tv_to)
-        Ti_to = deepcopy(Tv_fr)
+    perm = trans["conn"][1:3]
+    #TODO allow this finally or not?
+    @assert(!(perm in ["213", "321", "132"]))
+    polarity = trans["conn"][4]
+    dyz = trans["conn"][5]
+    # Tw will contain transformations related to permutation and polarity
+    perm_to_trans = Dict(
+        "123"=>diagm(0=>ones(Float64, 3)),
+        "312"=>Tbr,
+        "231"=>Tbr*Tbr
+    )
+    Tw = perm_to_trans[perm]
+    Tw = (polarity=='+') ? Tw : -Tw
+    #Tw = diagm(0=>ones(Float64, 3))
+    vmult = 1.0 # compensate for change in LN
+    if dyz=='y'
+        Tv_fr = Tw*Tminn
+        Tv_im = Tminn
+        Ti_fr = Tw*Tnoz
+        Ti_im = Tnoz
+    elseif dyz=='d'
+        Tv_fr = Tdelt*Tw*Tminn
+        Tv_im = Tminn
+        Ti_fr = Tw*Tnoz
+        Ti_im = Tdelt'*Tnoz
+        vmult = sqrt(3)
+    elseif dyz=='z'
+        #TODO zif-zag here
     else
-        error(LOGGER, string("Unknown transformer type \"", trans["type"], "\"."))
+        error(LOGGER, "Illegal connection specification $dyz.")
     end
+    #Tv_fr = diagm(0=>ones(Float64, 3))*Tminn
+    Cv_to = trans["vnom_kv"][1]*vmult/trans["vnom_kv"][2]
     # make equations dimensionless
     bkv_fr = ref(pm, nw, :bus, trans["f_bus"], "base_kv")
     bkv_to = ref(pm, nw, :bus, trans["t_bus"], "base_kv")
-    Tv_fr = Tv_fr.*bkv_fr./bkv_to
-    Ti_fr = Ti_fr.*bkv_to./bkv_fr
+    Cv_to = Cv_to*bkv_to/bkv_fr
     # remove fourth conductor for the time being
     Tv_fr = Tv_fr[:,1:end-1]
-    Tv_to = Tv_to[:,1:end-1]
+    Tv_im = Tv_im[:,1:end-1]
     Ti_fr = Ti_fr[:,1:end-1]
-    Ti_to = Ti_to[:,1:end-1]
-    return (Tv_fr,Tv_to,Ti_fr,Ti_to)
+    Ti_im = Ti_im[:,1:end-1]
+    return (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to)
 end

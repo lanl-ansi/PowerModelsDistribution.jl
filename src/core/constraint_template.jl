@@ -1,4 +1,5 @@
 # Three-phase specific constraints
+using Debugger
 
 ""
 function constraint_kcl_shunt_slack(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
@@ -30,6 +31,14 @@ end
 function constraint_tp_voltage(pm::GenericPowerModel; nw::Int=pm.cnw)
     for c in PMs.conductor_ids(pm)
         constraint_tp_voltage(pm, nw, c)
+    end
+end
+
+
+"Set loose voltage bounds; they will only be set if the voltage magnitude was unconstrained before."
+function constraint_tp_voltage_mag_unbound(pm::GenericPowerModel; nw::Int=pm.cnw, vmin=0.5, vmax=Inf)
+    for bus_id in ids(pm, pm.cnw, :bus)
+        constraint_tp_voltage_mag_unbound(pm, bus_id, vmin, vmax, nw=nw)
     end
 end
 
@@ -215,20 +224,38 @@ end
 
 ""
 function constraint_tp_trans_voltage(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
-    (Tv_fr,Tv_to,Ti_fr,Ti_to) = calc_tp_trans_Tvi(pm, i)
+    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
+    # TODO add checks to simplify
     f_bus = ref(pm, :trans, i)["f_bus"]
     t_bus = ref(pm, :trans, i)["t_bus"]
-    constraint_tp_trans_voltage(pm, f_bus, t_bus, Tv_fr, Tv_to)
+    tapset = ref(pm, :trans, i)["tapset"]
+    constraint_tp_trans_voltage(pm, i, f_bus, t_bus, tapset, Tv_fr, Tv_im, Cv_to)
 end
 
 ""
-function constraint_tp_trans_power(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
-    (Tv_fr,Tv_to,Ti_fr,Ti_to) = calc_tp_trans_Tvi(pm, i)
+function constraint_tp_trans_voltage_var(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
+    # TODO add checks to simplify
+    trans = ref(pm, :trans, i)
+    f_bus = trans["f_bus"]
+    t_bus = trans["t_bus"]
+    constraint_tp_trans_voltage_var(pm, i, f_bus, t_bus, Tv_fr, Tv_im, Cv_to)
+    # fix the taps with a constraint which are not free
+    # at least one tap will be free
+    tapfix = trans["tapfix"]
+    tapset = trans["tapset"]
+    constraint_tp_trans_tap_fix(pm, i, tapfix, tapset)
+end
+
+""
+function constraint_tp_trans_flow(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
+    # TODO add checks to simplify
     f_bus = ref(pm, :trans, i)["f_bus"]
     t_bus = ref(pm, :trans, i)["t_bus"]
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
-    constraint_tp_trans_power(pm, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_to)
+    constraint_tp_trans_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
 end
 
 ""

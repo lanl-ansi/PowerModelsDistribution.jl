@@ -603,10 +603,13 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             # voltage and power ratings
             transDict["vnom_kv"] = defaults["kvs"]
             #transDict["snom_kva"] = defaults["kvas"]
-            transDict["rate_a"] = defaults["normhkva"]./(tppm_data["baseMVA"]*1E3)
-            transDict["rate_b"] = defaults["normhkva"]./(tppm_data["baseMVA"]*1E3)
-            transDict["rate_c"] = defaults["emerghkva"]./(tppm_data["baseMVA"]*1E3)
-
+            transDict["rate_a"] = [PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
+            transDict["rate_b"] = [PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
+            transDict["rate_c"] = [PMs.MultiConductorVector(ones(nconductors))*defaults["emerghkva"] for i  in 1:nrw]
+            # convert to 1 MVA base
+            transDict["rate_a"] *= 1E-3
+            transDict["rate_b"] *= 1E-3
+            transDict["rate_c"] *= 1E-3
             # connection properties
             dyz_map = Dict("wye"=>"y", "delta"=>"d", "ll"=>"d", "ln"=>"y")
             dyz_primary = dyz_map[defaults["conns"][1]]
@@ -932,8 +935,11 @@ function decompose_transformers!(tppm_data)
             trans_dict["t_bus"] = vbus_tr["index"]
             append!(bus_reduce, vbus_tr["index"])
             # ratings
-            vmult = (conn[4]=='d') ? sqrt(3) : 1 # specified in LL, so correct for delta
-            trans_dict["vnom_kv"] = [trans["vnom_kv"][w]*vmult 1.0]
+            trans_dict["vnom_kv"] = [trans["vnom_kv"][w] 1.0]
+            # convert to baseMVA, because this is not done per_unit now)
+            trans_dict["rate_a"] = trans["rate_a"][w]/tppm_data["baseMVA"]
+            trans_dict["rate_b"] = trans["rate_b"][w]/tppm_data["baseMVA"]
+            trans_dict["rate_c"] = trans["rate_c"][w]/tppm_data["baseMVA"]
             # tap settings
             trans_dict["tapset"] = trans["tapset"][w]
             trans_dict["tapfix"] = trans["tapfix"][w]
@@ -962,38 +968,36 @@ function decompose_transformers!(tppm_data)
             endnode_id_w[w] = vbus_br["index"]
         end
         # now add the fully connected graph for reactances
+        # sum ratings for  all windings to have internal worst-case ratings
+        rate_a = sum(tppm_data["trans_comp"]["1"]["rate_a"])
+        rate_b = sum(tppm_data["trans_comp"]["1"]["rate_b"])
+        rate_c = sum(tppm_data["trans_comp"]["1"]["rate_c"])
         for w in 1:nrw
             for v in w+1:nrw
                 br = create_vbranch!(
                     tppm_data, endnode_id_w[w], endnode_id_w[v],
                     vbase=1.0,
                     br_x=trans["xs"][string(w,"-",v)],
-                    rate_a=s_bigM,
-                    rate_b=s_bigM,
-                    rate_c=s_bigM,
+                    rate_a=rate_a,
+                    rate_b=rate_b,
+                    rate_c=rate_c,
                 )
                 append!(branch_reduce, br["index"])
             end
         end
-        println(bus_reduce)
-        println(branch_reduce)
         rm_redundant_pd_elements!(tppm_data, buses=string.(bus_reduce), branches=string.(branch_reduce))
     end
     # reduce network
 end
-function create_vbus!(tppm_data; vmin=nothing, vmax=nothing, basekv=tppm_data["basekv"])
+function create_vbus!(tppm_data; vmin=0, vmax=Inf, basekv=tppm_data["basekv"])
     vbus = Dict{String, Any}("bus_type"=>"1")
     vbus_id = push_dict_ret_key!(tppm_data["bus"], vbus)
     vbus["bus_i"] = vbus_id
-    if !isnothing(vmin)
-        vbus["vmin"] = vmin
-    end
-    if !isnothing(vmax)
-        vbus["vmax"] = vmax
-    end
     ncnds = tppm_data["conductors"]
     vbus["vm"] = MultiConductorVector(ones(Float64, ncnds))
     vbus["va"] = MultiConductorVector(zeros(Float64, ncnds))
+    vbus["vmin"] = MultiConductorVector(ones(Float64, ncnds))*vmin
+    vbus["vmax"] = MultiConductorVector(ones(Float64, ncnds))*vmax
     vbus["base_kv"] = basekv
     return vbus
 end
@@ -1046,31 +1050,6 @@ function push_dict_ret_key!(dict::Dict{String, Any}, v::Dict{String, Any}; assum
     dict[string(k)] = v
     v["index"] = k
     return k
-end
-function calc_bigM_flows(tppm_data, trans, Shmax)
-    nrw = length(trans["buses"])
-    # find voltage bounds on all windings;
-    # guaranteed to be the highest voltage in loss model
-    Vminpu = Inf
-    Vmaxpu = 0
-    for bus_id in trans["buses"]
-        Vmaxpu = max(Vmaxpu, maximum(tppm_data["bus"][string(bus_id)]["vmax"]))
-        Vminpu = min(Vminpu, minimum(tppm_data["bus"][string(bus_id)]["vmin"]))
-    end
-    # loss model is referred to 1 kV
-    Vbase = 1.0
-    Vmax = Vmaxpu*Vbase
-    Vmin = Vminpu*Vbase
-    Ishmax = sum(abs.(trans["gsh"][w][:,:]+im*trans["bsh"][w][:,:]) for w in 1:nrw)*ones(3)*Vmax
-    println("Ishmax:$Ishmax")
-    Ihmax = Shmax./Vmin
-    println("Ihmax:$Ihmax")
-    Ismax = Ishmax + Ihmax
-    Slossmax = (
-        sum([abs.(r[:,:]) for r in trans["rs"]])+sum([abs.(x[:,:]) for (_,x) in trans["xs"]])
-        )*Ismax.^2
-    Smax = Shmax + Slossmax
-    return Smax
 end
 function rm_redundant_pd_elements!(tppm_data; buses=keys(tppm_data["bus"]), branches=keys(tppm_data["branch"]))
     # temporary dictionary for pi-model shunt elements
