@@ -635,6 +635,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             transDict["tapmin"] = [PMs.MultiConductorVector(ones(Float64,3))*defaults["mintap"] for i in 1:nrw]
             transDict["tapmax"] = [PMs.MultiConductorVector(ones(Float64,3))*defaults["maxtap"] for i in 1:nrw]
             transDict["tapnum"] = [PMs.MultiConductorVector(ones(Int,3))*defaults["numtaps"] for i in 1:nrw]
+            transDict["tapfix"] = [PMs.MultiConductorVector(ones(Bool,3)) for i in 1:nrw]
 
             # loss model (converted to SI units, referred to secondary)
             function zpn_to_abc(z, p, n; atol=1E-13)
@@ -912,110 +913,84 @@ function decompose_transformers!(tppm_data)
     end
     ncnds = tppm_data["conductors"]
     for (tr_id, trans) in tppm_data["trans_comp"]
-        if !haskey(trans, "type") || trans["type"]=="complex"
-            #TODO big M for flows
-            #s_bigM = calc_bigM_flows(trans)
-            s_bigM = [10E3 for i in 1:ncnds]
-            nrw = length(trans["buses"])
-            endnode_id_w = Array{Int, 1}(undef, nrw)
-            trans["dec_map"] = Dict{String, Any}()
-            #TODO populate these with references
-            #TODO issue: ID not defined yet
-            trans["dec_map"]["trans_conn"] = Array{Any,1}(undef,nrw)
-            trans["dec_map"]["trans_tap"] = Array{Any,1}(undef,nrw)
-            bus_list = []
-            branch_list = []
-            for w in 1:nrw
-                last_bus_id = trans["buses"][w]
-                last_bus = tppm_data["bus"][string(last_bus_id)]
-                # if the voltage base is scaled correctly, these voltage bounds
-                # will not further constrain the problem
-                vmin = last_bus["vmin"]
-                vmax = last_bus["vmax"]
-                vmin = MultiConductorVector(ones(3))*0.8
-                vmax = MultiConductorVector(ones(3))*1.2
-                last_vnom = trans["vnom_kv"][w]
-                conn = trans["conns"][w]
-                # if not 123+y, we need a connection transformer
-                if conn != "123+y"
-                    trans_conn = Dict{String, Any}("type"=>"conn", "conn"=>conn)
-                    t_bus_id = create_vbus!(tppm_data, vmin, vmax)["index"]
-                    trans_conn["f_bus"] = last_bus_id
-                    trans_conn["t_bus"] = t_bus_id
-                    vmult = 1.0
-                    if conn[5]=='d'
-                        vmult = sqrt(3)
-                    end
-                    #TODO handle zig-zag case
-                    trans_conn["vnom_kv"] = [last_vnom, last_vnom*vmult]
-                    # push transformer and save reference
-                    trans_conn_id = push_dict_ret_key!(tppm_data["trans"], trans_conn)
-                    trans["dec_map"]["trans_conn"][w] = trans_conn_id
-                    # shift the trailing bus and rated voltage
-                    last_bus_id = t_bus_id
-                    last_vnom = trans_conn["vnom_kv"][2]
-                end
-                # now and the n_w:1 transformer
-                trans_tap = Dict{String, Any}("type"=>"tap")
-                t_bus_id = create_vbus!(tppm_data, vmin, vmax, basekv=1.0)["index"]
-                trans_tap["f_bus"] = last_bus_id
-                trans_tap["t_bus"] = t_bus_id
-                trans_tap["vnom_kv"] = [last_vnom, 1.0]
-                trans_tap["tapset"] = trans["tapset"][w]
-                trans_tap["tapfix"] = ones(Bool, 3)
-                trans_tap["tapmax"] = trans["tapmax"][w]
-                trans_tap["tapmin"] = trans["tapmin"][w]
-                trans_tap["tapnum"] = trans["tapnum"][w]
-                trans_tap_id = push_dict_ret_key!(tppm_data["trans"], trans_tap)
-                trans["dec_map"]["trans_tap"][w] = trans_tap_id
-                last_bus_id = t_bus_id
-                append!(bus_list, last_bus_id) #save for reduction
-                # now we add the series resistance and shunt in p.u.
-                t_bus_id = create_vbus!(tppm_data, vmin, vmax, basekv=1.0)["index"]
-                append!(bus_list, t_bus_id) #save for reduction
+        #TODO big M for flows
+        #s_bigM = calc_bigM_flows(trans)
+        s_bigM = [10E3 for i in 1:ncnds]
+        nrw = length(trans["buses"])
+        endnode_id_w = Array{Int, 1}(undef, nrw)
+        bus_reduce = []
+        branch_reduce = []
+        for w in 1:nrw
+            # 2-WINDING TRANSFORMER
+            trans_dict = Dict{String, Any}()
+            # connection settings
+            conn = trans["conns"][w]
+            trans_dict["conn"] = conn
+            trans_dict["f_bus"] = trans["buses"][w]
+            # make virtual bus and mark it for reduction
+            vbus_tr = create_vbus!(tppm_data)
+            trans_dict["t_bus"] = vbus_tr["index"]
+            append!(bus_reduce, vbus_tr["index"])
+            # ratings
+            vmult = (conn[4]=='d') ? sqrt(3) : 1 # specified in LL, so correct for delta
+            trans_dict["vnom_kv"] = [trans["vnom_kv"][w]*vmult 1.0]
+            # tap settings
+            trans_dict["tapset"] = trans["tapset"][w]
+            trans_dict["tapfix"] = trans["tapfix"][w]
+            trans_dict["tapmax"] = trans["tapmax"][w]
+            trans_dict["tapmin"] = trans["tapmin"][w]
+            trans_dict["tapnum"] = trans["tapnum"][w]
+            # save
+            push_dict_ret_key!(tppm_data["trans"], trans_dict)
+            # WINDINF SERIES RESISTANCE
+            # make virtual bus and mark it for reduction
+            vbus_br = create_vbus!(tppm_data, basekv=1.0)
+            append!(bus_reduce, vbus_br["index"])
+            # make virtual branch and mark it for reduction
+            br = create_vbranch!(
+                tppm_data, vbus_tr["index"], vbus_br["index"],
+                vbase=1.0,
+                br_r=trans["rs"][w],
+                g_fr=diag(trans["gsh"][w]),
+                b_fr=diag(trans["bsh"][w]),
+                rate_a=s_bigM,
+                rate_b=s_bigM,
+                rate_c=s_bigM,
+            )
+            append!(branch_reduce, br["index"])
+            # save the trailing node for the reactance model
+            endnode_id_w[w] = vbus_br["index"]
+        end
+        # now add the fully connected graph for reactances
+        for w in 1:nrw
+            for v in w+1:nrw
                 br = create_vbranch!(
-                    tppm_data, last_bus_id, t_bus_id,
+                    tppm_data, endnode_id_w[w], endnode_id_w[v],
                     vbase=1.0,
-                    br_r=trans["rs"][w],
-                    g_fr=diag(trans["gsh"][w]),
-                    b_fr=diag(trans["bsh"][w]),
+                    br_x=trans["xs"][string(w,"-",v)],
                     rate_a=s_bigM,
                     rate_b=s_bigM,
                     rate_c=s_bigM,
                 )
-                append!(branch_list, br["index"])
-                # save the last node for the reactance model
-                endnode_id_w[w] = t_bus_id
+                append!(branch_reduce, br["index"])
             end
-            # now add the fully connected graph for reactances
-            # these branches are virtual; their flow limits should never be binding
-            for w in 1:nrw
-                for v in w+1:nrw
-                    br = create_vbranch!(
-                        tppm_data, endnode_id_w[w], endnode_id_w[v],
-                        vbase=1.0,
-                        br_x=trans["xs"][string(w,"-",v)],
-                        rate_a=s_bigM,
-                        rate_b=s_bigM,
-                        rate_c=s_bigM,
-                    )
-                    append!(branch_list, br["index"])
-                end
-            end
-            rm_redundant_pd_elements!(tppm_data, buses=bus_list, branches=branch_list)
-        else
-            warn(LOGGER, string("Transformer \"", trans["name"], "\" was not decomposed!"))
-            push_dict_ret_key!(trans_dict, trans)
         end
+        println(bus_reduce)
+        println(branch_reduce)
+        rm_redundant_pd_elements!(tppm_data, buses=string.(bus_reduce), branches=string.(branch_reduce))
     end
     # reduce network
 end
-function create_vbus!(tppm_data, vmin, vmax; basekv=tppm_data["basekv"])
+function create_vbus!(tppm_data; vmin=nothing, vmax=nothing, basekv=tppm_data["basekv"])
     vbus = Dict{String, Any}("bus_type"=>"1")
     vbus_id = push_dict_ret_key!(tppm_data["bus"], vbus)
     vbus["bus_i"] = vbus_id
-    vbus["vmin"] = vmin
-    vbus["vmax"] = vmax
+    if !isnothing(vmin)
+        vbus["vmin"] = vmin
+    end
+    if !isnothing(vmax)
+        vbus["vmax"] = vmax
+    end
     ncnds = tppm_data["conductors"]
     vbus["vm"] = MultiConductorVector(ones(Float64, ncnds))
     vbus["va"] = MultiConductorVector(zeros(Float64, ncnds))
