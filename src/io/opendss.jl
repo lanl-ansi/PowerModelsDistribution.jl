@@ -888,10 +888,14 @@ values. Defaults to Inf if all emergamps connected to sourcebus are also Inf.
 function adjust_sourcegen_bounds!(tppm_data)
     emergamps = Array{Float64,1}()
     sourcebus_n = find_bus("sourcebus", tppm_data)
-    # TODO include transformers here
     for line in tppm_data["branch"]
         if line["f_bus"] == sourcebus_n || line["t_bus"] == sourcebus_n
             append!(emergamps, line["rate_b"].values)
+        end
+    end
+    for trans in tppm_data["trans"]
+        if trans["f_bus"] == sourcebus_n || trans["t_bus"] == sourcebus_n
+            append!(emergamps, trans["rate_b"].values)
         end
     end
 
@@ -1362,6 +1366,12 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     dss2tppm_pvsystem!(tppm_data, dss_data, import_all)
     dss2tppm_storage!(tppm_data, dss_data, import_all)
 
+    if haskey(tppm_data, "trans_comp")
+        # this has to be done before calling adjust_sourcegen_bounds! 
+        decompose_transformers!(tppm_data)
+        adjust_base!(tppm_data)
+    end
+
     adjust_sourcegen_bounds!(tppm_data)
 
     tppm_data["dcline"] = []
@@ -1372,11 +1382,6 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         if length(tppm_data[optional]) == 0
             tppm_data[optional] = Dict{String,Any}()
         end
-    end
-
-    if haskey(tppm_data, "trans_comp")
-        decompose_transformers!(tppm_data)
-        adjust_base!(tppm_data)
     end
 
     tppm_data["files"] = dss_data["filename"]
