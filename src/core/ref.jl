@@ -53,8 +53,8 @@ function calc_tp_trans_Tvi(pm::GenericPowerModel, i::Int; nw=pm.cnw)
     trans = ref(pm, nw, :trans,  i)
     # transformation matrices
     # Tv and Ti will be compositions of these
-    Tminn = [diagm(0=>ones(Float64, 3)) -ones(Float64, 3)]  # substract neutral from other conductors
-    Tnoz = [diagm(0=>ones(Float64, 3)) zeros(Float64, 3)]   # remove the neutral
+    #Tminn = [diagm(0=>ones(Float64, 3)) -ones(Float64, 3)]  # substract neutral from other conductors
+    #Tnoz = [diagm(0=>ones(Float64, 3)) zeros(Float64, 3)]   # remove the neutral
     Tbr = [0 0 1; 1 0 0; 0 1 0]                             # barrel roll
     Tdelt  = [1 -1 0; 0 1 -1; -1 0 1]                       # delta transform
     # connection transformers
@@ -63,6 +63,7 @@ function calc_tp_trans_Tvi(pm::GenericPowerModel, i::Int; nw=pm.cnw)
     @assert(!(perm in ["213", "321", "132"]))
     polarity = trans["conn"][4]
     dyz = trans["conn"][5]
+    grounded = length(trans["conn"])>5 && trans["conn"][6]=='n'
     # Tw will contain transformations related to permutation and polarity
     perm_to_trans = Dict(
         "123"=>diagm(0=>ones(Float64, 3)),
@@ -74,15 +75,20 @@ function calc_tp_trans_Tvi(pm::GenericPowerModel, i::Int; nw=pm.cnw)
     #Tw = diagm(0=>ones(Float64, 3))
     vmult = 1.0 # compensate for change in LN
     if dyz=='y'
-        Tv_fr = Tw*Tminn
-        Tv_im = Tminn
-        Ti_fr = Tw*Tnoz
-        Ti_im = Tnoz
+        Tv_fr = Tw
+        Tv_im = diagm(0=>ones(Float64, 3))
+        Ti_fr = Tw
+        Ti_im = diagm(0=>ones(Float64, 3))
+        # if !grounded
+        #     # if not grounded, phase currents should sum to zero
+        #     Ti_fr = [Ti_fr; ones(1,3)]
+        #     Ti_im = [Ti_im; zeros(1,3)]
+        # end
     elseif dyz=='d'
-        Tv_fr = Tdelt*Tw*Tminn
-        Tv_im = Tminn
-        Ti_fr = Tw*Tnoz
-        Ti_im = Tdelt'*Tnoz
+        Tv_fr = Tdelt*Tw
+        Tv_im = diagm(0=>ones(Float64, 3))
+        Ti_fr = Tw
+        Ti_im = Tdelt'
         vmult = sqrt(3)
     elseif dyz=='z'
         #TODO zif-zag here
@@ -95,10 +101,5 @@ function calc_tp_trans_Tvi(pm::GenericPowerModel, i::Int; nw=pm.cnw)
     bkv_fr = ref(pm, nw, :bus, trans["f_bus"], "base_kv")
     bkv_to = ref(pm, nw, :bus, trans["t_bus"], "base_kv")
     Cv_to = Cv_to*bkv_to/bkv_fr
-    # remove fourth conductor for the time being
-    Tv_fr = Tv_fr[:,1:end-1]
-    Tv_im = Tv_im[:,1:end-1]
-    Ti_fr = Ti_fr[:,1:end-1]
-    Ti_im = Ti_im[:,1:end-1]
     return (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to)
 end

@@ -887,20 +887,25 @@ values. Defaults to Inf if all emergamps connected to sourcebus are also Inf.
 """
 function adjust_sourcegen_bounds!(tppm_data)
     emergamps = Array{Float64,1}()
-    sourcebus_n = find_bus("sourcebus", tppm_data)
-    # TODO include transformers here
-    for line in tppm_data["branch"]
+    #sourcebus_n = find_bus("sourcebus", tppm_data)
+    sourcebus_n = [bus["index"] for (_,bus) in tppm_data["bus"] if haskey(bus, "name") && bus["name"]=="sourcebus"][1]
+    for (_,line) in tppm_data["branch"]
         if line["f_bus"] == sourcebus_n || line["t_bus"] == sourcebus_n
             append!(emergamps, line["rate_b"].values)
+        end
+    end
+    for (_,trans) in tppm_data["trans"]
+        if trans["f_bus"] == sourcebus_n || trans["t_bus"] == sourcebus_n
+            append!(emergamps, trans["rate_b"].values)
         end
     end
 
     bound = sum(emergamps)
 
-    tppm_data["gen"][1]["pmin"] = PMs.MultiConductorVector(fill(-bound, size(tppm_data["gen"][1]["pmin"])))
-    tppm_data["gen"][1]["pmax"] = PMs.MultiConductorVector(fill( bound, size(tppm_data["gen"][1]["pmin"])))
-    tppm_data["gen"][1]["qmin"] = PMs.MultiConductorVector(fill(-bound, size(tppm_data["gen"][1]["pmin"])))
-    tppm_data["gen"][1]["qmax"] = PMs.MultiConductorVector(fill( bound, size(tppm_data["gen"][1]["pmin"])))
+    tppm_data["gen"]["1"]["pmin"] = PMs.MultiConductorVector(fill(-bound, size(tppm_data["gen"]["1"]["pmin"])))
+    tppm_data["gen"]["1"]["pmax"] = PMs.MultiConductorVector(fill( bound, size(tppm_data["gen"]["1"]["pmin"])))
+    tppm_data["gen"]["1"]["qmin"] = PMs.MultiConductorVector(fill(-bound, size(tppm_data["gen"]["1"]["pmin"])))
+    tppm_data["gen"]["1"]["qmax"] = PMs.MultiConductorVector(fill( bound, size(tppm_data["gen"]["1"]["pmin"])))
 end
 
 """
@@ -916,13 +921,14 @@ function decompose_transformers!(tppm_data)
     end
     ncnds = tppm_data["conductors"]
     for (tr_id, trans) in tppm_data["trans_comp"]
-        #TODO big M for flows
-        #s_bigM = calc_bigM_flows(trans)
-        s_bigM = [10E3 for i in 1:ncnds]
         nrw = length(trans["buses"])
         endnode_id_w = Array{Int, 1}(undef, nrw)
         bus_reduce = []
         branch_reduce = []
+        # sum ratings for  all windings to have internal worst-case ratings
+        rate_a = sum(trans["rate_a"])
+        rate_b = sum(trans["rate_b"])
+        rate_c = sum(trans["rate_c"])
         for w in 1:nrw
             # 2-WINDING TRANSFORMER
             trans_dict = Dict{String, Any}()
@@ -959,19 +965,15 @@ function decompose_transformers!(tppm_data)
                 br_r=trans["rs"][w],
                 g_fr=diag(trans["gsh"][w]),
                 b_fr=diag(trans["bsh"][w]),
-                rate_a=s_bigM,
-                rate_b=s_bigM,
-                rate_c=s_bigM,
+                rate_a=rate_a,
+                rate_b=rate_b,
+                rate_c=rate_c,
             )
             append!(branch_reduce, br["index"])
             # save the trailing node for the reactance model
             endnode_id_w[w] = vbus_br["index"]
         end
         # now add the fully connected graph for reactances
-        # sum ratings for  all windings to have internal worst-case ratings
-        rate_a = sum(tppm_data["trans_comp"]["1"]["rate_a"])
-        rate_b = sum(tppm_data["trans_comp"]["1"]["rate_b"])
-        rate_c = sum(tppm_data["trans_comp"]["1"]["rate_c"])
         for w in 1:nrw
             for v in w+1:nrw
                 br = create_vbranch!(
@@ -1362,8 +1364,6 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     dss2tppm_pvsystem!(tppm_data, dss_data, import_all)
     dss2tppm_storage!(tppm_data, dss_data, import_all)
 
-    adjust_sourcegen_bounds!(tppm_data)
-
     tppm_data["dcline"] = []
 
     InfrastructureModels.arrays_to_dicts!(tppm_data)
@@ -1375,9 +1375,12 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     end
 
     if haskey(tppm_data, "trans_comp")
+        # this has to be done before calling adjust_sourcegen_bounds!
         decompose_transformers!(tppm_data)
         adjust_base!(tppm_data)
     end
+
+    adjust_sourcegen_bounds!(tppm_data)
 
     tppm_data["files"] = dss_data["filename"]
 
