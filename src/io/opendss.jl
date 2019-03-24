@@ -649,7 +649,6 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 return res
             end
             pos_to_abc(p) = zpn_to_abc(p, p, p)
-            #TODO fix base conversion
             zbase = 1^2/(defaults["kvas"][1]/1E3)
             transDict["rs"] = Array{MultiConductorMatrix{Float64}, 1}(undef, nrw)
             transDict["gsh"] = Array{MultiConductorMatrix{Float64}, 1}(undef, nrw)
@@ -658,7 +657,17 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 zs_w_p = defaults["%rs"][w]/100*zbase
                 Zs_w = pos_to_abc(zs_w_p)
                 #TODO handle %loadloss property
-                #TODO add warning
+                # Problem is that for the two-winding case, both %loadloss
+                # and %rs map to values for the winding series resistance.
+                # Both are set to a (possibly default) value, so it is
+                # impossible to know at this point which was actually specified
+                # by the user. %rs is more general, so %loadloss is not
+                # supported for now.
+                warn(LOGGER, "The %loadloss property is ignored for now.")
+                #TODO handle neutral impedance
+                # neutral impedance is ignored for now; all transformers are
+                # grounded (that is, those with a wye and zig-zag winding).
+                warn(LOGGER, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.")
                 transDict["rs"][w] = MultiConductorMatrix(real.(Zs_w))
                 # shunt elements are added at second winding
                 if w==2
@@ -692,6 +701,13 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
         end
     end
 end
+
+"""
+Converts a set of short-circuit tests to an equivalent reactance network.
+Reference:
+R. C. Dugan, “A perspective on transformer modeling for distribution system analysis,”
+in 2003 IEEE Power Engineering Society General Meeting (IEEE Cat. No.03CH37491), 2003, vol. 1, pp. 114-119 Vol. 1.
+"""
 function sc2br_impedance(Zsc)
     N = maximum([maximum(k) for k in keys(Zsc)])
     # check whether no keys are missing
@@ -884,6 +900,9 @@ end
 Changes the bounds for the sourcebus generator by checking the emergamps of all
 of the branches attached to the sourcebus and taking the sum of non-infinite
 values. Defaults to Inf if all emergamps connected to sourcebus are also Inf.
+This method was updated to include connected transformers as well. It know
+has to occur after the call to InfrastructureModels.arrays_to_dicts, so the code
+was adjusted to accomodate that.
 """
 function adjust_sourcegen_bounds!(tppm_data)
     emergamps = Array{Float64,1}()
