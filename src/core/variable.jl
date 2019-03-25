@@ -133,3 +133,70 @@ function variable_reactive_bus_power_slack(pm::GenericPowerModel; nw::Int=pm.cnw
         start = PMs.getval(ref(pm, nw, :bus, i), "q_slack_start", cnd)
     )
 end
+
+"generates variables for both `active` and `reactive` power flow at each transformer"
+function variable_tp_trans_flow(pm::GenericPowerModel; kwargs...)
+    variable_tp_trans_active_flow(pm; kwargs...)
+    variable_tp_trans_reactive_flow(pm; kwargs...)
+end
+function variable_tp_trans_active_flow(pm::GenericPowerModel; nw::Int=pm.cnw, bounded=true)
+    for cnd in PMs.conductor_ids(pm)
+        var(pm, nw, cnd)[:p_trans] = @variable(pm.model,
+            [(l,i,j) in ref(pm, nw, :arcs_trans)],
+            basename="$(nw)_$(cnd)_p_trans",
+            start=0
+        )
+        if bounded
+            println("##########")
+            for arc in ref(pm, nw, :arcs_trans)
+                tr_id = arc[1]
+                flow_lb  = -ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
+                flow_ub  =  ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
+                PMs.setlowerbound(var(pm, nw, cnd, :p_trans, arc), flow_lb)
+                PMs.setupperbound(var(pm, nw, cnd, :p_trans, arc), flow_ub)
+            end
+        end
+    end
+end
+function variable_tp_trans_reactive_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
+    for cnd in PMs.conductor_ids(pm)
+        var(pm, nw, cnd)[:q_trans] = @variable(pm.model,
+            [(l,i,j) in ref(pm, nw, :arcs_trans)],
+            basename="$(nw)_$(cnd)_q_trans",
+            start=0
+        )
+        if bounded
+            for arc in ref(pm, nw, :arcs_trans)
+                tr_id = arc[1]
+                flow_lb  = -ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
+                flow_ub  = ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
+                PMs.setlowerbound(var(pm, nw, cnd, :q_trans, arc), flow_lb)
+                PMs.setupperbound(var(pm, nw, cnd, :q_trans, arc), flow_ub)
+            end
+        end
+    end
+end
+function variable_tp_trans_tap(pm::GenericPowerModel; nw=pm.cnw, kwargs...)
+    tr_ids = [tr_id for tr_id in ids(pm, pm.cnw, :trans)
+        if !(all(ref(pm, pm.cnw, :trans, tr_id, "tapfix")))
+    ]
+    if !isempty(tr_ids)
+        variable_tp_trans_tap(pm::GenericPowerModel, tr_ids; kwargs...)
+    end
+end
+function variable_tp_trans_tap(pm::GenericPowerModel, tr_ids::Array{Int,1}; nw::Int=pm.cnw, bounded=true)
+    nphases = 3
+    for c in 1:nphases
+        var(pm, nw, c)[:tap] = @variable(pm.model,
+            [tr_id in tr_ids],
+            basename="$(nw)_tap",
+            start=ref(pm, nw, :trans, tr_id, "tapset")[c]
+        )
+        if bounded
+            for tr_id in tr_ids
+                PMs.setlowerbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tapmin")[c])
+                PMs.setupperbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tapmax")[c])
+            end
+        end
+    end
+end

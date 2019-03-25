@@ -36,7 +36,15 @@ function post_tp_pf(pm::GenericPowerModel)
         PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
     end
 
+    if haskey(ref(pm), :trans)
+        add_arcs_trans!(pm)
+        variable_tp_trans_flow(pm, bounded=false)
+    end
+
     constraint_tp_voltage(pm)
+    # lower bound is often needed to converge
+    # this constraint only sets bound if previously unset
+    constraint_tp_voltage_mag_unbound(pm, vmin=0.5, vmax=Inf)
 
     for (i,bus) in ref(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)
@@ -48,7 +56,11 @@ function post_tp_pf(pm::GenericPowerModel)
     end
 
     for (i,bus) in ref(pm, :bus), c in PMs.conductor_ids(pm)
-        PMs.constraint_kcl_shunt(pm, i, cnd=c)
+        if haskey(ref(pm), :trans)
+            constraint_kcl_shunt_trans(pm, i, cnd=c)
+        else
+            PMs.constraint_kcl_shunt(pm, i, cnd=c)
+        end
 
         # PV Bus Constraints
         if length(ref(pm, :bus_gens, i)) > 0 && !(i in ids(pm,:ref_buses))
@@ -83,4 +95,13 @@ function post_tp_pf(pm::GenericPowerModel)
             PMs.constraint_voltage_magnitude_setpoint(pm, t_bus["index"], cnd=c)
         end
     end
+
+    if haskey(ref(pm), :trans)
+        for i in ids(pm, :trans)
+            trans = ref(pm, :trans, i)
+            constraint_tp_trans_voltage(pm, i)
+            constraint_tp_trans_flow(pm, i)
+        end
+    end
+
 end
