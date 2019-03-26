@@ -265,37 +265,6 @@ function constraint_tp_trans_flow_var(pm::GenericPowerModel, i::Int; nw::Int=pm.
 end
 
 ""
-function constraint_tp_trans_vartap_fix(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
-    tapset = ref(pm, nw, :trans, i)["tapset"]
-    tapfix = ref(pm, nw, :trans, i)["tapfix"]
-    constraint_tp_trans_vartap_fix(pm, i, tapset, tapfix, nw=nw)
-end
-
-""
-function constraint_tp_trans_voltage_vartap(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
-    f_bus = ref(pm, :trans, i)["f_bus"]
-    t_bus = ref(pm, :trans, i)["t_bus"]
-    bkv_fr = ref(pm, :bus, f_bus)["base_kv"]
-    bkv_to = ref(pm, :bus, t_bus)["base_kv"]
-    vnom_kv_fr = ref(pm, :trans, i)["vnom_kv"][1]
-    vnom_kv_to = ref(pm, :trans, i)["vnom_kv"][2]
-    constraint_tp_trans_voltage_vartap(pm, i, f_bus, t_bus, bkv_fr, bkv_to, vnom_kv_fr, vnom_kv_to)
-end
-
-""
-function constraint_tp_trans_power_vartap(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
-    f_bus = ref(pm, :trans, i)["f_bus"]
-    t_bus = ref(pm, :trans, i)["t_bus"]
-    bkv_fr = ref(pm, :bus, f_bus)["base_kv"]
-    bkv_to = ref(pm, :bus, t_bus)["base_kv"]
-    f_idx = (i, f_bus,  t_bus)
-    t_idx = (i, t_bus,  f_bus)
-    f_vnom_kv = ref(pm, :trans, i)["vnom_kv"][1]
-    t_vnom_kv = ref(pm, :trans, i)["vnom_kv"][2]
-    constraint_tp_trans_power_vartap(pm, i, f_bus, t_bus, f_idx, t_idx, bkv_fr, bkv_to, f_vnom_kv, t_vnom_kv)
-end
-
-""
 function constraint_kcl_shunt_trans(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     if !haskey(con(pm, nw, cnd), :kcl_p)
         con(pm, nw, cnd)[:kcl_p] = Dict{Int,ConstraintRef}()
@@ -319,19 +288,4 @@ function constraint_kcl_shunt_trans(pm::GenericPowerModel, i::Int; nw::Int=pm.cn
     bus_bs = Dict(k => ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
 
     constraint_kcl_shunt_trans(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
-end
-
-""
-function constraint_kcl_shunt_trans(pm::GenericPowerModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
-    vm = var(pm, nw, c, :vm, i)
-    p = var(pm, nw, c, :p)
-    q = var(pm, nw, c, :q)
-    pg = var(pm, nw, c, :pg)
-    qg = var(pm, nw, c, :qg)
-    p_dc = var(pm, nw, c, :p_dc)
-    q_dc = var(pm, nw, c, :q_dc)
-    p_trans = var(pm, nw, c, :p_trans)
-    q_trans = var(pm,  nw, c, :q_trans)
-    con(pm, nw, c, :kcl_p)[i] = @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*vm^2)
-    con(pm, nw, c, :kcl_q)[i] = @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(q_trans[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*vm^2)
 end
