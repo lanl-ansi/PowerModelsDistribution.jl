@@ -905,7 +905,7 @@ has to occur after the call to InfrastructureModels.arrays_to_dicts, so the code
 was adjusted to accomodate that.
 """
 function adjust_sourcegen_bounds!(tppm_data)
-    emergamps = Array{Float64,1}()
+    emergamps = Array{Float64,1}([0.0])
     #sourcebus_n = find_bus("sourcebus", tppm_data)
     sourcebus_n = [bus["index"] for (_,bus) in tppm_data["bus"] if haskey(bus, "name") && bus["name"]=="sourcebus"][1]
     for (_,line) in tppm_data["branch"]
@@ -913,9 +913,11 @@ function adjust_sourcegen_bounds!(tppm_data)
             append!(emergamps, line["rate_b"].values)
         end
     end
-    for (_,trans) in tppm_data["trans"]
-        if trans["f_bus"] == sourcebus_n || trans["t_bus"] == sourcebus_n
-            append!(emergamps, trans["rate_b"].values)
+    if haskey(tppm_data, "trans")
+        for (_,trans) in tppm_data["trans"]
+            if trans["f_bus"] == sourcebus_n || trans["t_bus"] == sourcebus_n
+                append!(emergamps, trans["rate_b"].values)
+            end
         end
     end
 

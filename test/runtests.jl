@@ -8,6 +8,8 @@ using InfrastructureModels
 using PowerModels
 const PMs = PowerModels
 
+using JuMP
+
 # Suppress warnings during testing.
 setlevel!(getlogger(PowerModels), "error")
 
@@ -58,4 +60,6 @@ pavito_solver = PavitoSolver(mip_solver=cbc_solver, cont_solver=ipopt_solver, mi
     ## include("tp_ots.jl")
 
     include("tp_multinetwork.jl")
+
+    include("tp_trans.jl")
 end

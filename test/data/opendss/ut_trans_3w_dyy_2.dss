@@ -1,0 +1,38 @@
+clear
+
+! Base Frequency
+Set DefaultBaseFrequency=50
+
+! New Circuit
+New circuit.ut_trans
+~ BasekV=11 BaseMVA=0.1 pu=1.0  ISC3=9999999999 ISC1=9999999999
+
+! Transformers
+New Transformer.TX1 windings=3 phases=3 Buses=[1 2 3]
+~ Conns=[Delta Wye Wye]
+~ kVs=[11 4 0.4]
+~ kVAs=[500 500 500]
+~ %Rs=[1 0 3]
+~ xhl=5 xht=0 xlt=3
+~ %noloadloss=5
+~ %imag=11
+~ leadlag=lead
+
+! Transmission Lines
+New Line.LINE1 Bus1=SourceBus Bus2=1 phases=3 X1=3 R1=6
+
+! Loads
+New Load.LOAD1 Phases=1 Bus1=2.1 kV=2.30 kW=43 kvar=76 vminpu=0.8 vmaxpu=1.2
+New Load.LOAD2 Phases=1 Bus1=2.2 kV=2.30 kW=52 kvar=85 vminpu=0.8 vmaxpu=1.2
+New Load.LOAD3 Phases=1 Bus1=2.3 kV=2.30 kW=61 kvar=94 vminpu=0.8 vmaxpu=1.2
+New Load.LOAD4 Phases=1 Bus1=3.1 kV=0.23 kW=74 kvar=41 vminpu=0.8 vmaxpu=1.2
+New Load.LOAD5 Phases=1 Bus1=3.2 kV=0.23 kW=85 kvar=52 vminpu=0.8 vmaxpu=1.2
+New Load.LOAD6 Phases=1 Bus1=3.3 kV=0.23 kW=96 kvar=63 vminpu=0.8 vmaxpu=1.2
+New Load.LOAD7 Phases=1 Bus1=1.3 kV=6.351 kW=205 kvar=185 vminpu=0.8 vmaxpu=1.2
+
+! Set Voltage Bases
+Set voltagebases=[11  4 0.4]
+Calcvoltagebases
+
+! Solve network
+solve

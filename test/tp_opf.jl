@@ -347,19 +347,3 @@ end
         @test isapprox(result["objective"], 0.0597016; atol = 1e-4)
     end
 end
-
-@testset "zero impedance branch model" begin
-    # ensure that adding a zero impedance branch does not affect the outcome
-    @testset "ac case" begin
-        tppm_data = TPPMs.parse_file("../test/data/opendss/case3_unbalanced_impzero.dss")
-        result = TPPMs.run_tp_opf(tppm_data, PMs.ACPPowerModel, ipopt_solver)
-        @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 0.0214811; atol = 1e-4)
-    end
-    @testset "dc case" begin
-        tppm_data = TPPMs.parse_file("../test/data/opendss/case2_diag_impzero.dss")
-        result = TPPMs.run_tp_opf(tppm_data, PMs.DCPPowerModel, ipopt_solver)
-        @test result["status"] == :LocalOptimal
-        @test isapprox(result["objective"], 0.018000000; atol = 1e-5)
-    end
-end

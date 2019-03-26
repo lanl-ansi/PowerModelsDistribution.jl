@@ -41,6 +41,13 @@ function constraint_tp_voltage_mag_unbound(pm::GenericPowerModel; nw::Int=pm.cnw
     end
 end
 
+"""
+In the general case, do not add the bounds;
+expand this on a per formulation case as deemed necessary.
+"""
+function constraint_tp_voltage_mag_unbound(pm::GenericPowerModel{T}, i::Int, vmin::Float64, vmax::Float64; nw::Int=pm.cnw) where T
+    # do nothing
+end
 
 ""
 function constraint_ohms_tp_yt_from(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd, atol_impzero=1E-13)
