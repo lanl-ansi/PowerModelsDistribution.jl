@@ -219,7 +219,7 @@ function constraint_tp_trans_tap_fix(pm::GenericPowerModel, i::Int, tapfix::Mult
 end
 
 ""
-function constraint_tp_trans_flow(pm::GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_to; nw::Int=pm.cnw)
+function constraint_tp_trans_flow(pm::GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im; nw::Int=pm.cnw)
     # the intermediate bus voltage is saved as an expression
     ncnd  = 3
     vm_im = [var(pm, nw, c, :vm_trans, i) for c in 1:ncnd]
@@ -241,7 +241,7 @@ function constraint_tp_trans_flow(pm::GenericPowerModel, i::Int, f_bus::Int, t_b
               sum(Ti_fr[n,c]*
                     1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c])) # i_fr_re[c]
               for c in 1:ncnd)
-            + sum(Ti_to[n,c]*
+            + sum(Ti_im[n,c]*
                     1/vm_im[c]*(p_to[c]*cos(va_im[c])+q_to[c]*sin(va_im[c])) # i_to_re[c]
               for c in 1:ncnd)
             == 0
@@ -250,10 +250,16 @@ function constraint_tp_trans_flow(pm::GenericPowerModel, i::Int, f_bus::Int, t_b
               sum(Ti_fr[n,c]*
                     1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c])) # i_fr_im[c]
               for c in 1:ncnd)
-            + sum(Ti_to[n,c]*
+            + sum(Ti_im[n,c]*
                     1/vm_im[c]*(p_to[c]*sin(va_im[c])-q_to[c]*cos(va_im[c])) # i_to_im[c]
               for c in 1:ncnd)
             == 0
         )
     end
+end
+
+""
+function constraint_tp_trans_flow_var(pm::GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im; nw::Int=pm.cnw)
+    # for ac formulation, indentical to fixed tap
+    constraint_tp_trans_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
 end

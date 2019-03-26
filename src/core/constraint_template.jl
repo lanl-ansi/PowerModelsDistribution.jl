@@ -254,6 +254,17 @@ function constraint_tp_trans_flow(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
 end
 
 ""
+function constraint_tp_trans_flow_var(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
+    # TODO add checks to simplify
+    f_bus = ref(pm, :trans, i)["f_bus"]
+    t_bus = ref(pm, :trans, i)["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+    t_idx = (i, t_bus, f_bus)
+    constraint_tp_trans_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
+end
+
+""
 function constraint_tp_trans_vartap_fix(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     tapset = ref(pm, nw, :trans, i)["tapset"]
     tapfix = ref(pm, nw, :trans, i)["tapfix"]

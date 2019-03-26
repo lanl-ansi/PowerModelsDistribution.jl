@@ -70,10 +70,11 @@ function post_tp_opf(pm::GenericPowerModel)
             trans = ref(pm, :trans, i)
             if all(trans["tapfix"])
                 constraint_tp_trans_voltage(pm, i)
+                constraint_tp_trans_flow(pm, i)
             else
                 constraint_tp_trans_voltage_var(pm, i)
+                constraint_tp_trans_flow_var(pm, i)
             end
-            constraint_tp_trans_flow(pm, i)
         end
     end
 
