@@ -147,7 +147,6 @@ function variable_tp_trans_active_flow(pm::GenericPowerModel; nw::Int=pm.cnw, bo
             start=0
         )
         if bounded
-            println("##########")
             for arc in ref(pm, nw, :arcs_trans)
                 tr_id = arc[1]
                 flow_lb  = -ref(pm, nw, :trans, tr_id, "rate_a")[cnd]

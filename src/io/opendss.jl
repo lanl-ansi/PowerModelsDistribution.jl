@@ -523,7 +523,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             rmatrix = parse_matrix(defaults["rmatrix"], nodes, nconductors) * 3  # why?
             xmatrix = parse_matrix(defaults["xmatrix"], nodes, nconductors) * 3  # why?
-            cmatrix = parse_matrix(defaults["cmatrix"], nodes, nconductors)
+            cmatrix = parse_matrix(defaults["cmatrix"], nodes, nconductors) / 3
             Zbase = (tppm_data["basekv"] / sqrt(3))^2 * nconductors / (tppm_data["baseMVA"])
 
             branchDict["br_r"] = PMs.MultiConductorMatrix(rmatrix * defaults["length"] / Zbase)
@@ -956,7 +956,7 @@ function decompose_transformers!(tppm_data)
             trans_dict["conn"] = conn
             trans_dict["f_bus"] = trans["buses"][w]
             # make virtual bus and mark it for reduction
-            vbus_tr = create_vbus!(tppm_data)
+            vbus_tr = create_vbus!(tppm_data, basekv=1.0)
             trans_dict["t_bus"] = vbus_tr["index"]
             append!(bus_reduce, vbus_tr["index"])
             # ratings
@@ -1097,8 +1097,8 @@ function rm_redundant_pd_elements!(tppm_data; buses=keys(tppm_data["bus"]), bran
             end
             # move shunts to the bus that will be left
             if !haskey(shunts_g, kp_bus)
-                shunts_g[kp_bus] =  MultiConductorMatrix(zeros(3, 3))
-                shunts_b[kp_bus] =  MultiConductorMatrix(zeros(3, 3))
+                shunts_g[kp_bus] =  MultiConductorVector(zeros(3))
+                shunts_b[kp_bus] =  MultiConductorVector(zeros(3))
             end
             shunts_g[kp_bus] .+= br["g_fr"]
             shunts_g[kp_bus] .+= br["g_to"]
@@ -1150,8 +1150,8 @@ function rm_redundant_pd_elements!(tppm_data; buses=keys(tppm_data["bus"]), bran
             # unlike TPPM level components. The shunts here originate from TPPM level
             # components which were already scaled. Therefore, we have to undo the
             # scaling here to prevent double scaling later on.
-            gs = diag(shunt_g)*1/tppm_data["baseMVA"]
-            bs = diag(shunt_b)*1/tppm_data["baseMVA"]
+            gs = shunt_g/1*tppm_data["baseMVA"]
+            bs = shunt_b/1*tppm_data["baseMVA"]
             add_shunt!(tppm_data, bus, gs=gs,  bs=bs)
         end
     end
@@ -1264,10 +1264,10 @@ function adjust_base_branch!(tppm_data, br_id::Int, base_kv_old::Float64, base_k
     zmult = (base_kv_old/base_kv_new)^2
     branch["br_r"] *= zmult
     branch["br_x"] *= zmult
-    branch["g_fr"] *= zmult
-    branch["b_fr"] *= zmult
-    branch["g_to"] *= zmult
-    branch["b_to"] *= zmult
+    branch["g_fr"] *= 1/zmult
+    branch["b_fr"] *= 1/zmult
+    branch["g_to"] *= 1/zmult
+    branch["b_to"] *= 1/zmult
 end
 
 """
@@ -1392,7 +1392,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
             tppm_data[optional] = Dict{String,Any}()
         end
     end
-    
+
     if haskey(tppm_data, "trans_comp")
         # this has to be done before calling adjust_sourcegen_bounds!
         decompose_transformers!(tppm_data)
