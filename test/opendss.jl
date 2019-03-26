@@ -188,7 +188,7 @@ TESTLOG = getlogger(PowerModels)
         end
 
         tppm2 = TPPMs.parse_file("../test/data/opendss/test_simple4.dss")
-        @test length(tppm2["bus"]) == 4
+        @test length(tppm2["bus"]) == 6 # updated nr of buses
 
         @testset "branches with switches" begin
             @test tppm["branch"]["8"]["switch"]
@@ -221,8 +221,10 @@ TESTLOG = getlogger(PowerModels)
             @test tppm["shunt"]["4"]["source_id"] == "reactor.reactor3" && length(tppm["shunt"]["4"]["active_phases"]) == 3
 
             @test tppm["branch"]["1"]["source_id"] == "line.l1" && length(tppm["branch"]["1"]["active_phases"]) == 3
-            @test tppm["branch"]["14"]["source_id"] == "transformer.t5" && length(tppm["branch"]["14"]["active_phases"]) == 3
-            @test tppm["branch"]["15"]["source_id"] == "reactor.reactor1" && length(tppm["branch"]["15"]["active_phases"]) == 3
+            # transformer is no longer a branch
+            @test tppm["trans"]["1"]["source_id"] == "transformer.t4"
+            # updated index, reactors shifted
+            @test tppm["branch"]["10"]["source_id"] == "reactor.reactor1" && length(tppm["branch"]["10"]["active_phases"]) == 3
 
             @test tppm["gen"]["1"]["source_id"] == "vsource.sourcebus" && length(tppm["gen"]["1"]["active_phases"]) == 3
             @test tppm["gen"]["2"]["source_id"] == "generator.g1" && length(tppm["gen"]["2"]["active_phases"]) == 3

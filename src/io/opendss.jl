@@ -599,6 +599,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
 
             transDict = Dict{String,Any}()
             transDict["name"] = defaults["name"]
+            transDict["source_id"] = "transformer.$(defaults["name"])"
             transDict["buses"] = [find_bus(parse_busname(x)[1], tppm_data) for x in defaults["buses"]]
 
             # voltage and power ratings
@@ -958,6 +959,8 @@ function decompose_transformers!(tppm_data)
         for w in 1:nrw
             # 2-WINDING TRANSFORMER
             trans_dict = Dict{String, Any}()
+            trans_dict["name"] = "tr$(tr_id)_w$(w)"
+            trans_dict["source_id"] = trans["source_id"]
             push_dict_ret_key!(tppm_data["trans"], trans_dict)
             # connection settings
             conn = trans["conns"][w]
@@ -1018,10 +1021,11 @@ function decompose_transformers!(tppm_data)
     end
     # reduce network
 end
-function create_vbus!(tppm_data; vmin=0, vmax=Inf, basekv=tppm_data["basekv"], name="")
+function create_vbus!(tppm_data; vmin=0, vmax=Inf, basekv=tppm_data["basekv"], name="", source_id="")
     vbus = Dict{String, Any}("bus_type"=>"1", "name"=>name)
     vbus_id = push_dict_ret_key!(tppm_data["bus"], vbus)
     vbus["bus_i"] = vbus_id
+    vbus["source_id"] = source_id
     ncnds = tppm_data["conductors"]
     vbus["vm"] = MultiConductorVector(ones(Float64, ncnds))
     vbus["va"] = MultiConductorVector(zeros(Float64, ncnds))
@@ -1030,7 +1034,7 @@ function create_vbus!(tppm_data; vmin=0, vmax=Inf, basekv=tppm_data["basekv"], n
     vbus["base_kv"] = basekv
     return vbus
 end
-function create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; name="", kwargs...)
+function create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; name="", source_id="", active_phases=[1, 2, 3], kwargs...)
     ncnd = tppm_data["conductors"]
     vbase = haskey(kwargs, :vbase) ? kwargs[:vbase] : tppm_data["basekv"]
     # TODO assumes per_unit will be flagged
@@ -1039,6 +1043,8 @@ function create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; name="", kwargs...)
     # convert to LN vbase in instead of LL vbase
     zbase *= (1/3)
     vbranch = Dict{String, Any}("f_bus"=>f_bus, "t_bus"=>t_bus, "name"=>name)
+    vbranch["active_phases"] = active_phases
+    vbranch["source_id"] = source_id
     for k in [:br_r, :br_x, :g_fr, :g_to, :b_fr, :b_to]
         if !haskey(kwargs, k)
             if k in [:br_r, :br_x]
@@ -1401,6 +1407,13 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     tppm_data["dcline"] = []
 
     InfrastructureModels.arrays_to_dicts!(tppm_data)
+    # empty branch arrays are not converted into dicts;
+    # resolve this here to prevent issues later on
+    for key in ["branch"]
+        if isa(tppm_data[key], Array)
+            tppm_data[key] = Dict{String, Any}()
+        end
+    end
 
     for optional in ["dcline", "load", "shunt", "storage", "pvsystem"]
         if length(tppm_data[optional]) == 0
