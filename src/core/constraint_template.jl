@@ -50,31 +50,25 @@ function constraint_tp_voltage_mag_unbound(pm::GenericPowerModel{T}, i::Int, vmi
 end
 
 ""
-function constraint_ohms_tp_yt_from(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd, atol_impzero=1E-13)
+function constraint_ohms_tp_yt_from(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
 
+    g, b = PMs.calc_branch_y(branch)
     tr, ti = PMs.calc_branch_t(branch)
     g_fr = branch["g_fr"]
     b_fr = branch["b_fr"]
     tm = branch["tap"]
 
-    if all(abs.(branch["br_r"]).<=atol_impzero) && all(abs.(branch["br_x"]).<=atol_impzero)
-        g_to = branch["g_to"]
-        b_to = branch["b_to"]
-        constraint_ohms_tp_yt_from_impzero(pm, nw, cnd, f_bus, t_bus, f_idx, t_idx, g_fr, b_fr, g_to, b_to, tr, ti, tm)
-    else
-        g, b = PMs.calc_branch_y(branch)
-        constraint_ohms_tp_yt_from(pm, nw, cnd, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
-    end
+    constraint_ohms_tp_yt_from(pm, nw, cnd, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
 end
 
 
 ""
-function constraint_ohms_tp_yt_to(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd, atol_impzero=1E-13)
+function constraint_ohms_tp_yt_to(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -87,12 +81,7 @@ function constraint_ohms_tp_yt_to(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw,
     b_to = branch["b_to"]
     tm = branch["tap"]
 
-    if all(abs.(branch["br_r"]).<=atol_impzero) && all(abs.(branch["br_x"]).<=atol_impzero)
-        # do nothing, constraint_ohms_tp_yt_from_impzero covers both sides
-    else
-        g, b = PMs.calc_branch_y(branch)
-        constraint_ohms_tp_yt_to(pm, nw, cnd, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
-    end
+    constraint_ohms_tp_yt_to(pm, nw, cnd, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
 end
 
 
