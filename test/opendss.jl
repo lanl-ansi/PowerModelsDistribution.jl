@@ -61,13 +61,10 @@ TESTLOG = getlogger(PowerModels)
         @test_throws(TESTLOG, ErrorException,
                      TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
 
-        @test_warn(TESTLOG, "Command \"solve\" on line 68 in \"test2_master.dss\" is not supported, skipping.",
+        @test_warn(TESTLOG, "Command \"solve\" on line 69 in \"test2_master.dss\" is not supported, skipping.",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        @test_warn(TESTLOG, "Command \"show\" on line 70 in \"test2_master.dss\" is not supported, skipping.",
-                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
-
-        @test_warn(TESTLOG, "transformers are not yet supported, treating like non-transformer lines",
+        @test_warn(TESTLOG, "Command \"show\" on line 71 in \"test2_master.dss\" is not supported, skipping.",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
         @test_warn(TESTLOG, "reactors as constant impedance elements is not yet supported, treating like line",
@@ -95,10 +92,17 @@ TESTLOG = getlogger(PowerModels)
 
         @test tppm["name"] == "test2"
 
-        @test length(tppm) == 18
+        @test length(tppm) == 20 # 2 more entries for transformer dicts
         @test length(dss) == 12
 
-        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline"], [12, 4, 5, 16, 4, 0])
+        # 26 buses and not 12, because of internal transformer buses;
+        # if rs=0, then 2 extra, else 4 extra
+        # tr1:+2(rs=0), tr2:+4, tr3:+2(rs=0), tr4:+4, tr5:+2(rs=0)
+        # 16-5+9=20 branches, before one branch per dss transformer, now 1 or 3
+        # if rs=0, then 1 extra, else 3 extra
+        # tr1:+1(rs=0), tr2:+3, tr3:+1(rs=0), tr4:+3, tr5:+1(rs=0)
+        # 10 transformers, 2 per dss transformer
+        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "trans"], [26, 4, 5, 20, 4, 0, 10])
             @test haskey(tppm, key)
             @test length(tppm[key]) == len
         end
@@ -110,18 +114,24 @@ TESTLOG = getlogger(PowerModels)
         len = 0.013516796
         rmatrix=TPPMs.parse_matrix(Float64, "[1.5000  |0.200000  1.50000  |0.250000  0.25000  2.00000  ]") * 3
         xmatrix=TPPMs.parse_matrix(Float64, "[1.0000  |0.500000  0.50000  |0.500000  0.50000  1.000000  ]") * 3
-        cmatrix = TPPMs.parse_matrix(Float64, "[8.0000  |-2.00000  9.000000  |-1.75000  -2.50000  8.00000  ]")
+        # added factor 3 to match bug fix in branch parsing, cmatrix
+        cmatrix = TPPMs.parse_matrix(Float64, "[8.0000  |-2.00000  9.000000  |-1.75000  -2.50000  8.00000  ]") / 3
 
-        @test all(isapprox.(tppm["branch"]["3"]["br_r"].values, rmatrix * len / tppm["basekv"]^2 * tppm["baseMVA"]; atol=1e-6))
-        @test all(isapprox.(tppm["branch"]["3"]["br_x"].values, xmatrix * len / tppm["basekv"]^2 * tppm["baseMVA"]; atol=1e-6))
-        @test all(isapprox.(tppm["branch"]["3"]["b_fr"].values, diag(tppm["basekv"]^2 / tppm["baseMVA"] * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0; atol=1e-6))
+        basekv_br3 = tppm["bus"][string(tppm["branch"]["3"]["f_bus"])]["base_kv"]
+        @test all(isapprox.(tppm["branch"]["3"]["br_r"].values, rmatrix * len / basekv_br3^2 * tppm["baseMVA"]; atol=1e-6))
+        @test all(isapprox.(tppm["branch"]["3"]["br_x"].values, xmatrix * len / basekv_br3^2 * tppm["baseMVA"]; atol=1e-6))
+        @test all(isapprox.(tppm["branch"]["3"]["b_fr"].values, diag(basekv_br3^2 / tppm["baseMVA"] * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0; atol=1e-6))
 
         for i in 6:7
-            @test all(isapprox.(tppm["branch"]["$i"]["b_fr"].values, (3.4 * 2.0 + 1.6) / 3.0 * (tppm["basekv"]^2 / tppm["baseMVA"] * 2.0 * pi * 60.0 / 1e9) / 2.0; atol=1e-6))
+            basekv_bri = tppm["bus"][string(tppm["branch"]["$i"]["f_bus"])]["base_kv"]
+            # added factor 3 to match bug fix in branch parsing
+            @test all(isapprox.(tppm["branch"]["$i"]["b_fr"].values, (3.4 * 2.0 + 1.6) / 3.0 * (basekv_bri^2 / tppm["baseMVA"] * 2.0 * pi * 60.0 / 1e9) / 2.0 / 3; atol=1e-6))
         end
 
-        @test all(isapprox.(tppm["branch"]["1"]["br_r"].values, diagm(0 => fill(6.30375e-8, 3)); atol=1e-12))
-        @test all(isapprox.(tppm["branch"]["1"]["br_x"].values, diagm(0 => fill(6.30254e-7, 3)); atol=1e-12))
+        # values were adjusted for the Float16->Float64 change in dss_structs.jl
+        # and then also for the new base
+        @test all(isapprox.(tppm["branch"]["1"]["br_r"].values.*(115/69)^2, diagm(0 => fill(6.3012e-8, 3)); atol=1e-12))
+        @test all(isapprox.(tppm["branch"]["1"]["br_x"].values.*(115/69)^2, diagm(0 => fill(6.3012e-7, 3)); atol=1e-12))
 
         for k in ["qd", "pd"]
             @test all(isapprox.(tppm["load"]["4"][k].values, tppm["load"]["2"][k].values; atol=1e-12))
@@ -142,25 +152,39 @@ TESTLOG = getlogger(PowerModels)
             end
         end
 
-        for k in keys(tppm["branch"]["16"])
+        # updated branch numbers; reactors have shifted, added after transformers
+        # lines involving former transformer branches have been commented out
+        for k in keys(tppm["branch"]["11"])
             if !(k in ["f_bus", "t_bus", "index", "name", "linecode", "source_id", "active_phases"])
-                if isa(tppm["branch"]["16"][k], PMs.MultiConductorValue)
-                    @test all(isapprox.(tppm["branch"]["15"][k].values, tppm["branch"]["16"][k].values; atol=1e-12))
-                    @test all(isapprox.(tppm["branch"]["13"][k].values, tppm["branch"]["14"][k].values; atol=1e-12))
-                    @test all(isapprox.(tppm["branch"]["3"][k].values, tppm["branch"]["8"][k].values; atol=1e-12))
+                mult = 1.0
+                if k in ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to"]
+                    # compensation for the different voltage base
+                    basekv_br3 = tppm["bus"][string(tppm["branch"]["3"]["f_bus"])]["base_kv"]
+                    basekv_br8 = tppm["bus"][string(tppm["branch"]["8"]["f_bus"])]["base_kv"]
+                    zmult = (basekv_br3/basekv_br8)^2
+                    mult = (k in ["br_r", "br_x"]) ? zmult : 1/zmult
+                end
+                if isa(tppm["branch"]["11"][k], PMs.MultiConductorValue)
+                    #@test all(isapprox.(tppm["branch"]["10"][k].values, tppm["branch"]["16"][k].values; atol=1e-12))
+                    #@test all(isapprox.(tppm["branch"]["13"][k].values, tppm["branch"]["14"][k].values; atol=1e-12))
+                    # compensate for change in base; 3: 41.5, 115.0
+
+                    @test all(isapprox.(tppm["branch"]["3"][k].values.*mult, tppm["branch"]["8"][k].values; atol=1e-12))
                 else
-                    @test all(isapprox.(tppm["branch"]["15"][k], tppm["branch"]["16"][k]; atol=1e-12))
-                    @test all(isapprox.(tppm["branch"]["13"][k], tppm["branch"]["14"][k]; atol=1e-12))
-                    @test all(isapprox.(tppm["branch"]["3"][k], tppm["branch"]["8"][k]; atol=1e-12))
+                    #@test all(isapprox.(tppm["branch"]["10"][k], tppm["branch"]["11"][k]; atol=1e-12))
+                    #@test all(isapprox.(tppm["branch"]["13"][k], tppm["branch"]["14"][k]; atol=1e-12))
+                    @test all(isapprox.(tppm["branch"]["3"][k].*mult, tppm["branch"]["8"][k]; atol=1e-12))
                 end
             end
         end
 
         @testset "length units parsing" begin
             @test tppm["branch"]["9"]["length"] == 1000.0 * len
-            @test all(isapprox.(tppm["branch"]["9"]["br_r"].values, rmatrix * len / tppm["basekv"]^2 * tppm["baseMVA"]; atol=1e-6))
-            @test all(isapprox.(tppm["branch"]["9"]["br_x"].values, xmatrix * len / tppm["basekv"]^2 * tppm["baseMVA"]; atol=1e-6))
-            @test all(isapprox.(tppm["branch"]["9"]["b_fr"].values, diag(tppm["basekv"]^2 / tppm["baseMVA"] * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0; atol=1e-6))
+            basekv_br9 = tppm["bus"][string(tppm["branch"]["9"]["f_bus"])]["base_kv"]
+            @test all(isapprox.(tppm["branch"]["9"]["br_r"].values, rmatrix * len / basekv_br9^2 * tppm["baseMVA"]; atol=1e-6))
+            @test all(isapprox.(tppm["branch"]["9"]["br_x"].values, xmatrix * len / basekv_br9^2 * tppm["baseMVA"]; atol=1e-6))
+            # added factor 3 to match bug fix in branch parsing, cmatrix
+            @test all(isapprox.(tppm["branch"]["9"]["b_fr"].values, diag(basekv_br9^2 / tppm["baseMVA"] * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0 / 3; atol=1e-6))
         end
 
         tppm2 = TPPMs.parse_file("../test/data/opendss/test_simple4.dss")
