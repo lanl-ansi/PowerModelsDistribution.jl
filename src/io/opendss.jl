@@ -590,6 +590,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
 
             nconductors = tppm_data["conductors"]
             nrw = defaults["windings"]
+            prop_suffix_w = ["", ["_$w" for w in 2:nrw]...]
             if nrw>3
                 # All of the code is compatible with any number of windings,
                 # except for the parsing of the loss model (the pair-wise reactance)
@@ -653,8 +654,12 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             transDict["rs"] = Array{MultiConductorMatrix{Float64}, 1}(undef, nrw)
             transDict["gsh"] = Array{MultiConductorMatrix{Float64}, 1}(undef, nrw)
             transDict["bsh"] = Array{MultiConductorMatrix{Float64}, 1}(undef, nrw)
+            # deal with dual definition of rs in defaults dict
+            # if non-zero, pick "%rs", else go for the per winding spec
+            rs_alt = [defaults["%r$suffix"] for suffix in prop_suffix_w]
+            rs = all(defaults["%rs"].==0) ? rs_alt : defaults["%rs"]
             for w in 1:nrw
-                zs_w_p = defaults["%rs"][w]/100*zbase
+                zs_w_p = rs[w]/100*zbase
                 Zs_w = pos_to_abc(zs_w_p)
                 #TODO handle %loadloss property
                 # Problem is that for the two-winding case, both %loadloss
@@ -975,7 +980,7 @@ function decompose_transformers!(tppm_data)
             trans_dict["tapnum"] = trans["tapnum"][w]
             # save
             push_dict_ret_key!(tppm_data["trans"], trans_dict)
-            # WINDINF SERIES RESISTANCE
+            # WINDING SERIES RESISTANCE
             # make virtual bus and mark it for reduction
             vbus_br = create_vbus!(tppm_data, basekv=1.0)
             append!(bus_reduce, vbus_br["index"])
