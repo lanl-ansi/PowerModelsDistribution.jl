@@ -1189,7 +1189,7 @@ windings. Default behaviour is to start at the primary winding of the first
 transformer, and to propagate from there. Branches are updated; the impedances
 and addmittances are rescaled to be consistent with the new voltage bases.
 """
-function adjust_base!(tppm_data)
+function adjust_base!(tppm_data; start_at_first_tr_prim=true)
     # initialize arrays etc. for the recursive part
     edges_br = [(br["index"], br["f_bus"], br["t_bus"]) for (br_id_str, br) in tppm_data["branch"]]
     edges_tr = [(tr["index"], tr["f_bus"], tr["t_bus"]) for (tr_id_str, tr) in tppm_data["trans"]]
@@ -1200,12 +1200,21 @@ function adjust_base!(tppm_data)
     # retrieve old voltage bases from connected nodes before starting
     br_basekv_old = Dict([(br["index"], tppm_data["bus"][string(br["f_bus"])]["base_kv"]) for (br_id_str, br) in tppm_data["branch"]])
     # start from the primary of the first transformer
-    if haskey(tppm_data, "trans") && haskey(tppm_data["trans"], "1")
+    if start_at_first_tr_prim && haskey(tppm_data, "trans") && haskey(tppm_data["trans"], "1")
         trans_first = tppm_data["trans"]["1"]
         source = trans_first["f_bus"]
         base_kv_new = trans_first["vnom_kv"][1]
     else
-        #TODO find bus of type 3?
+        # start at type 3 bus if present
+        buses_3 = [bus["index"] for (bus_id_str, bus) in tppm_data["bus"] if bus["bus_type"]==3]
+        if length(buses_3)==0
+            warn(LOGGER, "No bus of type 3 found; selecting random bus instead.")
+            source = parse(Int, rand(keys(tppm_data["bus"])))
+        else
+            source = buses_3[1]
+        end
+        base_kv_new = tppm_data["basekv"]
+        println(source)
         # Only relevant for future per-unit upgrade
         # Impossible to end up here;
         # condition checked before call to adjust_base!
@@ -1224,16 +1233,20 @@ function adjust_base_rec!(tppm_data, source::Int, base_kv_new::Float64, nodes_vi
             error(LOGGER, "Transformer ratings lead to an inconsistent definition for the voltage base at bus $source.")
         end
         source_dict["base_kv"] = base_kv_new
-        bus = tppm_data["bus"]["$source"]
-        bus_name = haskey(bus, "name") ? bus["name"] : ""
+        # update the connected shunts with the new voltage base
+        source_shunts = [shunt for (sh_id_str, shunt) in tppm_data["shunt"] if shunt["shunt_bus"]==source]
+        for shunt in source_shunts
+            adjust_base_shunt!(tppm_data, shunt["index"], base_kv_prev, base_kv_new)
+        end
+        source_name = haskey(source_dict, "name") ? source_dict["name"] : ""
         if source_dict["bus_type"]==3
             #TODO is this the desired behaviour, keep SI units for type 3 bus?
             source_dict["vm"] *= base_kv_prev/base_kv_new
             source_dict["vmax"] *= base_kv_prev/base_kv_new
             source_dict["vmin"] *= base_kv_prev/base_kv_new
-            info(LOGGER, "Rescaling vm, vmin and vmax conform with new base_kv at type 3 bus $source($bus_name): $base_kv_prev => $base_kv_new")
+            info(LOGGER, "Rescaling vm, vmin and vmax conform with new base_kv at type 3 bus $source($source_name): $base_kv_prev => $base_kv_new")
         else
-            info(LOGGER, "Resetting base_kv at bus $source($bus_name): $base_kv_prev => $base_kv_new")
+            info(LOGGER, "Resetting base_kv at bus $source($source_name): $base_kv_prev => $base_kv_new")
         end
         # TODO rescale vmin, vmax, vm
         # what is the desired behaviour here?
@@ -1289,6 +1302,12 @@ function adjust_base_branch!(tppm_data, br_id::Int, base_kv_old::Float64, base_k
     branch["b_fr"] *= 1/zmult
     branch["g_to"] *= 1/zmult
     branch["b_to"] *= 1/zmult
+end
+function adjust_base_shunt!(tppm_data, sh_id::Int, base_kv_old::Float64, base_kv_new::Float64)
+    shunt = tppm_data["shunt"][string(sh_id)]
+    zmult = (base_kv_old/base_kv_new)^2
+    shunt["bs"] *= 1/zmult
+    shunt["gs"] *= 1/zmult
 end
 
 """

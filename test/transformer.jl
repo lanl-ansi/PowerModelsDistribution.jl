@@ -1,4 +1,4 @@
-# helper functions
+# helper functions to access solutions by their OpenDSS names
 bus_name2id(tppm_data, name) = [bus["index"] for (_,bus) in tppm_data["bus"] if haskey(bus, "name") && bus["name"]==name][1]
 va(sol, tppm_data, name) = round.(TPPMs.wraptopi(sol["solution"]["bus"][string(bus_name2id(tppm_data, name))]["va"])*180/pi; digits=1)
 vm(sol, tppm_data, name) = sol["solution"]["bus"][string(bus_name2id(tppm_data, name))]["vm"]
@@ -67,6 +67,25 @@ vm(sol, tppm_data, name) = sol["solution"]["bus"][string(bus_name2id(tppm_data, 
             sol = TPPMs.run_ac_tp_pf(tppm_data, ipopt_solver, multiconductor=true)
             @test norm(vm(sol, tppm_data, "3")-[0.97047, 0.93949, 0.946], Inf) <= 1.5E-5
             @test norm(va(sol, tppm_data, "3")-[30.6, -90.0, 151.9], Inf) <= 0.5E-2
+        end
+    end
+    @testset "voltage base" begin
+        # make sure that different voltage bases lead to the same solution
+        # (after rescaling)
+        file = "../test/data/opendss/ut_trans_3w_dyy_basetest.dss"
+        tppm1 = TPPMs.parse_file(file)
+        tppm2 = deepcopy(tppm1)
+        TPPMs.adjust_base!(tppm2, start_at_first_tr_prim=false)
+        scale_2to1 = tppm2["bus"]["3"]["base_kv"]/tppm1["bus"]["3"]["base_kv"]
+        sol1 = TPPMs.run_ac_tp_pf(tppm1, ipopt_solver, multiconductor=true)
+        sol2 = TPPMs.run_ac_tp_pf(tppm2, ipopt_solver, multiconductor=true)
+        for bus_id_str in keys(sol1["solution"]["bus"])
+            vm1 = sol1["solution"]["bus"][bus_id_str]["vm"]
+            vm2 = sol2["solution"]["bus"][bus_id_str]["vm"]
+            va1 = TPPMs.wraptopi(sol1["solution"]["bus"][bus_id_str]["va"])
+            va2 = TPPMs.wraptopi(sol2["solution"]["bus"][bus_id_str]["va"])
+            @test norm(vm1-vm2*scale_2to1, Inf) <= 1E-6
+            @test norm(va1-va2, Inf) <= 1E-3
         end
     end
 end
