@@ -1,19 +1,46 @@
 # Three-phase specific constraints
 
+
+""
+function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: PMs.AbstractACRForm
+    for c in PMs.conductor_ids(pm)
+        PMs.variable_voltage(pm, cnd=c; kwargs...)
+    end
+    # local infeasbility issues without proper initialization;
+    # convergence issues start when the equivalent angles of the starting point
+    # are further away than 90 degrees from the solution (as given by ACP)
+    # this is the default behaviour of PMs, initialize all phases as (1,0)
+    # the magnitude seems to have a little effect on the convergence (>0.05)
+    # updating the starting point to a balanced phasor does the job
+    ncnd = length(PMs.conductor_ids(pm))
+    theta = [wraptopi(2 * pi / ncnd * (1-c)) for c in 1:ncnd]
+    vm = 1
+    for c in 1:ncnd
+        vr = vm*cos(theta[c])
+        vi = vm*sin(theta[c])
+        for id in PMs.ids(pm, :bus)
+            setvalue(var(pm, pm.cnw, c, :vr, id), vr)
+            setvalue(var(pm, pm.cnw, c, :vi, id), vi)
+        end
+    end
+end
+
+
 "delegate back to PowerModels"
 function constraint_tp_voltage(pm::GenericPowerModel{T}, n::Int, c::Int) where T <: PMs.AbstractACRForm
     constraint_voltage(pm, n, c)
 end
 
+
 function constraint_voltage(pm::GenericPowerModel{T}, n::Int, c::Int) where T <: PMs.AbstractACRForm
     vr = var(pm, n, c, :vr)
     vi = var(pm, n, c, :vi)
-    print("Here I am")
     for (i,bus) in ref(pm, n, :bus)
         @constraint(pm.model, bus["vmin"][c]^2 <= (vr[i]^2 + vi[i]^2))
         @constraint(pm.model, bus["vmax"][c]^2 >= (vr[i]^2 + vi[i]^2))
     end
 end
+
 
 "Creates phase angle constraints at reference buses"
 function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, c::Int, d) where T <: PMs.AbstractACRForm
