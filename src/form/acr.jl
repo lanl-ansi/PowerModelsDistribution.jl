@@ -52,8 +52,7 @@ function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, c::Int, d) wh
         @constraint(pm.model, vr >= 0)
         @constraint(pm.model, vi == 0)
     else
-        tanth = tan(theta)
-        @constraint(pm.model, vi == tanth*vr)
+        @constraint(pm.model, vi == tan(theta)*vr)
         # theta also implies a sign for vr, vi
         if 0<=theta && theta <= pi
             @constraint(pm.model, vi >= 0)
