@@ -28,17 +28,7 @@ end
 
 "delegate back to PowerModels"
 function constraint_tp_voltage(pm::GenericPowerModel{T}, n::Int, c::Int) where T <: PMs.AbstractACRForm
-    constraint_voltage(pm, n, c)
-end
-
-
-function constraint_voltage(pm::GenericPowerModel{T}, n::Int, c::Int) where T <: PMs.AbstractACRForm
-    vr = var(pm, n, c, :vr)
-    vi = var(pm, n, c, :vi)
-    for (i,bus) in ref(pm, n, :bus)
-        @constraint(pm.model, bus["vmin"][c]^2 <= (vr[i]^2 + vi[i]^2))
-        @constraint(pm.model, bus["vmax"][c]^2 >= (vr[i]^2 + vi[i]^2))
-    end
+    PMs.constraint_voltage(pm, n, c)
 end
 
 
