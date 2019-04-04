@@ -10,7 +10,7 @@ function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: PMs
     # convergence issues start when the equivalent angles of the starting point
     # are further away than 90 degrees from the solution (as given by ACP)
     # this is the default behaviour of PMs, initialize all phases as (1,0)
-    # the magnitude seems to have a little effect on the convergence (>0.05)
+    # the magnitude seems to have little effect on the convergence (>0.05)
     # updating the starting point to a balanced phasor does the job
     ncnd = length(PMs.conductor_ids(pm))
     theta = [wraptopi(2 * pi / ncnd * (1-c)) for c in 1:ncnd]
