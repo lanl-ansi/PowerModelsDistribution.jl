@@ -52,3 +52,25 @@ end
 function wraptopi(radians)
     return radians - 2*pi*floor.((radians .+ pi)/(2*pi))
 end
+
+function atan2(y::Float64, x::Float64)
+    if x==0
+        if y>0
+            return pi/2
+        elseif y<0
+            return -pi/2
+        else
+            return nothing
+        end
+    else
+        if x>0
+            return wraptopi(atan(y/x))
+        else
+            if y>=0
+                return wraptopi(atan(y/x)+pi)
+            else
+                return wraptopi(atan(y/x)-pi)
+            end
+        end
+    end
+end
