@@ -204,10 +204,20 @@ end
 
 
 "Do nothing by default."
-function constraint_vuf(pm::GenericPowerModel, nw::Int, bus_id::Int, vufmax::Float64)
+function constraint_tp_vuf(pm::GenericPowerModel, nw::Int, bus_id::Int, vufmax::Float64)
 end
 
 
 "Do nothing by default."
-function constraint_vmneg(pm::GenericPowerModel, nw::Int, bus_id::Int, vufmax::Float64)
+function constraint_tp_vmneg(pm::GenericPowerModel, nw::Int, bus_id::Int, vmnegmax::Float64)
+end
+
+
+"Do nothing by default."
+function constraint_tp_vmpos(pm::GenericPowerModel, nw::Int, bus_id::Int, vmposmax::Float64)
+end
+
+
+"Do nothing by default."
+function constraint_tp_vmzero(pm::GenericPowerModel, nw::Int, bus_id::Int, vmzeromax::Float64)
 end
