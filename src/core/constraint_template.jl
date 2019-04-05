@@ -201,3 +201,13 @@ function constraint_tp_storage_exchange(pm::GenericPowerModel, i::Int; nw::Int=p
     PMs.constraint_storage_complementarity(pm, nw, i)
     constraint_tp_storage_loss(pm, nw, i, storage["storage_bus"], storage["r"], storage["x"], storage["standby_loss"])
 end
+
+
+"Do nothing by default."
+function constraint_vuf(pm::GenericPowerModel, nw::Int, bus_id::Int, vufmax::Float64)
+end
+
+
+"Do nothing by default."
+function constraint_vmneg(pm::GenericPowerModel, nw::Int, bus_id::Int, vufmax::Float64)
+end

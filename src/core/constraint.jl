@@ -24,3 +24,11 @@ function constraint_tp_storage_loss(pm::GenericPowerModel, n::Int, i, bus, r, x,
     @NLconstraint(pm.model, sum(ps[c] for c in conductors) + (sd - sc) == standby_loss + sum( r[c]*(ps[c]^2 + qs[c]^2)/vm[c]^2 for c in conductors))
 end
 
+function constraint_vuf(pm::GenericPowerModel, nw::Int)
+    for id in PMs.ids(pm, nw, :bus)
+        bus = ref(pm, nw, :bus, id)
+        if haskey(bus, "vufmax")
+            constraint_vuf(pm, nw, id, vufmax)
+        end
+    end
+end
