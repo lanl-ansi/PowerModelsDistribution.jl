@@ -137,7 +137,7 @@ function variable_reactive_bus_power_slack(pm::GenericPowerModel; nw::Int=pm.cnw
     )
 end
 
-"Creates variables for both `active` and `reactive` power flow at each transformer".
+"Creates variables for both `active` and `reactive` power flow at each transformer."
 function variable_tp_trans_flow(pm::GenericPowerModel; kwargs...)
     variable_tp_trans_active_flow(pm; kwargs...)
     variable_tp_trans_reactive_flow(pm; kwargs...)
