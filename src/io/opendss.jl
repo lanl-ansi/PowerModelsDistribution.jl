@@ -521,10 +521,20 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict["length"] = defaults["length"]
 
-            rmatrix = parse_matrix(defaults["rmatrix"], nodes, nconductors) * 3  # why?
-            xmatrix = parse_matrix(defaults["xmatrix"], nodes, nconductors) * 3  # why?
-            cmatrix = parse_matrix(defaults["cmatrix"], nodes, nconductors) / 3
+            rmatrix = parse_matrix(defaults["rmatrix"], nodes, nconductors)
+            xmatrix = parse_matrix(defaults["xmatrix"], nodes, nconductors)
+            cmatrix = parse_matrix(defaults["cmatrix"], nodes, nconductors)
             Zbase = (tppm_data["basekv"] / sqrt(3))^2 * nconductors / (tppm_data["baseMVA"])
+
+            Zbase = Zbase/3
+            # The factor 3 here is needed to convert from a voltage base
+            # in line-to-line (LL) to a voltage base in line-to-neutral (LN).
+            # V_LL = √3*V_LN
+            # Zbase_new = Zbase_old*(Vbase_new/Vbase_old)^2 = Zbase_old*(1/√3)^2
+            # In the parser, LL voltage base is used for per unit conversion.
+            # However, in the mathematical model, the voltage magnitude per phase
+            # is fixed at 1. So implicitly, we later on state that the voltage base
+            # is actually in LN. We compensate here for that.
 
             branchDict["br_r"] = PMs.MultiConductorMatrix(rmatrix * defaults["length"] / Zbase)
             branchDict["br_x"] = PMs.MultiConductorMatrix(xmatrix * defaults["length"] / Zbase)
@@ -942,7 +952,7 @@ end
 Replaces complex transformers with a composition of ideal transformers and branches
 which model losses. New buses (virtual, no physical meaning) are added.
 """
-function decompose_transformers!(tppm_data)
+function decompose_transformers!(tppm_data; import_all::Bool=false)
     if !haskey(tppm_data, "trans")
         tppm_data["trans"] = Dict{String, Any}()
     end
@@ -1019,7 +1029,10 @@ function decompose_transformers!(tppm_data)
         end
         rm_redundant_pd_elements!(tppm_data, buses=string.(bus_reduce), branches=string.(branch_reduce))
     end
-    # reduce network
+    # remove the trans_comp dict unless import_all is flagged
+    if !import_all
+        delete!(tppm_data, "trans_comp")
+    end
 end
 function create_vbus!(tppm_data; vmin=0, vmax=Inf, basekv=tppm_data["basekv"], name="", source_id="")
     vbus = Dict{String, Any}("bus_type"=>"1", "name"=>name)
@@ -1426,15 +1439,8 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     tppm_data["dcline"] = []
 
     InfrastructureModels.arrays_to_dicts!(tppm_data)
-    # empty branch arrays are not converted into dicts;
-    # resolve this here to prevent issues later on
-    for key in ["branch"]
-        if isa(tppm_data[key], Array)
-            tppm_data[key] = Dict{String, Any}()
-        end
-    end
 
-    for optional in ["dcline", "load", "shunt", "storage", "pvsystem"]
+    for optional in ["dcline", "load", "shunt", "storage", "pvsystem", "branch"]
         if length(tppm_data[optional]) == 0
             tppm_data[optional] = Dict{String,Any}()
         end
@@ -1442,7 +1448,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
 
     if haskey(tppm_data, "trans_comp")
         # this has to be done before calling adjust_sourcegen_bounds!
-        decompose_transformers!(tppm_data)
+        decompose_transformers!(tppm_data; import_all=import_all)
         adjust_base!(tppm_data)
     end
 

@@ -76,6 +76,9 @@ TESTLOG = getlogger(PowerModels)
         @test_warn(TESTLOG, "Could not find line \"something\"",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
+       @test_warn(TESTLOG, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.",
+                  TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+
         Memento.Test.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
@@ -92,7 +95,7 @@ TESTLOG = getlogger(PowerModels)
 
         @test tppm["name"] == "test2"
 
-        @test length(tppm) == 20 # 2 more entries for transformer dicts
+        @test length(tppm) == 19 # 1 more entry for transformer dicts
         @test length(dss) == 12
 
         # 26 buses and not 12, because of internal transformer buses;
