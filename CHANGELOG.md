@@ -3,6 +3,7 @@ ThreePhasePowerModels.jl Change Log
 
 ### Staged
 - Minor fix to OpenDSS line parsing (length units mismatch with linecode)
+- Add AC rectangular formulation
 
 ### v0.1.4
 - Update to PowerModels v0.9
