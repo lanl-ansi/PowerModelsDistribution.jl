@@ -1076,6 +1076,7 @@ network, but is part of the decomposition of the transformer.
 """
 function create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; name="", source_id="", active_phases=[1, 2, 3], kwargs...)
     ncnd = tppm_data["conductors"]
+    kwargs = Dict{Symbol,Any}(kwargs)
     vbase = haskey(kwargs, :vbase) ? kwargs[:vbase] : tppm_data["basekv"]
     # TODO assumes per_unit will be flagged
     sbase = haskey(kwargs, :sbase) ? kwargs[:sbase] : tppm_data["baseMVA"]
