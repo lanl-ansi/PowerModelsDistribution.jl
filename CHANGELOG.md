@@ -7,6 +7,7 @@ ThreePhasePowerModels.jl Change Log
 - Add ACPForm for transformers
 - Add transformer parsing to OpenDSS, including mapping of loss model
 - Add voltage base calculation, and corresponding change of base
+- Add AC rectangular formulation
 
 ### v0.1.4
 - Update to PowerModels v0.9
