@@ -610,7 +610,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             transDict = Dict{String,Any}()
             transDict["name"] = defaults["name"]
             transDict["source_id"] = "transformer.$(defaults["name"])"
-            transDict["buses"] = Array{String, 1}(undef, nrw)
+            transDict["buses"] = Array{Int, 1}(undef, nrw)
             for i in 1:nrw
                 bnstr = defaults["buses"][i]
                 bus, nodes = parse_busname(bnstr)
@@ -619,9 +619,8 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 if !(nodes==nodes_0123 || nodes==nodes_123)
                     warn(LOGGER, "Only three-phase transformers are supported. The bus specification $bnstr is treated as $bus instead.")
                 end
-                transDict["buses"][i] = bus
+                transDict["buses"][i] = find_bus(bus, tppm_data)
             end
-            [find_bus(parse_busname(x)[1], tppm_data) for x in defaults["buses"]]
 
             # voltage and power ratings
             transDict["vnom_kv"] = defaults["kvs"]
