@@ -66,7 +66,7 @@ end
 ""
 function constraint_kcl_shunt_slack(pm::GenericPowerModel{T}, n::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: PMs.AbstractACRForm
     vr = var(pm, n, c, :vr, i)
-    vr = var(pm, n, c, :vi, i)
+    vi = var(pm, n, c, :vi, i)
     p_slack = var(pm, n, c, :p_slack, i)
     q_slack = var(pm, n, c, :q_slack, i)
     p = var(pm, n, c, :p)
