@@ -25,7 +25,7 @@
         end
 
         @testset "test dc polar opf" begin
-            result = ThreePhasePowerModels.run_mn_tp_strg_opf(mn_mp_data, PowerModels.DCPPowerModel, IpoptSolver(print_level=0)) # this test requires default tol value
+            result = ThreePhasePowerModels.run_mn_tp_strg_opf(mn_mp_data, PowerModels.DCPPowerModel, ipopt_solver)
 
             @test result["status"] == :LocalOptimal
             @test isapprox(result["objective"], 2.63419e5; atol = 1e2)
