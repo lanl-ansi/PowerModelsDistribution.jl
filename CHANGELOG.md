@@ -3,6 +3,10 @@ ThreePhasePowerModels.jl Change Log
 
 ### Staged
 - Minor fix to OpenDSS line parsing (length units mismatch with linecode)
+- Add transformer to TPPM: wye and delta windings, vector group variations (indirectly) and variable taps per phase with bounds
+- Add ACPForm for transformers
+- Add transformer parsing to OpenDSS, including mapping of loss model
+- Add voltage base calculation, and corresponding change of base
 
 ### v0.1.4
 - Update to PowerModels v0.9
