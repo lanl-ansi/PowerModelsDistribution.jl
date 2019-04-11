@@ -610,6 +610,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             transDict = Dict{String,Any}()
             transDict["name"] = defaults["name"]
             transDict["source_id"] = "transformer.$(defaults["name"])"
+            transDict["active_phases"] = [1, 2, 3]
             transDict["buses"] = Array{Int, 1}(undef, nrw)
             for i in 1:nrw
                 bnstr = defaults["buses"][i]
@@ -983,6 +984,7 @@ function decompose_transformers!(tppm_data; import_all::Bool=false)
             trans_dict = Dict{String, Any}()
             trans_dict["name"] = "tr$(tr_id)_w$(w)"
             trans_dict["source_id"] = trans["source_id"]
+            trans_dict["active_phases"] = [1, 2, 3]
             push_dict_ret_key!(tppm_data["trans"], trans_dict)
             # connection settings
             conn = trans["conns"][w]
@@ -1224,6 +1226,16 @@ function rm_redundant_pd_elements!(tppm_data; buses=keys(tppm_data["bus"]), bran
         end
     end
 end
+
+
+"""
+Helper function to add a new shunt. The shunt element is  always inserted at the
+internal bus of the second winding in OpenDSS. If one of the branches of the
+loss model connected to this bus, has zero impedance (for example, if XHL==0
+or XLT==0 or R[3]==0), then this bus might be removed by
+rm_redundant_pd_elements!, in which case a new shunt should be inserted at the
+remaining bus of the removed branch.
+"""
 function add_shunt!(tppm_data, bus; gs=MultiConductorVector(zeros(3)), bs=MultiConductorVector(zeros(3)), vbase_kv=1, sbase_mva=1)
     # TODO check whether keys are consistent with the actual data model
     shunt_dict = Dict{String, Any}("status"=>1, "shunt_bus"=>bus)
@@ -1279,6 +1291,14 @@ function adjust_base!(tppm_data; start_at_first_tr_prim=true)
         warn(LOGGER, "The network contains buses which are not reachable from the start node for the change of voltage base.")
     end
 end
+
+
+"""
+This is the recursive code that goes with adjust_base!; adjust_base!
+initializes arrays and other data that is passed along in the calls to this
+recursive function. For very large networks, this might have to be rewritten
+to not rely on recursion.
+"""
 function adjust_base_rec!(tppm_data, source::Int, base_kv_new::Float64, nodes_visited, edges_br, edges_br_visited, edges_tr, edges_tr_visited, br_basekv_old)
     source_dict = tppm_data["bus"][string(source)]
     base_kv_prev = source_dict["base_kv"]
