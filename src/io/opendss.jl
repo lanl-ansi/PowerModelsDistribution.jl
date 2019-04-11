@@ -1,5 +1,6 @@
 # OpenDSS parser
 
+
 "Structure representing OpenDSS `dss_source_id` giving the type of the component `dss_type`, its name `dss_name`, and the active phases `active_phases`"
 struct DSSSourceId
     dss_type::AbstractString
@@ -728,6 +729,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
     end
 end
 
+
 """
 Converts a set of short-circuit tests to an equivalent reactance network.
 Reference:
@@ -955,6 +957,7 @@ function adjust_sourcegen_bounds!(tppm_data)
     tppm_data["gen"]["1"]["qmax"] = PMs.MultiConductorVector(fill( bound, size(tppm_data["gen"]["1"]["pmin"])))
 end
 
+
 """
 
     function decompose_transformers!(tppm_data)
@@ -1044,6 +1047,13 @@ function decompose_transformers!(tppm_data; import_all::Bool=false)
         delete!(tppm_data, "trans_comp")
     end
 end
+
+
+"""
+This function adds a new bus to the data model and returns its dictionary.
+It is virtual in the sense that it does not correspond to a bus in the network,
+but is part of the decomposition of the transformer.
+"""
 function create_vbus!(tppm_data; vmin=0, vmax=Inf, basekv=tppm_data["basekv"], name="", source_id="")
     vbus = Dict{String, Any}("bus_type"=>"1", "name"=>name)
     vbus_id = push_dict_ret_key!(tppm_data["bus"], vbus)
@@ -1057,6 +1067,12 @@ function create_vbus!(tppm_data; vmin=0, vmax=Inf, basekv=tppm_data["basekv"], n
     vbus["base_kv"] = basekv
     return vbus
 end
+
+"""
+This function adds a new branch to the data model and returns its dictionary.
+It is virtual in the sense that it does not correspond to a branch in the
+network, but is part of the decomposition of the transformer.
+"""
 function create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; name="", source_id="", active_phases=[1, 2, 3], kwargs...)
     ncnd = tppm_data["conductors"]
     vbase = haskey(kwargs, :vbase) ? kwargs[:vbase] : tppm_data["basekv"]
@@ -1096,6 +1112,11 @@ function create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; name="", source_id="
     push_dict_ret_key!(tppm_data["branch"], vbranch)
     return vbranch
 end
+
+
+"""
+This function appends a component to a component dictionary of a tppm data model.
+"""
 function push_dict_ret_key!(dict::Dict{String, Any}, v::Dict{String, Any}; assume_no_gaps=false)
     if isempty(dict)
         k = 1
@@ -1109,6 +1130,17 @@ function push_dict_ret_key!(dict::Dict{String, Any}, v::Dict{String, Any}; assum
     v["index"] = k
     return k
 end
+
+
+"""
+This function removes zero impedance branches. Only for transformer loss model!
+Branches with zero impedances are deleted, and one of the buses it connects.
+For now, the implementation should only be used on the loss model of
+transformers. When deleting buses, references at shunts, loads... should
+be updated accordingly. In the current implementation, that is only done
+for shunts. The other elements, such as loads, do not appear in the
+transformer loss model.
+"""
 function rm_redundant_pd_elements!(tppm_data; buses=keys(tppm_data["bus"]), branches=keys(tppm_data["branch"]))
     # temporary dictionary for pi-model shunt elements
     shunts_g = Dict{Int, Any}()
@@ -1201,6 +1233,7 @@ function add_shunt!(tppm_data, bus; gs=MultiConductorVector(zeros(3)), bs=MultiC
     shunt_dict["bs"] = bs*zbase
     push_dict_ret_key!(tppm_data["shunt"], shunt_dict, assume_no_gaps=false)
 end
+
 
 """
 
@@ -1316,6 +1349,11 @@ function adjust_base_rec!(tppm_data, source::Int, base_kv_new::Float64, nodes_vi
         end
     end
 end
+
+
+"""
+Rescales the parameters of a branch to reflect a change in voltage base.
+"""
 function adjust_base_branch!(tppm_data, br_id::Int, base_kv_old::Float64, base_kv_new::Float64)
     branch = tppm_data["branch"][string(br_id)]
     zmult = (base_kv_old/base_kv_new)^2
@@ -1326,6 +1364,11 @@ function adjust_base_branch!(tppm_data, br_id::Int, base_kv_old::Float64, base_k
     branch["g_to"] *= 1/zmult
     branch["b_to"] *= 1/zmult
 end
+
+
+"""
+Rescales the parameters of a shunt to reflect a change in voltage base.
+"""
 function adjust_base_shunt!(tppm_data, sh_id::Int, base_kv_old::Float64, base_kv_new::Float64)
     shunt = tppm_data["shunt"][string(sh_id)]
     zmult = (base_kv_old/base_kv_new)^2

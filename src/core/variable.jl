@@ -5,6 +5,7 @@ function variable_tp_voltage(pm::GenericPowerModel; kwargs...)
     end
 end
 
+
 ""
 function variable_tp_branch_flow(pm::GenericPowerModel; kwargs...)
     for c in PMs.conductor_ids(pm)
@@ -118,6 +119,7 @@ function variable_bus_power_slack(pm::GenericPowerModel; kwargs...)
     variable_reactive_bus_power_slack(pm; kwargs...)
 end
 
+
 ""
 function variable_active_bus_power_slack(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     var(pm, nw, cnd)[:p_slack] = @variable(pm.model,
@@ -125,6 +127,7 @@ function variable_active_bus_power_slack(pm::GenericPowerModel; nw::Int=pm.cnw, 
         start = PMs.getval(ref(pm, nw, :bus, i), "p_slack_start", cnd)
     )
 end
+
 
 ""
 function variable_reactive_bus_power_slack(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
@@ -134,11 +137,14 @@ function variable_reactive_bus_power_slack(pm::GenericPowerModel; nw::Int=pm.cnw
     )
 end
 
-"generates variables for both `active` and `reactive` power flow at each transformer"
+"Creates variables for both `active` and `reactive` power flow at each transformer".
 function variable_tp_trans_flow(pm::GenericPowerModel; kwargs...)
     variable_tp_trans_active_flow(pm; kwargs...)
     variable_tp_trans_reactive_flow(pm; kwargs...)
 end
+
+
+"Create variables for the active power flowing into all transformer windings."
 function variable_tp_trans_active_flow(pm::GenericPowerModel; nw::Int=pm.cnw, bounded=true)
     for cnd in PMs.conductor_ids(pm)
         var(pm, nw, cnd)[:p_trans] = @variable(pm.model,
@@ -157,6 +163,9 @@ function variable_tp_trans_active_flow(pm::GenericPowerModel; nw::Int=pm.cnw, bo
         end
     end
 end
+
+
+"Create variables for the reactive power flowing into all transformer windings."
 function variable_tp_trans_reactive_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
     for cnd in PMs.conductor_ids(pm)
         var(pm, nw, cnd)[:q_trans] = @variable(pm.model,
@@ -175,6 +184,12 @@ function variable_tp_trans_reactive_flow(pm::GenericPowerModel; nw::Int=pm.cnw, 
         end
     end
 end
+
+
+"""
+Create tap variables;
+only do this for OLTCs which have at least one non-fixed tap.
+"""
 function variable_tp_trans_tap(pm::GenericPowerModel; nw=pm.cnw, kwargs...)
     tr_ids = [tr_id for tr_id in ids(pm, pm.cnw, :trans)
         if !(all(ref(pm, pm.cnw, :trans, tr_id, "tapfix")))
@@ -183,6 +198,9 @@ function variable_tp_trans_tap(pm::GenericPowerModel; nw=pm.cnw, kwargs...)
         variable_tp_trans_tap(pm::GenericPowerModel, tr_ids; kwargs...)
     end
 end
+
+
+"For a given set of transformers, create tap variables."
 function variable_tp_trans_tap(pm::GenericPowerModel, tr_ids::Array{Int,1}; nw::Int=pm.cnw, bounded=true)
     nphases = 3
     for c in 1:nphases

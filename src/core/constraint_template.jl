@@ -41,6 +41,7 @@ function constraint_tp_voltage_mag_unbound(pm::GenericPowerModel; nw::Int=pm.cnw
     end
 end
 
+
 """
 In the general case, do not add the bounds;
 expand this on a per formulation case as deemed necessary.
@@ -48,6 +49,7 @@ expand this on a per formulation case as deemed necessary.
 function constraint_tp_voltage_mag_unbound(pm::GenericPowerModel{T}, i::Int, vmin::Float64, vmax::Float64; nw::Int=pm.cnw) where T
     # do nothing
 end
+
 
 ""
 function constraint_ohms_tp_yt_from(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
@@ -125,6 +127,7 @@ function constraint_ohms_tp_yt_to_on_off(pm::GenericPowerModel, i::Int; nw::Int=
 
     constraint_ohms_tp_yt_to_on_off(pm, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max)
 end
+
 
 ""
 function constraint_voltage_magnitude_difference(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
@@ -217,7 +220,8 @@ function constraint_tp_storage_exchange(pm::GenericPowerModel, i::Int; nw::Int=p
     constraint_tp_storage_loss(pm, nw, i, storage["storage_bus"], storage["r"], storage["x"], storage["standby_loss"])
 end
 
-""
+
+"Links the voltage at both windings of a fixed tap transformer."
 function constraint_tp_trans_voltage(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
     # TODO add checks to simplify
@@ -227,7 +231,8 @@ function constraint_tp_trans_voltage(pm::GenericPowerModel, i::Int; nw::Int=pm.c
     constraint_tp_trans_voltage(pm, i, f_bus, t_bus, tapset, Tv_fr, Tv_im, Cv_to)
 end
 
-""
+
+"Links the voltage at both windings of a variable tap transformer."
 function constraint_tp_trans_voltage_var(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
     # TODO add checks to simplify
@@ -242,7 +247,8 @@ function constraint_tp_trans_voltage_var(pm::GenericPowerModel, i::Int; nw::Int=
     constraint_tp_trans_tap_fix(pm, i, tapfix, tapset)
 end
 
-""
+
+"Links the power flowing into both windings of a fixed tap transformer."
 function constraint_tp_trans_flow(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
     # TODO add checks to simplify
@@ -253,7 +259,8 @@ function constraint_tp_trans_flow(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     constraint_tp_trans_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
 end
 
-""
+
+"Links the power flowing into both windings of a variable tap transformer."
 function constraint_tp_trans_flow_var(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
     # TODO add checks to simplify
@@ -264,7 +271,8 @@ function constraint_tp_trans_flow_var(pm::GenericPowerModel, i::Int; nw::Int=pm.
     constraint_tp_trans_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
 end
 
-""
+
+"KCL including transformer arcs."
 function constraint_kcl_shunt_trans(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     if !haskey(con(pm, nw, cnd), :kcl_p)
         con(pm, nw, cnd)[:kcl_p] = Dict{Int,ConstraintRef}()
