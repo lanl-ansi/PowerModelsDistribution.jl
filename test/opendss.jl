@@ -79,6 +79,9 @@ TESTLOG = getlogger(PowerModels)
        @test_warn(TESTLOG, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.",
                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
+      @test_warn(TESTLOG, "Only three-phase transformers are supported. The bus specification b7.1 is treated as b7 instead.",
+                 TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+
         Memento.Test.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
