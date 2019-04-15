@@ -29,11 +29,9 @@ function post_tp_opf(pm::GenericPowerModel)
         PMs.variable_dcline_flow(pm, cnd=c)
     end
 
-    if haskey(ref(pm), :trans)
-        add_arcs_trans!(pm)
-        variable_tp_trans_flow(pm)
-        variable_tp_trans_tap(pm)
-    end
+    add_arcs_trans!(pm)
+    variable_tp_trans_flow(pm)
+    variable_tp_trans_tap(pm)
 
     constraint_tp_voltage(pm)
 
@@ -42,11 +40,7 @@ function post_tp_opf(pm::GenericPowerModel)
     end
 
     for i in ids(pm, :bus), c in PMs.conductor_ids(pm)
-        if haskey(ref(pm), :trans)
-            constraint_kcl_shunt_trans(pm, i, cnd=c)
-        else
-            PMs.constraint_kcl_shunt(pm, i, cnd=c)
-        end
+        constraint_kcl_shunt_trans(pm, i, cnd=c)
     end
 
     for i in ids(pm, :branch)
