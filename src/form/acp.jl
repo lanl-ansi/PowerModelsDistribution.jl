@@ -54,6 +54,24 @@ function constraint_kcl_shunt_trans(pm::GenericPowerModel, nw::Int, c::Int, i::I
     con(pm, nw, c, :kcl_q)[i] = @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(q_trans[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*vm^2)
 end
 
+
+""
+function constraint_kcl_shunt_trans_load(pm::GenericPowerModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_loads, bus_gs, bus_bs)
+    vm = var(pm, nw, c, :vm, i)
+    p = var(pm, nw, c, :p)
+    q = var(pm, nw, c, :q)
+    pg = var(pm, nw, c, :pg)
+    qg = var(pm, nw, c, :qg)
+    pd = var(pm, nw, c, :pd)
+    qd = var(pm, nw, c, :qd)
+    p_dc = var(pm, nw, c, :p_dc)
+    q_dc = var(pm, nw, c, :q_dc)
+    p_trans = var(pm, nw, c, :p_trans)
+    q_trans = var(pm,  nw, c, :q_trans)
+    con(pm, nw, c, :kcl_p)[i] = @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd[l] for l in bus_loads) - sum(gs for gs in values(bus_gs))*vm^2)
+    con(pm, nw, c, :kcl_q)[i] = @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(q_trans[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd[l] for l in bus_loads) + sum(bs for bs in values(bus_bs))*vm^2)
+end
+
 """
 Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
 
@@ -310,8 +328,9 @@ function constraint_tp_load_flow_setpoint_delta(pm::GenericPowerModel{T}, nw::In
     q_a, q_b, q_c = [var(pm, nw, c, :qd, load_id) for c in 1:3]
     p_ab, p_bc, p_ca = pd
     q_ab, q_bc, q_ca = qd
-    vm_a, vm_b, vm_c = [var(pm, nw, c, :vm, load_id) for c in 1:3]
-    va_a, va_b, va_c = [var(pm, nw, c, :va, load_id) for c in 1:3]
+    load_bus_id = ref(pm, nw, :load, load_id)["load_bus"]
+    vm_a, vm_b, vm_c = [var(pm, nw, c, :vm, load_bus_id) for c in 1:3]
+    va_a, va_b, va_c = [var(pm, nw, c, :va, load_bus_id) for c in 1:3]
     # v_xy = v_x - v_y
     vre_xy(vm_x, va_x, vm_y, va_y) = @NLexpression(pm.model, vm_x*cos(va_x)-vm_y*cos(va_y))
     vim_xy(vm_x, va_x, vm_y, va_y) = @NLexpression(pm.model, vm_x*sin(va_x)-vm_y*sin(va_y))
@@ -325,11 +344,11 @@ function constraint_tp_load_flow_setpoint_delta(pm::GenericPowerModel{T}, nw::In
     ire_xy(p_xy, q_xy, vre_xy, vim_xy) = @NLexpression(pm.model, (p_xy*vre_xy+q_xy*vim_xy)/(vre_xy^2+vim_xy^2))
     iim_xy(p_xy, q_xy, vre_xy, vim_xy) = @NLexpression(pm.model, (p_xy*vim_xy-q_xy*vre_xy)/(vre_xy^2+vim_xy^2))
     ire_ab = ire_xy(p_ab, q_ab, vre_ab, vim_ab)
-    iim_ab = ire_xy(p_ab, q_ab, vre_ab, vim_ab)
+    iim_ab = iim_xy(p_ab, q_ab, vre_ab, vim_ab)
     ire_bc = ire_xy(p_bc, q_bc, vre_bc, vim_bc)
-    iim_bc = ire_xy(p_bc, q_bc, vre_bc, vim_bc)
+    iim_bc = iim_xy(p_bc, q_bc, vre_bc, vim_bc)
     ire_ca = ire_xy(p_ca, q_ca, vre_ca, vim_ca)
-    iim_ca = ire_xy(p_ca, q_ca, vre_ca, vim_ca)
+    iim_ca = iim_xy(p_ca, q_ca, vre_ca, vim_ca)
     # s_x = v_x*conj(i_xy-i_zx)
     # p_x = vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx)
     # q_x = vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx)

@@ -1,33 +1,33 @@
-export run_ac_tp_pf_delta, run_tp_pf_delta
+export run_ac_tp_pf_lm, run_tp_pf_lm
 
 
 ""
-function run_ac_tp_pf_delta(file, solver; kwargs...)
+function run_ac_tp_pf_lm(file, solver; kwargs...)
     return run_tp_pf(file, PMs.ACPPowerModel, solver; kwargs...)
 end
 
 
 ""
-function run_dc_tp_pf_delta(file, solver; kwargs...)
+function run_dc_tp_pf_lm(file, solver; kwargs...)
     return run_tp_pf(file, PMs.DCPPowerModel, solver; kwargs...)
 end
 
 
 ""
-function run_tp_pf_delta(data::Dict{String,Any}, model_constructor, solver; kwargs...)
+function run_tp_pf_lm(data::Dict{String,Any}, model_constructor, solver; kwargs...)
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_pf; multiconductor=true, kwargs...)
 end
 
 
 ""
-function run_tp_pf_delta(file::String, model_constructor, solver; kwargs...)
+function run_tp_pf_lm(file::String, model_constructor, solver; kwargs...)
     data = ThreePhasePowerModels.parse_file(file)
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_pf; multiconductor=true, kwargs...)
 end
 
 
 ""
-function post_tp_pf_delta(pm::GenericPowerModel)
+function post_tp_pf_lm(pm::GenericPowerModel)
     variable_tp_voltage(pm, bounded=false)
     variable_tp_branch_flow(pm, bounded=false)
 
@@ -37,8 +37,9 @@ function post_tp_pf_delta(pm::GenericPowerModel)
         PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
     end
 
+    add_arcs_trans!(pm)
     if haskey(ref(pm), :trans)
-        add_arcs_trans!(pm)
+
         variable_tp_trans_flow(pm, bounded=false)
     end
 
@@ -57,11 +58,7 @@ function post_tp_pf_delta(pm::GenericPowerModel)
     end
 
     for (i,bus) in ref(pm, :bus), c in PMs.conductor_ids(pm)
-        if haskey(ref(pm), :trans)
-            constraint_kcl_shunt_trans(pm, i, cnd=c)
-        else
-            PMs.constraint_kcl_shunt(pm, i, cnd=c)
-        end
+        constraint_kcl_shunt_trans_load(pm, i, cnd=c)
 
         # PV Bus Constraints
         if length(ref(pm, :bus_gens, i)) > 0 && !(i in ids(pm,:ref_buses))

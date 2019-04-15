@@ -201,15 +201,58 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             loadDict["name"] = defaults["name"]
             loadDict["load_bus"] = find_bus(name, tppm_data)
-            loadDict["pd"] = PMs.MultiConductorVector(parse_array(defaults["kw"] / 1e3, nodes, nconductors))
-            loadDict["qd"] = PMs.MultiConductorVector(parse_array(defaults["kvar"] / 1e3, nodes, nconductors))
-            loadDict["status"] = convert(Int, defaults["enabled"])
 
             loadDict["conn"] = defaults["conn"]
 
+            conn = defaults["conn"]
+            nph = defaults["phases"]
+            nodes_ph = nodes[1:3]
+            if conn=="wye"
+                pqd_premul = nodes_ph./sum(nodes_ph)
+            elseif conn=="delta"
+                if nph==1
+                    #  ab->a, bc->b, ca->c
+                    if nodes_ph==[true, true, false]
+                        pqd_premul = [1, 0, 0]
+                    elseif nodes_ph==[false, true, true]
+                        pqd_premul = [0, 1, 0]
+                    elseif  nodes_ph==[true, false, true]
+                        pqd_premul = [0, 0, 1]
+                    else
+                        error(LOGGER, "Inconsistent connection specification for 1-phase delta load.")
+                    end
+                elseif nph==2
+                    # the order of the nodes phases is important now
+                    # for example,
+                    # phases=2 bus1=x.1.2.3 means ab (12) and bc (23)
+                    # phases=2 bus1=x.1.3.2 means ca (13 or 31) and bc (32 or 23)
+                    cnds = get_conductors_ordered(defaults["bus1"])
+                    if !all([x in [1, 2, 3] for x in cnds]) || length(cnds)!=3
+                        error(LOGGER, "Inconsistent connection specification for 2-phase delta load.")
+                    end
+                    cnds_fl = cnds[[true, false, true]]
+                    if cnds_fl==[1, 3] ||  cnds_fl==[3, 1]
+                        pqd_premul = [1/2, 1/2, 0]
+                    elseif cnds_fl==[1, 2] ||  cnds_fl==[2, 1]
+                        pqd_premul = [0, 1/2, 1/2]
+                    elseif cnds_fl==[2, 3] ||  cnds_fl==[3, 2]
+                        pqd_premul = [1/2, 0, 1/2]
+                    end
+                else # nph==3
+                    pqd_premul = [1/3, 1/3, 1/3]
+                end
+            else
+                error(LOGGER, "Unknown load connection type $conn.")
+            end
+
+            loadDict["pd"] = MultiConductorVector(pqd_premul.*defaults["kw"]./1e3)
+            loadDict["qd"] = MultiConductorVector(pqd_premul.*defaults["kvar"]./1e3)
+
+            loadDict["status"] = convert(Int, defaults["enabled"])
+
             loadDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
             loadDict["source_id"] = "load.$(defaults["name"])"
-
+  
             loadDict["index"] = length(tppm_data["load"]) + 1
 
             used = ["phases", "bus1", "name"]
@@ -1525,6 +1568,8 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         # this has to be done before calling adjust_sourcegen_bounds!
         decompose_transformers!(tppm_data; import_all=import_all)
         adjust_base!(tppm_data)
+    else
+        tppm_data["trans"] = Dict{String,Any}()
     end
 
     adjust_sourcegen_bounds!(tppm_data)
