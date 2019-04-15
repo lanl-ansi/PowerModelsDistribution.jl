@@ -38,10 +38,7 @@ function post_tp_pf_lm(pm::GenericPowerModel)
     end
 
     add_arcs_trans!(pm)
-    if haskey(ref(pm), :trans)
-
-        variable_tp_trans_flow(pm, bounded=false)
-    end
+    variable_tp_trans_flow(pm, bounded=false)
 
     constraint_tp_voltage(pm)
     # lower bound is often needed to converge
