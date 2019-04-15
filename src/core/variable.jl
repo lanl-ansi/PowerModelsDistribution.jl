@@ -1,7 +1,12 @@
 ""
-function variable_tp_voltage(pm::GenericPowerModel; kwargs...)
+function variable_tp_voltage(pm::GenericPowerModel; nw=pm.cnw, kwargs...)
+    for id in PMs.ids(pm, nw, :bus)
+        if !haskey(ref(pm, nw, :bus, id), "va_start")
+            ref(pm, nw, :bus, id)["va_start"] = MultiConductorVector([0, -2*pi/3, 2*pi/3])
+        end
+    end
     for c in PMs.conductor_ids(pm)
-        PMs.variable_voltage(pm, cnd=c; kwargs...)
+        PMs.variable_voltage(pm, cnd=c; nw=nw, kwargs...)
     end
 end
 
@@ -12,7 +17,6 @@ function variable_tp_branch_flow(pm::GenericPowerModel; kwargs...)
         PMs.variable_branch_flow(pm, cnd=c; kwargs...)
     end
 end
-
 
 
 ""
@@ -216,4 +220,26 @@ function variable_tp_trans_tap(pm::GenericPowerModel, tr_ids::Array{Int,1}; nw::
             end
         end
     end
+end
+
+
+function variable_load_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    variable_active_load_flow(pm, nw, cnd)
+    variable_reactive_load_flow(pm, nw, cnd)
+end
+
+
+function variable_active_load_flow(pm::GenericPowerModel, nw::Int, cnd::Int)
+    var(pm, nw, cnd)[:pd] = @variable(pm.model, [i in PMs.ids(pm, nw, :load)],
+        basename="$(nw)_$(cnd)_pd",
+        start=0
+    )
+end
+
+
+function variable_reactive_load_flow(pm::GenericPowerModel, nw::Int, cnd::Int)
+    var(pm, nw, cnd)[:qd] = @variable(pm.model, [i in PMs.ids(pm, nw, :load)],
+        basename="$(nw)_$(cnd)_qd",
+        start=0
+    )
 end

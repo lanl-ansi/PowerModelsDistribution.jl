@@ -24,3 +24,18 @@ function constraint_tp_storage_loss(pm::GenericPowerModel, n::Int, i, bus, r, x,
     @NLconstraint(pm.model, sum(ps[c] for c in conductors) + (sd - sc) == standby_loss + sum( r[c]*(ps[c]^2 + qs[c]^2)/vm[c]^2 for c in conductors))
 end
 
+function constraint_tp_load_flow_setpoint(pm::GenericPowerModel, load_id::Int; nw=pm.cnw)
+    load = ref(pm, nw, :load, load_id)
+    pd = load["pd"]
+    qd = load["qd"]
+    conn = load["conn"]
+    if conn=="wye"
+        for c in PMs.conductor_ids(pm)
+            constraint_load_flow_setpoint_wye(pm, nw, c, load_id, pd[c], qd[c])
+        end
+    elseif conn=="delta"
+        constraint_tp_load_flow_setpoint_delta(pm, nw, load_id, load["load_bus"], pd, qd)
+    else
+        error(LOGGER, "Unknown load connection type $conn.")
+    end
+end

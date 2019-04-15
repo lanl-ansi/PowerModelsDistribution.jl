@@ -205,6 +205,8 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             loadDict["qd"] = PMs.MultiConductorVector(parse_array(defaults["kvar"] / 1e3, nodes, nconductors))
             loadDict["status"] = convert(Int, defaults["enabled"])
 
+            loadDict["conn"] = defaults["conn"]
+
             loadDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
             loadDict["source_id"] = "load.$(defaults["name"])"
 
