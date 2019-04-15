@@ -37,6 +37,11 @@ end
 
 "Adds arcs for TPPM transformers; for dclines and branches this is done in PMs"
 function add_arcs_trans!(pm::GenericPowerModel)
+    if !haskey(ref(pm, pm.cnw), :trans)
+        # this might happen when parsing data from matlab format
+        # the OpenDSS parser always inserts a trans dict
+        ref(pm, pm.cnw)[:trans] = Dict{Int, Any}()
+    end
     # dirty fix add arcs_from/to_trans and bus_arcs_trans
     pm.ref[:nw][0][:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in ref(pm, :trans)]
     pm.ref[:nw][0][:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in ref(pm, :trans)]

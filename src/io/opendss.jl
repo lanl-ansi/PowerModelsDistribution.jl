@@ -1569,7 +1569,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         decompose_transformers!(tppm_data; import_all=import_all)
         adjust_base!(tppm_data)
     else
-        tppm_data["trans"] = Dict{String,Any}()
+        tppm_data["trans"] = Dict{String, Any}()
     end
 
     adjust_sourcegen_bounds!(tppm_data)
