@@ -62,4 +62,6 @@ pavito_solver = PavitoSolver(mip_solver=cbc_solver, cont_solver=ipopt_solver, mi
     include("tp_multinetwork.jl")
 
     include("transformer.jl")
+
+    include("loadmodels.jl")
 end

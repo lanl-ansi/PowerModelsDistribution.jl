@@ -194,7 +194,6 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             name, nodes = parse_busname(defaults["bus1"])
 
             kv = defaults["kv"]
-            loadDict["vnom_kv"] = kv
 
             expected_kv = tppm_data["basekv"] / sqrt(tppm_data["conductors"])
             if !isapprox(kv, expected_kv; atol=expected_kv * 0.01)
@@ -203,6 +202,8 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             loadDict["name"] = defaults["name"]
             loadDict["load_bus"] = find_bus(name, tppm_data)
+
+            load_name = defaults["name"]
 
             # V2
             loadDict["conn"] = defaults["conn"]
@@ -213,6 +214,9 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             end
             delta_map = Dict([1,2]=>1, [2,1]=>1, [2,3]=>2, [3,2]=>2, [1,3]=>3, [3,1]=>3)
             if nph==1
+                # TPPM convention is to specify the voltage across the load
+                # this what OpenDSS does for 1-phase loads only
+                loadDict["vnom_kv"] = kv
                 # default is to connect betwheen L1 and N
                 cnds = (isempty(cnds)) ? [1, 0] : cnds
                 # if only one connection specified, implicitly connected to N
@@ -250,7 +254,23 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 # so throw an error and ask to reformulate as single and three phase loads
                 error(LOGGER, "Two-phase loads (nphases=2) are not supported, as these lead to unexpected behaviour. Reformulate this load as a combination of single-phase loads.")
             elseif nph==3
-                pqd_premul = [1/3, 1/3, 1/3]
+                # for 2 and 3 phase windings, kv is always in LL, also for wye
+                # whilst TPPM model uses actual voltage across load; so LN for wye
+                if loadDict["conn"]=="wye"
+                    loadDict["vnom_kv"] = kv/sqrt(3)
+                else
+                    loadDict["vnom_kv"] = kv
+                end
+                if cnds==[]
+                    pqd_premul = [1/3, 1/3, 1/3]
+                else
+                    if (length(cnds)==3 || length(cnds)==4) && cnds==unique(cnds)
+                    #variations of [1, 2, 3] and [1, 2, 3, 0]
+                        pqd_premul = [1/3, 1/3, 1/3]
+                    else
+                        error(LOGGER, "Specified connections for three-phase load $name not allowed.")
+                    end
+                end
             else
                 error(LOGGER, "For a load, nphases should be in [1,3].")
             end
@@ -258,7 +278,6 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             loadDict["qd"] = MultiConductorVector(pqd_premul.*defaults["kvar"]./1e3)
 
             # parse the model
-            name = defaults["name"]
             model = defaults["model"]
             # some info on OpenDSS load models
             ##################################
@@ -267,18 +286,13 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             # 1: Constant P and Q, default
             if model == 2
             # 2: Constant Z
-                loadDict["vbase_kv"] = defaults["kv"]
-                loadDict["vnom_kv"] = defaults["kv"]
-                #loadDict["gs"] = loadDict["pd"]./loadDict["vnom_kv"]^2
-                #loadDict["bs"] = loadDict["qd"]./loadDict["vnom_kv"]^2
-                #TODO add vbase conversion in trans extension
             elseif model == 3
             # 3: Constant P and quadratic Q
-                warn(LOGGER, "$name: load model 3 not supported. Treating as model 1.")
+                warn(LOGGER, "$load_name: load model 3 not supported. Treating as model 1.")
                 model = 1
             elseif model == 4
             # 4: Exponential
-                warn(LOGGER, "$name: load model 4 not supported. Treating as model 1.")
+                warn(LOGGER, "$load_name: load model 4 not supported. Treating as model 1.")
                 model = 1
             elseif model == 5
             # 5: Constant I
@@ -286,15 +300,15 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 #model = 1
             elseif model == 6
             # 6: Constant P and fixed Q
-                warn(LOGGER, "$name: load model 5 identical to model 1 in current feature set. Treating as model 1.")
+                warn(LOGGER, "$load_name: load model 5 identical to model 1 in current feature set. Treating as model 1.")
                 model = 1
             elseif model == 7
             # 7: Constant P and quadratic Q (i.e., fixed reactance)
-                warn(LOGGER, "$name: load model 7 not supported. Treating as model 1.")
+                warn(LOGGER, "$load_name: load model 7 not supported. Treating as model 1.")
                 model = 1
             elseif model == 8
             # 8: ZIP
-                warn(LOGGER, "$name: load model 8 not supported. Treating as model 1.")
+                warn(LOGGER, "$load_name: load model 8 not supported. Treating as model 1.")
                 model = 1
             end
             # save adjusted model type to dict, human-readable
@@ -304,7 +318,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             loadDict["status"] = convert(Int, defaults["enabled"])
 
             loadDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-            loadDict["source_id"] = "load.$(defaults["name"])"
+            loadDict["source_id"] = "load.$load_name"
   
             loadDict["index"] = length(tppm_data["load"]) + 1
 
