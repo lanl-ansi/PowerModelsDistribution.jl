@@ -1,10 +1,5 @@
 ""
 function variable_tp_voltage(pm::GenericPowerModel; nw=pm.cnw, kwargs...)
-    for id in PMs.ids(pm, nw, :bus)
-        if !haskey(ref(pm, nw, :bus, id), "va_start")
-            ref(pm, nw, :bus, id)["va_start"] = MultiConductorVector([0, -2*pi/3, 2*pi/3])
-        end
-    end
     for c in PMs.conductor_ids(pm)
         PMs.variable_voltage(pm, cnd=c; nw=nw, kwargs...)
     end

@@ -194,6 +194,8 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             name, nodes = parse_busname(defaults["bus1"])
 
             kv = defaults["kv"]
+            loadDict["vnom_kv"] = kv
+
             expected_kv = tppm_data["basekv"] / sqrt(tppm_data["conductors"])
             if !isapprox(kv, expected_kv; atol=expected_kv * 0.01)
                 warn(LOGGER, "Load has kv=$kv, not the expected kv=$(expected_kv). Results may not match OpenDSS")
@@ -204,6 +206,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             loadDict["conn"] = defaults["conn"]
 
+            # parse power depending on phases=1/2/3, conn=delta/wye, bus1=...
             conn = defaults["conn"]
             nph = defaults["phases"]
             nodes_ph = nodes[1:3]
@@ -244,9 +247,10 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             else
                 error(LOGGER, "Unknown load connection type $conn.")
             end
-
             loadDict["pd"] = MultiConductorVector(pqd_premul.*defaults["kw"]./1e3)
             loadDict["qd"] = MultiConductorVector(pqd_premul.*defaults["kvar"]./1e3)
+
+
 
             loadDict["status"] = convert(Int, defaults["enabled"])
 

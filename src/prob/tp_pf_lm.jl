@@ -28,6 +28,8 @@ end
 
 ""
 function post_tp_pf_lm(pm::GenericPowerModel)
+    # without, starting point will divide by zero for delta loads
+    set_tp_va_start_if_unset(pm)
     variable_tp_voltage(pm, bounded=false)
     variable_tp_branch_flow(pm, bounded=false)
 

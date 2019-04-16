@@ -24,6 +24,7 @@ function constraint_tp_storage_loss(pm::GenericPowerModel, n::Int, i, bus, r, x,
     @NLconstraint(pm.model, sum(ps[c] for c in conductors) + (sd - sc) == standby_loss + sum( r[c]*(ps[c]^2 + qs[c]^2)/vm[c]^2 for c in conductors))
 end
 
+
 function constraint_tp_load_flow_setpoint(pm::GenericPowerModel, load_id::Int; nw=pm.cnw)
     load = ref(pm, nw, :load, load_id)
     pd = load["pd"]
@@ -37,5 +38,19 @@ function constraint_tp_load_flow_setpoint(pm::GenericPowerModel, load_id::Int; n
         constraint_tp_load_flow_setpoint_delta(pm, nw, load_id, load["load_bus"], pd, qd)
     else
         error(LOGGER, "Unknown load connection type $conn.")
+    end
+end
+
+
+"Sets va_starts on every bus if the 'va_start' key is not present."
+function set_tp_va_start_if_unset(pm::GenericPowerModel; nw::Int=pm.cnw, va1=0.0, va2=-2*pi/3, va3=2*pi/3, va_offset=0.0)
+    va1 = va1+va_offset
+    va2 = va2+va_offset
+    va3 = va3+va_offset
+
+    for bus_id in ids(pm, pm.cnw, :bus)
+        if !haskey(ref(pm, nw, :bus, bus_id), "va_start")
+            ref(pm, nw, :bus, bus_id)["va_start"] = MultiConductorVector([va1,va2, va3])
+        end
     end
 end
