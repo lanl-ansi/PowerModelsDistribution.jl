@@ -94,12 +94,17 @@ uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.20.0"
 
 [[JuMP]]
-deps = ["Calculus", "Compat", "ForwardDiff", "Libdl", "MathProgBase", "Pkg", "ReverseDiffSparse", "Serialization"]
-git-tree-sha1 = "3bd8e52f7aeb2736a8e1b0d8ae8d01c2c85fea24"
-repo-url = "https://github.com/JuliaOpt/JuMP.jl.git"
-repo-rev = "7c115a2dcc8d92bdb6422dc4ed0919b7842e30fb"
+deps = ["Calculus", "DataStructures", "ForwardDiff", "LinearAlgebra", "MathOptInterface", "NaNMath", "Random", "SparseArrays", "Statistics", "Test"]
+git-tree-sha1 = "db9f08540c1a23269acbae5d520c79f4722899f4"
 uuid = "4076af6c-e467-56ae-b986-b466b2749572"
-version = "0.18.5+"
+version = "0.19.0"
+
+[[Juniper]]
+deps = ["Distributed", "JSON", "JuMP", "LinearAlgebra", "Logging", "MathOptInterface", "Random", "Statistics", "Test"]
+repo-rev = "master"
+repo-url = "https://github.com/lanl-ansi/Juniper.jl.git"
+uuid = "2ddba703-00a4-53a7-87a5-e8b9971dde84"
+version = "0.2.6+"
 
 [[LibGit2]]
 uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
@@ -167,7 +172,7 @@ git-tree-sha1 = "1424521b04d5a2e4b6f084cafeaac6ab905bc9f2"
 repo-rev = "moi-2"
 repo-url = "https://github.com/lanl-ansi/PowerModels.jl.git"
 uuid = "c36e90e8-916a-50a6-bd94-075b64ef4655"
-version = "0.9.3+"
+version = "0.9.5+"
 
 [[Printf]]
 deps = ["Unicode"]
