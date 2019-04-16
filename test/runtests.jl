@@ -51,7 +51,7 @@ juniper_solver = JuMP.with_optimizer(Juniper.Optimizer, nl_solver=JuMP.with_opti
 
     include("tp_debug.jl")
 
-    include("tp_ots.jl")
+    ## include("tp_ots.jl")
 
     include("tp_multinetwork.jl")
 
