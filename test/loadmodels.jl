@@ -84,4 +84,38 @@ sd(pm, tppm_data, name) = pd(sol, tppm_data, name)+im*qd(sol, tppm_data, name)
         @test isapprox(pd(pm, tppm, "y3phm5"), [0.1108, 0.1329, 0.1341], atol=1E-4)
         @test isapprox(qd(pm, tppm, "y3phm5"), [0.0831, 0.0997, 0.1006], atol=1E-4)
     end
+    @testset "models 1/2/5 in acr pf" begin
+        tppm = TPPMs.parse_file("../test/data/opendss/case3_lm_models.dss")
+        pm = PMs.build_generic_model(tppm, PMs.ACRPowerModel, TPPMs.post_tp_pf_lm, multiconductor=true)
+        sol = PMs.solve_generic_model(pm, ipopt_solver)
+        # voltage magnitude at load bus
+        @test isapprox(vm(sol, tppm, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)
+        # delta and wye single-phase load models
+        @test isapprox(pd(pm, tppm, "d1phm1"), [0.4000, 0, 0], atol=1E-4)
+        @test isapprox(qd(pm, tppm, "d1phm1"), [0.3000, 0, 0], atol=1E-4)
+        @test isapprox(pd(pm, tppm, "d1phm2"), [0.2783, 0, 0], atol=1E-4)
+        @test isapprox(qd(pm, tppm, "d1phm2"), [0.2087, 0, 0], atol=1E-4)
+        @test isapprox(pd(pm, tppm, "d1phm5"), [0.3336, 0, 0], atol=1E-4)
+        @test isapprox(qd(pm, tppm, "d1phm5"), [0.2502, 0, 0], atol=1E-4)
+        @test isapprox(pd(pm, tppm, "y1phm1"), [0.4000, 0, 0], atol=1E-4)
+        @test isapprox(qd(pm, tppm, "y1phm1"), [0.3000, 0, 0], atol=1E-4)
+        @test isapprox(pd(pm, tppm, "y1phm2"), [0.2783, 0, 0], atol=1E-4)
+        @test isapprox(qd(pm, tppm, "y1phm2"), [0.2087, 0, 0], atol=1E-4)
+        @test isapprox(pd(pm, tppm, "y1phm5"), [0.3336, 0, 0], atol=1E-4)
+        @test isapprox(qd(pm, tppm, "y1phm5"), [0.2502, 0, 0], atol=1E-4)
+        # delta three-phase loads
+        @test isapprox(pd(pm, tppm, "d3phm1"), [0.1160, 0.1465, 0.1375], atol=1E-4)
+        @test isapprox(qd(pm, tppm, "d3phm1"), [0.0896, 0.0977, 0.1127], atol=1E-4)
+        @test isapprox(pd(pm, tppm, "d3phm2"), [0.1005, 0.1348, 0.1212], atol=1E-4)
+        @test isapprox(qd(pm, tppm, "d3phm2"), [0.0771, 0.0854, 0.1048], atol=1E-4)
+        @test isapprox(pd(pm, tppm, "d3phm5"), [0.1080, 0.1405, 0.1291], atol=1E-4)
+        @test isapprox(qd(pm, tppm, "d3phm5"), [0.0831, 0.0914, 0.1087], atol=1E-4)
+        # wye three-phase loads
+        @test isapprox(pd(pm, tppm, "y3phm1"), [0.1333, 0.1333, 0.1333], atol=1E-4)
+        @test isapprox(qd(pm, tppm, "y3phm1"), [0.1000, 0.1000, 0.1000], atol=1E-4)
+        @test isapprox(pd(pm, tppm, "y3phm2"), [0.0920, 0.1324, 0.1349], atol=1E-4)
+        @test isapprox(qd(pm, tppm, "y3phm2"), [0.0690, 0.0993, 0.1012], atol=1E-4)
+        @test isapprox(pd(pm, tppm, "y3phm5"), [0.1108, 0.1329, 0.1341], atol=1E-4)
+        @test isapprox(qd(pm, tppm, "y3phm5"), [0.0831, 0.0997, 0.1006], atol=1E-4)
+    end
 end
