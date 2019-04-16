@@ -204,53 +204,102 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             loadDict["name"] = defaults["name"]
             loadDict["load_bus"] = find_bus(name, tppm_data)
 
+            # V2
             loadDict["conn"] = defaults["conn"]
-
-            # parse power depending on phases=1/2/3, conn=delta/wye, bus1=...
-            conn = defaults["conn"]
             nph = defaults["phases"]
-            nodes_ph = nodes[1:3]
-            if conn=="wye"
-                pqd_premul = nodes_ph./sum(nodes_ph)
-            elseif conn=="delta"
-                if nph==1
-                    #  ab->a, bc->b, ca->c
-                    if nodes_ph==[true, true, false]
-                        pqd_premul = [1, 0, 0]
-                    elseif nodes_ph==[false, true, true]
-                        pqd_premul = [0, 1, 0]
-                    elseif  nodes_ph==[true, false, true]
-                        pqd_premul = [0, 0, 1]
-                    else
-                        error(LOGGER, "Inconsistent connection specification for 1-phase delta load.")
-                    end
-                elseif nph==2
-                    # the order of the nodes phases is important now
-                    # for example,
-                    # phases=2 bus1=x.1.2.3 means ab (12) and bc (23)
-                    # phases=2 bus1=x.1.3.2 means ca (13 or 31) and bc (32 or 23)
-                    cnds = get_conductors_ordered(defaults["bus1"])
-                    if !all([x in [1, 2, 3] for x in cnds]) || length(cnds)!=3
-                        error(LOGGER, "Inconsistent connection specification for 2-phase delta load.")
-                    end
-                    cnds_fl = cnds[[true, false, true]]
-                    if cnds_fl==[1, 3] ||  cnds_fl==[3, 1]
-                        pqd_premul = [1/2, 1/2, 0]
-                    elseif cnds_fl==[1, 2] ||  cnds_fl==[2, 1]
-                        pqd_premul = [0, 1/2, 1/2]
-                    elseif cnds_fl==[2, 3] ||  cnds_fl==[3, 2]
-                        pqd_premul = [1/2, 0, 1/2]
-                    end
-                else # nph==3
-                    pqd_premul = [1/3, 1/3, 1/3]
+            cnds = get_conductors_ordered(defaults["bus1"])
+            if !all([c in collect(0:3) for c in cnds])
+                error(LOGGER, "Conductors should be in [0,1,2,3].")
+            end
+            delta_map = Dict([1,2]=>1, [2,1]=>1, [2,3]=>2, [3,2]=>2, [1,3]=>3, [3,1]=>3)
+            if nph==1
+                # default is to connect betwheen L1 and N
+                cnds = (isempty(cnds)) ? [1, 0] : cnds
+                # if only one connection specified, implicitly connected to N
+                # bus1=x.c == bus1=x.c.0
+                if length(cnds)==1
+                    cnds = [cnds..., 0]
                 end
+                # if more than two, only first two are considered
+                if length(cnds)>2
+                    cnds = cnds[1:2]
+                end
+                # conn property has no effect
+                # delta/wye is determined by whether load connected to ground
+                # or between two phases
+                if cnds==[0, 0]
+                    pqd_premul = zeros(3)
+                elseif cnds[2]==0 || cnds[1]==0
+                    # this is a wye load in the TPPM sense
+                    loadDict["conn"] = "wye"
+                    ph = (cnds[2]==0) ? cnds[1] : cnds[2]
+                    pqd_premul = zeros(3)
+                    pqd_premul[ph] = 1
+                else
+                    # this is a delta load in the TPPM sense
+                    loadDict["conn"] = "delta"
+                    pqd_premul = zeros(3)
+                    pqd_premul[delta_map[cnds]] = 1
+                end
+            elseif nph==2
+                # there are some extremely weird edge cases for this
+                # the user can enter weird stuff and OpenDSS will still show some result
+                # for example, take
+                # nphases=3 bus1=x.1.2.0
+                # this looks like a combination of a single-phase TPPM delta and wye load
+                # so throw an error and ask to reformulate as single and three phase loads
+                error(LOGGER, "Two-phase loads (nphases=2) are not supported, as these lead to unexpected behaviour. Reformulate this load as a combination of single-phase loads.")
+            elseif nph==3
+                pqd_premul = [1/3, 1/3, 1/3]
             else
-                error(LOGGER, "Unknown load connection type $conn.")
+                error(LOGGER, "For a load, nphases should be in [1,3].")
             end
             loadDict["pd"] = MultiConductorVector(pqd_premul.*defaults["kw"]./1e3)
             loadDict["qd"] = MultiConductorVector(pqd_premul.*defaults["kvar"]./1e3)
 
-
+            # parse the model
+            name = defaults["name"]
+            model = defaults["model"]
+            # some info on OpenDSS load models
+            ##################################
+            # Constant can still be scaled by other settings, fixed cannot
+            # Note that in the current feature set, fixed therefore equals constant
+            # 1: Constant P and Q, default
+            if model == 2
+            # 2: Constant Z
+                loadDict["vbase_kv"] = defaults["kv"]
+                loadDict["vnom_kv"] = defaults["kv"]
+                #loadDict["gs"] = loadDict["pd"]./loadDict["vnom_kv"]^2
+                #loadDict["bs"] = loadDict["qd"]./loadDict["vnom_kv"]^2
+                #TODO add vbase conversion in trans extension
+            elseif model == 3
+            # 3: Constant P and quadratic Q
+                warn(LOGGER, "$name: load model 3 not supported. Treating as model 1.")
+                model = 1
+            elseif model == 4
+            # 4: Exponential
+                warn(LOGGER, "$name: load model 4 not supported. Treating as model 1.")
+                model = 1
+            elseif model == 5
+            # 5: Constant I
+                #warn(LOGGER, "$name: load model 5 not supported. Treating as model 1.")
+                #model = 1
+            elseif model == 6
+            # 6: Constant P and fixed Q
+                warn(LOGGER, "$name: load model 5 identical to model 1 in current feature set. Treating as model 1.")
+                model = 1
+            elseif model == 7
+            # 7: Constant P and quadratic Q (i.e., fixed reactance)
+                warn(LOGGER, "$name: load model 7 not supported. Treating as model 1.")
+                model = 1
+            elseif model == 8
+            # 8: ZIP
+                warn(LOGGER, "$name: load model 8 not supported. Treating as model 1.")
+                model = 1
+            end
+            # save adjusted model type to dict, human-readable
+            model_int2str = Dict(1=>"constant_power", 2=>"proportional_vmsqr", 5=>"proportional_vm")
+            loadDict["model"] = model_int2str[model]
 
             loadDict["status"] = convert(Int, defaults["enabled"])
 

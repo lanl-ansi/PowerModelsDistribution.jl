@@ -25,17 +25,67 @@ function constraint_tp_storage_loss(pm::GenericPowerModel, n::Int, i, bus, r, x,
 end
 
 
-function constraint_tp_load_flow_setpoint(pm::GenericPowerModel, load_id::Int; nw=pm.cnw)
+function constraint_tp_load_power_setpoint(pm::GenericPowerModel, load_id::Int; nw=pm.cnw)
     load = ref(pm, nw, :load, load_id)
     pd = load["pd"]
     qd = load["qd"]
     conn = load["conn"]
     if conn=="wye"
         for c in PMs.conductor_ids(pm)
-            constraint_load_flow_setpoint_wye(pm, nw, c, load_id, pd[c], qd[c])
+            constraint_load_power_setpoint_wye(pm, nw, c, load_id, pd[c], qd[c])
         end
     elseif conn=="delta"
-        constraint_tp_load_flow_setpoint_delta(pm, nw, load_id, load["load_bus"], pd, qd)
+        constraint_tp_load_power_setpoint_delta(pm, nw, load_id, load["load_bus"], pd, qd)
+    else
+        error(LOGGER, "Unknown load connection type $conn.")
+    end
+end
+
+
+function constraint_tp_load_power_prop_vm(pm::GenericPowerModel, load_id::Int; nw=pm.cnw)
+    load = ref(pm, nw, :load, load_id)
+
+    vnom_kv = load["vnom_kv"]
+    vbase_kv_LL = ref(pm, nw, :bus, load["load_bus"])["base_kv"]
+    vbase_kv_LN = vbase_kv_LL/sqrt(3)
+
+    pd = load["pd"]
+    qd = load["qd"]
+    cp = pd/(vnom_kv/vbase_kv_LN)
+    cq = qd/(vnom_kv/vbase_kv_LN)
+
+    conn = load["conn"]
+    if conn=="wye"
+        for c in PMs.conductor_ids(pm)
+            constraint_load_power_prop_vm_wye(pm, nw, c, load_id, load["load_bus"], cp[c], cq[c])
+        end
+    elseif conn=="delta"
+        constraint_tp_load_power_prop_vm_delta(pm, nw, load_id, load["load_bus"], cp, cq)
+    else
+        error(LOGGER, "Unknown load connection type $conn.")
+    end
+end
+
+
+function constraint_tp_load_power_prop_vmsqr(pm::GenericPowerModel, load_id::Int; nw=pm.cnw)
+    load = ref(pm, nw, :load, load_id)
+
+    vnom_kv = load["vnom_kv"]
+    vbase_kv_LL = ref(pm, nw, :bus, load["load_bus"])["base_kv"]
+    vbase_kv_LN = vbase_kv_LL/sqrt(3)
+
+    pd = load["pd"]
+    qd = load["qd"]
+    cp = pd/(vnom_kv/vbase_kv_LN)^2
+    cq = qd/(vnom_kv/vbase_kv_LN)^2
+
+    conn = load["conn"]
+    if conn=="wye"
+        for c in PMs.conductor_ids(pm)
+            constraint_load_power_prop_vmsqr_wye(pm, nw, c, load_id, load["load_bus"], cp[c], cq[c])
+        end
+    elseif conn=="delta"
+        constraint_tp_load_power_prop_vmsqr_delta(pm, nw, load_id, load["load_bus"], cp, cq)
     else
         error(LOGGER, "Unknown load connection type $conn.")
     end

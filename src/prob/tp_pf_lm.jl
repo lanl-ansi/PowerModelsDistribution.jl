@@ -72,7 +72,16 @@ function post_tp_pf_lm(pm::GenericPowerModel)
     end
 
     for id in ids(pm, :load)
-        constraint_tp_load_flow_setpoint(pm, id)
+        model = ref(pm, pm.cnw, :load, id, "model")
+        if model=="constant_power"
+            constraint_tp_load_power_setpoint(pm, id)
+        elseif model=="proportional_vm"
+            constraint_tp_load_power_prop_vm(pm, id)
+        elseif model=="proportional_vmsqr"
+            constraint_tp_load_power_prop_vmsqr(pm, id)
+        else
+            @error(LOGGER, "Unknown model $model for load $id.")
+        end
     end
 
     for i in ids(pm, :branch), c in PMs.conductor_ids(pm)
