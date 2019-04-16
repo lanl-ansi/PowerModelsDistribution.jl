@@ -327,12 +327,12 @@ function constraint_load_power_prop_vm_wye(pm::GenericPowerModel{T}, nw::Int, cn
 end
 
 
-function constraint_load_power_prop_vmsqr_wye(pm::GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, scale_p::Real, scale_q::Real) where T <: PMs.AbstractACPForm
+function constraint_load_power_prop_vmsqr_wye(pm::GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real) where T <: PMs.AbstractACPForm
     pd = var(pm, nw, cnd, :pd, load_id)
     qd = var(pm, nw, cnd, :qd, load_id)
     vm = var(pm, nw, cnd, :vm, load_bus_id)
-    @NLconstraint(pm.model, pd==scale_p*vm^2)
-    @NLconstraint(pm.model, qd==scale_q*vm^2)
+    @NLconstraint(pm.model, pd==cp*vm^2)
+    @NLconstraint(pm.model, qd==cq*vm^2)
 end
 
 

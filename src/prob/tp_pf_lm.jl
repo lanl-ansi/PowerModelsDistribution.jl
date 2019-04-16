@@ -42,7 +42,8 @@ function post_tp_pf_lm(pm::GenericPowerModel)
     add_arcs_trans!(pm)
     variable_tp_trans_flow(pm, bounded=false)
 
-    constraint_tp_voltage(pm)
+    # why is this one included in pf?
+    # constraint_tp_voltage(pm)
     # lower bound is often needed to converge
     # this constraint only sets bound if previously unset
     constraint_tp_voltage_mag_unbound(pm, vmin=0.3, vmax=Inf)
