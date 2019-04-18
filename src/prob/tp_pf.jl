@@ -28,6 +28,8 @@ end
 
 ""
 function post_tp_pf(pm::GenericPowerModel)
+    add_arcs_trans!(pm)
+
     variable_tp_voltage(pm, bounded=false)
     variable_tp_branch_flow(pm, bounded=false)
 
@@ -36,7 +38,6 @@ function post_tp_pf(pm::GenericPowerModel)
         PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
     end
 
-    add_arcs_trans!(pm)
     variable_tp_trans_flow(pm, bounded=false)
 
     constraint_tp_voltage(pm)
@@ -90,12 +91,10 @@ function post_tp_pf(pm::GenericPowerModel)
         end
     end
 
-    if haskey(ref(pm), :trans)
-        for i in ids(pm, :trans)
-            trans = ref(pm, :trans, i)
-            constraint_tp_trans_voltage(pm, i)
-            constraint_tp_trans_flow(pm, i)
-        end
+    for i in ids(pm, :trans)
+        trans = ref(pm, :trans, i)
+        constraint_tp_trans_voltage(pm, i)
+        constraint_tp_trans_flow(pm, i)
     end
 
 end
