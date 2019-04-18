@@ -60,8 +60,7 @@ function post_tp_opf_oltc(pm::GenericPowerModel)
     end
 
     for i in ids(pm, :trans)
-        constraint_tp_trans_voltage_var(pm, i)
-        constraint_tp_trans_flow_var(pm, i)
+        constraint_tp_oltc(pm, i)
     end
 
     PMs.objective_min_fuel_cost(pm)

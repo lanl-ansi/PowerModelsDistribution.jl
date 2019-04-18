@@ -60,8 +60,7 @@ function post_tp_opf(pm::GenericPowerModel)
     end
 
     for i in ids(pm, :trans)
-        constraint_tp_trans_voltage(pm, i)
-        constraint_tp_trans_flow(pm, i)
+        constraint_tp_trans(pm, i)
     end
 
     PMs.objective_min_fuel_cost(pm)

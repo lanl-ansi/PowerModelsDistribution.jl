@@ -92,9 +92,7 @@ function post_tp_pf(pm::GenericPowerModel)
     end
 
     for i in ids(pm, :trans)
-        trans = ref(pm, :trans, i)
-        constraint_tp_trans_voltage(pm, i)
-        constraint_tp_trans_flow(pm, i)
+        constraint_tp_trans(pm, i)
     end
 
 end
