@@ -225,31 +225,14 @@ function constraint_tp_trans(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     if ref(pm, pm.cnw, :conductors)!=3
         error(LOGGER, "Transformers only work with networks with three conductors.")
     end
-    constraint_tp_trans_voltage(pm, i, nw=nw)
-    constraint_tp_trans_flow(pm, i, nw=nw)
-end
-
-
-"Links the voltage at both windings of a fixed tap transformer."
-function constraint_tp_trans_voltage(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
-    # TODO add checks to simplify
     f_bus = ref(pm, :trans, i)["f_bus"]
     t_bus = ref(pm, :trans, i)["t_bus"]
     tapset = ref(pm, :trans, i)["tapset"]
-    constraint_tp_trans_voltage(pm, i, f_bus, t_bus, tapset, Tv_fr, Tv_im, Cv_to)
-end
-
-
-"Links the power flowing into both windings of a fixed tap transformer."
-function constraint_tp_trans_flow(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
-    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
-    # TODO add checks to simplify
-    f_bus = ref(pm, :trans, i)["f_bus"]
-    t_bus = ref(pm, :trans, i)["t_bus"]
+    constraint_tp_trans_voltage(pm, nw, i, f_bus, t_bus, tapset, Tv_fr, Tv_im, Cv_to)
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
-    constraint_tp_trans_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
+    constraint_tp_trans_flow(pm, nw, i, f_bus, t_bus, f_idx, t_idx, tapset, Ti_fr, Ti_im, Cv_to)
 end
 
 
@@ -257,38 +240,19 @@ function constraint_tp_oltc(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     if ref(pm, pm.cnw, :conductors)!=3
         error(LOGGER, "Transformers only work with networks with three conductors.")
     end
-    constraint_tp_oltc_voltage(pm, i, nw=nw)
-    constraint_tp_oltc_flow(pm, i, nw=nw)
-    # leave all free for now; future support through dispatchable
-    # fix the taps with a constraint which are not free
-    # at least one tap will be free
-    # trans = ref(pm, :trans, i)
-    # tapfix = trans["tapfix"]
-    # tapset = trans["tapset"]
-    # constraint_tp_trans_tap_fix(pm, i, tapfix, tapset)
-end
-
-
-"Links the voltage at both windings of a variable tap transformer."
-function constraint_tp_oltc_voltage(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
     trans = ref(pm, :trans, i)
     f_bus = trans["f_bus"]
     t_bus = trans["t_bus"]
-    constraint_tp_trans_voltage_var(pm, i, f_bus, t_bus, Tv_fr, Tv_im, Cv_to)
-
-end
-
-
-"Links the power flowing into both windings of a variable tap transformer."
-function constraint_tp_oltc_flow(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
-    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
-    # TODO add checks to simplify
-    f_bus = ref(pm, :trans, i)["f_bus"]
-    t_bus = ref(pm, :trans, i)["t_bus"]
+    constraint_tp_oltc_voltage(pm, nw, i, f_bus, t_bus, Tv_fr, Tv_im, Cv_to)
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
-    constraint_tp_trans_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
+    constraint_tp_oltc_flow(pm, nw, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im, Cv_to)
+    # fix the taps with a constraint which are not free
+    trans = ref(pm, :trans, i)
+    tapfix = trans["tapfix"]
+    tapset = trans["tapset"]
+    constraint_tp_oltc_tap_fix(pm, i, tapfix, tapset)
 end
 
 

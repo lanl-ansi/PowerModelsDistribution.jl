@@ -186,31 +186,18 @@ function variable_tp_trans_reactive_flow(pm::GenericPowerModel; nw::Int=pm.cnw, 
 end
 
 
-"""
-Create tap variables;
-only do this for OLTCs which have at least one non-fixed tap.
-"""
-function variable_tp_trans_tap(pm::GenericPowerModel; nw=pm.cnw, kwargs...)
-    tr_ids = [tr_id for tr_id in ids(pm, pm.cnw, :trans)
-        if !(all(ref(pm, pm.cnw, :trans, tr_id, "tapfix")))
-    ]
-    if !isempty(tr_ids)
-        variable_tp_trans_tap(pm::GenericPowerModel, tr_ids; kwargs...)
-    end
-end
-
-
-"For a given set of transformers, create tap variables."
-function variable_tp_trans_tap(pm::GenericPowerModel, tr_ids::Array{Int,1}; nw::Int=pm.cnw, bounded=true)
+"Create tap variables."
+function variable_tp_oltc_tap(pm::GenericPowerModel; nw::Int=pm.cnw, bounded=true)
     nphases = 3
+    oltc_ids = PMs.ids(pm, pm.cnw, :trans)
     for c in 1:nphases
         var(pm, nw, c)[:tap] = @variable(pm.model,
-            [tr_id in tr_ids],
+            [i in oltc_ids],
             basename="$(nw)_tap",
-            start=ref(pm, nw, :trans, tr_id, "tapset")[c]
+            start=ref(pm, nw, :trans, i, "tapset")[c]
         )
         if bounded
-            for tr_id in tr_ids
+            for tr_id in oltc_ids
                 setlowerbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tapmin")[c])
                 setupperbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tapmax")[c])
             end

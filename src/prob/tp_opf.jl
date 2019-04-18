@@ -31,7 +31,6 @@ function post_tp_opf(pm::GenericPowerModel)
         PMs.variable_dcline_flow(pm, cnd=c)
     end
     variable_tp_trans_flow(pm)
-    variable_tp_trans_tap(pm)
 
     constraint_tp_voltage(pm)
 

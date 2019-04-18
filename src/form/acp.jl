@@ -170,96 +170,46 @@ end
 
 
 "Links the voltage at both windings of a fixed tap transformer."
-function constraint_tp_trans_voltage(pm::GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, tapset::MultiConductorVector, Tv_fr, Tv_im, Cv_to; nw::Int=pm.cnw)
+function constraint_tp_trans_voltage(pm::GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, tapset::MultiConductorVector, Tv_fr, Tv_im, Cv_to) where T <: PMs.AbstractACPForm
     ncnd  = 3
-    # intermediate bus voltage, for now ignore tap changer
-    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
-    vm_im = @NLexpression(pm.model, [c in 1:ncnd], vm_to[c]*tapset[c]*Cv_to)
-    va_im = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
-    for c in 1:3
-        if !haskey(var(pm, pm.cnw, c), :vm_trans)
-            var(pm, pm.cnw, c)[:vm_trans] = Dict{Int, Any}()
-            var(pm, pm.cnw, c)[:va_trans] = Dict{Int, Any}()
-        end
-        var(pm, pm.cnw, c, :vm_trans)[i] = vm_im[c]
-        var(pm, pm.cnw, c, :va_trans)[i] = va_im[c]
-    end
     # from side
     vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
     va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
-    for n in 1:size(Tv_fr)[1]
-        @NLconstraint(pm.model,
-              sum(Tv_fr[n,c]*vm_fr[c]*cos(va_fr[c]) for c in 1:ncnd)
-            ==sum(Tv_im[n,c]*vm_im[c]*cos(va_im[c]) for c in 1:ncnd)
-        )
-        @NLconstraint(pm.model,
-              sum(Tv_fr[n,c]*vm_fr[c]*sin(va_fr[c]) for c in 1:ncnd)
-            ==sum(Tv_im[n,c]*vm_im[c]*sin(va_im[c]) for c in 1:ncnd)
-        )
-    end
-end
-
-
-"Links the voltage at both windings of a variable tap transformer."
-function constraint_tp_trans_voltage_var(pm::GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, Tv_fr, Tv_im, Cv_to; nw::Int=pm.cnw)
-    ncnd  = 3
-    # intermediate bus voltage, for now ignore tap changer
+    # to side
     vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
-    tap = [var(pm, nw, c, :tap)[i] for c in 1:ncnd]
-    vm_im = @NLexpression(pm.model, [c in 1:ncnd], vm_to[c]*tap[c]*Cv_to)
-    va_im = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
-    for c in 1:3
-        if !haskey(var(pm, pm.cnw, c), :vm_trans)
-            var(pm, pm.cnw, c)[:vm_trans] = Dict{Int, Any}()
-            var(pm, pm.cnw, c)[:va_trans] = Dict{Int, Any}()
-        end
-        var(pm, pm.cnw, c, :vm_trans)[i] = vm_im[c]
-        var(pm, pm.cnw, c, :va_trans)[i] = va_im[c]
-    end
-    # from side
-    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
-    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    # the intermediate bus voltage is saved as an expression
+    # vm_im[c] = vm_to[c]*tapset[c]*Cv_to
+    # va_im = va_to
     for n in 1:size(Tv_fr)[1]
         @NLconstraint(pm.model,
               sum(Tv_fr[n,c]*vm_fr[c]*cos(va_fr[c]) for c in 1:ncnd)
-            ==sum(Tv_im[n,c]*vm_im[c]*cos(va_im[c]) for c in 1:ncnd)
+            ==sum(Tv_im[n,c]*(vm_to[c]*tapset[c]*Cv_to)*cos(va_to[c]) for c in 1:ncnd)
         )
         @NLconstraint(pm.model,
               sum(Tv_fr[n,c]*vm_fr[c]*sin(va_fr[c]) for c in 1:ncnd)
-            ==sum(Tv_im[n,c]*vm_im[c]*sin(va_im[c]) for c in 1:ncnd)
+            ==sum(Tv_im[n,c]*(vm_to[c]*tapset[c]*Cv_to)*sin(va_to[c]) for c in 1:ncnd)
         )
-    end
-end
-
-
-"""
-For a variable tap transformer, fix the tap variables which are fixed. For
-example, an OLTC where the third phase is fixed, will have tap variables for
-all phases, but the third tap variable should be fixed.
-"""
-function constraint_tp_trans_tap_fix(pm::GenericPowerModel, i::Int, tapfix::MultiConductorVector, tapset::MultiConductorVector; nw=pm.cnw)
-    for (c,fixed) in enumerate(tapfix)
-        if fixed
-            @constraint(pm.model, var(pm, nw, c, :tap)[i]==tapset[c])
-        end
     end
 end
 
 
 "Links the power flowing into both windings of a fixed tap transformer."
-function constraint_tp_trans_flow(pm::GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im; nw::Int=pm.cnw)
-    # the intermediate bus voltage is saved as an expression
+function constraint_tp_trans_flow(pm::GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tapset::MultiConductorVector, Ti_fr, Ti_im, Cv_to) where T <: PMs.AbstractACPForm
     ncnd  = 3
-    vm_im = [var(pm, nw, c, :vm_trans, i) for c in 1:ncnd]
-    va_im = [var(pm, nw, c, :va_trans, i) for c in 1:ncnd]
-    # power is unaffected by tap-changer
-    p_to = [var(pm, nw, c, :pt, t_idx) for c in 1:ncnd]
-    q_to = [var(pm, nw, c, :qt, t_idx) for c in 1:ncnd]
     # from side variables
     vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
     va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
     p_fr = [var(pm, nw, c, :pt, f_idx) for c in 1:ncnd]
     q_fr = [var(pm, nw, c, :qt, f_idx) for c in 1:ncnd]
+    # to side
+    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    p_to = [var(pm, nw, c, :pt, t_idx) for c in 1:ncnd]
+    q_to = [var(pm, nw, c, :qt, t_idx) for c in 1:ncnd]
+    # the intermediate bus voltage is saved as an expression
+    # vm_im[c] = vm_to[c]*tapset[c]*Cv_to
+    # va_im = va_to
     for n in 1:size(Ti_fr)[1]
         # i_fr_re[c] = 1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c]))
         # i_fr_im[c] = 1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c]))
@@ -270,7 +220,7 @@ function constraint_tp_trans_flow(pm::GenericPowerModel, i::Int, f_bus::Int, t_b
                     1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c])) # i_fr_re[c]
               for c in 1:ncnd)
             + sum(Ti_im[n,c]*
-                    1/vm_im[c]*(p_to[c]*cos(va_im[c])+q_to[c]*sin(va_im[c])) # i_to_re[c]
+                    1/(vm_to[c]*tapset[c]*Cv_to)*(p_to[c]*cos(va_to[c])+q_to[c]*sin(va_to[c])) # i_to_re[c]
               for c in 1:ncnd)
             == 0
         )
@@ -279,7 +229,7 @@ function constraint_tp_trans_flow(pm::GenericPowerModel, i::Int, f_bus::Int, t_b
                     1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c])) # i_fr_im[c]
               for c in 1:ncnd)
             + sum(Ti_im[n,c]*
-                    1/vm_im[c]*(p_to[c]*sin(va_im[c])-q_to[c]*cos(va_im[c])) # i_to_im[c]
+                    1/(vm_to[c]*tapset[c]*Cv_to)*(p_to[c]*sin(va_to[c])-q_to[c]*cos(va_to[c])) # i_to_im[c]
               for c in 1:ncnd)
             == 0
         )
@@ -287,8 +237,73 @@ function constraint_tp_trans_flow(pm::GenericPowerModel, i::Int, f_bus::Int, t_b
 end
 
 
+"Links the voltage at both windings of a variable tap transformer."
+function constraint_tp_oltc_voltage(pm::GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, Tv_fr, Tv_im, Cv_to) where T <: PMs.AbstractACPForm
+    ncnd  = 3
+    # from side
+    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
+    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    # tap
+    tap = [var(pm, nw, c, :tap)[i] for c in 1:ncnd]
+    # to side
+    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    # the intermediate bus voltage is saved as an expression
+    # vm_im[c] = vm_to[c]*tap[c]*Cv_to
+    # va_im = va_to
+    for n in 1:size(Tv_fr)[1]
+        @NLconstraint(pm.model,
+              sum(Tv_fr[n,c]*vm_fr[c]*cos(va_fr[c]) for c in 1:ncnd)
+            ==sum(Tv_im[n,c]*(vm_to[c]*tap[c]*Cv_to)*cos(va_to[c]) for c in 1:ncnd)
+        )
+        @NLconstraint(pm.model,
+              sum(Tv_fr[n,c]*vm_fr[c]*sin(va_fr[c]) for c in 1:ncnd)
+            ==sum(Tv_im[n,c]*(vm_to[c]*tap[c]*Cv_to)*sin(va_to[c]) for c in 1:ncnd)
+        )
+    end
+end
+
+
 "Links the power flowing into both windings of a variable tap transformer."
-function constraint_tp_trans_flow_var(pm::GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im; nw::Int=pm.cnw)
-    # for ac formulation, indentical to fixed tap
-    constraint_tp_trans_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
+function constraint_tp_oltc_flow(pm::GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im, Cv_to) where T <: PMs.AbstractACPForm
+    ncnd  = 3
+    # from side variables
+    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
+    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    p_fr = [var(pm, nw, c, :pt, f_idx) for c in 1:ncnd]
+    q_fr = [var(pm, nw, c, :qt, f_idx) for c in 1:ncnd]
+    # tap
+    tap = [var(pm, nw, c, :tap, i) for c in 1:ncnd]
+    # to side
+    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    p_to = [var(pm, nw, c, :pt, t_idx) for c in 1:ncnd]
+    q_to = [var(pm, nw, c, :qt, t_idx) for c in 1:ncnd]
+    # the intermediate bus voltage is saved as an expression
+    # vm_im[c] = vm_to[c]*tap[c]*Cv_to
+    # va_im = va_to
+    for n in 1:size(Ti_fr)[1]
+        # i_fr_re[c] = 1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c]))
+        # i_fr_im[c] = 1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c]))
+        # i_to_re[c] = 1/vm_to[c]*(p_to[c]*cos(va_im[c])+q_to[c]*sin(va_im[c]))
+        # i_to_im[c] = 1/vm_to[c]*(p_to[c]*sin(va_im[c])-q_to[c]*cos(va_im[c]))
+        @NLconstraint(pm.model,
+              sum(Ti_fr[n,c]*
+                    1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c])) # i_fr_re[c]
+              for c in 1:ncnd)
+            + sum(Ti_im[n,c]*
+                    1/(vm_to[c]*tap[c]*Cv_to)*(p_to[c]*cos(va_to[c])+q_to[c]*sin(va_to[c])) # i_to_re[c]
+              for c in 1:ncnd)
+            == 0
+        )
+        @NLconstraint(pm.model,
+              sum(Ti_fr[n,c]*
+                    1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c])) # i_fr_im[c]
+              for c in 1:ncnd)
+            + sum(Ti_im[n,c]*
+                    1/(vm_to[c]*tap[c]*Cv_to)*(p_to[c]*sin(va_to[c])-q_to[c]*cos(va_to[c])) # i_to_im[c]
+              for c in 1:ncnd)
+            == 0
+        )
+    end
 end
