@@ -13,10 +13,10 @@ function constraint_tp_voltage_mag_unbound(pm::GenericPowerModel{T}, i::Int, vmi
         vmax_old = PMs.getupperbound(var(pm, nw, cnd, :vm, i))
         # a lower bound of zero is considered to be unbound
         if vmin_old <= 0
-            PMs.setlowerbound(var(pm, nw, cnd, :vm, i), vmin)
+            setlowerbound(var(pm, nw, cnd, :vm, i), vmin)
         end
         if vmax == Inf
-            PMs.setupperbound(var(pm, nw, cnd, :vm, i), vmax)
+            setupperbound(var(pm, nw, cnd, :vm, i), vmax)
         end
     end
 end

@@ -157,8 +157,8 @@ function variable_tp_trans_active_flow(pm::GenericPowerModel; nw::Int=pm.cnw, bo
                 tr_id = arc[1]
                 flow_lb  = -ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
                 flow_ub  =  ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
-                PMs.setlowerbound(var(pm, nw, cnd, :pt, arc), flow_lb)
-                PMs.setupperbound(var(pm, nw, cnd, :pt, arc), flow_ub)
+                setlowerbound(var(pm, nw, cnd, :pt, arc), flow_lb)
+                setupperbound(var(pm, nw, cnd, :pt, arc), flow_ub)
             end
         end
     end
@@ -178,8 +178,8 @@ function variable_tp_trans_reactive_flow(pm::GenericPowerModel; nw::Int=pm.cnw, 
                 tr_id = arc[1]
                 flow_lb  = -ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
                 flow_ub  = ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
-                PMs.setlowerbound(var(pm, nw, cnd, :qt, arc), flow_lb)
-                PMs.setupperbound(var(pm, nw, cnd, :qt, arc), flow_ub)
+                setlowerbound(var(pm, nw, cnd, :qt, arc), flow_lb)
+                setupperbound(var(pm, nw, cnd, :qt, arc), flow_ub)
             end
         end
     end
@@ -211,8 +211,8 @@ function variable_tp_trans_tap(pm::GenericPowerModel, tr_ids::Array{Int,1}; nw::
         )
         if bounded
             for tr_id in tr_ids
-                PMs.setlowerbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tapmin")[c])
-                PMs.setupperbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tapmax")[c])
+                setlowerbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tapmin")[c])
+                setupperbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tapmax")[c])
             end
         end
     end
