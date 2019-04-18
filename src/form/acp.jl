@@ -6,22 +6,6 @@ function constraint_tp_voltage(pm::GenericPowerModel{T}, n::Int, c::Int) where T
 end
 
 
-"Set loose voltage bounds; they will only be set if the voltage magnitude was unconstrained before."
-function constraint_tp_voltage_mag_unbound(pm::GenericPowerModel{T}, i::Int, vmin::Float64, vmax::Float64; nw::Int=pm.cnw) where T <: PMs.AbstractACPForm
-    for cnd in PMs.conductor_ids(pm)
-        vmin_old = PMs.getlowerbound(var(pm, nw, cnd, :vm, i))
-        vmax_old = PMs.getupperbound(var(pm, nw, cnd, :vm, i))
-        # a lower bound of zero is considered to be unbound
-        if vmin_old <= 0
-            setlowerbound(var(pm, nw, cnd, :vm, i), vmin)
-        end
-        if vmax == Inf
-            setupperbound(var(pm, nw, cnd, :vm, i), vmax)
-        end
-    end
-end
-
-
 ""
 function constraint_kcl_shunt_slack(pm::GenericPowerModel{T}, n::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: PMs.AbstractACPForm
     vm = var(pm, n, c, :vm, i)

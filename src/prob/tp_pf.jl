@@ -41,9 +41,6 @@ function post_tp_pf(pm::GenericPowerModel)
     variable_tp_trans_flow(pm, bounded=false)
 
     constraint_tp_voltage(pm)
-    # lower bound is often needed to converge
-    # this constraint only sets bound if previously unset
-    constraint_tp_voltage_mag_unbound(pm, vmin=0.3, vmax=Inf)
 
     for (i,bus) in ref(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)
