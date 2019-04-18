@@ -84,8 +84,8 @@ function constraint_kcl_shunt_trans(pm::GenericPowerModel{T}, nw::Int, c::Int, i
     q    = var(pm, nw, c, :q)
     p_dc = var(pm, nw, c, :p_dc)
     q_dc = var(pm, nw, c, :q_dc)
-    p_trans = var(pm, nw, c, :p_trans)
-    q_trans = var(pm,  nw, c, :q_trans)
+    p_trans = var(pm, nw, c, :pt)
+    q_trans = var(pm,  nw, c, :qt)
 
     @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*w)
     @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(q_trans[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*w)

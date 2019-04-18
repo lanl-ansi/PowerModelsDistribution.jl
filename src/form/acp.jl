@@ -48,9 +48,9 @@ function constraint_kcl_shunt_trans(pm::GenericPowerModel{T}, nw::Int, c::Int, i
     qg = var(pm, nw, c, :qg)
     p_dc = var(pm, nw, c, :p_dc)
     q_dc = var(pm, nw, c, :q_dc)
-    p_trans = var(pm, nw, c, :p_trans)
-    q_trans = var(pm,  nw, c, :q_trans)
-    
+    p_trans = var(pm, nw, c, :pt)
+    q_trans = var(pm,  nw, c, :qt)
+
     con(pm, nw, c, :kcl_p)[i] = @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*vm^2)
     con(pm, nw, c, :kcl_q)[i] = @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(q_trans[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*vm^2)
 end
@@ -253,13 +253,13 @@ function constraint_tp_trans_flow(pm::GenericPowerModel, i::Int, f_bus::Int, t_b
     vm_im = [var(pm, nw, c, :vm_trans, i) for c in 1:ncnd]
     va_im = [var(pm, nw, c, :va_trans, i) for c in 1:ncnd]
     # power is unaffected by tap-changer
-    p_to = [var(pm, nw, c, :p_trans, t_idx) for c in 1:ncnd]
-    q_to = [var(pm, nw, c, :q_trans, t_idx) for c in 1:ncnd]
+    p_to = [var(pm, nw, c, :pt, t_idx) for c in 1:ncnd]
+    q_to = [var(pm, nw, c, :qt, t_idx) for c in 1:ncnd]
     # from side variables
     vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
     va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
-    p_fr = [var(pm, nw, c, :p_trans, f_idx) for c in 1:ncnd]
-    q_fr = [var(pm, nw, c, :q_trans, f_idx) for c in 1:ncnd]
+    p_fr = [var(pm, nw, c, :pt, f_idx) for c in 1:ncnd]
+    q_fr = [var(pm, nw, c, :qt, f_idx) for c in 1:ncnd]
     for n in 1:size(Ti_fr)[1]
         # i_fr_re[c] = 1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c]))
         # i_fr_im[c] = 1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c]))

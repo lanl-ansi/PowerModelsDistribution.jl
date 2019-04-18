@@ -147,7 +147,7 @@ end
 "Create variables for the active power flowing into all transformer windings."
 function variable_tp_trans_active_flow(pm::GenericPowerModel; nw::Int=pm.cnw, bounded=true)
     for cnd in PMs.conductor_ids(pm)
-        var(pm, nw, cnd)[:p_trans] = @variable(pm.model,
+        var(pm, nw, cnd)[:pt] = @variable(pm.model,
             [(l,i,j) in ref(pm, nw, :arcs_trans)],
             basename="$(nw)_$(cnd)_p_trans",
             start=0
@@ -157,8 +157,8 @@ function variable_tp_trans_active_flow(pm::GenericPowerModel; nw::Int=pm.cnw, bo
                 tr_id = arc[1]
                 flow_lb  = -ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
                 flow_ub  =  ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
-                PMs.setlowerbound(var(pm, nw, cnd, :p_trans, arc), flow_lb)
-                PMs.setupperbound(var(pm, nw, cnd, :p_trans, arc), flow_ub)
+                PMs.setlowerbound(var(pm, nw, cnd, :pt, arc), flow_lb)
+                PMs.setupperbound(var(pm, nw, cnd, :pt, arc), flow_ub)
             end
         end
     end
@@ -168,7 +168,7 @@ end
 "Create variables for the reactive power flowing into all transformer windings."
 function variable_tp_trans_reactive_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
     for cnd in PMs.conductor_ids(pm)
-        var(pm, nw, cnd)[:q_trans] = @variable(pm.model,
+        var(pm, nw, cnd)[:qt] = @variable(pm.model,
             [(l,i,j) in ref(pm, nw, :arcs_trans)],
             basename="$(nw)_$(cnd)_q_trans",
             start=0
@@ -178,8 +178,8 @@ function variable_tp_trans_reactive_flow(pm::GenericPowerModel; nw::Int=pm.cnw, 
                 tr_id = arc[1]
                 flow_lb  = -ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
                 flow_ub  = ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
-                PMs.setlowerbound(var(pm, nw, cnd, :q_trans, arc), flow_lb)
-                PMs.setupperbound(var(pm, nw, cnd, :q_trans, arc), flow_ub)
+                PMs.setlowerbound(var(pm, nw, cnd, :qt, arc), flow_lb)
+                PMs.setupperbound(var(pm, nw, cnd, :qt, arc), flow_ub)
             end
         end
     end
