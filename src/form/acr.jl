@@ -27,7 +27,7 @@ end
 
 
 "only delegate back to PowerModels if bounded"
-function constraint_voltage(pm::GenericPowerModel{T}, n::Int, c::Int, bounded::Bool) where T <: PMs.AbstractACRForm
+function constraint_tp_voltage(pm::GenericPowerModel{T}, n::Int, c::Int, bounded::Bool) where T <: PMs.AbstractACRForm
     if bounded
         PMs.constraint_voltage(pm, n, c)
     end
