@@ -28,6 +28,8 @@ end
 
 ""
 function post_tp_pf_lm(pm::GenericPowerModel)
+    add_arcs_trans!(pm)
+
     # without, starting point will divide by zero for delta loads
     set_tp_va_start_if_unset(pm)
     variable_tp_voltage(pm, bounded=false)
@@ -39,14 +41,9 @@ function post_tp_pf_lm(pm::GenericPowerModel)
         PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
     end
 
-    add_arcs_trans!(pm)
     variable_tp_trans_flow(pm, bounded=false)
 
-    # why is this one included in pf?
-    # constraint_tp_voltage(pm)
-    # lower bound is often needed to converge
-    # this constraint only sets bound if previously unset
-    constraint_tp_voltage_mag_unbound(pm, vmin=0.3, vmax=Inf)
+    constraint_tp_voltage(pm, bounded=false)
 
     for (i,bus) in ref(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)
@@ -107,12 +104,8 @@ function post_tp_pf_lm(pm::GenericPowerModel)
         end
     end
 
-    if haskey(ref(pm), :trans)
-        for i in ids(pm, :trans)
-            trans = ref(pm, :trans, i)
-            constraint_tp_trans_voltage(pm, i)
-            constraint_tp_trans_flow(pm, i)
-        end
+    for i in ids(pm, :trans)
+        constraint_tp_trans(pm, i)
     end
 
 end

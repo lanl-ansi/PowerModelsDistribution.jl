@@ -56,17 +56,23 @@ function calc_tp_trans_Tvi(pm::GenericPowerModel, i::Int; nw=pm.cnw)
     trans = ref(pm, nw, :trans,  i)
     # transformation matrices
     # Tv and Ti will be compositions of these
-    #Tminn = [diagm(0=>ones(Float64, 3)) -ones(Float64, 3)]  # substract neutral from other conductors
-    #Tnoz = [diagm(0=>ones(Float64, 3)) zeros(Float64, 3)]   # remove the neutral
     Tbr = [0 0 1; 1 0 0; 0 1 0]                             # barrel roll
     Tdelt  = [1 -1 0; 0 1 -1; -1 0 1]                       # delta transform
     # connection transformers
     perm = trans["conn"][1:3]
-    #TODO allow this finally or not?
-    @assert(!(perm in ["213", "321", "132"]))
+    if !(perm in ["123", "312", "231"])
+        error(LOGGER, "Only the permutations \"123\", \"312\" and \"231\" are supported, but got \"$perm\".")
+    end
     polarity = trans["conn"][4]
+    if !(polarity in ['+', '-'])
+        error(LOGGER, "The polarity should be either \'+\' or \'-\', but got \'$polarity\'.")
+    end
     dyz = trans["conn"][5]
-    grounded = length(trans["conn"])>5 && trans["conn"][6]=='n'
+    if !(dyz in ['d', 'y'])
+        error(LOGGER, "The winding type should be either \'d\'(delta) or \'y\'(wye), but got \'$dyz\'.")
+    end
+    # for now, grounded by default
+    #grounded = length(trans["conn"])>5 && trans["conn"][6]=='n'
     # Tw will contain transformations related to permutation and polarity
     perm_to_trans = Dict(
         "123"=>diagm(0=>ones(Float64, 3)),
@@ -94,15 +100,15 @@ function calc_tp_trans_Tvi(pm::GenericPowerModel, i::Int; nw=pm.cnw)
         Ti_im = Tdelt'
         vmult = sqrt(3)
     elseif dyz=='z'
-        #TODO zif-zag here
-    else
-        error(LOGGER, "Illegal connection specification $dyz.")
+        #TODO zig-zag here
     end
-    #Tv_fr = diagm(0=>ones(Float64, 3))*Tminn
-    Cv_to = trans["vnom_kv"][1]*vmult/trans["vnom_kv"][2]
     # make equations dimensionless
+    # if vbase across a transformer scales according to the ratio of vnom_kv,
+    # this will simplify to 1.0
     bkv_fr = ref(pm, nw, :bus, trans["f_bus"], "base_kv")
     bkv_to = ref(pm, nw, :bus, trans["t_bus"], "base_kv")
-    Cv_to = Cv_to*bkv_to/bkv_fr
+    Cv_to = trans["vnom_kv"][1]/trans["vnom_kv"][2]*bkv_to/bkv_fr
+    # compensate for change of LN voltage of a delta winding
+    Cv_to *= vmult
     return (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to)
 end

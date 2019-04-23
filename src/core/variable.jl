@@ -146,7 +146,7 @@ end
 "Create variables for the active power flowing into all transformer windings."
 function variable_tp_trans_active_flow(pm::GenericPowerModel; nw::Int=pm.cnw, bounded=true)
     for cnd in PMs.conductor_ids(pm)
-        var(pm, nw, cnd)[:p_trans] = @variable(pm.model,
+        var(pm, nw, cnd)[:pt] = @variable(pm.model,
             [(l,i,j) in ref(pm, nw, :arcs_trans)],
             basename="$(nw)_$(cnd)_p_trans",
             start=0
@@ -156,8 +156,8 @@ function variable_tp_trans_active_flow(pm::GenericPowerModel; nw::Int=pm.cnw, bo
                 tr_id = arc[1]
                 flow_lb  = -ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
                 flow_ub  =  ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
-                PMs.setlowerbound(var(pm, nw, cnd, :p_trans, arc), flow_lb)
-                PMs.setupperbound(var(pm, nw, cnd, :p_trans, arc), flow_ub)
+                setlowerbound(var(pm, nw, cnd, :pt, arc), flow_lb)
+                setupperbound(var(pm, nw, cnd, :pt, arc), flow_ub)
             end
         end
     end
@@ -167,7 +167,7 @@ end
 "Create variables for the reactive power flowing into all transformer windings."
 function variable_tp_trans_reactive_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
     for cnd in PMs.conductor_ids(pm)
-        var(pm, nw, cnd)[:q_trans] = @variable(pm.model,
+        var(pm, nw, cnd)[:qt] = @variable(pm.model,
             [(l,i,j) in ref(pm, nw, :arcs_trans)],
             basename="$(nw)_$(cnd)_q_trans",
             start=0
@@ -177,41 +177,28 @@ function variable_tp_trans_reactive_flow(pm::GenericPowerModel; nw::Int=pm.cnw, 
                 tr_id = arc[1]
                 flow_lb  = -ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
                 flow_ub  = ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
-                PMs.setlowerbound(var(pm, nw, cnd, :q_trans, arc), flow_lb)
-                PMs.setupperbound(var(pm, nw, cnd, :q_trans, arc), flow_ub)
+                setlowerbound(var(pm, nw, cnd, :qt, arc), flow_lb)
+                setupperbound(var(pm, nw, cnd, :qt, arc), flow_ub)
             end
         end
     end
 end
 
 
-"""
-Create tap variables;
-only do this for OLTCs which have at least one non-fixed tap.
-"""
-function variable_tp_trans_tap(pm::GenericPowerModel; nw=pm.cnw, kwargs...)
-    tr_ids = [tr_id for tr_id in ids(pm, pm.cnw, :trans)
-        if !(all(ref(pm, pm.cnw, :trans, tr_id, "tapfix")))
-    ]
-    if !isempty(tr_ids)
-        variable_tp_trans_tap(pm::GenericPowerModel, tr_ids; kwargs...)
-    end
-end
-
-
-"For a given set of transformers, create tap variables."
-function variable_tp_trans_tap(pm::GenericPowerModel, tr_ids::Array{Int,1}; nw::Int=pm.cnw, bounded=true)
+"Create tap variables."
+function variable_tp_oltc_tap(pm::GenericPowerModel; nw::Int=pm.cnw, bounded=true)
     nphases = 3
+    oltc_ids = PMs.ids(pm, pm.cnw, :trans)
     for c in 1:nphases
         var(pm, nw, c)[:tap] = @variable(pm.model,
-            [tr_id in tr_ids],
+            [i in oltc_ids],
             basename="$(nw)_tap",
-            start=ref(pm, nw, :trans, tr_id, "tapset")[c]
+            start=ref(pm, nw, :trans, i, "tapset")[c]
         )
         if bounded
-            for tr_id in tr_ids
-                PMs.setlowerbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tapmin")[c])
-                PMs.setupperbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tapmax")[c])
+            for tr_id in oltc_ids
+                setlowerbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tapmin")[c])
+                setupperbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tapmax")[c])
             end
         end
     end
