@@ -27,10 +27,16 @@ end
 
 
 ""
-function constraint_tp_voltage(pm::GenericPowerModel; nw::Int=pm.cnw, bounded=true)
+function constraint_tp_voltage(pm::GenericPowerModel; nw::Int=pm.cnw, bounded::Bool=true)
     for c in PMs.conductor_ids(pm)
-        constraint_tp_voltage(pm, nw, c, bounded)
+        constraint_voltage(pm, nw, c, bounded)
     end
+end
+
+
+"delegate back to PowerModels by default"
+function constraint_voltage(pm::GenericPowerModel{T}, n::Int, c::Int, bounded::Bool) where T
+        PMs.constraint_voltage(pm, n, c)
 end
 
 

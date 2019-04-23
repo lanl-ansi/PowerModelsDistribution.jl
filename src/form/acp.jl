@@ -1,11 +1,6 @@
 # Three-phase specific constraints
 
 
-"do nothing, this model does not have complex voltage constraints"
-function constraint_tp_voltage(pm::GenericPowerModel{T}, n::Int, c::Int, bounded::Bool) where T <: PMs.AbstractACPForm
-end
-
-
 ""
 function constraint_kcl_shunt_slack(pm::GenericPowerModel{T}, n::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: PMs.AbstractACPForm
     vm = var(pm, n, c, :vm, i)

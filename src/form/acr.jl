@@ -26,8 +26,8 @@ function variable_tp_voltage(pm::GenericPowerModel{T}; kwargs...) where T <: PMs
 end
 
 
-"delegate back to PowerModels"
-function constraint_tp_voltage(pm::GenericPowerModel{T}, n::Int, c::Int, bounded::Bool) where T <: PMs.AbstractACRForm
+"only delegate back to PowerModels if bounded"
+function constraint_voltage(pm::GenericPowerModel{T}, n::Int, c::Int, bounded::Bool) where T <: PMs.AbstractACRForm
     if bounded
         PMs.constraint_voltage(pm, n, c)
     end
