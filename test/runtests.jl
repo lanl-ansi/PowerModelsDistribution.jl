@@ -14,9 +14,9 @@ using JuMP
 const TESTLOG = Memento.getlogger(PowerModels)
 Memento.setlevel!(TESTLOG, "error")
 
+import JuMP
 import Ipopt
 import Cbc
-import Pavito
 import Juniper
 import SCS
 
