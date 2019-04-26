@@ -624,7 +624,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             end
 
             # voltage and power ratings
-            transDict["vnom_kv"] = defaults["kvs"]
+            #transDict["vnom_kv"] = defaults["kvs"]
             #transDict["snom_kva"] = defaults["kvas"]
             transDict["rate_a"] = [PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
             transDict["rate_b"] = [PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
@@ -634,34 +634,56 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             transDict["rate_b"] *= 1E-3
             transDict["rate_c"] *= 1E-3
             # connection properties
-            dyz_map = Dict("wye"=>"y", "delta"=>"d", "ll"=>"d", "ln"=>"y")
+            dyz_map = Dict("wye"=>"wye", "delta"=>"delta", "ll"=>"delta", "ln"=>"wye")
             dyz_primary = dyz_map[defaults["conns"][1]]
             transDict["conns"] = Array{String,1}(undef, nrw)
-            transDict["conns"][1] = string("123+", dyz_primary)
+
+            transDict["config"] = Dict{Int,Any}()
+            transDict["config"][1] = Dict(
+                "type"=>dyz_primary,
+                "polarity"=>'+',
+                "cnd"=>[1, 2, 3],
+                "grounded"=>true,
+                "vm_nom"=>defaults["kvs"][1]
+            )
+            #transDict["conns"][1] = string("123+", dyz_primary)
             for w in 2:nrw
-                dyz_w = dyz_map[defaults["conns"][w]]
-                if dyz_primary==dyz_w
-                    pp_w = "123+"
+                type = dyz_map[defaults["conns"][w]]
+                if dyz_primary==type
+                    cnd = [1,2,3]
+                    polarity = '+'
                 else
                     if defaults["leadlag"] in ["ansi", "lag"]
                         #Yd1 => (123+y,123+d)
                         #Dy1 => (123+d,231-y)
-                        pp_w = (dyz_w=="d") ? "123+" : "231-"
+                        #pp_w = (type=="delta") ? "123+" : "231-"
+                        cnd = (type=="delta") ? [1, 2, 3] : [2, 3, 1]
+                        polarity = (type=="delta") ? '+' : '-'
                     else # hence defaults["leadlag"] in ["euro", "lead"]
                         #Yd11 => (123+y,312-d)
                         #Dy11 => (123+d,123+y)
-                        pp_w = (dyz_w=="d") ? "312-" : "123+"
+                        #pp_w = (type=="delta") ? "312-" : "123+"
+                        cnd = (type=="delta") ? [3, 1, 2] : [1, 2, 3]
+                        polarity = (type=="delta") ? '-' : '+'
                     end
                 end
-                transDict["conns"][w] = string(pp_w, dyz_w)
+                transDict["config"][w] = Dict(
+                    "type"=>type,
+                    "polarity"=>polarity,
+                    "cnd"=>cnd,
+                    "vm_nom"=>defaults["kvs"][w]
+                )
+                if type=="wye"
+                    transDict["config"][w]["grounded"] = true
+                end
             end
 
             # tap properties
-            transDict["tapset"] = [PMs.MultiConductorVector(ones(Float64,3))*defaults["taps"][i] for i in 1:nrw]
-            transDict["tapmin"] = [PMs.MultiConductorVector(ones(Float64,3))*defaults["mintap"] for i in 1:nrw]
-            transDict["tapmax"] = [PMs.MultiConductorVector(ones(Float64,3))*defaults["maxtap"] for i in 1:nrw]
-            transDict["tapnum"] = [PMs.MultiConductorVector(ones(Int,3))*defaults["numtaps"] for i in 1:nrw]
-            transDict["tapfix"] = [PMs.MultiConductorVector(ones(Bool,3)) for i in 1:nrw]
+            transDict["tm"] = [PMs.MultiConductorVector(ones(Float64,3))*defaults["taps"][i] for i in 1:nrw]
+            transDict["tm_min"] = [PMs.MultiConductorVector(ones(Float64,3))*defaults["mintap"] for i in 1:nrw]
+            transDict["tm_max"] = [PMs.MultiConductorVector(ones(Float64,3))*defaults["maxtap"] for i in 1:nrw]
+            transDict["tm_step"] = [PMs.MultiConductorVector(ones(Int,3))*defaults["numtaps"] for i in 1:nrw]
+            transDict["fixed"] = [PMs.MultiConductorVector(ones(Bool,3)) for i in 1:nrw]
 
             # loss model (converted to SI units, referred to secondary)
             function zpn_to_abc(z, p, n; atol=1E-13)
@@ -987,25 +1009,29 @@ function decompose_transformers!(tppm_data; import_all::Bool=false)
             trans_dict["active_phases"] = [1, 2, 3]
             push_dict_ret_key!(tppm_data["trans"], trans_dict)
             # connection settings
-            conn = trans["conns"][w]
-            trans_dict["conn"] = conn
+            trans_dict["config_fr"] = trans["config"][w]
+            trans_dict["config_to"] = Dict(
+                "type"=>"wye",
+                "polarity"=>'+',
+                "cnd"=>[1, 2, 3],
+                "grounded"=>true,
+                "vm_nom"=>1.0
+            )
             trans_dict["f_bus"] = trans["buses"][w]
             # make virtual bus and mark it for reduction
             vbus_tr = create_vbus!(tppm_data, basekv=1.0, name="tr$(tr_id)_w$(w)_b1")
             trans_dict["t_bus"] = vbus_tr["index"]
             append!(bus_reduce, vbus_tr["index"])
-            # ratings
-            trans_dict["vnom_kv"] = [trans["vnom_kv"][w] 1.0]
             # convert to baseMVA, because this is not done per_unit now)
             trans_dict["rate_a"] = trans["rate_a"][w]/tppm_data["baseMVA"]
             trans_dict["rate_b"] = trans["rate_b"][w]/tppm_data["baseMVA"]
             trans_dict["rate_c"] = trans["rate_c"][w]/tppm_data["baseMVA"]
             # tap settings
-            trans_dict["tapset"] = trans["tapset"][w]
-            trans_dict["tapfix"] = trans["tapfix"][w]
-            trans_dict["tapmax"] = trans["tapmax"][w]
-            trans_dict["tapmin"] = trans["tapmin"][w]
-            trans_dict["tapnum"] = trans["tapnum"][w]
+            trans_dict["tm"] = trans["tm"][w]
+            trans_dict["fixed"] = trans["fixed"][w]
+            trans_dict["tm_max"] = trans["tm_max"][w]
+            trans_dict["tm_min"] = trans["tm_min"][w]
+            trans_dict["tm_step"] = trans["tm_step"][w]
             # WINDING SERIES RESISTANCE
             # make virtual bus and mark it for reduction
             vbus_br = create_vbus!(tppm_data, basekv=1.0, name="tr$(tr_id)_w$(w)_b2")
@@ -1271,7 +1297,7 @@ function adjust_base!(tppm_data; start_at_first_tr_prim=true)
     if start_at_first_tr_prim && haskey(tppm_data, "trans") && haskey(tppm_data["trans"], "1")
         trans_first = tppm_data["trans"]["1"]
         source = trans_first["f_bus"]
-        base_kv_new = trans_first["vnom_kv"][1]
+        base_kv_new = trans_first["config_fr"]["vm_nom"]
     else
         # start at type 3 bus if present
         buses_3 = [bus["index"] for (bus_id_str, bus) in tppm_data["bus"] if bus["bus_type"]==3]
@@ -1360,9 +1386,9 @@ function adjust_base_rec!(tppm_data, source::Int, base_kv_new::Float64, nodes_vi
             trans = tppm_data["trans"][string(tr_id)]
             base_kv_new_tr = deepcopy(base_kv_new)
             if source_new==t_bus
-                base_kv_new_tr *= (trans["vnom_kv"][2]/trans["vnom_kv"][1])
+                base_kv_new_tr *= (trans["config_to"]["vm_nom"]/trans["config_fr"]["vm_nom"])
             else
-                base_kv_new_tr *= (trans["vnom_kv"][1]/trans["vnom_kv"][2])
+                base_kv_new_tr *= (trans["config_fr"]["vm_nom"]/trans["config_to"]["vm_nom"])
             end
             # follow the edge to the adjacent node and repeat
             adjust_base_rec!(tppm_data, source_new, base_kv_new_tr, nodes_visited, edges_br, edges_br_visited, edges_tr, edges_tr_visited, br_basekv_old)

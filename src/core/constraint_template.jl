@@ -211,11 +211,11 @@ function constraint_tp_trans(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
     f_bus = ref(pm, :trans, i)["f_bus"]
     t_bus = ref(pm, :trans, i)["t_bus"]
-    tapset = ref(pm, :trans, i)["tapset"]
-    constraint_tp_trans_voltage(pm, nw, i, f_bus, t_bus, tapset, Tv_fr, Tv_im, Cv_to)
+    tm = ref(pm, :trans, i)["tm"]
+    constraint_tp_trans_voltage(pm, nw, i, f_bus, t_bus, tm, Tv_fr, Tv_im, Cv_to)
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
-    constraint_tp_trans_flow(pm, nw, i, f_bus, t_bus, f_idx, t_idx, tapset, Ti_fr, Ti_im, Cv_to)
+    constraint_tp_trans_flow(pm, nw, i, f_bus, t_bus, f_idx, t_idx, tm, Ti_fr, Ti_im, Cv_to)
 end
 
 
@@ -233,9 +233,9 @@ function constraint_tp_oltc(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     constraint_tp_oltc_flow(pm, nw, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im, Cv_to)
     # fix the taps with a constraint which are not free
     trans = ref(pm, :trans, i)
-    tapfix = trans["tapfix"]
-    tapset = trans["tapset"]
-    constraint_tp_oltc_tap_fix(pm, i, tapfix, tapset)
+    tapfix = trans["fixed"]
+    tm = trans["tm"]
+    constraint_tp_oltc_tap_fix(pm, i, tapfix, tm)
 end
 
 

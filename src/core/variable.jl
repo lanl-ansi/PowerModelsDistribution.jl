@@ -193,13 +193,13 @@ function variable_tp_oltc_tap(pm::GenericPowerModel; nw::Int=pm.cnw, bounded=tru
     for c in 1:nphases
         var(pm, nw, c)[:tap] = @variable(pm.model,
             [i in oltc_ids],
-            basename="$(nw)_tap",
-            start=ref(pm, nw, :trans, i, "tapset")[c]
+            basename="$(nw)_tm",
+            start=ref(pm, nw, :trans, i, "tm")[c]
         )
         if bounded
             for tr_id in oltc_ids
-                setlowerbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tapmin")[c])
-                setupperbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tapmax")[c])
+                setlowerbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tm_min")[c])
+                setupperbound(var(pm, nw, c)[:tap][tr_id], ref(pm, nw, :trans, tr_id, "tm_max")[c])
             end
         end
     end

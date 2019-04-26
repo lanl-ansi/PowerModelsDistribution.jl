@@ -58,32 +58,45 @@ function calc_tp_trans_Tvi(pm::GenericPowerModel, i::Int; nw=pm.cnw)
     # Tv and Ti will be compositions of these
     Tbr = [0 0 1; 1 0 0; 0 1 0]                             # barrel roll
     Tdelt  = [1 -1 0; 0 1 -1; -1 0 1]                       # delta transform
+    # grounding disregarded
+    for config in [trans["config_to"], trans["config_fr"]]
+        if haskey(config, "grounded") && config["grounded"]==false
+            warning(LOGGER, "The wye winding is considered to be grounded instead of ungrounded.")
+        end
+    end
+    # make sure the secondary is y+123
+    if trans["config_to"]["cnd"]!=[1,2,3]
+        error(LOGGER, "Secondary should always be of wye type.")
+    end
+    if trans["config_to"]["polarity"]!='+'
+        error(LOGGER, "Secondary should always be of positive polarity.")
+    end
     # connection transformers
-    perm = trans["conn"][1:3]
-    if !(perm in ["123", "312", "231"])
+    perm = trans["config_fr"]["cnd"]
+    if !(perm in [[1,2,3], [3,1,2], [2,3,1]])
         error(LOGGER, "Only the permutations \"123\", \"312\" and \"231\" are supported, but got \"$perm\".")
     end
-    polarity = trans["conn"][4]
+    polarity = trans["config_fr"]["polarity"]
     if !(polarity in ['+', '-'])
         error(LOGGER, "The polarity should be either \'+\' or \'-\', but got \'$polarity\'.")
     end
-    dyz = trans["conn"][5]
-    if !(dyz in ['d', 'y'])
-        error(LOGGER, "The winding type should be either \'d\'(delta) or \'y\'(wye), but got \'$dyz\'.")
+    dyz = trans["config_fr"]["type"]
+    if !(dyz in ["delta", "wye"])
+        error(LOGGER, "The winding type should be either delta or wye, but got \'$dyz\'.")
     end
     # for now, grounded by default
     #grounded = length(trans["conn"])>5 && trans["conn"][6]=='n'
     # Tw will contain transformations related to permutation and polarity
     perm_to_trans = Dict(
-        "123"=>diagm(0=>ones(Float64, 3)),
-        "312"=>Tbr,
-        "231"=>Tbr*Tbr
+        [1,2,3]=>diagm(0=>ones(Float64, 3)),
+        [3,1,2]=>Tbr,
+        [2,3,1]=>Tbr*Tbr
     )
     Tw = perm_to_trans[perm]
     Tw = (polarity=='+') ? Tw : -Tw
     #Tw = diagm(0=>ones(Float64, 3))
     vmult = 1.0 # compensate for change in LN
-    if dyz=='y'
+    if dyz=="wye"
         Tv_fr = Tw
         Tv_im = diagm(0=>ones(Float64, 3))
         Ti_fr = Tw
@@ -93,13 +106,13 @@ function calc_tp_trans_Tvi(pm::GenericPowerModel, i::Int; nw=pm.cnw)
         #     Ti_fr = [Ti_fr; ones(1,3)]
         #     Ti_im = [Ti_im; zeros(1,3)]
         # end
-    elseif dyz=='d'
+    elseif dyz=="delta"
         Tv_fr = Tdelt*Tw
         Tv_im = diagm(0=>ones(Float64, 3))
         Ti_fr = Tw
         Ti_im = Tdelt'
         vmult = sqrt(3)
-    elseif dyz=='z'
+    elseif dyz=="zig-zag"
         #TODO zig-zag here
     end
     # make equations dimensionless
@@ -107,7 +120,7 @@ function calc_tp_trans_Tvi(pm::GenericPowerModel, i::Int; nw=pm.cnw)
     # this will simplify to 1.0
     bkv_fr = ref(pm, nw, :bus, trans["f_bus"], "base_kv")
     bkv_to = ref(pm, nw, :bus, trans["t_bus"], "base_kv")
-    Cv_to = trans["vnom_kv"][1]/trans["vnom_kv"][2]*bkv_to/bkv_fr
+    Cv_to = trans["config_fr"]["vm_nom"]/trans["config_to"]["vm_nom"]*bkv_to/bkv_fr
     # compensate for change of LN voltage of a delta winding
     Cv_to *= vmult
     return (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to)
