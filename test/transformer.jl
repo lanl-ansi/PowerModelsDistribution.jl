@@ -30,8 +30,8 @@ vm(sol, tppm_data, name) = sol["solution"]["bus"][string(bus_name2id(tppm_data, 
             file = "../test/data/opendss/ut_trans_2w_yy_oltc.dss"
             tppm_data = TPPMs.parse_file(file)
             # free the taps
-            tppm_data["trans"]["1"]["tapfix"] = MultiConductorVector(zeros(Bool, 3))
-            tppm_data["trans"]["2"]["tapfix"] = MultiConductorVector(zeros(Bool, 3))
+            tppm_data["trans"]["1"]["fixed"] = MultiConductorVector(zeros(Bool, 3))
+            tppm_data["trans"]["2"]["fixed"] = MultiConductorVector(zeros(Bool, 3))
             pm = PMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_oltc, multiconductor=true)
             sol = PMs.solve_generic_model(pm, ipopt_solver)
             # check that taps are set as to boost the voltage in the branches as much as possible;

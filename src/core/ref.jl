@@ -65,8 +65,11 @@ function calc_tp_trans_Tvi(pm::GenericPowerModel, i::Int; nw=pm.cnw)
         end
     end
     # make sure the secondary is y+123
-    if trans["config_to"]["cnd"]!=[1,2,3]
+    if trans["config_to"]["type"]!="wye"
         error(LOGGER, "Secondary should always be of wye type.")
+    end
+    if trans["config_to"]["cnd"]!=[1,2,3]
+        error(LOGGER, "Secondary should always be connected in 123.")
     end
     if trans["config_to"]["polarity"]!='+'
         error(LOGGER, "Secondary should always be of positive polarity.")

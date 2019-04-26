@@ -233,9 +233,9 @@ function constraint_tp_oltc(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw)
     constraint_tp_oltc_flow(pm, nw, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im, Cv_to)
     # fix the taps with a constraint which are not free
     trans = ref(pm, :trans, i)
-    tapfix = trans["fixed"]
+    fixed = trans["fixed"]
     tm = trans["tm"]
-    constraint_tp_oltc_tap_fix(pm, i, tapfix, tm)
+    constraint_tp_oltc_tap_fix(pm, i, fixed, tm)
 end
 
 

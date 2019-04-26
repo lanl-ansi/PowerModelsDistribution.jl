@@ -19,7 +19,7 @@ This enables the definition of a wide variety of power network formulations and 
 * Optimal Power Flow (opf), for the Bus Injection Model (BIM) as well as the Branch Flow Model (BFM)
 
 **Core Network Formulations**
-* AC (polar coordinates)
+* AC (polar and rectangular coordinates)
 * SDP BFM relaxation
 * SOC BFM and BIM relaxation (W-space)
 * Linear approximation (LinDist3Flow and simplified unbalanced DistFlow)
@@ -38,6 +38,7 @@ Community-driven development and enhancement of ThreePhasePowerModels are welcom
 ## Acknowledgments
 
 This code has been developed as part of the Advanced Network Science Initiative at Los Alamos National Laboratory.  The primary developers are David Fobes(@pseudocubic) and Carleton Coffrin(@ccoffrin) with support from the following contributors,
+- Sander Claeys (@sanderclaeys) KU Leuven, transformer models and ACR formulation
 - Frederik Geth (@frederikgeth) CSIRO, Distribution modeling advise
 
 ## License
