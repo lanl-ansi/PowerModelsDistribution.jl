@@ -27,10 +27,16 @@ end
 
 
 ""
-function constraint_tp_voltage(pm::GenericPowerModel; nw::Int=pm.cnw)
+function constraint_tp_voltage(pm::GenericPowerModel; nw::Int=pm.cnw, bounded::Bool=true)
     for c in PMs.conductor_ids(pm)
-        constraint_tp_voltage(pm, nw, c)
+        constraint_tp_voltage(pm, nw, c, bounded)
     end
+end
+
+
+"delegate back to PowerModels by default"
+function constraint_tp_voltage(pm::GenericPowerModel, n::Int, c::Int, bounded::Bool)
+        PMs.constraint_voltage(pm, n, c)
 end
 
 
@@ -263,4 +269,28 @@ function constraint_kcl_shunt_trans(pm::GenericPowerModel, i::Int; nw::Int=pm.cn
     bus_bs = Dict(k => ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
 
     constraint_kcl_shunt_trans(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
+end
+
+
+"KCL including transformer arcs and load variables."
+function constraint_kcl_shunt_trans_load(pm::GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    if !haskey(con(pm, nw, cnd), :kcl_p)
+        con(pm, nw, cnd)[:kcl_p] = Dict{Int,ConstraintRef}()
+    end
+    if !haskey(con(pm, nw, cnd), :kcl_q)
+        con(pm, nw, cnd)[:kcl_q] = Dict{Int,ConstraintRef}()
+    end
+
+    bus = ref(pm, nw, :bus, i)
+    bus_arcs = ref(pm, nw, :bus_arcs, i)
+    bus_arcs_dc = ref(pm, nw, :bus_arcs_dc, i)
+    bus_gens = ref(pm, nw, :bus_gens, i)
+    bus_loads = ref(pm, nw, :bus_loads, i)
+    bus_shunts = ref(pm, nw, :bus_shunts, i)
+    bus_arcs_trans = ref(pm, nw, :bus_arcs_trans, i)
+
+    bus_gs = Dict(k => ref(pm, nw, :shunt, k, "gs", cnd) for k in bus_shunts)
+    bus_bs = Dict(k => ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
+
+    constraint_kcl_shunt_trans_load(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_loads, bus_gs, bus_bs)
 end

@@ -32,11 +32,29 @@ function constraint_kcl_shunt_trans(pm::GenericPowerModel{T}, nw::Int, c::Int, i
     qg = var(pm, nw, c, :qg)
     p_dc = var(pm, nw, c, :p_dc)
     q_dc = var(pm, nw, c, :q_dc)
-    p_trans = var(pm, nw, c, :pt)
-    q_trans = var(pm,  nw, c, :qt)
+    pt = var(pm, nw, c, :pt)
+    qt = var(pm,  nw, c, :qt)
 
-    con(pm, nw, c, :kcl_p)[i] = @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*vm^2)
-    con(pm, nw, c, :kcl_q)[i] = @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(q_trans[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*vm^2)
+    con(pm, nw, c, :kcl_p)[i] = @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(pt[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*vm^2)
+    con(pm, nw, c, :kcl_q)[i] = @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(qt[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*vm^2)
+end
+
+
+""
+function constraint_kcl_shunt_trans_load(pm::GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_loads, bus_gs, bus_bs) where T <: PMs.AbstractACPForm
+    vm = var(pm, nw, c, :vm, i)
+    p = var(pm, nw, c, :p)
+    q = var(pm, nw, c, :q)
+    pg = var(pm, nw, c, :pg)
+    qg = var(pm, nw, c, :qg)
+    pd = var(pm, nw, c, :pd)
+    qd = var(pm, nw, c, :qd)
+    p_dc = var(pm, nw, c, :p_dc)
+    q_dc = var(pm, nw, c, :q_dc)
+    pt = var(pm, nw, c, :pt)
+    qt = var(pm,  nw, c, :qt)
+    con(pm, nw, c, :kcl_p)[i] = @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(pt[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd[l] for l in bus_loads) - sum(gs for gs in values(bus_gs))*vm^2)
+    con(pm, nw, c, :kcl_q)[i] = @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(qt[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd[l] for l in bus_loads) + sum(bs for bs in values(bus_bs))*vm^2)
 end
 
 
@@ -290,4 +308,198 @@ function constraint_tp_oltc_flow(pm::GenericPowerModel{T}, nw::Int, i::Int, f_bu
             == 0
         )
     end
+end
+
+
+"Links the power flowing into both windings of a variable tap transformer."
+function constraint_tp_trans_flow_var(pm::GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im; nw::Int=pm.cnw)
+    # for ac formulation, indentical to fixed tap
+    constraint_tp_trans_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
+end
+
+
+function constraint_load_power_setpoint_wye(pm::GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, pd::Real, qd::Real) where T <: PMs.AbstractACPForm
+    @constraint(pm.model, var(pm, nw, cnd, :pd, load_id)==pd)
+    @constraint(pm.model, var(pm, nw, cnd, :qd, load_id)==qd)
+end
+
+
+function constraint_load_power_prop_vm_wye(pm::GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, scale_p::Real, scale_q::Real) where T <: PMs.AbstractACPForm
+    pd = var(pm, nw, cnd, :pd, load_id)
+    qd = var(pm, nw, cnd, :qd, load_id)
+    vm = var(pm, nw, cnd, :vm, load_bus_id)
+    @NLconstraint(pm.model, pd==scale_p*vm)
+    @NLconstraint(pm.model, qd==scale_q*vm)
+end
+
+
+function constraint_load_power_prop_vmsqr_wye(pm::GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real) where T <: PMs.AbstractACPForm
+    pd = var(pm, nw, cnd, :pd, load_id)
+    qd = var(pm, nw, cnd, :qd, load_id)
+    vm = var(pm, nw, cnd, :vm, load_bus_id)
+    @NLconstraint(pm.model, pd==cp*vm^2)
+    @NLconstraint(pm.model, qd==cq*vm^2)
+end
+
+
+"""
+For a delta load, sd = (s_ab, s_bc, s_ca), but we want to fix s = (s_a, s_b, s_c)
+s is a non-linear transform of v and sd, s=f(v,sd)
+s_a = v_a*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
+s_b = v_b*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
+s_c = v_c*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
+"""
+function constraint_tp_load_power_setpoint_delta(pm::GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, pd::MultiConductorVector, qd::MultiConductorVector) where T <: PMs.AbstractACPForm
+    p_a, p_b, p_c = [var(pm, nw, c, :pd, load_id) for c in 1:3]
+    q_a, q_b, q_c = [var(pm, nw, c, :qd, load_id) for c in 1:3]
+    p_ab, p_bc, p_ca = pd
+    q_ab, q_bc, q_ca = qd
+    vm_a, vm_b, vm_c = [var(pm, nw, c, :vm, load_bus_id) for c in 1:3]
+    va_a, va_b, va_c = [var(pm, nw, c, :va, load_bus_id) for c in 1:3]
+    # v_xy = v_x - v_y
+    vre_xy(vm_x, va_x, vm_y, va_y) = @NLexpression(pm.model, vm_x*cos(va_x)-vm_y*cos(va_y))
+    vim_xy(vm_x, va_x, vm_y, va_y) = @NLexpression(pm.model, vm_x*sin(va_x)-vm_y*sin(va_y))
+    vre_ab = vre_xy(vm_a, va_a, vm_b, va_b)
+    vim_ab = vim_xy(vm_a, va_a, vm_b, va_b)
+    vre_bc = vre_xy(vm_b, va_b, vm_c, va_c)
+    vim_bc = vim_xy(vm_b, va_b, vm_c, va_c)
+    vre_ca = vre_xy(vm_c, va_c, vm_a, va_a)
+    vim_ca = vim_xy(vm_c, va_c, vm_a, va_a)
+    # i_xy = conj(s_xy/v_xy)
+    ire_xy(p_xy, q_xy, vre_xy, vim_xy) = @NLexpression(pm.model, (p_xy*vre_xy+q_xy*vim_xy)/(vre_xy^2+vim_xy^2))
+    iim_xy(p_xy, q_xy, vre_xy, vim_xy) = @NLexpression(pm.model, (p_xy*vim_xy-q_xy*vre_xy)/(vre_xy^2+vim_xy^2))
+    ire_ab = ire_xy(p_ab, q_ab, vre_ab, vim_ab)
+    iim_ab = iim_xy(p_ab, q_ab, vre_ab, vim_ab)
+    ire_bc = ire_xy(p_bc, q_bc, vre_bc, vim_bc)
+    iim_bc = iim_xy(p_bc, q_bc, vre_bc, vim_bc)
+    ire_ca = ire_xy(p_ca, q_ca, vre_ca, vim_ca)
+    iim_ca = iim_xy(p_ca, q_ca, vre_ca, vim_ca)
+    # s_x = v_x*conj(i_xy-i_zx)
+    # p_x = vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx)
+    # q_x = vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx)
+    p_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = @NLexpression(pm.model, vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx))
+    q_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = @NLexpression(pm.model, vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx))
+    # s_x = s_x,ref
+    p_a_nlexp = p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    p_b_nlexp = p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    p_c_nlexp = p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    q_a_nlexp = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    q_b_nlexp = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    q_c_nlexp = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    @NLconstraint(pm.model, p_a==p_a_nlexp)
+    @NLconstraint(pm.model, p_b==p_b_nlexp)
+    @NLconstraint(pm.model, p_c==p_c_nlexp)
+    @NLconstraint(pm.model, q_a==q_a_nlexp)
+    @NLconstraint(pm.model, q_b==q_b_nlexp)
+    @NLconstraint(pm.model, q_c==q_c_nlexp)
+end
+
+
+"""
+We want to express
+s_ab = cp.|v_ab|+im.cq.|v_ab|
+i_ab = conj(s_ab/v_ab) = |v_ab|.(cq-im.cq)/conj(v_ab) = (1/|v_ab|).(cp-im.cq)*v_ab
+idem for i_bc and i_ca
+And then
+s_a = v_a.conj(i_a) = v_a.conj(i_ab-i_ca)
+idem for s_b and s_c
+"""
+function constraint_tp_load_power_prop_vm_delta(pm::GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, cp::MultiConductorVector, cq::MultiConductorVector) where T <: PMs.AbstractACPForm
+    p_a, p_b, p_c = [var(pm, nw, c, :pd, load_id) for c in 1:3]
+    q_a, q_b, q_c = [var(pm, nw, c, :qd, load_id) for c in 1:3]
+    cp_ab, cp_bc, cp_ca = cp
+    cq_ab, cq_bc, cq_ca = cq
+    vm_a, vm_b, vm_c = [var(pm, nw, c, :vm, load_bus_id) for c in 1:3]
+    va_a, va_b, va_c = [var(pm, nw, c, :va, load_bus_id) for c in 1:3]
+    # v_xy = v_x - v_y
+    vre_xy(vm_x, va_x, vm_y, va_y) = @NLexpression(pm.model, vm_x*cos(va_x)-vm_y*cos(va_y))
+    vim_xy(vm_x, va_x, vm_y, va_y) = @NLexpression(pm.model, vm_x*sin(va_x)-vm_y*sin(va_y))
+    vre_ab = vre_xy(vm_a, va_a, vm_b, va_b)
+    vim_ab = vim_xy(vm_a, va_a, vm_b, va_b)
+    vre_bc = vre_xy(vm_b, va_b, vm_c, va_c)
+    vim_bc = vim_xy(vm_b, va_b, vm_c, va_c)
+    vre_ca = vre_xy(vm_c, va_c, vm_a, va_a)
+    vim_ca = vim_xy(vm_c, va_c, vm_a, va_a)
+    # i_xy = conj(s_xy/v_xy)
+    ire_xy(cp_xy, cq_xy, vre_xy, vim_xy) = @NLexpression(pm.model, 1/sqrt(vre_xy^2+vim_xy^2)*(cp_xy*vre_xy+cq_xy*vim_xy))
+    iim_xy(cp_xy, cq_xy, vre_xy, vim_xy) = @NLexpression(pm.model, 1/sqrt(vre_xy^2+vim_xy^2)*(cp_xy*vim_xy-cq_xy*vre_xy))
+    ire_ab = ire_xy(cp_ab, cq_ab, vre_ab, vim_ab)
+    iim_ab = iim_xy(cp_ab, cq_ab, vre_ab, vim_ab)
+    ire_bc = ire_xy(cp_bc, cq_bc, vre_bc, vim_bc)
+    iim_bc = iim_xy(cp_bc, cq_bc, vre_bc, vim_bc)
+    ire_ca = ire_xy(cp_ca, cq_ca, vre_ca, vim_ca)
+    iim_ca = iim_xy(cp_ca, cq_ca, vre_ca, vim_ca)
+    # s_x = v_x*conj(i_xy-i_zx)
+    # p_x = vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx)
+    # q_x = vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx)
+    p_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = @NLexpression(pm.model, vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx))
+    q_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = @NLexpression(pm.model, vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx))
+    # s_x = s_x,ref
+    p_a_nlexp = p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    p_b_nlexp = p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    p_c_nlexp = p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    q_a_nlexp = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    q_b_nlexp = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    q_c_nlexp = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    @NLconstraint(pm.model, p_a==p_a_nlexp)
+    @NLconstraint(pm.model, p_b==p_b_nlexp)
+    @NLconstraint(pm.model, p_c==p_c_nlexp)
+    @NLconstraint(pm.model, q_a==q_a_nlexp)
+    @NLconstraint(pm.model, q_b==q_b_nlexp)
+    @NLconstraint(pm.model, q_c==q_c_nlexp)
+end
+
+
+"""
+We want to express
+s_ab = cp.|v_ab|^2+im.cq.|v_ab|^2
+i_ab = conj(s_ab/v_ab) = |v_ab|^2.(cq-im.cq)/conj(v_ab) = (cp-im.cq)*v_ab
+idem for i_bc and i_ca
+And then
+s_a = v_a.conj(i_a) = v_a.conj(i_ab-i_ca)
+idem for s_b and s_c
+"""
+function constraint_tp_load_power_prop_vmsqr_delta(pm::GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, cp::MultiConductorVector, cq::MultiConductorVector) where T <: PMs.AbstractACPForm
+    p_a, p_b, p_c = [var(pm, nw, c, :pd, load_id) for c in 1:3]
+    q_a, q_b, q_c = [var(pm, nw, c, :qd, load_id) for c in 1:3]
+    cp_ab, cp_bc, cp_ca = cp
+    cq_ab, cq_bc, cq_ca = cq
+    vm_a, vm_b, vm_c = [var(pm, nw, c, :vm, load_bus_id) for c in 1:3]
+    va_a, va_b, va_c = [var(pm, nw, c, :va, load_bus_id) for c in 1:3]
+    # v_xy = v_x - v_y
+    vre_xy(vm_x, va_x, vm_y, va_y) = @NLexpression(pm.model, vm_x*cos(va_x)-vm_y*cos(va_y))
+    vim_xy(vm_x, va_x, vm_y, va_y) = @NLexpression(pm.model, vm_x*sin(va_x)-vm_y*sin(va_y))
+    vre_ab = vre_xy(vm_a, va_a, vm_b, va_b)
+    vim_ab = vim_xy(vm_a, va_a, vm_b, va_b)
+    vre_bc = vre_xy(vm_b, va_b, vm_c, va_c)
+    vim_bc = vim_xy(vm_b, va_b, vm_c, va_c)
+    vre_ca = vre_xy(vm_c, va_c, vm_a, va_a)
+    vim_ca = vim_xy(vm_c, va_c, vm_a, va_a)
+    # i_xy = conj(s_xy/v_xy)
+    ire_xy(cp_xy, cq_xy, vre_xy, vim_xy) = @NLexpression(pm.model, cp_xy*vre_xy+cq_xy*vim_xy)
+    iim_xy(cp_xy, cq_xy, vre_xy, vim_xy) = @NLexpression(pm.model, cp_xy*vim_xy-cq_xy*vre_xy)
+    ire_ab = ire_xy(cp_ab, cq_ab, vre_ab, vim_ab)
+    iim_ab = iim_xy(cp_ab, cq_ab, vre_ab, vim_ab)
+    ire_bc = ire_xy(cp_bc, cq_bc, vre_bc, vim_bc)
+    iim_bc = iim_xy(cp_bc, cq_bc, vre_bc, vim_bc)
+    ire_ca = ire_xy(cp_ca, cq_ca, vre_ca, vim_ca)
+    iim_ca = iim_xy(cp_ca, cq_ca, vre_ca, vim_ca)
+    # s_x = v_x*conj(i_xy-i_zx)
+    # p_x = vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx)
+    # q_x = vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx)
+    p_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = @NLexpression(pm.model, vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx))
+    q_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = @NLexpression(pm.model, vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx))
+    # s_x = s_x,ref
+    p_a_nlexp = p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    p_b_nlexp = p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    p_c_nlexp = p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    q_a_nlexp = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    q_b_nlexp = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    q_c_nlexp = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    @NLconstraint(pm.model, p_a==p_a_nlexp)
+    @NLconstraint(pm.model, p_b==p_b_nlexp)
+    @NLconstraint(pm.model, p_c==p_c_nlexp)
+    @NLconstraint(pm.model, q_a==q_a_nlexp)
+    @NLconstraint(pm.model, q_b==q_b_nlexp)
+    @NLconstraint(pm.model, q_c==q_c_nlexp)
 end

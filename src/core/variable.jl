@@ -1,7 +1,7 @@
 ""
-function variable_tp_voltage(pm::GenericPowerModel; kwargs...)
+function variable_tp_voltage(pm::GenericPowerModel; nw=pm.cnw, kwargs...)
     for c in PMs.conductor_ids(pm)
-        PMs.variable_voltage(pm, cnd=c; kwargs...)
+        PMs.variable_voltage(pm, cnd=c; nw=nw, kwargs...)
     end
 end
 
@@ -12,7 +12,6 @@ function variable_tp_branch_flow(pm::GenericPowerModel; kwargs...)
         PMs.variable_branch_flow(pm, cnd=c; kwargs...)
     end
 end
-
 
 
 ""
@@ -203,4 +202,29 @@ function variable_tp_oltc_tap(pm::GenericPowerModel; nw::Int=pm.cnw, bounded=tru
             end
         end
     end
+end
+
+
+"Power drawn by the load at the bus to which it is connected"
+function variable_load_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    variable_active_load_flow(pm, nw, cnd)
+    variable_reactive_load_flow(pm, nw, cnd)
+end
+
+
+"Active power drawn by the load at the bus to which it is connected"
+function variable_active_load_flow(pm::GenericPowerModel, nw::Int, cnd::Int)
+    var(pm, nw, cnd)[:pd] = @variable(pm.model, [i in PMs.ids(pm, nw, :load)],
+        basename="$(nw)_$(cnd)_pd",
+        start=0
+    )
+end
+
+
+"Reactive power drawn by the load at the bus to which it is connected"
+function variable_reactive_load_flow(pm::GenericPowerModel, nw::Int, cnd::Int)
+    var(pm, nw, cnd)[:qd] = @variable(pm.model, [i in PMs.ids(pm, nw, :load)],
+        basename="$(nw)_$(cnd)_qd",
+        start=0
+    )
 end
