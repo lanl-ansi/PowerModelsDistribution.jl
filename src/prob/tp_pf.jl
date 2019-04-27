@@ -28,6 +28,8 @@ end
 
 ""
 function post_tp_pf(pm::GenericPowerModel)
+    add_arcs_trans!(pm)
+
     variable_tp_voltage(pm, bounded=false)
     variable_tp_branch_flow(pm, bounded=false)
 
@@ -35,6 +37,8 @@ function post_tp_pf(pm::GenericPowerModel)
         PMs.variable_generation(pm, bounded=false, cnd=c)
         PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
     end
+
+    variable_tp_trans_flow(pm, bounded=false)
 
     constraint_tp_voltage(pm)
 
@@ -48,7 +52,7 @@ function post_tp_pf(pm::GenericPowerModel)
     end
 
     for (i,bus) in ref(pm, :bus), c in PMs.conductor_ids(pm)
-        PMs.constraint_kcl_shunt(pm, i, cnd=c)
+        constraint_kcl_shunt_trans(pm, i, cnd=c)
 
         # PV Bus Constraints
         if length(ref(pm, :bus_gens, i)) > 0 && !(i in ids(pm,:ref_buses))
@@ -83,4 +87,9 @@ function post_tp_pf(pm::GenericPowerModel)
             PMs.constraint_voltage_magnitude_setpoint(pm, t_bus["index"], cnd=c)
         end
     end
+
+    for i in ids(pm, :trans)
+        constraint_tp_trans(pm, i)
+    end
+
 end

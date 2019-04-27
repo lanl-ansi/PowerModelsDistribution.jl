@@ -43,7 +43,8 @@ New "Transformer.t2" phases=3 windings=2 Xhl=0.02 buses=[sourcebus, b3-1, ] conn
 New Transformer.t3a phases=1  windings=2  buses=(b7.1,  b10.1)  conns=(wye, wye)  kvs=(10.0, 10)  kvas=(30000, 30000)  xhl=0.1 %loadloss=.002 wdg=2 Maxtap=1.05 Mintap=0.95 ppm=0
 New Transformer.t4  phases=3  windings=2  buses=(b8, b9.1.2.3.0)
 ~ conns=(delta wye)
-~ kvs=(115, 14.7)  kvas=(30000, 30000)
+! 14.7->115 for kvs[2], otherwise inconsistent voltage base
+~ kvs=(115, 115)  kvas=(30000, 30000)
 ~ xhl=20.5  sub=y  subname=t4_sub
 ~ wdg=1  %r=0.75000
 ~ wdg=2  %r=0.75000

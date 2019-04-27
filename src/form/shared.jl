@@ -77,3 +77,17 @@ function constraint_tp_theta_ref(pm::GenericPowerModel{T}, n::Int, c::Int, d) wh
 
     @constraint(pm.model, va == wraptopi(2 * pi / nconductors * (1-c)))
 end
+
+
+"""
+For a variable tap transformer, fix the tap variables which are fixed. For
+example, an OLTC where the third phase is fixed, will have tap variables for
+all phases, but the third tap variable should be fixed.
+"""
+function constraint_tp_oltc_tap_fix(pm::GenericPowerModel, i::Int, fixed::MultiConductorVector, tm::MultiConductorVector; nw=pm.cnw)
+    for (c,fixed) in enumerate(fixed)
+        if fixed
+            @constraint(pm.model, var(pm, nw, c, :tap)[i]==tm[c])
+        end
+    end
+end

@@ -81,6 +81,24 @@ function constraint_kcl_shunt_slack(pm::GenericPowerModel{T}, n::Int, c::Int, i:
 end
 
 
+""
+function constraint_kcl_shunt_trans(pm::GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: PMs.AbstractACRForm
+    vr = var(pm, nw, c, :vr, i)
+    vi = var(pm, nw, c, :vi, i)
+    p = var(pm, nw, c, :p)
+    q = var(pm, nw, c, :q)
+    pg = var(pm, nw, c, :pg)
+    qg = var(pm, nw, c, :qg)
+    p_dc = var(pm, nw, c, :p_dc)
+    q_dc = var(pm, nw, c, :q_dc)
+    p_trans = var(pm, nw, c, :pt)
+    q_trans = var(pm,  nw, c, :qt)
+
+    con(pm, nw, c, :kcl_p)[i] = @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*(vr^2 + vi^2))
+    con(pm, nw, c, :kcl_q)[i] = @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(q_trans[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*(vr^2 + vi^2))
+end
+
+
 """
 Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
 

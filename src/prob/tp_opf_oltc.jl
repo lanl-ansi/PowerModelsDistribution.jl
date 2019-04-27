@@ -1,26 +1,26 @@
-export run_tp_opf, run_ac_tp_opf
+export run_tp_opf_oltc, run_ac_tp_opf_oltc
 
 ""
-function run_ac_tp_opf(file, solver; kwargs...)
+function run_ac_tp_opf_oltc(file, solver; kwargs...)
     return run_tp_opf(file, PMs.ACPPowerModel, solver; multiconductor=true, kwargs...)
 end
 
 
 ""
-function run_tp_opf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
+function run_tp_opf_oltc(data::Dict{String,Any}, model_constructor, solver; kwargs...)
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf; multiconductor=true, kwargs...)
 end
 
 
 ""
-function run_tp_opf(file::String, model_constructor, solver; kwargs...)
+function run_tp_opf_oltc(file::String, model_constructor, solver; kwargs...)
     data = ThreePhasePowerModels.parse_file(file)
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf; multiconductor=true, kwargs...)
 end
 
 
 ""
-function post_tp_opf(pm::GenericPowerModel)
+function post_tp_opf_oltc(pm::GenericPowerModel)
     add_arcs_trans!(pm)
 
     variable_tp_voltage(pm)
@@ -31,6 +31,7 @@ function post_tp_opf(pm::GenericPowerModel)
         PMs.variable_dcline_flow(pm, cnd=c)
     end
     variable_tp_trans_flow(pm)
+    variable_tp_oltc_tap(pm)
 
     constraint_tp_voltage(pm)
 
@@ -59,7 +60,7 @@ function post_tp_opf(pm::GenericPowerModel)
     end
 
     for i in ids(pm, :trans)
-        constraint_tp_trans(pm, i)
+        constraint_tp_oltc(pm, i)
     end
 
     PMs.objective_min_fuel_cost(pm)
