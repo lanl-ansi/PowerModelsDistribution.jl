@@ -72,12 +72,12 @@ end
 
 
 ""
-function constraint_kcl_shunt_trans(pm::GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: PMs.AbstractDCPForm
-    pg   = var(pm, nw, c, :pg)
-    p    = var(pm, nw, c, :p)
-    p_dc = var(pm, nw, c, :p_dc)
-    p_trans = var(pm, nw, c, :pt)
+function constraint_kcl_shunt_trans(pm::PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: PMs.AbstractDCPForm
+    pg   = PMs.var(pm, nw, c, :pg)
+    p    = PMs.var(pm, nw, c, :p)
+    p_dc = PMs.var(pm, nw, c, :p_dc)
+    p_trans = PMs.var(pm, nw, c, :pt)
 
-    con(pm, nw, c, :kcl_p)[i] = @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*1.0^2)
+    PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*1.0^2)
     # omit reactive constraint
 end

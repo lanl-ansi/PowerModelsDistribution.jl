@@ -39,7 +39,7 @@ function post_tp_opf(pm::PMs.GenericPowerModel)
     end
 
     for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
-        PMs.constraint_kcl_shunt_trans(pm, i, cnd=c)
+        constraint_kcl_shunt_trans(pm, i, cnd=c)
     end
 
     for i in PMs.ids(pm, :branch)
@@ -58,7 +58,7 @@ function post_tp_opf(pm::PMs.GenericPowerModel)
         PMs.constraint_dcline(pm, i, cnd=c)
     end
 
-    for i in ids(pm, :trans)
+    for i in PMs.ids(pm, :trans)
         constraint_tp_trans(pm, i)
     end
 

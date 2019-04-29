@@ -24,19 +24,19 @@ end
 
 
 ""
-function constraint_kcl_shunt_trans(pm::GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: PMs.AbstractACPForm
-    vm = var(pm, nw, c, :vm, i)
-    p = var(pm, nw, c, :p)
-    q = var(pm, nw, c, :q)
-    pg = var(pm, nw, c, :pg)
-    qg = var(pm, nw, c, :qg)
-    p_dc = var(pm, nw, c, :p_dc)
-    q_dc = var(pm, nw, c, :q_dc)
-    p_trans = var(pm, nw, c, :pt)
-    q_trans = var(pm,  nw, c, :qt)
+function constraint_kcl_shunt_trans(pm::PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: PMs.AbstractACPForm
+    vm = PMs.var(pm, nw, c, :vm, i)
+    p = PMs.var(pm, nw, c, :p)
+    q = PMs.var(pm, nw, c, :q)
+    pg = PMs.var(pm, nw, c, :pg)
+    qg = PMs.var(pm, nw, c, :qg)
+    p_dc = PMs.var(pm, nw, c, :p_dc)
+    q_dc = PMs.var(pm, nw, c, :q_dc)
+    p_trans = PMs.var(pm, nw, c, :pt)
+    q_trans = PMs.var(pm,  nw, c, :qt)
 
-    con(pm, nw, c, :kcl_p)[i] = @constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*vm^2)
-    con(pm, nw, c, :kcl_q)[i] = @constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(q_trans[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*vm^2)
+    PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*vm^2)
+    PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(q_trans[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*vm^2)
 end
 
 
@@ -154,23 +154,23 @@ end
 
 
 "Links the voltage at both windings of a fixed tap transformer."
-function constraint_tp_trans_voltage(pm::GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::MultiConductorVector, Tv_fr, Tv_im, Cv_to) where T <: PMs.AbstractACPForm
+function constraint_tp_trans_voltage(pm::PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to) where T <: PMs.AbstractACPForm
     ncnd  = 3
     # from side
-    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
-    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    vm_fr = [PMs.var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
+    va_fr = [PMs.var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
     # to side
-    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
-    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    vm_to = [PMs.var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [PMs.var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
     # the intermediate bus voltage is saved as an expression
     # vm_im[c] = vm_to[c]*tm[c]*Cv_to
     # va_im = va_to
     for n in 1:size(Tv_fr)[1]
-        @NLconstraint(pm.model,
+        JuMP.@NLconstraint(pm.model,
               sum(Tv_fr[n,c]*vm_fr[c]*cos(va_fr[c]) for c in 1:ncnd)
             ==sum(Tv_im[n,c]*(vm_to[c]*tm[c]*Cv_to)*cos(va_to[c]) for c in 1:ncnd)
         )
-        @NLconstraint(pm.model,
+        JuMP.@NLconstraint(pm.model,
               sum(Tv_fr[n,c]*vm_fr[c]*sin(va_fr[c]) for c in 1:ncnd)
             ==sum(Tv_im[n,c]*(vm_to[c]*tm[c]*Cv_to)*sin(va_to[c]) for c in 1:ncnd)
         )
@@ -179,18 +179,18 @@ end
 
 
 "Links the power flowing into both windings of a fixed tap transformer."
-function constraint_tp_trans_flow(pm::GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::MultiConductorVector, Ti_fr, Ti_im, Cv_to) where T <: PMs.AbstractACPForm
+function constraint_tp_trans_flow(pm::PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to) where T <: PMs.AbstractACPForm
     ncnd  = 3
     # from side variables
-    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
-    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
-    p_fr = [var(pm, nw, c, :pt, f_idx) for c in 1:ncnd]
-    q_fr = [var(pm, nw, c, :qt, f_idx) for c in 1:ncnd]
+    vm_fr = [PMs.var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
+    va_fr = [PMs.var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    p_fr = [PMs.var(pm, nw, c, :pt, f_idx) for c in 1:ncnd]
+    q_fr = [PMs.var(pm, nw, c, :qt, f_idx) for c in 1:ncnd]
     # to side
-    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
-    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
-    p_to = [var(pm, nw, c, :pt, t_idx) for c in 1:ncnd]
-    q_to = [var(pm, nw, c, :qt, t_idx) for c in 1:ncnd]
+    vm_to = [PMs.var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [PMs.var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    p_to = [PMs.var(pm, nw, c, :pt, t_idx) for c in 1:ncnd]
+    q_to = [PMs.var(pm, nw, c, :qt, t_idx) for c in 1:ncnd]
     # the intermediate bus voltage is saved as an expression
     # vm_im[c] = vm_to[c]*tm[c]*Cv_to
     # va_im = va_to
@@ -199,7 +199,7 @@ function constraint_tp_trans_flow(pm::GenericPowerModel{T}, nw::Int, i::Int, f_b
         # i_fr_im[c] = 1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c]))
         # i_to_re[c] = 1/vm_to[c]*(p_to[c]*cos(va_im[c])+q_to[c]*sin(va_im[c]))
         # i_to_im[c] = 1/vm_to[c]*(p_to[c]*sin(va_im[c])-q_to[c]*cos(va_im[c]))
-        @NLconstraint(pm.model,
+        JuMP.@NLconstraint(pm.model,
               sum(Ti_fr[n,c]*
                     1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c])) # i_fr_re[c]
               for c in 1:ncnd)
@@ -208,7 +208,7 @@ function constraint_tp_trans_flow(pm::GenericPowerModel{T}, nw::Int, i::Int, f_b
               for c in 1:ncnd)
             == 0
         )
-        @NLconstraint(pm.model,
+        JuMP.@NLconstraint(pm.model,
               sum(Ti_fr[n,c]*
                     1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c])) # i_fr_im[c]
               for c in 1:ncnd)
@@ -222,25 +222,25 @@ end
 
 
 "Links the voltage at both windings of a variable tap transformer."
-function constraint_tp_oltc_voltage(pm::GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, Tv_fr, Tv_im, Cv_to) where T <: PMs.AbstractACPForm
+function constraint_tp_oltc_voltage(pm::PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, Tv_fr, Tv_im, Cv_to) where T <: PMs.AbstractACPForm
     ncnd  = 3
     # from side
-    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
-    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    vm_fr = [PMs.var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
+    va_fr = [PMs.var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
     # tap
-    tap = [var(pm, nw, c, :tap)[i] for c in 1:ncnd]
+    tap = [PMs.var(pm, nw, c, :tap)[i] for c in 1:ncnd]
     # to side
-    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
-    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    vm_to = [PMs.var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [PMs.var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
     # the intermediate bus voltage is saved as an expression
     # vm_im[c] = vm_to[c]*tap[c]*Cv_to
     # va_im = va_to
     for n in 1:size(Tv_fr)[1]
-        @NLconstraint(pm.model,
+        JuMP.@NLconstraint(pm.model,
               sum(Tv_fr[n,c]*vm_fr[c]*cos(va_fr[c]) for c in 1:ncnd)
             ==sum(Tv_im[n,c]*(vm_to[c]*tap[c]*Cv_to)*cos(va_to[c]) for c in 1:ncnd)
         )
-        @NLconstraint(pm.model,
+        JuMP.@NLconstraint(pm.model,
               sum(Tv_fr[n,c]*vm_fr[c]*sin(va_fr[c]) for c in 1:ncnd)
             ==sum(Tv_im[n,c]*(vm_to[c]*tap[c]*Cv_to)*sin(va_to[c]) for c in 1:ncnd)
         )
@@ -249,20 +249,20 @@ end
 
 
 "Links the power flowing into both windings of a variable tap transformer."
-function constraint_tp_oltc_flow(pm::GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im, Cv_to) where T <: PMs.AbstractACPForm
+function constraint_tp_oltc_flow(pm::PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im, Cv_to) where T <: PMs.AbstractACPForm
     ncnd  = 3
     # from side variables
-    vm_fr = [var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
-    va_fr = [var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
-    p_fr = [var(pm, nw, c, :pt, f_idx) for c in 1:ncnd]
-    q_fr = [var(pm, nw, c, :qt, f_idx) for c in 1:ncnd]
+    vm_fr = [PMs.var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
+    va_fr = [PMs.var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
+    p_fr = [PMs.var(pm, nw, c, :pt, f_idx) for c in 1:ncnd]
+    q_fr = [PMs.var(pm, nw, c, :qt, f_idx) for c in 1:ncnd]
     # tap
-    tap = [var(pm, nw, c, :tap, i) for c in 1:ncnd]
+    tap = [PMs.var(pm, nw, c, :tap, i) for c in 1:ncnd]
     # to side
-    vm_to = [var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
-    va_to = [var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
-    p_to = [var(pm, nw, c, :pt, t_idx) for c in 1:ncnd]
-    q_to = [var(pm, nw, c, :qt, t_idx) for c in 1:ncnd]
+    vm_to = [PMs.var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
+    va_to = [PMs.var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
+    p_to = [PMs.var(pm, nw, c, :pt, t_idx) for c in 1:ncnd]
+    q_to = [PMs.var(pm, nw, c, :qt, t_idx) for c in 1:ncnd]
     # the intermediate bus voltage is saved as an expression
     # vm_im[c] = vm_to[c]*tap[c]*Cv_to
     # va_im = va_to
@@ -271,7 +271,7 @@ function constraint_tp_oltc_flow(pm::GenericPowerModel{T}, nw::Int, i::Int, f_bu
         # i_fr_im[c] = 1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c]))
         # i_to_re[c] = 1/vm_to[c]*(p_to[c]*cos(va_im[c])+q_to[c]*sin(va_im[c]))
         # i_to_im[c] = 1/vm_to[c]*(p_to[c]*sin(va_im[c])-q_to[c]*cos(va_im[c]))
-        @NLconstraint(pm.model,
+        JuMP.@NLconstraint(pm.model,
               sum(Ti_fr[n,c]*
                     1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c])) # i_fr_re[c]
               for c in 1:ncnd)
@@ -280,7 +280,7 @@ function constraint_tp_oltc_flow(pm::GenericPowerModel{T}, nw::Int, i::Int, f_bu
               for c in 1:ncnd)
             == 0
         )
-        @NLconstraint(pm.model,
+        JuMP.@NLconstraint(pm.model,
               sum(Ti_fr[n,c]*
                     1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c])) # i_fr_im[c]
               for c in 1:ncnd)

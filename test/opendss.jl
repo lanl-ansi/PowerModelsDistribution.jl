@@ -29,10 +29,10 @@
         @test_warn(TESTLOG, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported.",
                       TPPMs.parse_file("../test/data/opendss/test_simple.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Calling parse_dss on ../test/data/opendss/test_simple.dss",
+        Memento.TestUtils.@test_log(TESTLOG, "info", "Calling parse_dss on ../test/data/opendss/test_simple.dss",
                                TPPMs.parse_file("../test/data/opendss/test_simple.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Done parsing ../test/data/opendss/test_simple.dss",
+        Memento.TestUtils.@test_log(TESTLOG, "info", "Done parsing ../test/data/opendss/test_simple.dss",
                                TPPMs.parse_file("../test/data/opendss/test_simple.dss"))
 
         Memento.setlevel!(TESTLOG, "error")
@@ -80,13 +80,13 @@
       @test_warn(TESTLOG, "Only three-phase transformers are supported. The bus specification b7.1 is treated as b7 instead.",
                  TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
+        Memento.TestUtils.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Redirecting to file \"test2_Linecodes.dss\"",
+        Memento.TestUtils.@test_log(TESTLOG, "info", "Redirecting to file \"test2_Linecodes.dss\"",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Compiling file \"test2_Loadshape.dss\"",
+        Memento.TestUtils.@test_log(TESTLOG, "info", "Compiling file \"test2_Loadshape.dss\"",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
         Memento.setlevel!(TESTLOG, "error")

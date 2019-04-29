@@ -52,7 +52,7 @@ function post_tp_pf(pm::PMs.GenericPowerModel)
     end
 
     for (i,bus) in PMs.ref(pm, :bus), c in PMs.conductor_ids(pm)
-        PMs.constraint_kcl_shunt_trans(pm, i, cnd=c)
+        constraint_kcl_shunt_trans(pm, i, cnd=c)
 
         # PV Bus Constraints
         if length(PMs.ref(pm, :bus_gens, i)) > 0 && !(i in PMs.ids(pm,:ref_buses))
@@ -88,7 +88,7 @@ function post_tp_pf(pm::PMs.GenericPowerModel)
         end
     end
 
-    for i in ids(pm, :trans)
+    for i in PMs.ids(pm, :trans)
         constraint_tp_trans(pm, i)
     end
 
