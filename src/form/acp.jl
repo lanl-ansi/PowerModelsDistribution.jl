@@ -14,7 +14,7 @@ function variable_tp_voltage(pm::PMs.GenericPowerModel{T}; nw=pm.cnw, kwargs...)
     vm = 1
     for c in 1:ncnd
         for id in PMs.ids(pm, :bus)
-            JuMP.setvalue(var(pm, nw, c, :va, id), theta[c])
+            JuMP.setvalue(PMs.var(pm, nw, c, :va, id), theta[c])
         end
     end
 end
@@ -338,8 +338,8 @@ end
 
 
 function constraint_load_power_setpoint_wye(pm::PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, pd::Real, qd::Real) where T <: PMs.AbstractACPForm
-    JuMP.@constraint(pm.model, var(pm, nw, cnd, :pd, load_id)==pd)
-    JuMP.@constraint(pm.model, var(pm, nw, cnd, :qd, load_id)==qd)
+    JuMP.@constraint(pm.model, PMs.var(pm, nw, cnd, :pd, load_id)==pd)
+    JuMP.@constraint(pm.model, PMs.var(pm, nw, cnd, :qd, load_id)==qd)
 end
 
 
