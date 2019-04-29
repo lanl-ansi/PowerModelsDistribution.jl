@@ -210,7 +210,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             nph = defaults["phases"]
             cnds = get_conductors_ordered(defaults["bus1"])
             if !all([c in collect(0:3) for c in cnds])
-                error(LOGGER, "Conductors should be in [0,1,2,3].")
+                Memento.error(LOGGER, "Conductors should be in [0,1,2,3].")
             end
             delta_map = Dict([1,2]=>1, [2,1]=>1, [2,3]=>2, [3,2]=>2, [1,3]=>3, [3,1]=>3)
             if nph==1
@@ -252,7 +252,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 # nphases=3 bus1=x.1.2.0
                 # this looks like a combination of a single-phase TPPM delta and wye load
                 # so throw an error and ask to reformulate as single and three phase loads
-                error(LOGGER, "Two-phase loads (nphases=2) are not supported, as these lead to unexpected behaviour. Reformulate this load as a combination of single-phase loads.")
+                Memento.error(LOGGER, "Two-phase loads (nphases=2) are not supported, as these lead to unexpected behaviour. Reformulate this load as a combination of single-phase loads.")
             elseif nph==3
                 # for 2 and 3 phase windings, kv is always in LL, also for wye
                 # whilst TPPM model uses actual voltage across load; so LN for wye
@@ -268,14 +268,14 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                     #variations of [1, 2, 3] and [1, 2, 3, 0]
                         pqd_premul = [1/3, 1/3, 1/3]
                     else
-                        error(LOGGER, "Specified connections for three-phase load $name not allowed.")
+                        Memento.error(LOGGER, "Specified connections for three-phase load $name not allowed.")
                     end
                 end
             else
                 error(LOGGER, "For a load, nphases should be in [1,3].")
             end
-            loadDict["pd"] = MultiConductorVector(pqd_premul.*defaults["kw"]./1e3)
-            loadDict["qd"] = MultiConductorVector(pqd_premul.*defaults["kvar"]./1e3)
+            loadDict["pd"] = PMs.MultiConductorVector(pqd_premul.*defaults["kw"]./1e3)
+            loadDict["qd"] = PMs.MultiConductorVector(pqd_premul.*defaults["kvar"]./1e3)
 
             # parse the model
             model = defaults["model"]
@@ -288,11 +288,11 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             # 2: Constant Z
             elseif model == 3
             # 3: Constant P and quadratic Q
-                warn(LOGGER, "$load_name: load model 3 not supported. Treating as model 1.")
+                Memento.warn(LOGGER, "$load_name: load model 3 not supported. Treating as model 1.")
                 model = 1
             elseif model == 4
             # 4: Exponential
-                warn(LOGGER, "$load_name: load model 4 not supported. Treating as model 1.")
+                Memento.warn(LOGGER, "$load_name: load model 4 not supported. Treating as model 1.")
                 model = 1
             elseif model == 5
             # 5: Constant I
@@ -300,15 +300,15 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 #model = 1
             elseif model == 6
             # 6: Constant P and fixed Q
-                warn(LOGGER, "$load_name: load model 5 identical to model 1 in current feature set. Treating as model 1.")
+                Memento.warn(LOGGER, "$load_name: load model 5 identical to model 1 in current feature set. Treating as model 1.")
                 model = 1
             elseif model == 7
             # 7: Constant P and quadratic Q (i.e., fixed reactance)
-                warn(LOGGER, "$load_name: load model 7 not supported. Treating as model 1.")
+                Memento.warn(LOGGER, "$load_name: load model 7 not supported. Treating as model 1.")
                 model = 1
             elseif model == 8
             # 8: ZIP
-                warn(LOGGER, "$load_name: load model 8 not supported. Treating as model 1.")
+                Memento.warn(LOGGER, "$load_name: load model 8 not supported. Treating as model 1.")
                 model = 1
             end
             # save adjusted model type to dict, human-readable
