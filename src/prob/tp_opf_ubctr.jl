@@ -39,7 +39,7 @@ function post_tp_opf_ubctr(pm::PMs.GenericPowerModel)
     end
 
     for i in PMs.ids(pm, :bus)
-        bus = ref(pm, pm.cnw, :bus, i)
+        bus = PMs.ref(pm, pm.cnw, :bus, i)
         # unbalance constraints
         if haskey(bus, "vufmax")
             constraint_tp_vuf(pm, i)
