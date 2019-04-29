@@ -436,3 +436,17 @@ end
         @test isapprox(result["objective"], 0.0597016; atol = 1e-4)
     end
 end
+
+
+@testset "test acp opf unbalance constrained" begin
+    tppm_data = TPPMs.parse_file("../test/data/matlab/case_vuf.m")
+    # This case contains a load in phase 1 at bus 2
+    # A cheap generator at bus 3, and an expensive one at bus 2
+    # The optimal dispatch will use the generator at bus 2 as much as possible,
+    # being constrained by the voltage unbalance factor constraint.
+    # Therefore, we check that this constraint is binding.
+    tppm_data["bus"]["3"]["vufmax"] = 0.038
+    pm = TPPMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_ubctr, multiconductor=true)
+    sol = TPPMs.solve_generic_model(pm, ipopt_solver, solution_builder=TPPMs.get_solution_vseq)
+    @test norm(sol["solution"]["bus"]["3"]["vuf"]-0.038, Inf) <= 1E-5
+end
