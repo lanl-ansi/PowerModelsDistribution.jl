@@ -274,10 +274,10 @@ end
 
 "KCL including transformer arcs and load variables."
 function constraint_kcl_shunt_trans_load(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    if !haskey(con(pm, nw, cnd), :kcl_p)
+    if !haskey(PMs.con(pm, nw, cnd), :kcl_p)
         PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,JuMP.ConstraintRef}()
     end
-    if !haskey(con(pm, nw, cnd), :kcl_q)
+    if !haskey(PMs.con(pm, nw, cnd), :kcl_q)
         PMs.con(pm, nw, cnd)[:kcl_q] = Dict{Int,JuMP.ConstraintRef}()
     end
 
