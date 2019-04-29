@@ -126,22 +126,3 @@ function constraint_tp_load_power_prop_vmsqr(pm::GenericPowerModel, load_id::Int
         error(LOGGER, "Unknown load connection type $conn.")
     end
 end
-
-
-"""
-Sets va_start on every bus if the 'va_start' key is not present. This is needed
-for delta loads, where division occurs by the difference of voltage phasors.
-If the voltage phasors at one bus are initialized in the same point, this would
-lead to division by zero.
-"""
-function set_tp_va_start_if_unset(pm::GenericPowerModel; nw::Int=pm.cnw, va1=0.0, va2=-2*pi/3, va3=2*pi/3, va_offset=0.0)
-    va1 = va1+va_offset
-    va2 = va2+va_offset
-    va3 = va3+va_offset
-
-    for bus_id in ids(pm, pm.cnw, :bus)
-        if !haskey(ref(pm, nw, :bus, bus_id), "va_start")
-            ref(pm, nw, :bus, bus_id)["va_start"] = MultiConductorVector([va1,va2, va3])
-        end
-    end
-end

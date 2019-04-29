@@ -1,6 +1,25 @@
 # Three-phase specific constraints
 
 
+""
+function variable_tp_voltage(pm::GenericPowerModel{T}; nw=pm.cnw, kwargs...) where T <: PMs.AbstractACPForm
+    for c in PMs.conductor_ids(pm)
+        PMs.variable_voltage(pm, cnd=c; nw=nw, kwargs...)
+    end
+    # This is needed for delta loads, where division occurs by the difference
+    # of voltage phasors. If the voltage phasors at one bus are initialized
+    # in the same point, this would lead to division by zero.
+    ncnd = length(PMs.conductor_ids(pm))
+    theta = [wraptopi(2 * pi / ncnd * (1-c)) for c in 1:ncnd]
+    vm = 1
+    for c in 1:ncnd
+        for id in PMs.ids(pm, :bus)
+            setvalue(var(pm, nw, c, :va, id), theta[c])
+        end
+    end
+end
+
+
 "do nothing, this model does not have complex voltage constraints"
 function constraint_tp_voltage(pm::GenericPowerModel{T}, n::Int, c::Int) where T <: PMs.AbstractACPForm
 end

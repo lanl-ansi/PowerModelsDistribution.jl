@@ -276,7 +276,9 @@ TESTLOG = getlogger(PowerModels)
 
                 for (bus, va, vm) in zip(["1", "2", "3"], [0.0, deg2rad(-0.03), deg2rad(-0.07)], [0.9959, 0.986973, 0.976605])
                     @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs.wraptopi.([2 * pi / tppm["conductors"] * (1 - c) + va for c in 1:tppm["conductors"]]); atol=deg2rad(0.01)))
-                    @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-5))
+                    # changed atol 1E-5 -> 1E-4
+                    # solution changed after changing initial point in constraint_tp_voltage
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-4))
                 end
 
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.018345; atol=1e-6)
@@ -356,7 +358,10 @@ TESTLOG = getlogger(PowerModels)
         @test sol["status"] == :LocalOptimal
         @test sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]) < 0.0
         @test sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]) < 0.0
-        @test isapprox(sum(sol["solution"]["gen"]["2"]["pg"] * sol["solution"]["baseMVA"]), 0.018345; atol=1e-4)
+        #@test isapprox(sum(sol["solution"]["gen"]["2"]["pg"] * sol["solution"]["baseMVA"]), 0.018345; atol=1e-4)
+        # changed objective 0.018345 -> 0.0182074
+        # solution changed after changing initial point in constraint_tp_voltage
+        @test isapprox(sum(sol["solution"]["gen"]["2"]["pg"] * sol["solution"]["baseMVA"]), 0.0182074; atol=1e-4)
         @test isapprox(sum(sol["solution"]["gen"]["2"]["qg"] * sol["solution"]["baseMVA"]), 0.00919404; atol=1e-4)
     end
 
