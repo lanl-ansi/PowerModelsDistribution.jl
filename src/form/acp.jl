@@ -291,3 +291,149 @@ function constraint_tp_oltc_flow(pm::GenericPowerModel{T}, nw::Int, i::Int, f_bu
         )
     end
 end
+
+
+"""
+a = exp(im*2π/3)
+U+ = (1*Ua + a*Ub a^2*Uc)/3
+U- = (1*Ua + a^2*Ub a*Uc)/3
+vuf = |U-|/|U+|
+|U-| <= vufmax*|U+|
+|U-|^2 <= vufmax^2*|U+|^2
+"""
+function constraint_tp_vuf(pm::GenericPowerModel{T}, nw::Int, bus_id::Int, vufmax::Float64) where T <: PMs.AbstractACPForm
+    if !haskey(var(pm, pm.cnw), :vmpossqr)
+        var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
+        var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+    end
+    (vm_a, vm_b, vm_c) = [var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    (va_a, va_b, va_c) = [var(pm, nw, i, :va, bus_id) for i in 1:3]
+    a = exp(im*2*pi/3)
+    # real and imag functions cannot be used in NLexpressions, so precalculate
+    are = real(a)
+    aim = imag(a)
+    a2re = real(a^2)
+    a2im = imag(a^2)
+    # real and imaginary components of U+
+    vrepos = @NLexpression(pm.model,
+        (vm_a*cos(va_a) + are*vm_b*cos(va_b) - aim*vm_b*sin(va_b) + a2re*vm_c*cos(va_c) - a2im*vm_c*sin(va_c))/3
+    )
+    vimpos = @NLexpression(pm.model,
+        (vm_a*sin(va_a) + are*vm_b*sin(va_b) + aim*vm_b*cos(va_b) + a2re*vm_c*sin(va_c) + a2im*vm_c*cos(va_c))/3
+    )
+    # square of magnitude of U+, |U+|^2
+    vmpossqr = @NLexpression(pm.model, vrepos^2+vimpos^2)
+    # real and imaginary components of U-
+    vreneg = @NLexpression(pm.model,
+        (vm_a*cos(va_a) + a2re*vm_b*cos(va_b) - a2im*vm_b*sin(va_b) + are*vm_c*cos(va_c) - aim*vm_c*sin(va_c))/3
+    )
+    vimneg = @NLexpression(pm.model,
+        (vm_a*sin(va_a) + a2re*vm_b*sin(va_b) + a2im*vm_b*cos(va_b) + are*vm_c*sin(va_c) + aim*vm_c*cos(va_c))/3
+    )
+    # square of magnitude of U-, |U-|^2
+    vmnegsqr = @NLexpression(pm.model, vreneg^2+vimneg^2)
+    # finally, apply constraint
+    @NLconstraint(pm.model, vmnegsqr <= vufmax^2*vmpossqr)
+    # DEBUGGING: save references for post check
+    #var(pm, pm.cnw, :vmpossqr)[bus_id] = vmpossqr
+    #var(pm, pm.cnw, :vmnegsqr)[bus_id] = vmnegsqr
+end
+
+
+"""
+a = exp(im*2π/3)
+U+ = (1*Ua + a*Ub a^2*Uc)/3
+U- = (1*Ua + a^2*Ub a*Uc)/3
+vuf = |U-|/|U+|
+|U-| <= vufmax*|U+|
+|U-|^2 <= vufmax^2*|U+|^2
+"""
+function constraint_tp_vmneg(pm::GenericPowerModel{T}, nw::Int, bus_id::Int, vmnegmax::Float64) where T <: PMs.AbstractACPForm
+    if !haskey(var(pm, pm.cnw), :vmpossqr)
+        var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
+        var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+    end
+    (vm_a, vm_b, vm_c) = [var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    (va_a, va_b, va_c) = [var(pm, nw, i, :va, bus_id) for i in 1:3]
+    a = exp(im*2*pi/3)
+    # real and imag functions cannot be used in NLexpressions, so precalculate
+    are = real(a)
+    aim = imag(a)
+    a2re = real(a^2)
+    a2im = imag(a^2)
+    # real and imaginary components of U-
+    vreneg = @NLexpression(pm.model,
+        (vm_a*cos(va_a) + a2re*vm_b*cos(va_b) - a2im*vm_b*sin(va_b) + are*vm_c*cos(va_c) - aim*vm_c*sin(va_c))/3
+    )
+    vimneg = @NLexpression(pm.model,
+        (vm_a*sin(va_a) + a2re*vm_b*sin(va_b) + a2im*vm_b*cos(va_b) + are*vm_c*sin(va_c) + aim*vm_c*cos(va_c))/3
+    )
+    # square of magnitude of U-, |U-|^2
+    vmnegsqr = @NLexpression(pm.model, vreneg^2+vimneg^2)
+    # finally, apply constraint
+    @NLconstraint(pm.model, vmnegsqr <= vmnegmax^2)
+end
+
+
+"""
+a = exp(im*2π/3)
+U+ = (1*Ua + a*Ub a^2*Uc)/3
+U- = (1*Ua + a^2*Ub a*Uc)/3
+vuf = |U-|/|U+|
+|U-| <= vufmax*|U+|
+|U-|^2 <= vufmax^2*|U+|^2
+"""
+function constraint_tp_vmpos(pm::GenericPowerModel{T}, nw::Int, bus_id::Int, vmposmax::Float64) where T <: PMs.AbstractACPForm
+    if !haskey(var(pm, pm.cnw), :vmpossqr)
+        var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
+        var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+    end
+    (vm_a, vm_b, vm_c) = [var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    (va_a, va_b, va_c) = [var(pm, nw, i, :va, bus_id) for i in 1:3]
+    a = exp(im*2*pi/3)
+    # real and imag functions cannot be used in NLexpressions, so precalculate
+    are = real(a)
+    aim = imag(a)
+    a2re = real(a^2)
+    a2im = imag(a^2)
+    # real and imaginary components of U+
+    vrepos = @NLexpression(pm.model,
+        (vm_a*cos(va_a) + are*vm_b*cos(va_b) - aim*vm_b*sin(va_b) + a2re*vm_c*cos(va_c) - a2im*vm_c*sin(va_c))/3
+    )
+    vimpos = @NLexpression(pm.model,
+        (vm_a*sin(va_a) + are*vm_b*sin(va_b) + aim*vm_b*cos(va_b) + a2re*vm_c*sin(va_c) + a2im*vm_c*cos(va_c))/3
+    )
+    # square of magnitude of U+, |U+|^2
+    vmpossqr = @NLexpression(pm.model, vrepos^2+vimpos^2)
+    # finally, apply constraint
+    @NLconstraint(pm.model, vmpossqr <= vmposmax^2)
+end
+
+
+"""
+a = exp(im*2π/3)
+U+ = (1*Ua + a*Ub a^2*Uc)/3
+U- = (1*Ua + a^2*Ub a*Uc)/3
+vuf = |U-|/|U+|
+|U-| <= vufmax*|U+|
+|U-|^2 <= vufmax^2*|U+|^2
+"""
+function constraint_tp_vmzero(pm::GenericPowerModel{T}, nw::Int, bus_id::Int, vmzeromax::Float64) where T <: PMs.AbstractACPForm
+    if !haskey(var(pm, pm.cnw), :vmpossqr)
+        var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
+        var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+    end
+    (vm_a, vm_b, vm_c) = [var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    (va_a, va_b, va_c) = [var(pm, nw, i, :va, bus_id) for i in 1:3]
+    # real and imaginary components of U+
+    vrezero = @NLexpression(pm.model,
+        (vm_a*cos(va_a) + vm_b*cos(va_b) + vm_c*cos(va_c))/3
+    )
+    vimzero = @NLexpression(pm.model,
+        (vm_a*sin(va_a) + vm_b*sin(va_b) + vm_c*sin(va_c))/3
+    )
+    # square of magnitude of U+, |U+|^2
+    vmzerosqr = @NLexpression(pm.model, vrepos^2+vimpos^2)
+    # finally, apply constraint
+    @NLconstraint(pm.model, vmzerosqr <= vmzeromax^2)
+end
