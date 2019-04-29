@@ -14,7 +14,7 @@ PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
 
 [compat]
 # Cbc = ">= 0.4"
-InfrastructureModels = "< 0.2"
+InfrastructureModels = "^0.3"
 # Ipopt = ">= 0.4"
 JuMP = "^0.19"
 # Juniper = "< 0.4"

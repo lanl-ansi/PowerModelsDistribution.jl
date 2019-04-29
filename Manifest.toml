@@ -76,12 +76,12 @@ uuid = "f6369f11-7733-5829-9624-2563aa707210"
 version = "0.10.3"
 
 [[InfrastructureModels]]
-deps = ["JuMP", "LinearAlgebra", "MathOptInterface", "Memento"]
-git-tree-sha1 = "9197fc4b024ebf8d91e659c51079a6e0e921b0ff"
+deps = ["JuMP", "Memento"]
+git-tree-sha1 = "f4ad74faf03b899ac4a46f0c5f4ef4ddfaf47ede"
 repo-rev = "moi-2"
 repo-url = "https://github.com/lanl-ansi/InfrastructureModels.jl.git"
 uuid = "2030c09a-7f63-5d83-885d-db604e0e9cc0"
-version = "0.1.0"
+version = "0.3.0"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -161,7 +161,7 @@ uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [[PowerModels]]
 deps = ["InfrastructureModels", "JSON", "JuMP", "LinearAlgebra", "MathOptInterface", "Memento", "SparseArrays"]
-git-tree-sha1 = "2b685ea555d2c4fc17f99c270c3c58d2085261eb"
+git-tree-sha1 = "0dfdc427caf93b8ba68426a78a163af59b063f6d"
 repo-rev = "moi-2"
 repo-url = "https://github.com/lanl-ansi/PowerModels.jl.git"
 uuid = "c36e90e8-916a-50a6-bd94-075b64ef4655"
