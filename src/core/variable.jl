@@ -149,7 +149,7 @@ function variable_tp_trans_active_flow(pm::PMs.GenericPowerModel; nw::Int=pm.cnw
     for cnd in PMs.conductor_ids(pm)
         PMs.var(pm, nw, cnd)[:pt] = JuMP.@variable(pm.model,
             [(l,i,j) in PMs.ref(pm, nw, :arcs_trans)],
-            basename="$(nw)_$(cnd)_p_trans",
+            base_name="$(nw)_$(cnd)_p_trans",
             start=0
         )
         if bounded
@@ -157,8 +157,8 @@ function variable_tp_trans_active_flow(pm::PMs.GenericPowerModel; nw::Int=pm.cnw
                 tr_id = arc[1]
                 flow_lb  = -PMs.ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
                 flow_ub  =  PMs.ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
-                JuMP.setlowerbound(PMs.var(pm, nw, cnd, :pt, arc), flow_lb)
-                JuMP.setupperbound(PMs.var(pm, nw, cnd, :pt, arc), flow_ub)
+                JuMP.set_lower_bound(PMs.var(pm, nw, cnd, :pt, arc), flow_lb)
+                JuMP.set_upper_bound(PMs.var(pm, nw, cnd, :pt, arc), flow_ub)
             end
         end
     end
@@ -170,7 +170,7 @@ function variable_tp_trans_reactive_flow(pm::PMs.GenericPowerModel; nw::Int=pm.c
     for cnd in PMs.conductor_ids(pm)
         PMs.var(pm, nw, cnd)[:qt] = JuMP.@variable(pm.model,
             [(l,i,j) in PMs.ref(pm, nw, :arcs_trans)],
-            basename="$(nw)_$(cnd)_q_trans",
+            base_name="$(nw)_$(cnd)_q_trans",
             start=0
         )
         if bounded
@@ -178,8 +178,8 @@ function variable_tp_trans_reactive_flow(pm::PMs.GenericPowerModel; nw::Int=pm.c
                 tr_id = arc[1]
                 flow_lb  = -PMs.ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
                 flow_ub  = PMs.ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
-                JuMP.setlowerbound(PMs.var(pm, nw, cnd, :qt, arc), flow_lb)
-                JuMP.setupperbound(PMs.var(pm, nw, cnd, :qt, arc), flow_ub)
+                JuMP.set_lower_bound(PMs.var(pm, nw, cnd, :qt, arc), flow_lb)
+                JuMP.set_upper_bound(PMs.var(pm, nw, cnd, :qt, arc), flow_ub)
             end
         end
     end
@@ -193,13 +193,13 @@ function variable_tp_oltc_tap(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, bounded
     for c in 1:nphases
         PMs.var(pm, nw, c)[:tap] = JuMP.@variable(pm.model,
             [i in oltc_ids],
-            basename="$(nw)_tm",
+            base_name="$(nw)_tm",
             start=PMs.ref(pm, nw, :trans, i, "tm")[c]
         )
         if bounded
             for tr_id in oltc_ids
-                JuMP.setlowerbound(PMs.var(pm, nw, c)[:tap][tr_id], PMs.ref(pm, nw, :trans, tr_id, "tm_min")[c])
-                JuMP.setupperbound(PMs.var(pm, nw, c)[:tap][tr_id], PMs.ref(pm, nw, :trans, tr_id, "tm_max")[c])
+                JuMP.set_lower_bound(PMs.var(pm, nw, c)[:tap][tr_id], PMs.ref(pm, nw, :trans, tr_id, "tm_min")[c])
+                JuMP.set_upper_bound(PMs.var(pm, nw, c)[:tap][tr_id], PMs.ref(pm, nw, :trans, tr_id, "tm_max")[c])
             end
         end
     end
