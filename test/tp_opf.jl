@@ -463,5 +463,5 @@ end
     tppm_data["bus"]["3"]["vmzeromax"] = 0.04
     pm = TPPMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_ubctr, multiconductor=true)
     sol = TPPMs.solve_generic_model(pm, ipopt_solver, solution_builder=TPPMs.get_solution_vseq)
-    @test norm(sol["solution"]["bus"]["3"]["vmneg"]-0.04, Inf) <= 1E-5
+    @test norm(sol["solution"]["bus"]["3"]["vmzero"]-0.04, Inf) <= 1E-5
 end
