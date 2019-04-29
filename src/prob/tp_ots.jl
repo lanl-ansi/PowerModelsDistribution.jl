@@ -14,7 +14,7 @@ end
 
 
 ""
-function post_tp_ots(pm::GenericPowerModel)
+function post_tp_ots(pm::PMs.GenericPowerModel)
     for c in PMs.conductor_ids(pm)
         PMs.variable_branch_indicator(pm, cnd=c)
         PMs.variable_voltage_on_off(pm, cnd=c)
@@ -26,15 +26,15 @@ function post_tp_ots(pm::GenericPowerModel)
     for c in PMs.conductor_ids(pm)
         PMs.constraint_voltage_on_off(pm, cnd=c)
 
-        for i in ids(pm, :ref_buses)
+        for i in PMs.ids(pm, :ref_buses)
             constraint_tp_theta_ref(pm, i, cnd=c)
         end
 
-        for i in ids(pm, :bus)
+        for i in PMs.ids(pm, :bus)
             PMs.constraint_kcl_shunt(pm, i, cnd=c)
         end
 
-        for i in ids(pm, :branch)
+        for i in PMs.ids(pm, :branch)
             constraint_ohms_tp_yt_from_on_off(pm, i, cnd=c)
             constraint_ohms_tp_yt_to_on_off(pm, i, cnd=c)
 
@@ -44,7 +44,7 @@ function post_tp_ots(pm::GenericPowerModel)
             PMs.constraint_thermal_limit_to_on_off(pm, i, cnd=c)
         end
 
-        for i in ids(pm, :dcline)
+        for i in PMs.ids(pm, :dcline)
             PMs.constraint_dcline(pm, i, cnd=c)
         end
     end

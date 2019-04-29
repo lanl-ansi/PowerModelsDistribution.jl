@@ -5,21 +5,19 @@ os:
 julia:
   - 1.0
   - 1.1
-cache:
- directories:
-   - /home/travis/.julia
-addons:
-  apt_packages:
-    - gfortran
-before_install:
-  - julia -e '(VERSION >= v"0.7" && using Pkg); Pkg.rm("ThreePhasePowerModels"); Pkg.rm("ThreePhasePowerModels")'
-  - julia -e '(VERSION >= v"0.7" && using Pkg); Pkg.update()'
+  - nightly
+matrix:
+  allow_failures:
+    - julia: nightly
+script:
+  - julia --project -e 'import Pkg; Pkg.build(); Pkg.instantiate()'
+  - julia --project -e 'import Pkg; Pkg.test(coverage=true);'
 after_success:
-  - julia -e '(VERSION >= v"0.7" && using Pkg); Pkg.add("Coverage"); cd(Pkg.dir("ThreePhasePowerModels")); using Coverage; Codecov.submit(process_folder())'
+  - julia -e 'using Pkg; Pkg.add("Coverage"); cd(Pkg.dir("ThreePhasePowerModels")); using Coverage; Codecov.submit(process_folder())'
 jobs:
   include:
     - stage: "Documentation"
-      julia: 1.0
+      julia: 1.1
       os: linux
       script:
         - julia --project=docs/ -e 'using Pkg; Pkg.instantiate(); Pkg.develop(PackageSpec(path=pwd()))'
