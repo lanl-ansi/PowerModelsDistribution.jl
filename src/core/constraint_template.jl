@@ -35,7 +35,7 @@ end
 
 
 "delegate back to PowerModels by default"
-function constraint_tp_voltage(pm::GenericPowerModel, n::Int, c::Int, bounded::Bool)
+function constraint_tp_voltage(pm::PMs.GenericPowerModel, n::Int, c::Int, bounded::Bool)
         PMs.constraint_voltage(pm, n, c)
 end
 
