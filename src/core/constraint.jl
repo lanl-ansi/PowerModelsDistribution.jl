@@ -24,38 +24,22 @@ function constraint_tp_storage_loss(pm::GenericPowerModel, n::Int, i, bus, r, x,
     @NLconstraint(pm.model, sum(ps[c] for c in conductors) + (sd - sc) == standby_loss + sum( r[c]*(ps[c]^2 + qs[c]^2)/vm[c]^2 for c in conductors))
 end
 
-function constraint_tp_vuf(pm::GenericPowerModel; nw::Int=pm.cnw)
-    for id in PMs.ids(pm, nw, :bus)
-        bus = ref(pm, nw, :bus, id)
-        if haskey(bus, "vufmax")
-            constraint_tp_vuf(pm, nw, id, bus["vufmax"])
-        end
-    end
+function constraint_tp_vuf(pm::GenericPowerModel, bus_id::Int; nw::Int=pm.cnw)
+    bus = ref(pm, nw, :bus, bus_id)
+    constraint_tp_vuf(pm, nw, bus_id, bus["vufmax"])
 end
 
-function constraint_tp_vmneg(pm::GenericPowerModel; nw::Int=pm.cnw)
-    for id in PMs.ids(pm, nw, :bus)
-        bus = ref(pm, nw, :bus, id)
-        if haskey(bus, "vmnegmax")
-            constraint_tp_vmneg(pm, nw, id, bus["vmnegmax"])
-        end
-    end
+function constraint_tp_vmneg(pm::GenericPowerModel, bus_id::Int; nw::Int=pm.cnw)
+    bus = ref(pm, nw, :bus, bus_id)
+    constraint_tp_vmneg(pm, nw, bus_id, bus["vmnegmax"])
 end
 
-function constraint_tp_vmpos(pm::GenericPowerModel; nw::Int=pm.cnw)
-    for id in PMs.ids(pm, nw, :bus)
-        bus = ref(pm, nw, :bus, id)
-        if haskey(bus, "vmposmax")
-            constraint_tp_vmpos(pm, nw, id, bus["vmposmax"])
-        end
-    end
+function constraint_tp_vmpos(pm::GenericPowerModel, bus_id::Int; nw::Int=pm.cnw)
+    bus = ref(pm, nw, :bus, bus_id)
+    constraint_tp_vmpos(pm, nw, bus_id, bus["vmposmax"])
 end
 
-function constraint_tp_vmzero(pm::GenericPowerModel; nw::Int=pm.cnw)
-    for id in PMs.ids(pm, nw, :bus)
-        bus = ref(pm, nw, :bus, id)
-        if haskey(bus, "vmzeromax")
-            constraint_tp_vmzero(pm, nw, id, bus["vmzeromax"])
-        end
-    end
+function constraint_tp_vmzero(pm::GenericPowerModel, bus_id::Int; nw::Int=pm.cnw)
+        bus = ref(pm, nw, :bus, bus_id)
+        constraint_tp_vmzero(pm, nw, bus_id, bus["vmzeromax"])
 end
