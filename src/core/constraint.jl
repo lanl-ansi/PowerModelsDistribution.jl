@@ -46,7 +46,7 @@ function constraint_tp_vmpos(pm::GenericPowerModel; nw::Int=pm.cnw)
     for id in PMs.ids(pm, nw, :bus)
         bus = ref(pm, nw, :bus, id)
         if haskey(bus, "vmposmax")
-            constraint_tp_vmneg(pm, nw, id, bus["vmposmax"])
+            constraint_tp_vmpos(pm, nw, id, bus["vmposmax"])
         end
     end
 end
@@ -55,7 +55,7 @@ function constraint_tp_vmzero(pm::GenericPowerModel; nw::Int=pm.cnw)
     for id in PMs.ids(pm, nw, :bus)
         bus = ref(pm, nw, :bus, id)
         if haskey(bus, "vmzeromax")
-            constraint_tp_vmneg(pm, nw, id, bus["vmzeromax"])
+            constraint_tp_vmzero(pm, nw, id, bus["vmzeromax"])
         end
     end
 end

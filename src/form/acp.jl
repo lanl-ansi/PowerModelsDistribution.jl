@@ -433,7 +433,7 @@ function constraint_tp_vmzero(pm::GenericPowerModel{T}, nw::Int, bus_id::Int, vm
         (vm_a*sin(va_a) + vm_b*sin(va_b) + vm_c*sin(va_c))/3
     )
     # square of magnitude of U+, |U+|^2
-    vmzerosqr = @NLexpression(pm.model, vrepos^2+vimpos^2)
+    vmzerosqr = @NLexpression(pm.model, vrezero^2+vimzero^2)
     # finally, apply constraint
     @NLconstraint(pm.model, vmzerosqr <= vmzeromax^2)
 end
