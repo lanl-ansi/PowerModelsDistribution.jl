@@ -1,5 +1,5 @@
 # OpenDSS parser
-
+import LinearAlgebra: isdiag, diag, pinv
 
 "Structure representing OpenDSS `dss_source_id` giving the type of the component `dss_type`, its name `dss_name`, and the active phases `active_phases`"
 struct DSSSourceId
@@ -90,7 +90,7 @@ function discover_buses(dss_data::Dict)::Array
         end
     end
     if length(buses) == 0
-        error(LOGGER, "dss_data has no branches!")
+        Memento.error(LOGGER, "dss_data has no branches!")
     else
         return buses
     end
@@ -150,7 +150,7 @@ function find_component(data::Dict, name::AbstractString, compType::AbstractStri
             return comp
         end
     end
-    warn(LOGGER, "Could not find $compType \"$name\"")
+    Memento.warn(LOGGER, "Could not find $compType \"$name\"")
     return Dict{String,Any}()
 end
 
@@ -165,7 +165,7 @@ function find_bus(busname::AbstractString, tppm_data::Dict)
     if haskey(bus, "bus_i")
         return bus["bus_i"]
     else
-        error(LOGGER, "cannot find connected bus with id \"$busname\"")
+        Memento.error(LOGGER, "cannot find connected bus with id \"$busname\"")
     end
 end
 
@@ -197,7 +197,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             expected_kv = tppm_data["basekv"] / sqrt(tppm_data["conductors"])
             if !isapprox(kv, expected_kv; atol=expected_kv * 0.01)
-                warn(LOGGER, "Load has kv=$kv, not the expected kv=$(expected_kv). Results may not match OpenDSS")
+                Memento.warn(LOGGER, "Load has kv=$kv, not the expected kv=$(expected_kv). Results may not match OpenDSS")
             end
 
             loadDict["name"] = defaults["name"]
@@ -531,7 +531,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "pvsystem")
         for pv in dss_data["pvsystem"]
-            warn(LOGGER, "Converting PVSystem \"$(pv["name"])\" into generator with limits determined by OpenDSS property 'kVA'")
+            Memento.warn(LOGGER, "Converting PVSystem \"$(pv["name"])\" into generator with limits determined by OpenDSS property 'kVA'")
 
             if haskey(pv, "like")
                 pv = merge(find_component(dss_data, pv["like"], "pvsystem"), pv)
@@ -611,7 +611,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             end
 
             if haskey(line, "basefreq") && line["basefreq"] != tppm_data["basefreq"]
-                warn(LOGGER, "basefreq=$(line["basefreq"]) on line $(line["name"]) does not match circuit basefreq=$(tppm_data["basefreq"])")
+                Memento.warn(LOGGER, "basefreq=$(line["basefreq"]) on line $(line["name"]) does not match circuit basefreq=$(tppm_data["basefreq"])")
                 line["freq"] = deepcopy(line["basefreq"])
                 line["basefreq"] = deepcopy(tppm_data["basefreq"])
             end
@@ -656,7 +656,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["g_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
 
             if !isdiag(cmatrix)
-                info(LOGGER, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`")
+                Memento.info(LOGGER, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`")
             end
             branchDict["b_fr"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
             branchDict["b_to"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
@@ -716,7 +716,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             if nrw>3
                 # All of the code is compatible with any number of windings,
                 # except for the parsing of the loss model (the pair-wise reactance)
-                error(LOGGER, "For now parsing of xscarray is not supported. At most 3 windings are allowed, not $nrw.")
+                Memento.error(LOGGER, "For now parsing of xscarray is not supported. At most 3 windings are allowed, not $nrw.")
             end
 
             transDict = Dict{String,Any}()
@@ -730,7 +730,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 nodes_0123 = [true true true true]
                 nodes_123 = [true true true false]
                 if !(nodes==nodes_0123 || nodes==nodes_123)
-                    warn(LOGGER, "Only three-phase transformers are supported. The bus specification $bnstr is treated as $bus instead.")
+                    Memento.warn(LOGGER, "Only three-phase transformers are supported. The bus specification $bnstr is treated as $bus instead.")
                 end
                 transDict["buses"][i] = find_bus(bus, tppm_data)
             end
@@ -807,9 +807,9 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             end
             pos_to_abc(p) = zpn_to_abc(p, p, p)
             zbase = 1^2/(defaults["kvas"][1]/1E3)
-            transDict["rs"] = Array{MultiConductorMatrix{Float64}, 1}(undef, nrw)
-            transDict["gsh"] = Array{MultiConductorMatrix{Float64}, 1}(undef, nrw)
-            transDict["bsh"] = Array{MultiConductorMatrix{Float64}, 1}(undef, nrw)
+            transDict["rs"] = Array{PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
+            transDict["gsh"] = Array{PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
+            transDict["bsh"] = Array{PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
             # deal with dual definition of rs in defaults dict
             # if non-zero, pick "%rs", else go for the per winding spec
             rs_alt = [defaults["%r$suffix"] for suffix in prop_suffix_w]
@@ -824,24 +824,24 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 # impossible to know at this point which was actually specified
                 # by the user. %rs is more general, so %loadloss is not
                 # supported for now.
-                warn(LOGGER, "The %loadloss property is ignored for now.")
+                Memento.warn(LOGGER, "The %loadloss property is ignored for now.")
                 #TODO handle neutral impedance
                 # neutral impedance is ignored for now; all transformers are
                 # grounded (that is, those with a wye and zig-zag winding).
-                warn(LOGGER, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.")
-                transDict["rs"][w] = MultiConductorMatrix(real.(Zs_w))
+                Memento.warn(LOGGER, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.")
+                transDict["rs"][w] = PMs.MultiConductorMatrix(real.(Zs_w))
                 # shunt elements are added at second winding
                 if w==2
                     ysh_w_p = (defaults["%noloadloss"]-im*defaults["%imag"])/100/zbase
                     Ysh_w = pos_to_abc(ysh_w_p)
-                    transDict["gsh"][w] = MultiConductorMatrix(real.(Ysh_w))
-                    transDict["bsh"][w] = MultiConductorMatrix(imag.(Ysh_w))
+                    transDict["gsh"][w] = PMs.MultiConductorMatrix(real.(Ysh_w))
+                    transDict["bsh"][w] = PMs.MultiConductorMatrix(imag.(Ysh_w))
                 else
-                    transDict["gsh"][w] = MultiConductorMatrix(zeros(Float64, 3, 3))
-                    transDict["bsh"][w] = MultiConductorMatrix(zeros(Float64, 3, 3))
+                    transDict["gsh"][w] = PMs.MultiConductorMatrix(zeros(Float64, 3, 3))
+                    transDict["bsh"][w] = PMs.MultiConductorMatrix(zeros(Float64, 3, 3))
                 end
             end
-            transDict["xs"] = Dict{String, MultiConductorMatrix{Float64}}()
+            transDict["xs"] = Dict{String, PMs.MultiConductorMatrix{Float64}}()
 
             Zsc = Dict{Tuple{Int,Int}, Complex}()
             if nrw==2
@@ -855,7 +855,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             Zbr = sc2br_impedance(Zsc)
             for (k,zs_ij_p) in Zbr
                 Zs_ij = pos_to_abc(zs_ij_p)
-                transDict["xs"]["$(k[1])-$(k[2])"] = MultiConductorMatrix(imag.(Zs_ij))
+                transDict["xs"]["$(k[1])-$(k[2])"] = PMs.MultiConductorMatrix(imag.(Zs_ij))
             end
 
             push!(tppm_data["trans_comp"], transDict)
@@ -881,7 +881,7 @@ function sc2br_impedance(Zsc)
                     # Zsc is symmetric; use value of lower triangle if defined
                     Zsc[(i,j)] =  Zsc[(j,i)]
                 else
-                    error(LOGGER, "Short-circuit impedance between winding $i and $j is missing.")
+                    Memento.error(LOGGER, "Short-circuit impedance between winding $i and $j is missing.")
                 end
             end
         end
@@ -915,7 +915,7 @@ function dss2tppm_reactor!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     end
 
     if haskey(dss_data, "reactor")
-        warn(LOGGER, "reactors as constant impedance elements is not yet supported, treating like line")
+        Memento.warn(LOGGER, "reactors as constant impedance elements is not yet supported, treating like line")
         for reactor in dss_data["reactor"]
             if haskey(reactor, "bus2")
                 if haskey(reactor, "like")
@@ -1199,10 +1199,10 @@ function create_vbus!(tppm_data; vmin=0, vmax=Inf, basekv=tppm_data["basekv"], n
     vbus["bus_i"] = vbus_id
     vbus["source_id"] = source_id
     ncnds = tppm_data["conductors"]
-    vbus["vm"] = MultiConductorVector(ones(Float64, ncnds))
-    vbus["va"] = MultiConductorVector(zeros(Float64, ncnds))
-    vbus["vmin"] = MultiConductorVector(ones(Float64, ncnds))*vmin
-    vbus["vmax"] = MultiConductorVector(ones(Float64, ncnds))*vmax
+    vbus["vm"] = PMs.MultiConductorVector(ones(Float64, ncnds))
+    vbus["va"] = PMs.MultiConductorVector(zeros(Float64, ncnds))
+    vbus["vmin"] = PMs.MultiConductorVector(ones(Float64, ncnds))*vmin
+    vbus["vmax"] = PMs.MultiConductorVector(ones(Float64, ncnds))*vmax
     vbus["base_kv"] = basekv
     return vbus
 end
@@ -1227,9 +1227,9 @@ function create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; name="", source_id="
     for k in [:br_r, :br_x, :g_fr, :g_to, :b_fr, :b_to]
         if !haskey(kwargs, k)
             if k in [:br_r, :br_x]
-                vbranch[string(k)] = MultiConductorMatrix(zeros(ncnd, ncnd))
+                vbranch[string(k)] = PMs.MultiConductorMatrix(zeros(ncnd, ncnd))
             else
-                vbranch[string(k)] = MultiConductorVector(zeros(ncnd))
+                vbranch[string(k)] = PMs.MultiConductorVector(zeros(ncnd))
             end
         else
             if k in [:br_r, :br_x]
@@ -1239,10 +1239,10 @@ function create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; name="", source_id="
             end
         end
     end
-    vbranch["angmin"] = -MultiConductorVector(ones(ncnd))*60
-    vbranch["angmax"] = MultiConductorVector(ones(ncnd))*60
-    vbranch["shift"] = MultiConductorVector(zeros(ncnd))
-    vbranch["tap"] = MultiConductorVector(ones(ncnd))
+    vbranch["angmin"] = -PMs.MultiConductorVector(ones(ncnd))*60
+    vbranch["angmax"] = PMs.MultiConductorVector(ones(ncnd))*60
+    vbranch["shift"] = PMs.MultiConductorVector(zeros(ncnd))
+    vbranch["tap"] = PMs.MultiConductorVector(ones(ncnd))
     vbranch["br_status"] = 1
     for k in [:rate_a, :rate_b, :rate_c]
         if haskey(kwargs, k)
@@ -1306,8 +1306,8 @@ function rm_redundant_pd_elements!(tppm_data; buses=keys(tppm_data["bus"]), bran
             end
             # move shunts to the bus that will be left
             if !haskey(shunts_g, kp_bus)
-                shunts_g[kp_bus] =  MultiConductorVector(zeros(3))
-                shunts_b[kp_bus] =  MultiConductorVector(zeros(3))
+                shunts_g[kp_bus] =  PMs.MultiConductorVector(zeros(3))
+                shunts_b[kp_bus] =  PMs.MultiConductorVector(zeros(3))
             end
             shunts_g[kp_bus] .+= br["g_fr"]
             shunts_g[kp_bus] .+= br["g_to"]
@@ -1347,14 +1347,14 @@ function rm_redundant_pd_elements!(tppm_data; buses=keys(tppm_data["bus"]), bran
             # this might occur if not all buses and branches are marked for removal
             # a branch in parallel with a removed branch can turn into a self-loop
             # and if that branch is not marked for removal, we end up here
-            error(LOGGER, "Specified set of buses and branches leads to a self-loop.")
+            Memento.error(LOGGER, "Specified set of buses and branches leads to a self-loop.")
         end
     end
     # create shunts for lumped pi-model shunts
     for (bus, shunt_g) in shunts_g
         shunt_b = shunts_b[bus]
         if !all(shunt_g .==0) || !all(shunt_b  .==0)
-            warn(LOGGER, "Pi-model shunt was moved to a bus shunt. Off-diagonals will be discarded in the data model.")
+            Memento.warn(LOGGER, "Pi-model shunt was moved to a bus shunt. Off-diagonals will be discarded in the data model.")
             # The shunts are part of PM, and will be scaled later on by make_per_unit,
             # unlike TPPM level components. The shunts here originate from TPPM level
             # components which were already scaled. Therefore, we have to undo the
@@ -1375,7 +1375,7 @@ or XLT==0 or R[3]==0), then this bus might be removed by
 rm_redundant_pd_elements!, in which case a new shunt should be inserted at the
 remaining bus of the removed branch.
 """
-function add_shunt!(tppm_data, bus; gs=MultiConductorVector(zeros(3)), bs=MultiConductorVector(zeros(3)), vbase_kv=1, sbase_mva=1)
+function add_shunt!(tppm_data, bus; gs=PMs.MultiConductorVector(zeros(3)), bs=PMs.MultiConductorVector(zeros(3)), vbase_kv=1, sbase_mva=1)
     # TODO check whether keys are consistent with the actual data model
     shunt_dict = Dict{String, Any}("status"=>1, "shunt_bus"=>bus)
     zbase  = vbase_kv^2/sbase_mva
@@ -1414,7 +1414,7 @@ function adjust_base!(tppm_data; start_at_first_tr_prim=true)
         # start at type 3 bus if present
         buses_3 = [bus["index"] for (bus_id_str, bus) in tppm_data["bus"] if bus["bus_type"]==3]
         if length(buses_3)==0
-            warn(LOGGER, "No bus of type 3 found; selecting random bus instead.")
+            Memento.warn(LOGGER, "No bus of type 3 found; selecting random bus instead.")
             source = parse(Int, rand(keys(tppm_data["bus"])))
         else
             source = buses_3[1]
@@ -1427,7 +1427,7 @@ function adjust_base!(tppm_data; start_at_first_tr_prim=true)
     end
     adjust_base_rec!(tppm_data, source, base_kv_new, nodes_visited, edges_br, edges_br_visited, edges_tr, edges_tr_visited, br_basekv_old)
     if !all(values(nodes_visited))
-        warn(LOGGER, "The network contains buses which are not reachable from the start node for the change of voltage base.")
+        Memento.warn(LOGGER, "The network contains buses which are not reachable from the start node for the change of voltage base.")
     end
 end
 
@@ -1444,7 +1444,7 @@ function adjust_base_rec!(tppm_data, source::Int, base_kv_new::Float64, nodes_vi
     if !(base_kv_prev≈base_kv_new)
         # only possible when meshed; ensure consistency
         if nodes_visited[source]
-            error(LOGGER, "Transformer ratings lead to an inconsistent definition for the voltage base at bus $source.")
+            Memento.error(LOGGER, "Transformer ratings lead to an inconsistent definition for the voltage base at bus $source.")
         end
         source_dict["base_kv"] = base_kv_new
         # update the connected shunts with the new voltage base
@@ -1458,9 +1458,9 @@ function adjust_base_rec!(tppm_data, source::Int, base_kv_new::Float64, nodes_vi
             source_dict["vm"] *= base_kv_prev/base_kv_new
             source_dict["vmax"] *= base_kv_prev/base_kv_new
             source_dict["vmin"] *= base_kv_prev/base_kv_new
-            info(LOGGER, "Rescaling vm, vmin and vmax conform with new base_kv at type 3 bus $source($source_name): $base_kv_prev => $base_kv_new")
+            Memento.info(LOGGER, "Rescaling vm, vmin and vmax conform with new base_kv at type 3 bus $source($source_name): $base_kv_prev => $base_kv_new")
         else
-            info(LOGGER, "Resetting base_kv at bus $source($source_name): $base_kv_prev => $base_kv_new")
+            Memento.info(LOGGER, "Resetting base_kv at bus $source($source_name): $base_kv_prev => $base_kv_new")
         end
         # TODO rescale vmin, vmax, vm
         # what is the desired behaviour here?
@@ -1481,7 +1481,7 @@ function adjust_base_rec!(tppm_data, source::Int, base_kv_new::Float64, nodes_vi
             if base_kv_branch_prev != base_kv_new
                 br = tppm_data["branch"]["$br_id"]
                 br_name = haskey(br, "name") ? br["name"] : ""
-                info(LOGGER, "Rescaling impedances at branch $br_id($br_name), conform with change of voltage base: $base_kv_branch_prev => $base_kv_new")
+                Memento.info(LOGGER, "Rescaling impedances at branch $br_id($br_name), conform with change of voltage base: $base_kv_branch_prev => $base_kv_new")
                 adjust_base_branch!(tppm_data, br_id, base_kv_branch_prev, base_kv_new)
             end
             # follow the edge to the adjacent node and repeat
@@ -1589,7 +1589,7 @@ function parse_options(options)
     end
 
     if !haskey(options, "defaultbasefreq")
-        warn(LOGGER, "defaultbasefreq is not defined, default for circuit set to 60 Hz")
+        Memento.warn(LOGGER, "defaultbasefreq is not defined, default for circuit set to 60 Hz")
         out["defaultbasefreq"] = 60.0
     else
         out["defaultbasefreq"] = parse(Float64, options["defaultbasefreq"])
@@ -1634,7 +1634,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         tppm_data["pu"] = defaults["pu"]
         tppm_data["conductors"] = defaults["phases"]
     else
-        error(LOGGER, "Circuit not defined, not a valid circuit!")
+        Memento.error(LOGGER, "Circuit not defined, not a valid circuit!")
     end
 
     dss2tppm_bus!(tppm_data, dss_data, import_all, vmin, vmax)

@@ -7,10 +7,10 @@ function parse_file(io::IOStream; import_all::Bool=false, vmin::Float64=0.9, vma
     if endswith(lowercase(strip(io.name,['>'])), ".m")
         tppm_data = ThreePhasePowerModels.parse_matlab(io)
     elseif endswith(lowercase(strip(io.name,['>'])), ".dss")
-        warn(LOGGER, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported.")
+        Memento.warn(LOGGER, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported.")
         tppm_data = ThreePhasePowerModels.parse_opendss(io; import_all=import_all, vmin=vmin, vmax=vmax)
     else
-        error(LOGGER, "only .m and .dss files are supported")
+        Memento.error(LOGGER, "only .m and .dss files are supported")
     end
 
     check_network_data(tppm_data)
