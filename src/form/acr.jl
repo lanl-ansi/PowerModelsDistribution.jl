@@ -169,29 +169,29 @@ function constraint_ohms_tp_yt_to(pm::PMs.GenericPowerModel{T}, n::Int, c::Int, 
 end
 
 
-function constraint_load_power_setpoint_wye(pm::GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, pd::Real, qd::Real) where T <: PMs.AbstractACRForm
-    @constraint(pm.model, var(pm, nw, cnd, :pd, load_id)==pd)
-    @constraint(pm.model, var(pm, nw, cnd, :qd, load_id)==qd)
+function constraint_load_power_setpoint_wye(pm::PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, pd::Real, qd::Real) where T <: PMs.AbstractACRForm
+    JuMP.@constraint(pm.model, PMs.var(pm, nw, cnd, :pd, load_id)==pd)
+    JuMP.@constraint(pm.model, PMs.var(pm, nw, cnd, :qd, load_id)==qd)
 end
 
 
-function constraint_load_power_prop_vm_wye(pm::GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real) where T <: PMs.AbstractACRForm
-    pd = var(pm, nw, cnd, :pd, load_id)
-    qd = var(pm, nw, cnd, :qd, load_id)
-    vr = var(pm, nw, cnd, :vr, load_bus_id)
-    vi = var(pm, nw, cnd, :vi, load_bus_id)
-    @NLconstraint(pm.model, pd==cp*sqrt(vr^2+vi^2))
-    @NLconstraint(pm.model, qd==cq*sqrt(vr^2+vi^2))
+function constraint_load_power_prop_vm_wye(pm::PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real) where T <: PMs.AbstractACRForm
+    pd = PMs.var(pm, nw, cnd, :pd, load_id)
+    qd = PMs.var(pm, nw, cnd, :qd, load_id)
+    vr = PMs.var(pm, nw, cnd, :vr, load_bus_id)
+    vi = PMs.var(pm, nw, cnd, :vi, load_bus_id)
+    JuMP.@NLconstraint(pm.model, pd==cp*sqrt(vr^2+vi^2))
+    JuMP.@NLconstraint(pm.model, qd==cq*sqrt(vr^2+vi^2))
 end
 
 
-function constraint_load_power_prop_vmsqr_wye(pm::GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real) where T <: PMs.AbstractACRForm
-    pd = var(pm, nw, cnd, :pd, load_id)
-    qd = var(pm, nw, cnd, :qd, load_id)
-    vr = var(pm, nw, cnd, :vr, load_bus_id)
-    vi = var(pm, nw, cnd, :vi, load_bus_id)
-    @NLconstraint(pm.model, pd==cp*(vr^2+vi^2))
-    @NLconstraint(pm.model, qd==cq*(vr^2+vi^2))
+function constraint_load_power_prop_vmsqr_wye(pm::PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real) where T <: PMs.AbstractACRForm
+    pd = PMs.var(pm, nw, cnd, :pd, load_id)
+    qd = PMs.var(pm, nw, cnd, :qd, load_id)
+    vr = PMs.var(pm, nw, cnd, :vr, load_bus_id)
+    vi = PMs.var(pm, nw, cnd, :vi, load_bus_id)
+    JuMP.@NLconstraint(pm.model, pd==cp*(vr^2+vi^2))
+    JuMP.@NLconstraint(pm.model, qd==cq*(vr^2+vi^2))
 end
 
 
@@ -202,16 +202,16 @@ s_a = v_a*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 s_b = v_b*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 s_c = v_c*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 """
-function constraint_tp_load_power_setpoint_delta(pm::GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, pd::MultiConductorVector, qd::MultiConductorVector) where T <: PMs.AbstractACRForm
-    p_a, p_b, p_c = [var(pm, nw, c, :pd, load_id) for c in 1:3]
-    q_a, q_b, q_c = [var(pm, nw, c, :qd, load_id) for c in 1:3]
+function constraint_tp_load_power_setpoint_delta(pm::PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, pd::PMs.MultiConductorVector, qd::PMs.MultiConductorVector) where T <: PMs.AbstractACRForm
+    p_a, p_b, p_c = [PMs.var(pm, nw, c, :pd, load_id) for c in 1:3]
+    q_a, q_b, q_c = [PMs.var(pm, nw, c, :qd, load_id) for c in 1:3]
     p_ab, p_bc, p_ca = pd
     q_ab, q_bc, q_ca = qd
-    vre_a, vre_b, vre_c = [var(pm, nw, c, :vr, load_bus_id) for c in 1:3]
-    vim_a, vim_b, vim_c = [var(pm, nw, c, :vi, load_bus_id) for c in 1:3]
+    vre_a, vre_b, vre_c = [PMs.var(pm, nw, c, :vr, load_bus_id) for c in 1:3]
+    vim_a, vim_b, vim_c = [PMs.var(pm, nw, c, :vi, load_bus_id) for c in 1:3]
     # v_xy = v_x - v_y
-    vre_xy(vre_x, vre_y) = @NLexpression(pm.model, vre_x-vre_y)
-    vim_xy(vim_x, vim_y) = @NLexpression(pm.model, vim_x-vim_y)
+    vre_xy(vre_x, vre_y) = JuMP.@NLexpression(pm.model, vre_x-vre_y)
+    vim_xy(vim_x, vim_y) = JuMP.@NLexpression(pm.model, vim_x-vim_y)
     vre_ab = vre_xy(vre_a, vre_b)
     vim_ab = vim_xy(vim_a, vim_b)
     vre_bc = vre_xy(vre_b, vre_c)
@@ -219,8 +219,8 @@ function constraint_tp_load_power_setpoint_delta(pm::GenericPowerModel{T}, nw::I
     vre_ca = vre_xy(vre_c, vre_a)
     vim_ca = vim_xy(vim_c, vim_a)
     # i_xy = conj(s_xy/v_xy)
-    ire_xy(p_xy, q_xy, vre_xy, vim_xy) = @NLexpression(pm.model, (p_xy*vre_xy+q_xy*vim_xy)/(vre_xy^2+vim_xy^2))
-    iim_xy(p_xy, q_xy, vre_xy, vim_xy) = @NLexpression(pm.model, (p_xy*vim_xy-q_xy*vre_xy)/(vre_xy^2+vim_xy^2))
+    ire_xy(p_xy, q_xy, vre_xy, vim_xy) = JuMP.@NLexpression(pm.model, (p_xy*vre_xy+q_xy*vim_xy)/(vre_xy^2+vim_xy^2))
+    iim_xy(p_xy, q_xy, vre_xy, vim_xy) = JuMP.@NLexpression(pm.model, (p_xy*vim_xy-q_xy*vre_xy)/(vre_xy^2+vim_xy^2))
     ire_ab = ire_xy(p_ab, q_ab, vre_ab, vim_ab)
     iim_ab = iim_xy(p_ab, q_ab, vre_ab, vim_ab)
     ire_bc = ire_xy(p_bc, q_bc, vre_bc, vim_bc)
@@ -230,8 +230,8 @@ function constraint_tp_load_power_setpoint_delta(pm::GenericPowerModel{T}, nw::I
     # s_x = v_x*conj(i_xy-i_zx)
     # p_x = vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx)
     # q_x = vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx)
-    p_x(vre_x, vim_x, ire_xy, iim_xy, ire_zx, iim_zx) = @NLexpression(pm.model, vre_x*(ire_xy-ire_zx) + vim_x*(iim_xy-iim_zx))
-    q_x(vre_x, vim_x, ire_xy, iim_xy, ire_zx, iim_zx) = @NLexpression(pm.model, vim_x*(ire_xy-ire_zx) - vre_x*(iim_xy-iim_zx))
+    p_x(vre_x, vim_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vre_x*(ire_xy-ire_zx) + vim_x*(iim_xy-iim_zx))
+    q_x(vre_x, vim_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vim_x*(ire_xy-ire_zx) - vre_x*(iim_xy-iim_zx))
     # s_x = s_x,ref
     p_a_nlexp = p_x(vre_a, vim_a, ire_ab, iim_ab, ire_ca, iim_ca)
     p_b_nlexp = p_x(vre_b, vim_b, ire_bc, iim_bc, ire_ab, iim_ab)
@@ -239,12 +239,12 @@ function constraint_tp_load_power_setpoint_delta(pm::GenericPowerModel{T}, nw::I
     q_a_nlexp = q_x(vre_a, vim_a, ire_ab, iim_ab, ire_ca, iim_ca)
     q_b_nlexp = q_x(vre_b, vim_b, ire_bc, iim_bc, ire_ab, iim_ab)
     q_c_nlexp = q_x(vre_c, vim_c, ire_ca, iim_ca, ire_bc, iim_bc)
-    @NLconstraint(pm.model, p_a==p_a_nlexp)
-    @NLconstraint(pm.model, p_b==p_b_nlexp)
-    @NLconstraint(pm.model, p_c==p_c_nlexp)
-    @NLconstraint(pm.model, q_a==q_a_nlexp)
-    @NLconstraint(pm.model, q_b==q_b_nlexp)
-    @NLconstraint(pm.model, q_c==q_c_nlexp)
+    JuMP.@NLconstraint(pm.model, p_a==p_a_nlexp)
+    JuMP.@NLconstraint(pm.model, p_b==p_b_nlexp)
+    JuMP.@NLconstraint(pm.model, p_c==p_c_nlexp)
+    JuMP.@NLconstraint(pm.model, q_a==q_a_nlexp)
+    JuMP.@NLconstraint(pm.model, q_b==q_b_nlexp)
+    JuMP.@NLconstraint(pm.model, q_c==q_c_nlexp)
 end
 
 
@@ -257,16 +257,16 @@ And then
 s_a = v_a.conj(i_a) = v_a.conj(i_ab-i_ca)
 idem for s_b and s_c
 """
-function constraint_tp_load_power_prop_vm_delta(pm::GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, cp::MultiConductorVector, cq::MultiConductorVector) where T <: PMs.AbstractACRForm
-    p_a, p_b, p_c = [var(pm, nw, c, :pd, load_id) for c in 1:3]
-    q_a, q_b, q_c = [var(pm, nw, c, :qd, load_id) for c in 1:3]
+function constraint_tp_load_power_prop_vm_delta(pm::PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, cp::PMs.MultiConductorVector, cq::PMs.MultiConductorVector) where T <: PMs.AbstractACRForm
+    p_a, p_b, p_c = [PMs.var(pm, nw, c, :pd, load_id) for c in 1:3]
+    q_a, q_b, q_c = [PMs.var(pm, nw, c, :qd, load_id) for c in 1:3]
     cp_ab, cp_bc, cp_ca = cp
     cq_ab, cq_bc, cq_ca = cq
-    vre_a, vre_b, vre_c = [var(pm, nw, c, :vr, load_bus_id) for c in 1:3]
-    vim_a, vim_b, vim_c = [var(pm, nw, c, :vi, load_bus_id) for c in 1:3]
+    vre_a, vre_b, vre_c = [PMs.var(pm, nw, c, :vr, load_bus_id) for c in 1:3]
+    vim_a, vim_b, vim_c = [PMs.var(pm, nw, c, :vi, load_bus_id) for c in 1:3]
     # v_xy = v_x - v_y
-    vre_xy(vre_x, vre_y) = @NLexpression(pm.model, vre_x-vre_y)
-    vim_xy(vim_x, vim_y) = @NLexpression(pm.model, vim_x-vim_y)
+    vre_xy(vre_x, vre_y) = JuMP.@NLexpression(pm.model, vre_x-vre_y)
+    vim_xy(vim_x, vim_y) = JuMP.@NLexpression(pm.model, vim_x-vim_y)
     vre_ab = vre_xy(vre_a, vre_b)
     vim_ab = vim_xy(vim_a, vim_b)
     vre_bc = vre_xy(vre_b, vre_c)
@@ -274,8 +274,8 @@ function constraint_tp_load_power_prop_vm_delta(pm::GenericPowerModel{T}, nw::In
     vre_ca = vre_xy(vre_c, vre_a)
     vim_ca = vim_xy(vim_c, vim_a)
     # i_xy = conj(s_xy/v_xy)
-    ire_xy(cp_xy, cq_xy, vre_xy, vim_xy) = @NLexpression(pm.model, 1/sqrt(vre_xy^2+vim_xy^2)*(cp_xy*vre_xy+cq_xy*vim_xy))
-    iim_xy(cp_xy, cq_xy, vre_xy, vim_xy) = @NLexpression(pm.model, 1/sqrt(vre_xy^2+vim_xy^2)*(cp_xy*vim_xy-cq_xy*vre_xy))
+    ire_xy(cp_xy, cq_xy, vre_xy, vim_xy) = JuMP.@NLexpression(pm.model, 1/sqrt(vre_xy^2+vim_xy^2)*(cp_xy*vre_xy+cq_xy*vim_xy))
+    iim_xy(cp_xy, cq_xy, vre_xy, vim_xy) = JuMP.@NLexpression(pm.model, 1/sqrt(vre_xy^2+vim_xy^2)*(cp_xy*vim_xy-cq_xy*vre_xy))
     ire_ab = ire_xy(cp_ab, cq_ab, vre_ab, vim_ab)
     iim_ab = iim_xy(cp_ab, cq_ab, vre_ab, vim_ab)
     ire_bc = ire_xy(cp_bc, cq_bc, vre_bc, vim_bc)
@@ -285,8 +285,8 @@ function constraint_tp_load_power_prop_vm_delta(pm::GenericPowerModel{T}, nw::In
     # s_x = v_x*conj(i_xy-i_zx)
     # p_x = vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx)
     # q_x = vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx)
-    p_x(vre_x, vim_x, ire_xy, iim_xy, ire_zx, iim_zx) = @NLexpression(pm.model, vre_x*(ire_xy-ire_zx) + vim_x*(iim_xy-iim_zx))
-    q_x(vre_x, vim_x, ire_xy, iim_xy, ire_zx, iim_zx) = @NLexpression(pm.model, vim_x*(ire_xy-ire_zx) - vre_x*(iim_xy-iim_zx))
+    p_x(vre_x, vim_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vre_x*(ire_xy-ire_zx) + vim_x*(iim_xy-iim_zx))
+    q_x(vre_x, vim_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vim_x*(ire_xy-ire_zx) - vre_x*(iim_xy-iim_zx))
     # s_x = s_x,ref
     p_a_nlexp = p_x(vre_a, vim_a, ire_ab, iim_ab, ire_ca, iim_ca)
     p_b_nlexp = p_x(vre_b, vim_b, ire_bc, iim_bc, ire_ab, iim_ab)
@@ -294,12 +294,12 @@ function constraint_tp_load_power_prop_vm_delta(pm::GenericPowerModel{T}, nw::In
     q_a_nlexp = q_x(vre_a, vim_a, ire_ab, iim_ab, ire_ca, iim_ca)
     q_b_nlexp = q_x(vre_b, vim_b, ire_bc, iim_bc, ire_ab, iim_ab)
     q_c_nlexp = q_x(vre_c, vim_c, ire_ca, iim_ca, ire_bc, iim_bc)
-    @NLconstraint(pm.model, p_a==p_a_nlexp)
-    @NLconstraint(pm.model, p_b==p_b_nlexp)
-    @NLconstraint(pm.model, p_c==p_c_nlexp)
-    @NLconstraint(pm.model, q_a==q_a_nlexp)
-    @NLconstraint(pm.model, q_b==q_b_nlexp)
-    @NLconstraint(pm.model, q_c==q_c_nlexp)
+    JuMP.@NLconstraint(pm.model, p_a==p_a_nlexp)
+    JuMP.@NLconstraint(pm.model, p_b==p_b_nlexp)
+    JuMP.@NLconstraint(pm.model, p_c==p_c_nlexp)
+    JuMP.@NLconstraint(pm.model, q_a==q_a_nlexp)
+    JuMP.@NLconstraint(pm.model, q_b==q_b_nlexp)
+    JuMP.@NLconstraint(pm.model, q_c==q_c_nlexp)
 end
 
 
@@ -312,13 +312,13 @@ And then
 s_a = v_a.conj(i_a) = v_a.conj(i_ab-i_ca)
 idem for s_b and s_c
 """
-function constraint_tp_load_power_prop_vmsqr_delta(pm::GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, cp::MultiConductorVector, cq::MultiConductorVector) where T <: PMs.AbstractACRForm
-    p_a, p_b, p_c = [var(pm, nw, c, :pd, load_id) for c in 1:3]
-    q_a, q_b, q_c = [var(pm, nw, c, :qd, load_id) for c in 1:3]
+function constraint_tp_load_power_prop_vmsqr_delta(pm::PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, cp::PMs.MultiConductorVector, cq::PMs.MultiConductorVector) where T <: PMs.AbstractACRForm
+    p_a, p_b, p_c = [PMs.var(pm, nw, c, :pd, load_id) for c in 1:3]
+    q_a, q_b, q_c = [PMs.var(pm, nw, c, :qd, load_id) for c in 1:3]
     cp_ab, cp_bc, cp_ca = cp
     cq_ab, cq_bc, cq_ca = cq
-    vre_a, vre_b, vre_c = [var(pm, nw, c, :vr, load_bus_id) for c in 1:3]
-    vim_a, vim_b, vim_c = [var(pm, nw, c, :vi, load_bus_id) for c in 1:3]
+    vre_a, vre_b, vre_c = [PMs.var(pm, nw, c, :vr, load_bus_id) for c in 1:3]
+    vim_a, vim_b, vim_c = [PMs.var(pm, nw, c, :vi, load_bus_id) for c in 1:3]
     # v_xy = v_x - v_y
     vre_xy(vre_x, vre_y) = @NLexpression(pm.model, vre_x-vre_y)
     vim_xy(vim_x, vim_y) = @NLexpression(pm.model, vim_x-vim_y)
