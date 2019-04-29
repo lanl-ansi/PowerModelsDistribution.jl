@@ -2,8 +2,8 @@ bus_name2id(tppm_data, name) = [bus["index"] for (_,bus) in tppm_data["bus"] if 
 load_name2id(tppm_data, name) = [load["index"] for (_,load) in tppm_data["load"] if haskey(load, "name") && load["name"]==name][1]
 va(sol, tppm_data, name) = TPPMs.wraptopi(sol["solution"]["bus"][string(bus_name2id(tppm_data, name))]["va"][:])
 vm(sol, tppm_data, name) = sol["solution"]["bus"][string(bus_name2id(tppm_data, name))]["vm"][:]
-pd(pm, tppm_data, name) = [getvalue(var(pm, pm.cnw, c, :pd, load_name2id(tppm_data, name))) for c in 1:3]
-qd(pm, tppm_data, name) = [getvalue(var(pm, pm.cnw, c, :qd, load_name2id(tppm_data, name))) for c in 1:3]
+pd(pm, tppm_data, name) = [getvalue(PMs.var(pm, pm.cnw, c, :pd, load_name2id(tppm_data, name))) for c in 1:3]
+qd(pm, tppm_data, name) = [getvalue(PMs.var(pm, pm.cnw, c, :qd, load_name2id(tppm_data, name))) for c in 1:3]
 sd(pm, tppm_data, name) = pd(sol, tppm_data, name)+im*qd(sol, tppm_data, name)
 @testset "loadmodels pf" begin
     @testset "connection variations" begin
