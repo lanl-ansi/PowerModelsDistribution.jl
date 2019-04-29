@@ -207,15 +207,15 @@ end
 
 
 "Power drawn by the load at the bus to which it is connected"
-function variable_load_flow(pm::GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+function variable_load_flow(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     variable_active_load_flow(pm, nw, cnd)
     variable_reactive_load_flow(pm, nw, cnd)
 end
 
 
 "Active power drawn by the load at the bus to which it is connected"
-function variable_active_load_flow(pm::GenericPowerModel, nw::Int, cnd::Int)
-    var(pm, nw, cnd)[:pd] = @variable(pm.model, [i in PMs.ids(pm, nw, :load)],
+function variable_active_load_flow(pm::PMs.GenericPowerModel, nw::Int, cnd::Int)
+    PMs.var(pm, nw, cnd)[:pd] = JuMP.@variable(pm.model, [i in PMs.ids(pm, nw, :load)],
         basename="$(nw)_$(cnd)_pd",
         start=0
     )
@@ -224,7 +224,7 @@ end
 
 "Reactive power drawn by the load at the bus to which it is connected"
 function variable_reactive_load_flow(pm::GenericPowerModel, nw::Int, cnd::Int)
-    var(pm, nw, cnd)[:qd] = @variable(pm.model, [i in PMs.ids(pm, nw, :load)],
+    PMs.var(pm, nw, cnd)[:qd] = JuMP.@variable(pm.model, [i in PMs.ids(pm, nw, :load)],
         basename="$(nw)_$(cnd)_qd",
         start=0
     )
