@@ -446,22 +446,22 @@ end
     # being constrained by the voltage unbalance factor constraint.
     # Therefore, we check that this constraint is binding.
     tppm_data["bus"]["3"]["vufmax"] = 0.04
-    pm = TPPMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_ubctr, multiconductor=true)
-    sol = TPPMs.solve_generic_model(pm, ipopt_solver, solution_builder=TPPMs.get_solution_vseq)
+    pm = PMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_ubctr, multiconductor=true)
+    sol = PMs.solve_generic_model(pm, ipopt_solver, solution_builder=TPPMs.get_solution_vseq)
     @test norm(sol["solution"]["bus"]["3"]["vuf"]-0.04, Inf) <= 1E-5
     tppm_data = TPPMs.parse_file("../test/data/matlab/case_ubctr.m")
     tppm_data["bus"]["3"]["vmposmax"] = 1.02
-    pm = TPPMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_ubctr, multiconductor=true)
-    sol = TPPMs.solve_generic_model(pm, ipopt_solver, solution_builder=TPPMs.get_solution_vseq)
+    pm = PMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_ubctr, multiconductor=true)
+    sol = PMs.solve_generic_model(pm, ipopt_solver, solution_builder=TPPMs.get_solution_vseq)
     @test norm(sol["solution"]["bus"]["3"]["vmpos"]-1.02, Inf) <= 1E-5
     tppm_data = TPPMs.parse_file("../test/data/matlab/case_ubctr.m")
     tppm_data["bus"]["3"]["vmnegmax"] = 0.04
-    pm = TPPMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_ubctr, multiconductor=true)
-    sol = TPPMs.solve_generic_model(pm, ipopt_solver, solution_builder=TPPMs.get_solution_vseq)
+    pm = PMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_ubctr, multiconductor=true)
+    sol = PMs.solve_generic_model(pm, ipopt_solver, solution_builder=TPPMs.get_solution_vseq)
     @test norm(sol["solution"]["bus"]["3"]["vmneg"]-0.04, Inf) <= 1E-5
     tppm_data = TPPMs.parse_file("../test/data/matlab/case_ubctr.m")
     tppm_data["bus"]["3"]["vmzeromax"] = 0.04
-    pm = TPPMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_ubctr, multiconductor=true)
-    sol = TPPMs.solve_generic_model(pm, ipopt_solver, solution_builder=TPPMs.get_solution_vseq)
+    pm = PMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_ubctr, multiconductor=true)
+    sol = PMs.solve_generic_model(pm, ipopt_solver, solution_builder=TPPMs.get_solution_vseq)
     @test norm(sol["solution"]["bus"]["3"]["vmzero"]-0.04, Inf) <= 1E-5
 end
