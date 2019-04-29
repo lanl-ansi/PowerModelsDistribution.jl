@@ -2,7 +2,7 @@
 
 
 ""
-function variable_tp_voltage(pm::GenericPowerModel{T}; nw=pm.cnw, kwargs...) where T <: PMs.AbstractACPForm
+function variable_tp_voltage(pm::PMs.GenericPowerModel{T}; nw=pm.cnw, kwargs...) where T <: PMs.AbstractACPForm
     for c in PMs.conductor_ids(pm)
         PMs.variable_voltage(pm, cnd=c; nw=nw, kwargs...)
     end
@@ -14,7 +14,7 @@ function variable_tp_voltage(pm::GenericPowerModel{T}; nw=pm.cnw, kwargs...) whe
     vm = 1
     for c in 1:ncnd
         for id in PMs.ids(pm, :bus)
-            setvalue(var(pm, nw, c, :va, id), theta[c])
+            JuMP.setvalue(var(pm, nw, c, :va, id), theta[c])
         end
     end
 end
