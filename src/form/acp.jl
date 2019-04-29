@@ -365,7 +365,7 @@ function constraint_tp_vmneg(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int,
     vreneg = JuMP.@NLexpression(pm.model,
         (vm_a*cos(va_a) + a2re*vm_b*cos(va_b) - a2im*vm_b*sin(va_b) + are*vm_c*cos(va_c) - aim*vm_c*sin(va_c))/3
     )
-    vimneg = @NLexpression(pm.model,
+    vimneg = JuMP.@NLexpression(pm.model,
         (vm_a*sin(va_a) + a2re*vm_b*sin(va_b) + a2im*vm_b*cos(va_b) + are*vm_c*sin(va_c) + aim*vm_c*cos(va_c))/3
     )
     # square of magnitude of U-, |U-|^2
