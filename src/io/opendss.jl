@@ -272,7 +272,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                     end
                 end
             else
-                error(LOGGER, "For a load, nphases should be in [1,3].")
+                Memento.error(LOGGER, "For a load, nphases should be in [1,3].")
             end
             loadDict["pd"] = PMs.MultiConductorVector(pqd_premul.*defaults["kw"]./1e3)
             loadDict["qd"] = PMs.MultiConductorVector(pqd_premul.*defaults["kvar"]./1e3)
@@ -300,7 +300,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 #model = 1
             elseif model == 6
             # 6: Constant P and fixed Q
-                Memento.warn(LOGGER, "$load_name: load model 5 identical to model 1 in current feature set. Treating as model 1.")
+                Memento.warn(LOGGER, "$load_name: load model 6 identical to model 1 in current feature set. Treating as model 1.")
                 model = 1
             elseif model == 7
             # 7: Constant P and quadratic Q (i.e., fixed reactance)

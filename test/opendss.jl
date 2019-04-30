@@ -54,10 +54,23 @@
         Memento.setlevel!(TESTLOG, "info")
 
         @test_throws(TESTLOG, ErrorException,
-                     TPPMs.parse_file("../test/data/opendss/test_simple3.dss"))
+                   TPPMs.parse_file("../test/data/opendss/loadparser_error_1.dss"))
 
         @test_throws(TESTLOG, ErrorException,
-                     TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
+                   TPPMs.parse_file("../test/data/opendss/loadparser_error_2.dss"))
+
+        @test_throws(TESTLOG, ErrorException,
+                   TPPMs.parse_file("../test/data/opendss/loadparser_error_3.dss"))
+
+        @test_throws(TESTLOG, ErrorException,
+                   TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
+
+        # load parsing related errors
+        @test_throws(TESTLOG, ErrorException,
+                   TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
+
+        @test_throws(TESTLOG, ErrorException,
+                   TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
 
         @test_warn(TESTLOG, "Command \"solve\" on line 69 in \"test2_master.dss\" is not supported, skipping.",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
@@ -74,11 +87,27 @@
         @test_warn(TESTLOG, "Could not find line \"something\"",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-       @test_warn(TESTLOG, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.",
-                  TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+        @test_warn(TESTLOG, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.",
+                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-      @test_warn(TESTLOG, "Only three-phase transformers are supported. The bus specification b7.1 is treated as b7 instead.",
-                 TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+        @test_warn(TESTLOG, "Only three-phase transformers are supported. The bus specification b7.1 is treated as b7 instead.",
+                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+
+        # load parsing related warnings
+        @test_warn(TESTLOG, ": load model 3 not supported. Treating as model 1.",
+                   TPPMs.parse_file("../test/data/opendss/loadparser_warn_model3.dss"))
+
+        @test_warn(TESTLOG, ": load model 4 not supported. Treating as model 1.",
+                   TPPMs.parse_file("../test/data/opendss/loadparser_warn_model4.dss"))
+
+        @test_warn(TESTLOG, ": load model 6 identical to model 1 in current feature set. Treating as model 1.",
+                   TPPMs.parse_file("../test/data/opendss/loadparser_warn_model6.dss"))
+
+        @test_warn(TESTLOG, ": load model 7 not supported. Treating as model 1.",
+                   TPPMs.parse_file("../test/data/opendss/loadparser_warn_model7.dss"))
+
+        @test_warn(TESTLOG, ": load model 8 not supported. Treating as model 1.",
+                   TPPMs.parse_file("../test/data/opendss/loadparser_warn_model8.dss"))
 
         Memento.TestUtils.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
