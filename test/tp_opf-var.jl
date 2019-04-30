@@ -6,7 +6,7 @@
             mp_data = PowerModels.parse_file("../test/data/matpower/case5_strg.m")
             PowerModels.make_multiconductor(mp_data, 3)
 
-            result = ThreePhasePowerModels.run_tp_strg_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
+            result = TPPMs.run_tp_strg_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
 
             @test result["status"] == :LocalOptimal
@@ -26,7 +26,7 @@
             mp_data = PowerModels.parse_file("../test/data/matpower/case5_strg.m")
             PowerModels.make_multiconductor(mp_data, 3)
 
-            result = ThreePhasePowerModels.run_tp_strg_opf(mp_data, PowerModels.DCPPowerModel, ipopt_solver)
+            result = TPPMs.run_tp_strg_opf(mp_data, PowerModels.DCPPowerModel, ipopt_solver)
 
             @test result["status"] == :LocalOptimal
             @test isapprox(result["objective"], 52064.7; atol = 1e0)
@@ -46,7 +46,7 @@
             mp_data = PowerModels.parse_file("../test/data/matpower/case5_strg.m")
             PowerModels.make_multiconductor(mp_data, 3)
 
-            result = ThreePhasePowerModels.run_tp_strg_opf(mp_data, PowerModels.NFAPowerModel, ipopt_solver)
+            result = TPPMs.run_tp_strg_opf(mp_data, PowerModels.NFAPowerModel, ipopt_solver)
 
             @test result["status"] == :LocalOptimal
             @test isapprox(result["objective"], 43178.9; atol = 1e0)

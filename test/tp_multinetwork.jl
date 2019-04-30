@@ -6,7 +6,7 @@
         mn_mp_data = PowerModels.replicate(mp_data, 5)
 
         @testset "test ac polar opf" begin
-            result = ThreePhasePowerModels.run_mn_tp_strg_opf(mn_mp_data, PowerModels.ACPPowerModel, ipopt_solver)
+            result = TPPMs.run_mn_tp_strg_opf(mn_mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
             @test result["status"] == :LocalOptimal
             @test isapprox(result["objective"], 2.64596e5; atol = 1e2)
@@ -25,7 +25,7 @@
         end
 
         @testset "test dc polar opf" begin
-            result = ThreePhasePowerModels.run_mn_tp_strg_opf(mn_mp_data, PowerModels.DCPPowerModel, ipopt_solver)
+            result = TPPMs.run_mn_tp_strg_opf(mn_mp_data, PowerModels.DCPPowerModel, ipopt_solver) # this test requires default tol value
 
             @test result["status"] == :LocalOptimal
             @test isapprox(result["objective"], 2.63419e5; atol = 1e2)
@@ -41,7 +41,7 @@
         #=
         # non-convexity issues probably need to be resolved first
         @testset "test nfa opf" begin
-            result = ThreePhasePowerModels.run_mn_tp_strg_opf(mn_mp_data, PowerModels.NFAPowerModel, ipopt_solver)
+            result = TPPMs.run_mn_tp_strg_opf(mn_mp_data, PowerModels.NFAPowerModel, ipopt_solver)
 
             @test result["status"] == :LocalOptimal
             @test isapprox(result["objective"], 2.63419e5; atol = 1e2)

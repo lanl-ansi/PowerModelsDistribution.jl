@@ -1,8 +1,6 @@
-TESTLOG = getlogger(PowerModels)
-
 @testset "test matlab data parser" begin
     @testset "5-bus minimal data" begin
-        data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_a.m")
+        data = TPPMs.parse_file("../test/data/matlab/case5_i_r_a.m")
 
         @test length(data["bus"]) == 5
         @test length(data["load"]) == 3
@@ -20,7 +18,7 @@ TESTLOG = getlogger(PowerModels)
     end
 
     @testset "5-bus shunt data" begin
-        data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m")
+        data = TPPMs.parse_file("../test/data/matlab/case5_i_r_b.m")
 
         @test length(data["bus"]) == 5
         @test length(data["load"]) == 3
@@ -33,15 +31,15 @@ TESTLOG = getlogger(PowerModels)
 
     #=
     @testset "version warning" begin
-        setlevel!(TESTLOG, "warn")
+        Memento.setlevel!(TESTLOG, "warn")
 
         @test_warn(TESTLOG, "matlab source data has unrecognized version 0.0.0, cannot translate to version 1.0.0, parse may be invalid",
-                   ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m"))
+                   TPPMs.parse_file("../test/data/matlab/case5_i_r_b.m"))
 
         @test_warn(TESTLOG, "No version number found, file may not be compatible with parser.",
-                   ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m"))
+                   TPPMs.parse_file("../test/data/matlab/case5_i_r_b.m"))
 
-        setlevel!(TESTLOG, "error")
+        Memento.setlevel!(TESTLOG, "error")
     end
     =#
 end
