@@ -3,13 +3,13 @@ export run_ac_tp_pf_lm, run_tp_pf_lm
 
 ""
 function run_ac_tp_pf_lm(file, solver; kwargs...)
-    return run_tp_pf(file, PMs.ACPPowerModel, solver; kwargs...)
+    return run_tp_pf_lm(file, PMs.ACPPowerModel, solver; kwargs...)
 end
 
 
 ""
-function run_dc_tp_pf_lm(file, solver; kwargs...)
-    return run_tp_pf(file, PMs.DCPPowerModel, solver; kwargs...)
+function run_dc_tp_opf_lm(file, solver; kwargs...)
+    return run_tp_pf_lm(file, PMs.DCPPowerModel, solver; kwargs...)
 end
 
 
