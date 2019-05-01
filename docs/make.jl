@@ -14,6 +14,7 @@ makedocs(
         ],
         "Library" => [
             "Network Formulations" => "formulations.md",
+            "Problem Specifications" => "specifications.md",
             "Modeling Components" => "library.md",
         ],
         "Developer" => [

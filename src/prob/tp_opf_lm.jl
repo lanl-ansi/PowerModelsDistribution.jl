@@ -1,26 +1,26 @@
-export run_tp_opf, run_ac_tp_opf
+export run_tp_opf_lm, run_ac_tp_opf_lm
 
 ""
-function run_ac_tp_opf(file, solver; kwargs...)
-    return run_tp_opf(file, PMs.ACPPowerModel, solver; multiconductor=true, kwargs...)
+function run_ac_tp_opf_lm(file, solver; kwargs...)
+    return run_tp_opf_lm(file, PMs.ACPPowerModel, solver; multiconductor=true, kwargs...)
 end
 
 
 ""
-function run_tp_opf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
+function run_tp_opf_lm(data::Dict{String,Any}, model_constructor, solver; kwargs...)
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf; multiconductor=true, kwargs...)
 end
 
 
 ""
-function run_tp_opf(file::String, model_constructor, solver; kwargs...)
+function run_tp_opf_lm(file::String, model_constructor, solver; kwargs...)
     data = ThreePhasePowerModels.parse_file(file)
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf; multiconductor=true, kwargs...)
 end
 
 
 ""
-function post_tp_opf(pm::PMs.GenericPowerModel)
+function post_tp_opf_lm(pm::PMs.GenericPowerModel)
     add_arcs_trans!(pm)
 
     variable_tp_voltage(pm)

@@ -40,6 +40,7 @@ include("io/dss_structs.jl")
 include("io/opendss.jl")
 
 include("prob/tp_opf.jl")
+include("prob/tp_opf_lm.jl")
 include("prob/tp_opf_oltc.jl")
 include("prob/tp_opf_bf.jl")
 include("prob/tp_ots.jl")
