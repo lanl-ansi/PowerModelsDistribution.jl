@@ -1005,7 +1005,7 @@ function decompose_transformers!(tppm_data; import_all::Bool=false)
             # 2-WINDING TRANSFORMER
             trans_dict = Dict{String, Any}()
             trans_dict["name"] = "tr$(tr_id)_w$(w)"
-            trans_dict["source_id"] = trans["source_id"]
+            trans_dict["source_id"] = "$(trans["source_id"])_$(w)"
             trans_dict["active_phases"] = [1, 2, 3]
             push_dict_ret_key!(tppm_data["trans"], trans_dict)
             # connection settings
@@ -1111,7 +1111,7 @@ function create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; name="", source_id="
     zbase *= (1/3)
     vbranch = Dict{String, Any}("f_bus"=>f_bus, "t_bus"=>t_bus, "name"=>name)
     vbranch["active_phases"] = active_phases
-    vbranch["source_id"] = source_id
+    vbranch["source_id"] = "virtual_branch.$name"
     for k in [:br_r, :br_x, :g_fr, :g_to, :b_fr, :b_to]
         if !haskey(kwargs, k)
             if k in [:br_r, :br_x]
@@ -1131,6 +1131,8 @@ function create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; name="", source_id="
     vbranch["angmax"] = PMs.MultiConductorVector(ones(ncnd))*60
     vbranch["shift"] = PMs.MultiConductorVector(zeros(ncnd))
     vbranch["tap"] = PMs.MultiConductorVector(ones(ncnd))
+    vbranch["transformer"] = false
+    vbranch["switch"] = false
     vbranch["br_status"] = 1
     for k in [:rate_a, :rate_b, :rate_c]
         if haskey(kwargs, k)
