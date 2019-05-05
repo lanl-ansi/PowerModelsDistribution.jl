@@ -26,14 +26,6 @@ function variable_tp_voltage(pm::PMs.GenericPowerModel{T}; kwargs...) where T <:
 end
 
 
-"only delegate back to PowerModels if bounded"
-function constraint_tp_voltage(pm::PMs.GenericPowerModel{T}, n::Int, c::Int, bounded::Bool) where T <: PMs.AbstractACRForm
-    if bounded
-        PMs.constraint_voltage(pm, n, c)
-    end
-end
-
-
 "Creates phase angle constraints at reference buses"
 function constraint_tp_theta_ref(pm::PMs.GenericPowerModel{T}, n::Int, c::Int, d) where T <: PMs.AbstractACRForm
     vr = PMs.var(pm, n, c, :vr, d)
