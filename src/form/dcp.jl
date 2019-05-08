@@ -1,4 +1,41 @@
 
+"Create variables for the active power flowing into all transformer windings."
+function variable_tp_trans_active_flow(pm::PMs.GenericPowerModel{T}; nw::Int=pm.cnw, bounded=true) where T <: PMs.AbstractActivePowerFormulation
+    for cnd in PMs.conductor_ids(pm)
+        pt = PMs.var(pm, nw, cnd)[:pt] = JuMP.@variable(pm.model,
+            [(l,i,j) in PMs.ref(pm, nw, :arcs_from_trans)],
+            basename="$(nw)_$(cnd)_p_trans",
+            start=0
+        )
+        if bounded
+            for arc in PMs.ref(pm, nw, :arcs_from_trans)
+                tr_id = arc[1]
+                flow_lb  = -PMs.ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
+                flow_ub  =  PMs.ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
+                JuMP.setlowerbound(pt[arc], flow_lb)
+                JuMP.setupperbound(pt[arc], flow_ub)
+            end
+        end
+
+        for (l,branch) in PMs.ref(pm, nw, :branch)
+            if haskey(branch, "pf_start")
+                f_idx = (l, branch["f_bus"], branch["t_bus"])
+                JuMP.setvalue(p[f_idx], branch["pf_start"])
+            end
+        end
+
+        # this explicit type erasure is necessary
+        p_expr = Dict{Any,Any}( ((l,i,j), pt[(l,i,j)]) for (l,i,j) in PMs.ref(pm, nw, :arcs_from_trans) )
+        p_expr = merge(p_expr, Dict( ((l,j,i), -1.0*pt[(l,i,j)]) for (l,i,j) in PMs.ref(pm, nw, :arcs_from_trans)))
+        PMs.var(pm, nw, cnd)[:pt] = p_expr
+    end
+end
+
+"do nothing, no reactive power in this model"
+function variable_tp_trans_reactive_flow(pm::PMs.GenericPowerModel{T}; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true) where T <: PMs.AbstractActivePowerFormulation
+end
+
+
 "nothing to do, these models do not have complex voltage constraints"
 function constraint_tp_voltage(pm::PMs.GenericPowerModel{T}, n::Int, c::Int) where T <: PMs.AbstractDCPForm
 end
@@ -68,6 +105,15 @@ end
 
 "nothing to do, this model is symmetric"
 function constraint_ohms_tp_yt_to(pm::PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm) where T <: PMs.NFAForm
+end
+
+"nothing to do, no voltage variables"
+function constraint_tp_trans_voltage(pm::PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to) where T <: PMs.NFAForm
+end
+
+
+"nothing to do, this model is symmetric"
+function constraint_tp_trans_flow(pm::PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to) where T <: PMs.NFAForm
 end
 
 
