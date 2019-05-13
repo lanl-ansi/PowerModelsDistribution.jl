@@ -160,8 +160,6 @@ uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 [[PowerModels]]
 deps = ["InfrastructureModels", "JSON", "JuMP", "LinearAlgebra", "MathOptInterface", "Memento", "SparseArrays"]
 git-tree-sha1 = "07ab528b4c9316a17cdd8d207f260c11efa6688d"
-repo-rev = "master"
-repo-url = "https://github.com/lanl-ansi/PowerModels.jl.git"
 uuid = "c36e90e8-916a-50a6-bd94-075b64ef4655"
 version = "0.10.0"
 
