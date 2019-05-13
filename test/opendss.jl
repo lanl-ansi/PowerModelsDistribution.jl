@@ -226,7 +226,7 @@
 
             @test tppm["branch"]["1"]["source_id"] == "line.l1" && length(tppm["branch"]["1"]["active_phases"]) == 3
             # transformer is no longer a branch
-            @test tppm["trans"]["1"]["source_id"] == "transformer.t4"
+            @test tppm["trans"]["1"]["source_id"] == "transformer.t4_1"  # winding indicated by _1
             # updated index, reactors shifted
             @test tppm["branch"]["10"]["source_id"] == "reactor.reactor1" && length(tppm["branch"]["10"]["active_phases"]) == 3
 

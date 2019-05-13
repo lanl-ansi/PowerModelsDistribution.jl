@@ -3,6 +3,7 @@ ThreePhasePowerModels.jl Change Log
 
 ### Staged
 - Add transformer support to active power only models
+- Fix bug in source_ids of new components created for transformer support
 
 ### v0.2.0
 - Add transformer to TPPM: wye and delta windings, vector group variations (indirectly) and variable taps per phase with bounds
