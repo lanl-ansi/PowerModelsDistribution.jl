@@ -1,7 +1,10 @@
 ThreePhasePowerModels.jl Change Log
 ===================================
 
-### Staged
+### staged
+- nothing
+
+### v0.2.1
 - Add transformer support to active power only models
 - Fix bug in source_ids of new components created for transformer support
 
