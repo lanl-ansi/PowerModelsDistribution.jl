@@ -13,15 +13,14 @@ Memento = "f28f55f0-a522-5efc-85c2-fe41dfb9b2d9"
 PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
 
 [compat]
-# Cbc = ">= 0.4"
-InfrastructureModels = "^0.3"
-# Ipopt = ">= 0.4"
-JuMP = "^0.19"
-# Juniper = "< 0.4"
+Cbc = ">= 0.4"
+InfrastructureModels = "^0.2"
+Ipopt = ">= 0.4"
+JuMP = "^0.19.1"
+Juniper = ">= 0.4"
 Memento = ">= 0.8, < 0.13"
-# Pavito = ">= 0.1.1"
 PowerModels = "^0.10"
-# SCS = ">= 0.4.1"
+SCS = ">= 0.4"
 julia = "^1"
 
 [extras]
