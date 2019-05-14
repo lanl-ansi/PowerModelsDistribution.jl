@@ -37,7 +37,7 @@ vm(sol, tppm_data, name) = sol["solution"]["bus"][string(bus_name2id(tppm_data, 
             # check that taps are set as to boost the voltage in the branches as much as possible;
             # this is trivially optimal if the voltage bounds are not binding
             # and without significant shunts (both branch and transformer)
-            tap(i) = [JuMP.getvalue(PMs.var(pm, pm.cnw, :cnd, c)[:tap][i]) for c in 1:3]
+            tap(i) = [JuMP.value(PMs.var(pm, pm.cnw, :cnd, c)[:tap][i]) for c in 1:3]
             @test norm(tap(1)-[0.95, 0.95, 0.95], Inf) <= 1E-4
             @test norm(tap(2)-[1.05, 1.05, 1.05], Inf) <= 1E-4
             # then check whether voltage is what OpenDSS expects for those values

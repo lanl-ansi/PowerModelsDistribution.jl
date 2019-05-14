@@ -138,9 +138,9 @@ end
         @test result["status"] == :Optimal
         @test isapprox(result["objective"], 56091.7; atol = 2e0)
 
-        @test isapprox(result["solution"]["gen"]["1"]["qg"][1],   0.0157310; atol = 1e-2)
-        @test isapprox(result["solution"]["gen"]["1"]["qg"][2],  -0.0069089; atol = 1e-2)
-        @test isapprox(result["solution"]["gen"]["1"]["qg"][3],  -0.0366602; atol = 1e-2)
+        @test isapprox(result["solution"]["gen"]["1"]["qg"][1],   0.2362121; atol = 2e-2)
+        @test isapprox(result["solution"]["gen"]["1"]["qg"][2],  -0.0219214; atol = 2e-2)
+        @test isapprox(result["solution"]["gen"]["1"]["qg"][3],  -0.0249553; atol = 2e-2)
         # @test isapprox(result["solution"]["gen"]["1"]["qg"][1],  0.105276; atol = 1e-3)
         # @test isapprox(result["solution"]["bus"]["2"]["va"][1],  0.0575114; atol = 1e-3)
 

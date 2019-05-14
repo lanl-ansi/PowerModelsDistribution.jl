@@ -17,7 +17,7 @@ function variable_tp_trans_active_flow(pm::PMs.GenericPowerModel{T}; nw::Int=pm.
     for cnd in PMs.conductor_ids(pm)
         pt = PMs.var(pm, nw, cnd)[:pt] = JuMP.@variable(pm.model,
             [(l,i,j) in PMs.ref(pm, nw, :arcs_from_trans)],
-            basename="$(nw)_$(cnd)_p_trans",
+            base_name="$(nw)_$(cnd)_p_trans",
             start=0
         )
         if bounded
@@ -25,15 +25,15 @@ function variable_tp_trans_active_flow(pm::PMs.GenericPowerModel{T}; nw::Int=pm.
                 tr_id = arc[1]
                 flow_lb  = -PMs.ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
                 flow_ub  =  PMs.ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
-                JuMP.setlowerbound(pt[arc], flow_lb)
-                JuMP.setupperbound(pt[arc], flow_ub)
+                JuMP.set_lower_bound(pt[arc], flow_lb)
+                JuMP.set_upper_bound(pt[arc], flow_ub)
             end
         end
 
         for (l,branch) in PMs.ref(pm, nw, :branch)
             if haskey(branch, "pf_start")
                 f_idx = (l, branch["f_bus"], branch["t_bus"])
-                JuMP.setvalue(p[f_idx], branch["pf_start"])
+                JuMP.set_value(p[f_idx], branch["pf_start"])
             end
         end
 
