@@ -1395,7 +1395,7 @@ windings. Default behaviour is to start at the primary winding of the first
 transformer, and to propagate from there. Branches are updated; the impedances
 and addmittances are rescaled to be consistent with the new voltage bases.
 """
-function adjust_base!(tppm_data; start_at_first_tr_prim=true)
+function adjust_base!(tppm_data; start_at_first_tr_prim=false)
     # initialize arrays etc. for the recursive part
     edges_br = [(br["index"], br["f_bus"], br["t_bus"]) for (br_id_str, br) in tppm_data["branch"]]
     edges_tr = [(tr["index"], tr["f_bus"], tr["t_bus"]) for (tr_id_str, tr) in tppm_data["trans"]]
