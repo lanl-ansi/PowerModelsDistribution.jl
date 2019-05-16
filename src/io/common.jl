@@ -9,6 +9,8 @@ function parse_file(io::IOStream; import_all::Bool=false, vmin::Float64=0.9, vma
     elseif endswith(lowercase(strip(io.name,['>'])), ".dss")
         Memento.warn(LOGGER, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported.")
         tppm_data = ThreePhasePowerModels.parse_opendss(io; import_all=import_all, vmin=vmin, vmax=vmax)
+    elseif endswith(lowercase(strip(io.name,['>'])), ".json")
+        tppm_data = PowerModels.parse_json(io; validate=false)
     else
         Memento.error(LOGGER, "only .m and .dss files are supported")
     end
