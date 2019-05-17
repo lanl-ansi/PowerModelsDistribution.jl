@@ -74,11 +74,11 @@
         @test_warn(TESTLOG, "Could not find line \"something\"",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-       @test_warn(TESTLOG, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.",
-                  TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+        @test_warn(TESTLOG, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.",
+                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-      @test_warn(TESTLOG, "Only three-phase transformers are supported. The bus specification b7.1 is treated as b7 instead.",
-                 TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+        @test_warn(TESTLOG, "Only three-phase transformers are supported. The bus specification b7.1 is treated as b7 instead.",
+                  TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
         Memento.TestUtils.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
@@ -226,7 +226,7 @@
 
             @test tppm["branch"]["1"]["source_id"] == "line.l1" && length(tppm["branch"]["1"]["active_phases"]) == 3
             # transformer is no longer a branch
-            @test tppm["trans"]["1"]["source_id"] == "transformer.t4"
+            @test tppm["trans"]["1"]["source_id"] == "transformer.t4_1"  # winding indicated by _1
             # updated index, reactors shifted
             @test tppm["branch"]["10"]["source_id"] == "reactor.reactor1" && length(tppm["branch"]["10"]["active_phases"]) == 3
 
