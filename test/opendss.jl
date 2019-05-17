@@ -370,4 +370,14 @@
         @test all(sol["solution"]["gen"]["2"]["pg"][2:3] .== 0.0)
         @test all(sol["solution"]["gen"]["2"]["qg"][2:3] .== 0.0)
     end
+
+    @testset "json parse" begin
+        tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced.dss")
+
+        io = PipeBuffer()
+        JSON.print(io, tppm)
+        tppm_json_file = TPPMs.parse_file(io)
+
+        @test tppm == tppm_json_file
+    end
 end

@@ -1511,7 +1511,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
 
     tppm_data["per_unit"] = false
     tppm_data["source_type"] = "dss"
-    tppm_data["source_version"] = VersionNumber("0")
+    tppm_data["source_version"] = string(VersionNumber("0"))
 
     if haskey(dss_data, "circuit")
         circuit = dss_data["circuit"][1]

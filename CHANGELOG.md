@@ -2,7 +2,7 @@ ThreePhasePowerModels.jl Change Log
 ===================================
 
 ### staged
-- nothing
+- Add json parser
 
 ### v0.3.0
 - Update to JuMP v0.19/MathOptInterface

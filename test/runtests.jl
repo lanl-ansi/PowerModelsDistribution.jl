@@ -20,6 +20,8 @@ import Cbc
 import Juniper
 import SCS
 
+import JSON
+
 using Test
 using LinearAlgebra
 
