@@ -96,7 +96,7 @@
 
         @test tppm["name"] == "test2"
 
-        @test length(tppm) == 19 # 1 more entry for transformer dicts
+        @test length(tppm) == 20 # keep track of sourcebus
         @test length(dss) == 12
 
         # 26 buses and not 12, because of internal transformer buses;
