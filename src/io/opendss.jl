@@ -243,7 +243,9 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             name, nodes = parse_busname(defaults["bus1"])
 
             Zbase = (tppm_data["basekv"] / sqrt(3.0))^2 * nconductors / tppm_data["baseMVA"]  # Use single-phase base impedance for each phase
-            Gcap = -Zbase * sum(defaults["kvar"]) / (nconductors * 1e3 * (tppm_data["basekv"] / sqrt(3.0))^2)
+            Zbase = Zbase/3 # use three-phase base impedance, mirroring change in branch
+            # should be  positive; the capacitor power reference has generator convention, not load
+            Gcap = Zbase * sum(defaults["kvar"]) / (nconductors * 1e3 * (tppm_data["basekv"] / sqrt(3.0))^2)
 
             shuntDict["shunt_bus"] = find_bus(name, tppm_data)
             shuntDict["name"] = defaults["name"]
