@@ -108,7 +108,7 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool=false, 
     end
 
     buses = discover_buses(dss_data)
-    circuit = createVSource(dss_data["circuit"][1]["bus1"], dss_data["circuit"][1]["name"]; to_sym_keys(dss_data["circuit"][1])...)
+    circuit = createVSource(get(dss_data["circuit"][1], "bus1", "sourcebus"), dss_data["circuit"][1]["name"]; to_sym_keys(dss_data["circuit"][1])...)
     sourcebus = circuit["bus1"]
 
     for (n, (bus, nodes)) in enumerate(buses)
