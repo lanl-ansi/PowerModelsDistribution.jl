@@ -2,6 +2,7 @@ ThreePhasePowerModels.jl Change Log
 ===================================
 
 ### staged
+- Allow for arbitrarily named sourcebus
 - Add json parser
 
 ### v0.3.0

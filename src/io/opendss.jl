@@ -108,22 +108,23 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool=false, 
     end
 
     buses = discover_buses(dss_data)
-    circuit = createVSource("", dss_data["circuit"][1]["name"]; to_sym_keys(dss_data["circuit"][1])...)
+    circuit = createVSource(get(dss_data["circuit"][1], "bus1", "sourcebus"), dss_data["circuit"][1]["name"]; to_sym_keys(dss_data["circuit"][1])...)
+    sourcebus = circuit["bus1"]
 
     for (n, (bus, nodes)) in enumerate(buses)
         busDict = Dict{String,Any}()
 
         nconductors = tppm_data["conductors"]
-        ph1_ang = bus == "sourcebus" ? circuit["angle"] : 0.0
-        vm = bus == "sourcebus" ? circuit["pu"] : 1.0
-        vmi = bus == "sourcebus" ? circuit["pu"] - circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmin
-        vma = bus == "sourcebus" ? circuit["pu"] + circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmax
+        ph1_ang = bus == sourcebus ? circuit["angle"] : 0.0
+        vm = bus == sourcebus ? circuit["pu"] : 1.0
+        vmi = bus == sourcebus ? circuit["pu"] - circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmin
+        vma = bus == sourcebus ? circuit["pu"] + circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmax
 
         busDict["bus_i"] = n
         busDict["index"] = n
         busDict["name"] = bus
 
-        busDict["bus_type"] = bus == "sourcebus" ? 3 : 1
+        busDict["bus_type"] = bus == sourcebus ? 3 : 1
 
         busDict["vm"] = PMs.MultiConductorVector(parse_array(vm, nodes, nconductors))
         busDict["va"] = PMs.MultiConductorVector(parse_array([rad2deg(2*pi/nconductors*(i-1))+ph1_ang for i in 1:nconductors], nodes, nconductors))
@@ -312,7 +313,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     # sourcebus generator (created by circuit)
     circuit = dss_data["circuit"][1]
-    defaults = createVSource("sourcebus", "sourcebus"; to_sym_keys(circuit)...)
+    defaults = createVSource(get(circuit, "bus1", "sourcebus"), "sourcebus"; to_sym_keys(circuit)...)
 
     genDict = Dict{String,Any}()
 
@@ -348,6 +349,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     PMs.import_remaining!(genDict, defaults, import_all; exclude=used)
 
     push!(tppm_data["gen"], genDict)
+
 
     if haskey(dss_data, "generator")
         for gen in dss_data["generator"]
@@ -957,7 +959,7 @@ was adjusted to accomodate that.
 function adjust_sourcegen_bounds!(tppm_data)
     emergamps = Array{Float64,1}([0.0])
     #sourcebus_n = find_bus("sourcebus", tppm_data)
-    sourcebus_n = [bus["index"] for (_,bus) in tppm_data["bus"] if haskey(bus, "name") && bus["name"]=="sourcebus"][1]
+    sourcebus_n = [bus["index"] for (_,bus) in tppm_data["bus"] if haskey(bus, "name") && bus["name"]==tppm_data["sourcebus"]][1]
     for (_,line) in tppm_data["branch"]
         if line["f_bus"] == sourcebus_n || line["t_bus"] == sourcebus_n
             append!(emergamps, line["rate_b"].values)
@@ -1515,7 +1517,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
 
     if haskey(dss_data, "circuit")
         circuit = dss_data["circuit"][1]
-        defaults = createVSource("", circuit["name"]; to_sym_keys(circuit)...)
+        defaults = createVSource(get(circuit, "bus1", "sourcebus"), circuit["name"]; to_sym_keys(circuit)...)
 
         tppm_data["name"] = defaults["name"]
         tppm_data["basekv"] = defaults["basekv"]
@@ -1523,6 +1525,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         tppm_data["basefreq"] = pop!(tppm_data, "defaultbasefreq")
         tppm_data["pu"] = defaults["pu"]
         tppm_data["conductors"] = defaults["phases"]
+        tppm_data["sourcebus"] = defaults["bus1"]
     else
         Memento.error(LOGGER, "Circuit not defined, not a valid circuit!")
     end
