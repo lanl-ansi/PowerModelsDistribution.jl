@@ -407,6 +407,13 @@ end
         @test result["status"] == :LocalOptimal
         @test isapprox(result["objective"], 0.054; atol = 1e-4)
     end
+    @testset "3w transformer case" begin
+        mp_data = TPPMs.parse_file("../test/data/opendss/ut_trans_3w_dyy_basetest.dss")
+        result = run_tp_opf(mp_data, PMs.NFAPowerModel, ipopt_solver)
+
+        @test result["status"] == :LocalOptimal
+        @test isapprox(result["objective"], 0.666; atol = 1e-3)
+    end
 end
 
 

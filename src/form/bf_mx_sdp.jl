@@ -25,10 +25,10 @@ function constraint_tp_branch_current(pm::PMs.GenericPowerModel{T}, n::Int, i, f
     -q_s_fr'    ccm_im  ;
     ]
 
-    JuMP.@SDconstraint(pm.model,
+    JuMP.@constraint(pm.model,
     [
     mat_real  -mat_imag;
     mat_imag   mat_real
-    ] >=0)
+    ] in JuMP.PSDCone())
 
 end
