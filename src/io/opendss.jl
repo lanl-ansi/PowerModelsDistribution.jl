@@ -244,8 +244,12 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             name, nodes = parse_busname(defaults["bus1"])
 
             Zbase = (tppm_data["basekv"] / sqrt(3.0))^2 * nconductors / tppm_data["baseMVA"]  # Use single-phase base impedance for each phase
-            Gcap = -Zbase * sum(defaults["kvar"]) / (nconductors * 1e3 * (tppm_data["basekv"] / sqrt(3.0))^2)
-
+            # should be in 1MW Sbase, because make_per_unit will rescale to real power base later on already
+            # also, we want the total Sbase, not per phase
+            Zbase = Zbase*tppm_data["baseMVA"]/3
+            # should be  positive; the capacitor power reference has generator convention, not load
+            Gcap = Zbase * sum(defaults["kvar"]) / (nconductors * 1e3 * (tppm_data["basekv"] / sqrt(3.0))^2)
+            
             shuntDict["shunt_bus"] = find_bus(name, tppm_data)
             shuntDict["name"] = defaults["name"]
             shuntDict["gs"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))  # TODO:

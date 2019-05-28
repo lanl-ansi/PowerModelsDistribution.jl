@@ -371,6 +371,18 @@
         @test all(sol["solution"]["gen"]["2"]["qg"][2:3] .== 0.0)
     end
 
+    @testset "3-bus balanced capacitor" begin
+        tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced_cap.dss")
+        sol = TPPMs.run_tp_pf(tppm, PMs.ACPPowerModel, ipopt_solver)
+
+        @test sol["status"] == :LocalOptimal
+
+        for c in 1:3
+            @test abs(sol["solution"]["bus"]["3"]["vm"][c]-0.98588)<=1E-4
+            @test abs(sol["solution"]["bus"]["2"]["vm"][c]-0.99127)<=1E-4
+        end
+    end
+    
     @testset "json parse" begin
         tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced.dss")
 
