@@ -34,7 +34,7 @@
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
         @test all(isapprox.(sol["solution"]["bus"]["2"]["vm"].values, 0.984377; atol=1e-4))
-        @test all(isapprox.(sol["solution"]["bus"]["2"]["va"].values, [TPPMs.wraptopi(2*pi/tppm["conductors"]*(1-c) - deg2rad(0.79)) for c in 1:tppm["conductors"]]; atol=deg2rad(0.2)))
+        @test all(isapprox.(sol["solution"]["bus"]["2"]["va"].values, [TPPMs._wrap_to_pi(2*pi/tppm["conductors"]*(1-c) - deg2rad(0.79)) for c in 1:tppm["conductors"]]; atol=deg2rad(0.2)))
 
         @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.018209; atol=1e-5)
         @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.000208979; atol=1e-5)
@@ -47,7 +47,7 @@
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
         for (bus, va, vm) in zip(["1", "2", "3"], [0.0, deg2rad(-0.08), deg2rad(-0.17)], [0.9959, 0.986976, 0.976611])
-            @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, [TPPMs.wraptopi(2*pi/tppm["conductors"]*(1-c) .+ va) for c in 1:tppm["conductors"]]; atol=deg2rad(0.2)))
+            @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, [TPPMs._wrap_to_pi(2*pi/tppm["conductors"]*(1-c) .+ va) for c in 1:tppm["conductors"]]; atol=deg2rad(0.2)))
             @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-3))
         end
 
@@ -64,7 +64,7 @@
         for (bus, va, vm) in zip(["1", "2", "3"],
                                 [0.0, deg2rad.([-0.22, -0.11, 0.12]), deg2rad.([-0.48, -0.24, 0.27])],
                                 [0.9959, [0.98094, 0.989365, 0.987043], [0.96355, 0.981767, 0.976786]])
-            @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs.wraptopi([2*pi/tppm["conductors"]*(1-c) for c in 1:tppm["conductors"]] .+ va); atol=deg2rad(0.2)))
+            @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs._wrap_to_pi([2*pi/tppm["conductors"]*(1-c) for c in 1:tppm["conductors"]] .+ va); atol=deg2rad(0.2)))
             @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=2e-3))
         end
 
@@ -125,7 +125,7 @@ end
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
         @test all(isapprox.(sol["solution"]["bus"]["2"]["vm"].values, 0.984377; atol=1e-4))
-        @test all(isapprox.(sol["solution"]["bus"]["2"]["va"].values, [TPPMs.wraptopi(2*pi/tppm["conductors"]*(1-c) - deg2rad(0.79)) for c in 1:tppm["conductors"]]; atol=deg2rad(0.2)))
+        @test all(isapprox.(sol["solution"]["bus"]["2"]["va"].values, [TPPMs._wrap_to_pi(2*pi/tppm["conductors"]*(1-c) - deg2rad(0.79)) for c in 1:tppm["conductors"]]; atol=deg2rad(0.2)))
 
         @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.018209; atol=1e-5)
         @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.000208979; atol=1e-5)
@@ -138,7 +138,7 @@ end
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
         for (bus, va, vm) in zip(["1", "2", "3"], [0.0, deg2rad(-0.08), deg2rad(-0.17)], [0.9959, 0.986976, 0.976611])
-            @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, [TPPMs.wraptopi(2*pi/tppm["conductors"]*(1-c) .+ va) for c in 1:tppm["conductors"]]; atol=deg2rad(0.2)))
+            @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, [TPPMs._wrap_to_pi(2*pi/tppm["conductors"]*(1-c) .+ va) for c in 1:tppm["conductors"]]; atol=deg2rad(0.2)))
             @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-3))
         end
 
@@ -155,7 +155,7 @@ end
         for (bus, va, vm) in zip(["1", "2", "3"],
                                 [0.0, deg2rad.([-0.22, -0.11, 0.12]), deg2rad.([-0.48, -0.24, 0.27])],
                                 [0.9959, [0.98094, 0.989365, 0.987043], [0.96355, 0.981767, 0.976786]])
-            @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs.wraptopi([2*pi/tppm["conductors"]*(1-c) for c in 1:tppm["conductors"]] .+ va); atol=deg2rad(0.2)))
+            @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs._wrap_to_pi([2*pi/tppm["conductors"]*(1-c) for c in 1:tppm["conductors"]] .+ va); atol=deg2rad(0.2)))
             @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=2e-3))
         end
 

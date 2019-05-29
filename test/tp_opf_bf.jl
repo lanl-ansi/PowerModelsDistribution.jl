@@ -128,7 +128,7 @@ end
 
         for c in 1:mp_data["conductors"]
             # @test isapprox(result["solution"]["gen"]["1"]["qg"][c], 0.039742; atol = 1e-4)
-            # @test isapprox(result["solution"]["bus"]["2"]["va"][c], TPPMs.wraptopi(0.048896+2*pi/mp_data["conductors"]*(1-c)); atol = 1e-4)
+            # @test isapprox(result["solution"]["bus"]["2"]["va"][c], TPPMs._wrap_to_pi(0.048896+2*pi/mp_data["conductors"]*(1-c)); atol = 1e-4)
         end
     end
     @testset "5-bus independent radial different case" begin
@@ -159,7 +159,7 @@ end
         # @test isapprox(result["solution"]["gen"]["1"]["qg"][c],  0.3; atol = 1e-3)
         # not stable cross platform
         # @test isapprox(result["solution"]["gen"]["1"]["qg"].values,  [-0.0827465, -0.013034, 0.00456187]; atol = 1e-2)
-        # @test isapprox(result["solution"]["bus"]["2"]["va"][c], TPPMs.wraptopi(-0.0135651+2*pi/mp_data["conductors"]*(1-c)); atol = 1e-3)
+        # @test isapprox(result["solution"]["bus"]["2"]["va"][c], TPPMs._wrap_to_pi(-0.0135651+2*pi/mp_data["conductors"]*(1-c)); atol = 1e-3)
         # end
     end
     # @testset "5-bus coupled meshed case" begin
@@ -204,7 +204,7 @@ end
             @test isapprox(result["solution"]["gen"]["1"]["pg"][c], 0.4; atol = 1e-3)
             # @test isapprox(result["solution"]["bus"]["2"]["vm"][c], 1.08564; atol = 1e-3)
             @test isapprox(result["solution"]["bus"]["2"]["vm"][c], 1.08620; atol = 1e-3)
-            # @test isapprox(result["solution"]["bus"]["2"]["va"][c], TPPMs.wraptopi(0.04905-2*pi/mp_data["conductors"]*(c-1)); atol = 1e-3)
+            # @test isapprox(result["solution"]["bus"]["2"]["va"][c], TPPMs._wrap_to_pi(0.04905-2*pi/mp_data["conductors"]*(c-1)); atol = 1e-3)
         end
     end
     @testset "5-bus coupled radial shunt case" begin
@@ -216,7 +216,7 @@ end
 
         for c in 1:mp_data["conductors"]
             @test isapprox(result["solution"]["gen"]["1"]["pg"][c],  0.4; atol = 1e-3)
-            # @test isapprox(result["solution"]["bus"]["2"]["va"][c], TPPMs.wraptopi(0.055338-2*pi/mp_data["conductors"]*(c-1)); atol = 5e-3)
+            # @test isapprox(result["solution"]["bus"]["2"]["va"][c], TPPMs._wrap_to_pi(0.055338-2*pi/mp_data["conductors"]*(c-1)); atol = 5e-3)
         end
     end
 end
