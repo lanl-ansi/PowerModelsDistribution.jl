@@ -5,4 +5,4 @@ PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
 
 [compat]
 InfrastructureModels = "~0.2"
-PowerModels = "~0.10"
+PowerModels = "~0.11"
