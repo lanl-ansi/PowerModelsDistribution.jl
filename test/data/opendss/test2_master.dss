@@ -4,7 +4,7 @@ Clear
 new object=Circuit.TEST2
 
 ! Test circuit properties
-~ pu=1.1  r1=0.001  x1=0.01  r0=0.001  x0=0.01  basekv=69  angle=30
+~ pu=1.1  r1=0.001  x1=0.01  r0=0.001  x0=0.01  basekv=69  angle=30 bus1=testsource
 
 Redirect test2_Linecodes.dss
 Compile test2_Loadshape.dss
@@ -32,14 +32,14 @@ New "Capacitor.c2" bus1=b8 phases=3 kvar=[ 500] kv=25.0
 new capacitor.c3 bus1=b1 like=c2
 
 ! Reactors
-New Reactor.reactor1  bus1=SourceBus  bus2=b1  r=0  x=(1.05 0.75 0.001 5 * - - 125 15.0 / sqr *) normamps=400  emergamps=600
+New Reactor.reactor1  bus1=testsource  bus2=b1  r=0  x=(1.05 0.75 0.001 5 * - - 125 15.0 / sqr *) normamps=400  emergamps=600
 new reactor.reactor2 bus1=_b2 bus2=b10 like=reactor1
 new reactor.reactor3 bus1=b9 kvar=10.0
 new reactor.reactor4 bus1=b8 like=reactor3
 
 ! Transformers
-New "Transformer.t1" phases=1 windings=2 buses=[sourcebus,  _b2, ] conns=[wye, wye, ] kVs=[15.0, 15.0, ] kVAs=[50000, 50000, ] Xhl=1
-New "Transformer.t2" phases=3 windings=2 Xhl=0.02 buses=[sourcebus, b3-1, ] conns=[delta, wye, ] kVs=[69, 24.9, ] kVAs=[25000, 25000, ] taps=[1, 1, ] wdg=1 %R=0.0005 wdg=2 %R=0.0005
+New "Transformer.t1" phases=1 windings=2 buses=[testsource,  _b2, ] conns=[wye, wye, ] kVs=[15.0, 15.0, ] kVAs=[50000, 50000, ] Xhl=1
+New "Transformer.t2" phases=3 windings=2 Xhl=0.02 buses=[testsource, b3-1, ] conns=[delta, wye, ] kVs=[69, 24.9, ] kVAs=[25000, 25000, ] taps=[1, 1, ] wdg=1 %R=0.0005 wdg=2 %R=0.0005
 New Transformer.t3a phases=1  windings=2  buses=(b7.1,  b10.1)  conns=(wye, wye)  kvs=(10.0, 10)  kvas=(30000, 30000)  xhl=0.1 %loadloss=.002 wdg=2 Maxtap=1.05 Mintap=0.95 ppm=0
 New Transformer.t4  phases=3  windings=2  buses=(b8, b9.1.2.3.0)
 ~ conns=(delta wye)
@@ -52,7 +52,7 @@ new transformer.t5 buses=(b3-1, b5) like=t4
 
 ! Generators
 New Generator.g1 Bus1=b1  kV= 150 kW=1 Model=3 Vpu=1.05 Maxkvar=70000 Minkvar=10000 !  kvar=50000
-New Generator.g2 Bus1=sourcebus  kV= 120 kW=1 Phases=1 Model=3 Vpu=1.05 Maxkvar=70000 Minkvar=10000   !  kvar=60000
+New Generator.g2 Bus1=testsource  kV= 120 kW=1 Phases=1 Model=3 Vpu=1.05 Maxkvar=70000 Minkvar=10000   !  kvar=60000
 new generator.g3 bus1=b7 like=g2
 
 Set voltagebases=[115, 12.47, 0.48, 0.208]

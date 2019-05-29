@@ -108,22 +108,23 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool=false, 
     end
 
     buses = discover_buses(dss_data)
-    circuit = createVSource("", dss_data["circuit"][1]["name"]; to_sym_keys(dss_data["circuit"][1])...)
+    circuit = createVSource(get(dss_data["circuit"][1], "bus1", "sourcebus"), dss_data["circuit"][1]["name"]; to_sym_keys(dss_data["circuit"][1])...)
+    sourcebus = circuit["bus1"]
 
     for (n, (bus, nodes)) in enumerate(buses)
         busDict = Dict{String,Any}()
 
         nconductors = tppm_data["conductors"]
-        ph1_ang = bus == "sourcebus" ? circuit["angle"] : 0.0
-        vm = bus == "sourcebus" ? circuit["pu"] : 1.0
-        vmi = bus == "sourcebus" ? circuit["pu"] - circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmin
-        vma = bus == "sourcebus" ? circuit["pu"] + circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmax
+        ph1_ang = bus == sourcebus ? circuit["angle"] : 0.0
+        vm = bus == sourcebus ? circuit["pu"] : 1.0
+        vmi = bus == sourcebus ? circuit["pu"] - circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmin
+        vma = bus == sourcebus ? circuit["pu"] + circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmax
 
         busDict["bus_i"] = n
         busDict["index"] = n
         busDict["name"] = bus
 
-        busDict["bus_type"] = bus == "sourcebus" ? 3 : 1
+        busDict["bus_type"] = bus == sourcebus ? 3 : 1
 
         busDict["vm"] = PMs.MultiConductorVector(parse_array(vm, nodes, nconductors))
         busDict["va"] = PMs.MultiConductorVector(parse_array([rad2deg(2*pi/nconductors*(i-1))+ph1_ang for i in 1:nconductors], nodes, nconductors))
@@ -205,14 +206,10 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             load_name = defaults["name"]
 
-            # V2
+            cnds = [1, 2, 3, 0][nodes[1,:]]
             loadDict["conn"] = defaults["conn"]
             nph = defaults["phases"]
-            cnds = get_conductors_ordered(defaults["bus1"])
-            if !all([c in collect(0:3) for c in cnds])
-                Memento.error(LOGGER, "Conductors should be in [0,1,2,3].")
-            end
-            delta_map = Dict([1,2]=>1, [2,1]=>1, [2,3]=>2, [3,2]=>2, [1,3]=>3, [3,1]=>3)
+            delta_map = Dict([1,2]=>1, [2,3]=>2, [1,3]=>3)
             if nph==1
                 # TPPM convention is to specify the voltage across the load
                 # this what OpenDSS does for 1-phase loads only
@@ -226,7 +223,10 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 end
                 # if more than two, only first two are considered
                 if length(cnds)>2
-                    cnds = cnds[1:2]
+                    # this no longer works if order is not preserved
+                    # throw an error instead of behaving like OpenDSS
+                    # cnds = cnds[1:2]
+                    Memento.error(LOGGER, "A 1-phase load cannot specify more than two terminals.")
                 end
                 # conn property has no effect
                 # delta/wye is determined by whether load connected to ground
@@ -424,7 +424,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
     # sourcebus generator (created by circuit)
     circuit = dss_data["circuit"][1]
-    defaults = createVSource("sourcebus", "sourcebus"; to_sym_keys(circuit)...)
+    defaults = createVSource(get(circuit, "bus1", "sourcebus"), "sourcebus"; to_sym_keys(circuit)...)
 
     genDict = Dict{String,Any}()
 
@@ -460,6 +460,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     PMs.import_remaining!(genDict, defaults, import_all; exclude=used)
 
     push!(tppm_data["gen"], genDict)
+
 
     if haskey(dss_data, "generator")
         for gen in dss_data["generator"]
@@ -1069,7 +1070,7 @@ was adjusted to accomodate that.
 function adjust_sourcegen_bounds!(tppm_data)
     emergamps = Array{Float64,1}([0.0])
     #sourcebus_n = find_bus("sourcebus", tppm_data)
-    sourcebus_n = [bus["index"] for (_,bus) in tppm_data["bus"] if haskey(bus, "name") && bus["name"]=="sourcebus"][1]
+    sourcebus_n = [bus["index"] for (_,bus) in tppm_data["bus"] if haskey(bus, "name") && bus["name"]==tppm_data["sourcebus"]][1]
     for (_,line) in tppm_data["branch"]
         if line["f_bus"] == sourcebus_n || line["t_bus"] == sourcebus_n
             append!(emergamps, line["rate_b"].values)
@@ -1117,7 +1118,7 @@ function decompose_transformers!(tppm_data; import_all::Bool=false)
             # 2-WINDING TRANSFORMER
             trans_dict = Dict{String, Any}()
             trans_dict["name"] = "tr$(tr_id)_w$(w)"
-            trans_dict["source_id"] = trans["source_id"]
+            trans_dict["source_id"] = "$(trans["source_id"])"
             trans_dict["active_phases"] = [1, 2, 3]
             push_dict_ret_key!(tppm_data["trans"], trans_dict)
             # connection settings
@@ -1223,7 +1224,7 @@ function create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; name="", source_id="
     zbase *= (1/3)
     vbranch = Dict{String, Any}("f_bus"=>f_bus, "t_bus"=>t_bus, "name"=>name)
     vbranch["active_phases"] = active_phases
-    vbranch["source_id"] = source_id
+    vbranch["source_id"] = "virtual_branch.$name"
     for k in [:br_r, :br_x, :g_fr, :g_to, :b_fr, :b_to]
         if !haskey(kwargs, k)
             if k in [:br_r, :br_x]
@@ -1243,6 +1244,8 @@ function create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; name="", source_id="
     vbranch["angmax"] = PMs.MultiConductorVector(ones(ncnd))*60
     vbranch["shift"] = PMs.MultiConductorVector(zeros(ncnd))
     vbranch["tap"] = PMs.MultiConductorVector(ones(ncnd))
+    vbranch["transformer"] = false
+    vbranch["switch"] = false
     vbranch["br_status"] = 1
     for k in [:rate_a, :rate_b, :rate_c]
         if haskey(kwargs, k)
@@ -1420,7 +1423,7 @@ function adjust_base!(tppm_data; start_at_first_tr_prim=false)
             source = buses_3[1]
         end
         base_kv_new = tppm_data["basekv"]
-        println(source)
+        #println(source)
         # Only relevant for future per-unit upgrade
         # Impossible to end up here;
         # condition checked before call to adjust_base!
@@ -1621,11 +1624,11 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
 
     tppm_data["per_unit"] = false
     tppm_data["source_type"] = "dss"
-    tppm_data["source_version"] = VersionNumber("0")
+    tppm_data["source_version"] = string(VersionNumber("0"))
 
     if haskey(dss_data, "circuit")
         circuit = dss_data["circuit"][1]
-        defaults = createVSource("", circuit["name"]; to_sym_keys(circuit)...)
+        defaults = createVSource(get(circuit, "bus1", "sourcebus"), circuit["name"]; to_sym_keys(circuit)...)
 
         tppm_data["name"] = defaults["name"]
         tppm_data["basekv"] = defaults["basekv"]
@@ -1633,6 +1636,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         tppm_data["basefreq"] = pop!(tppm_data, "defaultbasefreq")
         tppm_data["pu"] = defaults["pu"]
         tppm_data["conductors"] = defaults["phases"]
+        tppm_data["sourcebus"] = defaults["bus1"]
     else
         Memento.error(LOGGER, "Circuit not defined, not a valid circuit!")
     end

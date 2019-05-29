@@ -99,24 +99,24 @@ function variable_tp_voltage_prod_hermitian(pm::PMs.GenericPowerModel{T}; n_cond
     for c in 1:n_lower_triangle_el
         if bounded
             PMs.var(pm, nw, c)[:wr] = JuMP.@variable(pm.model,
-            [i in PMs.ids(pm, nw, :bus)], basename="$(nw)_$(c)_wr",
-            lowerbound = -wmaxdict[i][c],
-            upperbound =  wmaxdict[i][c],
+            [i in PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(c)_wr",
+            lower_bound = -wmaxdict[i][c],
+            upper_bound =  wmaxdict[i][c],
             start = PMs.getval(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
             PMs.var(pm, nw, c)[:wi] = JuMP.@variable(pm.model,
-            [i in PMs.ids(pm, nw, :bus)], basename="$(nw)_$(c)_wi",
-            lowerbound = -wmaxdict[i][c],
-            upperbound =  wmaxdict[i][c],
+            [i in PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(c)_wi",
+            lower_bound = -wmaxdict[i][c],
+            upper_bound =  wmaxdict[i][c],
             start = PMs.getval(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
         else
             PMs.var(pm, nw, c)[:wr] = JuMP.@variable(pm.model,
-            [i in PMs.ids(pm, nw, :bus)], basename="$(nw)_$(c)_wr",
+            [i in PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(c)_wr",
             start = PMs.getval(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
             PMs.var(pm, nw, c)[:wi] = JuMP.@variable(pm.model,
-            [i in PMs.ids(pm, nw, :bus)], basename="$(nw)_$(c)_wi",
+            [i in PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(c)_wi",
             start = PMs.getval(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
         end
@@ -171,15 +171,15 @@ function variable_tp_branch_series_current_prod_hermitian(pm::PMs.GenericPowerMo
     for c in 1:n_diag_el
         if bounded
             PMs.var(pm, nw, c)[:cm] = JuMP.@variable(pm.model,
-            [l in PMs.ids(pm, nw, :branch)], basename="$(nw)_$(c)_cm",
-            lowerbound = 0,
-            upperbound = (cmax[l][c])^2,
+            [l in PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_cm",
+            lower_bound = 0,
+            upper_bound = (cmax[l][c])^2,
             start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
             )
         else
             PMs.var(pm, nw, c)[:cm] = JuMP.@variable(pm.model,
-            [l in PMs.ids(pm, nw, :branch)], basename="$(nw)_$(c)_cm",
-            lowerbound = 0,
+            [l in PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_cm",
+            lower_bound = 0,
             start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c)
             )
         end
@@ -189,26 +189,26 @@ function variable_tp_branch_series_current_prod_hermitian(pm::PMs.GenericPowerMo
     for c in 1:n_lower_triangle_el
         if bounded
             PMs.var(pm, nw, c)[:ccmr] = JuMP.@variable(pm.model,
-            [l in PMs.ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmr",
-            lowerbound = -(cmax[l][c])^2,
-            upperbound = (cmax[l][c])^2,
+            [l in PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_ccmr",
+            lower_bound = -(cmax[l][c])^2,
+            upper_bound = (cmax[l][c])^2,
             start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
             )
             PMs.var(pm, nw, c)[:ccmi] = JuMP.@variable(pm.model,
-            [l in PMs.ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmi",
-            lowerbound = -(cmax[l][c])^2,
-            upperbound = (cmax[l][c])^2,
+            [l in PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_ccmi",
+            lower_bound = -(cmax[l][c])^2,
+            upper_bound = (cmax[l][c])^2,
             start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c)
             )
         else
             PMs.var(pm, nw, c)[:ccmr] = JuMP.@variable(pm.model,
-            [l in PMs.ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmr",
-            # lowerbound = 0,
+            [l in PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_ccmr",
+            # lower_bound = 0,
             start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c)
             )
             PMs.var(pm, nw, c)[:ccmi] = JuMP.@variable(pm.model,
-            [l in PMs.ids(pm, nw, :branch)], basename="$(nw)_$(c)_ccmi",
-            # lowerbound = 0,
+            [l in PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_ccmi",
+            # lower_bound = 0,
             start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c)
             )
         end
@@ -284,14 +284,14 @@ function variable_lower_triangle_active_branch_flow(pm::PMs.GenericPowerModel; n
 
     if bounded
         PMs.var(pm, nw, cnd)[:p_lt] = JuMP.@variable(pm.model,
-        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_lt",
-        lowerbound = -smaxdict[(l,i,j)][cnd],
-        upperbound =  smaxdict[(l,i,j)][cnd],
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_p_lt",
+        lower_bound = -smaxdict[(l,i,j)][cnd],
+        upper_bound =  smaxdict[(l,i,j)][cnd],
         start = PMs.getval(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
         )
     else
         PMs.var(pm, nw, cnd)[:p_lt] = JuMP.@variable(pm.model,
-        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_lt",
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_p_lt",
         start = PMs.getval(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
         )
     end
@@ -310,14 +310,14 @@ function variable_lower_triangle_reactive_branch_flow(pm::PMs.GenericPowerModel;
 
     if bounded
         PMs.var(pm, nw, cnd)[:q_lt] = JuMP.@variable(pm.model,
-        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_lt",
-        lowerbound = -smaxdict[(l,i,j)][cnd],
-        upperbound =  smaxdict[(l,i,j)][cnd],
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_q_lt",
+        lower_bound = -smaxdict[(l,i,j)][cnd],
+        upper_bound =  smaxdict[(l,i,j)][cnd],
         start = PMs.getval(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
         )
     else
         PMs.var(pm, nw, cnd)[:q_lt] = JuMP.@variable(pm.model,
-        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_lt",
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_q_lt",
         start = PMs.getval(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
         )
     end
@@ -336,14 +336,14 @@ function variable_upper_triangle_active_branch_flow(pm::PMs.GenericPowerModel; n
 
     if bounded
         PMs.var(pm, nw, cnd)[:p_ut] = JuMP.@variable(pm.model,
-        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_ut",
-        lowerbound = -smaxdict[(l,i,j)][cnd],
-        upperbound =  smaxdict[(l,i,j)][cnd],
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_p_ut",
+        lower_bound = -smaxdict[(l,i,j)][cnd],
+        upper_bound =  smaxdict[(l,i,j)][cnd],
         start = PMs.getval(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
         )
     else
         PMs.var(pm, nw, cnd)[:p_ut] = JuMP.@variable(pm.model,
-        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_p_ut",
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_p_ut",
         start = PMs.getval(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
         )
     end
@@ -361,14 +361,14 @@ function variable_upper_triangle_reactive_branch_flow(pm::PMs.GenericPowerModel;
     end
     if bounded
         PMs.var(pm, nw, cnd)[:q_ut] = JuMP.@variable(pm.model,
-        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_ut",
-        lowerbound = -smaxdict[(l,i,j)][cnd],
-        upperbound =  smaxdict[(l,i,j)][cnd],
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_q_ut",
+        lower_bound = -smaxdict[(l,i,j)][cnd],
+        upper_bound =  smaxdict[(l,i,j)][cnd],
         start = PMs.getval(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
         )
     else
         PMs.var(pm, nw, cnd)[:q_ut] = JuMP.@variable(pm.model,
-        [(l,i,j) in PMs.ref(pm, nw, :arcs)], basename="$(nw)_$(cnd)_q_ut",
+        [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_q_ut",
         start = PMs.getval(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
         )
     end

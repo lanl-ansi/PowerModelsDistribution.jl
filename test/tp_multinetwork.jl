@@ -25,7 +25,7 @@
         end
 
         @testset "test dc polar opf" begin
-            result = TPPMs.run_mn_tp_strg_opf(mn_mp_data, PowerModels.DCPPowerModel, ipopt_solver) # this test requires default tol value
+            result = TPPMs.run_mn_tp_strg_opf(mn_mp_data, PowerModels.DCPPowerModel, JuMP.with_optimizer(Ipopt.Optimizer, print_level=0)) # this test requires default tol value
 
             @test result["status"] == :LocalOptimal
             @test isapprox(result["objective"], 2.63419e5; atol = 1e2)

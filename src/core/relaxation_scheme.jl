@@ -68,7 +68,7 @@ function relaxation_psd_to_soc_real_conic(m, mx)
     n_elements = size(mx,1)
     for i in 1:n_elements-1
         for j in i+1:n_elements
-            JuMP.@constraint(m, norm([2*mx[i,j], mx[i,i]-mx[j,j]]) <= mx[i,i]+mx[j,j])
+            JuMP.@constraint(m, [mx[i,i]+mx[j,j], 2*mx[i,j], mx[i,i]-mx[j,j]] in JuMP.SecondOrderCone())
         end
     end
 end
@@ -93,7 +93,7 @@ function relaxation_psd_to_soc_complex_conic(m, mxreal, mximag)
     n_elements = size(mxreal,1)
     for i in 1:n_elements-1
         for j in i+1:n_elements
-            JuMP.@constraint(m, norm([2*mxreal[i,j], 2*mximag[i,j], mxreal[i,i]-mxreal[j,j]]) <= mxreal[i,i]+mxreal[j,j])
+            JuMP.@constraint(m, [mxreal[i,i]+mxreal[j,j], 2*mxreal[i,j], 2*mximag[i,j], mxreal[i,i]-mxreal[j,j]] in JuMP.SecondOrderCone())
         end
     end
 end
@@ -171,6 +171,6 @@ function relaxation_psd_to_psd_real(m, mxreal, mximag; ndim=3)
         j = i+(ndim-1)
         mr = mxreal[i:j, i:j]
         mi = mximag[i:j, i:j]
-        JuMP.@SDconstraint(m, [mr -mi; mi mr] >=0)
+        JuMP.@constraint(m, [mr -mi; mi mr] in JuMP.PSDCone())
     end
 end

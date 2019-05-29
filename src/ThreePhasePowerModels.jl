@@ -21,6 +21,7 @@ include("core/objective.jl")
 
 include("form/acp.jl")
 include("form/acr.jl")
+include("form/apo.jl")
 include("form/dcp.jl")
 include("form/bf.jl")
 include("form/bf_mx.jl")

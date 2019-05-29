@@ -2,10 +2,9 @@ using Documenter, ThreePhasePowerModels
 
 makedocs(
     modules = [ThreePhasePowerModels],
-    format = :html,
+    format = Documenter.HTML(analytics = ""),
     sitename = "ThreePhasePowerModels",
     authors = "Carleton Coffrin, David Fobes, Frederik Geth and contributors.",
-    analytics = "",
     pages = [
         "Home" => "index.md",
         "Manual" => [

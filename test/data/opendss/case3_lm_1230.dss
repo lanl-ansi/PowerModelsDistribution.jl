@@ -32,13 +32,16 @@ New Load.d1ph2 phases=1 loadbus.2 kv=0.23 kW=400 kvar=300 model=1 conn=delta vmi
 New Load.d1ph23 phases=1 loadbus.2.3 kv=0.4 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
 New Load.d1ph0 phases=1 loadbus.0 kv=0.23 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
 New Load.d1ph00 phases=1 loadbus.0.0 kv=0.23 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
-New Load.d1ph123 phases=1 loadbus.0.1.2.3 kv=0.23 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
-New Load.y1ph phases=1 loadbus kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+! This specification will now lead to an error
+! New Load.d1ph123 phases=1 loadbus.0.1.2.3 kv=0.23 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+! This specification will now lead to an error
+! New Load.y1ph phases=1 loadbus kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
 New Load.y1ph2 phases=1 loadbus.2 kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
 New Load.y1ph23 phases=1 loadbus.2.3 kv=0.4 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
 New Load.y1ph0 phases=1 loadbus.0 kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
 New Load.y1ph00 phases=1 loadbus.0.0 kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
-New Load.y1ph123 phases=1 loadbus.0.1.2.3 kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+! This specification will now lead to an error
+! New Load.y1ph123 phases=1 loadbus.0.1.2.3 kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
 
 ! three-phase loads
 New Load.d3ph phases=3 loadbus kv=0.4 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3

@@ -109,6 +109,9 @@
         @test_warn(TESTLOG, ": load model 8 not supported. Treating as model 1.",
                    TPPMs.parse_file("../test/data/opendss/loadparser_warn_model8.dss"))
 
+        @test_warn(TESTLOG, "Only three-phase transformers are supported. The bus specification b7.1 is treated as b7 instead.",
+                  TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+
         Memento.TestUtils.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
@@ -125,7 +128,7 @@
 
         @test tppm["name"] == "test2"
 
-        @test length(tppm) == 19 # 1 more entry for transformer dicts
+        @test length(tppm) == 20 # keep track of sourcebus
         @test length(dss) == 12
 
         # 26 buses and not 12, because of internal transformer buses;
@@ -255,7 +258,7 @@
 
             @test tppm["branch"]["1"]["source_id"] == "line.l1" && length(tppm["branch"]["1"]["active_phases"]) == 3
             # transformer is no longer a branch
-            @test tppm["trans"]["1"]["source_id"] == "transformer.t4"
+            @test tppm["trans"]["1"]["source_id"] == "transformer.t4_1"  # winding indicated by _1
             # updated index, reactors shifted
             @test tppm["branch"]["10"]["source_id"] == "reactor.reactor1" && length(tppm["branch"]["10"]["active_phases"]) == 3
 
@@ -403,5 +406,15 @@
 
         @test all(sol["solution"]["gen"]["2"]["pg"][2:3] .== 0.0)
         @test all(sol["solution"]["gen"]["2"]["qg"][2:3] .== 0.0)
+    end
+
+    @testset "json parse" begin
+        tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced.dss")
+
+        io = PipeBuffer()
+        JSON.print(io, tppm)
+        tppm_json_file = TPPMs.parse_file(io)
+
+        @test tppm == tppm_json_file
     end
 end

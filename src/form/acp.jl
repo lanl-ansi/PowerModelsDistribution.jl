@@ -14,7 +14,7 @@ function variable_tp_voltage(pm::PMs.GenericPowerModel{T}; nw=pm.cnw, kwargs...)
     vm = 1
     for c in 1:ncnd
         for id in PMs.ids(pm, :bus)
-            JuMP.setvalue(PMs.var(pm, nw, c, :va, id), theta[c])
+            JuMP.set_start_value(PMs.var(pm, nw, c, :va, id), theta[c])
         end
     end
 end
