@@ -12,9 +12,13 @@ function variable_tp_voltage(pm::PMs.GenericPowerModel{T}; nw=pm.cnw, kwargs...)
     ncnd = length(PMs.conductor_ids(pm))
     theta = [wraptopi(2 * pi / ncnd * (1-c)) for c in 1:ncnd]
     vm = 1
-    for c in 1:ncnd
-        for id in PMs.ids(pm, :bus)
-            JuMP.set_start_value(PMs.var(pm, nw, c, :va, id), theta[c])
+    for id in PMs.ids(pm, :bus)
+        busref = PMs.ref(pm, nw, :bus, id)
+        if !haskey(busref, "va_start")
+        # if it has this key, it was set at PM level
+            for c in 1:ncnd
+                JuMP.set_start_value(PMs.var(pm, nw, c, :va, id), theta[c])
+            end
         end
     end
 end
@@ -67,8 +71,8 @@ function constraint_kcl_shunt_trans_load(pm::PMs.GenericPowerModel{T}, nw::Int, 
     q_dc = PMs.var(pm, nw, c, :q_dc)
     pt = PMs.var(pm, nw, c, :pt)
     qt = PMs.var(pm,  nw, c, :qt)
-    PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(pt[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd[l] for l in bus_loads) - sum(gs for gs in values(bus_gs))*vm^2)
-    PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(qt[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd[l] for l in bus_loads) + sum(bs for bs in values(bus_bs))*vm^2)
+    PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@NLconstraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(pt[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd[l] for l in bus_loads) - sum(gs for gs in values(bus_gs))*vm^2)
+    PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@NLconstraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(qt[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd[l] for l in bus_loads) + sum(bs for bs in values(bus_bs))*vm^2)
 end
 
 
@@ -332,27 +336,25 @@ function constraint_tp_trans_flow_var(pm::PMs.GenericPowerModel, i::Int, f_bus::
 end
 
 
-function constraint_load_power_setpoint_wye(pm::PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, pd::Real, qd::Real) where T <: PMs.AbstractACPForm
-    JuMP.@constraint(pm.model, PMs.var(pm, nw, cnd, :pd, load_id)==pd)
-    JuMP.@constraint(pm.model, PMs.var(pm, nw, cnd, :qd, load_id)==qd)
+function constraint_load_power_wye(pm::PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, pd::Real, qd::Real) where T <: PMs.AbstractACPForm
+    PMs.var(pm, nw, cnd, :pd)[load_id] = pd
+    PMs.var(pm, nw, cnd, :qd)[load_id] = qd
 end
 
 
-function constraint_load_power_prop_vm_wye(pm::PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, scale_p::Real, scale_q::Real) where T <: PMs.AbstractACPForm
-    pd = PMs.var(pm, nw, cnd, :pd, load_id)
-    qd = PMs.var(pm, nw, cnd, :qd, load_id)
+function constraint_load_current_wye(pm::PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, scale_p::Real, scale_q::Real) where T <: PMs.AbstractACPForm
     vm = PMs.var(pm, nw, cnd, :vm, load_bus_id)
-    JuMP.@NLconstraint(pm.model, pd==scale_p*vm)
-    JuMP.@NLconstraint(pm.model, qd==scale_q*vm)
+    # this has to be a NLexpression and not an expression;
+    # might be mixed in KCL with NLexpression, so has to also be NLexpression
+    PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, scale_p*vm)
+    PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, scale_q*vm)
 end
 
 
-function constraint_load_power_prop_vmsqr_wye(pm::PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real) where T <: PMs.AbstractACPForm
-    pd = PMs.var(pm, nw, cnd, :pd, load_id)
-    qd = PMs.var(pm, nw, cnd, :qd, load_id)
+function constraint_load_impedance_wye(pm::PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real) where T <: PMs.AbstractACPForm
     vm = PMs.var(pm, nw, cnd, :vm, load_bus_id)
-    JuMP.@NLconstraint(pm.model, pd==cp*vm^2)
-    JuMP.@NLconstraint(pm.model, qd==cq*vm^2)
+    PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, cp*vm^2)
+    PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, cq*vm^2)
 end
 
 
@@ -363,9 +365,7 @@ s_a = v_a*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 s_b = v_b*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 s_c = v_c*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 """
-function constraint_tp_load_power_setpoint_delta(pm::PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, pd::PMs.MultiConductorVector, qd::PMs.MultiConductorVector) where T <: PMs.AbstractACPForm
-    p_a, p_b, p_c = [PMs.var(pm, nw, c, :pd, load_id) for c in 1:3]
-    q_a, q_b, q_c = [PMs.var(pm, nw, c, :qd, load_id) for c in 1:3]
+function constraint_tp_load_power_delta(pm::PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, pd::PMs.MultiConductorVector, qd::PMs.MultiConductorVector) where T <: PMs.AbstractACPForm
     p_ab, p_bc, p_ca = pd
     q_ab, q_bc, q_ca = qd
     vm_a, vm_b, vm_c = [PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:3]
@@ -394,18 +394,12 @@ function constraint_tp_load_power_setpoint_delta(pm::PMs.GenericPowerModel{T}, n
     p_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx))
     q_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx))
     # s_x = s_x,ref
-    p_a_nlexp = p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    p_b_nlexp = p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    p_c_nlexp = p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
-    q_a_nlexp = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    q_b_nlexp = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    q_c_nlexp = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
-    JuMP.@NLconstraint(pm.model, p_a==p_a_nlexp)
-    JuMP.@NLconstraint(pm.model, p_b==p_b_nlexp)
-    JuMP.@NLconstraint(pm.model, p_c==p_c_nlexp)
-    JuMP.@NLconstraint(pm.model, q_a==q_a_nlexp)
-    JuMP.@NLconstraint(pm.model, q_b==q_b_nlexp)
-    JuMP.@NLconstraint(pm.model, q_c==q_c_nlexp)
+    PMs.var(pm, nw, 1, :pd)[load_id] = p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    PMs.var(pm, nw, 2, :pd)[load_id] = p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    PMs.var(pm, nw, 3, :pd)[load_id] = p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    PMs.var(pm, nw, 1, :qd)[load_id] = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    PMs.var(pm, nw, 2, :qd)[load_id] = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    PMs.var(pm, nw, 3, :qd)[load_id] = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
 end
 
 
@@ -418,9 +412,7 @@ And then
 s_a = v_a.conj(i_a) = v_a.conj(i_ab-i_ca)
 idem for s_b and s_c
 """
-function constraint_tp_load_power_prop_vm_delta(pm::PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, cp::PMs.MultiConductorVector, cq::PMs.MultiConductorVector) where T <: PMs.AbstractACPForm
-    p_a, p_b, p_c = [PMs.var(pm, nw, c, :pd, load_id) for c in 1:3]
-    q_a, q_b, q_c = [PMs.var(pm, nw, c, :qd, load_id) for c in 1:3]
+function constraint_tp_load_current_delta(pm::PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, cp::PMs.MultiConductorVector, cq::PMs.MultiConductorVector) where T <: PMs.AbstractACPForm
     cp_ab, cp_bc, cp_ca = cp
     cq_ab, cq_bc, cq_ca = cq
     vm_a, vm_b, vm_c = [PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:3]
@@ -449,18 +441,12 @@ function constraint_tp_load_power_prop_vm_delta(pm::PMs.GenericPowerModel{T}, nw
     p_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx))
     q_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx))
     # s_x = s_x,ref
-    p_a_nlexp = p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    p_b_nlexp = p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    p_c_nlexp = p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
-    q_a_nlexp = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    q_b_nlexp = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    q_c_nlexp = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
-    JuMP.@NLconstraint(pm.model, p_a==p_a_nlexp)
-    JuMP.@NLconstraint(pm.model, p_b==p_b_nlexp)
-    JuMP.@NLconstraint(pm.model, p_c==p_c_nlexp)
-    JuMP.@NLconstraint(pm.model, q_a==q_a_nlexp)
-    JuMP.@NLconstraint(pm.model, q_b==q_b_nlexp)
-    JuMP.@NLconstraint(pm.model, q_c==q_c_nlexp)
+    PMs.var(pm, nw, 1, :pd)[load_id] = p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    PMs.var(pm, nw, 2, :pd)[load_id] = p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    PMs.var(pm, nw, 3, :pd)[load_id] = p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    PMs.var(pm, nw, 1, :qd)[load_id] = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    PMs.var(pm, nw, 2, :qd)[load_id] = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    PMs.var(pm, nw, 3, :qd)[load_id] = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
 end
 
 
@@ -473,9 +459,7 @@ And then
 s_a = v_a.conj(i_a) = v_a.conj(i_ab-i_ca)
 idem for s_b and s_c
 """
-function constraint_tp_load_power_prop_vmsqr_delta(pm::PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, cp::PMs.MultiConductorVector, cq::PMs.MultiConductorVector) where T <: PMs.AbstractACPForm
-    p_a, p_b, p_c = [PMs.var(pm, nw, c, :pd, load_id) for c in 1:3]
-    q_a, q_b, q_c = [PMs.var(pm, nw, c, :qd, load_id) for c in 1:3]
+function constraint_tp_load_impedance_delta(pm::PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, cp::PMs.MultiConductorVector, cq::PMs.MultiConductorVector) where T <: PMs.AbstractACPForm
     cp_ab, cp_bc, cp_ca = cp
     cq_ab, cq_bc, cq_ca = cq
     vm_a, vm_b, vm_c = [PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:3]
@@ -504,16 +488,10 @@ function constraint_tp_load_power_prop_vmsqr_delta(pm::PMs.GenericPowerModel{T},
     p_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx))
     q_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx))
     # s_x = s_x,ref
-    p_a_nlexp = p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    p_b_nlexp = p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    p_c_nlexp = p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
-    q_a_nlexp = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    q_b_nlexp = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    q_c_nlexp = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
-    JuMP.@NLconstraint(pm.model, p_a==p_a_nlexp)
-    JuMP.@NLconstraint(pm.model, p_b==p_b_nlexp)
-    JuMP.@NLconstraint(pm.model, p_c==p_c_nlexp)
-    JuMP.@NLconstraint(pm.model, q_a==q_a_nlexp)
-    JuMP.@NLconstraint(pm.model, q_b==q_b_nlexp)
-    JuMP.@NLconstraint(pm.model, q_c==q_c_nlexp)
+    PMs.var(pm, nw, 1, :pd)[load_id] = p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    PMs.var(pm, nw, 2, :pd)[load_id] = p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    PMs.var(pm, nw, 3, :pd)[load_id] = p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    PMs.var(pm, nw, 1, :qd)[load_id] = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    PMs.var(pm, nw, 2, :qd)[load_id] = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    PMs.var(pm, nw, 3, :qd)[load_id] = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
 end

@@ -17,8 +17,16 @@ New Line.OHLine  bus1=sourcebus.1.2.3.0  loadbus.1.2.3.0  linecode = 556MCM   le
 
 !Loads - single phase
 
-! Error should be thrown for nphases not in [1,3]
-New Load.d1ph phases=4 loadbus kv=0.23 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+! Warning when load model is 3
+New Load.d1phm3 phases=3 loadbus kv=0.23 kW=400 kvar=300 model=3 conn=delta vminpu=0.7 vmaxpu=1.3
+! Warning when load model is 4
+New Load.d1phm4 phases=3 loadbus kv=0.23 kW=400 kvar=300 model=4 conn=delta vminpu=0.7 vmaxpu=1.3
+! Warning when load model is 6
+New Load.d1phm6 phases=3 loadbus kv=0.23 kW=400 kvar=300 model=6 conn=delta vminpu=0.7 vmaxpu=1.3
+! Warning when load model is 7
+New Load.d1phm7 phases=3 loadbus kv=0.23 kW=400 kvar=300 model=7 conn=delta vminpu=0.7 vmaxpu=1.3
+! Warning when load model is 8
+New Load.d1phm8 phases=3 loadbus kv=0.23 kW=400 kvar=300 model=8 conn=delta vminpu=0.7 vmaxpu=1.3
 
 Set voltagebases=[0.4]
 Set tolerance=0.000001

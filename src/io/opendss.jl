@@ -312,7 +312,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 model = 1
             end
             # save adjusted model type to dict, human-readable
-            model_int2str = Dict(1=>"constant_power", 2=>"proportional_vmsqr", 5=>"proportional_vm")
+            model_int2str = Dict(1=>"constant_power", 2=>"constant_impedance", 5=>"constant_current")
             loadDict["model"] = model_int2str[model]
 
             loadDict["status"] = convert(Int, defaults["enabled"])
@@ -1426,7 +1426,7 @@ function adjust_base!(tppm_data; start_at_first_tr_prim=false)
             source = parse(Int, rand(keys(tppm_data["bus"])))
         end
         base_kv_new = tppm_data["basekv"]
-        println(source)
+        #println(source)
         # Only relevant for future per-unit upgrade
         # Impossible to end up here;
         # condition checked before call to adjust_base!

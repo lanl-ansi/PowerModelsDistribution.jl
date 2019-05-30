@@ -28,7 +28,7 @@ function post_tp_opf_lm(pm::PMs.GenericPowerModel)
 
     for c in PMs.conductor_ids(pm)
         PMs.variable_generation(pm, cnd=c)
-        variable_load_flow(pm, cnd=c)
+        variable_load(pm, cnd=c)
         PMs.variable_dcline_flow(pm, cnd=c)
     end
     variable_tp_trans_flow(pm)
@@ -39,21 +39,13 @@ function post_tp_opf_lm(pm::PMs.GenericPowerModel)
         constraint_tp_theta_ref(pm, i)
     end
 
-    for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
-        constraint_kcl_shunt_trans_load(pm, i, cnd=c)
+    # loads should be constrained before KCL, or Pd/Qd undefined
+    for id in PMs.ids(pm, :load)
+        constraint_tp_load(pm, id)
     end
 
-    for id in PMs.ids(pm, :load)
-        model = PMs.ref(pm, pm.cnw, :load, id, "model")
-        if model=="constant_power"
-            constraint_tp_load_power_setpoint(pm, id)
-        elseif model=="proportional_vm"
-            constraint_tp_load_power_prop_vm(pm, id)
-        elseif model=="proportional_vmsqr"
-            constraint_tp_load_power_prop_vmsqr(pm, id)
-        else
-            Memento.@error(LOGGER, "Unknown model $model for load $id.")
-        end
+    for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
+        constraint_kcl_shunt_trans_load(pm, i, cnd=c)
     end
 
     for i in PMs.ids(pm, :branch)

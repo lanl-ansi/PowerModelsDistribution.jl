@@ -19,6 +19,15 @@ New Line.OHLine  bus1=sourcebus.1.2.3.0  loadbus.1.2.3.0  linecode = 556MCM   le
 
 ! Error should be thrown for two-phase loads
 New Load.d1ph phases=2 loadbus kv=0.23 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+! Error should be thrown for nphases not in [1,3]
+New Load.d1ph phases=4 loadbus kv=0.23 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+! Error when connections not permutations of 0:3 or 1:3
+New Load.d1ph phases=3 loadbus.1.2 kv=0.23 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+! This specification will now lead to an error
+New Load.y1ph123 phases=1 loadbus.0.1.2.3 kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+New Load.d1ph123 phases=1 loadbus.0.1.2.3 kv=0.23 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+New Load.y1ph phases=1 loadbus kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+
 
 Set voltagebases=[0.4]
 Set tolerance=0.000001

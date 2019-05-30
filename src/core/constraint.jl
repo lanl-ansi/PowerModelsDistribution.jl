@@ -43,17 +43,18 @@ sn_a = v_a.conj(i_a)
     = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 So for delta, sn is constrained indirectly.
 """
-function constraint_tp_load_power_setpoint(pm::PMs.GenericPowerModel, load_id::Int; nw=pm.cnw)
+function constraint_tp_load_power(pm::PMs.GenericPowerModel, load_id::Int; nw=pm.cnw)
     load = PMs.ref(pm, nw, :load, load_id)
     pd = load["pd"]
     qd = load["qd"]
     conn = load["conn"]
     if conn=="wye"
         for c in PMs.conductor_ids(pm)
-            constraint_load_power_setpoint_wye(pm, nw, c, load_id, pd[c], qd[c])
+            constraint_load_power_wye(pm, nw, c, load_id, pd[c], qd[c])
         end
     elseif conn=="delta"
-        constraint_tp_load_power_setpoint_delta(pm, nw, load_id, load["load_bus"], pd, qd)
+        @assert(PMs.ref(pm, 0, :conductors)==3)
+        constraint_tp_load_power_delta(pm, nw, load_id, load["load_bus"], pd, qd)
     else
         Memento.error(LOGGER, "Unknown load connection type $conn.")
     end
@@ -69,7 +70,7 @@ qd = cq.|vm|
 sd = cp.|vm| + j.cq.|vm|
 The same remark applies on delta/wye as for the fixed setpoint.
 """
-function constraint_tp_load_power_prop_vm(pm::PMs.GenericPowerModel, load_id::Int; nw=pm.cnw)
+function constraint_tp_load_current(pm::PMs.GenericPowerModel, load_id::Int; nw=pm.cnw)
     load = PMs.ref(pm, nw, :load, load_id)
 
     vnom_kv = load["vnom_kv"]
@@ -84,10 +85,11 @@ function constraint_tp_load_power_prop_vm(pm::PMs.GenericPowerModel, load_id::In
     conn = load["conn"]
     if conn=="wye"
         for c in PMs.conductor_ids(pm)
-            constraint_load_power_prop_vm_wye(pm, nw, c, load_id, load["load_bus"], cp[c], cq[c])
+            constraint_load_current_wye(pm, nw, c, load_id, load["load_bus"], cp[c], cq[c])
         end
     elseif conn=="delta"
-        constraint_tp_load_power_prop_vm_delta(pm, nw, load_id, load["load_bus"], cp, cq)
+        @assert(PMs.ref(pm, 0, :conductors)==3)
+        constraint_tp_load_current_delta(pm, nw, load_id, load["load_bus"], cp, cq)
     else
         Memento.error(LOGGER, "Unknown load connection type $conn.")
     end
@@ -103,7 +105,7 @@ qd = cq.|vm|^2
 sd = cp.|vm|^2 + j.cq.|vm|^2
 The same remark applies on delta/wye as for the fixed setpoint.
 """
-function constraint_tp_load_power_prop_vmsqr(pm::PMs.GenericPowerModel, load_id::Int; nw=pm.cnw)
+function constraint_tp_load_impedance(pm::PMs.GenericPowerModel, load_id::Int; nw=pm.cnw)
     load = PMs.ref(pm, nw, :load, load_id)
 
     vnom_kv = load["vnom_kv"]
@@ -118,10 +120,11 @@ function constraint_tp_load_power_prop_vmsqr(pm::PMs.GenericPowerModel, load_id:
     conn = load["conn"]
     if conn=="wye"
         for c in PMs.conductor_ids(pm)
-            constraint_load_power_prop_vmsqr_wye(pm, nw, c, load_id, load["load_bus"], cp[c], cq[c])
+            constraint_load_impedance_wye(pm, nw, c, load_id, load["load_bus"], cp[c], cq[c])
         end
     elseif conn=="delta"
-        constraint_tp_load_power_prop_vmsqr_delta(pm, nw, load_id, load["load_bus"], cp, cq)
+        @assert(PMs.ref(pm, 0, :conductors)==3)
+        constraint_tp_load_impedance_delta(pm, nw, load_id, load["load_bus"], cp, cq)
     else
         Memento.error(LOGGER, "Unknown load connection type $conn.")
     end

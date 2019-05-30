@@ -66,8 +66,13 @@
                    TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
 
         # load parsing related errors
-        @test_throws(TESTLOG, ErrorException,
-                   TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
+        for load in 1:5
+           dss = TPPMs.parse_dss("../test/data/opendss/loadparser_error.dss")
+           dss["load"] = [dss["load"][load]]
+           @test_throws(TESTLOG, ErrorException,
+                      TPPMs.parse_opendss(dss)
+           )
+        end
 
         @test_throws(TESTLOG, ErrorException,
                    TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
@@ -94,20 +99,13 @@
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
         # load parsing related warnings
-        @test_warn(TESTLOG, ": load model 3 not supported. Treating as model 1.",
-                   TPPMs.parse_file("../test/data/opendss/loadparser_warn_model3.dss"))
-
-        @test_warn(TESTLOG, ": load model 4 not supported. Treating as model 1.",
-                   TPPMs.parse_file("../test/data/opendss/loadparser_warn_model4.dss"))
-
-        @test_warn(TESTLOG, ": load model 6 identical to model 1 in current feature set. Treating as model 1.",
-                   TPPMs.parse_file("../test/data/opendss/loadparser_warn_model6.dss"))
-
-        @test_warn(TESTLOG, ": load model 7 not supported. Treating as model 1.",
-                   TPPMs.parse_file("../test/data/opendss/loadparser_warn_model7.dss"))
-
-        @test_warn(TESTLOG, ": load model 8 not supported. Treating as model 1.",
-                   TPPMs.parse_file("../test/data/opendss/loadparser_warn_model8.dss"))
+        for model in [3, 4, 7, 8]
+           dss = TPPMs.parse_dss("../test/data/opendss/loadparser_warn_model.dss")
+           dss["load"] = [l for l in dss["load"] if l["name"]=="d1phm$model"]
+           @test_warn(TESTLOG, ": load model $model not supported. Treating as model 1.",
+              TPPMs.parse_opendss(dss)
+           )
+        end
 
         @test_warn(TESTLOG, "Only three-phase transformers are supported. The bus specification b7.1 is treated as b7 instead.",
                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))

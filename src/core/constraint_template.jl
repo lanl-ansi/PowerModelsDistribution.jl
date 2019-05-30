@@ -294,3 +294,16 @@ function constraint_kcl_shunt_trans_load(pm::PMs.GenericPowerModel, i::Int; nw::
 
     constraint_kcl_shunt_trans_load(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_loads, bus_gs, bus_bs)
 end
+
+function constraint_tp_load(pm::PMs.GenericPowerModel, id::Int; nw=pm.cnw)
+    model = PMs.ref(pm, nw, :load, id, "model")
+    if model=="constant_power"
+        constraint_tp_load_power(pm, id)
+    elseif model=="constant_current"
+        constraint_tp_load_current(pm, id)
+    elseif model=="constant_impedance"
+        constraint_tp_load_impedance(pm, id)
+    else
+        Memento.@error(LOGGER, "Unknown model $model for load $id.")
+    end
+end

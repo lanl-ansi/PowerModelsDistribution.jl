@@ -2,7 +2,7 @@
 
 function variable_tp_voltage(pm::PMs.GenericPowerModel; nw=pm.cnw, kwargs...)
     for c in PMs.conductor_ids(pm)
-        PMs.variable_voltage(pm, cnd=c; nw=nw, kwargs...)
+        PMs.variable_voltage(pm, nw=nw, cnd=c, kwargs...)
     end
 end
 
@@ -206,26 +206,12 @@ function variable_tp_oltc_tap(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, bounded
 end
 
 
-"Power drawn by the load at the bus to which it is connected"
-function variable_load_flow(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    variable_active_load_flow(pm, nw, cnd)
-    variable_reactive_load_flow(pm, nw, cnd)
-end
-
-
-"Active power drawn by the load at the bus to which it is connected"
-function variable_active_load_flow(pm::PMs.GenericPowerModel, nw::Int, cnd::Int)
-    PMs.var(pm, nw, cnd)[:pd] = JuMP.@variable(pm.model, [i in PMs.ids(pm, nw, :load)],
-        base_name="$(nw)_$(cnd)_pd",
-        start=0
-    )
-end
-
-
-"Reactive power drawn by the load at the bus to which it is connected"
-function variable_reactive_load_flow(pm::PMs.GenericPowerModel, nw::Int, cnd::Int)
-    PMs.var(pm, nw, cnd)[:qd] = JuMP.@variable(pm.model, [i in PMs.ids(pm, nw, :load)],
-        base_name="$(nw)_$(cnd)_qd",
-        start=0
-    )
+"""
+Create a dictionary with values of type Any for the load.
+Depending on the load model, this can be a parameter or a NLexpression.
+These will be inserted into KCL.
+"""
+function variable_load(pm::PMs.GenericPowerModel; nw=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
+    PMs.var(pm, nw, cnd)[:pd] = Dict{Int, Any}()
+    PMs.var(pm, nw, cnd)[:qd] = Dict{Int, Any}()
 end
