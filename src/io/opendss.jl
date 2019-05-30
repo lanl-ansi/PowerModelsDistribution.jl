@@ -1416,14 +1416,17 @@ function adjust_base!(tppm_data; start_at_first_tr_prim=false)
     else
         # start at type 3 bus if present
         buses_3 = [bus["index"] for (bus_id_str, bus) in tppm_data["bus"] if bus["bus_type"]==3]
-        if length(buses_3)==0
+        buses_2 = [bus["index"] for (bus_id_str, bus) in tppm_data["bus"] if bus["bus_type"]==2]
+        if length(buses_3)>0
+            source = buses_3[1]
+        elseif length(buses_2)>0
+            source = buses_2[1]
+        else
             Memento.warn(LOGGER, "No bus of type 3 found; selecting random bus instead.")
             source = parse(Int, rand(keys(tppm_data["bus"])))
-        else
-            source = buses_3[1]
         end
         base_kv_new = tppm_data["basekv"]
-        #println(source)
+        println(source)
         # Only relevant for future per-unit upgrade
         # Impossible to end up here;
         # condition checked before call to adjust_base!

@@ -4,7 +4,7 @@ Clear
 new object=Circuit.TEST2
 
 ! Test circuit properties
-~ pu=1.1  r1=0.001  x1=0.01  r0=0.001  x0=0.01  basekv=69  angle=30 bus1=testsource
+~ pu=1.1  r1=0.001  x1=0.01  r0=0.001  x0=0.01  basekv=115  angle=30 bus1=testsource
 
 Redirect test2_Linecodes.dss
 Compile test2_Loadshape.dss
