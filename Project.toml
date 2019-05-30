@@ -31,6 +31,7 @@ JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 Juniper = "2ddba703-00a4-53a7-87a5-e8b9971dde84"
 SCS = "c946c3f1-0d1f-5ce8-9dea-7daa1f7e2d13"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+AmplNLWriter = "7c4d4715-977e-5154-bfe0-e096adeac482"
 
 [targets]
 test = ["Cbc", "Ipopt", "JSON", "Juniper", "SCS", "Test", "AmplNLWriter"]
