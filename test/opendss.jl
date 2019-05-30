@@ -53,18 +53,6 @@
     @testset "parser cases" begin
         Memento.setlevel!(TESTLOG, "info")
 
-        @test_throws(TESTLOG, ErrorException,
-                   TPPMs.parse_file("../test/data/opendss/loadparser_error_1.dss"))
-
-        @test_throws(TESTLOG, ErrorException,
-                   TPPMs.parse_file("../test/data/opendss/loadparser_error_2.dss"))
-
-        @test_throws(TESTLOG, ErrorException,
-                   TPPMs.parse_file("../test/data/opendss/loadparser_error_3.dss"))
-
-        @test_throws(TESTLOG, ErrorException,
-                   TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
-
         # load parsing related errors
         for load in 1:5
            dss = TPPMs.parse_dss("../test/data/opendss/loadparser_error.dss")
@@ -73,6 +61,9 @@
                       TPPMs.parse_opendss(dss)
            )
         end
+
+        @test_throws(TESTLOG, ErrorException,
+                   TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
 
         @test_throws(TESTLOG, ErrorException,
                    TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
