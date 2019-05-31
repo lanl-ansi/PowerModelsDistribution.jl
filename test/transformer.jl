@@ -30,14 +30,14 @@ vm(sol, tppm_data, name) = sol["solution"]["bus"][string(bus_name2id(tppm_data, 
             file = "../test/data/opendss/ut_trans_2w_yy_oltc.dss"
             tppm_data = TPPMs.parse_file(file)
             # free the taps
-            tppm_data["trans"]["1"]["fixed"] = MultiConductorVector(zeros(Bool, 3))
-            tppm_data["trans"]["2"]["fixed"] = MultiConductorVector(zeros(Bool, 3))
+            tppm_data["trans"]["1"]["fixed"] = PMs.MultiConductorVector(zeros(Bool, 3))
+            tppm_data["trans"]["2"]["fixed"] = PMs.MultiConductorVector(zeros(Bool, 3))
             pm = PMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_oltc, multiconductor=true)
             sol = PMs.solve_generic_model(pm, ipopt_solver)
             # check that taps are set as to boost the voltage in the branches as much as possible;
             # this is trivially optimal if the voltage bounds are not binding
             # and without significant shunts (both branch and transformer)
-            tap(i) = [JuMP.getvalue(var(pm, pm.cnw, :cnd, c)[:tap][i]) for c in 1:3]
+            tap(i) = [JuMP.value(PMs.var(pm, pm.cnw, :cnd, c)[:tap][i]) for c in 1:3]
             @test norm(tap(1)-[0.95, 0.95, 0.95], Inf) <= 1E-4
             @test norm(tap(2)-[1.05, 1.05, 1.05], Inf) <= 1E-4
             # then check whether voltage is what OpenDSS expects for those values

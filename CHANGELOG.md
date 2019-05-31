@@ -1,13 +1,29 @@
 ThreePhasePowerModels.jl Change Log
 ===================================
 
-### Staged
-- Minor fix to OpenDSS line parsing (length units mismatch with linecode)
+### staged
+- Allow for arbitrarily named sourcebus
+- Add json parser
+- Fix bug in OpenDSS parse of Capacitors [zbase factor and wrong sign] (#138)
+
+### v0.3.0
+- Update to JuMP v0.19/MathOptInterface
+
+### v0.2.1
+- Add transformer support to active power only models
+- Fix bug in source_ids of new components created for transformer support
+
+### v0.2.0
 - Add transformer to TPPM: wye and delta windings, vector group variations (indirectly) and variable taps per phase with bounds
 - Add ACPForm for transformers
 - Add transformer parsing to OpenDSS, including mapping of loss model
 - Add voltage base calculation, and corresponding change of base
 - Add AC rectangular formulation
+- Remove support for Julia versions < 1.0
+- Switch to using `import` instead of `using` internally
+
+### v0.1.5
+- Minor fix to OpenDSS line parsing (length units mismatch with linecode)
 
 ### v0.1.4
 - Update to PowerModels v0.9

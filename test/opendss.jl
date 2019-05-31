@@ -1,5 +1,3 @@
-TESTLOG = getlogger(PowerModels)
-
 @testset "opendss parser" begin
     @testset "reverse polish notation" begin
         # Examples from OpenDSS manual
@@ -11,7 +9,7 @@ TESTLOG = getlogger(PowerModels)
         @test TPPMs.isa_rpn("2 pi * 60 * .001 *")
         @test !TPPMs.isa_rpn("[ 2 10 ]")
 
-        setlevel!(TESTLOG, "warn")
+        Memento.setlevel!(TESTLOG, "warn")
 
         @test_warn(TESTLOG, "parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String",
                    TPPMs.parse_rpn("1 2 swap atan2"))
@@ -22,22 +20,22 @@ TESTLOG = getlogger(PowerModels)
         @test_warn(TESTLOG, "\"1 2 3 +\" is not valid Reverse Polish Notation, leaving as String",
                    TPPMs.parse_rpn("1 2 3 +"))
 
-        setlevel!(TESTLOG, "error")
+        Memento.setlevel!(TESTLOG, "error")
     end
 
     @testset "simple generator branch load" begin
-        setlevel!(TESTLOG, "info")
+        Memento.setlevel!(TESTLOG, "info")
 
         @test_warn(TESTLOG, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported.",
                       TPPMs.parse_file("../test/data/opendss/test_simple.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Calling parse_dss on ../test/data/opendss/test_simple.dss",
+        Memento.TestUtils.@test_log(TESTLOG, "info", "Calling parse_dss on ../test/data/opendss/test_simple.dss",
                                TPPMs.parse_file("../test/data/opendss/test_simple.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Done parsing ../test/data/opendss/test_simple.dss",
+        Memento.TestUtils.@test_log(TESTLOG, "info", "Done parsing ../test/data/opendss/test_simple.dss",
                                TPPMs.parse_file("../test/data/opendss/test_simple.dss"))
 
-        setlevel!(TESTLOG, "error")
+        Memento.setlevel!(TESTLOG, "error")
 
         dss = TPPMs.parse_dss("../test/data/opendss/test_simple.dss")
         tppm = TPPMs.parse_file("../test/data/opendss/test_simple.dss")
@@ -53,7 +51,7 @@ TESTLOG = getlogger(PowerModels)
     end
 
     @testset "parser cases" begin
-        setlevel!(TESTLOG, "info")
+        Memento.setlevel!(TESTLOG, "info")
 
         @test_throws(TESTLOG, ErrorException,
                      TPPMs.parse_file("../test/data/opendss/test_simple3.dss"))
@@ -76,29 +74,29 @@ TESTLOG = getlogger(PowerModels)
         @test_warn(TESTLOG, "Could not find line \"something\"",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-       @test_warn(TESTLOG, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.",
+        @test_warn(TESTLOG, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.",
+                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
+
+        @test_warn(TESTLOG, "Only three-phase transformers are supported. The bus specification b7.1 is treated as b7 instead.",
                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-      @test_warn(TESTLOG, "Only three-phase transformers are supported. The bus specification b7.1 is treated as b7 instead.",
-                 TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
-
-        Memento.Test.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
+        Memento.TestUtils.@test_log(TESTLOG, "info", "`dss_data` has been reset with the \"clear\" command.",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Redirecting to file \"test2_Linecodes.dss\"",
+        Memento.TestUtils.@test_log(TESTLOG, "info", "Redirecting to file \"test2_Linecodes.dss\"",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        Memento.Test.@test_log(TESTLOG, "info", "Compiling file \"test2_Loadshape.dss\"",
+        Memento.TestUtils.@test_log(TESTLOG, "info", "Compiling file \"test2_Loadshape.dss\"",
                                TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
 
-        setlevel!(TESTLOG, "error")
+        Memento.setlevel!(TESTLOG, "error")
 
         dss = TPPMs.parse_dss("../test/data/opendss/test2_master.dss")
         tppm = TPPMs.parse_file("../test/data/opendss/test2_master.dss")
 
         @test tppm["name"] == "test2"
 
-        @test length(tppm) == 19 # 1 more entry for transformer dicts
+        @test length(tppm) == 20 # keep track of sourcebus
         @test length(dss) == 12
 
         # 26 buses and not 12, because of internal transformer buses;
@@ -228,7 +226,7 @@ TESTLOG = getlogger(PowerModels)
 
             @test tppm["branch"]["1"]["source_id"] == "line.l1" && length(tppm["branch"]["1"]["active_phases"]) == 3
             # transformer is no longer a branch
-            @test tppm["trans"]["1"]["source_id"] == "transformer.t4"
+            @test tppm["trans"]["1"]["source_id"] == "transformer.t4_1"  # winding indicated by _1
             # updated index, reactors shifted
             @test tppm["branch"]["10"]["source_id"] == "reactor.reactor1" && length(tppm["branch"]["10"]["active_phases"]) == 3
 
@@ -339,10 +337,10 @@ TESTLOG = getlogger(PowerModels)
     end
 
     @testset "3-bus balanced pv" begin
-        setlevel!(TESTLOG, "warn")
+        Memento.setlevel!(TESTLOG, "warn")
         @test_warn(TESTLOG, "Converting PVSystem \"pv1\" into generator with limits determined by OpenDSS property 'kVA'",
                    TPPMs.parse_file("../test/data/opendss/case3_balanced_pv.dss"))
-        setlevel!(TESTLOG, "error")
+        Memento.setlevel!(TESTLOG, "error")
 
         tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced_pv.dss")
 
@@ -371,5 +369,27 @@ TESTLOG = getlogger(PowerModels)
 
         @test all(sol["solution"]["gen"]["2"]["pg"][2:3] .== 0.0)
         @test all(sol["solution"]["gen"]["2"]["qg"][2:3] .== 0.0)
+    end
+
+    @testset "3-bus balanced capacitor" begin
+        tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced_cap.dss")
+        sol = TPPMs.run_tp_pf(tppm, PMs.ACPPowerModel, ipopt_solver)
+
+        @test sol["status"] == :LocalOptimal
+
+        for c in 1:3
+            @test abs(sol["solution"]["bus"]["3"]["vm"][c]-0.98588)<=1E-4
+            @test abs(sol["solution"]["bus"]["2"]["vm"][c]-0.99127)<=1E-4
+        end
+    end
+    
+    @testset "json parse" begin
+        tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced.dss")
+
+        io = PipeBuffer()
+        JSON.print(io, tppm)
+        tppm_json_file = TPPMs.parse_file(io)
+
+        @test tppm == tppm_json_file
     end
 end

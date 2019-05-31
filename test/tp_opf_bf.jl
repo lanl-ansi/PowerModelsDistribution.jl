@@ -19,7 +19,7 @@
 
     end
     @testset "5-bus independent radial identical case" begin
-        mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_a.m")
+        mp_data = TPPMs.parse_file("../test/data/matlab/case5_i_r_a.m")
         result = run_tp_opf_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
@@ -27,7 +27,7 @@
         @test isapprox(result["solution"]["bus"]["3"]["vm"].values, 1.02472*[1,1,1]; atol = 1e-3)
     end
     @testset "5-bus independent radial different case" begin
-        mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m")
+        mp_data = TPPMs.parse_file("../test/data/matlab/case5_i_r_b.m")
         result = run_tp_opf_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
@@ -58,7 +58,7 @@ end
 
     end
     @testset "5-bus independent radial identical case" begin
-        mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_a.m")
+        mp_data = TPPMs.parse_file("../test/data/matlab/case5_i_r_a.m")
         result = run_tp_opf_bf(mp_data, LPdiagUBFPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
@@ -67,7 +67,7 @@ end
 
     end
     @testset "5-bus independent radial different case" begin
-        mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m")
+        mp_data = TPPMs.parse_file("../test/data/matlab/case5_i_r_b.m")
         result = run_tp_opf_bf(mp_data, LPdiagUBFPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
@@ -99,7 +99,7 @@ end
 
     end
     @testset "5-bus independent radial identical case" begin
-        mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_a.m")
+        mp_data = TPPMs.parse_file("../test/data/matlab/case5_i_r_a.m")
         result = run_tp_opf_bf(mp_data, LPfullUBFPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
@@ -108,7 +108,7 @@ end
 
     end
     @testset "5-bus independent radial different case" begin
-        mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m")
+        mp_data = TPPMs.parse_file("../test/data/matlab/case5_i_r_b.m")
         result = run_tp_opf_bf(mp_data, LPfullUBFPowerModel, ipopt_solver)
 
         @test result["status"] == :LocalOptimal
@@ -120,7 +120,7 @@ end
 
 @testset "test sdp distflow opf_bf" begin
     @testset "5-bus independent radial identical case" begin
-        mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_a.m")
+        mp_data = TPPMs.parse_file("../test/data/matlab/case5_i_r_a.m")
         result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
         @test result["status"] == :Optimal
@@ -132,15 +132,15 @@ end
         end
     end
     @testset "5-bus independent radial different case" begin
-        mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_r_b.m")
+        mp_data = TPPMs.parse_file("../test/data/matlab/case5_i_r_b.m")
         result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
         @test result["status"] == :Optimal
         @test isapprox(result["objective"], 56091.7; atol = 2e0)
 
-        @test isapprox(result["solution"]["gen"]["1"]["qg"][1],   0.0157310; atol = 1e-2)
-        @test isapprox(result["solution"]["gen"]["1"]["qg"][2],  -0.0069089; atol = 1e-2)
-        @test isapprox(result["solution"]["gen"]["1"]["qg"][3],  -0.0366602; atol = 1e-2)
+        @test isapprox(result["solution"]["gen"]["1"]["qg"][1],   0.2362121; atol = 2e-2)
+        @test isapprox(result["solution"]["gen"]["1"]["qg"][2],  -0.0219214; atol = 2e-2)
+        @test isapprox(result["solution"]["gen"]["1"]["qg"][3],  -0.0249553; atol = 2e-2)
         # @test isapprox(result["solution"]["gen"]["1"]["qg"][1],  0.105276; atol = 1e-3)
         # @test isapprox(result["solution"]["bus"]["2"]["va"][1],  0.0575114; atol = 1e-3)
 
@@ -149,7 +149,7 @@ end
         #end
     end
     @testset "5-bus independent meshed different case" begin
-        mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_i_m_b.m")
+        mp_data = TPPMs.parse_file("../test/data/matlab/case5_i_m_b.m")
         result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
         @test result["status"] == :Optimal
@@ -164,7 +164,7 @@ end
     end
     # @testset "5-bus coupled meshed case" begin
         # @testset "ac case" begin
-        #     mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_c_m_a.m")
+        #     mp_data = TPPMs.parse_file("../test/data/matlab/case5_c_m_a.m")
         #     result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
         #     @test result["status"] == :Optimal
@@ -177,7 +177,7 @@ end
     # end
     @testset "5-bus coupled meshed infeasible case" begin
         @testset "ac case" begin
-            mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_c_m_b.m")
+            mp_data = TPPMs.parse_file("../test/data/matlab/case5_c_m_b.m")
             result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
             @test result["status"] == :Infeasible
@@ -185,7 +185,7 @@ end
         #=
         # omit due to large number of terminal warnings
         @testset "soc case" begin
-            mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_c_m_b.m")
+            mp_data = TPPMs.parse_file("../test/data/matlab/case5_c_m_b.m")
             result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
 
             @test result["status"] == :LocalInfeasible
@@ -193,7 +193,7 @@ end
         =#
     end
     @testset "5-bus coupled radial no shunt case" begin
-        mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_c_r_a.m")
+        mp_data = TPPMs.parse_file("../test/data/matlab/case5_c_r_a.m")
         result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
         @test result["status"] == :Optimal
@@ -208,7 +208,7 @@ end
         end
     end
     @testset "5-bus coupled radial shunt case" begin
-        mp_data = ThreePhasePowerModels.parse_file("../test/data/matlab/case5_c_r_b.m")
+        mp_data = TPPMs.parse_file("../test/data/matlab/case5_c_r_b.m")
         result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
         @test result["status"] == :Optimal

@@ -14,7 +14,7 @@ end
 
 
 ""
-function post_tp_opf_bf(pm::GenericPowerModel)
+function post_tp_opf_bf(pm::PMs.GenericPowerModel)
     # Variables
     variable_tp_voltage(pm)
     variable_tp_branch_current(pm)
@@ -26,15 +26,15 @@ function post_tp_opf_bf(pm::GenericPowerModel)
     end
 
     # Constraints
-    for i in ids(pm, :ref_buses)
+    for i in PMs.ids(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)
     end
 
-    for i in ids(pm, :bus), c in PMs.conductor_ids(pm)
+    for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
         PMs.constraint_kcl_shunt(pm, i, cnd=c)
     end
 
-    for i in ids(pm, :branch)
+    for i in PMs.ids(pm, :branch)
         constraint_tp_flow_losses(pm, i)
 
         constraint_tp_voltage_magnitude_difference(pm, i)
@@ -50,7 +50,7 @@ function post_tp_opf_bf(pm::GenericPowerModel)
         end
     end
 
-    for i in ids(pm, :dcline), c in PMs.conductor_ids(pm)
+    for i in PMs.ids(pm, :dcline), c in PMs.conductor_ids(pm)
         PMs.constraint_dcline(pm, i, cnd=c)
     end
 
