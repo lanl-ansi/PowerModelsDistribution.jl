@@ -21,9 +21,9 @@ function get_solution_vseq(pm::PMs.GenericPowerModel, nw::Int, sol_nw::Dict{Stri
         vpos = transpose(vabc)*[1, a, a^2]./3
         vneg = transpose(vabc)*[1, a^2, a]./3
         vzero = transpose(vabc)*[1, 1, 1]./3
-        sol_nw["bus"]["$bus_id"]["vmpos"] = abs(vpos)
-        sol_nw["bus"]["$bus_id"]["vmneg"] = abs(vneg)
-        sol_nw["bus"]["$bus_id"]["vmzero"] = abs(vzero)
+        sol_nw["bus"]["$bus_id"]["vm_pos_seq"] = abs(vpos)
+        sol_nw["bus"]["$bus_id"]["vm_neg_seq"] = abs(vneg)
+        sol_nw["bus"]["$bus_id"]["vm_zero_seq"] = abs(vzero)
         sol_nw["bus"]["$bus_id"]["vuf"] = abs(vneg)/abs(vpos)
     end
 end

@@ -301,7 +301,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_tp_vuf(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vufmax::Float64) where T <: PMs.AbstractACPForm
+function constraint_tp_vm_vuf(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vufmax::Float64) where T <: PMs.AbstractACPForm
     if !haskey(PMs.var(pm, pm.cnw), :vmpossqr)
         PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
         PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
@@ -348,7 +348,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_tp_vmneg(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmnegmax::Float64) where T <: PMs.AbstractACPForm
+function constraint_tp_vm_neg_seq(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmnegmax::Float64) where T <: PMs.AbstractACPForm
     if !haskey(PMs.var(pm, pm.cnw), :vmpossqr)
         PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
         PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
@@ -383,7 +383,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_tp_vmpos(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmposmax::Float64) where T <: PMs.AbstractACPForm
+function constraint_tp_vm_pos_seq(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmposmax::Float64) where T <: PMs.AbstractACPForm
     if !haskey(PMs.var(pm, pm.cnw), :vmpossqr)
         PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
         PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
@@ -418,7 +418,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_tp_vmzero(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmzeromax::Float64) where T <: PMs.AbstractACPForm
+function constraint_tp_vm_zero_seq(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmzeromax::Float64) where T <: PMs.AbstractACPForm
     if !haskey(PMs.var(pm, pm.cnw), :vmpossqr)
         PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
         PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
@@ -436,4 +436,23 @@ function constraint_tp_vmzero(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int
     vmzerosqr = JuMP.@NLexpression(pm.model, vrezero^2+vimzero^2)
     # finally, apply constraint
     JuMP.@NLconstraint(pm.model, vmzerosqr <= vmzeromax^2)
+end
+
+
+"""
+"""
+function constraint_tp_vm_ll(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vm_ll_min::Array{Real, 1}, vm_ll_max::Array{Real, 1}) where T <: PMs.AbstractACPForm
+    # 3 conductors asserted in template already
+    vm_ln = [PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    va_ln = [PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
+    vr_ll = JuMP.@NLexpression(pm.model, [i in 1:3],
+        vm_ln[i]*cos(va_ln[i]) - vm_ln[(i-1)%3+1]*cos(va_ln[(i-1)%3+1])
+    )
+    vi_ll = JuMP.@NLexpression(pm.model, [i in 1:3],
+        vm_ln[i]*sin(va_ln[i]) - vm_ln[(i-1)%3+1]*sin(va_ln[(i-1)%3+1])
+    )
+    for c in 1:3
+        JuMP.@NLconstraint(pm.model, vr_ll[c]^2+vi_ll[c]^2 >= vm_ll_min[c]^2)
+        JuMP.@NLconstraint(pm.model, vr_ll[c]^2+vi_ll[c]^2 <= vm_ll_max[c]^2)
+    end
 end

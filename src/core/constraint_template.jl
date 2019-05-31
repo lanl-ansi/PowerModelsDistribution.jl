@@ -264,3 +264,33 @@ function constraint_kcl_shunt_trans(pm::PMs.GenericPowerModel, i::Int; nw::Int=p
 
     constraint_kcl_shunt_trans(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
 end
+
+
+"Impose all balance related constraints for which key present in data model of bus."
+function constraint_tp_voltage_balance(pm::PMs.GenericPowerModel, bus_id::Int; nw=pm.cnw)
+    @assert(PMs.ref(pm, nw, :conductors)==3)
+
+    bus = PMs.ref(pm, nw, :bus, bus_id)
+
+    if haskey(bus, "vm_vuf_max")
+        constraint_tp_vm_vuf(pm, nw, bus_id, bus["vm_vuf_max"])
+    end
+
+    if haskey(bus, "vm_neg_seq_max")
+        constraint_tp_vm_neg_seq(pm, nw, bus_id, bus["vm_neg_seq_max"])
+    end
+
+    if haskey(bus, "vm_pos_seq_max")
+        constraint_tp_vm_pos_seq(pm, nw, bus_id, bus["vm_pos_seq_max"])
+    end
+
+    if haskey(bus, "vm_zero_seq_max")
+        constraint_tp_vm_zero_seq(pm, nw, bus_id, bus["vm_zero_seq_max"])
+    end
+
+    if haskey(bus, "vm_ll_min")|| haskey(bus, "vm_ll_max")
+        vm_ll_min = haskey(bus, "vm_ll_min") ? bus["vm_ll_min"] : fill(0, 3)
+        vm_ll_max = haskey(bus, "vm_ll_max") ? bus["vm_ll_max"] : fill(Inf, 3)
+        constraint_tp_vm_ll(pm, nw, bus_id, vm_ll_min, vm_ll_max)
+    end
+end

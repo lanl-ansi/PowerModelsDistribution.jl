@@ -40,19 +40,7 @@ function post_tp_opf_ubctr(pm::PMs.GenericPowerModel)
 
     for i in PMs.ids(pm, :bus)
         bus = PMs.ref(pm, pm.cnw, :bus, i)
-        # unbalance constraints
-        if haskey(bus, "vufmax")
-            constraint_tp_vuf(pm, i)
-        end
-        if haskey(bus, "vmnegmax")
-            constraint_tp_vmneg(pm, i)
-        end
-        if haskey(bus, "vmposmax")
-            constraint_tp_vmpos(pm, i)
-        end
-        if haskey(bus, "vmzeromax")
-            constraint_tp_vmzero(pm, i)
-        end
+        constraint_tp_voltage_balance(pm, i)
         # KCL
         for c in PMs.conductor_ids(pm)
             PMs.constraint_kcl_shunt(pm, i, cnd=c)
