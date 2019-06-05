@@ -2,9 +2,14 @@ ThreePhasePowerModels.jl Change Log
 ===================================
 
 ### staged
+- none
+
+### v0.4.0
 - Allow for arbitrarily named sourcebus
 - Add json parser
 - Fix bug in OpenDSS parse of Capacitors [zbase factor and wrong sign] (#138)
+- Enforce function naming conventions (starts with `_`: internal function; ends with `!`: transforms data; `correct_`: corrects network data; `check_`: warnings about network data)
+- Update for PowerModels.jl v0.11
 
 ### v0.3.0
 - Update to JuMP v0.19/MathOptInterface

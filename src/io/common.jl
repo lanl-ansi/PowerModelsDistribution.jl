@@ -15,7 +15,7 @@ function parse_file(io::IO; import_all::Bool=false, vmin::Float64=0.9, vmax::Flo
         Memento.error(LOGGER, "only .m and .dss files are supported")
     end
 
-    check_network_data(tppm_data)
+    correct_network_data!(tppm_data)
 
     return tppm_data
 end
@@ -31,26 +31,26 @@ end
 
 
 ""
-function check_network_data(data::Dict{String,Any})
-    PMs.make_per_unit(data)
+function correct_network_data!(data::Dict{String,Any})
+    PMs.make_per_unit!(data)
 
     PMs.check_connectivity(data)
-    PMs.check_transformer_parameters(data)
-    PMs.check_voltage_angle_differences(data)
-    PMs.check_thermal_limits(data)
-    PMs.check_branch_directions(data)
+    PMs.correct_transformer_parameters!(data)
+    PMs.correct_voltage_angle_differences!(data)
+    PMs.correct_thermal_limits!(data)
+    PMs.correct_branch_directions!(data)
     PMs.check_branch_loops(data)
-    PMs.check_bus_types(data)
-    PMs.check_dcline_limits(data)
+    PMs.correct_bus_types!(data)
+    PMs.correct_dcline_limits!(data)
     # PMs.check_voltage_setpoints(data)
-    PMs.check_cost_functions(data)
-    PMs.standardize_cost_terms(data)
+    PMs.correct_cost_functions!(data)
+    PMs.standardize_cost_terms!(data)
 end
 
-function wrapto180(degrees)
+function _wrap_to_180(degrees)
     return degrees - 360*floor.((degrees .+ 180)/360)
 end
 
-function wraptopi(radians)
+function _wrap_to_pi(radians)
     return radians - 2*pi*floor.((radians .+ pi)/(2*pi))
 end

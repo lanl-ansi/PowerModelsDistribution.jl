@@ -1,28 +1,28 @@
 # https://stackoverflow.com/questions/39039553/lower-triangular-matrix-in-julia
-function vec2utri(v::Vector{T}) where T
+function _vec2utri!(v::Vector{T}) where T
     d = length(v)
     n = Int((sqrt(8d+1)+1)/2)
     n*(n-1)/2 == d || error("vec2utri: length of vector is not triangular")
     [ i<j ? v[Int((j-1)*(j-2)/2)+i] : 0 for i=1:n, j=1:n ]
 end
 
-function vec2ltri(v::Vector{T}) where T
-    vec2utri(v)'
+function _vec2ltri!(v::Vector{T}) where T
+    _vec2utri!(v)'
 end
 
-function mat2utrivec(m::Matrix{T}) where T
+function _mat2utrivec!(m::Matrix{T}) where T
     @assert size(m,1) == size(m,2)
     n = size(m,1)
     [m[i,j] for i=1:n, j=1:n if i < j]
 end
 
-function mat2ltrivec(m::Matrix{T}) where T
+function _mat2ltrivec!(m::Matrix{T}) where T
     @assert size(m,1) == size(m,2)
     n = size(m,1)
     [m[j,i] for i=1:n, j=1:n if i < j]
 end
 
-function make_hermitian_matrix_variable(diag, lowertrianglereal, lowertriangleimag)
+function _make_hermitian_matrix_variable(diag, lowertrianglereal, lowertriangleimag)
     #TODO clean up
     matrixreal = []
     if length(diag) == 3
@@ -74,7 +74,7 @@ function make_hermitian_matrix_variable(diag, lowertrianglereal, lowertriangleim
     return matrixreal, matriximag
 end
 
-function make_full_matrix_variable(diag, lowertriangle, uppertriangle)
+function _make_full_matrix_variable(diag, lowertriangle, uppertriangle)
     #TODO clean up
     matrix = []
     if length(diag) == 3
@@ -99,6 +99,6 @@ function make_full_matrix_variable(diag, lowertriangle, uppertriangle)
         lowertriangle[7]    lowertriangle[8]    lowertriangle[9]    lowertriangle[10]    diag[5]
         ]
     end
-    # matrix = diagm(0 => diag) + vec2ltri(lowertriangle) + vec2utri(uppertriangle)
+    # matrix = diagm(0 => diag) + _vec2ltri!(lowertriangle) + _vec2utri!(uppertriangle)
     return matrix
 end

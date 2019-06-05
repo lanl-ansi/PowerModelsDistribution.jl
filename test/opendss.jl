@@ -6,8 +6,8 @@
         @test isapprox(TPPMs.parse_rpn("24.9 3 sqrt /"), 24.9 / sqrt(3); atol=1e-12)
         @test all(isapprox.(TPPMs.parse_array(Float64, "(\"24.9 3 sqrt /\" \"10 2 *\")"), [24.9 / sqrt(3), 10 * 2.0]; atol=1e-12))
 
-        @test TPPMs.isa_rpn("2 pi * 60 * .001 *")
-        @test !TPPMs.isa_rpn("[ 2 10 ]")
+        @test TPPMs._isa_rpn("2 pi * 60 * .001 *")
+        @test !TPPMs._isa_rpn("[ 2 10 ]")
 
         Memento.setlevel!(TESTLOG, "warn")
 
@@ -47,7 +47,7 @@
 
         sol = TPPMs.run_tp_opf(tppm, PowerModels.SOCWRPowerModel, ipopt_solver)
 
-        @test sol["status"] == :LocalOptimal
+        @test sol["termination_status"] == PMs.LOCALLY_SOLVED
     end
 
     @testset "parser cases" begin
@@ -233,7 +233,7 @@
             @test tppm["gen"]["1"]["source_id"] == "vsource.sourcebus" && length(tppm["gen"]["1"]["active_phases"]) == 3
             @test tppm["gen"]["2"]["source_id"] == "generator.g1" && length(tppm["gen"]["2"]["active_phases"]) == 3
 
-            source_id = TPPMs.parse_dss_source_id(tppm["load"]["1"])
+            source_id = TPPMs._parse_dss_source_id(tppm["load"]["1"])
             @test source_id.dss_type == "load"
             @test source_id.dss_name == "ld1"
             @test all([n in source_id.active_phases for n in 1:2])
@@ -253,10 +253,10 @@
             @testset "ACP" begin
                 sol = TPPMs.run_tp_opf(tppm, PMs.ACPPowerModel, ipopt_solver)
 
-                @test sol["status"] == :LocalOptimal
+                @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
                 @test all(isapprox.(sol["solution"]["bus"]["2"]["vm"].values, 0.984377; atol=1e-4))
-                @test all(isapprox.(sol["solution"]["bus"]["2"]["va"].values, TPPMs.wraptopi.([2 * pi / tppm["conductors"] * (1 - c) - deg2rad(0.79) for c in 1:tppm["conductors"]]); atol=deg2rad(0.2)))
+                @test all(isapprox.(sol["solution"]["bus"]["2"]["va"].values, TPPMs._wrap_to_pi.([2 * pi / tppm["conductors"] * (1 - c) - deg2rad(0.79) for c in 1:tppm["conductors"]]); atol=deg2rad(0.2)))
 
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.018209; atol=1e-5)
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.000208979; atol=1e-5)
@@ -270,10 +270,10 @@
             @testset "ACP" begin
                 sol = TPPMs.run_tp_opf(tppm, PMs.ACPPowerModel, ipopt_solver)
 
-                @test sol["status"] == :LocalOptimal
+                @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
                 for (bus, va, vm) in zip(["1", "2", "3"], [0.0, deg2rad(-0.03), deg2rad(-0.07)], [0.9959, 0.986973, 0.976605])
-                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs.wraptopi.([2 * pi / tppm["conductors"] * (1 - c) + va for c in 1:tppm["conductors"]]); atol=deg2rad(0.01)))
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs._wrap_to_pi.([2 * pi / tppm["conductors"] * (1 - c) + va for c in 1:tppm["conductors"]]); atol=deg2rad(0.01)))
                     @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-5))
                 end
 
@@ -283,12 +283,12 @@
             @testset "SOC" begin
                 sol = TPPMs.run_tp_opf(tppm, PMs.SOCWRPowerModel, ipopt_solver)
 
-                @test sol["status"] == :LocalOptimal
+                @test sol["termination_status"] == PMs.LOCALLY_SOLVED
             end
             @testset "LDF" begin
                 sol = TPPMs.run_tp_opf_bf(tppm, LPLinUBFPowerModel, ipopt_solver)
 
-                @test sol["status"] == :LocalOptimal
+                @test sol["termination_status"] == PMs.LOCALLY_SOLVED
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183456; atol=2e-3)
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00923328; atol=2e-3)
             end
@@ -301,12 +301,12 @@
             @testset "ACP" begin
                 sol = TPPMs.run_tp_opf(tppm, PMs.ACPPowerModel, ipopt_solver)
 
-                @test sol["status"] == :LocalOptimal
+                @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
                 for (bus, va, vm) in zip(["1", "2", "3"],
                                          [0.0, deg2rad.([-0.22, -0.11, 0.12]), deg2rad.([-0.48, -0.24, 0.27])],
                                          [0.9959, [0.980937, 0.98936, 0.987039], [0.963546, 0.981757, 0.976779]])
-                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs.wraptopi.([2 * pi / tppm["conductors"] * (1 - c) for c in 1:tppm["conductors"]]) .+ va; atol=deg2rad(0.01)))
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, TPPMs._wrap_to_pi.([2 * pi / tppm["conductors"] * (1 - c) for c in 1:tppm["conductors"]]) .+ va; atol=deg2rad(0.01)))
                     @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-5))
                 end
 
@@ -316,12 +316,12 @@
             @testset "SOC" begin
                 sol = TPPMs.run_tp_opf(tppm, PMs.SOCWRPowerModel, ipopt_solver)
 
-                @test sol["status"] == :LocalOptimal
+                @test sol["termination_status"] == PMs.LOCALLY_SOLVED
             end
             @testset "LDF" begin
                 sol = TPPMs.run_tp_opf_bf(tppm, LPLinUBFPowerModel, ipopt_solver)
 
-                @test sol["status"] == :LocalOptimal
+                @test sol["termination_status"] == PMs.LOCALLY_SOLVED
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214812; atol=2e-3)
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00927263; atol=2e-3)
             end
@@ -332,7 +332,7 @@
         tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced_isc.dss")
         sol = TPPMs.run_tp_opf(tppm, PMs.ACPPowerModel, ipopt_solver)
 
-        @test sol["status"] == :LocalOptimal
+        @test sol["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(sol["objective"], 0.0182769; atol = 1e-4)
     end
 
@@ -351,7 +351,7 @@
 
         sol = TPPMs.run_tp_opf(tppm, PMs.ACPPowerModel, ipopt_solver)
 
-        @test sol["status"] == :LocalOptimal
+        @test sol["termination_status"] == PMs.LOCALLY_SOLVED
         @test sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]) < 0.0
         @test sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]) < 0.0
         @test isapprox(sum(sol["solution"]["gen"]["2"]["pg"] * sol["solution"]["baseMVA"]), 0.018345; atol=1e-4)
@@ -362,7 +362,7 @@
         tppm = TPPMs.parse_file("../test/data/opendss/case3_unbalanced_1phase-pv.dss")
         sol = TPPMs.run_tp_opf(tppm, PMs.ACPPowerModel, ipopt_solver)
 
-        @test sol["status"] == :LocalOptimal
+        @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
         @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0196116; atol=1e-3)
         @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00923107; atol=1e-3)
@@ -375,14 +375,14 @@
         tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced_cap.dss")
         sol = TPPMs.run_tp_pf(tppm, PMs.ACPPowerModel, ipopt_solver)
 
-        @test sol["status"] == :LocalOptimal
+        @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
         for c in 1:3
             @test abs(sol["solution"]["bus"]["3"]["vm"][c]-0.98588)<=1E-4
             @test abs(sol["solution"]["bus"]["2"]["vm"][c]-0.99127)<=1E-4
         end
     end
-    
+
     @testset "json parse" begin
         tppm = TPPMs.parse_file("../test/data/opendss/case3_balanced.dss")
 

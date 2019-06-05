@@ -2,13 +2,13 @@
 
     @testset "opf with storage case" begin
         mp_data = PowerModels.parse_file("../test/data/matpower/case5_strg.m")
-        PowerModels.make_multiconductor(mp_data, 3)
+        PowerModels.make_multiconductor!(mp_data, 3)
         mn_mp_data = PowerModels.replicate(mp_data, 5)
 
         @testset "test ac polar opf" begin
             result = TPPMs.run_mn_tp_strg_opf(mn_mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
-            @test result["status"] == :LocalOptimal
+            @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 2.64596e5; atol = 1e2)
 
             for (n, network) in result["solution"]["nw"], c in 1:network["conductors"]
@@ -27,7 +27,7 @@
         @testset "test dc polar opf" begin
             result = TPPMs.run_mn_tp_strg_opf(mn_mp_data, PowerModels.DCPPowerModel, JuMP.with_optimizer(Ipopt.Optimizer, print_level=0)) # this test requires default tol value
 
-            @test result["status"] == :LocalOptimal
+            @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 2.63419e5; atol = 1e2)
 
             for (n, network) in result["solution"]["nw"], c in 1:network["conductors"]
@@ -43,7 +43,7 @@
         @testset "test nfa opf" begin
             result = TPPMs.run_mn_tp_strg_opf(mn_mp_data, PowerModels.NFAPowerModel, ipopt_solver)
 
-            @test result["status"] == :LocalOptimal
+            @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 2.63419e5; atol = 1e2)
 
             for (n, network) in result["solution"]["nw"], c in 1:network["conductors"]
