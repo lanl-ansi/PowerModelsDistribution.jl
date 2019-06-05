@@ -7,12 +7,16 @@ PowerModelsDistribution.jl Change Log
 ### v0.3.2
 - Final version of ThreePhasePowerModels.jl before name change to PowerModelsDistribution.jl (adds depreciation warnings)
 
-### v0.3.1
+### v0.4.0
 - Allow for arbitrarily named sourcebus
 - Add json parser
 - Add support for additional load models (constant power, constant impedance, constant current; delta or wye connected) (#127)
 - Fix bug in OpenDSS parse of Capacitors [zbase factor and wrong sign] (#138)
+- Update for PowerModels.jl v0.11
+
+### v0.3.1
 - Add voltage balance constraints (#129)
+- Enforce function naming conventions (starts with `_`: internal function; ends with `!`: transforms data; `correct_`: corrects network data; `check_`: warnings about network data)
 
 ### v0.3.0
 - Update to JuMP v0.19/MathOptInterface

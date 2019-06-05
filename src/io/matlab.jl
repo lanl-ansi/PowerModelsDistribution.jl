@@ -1,4 +1,4 @@
-current_version = v"1"
+_current_version = v"1"
 
 ""
 function parse_matlab(io::IOStream)
@@ -21,12 +21,12 @@ end
 
 
 ### Data and functions specific to Matlab format ###
-pmd_data_names = [
+_pmd_data_names = [
     "pmdc.baseMVA", "pmdc.baseKV", "pmdc.bus", "pmdc.load", "pmdc.shunt",
     "pmdc.gen", "pmdc.branch", "pmdc.bus_name", "pmdc.gencost"
 ]
 
-pmd_bus_columns = [
+_pmd_bus_columns = [
     ("bus_i", Int),
     ("bus_type", Int),
     ("vmin_1", Float64), ("vmax_1", Float64),
@@ -37,11 +37,11 @@ pmd_bus_columns = [
     ("vm_3", Float64), ("va_3", Float64)
 ]
 
-pmd_bus_name_columns = [
+_pmd_bus_name_columns = [
     ("bus_name", AbstractString)
 ]
 
-pmd_load_columns = [
+_pmd_load_columns = [
     ("load_bus", Int),
     ("pd_1", Float64), ("qd_1", Float64),
     ("pd_2", Float64), ("qd_2", Float64),
@@ -49,7 +49,7 @@ pmd_load_columns = [
     ("status", Int)
 ]
 
-pmd_shunt_columns = [
+_pmd_shunt_columns = [
     ("shunt_bus", Int),
     ("gs_1", Float64), ("bs_1", Float64),
     ("gs_2", Float64), ("bs_2", Float64),
@@ -57,7 +57,7 @@ pmd_shunt_columns = [
     ("status", Int)
 ]
 
-pmd_gen_columns = [
+_pmd_gen_columns = [
     ("gen_bus", Int),
     ("pmin_1", Float64), ("pmax_1", Float64),
     ("qmin_1", Float64), ("qmax_1", Float64),
@@ -71,7 +71,7 @@ pmd_gen_columns = [
     ("gen_status", Int)
 ]
 
-pmd_branch_columns = [
+_pmd_branch_columns = [
     ("f_bus", Int),
     ("t_bus", Int),
     ("r_11", Float64), ("x_11", Float64),
@@ -108,10 +108,11 @@ function parse_matlab_string(data_string::String)
 
     case["source_type"] = "matlab"
     if haskey(matlab_data, "pmdc.version")
-        case["source_version"] = VersionNumber(matlab_data["pmdc.version"])
+        case["source_version"] = string(VersionNumber(matlab_data["pmdc.version"]))
     else
         Memento.warn(LOGGER, "No version number found, file may not be compatible with parser.")
-        case["source_version"] = v"0"
+        case["source_version"] = string(v"0")
+
     end
 
     if haskey(matlab_data, "pmdc.baseMVA")
@@ -131,7 +132,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "pmdc.bus")
         buses = []
         for bus_row in matlab_data["pmdc.bus"]
-            bus_data = InfrastructureModels.row_to_typed_dict(bus_row, pmd_bus_columns)
+            bus_data = InfrastructureModels.row_to_typed_dict(bus_row, _pmd_bus_columns)
             bus_data["index"] = InfrastructureModels.check_type(Int, bus_row[1])
             push!(buses, bus_data)
         end
@@ -143,7 +144,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "pmdc.load")
         loads = []
         for (i,load_row) in enumerate(matlab_data["pmdc.load"])
-            load_data = InfrastructureModels.row_to_typed_dict(load_row, pmd_load_columns)
+            load_data = InfrastructureModels.row_to_typed_dict(load_row, _pmd_load_columns)
             load_data["index"] = i
             push!(loads, load_data)
         end
@@ -155,7 +156,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "pmdc.shunt")
         shunts = []
         for (i,shunt_row) in enumerate(matlab_data["pmdc.shunt"])
-            shunt_data = InfrastructureModels.row_to_typed_dict(shunt_row, pmd_shunt_columns)
+            shunt_data = InfrastructureModels.row_to_typed_dict(shunt_row, _pmd_shunt_columns)
             shunt_data["index"] = i
             push!(shunts, shunt_data)
         end
@@ -165,7 +166,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "pmdc.gen")
         gens = []
         for (i, gen_row) in enumerate(matlab_data["pmdc.gen"])
-            gen_data = InfrastructureModels.row_to_typed_dict(gen_row, pmd_gen_columns)
+            gen_data = InfrastructureModels.row_to_typed_dict(gen_row, _pmd_gen_columns)
             gen_data["index"] = i
             push!(gens, gen_data)
         end
@@ -177,7 +178,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "pmdc.branch")
         branches = []
         for (i, branch_row) in enumerate(matlab_data["pmdc.branch"])
-            branch_data = InfrastructureModels.row_to_typed_dict(branch_row, pmd_branch_columns)
+            branch_data = InfrastructureModels.row_to_typed_dict(branch_row, _pmd_branch_columns)
             branch_data["index"] = i
             push!(branches, branch_data)
         end
@@ -190,7 +191,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "pmdc.bus_name")
         bus_names = []
         for (i, bus_name_row) in enumerate(matlab_data["pmdc.bus_name"])
-            bus_name_data = InfrastructureModels.row_to_typed_dict(bus_name_row, pmd_bus_name_columns)
+            bus_name_data = InfrastructureModels.row_to_typed_dict(bus_name_row, _pmd_bus_name_columns)
             bus_name_data["index"] = i
             push!(bus_names, bus_name_data)
         end
@@ -216,7 +217,7 @@ function parse_matlab_string(data_string::String)
     end
 
     for k in keys(matlab_data)
-        if !in(k, pmd_data_names) && startswith(k, "pmdc.")
+        if !in(k, _pmd_data_names) && startswith(k, "pmdc.")
             case_name = k[7:length(k)]
             value = matlab_data[k]
             if isa(value, Array)
@@ -247,12 +248,12 @@ end
 
 
 "Translates legacy versions into current version format"
-function translate_version!(ml_data::Dict{String,Any})
+function _translate_version!(ml_data::Dict{String,Any})
     # Future Version translation here
-    if ml_data["source_version"] == current_version
+    if ml_data["source_version"] == _current_version
         return ml_data
     else
-        Memento.warn(LOGGER, "matlab source data has unrecognized version $(ml_data["source_version"]), cannot translate to version $current_version, parse may be invalid")
+        Memento.warn(LOGGER, "matlab source data has unrecognized version $(ml_data["source_version"]), cannot translate to version $_current_version, parse may be invalid")
         return ml_data
     end
 end
@@ -264,7 +265,7 @@ Converts a Matlab dict into a PowerModelsDistribution dict
 function matlab_to_pmd(ml_data::Dict{String,Any})
     ml_data = deepcopy(ml_data)
 
-    translate_version!(ml_data)
+    _translate_version!(ml_data)
 
     ml_data["multinetwork"] = false
     ml_data["per_unit"] = false
@@ -303,10 +304,10 @@ end
 "convert raw bus data into arrays"
 function ml2pm_bus(data::Dict{String,Any})
     for bus in data["bus"]
-        make_mpv!(bus, "vmin", ["vmin_1", "vmin_2", "vmin_3"])
-        make_mpv!(bus, "vmax", ["vmax_1", "vmax_2", "vmax_3"])
-        make_mpv!(bus,   "vm", ["vm_1", "vm_2", "vm_3"])
-        make_mpv!(bus,   "va", ["va_1", "va_2", "va_3"])
+        _make_mpv!(bus, "vmin", ["vmin_1", "vmin_2", "vmin_3"])
+        _make_mpv!(bus, "vmax", ["vmax_1", "vmax_2", "vmax_3"])
+        _make_mpv!(bus,   "vm", ["vm_1", "vm_2", "vm_3"])
+        _make_mpv!(bus,   "va", ["va_1", "va_2", "va_3"])
     end
 end
 
@@ -314,8 +315,8 @@ end
 "convert raw load data into arrays"
 function ml2pm_load(data::Dict{String,Any})
     for load in data["load"]
-        make_mpv!(load, "pd", ["pd_1", "pd_2", "pd_3"])
-        make_mpv!(load, "qd", ["qd_1", "qd_2", "qd_3"])
+        _make_mpv!(load, "pd", ["pd_1", "pd_2", "pd_3"])
+        _make_mpv!(load, "qd", ["qd_1", "qd_2", "qd_3"])
     end
 end
 
@@ -323,8 +324,8 @@ end
 "convert raw shunt data into arrays"
 function ml2pm_shunt(data::Dict{String,Any})
     for load in data["shunt"]
-        make_mpv!(load, "gs", ["gs_1", "gs_2", "gs_3"])
-        make_mpv!(load, "bs", ["bs_1", "bs_2", "bs_3"])
+        _make_mpv!(load, "gs", ["gs_1", "gs_2", "gs_3"])
+        _make_mpv!(load, "bs", ["bs_1", "bs_2", "bs_3"])
     end
 end
 
@@ -332,12 +333,12 @@ end
 "convert raw generator data into arrays"
 function ml2pm_gen(data::Dict{String,Any})
     for gen in data["gen"]
-        make_mpv!(gen, "pmin", ["pmin_1", "pmin_2", "pmin_3"])
-        make_mpv!(gen, "pmax", ["pmax_1", "pmax_2", "pmax_3"])
-        make_mpv!(gen, "qmin", ["qmin_1", "qmin_2", "qmin_3"])
-        make_mpv!(gen, "qmax", ["qmax_1", "qmax_2", "qmax_3"])
-        make_mpv!(gen, "pg", ["pg_1", "pg_2", "pg_3"])
-        make_mpv!(gen, "qg", ["qg_1", "qg_2", "qg_3"])
+        _make_mpv!(gen, "pmin", ["pmin_1", "pmin_2", "pmin_3"])
+        _make_mpv!(gen, "pmax", ["pmax_1", "pmax_2", "pmax_3"])
+        _make_mpv!(gen, "qmin", ["qmin_1", "qmin_2", "qmin_3"])
+        _make_mpv!(gen, "qmax", ["qmax_1", "qmax_2", "qmax_3"])
+        _make_mpv!(gen, "pg", ["pg_1", "pg_2", "pg_3"])
+        _make_mpv!(gen, "qg", ["qg_1", "qg_2", "qg_3"])
     end
 end
 
@@ -352,16 +353,16 @@ function ml2pm_branch(data::Dict{String,Any})
         branch["angmin"] = PMs.MultiConductorVector(branch["angmin"], 3)
         branch["angmax"] = PMs.MultiConductorVector(branch["angmax"], 3)
 
-        set_default(branch, "g_fr_1", 0.0)
-        set_default(branch, "g_fr_2", 0.0)
-        set_default(branch, "g_fr_3", 0.0)
+        _set_default(branch, "g_fr_1", 0.0)
+        _set_default(branch, "g_fr_2", 0.0)
+        _set_default(branch, "g_fr_3", 0.0)
 
-        set_default(branch, "g_to_1", 0.0)
-        set_default(branch, "g_to_2", 0.0)
-        set_default(branch, "g_to_3", 0.0)
+        _set_default(branch, "g_to_1", 0.0)
+        _set_default(branch, "g_to_2", 0.0)
+        _set_default(branch, "g_to_3", 0.0)
 
-        make_mpv!(branch, "g_fr", ["g_fr_1", "g_fr_2", "g_fr_3"])
-        make_mpv!(branch, "g_to", ["g_to_1", "g_to_2", "g_to_3"])
+        _make_mpv!(branch, "g_fr", ["g_fr_1", "g_fr_2", "g_fr_3"])
+        _make_mpv!(branch, "g_to", ["g_to_1", "g_to_2", "g_to_3"])
 
         branch["b_fr"] = PMs.MultiConductorVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
         branch["b_to"] = PMs.MultiConductorVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
@@ -395,7 +396,7 @@ end
 
 
 "collects several from_keys in an array and sets it to the to_key, removes from_keys"
-function make_mpv!(data::Dict{String,Any}, to_key::String, from_keys::Array{String,1})
+function _make_mpv!(data::Dict{String,Any}, to_key::String, from_keys::Array{String,1})
     @assert !(haskey(data, to_key))
     data[to_key] = PMs.MultiConductorVector([data[k] for k in from_keys])
     for k in from_keys
@@ -405,7 +406,7 @@ end
 
 
 "checks if the given dict has a value, if not, sets a default value"
-function set_default(data::Dict{String,Any}, key::String, default_value)
+function _set_default(data::Dict{String,Any}, key::String, default_value)
     if !(haskey(data, key))
         data[key] = default_value
     end

@@ -20,7 +20,7 @@ JuMP = "^0.19.2"
 JSON = ">= 0.18"
 Juniper = ">= 0.4"
 Memento = ">= 0.8, < 0.13"
-PowerModels = "^0.10"
+PowerModels = "^0.11"
 SCS = ">= 0.4"
 julia = "^1"
 

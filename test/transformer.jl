@@ -1,6 +1,6 @@
 # helper functions to access solutions by their OpenDSS names
 bus_name2id(pmd_data, name) = [bus["index"] for (_,bus) in pmd_data["bus"] if haskey(bus, "name") && bus["name"]==name][1]
-va(sol, pmd_data, name) = round.(PMD.wraptopi(sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["va"][:])*180/pi; digits=1)
+va(sol, pmd_data, name) = round.(PMD._wrap_to_pi(sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["va"][:])*180/pi; digits=1)
 vm(sol, pmd_data, name) = sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["vm"]
 # tests
 @testset "transformer" begin
@@ -75,15 +75,15 @@ vm(sol, pmd_data, name) = sol["solution"]["bus"][string(bus_name2id(pmd_data, na
         file = "../test/data/opendss/ut_trans_3w_dyy_basetest.dss"
         pmd1 = PMD.parse_file(file)
         pmd2 = deepcopy(pmd1)
-        PMD.adjust_base!(pmd2, start_at_first_tr_prim=false)
+        PMD._adjust_base!(pmd2, start_at_first_tr_prim=false)
         scale_2to1 = pmd2["bus"]["3"]["base_kv"]/pmd1["bus"]["3"]["base_kv"]
         sol1 = PMD.run_ac_tp_pf(pmd1, ipopt_solver, multiconductor=true)
         sol2 = PMD.run_ac_tp_pf(pmd2, ipopt_solver, multiconductor=true)
         for bus_id_str in keys(sol1["solution"]["bus"])
             vm1 = sol1["solution"]["bus"][bus_id_str]["vm"]
             vm2 = sol2["solution"]["bus"][bus_id_str]["vm"]
-            va1 = PMD.wraptopi(sol1["solution"]["bus"][bus_id_str]["va"][:])
-            va2 = PMD.wraptopi(sol2["solution"]["bus"][bus_id_str]["va"][:])
+            va1 = PMD._wrap_to_pi(sol1["solution"]["bus"][bus_id_str]["va"][:])
+            va2 = PMD._wrap_to_pi(sol2["solution"]["bus"][bus_id_str]["va"][:])
             @test norm(vm1-vm2*scale_2to1, Inf) <= 1E-6
             @test norm(va1-va2, Inf) <= 1E-3
         end

@@ -13,7 +13,7 @@ function variable_tp_voltage(pm::PMs.GenericPowerModel{T}; nw=pm.cnw, kwargs...)
     # the magnitude seems to have little effect on the convergence (>0.05)
     # updating the starting point to a balanced phasor does the job
     ncnd = length(PMs.conductor_ids(pm))
-    theta = [wraptopi(2 * pi / ncnd * (1-c)) for c in 1:ncnd]
+    theta = [_wrap_to_pi(2 * pi / ncnd * (1-c)) for c in 1:ncnd]
     vm = 1
     for id in PMs.ids(pm, nw, :bus)
         busref = PMs.ref(pm, nw, :bus, id)
@@ -34,7 +34,7 @@ function constraint_tp_theta_ref(pm::PMs.GenericPowerModel{T}, n::Int, c::Int, d
     vr = PMs.var(pm, n, c, :vr, d)
     vi = PMs.var(pm, n, c, :vi, d)
     nconductors = length(PMs.conductor_ids(pm))
-    theta = wraptopi(2 * pi / nconductors * (1-c))
+    theta = _wrap_to_pi(2 * pi / nconductors * (1-c))
     # deal with cases first where tan(theta)==Inf or tan(theta)==0
     if theta == pi/2
         JuMP.@constraint(pm.model, vr == 0)

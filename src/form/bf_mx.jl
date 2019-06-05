@@ -92,7 +92,7 @@ function variable_tp_voltage_prod_hermitian(pm::PMs.GenericPowerModel{T}; n_cond
     wmaxdict = Dict{Int64, Any}()
     for i in PMs.ids(pm, nw, :bus)
         wmax = PMs.ref(pm, nw, :bus, i, "vmax").values*PMs.ref(pm, nw, :bus, i, "vmax").values'
-        wmaxltri = PowerModelsDistribution.mat2ltrivec(wmax)
+        wmaxltri = _mat2ltrivec!(wmax)
         wmaxdict[i] = wmaxltri
     end
 
@@ -130,7 +130,7 @@ function variable_tp_voltage_prod_hermitian(pm::PMs.GenericPowerModel{T}; n_cond
         wr = [PMs.var(pm, nw, h, :wr, i) for h in 1:n_lower_triangle_el]
         wi = [PMs.var(pm, nw, h, :wi, i) for h in 1:n_lower_triangle_el]
 
-        (w_re, w_im) = make_hermitian_matrix_variable(w, wr, wi)
+        (w_re, w_im) = _make_hermitian_matrix_variable(w, wr, wi)
         w_re_dict[i] = w_re
         w_im_dict[i] = w_im
     end
@@ -222,7 +222,7 @@ function variable_tp_branch_series_current_prod_hermitian(pm::PMs.GenericPowerMo
         ccmr = [PMs.var(pm, nw, h, :ccmr, i) for h in 1:n_lower_triangle_el]
         ccmi = [PMs.var(pm, nw, h, :ccmi, i) for h in 1:n_lower_triangle_el]
 
-        (ccm_re, ccm_im) = make_hermitian_matrix_variable(ccm, ccmr, ccmi)
+        (ccm_re, ccm_im) = _make_hermitian_matrix_variable(ccm, ccmr, ccmi)
         ccm_re_dict[i] = ccm_re
         ccm_im_dict[i] = ccm_im
     end
@@ -260,8 +260,8 @@ function variable_tp_branch_flow(pm::PMs.GenericPowerModel{T}; n_cond::Int=3, nw
         q_ut = [PMs.var(pm, nw, c, :q_ut, i) for c in 1:n_lower_triangle_el]
         q_lt = [PMs.var(pm, nw, c, :q_lt, i) for c in 1:n_lower_triangle_el]
 
-        p_mat = make_full_matrix_variable(p_d, p_lt, p_ut)
-        q_mat = make_full_matrix_variable(q_d, q_lt, q_ut)
+        p_mat = _make_full_matrix_variable(p_d, p_lt, p_ut)
+        q_mat = _make_full_matrix_variable(q_d, q_lt, q_ut)
 
         p_mat_dict[i] = p_mat
         q_mat_dict[i] = q_mat
@@ -278,7 +278,7 @@ function variable_lower_triangle_active_branch_flow(pm::PMs.GenericPowerModel; n
     for (l,i,j) in PMs.ref(pm, nw, :arcs)
         cmax = PMs.ref(pm, nw, :branch, l, "rate_a").values./PMs.ref(pm, nw, :bus, i, "vmin").values
         smax = PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
-        smaxltri = PowerModelsDistribution.mat2ltrivec(smax)
+        smaxltri = _mat2ltrivec!(smax)
         smaxdict[(l,i,j)] = smaxltri
     end
 
@@ -304,7 +304,7 @@ function variable_lower_triangle_reactive_branch_flow(pm::PMs.GenericPowerModel;
     for (l,i,j) in PMs.ref(pm, nw, :arcs)
         cmax = PMs.ref(pm, nw, :branch, l, "rate_a").values./PMs.ref(pm, nw, :bus, i, "vmin").values
         smax = PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
-        smaxltri = PowerModelsDistribution.mat2ltrivec(smax)
+        smaxltri = _mat2ltrivec!(smax)
         smaxdict[(l,i,j)] = smaxltri
     end
 
@@ -330,7 +330,7 @@ function variable_upper_triangle_active_branch_flow(pm::PMs.GenericPowerModel; n
     for (l,i,j) in PMs.ref(pm, nw, :arcs)
         cmax = PMs.ref(pm, nw, :branch, l, "rate_a").values./PMs.ref(pm, nw, :bus, i, "vmin").values
         smax = PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
-        smaxutri = PowerModelsDistribution.mat2utrivec(smax)
+        smaxutri = _mat2utrivec!(smax)
         smaxdict[(l,i,j)] = smaxutri
     end
 
@@ -356,7 +356,7 @@ function variable_upper_triangle_reactive_branch_flow(pm::PMs.GenericPowerModel;
     for (l,i,j) in PMs.ref(pm, nw, :arcs)
         cmax = PMs.ref(pm, nw, :branch, l, "rate_a").values./PMs.ref(pm, nw, :bus, i, "vmin").values
         smax = PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
-        smaxutri = PowerModelsDistribution.mat2utrivec(smax)
+        smaxutri = _mat2utrivec!(smax)
         smaxdict[(l,i,j)] = smaxutri
     end
     if bounded
@@ -410,15 +410,15 @@ function constraint_tp_theta_ref(pm::PMs.GenericPowerModel{T}, n::Int, i) where 
     w_re = PMs.var(pm, n, :W_re)[i]
     w_im = PMs.var(pm, n, :W_im)[i]
 
-    alpha = exp(-im*PowerModelsDistribution.wraptopi(2 * pi / nconductors ))
+    alpha = exp(-im*_wrap_to_pi(2 * pi / nconductors ))
     beta = (alpha*ones(nconductors)).^(0:nconductors-1)
     gamma = beta*beta'
 
     w_re_ref = real(gamma).*w_re[1,1]
     w_im_ref = imag(gamma).*w_re[1,1]
     JuMP.@constraint(pm.model, diag(w_re)[2:nconductors]        .== diag(w_re_ref)[2:nconductors]) # first equality is implied
-    JuMP.@constraint(pm.model, mat2utrivec(w_re) .== mat2utrivec(w_re_ref))
-    JuMP.@constraint(pm.model, mat2utrivec(w_im) .== mat2utrivec(w_im_ref))
+    JuMP.@constraint(pm.model, _mat2utrivec!(w_re) .== _mat2utrivec!(w_re_ref))
+    JuMP.@constraint(pm.model, _mat2utrivec!(w_im) .== _mat2utrivec!(w_im_ref))
 end
 
 
@@ -445,10 +445,10 @@ function constraint_tp_voltage_magnitude_difference(pm::PMs.GenericPowerModel{T}
     JuMP.@constraint(pm.model, diag(w_to_re) .== diag(
     w_fr_re   - p_s_fr  *r' - q_s_fr*x'        - r*p_s_fr'    - x*q_s_fr'
     + r*ccm_re*r' - x     *ccm_im*r' + x*ccm_re *x' + r*ccm_im *x'))
-    JuMP.@constraint(pm.model, mat2utrivec(w_to_re) .== mat2utrivec(
+    JuMP.@constraint(pm.model, _mat2utrivec!(w_to_re) .== _mat2utrivec!(
     w_fr_re   - p_s_fr  *r' - q_s_fr*x'        - r*p_s_fr'    - x*q_s_fr'
     + r*ccm_re*r' - x     *ccm_im*r' + x*ccm_re *x' + r*ccm_im *x'))
-    JuMP.@constraint(pm.model, mat2utrivec(w_to_im) .== mat2utrivec(
+    JuMP.@constraint(pm.model, _mat2utrivec!(w_to_im) .== _mat2utrivec!(
     w_fr_im   - q_s_fr  *r' + p_s_fr*x'        - x*p_s_fr'    + r*q_s_fr'
     + x*ccm_re*r' + r     *ccm_im*r' - r*ccm_re *x' + x*ccm_im *x'))
 end
@@ -546,7 +546,7 @@ function add_voltage_variable_rank(sol, pm::PMs.GenericPowerModel{T}; tol = 1e-6
     for (nw, network) in pm.PMs.ref[:nw]
         buses       = PMs.ref(pm, nw, :bus)
         for (b, bus) in buses
-            Wre, Wim = make_hermitian_matrix_variable(sol["bus"]["$b"]["w"].values, sol["bus"]["$b"]["wr"].values, sol["bus"]["$b"]["wi"].values)
+            Wre, Wim = _make_hermitian_matrix_variable(sol["bus"]["$b"]["w"].values, sol["bus"]["$b"]["wr"].values, sol["bus"]["$b"]["wi"].values)
             W = Wre + im*Wim
             sol["bus"]["$b"]["rank"] = rank(W, tol)
         end
@@ -557,7 +557,7 @@ function add_current_variable_rank(sol, pm::PMs.GenericPowerModel{T}; tol = 1e-6
     for (nw, network) in pm.PMs.ref[:nw]
         branches       = PMs.ref(pm, nw, :branch)
         for (b, branch) in branches
-            CCre, CCim = make_hermitian_matrix_variable(sol["branch"]["$b"]["cc"].values, sol["branch"]["$b"]["ccr"].values, sol["branch"]["$b"]["cci"].values)
+            CCre, CCim = _make_hermitian_matrix_variable(sol["branch"]["$b"]["cc"].values, sol["branch"]["$b"]["ccr"].values, sol["branch"]["$b"]["cci"].values)
             CC = CCre + im*CCim
             sol["branch"]["$b"]["CC_rank"] = rank(CC, tol)
         end
@@ -573,14 +573,14 @@ function add_branch_flow_rank(sol, pm::PMs.GenericPowerModel{T}; tol = 1e-6) whe
             y_fr = g_fr + im* b_fr
 
             fbus = branch["f_bus"]
-            Wre, Wim = make_hermitian_matrix_variable(sol["bus"]["$fbus"]["w"].values, sol["bus"]["$fbus"]["wr"].values, sol["bus"]["$fbus"]["wi"].values)
+            Wre, Wim = _make_hermitian_matrix_variable(sol["bus"]["$fbus"]["w"].values, sol["bus"]["$fbus"]["wr"].values, sol["bus"]["$fbus"]["wi"].values)
             W = Wre + im*Wim
 
-            CCre, CCim = make_hermitian_matrix_variable(sol["branch"]["$b"]["cc"].values, sol["branch"]["$b"]["ccr"].values, sol["branch"]["$b"]["cci"].values)
+            CCre, CCim = _make_hermitian_matrix_variable(sol["branch"]["$b"]["cc"].values, sol["branch"]["$b"]["ccr"].values, sol["branch"]["$b"]["cci"].values)
             CC = CCre + im*CCim
 
-            Pij = make_full_matrix_variable(sol["branch"]["$b"]["pf"].values, sol["branch"]["$b"]["pf_lt"].values, sol["branch"]["$b"]["pf_ut"].values)
-            Qij = make_full_matrix_variable(sol["branch"]["$b"]["qf"].values, sol["branch"]["$b"]["qf_lt"].values, sol["branch"]["$b"]["qf_ut"].values)
+            Pij = _make_full_matrix_variable(sol["branch"]["$b"]["pf"].values, sol["branch"]["$b"]["pf_lt"].values, sol["branch"]["$b"]["pf_ut"].values)
+            Qij = _make_full_matrix_variable(sol["branch"]["$b"]["qf"].values, sol["branch"]["$b"]["qf_lt"].values, sol["branch"]["$b"]["qf_ut"].values)
             Sij = Pij + im*Qij
             Ssij = Sij - W'*y_fr'
 
@@ -647,8 +647,8 @@ function add_original_variables(sol, pm::PMs.GenericPowerModel)
                 z = (r + im*x)
                 Ui = sol["bus"]["$i"]["vm"].*exp.(im*sol["bus"]["$i"]["va"])
 
-                Pij = make_full_matrix_variable(sol["branch"]["$l"]["pf"].values, sol["branch"]["$l"]["pf_lt"].values, sol["branch"]["$l"]["pf_ut"].values)
-                Qij = make_full_matrix_variable(sol["branch"]["$l"]["qf"].values, sol["branch"]["$l"]["qf_lt"].values, sol["branch"]["$l"]["qf_ut"].values)
+                Pij = _make_full_matrix_variable(sol["branch"]["$l"]["pf"].values, sol["branch"]["$l"]["pf_lt"].values, sol["branch"]["$l"]["pf_ut"].values)
+                Qij = _make_full_matrix_variable(sol["branch"]["$l"]["qf"].values, sol["branch"]["$l"]["qf_lt"].values, sol["branch"]["$l"]["qf_ut"].values)
                 Sij = Pij + im*Qij
 
                 Ssij = Sij - Ui*Ui'*y_fr'
@@ -660,12 +660,12 @@ function add_original_variables(sol, pm::PMs.GenericPowerModel)
                 Iji = Isji + y_to*Uj
 
                 sol["bus"]["$j"]["vm"] = abs.(Uj)
-                sol["bus"]["$j"]["va"] = wraptopi(angle.(Uj))
+                sol["bus"]["$j"]["va"] = _wrap_to_pi(angle.(Uj))
 
                 sol["branch"]["$l"]["cfm"] = abs.(Iij)
-                sol["branch"]["$l"]["cfa"] = wraptopi(angle.(Iij))
+                sol["branch"]["$l"]["cfa"] = _wrap_to_pi(angle.(Iij))
                 sol["branch"]["$l"]["ctm"] = abs.(Iji)
-                sol["branch"]["$l"]["cta"] = wraptopi(angle.(Iji))
+                sol["branch"]["$l"]["cta"] = _wrap_to_pi(angle.(Iji))
                 #
                 push!(visited_arc_from_ids, arc)
                 push!(visited_branch_ids, l)
@@ -684,8 +684,8 @@ function add_original_variables(sol, pm::PMs.GenericPowerModel)
                 z = (r + im*x)
                 Ui = sol["bus"]["$i"]["vm"].*exp.(im*sol["bus"]["$i"]["va"])
 
-                Pij = make_full_matrix_variable(sol["branch"]["$l"]["pt"].values, sol["branch"]["$l"]["pt_lt"].values, sol["branch"]["$l"]["pt_ut"].values)
-                Qij = make_full_matrix_variable(sol["branch"]["$l"]["qt"].values, sol["branch"]["$l"]["qt_lt"].values, sol["branch"]["$l"]["qt_ut"].values)
+                Pij = _make_full_matrix_variable(sol["branch"]["$l"]["pt"].values, sol["branch"]["$l"]["pt_lt"].values, sol["branch"]["$l"]["pt_ut"].values)
+                Qij = _make_full_matrix_variable(sol["branch"]["$l"]["qt"].values, sol["branch"]["$l"]["qt_lt"].values, sol["branch"]["$l"]["qt_ut"].values)
                 Sij = Pij + im*Qij
 
                 Ssij = Sij - Ui*Ui'*y_fr'
@@ -698,12 +698,12 @@ function add_original_variables(sol, pm::PMs.GenericPowerModel)
 
 
                 sol["bus"]["$j"]["vm"] = abs.(Uj)
-                sol["bus"]["$j"]["va"] = wraptopi(angle.(Uj))
+                sol["bus"]["$j"]["va"] = _wrap_to_pi(angle.(Uj))
 
                 sol["branch"]["$l"]["ctm"] = abs.(Iij)
-                sol["branch"]["$l"]["cta"] = wraptopi(angle.(Iij))
+                sol["branch"]["$l"]["cta"] = _wrap_to_pi(angle.(Iij))
                 sol["branch"]["$l"]["cfm"] = abs.(Iji)
-                sol["branch"]["$l"]["cfa"] = wraptopi(angle.(Iji))
+                sol["branch"]["$l"]["cfa"] = _wrap_to_pi(angle.(Iji))
                 #
                 push!(visited_arc_to_ids, arc)
                 push!(visited_branch_ids, l)
@@ -720,9 +720,9 @@ function add_original_variables(sol, pm::PMs.GenericPowerModel)
                 Iij = Sij./Ui
                 Iji = Sji./Uj
                 sol["branch"]["$l"]["cfm"] = abs.(Iij)
-                sol["branch"]["$l"]["cfa"] = wraptopi(angle.(Iij))
+                sol["branch"]["$l"]["cfa"] = _wrap_to_pi(angle.(Iij))
                 sol["branch"]["$l"]["ctm"] = abs.(Iji)
-                sol["branch"]["$l"]["cta"] = wraptopi(angle.(Iji))
+                sol["branch"]["$l"]["cta"] = _wrap_to_pi(angle.(Iji))
                 push!(visited_arc_from_ids, arc)
                 push!(visited_arc_to_ids, (l,j,i))
                 push!(visited_branch_ids, l)
