@@ -7,13 +7,12 @@ pd(pm, tppm_data, name) = [isa(x, Number) ? x : JuMP.value(x) for x in pdvar(pm,
 qdvar(pm, tppm_data, name) = [PMs.var(pm, pm.cnw, c, :qd, load_name2id(tppm_data, name)) for c in 1:3]
 qd(pm, tppm_data, name) = [isa(x, Number) ? x : JuMP.value(x) for x in qdvar(pm, tppm_data, name)]
 sd(pm, tppm_data, name) = pd(sol, tppm_data, name)+im*qd(sol, tppm_data, name)
-import AmplNLWriter
-ipopt_solver_ampl = JuMP.with_optimizer(AmplNLWriter.Optimizer, Ipopt.amplexe)
+
 @testset "loadmodels pf" begin
     @testset "connection variations" begin
         tppm = TPPMs.parse_file("../test/data/opendss/case3_lm_1230.dss")
         pm = PMs.build_generic_model(tppm, PMs.ACPPowerModel, TPPMs.post_tp_pf_lm, multiconductor=true)
-        sol = PMs.solve_generic_model(pm, ipopt_solver_ampl)
+        sol = PMs.solve_generic_model(pm, ipopt_solver)
         # voltage magnitude at load bus
         @test isapprox(vm(sol, tppm, "loadbus"), [1, 1, 1], atol=1E-5)
         # single-phase delta loads
@@ -60,7 +59,7 @@ ipopt_solver_ampl = JuMP.with_optimizer(AmplNLWriter.Optimizer, Ipopt.amplexe)
     @testset "models 1/2/5 in acp pf" begin
         tppm = TPPMs.parse_file("../test/data/opendss/case3_lm_models.dss")
         pm = PMs.build_generic_model(tppm, PMs.ACPPowerModel, TPPMs.post_tp_pf_lm, multiconductor=true)
-        sol = PMs.solve_generic_model(pm, ipopt_solver_ampl)
+        sol = PMs.solve_generic_model(pm, ipopt_solver)
         # voltage magnitude at load bus
         @test isapprox(vm(sol, tppm, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)
         # delta and wye single-phase load models
@@ -94,7 +93,7 @@ ipopt_solver_ampl = JuMP.with_optimizer(AmplNLWriter.Optimizer, Ipopt.amplexe)
     @testset "models 1/2/5 in acr pf" begin
         tppm = TPPMs.parse_file("../test/data/opendss/case3_lm_models.dss")
         pm = PMs.build_generic_model(tppm, PMs.ACRPowerModel, TPPMs.post_tp_pf_lm, multiconductor=true)
-        sol = PMs.solve_generic_model(pm, ipopt_solver_ampl)
+        sol = PMs.solve_generic_model(pm, ipopt_solver)
         # voltage magnitude at load bus
         @test isapprox(vm(sol, tppm, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)
         # delta and wye single-phase load models
