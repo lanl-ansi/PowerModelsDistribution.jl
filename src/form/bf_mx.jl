@@ -170,14 +170,14 @@ function variable_tp_branch_series_current_prod_hermitian(pm::_PMs.GenericPowerM
 
     for c in 1:n_diag_el
         if bounded
-            _PMs.var(pm, nw, c)[:cm] = JuMP.@variable(pm.model,
+            _PMs.var(pm, nw, c)[:ccm] = JuMP.@variable(pm.model,
             [l in _PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_cm",
             lower_bound = 0,
             upper_bound = (cmax[l][c])^2,
             start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
             )
         else
-            _PMs.var(pm, nw, c)[:cm] = JuMP.@variable(pm.model,
+            _PMs.var(pm, nw, c)[:ccm] = JuMP.@variable(pm.model,
             [l in _PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_cm",
             lower_bound = 0,
             start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "i_start", c)
@@ -218,7 +218,7 @@ function variable_tp_branch_series_current_prod_hermitian(pm::_PMs.GenericPowerM
     ccm_re_dict = Dict{Int64, Any}()
     ccm_im_dict = Dict{Int64, Any}()
     for i in _PMs.ids(pm, nw, :branch)
-        ccm =  [_PMs.var(pm, nw, h, :cm,  i) for h in 1:n_diag_el]
+        ccm =  [_PMs.var(pm, nw, h, :ccm,  i) for h in 1:n_diag_el]
         ccmr = [_PMs.var(pm, nw, h, :ccmr, i) for h in 1:n_lower_triangle_el]
         ccmi = [_PMs.var(pm, nw, h, :ccmi, i) for h in 1:n_lower_triangle_el]
 
@@ -504,8 +504,8 @@ end
 ""
 function add_branch_current_setpoint!(sol, pm::_PMs.GenericPowerModel)
     if haskey(pm.setting, "output") && haskey(pm.setting["output"], "branch_flows") && pm.setting["output"]["branch_flows"] == true
-        _PMs.add_setpoint!(sol, pm, "branch", "cm", :cm; scale = (x,item,i) -> sqrt(x), status_name="br_status")
-        _PMs.add_setpoint!(sol, pm, "branch", "cc", :cm, status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "ccm", :ccm; scale = (x,item,i) -> sqrt(x), status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "cc", :ccm, status_name="br_status")
         _PMs.add_setpoint!(sol, pm, "branch", "ccr", :ccmr, status_name="br_status")
         _PMs.add_setpoint!(sol, pm, "branch", "cci", :ccmi, status_name="br_status")
     end
