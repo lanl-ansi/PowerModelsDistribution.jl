@@ -32,19 +32,19 @@ end
 
 ""
 function correct_network_data!(data::Dict{String,Any})
-    PMs.make_per_unit!(data)
+    _PMs.make_per_unit!(data)
 
-    PMs.check_connectivity(data)
-    PMs.correct_transformer_parameters!(data)
-    PMs.correct_voltage_angle_differences!(data)
-    PMs.correct_thermal_limits!(data)
-    PMs.correct_branch_directions!(data)
-    PMs.check_branch_loops(data)
-    PMs.correct_bus_types!(data)
-    PMs.correct_dcline_limits!(data)
-    # PMs.check_voltage_setpoints(data)
-    PMs.correct_cost_functions!(data)
-    PMs.standardize_cost_terms!(data)
+    _PMs.check_connectivity(data)
+    _PMs.correct_transformer_parameters!(data)
+    _PMs.correct_voltage_angle_differences!(data)
+    _PMs.correct_thermal_limits!(data)
+    _PMs.correct_branch_directions!(data)
+    _PMs.check_branch_loops(data)
+    _PMs.correct_bus_types!(data)
+    _PMs.correct_dcline_limits!(data)
+    # _PMs.check_voltage_setpoints(data)
+    _PMs.correct_cost_functions!(data)
+    _PMs.standardize_cost_terms!(data)
 end
 
 function _wrap_to_180(degrees)

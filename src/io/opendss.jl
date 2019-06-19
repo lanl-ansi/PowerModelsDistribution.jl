@@ -33,18 +33,18 @@ end
 function _create_starbus(tppm_data::Dict, transformer::Dict)::Dict
     starbus = Dict{String,Any}()
 
-    base = convert(Int, 10^ceil(log10(abs(PMs.find_max_bus_id(tppm_data)))))
+    base = convert(Int, 10^ceil(log10(abs(_PMs.find_max_bus_id(tppm_data)))))
     name, nodes = parse_busname(transformer["buses"][1])
     nconductors = tppm_data["conductors"]
     starbus_id = _find_bus(name, tppm_data) + base
 
     starbus["bus_i"] = starbus_id
     starbus["base_kv"] = 1.0
-    starbus["vmin"] = PMs.MultiConductorVector(parse_array(0.9, nodes, nconductors, 0.9))
-    starbus["vmax"] = PMs.MultiConductorVector(parse_array(1.1, nodes, nconductors, 1.1))
+    starbus["vmin"] = _PMs.MultiConductorVector(parse_array(0.9, nodes, nconductors, 0.9))
+    starbus["vmax"] = _PMs.MultiConductorVector(parse_array(1.1, nodes, nconductors, 1.1))
     starbus["name"] = "$(transformer["name"]) starbus"
-    starbus["vm"] = PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors))
-    starbus["va"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+    starbus["vm"] = _PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors))
+    starbus["va"] = _PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
     starbus["bus_type"] = 1
     starbus["index"] = starbus_id
 
@@ -126,11 +126,11 @@ function dss2tppm_bus!(tppm_data::Dict, dss_data::Dict, import_all::Bool=false, 
 
         busDict["bus_type"] = bus == sourcebus ? 3 : 1
 
-        busDict["vm"] = PMs.MultiConductorVector(parse_array(vm, nodes, nconductors))
-        busDict["va"] = PMs.MultiConductorVector(parse_array([rad2deg(2*pi/nconductors*(i-1))+ph1_ang for i in 1:nconductors], nodes, nconductors))
+        busDict["vm"] = _PMs.MultiConductorVector(parse_array(vm, nodes, nconductors))
+        busDict["va"] = _PMs.MultiConductorVector(parse_array([rad2deg(2*pi/nconductors*(i-1))+ph1_ang for i in 1:nconductors], nodes, nconductors))
 
-        busDict["vmin"] = PMs.MultiConductorVector(parse_array(vmi, nodes, nconductors, vmi))
-        busDict["vmax"] = PMs.MultiConductorVector(parse_array(vma, nodes, nconductors, vma))
+        busDict["vmin"] = _PMs.MultiConductorVector(parse_array(vmi, nodes, nconductors, vmi))
+        busDict["vmax"] = _PMs.MultiConductorVector(parse_array(vma, nodes, nconductors, vma))
 
         busDict["base_kv"] = tppm_data["basekv"]
 
@@ -202,8 +202,8 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             loadDict["name"] = defaults["name"]
             loadDict["load_bus"] = _find_bus(name, tppm_data)
-            loadDict["pd"] = PMs.MultiConductorVector(parse_array(defaults["kw"] / 1e3, nodes, nconductors))
-            loadDict["qd"] = PMs.MultiConductorVector(parse_array(defaults["kvar"] / 1e3, nodes, nconductors))
+            loadDict["pd"] = _PMs.MultiConductorVector(parse_array(defaults["kw"] / 1e3, nodes, nconductors))
+            loadDict["qd"] = _PMs.MultiConductorVector(parse_array(defaults["kvar"] / 1e3, nodes, nconductors))
             loadDict["status"] = convert(Int, defaults["enabled"])
 
             loadDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
@@ -212,7 +212,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             loadDict["index"] = length(tppm_data["load"]) + 1
 
             used = ["phases", "bus1", "name"]
-            PMs._import_remaining!(loadDict, defaults, import_all; exclude=used)
+            _PMs._import_remaining!(loadDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["load"], loadDict)
         end
@@ -252,8 +252,8 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             shuntDict["shunt_bus"] = _find_bus(name, tppm_data)
             shuntDict["name"] = defaults["name"]
-            shuntDict["gs"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))  # TODO:
-            shuntDict["bs"] = PMs.MultiConductorVector(parse_array(Gcap, nodes, nconductors))
+            shuntDict["gs"] = _PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))  # TODO:
+            shuntDict["bs"] = _PMs.MultiConductorVector(parse_array(Gcap, nodes, nconductors))
             shuntDict["status"] = convert(Int, defaults["enabled"])
             shuntDict["index"] = length(tppm_data["shunt"]) + 1
 
@@ -261,7 +261,7 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             shuntDict["source_id"] = "capacitor.$(defaults["name"])"
 
             used = ["bus1", "phases", "name"]
-            PMs._import_remaining!(shuntDict, defaults, import_all; exclude=used)
+            _PMs._import_remaining!(shuntDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["shunt"], shuntDict)
         end
@@ -287,8 +287,8 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
                 shuntDict["shunt_bus"] = _find_bus(name, tppm_data)
                 shuntDict["name"] = defaults["name"]
-                shuntDict["gs"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))  # TODO:
-                shuntDict["bs"] = PMs.MultiConductorVector(parse_array(Gcap, nodes, nconductors))
+                shuntDict["gs"] = _PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))  # TODO:
+                shuntDict["bs"] = _PMs.MultiConductorVector(parse_array(Gcap, nodes, nconductors))
                 shuntDict["status"] = convert(Int, defaults["enabled"])
                 shuntDict["index"] = length(tppm_data["shunt"]) + 1
 
@@ -296,7 +296,7 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 shuntDict["source_id"] = "reactor.$(defaults["name"])"
 
                 used = ["bus1", "phases", "name"]
-                PMs._import_remaining!(shuntDict, defaults, import_all; exclude=used)
+                _PMs._import_remaining!(shuntDict, defaults, import_all; exclude=used)
 
                 push!(tppm_data["shunt"], shuntDict)
             end
@@ -329,14 +329,14 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     genDict["gen_status"] = convert(Int, defaults["enabled"])
 
     # TODO: populate with VSOURCE properties
-    genDict["pg"] = PMs.MultiConductorVector(parse_array( 0.0, nodes, nconductors))
-    genDict["qg"] = PMs.MultiConductorVector(parse_array( 0.0, nodes, nconductors))
+    genDict["pg"] = _PMs.MultiConductorVector(parse_array( 0.0, nodes, nconductors))
+    genDict["qg"] = _PMs.MultiConductorVector(parse_array( 0.0, nodes, nconductors))
 
-    genDict["qmin"] = PMs.MultiConductorVector(parse_array(-NaN, nodes, nconductors))
-    genDict["qmax"] = PMs.MultiConductorVector(parse_array( NaN, nodes, nconductors))
+    genDict["qmin"] = _PMs.MultiConductorVector(parse_array(-NaN, nodes, nconductors))
+    genDict["qmax"] = _PMs.MultiConductorVector(parse_array( NaN, nodes, nconductors))
 
-    genDict["pmin"] = PMs.MultiConductorVector(parse_array(-NaN, nodes, nconductors))
-    genDict["pmax"] = PMs.MultiConductorVector(parse_array( NaN, nodes, nconductors))
+    genDict["pmin"] = _PMs.MultiConductorVector(parse_array(-NaN, nodes, nconductors))
+    genDict["pmax"] = _PMs.MultiConductorVector(parse_array( NaN, nodes, nconductors))
 
     genDict["model"] = 2
     genDict["startup"] = 0.0
@@ -350,7 +350,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     genDict["source_id"] = "vsource.$(defaults["name"])"
 
     used = ["name", "phases", "bus1"]
-    PMs._import_remaining!(genDict, defaults, import_all; exclude=used)
+    _PMs._import_remaining!(genDict, defaults, import_all; exclude=used)
 
     push!(tppm_data["gen"], genDict)
 
@@ -371,14 +371,14 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             genDict["gen_bus"] = _find_bus(name, tppm_data)
             genDict["name"] = defaults["name"]
             genDict["gen_status"] = convert(Int, defaults["enabled"])
-            genDict["pg"] = PMs.MultiConductorVector(parse_array(defaults["kw"] / (1e3 * nconductors), nodes, nconductors))
-            genDict["qg"] = PMs.MultiConductorVector(parse_array(defaults["kvar"] / (1e3 * nconductors), nodes, nconductors))
-            genDict["vg"] = PMs.MultiConductorVector(parse_array(defaults["kv"] / tppm_data["basekv"], nodes, nconductors))
+            genDict["pg"] = _PMs.MultiConductorVector(parse_array(defaults["kw"] / (1e3 * nconductors), nodes, nconductors))
+            genDict["qg"] = _PMs.MultiConductorVector(parse_array(defaults["kvar"] / (1e3 * nconductors), nodes, nconductors))
+            genDict["vg"] = _PMs.MultiConductorVector(parse_array(defaults["kv"] / tppm_data["basekv"], nodes, nconductors))
 
-            genDict["qmin"] = PMs.MultiConductorVector(parse_array(defaults["minkvar"] / (1e3 * nconductors), nodes, nconductors))
-            genDict["qmax"] = PMs.MultiConductorVector(parse_array(defaults["maxkvar"] / (1e3 * nconductors), nodes, nconductors))
+            genDict["qmin"] = _PMs.MultiConductorVector(parse_array(defaults["minkvar"] / (1e3 * nconductors), nodes, nconductors))
+            genDict["qmax"] = _PMs.MultiConductorVector(parse_array(defaults["maxkvar"] / (1e3 * nconductors), nodes, nconductors))
 
-            genDict["apf"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+            genDict["apf"] = _PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
 
             genDict["pmax"] = genDict["pg"]  # Assumes generator is at rated power
             genDict["pmin"] = 0.0 * genDict["pg"]  # 0% of pmax
@@ -394,7 +394,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             # and they are not supported in OpenDSS
             genDict["ramp_agc"] = genDict["pmax"]
 
-            genDict["ramp_q"] = PMs.MultiConductorVector(parse_array(max.(abs.(genDict["qmin"].values), abs.(genDict["qmax"].values)), nodes, nconductors))
+            genDict["ramp_q"] = _PMs.MultiConductorVector(parse_array(max.(abs.(genDict["qmin"].values), abs.(genDict["qmax"].values)), nodes, nconductors))
             genDict["ramp_10"] = genDict["pmax"]
             genDict["ramp_30"] = genDict["pmax"]
 
@@ -417,7 +417,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             genDict["source_id"] = "generator.$(defaults["name"])"
 
             used = ["name", "phases", "bus1"]
-            PMs._import_remaining!(genDict, defaults, import_all; exclude=used)
+            _PMs._import_remaining!(genDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["gen"], genDict)
         end
@@ -441,15 +441,15 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             pvDict["name"] = defaults["name"]
             pvDict["gen_bus"] = _find_bus(name, tppm_data)
 
-            pvDict["pg"] = PMs.MultiConductorVector(parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
-            pvDict["qg"] = PMs.MultiConductorVector(parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
-            pvDict["vg"] = PMs.MultiConductorVector(parse_array(defaults["kv"] / tppm_data["basekv"], nodes, nconductors))
+            pvDict["pg"] = _PMs.MultiConductorVector(parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
+            pvDict["qg"] = _PMs.MultiConductorVector(parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
+            pvDict["vg"] = _PMs.MultiConductorVector(parse_array(defaults["kv"] / tppm_data["basekv"], nodes, nconductors))
 
-            pvDict["pmin"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-            pvDict["pmax"] = PMs.MultiConductorVector(parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
+            pvDict["pmin"] = _PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+            pvDict["pmax"] = _PMs.MultiConductorVector(parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
 
-            pvDict["qmin"] = -PMs.MultiConductorVector(parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
-            pvDict["qmax"] =  PMs.MultiConductorVector(parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
+            pvDict["qmin"] = -_PMs.MultiConductorVector(parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
+            pvDict["qmax"] =  _PMs.MultiConductorVector(parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
 
             pvDict["gen_status"] = convert(Int, defaults["enabled"])
 
@@ -465,7 +465,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             pvDict["source_id"] = "pvsystem.$(defaults["name"])"
 
             used = ["name", "phases", "bus1"]
-            PMs._import_remaining!(pvDict, defaults, import_all; exclude=used)
+            _PMs._import_remaining!(pvDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["gen"], pvDict)
         end
@@ -542,31 +542,31 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             # is fixed at 1. So implicitly, we later on state that the voltage base
             # is actually in LN. We compensate here for that.
 
-            branchDict["br_r"] = PMs.MultiConductorMatrix(rmatrix * defaults["length"] / Zbase)
-            branchDict["br_x"] = PMs.MultiConductorMatrix(xmatrix * defaults["length"] / Zbase)
+            branchDict["br_r"] = _PMs.MultiConductorMatrix(rmatrix * defaults["length"] / Zbase)
+            branchDict["br_x"] = _PMs.MultiConductorMatrix(xmatrix * defaults["length"] / Zbase)
 
             # CHECK: Do we need to reformulate to use a matrix instead of a vector for g, b?
-            branchDict["g_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-            branchDict["g_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+            branchDict["g_fr"] = _PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+            branchDict["g_to"] = _PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
 
             if !isdiag(cmatrix)
                 Memento.info(_LOGGER, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`")
             end
-            branchDict["b_fr"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
-            branchDict["b_to"] = PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
+            branchDict["b_fr"] = _PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
+            branchDict["b_to"] = _PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
 
             # TODO: pick a better value for emergamps
-            branchDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors))
-            branchDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
-            branchDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
+            branchDict["rate_a"] = _PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors))
+            branchDict["rate_b"] = _PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
+            branchDict["rate_c"] = _PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
 
-            branchDict["tap"] = PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors, 1.0))
-            branchDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+            branchDict["tap"] = _PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors, 1.0))
+            branchDict["shift"] = _PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
 
             branchDict["br_status"] = convert(Int, defaults["enabled"])
 
-            branchDict["angmin"] = PMs.MultiConductorVector(parse_array(-60.0, nodes, nconductors, -60.0))
-            branchDict["angmax"] = PMs.MultiConductorVector(parse_array( 60.0, nodes, nconductors,  60.0))
+            branchDict["angmin"] = _PMs.MultiConductorVector(parse_array(-60.0, nodes, nconductors, -60.0))
+            branchDict["angmax"] = _PMs.MultiConductorVector(parse_array( 60.0, nodes, nconductors,  60.0))
 
             branchDict["transformer"] = false
             branchDict["switch"] = defaults["switch"]
@@ -578,7 +578,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["source_id"] = "line.$(defaults["name"])"
 
             used = ["name", "bus1", "bus2", "rmatrix", "xmatrix"]
-            PMs._import_remaining!(branchDict, defaults, import_all; exclude=used)
+            _PMs._import_remaining!(branchDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["branch"], branchDict)
         end
@@ -632,9 +632,9 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             # voltage and power ratings
             #transDict["vnom_kv"] = defaults["kvs"]
             #transDict["snom_kva"] = defaults["kvas"]
-            transDict["rate_a"] = [PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
-            transDict["rate_b"] = [PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
-            transDict["rate_c"] = [PMs.MultiConductorVector(ones(nconductors))*defaults["emerghkva"] for i  in 1:nrw]
+            transDict["rate_a"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
+            transDict["rate_b"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
+            transDict["rate_c"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["emerghkva"] for i  in 1:nrw]
             # convert to 1 MVA base
             transDict["rate_a"] *= 1E-3
             transDict["rate_b"] *= 1E-3
@@ -685,11 +685,11 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             end
 
             # tap properties
-            transDict["tm"] = [PMs.MultiConductorVector(ones(Float64,3))*defaults["taps"][i] for i in 1:nrw]
-            transDict["tm_min"] = [PMs.MultiConductorVector(ones(Float64,3))*defaults["mintap"] for i in 1:nrw]
-            transDict["tm_max"] = [PMs.MultiConductorVector(ones(Float64,3))*defaults["maxtap"] for i in 1:nrw]
-            transDict["tm_step"] = [PMs.MultiConductorVector(ones(Int,3))*defaults["numtaps"] for i in 1:nrw]
-            transDict["fixed"] = [PMs.MultiConductorVector(ones(Bool,3)) for i in 1:nrw]
+            transDict["tm"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["taps"][i] for i in 1:nrw]
+            transDict["tm_min"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["mintap"] for i in 1:nrw]
+            transDict["tm_max"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["maxtap"] for i in 1:nrw]
+            transDict["tm_step"] = [_PMs.MultiConductorVector(ones(Int,3))*defaults["numtaps"] for i in 1:nrw]
+            transDict["fixed"] = [_PMs.MultiConductorVector(ones(Bool,3)) for i in 1:nrw]
 
             # loss model (converted to SI units, referred to secondary)
             function zpn_to_abc(z, p, n; atol=1E-13)
@@ -701,9 +701,9 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             end
             pos_to_abc(p) = zpn_to_abc(p, p, p)
             zbase = 1^2/(defaults["kvas"][1]/1E3)
-            transDict["rs"] = Array{PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
-            transDict["gsh"] = Array{PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
-            transDict["bsh"] = Array{PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
+            transDict["rs"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
+            transDict["gsh"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
+            transDict["bsh"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
             # deal with dual definition of rs in defaults dict
             # if non-zero, pick "%rs", else go for the per winding spec
             rs_alt = [defaults["%r$suffix"] for suffix in prop_suffix_w]
@@ -723,19 +723,19 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
                 # neutral impedance is ignored for now; all transformers are
                 # grounded (that is, those with a wye and zig-zag winding).
                 Memento.warn(_LOGGER, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.")
-                transDict["rs"][w] = PMs.MultiConductorMatrix(real.(Zs_w))
+                transDict["rs"][w] = _PMs.MultiConductorMatrix(real.(Zs_w))
                 # shunt elements are added at second winding
                 if w==2
                     ysh_w_p = (defaults["%noloadloss"]-im*defaults["%imag"])/100/zbase
                     Ysh_w = pos_to_abc(ysh_w_p)
-                    transDict["gsh"][w] = PMs.MultiConductorMatrix(real.(Ysh_w))
-                    transDict["bsh"][w] = PMs.MultiConductorMatrix(imag.(Ysh_w))
+                    transDict["gsh"][w] = _PMs.MultiConductorMatrix(real.(Ysh_w))
+                    transDict["bsh"][w] = _PMs.MultiConductorMatrix(imag.(Ysh_w))
                 else
-                    transDict["gsh"][w] = PMs.MultiConductorMatrix(zeros(Float64, 3, 3))
-                    transDict["bsh"][w] = PMs.MultiConductorMatrix(zeros(Float64, 3, 3))
+                    transDict["gsh"][w] = _PMs.MultiConductorMatrix(zeros(Float64, 3, 3))
+                    transDict["bsh"][w] = _PMs.MultiConductorMatrix(zeros(Float64, 3, 3))
                 end
             end
-            transDict["xs"] = Dict{String, PMs.MultiConductorMatrix{Float64}}()
+            transDict["xs"] = Dict{String, _PMs.MultiConductorMatrix{Float64}}()
 
             Zsc = Dict{Tuple{Int,Int}, Complex}()
             if nrw==2
@@ -749,7 +749,7 @@ function dss2tppm_transformer!(tppm_data::Dict, dss_data::Dict, import_all::Bool
             Zbr = _sc2br_impedance(Zsc)
             for (k,zs_ij_p) in Zbr
                 Zs_ij = pos_to_abc(zs_ij_p)
-                transDict["xs"]["$(k[1])-$(k[2])"] = PMs.MultiConductorMatrix(imag.(Zs_ij))
+                transDict["xs"]["$(k[1])-$(k[2])"] = _PMs.MultiConductorMatrix(imag.(Zs_ij))
             end
 
             push!(tppm_data["trans_comp"], transDict)
@@ -829,25 +829,25 @@ function dss2tppm_reactor!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 reactDict["f_bus"] = _find_bus(f_bus, tppm_data)
                 reactDict["t_bus"] = _find_bus(t_bus, tppm_data)
 
-                reactDict["br_r"] = PMs.MultiConductorMatrix(parse_matrix(diagm(0 => fill(0.2, nconductors)), nodes, nconductors))
-                reactDict["br_x"] = PMs.MultiConductorMatrix(parse_matrix(zeros(nconductors, nconductors), nodes, nconductors))
+                reactDict["br_r"] = _PMs.MultiConductorMatrix(parse_matrix(diagm(0 => fill(0.2, nconductors)), nodes, nconductors))
+                reactDict["br_x"] = _PMs.MultiConductorMatrix(parse_matrix(zeros(nconductors, nconductors), nodes, nconductors))
 
-                reactDict["g_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-                reactDict["g_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-                reactDict["b_fr"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
-                reactDict["b_to"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+                reactDict["g_fr"] = _PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+                reactDict["g_to"] = _PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+                reactDict["b_fr"] = _PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+                reactDict["b_to"] = _PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
 
-                reactDict["rate_a"] = PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors))
-                reactDict["rate_b"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
-                reactDict["rate_c"] = PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
+                reactDict["rate_a"] = _PMs.MultiConductorVector(parse_array(defaults["normamps"], nodes, nconductors))
+                reactDict["rate_b"] = _PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
+                reactDict["rate_c"] = _PMs.MultiConductorVector(parse_array(defaults["emergamps"], nodes, nconductors))
 
-                reactDict["tap"] = PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors, NaN))
-                reactDict["shift"] = PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
+                reactDict["tap"] = _PMs.MultiConductorVector(parse_array(1.0, nodes, nconductors, NaN))
+                reactDict["shift"] = _PMs.MultiConductorVector(parse_array(0.0, nodes, nconductors))
 
                 reactDict["br_status"] = convert(Int, defaults["enabled"])
 
-                reactDict["angmin"] = PMs.MultiConductorVector(parse_array(-60.0, nodes, nconductors, -60.0))
-                reactDict["angmax"] = PMs.MultiConductorVector(parse_array( 60.0, nodes, nconductors,  60.0))
+                reactDict["angmin"] = _PMs.MultiConductorVector(parse_array(-60.0, nodes, nconductors, -60.0))
+                reactDict["angmax"] = _PMs.MultiConductorVector(parse_array( 60.0, nodes, nconductors,  60.0))
 
                 reactDict["transformer"] = true
 
@@ -858,7 +858,7 @@ function dss2tppm_reactor!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 reactDict["source_id"] = "reactor.$(defaults["name"])"
 
                 used = []
-                PMs._import_remaining!(reactDict, defaults, import_all; exclude=used)
+                _PMs._import_remaining!(reactDict, defaults, import_all; exclude=used)
 
                 push!(tppm_data["branch"], reactDict)
             end
@@ -888,8 +888,8 @@ function dss2tppm_pvsystem!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             pvsystemDict["name"] = defaults["name"]
             pvsystemDict["pv_bus"] = _find_bus(name, tppm_data)
-            pvsystemDict["p"] = PMs.MultiConductorVector(parse_array(defaults["kw"] / 1e3, nodes, nconductors))
-            pvsystemDict["q"] = PMs.MultiConductorVector(parse_array(defaults["kvar"] / 1e3, nodes, nconductors))
+            pvsystemDict["p"] = _PMs.MultiConductorVector(parse_array(defaults["kw"] / 1e3, nodes, nconductors))
+            pvsystemDict["q"] = _PMs.MultiConductorVector(parse_array(defaults["kvar"] / 1e3, nodes, nconductors))
             pvsystemDict["status"] = convert(Int, defaults["enabled"])
 
             pvsystemDict["index"] = length(tppm_data["pvsystem"]) + 1
@@ -898,7 +898,7 @@ function dss2tppm_pvsystem!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             pvsystemDict["source_id"] = "pvsystem.$(defaults["name"])"
 
             used = ["phases", "bus1", "name"]
-            PMs._import_remaining!(pvsystemDict, defaults, import_all; exclude=used)
+            _PMs._import_remaining!(pvsystemDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["pvsystem"], pvsystemDict)
         end
@@ -928,11 +928,11 @@ function dss2tppm_storage!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             storageDict["discharge_rating"] = defaults["%discharge"] * defaults["kwrated"] / 1e3 / 100.0
             storageDict["charge_efficiency"] = defaults["%effcharge"] / 100.0
             storageDict["discharge_efficiency"] = defaults["%effdischarge"] / 100.0
-            storageDict["thermal_rating"] = PMs.MultiConductorVector(parse_array(defaults["kva"] / 1e3, nodes, nconductors))
-            storageDict["qmin"] = PMs.MultiConductorVector(parse_array(-defaults["kvar"] / 1e3, nodes, nconductors))
-            storageDict["qmax"] = PMs.MultiConductorVector(parse_array( defaults["kvar"] / 1e3, nodes, nconductors))
-            storageDict["r"] = PMs.MultiConductorVector(parse_array(defaults["%r"] / 100.0, nodes, nconductors))
-            storageDict["x"] = PMs.MultiConductorVector(parse_array(defaults["%x"] / 100.0, nodes, nconductors))
+            storageDict["thermal_rating"] = _PMs.MultiConductorVector(parse_array(defaults["kva"] / 1e3, nodes, nconductors))
+            storageDict["qmin"] = _PMs.MultiConductorVector(parse_array(-defaults["kvar"] / 1e3, nodes, nconductors))
+            storageDict["qmax"] = _PMs.MultiConductorVector(parse_array( defaults["kvar"] / 1e3, nodes, nconductors))
+            storageDict["r"] = _PMs.MultiConductorVector(parse_array(defaults["%r"] / 100.0, nodes, nconductors))
+            storageDict["x"] = _PMs.MultiConductorVector(parse_array(defaults["%x"] / 100.0, nodes, nconductors))
             storageDict["standby_loss"] = defaults["%idlingkw"] * defaults["kwrated"] / 1e3
             storageDict["status"] = convert(Int, defaults["enabled"])
 
@@ -942,7 +942,7 @@ function dss2tppm_storage!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             storageDict["source_id"] = "storage.$(defaults["name"])"
 
             used = ["phases", "bus1", "name"]
-            PMs._import_remaining!(storageDict, defaults, import_all; exclude=used)
+            _PMs._import_remaining!(storageDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["storage"], storageDict)
         end
@@ -979,10 +979,10 @@ function _adjust_sourcegen_bounds!(tppm_data)
 
     bound = sum(emergamps)
 
-    tppm_data["gen"]["1"]["pmin"] = PMs.MultiConductorVector(fill(-bound, size(tppm_data["gen"]["1"]["pmin"])))
-    tppm_data["gen"]["1"]["pmax"] = PMs.MultiConductorVector(fill( bound, size(tppm_data["gen"]["1"]["pmin"])))
-    tppm_data["gen"]["1"]["qmin"] = PMs.MultiConductorVector(fill(-bound, size(tppm_data["gen"]["1"]["pmin"])))
-    tppm_data["gen"]["1"]["qmax"] = PMs.MultiConductorVector(fill( bound, size(tppm_data["gen"]["1"]["pmin"])))
+    tppm_data["gen"]["1"]["pmin"] = _PMs.MultiConductorVector(fill(-bound, size(tppm_data["gen"]["1"]["pmin"])))
+    tppm_data["gen"]["1"]["pmax"] = _PMs.MultiConductorVector(fill( bound, size(tppm_data["gen"]["1"]["pmin"])))
+    tppm_data["gen"]["1"]["qmin"] = _PMs.MultiConductorVector(fill(-bound, size(tppm_data["gen"]["1"]["pmin"])))
+    tppm_data["gen"]["1"]["qmax"] = _PMs.MultiConductorVector(fill( bound, size(tppm_data["gen"]["1"]["pmin"])))
 end
 
 
@@ -1093,10 +1093,10 @@ function _create_vbus!(tppm_data; vmin=0, vmax=Inf, basekv=tppm_data["basekv"], 
     vbus["bus_i"] = vbus_id
     vbus["source_id"] = source_id
     ncnds = tppm_data["conductors"]
-    vbus["vm"] = PMs.MultiConductorVector(ones(Float64, ncnds))
-    vbus["va"] = PMs.MultiConductorVector(zeros(Float64, ncnds))
-    vbus["vmin"] = PMs.MultiConductorVector(ones(Float64, ncnds))*vmin
-    vbus["vmax"] = PMs.MultiConductorVector(ones(Float64, ncnds))*vmax
+    vbus["vm"] = _PMs.MultiConductorVector(ones(Float64, ncnds))
+    vbus["va"] = _PMs.MultiConductorVector(zeros(Float64, ncnds))
+    vbus["vmin"] = _PMs.MultiConductorVector(ones(Float64, ncnds))*vmin
+    vbus["vmax"] = _PMs.MultiConductorVector(ones(Float64, ncnds))*vmax
     vbus["base_kv"] = basekv
     return vbus
 end
@@ -1121,9 +1121,9 @@ function _create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; name="", source_id=
     for k in [:br_r, :br_x, :g_fr, :g_to, :b_fr, :b_to]
         if !haskey(kwargs, k)
             if k in [:br_r, :br_x]
-                vbranch[string(k)] = PMs.MultiConductorMatrix(zeros(ncnd, ncnd))
+                vbranch[string(k)] = _PMs.MultiConductorMatrix(zeros(ncnd, ncnd))
             else
-                vbranch[string(k)] = PMs.MultiConductorVector(zeros(ncnd))
+                vbranch[string(k)] = _PMs.MultiConductorVector(zeros(ncnd))
             end
         else
             if k in [:br_r, :br_x]
@@ -1133,10 +1133,10 @@ function _create_vbranch!(tppm_data, f_bus::Int, t_bus::Int; name="", source_id=
             end
         end
     end
-    vbranch["angmin"] = -PMs.MultiConductorVector(ones(ncnd))*60
-    vbranch["angmax"] = PMs.MultiConductorVector(ones(ncnd))*60
-    vbranch["shift"] = PMs.MultiConductorVector(zeros(ncnd))
-    vbranch["tap"] = PMs.MultiConductorVector(ones(ncnd))
+    vbranch["angmin"] = -_PMs.MultiConductorVector(ones(ncnd))*60
+    vbranch["angmax"] = _PMs.MultiConductorVector(ones(ncnd))*60
+    vbranch["shift"] = _PMs.MultiConductorVector(zeros(ncnd))
+    vbranch["tap"] = _PMs.MultiConductorVector(ones(ncnd))
     vbranch["transformer"] = false
     vbranch["switch"] = false
     vbranch["br_status"] = 1
@@ -1202,8 +1202,8 @@ function _rm_redundant_pd_elements!(tppm_data; buses=keys(tppm_data["bus"]), bra
             end
             # move shunts to the bus that will be left
             if !haskey(shunts_g, kp_bus)
-                shunts_g[kp_bus] =  PMs.MultiConductorVector(zeros(3))
-                shunts_b[kp_bus] =  PMs.MultiConductorVector(zeros(3))
+                shunts_g[kp_bus] =  _PMs.MultiConductorVector(zeros(3))
+                shunts_b[kp_bus] =  _PMs.MultiConductorVector(zeros(3))
             end
             shunts_g[kp_bus] .+= br["g_fr"]
             shunts_g[kp_bus] .+= br["g_to"]
@@ -1271,7 +1271,7 @@ or XLT==0 or R[3]==0), then this bus might be removed by
 _rm_redundant_pd_elements!, in which case a new shunt should be inserted at the
 remaining bus of the removed branch.
 """
-function _add_shunt!(tppm_data, bus; gs=PMs.MultiConductorVector(zeros(3)), bs=PMs.MultiConductorVector(zeros(3)), vbase_kv=1, sbase_mva=1)
+function _add_shunt!(tppm_data, bus; gs=_PMs.MultiConductorVector(zeros(3)), bs=_PMs.MultiConductorVector(zeros(3)), vbase_kv=1, sbase_mva=1)
     # TODO check whether keys are consistent with the actual data model
     shunt_dict = Dict{String, Any}("status"=>1, "shunt_bus"=>bus)
     zbase  = vbase_kv^2/sbase_mva

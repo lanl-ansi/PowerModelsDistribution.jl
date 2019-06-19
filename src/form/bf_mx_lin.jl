@@ -3,14 +3,14 @@ import LinearAlgebra: diagm
 """
 Defines relationship between branch (series) power flow, branch (series) current and node voltage magnitude
 """
-function constraint_tp_branch_current(pm::PMs.GenericPowerModel{T}, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr) where T <: AbstractLPUBFForm
+function constraint_tp_model_current(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr) where T <: AbstractLPUBFForm
 end
 
-function variable_tp_branch_current(pm::PMs.GenericPowerModel{T}; kwargs...) where T <: AbstractLPUBFForm
+function variable_tp_branch_current(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: AbstractLPUBFForm
 end
 
 ""
-function variable_tp_voltage_prod_hermitian(pm::PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: LPdiagUBFForm
+function variable_tp_voltage_prod_hermitian(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: LPdiagUBFForm
     n_diag_el = n_cond
     n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
     for c in 1:n_diag_el
@@ -18,34 +18,34 @@ function variable_tp_voltage_prod_hermitian(pm::PMs.GenericPowerModel{T}; n_cond
     end
     #Store dictionary with matrix variables by bus
     w_re_dict = Dict{Int64, Any}()
-    for i in PMs.ids(pm, nw, :bus)
-        w =  [PMs.var(pm, nw, h, :w,  i) for h in 1:n_diag_el]
+    for i in _PMs.ids(pm, nw, :bus)
+        w =  [_PMs.var(pm, nw, h, :w,  i) for h in 1:n_diag_el]
         w_re_dict[i] = w
     end
-    PMs.var(pm, nw)[:W_re] = w_re_dict
+    _PMs.var(pm, nw)[:W_re] = w_re_dict
 end
 
 
 ""
-function variable_tp_branch_flow(pm::PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where  T<: LPfullUBFForm
+function variable_tp_branch_flow(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where  T<: LPfullUBFForm
     n_diag_el = n_cond
     n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
 
     for i in 1:n_diag_el
-        PMs.variable_active_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
-        PMs.variable_reactive_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
+        _PMs.variable_active_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
+        _PMs.variable_reactive_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
     end
 
     #Store dictionary with matrix variables by arc
     p_mat_dict = Dict{Tuple{Int64,Int64,Int64}, Any}()
     q_mat_dict = Dict{Tuple{Int64,Int64,Int64}, Any}()
 
-    for i in PMs.ref(pm, nw, :arcs)
+    for i in _PMs.ref(pm, nw, :arcs)
         l = i[1]
         f_bus = i[2]
-        branch = PMs.ref(pm, nw, :branch, l)
-        p_d =  [PMs.var(pm, nw, c, :p,    i) for c in 1:n_diag_el]
-        q_d =  [PMs.var(pm, nw, c, :q,    i) for c in 1:n_diag_el]
+        branch = _PMs.ref(pm, nw, :branch, l)
+        p_d =  [_PMs.var(pm, nw, c, :p,    i) for c in 1:n_diag_el]
+        q_d =  [_PMs.var(pm, nw, c, :q,    i) for c in 1:n_diag_el]
 
         alpha = exp(-im*2*pi/3)
         Gamma = [1 alpha^2 alpha; alpha 1 alpha^2; alpha^2 alpha 1]
@@ -59,8 +59,8 @@ function variable_tp_branch_flow(pm::PMs.GenericPowerModel{T}; n_cond::Int=3, nw
         g_sh_fr = diagm(0 => branch["g_fr"].values)
         b_sh_fr = diagm(0 => branch["b_fr"].values)
 
-        w_fr_re = PMs.var(pm, nw, :W_re)[f_bus]
-        w_fr_im = PMs.var(pm, nw, :W_im)[f_bus]
+        w_fr_re = _PMs.var(pm, nw, :W_re)[f_bus]
+        w_fr_im = _PMs.var(pm, nw, :W_im)[f_bus]
 
         p_mat = ps_mat + (w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)')
         q_mat = qs_mat + (w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)')
@@ -68,29 +68,29 @@ function variable_tp_branch_flow(pm::PMs.GenericPowerModel{T}; n_cond::Int=3, nw
         p_mat_dict[i] = p_mat
         q_mat_dict[i] = q_mat
     end
-    PMs.var(pm, nw)[:P_mx] = p_mat_dict
-    PMs.var(pm, nw)[:Q_mx] = q_mat_dict
+    _PMs.var(pm, nw)[:P_mx] = p_mat_dict
+    _PMs.var(pm, nw)[:Q_mx] = q_mat_dict
 end
 
 ""
-function variable_tp_branch_flow(pm::PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T<:LPdiagUBFForm
+function variable_tp_branch_flow(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T<:LPdiagUBFForm
     n_diag_el = n_cond
 
     for i in 1:n_diag_el
-        PMs.variable_active_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
-        PMs.variable_reactive_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
+        _PMs.variable_active_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
+        _PMs.variable_reactive_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
     end
 
     #Store dictionary with matrix variables by arc
     p_mat_dict = Dict{Tuple{Int64,Int64,Int64}, Any}()
     q_mat_dict = Dict{Tuple{Int64,Int64,Int64}, Any}()
 
-    for i in PMs.ref(pm, nw, :arcs)
+    for i in _PMs.ref(pm, nw, :arcs)
         l = i[1]
         f_bus = i[2]
-        branch = PMs.ref(pm, nw, :branch, l)
-        p_d =  [PMs.var(pm, nw, c, :p,    i) for c in 1:n_diag_el]
-        q_d =  [PMs.var(pm, nw, c, :q,    i) for c in 1:n_diag_el]
+        branch = _PMs.ref(pm, nw, :branch, l)
+        p_d =  [_PMs.var(pm, nw, c, :p,    i) for c in 1:n_diag_el]
+        q_d =  [_PMs.var(pm, nw, c, :q,    i) for c in 1:n_diag_el]
 
         ps_mat = p_d
         qs_mat = q_d
@@ -98,7 +98,7 @@ function variable_tp_branch_flow(pm::PMs.GenericPowerModel{T}; n_cond::Int=3, nw
         g_sh_fr = diagm(0 => branch["g_fr"].values)
         b_sh_fr = diagm(0 => branch["b_fr"].values)
 
-        w_fr_re = PMs.var(pm, nw, :W_re)[f_bus]
+        w_fr_re = _PMs.var(pm, nw, :W_re)[f_bus]
         w_fr_re_mx = [w_fr_re[1] 0 0; 0 w_fr_re[2] 0; 0 0 w_fr_re[3]]
 
         p_mat = ps_mat + diag(( w_fr_re_mx*(g_sh_fr)'))
@@ -108,25 +108,25 @@ function variable_tp_branch_flow(pm::PMs.GenericPowerModel{T}; n_cond::Int=3, nw
         p_mat_dict[i] = p_mat
         q_mat_dict[i] = q_mat
     end
-    PMs.var(pm, nw)[:P_mx] = p_mat_dict
-    PMs.var(pm, nw)[:Q_mx] = q_mat_dict
+    _PMs.var(pm, nw)[:P_mx] = p_mat_dict
+    _PMs.var(pm, nw)[:Q_mx] = q_mat_dict
 end
 
 """
 Defines branch flow model power flow equations
 """
-function constraint_tp_flow_losses(pm::PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to) where T <: LPfullUBFForm
-    p_fr = PMs.var(pm, n, :P_mx)[f_idx]
-    q_fr = PMs.var(pm, n, :Q_mx)[f_idx]
+function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to) where T <: LPfullUBFForm
+    p_fr = _PMs.var(pm, n, :P_mx)[f_idx]
+    q_fr = _PMs.var(pm, n, :Q_mx)[f_idx]
 
-    p_to = PMs.var(pm, n, :P_mx)[t_idx]
-    q_to = PMs.var(pm, n, :Q_mx)[t_idx]
+    p_to = _PMs.var(pm, n, :P_mx)[t_idx]
+    q_to = _PMs.var(pm, n, :Q_mx)[t_idx]
 
-    w_fr_re = PMs.var(pm, n, :W_re)[f_bus]
-    w_to_re = PMs.var(pm, n, :W_re)[t_bus]
+    w_fr_re = _PMs.var(pm, n, :W_re)[f_bus]
+    w_to_re = _PMs.var(pm, n, :W_re)[t_bus]
 
-    w_fr_im = PMs.var(pm, n, :W_im)[f_bus]
-    w_to_im = PMs.var(pm, n, :W_im)[t_bus]
+    w_fr_im = _PMs.var(pm, n, :W_im)[f_bus]
+    w_to_im = _PMs.var(pm, n, :W_im)[t_bus]
 
     JuMP.@constraint(pm.model, diag(p_fr) + diag(p_to) .==  diag(w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)' +  w_to_re*(g_sh_to)'  + w_to_im*(b_sh_to)'))
     JuMP.@constraint(pm.model, diag(q_fr) + diag(q_to) .==  diag(w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)' +  w_to_im*(g_sh_to)'  - w_to_re*(b_sh_to)'))
@@ -136,15 +136,15 @@ end
 """
 Defines branch flow model power flow equations
 """
-function constraint_tp_flow_losses(pm::PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to) where T <: LPdiagUBFForm
-    p_fr = PMs.var(pm, n, :P_mx)[f_idx]
-    q_fr = PMs.var(pm, n, :Q_mx)[f_idx]
+function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to) where T <: LPdiagUBFForm
+    p_fr = _PMs.var(pm, n, :P_mx)[f_idx]
+    q_fr = _PMs.var(pm, n, :Q_mx)[f_idx]
 
-    p_to = PMs.var(pm, n, :P_mx)[t_idx]
-    q_to = PMs.var(pm, n, :Q_mx)[t_idx]
+    p_to = _PMs.var(pm, n, :P_mx)[t_idx]
+    q_to = _PMs.var(pm, n, :Q_mx)[t_idx]
 
-    w_fr_re = PMs.var(pm, n, :W_re)[f_bus]
-    w_to_re = PMs.var(pm, n, :W_re)[t_bus]
+    w_fr_re = _PMs.var(pm, n, :W_re)[f_bus]
+    w_to_re = _PMs.var(pm, n, :W_re)[t_bus]
 
     JuMP.@constraint(pm.model, p_fr + p_to .== diag( g_sh_fr).*w_fr_re + diag( g_sh_to).*w_to_re)
     JuMP.@constraint(pm.model, q_fr + q_to .== diag(-b_sh_fr).*w_fr_re + diag(-b_sh_to).*w_to_re)
@@ -154,15 +154,15 @@ end
 """
 Defines voltage drop over a branch, linking from and to side voltage
 """
-function constraint_tp_voltage_magnitude_difference(pm::PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: LPfullUBFForm
-    w_fr_re = PMs.var(pm, n, :W_re)[f_bus]
-    w_fr_im = PMs.var(pm, n, :W_im)[f_bus]
+function constraint_tp_model_voltage_magnitude_difference(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: LPfullUBFForm
+    w_fr_re = _PMs.var(pm, n, :W_re)[f_bus]
+    w_fr_im = _PMs.var(pm, n, :W_im)[f_bus]
 
-    w_to_re = PMs.var(pm, n, :W_re)[t_bus]
-    w_to_im = PMs.var(pm, n, :W_im)[t_bus]
+    w_to_re = _PMs.var(pm, n, :W_re)[t_bus]
+    w_to_im = _PMs.var(pm, n, :W_im)[t_bus]
 
-    p_fr = PMs.var(pm, n, :P_mx)[f_idx]
-    q_fr = PMs.var(pm, n, :Q_mx)[f_idx]
+    p_fr = _PMs.var(pm, n, :P_mx)[f_idx]
+    q_fr = _PMs.var(pm, n, :Q_mx)[f_idx]
 
     p_s_fr = p_fr - (w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)')
     q_s_fr = q_fr - (w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)')
@@ -174,12 +174,12 @@ end
 """
 Defines voltage drop over a branch, linking from and to side voltage
 """
-function constraint_tp_voltage_magnitude_difference(pm::PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: LPdiagUBFForm
-    w_fr_re = PMs.var(pm, n, :W_re)[f_bus]
-    w_to_re = PMs.var(pm, n, :W_re)[t_bus]
+function constraint_tp_model_voltage_magnitude_difference(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: LPdiagUBFForm
+    w_fr_re = _PMs.var(pm, n, :W_re)[f_bus]
+    w_to_re = _PMs.var(pm, n, :W_re)[t_bus]
 
-    p_fr = PMs.var(pm, n, :P_mx)[f_idx]
-    q_fr = PMs.var(pm, n, :Q_mx)[f_idx]
+    p_fr = _PMs.var(pm, n, :P_mx)[f_idx]
+    q_fr = _PMs.var(pm, n, :Q_mx)[f_idx]
 
 
 
@@ -197,10 +197,10 @@ function constraint_tp_voltage_magnitude_difference(pm::PMs.GenericPowerModel{T}
 end
 
 ""
-function constraint_tp_theta_ref(pm::PMs.GenericPowerModel{T}, n::Int, i) where T <: LPdiagUBFForm
-    nconductors = length(PMs.conductor_ids(pm))
+function constraint_tp_theta_ref(pm::_PMs.GenericPowerModel{T}, n::Int, i) where T <: LPdiagUBFForm
+    nconductors = length(_PMs.conductor_ids(pm))
 
-    w_re = PMs.var(pm, n, :W_re)[i]
+    w_re = _PMs.var(pm, n, :W_re)[i]
     # balanced three-phase phasor
     JuMP.@constraint(pm.model, w_re[2:3]   .== w_re[1])
 end
