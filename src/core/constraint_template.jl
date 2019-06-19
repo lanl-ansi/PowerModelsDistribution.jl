@@ -159,7 +159,7 @@ function constraint_tp_model_current(pm::_PMs.GenericPowerModel{T}; nw::Int=pm.c
     end
 end
 
-
+#= ??? DEPRECIATED ???
 function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     branch = _PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
@@ -177,6 +177,7 @@ function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel, i::Int; nw::Int=p
 
     constraint_tp_flow_losses(pm::_PMs.GenericPowerModel, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
 end
+=#
 
 function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
     branch = _PMs.ref(pm, nw, :branch, i)
