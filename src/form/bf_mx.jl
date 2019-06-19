@@ -595,7 +595,7 @@ end
 ""
 function add_original_variables(sol, pm::PMs.GenericPowerModel)
     if !haskey(pm.setting, "output") || !haskey(pm.setting["output"], "branch_flows") || pm.setting["output"]["branch_flows"] == false
-        Memento.error(LOGGER, "deriving the original variables requires setting: branch_flows => true")
+        Memento.error(_LOGGER, "deriving the original variables requires setting: branch_flows => true")
     end
 
     for (nw, network) in pm.PMs.ref[:nw]

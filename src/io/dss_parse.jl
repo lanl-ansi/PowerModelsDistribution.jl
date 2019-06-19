@@ -18,7 +18,7 @@ function parse_rpn(expr::AbstractString, dtype::Type=Float64)
     clean_expr = strip(expr, array_delimiters)
 
     if occursin("rollup", clean_expr) || occursin("rolldn", clean_expr) || occursin("swap", clean_expr)
-        Memento.warn(LOGGER, "parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String")
+        Memento.warn(_LOGGER, "parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String")
         return expr
     end
 
@@ -42,13 +42,13 @@ function parse_rpn(expr::AbstractString, dtype::Type=Float64)
             end
         catch error
             if isa(error, ArgumentError)
-                Memento.warn(LOGGER, "\"$expr\" is not valid Reverse Polish Notation, leaving as String")
+                Memento.warn(_LOGGER, "\"$expr\" is not valid Reverse Polish Notation, leaving as String")
                 return expr
             end
         end
     end
     if length(stack) > 1
-        Memento.warn(LOGGER, "\"$expr\" is not valid Reverse Polish Notation, leaving as String")
+        Memento.warn(_LOGGER, "\"$expr\" is not valid Reverse Polish Notation, leaving as String")
         return expr
     else
         return stack[1]
@@ -76,7 +76,7 @@ function parse_conn(conn::String)::String
     elseif conn in ["delta", "ll"]
         return "delta"
     else
-        Memento.warn(LOGGER, "Unsupported connection $conn, defaulting to \"wye\"")
+        Memento.warn(_LOGGER, "Unsupported connection $conn, defaulting to \"wye\"")
         return "wye"
     end
 end
@@ -602,7 +602,7 @@ defined, an empty dictionary will be used. Assumes that unnamed properties are
 given in order, but named properties can be given anywhere.
 """
 function _parse_component(component::AbstractString, properties::AbstractString, compDict::Dict=Dict{String,Any}())
-    Memento.debug(LOGGER, "Properties: $properties")
+    Memento.debug(_LOGGER, "Properties: $properties")
     ctype, name = split(component, '.'; limit=2)
 
     if !haskey(compDict, "name")
@@ -610,7 +610,7 @@ function _parse_component(component::AbstractString, properties::AbstractString,
     end
 
     propArray = _parse_properties(properties)
-    Memento.debug(LOGGER, "propArray: $propArray")
+    Memento.debug(_LOGGER, "propArray: $propArray")
 
     propNames = get_prop_name(ctype)
     propIdx = 1
@@ -722,7 +722,7 @@ function _assign_property!(dss_data::Dict, cType::AbstractString, cName::Abstrac
             end
         end
     else
-        Memento.warn(LOGGER, "Cannot find $cType object $cName.")
+        Memento.warn(_LOGGER, "Cannot find $cType object $cName.")
     end
 end
 
@@ -737,7 +737,7 @@ Will also parse files defined inside of the originating DSS file via the
 """
 function parse_dss(io::IOStream)::Dict
     filename = match(r"^<file\s(.+)>$", io.name).captures[1]
-    Memento.info(LOGGER, "Calling parse_dss on $filename")
+    Memento.info(_LOGGER, "Calling parse_dss on $filename")
     currentFile = split(filename, "/")[end]
     path = join(split(filename, '/')[1:end-1], '/')
     dss_data = Dict{String,Array}()
@@ -754,7 +754,7 @@ function parse_dss(io::IOStream)::Dict
 
     for (n, line) in enumerate(stripped_lines)
         real_line_num = findall(lines .== line)[1]
-        Memento.debug(LOGGER, "LINE $real_line_num: $line")
+        Memento.debug(_LOGGER, "LINE $real_line_num: $line")
         line = _strip_comments(line)
 
         if startswith(strip(line), '~')
@@ -771,26 +771,26 @@ function parse_dss(io::IOStream)::Dict
             cmd = lowercase(line_elements[1])
 
             if cmd == "clear"
-                Memento.info(LOGGER, "`dss_data` has been reset with the \"clear\" command.")
+                Memento.info(_LOGGER, "`dss_data` has been reset with the \"clear\" command.")
                 dss_data = Dict{String,Array}("filename"=>dss_data["filename"])
                 continue
 
             elseif cmd == "redirect"
                 file = line_elements[2]
                 fullpath = path == "" ? file : join([path, file], '/')
-                Memento.info(LOGGER, "Redirecting to file \"$file\"")
+                Memento.info(_LOGGER, "Redirecting to file \"$file\"")
                 _merge_dss!(dss_data, parse_dss(fullpath))
                 continue
 
             elseif cmd == "compile"
                 file = split(strip(line_elements[2], ['(',')']), '\\')[end]
                 fullpath = path == "" ? file : join([path, file], '/')
-                Memento.info(LOGGER, "Compiling file \"$file\"")
+                Memento.info(_LOGGER, "Compiling file \"$file\"")
                 _merge_dss!(dss_data, parse_dss(fullpath))
                 continue
 
             elseif cmd == "set"
-                Memento.debug(LOGGER, "set command: $line_elements")
+                Memento.debug(_LOGGER, "set command: $line_elements")
                 if length(line_elements) == 2
                     property, value = split(lowercase(line_elements[2]), '='; limit=2)
                 else
@@ -807,7 +807,7 @@ function parse_dss(io::IOStream)::Dict
             elseif cmd == "buscoords"
                 file = line_elements[2]
                 fullpath = path == "" ? file : join([path, file], '/')
-                Memento.debug(LOGGER, "Buscoords path: $fullpath")
+                Memento.debug(_LOGGER, "Buscoords path: $fullpath")
                 dss_data["buscoords"] = parse_buscoords(fullpath)
 
             elseif cmd == "new"
@@ -821,11 +821,11 @@ function parse_dss(io::IOStream)::Dict
                         _assign_property!(dss_data, cType, cName, propName, propValue)
                     end
                 catch
-                    Memento.warn(LOGGER, "Command \"$cmd\" on line $real_line_num in \"$currentFile\" is not supported, skipping.")
+                    Memento.warn(_LOGGER, "Command \"$cmd\" on line $real_line_num in \"$currentFile\" is not supported, skipping.")
                 end
             end
 
-            Memento.debug(LOGGER, "size curCompDict: $(length(curCompDict))")
+            Memento.debug(_LOGGER, "size curCompDict: $(length(curCompDict))")
             if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')
                 continue
             elseif length(curCompDict) > 0
@@ -836,7 +836,7 @@ function parse_dss(io::IOStream)::Dict
         end
     end
 
-    Memento.info(LOGGER, "Done parsing $filename")
+    Memento.info(_LOGGER, "Done parsing $filename")
     return dss_data
 end
 
@@ -874,7 +874,7 @@ function parse_element_with_dtype(dtype, element)
             try
                 out = parse(dtype, element)
             catch
-                Memento.warn(LOGGER, "cannot parse $element as $dtype, leaving as String.")
+                Memento.warn(_LOGGER, "cannot parse $element as $dtype, leaving as String.")
                 out = element
             end
         end
@@ -893,12 +893,12 @@ the default properties from the `get_prop_default` function.
 function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
     for compType in toParse
         if haskey(dss_data, compType)
-            Memento.debug(LOGGER, "type: $compType")
+            Memento.debug(_LOGGER, "type: $compType")
             for item in dss_data[compType]
                 dtypes = _get_dtypes(compType)
                 for (k, v) in item
                     if haskey(dtypes, k)
-                        Memento.debug(LOGGER, "key: $k")
+                        Memento.debug(_LOGGER, "key: $k")
                         if isa(v, Array)
                             arrout = []
                             for el in v
@@ -912,7 +912,7 @@ function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
                         elseif isa(v, AbstractString)
                             item[k] = parse_element_with_dtype(dtypes[k], v)
                         else
-                            Memento.error(LOGGER, "dtype unknown $compType, $k, $v")
+                            Memento.error(_LOGGER, "dtype unknown $compType, $k, $v")
                         end
                     end
                 end

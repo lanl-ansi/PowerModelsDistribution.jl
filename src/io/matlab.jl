@@ -102,7 +102,7 @@ function parse_matlab_string(data_string::String)
     if func_name != nothing
         case["name"] = func_name
     else
-        Memento.warn(LOGGER, string("no case name found in matlab file.  The file seems to be missing \"function mpc = ...\""))
+        Memento.warn(_LOGGER, string("no case name found in matlab file.  The file seems to be missing \"function mpc = ...\""))
         case["name"] = "no_name_found"
     end
 
@@ -110,7 +110,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "tppmc.version")
         case["source_version"] = string(VersionNumber(matlab_data["tppmc.version"]))
     else
-        Memento.warn(LOGGER, "No version number found, file may not be compatible with parser.")
+        Memento.warn(_LOGGER, "No version number found, file may not be compatible with parser.")
         case["source_version"] = string(v"0")
 
     end
@@ -118,14 +118,14 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "tppmc.baseMVA")
         case["baseMVA"] = matlab_data["tppmc.baseMVA"]
     else
-        Memento.warn(LOGGER, string("no baseMVA found in matlab file.  The file seems to be missing \"tppmc.baseMVA = ...\""))
+        Memento.warn(_LOGGER, string("no baseMVA found in matlab file.  The file seems to be missing \"tppmc.baseMVA = ...\""))
         case["baseMVA"] = 1.0
     end
 
     if haskey(matlab_data, "tppmc.baseKV")
         case["baseKV"] = matlab_data["tppmc.baseKV"]
     else
-        Memento.warn(LOGGER, string("no baseKV found in matlab file.  The file seems to be missing \"tppmc.baseKV = ...\""))
+        Memento.warn(_LOGGER, string("no baseKV found in matlab file.  The file seems to be missing \"tppmc.baseKV = ...\""))
         case["baseKV"] = 1.0
     end
 
@@ -232,10 +232,10 @@ function parse_matlab_string(data_string::String)
                     push!(tbl, row_data)
                 end
                 case[case_name] = tbl
-                Memento.info(LOGGER, "extending matlab format with data: $(case_name) $(length(tbl))x$(length(tbl[1])-1)")
+                Memento.info(_LOGGER, "extending matlab format with data: $(case_name) $(length(tbl))x$(length(tbl[1])-1)")
             else
                 case[case_name] = value
-                Memento.info(LOGGER, "extending matlab format with constant data: $(case_name)")
+                Memento.info(_LOGGER, "extending matlab format with constant data: $(case_name)")
             end
         end
     end
@@ -253,7 +253,7 @@ function _translate_version!(ml_data::Dict{String,Any})
     if ml_data["source_version"] == _current_version
         return ml_data
     else
-        Memento.warn(LOGGER, "matlab source data has unrecognized version $(ml_data["source_version"]), cannot translate to version $_current_version, parse may be invalid")
+        Memento.warn(_LOGGER, "matlab source data has unrecognized version $(ml_data["source_version"]), cannot translate to version $_current_version, parse may be invalid")
         return ml_data
     end
 end

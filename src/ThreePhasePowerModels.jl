@@ -10,7 +10,7 @@ import LinearAlgebra
 const PMs = PowerModels
 
 function __init__()
-    global LOGGER = Memento.getlogger(PowerModels)
+    global _LOGGER = Memento.getlogger(PowerModels)
 end
 
 include("core/ref.jl")

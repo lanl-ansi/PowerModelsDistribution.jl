@@ -188,7 +188,7 @@ function _createLine(bus1, bus2, name::AbstractString; kwargs...)
     len = get(kwargs, :length, 1.0) * to_meters[units]
 
     if haskey(kwargs, :rg)
-        Memento.warn(LOGGER, "Rg,Xg are not fully supported")
+        Memento.warn(_LOGGER, "Rg,Xg are not fully supported")
     end
 
     rmatrix .+= rg * (freq/basefreq - 1.0)
@@ -943,7 +943,7 @@ function _createPVSystem(bus1, name::AbstractString; kwargs...)
     end
 
     if haskey(kwargs, :like)
-        Memento.warn(LOGGER, "\"like\" keyword on pvsystem $name is not supported.")
+        Memento.warn(_LOGGER, "\"like\" keyword on pvsystem $name is not supported.")
     end
 
     pvsystem = Dict{String,Any}("name" => name,

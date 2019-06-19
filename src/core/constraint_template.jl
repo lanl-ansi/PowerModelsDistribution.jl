@@ -207,7 +207,7 @@ end
 
 function constraint_tp_trans(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
     if PMs.ref(pm, pm.cnw, :conductors)!=3
-        Memento.error(LOGGER, "Transformers only work with networks with three conductors.")
+        Memento.error(_LOGGER, "Transformers only work with networks with three conductors.")
     end
     (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
     f_bus = PMs.ref(pm, :trans, i)["f_bus"]
@@ -222,7 +222,7 @@ end
 
 function constraint_tp_oltc(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
     if PMs.ref(pm, pm.cnw, :conductors)!=3
-        Memento.error(LOGGER, "Transformers only work with networks with three conductors.")
+        Memento.error(_LOGGER, "Transformers only work with networks with three conductors.")
     end
     (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = calc_tp_trans_Tvi(pm, i)
     trans = PMs.ref(pm, :trans, i)
