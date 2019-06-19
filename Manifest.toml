@@ -77,9 +77,9 @@ version = "0.10.3"
 
 [[InfrastructureModels]]
 deps = ["JuMP", "Memento"]
-git-tree-sha1 = "ec3f1ba27dbfd29a93f3c520ee189ce32deec049"
+git-tree-sha1 = "131d2d24a2a0d404f59dceab2fb8f8cca2aadce5"
 uuid = "2030c09a-7f63-5d83-885d-db604e0e9cc0"
-version = "0.2.0"
+version = "0.2.1"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -93,9 +93,9 @@ version = "0.20.0"
 
 [[JuMP]]
 deps = ["Calculus", "DataStructures", "ForwardDiff", "LinearAlgebra", "MathOptInterface", "NaNMath", "Random", "SparseArrays", "Statistics"]
-git-tree-sha1 = "5df42febdee8ac7db9de66c712e439a6ff06459d"
+git-tree-sha1 = "a37fdb14ee3a04b4df44c20a73da89c57035bdf2"
 uuid = "4076af6c-e467-56ae-b986-b466b2749572"
-version = "0.19.1"
+version = "0.19.2"
 
 [[LibGit2]]
 uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
@@ -153,9 +153,11 @@ uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [[PowerModels]]
 deps = ["InfrastructureModels", "JSON", "JuMP", "LinearAlgebra", "MathOptInterface", "Memento", "SparseArrays"]
-git-tree-sha1 = "c9d4280b0cd1cd6dc10bca03d8c17950a1f90e8a"
+git-tree-sha1 = "d766058e401a32e43e916b881ca2b5a19e208656"
+repo-rev = "setpoint-fix"
+repo-url = "https://github.com/lanl-ansi/PowerModels.jl.git"
 uuid = "c36e90e8-916a-50a6-bd94-075b64ef4655"
-version = "0.11.1"
+version = "0.12.0"
 
 [[Printf]]
 deps = ["Unicode"]
@@ -193,10 +195,10 @@ uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
 version = "0.7.2"
 
 [[StaticArrays]]
-deps = ["InteractiveUtils", "LinearAlgebra", "Random", "Statistics", "Test"]
-git-tree-sha1 = "3841b39ed5f047db1162627bf5f80a9cd3e39ae2"
+deps = ["LinearAlgebra", "Random", "Statistics"]
+git-tree-sha1 = "db23bbf50064c582b6f2b9b043c8e7e98ea8c0c6"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "0.10.3"
+version = "0.11.0"
 
 [[Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]

@@ -28,7 +28,7 @@ end
 
 "delegate back to PowerModels"
 function constraint_tp_voltage(pm::PMs.GenericPowerModel{T}, n::Int, c::Int) where T <: PMs.AbstractACRForm
-    PMs.constraint_voltage(pm, n, c)
+    PMs. constraint_model_voltage(pm, n, c)
 end
 
 

@@ -212,7 +212,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             loadDict["index"] = length(tppm_data["load"]) + 1
 
             used = ["phases", "bus1", "name"]
-            PMs.import_remaining!(loadDict, defaults, import_all; exclude=used)
+            PMs._import_remaining!(loadDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["load"], loadDict)
         end
@@ -261,7 +261,7 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             shuntDict["source_id"] = "capacitor.$(defaults["name"])"
 
             used = ["bus1", "phases", "name"]
-            PMs.import_remaining!(shuntDict, defaults, import_all; exclude=used)
+            PMs._import_remaining!(shuntDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["shunt"], shuntDict)
         end
@@ -296,7 +296,7 @@ function dss2tppm_shunt!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 shuntDict["source_id"] = "reactor.$(defaults["name"])"
 
                 used = ["bus1", "phases", "name"]
-                PMs.import_remaining!(shuntDict, defaults, import_all; exclude=used)
+                PMs._import_remaining!(shuntDict, defaults, import_all; exclude=used)
 
                 push!(tppm_data["shunt"], shuntDict)
             end
@@ -350,7 +350,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
     genDict["source_id"] = "vsource.$(defaults["name"])"
 
     used = ["name", "phases", "bus1"]
-    PMs.import_remaining!(genDict, defaults, import_all; exclude=used)
+    PMs._import_remaining!(genDict, defaults, import_all; exclude=used)
 
     push!(tppm_data["gen"], genDict)
 
@@ -417,7 +417,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             genDict["source_id"] = "generator.$(defaults["name"])"
 
             used = ["name", "phases", "bus1"]
-            PMs.import_remaining!(genDict, defaults, import_all; exclude=used)
+            PMs._import_remaining!(genDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["gen"], genDict)
         end
@@ -465,7 +465,7 @@ function dss2tppm_gen!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             pvDict["source_id"] = "pvsystem.$(defaults["name"])"
 
             used = ["name", "phases", "bus1"]
-            PMs.import_remaining!(pvDict, defaults, import_all; exclude=used)
+            PMs._import_remaining!(pvDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["gen"], pvDict)
         end
@@ -578,7 +578,7 @@ function dss2tppm_branch!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["source_id"] = "line.$(defaults["name"])"
 
             used = ["name", "bus1", "bus2", "rmatrix", "xmatrix"]
-            PMs.import_remaining!(branchDict, defaults, import_all; exclude=used)
+            PMs._import_remaining!(branchDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["branch"], branchDict)
         end
@@ -858,7 +858,7 @@ function dss2tppm_reactor!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
                 reactDict["source_id"] = "reactor.$(defaults["name"])"
 
                 used = []
-                PMs.import_remaining!(reactDict, defaults, import_all; exclude=used)
+                PMs._import_remaining!(reactDict, defaults, import_all; exclude=used)
 
                 push!(tppm_data["branch"], reactDict)
             end
@@ -898,7 +898,7 @@ function dss2tppm_pvsystem!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             pvsystemDict["source_id"] = "pvsystem.$(defaults["name"])"
 
             used = ["phases", "bus1", "name"]
-            PMs.import_remaining!(pvsystemDict, defaults, import_all; exclude=used)
+            PMs._import_remaining!(pvsystemDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["pvsystem"], pvsystemDict)
         end
@@ -942,7 +942,7 @@ function dss2tppm_storage!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             storageDict["source_id"] = "storage.$(defaults["name"])"
 
             used = ["phases", "bus1", "name"]
-            PMs.import_remaining!(storageDict, defaults, import_all; exclude=used)
+            PMs._import_remaining!(storageDict, defaults, import_all; exclude=used)
 
             push!(tppm_data["storage"], storageDict)
         end

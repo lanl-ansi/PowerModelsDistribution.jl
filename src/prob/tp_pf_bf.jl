@@ -5,7 +5,7 @@ function run_tp_pf_bf(data::Dict{String,Any}, model_constructor, solver; kwargs.
     if model_constructor != SDPUBFPowerModel && model_constructor != SOCNLPUBFPowerModel && model_constructor != SOCConicUBFPowerModel && model_constructor != LPUBFPowerModel && model_constructor != LPdiagUBFPowerModel && model_constructor !=  SOCBFPowerModel
         Memento.error(LOGGER, "The problem type tp_opf_bf at the moment only supports a limited set of formulations")
     end
-    return PMs.run_generic_model(data, model_constructor, solver, post_tp_pf_bf; solution_builder=get_solution_tp, multiconductor=true, kwargs...)
+    return PMs.run_model(data, model_constructor, solver, post_tp_pf_bf; solution_builder=get_solution_tp, multiconductor=true, kwargs...)
 end
 
 
@@ -15,7 +15,7 @@ function run_tp_pf_bf(file::String, model_constructor, solver; kwargs...)
         Memento.error(LOGGER, "The problem type tp_opf_bf at the moment only supports a limited set of formulations")
     end
     data = ThreePhasePowerModels.parse_file(file)
-    return PMs.run_generic_model(data, model_constructor, solver, post_tp_pf_bf; solution_builder=get_solution_tp, multiconductor=true, kwargs...)
+    return PMs.run_model(data, model_constructor, solver, post_tp_pf_bf; solution_builder=get_solution_tp, multiconductor=true, kwargs...)
 end
 
 
@@ -32,6 +32,8 @@ function post_tp_pf_bf(pm::PMs.GenericPowerModel)
     end
 
     # Constraints
+    constraint_tp_branch_current(pm)
+
     for (i,bus) in PMs.ref(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)
 
@@ -42,7 +44,7 @@ function post_tp_pf_bf(pm::PMs.GenericPowerModel)
     end
 
     for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
-        PMs.constraint_kcl_shunt(pm, i, cnd=c)
+        PMs. constraint_power_balance_shunt(pm, i, cnd=c)
 
         # PV Bus Constraints
         if length(PMs.ref(pm, :bus_gens, i)) > 0 && !(i in PMs.ids(pm,:ref_buses))
@@ -60,9 +62,6 @@ function post_tp_pf_bf(pm::PMs.GenericPowerModel)
         constraint_tp_flow_losses(pm, i)
 
         constraint_tp_voltage_magnitude_difference(pm, i)
-
-        constraint_tp_branch_current(pm, i)
-
 
         for c in PMs.conductor_ids(pm)
             constraint_voltage_angle_difference(pm, i, cnd=c)

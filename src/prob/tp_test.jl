@@ -7,7 +7,7 @@
 
 "opf with storage"
 function run_tp_strg_opf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return PMs.run_generic_model(data, model_constructor, solver, post_tp_strg_opf; multiconductor=true, kwargs...)
+    return PMs.run_model(data, model_constructor, solver, post_tp_strg_opf; multiconductor=true, kwargs...)
 end
 
 ""
@@ -28,7 +28,7 @@ function post_tp_strg_opf(pm::PMs.GenericPowerModel)
     end
 
     for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
-        PMs.constraint_kcl_shunt_storage(pm, i, cnd=c)
+        PMs.constraint_power_balance_shunt_storage(pm, i, cnd=c)
     end
 
     for i in PMs.ids(pm, :storage)
@@ -63,7 +63,7 @@ end
 
 "multi-network opf with storage"
 function run_mn_tp_strg_opf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return PMs.run_generic_model(data, model_constructor, solver, post_mn_tp_strg_opf; multiconductor=true, multinetwork=true, kwargs...)
+    return PMs.run_model(data, model_constructor, solver, post_mn_tp_strg_opf; multiconductor=true, multinetwork=true, kwargs...)
 end
 
 ""
@@ -85,7 +85,7 @@ function post_mn_tp_strg_opf(pm::PMs.GenericPowerModel)
         end
 
         for i in PMs.ids(pm, :bus, nw=n), c in PMs.conductor_ids(pm, nw=n)
-            PMs.constraint_kcl_shunt_storage(pm, i, cnd=c, nw=n)
+            PMs.constraint_power_balance_shunt_storage(pm, i, cnd=c, nw=n)
         end
 
         for i in PMs.ids(pm, :storage, nw=n)

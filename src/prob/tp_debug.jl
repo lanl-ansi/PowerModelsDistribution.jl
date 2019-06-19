@@ -5,14 +5,14 @@ export run_tp_opf_pbs, run_tp_pf_pbs
 
 ""
 function run_tp_opf_pbs(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf_pbs; multiconductor=true, solution_builder = get_pbs_solution, kwargs...)
+    return PMs.run_model(data, model_constructor, solver, post_tp_opf_pbs; multiconductor=true, solution_builder = get_pbs_solution, kwargs...)
 end
 
 
 ""
 function run_tp_opf_pbs(file::String, model_constructor, solver; kwargs...)
     data = ThreePhasePowerModels.parse_file(file)
-    return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf_pbs; multiconductor=true, solution_builder = get_pbs_solution, kwargs...)
+    return PMs.run_model(data, model_constructor, solver, post_tp_opf_pbs; multiconductor=true, solution_builder = get_pbs_solution, kwargs...)
 end
 
 
@@ -58,14 +58,14 @@ end
 
 ""
 function run_tp_pf_pbs(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return PMs.run_generic_model(data, model_constructor, solver, post_tp_pf_pbs; multiconductor=true, solution_builder = get_pbs_solution, kwargs...)
+    return PMs.run_model(data, model_constructor, solver, post_tp_pf_pbs; multiconductor=true, solution_builder = get_pbs_solution, kwargs...)
 end
 
 
 ""
 function run_tp_pf_pbs(file::String, model_constructor, solver; kwargs...)
     data = ThreePhasePowerModels.parse_file(file)
-    return PMs.run_generic_model(data, model_constructor, solver, post_tp_pf_pbs; multiconductor=true, solution_builder = get_pbs_solution, kwargs...)
+    return PMs.run_model(data, model_constructor, solver, post_tp_pf_pbs; multiconductor=true, solution_builder = get_pbs_solution, kwargs...)
 end
 
 ""
@@ -130,15 +130,15 @@ end
 
 ""
 function get_pbs_solution(pm::PMs.GenericPowerModel, sol::Dict{String,Any})
-    PMs.add_bus_voltage_setpoint(sol, pm)
-    PMs.add_generator_power_setpoint(sol, pm)
-    PMs.add_branch_flow_setpoint(sol, pm)
+    PMs. add_setpoint_bus_voltage!(sol, pm)
+    PMs.add_setpoint_generator_power!(sol, pm)
+    PMs.add_setpoint_branch_flow!(sol, pm)
     add_bus_slack_setpoint(sol, pm)
 end
 
 
 ""
 function add_bus_slack_setpoint(sol, pm::PMs.GenericPowerModel)
-    PMs.add_setpoint(sol, pm, "bus", "p_slack", :p_slack)
-    PMs.add_setpoint(sol, pm, "bus", "q_slack", :q_slack)
+    PMs. add_setpoint!(sol, pm, "bus", "p_slack", :p_slack, status_name="bus_type", inactive_status_value=4)
+    PMs. add_setpoint!(sol, pm, "bus", "q_slack", :q_slack, status_name="bus_type", inactive_status_value=4)
 end

@@ -205,7 +205,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "tppmc.gencost")
         gencost = []
         for (i, gencost_row) in enumerate(matlab_data["tppmc.gencost"])
-            gencost_data = PMs.mp_cost_data(gencost_row)
+            gencost_data = PMs._mp_cost_data(gencost_row)
             gencost_data["index"] = i
             push!(gencost, gencost_data)
         end
@@ -284,10 +284,10 @@ function matlab_to_tppm(ml_data::Dict{String,Any})
     ml2pm_gen(ml_data)
     ml2pm_branch(ml_data)
 
-    PMs.merge_bus_name_data(ml_data)
-    PMs.merge_generator_cost_data(ml_data)
+    PMs._merge_bus_name_data!(ml_data)
+    PMs._merge_generator_cost_data!(ml_data)
 
-    PMs.merge_generic_data(ml_data)
+    PMs._merge_generic_data!(ml_data)
 
     InfrastructureModels.arrays_to_dicts!(ml_data)
 

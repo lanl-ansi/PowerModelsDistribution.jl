@@ -102,22 +102,22 @@ function variable_tp_voltage_prod_hermitian(pm::PMs.GenericPowerModel{T}; n_cond
             [i in PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(c)_wr",
             lower_bound = -wmaxdict[i][c],
             upper_bound =  wmaxdict[i][c],
-            start = PMs.getval(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
+            start = PMs. comp_start_value(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
             PMs.var(pm, nw, c)[:wi] = JuMP.@variable(pm.model,
             [i in PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(c)_wi",
             lower_bound = -wmaxdict[i][c],
             upper_bound =  wmaxdict[i][c],
-            start = PMs.getval(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
+            start = PMs. comp_start_value(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
         else
             PMs.var(pm, nw, c)[:wr] = JuMP.@variable(pm.model,
             [i in PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(c)_wr",
-            start = PMs.getval(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
+            start = PMs. comp_start_value(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
             PMs.var(pm, nw, c)[:wi] = JuMP.@variable(pm.model,
             [i in PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(c)_wi",
-            start = PMs.getval(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
+            start = PMs. comp_start_value(PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
             )
         end
     end
@@ -174,13 +174,13 @@ function variable_tp_branch_series_current_prod_hermitian(pm::PMs.GenericPowerMo
             [l in PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_cm",
             lower_bound = 0,
             upper_bound = (cmax[l][c])^2,
-            start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
+            start = PMs. comp_start_value(PMs.ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
             )
         else
             PMs.var(pm, nw, c)[:cm] = JuMP.@variable(pm.model,
             [l in PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_cm",
             lower_bound = 0,
-            start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c)
+            start = PMs. comp_start_value(PMs.ref(pm, nw, :branch, l), "i_start", c)
             )
         end
         # PowerModels.variable_current_magnitude_sqr(pm, nw=nw, cnd=c)
@@ -192,24 +192,24 @@ function variable_tp_branch_series_current_prod_hermitian(pm::PMs.GenericPowerMo
             [l in PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_ccmr",
             lower_bound = -(cmax[l][c])^2,
             upper_bound = (cmax[l][c])^2,
-            start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
+            start = PMs. comp_start_value(PMs.ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
             )
             PMs.var(pm, nw, c)[:ccmi] = JuMP.@variable(pm.model,
             [l in PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_ccmi",
             lower_bound = -(cmax[l][c])^2,
             upper_bound = (cmax[l][c])^2,
-            start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c)
+            start = PMs. comp_start_value(PMs.ref(pm, nw, :branch, l), "i_start", c)
             )
         else
             PMs.var(pm, nw, c)[:ccmr] = JuMP.@variable(pm.model,
             [l in PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_ccmr",
             # lower_bound = 0,
-            start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c)
+            start = PMs. comp_start_value(PMs.ref(pm, nw, :branch, l), "i_start", c)
             )
             PMs.var(pm, nw, c)[:ccmi] = JuMP.@variable(pm.model,
             [l in PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_ccmi",
             # lower_bound = 0,
-            start = PMs.getval(PMs.ref(pm, nw, :branch, l), "i_start", c)
+            start = PMs. comp_start_value(PMs.ref(pm, nw, :branch, l), "i_start", c)
             )
         end
     end
@@ -287,12 +287,12 @@ function variable_lower_triangle_active_branch_flow(pm::PMs.GenericPowerModel; n
         [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_p_lt",
         lower_bound = -smaxdict[(l,i,j)][cnd],
         upper_bound =  smaxdict[(l,i,j)][cnd],
-        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
+        start = PMs. comp_start_value(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
         )
     else
         PMs.var(pm, nw, cnd)[:p_lt] = JuMP.@variable(pm.model,
         [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_p_lt",
-        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
+        start = PMs. comp_start_value(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
         )
     end
 end
@@ -313,12 +313,12 @@ function variable_lower_triangle_reactive_branch_flow(pm::PMs.GenericPowerModel;
         [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_q_lt",
         lower_bound = -smaxdict[(l,i,j)][cnd],
         upper_bound =  smaxdict[(l,i,j)][cnd],
-        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
+        start = PMs. comp_start_value(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
         )
     else
         PMs.var(pm, nw, cnd)[:q_lt] = JuMP.@variable(pm.model,
         [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_q_lt",
-        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
+        start = PMs. comp_start_value(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
         )
     end
 end
@@ -339,12 +339,12 @@ function variable_upper_triangle_active_branch_flow(pm::PMs.GenericPowerModel; n
         [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_p_ut",
         lower_bound = -smaxdict[(l,i,j)][cnd],
         upper_bound =  smaxdict[(l,i,j)][cnd],
-        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
+        start = PMs. comp_start_value(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
         )
     else
         PMs.var(pm, nw, cnd)[:p_ut] = JuMP.@variable(pm.model,
         [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_p_ut",
-        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
+        start = PMs. comp_start_value(PMs.ref(pm, nw, :branch, l), "p_start", cnd)
         )
     end
 end
@@ -364,12 +364,12 @@ function variable_upper_triangle_reactive_branch_flow(pm::PMs.GenericPowerModel;
         [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_q_ut",
         lower_bound = -smaxdict[(l,i,j)][cnd],
         upper_bound =  smaxdict[(l,i,j)][cnd],
-        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
+        start = PMs. comp_start_value(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
         )
     else
         PMs.var(pm, nw, cnd)[:q_ut] = JuMP.@variable(pm.model,
         [(l,i,j) in PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_q_ut",
-        start = PMs.getval(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
+        start = PMs. comp_start_value(PMs.ref(pm, nw, :branch, l), "q_start", cnd)
         )
     end
 end
@@ -456,13 +456,13 @@ end
 ""
 function get_solution_tp(pm::PMs.GenericPowerModel, sol::Dict{String,Any})
     add_bus_voltage_setpoint(sol, pm)
-    PMs.add_generator_power_setpoint(sol, pm)
+    PMs.add_setpoint_generator_power!(sol, pm)
     add_branch_flow_setpoint(sol, pm)
     add_branch_current_setpoint(sol, pm)
-    PMs.add_dcline_flow_setpoint(sol, pm)
+    PMs.add_setpoint_dcline_flow!(sol, pm)
 
-    PMs.add_kcl_duals(sol, pm)
-    PMs.add_sm_duals(sol, pm) # Adds the duals of the transmission lines' thermal limits.
+    PMs.add_dual_kcl!(sol, pm)
+    PMs.add_dual_sm!(sol, pm) # Adds the duals of the transmission lines' thermal limits.
 
     if haskey(pm.setting, "output") && haskey(pm.setting["output"], "original_variables") && pm.setting["output"]["original_variables"] == true
         add_rank(sol, pm)
@@ -474,28 +474,28 @@ end
 
 ""
 function add_bus_voltage_setpoint(sol, pm::PMs.GenericPowerModel)
-    PMs.add_setpoint(sol, pm, "bus", "vm", :w; scale = (x,item,i) -> sqrt(x))
-    PMs.add_setpoint(sol, pm, "bus", "w",  :w)
-    PMs.add_setpoint(sol, pm, "bus", "wr", :wr)
-    PMs.add_setpoint(sol, pm, "bus", "wi", :wi)
+    PMs. add_setpoint!(sol, pm, "bus", "vm", :w; scale = (x,item,i) -> sqrt(x), status_name="bus_type", inactive_status_value=4)
+    PMs. add_setpoint!(sol, pm, "bus", "w",  :w, status_name="bus_type", inactive_status_value=4)
+    PMs. add_setpoint!(sol, pm, "bus", "wr", :wr, status_name="bus_type", inactive_status_value=4)
+    PMs. add_setpoint!(sol, pm, "bus", "wi", :wi, status_name="bus_type", inactive_status_value=4)
 end
 
 ""
 function add_branch_flow_setpoint(sol, pm::PMs.GenericPowerModel)
     if haskey(pm.setting, "output") && haskey(pm.setting["output"], "branch_flows") && pm.setting["output"]["branch_flows"] == true
-        PMs.add_setpoint(sol, pm, "branch", "pf", :p; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])])
-        PMs.add_setpoint(sol, pm, "branch", "qf", :q; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])])
-        PMs.add_setpoint(sol, pm, "branch", "pf_ut", :p_ut; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])])
-        PMs.add_setpoint(sol, pm, "branch", "qf_ut", :q_ut; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])])
-        PMs.add_setpoint(sol, pm, "branch", "pf_lt", :p_lt; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])])
-        PMs.add_setpoint(sol, pm, "branch", "qf_lt", :q_lt; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])])
+        PMs. add_setpoint!(sol, pm, "branch", "pf", :p; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])], status_name="br_status")
+        PMs. add_setpoint!(sol, pm, "branch", "qf", :q; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])], status_name="br_status")
+        PMs. add_setpoint!(sol, pm, "branch", "pf_ut", :p_ut; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])], status_name="br_status")
+        PMs. add_setpoint!(sol, pm, "branch", "qf_ut", :q_ut; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])], status_name="br_status")
+        PMs. add_setpoint!(sol, pm, "branch", "pf_lt", :p_lt; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])], status_name="br_status")
+        PMs. add_setpoint!(sol, pm, "branch", "qf_lt", :q_lt; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])], status_name="br_status")
 
-        PMs.add_setpoint(sol, pm, "branch", "pt", :p; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])])
-        PMs.add_setpoint(sol, pm, "branch", "qt", :q; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])])
-        PMs.add_setpoint(sol, pm, "branch", "pt_ut", :p_ut; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])])
-        PMs.add_setpoint(sol, pm, "branch", "qt_ut", :q_ut; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])])
-        PMs.add_setpoint(sol, pm, "branch", "pt_lt", :p_lt; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])])
-        PMs.add_setpoint(sol, pm, "branch", "qt_lt", :q_lt; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])])
+        PMs. add_setpoint!(sol, pm, "branch", "pt", :p; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])], status_name="br_status")
+        PMs. add_setpoint!(sol, pm, "branch", "qt", :q; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])], status_name="br_status")
+        PMs. add_setpoint!(sol, pm, "branch", "pt_ut", :p_ut; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])], status_name="br_status")
+        PMs. add_setpoint!(sol, pm, "branch", "qt_ut", :q_ut; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])], status_name="br_status")
+        PMs. add_setpoint!(sol, pm, "branch", "pt_lt", :p_lt; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])], status_name="br_status")
+        PMs. add_setpoint!(sol, pm, "branch", "qt_lt", :q_lt; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])], status_name="br_status")
 
     end
 end
@@ -504,10 +504,10 @@ end
 ""
 function add_branch_current_setpoint(sol, pm::PMs.GenericPowerModel)
     if haskey(pm.setting, "output") && haskey(pm.setting["output"], "branch_flows") && pm.setting["output"]["branch_flows"] == true
-        PMs.add_setpoint(sol, pm, "branch", "cm", :cm; scale = (x,item,i) -> sqrt(x))
-        PMs.add_setpoint(sol, pm, "branch", "cc", :cm)
-        PMs.add_setpoint(sol, pm, "branch", "ccr", :ccmr)
-        PMs.add_setpoint(sol, pm, "branch", "cci", :ccmi)
+        PMs. add_setpoint!(sol, pm, "branch", "cm", :cm; scale = (x,item,i) -> sqrt(x), status_name="br_status")
+        PMs. add_setpoint!(sol, pm, "branch", "cc", :cm, status_name="br_status")
+        PMs. add_setpoint!(sol, pm, "branch", "ccr", :ccmr, status_name="br_status")
+        PMs. add_setpoint!(sol, pm, "branch", "cci", :ccmi, status_name="br_status")
     end
 end
 

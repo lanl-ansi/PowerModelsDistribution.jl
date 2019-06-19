@@ -1,7 +1,7 @@
 
-function constraint_tp_branch_current(pm::PMs.GenericPowerModel, i::Int; kwargs...)
+function constraint_tp_branch_current(pm::PMs.GenericPowerModel; kwargs...)
     for c in PMs.conductor_ids(pm)
-        PMs.constraint_branch_current(pm, i, cnd=c; kwargs...)
+        PMs.constraint_model_current(pm; cnd=c, kwargs...)
     end
 end
 

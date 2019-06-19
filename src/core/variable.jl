@@ -33,13 +33,13 @@ function variable_tp_voltage_magnitude_sqr(pm::PMs.GenericPowerModel; nw::Int=pm
             [i in bus_cnd], base_name="$(nw)_w",
             lower_bound = PMs.ref(pm, nw, :bus, i[1], "vmin", i[2])^2,
             upper_bound = PMs.ref(pm, nw, :bus, i[1], "vmax", i[2])^2,
-            start = PMs.getval(PMs.ref(pm, nw, :bus, i[1]), "w_start", i[2], 1.001)
+            start = PMs. comp_start_value(PMs.ref(pm, nw, :bus, i[1]), "w_start", i[2], 1.001)
         )
     else
         W = PMs.var(pm, nw)[:w] = JuMP.@variable(pm.model,
             [i in bus_cnd], base_name="$(nw)_w",
             lower_bound = 0,
-            start = PMs.getval(PMs.ref(pm, nw, :bus, i[1]), "w_start", i[2], 1.001)
+            start = PMs. comp_start_value(PMs.ref(pm, nw, :bus, i[1]), "w_start", i[2], 1.001)
         )
     end
 
@@ -58,17 +58,17 @@ function variable_tp_voltage_product(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, 
 
     WR = PMs.var(pm, nw)[:wr] = JuMP.@variable(pm.model,
         [b in bus_cnd], base_name="$(nw)_wr",
-        start = PMs.getval(b[1] != b[2] ? PMs.ref(pm, nw, :buspairs, b[1:2]) : PMs.ref(pm, nw, :bus, b[1]), "wr_start", b[3], 1.0)
+        start = PMs. comp_start_value(b[1] != b[2] ? PMs.ref(pm, nw, :buspairs, b[1:2]) : PMs.ref(pm, nw, :bus, b[1]), "wr_start", b[3], 1.0)
     )
 
     WI = PMs.var(pm, nw)[:wi] = JuMP.@variable(pm.model,
         [b in bus_cnd], base_name="$(nw)_wi",
-        start = PMs.getval(b[1] != b[2] ? PMs.ref(pm, nw, :buspairs, b[1:2]) : PMs.ref(pm, nw, :bus, b[1]), "wi_start", b[3])
+        start = PMs. comp_start_value(b[1] != b[2] ? PMs.ref(pm, nw, :buspairs, b[1:2]) : PMs.ref(pm, nw, :bus, b[1]), "wi_start", b[3])
     )
 
     if bounded
         # Diagonal bounds
-        wr_min, wr_max, wi_min, wi_max = PMs.calc_voltage_product_bounds(PMs.ref(pm, nw, :buspairs), cnd)
+        wr_min, wr_max, wi_min, wi_max = PMs.ref_calc_voltage_product_bounds(PMs.ref(pm, nw, :buspairs), cnd)
         for (i, j) in PMs.ids(pm, nw, :buspairs)
             JuMP.set_upper_bound(WR[(i, j, cnd, cnd)], wr_max[(i,j)])
             JuMP.set_upper_bound(WI[(i, j, cnd, cnd)], wi_max[(i,j)])
@@ -124,7 +124,7 @@ end
 function variable_active_bus_power_slack(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     PMs.var(pm, nw, cnd)[:p_slack] = JuMP.@variable(pm.model,
         [i in PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(cnd)_p_slack",
-        start = PMs.getval(PMs.ref(pm, nw, :bus, i), "p_slack_start", cnd)
+        start = PMs. comp_start_value(PMs.ref(pm, nw, :bus, i), "p_slack_start", cnd)
     )
 end
 
@@ -133,7 +133,7 @@ end
 function variable_reactive_bus_power_slack(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     PMs.var(pm, nw, cnd)[:q_slack] = JuMP.@variable(pm.model,
         [i in PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(cnd)_q_slack",
-        start = PMs.getval(PMs.ref(pm, nw, :bus, i), "q_slack_start", cnd)
+        start = PMs. comp_start_value(PMs.ref(pm, nw, :bus, i), "q_slack_start", cnd)
     )
 end
 

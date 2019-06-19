@@ -146,16 +146,17 @@ function constraint_tp_voltage_magnitude_difference(pm::PMs.GenericPowerModel, i
 end
 
 
-function constraint_tp_branch_current(pm::PMs.GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
-    branch = PMs.ref(pm, nw, :branch, i)
-    f_bus = branch["f_bus"]
-    t_bus = branch["t_bus"]
-    f_idx = (i, f_bus, t_bus)
+function constraint_tp_branch_current(pm::PMs.GenericPowerModel{T}; nw::Int=pm.cnw) where T <: AbstractUBFForm
+    for (i,branch) in PMs.ref(pm, nw, :branch)
+        f_bus = branch["f_bus"]
+        t_bus = branch["t_bus"]
+        f_idx = (i, f_bus, t_bus)
 
-    g_sh_fr = diagm(0 => branch["g_fr"].values)
-    b_sh_fr = diagm(0 => branch["b_fr"].values)
+        g_sh_fr = diagm(0 => branch["g_fr"].values)
+        b_sh_fr = diagm(0 => branch["b_fr"].values)
 
-    constraint_tp_branch_current(pm, nw, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
+        constraint_tp_branch_current(pm, nw, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
+    end
 end
 
 

@@ -2,14 +2,14 @@ export run_tp_ots
 
 ""
 function run_tp_ots(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return PMs.run_generic_model(data, model_constructor, solver, post_tp_ots; multiconductor=true, solution_builder=PMs.get_ots_solution, kwargs...)
+    return PMs.run_model(data, model_constructor, solver, post_tp_ots; multiconductor=true, solution_builder=PMs.get_ots_solution, kwargs...)
 end
 
 
 ""
 function run_tp_ots(file::String, model_constructor, solver; kwargs...)
     data = ThreePhasePowerModels.parse_file(file)
-    return PMs.run_generic_model(data, model_constructor, solver, post_tp_ots; multiconductor=true, solution_builder=PMs.get_ots_solution, kwargs...)
+    return PMs.run_model(data, model_constructor, solver, post_tp_ots; multiconductor=true, solution_builder=PMs.get_ots_solution, kwargs...)
 end
 
 
@@ -31,7 +31,7 @@ function post_tp_ots(pm::PMs.GenericPowerModel)
         end
 
         for i in PMs.ids(pm, :bus)
-            PMs.constraint_kcl_shunt(pm, i, cnd=c)
+            PMs. constraint_power_balance_shunt(pm, i, cnd=c)
         end
 
         for i in PMs.ids(pm, :branch)
