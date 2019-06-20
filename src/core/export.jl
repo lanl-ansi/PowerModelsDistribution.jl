@@ -6,8 +6,6 @@
 # Do not add ThreePhasePowerModels-defined symbols to this exclude list. Instead, rename
 # them with an underscore.
 
-# Not yet used
-#=
 const _EXCLUDE_SYMBOLS = [Symbol(@__MODULE__), :eval, :include]
 for sym in names(@__MODULE__, all=true)
     sym_string = string(sym)
@@ -20,7 +18,6 @@ for sym in names(@__MODULE__, all=true)
     end
     @eval export $sym
 end
-=#
 
 # the follow items are also exported for user-friendlyness when calling
 # `using ThreePhasePowerModels`

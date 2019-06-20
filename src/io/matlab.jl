@@ -102,7 +102,7 @@ function parse_matlab_string(data_string::String)
     if func_name != nothing
         case["name"] = func_name
     else
-        Memento.warn(LOGGER, string("no case name found in matlab file.  The file seems to be missing \"function mpc = ...\""))
+        Memento.warn(_LOGGER, string("no case name found in matlab file.  The file seems to be missing \"function mpc = ...\""))
         case["name"] = "no_name_found"
     end
 
@@ -110,7 +110,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "pmdc.version")
         case["source_version"] = string(VersionNumber(matlab_data["pmdc.version"]))
     else
-        Memento.warn(LOGGER, "No version number found, file may not be compatible with parser.")
+        Memento.warn(_LOGGER, "No version number found, file may not be compatible with parser.")
         case["source_version"] = string(v"0")
 
     end
@@ -118,14 +118,14 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "pmdc.baseMVA")
         case["baseMVA"] = matlab_data["pmdc.baseMVA"]
     else
-        Memento.warn(LOGGER, string("no baseMVA found in matlab file.  The file seems to be missing \"pmdc.baseMVA = ...\""))
+        Memento.warn(_LOGGER, string("no baseMVA found in matlab file.  The file seems to be missing \"pmdc.baseMVA = ...\""))
         case["baseMVA"] = 1.0
     end
 
     if haskey(matlab_data, "pmdc.baseKV")
         case["baseKV"] = matlab_data["pmdc.baseKV"]
     else
-        Memento.warn(LOGGER, string("no baseKV found in matlab file.  The file seems to be missing \"pmdc.baseKV = ...\""))
+        Memento.warn(_LOGGER, string("no baseKV found in matlab file.  The file seems to be missing \"pmdc.baseKV = ...\""))
         case["baseKV"] = 1.0
     end
 
@@ -205,7 +205,7 @@ function parse_matlab_string(data_string::String)
     if haskey(matlab_data, "pmdc.gencost")
         gencost = []
         for (i, gencost_row) in enumerate(matlab_data["pmdc.gencost"])
-            gencost_data = PMs.mp_cost_data(gencost_row)
+            gencost_data = _PMs._mp_cost_data(gencost_row)
             gencost_data["index"] = i
             push!(gencost, gencost_data)
         end
@@ -227,15 +227,15 @@ function parse_matlab_string(data_string::String)
                 end
                 tbl = []
                 for (i, row) in enumerate(matlab_data[k])
-                    row_data = PMs.row_to_dict(row, column_names)
+                    row_data = _PMs.row_to_dict(row, column_names)
                     row_data["index"] = i
                     push!(tbl, row_data)
                 end
                 case[case_name] = tbl
-                Memento.info(LOGGER, "extending matlab format with data: $(case_name) $(length(tbl))x$(length(tbl[1])-1)")
+                Memento.info(_LOGGER, "extending matlab format with data: $(case_name) $(length(tbl))x$(length(tbl[1])-1)")
             else
                 case[case_name] = value
-                Memento.info(LOGGER, "extending matlab format with constant data: $(case_name)")
+                Memento.info(_LOGGER, "extending matlab format with constant data: $(case_name)")
             end
         end
     end
@@ -253,7 +253,7 @@ function _translate_version!(ml_data::Dict{String,Any})
     if ml_data["source_version"] == _current_version
         return ml_data
     else
-        Memento.warn(LOGGER, "matlab source data has unrecognized version $(ml_data["source_version"]), cannot translate to version $_current_version, parse may be invalid")
+        Memento.warn(_LOGGER, "matlab source data has unrecognized version $(ml_data["source_version"]), cannot translate to version $_current_version, parse may be invalid")
         return ml_data
     end
 end
@@ -284,10 +284,10 @@ function matlab_to_pmd(ml_data::Dict{String,Any})
     ml2pm_gen(ml_data)
     ml2pm_branch(ml_data)
 
-    PMs.merge_bus_name_data(ml_data)
-    PMs.merge_generator_cost_data(ml_data)
+    _PMs._merge_bus_name_data!(ml_data)
+    _PMs._merge_generator_cost_data!(ml_data)
 
-    PMs.merge_generic_data(ml_data)
+    _PMs._merge_generic_data!(ml_data)
 
     InfrastructureModels.arrays_to_dicts!(ml_data)
 
@@ -346,12 +346,12 @@ end
 "convert raw branch data into arrays"
 function ml2pm_branch(data::Dict{String,Any})
     for branch in data["branch"]
-        branch["rate_a"] = PMs.MultiConductorVector(branch["rate_a"], 3)
-        branch["rate_b"] = PMs.MultiConductorVector(branch["rate_b"], 3)
-        branch["rate_c"] = PMs.MultiConductorVector(branch["rate_c"], 3)
+        branch["rate_a"] = _PMs.MultiConductorVector(branch["rate_a"], 3)
+        branch["rate_b"] = _PMs.MultiConductorVector(branch["rate_b"], 3)
+        branch["rate_c"] = _PMs.MultiConductorVector(branch["rate_c"], 3)
 
-        branch["angmin"] = PMs.MultiConductorVector(branch["angmin"], 3)
-        branch["angmax"] = PMs.MultiConductorVector(branch["angmax"], 3)
+        branch["angmin"] = _PMs.MultiConductorVector(branch["angmin"], 3)
+        branch["angmax"] = _PMs.MultiConductorVector(branch["angmax"], 3)
 
         _set_default(branch, "g_fr_1", 0.0)
         _set_default(branch, "g_fr_2", 0.0)
@@ -364,24 +364,24 @@ function ml2pm_branch(data::Dict{String,Any})
         _make_mpv!(branch, "g_fr", ["g_fr_1", "g_fr_2", "g_fr_3"])
         _make_mpv!(branch, "g_to", ["g_to_1", "g_to_2", "g_to_3"])
 
-        branch["b_fr"] = PMs.MultiConductorVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
-        branch["b_to"] = PMs.MultiConductorVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
+        branch["b_fr"] = _PMs.MultiConductorVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
+        branch["b_to"] = _PMs.MultiConductorVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
 
         delete!(branch, "b_1")
         delete!(branch, "b_2")
         delete!(branch, "b_3")
 
-        branch["tap"] = PMs.MultiConductorVector(1.0, 3)
-        branch["shift"] = PMs.MultiConductorVector(0.0, 3)
+        branch["tap"] = _PMs.MultiConductorVector(1.0, 3)
+        branch["shift"] = _PMs.MultiConductorVector(0.0, 3)
         branch["transformer"] = false
 
-        branch["br_r"] = PMs.MultiConductorMatrix([
+        branch["br_r"] = _PMs.MultiConductorMatrix([
             branch["r_11"]     branch["r_12"]/2.0 branch["r_13"]/2.0;
             branch["r_12"]/2.0 branch["r_22"]     branch["r_23"]/2.0;
             branch["r_13"]/2.0 branch["r_23"]/2.0 branch["r_33"];
         ])
 
-        branch["br_x"] = PMs.MultiConductorMatrix([
+        branch["br_x"] = _PMs.MultiConductorMatrix([
             branch["x_11"]     branch["x_12"]/2.0 branch["x_13"]/2.0;
             branch["x_12"]/2.0 branch["x_22"]     branch["x_23"]/2.0;
             branch["x_13"]/2.0 branch["x_23"]/2.0 branch["x_33"];
@@ -398,7 +398,7 @@ end
 "collects several from_keys in an array and sets it to the to_key, removes from_keys"
 function _make_mpv!(data::Dict{String,Any}, to_key::String, from_keys::Array{String,1})
     @assert !(haskey(data, to_key))
-    data[to_key] = PMs.MultiConductorVector([data[k] for k in from_keys])
+    data[to_key] = _PMs.MultiConductorVector([data[k] for k in from_keys])
     for k in from_keys
         delete!(data, k)
     end
