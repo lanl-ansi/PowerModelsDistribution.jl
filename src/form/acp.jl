@@ -441,18 +441,24 @@ end
 
 """
 """
-function constraint_tp_vm_ll(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vm_ll_min::Array{Real, 1}, vm_ll_max::Array{Real, 1}) where T <: PMs.AbstractACPForm
+function constraint_tp_vm_ll(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vm_ll_min::PMs.MultiConductorVector, vm_ll_max::PMs.MultiConductorVector) where T <: PMs.AbstractACPForm
     # 3 conductors asserted in template already
     vm_ln = [PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
     va_ln = [PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
     vr_ll = JuMP.@NLexpression(pm.model, [i in 1:3],
-        vm_ln[i]*cos(va_ln[i]) - vm_ln[(i-1)%3+1]*cos(va_ln[(i-1)%3+1])
+        vm_ln[i]*cos(va_ln[i]) - vm_ln[i%3+1]*cos(va_ln[i%3+1])
     )
     vi_ll = JuMP.@NLexpression(pm.model, [i in 1:3],
-        vm_ln[i]*sin(va_ln[i]) - vm_ln[(i-1)%3+1]*sin(va_ln[(i-1)%3+1])
+        vm_ln[i]*sin(va_ln[i]) - vm_ln[i%3+1]*sin(va_ln[i%3+1])
     )
     for c in 1:3
-        JuMP.@NLconstraint(pm.model, vr_ll[c]^2+vi_ll[c]^2 >= vm_ll_min[c]^2)
-        JuMP.@NLconstraint(pm.model, vr_ll[c]^2+vi_ll[c]^2 <= vm_ll_max[c]^2)
+        # factor of 3 is needed because vm_ll bounds are with respect to the
+        # LL base, not the LN base
+        if vm_ll_min[c] > 0
+            JuMP.@NLconstraint(pm.model, vr_ll[c]^2+vi_ll[c]^2 >= vm_ll_min[c]^2*3)
+        end
+        if vm_ll_max[c] < Inf
+            JuMP.@NLconstraint(pm.model, vr_ll[c]^2+vi_ll[c]^2 <= vm_ll_max[c]^2*3)
+        end
     end
 end

@@ -444,26 +444,24 @@ end
     end
 end
 
-##
+
 @testset "test acp opf unbalance constrained" begin
     tppm_data = TPPMs.parse_file("../test/data/matlab/case_ubctr.m")
-    # This case contains a load in phase 1 at bus 2
-    # A cheap generator at bus 3, and an expensive one at bus 2
-    # The optimal dispatch will use the generator at bus 2 as much as possible,
-    # being constrained by the voltage unbalance factor constraint.
-    # Therefore, we check that this constraint is binding.
-    tppm_data["bus"]["3"]["vm_vuf_max"] = 0.04
-    pm = PMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_ubctr, multiconductor=true)
-    sol = PMs.solve_generic_model(pm, ipopt_solver, solution_builder=TPPMs.get_solution_vseq)
-    @test norm(sol["solution"]["bus"]["3"]["vuf"]-0.04, Inf) <= 1E-5
-    tppm_data = TPPMs.parse_file("../test/data/matlab/case_ubctr.m")
-    tppm_data["bus"]["3"]["vm_neg_seq_max"] = 0.04
-    pm = PMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_ubctr, multiconductor=true)
-    sol = PMs.solve_generic_model(pm, ipopt_solver, solution_builder=TPPMs.get_solution_vseq)
-    @test norm(sol["solution"]["bus"]["3"]["vm_neg_seq"]-0.04, Inf) <= 1E-5
-    tppm_data = TPPMs.parse_file("../test/data/matlab/case_ubctr.m")
-    tppm_data["bus"]["3"]["vm_zero_seq_max"] = 0.04
-    pm = PMs.build_generic_model(tppm_data, PMs.ACPPowerModel, TPPMs.post_tp_opf_ubctr, multiconductor=true)
-    sol = PMs.solve_generic_model(pm, ipopt_solver, solution_builder=TPPMs.get_solution_vseq)
-    @test norm(sol["solution"]["bus"]["3"]["vm_zero_seq"]-0.04, Inf) <= 1E-5
+    # This case contains a load in phase 1 at bus 2,
+    # a cheap generator at bus 3, and an expensive one at bus 2
+    # The optimal dispatch will use the generator at bus 3 as much as possible,
+    # being constrained by the imposed balance constraint
+    # We check the equations by comparing against the value calculated by the solution
+    # builder for the active constraint
+    constr_keys = ["vm_vuf_max", "vm_neg_seq_max", "vm_zero_seq_max", "vm_pos_seq_max", "vm_ll_max", "vm_ll_min"]
+    constr_lims = [0.04, 0.04, 0.04, 1.02, PMs.MultiConductorVector(ones(3)*1.07), PMs.MultiConductorVector(ones(3)*1.01)]
+    sol_keys = ["vuf", "vm_neg_seq", "vm_zero_seq", "vm_pos_seq", "vm_ll", "vm_ll"]
+    for i in 1:length(constr_keys)
+        tppm = deepcopy(tppm_data)
+        tppm["bus"]["3"][constr_keys[i]] = constr_lims[i]
+        pm = PMs.build_generic_model(tppm, PMs.ACPPowerModel, TPPMs.post_tp_opf_ubctr, multiconductor=true)
+        sol = PMs.solve_generic_model(pm, ipopt_solver, solution_builder=TPPMs.get_solution_vm_all)
+        # the minimum is needed for the LL constraints; only one out of three will be active
+        @test minimum(abs.(sol["solution"]["bus"]["3"][sol_keys[i]]-constr_lims[i])) <= 1E-5
+    end
 end

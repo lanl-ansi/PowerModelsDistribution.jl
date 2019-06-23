@@ -1,16 +1,16 @@
 "Adds sequence components of the voltage to the solution dict."
-function get_solution_vseq(pm::PMs.GenericPowerModel, sol::Dict{String,<:Any})
+function get_solution_vm_all(pm::PMs.GenericPowerModel, sol::Dict{String,<:Any})
     PMs.get_solution(pm, sol)
     if !PMs.ismultinetwork(pm)
-        get_solution_vseq(pm, pm.cnw, sol)
+        get_solution_vm_all(pm, pm.cnw, sol)
     else
         for nw in PMs.nws(pm)
-            get_solution_vseq(pm, nw, sol[nw])
+            get_solution_vm_all(pm, nw, sol[nw])
         end
     end
 end
 
-function get_solution_vseq(pm::PMs.GenericPowerModel, nw::Int, sol_nw::Dict{String,<:Any})
+function get_solution_vm_all(pm::PMs.GenericPowerModel, nw::Int, sol_nw::Dict{String,<:Any})
     PMs.get_solution(pm, sol_nw)
     if !PMs.ismulticonductor(pm, nw=nw) && PMs.ref(pm, nw, :conductors)==3
         Memento.error(LOGGER, "Sequence components are only defined on three-phase networks.")
@@ -25,5 +25,6 @@ function get_solution_vseq(pm::PMs.GenericPowerModel, nw::Int, sol_nw::Dict{Stri
         sol_nw["bus"]["$bus_id"]["vm_neg_seq"] = abs(vneg)
         sol_nw["bus"]["$bus_id"]["vm_zero_seq"] = abs(vzero)
         sol_nw["bus"]["$bus_id"]["vuf"] = abs(vneg)/abs(vpos)
+        sol_nw["bus"]["$bus_id"]["vm_ll"] = PMs.MultiConductorVector(abs.([1 -1 0; 0 1 -1; -1 0 1]*vabc)./sqrt(3))
     end
 end
