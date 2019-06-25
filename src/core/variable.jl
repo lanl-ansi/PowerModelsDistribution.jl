@@ -1,4 +1,5 @@
 ""
+
 function variable_tp_voltage(pm::PMs.GenericPowerModel; kwargs...)
     for c in PMs.conductor_ids(pm)
         PMs.variable_voltage(pm, cnd=c; kwargs...)
@@ -12,7 +13,6 @@ function variable_tp_branch_flow(pm::PMs.GenericPowerModel; kwargs...)
         PMs.variable_branch_flow(pm, cnd=c; kwargs...)
     end
 end
-
 
 
 ""
@@ -203,4 +203,15 @@ function variable_tp_oltc_tap(pm::PMs.GenericPowerModel; nw::Int=pm.cnw, bounded
             end
         end
     end
+end
+
+
+"""
+Create a dictionary with values of type Any for the load.
+Depending on the load model, this can be a parameter or a NLexpression.
+These will be inserted into KCL.
+"""
+function variable_load(pm::PMs.GenericPowerModel; nw=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
+    PMs.var(pm, nw, cnd)[:pd] = Dict{Int, Any}()
+    PMs.var(pm, nw, cnd)[:qd] = Dict{Int, Any}()
 end

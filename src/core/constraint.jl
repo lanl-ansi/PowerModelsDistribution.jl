@@ -23,4 +23,3 @@ function constraint_tp_storage_loss(pm::PMs.GenericPowerModel, n::Int, i, bus, r
 
     JuMP.@NLconstraint(pm.model, sum(ps[c] for c in conductors) + (sd - sc) == standby_loss + sum( r[c]*(ps[c]^2 + qs[c]^2)/vm[c]^2 for c in conductors))
 end
-

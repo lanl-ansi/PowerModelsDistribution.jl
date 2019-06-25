@@ -952,6 +952,22 @@ function parse_busname(busname::AbstractString)
 end
 
 
+"""
+    get_conductors_ordered(busname)
+
+Returns an ordered list of defined conductors.
+"""
+function get_conductors_ordered(busname::AbstractString)
+    parts = split(busname, '.'; limit=2)
+    ret = []
+    if length(parts)==2
+        conds_str = split(parts[2], '.')
+        ret = [parse(Int, i) for i in conds_str]
+    end
+    return ret
+end
+
+
 "converts Dict{String,Any} to Dict{Symbol,Any} for passing as kwargs"
 function to_sym_keys(data::Dict{String,Any})::Dict{Symbol,Any}
     return Dict{Symbol,Any}((Symbol(k), v) for (k, v) in data)

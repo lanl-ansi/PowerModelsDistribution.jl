@@ -5,7 +5,7 @@ Set DefaultBaseFrequency=50
 
 ! New Circuit
 New circuit.ut_trans
-~ BasekV=13.5 BaseMVA=0.1 pu=1.0  ISC3=9999999999 ISC1=9999999999
+~ BasekV=11 BaseMVA=0.1 pu=1.2272727  ISC3=9999999999 ISC1=9999999999
 
 ! Transformers
 New Transformer.TX1 windings=3 phases=3 Buses=[1 2 3]

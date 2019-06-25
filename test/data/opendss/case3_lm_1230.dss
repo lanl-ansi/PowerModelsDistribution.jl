@@ -1,0 +1,64 @@
+Clear
+New Circuit.3Bus_example
+!  define a really stiff source
+~ basekv=0.4   pu=1.0  MVAsc1=1e6  MVAsc3=1e6 basemva=1
+
+!Define Linecodes
+
+
+New linecode.556MCM nphases=3 basefreq=50  ! ohms per 5 mile
+~ rmatrix = ( 0.1000 | 0.0400    0.1000 |  0.0400    0.0400    0.1000)
+~ xmatrix = ( 0.0583 |  0.0233    0.0583 | 0.0233    0.0233    0.0583)
+~ cmatrix = (0.0  | -0  0.0 | -0 -0 0.0  ) ! small capacitance
+
+
+New linecode.4/0QUAD nphases=3 basefreq=50  ! ohms per 100ft
+~ rmatrix = ( 0.1167 | 0.0467    0.1167 | 0.0467    0.0467    0.1167)
+~ xmatrix = (0.0667  |  0.0267    0.0667  |  0.0267    0.0267    0.0667 )
+~ cmatrix = (0.0  | -0  0.0 | -0 -0 0.0  )  ! small capacitance
+
+!Define lines
+
+New Line.OHLine  bus1=sourcebus.1.2.3.0  Primary.1.2.3.0  linecode = 556MCM   length=0.000000001  ! 5 mile line
+New Line.Quad    Bus1=Primary.1.2.3.0  loadbus.1.2.3.0  linecode = 4/0QUAD  length=0.000000001  ! 100 ft
+
+!Loads - single phase
+
+! single-phase loads
+New Load.d1ph phases=1 loadbus.1 kv=0.23 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+! if only one is specified, .0 is added
+New Load.d1ph2 phases=1 loadbus.2 kv=0.23 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+! when connected between two phases, acts as delta load in the TPPM sense
+New Load.d1ph23 phases=1 loadbus.2.3 kv=0.4 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+New Load.d1ph0 phases=1 loadbus.0 kv=0.23 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+New Load.d1ph00 phases=1 loadbus.0.0 kv=0.23 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+! This specification will now lead to an error
+! New Load.d1ph123 phases=1 loadbus.0.1.2.3 kv=0.23 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+! This specification will now lead to an error
+! New Load.y1ph phases=1 loadbus kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+New Load.y1ph2 phases=1 loadbus.2 kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+New Load.y1ph23 phases=1 loadbus.2.3 kv=0.4 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+New Load.y1ph0 phases=1 loadbus.0 kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+New Load.y1ph00 phases=1 loadbus.0.0 kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+! This specification will now lead to an error
+! New Load.y1ph123 phases=1 loadbus.0.1.2.3 kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+
+! three-phase loads
+New Load.d3ph phases=3 loadbus kv=0.4 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+New Load.d3ph123 phases=3 loadbus.1.2.3 kv=0.4 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+New Load.d3ph1230 phases=3 loadbus.1.2.3.0 kv=0.4 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+New Load.d3ph213 phases=3 loadbus.2.1.3 kv=0.4 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+New Load.d3ph3120 phases=3 loadbus.3.1.2.0 kv=0.4 kW=400 kvar=300 model=1 conn=delta vminpu=0.7 vmaxpu=1.3
+! note change kv
+New Load.y3ph phases=3 loadbus kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+New Load.y3ph123 phases=3 loadbus.1.2.3 kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+New Load.y3ph1230 phases=3 loadbus.1.2.3.0 kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+New Load.y3ph213 phases=3 loadbus.2.1.3 kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+New Load.y3ph3120 phases=3 loadbus.3.1.2.0 kv=0.23 kW=400 kvar=300 model=1 conn=wye vminpu=0.7 vmaxpu=1.3
+
+Set voltagebases=[0.4]
+Set tolerance=0.000001
+set defaultbasefreq=50
+Calcvoltagebases
+
+Solve

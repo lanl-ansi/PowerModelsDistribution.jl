@@ -195,6 +195,7 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
             name, nodes = parse_busname(defaults["bus1"])
 
             kv = defaults["kv"]
+
             expected_kv = tppm_data["basekv"] / sqrt(tppm_data["conductors"])
             if !isapprox(kv, expected_kv; atol=expected_kv * 0.01)
                 Memento.warn(LOGGER, "Load has kv=$kv, not the expected kv=$(expected_kv). Results may not match OpenDSS")
@@ -202,13 +203,123 @@ function dss2tppm_load!(tppm_data::Dict, dss_data::Dict, import_all::Bool)
 
             loadDict["name"] = defaults["name"]
             loadDict["load_bus"] = find_bus(name, tppm_data)
-            loadDict["pd"] = PMs.MultiConductorVector(parse_array(defaults["kw"] / 1e3, nodes, nconductors))
-            loadDict["qd"] = PMs.MultiConductorVector(parse_array(defaults["kvar"] / 1e3, nodes, nconductors))
+
+            load_name = defaults["name"]
+
+            cnds = [1, 2, 3, 0][nodes[1,:]]
+            loadDict["conn"] = defaults["conn"]
+            nph = defaults["phases"]
+            delta_map = Dict([1,2]=>1, [2,3]=>2, [1,3]=>3)
+            if nph==1
+                # TPPM convention is to specify the voltage across the load
+                # this what OpenDSS does for 1-phase loads only
+                loadDict["vnom_kv"] = kv
+                # default is to connect betwheen L1 and N
+                cnds = (isempty(cnds)) ? [1, 0] : cnds
+                # if only one connection specified, implicitly connected to N
+                # bus1=x.c == bus1=x.c.0
+                if length(cnds)==1
+                    cnds = [cnds..., 0]
+                end
+                # if more than two, only first two are considered
+                if length(cnds)>2
+                    # this no longer works if order is not preserved
+                    # throw an error instead of behaving like OpenDSS
+                    # cnds = cnds[1:2]
+                    Memento.error(LOGGER, "A 1-phase load cannot specify more than two terminals.")
+                end
+                # conn property has no effect
+                # delta/wye is determined by whether load connected to ground
+                # or between two phases
+                if cnds==[0, 0]
+                    pqd_premul = zeros(3)
+                elseif cnds[2]==0 || cnds[1]==0
+                    # this is a wye load in the TPPM sense
+                    loadDict["conn"] = "wye"
+                    ph = (cnds[2]==0) ? cnds[1] : cnds[2]
+                    pqd_premul = zeros(3)
+                    pqd_premul[ph] = 1
+                else
+                    # this is a delta load in the TPPM sense
+                    loadDict["conn"] = "delta"
+                    pqd_premul = zeros(3)
+                    pqd_premul[delta_map[cnds]] = 1
+                end
+            elseif nph==2
+                # there are some extremely weird edge cases for this
+                # the user can enter weird stuff and OpenDSS will still show some result
+                # for example, take
+                # nphases=3 bus1=x.1.2.0
+                # this looks like a combination of a single-phase TPPM delta and wye load
+                # so throw an error and ask to reformulate as single and three phase loads
+                Memento.error(LOGGER, "Two-phase loads (nphases=2) are not supported, as these lead to unexpected behaviour. Reformulate this load as a combination of single-phase loads.")
+            elseif nph==3
+                # for 2 and 3 phase windings, kv is always in LL, also for wye
+                # whilst TPPM model uses actual voltage across load; so LN for wye
+                if loadDict["conn"]=="wye"
+                    loadDict["vnom_kv"] = kv/sqrt(3)
+                else
+                    loadDict["vnom_kv"] = kv
+                end
+                if cnds==[]
+                    pqd_premul = [1/3, 1/3, 1/3]
+                else
+                    if (length(cnds)==3 || length(cnds)==4) && cnds==unique(cnds)
+                    #variations of [1, 2, 3] and [1, 2, 3, 0]
+                        pqd_premul = [1/3, 1/3, 1/3]
+                    else
+                        Memento.error(LOGGER, "Specified connections for three-phase load $name not allowed.")
+                    end
+                end
+            else
+                Memento.error(LOGGER, "For a load, nphases should be in [1,3].")
+            end
+            loadDict["pd"] = PMs.MultiConductorVector(pqd_premul.*defaults["kw"]./1e3)
+            loadDict["qd"] = PMs.MultiConductorVector(pqd_premul.*defaults["kvar"]./1e3)
+
+            # parse the model
+            model = defaults["model"]
+            # some info on OpenDSS load models
+            ##################################
+            # Constant can still be scaled by other settings, fixed cannot
+            # Note that in the current feature set, fixed therefore equals constant
+            # 1: Constant P and Q, default
+            if model == 2
+            # 2: Constant Z
+            elseif model == 3
+            # 3: Constant P and quadratic Q
+                Memento.warn(LOGGER, "$load_name: load model 3 not supported. Treating as model 1.")
+                model = 1
+            elseif model == 4
+            # 4: Exponential
+                Memento.warn(LOGGER, "$load_name: load model 4 not supported. Treating as model 1.")
+                model = 1
+            elseif model == 5
+            # 5: Constant I
+                #warn(LOGGER, "$name: load model 5 not supported. Treating as model 1.")
+                #model = 1
+            elseif model == 6
+            # 6: Constant P and fixed Q
+                Memento.warn(LOGGER, "$load_name: load model 6 identical to model 1 in current feature set. Treating as model 1.")
+                model = 1
+            elseif model == 7
+            # 7: Constant P and quadratic Q (i.e., fixed reactance)
+                Memento.warn(LOGGER, "$load_name: load model 7 not supported. Treating as model 1.")
+                model = 1
+            elseif model == 8
+            # 8: ZIP
+                Memento.warn(LOGGER, "$load_name: load model 8 not supported. Treating as model 1.")
+                model = 1
+            end
+            # save adjusted model type to dict, human-readable
+            model_int2str = Dict(1=>"constant_power", 2=>"constant_impedance", 5=>"constant_current")
+            loadDict["model"] = model_int2str[model]
+
             loadDict["status"] = convert(Int, defaults["enabled"])
 
             loadDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-            loadDict["source_id"] = "load.$(defaults["name"])"
-
+            loadDict["source_id"] = "load.$load_name"
+  
             loadDict["index"] = length(tppm_data["load"]) + 1
 
             used = ["phases", "bus1", "name"]
@@ -1011,7 +1122,7 @@ function decompose_transformers!(tppm_data; import_all::Bool=false)
             # 2-WINDING TRANSFORMER
             trans_dict = Dict{String, Any}()
             trans_dict["name"] = "tr$(tr_id)_w$(w)"
-            trans_dict["source_id"] = "$(trans["source_id"])_$(w)"
+            trans_dict["source_id"] = "$(trans["source_id"])"
             trans_dict["active_phases"] = [1, 2, 3]
             push_dict_ret_key!(tppm_data["trans"], trans_dict)
             # connection settings
@@ -1291,7 +1402,7 @@ windings. Default behaviour is to start at the primary winding of the first
 transformer, and to propagate from there. Branches are updated; the impedances
 and addmittances are rescaled to be consistent with the new voltage bases.
 """
-function adjust_base!(tppm_data; start_at_first_tr_prim=true)
+function adjust_base!(tppm_data; start_at_first_tr_prim=false)
     # initialize arrays etc. for the recursive part
     edges_br = [(br["index"], br["f_bus"], br["t_bus"]) for (br_id_str, br) in tppm_data["branch"]]
     edges_tr = [(tr["index"], tr["f_bus"], tr["t_bus"]) for (tr_id_str, tr) in tppm_data["trans"]]
@@ -1309,14 +1420,17 @@ function adjust_base!(tppm_data; start_at_first_tr_prim=true)
     else
         # start at type 3 bus if present
         buses_3 = [bus["index"] for (bus_id_str, bus) in tppm_data["bus"] if bus["bus_type"]==3]
-        if length(buses_3)==0
+        buses_2 = [bus["index"] for (bus_id_str, bus) in tppm_data["bus"] if bus["bus_type"]==2]
+        if length(buses_3)>0
+            source = buses_3[1]
+        elseif length(buses_2)>0
+            source = buses_2[1]
+        else
             Memento.warn(LOGGER, "No bus of type 3 found; selecting random bus instead.")
             source = parse(Int, rand(keys(tppm_data["bus"])))
-        else
-            source = buses_3[1]
         end
         base_kv_new = tppm_data["basekv"]
-        println(source)
+        #println(source)
         # Only relevant for future per-unit upgrade
         # Impossible to end up here;
         # condition checked before call to adjust_base!
