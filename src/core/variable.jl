@@ -2,7 +2,7 @@
 
 function variable_tp_voltage(pm::PMs.GenericPowerModel; kwargs...)
     for c in PMs.conductor_ids(pm)
-        PMs.variable_voltage(pm, cnd=c, kwargs...)
+        PMs.variable_voltage(pm, cnd=c; kwargs...)
     end
 end
 
