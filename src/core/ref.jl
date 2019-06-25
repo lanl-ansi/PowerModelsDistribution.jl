@@ -1,7 +1,7 @@
 import LinearAlgebra: diagm
 
 ""
-function calc_tp_voltage_product_bounds(pm::_PMs.GenericPowerModel, buspairs; nw::Int=pm.cnw)
+function _calc_tp_voltage_product_bounds(pm::_PMs.GenericPowerModel, buspairs; nw::Int=pm.cnw)
     wr_min = Dict([(bp, -Inf) for bp in buspairs])
     wr_max = Dict([(bp,  Inf) for bp in buspairs])
     wi_min = Dict([(bp, -Inf) for bp in buspairs])

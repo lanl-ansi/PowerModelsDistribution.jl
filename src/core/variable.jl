@@ -79,7 +79,7 @@ function variable_tp_voltage_product(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw,
         # Off-diagonal bounds
         for c in _PMs.conductor_ids(pm)
             if c != cnd
-                wr_min, wr_max, wi_min, wi_max = calc_tp_voltage_product_bounds(pm, bus_cnd)
+                wr_min, wr_max, wi_min, wi_max = _calc_tp_voltage_product_bounds(pm, bus_cnd)
                 for k in bus_cnd
                     JuMP.set_upper_bound(WR[k], wr_max[k])
                     JuMP.set_upper_bound(WI[k], wi_max[k])
