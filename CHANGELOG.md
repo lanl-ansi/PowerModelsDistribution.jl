@@ -5,6 +5,7 @@ ThreePhasePowerModels.jl Change Log
 - Allow for arbitrarily named sourcebus
 - Add json parser
 - Add support for additional load models (constant power, constant impedance, constant current; delta or wye connected) (#127)
+- Fix bug in OpenDSS parse of Capacitors [zbase factor and wrong sign] (#138)
 
 ### v0.3.0
 - Update to JuMP v0.19/MathOptInterface
