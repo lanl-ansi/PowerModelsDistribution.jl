@@ -4,7 +4,7 @@
 ""
 function variable_tp_voltage(pm::PMs.GenericPowerModel{T}; nw=pm.cnw, kwargs...) where T <: PMs.AbstractACRForm
     for c in PMs.conductor_ids(pm)
-        PMs.variable_voltage(pm, cnd=c; kwargs...)
+        PMs.variable_voltage(pm, cnd=c; nw=nw, kwargs...)
     end
     # local infeasbility issues without proper initialization;
     # convergence issues start when the equivalent angles of the starting point
@@ -21,8 +21,8 @@ function variable_tp_voltage(pm::PMs.GenericPowerModel{T}; nw=pm.cnw, kwargs...)
             for c in 1:ncnd
                 vr = vm*cos(theta[c])
                 vi = vm*sin(theta[c])
-                JuMP.set_start_value(PMs.var(pm, pm.cnw, c, :vr, id), vr)
-                JuMP.set_start_value(PMs.var(pm, pm.cnw, c, :vi, id), vi)
+                JuMP.set_start_value(PMs.var(pm, nw, c, :vr, id), vr)
+                JuMP.set_start_value(PMs.var(pm, nw, c, :vi, id), vi)
             end
         end
     end

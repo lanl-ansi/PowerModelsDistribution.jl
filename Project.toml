@@ -34,4 +34,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 AmplNLWriter = "7c4d4715-977e-5154-bfe0-e096adeac482"
 
 [targets]
-test = ["Cbc", "Ipopt", "JSON", "Juniper", "SCS", "Test", "AmplNLWriter"]
+test = ["Cbc", "Ipopt", "JSON", "Juniper", "SCS", "Test"]

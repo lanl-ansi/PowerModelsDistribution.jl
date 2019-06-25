@@ -1,8 +1,8 @@
 ""
 
-function variable_tp_voltage(pm::PMs.GenericPowerModel; nw=pm.cnw, kwargs...)
+function variable_tp_voltage(pm::PMs.GenericPowerModel; kwargs...)
     for c in PMs.conductor_ids(pm)
-        PMs.variable_voltage(pm, nw=nw, cnd=c, kwargs...)
+        PMs.variable_voltage(pm, cnd=c, kwargs...)
     end
 end
 

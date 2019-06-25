@@ -41,7 +41,7 @@ function post_tp_pf_lm(pm::PMs.GenericPowerModel)
 
     variable_tp_trans_flow(pm, bounded=false)
 
-    constraint_tp_voltage(pm, bounded=false)
+    constraint_tp_voltage(pm)
 
     for (i,bus) in PMs.ref(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)

@@ -19,7 +19,11 @@ function run_tp_opf_lm(file::String, model_constructor, solver; kwargs...)
 end
 
 
-""
+"""
+This problem specification includes advanced load models, including
+constant power, constant current and constabt impedance
+delta-connected and wye-connected
+"""
 function post_tp_opf_lm(pm::PMs.GenericPowerModel)
     add_arcs_trans!(pm)
 

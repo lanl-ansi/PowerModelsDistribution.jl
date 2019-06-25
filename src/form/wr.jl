@@ -2,7 +2,7 @@
 
 
 ""
-function constraint_tp_voltage(pm::PMs.GenericPowerModel{T}, n::Int, c::Int, bounded::Bool) where T <: PMs.AbstractWRForm
+function constraint_tp_voltage(pm::PMs.GenericPowerModel{T}, n::Int, c::Int) where T <: PMs.AbstractWRForm
     w  = PMs.var(pm, n,  :w)
     wr = PMs.var(pm, n, :wr)
     wi = PMs.var(pm, n, :wi)
