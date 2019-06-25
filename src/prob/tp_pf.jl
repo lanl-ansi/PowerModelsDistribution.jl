@@ -1,6 +1,3 @@
-export run_ac_tp_pf, run_tp_pf
-
-
 ""
 function run_ac_tp_pf(file, solver; kwargs...)
     return run_tp_pf(file, _PMs.ACPPowerModel, solver; kwargs...)
@@ -15,21 +12,19 @@ end
 
 ""
 function run_tp_pf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_pf; multiconductor=true, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_pf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
 end
 
 
 ""
 function run_tp_pf(file::String, model_constructor, solver; kwargs...)
     data = PowerModelsDistribution.parse_file(file)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_pf; multiconductor=true, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_pf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
 end
 
 
 ""
 function post_tp_pf(pm::_PMs.GenericPowerModel)
-    add_arcs_trans!(pm)
-
     variable_tp_voltage(pm, bounded=false)
     variable_tp_branch_flow(pm, bounded=false)
 

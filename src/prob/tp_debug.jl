@@ -1,8 +1,5 @@
 # These problem formulations are used to debug Three Phase datasets
 # that do not converge using the standard formulations
-
-export run_tp_opf_pbs, run_tp_pf_pbs
-
 ""
 function run_tp_opf_pbs(data::Dict{String,Any}, model_constructor, solver; kwargs...)
     return _PMs.run_model(data, model_constructor, solver, post_tp_opf_pbs; multiconductor=true, solution_builder = get_pbs_solution, kwargs...)

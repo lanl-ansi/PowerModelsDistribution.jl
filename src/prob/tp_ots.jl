@@ -1,5 +1,3 @@
-export run_tp_ots
-
 ""
 function run_tp_ots(data::Dict{String,Any}, model_constructor, solver; kwargs...)
     return _PMs.run_model(data, model_constructor, solver, post_tp_ots; multiconductor=true, solution_builder=_PMs.get_ots_solution, kwargs...)

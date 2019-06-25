@@ -1,5 +1,3 @@
-export run_tp_opf_lm, run_ac_tp_opf_lm
-
 ""
 function run_ac_tp_opf_lm(file, solver; kwargs...)
     return run_tp_opf_lm(file, _PMs.ACPPowerModel, solver; multiconductor=true, kwargs...)
@@ -8,14 +6,14 @@ end
 
 ""
 function run_tp_opf_lm(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_generic_model(data, model_constructor, solver, post_tp_opf; multiconductor=true, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_opf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
 end
 
 
 ""
 function run_tp_opf_lm(file::String, model_constructor, solver; kwargs...)
     data = PowerModelsDistribution.parse_file(file)
-    return _PMs.run_generic_model(data, model_constructor, solver, post_tp_opf; multiconductor=true, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_opf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
 end
 
 
@@ -25,8 +23,6 @@ constant power, constant current and constabt impedance
 delta-connected and wye-connected
 """
 function post_tp_opf_lm(pm::_PMs.GenericPowerModel)
-    add_arcs_trans!(pm)
-
     variable_tp_voltage(pm)
     variable_tp_branch_flow(pm)
 
@@ -37,7 +33,7 @@ function post_tp_opf_lm(pm::_PMs.GenericPowerModel)
     end
     variable_tp_trans_flow(pm)
 
-    constraint_tp_voltage(pm)
+    constraint_tp_model_voltage(pm)
 
     for i in _PMs.ids(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)

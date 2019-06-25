@@ -38,7 +38,7 @@ function _find_ref_buses(pm::_PMs.GenericPowerModel, nw)
 end
 
 "Adds arcs for PMD transformers; for dclines and branches this is done in PMs"
-function add_arcs_trans!(pm::_PMs.GenericPowerModel)
+function ref_add_arcs_trans!(pm::_PMs.GenericPowerModel)
     if !haskey(_PMs.ref(pm, pm.cnw), :trans)
         # this might happen when parsing data from matlab format
         # the OpenDSS parser always inserts a trans dict

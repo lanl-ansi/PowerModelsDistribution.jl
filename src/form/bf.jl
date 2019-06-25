@@ -1,5 +1,3 @@
-export LPLinUBFPowerModel, LPLinUBFForm
-
 "LinDist3Flow per Sankur et al 2016, using vector variables for power, voltage and current in scalar form"
 abstract type LPLinUBFForm <: _PMs.AbstractBFForm end
 
