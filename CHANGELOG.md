@@ -4,6 +4,7 @@ ThreePhasePowerModels.jl Change Log
 ### staged
 - Allow for arbitrarily named sourcebus
 - Add json parser
+- Add support for additional load models (constant power, constant impedance, constant current; delta or wye connected) (#127)
 
 ### v0.3.0
 - Update to JuMP v0.19/MathOptInterface
