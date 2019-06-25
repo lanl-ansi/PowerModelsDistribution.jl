@@ -51,8 +51,6 @@
     end
 
     @testset "parser cases" begin
-        Memento.setlevel!(TESTLOG, "info")
-
         # load parsing related errors
         for load in 1:5
            dss = TPPMs.parse_dss("../test/data/opendss/loadparser_error.dss")
@@ -61,6 +59,19 @@
                       TPPMs.parse_opendss(dss)
            )
         end
+
+        # load parsing related warnings
+        for model in [3, 4, 7, 8]
+           dss = TPPMs.parse_dss("../test/data/opendss/loadparser_warn_model.dss")
+           dss["load"] = [l for l in dss["load"] if l["name"]=="d1phm$model"]
+           Memento.setlevel!(TESTLOG, "info")
+           @test_warn(TESTLOG, ": load model $model not supported. Treating as model 1.",
+              TPPMs.parse_opendss(dss)
+           )
+           Memento.setlevel!(TESTLOG, "error")
+        end
+
+        Memento.setlevel!(TESTLOG, "info")
 
         @test_throws(TESTLOG, ErrorException,
                    TPPMs.parse_file("../test/data/opendss/test_simple2.dss"))
@@ -88,15 +99,6 @@
 
         @test_warn(TESTLOG, "Only three-phase transformers are supported. The bus specification b7.1 is treated as b7 instead.",
                    TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
-
-        # load parsing related warnings
-        for model in [3, 4, 7, 8]
-           dss = TPPMs.parse_dss("../test/data/opendss/loadparser_warn_model.dss")
-           dss["load"] = [l for l in dss["load"] if l["name"]=="d1phm$model"]
-           @test_warn(TESTLOG, ": load model $model not supported. Treating as model 1.",
-              TPPMs.parse_opendss(dss)
-           )
-        end
 
         @test_warn(TESTLOG, "Only three-phase transformers are supported. The bus specification b7.1 is treated as b7 instead.",
                   TPPMs.parse_file("../test/data/opendss/test2_master.dss"))
