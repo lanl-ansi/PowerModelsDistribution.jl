@@ -210,7 +210,7 @@ Create a dictionary with values of type Any for the load.
 Depending on the load model, this can be a parameter or a NLexpression.
 These will be inserted into KCL.
 """
-function variable_load(pm::PMs.GenericPowerModel; nw=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
-    PMs.var(pm, nw, cnd)[:pd] = Dict{Int, Any}()
-    PMs.var(pm, nw, cnd)[:qd] = Dict{Int, Any}()
+function variable_load(pm::_PMs.GenericPowerModel; nw=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
+    _PMs.var(pm, nw, cnd)[:pd] = Dict{Int, Any}()
+    _PMs.var(pm, nw, cnd)[:qd] = Dict{Int, Any}()
 end

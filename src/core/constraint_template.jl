@@ -35,8 +35,8 @@ end
 
 
 "delegate back to PowerModels by default"
-function constraint_tp_voltage(pm::PMs.GenericPowerModel, n::Int, c::Int)
-        PMs.constraint_voltage(pm, n, c)
+function constraint_tp_model_voltage(pm::_PMs.GenericPowerModel, n::Int, c::Int)
+        _PMs.constraint_model_voltage(pm, n, c)
 end
 
 
@@ -316,26 +316,26 @@ end
 
 
 "KCL including transformer arcs and load variables."
-function constraint_kcl_shunt_trans_load(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    if !haskey(PMs.con(pm, nw, cnd), :kcl_p)
-        PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,JuMP.ConstraintRef}()
+function constraint_tp_power_balance_shunt_trans_load(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    if !haskey(_PMs.con(pm, nw, cnd), :kcl_p)
+        _PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,JuMP.ConstraintRef}()
     end
-    if !haskey(PMs.con(pm, nw, cnd), :kcl_q)
-        PMs.con(pm, nw, cnd)[:kcl_q] = Dict{Int,JuMP.ConstraintRef}()
+    if !haskey(_PMs.con(pm, nw, cnd), :kcl_q)
+        _PMs.con(pm, nw, cnd)[:kcl_q] = Dict{Int,JuMP.ConstraintRef}()
     end
 
-    bus = PMs.ref(pm, nw, :bus, i)
-    bus_arcs = PMs.ref(pm, nw, :bus_arcs, i)
-    bus_arcs_dc = PMs.ref(pm, nw, :bus_arcs_dc, i)
-    bus_gens = PMs.ref(pm, nw, :bus_gens, i)
-    bus_loads = PMs.ref(pm, nw, :bus_loads, i)
-    bus_shunts = PMs.ref(pm, nw, :bus_shunts, i)
-    bus_arcs_trans = PMs.ref(pm, nw, :bus_arcs_trans, i)
+    bus = _PMs.ref(pm, nw, :bus, i)
+    bus_arcs = _PMs.ref(pm, nw, :bus_arcs, i)
+    bus_arcs_dc = _PMs.ref(pm, nw, :bus_arcs_dc, i)
+    bus_gens = _PMs.ref(pm, nw, :bus_gens, i)
+    bus_loads = _PMs.ref(pm, nw, :bus_loads, i)
+    bus_shunts = _PMs.ref(pm, nw, :bus_shunts, i)
+    bus_arcs_trans = _PMs.ref(pm, nw, :bus_arcs_trans, i)
 
-    bus_gs = Dict(k => PMs.ref(pm, nw, :shunt, k, "gs", cnd) for k in bus_shunts)
-    bus_bs = Dict(k => PMs.ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
+    bus_gs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "gs", cnd) for k in bus_shunts)
+    bus_bs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
 
-    constraint_kcl_shunt_trans_load(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_loads, bus_gs, bus_bs)
+    constraint_tp_power_balance_shunt_trans_load(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_loads, bus_gs, bus_bs)
 end
 
 
@@ -373,10 +373,10 @@ sn_a = v_a.conj(i_a)
     = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 So for delta, sn is constrained indirectly.
 """
-function constraint_tp_load(pm::PMs.GenericPowerModel, id::Int; nw=pm.cnw)
-    load = PMs.ref(pm, nw, :load, id)
+function constraint_tp_load(pm::_PMs.GenericPowerModel, id::Int; nw=pm.cnw)
+    load = _PMs.ref(pm, nw, :load, id)
     model = load["model"]
-    conn = PMs.ref(pm, nw, :load, id, "conn")
+    conn = _PMs.ref(pm, nw, :load, id, "conn")
     @assert(conn in ["delta", "wye"])
 
     if model=="constant_power"
@@ -384,17 +384,17 @@ function constraint_tp_load(pm::PMs.GenericPowerModel, id::Int; nw=pm.cnw)
         qd = load["qd"]
 
         if conn=="wye"
-            for c in PMs.conductor_ids(pm)
+            for c in _PMs.conductor_ids(pm)
                 constraint_load_power_wye(pm, nw, c, id, pd[c], qd[c])
             end
         elseif conn=="delta"
-            @assert(PMs.ref(pm, 0, :conductors)==3)
+            @assert(_PMs.ref(pm, 0, :conductors)==3)
             constraint_tp_load_power_delta(pm, nw, id, load["load_bus"], pd, qd)
         end
 
     elseif model=="constant_current"
         vnom_kv = load["vnom_kv"]
-        vbase_kv_LL = PMs.ref(pm, nw, :bus, load["load_bus"])["base_kv"]
+        vbase_kv_LL = _PMs.ref(pm, nw, :bus, load["load_bus"])["base_kv"]
         vbase_kv_LN = vbase_kv_LL/sqrt(3)
 
         pd = load["pd"]
@@ -403,17 +403,17 @@ function constraint_tp_load(pm::PMs.GenericPowerModel, id::Int; nw=pm.cnw)
         cq = qd/(vnom_kv/vbase_kv_LN)
 
         if conn=="wye"
-            for c in PMs.conductor_ids(pm)
+            for c in _PMs.conductor_ids(pm)
                 constraint_load_current_wye(pm, nw, c, id, load["load_bus"], cp[c], cq[c])
             end
         elseif conn=="delta"
-            @assert(PMs.ref(pm, 0, :conductors)==3)
+            @assert(_PMs.ref(pm, 0, :conductors)==3)
             constraint_tp_load_current_delta(pm, nw, id, load["load_bus"], cp, cq)
         end
 
     elseif model=="constant_impedance"
         vnom_kv = load["vnom_kv"]
-        vbase_kv_LL = PMs.ref(pm, nw, :bus, load["load_bus"])["base_kv"]
+        vbase_kv_LL = _PMs.ref(pm, nw, :bus, load["load_bus"])["base_kv"]
         vbase_kv_LN = vbase_kv_LL/sqrt(3)
 
         pd = load["pd"]
@@ -422,11 +422,11 @@ function constraint_tp_load(pm::PMs.GenericPowerModel, id::Int; nw=pm.cnw)
         cq = qd/(vnom_kv/vbase_kv_LN)^2
 
         if conn=="wye"
-            for c in PMs.conductor_ids(pm)
+            for c in _PMs.conductor_ids(pm)
                 constraint_load_impedance_wye(pm, nw, c, id, load["load_bus"], cp[c], cq[c])
             end
         elseif conn=="delta"
-            @assert(PMs.ref(pm, 0, :conductors)==3)
+            @assert(_PMs.ref(pm, 0, :conductors)==3)
             constraint_tp_load_impedance_delta(pm, nw, id, load["load_bus"], cp, cq)
         end
 

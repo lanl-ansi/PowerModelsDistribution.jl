@@ -379,7 +379,7 @@
         @test sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]) < 0.0
         #@test isapprox(sum(sol["solution"]["gen"]["2"]["pg"] * sol["solution"]["baseMVA"]), 0.018345; atol=1e-4)
         # changed objective 0.018345 -> 0.0182074
-        # solution changed after changing initial point in constraint_tp_voltage
+        # solution changed after changing initial point in constraint_tp_model_voltage
         @test isapprox(sum(sol["solution"]["gen"]["2"]["pg"] * sol["solution"]["baseMVA"]), 0.0182074; atol=1e-4)
         @test isapprox(sum(sol["solution"]["gen"]["2"]["qg"] * sol["solution"]["baseMVA"]), 0.00919404; atol=1e-4)
     end

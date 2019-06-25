@@ -42,7 +42,7 @@ end
 
 
 ""
-function constraint_tp_ower_balance_shunt_trans(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractACPForm
+function constraint_tp_power_balance_shunt_trans(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractACPForm
     vm = _PMs.var(pm, nw, c, :vm, i)
     p = _PMs.var(pm, nw, c, :p)
     q = _PMs.var(pm, nw, c, :q)
