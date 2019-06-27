@@ -1,26 +1,21 @@
-export run_tp_opf_ubctr, run_ac_tp_opf_ubctr
+export run_tp_opf_bctr, run_ac_tp_opf_bctr
+
 
 ""
-function run_ac_tp_opf_ubctr(file, solver; kwargs...)
-    return run_tp_opf(file, PMs.ACPPowerModel, solver; multiconductor=true, kwargs...)
+function run_tp_opf_bctr(data::Dict{String,Any}, model_constructor, solver; kwargs...)
+    return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf_bctr; multiconductor=true, solution_builder=solution_bctr!, kwargs...)
 end
 
 
 ""
-function run_tp_opf_ubctr(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf_ubctr; multiconductor=true, kwargs...)
-end
-
-
-""
-function run_tp_opf_ubctr(file::String, model_constructor, solver; kwargs...)
+function run_tp_opf_bctr(file::String, model_constructor, solver; kwargs...)
     data = ThreePhasePowerModels.parse_file(file)
-    return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf_ubctr; multiconductor=true, kwargs...)
+    return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf_bctr; multiconductor=true, solution_builder=solution_bctr!,  kwargs...)
 end
 
 
 ""
-function post_tp_opf_ubctr(pm::PMs.GenericPowerModel)
+function post_tp_opf_bctr(pm::PMs.GenericPowerModel)
     add_arcs_trans!(pm)
 
     variable_tp_voltage(pm)
@@ -68,4 +63,11 @@ function post_tp_opf_ubctr(pm::PMs.GenericPowerModel)
     end
 
     PMs.objective_min_fuel_cost(pm)
+end
+
+""
+function solution_bctr!(pm::PMs.GenericPowerModel, sol::Dict{String,<:Any})
+    PMs.add_bus_voltage_setpoint(sol, pm)
+    add_setpoint_bus_voltage_balance_indicators!(pm, sol)
+    PMs.add_generator_power_setpoint(sol, pm)
 end

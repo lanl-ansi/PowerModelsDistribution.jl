@@ -1,5 +1,11 @@
+% This case was designed for testing the voltage balance constraints
+
 % 3 coupled radial networks
 % no shunts
+% This case contains a load in phase 1 at bus 2,
+% a cheap generator at bus 3, and an expensive one at bus 2
+% The optimal dispatch will use the generator at bus 3 as much as possible,
+% being constrained by the imposed balance constraint
 
 function tppmc = case5_i_r_a
 tppmc.version = '1'
