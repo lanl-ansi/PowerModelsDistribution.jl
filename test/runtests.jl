@@ -58,4 +58,6 @@ juniper_solver = JuMP.with_optimizer(Juniper.Optimizer, nl_solver=JuMP.with_opti
     include("tp_multinetwork.jl")
 
     include("transformer.jl")
+
+    include("loadmodels.jl")
 end
