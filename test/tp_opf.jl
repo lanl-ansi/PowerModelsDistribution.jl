@@ -443,3 +443,20 @@ end
         @test isapprox(result["objective"], 0.0597016; atol = 1e-4)
     end
 end
+##
+
+@testset "test acp opf unbalance constrained" begin
+    tppm_data = TPPMs.parse_file("../test/data/matlab/case_bctr.m")
+    # We check the equations by comparing against the value calculated by the solution
+    # builder for the active constraint
+    constr_keys = ["vm_vuf_max", "vm_seq_neg_max", "vm_seq_zero_max", "vm_seq_pos_max", "vm_ll_max", "vm_ll_min"]
+    constr_lims = [0.04, 0.04, 0.04, 1.02, PMs.MultiConductorVector(ones(3)*1.07), PMs.MultiConductorVector(ones(3)*1.01)]
+    sol_keys = ["vuf", "vm_seq_neg", "vm_seq_zero", "vm_seq_pos", "vm_ll", "vm_ll"]
+    for i in 1:length(constr_keys)
+        tppm = deepcopy(tppm_data)
+        tppm["bus"]["3"][constr_keys[i]] = constr_lims[i]
+        sol = TPPMs.run_tp_opf_bctr(tppm, PMs.ACPPowerModel, ipopt_solver, multiconductor=true)
+        # the minimum is needed for the LL constraints; only one out of three will be active
+        @test minimum(abs.(sol["solution"]["bus"]["3"][sol_keys[i]]-constr_lims[i])) <= 1E-5
+    end
+end

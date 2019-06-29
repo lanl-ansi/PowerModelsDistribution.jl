@@ -272,6 +272,47 @@ function constraint_kcl_shunt_trans(pm::PMs.GenericPowerModel, i::Int; nw::Int=p
 end
 
 
+"""
+Impose all balance related constraints for which key present in data model of bus.
+For a discussion of sequence components and voltage unbalance factor (VUF), see
+@INPROCEEDINGS{girigoudar_molzahn_roald-2019,
+	author={K. Girigoudar and D. K. Molzahn and L. A. Roald},
+	booktitle={submitted},
+	title={{Analytical and Empirical Comparisons of Voltage Unbalance Definitions}},
+	year={2019},
+	month={},
+    url={https://molzahn.github.io/pubs/girigoudar_molzahn_roald-2019.pdf}
+}
+"""
+function constraint_tp_voltage_balance(pm::PMs.GenericPowerModel, bus_id::Int; nw=pm.cnw)
+    @assert(PMs.ref(pm, nw, :conductors)==3)
+
+    bus = PMs.ref(pm, nw, :bus, bus_id)
+
+    if haskey(bus, "vm_vuf_max")
+        constraint_tp_vm_vuf(pm, nw, bus_id, bus["vm_vuf_max"])
+    end
+
+    if haskey(bus, "vm_seq_neg_max")
+        constraint_tp_vm_neg_seq(pm, nw, bus_id, bus["vm_seq_neg_max"])
+    end
+
+    if haskey(bus, "vm_seq_pos_max")
+        constraint_tp_vm_pos_seq(pm, nw, bus_id, bus["vm_seq_pos_max"])
+    end
+
+    if haskey(bus, "vm_seq_zero_max")
+        constraint_tp_vm_zero_seq(pm, nw, bus_id, bus["vm_seq_zero_max"])
+    end
+
+    if haskey(bus, "vm_ll_min")|| haskey(bus, "vm_ll_max")
+        vm_ll_min = haskey(bus, "vm_ll_min") ? bus["vm_ll_min"] : PMs.MultiConductorVector(fill(0, 3))
+        vm_ll_max = haskey(bus, "vm_ll_max") ? bus["vm_ll_max"] : PMs.MultiConductorVector(fill(Inf, 3))
+        constraint_tp_vm_ll(pm, nw, bus_id, vm_ll_min, vm_ll_max)
+    end
+end
+
+
 "KCL including transformer arcs and load variables."
 function constraint_kcl_shunt_trans_load(pm::PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     if !haskey(PMs.con(pm, nw, cnd), :kcl_p)
@@ -294,6 +335,7 @@ function constraint_kcl_shunt_trans_load(pm::PMs.GenericPowerModel, i::Int; nw::
 
     constraint_kcl_shunt_trans_load(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_loads, bus_gs, bus_bs)
 end
+
 
 """
 CONSTANT POWER

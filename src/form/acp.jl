@@ -329,6 +329,88 @@ function constraint_tp_oltc_flow(pm::PMs.GenericPowerModel{T}, nw::Int, i::Int, 
 end
 
 
+"""
+a = exp(im*2π/3)
+U+ = (1*Ua + a*Ub a^2*Uc)/3
+U- = (1*Ua + a^2*Ub a*Uc)/3
+vuf = |U-|/|U+|
+|U-| <= vufmax*|U+|
+|U-|^2 <= vufmax^2*|U+|^2
+"""
+function constraint_tp_vm_vuf(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vufmax::Float64) where T <: PMs.AbstractACPForm
+    if !haskey(PMs.var(pm, pm.cnw), :vmpossqr)
+        PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
+        PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+    end
+    (vm_a, vm_b, vm_c) = [PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    (va_a, va_b, va_c) = [PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
+    a = exp(im*2*pi/3)
+    # real and imag functions cannot be used in NLexpressions, so precalculate
+    are = real(a)
+    aim = imag(a)
+    a2re = real(a^2)
+    a2im = imag(a^2)
+    # real and imaginary components of U+
+    vrepos = JuMP.@NLexpression(pm.model,
+        (vm_a*cos(va_a) + are*vm_b*cos(va_b) - aim*vm_b*sin(va_b) + a2re*vm_c*cos(va_c) - a2im*vm_c*sin(va_c))/3
+    )
+    vimpos = JuMP.@NLexpression(pm.model,
+        (vm_a*sin(va_a) + are*vm_b*sin(va_b) + aim*vm_b*cos(va_b) + a2re*vm_c*sin(va_c) + a2im*vm_c*cos(va_c))/3
+    )
+    # square of magnitude of U+, |U+|^2
+    vmpossqr = JuMP.@NLexpression(pm.model, vrepos^2+vimpos^2)
+    # real and imaginary components of U-
+    vreneg = JuMP.@NLexpression(pm.model,
+        (vm_a*cos(va_a) + a2re*vm_b*cos(va_b) - a2im*vm_b*sin(va_b) + are*vm_c*cos(va_c) - aim*vm_c*sin(va_c))/3
+    )
+    vimneg = JuMP.@NLexpression(pm.model,
+        (vm_a*sin(va_a) + a2re*vm_b*sin(va_b) + a2im*vm_b*cos(va_b) + are*vm_c*sin(va_c) + aim*vm_c*cos(va_c))/3
+    )
+    # square of magnitude of U-, |U-|^2
+    vmnegsqr = JuMP.@NLexpression(pm.model, vreneg^2+vimneg^2)
+    # finally, apply constraint
+    JuMP.@NLconstraint(pm.model, vmnegsqr <= vufmax^2*vmpossqr)
+    # DEBUGGING: save references for post check
+    #var(pm, pm.cnw, :vmpossqr)[bus_id] = vmpossqr
+    #var(pm, pm.cnw, :vmnegsqr)[bus_id] = vmnegsqr
+end
+
+
+"""
+a = exp(im*2π/3)
+U+ = (1*Ua + a*Ub a^2*Uc)/3
+U- = (1*Ua + a^2*Ub a*Uc)/3
+vuf = |U-|/|U+|
+|U-| <= vufmax*|U+|
+|U-|^2 <= vufmax^2*|U+|^2
+"""
+function constraint_tp_vm_neg_seq(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmnegmax::Float64) where T <: PMs.AbstractACPForm
+    if !haskey(PMs.var(pm, pm.cnw), :vmpossqr)
+        PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
+        PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+    end
+    (vm_a, vm_b, vm_c) = [PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    (va_a, va_b, va_c) = [PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
+    a = exp(im*2*pi/3)
+    # real and imag functions cannot be used in NLexpressions, so precalculate
+    are = real(a)
+    aim = imag(a)
+    a2re = real(a^2)
+    a2im = imag(a^2)
+    # real and imaginary components of U-
+    vreneg = JuMP.@NLexpression(pm.model,
+        (vm_a*cos(va_a) + a2re*vm_b*cos(va_b) - a2im*vm_b*sin(va_b) + are*vm_c*cos(va_c) - aim*vm_c*sin(va_c))/3
+    )
+    vimneg = JuMP.@NLexpression(pm.model,
+        (vm_a*sin(va_a) + a2re*vm_b*sin(va_b) + a2im*vm_b*cos(va_b) + are*vm_c*sin(va_c) + aim*vm_c*cos(va_c))/3
+    )
+    # square of magnitude of U-, |U-|^2
+    vmnegsqr = JuMP.@NLexpression(pm.model, vreneg^2+vimneg^2)
+    # finally, apply constraint
+    JuMP.@NLconstraint(pm.model, vmnegsqr <= vmnegmax^2)
+end
+
+                                                                          
 "Links the power flowing into both windings of a variable tap transformer."
 function constraint_tp_trans_flow_var(pm::PMs.GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im; nw::Int=pm.cnw)
     # for ac formulation, indentical to fixed tap
@@ -357,6 +439,40 @@ function constraint_load_impedance_wye(pm::PMs.GenericPowerModel{T}, nw::Int, cn
     PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, cq*vm^2)
 end
 
+
+"""
+a = exp(im*2π/3)
+U+ = (1*Ua + a*Ub a^2*Uc)/3
+U- = (1*Ua + a^2*Ub a*Uc)/3
+vuf = |U-|/|U+|
+|U-| <= vufmax*|U+|
+|U-|^2 <= vufmax^2*|U+|^2
+"""
+function constraint_tp_vm_pos_seq(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmposmax::Float64) where T <: PMs.AbstractACPForm
+    if !haskey(PMs.var(pm, pm.cnw), :vmpossqr)
+        PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
+        PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+    end
+    (vm_a, vm_b, vm_c) = [PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    (va_a, va_b, va_c) = [PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
+    a = exp(im*2*pi/3)
+    # real and imag functions cannot be used in NLexpressions, so precalculate
+    are = real(a)
+    aim = imag(a)
+    a2re = real(a^2)
+    a2im = imag(a^2)
+    # real and imaginary components of U+
+    vrepos = JuMP.@NLexpression(pm.model,
+        (vm_a*cos(va_a) + are*vm_b*cos(va_b) - aim*vm_b*sin(va_b) + a2re*vm_c*cos(va_c) - a2im*vm_c*sin(va_c))/3
+    )
+    vimpos = JuMP.@NLexpression(pm.model,
+        (vm_a*sin(va_a) + are*vm_b*sin(va_b) + aim*vm_b*cos(va_b) + a2re*vm_c*sin(va_c) + a2im*vm_c*cos(va_c))/3
+    )
+    # square of magnitude of U+, |U+|^2
+    vmpossqr = JuMP.@NLexpression(pm.model, vrepos^2+vimpos^2)
+    # finally, apply constraint
+    JuMP.@NLconstraint(pm.model, vmpossqr <= vmposmax^2)
+end
 
 """
 For a delta load, sd = (s_ab, s_bc, s_ca), but we want to fix s = (s_a, s_b, s_c)
@@ -404,6 +520,35 @@ end
 
 
 """
+a = exp(im*2π/3)
+U+ = (1*Ua + a*Ub a^2*Uc)/3
+U- = (1*Ua + a^2*Ub a*Uc)/3
+vuf = |U-|/|U+|
+|U-| <= vufmax*|U+|
+|U-|^2 <= vufmax^2*|U+|^2
+"""
+function constraint_tp_vm_zero_seq(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmzeromax::Float64) where T <: PMs.AbstractACPForm
+    if !haskey(PMs.var(pm, pm.cnw), :vmpossqr)
+        PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
+        PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+    end
+    (vm_a, vm_b, vm_c) = [PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    (va_a, va_b, va_c) = [PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
+    # real and imaginary components of U+
+    vrezero = JuMP.@NLexpression(pm.model,
+        (vm_a*cos(va_a) + vm_b*cos(va_b) + vm_c*cos(va_c))/3
+    )
+    vimzero = JuMP.@NLexpression(pm.model,
+        (vm_a*sin(va_a) + vm_b*sin(va_b) + vm_c*sin(va_c))/3
+    )
+    # square of magnitude of U+, |U+|^2
+    vmzerosqr = JuMP.@NLexpression(pm.model, vrezero^2+vimzero^2)
+    # finally, apply constraint
+    JuMP.@NLconstraint(pm.model, vmzerosqr <= vmzeromax^2)
+end
+
+
+"""
 We want to express
 s_ab = cp.|v_ab|+im.cq.|v_ab|
 i_ab = conj(s_ab/v_ab) = |v_ab|.(cq-im.cq)/conj(v_ab) = (1/|v_ab|).(cp-im.cq)*v_ab
@@ -447,6 +592,31 @@ function constraint_tp_load_current_delta(pm::PMs.GenericPowerModel{T}, nw::Int,
     PMs.var(pm, nw, 1, :qd)[load_id] = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
     PMs.var(pm, nw, 2, :qd)[load_id] = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
     PMs.var(pm, nw, 3, :qd)[load_id] = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+end
+
+
+"""
+"""
+function constraint_tp_vm_ll(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vm_ll_min::PMs.MultiConductorVector, vm_ll_max::PMs.MultiConductorVector) where T <: PMs.AbstractACPForm
+    # 3 conductors asserted in template already
+    vm_ln = [PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    va_ln = [PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
+    vr_ll = JuMP.@NLexpression(pm.model, [i in 1:3],
+        vm_ln[i]*cos(va_ln[i]) - vm_ln[i%3+1]*cos(va_ln[i%3+1])
+    )
+    vi_ll = JuMP.@NLexpression(pm.model, [i in 1:3],
+        vm_ln[i]*sin(va_ln[i]) - vm_ln[i%3+1]*sin(va_ln[i%3+1])
+    )
+    for c in 1:3
+        # factor of 3 is needed because vm_ll bounds are with respect to the
+        # LL base, not the LN base
+        if vm_ll_min[c] > 0
+            JuMP.@NLconstraint(pm.model, vr_ll[c]^2+vi_ll[c]^2 >= vm_ll_min[c]^2*3)
+        end
+        if vm_ll_max[c] < Inf
+            JuMP.@NLconstraint(pm.model, vr_ll[c]^2+vi_ll[c]^2 <= vm_ll_max[c]^2*3)
+        end
+    end
 end
 
 
