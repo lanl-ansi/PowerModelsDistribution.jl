@@ -111,7 +111,9 @@ function shunts_diag2mat!(pm)
     for (nw, ref_nw) in  PMs.nws(pm)
         for (id, br) in ref_nw[:branch]
             for key in ["g_fr", "g_to", "b_fr", "b_to"]
-                br[key] = LinearAlgebra.diagm(0=>br[key])
+                if !isa(br[key], PMs.MultiConductorMatrix)
+                    br[key] = LinearAlgebra.diagm(0=>br[key])
+                end
             end
         end
     end
