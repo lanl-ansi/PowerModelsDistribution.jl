@@ -10,6 +10,13 @@ function run_tp_strg_opf(data::Dict{String,Any}, model_constructor, solver; kwar
     return _PMs.run_model(data, model_constructor, solver, post_tp_strg_opf; multiconductor=true, kwargs...)
 end
 
+
+""
+function run_tp_strg_opf(file::String, model_constructor, solver; kwargs...)
+    return run_tp_strg_opf(ThreePhasePowerModels.parse_file(file), model_constructor, solver; kwargs...)
+end
+
+
 ""
 function post_tp_strg_opf(pm::_PMs.GenericPowerModel)
     variable_tp_voltage(pm)
@@ -65,6 +72,13 @@ end
 function run_mn_tp_strg_opf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
     return _PMs.run_model(data, model_constructor, solver, post_mn_tp_strg_opf; multiconductor=true, multinetwork=true, kwargs...)
 end
+
+
+""
+function run_mn_tp_strg_opf(file::String, model_constructor, solver; kwargs...)
+    return run_mn_tp_strg_opf(ThreePhasePowerModels.parse_file(file), model_constructor, solver; kwargs...)
+end
+
 
 ""
 function post_mn_tp_strg_opf(pm::_PMs.GenericPowerModel)

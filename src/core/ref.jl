@@ -1,5 +1,6 @@
 import LinearAlgebra: diagm
 
+
 ""
 function _calc_tp_voltage_product_bounds(pm::_PMs.GenericPowerModel, buspairs; nw::Int=pm.cnw)
     wr_min = Dict([(bp, -Inf) for bp in buspairs])
@@ -31,11 +32,14 @@ function _calc_tp_voltage_product_bounds(pm::_PMs.GenericPowerModel, buspairs; n
     return wr_min, wr_max, wi_min, wi_max
 end
 
+
+""
 function _find_ref_buses(pm::_PMs.GenericPowerModel, nw)
     buses = _PMs.ref(pm, nw, :bus)
     return [b for (b,bus) in buses if bus["bus_type"]==3]
     # return [bus for (b,bus) in buses ]
 end
+
 
 "Adds arcs for PMD transformers; for dclines and branches this is done in PMs"
 function ref_add_arcs_trans!(pm::_PMs.GenericPowerModel)
@@ -54,6 +58,8 @@ function ref_add_arcs_trans!(pm::_PMs.GenericPowerModel)
     end
 end
 
+
+""
 function _calc_tp_trans_Tvi(pm::_PMs.GenericPowerModel, i::Int; nw=pm.cnw)
     trans = _PMs.ref(pm, nw, :trans,  i)
     # transformation matrices

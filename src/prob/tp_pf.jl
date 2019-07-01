@@ -1,12 +1,12 @@
 ""
-function run_ac_tp_pf(file, solver; kwargs...)
-    return run_tp_pf(file, _PMs.ACPPowerModel, solver; kwargs...)
+function run_ac_tp_pf(data, solver; kwargs...)
+    return run_tp_pf(data, _PMs.ACPPowerModel, solver; kwargs...)
 end
 
 
 ""
-function run_dc_tp_pf(file, solver; kwargs...)
-    return run_tp_pf(file, _PMs.DCPPowerModel, solver; kwargs...)
+function run_dc_tp_pf(data, solver; kwargs...)
+    return run_tp_pf(data, _PMs.DCPPowerModel, solver; kwargs...)
 end
 
 
@@ -18,8 +18,7 @@ end
 
 ""
 function run_tp_pf(file::String, model_constructor, solver; kwargs...)
-    data = PowerModelsDistribution.parse_file(file)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_pf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+    return run_tp_pf(PowerModelsDistribution.parse_file(file), model_constructor, solver;  kwargs...)
 end
 
 
@@ -84,5 +83,4 @@ function post_tp_pf(pm::_PMs.GenericPowerModel)
     for i in _PMs.ids(pm, :trans)
         constraint_tp_trans(pm, i)
     end
-
 end

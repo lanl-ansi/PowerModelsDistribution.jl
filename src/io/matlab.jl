@@ -1,9 +1,10 @@
-_current_version = v"1"
+_current_matlab_version = v"1"
+
 
 ""
 function parse_matlab(io::IOStream)
     data_string = read(io, String)
-    ml_data = parse_matlab_string(data_string)
+    ml_data = _parse_matlab_string(data_string)
 
     pm_data = matlab_to_pmd(ml_data)
 
@@ -92,10 +93,10 @@ _pmd_branch_columns = [
 
 
 ""
-function parse_matlab_string(data_string::String)
+function _parse_matlab_string(data_string::String)
     matlab_data, func_name, colnames = InfrastructureModels.parse_matlab_string(data_string, extended=true)
 
-    #println(matlab_data)
+    Memento.debug(_LOGGER, "$matlab_data")
 
     case = Dict{String,Any}()
 
@@ -240,8 +241,8 @@ function parse_matlab_string(data_string::String)
         end
     end
 
-    #println("Case:")
-    #println(case)
+    Memento.debug(_LOGGER, "Case:")
+    Memento.debug(_LOGGER, "$case")
 
     return case
 end
@@ -250,18 +251,16 @@ end
 "Translates legacy versions into current version format"
 function _translate_version!(ml_data::Dict{String,Any})
     # Future Version translation here
-    if ml_data["source_version"] == _current_version
+    if ml_data["source_version"] == _current_matlab_version
         return ml_data
     else
-        Memento.warn(_LOGGER, "matlab source data has unrecognized version $(ml_data["source_version"]), cannot translate to version $_current_version, parse may be invalid")
+        Memento.warn(_LOGGER, "matlab source data has unrecognized version $(ml_data["source_version"]), cannot translate to version $_current_matlab_version, parse may be invalid")
         return ml_data
     end
 end
 
 
-"""
-Converts a Matlab dict into a PowerModelsDistribution dict
-"""
+"Converts a Matlab dict into a PowerModelsDistribution dict"
 function matlab_to_pmd(ml_data::Dict{String,Any})
     ml_data = deepcopy(ml_data)
 
@@ -278,11 +277,11 @@ function matlab_to_pmd(ml_data::Dict{String,Any})
         ml_data["shunt"] = []
     end
 
-    ml2pm_bus(ml_data)
-    ml2pm_load(ml_data)
-    ml2pm_shunt(ml_data)
-    ml2pm_gen(ml_data)
-    ml2pm_branch(ml_data)
+    _ml2tppm_bus!(ml_data)
+    _ml2tppm_load!(ml_data)
+    _ml2tppm_shunt!(ml_data)
+    _ml2tppm_gen!(ml_data)
+    _ml2tppm_branch!(ml_data)
 
     _PMs._merge_bus_name_data!(ml_data)
     _PMs._merge_generator_cost_data!(ml_data)
@@ -302,7 +301,7 @@ end
 
 
 "convert raw bus data into arrays"
-function ml2pm_bus(data::Dict{String,Any})
+function _ml2tppm_bus!(data::Dict{String,Any})
     for bus in data["bus"]
         _make_mpv!(bus, "vmin", ["vmin_1", "vmin_2", "vmin_3"])
         _make_mpv!(bus, "vmax", ["vmax_1", "vmax_2", "vmax_3"])
@@ -313,7 +312,7 @@ end
 
 
 "convert raw load data into arrays"
-function ml2pm_load(data::Dict{String,Any})
+function _ml2tppm_load!(data::Dict{String,Any})
     for load in data["load"]
         _make_mpv!(load, "pd", ["pd_1", "pd_2", "pd_3"])
         _make_mpv!(load, "qd", ["qd_1", "qd_2", "qd_3"])
@@ -322,7 +321,7 @@ end
 
 
 "convert raw shunt data into arrays"
-function ml2pm_shunt(data::Dict{String,Any})
+function _ml2tppm_shunt!(data::Dict{String,Any})
     for load in data["shunt"]
         _make_mpv!(load, "gs", ["gs_1", "gs_2", "gs_3"])
         _make_mpv!(load, "bs", ["bs_1", "bs_2", "bs_3"])
@@ -331,7 +330,7 @@ end
 
 
 "convert raw generator data into arrays"
-function ml2pm_gen(data::Dict{String,Any})
+function _ml2tppm_gen!(data::Dict{String,Any})
     for gen in data["gen"]
         _make_mpv!(gen, "pmin", ["pmin_1", "pmin_2", "pmin_3"])
         _make_mpv!(gen, "pmax", ["pmax_1", "pmax_2", "pmax_3"])
@@ -344,7 +343,7 @@ end
 
 
 "convert raw branch data into arrays"
-function ml2pm_branch(data::Dict{String,Any})
+function _ml2tppm_branch!(data::Dict{String,Any})
     for branch in data["branch"]
         branch["rate_a"] = _PMs.MultiConductorVector(branch["rate_a"], 3)
         branch["rate_b"] = _PMs.MultiConductorVector(branch["rate_b"], 3)

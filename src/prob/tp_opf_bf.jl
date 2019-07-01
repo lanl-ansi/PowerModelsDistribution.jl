@@ -1,13 +1,12 @@
 ""
 function run_tp_opf_bf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_opf_bf; solution_builder=get_solution_tp, multiconductor=true, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_opf_bf; solution_builder=solution_tp!, multiconductor=true, kwargs...)
 end
 
 
 ""
 function run_tp_opf_bf(file::String, model_constructor, solver; kwargs...)
-    data = PowerModelsDistribution.parse_file(file)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_opf_bf; solution_builder=get_solution_tp, multiconductor=true, kwargs...)
+    return run_tp_opf_bf(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
 end
 
 
@@ -51,5 +50,6 @@ function post_tp_opf_bf(pm::_PMs.GenericPowerModel)
         _PMs.constraint_dcline(pm, i, cnd=c)
     end
 
+    # Objective
     _PMs.objective_min_fuel_cost(pm)
 end

@@ -1,19 +1,18 @@
 ""
 function run_ac_tp_opf_lm(file, solver; kwargs...)
-    return run_tp_opf_lm(file, _PMs.ACPPowerModel, solver; multiconductor=true, kwargs...)
+    return run_tp_opf_lm(file, _PMs.ACPPowerModel, solver; kwargs...)
 end
 
 
 ""
 function run_tp_opf_lm(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_opf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_opf_lm; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
 end
 
 
 ""
 function run_tp_opf_lm(file::String, model_constructor, solver; kwargs...)
-    data = PowerModelsDistribution.parse_file(file)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_opf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+    return run_tp_opf_lm(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
 end
 
 

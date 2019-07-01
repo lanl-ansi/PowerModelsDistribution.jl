@@ -1,25 +1,24 @@
 ""
-function run_ac_tp_pf_lm(file, solver; kwargs...)
-    return run_tp_pf_lm(file, _PMs.ACPPowerModel, solver; kwargs...)
+function run_ac_tp_pf_lm(data, solver; kwargs...)
+    return run_tp_pf_lm(data, _PMs.ACPPowerModel, solver; kwargs...)
 end
 
 
 ""
-function run_dc_tp_opf_lm(file, solver; kwargs...)
-    return run_tp_pf_lm(file, _PMs.DCPPowerModel, solver; kwargs...)
+function run_dc_tp_opf_lm(data, solver; kwargs...)
+    return run_tp_pf_lm(data, _PMs.DCPPowerModel, solver; kwargs...)
 end
 
 
 ""
 function run_tp_pf_lm(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_pf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_pf_lm; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
 end
 
 
 ""
 function run_tp_pf_lm(file::String, model_constructor, solver; kwargs...)
-    data = PowerModelsDistribution.parse_file(file)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_pf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+    return run_tp_pf_lm(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
 end
 
 
@@ -70,8 +69,6 @@ function post_tp_pf_lm(pm::_PMs.GenericPowerModel)
     for i in _PMs.ids(pm, :branch), c in _PMs.conductor_ids(pm)
         constraint_tp_ohms_yt_from(pm, i, cnd=c)
         constraint_tp_ohms_yt_to(pm, i, cnd=c)
-        # _PMs.constraint_ohms_yt_from(pm, i, cnd=c)
-        # _PMs.constraint_ohms_yt_to(pm, i, cnd=c)
     end
 
     for (i,dcline) in _PMs.ref(pm, :dcline), c in _PMs.conductor_ids(pm)
@@ -92,5 +89,4 @@ function post_tp_pf_lm(pm::_PMs.GenericPowerModel)
     for i in _PMs.ids(pm, :trans)
         constraint_tp_trans(pm, i)
     end
-
 end

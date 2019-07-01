@@ -3,17 +3,13 @@ function run_tp_pf_bf(data::Dict{String,Any}, model_constructor, solver; kwargs.
     if model_constructor != SDPUBFPowerModel && model_constructor != SOCNLPUBFPowerModel && model_constructor != SOCConicUBFPowerModel && model_constructor != LPUBFPowerModel && model_constructor != LPdiagUBFPowerModel && model_constructor !=  SOCBFPowerModel
         Memento.error(_LOGGER, "The problem type tp_opf_bf at the moment only supports a limited set of formulations")
     end
-    return _PMs.run_model(data, model_constructor, solver, post_tp_pf_bf; solution_builder=get_solution_tp, multiconductor=true, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_pf_bf; solution_builder=solution_tp!, multiconductor=true, kwargs...)
 end
 
 
 ""
 function run_tp_pf_bf(file::String, model_constructor, solver; kwargs...)
-    if model_constructor != SDPUBFPowerModel && model_constructor != SOCNLPUBFPowerModel && model_constructor != SOCConicUBFPowerModel && model_constructor != LPUBFPowerModel && model_constructor !=  SOCBFPowerModel
-        Memento.error(_LOGGER, "The problem type tp_opf_bf at the moment only supports a limited set of formulations")
-    end
-    data = PowerModelsDistribution.parse_file(file)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_pf_bf; solution_builder=get_solution_tp, multiconductor=true, kwargs...)
+    return run_tp_pf_bf(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
 end
 
 
@@ -86,5 +82,6 @@ function post_tp_pf_bf(pm::_PMs.GenericPowerModel)
         end
     end
 
-     _PMs.objective_min_fuel_cost(pm)
+    # Objective
+    _PMs.objective_min_fuel_cost(pm)
 end

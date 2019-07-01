@@ -1,6 +1,6 @@
 ""
 function run_ac_tp_opf(file, solver; kwargs...)
-    return run_tp_opf(file, _PMs.ACPPowerModel, solver; multiconductor=true, kwargs...)
+    return run_tp_opf(file, _PMs.ACPPowerModel, solver; kwargs...)
 end
 
 
@@ -12,8 +12,7 @@ end
 
 ""
 function run_tp_opf(file::String, model_constructor, solver; kwargs...)
-    data = PowerModelsDistribution.parse_file(file)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_opf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+    return run_tp_opf(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
 end
 
 

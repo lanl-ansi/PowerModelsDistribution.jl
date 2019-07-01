@@ -1,6 +1,3 @@
-# Three-phase specific constraints
-
-
 ""
 function variable_tp_voltage(pm::_PMs.GenericPowerModel{T}; nw=pm.cnw, kwargs...) where T <: _PMs.AbstractACPForm
     for c in _PMs.conductor_ids(pm)
@@ -161,6 +158,7 @@ function constraint_tp_ohms_yt_from_on_off(pm::_PMs.GenericPowerModel{T}, n::Int
                                              g[c,d]*vm_fr[c]*vm_to[d]*sin(va_fr[c]-va_to[d]) for d in _PMs.conductor_ids(pm))) )
 end
 
+
 """
 ```
 p[t_idx] == z*(g*v[t_bus]^2 + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[t_bus]-t[f_bus])) + (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus])))
@@ -189,7 +187,7 @@ function constraint_tp_ohms_yt_to_on_off(pm::_PMs.GenericPowerModel{T}, n::Int, 
 end
 
 
-"Links the voltage at both windings of a fixed tap transformer."
+"Links the voltage at both windings of a fixed tap transformer"
 function constraint_tp_trans_voltage(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to) where T <: _PMs.AbstractACPForm
     ncnd  = 3
     # from side
@@ -214,7 +212,7 @@ function constraint_tp_trans_voltage(pm::_PMs.GenericPowerModel{T}, nw::Int, i::
 end
 
 
-"Links the power flowing into both windings of a fixed tap transformer."
+"Links the power flowing into both windings of a fixed tap transformer"
 function constraint_tp_trans_flow(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to) where T <: _PMs.AbstractACPForm
     ncnd  = 3
     # from side variables
@@ -418,12 +416,14 @@ function constraint_tp_trans_flow_var(pm::_PMs.GenericPowerModel, i::Int, f_bus:
 end
 
 
+""
 function constraint_load_power_wye(pm::_PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, pd::Real, qd::Real) where T <: _PMs.AbstractACPForm
     _PMs.var(pm, nw, cnd, :pd)[load_id] = pd
     _PMs.var(pm, nw, cnd, :qd)[load_id] = qd
 end
 
 
+""
 function constraint_load_current_wye(pm::_PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, scale_p::Real, scale_q::Real) where T <: _PMs.AbstractACPForm
     vm = _PMs.var(pm, nw, cnd, :vm, load_bus_id)
     # this has to be a NLexpression and not an expression;
@@ -433,6 +433,7 @@ function constraint_load_current_wye(pm::_PMs.GenericPowerModel{T}, nw::Int, cnd
 end
 
 
+""
 function constraint_load_impedance_wye(pm::_PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real) where T <: _PMs.AbstractACPForm
     vm = _PMs.var(pm, nw, cnd, :vm, load_bus_id)
     _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, cp*vm^2)

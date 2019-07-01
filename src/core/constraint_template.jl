@@ -1,5 +1,3 @@
-# Three-phase specific constraints
-
 ""
 function constraint_tp_power_balance_shunt_slack(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     if !haskey(_PMs.con(pm, nw, cnd), :kcl_p)
@@ -36,7 +34,7 @@ end
 
 "delegate back to PowerModels by default"
 function constraint_tp_model_voltage(pm::_PMs.GenericPowerModel, n::Int, c::Int)
-        _PMs.constraint_model_voltage(pm, n, c)
+    _PMs.constraint_model_voltage(pm, n, c)
 end
 
 
@@ -135,6 +133,8 @@ function constraint_tp_voltage_magnitude_difference(pm::_PMs.GenericPowerModel, 
     constraint_tp_voltage_magnitude_difference(pm, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
 end
 
+
+""
 function constraint_tp_model_voltage_magnitude_difference(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
     branch = _PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
@@ -152,6 +152,7 @@ function constraint_tp_model_voltage_magnitude_difference(pm::_PMs.GenericPowerM
 end
 
 
+""
 function constraint_tp_model_current(pm::_PMs.GenericPowerModel{T}; nw::Int=pm.cnw) where T <: AbstractUBFForm
     for (i,branch) in _PMs.ref(pm, nw, :branch)
         f_bus = branch["f_bus"]
@@ -165,26 +166,8 @@ function constraint_tp_model_current(pm::_PMs.GenericPowerModel{T}; nw::Int=pm.c
     end
 end
 
-#= ??? DEPRECIATED ???
-function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    branch = _PMs.ref(pm, nw, :branch, i)
-    f_bus = branch["f_bus"]
-    t_bus = branch["t_bus"]
-    f_idx = (i, f_bus, t_bus)
-    t_idx = (i, t_bus, f_bus)
 
-    r = branch["br_r"][cnd]
-    x = branch["br_x"][cnd]
-    tm = branch["tap"][cnd]
-    g_sh_fr = branch["g_fr"][cnd]
-    g_sh_to = branch["g_to"][cnd]
-    b_sh_fr = branch["b_fr"][cnd]
-    b_sh_to = branch["b_to"][cnd]
-
-    constraint_tp_flow_losses(pm::_PMs.GenericPowerModel, nw, cnd, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
-end
-=#
-
+""
 function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
     branch = _PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
@@ -212,6 +195,7 @@ function constraint_tp_storage_exchange(pm::_PMs.GenericPowerModel, i::Int; nw::
 end
 
 
+""
 function constraint_tp_trans(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
     if _PMs.ref(pm, pm.cnw, :conductors)!=3
         Memento.error(_LOGGER, "Transformers only work with networks with three conductors.")
@@ -227,6 +211,7 @@ function constraint_tp_trans(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
 end
 
 
+""
 function constraint_tp_oltc(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
     if _PMs.ref(pm, pm.cnw, :conductors)!=3
         Memento.error(_LOGGER, "Transformers only work with networks with three conductors.")

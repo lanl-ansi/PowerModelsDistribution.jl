@@ -42,15 +42,6 @@ function correct_network_data!(data::Dict{String,Any})
     _PMs.check_branch_loops(data)
     _PMs.correct_bus_types!(data)
     _PMs.correct_dcline_limits!(data)
-    # _PMs.check_voltage_setpoints(data)
     _PMs.correct_cost_functions!(data)
     _PMs.standardize_cost_terms!(data)
-end
-
-function _wrap_to_180(degrees)
-    return degrees - 360*floor.((degrees .+ 180)/360)
-end
-
-function _wrap_to_pi(radians)
-    return radians - 2*pi*floor.((radians .+ pi)/(2*pi))
 end

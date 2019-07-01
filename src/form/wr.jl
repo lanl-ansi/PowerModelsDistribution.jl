@@ -1,6 +1,3 @@
-# Three-phase specific constraints
-
-
 ""
 function constraint_tp_model_voltage(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int) where T <: _PMs.AbstractWRForm
     w  = _PMs.var(pm, n,  :w)
@@ -48,6 +45,7 @@ function constraint_tp_ohms_yt_from_on_off(pm::_PMs.GenericPowerModel{T}, n::Int
                                      g[c,d] * wi[(f_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm)) )
 end
 
+
 """
 Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
 
@@ -76,6 +74,7 @@ function constraint_tp_ohms_yt_to_on_off(pm::_PMs.GenericPowerModel{T}, n::Int, 
 end
 
 
+""
 function constraint_tp_power_balance_shunt_trans(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractWRForm
     w    = _PMs.var(pm, nw, c, :w, i)
     pg   = _PMs.var(pm, nw, c, :pg)

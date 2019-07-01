@@ -1,24 +1,24 @@
 "Squares `x`, for parsing Reverse Polish Notation"
-function sqr(x::Float64)
+function _sqr(x::Float64)
     return x * x
 end
 
 
-double_operators = Dict("+" => +, "-" => -, "*" => *, "/" => /, "^" => ^,
+_double_operators = Dict("+" => +, "-" => -, "*" => *, "/" => /, "^" => ^,
                         "atan2" => (x, y) -> rad2deg(atan2(y, x)))
 
-single_operators = Dict("sqr" => sqr, "sqrt" => sqrt, "inv" => inv, "ln" => log,
+_single_operators = Dict("sqr" => _sqr, "sqrt" => sqrt, "inv" => inv, "ln" => log,
                         "exp" => exp, "log10" => log10, "sin" => sind, "cos" => cosd,
                         "tan" => tand, "asin" => asind, "acos" => acosd, "atan" => atand)
 
 array_delimiters = ['\"', '\'', '[', '{', '(', ']', '}', ')']
 
 "parses Reverse Polish Notation `expr`"
-function parse_rpn(expr::AbstractString, dtype::Type=Float64)
+function _parse_rpn(expr::AbstractString, dtype::Type=Float64)
     clean_expr = strip(expr, array_delimiters)
 
     if occursin("rollup", clean_expr) || occursin("rolldn", clean_expr) || occursin("swap", clean_expr)
-        Memento.warn(_LOGGER, "parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String")
+        Memento.warn(_LOGGER, "_parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String")
         return expr
     end
 
@@ -27,12 +27,12 @@ function parse_rpn(expr::AbstractString, dtype::Type=Float64)
 
     for item in split_expr
         try
-            if haskey(double_operators, item)
+            if haskey(_double_operators, item)
                 b = pop!(stack)
                 a = pop!(stack)
-                push!(stack, double_operators[item](a, b))
-            elseif haskey(single_operators, item)
-                push!(stack, single_operators[item](pop!(stack)))
+                push!(stack, _double_operators[item](a, b))
+            elseif haskey(_single_operators, item)
+                push!(stack, _single_operators[item](pop!(stack)))
             else
                 if item == "pi"
                     push!(stack, pi)
@@ -59,7 +59,7 @@ end
 "detects if `expr` is Reverse Polish Notation expression"
 function _isa_rpn(expr::AbstractString)::Bool
     expr = split(strip(expr, array_delimiters))
-    opkeys = keys(merge(double_operators, single_operators))
+    opkeys = keys(merge(_double_operators, _single_operators))
     for item in expr
         if item in opkeys
             return true
@@ -70,7 +70,7 @@ end
 
 
 "parses connection \"conn\" specification reducing to wye or delta"
-function parse_conn(conn::String)::String
+function _parse_conn(conn::String)::String
     if conn in ["wye", "y", "ln"]
         return "wye"
     elseif conn in ["delta", "ll"]
@@ -83,7 +83,7 @@ end
 
 
 "checks is a string is a connection by checking the values"
-function isa_conn(expr::AbstractString)::Bool
+function _isa_conn(expr::AbstractString)::Bool
     if expr in ["wye", "y", "ln", "delta", "ll"]
         return true
     else
@@ -93,11 +93,11 @@ end
 
 
 """
-    get_prop_name(ctype)
+    _get_prop_name(ctype)
 
 Returns the property names in order for a given component type `ctype`.
 """
-function get_prop_name(ctype::AbstractString)::Array
+function _get_prop_name(ctype::AbstractString)::Array
     linecode = ["nphases", "r1", "x1", "r0", "x0", "c1", "c0", "units",
                 "rmatrix", "xmatrix", "cmatrix", "basefreq", "normamps",
                 "emergamps", "faultrate", "pctperm", "repair", "kron",
@@ -268,23 +268,23 @@ end
 
 
 """
-    get_prop_name(ctype, i)
+    _get_prop_name(ctype, i)
 
 Returns the `i`th property name for a given component type `ctype`.
 """
-function get_prop_name(ctype::AbstractString, i::Int)::String
-    return get_prop_name(ctype)[i]
+function _get_prop_name(ctype::AbstractString, i::Int)::String
+    return _get_prop_name(ctype)[i]
 end
 
 
 """
-    parse_matrix(dtype, data)
+    _parse_matrix(dtype, data)
 
 Parses a OpenDSS style triangular matrix string `data` into a two dimensional
 array of type `dtype`. Matrix strings are capped by either parenthesis or
 brackets, rows are separated by "|", and columns are separated by spaces.
 """
-function parse_matrix(dtype::Type, data::AbstractString)::Array
+function _parse_matrix(dtype::Type, data::AbstractString)::Array
     rows = []
     for line in split(strip(data, array_delimiters), '|')
         cols = []
@@ -327,7 +327,7 @@ end
 
 
 "parse matrices according to active nodes"
-function parse_matrix(data::Array{T}, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array where T
+function _parse_matrix(data::Array{T}, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array where T
     mat = fill(fill_val, (nph, nph))
     idxs = findall(nodes[1:nph])
 
@@ -353,13 +353,13 @@ end
 
 
 """
-    parse_array(dtype, data)
+    _parse_array(dtype, data)
 
 Parses a OpenDSS style array string `data` into a one dimensional array of type
 `dtype`. Array strings are capped by either brackets, single quotes, or double
 quotes, and elements are separated by spaces.
 """
-function parse_array(dtype::Type, data::AbstractString)
+function _parse_array(dtype::Type, data::AbstractString)
     if occursin(",", data)
         split_char = ','
     else
@@ -372,7 +372,7 @@ function parse_array(dtype::Type, data::AbstractString)
             if dtype == String
                 return data
             else
-                return parse_rpn(data, dtype)
+                return _parse_rpn(data, dtype)
             end
 
         else
@@ -392,7 +392,7 @@ function parse_array(dtype::Type, data::AbstractString)
         array = zeros(dtype, length(elements))
         for (i, el) in enumerate(elements)
             if _isa_rpn(data)
-                array[i] = parse_rpn(el, dtype)
+                array[i] = _parse_rpn(el, dtype)
             else
                 array[i] = parse(dtype, el)
             end
@@ -404,7 +404,7 @@ end
 
 
 "parse matrices according to active nodes"
-function parse_array(data, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array
+function _parse_array(data, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array
     mat = fill(fill_val, nph)
     idxs = findall(nodes[1:nph])
 
@@ -463,13 +463,13 @@ end
 
 
 """
-    parse_buscoords(file)
+    _parse_buscoords(file)
 
 Parses a Bus Coordinate `file`, in either "dat" or "csv" formats, where in
 "dat", columns are separated by spaces, and in "csv" by commas. File expected
 to contain "bus,x,y" on each line.
 """
-function parse_buscoords(file::AbstractString)::Array
+function _parse_buscoords(file::AbstractString)::Array
     file_str = read(open(file), String)
     regex = r",\s*"
     if endswith(lowercase(file), "csv") || endswith(lowercase(file), "dss")
@@ -612,7 +612,7 @@ function _parse_component(component::AbstractString, properties::AbstractString,
     propArray = _parse_properties(properties)
     Memento.debug(_LOGGER, "propArray: $propArray")
 
-    propNames = get_prop_name(ctype)
+    propNames = _get_prop_name(ctype)
     propIdx = 1
 
     for (n, property) in enumerate(propArray)
@@ -808,7 +808,7 @@ function parse_dss(io::IOStream)::Dict
                 file = line_elements[2]
                 fullpath = path == "" ? file : join([path, file], '/')
                 Memento.debug(_LOGGER, "Buscoords path: $fullpath")
-                dss_data["buscoords"] = parse_buscoords(fullpath)
+                dss_data["buscoords"] = _parse_buscoords(fullpath)
 
             elseif cmd == "new"
                 curCtypeName, curCompDict = _parse_line([lowercase(line_element) for line_element in line_elements])
@@ -851,11 +851,11 @@ end
 
 
 "parses the raw dss values into their expected data types"
-function parse_element_with_dtype(dtype, element)
+function _parse_element_with_dtype(dtype, element)
     if _isa_matrix(element)
-        out = parse_matrix(eltype(dtype), element)
+        out = _parse_matrix(eltype(dtype), element)
     elseif _isa_array(element)
-        out = parse_array(eltype(dtype), element)
+        out = _parse_array(eltype(dtype), element)
     elseif dtype <: Bool
         if element in ["n", "no"]
             element = "false"
@@ -864,12 +864,12 @@ function parse_element_with_dtype(dtype, element)
         end
         out = parse(dtype, element)
     elseif _isa_rpn(element)
-        out = parse_rpn(element)
+        out = _parse_rpn(element)
     elseif dtype == String
         out = element
     else
-        if isa_conn(element)
-            out = parse_conn(element)
+        if _isa_conn(element)
+            out = _parse_conn(element)
         else
             try
                 out = parse(dtype, element)
@@ -903,14 +903,14 @@ function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
                             arrout = []
                             for el in v
                                 if isa(v, AbstractString)
-                                    push!(arrout, parse_element_with_dtype(dtypes[k], el))
+                                    push!(arrout, _parse_element_with_dtype(dtypes[k], el))
                                 else
                                     push!(arrout, el)
                                 end
                             end
                             item[k] = arrout
                         elseif isa(v, AbstractString)
-                            item[k] = parse_element_with_dtype(dtypes[k], v)
+                            item[k] = _parse_element_with_dtype(dtypes[k], v)
                         else
                             Memento.error(_LOGGER, "dtype unknown $compType, $k, $v")
                         end
@@ -923,11 +923,11 @@ end
 
 
 """
-    parse_busname(busname)
+    _parse_busname(busname)
 
 Parses busnames as defined in OpenDSS, e.g. "primary.1.2.3.0".
 """
-function parse_busname(busname::AbstractString)
+function _parse_busname(busname::AbstractString)
     parts = split(busname, '.'; limit=2)
     name = parts[1]
     elements = "1.2.3"
@@ -953,11 +953,11 @@ end
 
 
 """
-    get_conductors_ordered(busname)
+    _get_conductors_ordered(busname)
 
 Returns an ordered list of defined conductors.
 """
-function get_conductors_ordered(busname::AbstractString)
+function _get_conductors_ordered(busname::AbstractString)
     parts = split(busname, '.'; limit=2)
     ret = []
     if length(parts)==2
@@ -969,6 +969,6 @@ end
 
 
 "converts Dict{String,Any} to Dict{Symbol,Any} for passing as kwargs"
-function to_sym_keys(data::Dict{String,Any})::Dict{Symbol,Any}
+function _to_sym_keys(data::Dict{String,Any})::Dict{Symbol,Any}
     return Dict{Symbol,Any}((Symbol(k), v) for (k, v) in data)
 end

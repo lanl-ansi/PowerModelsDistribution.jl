@@ -1,13 +1,12 @@
 ""
 function run_tp_ots(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_ots; multiconductor=true, solution_builder=_PMs.get_ots_solution, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_ots; multiconductor=true, solution_builder=_PMs.solution_ots!, kwargs...)
 end
 
 
 ""
 function run_tp_ots(file::String, model_constructor, solver; kwargs...)
-    data = PowerModelsDistribution.parse_file(file)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_ots; multiconductor=true, solution_builder=_PMs.get_ots_solution, kwargs...)
+    return run_tp_ots(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
 end
 
 

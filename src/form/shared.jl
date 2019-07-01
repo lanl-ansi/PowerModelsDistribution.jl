@@ -1,6 +1,3 @@
-# Three-phase specific constraints
-
-
 ""
 function constraint_tp_power_balance_shunt_slack(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, i, bus_arcs, bus_arcs_dc, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractWForms
     w    = _PMs.var(pm, n, c, :w, i)
@@ -18,10 +15,7 @@ function constraint_tp_power_balance_shunt_slack(pm::_PMs.GenericPowerModel{T}, 
 end
 
 
-
-"""
-Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
-"""
+"Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)"
 function constraint_tp_ohms_yt_from(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm) where T <: _PMs.AbstractWRForms
     p_fr = _PMs.var(pm, n, c, :p, f_idx)
     q_fr = _PMs.var(pm, n, c, :q, f_idx)
@@ -42,9 +36,7 @@ function constraint_tp_ohms_yt_from(pm::_PMs.GenericPowerModel{T}, n::Int, c::In
 end
 
 
-"""
-Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
-"""
+"Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)"
 function constraint_tp_ohms_yt_to(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm) where T <: _PMs.AbstractWRForms
     q_to = _PMs.var(pm, n, c, :q, t_idx)
     p_to = _PMs.var(pm, n, c, :p, t_idx)

@@ -1,6 +1,3 @@
-# Three-phase specific constraints
-
-
 ""
 function variable_tp_voltage(pm::_PMs.GenericPowerModel{T}; nw=pm.cnw, kwargs...) where T <: _PMs.AbstractACRForm
     for c in _PMs.conductor_ids(pm)
@@ -164,12 +161,14 @@ function constraint_tp_ohms_yt_to(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int,
 end
 
 
+""
 function constraint_load_power_wye(pm::_PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, pd::Real, qd::Real) where T <: _PMs.AbstractACRForm
     _PMs.var(pm, nw, cnd, :pd)[load_id] = pd
     _PMs.var(pm, nw, cnd, :qd)[load_id] = qd
 end
 
 
+""
 function constraint_load_current_wye(pm::_PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real) where T <: _PMs.AbstractACRForm
     vr = _PMs.var(pm, nw, cnd, :vr, load_bus_id)
     vi = _PMs.var(pm, nw, cnd, :vi, load_bus_id)
@@ -178,6 +177,7 @@ function constraint_load_current_wye(pm::_PMs.GenericPowerModel{T}, nw::Int, cnd
 end
 
 
+""
 function constraint_load_impedance_wye(pm::_PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real) where T <: _PMs.AbstractACRForm
     vr = _PMs.var(pm, nw, cnd, :vr, load_bus_id)
     vi = _PMs.var(pm, nw, cnd, :vi, load_bus_id)

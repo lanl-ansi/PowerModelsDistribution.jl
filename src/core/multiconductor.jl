@@ -1,4 +1,4 @@
-# https://stackoverflow.com/questions/39039553/lower-triangular-matrix-in-julia
+"https://stackoverflow.com/questions/39039553/lower-triangular-matrix-in-julia"
 function _vec2utri!(v::Vector{T}) where T
     d = length(v)
     n = Int((sqrt(8d+1)+1)/2)
@@ -6,22 +6,30 @@ function _vec2utri!(v::Vector{T}) where T
     [ i<j ? v[Int((j-1)*(j-2)/2)+i] : 0 for i=1:n, j=1:n ]
 end
 
+
+""
 function _vec2ltri!(v::Vector{T}) where T
     _vec2utri!(v)'
 end
 
+
+""
 function _mat2utrivec!(m::Matrix{T}) where T
     @assert size(m,1) == size(m,2)
     n = size(m,1)
     [m[i,j] for i=1:n, j=1:n if i < j]
 end
 
+
+""
 function _mat2ltrivec!(m::Matrix{T}) where T
     @assert size(m,1) == size(m,2)
     n = size(m,1)
     [m[j,i] for i=1:n, j=1:n if i < j]
 end
 
+
+""
 function _make_hermitian_matrix_variable(diag, lowertrianglereal, lowertriangleimag)
     #TODO clean up
     matrixreal = []
@@ -74,6 +82,8 @@ function _make_hermitian_matrix_variable(diag, lowertrianglereal, lowertrianglei
     return matrixreal, matriximag
 end
 
+
+""
 function _make_full_matrix_variable(diag, lowertriangle, uppertriangle)
     #TODO clean up
     matrix = []

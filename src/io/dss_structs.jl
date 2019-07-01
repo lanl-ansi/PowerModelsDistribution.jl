@@ -1,7 +1,8 @@
 # Defines data structures (defaults) for OpenDSS objects
 import LinearAlgebra: diagm
 
-to_meters = Dict{String,Any}("mi" => 1609.3,
+
+_convert_to_meters = Dict{String,Any}("mi" => 1609.3,
                              "km" => 1000.0,
                              "kft" => 304.8,
                              "m" => 1.0,
@@ -82,16 +83,16 @@ function _createLinecode(name::AbstractString; kwargs...)
 
     return Dict{String,Any}("name" => name,
                             "nphases" => phases,
-                            "r1" => r1 / to_meters[units],
-                            "x1" => x1 / to_meters[units],
-                            "r0" => r0 / to_meters[units],
-                            "x0" => x0 / to_meters[units],
-                            "c1" => c1 / to_meters[units],
-                            "c0" => c0 / to_meters[units],
+                            "r1" => r1 / _convert_to_meters[units],
+                            "x1" => x1 / _convert_to_meters[units],
+                            "r0" => r0 / _convert_to_meters[units],
+                            "x0" => x0 / _convert_to_meters[units],
+                            "c1" => c1 / _convert_to_meters[units],
+                            "c0" => c0 / _convert_to_meters[units],
                             "units" => "m",
-                            "rmatrix" => rmatrix / to_meters[units],
-                            "xmatrix" => xmatrix / to_meters[units],
-                            "cmatrix" => cmatrix / to_meters[units],
+                            "rmatrix" => rmatrix / _convert_to_meters[units],
+                            "xmatrix" => xmatrix / _convert_to_meters[units],
+                            "cmatrix" => cmatrix / _convert_to_meters[units],
                             "basefreq" => basefreq,
                             "normamps" => get(kwargs, :normamps, 400.0),
                             "emergamps" => get(kwargs, :emergamps, 600.0),
@@ -103,8 +104,8 @@ function _createLinecode(name::AbstractString; kwargs...)
                             "xg" => get(kwargs, :xg, 0.155081),
                             "rho" => get(kwargs, :rho, 100.0),
                             "neutral" => get(kwargs, :neutral, 3),
-                            "b1" => b1 / to_meters[units],
-                            "b0" => b0 / to_meters[units]
+                            "b1" => b1 / _convert_to_meters[units],
+                            "b0" => b0 / _convert_to_meters[units]
                             )
 end
 
@@ -185,7 +186,7 @@ function _createLine(bus1, bus2, name::AbstractString; kwargs...)
     xgmod = xg != 0.0 ?  0.5 * kxg * log(freq / basefreq) : 0.0
 
     units = get(kwargs, :units, "none")
-    len = get(kwargs, :length, 1.0) * to_meters[units]
+    len = get(kwargs, :length, 1.0) * _convert_to_meters[units]
 
     if haskey(kwargs, :rg)
         Memento.warn(_LOGGER, "Rg,Xg are not fully supported")
@@ -202,18 +203,18 @@ function _createLine(bus1, bus2, name::AbstractString; kwargs...)
                             "linecode" => get(kwargs, :linecode, ""),
                             "length" => len,
                             "phases" => phases,
-                            "r1" => r1 / to_meters[units],
-                            "x1" => x1 / to_meters[units],
-                            "r0" => r0 / to_meters[units],
-                            "x0" => x0 / to_meters[units],
-                            "c1" => c1 / to_meters[units],
-                            "c0" => c0 / to_meters[units],
-                            "rmatrix" => rmatrix / to_meters[units],
-                            "xmatrix" => xmatrix / to_meters[units],
-                            "cmatrix" => cmatrix / to_meters[units],
+                            "r1" => r1 / _convert_to_meters[units],
+                            "x1" => x1 / _convert_to_meters[units],
+                            "r0" => r0 / _convert_to_meters[units],
+                            "x0" => x0 / _convert_to_meters[units],
+                            "c1" => c1 / _convert_to_meters[units],
+                            "c0" => c0 / _convert_to_meters[units],
+                            "rmatrix" => rmatrix / _convert_to_meters[units],
+                            "xmatrix" => xmatrix / _convert_to_meters[units],
+                            "cmatrix" => cmatrix / _convert_to_meters[units],
                             "switch" => get(kwargs, :switch, false),
-                            "rg" => rg / to_meters[units],
-                            "xg" => xg / to_meters[units],
+                            "rg" => rg / _convert_to_meters[units],
+                            "xg" => xg / _convert_to_meters[units],
                             "rho" => get(kwargs, :rho, 100),
                             "geometry" => get(kwargs, :geometry, ""),
                             "units" => "m",
@@ -222,8 +223,8 @@ function _createLine(bus1, bus2, name::AbstractString; kwargs...)
                             "earthmodel" => get(kwargs, :earthmodel, ""),
                             "cncables" => get(kwargs, :cncables, ""),
                             "tscables" => get(kwargs, :tscables, ""),
-                            "b1" => b1 / to_meters[units],
-                            "b0" => b0 / to_meters[units],
+                            "b1" => b1 / _convert_to_meters[units],
+                            "b0" => b0 / _convert_to_meters[units],
                             # Inherited Properties
                             "normamps" => get(kwargs, :normamps, 400.0),
                             "emergamps" => get(kwargs, :emergamps, 600.0),
@@ -1060,4 +1061,6 @@ function _get_dtypes(comp::AbstractString)::Dict
     return Dict{String,Type}((k, typeof(v)) for (k, v) in default_dicts[comp])
 end
 
+
+""
 _get_dtypes(comp::String, key::String)::Type = _get_dtypes(comp)[key]

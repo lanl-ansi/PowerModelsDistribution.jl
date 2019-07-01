@@ -2,17 +2,13 @@
 
 
 ######## AbstractDCPForm Models (has va but assumes vm is 1.0) ########
-
 "nothing to do, these models do not have complex voltage constraints"
 function constraint_tp_model_voltage(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int) where T <: _PMs.AbstractDCPForm
 end
 
 
-
-
 ######## Lossless Models ########
-
-"Create variables for the active power flowing into all transformer windings."
+"Create variables for the active power flowing into all transformer windings"
 function variable_tp_trans_active_flow(pm::_PMs.GenericPowerModel{T}; nw::Int=pm.cnw, bounded=true) where T <: _PMs.DCPlosslessForm
     for cnd in _PMs.conductor_ids(pm)
         pt = _PMs.var(pm, nw, cnd)[:pt] = JuMP.@variable(pm.model,
@@ -44,19 +40,18 @@ function variable_tp_trans_active_flow(pm::_PMs.GenericPowerModel{T}; nw::Int=pm
     end
 end
 
+
 "Do nothing, this model is symmetric"
 function constraint_tp_ohms_yt_to(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm) where T <: _PMs.DCPlosslessForm
 end
+
 
 "Do nothing, this model is symmetric"
 function constraint_tp_ohms_yt_to_on_off(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max) where T <: _PMs.DCPlosslessForm
 end
 
 
-
-
 ### DC Power Flow Approximation ###
-
 """
 Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
 
@@ -86,26 +81,27 @@ function constraint_tp_ohms_yt_from_on_off(pm::_PMs.GenericPowerModel{T}, n::Int
 end
 
 
-
 ### Network Flow Approximation ###
-
 "nothing to do, no voltage angle variables"
 function constraint_tp_theta_ref(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, d) where T <: _PMs.NFAForm
 end
+
 
 "nothing to do, no voltage angle variables"
 function constraint_tp_ohms_yt_from(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm) where T <: _PMs.NFAForm
 end
 
+
 "nothing to do, this model is symmetric"
 function constraint_tp_ohms_yt_to(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm) where T <: _PMs.NFAForm
 end
+
 
 "nothing to do, no voltage variables"
 function constraint_tp_trans_voltage(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to) where T <: _PMs.NFAForm
 end
 
+
 "nothing to do, this model is symmetric"
 function constraint_tp_trans_flow(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to) where T <: _PMs.NFAForm
 end
-

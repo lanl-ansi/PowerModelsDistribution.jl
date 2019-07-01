@@ -1,4 +1,4 @@
-
+""
 function constraint_tp_model_current(pm::_PMs.GenericPowerModel; kwargs...)
     for c in _PMs.conductor_ids(pm)
         _PMs.constraint_model_current(pm; cnd=c, kwargs...)
@@ -6,6 +6,7 @@ function constraint_tp_model_current(pm::_PMs.GenericPowerModel; kwargs...)
 end
 
 
+""
 function constraint_tp_theta_ref(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
     for cnd in _PMs.conductor_ids(pm)
         constraint_tp_theta_ref(pm, nw, cnd, i)
@@ -13,6 +14,7 @@ function constraint_tp_theta_ref(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.
 end
 
 
+""
 function constraint_tp_storage_loss(pm::_PMs.GenericPowerModel, n::Int, i, bus, r, x, standby_loss)
     conductors = _PMs.conductor_ids(pm)
     vm = [_PMs.var(pm, n, c, :vm, bus) for c in conductors]
