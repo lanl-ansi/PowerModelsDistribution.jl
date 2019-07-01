@@ -15,15 +15,15 @@ _convert_to_meters = Dict{String,Any}("mi" => 1609.3,
 
 
 """
-    _createLinecode(name; kwargs...)
+    _create_linecode(name; kwargs...)
 
 Creates a Dict{String,Any} containing all of the properties of a Linecode. See
 OpenDSS documentation for valid fields and ways to specify the different
-properties. DEPRECIATED: Calculation all done inside of _createLine() due to Rg,
-Xg. Merge linecode values into line kwargs values BEFORE calling _createLine().
+properties. DEPRECIATED: Calculation all done inside of _create_line() due to Rg,
+Xg. Merge linecode values into line kwargs values BEFORE calling _create_line().
 This is now mainly used for parsing linecode dicts into correct data types.
 """
-function _createLinecode(name::AbstractString; kwargs...)
+function _create_linecode(name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :nphases, 3)
     basefreq = get(kwargs, :basefreq, 60.0)
@@ -111,13 +111,13 @@ end
 
 
 """
-    _createLine(bus1, bus2, name; kwargs...)
+    _create_line(bus1, bus2, name; kwargs...)
 
 Creates a Dict{String,Any} containing all of the properties for a Line. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
-function _createLine(bus1, bus2, name::AbstractString; kwargs...)
+function _create_line(bus1, bus2, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
     basefreq = get(kwargs, :basefreq, 60.0)
@@ -240,13 +240,13 @@ end
 
 
 """
-    _createLoad(bus1, name; kwargs...)
+    _create_load(bus1, name; kwargs...)
 
 Creates a Dict{String,Any} containing all of the expected properties for a
 Load. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _createLoad(bus1, name::AbstractString; kwargs...)
+function _create_load(bus1, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     kv = get(kwargs, :kv, 12.47)
     kw = get(kwargs, :kw, 10.0)
@@ -326,13 +326,13 @@ end
 
 
 """
-    _createGenerator(bus1, name; kwargs...)
+    _create_generator(bus1, name; kwargs...)
 
 Creates a Dict{String,Any} containing all of the expected properties for a
 Generator. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _createGenerator(bus1, name::AbstractString; kwargs...)
+function _create_generator(bus1, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     conn = get(kwargs, :conn, "wye")
 
@@ -391,14 +391,14 @@ end
 
 
 """
-    _createCapacitor(bus1, name, bus2=0; kwargs)
+    _create_capacitor(bus1, name, bus2=0; kwargs)
 
 Creates a Dict{String,Any} containing all of the expected properties for a
 Capacitor. If `bus2` is not specified, the capacitor will be treated as a shunt.
 See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _createCapacitor(bus1, name::AbstractString, bus2=0; kwargs...)
+function _create_capacitor(bus1, name::AbstractString, bus2=0; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
 
@@ -428,14 +428,14 @@ end
 
 
 """
-    _createReactor(bus1, name, bus2=0; kwargs...)
+    _create_reactor(bus1, name, bus2=0; kwargs...)
 
 Creates a Dict{String,Any} containing all of the expected properties for a
 Reactor. If `bus2` is not specified Reactor is treated like a shunt. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
-function _createReactor(bus1, name::AbstractString, bus2=""; kwargs...)
+function _create_reactor(bus1, name::AbstractString, bus2=""; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
     kvar = get(kwargs, :kvar, 1200.0)
@@ -572,7 +572,7 @@ end
 
 
 """
-    _createVSource(bus1, name, bus2=0; kwargs...)
+    _create_vsource(bus1, name, bus2=0; kwargs...)
 
 Creates a Dict{String,Any} containing all of the expected properties for a
 Voltage Source. If `bus2` is not specified, VSource will be treated like a
@@ -580,7 +580,7 @@ generator. Mostly used as `sourcebus` which represents the circuit. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
-function _createVSource(bus1, name::AbstractString, bus2=0; kwargs...)
+function _create_vsource(bus1, name::AbstractString, bus2=0; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     x1r1 = get(kwargs, :x1r1, 4.0)
     x0r0 = get(kwargs, :x0r0, 3.0)
@@ -789,13 +789,13 @@ end
 
 
 """
-    _createTransformer(name; kwargs...)
+    _create_transformer(name; kwargs...)
 
 Creates a Dict{String,Any} containing all of the expected properties for a
 Transformer. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _createTransformer(name::AbstractString; kwargs...)
+function _create_transformer(name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     windings = get(kwargs, :windings, 2)
     phases = get(kwargs, :phases, 3)
@@ -908,14 +908,14 @@ end
 
 
 """
-    _createPVSystem(bus1, name; kwargs...)
+    _create_pvsystem(bus1, name; kwargs...)
 
 Creates a Dict{String,Any} containing all of the expected properties for a
 PVSystem. See OpenDSS document
 https://github.com/tshort/OpenDSS/blob/master/Doc/OpenDSS%20PVSystem%20Model.doc
 for valid fields and ways to specify the different properties.
 """
-function _createPVSystem(bus1, name::AbstractString; kwargs...)
+function _create_pvsystem(bus1, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     kv = get(kwargs, :kv, 12.47)
     kw = get(kwargs, :kw, 10.0)
@@ -987,13 +987,13 @@ end
 
 
 """
-    _createStorage(bus1, name; kwargs...)
+    _create_storage(bus1, name; kwargs...)
 
 Creates a Dict{String,Any} containing all expected properties for a storage
 element. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _createStorage(bus1, name::AbstractString; kwargs...)
+function _create_storage(bus1, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
 
     storage = Dict{String,Any}("name" => name,
@@ -1045,17 +1045,17 @@ end
 
 "Returns a Dict{String,Type} for the desired component `comp`, giving all of the expected data types"
 function _get_dtypes(comp::AbstractString)::Dict
-    default_dicts = Dict{String,Any}("line" => _createLine("", "", ""),
-                                     "load" => _createLoad("", ""),
-                                     "generator" => _createGenerator("", ""),
-                                     "capacitor" => _createCapacitor("", "", ""),
-                                     "reactor" => _createReactor("", "", ""),
-                                     "transformer" => _createTransformer(""),
-                                     "linecode" => _createLinecode(""),
-                                     "circuit" => _createVSource("", ""),
-                                     "pvsystem" => _createPVSystem("", ""),
-                                     "vsource" => _createVSource("", "", ""),
-                                     "storage" => _createStorage("", "")
+    default_dicts = Dict{String,Any}("line" => _create_line("", "", ""),
+                                     "load" => _create_load("", ""),
+                                     "generator" => _create_generator("", ""),
+                                     "capacitor" => _create_capacitor("", "", ""),
+                                     "reactor" => _create_reactor("", "", ""),
+                                     "transformer" => _create_transformer(""),
+                                     "linecode" => _create_linecode(""),
+                                     "circuit" => _create_vsource("", ""),
+                                     "pvsystem" => _create_pvsystem("", ""),
+                                     "vsource" => _create_vsource("", "", ""),
+                                     "storage" => _create_storage("", "")
                                     )
 
     return Dict{String,Type}((k, typeof(v)) for (k, v) in default_dicts[comp])

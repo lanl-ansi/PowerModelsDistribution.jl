@@ -70,7 +70,7 @@ function _discover_buses(dss_data::Dict)::Array
             compList = dss_data[compType]
             for compObj in compList
                 if compType == "transformer"
-                    compObj = _createTransformer(compObj["name"]; _to_sym_keys(compObj)...)
+                    compObj = _create_transformer(compObj["name"]; _to_sym_keys(compObj)...)
                     for bus in compObj["buses"]
                         name, nodes = _parse_busname(bus)
                         if !(name in bus_names)
@@ -109,7 +109,7 @@ function _dss2pmd_bus!(pmd_data::Dict, dss_data::Dict, import_all::Bool=false, v
     end
 
     buses = _discover_buses(dss_data)
-    circuit = _createVSource(get(dss_data["circuit"][1], "bus1", "sourcebus"), dss_data["circuit"][1]["name"]; _to_sym_keys(dss_data["circuit"][1])...)
+    circuit = _create_vsource(get(dss_data["circuit"][1], "bus1", "sourcebus"), dss_data["circuit"][1]["name"]; _to_sym_keys(dss_data["circuit"][1])...)
     sourcebus = circuit["bus1"]
 
     for (n, (bus, nodes)) in enumerate(buses)
@@ -188,7 +188,7 @@ function _dss2pmd_load!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
                 load = merge(_find_component(dss_data, load["like"], "load"), load)
             end
 
-            defaults = _createLoad(load["bus1"], load["name"]; _to_sym_keys(load)...)
+            defaults = _create_load(load["bus1"], load["name"]; _to_sym_keys(load)...)
 
             loadDict = Dict{String,Any}()
 
@@ -348,7 +348,7 @@ function _dss2pmd_shunt!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
                 shunt = merge(_find_component(dss_data, shunt["like"], "capacitor"), shunt)
             end
 
-            defaults = _createCapacitor(shunt["bus1"], shunt["name"]; _to_sym_keys(shunt)...)
+            defaults = _create_capacitor(shunt["bus1"], shunt["name"]; _to_sym_keys(shunt)...)
 
             shuntDict = Dict{String,Any}()
 
@@ -387,7 +387,7 @@ function _dss2pmd_shunt!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
                     shunt = merge(_find_component(dss_data, shunt["like"], "reactor"), shunt)
                 end
 
-                defaults = _createReactor(shunt["bus1"], shunt["name"]; _to_sym_keys(shunt)...)
+                defaults = _create_reactor(shunt["bus1"], shunt["name"]; _to_sym_keys(shunt)...)
 
                 shuntDict = Dict{String,Any}()
 
@@ -429,7 +429,7 @@ function _dss2pmd_gen!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
     # sourcebus generator (created by circuit)
     circuit = dss_data["circuit"][1]
-    defaults = _createVSource(get(circuit, "bus1", "sourcebus"), "sourcebus"; _to_sym_keys(circuit)...)
+    defaults = _create_vsource(get(circuit, "bus1", "sourcebus"), "sourcebus"; _to_sym_keys(circuit)...)
 
     genDict = Dict{String,Any}()
 
@@ -473,7 +473,7 @@ function _dss2pmd_gen!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
                 gen = merge(_find_component(dss_data, gen["like"], "generator"), gen)
             end
 
-            defaults = _createGenerator(gen["bus1"], gen["name"]; _to_sym_keys(gen)...)
+            defaults = _create_generator(gen["bus1"], gen["name"]; _to_sym_keys(gen)...)
 
             genDict = Dict{String,Any}()
 
@@ -543,7 +543,7 @@ function _dss2pmd_gen!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
                 pv = merge(_find_component(dss_data, pv["like"], "pvsystem"), pv)
             end
 
-            defaults = _createPVSystem(pv["bus1"], pv["name"]; _to_sym_keys(pv)...)
+            defaults = _create_pvsystem(pv["bus1"], pv["name"]; _to_sym_keys(pv)...)
 
             pvDict = Dict{String,Any}()
 
@@ -610,7 +610,7 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
                 linecode["units"] = get(line, "units", "none") == "none" ? "none" : get(linecode, "units", "none")
 
-                linecode = _createLinecode(get(linecode, "name", ""); _to_sym_keys(linecode)...)
+                linecode = _create_linecode(get(linecode, "name", ""); _to_sym_keys(linecode)...)
                 delete!(linecode, "name")
             else
                 linecode = Dict{String,Any}()
@@ -622,7 +622,7 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
                 line["basefreq"] = deepcopy(pmd_data["basefreq"])
             end
 
-            defaults = _createLine(line["bus1"], line["bus2"], line["name"]; _to_sym_keys(line)...)
+            defaults = _create_line(line["bus1"], line["bus2"], line["name"]; _to_sym_keys(line)...)
             merge!(defaults, linecode)
 
             bf, nodes = _parse_busname(defaults["bus1"])
@@ -714,7 +714,7 @@ function _dss2pmd_transformer!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
                 transformer = merge(_find_component(dss_data, transformer["like"], "transformer"), transformer)
             end
 
-            defaults = _createTransformer(transformer["name"]; _to_sym_keys(transformer)...)
+            defaults = _create_transformer(transformer["name"]; _to_sym_keys(transformer)...)
 
             nconductors = pmd_data["conductors"]
             nrw = defaults["windings"]
@@ -934,7 +934,7 @@ function _dss2pmd_reactor!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
                     reactor = merge(_find_component(dss_data, reactor["like"], "reactor"), reactor)
                 end
 
-                defaults = _createReactor(reactor["bus1"], reactor["name"], reactor["bus2"]; _to_sym_keys(reactor)...)
+                defaults = _create_reactor(reactor["bus1"], reactor["name"], reactor["bus2"]; _to_sym_keys(reactor)...)
 
                 reactDict = Dict{String,Any}()
 
@@ -997,7 +997,7 @@ function _dss2pmd_pvsystem!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "pvsystem")
         for pvsystem in dss_data["pvsystem"]
-            defaults = _createPVSystem(pvsystem["bus1"], pvsystem["name"]; _to_sym_keys(pvsystem)...)
+            defaults = _create_pvsystem(pvsystem["bus1"], pvsystem["name"]; _to_sym_keys(pvsystem)...)
 
             pvsystemDict = Dict{String,Any}()
 
@@ -1036,7 +1036,7 @@ function _dss2pmd_storage!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
     if haskey(dss_data, "storage")
         for storage in dss_data["storage"]
-            defaults = _createStorage(storage["bus1"], storage["name"]; _to_sym_keys(storage)...)
+            defaults = _create_storage(storage["bus1"], storage["name"]; _to_sym_keys(storage)...)
 
             storageDict = Dict{String,Any}()
 
@@ -1642,7 +1642,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
 
     if haskey(dss_data, "circuit")
         circuit = dss_data["circuit"][1]
-        defaults = _createVSource(get(circuit, "bus1", "sourcebus"), circuit["name"]; _to_sym_keys(circuit)...)
+        defaults = _create_vsource(get(circuit, "bus1", "sourcebus"), circuit["name"]; _to_sym_keys(circuit)...)
 
         pmd_data["name"] = defaults["name"]
         pmd_data["basekv"] = defaults["basekv"]
