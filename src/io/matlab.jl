@@ -277,11 +277,11 @@ function matlab_to_pmd(ml_data::Dict{String,Any})
         ml_data["shunt"] = []
     end
 
-    _ml2tppm_bus!(ml_data)
-    _ml2tppm_load!(ml_data)
-    _ml2tppm_shunt!(ml_data)
-    _ml2tppm_gen!(ml_data)
-    _ml2tppm_branch!(ml_data)
+    _ml2pmd_bus!(ml_data)
+    _ml2pmd_load!(ml_data)
+    _ml2pmd_shunt!(ml_data)
+    _ml2pmd_gen!(ml_data)
+    _ml2pmd_branch!(ml_data)
 
     _PMs._merge_bus_name_data!(ml_data)
     _PMs._merge_generator_cost_data!(ml_data)
@@ -301,7 +301,7 @@ end
 
 
 "convert raw bus data into arrays"
-function _ml2tppm_bus!(data::Dict{String,Any})
+function _ml2pmd_bus!(data::Dict{String,Any})
     for bus in data["bus"]
         _make_mpv!(bus, "vmin", ["vmin_1", "vmin_2", "vmin_3"])
         _make_mpv!(bus, "vmax", ["vmax_1", "vmax_2", "vmax_3"])
@@ -312,7 +312,7 @@ end
 
 
 "convert raw load data into arrays"
-function _ml2tppm_load!(data::Dict{String,Any})
+function _ml2pmd_load!(data::Dict{String,Any})
     for load in data["load"]
         _make_mpv!(load, "pd", ["pd_1", "pd_2", "pd_3"])
         _make_mpv!(load, "qd", ["qd_1", "qd_2", "qd_3"])
@@ -321,7 +321,7 @@ end
 
 
 "convert raw shunt data into arrays"
-function _ml2tppm_shunt!(data::Dict{String,Any})
+function _ml2pmd_shunt!(data::Dict{String,Any})
     for load in data["shunt"]
         _make_mpv!(load, "gs", ["gs_1", "gs_2", "gs_3"])
         _make_mpv!(load, "bs", ["bs_1", "bs_2", "bs_3"])
@@ -330,7 +330,7 @@ end
 
 
 "convert raw generator data into arrays"
-function _ml2tppm_gen!(data::Dict{String,Any})
+function _ml2pmd_gen!(data::Dict{String,Any})
     for gen in data["gen"]
         _make_mpv!(gen, "pmin", ["pmin_1", "pmin_2", "pmin_3"])
         _make_mpv!(gen, "pmax", ["pmax_1", "pmax_2", "pmax_3"])
@@ -343,7 +343,7 @@ end
 
 
 "convert raw branch data into arrays"
-function _ml2tppm_branch!(data::Dict{String,Any})
+function _ml2pmd_branch!(data::Dict{String,Any})
     for branch in data["branch"]
         branch["rate_a"] = _PMs.MultiConductorVector(branch["rate_a"], 3)
         branch["rate_b"] = _PMs.MultiConductorVector(branch["rate_b"], 3)
