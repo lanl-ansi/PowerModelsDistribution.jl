@@ -1,8 +1,8 @@
 ThreePhasePowerModels.jl Change Log
 ===================================
 
-### staged
-- none
+### v0.3.2
+- Final version of ThreePhasePowerModels.jl before name change to PowerModelsDistribution.jl (adds depreciation warnings)
 
 ### v0.3.1
 - Allow for arbitrarily named sourcebus

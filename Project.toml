@@ -2,7 +2,7 @@ name = "ThreePhasePowerModels"
 uuid = "8503087a-994b-5095-bd6e-f54267f2dd19"
 authors = ["David M Fobes <dfobes@lanl.gov>", "Carleton Coffrin"]
 repo = "https://github.com/lanl-ansi/ThreePhasePowerModels.jl.git"
-version = "0.3.1"
+version = "0.3.2"
 
 [deps]
 InfrastructureModels = "2030c09a-7f63-5d83-885d-db604e0e9cc0"

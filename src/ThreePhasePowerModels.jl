@@ -11,6 +11,7 @@ const PMs = PowerModels
 
 function __init__()
     global LOGGER = Memento.getlogger(PowerModels)
+    Memento.warn(LOGGER, "DEPRECIATED :: ThreePhasePowerModels.jl is depreciated, v0.3.2 is the final version with this package name. PowerModelsDistribution.jl (https://github.com/lanl-ansi/PowerModelsDistribution.jl) is the new name of this package going forward.")
 end
 
 include("core/ref.jl")
