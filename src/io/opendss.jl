@@ -1134,7 +1134,7 @@ function _decompose_transformers!(pmd_data; import_all::Bool=false)
             # 2-WINDING TRANSFORMER
             trans_dict = Dict{String, Any}()
             trans_dict["name"] = "tr$(tr_id)_w$(w)"
-            trans_dict["source_id"] = "$(trans["source_id"])"
+            trans_dict["source_id"] = "$(trans["source_id"])_$(w)"
             trans_dict["active_phases"] = [1, 2, 3]
             _push_dict_ret_key!(pmd_data["trans"], trans_dict)
             # connection settings

@@ -249,7 +249,7 @@
 
             @test pmd["branch"]["1"]["source_id"] == "line.l1" && length(pmd["branch"]["1"]["active_phases"]) == 3
             # transformer is no longer a branch
-            @test pmd["trans"]["1"]["source_id"] == "transformer.t4"  # winding indicated by _1
+            @test pmd["trans"]["1"]["source_id"] == "transformer.t4_1"  # winding indicated by _1
             # updated index, reactors shifted
             @test pmd["branch"]["10"]["source_id"] == "reactor.reactor1" && length(pmd["branch"]["10"]["active_phases"]) == 3
 
