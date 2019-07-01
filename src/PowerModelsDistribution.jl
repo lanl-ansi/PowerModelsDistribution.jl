@@ -19,6 +19,7 @@ module PowerModelsDistribution
     include("core/variable.jl")
     include("core/constraint.jl")
     include("core/objective.jl")
+    include("core/solution.jl")
 
     include("form/acp.jl")
     include("form/acr.jl")
@@ -44,6 +45,7 @@ module PowerModelsDistribution
     include("prob/tp_opf.jl")
     include("prob/tp_opf_lm.jl")
     include("prob/tp_opf_oltc.jl")
+    include("prob/tp_opf_bctr.jl")
     include("prob/tp_opf_bf.jl")
     include("prob/tp_ots.jl")
     include("prob/tp_pf.jl")

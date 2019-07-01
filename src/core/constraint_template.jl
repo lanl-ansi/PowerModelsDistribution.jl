@@ -271,10 +271,10 @@ For a discussion of sequence components and voltage unbalance factor (VUF), see
     url={https://molzahn.github.io/pubs/girigoudar_molzahn_roald-2019.pdf}
 }
 """
-function constraint_tp_voltage_balance(pm::PMs.GenericPowerModel, bus_id::Int; nw=pm.cnw)
-    @assert(PMs.ref(pm, nw, :conductors)==3)
+function constraint_tp_voltage_balance(pm::_PMs.GenericPowerModel, bus_id::Int; nw=pm.cnw)
+    @assert(_PMs.ref(pm, nw, :conductors)==3)
 
-    bus = PMs.ref(pm, nw, :bus, bus_id)
+    bus = _PMs.ref(pm, nw, :bus, bus_id)
 
     if haskey(bus, "vm_vuf_max")
         constraint_tp_vm_vuf(pm, nw, bus_id, bus["vm_vuf_max"])
@@ -293,8 +293,8 @@ function constraint_tp_voltage_balance(pm::PMs.GenericPowerModel, bus_id::Int; n
     end
 
     if haskey(bus, "vm_ll_min")|| haskey(bus, "vm_ll_max")
-        vm_ll_min = haskey(bus, "vm_ll_min") ? bus["vm_ll_min"] : PMs.MultiConductorVector(fill(0, 3))
-        vm_ll_max = haskey(bus, "vm_ll_max") ? bus["vm_ll_max"] : PMs.MultiConductorVector(fill(Inf, 3))
+        vm_ll_min = haskey(bus, "vm_ll_min") ? bus["vm_ll_min"] : _PMs.MultiConductorVector(fill(0, 3))
+        vm_ll_max = haskey(bus, "vm_ll_max") ? bus["vm_ll_max"] : _PMs.MultiConductorVector(fill(Inf, 3))
         constraint_tp_vm_ll(pm, nw, bus_id, vm_ll_min, vm_ll_max)
     end
 end

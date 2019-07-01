@@ -335,13 +335,13 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_tp_vm_vuf(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vufmax::Float64) where T <: PMs.AbstractACPForm
-    if !haskey(PMs.var(pm, pm.cnw), :vmpossqr)
-        PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
-        PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+function constraint_tp_vm_vuf(pm::_PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vufmax::Float64) where T <: _PMs.AbstractACPForm
+    if !haskey(_PMs.var(pm, pm.cnw), :vmpossqr)
+        _PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
+        _PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
     end
-    (vm_a, vm_b, vm_c) = [PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
-    (va_a, va_b, va_c) = [PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
+    (vm_a, vm_b, vm_c) = [_PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    (va_a, va_b, va_c) = [_PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
     a = exp(im*2*pi/3)
     # real and imag functions cannot be used in NLexpressions, so precalculate
     are = real(a)
@@ -382,13 +382,13 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_tp_vm_neg_seq(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmnegmax::Float64) where T <: PMs.AbstractACPForm
-    if !haskey(PMs.var(pm, pm.cnw), :vmpossqr)
-        PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
-        PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+function constraint_tp_vm_neg_seq(pm::_PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmnegmax::Float64) where T <: _PMs.AbstractACPForm
+    if !haskey(_PMs.var(pm, pm.cnw), :vmpossqr)
+        _PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
+        _PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
     end
-    (vm_a, vm_b, vm_c) = [PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
-    (va_a, va_b, va_c) = [PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
+    (vm_a, vm_b, vm_c) = [_PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    (va_a, va_b, va_c) = [_PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
     a = exp(im*2*pi/3)
     # real and imag functions cannot be used in NLexpressions, so precalculate
     are = real(a)
@@ -408,7 +408,7 @@ function constraint_tp_vm_neg_seq(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id:
     JuMP.@NLconstraint(pm.model, vmnegsqr <= vmnegmax^2)
 end
 
-                                                                          
+
 "Links the power flowing into both windings of a variable tap transformer."
 function constraint_tp_trans_flow_var(pm::_PMs.GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im; nw::Int=pm.cnw)
     # for ac formulation, indentical to fixed tap
@@ -449,13 +449,13 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_tp_vm_pos_seq(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmposmax::Float64) where T <: PMs.AbstractACPForm
-    if !haskey(PMs.var(pm, pm.cnw), :vmpossqr)
-        PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
-        PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+function constraint_tp_vm_pos_seq(pm::_PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmposmax::Float64) where T <: _PMs.AbstractACPForm
+    if !haskey(_PMs.var(pm, pm.cnw), :vmpossqr)
+        _PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
+        _PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
     end
-    (vm_a, vm_b, vm_c) = [PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
-    (va_a, va_b, va_c) = [PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
+    (vm_a, vm_b, vm_c) = [_PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    (va_a, va_b, va_c) = [_PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
     a = exp(im*2*pi/3)
     # real and imag functions cannot be used in NLexpressions, so precalculate
     are = real(a)
@@ -474,6 +474,7 @@ function constraint_tp_vm_pos_seq(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id:
     # finally, apply constraint
     JuMP.@NLconstraint(pm.model, vmpossqr <= vmposmax^2)
 end
+
 
 """
 For a delta load, sd = (s_ab, s_bc, s_ca), but we want to fix s = (s_a, s_b, s_c)
@@ -528,13 +529,13 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_tp_vm_zero_seq(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmzeromax::Float64) where T <: PMs.AbstractACPForm
-    if !haskey(PMs.var(pm, pm.cnw), :vmpossqr)
-        PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
-        PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+function constraint_tp_vm_zero_seq(pm::_PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmzeromax::Float64) where T <: _PMs.AbstractACPForm
+    if !haskey(_PMs.var(pm, pm.cnw), :vmpossqr)
+        _PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
+        _PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
     end
-    (vm_a, vm_b, vm_c) = [PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
-    (va_a, va_b, va_c) = [PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
+    (vm_a, vm_b, vm_c) = [_PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    (va_a, va_b, va_c) = [_PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
     # real and imaginary components of U+
     vrezero = JuMP.@NLexpression(pm.model,
         (vm_a*cos(va_a) + vm_b*cos(va_b) + vm_c*cos(va_c))/3
@@ -596,12 +597,11 @@ function constraint_tp_load_current_delta(pm::_PMs.GenericPowerModel{T}, nw::Int
 end
 
 
-"""
-"""
-function constraint_tp_vm_ll(pm::PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vm_ll_min::PMs.MultiConductorVector, vm_ll_max::PMs.MultiConductorVector) where T <: PMs.AbstractACPForm
+""
+function constraint_tp_vm_ll(pm::_PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vm_ll_min::_PMs.MultiConductorVector, vm_ll_max::_PMs.MultiConductorVector) where T <: _PMs.AbstractACPForm
     # 3 conductors asserted in template already
-    vm_ln = [PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
-    va_ln = [PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
+    vm_ln = [_PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
+    va_ln = [_PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
     vr_ll = JuMP.@NLexpression(pm.model, [i in 1:3],
         vm_ln[i]*cos(va_ln[i]) - vm_ln[i%3+1]*cos(va_ln[i%3+1])
     )

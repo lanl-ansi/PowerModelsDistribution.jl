@@ -1,11 +1,11 @@
 "adds voltage balance indicators; should only be called after add_setpoint_bus_voltage!"
-function add_setpoint_bus_voltage_balance_indicators!(pm::PMs.GenericPowerModel, sol)
-    sol_dict = PMs.get(sol, "bus", Dict{String,Any}())
+function add_setpoint_bus_voltage_balance_indicators!(pm::_PMs.GenericPowerModel, sol)
+    sol_dict = _PMs.get(sol, "bus", Dict{String,Any}())
 
-    num_conductors = length(PMs.conductor_ids(pm))
-    @assert(PMs.ismulticonductor(pm) && num_conductors==3)
+    num_conductors = length(_PMs.conductor_ids(pm))
+    @assert(_PMs.ismulticonductor(pm) && num_conductors==3)
 
-    if PMs.ismultinetwork(pm)
+    if _PMs.ismultinetwork(pm)
         bus_dict = pm.data["nw"]["$(pm.cnw)"]["bus"]
     else
         bus_dict = pm.data["bus"]
@@ -32,6 +32,6 @@ function add_setpoint_bus_voltage_balance_indicators!(pm::PMs.GenericPowerModel,
         sol_item["vm_seq_neg"] = abs(v_neg)
         sol_item["vm_seq_zero"] = abs(v_zero)
         sol_item["vuf"] = abs(v_neg)/abs(v_pos)
-        sol_item["vm_ll"] = PMs.MultiConductorVector(abs.([1 -1 0; 0 1 -1; -1 0 1]*v_abc)./sqrt(3))
+        sol_item["vm_ll"] = _PMs.MultiConductorVector(abs.([1 -1 0; 0 1 -1; -1 0 1]*v_abc)./sqrt(3))
     end
 end
