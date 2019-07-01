@@ -1,24 +1,24 @@
 @testset "opendss parser" begin
     @testset "reverse polish notation" begin
         # Examples from OpenDSS manual
-        @test isapprox(PMD.parse_rpn("2 pi * 60 * .001 *"), 2 * pi * 60 * .001; atol=1e-12)
-        @test isapprox(PMD.parse_rpn("(14.4 13.8 / sqr 300 *"), (14.4 / 13.8)^2 * 300; atol=1e-12)
-        @test isapprox(PMD.parse_rpn("24.9 3 sqrt /"), 24.9 / sqrt(3); atol=1e-12)
-        @test all(isapprox.(PMD.parse_array(Float64, "(\"24.9 3 sqrt /\" \"10 2 *\")"), [24.9 / sqrt(3), 10 * 2.0]; atol=1e-12))
+        @test isapprox(PMD._parse_rpn("2 pi * 60 * .001 *"), 2 * pi * 60 * .001; atol=1e-12)
+        @test isapprox(PMD._parse_rpn("(14.4 13.8 / sqr 300 *"), (14.4 / 13.8)^2 * 300; atol=1e-12)
+        @test isapprox(PMD._parse_rpn("24.9 3 sqrt /"), 24.9 / sqrt(3); atol=1e-12)
+        @test all(isapprox.(PMD._parse_array(Float64, "(\"24.9 3 sqrt /\" \"10 2 *\")"), [24.9 / sqrt(3), 10 * 2.0]; atol=1e-12))
 
-        @test PMD.isa_rpn("2 pi * 60 * .001 *")
-        @test !PMD.isa_rpn("[ 2 10 ]")
+        @test PMD._isa_rpn("2 pi * 60 * .001 *")
+        @test !PMD._isa_rpn("[ 2 10 ]")
 
         Memento.setlevel!(TESTLOG, "warn")
 
-        @test_warn(TESTLOG, "parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String",
-                   PMD.parse_rpn("1 2 swap atan2"))
+        @test_warn(TESTLOG, "_parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String",
+                   PMD._parse_rpn("1 2 swap atan2"))
 
         @test_warn(TESTLOG, "\" 1 2 + - \" is not valid Reverse Polish Notation, leaving as String",
-                   PMD.parse_rpn(" 1 2 + - "))
+                   PMD._parse_rpn(" 1 2 + - "))
 
         @test_warn(TESTLOG, "\"1 2 3 +\" is not valid Reverse Polish Notation, leaving as String",
-                   PMD.parse_rpn("1 2 3 +"))
+                   PMD._parse_rpn("1 2 3 +"))
 
         Memento.setlevel!(TESTLOG, "error")
     end
@@ -47,7 +47,7 @@
 
         sol = PMD.run_tp_opf(pmd, PowerModels.SOCWRPowerModel, ipopt_solver)
 
-        @test sol["status"] == :LocalOptimal
+        @test sol["termination_status"] == PMs.LOCALLY_SOLVED
     end
 
     @testset "parser cases" begin
@@ -139,10 +139,10 @@
         end
 
         len = 0.013516796
-        rmatrix=PMD.parse_matrix(Float64, "[1.5000  |0.200000  1.50000  |0.250000  0.25000  2.00000  ]") * 3
-        xmatrix=PMD.parse_matrix(Float64, "[1.0000  |0.500000  0.50000  |0.500000  0.50000  1.000000  ]") * 3
+        rmatrix=PMD._parse_matrix(Float64, "[1.5000  |0.200000  1.50000  |0.250000  0.25000  2.00000  ]") * 3
+        xmatrix=PMD._parse_matrix(Float64, "[1.0000  |0.500000  0.50000  |0.500000  0.50000  1.000000  ]") * 3
         # added factor 3 to match bug fix in branch parsing, cmatrix
-        cmatrix = PMD.parse_matrix(Float64, "[8.0000  |-2.00000  9.000000  |-1.75000  -2.50000  8.00000  ]") / 3
+        cmatrix = PMD._parse_matrix(Float64, "[8.0000  |-2.00000  9.000000  |-1.75000  -2.50000  8.00000  ]") / 3
 
         basekv_br3 = pmd["bus"][string(pmd["branch"]["3"]["f_bus"])]["base_kv"]
         @test all(isapprox.(pmd["branch"]["3"]["br_r"].values, rmatrix * len / basekv_br3^2 * pmd["baseMVA"]; atol=1e-6))
@@ -256,7 +256,7 @@
             @test pmd["gen"]["1"]["source_id"] == "vsource.sourcebus" && length(pmd["gen"]["1"]["active_phases"]) == 3
             @test pmd["gen"]["2"]["source_id"] == "generator.g1" && length(pmd["gen"]["2"]["active_phases"]) == 3
 
-            source_id = PMD.parse_dss_source_id(pmd["load"]["1"])
+            source_id = PMD._parse_dss_source_id(pmd["load"]["1"])
             @test source_id.dss_type == "load"
             @test source_id.dss_name == "ld1"
             @test all([n in source_id.active_phases for n in 1:2])
@@ -276,10 +276,10 @@
             @testset "ACP" begin
                 sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
-                @test sol["status"] == :LocalOptimal
+                @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
                 @test all(isapprox.(sol["solution"]["bus"]["2"]["vm"].values, 0.984377; atol=1e-4))
-                @test all(isapprox.(sol["solution"]["bus"]["2"]["va"].values, PMD.wraptopi.([2 * pi / pmd["conductors"] * (1 - c) - deg2rad(0.79) for c in 1:pmd["conductors"]]); atol=deg2rad(0.2)))
+                @test all(isapprox.(sol["solution"]["bus"]["2"]["va"].values, PMD._wrap_to_pi.([2 * pi / pmd["conductors"] * (1 - c) - deg2rad(0.79) for c in 1:pmd["conductors"]]); atol=deg2rad(0.2)))
 
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.018209; atol=1e-5)
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.000208979; atol=1e-5)
@@ -293,12 +293,10 @@
             @testset "ACP" begin
                 sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
-                @test sol["status"] == :LocalOptimal
+                @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
                 for (bus, va, vm) in zip(["1", "2", "3"], [0.0, deg2rad(-0.03), deg2rad(-0.07)], [0.9959, 0.986973, 0.976605])
-                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, PMD.wraptopi.([2 * pi / pmd["conductors"] * (1 - c) + va for c in 1:pmd["conductors"]]); atol=deg2rad(0.01)))
-                    # changed atol 1E-5 -> 1E-4
-                    # solution changed after changing initial point in constraint_tp_voltage
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, PMD._wrap_to_pi.([2 * pi / pmd["conductors"] * (1 - c) + va for c in 1:pmd["conductors"]]); atol=deg2rad(0.01)))
                     @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-4))
                 end
 
@@ -308,12 +306,12 @@
             @testset "SOC" begin
                 sol = PMD.run_tp_opf(pmd, PMs.SOCWRPowerModel, ipopt_solver)
 
-                @test sol["status"] == :LocalOptimal
+                @test sol["termination_status"] == PMs.LOCALLY_SOLVED
             end
             @testset "LDF" begin
                 sol = PMD.run_tp_opf_bf(pmd, LPLinUBFPowerModel, ipopt_solver)
 
-                @test sol["status"] == :LocalOptimal
+                @test sol["termination_status"] == PMs.LOCALLY_SOLVED
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183456; atol=2e-3)
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00923328; atol=2e-3)
             end
@@ -326,12 +324,12 @@
             @testset "ACP" begin
                 sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
-                @test sol["status"] == :LocalOptimal
+                @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
                 for (bus, va, vm) in zip(["1", "2", "3"],
                                          [0.0, deg2rad.([-0.22, -0.11, 0.12]), deg2rad.([-0.48, -0.24, 0.27])],
                                          [0.9959, [0.980937, 0.98936, 0.987039], [0.963546, 0.981757, 0.976779]])
-                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, PMD.wraptopi.([2 * pi / pmd["conductors"] * (1 - c) for c in 1:pmd["conductors"]]) .+ va; atol=deg2rad(0.01)))
+                    @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, PMD._wrap_to_pi.([2 * pi / pmd["conductors"] * (1 - c) for c in 1:pmd["conductors"]]) .+ va; atol=deg2rad(0.01)))
                     @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-5))
                 end
 
@@ -341,12 +339,12 @@
             @testset "SOC" begin
                 sol = PMD.run_tp_opf(pmd, PMs.SOCWRPowerModel, ipopt_solver)
 
-                @test sol["status"] == :LocalOptimal
+                @test sol["termination_status"] == PMs.LOCALLY_SOLVED
             end
             @testset "LDF" begin
                 sol = PMD.run_tp_opf_bf(pmd, LPLinUBFPowerModel, ipopt_solver)
 
-                @test sol["status"] == :LocalOptimal
+                @test sol["termination_status"] == PMs.LOCALLY_SOLVED
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214812; atol=2e-3)
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00927263; atol=2e-3)
             end
@@ -357,7 +355,7 @@
         pmd = PMD.parse_file("../test/data/opendss/case3_balanced_isc.dss")
         sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
-        @test sol["status"] == :LocalOptimal
+        @test sol["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(sol["objective"], 0.0182769; atol = 1e-4)
     end
 
@@ -376,12 +374,12 @@
 
         sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
-        @test sol["status"] == :LocalOptimal
+        @test sol["termination_status"] == PMs.LOCALLY_SOLVED
         @test sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]) < 0.0
         @test sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]) < 0.0
         #@test isapprox(sum(sol["solution"]["gen"]["2"]["pg"] * sol["solution"]["baseMVA"]), 0.018345; atol=1e-4)
         # changed objective 0.018345 -> 0.0182074
-        # solution changed after changing initial point in constraint_tp_voltage
+        # solution changed after changing initial point in constraint_tp_model_voltage
         @test isapprox(sum(sol["solution"]["gen"]["2"]["pg"] * sol["solution"]["baseMVA"]), 0.0182074; atol=1e-4)
         @test isapprox(sum(sol["solution"]["gen"]["2"]["qg"] * sol["solution"]["baseMVA"]), 0.00919404; atol=1e-4)
     end
@@ -390,7 +388,7 @@
         pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced_1phase-pv.dss")
         sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
-        @test sol["status"] == :LocalOptimal
+        @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
         @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0196116; atol=1e-3)
         @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00923107; atol=1e-3)
@@ -403,7 +401,7 @@
         pmd = PMD.parse_file("../test/data/opendss/case3_balanced_cap.dss")
         sol = PMD.run_tp_pf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
-        @test sol["status"] == :LocalOptimal
+        @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
         for c in 1:3
             @test abs(sol["solution"]["bus"]["3"]["vm"][c]-0.98588)<=1E-4

@@ -1,24 +1,24 @@
 "Squares `x`, for parsing Reverse Polish Notation"
-function sqr(x::Float64)
+function _sqr(x::Float64)
     return x * x
 end
 
 
-double_operators = Dict("+" => +, "-" => -, "*" => *, "/" => /, "^" => ^,
+_double_operators = Dict("+" => +, "-" => -, "*" => *, "/" => /, "^" => ^,
                         "atan2" => (x, y) -> rad2deg(atan2(y, x)))
 
-single_operators = Dict("sqr" => sqr, "sqrt" => sqrt, "inv" => inv, "ln" => log,
+_single_operators = Dict("sqr" => _sqr, "sqrt" => sqrt, "inv" => inv, "ln" => log,
                         "exp" => exp, "log10" => log10, "sin" => sind, "cos" => cosd,
                         "tan" => tand, "asin" => asind, "acos" => acosd, "atan" => atand)
 
 array_delimiters = ['\"', '\'', '[', '{', '(', ']', '}', ')']
 
 "parses Reverse Polish Notation `expr`"
-function parse_rpn(expr::AbstractString, dtype::Type=Float64)
+function _parse_rpn(expr::AbstractString, dtype::Type=Float64)
     clean_expr = strip(expr, array_delimiters)
 
     if occursin("rollup", clean_expr) || occursin("rolldn", clean_expr) || occursin("swap", clean_expr)
-        Memento.warn(LOGGER, "parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String")
+        Memento.warn(_LOGGER, "_parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String")
         return expr
     end
 
@@ -27,12 +27,12 @@ function parse_rpn(expr::AbstractString, dtype::Type=Float64)
 
     for item in split_expr
         try
-            if haskey(double_operators, item)
+            if haskey(_double_operators, item)
                 b = pop!(stack)
                 a = pop!(stack)
-                push!(stack, double_operators[item](a, b))
-            elseif haskey(single_operators, item)
-                push!(stack, single_operators[item](pop!(stack)))
+                push!(stack, _double_operators[item](a, b))
+            elseif haskey(_single_operators, item)
+                push!(stack, _single_operators[item](pop!(stack)))
             else
                 if item == "pi"
                     push!(stack, pi)
@@ -42,13 +42,13 @@ function parse_rpn(expr::AbstractString, dtype::Type=Float64)
             end
         catch error
             if isa(error, ArgumentError)
-                Memento.warn(LOGGER, "\"$expr\" is not valid Reverse Polish Notation, leaving as String")
+                Memento.warn(_LOGGER, "\"$expr\" is not valid Reverse Polish Notation, leaving as String")
                 return expr
             end
         end
     end
     if length(stack) > 1
-        Memento.warn(LOGGER, "\"$expr\" is not valid Reverse Polish Notation, leaving as String")
+        Memento.warn(_LOGGER, "\"$expr\" is not valid Reverse Polish Notation, leaving as String")
         return expr
     else
         return stack[1]
@@ -57,9 +57,9 @@ end
 
 
 "detects if `expr` is Reverse Polish Notation expression"
-function isa_rpn(expr::AbstractString)::Bool
+function _isa_rpn(expr::AbstractString)::Bool
     expr = split(strip(expr, array_delimiters))
-    opkeys = keys(merge(double_operators, single_operators))
+    opkeys = keys(merge(_double_operators, _single_operators))
     for item in expr
         if item in opkeys
             return true
@@ -70,20 +70,20 @@ end
 
 
 "parses connection \"conn\" specification reducing to wye or delta"
-function parse_conn(conn::String)::String
+function _parse_conn(conn::String)::String
     if conn in ["wye", "y", "ln"]
         return "wye"
     elseif conn in ["delta", "ll"]
         return "delta"
     else
-        Memento.warn(LOGGER, "Unsupported connection $conn, defaulting to \"wye\"")
+        Memento.warn(_LOGGER, "Unsupported connection $conn, defaulting to \"wye\"")
         return "wye"
     end
 end
 
 
 "checks is a string is a connection by checking the values"
-function isa_conn(expr::AbstractString)::Bool
+function _isa_conn(expr::AbstractString)::Bool
     if expr in ["wye", "y", "ln", "delta", "ll"]
         return true
     else
@@ -93,11 +93,11 @@ end
 
 
 """
-    get_prop_name(ctype)
+    _get_prop_name(ctype)
 
 Returns the property names in order for a given component type `ctype`.
 """
-function get_prop_name(ctype::AbstractString)::Array
+function _get_prop_name(ctype::AbstractString)::Array
     linecode = ["nphases", "r1", "x1", "r0", "x0", "c1", "c0", "units",
                 "rmatrix", "xmatrix", "cmatrix", "basefreq", "normamps",
                 "emergamps", "faultrate", "pctperm", "repair", "kron",
@@ -268,23 +268,23 @@ end
 
 
 """
-    get_prop_name(ctype, i)
+    _get_prop_name(ctype, i)
 
 Returns the `i`th property name for a given component type `ctype`.
 """
-function get_prop_name(ctype::AbstractString, i::Int)::String
-    return get_prop_name(ctype)[i]
+function _get_prop_name(ctype::AbstractString, i::Int)::String
+    return _get_prop_name(ctype)[i]
 end
 
 
 """
-    parse_matrix(dtype, data)
+    _parse_matrix(dtype, data)
 
 Parses a OpenDSS style triangular matrix string `data` into a two dimensional
 array of type `dtype`. Matrix strings are capped by either parenthesis or
 brackets, rows are separated by "|", and columns are separated by spaces.
 """
-function parse_matrix(dtype::Type, data::AbstractString)::Array
+function _parse_matrix(dtype::Type, data::AbstractString)::Array
     rows = []
     for line in split(strip(data, array_delimiters), '|')
         cols = []
@@ -327,7 +327,7 @@ end
 
 
 "parse matrices according to active nodes"
-function parse_matrix(data::Array{T}, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array where T
+function _parse_matrix(data::Array{T}, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array where T
     mat = fill(fill_val, (nph, nph))
     idxs = findall(nodes[1:nph])
 
@@ -343,7 +343,7 @@ end
 
 
 "checks if `data` is an opendss-style matrix string"
-function isa_matrix(data::AbstractString)::Bool
+function _isa_matrix(data::AbstractString)::Bool
     if occursin("|", data)
         return true
     else
@@ -353,30 +353,30 @@ end
 
 
 """
-    parse_array(dtype, data)
+    _parse_array(dtype, data)
 
 Parses a OpenDSS style array string `data` into a one dimensional array of type
 `dtype`. Array strings are capped by either brackets, single quotes, or double
 quotes, and elements are separated by spaces.
 """
-function parse_array(dtype::Type, data::AbstractString)
+function _parse_array(dtype::Type, data::AbstractString)
     if occursin(",", data)
         split_char = ','
     else
         split_char = ' '
     end
 
-    if isa_rpn(data)
+    if _isa_rpn(data)
         matches = collect((m.match for m = eachmatch(Regex(string("[",join(array_delimiters, '\\'),"]")), data, overlap=false)))
         if length(matches) == 2
             if dtype == String
                 return data
             else
-                return parse_rpn(data, dtype)
+                return _parse_rpn(data, dtype)
             end
 
         else
-            elements = parse_properties(data[2:end-1])
+            elements = _parse_properties(data[2:end-1])
         end
     else
         elements = split(strip(data, array_delimiters), split_char)
@@ -391,8 +391,8 @@ function parse_array(dtype::Type, data::AbstractString)
     else
         array = zeros(dtype, length(elements))
         for (i, el) in enumerate(elements)
-            if isa_rpn(data)
-                array[i] = parse_rpn(el, dtype)
+            if _isa_rpn(data)
+                array[i] = _parse_rpn(el, dtype)
             else
                 array[i] = parse(dtype, el)
             end
@@ -404,7 +404,7 @@ end
 
 
 "parse matrices according to active nodes"
-function parse_array(data, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array
+function _parse_array(data, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array
     mat = fill(fill_val, nph)
     idxs = findall(nodes[1:nph])
 
@@ -423,7 +423,7 @@ end
 
 
 "checks if `data` is an opendss-style array string"
-function isa_array(data::AbstractString)::Bool
+function _isa_array(data::AbstractString)::Bool
     clean_data = strip(data)
     if !occursin("|", clean_data)
         if occursin(",", clean_data)
@@ -448,7 +448,7 @@ end
 
 
 "strips lines that are either commented (block or single) or empty"
-function strip_lines(lines::Array)::Array
+function _strip_lines(lines::Array)::Array
     blockComment = false
     stripped_lines = []
     for line in lines
@@ -463,20 +463,20 @@ end
 
 
 """
-    parse_buscoords(file)
+    _parse_buscoords(file)
 
 Parses a Bus Coordinate `file`, in either "dat" or "csv" formats, where in
 "dat", columns are separated by spaces, and in "csv" by commas. File expected
 to contain "bus,x,y" on each line.
 """
-function parse_buscoords(file::AbstractString)::Array
+function _parse_buscoords(file::AbstractString)::Array
     file_str = read(open(file), String)
     regex = r",\s*"
     if endswith(lowercase(file), "csv") || endswith(lowercase(file), "dss")
         regex = r","
     end
 
-    lines = strip_lines(split(file_str, '\n'))
+    lines = _strip_lines(split(file_str, '\n'))
 
     coordArray = []
     for line in lines
@@ -491,13 +491,13 @@ end
 
 
 """
-    parse_properties(properties)
+    _parse_properties(properties)
 
 Parses a string of `properties` of a component type, character by character
 into an array with each element containing (if present) the property name, "=",
 and the property value.
 """
-function parse_properties(properties::AbstractString)::Array
+function _parse_properties(properties::AbstractString)::Array
     propsOut = []
     endArray = true
     endProp = false
@@ -552,14 +552,14 @@ end
 
 
 """
-    add_component!(dss_data, ctype_name, compDict)
+    _add_component!(dss_data, ctype_name, compDict)
 
 Adds a component of type `ctype_name` with properties given by `compDict` to
 the existing `dss_data` structure. If a component of the same type has already
 been added to `dss_data`, the new component is appeneded to the existing array
 of components of that type, otherwise a new array is created.
 """
-function add_component!(dss_data::Dict, ctype_name::AbstractString, compDict::Dict)
+function _add_component!(dss_data::Dict, ctype_name::AbstractString, compDict::Dict)
     ctype = split(ctype_name, '.'; limit=2)[1]
     if haskey(dss_data, ctype)
         push!(dss_data[ctype], compDict)
@@ -570,14 +570,14 @@ end
 
 
 """
-    add_property(compDict, key, value)
+    _add_property(compDict, key, value)
 
 Adds a property to an existing component properties dictionary `compDict` given
 the `key` and `value` of the property. If a property of the same name already
 exists inside `compDict`, the original value is converted to an array, and the
 new value is appended to the end.
 """
-function add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
+function _add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
     if haskey(compDict, lowercase(key))
         rmatch = match(r"_(\d+)$", key)
         if typeof(rmatch) != Nothing
@@ -595,24 +595,24 @@ end
 
 
 """
-    parse_component(component, properies, compDict=Dict{String,Any}())
+    _parse_component(component, properies, compDict=Dict{String,Any}())
 
 Parses a `component` with `properties` into a `compDict`. If `compDict` is not
 defined, an empty dictionary will be used. Assumes that unnamed properties are
 given in order, but named properties can be given anywhere.
 """
-function parse_component(component::AbstractString, properties::AbstractString, compDict::Dict=Dict{String,Any}())
-    Memento.debug(LOGGER, "Properties: $properties")
+function _parse_component(component::AbstractString, properties::AbstractString, compDict::Dict=Dict{String,Any}())
+    Memento.debug(_LOGGER, "Properties: $properties")
     ctype, name = split(component, '.'; limit=2)
 
     if !haskey(compDict, "name")
         compDict["name"] = name
     end
 
-    propArray = parse_properties(properties)
-    Memento.debug(LOGGER, "propArray: $propArray")
+    propArray = _parse_properties(properties)
+    Memento.debug(_LOGGER, "propArray: $propArray")
 
-    propNames = get_prop_name(ctype)
+    propNames = _get_prop_name(ctype)
     propIdx = 1
 
     for (n, property) in enumerate(propArray)
@@ -651,7 +651,7 @@ function parse_component(component::AbstractString, properties::AbstractString, 
 
         key, value = split(property, '='; limit=2)
 
-        add_property(compDict, key, value)
+        _add_property(compDict, key, value)
     end
 
     return compDict
@@ -659,13 +659,13 @@ end
 
 
 """
-    merge_dss!(dss_prime, dss_to_add)
+    _merge_dss!(dss_prime, dss_to_add)
 
 Merges two (partially) parsed OpenDSS files to the same dictionary `dss_prime`.
 Used in cases where files are referenced via the "compile" or "redirect"
 OpenDSS commands inside the originating file.
 """
-function merge_dss!(dss_prime::Dict{String,Array}, dss_to_add::Dict{String,Array})
+function _merge_dss!(dss_prime::Dict{String,Array}, dss_to_add::Dict{String,Array})
     for (k, v) in dss_to_add
         if k in keys(dss_prime)
             append!(dss_prime[k], v)
@@ -677,12 +677,12 @@ end
 
 
 """
-    parse_line(elements, curCompDict=Dict{String,Any}())
+    _parse_line(elements, curCompDict=Dict{String,Any}())
 
 Parses an already separated line given by `elements` (an array) of an OpenDSS
 file into `curCompDict`. If not defined, `curCompDict` is an empty dictionary.
 """
-function parse_line(elements::Array, curCompDict::Dict=Dict{String,Any}())
+function _parse_line(elements::Array, curCompDict::Dict=Dict{String,Any}())
     curCtypeName = strip(elements[2], ['\"', '\''])
     if startswith(curCtypeName, "object")
         curCtypeName = split(curCtypeName, '=')[2]
@@ -694,7 +694,7 @@ function parse_line(elements::Array, curCompDict::Dict=Dict{String,Any}())
             properties = elements[3]
         end
 
-        curCompDict = parse_component(curCtypeName, properties)
+        curCompDict = _parse_component(curCtypeName, properties)
     end
 
     return curCtypeName, curCompDict
@@ -702,18 +702,18 @@ end
 
 
 "Strips comments, defined by \"!\" from the ends of lines"
-function strip_comments(line::AbstractString)::String
+function _strip_comments(line::AbstractString)::String
     return strip(split(line, r"\s*!")[1], ['\r', '\n'])
 end
 
 
 """
-    assign_property!(dss_data, cType, cName, propName, propValue)
+    _assign_property!(dss_data, cType, cName, propName, propValue)
 
 Assigns a property with name `propName` and value `propValue` to the component
 of type `cType` named `cName` in `dss_data`.
 """
-function assign_property!(dss_data::Dict, cType::AbstractString, cName::AbstractString,
+function _assign_property!(dss_data::Dict, cType::AbstractString, cName::AbstractString,
                           propName::AbstractString, propValue::Any)
     if haskey(dss_data, cType)
         for obj in dss_data[cType]
@@ -722,7 +722,7 @@ function assign_property!(dss_data::Dict, cType::AbstractString, cName::Abstract
             end
         end
     else
-        Memento.warn(LOGGER, "Cannot find $cType object $cName.")
+        Memento.warn(_LOGGER, "Cannot find $cType object $cName.")
     end
 end
 
@@ -737,7 +737,7 @@ Will also parse files defined inside of the originating DSS file via the
 """
 function parse_dss(io::IOStream)::Dict
     filename = match(r"^<file\s(.+)>$", io.name).captures[1]
-    Memento.info(LOGGER, "Calling parse_dss on $filename")
+    Memento.info(_LOGGER, "Calling parse_dss on $filename")
     currentFile = split(filename, "/")[end]
     path = join(split(filename, '/')[1:end-1], '/')
     dss_data = Dict{String,Array}()
@@ -749,21 +749,21 @@ function parse_dss(io::IOStream)::Dict
 
     lines = readlines(io)
 
-    stripped_lines = strip_lines(lines)
+    stripped_lines = _strip_lines(lines)
     nlines = length(stripped_lines)
 
     for (n, line) in enumerate(stripped_lines)
         real_line_num = findall(lines .== line)[1]
-        Memento.debug(LOGGER, "LINE $real_line_num: $line")
-        line = strip_comments(line)
+        Memento.debug(_LOGGER, "LINE $real_line_num: $line")
+        line = _strip_comments(line)
 
         if startswith(strip(line), '~')
-            curCompDict = parse_component(curCtypeName, strip(strip(lowercase(line)),  '~'), curCompDict)
+            curCompDict = _parse_component(curCtypeName, strip(strip(lowercase(line)),  '~'), curCompDict)
 
             if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')
                 continue
             else
-                add_component!(dss_data, curCtypeName, curCompDict)
+                _add_component!(dss_data, curCtypeName, curCompDict)
             end
         else
             curCompDict = Dict{String,Any}()
@@ -771,26 +771,26 @@ function parse_dss(io::IOStream)::Dict
             cmd = lowercase(line_elements[1])
 
             if cmd == "clear"
-                Memento.info(LOGGER, "`dss_data` has been reset with the \"clear\" command.")
+                Memento.info(_LOGGER, "`dss_data` has been reset with the \"clear\" command.")
                 dss_data = Dict{String,Array}("filename"=>dss_data["filename"])
                 continue
 
             elseif cmd == "redirect"
                 file = line_elements[2]
                 fullpath = path == "" ? file : join([path, file], '/')
-                Memento.info(LOGGER, "Redirecting to file \"$file\"")
-                merge_dss!(dss_data, parse_dss(fullpath))
+                Memento.info(_LOGGER, "Redirecting to file \"$file\"")
+                _merge_dss!(dss_data, parse_dss(fullpath))
                 continue
 
             elseif cmd == "compile"
                 file = split(strip(line_elements[2], ['(',')']), '\\')[end]
                 fullpath = path == "" ? file : join([path, file], '/')
-                Memento.info(LOGGER, "Compiling file \"$file\"")
-                merge_dss!(dss_data, parse_dss(fullpath))
+                Memento.info(_LOGGER, "Compiling file \"$file\"")
+                _merge_dss!(dss_data, parse_dss(fullpath))
                 continue
 
             elseif cmd == "set"
-                Memento.debug(LOGGER, "set command: $line_elements")
+                Memento.debug(_LOGGER, "set command: $line_elements")
                 if length(line_elements) == 2
                     property, value = split(lowercase(line_elements[2]), '='; limit=2)
                 else
@@ -807,36 +807,36 @@ function parse_dss(io::IOStream)::Dict
             elseif cmd == "buscoords"
                 file = line_elements[2]
                 fullpath = path == "" ? file : join([path, file], '/')
-                Memento.debug(LOGGER, "Buscoords path: $fullpath")
-                dss_data["buscoords"] = parse_buscoords(fullpath)
+                Memento.debug(_LOGGER, "Buscoords path: $fullpath")
+                dss_data["buscoords"] = _parse_buscoords(fullpath)
 
             elseif cmd == "new"
-                curCtypeName, curCompDict = parse_line([lowercase(line_element) for line_element in line_elements])
+                curCtypeName, curCompDict = _parse_line([lowercase(line_element) for line_element in line_elements])
             else
                 try
                     cType, cName, props = split(lowercase(line), '.'; limit=3)
-                    propsOut = parse_properties(props)
+                    propsOut = _parse_properties(props)
                     for prop in propsOut
                         propName, propValue = split(prop, '=')
-                        assign_property!(dss_data, cType, cName, propName, propValue)
+                        _assign_property!(dss_data, cType, cName, propName, propValue)
                     end
                 catch
-                    Memento.warn(LOGGER, "Command \"$cmd\" on line $real_line_num in \"$currentFile\" is not supported, skipping.")
+                    Memento.warn(_LOGGER, "Command \"$cmd\" on line $real_line_num in \"$currentFile\" is not supported, skipping.")
                 end
             end
 
-            Memento.debug(LOGGER, "size curCompDict: $(length(curCompDict))")
+            Memento.debug(_LOGGER, "size curCompDict: $(length(curCompDict))")
             if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')
                 continue
             elseif length(curCompDict) > 0
-                add_component!(dss_data, curCtypeName, curCompDict)
+                _add_component!(dss_data, curCtypeName, curCompDict)
             else
                 continue
             end
         end
     end
 
-    Memento.info(LOGGER, "Done parsing $filename")
+    Memento.info(_LOGGER, "Done parsing $filename")
     return dss_data
 end
 
@@ -851,11 +851,11 @@ end
 
 
 "parses the raw dss values into their expected data types"
-function parse_element_with_dtype(dtype, element)
-    if isa_matrix(element)
-        out = parse_matrix(eltype(dtype), element)
-    elseif isa_array(element)
-        out = parse_array(eltype(dtype), element)
+function _parse_element_with_dtype(dtype, element)
+    if _isa_matrix(element)
+        out = _parse_matrix(eltype(dtype), element)
+    elseif _isa_array(element)
+        out = _parse_array(eltype(dtype), element)
     elseif dtype <: Bool
         if element in ["n", "no"]
             element = "false"
@@ -863,18 +863,18 @@ function parse_element_with_dtype(dtype, element)
             element = "true"
         end
         out = parse(dtype, element)
-    elseif isa_rpn(element)
-        out = parse_rpn(element)
+    elseif _isa_rpn(element)
+        out = _parse_rpn(element)
     elseif dtype == String
         out = element
     else
-        if isa_conn(element)
-            out = parse_conn(element)
+        if _isa_conn(element)
+            out = _parse_conn(element)
         else
             try
                 out = parse(dtype, element)
             catch
-                Memento.warn(LOGGER, "cannot parse $element as $dtype, leaving as String.")
+                Memento.warn(_LOGGER, "cannot parse $element as $dtype, leaving as String.")
                 out = element
             end
         end
@@ -893,26 +893,26 @@ the default properties from the `get_prop_default` function.
 function parse_dss_with_dtypes!(dss_data::Dict, toParse::Array{String}=[])
     for compType in toParse
         if haskey(dss_data, compType)
-            Memento.debug(LOGGER, "type: $compType")
+            Memento.debug(_LOGGER, "type: $compType")
             for item in dss_data[compType]
-                dtypes = get_dtypes(compType)
+                dtypes = _get_dtypes(compType)
                 for (k, v) in item
                     if haskey(dtypes, k)
-                        Memento.debug(LOGGER, "key: $k")
+                        Memento.debug(_LOGGER, "key: $k")
                         if isa(v, Array)
                             arrout = []
                             for el in v
                                 if isa(v, AbstractString)
-                                    push!(arrout, parse_element_with_dtype(dtypes[k], el))
+                                    push!(arrout, _parse_element_with_dtype(dtypes[k], el))
                                 else
                                     push!(arrout, el)
                                 end
                             end
                             item[k] = arrout
                         elseif isa(v, AbstractString)
-                            item[k] = parse_element_with_dtype(dtypes[k], v)
+                            item[k] = _parse_element_with_dtype(dtypes[k], v)
                         else
-                            Memento.error(LOGGER, "dtype unknown $compType, $k, $v")
+                            Memento.error(_LOGGER, "dtype unknown $compType, $k, $v")
                         end
                     end
                 end
@@ -923,11 +923,11 @@ end
 
 
 """
-    parse_busname(busname)
+    _parse_busname(busname)
 
 Parses busnames as defined in OpenDSS, e.g. "primary.1.2.3.0".
 """
-function parse_busname(busname::AbstractString)
+function _parse_busname(busname::AbstractString)
     parts = split(busname, '.'; limit=2)
     name = parts[1]
     elements = "1.2.3"
@@ -953,11 +953,11 @@ end
 
 
 """
-    get_conductors_ordered(busname)
+    _get_conductors_ordered(busname)
 
 Returns an ordered list of defined conductors.
 """
-function get_conductors_ordered(busname::AbstractString)
+function _get_conductors_ordered(busname::AbstractString)
     parts = split(busname, '.'; limit=2)
     ret = []
     if length(parts)==2
@@ -969,6 +969,6 @@ end
 
 
 "converts Dict{String,Any} to Dict{Symbol,Any} for passing as kwargs"
-function to_sym_keys(data::Dict{String,Any})::Dict{Symbol,Any}
+function _to_sym_keys(data::Dict{String,Any})::Dict{Symbol,Any}
     return Dict{Symbol,Any}((Symbol(k), v) for (k, v) in data)
 end

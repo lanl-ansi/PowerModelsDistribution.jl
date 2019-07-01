@@ -23,20 +23,20 @@ variable_tp_oltc_tap(pm)
 
 ### Constraints
 ```julia
-constraint_tp_voltage(pm)
+constraint_tp_model_voltage(pm)
 
 for i in PMs.ids(pm, :ref_buses)
     constraint_tp_theta_ref(pm, i)
 end
 
 for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
-    constraint_kcl_shunt_trans(pm, i, cnd=c)
+    constraint_tp_power_balance_shunt_trans(pm, i, cnd=c)
 end
 
 for i in PMs.ids(pm, :branch)
     for c in PMs.conductor_ids(pm)
-        constraint_ohms_tp_yt_from(pm, i, cnd=c)
-        constraint_ohms_tp_yt_to(pm, i, cnd=c)
+        constraint_tp_ohms_yt_from(pm, i, cnd=c)
+        constraint_tp_ohms_yt_to(pm, i, cnd=c)
 
         PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
 
@@ -77,14 +77,14 @@ variable_tp_oltc_tap(pm)
 
 ### Constraints
 ```julia
-constraint_tp_voltage(pm)
+constraint_tp_model_voltage(pm)
 
 for i in PMs.ids(pm, :ref_buses)
     constraint_tp_theta_ref(pm, i)
 end
 
 for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
-    constraint_kcl_shunt_trans_load(pm, i, cnd=c)
+    constraint_tp_power_balance_shunt_trans_load(pm, i, cnd=c)
 end
 
 for id in PMs.ids(pm, :load)
@@ -102,8 +102,8 @@ end
 
 for i in PMs.ids(pm, :branch)
     for c in PMs.conductor_ids(pm)
-        constraint_ohms_tp_yt_from(pm, i, cnd=c)
-        constraint_ohms_tp_yt_to(pm, i, cnd=c)
+        constraint_tp_ohms_yt_from(pm, i, cnd=c)
+        constraint_tp_ohms_yt_to(pm, i, cnd=c)
 
         PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
 
@@ -140,7 +140,7 @@ variable_tp_trans_flow(pm, bounded=false)
 
 ### Constraints
 ```julia
-constraint_tp_voltage(pm, bounded=false)
+constraint_tp_model_voltage(pm, bounded=false)
 
 for (i,bus) in PMs.ref(pm, :ref_buses)
     constraint_tp_theta_ref(pm, i)
@@ -152,7 +152,7 @@ for (i,bus) in PMs.ref(pm, :ref_buses)
 end
 
 for (i,bus) in PMs.ref(pm, :bus), c in PMs.conductor_ids(pm)
-    constraint_kcl_shunt_trans_load(pm, i, cnd=c)
+    constraint_tp_power_balance_shunt_trans_load(pm, i, cnd=c)
 
     # PV Bus Constraints
     if length(PMs.ref(pm, :bus_gens, i)) > 0 && !(i in PMs.ids(pm,:ref_buses))
@@ -180,8 +180,8 @@ for id in PMs.ids(pm, :load)
 end
 
 for i in PMs.ids(pm, :branch), c in PMs.conductor_ids(pm)
-    constraint_ohms_tp_yt_from(pm, i, cnd=c)
-    constraint_ohms_tp_yt_to(pm, i, cnd=c)
+    constraint_tp_ohms_yt_from(pm, i, cnd=c)
+    constraint_tp_ohms_yt_to(pm, i, cnd=c)
     # PMs.constraint_ohms_yt_from(pm, i, cnd=c)
     # PMs.constraint_ohms_yt_to(pm, i, cnd=c)
 end

@@ -40,7 +40,7 @@ The following example demonstrates how to break a `run_tp_opf` call into seperat
 
 ```julia
 data = PowerModelsDistribution.parse_file("case3_unbalanced.dss")
-pm = PowerModels.build_generic_model(data, ACPPowerModel, PowerModelsDistribution.post_tp_opf; multiconductor=true)
+pm = PowerModels.build_model(data, ACPPowerModel, PowerModelsDistribution.post_tp_opf; multiconductor=true)
 print(pm.model)
-solve_generic_model(pm, IpoptSolver())
+optimize_model!(pm, IpoptSolver())
 ```
