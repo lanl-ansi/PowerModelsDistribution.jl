@@ -121,19 +121,3 @@ function post_tp_pf_pbs(pm::_PMs.GenericPowerModel)
 
     objective_min_bus_power_slack(pm)
 end
-
-
-""
-function solution_pbs!(pm::_PMs.GenericPowerModel, sol::Dict{String,Any})
-    _PMs.add_setpoint_bus_voltage!(sol, pm)
-    _PMs.add_setpoint_generator_power!(sol, pm)
-    _PMs.add_setpoint_branch_flow!(sol, pm)
-    add_setpoint_bus_slack!(sol, pm)
-end
-
-
-""
-function add_setpoint_bus_slack!(sol, pm::_PMs.GenericPowerModel)
-    _PMs.add_setpoint!(sol, pm, "bus", "p_slack", :p_slack, status_name="bus_type", inactive_status_value=4)
-    _PMs.add_setpoint!(sol, pm, "bus", "q_slack", :q_slack, status_name="bus_type", inactive_status_value=4)
-end

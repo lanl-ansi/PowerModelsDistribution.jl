@@ -57,11 +57,3 @@ function post_tp_opf_bctr(pm::_PMs.GenericPowerModel)
 
     _PMs.objective_min_fuel_cost(pm)
 end
-
-
-""
-function solution_bctr!(pm::_PMs.GenericPowerModel, sol::Dict{String,<:Any})
-    _PMs.add_setpoint_bus_voltage!(sol, pm)
-    add_setpoint_bus_voltage_balance_indicators!(pm, sol)
-    _PMs.add_setpoint_generator_power!(sol, pm)
-end
