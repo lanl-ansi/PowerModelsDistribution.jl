@@ -13,6 +13,7 @@ module PowerModelsDistribution
         global _LOGGER = Memento.getlogger(PowerModels)
     end
 
+    include("core/types.jl")
     include("core/data.jl")
     include("core/ref.jl")
     include("core/multiconductor.jl")
