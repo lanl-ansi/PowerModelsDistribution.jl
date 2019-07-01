@@ -14,7 +14,7 @@ end
 
 ""
 function run_tp_opf_oltc(file::String, model_constructor, solver; kwargs...)
-    data = ThreePhasePowerModels.parse_file(file)
+    data = PowerModelsDistribution.parse_file(file)
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf; multiconductor=true, kwargs...)
 end
 

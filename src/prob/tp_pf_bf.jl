@@ -14,7 +14,7 @@ function run_tp_pf_bf(file::String, model_constructor, solver; kwargs...)
     if model_constructor != SDPUBFPowerModel && model_constructor != SOCNLPUBFPowerModel && model_constructor != SOCConicUBFPowerModel && model_constructor != LPUBFPowerModel && model_constructor !=  SOCBFPowerModel
         Memento.error(LOGGER, "The problem type tp_opf_bf at the moment only supports a limited set of formulations")
     end
-    data = ThreePhasePowerModels.parse_file(file)
+    data = PowerModelsDistribution.parse_file(file)
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_pf_bf; solution_builder=get_solution_tp, multiconductor=true, kwargs...)
 end
 

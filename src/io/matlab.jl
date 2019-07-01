@@ -5,7 +5,7 @@ function parse_matlab(io::IOStream)
     data_string = read(io, String)
     ml_data = parse_matlab_string(data_string)
 
-    pm_data = matlab_to_tppm(ml_data)
+    pm_data = matlab_to_pmd(ml_data)
 
     return pm_data
 end
@@ -21,12 +21,12 @@ end
 
 
 ### Data and functions specific to Matlab format ###
-tppm_data_names = [
-    "tppmc.baseMVA", "tppmc.baseKV", "tppmc.bus", "tppmc.load", "tppmc.shunt",
-    "tppmc.gen", "tppmc.branch", "tppmc.bus_name", "tppmc.gencost"
+pmd_data_names = [
+    "pmdc.baseMVA", "pmdc.baseKV", "pmdc.bus", "pmdc.load", "pmdc.shunt",
+    "pmdc.gen", "pmdc.branch", "pmdc.bus_name", "pmdc.gencost"
 ]
 
-tppm_bus_columns = [
+pmd_bus_columns = [
     ("bus_i", Int),
     ("bus_type", Int),
     ("vmin_1", Float64), ("vmax_1", Float64),
@@ -37,11 +37,11 @@ tppm_bus_columns = [
     ("vm_3", Float64), ("va_3", Float64)
 ]
 
-tppm_bus_name_columns = [
+pmd_bus_name_columns = [
     ("bus_name", AbstractString)
 ]
 
-tppm_load_columns = [
+pmd_load_columns = [
     ("load_bus", Int),
     ("pd_1", Float64), ("qd_1", Float64),
     ("pd_2", Float64), ("qd_2", Float64),
@@ -49,7 +49,7 @@ tppm_load_columns = [
     ("status", Int)
 ]
 
-tppm_shunt_columns = [
+pmd_shunt_columns = [
     ("shunt_bus", Int),
     ("gs_1", Float64), ("bs_1", Float64),
     ("gs_2", Float64), ("bs_2", Float64),
@@ -57,7 +57,7 @@ tppm_shunt_columns = [
     ("status", Int)
 ]
 
-tppm_gen_columns = [
+pmd_gen_columns = [
     ("gen_bus", Int),
     ("pmin_1", Float64), ("pmax_1", Float64),
     ("qmin_1", Float64), ("qmax_1", Float64),
@@ -71,7 +71,7 @@ tppm_gen_columns = [
     ("gen_status", Int)
 ]
 
-tppm_branch_columns = [
+pmd_branch_columns = [
     ("f_bus", Int),
     ("t_bus", Int),
     ("r_11", Float64), ("x_11", Float64),
@@ -107,90 +107,90 @@ function parse_matlab_string(data_string::String)
     end
 
     case["source_type"] = "matlab"
-    if haskey(matlab_data, "tppmc.version")
-        case["source_version"] = VersionNumber(matlab_data["tppmc.version"])
+    if haskey(matlab_data, "pmdc.version")
+        case["source_version"] = VersionNumber(matlab_data["pmdc.version"])
     else
         Memento.warn(LOGGER, "No version number found, file may not be compatible with parser.")
         case["source_version"] = v"0"
     end
 
-    if haskey(matlab_data, "tppmc.baseMVA")
-        case["baseMVA"] = matlab_data["tppmc.baseMVA"]
+    if haskey(matlab_data, "pmdc.baseMVA")
+        case["baseMVA"] = matlab_data["pmdc.baseMVA"]
     else
-        Memento.warn(LOGGER, string("no baseMVA found in matlab file.  The file seems to be missing \"tppmc.baseMVA = ...\""))
+        Memento.warn(LOGGER, string("no baseMVA found in matlab file.  The file seems to be missing \"pmdc.baseMVA = ...\""))
         case["baseMVA"] = 1.0
     end
 
-    if haskey(matlab_data, "tppmc.baseKV")
-        case["baseKV"] = matlab_data["tppmc.baseKV"]
+    if haskey(matlab_data, "pmdc.baseKV")
+        case["baseKV"] = matlab_data["pmdc.baseKV"]
     else
-        Memento.warn(LOGGER, string("no baseKV found in matlab file.  The file seems to be missing \"tppmc.baseKV = ...\""))
+        Memento.warn(LOGGER, string("no baseKV found in matlab file.  The file seems to be missing \"pmdc.baseKV = ...\""))
         case["baseKV"] = 1.0
     end
 
-    if haskey(matlab_data, "tppmc.bus")
+    if haskey(matlab_data, "pmdc.bus")
         buses = []
-        for bus_row in matlab_data["tppmc.bus"]
-            bus_data = InfrastructureModels.row_to_typed_dict(bus_row, tppm_bus_columns)
+        for bus_row in matlab_data["pmdc.bus"]
+            bus_data = InfrastructureModels.row_to_typed_dict(bus_row, pmd_bus_columns)
             bus_data["index"] = InfrastructureModels.check_type(Int, bus_row[1])
             push!(buses, bus_data)
         end
         case["bus"] = buses
     else
-        error(string("no bus table found in matlab file.  The file seems to be missing \"tppmc.bus = [...];\""))
+        error(string("no bus table found in matlab file.  The file seems to be missing \"pmdc.bus = [...];\""))
     end
 
-    if haskey(matlab_data, "tppmc.load")
+    if haskey(matlab_data, "pmdc.load")
         loads = []
-        for (i,load_row) in enumerate(matlab_data["tppmc.load"])
-            load_data = InfrastructureModels.row_to_typed_dict(load_row, tppm_load_columns)
+        for (i,load_row) in enumerate(matlab_data["pmdc.load"])
+            load_data = InfrastructureModels.row_to_typed_dict(load_row, pmd_load_columns)
             load_data["index"] = i
             push!(loads, load_data)
         end
         case["load"] = loads
     else
-        error(string("no load table found in matlab file.  The file seems to be missing \"tppmc.load = [...];\""))
+        error(string("no load table found in matlab file.  The file seems to be missing \"pmdc.load = [...];\""))
     end
 
-    if haskey(matlab_data, "tppmc.shunt")
+    if haskey(matlab_data, "pmdc.shunt")
         shunts = []
-        for (i,shunt_row) in enumerate(matlab_data["tppmc.shunt"])
-            shunt_data = InfrastructureModels.row_to_typed_dict(shunt_row, tppm_shunt_columns)
+        for (i,shunt_row) in enumerate(matlab_data["pmdc.shunt"])
+            shunt_data = InfrastructureModels.row_to_typed_dict(shunt_row, pmd_shunt_columns)
             shunt_data["index"] = i
             push!(shunts, shunt_data)
         end
         case["shunt"] = shunts
     end
 
-    if haskey(matlab_data, "tppmc.gen")
+    if haskey(matlab_data, "pmdc.gen")
         gens = []
-        for (i, gen_row) in enumerate(matlab_data["tppmc.gen"])
-            gen_data = InfrastructureModels.row_to_typed_dict(gen_row, tppm_gen_columns)
+        for (i, gen_row) in enumerate(matlab_data["pmdc.gen"])
+            gen_data = InfrastructureModels.row_to_typed_dict(gen_row, pmd_gen_columns)
             gen_data["index"] = i
             push!(gens, gen_data)
         end
         case["gen"] = gens
     else
-        error(string("no gen table found in matlab file.  The file seems to be missing \"tppmc.gen = [...];\""))
+        error(string("no gen table found in matlab file.  The file seems to be missing \"pmdc.gen = [...];\""))
     end
 
-    if haskey(matlab_data, "tppmc.branch")
+    if haskey(matlab_data, "pmdc.branch")
         branches = []
-        for (i, branch_row) in enumerate(matlab_data["tppmc.branch"])
-            branch_data = InfrastructureModels.row_to_typed_dict(branch_row, tppm_branch_columns)
+        for (i, branch_row) in enumerate(matlab_data["pmdc.branch"])
+            branch_data = InfrastructureModels.row_to_typed_dict(branch_row, pmd_branch_columns)
             branch_data["index"] = i
             push!(branches, branch_data)
         end
         case["branch"] = branches
     else
-        error(string("no branch table found in matlab file.  The file seems to be missing \"tppmc.branch = [...];\""))
+        error(string("no branch table found in matlab file.  The file seems to be missing \"pmdc.branch = [...];\""))
     end
 
 
-    if haskey(matlab_data, "tppmc.bus_name")
+    if haskey(matlab_data, "pmdc.bus_name")
         bus_names = []
-        for (i, bus_name_row) in enumerate(matlab_data["tppmc.bus_name"])
-            bus_name_data = InfrastructureModels.row_to_typed_dict(bus_name_row, tppm_bus_name_columns)
+        for (i, bus_name_row) in enumerate(matlab_data["pmdc.bus_name"])
+            bus_name_data = InfrastructureModels.row_to_typed_dict(bus_name_row, pmd_bus_name_columns)
             bus_name_data["index"] = i
             push!(bus_names, bus_name_data)
         end
@@ -201,9 +201,9 @@ function parse_matlab_string(data_string::String)
         end
     end
 
-    if haskey(matlab_data, "tppmc.gencost")
+    if haskey(matlab_data, "pmdc.gencost")
         gencost = []
-        for (i, gencost_row) in enumerate(matlab_data["tppmc.gencost"])
+        for (i, gencost_row) in enumerate(matlab_data["pmdc.gencost"])
             gencost_data = PMs.mp_cost_data(gencost_row)
             gencost_data["index"] = i
             push!(gencost, gencost_data)
@@ -216,7 +216,7 @@ function parse_matlab_string(data_string::String)
     end
 
     for k in keys(matlab_data)
-        if !in(k, tppm_data_names) && startswith(k, "tppmc.")
+        if !in(k, pmd_data_names) && startswith(k, "pmdc.")
             case_name = k[7:length(k)]
             value = matlab_data[k]
             if isa(value, Array)
@@ -259,9 +259,9 @@ end
 
 
 """
-Converts a Matlab dict into a ThreePhasePowerModels dict
+Converts a Matlab dict into a PowerModelsDistribution dict
 """
-function matlab_to_tppm(ml_data::Dict{String,Any})
+function matlab_to_pmd(ml_data::Dict{String,Any})
     ml_data = deepcopy(ml_data)
 
     translate_version!(ml_data)

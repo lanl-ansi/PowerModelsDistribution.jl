@@ -1,19 +1,16 @@
-# ThreePhasePowerModels.jl
-
-## DEPRECIATED :: The ThreePhasePowerModels.jl package name is depreciated, v0.3.2 is the final release version with this name. Going forward, please use PowerModelsDistribution.jl (https://github.com/lanl-ansi/PowerModelsDistribution.jl).
+# PowerModelsDistribution.jl
 
 Release:
-<!-- [![ThreePhasePowerModels](http://pkg.julialang.org/badges/ThreePhasePowerModels_0.6.svg)](http://pkg.julialang.org/detail/ThreePhasePowerModels) -->
-[![docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://lanl-ansi.github.io/ThreePhasePowerModels.jl/stable/)
+<!-- [![PowerModelsDistribution](http://pkg.julialang.org/badges/ThreePhasePowerModels_0.6.svg)](http://pkg.julialang.org/detail/PowerModelsDistribution) -->
+[![docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://lanl-ansi.github.io/PowerModelsDistribution.jl/stable/)
 
 Dev:
-[![Build Status](https://travis-ci.org/lanl-ansi/ThreePhasePowerModels.jl.svg?branch=master)](https://travis-ci.org/lanl-ansi/ThreePhasePowerModels.jl)
-[![codecov](https://codecov.io/gh/lanl-ansi/ThreePhasePowerModels.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/lanl-ansi/ThreePhasePowerModels.jl)
-[![docs](https://img.shields.io/badge/docs-latest-blue.svg)](https://lanl-ansi.github.io/ThreePhasePowerModels.jl/latest/)
+[![Build Status](https://travis-ci.org/lanl-ansi/PowerModelsDistribution.jl.svg?branch=master)](https://travis-ci.org/lanl-ansi/PowerModelsDistribution.jl)
+[![codecov](https://codecov.io/gh/lanl-ansi/PowerModelsDistribution.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/lanl-ansi/PowerModelsDistribution.jl)
+[![docs](https://img.shields.io/badge/docs-latest-blue.svg)](https://lanl-ansi.github.io/PowerModelsDistribution.jl/latest/)
 
 
-
-ThreePhasePowerModels.jl is an extention package of PowerModels.jl for Steady-State Power Distribution Network Optimization.  It is designed to enable computational evaluation of emerging power network formulations and algorithms in a common platform.  The code is engineered to decouple problem specifications (e.g. Power Flow, Optimal Power Flow, ...) from the power network formulations (e.g. AC, linear-approximation, SOC-relaxation, ...).
+PowerModelsDistribution.jl is an extention package of PowerModels.jl for Steady-State Power Distribution Network Optimization.  It is designed to enable computational evaluation of emerging power network formulations and algorithms in a common platform.  The code is engineered to decouple problem specifications (e.g. Power Flow, Optimal Power Flow, ...) from the power network formulations (e.g. AC, linear-approximation, SOC-relaxation, ...).
 This enables the definition of a wide variety of power network formulations and their comparison on common problem specifications.
 
 **Core Problem Specifications**
@@ -34,7 +31,7 @@ This enables the definition of a wide variety of power network formulations and 
 
 ## Development
 
-Community-driven development and enhancement of ThreePhasePowerModels are welcome and encouraged. Please fork this repository and share your contributions to the master with pull requests.
+Community-driven development and enhancement of PowerModelsDistribution are welcome and encouraged. Please fork this repository and share your contributions to the master with pull requests.
 
 
 ## Acknowledgments

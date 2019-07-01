@@ -2,7 +2,7 @@
 
 @testset "test PowerModels generic functions" begin
     @testset "build PMs.ref" begin
-        data = TPPMs.parse_file("../test/data/matlab/case5_i_r_b.m")
+        data = PMD.parse_file("../test/data/matlab/case5_i_r_b.m")
 
         ref = PowerModels.build_ref(data)
 

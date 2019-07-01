@@ -1,5 +1,8 @@
-ThreePhasePowerModels.jl Change Log
+PowerModelsDistribution.jl Change Log
 ===================================
+
+### v0.4
+- First version of PowerModelsDistribution.jl
 
 ### v0.3.2
 - Final version of ThreePhasePowerModels.jl before name change to PowerModelsDistribution.jl (adds depreciation warnings)

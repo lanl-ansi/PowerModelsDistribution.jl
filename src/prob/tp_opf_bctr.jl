@@ -9,7 +9,7 @@ end
 
 ""
 function run_tp_opf_bctr(file::String, model_constructor, solver; kwargs...)
-    data = ThreePhasePowerModels.parse_file(file)
+    data = PowerModelsDistribution.parse_file(file)
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf_bctr; multiconductor=true, solution_builder=solution_bctr!,  kwargs...)
 end
 
