@@ -37,7 +37,7 @@ function find_ref_buses(pm::PMs.GenericPowerModel, nw)
     # return [bus for (b,bus) in buses ]
 end
 
-"Adds arcs for TPPM transformers; for dclines and branches this is done in PMs"
+"Adds arcs for PMD transformers; for dclines and branches this is done in PMs"
 function add_arcs_trans!(pm::PMs.GenericPowerModel)
     if !haskey(PMs.ref(pm, pm.cnw), :trans)
         # this might happen when parsing data from matlab format

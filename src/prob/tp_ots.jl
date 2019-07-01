@@ -8,7 +8,7 @@ end
 
 ""
 function run_tp_ots(file::String, model_constructor, solver; kwargs...)
-    data = ThreePhasePowerModels.parse_file(file)
+    data = PowerModelsDistribution.parse_file(file)
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_ots; multiconductor=true, solution_builder=PMs.get_ots_solution, kwargs...)
 end
 

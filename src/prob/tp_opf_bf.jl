@@ -8,7 +8,7 @@ end
 
 ""
 function run_tp_opf_bf(file::String, model_constructor, solver; kwargs...)
-    data = ThreePhasePowerModels.parse_file(file)
+    data = PowerModelsDistribution.parse_file(file)
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf_bf; solution_builder=get_solution_tp, multiconductor=true, kwargs...)
 end
 

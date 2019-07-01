@@ -15,9 +15,9 @@ We begin with the top of the hierarchy, where we can distinguish between AC and 
 PowerModels.AbstractACPForm <: PowerModels.AbstractPowerFormulation
 PowerModels.AbstractDCPForm <: PowerModels.AbstractPowerFormulation
 PowerModels.AbstractWRForm <: PowerModels.AbstractPowerFormulation
-ThreePhasePowerModels.AbstractNLPUBFForm <: PowerModels.AbstractBFQPForm
-ThreePhasePowerModels.AbstractConicUBFForm <: PowerModels.AbstractBFConicForm
-ThreePhasePowerModels.AbstractLPUBFForm <: ThreePhasePowerModels.AbstractNLPUBFForm
+PowerModelsDistribution.AbstractNLPUBFForm <: PowerModels.AbstractBFQPForm
+PowerModelsDistribution.AbstractConicUBFForm <: PowerModels.AbstractBFConicForm
+PowerModelsDistribution.AbstractLPUBFForm <: PowerModelsDistribution.AbstractNLPUBFForm
 ```
 
 From there, different forms are possible:
@@ -28,13 +28,13 @@ PowerModels.StandardDCPForm <: PowerModels.AbstractDCPForm
 PowerModels.SOCWRForm <: PowerModels.AbstractWRForm
 
 #Branch flow models:
-ThreePhasePowerModels.SDPUBFForm <: ThreePhasePowerModels.AbstractConicUBFForm
-ThreePhasePowerModels.SOCNLPUBFForm <: ThreePhasePowerModels.AbstractNLPUBFForm
-ThreePhasePowerModels.SOCConicUBFForm <: ThreePhasePowerModels.AbstractConicUBFForm
+PowerModelsDistribution.SDPUBFForm <: PowerModelsDistribution.AbstractConicUBFForm
+PowerModelsDistribution.SOCNLPUBFForm <: PowerModelsDistribution.AbstractNLPUBFForm
+PowerModelsDistribution.SOCConicUBFForm <: PowerModelsDistribution.AbstractConicUBFForm
 
-ThreePhasePowerModels.LPLinUBFForm <: PowerModels.AbstractBFForm
-ThreePhasePowerModels.LPfullUBFForm <: ThreePhasePowerModels.AbstractLPUBFForm
-ThreePhasePowerModels.LPdiagUBFForm <: ThreePhasePowerModels.AbstractLPUBFForm
+PowerModelsDistribution.LPLinUBFForm <: PowerModels.AbstractBFForm
+PowerModelsDistribution.LPfullUBFForm <: PowerModelsDistribution.AbstractLPUBFForm
+PowerModelsDistribution.LPdiagUBFForm <: PowerModelsDistribution.AbstractLPUBFForm
 ```
 
 ## Power Models
@@ -45,13 +45,13 @@ PowerModels.DCPPowerModel = GenericPowerModel{PowerModels.StandardDCPForm}
 
 PowerModels.SOCWRPowerModel = GenericPowerModel{PowerModels.SOCWRForm}
 
-ThreePhasePowerModels.SDPUBFPowerModel = GenericPowerModel{ThreePhasePowerModels.SDPUBFForm}
-ThreePhasePowerModels.SOCNLPUBFPowerModel = GenericPowerModel{ThreePhasePowerModels.SOCNLPUBFForm}
-ThreePhasePowerModels.SOCConicUBFPowerModel = GenericPowerModel{ThreePhasePowerModels.SOCConicUBFForm}
+PowerModelsDistribution.SDPUBFPowerModel = GenericPowerModel{PowerModelsDistribution.SDPUBFForm}
+PowerModelsDistribution.SOCNLPUBFPowerModel = GenericPowerModel{PowerModelsDistribution.SOCNLPUBFForm}
+PowerModelsDistribution.SOCConicUBFPowerModel = GenericPowerModel{PowerModelsDistribution.SOCConicUBFForm}
 
-ThreePhasePowerModels.LPfullUBFPowerModel = GenericPowerModel{ThreePhasePowerModels.LPfullUBFForm}
-ThreePhasePowerModels.LPdiagUBFPowerModel = GenericPowerModel{ThreePhasePowerModels.LPdiagUBFForm}
-ThreePhasePowerModels.LPLinUBFPowerModel = GenericPowerModel{ThreePhasePowerModels.LPLinUBFForm}
+PowerModelsDistribution.LPfullUBFPowerModel = GenericPowerModel{PowerModelsDistribution.LPfullUBFForm}
+PowerModelsDistribution.LPdiagUBFPowerModel = GenericPowerModel{PowerModelsDistribution.LPdiagUBFForm}
+PowerModelsDistribution.LPLinUBFPowerModel = GenericPowerModel{PowerModelsDistribution.LPLinUBFForm}
 ```
 
 ## Union Types

@@ -92,7 +92,7 @@ function variable_tp_voltage_prod_hermitian(pm::PMs.GenericPowerModel{T}; n_cond
     wmaxdict = Dict{Int64, Any}()
     for i in PMs.ids(pm, nw, :bus)
         wmax = PMs.ref(pm, nw, :bus, i, "vmax").values*PMs.ref(pm, nw, :bus, i, "vmax").values'
-        wmaxltri = ThreePhasePowerModels.mat2ltrivec(wmax)
+        wmaxltri = PowerModelsDistribution.mat2ltrivec(wmax)
         wmaxdict[i] = wmaxltri
     end
 
@@ -278,7 +278,7 @@ function variable_lower_triangle_active_branch_flow(pm::PMs.GenericPowerModel; n
     for (l,i,j) in PMs.ref(pm, nw, :arcs)
         cmax = PMs.ref(pm, nw, :branch, l, "rate_a").values./PMs.ref(pm, nw, :bus, i, "vmin").values
         smax = PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
-        smaxltri = ThreePhasePowerModels.mat2ltrivec(smax)
+        smaxltri = PowerModelsDistribution.mat2ltrivec(smax)
         smaxdict[(l,i,j)] = smaxltri
     end
 
@@ -304,7 +304,7 @@ function variable_lower_triangle_reactive_branch_flow(pm::PMs.GenericPowerModel;
     for (l,i,j) in PMs.ref(pm, nw, :arcs)
         cmax = PMs.ref(pm, nw, :branch, l, "rate_a").values./PMs.ref(pm, nw, :bus, i, "vmin").values
         smax = PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
-        smaxltri = ThreePhasePowerModels.mat2ltrivec(smax)
+        smaxltri = PowerModelsDistribution.mat2ltrivec(smax)
         smaxdict[(l,i,j)] = smaxltri
     end
 
@@ -330,7 +330,7 @@ function variable_upper_triangle_active_branch_flow(pm::PMs.GenericPowerModel; n
     for (l,i,j) in PMs.ref(pm, nw, :arcs)
         cmax = PMs.ref(pm, nw, :branch, l, "rate_a").values./PMs.ref(pm, nw, :bus, i, "vmin").values
         smax = PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
-        smaxutri = ThreePhasePowerModels.mat2utrivec(smax)
+        smaxutri = PowerModelsDistribution.mat2utrivec(smax)
         smaxdict[(l,i,j)] = smaxutri
     end
 
@@ -356,7 +356,7 @@ function variable_upper_triangle_reactive_branch_flow(pm::PMs.GenericPowerModel;
     for (l,i,j) in PMs.ref(pm, nw, :arcs)
         cmax = PMs.ref(pm, nw, :branch, l, "rate_a").values./PMs.ref(pm, nw, :bus, i, "vmin").values
         smax = PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
-        smaxutri = ThreePhasePowerModels.mat2utrivec(smax)
+        smaxutri = PowerModelsDistribution.mat2utrivec(smax)
         smaxdict[(l,i,j)] = smaxutri
     end
     if bounded
@@ -410,7 +410,7 @@ function constraint_tp_theta_ref(pm::PMs.GenericPowerModel{T}, n::Int, i) where 
     w_re = PMs.var(pm, n, :W_re)[i]
     w_im = PMs.var(pm, n, :W_im)[i]
 
-    alpha = exp(-im*ThreePhasePowerModels.wraptopi(2 * pi / nconductors ))
+    alpha = exp(-im*PowerModelsDistribution.wraptopi(2 * pi / nconductors ))
     beta = (alpha*ones(nconductors)).^(0:nconductors-1)
     gamma = beta*beta'
 

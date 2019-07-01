@@ -11,7 +11,7 @@ end
 
 ""
 function run_tp_opf_pbs(file::String, model_constructor, solver; kwargs...)
-    data = ThreePhasePowerModels.parse_file(file)
+    data = PowerModelsDistribution.parse_file(file)
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf_pbs; multiconductor=true, solution_builder = get_pbs_solution, kwargs...)
 end
 
@@ -64,7 +64,7 @@ end
 
 ""
 function run_tp_pf_pbs(file::String, model_constructor, solver; kwargs...)
-    data = ThreePhasePowerModels.parse_file(file)
+    data = PowerModelsDistribution.parse_file(file)
     return PMs.run_generic_model(data, model_constructor, solver, post_tp_pf_pbs; multiconductor=true, solution_builder = get_pbs_solution, kwargs...)
 end
 
