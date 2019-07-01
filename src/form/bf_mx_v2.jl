@@ -1,7 +1,6 @@
 #TODO
 #- Should unbounded be supported as well by variable_mx? If so, redesign signatures
-#- Decide naming scheme for matrix variables (base_name)
-#- no underscore for re and im
+#- Fix matrix variable dict keys once merging
 #- Add formulation types
 #- Add matrix KCL
 #- Allow to pass vectors for upperbound/lowerbound for Hermitian
@@ -20,22 +19,19 @@ end
 
 function variable_tp_voltage_prod_hermitian_v2(pm::PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
     bus_ids = collect(PMs.ids(pm, nw, :bus))
-    # calculate bounds
-    lower_bound = Dict{eltype(bus_ids), Array{Real,2}}()
-    upper_bound = Dict{eltype(bus_ids), Array{Real,2}}()
-    for id in bus_ids
-        vmax = PMs.ref(pm, nw, :bus, id)["vmax"].values
-        vmin = PMs.ref(pm, nw, :bus, id)["vmin"].values
-        lower_bound[id] = -vmax*vmax'
-        for c in 1:n_cond
-            lower_bound[id][c,c] = vmin[c]^2
-        end
-        upper_bound[id] =  vmax*vmax'
+
+    if bounded
+        # get bounds
+        vmax = Dict([(id, PMs.ref(pm, nw, :bus, id, "vmax").values) for id in bus_ids])
+        vmin = Dict([(id, PMs.ref(pm, nw, :bus, id, "vmin").values) for id in bus_ids])
+        # create bounded Hermitian matrix variables
+        (Wre,Wim) = variable_mx_hermitian_sqrt_bounds(pm, bus_ids, n_cond,
+            vmax, vmin; name="W", prefix="$nw")
+    else
+        # create unbounded Hermitian matrix variables
+        (Wre,Wim) = variable_mx_hermitian(pm, bus_ids, n_cond; name="W", prefix="$nw")
     end
-    # create  matrix variables
-    # TODO is it okay to always be bounded?
-    upperbound = Dict([(id, PMs.ref(pm, nw, :bus, id, "vmin")) for id in bus_ids])
-    (Wre,Wim) = variable_mx_hermitian(pm, bus_ids, n_cond, lower_bound, upper_bound; name="W", prefix="$nw")
+
     # save references in dict
     PMs.var(pm, nw)[:W_re] = Wre
     PMs.var(pm, nw)[:W_im] = Wim
@@ -49,37 +45,41 @@ function variable_tp_branch_series_current_prod_hermitian_v2(pm::PMs.GenericPowe
     branches = PMs.ref(pm, nw, :branch)
     buses = PMs.ref(pm, nw, :bus)
 
-    # calculate max series current for each branch
-    cmax = Dict{Int, Array{Real,1}}()
-    for (key, branch) in branches
-        bus_fr = buses[branch["f_bus"]]
-        bus_to = buses[branch["t_bus"]]
-
-        vmin_fr = bus_fr["vmin"].values
-        vmin_to = bus_to["vmin"].values
-
-        vmax_fr = bus_fr["vmax"].values
-        vmax_to = bus_to["vmax"].values
-
-        # assumed to be matrices already
-        # temportary fix by shunts_diag2mat!
-        y_fr = branch["g_fr"].values + im* branch["b_fr"].values
-        y_to = branch["g_to"].values + im* branch["b_to"].values
-
-        smax = branch["rate_a"].values
-        cmaxfr = smax./vmin_fr + abs.(y_fr)*vmax_fr
-        cmaxto = smax./vmin_to + abs.(y_to)*vmax_to
-
-        cmax[key] = max.(cmaxfr, cmaxto)
-    end
-    # create  L bound
     branch_ids = collect(keys(branches))
-    bound = Dict{eltype(branch_ids), Array{Real,2}}([(id, cmax[id]*cmax[id]') for id in branch_ids])
-    # create matrix variables
-    (Lre,Lim) = variable_mx_hermitian(pm, branch_ids, n_cond, bound; name="CC", prefix="$nw")
+
+    if bounded
+        # calculate max series current for each branch
+        cmax = Dict{eltype(branch_ids), Array{Real,1}}()
+        for (key, branch) in branches
+            bus_fr = buses[branch["f_bus"]]
+            bus_to = buses[branch["t_bus"]]
+
+            vmin_fr = bus_fr["vmin"].values
+            vmin_to = bus_to["vmin"].values
+
+            vmax_fr = bus_fr["vmax"].values
+            vmax_to = bus_to["vmax"].values
+
+            # assumed to be matrices already
+            # temportary fix by shunts_diag2mat!
+            y_fr = branch["g_fr"].values + im* branch["b_fr"].values
+            y_to = branch["g_to"].values + im* branch["b_to"].values
+
+            smax = branch["rate_a"].values
+            cmaxfr = smax./vmin_fr + abs.(y_fr)*vmax_fr
+            cmaxto = smax./vmin_to + abs.(y_to)*vmax_to
+
+            cmax[key] = max.(cmaxfr, cmaxto)
+        end
+        # create matrix variables
+        (Lre,Lim) = variable_mx_hermitian_sqrt_bounds(pm, branch_ids, n_cond, cmax; name="CC", prefix="$nw")
+    else
+        (Lre,Lim) = variable_mx_hermitian(pm, branch_ids, n_cond; name="CC", prefix="$nw")
+    end
+
     # save reference
-    PMs.var(pm, nw)[:CCre] = Lre
-    PMs.var(pm, nw)[:CCim] = Lim
+    PMs.var(pm, nw)[:CC_re] = Lre
+    PMs.var(pm, nw)[:CC_im] = Lim
     for c in 1:n_cond
         PMs.var(pm, nw, c)[:cm] = Dict([(id, Lre[id][c,c]) for id in branch_ids])
     end
@@ -99,10 +99,10 @@ function variable_tp_branch_flow_v2(pm::PMs.GenericPowerModel{T}; n_cond::Int=3,
         bound[(l,i,j)] = vmax*cmax'
     end
     # create matrix variables
-    (P,Q) = variable_mx_complex(pm, branch_arcs, n_cond, bound; name=("P", "Q"), prefix="$nw")
+    (P,Q) = variable_mx_complex(pm, branch_arcs, n_cond, n_cond, bound; name=("P", "Q"), prefix="$nw")
     # save reference
-    PMs.var(pm, nw)[:P] = P
-    PMs.var(pm, nw)[:Q] = Q
+    PMs.var(pm, nw)[:P_mx] = P
+    PMs.var(pm, nw)[:Q_mx] = Q
     for c in 1:n_cond
         PMs.var(pm, nw, c)[:p] = Dict([(id,P[id][c,c]) for id in branch_arcs])
         PMs.var(pm, nw, c)[:q] = Dict([(id,Q[id][c,c]) for id in branch_arcs])
@@ -417,11 +417,10 @@ function variable_mx_complex(pm::PMs.GenericPowerModel, indices::Array{T,1}, N::
         name::Union{String, Tuple{String,String}}="", prefix="") where {T, LB<:Real,UB<:Real}
     name_real = isa(name, Tuple) ? name[1] : "$(name)re"
     name_imag = isa(name, Tuple) ? name[2] : "$(name)im"
-    Mre = variable_mx_real(pm, indices, N,
-        lower_bound, upper_bound, prefix=prefix,
+    Mre = variable_mx_real(pm, indices, N, M, lower_bound, upper_bound, prefix=prefix,
         name=name_real
     )
-    Mim = variable_mx_real(pm, indices, N, lower_bound, upper_bound;
+    Mim = variable_mx_real(pm, indices, N, M, lower_bound, upper_bound;
         prefix=prefix, name=name_imag)
     return (Mre,Mim)
 end
@@ -434,14 +433,14 @@ If not specified, the diagonal elements are set to zero.
 function variable_mx_complex_const_diag(pm::PMs.GenericPowerModel, indices::Array{T,1}, N::Int,
         lower_bound::Dict{T,Array{LB,2}}, upper_bound::Dict{T,Array{UB,2}};
         diag_re::Dict{T,Array{DR,1}}=Dict([(i, zeros(N)) for i in indices]),
-        diag_im::Dict{T,Array{DI,1}}==Dict([(i, zeros(N)) for i in indices]),
+        diag_im::Dict{T,Array{DI,1}}=Dict([(i, zeros(N)) for i in indices]),
         name::Union{String, Tuple{String,String}}="", prefix="") where {T, LB<:Real,UB<:Real, DR<:Real, DI<:Real}
     name_real = isa(name, Tuple) ? name[1] : "$(name)re"
     name_imag = isa(name, Tuple) ? name[2] : "$(name)im"
-    Mre = variable_mx_real_const_diag(pm, indices, N, lower_bound, upper_bound; diag_re,
+    Mre = variable_mx_real_const_diag(pm, indices, N, lower_bound, upper_bound, diag_re;
         prefix=prefix, name=name_real
     )
-    Mim = variable_mx_real_const_diag(pm, indices, N, lower_bound, upper_bound; diag_im,
+    Mim = variable_mx_real_const_diag(pm, indices, N, lower_bound, upper_bound, diag_im;
         prefix=prefix, name=name_imag)
     return (Mre,Mim)
 end
@@ -453,13 +452,12 @@ of the constants passed as the diag_re and diag_im argument. The diag argument
 is a dictionary of (index, 1d-array) pairs.
 Useful for power matrices with specified diagonals (constant power wye loads).
 """
-function variable_mx_complex(pm::PMs.GenericPowerModel, indices::Array{T,1}, N::Int,
+function variable_mx_complex(pm::PMs.GenericPowerModel, indices::Array{T,1}, N::Int, M::Int,
         bound::Dict{T,Array{B,2}};
         name::Union{String, Tuple{String,String}}="", prefix="") where {T, B<:Real}
     upper_bound = bound
     lower_bound = Dict([(k,-v) for (k,v) in bound])
-    return variable_mx_complex(pm, indices, N,
-        lower_bound, upper_bound,
+    return variable_mx_complex(pm, indices, N, M, lower_bound, upper_bound;
         name=name, prefix=prefix)
 end
 
@@ -653,6 +651,22 @@ function variable_mx_hermitian(pm::PMs.GenericPowerModel, indices::Array{T,1}, N
 end
 
 """
+Alternative method of variable_mx_hermitian,
+that does not take any bounds, and creates unbounded matrix variables.
+"""
+function variable_mx_hermitian(pm::PMs.GenericPowerModel, indices::Array{T,1}, N::Int;
+        name::Union{String, Tuple{String,String}}="", prefix="") where {T, LB<:Real, UB<:Real}
+    name_real = isa(name, Tuple) ? name[1] : "$(name)re"
+    name_imag = isa(name, Tuple) ? name[2] : "$(name)im"
+    Mre = variable_mx_symmetric(pm, indices, N;
+        prefix=prefix, name=name_real)
+    Mim = variable_mx_skewsymmetric(pm, indices, N;
+        prefix=prefix, name=name_imag)
+    return (Mre,Mim)
+end
+
+
+"""
 Often, lower_bound=-upper_bound, so this method takes only a magnitude bound,
 which is then applied symmetrically to the rectangular coordinates.
 """
@@ -674,13 +688,13 @@ Often, bounds on W are specified through magnitude upper bounds on Umax
 In that case, Wmax = Umax*Umax' and Wmin = -Umax*Umax'
 Except for the diagonal which is bounded below by 0, diag(Wmin) = 0
 """
-function variable_mx_hermitian(pm::PMs.GenericPowerModel, indices::Array{T,1}, N::Int,
+function variable_mx_hermitian_sqrt_bounds(pm::PMs.GenericPowerModel, indices::Array{T,1}, N::Int,
         bound_diag_mag_sqrt_max::Dict{T,Array{B,1}};
         name::Union{String, Tuple{String,String}}="", prefix="") where {T, B<:Real}
-    upper_bound = Dict([(k,v*v') for (k,v) in bound_diag_mag_sqrt])
+    upper_bound = Dict([(k,v*v') for (k,v) in bound_diag_mag_sqrt_max])
     lower_bound = Dict([(k,-w) for (k,w) in upper_bound])
     for c in 1:N
-        for (_,w) in lowerbound
+        for (_,w) in lower_bound
             w[c,c] = 0
         end
     end
@@ -695,15 +709,15 @@ Same as variable_mx_hermitian, but has an additional lower bound on the
 magnitude of U, Umin>=0
 √(|W[c,c]|) >= Umin, hence Umax is called bound_diag_mag_sqrt_min
 """
-function variable_mx_hermitian(pm::PMs.GenericPowerModel, indices::Array{T,1}, N::Int,
+function variable_mx_hermitian_sqrt_bounds(pm::PMs.GenericPowerModel, indices::Array{T,1}, N::Int,
         bound_diag_mag_sqrt_max::Dict{T,Array{B,1}},
         bound_diag_mag_sqrt_min::Dict{T,Array{B,1}};
         name::Union{String, Tuple{String,String}}="", prefix="") where {T, B<:Real}
-    upper_bound = Dict([(k,v*v') for (k,v) in bound_diag_mag_sqrt])
+    upper_bound = Dict([(k,v*v') for (k,v) in bound_diag_mag_sqrt_max])
     lower_bound = Dict([(k,-w) for (k,w) in upper_bound])
     for c in 1:N
-        for (id, w) in lowerbound
-            w[c,c] = bound_diag_mag_sqrt_min[id][c,c]^2
+        for (id, w) in lower_bound
+            w[c,c] = bound_diag_mag_sqrt_min[id][c]^2
             @assert(w[c,c]>=0)
         end
     end
