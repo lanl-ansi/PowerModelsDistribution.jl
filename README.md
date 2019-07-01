@@ -1,5 +1,7 @@
 # ThreePhasePowerModels.jl
 
+## DEPRECIATED :: The ThreePhasePowerModels.jl package name is depreciated, v0.3.2 is the final release version with this name. Going forward, please use PowerModelsDistribution.jl (https://github.com/lanl-ansi/PowerModelsDistribution.jl).
+
 Release:
 <!-- [![ThreePhasePowerModels](http://pkg.julialang.org/badges/ThreePhasePowerModels_0.6.svg)](http://pkg.julialang.org/detail/ThreePhasePowerModels) -->
 [![docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://lanl-ansi.github.io/ThreePhasePowerModels.jl/stable/)
