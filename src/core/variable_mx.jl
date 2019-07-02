@@ -106,8 +106,8 @@ If not specified, the diagonal elements are set to missing.
 """
 function variable_mx_real_with_diag(model::JuMP.Model, indices::Array{T,1}, N::Int,
         upper_bound::Dict{T,Array{UB,2}}, lower_bound::Dict{T,Array{LB,2}};
-        diag::Dict{T,Array{Any,1}}=Dict([(i, fill(missing, N)) for i in indices]),
-        name="", prefix="") where {T, LB<:Real, UB<:Real}
+        diag::Dict{T,Array{D,1}}=Dict([(i, fill(missing, N)) for i in indices]),
+        name="", prefix="") where {T,LB<:Real,UB<:Real,D<:Any}
     # the output is a dictionary of (index, matrix) pairs
     dict_mat_vars = Dict{T, Array{Any, 2}}([(index, zeros(N,N)) for index in indices])
     for n in 1:N
@@ -139,8 +139,8 @@ end
 Same as variable_mx_real_with diag, but without bounds.
 """
 function variable_mx_real_with_diag(model::JuMP.Model, indices::Array{T,1}, N::Int;
-        diag::Dict{T,Array{Any,1}}=Dict([(i, fill(missing, N)) for i in indices]),
-        name="", prefix="") where T
+        diag::Dict{T,Array{D,1}}=Dict([(i, fill(missing, N)) for i in indices]),
+        name="", prefix="") where {T,D<:Any}
     # the output is a dictionary of (index, matrix) pairs
     dict_mat_vars = Dict{T, Array{Any, 2}}([(index, zeros(N,N)) for index in indices])
     for n in 1:N
@@ -221,9 +221,9 @@ Useful for power matrices with specified diagonals (constant power wye loads).
 """
 function variable_mx_complex_with_diag(model::JuMP.Model, indices::Array{T,1}, N::Int,
         upper_bound::Dict{T,Array{UB,2}}, lower_bound::Dict{T,Array{LB,2}};
-        diag_re::Dict{T,Array{Any,1}}=Dict([(i, zeros(N)) for i in indices]),
-        diag_im::Dict{T,Array{Any,1}}=Dict([(i, zeros(N)) for i in indices]),
-        name::Union{String, Tuple{String,String}}="", prefix="") where {T, LB<:Real,UB<:Real}
+        diag_re::Dict{T,Array{LB,1}}=Dict([(i, zeros(N)) for i in indices]),
+        diag_im::Dict{T,Array{UB,1}}=Dict([(i, zeros(N)) for i in indices]),
+        name::Union{String, Tuple{String,String}}="", prefix="") where {T, LB<:Real, UB<:Real, DR<:Any, DI<:Any}
     name_real = isa(name, Tuple) ? name[1] : "$(name)re"
     name_imag = isa(name, Tuple) ? name[2] : "$(name)im"
     Mre = variable_mx_real_with_diag(model, indices, N, lower_bound, upper_bound, diag_re;
@@ -251,9 +251,9 @@ Alternative method of variable_mx_complex_with_diag,
 that does not take any bounds, and creates unbounded matrix variables.
 """
 function variable_mx_complex_with_diag(model::JuMP.Model, indices::Array{T,1}, N::Int;
-        diag_re::Dict{T,Array{Any,1}}=Dict([(i, zeros(N)) for i in indices]),
-        diag_im::Dict{T,Array{Any,1}}=Dict([(i, zeros(N)) for i in indices]),
-        name::Union{String, Tuple{String,String}}="", prefix="") where T
+        diag_re::Dict{T,Array{DR,1}}=Dict([(i, zeros(N)) for i in indices]),
+        diag_im::Dict{T,Array{DI,1}}=Dict([(i, zeros(N)) for i in indices]),
+        name::Union{String, Tuple{String,String}}="", prefix="") where {T, DR<:Any, DI<:Any}
     name_real = isa(name, Tuple) ? name[1] : "$(name)re"
     name_imag = isa(name, Tuple) ? name[2] : "$(name)im"
     Mre = variable_mx_real_with_diag(model, indices, N; diag=diag_re,
@@ -444,7 +444,7 @@ Returns a pair of symmetric and skew-symmetric matrix variables.
 """
 function variable_mx_hermitian(model::JuMP.Model, indices::Array{T,1}, N::Int,
         lower_bound::Dict{T,Array{LB,2}}, upper_bound::Dict{T,Array{UB,2}};
-        name::Union{String, Tuple{String,String}}="", prefix="") where {T, LB<:Real, UB<:Real}
+        name::Union{String,Tuple{String,String}}="", prefix="") where {T, LB<:Real, UB<:Real}
     name_real = isa(name, Tuple) ? name[1] : "$(name)re"
     name_imag = isa(name, Tuple) ? name[2] : "$(name)im"
     Mre = variable_mx_symmetric(model, indices, N, lower_bound, upper_bound;
