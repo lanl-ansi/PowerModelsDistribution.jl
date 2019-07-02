@@ -136,17 +136,3 @@ function _calc_tp_trans_Tvi(pm::_PMs.GenericPowerModel, i::Int; nw=pm.cnw)
     Cv_to *= vmult
     return (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to)
 end
-
-
-"Converts all shunt values from vector to matrix."
-function shunts_diag2mat!(pm)
-    for (nw, ref_nw) in  _PMs.nws(pm)
-        for (id, br) in ref_nw[:branch]
-            for key in ["g_fr", "g_to", "b_fr", "b_to"]
-                if !isa(br[key], _PMs.MultiConductorMatrix)
-                    br[key] = LinearAlgebra.diagm(0=>br[key])
-                end
-            end
-        end
-    end
-end
