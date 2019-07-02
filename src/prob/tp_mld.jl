@@ -1,6 +1,6 @@
 ""
 function run_tp_mld(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_mld; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=get_mld_solution, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_mld; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
 end
 
 
@@ -12,7 +12,7 @@ end
 
 ""
 function run_tp_mld_strg(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_mld_strg; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=get_mld_solution, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_mld_strg; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
 end
 
 
@@ -136,32 +136,49 @@ function post_tp_mld_strg(pm::_PMs.GenericPowerModel)
 end
 
 
-function get_mld_solution(pm::_PMs.GenericPowerModel{T}, sol::Dict{String,Any}) where T
+""
+function solution_mld!(pm::_PMs.GenericPowerModel{T}, sol::Dict{String,Any}) where T
     _PMs.add_setpoint_bus_voltage!(sol, pm)
     _PMs.add_setpoint_generator_power!(sol, pm)
+    _PMs.add_setpoint_storage!(sol, pm)
     _PMs.add_setpoint_branch_flow!(sol, pm)
-    #add_bus_status_setpoint(sol, pm)
-    add_load_setpoint!(sol, pm)
-    add_shunt_setpoint!(sol, pm)
-    #add_generator_status_setpoint(sol, pm)
+    add_setpoint_bus_status!(sol, pm)
+    add_setpoint_load!(sol, pm)
+    add_setpoint_shunt!(sol, pm)
+    add_setpoint_generator_status!(sol, pm)
+    add_setpoint_storage_status!(sol, pm)
 end
 
-function add_load_setpoint!(sol, pm::_PMs.GenericPowerModel{T}) where T
+
+""
+function add_setpoint_load!(sol, pm::_PMs.GenericPowerModel{T}) where T
     _PMs.add_setpoint!(sol, pm, "load", "pd", :z_demand; scale = (x,item,cnd) -> x*item["pd"][cnd])
     _PMs.add_setpoint!(sol, pm, "load", "qd", :z_demand; scale = (x,item,cnd) -> x*item["qd"][cnd])
     _PMs.add_setpoint!(sol, pm, "load", "status", :z_demand; default_value = (item) -> if (item["status"] == 0) 0.0 else 1.0 end, conductorless=true)
 end
 
-function add_shunt_setpoint!(sol, pm::_PMs.GenericPowerModel{T}) where T
+
+""
+function add_setpoint_shunt!(sol, pm::_PMs.GenericPowerModel{T}) where T
     _PMs.add_setpoint!(sol, pm, "shunt", "gs", :z_shunt; scale = (x,item,cnd) -> x*item["gs"][cnd])
     _PMs.add_setpoint!(sol, pm, "shunt", "bs", :z_shunt; scale = (x,item,cnd) -> x*item["bs"][cnd])
     _PMs.add_setpoint!(sol, pm, "shunt", "status", :z_shunt; default_value = (item) -> if (item["status"] == 0) 0.0 else 1.0 end, conductorless=true)
 end
 
-#function add_bus_status_setpoint{T}(sol, pm::_PMs.GenericPowerModel{T})
-#    _PMs.add_setpoint(sol, pm, "bus", "status", :z_voltage; default_value = (item) -> if item["bus_type"] == 4 0.0 else 1.0 end, conductorless=true)
-#end
 
-#function add_generator_status_setpoint{T}(sol, pm::_PMs.GenericPowerModel{T})
-#    _PMs.add_setpoint(sol, pm, "gen", "gen_status", :z_gen; default_value = (item) -> item["gen_status"]*1.0, conductorless=true)
-#end
+""
+function add_setpoint_bus_status!(sol, pm::_PMs.GenericPowerModel{T}) where T
+   _PMs.add_setpoint!(sol, pm, "bus", "status", :z_voltage; status_name="bus_type", inactive_status_value=4, default_value = (item) -> if item["bus_type"] == 4 0.0 else 1.0 end, conductorless=true)
+end
+
+
+""
+function add_setpoint_generator_status!(sol, pm::_PMs.GenericPowerModel{T}) where T
+   _PMs.add_setpoint!(sol, pm, "gen", "gen_status", :z_gen; status_name="gen_status", default_value = (item) -> item["gen_status"]*1.0, conductorless=true)
+end
+
+
+""
+function add_setpoint_storage_status!(sol, pm::_PMs.GenericPowerModel{T}) where T
+    _PMs.add_setpoint!(sol, pm, "storage", "status", :z_storage; default_value = (item) -> item["status"]*1.0, conductorless=true)
+end

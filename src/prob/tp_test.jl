@@ -13,7 +13,7 @@ end
 
 ""
 function run_tp_strg_opf(file::String, model_constructor, solver; kwargs...)
-    return run_tp_strg_opf(ThreePhasePowerModels.parse_file(file), model_constructor, solver; kwargs...)
+    return run_tp_strg_opf(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
 end
 
 
@@ -76,7 +76,7 @@ end
 
 ""
 function run_mn_tp_strg_opf(file::String, model_constructor, solver; kwargs...)
-    return run_mn_tp_strg_opf(ThreePhasePowerModels.parse_file(file), model_constructor, solver; kwargs...)
+    return run_mn_tp_strg_opf(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
 end
 
 

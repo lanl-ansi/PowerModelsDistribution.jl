@@ -271,12 +271,6 @@ end
 
 
 ""
-function variable_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw)
-
-end
-
-
-""
 function variable_tp_generation_indicator(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, relax=false)
     _PMs.variable_generation_indicator(pm; nw=nw, relax=relax)
     for cn in _PMs.conductor_ids(pm, nw)
