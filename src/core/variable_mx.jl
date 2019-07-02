@@ -303,8 +303,10 @@ function variable_mx_symmetric(model::JuMP.Model, indices::Array{T,1}, N::Int,
             end
         end
     end
-    # recast as Array of VariableRef, useful for JuMP inspection
-    return Dict{T, Array{JuMP.VariableRef, 2}}([x for x in dict_mat_vars])
+    # create explicit Symmetric matrices, supported by JuMP
+    # cannot do it directly through JuMP because of name generation
+    out = Dict{T, Array{JuMP.VariableRef, 2}}([x for x in dict_mat_vars])
+    return Dict([(k, LinearAlgebra.Symmetric(v)) for (k, v) in out])
 end
 
 
@@ -348,8 +350,10 @@ function variable_mx_symmetric(model::JuMP.Model, indices::Array{T,1}, N::Int;
             end
         end
     end
-    # recast as Array of VariableRef, useful for JuMP inspection
-    return Dict{T, Array{JuMP.VariableRef, 2}}([x for x in dict_mat_vars])
+    # create explicit Symmetric matrices, supported by JuMP
+    # cannot do it directly through JuMP because of name generation
+    out = Dict{T, Array{JuMP.VariableRef, 2}}([x for x in dict_mat_vars])
+    return Dict([(k, LinearAlgebra.Symmetric(v)) for (k, v) in out])
 end
 
 

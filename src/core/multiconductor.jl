@@ -14,7 +14,7 @@ end
 
 
 ""
-function _mat2utrivec!(m::Matrix{T}) where T
+function _mat2utrivec!(m::Union{Matrix{T}, LinearAlgebra.Symmetric{T}}) where T
     @assert size(m,1) == size(m,2)
     n = size(m,1)
     [m[i,j] for i=1:n, j=1:n if i < j]
@@ -22,7 +22,7 @@ end
 
 
 ""
-function _mat2ltrivec!(m::Matrix{T}) where T
+function _mat2ltrivec!(m::Union{Matrix{T}, LinearAlgebra.Symmetric{T}}) where T
     @assert size(m,1) == size(m,2)
     n = size(m,1)
     [m[j,i] for i=1:n, j=1:n if i < j]
