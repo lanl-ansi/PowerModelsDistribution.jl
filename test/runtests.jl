@@ -1,5 +1,5 @@
-using ThreePhasePowerModels
-const TPPMs = ThreePhasePowerModels
+using PowerModelsDistribution
+const PMD = PowerModelsDistribution
 
 import Memento
 
@@ -20,6 +20,8 @@ import Cbc
 import Juniper
 import SCS
 
+import JSON
+
 using Test
 using LinearAlgebra
 
@@ -31,7 +33,7 @@ scs_solver = JuMP.with_optimizer(SCS.Optimizer, max_iters=10000, verbose=0)
 juniper_solver = JuMP.with_optimizer(Juniper.Optimizer, nl_solver=JuMP.with_optimizer(Ipopt.Optimizer, tol=1e-4, print_level=0), mip_solver=cbc_solver, log_levels=[])
 
 
-@testset "TPPMs" begin
+@testset "PMD" begin
 
     include("matlab.jl")
 
@@ -56,4 +58,6 @@ juniper_solver = JuMP.with_optimizer(Juniper.Optimizer, nl_solver=JuMP.with_opti
     include("tp_multinetwork.jl")
 
     include("transformer.jl")
+
+    include("loadmodels.jl")
 end

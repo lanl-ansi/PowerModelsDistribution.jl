@@ -1,6 +1,6 @@
 @testset "test matlab data parser" begin
     @testset "5-bus minimal data" begin
-        data = TPPMs.parse_file("../test/data/matlab/case5_i_r_a.m")
+        data = PMD.parse_file("../test/data/matlab/case5_i_r_a.m")
 
         @test length(data["bus"]) == 5
         @test length(data["load"]) == 3
@@ -18,7 +18,7 @@
     end
 
     @testset "5-bus shunt data" begin
-        data = TPPMs.parse_file("../test/data/matlab/case5_i_r_b.m")
+        data = PMD.parse_file("../test/data/matlab/case5_i_r_b.m")
 
         @test length(data["bus"]) == 5
         @test length(data["load"]) == 3
@@ -34,10 +34,10 @@
         Memento.setlevel!(TESTLOG, "warn")
 
         @test_warn(TESTLOG, "matlab source data has unrecognized version 0.0.0, cannot translate to version 1.0.0, parse may be invalid",
-                   TPPMs.parse_file("../test/data/matlab/case5_i_r_b.m"))
+                   PMD.parse_file("../test/data/matlab/case5_i_r_b.m"))
 
         @test_warn(TESTLOG, "No version number found, file may not be compatible with parser.",
-                   TPPMs.parse_file("../test/data/matlab/case5_i_r_b.m"))
+                   PMD.parse_file("../test/data/matlab/case5_i_r_b.m"))
 
         Memento.setlevel!(TESTLOG, "error")
     end

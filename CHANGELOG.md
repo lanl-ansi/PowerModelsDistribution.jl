@@ -1,8 +1,29 @@
-ThreePhasePowerModels.jl Change Log
+PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
-- nothing
+- none
+
+### v0.5.0
+- Enforce function naming conventions (starts with `_`: internal function; ends with `!`: transforms data; `correct_`: corrects network data; `check_`: warnings about network data) (breaking)
+- Update for PowerModels.jl v0.12 (breaking)
+- Enforce constraint/variable naming conventions to include `_tp` (breaking)
+- Add automatic export of non-internal functions (all functions not prefixed with `_`)
+- Enforce function naming conventions (starts with `_`: internal function; ends with `!`: transforms data; `correct_`: corrects network data; `check_`: warnings about network data)
+
+### v0.4
+- First version of PowerModelsDistribution.jl
+
+### v0.3.2
+- Final version of ThreePhasePowerModels.jl before name change to PowerModelsDistribution.jl (adds depreciation warnings)
+
+### v0.3.1
+- Allow for arbitrarily named sourcebus
+- Add json parser
+- Add support for additional load models (constant power, constant impedance, constant current; delta or wye connected) (#127)
+- Fix bug in OpenDSS parse of Capacitors [zbase factor and wrong sign] (#138)
+- Add voltage balance constraints (#129)
+
 
 ### v0.3.0
 - Update to JuMP v0.19/MathOptInterface

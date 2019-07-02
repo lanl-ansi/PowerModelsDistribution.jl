@@ -1,7 +1,8 @@
 # Defines data structures (defaults) for OpenDSS objects
 import LinearAlgebra: diagm
 
-to_meters = Dict{String,Any}("mi" => 1609.3,
+
+_convert_to_meters = Dict{String,Any}("mi" => 1609.3,
                              "km" => 1000.0,
                              "kft" => 304.8,
                              "m" => 1.0,
@@ -14,15 +15,15 @@ to_meters = Dict{String,Any}("mi" => 1609.3,
 
 
 """
-    createLinecode(name; kwargs...)
+    _create_linecode(name; kwargs...)
 
 Creates a Dict{String,Any} containing all of the properties of a Linecode. See
 OpenDSS documentation for valid fields and ways to specify the different
-properties. DEPRECIATED: Calculation all done inside of createLine() due to Rg,
-Xg. Merge linecode values into line kwargs values BEFORE calling createLine().
+properties. DEPRECIATED: Calculation all done inside of _create_line() due to Rg,
+Xg. Merge linecode values into line kwargs values BEFORE calling _create_line().
 This is now mainly used for parsing linecode dicts into correct data types.
 """
-function createLinecode(name::AbstractString; kwargs...)
+function _create_linecode(name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :nphases, 3)
     basefreq = get(kwargs, :basefreq, 60.0)
@@ -82,16 +83,16 @@ function createLinecode(name::AbstractString; kwargs...)
 
     return Dict{String,Any}("name" => name,
                             "nphases" => phases,
-                            "r1" => r1 / to_meters[units],
-                            "x1" => x1 / to_meters[units],
-                            "r0" => r0 / to_meters[units],
-                            "x0" => x0 / to_meters[units],
-                            "c1" => c1 / to_meters[units],
-                            "c0" => c0 / to_meters[units],
+                            "r1" => r1 / _convert_to_meters[units],
+                            "x1" => x1 / _convert_to_meters[units],
+                            "r0" => r0 / _convert_to_meters[units],
+                            "x0" => x0 / _convert_to_meters[units],
+                            "c1" => c1 / _convert_to_meters[units],
+                            "c0" => c0 / _convert_to_meters[units],
                             "units" => "m",
-                            "rmatrix" => rmatrix / to_meters[units],
-                            "xmatrix" => xmatrix / to_meters[units],
-                            "cmatrix" => cmatrix / to_meters[units],
+                            "rmatrix" => rmatrix / _convert_to_meters[units],
+                            "xmatrix" => xmatrix / _convert_to_meters[units],
+                            "cmatrix" => cmatrix / _convert_to_meters[units],
                             "basefreq" => basefreq,
                             "normamps" => get(kwargs, :normamps, 400.0),
                             "emergamps" => get(kwargs, :emergamps, 600.0),
@@ -103,20 +104,20 @@ function createLinecode(name::AbstractString; kwargs...)
                             "xg" => get(kwargs, :xg, 0.155081),
                             "rho" => get(kwargs, :rho, 100.0),
                             "neutral" => get(kwargs, :neutral, 3),
-                            "b1" => b1 / to_meters[units],
-                            "b0" => b0 / to_meters[units]
+                            "b1" => b1 / _convert_to_meters[units],
+                            "b0" => b0 / _convert_to_meters[units]
                             )
 end
 
 
 """
-    createLine(bus1, bus2, name; kwargs...)
+    _create_line(bus1, bus2, name; kwargs...)
 
 Creates a Dict{String,Any} containing all of the properties for a Line. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
-function createLine(bus1, bus2, name::AbstractString; kwargs...)
+function _create_line(bus1, bus2, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
     basefreq = get(kwargs, :basefreq, 60.0)
@@ -185,10 +186,10 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
     xgmod = xg != 0.0 ?  0.5 * kxg * log(freq / basefreq) : 0.0
 
     units = get(kwargs, :units, "none")
-    len = get(kwargs, :length, 1.0) * to_meters[units]
+    len = get(kwargs, :length, 1.0) * _convert_to_meters[units]
 
     if haskey(kwargs, :rg)
-        Memento.warn(LOGGER, "Rg,Xg are not fully supported")
+        Memento.warn(_LOGGER, "Rg,Xg are not fully supported")
     end
 
     rmatrix .+= rg * (freq/basefreq - 1.0)
@@ -202,18 +203,18 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
                             "linecode" => get(kwargs, :linecode, ""),
                             "length" => len,
                             "phases" => phases,
-                            "r1" => r1 / to_meters[units],
-                            "x1" => x1 / to_meters[units],
-                            "r0" => r0 / to_meters[units],
-                            "x0" => x0 / to_meters[units],
-                            "c1" => c1 / to_meters[units],
-                            "c0" => c0 / to_meters[units],
-                            "rmatrix" => rmatrix / to_meters[units],
-                            "xmatrix" => xmatrix / to_meters[units],
-                            "cmatrix" => cmatrix / to_meters[units],
+                            "r1" => r1 / _convert_to_meters[units],
+                            "x1" => x1 / _convert_to_meters[units],
+                            "r0" => r0 / _convert_to_meters[units],
+                            "x0" => x0 / _convert_to_meters[units],
+                            "c1" => c1 / _convert_to_meters[units],
+                            "c0" => c0 / _convert_to_meters[units],
+                            "rmatrix" => rmatrix / _convert_to_meters[units],
+                            "xmatrix" => xmatrix / _convert_to_meters[units],
+                            "cmatrix" => cmatrix / _convert_to_meters[units],
                             "switch" => get(kwargs, :switch, false),
-                            "rg" => rg / to_meters[units],
-                            "xg" => xg / to_meters[units],
+                            "rg" => rg / _convert_to_meters[units],
+                            "xg" => xg / _convert_to_meters[units],
                             "rho" => get(kwargs, :rho, 100),
                             "geometry" => get(kwargs, :geometry, ""),
                             "units" => "m",
@@ -222,8 +223,8 @@ function createLine(bus1, bus2, name::AbstractString; kwargs...)
                             "earthmodel" => get(kwargs, :earthmodel, ""),
                             "cncables" => get(kwargs, :cncables, ""),
                             "tscables" => get(kwargs, :tscables, ""),
-                            "b1" => b1 / to_meters[units],
-                            "b0" => b0 / to_meters[units],
+                            "b1" => b1 / _convert_to_meters[units],
+                            "b0" => b0 / _convert_to_meters[units],
                             # Inherited Properties
                             "normamps" => get(kwargs, :normamps, 400.0),
                             "emergamps" => get(kwargs, :emergamps, 600.0),
@@ -239,13 +240,13 @@ end
 
 
 """
-    createLoad(bus1, name; kwargs...)
+    _create_load(bus1, name; kwargs...)
 
 Creates a Dict{String,Any} containing all of the expected properties for a
 Load. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function createLoad(bus1, name::AbstractString; kwargs...)
+function _create_load(bus1, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     kv = get(kwargs, :kv, 12.47)
     kw = get(kwargs, :kw, 10.0)
@@ -325,13 +326,13 @@ end
 
 
 """
-    createGenerator(bus1, name; kwargs...)
+    _create_generator(bus1, name; kwargs...)
 
 Creates a Dict{String,Any} containing all of the expected properties for a
 Generator. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function createGenerator(bus1, name::AbstractString; kwargs...)
+function _create_generator(bus1, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     conn = get(kwargs, :conn, "wye")
 
@@ -390,14 +391,14 @@ end
 
 
 """
-    createCapacitor(bus1, name, bus2=0; kwargs)
+    _create_capacitor(bus1, name, bus2=0; kwargs)
 
 Creates a Dict{String,Any} containing all of the expected properties for a
 Capacitor. If `bus2` is not specified, the capacitor will be treated as a shunt.
 See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function createCapacitor(bus1, name::AbstractString, bus2=0; kwargs...)
+function _create_capacitor(bus1, name::AbstractString, bus2=0; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
 
@@ -427,14 +428,14 @@ end
 
 
 """
-    createReactor(bus1, name, bus2=0; kwargs...)
+    _create_reactor(bus1, name, bus2=0; kwargs...)
 
 Creates a Dict{String,Any} containing all of the expected properties for a
 Reactor. If `bus2` is not specified Reactor is treated like a shunt. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
-function createReactor(bus1, name::AbstractString, bus2=""; kwargs...)
+function _create_reactor(bus1, name::AbstractString, bus2=""; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
     kvar = get(kwargs, :kvar, 1200.0)
@@ -571,7 +572,7 @@ end
 
 
 """
-    createVSource(bus1, name, bus2=0; kwargs...)
+    _create_vsource(bus1, name, bus2=0; kwargs...)
 
 Creates a Dict{String,Any} containing all of the expected properties for a
 Voltage Source. If `bus2` is not specified, VSource will be treated like a
@@ -579,7 +580,7 @@ generator. Mostly used as `sourcebus` which represents the circuit. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
-function createVSource(bus1, name::AbstractString, bus2=0; kwargs...)
+function _create_vsource(bus1, name::AbstractString, bus2=0; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     x1r1 = get(kwargs, :x1r1, 4.0)
     x0r0 = get(kwargs, :x0r0, 3.0)
@@ -788,13 +789,13 @@ end
 
 
 """
-    createTransformer(name; kwargs...)
+    _create_transformer(name; kwargs...)
 
 Creates a Dict{String,Any} containing all of the expected properties for a
 Transformer. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function createTransformer(name::AbstractString; kwargs...)
+function _create_transformer(name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     windings = get(kwargs, :windings, 2)
     phases = get(kwargs, :phases, 3)
@@ -907,14 +908,14 @@ end
 
 
 """
-    createPVSystem(bus1, name; kwargs...)
+    _create_pvsystem(bus1, name; kwargs...)
 
 Creates a Dict{String,Any} containing all of the expected properties for a
 PVSystem. See OpenDSS document
 https://github.com/tshort/OpenDSS/blob/master/Doc/OpenDSS%20PVSystem%20Model.doc
 for valid fields and ways to specify the different properties.
 """
-function createPVSystem(bus1, name::AbstractString; kwargs...)
+function _create_pvsystem(bus1, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     kv = get(kwargs, :kv, 12.47)
     kw = get(kwargs, :kw, 10.0)
@@ -943,7 +944,7 @@ function createPVSystem(bus1, name::AbstractString; kwargs...)
     end
 
     if haskey(kwargs, :like)
-        Memento.warn(LOGGER, "\"like\" keyword on pvsystem $name is not supported.")
+        Memento.warn(_LOGGER, "\"like\" keyword on pvsystem $name is not supported.")
     end
 
     pvsystem = Dict{String,Any}("name" => name,
@@ -986,13 +987,13 @@ end
 
 
 """
-    createStorage(bus1, name; kwargs...)
+    _create_storage(bus1, name; kwargs...)
 
 Creates a Dict{String,Any} containing all expected properties for a storage
 element. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function createStorage(bus1, name::AbstractString; kwargs...)
+function _create_storage(bus1, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
 
     storage = Dict{String,Any}("name" => name,
@@ -1043,21 +1044,23 @@ end
 
 
 "Returns a Dict{String,Type} for the desired component `comp`, giving all of the expected data types"
-function get_dtypes(comp::AbstractString)::Dict
-    default_dicts = Dict{String,Any}("line" => createLine("", "", ""),
-                                     "load" => createLoad("", ""),
-                                     "generator" => createGenerator("", ""),
-                                     "capacitor" => createCapacitor("", "", ""),
-                                     "reactor" => createReactor("", "", ""),
-                                     "transformer" => createTransformer(""),
-                                     "linecode" => createLinecode(""),
-                                     "circuit" => createVSource("", ""),
-                                     "pvsystem" => createPVSystem("", ""),
-                                     "vsource" => createVSource("", "", ""),
-                                     "storage" => createStorage("", "")
+function _get_dtypes(comp::AbstractString)::Dict
+    default_dicts = Dict{String,Any}("line" => _create_line("", "", ""),
+                                     "load" => _create_load("", ""),
+                                     "generator" => _create_generator("", ""),
+                                     "capacitor" => _create_capacitor("", "", ""),
+                                     "reactor" => _create_reactor("", "", ""),
+                                     "transformer" => _create_transformer(""),
+                                     "linecode" => _create_linecode(""),
+                                     "circuit" => _create_vsource("", ""),
+                                     "pvsystem" => _create_pvsystem("", ""),
+                                     "vsource" => _create_vsource("", "", ""),
+                                     "storage" => _create_storage("", "")
                                     )
 
     return Dict{String,Type}((k, typeof(v)) for (k, v) in default_dicts[comp])
 end
 
-get_dtypes(comp::String, key::String)::Type = get_dtypes(comp)[key]
+
+""
+_get_dtypes(comp::String, key::String)::Type = _get_dtypes(comp)[key]
