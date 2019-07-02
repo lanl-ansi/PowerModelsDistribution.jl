@@ -313,9 +313,9 @@ For a discussion of sequence components and voltage unbalance factor (VUF), see
 }
 """
 function constraint_tp_voltage_balance(pm::PMs.GenericPowerModel, bus_id::Int; nw=pm.cnw)
-    @assert(PMs.ref(pm, nw, :conductors)==3)
+    @assert(_PMs.ref(pm, nw, :conductors)==3)
 
-    bus = PMs.ref(pm, nw, :bus, bus_id)
+    bus = _PMs.ref(pm, nw, :bus, bus_id)
 
     if haskey(bus, "vm_vuf_max")
         constraint_tp_vm_vuf(pm, nw, bus_id, bus["vm_vuf_max"])
