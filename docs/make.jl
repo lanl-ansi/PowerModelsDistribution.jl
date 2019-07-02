@@ -1,10 +1,10 @@
-using Documenter, ThreePhasePowerModels
+using Documenter, PowerModelsDistribution
 
 makedocs(
-    modules = [ThreePhasePowerModels],
+    modules = [PowerModelsDistribution],
     format = Documenter.HTML(analytics = ""),
-    sitename = "ThreePhasePowerModels",
-    authors = "Carleton Coffrin, David Fobes, Frederik Geth and contributors.",
+    sitename = "PowerModelsDistribution",
+    authors = "David Fobes, Carleton Coffrin, Frederik Geth, Sander Claeys, and contributors.",
     pages = [
         "Home" => "index.md",
         "Manual" => [
@@ -24,5 +24,5 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/lanl-ansi/ThreePhasePowerModels.jl.git",
+    repo = "github.com/lanl-ansi/PowerModelsDistribution.jl.git",
 )

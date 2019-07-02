@@ -1,5 +1,5 @@
-# ThreePhasePowerModels.jl Library
+# PowerModelsDistribution.jl Library
 
 ```@autodocs
-Modules = [ThreePhasePowerModels]
+Modules = [PowerModelsDistribution]
 ```

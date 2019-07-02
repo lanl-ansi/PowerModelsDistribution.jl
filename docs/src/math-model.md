@@ -1,11 +1,11 @@
-# The ThreePhasePowerModels Mathematical Model
+# The PowerModelsDistribution Mathematical Model
 
-As ThreePhasePowerModels implements a variety of power network optimization problems, the implementation is the best reference for precise mathematical formulations.  This section provides a complex number based mathematical specification for a prototypical unbalanced AC Optimal Power Flow problem, to provide an overview of the typical mathematical models in ThreePhasePowerModels.
+As PowerModelsDistribution implements a variety of power network optimization problems, the implementation is the best reference for precise mathematical formulations.  This section provides a complex number based mathematical specification for a prototypical unbalanced AC Optimal Power Flow problem, to provide an overview of the typical mathematical models in PowerModelsDistribution.
 
 
 ## Unbalanced AC Optimal Power Flow
 
-ThreePhasePowerModels implements a  generalized version of the AC Optimal Power Flow problem, from [Matpower](http://www.pserc.cornell.edu/matpower/) but extended to take into account phase unbalance [^1].  These generalizations make it possible for ThreePhasePowerModels to more accurately capture real-world distribution network datasets.  The core generalizations are,
+PowerModelsDistribution implements a  generalized version of the AC Optimal Power Flow problem, from [Matpower](http://www.pserc.cornell.edu/matpower/) but extended to take into account phase unbalance [^1].  These generalizations make it possible for PowerModelsDistribution to more accurately capture real-world distribution network datasets.  The core generalizations are,
 
 - Support for multiple load and shunt components on each bus
 - Line charging (shunt) that supports a conductance and asymmetrical values

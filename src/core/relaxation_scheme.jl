@@ -23,6 +23,7 @@ function relaxation_psd_to_soc_real(m, mx)
     end
 end
 
+
 """
 SDP to SOC relaxation of type 2, applied to complex-value matrix,  as described in:
 ```
@@ -48,6 +49,7 @@ function relaxation_psd_to_soc_complex(m, mxreal, mximag)
     end
 end
 
+
 """
 SDP to SOC relaxation of type 2, applied to real-value matrix,  as described in:
 ```
@@ -72,6 +74,7 @@ function relaxation_psd_to_soc_real_conic(m, mx)
         end
     end
 end
+
 
 """
 SDP to SOC relaxation of type 2, applied to complex-value matrix,  as described in:
@@ -159,9 +162,8 @@ function relaxation_psd_to_soc_conic(m, mxreal, mximag; complex=true)
 end
 
 
-#for debugging / exploration:
 """
-real-valued SDP to SDP relaxation based on PSDness of principal minors, default is 3x3 SDP relaxation
+For debugging / exploration: real-valued SDP to SDP relaxation based on PSDness of principal minors, default is 3x3 SDP relaxation
 """
 function relaxation_psd_to_psd_real(m, mxreal, mximag; ndim=3)
     @assert size(mxreal) == size(mximag)

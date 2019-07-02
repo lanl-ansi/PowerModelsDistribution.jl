@@ -1,4 +1,4 @@
-# Building the Documentation for ThreePhasePowerModels.jl
+# Building the Documentation for PowerModelsDistribution.jl
 
 ## Installation
 We rely on [Documenter.jl](https://github.com/JuliaDocs/Documenter.jl). To install it, run the following command in a julia session:
