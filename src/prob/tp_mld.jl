@@ -132,7 +132,7 @@ function post_tp_mld_strg(pm::_PMs.GenericPowerModel)
         constraint_tp_trans(pm, i)
     end
 
-    objective_tp_min_load_delta_strg(pm)
+    objective_tp_max_loadability_strg(pm)
 end
 
 
@@ -142,6 +142,7 @@ function solution_mld!(pm::_PMs.GenericPowerModel{T}, sol::Dict{String,Any}) whe
     _PMs.add_setpoint_generator_power!(sol, pm)
     _PMs.add_setpoint_storage!(sol, pm)
     _PMs.add_setpoint_branch_flow!(sol, pm)
+
     add_setpoint_bus_status!(sol, pm)
     add_setpoint_load!(sol, pm)
     add_setpoint_shunt!(sol, pm)
