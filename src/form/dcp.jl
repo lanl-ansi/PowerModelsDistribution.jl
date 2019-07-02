@@ -7,6 +7,14 @@ function constraint_tp_model_voltage(pm::_PMs.GenericPowerModel{T}, n::Int, c::I
 end
 
 
+""
+function variable_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: _PMs.AbstractDCPForm
+    for c in _PMs.conductor_ids(pm)
+        _PMs.variable_voltage_angle(pm; cnd=c, kwargs...)
+    end
+end
+
+
 ######## Lossless Models ########
 "Create variables for the active power flowing into all transformer windings"
 function variable_tp_trans_active_flow(pm::_PMs.GenericPowerModel{T}; nw::Int=pm.cnw, bounded=true) where T <: _PMs.DCPlosslessForm
@@ -104,4 +112,17 @@ end
 
 "nothing to do, this model is symmetric"
 function constraint_tp_trans_flow(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to) where T <: _PMs.NFAForm
+end
+
+
+""
+function constraint_tp_power_balance_shunt_trans_shed(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractDCPForm
+    p = _PMs.var(pm, n, c, :p)
+    pg = _PMs.var(pm, n, c, :pg)
+    p_dc = _PMs.var(pm, n, c, :p_dc)
+    p_trans = _PMs.var(pm, n, c, :pt)
+    z_demand = _PMs.var(pm, n, :z_demand)
+    z_shunt = _PMs.var(pm, n, :z_shunt)
+
+    JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd*z_demand[i] for (i,pd) in bus_pd) - sum(gs*1.0^2*z_shunt[i] for (i,gs) in bus_gs))
 end

@@ -682,6 +682,7 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict["transformer"] = false
             branchDict["switch"] = defaults["switch"]
+            branchDict["dispatchable"] = defaults["switch"]
 
             branchDict["index"] = length(pmd_data["branch"]) + 1
 
@@ -1058,6 +1059,9 @@ function _dss2pmd_storage!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
             storageDict["x"] = _PMs.MultiConductorVector(_parse_array(defaults["%x"] / 100.0, nodes, nconductors))
             storageDict["standby_loss"] = defaults["%idlingkw"] * defaults["kwrated"] / 1e3
             storageDict["status"] = convert(Int, defaults["enabled"])
+
+            storageDict["ps"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
+            storageDict["qs"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
 
             storageDict["index"] = length(pmd_data["storage"]) + 1
 

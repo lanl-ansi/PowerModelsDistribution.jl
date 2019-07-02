@@ -22,6 +22,30 @@ end
 
 
 ""
+function variable_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: _PMs.AbstractACPForm
+    for c in _PMs.conductor_ids(pm)
+        _PMs.variable_voltage_angle(pm; cnd=c, kwargs...)
+    end
+    variable_tp_voltage_magnitude_on_off(pm; kwargs...)
+
+    nw = get(kwargs, :nw, pm.cnw)
+
+    ncnd = length(_PMs.conductor_ids(pm))
+    theta = [_wrap_to_pi(2 * pi / ncnd * (1-c)) for c in 1:ncnd]
+    vm = 1
+    for id in _PMs.ids(pm, :bus)
+        busref = _PMs.ref(pm, nw, :bus, id)
+        if !haskey(busref, "va_start")
+        # if it has this key, it was set at PM level
+            for c in 1:ncnd
+                JuMP.set_start_value(_PMs.var(pm, nw, c, :va, id), theta[c])
+            end
+        end
+    end
+end
+
+
+""
 function constraint_tp_power_balance_shunt_slack(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractACPForm
     vm = _PMs.var(pm, n, c, :vm, i)
     p_slack = _PMs.var(pm, n, c, :p_slack, i)
