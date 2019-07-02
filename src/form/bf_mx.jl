@@ -1,4 +1,4 @@
-import LinearAlgebra: diag
+import LinearAlgebra: diag, diagm
 
 
 ""
@@ -15,59 +15,26 @@ end
 
 ""
 function variable_tp_voltage_prod_hermitian(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
-    n_diag_el = n_cond
-    n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
-    for c in 1:n_diag_el
-        PowerModels.variable_voltage_magnitude_sqr(pm, nw=nw, cnd=c, bounded=bounded)
+    bus_ids = collect(_PMs.ids(pm, nw, :bus))
+
+    if bounded
+        # get bounds
+        vmax = Dict([(id, _PMs.ref(pm, nw, :bus, id, "vmax").values) for id in bus_ids])
+        vmin = Dict([(id, _PMs.ref(pm, nw, :bus, id, "vmin").values) for id in bus_ids])
+        # create bounded Hermitian matrix variables
+        (Wre,Wim) = variable_mx_hermitian_sqrt_bounds(pm.model, bus_ids, n_cond,
+            vmax, vmin; name="W", prefix="$nw")
+    else
+        # create unbounded Hermitian matrix variables
+        (Wre,Wim) = variable_mx_hermitian(pm.model, bus_ids, n_cond; name="W", prefix="$nw", lb_diag_zero=0)
     end
 
-    wmaxdict = Dict{Int64, Any}()
-    for i in _PMs.ids(pm, nw, :bus)
-        wmax = _PMs.ref(pm, nw, :bus, i, "vmax").values*_PMs.ref(pm, nw, :bus, i, "vmax").values'
-        wmaxltri = _mat2ltrivec!(wmax)
-        wmaxdict[i] = wmaxltri
+    # save references in dict
+    _PMs.var(pm, nw)[:W_re] = Wre
+    _PMs.var(pm, nw)[:W_im] = Wim
+    for c in 1:n_cond
+        _PMs.var(pm, nw, c)[:w] = Dict{Int, Any}([(id, Wre[id][c,c]) for id in bus_ids])
     end
-
-    for c in 1:n_lower_triangle_el
-        if bounded
-            _PMs.var(pm, nw, c)[:wr] = JuMP.@variable(pm.model,
-            [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(c)_wr",
-            lower_bound = -wmaxdict[i][c],
-            upper_bound =  wmaxdict[i][c],
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
-            )
-            _PMs.var(pm, nw, c)[:wi] = JuMP.@variable(pm.model,
-            [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(c)_wi",
-            lower_bound = -wmaxdict[i][c],
-            upper_bound =  wmaxdict[i][c],
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
-            )
-        else
-            _PMs.var(pm, nw, c)[:wr] = JuMP.@variable(pm.model,
-            [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(c)_wr",
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
-            )
-            _PMs.var(pm, nw, c)[:wi] = JuMP.@variable(pm.model,
-            [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(c)_wi",
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
-            )
-        end
-    end
-
-    #Store dictionary with matrix variables by bus
-    w_re_dict = Dict{Int64, Any}()
-    w_im_dict = Dict{Int64, Any}()
-    for i in _PMs.ids(pm, nw, :bus)
-        w =  [_PMs.var(pm, nw, h, :w,  i) for h in 1:n_diag_el]
-        wr = [_PMs.var(pm, nw, h, :wr, i) for h in 1:n_lower_triangle_el]
-        wi = [_PMs.var(pm, nw, h, :wi, i) for h in 1:n_lower_triangle_el]
-
-        (w_re, w_im) = _make_hermitian_matrix_variable(w, wr, wi)
-        w_re_dict[i] = w_re
-        w_im_dict[i] = w_im
-    end
-    _PMs.var(pm, nw)[:W_re] = w_re_dict
-    _PMs.var(pm, nw)[:W_im] = w_im_dict
 end
 
 
@@ -76,239 +43,77 @@ function variable_tp_branch_series_current_prod_hermitian(pm::_PMs.GenericPowerM
     branches = _PMs.ref(pm, nw, :branch)
     buses = _PMs.ref(pm, nw, :bus)
 
-    n_diag_el = n_cond
-    n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
+    branch_ids = collect(keys(branches))
 
-    cmax = Dict([(key, zeros(n_cond)) for key in keys(branches)])
+    if bounded
+        # calculate max series current for each branch
+        cmax = Dict{eltype(branch_ids), Array{Real,1}}()
+        for (key, branch) in branches
+            bus_fr = buses[branch["f_bus"]]
+            bus_to = buses[branch["t_bus"]]
 
-    for (key, branch) in branches
-        bus_fr = buses[branch["f_bus"]]
-        bus_to = buses[branch["t_bus"]]
+            vmin_fr = bus_fr["vmin"].values
+            vmin_to = bus_to["vmin"].values
 
-        vmin_fr = bus_fr["vmin"].values
-        vmin_to = bus_to["vmin"].values
+            vmax_fr = bus_fr["vmax"].values
+            vmax_to = bus_to["vmax"].values
 
-        vmax_fr = bus_fr["vmax"].values
-        vmax_to = bus_to["vmax"].values
+            # assumed to be matrices already
+            # temportary fix by shunts_diag2mat!
+            y_fr = branch["g_fr"].values + im* branch["b_fr"].values
+            y_to = branch["g_to"].values + im* branch["b_to"].values
 
-        y_fr_mag = abs.(branch["g_fr"].values + im* branch["b_fr"].values)
-        y_to_mag = abs.(branch["g_to"].values + im* branch["b_to"].values)
+            y_fr = diagm(0=>y_fr)
+            y_to = diagm(0=>y_to)
 
-        smax = branch["rate_a"].values
-        cmaxfr = smax./vmin_fr + vmax_fr.*y_fr_mag
-        cmaxto = smax./vmin_to + vmax_to.*y_to_mag
+            smax = branch["rate_a"].values
+            cmaxfr = smax./vmin_fr + abs.(y_fr)*vmax_fr
+            cmaxto = smax./vmin_to + abs.(y_to)*vmax_to
 
-        cmax[key] = max.(cmaxfr, cmaxto)
-    end
-
-
-    for c in 1:n_diag_el
-        if bounded
-            _PMs.var(pm, nw, c)[:ccm] = JuMP.@variable(pm.model,
-            [l in _PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_cm",
-            lower_bound = 0,
-            upper_bound = (cmax[l][c])^2,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
-            )
-        else
-            _PMs.var(pm, nw, c)[:ccm] = JuMP.@variable(pm.model,
-            [l in _PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_cm",
-            lower_bound = 0,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "i_start", c)
-            )
+            cmax[key] = max.(cmaxfr, cmaxto)
         end
-        # PowerModels.variable_current_magnitude_sqr(pm, nw=nw, cnd=c)
+        # create matrix variables
+        (Lre,Lim) = variable_mx_hermitian_sqrt_bounds(pm.model, branch_ids, n_cond, cmax; name="CC", prefix="$nw")
+    else
+        (Lre,Lim) = variable_mx_hermitian(pm.model, branch_ids, n_cond; name="CC", prefix="$nw", lb_diag_zero=true)
     end
 
-    for c in 1:n_lower_triangle_el
-        if bounded
-            _PMs.var(pm, nw, c)[:ccmr] = JuMP.@variable(pm.model,
-            [l in _PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_ccmr",
-            lower_bound = -(cmax[l][c])^2,
-            upper_bound = (cmax[l][c])^2,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "i_start", c) #TODO shouldn't this be squared?
-            )
-            _PMs.var(pm, nw, c)[:ccmi] = JuMP.@variable(pm.model,
-            [l in _PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_ccmi",
-            lower_bound = -(cmax[l][c])^2,
-            upper_bound = (cmax[l][c])^2,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "i_start", c)
-            )
-        else
-            _PMs.var(pm, nw, c)[:ccmr] = JuMP.@variable(pm.model,
-            [l in _PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_ccmr",
-            # lower_bound = 0,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "i_start", c)
-            )
-            _PMs.var(pm, nw, c)[:ccmi] = JuMP.@variable(pm.model,
-            [l in _PMs.ids(pm, nw, :branch)], base_name="$(nw)_$(c)_ccmi",
-            # lower_bound = 0,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "i_start", c)
-            )
-        end
+    # save reference
+    _PMs.var(pm, nw)[:CC_re] = Lre
+    _PMs.var(pm, nw)[:CC_im] = Lim
+    for c in 1:n_cond
+        _PMs.var(pm, nw, c)[:cm] = Dict([(id, Lre[id][c,c]) for id in branch_ids])
     end
-
-    #Store dictionary with matrix variables by branch
-    ccm_re_dict = Dict{Int64, Any}()
-    ccm_im_dict = Dict{Int64, Any}()
-    for i in _PMs.ids(pm, nw, :branch)
-        ccm =  [_PMs.var(pm, nw, h, :ccm,  i) for h in 1:n_diag_el]
-        ccmr = [_PMs.var(pm, nw, h, :ccmr, i) for h in 1:n_lower_triangle_el]
-        ccmi = [_PMs.var(pm, nw, h, :ccmi, i) for h in 1:n_lower_triangle_el]
-
-        (ccm_re, ccm_im) = _make_hermitian_matrix_variable(ccm, ccmr, ccmi)
-        ccm_re_dict[i] = ccm_re
-        ccm_im_dict[i] = ccm_im
-    end
-    _PMs.var(pm, nw)[:CC_re] = ccm_re_dict
-    _PMs.var(pm, nw)[:CC_im] = ccm_im_dict
 end
 
 
 ""
 function variable_tp_branch_flow(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
-    n_diag_el = n_cond
-    n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
-    @assert n_cond<=5
-
-    for i in 1:n_diag_el
-        _PMs.variable_active_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
-        _PMs.variable_reactive_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
-    end
-
-    for i in 1:n_lower_triangle_el
-        variable_tp_lower_triangle_active_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
-        variable_tp_lower_triangle_reactive_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
-        variable_tp_upper_triangle_active_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
-        variable_tp_upper_triangle_reactive_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
-    end
-    #Store dictionary with matrix variables by arc
-    p_mat_dict = Dict{Tuple{Int64,Int64,Int64}, Any}()
-    q_mat_dict = Dict{Tuple{Int64,Int64,Int64}, Any}()
-
-    for i in _PMs.ref(pm, nw, :arcs)
-        p_d =  [_PMs.var(pm, nw, c, :p,    i) for c in 1:n_diag_el]
-        p_ut = [_PMs.var(pm, nw, c, :p_ut, i) for c in 1:n_lower_triangle_el]
-        p_lt = [_PMs.var(pm, nw, c, :p_lt, i) for c in 1:n_lower_triangle_el]
-
-        q_d =  [_PMs.var(pm, nw, c, :q,    i) for c in 1:n_diag_el]
-        q_ut = [_PMs.var(pm, nw, c, :q_ut, i) for c in 1:n_lower_triangle_el]
-        q_lt = [_PMs.var(pm, nw, c, :q_lt, i) for c in 1:n_lower_triangle_el]
-
-        p_mat = _make_full_matrix_variable(p_d, p_lt, p_ut)
-        q_mat = _make_full_matrix_variable(q_d, q_lt, q_ut)
-
-        p_mat_dict[i] = p_mat
-        q_mat_dict[i] = q_mat
-    end
-    _PMs.var(pm, nw)[:P_mx] = p_mat_dict
-    _PMs.var(pm, nw)[:Q_mx] = q_mat_dict
-end
-
-
-"variable: `p_lt[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_tp_lower_triangle_active_branch_flow(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
-    smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
-
-    for (l,i,j) in _PMs.ref(pm, nw, :arcs)
-        cmax = _PMs.ref(pm, nw, :branch, l, "rate_a").values./_PMs.ref(pm, nw, :bus, i, "vmin").values
-        smax = _PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
-        smaxltri = _mat2ltrivec!(smax)
-        smaxdict[(l,i,j)] = smaxltri
-    end
-
+    # calculate S bound
+    branch_arcs = _PMs.ref(pm, nw, :arcs)
     if bounded
-        _PMs.var(pm, nw, cnd)[:p_lt] = JuMP.@variable(pm.model,
-        [(l,i,j) in _PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_p_lt",
-        lower_bound = -smaxdict[(l,i,j)][cnd],
-        upper_bound =  smaxdict[(l,i,j)][cnd],
-        start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "p_start", cnd)
-        )
+        bound = Dict{eltype(branch_arcs), Array{Real,2}}()
+        for (l,i,j) in branch_arcs
+            vmin = _PMs.ref(pm, nw, :bus, i)["vmin"].values
+            vmax = _PMs.ref(pm, nw, :bus, i)["vmax"].values
+            smax = _PMs.ref(pm, nw, :branch, l)["rate_a"].values
+            cmax = smax./vmin
+            bound[(l,i,j)] = vmax*cmax'
+            for c in 1:length(smax)
+                bound[(l,i,j)][c,c] = smax[c]
+            end
+        end
+        # create matrix variables
+        (P,Q) = variable_mx_complex(pm.model, branch_arcs, n_cond, n_cond, bound; name=("P", "Q"), prefix="$nw")
     else
-        _PMs.var(pm, nw, cnd)[:p_lt] = JuMP.@variable(pm.model,
-        [(l,i,j) in _PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_p_lt",
-        start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "p_start", cnd)
-        )
+        (P,Q) = variable_mx_complex(pm.model, branch_arcs, n_cond, n_cond; name=("P", "Q"), prefix="$nw")
     end
-end
-
-
-"variable: `q_lt[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_tp_lower_triangle_reactive_branch_flow(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
-    smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
-
-    for (l,i,j) in _PMs.ref(pm, nw, :arcs)
-        cmax = _PMs.ref(pm, nw, :branch, l, "rate_a").values./_PMs.ref(pm, nw, :bus, i, "vmin").values
-        smax = _PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
-        smaxltri = _mat2ltrivec!(smax)
-        smaxdict[(l,i,j)] = smaxltri
-    end
-
-    if bounded
-        _PMs.var(pm, nw, cnd)[:q_lt] = JuMP.@variable(pm.model,
-        [(l,i,j) in _PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_q_lt",
-        lower_bound = -smaxdict[(l,i,j)][cnd],
-        upper_bound =  smaxdict[(l,i,j)][cnd],
-        start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "q_start", cnd)
-        )
-    else
-        _PMs.var(pm, nw, cnd)[:q_lt] = JuMP.@variable(pm.model,
-        [(l,i,j) in _PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_q_lt",
-        start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "q_start", cnd)
-        )
-    end
-end
-
-
-"variable: `p_ut[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_tp_upper_triangle_active_branch_flow(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
-    smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
-
-    for (l,i,j) in _PMs.ref(pm, nw, :arcs)
-        cmax = _PMs.ref(pm, nw, :branch, l, "rate_a").values./_PMs.ref(pm, nw, :bus, i, "vmin").values
-        smax = _PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
-        smaxutri = _mat2utrivec!(smax)
-        smaxdict[(l,i,j)] = smaxutri
-    end
-
-    if bounded
-        _PMs.var(pm, nw, cnd)[:p_ut] = JuMP.@variable(pm.model,
-        [(l,i,j) in _PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_p_ut",
-        lower_bound = -smaxdict[(l,i,j)][cnd],
-        upper_bound =  smaxdict[(l,i,j)][cnd],
-        start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "p_start", cnd)
-        )
-    else
-        _PMs.var(pm, nw, cnd)[:p_ut] = JuMP.@variable(pm.model,
-        [(l,i,j) in _PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_p_ut",
-        start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "p_start", cnd)
-        )
-    end
-end
-
-
-"variable: `q_ut[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_tp_upper_triangle_reactive_branch_flow(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
-    smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
-
-    for (l,i,j) in _PMs.ref(pm, nw, :arcs)
-        cmax = _PMs.ref(pm, nw, :branch, l, "rate_a").values./_PMs.ref(pm, nw, :bus, i, "vmin").values
-        smax = _PMs.ref(pm, nw, :bus, i, "vmax").values.*cmax'
-        smaxutri = _mat2utrivec!(smax)
-        smaxdict[(l,i,j)] = smaxutri
-    end
-    if bounded
-        _PMs.var(pm, nw, cnd)[:q_ut] = JuMP.@variable(pm.model,
-        [(l,i,j) in _PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_q_ut",
-        lower_bound = -smaxdict[(l,i,j)][cnd],
-        upper_bound =  smaxdict[(l,i,j)][cnd],
-        start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "q_start", cnd)
-        )
-    else
-        _PMs.var(pm, nw, cnd)[:q_ut] = JuMP.@variable(pm.model,
-        [(l,i,j) in _PMs.ref(pm, nw, :arcs)], base_name="$(nw)_$(cnd)_q_ut",
-        start = _PMs.comp_start_value(_PMs.ref(pm, nw, :branch, l), "q_start", cnd)
-        )
+    # save reference
+    _PMs.var(pm, nw)[:P_mx] = P
+    _PMs.var(pm, nw)[:Q_mx] = Q
+    for c in 1:n_cond
+        _PMs.var(pm, nw, c)[:p] = Dict([(id,P[id][c,c]) for id in branch_arcs])
+        _PMs.var(pm, nw, c)[:q] = Dict([(id,Q[id][c,c]) for id in branch_arcs])
     end
 end
 

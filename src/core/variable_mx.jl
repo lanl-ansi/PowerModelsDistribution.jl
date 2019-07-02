@@ -22,7 +22,9 @@
 # allowing to pass magnitude bounds on U instead
 # variable_mx_hermitian_sqrt_bounds
 
-# I strongly typed most of the method arguments, to make it clear what is expected.
+# Most of the method arguments are strongly typed, to make it clear what is expected.
+# These functions only depend on JuMP models, not PowerModels.
+
 
 # GENERAL MATRICES
 #%##########################
@@ -277,7 +279,7 @@ function variable_mx_symmetric(model::JuMP.Model, indices::Array{T,1}, N::Int,
     # the data type of the matrix has to be JuMP.GenericAffExpr, because it
     # will also contain inverted variables (upper triangle) and potentially
     # constants (zero) on the diagonal
-    dict_mat_vars = Dict{T, Array{JuMP.GenericAffExpr{Float64,JuMP.VariableRef}, 2}}([(index, zeros(N,N)) for index in indices])
+    dict_mat_vars = Dict{T, Array{Any, 2}}([(index, zeros(N,N)) for index in indices])
     for n in 1:N
         for m in 1:n
             varname = isempty(prefix) ? "$(n)$(m)_$name" : "$(prefix)_$(n)$(m)_$name"
@@ -301,7 +303,8 @@ function variable_mx_symmetric(model::JuMP.Model, indices::Array{T,1}, N::Int,
             end
         end
     end
-    return dict_mat_vars
+    # recast as Array of VariableRef, useful for JuMP inspection
+    return Dict{T, Array{JuMP.VariableRef, 2}}([x for x in dict_mat_vars])
 end
 
 
@@ -315,7 +318,7 @@ function variable_mx_symmetric(model::JuMP.Model, indices::Array{T,1}, N::Int;
     # the data type of the matrix has to be JuMP.GenericAffExpr, because it
     # will also contain inverted variables (upper triangle) and potentially
     # constants (zero) on the diagonal
-    dict_mat_vars = Dict{T, Array{JuMP.GenericAffExpr{Float64,JuMP.VariableRef}, 2}}([(index, zeros(N,N)) for index in indices])
+    dict_mat_vars = Dict{T, Array{Any, 2}}([(index, fill(missing, N, N)) for index in indices])
     for n in 1:N
         for m in 1:n
             varname = isempty(prefix) ? "$(n)$(m)_$name" : "$(prefix)_$(n)$(m)_$name"
@@ -345,7 +348,8 @@ function variable_mx_symmetric(model::JuMP.Model, indices::Array{T,1}, N::Int;
             end
         end
     end
-    return dict_mat_vars
+    # recast as Array of VariableRef, useful for JuMP inspection
+    return Dict{T, Array{JuMP.VariableRef, 2}}([x for x in dict_mat_vars])
 end
 
 
@@ -476,7 +480,7 @@ function variable_mx_hermitian(model::JuMP.Model, indices::Array{T,1}, N::Int,
         bound::Dict{T,Array{B,2}}; kwargs...) where {T, B<:Real}
     upper_bound = bound
     lower_bound = Dict([(k,-v) for (k,v) in bound])
-    return variable_mx_hermitian(model, indices, N, lower_bound, upper_bound; kwargs...)
+    return variable_mx_hermitian(model, indices, N, upper_bound, lower_bound; kwargs...)
 end
 
 
@@ -496,7 +500,7 @@ function variable_mx_hermitian_sqrt_bounds(model::JuMP.Model, indices::Array{T,1
             w[c,c] = 0
         end
     end
-    return variable_mx_hermitian(model, indices, N, lower_bound, upper_bound; kwargs...)
+    return variable_mx_hermitian(model, indices, N, upper_bound, lower_bound; kwargs...)
 end
 
 
@@ -516,5 +520,5 @@ function variable_mx_hermitian_sqrt_bounds(model::JuMP.Model, indices::Array{T,1
             @assert(w[c,c]>=0)
         end
     end
-    return variable_mx_hermitian(model, indices, N, lower_bound, upper_bound; kwargs...)
+    return variable_mx_hermitian(model, indices, N, upper_bound, lower_bound; kwargs...)
 end

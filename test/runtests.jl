@@ -29,7 +29,7 @@ pms_path = joinpath(dirname(pathof(PowerModels)), "..")
 
 ipopt_solver = JuMP.with_optimizer(Ipopt.Optimizer, tol=1e-6, print_level=0)
 cbc_solver = JuMP.with_optimizer(Cbc.Optimizer, logLevel=0)
-scs_solver = JuMP.with_optimizer(SCS.Optimizer, max_iters=10000, verbose=0)
+scs_solver = JuMP.with_optimizer(SCS.Optimizer, max_iters=10000, eps=1e-6, verbose=0)
 juniper_solver = JuMP.with_optimizer(Juniper.Optimizer, nl_solver=JuMP.with_optimizer(Ipopt.Optimizer, tol=1e-4, print_level=0), mip_solver=cbc_solver, log_levels=[])
 
 
