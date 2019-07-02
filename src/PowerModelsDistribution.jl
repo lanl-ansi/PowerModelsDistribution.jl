@@ -18,6 +18,7 @@ module PowerModelsDistribution
     include("core/ref.jl")
     include("core/multiconductor.jl")
     include("core/variable.jl")
+    include("core/variable_mx.jl")
     include("core/constraint.jl")
     include("core/objective.jl")
     include("core/solution.jl")
