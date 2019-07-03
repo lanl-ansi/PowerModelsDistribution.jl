@@ -18,10 +18,10 @@ function objective_tp_min_load_delta(pm::_PMs.GenericPowerModel{T}) where T
     JuMP.@objective(pm.model, Min,
         sum(
             sum(
-                sum( (M[n][c]*10*(1 - _PMs.var(pm, n, :z_voltage, i))^2 for (i, bus) in _PMs.ref(pm, n, :bus))) +
-                sum( (M[n][c]*load["pd"][c]*(1 - _PMs.var(pm, n, :z_demand, i)))^2 for (i,load) in nw_ref[:load]) +
-                sum( (M[n][c]*shunt["gs"][c]*(1 - _PMs.var(pm, n, :z_shunt, i)))^2 for (i,shunt) in nw_ref[:shunt]) +
-                sum( (M[n][c]*(gen["pg"][c] - _PMs.var(pm, n, c, :pg, i))^2 for (i,gen) in nw_ref[:gen]))
+                sum( (M[n][c]*10*(1 - _PMs.var(pm, n, :z_voltage, i)) for (i, bus) in nw_ref[:bus])) +
+                sum( (load_weight[n][i]*load["pd"][c]*(1 - _PMs.var(pm, n, :z_demand, i))) for (i,load) in nw_ref[:load]) +
+                sum( (M[n][c]*(1 - _PMs.var(pm, n, :z_shunt, i))) for (i,shunt) in nw_ref[:shunt]) +
+                sum( (M[n][c]*(1 - _PMs.var(pm, n, :z_gen, i)) for (i,gen) in nw_ref[:gen]))
             for c in _PMs.conductor_ids(pm, n))
         for (n, nw_ref) in _PMs.nws(pm))
     )

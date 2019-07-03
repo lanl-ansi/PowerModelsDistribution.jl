@@ -103,13 +103,13 @@ end
 
 
 "delegate back to PowerModels"
-function constraint_tp_ohms_yt_from(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd) where T <: _PMs.AbstractWForms
-    _PMs.constraint_ohms_yt_from(pm, i; nw=nw, cnd=cnd)
+function constraint_tp_ohms_yt_from(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm) where T <: _PMs.AbstractWForms
+    _PMs.constraint_tp_ohms_yt_from(pm, n, c, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
 end
 
 
 "delegate back to PowerModels"
-function constraint_tp_ohms_yt_to(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd) where T <: _PMs.AbstractWForms
-    _PMs.constraint_ohms_yt_from(pm, i; nw=nw, cnd=cnd)
+function constraint_tp_ohms_yt_to(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm) where T <: _PMs.AbstractWForms
+    _PMs.constraint_ohms_yt_from(pm, n, c, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
 end
 

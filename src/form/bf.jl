@@ -64,9 +64,9 @@ function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int
 end
 
 
-""
+"Create voltage variables for branch flow model"
 function variable_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: LPLinUBFForm
     for cnd in _PMs.conductor_ids(pm)
-        variable_tp_voltage_magnitude_sqr_on_off(pm; cnd=cnd)
+        variable_tp_voltage_magnitude_sqr_on_off(pm; cnd=cnd, kwargs...)
     end
 end

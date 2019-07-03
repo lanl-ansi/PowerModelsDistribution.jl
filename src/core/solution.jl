@@ -81,31 +81,6 @@ end
 
 
 ""
-function solution_mld_bf!(pm::_PMs.GenericPowerModel, sol::Dict{String,Any})
-    add_setpoint_bus_voltage!(sol, pm)
-    _PMs.add_setpoint_generator_power!(sol, pm)
-    add_setpoint_branch_flow!(sol, pm)
-    add_setpoint_branch_current!(sol, pm)
-    _PMs.add_setpoint_dcline_flow!(sol, pm)
-
-    _PMs.add_dual_kcl!(sol, pm)
-    _PMs.add_dual_sm!(sol, pm) # Adds the duals of the transmission lines' thermal limits.
-
-    add_setpoint_bus_status!(sol, pm)
-    add_setpoint_load!(sol, pm)
-    add_setpoint_shunt!(sol, pm)
-    add_setpoint_generator_status!(sol, pm)
-    add_setpoint_storage_status!(sol, pm)
-
-    if haskey(pm.setting, "output") && haskey(pm.setting["output"], "original_variables") && pm.setting["output"]["original_variables"] == true
-        add_rank!(sol, pm)
-        add_is_ac_feasible!(sol, pm)
-        add_original_variables!(sol, pm)
-    end
-end
-
-
-""
 function add_setpoint_bus_voltage!(sol, pm::_PMs.GenericPowerModel)
     _PMs.add_setpoint!(sol, pm, "bus", "vm", :w; scale = (x,item,i) -> sqrt(x), status_name="bus_type", inactive_status_value=4)
     _PMs.add_setpoint!(sol, pm, "bus", "w",  :w, status_name="bus_type", inactive_status_value=4)
@@ -378,6 +353,31 @@ function solution_mld!(pm::_PMs.GenericPowerModel{T}, sol::Dict{String,Any}) whe
     add_setpoint_shunt!(sol, pm)
     add_setpoint_generator_status!(sol, pm)
     add_setpoint_storage_status!(sol, pm)
+end
+
+
+""
+function solution_mld_bf!(pm::_PMs.GenericPowerModel, sol::Dict{String,Any})
+    add_setpoint_bus_voltage!(sol, pm)
+    _PMs.add_setpoint_generator_power!(sol, pm)
+    add_setpoint_branch_flow!(sol, pm)
+    add_setpoint_branch_current!(sol, pm)
+    _PMs.add_setpoint_dcline_flow!(sol, pm)
+
+    _PMs.add_dual_kcl!(sol, pm)
+    _PMs.add_dual_sm!(sol, pm) # Adds the duals of the transmission lines' thermal limits.
+
+    add_setpoint_bus_status!(sol, pm)
+    add_setpoint_load!(sol, pm)
+    add_setpoint_shunt!(sol, pm)
+    add_setpoint_generator_status!(sol, pm)
+    add_setpoint_storage_status!(sol, pm)
+
+    if haskey(pm.setting, "output") && haskey(pm.setting["output"], "original_variables") && pm.setting["output"]["original_variables"] == true
+        add_rank!(sol, pm)
+        add_is_ac_feasible!(sol, pm)
+        add_original_variables!(sol, pm)
+    end
 end
 
 
