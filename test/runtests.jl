@@ -36,31 +36,31 @@ juniper_solver = JuMP.with_optimizer(Juniper.Optimizer, nl_solver=JuMP.with_opti
 
 @testset "PowerModelsDistribution" begin
 
-    # include("matlab.jl")
+    include("matlab.jl")
 
-    # include("opendss.jl")
+    include("opendss.jl")
 
-    # include("data.jl")
+    include("data.jl")
 
-    # include("base.jl")
+    include("base.jl")
 
-    # include("tp_pf.jl")
+    include("tp_pf.jl")
 
-    # include("tp_opf.jl")
+    include("tp_opf.jl")
 
-    # include("tp_opf_bf.jl")
+    include("tp_opf_bf.jl")
 
-    # include("tp_opf-var.jl")
+    include("tp_opf-var.jl")
 
-    # include("tp_debug.jl")
+    include("tp_debug.jl")
 
-    # ## include("tp_ots.jl")
+    ## include("tp_ots.jl")
 
-    # include("tp_multinetwork.jl")
+    include("tp_multinetwork.jl")
 
-    # include("transformer.jl")
+    include("transformer.jl")
 
-    # include("loadmodels.jl")
+    include("loadmodels.jl")
 
     include("tp_mld.jl")
 end
