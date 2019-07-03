@@ -136,3 +136,19 @@ function _calc_tp_trans_Tvi(pm::_PMs.GenericPowerModel, i::Int; nw=pm.cnw)
     Cv_to *= vmult
     return (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to)
 end
+
+function _bus_vm_ll_bounds(bus::Dict; eps=0.1)
+    vmax = bus["vmax"].values
+    vmin = bus["vmin"].values
+    if haskey(bus, "vm_ll_max")
+        vdmax = bus["vm_ll_max"].values
+    else
+        vdmax = 2*vmax
+    end
+    if haskey(bus, "vm_ll_min")
+        vdmin = bus["vm_ll_min"].values
+    else
+        vdmin = ones(3)*eps
+    end
+    return (vdmax, vdmin)
+end

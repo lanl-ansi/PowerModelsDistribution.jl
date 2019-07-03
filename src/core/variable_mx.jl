@@ -175,7 +175,7 @@ as a Tuple as well (to achieve P and Q instead of Sre and Sim for example).
 """
 function variable_mx_complex(model::JuMP.Model, indices::Array{T,1}, N::Int, M::Int,
         upper_bound::Dict{T,Array{UB,2}}, lower_bound::Dict{T,Array{LB,2}};
-        name::Union{String, Tuple{String,String}}="", prefix="") where {T, LB<:Real,UB<:Real}
+        name::Union{String, Tuple{String,String}}="", prefix="") where {T, LB<:Real, UB<:Real}
     name_real = isa(name, Tuple) ? name[1] : "$(name)re"
     name_imag = isa(name, Tuple) ? name[2] : "$(name)im"
     Mre = variable_mx_real(model, indices, N, M, upper_bound, lower_bound;
@@ -192,7 +192,7 @@ Same as variable_mx_complex_with_diag, but with symmetric bounds.
 function variable_mx_complex(model::JuMP.Model, indices::Array{T,1}, N::Int, M::Int,
         bound::Dict{T,Array{B,2}}; kwargs...) where {T, B<:Real}
     upper_bound = bound
-    lower_bound = Dict([(k,-v) for (k,v) in bound])
+    lower_bound = Dict{T,Array{B,2}}([(k,-v) for (k,v) in bound])
     return variable_mx_complex(model, indices, N, M, upper_bound, lower_bound; kwargs...)
 end
 

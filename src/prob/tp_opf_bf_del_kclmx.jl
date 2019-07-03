@@ -1,17 +1,17 @@
 ""
-function run_tp_opf_bf_mx(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_opf_bf_mx; solution_builder=solution_tp!, multiconductor=true, kwargs...)
+function run_tp_opf_bf_del_kclmx(data::Dict{String,Any}, model_constructor, solver; kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_opf_bf_del_kclmx; solution_builder=solution_tp!, multiconductor=true, kwargs...)
 end
 
 
 ""
-function run_tp_opf_bf_mx(file::String, model_constructor, solver; kwargs...)
-    return run_tp_opf_bf_mx(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
+function run_tp_opf_bf_del_kclmx(file::String, model_constructor, solver; kwargs...)
+    return run_tp_opf_bf_del_kclmx(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
 end
 
 
 ""
-function post_tp_opf_bf_mx(pm::_PMs.GenericPowerModel)
+function post_tp_opf_bf_del_kclmx(pm::_PMs.GenericPowerModel)
     # Variables
     variable_tp_voltage(pm)
     variable_tp_branch_current(pm)
@@ -19,8 +19,7 @@ function post_tp_opf_bf_mx(pm::_PMs.GenericPowerModel)
 
     variable_tp_generation_power_mx(pm)
     variable_tp_generation_current_mx(pm)
-    variable_tp_load_power_mx(pm)
-    variable_tp_load_current_mx(pm)
+    variable_tp_load_mx(pm)
 
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_dcline_flow(pm, cnd=c)
