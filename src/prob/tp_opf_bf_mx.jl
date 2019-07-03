@@ -1,73 +1,73 @@
-export run_tp_opf_bf_mx
-
 ""
 function run_tp_opf_bf_mx(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf_bf_mx; solution_builder=get_solution_tp, multiconductor=true, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_opf_bf_mx; solution_builder=solution_tp!, multiconductor=true, kwargs...)
 end
 
 
 ""
 function run_tp_opf_bf_mx(file::String, model_constructor, solver; kwargs...)
-    data = ThreePhasePowerModels.parse_file(file)
-    return PMs.run_generic_model(data, model_constructor, solver, post_tp_opf_bf_mx; solution_builder=get_solution_tp, multiconductor=true, kwargs...)
+    return run_tp_opf_bf_mx(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
 end
 
 
 ""
-function post_tp_opf_bf_mx(pm::PMs.GenericPowerModel)
-    shunts_diag2mat!(pm)
-
+function post_tp_opf_bf_mx(pm::_PMs.GenericPowerModel)
     # Variables
-    variable_tp_voltage_v2(pm)
-    variable_tp_branch_current_v2(pm)
-    variable_tp_branch_flow_v2(pm)
+    variable_tp_voltage(pm)
+    variable_tp_branch_current(pm)
+    variable_tp_branch_flow(pm)
 
     variable_tp_generation_power_mx(pm)
     variable_tp_generation_current_mx(pm)
     variable_tp_load_power_mx(pm)
     variable_tp_load_current_mx(pm)
 
-    for c in PMs.conductor_ids(pm)
-        PMs.variable_dcline_flow(pm, cnd=c)
+    for c in _PMs.conductor_ids(pm)
+        _PMs.variable_dcline_flow(pm, cnd=c)
     end
 
     # Constraints
-    for i in PMs.ids(pm, :ref_buses)
+    constraint_tp_model_current(pm)
+
+    for i in _PMs.ids(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)
     end
 
-    for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
-        PMs.constraint_kcl_shunt(pm, i, cnd=c)
-    end
-    constraint_tp_voltage_psd(pm)
+    for i in _PMs.ids(pm, :branch)
+        constraint_tp_flow_losses(pm, i)
 
-    for i in PMs.ids(pm, :branch)
-        constraint_tp_flow_losses_v2(pm, i)
+        constraint_tp_model_voltage_magnitude_difference(pm, i)
 
-        constraint_tp_voltage_magnitude_difference_v2(pm, i)
+        for c in _PMs.conductor_ids(pm)
+            _PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
 
-        constraint_tp_branch_current_v2(pm, i)
-
-
-        for c in PMs.conductor_ids(pm)
-            PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
-
-            PMs.constraint_thermal_limit_from(pm, i, cnd=c)
-            PMs.constraint_thermal_limit_to(pm, i, cnd=c)
+            _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
+            _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
         end
     end
 
-    for i in PMs.conductor_ids(pm, :load)
-        constraint_tp_load_current(pm, i)
+    for i in _PMs.ids(pm, :load)
+        constraint_tp_load_mx(pm, i)
     end
 
-    for i in PMs.conductor_ids(pm, :gen)
-        constraint_tp_generation_current(pm, i)
+    for i in _PMs.ids(pm, :gen)
+        constraint_tp_generation_mx(pm, i)
     end
 
-    for i in PMs.ids(pm, :dcline), c in PMs.conductor_ids(pm)
-        PMs.constraint_dcline(pm, i, cnd=c)
+    for i in _PMs.ids(pm, :dcline), c in _PMs.conductor_ids(pm)
+        #_PMs.constraint_dcline(pm, i, cnd=c)
     end
 
-    PMs.objective_min_fuel_cost(pm)
+    # This has to happen after constraining the load now!
+    # Otherwise incorrect values on the diagonal, initialized at zero!
+    for i in _PMs.ids(pm, :bus)
+        constraint_tp_power_balance_mx_shunt(pm, i)
+    end
+
+    for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
+        #_PMs.constraint_power_balance_shunt(pm, i, cnd=c)
+    end
+
+    # Objective
+    _PMs.objective_min_fuel_cost(pm)
 end
