@@ -1,15 +1,3 @@
-"LinDist3Flow per Sankur et al 2016, using vector variables for power, voltage and current in scalar form"
-abstract type LPLinUBFForm <: _PMs.AbstractBFForm end
-
-
-""
-const LPLinUBFPowerModel = _PMs.GenericPowerModel{LPLinUBFForm}
-
-
-"default Lin3Distflow constructor for scalar form"
-LPLinUBFPowerModel(data::Dict{String,Any}; kwargs...) = _PMs.GenericPowerModel(data, LPLinUBFForm; kwargs...)
-
-
 ""
 function variable_tp_voltage(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: LPLinUBFForm
     for cnd in _PMs.conductor_ids(pm)
@@ -73,4 +61,12 @@ function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int
 
     JuMP.@constraint(pm.model, p_fr + p_to ==  g_sh_fr*(w_fr/tm^2) +  g_sh_to*w_to)
     JuMP.@constraint(pm.model, q_fr + q_to == -b_sh_fr*(w_fr/tm^2) + -b_sh_to*w_to)
+end
+
+
+""
+function variable_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: LPLinUBFForm
+    for cnd in _PMs.conductor_ids(pm)
+        variable_tp_voltage_magnitude_sqr_on_off(pm; cnd=cnd)
+    end
 end

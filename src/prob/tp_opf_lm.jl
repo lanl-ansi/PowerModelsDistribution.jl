@@ -27,7 +27,7 @@ function post_tp_opf_lm(pm::_PMs.GenericPowerModel)
 
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_generation(pm, cnd=c)
-        variable_load(pm, cnd=c)
+        variable_tp_load(pm, cnd=c)
         _PMs.variable_dcline_flow(pm, cnd=c)
     end
     variable_tp_trans_flow(pm)

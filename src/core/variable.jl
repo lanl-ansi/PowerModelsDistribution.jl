@@ -211,7 +211,7 @@ Create a dictionary with values of type Any for the load.
 Depending on the load model, this can be a parameter or a NLexpression.
 These will be inserted into KCL.
 """
-function variable_load(pm::_PMs.GenericPowerModel; nw=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
+function variable_tp_load(pm::_PMs.GenericPowerModel; nw=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
     _PMs.var(pm, nw, cnd)[:pd] = Dict{Int, Any}()
     _PMs.var(pm, nw, cnd)[:qd] = Dict{Int, Any}()
 end
@@ -248,7 +248,7 @@ end
 
 
 "Create variables for bus status"
-function variable_tp_bus_voltage_indicator(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, relax=false)
+function variable_tp_indicator_bus_voltage(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, relax=false)
     if !relax
         _PMs.var(pm, nw)[:z_voltage] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_z_voltage",
@@ -281,7 +281,7 @@ end
 
 
 "Create variables for storage status"
-function variable_tp_storage_indicator(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, relax=false)
+function variable_tp_indicator_storage(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, relax=false)
     if !relax
         _PMs.var(pm, nw)[:z_storage] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :storage)], base_name="$(nw)-z_storage",
@@ -305,13 +305,13 @@ end
 
 "Create variables for `active` and `reactive` storage injection"
 function variable_tp_storage_on_off(pm::_PMs.GenericPowerModel; kwargs...)
-    variable_tp_active_storage_on_off(pm; kwargs...)
-    variable_tp_reactive_storage_on_off(pm; kwargs...)
+    variable_tp_storage_active_on_off(pm; kwargs...)
+    variable_tp_storage_reactive_on_off(pm; kwargs...)
 end
 
 
 "Create variables for `active` storage injection"
-function variable_tp_active_storage_on_off(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+function variable_tp_storage_active_on_off(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     inj_lb, inj_ub = _PMs.ref_calc_storage_injection_bounds(_PMs.ref(pm, nw, :storage), _PMs.ref(pm, nw, :bus), cnd)
 
     _PMs.var(pm, nw, cnd)[:ps] = JuMP.@variable(pm.model,
@@ -324,11 +324,22 @@ end
 
 
 "Create variables for `reactive` storage injection"
-function variable_tp_reactive_storage_on_off(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+function variable_tp_storage_reactive_on_off(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     _PMs.var(pm, nw, cnd)[:qs] = JuMP.@variable(pm.model,
         [i in _PMs.ids(pm, nw, :storage)], base_name="$(nw)_$(cnd)_qs",
         lower_bound = min(0, _PMs.ref(pm, nw, :storage, i, "qmin", cnd)),
         upper_bound = max(0, _PMs.ref(pm, nw, :storage, i, "qmax", cnd)),
         start = _PMs.comp_start_value(_PMs.ref(pm, nw, :storage, i), "qs_start", cnd)
+    )
+end
+
+
+""
+function variable_tp_voltage_magnitude_sqr_on_off(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    _PMs.var(pm, nw, cnd)[:w] = JuMP.@variable(pm.model,
+        [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(cnd)_w",
+        lower_bound = 0,
+        upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax", cnd)^2,
+        start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", cnd, 1.001)
     )
 end
