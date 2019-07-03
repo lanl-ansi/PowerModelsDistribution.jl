@@ -131,7 +131,7 @@ variable_tp_branch_flow(pm, bounded=false)
 
 for c in PMs.conductor_ids(pm)
     PMs.variable_generation(pm, bounded=false, cnd=c)
-    variable_load_flow(pm, cnd=c)
+    variable_tp_load(pm, cnd=c)
     PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
 end
 
