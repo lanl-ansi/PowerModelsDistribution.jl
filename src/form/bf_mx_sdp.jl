@@ -1,10 +1,10 @@
 "Defines relationship between branch (series) power flow, branch (series) current and node voltage magnitude"
 function constraint_tp_model_current(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr) where T <: SDPUBFForm
-    p_fr = _PMs.var(pm, n, :P_mx)[f_idx]
-    q_fr = _PMs.var(pm, n, :Q_mx)[f_idx]
+    p_fr = _PMs.var(pm, n, :P)[f_idx]
+    q_fr = _PMs.var(pm, n, :Q)[f_idx]
 
-    w_fr_re = _PMs.var(pm, n, :W_re)[f_bus]
-    w_fr_im = _PMs.var(pm, n, :W_im)[f_bus]
+    w_fr_re = _PMs.var(pm, n, :Wr)[f_bus]
+    w_fr_im = _PMs.var(pm, n, :Wi)[f_bus]
 
     ccm_re =  _PMs.var(pm, n, :CC_re)[i]
     ccm_im =  _PMs.var(pm, n, :CC_im)[i]

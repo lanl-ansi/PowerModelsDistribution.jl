@@ -30,8 +30,8 @@ function variable_tp_voltage_prod_hermitian(pm::_PMs.GenericPowerModel{T}; n_con
     end
 
     # save references in dict
-    _PMs.var(pm, nw)[:W_re] = Wre
-    _PMs.var(pm, nw)[:W_im] = Wim
+    _PMs.var(pm, nw)[:Wr] = Wre
+    _PMs.var(pm, nw)[:Wi] = Wim
     for c in 1:n_cond
         _PMs.var(pm, nw, c)[:w] = Dict{Int, Any}([(id, Wre[id][c,c]) for id in bus_ids])
     end
@@ -109,8 +109,8 @@ function variable_tp_branch_flow(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, n
         (P,Q) = variable_mx_complex(pm.model, branch_arcs, n_cond, n_cond; name=("P", "Q"), prefix="$nw")
     end
     # save reference
-    _PMs.var(pm, nw)[:P_mx] = P
-    _PMs.var(pm, nw)[:Q_mx] = Q
+    _PMs.var(pm, nw)[:P] = P
+    _PMs.var(pm, nw)[:Q] = Q
     for c in 1:n_cond
         _PMs.var(pm, nw, c)[:p] = Dict([(id,P[id][c,c]) for id in branch_arcs])
         _PMs.var(pm, nw, c)[:q] = Dict([(id,Q[id][c,c]) for id in branch_arcs])
@@ -126,17 +126,17 @@ end
 
 "Defines branch flow model power flow equations"
 function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to) where T <: AbstractUBFForm
-    p_to = _PMs.var(pm, n, :P_mx)[t_idx]
-    q_to = _PMs.var(pm, n, :Q_mx)[t_idx]
+    p_to = _PMs.var(pm, n, :P)[t_idx]
+    q_to = _PMs.var(pm, n, :Q)[t_idx]
 
-    p_fr = _PMs.var(pm, n, :P_mx)[f_idx]
-    q_fr = _PMs.var(pm, n, :Q_mx)[f_idx]
+    p_fr = _PMs.var(pm, n, :P)[f_idx]
+    q_fr = _PMs.var(pm, n, :Q)[f_idx]
 
-    w_to_re = _PMs.var(pm, n, :W_re)[t_bus]
-    w_fr_re = _PMs.var(pm, n, :W_re)[f_bus]
+    w_to_re = _PMs.var(pm, n, :Wr)[t_bus]
+    w_fr_re = _PMs.var(pm, n, :Wr)[f_bus]
 
-    w_to_im = _PMs.var(pm, n, :W_im)[t_bus]
-    w_fr_im = _PMs.var(pm, n, :W_im)[f_bus]
+    w_to_im = _PMs.var(pm, n, :Wi)[t_bus]
+    w_fr_im = _PMs.var(pm, n, :Wi)[f_bus]
 
     ccm_re =  _PMs.var(pm, n, :CC_re)[i]
     ccm_im =  _PMs.var(pm, n, :CC_im)[i]
@@ -150,8 +150,8 @@ end
 function constraint_tp_theta_ref(pm::_PMs.GenericPowerModel{T}, n::Int, i) where T <: AbstractUBFForm
     nconductors = length(_PMs.conductor_ids(pm))
 
-    w_re = _PMs.var(pm, n, :W_re)[i]
-    w_im = _PMs.var(pm, n, :W_im)[i]
+    w_re = _PMs.var(pm, n, :Wr)[i]
+    w_im = _PMs.var(pm, n, :Wi)[i]
 
     alpha = exp(-im*_wrap_to_pi(2 * pi / nconductors ))
     beta = (alpha*ones(nconductors)).^(0:nconductors-1)
@@ -167,14 +167,14 @@ end
 
 "Defines voltage drop over a branch, linking from and to side voltage"
 function constraint_tp_model_voltage_magnitude_difference(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: AbstractUBFForm
-    w_fr_re = _PMs.var(pm, n, :W_re)[f_bus]
-    w_fr_im = _PMs.var(pm, n, :W_im)[f_bus]
+    w_fr_re = _PMs.var(pm, n, :Wr)[f_bus]
+    w_fr_im = _PMs.var(pm, n, :Wi)[f_bus]
 
-    w_to_re = _PMs.var(pm, n, :W_re)[t_bus]
-    w_to_im = _PMs.var(pm, n, :W_im)[t_bus]
+    w_to_re = _PMs.var(pm, n, :Wr)[t_bus]
+    w_to_im = _PMs.var(pm, n, :Wi)[t_bus]
 
-    p_fr = _PMs.var(pm, n, :P_mx)[f_idx]
-    q_fr = _PMs.var(pm, n, :Q_mx)[f_idx]
+    p_fr = _PMs.var(pm, n, :P)[f_idx]
+    q_fr = _PMs.var(pm, n, :Q)[f_idx]
 
     p_s_fr = p_fr - (w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)')
     q_s_fr = q_fr - (w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)')
@@ -244,8 +244,8 @@ function variable_tp_generation_current_mx(pm::_PMs.GenericPowerModel; nw=pm.cnw
     # create matrix variables
     (Lre,Lim) = variable_mx_hermitian(pm.model, gen_ids, ncnds, bound; name="Ld", prefix="$nw")
     # save references
-    _PMs.var(pm, nw)[:Lgre] = Lre
-    _PMs.var(pm, nw)[:Lgim] = Lim
+    _PMs.var(pm, nw)[:CCgr] = Lre
+    _PMs.var(pm, nw)[:CCgi] = Lim
 end
 
 
@@ -399,8 +399,8 @@ function variable_tp_load_current_mx(pm::_PMs.GenericPowerModel, load_ids::Array
     # create matrix variables
     (Ldre, Ldim) = variable_mx_hermitian(pm.model, load_ids, ncnds, bound; name="Ld", prefix="$nw")
     # save references
-    _PMs.var(pm, nw)[:Ldre] = Ldre
-    _PMs.var(pm, nw)[:Ldim] = Ldim
+    _PMs.var(pm, nw)[:CCdr] = Ldre
+    _PMs.var(pm, nw)[:CCdi] = Ldim
 end
 
 
@@ -408,10 +408,10 @@ function constraint_tp_generation_mx(pm::_PMs.GenericPowerModel{T}, gen_id::Int;
     Pg = _PMs.var(pm, nw, :Pg, gen_id)
     Qg = _PMs.var(pm, nw, :Qg, gen_id)
     bus_id = _PMs.ref(pm, nw, :gen, gen_id)["gen_bus"]
-    W_re = _PMs.var(pm, nw, :W_re, bus_id)
-    W_im = _PMs.var(pm, nw, :W_im, bus_id)
-    Lgre = _PMs.var(pm, nw, :Lgre, gen_id)
-    Lgim = _PMs.var(pm, nw, :Lgim, gen_id)
+    W_re = _PMs.var(pm, nw, :Wr, bus_id)
+    W_im = _PMs.var(pm, nw, :Wi, bus_id)
+    Lgre = _PMs.var(pm, nw, :CCgr, gen_id)
+    Lgim = _PMs.var(pm, nw, :CCgi, gen_id)
     constraint_SWL_psd(pm.model, Pg, Qg, W_re, W_im, Lgre, Lgim)
 end
 
@@ -422,10 +422,10 @@ function constraint_tp_load_mx(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::
     pd = load["pd"].values
     qd = load["qd"].values
     bus_id = _PMs.ref(pm, nw, :load, load_id)["load_bus"]
-    W_re = _PMs.var(pm, nw, :W_re, bus_id)
-    W_im = _PMs.var(pm, nw, :W_im, bus_id)
-    Ldre = _PMs.var(pm, nw, :Ldre, load_id)
-    Ldim = _PMs.var(pm, nw, :Ldim, load_id)
+    W_re = _PMs.var(pm, nw, :Wr, bus_id)
+    W_im = _PMs.var(pm, nw, :Wi, bus_id)
+    Ldre = _PMs.var(pm, nw, :CCdr, load_id)
+    Ldim = _PMs.var(pm, nw, :CCdi, load_id)
 
     @assert(load["model"]=="constant_power")
     if load["conn"]=="wye"
@@ -463,10 +463,10 @@ function constraint_tp_load(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::Int
             _PMs.var(pm, nw, c, :qd)[load_id] = qd[c]
         end
     elseif load["conn"]=="delta"
-        W_re = _PMs.var(pm, nw, :W_re, bus_id)
-        W_im = _PMs.var(pm, nw, :W_im, bus_id)
-        Ldre = _PMs.var(pm, nw, :Ldre, load_id)
-        Ldim = _PMs.var(pm, nw, :Ldim, load_id)
+        W_re = _PMs.var(pm, nw, :Wr, bus_id)
+        W_im = _PMs.var(pm, nw, :Wi, bus_id)
+        Ldre = _PMs.var(pm, nw, :CCdr, load_id)
+        Ldim = _PMs.var(pm, nw, :CCdi, load_id)
         Xdre = _PMs.var(pm, nw, :Xdre, load_id)
         Xdim = _PMs.var(pm, nw, :Xdim, load_id)
         Td = [1 -1 0; 0 1 -1; -1 0 1]
@@ -481,8 +481,8 @@ function constraint_tp_voltage_psd(pm::_PMs.GenericPowerModel; nw=pm.cnw)
     buses_covered = [i for (l,i,j) in _PMs.ref(pm, nw, :arcs)]
     buses_psd = [i for i in _PMs.ids(pm, nw, :bus) if !(i in buses_covered)]
     for bus_id in buses_psd
-        W_re = _PMs.var(pm, nw, :W_re, bus_id)
-        W_im = _PMs.var(pm, nw, :W_im, bus_id)
+        W_re = _PMs.var(pm, nw, :Wr, bus_id)
+        W_im = _PMs.var(pm, nw, :Wi, bus_id)
         constraint_M_psd(W_re, W_im)
     end
 end
@@ -532,10 +532,10 @@ P =  Wre.G'+Wim.B'
 Q = -Wre.B'+Wim.G'
 """
 function constraint_tp_power_balance_mx_shunt(pm::_PMs.GenericPowerModel{T}, n::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_Gs, bus_Bs) where T <: AbstractUBFForm
-    Wre = _PMs.var(pm, n, :W_re, i)
-    Wim = _PMs.var(pm, n, :W_im, i)
-    P = _PMs.var(pm, n, :P_mx)
-    Q = _PMs.var(pm, n, :Q_mx)
+    Wre = _PMs.var(pm, n, :Wr, i)
+    Wim = _PMs.var(pm, n, :Wi, i)
+    P = _PMs.var(pm, n, :P)
+    Q = _PMs.var(pm, n, :Q)
     Pg = _PMs.var(pm, n, :Pg)
     Qg = _PMs.var(pm, n, :Qg)
     Pd = _PMs.var(pm, n, :Pd)
