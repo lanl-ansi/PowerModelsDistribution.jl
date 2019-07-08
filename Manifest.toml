@@ -153,7 +153,7 @@ uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [[PowerModels]]
 deps = ["InfrastructureModels", "JSON", "JuMP", "LinearAlgebra", "MathOptInterface", "Memento", "SparseArrays"]
-git-tree-sha1 = "dc9f838d23ef199dd7576f22b32dc89c71809554"
+git-tree-sha1 = "864d7bb5239e4ff43e44f9fceef3395a0427455d"
 repo-rev = "fix/BFForm-constraint_voltage_angle_difference"
 repo-url = "https://github.com/lanl-ansi/PowerModels.jl.git"
 uuid = "c36e90e8-916a-50a6-bd94-075b64ef4655"
