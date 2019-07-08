@@ -70,3 +70,13 @@ function variable_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}; kwargs...
         variable_tp_voltage_magnitude_sqr_on_off(pm; cnd=cnd, kwargs...)
     end
 end
+
+
+"nothing to do, no voltage variables"
+function constraint_tp_trans_voltage(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to) where T <: LPLinUBFForm
+end
+
+
+"nothing to do, this model is symmetric"
+function constraint_tp_trans_flow(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to) where T <: LPLinUBFForm
+end
