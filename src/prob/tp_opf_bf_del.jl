@@ -53,7 +53,7 @@ function post_tp_opf_bf_del(pm::_PMs.GenericPowerModel)
     end
 
     for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
-        _PMs.constraint_power_balance_shunt(pm, i, cnd=c)
+        constraint_power_balance_shunt(pm, i, cnd=c)
     end
 
     # Objective

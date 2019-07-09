@@ -241,7 +241,7 @@ Same as variable_mx_complex_with_diag, but symmetric bounds.
 function variable_mx_complex_with_diag(model::JuMP.Model, indices::Array{T,1}, N::Int,
         bound::Dict{T,Array{B,2}}; kwargs...) where {T,B<:Real}
     upper_bound = bound
-    lower_bound = Dict([(k,-v) for (k,v) in bound])
+    lower_bound = Dict{T, Array{B,2}}([(k,-v) for (k,v) in bound])
     return variable_mx_complex_with_diag(model, indices, N, upper_bound, lower_bound; kwargs...)
 end
 
