@@ -24,6 +24,9 @@ end
 
 "Run Branch Flow Model Load Shedding Problem"
 function run_tp_mld_bf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
+    if model_constructor != LPLinUBFPowerModel
+        Memento.error(_LOGGER, "The problem type tp_mld_bf only supports a limited set of formulations at the moment")
+    end
     return _PMs.run_model(data, model_constructor, solver, post_tp_mld_bf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld_bf!, kwargs...)
 end
 
@@ -34,7 +37,7 @@ function run_tp_mld_bf(file::String, model_constructor, solver; kwargs...)
 end
 
 
-"Load Shedding Problem"
+"Standard load shedding problem"
 function post_tp_mld(pm::_PMs.GenericPowerModel)
     variable_tp_indicator_bus_voltage(pm; relax=true)
     variable_tp_bus_voltage_on_off(pm)
@@ -148,7 +151,7 @@ function post_tp_mld_strg(pm::_PMs.GenericPowerModel)
 end
 
 
-"Branch flow model load shedding problem"
+"Load shedding problem for Branch Flow model"
 function post_tp_mld_bf(pm::_PMs.GenericPowerModel)
     variable_tp_indicator_bus_voltage(pm; relax=true)
     variable_tp_bus_voltage_on_off(pm)

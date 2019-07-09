@@ -682,7 +682,6 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
             branchDict["transformer"] = false
             branchDict["switch"] = defaults["switch"]
-            branchDict["dispatchable"] = defaults["switch"]
 
             branchDict["index"] = length(pmd_data["branch"]) + 1
 
