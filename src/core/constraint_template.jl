@@ -190,7 +190,7 @@ end
 function constraint_tp_storage_exchange(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
     storage = _PMs.ref(pm, nw, :storage, i)
 
-    _PMs.constraint_storage_complementarity(pm, nw, i)
+    _PMs.constraint_storage_complementarity_nl(pm, nw, i)
     constraint_tp_storage_loss(pm, nw, i, storage["storage_bus"], storage["r"], storage["x"], storage["standby_loss"])
 end
 
