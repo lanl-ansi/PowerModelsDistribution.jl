@@ -276,16 +276,6 @@ function variable_tp_load(pm::_PMs.GenericPowerModel{T}; nw=pm.cnw) where T <: A
     end
     # now, create delta loads; will create :Xdre, :Xdim
     variable_tp_load_power_delta(pm, load_del_ids)
-    # define :Pd, :Qd for delta loads as lin. transformation of :Xdre and :Wdim
-    Td = [1 -1 0; 0 1 -1; -1 0 1]
-    for id in load_del_ids
-        Pd = _PMs.var(pm, nw, :Xdre, id)*Td
-        Qd = _PMs.var(pm, nw, :Xdim, id)*Td
-        for c in _PMs.conductor_ids(pm)
-            _PMs.var(pm, nw, c, :pd)[id] = Pd[c,c]
-            _PMs.var(pm, nw, c, :qd)[id] = Qd[c,c]
-        end
-    end
     # only delta loads need a current matrix variable
     variable_tp_load_current_mx(pm, load_del_ids)
 end
@@ -368,8 +358,8 @@ function variable_tp_load_power_delta(pm::_PMs.GenericPowerModel, load_ids::Arra
     # create matrix variables
     (Xdre,Xdim) = variable_mx_complex(pm.model, load_ids, ncnds, ncnds, bound; name="Xd", prefix="$nw")
     # save references
-    _PMs.var(pm, nw)[:Xdre] = Xdre
-    _PMs.var(pm, nw)[:Xdim] = Xdim
+    _PMs.var(pm, nw)[:Xdr] = Xdre
+    _PMs.var(pm, nw)[:Xdi] = Xdim
 end
 
 
@@ -439,8 +429,8 @@ function constraint_tp_load_mx(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::
         # link S, W and L
         constraint_SWL_psd(pm.model, Pd, Qd, W_re, W_im, Ldre, Ldim)
     elseif load["conn"]=="delta"
-        Xdre = _PMs.var(pm, nw, :Xdre, load_id)
-        Xdim = _PMs.var(pm, nw, :Xdim, load_id)
+        Xdre = _PMs.var(pm, nw, :Xdr, load_id)
+        Xdim = _PMs.var(pm, nw, :Xdi, load_id)
         Td = [1 -1 0; 0 1 -1; -1 0 1]
         JuMP.@constraint(pm.model, LinearAlgebra.diag(Td*Xdre) .== pd)
         JuMP.@constraint(pm.model, LinearAlgebra.diag(Td*Xdim) .== qd)
@@ -454,9 +444,10 @@ function constraint_tp_load(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::Int
     load = _PMs.ref(pm, nw, :load, load_id)
     pd = load["pd"].values
     qd = load["qd"].values
-    bus_id = _PMs.ref(pm, nw, :load, load_id)["load_bus"]
+    bus_id = load["load_bus"]
 
     @assert(load["model"]=="constant_power")
+
     if load["conn"]=="wye"
         for c in 1:length(pd)
             _PMs.var(pm, nw, c, :pd)[load_id] = pd[c]
@@ -467,12 +458,18 @@ function constraint_tp_load(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::Int
         W_im = _PMs.var(pm, nw, :Wi, bus_id)
         Ldre = _PMs.var(pm, nw, :CCdr, load_id)
         Ldim = _PMs.var(pm, nw, :CCdi, load_id)
-        Xdre = _PMs.var(pm, nw, :Xdre, load_id)
-        Xdim = _PMs.var(pm, nw, :Xdim, load_id)
+        Xdre = _PMs.var(pm, nw, :Xdr, load_id)
+        Xdim = _PMs.var(pm, nw, :Xdi, load_id)
         Td = [1 -1 0; 0 1 -1; -1 0 1]
         JuMP.@constraint(pm.model, LinearAlgebra.diag(Td*Xdre) .== pd)
         JuMP.@constraint(pm.model, LinearAlgebra.diag(Td*Xdim) .== qd)
         constraint_SWL_psd(pm.model, Xdre, Xdim, W_re, W_im, Ldre, Ldim)
+        Pd = Xdre*Td
+        Qd = Xdim*Td
+        for c in 1:length(pd)
+            _PMs.var(pm, nw, c, :pd)[load_id] = Pd[c,c]
+            _PMs.var(pm, nw, c, :qd)[load_id] = Qd[c,c]
+        end
     end
 end
 

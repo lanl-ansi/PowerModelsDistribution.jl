@@ -37,7 +37,7 @@ function post_tp_opf_bf_del(pm::_PMs.GenericPowerModel)
         constraint_tp_model_voltage_magnitude_difference(pm, i)
 
         for c in _PMs.conductor_ids(pm)
-            _PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
+            #_PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
 
             _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
             _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
