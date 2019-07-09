@@ -27,7 +27,7 @@ function constraint_tp_voltage_magnitude_difference(pm::_PMs.GenericPowerModel{T
 end
 
 
-""
+"do nothing"
 function _PMs.constraint_model_current(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr, tm) where T <: LPLinUBFForm
 end
 
