@@ -677,13 +677,7 @@ end
 
 
 """
-We want to express
-s_ab = cp.|v_ab|^2+im.cq.|v_ab|^2
-i_ab = conj(s_ab/v_ab) = |v_ab|^2.(cq-im.cq)/conj(v_ab) = (cp-im.cq)*v_ab
-idem for i_bc and i_ca
-And then
-s_a = v_a.conj(i_a) = v_a.conj(i_ab-i_ca)
-idem for s_b and s_c
+exponential model in acp voltage coordinates
 """
 function constraint_tp_load_exponential_delta(pm::_PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, a, α, b, β) where T <: _PMs.AbstractACPForm
     nph = 3
