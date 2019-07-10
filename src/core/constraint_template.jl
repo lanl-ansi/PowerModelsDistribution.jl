@@ -416,10 +416,6 @@ function constraint_tp_load(pm::_PMs.GenericPowerModel, id::Int; nw=pm.cnw)
             constraint_tp_load_impedance_delta(pm, nw, id, load["load_bus"], cp, cq)
         end
     elseif model=="exponential"
-        vnom_kv = load["vnom_kv"]
-        vbase_kv_LL = _PMs.ref(pm, nw, :bus, load["load_bus"])["base_kv"]
-        vbase_kv_LN = vbase_kv_LL/sqrt(3)
-
         a, α, b, β = _load_expmodel_params(load, bus)
 
         if conn=="wye"
