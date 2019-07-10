@@ -137,6 +137,7 @@ function _calc_tp_trans_Tvi(pm::_PMs.GenericPowerModel, i::Int; nw=pm.cnw)
     return (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to)
 end
 
+
 function _bus_vm_ll_bounds(bus::Dict; eps=0.1)
     vmax = bus["vmax"].values
     vmin = bus["vmin"].values
@@ -150,5 +151,81 @@ function _bus_vm_ll_bounds(bus::Dict; eps=0.1)
     else
         vdmin = ones(3)*eps
     end
-    return (vdmax, vdmin)
+    return (vdmin, vdmax)
+end
+
+
+function _load_pq_bounds(load::Dict, bus::Dict)
+    a, α, b, β = _load_expmodel_params(load, bus)
+    vmin, vmax = _load_vbounds(load, bus)
+    # get bounds
+    pmin = min.(a.*vmin.^α, a.*vmax.^α)
+    pmax = max.(a.*vmin.^α, a.*vmax.^α)
+    qmin = min.(b.*vmin.^β, b.*vmax.^β)
+    qmax = max.(b.*vmin.^β, b.*vmax.^β)
+    return (pmin, pmax, qmin, qmax)
+end
+
+function _load_curr_max(load::Dict, bus::Dict)
+    pmin, pmax, qmin, qmax = _load_pq_bounds(load, bus)
+    pabsmax = max.(abs.(pmin), abs.(pmax))
+    qabsmax = max.(abs.(qmin), abs.(qmax))
+    smax = sqrt.(pabsmax.^2 + qabsmax.^2)
+
+    vmin, vmax = _load_vbounds(load, bus)
+
+    return smax./vmin
+end
+
+
+function _load_expmodel_params(load::Dict, bus::Dict)
+    pd = load["pd"].values
+    qd = load["qd"].values
+    ncnds = length(pd)
+    if load["model"]=="constant_power"
+        return (pd, zeros(ncnds), qd, zeros(ncnds))
+    else
+        vmin, vmax = _load_vbounds(load, bus)
+        # get exponents
+        if load["model"]=="constant_current"
+            α = ones(ncnds)
+            β  =ones(ncnds)
+        elseif load["model"]=="constant_impedance"
+            α = ones(ncnds)*2
+            β  =ones(ncnds)*2
+        elseif load["model"]=="exponential"
+            α = load["alpha"]
+            β = load["beta"]
+        end
+        # calculate proportionality constants
+        v0 = load["vnom_kv"]/(bus["base_kv"]/sqrt(3))
+        a = pd./v0.^α
+        b = qd./v0.^β
+        # get bounds
+        return (a, α, b, β)
+    end
+end
+
+function _load_vbounds(load::Dict, bus::Dict)
+    if load["conn"]=="wye"
+        vmin = bus["vmin"].values
+        vmax = bus["vmax"].values
+    elseif load["conn"]=="delta"
+        vmin, vmax = _bus_vm_ll_bounds(bus)
+    end
+    return vmin, vmax
+end
+
+"""
+Returns a Bool, indicating whether the convex hull of the voltage-dependent
+relationship needs a cone inclusion constraint.
+"""
+function _load_needs_cone(load::Dict)
+    if load["model"]=="constant_current"
+        return true
+    elseif load["model"]=="exponential"
+        return true
+    else
+        return false
+    end
 end
