@@ -441,6 +441,14 @@ function constraint_load_impedance_wye(pm::_PMs.GenericPowerModel{T}, nw::Int, c
 end
 
 
+""
+function constraint_load_exponential_wye(pm::_PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, a::Real, α::Real, b::Real, β::Real) where T <: _PMs.AbstractACPForm
+    vm = _PMs.var(pm, nw, cnd, :vm, load_bus_id)
+    _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, a*vm^α)
+    _PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, b*vm^β)
+end
+
+
 """
 a = exp(im*2π/3)
 U+ = (1*Ua + a*Ub a^2*Uc)/3
@@ -665,4 +673,58 @@ function constraint_tp_load_impedance_delta(pm::_PMs.GenericPowerModel{T}, nw::I
     _PMs.var(pm, nw, 1, :qd)[load_id] = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
     _PMs.var(pm, nw, 2, :qd)[load_id] = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
     _PMs.var(pm, nw, 3, :qd)[load_id] = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+end
+
+
+"""
+We want to express
+s_ab = cp.|v_ab|^2+im.cq.|v_ab|^2
+i_ab = conj(s_ab/v_ab) = |v_ab|^2.(cq-im.cq)/conj(v_ab) = (cp-im.cq)*v_ab
+idem for i_bc and i_ca
+And then
+s_a = v_a.conj(i_a) = v_a.conj(i_ab-i_ca)
+idem for s_b and s_c
+"""
+function constraint_tp_load_exponential_delta(pm::_PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, a, α, b, β) where T <: _PMs.AbstractACPForm
+    nph = 3
+
+    vm = [_PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:nph]
+    va = [_PMs.var(pm, nw, c, :va, load_bus_id) for c in 1:nph]
+
+    # vd = Td*v
+    vdr = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])-vm[mod(i,nph)+1]*cos(va[mod(i,nph)+1]))
+    vdi = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*sin(va[i])-vm[mod(i,nph)+1]*sin(va[mod(i,nph)+1]))
+    pl = JuMP.@NLexpression(pm.model, [i in 1:nph], a[i]*(vdr[i]^2+vdi[i]^2)^(α[i]/2))
+    ql = JuMP.@NLexpression(pm.model, [i in 1:nph], b[i]*(vdr[i]^2+vdi[i]^2)^(β[i]/2))
+
+    # idc: conjugate of delta current
+    # idc = sl./vd
+    #     = (pl + j.ql)/vd = (a.|vd|^α + j.b.|vd|^β)/vd, now use 1/c = conj(c)/|c|^2
+    #     = (vdr-j.vdi).(a.|vd|^α + j.b.|vd|^β)/|vd|^2
+    #     = (vdr-j.vdi).(a.|vd|^(α-2) + j.b.|vd|^(β-2))
+    #  now also use that |vd| = (vdr^2 + wdi^2)^(1/2)
+    idcr = JuMP.@NLexpression(pm.model, [i in 1:nph], vdr[i]*a[i]*(vdr[i]^2+vdi[i]^2)^(α[i]/2-1) + vdi[i]*b[i]*(vdr[i]^2+vdi[i]^2)^(β[i]/2-1))
+    idci = JuMP.@NLexpression(pm.model, [i in 1:nph], vdr[i]*b[i]*(vdr[i]^2+vdi[i]^2)^(β[i]/2-1) - vdi[i]*a[i]*(vdr[i]^2+vdi[i]^2)^(α[i]/2-1))
+
+    # icr = Td'*idcr
+    icr = JuMP.@NLexpression(pm.model, [i in 1:nph], idcr[i]-idcr[mod(i+nph-2,nph)+1])
+    ici = JuMP.@NLexpression(pm.model, [i in 1:nph], idci[i]-idci[mod(i+nph-2,nph)+1])
+
+    # s = v.*conj(ic)
+    pd = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])*icr[i] - vm[i]*sin(va[i])*ici[i])
+    qd = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])*ici[i] + vm[i]*sin(va[i])*icr[i])
+    for c in 1:nph
+        _PMs.var(pm, nw, c, :pd)[load_id] = pd[c]
+        _PMs.var(pm, nw, c, :qd)[load_id] = qd[c]
+    end
+
+    # also save pl, ql for inspection
+    for c in 1:nph
+        if !haskey(_PMs.var(pm, nw, c), :pl)
+            _PMs.var(pm, nw, c)[:pl] = Dict()
+            _PMs.var(pm, nw, c)[:ql] = Dict()
+        end
+        _PMs.var(pm, nw, c, :pl)[load_id] = pl[c]
+        _PMs.var(pm, nw, c, :ql)[load_id] = ql[c]
+    end
 end

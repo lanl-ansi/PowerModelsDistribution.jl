@@ -1,5 +1,5 @@
 import LinearAlgebra: diag, diagm
-
+import MathOptInterface
 
 ""
 function variable_tp_branch_current(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: AbstractUBFForm
@@ -459,26 +459,46 @@ function constraint_tp_load_vector(pm::_PMs.GenericPowerModel, load_id::Int; nw=
 end
 
 function constraint_pqw(model::JuMP.Model, w, p, a::Real, α::Real, wmin::Real, wmax::Real, pmin::Real, pmax::Real)
-    if a>0
-        l = (1/a)*(pmax-pmin)/(wmax-wmin)*(w-wmin) + pmin/a
+    if a==0
+        JuMP.@constraint(model, p==0)
     else
-        l = (1/a)*(pmin-pmax)/(wmax-wmin)*(w-wmin) + pmax/a
-    end
-    println(l)
-    # affine overestimator
-    if α>2
-        JuMP.@constraint(model, p/a <= l)
-    # affine underestimator
-    elseif 0<α<2
-        JuMP.@constraint(model, p/a >= l)
-    end
-    # constant current case
-    if α==1
-        #       p/a <= w^(1/2)
-        # <=>   (p/a)^2 <= w
-        # <=>   2*(w/2)*1 >= ||p/a||^2_2
-        # <=>   (w/2, 1, p/a) ∈ RotatedSecondOrderCone(3)
-        JuMP.@constraint(model, [w/2, 1, p/a] in JuMP.RotatedSecondOrderCone())
+        # for α==2, p should be a Expression and not a Variable, as it is
+        # simply a linear transformation of w, p = a*w
+        @assert(α!=2)
+        # AFFINE BOUNDARY
+        if a>0
+            l = (1/a)*(pmax-pmin)/(wmax-wmin)*(w-wmin) + pmin/a
+        else
+            # swap pmin and pmax if a<0, because pmin/a > pmax/a
+            l = (1/a)*(pmin-pmax)/(wmax-wmin)*(w-wmin) + pmax/a
+        end
+        # affine overestimator
+        if α>2
+            JuMP.@constraint(model, p/a <= l)
+        # affine underestimator
+        elseif 0<α<2
+            JuMP.@constraint(model, p/a >= l)
+        end
+        # CONE INCLUSIONS
+        # constant current case
+        # simplifies to a RotatedSecondOrderCone
+        if α==1
+            #       p/a <= w^(1/2)
+            # <=>   (p/a)^2 <= w
+            # <=>   2*(w/2)*1 >= ||p/a||^2_2
+            # <=>   (w/2, 1, p/a) ∈ RotatedSecondOrderCone(3)
+            JuMP.@constraint(model, [w/2, 1, p/a] in JuMP.RotatedSecondOrderCone())
+        elseif 0<α<2
+            #       p/a <= w^(α/2)
+            # <=>   w^(α/2) >= p/a
+            # <=>   (w, 1, p/a) ∈ PowerCone(3)
+            JuMP.@constraint(model, [w, 1, p/a] in MathOptInterface.PowerCone(α/2))
+        elseif α>2
+            #       p/a >= w^(α/2)
+            # <=>   (p/a)^(2/α) >= w
+            # <=>   (p/a, 1, w) ∈ PowerCone(3)
+            JuMP.@constraint(model, [p/a, 1, w] in MathOptInterface.PowerCone(2/α))
+        end
     end
 end
 

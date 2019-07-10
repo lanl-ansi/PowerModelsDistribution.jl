@@ -194,8 +194,8 @@ function _load_expmodel_params(load::Dict, bus::Dict)
             α = ones(ncnds)*2
             β  =ones(ncnds)*2
         elseif load["model"]=="exponential"
-            α = load["alpha"]
-            β = load["beta"]
+            α = load["alpha"].values
+            β = load["beta"].values
         end
         # calculate proportionality constants
         v0 = load["vnom_kv"]/(bus["base_kv"]/sqrt(3))

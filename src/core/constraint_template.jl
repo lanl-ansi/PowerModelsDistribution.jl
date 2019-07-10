@@ -360,6 +360,7 @@ So for delta, sn is constrained indirectly.
 """
 function constraint_tp_load(pm::_PMs.GenericPowerModel, id::Int; nw=pm.cnw)
     load = _PMs.ref(pm, nw, :load, id)
+    bus = _PMs.ref(pm, nw,:bus, load["load_bus"])
     model = load["model"]
     conn = _PMs.ref(pm, nw, :load, id, "conn")
     @assert(conn in ["delta", "wye"])
@@ -413,6 +414,21 @@ function constraint_tp_load(pm::_PMs.GenericPowerModel, id::Int; nw=pm.cnw)
         elseif conn=="delta"
             @assert(_PMs.ref(pm, 0, :conductors)==3)
             constraint_tp_load_impedance_delta(pm, nw, id, load["load_bus"], cp, cq)
+        end
+    elseif model=="exponential"
+        vnom_kv = load["vnom_kv"]
+        vbase_kv_LL = _PMs.ref(pm, nw, :bus, load["load_bus"])["base_kv"]
+        vbase_kv_LN = vbase_kv_LL/sqrt(3)
+
+        a, α, b, β = _load_expmodel_params(load, bus)
+
+        if conn=="wye"
+            for c in _PMs.conductor_ids(pm)
+                constraint_load_exponential_wye(pm, nw, c, id, load["load_bus"], a[c], α[c], b[c], β[c])
+            end
+        elseif conn=="delta"
+            @assert(_PMs.ref(pm, 0, :conductors)==3)
+            constraint_tp_load_exponential_delta(pm, nw, id, load["load_bus"], a, α, b, β)
         end
 
     else
