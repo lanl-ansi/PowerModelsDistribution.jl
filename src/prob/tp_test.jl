@@ -7,7 +7,7 @@
 
 "opf with storage"
 function run_tp_strg_opf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_strg_opf; multiconductor=true, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_strg_opf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
 end
 
 
@@ -28,6 +28,7 @@ function post_tp_strg_opf(pm::_PMs.GenericPowerModel)
         _PMs.variable_dcline_flow(pm, cnd=c)
     end
 
+    variable_tp_trans_flow(pm)
     constraint_tp_model_voltage(pm)
 
     for i in _PMs.ids(pm, :ref_buses)
@@ -35,7 +36,7 @@ function post_tp_strg_opf(pm::_PMs.GenericPowerModel)
     end
 
     for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
-        _PMs.constraint_power_balance_shunt_storage(pm, i, cnd=c)
+        constraint_tp_power_balance_shunt_storage_trans(pm, i, cnd=c)
     end
 
     for i in _PMs.ids(pm, :storage)
@@ -60,6 +61,10 @@ function post_tp_strg_opf(pm::_PMs.GenericPowerModel)
 
     for i in _PMs.ids(pm, :dcline), c in _PMs.conductor_ids(pm)
         _PMs.constraint_dcline(pm, i, cnd=c)
+    end
+
+    for i in _PMs.ids(pm, :trans)
+        constraint_tp_trans(pm, i)
     end
 
     _PMs.objective_min_fuel_cost(pm)
