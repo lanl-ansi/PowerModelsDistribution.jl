@@ -80,6 +80,25 @@ end
 
 
 ""
+function constraint_tp_power_balance_shunt_storage_trans(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractACPForm
+    vm = _PMs.var(pm, nw, c, :vm, i)
+    p = _PMs.var(pm, nw, c, :p)
+    q = _PMs.var(pm, nw, c, :q)
+    pg = _PMs.var(pm, nw, c, :pg)
+    qg = _PMs.var(pm, nw, c, :qg)
+    ps = _PMs.var(pm, nw, c, :ps)
+    qs = _PMs.var(pm, nw, c, :qs)
+    p_dc = _PMs.var(pm, nw, c, :p_dc)
+    q_dc = _PMs.var(pm, nw, c, :q_dc)
+    pt = _PMs.var(pm, nw, c, :pt)
+    qt = _PMs.var(pm,  nw, c, :qt)
+
+    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(pt[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(ps[s] for s in bus_storage) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*vm^2)
+    _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(qt[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qs[s] for s in bus_storage) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*vm^2)
+end
+
+
+""
 function constraint_tp_power_balance_shunt_trans_load(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_loads, bus_gs, bus_bs) where T <: _PMs.AbstractACPForm
     vm = _PMs.var(pm, nw, c, :vm, i)
     p = _PMs.var(pm, nw, c, :p)
