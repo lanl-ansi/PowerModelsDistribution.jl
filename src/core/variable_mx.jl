@@ -176,8 +176,8 @@ as a Tuple as well (to achieve P and Q instead of Sre and Sim for example).
 function variable_mx_complex(model::JuMP.Model, indices::Array{T,1}, N::Int, M::Int,
         upper_bound::Dict{T,Array{UB,2}}, lower_bound::Dict{T,Array{LB,2}};
         name::Union{String, Tuple{String,String}}="", prefix="") where {T, LB<:Real, UB<:Real}
-    name_real = isa(name, Tuple) ? name[1] : "$(name)re"
-    name_imag = isa(name, Tuple) ? name[2] : "$(name)im"
+    name_real = isa(name, Tuple) ? name[1] : "$(name)r"
+    name_imag = isa(name, Tuple) ? name[2] : "$(name)i"
     Mre = variable_mx_real(model, indices, N, M, upper_bound, lower_bound;
         prefix=prefix, name=name_real)
     Mim = variable_mx_real(model, indices, N, M, upper_bound, lower_bound;
@@ -203,8 +203,8 @@ that does not take any bounds, and creates unbounded matrix variables.
 """
 function variable_mx_complex(model::JuMP.Model, indices::Array{T,1}, N::Int, M::Int;
         name::Union{String, Tuple{String,String}}="", prefix="") where T
-    name_real = isa(name, Tuple) ? name[1] : "$(name)re"
-    name_imag = isa(name, Tuple) ? name[2] : "$(name)im"
+    name_real = isa(name, Tuple) ? name[1] : "$(name)r"
+    name_imag = isa(name, Tuple) ? name[2] : "$(name)i"
     Mre = variable_mx_real(model, indices, N, M;
         prefix=prefix, name=name_real)
     Mim = variable_mx_real(model, indices, N, M;
@@ -224,8 +224,8 @@ function variable_mx_complex_with_diag(model::JuMP.Model, indices::Array{T,1}, N
         diag_re::Dict{T,Array{DR,1}}=Dict([(i, zeros(N)) for i in indices]),
         diag_im::Dict{T,Array{DI,1}}=Dict([(i, zeros(N)) for i in indices]),
         name::Union{String, Tuple{String,String}}="", prefix="") where {T, LB<:Real, UB<:Real, DR, DI}
-    name_real = isa(name, Tuple) ? name[1] : "$(name)re"
-    name_imag = isa(name, Tuple) ? name[2] : "$(name)im"
+    name_real = isa(name, Tuple) ? name[1] : "$(name)r"
+    name_imag = isa(name, Tuple) ? name[2] : "$(name)i"
     Mre = variable_mx_real_with_diag(model, indices, N, upper_bound, lower_bound;
         diag=diag_re, prefix=prefix, name=name_real
     )
@@ -254,8 +254,8 @@ function variable_mx_complex_with_diag(model::JuMP.Model, indices::Array{T,1}, N
         diag_re::Dict{T,Array{DR,1}}=Dict([(i, zeros(N)) for i in indices]),
         diag_im::Dict{T,Array{DI,1}}=Dict([(i, zeros(N)) for i in indices]),
         name::Union{String, Tuple{String,String}}="", prefix="") where {T, DR, DI}
-    name_real = isa(name, Tuple) ? name[1] : "$(name)re"
-    name_imag = isa(name, Tuple) ? name[2] : "$(name)im"
+    name_real = isa(name, Tuple) ? name[1] : "$(name)r"
+    name_imag = isa(name, Tuple) ? name[2] : "$(name)i"
     Mre = variable_mx_real_with_diag(model, indices, N; diag=diag_re,
         prefix=prefix, name=name_real
     )
@@ -450,8 +450,8 @@ Returns a pair of symmetric and skew-symmetric matrix variables.
 function variable_mx_hermitian(model::JuMP.Model, indices::Array{T,1}, N::Int,
         upper_bound::Dict{T,Array{LB,2}}, lower_bound::Dict{T,Array{UB,2}};
         name::Union{String,Tuple{String,String}}="", prefix="") where {T, LB<:Real, UB<:Real}
-    name_real = isa(name, Tuple) ? name[1] : "$(name)re"
-    name_imag = isa(name, Tuple) ? name[2] : "$(name)im"
+    name_real = isa(name, Tuple) ? name[1] : "$(name)r"
+    name_imag = isa(name, Tuple) ? name[2] : "$(name)i"
     Mre = variable_mx_symmetric(model, indices, N, upper_bound, lower_bound;
         prefix=prefix, name=name_real)
     Mim = variable_mx_skewsymmetric(model, indices, N, upper_bound, lower_bound;
@@ -467,8 +467,8 @@ Note that diagonal is still bounded below at zero if flagged.
 """
 function variable_mx_hermitian(model::JuMP.Model, indices::Array{T,1}, N::Int;
         name::Union{String, Tuple{String,String}}="", prefix="", lb_diag_zero=false) where {T, LB<:Real, UB<:Real}
-    name_real = isa(name, Tuple) ? name[1] : "$(name)re"
-    name_imag = isa(name, Tuple) ? name[2] : "$(name)im"
+    name_real = isa(name, Tuple) ? name[1] : "$(name)r"
+    name_imag = isa(name, Tuple) ? name[2] : "$(name)i"
     Mre = variable_mx_symmetric(model, indices, N;
         prefix=prefix, name=name_real, lb_diag_zero=lb_diag_zero)
     Mim = variable_mx_skewsymmetric(model, indices, N;

@@ -1,17 +1,17 @@
 ""
-function run_tp_opf_bf_del_kclmx(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_tp_opf_bf_del_kclmx; solution_builder=solution_tp!, multiconductor=true, kwargs...)
+function run_tp_opf_bf_del_kclmx_sdp(data::Dict{String,Any}, model_constructor, solver; kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_tp_opf_bf_del_kclmx_sdp; solution_builder=solution_tp!, multiconductor=true, kwargs...)
 end
 
 
 ""
-function run_tp_opf_bf_del_kclmx(file::String, model_constructor, solver; kwargs...)
-    return run_tp_opf_bf_del_kclmx(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
+function run_tp_opf_bf_del_kclmx_sdp(file::String, model_constructor, solver; kwargs...)
+    return run_tp_opf_bf_del_kclmx_sdp(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
 end
 
 
 ""
-function post_tp_opf_bf_del_kclmx(pm::_PMs.GenericPowerModel)
+function post_tp_opf_bf_del_kclmx_sdp(pm::_PMs.GenericPowerModel)
     # Variables
     variable_tp_voltage(pm)
     variable_tp_branch_current(pm)
@@ -46,11 +46,11 @@ function post_tp_opf_bf_del_kclmx(pm::_PMs.GenericPowerModel)
 
     for i in _PMs.ids(pm, :load)
         constraint_tp_load_mx(pm, i)
-        #constraint_tp_load_mx_SWL(pm, i)
+        constraint_tp_load_mx_SWL(pm, i)
     end
 
     for i in _PMs.ids(pm, :gen)
-        #constraint_tp_generation_mx_SWL(pm, i)
+        constraint_tp_generation_mx_SWL(pm, i)
     end
 
     for i in _PMs.ids(pm, :dcline), c in _PMs.conductor_ids(pm)

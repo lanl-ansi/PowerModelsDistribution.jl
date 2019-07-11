@@ -195,6 +195,12 @@ function constraint_tp_model_voltage_magnitude_difference(pm::_PMs.GenericPowerM
 end
 
 
+function variable_tp_generation_mx(pm::_PMs.GenericPowerModel; nw=pm.cnw)
+    variable_tp_generation_current_mx(pm; nw=nw)
+    variable_tp_generation_power_mx(pm; nw=nw)
+end
+
+
 function variable_tp_generation_power_mx(pm::_PMs.GenericPowerModel; nw=pm.cnw)
     gen_ids = collect(_PMs.ids(pm, nw, :gen))
     # delegate creation of diagonal elements back to PMs as before
@@ -232,20 +238,15 @@ function variable_tp_generation_current_mx(pm::_PMs.GenericPowerModel; nw=pm.cnw
     # calculate bounds
     bound = Dict{eltype(gen_ids), Array{Real,2}}()
     for (id, gen) in _PMs.ref(pm, nw, :gen)
-        bus_id = gen["gen_bus"]
-        vmax = _PMs.ref(pm, nw, :bus, bus_id)["vmax"].values
-        vmin = _PMs.ref(pm, nw, :bus, bus_id)["vmin"].values
-        pmax = max(abs.(gen["pmax"].values), abs.(gen["pmin"].values))
-        qmax = max(abs.(gen["qmax"].values), abs.(gen["qmin"].values))
-        smax = sqrt.(pmax.^2 + qmax.^2)
-        cmax = smax./vmin
+        bus = _PMs.ref(pm, nw, :bus, gen["gen_bus"])
+        cmax = _gen_curr_max(gen, bus)
         bound[id] = cmax*cmax'
     end
     # create matrix variables
-    (Lre,Lim) = variable_mx_hermitian(pm.model, gen_ids, ncnds, bound; name="Ld", prefix="$nw")
+    (CCgr,CCgi) = variable_mx_hermitian(pm.model, gen_ids, ncnds, bound; name="CCg", prefix="$nw")
     # save references
-    _PMs.var(pm, nw)[:CCgr] = Lre
-    _PMs.var(pm, nw)[:CCgi] = Lim
+    _PMs.var(pm, nw)[:CCgr] = CCgr
+    _PMs.var(pm, nw)[:CCgi] = CCgi
 end
 
 
@@ -313,7 +314,6 @@ function variable_tp_load_power_vector(pm::_PMs.GenericPowerModel, load_ids::Arr
 end
 
 
-
 function variable_tp_load_power_wye_mx(pm::_PMs.GenericPowerModel, load_ids::Array{Int,1}; nw=pm.cnw)
     ncnds = length(_PMs.conductor_ids(pm, nw))
     # calculate bounds
@@ -379,30 +379,31 @@ end
 function variable_tp_load_current_mx(pm::_PMs.GenericPowerModel, load_ids::Array{Int,1}; nw=pm.cnw)
     ncnds = length(_PMs.conductor_ids(pm, nw))
     # calculate bounds
+    cmin = Dict{eltype(load_ids), Array{Real,2}}()
+    cmax = Dict{eltype(load_ids), Array{Real,2}}()
     bound = Dict{eltype(load_ids), Array{Real,2}}()
     for (id, load) in _PMs.ref(pm, nw, :load)
         bus_id = load["load_bus"]
         bus = _PMs.ref(pm, nw, :bus, bus_id)
-        cmax = _load_curr_max(load, bus)
-        bound[id] = cmax*cmax'
+        cmin[id], cmax[id] = _load_curr_mag_bounds(load, bus)
     end
     # create matrix variables
-    (Ldre, Ldim) = variable_mx_hermitian(pm.model, load_ids, ncnds, bound; name="Ld", prefix="$nw")
+    (CCdr, CCdi) = variable_mx_hermitian_sqrt_bounds(pm.model, load_ids, ncnds, cmax, cmin; name="CCd", prefix="$nw")
     # save references
-    _PMs.var(pm, nw)[:CCdr] = Ldre
-    _PMs.var(pm, nw)[:CCdi] = Ldim
+    _PMs.var(pm, nw)[:CCdr] = CCdr
+    _PMs.var(pm, nw)[:CCdi] = CCdi
 end
 
 
-function constraint_tp_generation_mx(pm::_PMs.GenericPowerModel{T}, gen_id::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
+function constraint_tp_generation_mx_SWL(pm::_PMs.GenericPowerModel{T}, gen_id::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
     Pg = _PMs.var(pm, nw, :Pg, gen_id)
     Qg = _PMs.var(pm, nw, :Qg, gen_id)
     bus_id = _PMs.ref(pm, nw, :gen, gen_id)["gen_bus"]
-    W_re = _PMs.var(pm, nw, :Wr, bus_id)
-    W_im = _PMs.var(pm, nw, :Wi, bus_id)
-    Lgre = _PMs.var(pm, nw, :CCgr, gen_id)
-    Lgim = _PMs.var(pm, nw, :CCgi, gen_id)
-    constraint_SWL_psd(pm.model, Pg, Qg, W_re, W_im, Lgre, Lgim)
+    Wr = _PMs.var(pm, nw, :Wr, bus_id)
+    Wi = _PMs.var(pm, nw, :Wi, bus_id)
+    CCgr = _PMs.var(pm, nw, :CCgr, gen_id)
+    CCgi = _PMs.var(pm, nw, :CCgi, gen_id)
+    constraint_SWL_psd(pm.model, Pg, Qg, Wr, Wi, CCgr, CCgi)
 end
 
 
@@ -443,16 +444,8 @@ function constraint_tp_load_vector(pm::_PMs.GenericPowerModel, load_id::Int; nw=
             for c in 1:ncnds
                 pl = _PMs.var(pm, nw, c, :pl)[load_id]
                 ql = _PMs.var(pm, nw, c, :ql)[load_id]
-                if a[c]==0
-                    JuMP.@constraint(pm.model, pl==0)
-                else
-                    constraint_pqw(pm.model, Wr[c,c], pl, a[c], α[c], wmin[c], wmax[c], pmin[c], pmax[c])
-                end
-                if b[c]==0
-                    JuMP.@constraint(pm.model, ql==0)
-                else
-                    constraint_pqw(pm.model, Wr[c,c], ql, b[c], β[c], wmin[c], wmax[c], qmin[c], qmax[c])
-                end
+                constraint_pqw(pm.model, Wr[c,c], pl, a[c], α[c], wmin[c], wmax[c], pmin[c], pmax[c])
+                constraint_pqw(pm.model, Wr[c,c], ql, b[c], β[c], wmin[c], wmax[c], qmin[c], qmax[c])
             end
         end
     end
@@ -523,18 +516,18 @@ function constraint_tp_load(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::Int
             _PMs.var(pm, nw, c, :qd)[load_id] = ql[c]
         end
     elseif load["conn"]=="delta"
-        W_re = _PMs.var(pm, nw, :Wr, bus_id)
-        W_im = _PMs.var(pm, nw, :Wi, bus_id)
-        Ldre = _PMs.var(pm, nw, :CCdr, load_id)
-        Ldim = _PMs.var(pm, nw, :CCdi, load_id)
-        Xdre = _PMs.var(pm, nw, :Xdr, load_id)
-        Xdim = _PMs.var(pm, nw, :Xdi, load_id)
+        Wr = _PMs.var(pm, nw, :Wr, bus_id)
+        Wi = _PMs.var(pm, nw, :Wi, bus_id)
+        CCdr = _PMs.var(pm, nw, :CCdr, load_id)
+        CCdi = _PMs.var(pm, nw, :CCdi, load_id)
+        Xdr = _PMs.var(pm, nw, :Xdr, load_id)
+        Xdi = _PMs.var(pm, nw, :Xdi, load_id)
         Td = [1 -1 0; 0 1 -1; -1 0 1]
-        JuMP.@constraint(pm.model, LinearAlgebra.diag(Td*Xdre) .== pl)
-        JuMP.@constraint(pm.model, LinearAlgebra.diag(Td*Xdim) .== ql)
-        constraint_SWL_psd(pm.model, Xdre, Xdim, W_re, W_im, Ldre, Ldim)
-        Pd = Xdre*Td
-        Qd = Xdim*Td
+        JuMP.@constraint(pm.model, LinearAlgebra.diag(Td*Xdr) .== pl)
+        JuMP.@constraint(pm.model, LinearAlgebra.diag(Td*Xdi) .== ql)
+        constraint_SWL_psd(pm.model, Xdr, Xdi, Wr, Wi, CCdr, CCdi)
+        Pd = Xdr*Td
+        Qd = Xdi*Td
         for c in 1:length(pd)
             _PMs.var(pm, nw, c, :pd)[load_id] = Pd[c,c]
             _PMs.var(pm, nw, c, :qd)[load_id] = Qd[c,c]
@@ -556,10 +549,10 @@ function constraint_tp_load_mx(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::
     ql = [_PMs.var(pm, nw, c, :ql, load_id) for c in 1:ncnds]
 
 
-    W_re = _PMs.var(pm, nw, :Wr, bus_id)
-    W_im = _PMs.var(pm, nw, :Wi, bus_id)
-    Ldre = _PMs.var(pm, nw, :CCdr, load_id)
-    Ldim = _PMs.var(pm, nw, :CCdi, load_id)
+    Wr = _PMs.var(pm, nw, :Wr, bus_id)
+    Wi = _PMs.var(pm, nw, :Wi, bus_id)
+    CCdr = _PMs.var(pm, nw, :CCdr, load_id)
+    CCdi = _PMs.var(pm, nw, :CCdi, load_id)
     if load["conn"]=="wye"
         # set the diagonal values
         Pd = _PMs.var(pm, nw, :Pd, load_id)
@@ -571,14 +564,14 @@ function constraint_tp_load_mx(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::
             _PMs.var(pm, nw, c, :qd)[load_id] = ql[c]
         end
         # link S, W and L
-        constraint_SWL_psd(pm.model, Pd, Qd, W_re, W_im, Ldre, Ldim)
+        #constraint_SWL_psd(pm.model, Pd, Qd, Wr, Wi, CCdr, CCdi)
     elseif load["conn"]=="delta"
         Xdre = _PMs.var(pm, nw, :Xdr, load_id)
         Xdim = _PMs.var(pm, nw, :Xdi, load_id)
         Td = [1 -1 0; 0 1 -1; -1 0 1]
         JuMP.@constraint(pm.model, LinearAlgebra.diag(Td*Xdre) .== pl)
         JuMP.@constraint(pm.model, LinearAlgebra.diag(Td*Xdim) .== ql)
-        constraint_SWL_psd(pm.model, Xdre, Xdim, W_re, W_im, Ldre, Ldim)
+        #constraint_SWL_psd(pm.model, Xdre, Xdim, Wr, Wi, CCdr, CCdi)
         Pd = Xdre*Td
         Qd = Xdim*Td
         _PMs.var(pm, nw, :Pd)[load_id] = Pd
@@ -587,20 +580,44 @@ function constraint_tp_load_mx(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::
 end
 
 
-function constraint_tp_voltage_psd(pm::_PMs.GenericPowerModel; nw=pm.cnw)
-    buses_covered = [i for (l,i,j) in _PMs.ref(pm, nw, :arcs)]
-    buses_psd = [i for i in _PMs.ids(pm, nw, :bus) if !(i in buses_covered)]
-    for bus_id in buses_psd
-        W_re = _PMs.var(pm, nw, :Wr, bus_id)
-        W_im = _PMs.var(pm, nw, :Wi, bus_id)
-        constraint_M_psd(W_re, W_im)
+function constraint_tp_load_mx_SWL(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
+    # shared variables and parameters
+    load = _PMs.ref(pm, nw, :load, load_id)
+    bus_id = load["load_bus"]
+    ncnds = length(load["pd"])
+
+    Wr = _PMs.var(pm, nw, :Wr, bus_id)
+    Wi = _PMs.var(pm, nw, :Wi, bus_id)
+    CCdr = _PMs.var(pm, nw, :CCdr, load_id)
+    CCdi = _PMs.var(pm, nw, :CCdi, load_id)
+    if load["conn"]=="wye"
+        # set the diagonal values
+        Pd = _PMs.var(pm, nw, :Pd, load_id)
+        Qd = _PMs.var(pm, nw, :Qd, load_id)
+        # link S, W and L
+        constraint_SWL_psd(pm.model, Pd, Qd, Wr, Wi, CCdr, CCdi)
+    elseif load["conn"]=="delta"
+        Xdre = _PMs.var(pm, nw, :Xdr, load_id)
+        Xdim = _PMs.var(pm, nw, :Xdi, load_id)
+        constraint_SWL_psd(pm.model, Xdre, Xdim, Wr, Wi, CCdr, CCdi)
     end
 end
 
 
-function constraint_SWL_psd(model::JuMP.Model, P, Q, W_re, W_im, L_re, L_im)
-    M_re = [W_re P; P' L_re]
-    M_im = [W_im Q; -Q' L_im]
+function constraint_tp_voltage_psd(pm::_PMs.GenericPowerModel; nw=pm.cnw)
+    buses_covered = [i for (l,i,j) in _PMs.ref(pm, nw, :arcs)]
+    buses_psd = [i for i in _PMs.ids(pm, nw, :bus) if !(i in buses_covered)]
+    for bus_id in buses_psd
+        Wr = _PMs.var(pm, nw, :Wr, bus_id)
+        Wi = _PMs.var(pm, nw, :Wi, bus_id)
+        constraint_M_psd(Wr, Wi)
+    end
+end
+
+
+function constraint_SWL_psd(model::JuMP.Model, P, Q, Wr, Wi, L_re, L_im)
+    M_re = [Wr P; P' L_re]
+    M_im = [Wi Q; -Q' L_im]
     constraint_M_psd(model, M_re, M_im)
 end
 

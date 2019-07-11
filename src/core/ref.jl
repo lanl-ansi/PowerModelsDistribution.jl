@@ -177,6 +177,16 @@ function _load_curr_max(load::Dict, bus::Dict)
     return smax./vmin
 end
 
+function _load_curr_mag_bounds(load::Dict, bus::Dict)
+    a, α, b, β = _load_expmodel_params(load, bus)
+    vmin, vmax = _load_vbounds(load, bus)
+    cb1 = sqrt.(a.^(2).*vmin.^(2*α.-2) + b.^(2).*vmin.^(2*β.-2))
+    cb2 = sqrt.(a.^(2).*vmax.^(2*α.-2) + b.^(2).*vmax.^(2*β.-2))
+    cmin = min.(cb1, cb2)
+    cmax = max.(cb1, cb2)
+    return cmin, cmax
+end
+
 
 function _load_expmodel_params(load::Dict, bus::Dict)
     pd = load["pd"].values
@@ -228,4 +238,15 @@ function _load_needs_cone(load::Dict)
     else
         return false
     end
+end
+
+
+function _gen_curr_max(gen::Dict, bus::Dict)
+    pabsmax = max.(abs.(gen["pmin"].values), abs.(gen["pmax"].values))
+    qabsmax = max.(abs.(gen["qmax"].values), abs.(gen["qmax"].values))
+    smax = sqrt.(pabsmax.^2 + qabsmax.^2)
+
+    vmin = bus["vmin"].values
+
+    return smax./vmin
 end
