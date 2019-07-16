@@ -14,7 +14,7 @@
             result = run_tp_mld_strg(mp_data, PMs.NFAPowerModel, ipopt_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 0.0; atol=1e-4)
+            @test isapprox(result["objective"], -14.114; atol=1e-3)
 
             @test isapprox(result["solution"]["load"]["1"]["status"], 1.000; atol=1e-3)
         end
