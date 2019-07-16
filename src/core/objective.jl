@@ -38,9 +38,29 @@ function objective_tp_min_load_delta_strg(pm::_PMs.GenericPowerModel{T}) where T
             sum(
                 sum( (M[n][c]*10*(1 - _PMs.var(pm, n, :z_voltage, i)) for (i, bus) in nw_ref[:bus])) +
                 sum( (load_weight[n][i]*load["pd"][c]*(1 - _PMs.var(pm, n, :z_demand, i))) for (i,load) in nw_ref[:load]) +
-                sum( (M[n][c]*(1 - _PMs.var(pm, n, :z_shunt, i))) for (i,shunt) in nw_ref[:shunt]) +
-                sum( (M[n][c]*(1 - _PMs.var(pm, n, :z_gen, i)) for (i,gen) in nw_ref[:gen])) +
-                sum( (M[n][c]*(1 - _PMs.var(pm, n, :z_storage, i)) for (i,storage) in nw_ref[:storage]))
+                sum( (M[n][c]*shunt["gs"][c]*(1 - _PMs.var(pm, n, :z_shunt, i))) for (i,shunt) in nw_ref[:shunt]) +
+                sum( (M[n][c]*(gen["pg"][c] - _PMs.var(pm, n, c, :pg, i)) for (i,gen) in nw_ref[:gen])) +
+                sum( (M[n][c]*(storage["ps"][c] - _PMs.var(pm, n, c, :ps, i)) for (i,storage) in nw_ref[:storage]))
+            for c in _PMs.conductor_ids(pm, n))
+        for (n, nw_ref) in _PMs.nws(pm))
+    )
+end
+
+
+
+"maximum loadability objective (continuous load shed) with storage"
+function objective_tp_max_loadability_strg(pm::_PMs.GenericPowerModel{T}) where T
+    load_weight = Dict(n => Dict(i => get(load, "weight", 1.0) for (i,load) in _PMs.ref(pm, n, :load)) for n in _PMs.nw_ids(pm))
+    M = Dict(n => Dict(c => 10*maximum([load_weight[n][i]*abs(load["pd"][c]) for (i,load) in _PMs.ref(pm, n, :load)]) for c in _PMs.conductor_ids(pm, n)) for n in _PMs.nw_ids(pm))
+
+    JuMP.@objective(pm.model, Max,
+        sum(
+            sum(
+                sum( (M[n][c]*10*_PMs.var(pm, n, :z_voltage, i) for (i, bus) in nw_ref[:bus])) +
+                sum( (load_weight[n][i]*load["pd"][c]*_PMs.var(pm, n, :z_demand, i)) for (i,load) in nw_ref[:load]) +
+                sum( (M[n][c]*_PMs.var(pm, n, :z_shunt, i)) for (i,shunt) in nw_ref[:shunt]) +
+                sum( (M[n][c]*_PMs.var(pm, n, :z_gen, i) for (i,gen) in nw_ref[:gen])) +
+                sum( (M[n][c]*_PMs.var(pm, n, :z_storage, i) for (i,storage) in nw_ref[:storage]))
             for c in _PMs.conductor_ids(pm, n))
         for (n, nw_ref) in _PMs.nws(pm))
     )
