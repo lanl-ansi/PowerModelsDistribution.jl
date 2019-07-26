@@ -451,6 +451,13 @@ end
 
 "KCL for load shed problem with transformers"
 function constraint_tp_power_balance_shunt_trans_shed(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    if !haskey(_PMs.con(pm, nw, cnd), :kcl_p)
+        _PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,JuMP.ConstraintRef}()
+    end
+    if !haskey(_PMs.con(pm, nw, cnd), :kcl_q)
+        _PMs.con(pm, nw, cnd)[:kcl_q] = Dict{Int,JuMP.ConstraintRef}()
+    end
+
     bus = _PMs.ref(pm, nw, :bus, i)
     bus_arcs = _PMs.ref(pm, nw, :bus_arcs, i)
     bus_arcs_dc = _PMs.ref(pm, nw, :bus_arcs_dc, i)

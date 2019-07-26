@@ -33,6 +33,7 @@ cbc_solver = JuMP.with_optimizer(Cbc.Optimizer, logLevel=0)
 scs_solver = JuMP.with_optimizer(SCS.Optimizer, max_iters=10000, verbose=0)
 juniper_solver = JuMP.with_optimizer(Juniper.Optimizer, nl_solver=JuMP.with_optimizer(Ipopt.Optimizer, tol=1e-4, print_level=0), mip_solver=cbc_solver, log_levels=[])
 
+include("common.jl")
 
 @testset "PowerModelsDistribution" begin
 

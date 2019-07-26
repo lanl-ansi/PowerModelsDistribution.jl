@@ -116,13 +116,13 @@ end
 
 
 ""
-function constraint_tp_power_balance_shunt_trans_shed(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractDCPForm
-    p = _PMs.var(pm, n, c, :p)
-    pg = _PMs.var(pm, n, c, :pg)
-    p_dc = _PMs.var(pm, n, c, :p_dc)
-    p_trans = _PMs.var(pm, n, c, :pt)
-    z_demand = _PMs.var(pm, n, :z_demand)
-    z_shunt = _PMs.var(pm, n, :z_shunt)
+function constraint_tp_power_balance_shunt_trans_shed(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractDCPForm
+    p = _PMs.var(pm, nw, c, :p)
+    pg = _PMs.var(pm, nw, c, :pg)
+    p_dc = _PMs.var(pm, nw, c, :p_dc)
+    p_trans = _PMs.var(pm, nw, c, :pt)
+    z_demand = _PMs.var(pm, nw, :z_demand)
+    z_shunt = _PMs.var(pm, nw, :z_shunt)
 
-    JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd*z_demand[i] for (i,pd) in bus_pd) - sum(gs*1.0^2*z_shunt[i] for (i,gs) in bus_gs))
+    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd*z_demand[n] for (n,pd) in bus_pd) - sum(gs*1.0^2*z_shunt[n] for (n,gs) in bus_gs))
 end

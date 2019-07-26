@@ -84,4 +84,26 @@
             @test isapprox(result["solution"]["load"]["1"]["status"], 1.0; atol=1e-3)
         end
     end
+    @testset "test mld_uc" begin
+        @testset "test ACPPowerModel" begin
+            @testset "test 5-bus case" begin
+                mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case5.m"); PMs.make_multiconductor!(mp_data, 3)
+                result = run_tp_mld_uc(mp_data, PMs.ACPPowerModel, juniper_solver)
+
+                @test result["termination_status"] == PMs.LOCALLY_SOLVED
+                @test all_gens_on(result)
+                @test all_voltages_on(result)
+            end
+        end
+        @testset "test NFAPowerModel" begin
+            @testset "test 5-bus case" begin
+                mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case5.m"); PMs.make_multiconductor!(mp_data, 3)
+                result = run_tp_mld_uc(mp_data, PMs.NFAPowerModel, juniper_solver)
+
+                @test result["termination_status"] == PMs.LOCALLY_SOLVED
+                @test all_gens_on(result)
+                @test all_voltages_on(result)
+            end
+        end
+    end
 end

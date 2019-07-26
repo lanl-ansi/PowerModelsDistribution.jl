@@ -218,13 +218,21 @@ end
 
 
 "Create variables for demand status"
-function variable_tp_demand_factor(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw)
-    _PMs.var(pm, nw)[:z_demand] = JuMP.@variable(pm.model,
-        [i in _PMs.ids(pm, nw, :load)], base_name="$(nw)_z_demand",
-        lower_bound = 0,
-        upper_bound = 1,
-        start = 1.0
-    )
+function variable_tp_indicator_demand(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, relax=false)
+    if relax
+        _PMs.var(pm, nw)[:z_demand] = JuMP.@variable(pm.model,
+            [i in _PMs.ids(pm, nw, :load)], base_name="$(nw)_z_demand",
+            lower_bound = 0,
+            upper_bound = 1,
+            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :load, i), "z_demand_on_start", cnd, 1.0)
+        )
+    else
+        _PMs.var(pm, nw)[:z_demand] = JuMP.@variable(pm.model,
+            [i in _PMs.ids(pm, nw, :load)], base_name="$(nw)_z_demand",
+            binary = true,
+            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :load, i), "z_demand_on_start", cnd, 1.0)
+        )
+    end
     # add lookup in each conductor for solution recovery
     for cn in _PMs.conductor_ids(pm, nw)
         _PMs.var(pm, nw, cn)[:z_demand] = _PMs.var(pm, nw, :z_demand)
@@ -233,13 +241,21 @@ end
 
 
 "Create variables for shunt status"
-function variable_tp_shunt_factor(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw)
-    _PMs.var(pm, nw)[:z_shunt] = JuMP.@variable(pm.model,
-        [i in _PMs.ids(pm, nw, :shunt)], base_name="$(nw)_z_shunt",
-        lower_bound = 0,
-        upper_bound = 1,
-        start = 1.0
-    )
+function variable_tp_indicator_shunt(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, relax=false)
+    if relax
+        _PMs.var(pm, nw)[:z_shunt] = JuMP.@variable(pm.model,
+            [i in _PMs.ids(pm, nw, :shunt)], base_name="$(nw)_z_shunt",
+            lower_bound = 0,
+            upper_bound = 1,
+            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :shunt, i), "z_shunt_on_start", cnd, 1.0)
+        )
+    else
+        _PMs.var(pm, nw)[:z_shunt] = JuMP.@variable(pm.model,
+            [i in _PMs.ids(pm, nw, :shunt)], base_name="$(nw)_z_shunt",
+            binary=true,
+            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :shunt, i), "z_shunt_on_start", cnd, 1.0)
+        )
+    end
     # add lookup in each conductor for solution recovery
     for cn in _PMs.conductor_ids(pm, nw)
         _PMs.var(pm, nw, cn)[:z_shunt] = _PMs.var(pm, nw, :z_shunt)
@@ -271,7 +287,7 @@ end
 
 
 "Create variables for generator status"
-function variable_tp_generation_indicator(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, relax=false)
+function variable_tp_indicator_generation(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, relax=false)
     _PMs.variable_generation_indicator(pm; nw=nw, relax=relax)
     # add lookup in each conductor for solution recovery
     for cn in _PMs.conductor_ids(pm, nw)
@@ -304,14 +320,14 @@ end
 
 
 "Create variables for `active` and `reactive` storage injection"
-function variable_tp_storage_on_off(pm::_PMs.GenericPowerModel; kwargs...)
-    variable_tp_storage_active_on_off(pm; kwargs...)
-    variable_tp_storage_reactive_on_off(pm; kwargs...)
+function variable_tp_on_off_storage(pm::_PMs.GenericPowerModel; kwargs...)
+    variabe_tp_on_off_storage_active(pm; kwargs...)
+    variable_tp_on_off_storage_reactive(pm; kwargs...)
 end
 
 
 "Create variables for `active` storage injection"
-function variable_tp_storage_active_on_off(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+function variabe_tp_on_off_storage_active(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     inj_lb, inj_ub = _PMs.ref_calc_storage_injection_bounds(_PMs.ref(pm, nw, :storage), _PMs.ref(pm, nw, :bus), cnd)
 
     _PMs.var(pm, nw, cnd)[:ps] = JuMP.@variable(pm.model,
@@ -324,7 +340,7 @@ end
 
 
 "Create variables for `reactive` storage injection"
-function variable_tp_storage_reactive_on_off(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+function variable_tp_on_off_storage_reactive(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     _PMs.var(pm, nw, cnd)[:qs] = JuMP.@variable(pm.model,
         [i in _PMs.ids(pm, nw, :storage)], base_name="$(nw)_$(cnd)_qs",
         lower_bound = min(0, _PMs.ref(pm, nw, :storage, i, "qmin", cnd)),
@@ -342,4 +358,17 @@ function variable_tp_voltage_magnitude_sqr_on_off(pm::_PMs.GenericPowerModel; nw
         upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax", cnd)^2,
         start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", cnd, 1.001)
     )
+end
+
+
+""
+function variable_tp_voltage_magnitude_on_off(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw)
+    for cnd in _PMs.conductor_ids(pm)
+        _PMs.var(pm, nw, cnd)[:vm] = JuMP.@variable(pm.model,
+            [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(cnd)_vm",
+            lower_bound = 0,
+            upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax", cnd),
+            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "vm_start", cnd, 1.0)
+        )
+    end
 end
