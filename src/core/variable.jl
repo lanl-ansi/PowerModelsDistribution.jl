@@ -233,10 +233,6 @@ function variable_tp_indicator_demand(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw
             start = _PMs.comp_start_value(_PMs.ref(pm, nw, :load, i), "z_demand_on_start", cnd, 1.0)
         )
     end
-    # add lookup in each conductor for solution recovery
-    for cn in _PMs.conductor_ids(pm, nw)
-        _PMs.var(pm, nw, cn)[:z_demand] = _PMs.var(pm, nw, :z_demand)
-    end
 end
 
 
@@ -256,10 +252,6 @@ function variable_tp_indicator_shunt(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw,
             start = _PMs.comp_start_value(_PMs.ref(pm, nw, :shunt, i), "z_shunt_on_start", cnd, 1.0)
         )
     end
-    # add lookup in each conductor for solution recovery
-    for cn in _PMs.conductor_ids(pm, nw)
-        _PMs.var(pm, nw, cn)[:z_shunt] = _PMs.var(pm, nw, :z_shunt)
-    end
 end
 
 
@@ -278,10 +270,6 @@ function variable_tp_indicator_bus_voltage(pm::_PMs.GenericPowerModel; nw::Int=p
             upper_bound = 1,
             start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "z_voltage_start", 1, 1.0)
         )
-    end
-    # add lookup in each conductor for solution recovery
-    for cn in _PMs.conductor_ids(pm, nw)
-        _PMs.var(pm, nw, cn)[:z_voltage] = _PMs.var(pm, nw, :z_voltage)
     end
 end
 
@@ -311,10 +299,6 @@ function variable_tp_indicator_storage(pm::_PMs.GenericPowerModel; nw::Int=pm.cn
             upper_bound = 1,
             start = _PMs.comp_start_value(_PMs.ref(pm, nw, :storage, i), "z_storage_start", 1, 1.0)
         )
-    end
-    # add lookup in each conductor for solution recovery
-    for cn in _PMs.conductor_ids(pm, nw)
-        _PMs.var(pm, nw, cn)[:z_storage] = _PMs.var(pm, nw, :z_storage)
     end
 end
 

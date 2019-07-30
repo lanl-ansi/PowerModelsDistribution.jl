@@ -405,11 +405,11 @@ end
 
 ""
 function add_setpoint_generator_status!(sol, pm::_PMs.GenericPowerModel{T}) where T
-   _PMs.add_setpoint!(sol, pm, "gen", "gen_status", :z_gen; status_name="gen_status", default_value = (item) -> item["gen_status"]*1.0, conductorless=true)
+    _PMs.add_setpoint!(sol, pm, "gen", "gen_status", :z_gen; status_name="gen_status", default_value = (item) -> if (item["gen_status"] == 0) 0.0 else 1.0 end, conductorless=true)
 end
 
 
 ""
 function add_setpoint_storage_status!(sol, pm::_PMs.GenericPowerModel{T}) where T
-    _PMs.add_setpoint!(sol, pm, "storage", "status", :z_storage; default_value = (item) -> item["status"]*1.0, conductorless=true)
+    _PMs.add_setpoint!(sol, pm, "storage", "status", :z_storage; default_value = (item) -> if (item["status"] == 0) 0.0 else 1.0 end, conductorless=true)
 end
