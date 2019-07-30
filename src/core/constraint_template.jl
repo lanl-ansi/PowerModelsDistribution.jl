@@ -474,3 +474,27 @@ function constraint_tp_power_balance_shunt_trans_shed(pm::_PMs.GenericPowerModel
 
     constraint_tp_power_balance_shunt_trans_shed(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
 end
+
+
+""
+function constraint_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, kwargs...)
+    for c in _PMs.conductor_ids(pm)
+        constraint_tp_bus_voltage_on_off(pm, nw, c; kwargs...)
+    end
+end
+
+
+""
+function constraint_tp_voltage_magnitude_on_off(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    bus = _PMs.ref(pm, nw, :bus, i)
+
+    constraint_tp_voltage_magnitude_on_off(pm, nw, cnd, i, bus["vmin"][cnd], bus["vmax"][cnd])
+end
+
+
+""
+function constraint_tp_voltage_magnitude_sqr_on_off(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    bus = _PMs.ref(pm, nw, :bus, i)
+
+    constraint_tp_voltage_magnitude_sqr_on_off(pm, nw, cnd, i, bus["vmin"][cnd], bus["vmax"][cnd])
+end

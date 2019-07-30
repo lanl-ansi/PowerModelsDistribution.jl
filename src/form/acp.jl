@@ -73,8 +73,8 @@ function constraint_tp_power_balance_shunt_trans_shed(pm::_PMs.GenericPowerModel
     q_dc = _PMs.var(pm, nw, c, :q_dc)
     pt = _PMs.var(pm, nw, c, :pt)
     qt = _PMs.var(pm,  nw, c, :qt)
-    z_demand = _PMs.var(pm, nw, c, :z_demand)
-    z_shunt = _PMs.var(pm, nw, c, :z_shunt)
+    z_demand = _PMs.var(pm, nw, :z_demand)
+    z_shunt = _PMs.var(pm, nw, :z_shunt)
 
     _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(pt[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd*z_demand[n] for (n,pd) in bus_pd) - sum(gs*z_shunt[n] for (n,gs) in bus_gs)*vm^2)
     _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(qt[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd*z_demand[n] for (n,qd) in bus_qd) + sum(bs*z_shunt[n] for (n,bs) in bus_bs)*vm^2)
@@ -728,4 +728,12 @@ function constraint_tp_load_impedance_delta(pm::_PMs.GenericPowerModel{T}, nw::I
     _PMs.var(pm, nw, 1, :qd)[load_id] = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
     _PMs.var(pm, nw, 2, :qd)[load_id] = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
     _PMs.var(pm, nw, 3, :qd)[load_id] = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+end
+
+
+""
+function constraint_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}; nw::Int=pm.cnw, cnd::Int=pm.ccnd, kwargs...) where T <: _PMs.AbstractACPForm
+    for (i,bus) in _PMs.ref(pm, nw, :bus)
+        constraint_tp_voltage_magnitude_on_off(pm, i; nw=nw, cnd=cnd)
+    end
 end

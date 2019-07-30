@@ -31,6 +31,12 @@ function run_tp_mld_bf(data::Dict{String,Any}, model_constructor, solver; kwargs
 end
 
 
+""
+function run_tp_mld_bf(file::String, model_constructor, solver; kwargs...)
+    return run_tp_mld_bf(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
+end
+
+
 "Run unit commitment load shedding problem (!relaxed)"
 function run_tp_mld_uc(data::Dict{String,Any}, model_constructor, solver; kwargs...)
     return _PMs.run_model(data, model_constructor, solver, post_tp_mld_uc; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
@@ -40,12 +46,6 @@ end
 ""
 function run_tp_mld_uc(file::String, model_constructor, solver; kwargs...)
     return run_tp_mld(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
-end
-
-
-""
-function run_tp_mld_bf(file::String, model_constructor, solver; kwargs...)
-    return run_tp_mld_bf(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
 end
 
 
@@ -70,6 +70,11 @@ function post_tp_mld(pm::_PMs.GenericPowerModel)
 
     for i in _PMs.ids(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)
+    end
+    constraint_tp_bus_voltage_on_off(pm)
+
+    for i in _PMs.ids(pm, :gen)
+        _PMs.constraint_generation_on_off(pm, i)
     end
 
     for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
@@ -126,6 +131,11 @@ function post_tp_mld_strg(pm::_PMs.GenericPowerModel)
     for i in _PMs.ids(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)
     end
+    constraint_tp_bus_voltage_on_off(pm)
+
+    for i in _PMs.ids(pm, :gen)
+        _PMs.constraint_generation_on_off(pm, i)
+    end
 
     for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
         constraint_tp_power_balance_shunt_trans_shed(pm, i, cnd=c)
@@ -134,6 +144,7 @@ function post_tp_mld_strg(pm::_PMs.GenericPowerModel)
     for i in _PMs.ids(pm, :storage)
         _PMs.constraint_storage_state(pm, i)
         constraint_tp_storage_exchange(pm, i)
+        _PMs.constraint_storage_on_off(pm,i)
         for c in _PMs.conductor_ids(pm)
             _PMs.constraint_storage_thermal_limit(pm, i, cnd=c)
         end
@@ -186,6 +197,11 @@ function post_tp_mld_bf(pm::_PMs.GenericPowerModel)
     for i in _PMs.ids(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)
     end
+    constraint_tp_bus_voltage_on_off(pm)
+
+    for i in _PMs.ids(pm, :gen)
+        _PMs.constraint_generation_on_off(pm, i)
+    end
 
     for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
         constraint_tp_power_balance_shunt_trans_shed(pm, i, cnd=c)
@@ -236,6 +252,11 @@ function post_tp_mld_uc(pm::_PMs.GenericPowerModel)
 
     for i in _PMs.ids(pm, :ref_buses)
         constraint_tp_theta_ref(pm, i)
+    end
+    constraint_tp_bus_voltage_on_off(pm)
+
+    for i in _PMs.ids(pm, :gen)
+        _PMs.constraint_generation_on_off(pm, i)
     end
 
     for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)

@@ -115,3 +115,10 @@ function constraint_tp_ohms_yt_to(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int,
     _PMs.constraint_ohms_yt_from(pm, n, c, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
 end
 
+
+""
+function constraint_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int; kwargs...) where T <: _PMs.AbstractWForms
+    for (i, bus) in _PMs.ref(pm, n, :bus)
+        constraint_tp_voltage_magnitude_sqr_on_off(pm, i; nw=n, cnd=c)
+    end
+end
