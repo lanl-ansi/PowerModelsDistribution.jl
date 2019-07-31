@@ -5,7 +5,7 @@ function variable_tp_trans_reactive_flow(pm::_PMs.GenericPowerModel{T}; nw::Int=
 end
 
 
-""
+"power balanace constraint with line shunts and transformers, active power only"
 function constraint_tp_power_balance_shunt_trans(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractActivePowerFormulation
     pg   = _PMs.var(pm, nw, c, :pg)
     p    = _PMs.var(pm, nw, c, :p)
@@ -17,7 +17,7 @@ function constraint_tp_power_balance_shunt_trans(pm::_PMs.GenericPowerModel{T}, 
 end
 
 
-""
+"storage loss constraint"
 function constraint_tp_storage_loss(pm::_PMs.GenericPowerModel{T}, n::Int, i, bus, r, x, standby_loss) where T <: _PMs.AbstractActivePowerFormulation
     conductors = _PMs.conductor_ids(pm)
     ps = [_PMs.var(pm, n, c, :ps, i) for c in conductors]
@@ -28,7 +28,7 @@ function constraint_tp_storage_loss(pm::_PMs.GenericPowerModel{T}, n::Int, i, bu
 end
 
 
-""
+"power balance constraint with line shunts, storage, and transformers, active power only"
 function constraint_tp_power_balance_shunt_storage_trans(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractActivePowerFormulation
     p    = _PMs.var(pm, nw, c, :p)
     pg   = _PMs.var(pm, nw, c, :pg)

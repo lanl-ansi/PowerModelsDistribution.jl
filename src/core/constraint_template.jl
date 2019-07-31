@@ -38,7 +38,7 @@ function constraint_tp_model_voltage(pm::_PMs.GenericPowerModel, n::Int, c::Int)
 end
 
 
-""
+"ohms constraint for branches on the from-side"
 function constraint_tp_ohms_yt_from(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     branch = _PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
@@ -56,7 +56,7 @@ function constraint_tp_ohms_yt_from(pm::_PMs.GenericPowerModel, i::Int; nw::Int=
 end
 
 
-""
+"ohms constraint for branches on the to-side"
 function constraint_tp_ohms_yt_to(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     branch = _PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
@@ -74,7 +74,7 @@ function constraint_tp_ohms_yt_to(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm
 end
 
 
-""
+"on/off ohms constraint for branches on the from-side"
 function constraint_tp_ohms_yt_from_on_off(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     branch = _PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
@@ -95,7 +95,7 @@ function constraint_tp_ohms_yt_from_on_off(pm::_PMs.GenericPowerModel, i::Int; n
 end
 
 
-""
+"on/off ohms constraint for branches on the from-side"
 function constraint_tp_ohms_yt_to_on_off(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     branch = _PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
@@ -476,7 +476,7 @@ function constraint_tp_power_balance_shunt_trans_shed(pm::_PMs.GenericPowerModel
 end
 
 
-""
+"on/off constraint for bus voltages"
 function constraint_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, kwargs...)
     for c in _PMs.conductor_ids(pm)
         constraint_tp_bus_voltage_on_off(pm, nw, c; kwargs...)
@@ -484,7 +484,7 @@ function constraint_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel; nw::Int=pm
 end
 
 
-""
+"on/off voltage magnitude constraint"
 function constraint_tp_voltage_magnitude_on_off(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     bus = _PMs.ref(pm, nw, :bus, i)
 
@@ -492,7 +492,7 @@ function constraint_tp_voltage_magnitude_on_off(pm::_PMs.GenericPowerModel, i::I
 end
 
 
-""
+"on/off voltage magnitude squared constraint for relaxed formulations"
 function constraint_tp_voltage_magnitude_sqr_on_off(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     bus = _PMs.ref(pm, nw, :bus, i)
 

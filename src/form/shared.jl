@@ -116,7 +116,7 @@ function constraint_tp_ohms_yt_to(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int,
 end
 
 
-""
+"on/off bus voltage constraint for relaxed forms"
 function constraint_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int; kwargs...) where T <: _PMs.AbstractWForms
     for (i, bus) in _PMs.ref(pm, n, :bus)
         constraint_tp_voltage_magnitude_sqr_on_off(pm, i; nw=n, cnd=c)

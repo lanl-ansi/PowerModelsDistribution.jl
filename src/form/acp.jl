@@ -731,7 +731,7 @@ function constraint_tp_load_impedance_delta(pm::_PMs.GenericPowerModel{T}, nw::I
 end
 
 
-""
+"bus voltage on/off constraint for load shed problem"
 function constraint_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}; nw::Int=pm.cnw, cnd::Int=pm.ccnd, kwargs...) where T <: _PMs.AbstractACPForm
     for (i,bus) in _PMs.ref(pm, nw, :bus)
         constraint_tp_voltage_magnitude_on_off(pm, i; nw=nw, cnd=cnd)

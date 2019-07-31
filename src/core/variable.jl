@@ -1,4 +1,4 @@
-""
+"voltage variables, delegated back to PowerModels"
 function variable_tp_voltage(pm::_PMs.GenericPowerModel; kwargs...)
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_voltage(pm, cnd=c; kwargs...)
@@ -6,7 +6,7 @@ function variable_tp_voltage(pm::_PMs.GenericPowerModel; kwargs...)
 end
 
 
-""
+"branch flow variables, delegated back to PowerModels"
 function variable_tp_branch_flow(pm::_PMs.GenericPowerModel; kwargs...)
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_branch_flow(pm, cnd=c; kwargs...)
@@ -14,7 +14,7 @@ function variable_tp_branch_flow(pm::_PMs.GenericPowerModel; kwargs...)
 end
 
 
-""
+"voltage variables, relaxed form"
 function variable_tp_voltage(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: _PMs.AbstractWRForm
     for c in _PMs.conductor_ids(pm)
         variable_tp_voltage_magnitude_sqr(pm, cnd=c; kwargs...)
@@ -330,7 +330,7 @@ function variable_tp_on_off_storage_reactive(pm::_PMs.GenericPowerModel; nw::Int
 end
 
 
-""
+"voltage variable magnitude squared (relaxed form)"
 function variable_tp_voltage_magnitude_sqr_on_off(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     _PMs.var(pm, nw, cnd)[:w] = JuMP.@variable(pm.model,
         [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(cnd)_w",
@@ -341,7 +341,7 @@ function variable_tp_voltage_magnitude_sqr_on_off(pm::_PMs.GenericPowerModel; nw
 end
 
 
-""
+"on/off voltage magnitude variable"
 function variable_tp_voltage_magnitude_on_off(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw)
     for cnd in _PMs.conductor_ids(pm)
         _PMs.var(pm, nw, cnd)[:vm] = JuMP.@variable(pm.model,

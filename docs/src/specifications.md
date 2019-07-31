@@ -228,7 +228,17 @@ Load shed (continuous) problem. See "Relaxations of AC Maximal Load Delivery for
 ```math
 \begin{align}
 \mbox{minimize: }\left (
-\sum_{\substack{i\in N,c\in C}}{10M_c \left (1-z^v_i \right )} + \sum_{\substack{i\in L,c\in C}}{\omega_{i,c}\left |\Re{\left (S^d_i\right )}\right |\left ( 1-z^d_i \right ) } + \sum_{\substack{i\in H,c\in C}}{M_c \left (1-z^s_i \right ) } +  \sum_{\substack{i\in G,c\in C}}{M_c \left (1-z_i^g \right ) } + \sum_{\substack{i\in B,c\in C}}{M_c \left (1-z^b_i\right )} \right )
+\sum_{\substack{i\in N,c\in C}}{10 \left (1-z^v_i \right )} + \sum_{\substack{i\in L,c\in C}}{10 \omega_{i,c}\left |\Re{\left (S^d_i\right )}\right |\left ( 1-z^d_i \right ) } + \sum_{\substack{i\in H,c\in C}}{\left | \Re{\left (S^s_i \right )}\right | \left (1-z^s_i \right ) } + \sum_{\substack{i\in G,c\in C}}{\Delta^g_i } + \sum_{\substack{i\in B,c\in C}}{\Delta^b_i} \right )
+\end{align}
+```
+where
+
+```math
+\begin{align}
+\Delta^g_i &>= \left [\Re{\left (S^g_{i}(0) \right )} - \Re{\left (S^g_i \right )} \right ] \\
+\Delta^g_i &>= -\left [\Re{\left (S^g_{i}(0) \right )} - \Re{\left (S^g_i \right )} \right ] \\
+\Delta^b_i &>= \left [\Re{\left (S^b_{i}(0) \right )} - \Re{\left (S^b_i \right )} \right ] \\
+\Delta^b_i &>= -\left [\Re{\left (S^b_{i}(0) \right )} - \Re{\left (S^b_i \right )} \right ]
 \end{align}
 ```
 
