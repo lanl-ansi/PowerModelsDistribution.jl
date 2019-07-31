@@ -277,10 +277,6 @@ end
 "Create variables for generator status"
 function variable_tp_indicator_generation(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, relax=false)
     _PMs.variable_generation_indicator(pm; nw=nw, relax=relax)
-    # add lookup in each conductor for solution recovery
-    for cn in _PMs.conductor_ids(pm, nw)
-        _PMs.var(pm, nw, cn)[:z_gen] = _PMs.var(pm, nw, :z_gen)
-    end
 end
 
 
