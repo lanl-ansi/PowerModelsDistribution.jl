@@ -1,7 +1,6 @@
 # PowerModelsDistribution.jl
 
 Release:
-<!-- [![PowerModelsDistribution](http://pkg.julialang.org/badges/ThreePhasePowerModels_0.6.svg)](http://pkg.julialang.org/detail/PowerModelsDistribution) -->
 [![docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://lanl-ansi.github.io/PowerModelsDistribution.jl/stable/)
 
 Dev:
@@ -14,16 +13,20 @@ PowerModelsDistribution.jl is an extention package of PowerModels.jl for Steady-
 This enables the definition of a wide variety of power network formulations and their comparison on common problem specifications.
 
 **Core Problem Specifications**
+
 * Power Flow (pf)
 * Optimal Power Flow (opf), for the Bus Injection Model (BIM) as well as the Branch Flow Model (BFM)
+* Continuous load shed, minimum load delta (mld), for the Branch Flow Model (LPLinUBFPowerModel) and Network Flow Approximation (NFAPowerModel)
 
 **Core Network Formulations**
+
 * AC (polar and rectangular coordinates)
 * SDP BFM relaxation
 * SOC BFM and BIM relaxation (W-space)
 * Linear approximation (LinDist3Flow and simplified unbalanced DistFlow)
 
 **Network Data Formats**
+
 * Matlab ".m" files (extended for three-phase)
 * OpenDSS ".dss" files
 
@@ -36,9 +39,10 @@ Community-driven development and enhancement of PowerModelsDistribution are welc
 
 ## Acknowledgments
 
-This code has been developed as part of the Advanced Network Science Initiative at Los Alamos National Laboratory.  The primary developers are David Fobes(@pseudocubic) and Carleton Coffrin(@ccoffrin) with support from the following contributors,
-- Sander Claeys (@sanderclaeys) KU Leuven, transformer models and ACR formulation
-- Frederik Geth (@frederikgeth) CSIRO, Distribution modeling advise
+This code has been developed as part of the Advanced Network Science Initiative at Los Alamos National Laboratory.  The primary developers are David Fobes(@pseudocubic) and Carleton Coffrin(@ccoffrin) with support from the following contributors:
+
+* Sander Claeys (@sanderclaeys) KU Leuven, transformer models and ACR formulation
+* Frederik Geth (@frederikgeth) CSIRO, Distribution modeling advise
 
 ## License
 

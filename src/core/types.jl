@@ -73,3 +73,15 @@ const LPdiagUBFPowerModel = _PMs.GenericPowerModel{LPdiagUBFForm}
 
 "default LP unbalanced DistFlow constructor"
 LPdiagUBFPowerModel(data::Dict{String,Any}; kwargs...) = _PMs.GenericPowerModel(data, LPdiagUBFForm; kwargs...)
+
+
+"LinDist3Flow per Sankur et al 2016, using vector variables for power, voltage and current in scalar form"
+abstract type LPLinUBFForm <: _PMs.AbstractBFForm end
+
+
+""
+const LPLinUBFPowerModel = _PMs.GenericPowerModel{LPLinUBFForm}
+
+
+"default Lin3Distflow constructor for scalar form"
+LPLinUBFPowerModel(data::Dict{String,Any}; kwargs...) = _PMs.GenericPowerModel(data, LPLinUBFForm; kwargs...)

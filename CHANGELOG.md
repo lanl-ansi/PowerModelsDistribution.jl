@@ -2,7 +2,7 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
-- none
+- Add continuous load shedding problem (mld)
 
 ### v0.5.0
 - Enforce function naming conventions (starts with `_`: internal function; ends with `!`: transforms data; `correct_`: corrects network data; `check_`: warnings about network data) (breaking)

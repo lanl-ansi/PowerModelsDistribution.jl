@@ -74,7 +74,7 @@ function constraint_tp_ohms_yt_to_on_off(pm::_PMs.GenericPowerModel{T}, n::Int, 
 end
 
 
-""
+"power balance constraint with line shunts and transformers for relaxed WR forms"
 function constraint_tp_power_balance_shunt_trans(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractWRForm
     w    = _PMs.var(pm, nw, c, :w, i)
     pg   = _PMs.var(pm, nw, c, :pg)

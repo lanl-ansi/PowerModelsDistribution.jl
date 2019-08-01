@@ -1051,13 +1051,16 @@ function _dss2pmd_storage!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
             storageDict["discharge_rating"] = defaults["%discharge"] * defaults["kwrated"] / 1e3 / 100.0
             storageDict["charge_efficiency"] = defaults["%effcharge"] / 100.0
             storageDict["discharge_efficiency"] = defaults["%effdischarge"] / 100.0
-            storageDict["thermal_rating"] = _PMs.MultiConductorVector(_parse_array(defaults["kva"] / 1e3, nodes, nconductors))
-            storageDict["qmin"] = _PMs.MultiConductorVector(_parse_array(-defaults["kvar"] / 1e3, nodes, nconductors))
-            storageDict["qmax"] = _PMs.MultiConductorVector(_parse_array( defaults["kvar"] / 1e3, nodes, nconductors))
+            storageDict["thermal_rating"] = _PMs.MultiConductorVector(_parse_array(defaults["kva"] / 1e3 / nconductors, nodes, nconductors))
+            storageDict["qmin"] = _PMs.MultiConductorVector(_parse_array(-defaults["kvar"] / 1e3 / nconductors, nodes, nconductors))
+            storageDict["qmax"] = _PMs.MultiConductorVector(_parse_array( defaults["kvar"] / 1e3 / nconductors, nodes, nconductors))
             storageDict["r"] = _PMs.MultiConductorVector(_parse_array(defaults["%r"] / 100.0, nodes, nconductors))
             storageDict["x"] = _PMs.MultiConductorVector(_parse_array(defaults["%x"] / 100.0, nodes, nconductors))
             storageDict["standby_loss"] = defaults["%idlingkw"] * defaults["kwrated"] / 1e3
             storageDict["status"] = convert(Int, defaults["enabled"])
+
+            storageDict["ps"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
+            storageDict["qs"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
 
             storageDict["index"] = length(pmd_data["storage"]) + 1
 
