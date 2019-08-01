@@ -399,16 +399,16 @@ end
 
 "add load setpoints for load shed problem"
 function add_setpoint_load!(sol, pm::_PMs.GenericPowerModel{T}) where T
-    _PMs.add_setpoint!(sol, pm, "load", "pd", :z_demand; scale = (x,item,cnd) -> x*item["pd"][cnd])
-    _PMs.add_setpoint!(sol, pm, "load", "qd", :z_demand; scale = (x,item,cnd) -> x*item["qd"][cnd])
+    _PMs.add_setpoint!(sol, pm, "load", "pd", :z_demand; scale = (x,item,cnd) -> x*item["pd"], conductorless=true)
+    _PMs.add_setpoint!(sol, pm, "load", "qd", :z_demand; scale = (x,item,cnd) -> x*item["qd"], conductorless=true)
     _PMs.add_setpoint!(sol, pm, "load", "status", :z_demand; default_value = (item) -> if (item["status"] == 0) 0.0 else 1.0 end, conductorless=true)
 end
 
 
 "add shunt setpoints for load shed problem"
 function add_setpoint_shunt!(sol, pm::_PMs.GenericPowerModel{T}) where T
-    _PMs.add_setpoint!(sol, pm, "shunt", "gs", :z_shunt; scale = (x,item,cnd) -> x*item["gs"][cnd])
-    _PMs.add_setpoint!(sol, pm, "shunt", "bs", :z_shunt; scale = (x,item,cnd) -> x*item["bs"][cnd])
+    _PMs.add_setpoint!(sol, pm, "shunt", "gs", :z_shunt; scale = (x,item,cnd) -> x.*item["gs"], conductorless=true)
+    _PMs.add_setpoint!(sol, pm, "shunt", "bs", :z_shunt; scale = (x,item,cnd) -> x.*item["bs"], conductorless=true)
     _PMs.add_setpoint!(sol, pm, "shunt", "status", :z_shunt; default_value = (item) -> if (item["status"] == 0) 0.0 else 1.0 end, conductorless=true)
 end
 

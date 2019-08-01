@@ -8,7 +8,6 @@ Dev:
 [![codecov](https://codecov.io/gh/lanl-ansi/PowerModelsDistribution.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/lanl-ansi/PowerModelsDistribution.jl)
 [![docs](https://img.shields.io/badge/docs-latest-blue.svg)](https://lanl-ansi.github.io/PowerModelsDistribution.jl/latest/)
 
-
 PowerModelsDistribution.jl is an extention package of PowerModels.jl for Steady-State Power Distribution Network Optimization.  It is designed to enable computational evaluation of emerging power network formulations and algorithms in a common platform.  The code is engineered to decouple problem specifications (e.g. Power Flow, Optimal Power Flow, ...) from the power network formulations (e.g. AC, linear-approximation, SOC-relaxation, ...).
 This enables the definition of a wide variety of power network formulations and their comparison on common problem specifications.
 
@@ -16,7 +15,7 @@ This enables the definition of a wide variety of power network formulations and 
 
 * Power Flow (pf)
 * Optimal Power Flow (opf), for the Bus Injection Model (BIM) as well as the Branch Flow Model (BFM)
-* Continuous load shed, minimum load delta (mld), for the Branch Flow Model (LPLinUBFPowerModel) and Network Flow Approximation (NFAPowerModel)
+* Continuous load shed, minimum load delta (mld), for the Branch Flow Model (LPLinUBFPowerModel), AC Polar (ACPPowerModel), and Network Flow Approximation (NFAPowerModel)
 
 **Core Network Formulations**
 
@@ -35,7 +34,6 @@ This enables the definition of a wide variety of power network formulations and 
 ## Development
 
 Community-driven development and enhancement of PowerModelsDistribution are welcome and encouraged. Please fork this repository and share your contributions to the master with pull requests.
-
 
 ## Acknowledgments
 

@@ -6,6 +6,8 @@
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.3295; atol = 1e-4)
+            @test all(isapprox(result["solution"]["load"]["1"]["pd"], [3.0, 3.0, 3.0]; atol=1e-4))
+            @test all(isapprox(result["solution"]["load"]["1"]["qd"], [0.9861, 0.9861, 0.9861]; atol=1e-4))
 
             @test isapprox(result["solution"]["load"]["1"]["status"], 1.000; atol = 1e-3)
         end
