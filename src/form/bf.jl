@@ -1,15 +1,3 @@
-"LinDist3Flow per Sankur et al 2016, using vector variables for power, voltage and current in scalar form"
-abstract type LPLinUBFForm <: _PMs.AbstractBFForm end
-
-
-""
-const LPLinUBFPowerModel = _PMs.GenericPowerModel{LPLinUBFForm}
-
-
-"default Lin3Distflow constructor for scalar form"
-LPLinUBFPowerModel(data::Dict{String,Any}; kwargs...) = _PMs.GenericPowerModel(data, LPLinUBFForm; kwargs...)
-
-
 ""
 function variable_tp_voltage(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: LPLinUBFForm
     for cnd in _PMs.conductor_ids(pm)
@@ -39,7 +27,7 @@ function constraint_tp_voltage_magnitude_difference(pm::_PMs.GenericPowerModel{T
 end
 
 
-""
+"do nothing"
 function _PMs.constraint_model_current(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr, tm) where T <: LPLinUBFForm
 end
 
@@ -73,4 +61,22 @@ function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int
 
     JuMP.@constraint(pm.model, p_fr + p_to ==  g_sh_fr*(w_fr/tm^2) +  g_sh_to*w_to)
     JuMP.@constraint(pm.model, q_fr + q_to == -b_sh_fr*(w_fr/tm^2) + -b_sh_to*w_to)
+end
+
+
+"Create voltage variables for branch flow model"
+function variable_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: LPLinUBFForm
+    for cnd in _PMs.conductor_ids(pm)
+        variable_tp_voltage_magnitude_sqr_on_off(pm; cnd=cnd, kwargs...)
+    end
+end
+
+
+"nothing to do, no voltage variables"
+function constraint_tp_trans_voltage(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to) where T <: LPLinUBFForm
+end
+
+
+"nothing to do, this model is symmetric"
+function constraint_tp_trans_flow(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to) where T <: LPLinUBFForm
 end
