@@ -137,19 +137,21 @@ function _calc_tp_trans_Tvi(pm::_PMs.GenericPowerModel, i::Int; nw=pm.cnw)
     return (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to)
 end
 
-
+"""
+Returns bounds in LN base.
+"""
 function _bus_vm_ll_bounds(bus::Dict; eps=0.1)
     vmax = bus["vmax"].values
     vmin = bus["vmin"].values
     if haskey(bus, "vm_ll_max")
-        vdmax = bus["vm_ll_max"].values
+        vdmax = bus["vm_ll_max"].values*sqrt(3)
     else
         vdmax = 2*vmax
     end
     if haskey(bus, "vm_ll_min")
-        vdmin = bus["vm_ll_min"].values
+        vdmin = bus["vm_ll_min"].values*sqrt(3)
     else
-        vdmin = ones(3)*eps
+        vdmin = ones(3)*eps*sqrt(3)
     end
     return (vdmin, vdmax)
 end
@@ -195,7 +197,6 @@ function _load_expmodel_params(load::Dict, bus::Dict)
     if load["model"]=="constant_power"
         return (pd, zeros(ncnds), qd, zeros(ncnds))
     else
-        vmin, vmax = _load_vbounds(load, bus)
         # get exponents
         if load["model"]=="constant_current"
             α = ones(ncnds)

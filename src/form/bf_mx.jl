@@ -379,9 +379,8 @@ end
 function variable_tp_load_current_mx(pm::_PMs.GenericPowerModel, load_ids::Array{Int,1}; nw=pm.cnw)
     ncnds = length(_PMs.conductor_ids(pm, nw))
     # calculate bounds
-    cmin = Dict{eltype(load_ids), Array{Real,2}}()
-    cmax = Dict{eltype(load_ids), Array{Real,2}}()
-    bound = Dict{eltype(load_ids), Array{Real,2}}()
+    cmin = Dict{eltype(load_ids), Array{Real,1}}()
+    cmax = Dict{eltype(load_ids), Array{Real,1}}()
     for (id, load) in _PMs.ref(pm, nw, :load)
         bus_id = load["load_bus"]
         bus = _PMs.ref(pm, nw, :bus, bus_id)
@@ -597,6 +596,24 @@ function constraint_tp_load_mx_SWL(pm::_PMs.GenericPowerModel{T}, load_id::Int; 
         # link S, W and L
         constraint_SWL_psd(pm.model, Pd, Qd, Wr, Wi, CCdr, CCdi)
     elseif load["conn"]=="delta"
+        Xdre = _PMs.var(pm, nw, :Xdr, load_id)
+        Xdim = _PMs.var(pm, nw, :Xdi, load_id)
+        constraint_SWL_psd(pm.model, Xdre, Xdim, Wr, Wi, CCdr, CCdi)
+    end
+end
+
+
+function constraint_tp_load_mx_SWL_only_delta(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
+    # shared variables and parameters
+    load = _PMs.ref(pm, nw, :load, load_id)
+    bus_id = load["load_bus"]
+    ncnds = length(load["pd"])
+
+    Wr = _PMs.var(pm, nw, :Wr, bus_id)
+    Wi = _PMs.var(pm, nw, :Wi, bus_id)
+    CCdr = _PMs.var(pm, nw, :CCdr, load_id)
+    CCdi = _PMs.var(pm, nw, :CCdi, load_id)
+    if load["conn"]=="delta"
         Xdre = _PMs.var(pm, nw, :Xdr, load_id)
         Xdim = _PMs.var(pm, nw, :Xdi, load_id)
         constraint_SWL_psd(pm.model, Xdre, Xdim, Wr, Wi, CCdr, CCdi)

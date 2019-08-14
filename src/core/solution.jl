@@ -140,7 +140,7 @@ function add_is_ac_feasible!(sol, pm::_PMs.GenericPowerModel)
 end
 
 function add_is_ac_feasible!(sol, pm::_PMs.GenericPowerModel{T}) where T <: AbstractUBFForm
-    for (nw, network) in pm._PMs.ref[:nw]
+    for (nw, network) in _PMs.nws(pm)
         branch_feasibilities = [branch["rank"] <= 1 for (b, branch) in sol["branch"]]
         branch_feasbility = all(branch_feasibilities)
         bus_feasibilities = [bus["rank"] <= 1 for (b, bus) in sol["bus"]]
@@ -152,29 +152,29 @@ function add_is_ac_feasible!(sol, pm::_PMs.GenericPowerModel{T}) where T <: Abst
 end
 
 function add_rank_voltage_variable!(sol, pm::_PMs.GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
-    for (nw, network) in pm._PMs.ref[:nw]
+    for (nw, network) in _PMs.nws(pm)
         buses       = _PMs.ref(pm, nw, :bus)
         for (b, bus) in buses
             Wre, Wim = _make_hermitian_matrix_variable(sol["bus"]["$b"]["w"].values, sol["bus"]["$b"]["wr"].values, sol["bus"]["$b"]["wi"].values)
             W = Wre + im*Wim
-            sol["bus"]["$b"]["rank"] = rank(W, tol)
+            sol["bus"]["$b"]["rank"] = LinearAlgebra.rank(W, tol)
         end
     end
 end
 
 function add_rank_current_variable!(sol, pm::_PMs.GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
-    for (nw, network) in pm._PMs.ref[:nw]
+    for (nw, network) in _PMs.nws(pm)
         branches       = _PMs.ref(pm, nw, :branch)
         for (b, branch) in branches
             CCre, CCim = _make_hermitian_matrix_variable(sol["branch"]["$b"]["cc"].values, sol["branch"]["$b"]["ccr"].values, sol["branch"]["$b"]["cci"].values)
             CC = CCre + im*CCim
-            sol["branch"]["$b"]["CC_rank"] = rank(CC, tol)
+            sol["branch"]["$b"]["CC_rank"] = LinearAlgebra.rank(CC, tol)
         end
     end
 end
 
 function add_rank_branch_flow!(sol, pm::_PMs.GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
-    for (nw, network) in pm._PMs.ref[:nw]
+    for (nw, network) in _PMs.nws(pm)
         buses       = _PMs.ref(pm, nw, :bus)
         for (b, branch) in _PMs.ref(pm, nw, :branch)
             g_fr = diagm(0 => branch["g_fr"].values)
@@ -194,7 +194,7 @@ function add_rank_branch_flow!(sol, pm::_PMs.GenericPowerModel{T}; tol = 1e-6) w
             Ssij = Sij - W'*y_fr'
 
             f = [W Ssij; Ssij' CC]
-            sol["branch"]["$b"]["rank"] = rank(f, tol)
+            sol["branch"]["$b"]["rank"] = LinearAlgebra.rank(f, tol)
         end
     end
 end
@@ -207,7 +207,7 @@ function add_original_variables!(sol, pm::_PMs.GenericPowerModel)
         Memento.error(_LOGGER, "deriving the original variables requires setting: branch_flows => true")
     end
 
-    for (nw, network) in pm._PMs.ref[:nw]
+    for (nw, network) in _PMs.nws(pm)
         #find rank-1 starting points
         ref_buses   = _find_ref_buses(pm, nw)
         #TODO develop code to start with any rank-1 W variable
