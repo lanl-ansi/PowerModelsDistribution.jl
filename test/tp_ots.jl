@@ -10,7 +10,7 @@ end
 @testset "test_multiphase ac ots" begin
     @testset "3-bus 3-phase case" begin
         mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case3.m")
-        PMs.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_ots(mp_data, PMs.ACPPowerModel, juniper_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -42,7 +42,7 @@ end
 
         @testset "3-bus 3-phase case" begin
             mp_data = PMs.parse_file("../../PowerModels/test/data/matpower/case3.m")
-            PMs.make_multiconductor!(mp_data, 3)
+            PMD.make_multiconductor!(mp_data, 3)
             result = run_tp_ots(mp_data, PMs.DCPPowerModel, juniper_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -53,7 +53,7 @@ end
 
         @testset "5-bus 3-phase case" begin
             mp_data = PMs.parse_file("../test/data/matpower/case5.m")
-            PMs.make_multiconductor!(mp_data, 3)
+            PMD.make_multiconductor!(mp_data, 3)
             result = run_tp_ots(mp_data, PMs.DCPPowerModel, juniper_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED

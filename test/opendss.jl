@@ -152,7 +152,7 @@
         for i in 6:7
             basekv_bri = pmd["bus"][string(pmd["branch"]["$i"]["f_bus"])]["base_kv"]
             # added factor 3 to match bug fix in branch parsing
-            @test all(isapprox.(pmd["branch"]["$i"]["b_fr"].values, (3.4 * 2.0 + 1.6) / 3.0 * (basekv_bri^2 / pmd["baseMVA"] * 2.0 * pi * 60.0 / 1e9) / 2.0 / 3; atol=1e-6))
+            @test all(isapprox.(diag(pmd["branch"]["$i"]["b_fr"].values), (3.4 * 2.0 + 1.6) / 3.0 * (basekv_bri^2 / pmd["baseMVA"] * 2.0 * pi * 60.0 / 1e9) / 2.0 / 3; atol=1e-6))
         end
 
         # values were adjusted for the Float16->Float64 change in dss_structs.jl
