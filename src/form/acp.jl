@@ -169,23 +169,21 @@ function constraint_tp_ohms_yt_from(pm::_PMs.GenericPowerModel{T}, n::Int, c::In
     va_to = [_PMs.var(pm, n, d, :va, t_bus) for d in _PMs.conductor_ids(pm)]
 
     JuMP.@NLconstraint(pm.model, p_fr ==
-                                    g[c,c] * vm_fr[c]^2 +
-                                    sum( g[c,d]*vm_fr[c]*vm_fr[d]*cos(va_fr[c]-va_fr[d]) +
-                                         b[c,d]*vm_fr[c]*vm_fr[d]*sin(va_fr[c]-va_fr[d]) for d in _PMs.conductor_ids(pm) if d != c) +
-                                    sum(-g[c,d]*vm_fr[c]*vm_to[d]*cos(va_fr[c]-va_to[d]) +
-                                        -b[c,d]*vm_fr[c]*vm_to[d]*sin(va_fr[c]-va_to[d]) for d in _PMs.conductor_ids(pm))
-                                    + g_fr[c,c] * vm_fr[c]^2 +
-                                    sum( g_fr[c,d]*vm_fr[c]*vm_fr[d]*cos(va_fr[c]-va_fr[d]) +
-                                         b_fr[c,d]*vm_fr[c]*vm_fr[d]*sin(va_fr[c]-va_fr[d]) for d in _PMs.conductor_ids(pm) if d != c)
+                                    (g[c,c]+g_fr[c,c])*vm_fr[c]^2
+                                    +sum( (g[c,d]+g_fr[c,d]) * vm_fr[c]*vm_fr[d]*cos(va_fr[c]-va_fr[d])
+                                         +(b[c,d]+b_fr[c,d]) * vm_fr[c]*vm_fr[d]*sin(va_fr[c]-va_fr[d])
+                                         for d in _PMs.conductor_ids(pm) if d != c)
+                                    +sum(-g[c,d]*vm_fr[c]*vm_to[d]*cos(va_fr[c]-va_to[d])
+                                         -b[c,d]*vm_fr[c]*vm_to[d]*sin(va_fr[c]-va_to[d])
+                                         for d in _PMs.conductor_ids(pm))
                                 )
-    JuMP.@NLconstraint(pm.model, q_fr == -b[c,c] *vm_fr[c]^2 -
-                                    sum( b[c,d]*vm_fr[c]*vm_fr[d]*cos(va_fr[c]-va_fr[d]) -
-                                         g[c,d]*vm_fr[c]*vm_fr[d]*sin(va_fr[c]-va_fr[d]) for d in _PMs.conductor_ids(pm) if d != c) -
-                                    sum(-b[c,d]*vm_fr[c]*vm_to[d]*cos(va_fr[c]-va_to[d]) +
-                                         g[c,d]*vm_fr[c]*vm_to[d]*sin(va_fr[c]-va_to[d]) for d in _PMs.conductor_ids(pm))
-                                    -b_fr[c,c] *vm_fr[c]^2 -
-                                    sum( b_fr[c,d]*vm_fr[c]*vm_fr[d]*cos(va_fr[c]-va_fr[d]) -
-                                         g_fr[c,d]*vm_fr[c]*vm_fr[d]*sin(va_fr[c]-va_fr[d]) for d in _PMs.conductor_ids(pm) if d != c)
+    JuMP.@NLconstraint(pm.model, q_fr == -(b[c,c]+b_fr[c,c])*vm_fr[c]^2
+                                    -sum( (b[c,d]+b_fr[c,d])*vm_fr[c]*vm_fr[d]*cos(va_fr[c]-va_fr[d])
+                                         -(g[c,d]+g_fr[c,d])*vm_fr[c]*vm_fr[d]*sin(va_fr[c]-va_fr[d])
+                                         for d in _PMs.conductor_ids(pm) if d != c)
+                                    -sum(-b[c,d]*vm_fr[c]*vm_to[d]*cos(va_fr[c]-va_to[d])
+                                         +g[c,d]*vm_fr[c]*vm_to[d]*sin(va_fr[c]-va_to[d])
+                                         for d in _PMs.conductor_ids(pm))
                                 )
 end
 
