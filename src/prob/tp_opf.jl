@@ -42,7 +42,7 @@ function post_tp_opf(pm::_PMs.GenericPowerModel)
             constraint_tp_ohms_yt_from(pm, i, cnd=c)
             constraint_tp_ohms_yt_to(pm, i, cnd=c)
 
-            _PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
+            constraint_voltage_angle_difference(pm, i, cnd=c)
 
             _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
             _PMs.constraint_thermal_limit_to(pm, i, cnd=c)

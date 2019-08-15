@@ -498,3 +498,18 @@ function constraint_tp_voltage_magnitude_sqr_on_off(pm::_PMs.GenericPowerModel, 
 
     constraint_tp_voltage_magnitude_sqr_on_off(pm, nw, cnd, i, bus["vmin"][cnd], bus["vmax"][cnd])
 end
+
+
+"This is duplicated at PMD level to correctly handle the indexing of the shunts."
+function constraint_voltage_angle_difference(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+    branch = _PMs.ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+    pair = (f_bus, t_bus)
+    buspair = _PMs.ref(pm, nw, :buspairs, pair)
+
+    if buspair["branch"] == i
+        constraint_voltage_angle_difference(pm, nw, cnd, f_idx, buspair["angmin"][cnd], buspair["angmax"][cnd])
+    end
+end

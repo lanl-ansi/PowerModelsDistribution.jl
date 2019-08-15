@@ -124,3 +124,12 @@ function constraint_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}, n::Int,
         constraint_tp_voltage_magnitude_sqr_on_off(pm, i; nw=n, cnd=c)
     end
 end
+
+
+"
+This is duplicated at PMD level to correctly handle the indexing of the shunts.
+By default, delegate back to PM; only certain formulations differ between PMD and PMs.
+"
+function constraint_voltage_angle_difference(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_idx, angmin, angmax) where T
+    _PMs.constraint_voltage_angle_difference(pm, n, c, f_idx, angmin, angmax)
+end
