@@ -246,15 +246,15 @@ end
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
-        @test isapprox(result["objective"], 0.0597017; atol = 1e-4)
+        @test isapprox(result["objective"], 0.0599389; atol = 1e-4)
 
         @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 0.00015236280779412599; atol = 1e-7)
         @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 0.00019836795302238667; atol = 1e-7)
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 0.0002469182092574594; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 0.0002486642034746673; atol = 1e-7)
 
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9736211293005391; atol = 1e-4)
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9650040745702724; atol = 1e-4)
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9562171321941326; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9735194654731474; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9649009834917063; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9564602048264421; atol = 1e-4)
     end
 
     @testset "5-bus 3-phase ac rectangular opf case" begin
@@ -262,15 +262,15 @@ end
         result = run_tp_opf(mp_data, PMs.ACRPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
-        @test isapprox(result["objective"], 0.0597017; atol = 1e-4)
+        @test isapprox(result["objective"], 0.0599400; atol = 1e-4)
 
         @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 0.00015236280779412599; atol = 1e-7)
         @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 0.00019836795302238667; atol = 1e-7)
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 0.00024691804721165244; atol = 1e-7)
+        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 0.0002486688793741932; atol = 1e-7)
 
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9736211293005391; atol = 1e-4)
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9650040745702724; atol = 1e-4)
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9562166511182492; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9735188343958152; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9649003198689144; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9564593296045091; atol = 1e-4)
     end
 
 
@@ -321,7 +321,7 @@ end
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
-        @test isapprox(result["objective"], 0.0597017; atol = 1e-4)
+        @test isapprox(result["objective"], 0.0599389; atol = 1e-4)
     end
 end
 
@@ -349,7 +349,7 @@ end
         result = run_tp_opf(mp_data, PMs.ACRPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
-        @test isapprox(result["objective"], 0.0597017; atol = 1e-4)
+        @test isapprox(result["objective"], 0.059940; atol = 1e-4)
     end
 end
 
@@ -440,7 +440,7 @@ end
         result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
-        @test isapprox(result["objective"], 0.0597016; atol = 1e-4)
+        @test isapprox(result["objective"], 0.0599410; atol = 1e-4)
     end
 end
 
