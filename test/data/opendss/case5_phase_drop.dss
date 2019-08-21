@@ -1,21 +1,29 @@
 clear
 
 new circuit.c3
-~ basekv=0.4 pu=1 MVAsc1=1e6 MVAsc3=1e6
+~ basekv=0.4 pu=1 MVAsc1=1e12 MVAsc3=1e12
 
-new linecode.lc1
+new linecode.lc1_3ph nphases=3
 ~ rmatrix = [ 0.1 | 0.0 0.1 | 0.0 0.0 0.1 ]
 ~ xmatrix = [ 0.01 | 0.0 0.01 | 0.0 0.0 0.01 ]
 ~ cmatrix = [ 50 | 0 50 | 0 0 50 ]
+new linecode.lc1_2ph nphases=2
+~ rmatrix = [ 0.1 | 0.0 0.1 ]
+~ xmatrix = [ 0.01 | 0.0 0.01 ]
+~ cmatrix = [ 50 | 0 50 ]
+new linecode.lc1_1ph nphases=1
+~ rmatrix = [ 0.1 ]
+~ xmatrix = [ 0.01 ]
+~ cmatrix = [ 50 ]
 
-new line.line1 bus1=sourcebus.1.2.3.0 bus2=midbus.1.2.3.0 linecode=lc1
-new line.line2 bus1=midbus.1 bus2=l1.1 linecode=lc1
-new line.line3 bus1=midbus.2.3 bus2=l2.2.3 linecode=lc1
-new line.line4 bus1=midbus.3 bus2=cap1.3 linecode=lc1
+new line.line1 bus1=sourcebus.1.2.3.0 bus2=midbus.1.2.3.0 linecode=lc1_3ph
+new line.line2 bus1=midbus.1 bus2=l1.1 linecode=lc1_1ph
+new line.line3 bus1=midbus.2.3 bus2=l2.2.3 linecode=lc1_2ph
+new line.line4 bus1=midbus.3 bus2=cap1.3 linecode=lc1_1ph
 
-new load.load1 phases=1 bus1=l1.1 kv=( 0.4 3 sqrt / ) kw=14 kvar=-10
-new load.load2 phases=1 bus1=l2.2 kv=( 0.4 3 sqrt / ) kw=18 kvar=-10
-new load.load3 phases=1 bus1=l2.3 kv=( 0.4 3 sqrt / ) kw=22 kvar=-10
+new load.load1 phases=1 bus1=l1.1 kv=( 0.4 3 sqrt / ) kw=14 kvar=-10 vminpu=0.6 vmaxpu=1.4
+new load.load2 phases=1 bus1=l2.2 kv=( 0.4 3 sqrt / ) kw=18 kvar=-10 vminpu=0.6 vmaxpu=1.4
+new load.load3 phases=1 bus1=l2.3 kv=( 0.4 3 sqrt / ) kw=22 kvar=-10 vminpu=0.6 vmaxpu=1.4
 
 new capacitor.capac1 phases=1 bus1=cap1.3 kvar=4.5 kv=( 0.4 3 sqrt / )
 
