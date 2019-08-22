@@ -320,7 +320,7 @@ function _dss2pmd_load!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
             loadDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
             loadDict["source_id"] = "load.$load_name"
-  
+
             loadDict["index"] = length(pmd_data["load"]) + 1
 
             used = ["phases", "bus1", "name"]
@@ -355,17 +355,24 @@ function _dss2pmd_shunt!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
             nconductors = pmd_data["conductors"]
             name, nodes = _parse_busname(defaults["bus1"])
 
-            Zbase = (pmd_data["basekv"] / sqrt(3.0))^2 * nconductors / pmd_data["baseMVA"]  # Use single-phase base impedance for each phase
-            # should be in 1MW Sbase, because make_per_unit will rescale to real power base later on already
-            # also, we want the total Sbase, not per phase
-            Zbase = Zbase*pmd_data["baseMVA"]/3
-            # should be  positive; the capacitor power reference has generator convention, not load
-            Gcap = Zbase * sum(defaults["kvar"]) / (nconductors * 1e3 * (pmd_data["basekv"] / sqrt(3.0))^2)
+            vnom_ln = defaults["kv"]
+            # 'kv' is specified as phase-to-phase for phases=2/3 (unsure for 4 and more)
+            if defaults["phases"] > 1
+                vnom_ln = vnom_ln/sqrt(3)
+            end
+            # 'kvar' is specified for all phases at once; we want the per-phase one, in MVar
+            qnom = (defaults["kvar"]/1E3)/defaults["phases"]
+            b_cap = qnom/vnom_ln^2
+            #  get the base addmittance, with a LN voltage base
+            Sbase = 1 # not yet pmd_data["baseMVA"] because this is done in _PMs.make_per_unit
+            Ybase_ln = Sbase/(pmd_data["basekv"]/sqrt(3))^2
+            # now convent b_cap to per unit
+            b_cap_pu = b_cap/Ybase_ln
 
             shuntDict["shunt_bus"] = _find_bus(name, pmd_data)
             shuntDict["name"] = defaults["name"]
             shuntDict["gs"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))  # TODO:
-            shuntDict["bs"] = _PMs.MultiConductorVector(_parse_array(Gcap, nodes, nconductors))
+            shuntDict["bs"] = _PMs.MultiConductorVector(_parse_array(b_cap_pu, nodes, nconductors))
             shuntDict["status"] = convert(Int, defaults["enabled"])
             shuntDict["index"] = length(pmd_data["shunt"]) + 1
 
@@ -1415,7 +1422,7 @@ windings. Default behaviour is to start at the primary winding of the first
 transformer, and to propagate from there. Branches are updated; the impedances
 and addmittances are rescaled to be consistent with the new voltage bases.
 """
-function _adjust_base!(pmd_data; start_at_first_tr_prim=true)
+function _adjust_base!(pmd_data; start_at_first_tr_prim=false)
     # initialize arrays etc. for the recursive part
     edges_br = [(br["index"], br["f_bus"], br["t_bus"]) for (br_id_str, br) in pmd_data["branch"]]
     edges_tr = [(tr["index"], tr["f_bus"], tr["t_bus"]) for (tr_id_str, tr) in pmd_data["trans"]]
@@ -1443,10 +1450,6 @@ function _adjust_base!(pmd_data; start_at_first_tr_prim=true)
             source = parse(Int, rand(keys(pmd_data["bus"])))
         end
         base_kv_new = pmd_data["basekv"]
-        #println(source)
-        # Only relevant for future per-unit upgrade
-        # Impossible to end up here;
-        # condition checked before call to _adjust_base!
     end
     _adjust_base_rec!(pmd_data, source, base_kv_new, nodes_visited, edges_br, edges_br_visited, edges_tr, edges_tr_visited, br_basekv_old)
     if !all(values(nodes_visited))
