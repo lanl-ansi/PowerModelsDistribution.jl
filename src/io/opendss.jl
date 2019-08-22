@@ -368,9 +368,6 @@ function _dss2pmd_shunt!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
             Ybase_ln = Sbase/(pmd_data["basekv"]/sqrt(3))^2
             # now convent b_cap to per unit
             b_cap_pu = b_cap/Ybase_ln
-            #TODO clean this up when revisiting p.u. conversion
-            # this is needed because the shunt is non-dimensionalized at PM level later on
-            b_cap_pu = b_cap_pu
 
             shuntDict["shunt_bus"] = _find_bus(name, pmd_data)
             shuntDict["name"] = defaults["name"]
