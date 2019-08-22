@@ -501,7 +501,7 @@ end
 
 
 "This is duplicated at PMD level to correctly handle the indexing of the shunts."
-function constraint_voltage_angle_difference(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+function constraint_mc_voltage_angle_difference(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
     branch = _PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -510,6 +510,6 @@ function constraint_voltage_angle_difference(pm::_PMs.GenericPowerModel, i::Int;
     buspair = _PMs.ref(pm, nw, :buspairs, pair)
 
     if buspair["branch"] == i
-        constraint_voltage_angle_difference(pm, nw, cnd, f_idx, buspair["angmin"][cnd], buspair["angmax"][cnd])
+        constraint_mc_voltage_angle_difference(pm, nw, f_idx, buspair["angmin"], buspair["angmax"])
     end
 end

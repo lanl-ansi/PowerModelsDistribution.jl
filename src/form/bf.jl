@@ -83,7 +83,15 @@ end
 
 
 "This is duplicated at PMD level to correctly handle the indexing of the shunts."
-function constraint_voltage_angle_difference(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_idx, angmin, angmax) where T <: _PMs.AbstractBFForm
+function constraint_mc_voltage_angle_difference(pm::_PMs.GenericPowerModel{T}, n::Int, f_idx, angmin, angmax) where T <: _PMs.AbstractBFForm
+    for c in _PMs.conductor_ids(pm; nw=n)
+        constraint_mls_voltage_angle_difference(pm, n, c, f_idx, angmin[c], angmax[c])
+    end
+end
+
+
+"This is duplicated at PMD level to correctly handle the indexing of the shunts."
+function constraint_mls_voltage_angle_difference(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_idx, angmin, angmax) where T <: _PMs.AbstractBFForm
     i, f_bus, t_bus = f_idx
     t_idx = (i, t_bus, f_bus)
 

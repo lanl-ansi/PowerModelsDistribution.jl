@@ -30,17 +30,18 @@ function post_tp_opf_bctr(pm::_PMs.GenericPowerModel)
     for i in _PMs.ids(pm, :bus)
         bus = _PMs.ref(pm, pm.cnw, :bus, i)
         constraint_tp_voltage_balance(pm, i)
+
         for c in _PMs.conductor_ids(pm)
             _PMs.constraint_power_balance_shunt(pm, i, cnd=c)
         end
     end
 
     for i in _PMs.ids(pm, :branch)
+        constraint_mc_voltage_angle_difference(pm, i)
+
         for c in _PMs.conductor_ids(pm)
             constraint_tp_ohms_yt_from(pm, i, cnd=c)
             constraint_tp_ohms_yt_to(pm, i, cnd=c)
-
-            _PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
 
             _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
             _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
