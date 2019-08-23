@@ -4,6 +4,10 @@ PowerModelsDistribution.jl Change Log
 ### staged
 - none
 
+### v0.5.2
+- Fix bug in OpenDSS parser on Capacitors (#158)
+- Add support for full matrix line shunts (#153)
+
 ### v0.5.1
 - Add continuous load shedding problem (mld)
 
