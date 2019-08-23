@@ -3,12 +3,12 @@
 
 ######## AbstractDCPForm Models (has va but assumes vm is 1.0) ########
 "nothing to do, these models do not have complex voltage constraints"
-function constraint_tp_model_voltage(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int) where T <: _PMs.AbstractDCPForm
+function constraint_mc_model_voltage(pm::_PMs.AbstractDCPModel, n::Int, c::Int)
 end
 
 
 ""
-function variable_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: _PMs.AbstractDCPForm
+function variable_mc_bus_voltage_on_off(pm::_PMs.AbstractDCPModel; kwargs...)
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_voltage_angle(pm; cnd=c, kwargs...)
     end
@@ -17,7 +17,7 @@ end
 
 ######## Lossless Models ########
 "Create variables for the active power flowing into all transformer windings"
-function variable_tp_trans_active_flow(pm::_PMs.GenericPowerModel{T}; nw::Int=pm.cnw, bounded=true) where T <: _PMs.DCPlosslessForm
+function variable_mc_trans_active_flow(pm::_PMs.AbstractAPLossLessModels; nw::Int=pm.cnw, bounded=true)
     for cnd in _PMs.conductor_ids(pm)
         pt = _PMs.var(pm, nw, cnd)[:pt] = JuMP.@variable(pm.model,
             [(l,i,j) in _PMs.ref(pm, nw, :arcs_from_trans)],
@@ -50,12 +50,12 @@ end
 
 
 "Do nothing, this model is symmetric"
-function constraint_tp_ohms_yt_to(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm) where T <: _PMs.DCPlosslessForm
+function constraint_mc_ohms_yt_to(pm::_PMs.AbstractAPLossLessModels, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
 end
 
 
 "Do nothing, this model is symmetric"
-function constraint_tp_ohms_yt_to_on_off(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max) where T <: _PMs.DCPlosslessForm
+function constraint_mc_ohms_yt_to_on_off(pm::_PMs.AbstractAPLossLessModels, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max)
 end
 
 
@@ -67,7 +67,7 @@ Creates Ohms constraints (yt post fix indicates that Y and T values are in recta
 p[f_idx] == -b*(t[f_bus] - t[t_bus])
 ```
 """
-function constraint_tp_ohms_yt_from(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm) where T <: _PMs.AbstractDCPForm
+function constraint_mc_ohms_yt_from(pm::_PMs.AbstractDCPModel, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
     p_fr  = _PMs.var(pm, n, c,  :p, f_idx)
     va_fr = [_PMs.var(pm, n, d, :va, f_bus) for d in _PMs.conductor_ids(pm)]
     va_to = [_PMs.var(pm, n, d, :va, t_bus) for d in _PMs.conductor_ids(pm)]
@@ -78,7 +78,7 @@ end
 
 
 "`-b*(t[f_bus] - t[t_bus] + vad_min*(1-branch_z[i])) <= p[f_idx] <= -b*(t[f_bus] - t[t_bus] + vad_max*(1-branch_z[i]))`"
-function constraint_tp_ohms_yt_from_on_off(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm, vad_min, vad_max) where T <: _PMs.AbstractDCPForm
+function constraint_mc_ohms_yt_from_on_off(pm::_PMs.AbstractDCPModel, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm, vad_min, vad_max)
     p_fr  = _PMs.var(pm, n, c,  :p, f_idx)
     va_fr = [_PMs.var(pm, n, d, :va, f_bus) for d in _PMs.conductor_ids(pm)]
     va_to = [_PMs.var(pm, n, d, :va, t_bus) for d in _PMs.conductor_ids(pm)]
@@ -91,32 +91,32 @@ end
 
 ### Network Flow Approximation ###
 "nothing to do, no voltage angle variables"
-function constraint_tp_theta_ref(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, d) where T <: _PMs.NFAForm
+function constraint_mc_theta_ref(pm::_PMs.AbstractNFAModel, n::Int, c::Int, d)
 end
 
 
 "nothing to do, no voltage angle variables"
-function constraint_tp_ohms_yt_from(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm) where T <: _PMs.NFAForm
+function constraint_mc_ohms_yt_from(pm::_PMs.AbstractNFAModel, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
 end
 
 
 "nothing to do, this model is symmetric"
-function constraint_tp_ohms_yt_to(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm) where T <: _PMs.NFAForm
+function constraint_mc_ohms_yt_to(pm::_PMs.AbstractNFAModel, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
 end
 
 
 "nothing to do, no voltage variables"
-function constraint_tp_trans_voltage(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to) where T <: _PMs.NFAForm
+function constraint_mc_trans_voltage(pm::_PMs.AbstractNFAModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to)
 end
 
 
 "nothing to do, this model is symmetric"
-function constraint_tp_trans_flow(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to) where T <: _PMs.NFAForm
+function constraint_mc_trans_flow(pm::_PMs.AbstractNFAModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to)
 end
 
 
 "power balance constraint with line shunts and transformers for load shed problem, DCP formulation"
-function constraint_tp_power_balance_shunt_trans_shed(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractDCPForm
+function constraint_mc_power_balance_shunt_trans_shed(pm::_PMs.AbstractDCPModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
     p = _PMs.var(pm, nw, c, :p)
     pg = _PMs.var(pm, nw, c, :pg)
     p_dc = _PMs.var(pm, nw, c, :p_dc)
@@ -129,5 +129,5 @@ end
 
 
 "on/off bus voltage constraint for DCP formulation, nothing to do"
-function constraint_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}; nw::Int=pm.cnw, cnd::Int=pm.ccnd, kwargs...) where T <: _PMs.AbstractDCPForm
+function constraint_mc_bus_voltage_on_off(pm::_PMs.AbstractDCPModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, kwargs...)
 end

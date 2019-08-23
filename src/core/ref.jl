@@ -2,7 +2,7 @@ import LinearAlgebra: diagm
 
 
 ""
-function _calc_tp_voltage_product_bounds(pm::_PMs.GenericPowerModel, buspairs; nw::Int=pm.cnw)
+function _calc_tp_voltage_product_bounds(pm::_PMs.AbstractPowerModel, buspairs; nw::Int=pm.cnw)
     wr_min = Dict([(bp, -Inf) for bp in buspairs])
     wr_max = Dict([(bp,  Inf) for bp in buspairs])
     wi_min = Dict([(bp, -Inf) for bp in buspairs])
@@ -34,7 +34,7 @@ end
 
 
 ""
-function _find_ref_buses(pm::_PMs.GenericPowerModel, nw)
+function _find_ref_buses(pm::_PMs.AbstractPowerModel, nw)
     buses = _PMs.ref(pm, nw, :bus)
     return [b for (b,bus) in buses if bus["bus_type"]==3]
     # return [bus for (b,bus) in buses ]
@@ -42,7 +42,7 @@ end
 
 
 "Adds arcs for PMD transformers; for dclines and branches this is done in PMs"
-function ref_add_arcs_trans!(pm::_PMs.GenericPowerModel)
+function ref_add_arcs_trans!(pm::_PMs.AbstractPowerModel)
     if !haskey(_PMs.ref(pm, pm.cnw), :trans)
         # this might happen when parsing data from matlab format
         # the OpenDSS parser always inserts a trans dict
@@ -60,7 +60,7 @@ end
 
 
 ""
-function _calc_tp_trans_Tvi(pm::_PMs.GenericPowerModel, i::Int; nw=pm.cnw)
+function _calc_tp_trans_Tvi(pm::_PMs.AbstractPowerModel, i::Int; nw=pm.cnw)
     trans = _PMs.ref(pm, nw, :trans,  i)
     # transformation matrices
     # Tv and Ti will be compositions of these
