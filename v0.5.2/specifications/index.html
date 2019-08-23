@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Problem Specifications · PowerModelsDistribution</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link href="../assets/documenter.css" rel="stylesheet" type="text/css"/></head><body><nav class="toc"><a href="../"><img class="logo" src="../assets/logo.svg" alt="PowerModelsDistribution logo"/></a><h1>PowerModelsDistribution</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="../search/"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li><a class="toctext" href="../">Home</a></li><li><span class="toctext">Manual</span><ul><li><a class="toctext" href="../quickguide/">Getting Started</a></li><li><a class="toctext" href="../math-model/">Mathematical Model</a></li></ul></li><li><span class="toctext">Library</span><ul><li><a class="toctext" href="../formulations/">Network Formulations</a></li><li class="current"><a class="toctext" href>Problem Specifications</a><ul class="internal"><li><a class="toctext" href="#Optimal-Power-Flow-(OPF)-with-On-Load-Tap-Changers-(OLTC)-1">Optimal Power Flow (OPF) with On-Load Tap Changers (OLTC)</a></li><li><a class="toctext" href="#Optimal-Power-Flow-(OPF)-with-Load-Models-(LM)-1">Optimal Power Flow (OPF) with Load Models (LM)</a></li><li><a class="toctext" href="#Power-Flow-(PF)-with-Load-Models-(LM)-1">Power Flow (PF) with Load Models (LM)</a></li><li><a class="toctext" href="#Minimal-Load-Delta-(MLD)-Problem-Specification-1">Minimal Load Delta (MLD) Problem Specification</a></li></ul></li><li><a class="toctext" href="../library/">Modeling Components</a></li></ul></li><li><span class="toctext">Developer</span><ul><li><a class="toctext" href="../developer/">Developer</a></li><li><a class="toctext" href="../formulation-details/">Formulation Details</a></li></ul></li></ul></nav><article id="docs"><header><nav><ul><li>Library</li><li><a href>Problem Specifications</a></li></ul><a class="edit-page" href="https://github.com/lanl-ansi/PowerModelsDistribution.jl/blob/master/docs/src/specifications.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Problem Specifications</span><a class="fa fa-bars" href="#"></a></div></header><h1><a class="nav-anchor" id="Problem-Specifications-1" href="#Problem-Specifications-1">Problem Specifications</a></h1><h2><a class="nav-anchor" id="Optimal-Power-Flow-(OPF)-with-On-Load-Tap-Changers-(OLTC)-1" href="#Optimal-Power-Flow-(OPF)-with-On-Load-Tap-Changers-(OLTC)-1">Optimal Power Flow (OPF) with On-Load Tap Changers (OLTC)</a></h2><p>This problem is identical to <code>tp_opf</code>, except that all transformers are now modelled as on-load tap changers (OLTCs). Each phase has an individual tap ratio, which can be either variable or fixed, as specified in the data model.</p><h3><a class="nav-anchor" id="Objective-1" href="#Objective-1">Objective</a></h3><pre><code class="language-julia">objective_min_fuel_cost(pm)</code></pre><h3><a class="nav-anchor" id="Variables-1" href="#Variables-1">Variables</a></h3><pre><code class="language-julia">variable_tp_voltage(pm)
+variable_tp_branch_flow(pm)
+
+for c in PMs.conductor_ids(pm)
+    PMs.variable_generation(pm, cnd=c)
+    PMs.variable_dcline_flow(pm, cnd=c)
+end
+variable_tp_trans_flow(pm)
+variable_tp_oltc_tap(pm)</code></pre><h3><a class="nav-anchor" id="Constraints-1" href="#Constraints-1">Constraints</a></h3><pre><code class="language-julia">constraint_tp_model_voltage(pm)
+
+for i in PMs.ids(pm, :ref_buses)
+    constraint_tp_theta_ref(pm, i)
+end
+
+for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
+    constraint_tp_power_balance_shunt_trans(pm, i, cnd=c)
+end
+
+for i in PMs.ids(pm, :branch)
+    for c in PMs.conductor_ids(pm)
+        constraint_tp_ohms_yt_from(pm, i, cnd=c)
+        constraint_tp_ohms_yt_to(pm, i, cnd=c)
+
+        PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
+
+        PMs.constraint_thermal_limit_from(pm, i, cnd=c)
+        PMs.constraint_thermal_limit_to(pm, i, cnd=c)
+    end
+end
+
+for i in PMs.ids(pm, :dcline), c in PMs.conductor_ids(pm)
+    PMs.constraint_dcline(pm, i, cnd=c)
+end
+
+for i in PMs.ids(pm, :trans)
+    constraint_tp_oltc(pm, i)
+end</code></pre><h2><a class="nav-anchor" id="Optimal-Power-Flow-(OPF)-with-Load-Models-(LM)-1" href="#Optimal-Power-Flow-(OPF)-with-Load-Models-(LM)-1">Optimal Power Flow (OPF) with Load Models (LM)</a></h2><p>Unlike <code>tp_opf</code>, which models all loads as constant power loads, this problem specification additionally supports loads proportional to the voltage magnitude (a.k.a. constant current) and the square of the voltage magnitude (a.k.a. constant impedance). Each load now has associated active and reactive power variables. In <code>tp_opf</code>, loads are directly added as parameters in KCL.</p><h3><a class="nav-anchor" id="Objective-2" href="#Objective-2">Objective</a></h3><pre><code class="language-julia">objective_min_fuel_cost(pm)</code></pre><h3><a class="nav-anchor" id="Variables-2" href="#Variables-2">Variables</a></h3><pre><code class="language-julia">variable_tp_voltage(pm)
+variable_tp_branch_flow(pm)
+
+for c in PMs.conductor_ids(pm)
+    PMs.variable_generation(pm, cnd=c)
+    PMs.variable_dcline_flow(pm, cnd=c)
+end
+variable_tp_trans_flow(pm)
+variable_tp_oltc_tap(pm)</code></pre><h3><a class="nav-anchor" id="Constraints-2" href="#Constraints-2">Constraints</a></h3><pre><code class="language-julia">constraint_tp_model_voltage(pm)
+
+for i in PMs.ids(pm, :ref_buses)
+    constraint_tp_theta_ref(pm, i)
+end
+
+for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
+    constraint_tp_power_balance_shunt_trans_load(pm, i, cnd=c)
+end
+
+for id in PMs.ids(pm, :load)
+    model = PMs.ref(pm, pm.cnw, :load, id, &quot;model&quot;)
+    if model==&quot;constant_power&quot;
+        constraint_tp_load_power_setpoint(pm, id)
+    elseif model==&quot;proportional_vm&quot;
+        constraint_tp_load_power_prop_vm(pm, id)
+    elseif model==&quot;proportional_vmsqr&quot;
+        constraint_tp_load_power_prop_vmsqr(pm, id)
+    else
+        Memento.@error(LOGGER, &quot;Unknown model $model for load $id.&quot;)
+    end
+end
+
+for i in PMs.ids(pm, :branch)
+    for c in PMs.conductor_ids(pm)
+        constraint_tp_ohms_yt_from(pm, i, cnd=c)
+        constraint_tp_ohms_yt_to(pm, i, cnd=c)
+
+        PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
+
+        PMs.constraint_thermal_limit_from(pm, i, cnd=c)
+        PMs.constraint_thermal_limit_to(pm, i, cnd=c)
+    end
+end
+
+for i in PMs.ids(pm, :dcline), c in PMs.conductor_ids(pm)
+    PMs.constraint_dcline(pm, i, cnd=c)
+end
+
+for i in PMs.ids(pm, :trans)
+    constraint_tp_trans(pm, i)
+end</code></pre><h2><a class="nav-anchor" id="Power-Flow-(PF)-with-Load-Models-(LM)-1" href="#Power-Flow-(PF)-with-Load-Models-(LM)-1">Power Flow (PF) with Load Models (LM)</a></h2><p>Unlike <code>tp_pf</code>, which models all loads as constant power loads, this problem specification additionally supports loads proportional to the voltage magnitude (a.k.a. constant current) and the square of the voltage magnitude (a.k.a. constant impedance). Each load now has associated active and reactive power variables. In <code>tp_pf</code>, loads are directly added as parameters in KCL.</p><h3><a class="nav-anchor" id="Variables-3" href="#Variables-3">Variables</a></h3><pre><code class="language-julia">variable_tp_voltage(pm, bounded=false)
+variable_tp_branch_flow(pm, bounded=false)
+
+for c in PMs.conductor_ids(pm)
+    PMs.variable_generation(pm, bounded=false, cnd=c)
+    variable_tp_load(pm, cnd=c)
+    PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
+end
+
+variable_tp_trans_flow(pm, bounded=false)</code></pre><h3><a class="nav-anchor" id="Constraints-3" href="#Constraints-3">Constraints</a></h3><pre><code class="language-julia">constraint_tp_model_voltage(pm, bounded=false)
+
+for (i,bus) in PMs.ref(pm, :ref_buses)
+    constraint_tp_theta_ref(pm, i)
+
+    for c in PMs.conductor_ids(pm)
+        @assert bus[&quot;bus_type&quot;] == 3
+        PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
+    end
+end
+
+for (i,bus) in PMs.ref(pm, :bus), c in PMs.conductor_ids(pm)
+    constraint_tp_power_balance_shunt_trans_load(pm, i, cnd=c)
+
+    # PV Bus Constraints
+    if length(PMs.ref(pm, :bus_gens, i)) &gt; 0 &amp;&amp; !(i in PMs.ids(pm,:ref_buses))
+        # this assumes inactive generators are filtered out of bus_gens
+        @assert bus[&quot;bus_type&quot;] == 2
+
+        PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
+        for j in PMs.ref(pm, :bus_gens, i)
+            PMs.constraint_active_gen_setpoint(pm, j, cnd=c)
+        end
+    end
+end
+
+for id in PMs.ids(pm, :load)
+    model = PMs.ref(pm, pm.cnw, :load, id, &quot;model&quot;)
+    if model==&quot;constant_power&quot;
+        constraint_tp_load_power_setpoint(pm, id)
+    elseif model==&quot;proportional_vm&quot;
+        constraint_tp_load_power_prop_vm(pm, id)
+    elseif model==&quot;proportional_vmsqr&quot;
+        constraint_tp_load_power_prop_vmsqr(pm, id)
+    else
+        Memento.@error(LOGGER, &quot;Unknown model $model for load $id.&quot;)
+    end
+end
+
+for i in PMs.ids(pm, :branch), c in PMs.conductor_ids(pm)
+    constraint_tp_ohms_yt_from(pm, i, cnd=c)
+    constraint_tp_ohms_yt_to(pm, i, cnd=c)
+    # PMs.constraint_ohms_yt_from(pm, i, cnd=c)
+    # PMs.constraint_ohms_yt_to(pm, i, cnd=c)
+end
+
+for (i,dcline) in PMs.ref(pm, :dcline), c in PMs.conductor_ids(pm)
+
+    PMs.constraint_active_dcline_setpoint(pm, i, cnd=c)
+
+    f_bus = PMs.ref(pm, :bus)[dcline[&quot;f_bus&quot;]]
+    if f_bus[&quot;bus_type&quot;] == 1
+        PMs.constraint_voltage_magnitude_setpoint(pm, f_bus[&quot;index&quot;], cnd=c)
+    end
+
+    t_bus = PMs.ref(pm, :bus)[dcline[&quot;t_bus&quot;]]
+    if t_bus[&quot;bus_type&quot;] == 1
+        PMs.constraint_voltage_magnitude_setpoint(pm, t_bus[&quot;index&quot;], cnd=c)
+    end
+end
+
+for i in PMs.ids(pm, :trans)
+    constraint_tp_trans(pm, i)
+end</code></pre><h2><a class="nav-anchor" id="Minimal-Load-Delta-(MLD)-Problem-Specification-1" href="#Minimal-Load-Delta-(MLD)-Problem-Specification-1">Minimal Load Delta (MLD) Problem Specification</a></h2><p>Load shed (continuous) problem. See &quot;Relaxations of AC Maximal Load Delivery for Severe Contingency Analysis&quot; by C. Coffrin <em>et al.</em> (DOI: <a href="https://ieeexplore.ieee.org/document/8494809">10.1109/TPWRS.2018.2876507</a>) for single-phase case.</p><h3><a class="nav-anchor" id="Variables-4" href="#Variables-4">Variables</a></h3><div>\[\begin{align}
+\mbox{variables: } &amp; \nonumber \\
+&amp; z^v_i \in \{0,1\}\ \ \forall i \in N \mbox{ - bus voltage on/off variable} \\
+&amp; z^g_i \in \{0,1\}\ \ \forall i \in G \mbox{ - generator on/off variable} \\
+&amp; z^{b}_i \in \{0,1\}\ \ \forall i \in B\mbox{ - storage on/off variable} \\
+&amp; z^d_i \in (0,1)\ \ \forall i \in L \mbox{ - continuous load shedding variable} \\
+&amp; z^s_i \in (0,1)\ \ \forall i \in H \mbox{ - continuous shunt shedding variable}
+\end{align}\]</div><h3><a class="nav-anchor" id="Objective-3" href="#Objective-3">Objective</a></h3><div>\[\begin{align}
+\mbox{minimize: }\left (
+\sum_{\substack{i\in N,c\in C}}{10 \left (1-z^v_i \right )} + \sum_{\substack{i\in L,c\in C}}{10 \omega_{i,c}\left |\Re{\left (S^d_i\right )}\right |\left ( 1-z^d_i \right ) } + \sum_{\substack{i\in H,c\in C}}{\left | \Re{\left (S^s_i \right )}\right | \left (1-z^s_i \right ) } + \sum_{\substack{i\in G,c\in C}}{\Delta^g_i } + \sum_{\substack{i\in B,c\in C}}{\Delta^b_i} \right )
+\end{align}\]</div><p>where</p><div>\[\begin{align}
+\Delta^g_i &amp;&gt;= \left [\Re{\left (S^g_{i}(0) \right )} - \Re{\left (S^g_i \right )} \right ] \\
+\Delta^g_i &amp;&gt;= -\left [\Re{\left (S^g_{i}(0) \right )} - \Re{\left (S^g_i \right )} \right ] \\
+\Delta^b_i &amp;&gt;= \left [\Re{\left (S^b_{i}(0) \right )} - \Re{\left (S^b_i \right )} \right ] \\
+\Delta^b_i &amp;&gt;= -\left [\Re{\left (S^b_{i}(0) \right )} - \Re{\left (S^b_i \right )} \right ]
+\end{align}\]</div><h3><a class="nav-anchor" id="Constraints-4" href="#Constraints-4">Constraints</a></h3><div>\[\begin{align}
+\mbox{subject to: } &amp; \nonumber \\
+&amp; z^v_i v^l_{i,c} \leq \left | V_{i,c} \right | \leq z_i^v v^u_{i,c}\ \ \forall i \in N,\forall c \in C \\
+&amp; z^g_i S^{gl}_{i,c} \leq S^g_{i,c} \leq z^g_i S^{gu}_{i,c}\ \ \forall i \in G,\forall c \in C \\
+&amp; \sum_{\substack{k\in G_i,c\in C}} S^g_{k,c} - \sum_{\substack{k\in L_i,c\in C}} z^d_k S^d_{k,c}- \sum_{\substack{k\in H_i,c\in C}} z^s_k Y^s_{k,c}\left | V_{i,c} \right |^2 \nonumber \\
+&amp; = \sum_{\substack{(i,j)\in E_i\cup E_i^R,c\in C}} S_{ij,c}\ \forall i \in N
+\end{align}\]</div><footer><hr/><a class="previous" href="../formulations/"><span class="direction">Previous</span><span class="title">Network Formulations</span></a><a class="next" href="../library/"><span class="direction">Next</span><span class="title">Modeling Components</span></a></footer></article></body></html>
