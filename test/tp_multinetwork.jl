@@ -2,7 +2,7 @@
 
     @testset "opf with storage case" begin
         mp_data = PowerModels.parse_file("../test/data/matpower/case5_strg.m")
-        PowerModels.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         mn_mp_data = PowerModels.replicate(mp_data, 5)
 
         @testset "test ac polar opf" begin

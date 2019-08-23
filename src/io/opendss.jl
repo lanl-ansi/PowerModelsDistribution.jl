@@ -664,15 +664,11 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["br_r"] = _PMs.MultiConductorMatrix(rmatrix * defaults["length"] / Zbase)
             branchDict["br_x"] = _PMs.MultiConductorMatrix(xmatrix * defaults["length"] / Zbase)
 
-            # CHECK: Do we need to reformulate to use a matrix instead of a vector for g, b?
-            branchDict["g_fr"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
-            branchDict["g_to"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
+            branchDict["g_fr"] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>_parse_array(0.0, nodes, nconductors)))
+            branchDict["g_to"] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>_parse_array(0.0, nodes, nconductors)))
 
-            if !isdiag(cmatrix)
-                Memento.info(_LOGGER, "Only diagonal elements of cmatrix are used to obtain branch values `b_fr/to`")
-            end
-            branchDict["b_fr"] = _PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
-            branchDict["b_to"] = _PMs.MultiConductorVector(diag(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0))
+            branchDict["b_fr"] = _PMs.MultiConductorMatrix(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0)
+            branchDict["b_to"] = _PMs.MultiConductorMatrix(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0)
 
             # TODO: pick a better value for emergamps
             branchDict["rate_a"] = _PMs.MultiConductorVector(_parse_array(defaults["normamps"], nodes, nconductors))
@@ -962,6 +958,10 @@ function _dss2pmd_reactor!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
                 reactDict["b_fr"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
                 reactDict["b_to"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
 
+                for key in ["g_fr", "g_to", "b_fr", "b_to"]
+                    reactDict[key] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>reactDict[key].values))
+                end
+
                 reactDict["rate_a"] = _PMs.MultiConductorVector(_parse_array(defaults["normamps"], nodes, nconductors))
                 reactDict["rate_b"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
                 reactDict["rate_c"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
@@ -1180,8 +1180,8 @@ function _decompose_transformers!(pmd_data; import_all::Bool=false)
                 pmd_data, vbus_tr["index"], vbus_br["index"],
                 vbase=1.0,
                 br_r=trans["rs"][w],
-                g_fr=diag(trans["gsh"][w]),
-                b_fr=diag(trans["bsh"][w]),
+                g_fr=trans["gsh"][w],
+                b_fr=trans["bsh"][w],
                 rate_a=rate_a,
                 rate_b=rate_b,
                 rate_c=rate_c,
@@ -1254,11 +1254,7 @@ function _create_vbranch!(pmd_data, f_bus::Int, t_bus::Int; name="", source_id="
     vbranch["source_id"] = "virtual_branch.$name"
     for k in [:br_r, :br_x, :g_fr, :g_to, :b_fr, :b_to]
         if !haskey(kwargs, k)
-            if k in [:br_r, :br_x]
-                vbranch[string(k)] = _PMs.MultiConductorMatrix(zeros(ncnd, ncnd))
-            else
-                vbranch[string(k)] = _PMs.MultiConductorVector(zeros(ncnd))
-            end
+            vbranch[string(k)] = _PMs.MultiConductorMatrix(zeros(ncnd, ncnd))
         else
             if k in [:br_r, :br_x]
                 vbranch[string(k)] = kwargs[k]./zbase
@@ -1337,10 +1333,18 @@ function _rm_redundant_pd_elements!(pmd_data; buses=keys(pmd_data["bus"]), branc
                 shunts_g[kp_bus] =  _PMs.MultiConductorVector(zeros(3))
                 shunts_b[kp_bus] =  _PMs.MultiConductorVector(zeros(3))
             end
-            shunts_g[kp_bus] .+= br["g_fr"]
-            shunts_g[kp_bus] .+= br["g_to"]
-            shunts_b[kp_bus] .+= br["b_fr"]
-            shunts_b[kp_bus] .+= br["b_to"]
+
+            # bus shunts are diagonal, but branch shunts can b e full matrices
+            # ensure no data is lost by only keeping the diagonal
+            # this should not be the case for the current transformer parsing
+            for key in ["g_fr", "g_to", "b_fr", "b_to"]
+                @assert(all(br[key]-diagm(0=>diag(br[key])).==0))
+            end
+
+            shunts_g[kp_bus] .+= diag(br["g_fr"])
+            shunts_g[kp_bus] .+= diag(br["g_to"])
+            shunts_b[kp_bus] .+= diag(br["b_fr"])
+            shunts_b[kp_bus] .+= diag(br["b_to"])
             # remove branch from pmd_data
             delete!(pmd_data["branch"], string(br_id))
             if is_shorted && is_reducable

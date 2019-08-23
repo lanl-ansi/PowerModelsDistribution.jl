@@ -25,3 +25,15 @@ function _roll(array::Array{T, 1}, idx::Int; right=true) where T <: Number
 
     return out
 end
+
+
+"Corrects the shunts from vectors to matrices after the call to PMs."
+function make_multiconductor!(mp_data, n_conductors::Int)
+    PowerModels.make_multiconductor!(mp_data, n_conductors)
+    # replace matrix shunts by matrices instead of vectors
+    for (_, br) in mp_data["branch"]
+        for key in ["b_fr", "b_to", "g_fr", "g_to"]
+            br[key] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>br[key].values))
+        end
+    end
+end

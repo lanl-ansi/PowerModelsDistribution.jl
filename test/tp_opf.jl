@@ -2,7 +2,7 @@
 @testset "test make multi-phase" begin
     @testset "3-bus 3-phase case" begin
         mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case3.m")
-        PMs.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -16,7 +16,7 @@
 
     @testset "5-bus 5-phase ac polar case" begin
         mp_data = PMs.parse_file("../test/data/matpower/case5.m")
-        PMs.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -29,7 +29,7 @@
 
     @testset "5-bus 5-phase ac rectangular case" begin
         mp_data = PMs.parse_file("../test/data/matpower/case5.m")
-        PMs.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.ACRPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -42,7 +42,7 @@
 
     @testset "5-bus 5-phase soc case" begin
         mp_data = PMs.parse_file("../test/data/matpower/case5.m")
-        PMs.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -54,7 +54,7 @@
 
     @testset "30-bus 3-phase ac polar case" begin
         mp_data = PMs.parse_file("../test/data/matpower/case30.m")
-        PMs.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -68,7 +68,7 @@
 
     @testset "30-bus 3-phase ac rectangular case" begin
         mp_data = PMs.parse_file("../test/data/matpower/case30.m")
-        PMs.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.ACRPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -82,7 +82,7 @@
 
     @testset "30-bus 3-phase soc case" begin
         mp_data = PMs.parse_file("../test/data/matpower/case30.m")
-        PMs.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -301,7 +301,7 @@ end
 @testset "test ac polar polar opf" begin
     @testset "30-bus make-3-phase case" begin
         mp_data = PMs.parse_file("../test/data/matpower/case30.m")
-        PMs.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -329,7 +329,7 @@ end
 @testset "test ac rectangular opf" begin
     @testset "30-bus make-3-phase case" begin
         mp_data = PMs.parse_file("../test/data/matpower/case30.m")
-        PMs.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.ACRPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -357,7 +357,7 @@ end
 @testset "test dc opf" begin
      @testset "30-bus make-3-phase case" begin
         mp_data = PMs.parse_file("../test/data/matpower/case30.m")
-        PMs.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.DCPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -385,7 +385,7 @@ end
 @testset "test nfa opf" begin
      @testset "30-bus make-3-phase case" begin
         mp_data = PMs.parse_file("../test/data/matpower/case30.m")
-        PMs.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.NFAPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -420,7 +420,7 @@ end
 @testset "test soc (BIM) opf" begin
      @testset "30-bus make-3-phase case" begin
         mp_data = PMs.parse_file("../test/data/matpower/case30.m")
-        PMs.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED

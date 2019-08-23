@@ -144,8 +144,8 @@ function constraint_tp_model_voltage_magnitude_difference(pm::_PMs.GenericPowerM
 
     r = branch["br_r"].values
     x = branch["br_x"].values
-    g_sh_fr = diagm(0 => branch["g_fr"].values)
-    b_sh_fr = diagm(0 => branch["b_fr"].values)
+    g_sh_fr = branch["g_fr"].values
+    b_sh_fr = branch["b_fr"].values
     tm = branch["tap"].values
 
     constraint_tp_model_voltage_magnitude_difference(pm, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
@@ -159,8 +159,8 @@ function constraint_tp_model_current(pm::_PMs.GenericPowerModel{T}; nw::Int=pm.c
         t_bus = branch["t_bus"]
         f_idx = (i, f_bus, t_bus)
 
-        g_sh_fr = diagm(0 => branch["g_fr"].values)
-        b_sh_fr = diagm(0 => branch["b_fr"].values)
+        g_sh_fr = branch["g_fr"].values
+        b_sh_fr = branch["b_fr"].values
 
         constraint_tp_model_current(pm, nw, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
     end
@@ -177,10 +177,10 @@ function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel, i::Int; nw::Int=p
 
     r = branch["br_r"].values
     x = branch["br_x"].values
-    g_sh_fr = diagm(0 => branch["g_fr"]).values
-    g_sh_to = diagm(0 => branch["g_to"]).values
-    b_sh_fr = diagm(0 => branch["b_fr"]).values
-    b_sh_to = diagm(0 => branch["b_to"]).values
+    g_sh_fr = branch["g_fr"].values
+    g_sh_to = branch["g_to"].values
+    b_sh_fr = branch["b_fr"].values
+    b_sh_to = branch["b_to"].values
 
     constraint_tp_flow_losses(pm::_PMs.GenericPowerModel, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
 end
@@ -497,4 +497,19 @@ function constraint_tp_voltage_magnitude_sqr_on_off(pm::_PMs.GenericPowerModel, 
     bus = _PMs.ref(pm, nw, :bus, i)
 
     constraint_tp_voltage_magnitude_sqr_on_off(pm, nw, cnd, i, bus["vmin"][cnd], bus["vmax"][cnd])
+end
+
+
+"This is duplicated at PMD level to correctly handle the indexing of the shunts."
+function constraint_mc_voltage_angle_difference(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
+    branch = _PMs.ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+    pair = (f_bus, t_bus)
+    buspair = _PMs.ref(pm, nw, :buspairs, pair)
+
+    if buspair["branch"] == i
+        constraint_mc_voltage_angle_difference(pm, nw, f_idx, buspair["angmin"], buspair["angmax"])
+    end
 end

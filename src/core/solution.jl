@@ -194,8 +194,8 @@ function add_rank_branch_flow!(sol, pm::_PMs.GenericPowerModel{T}; tol = 1e-6) w
     for (nw, network) in pm._PMs.ref[:nw]
         buses       = _PMs.ref(pm, nw, :bus)
         for (b, branch) in _PMs.ref(pm, nw, :branch)
-            g_fr = diagm(0 => branch["g_fr"].values)
-            b_fr = diagm(0 => branch["b_fr"].values)
+            g_fr = branch["g_fr"].values
+            b_fr = branch["b_fr"].values
             y_fr = g_fr + im* b_fr
 
             fbus = branch["f_bus"]
@@ -261,11 +261,11 @@ function add_original_variables!(sol, pm::_PMs.GenericPowerModel)
 
             if !isempty(candidate_arcs_from)
                 (l,i,j) = arc = candidate_arcs_from[1]
-                g_fr = diagm(0 => branches[l]["g_fr"].values)
-                b_fr = diagm(0 => branches[l]["b_fr"].values)
+                g_fr = branches[l]["g_fr"].values
+                b_fr = branches[l]["b_fr"].values
                 y_fr = g_fr + im* b_fr
-                g_to = diagm(0 => branches[l]["g_to"].values)
-                b_to = diagm(0 => branches[l]["b_to"].values)
+                g_to = branches[l]["g_to"].values
+                b_to = branches[l]["b_to"].values
                 y_to = g_to + im* b_to
                 r = branches[l]["br_r"].values
                 x = branches[l]["br_x"].values
@@ -298,11 +298,11 @@ function add_original_variables!(sol, pm::_PMs.GenericPowerModel)
 
             elseif !isempty(candidate_arcs_to)
                 (l,i,j) = arc = candidate_arcs_to[1]
-                g_fr = diagm(0 => branches[l]["g_to"].values)
-                b_fr = diagm(0 => branches[l]["b_to"].values)
+                g_fr = branches[l]["g_to"].values
+                b_fr = branches[l]["b_to"].values
                 y_fr = g_fr + im* b_fr
-                g_to = diagm(0 => branches[l]["g_fr"].values)
-                b_to = diagm(0 => branches[l]["b_fr"].values)
+                g_to = branches[l]["g_fr"].values
+                b_to = branches[l]["b_fr"].values
                 y_to = g_to + im* b_to
                 r = branches[l]["br_r"].values
                 x = branches[l]["br_x"].values
