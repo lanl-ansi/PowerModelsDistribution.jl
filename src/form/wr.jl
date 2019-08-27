@@ -75,7 +75,7 @@ end
 
 
 "power balance constraint with line shunts and transformers for relaxed WR forms"
-function constraint_mc_power_balance_shunt_trans(pm::_PMs.AbstractWRModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_power_balance(pm::_PMs.AbstractWRModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
     w    = _PMs.var(pm, nw, c, :w, i)
     pg   = _PMs.var(pm, nw, c, :pg)
     qg   = _PMs.var(pm, nw, c, :qg)

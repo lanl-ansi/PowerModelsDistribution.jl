@@ -2,7 +2,7 @@
 # that do not converge using the standard formulations
 ""
 function run_mc_opf_pbs(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_mc_opf_pbs; multiconductor=true, solution_builder=solution_pbs!, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_mc_opf_pbs; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_pbs!, kwargs...)
 end
 
 
@@ -16,6 +16,7 @@ end
 function post_mc_opf_pbs(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm)
     variable_mc_branch_flow(pm)
+    variable_mc_trans_flow(pm)
 
     for c in _PMs.conductor_ids(pm)
         variable_mc_bus_power_slack(pm, cnd=c)
@@ -30,7 +31,7 @@ function post_mc_opf_pbs(pm::_PMs.AbstractPowerModel)
     end
 
     for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
-        constraint_mc_power_balance_shunt_slack(pm, i, cnd=c)
+        constraint_mc_power_balance_slack(pm, i, cnd=c)
     end
 
     for i in _PMs.ids(pm, :branch), c in _PMs.conductor_ids(pm)
@@ -53,7 +54,7 @@ end
 
 ""
 function run_mc_pf_pbs(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_mc_pf_pbs; multiconductor=true, solution_builder=solution_pbs!, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_mc_pf_pbs; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_pbs!, kwargs...)
 end
 
 
@@ -67,6 +68,7 @@ end
 function post_mc_pf_pbs(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm, bounded=false)
     variable_mc_branch_flow(pm, bounded=false)
+    variable_mc_trans_flow(pm, bounded=false)
 
     for c in _PMs.conductor_ids(pm)
         variable_mc_bus_power_slack(pm, cnd=c)
@@ -86,7 +88,7 @@ function post_mc_pf_pbs(pm::_PMs.AbstractPowerModel)
     end
 
     for (i,bus) in _PMs.ref(pm, :bus), c in _PMs.conductor_ids(pm)
-        constraint_mc_power_balance_shunt_slack(pm, i, cnd=c)
+        constraint_mc_power_balance_slack(pm, i, cnd=c)
 
         # PV Bus Constraints
         if length(_PMs.ref(pm, :bus_gens, i)) > 0 && !(i in _PMs.ids(pm,:ref_buses))

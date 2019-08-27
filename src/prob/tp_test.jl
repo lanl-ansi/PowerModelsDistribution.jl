@@ -36,7 +36,7 @@ function post_mc_strg_opf(pm::_PMs.AbstractPowerModel)
     end
 
     for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
-        constraint_mc_power_balance_shunt_storage_trans(pm, i, cnd=c)
+        constraint_mc_power_balance_storage(pm, i, cnd=c)
     end
 
     for i in _PMs.ids(pm, :storage)

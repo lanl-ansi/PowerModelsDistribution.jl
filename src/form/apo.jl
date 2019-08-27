@@ -6,7 +6,7 @@ end
 
 
 "power balanace constraint with line shunts and transformers, active power only"
-function constraint_mc_power_balance_shunt_trans(pm::_PMs.AbstractActivePowerModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_power_balance(pm::_PMs.AbstractActivePowerModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
     pg   = _PMs.var(pm, nw, c, :pg)
     p    = _PMs.var(pm, nw, c, :p)
     p_dc = _PMs.var(pm, nw, c, :p_dc)
@@ -29,7 +29,7 @@ end
 
 
 "power balance constraint with line shunts, storage, and transformers, active power only"
-function constraint_mc_power_balance_shunt_storage_trans(pm::_PMs.AbstractActivePowerModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_power_balance_storage(pm::_PMs.AbstractActivePowerModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
     p    = _PMs.var(pm, nw, c, :p)
     pg   = _PMs.var(pm, nw, c, :pg)
     ps   = _PMs.var(pm, nw, c, :ps)

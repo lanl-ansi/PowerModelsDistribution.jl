@@ -58,7 +58,7 @@ end
 
 
 ""
-function constraint_mc_power_balance_shunt_slack(pm::_PMs.AbstractACRModel, n::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_power_balance_slack(pm::_PMs.AbstractACRModel, n::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
     vr = _PMs.var(pm, n, c, :vr, i)
     vi = _PMs.var(pm, n, c, :vi, i)
     p_slack = _PMs.var(pm, n, c, :p_slack, i)
@@ -69,14 +69,16 @@ function constraint_mc_power_balance_shunt_slack(pm::_PMs.AbstractACRModel, n::I
     qg = _PMs.var(pm, n, c, :qg)
     p_dc = _PMs.var(pm, n, c, :p_dc)
     q_dc = _PMs.var(pm, n, c, :q_dc)
+    pt = _PMs.var(pm, n, c, :pt)
+    qt = _PMs.var(pm, n, c, :qt)
 
-    _PMs.con(pm, n, c, :kcl_p)[i] = JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*(vr^2 + vi^2) + p_slack)
-    _PMs.con(pm, n, c, :kcl_q)[i] = JuMP.@constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*(vr^2 + vi^2) + q_slack)
+    _PMs.con(pm, n, c, :kcl_p)[i] = JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(pt[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*(vr^2 + vi^2) + p_slack)
+    _PMs.con(pm, n, c, :kcl_q)[i] = JuMP.@constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(qt[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*(vr^2 + vi^2) + q_slack)
 end
 
 
 ""
-function constraint_mc_power_balance_shunt_trans(pm::_PMs.AbstractACRModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_power_balance(pm::_PMs.AbstractACRModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
     vr = _PMs.var(pm, nw, c, :vr, i)
     vi = _PMs.var(pm, nw, c, :vi, i)
     p = _PMs.var(pm, nw, c, :p)
@@ -94,7 +96,7 @@ end
 
 
 ""
-function constraint_mc_power_balance_shunt_trans_load(pm::_PMs.AbstractACRModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_loads, bus_gs, bus_bs)
+function constraint_mc_power_balance_load(pm::_PMs.AbstractACRModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_loads, bus_gs, bus_bs)
     vr = _PMs.var(pm, nw, c, :vr, i)
     vi = _PMs.var(pm, nw, c, :vi, i)
     p = _PMs.var(pm, nw, c, :p)

@@ -46,7 +46,7 @@ function post_mc_pf(pm::_PMs.AbstractPowerModel)
     end
 
     for (i,bus) in _PMs.ref(pm, :bus), c in _PMs.conductor_ids(pm)
-        constraint_mc_power_balance_shunt_trans(pm, i, cnd=c)
+        constraint_mc_power_balance(pm, i, cnd=c)
 
         # PV Bus Constraints
         if length(_PMs.ref(pm, :bus_gens, i)) > 0 && !(i in _PMs.ids(pm,:ref_buses))

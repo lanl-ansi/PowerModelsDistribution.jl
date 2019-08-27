@@ -78,7 +78,7 @@ function post_mc_mld(pm::_PMs.AbstractPowerModel)
     end
 
     for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
-        constraint_mc_power_balance_shunt_trans_shed(pm, i, cnd=c)
+        constraint_mc_power_balance_shed(pm, i, cnd=c)
     end
 
     for i in _PMs.ids(pm, :branch)
@@ -138,7 +138,7 @@ function post_mc_mld_strg(pm::_PMs.AbstractPowerModel)
     end
 
     for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
-        constraint_mc_power_balance_shunt_trans_shed(pm, i, cnd=c)
+        constraint_mc_power_balance_shed(pm, i, cnd=c)
     end
 
     for i in _PMs.ids(pm, :storage)
@@ -204,7 +204,7 @@ function post_mc_mld_bf(pm::_PMs.AbstractPowerModel)
     end
 
     for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
-        constraint_mc_power_balance_shunt_trans_shed(pm, i, cnd=c)
+        constraint_mc_power_balance_shed(pm, i, cnd=c)
     end
 
     for i in _PMs.ids(pm, :branch)
@@ -260,7 +260,7 @@ function post_mc_mld_uc(pm::_PMs.AbstractPowerModel)
     end
 
     for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
-        constraint_mc_power_balance_shunt_trans_shed(pm, i, cnd=c)
+        constraint_mc_power_balance_shed(pm, i, cnd=c)
     end
 
     for i in _PMs.ids(pm, :branch)
