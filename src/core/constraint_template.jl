@@ -187,15 +187,6 @@ end
 
 
 ""
-function constraint_mc_storage_exchange(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    storage = _PMs.ref(pm, nw, :storage, i)
-
-    _PMs.constraint_storage_complementarity_nl(pm, nw, i)
-    _PMs.constraint_storage_loss(pm, nw, i, storage["storage_bus"], _PMs.conductor_ids(pm), storage["r"], storage["x"], storage["p_loss"], storage["q_loss"])
-end
-
-
-""
 function constraint_mc_trans(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     if _PMs.ref(pm, pm.cnw, :conductors)!=3
         Memento.error(_LOGGER, "Transformers only work with networks with three conductors.")

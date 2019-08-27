@@ -41,7 +41,8 @@ function post_mc_strg_opf(pm::_PMs.AbstractPowerModel)
 
     for i in _PMs.ids(pm, :storage)
         _PMs.constraint_storage_state(pm, i)
-        constraint_mc_storage_exchange(pm, i)
+        _PMs.constraint_storage_complementarity_nl(pm, i)
+        _PMs.constraint_storage_loss(pm, i, conductors=_PMs.conductor_ids(pm))
         for c in _PMs.conductor_ids(pm)
             _PMs.constraint_storage_thermal_limit(pm, i, cnd=c)
         end
@@ -108,7 +109,9 @@ function post_mn_tp_strg_opf(pm::_PMs.AbstractPowerModel)
         end
 
         for i in _PMs.ids(pm, :storage, nw=n)
-            constraint_mc_storage_exchange(pm, i, nw=n)
+            _PMs.constraint_storage_state(pm, i, nw=n)
+            _PMs.constraint_storage_complementarity_nl(pm, i, nw=n)
+            _PMs.constraint_storage_loss(pm, i, conductors=_PMs.conductor_ids(pm), nw=n)
             for c in _PMs.conductor_ids(pm, nw=n)
                 _PMs.constraint_storage_thermal_limit(pm, i, cnd=c, nw=n)
             end

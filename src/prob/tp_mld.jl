@@ -143,8 +143,8 @@ function post_mc_mld_strg(pm::_PMs.AbstractPowerModel)
 
     for i in _PMs.ids(pm, :storage)
         _PMs.constraint_storage_state(pm, i)
-        constraint_mc_storage_exchange(pm, i)
-        _PMs.constraint_storage_on_off(pm,i)
+        _PMs.constraint_storage_complementarity_nl(pm, i)
+        _PMs.constraint_storage_loss(pm, i, conductors=_PMs.conductor_ids(pm))
         for c in _PMs.conductor_ids(pm)
             _PMs.constraint_storage_thermal_limit(pm, i, cnd=c)
         end
