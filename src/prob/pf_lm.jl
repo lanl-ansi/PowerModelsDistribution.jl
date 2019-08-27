@@ -1,11 +1,11 @@
 ""
-function run_ac_tp_pf_lm(data, solver; kwargs...)
+function run_ac_mc_pf_lm(data, solver; kwargs...)
     return run_mc_pf_lm(data, _PMs.ACPPowerModel, solver; kwargs...)
 end
 
 
 ""
-function run_dc_tp_opf_lm(data, solver; kwargs...)
+function run_dc_mc_opf_lm(data, solver; kwargs...)
     return run_mc_pf_lm(data, _PMs.DCPPowerModel, solver; kwargs...)
 end
 

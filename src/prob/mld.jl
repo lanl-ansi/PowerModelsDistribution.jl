@@ -25,7 +25,7 @@ end
 "Run Branch Flow Model Load Shedding Problem"
 function run_mc_mld_bf(data::Dict{String,Any}, model_type, solver; kwargs...)
     if model_type != LPLinUBFPowerModel
-        Memento.error(_LOGGER, "The problem type tp_mld_bf only supports a limited set of formulations at the moment")
+        Memento.error(_LOGGER, "The problem type mc_mld_bf only supports a limited set of formulations at the moment")
     end
     return _PMs.run_model(data, model_type, solver, post_mc_mld_bf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld_bf!, kwargs...)
 end
@@ -101,7 +101,7 @@ function post_mc_mld(pm::_PMs.AbstractPowerModel)
         constraint_mc_trans(pm, i)
     end
 
-    objective_tp_min_load_delta(pm)
+    objective_mc_min_load_delta(pm)
 end
 
 
@@ -170,7 +170,7 @@ function post_mc_mld_strg(pm::_PMs.AbstractPowerModel)
         constraint_mc_trans(pm, i)
     end
 
-    objective_tp_min_load_delta_strg(pm)
+    objective_mc_min_load_delta_strg(pm)
 end
 
 
@@ -227,7 +227,7 @@ function post_mc_mld_bf(pm::_PMs.AbstractPowerModel)
         constraint_mc_trans(pm, i)
     end
 
-    objective_tp_min_load_delta(pm)
+    objective_mc_min_load_delta(pm)
 end
 
 
@@ -283,5 +283,5 @@ function post_mc_mld_uc(pm::_PMs.AbstractPowerModel)
         constraint_mc_trans(pm, i)
     end
 
-    objective_tp_min_load_delta(pm)
+    objective_mc_min_load_delta(pm)
 end

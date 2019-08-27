@@ -1,27 +1,27 @@
 @testset "test ac polar pf" begin
     @testset "5-bus independent meshed network" begin
-        result = run_ac_tp_pf("../test/data/matlab/case5_i_m_b.m", ipopt_solver)
+        result = run_ac_mc_pf("../test/data/matlab/case5_i_m_b.m", ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 0.0; atol=1e-2)
     end
 
     @testset "5-bus coupled meshed network (a)" begin
-        result = run_ac_tp_pf("../test/data/matlab/case5_c_m_a.m", ipopt_solver)
+        result = run_ac_mc_pf("../test/data/matlab/case5_c_m_a.m", ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 0.0; atol=1e-2)
     end
 
     @testset "5-bus coupled meshed network (b)" begin
-        result = run_ac_tp_pf("../test/data/matlab/case5_c_m_b.m", ipopt_solver)
+        result = run_ac_mc_pf("../test/data/matlab/case5_c_m_b.m", ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 0.0; atol=1e-2)
     end
 
     @testset "5-bus independent radial w/ shunts" begin
-        result = run_ac_tp_pf("../test/data/matlab/case5_i_r_b.m", ipopt_solver)
+        result = run_ac_mc_pf("../test/data/matlab/case5_i_r_b.m", ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 0.0; atol=1e-2)
@@ -89,7 +89,7 @@
     end
 
     @testset "matrix branch shunts" begin
-        sol = PMD.run_ac_tp_pf_lm("../test/data/opendss/case_mxshunt.dss", ipopt_solver)
+        sol = PMD.run_ac_mc_pf_lm("../test/data/opendss/case_mxshunt.dss", ipopt_solver)
 
         # these results were obtained from OpenDSS; largest mismatch was 5E-9
         isapprox(sol["solution"]["bus"]["2"]["vm"][1], 0.9873988561202298, atol=1E-8)

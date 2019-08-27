@@ -2,7 +2,7 @@ import LinearAlgebra: diagm
 
 
 ""
-function _calc_tp_voltage_product_bounds(pm::_PMs.AbstractPowerModel, buspairs; nw::Int=pm.cnw)
+function _calc_mc_voltage_product_bounds(pm::_PMs.AbstractPowerModel, buspairs; nw::Int=pm.cnw)
     wr_min = Dict([(bp, -Inf) for bp in buspairs])
     wr_max = Dict([(bp,  Inf) for bp in buspairs])
     wi_min = Dict([(bp, -Inf) for bp in buspairs])
@@ -60,7 +60,7 @@ end
 
 
 ""
-function _calc_tp_trans_Tvi(pm::_PMs.AbstractPowerModel, i::Int; nw=pm.cnw)
+function _calc_mc_trans_Tvi(pm::_PMs.AbstractPowerModel, i::Int; nw=pm.cnw)
     trans = _PMs.ref(pm, nw, :trans,  i)
     # transformation matrices
     # Tv and Ti will be compositions of these

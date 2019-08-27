@@ -79,7 +79,7 @@ function variable_mc_voltage_product(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw
         # Off-diagonal bounds
         for c in _PMs.conductor_ids(pm)
             if c != cnd
-                wr_min, wr_max, wi_min, wi_max = _calc_tp_voltage_product_bounds(pm, bus_cnd)
+                wr_min, wr_max, wi_min, wi_max = _calc_mc_voltage_product_bounds(pm, bus_cnd)
                 for k in bus_cnd
                     JuMP.set_upper_bound(WR[k], wr_max[k])
                     JuMP.set_upper_bound(WI[k], wi_max[k])
@@ -301,13 +301,13 @@ end
 
 "Create variables for `active` and `reactive` storage injection"
 function variable_mc_on_off_storage(pm::_PMs.AbstractPowerModel; kwargs...)
-    variabe_tp_on_off_storage_active(pm; kwargs...)
+    variabe_mc_on_off_storage_active(pm; kwargs...)
     variable_mc_on_off_storage_reactive(pm; kwargs...)
 end
 
 
 "Create variables for `active` storage injection"
-function variabe_tp_on_off_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+function variabe_mc_on_off_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     inj_lb, inj_ub = _PMs.ref_calc_storage_injection_bounds(_PMs.ref(pm, nw, :storage), _PMs.ref(pm, nw, :bus), cnd)
 
     _PMs.var(pm, nw, cnd)[:ps] = JuMP.@variable(pm.model,

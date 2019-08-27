@@ -192,7 +192,7 @@ function constraint_mc_trans(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw
     if _PMs.ref(pm, pm.cnw, :conductors)!=3
         Memento.error(_LOGGER, "Transformers only work with networks with three conductors.")
     end
-    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = _calc_tp_trans_Tvi(pm, i)
+    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = _calc_mc_trans_Tvi(pm, i)
     f_bus = _PMs.ref(pm, :trans, i)["f_bus"]
     t_bus = _PMs.ref(pm, :trans, i)["t_bus"]
     tm = _PMs.ref(pm, :trans, i)["tm"]
@@ -208,7 +208,7 @@ function constraint_mc_oltc(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     if _PMs.ref(pm, pm.cnw, :conductors)!=3
         Memento.error(_LOGGER, "Transformers only work with networks with three conductors.")
     end
-    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = _calc_tp_trans_Tvi(pm, i)
+    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = _calc_mc_trans_Tvi(pm, i)
     trans = _PMs.ref(pm, :trans, i)
     f_bus = trans["f_bus"]
     t_bus = trans["t_bus"]

@@ -11,7 +11,7 @@ end
 
 
 "minimum load delta objective (continuous load shed)"
-function objective_tp_min_load_delta(pm::_PMs.AbstractPowerModel)
+function objective_mc_min_load_delta(pm::_PMs.AbstractPowerModel)
     for (n, nw_ref) in _PMs.nws(pm)
         for c in _PMs.conductor_ids(pm, n)
             _PMs.var(pm, n, c)[:delta_pg] = JuMP.@variable(pm.model,
@@ -42,7 +42,7 @@ end
 
 
 "minimum load delta objective (continuous load shed) with storage"
-function objective_tp_min_load_delta_strg(pm::_PMs.AbstractPowerModel)
+function objective_mc_min_load_delta_strg(pm::_PMs.AbstractPowerModel)
     for (n, nw_ref) in _PMs.nws(pm)
         for c in _PMs.conductor_ids(pm, n)
             _PMs.var(pm, n, c)[:delta_pg] = JuMP.@variable(pm.model,
@@ -85,7 +85,7 @@ end
 
 
 "maximum loadability objective (continuous load shed) with storage"
-function objective_tp_max_loadability_strg(pm::_PMs.AbstractPowerModel)
+function objective_mc_max_loadability_strg(pm::_PMs.AbstractPowerModel)
     load_weight = Dict(n => Dict(i => get(load, "weight", 1.0) for (i,load) in _PMs.ref(pm, n, :load)) for n in _PMs.nw_ids(pm))
     M = Dict(n => Dict(c => 10*maximum([load_weight[n][i]*abs(load["pd"][c]) for (i,load) in _PMs.ref(pm, n, :load)]) for c in _PMs.conductor_ids(pm, n)) for n in _PMs.nw_ids(pm))
 

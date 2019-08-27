@@ -75,19 +75,19 @@ end
 
 
 "multi-network opf with storage"
-function run_mn_tp_strg_opf(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, post_mn_tp_strg_opf; multiconductor=true, multinetwork=true, kwargs...)
+function run_mn_mc_strg_opf(data::Dict{String,Any}, model_type, solver; kwargs...)
+    return _PMs.run_model(data, model_type, solver, post_mn_mc_strg_opf; multiconductor=true, multinetwork=true, kwargs...)
 end
 
 
 ""
-function run_mn_tp_strg_opf(file::String, model_type, solver; kwargs...)
-    return run_mn_tp_strg_opf(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
+function run_mn_mc_strg_opf(file::String, model_type, solver; kwargs...)
+    return run_mn_mc_strg_opf(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
 end
 
 
 ""
-function post_mn_tp_strg_opf(pm::_PMs.AbstractPowerModel)
+function post_mn_mc_strg_opf(pm::_PMs.AbstractPowerModel)
     for (n, network) in _PMs.nws(pm)
         variable_mc_voltage(pm, nw=n)
         variable_mc_branch_flow(pm, nw=n)
