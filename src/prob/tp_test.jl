@@ -6,14 +6,14 @@
 ######
 
 "opf with storage"
-function run_mc_strg_opf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_mc_strg_opf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+function run_mc_strg_opf(data::Dict{String,Any}, model_type, solver; kwargs...)
+    return _PMs.run_model(data, model_type, solver, post_mc_strg_opf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
 end
 
 
 ""
-function run_mc_strg_opf(file::String, model_constructor, solver; kwargs...)
-    return run_mc_strg_opf(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
+function run_mc_strg_opf(file::String, model_type, solver; kwargs...)
+    return run_mc_strg_opf(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
 end
 
 
@@ -75,14 +75,14 @@ end
 
 
 "multi-network opf with storage"
-function run_mn_tp_strg_opf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_mn_tp_strg_opf; multiconductor=true, multinetwork=true, kwargs...)
+function run_mn_tp_strg_opf(data::Dict{String,Any}, model_type, solver; kwargs...)
+    return _PMs.run_model(data, model_type, solver, post_mn_tp_strg_opf; multiconductor=true, multinetwork=true, kwargs...)
 end
 
 
 ""
-function run_mn_tp_strg_opf(file::String, model_constructor, solver; kwargs...)
-    return run_mn_tp_strg_opf(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
+function run_mn_tp_strg_opf(file::String, model_type, solver; kwargs...)
+    return run_mn_tp_strg_opf(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
 end
 
 

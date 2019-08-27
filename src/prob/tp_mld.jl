@@ -1,51 +1,51 @@
 "Run load shedding problem"
-function run_mc_mld(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_mc_mld; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
+function run_mc_mld(data::Dict{String,Any}, model_type, solver; kwargs...)
+    return _PMs.run_model(data, model_type, solver, post_mc_mld; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
 end
 
 
 ""
-function run_mc_mld(file::String, model_constructor, solver; kwargs...)
-    return run_mc_mld(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
+function run_mc_mld(file::String, model_type, solver; kwargs...)
+    return run_mc_mld(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
 end
 
 
 "Run load shedding problem with storage"
-function run_mc_mld_strg(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_mc_mld_strg; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
+function run_mc_mld_strg(data::Dict{String,Any}, model_type, solver; kwargs...)
+    return _PMs.run_model(data, model_type, solver, post_mc_mld_strg; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
 end
 
 
 ""
-function run_mc_mld_strg(file::String, model_constructor, solver; kwargs...)
-    return run_mc_mld_strg(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
+function run_mc_mld_strg(file::String, model_type, solver; kwargs...)
+    return run_mc_mld_strg(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
 end
 
 
 "Run Branch Flow Model Load Shedding Problem"
-function run_mc_mld_bf(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    if model_constructor != LPLinUBFPowerModel
+function run_mc_mld_bf(data::Dict{String,Any}, model_type, solver; kwargs...)
+    if model_type != LPLinUBFPowerModel
         Memento.error(_LOGGER, "The problem type tp_mld_bf only supports a limited set of formulations at the moment")
     end
-    return _PMs.run_model(data, model_constructor, solver, post_mc_mld_bf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld_bf!, kwargs...)
+    return _PMs.run_model(data, model_type, solver, post_mc_mld_bf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld_bf!, kwargs...)
 end
 
 
 ""
-function run_mc_mld_bf(file::String, model_constructor, solver; kwargs...)
-    return run_mc_mld_bf(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
+function run_mc_mld_bf(file::String, model_type, solver; kwargs...)
+    return run_mc_mld_bf(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
 end
 
 
 "Run unit commitment load shedding problem (!relaxed)"
-function run_mc_mld_uc(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_mc_mld_uc; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
+function run_mc_mld_uc(data::Dict{String,Any}, model_type, solver; kwargs...)
+    return _PMs.run_model(data, model_type, solver, post_mc_mld_uc; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
 end
 
 
 ""
-function run_mc_mld_uc(file::String, model_constructor, solver; kwargs...)
-    return run_mc_mld(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
+function run_mc_mld_uc(file::String, model_type, solver; kwargs...)
+    return run_mc_mld(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
 end
 
 

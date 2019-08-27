@@ -1,14 +1,14 @@
 # These problem formulations are used to debug Three Phase datasets
 # that do not converge using the standard formulations
 ""
-function run_mc_opf_pbs(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_mc_opf_pbs; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_pbs!, kwargs...)
+function run_mc_opf_pbs(data::Dict{String,Any}, model_type, solver; kwargs...)
+    return _PMs.run_model(data, model_type, solver, post_mc_opf_pbs; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_pbs!, kwargs...)
 end
 
 
 ""
-function run_mc_opf_pbs(file::String, model_constructor, solver; kwargs...)
-    return run_mc_opf_pbs(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
+function run_mc_opf_pbs(file::String, model_type, solver; kwargs...)
+    return run_mc_opf_pbs(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
 end
 
 
@@ -53,14 +53,14 @@ end
 
 
 ""
-function run_mc_pf_pbs(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_mc_pf_pbs; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_pbs!, kwargs...)
+function run_mc_pf_pbs(data::Dict{String,Any}, model_type, solver; kwargs...)
+    return _PMs.run_model(data, model_type, solver, post_mc_pf_pbs; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_pbs!, kwargs...)
 end
 
 
 ""
-function run_mc_pf_pbs(file::String, model_constructor, solver; kwargs...)
-    return run_mc_pf_pbs(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
+function run_mc_pf_pbs(file::String, model_type, solver; kwargs...)
+    return run_mc_pf_pbs(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
 end
 
 
