@@ -1,5 +1,5 @@
 ""
-function run_ac_tp_opf(file, solver; kwargs...)
+function run_ac_mc_opf(file, solver; kwargs...)
     return run_mc_opf(file, _PMs.ACPPowerModel, solver; kwargs...)
 end
 

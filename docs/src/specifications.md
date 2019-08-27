@@ -2,7 +2,7 @@
 
 
 ## Optimal Power Flow (OPF) with On-Load Tap Changers (OLTC)
-This problem is identical to `tp_opf`, except that all transformers are now modelled as on-load tap changers (OLTCs). Each phase has an individual tap ratio, which can be either variable or fixed, as specified in the data model.
+This problem is identical to `mc_opf`, except that all transformers are now modelled as on-load tap changers (OLTCs). Each phase has an individual tap ratio, which can be either variable or fixed, as specified in the data model.
 ### Objective
 ```julia
 objective_min_fuel_cost(pm)
@@ -55,7 +55,7 @@ end
 ```
 
 ## Optimal Power Flow (OPF) with Load Models (LM)
-Unlike `tp_opf`, which models all loads as constant power loads, this problem specification additionally supports loads proportional to the voltage magnitude (a.k.a. constant current) and the square of the voltage magnitude (a.k.a. constant impedance). Each load now has associated active and reactive power variables. In `tp_opf`, loads are directly added as parameters in KCL.
+Unlike `mc_opf`, which models all loads as constant power loads, this problem specification additionally supports loads proportional to the voltage magnitude (a.k.a. constant current) and the square of the voltage magnitude (a.k.a. constant impedance). Each load now has associated active and reactive power variables. In `mc_opf`, loads are directly added as parameters in KCL.
 
 ### Objective
 ```julia
@@ -122,7 +122,7 @@ end
 ```
 
 ## Power Flow (PF) with Load Models (LM)
-Unlike `tp_pf`, which models all loads as constant power loads, this problem specification additionally supports loads proportional to the voltage magnitude (a.k.a. constant current) and the square of the voltage magnitude (a.k.a. constant impedance). Each load now has associated active and reactive power variables. In `tp_pf`, loads are directly added as parameters in KCL.
+Unlike `mc_pf`, which models all loads as constant power loads, this problem specification additionally supports loads proportional to the voltage magnitude (a.k.a. constant current) and the square of the voltage magnitude (a.k.a. constant impedance). Each load now has associated active and reactive power variables. In `mc_pf`, loads are directly added as parameters in KCL.
 
 ### Variables
 ```julia
