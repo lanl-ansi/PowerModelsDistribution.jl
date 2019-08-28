@@ -218,8 +218,9 @@
         @test length(pmd2["bus"]) == 6 # updated nr of buses
 
         @testset "branches with switches" begin
-            @test pmd["branch"]["8"]["switch"]
-            @test all([pmd["branch"]["$i"]["switch"] == false for i in 1:6])
+            @test pmd["branch"]["5"]["switch"]
+            @test pmd["branch"]["5"]["length"] == 0.001
+            @test all([pmd["branch"]["$i"]["switch"] == false for i in 1:4])
         end
 
         @testset "whitespace before ~" begin

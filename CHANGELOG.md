@@ -2,7 +2,7 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
-- none
+- FIX: OpenDSS parsing of `switch=y` property on lines (#161)
 
 ### v0.5.2
 - Fix bug in OpenDSS parser on Capacitors (#158)
