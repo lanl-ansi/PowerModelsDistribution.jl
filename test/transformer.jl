@@ -68,6 +68,14 @@ vm(sol, pmd_data, name) = sol["solution"]["bus"][string(bus_name2id(pmd_data, na
             @test norm(vm(sol, pmd_data, "3")-[0.97047, 0.93949, 0.946], Inf) <= 1.5E-5
             @test norm(va(sol, pmd_data, "3")-[30.6, -90.0, 151.9], Inf) <= 0.5E-2
         end
+        @testset "%loadloss=0" begin
+            file = "../test/data/opendss/ut_trans_3w_dyy_3_loadloss.dss"
+            pmd_data = PMD.parse_file(file)
+            sol = PMD.run_ac_mc_pf(pmd_data, ipopt_solver, multiconductor=true)
+            @test haskey(sol["solution"]["bus"], "9")
+            @test norm(vm(sol, pmd_data, "3")-[0.969531, 0.938369, 0.944748], Inf) <= 1.5E-5
+            @test norm(va(sol, pmd_data, "3")-[30.7, -90.0, 152.0], Inf) <= 0.5E-2
+        end
     end
     @testset "voltage base" begin
         # make sure that different voltage bases lead to the same solution

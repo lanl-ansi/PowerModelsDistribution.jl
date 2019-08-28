@@ -2,7 +2,7 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
-- none
+- Fix bug in OpenDSS parser on Transformers (#162)
 
 ### v0.6.0
 - Update Formulation types to follow PowerModels v0.13 conventions (breaking) (#160)
