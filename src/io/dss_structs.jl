@@ -26,7 +26,8 @@ This is now mainly used for parsing linecode dicts into correct data types.
 function _create_linecode(name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :nphases, 3)
-    basefreq = get(kwargs, :basefreq, 60.0)
+    circuit_basefreq = get(kwargs, :circuit_basefreq, 60.0)
+    basefreq = get(kwargs, :basefreq, circuit_basefreq)
 
     r1 = get(kwargs, :r1, 0.058)
     x1 = get(kwargs, :x1, 0.1206)
@@ -120,7 +121,8 @@ properties.
 function _create_line(bus1, bus2, name::AbstractString; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
-    basefreq = get(kwargs, :basefreq, 60.0)
+    circuit_basefreq = get(kwargs, :circuit_basefreq, 60.0)
+    basefreq = get(kwargs, :basefreq, circuit_basefreq)
 
     r1 = get(kwargs, :r1, 0.058)
     x1 = get(kwargs, :x1, 0.1206)
@@ -175,15 +177,13 @@ function _create_line(bus1, bus2, name::AbstractString; kwargs...)
     xg = get(kwargs, :xg, 0.155081)
     rho = get(kwargs, :rho, 100.0)
 
-    # TODO: calculate freq solution for circuit to use rg, xg
     # TODO: support length mismatch between line and linecode?
     # Currently this does not change the values of rmatrix and xmatrix due to
-    # freq=basefreq and lenmult=1, code is only in place for future use.
-    freq = basefreq
+    # lenmult=1, code is only in place for future use.
     lenmult = 1.0
 
-    kxg = xg / log(658.5 * sqrt(rho / basefreq))
-    xgmod = xg != 0.0 ?  0.5 * kxg * log(freq / basefreq) : 0.0
+    kxg = xg / log(658.5 * sqrt(rho / circuit_basefreq))
+    xgmod = xg != 0.0 ?  0.5 * kxg * log(basefreq / circuit_basefreq) : 0.0
 
     units = get(kwargs, :units, "none")
     len = get(kwargs, :switch, false) ? 0.001 : get(kwargs, :length, 1.0) * _convert_to_meters[units]
@@ -192,10 +192,10 @@ function _create_line(bus1, bus2, name::AbstractString; kwargs...)
         Memento.warn(_LOGGER, "Rg,Xg are not fully supported")
     end
 
-    rmatrix .+= rg * (freq/basefreq - 1.0)
+    rmatrix .+= rg * (basefreq / circuit_basefreq - 1.0)
     rmatrix .*= lenmult
     xmatrix .-= xgmod
-    xmatrix .*= lenmult * (freq / basefreq)
+    xmatrix .*= lenmult * (basefreq / circuit_basefreq)
 
     return Dict{String,Any}("name" => name,
                             "bus1" => bus1,
@@ -233,8 +233,6 @@ function _create_line(bus1, bus2, name::AbstractString; kwargs...)
                             "repair" => get(kwargs, :repair, 3.0),
                             "basefreq" => basefreq,
                             "enabled" => get(kwargs, :enabled, true),
-                            # Added properties
-                            "freq" => freq
                            )
 end
 

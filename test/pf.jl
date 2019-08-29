@@ -53,6 +53,15 @@
 
         @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183456; atol=1e-5)
         @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00923328; atol=1e-4)
+
+        @testset "3-bus balanced no linecode basefreq defined" begin
+            pmd2 = PMD.parse_file("../test/data/opendss/case3_balanced_basefreq.dss")
+            sol2 = PMD.run_mc_pf(pmd2, PMs.ACPPowerModel, ipopt_solver)
+
+            @test all(all(isapprox.(bus["vm"].values, sol2["solution"]["bus"][i]["vm"]; atol=1e-8)) for (i, bus) in sol["solution"]["bus"])
+            @test all(all(isapprox.(bus["va"].values, sol2["solution"]["bus"][i]["va"]; atol=1e-8)) for (i, bus) in sol["solution"]["bus"])
+            @test all(isapprox(sum(sol["solution"]["gen"]["1"][field] * sol["solution"]["baseMVA"]), sum(sol2["solution"]["gen"]["1"][field] * sol2["solution"]["baseMVA"]); atol=1e-8) for field in ["pg", "qg"])
+        end
     end
 
     @testset "3-bus balanced w/ switch" begin

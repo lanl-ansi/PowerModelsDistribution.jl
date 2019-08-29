@@ -2,8 +2,9 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
+- Fix bug in OpenDSS parser on Lines / Linecodes related to basefreq (#163)
 - Fix bug in OpenDSS parser on Transformers (#162)
-- FIX: OpenDSS parsing of `switch=y` property on lines (#161)
+- Fix bug in OpenDSS parser on Lines where `switch=y` property is used (#161)
 
 ### v0.6.0
 - Update Formulation types to follow PowerModels v0.13 conventions (breaking) (#160)
