@@ -1063,7 +1063,9 @@ function _dss2pmd_storage!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
             storageDict["qmax"] = _PMs.MultiConductorVector(_parse_array( defaults["kvar"] / 1e3 / nconductors, nodes, nconductors))
             storageDict["r"] = _PMs.MultiConductorVector(_parse_array(defaults["%r"] / 100.0, nodes, nconductors))
             storageDict["x"] = _PMs.MultiConductorVector(_parse_array(defaults["%x"] / 100.0, nodes, nconductors))
-            storageDict["standby_loss"] = defaults["%idlingkw"] * defaults["kwrated"] / 1e3
+            storageDict["p_loss"] = defaults["%idlingkw"] * defaults["kwrated"] / 1e3
+            storageDict["q_loss"] = defaults["%idlingkvar"] * defaults["kvar"] / 1e3
+
             storageDict["status"] = convert(Int, defaults["enabled"])
 
             storageDict["ps"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
@@ -1676,6 +1678,7 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     _dss2pmd_storage!(pmd_data, dss_data, import_all)
 
     pmd_data["dcline"] = []
+    pmd_data["switch"] = []
 
     InfrastructureModels.arrays_to_dicts!(pmd_data)
 

@@ -45,7 +45,7 @@
             @test length(pmd[key]) == len
         end
 
-        sol = PMD.run_tp_opf(pmd, PowerModels.SOCWRPowerModel, ipopt_solver)
+        sol = PMD.run_mc_opf(pmd, PowerModels.SOCWRPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
     end
@@ -119,7 +119,7 @@
 
         @test pmd["name"] == "test2"
 
-        @test length(pmd) == 20 # keep track of sourcebus
+        @test length(pmd) == 21 # keep track of sourcebus, switches
         @test length(dss) == 12
 
         # 26 buses and not 12, because of internal transformer buses;
@@ -232,7 +232,7 @@
             for bat in values(pmd_storage["storage"])
                 for key in ["energy", "storage_bus", "energy_rating", "charge_rating", "discharge_rating",
                             "charge_efficiency", "discharge_efficiency", "thermal_rating", "qmin", "qmax",
-                            "r", "x", "standby_loss", "status", "source_id", "active_phases"]
+                            "r", "x", "p_loss", "q_loss", "status", "source_id", "active_phases"]
                     @test haskey(bat, key)
                     if key in ["x", "r", "qmin", "qmax", "thermal_rating"]
                         @test isa(bat[key], PowerModels.MultiConductorVector)
@@ -274,7 +274,7 @@
         pmd = PMD.parse_file("../test/data/opendss/case2_diag.dss")
         @testset "OPF" begin
             @testset "ACP" begin
-                sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
+                sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
                 @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
@@ -291,7 +291,7 @@
         pmd = PMD.parse_file("../test/data/opendss/case3_balanced.dss")
         @testset "OPF" begin
             @testset "ACP" begin
-                sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
+                sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
                 @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
@@ -304,12 +304,12 @@
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00919404; atol=1.2e-5)
             end
             @testset "SOC" begin
-                sol = PMD.run_tp_opf(pmd, PMs.SOCWRPowerModel, ipopt_solver)
+                sol = PMD.run_mc_opf(pmd, PMs.SOCWRPowerModel, ipopt_solver)
 
                 @test sol["termination_status"] == PMs.LOCALLY_SOLVED
             end
             @testset "LDF" begin
-                sol = PMD.run_tp_opf_bf(pmd, LPLinUBFPowerModel, ipopt_solver)
+                sol = PMD.run_mc_opf_bf(pmd, LPLinUBFPowerModel, ipopt_solver)
 
                 @test sol["termination_status"] == PMs.LOCALLY_SOLVED
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183456; atol=2e-3)
@@ -322,7 +322,7 @@
         pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced.dss")
         @testset "OPF" begin
             @testset "ACP" begin
-                sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
+                sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
                 @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
@@ -337,12 +337,12 @@
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00927263; atol=1e-5)
             end
             @testset "SOC" begin
-                sol = PMD.run_tp_opf(pmd, PMs.SOCWRPowerModel, ipopt_solver)
+                sol = PMD.run_mc_opf(pmd, PMs.SOCWRPowerModel, ipopt_solver)
 
                 @test sol["termination_status"] == PMs.LOCALLY_SOLVED
             end
             @testset "LDF" begin
-                sol = PMD.run_tp_opf_bf(pmd, LPLinUBFPowerModel, ipopt_solver)
+                sol = PMD.run_mc_opf_bf(pmd, LPLinUBFPowerModel, ipopt_solver)
 
                 @test sol["termination_status"] == PMs.LOCALLY_SOLVED
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214812; atol=2e-3)
@@ -353,7 +353,7 @@
 
     @testset "3-bus unbalanced isc" begin
         pmd = PMD.parse_file("../test/data/opendss/case3_balanced_isc.dss")
-        sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
+        sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(sol["objective"], 0.0182769; atol = 1e-4)
@@ -372,21 +372,21 @@
         @test all(pmd["gen"]["2"]["pmax"] .== pmd["gen"]["2"]["qmax"])
         @test all(pmd["gen"]["2"]["pmin"].values .== 0.0)
 
-        sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
+        sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
         @test sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]) < 0.0
         @test sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]) < 0.0
         #@test isapprox(sum(sol["solution"]["gen"]["2"]["pg"] * sol["solution"]["baseMVA"]), 0.018345; atol=1e-4)
         # changed objective 0.018345 -> 0.0182074
-        # solution changed after changing initial point in constraint_tp_model_voltage
+        # solution changed after changing initial point in constraint_mc_model_voltage
         @test isapprox(sum(sol["solution"]["gen"]["2"]["pg"] * sol["solution"]["baseMVA"]), 0.0182074; atol=1e-4)
         @test isapprox(sum(sol["solution"]["gen"]["2"]["qg"] * sol["solution"]["baseMVA"]), 0.00919404; atol=1e-4)
     end
 
     @testset "3-bus unbalanced single-phase pv" begin
         pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced_1phase-pv.dss")
-        sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
+        sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
@@ -399,7 +399,7 @@
 
     @testset "3-bus balanced capacitor" begin
         pmd = PMD.parse_file("../test/data/opendss/case3_balanced_cap.dss")
-        sol = PMD.run_tp_pf(pmd, PMs.ACPPowerModel, ipopt_solver)
+        sol = PMD.run_mc_pf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 

@@ -270,6 +270,7 @@ function matlab_to_pmd(ml_data::Dict{String,Any})
     ml_data["per_unit"] = false
     ml_data["conductors"] = 3
     ml_data["dcline"] = []
+    ml_data["switch"] = []
     ml_data["storage"] = []
 
     # required default values
