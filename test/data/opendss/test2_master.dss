@@ -14,10 +14,10 @@ New Line.L1  bus1=b1 bus2=_b2 length=0.001 units=mi r1=0.001 r0=0.001 x1=0.01 x0
 New Line.L1-2 bus1=b3-1.2 bus2=b4.2 length=0.032175613 units=km Linecode=lc1
 New Line.L2 bus1=b5 bus2=b6_check-chars length=0.013516796 units=none linecode=lc/2
 New "Line.L3" phases=3 bus1=b7.1.2.3 bus2=b9.1.2.3 linecode=300 normamps=400 emergamps=600 faultrate=0.1 pctperm=20 repair=0 length=2.58
-New "Line._L4" phases=3 bus1=b8.1.2.3 bus2=b10.1.2.3 linecode=300 normamps=400 emergamps=600 faultrate=0.1 pctperm=20 repair=0 length=1.73
+New "Line._L4" phases=3 bus1=b8.1.2.3 bus2=b10.1.2.3 linecode=300 normamps=400 emergamps=600 faultrate=0.1 pctperm=20 repair=0 length=1.73 switch=y
 New line.l5 phases=3 bus1=_b2.1.2.3.0 bus2=b7.1.2.3.0 linecode=lc8
 New line.l6 phases=3 bus1=b1.1.2.3 bus2=b10.1.2.3 linecode=lc9
-new line.l7 bus1=_b2 bus2=b10 like=L2 linecode=lc10 switch=y
+new line.l7 bus1=_b2 bus2=b10 like=L2 linecode=lc10
 
 ! Loads
 New Load.ld1 phases=1 Bus1=b7.1.2  kv=0.208  status=variable model=1 conn=wye kW=3.89   pf=0.97  Vminpu=.88

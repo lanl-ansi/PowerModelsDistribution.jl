@@ -2,7 +2,7 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
-- none
+- FIX: OpenDSS parsing of `switch=y` property on lines (#161)
 
 ### v0.6.0
 - Update Formulation types to follow PowerModels v0.13 conventions (breaking) (#160)
