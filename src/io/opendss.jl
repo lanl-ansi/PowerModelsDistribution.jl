@@ -616,6 +616,7 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
                 end
 
                 linecode["units"] = get(line, "units", "none") == "none" ? "none" : get(linecode, "units", "none")
+                linecode["circuit_basefreq"] = pmd_data["basefreq"]
 
                 linecode = _create_linecode(get(linecode, "name", ""); _to_sym_keys(linecode)...)
                 delete!(linecode, "name")
@@ -625,8 +626,7 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
             if haskey(line, "basefreq") && line["basefreq"] != pmd_data["basefreq"]
                 Memento.warn(_LOGGER, "basefreq=$(line["basefreq"]) on line $(line["name"]) does not match circuit basefreq=$(pmd_data["basefreq"])")
-                line["freq"] = deepcopy(line["basefreq"])
-                line["basefreq"] = deepcopy(pmd_data["basefreq"])
+                line["circuit_basefreq"] = pmd_data["basefreq"]
             end
 
             defaults = _create_line(line["bus1"], line["bus2"], line["name"]; _to_sym_keys(line)...)
@@ -667,8 +667,8 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
             branchDict["g_fr"] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>_parse_array(0.0, nodes, nconductors)))
             branchDict["g_to"] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>_parse_array(0.0, nodes, nconductors)))
 
-            branchDict["b_fr"] = _PMs.MultiConductorMatrix(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0)
-            branchDict["b_to"] = _PMs.MultiConductorMatrix(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0)
+            branchDict["b_fr"] = _PMs.MultiConductorMatrix(Zbase * (2.0 * pi * pmd_data["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0)
+            branchDict["b_to"] = _PMs.MultiConductorMatrix(Zbase * (2.0 * pi * pmd_data["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0)
 
             # TODO: pick a better value for emergamps
             branchDict["rate_a"] = _PMs.MultiConductorVector(_parse_array(defaults["normamps"], nodes, nconductors))
