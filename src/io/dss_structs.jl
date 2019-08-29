@@ -800,12 +800,19 @@ function _create_transformer(name::AbstractString; kwargs...)
     windings = get(kwargs, :windings, 2)
     phases = get(kwargs, :phases, 3)
 
+    prcnt_rs = fill(0.2, windings)
+    if haskey(kwargs, Symbol("%rs"))
+        prcnt_rs = kwargs[Symbol("%rs")]
+    elseif haskey(kwargs, Symbol("%loadloss"))
+        prcnt_rs[1] = prcnt_rs[2] = kwargs[Symbol("%loadloss")] / 2.0
+    end
+
     temp = Dict{String,Any}("buss" => get(kwargs, :buses, fill("", windings)),
                             "taps" => get(kwargs, :taps, fill(1.0, windings)),
                             "conns" => get(kwargs, :conns, fill("wye", windings)),
                             "kvs" => get(kwargs, :kvs, fill(12.47, windings)),
                             "kvas" => get(kwargs, :kvas, fill(10.0, windings)),
-                            "%rs" => fill(0.0, windings),
+                            "%rs" => prcnt_rs,
                             "rneuts" => fill(0.0, windings),
                             "xneuts" => fill(0.0, windings)
                            )
@@ -862,7 +869,7 @@ function _create_transformer(name::AbstractString; kwargs...)
                             "m" => get(kwargs, :m, 0.8),
                             "flrise" => get(kwargs, :flrise, 65.0),
                             "hsrise" => get(kwargs, :hsrise, 15.0),
-                            "%loadloss" => get(kwargs, Symbol("%loadloss"), 2.0 * temp["%rs"][1] * 100.0),  # CHECK:
+                            "%loadloss" => get(kwargs, Symbol("%loadloss"), sum(temp["%rs"][1:2])),
                             "%noloadloss" => get(kwargs, Symbol("%noloadloss"), 0.0),
                             "normhkva" => get(kwargs, :normhkva, 1.1 * temp["kvas"][1]),
                             "emerghkva" => get(kwargs, :emerghkva, 1.5 * temp["kvas"][1]),
