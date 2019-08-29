@@ -4,6 +4,9 @@ PowerModelsDistribution.jl Change Log
 ### staged
 - none
 
+### v0.6.0
+- Update Formulation types to follow PowerModels v0.13 conventions (breaking) (#160)
+
 ### v0.5.2
 - Fix bug in OpenDSS parser on Capacitors (#158)
 - Add support for full matrix line shunts (#153)
