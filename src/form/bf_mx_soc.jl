@@ -1,5 +1,5 @@
 "Defines relationship between branch (series) power flow, branch (series) current and node voltage magnitude"
-function constraint_tp_model_current(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr) where T <: SOCUBFForm
+function constraint_mc_model_current(pm::SOCUBFModels, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
     p_fr = _PMs.var(pm, n, :P_mx)[f_idx]
     q_fr = _PMs.var(pm, n, :Q_mx)[f_idx]
 
@@ -35,7 +35,7 @@ end
 
 
 "Defines relationship between branch (series) power flow, branch (series) current and node voltage magnitude"
-function constraint_tp_model_current(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr) where T <: SOCConicUBFForm
+function constraint_mc_model_current(pm::SOCConicUBFModel, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
     p_fr = _PMs.var(pm, n, :P_mx)[f_idx]
     q_fr = _PMs.var(pm, n, :Q_mx)[f_idx]
 

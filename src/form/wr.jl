@@ -1,5 +1,5 @@
 ""
-function constraint_tp_model_voltage(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int) where T <: _PMs.AbstractWRForm
+function constraint_mc_model_voltage(pm::_PMs.AbstractWRModel, n::Int, c::Int)
     w  = _PMs.var(pm, n,  :w)
     wr = _PMs.var(pm, n, :wr)
     wi = _PMs.var(pm, n, :wi)
@@ -26,7 +26,7 @@ p[f_idx] ==        g/tm*w_fr[i] + (-g*tr+b*ti)/tm*(wr[i]) + (-b*tr-g*ti)/tm*(wi[
 q[f_idx] == -(b+c/2)/tm*w_fr[i] - (-b*tr-g*ti)/tm*(wr[i]) + (-g*tr+b*ti)/tm*(wi[i])
 ```
 """
-function constraint_tp_ohms_yt_from_on_off(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm, vad_min, vad_max) where T <: _PMs.AbstractWRForm
+function constraint_mc_ohms_yt_from_on_off(pm::_PMs.AbstractWRModel, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm, vad_min, vad_max)
     p_fr = _PMs.var(pm, n, c, :p, f_idx)
     q_fr = _PMs.var(pm, n, c, :q, f_idx)
     w    = _PMs.var(pm, n, :w)
@@ -54,7 +54,7 @@ p[t_idx] ==        g*w_to[i] + (-g*tr-b*ti)/tm*(wr[i]) + (-b*tr+g*ti)/tm*(-wi[i]
 q[t_idx] == -(b+c/2)*w_to[i] - (-b*tr+g*ti)/tm*(wr[i]) + (-g*tr-b*ti)/tm*(-wi[i])
 ```
 """
-function constraint_tp_ohms_yt_to_on_off(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max) where T <: _PMs.AbstractWRForm
+function constraint_mc_ohms_yt_to_on_off(pm::_PMs.AbstractWRModel, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max)
     p_to = _PMs.var(pm, n, c, :p, t_idx)
     q_to = _PMs.var(pm, n, c, :q, t_idx)
     w    = _PMs.var(pm, n, :w)
@@ -75,7 +75,7 @@ end
 
 
 "power balance constraint with line shunts and transformers for relaxed WR forms"
-function constraint_tp_power_balance_shunt_trans(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractWRForm
+function constraint_mc_power_balance(pm::_PMs.AbstractWRModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
     w    = _PMs.var(pm, nw, c, :w, i)
     pg   = _PMs.var(pm, nw, c, :pg)
     qg   = _PMs.var(pm, nw, c, :qg)
