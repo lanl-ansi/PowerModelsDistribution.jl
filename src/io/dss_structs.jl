@@ -186,7 +186,7 @@ function _create_line(bus1, bus2, name::AbstractString; kwargs...)
     xgmod = xg != 0.0 ?  0.5 * kxg * log(freq / basefreq) : 0.0
 
     units = get(kwargs, :units, "none")
-    len = get(kwargs, :length, 1.0) * _convert_to_meters[units]
+    len = get(kwargs, :switch, false) ? 0.001 : get(kwargs, :length, 1.0) * _convert_to_meters[units]
 
     if haskey(kwargs, :rg)
         Memento.warn(_LOGGER, "Rg,Xg are not fully supported")
