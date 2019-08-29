@@ -129,7 +129,7 @@
         # if rs=0, then 1 extra, else 3 extra
         # tr1:+1(rs=0), tr2:+3, tr3:+1(rs=0), tr4:+3, tr5:+1(rs=0)
         # 10 transformers, 2 per dss transformer
-        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "trans"], [26, 4, 5, 20, 4, 0, 10])
+        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "trans"], [32, 4, 5, 26, 4, 0, 10])
             @test haskey(pmd, key)
             @test length(pmd[key]) == len
         end
@@ -215,11 +215,12 @@
         end
 
         pmd2 = PMD.parse_file("../test/data/opendss/test_simple4.dss")
-        @test length(pmd2["bus"]) == 6 # updated nr of buses
+        @test length(pmd2["bus"]) == 9 # updated nr of buses
 
         @testset "branches with switches" begin
-            @test pmd["branch"]["8"]["switch"]
-            @test all([pmd["branch"]["$i"]["switch"] == false for i in 1:6])
+            @test pmd["branch"]["5"]["switch"]
+            @test pmd["branch"]["5"]["length"] == 0.001
+            @test all([pmd["branch"]["$i"]["switch"] == false for i in 1:4])
         end
 
         @testset "whitespace before ~" begin

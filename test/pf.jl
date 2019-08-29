@@ -64,6 +64,21 @@
         end
     end
 
+    @testset "3-bus balanced w/ switch" begin
+        pmd = PMD.parse_file("../test/data/opendss/case3_balanced_switch.dss")
+        sol = PMD.run_mc_pf(pmd, PMs.ACPPowerModel, ipopt_solver)
+
+        @test sol["termination_status"] == PMs.LOCALLY_SOLVED
+
+        for (bus, va, vm) in zip(["1", "2", "3"], [0.0, 0.0, deg2rad(-0.04)], [0.9959, 0.995729, 0.985454])
+            @test all(isapprox.(sol["solution"]["bus"][bus]["va"].values, [PMD._wrap_to_pi(2*pi/pmd["conductors"]*(1-c) .+ va) for c in 1:pmd["conductors"]]; atol=deg2rad(0.2)))
+            @test all(isapprox.(sol["solution"]["bus"][bus]["vm"].values, vm; atol=1e-3))
+        end
+
+        # @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.018185; atol=1e-5)
+        # @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00910435; atol=1e-4)
+    end
+
     @testset "3-bus unbalanced" begin
         pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced.dss")
         sol = PMD.run_mc_pf(pmd, PMs.ACPPowerModel, ipopt_solver)
