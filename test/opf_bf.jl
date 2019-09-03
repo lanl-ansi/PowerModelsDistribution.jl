@@ -1,3 +1,5 @@
+@info "opf_bf.jl"
+
 @testset "test linearised distflow opf_bf" begin
     @testset "3-bus case" begin
         mp_data = PowerModels.parse_file("$(pms_path)/test/data/matpower/case3.m")

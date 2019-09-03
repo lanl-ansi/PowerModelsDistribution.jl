@@ -1,3 +1,5 @@
+@info "loadmodels.jl"
+
 bus_name2id(pmd_data, name) = [bus["index"] for (_,bus) in pmd_data["bus"] if haskey(bus, "name") && bus["name"]==name][1]
 load_name2id(pmd_data, name) = [load["index"] for (_,load) in pmd_data["load"] if haskey(load, "name") && load["name"]==name][1]
 va(sol, pmd_data, name) = PMD.wraptopi(sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["va"][:])

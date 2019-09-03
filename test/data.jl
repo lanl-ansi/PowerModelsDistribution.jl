@@ -1,3 +1,5 @@
+@info "data.jl"
+
 @testset "test idempotent units transformations" begin
     @testset "5-bus case" begin
         data = PMD.parse_file("../test/data/matlab/case5_i_r_b.m")

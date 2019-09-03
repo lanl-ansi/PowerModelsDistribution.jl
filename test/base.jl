@@ -1,4 +1,5 @@
 # tests of PowerModels generic functions
+@info "base.jl"
 
 @testset "test PowerModels generic functions" begin
     @testset "build PMs.ref" begin

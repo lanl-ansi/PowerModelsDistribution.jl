@@ -1,3 +1,4 @@
+@info "debug.jl"
 
 @testset "test ac opf pbs" begin
 

@@ -1,3 +1,5 @@
+@info "mld.jl"
+
 @testset "test mld" begin
     @testset "test ACP" begin
         @testset "5-bus case" begin

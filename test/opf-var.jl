@@ -1,3 +1,4 @@
+@info "opf-var.jl"
 
 @testset "test storage opf" begin
 
