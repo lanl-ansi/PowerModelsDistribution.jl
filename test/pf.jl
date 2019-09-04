@@ -105,6 +105,16 @@
         @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00932693; atol=1e-4)
     end
 
+    @testset "3-bus unbalanced w/ assymetric linecode & phase order swap" begin
+        pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced_assym_swap.dss")
+        sol = PMD.run_ac_mc_pf(pmd, ipopt_solver)
+
+        @test sol["termination_status"] == PMs.LOCALLY_SOLVED
+
+        @test all(isapprox.(sol["solution"]["bus"]["2"]["vm"], [0.983453, 0.98718, 0.981602]; atol=1e-5))
+        @test all(isapprox.(sol["solution"]["bus"]["2"]["va"], deg2rad.([-0.07, -120.19, 120.29]); atol=1e-2))
+    end
+
     @testset "5-bus 3-phase ac pf case" begin
         mp_data = PMD.parse_file("../test/data/opendss/case5_phase_drop.dss")
         result = run_mc_pf(mp_data, PMs.ACPPowerModel, ipopt_solver)
