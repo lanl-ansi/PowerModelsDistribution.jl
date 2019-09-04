@@ -55,7 +55,7 @@ function post_mc_mld(pm::_PMs.AbstractPowerModel)
     variable_mc_bus_voltage_on_off(pm)
 
     variable_mc_branch_flow(pm)
-    variable_mc_trans_flow(pm)
+    variable_mc_transformer_flow(pm)
 
     variable_mc_indicator_generation(pm; relax=true)
 
@@ -98,7 +98,7 @@ function post_mc_mld(pm::_PMs.AbstractPowerModel)
         _PMs.constraint_dcline(pm, i, cnd=c)
     end
 
-    for i in _PMs.ids(pm, :trans)
+    for i in _PMs.ids(pm, :transformer)
         constraint_mc_trans(pm, i)
     end
 
@@ -112,7 +112,7 @@ function post_mc_mld_strg(pm::_PMs.AbstractPowerModel)
     variable_mc_bus_voltage_on_off(pm)
 
     variable_mc_branch_flow(pm)
-    variable_mc_trans_flow(pm)
+    variable_mc_transformer_flow(pm)
 
     variable_mc_indicator_generation(pm; relax=true)
 
@@ -169,7 +169,7 @@ function post_mc_mld_strg(pm::_PMs.AbstractPowerModel)
         _PMs.constraint_dcline(pm, i, cnd=c)
     end
 
-    for i in _PMs.ids(pm, :trans)
+    for i in _PMs.ids(pm, :transformer)
         constraint_mc_trans(pm, i)
     end
 
@@ -184,7 +184,7 @@ function post_mc_mld_bf(pm::_PMs.AbstractPowerModel)
 
     variable_mc_branch_current(pm)
     variable_mc_branch_flow(pm)
-    variable_mc_trans_flow(pm)
+    variable_mc_transformer_flow(pm)
 
     variable_mc_indicator_generation(pm; relax=true)
 
@@ -228,7 +228,7 @@ function post_mc_mld_bf(pm::_PMs.AbstractPowerModel)
         _PMs.constraint_dcline(pm, i, cnd=c)
     end
 
-    for i in _PMs.ids(pm, :trans)
+    for i in _PMs.ids(pm, :transformer)
         constraint_mc_trans(pm, i)
     end
 
@@ -242,7 +242,7 @@ function post_mc_mld_uc(pm::_PMs.AbstractPowerModel)
     variable_mc_bus_voltage_on_off(pm)
 
     variable_mc_branch_flow(pm)
-    variable_mc_trans_flow(pm)
+    variable_mc_transformer_flow(pm)
 
     variable_mc_indicator_generation(pm; relax=false)
 
@@ -286,7 +286,7 @@ function post_mc_mld_uc(pm::_PMs.AbstractPowerModel)
         _PMs.constraint_dcline(pm, i, cnd=c)
     end
 
-    for i in _PMs.ids(pm, :trans)
+    for i in _PMs.ids(pm, :transformer)
         constraint_mc_trans(pm, i)
     end
 

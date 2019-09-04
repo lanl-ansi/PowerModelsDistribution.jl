@@ -140,14 +140,14 @@ end
 
 
 "Creates variables for both `active` and `reactive` power flow at each transformer."
-function variable_mc_trans_flow(pm::_PMs.AbstractPowerModel; kwargs...)
-    variable_mc_trans_active_flow(pm; kwargs...)
-    variable_mc_trans_reactive_flow(pm; kwargs...)
+function variable_mc_transformer_flow(pm::_PMs.AbstractPowerModel; kwargs...)
+    variable_mc_transformer_active_flow(pm; kwargs...)
+    variable_mc_transformer_reactive_flow(pm; kwargs...)
 end
 
 
 "Create variables for the active power flowing into all transformer windings."
-function variable_mc_trans_active_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded=true)
+function variable_mc_transformer_active_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded=true)
     for cnd in _PMs.conductor_ids(pm)
         _PMs.var(pm, nw, cnd)[:pt] = JuMP.@variable(pm.model,
             [(l,i,j) in _PMs.ref(pm, nw, :arcs_trans)],
@@ -157,8 +157,8 @@ function variable_mc_trans_active_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.c
         if bounded
             for arc in _PMs.ref(pm, nw, :arcs_trans)
                 tr_id = arc[1]
-                flow_lb  = -_PMs.ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
-                flow_ub  =  _PMs.ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
+                flow_lb  = -_PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
+                flow_ub  =  _PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
                 JuMP.set_lower_bound(_PMs.var(pm, nw, cnd, :pt, arc), flow_lb)
                 JuMP.set_upper_bound(_PMs.var(pm, nw, cnd, :pt, arc), flow_ub)
             end
@@ -168,7 +168,7 @@ end
 
 
 "Create variables for the reactive power flowing into all transformer windings."
-function variable_mc_trans_reactive_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
+function variable_mc_transformer_reactive_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
     for cnd in _PMs.conductor_ids(pm)
         _PMs.var(pm, nw, cnd)[:qt] = JuMP.@variable(pm.model,
             [(l,i,j) in _PMs.ref(pm, nw, :arcs_trans)],
@@ -178,8 +178,8 @@ function variable_mc_trans_reactive_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm
         if bounded
             for arc in _PMs.ref(pm, nw, :arcs_trans)
                 tr_id = arc[1]
-                flow_lb  = -_PMs.ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
-                flow_ub  = _PMs.ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
+                flow_lb  = -_PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
+                flow_ub  = _PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
                 JuMP.set_lower_bound(_PMs.var(pm, nw, cnd, :qt, arc), flow_lb)
                 JuMP.set_upper_bound(_PMs.var(pm, nw, cnd, :qt, arc), flow_ub)
             end
@@ -191,17 +191,17 @@ end
 "Create tap variables."
 function variable_mc_oltc_tap(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded=true)
     nphases = 3
-    oltc_ids = _PMs.ids(pm, pm.cnw, :trans)
+    oltc_ids = _PMs.ids(pm, pm.cnw, :transformer)
     for c in 1:nphases
         _PMs.var(pm, nw, c)[:tap] = JuMP.@variable(pm.model,
             [i in oltc_ids],
             base_name="$(nw)_tm",
-            start=_PMs.ref(pm, nw, :trans, i, "tm")[c]
+            start=_PMs.ref(pm, nw, :transformer, i, "tm")[c]
         )
         if bounded
             for tr_id in oltc_ids
-                JuMP.set_lower_bound(_PMs.var(pm, nw, c)[:tap][tr_id], _PMs.ref(pm, nw, :trans, tr_id, "tm_min")[c])
-                JuMP.set_upper_bound(_PMs.var(pm, nw, c)[:tap][tr_id], _PMs.ref(pm, nw, :trans, tr_id, "tm_max")[c])
+                JuMP.set_lower_bound(_PMs.var(pm, nw, c)[:tap][tr_id], _PMs.ref(pm, nw, :transformer, tr_id, "tm_min")[c])
+                JuMP.set_upper_bound(_PMs.var(pm, nw, c)[:tap][tr_id], _PMs.ref(pm, nw, :transformer, tr_id, "tm_max")[c])
             end
         end
     end

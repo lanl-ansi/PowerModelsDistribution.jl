@@ -20,7 +20,7 @@ for c in PMs.conductor_ids(pm)
     PMs.variable_generation(pm, cnd=c)
     PMs.variable_dcline_flow(pm, cnd=c)
 end
-variable_mc_trans_flow(pm)
+variable_mc_transformer_flow(pm)
 variable_mc_oltc_tap(pm)
 ```
 
@@ -78,7 +78,7 @@ for c in PMs.conductor_ids(pm)
     PMs.variable_generation(pm, cnd=c)
     PMs.variable_dcline_flow(pm, cnd=c)
 end
-variable_mc_trans_flow(pm)
+variable_mc_transformer_flow(pm)
 variable_mc_oltc_tap(pm)
 ```
 
@@ -138,7 +138,7 @@ Unlike `mc_pf`, which models all loads as constant power loads, this problem spe
 ```julia
 variable_mc_voltage(pm, bounded=false)
 variable_mc_branch_flow(pm, bounded=false)
-variable_mc_trans_flow(pm, bounded=false)
+variable_mc_transformer_flow(pm, bounded=false)
 variable_mc_load(pm)
 
 for c in PMs.conductor_ids(pm)
