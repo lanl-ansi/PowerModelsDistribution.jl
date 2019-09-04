@@ -352,6 +352,18 @@ function _isa_matrix(data::AbstractString)::Bool
 end
 
 
+"Reorders a `matrix` based on the order that phases are listed in on the from- (`pof`) and to-sides (`pot`)"
+function _reorder_matrix(matrix, pof, pot)
+    mat = deepcopy(matrix)
+    for (i, pf) in enumerate(pof)
+        for (j, pt) in enumerate(pot)
+            mat[i, j] = matrix[pf, pt]
+        end
+    end
+    return mat
+end
+
+
 """
     _parse_array(dtype, data)
 
@@ -953,16 +965,20 @@ end
 
 
 """
-    _get_conductors_ordered(busname)
+    _get_conductors_ordered(busname; neutral=true)
 
-Returns an ordered list of defined conductors.
+Returns an ordered list of defined conductors. If neutral=false, will omit any `0`
 """
-function _get_conductors_ordered(busname::AbstractString)
+function _get_conductors_ordered(busname::AbstractString; neutral=true)
     parts = split(busname, '.'; limit=2)
     ret = []
     if length(parts)==2
         conds_str = split(parts[2], '.')
-        ret = [parse(Int, i) for i in conds_str]
+        if neutral
+            ret = [parse(Int, i) for i in conds_str]
+        else
+            ret = [parse(Int, i) for i in conds_str if i != "0"]
+        end
     end
     return ret
 end
