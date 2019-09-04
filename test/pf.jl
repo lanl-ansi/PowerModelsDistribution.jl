@@ -1,5 +1,13 @@
 @info "running pf.jl tests"
 @testset "test ac polar pf" begin
+    @testset "virtual sourcebus creation" begin
+        result = run_ac_mc_pf("../test/data/opendss/virtual_sourcebus.dss", ipopt_solver)
+        @test result["termination_status"] == PMs.LOCALLY_SOLVED
+
+        @test all(all(isapprox.(result["solution"]["bus"]["$n"]["vm"].values, [0.961352, 0.999418, 1.00113]; atol=1e-6)) for n in [1, 2])
+        @test all(all(isapprox.(rad2deg.(result["solution"]["bus"]["$n"]["va"].values), [-1.25, -120.06, 120.0]; atol=1e-1)) for n in [1, 2])
+    end
+
     @testset "5-bus independent meshed network" begin
         result = run_ac_mc_pf("../test/data/matlab/case5_i_m_b.m", ipopt_solver)
 
@@ -104,13 +112,9 @@
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 0.0; atol = 1e-4)
 
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 0.00015328882711864364; atol = 1e-5)
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 0.0001993266190368713; atol = 1e-5)
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 0.0002480554356591965; atol = 1e-5)
-
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9733455037213229; atol = 1e-3)
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9647241898338335; atol = 1e-3)
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9555739064829893; atol = 1e-3)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.973519; atol = 1e-3)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.964902; atol = 1e-3)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.956465; atol = 1e-3)
     end
 
     @testset "matrix branch shunts" begin
@@ -204,13 +208,9 @@ end
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 0.0; atol = 1e-4)
 
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][1], 0.00015328882711864364; atol = 1e-5)
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][2], 0.0001993266190368713; atol = 1e-5)
-        @test isapprox(result["solution"]["gen"]["1"]["pg"][3], 0.0002480554356591965; atol = 1e-5)
-
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9733455037213229; atol = 1e-3)
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9647241898338335; atol = 1e-3)
-        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9555739064829893; atol = 1e-3)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.973519; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.964902; atol = 1e-4)
+        @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.956465; atol = 1e-4)
     end
 
     @testset "matrix branch shunts" begin

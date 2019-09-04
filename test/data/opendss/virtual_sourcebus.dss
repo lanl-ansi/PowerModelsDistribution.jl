@@ -1,0 +1,30 @@
+Clear
+
+Set DefaultBaseFreq=50
+
+New Circuit.3Bus_example
+!  define a really stiff source
+~ basekv=0.4   pu=1.0  MVAsc1=1e2  MVAsc3=1e2 basemva=1 frequency=50
+
+!Define Linecodes
+
+
+New linecode.LINECODE1 nphases=3 basefreq=50  ! ohms per 5 mile
+~ rmatrix = (0.45 | 0.72 0.34 |  0.77 0.77 0.92)
+~ xmatrix = (0.83 | 0.09 0.40 | 0.97 0.63 0.52)
+~ cmatrix = (0 | 0 0 | 0 0 0) ! small capacitance
+
+!Define lines
+
+New Line.LINE1  bus1=sourcebus.1.2.3.0  loadbus.1.2.3.0  linecode = LINECODE1   length=0.5
+!Loads - single phase
+
+! single-phase loads
+New Load.LOAD1A phases=1 sourcebus.1 kv=0.23 kW=1000 kvar=1000 model=1 conn=wye vminpu=0.6 vmaxpu=1.4
+
+Set voltagebases=[0.4]
+Set tolerance=0.000001
+Set defaultbasefreq=50
+Calcvoltagebases
+
+Solve

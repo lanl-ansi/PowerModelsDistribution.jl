@@ -2,6 +2,7 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
+- Add virtual line to sourcebus to model source impedance (#165)
 - Update to JuMP v0.20 / MOI v0.9 (#164)
 - Fix bug in OpenDSS parser on Lines / Linecodes related to basefreq (#163)
 - Fix bug in OpenDSS parser on Transformers (#162)

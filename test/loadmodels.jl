@@ -15,7 +15,7 @@ sd(pm, pmd_data, name) = pd(sol, pmd_data, name)+im*qd(sol, pmd_data, name)
         pm = PMs.build_model(pmd, PMs.ACPPowerModel, PMD.post_mc_pf_lm, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
         sol = PMs.optimize_model!(pm, ipopt_solver)
         # voltage magnitude at load bus
-        @test isapprox(vm(sol, pmd, "loadbus"), [1, 1, 1], atol=1E-5)
+        @test isapprox(vm(sol, pmd, "loadbus"), [0.999993, 0.999992, 0.999993], atol=1E-5)
         # single-phase delta loads
         @test isapprox(pd(pm, pmd, "d1ph"), [0.4000, 0, 0], atol=1E-4)
         @test isapprox(qd(pm, pmd, "d1ph"), [0.3000, 0, 0], atol=1E-4)
