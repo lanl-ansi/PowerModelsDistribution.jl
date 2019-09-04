@@ -97,4 +97,16 @@ vm(sol, pmd_data, name) = sol["solution"]["bus"][string(bus_name2id(pmd_data, na
             @test norm(va1-va2, Inf) <= 1E-3
         end
     end
+    @testset "banked transformers" begin
+        file = "../test/data/opendss/ut_trans_2w_yy_bank.dss"
+        pmd1 = PMD.parse_file(file)
+        pmd2 = PMD.parse_file(file; bank_transformers=false)
+        result1 = run_ac_mc_pf(pmd1, ipopt_solver)
+        result2 = run_ac_mc_pf(pmd2, ipopt_solver)
+
+        @test result1["termination_status"] == PMs.LOCALLY_SOLVED
+        @test result2["termination_status"] == PMs.LOCALLY_SOLVED
+        @test result1["solution"]["bus"] == result2["solution"]["bus"]
+        @test result1["solution"]["gen"] == result2["solution"]["gen"]
+    end
 end
