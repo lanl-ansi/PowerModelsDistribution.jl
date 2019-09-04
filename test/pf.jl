@@ -1,3 +1,4 @@
+@info "running pf.jl tests"
 @testset "test ac polar pf" begin
     @testset "5-bus independent meshed network" begin
         result = run_ac_mc_pf("../test/data/matlab/case5_i_m_b.m", ipopt_solver)

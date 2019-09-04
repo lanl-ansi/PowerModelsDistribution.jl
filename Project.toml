@@ -14,13 +14,14 @@ PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
 
 [compat]
 Cbc = ">= 0.4"
-InfrastructureModels = "^0.3"
+InfrastructureModels = "~0.3.1"
 Ipopt = ">= 0.4"
 JSON = ">= 0.18"
-JuMP = "^0.19.2"
+JuMP = "~0.19.2, ~0.20"
 Juniper = ">= 0.4"
-Memento = ">= 0.8, < 0.13"
-PowerModels = "^0.13"
+MathOptInterface = "~0.8, ~0.9"
+Memento = "~0.10, ~0.11, ~0.12"
+PowerModels = "~0.13"
 SCS = ">= 0.4"
 julia = "^1"
 
