@@ -724,168 +724,181 @@ end
 Adds ThreePhasePowerModels-style transformers to `pmd_data` from `dss_data`.
 """
 function _dss2pmd_transformer!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
+   if !haskey(pmd_data, "trans_comp")
+        pmd_data["trans_comp"] = Array{Any,1}()
+    end
 
-    if haskey(dss_data, "transformer")
-        if !haskey(pmd_data, "trans_comp")
-            pmd_data["trans_comp"] = Array{Any,1}()
+    for transformer in get(dss_data, "transformer", [])
+        if haskey(transformer, "like")
+            transformer = merge(_find_component(dss_data, transformer["like"], "transformer"), transformer)
         end
-        for transformer in dss_data["transformer"]
-            if haskey(transformer, "like")
-                transformer = merge(_find_component(dss_data, transformer["like"], "transformer"), transformer)
-            end
 
-            defaults = _create_transformer(transformer["name"]; _to_sym_keys(transformer)...)
+        defaults = _create_transformer(transformer["name"]; _to_sym_keys(transformer)...)
 
-            nconductors = pmd_data["conductors"]
-            nrw = defaults["windings"]
-            prop_suffix_w = ["", ["_$w" for w in 2:nrw]...]
-            if nrw>3
-                # All of the code is compatible with any number of windings,
-                # except for the parsing of the loss model (the pair-wise reactance)
-                Memento.error(_LOGGER, "For now parsing of xscarray is not supported. At most 3 windings are allowed, not $nrw.")
-            end
+        nconductors = pmd_data["conductors"]
+        nrw = defaults["windings"]
+        prop_suffix_w = ["", ["_$w" for w in 2:nrw]...]
+        if nrw>3
+            # All of the code is compatible with any number of windings,
+            # except for the parsing of the loss model (the pair-wise reactance)
+            Memento.error(_LOGGER, "For now parsing of xscarray is not supported. At most 3 windings are allowed, not $nrw.")
+        end
 
-            transDict = Dict{String,Any}()
-            transDict["name"] = defaults["name"]
-            transDict["source_id"] = "transformer.$(defaults["name"])"
-            transDict["active_phases"] = [1, 2, 3]
-            transDict["buses"] = Array{Int, 1}(undef, nrw)
-            for i in 1:nrw
-                bnstr = defaults["buses"][i]
-                bus, nodes = _parse_busname(bnstr)
-                nodes_0123 = [true true true true]
-                nodes_123 = [true true true false]
-                if !(nodes==nodes_0123 || nodes==nodes_123)
-                    Memento.warn(_LOGGER, "Only three-phase transformers are supported. The bus specification $bnstr is treated as $bus instead.")
-                end
-                transDict["buses"][i] = _find_bus(bus, pmd_data)
-            end
-
-            # voltage and power ratings
-            #transDict["vnom_kv"] = defaults["kvs"]
-            #transDict["snom_kva"] = defaults["kvas"]
-            transDict["rate_a"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
-            transDict["rate_b"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
-            transDict["rate_c"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["emerghkva"] for i  in 1:nrw]
-            # convert to 1 MVA base
-            transDict["rate_a"] *= 1E-3
-            transDict["rate_b"] *= 1E-3
-            transDict["rate_c"] *= 1E-3
-            # connection properties
-            dyz_map = Dict("wye"=>"wye", "delta"=>"delta", "ll"=>"delta", "ln"=>"wye")
-            dyz_primary = dyz_map[defaults["conns"][1]]
-            transDict["conns"] = Array{String,1}(undef, nrw)
-
-            transDict["config"] = Dict{Int,Any}()
-            transDict["config"][1] = Dict(
-                "type"=>dyz_primary,
-                "polarity"=>'+',
-                "cnd"=>[1, 2, 3],
-                "grounded"=>true,
-                "vm_nom"=>defaults["kvs"][1]
-            )
-            #transDict["conns"][1] = string("123+", dyz_primary)
-            for w in 2:nrw
-                type = dyz_map[defaults["conns"][w]]
-                if dyz_primary==type
-                    cnd = [1,2,3]
-                    polarity = '+'
-                else
-                    if defaults["leadlag"] in ["ansi", "lag"]
-                        #Yd1 => (123+y,123+d)
-                        #Dy1 => (123+d,231-y)
-                        #pp_w = (type=="delta") ? "123+" : "231-"
-                        cnd = (type=="delta") ? [1, 2, 3] : [2, 3, 1]
-                        polarity = (type=="delta") ? '+' : '-'
-                    else # hence defaults["leadlag"] in ["euro", "lead"]
-                        #Yd11 => (123+y,312-d)
-                        #Dy11 => (123+d,123+y)
-                        #pp_w = (type=="delta") ? "312-" : "123+"
-                        cnd = (type=="delta") ? [3, 1, 2] : [1, 2, 3]
-                        polarity = (type=="delta") ? '-' : '+'
+        transDict = Dict{String,Any}()
+        transDict["name"] = defaults["name"]
+        transDict["source_id"] = "transformer.$(defaults["name"])"
+        transDict["buses"] = Array{Int, 1}(undef, nrw)
+        if !isempty(defaults["bank"])
+            transDict["bank"] = defaults["bank"]
+        end
+        for i in 1:nrw
+            bnstr = defaults["buses"][i]
+            bus, nodes = _parse_busname(bnstr)
+            active_phases = [n for n in 1:nconductors if nodes[n] > 0]
+            nodes_123 = [true true true]
+            if !all(nodes[1:3]) && isempty(defaults["bank"])
+                Memento.warn(_LOGGER, "Only three-phase transformers are supported. The bus specification $bnstr is treated as $bus instead.")
+            elseif !isempty(defaults["bank"])
+                if haskey(transDict, "active_phases")
+                    if transDict["active_phases"] != active_phases
+                        Memento.error(_LOGGER, "Mismatched phase connections on transformer windings not supported when banking transformers")
                     end
-                end
-                transDict["config"][w] = Dict(
-                    "type"=>type,
-                    "polarity"=>polarity,
-                    "cnd"=>cnd,
-                    "vm_nom"=>defaults["kvs"][w]
-                )
-                if type=="wye"
-                    transDict["config"][w]["grounded"] = true
-                end
-            end
-
-            # tap properties
-            transDict["tm"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["taps"][i] for i in 1:nrw]
-            transDict["tm_min"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["mintap"] for i in 1:nrw]
-            transDict["tm_max"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["maxtap"] for i in 1:nrw]
-            transDict["tm_step"] = [_PMs.MultiConductorVector(ones(Int,3))*defaults["numtaps"] for i in 1:nrw]
-            transDict["fixed"] = [_PMs.MultiConductorVector(ones(Bool,3)) for i in 1:nrw]
-
-            # loss model (converted to SI units, referred to secondary)
-            function zpn_to_abc(z, p, n; atol=1E-13)
-                a = exp(im*2*pi/3)
-                C = 1/sqrt(3)*[1 1 1; 1 a a^2; 1 a^2 a]
-                res = inv(C)*[z 0 0; 0 p 0; 0 0 n]*C
-                res = (abs.(res).>atol).*res
-                return res
-            end
-            pos_to_abc(p) = zpn_to_abc(p, p, p)
-            zbase = 1^2/(defaults["kvas"][1]/1E3)
-            transDict["rs"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
-            transDict["gsh"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
-            transDict["bsh"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
-            # deal with dual definition of rs in defaults dict
-            # if non-zero, pick "%rs", else go for the per winding spec
-            rs_alt = [defaults["%r$suffix"] for suffix in prop_suffix_w]
-            rs = all(defaults["%rs"].==0) ? rs_alt : defaults["%rs"]
-            for w in 1:nrw
-                zs_w_p = rs[w]/100*zbase
-                Zs_w = pos_to_abc(zs_w_p)
-                #TODO handle %loadloss property
-                # Problem is that for the two-winding case, both %loadloss
-                # and %rs map to values for the winding series resistance.
-                # Both are set to a (possibly default) value, so it is
-                # impossible to know at this point which was actually specified
-                # by the user. %rs is more general, so %loadloss is not
-                # supported for now.
-                Memento.warn(_LOGGER, "The %loadloss property is ignored for now.")
-                #TODO handle neutral impedance
-                # neutral impedance is ignored for now; all transformers are
-                # grounded (that is, those with a wye and zig-zag winding).
-                Memento.warn(_LOGGER, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.")
-                transDict["rs"][w] = _PMs.MultiConductorMatrix(real.(Zs_w))
-                # shunt elements are added at second winding
-                if w==2
-                    ysh_w_p = (defaults["%noloadloss"]-im*defaults["%imag"])/100/zbase
-                    Ysh_w = pos_to_abc(ysh_w_p)
-                    transDict["gsh"][w] = _PMs.MultiConductorMatrix(real.(Ysh_w))
-                    transDict["bsh"][w] = _PMs.MultiConductorMatrix(imag.(Ysh_w))
                 else
-                    transDict["gsh"][w] = _PMs.MultiConductorMatrix(zeros(Float64, 3, 3))
-                    transDict["bsh"][w] = _PMs.MultiConductorMatrix(zeros(Float64, 3, 3))
+                    transDict["active_phases"] = active_phases
+                end
+            elseif all(nodes[1:3])
+                transDict["active_phases"] = [1, 2, 3]
+            else
+                transDict["active_phases"] = [1, 2, 3]
+                Memento.warn(_LOGGER, "Only three-phase transformers are supported. The bus specification $bnstr is treated as $bus instead.")
+            end
+            transDict["buses"][i] = _find_bus(bus, pmd_data)
+        end
+
+        # voltage and power ratings
+        #transDict["vnom_kv"] = defaults["kvs"]
+        #transDict["snom_kva"] = defaults["kvas"]
+        transDict["rate_a"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
+        transDict["rate_b"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
+        transDict["rate_c"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["emerghkva"] for i  in 1:nrw]
+        # convert to 1 MVA base
+        transDict["rate_a"] *= 1E-3
+        transDict["rate_b"] *= 1E-3
+        transDict["rate_c"] *= 1E-3
+        # connection properties
+        dyz_map = Dict("wye"=>"wye", "delta"=>"delta", "ll"=>"delta", "ln"=>"wye")
+        dyz_primary = dyz_map[defaults["conns"][1]]
+        transDict["conns"] = Array{String,1}(undef, nrw)
+
+        transDict["config"] = Dict{Int,Any}()
+        transDict["config"][1] = Dict(
+            "type"=>dyz_primary,
+            "polarity"=>'+',
+            "cnd"=>[1, 2, 3],
+            "grounded"=>true,
+            "vm_nom"=>defaults["kvs"][1]
+        )
+        #transDict["conns"][1] = string("123+", dyz_primary)
+        for w in 2:nrw
+            type = dyz_map[defaults["conns"][w]]
+            if dyz_primary==type
+                cnd = [1,2,3]
+                polarity = '+'
+            else
+                if defaults["leadlag"] in ["ansi", "lag"]
+                    #Yd1 => (123+y,123+d)
+                    #Dy1 => (123+d,231-y)
+                    #pp_w = (type=="delta") ? "123+" : "231-"
+                    cnd = (type=="delta") ? [1, 2, 3] : [2, 3, 1]
+                    polarity = (type=="delta") ? '+' : '-'
+                else # hence defaults["leadlag"] in ["euro", "lead"]
+                    #Yd11 => (123+y,312-d)
+                    #Dy11 => (123+d,123+y)
+                    #pp_w = (type=="delta") ? "312-" : "123+"
+                    cnd = (type=="delta") ? [3, 1, 2] : [1, 2, 3]
+                    polarity = (type=="delta") ? '-' : '+'
                 end
             end
-            transDict["xs"] = Dict{String, _PMs.MultiConductorMatrix{Float64}}()
-
-            Zsc = Dict{Tuple{Int,Int}, Complex}()
-            if nrw==2
-                xs_map = Dict("xhl"=>(1,2))
-            elseif nrw==3
-                xs_map = Dict("xhl"=>(1,2), "xht"=>(1,3), "xlt"=>(2,3))
+            transDict["config"][w] = Dict(
+                "type"=>type,
+                "polarity"=>polarity,
+                "cnd"=>cnd,
+                "vm_nom"=>defaults["kvs"][w]
+            )
+            if type=="wye"
+                transDict["config"][w]["grounded"] = true
             end
-            for (k,v) in xs_map
-                Zsc[(v)] = im*defaults[k]/100*zbase
-            end
-            Zbr = _sc2br_impedance(Zsc)
-            for (k,zs_ij_p) in Zbr
-                Zs_ij = pos_to_abc(zs_ij_p)
-                transDict["xs"]["$(k[1])-$(k[2])"] = _PMs.MultiConductorMatrix(imag.(Zs_ij))
-            end
-
-            push!(pmd_data["trans_comp"], transDict)
         end
+
+        # tap properties
+        transDict["tm"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["taps"][i] for i in 1:nrw]
+        transDict["tm_min"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["mintap"] for i in 1:nrw]
+        transDict["tm_max"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["maxtap"] for i in 1:nrw]
+        transDict["tm_step"] = [_PMs.MultiConductorVector(ones(Int,3))*defaults["numtaps"] for i in 1:nrw]
+        transDict["fixed"] = [_PMs.MultiConductorVector(ones(Bool,3)) for i in 1:nrw]
+
+        # loss model (converted to SI units, referred to secondary)
+        function zpn_to_abc(z, p, n; atol=1E-13)
+            a = exp(im*2*pi/3)
+            C = 1/sqrt(3)*[1 1 1; 1 a a^2; 1 a^2 a]
+            res = inv(C)*[z 0 0; 0 p 0; 0 0 n]*C
+            res = (abs.(res).>atol).*res
+            return res
+        end
+        pos_to_abc(p) = zpn_to_abc(p, p, p)
+        zbase = 1^2/(defaults["kvas"][1]/1E3)
+        transDict["rs"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
+        transDict["gsh"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
+        transDict["bsh"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
+        # deal with dual definition of rs in defaults dict
+        # if non-zero, pick "%rs", else go for the per winding spec
+        rs_alt = [defaults["%r$suffix"] for suffix in prop_suffix_w]
+        rs = all(defaults["%rs"].==0) ? rs_alt : defaults["%rs"]
+        for w in 1:nrw
+            zs_w_p = rs[w]/100*zbase
+            Zs_w = pos_to_abc(zs_w_p)
+            #TODO handle %loadloss property
+            # Problem is that for the two-winding case, both %loadloss
+            # and %rs map to values for the winding series resistance.
+            # Both are set to a (possibly default) value, so it is
+            # impossible to know at this point which was actually specified
+            # by the user. %rs is more general, so %loadloss is not
+            # supported for now.
+            Memento.warn(_LOGGER, "The %loadloss property is ignored for now.")
+            #TODO handle neutral impedance
+            # neutral impedance is ignored for now; all transformers are
+            # grounded (that is, those with a wye and zig-zag winding).
+            Memento.warn(_LOGGER, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.")
+            transDict["rs"][w] = _PMs.MultiConductorMatrix(real.(Zs_w))
+            # shunt elements are added at second winding
+            if w==2
+                ysh_w_p = (defaults["%noloadloss"]-im*defaults["%imag"])/100/zbase
+                Ysh_w = pos_to_abc(ysh_w_p)
+                transDict["gsh"][w] = _PMs.MultiConductorMatrix(real.(Ysh_w))
+                transDict["bsh"][w] = _PMs.MultiConductorMatrix(imag.(Ysh_w))
+            else
+                transDict["gsh"][w] = _PMs.MultiConductorMatrix(zeros(Float64, 3, 3))
+                transDict["bsh"][w] = _PMs.MultiConductorMatrix(zeros(Float64, 3, 3))
+            end
+        end
+        transDict["xs"] = Dict{String, _PMs.MultiConductorMatrix{Float64}}()
+
+        Zsc = Dict{Tuple{Int,Int}, Complex}()
+        if nrw==2
+            xs_map = Dict("xhl"=>(1,2))
+        elseif nrw==3
+            xs_map = Dict("xhl"=>(1,2), "xht"=>(1,3), "xlt"=>(2,3))
+        end
+        for (k,v) in xs_map
+            Zsc[(v)] = im*defaults[k]/100*zbase
+        end
+        Zbr = _sc2br_impedance(Zsc)
+        for (k,zs_ij_p) in Zbr
+            Zs_ij = pos_to_abc(zs_ij_p)
+            transDict["xs"]["$(k[1])-$(k[2])"] = _PMs.MultiConductorMatrix(imag.(Zs_ij))
+        end
+
+        push!(pmd_data["trans_comp"], transDict)
     end
 end
 
@@ -1639,7 +1652,7 @@ function _correct_duplicate_components!(dss_data::Dict)
 end
 
 
-""
+"Creates a virtual branch between the `virtual_sourcebus` and `sourcebus` with the impedance given by `circuit`"
 function _create_sourcebus_vbranch!(pmd_data::Dict, circuit::Dict)
     sourcebus = _find_bus(pmd_data["sourcebus"], pmd_data)
     vsourcebus = _find_bus("virtual_sourcebus", pmd_data)
@@ -1650,6 +1663,40 @@ function _create_sourcebus_vbranch!(pmd_data::Dict, circuit::Dict)
     rate_b = _PMs.MultiConductorVector(ones(pmd_data["conductors"]) * 1e6)
 
     vbranch = _create_vbranch!(pmd_data, sourcebus, vsourcebus; name="sourcebus_vbranch", br_r=br_r, br_x=br_x)
+end
+
+
+"Combines transformers with 'bank' keyword into a single transformer"
+function _bank_transformers!(pmd_data::Dict)
+    transformer_names = Dict(trans["name"] => n for (n, trans) in get(pmd_data, "trans_comp", Dict()))
+    bankable_transformers = [trans for trans in values(get(pmd_data, "trans_comp", Dict())) if haskey(trans, "bank")]
+    for transformer in bankable_transformers
+        if !(transformer["bank"] in keys(transformer_names))
+            n = length(pmd_data["trans_comp"])+1
+            pmd_data["trans_comp"]["$n"] = deepcopy(transformer)
+            pmd_data["trans_comp"]["$n"]["name"] = deepcopy(transformer["bank"])
+            pmd_data["trans_comp"]["$n"]["source_id"] = "transformer.$(transformer["bank"])"
+            pmd_data["trans_comp"]["$n"]["index"] = n
+            delete!(pmd_data["trans_comp"]["$n"], "bank")
+            transformer_names[transformer["bank"]] = "$n"
+        else
+            banked_transformer = pmd_data["trans_comp"][transformer_names[transformer["bank"]]]
+            for phase in transformer["active_phases"]
+                push!(banked_transformer["active_phases"], phase)
+                for (k, v) in banked_transformer
+                    if isa(v, _PMs.MultiConductorVector)
+                        banked_transformer[k][phase] = deepcopy(transformer[k][phase])
+                    elseif isa(v, _PMs.MultiConductorMatrix)
+                        banked_transformer[k][phase, :] .= deepcopy(transformer[k][phase, :])
+                    end
+                end
+            end
+        end
+    end
+
+    for transformer in bankable_transformers
+        delete!(pmd_data["trans_comp"], transformer_names[transformer["name"]])
+    end
 end
 
 
@@ -1676,7 +1723,7 @@ end
 
 
 "Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format"
-function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1)::Dict
+function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1, bank_transformers::Bool=true)::Dict
     pmd_data = Dict{String,Any}()
 
     _correct_duplicate_components!(dss_data)
@@ -1729,6 +1776,10 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
 
     InfrastructureModels.arrays_to_dicts!(pmd_data)
 
+    if bank_transformers
+        _bank_transformers!(pmd_data)
+    end
+
     for optional in ["dcline", "load", "shunt", "storage", "pvsystem", "branch"]
         if length(pmd_data[optional]) == 0
             pmd_data[optional] = Dict{String,Any}()
@@ -1754,7 +1805,7 @@ end
 
 
 "Parses a DSS file into a PowerModels usable format"
-function parse_opendss(io::IOStream; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1)::Dict
+function parse_opendss(io::IOStream; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1, bank_transformers::Bool=true)::Dict
     dss_data = parse_dss(io)
 
     return parse_opendss(dss_data; import_all=import_all)
