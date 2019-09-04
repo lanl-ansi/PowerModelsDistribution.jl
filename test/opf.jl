@@ -1,4 +1,4 @@
-
+@info "running opf.jl tests"
 @testset "test make multi-phase" begin
     @testset "3-bus 3-phase case" begin
         mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case3.m")

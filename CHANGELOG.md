@@ -2,6 +2,7 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
+- Update to JuMP v0.20 / MOI v0.9 (#164)
 - Fix bug in OpenDSS parser on Lines / Linecodes related to basefreq (#163)
 - Fix bug in OpenDSS parser on Transformers (#162)
 - Fix bug in OpenDSS parser on Lines where `switch=y` property is used (#161)

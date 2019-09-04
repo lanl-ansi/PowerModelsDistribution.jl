@@ -1,4 +1,4 @@
-
+@info "running opf-var.jl tests"
 @testset "test storage opf" begin
 
     @testset "test ac polar opf" begin

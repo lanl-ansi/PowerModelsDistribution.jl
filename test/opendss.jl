@@ -1,3 +1,4 @@
+@info "running opendss.jl tests"
 @testset "opendss parser" begin
     @testset "reverse polish notation" begin
         # Examples from OpenDSS manual
