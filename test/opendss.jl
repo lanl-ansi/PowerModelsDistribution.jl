@@ -41,7 +41,7 @@
         dss = PMD.parse_dss("../test/data/opendss/test_simple.dss")
         pmd = PMD.parse_file("../test/data/opendss/test_simple.dss")
 
-        for (key, len) in zip(["bus", "gen", "branch", "load", "dcline"], [2, 2, 1, 1, 0])
+        for (key, len) in zip(["bus", "gen", "branch", "load", "dcline"], [3, 2, 2, 1, 0])
             @test haskey(pmd, key)
             @test length(pmd[key]) == len
         end
@@ -130,7 +130,7 @@
         # if rs=0, then 1 extra, else 3 extra
         # tr1:+1(rs=0), tr2:+3, tr3:+1(rs=0), tr4:+3, tr5:+1(rs=0)
         # 10 transformers, 2 per dss transformer
-        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "trans"], [32, 4, 5, 26, 4, 0, 10])
+        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "trans"], [33, 4, 5, 27, 4, 0, 10])
             @test haskey(pmd, key)
             @test length(pmd[key]) == len
         end
@@ -216,7 +216,7 @@
         end
 
         pmd2 = PMD.parse_file("../test/data/opendss/test_simple4.dss")
-        @test length(pmd2["bus"]) == 9 # updated nr of buses
+        @test length(pmd2["bus"]) == 10 # updated nr of buses
 
         @testset "branches with switches" begin
             @test pmd["branch"]["5"]["switch"]
@@ -255,7 +255,7 @@
             # updated index, reactors shifted
             @test pmd["branch"]["10"]["source_id"] == "reactor.reactor1" && length(pmd["branch"]["10"]["active_phases"]) == 3
 
-            @test pmd["gen"]["1"]["source_id"] == "vsource.sourcebus" && length(pmd["gen"]["1"]["active_phases"]) == 3
+            @test pmd["gen"]["1"]["source_id"] == "vsource.sourcegen" && length(pmd["gen"]["1"]["active_phases"]) == 3
             @test pmd["gen"]["2"]["source_id"] == "generator.g1" && length(pmd["gen"]["2"]["active_phases"]) == 3
 
             source_id = PMD._parse_dss_source_id(pmd["load"]["1"])
@@ -358,7 +358,7 @@
         sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
-        @test isapprox(sol["objective"], 0.0182769; atol = 1e-4)
+        @test isapprox(sol["objective"], 0.0183961; atol = 1e-4)
     end
 
     @testset "3-bus balanced pv" begin

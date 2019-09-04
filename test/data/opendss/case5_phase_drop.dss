@@ -1,7 +1,7 @@
 clear
 
 new circuit.c3
-~ basekv=0.4 pu=1 MVAsc1=1e12 MVAsc3=1e12
+~ basekv=0.4 pu=1 MVAsc1=1e6 MVAsc3=1e6
 
 new linecode.lc1_3ph nphases=3
 ~ rmatrix = [ 0.1 | 0.0 0.1 | 0.0 0.0 0.1 ]
