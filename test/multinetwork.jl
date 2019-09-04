@@ -1,5 +1,4 @@
-@info "multinetwork.jl"
-
+@info "running multinetwork.jl tests"
 @testset "test multinetwork" begin
 
     @testset "opf with storage case" begin

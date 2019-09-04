@@ -1,5 +1,4 @@
-@info "matlab.jl"
-
+@info "running matlab.jl tests"
 @testset "test matlab data parser" begin
     @testset "5-bus minimal data" begin
         data = PMD.parse_file("../test/data/matlab/case5_i_r_a.m")

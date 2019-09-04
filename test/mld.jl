@@ -1,5 +1,4 @@
-@info "mld.jl"
-
+@info "running mld.jl tests"
 @testset "test mld" begin
     @testset "test ACP" begin
         @testset "5-bus case" begin

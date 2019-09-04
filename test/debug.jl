@@ -1,5 +1,4 @@
-@info "debug.jl"
-
+@info "running debug.jl tests"
 @testset "test ac opf pbs" begin
 
     @testset "5-bus coupled meshed infeasible case" begin
