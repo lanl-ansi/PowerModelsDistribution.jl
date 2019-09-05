@@ -2,6 +2,7 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
+- Change internal variable and constraint functions to loop over phases internally (breaking) (#168)
 - Fix bug in OpenDSS parser on Lines where the connected phases are listed out of order (#167)
 - Add ability to "bank" single phase OpenDSS transformers into a single multiphase transformer (#166)
 - Add virtual line to sourcebus to model source impedance (#165)

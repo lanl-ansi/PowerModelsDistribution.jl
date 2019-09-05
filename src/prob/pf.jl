@@ -26,13 +26,12 @@ end
 function post_mc_pf(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm, bounded=false)
     variable_mc_branch_flow(pm, bounded=false)
+    variable_mc_trans_flow(pm, bounded=false)
 
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_generation(pm, bounded=false, cnd=c)
         _PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
     end
-
-    variable_mc_trans_flow(pm, bounded=false)
 
     constraint_mc_model_voltage(pm)
 
@@ -45,24 +44,26 @@ function post_mc_pf(pm::_PMs.AbstractPowerModel)
         end
     end
 
-    for (i,bus) in _PMs.ref(pm, :bus), c in _PMs.conductor_ids(pm)
-        constraint_mc_power_balance(pm, i, cnd=c)
+    for (i,bus) in _PMs.ref(pm, :bus)
+        constraint_mc_power_balance(pm, i)
 
-        # PV Bus Constraints
-        if length(_PMs.ref(pm, :bus_gens, i)) > 0 && !(i in _PMs.ids(pm,:ref_buses))
-            # this assumes inactive generators are filtered out of bus_gens
-            @assert bus["bus_type"] == 2
+        for c in _PMs.conductor_ids(pm)
+            # PV Bus Constraints
+            if length(_PMs.ref(pm, :bus_gens, i)) > 0 && !(i in _PMs.ids(pm,:ref_buses))
+                # this assumes inactive generators are filtered out of bus_gens
+                @assert bus["bus_type"] == 2
 
-            _PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
-            for j in _PMs.ref(pm, :bus_gens, i)
-                _PMs.constraint_active_gen_setpoint(pm, j, cnd=c)
+                _PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
+                for j in _PMs.ref(pm, :bus_gens, i)
+                    _PMs.constraint_active_gen_setpoint(pm, j, cnd=c)
+                end
             end
         end
     end
 
-    for i in _PMs.ids(pm, :branch), c in _PMs.conductor_ids(pm)
-        constraint_mc_ohms_yt_from(pm, i, cnd=c)
-        constraint_mc_ohms_yt_to(pm, i, cnd=c)
+    for i in _PMs.ids(pm, :branch)
+        constraint_mc_ohms_yt_from(pm, i)
+        constraint_mc_ohms_yt_to(pm, i)
     end
 
     for (i,dcline) in _PMs.ref(pm, :dcline), c in _PMs.conductor_ids(pm)

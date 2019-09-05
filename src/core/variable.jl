@@ -114,8 +114,10 @@ end
 
 "generates variables for both `active` and `reactive` slack at each bus"
 function variable_mc_bus_power_slack(pm::_PMs.AbstractPowerModel; kwargs...)
-    variable_mc_active_bus_power_slack(pm; kwargs...)
-    variable_mc_reactive_bus_power_slack(pm; kwargs...)
+    for cnd in _PMs.conductor_ids(pm)
+        variable_mc_active_bus_power_slack(pm; cnd=cnd, kwargs...)
+        variable_mc_reactive_bus_power_slack(pm; cnd=cnd, kwargs...)
+    end
 end
 
 
@@ -211,9 +213,11 @@ Create a dictionary with values of type Any for the load.
 Depending on the load model, this can be a parameter or a NLexpression.
 These will be inserted into KCL.
 """
-function variable_mc_load(pm::_PMs.AbstractPowerModel; nw=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
-    _PMs.var(pm, nw, cnd)[:pd] = Dict{Int, Any}()
-    _PMs.var(pm, nw, cnd)[:qd] = Dict{Int, Any}()
+function variable_mc_load(pm::_PMs.AbstractPowerModel; nw=pm.cnw, bounded=true)
+    for cnd in _PMs.conductor_ids(pm)
+        _PMs.var(pm, nw, cnd)[:pd] = Dict{Int, Any}()
+        _PMs.var(pm, nw, cnd)[:qd] = Dict{Int, Any}()
+    end
 end
 
 
@@ -301,8 +305,10 @@ end
 
 "Create variables for `active` and `reactive` storage injection"
 function variable_mc_on_off_storage(pm::_PMs.AbstractPowerModel; kwargs...)
-    variabe_mc_on_off_storage_active(pm; kwargs...)
-    variable_mc_on_off_storage_reactive(pm; kwargs...)
+    for cnd in _PMs.conductor_ids(pm)
+        variabe_mc_on_off_storage_active(pm; cnd=cnd, kwargs...)
+        variable_mc_on_off_storage_reactive(pm; cnd=cnd, kwargs...)
+    end
 end
 
 
