@@ -43,14 +43,14 @@ end
 
 "Adds arcs for PMD transformers; for dclines and branches this is done in PMs"
 function ref_add_arcs_trans!(pm::_PMs.AbstractPowerModel)
-    if !haskey(_PMs.ref(pm, pm.cnw), :trans)
+    if !haskey(_PMs.ref(pm, pm.cnw), :transformer)
         # this might happen when parsing data from matlab format
         # the OpenDSS parser always inserts a trans dict
-        _PMs.ref(pm, pm.cnw)[:trans] = Dict{Int, Any}()
+        _PMs.ref(pm, pm.cnw)[:transformer] = Dict{Int, Any}()
     end
     # dirty fix add arcs_from/to_trans and bus_arcs_trans
-    pm.ref[:nw][0][:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in _PMs.ref(pm, :trans)]
-    pm.ref[:nw][0][:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in _PMs.ref(pm, :trans)]
+    pm.ref[:nw][0][:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in _PMs.ref(pm, :transformer)]
+    pm.ref[:nw][0][:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in _PMs.ref(pm, :transformer)]
     pm.ref[:nw][0][:arcs_trans] = [pm.ref[:nw][0][:arcs_from_trans]..., pm.ref[:nw][0][:arcs_to_trans]...]
     pm.ref[:nw][0][:bus_arcs_trans] = Dict{Int64, Array{Any, 1}}()
     for i in _PMs.ids(pm, :bus)
@@ -60,8 +60,8 @@ end
 
 
 ""
-function _calc_mc_trans_Tvi(pm::_PMs.AbstractPowerModel, i::Int; nw=pm.cnw)
-    trans = _PMs.ref(pm, nw, :trans,  i)
+function _calc_mc_transformer_Tvi(pm::_PMs.AbstractPowerModel, i::Int; nw=pm.cnw)
+    trans = _PMs.ref(pm, nw, :transformer,  i)
     # transformation matrices
     # Tv and Ti will be compositions of these
     Tbr = [0 0 1; 1 0 0; 0 1 0]                             # barrel roll

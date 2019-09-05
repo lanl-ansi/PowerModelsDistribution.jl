@@ -130,7 +130,7 @@
         # if rs=0, then 1 extra, else 3 extra
         # tr1:+1(rs=0), tr2:+3, tr3:+1(rs=0), tr4:+3, tr5:+1(rs=0)
         # 10 transformers, 2 per dss transformer
-        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "trans"], [33, 4, 5, 27, 4, 0, 10])
+        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "transformer"], [33, 4, 5, 27, 4, 0, 10])
             @test haskey(pmd, key)
             @test length(pmd[key]) == len
         end
@@ -251,7 +251,7 @@
 
             @test pmd["branch"]["1"]["source_id"] == "line.l1" && length(pmd["branch"]["1"]["active_phases"]) == 3
             # transformer is no longer a branch
-            @test pmd["trans"]["1"]["source_id"] == "transformer.t4_1"  # winding indicated by _1
+            @test pmd["transformer"]["1"]["source_id"] == "transformer.t4_1"  # winding indicated by _1
             # updated index, reactors shifted
             @test pmd["branch"]["10"]["source_id"] == "reactor.reactor1" && length(pmd["branch"]["10"]["active_phases"]) == 3
 
