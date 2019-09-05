@@ -2,6 +2,7 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
+- Fix bug in OpenDSS parser where properties were not applied in the order they were received (#170)
 - Rename "trans" in data and ref to `transformer` for component naming consistency (breaking) (#169)
 - Change internal variable and constraint functions to loop over phases internally (breaking) (#168)
 - Fix bug in OpenDSS parser on Lines where the connected phases are listed out of order (#167)
