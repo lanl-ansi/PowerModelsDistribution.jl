@@ -7,6 +7,7 @@ CurrentModule = PowerModelsDistribution
 ## Overview
 
 PowerModelsDistribution.jl is a Julia/JuMP extension package to PowerModels.jl for modeling of Multi-Phase (with a focus on three-phase) power grids.
+
 ## Installation
 
 The latest stable release of PowerModels can be installed using the Julia package manager with

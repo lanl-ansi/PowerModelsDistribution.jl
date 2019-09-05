@@ -35,9 +35,7 @@ function post_mc_opf_bf(pm::_PMs.AbstractPowerModel)
 
     for i in _PMs.ids(pm, :branch)
         constraint_mc_flow_losses(pm, i)
-
         constraint_mc_model_voltage_magnitude_difference(pm, i)
-
         constraint_mc_voltage_angle_difference(pm, i)
 
         for c in _PMs.conductor_ids(pm)

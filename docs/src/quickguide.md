@@ -16,7 +16,6 @@ The run commands in PowerModelsDistribution return detailed results data in the 
 result = run_ac_mc_opf("case3_unbalanced.dss", with_optimizer(Ipopt.Optimizer))
 ```
 
-
 ## Accessing Different Formulations
 
 The function "run_ac_mc_opf" is a shorthands for a more general formulation-independent OPF execution, "run_mc_opf".
@@ -33,9 +32,11 @@ Note that PowerModels needs to be loaded to access formulations which are extend
 using SCS
 run_mc_opf_bf("case3_unbalanced.dss", SDPUBFPowerModel, with_optimizer(SCS.Optimizer))
 ```
+
 Note that you have to use a SDP-capable solver, e.g. the open-source solver SCS, to solve SDP models.
 
 ## Inspecting the Formulation
+
 The following example demonstrates how to break a `run_mc_opf` call into seperate model building and solving steps.  This allows inspection of the JuMP model created by PowerModelsDistribution for the AC-OPF problem,
 
 ```julia

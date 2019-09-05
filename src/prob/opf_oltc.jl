@@ -34,17 +34,16 @@ function post_mc_opf_oltc(pm::_PMs.AbstractPowerModel)
         constraint_mc_theta_ref(pm, i)
     end
 
-    for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
-        constraint_mc_power_balance(pm, i, cnd=c)
+    for i in _PMs.ids(pm, :bus)
+        constraint_mc_power_balance(pm, i)
     end
 
     for i in _PMs.ids(pm, :branch)
         constraint_mc_voltage_angle_difference(pm, i)
+        constraint_mc_ohms_yt_from(pm, i)
+        constraint_mc_ohms_yt_to(pm, i)
 
         for c in _PMs.conductor_ids(pm)
-            constraint_mc_ohms_yt_from(pm, i, cnd=c)
-            constraint_mc_ohms_yt_to(pm, i, cnd=c)
-
             _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
             _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
         end

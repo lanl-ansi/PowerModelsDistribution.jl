@@ -24,13 +24,13 @@ delta-connected and wye-connected
 function post_mc_opf_lm(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm)
     variable_mc_branch_flow(pm)
+    variable_mc_trans_flow(pm)
+    variable_mc_load(pm)
 
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_generation(pm, cnd=c)
-        variable_mc_load(pm, cnd=c)
         _PMs.variable_dcline_flow(pm, cnd=c)
     end
-    variable_mc_trans_flow(pm)
 
     constraint_mc_model_voltage(pm)
 
@@ -43,17 +43,16 @@ function post_mc_opf_lm(pm::_PMs.AbstractPowerModel)
         constraint_mc_load(pm, id)
     end
 
-    for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
-        constraint_mc_power_balance_load(pm, i, cnd=c)
+    for i in _PMs.ids(pm, :bus)
+        constraint_mc_power_balance_load(pm, i)
     end
 
     for i in _PMs.ids(pm, :branch)
         constraint_mc_voltage_angle_difference(pm, i)
+        constraint_mc_ohms_yt_from(pm, i)
+        constraint_mc_ohms_yt_to(pm, i)
 
         for c in _PMs.conductor_ids(pm)
-            constraint_mc_ohms_yt_from(pm, i, cnd=c)
-            constraint_mc_ohms_yt_to(pm, i, cnd=c)
-
             _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
             _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
         end
