@@ -2,7 +2,6 @@
 
 As PowerModelsDistribution implements a variety of power network optimization problems, the implementation is the best reference for precise mathematical formulations.  This section provides a complex number based mathematical specification for a prototypical unbalanced AC Optimal Power Flow problem, to provide an overview of the typical mathematical models in PowerModelsDistribution.
 
-
 ## Unbalanced AC Optimal Power Flow
 
 PowerModelsDistribution implements a  generalized version of the AC Optimal Power Flow problem, from [Matpower](http://www.pserc.cornell.edu/matpower/) but extended to take into account phase unbalance [^1].  These generalizations make it possible for PowerModelsDistribution to more accurately capture real-world distribution network datasets.  The core generalizations are,
@@ -11,6 +10,7 @@ PowerModelsDistribution implements a  generalized version of the AC Optimal Powe
 - Line charging (shunt) that supports a conductance and asymmetrical values
 
 In the mathematical description below,
+
 - Bold typeface indicates a vector ($\in \mathbb{C}^c$) or matrix ($\in \mathbb{C}^{c\times c}$)
 - Operator $diag$ takes the diagonal (vector) from a square matrix
 - The set of complex numbers is $\mathbb{C}$ and real numbers is $\mathbb{R}$
@@ -18,10 +18,10 @@ In the mathematical description below,
 - Note that complex power is defined as $\mathbf{S}_{ij} = \mathbf{V}_{i} \mathbf{I}_{ij}^H$ and is therefore a complex matrix of dimension $c \times c$
 - The line $\mathbf{Y}^c_{ij}, \mathbf{Y}^c_{ji}$ and bus $\mathbf{Y}^s_{k}$ shunt matrices do not need to be diagonal
 
-
 ### Sets
 
 The definitions of the sets involved remain unchanged w.r.t. the balanced OPF problem definition, except for the addition of the conductor set:
+
 ```math
 \begin{align}
 %
@@ -36,9 +36,11 @@ The definitions of the sets involved remain unchanged w.r.t. the balanced OPF pr
 %
 \end{align}
 ```
+
 where the set of conductors $C$ typically equals $\{ a,b,c\}$.
 
 ### Data
+
 ```math
 \begin{align}
 \mbox{data:} & \nonumber \\
@@ -53,12 +55,15 @@ where the set of conductors $C$ typically equals $\{ a,b,c\}$.
 %
 \end{align}
 ```
+
 where the notation $\mathbf{v}^l_{i} := [v^l_{i,c}]_{c \in C}$ reflects that the vector $\mathbf{v}^l_{i}$ is constructed by putting the individual phase values $v^l_{i,c}$ in a vector (in order $a,b,c$).
 
 Alternatively, the series impedance of a line can be written in impedance form:
+
 ```math
 \mathbf{Z}_{ij} \in \mathbb{C}^{c\times c} \;\; \forall (i,j) \in E \nonumber, \mathbf{Y}_{ij} = ( \mathbf{Z}_{ij})^{-1}
 ```
+
 where superscript $-1$ indicates the matrix inverse. Note that $\mathbf{Y}_{ij}$ or $\mathbf{Z}_{ij}$ may not be invertible, e.g. in case of single-phase branches in a three-phase grid. In this case the [pseudo-inverse](https://en.wikipedia.org/wiki/Moore%E2%80%93Penrose_inverse) can be used.
 
 ### Variables for a Bus Injection Model
@@ -72,8 +77,7 @@ where superscript $-1$ indicates the matrix inverse. Note that $\mathbf{Y}_{ij}$
 \end{align}
 ```
 
-
-###  Mathematical Formulation of a Bus Injection Model
+### Mathematical Formulation of a Bus Injection Model
 
 A complete mathematical model is as follows,
 
@@ -95,7 +99,6 @@ A complete mathematical model is as follows,
 \end{align}
 ```
 
-
 ### Variables for a Branch Flow Model
 
 ```math
@@ -108,8 +111,7 @@ A complete mathematical model is as follows,
 \end{align}
 ```
 
-
-###  Mathematical Formulation of a Branch Flow Model
+### Mathematical Formulation of a Branch Flow Model
 
 A complete mathematical model is as follows,
 
@@ -131,6 +133,5 @@ A complete mathematical model is as follows,
 %
 \end{align}
 ```
-
 
 [^1] Gan, L., & Low, S. H. (2014). Convex relaxations and linear approximation for optimal power flow in multiphase radial networks. In PSSC (pp. 1–9). Wroclaw, Poland. https://doi.org/10.1109/PSCC.2014.7038399

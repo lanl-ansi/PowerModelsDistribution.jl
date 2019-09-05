@@ -1,14 +1,17 @@
 # Problem Specifications
 
-
 ## Optimal Power Flow (OPF) with On-Load Tap Changers (OLTC)
+
 This problem is identical to `mc_opf`, except that all transformers are now modelled as on-load tap changers (OLTCs). Each phase has an individual tap ratio, which can be either variable or fixed, as specified in the data model.
+
 ### Objective
+
 ```julia
 objective_min_fuel_cost(pm)
 ```
 
 ### Variables
+
 ```julia
 variable_mc_voltage(pm)
 variable_mc_branch_flow(pm)
@@ -22,6 +25,7 @@ variable_mc_oltc_tap(pm)
 ```
 
 ### Constraints
+
 ```julia
 constraint_mc_model_voltage(pm)
 
@@ -34,8 +38,8 @@ for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
 end
 
 for i in PMs.ids(pm, :branch)
-    constraint_mc_ohms_yt_from(pm, i, cnd=c)
-    constraint_mc_ohms_yt_to(pm, i, cnd=c)
+    constraint_mc_ohms_yt_from(pm, i)
+    constraint_mc_ohms_yt_to(pm, i)
 
     for c in PMs.conductor_ids(pm)
         PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
@@ -55,14 +59,17 @@ end
 ```
 
 ## Optimal Power Flow (OPF) with Load Models (LM)
+
 Unlike `mc_opf`, which models all loads as constant power loads, this problem specification additionally supports loads proportional to the voltage magnitude (a.k.a. constant current) and the square of the voltage magnitude (a.k.a. constant impedance). Each load now has associated active and reactive power variables. In `mc_opf`, loads are directly added as parameters in KCL.
 
 ### Objective
+
 ```julia
 objective_min_fuel_cost(pm)
 ```
 
 ### Variables
+
 ```julia
 variable_mc_voltage(pm)
 variable_mc_branch_flow(pm)
@@ -76,6 +83,7 @@ variable_mc_oltc_tap(pm)
 ```
 
 ### Constraints
+
 ```julia
 constraint_mc_model_voltage(pm)
 
@@ -122,23 +130,25 @@ end
 ```
 
 ## Power Flow (PF) with Load Models (LM)
+
 Unlike `mc_pf`, which models all loads as constant power loads, this problem specification additionally supports loads proportional to the voltage magnitude (a.k.a. constant current) and the square of the voltage magnitude (a.k.a. constant impedance). Each load now has associated active and reactive power variables. In `mc_pf`, loads are directly added as parameters in KCL.
 
 ### Variables
+
 ```julia
 variable_mc_voltage(pm, bounded=false)
 variable_mc_branch_flow(pm, bounded=false)
+variable_mc_trans_flow(pm, bounded=false)
+variable_mc_load(pm)
 
 for c in PMs.conductor_ids(pm)
     PMs.variable_generation(pm, bounded=false, cnd=c)
-    variable_mc_load(pm, cnd=c)
     PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
 end
-
-variable_mc_trans_flow(pm, bounded=false)
 ```
 
 ### Constraints
+
 ```julia
 constraint_mc_model_voltage(pm, bounded=false)
 
@@ -187,7 +197,6 @@ for i in PMs.ids(pm, :branch)
 end
 
 for (i,dcline) in PMs.ref(pm, :dcline), c in PMs.conductor_ids(pm)
-
     PMs.constraint_active_dcline_setpoint(pm, i, cnd=c)
 
     f_bus = PMs.ref(pm, :bus)[dcline["f_bus"]]

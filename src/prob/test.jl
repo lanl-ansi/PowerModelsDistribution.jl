@@ -21,6 +21,7 @@ end
 function post_mc_strg_opf(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm)
     variable_mc_branch_flow(pm)
+    variable_mc_trans_flow(pm)
     variable_mc_storage(pm)
 
     for c in _PMs.conductor_ids(pm)
@@ -28,15 +29,14 @@ function post_mc_strg_opf(pm::_PMs.AbstractPowerModel)
         _PMs.variable_dcline_flow(pm, cnd=c)
     end
 
-    variable_mc_trans_flow(pm)
     constraint_mc_model_voltage(pm)
 
     for i in _PMs.ids(pm, :ref_buses)
         constraint_mc_theta_ref(pm, i)
     end
 
-    for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
-        constraint_mc_power_balance_storage(pm, i, cnd=c)
+    for i in _PMs.ids(pm, :bus)
+        constraint_mc_power_balance_storage(pm, i)
     end
 
     for i in _PMs.ids(pm, :storage)
@@ -50,11 +50,10 @@ function post_mc_strg_opf(pm::_PMs.AbstractPowerModel)
 
     for i in _PMs.ids(pm, :branch)
         constraint_mc_voltage_angle_difference(pm, i)
+        constraint_mc_ohms_yt_from(pm, i)
+        constraint_mc_ohms_yt_to(pm, i)
 
         for c in _PMs.conductor_ids(pm)
-            constraint_mc_ohms_yt_from(pm, i, cnd=c)
-            constraint_mc_ohms_yt_to(pm, i, cnd=c)
-
             _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
             _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
         end
@@ -90,6 +89,7 @@ end
 function post_mn_mc_strg_opf(pm::_PMs.AbstractPowerModel)
     for (n, network) in _PMs.nws(pm)
         variable_mc_voltage(pm, nw=n)
+        constraint_mc_model_voltage(pm, nw=n)
         variable_mc_branch_flow(pm, nw=n)
         variable_mc_storage(pm, nw=n)
 
@@ -97,8 +97,6 @@ function post_mn_mc_strg_opf(pm::_PMs.AbstractPowerModel)
             _PMs.variable_generation(pm, cnd=c, nw=n)
             _PMs.variable_dcline_flow(pm, cnd=c, nw=n)
         end
-
-        constraint_mc_model_voltage(pm, nw=n)
 
         for i in _PMs.ids(pm, :ref_buses, nw=n)
             constraint_mc_theta_ref(pm, i, nw=n)
@@ -118,10 +116,10 @@ function post_mn_mc_strg_opf(pm::_PMs.AbstractPowerModel)
         end
 
         for i in _PMs.ids(pm, :branch, nw=n)
-            for c in _PMs.conductor_ids(pm, nw=n)
-                constraint_mc_ohms_yt_from(pm, i, cnd=c, nw=n)
-                constraint_mc_ohms_yt_to(pm, i, cnd=c, nw=n)
+            constraint_mc_ohms_yt_from(pm, i, nw=n)
+            constraint_mc_ohms_yt_to(pm, i, nw=n)
 
+            for c in _PMs.conductor_ids(pm, nw=n)
                 _PMs.constraint_voltage_angle_difference(pm, i, cnd=c, nw=n)
 
                 _PMs.constraint_thermal_limit_from(pm, i, cnd=c, nw=n)
