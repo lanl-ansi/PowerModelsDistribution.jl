@@ -1,7 +1,7 @@
 ### generic features that apply to all active-power-only (apo) approximations
 
 "do nothing, no reactive power in this model"
-function variable_mc_trans_reactive_flow(pm::_PMs.AbstractActivePowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
+function variable_mc_transformer_reactive_flow(pm::_PMs.AbstractActivePowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
 end
 
 

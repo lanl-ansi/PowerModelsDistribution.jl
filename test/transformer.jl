@@ -31,8 +31,8 @@ vm(sol, pmd_data, name) = sol["solution"]["bus"][string(bus_name2id(pmd_data, na
             file = "../test/data/opendss/ut_trans_2w_yy_oltc.dss"
             pmd_data = PMD.parse_file(file)
             # free the taps
-            pmd_data["trans"]["1"]["fixed"] = PMs.MultiConductorVector(zeros(Bool, 3))
-            pmd_data["trans"]["2"]["fixed"] = PMs.MultiConductorVector(zeros(Bool, 3))
+            pmd_data["transformer"]["1"]["fixed"] = PMs.MultiConductorVector(zeros(Bool, 3))
+            pmd_data["transformer"]["2"]["fixed"] = PMs.MultiConductorVector(zeros(Bool, 3))
             pm = PMs.build_model(pmd_data, PMs.ACPPowerModel, PMD.post_mc_opf_oltc, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
             sol = PMs.optimize_model!(pm, ipopt_solver)
             # check that taps are set as to boost the voltage in the branches as much as possible;

@@ -17,7 +17,7 @@ end
 
 ######## Lossless Models ########
 "Create variables for the active power flowing into all transformer windings"
-function variable_mc_trans_active_flow(pm::_PMs.AbstractAPLossLessModels; nw::Int=pm.cnw, bounded=true)
+function variable_mc_transformer_active_flow(pm::_PMs.AbstractAPLossLessModels; nw::Int=pm.cnw, bounded=true)
     for cnd in _PMs.conductor_ids(pm)
         pt = _PMs.var(pm, nw, cnd)[:pt] = JuMP.@variable(pm.model,
             [(l,i,j) in _PMs.ref(pm, nw, :arcs_from_trans)],
@@ -27,8 +27,8 @@ function variable_mc_trans_active_flow(pm::_PMs.AbstractAPLossLessModels; nw::In
         if bounded
             for arc in _PMs.ref(pm, nw, :arcs_from_trans)
                 tr_id = arc[1]
-                flow_lb  = -_PMs.ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
-                flow_ub  =  _PMs.ref(pm, nw, :trans, tr_id, "rate_a")[cnd]
+                flow_lb  = -_PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
+                flow_ub  =  _PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
                 JuMP.set_lower_bound(pt[arc], flow_lb)
                 JuMP.set_upper_bound(pt[arc], flow_ub)
             end
@@ -106,12 +106,12 @@ end
 
 
 "nothing to do, no voltage variables"
-function constraint_mc_trans_voltage(pm::_PMs.AbstractNFAModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to)
+function constraint_mc_transformer_voltage(pm::_PMs.AbstractNFAModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to)
 end
 
 
 "nothing to do, this model is symmetric"
-function constraint_mc_trans_flow(pm::_PMs.AbstractNFAModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to)
+function constraint_mc_transformer_flow(pm::_PMs.AbstractNFAModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to)
 end
 
 

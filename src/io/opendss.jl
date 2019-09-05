@@ -732,8 +732,8 @@ end
 Adds ThreePhasePowerModels-style transformers to `pmd_data` from `dss_data`.
 """
 function _dss2pmd_transformer!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
-   if !haskey(pmd_data, "trans_comp")
-        pmd_data["trans_comp"] = Array{Any,1}()
+   if !haskey(pmd_data, "transformer_comp")
+        pmd_data["transformer_comp"] = Array{Any,1}()
     end
 
     for transformer in get(dss_data, "transformer", [])
@@ -906,7 +906,7 @@ function _dss2pmd_transformer!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
             transDict["xs"]["$(k[1])-$(k[2])"] = _PMs.MultiConductorMatrix(imag.(Zs_ij))
         end
 
-        push!(pmd_data["trans_comp"], transDict)
+        push!(pmd_data["transformer_comp"], transDict)
     end
 end
 
@@ -1142,8 +1142,8 @@ function _adjust_sourcegen_bounds!(pmd_data)
         end
     end
 
-    if haskey(pmd_data, "trans")
-        for (_,trans) in pmd_data["trans"]
+    if haskey(pmd_data, "transformer")
+        for (_,trans) in pmd_data["transformer"]
             if trans["f_bus"] == sourcebus_n || trans["t_bus"] == sourcebus_n
                 append!(emergamps, trans["rate_b"].values)
             end
@@ -1167,11 +1167,11 @@ Replaces complex transformers with a composition of ideal transformers and branc
 which model losses. New buses (virtual, no physical meaning) are added.
 """
 function _decompose_transformers!(pmd_data; import_all::Bool=false)
-    if !haskey(pmd_data, "trans")
-        pmd_data["trans"] = Dict{String, Any}()
+    if !haskey(pmd_data, "transformer")
+        pmd_data["transformer"] = Dict{String, Any}()
     end
     ncnds = pmd_data["conductors"]
-    for (tr_id, trans) in pmd_data["trans_comp"]
+    for (tr_id, trans) in pmd_data["transformer_comp"]
         nrw = length(trans["buses"])
         endnode_id_w = Array{Int, 1}(undef, nrw)
         bus_reduce = []
@@ -1186,7 +1186,7 @@ function _decompose_transformers!(pmd_data; import_all::Bool=false)
             trans_dict["name"] = "tr$(tr_id)_w$(w)"
             trans_dict["source_id"] = "$(trans["source_id"])_$(w)"
             trans_dict["active_phases"] = [1, 2, 3]
-            _push_dict_ret_key!(pmd_data["trans"], trans_dict)
+            _push_dict_ret_key!(pmd_data["transformer"], trans_dict)
             # connection settings
             trans_dict["config_fr"] = trans["config"][w]
             trans_dict["config_to"] = Dict(
@@ -1248,9 +1248,9 @@ function _decompose_transformers!(pmd_data; import_all::Bool=false)
         end
         _rm_redundant_pd_elements!(pmd_data, buses=string.(bus_reduce), branches=string.(branch_reduce))
     end
-    # remove the trans_comp dict unless import_all is flagged
+    # remove the transformer_comp dict unless import_all is flagged
     if !import_all
-        delete!(pmd_data, "trans_comp")
+        delete!(pmd_data, "transformer_comp")
     end
 end
 
@@ -1400,7 +1400,7 @@ function _rm_redundant_pd_elements!(pmd_data; buses=keys(pmd_data["bus"]), branc
                     end
                 end
                 # replace bus references in transformers
-                for (_, tr) in pmd_data["trans"]
+                for (_, tr) in pmd_data["transformer"]
                     if tr["f_bus"] == rm_bus
                         tr["f_bus"] = kp_bus
                     end
@@ -1485,7 +1485,7 @@ and addmittances are rescaled to be consistent with the new voltage bases.
 function _adjust_base!(pmd_data; start_at_first_tr_prim=false)
     # initialize arrays etc. for the recursive part
     edges_br = [(br["index"], br["f_bus"], br["t_bus"]) for (br_id_str, br) in pmd_data["branch"]]
-    edges_tr = [(tr["index"], tr["f_bus"], tr["t_bus"]) for (tr_id_str, tr) in pmd_data["trans"]]
+    edges_tr = [(tr["index"], tr["f_bus"], tr["t_bus"]) for (tr_id_str, tr) in pmd_data["transformer"]]
     edges_br_visited = Dict{Int, Bool}([(edge[1], false) for edge in edges_br])
     edges_tr_visited = Dict{Int, Bool}([(edge[1], false) for edge in edges_tr])
     bus_ids = [parse(Int, x) for x in keys(pmd_data["bus"])]
@@ -1493,8 +1493,8 @@ function _adjust_base!(pmd_data; start_at_first_tr_prim=false)
     # retrieve old voltage bases from connected nodes before starting
     br_basekv_old = Dict([(br["index"], pmd_data["bus"][string(br["f_bus"])]["base_kv"]) for (br_id_str, br) in pmd_data["branch"]])
     # start from the primary of the first transformer
-    if start_at_first_tr_prim && haskey(pmd_data, "trans") && haskey(pmd_data["trans"], "1")
-        trans_first = pmd_data["trans"]["1"]
+    if start_at_first_tr_prim && haskey(pmd_data, "transformer") && haskey(pmd_data["transformer"], "1")
+        trans_first = pmd_data["transformer"]["1"]
         source = trans_first["f_bus"]
         base_kv_new = trans_first["config_fr"]["vm_nom"]
     else
@@ -1581,7 +1581,7 @@ function _adjust_base_rec!(pmd_data, source::Int, base_kv_new::Float64, nodes_vi
             edges_tr_visited[tr_id] = true
             source_new = (f_bus==source) ? t_bus : f_bus
             # scale the basekv across the transformer
-            trans = pmd_data["trans"][string(tr_id)]
+            trans = pmd_data["transformer"][string(tr_id)]
             base_kv_new_tr = deepcopy(base_kv_new)
             if source_new==t_bus
                 base_kv_new_tr *= (trans["config_to"]["vm_nom"]/trans["config_fr"]["vm_nom"])
@@ -1676,19 +1676,19 @@ end
 
 "Combines transformers with 'bank' keyword into a single transformer"
 function _bank_transformers!(pmd_data::Dict)
-    transformer_names = Dict(trans["name"] => n for (n, trans) in get(pmd_data, "trans_comp", Dict()))
-    bankable_transformers = [trans for trans in values(get(pmd_data, "trans_comp", Dict())) if haskey(trans, "bank")]
+    transformer_names = Dict(trans["name"] => n for (n, trans) in get(pmd_data, "transformer_comp", Dict()))
+    bankable_transformers = [trans for trans in values(get(pmd_data, "transformer_comp", Dict())) if haskey(trans, "bank")]
     for transformer in bankable_transformers
         if !(transformer["bank"] in keys(transformer_names))
-            n = length(pmd_data["trans_comp"])+1
-            pmd_data["trans_comp"]["$n"] = deepcopy(transformer)
-            pmd_data["trans_comp"]["$n"]["name"] = deepcopy(transformer["bank"])
-            pmd_data["trans_comp"]["$n"]["source_id"] = "transformer.$(transformer["bank"])"
-            pmd_data["trans_comp"]["$n"]["index"] = n
-            delete!(pmd_data["trans_comp"]["$n"], "bank")
+            n = length(pmd_data["transformer_comp"])+1
+            pmd_data["transformer_comp"]["$n"] = deepcopy(transformer)
+            pmd_data["transformer_comp"]["$n"]["name"] = deepcopy(transformer["bank"])
+            pmd_data["transformer_comp"]["$n"]["source_id"] = "transformer.$(transformer["bank"])"
+            pmd_data["transformer_comp"]["$n"]["index"] = n
+            delete!(pmd_data["transformer_comp"]["$n"], "bank")
             transformer_names[transformer["bank"]] = "$n"
         else
-            banked_transformer = pmd_data["trans_comp"][transformer_names[transformer["bank"]]]
+            banked_transformer = pmd_data["transformer_comp"][transformer_names[transformer["bank"]]]
             for phase in transformer["active_phases"]
                 push!(banked_transformer["active_phases"], phase)
                 for (k, v) in banked_transformer
@@ -1703,7 +1703,7 @@ function _bank_transformers!(pmd_data::Dict)
     end
 
     for transformer in bankable_transformers
-        delete!(pmd_data["trans_comp"], transformer_names[transformer["name"]])
+        delete!(pmd_data["transformer_comp"], transformer_names[transformer["name"]])
     end
 end
 
@@ -1796,12 +1796,12 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
 
     _create_sourcebus_vbranch!(pmd_data, defaults)
 
-    if haskey(pmd_data, "trans_comp")
+    if haskey(pmd_data, "transformer_comp")
         # this has to be done before calling _adjust_sourcegen_bounds!
         _decompose_transformers!(pmd_data; import_all=import_all)
         _adjust_base!(pmd_data)
     else
-        pmd_data["trans"] = Dict{String, Any}()
+        pmd_data["transformer"] = Dict{String, Any}()
     end
 
     _adjust_sourcegen_bounds!(pmd_data)

@@ -262,7 +262,7 @@ end
 
 
 "Links the voltage at both windings of a fixed tap transformer"
-function constraint_mc_trans_voltage(pm::_PMs.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to)
+function constraint_mc_transformer_voltage(pm::_PMs.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to)
     ncnd  = 3
     # from side
     vm_fr = [_PMs.var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
@@ -287,7 +287,7 @@ end
 
 
 "Links the power flowing into both windings of a fixed tap transformer"
-function constraint_mc_trans_flow(pm::_PMs.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to)
+function constraint_mc_transformer_flow(pm::_PMs.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to)
     ncnd  = 3
     # from side variables
     vm_fr = [_PMs.var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
@@ -484,9 +484,9 @@ end
 
 
 "Links the power flowing into both windings of a variable tap transformer."
-function constraint_mc_trans_flow_var(pm::_PMs.AbstractPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im; nw::Int=pm.cnw)
+function constraint_mc_transformer_flow_var(pm::_PMs.AbstractPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im; nw::Int=pm.cnw)
     # for ac formulation, indentical to fixed tap
-    constraint_mc_trans_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
+    constraint_mc_transformer_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
 end
 
 

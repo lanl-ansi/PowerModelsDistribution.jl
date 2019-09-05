@@ -25,7 +25,7 @@ function post_mc_opf_oltc(pm::_PMs.AbstractPowerModel)
         _PMs.variable_generation(pm, cnd=c)
         _PMs.variable_dcline_flow(pm, cnd=c)
     end
-    variable_mc_trans_flow(pm)
+    variable_mc_transformer_flow(pm)
     variable_mc_oltc_tap(pm)
 
     constraint_mc_model_voltage(pm)
@@ -53,7 +53,7 @@ function post_mc_opf_oltc(pm::_PMs.AbstractPowerModel)
         _PMs.constraint_dcline(pm, i, cnd=c)
     end
 
-    for i in _PMs.ids(pm, :trans)
+    for i in _PMs.ids(pm, :transformer)
         constraint_mc_oltc(pm, i)
     end
 

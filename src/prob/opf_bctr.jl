@@ -14,7 +14,7 @@ end
 function post_mc_opf_bctr(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm)
     variable_mc_branch_flow(pm)
-    variable_mc_trans_flow(pm)
+    variable_mc_transformer_flow(pm)
 
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_generation(pm, cnd=c)
@@ -51,7 +51,7 @@ function post_mc_opf_bctr(pm::_PMs.AbstractPowerModel)
         _PMs.constraint_dcline(pm, i, cnd=c)
     end
 
-    for i in _PMs.ids(pm, :trans)
+    for i in _PMs.ids(pm, :transformer)
         constraint_mc_trans(pm, i)
     end
 

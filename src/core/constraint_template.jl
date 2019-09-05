@@ -202,14 +202,14 @@ function constraint_mc_trans(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw
     if _PMs.ref(pm, pm.cnw, :conductors)!=3
         Memento.error(_LOGGER, "Transformers only work with networks with three conductors.")
     end
-    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = _calc_mc_trans_Tvi(pm, i)
-    f_bus = _PMs.ref(pm, :trans, i)["f_bus"]
-    t_bus = _PMs.ref(pm, :trans, i)["t_bus"]
-    tm = _PMs.ref(pm, :trans, i)["tm"]
-    constraint_mc_trans_voltage(pm, nw, i, f_bus, t_bus, tm, Tv_fr, Tv_im, Cv_to)
+    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = _calc_mc_transformer_Tvi(pm, i)
+    f_bus = _PMs.ref(pm, :transformer, i)["f_bus"]
+    t_bus = _PMs.ref(pm, :transformer, i)["t_bus"]
+    tm = _PMs.ref(pm, :transformer, i)["tm"]
+    constraint_mc_transformer_voltage(pm, nw, i, f_bus, t_bus, tm, Tv_fr, Tv_im, Cv_to)
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
-    constraint_mc_trans_flow(pm, nw, i, f_bus, t_bus, f_idx, t_idx, tm, Ti_fr, Ti_im, Cv_to)
+    constraint_mc_transformer_flow(pm, nw, i, f_bus, t_bus, f_idx, t_idx, tm, Ti_fr, Ti_im, Cv_to)
 end
 
 
@@ -218,8 +218,8 @@ function constraint_mc_oltc(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     if _PMs.ref(pm, pm.cnw, :conductors)!=3
         Memento.error(_LOGGER, "Transformers only work with networks with three conductors.")
     end
-    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = _calc_mc_trans_Tvi(pm, i)
-    trans = _PMs.ref(pm, :trans, i)
+    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = _calc_mc_transformer_Tvi(pm, i)
+    trans = _PMs.ref(pm, :transformer, i)
     f_bus = trans["f_bus"]
     t_bus = trans["t_bus"]
     constraint_mc_oltc_voltage(pm, nw, i, f_bus, t_bus, Tv_fr, Tv_im, Cv_to)
@@ -227,7 +227,7 @@ function constraint_mc_oltc(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     t_idx = (i, t_bus, f_bus)
     constraint_mc_oltc_flow(pm, nw, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im, Cv_to)
     # fix the taps with a constraint which are not free
-    trans = _PMs.ref(pm, :trans, i)
+    trans = _PMs.ref(pm, :transformer, i)
     fixed = trans["fixed"]
     tm = trans["tm"]
     constraint_mc_oltc_tap_fix(pm, i, fixed, tm)

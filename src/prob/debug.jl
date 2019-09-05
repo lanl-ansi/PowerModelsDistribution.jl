@@ -29,7 +29,7 @@ function post_mc_opf_pbs(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm)
 
     variable_mc_branch_flow(pm)
-    variable_mc_trans_flow(pm)
+    variable_mc_transformer_flow(pm)
 
     variable_mc_bus_power_slack(pm)
 
@@ -75,7 +75,7 @@ function post_mc_pf_pbs(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm, bounded=false)
 
     variable_mc_branch_flow(pm, bounded=false)
-    variable_mc_trans_flow(pm, bounded=false)
+    variable_mc_transformer_flow(pm, bounded=false)
 
     variable_mc_bus_power_slack(pm)
 
