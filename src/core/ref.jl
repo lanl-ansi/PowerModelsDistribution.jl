@@ -43,18 +43,20 @@ end
 
 "Adds arcs for PMD transformers; for dclines and branches this is done in PMs"
 function ref_add_arcs_trans!(pm::_PMs.GenericPowerModel)
-    if !haskey(_PMs.ref(pm, pm.cnw), :trans)
-        # this might happen when parsing data from matlab format
-        # the OpenDSS parser always inserts a trans dict
-        _PMs.ref(pm, pm.cnw)[:trans] = Dict{Int, Any}()
-    end
-    # dirty fix add arcs_from/to_trans and bus_arcs_trans
-    pm.ref[:nw][0][:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in _PMs.ref(pm, :trans)]
-    pm.ref[:nw][0][:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in _PMs.ref(pm, :trans)]
-    pm.ref[:nw][0][:arcs_trans] = [pm.ref[:nw][0][:arcs_from_trans]..., pm.ref[:nw][0][:arcs_to_trans]...]
-    pm.ref[:nw][0][:bus_arcs_trans] = Dict{Int64, Array{Any, 1}}()
-    for i in _PMs.ids(pm, :bus)
-        pm.ref[:nw][0][:bus_arcs_trans][i] = [e for e in pm.ref[:nw][0][:arcs_trans] if e[2]==i]
+    for nw in _PMs.nw_ids(pm)
+        if !haskey(_PMs.ref(pm, nw), :trans)
+            # this might happen when parsing data from matlab format
+            # the OpenDSS parser always inserts a trans dict
+            _PMs.ref(pm, nw)[:trans] = Dict{Int, Any}()
+        end
+        # dirty fix add arcs_from/to_trans and bus_arcs_trans
+        pm.ref[:nw][nw][:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in _PMs.ref(pm, :trans)]
+        pm.ref[:nw][nw][:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in _PMs.ref(pm, :trans)]
+        pm.ref[:nw][nw][:arcs_trans] = [pm.ref[:nw][nw][:arcs_from_trans]..., pm.ref[:nw][nw][:arcs_to_trans]...]
+        pm.ref[:nw][nw][:bus_arcs_trans] = Dict{Int64, Array{Any, 1}}()
+        for i in _PMs.ids(pm, :bus)
+            pm.ref[:nw][nw][:bus_arcs_trans][i] = [e for e in pm.ref[:nw][nw][:arcs_trans] if e[2]==i]
+        end
     end
 end
 
