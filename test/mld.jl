@@ -1,8 +1,9 @@
+@info "running mld.jl tests"
 @testset "test mld" begin
     @testset "test ACP" begin
         @testset "5-bus case" begin
             mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case5.m"); PMD.make_multiconductor!(mp_data, 3)
-            result = run_tp_mld(mp_data, PMs.ACPPowerModel, ipopt_solver)
+            result = run_mc_mld(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.3295; atol = 1e-4)
@@ -13,7 +14,7 @@
         end
         @testset "5-bus storage case" begin
             mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case5_strg.m"); PMD.make_multiconductor!(mp_data, 3)
-            result = run_tp_mld_strg(mp_data, PMs.ACPPowerModel, with_optimizer(Ipopt.Optimizer, print_level=0, tol=1e-10))  # why higher tol required?
+            result = run_mc_mld_strg(mp_data, PMs.ACPPowerModel, ipopt_solver)  # why higher tol required?
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.3553; atol=1e-4)
@@ -24,7 +25,7 @@
     @testset "test NFA" begin
         @testset "5-bus case" begin
             mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case5.m"); PMD.make_multiconductor!(mp_data, 3)
-            result = run_tp_mld(mp_data, PMs.NFAPowerModel, ipopt_solver)
+            result = run_mc_mld(mp_data, PMs.NFAPowerModel, ipopt_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.1557; atol = 1e-4)
@@ -33,7 +34,7 @@
         end
         @testset "5-bus storage case" begin
             mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case5_strg.m"); PMD.make_multiconductor!(mp_data, 3)
-            result = run_tp_mld_strg(mp_data, PMs.NFAPowerModel, ipopt_solver)
+            result = run_mc_mld_strg(mp_data, PMs.NFAPowerModel, ipopt_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.1557; atol=1e-4)
@@ -42,7 +43,7 @@
         end
         @testset "3-bus case" begin
             mp_data = PMs.parse_file("../test/data/matpower/case3_ml.m"); PMD.make_multiconductor!(mp_data, 3)
-            result = run_tp_mld(mp_data, PMs.NFAPowerModel, ipopt_solver)
+            result = run_mc_mld(mp_data, PMs.NFAPowerModel, ipopt_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 24.9; atol = 1e-1)
@@ -51,7 +52,7 @@
         end
         @testset "3-bus shunt case" begin
             mp_data = PMs.parse_file("../test/data/matpower/case3_ml_s.m"); PMD.make_multiconductor!(mp_data, 3)
-            result = run_tp_mld(mp_data, PMs.NFAPowerModel, ipopt_solver)
+            result = run_mc_mld(mp_data, PMs.NFAPowerModel, ipopt_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 22.2; atol = 1e-1)
@@ -60,7 +61,7 @@
         end
         @testset "3-bus line charge case" begin
             mp_data = PMs.parse_file("../test/data/matpower/case3_ml_lc.m"); PMD.make_multiconductor!(mp_data, 3)
-            result = run_tp_mld(mp_data, PMs.NFAPowerModel, ipopt_solver)
+            result = run_mc_mld(mp_data, PMs.NFAPowerModel, ipopt_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 43.8; atol = 1e-1)
@@ -69,7 +70,7 @@
         end
         @testset "transformer" begin
             mp_data = PowerModelsDistribution.parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
-            result = run_tp_mld(mp_data, PMs.NFAPowerModel, ipopt_solver)
+            result = run_mc_mld(mp_data, PMs.NFAPowerModel, ipopt_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.411, atol = 1e-3)
@@ -79,18 +80,18 @@
     @testset "test LPLinUBFPowerModel" begin
         @testset "5-bus case" begin
             mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case5.m"); PMD.make_multiconductor!(mp_data, 3)
-            result = run_tp_mld_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
+            result = run_mc_mld_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.1557; atol = 1e-4)
 
             @test isapprox(result["solution"]["load"]["1"]["status"], 1.000; atol = 1e-3)
 
-            @test_throws(TESTLOG, ErrorException, run_tp_mld_bf(mp_data, PMs.NFAPowerModel, ipopt_solver))
+            @test_throws(TESTLOG, ErrorException, run_mc_mld_bf(mp_data, PMs.NFAPowerModel, ipopt_solver))
         end
         @testset "3-bus case" begin
             mp_data = PMs.parse_file("../test/data/matpower/case3_ml.m"); PMD.make_multiconductor!(mp_data, 3)
-            result = run_tp_mld_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
+            result = run_mc_mld_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 24.98; atol = 1e-1)
@@ -99,7 +100,7 @@
         end
         @testset "transformer case" begin
             dss = PowerModelsDistribution.parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
-            result = run_tp_mld_bf(dss, LPLinUBFPowerModel, ipopt_solver)
+            result = run_mc_mld_bf(dss, LPLinUBFPowerModel, ipopt_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.0; atol=1e-3)
@@ -110,7 +111,7 @@
         @testset "test ACPPowerModel" begin
             @testset "test 5-bus case" begin
                 mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case5.m"); PMD.make_multiconductor!(mp_data, 3)
-                result = run_tp_mld_uc(mp_data, PMs.ACPPowerModel, juniper_solver)
+                result = run_mc_mld_uc(mp_data, PMs.ACPPowerModel, juniper_solver)
 
                 @test result["termination_status"] == PMs.LOCALLY_SOLVED
                 @test isapprox(result["objective"], 0.330; atol=1e-3)
@@ -121,7 +122,7 @@
         @testset "test NFAPowerModel" begin
             @testset "test 5-bus case" begin
                 mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case5.m"); PMD.make_multiconductor!(mp_data, 3)
-                result = run_tp_mld_uc(mp_data, PMs.NFAPowerModel, juniper_solver)
+                result = run_mc_mld_uc(mp_data, PMs.NFAPowerModel, juniper_solver)
 
                 @test result["termination_status"] == PMs.LOCALLY_SOLVED
                 for (i, gen) in result["solution"]["gen"]

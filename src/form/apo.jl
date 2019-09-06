@@ -1,12 +1,12 @@
 ### generic features that apply to all active-power-only (apo) approximations
 
 "do nothing, no reactive power in this model"
-function variable_tp_trans_reactive_flow(pm::_PMs.GenericPowerModel{T}; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true) where T <: _PMs.AbstractActivePowerFormulation
+function variable_mc_transformer_reactive_flow(pm::_PMs.AbstractActivePowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
 end
 
 
 "power balanace constraint with line shunts and transformers, active power only"
-function constraint_tp_power_balance_shunt_trans(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractActivePowerFormulation
+function constraint_mc_power_balance(pm::_PMs.AbstractActivePowerModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
     pg   = _PMs.var(pm, nw, c, :pg)
     p    = _PMs.var(pm, nw, c, :p)
     p_dc = _PMs.var(pm, nw, c, :p_dc)
@@ -18,7 +18,7 @@ end
 
 
 "storage loss constraint"
-function constraint_tp_storage_loss(pm::_PMs.GenericPowerModel{T}, n::Int, i, bus, r, x, standby_loss) where T <: _PMs.AbstractActivePowerFormulation
+function constraint_mc_storage_loss(pm::_PMs.AbstractActivePowerModel, n::Int, i, bus, r, x, standby_loss)
     conductors = _PMs.conductor_ids(pm)
     ps = [_PMs.var(pm, n, c, :ps, i) for c in conductors]
     sc = _PMs.var(pm, n, :sc, i)
@@ -29,7 +29,7 @@ end
 
 
 "power balance constraint with line shunts, storage, and transformers, active power only"
-function constraint_tp_power_balance_shunt_storage_trans(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractActivePowerFormulation
+function constraint_mc_power_balance_storage(pm::_PMs.AbstractActivePowerModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
     p    = _PMs.var(pm, nw, c, :p)
     pg   = _PMs.var(pm, nw, c, :pg)
     ps   = _PMs.var(pm, nw, c, :ps)

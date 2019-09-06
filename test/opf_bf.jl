@@ -1,8 +1,9 @@
+@info "running opf_bf.jl tests"
 @testset "test linearised distflow opf_bf" begin
     @testset "3-bus case" begin
         mp_data = PowerModels.parse_file("$(pms_path)/test/data/matpower/case3.m")
         PMD.make_multiconductor!(mp_data, 3)
-        result = run_tp_opf_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
+        result = run_mc_opf_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 45500.2 ; atol = 1e0)
@@ -11,7 +12,7 @@
     @testset "5-bus case" begin
         mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
         PMD.make_multiconductor!(mp_data, 3)
-        result = run_tp_opf_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
+        result = run_mc_opf_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 44880; atol = 1e0)
@@ -20,7 +21,7 @@
     end
     @testset "5-bus independent radial identical case" begin
         mp_data = PMD.parse_file("../test/data/matlab/case5_i_r_a.m")
-        result = run_tp_opf_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
+        result = run_mc_opf_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 54870.0; atol = 1e-1)
@@ -28,7 +29,7 @@
     end
     @testset "5-bus independent radial different case" begin
         mp_data = PMD.parse_file("../test/data/matlab/case5_i_r_b.m")
-        result = run_tp_opf_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
+        result = run_mc_opf_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 55307.7; atol = 1e-1)
@@ -41,7 +42,7 @@ end
     @testset "3-bus case" begin
         mp_data = PowerModels.parse_file("$(pms_path)/test/data/matpower/case3.m")
         PMD.make_multiconductor!(mp_data, 3)
-        result = run_tp_opf_bf(mp_data, LPdiagUBFPowerModel, ipopt_solver)
+        result = run_mc_opf_bf(mp_data, LPdiagUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 45500.2 ; atol = 1e0)
@@ -50,7 +51,7 @@ end
     @testset "5-bus case" begin
         mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
         PMD.make_multiconductor!(mp_data, 3)
-        result = run_tp_opf_bf(mp_data, LPdiagUBFPowerModel, ipopt_solver)
+        result = run_mc_opf_bf(mp_data, LPdiagUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 44880; atol = 1e0)
@@ -59,7 +60,7 @@ end
     end
     @testset "5-bus independent radial identical case" begin
         mp_data = PMD.parse_file("../test/data/matlab/case5_i_r_a.m")
-        result = run_tp_opf_bf(mp_data, LPdiagUBFPowerModel, ipopt_solver)
+        result = run_mc_opf_bf(mp_data, LPdiagUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 54870.0; atol = 1e-1)
@@ -68,7 +69,7 @@ end
     end
     @testset "5-bus independent radial different case" begin
         mp_data = PMD.parse_file("../test/data/matlab/case5_i_r_b.m")
-        result = run_tp_opf_bf(mp_data, LPdiagUBFPowerModel, ipopt_solver)
+        result = run_mc_opf_bf(mp_data, LPdiagUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 55307.7; atol = 1e-1)
@@ -81,7 +82,7 @@ end
     @testset "3-bus case" begin
         mp_data = PowerModels.parse_file("$(pms_path)/test/data/matpower/case3.m")
         PMD.make_multiconductor!(mp_data, 3)
-        result = run_tp_opf_bf(mp_data, LPfullUBFPowerModel, ipopt_solver)
+        result = run_mc_opf_bf(mp_data, LPfullUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 45500.2 ; atol = 1e0)
@@ -91,7 +92,7 @@ end
     @testset "5-bus case" begin
         mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
         PMD.make_multiconductor!(mp_data, 3)
-        result = run_tp_opf_bf(mp_data, LPfullUBFPowerModel, ipopt_solver)
+        result = run_mc_opf_bf(mp_data, LPfullUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 44880; atol = 1e0)
@@ -100,7 +101,7 @@ end
     end
     @testset "5-bus independent radial identical case" begin
         mp_data = PMD.parse_file("../test/data/matlab/case5_i_r_a.m")
-        result = run_tp_opf_bf(mp_data, LPfullUBFPowerModel, ipopt_solver)
+        result = run_mc_opf_bf(mp_data, LPfullUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 54870.0; atol = 1e-1)
@@ -109,7 +110,7 @@ end
     end
     @testset "5-bus independent radial different case" begin
         mp_data = PMD.parse_file("../test/data/matlab/case5_i_r_b.m")
-        result = run_tp_opf_bf(mp_data, LPfullUBFPowerModel, ipopt_solver)
+        result = run_mc_opf_bf(mp_data, LPfullUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 55307.7; atol = 1e-1)
@@ -121,7 +122,7 @@ end
 @testset "test sdp distflow opf_bf" begin
     @testset "5-bus independent radial identical case" begin
         mp_data = PMD.parse_file("../test/data/matlab/case5_i_r_a.m")
-        result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
+        result = run_mc_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
         @test result["termination_status"] == PMs.OPTIMAL
         @test isapprox(result["objective"], 55451.2; atol = 2e0)
@@ -133,7 +134,7 @@ end
     end
     @testset "5-bus independent radial different case" begin
         mp_data = PMD.parse_file("../test/data/matlab/case5_i_r_b.m")
-        result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
+        result = run_mc_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
         @test result["termination_status"] == PMs.OPTIMAL
         @test isapprox(result["objective"], 56091.7; atol = 2e0)
@@ -150,7 +151,7 @@ end
     end
     @testset "5-bus independent meshed different case" begin
         mp_data = PMD.parse_file("../test/data/matlab/case5_i_m_b.m")
-        result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
+        result = run_mc_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
         @test result["termination_status"] == PMs.OPTIMAL
         @test isapprox(result["objective"], 45320.5; atol = 2e0)
@@ -165,7 +166,7 @@ end
     # @testset "5-bus coupled meshed case" begin
         # @testset "ac case" begin
         #     mp_data = PMD.parse_file("../test/data/matlab/case5_c_m_a.m")
-        #     result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
+        #     result = run_mc_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
         #     @test result["termination_status"] == PMs.OPTIMAL
         #     @test isapprox(result["objective"], 45555.1; atol = 2e0)
@@ -178,7 +179,7 @@ end
     @testset "5-bus coupled meshed infeasible case" begin
         @testset "ac case" begin
             mp_data = PMD.parse_file("../test/data/matlab/case5_c_m_b.m")
-            result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
+            result = run_mc_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
             @test result["termination_status"] == PMs.INFEASIBLE
         end
@@ -186,7 +187,7 @@ end
         # omit due to large number of terminal warnings
         @testset "soc case" begin
             mp_data = PMD.parse_file("../test/data/matlab/case5_c_m_b.m")
-            result = run_tp_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
+            result = run_mc_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_INFEASIBLE
         end
@@ -194,7 +195,7 @@ end
     end
     @testset "5-bus coupled radial no shunt case" begin
         mp_data = PMD.parse_file("../test/data/matlab/case5_c_r_a.m")
-        result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
+        result = run_mc_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
         @test result["termination_status"] == PMs.OPTIMAL
         # @test isapprox(result["objective"], 55436.1; atol = 1e-1)
@@ -209,7 +210,7 @@ end
     end
     @testset "5-bus coupled radial shunt case" begin
         mp_data = PMD.parse_file("../test/data/matlab/case5_c_r_b.m")
-        result = run_tp_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
+        result = run_mc_opf_bf(mp_data, SDPUBFPowerModel, scs_solver)
 
         @test result["termination_status"] == PMs.OPTIMAL
         @test isapprox(result["objective"], 56075.9; atol = 2e0)

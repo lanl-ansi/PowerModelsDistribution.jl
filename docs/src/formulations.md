@@ -3,63 +3,63 @@
 ## Type Hierarchy
 We begin with the top of the hierarchy, where we can distinguish between conic and non-conic power flow models.
 ```julia
-PowerModels.AbstractConicForms = Union{PowerModels.AbstractConicPowerFormulation, PowerModels.AbstractBFConicForm}
-PowerModels.AbstractConicPowerFormulation <: PowerModels.AbstractPowerFormulation
-PowerModels.AbstractBFForm <: PowerModels.AbstractPowerFormulation
-PowerModels.AbstractBFQPForm <: PowerModels.AbstractBFForm
-PowerModels.AbstractBFConicForm <: PowerModels.AbstractBFForm
+PowerModels.AbstractConicModels = Union{PowerModels.AbstractConicModel, PowerModels.AbstractBFConicModel}
+PowerModels.AbstractConicModel <: PowerModels.AbstractPowerModel
+PowerModels.AbstractBFModel <: PowerModels.AbstractPowerModel
+PowerModels.AbstractBFQPModel <: PowerModels.AbstractBFModel
+PowerModels.AbstractBFConicModel <: PowerModels.AbstractBFModel
 ```
 
 We begin with the top of the hierarchy, where we can distinguish between AC and DC power flow models.
 ```julia
-PowerModels.AbstractACPForm <: PowerModels.AbstractPowerFormulation
-PowerModels.AbstractDCPForm <: PowerModels.AbstractPowerFormulation
-PowerModels.AbstractWRForm <: PowerModels.AbstractPowerFormulation
-PowerModelsDistribution.AbstractNLPUBFForm <: PowerModels.AbstractBFQPForm
-PowerModelsDistribution.AbstractConicUBFForm <: PowerModels.AbstractBFConicForm
-PowerModelsDistribution.AbstractLPUBFForm <: PowerModelsDistribution.AbstractNLPUBFForm
+PowerModels.AbstractACPModel <: PowerModels.AbstractPowerModel
+PowerModels.AbstractDCPModel <: PowerModels.AbstractPowerModel
+PowerModels.AbstractWRModel <: PowerModels.AbstractPowerModel
+PowerModelsDistribution.AbstractNLPUBFModel <: PowerModels.AbstractBFQPModel
+PowerModelsDistribution.AbstractConicUBFModel <: PowerModels.AbstractBFConicModel
+PowerModelsDistribution.AbstractLPUBFModel <: PowerModelsDistribution.AbstractNLPUBFModel
 ```
 
-From there, different forms are possible:
+From there, different Models are possible:
 ```julia
 #Bus injection models:
-PowerModels.StandardACPForm <: PowerModels.AbstractACPForm
-PowerModels.StandardDCPForm <: PowerModels.AbstractDCPForm
-PowerModels.SOCWRForm <: PowerModels.AbstractWRForm
+PowerModels.AbstractACPModel <: PowerModels.AbstractPowerModel
+PowerModels.AbstractDCPModel <: PowerModels.AbstractPowerModel
+PowerModels.SOCWRModel <: PowerModels.AbstractWRModels
 
 #Branch flow models:
-PowerModelsDistribution.SDPUBFForm <: PowerModelsDistribution.AbstractConicUBFForm
-PowerModelsDistribution.SOCNLPUBFForm <: PowerModelsDistribution.AbstractNLPUBFForm
-PowerModelsDistribution.SOCConicUBFForm <: PowerModelsDistribution.AbstractConicUBFForm
+PowerModelsDistribution.SDPUBFModel <: PowerModelsDistribution.AbstractConicUBFModel
+PowerModelsDistribution.SOCNLPUBFModel <: PowerModelsDistribution.AbstractNLPUBFModel
+PowerModelsDistribution.SOCConicUBFModel <: PowerModelsDistribution.AbstractConicUBFModel
 
-PowerModelsDistribution.LPLinUBFForm <: PowerModels.AbstractBFForm
-PowerModelsDistribution.LPfullUBFForm <: PowerModelsDistribution.AbstractLPUBFForm
-PowerModelsDistribution.LPdiagUBFForm <: PowerModelsDistribution.AbstractLPUBFForm
+PowerModelsDistribution.LPLinUBFModel <: PowerModels.AbstractBFModel
+PowerModelsDistribution.LPfullUBFModel <: PowerModelsDistribution.AbstractLPUBFModel
+PowerModelsDistribution.LPdiagUBFModel <: PowerModelsDistribution.AbstractLPUBFModel
 ```
 
 ## Power Models
-Each of these forms can be used as the type parameter for a PowerModel:
+Each of these Models can be used as the type parameter for a PowerModel:
 ```julia
-PowerModels.ACPPowerModel = GenericPowerModel{PowerModels.StandardACPForm}
-PowerModels.DCPPowerModel = GenericPowerModel{PowerModels.StandardDCPForm}
+mutable struct PowerModels.ACPPowerModel <: PowerModels.AbstractACPModel PowerModels.@pm_fields end
+mutable struct PowerModels.DCPPowerModel <: PowerModels.AbstractDCPModel PowerModels.@pm_fields end
 
-PowerModels.SOCWRPowerModel = GenericPowerModel{PowerModels.SOCWRForm}
+mutable struct PowerModels.SOCWRPowerModel <: PowerModels.SOCWRModel PowerModels.@pm_fields end
 
-PowerModelsDistribution.SDPUBFPowerModel = GenericPowerModel{PowerModelsDistribution.SDPUBFForm}
-PowerModelsDistribution.SOCNLPUBFPowerModel = GenericPowerModel{PowerModelsDistribution.SOCNLPUBFForm}
-PowerModelsDistribution.SOCConicUBFPowerModel = GenericPowerModel{PowerModelsDistribution.SOCConicUBFForm}
+mutable struct PowerModelsDistribution.SDPUBFPowerModel <: PowerModelsDistribution.SDPUBFModel PowerModels.@pm_fields end
+mutable struct PowerModelsDistribution.SOCNLPUBFPowerModel <: PowerModelsDistribution.SOCNLPUBFModel PowerModels.@pm_fields end
+mutable struct PowerModelsDistribution.SOCConicUBFPowerModel <: PowerModelsDistribution.SOCConicUBFModel PowerModels.@pm_fields end
 
-PowerModelsDistribution.LPfullUBFPowerModel = GenericPowerModel{PowerModelsDistribution.LPfullUBFForm}
-PowerModelsDistribution.LPdiagUBFPowerModel = GenericPowerModel{PowerModelsDistribution.LPdiagUBFForm}
-PowerModelsDistribution.LPLinUBFPowerModel = GenericPowerModel{PowerModelsDistribution.LPLinUBFForm}
+mutable struct PowerModelsDistribution.LPfullUBFPowerModel <: PowerModelsDistribution.LPfullUBFModel PowerModels.@pm_fields end
+mutable struct PowerModelsDistribution.LPdiagUBFPowerModel <: PowerModelsDistribution.LPdiagUBFModel PowerModels.@pm_fields end
+mutable struct PowerModelsDistribution.LPLinUBFPowerModel <: PowerModelsDistribution.LPLinUBFModel PowerModels.@pm_fields end
 ```
 
 ## Union Types
 
-To support both conic and quadratically-constrained formulation variants for the unbalanced branch flow model, the union type `AbstractUBFForm` is defined. These formulations extend `AbstractBFForm` and are therefore also `AbstractWForms` (as defined in PowerModels proper).
+To support both conic and quadratically-constrained formulation variants for the unbalanced branch flow model, the union type `AbstractUBFModels` is defined. These formulations extend `AbstractBFModel` and are therefore also `AbstractWModels` (as defined in PowerModels proper).
 
 ```julia
-AbstractUBFForm = Union{AbstractNLPUBFForm, AbstractConicUBFForm}
+AbstractUBFModels = Union{AbstractNLPUBFModel, AbstractConicUBFModel}
 ```
 
 ## Optimization problem classes

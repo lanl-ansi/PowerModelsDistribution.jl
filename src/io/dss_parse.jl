@@ -352,6 +352,18 @@ function _isa_matrix(data::AbstractString)::Bool
 end
 
 
+"Reorders a `matrix` based on the order that phases are listed in on the from- (`pof`) and to-sides (`pot`)"
+function _reorder_matrix(matrix, pof, pot)
+    mat = deepcopy(matrix)
+    for (i, pf) in enumerate(pof)
+        for (j, pt) in enumerate(pot)
+            mat[i, j] = matrix[pf, pt]
+        end
+    end
+    return mat
+end
+
+
 """
     _parse_array(dtype, data)
 
@@ -578,6 +590,10 @@ exists inside `compDict`, the original value is converted to an array, and the
 new value is appended to the end.
 """
 function _add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
+    if !haskey(compDict, "prop_order")
+        compDict["prop_order"] = Array{String,1}(["name"])
+    end
+
     if haskey(compDict, lowercase(key))
         rmatch = match(r"_(\d+)$", key)
         if typeof(rmatch) != Nothing
@@ -589,6 +605,7 @@ function _add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
     end
 
     compDict[lowercase(key)] = value
+    push!(compDict["prop_order"], lowercase(key))
 
     return compDict
 end
@@ -624,27 +641,20 @@ function _parse_component(component::AbstractString, properties::AbstractString,
         else
             if split(component,'.')[1] == "loadshape" && startswith(property, "mult")
                 property = replace(property, "mult" => "pmult")
+            elseif split(component,'.')[1] == "transformer"
+                if split(property,'=')[1] == "ppm"
+                    property = replace(property, "ppm" => "ppm_antifloat")
+                elseif split(property,'=')[1] == "x12"
+                    property = replace(property, "x12" => "xhl")
+                elseif split(property,'=')[1] == "x23"
+                    property = replace(property, "x23" => "xlt")
+                elseif split(property,'=')[1] == "x13"
+                    property = replace(property, "x13" => "xht")
+                end
             end
 
-            try
-                propIdxs = findall(e->e==split(property,'=')[1], propNames)
-                if length(propIdxs) > 0
-                    propIdx = findall(e->e==split(property,'=')[1], propNames)[1] + 1
-                end
-            catch e
-                if split(component,'.')[1] == "transformer"
-                    if split(property,'=')[1] == "ppm"
-                        property = replace(property, "ppm" => "ppm_antifloat")
-                    elseif split(property,'=')[1] == "x12"
-                        property = replace(property, "x12" => "xhl")
-                    elseif split(property,'=')[1] == "x23"
-                        property = replace(property, "x23" => "xlt")
-                    elseif split(property,'=')[1] == "x13"
-                        property = replace(property, "x13" => "xht")
-                    end
-                else
-                    throw(e)
-                end
+            propIdxs = findall(e->e==split(property,'=')[1], propNames)
+            if length(propIdxs) > 0
                 propIdx = findall(e->e==split(property,'=')[1], propNames)[1] + 1
             end
         end
@@ -953,16 +963,20 @@ end
 
 
 """
-    _get_conductors_ordered(busname)
+    _get_conductors_ordered(busname; neutral=true)
 
-Returns an ordered list of defined conductors.
+Returns an ordered list of defined conductors. If neutral=false, will omit any `0`
 """
-function _get_conductors_ordered(busname::AbstractString)
+function _get_conductors_ordered(busname::AbstractString; neutral=true)
     parts = split(busname, '.'; limit=2)
     ret = []
     if length(parts)==2
         conds_str = split(parts[2], '.')
-        ret = [parse(Int, i) for i in conds_str]
+        if neutral
+            ret = [parse(Int, i) for i in conds_str]
+        else
+            ret = [parse(Int, i) for i in conds_str if i != "0"]
+        end
     end
     return ret
 end
@@ -971,4 +985,39 @@ end
 "converts Dict{String,Any} to Dict{Symbol,Any} for passing as kwargs"
 function _to_sym_keys(data::Dict{String,Any})::Dict{Symbol,Any}
     return Dict{Symbol,Any}((Symbol(k), v) for (k, v) in data)
+end
+
+
+""
+function _apply_ordered_properties(defaults::Dict{String,Any}, raw_dss::Dict{String,Any}; like::Dict{String,Any}=Dict{String,Any}(), linecode::Dict{String,Any}=Dict{String,Any}())
+    _defaults = deepcopy(defaults)
+
+    if "like" in raw_dss["prop_order"]
+        before_like = []
+        for prop in raw_dss["prop_order"]
+            if prop == "like"
+                break
+            else
+                push!(before_like, prop)
+            end
+        end
+
+        if !all(prop in ["name", "bus1", "bus2", "phases"] for prop in before_like)
+            Memento.warn(_LOGGER, "The 'like' property is expected as the first property on a line in OpenDSS, and will be treated as such in this parser no matter where it actually appears")
+        end
+
+        merge!(defaults, like)
+
+        filter!(e->!(e in ["like"]),raw_dss["prop_order"])
+    end
+
+    for prop in raw_dss["prop_order"]
+        if prop == "linecode"
+            merge!(defaults, linecode)
+        else
+            defaults[prop] = _defaults[prop]
+        end
+    end
+
+    return defaults
 end

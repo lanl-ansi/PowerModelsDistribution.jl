@@ -2,7 +2,19 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
-- none
+- Fix bug in OpenDSS parser where properties were not applied in the order they were received (#170)
+- Rename "trans" in data and ref to `transformer` for component naming consistency (breaking) (#169)
+- Change internal variable and constraint functions to loop over phases internally (breaking) (#168)
+- Fix bug in OpenDSS parser on Lines where the connected phases are listed out of order (#167)
+- Add ability to "bank" single phase OpenDSS transformers into a single multiphase transformer (#166)
+- Add virtual line to sourcebus to model source impedance (#165)
+- Update to JuMP v0.20 / MOI v0.9 (#164)
+- Fix bug in OpenDSS parser on Lines / Linecodes related to basefreq (#163)
+- Fix bug in OpenDSS parser on Transformers (#162)
+- Fix bug in OpenDSS parser on Lines where `switch=y` property is used (#161)
+
+### v0.6.0
+- Update Formulation types to follow PowerModels v0.13 conventions (breaking) (#160)
 
 ### v0.5.2
 - Fix bug in OpenDSS parser on Capacitors (#158)

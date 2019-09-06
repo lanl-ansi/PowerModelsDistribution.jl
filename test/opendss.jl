@@ -1,3 +1,4 @@
+@info "running opendss.jl tests"
 @testset "opendss parser" begin
     @testset "reverse polish notation" begin
         # Examples from OpenDSS manual
@@ -40,12 +41,12 @@
         dss = PMD.parse_dss("../test/data/opendss/test_simple.dss")
         pmd = PMD.parse_file("../test/data/opendss/test_simple.dss")
 
-        for (key, len) in zip(["bus", "gen", "branch", "load", "dcline"], [2, 2, 1, 1, 0])
+        for (key, len) in zip(["bus", "gen", "branch", "load", "dcline"], [3, 2, 2, 1, 0])
             @test haskey(pmd, key)
             @test length(pmd[key]) == len
         end
 
-        sol = PMD.run_tp_opf(pmd, PowerModels.SOCWRPowerModel, ipopt_solver)
+        sol = PMD.run_mc_opf(pmd, PowerModels.SOCWRPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
     end
@@ -119,7 +120,7 @@
 
         @test pmd["name"] == "test2"
 
-        @test length(pmd) == 20 # keep track of sourcebus
+        @test length(pmd) == 21 # keep track of sourcebus, switches
         @test length(dss) == 12
 
         # 26 buses and not 12, because of internal transformer buses;
@@ -129,7 +130,7 @@
         # if rs=0, then 1 extra, else 3 extra
         # tr1:+1(rs=0), tr2:+3, tr3:+1(rs=0), tr4:+3, tr5:+1(rs=0)
         # 10 transformers, 2 per dss transformer
-        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "trans"], [26, 4, 5, 20, 4, 0, 10])
+        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "transformer"], [33, 4, 5, 27, 4, 0, 10])
             @test haskey(pmd, key)
             @test length(pmd[key]) == len
         end
@@ -215,11 +216,12 @@
         end
 
         pmd2 = PMD.parse_file("../test/data/opendss/test_simple4.dss")
-        @test length(pmd2["bus"]) == 6 # updated nr of buses
+        @test length(pmd2["bus"]) == 10 # updated nr of buses
 
         @testset "branches with switches" begin
-            @test pmd["branch"]["8"]["switch"]
-            @test all([pmd["branch"]["$i"]["switch"] == false for i in 1:6])
+            @test pmd["branch"]["5"]["switch"]
+            @test pmd["branch"]["5"]["length"] == 0.001
+            @test all([pmd["branch"]["$i"]["switch"] == false for i in 1:4])
         end
 
         @testset "whitespace before ~" begin
@@ -232,7 +234,7 @@
             for bat in values(pmd_storage["storage"])
                 for key in ["energy", "storage_bus", "energy_rating", "charge_rating", "discharge_rating",
                             "charge_efficiency", "discharge_efficiency", "thermal_rating", "qmin", "qmax",
-                            "r", "x", "standby_loss", "status", "source_id", "active_phases"]
+                            "r", "x", "p_loss", "q_loss", "status", "source_id", "active_phases"]
                     @test haskey(bat, key)
                     if key in ["x", "r", "qmin", "qmax", "thermal_rating"]
                         @test isa(bat[key], PowerModels.MultiConductorVector)
@@ -249,11 +251,11 @@
 
             @test pmd["branch"]["1"]["source_id"] == "line.l1" && length(pmd["branch"]["1"]["active_phases"]) == 3
             # transformer is no longer a branch
-            @test pmd["trans"]["1"]["source_id"] == "transformer.t4_1"  # winding indicated by _1
+            @test pmd["transformer"]["1"]["source_id"] == "transformer.t4_1"  # winding indicated by _1
             # updated index, reactors shifted
             @test pmd["branch"]["10"]["source_id"] == "reactor.reactor1" && length(pmd["branch"]["10"]["active_phases"]) == 3
 
-            @test pmd["gen"]["1"]["source_id"] == "vsource.sourcebus" && length(pmd["gen"]["1"]["active_phases"]) == 3
+            @test pmd["gen"]["1"]["source_id"] == "vsource.sourcegen" && length(pmd["gen"]["1"]["active_phases"]) == 3
             @test pmd["gen"]["2"]["source_id"] == "generator.g1" && length(pmd["gen"]["2"]["active_phases"]) == 3
 
             source_id = PMD._parse_dss_source_id(pmd["load"]["1"])
@@ -268,13 +270,27 @@
                 end
             end
         end
+
+        @testset "order of properties on line" begin
+            pmd1 = PMD.parse_file("../test/data/opendss/case3_balanced.dss")
+            pmd2 = PMD.parse_file("../test/data/opendss/case3_balanced_prop-order.dss")
+
+            @test pmd1 == pmd2
+
+            dss1 = PMD.parse_dss("../test/data/opendss/case3_balanced.dss")
+            dss2 = PMD.parse_dss("../test/data/opendss/case3_balanced_prop-order.dss")
+
+            @test dss1 != dss2
+            @test all(a == b for (a, b) in zip(dss2["line"][1]["prop_order"],["name", "bus1", "bus2", "linecode", "rmatrix", "length"]))
+            @test all(a == b for (a, b) in zip(dss2["line"][2]["prop_order"],["name", "bus1", "bus2", "like", "linecode", "length"]))
+        end
     end
 
     @testset "2-bus diagonal" begin
         pmd = PMD.parse_file("../test/data/opendss/case2_diag.dss")
         @testset "OPF" begin
             @testset "ACP" begin
-                sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
+                sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
                 @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
@@ -291,7 +307,7 @@
         pmd = PMD.parse_file("../test/data/opendss/case3_balanced.dss")
         @testset "OPF" begin
             @testset "ACP" begin
-                sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
+                sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
                 @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
@@ -304,12 +320,12 @@
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00919404; atol=1.2e-5)
             end
             @testset "SOC" begin
-                sol = PMD.run_tp_opf(pmd, PMs.SOCWRPowerModel, ipopt_solver)
+                sol = PMD.run_mc_opf(pmd, PMs.SOCWRPowerModel, ipopt_solver)
 
                 @test sol["termination_status"] == PMs.LOCALLY_SOLVED
             end
             @testset "LDF" begin
-                sol = PMD.run_tp_opf_bf(pmd, LPLinUBFPowerModel, ipopt_solver)
+                sol = PMD.run_mc_opf_bf(pmd, LPLinUBFPowerModel, ipopt_solver)
 
                 @test sol["termination_status"] == PMs.LOCALLY_SOLVED
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183456; atol=2e-3)
@@ -322,7 +338,7 @@
         pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced.dss")
         @testset "OPF" begin
             @testset "ACP" begin
-                sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
+                sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
                 @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
@@ -337,12 +353,12 @@
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00927263; atol=1e-5)
             end
             @testset "SOC" begin
-                sol = PMD.run_tp_opf(pmd, PMs.SOCWRPowerModel, ipopt_solver)
+                sol = PMD.run_mc_opf(pmd, PMs.SOCWRPowerModel, ipopt_solver)
 
                 @test sol["termination_status"] == PMs.LOCALLY_SOLVED
             end
             @testset "LDF" begin
-                sol = PMD.run_tp_opf_bf(pmd, LPLinUBFPowerModel, ipopt_solver)
+                sol = PMD.run_mc_opf_bf(pmd, LPLinUBFPowerModel, ipopt_solver)
 
                 @test sol["termination_status"] == PMs.LOCALLY_SOLVED
                 @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214812; atol=2e-3)
@@ -353,10 +369,10 @@
 
     @testset "3-bus unbalanced isc" begin
         pmd = PMD.parse_file("../test/data/opendss/case3_balanced_isc.dss")
-        sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
+        sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
-        @test isapprox(sol["objective"], 0.0182769; atol = 1e-4)
+        @test isapprox(sol["objective"], 0.0183961; atol = 1e-4)
     end
 
     @testset "3-bus balanced pv" begin
@@ -372,21 +388,21 @@
         @test all(pmd["gen"]["2"]["pmax"] .== pmd["gen"]["2"]["qmax"])
         @test all(pmd["gen"]["2"]["pmin"].values .== 0.0)
 
-        sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
+        sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
         @test sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]) < 0.0
         @test sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]) < 0.0
         #@test isapprox(sum(sol["solution"]["gen"]["2"]["pg"] * sol["solution"]["baseMVA"]), 0.018345; atol=1e-4)
         # changed objective 0.018345 -> 0.0182074
-        # solution changed after changing initial point in constraint_tp_model_voltage
+        # solution changed after changing initial point in constraint_mc_model_voltage
         @test isapprox(sum(sol["solution"]["gen"]["2"]["pg"] * sol["solution"]["baseMVA"]), 0.0182074; atol=1e-4)
         @test isapprox(sum(sol["solution"]["gen"]["2"]["qg"] * sol["solution"]["baseMVA"]), 0.00919404; atol=1e-4)
     end
 
     @testset "3-bus unbalanced single-phase pv" begin
         pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced_1phase-pv.dss")
-        sol = PMD.run_tp_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
+        sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
@@ -399,7 +415,7 @@
 
     @testset "3-bus balanced capacitor" begin
         pmd = PMD.parse_file("../test/data/opendss/case3_balanced_cap.dss")
-        sol = PMD.run_tp_pf(pmd, PMs.ACPPowerModel, ipopt_solver)
+        sol = PMD.run_mc_pf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 

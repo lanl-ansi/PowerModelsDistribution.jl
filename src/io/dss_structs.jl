@@ -23,10 +23,11 @@ properties. DEPRECIATED: Calculation all done inside of _create_line() due to Rg
 Xg. Merge linecode values into line kwargs values BEFORE calling _create_line().
 This is now mainly used for parsing linecode dicts into correct data types.
 """
-function _create_linecode(name::AbstractString; kwargs...)
+function _create_linecode(name::AbstractString=""; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :nphases, 3)
-    basefreq = get(kwargs, :basefreq, 60.0)
+    circuit_basefreq = get(kwargs, :circuit_basefreq, 60.0)
+    basefreq = get(kwargs, :basefreq, circuit_basefreq)
 
     r1 = get(kwargs, :r1, 0.058)
     x1 = get(kwargs, :x1, 0.1206)
@@ -117,10 +118,11 @@ Creates a Dict{String,Any} containing all of the properties for a Line. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
-function _create_line(bus1, bus2, name::AbstractString; kwargs...)
+function _create_line(bus1="", bus2="", name::AbstractString=""; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
-    basefreq = get(kwargs, :basefreq, 60.0)
+    circuit_basefreq = get(kwargs, :circuit_basefreq, 60.0)
+    basefreq = get(kwargs, :basefreq, circuit_basefreq)
 
     r1 = get(kwargs, :r1, 0.058)
     x1 = get(kwargs, :x1, 0.1206)
@@ -175,27 +177,25 @@ function _create_line(bus1, bus2, name::AbstractString; kwargs...)
     xg = get(kwargs, :xg, 0.155081)
     rho = get(kwargs, :rho, 100.0)
 
-    # TODO: calculate freq solution for circuit to use rg, xg
     # TODO: support length mismatch between line and linecode?
     # Currently this does not change the values of rmatrix and xmatrix due to
-    # freq=basefreq and lenmult=1, code is only in place for future use.
-    freq = basefreq
+    # lenmult=1, code is only in place for future use.
     lenmult = 1.0
 
-    kxg = xg / log(658.5 * sqrt(rho / basefreq))
-    xgmod = xg != 0.0 ?  0.5 * kxg * log(freq / basefreq) : 0.0
+    kxg = xg / log(658.5 * sqrt(rho / circuit_basefreq))
+    xgmod = xg != 0.0 ?  0.5 * kxg * log(basefreq / circuit_basefreq) : 0.0
 
     units = get(kwargs, :units, "none")
-    len = get(kwargs, :length, 1.0) * _convert_to_meters[units]
+    len = get(kwargs, :switch, false) ? 0.001 : get(kwargs, :length, 1.0) * _convert_to_meters[units]
 
     if haskey(kwargs, :rg)
         Memento.warn(_LOGGER, "Rg,Xg are not fully supported")
     end
 
-    rmatrix .+= rg * (freq/basefreq - 1.0)
+    rmatrix .+= rg * (basefreq / circuit_basefreq - 1.0)
     rmatrix .*= lenmult
     xmatrix .-= xgmod
-    xmatrix .*= lenmult * (freq / basefreq)
+    xmatrix .*= lenmult * (basefreq / circuit_basefreq)
 
     return Dict{String,Any}("name" => name,
                             "bus1" => bus1,
@@ -233,8 +233,6 @@ function _create_line(bus1, bus2, name::AbstractString; kwargs...)
                             "repair" => get(kwargs, :repair, 3.0),
                             "basefreq" => basefreq,
                             "enabled" => get(kwargs, :enabled, true),
-                            # Added properties
-                            "freq" => freq
                            )
 end
 
@@ -246,7 +244,7 @@ Creates a Dict{String,Any} containing all of the expected properties for a
 Load. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _create_load(bus1, name::AbstractString; kwargs...)
+function _create_load(bus1="", name::AbstractString=""; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     kv = get(kwargs, :kv, 12.47)
     kw = get(kwargs, :kw, 10.0)
@@ -332,7 +330,7 @@ Creates a Dict{String,Any} containing all of the expected properties for a
 Generator. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _create_generator(bus1, name::AbstractString; kwargs...)
+function _create_generator(bus1="", name::AbstractString=""; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     conn = get(kwargs, :conn, "wye")
 
@@ -398,7 +396,7 @@ Capacitor. If `bus2` is not specified, the capacitor will be treated as a shunt.
 See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _create_capacitor(bus1, name::AbstractString, bus2=0; kwargs...)
+function _create_capacitor(bus1="", name::AbstractString="", bus2=0; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
 
@@ -435,7 +433,7 @@ Reactor. If `bus2` is not specified Reactor is treated like a shunt. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
-function _create_reactor(bus1, name::AbstractString, bus2=""; kwargs...)
+function _create_reactor(bus1="", name::AbstractString="", bus2=""; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
     kvar = get(kwargs, :kvar, 1200.0)
@@ -580,7 +578,7 @@ generator. Mostly used as `sourcebus` which represents the circuit. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
-function _create_vsource(bus1, name::AbstractString, bus2=0; kwargs...)
+function _create_vsource(bus1="", name::AbstractString="", bus2=0; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     x1r1 = get(kwargs, :x1r1, 4.0)
     x0r0 = get(kwargs, :x0r0, 3.0)
@@ -795,17 +793,24 @@ Creates a Dict{String,Any} containing all of the expected properties for a
 Transformer. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _create_transformer(name::AbstractString; kwargs...)
+function _create_transformer(name::AbstractString=""; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     windings = get(kwargs, :windings, 2)
     phases = get(kwargs, :phases, 3)
+
+    prcnt_rs = fill(0.2, windings)
+    if haskey(kwargs, Symbol("%rs"))
+        prcnt_rs = kwargs[Symbol("%rs")]
+    elseif haskey(kwargs, Symbol("%loadloss"))
+        prcnt_rs[1] = prcnt_rs[2] = kwargs[Symbol("%loadloss")] / 2.0
+    end
 
     temp = Dict{String,Any}("buss" => get(kwargs, :buses, fill("", windings)),
                             "taps" => get(kwargs, :taps, fill(1.0, windings)),
                             "conns" => get(kwargs, :conns, fill("wye", windings)),
                             "kvs" => get(kwargs, :kvs, fill(12.47, windings)),
                             "kvas" => get(kwargs, :kvas, fill(10.0, windings)),
-                            "%rs" => fill(0.0, windings),
+                            "%rs" => prcnt_rs,
                             "rneuts" => fill(0.0, windings),
                             "xneuts" => fill(0.0, windings)
                            )
@@ -862,7 +867,7 @@ function _create_transformer(name::AbstractString; kwargs...)
                             "m" => get(kwargs, :m, 0.8),
                             "flrise" => get(kwargs, :flrise, 65.0),
                             "hsrise" => get(kwargs, :hsrise, 15.0),
-                            "%loadloss" => get(kwargs, Symbol("%loadloss"), 2.0 * temp["%rs"][1] * 100.0),  # CHECK:
+                            "%loadloss" => get(kwargs, Symbol("%loadloss"), sum(temp["%rs"][1:2])),
                             "%noloadloss" => get(kwargs, Symbol("%noloadloss"), 0.0),
                             "normhkva" => get(kwargs, :normhkva, 1.1 * temp["kvas"][1]),
                             "emerghkva" => get(kwargs, :emerghkva, 1.5 * temp["kvas"][1]),
@@ -915,7 +920,7 @@ PVSystem. See OpenDSS document
 https://github.com/tshort/OpenDSS/blob/master/Doc/OpenDSS%20PVSystem%20Model.doc
 for valid fields and ways to specify the different properties.
 """
-function _create_pvsystem(bus1, name::AbstractString; kwargs...)
+function _create_pvsystem(bus1="", name::AbstractString=""; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     kv = get(kwargs, :kv, 12.47)
     kw = get(kwargs, :kw, 10.0)
@@ -993,7 +998,7 @@ Creates a Dict{String,Any} containing all expected properties for a storage
 element. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _create_storage(bus1, name::AbstractString; kwargs...)
+function _create_storage(bus1="", name::AbstractString=""; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
 
     storage = Dict{String,Any}("name" => name,
@@ -1045,22 +1050,24 @@ end
 
 "Returns a Dict{String,Type} for the desired component `comp`, giving all of the expected data types"
 function _get_dtypes(comp::AbstractString)::Dict
-    default_dicts = Dict{String,Any}("line" => _create_line("", "", ""),
-                                     "load" => _create_load("", ""),
-                                     "generator" => _create_generator("", ""),
-                                     "capacitor" => _create_capacitor("", "", ""),
-                                     "reactor" => _create_reactor("", "", ""),
-                                     "transformer" => _create_transformer(""),
-                                     "linecode" => _create_linecode(""),
-                                     "circuit" => _create_vsource("", ""),
-                                     "pvsystem" => _create_pvsystem("", ""),
-                                     "vsource" => _create_vsource("", "", ""),
-                                     "storage" => _create_storage("", "")
-                                    )
-
-    return Dict{String,Type}((k, typeof(v)) for (k, v) in default_dicts[comp])
+    return Dict{String,Type}((k, typeof(v)) for (k, v) in _constructors[comp]())
 end
 
 
 ""
 _get_dtypes(comp::String, key::String)::Type = _get_dtypes(comp)[key]
+
+
+"list of constructor functions for easy access"
+const _constructors = Dict{String,Any}("line" => _create_line,
+                                       "load" => _create_load,
+                                       "generator" => _create_generator,
+                                       "capacitor" => _create_capacitor,
+                                       "reactor" => _create_reactor,
+                                       "transformer" => _create_transformer,
+                                       "linecode" => _create_linecode,
+                                       "circuit" => _create_vsource,
+                                       "pvsystem" => _create_pvsystem,
+                                       "vsource" => _create_vsource,
+                                       "storage" => _create_storage
+                                       )

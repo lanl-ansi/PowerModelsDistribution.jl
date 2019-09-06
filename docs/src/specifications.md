@@ -1,43 +1,47 @@
 # Problem Specifications
 
-
 ## Optimal Power Flow (OPF) with On-Load Tap Changers (OLTC)
-This problem is identical to `tp_opf`, except that all transformers are now modelled as on-load tap changers (OLTCs). Each phase has an individual tap ratio, which can be either variable or fixed, as specified in the data model.
+
+This problem is identical to `mc_opf`, except that all transformers are now modelled as on-load tap changers (OLTCs). Each phase has an individual tap ratio, which can be either variable or fixed, as specified in the data model.
+
 ### Objective
+
 ```julia
 objective_min_fuel_cost(pm)
 ```
 
 ### Variables
+
 ```julia
-variable_tp_voltage(pm)
-variable_tp_branch_flow(pm)
+variable_mc_voltage(pm)
+variable_mc_branch_flow(pm)
 
 for c in PMs.conductor_ids(pm)
     PMs.variable_generation(pm, cnd=c)
     PMs.variable_dcline_flow(pm, cnd=c)
 end
-variable_tp_trans_flow(pm)
-variable_tp_oltc_tap(pm)
+variable_mc_transformer_flow(pm)
+variable_mc_oltc_tap(pm)
 ```
 
 ### Constraints
+
 ```julia
-constraint_tp_model_voltage(pm)
+constraint_mc_model_voltage(pm)
 
 for i in PMs.ids(pm, :ref_buses)
-    constraint_tp_theta_ref(pm, i)
+    constraint_mc_theta_ref(pm, i)
 end
 
 for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
-    constraint_tp_power_balance_shunt_trans(pm, i, cnd=c)
+    constraint_mc_power_balance(pm, i, cnd=c)
 end
 
 for i in PMs.ids(pm, :branch)
-    for c in PMs.conductor_ids(pm)
-        constraint_tp_ohms_yt_from(pm, i, cnd=c)
-        constraint_tp_ohms_yt_to(pm, i, cnd=c)
+    constraint_mc_ohms_yt_from(pm, i)
+    constraint_mc_ohms_yt_to(pm, i)
 
+    for c in PMs.conductor_ids(pm)
         PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
 
         PMs.constraint_thermal_limit_from(pm, i, cnd=c)
@@ -49,62 +53,66 @@ for i in PMs.ids(pm, :dcline), c in PMs.conductor_ids(pm)
     PMs.constraint_dcline(pm, i, cnd=c)
 end
 
-for i in PMs.ids(pm, :trans)
-    constraint_tp_oltc(pm, i)
+for i in PMs.ids(pm, :transformer)
+    constraint_mc_oltc(pm, i)
 end
 ```
 
 ## Optimal Power Flow (OPF) with Load Models (LM)
-Unlike `tp_opf`, which models all loads as constant power loads, this problem specification additionally supports loads proportional to the voltage magnitude (a.k.a. constant current) and the square of the voltage magnitude (a.k.a. constant impedance). Each load now has associated active and reactive power variables. In `tp_opf`, loads are directly added as parameters in KCL.
+
+Unlike `mc_opf`, which models all loads as constant power loads, this problem specification additionally supports loads proportional to the voltage magnitude (a.k.a. constant current) and the square of the voltage magnitude (a.k.a. constant impedance). Each load now has associated active and reactive power variables. In `mc_opf`, loads are directly added as parameters in KCL.
 
 ### Objective
+
 ```julia
 objective_min_fuel_cost(pm)
 ```
 
 ### Variables
+
 ```julia
-variable_tp_voltage(pm)
-variable_tp_branch_flow(pm)
+variable_mc_voltage(pm)
+variable_mc_branch_flow(pm)
 
 for c in PMs.conductor_ids(pm)
     PMs.variable_generation(pm, cnd=c)
     PMs.variable_dcline_flow(pm, cnd=c)
 end
-variable_tp_trans_flow(pm)
-variable_tp_oltc_tap(pm)
+variable_mc_transformer_flow(pm)
+variable_mc_oltc_tap(pm)
 ```
 
 ### Constraints
+
 ```julia
-constraint_tp_model_voltage(pm)
+constraint_mc_model_voltage(pm)
 
 for i in PMs.ids(pm, :ref_buses)
-    constraint_tp_theta_ref(pm, i)
+    constraint_mc_theta_ref(pm, i)
 end
 
-for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
-    constraint_tp_power_balance_shunt_trans_load(pm, i, cnd=c)
+for i in PMs.ids(pm, :bus)
+    constraint_mc_power_balance_load(pm, i)
 end
 
 for id in PMs.ids(pm, :load)
     model = PMs.ref(pm, pm.cnw, :load, id, "model")
     if model=="constant_power"
-        constraint_tp_load_power_setpoint(pm, id)
+        constraint_mc_load_power_setpoint(pm, id)
     elseif model=="proportional_vm"
-        constraint_tp_load_power_prop_vm(pm, id)
+        constraint_mc_load_power_prop_vm(pm, id)
     elseif model=="proportional_vmsqr"
-        constraint_tp_load_power_prop_vmsqr(pm, id)
+        constraint_mc_load_power_prop_vmsqr(pm, id)
     else
         Memento.@error(LOGGER, "Unknown model $model for load $id.")
     end
 end
 
 for i in PMs.ids(pm, :branch)
-    for c in PMs.conductor_ids(pm)
-        constraint_tp_ohms_yt_from(pm, i, cnd=c)
-        constraint_tp_ohms_yt_to(pm, i, cnd=c)
+    constraint_mc_ohms_yt_from(pm, i)
+    constraint_mc_ohms_yt_to(pm, i)
 
+    for c in PMs.conductor_ids(pm)
         PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
 
         PMs.constraint_thermal_limit_from(pm, i, cnd=c)
@@ -116,34 +124,36 @@ for i in PMs.ids(pm, :dcline), c in PMs.conductor_ids(pm)
     PMs.constraint_dcline(pm, i, cnd=c)
 end
 
-for i in PMs.ids(pm, :trans)
-    constraint_tp_trans(pm, i)
+for i in PMs.ids(pm, :transformer)
+    constraint_mc_transformer(pm, i)
 end
 ```
 
 ## Power Flow (PF) with Load Models (LM)
-Unlike `tp_pf`, which models all loads as constant power loads, this problem specification additionally supports loads proportional to the voltage magnitude (a.k.a. constant current) and the square of the voltage magnitude (a.k.a. constant impedance). Each load now has associated active and reactive power variables. In `tp_pf`, loads are directly added as parameters in KCL.
+
+Unlike `mc_pf`, which models all loads as constant power loads, this problem specification additionally supports loads proportional to the voltage magnitude (a.k.a. constant current) and the square of the voltage magnitude (a.k.a. constant impedance). Each load now has associated active and reactive power variables. In `mc_pf`, loads are directly added as parameters in KCL.
 
 ### Variables
+
 ```julia
-variable_tp_voltage(pm, bounded=false)
-variable_tp_branch_flow(pm, bounded=false)
+variable_mc_voltage(pm, bounded=false)
+variable_mc_branch_flow(pm, bounded=false)
+variable_mc_transformer_flow(pm, bounded=false)
+variable_mc_load(pm)
 
 for c in PMs.conductor_ids(pm)
     PMs.variable_generation(pm, bounded=false, cnd=c)
-    variable_tp_load(pm, cnd=c)
     PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
 end
-
-variable_tp_trans_flow(pm, bounded=false)
 ```
 
 ### Constraints
+
 ```julia
-constraint_tp_model_voltage(pm, bounded=false)
+constraint_mc_model_voltage(pm, bounded=false)
 
 for (i,bus) in PMs.ref(pm, :ref_buses)
-    constraint_tp_theta_ref(pm, i)
+    constraint_mc_theta_ref(pm, i)
 
     for c in PMs.conductor_ids(pm)
         @assert bus["bus_type"] == 3
@@ -151,17 +161,19 @@ for (i,bus) in PMs.ref(pm, :ref_buses)
     end
 end
 
-for (i,bus) in PMs.ref(pm, :bus), c in PMs.conductor_ids(pm)
-    constraint_tp_power_balance_shunt_trans_load(pm, i, cnd=c)
+for (i,bus) in PMs.ref(pm, :bus)
+    constraint_mc_power_balance_load(pm, i)
 
-    # PV Bus Constraints
-    if length(PMs.ref(pm, :bus_gens, i)) > 0 && !(i in PMs.ids(pm,:ref_buses))
-        # this assumes inactive generators are filtered out of bus_gens
-        @assert bus["bus_type"] == 2
+    for c in PM.conductor_ids(pm)
+        # PV Bus Constraints
+        if length(PMs.ref(pm, :bus_gens, i)) > 0 && !(i in PMs.ids(pm,:ref_buses))
+            # this assumes inactive generators are filtered out of bus_gens
+            @assert bus["bus_type"] == 2
 
-        PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
-        for j in PMs.ref(pm, :bus_gens, i)
-            PMs.constraint_active_gen_setpoint(pm, j, cnd=c)
+            PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
+            for j in PMs.ref(pm, :bus_gens, i)
+                PMs.constraint_active_gen_setpoint(pm, j, cnd=c)
+            end
         end
     end
 end
@@ -169,25 +181,22 @@ end
 for id in PMs.ids(pm, :load)
     model = PMs.ref(pm, pm.cnw, :load, id, "model")
     if model=="constant_power"
-        constraint_tp_load_power_setpoint(pm, id)
+        constraint_mc_load_power_setpoint(pm, id)
     elseif model=="proportional_vm"
-        constraint_tp_load_power_prop_vm(pm, id)
+        constraint_mc_load_power_prop_vm(pm, id)
     elseif model=="proportional_vmsqr"
-        constraint_tp_load_power_prop_vmsqr(pm, id)
+        constraint_mc_load_power_prop_vmsqr(pm, id)
     else
         Memento.@error(LOGGER, "Unknown model $model for load $id.")
     end
 end
 
-for i in PMs.ids(pm, :branch), c in PMs.conductor_ids(pm)
-    constraint_tp_ohms_yt_from(pm, i, cnd=c)
-    constraint_tp_ohms_yt_to(pm, i, cnd=c)
-    # PMs.constraint_ohms_yt_from(pm, i, cnd=c)
-    # PMs.constraint_ohms_yt_to(pm, i, cnd=c)
+for i in PMs.ids(pm, :branch)
+    constraint_mc_ohms_yt_from(pm, i)
+    constraint_mc_ohms_yt_to(pm, i)
 end
 
 for (i,dcline) in PMs.ref(pm, :dcline), c in PMs.conductor_ids(pm)
-
     PMs.constraint_active_dcline_setpoint(pm, i, cnd=c)
 
     f_bus = PMs.ref(pm, :bus)[dcline["f_bus"]]
@@ -201,8 +210,8 @@ for (i,dcline) in PMs.ref(pm, :dcline), c in PMs.conductor_ids(pm)
     end
 end
 
-for i in PMs.ids(pm, :trans)
-    constraint_tp_trans(pm, i)
+for i in PMs.ids(pm, :transformer)
+    constraint_mc_transformer(pm, i)
 end
 ```
 
