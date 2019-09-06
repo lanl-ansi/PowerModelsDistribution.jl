@@ -270,6 +270,20 @@
                 end
             end
         end
+
+        @testset "order of properties on line" begin
+            pmd1 = PMD.parse_file("../test/data/opendss/case3_balanced.dss")
+            pmd2 = PMD.parse_file("../test/data/opendss/case3_balanced_prop-order.dss")
+
+            @test pmd1 == pmd2
+
+            dss1 = PMD.parse_dss("../test/data/opendss/case3_balanced.dss")
+            dss2 = PMD.parse_dss("../test/data/opendss/case3_balanced_prop-order.dss")
+
+            @test dss1 != dss2
+            @test all(a == b for (a, b) in zip(dss2["line"][1]["prop_order"],["name", "bus1", "bus2", "linecode", "rmatrix", "length"]))
+            @test all(a == b for (a, b) in zip(dss2["line"][2]["prop_order"],["name", "bus1", "bus2", "like", "linecode", "length"]))
+        end
     end
 
     @testset "2-bus diagonal" begin
