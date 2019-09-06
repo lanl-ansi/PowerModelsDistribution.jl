@@ -590,6 +590,10 @@ exists inside `compDict`, the original value is converted to an array, and the
 new value is appended to the end.
 """
 function _add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
+    if !haskey(compDict, "prop_order")
+        compDict["prop_order"] = Array{String,1}(["name"])
+    end
+
     if haskey(compDict, lowercase(key))
         rmatch = match(r"_(\d+)$", key)
         if typeof(rmatch) != Nothing
@@ -601,6 +605,7 @@ function _add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
     end
 
     compDict[lowercase(key)] = value
+    push!(compDict["prop_order"], lowercase(key))
 
     return compDict
 end
@@ -636,27 +641,20 @@ function _parse_component(component::AbstractString, properties::AbstractString,
         else
             if split(component,'.')[1] == "loadshape" && startswith(property, "mult")
                 property = replace(property, "mult" => "pmult")
+            elseif split(component,'.')[1] == "transformer"
+                if split(property,'=')[1] == "ppm"
+                    property = replace(property, "ppm" => "ppm_antifloat")
+                elseif split(property,'=')[1] == "x12"
+                    property = replace(property, "x12" => "xhl")
+                elseif split(property,'=')[1] == "x23"
+                    property = replace(property, "x23" => "xlt")
+                elseif split(property,'=')[1] == "x13"
+                    property = replace(property, "x13" => "xht")
+                end
             end
 
-            try
-                propIdxs = findall(e->e==split(property,'=')[1], propNames)
-                if length(propIdxs) > 0
-                    propIdx = findall(e->e==split(property,'=')[1], propNames)[1] + 1
-                end
-            catch e
-                if split(component,'.')[1] == "transformer"
-                    if split(property,'=')[1] == "ppm"
-                        property = replace(property, "ppm" => "ppm_antifloat")
-                    elseif split(property,'=')[1] == "x12"
-                        property = replace(property, "x12" => "xhl")
-                    elseif split(property,'=')[1] == "x23"
-                        property = replace(property, "x23" => "xlt")
-                    elseif split(property,'=')[1] == "x13"
-                        property = replace(property, "x13" => "xht")
-                    end
-                else
-                    throw(e)
-                end
+            propIdxs = findall(e->e==split(property,'=')[1], propNames)
+            if length(propIdxs) > 0
                 propIdx = findall(e->e==split(property,'=')[1], propNames)[1] + 1
             end
         end
@@ -987,4 +985,39 @@ end
 "converts Dict{String,Any} to Dict{Symbol,Any} for passing as kwargs"
 function _to_sym_keys(data::Dict{String,Any})::Dict{Symbol,Any}
     return Dict{Symbol,Any}((Symbol(k), v) for (k, v) in data)
+end
+
+
+""
+function _apply_ordered_properties(defaults::Dict{String,Any}, raw_dss::Dict{String,Any}; like::Dict{String,Any}=Dict{String,Any}(), linecode::Dict{String,Any}=Dict{String,Any}())
+    _defaults = deepcopy(defaults)
+
+    if "like" in raw_dss["prop_order"]
+        before_like = []
+        for prop in raw_dss["prop_order"]
+            if prop == "like"
+                break
+            else
+                push!(before_like, prop)
+            end
+        end
+
+        if !all(prop in ["name", "bus1", "bus2", "phases"] for prop in before_like)
+            Memento.warn(_LOGGER, "The 'like' property is expected as the first property on a line in OpenDSS, and will be treated as such in this parser no matter where it actually appears")
+        end
+
+        merge!(defaults, like)
+
+        filter!(e->!(e in ["like"]),raw_dss["prop_order"])
+    end
+
+    for prop in raw_dss["prop_order"]
+        if prop == "linecode"
+            merge!(defaults, linecode)
+        else
+            defaults[prop] = _defaults[prop]
+        end
+    end
+
+    return defaults
 end
