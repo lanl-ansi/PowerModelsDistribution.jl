@@ -1644,32 +1644,38 @@ end
 function _bank_transformers!(pmd_data::Dict)
     transformer_names = Dict(trans["name"] => n for (n, trans) in get(pmd_data, "transformer_comp", Dict()))
     bankable_transformers = [trans for trans in values(get(pmd_data, "transformer_comp", Dict())) if haskey(trans, "bank")]
+    banked_transformers = Dict()
     for transformer in bankable_transformers
-        if !(transformer["bank"] in keys(transformer_names))
-            n = length(pmd_data["transformer_comp"])+1
-            pmd_data["transformer_comp"]["$n"] = deepcopy(transformer)
-            pmd_data["transformer_comp"]["$n"]["name"] = deepcopy(transformer["bank"])
-            pmd_data["transformer_comp"]["$n"]["source_id"] = "transformer.$(transformer["bank"])"
-            pmd_data["transformer_comp"]["$n"]["index"] = n
-            delete!(pmd_data["transformer_comp"]["$n"], "bank")
-            transformer_names[transformer["bank"]] = "$n"
+        bank = transformer["bank"]
+        if !(bank in keys(banked_transformers))
+            banked_transformers[bank] = banked_transformer = deepcopy(transformer)
+            banked_transformer["name"] = deepcopy(transformer["bank"])
+            banked_transformer["source_id"] = "transformer.$bank"
         else
-            banked_transformer = pmd_data["transformer_comp"][transformer_names[transformer["bank"]]]
+            banked_transformer = banked_transformers[bank]
             for phase in transformer["active_phases"]
                 push!(banked_transformer["active_phases"], phase)
                 for (k, v) in banked_transformer
-                    if isa(v, _PMs.MultiConductorVector)
-                        banked_transformer[k][phase] = deepcopy(transformer[k][phase])
-                    elseif isa(v, _PMs.MultiConductorMatrix)
-                        banked_transformer[k][phase, :] .= deepcopy(transformer[k][phase, :])
+                    # we are dealing with 1D-arrays of MultiConductorVector/MultiConductormatrix,
+                    # indexed over the windings
+                    if isa(v, Array) && k!="conns"
+                        for w in 1:length(v)
+                            if isa(v[w], _PMs.MultiConductorVector)
+                                banked_transformer[k][w][phase] = deepcopy(transformer[k][w][phase])
+                            elseif isa(v[w], _PMs.MultiConductorMatrix)
+                                banked_transformer[k][w][phase, :] .= deepcopy(transformer[k][w][phase, :])
+                            end
+                        end
                     end
                 end
             end
         end
+        # remove this transformer; it will be included in a bank
+        delete!(pmd_data["transformer_comp"], string(transformer_names[transformer["name"]]))
     end
-
-    for transformer in bankable_transformers
-        delete!(pmd_data["transformer_comp"], transformer_names[transformer["name"]])
+    # now add the banked transformers to the dictionary
+    for (bank, transformer) in banked_transformers
+        _push_dict_ret_key!(pmd_data["transformer_comp"], transformer)
     end
 end
 
