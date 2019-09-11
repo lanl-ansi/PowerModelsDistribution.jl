@@ -8,17 +8,18 @@ New circuit.ut_trans
 ~ BasekV=11 BaseMVA=1 pu=1.0  ISC3=9999999999 ISC1=9999999999
 
 ! Transformers
-New Transformer.TX1a windings=2 phases=1 Buses=[1.1 2.1]
+New Transformer.TX1 windings=2 phases=1 Buses=[1.1 2.1]
 ~ Conns=[Wye Wye]
 ~ kVs=[11 4]
 ~ kVAs=[500 500]
-~ %Rs=[1 2]
 ~ xhl=5
 ~ %noloadloss=5
 ~ %imag=11
 ~ leadlag=lead
 ~ taps=[1.05 0.95]
 ~ bank=TX1
+~ wdg=1 %r=1
+~ wdg=2 %r=2
 
 New Transformer.TX1b windings=2 phases=1 Buses=[1.2 2.2]
 ~ Conns=[Wye Wye]

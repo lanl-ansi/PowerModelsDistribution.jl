@@ -95,7 +95,7 @@
         @test_warn(TESTLOG, "Could not find line \"something\"",
                    PMD.parse_file("../test/data/opendss/test2_master.dss"))
 
-        @test_warn(TESTLOG, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.",
+        @test_warn(TESTLOG, "The neutral impedance, (rneut and xneut properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.",
                    PMD.parse_file("../test/data/opendss/test2_master.dss"))
 
         @test_warn(TESTLOG, "Only three-phase transformers are supported. The bus specification b7.1 is treated as b7 instead.",
