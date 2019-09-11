@@ -108,5 +108,10 @@ vm(sol, pmd_data, name) = sol["solution"]["bus"][string(bus_name2id(pmd_data, na
         @test result2["termination_status"] == PMs.LOCALLY_SOLVED
         @test result1["solution"]["bus"] == result2["solution"]["bus"]
         @test result1["solution"]["gen"] == result2["solution"]["gen"]
+
+        dss = PMD.parse_dss(file)
+        PMD.parse_dss_with_dtypes!(dss, ["line", "load", "transformer"])
+        trans = PMD._create_transformer(dss["transformer"][1]["name"]; PMD._to_sym_keys(dss["transformer"][1])...)
+        @test all(trans["%rs"] .== [1.0, 2.0])
     end
 end

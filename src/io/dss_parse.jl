@@ -353,11 +353,11 @@ end
 
 
 "Reorders a `matrix` based on the order that phases are listed in on the from- (`pof`) and to-sides (`pot`)"
-function _reorder_matrix(matrix, pof, pot)
-    mat = deepcopy(matrix)
-    for (i, pf) in enumerate(pof)
-        for (j, pt) in enumerate(pot)
-            mat[i, j] = matrix[pf, pt]
+function _reorder_matrix(matrix, phase_order)
+    mat = zeros(size(matrix))
+    for (i, n) in zip(sort(phase_order), phase_order)
+        for (j, m) in zip(sort(phase_order), phase_order)
+            mat[i, j] = matrix[n, m]
         end
     end
     return mat
@@ -965,9 +965,9 @@ end
 """
     _get_conductors_ordered(busname; neutral=true)
 
-Returns an ordered list of defined conductors. If neutral=false, will omit any `0`
+Returns an ordered list of defined conductors. If ground=false, will omit any `0`
 """
-function _get_conductors_ordered(busname::AbstractString; neutral=true)
+function _get_conductors_ordered(busname::AbstractString; neutral::Bool=true, nconductors::Int=3)::Array
     parts = split(busname, '.'; limit=2)
     ret = []
     if length(parts)==2
@@ -977,7 +977,10 @@ function _get_conductors_ordered(busname::AbstractString; neutral=true)
         else
             ret = [parse(Int, i) for i in conds_str if i != "0"]
         end
+    else
+        ret = collect(1:nconductors)
     end
+
     return ret
 end
 

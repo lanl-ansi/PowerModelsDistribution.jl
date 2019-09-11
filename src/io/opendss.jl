@@ -626,11 +626,10 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
         bf, nodes = _parse_busname(defaults["bus1"])
 
-        phase_order_fr = _get_conductors_ordered(defaults["bus1"]; neutral=false)
-        phase_order_to = _get_conductors_ordered(defaults["bus2"]; neutral=false)
+        phase_order_fr = _get_conductors_ordered(defaults["bus1"]; neutral=false, nconductors=nconductors)
+        phase_order_to = _get_conductors_ordered(defaults["bus2"]; neutral=false, nconductors=nconductors)
 
-        # phase_order_fr = isempty(phase_order_fr) ? collect(1:nconductors) : phase_order_fr
-        # phase_order_to = isempty(phase_order_to) ? collect(1:nconductors) : phase_order_to
+        @assert phase_order_fr == phase_order_to "Order of connections must be identical on either end of a line"
 
         bt = _parse_busname(defaults["bus2"])[1]
 
@@ -643,9 +642,9 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
         branchDict["length"] = defaults["length"]
 
-        rmatrix = _reorder_matrix(_parse_matrix(defaults["rmatrix"], nodes, nconductors), phase_order_fr, phase_order_to)
-        xmatrix = _reorder_matrix(_parse_matrix(defaults["xmatrix"], nodes, nconductors), phase_order_fr, phase_order_to)
-        cmatrix = _reorder_matrix(_parse_matrix(defaults["cmatrix"], nodes, nconductors), phase_order_fr, phase_order_to)
+        rmatrix = _reorder_matrix(_parse_matrix(defaults["rmatrix"], nodes, nconductors), phase_order_fr)
+        xmatrix = _reorder_matrix(_parse_matrix(defaults["xmatrix"], nodes, nconductors), phase_order_fr)
+        cmatrix = _reorder_matrix(_parse_matrix(defaults["cmatrix"], nodes, nconductors), phase_order_fr)
 
         Zbase = (pmd_data["basekv"] / sqrt(3))^2 * nconductors / (pmd_data["baseMVA"])
 
@@ -827,25 +826,17 @@ function _dss2pmd_transformer!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         transDict["rs"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
         transDict["gsh"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
         transDict["bsh"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
-        # deal with dual definition of rs in defaults dict
-        # if non-zero, pick "%rs", else go for the per winding spec
-        rs_alt = [defaults["%r$suffix"] for suffix in prop_suffix_w]
-        rs = all(defaults["%rs"].==0) ? rs_alt : defaults["%rs"]
         for w in 1:nrw
-            zs_w_p = rs[w]/100*zbase
+            zs_w_p = defaults["%rs"][w]/100*zbase
             Zs_w = pos_to_abc(zs_w_p)
-            #TODO handle %loadloss property
-            # Problem is that for the two-winding case, both %loadloss
-            # and %rs map to values for the winding series resistance.
-            # Both are set to a (possibly default) value, so it is
-            # impossible to know at this point which was actually specified
-            # by the user. %rs is more general, so %loadloss is not
-            # supported for now.
-            Memento.warn(_LOGGER, "The %loadloss property is ignored for now.")
-            #TODO handle neutral impedance
-            # neutral impedance is ignored for now; all transformers are
-            # grounded (that is, those with a wye and zig-zag winding).
-            Memento.warn(_LOGGER, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.")
+
+            if haskey(transformer, "rneut") || haskey(transformer, "xneut")
+                #TODO handle neutral impedance
+                # neutral impedance is ignored for now; all transformers are
+                # grounded (that is, those with a wye and zig-zag winding).
+                Memento.warn(_LOGGER, "The neutral impedance, (rneut and xneut properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.")
+            end
+
             transDict["rs"][w] = _PMs.MultiConductorMatrix(real.(Zs_w))
             # shunt elements are added at second winding
             if w==2
@@ -1644,17 +1635,20 @@ end
 function _bank_transformers!(pmd_data::Dict)
     transformer_names = Dict(trans["name"] => n for (n, trans) in get(pmd_data, "transformer_comp", Dict()))
     bankable_transformers = [trans for trans in values(get(pmd_data, "transformer_comp", Dict())) if haskey(trans, "bank")]
+    banked_transformers = Dict()
     for transformer in bankable_transformers
-        if !(transformer["bank"] in keys(transformer_names))
+        bank = transformer["bank"]
+
+        if !(bank in keys(banked_transformers))
             n = length(pmd_data["transformer_comp"])+1
-            pmd_data["transformer_comp"]["$n"] = deepcopy(transformer)
-            pmd_data["transformer_comp"]["$n"]["name"] = deepcopy(transformer["bank"])
-            pmd_data["transformer_comp"]["$n"]["source_id"] = "transformer.$(transformer["bank"])"
-            pmd_data["transformer_comp"]["$n"]["index"] = n
-            delete!(pmd_data["transformer_comp"]["$n"], "bank")
-            transformer_names[transformer["bank"]] = "$n"
+
+            banked_transformers[bank] = deepcopy(transformer)
+            banked_transformers[bank]["name"] = deepcopy(transformer["bank"])
+            banked_transformers[bank]["source_id"] = "transformer.$(transformer["bank"])"
+            banked_transformers[bank]["index"] = n
+            delete!(banked_transformers[bank], "bank")
         else
-            banked_transformer = pmd_data["transformer_comp"][transformer_names[transformer["bank"]]]
+            banked_transformer = banked_transformers[bank]
             for phase in transformer["active_phases"]
                 push!(banked_transformer["active_phases"], phase)
                 for (k, v) in banked_transformer
@@ -1670,6 +1664,10 @@ function _bank_transformers!(pmd_data::Dict)
 
     for transformer in bankable_transformers
         delete!(pmd_data["transformer_comp"], transformer_names[transformer["name"]])
+    end
+
+    for transformer in values(banked_transformers)
+        pmd_data["transformer_comp"]["$(transformer["index"])"] = deepcopy(transformer)
     end
 end
 
