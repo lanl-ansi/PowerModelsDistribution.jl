@@ -355,9 +355,16 @@ end
 "Reorders a `matrix` based on the order that phases are listed in on the from- (`pof`) and to-sides (`pot`)"
 function _reorder_matrix(matrix, nconductors, phase_order)
     mat = fill(0.0, nconductors, nconductors)
-    for (i, n) in enumerate(phase_order)
-        for (j, m) in enumerate(phase_order)
-            mat[n, m] = matrix[i, j]
+    if isempty(phase_order)
+        # sometimes the conductors are not explicitly supplied;
+        # in that case, place matrix in the upper left corner of mat
+        N, M = size(matrix)
+        mat[1:N, 1:M] = matrix
+    else
+        for (i, n) in enumerate(phase_order)
+            for (j, m) in enumerate(phase_order)
+                mat[n, m] = matrix[i, j]
+            end
         end
     end
     return mat
