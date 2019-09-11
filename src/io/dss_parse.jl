@@ -353,11 +353,11 @@ end
 
 
 "Reorders a `matrix` based on the order that phases are listed in on the from- (`pof`) and to-sides (`pot`)"
-function _reorder_matrix(matrix, pof, pot)
-    mat = deepcopy(matrix)
-    for (i, pf) in enumerate(pof)
-        for (j, pt) in enumerate(pot)
-            mat[i, j] = matrix[pf, pt]
+function _reorder_matrix(matrix, nconductors, phase_order)
+    mat = fill(0.0, nconductors, nconductors)
+    for (i, n) in enumerate(phase_order)
+        for (j, m) in enumerate(phase_order)
+            mat[n, m] = matrix[i, j]
         end
     end
     return mat

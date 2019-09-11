@@ -628,6 +628,7 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
         phase_order_fr = _get_conductors_ordered(defaults["bus1"]; neutral=false)
         phase_order_to = _get_conductors_ordered(defaults["bus2"]; neutral=false)
+        @assert(all(phase_order_fr.==phase_order_to))
 
         # phase_order_fr = isempty(phase_order_fr) ? collect(1:nconductors) : phase_order_fr
         # phase_order_to = isempty(phase_order_to) ? collect(1:nconductors) : phase_order_to
@@ -643,9 +644,9 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
         branchDict["length"] = defaults["length"]
 
-        rmatrix = _reorder_matrix(_parse_matrix(defaults["rmatrix"], nodes, nconductors), phase_order_fr, phase_order_to)
-        xmatrix = _reorder_matrix(_parse_matrix(defaults["xmatrix"], nodes, nconductors), phase_order_fr, phase_order_to)
-        cmatrix = _reorder_matrix(_parse_matrix(defaults["cmatrix"], nodes, nconductors), phase_order_fr, phase_order_to)
+        rmatrix = _reorder_matrix(defaults["rmatrix"], nconductors, phase_order_fr)
+        xmatrix = _reorder_matrix(defaults["xmatrix"], nconductors, phase_order_fr)
+        cmatrix = _reorder_matrix(defaults["cmatrix"], nconductors, phase_order_fr)
 
         Zbase = (pmd_data["basekv"] / sqrt(3))^2 * nconductors / (pmd_data["baseMVA"])
 
