@@ -63,9 +63,6 @@ function variable_tp_branch_series_current_prod_hermitian(pm::_PMs.GenericPowerM
             y_fr = branch["g_fr"].values + im* branch["b_fr"].values
             y_to = branch["g_to"].values + im* branch["b_to"].values
 
-            y_fr = diagm(0=>y_fr)
-            y_to = diagm(0=>y_to)
-
             smax = branch["rate_a"].values
             cmaxfr = smax./vmin_fr + abs.(y_fr)*vmax_fr
             cmaxto = smax./vmin_to + abs.(y_to)*vmax_to

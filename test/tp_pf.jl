@@ -87,6 +87,15 @@
         @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9647241898338335; atol = 1e-3)
         @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9555739064829893; atol = 1e-3)
     end
+
+    @testset "matrix branch shunts" begin
+        sol = PMD.run_ac_tp_pf_lm("../test/data/opendss/case_mxshunt.dss", ipopt_solver)
+
+        # these results were obtained from OpenDSS; largest mismatch was 5E-9
+        isapprox(sol["solution"]["bus"]["2"]["vm"][1], 0.9873988561202298, atol=1E-8)
+        isapprox(sol["solution"]["bus"]["2"]["vm"][2], 0.9813000619074207, atol=1E-8)
+        isapprox(sol["solution"]["bus"]["2"]["vm"][3], 1.0035368353626686, atol=1E-8)
+    end
 end
 
 @testset "test ac rectangular pf" begin
@@ -177,6 +186,17 @@ end
         @test isapprox(result["solution"]["bus"]["2"]["vm"][1], 0.9733455037213229; atol = 1e-3)
         @test isapprox(result["solution"]["bus"]["2"]["vm"][2], 0.9647241898338335; atol = 1e-3)
         @test isapprox(result["solution"]["bus"]["2"]["vm"][3], 0.9555739064829893; atol = 1e-3)
+    end
+
+    @testset "matrix branch shunts" begin
+        data_pmd = PMD.parse_file("../test/data/opendss/case_mxshunt.dss")
+        pm = PMs.build_model(data_pmd, PMs.ACRPowerModel, PMD.post_tp_pf_lm, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+        sol = PMs.optimize_model!(pm, ipopt_solver)
+
+        # these results were obtained from OpenDSS; largest mismatch was 5E-9
+        isapprox(sol["solution"]["bus"]["2"]["vm"][1], 0.9873988561202298, atol=1E-8)
+        isapprox(sol["solution"]["bus"]["2"]["vm"][2], 0.9813000619074207, atol=1E-8)
+        isapprox(sol["solution"]["bus"]["2"]["vm"][3], 1.0035368353626686, atol=1E-8)
     end
 end
 

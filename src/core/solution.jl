@@ -121,24 +121,35 @@ function add_setpoint_branch_current!(sol, pm::_PMs.GenericPowerModel)
 end
 
 
+""
 function add_rank!(sol, pm::_PMs.GenericPowerModel; tol = 1e-6)
     add_rank_voltage_variable!(sol, pm; tol=tol)
     add_rank_current_variable!(sol, pm; tol=tol)
     add_rank_branch_flow!(sol, pm; tol=tol)
 end
 
+
+""
 function add_rank_voltage_variable!(sol, pm::_PMs.GenericPowerModel; tol = 1e-6)
 end
 
+
+""
 function add_rank_current_variable!(sol, pm::_PMs.GenericPowerModel; tol = 1e-6)
 end
 
+
+""
 function add_rank_branch_flow!(sol, pm::_PMs.GenericPowerModel; tol = 1e-6)
 end
 
+
+""
 function add_is_ac_feasible!(sol, pm::_PMs.GenericPowerModel)
 end
 
+
+""
 function add_is_ac_feasible!(sol, pm::_PMs.GenericPowerModel{T}) where T <: AbstractUBFForm
     for (nw, network) in _PMs.nws(pm)
         branch_feasibilities = [branch["rank"] <= 1 for (b, branch) in sol["branch"]]
@@ -151,6 +162,8 @@ function add_is_ac_feasible!(sol, pm::_PMs.GenericPowerModel{T}) where T <: Abst
     end
 end
 
+
+""
 function add_rank_voltage_variable!(sol, pm::_PMs.GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
     for (nw, network) in _PMs.nws(pm)
         buses       = _PMs.ref(pm, nw, :bus)
@@ -162,6 +175,8 @@ function add_rank_voltage_variable!(sol, pm::_PMs.GenericPowerModel{T}; tol = 1e
     end
 end
 
+
+""
 function add_rank_current_variable!(sol, pm::_PMs.GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
     for (nw, network) in _PMs.nws(pm)
         branches       = _PMs.ref(pm, nw, :branch)
@@ -173,12 +188,14 @@ function add_rank_current_variable!(sol, pm::_PMs.GenericPowerModel{T}; tol = 1e
     end
 end
 
+
+""
 function add_rank_branch_flow!(sol, pm::_PMs.GenericPowerModel{T}; tol = 1e-6) where T <: AbstractUBFForm
     for (nw, network) in _PMs.nws(pm)
         buses       = _PMs.ref(pm, nw, :bus)
         for (b, branch) in _PMs.ref(pm, nw, :branch)
-            g_fr = diagm(0 => branch["g_fr"].values)
-            b_fr = diagm(0 => branch["b_fr"].values)
+            g_fr = branch["g_fr"].values
+            b_fr = branch["b_fr"].values
             y_fr = g_fr + im* b_fr
 
             fbus = branch["f_bus"]
@@ -198,7 +215,6 @@ function add_rank_branch_flow!(sol, pm::_PMs.GenericPowerModel{T}; tol = 1e-6) w
         end
     end
 end
-
 
 
 ""
@@ -245,11 +261,11 @@ function add_original_variables!(sol, pm::_PMs.GenericPowerModel)
 
             if !isempty(candidate_arcs_from)
                 (l,i,j) = arc = candidate_arcs_from[1]
-                g_fr = diagm(0 => branches[l]["g_fr"].values)
-                b_fr = diagm(0 => branches[l]["b_fr"].values)
+                g_fr = branches[l]["g_fr"].values
+                b_fr = branches[l]["b_fr"].values
                 y_fr = g_fr + im* b_fr
-                g_to = diagm(0 => branches[l]["g_to"].values)
-                b_to = diagm(0 => branches[l]["b_to"].values)
+                g_to = branches[l]["g_to"].values
+                b_to = branches[l]["b_to"].values
                 y_to = g_to + im* b_to
                 r = branches[l]["br_r"].values
                 x = branches[l]["br_x"].values
@@ -282,11 +298,11 @@ function add_original_variables!(sol, pm::_PMs.GenericPowerModel)
 
             elseif !isempty(candidate_arcs_to)
                 (l,i,j) = arc = candidate_arcs_to[1]
-                g_fr = diagm(0 => branches[l]["g_to"].values)
-                b_fr = diagm(0 => branches[l]["b_to"].values)
+                g_fr = branches[l]["g_to"].values
+                b_fr = branches[l]["b_to"].values
                 y_fr = g_fr + im* b_fr
-                g_to = diagm(0 => branches[l]["g_fr"].values)
-                b_to = diagm(0 => branches[l]["b_fr"].values)
+                g_to = branches[l]["g_fr"].values
+                b_to = branches[l]["b_fr"].values
                 y_to = g_to + im* b_to
                 r = branches[l]["br_r"].values
                 x = branches[l]["br_x"].values
@@ -338,4 +354,78 @@ function add_original_variables!(sol, pm::_PMs.GenericPowerModel)
             end
         end
     end
+end
+
+
+"solution builder for minimum load delta problem (load shed)"
+function solution_mld!(pm::_PMs.GenericPowerModel{T}, sol::Dict{String,Any}) where T
+    _PMs.add_setpoint_bus_voltage!(sol, pm)
+    _PMs.add_setpoint_generator_power!(sol, pm)
+    _PMs.add_setpoint_storage!(sol, pm)
+    _PMs.add_setpoint_branch_flow!(sol, pm)
+
+    add_setpoint_bus_status!(sol, pm)
+    add_setpoint_load!(sol, pm)
+    add_setpoint_shunt!(sol, pm)
+    add_setpoint_generator_status!(sol, pm)
+    add_setpoint_storage_status!(sol, pm)
+end
+
+
+"solution builder for branch-flow minimum load delta problem (load shed)"
+function solution_mld_bf!(pm::_PMs.GenericPowerModel, sol::Dict{String,Any})
+    add_setpoint_bus_voltage!(sol, pm)
+    _PMs.add_setpoint_generator_power!(sol, pm)
+    add_setpoint_branch_flow!(sol, pm)
+    add_setpoint_branch_current!(sol, pm)
+    _PMs.add_setpoint_dcline_flow!(sol, pm)
+
+    _PMs.add_dual_kcl!(sol, pm)
+    _PMs.add_dual_sm!(sol, pm) # Adds the duals of the transmission lines' thermal limits.
+
+    add_setpoint_bus_status!(sol, pm)
+    add_setpoint_load!(sol, pm)
+    add_setpoint_shunt!(sol, pm)
+    add_setpoint_generator_status!(sol, pm)
+    add_setpoint_storage_status!(sol, pm)
+
+    if haskey(pm.setting, "output") && haskey(pm.setting["output"], "original_variables") && pm.setting["output"]["original_variables"] == true
+        add_rank!(sol, pm)
+        add_is_ac_feasible!(sol, pm)
+        add_original_variables!(sol, pm)
+    end
+end
+
+
+"add load setpoints for load shed problem"
+function add_setpoint_load!(sol, pm::_PMs.GenericPowerModel{T}) where T
+    _PMs.add_setpoint!(sol, pm, "load", "pd", :z_demand; scale = (x,item,cnd) -> x*item["pd"], conductorless=true)
+    _PMs.add_setpoint!(sol, pm, "load", "qd", :z_demand; scale = (x,item,cnd) -> x*item["qd"], conductorless=true)
+    _PMs.add_setpoint!(sol, pm, "load", "status", :z_demand; default_value = (item) -> if (item["status"] == 0) 0.0 else 1.0 end, conductorless=true)
+end
+
+
+"add shunt setpoints for load shed problem"
+function add_setpoint_shunt!(sol, pm::_PMs.GenericPowerModel{T}) where T
+    _PMs.add_setpoint!(sol, pm, "shunt", "gs", :z_shunt; scale = (x,item,cnd) -> x.*item["gs"], conductorless=true)
+    _PMs.add_setpoint!(sol, pm, "shunt", "bs", :z_shunt; scale = (x,item,cnd) -> x.*item["bs"], conductorless=true)
+    _PMs.add_setpoint!(sol, pm, "shunt", "status", :z_shunt; default_value = (item) -> if (item["status"] == 0) 0.0 else 1.0 end, conductorless=true)
+end
+
+
+"add bus statuses for load shed problem"
+function add_setpoint_bus_status!(sol, pm::_PMs.GenericPowerModel{T}) where T
+   _PMs.add_setpoint!(sol, pm, "bus", "status", :z_voltage; status_name="bus_type", inactive_status_value=4, default_value = (item) -> if item["bus_type"] == 4 0.0 else 1.0 end, conductorless=true)
+end
+
+
+"add generator statuses for load shed problem"
+function add_setpoint_generator_status!(sol, pm::_PMs.GenericPowerModel{T}) where T
+    _PMs.add_setpoint!(sol, pm, "gen", "gen_status", :z_gen; status_name="gen_status", default_value = (item) -> if (item["gen_status"] == 0) 0.0 else 1.0 end, conductorless=true)
+end
+
+
+"add storage statuses for load shed problem"
+function add_setpoint_storage_status!(sol, pm::_PMs.GenericPowerModel{T}) where T
+    _PMs.add_setpoint!(sol, pm, "storage", "status", :z_storage; default_value = (item) -> if (item["status"] == 0) 0.0 else 1.0 end, conductorless=true)
 end

@@ -1,7 +1,7 @@
 @testset "test linearised distflow opf_bf" begin
     @testset "3-bus case" begin
         mp_data = PowerModels.parse_file("$(pms_path)/test/data/matpower/case3.m")
-        PowerModels.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -10,7 +10,7 @@
     end
     @testset "5-bus case" begin
         mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
-        PowerModels.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -40,7 +40,7 @@ end
 @testset "test linearised distflow opf_bf in diagonal matrix form" begin
     @testset "3-bus case" begin
         mp_data = PowerModels.parse_file("$(pms_path)/test/data/matpower/case3.m")
-        PowerModels.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf_bf(mp_data, LPdiagUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -49,7 +49,7 @@ end
     end
     @testset "5-bus case" begin
         mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
-        PowerModels.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf_bf(mp_data, LPdiagUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -80,7 +80,7 @@ end
 @testset "test linearised distflow opf_bf in full matrix form" begin
     @testset "3-bus case" begin
         mp_data = PowerModels.parse_file("$(pms_path)/test/data/matpower/case3.m")
-        PowerModels.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf_bf(mp_data, LPfullUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -90,7 +90,7 @@ end
     end
     @testset "5-bus case" begin
         mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
-        PowerModels.make_multiconductor!(mp_data, 3)
+        PMD.make_multiconductor!(mp_data, 3)
         result = run_tp_opf_bf(mp_data, LPfullUBFPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -220,4 +220,3 @@ end
         end
     end
 end
-

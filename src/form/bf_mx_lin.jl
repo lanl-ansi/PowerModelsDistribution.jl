@@ -58,8 +58,8 @@ function variable_tp_branch_flow(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, n
         ps_mat = real(Gamma)*p_d_mx - imag(Gamma)*q_d_mx
         qs_mat = imag(Gamma)*p_d_mx + real(Gamma)*q_d_mx
 
-        g_sh_fr = diagm(0 => branch["g_fr"].values)
-        b_sh_fr = diagm(0 => branch["b_fr"].values)
+        g_sh_fr = branch["g_fr"].values
+        b_sh_fr = branch["b_fr"].values
 
         w_fr_re = _PMs.var(pm, nw, :Wr)[f_bus]
         w_fr_im = _PMs.var(pm, nw, :Wi)[f_bus]
@@ -98,8 +98,8 @@ function variable_tp_branch_flow(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, n
         ps_mat = p_d
         qs_mat = q_d
 
-        g_sh_fr = diagm(0 => branch["g_fr"].values)
-        b_sh_fr = diagm(0 => branch["b_fr"].values)
+        g_sh_fr = branch["g_fr"].values
+        b_sh_fr = branch["b_fr"].values
 
         w_fr_re = _PMs.var(pm, nw, :Wr)[f_bus]
         w_fr_re_mx = [w_fr_re[1] 0 0; 0 w_fr_re[2] 0; 0 0 w_fr_re[3]]

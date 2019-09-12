@@ -4,6 +4,13 @@ PowerModelsDistribution.jl Change Log
 ### staged
 - none
 
+### v0.5.2
+- Fix bug in OpenDSS parser on Capacitors (#158)
+- Add support for full matrix line shunts (#153)
+
+### v0.5.1
+- Add continuous load shedding problem (mld)
+
 ### v0.5.0
 - Enforce function naming conventions (starts with `_`: internal function; ends with `!`: transforms data; `correct_`: corrects network data; `check_`: warnings about network data) (breaking)
 - Update for PowerModels.jl v0.12 (breaking)
@@ -23,7 +30,6 @@ PowerModelsDistribution.jl Change Log
 - Add support for additional load models (constant power, constant impedance, constant current; delta or wye connected) (#127)
 - Fix bug in OpenDSS parse of Capacitors [zbase factor and wrong sign] (#138)
 - Add voltage balance constraints (#129)
-
 
 ### v0.3.0
 - Update to JuMP v0.19/MathOptInterface

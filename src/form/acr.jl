@@ -117,14 +117,22 @@ end
 Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
 
 ```
-p_fr =  g_fr[c]*(vr_fr[c]^2+vi_fr[c]^2)+ sum(
-                                     vr_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
-                                    -vi_fr[c]*(-b[c,d]*(vr_fr[d]-vr_to[d])-g[c,d]*(vi_fr[d]-vi_to[d]))
-                                for d in _PMs.conductor_ids(pm))
-q_fr =  -b_fr[c]*(vr_fr[c]^2+vi_fr[c]^2)+ sum(
-                                        -vr_fr[c]*(b[c,d]*(vr_fr[d]-vr_to[d])+g[c,d]*(vi_fr[d]-vi_to[d]))
-                                        +vi_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
-                                    for d in _PMs.conductor_ids(pm))
+p_fr ==  sum(
+             vr_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
+            -vi_fr[c]*(-b[c,d]*(vr_fr[d]-vr_to[d])-g[c,d]*(vi_fr[d]-vi_to[d]))
+            for d in _PMs.conductor_ids(pm))
+         + sum(
+             vr_fr[c]*(g_fr[c,d]*vr_fr[d]-b_fr[c,d]*vi_fr[d])
+            -vi_fr[c]*(-b_fr[c,d]*vr_fr[d]-g_fr[c,d]*vi_fr[d])
+            for d in _PMs.conductor_ids(pm))
+q_fr ==  sum(
+            -vr_fr[c]*(b[c,d]*(vr_fr[d]-vr_to[d])+g[c,d]*(vi_fr[d]-vi_to[d]))
+            +vi_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
+            for d in _PMs.conductor_ids(pm))
+          + sum(
+            -vr_fr[c]*(b_fr[c,d]*vr_fr[d]+g_fr[c,d]*vi_fr[d])
+            +vi_fr[c]*(g_fr[c,d]*vr_fr[d]-b_fr[c,d]*vi_fr[d])
+            for d in _PMs.conductor_ids(pm))
 ```
 """
 function constraint_tp_ohms_yt_from(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm) where T <: _PMs.AbstractACRForm
@@ -135,15 +143,25 @@ function constraint_tp_ohms_yt_from(pm::_PMs.GenericPowerModel{T}, n::Int, c::In
     vi_fr = [_PMs.var(pm, n, d, :vi, f_bus) for d in _PMs.conductor_ids(pm)]
     vi_to = [_PMs.var(pm, n, d, :vi, t_bus) for d in _PMs.conductor_ids(pm)]
 
-    JuMP.@NLconstraint(pm.model, p_fr ==  g_fr[c]*(vr_fr[c]^2+vi_fr[c]^2)+ sum(
+    JuMP.@NLconstraint(pm.model, p_fr ==  sum(
                                              vr_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
                                             -vi_fr[c]*(-b[c,d]*(vr_fr[d]-vr_to[d])-g[c,d]*(vi_fr[d]-vi_to[d]))
-                                        for d in _PMs.conductor_ids(pm))
+                                            for d in _PMs.conductor_ids(pm))
+                                          # the shunt element is identical but vr_to=vi_to=0
+                                          + sum(
+                                             vr_fr[c]*(g_fr[c,d]*vr_fr[d]-b_fr[c,d]*vi_fr[d])
+                                            -vi_fr[c]*(-b_fr[c,d]*vr_fr[d]-g_fr[c,d]*vi_fr[d])
+                                            for d in _PMs.conductor_ids(pm))
     )
-    JuMP.@NLconstraint(pm.model, q_fr ==  -b_fr[c]*(vr_fr[c]^2+vi_fr[c]^2)+ sum(
+    JuMP.@NLconstraint(pm.model, q_fr ==  sum(
                                             -vr_fr[c]*(b[c,d]*(vr_fr[d]-vr_to[d])+g[c,d]*(vi_fr[d]-vi_to[d]))
                                             +vi_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
-                                        for d in _PMs.conductor_ids(pm))
+                                            for d in _PMs.conductor_ids(pm))
+                                          # the shunt element is identical but vr_to=vi_to=0
+                                          + sum(
+                                            -vr_fr[c]*(b_fr[c,d]*vr_fr[d]+g_fr[c,d]*vi_fr[d])
+                                            +vi_fr[c]*(g_fr[c,d]*vr_fr[d]-b_fr[c,d]*vi_fr[d])
+                                            for d in _PMs.conductor_ids(pm))
     )
 end
 
