@@ -203,8 +203,8 @@ function _dss2pmd_load!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
     end
 
     for load in get(dss_data, "load", [])
-        like = haskey(load, "like") ? _find_component(dss_data, load["like"], "load") : Dict{String,Any}()
-        defaults = _apply_ordered_properties(_create_load(load["bus1"], load["name"]; _to_sym_keys(load)...), load; like=like)
+        _apply_like!(load, dss_data, "load")
+        defaults = _apply_ordered_properties(_create_load(load["bus1"], load["name"]; _to_sym_keys(load)...), load)
 
         loadDict = Dict{String,Any}()
 
@@ -358,8 +358,8 @@ function _dss2pmd_shunt!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
     end
 
     for shunt in get(dss_data, "capacitor", [])
-        like = haskey(shunt, "like") ? _find_component(dss_data, shunt["like"], "capacitor") : Dict{String,Any}()
-        defaults = _apply_ordered_properties(_create_capacitor(shunt["bus1"], shunt["name"]; _to_sym_keys(shunt)...), shunt; like=like)
+        _apply_like!(shunt, dss_data, "capacitor")
+        defaults = _apply_ordered_properties(_create_capacitor(shunt["bus1"], shunt["name"]; _to_sym_keys(shunt)...), shunt)
 
         shuntDict = Dict{String,Any}()
 
@@ -399,8 +399,8 @@ function _dss2pmd_shunt!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
     for shunt in get(dss_data, "reactor", [])
         if !haskey(shunt, "bus2")
-            like = haskey(shunt, "like") ? _find_component(dss_data, shunt["like"], "reactor") : Dict{String,Any}()
-            defaults = _apply_ordered_properties(_create_reactor(shunt["bus1"], shunt["name"]; _to_sym_keys(shunt)...), shunt; like=like)
+            _apply_like!(shunt, dss_data, "reactor")
+            defaults = _apply_ordered_properties(_create_reactor(shunt["bus1"], shunt["name"]; _to_sym_keys(shunt)...), shunt)
 
             shuntDict = Dict{String,Any}()
 
@@ -480,8 +480,8 @@ function _dss2pmd_gen!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
 
     for gen in get(dss_data, "generator", [])
-        like = haskey(gen, "like") ? _find_component(dss_data, gen["like"], "generator") : Dict{String,Any}()
-        defaults = _apply_ordered_properties(_create_generator(gen["bus1"], gen["name"]; _to_sym_keys(gen)...), gen; like=like)
+        _apply_like!(gen, dss_data, "generator")
+        defaults = _apply_ordered_properties(_create_generator(gen["bus1"], gen["name"]; _to_sym_keys(gen)...), gen)
 
         genDict = Dict{String,Any}()
 
@@ -545,8 +545,8 @@ function _dss2pmd_gen!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
     for pv in get(dss_data, "pvsystem", [])
         Memento.warn(_LOGGER, "Converting PVSystem \"$(pv["name"])\" into generator with limits determined by OpenDSS property 'kVA'")
 
-        like = haskey(pv, "like") ? _find_component(dss_data, pv["like"], "pvsystem") : Dict{String,Any}()
-        defaults = _apply_ordered_properties(_create_pvsystem(pv["bus1"], pv["name"]; _to_sym_keys(pv)...), pv; like=like)
+        _apply_like!(pv, dss_data, "pvsystem")
+        defaults = _apply_ordered_properties(_create_pvsystem(pv["bus1"], pv["name"]; _to_sym_keys(pv)...), pv)
 
         pvDict = Dict{String,Any}()
 
@@ -600,7 +600,7 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
     nconductors = pmd_data["conductors"]
 
     for line in get(dss_data, "line", [])
-        like = haskey(line, "like") ? _find_component(dss_data, line["like"], "line") : Dict{String,Any}()
+        _apply_like!(line, dss_data, "line")
 
         if haskey(line, "linecode")
             linecode = deepcopy(_get_linecode(dss_data, get(line, "linecode", "")))
@@ -622,7 +622,7 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
             line["circuit_basefreq"] = pmd_data["basefreq"]
         end
 
-        defaults = _apply_ordered_properties(_create_line(line["bus1"], line["bus2"], line["name"]; _to_sym_keys(line)...), line; like=like, linecode=linecode)
+        defaults = _apply_ordered_properties(_create_line(line["bus1"], line["bus2"], line["name"]; _to_sym_keys(line)...), line; linecode=linecode)
 
         bf, nodes = _parse_busname(defaults["bus1"])
 
@@ -708,8 +708,8 @@ function _dss2pmd_transformer!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
     end
 
     for transformer in get(dss_data, "transformer", [])
-        like = haskey(transformer, "like") ? _find_component(dss_data, transformer["like"], "transformer") : Dict{String,Any}()
-        defaults = _apply_ordered_properties(_create_transformer(transformer["name"]; _to_sym_keys(transformer)...), transformer; like=like)
+        _apply_like!(transformer, dss_data, "transformer")
+        defaults = _apply_ordered_properties(_create_transformer(transformer["name"]; _to_sym_keys(transformer)...), transformer)
 
         nconductors = pmd_data["conductors"]
         nrw = defaults["windings"]
@@ -931,8 +931,8 @@ function _dss2pmd_reactor!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         Memento.warn(_LOGGER, "reactors as constant impedance elements is not yet supported, treating like line")
         for reactor in dss_data["reactor"]
             if haskey(reactor, "bus2")
-                like = haskey(reactor, "like") ? _find_component(dss_data, reactor["like"], "reactor") : Dict{String,Any}()
-                defaults = _apply_ordered_properties(_create_reactor(reactor["bus1"], reactor["name"], reactor["bus2"]; _to_sym_keys(reactor)...), reactor; like=like)
+                _apply_like!(reactor, dss_data, "reactor")
+                defaults = _apply_ordered_properties(_create_reactor(reactor["bus1"], reactor["name"], reactor["bus2"]; _to_sym_keys(reactor)...), reactor)
 
                 reactDict = Dict{String,Any}()
 
@@ -997,32 +997,30 @@ function _dss2pmd_pvsystem!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         pmd_data["pvsystem"] = []
     end
 
-    if haskey(dss_data, "pvsystem")
-        for pvsystem in dss_data["pvsystem"]
-            like = haskey(pvsystem, "like") ? _find_component(dss_data, pvsystem["like"], "pvsystem") : Dict{String,Any}()
-            defaults = _apply_ordered_properties(_create_pvsystem(pvsystem["bus1"], pvsystem["name"]; _to_sym_keys(pvsystem)...), pvsystem; like=like)
+    for pvsystem in get(dss_data, "pvsystem", [])
+        _apply_like!(pvsystem, dss_data, "pvsystem")
+        defaults = _apply_ordered_properties(_create_pvsystem(pvsystem["bus1"], pvsystem["name"]; _to_sym_keys(pvsystem)...), pvsystem)
 
-            pvsystemDict = Dict{String,Any}()
+        pvsystemDict = Dict{String,Any}()
 
-            nconductors = pmd_data["conductors"]
-            name, nodes = _parse_busname(defaults["bus1"])
+        nconductors = pmd_data["conductors"]
+        name, nodes = _parse_busname(defaults["bus1"])
 
-            pvsystemDict["name"] = defaults["name"]
-            pvsystemDict["pv_bus"] = _find_bus(name, pmd_data)
-            pvsystemDict["p"] = _PMs.MultiConductorVector(_parse_array(defaults["kw"] / 1e3, nodes, nconductors))
-            pvsystemDict["q"] = _PMs.MultiConductorVector(_parse_array(defaults["kvar"] / 1e3, nodes, nconductors))
-            pvsystemDict["status"] = convert(Int, defaults["enabled"])
+        pvsystemDict["name"] = defaults["name"]
+        pvsystemDict["pv_bus"] = _find_bus(name, pmd_data)
+        pvsystemDict["p"] = _PMs.MultiConductorVector(_parse_array(defaults["kw"] / 1e3, nodes, nconductors))
+        pvsystemDict["q"] = _PMs.MultiConductorVector(_parse_array(defaults["kvar"] / 1e3, nodes, nconductors))
+        pvsystemDict["status"] = convert(Int, defaults["enabled"])
 
-            pvsystemDict["index"] = length(pmd_data["pvsystem"]) + 1
+        pvsystemDict["index"] = length(pmd_data["pvsystem"]) + 1
 
-            pvsystemDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-            pvsystemDict["source_id"] = "pvsystem.$(defaults["name"])"
+        pvsystemDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+        pvsystemDict["source_id"] = "pvsystem.$(defaults["name"])"
 
-            used = ["phases", "bus1", "name"]
-            _PMs._import_remaining!(pvsystemDict, defaults, import_all; exclude=used)
+        used = ["phases", "bus1", "name"]
+        _PMs._import_remaining!(pvsystemDict, defaults, import_all; exclude=used)
 
-            push!(pmd_data["pvsystem"], pvsystemDict)
-        end
+        push!(pmd_data["pvsystem"], pvsystemDict)
     end
 end
 
@@ -1038,8 +1036,8 @@ function _dss2pmd_storage!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
     end
 
     for storage in get(dss_data, "storage", [])
-        like = haskey(storage, "like") ? _find_component(dss_data, storage["like"], "storage") : Dict{String,Any}()
-        defaults = _apply_ordered_properties(_create_storage(storage["bus1"], storage["name"]; _to_sym_keys(storage)...), storage; like=like)
+        _apply_like!(storage, dss_data, "storage")
+        defaults = _apply_ordered_properties(_create_storage(storage["bus1"], storage["name"]; _to_sym_keys(storage)...), storage)
 
         storageDict = Dict{String,Any}()
 

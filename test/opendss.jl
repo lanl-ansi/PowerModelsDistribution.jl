@@ -89,6 +89,9 @@
         @test_warn(TESTLOG, "reactors as constant impedance elements is not yet supported, treating like line",
                    PMD.parse_file("../test/data/opendss/test2_master.dss"))
 
+        @test_warn(TESTLOG, "line.l1: like=something cannot be found",
+                   PMD.parse_file("../test/data/opendss/test2_master.dss"))
+
         @test_warn(TESTLOG, "Rg,Xg are not fully supported",
                    PMD.parse_file("../test/data/opendss/test2_master.dss"))
 
@@ -235,6 +238,9 @@
             @test transformer["kv_2"] == "12.47"
             @test transformer["conn_2"] == "wye"
             @test transformer["tap_3"] == "0.9"
+
+            PMD._apply_like!(dss_data["transformer"][3], dss_data, "transformer")
+            @test dss_data["transformer"][3]["%loadloss"] == dss_data["transformer"][2]["%loadloss"]
         end
 
         @testset "storage parse" begin
