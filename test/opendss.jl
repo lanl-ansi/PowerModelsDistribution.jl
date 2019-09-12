@@ -226,7 +226,15 @@
 
         @testset "whitespace before ~" begin
             dss_data = PMD.parse_dss("../test/data/opendss/test_transformer_formatting.dss")
-            @test dss_data["transformer"][1]["phases"] == "3"
+            transformer = dss_data["transformer"][1]
+            @test transformer["phases"] == "3"
+            @test transformer["tap"] == "(0.00625 12 * 1 +)"
+            @test transformer["tap_2"] == "1.5"
+            @test transformer["%loadloss"] == "0.01"
+            @test transformer["xhl"] == "0.02"
+            @test transformer["kv_2"] == "12.47"
+            @test transformer["conn_2"] == "wye"
+            @test transformer["tap_3"] == "0.9"
         end
 
         @testset "storage parse" begin
