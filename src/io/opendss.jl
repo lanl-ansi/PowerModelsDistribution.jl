@@ -1646,26 +1646,38 @@ function _bank_transformers!(pmd_data::Dict)
             banked_transformers[bank]["name"] = deepcopy(transformer["bank"])
             banked_transformers[bank]["source_id"] = "transformer.$(transformer["bank"])"
             banked_transformers[bank]["index"] = n
+            # set impedances / admittances to zero; only the specified phases should be non-zero
+            for key in ["rs", "xs", "bsh", "gsh"]
+                inds = key=="xs" ? keys(banked_transformers[bank][key]) : 1:length(banked_transformers[bank][key])
+                for w in inds
+                    banked_transformers[bank][key][w] *= 0
+                end
+            end
             delete!(banked_transformers[bank], "bank")
-        else
-            banked_transformer = banked_transformers[bank]
-            for phase in transformer["active_phases"]
-                push!(banked_transformer["active_phases"], phase)
-                for (k, v) in banked_transformer
-                    if isa(v, _PMs.MultiConductorVector)
-                        banked_transformer[k][phase] = deepcopy(transformer[k][phase])
-                    elseif isa(v, _PMs.MultiConductorMatrix)
-                        banked_transformer[k][phase, :] .= deepcopy(transformer[k][phase, :])
-                    elseif isa(v, Array) && eltype(v) <: _PMs.MultiConductorVector
-                        # most properties are arrays (indexed over the windings)
-                        for w in 1:length(v)
-                            banked_transformer[k][w][phase] = deepcopy(transformer[k][w][phase])
-                        end
-                    elseif isa(v, Array) && eltype(v) <: _PMs.MultiConductorMatrix
-                        # most properties are arrays (indexed over the windings)
-                        for w in 1:length(v)
-                            banked_transformer[k][w][phase, :] .= deepcopy(transformer[k][w][phase, :])
-                        end
+        end
+
+        banked_transformer = banked_transformers[bank]
+        for phase in transformer["active_phases"]
+            push!(banked_transformer["active_phases"], phase)
+            for (k, v) in banked_transformer
+                if isa(v, _PMs.MultiConductorVector)
+                    banked_transformer[k][phase] = deepcopy(transformer[k][phase])
+                elseif isa(v, _PMs.MultiConductorMatrix)
+                    banked_transformer[k][phase, :] .= deepcopy(transformer[k][phase, :])
+                elseif isa(v, Array) && eltype(v) <: _PMs.MultiConductorVector
+                    # most properties are arrays (indexed over the windings)
+                    for w in 1:length(v)
+                        banked_transformer[k][w][phase] = deepcopy(transformer[k][w][phase])
+                    end
+                elseif isa(v, Array) && eltype(v) <: _PMs.MultiConductorMatrix
+                    # most properties are arrays (indexed over the windings)
+                    for w in 1:length(v)
+                        banked_transformer[k][w][phase, :] .= deepcopy(transformer[k][w][phase, :])
+                    end
+                elseif k=="xs"
+                    # xs is a Dictionary indexed over pairs of windings
+                    for w in keys(v)
+                        banked_transformer[k][w][phase, :] .= deepcopy(transformer[k][w][phase, :])
                     end
                 end
             end
