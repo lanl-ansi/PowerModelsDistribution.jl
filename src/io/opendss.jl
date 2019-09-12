@@ -1640,7 +1640,7 @@ function _bank_transformers!(pmd_data::Dict)
         bank = transformer["bank"]
 
         if !(bank in keys(banked_transformers))
-            n = length(pmd_data["transformer_comp"])+1
+            n = length(pmd_data["transformer_comp"])+length(banked_transformers)
 
             banked_transformers[bank] = deepcopy(transformer)
             banked_transformers[bank]["name"] = deepcopy(transformer["bank"])
@@ -1656,6 +1656,16 @@ function _bank_transformers!(pmd_data::Dict)
                         banked_transformer[k][phase] = deepcopy(transformer[k][phase])
                     elseif isa(v, _PMs.MultiConductorMatrix)
                         banked_transformer[k][phase, :] .= deepcopy(transformer[k][phase, :])
+                    elseif isa(v, Array) && eltype(v) <: _PMs.MultiConductorVector
+                        # most properties are arrays (indexed over the windings)
+                        for w in 1:length(v)
+                            banked_transformer[k][w][phase] = deepcopy(transformer[k][w][phase])
+                        end
+                    elseif isa(v, Array) && eltype(v) <: _PMs.MultiConductorMatrix
+                        # most properties are arrays (indexed over the windings)
+                        for w in 1:length(v)
+                            banked_transformer[k][w][phase, :] .= deepcopy(transformer[k][w][phase, :])
+                        end
                     end
                 end
             end
