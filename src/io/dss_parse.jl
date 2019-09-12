@@ -1012,29 +1012,10 @@ end
 
 
 ""
-function _apply_ordered_properties(defaults::Dict{String,Any}, raw_dss::Dict{String,Any}; like::Dict{String,Any}=Dict{String,Any}(), linecode::Dict{String,Any}=Dict{String,Any}())
+function _apply_ordered_properties(defaults::Dict{String,Any}, raw_dss::Dict{String,Any}; linecode::Dict{String,Any}=Dict{String,Any}())
     _defaults = deepcopy(defaults)
 
-    if "like" in raw_dss["prop_order"]
-        before_like = []
-        for prop in raw_dss["prop_order"]
-            if prop == "like"
-                break
-            else
-                push!(before_like, prop)
-            end
-        end
-
-        if !all(prop in ["name", "bus1", "bus2", "phases"] for prop in before_like)
-            Memento.warn(_LOGGER, "The 'like' property is expected as the first property on a line in OpenDSS, and will be treated as such in this parser no matter where it actually appears")
-        end
-
-        merge!(defaults, like)
-
-        filter!(e->!(e in ["like"]),raw_dss["prop_order"])
-    end
-
-    for prop in raw_dss["prop_order"]
+    for prop in filter(p->p!="like", raw_dss["prop_order"])
         if prop == "linecode"
             merge!(defaults, linecode)
         else
@@ -1044,3 +1025,61 @@ function _apply_ordered_properties(defaults::Dict{String,Any}, raw_dss::Dict{Str
 
     return defaults
 end
+
+
+"applies `like` to component"
+function _apply_like!(raw_dss, dss_data, comp_type)
+    default_exclusions =
+    links = ["like"]
+    if any(link in raw_dss["prop_order"] for link in links)
+        new_prop_order = []
+        raw_dss_copy = deepcopy(raw_dss)
+
+        for prop in raw_dss["prop_order"]
+            push!(new_prop_order, prop)
+
+            if prop in get(_like_exclusions, comp_type, []) || prop in _like_exclusions["all"]
+                continue
+            end
+
+            if prop in links
+                linked_dss = _find_component(dss_data, raw_dss[prop], comp_type)
+                if isempty(linked_dss)
+                    Memento.warn(_LOGGER, "$comp_type.$(raw_dss["name"]): $prop=$(raw_dss[prop]) cannot be found")
+                else
+                    for linked_prop in linked_dss["prop_order"]
+                        if linked_prop in get(_like_exclusions, comp_type, []) || linked_prop in _like_exclusions["all"]
+                            continue
+                        end
+
+                        push!(new_prop_order, linked_prop)
+                        if linked_prop in links
+                            _apply_like!(linked_dss, dss_data, comp_type)
+                        else
+                            raw_dss[linked_prop] = deepcopy(linked_dss[linked_prop])
+                        end
+                    end
+                end
+            else
+                raw_dss[prop] = deepcopy(raw_dss_copy[prop])
+            end
+        end
+
+        final_prop_order = []
+        while !isempty(new_prop_order)
+            prop = popfirst!(new_prop_order)
+            if !(prop in new_prop_order)
+                push!(final_prop_order, prop)
+            end
+        end
+        raw_dss["prop_order"] = final_prop_order
+    end
+end
+
+
+"properties that should be excluded from being overwritten during the application of `like`"
+const _like_exclusions = Dict{String,Array}("all" => ["name", "bus1", "bus2", "phases", "nphases", "enabled"],
+                                            "line" => ["switch"],
+                                            "transformer" => ["bank", "bus", "bus_2", "bus_3", "buses", "windings", "wdg", "wdg_2", "wdg_3"],
+                                            "linegeometry" => ["nconds"]
+                                            )
