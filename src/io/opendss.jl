@@ -1640,7 +1640,7 @@ function _bank_transformers!(pmd_data::Dict)
         bank = transformer["bank"]
 
         if !(bank in keys(banked_transformers))
-            n = length(pmd_data["transformer_comp"])+length(banked_transformers)
+            n = length(pmd_data["transformer_comp"])+length(banked_transformers)+1
 
             banked_transformers[bank] = deepcopy(transformer)
             banked_transformers[bank]["name"] = deepcopy(transformer["bank"])
