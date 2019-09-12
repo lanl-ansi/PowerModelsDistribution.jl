@@ -1,8 +1,13 @@
+clear
 new circuit.c1
 
 new transformer.transformer_test kva=20000.0
-	~ phases=3 windings=2
-	~ %loadloss=0.01 xhl=0.02
+	~ phases=3 windings=3
 	~ wdg=1 bus=from_bus.1.2.3 conn=delta kv=67.0
-	~ wdg=2 bus=to_bus.1.2.3 conn=wye kv=12.47
-	~ tap=1.0 maxtap=0.0 mintap=-0.0
+	~ wdg=2 bus=to_bus.1.2.3
+	~ tap=1.5 maxtap=0.0 mintap=-0.0
+
+transformer.transformer_test.wdg=2 %loadloss=0.01 conn=wye
+transformer.transformer_test.xhl=0.02 wdg=2 kv=12.47
+transformer.transformer_test.wdg=1 tap=(0.00625 12 * 1 +)
+transformer.transformer_test.wdg=3 tap=0.9

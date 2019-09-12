@@ -594,6 +594,13 @@ function _add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
         compDict["prop_order"] = Array{String,1}(["name"])
     end
 
+    cur_wdg = "wdg" in compDict["prop_order"] ? string(filter(p->occursin("wdg", p), compDict["prop_order"])[end][end]) : ""
+    cur_wdg = cur_wdg == "g" ? "" : cur_wdg
+
+    if key in ["bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
+        key = join(filter(p->!isempty(p), [key, cur_wdg]), "_")
+    end
+
     if haskey(compDict, lowercase(key))
         rmatch = match(r"_(\d+)$", key)
         if typeof(rmatch) != Nothing
@@ -639,17 +646,18 @@ function _parse_component(component::AbstractString, properties::AbstractString,
             property = join([propNames[propIdx], property], '=')
             propIdx += 1
         else
-            if split(component,'.')[1] == "loadshape" && startswith(property, "mult")
+            if ctype == "loadshape" && startswith(property, "mult")
                 property = replace(property, "mult" => "pmult")
-            elseif split(component,'.')[1] == "transformer"
-                if split(property,'=')[1] == "ppm"
-                    property = replace(property, "ppm" => "ppm_antifloat")
-                elseif split(property,'=')[1] == "x12"
-                    property = replace(property, "x12" => "xhl")
-                elseif split(property,'=')[1] == "x23"
-                    property = replace(property, "x23" => "xlt")
-                elseif split(property,'=')[1] == "x13"
-                    property = replace(property, "x13" => "xht")
+            elseif ctype == "transformer"
+                prop_name, _ = split(property,'=')
+                if prop_name == "ppm"
+                    property = replace(property, prop_name => "ppm_antifloat")
+                elseif prop_name == "x12"
+                    property = replace(property, prop_name => "xhl")
+                elseif prop_name == "x23"
+                    property = replace(property, prop_name => "xlt")
+                elseif prop_name == "x13"
+                    property = replace(property, prop_name => "xht")
                 end
             end
 
@@ -826,9 +834,21 @@ function parse_dss(io::IOStream)::Dict
                 try
                     cType, cName, props = split(lowercase(line), '.'; limit=3)
                     propsOut = _parse_properties(props)
+                    wdg = ""
                     for prop in propsOut
                         propName, propValue = split(prop, '=')
-                        _assign_property!(dss_data, cType, cName, propName, propValue)
+                        if cType == "transformer"
+                            if propName == "wdg" && propValue != "1"
+                                wdg = propValue
+                            else
+                                if propName in ["bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
+                                    propName = join(filter(p->!isempty(p), [propName, wdg]), "_")
+                                end
+                                _assign_property!(dss_data, cType, cName, propName, propValue)
+                            end
+                        else
+                            _assign_property!(dss_data, cType, cName, propName, propValue)
+                        end
                     end
                 catch
                     Memento.warn(_LOGGER, "Command \"$cmd\" on line $real_line_num in \"$currentFile\" is not supported, skipping.")
