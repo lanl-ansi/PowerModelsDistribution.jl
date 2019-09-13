@@ -10,7 +10,7 @@ new transformer.transformer_test kva=20000.0
 transformer.transformer_test.wdg=2 %loadloss=0.01 conn=wye
 transformer.transformer_test.xhl=0.02 wdg=2 kv=12.47
 transformer.transformer_test.wdg=1 tap=(0.00625 12 * 1 +)
-transformer.transformer_test.wdg=3 tap=0.9
+transformer.transformer_test.wdg=3 tap=0.9 bus=1.1.2.3
 
 new transformer.reg4a phases=1          windings=2   bank=reg4     buses=[1.1 2.1]   conns=[wye wye]       kvs=[2.402 2.402] kvas=[2000 2000] XHL=.01 %LoadLoss=0.00001 ppm=0.0
 new transformer.reg4b like=reg4a                     bank=reg4     buses=[1.2 2.2]      ppm=0.0
