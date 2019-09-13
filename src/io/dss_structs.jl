@@ -795,7 +795,7 @@ different properties.
 """
 function _create_transformer(name::AbstractString=""; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
-    windings = get(kwargs, :windings, 2)
+    windings = isempty(name) ? 3 : get(kwargs, :windings, 2)
     phases = get(kwargs, :phases, 3)
 
     prcnt_rs = fill(0.2, windings)
@@ -817,8 +817,7 @@ function _create_transformer(name::AbstractString=""; kwargs...)
 
     for wdg in [:wdg, :wdg_2, :wdg_3]
         if haskey(kwargs, wdg)
-            smat = match(r"_\d", String(wdg))
-            suffix = isa(smat, Nothing) ? "" : smat.match
+            suffix = kwargs[wdg] == 1 ? "" : "_$(kwargs[wdg])"
             for key in [:bus, :tap, :conn, :kv, :kva, Symbol("%r"), :rneut, :xneut]
                 subkey = Symbol(string(key, suffix))
                 if haskey(kwargs, subkey)

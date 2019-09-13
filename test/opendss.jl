@@ -238,9 +238,13 @@
             @test transformer["kv_2"] == "12.47"
             @test transformer["conn_2"] == "wye"
             @test transformer["tap_3"] == "0.9"
+            @test transformer["wdg_3"] == "3"
 
             PMD._apply_like!(dss_data["transformer"][3], dss_data, "transformer")
             @test dss_data["transformer"][3]["%loadloss"] == dss_data["transformer"][2]["%loadloss"]
+
+            pmd_data = PMD.parse_file("../test/data/opendss/test_transformer_formatting.dss")
+            @test all(all(pmd_data["transformer"]["$n"]["tm"] .== tm) for (n, tm) in zip(1:3, [1.075, 1.5, 0.9]))
         end
 
         @testset "storage parse" begin

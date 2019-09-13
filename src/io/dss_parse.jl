@@ -597,7 +597,7 @@ function _add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
     cur_wdg = "wdg" in compDict["prop_order"] ? string(filter(p->occursin("wdg", p), compDict["prop_order"])[end][end]) : ""
     cur_wdg = cur_wdg == "g" ? "" : cur_wdg
 
-    if key in ["bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
+    if key in ["wdg", "bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
         key = join(filter(p->!isempty(p), [key, cur_wdg]), "_")
     end
 
@@ -838,14 +838,13 @@ function parse_dss(io::IOStream)::Dict
                     for prop in propsOut
                         propName, propValue = split(prop, '=')
                         if cType == "transformer"
-                            if propName == "wdg" && propValue != "1"
-                                wdg = propValue
-                            else
-                                if propName in ["bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
-                                    propName = join(filter(p->!isempty(p), [propName, wdg]), "_")
-                                end
-                                _assign_property!(dss_data, cType, cName, propName, propValue)
+                            wdg = propName == "wdg" && propValue != "1" ? propValue : propName == "wdg" && propValue == "1" ? "" : wdg
+
+                            if propName in ["wdg", "bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
+                                propName = join(filter(p->!isempty(p), [propName, wdg]), "_")
                             end
+
+                            _assign_property!(dss_data, cType, cName, propName, propValue)
                         else
                             _assign_property!(dss_data, cType, cName, propName, propValue)
                         end
