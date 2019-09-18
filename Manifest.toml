@@ -4,10 +4,10 @@
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
 [[BenchmarkTools]]
-deps = ["JSON", "Printf", "Statistics", "Test"]
-git-tree-sha1 = "5d1dd8577643ba9014574cd40d9c028cd5e4b85a"
+deps = ["JSON", "Printf", "Statistics"]
+git-tree-sha1 = "90b73db83791c5f83155016dd1cc1f684d4e1361"
 uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-version = "0.4.2"
+version = "0.4.3"
 
 [[BinDeps]]
 deps = ["Compat", "Libdl", "SHA", "URIParser"]
@@ -122,9 +122,9 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
 [[MathOptInterface]]
 deps = ["BenchmarkTools", "LinearAlgebra", "OrderedCollections", "SparseArrays", "Test", "Unicode"]
-git-tree-sha1 = "5e6e36e2f01efbc62b3f8bf68c8cf82035e2c6a6"
+git-tree-sha1 = "2772d0090391b4bce23f4da0fa74143b6d0d5939"
 uuid = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
-version = "0.9.1"
+version = "0.9.2"
 
 [[Memento]]
 deps = ["Dates", "Distributed", "JSON", "Serialization", "Sockets", "Syslogs", "Test", "TimeZones", "UUIDs"]
@@ -136,9 +136,9 @@ version = "0.12.1"
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[Mocking]]
-git-tree-sha1 = "7f42a32a8cef08f45d43c35663e73bd4e3b35f6d"
+git-tree-sha1 = "bd2623f8b728af988d2afec53d611acb621f3bc4"
 uuid = "78c3b35d-d492-501b-9361-3d52fe80e533"
-version = "0.6.0"
+version = "0.7.0"
 
 [[NaNMath]]
 deps = ["Compat"]
@@ -164,8 +164,8 @@ uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [[PowerModels]]
 deps = ["InfrastructureModels", "JSON", "JuMP", "LinearAlgebra", "MathOptInterface", "Memento", "SparseArrays"]
-git-tree-sha1 = "2bf4d63f9a742b6c246c033b2a434c13dcc13d32"
-repo-rev = "v13-rc"
+git-tree-sha1 = "67b22083c3ba52c873bb75c49ffd42edda82939a"
+repo-rev = "master"
 repo-url = "https://github.com/lanl-ansi/PowerModels.jl.git"
 uuid = "c36e90e8-916a-50a6-bd94-075b64ef4655"
 version = "0.13.0"
@@ -227,9 +227,9 @@ uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[TimeZones]]
 deps = ["Dates", "EzXML", "Mocking", "Printf", "Serialization", "Unicode"]
-git-tree-sha1 = "0271dc890dd1447da1568510937bd5b3a6b51b58"
+git-tree-sha1 = "2769a7ceffe237e651ed960a331a19258c8cf208"
 uuid = "f269a46b-ccf7-5d73-abea-4c690281aa53"
-version = "0.9.2"
+version = "0.10.0"
 
 [[URIParser]]
 deps = ["Test", "Unicode"]
