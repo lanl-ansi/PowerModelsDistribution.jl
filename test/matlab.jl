@@ -1,6 +1,7 @@
-@info "running matlab.jl tests"
+@info "running matlab parser tests"
+
 @testset "test matlab data parser" begin
-    @testset "5-bus minimal data" begin
+    @testset "5-bus matlab minimal data parse" begin
         data = PMD.parse_file("../test/data/matlab/case5_i_r_a.m")
 
         @test length(data["bus"]) == 5
@@ -18,7 +19,7 @@
         @test haskey(data["bus"]["1"], "bus_name")
     end
 
-    @testset "5-bus shunt data" begin
+    @testset "5-bus matlab shunt data parse" begin
         data = PMD.parse_file("../test/data/matlab/case5_i_r_b.m")
 
         @test length(data["bus"]) == 5
@@ -29,18 +30,4 @@
 
         @test isa(data["shunt"]["1"]["bs"], PMs.MultiConductorVector{Float64})
     end
-
-    #=
-    @testset "version warning" begin
-        Memento.setlevel!(TESTLOG, "warn")
-
-        @test_warn(TESTLOG, "matlab source data has unrecognized version 0.0.0, cannot translate to version 1.0.0, parse may be invalid",
-                   PMD.parse_file("../test/data/matlab/case5_i_r_b.m"))
-
-        @test_warn(TESTLOG, "No version number found, file may not be compatible with parser.",
-                   PMD.parse_file("../test/data/matlab/case5_i_r_b.m"))
-
-        Memento.setlevel!(TESTLOG, "error")
-    end
-    =#
 end
