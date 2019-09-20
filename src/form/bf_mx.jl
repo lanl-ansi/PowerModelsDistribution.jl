@@ -273,7 +273,8 @@ function variable_tp_load(pm::_PMs.GenericPowerModel{T}; nw=pm.cnw) where T <: A
     load_cone_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if _load_needs_cone(load)]
     # create dictionary for wye loads
     for c in _PMs.conductor_ids(pm)
-        variable_load(pm, nw=nw, cnd=c)
+        _PMs.var(pm, nw, c)[:pd] = Dict()
+        _PMs.var(pm, nw, c)[:qd] = Dict()
     end
     # now, create delta loads; will create :Xdr, :Xdi
     variable_tp_load_power_delta(pm, load_del_ids)
@@ -451,9 +452,6 @@ function constraint_pqw(model::JuMP.Model, w, p, a::Real, α::Real, wmin::Real, 
     if a==0
         JuMP.@constraint(model, p==0)
     else
-        # for α==2, p should be a Expression and not a Variable, as it is
-        # simply a linear transformation of w, p = a*w
-        @assert(α!=2)
         # AFFINE BOUNDARY
         if a>0
             l = (1/a)*(pmax-pmin)/(wmax-wmin)*(w-wmin) + pmin/a
@@ -471,6 +469,9 @@ function constraint_pqw(model::JuMP.Model, w, p, a::Real, α::Real, wmin::Real, 
         # CONE INCLUSIONS
         # constant current case
         # simplifies to a RotatedSecondOrderCone
+        @assert(α>=0, "α has to greater than or equal to zero.")
+        if α==0
+            JuMP.@constraint(model, p==a)
         if α==1
             #       p/a <= w^(1/2)
             # <=>   (p/a)^2 <= w
@@ -482,7 +483,9 @@ function constraint_pqw(model::JuMP.Model, w, p, a::Real, α::Real, wmin::Real, 
             # <=>   w^(α/2) >= p/a
             # <=>   (w, 1, p/a) ∈ PowerCone(3)
             JuMP.@constraint(model, [w, 1, p/a] in MathOptInterface.PowerCone(α/2))
-        elseif α>2
+        elseif α==2
+            JuMP.@constraint(model, p==a*w)
+        else # α>2
             #       p/a >= w^(α/2)
             # <=>   (p/a)^(2/α) >= w
             # <=>   (p/a, 1, w) ∈ PowerCone(3)
