@@ -1,4 +1,5 @@
 new object=circuit.test3
+~ isc3=9538.8
 
 new line.l1 bus1=sourcebus bus2=b1
 

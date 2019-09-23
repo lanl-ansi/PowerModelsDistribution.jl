@@ -2,6 +2,7 @@
 
 
 new circuit.Simple
+~ mVAsc3=1900
 
 new line.branch1 bus1=sourcebus bus2=2
 

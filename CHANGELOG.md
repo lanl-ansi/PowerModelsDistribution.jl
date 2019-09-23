@@ -2,6 +2,8 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
+- Fix bug in OpenDSS circuit initialization (vsource) (#178)
+- Make current rating (c_rating_a|b|c) be the default on branches (breaking)
 - Fix bug in transformer `ref` extension where all refs were not built for all `nw` in multinetworks (#171)
 - Fix bug in OpenDSS parser where properties were not applied in the order they were received (#170)
 - Rename "trans" in data and ref to `transformer` for component naming consistency (breaking) (#169)
