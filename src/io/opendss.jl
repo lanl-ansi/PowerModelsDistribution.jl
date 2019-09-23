@@ -667,10 +667,9 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         branchDict["b_fr"] = _PMs.MultiConductorMatrix(Zbase * (2.0 * pi * pmd_data["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0)
         branchDict["b_to"] = _PMs.MultiConductorMatrix(Zbase * (2.0 * pi * pmd_data["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0)
 
-        # TODO: pick a better value for emergamps
-        branchDict["rate_a"] = _PMs.MultiConductorVector(_parse_array(defaults["normamps"], nodes, nconductors))
-        branchDict["rate_b"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
-        branchDict["rate_c"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
+        branchDict["c_rating_a"] = _PMs.MultiConductorVector(_parse_array(defaults["normamps"], nodes, nconductors))
+        branchDict["c_rating_b"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
+        branchDict["c_rating_c"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
 
         branchDict["tap"] = _PMs.MultiConductorVector(_parse_array(1.0, nodes, nconductors, 1.0))
         branchDict["shift"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
@@ -957,9 +956,9 @@ function _dss2pmd_reactor!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
                     reactDict[key] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>reactDict[key].values))
                 end
 
-                reactDict["rate_a"] = _PMs.MultiConductorVector(_parse_array(defaults["normamps"], nodes, nconductors))
-                reactDict["rate_b"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
-                reactDict["rate_c"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
+                reactDict["c_rating_a"] = _PMs.MultiConductorVector(_parse_array(defaults["normamps"], nodes, nconductors))
+                reactDict["c_rating_b"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
+                reactDict["c_rating_c"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
 
                 reactDict["tap"] = _PMs.MultiConductorVector(_parse_array(1.0, nodes, nconductors, NaN))
                 reactDict["shift"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
@@ -1093,7 +1092,7 @@ function _adjust_sourcegen_bounds!(pmd_data)
     sourcebus_n = _find_bus(pmd_data["sourcebus"], pmd_data)
     for (_,line) in pmd_data["branch"]
         if (line["f_bus"] == sourcebus_n || line["t_bus"] == sourcebus_n) && !startswith(line["source_id"], "virtual")
-            append!(emergamps, line["rate_b"].values)
+            append!(emergamps, get(line, "c_rating_b", get(line, "rate_b", missing)).values)
         end
     end
 
@@ -1265,7 +1264,7 @@ function _create_vbranch!(pmd_data, f_bus::Int, t_bus::Int; name="", source_id="
     vbranch["transformer"] = false
     vbranch["switch"] = false
     vbranch["br_status"] = 1
-    for k in [:rate_a, :rate_b, :rate_c]
+    for k in [:rate_a, :rate_b, :rate_c, :c_rating_a, :c_rating_b, :c_rating_c]
         if haskey(kwargs, k)
             vbranch[string(k)] = kwargs[k]
         end
@@ -1622,8 +1621,6 @@ function _create_sourcebus_vbranch!(pmd_data::Dict, circuit::Dict)
 
     br_r = _PMs.MultiConductorMatrix(circuit["rmatrix"])
     br_x = _PMs.MultiConductorMatrix(circuit["xmatrix"])
-    rate_a = _PMs.MultiConductorVector(ones(pmd_data["conductors"]) * 1e5)
-    rate_b = _PMs.MultiConductorVector(ones(pmd_data["conductors"]) * 1e6)
 
     vbranch = _create_vbranch!(pmd_data, sourcebus, vsourcebus; name="sourcebus_vbranch", br_r=br_r, br_x=br_x)
 end
