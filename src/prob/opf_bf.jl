@@ -1,6 +1,6 @@
 ""
 function run_mc_opf_bf(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, post_mc_opf_bf; solution_builder=solution_tp!, multiconductor=true, kwargs...)
+    return _PMs.run_model(data, model_type, solver, post_mc_opf_bf; solution_builder=solution_tp!, ref_extensions=[ref_add_arcs_trans!], multiconductor=true, kwargs...)
 end
 
 
@@ -19,7 +19,6 @@ function post_mc_opf_bf(pm::_PMs.AbstractPowerModel)
 
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_generation(pm, cnd=c)
-        _PMs.variable_dcline_flow(pm, cnd=c)
     end
 
     # Constraints
@@ -44,8 +43,8 @@ function post_mc_opf_bf(pm::_PMs.AbstractPowerModel)
         end
     end
 
-    for i in _PMs.ids(pm, :dcline), c in _PMs.conductor_ids(pm)
-        _PMs.constraint_dcline(pm, i, cnd=c)
+    for i in _PMs.ids(pm, :transformer)
+        constraint_mc_trans(pm, i)
     end
 
     # Objective

@@ -116,15 +116,25 @@ end
 
 
 "power balance constraint with line shunts and transformers for load shed problem, DCP formulation"
-function constraint_mc_power_balance_shed(pm::_PMs.AbstractDCPModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs)
-    p = _PMs.var(pm, nw, c, :p)
-    pg = _PMs.var(pm, nw, c, :pg)
-    p_dc = _PMs.var(pm, nw, c, :p_dc)
-    p_trans = _PMs.var(pm, nw, c, :pt)
+function constraint_mc_power_balance_shed(pm::_PMs.AbstractDCPModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    p        = get(_PMs.var(pm, nw, c),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
+    pg       = get(_PMs.var(pm, nw, c),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    ps       = get(_PMs.var(pm, nw, c),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
+    psw      = get(_PMs.var(pm, nw, c),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    pt       = get(_PMs.var(pm, nw, c),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
     z_demand = _PMs.var(pm, nw, :z_demand)
-    z_shunt = _PMs.var(pm, nw, :z_shunt)
+    z_shunt  = _PMs.var(pm, nw, :z_shunt)
 
-    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(p_trans[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd*z_demand[n] for (n,pd) in bus_pd) - sum(gs*1.0^2*z_shunt[n] for (n,gs) in bus_gs))
+    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model,
+        sum(p[a] for a in bus_arcs)
+        + sum(psw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(pt[a_trans] for a_trans in bus_arcs_trans)
+        ==
+        sum(pg[g] for g in bus_gens)
+        - sum(ps[s] for s in bus_storage)
+        - sum(pd*z_demand[n] for (n,pd) in bus_pd)
+        - sum(gs*1.0^2*z_shunt[n] for (n,gs) in bus_gs)
+    )
 end
 
 

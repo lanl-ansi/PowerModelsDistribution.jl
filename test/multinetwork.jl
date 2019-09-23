@@ -6,7 +6,7 @@
         PMD.make_multiconductor!(mp_data, 3)
         mn_mp_data = PowerModels.replicate(mp_data, 5)
 
-        result = PMD.run_mn_mc_strg_opf(mn_mp_data, PowerModels.ACPPowerModel, ipopt_solver)
+        result = PMD.run_mn_mc_opf(mn_mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 2.64596e5; atol = 1e2)

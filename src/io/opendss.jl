@@ -30,33 +30,6 @@ function _get_linecode(dss_data::Dict, id::AbstractString)
 end
 
 
-"creates a starbus from a 3-winding transformer"
-function _create_starbus(pmd_data::Dict, transformer::Dict)::Dict
-    starbus = Dict{String,Any}()
-
-    base = convert(Int, 10^ceil(log10(abs(_PMs.find_max_bus_id(pmd_data)))))
-    name, nodes = _parse_busname(transformer["buses"][1])
-    nconductors = pmd_data["conductors"]
-    starbus_id = _find_bus(name, pmd_data) + base
-
-    starbus["bus_i"] = starbus_id
-    starbus["base_kv"] = 1.0
-    starbus["vmin"] = _PMs.MultiConductorVector(_parse_array(0.9, nodes, nconductors, 0.9))
-    starbus["vmax"] = _PMs.MultiConductorVector(_parse_array(1.1, nodes, nconductors, 1.1))
-    starbus["name"] = "$(transformer["name"]) starbus"
-    starbus["vm"] = _PMs.MultiConductorVector(_parse_array(1.0, nodes, nconductors))
-    starbus["va"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
-    starbus["bus_type"] = 1
-    starbus["index"] = starbus_id
-
-    nodes = .+([_parse_busname(transformer["buses"][n])[2] for n in length(transformer["buses"])]...)
-    starbus["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-    starbus["source_id"] = "transformer.$(transformer["name"])"
-
-    return starbus
-end
-
-
 """
     _discover_buses(dss_data)
 
@@ -131,7 +104,6 @@ function _dss2pmd_bus!(pmd_data::Dict, dss_data::Dict, import_all::Bool=false, v
     end
 
     # create virtual sourcebus
-
     circuit = _create_vsource(get(dss_data["circuit"][1], "bus1", "sourcebus"), dss_data["circuit"][1]["name"]; _to_sym_keys(dss_data["circuit"][1])...)
 
     busDict = Dict{String,Any}()

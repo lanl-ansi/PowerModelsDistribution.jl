@@ -21,10 +21,10 @@ function post_mc_opf(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm)
     variable_mc_branch_flow(pm)
     variable_mc_transformer_flow(pm)
+    variable_mc_storage(pm)
 
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_generation(pm, cnd=c)
-        _PMs.variable_dcline_flow(pm, cnd=c)
     end
 
     constraint_mc_model_voltage(pm)
@@ -37,6 +37,15 @@ function post_mc_opf(pm::_PMs.AbstractPowerModel)
         constraint_mc_power_balance(pm, i)
     end
 
+    for i in _PMs.ids(pm, :storage)
+        _PMs.constraint_storage_state(pm, i)
+        _PMs.constraint_storage_complementarity_nl(pm, i)
+        _PMs.constraint_storage_loss(pm, i, conductors=_PMs.conductor_ids(pm))
+        for c in _PMs.conductor_ids(pm)
+            _PMs.constraint_storage_thermal_limit(pm, i, cnd=c)
+        end
+    end
+
     for i in _PMs.ids(pm, :branch)
         constraint_mc_voltage_angle_difference(pm, i)
         constraint_mc_ohms_yt_from(pm, i)
@@ -46,10 +55,6 @@ function post_mc_opf(pm::_PMs.AbstractPowerModel)
             _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
             _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
         end
-    end
-
-    for i in _PMs.ids(pm, :dcline), c in _PMs.conductor_ids(pm)
-        _PMs.constraint_dcline(pm, i, cnd=c)
     end
 
     for i in _PMs.ids(pm, :transformer)

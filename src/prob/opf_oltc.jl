@@ -23,7 +23,6 @@ function post_mc_opf_oltc(pm::_PMs.AbstractPowerModel)
 
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_generation(pm, cnd=c)
-        _PMs.variable_dcline_flow(pm, cnd=c)
     end
     variable_mc_transformer_flow(pm)
     variable_mc_oltc_tap(pm)
@@ -47,10 +46,6 @@ function post_mc_opf_oltc(pm::_PMs.AbstractPowerModel)
             _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
             _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
         end
-    end
-
-    for i in _PMs.ids(pm, :dcline), c in _PMs.conductor_ids(pm)
-        _PMs.constraint_dcline(pm, i, cnd=c)
     end
 
     for i in _PMs.ids(pm, :transformer)

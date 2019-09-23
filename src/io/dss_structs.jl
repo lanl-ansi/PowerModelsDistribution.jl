@@ -1047,10 +1047,6 @@ function _get_dtypes(comp::AbstractString)::Dict
 end
 
 
-""
-_get_dtypes(comp::String, key::String)::Type = _get_dtypes(comp)[key]
-
-
 "list of constructor functions for easy access"
 const _constructors = Dict{String,Any}("line" => _create_line,
                                        "load" => _create_load,
