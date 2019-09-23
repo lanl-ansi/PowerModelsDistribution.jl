@@ -266,6 +266,35 @@
         @test all(a == b for (a, b) in zip(dss2["line"][1]["prop_order"],["name", "bus1", "bus2", "linecode", "rmatrix", "length"]))
         @test all(a == b for (a, b) in zip(dss2["line"][2]["prop_order"],["name", "bus1", "bus2", "like", "linecode", "length"]))
     end
+
+    @testset "opendss parse verify mvasc3/mvasc1 circuit parse" begin
+        dss = PMD.parse_dss("../test/data/opendss/test_simple.dss")
+        PMD.parse_dss_with_dtypes!(dss, ["circuit"])
+        circuit = PMD._create_vsource("sourcebus", "simple"; PMD._to_sym_keys(dss["circuit"][1])...)
+
+        @test circuit["mvasc1"] == 2100.0
+        @test circuit["mvasc3"] == 1900.0
+        @test isapprox(circuit["isc3"], 9538.8; atol=1e-1)
+        @test isapprox(circuit["isc1"], 10543.0; atol=1e-1)
+
+        dss = PMD.parse_dss("../test/data/opendss/test_simple3.dss")
+        PMD.parse_dss_with_dtypes!(dss, ["circuit"])
+        circuit = PMD._create_vsource("sourcebus", "simple"; PMD._to_sym_keys(dss["circuit"][1])...)
+
+        @test circuit["mvasc1"] == 2100.0
+        @test isapprox(circuit["mvasc3"], 1900.0; atol=1e-1)
+        @test circuit["isc3"] == 9538.8
+        @test isapprox(circuit["isc1"], 10543.0; atol=1e-1)
+
+        dss = PMD.parse_dss("../test/data/opendss/test_simple4.dss")
+        PMD.parse_dss_with_dtypes!(dss, ["circuit"])
+        circuit = PMD._create_vsource("sourcebus", "simple"; PMD._to_sym_keys(dss["circuit"][1])...)
+
+        @test isapprox(circuit["mvasc1"], 2091.5; atol=1e-1)
+        @test circuit["mvasc3"] == 2000.0
+        @test circuit["isc3"] == 10041.0
+        @test circuit["isc1"] == 10500.0
+    end
 end
 
 @testset "test json parser" begin

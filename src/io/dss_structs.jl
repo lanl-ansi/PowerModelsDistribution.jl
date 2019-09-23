@@ -596,8 +596,8 @@ function _create_vsource(bus1="", name::AbstractString="", bus2=0; kwargs...)
     mvasc3 = get(kwargs, :mvasc3, 2000.0)
     mvasc1 = get(kwargs, :mvasc1, 2100.0)
 
-    isc3 = get(kwargs, :isc3, 10000.0)
-    isc1 = get(kwargs, :isc1, 10500.0)
+    isc3 = get(kwargs, :isc3, 10041.0)
+    isc1 = get(kwargs, :isc1, 10543.0)
 
     r1 = get(kwargs, :r1, 1.65)
     x1 = get(kwargs, :x1, 6.6)
@@ -618,19 +618,13 @@ function _create_vsource(bus1="", name::AbstractString="", bus2=0; kwargs...)
 
     Zbase = basekv^2 / basemva
 
-    if (haskey(kwargs, :mvasc3) && haskey(kwargs, :mvasc1)) || (haskey(kwargs, :isc3) && haskey(kwargs, :isc1))
-        if haskey(kwargs, :mvasc3) && haskey(kwargs, :mvasc1)
-            mvasc3 = kwargs[:mvasc3]
-            mvasc1 = kwargs[:mvasc1]
-
-            isc3 = mvasc3 * 1e3 / (basekv * sqrt(3.0))
-            isc1 = mvasc1 * 1e3 / (basekv * factor)
-        elseif haskey(kwargs, :isc3) && haskey(kwargs, :isc1)
-            isc3 = kwargs[:isc3]
-            isc1 = kwargs[:isc1]
-
-            mvasc3 = sqrt(3) * basekv * isc3 / 1e3
-            mvasc1 = factor * basekv * isc1 / 1e3
+    if (haskey(kwargs, :mvasc3) || haskey(kwargs, :mvasc1)) || (haskey(kwargs, :isc3) || haskey(kwargs, :isc1))
+        if haskey(kwargs, :mvasc3) || haskey(kwargs, :mvasc1)
+            isc3 = haskey(kwargs, :mvasc3) ? mvasc3 * 1e3 / (basekv * sqrt(3.0)) : isc3
+            isc1 = haskey(kwargs, :mvasc1) ? mvasc1 * 1e3 / (basekv * factor) : isc1
+        elseif haskey(kwargs, :isc3) || haskey(kwargs, :isc1)
+            mvasc3 = haskey(kwargs, :isc3) ? sqrt(3) * basekv * isc3 / 1e3 : mvasc3
+            mvasc1 = haskey(kwargs, :isc1) ? factor * basekv * isc1 / 1e3 : mvasc1
         end
 
         x1 = basekv^2 / mvasc3 / sqrt(1.0 + 1.0 / x1r1^2)
