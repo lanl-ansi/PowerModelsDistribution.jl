@@ -1,6 +1,6 @@
 ""
 function constraint_mc_power_balance_slack(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    for cnd in _PMs.conductor_ids(pm)
+    for cnd in _PMs.conductor_ids(pm; nw=nw)
         if !haskey(_PMs.con(pm, nw, cnd), :kcl_p)
             _PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,JuMP.ConstraintRef}()
         end
@@ -30,7 +30,7 @@ end
 
 ""
 function constraint_mc_model_voltage(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw)
-    for c in _PMs.conductor_ids(pm)
+    for c in _PMs.conductor_ids(pm; nw=nw)
         constraint_mc_model_voltage(pm, nw, c)
     end
 end
@@ -76,7 +76,7 @@ function constraint_mc_ohms_yt_to(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=p
     b_to = branch["b_to"]
     tm = branch["tap"]
 
-    for cnd in _PMs.conductor_ids(pm)
+    for cnd in _PMs.conductor_ids(pm; nw=nw)
         constraint_mc_ohms_yt_to(pm, nw, cnd, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
     end
 end
@@ -173,7 +173,7 @@ end
 
 "KCL including transformer arcs"
 function constraint_mc_power_balance(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    for cnd in _PMs.conductor_ids(pm)
+    for cnd in _PMs.conductor_ids(pm; nw=nw)
         if !haskey(_PMs.con(pm, nw, cnd), :kcl_p)
             _PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,JuMP.ConstraintRef}()
         end
@@ -244,7 +244,7 @@ end
 
 "KCL including transformer arcs and load variables."
 function constraint_mc_power_balance_load(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    for cnd in _PMs.conductor_ids(pm)
+    for cnd in _PMs.conductor_ids(pm; nw=nw)
         if !haskey(_PMs.con(pm, nw, cnd), :kcl_p)
             _PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,JuMP.ConstraintRef}()
         end
@@ -303,7 +303,7 @@ sn_a = v_a.conj(i_a)
     = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 So for delta, sn is constrained indirectly.
 """
-function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw=pm.cnw)
+function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw)
     load = _PMs.ref(pm, nw, :load, id)
     model = load["model"]
     conn = _PMs.ref(pm, nw, :load, id, "conn")
@@ -314,7 +314,7 @@ function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw=pm.cnw)
         qd = load["qd"]
 
         if conn=="wye"
-            for c in _PMs.conductor_ids(pm)
+            for c in _PMs.conductor_ids(pm; nw=nw)
                 constraint_load_power_wye(pm, nw, c, id, pd[c], qd[c])
             end
         elseif conn=="delta"
@@ -333,7 +333,7 @@ function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw=pm.cnw)
         cq = qd/(vnom_kv/vbase_kv_LN)
 
         if conn=="wye"
-            for c in _PMs.conductor_ids(pm)
+            for c in _PMs.conductor_ids(pm; nw=nw)
                 constraint_load_current_wye(pm, nw, c, id, load["load_bus"], cp[c], cq[c])
             end
         elseif conn=="delta"
@@ -352,7 +352,7 @@ function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw=pm.cnw)
         cq = qd/(vnom_kv/vbase_kv_LN)^2
 
         if conn=="wye"
-            for c in _PMs.conductor_ids(pm)
+            for c in _PMs.conductor_ids(pm; nw=nw)
                 constraint_load_impedance_wye(pm, nw, c, id, load["load_bus"], cp[c], cq[c])
             end
         elseif conn=="delta"
@@ -368,7 +368,7 @@ end
 
 "KCL for load shed problem with transformers"
 function constraint_mc_power_balance_shed(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    for cnd in _PMs.conductor_ids(pm)
+    for cnd in _PMs.conductor_ids(pm; nw=nw)
         if !haskey(_PMs.con(pm, nw, cnd), :kcl_p)
             _PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,JuMP.ConstraintRef}()
         end
@@ -398,7 +398,7 @@ end
 
 "on/off constraint for bus voltages"
 function constraint_mc_bus_voltage_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
-    for c in _PMs.conductor_ids(pm)
+    for c in _PMs.conductor_ids(pm; nw=nw)
         constraint_mc_bus_voltage_on_off(pm, nw, c; kwargs...)
     end
 end
@@ -431,5 +431,51 @@ function constraint_mc_voltage_angle_difference(pm::_PMs.AbstractPowerModel, i::
 
     if buspair["branch"] == i
         constraint_mc_voltage_angle_difference(pm, nw, f_idx, buspair["angmin"], buspair["angmax"])
+    end
+end
+
+
+"storage loss constraints, delegate to PowerModels"
+function constraint_mc_storage_loss(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
+    _PMs.constraint_storage_loss(pm, i; conductors=_PMs.conductor_ids(pm; nw=nw), nw=nw, kwargs...)
+end
+
+
+"storage thermal limit constraints, delegate to PowerModels per conductor"
+function constraint_mc_storage_thermal_limit(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        _PMs.constraint_storage_thermal_limit(pm, i; cnd=c, nw=nw, kwargs...)
+    end
+end
+
+
+"branch thermal constraints from, delegate to PowerModels per conductor"
+function constraint_mc_thermal_limit_from(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        _PMs.constraint_thermal_limit_from(pm, i; cnd=c, nw=nw, kwargs...)
+    end
+end
+
+
+"branch thermal constraints to, delegate to PowerModels per conductor"
+function constraint_mc_thermal_limit_to(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        _PMs.constraint_thermal_limit_to(pm, i; cnd=c, nw=nw, kwargs...)
+    end
+end
+
+
+"voltage magnitude setpoint constraint, delegate to PowerModels per conductor"
+function constraint_mc_voltage_magnitude_setpoint(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        _PMs.constraint_voltage_magnitude_setpoint(pm, i; nw=nw, cnd=c, kwargs...)
+    end
+end
+
+
+"generator active power setpoint constraint, delegate to PowerModels"
+function constraint_mc_active_gen_setpoint(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        _PMs.constraint_active_gen_setpoint(pm, i; nw=nw, cnd=c, kwargs...)
     end
 end

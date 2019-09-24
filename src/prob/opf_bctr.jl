@@ -15,10 +15,7 @@ function post_mc_opf_bctr(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm)
     variable_mc_branch_flow(pm)
     variable_mc_transformer_flow(pm)
-
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_generation(pm, cnd=c)
-    end
+    variable_mc_generation(pm)
 
     constraint_mc_model_voltage(pm)
 
@@ -31,19 +28,18 @@ function post_mc_opf_bctr(pm::_PMs.AbstractPowerModel)
         constraint_mc_voltage_balance(pm, i)
 
         for c in _PMs.conductor_ids(pm)
-            _PMs.constraint_power_balance(pm, i, cnd=c)
+            _PMs.constraint_power_balance(pm, i; cnd=c)  # TODO: Create appropriate constraint variations for constraint_mc_power_balance
         end
     end
 
     for i in _PMs.ids(pm, :branch)
-        constraint_mc_voltage_angle_difference(pm, i)
         constraint_mc_ohms_yt_from(pm, i)
         constraint_mc_ohms_yt_to(pm, i)
 
-        for c in _PMs.conductor_ids(pm)
-            _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
-            _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
-        end
+        constraint_mc_voltage_angle_difference(pm, i)
+
+        constraint_mc_thermal_limit_from(pm, i)
+        constraint_mc_thermal_limit_to(pm, i)
     end
 
     for i in _PMs.ids(pm, :transformer)
