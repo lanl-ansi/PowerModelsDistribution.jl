@@ -266,64 +266,6 @@ function constraint_mc_ohms_yt_to(pm::_PMs.AbstractACPModel, n::Int, c::Int, f_b
 end
 
 
-#TODO: extend for matrix shunts
-"""
-```
-p[f_idx] == z*(g/tm*v[f_bus]^2 + (-g*tr+b*ti)/tm*(v[f_bus]*v[t_bus]*cos(t[f_bus]-t[t_bus])) + (-b*tr-g*ti)/tm*(v[f_bus]*v[t_bus]*sin(t[f_bus]-t[t_bus])))
-q[f_idx] == z*(-(b+c/2)/tm*v[f_bus]^2 - (-b*tr-g*ti)/tm*(v[f_bus]*v[t_bus]*cos(t[f_bus]-t[t_bus])) + (-g*tr+b*ti)/tm*(v[f_bus]*v[t_bus]*sin(t[f_bus]-t[t_bus])))
-```
-"""
-function constraint_mc_ohms_yt_from_on_off(pm::_PMs.AbstractACPModel, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm, vad_min, vad_max)
-    p_fr  = _PMs.var(pm, n, c,  :p, f_idx)
-    q_fr  = _PMs.var(pm, n, c,  :q, f_idx)
-    vm_fr = [_PMs.var(pm, n, d, :vm, f_bus) for d in _PMs.conductor_ids(pm)]
-    vm_to = [_PMs.var(pm, n, d, :vm, t_bus) for d in _PMs.conductor_ids(pm)]
-    va_fr = [_PMs.var(pm, n, d, :va, f_bus) for d in _PMs.conductor_ids(pm)]
-    va_to = [_PMs.var(pm, n, d, :va, t_bus) for d in _PMs.conductor_ids(pm)]
-    z = _PMs.var(pm, n, c, :branch_z, i)
-
-    JuMP.@NLconstraint(pm.model, p_fr == z*((g_fr[c]+g[c,c]) * vm_fr[c]^2 +
-                                        sum( g[c,d]*vm_fr[c]*vm_fr[d]*cos(va_fr[c]-va_fr[d]) +
-                                             b[c,d]*vm_fr[c]*vm_fr[d]*sin(va_fr[c]-va_fr[d]) for d in _PMs.conductor_ids(pm) if d != c) +
-                                        sum(-g[c,d]*vm_fr[c]*vm_to[d]*cos(va_fr[c]-va_to[d]) +
-                                            -b[c,d]*vm_fr[c]*vm_to[d]*sin(va_fr[c]-va_to[d]) for d in _PMs.conductor_ids(pm))) )
-    JuMP.@NLconstraint(pm.model, q_fr == z*(-(b_fr[c]+b[c,c]) *vm_fr[c]^2 -
-                                        sum( b[c,d]*vm_fr[c]*vm_fr[d]*cos(va_fr[c]-va_fr[d]) -
-                                             g[c,d]*vm_fr[c]*vm_fr[d]*sin(va_fr[c]-va_fr[d]) for d in _PMs.conductor_ids(pm) if d != c) -
-                                        sum(-b[c,d]*vm_fr[c]*vm_to[d]*cos(va_fr[c]-va_to[d]) +
-                                             g[c,d]*vm_fr[c]*vm_to[d]*sin(va_fr[c]-va_to[d]) for d in _PMs.conductor_ids(pm))) )
-end
-
-
-#TODO: extend for matrix shunts
-"""
-```
-p[t_idx] == z*(g*v[t_bus]^2 + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[t_bus]-t[f_bus])) + (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus])))
-q[t_idx] == z*(-(b+c/2)*v[t_bus]^2 - (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[f_bus]-t[t_bus])) + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus])))
-```
-"""
-function constraint_mc_ohms_yt_to_on_off(pm::_PMs.AbstractACPModel, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max)
-    p_to  = _PMs.var(pm, n, c,  :p, t_idx)
-    q_to  = _PMs.var(pm, n, c,  :q, t_idx)
-    vm_fr = [_PMs.var(pm, n, d, :vm, f_bus) for d in _PMs.conductor_ids(pm)]
-    vm_to = [_PMs.var(pm, n, d, :vm, t_bus) for d in _PMs.conductor_ids(pm)]
-    va_fr = [_PMs.var(pm, n, d, :va, f_bus) for d in _PMs.conductor_ids(pm)]
-    va_to = [_PMs.var(pm, n, d, :va, t_bus) for d in _PMs.conductor_ids(pm)]
-    z = _PMs.var(pm, n, c, :branch_z, i)
-
-    JuMP.@NLconstraint(pm.model, p_to == z*((g_to[c]+g[c,c])*vm_to[c]^2 +
-                                        sum( g[c,d]*vm_to[c]*vm_to[d]*cos(va_to[c]-va_to[d]) +
-                                             b[c,d]*vm_to[c]*vm_to[d]*sin(va_to[c]-va_to[d]) for d in _PMs.conductor_ids(pm) if d != c) +
-                                        sum(-g[c,d]*vm_to[c]*vm_fr[d]*cos(va_to[c]-va_fr[d]) +
-                                            -b[c,d]*vm_to[c]*vm_fr[d]*sin(va_to[c]-va_fr[d]) for d in _PMs.conductor_ids(pm))) )
-    JuMP.@NLconstraint(pm.model, q_to == z*(-(b_to[c]+b[c,c])*vm_to[c]^2 -
-                                        sum( b[c,d]*vm_to[c]*vm_to[d]*cos(va_to[c]-va_to[d]) -
-                                             g[c,d]*vm_to[c]*vm_to[d]*sin(va_to[c]-va_to[d]) for d in _PMs.conductor_ids(pm) if d != c) -
-                                        sum(-b[c,d]*vm_to[c]*vm_fr[d]*cos(va_to[c]-va_fr[d]) +
-                                             g[c,d]*vm_to[c]*vm_fr[d]*sin(va_to[c]-va_fr[d]) for d in _PMs.conductor_ids(pm))) )
-end
-
-
 "Links the voltage at both windings of a fixed tap transformer"
 function constraint_mc_transformer_voltage(pm::_PMs.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to)
     ncnd  = 3
@@ -546,11 +488,13 @@ function constraint_mc_vm_neg_seq(pm::_PMs.AbstractACPModel, nw::Int, bus_id::In
 end
 
 
+#= TODO unused function, remove?
 "Links the power flowing into both windings of a variable tap transformer."
 function constraint_mc_transformer_flow_var(pm::_PMs.AbstractPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im; nw::Int=pm.cnw)
     # for ac formulation, indentical to fixed tap
     constraint_mc_transformer_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
 end
+=#
 
 
 ""

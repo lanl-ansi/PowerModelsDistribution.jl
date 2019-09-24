@@ -18,62 +18,6 @@ function constraint_mc_model_voltage(pm::_PMs.AbstractWRModel, n::Int, c::Int)
 end
 
 
-"""
-Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
-
-```
-p[f_idx] ==        g/tm*w_fr[i] + (-g*tr+b*ti)/tm*(wr[i]) + (-b*tr-g*ti)/tm*(wi[i])
-q[f_idx] == -(b+c/2)/tm*w_fr[i] - (-b*tr-g*ti)/tm*(wr[i]) + (-g*tr+b*ti)/tm*(wi[i])
-```
-"""
-function constraint_mc_ohms_yt_from_on_off(pm::_PMs.AbstractWRModel, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm, vad_min, vad_max)
-    p_fr = _PMs.var(pm, n, c, :p, f_idx)
-    q_fr = _PMs.var(pm, n, c, :q, f_idx)
-    w    = _PMs.var(pm, n, :w)
-    wr   = _PMs.var(pm, n, :wr)
-    wi   = _PMs.var(pm, n, :wi)
-
-    JuMP.@constraint(pm.model, p_fr ==  ( g_fr[c]+g[c,c]) * w[(f_bus, c)] +
-                                sum( g[c,d] * wr[(f_bus, f_bus, c, d)] +
-                                     b[c,d] * wi[(f_bus, f_bus, c, d)] for d in _PMs.conductor_ids(pm) if d != c) +
-                                sum(-g[c,d] * wr[(f_bus, t_bus, c, d)] +
-                                    -b[c,d] * wi[(f_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm)) )
-    JuMP.@constraint(pm.model, q_fr == -( b_fr[c]+b[c,c]) * w[(f_bus, c)] -
-                                sum( b[c,d] * wr[(f_bus, f_bus, c, d)] -
-                                     g[c,d] * wi[(f_bus, f_bus, c, d)] for d in _PMs.conductor_ids(pm) if d != c) -
-                                sum(-b[c,d] * wr[(f_bus, t_bus, c, d)] +
-                                     g[c,d] * wi[(f_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm)) )
-end
-
-
-"""
-Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
-
-```
-p[t_idx] ==        g*w_to[i] + (-g*tr-b*ti)/tm*(wr[i]) + (-b*tr+g*ti)/tm*(-wi[i])
-q[t_idx] == -(b+c/2)*w_to[i] - (-b*tr+g*ti)/tm*(wr[i]) + (-g*tr-b*ti)/tm*(-wi[i])
-```
-"""
-function constraint_mc_ohms_yt_to_on_off(pm::_PMs.AbstractWRModel, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max)
-    p_to = _PMs.var(pm, n, c, :p, t_idx)
-    q_to = _PMs.var(pm, n, c, :q, t_idx)
-    w    = _PMs.var(pm, n, :w)
-    wr   = _PMs.var(pm, n, :wr)
-    wi   = _PMs.var(pm, n, :wi)
-
-    JuMP.@constraint(pm.model, p_to ==  ( g_to[c]+g[c,c]) * w[(t_bus, c)] +
-                                sum( g[c,d] * wr[(t_bus, t_bus, c, d)] +
-                                     b[c,d] *-wi[(t_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm) if d != c) +
-                                sum(-g[c,d] * wr[(f_bus, t_bus, c, d)] +
-                                    -b[c,d] *-wi[(f_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm)) )
-    JuMP.@constraint(pm.model, q_to == -( b_to[c]+b[c,c]) * w[(t_bus, c)] -
-                                sum( b[c,d] * wr[(t_bus, t_bus, c, d)] -
-                                     g[c,d] *-wi[(t_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm) if d != c) -
-                                sum(-b[c,d] * wr[(f_bus, t_bus, c, d)] +
-                                     g[c,d] *-wi[(f_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm)) )
-end
-
-
 "power balance constraint with line shunts and transformers for relaxed WR forms"
 function constraint_mc_power_balance(pm::_PMs.AbstractWRModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
     w    = _PMs.var(pm, nw, c, :w, i)

@@ -1,9 +1,9 @@
 ""
 function run_mc_pf_bf(data::Dict{String,Any}, model_type, solver; kwargs...)
-    if model_type != SDPUBFPowerModel && model_type != SOCNLPUBFPowerModel && model_type != SOCConicUBFPowerModel && model_type != LPUBFPowerModel && model_type != LPdiagUBFPowerModel && model_type !=  SOCBFPowerModel
+    if model_type != SDPUBFPowerModel && model_type != SOCNLPUBFPowerModel && model_type != SOCConicUBFPowerModel && model_type != LPLinUBFPowerModel && model_type != LPdiagUBFPowerModel && model_type !=  SOCBFPowerModel
         Memento.error(_LOGGER, "The problem type mc_opf_bf at the moment only supports a limited set of formulations")
     end
-    return _PMs.run_model(data, model_type, solver, post_mc_pf_bf; solution_builder=solution_tp!, ref_extensions=[ref_add_arcs_trans!], multiconductor=true, kwargs...)
+    return _PMs.run_model(data, model_type, solver, post_mc_pf_bf; solution_builder=solution_bf!, ref_extensions=[ref_add_arcs_trans!], multiconductor=true, kwargs...)
 end
 
 
@@ -28,7 +28,7 @@ function post_mc_pf_bf(pm::_PMs.AbstractPowerModel)
         constraint_mc_theta_ref(pm, i)
 
         @assert bus["bus_type"] == 3
-        # constraint_mc_voltage_magnitude_setpoint(pm, i) #TODO add back
+        constraint_mc_voltage_magnitude_setpoint(pm, i)
     end
 
     for i in _PMs.ids(pm, :bus)

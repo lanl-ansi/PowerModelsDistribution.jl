@@ -2,6 +2,7 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
+- Fixed `solution_bf!` for branch flow solution building (#182)
 - Refactored problem definitions to remove any explicit loops over conductors (#181)
 - Added data format documentation (#180)
 - Moved storage to main MLD and OPF problems (#179)
