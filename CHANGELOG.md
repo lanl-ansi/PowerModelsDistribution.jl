@@ -2,6 +2,7 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
+- Added data format documentation (#180)
 - Moved storage to main MLD and OPF problems (#179)
 - Refactor to remove dcline variables and constraints (#179)
 - Refactor to genericize `constraint_mc_power_balance` (#179)
