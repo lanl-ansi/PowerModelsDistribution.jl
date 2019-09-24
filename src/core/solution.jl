@@ -1,3 +1,5 @@
+import LinearAlgebra: tr
+
 "adds voltage balance indicators; should only be called after add_setpoint_bus_voltage!"
 function add_setpoint_bus_voltage_balance_indicators!(pm::_PMs.AbstractPowerModel, sol)
     sol_dict = _PMs.get(sol, "bus", Dict{String,Any}())
@@ -62,7 +64,7 @@ end
 
 
 ""
-function solution_tp!(pm::_PMs.AbstractPowerModel, sol::Dict{String,Any})
+function solution_bf!(pm::_PMs.AbstractPowerModel, sol::Dict{String,Any})
     add_setpoint_bus_voltage!(sol, pm)
     _PMs.add_setpoint_generator_power!(sol, pm)
     add_setpoint_branch_flow!(sol, pm)
@@ -92,20 +94,19 @@ end
 ""
 function add_setpoint_branch_flow!(sol, pm::_PMs.AbstractPowerModel)
     if haskey(pm.setting, "output") && haskey(pm.setting["output"], "branch_flows") && pm.setting["output"]["branch_flows"] == true
-        _PMs.add_setpoint!(sol, pm, "branch", "pf", :p; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])], status_name="br_status")
-        _PMs.add_setpoint!(sol, pm, "branch", "qf", :q; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])], status_name="br_status")
-        _PMs.add_setpoint!(sol, pm, "branch", "pf_ut", :p_ut; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])], status_name="br_status")
-        _PMs.add_setpoint!(sol, pm, "branch", "qf_ut", :q_ut; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])], status_name="br_status")
-        _PMs.add_setpoint!(sol, pm, "branch", "pf_lt", :p_lt; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])], status_name="br_status")
-        _PMs.add_setpoint!(sol, pm, "branch", "qf_lt", :q_lt; extract_var = (var,idx,item) -> var[(idx, item["f_bus"], item["t_bus"])], status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "pf", :p; var_key = (idx,item) -> (idx, item["f_bus"], item["t_bus"]), status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "qf", :q; var_key = (idx,item) -> (idx, item["f_bus"], item["t_bus"]), status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "pf_ut", :p_ut; var_key = (idx,item) -> (idx, item["f_bus"], item["t_bus"]), status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "qf_ut", :q_ut; var_key = (idx,item) -> (idx, item["f_bus"], item["t_bus"]), status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "pf_lt", :p_lt; var_key = (idx,item) -> (idx, item["f_bus"], item["t_bus"]), status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "qf_lt", :q_lt; var_key = (idx,item) -> (idx, item["f_bus"], item["t_bus"]), status_name="br_status")
 
-        _PMs.add_setpoint!(sol, pm, "branch", "pt", :p; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])], status_name="br_status")
-        _PMs.add_setpoint!(sol, pm, "branch", "qt", :q; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])], status_name="br_status")
-        _PMs.add_setpoint!(sol, pm, "branch", "pt_ut", :p_ut; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])], status_name="br_status")
-        _PMs.add_setpoint!(sol, pm, "branch", "qt_ut", :q_ut; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])], status_name="br_status")
-        _PMs.add_setpoint!(sol, pm, "branch", "pt_lt", :p_lt; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])], status_name="br_status")
-        _PMs.add_setpoint!(sol, pm, "branch", "qt_lt", :q_lt; extract_var = (var,idx,item) -> var[(idx, item["t_bus"], item["f_bus"])], status_name="br_status")
-
+        _PMs.add_setpoint!(sol, pm, "branch", "pt", :p; var_key = (idx,item) -> (idx, item["t_bus"], item["f_bus"]), status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "qt", :q; var_key = (idx,item) -> (idx, item["t_bus"], item["f_bus"]), status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "pt_ut", :p_ut; var_key = (idx,item) -> (idx, item["t_bus"], item["f_bus"]), status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "qt_ut", :q_ut; var_key = (idx,item) -> (idx, item["t_bus"], item["f_bus"]), status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "pt_lt", :p_lt; var_key = (idx,item) -> (idx, item["t_bus"], item["f_bus"]), status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "qt_lt", :q_lt; var_key = (idx,item) -> (idx, item["t_bus"], item["f_bus"]), status_name="br_status")
     end
 end
 
@@ -114,9 +115,9 @@ end
 function add_setpoint_branch_current!(sol, pm::_PMs.AbstractPowerModel)
     if haskey(pm.setting, "output") && haskey(pm.setting["output"], "branch_flows") && pm.setting["output"]["branch_flows"] == true
         _PMs.add_setpoint!(sol, pm, "branch", "ccm", :ccm; scale = (x,item,i) -> sqrt(x), status_name="br_status")
-        _PMs.add_setpoint!(sol, pm, "branch", "cc", :ccm, status_name="br_status")
-        _PMs.add_setpoint!(sol, pm, "branch", "ccr", :ccmr, status_name="br_status")
-        _PMs.add_setpoint!(sol, pm, "branch", "cci", :ccmi, status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "cc", :ccm; status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "ccr", :ccmr; status_name="br_status")
+        _PMs.add_setpoint!(sol, pm, "branch", "cci", :ccmi; status_name="br_status")
     end
 end
 
@@ -223,7 +224,7 @@ function add_original_variables!(sol, pm::_PMs.AbstractPowerModel)
         Memento.error(_LOGGER, "deriving the original variables requires setting: branch_flows => true")
     end
 
-    for (nw, network) in pm._PMs.ref[:nw]
+    for (nw, network) in _PMs.nws(pm)
         #find rank-1 starting points
         ref_buses   = _find_ref_buses(pm, nw)
         #TODO develop code to start with any rank-1 W variable
@@ -274,7 +275,7 @@ function add_original_variables!(sol, pm::_PMs.AbstractPowerModel)
 
                 Pij = _make_full_matrix_variable(sol["branch"]["$l"]["pf"].values, sol["branch"]["$l"]["pf_lt"].values, sol["branch"]["$l"]["pf_ut"].values)
                 Qij = _make_full_matrix_variable(sol["branch"]["$l"]["qf"].values, sol["branch"]["$l"]["qf_lt"].values, sol["branch"]["$l"]["qf_ut"].values)
-                Sij = Pij + im*Qij
+                Sij = _replace_nan(Pij + im*Qij)
 
                 Ssij = Sij - Ui*Ui'*y_fr'
                 Isij = (1/tr(Ui*Ui'))*(Ssij')*Ui
@@ -311,7 +312,7 @@ function add_original_variables!(sol, pm::_PMs.AbstractPowerModel)
 
                 Pij = _make_full_matrix_variable(sol["branch"]["$l"]["pt"].values, sol["branch"]["$l"]["pt_lt"].values, sol["branch"]["$l"]["pt_ut"].values)
                 Qij = _make_full_matrix_variable(sol["branch"]["$l"]["qt"].values, sol["branch"]["$l"]["qt_lt"].values, sol["branch"]["$l"]["qt_ut"].values)
-                Sij = Pij + im*Qij
+                Sij = _replace_nan(Pij + im*Qij)
 
                 Ssij = Sij - Ui*Ui'*y_fr'
                 Isij = (1/tr(Ui*Ui'))*(Ssij')*Ui
@@ -320,7 +321,6 @@ function add_original_variables!(sol, pm::_PMs.AbstractPowerModel)
 
                 Isji = -Isij
                 Iji = Isji + y_to*Uj
-
 
                 sol["bus"]["$j"]["vm"] = abs.(Uj)
                 sol["bus"]["$j"]["va"] = _wrap_to_pi(angle.(Uj))

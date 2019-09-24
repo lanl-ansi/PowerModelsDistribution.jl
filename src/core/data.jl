@@ -37,3 +37,7 @@ function make_multiconductor!(mp_data, n_conductors::Int)
         end
     end
 end
+
+
+"Replaces NaN values with zeros"
+_replace_nan(v) = map(x -> isnan(x) ? zero(x) : x, v)
