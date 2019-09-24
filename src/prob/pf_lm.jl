@@ -24,24 +24,19 @@ end
 
 ""
 function post_mc_pf_lm(pm::_PMs.AbstractPowerModel)
-    variable_mc_voltage(pm, bounded=false)
-    variable_mc_branch_flow(pm, bounded=false)
-    variable_mc_transformer_flow(pm, bounded=false)
-    variable_mc_load(pm, bounded=false)
-
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_generation(pm, bounded=false, cnd=c)
-    end
+    variable_mc_voltage(pm; bounded=false)
+    variable_mc_branch_flow(pm; bounded=false)
+    variable_mc_transformer_flow(pm; bounded=false)
+    variable_mc_generation(pm; bounded=false)
+    variable_mc_load(pm; bounded=false)
 
     constraint_mc_model_voltage(pm)
 
     for (i,bus) in _PMs.ref(pm, :ref_buses)
         constraint_mc_theta_ref(pm, i)
 
-        for c in _PMs.conductor_ids(pm)
-            @assert bus["bus_type"] == 3
-            _PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
-        end
+        @assert bus["bus_type"] == 3
+        constraint_mc_voltage_magnitude_setpoint(pm, i)
     end
 
     # loads should be constrained before KCL, or Pd/Qd undefined
@@ -52,16 +47,14 @@ function post_mc_pf_lm(pm::_PMs.AbstractPowerModel)
     for (i,bus) in _PMs.ref(pm, :bus)
         constraint_mc_power_balance_load(pm, i)
 
-        for c in _PMs.conductor_ids(pm)
-            # PV Bus Constraints
-            if length(_PMs.ref(pm, :bus_gens, i)) > 0 && !(i in _PMs.ids(pm,:ref_buses))
-                # this assumes inactive generators are filtered out of bus_gens
-                @assert bus["bus_type"] == 2
+        # PV Bus Constraints
+        if length(_PMs.ref(pm, :bus_gens, i)) > 0 && !(i in _PMs.ids(pm,:ref_buses))
+            # this assumes inactive generators are filtered out of bus_gens
+            @assert bus["bus_type"] == 2
 
-                _PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
-                for j in _PMs.ref(pm, :bus_gens, i)
-                    _PMs.constraint_active_gen_setpoint(pm, j, cnd=c)
-                end
+            constraint_mc_voltage_magnitude_setpoint(pm, i)
+            for j in _PMs.ref(pm, :bus_gens, i)
+                constraint_mc_active_gen_setpoint(pm, j)
             end
         end
     end

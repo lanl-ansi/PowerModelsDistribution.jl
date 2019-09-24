@@ -16,10 +16,8 @@ function post_mc_opf_bf(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm)
     variable_mc_branch_current(pm)
     variable_mc_branch_flow(pm)
-
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_generation(pm, cnd=c)
-    end
+    variable_mc_transformer_flow(pm)
+    variable_mc_generation(pm)
 
     # Constraints
     constraint_mc_model_current(pm)
@@ -28,19 +26,18 @@ function post_mc_opf_bf(pm::_PMs.AbstractPowerModel)
         constraint_mc_theta_ref(pm, i)
     end
 
-    for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
-        _PMs.constraint_power_balance(pm, i, cnd=c)
+    for i in _PMs.ids(pm, :bus)
+        constraint_mc_power_balance(pm, i)
     end
 
     for i in _PMs.ids(pm, :branch)
         constraint_mc_flow_losses(pm, i)
         constraint_mc_model_voltage_magnitude_difference(pm, i)
+
         constraint_mc_voltage_angle_difference(pm, i)
 
-        for c in _PMs.conductor_ids(pm)
-            _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
-            _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
-        end
+        constraint_mc_thermal_limit_from(pm, i)
+        constraint_mc_thermal_limit_to(pm, i)
     end
 
     for i in _PMs.ids(pm, :transformer)

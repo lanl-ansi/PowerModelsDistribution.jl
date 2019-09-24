@@ -37,7 +37,7 @@ function run_mc_mld_uc(file::String, model_type, solver; kwargs...)
 end
 
 
-"Load shedding problem"
+"Load shedding problem including storage"
 function post_mc_mld(pm::_PMs.AbstractPowerModel)
     variable_mc_indicator_bus_voltage(pm; relax=true)
     variable_mc_bus_voltage_on_off(pm)
@@ -46,6 +46,7 @@ function post_mc_mld(pm::_PMs.AbstractPowerModel)
     variable_mc_transformer_flow(pm)
 
     variable_mc_indicator_generation(pm; relax=true)
+    variable_mc_generation_on_off(pm)
 
     variable_mc_storage(pm)
     variable_mc_indicator_storage(pm; relax=true)
@@ -53,10 +54,6 @@ function post_mc_mld(pm::_PMs.AbstractPowerModel)
 
     variable_mc_indicator_demand(pm; relax=true)
     variable_mc_indicator_shunt(pm; relax=true)
-
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_generation_on_off(pm, cnd=c)
-    end
 
     constraint_mc_model_voltage(pm)
 
@@ -77,22 +74,18 @@ function post_mc_mld(pm::_PMs.AbstractPowerModel)
     for i in _PMs.ids(pm, :storage)
         _PMs.constraint_storage_state(pm, i)
         _PMs.constraint_storage_complementarity_nl(pm, i)
-        _PMs.constraint_storage_loss(pm, i, conductors=_PMs.conductor_ids(pm))
-        for c in _PMs.conductor_ids(pm)
-            _PMs.constraint_storage_thermal_limit(pm, i, cnd=c)
-        end
+        constraint_mc_storage_loss(pm, i)
+        constraint_mc_storage_thermal_limit(pm, i)
     end
 
     for i in _PMs.ids(pm, :branch)
         constraint_mc_ohms_yt_from(pm, i)
         constraint_mc_ohms_yt_to(pm, i)
 
-        for c in _PMs.conductor_ids(pm)
-            _PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
+        constraint_mc_voltage_angle_difference(pm, i)
 
-            _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
-            _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
-        end
+        constraint_mc_thermal_limit_from(pm, i)
+        constraint_mc_thermal_limit_to(pm, i)
     end
 
     for i in _PMs.ids(pm, :transformer)
@@ -113,13 +106,10 @@ function post_mc_mld_bf(pm::_PMs.AbstractPowerModel)
     variable_mc_transformer_flow(pm)
 
     variable_mc_indicator_generation(pm; relax=true)
+    variable_mc_generation_on_off(pm)
 
     variable_mc_indicator_demand(pm; relax=true)
     variable_mc_indicator_shunt(pm; relax=true)
-
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_generation_on_off(pm, cnd=c)
-    end
 
     constraint_mc_model_current(pm)
 
@@ -141,12 +131,10 @@ function post_mc_mld_bf(pm::_PMs.AbstractPowerModel)
         constraint_mc_flow_losses(pm, i)
         constraint_mc_model_voltage_magnitude_difference(pm, i)
 
-        for c in _PMs.conductor_ids(pm)
-            _PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
+        constraint_mc_voltage_angle_difference(pm, i)
 
-            _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
-            _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
-        end
+        constraint_mc_thermal_limit_from(pm, i)
+        constraint_mc_thermal_limit_to(pm, i)
     end
 
     for i in _PMs.ids(pm, :transformer)
@@ -166,6 +154,7 @@ function post_mc_mld_uc(pm::_PMs.AbstractPowerModel)
     variable_mc_transformer_flow(pm)
 
     variable_mc_indicator_generation(pm; relax=false)
+    variable_mc_generation_on_off(pm)
 
     variable_mc_storage(pm)
     variable_mc_indicator_storage(pm; relax=false)
@@ -173,10 +162,6 @@ function post_mc_mld_uc(pm::_PMs.AbstractPowerModel)
 
     variable_mc_indicator_demand(pm; relax=false)
     variable_mc_indicator_shunt(pm; relax=false)
-
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_generation_on_off(pm, cnd=c)
-    end
 
     constraint_mc_model_voltage(pm)
 
@@ -197,22 +182,18 @@ function post_mc_mld_uc(pm::_PMs.AbstractPowerModel)
     for i in _PMs.ids(pm, :storage)
         _PMs.constraint_storage_state(pm, i)
         _PMs.constraint_storage_complementarity_nl(pm, i)
-        _PMs.constraint_storage_loss(pm, i, conductors=_PMs.conductor_ids(pm))
-        for c in _PMs.conductor_ids(pm)
-            _PMs.constraint_storage_thermal_limit(pm, i, cnd=c)
-        end
+        constraint_mc_storage_loss(pm, i)
+        constraint_mc_storage_thermal_limit(pm, i)
     end
 
     for i in _PMs.ids(pm, :branch)
         constraint_mc_ohms_yt_from(pm, i)
         constraint_mc_ohms_yt_to(pm, i)
 
-        for c in _PMs.conductor_ids(pm)
-            _PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
+        constraint_mc_voltage_angle_difference(pm, i)
 
-            _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
-            _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
-        end
+        constraint_mc_thermal_limit_from(pm, i)
+        constraint_mc_thermal_limit_to(pm, i)
     end
 
     for i in _PMs.ids(pm, :transformer)

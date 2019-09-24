@@ -1,24 +1,24 @@
 "voltage variables, delegated back to PowerModels"
-function variable_mc_voltage(pm::_PMs.AbstractPowerModel; kwargs...)
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_voltage(pm, cnd=c; kwargs...)
+function variable_mc_voltage(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        _PMs.variable_voltage(pm; cnd=c, nw=nw, kwargs...)
     end
 end
 
 
 "branch flow variables, delegated back to PowerModels"
-function variable_mc_branch_flow(pm::_PMs.AbstractPowerModel; kwargs...)
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_branch_flow(pm, cnd=c; kwargs...)
+function variable_mc_branch_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        _PMs.variable_branch_flow(pm; cnd=c, nw=nw, kwargs...)
     end
 end
 
 
 "voltage variables, relaxed form"
-function variable_mc_voltage(pm::_PMs.AbstractWRModel; kwargs...)
-    for c in _PMs.conductor_ids(pm)
-        variable_mc_voltage_magnitude_sqr(pm, cnd=c; kwargs...)
-        variable_mc_voltage_product(pm, cnd=c; kwargs...)
+function variable_mc_voltage(pm::_PMs.AbstractWRModel; nw::Int=pm.cnw, kwargs...)
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        variable_mc_voltage_magnitude_sqr(pm; cnd=c, nw=nw, kwargs...)
+        variable_mc_voltage_product(pm; cnd=c, nw=nw, kwargs...)
     end
 end
 
@@ -101,22 +101,22 @@ end
 
 
 "variables for modeling storage units, includes grid injection and internal variables"
-function variable_mc_storage(pm::_PMs.AbstractPowerModel; kwargs...)
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_active_storage(pm, cnd=c; kwargs...)
-        _PMs.variable_reactive_storage(pm, cnd=c; kwargs...)
+function variable_mc_storage(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        _PMs.variable_active_storage(pm; cnd=c, nw=nw, kwargs...)
+        _PMs.variable_reactive_storage(pm; cnd=c, nw=nw, kwargs...)
     end
-    _PMs.variable_storage_energy(pm; kwargs...)
-    _PMs.variable_storage_charge(pm; kwargs...)
-    _PMs.variable_storage_discharge(pm; kwargs...)
+    _PMs.variable_storage_energy(pm; nw=nw, kwargs...)
+    _PMs.variable_storage_charge(pm; nw=nw, kwargs...)
+    _PMs.variable_storage_discharge(pm; nw=nw, kwargs...)
 end
 
 
 "generates variables for both `active` and `reactive` slack at each bus"
-function variable_mc_bus_power_slack(pm::_PMs.AbstractPowerModel; kwargs...)
-    for cnd in _PMs.conductor_ids(pm)
-        variable_mc_active_bus_power_slack(pm; cnd=cnd, kwargs...)
-        variable_mc_reactive_bus_power_slack(pm; cnd=cnd, kwargs...)
+function variable_mc_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
+    for cnd in _PMs.conductor_ids(pm; nw=nw)
+        variable_mc_active_bus_power_slack(pm; cnd=cnd, nw=nw, kwargs...)
+        variable_mc_reactive_bus_power_slack(pm; cnd=cnd, nw=nw, kwargs...)
     end
 end
 
@@ -148,7 +148,7 @@ end
 
 "Create variables for the active power flowing into all transformer windings."
 function variable_mc_transformer_active_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded=true)
-    for cnd in _PMs.conductor_ids(pm)
+    for cnd in _PMs.conductor_ids(pm; nw=nw)
         _PMs.var(pm, nw, cnd)[:pt] = JuMP.@variable(pm.model,
             [(l,i,j) in _PMs.ref(pm, nw, :arcs_trans)],
             base_name="$(nw)_$(cnd)_p_trans",
@@ -169,7 +169,7 @@ end
 
 "Create variables for the reactive power flowing into all transformer windings."
 function variable_mc_transformer_reactive_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
-    for cnd in _PMs.conductor_ids(pm)
+    for cnd in _PMs.conductor_ids(pm; nw=nw)
         _PMs.var(pm, nw, cnd)[:qt] = JuMP.@variable(pm.model,
             [(l,i,j) in _PMs.ref(pm, nw, :arcs_trans)],
             base_name="$(nw)_$(cnd)_q_trans",
@@ -214,7 +214,7 @@ Depending on the load model, this can be a parameter or a NLexpression.
 These will be inserted into KCL.
 """
 function variable_mc_load(pm::_PMs.AbstractPowerModel; nw=pm.cnw, bounded=true)
-    for cnd in _PMs.conductor_ids(pm)
+    for cnd in _PMs.conductor_ids(pm; nw=nw)
         _PMs.var(pm, nw, cnd)[:pd] = Dict{Int, Any}()
         _PMs.var(pm, nw, cnd)[:qd] = Dict{Int, Any}()
     end
@@ -304,10 +304,10 @@ end
 
 
 "Create variables for `active` and `reactive` storage injection"
-function variable_mc_on_off_storage(pm::_PMs.AbstractPowerModel; kwargs...)
-    for cnd in _PMs.conductor_ids(pm)
-        variabe_mc_on_off_storage_active(pm; cnd=cnd, kwargs...)
-        variable_mc_on_off_storage_reactive(pm; cnd=cnd, kwargs...)
+function variable_mc_on_off_storage(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
+    for cnd in _PMs.conductor_ids(pm; nw=nw)
+        variabe_mc_on_off_storage_active(pm; cnd=cnd, nw=nw, kwargs...)
+        variable_mc_on_off_storage_reactive(pm; cnd=cnd, nw=nw, kwargs...)
     end
 end
 
@@ -349,12 +349,28 @@ end
 
 "on/off voltage magnitude variable"
 function variable_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw)
-    for cnd in _PMs.conductor_ids(pm)
+    for cnd in _PMs.conductor_ids(pm; nw=nw)
         _PMs.var(pm, nw, cnd)[:vm] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(cnd)_vm",
             lower_bound = 0,
             upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax", cnd),
             start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "vm_start", cnd, 1.0)
         )
+    end
+end
+
+
+"create variables for generators, delegate to PowerModels"
+function variable_mc_generation(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        _PMs.variable_generation(pm; cnd=c, nw=nw, kwargs...)
+    end
+end
+
+
+"create on/off variables for generators, delegate to PowerModels"
+function variable_mc_generation_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        _PMs.variable_generation_on_off(pm; cnd=c, nw=nw, kwargs...)
     end
 end

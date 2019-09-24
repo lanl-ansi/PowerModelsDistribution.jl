@@ -50,8 +50,8 @@ function ref_add_arcs_trans!(pm::_PMs.AbstractPowerModel)
             _PMs.ref(pm, nw)[:transformer] = Dict{Int, Any}()
         end
         # dirty fix add arcs_from/to_trans and bus_arcs_trans
-        pm.ref[:nw][nw][:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in _PMs.ref(pm, :transformer)]
-        pm.ref[:nw][nw][:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in _PMs.ref(pm, :transformer)]
+        pm.ref[:nw][nw][:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in _PMs.ref(pm, nw, :transformer)]
+        pm.ref[:nw][nw][:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in _PMs.ref(pm, nw, :transformer)]
         pm.ref[:nw][nw][:arcs_trans] = [pm.ref[:nw][nw][:arcs_from_trans]..., pm.ref[:nw][nw][:arcs_to_trans]...]
         pm.ref[:nw][nw][:bus_arcs_trans] = Dict{Int64, Array{Any, 1}}()
         for i in _PMs.ids(pm, :bus)

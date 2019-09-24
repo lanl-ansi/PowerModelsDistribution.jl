@@ -2,6 +2,7 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
+- Refactored problem definitions to remove any explicit loops over conductors (#181)
 - Added data format documentation (#180)
 - Moved storage to main MLD and OPF problems (#179)
 - Refactor to remove dcline variables and constraints (#179)
