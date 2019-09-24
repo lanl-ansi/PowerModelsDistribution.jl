@@ -1,11 +1,11 @@
-@info "running storage optimal power flow (test) tests"
+@info "running storage optimal power flow tests"
 
 @testset "test storage opf" begin
     @testset "5-bus storage acp opf_strg" begin
         mp_data = PowerModels.parse_file("../test/data/matpower/case5_strg.m")
         PMD.make_multiconductor!(mp_data, 3)
 
-        result = PMD.run_mc_strg_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
+        result = PMD.run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 52299.2; atol = 1e0)
@@ -22,7 +22,7 @@
         mp_data = PowerModels.parse_file("../test/data/matpower/case5_strg.m")
         PMD.make_multiconductor!(mp_data, 3)
 
-        result = PMD.run_mc_strg_opf(mp_data, PowerModels.DCPPowerModel, ipopt_solver)
+        result = PMD.run_mc_opf(mp_data, PowerModels.DCPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 52059.6; atol = 1e0)
@@ -40,7 +40,7 @@
         mp_data = PowerModels.parse_file("../test/data/matpower/case5_strg.m")
         PMD.make_multiconductor!(mp_data, 3)
 
-        result = PMD.run_mc_strg_opf(mp_data, PowerModels.NFAPowerModel, ipopt_solver)
+        result = PMD.run_mc_opf(mp_data, PowerModels.NFAPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 43169.9; atol = 1e0)

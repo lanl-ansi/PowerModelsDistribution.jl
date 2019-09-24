@@ -2,18 +2,6 @@
 
 @testset "test opf" begin
     @testset "test matpower opf" begin
-        @testset "3-bus matlab acp opf" begin
-            mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case3.m")
-            PMD.make_multiconductor!(mp_data, 3)
-            result = run_mc_opf(mp_data, PMs.ACPPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 47267.9; atol=1e-1)
-
-            @test all(isapprox(result["solution"]["gen"]["1"]["pg"][c], 1.58067; atol=1e-3) for c in 1:mp_data["conductors"])
-            @test all(isapprox(result["solution"]["bus"]["2"]["va"][c], PMD._wrap_to_pi(0.12669+2*pi/mp_data["conductors"]*(1-c)); atol=1e-3) for c in 1:mp_data["conductors"])
-        end
-
         @testset "5-bus matpower acp opf" begin
             mp_data = PMs.parse_file("../test/data/matpower/case5.m")
             PMD.make_multiconductor!(mp_data, 3)

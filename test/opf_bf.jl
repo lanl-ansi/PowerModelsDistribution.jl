@@ -2,16 +2,6 @@
 
 @testset "test distflow formulations" begin
     @testset "test linearised distflow opf_bf" begin
-        @testset "3-bus lplinubf opf_bf" begin
-            mp_data = PowerModels.parse_file("$(pms_path)/test/data/matpower/case3.m")
-            PMD.make_multiconductor!(mp_data, 3)
-            result = run_mc_opf_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 45500.2 ; atol = 1e0)
-            @test isapprox(result["solution"]["bus"]["3"]["vm"].values, 0.992977*[1,1,1]; atol = 1e-3)
-        end
-
         @testset "5-bus lplinubf opf_bf" begin
             mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
             PMD.make_multiconductor!(mp_data, 3)
@@ -60,15 +50,6 @@
     end
 
     @testset "test linearised distflow opf_bf in diagonal matrix form" begin
-        @testset "3-bus lpdiagubf opf_bf" begin
-            mp_data = PowerModels.parse_file("$(pms_path)/test/data/matpower/case3.m")
-            PMD.make_multiconductor!(mp_data, 3)
-            result = run_mc_opf_bf(mp_data, LPdiagUBFPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 45500.2 ; atol = 1e0)
-        end
-
         @testset "5-bus lpdiagubf opf_bf" begin
             mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
             PMD.make_multiconductor!(mp_data, 3)
@@ -98,15 +79,6 @@
     end
 
     @testset "test linearised distflow opf_bf in full matrix form" begin
-        @testset "3-bus lpfullubf opf_bf" begin
-            mp_data = PowerModels.parse_file("$(pms_path)/test/data/matpower/case3.m")
-            PMD.make_multiconductor!(mp_data, 3)
-            result = run_mc_opf_bf(mp_data, LPfullUBFPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 45500.2 ; atol = 1e0)
-        end
-
         @testset "5-bus lpfullubf opf_bf" begin
             mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
             PMD.make_multiconductor!(mp_data, 3)

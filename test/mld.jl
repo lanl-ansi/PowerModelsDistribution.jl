@@ -15,10 +15,10 @@
 
     @testset "5-bus storage acp mld" begin
         mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case5_strg.m"); PMD.make_multiconductor!(mp_data, 3)
-        result = run_mc_mld_strg(mp_data, PMs.ACPPowerModel, ipopt_solver)  # why higher tol required?
+        result = run_mc_mld(mp_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
-        @test isapprox(result["objective"], 0.3553; atol=1e-4)
+        @test isapprox(result["objective"], 0.3553; atol=1e-2)
 
         @test isapprox(result["solution"]["load"]["1"]["status"], 1.000; atol=1e-3)
     end
@@ -35,7 +35,7 @@
 
     @testset "5-bus storage nfa mld" begin
         mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case5_strg.m"); PMD.make_multiconductor!(mp_data, 3)
-        result = run_mc_mld_strg(mp_data, PMs.NFAPowerModel, ipopt_solver)
+        result = run_mc_mld(mp_data, PMs.NFAPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
         @test isapprox(result["objective"], 0.1557; atol=1e-4)

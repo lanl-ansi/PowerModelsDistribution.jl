@@ -3,7 +3,7 @@ function run_mc_pf_bf(data::Dict{String,Any}, model_type, solver; kwargs...)
     if model_type != SDPUBFPowerModel && model_type != SOCNLPUBFPowerModel && model_type != SOCConicUBFPowerModel && model_type != LPUBFPowerModel && model_type != LPdiagUBFPowerModel && model_type !=  SOCBFPowerModel
         Memento.error(_LOGGER, "The problem type mc_opf_bf at the moment only supports a limited set of formulations")
     end
-    return _PMs.run_model(data, model_type, solver, post_mc_pf_bf; solution_builder=solution_tp!, multiconductor=true, kwargs...)
+    return _PMs.run_model(data, model_type, solver, post_mc_pf_bf; solution_builder=solution_tp!, ref_extensions=[ref_add_arcs_trans!], multiconductor=true, kwargs...)
 end
 
 
@@ -22,7 +22,6 @@ function post_mc_pf_bf(pm::_PMs.AbstractPowerModel)
 
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_generation(pm, bounded=false, cnd=c)
-        _PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
     end
 
     # Constraints
@@ -62,23 +61,6 @@ function post_mc_pf_bf(pm::_PMs.AbstractPowerModel)
         for c in _PMs.conductor_ids(pm)
             _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
             _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
-        end
-    end
-
-    for (i,dcline) in _PMs.ref(pm, :dcline)
-        for c in _PMs.conductor_ids(pm)
-
-            _PMs.constraint_active_dcline_setpoint(pm, i, cnd=c)
-
-            f_bus = _PMs.ref(pm, :bus)[dcline["f_bus"]]
-            if f_bus["bus_type"] == 1
-                _PMs.constraint_voltage_magnitude_setpoint(pm, f_bus["index"], cnd=c)
-            end
-
-            t_bus = _PMs.ref(pm, :bus)[dcline["t_bus"]]
-            if t_bus["bus_type"] == 1
-                _PMs.constraint_voltage_magnitude_setpoint(pm, t_bus["index"], cnd=c)
-            end
         end
     end
 

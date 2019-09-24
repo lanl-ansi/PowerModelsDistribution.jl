@@ -268,16 +268,6 @@ end
 
 
 """
-    _get_prop_name(ctype, i)
-
-Returns the `i`th property name for a given component type `ctype`.
-"""
-function _get_prop_name(ctype::AbstractString, i::Int)::String
-    return _get_prop_name(ctype)[i]
-end
-
-
-"""
     _parse_matrix(dtype, data)
 
 Parses a OpenDSS style triangular matrix string `data` into a two dimensional

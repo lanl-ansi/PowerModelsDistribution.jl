@@ -31,7 +31,6 @@ function post_mc_pf_lm(pm::_PMs.AbstractPowerModel)
 
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_generation(pm, bounded=false, cnd=c)
-        _PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
     end
 
     constraint_mc_model_voltage(pm)
@@ -70,20 +69,6 @@ function post_mc_pf_lm(pm::_PMs.AbstractPowerModel)
     for i in _PMs.ids(pm, :branch)
         constraint_mc_ohms_yt_from(pm, i)
         constraint_mc_ohms_yt_to(pm, i)
-    end
-
-    for (i,dcline) in _PMs.ref(pm, :dcline), c in _PMs.conductor_ids(pm)
-        _PMs.constraint_active_dcline_setpoint(pm, i, cnd=c)
-
-        f_bus = _PMs.ref(pm, :bus)[dcline["f_bus"]]
-        if f_bus["bus_type"] == 1
-            _PMs.constraint_voltage_magnitude_setpoint(pm, f_bus["index"], cnd=c)
-        end
-
-        t_bus = _PMs.ref(pm, :bus)[dcline["t_bus"]]
-        if t_bus["bus_type"] == 1
-            _PMs.constraint_voltage_magnitude_setpoint(pm, t_bus["index"], cnd=c)
-        end
     end
 
     for i in _PMs.ids(pm, :transformer)
