@@ -2,6 +2,8 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
+- Adds `count_nodes` function to count the number of nodes in a parsed network (#183)
+- Exports `find_bus` and `find_component` functions for better user experience (#183)
 - Fixed `solution_bf!` for branch flow solution building (#182)
 - Refactored problem definitions to remove any explicit loops over conductors (#181)
 - Added data format documentation (#180)
