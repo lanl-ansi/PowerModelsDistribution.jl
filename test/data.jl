@@ -66,5 +66,8 @@
         @test count_nodes(dss) == 7
         @test count_nodes(dss) == count_nodes(pmd)
         @test count_nodes(matlab) == 15
+
+        dss = PMD.parse_dss("../test/data/opendss/ut_trans_2w_yy.dss")
+        @test count_nodes(dss) == 9
     end
 end
