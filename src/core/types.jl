@@ -1,87 +1,63 @@
 ""
-abstract type AbstractNLPUBFForm <: _PMs.AbstractBFQPForm end
+abstract type AbstractNLPUBFModel <: _PMs.AbstractBFQPModel end
 
 
 ""
-abstract type AbstractConicUBFForm <: _PMs.AbstractBFConicForm end
+abstract type AbstractConicUBFModel <: _PMs.AbstractBFConicModel end
 
 
-AbstractUBFForm = Union{AbstractNLPUBFForm, AbstractConicUBFForm}
+AbstractUBFModels = Union{AbstractNLPUBFModel, AbstractConicUBFModel}
 
 
 "SDP BFM per Gan and Low 2014, PSCC"
-abstract type SDPUBFForm <: AbstractConicUBFForm end
+abstract type SDPUBFModel <: AbstractConicUBFModel end
 
 
-"SOC relaxation of SDPUBFForm per Kim, Kojima, & Yamashita 2003, cast as an QCP"
-abstract type SOCNLPUBFForm <: AbstractNLPUBFForm end
+"SOC relaxation of SDPUBFModel per Kim, Kojima, & Yamashita 2003, cast as an QCP"
+abstract type SOCNLPUBFModel <: AbstractNLPUBFModel end
 
 
-"SOC relaxation of SDPUBFForm per Kim, Kojima, & Yamashita 2003, cast as a SOC"
-abstract type SOCConicUBFForm <: AbstractConicUBFForm end
+"SOC relaxation of SDPUBFModel per Kim, Kojima, & Yamashita 2003, cast as a SOC"
+abstract type SOCConicUBFModel <: AbstractConicUBFModel end
 
-SOCUBFForm = Union{SOCNLPUBFForm, SOCConicUBFForm}
+SOCUBFModels = Union{SOCNLPUBFModel, SOCConicUBFModel}
 
 
 "Abstract form for linear unbalanced power flow models"
-abstract type AbstractLPUBFForm <: AbstractNLPUBFForm end
+abstract type AbstractLPUBFModel <: AbstractNLPUBFModel end
 
 
 "Simplified BFM per Gan and Low 2014, PSCC, using matrix variables for power, voltage and current"
-abstract type LPfullUBFForm <: AbstractLPUBFForm end
+abstract type LPfullUBFModel <: AbstractLPUBFModel end
 
 
 "LinDist3Flow per Sankur et al 2016, using vector variables for power, voltage and current"
-abstract type LPdiagUBFForm <: AbstractLPUBFForm end
-
-
-""
-const SDPUBFPowerModel = _PMs.GenericPowerModel{SDPUBFForm}
+abstract type LPdiagUBFModel <: AbstractLPUBFModel end
 
 
 "default SDP unbalanced DistFlow constructor"
-SDPUBFPowerModel(data::Dict{String,Any}; kwargs...) = _PMs.GenericPowerModel(data, SDPUBFForm; kwargs...)
-
-
-""
-const SOCNLPUBFPowerModel = _PMs.GenericPowerModel{SOCNLPUBFForm}
+mutable struct SDPUBFPowerModel <: SDPUBFModel _PMs.@pm_fields end
 
 
 "default SOC unbalanced DistFlow constructor"
-SOCNLPUBFPowerModel(data::Dict{String,Any}; kwargs...) = _PMs.GenericPowerModel(data, SOCNLPUBFForm; kwargs...)
-
-
-""
-const SOCConicUBFPowerModel = _PMs.GenericPowerModel{SOCConicUBFForm}
+mutable struct SOCNLPUBFPowerModel <: SOCNLPUBFModel _PMs.@pm_fields end
 
 
 "default SOC unbalanced DistFlow constructor"
-SOCConicUBFPowerModel(data::Dict{String,Any}; kwargs...) = _PMs.GenericPowerModel(data, SOCConicUBFForm; kwargs...)
-
-
-""
-const LPfullUBFPowerModel = _PMs.GenericPowerModel{LPfullUBFForm}
+mutable struct SOCConicUBFPowerModel <: SOCConicUBFModel _PMs.@pm_fields end
 
 
 "default LP unbalanced DistFlow constructor"
-LPfullUBFPowerModel(data::Dict{String,Any}; kwargs...) = _PMs.GenericPowerModel(data, LPfullUBFForm; kwargs...)
-
-
-""
-const LPdiagUBFPowerModel = _PMs.GenericPowerModel{LPdiagUBFForm}
+mutable struct LPfullUBFPowerModel <: LPfullUBFModel _PMs.@pm_fields end
 
 
 "default LP unbalanced DistFlow constructor"
-LPdiagUBFPowerModel(data::Dict{String,Any}; kwargs...) = _PMs.GenericPowerModel(data, LPdiagUBFForm; kwargs...)
+mutable struct LPdiagUBFPowerModel <: LPdiagUBFModel _PMs.@pm_fields end
 
 
 "LinDist3Flow per Sankur et al 2016, using vector variables for power, voltage and current in scalar form"
-abstract type LPLinUBFForm <: _PMs.AbstractBFForm end
-
-
-""
-const LPLinUBFPowerModel = _PMs.GenericPowerModel{LPLinUBFForm}
+abstract type LPLinUBFModel <: _PMs.AbstractBFModel end
 
 
 "default Lin3Distflow constructor for scalar form"
-LPLinUBFPowerModel(data::Dict{String,Any}; kwargs...) = _PMs.GenericPowerModel(data, LPLinUBFForm; kwargs...)
+mutable struct LPLinUBFPowerModel <: LPLinUBFModel _PMs.@pm_fields end

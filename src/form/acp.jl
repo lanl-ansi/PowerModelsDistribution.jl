@@ -1,5 +1,5 @@
 ""
-function variable_tp_voltage(pm::_PMs.GenericPowerModel{T}; nw=pm.cnw, kwargs...) where T <: _PMs.AbstractACPForm
+function variable_mc_voltage(pm::_PMs.AbstractACPModel; nw=pm.cnw, kwargs...)
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_voltage(pm, cnd=c; nw=nw, kwargs...)
     end
@@ -22,11 +22,11 @@ end
 
 
 ""
-function variable_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: _PMs.AbstractACPForm
+function variable_mc_bus_voltage_on_off(pm::_PMs.AbstractACPModel; kwargs...)
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_voltage_angle(pm; cnd=c, kwargs...)
     end
-    variable_tp_voltage_magnitude_on_off(pm; kwargs...)
+    variable_mc_voltage_magnitude_on_off(pm; kwargs...)
 
     nw = get(kwargs, :nw, pm.cnw)
 
@@ -46,93 +46,158 @@ end
 
 
 ""
-function constraint_tp_power_balance_shunt_slack(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractACPForm
-    vm = _PMs.var(pm, n, c, :vm, i)
-    p_slack = _PMs.var(pm, n, c, :p_slack, i)
-    q_slack = _PMs.var(pm, n, c, :q_slack, i)
-    p = _PMs.var(pm, n, c, :p)
-    q = _PMs.var(pm, n, c, :q)
-    pg = _PMs.var(pm, n, c, :pg)
-    qg = _PMs.var(pm, n, c, :qg)
-    p_dc = _PMs.var(pm, n, c, :p_dc)
-    q_dc = _PMs.var(pm, n, c, :q_dc)
+function constraint_mc_power_balance_slack(pm::_PMs.AbstractACPModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    vm   = _PMs.var(pm, nw, c, :vm, i)
+    p    = get(_PMs.var(pm, nw, c),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
+    q    = get(_PMs.var(pm, nw, c),    :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
+    pg   = get(_PMs.var(pm, nw, c),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    qg   = get(_PMs.var(pm, nw, c),   :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps   = get(_PMs.var(pm, nw, c),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
+    qs   = get(_PMs.var(pm, nw, c),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    psw  = get(_PMs.var(pm, nw, c),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(_PMs.var(pm, nw, c),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(_PMs.var(pm, nw, c),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(_PMs.var(pm, nw, c),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+    p_slack = _PMs.var(pm, nw, c, :p_slack, i)
+    q_slack = _PMs.var(pm, nw, c, :q_slack, i)
 
-    _PMs.con(pm, n, c, :kcl_p)[i] = JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*vm^2 + p_slack)
-    _PMs.con(pm, n, c, :kcl_q)[i] = JuMP.@constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*vm^2 + q_slack)
+    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model,
+        sum(p[a] for a in bus_arcs)
+        + sum(psw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(pt[a_trans] for a_trans in bus_arcs_trans)
+        ==
+        sum(pg[g] for g in bus_gens)
+        - sum(ps[s] for s in bus_storage)
+        - sum(pd for pd in values(bus_pd))
+        - sum(gs for gs in values(bus_gs))*vm^2
+        + p_slack
+    )
+    _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@constraint(pm.model,
+        sum(q[a] for a in bus_arcs)
+        + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(qt[a_trans] for a_trans in bus_arcs_trans)
+        ==
+        sum(qg[g] for g in bus_gens)
+        - sum(qs[s] for s in bus_storage)
+        - sum(qd for qd in values(bus_qd))
+        + sum(bs for bs in values(bus_bs))*vm^2
+        + q_slack
+    )
 end
 
 
 ""
-function constraint_tp_power_balance_shunt_trans_shed(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractACPForm
-    vm = _PMs.var(pm, nw, c, :vm, i)
-    p = _PMs.var(pm, nw, c, :p)
-    q = _PMs.var(pm, nw, c, :q)
-    pg = _PMs.var(pm, nw, c, :pg)
-    qg = _PMs.var(pm, nw, c, :qg)
-    p_dc = _PMs.var(pm, nw, c, :p_dc)
-    q_dc = _PMs.var(pm, nw, c, :q_dc)
-    pt = _PMs.var(pm, nw, c, :pt)
-    qt = _PMs.var(pm,  nw, c, :qt)
+function constraint_mc_power_balance_shed(pm::_PMs.AbstractACPModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    vm       = _PMs.var(pm, nw, c, :vm, i)
+    p        = get(_PMs.var(pm, nw, c),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
+    q        = get(_PMs.var(pm, nw, c),    :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
+    pg       = get(_PMs.var(pm, nw, c),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    qg       = get(_PMs.var(pm, nw, c),   :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps       = get(_PMs.var(pm, nw, c),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
+    qs       = get(_PMs.var(pm, nw, c),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    psw      = get(_PMs.var(pm, nw, c),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw      = get(_PMs.var(pm, nw, c),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt       = get(_PMs.var(pm, nw, c),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt       = get(_PMs.var(pm, nw, c),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
     z_demand = _PMs.var(pm, nw, :z_demand)
-    z_shunt = _PMs.var(pm, nw, :z_shunt)
+    z_shunt  = _PMs.var(pm, nw, :z_shunt)
 
-    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(pt[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd*z_demand[n] for (n,pd) in bus_pd) - sum(gs*z_shunt[n] for (n,gs) in bus_gs)*vm^2)
-    _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(qt[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd*z_demand[n] for (n,qd) in bus_qd) + sum(bs*z_shunt[n] for (n,bs) in bus_bs)*vm^2)
+    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model,
+        sum(p[a] for a in bus_arcs)
+        + sum(psw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(pt[a_trans] for a_trans in bus_arcs_trans)
+        ==
+        sum(pg[g] for g in bus_gens)
+        - sum(ps[s] for s in bus_storage)
+        - sum(pd*z_demand[n] for (n,pd) in bus_pd)
+        - sum(gs*z_shunt[n] for (n,gs) in bus_gs)*vm^2
+    )
+    _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@constraint(pm.model,
+        sum(q[a] for a in bus_arcs)
+        + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(qt[a_trans] for a_trans in bus_arcs_trans)
+        ==
+        sum(qg[g] for g in bus_gens)
+        - sum(qs[s] for s in bus_storage)
+        - sum(qd*z_demand[n] for (n,qd) in bus_qd)
+        + sum(bs*z_shunt[n] for (n,bs) in bus_bs)*vm^2
+    )
 end
 
 
 ""
-function constraint_tp_power_balance_shunt_trans(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractACPForm
-    vm = _PMs.var(pm, nw, c, :vm, i)
-    p = _PMs.var(pm, nw, c, :p)
-    q = _PMs.var(pm, nw, c, :q)
-    pg = _PMs.var(pm, nw, c, :pg)
-    qg = _PMs.var(pm, nw, c, :qg)
-    p_dc = _PMs.var(pm, nw, c, :p_dc)
-    q_dc = _PMs.var(pm, nw, c, :q_dc)
-    pt = _PMs.var(pm, nw, c, :pt)
-    qt = _PMs.var(pm,  nw, c, :qt)
+function constraint_mc_power_balance(pm::_PMs.AbstractACPModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    vm   = _PMs.var(pm, nw, c, :vm, i)
+    p    = get(_PMs.var(pm, nw, c),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
+    q    = get(_PMs.var(pm, nw, c),    :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
+    pg   = get(_PMs.var(pm, nw, c),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    qg   = get(_PMs.var(pm, nw, c),   :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps   = get(_PMs.var(pm, nw, c),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
+    qs   = get(_PMs.var(pm, nw, c),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    psw  = get(_PMs.var(pm, nw, c),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(_PMs.var(pm, nw, c),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(_PMs.var(pm, nw, c),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(_PMs.var(pm, nw, c),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
 
-    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(pt[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*vm^2)
-    _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(qt[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*vm^2)
+    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model,
+        sum(p[a] for a in bus_arcs)
+        + sum(psw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(pt[a_trans] for a_trans in bus_arcs_trans)
+        ==
+        sum(pg[g] for g in bus_gens)
+        - sum(ps[s] for s in bus_storage)
+        - sum(pd for pd in values(bus_pd))
+        - sum(gs for gs in values(bus_gs))*vm^2
+    )
+    _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@constraint(pm.model,
+        sum(q[a] for a in bus_arcs)
+        + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(qt[a_trans] for a_trans in bus_arcs_trans)
+        ==
+        sum(qg[g] for g in bus_gens)
+        - sum(qs[s] for s in bus_storage)
+        - sum(qd for qd in values(bus_qd))
+        + sum(bs for bs in values(bus_bs))*vm^2
+    )
 end
 
 
-
 ""
-function constraint_tp_power_balance_shunt_storage_trans(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs) where T <: _PMs.AbstractACPForm
-    vm = _PMs.var(pm, nw, c, :vm, i)
-    p = _PMs.var(pm, nw, c, :p)
-    q = _PMs.var(pm, nw, c, :q)
-    pg = _PMs.var(pm, nw, c, :pg)
-    qg = _PMs.var(pm, nw, c, :qg)
-    ps = _PMs.var(pm, nw, c, :ps)
-    qs = _PMs.var(pm, nw, c, :qs)
-    p_dc = _PMs.var(pm, nw, c, :p_dc)
-    q_dc = _PMs.var(pm, nw, c, :q_dc)
-    pt = _PMs.var(pm, nw, c, :pt)
-    qt = _PMs.var(pm,  nw, c, :qt)
+function constraint_mc_power_balance_load(pm::_PMs.AbstractACPModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+    vm   = _PMs.var(pm, nw, c, :vm, i)
+    p    = get(_PMs.var(pm, nw, c),   :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
+    q    = get(_PMs.var(pm, nw, c),   :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
+    pg   = get(_PMs.var(pm, nw, c),  :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    qg   = get(_PMs.var(pm, nw, c),  :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps   = get(_PMs.var(pm, nw, c),  :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
+    qs   = get(_PMs.var(pm, nw, c),  :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    psw  = get(_PMs.var(pm, nw, c), :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(_PMs.var(pm, nw, c), :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(_PMs.var(pm, nw, c),  :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(_PMs.var(pm, nw, c),  :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+    pd   = get(_PMs.var(pm, nw, c),  :pd, Dict()); _PMs._check_var_keys(pd, bus_loads, "active power", "load")
+    qd   = get(_PMs.var(pm, nw, c),  :qd, Dict()); _PMs._check_var_keys(pd, bus_loads, "reactive power", "load")
 
-    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(pt[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(ps[s] for s in bus_storage) - sum(pd for pd in values(bus_pd)) - sum(gs for gs in values(bus_gs))*vm^2)
-    _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(qt[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qs[s] for s in bus_storage) - sum(qd for qd in values(bus_qd)) + sum(bs for bs in values(bus_bs))*vm^2)
-end
-
-
-""
-function constraint_tp_power_balance_shunt_trans_load(pm::_PMs.GenericPowerModel{T}, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_arcs_trans, bus_gens, bus_loads, bus_gs, bus_bs) where T <: _PMs.AbstractACPForm
-    vm = _PMs.var(pm, nw, c, :vm, i)
-    p = _PMs.var(pm, nw, c, :p)
-    q = _PMs.var(pm, nw, c, :q)
-    pg = _PMs.var(pm, nw, c, :pg)
-    qg = _PMs.var(pm, nw, c, :qg)
-    pd = _PMs.var(pm, nw, c, :pd)
-    qd = _PMs.var(pm, nw, c, :qd)
-    p_dc = _PMs.var(pm, nw, c, :p_dc)
-    q_dc = _PMs.var(pm, nw, c, :q_dc)
-    pt = _PMs.var(pm, nw, c, :pt)
-    qt = _PMs.var(pm,  nw, c, :qt)
-    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@NLconstraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) + sum(pt[a_trans] for a_trans in bus_arcs_trans) == sum(pg[g] for g in bus_gens) - sum(pd[l] for l in bus_loads) - sum(gs for gs in values(bus_gs))*vm^2)
-    _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@NLconstraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) + sum(qt[a_trans] for a_trans in bus_arcs_trans) == sum(qg[g] for g in bus_gens) - sum(qd[l] for l in bus_loads) + sum(bs for bs in values(bus_bs))*vm^2)
+    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@NLconstraint(pm.model,
+        sum(p[a] for a in bus_arcs)
+        + sum(psw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(pt[a_trans] for a_trans in bus_arcs_trans)
+        ==
+        sum(pg[g] for g in bus_gens)
+        - sum(ps[s] for s in bus_storage)
+        - sum(pd[l] for l in bus_loads)
+        - sum(gs for gs in values(bus_gs))*vm^2
+    )
+    _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@NLconstraint(pm.model,
+        sum(q[a] for a in bus_arcs)
+        + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(qt[a_trans] for a_trans in bus_arcs_trans)
+        ==
+        sum(qg[g] for g in bus_gens)
+        - sum(qs[s] for s in bus_storage)
+        - sum(qd[l] for l in bus_loads)
+        + sum(bs for bs in values(bus_bs))*vm^2
+    )
 end
 
 
@@ -160,7 +225,7 @@ q_fr == -b[c,c] *vm_fr[c]^2 -
             )
 ```
 """
-function constraint_tp_ohms_yt_from(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm) where T <: _PMs.AbstractACPForm
+function constraint_mc_ohms_yt_from(pm::_PMs.AbstractACPModel, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
     p_fr  = _PMs.var(pm, n, c,  :p, f_idx)
     q_fr  = _PMs.var(pm, n, c,  :q, f_idx)
     vm_fr = [_PMs.var(pm, n, d, :vm, f_bus) for d in _PMs.conductor_ids(pm)]
@@ -196,71 +261,13 @@ p[t_idx] ==  (g+g_to)*v[t_bus]^2 + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[t_bu
 q[t_idx] == -(b+b_to)*v[t_bus]^2 - (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[f_bus]-t[t_bus])) + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus]))
 ```
 """
-function constraint_tp_ohms_yt_to(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm) where T <: _PMs.AbstractACPForm
-    constraint_tp_ohms_yt_from(pm, n, c, t_bus, f_bus, t_idx, f_idx, g, b, g_to, b_to, tr, ti, tm)
-end
-
-
-#TODO: extend for matrix shunts
-"""
-```
-p[f_idx] == z*(g/tm*v[f_bus]^2 + (-g*tr+b*ti)/tm*(v[f_bus]*v[t_bus]*cos(t[f_bus]-t[t_bus])) + (-b*tr-g*ti)/tm*(v[f_bus]*v[t_bus]*sin(t[f_bus]-t[t_bus])))
-q[f_idx] == z*(-(b+c/2)/tm*v[f_bus]^2 - (-b*tr-g*ti)/tm*(v[f_bus]*v[t_bus]*cos(t[f_bus]-t[t_bus])) + (-g*tr+b*ti)/tm*(v[f_bus]*v[t_bus]*sin(t[f_bus]-t[t_bus])))
-```
-"""
-function constraint_tp_ohms_yt_from_on_off(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm, vad_min, vad_max) where T <: _PMs.AbstractACPForm
-    p_fr  = _PMs.var(pm, n, c,  :p, f_idx)
-    q_fr  = _PMs.var(pm, n, c,  :q, f_idx)
-    vm_fr = [_PMs.var(pm, n, d, :vm, f_bus) for d in _PMs.conductor_ids(pm)]
-    vm_to = [_PMs.var(pm, n, d, :vm, t_bus) for d in _PMs.conductor_ids(pm)]
-    va_fr = [_PMs.var(pm, n, d, :va, f_bus) for d in _PMs.conductor_ids(pm)]
-    va_to = [_PMs.var(pm, n, d, :va, t_bus) for d in _PMs.conductor_ids(pm)]
-    z = _PMs.var(pm, n, c, :branch_z, i)
-
-    JuMP.@NLconstraint(pm.model, p_fr == z*((g_fr[c]+g[c,c]) * vm_fr[c]^2 +
-                                        sum( g[c,d]*vm_fr[c]*vm_fr[d]*cos(va_fr[c]-va_fr[d]) +
-                                             b[c,d]*vm_fr[c]*vm_fr[d]*sin(va_fr[c]-va_fr[d]) for d in _PMs.conductor_ids(pm) if d != c) +
-                                        sum(-g[c,d]*vm_fr[c]*vm_to[d]*cos(va_fr[c]-va_to[d]) +
-                                            -b[c,d]*vm_fr[c]*vm_to[d]*sin(va_fr[c]-va_to[d]) for d in _PMs.conductor_ids(pm))) )
-    JuMP.@NLconstraint(pm.model, q_fr == z*(-(b_fr[c]+b[c,c]) *vm_fr[c]^2 -
-                                        sum( b[c,d]*vm_fr[c]*vm_fr[d]*cos(va_fr[c]-va_fr[d]) -
-                                             g[c,d]*vm_fr[c]*vm_fr[d]*sin(va_fr[c]-va_fr[d]) for d in _PMs.conductor_ids(pm) if d != c) -
-                                        sum(-b[c,d]*vm_fr[c]*vm_to[d]*cos(va_fr[c]-va_to[d]) +
-                                             g[c,d]*vm_fr[c]*vm_to[d]*sin(va_fr[c]-va_to[d]) for d in _PMs.conductor_ids(pm))) )
-end
-
-
-#TODO: extend for matrix shunts
-"""
-```
-p[t_idx] == z*(g*v[t_bus]^2 + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[t_bus]-t[f_bus])) + (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus])))
-q[t_idx] == z*(-(b+c/2)*v[t_bus]^2 - (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[f_bus]-t[t_bus])) + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus])))
-```
-"""
-function constraint_tp_ohms_yt_to_on_off(pm::_PMs.GenericPowerModel{T}, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm, vad_min, vad_max) where T <: _PMs.AbstractACPForm
-    p_to  = _PMs.var(pm, n, c,  :p, t_idx)
-    q_to  = _PMs.var(pm, n, c,  :q, t_idx)
-    vm_fr = [_PMs.var(pm, n, d, :vm, f_bus) for d in _PMs.conductor_ids(pm)]
-    vm_to = [_PMs.var(pm, n, d, :vm, t_bus) for d in _PMs.conductor_ids(pm)]
-    va_fr = [_PMs.var(pm, n, d, :va, f_bus) for d in _PMs.conductor_ids(pm)]
-    va_to = [_PMs.var(pm, n, d, :va, t_bus) for d in _PMs.conductor_ids(pm)]
-    z = _PMs.var(pm, n, c, :branch_z, i)
-
-    JuMP.@NLconstraint(pm.model, p_to == z*((g_to[c]+g[c,c])*vm_to[c]^2 +
-                                        sum( g[c,d]*vm_to[c]*vm_to[d]*cos(va_to[c]-va_to[d]) +
-                                             b[c,d]*vm_to[c]*vm_to[d]*sin(va_to[c]-va_to[d]) for d in _PMs.conductor_ids(pm) if d != c) +
-                                        sum(-g[c,d]*vm_to[c]*vm_fr[d]*cos(va_to[c]-va_fr[d]) +
-                                            -b[c,d]*vm_to[c]*vm_fr[d]*sin(va_to[c]-va_fr[d]) for d in _PMs.conductor_ids(pm))) )
-    JuMP.@NLconstraint(pm.model, q_to == z*(-(b_to[c]+b[c,c])*vm_to[c]^2 -
-                                        sum( b[c,d]*vm_to[c]*vm_to[d]*cos(va_to[c]-va_to[d]) -
-                                             g[c,d]*vm_to[c]*vm_to[d]*sin(va_to[c]-va_to[d]) for d in _PMs.conductor_ids(pm) if d != c) -
-                                        sum(-b[c,d]*vm_to[c]*vm_fr[d]*cos(va_to[c]-va_fr[d]) +
-                                             g[c,d]*vm_to[c]*vm_fr[d]*sin(va_to[c]-va_fr[d]) for d in _PMs.conductor_ids(pm))) )
+function constraint_mc_ohms_yt_to(pm::_PMs.AbstractACPModel, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
+    constraint_mc_ohms_yt_from(pm, n, c, t_bus, f_bus, t_idx, f_idx, g, b, g_to, b_to, tr, ti, tm)
 end
 
 
 "Links the voltage at both windings of a fixed tap transformer"
-function constraint_tp_trans_voltage(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to) where T <: _PMs.AbstractACPForm
+function constraint_mc_transformer_voltage(pm::_PMs.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to)
     ncnd  = 3
     # from side
     vm_fr = [_PMs.var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
@@ -285,7 +292,7 @@ end
 
 
 "Links the power flowing into both windings of a fixed tap transformer"
-function constraint_tp_trans_flow(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to) where T <: _PMs.AbstractACPForm
+function constraint_mc_transformer_flow(pm::_PMs.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to)
     ncnd  = 3
     # from side variables
     vm_fr = [_PMs.var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
@@ -328,7 +335,7 @@ end
 
 
 "Links the voltage at both windings of a variable tap transformer."
-function constraint_tp_oltc_voltage(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, Tv_fr, Tv_im, Cv_to) where T <: _PMs.AbstractACPForm
+function constraint_mc_oltc_voltage(pm::_PMs.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, Tv_fr, Tv_im, Cv_to)
     ncnd  = 3
     # from side
     vm_fr = [_PMs.var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
@@ -355,7 +362,7 @@ end
 
 
 "Links the power flowing into both windings of a variable tap transformer."
-function constraint_tp_oltc_flow(pm::_PMs.GenericPowerModel{T}, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im, Cv_to) where T <: _PMs.AbstractACPForm
+function constraint_mc_oltc_flow(pm::_PMs.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im, Cv_to)
     ncnd  = 3
     # from side variables
     vm_fr = [_PMs.var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
@@ -407,7 +414,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_tp_vm_vuf(pm::_PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vufmax::Float64) where T <: _PMs.AbstractACPForm
+function constraint_mc_vm_vuf(pm::_PMs.AbstractACPModel, nw::Int, bus_id::Int, vufmax::Float64)
     if !haskey(_PMs.var(pm, pm.cnw), :vmpossqr)
         _PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
         _PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
@@ -454,7 +461,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_tp_vm_neg_seq(pm::_PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmnegmax::Float64) where T <: _PMs.AbstractACPForm
+function constraint_mc_vm_neg_seq(pm::_PMs.AbstractACPModel, nw::Int, bus_id::Int, vmnegmax::Float64)
     if !haskey(_PMs.var(pm, pm.cnw), :vmpossqr)
         _PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
         _PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
@@ -481,22 +488,24 @@ function constraint_tp_vm_neg_seq(pm::_PMs.GenericPowerModel{T}, nw::Int, bus_id
 end
 
 
+#= TODO unused function, remove?
 "Links the power flowing into both windings of a variable tap transformer."
-function constraint_tp_trans_flow_var(pm::_PMs.GenericPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im; nw::Int=pm.cnw)
+function constraint_mc_transformer_flow_var(pm::_PMs.AbstractPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im; nw::Int=pm.cnw)
     # for ac formulation, indentical to fixed tap
-    constraint_tp_trans_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
+    constraint_mc_transformer_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
 end
+=#
 
 
 ""
-function constraint_load_power_wye(pm::_PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, pd::Real, qd::Real) where T <: _PMs.AbstractACPForm
+function constraint_load_power_wye(pm::_PMs.AbstractACPModel, nw::Int, cnd::Int, load_id::Int, pd::Real, qd::Real)
     _PMs.var(pm, nw, cnd, :pd)[load_id] = pd
     _PMs.var(pm, nw, cnd, :qd)[load_id] = qd
 end
 
 
 ""
-function constraint_load_current_wye(pm::_PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, scale_p::Real, scale_q::Real) where T <: _PMs.AbstractACPForm
+function constraint_load_current_wye(pm::_PMs.AbstractACPModel, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, scale_p::Real, scale_q::Real)
     vm = _PMs.var(pm, nw, cnd, :vm, load_bus_id)
     # this has to be a NLexpression and not an expression;
     # might be mixed in KCL with NLexpression, so has to also be NLexpression
@@ -506,7 +515,7 @@ end
 
 
 ""
-function constraint_load_impedance_wye(pm::_PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real) where T <: _PMs.AbstractACPForm
+function constraint_load_impedance_wye(pm::_PMs.AbstractACPModel, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real)
     vm = _PMs.var(pm, nw, cnd, :vm, load_bus_id)
     _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, cp*vm^2)
     _PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, cq*vm^2)
@@ -514,7 +523,7 @@ end
 
 
 ""
-function constraint_load_exponential_wye(pm::_PMs.GenericPowerModel{T}, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, a::Real, α::Real, b::Real, β::Real) where T <: _PMs.AbstractACPForm
+function constraint_load_exponential_wye(pm::_PMs.AbstractACPModel, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, a::Real, α::Real, b::Real, β::Real)
     vm = _PMs.var(pm, nw, cnd, :vm, load_bus_id)
     _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, a*vm^α)
     _PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, b*vm^β)
@@ -529,7 +538,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_tp_vm_pos_seq(pm::_PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmposmax::Float64) where T <: _PMs.AbstractACPForm
+function constraint_mc_vm_pos_seq(pm::_PMs.AbstractACPModel, nw::Int, bus_id::Int, vmposmax::Float64)
     if !haskey(_PMs.var(pm, pm.cnw), :vmpossqr)
         _PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
         _PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
@@ -563,7 +572,7 @@ s_a = v_a*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 s_b = v_b*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 s_c = v_c*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 """
-function constraint_tp_load_power_delta(pm::_PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, pd::_PMs.MultiConductorVector, qd::_PMs.MultiConductorVector) where T <: _PMs.AbstractACPForm
+function constraint_mc_load_power_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, pd::_PMs.MultiConductorVector, qd::_PMs.MultiConductorVector)
     p_ab, p_bc, p_ca = pd
     q_ab, q_bc, q_ca = qd
     vm_a, vm_b, vm_c = [_PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:3]
@@ -609,7 +618,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_tp_vm_zero_seq(pm::_PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vmzeromax::Float64) where T <: _PMs.AbstractACPForm
+function constraint_mc_vm_zero_seq(pm::_PMs.AbstractACPModel, nw::Int, bus_id::Int, vmzeromax::Float64)
     if !haskey(_PMs.var(pm, pm.cnw), :vmpossqr)
         _PMs.var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
         _PMs.var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
@@ -639,7 +648,7 @@ And then
 s_a = v_a.conj(i_a) = v_a.conj(i_ab-i_ca)
 idem for s_b and s_c
 """
-function constraint_tp_load_current_delta(pm::_PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, cp::_PMs.MultiConductorVector, cq::_PMs.MultiConductorVector) where T <: _PMs.AbstractACPForm
+function constraint_mc_load_current_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, cp::_PMs.MultiConductorVector, cq::_PMs.MultiConductorVector)
     cp_ab, cp_bc, cp_ca = cp
     cq_ab, cq_bc, cq_ca = cq
     vm_a, vm_b, vm_c = [_PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:3]
@@ -678,7 +687,7 @@ end
 
 
 ""
-function constraint_tp_vm_ll(pm::_PMs.GenericPowerModel{T}, nw::Int, bus_id::Int, vm_ll_min::_PMs.MultiConductorVector, vm_ll_max::_PMs.MultiConductorVector) where T <: _PMs.AbstractACPForm
+function constraint_mc_vm_ll(pm::_PMs.AbstractACPModel, nw::Int, bus_id::Int, vm_ll_min::_PMs.MultiConductorVector, vm_ll_max::_PMs.MultiConductorVector)
     # 3 conductors asserted in template already
     vm_ln = [_PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
     va_ln = [_PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
@@ -710,7 +719,7 @@ And then
 s_a = v_a.conj(i_a) = v_a.conj(i_ab-i_ca)
 idem for s_b and s_c
 """
-function constraint_tp_load_impedance_delta(pm::_PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, cp::_PMs.MultiConductorVector, cq::_PMs.MultiConductorVector) where T <: _PMs.AbstractACPForm
+function constraint_mc_load_impedance_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, cp::_PMs.MultiConductorVector, cq::_PMs.MultiConductorVector)
     cp_ab, cp_bc, cp_ca = cp
     cq_ab, cq_bc, cq_ca = cq
     vm_a, vm_b, vm_c = [_PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:3]
@@ -751,7 +760,7 @@ end
 """
 exponential model in acp voltage coordinates
 """
-function constraint_tp_load_exponential_delta(pm::_PMs.GenericPowerModel{T}, nw::Int, load_id::Int, load_bus_id::Int, a, α, b, β) where T <: _PMs.AbstractACPForm
+function constraint_tp_load_exponential_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, a, α, b, β)
     nph = 3
 
     vm = [_PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:nph]
@@ -797,8 +806,8 @@ end
 
 
 "bus voltage on/off constraint for load shed problem"
-function constraint_tp_bus_voltage_on_off(pm::_PMs.GenericPowerModel{T}; nw::Int=pm.cnw, cnd::Int=pm.ccnd, kwargs...) where T <: _PMs.AbstractACPForm
+function constraint_mc_bus_voltage_on_off(pm::_PMs.AbstractACPModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, kwargs...)
     for (i,bus) in _PMs.ref(pm, nw, :bus)
-        constraint_tp_voltage_magnitude_on_off(pm, i; nw=nw, cnd=cnd)
+        constraint_mc_voltage_magnitude_on_off(pm, i; nw=nw, cnd=cnd)
     end
 end

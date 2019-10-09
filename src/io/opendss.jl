@@ -30,33 +30,6 @@ function _get_linecode(dss_data::Dict, id::AbstractString)
 end
 
 
-"creates a starbus from a 3-winding transformer"
-function _create_starbus(pmd_data::Dict, transformer::Dict)::Dict
-    starbus = Dict{String,Any}()
-
-    base = convert(Int, 10^ceil(log10(abs(_PMs.find_max_bus_id(pmd_data)))))
-    name, nodes = _parse_busname(transformer["buses"][1])
-    nconductors = pmd_data["conductors"]
-    starbus_id = _find_bus(name, pmd_data) + base
-
-    starbus["bus_i"] = starbus_id
-    starbus["base_kv"] = 1.0
-    starbus["vmin"] = _PMs.MultiConductorVector(_parse_array(0.9, nodes, nconductors, 0.9))
-    starbus["vmax"] = _PMs.MultiConductorVector(_parse_array(1.1, nodes, nconductors, 1.1))
-    starbus["name"] = "$(transformer["name"]) starbus"
-    starbus["vm"] = _PMs.MultiConductorVector(_parse_array(1.0, nodes, nconductors))
-    starbus["va"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
-    starbus["bus_type"] = 1
-    starbus["index"] = starbus_id
-
-    nodes = .+([_parse_busname(transformer["buses"][n])[2] for n in length(transformer["buses"])]...)
-    starbus["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-    starbus["source_id"] = "transformer.$(transformer["name"])"
-
-    return starbus
-end
-
-
 """
     _discover_buses(dss_data)
 
@@ -108,45 +81,64 @@ function _dss2pmd_bus!(pmd_data::Dict, dss_data::Dict, import_all::Bool=false, v
         pmd_data["bus"] = []
     end
 
+    nconductors = pmd_data["conductors"]
     buses = _discover_buses(dss_data)
-    circuit = _create_vsource(get(dss_data["circuit"][1], "bus1", "sourcebus"), dss_data["circuit"][1]["name"]; _to_sym_keys(dss_data["circuit"][1])...)
-    sourcebus = circuit["bus1"]
-
     for (n, (bus, nodes)) in enumerate(buses)
         busDict = Dict{String,Any}()
-
-        nconductors = pmd_data["conductors"]
-        ph1_ang = bus == sourcebus ? circuit["angle"] : 0.0
-        vm = bus == sourcebus ? circuit["pu"] : 1.0
-        vmi = bus == sourcebus ? circuit["pu"] - circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmin
-        vma = bus == sourcebus ? circuit["pu"] + circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"]) : vmax
 
         busDict["bus_i"] = n
         busDict["index"] = n
         busDict["name"] = bus
 
-        busDict["bus_type"] = bus == sourcebus ? 3 : 1
+        busDict["bus_type"] = 1
 
-        busDict["vm"] = _PMs.MultiConductorVector(_parse_array(vm, nodes, nconductors))
-        busDict["va"] = _PMs.MultiConductorVector(_parse_array([rad2deg(2*pi/nconductors*(i-1))+ph1_ang for i in 1:nconductors], nodes, nconductors))
+        busDict["vm"] = _PMs.MultiConductorVector(_parse_array(1.0, nodes, nconductors))
+        busDict["va"] = _PMs.MultiConductorVector(_parse_array([rad2deg(2*pi/nconductors*(i-1)) for i in 1:nconductors], nodes, nconductors))
 
-        busDict["vmin"] = _PMs.MultiConductorVector(_parse_array(vmi, nodes, nconductors, vmi))
-        busDict["vmax"] = _PMs.MultiConductorVector(_parse_array(vma, nodes, nconductors, vma))
+        busDict["vmin"] = _PMs.MultiConductorVector(_parse_array(vmin, nodes, nconductors, vmin))
+        busDict["vmax"] = _PMs.MultiConductorVector(_parse_array(vmax, nodes, nconductors, vmax))
 
         busDict["base_kv"] = pmd_data["basekv"]
 
         push!(pmd_data["bus"], busDict)
     end
+
+    # create virtual sourcebus
+    circuit = _create_vsource(get(dss_data["circuit"][1], "bus1", "sourcebus"), dss_data["circuit"][1]["name"]; _to_sym_keys(dss_data["circuit"][1])...)
+
+    busDict = Dict{String,Any}()
+
+    nodes = Array{Bool}([1 1 1 0])
+    ph1_ang = circuit["angle"]
+    vm = circuit["pu"]
+    vmi = circuit["pu"] - circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"])
+    vma = circuit["pu"] + circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"])
+
+    busDict["bus_i"] = length(pmd_data["bus"])+1
+    busDict["index"] = length(pmd_data["bus"])+1
+    busDict["name"] = "virtual_sourcebus"
+
+    busDict["bus_type"] = 3
+
+    busDict["vm"] = _PMs.MultiConductorVector(_parse_array(vm, nodes, nconductors))
+    busDict["va"] = _PMs.MultiConductorVector(_parse_array([rad2deg(2*pi/nconductors*(i-1))+ph1_ang for i in 1:nconductors], nodes, nconductors))
+
+    busDict["vmin"] = _PMs.MultiConductorVector(_parse_array(vmi, nodes, nconductors, vmi))
+    busDict["vmax"] = _PMs.MultiConductorVector(_parse_array(vma, nodes, nconductors, vma))
+
+    busDict["base_kv"] = pmd_data["basekv"]
+
+    push!(pmd_data["bus"], busDict)
 end
 
 
 """
-    _find_component(pmd_data, name, compType)
+    find_component(pmd_data, name, compType)
 
 Returns the component of `compType` with `name` from `data` of type
 Dict{String,Array}.
 """
-function _find_component(data::Dict, name::AbstractString, compType::AbstractString)::Dict
+function find_component(data::Dict, name::AbstractString, compType::AbstractString)::Dict
     for comp in values(data[compType])
         if comp["name"] == name
             return comp
@@ -158,12 +150,12 @@ end
 
 
 """
-    _find_bus(busname, pmd_data)
+    find_bus(busname, pmd_data)
 
 Finds the index number of the bus in existing data from the given `busname`.
 """
-function _find_bus(busname::AbstractString, pmd_data::Dict)
-    bus = _find_component(pmd_data, busname, "bus")
+function find_bus(busname::AbstractString, pmd_data::Dict)
+    bus = find_component(pmd_data, busname, "bus")
     if haskey(bus, "bus_i")
         return bus["bus_i"]
     else
@@ -182,152 +174,147 @@ function _dss2pmd_load!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         pmd_data["load"] = []
     end
 
-    if haskey(dss_data, "load")
-        for load in dss_data["load"]
-            if haskey(load, "like")
-                load = merge(_find_component(dss_data, load["like"], "load"), load)
+    for load in get(dss_data, "load", [])
+        _apply_like!(load, dss_data, "load")
+        defaults = _apply_ordered_properties(_create_load(load["bus1"], load["name"]; _to_sym_keys(load)...), load)
+
+        loadDict = Dict{String,Any}()
+
+        nconductors = pmd_data["conductors"]
+        name, nodes = _parse_busname(defaults["bus1"])
+
+        kv = defaults["kv"]
+
+        expected_kv = pmd_data["basekv"] / sqrt(pmd_data["conductors"])
+        if !isapprox(kv, expected_kv; atol=expected_kv * 0.01)
+            Memento.warn(_LOGGER, "Load has kv=$kv, not the expected kv=$(expected_kv). Results may not match OpenDSS")
+        end
+
+        loadDict["name"] = defaults["name"]
+        loadDict["load_bus"] = find_bus(name, pmd_data)
+
+        load_name = defaults["name"]
+
+        cnds = [1, 2, 3, 0][nodes[1,:]]
+        loadDict["conn"] = defaults["conn"]
+        nph = defaults["phases"]
+        delta_map = Dict([1,2]=>1, [2,3]=>2, [1,3]=>3)
+        if nph==1
+            # PMD convention is to specify the voltage across the load
+            # this what OpenDSS does for 1-phase loads only
+            loadDict["vnom_kv"] = kv
+            # default is to connect betwheen L1 and N
+            cnds = (isempty(cnds)) ? [1, 0] : cnds
+            # if only one connection specified, implicitly connected to N
+            # bus1=x.c == bus1=x.c.0
+            if length(cnds)==1
+                cnds = [cnds..., 0]
             end
-
-            defaults = _create_load(load["bus1"], load["name"]; _to_sym_keys(load)...)
-
-            loadDict = Dict{String,Any}()
-
-            nconductors = pmd_data["conductors"]
-            name, nodes = _parse_busname(defaults["bus1"])
-
-            kv = defaults["kv"]
-
-            expected_kv = pmd_data["basekv"] / sqrt(pmd_data["conductors"])
-            if !isapprox(kv, expected_kv; atol=expected_kv * 0.01)
-                Memento.warn(_LOGGER, "Load has kv=$kv, not the expected kv=$(expected_kv). Results may not match OpenDSS")
+            # if more than two, only first two are considered
+            if length(cnds)>2
+                # this no longer works if order is not preserved
+                # throw an error instead of behaving like OpenDSS
+                # cnds = cnds[1:2]
+                Memento.error(_LOGGER, "A 1-phase load cannot specify more than two terminals.")
             end
-
-            loadDict["name"] = defaults["name"]
-            loadDict["load_bus"] = _find_bus(name, pmd_data)
-
-            load_name = defaults["name"]
-
-            cnds = [1, 2, 3, 0][nodes[1,:]]
-            loadDict["conn"] = defaults["conn"]
-            nph = defaults["phases"]
-            delta_map = Dict([1,2]=>1, [2,3]=>2, [1,3]=>3)
-            if nph==1
-                # PMD convention is to specify the voltage across the load
-                # this what OpenDSS does for 1-phase loads only
+            # conn property has no effect
+            # delta/wye is determined by whether load connected to ground
+            # or between two phases
+            if cnds==[0, 0]
+                pqd_premul = zeros(3)
+            elseif cnds[2]==0 || cnds[1]==0
+                # this is a wye load in the PMD sense
+                loadDict["conn"] = "wye"
+                ph = (cnds[2]==0) ? cnds[1] : cnds[2]
+                pqd_premul = zeros(3)
+                pqd_premul[ph] = 1
+            else
+                # this is a delta load in the PMD sense
+                loadDict["conn"] = "delta"
+                pqd_premul = zeros(3)
+                pqd_premul[delta_map[cnds]] = 1
+            end
+        elseif nph==2
+            # there are some extremely weird edge cases for this
+            # the user can enter weird stuff and OpenDSS will still show some result
+            # for example, take
+            # nphases=3 bus1=x.1.2.0
+            # this looks like a combination of a single-phase PMD delta and wye load
+            # so throw an error and ask to reformulate as single and three phase loads
+            Memento.error(_LOGGER, "Two-phase loads (nphases=2) are not supported, as these lead to unexpected behaviour. Reformulate this load as a combination of single-phase loads.")
+        elseif nph==3
+            # for 2 and 3 phase windings, kv is always in LL, also for wye
+            # whilst PMD model uses actual voltage across load; so LN for wye
+            if loadDict["conn"]=="wye"
+                loadDict["vnom_kv"] = kv/sqrt(3)
+            else
                 loadDict["vnom_kv"] = kv
-                # default is to connect betwheen L1 and N
-                cnds = (isempty(cnds)) ? [1, 0] : cnds
-                # if only one connection specified, implicitly connected to N
-                # bus1=x.c == bus1=x.c.0
-                if length(cnds)==1
-                    cnds = [cnds..., 0]
-                end
-                # if more than two, only first two are considered
-                if length(cnds)>2
-                    # this no longer works if order is not preserved
-                    # throw an error instead of behaving like OpenDSS
-                    # cnds = cnds[1:2]
-                    Memento.error(_LOGGER, "A 1-phase load cannot specify more than two terminals.")
-                end
-                # conn property has no effect
-                # delta/wye is determined by whether load connected to ground
-                # or between two phases
-                if cnds==[0, 0]
-                    pqd_premul = zeros(3)
-                elseif cnds[2]==0 || cnds[1]==0
-                    # this is a wye load in the PMD sense
-                    loadDict["conn"] = "wye"
-                    ph = (cnds[2]==0) ? cnds[1] : cnds[2]
-                    pqd_premul = zeros(3)
-                    pqd_premul[ph] = 1
-                else
-                    # this is a delta load in the PMD sense
-                    loadDict["conn"] = "delta"
-                    pqd_premul = zeros(3)
-                    pqd_premul[delta_map[cnds]] = 1
-                end
-            elseif nph==2
-                # there are some extremely weird edge cases for this
-                # the user can enter weird stuff and OpenDSS will still show some result
-                # for example, take
-                # nphases=3 bus1=x.1.2.0
-                # this looks like a combination of a single-phase PMD delta and wye load
-                # so throw an error and ask to reformulate as single and three phase loads
-                Memento.error(_LOGGER, "Two-phase loads (nphases=2) are not supported, as these lead to unexpected behaviour. Reformulate this load as a combination of single-phase loads.")
-            elseif nph==3
-                # for 2 and 3 phase windings, kv is always in LL, also for wye
-                # whilst PMD model uses actual voltage across load; so LN for wye
-                if loadDict["conn"]=="wye"
-                    loadDict["vnom_kv"] = kv/sqrt(3)
-                else
-                    loadDict["vnom_kv"] = kv
-                end
-                if cnds==[]
+            end
+            if cnds==[]
+                pqd_premul = [1/3, 1/3, 1/3]
+            else
+                if (length(cnds)==3 || length(cnds)==4) && cnds==unique(cnds)
+                #variations of [1, 2, 3] and [1, 2, 3, 0]
                     pqd_premul = [1/3, 1/3, 1/3]
                 else
-                    if (length(cnds)==3 || length(cnds)==4) && cnds==unique(cnds)
-                    #variations of [1, 2, 3] and [1, 2, 3, 0]
-                        pqd_premul = [1/3, 1/3, 1/3]
-                    else
-                        Memento.error(_LOGGER, "Specified connections for three-phase load $name not allowed.")
-                    end
+                    Memento.error(_LOGGER, "Specified connections for three-phase load $name not allowed.")
                 end
-            else
-                Memento.error(_LOGGER, "For a load, nphases should be in [1,3].")
             end
-            loadDict["pd"] = _PMs.MultiConductorVector(pqd_premul.*defaults["kw"]./1e3)
-            loadDict["qd"] = _PMs.MultiConductorVector(pqd_premul.*defaults["kvar"]./1e3)
-
-            # parse the model
-            model = defaults["model"]
-            # some info on OpenDSS load models
-            ##################################
-            # Constant can still be scaled by other settings, fixed cannot
-            # Note that in the current feature set, fixed therefore equals constant
-            # 1: Constant P and Q, default
-            if model == 2
-            # 2: Constant Z
-            elseif model == 3
-            # 3: Constant P and quadratic Q
-                Memento.warn(_LOGGER, "$load_name: load model 3 not supported. Treating as model 1.")
-                model = 1
-            elseif model == 4
-            # 4: Exponential
-                Memento.warn(_LOGGER, "$load_name: load model 4 not supported. Treating as model 1.")
-                model = 1
-            elseif model == 5
-            # 5: Constant I
-                #warn(_LOGGER, "$name: load model 5 not supported. Treating as model 1.")
-                #model = 1
-            elseif model == 6
-            # 6: Constant P and fixed Q
-                Memento.warn(_LOGGER, "$load_name: load model 6 identical to model 1 in current feature set. Treating as model 1.")
-                model = 1
-            elseif model == 7
-            # 7: Constant P and quadratic Q (i.e., fixed reactance)
-                Memento.warn(_LOGGER, "$load_name: load model 7 not supported. Treating as model 1.")
-                model = 1
-            elseif model == 8
-            # 8: ZIP
-                Memento.warn(_LOGGER, "$load_name: load model 8 not supported. Treating as model 1.")
-                model = 1
-            end
-            # save adjusted model type to dict, human-readable
-            model_int2str = Dict(1=>"constant_power", 2=>"constant_impedance", 5=>"constant_current")
-            loadDict["model"] = model_int2str[model]
-
-            loadDict["status"] = convert(Int, defaults["enabled"])
-
-            loadDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-            loadDict["source_id"] = "load.$load_name"
-
-            loadDict["index"] = length(pmd_data["load"]) + 1
-
-            used = ["phases", "bus1", "name"]
-            _PMs._import_remaining!(loadDict, defaults, import_all; exclude=used)
-
-            push!(pmd_data["load"], loadDict)
+        else
+            Memento.error(_LOGGER, "For a load, nphases should be in [1,3].")
         end
+        loadDict["pd"] = _PMs.MultiConductorVector(pqd_premul.*defaults["kw"]./1e3)
+        loadDict["qd"] = _PMs.MultiConductorVector(pqd_premul.*defaults["kvar"]./1e3)
+
+        # parse the model
+        model = defaults["model"]
+        # some info on OpenDSS load models
+        ##################################
+        # Constant can still be scaled by other settings, fixed cannot
+        # Note that in the current feature set, fixed therefore equals constant
+        # 1: Constant P and Q, default
+        if model == 2
+        # 2: Constant Z
+        elseif model == 3
+        # 3: Constant P and quadratic Q
+            Memento.warn(_LOGGER, "$load_name: load model 3 not supported. Treating as model 1.")
+            model = 1
+        elseif model == 4
+        # 4: Exponential
+            Memento.warn(_LOGGER, "$load_name: load model 4 not supported. Treating as model 1.")
+            model = 1
+        elseif model == 5
+        # 5: Constant I
+            #warn(_LOGGER, "$name: load model 5 not supported. Treating as model 1.")
+            #model = 1
+        elseif model == 6
+        # 6: Constant P and fixed Q
+            Memento.warn(_LOGGER, "$load_name: load model 6 identical to model 1 in current feature set. Treating as model 1.")
+            model = 1
+        elseif model == 7
+        # 7: Constant P and quadratic Q (i.e., fixed reactance)
+            Memento.warn(_LOGGER, "$load_name: load model 7 not supported. Treating as model 1.")
+            model = 1
+        elseif model == 8
+        # 8: ZIP
+            Memento.warn(_LOGGER, "$load_name: load model 8 not supported. Treating as model 1.")
+            model = 1
+        end
+        # save adjusted model type to dict, human-readable
+        model_int2str = Dict(1=>"constant_power", 2=>"constant_impedance", 5=>"constant_current")
+        loadDict["model"] = model_int2str[model]
+
+        loadDict["status"] = convert(Int, defaults["enabled"])
+
+        loadDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+        loadDict["source_id"] = "load.$load_name"
+
+        loadDict["index"] = length(pmd_data["load"]) + 1
+
+        used = ["phases", "bus1", "name"]
+        _PMs._import_remaining!(loadDict, defaults, import_all; exclude=used)
+
+        push!(pmd_data["load"], loadDict)
     end
 end
 
@@ -342,83 +329,73 @@ function _dss2pmd_shunt!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         pmd_data["shunt"] = []
     end
 
-    if haskey(dss_data, "capacitor")
-        for shunt in dss_data["capacitor"]
-            if haskey(shunt, "like")
-                shunt = merge(_find_component(dss_data, shunt["like"], "capacitor"), shunt)
-            end
+    for shunt in get(dss_data, "capacitor", [])
+        _apply_like!(shunt, dss_data, "capacitor")
+        defaults = _apply_ordered_properties(_create_capacitor(shunt["bus1"], shunt["name"]; _to_sym_keys(shunt)...), shunt)
 
-            defaults = _create_capacitor(shunt["bus1"], shunt["name"]; _to_sym_keys(shunt)...)
+        shuntDict = Dict{String,Any}()
+
+        nconductors = pmd_data["conductors"]
+        name, nodes = _parse_busname(defaults["bus1"])
+
+        vnom_ln = defaults["kv"]
+        # 'kv' is specified as phase-to-phase for phases=2/3 (unsure for 4 and more)
+        if defaults["phases"] > 1
+            vnom_ln = vnom_ln/sqrt(3)
+        end
+        # 'kvar' is specified for all phases at once; we want the per-phase one, in MVar
+        qnom = (defaults["kvar"]/1E3)/defaults["phases"]
+        b_cap = qnom/vnom_ln^2
+        #  get the base addmittance, with a LN voltage base
+        Sbase = 1 # not yet pmd_data["baseMVA"] because this is done in _PMs.make_per_unit
+        Ybase_ln = Sbase/(pmd_data["basekv"]/sqrt(3))^2
+        # now convent b_cap to per unit
+        b_cap_pu = b_cap/Ybase_ln
+
+        shuntDict["shunt_bus"] = find_bus(name, pmd_data)
+        shuntDict["name"] = defaults["name"]
+        shuntDict["gs"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))  # TODO:
+        shuntDict["bs"] = _PMs.MultiConductorVector(_parse_array(b_cap_pu, nodes, nconductors))
+        shuntDict["status"] = convert(Int, defaults["enabled"])
+        shuntDict["index"] = length(pmd_data["shunt"]) + 1
+
+        shuntDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+        shuntDict["source_id"] = "capacitor.$(defaults["name"])"
+
+        used = ["bus1", "phases", "name"]
+        _PMs._import_remaining!(shuntDict, defaults, import_all; exclude=used)
+
+        push!(pmd_data["shunt"], shuntDict)
+    end
+
+
+    for shunt in get(dss_data, "reactor", [])
+        if !haskey(shunt, "bus2")
+            _apply_like!(shunt, dss_data, "reactor")
+            defaults = _apply_ordered_properties(_create_reactor(shunt["bus1"], shunt["name"]; _to_sym_keys(shunt)...), shunt)
 
             shuntDict = Dict{String,Any}()
 
             nconductors = pmd_data["conductors"]
             name, nodes = _parse_busname(defaults["bus1"])
 
-            vnom_ln = defaults["kv"]
-            # 'kv' is specified as phase-to-phase for phases=2/3 (unsure for 4 and more)
-            if defaults["phases"] > 1
-                vnom_ln = vnom_ln/sqrt(3)
-            end
-            # 'kvar' is specified for all phases at once; we want the per-phase one, in MVar
-            qnom = (defaults["kvar"]/1E3)/defaults["phases"]
-            b_cap = qnom/vnom_ln^2
-            #  get the base addmittance, with a LN voltage base
-            Sbase = 1 # not yet pmd_data["baseMVA"] because this is done in _PMs.make_per_unit
-            Ybase_ln = Sbase/(pmd_data["basekv"]/sqrt(3))^2
-            # now convent b_cap to per unit
-            b_cap_pu = b_cap/Ybase_ln
+            Zbase = (pmd_data["basekv"] / sqrt(3.0))^2 * nconductors / pmd_data["baseMVA"]  # Use single-phase base impedance for each phase
+            Gcap = Zbase * sum(defaults["kvar"]) / (nconductors * 1e3 * (pmd_data["basekv"] / sqrt(3.0))^2)
 
-            shuntDict["shunt_bus"] = _find_bus(name, pmd_data)
+            shuntDict["shunt_bus"] = find_bus(name, pmd_data)
             shuntDict["name"] = defaults["name"]
             shuntDict["gs"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))  # TODO:
-            shuntDict["bs"] = _PMs.MultiConductorVector(_parse_array(b_cap_pu, nodes, nconductors))
+            shuntDict["bs"] = _PMs.MultiConductorVector(_parse_array(Gcap, nodes, nconductors))
             shuntDict["status"] = convert(Int, defaults["enabled"])
             shuntDict["index"] = length(pmd_data["shunt"]) + 1
 
             shuntDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-            shuntDict["source_id"] = "capacitor.$(defaults["name"])"
+            shuntDict["source_id"] = "reactor.$(defaults["name"])"
 
             used = ["bus1", "phases", "name"]
             _PMs._import_remaining!(shuntDict, defaults, import_all; exclude=used)
 
             push!(pmd_data["shunt"], shuntDict)
-        end
-    end
-
-
-    if haskey(dss_data, "reactor")
-        for shunt in dss_data["reactor"]
-            if !haskey(shunt, "bus2")
-                if haskey(shunt, "like")
-                    shunt = merge(_find_component(dss_data, shunt["like"], "reactor"), shunt)
-                end
-
-                defaults = _create_reactor(shunt["bus1"], shunt["name"]; _to_sym_keys(shunt)...)
-
-                shuntDict = Dict{String,Any}()
-
-                nconductors = pmd_data["conductors"]
-                name, nodes = _parse_busname(defaults["bus1"])
-
-                Zbase = (pmd_data["basekv"] / sqrt(3.0))^2 * nconductors / pmd_data["baseMVA"]  # Use single-phase base impedance for each phase
-                Gcap = Zbase * sum(defaults["kvar"]) / (nconductors * 1e3 * (pmd_data["basekv"] / sqrt(3.0))^2)
-
-                shuntDict["shunt_bus"] = _find_bus(name, pmd_data)
-                shuntDict["name"] = defaults["name"]
-                shuntDict["gs"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))  # TODO:
-                shuntDict["bs"] = _PMs.MultiConductorVector(_parse_array(Gcap, nodes, nconductors))
-                shuntDict["status"] = convert(Int, defaults["enabled"])
-                shuntDict["index"] = length(pmd_data["shunt"]) + 1
-
-                shuntDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-                shuntDict["source_id"] = "reactor.$(defaults["name"])"
-
-                used = ["bus1", "phases", "name"]
-                _PMs._import_remaining!(shuntDict, defaults, import_all; exclude=used)
-
-                push!(pmd_data["shunt"], shuntDict)
-            end
         end
     end
 end
@@ -436,14 +413,14 @@ function _dss2pmd_gen!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
     # sourcebus generator (created by circuit)
     circuit = dss_data["circuit"][1]
-    defaults = _create_vsource(get(circuit, "bus1", "sourcebus"), "sourcebus"; _to_sym_keys(circuit)...)
+    defaults = _create_vsource(get(circuit, "bus1", "sourcebus"), "sourcegen"; _to_sym_keys(circuit)...)
 
     genDict = Dict{String,Any}()
 
     nconductors = pmd_data["conductors"]
     name, nodes = _parse_busname(defaults["bus1"])
 
-    genDict["gen_bus"] = _find_bus(name, pmd_data)
+    genDict["gen_bus"] = find_bus("virtual_sourcebus", pmd_data)
     genDict["name"] = defaults["name"]
     genDict["gen_status"] = convert(Int, defaults["enabled"])
 
@@ -474,120 +451,110 @@ function _dss2pmd_gen!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
     push!(pmd_data["gen"], genDict)
 
 
-    if haskey(dss_data, "generator")
-        for gen in dss_data["generator"]
-            if haskey(gen, "like")
-                gen = merge(_find_component(dss_data, gen["like"], "generator"), gen)
-            end
+    for gen in get(dss_data, "generator", [])
+        _apply_like!(gen, dss_data, "generator")
+        defaults = _apply_ordered_properties(_create_generator(gen["bus1"], gen["name"]; _to_sym_keys(gen)...), gen)
 
-            defaults = _create_generator(gen["bus1"], gen["name"]; _to_sym_keys(gen)...)
+        genDict = Dict{String,Any}()
 
-            genDict = Dict{String,Any}()
+        nconductors = pmd_data["conductors"]
+        name, nodes = _parse_busname(defaults["bus1"])
 
-            nconductors = pmd_data["conductors"]
-            name, nodes = _parse_busname(defaults["bus1"])
+        genDict["gen_bus"] = find_bus(name, pmd_data)
+        genDict["name"] = defaults["name"]
+        genDict["gen_status"] = convert(Int, defaults["enabled"])
+        genDict["pg"] = _PMs.MultiConductorVector(_parse_array(defaults["kw"] / (1e3 * nconductors), nodes, nconductors))
+        genDict["qg"] = _PMs.MultiConductorVector(_parse_array(defaults["kvar"] / (1e3 * nconductors), nodes, nconductors))
+        genDict["vg"] = _PMs.MultiConductorVector(_parse_array(defaults["kv"] / pmd_data["basekv"], nodes, nconductors))
 
-            genDict["gen_bus"] = _find_bus(name, pmd_data)
-            genDict["name"] = defaults["name"]
-            genDict["gen_status"] = convert(Int, defaults["enabled"])
-            genDict["pg"] = _PMs.MultiConductorVector(_parse_array(defaults["kw"] / (1e3 * nconductors), nodes, nconductors))
-            genDict["qg"] = _PMs.MultiConductorVector(_parse_array(defaults["kvar"] / (1e3 * nconductors), nodes, nconductors))
-            genDict["vg"] = _PMs.MultiConductorVector(_parse_array(defaults["kv"] / pmd_data["basekv"], nodes, nconductors))
+        genDict["qmin"] = _PMs.MultiConductorVector(_parse_array(defaults["minkvar"] / (1e3 * nconductors), nodes, nconductors))
+        genDict["qmax"] = _PMs.MultiConductorVector(_parse_array(defaults["maxkvar"] / (1e3 * nconductors), nodes, nconductors))
 
-            genDict["qmin"] = _PMs.MultiConductorVector(_parse_array(defaults["minkvar"] / (1e3 * nconductors), nodes, nconductors))
-            genDict["qmax"] = _PMs.MultiConductorVector(_parse_array(defaults["maxkvar"] / (1e3 * nconductors), nodes, nconductors))
+        genDict["apf"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
 
-            genDict["apf"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
+        genDict["pmax"] = genDict["pg"]  # Assumes generator is at rated power
+        genDict["pmin"] = 0.0 * genDict["pg"]  # 0% of pmax
 
-            genDict["pmax"] = genDict["pg"]  # Assumes generator is at rated power
-            genDict["pmin"] = 0.0 * genDict["pg"]  # 0% of pmax
+        genDict["pc1"] = genDict["pmax"]
+        genDict["pc2"] = genDict["pmin"]
+        genDict["qc1min"] = genDict["qmin"]
+        genDict["qc1max"] = genDict["qmax"]
+        genDict["qc2min"] = genDict["qmin"]
+        genDict["qc2max"] = genDict["qmax"]
 
-            genDict["pc1"] = genDict["pmax"]
-            genDict["pc2"] = genDict["pmin"]
-            genDict["qc1min"] = genDict["qmin"]
-            genDict["qc1max"] = genDict["qmax"]
-            genDict["qc2min"] = genDict["qmin"]
-            genDict["qc2max"] = genDict["qmax"]
+        # For distributed generation ramp rates are not usually an issue
+        # and they are not supported in OpenDSS
+        genDict["ramp_agc"] = genDict["pmax"]
 
-            # For distributed generation ramp rates are not usually an issue
-            # and they are not supported in OpenDSS
-            genDict["ramp_agc"] = genDict["pmax"]
+        genDict["ramp_q"] = _PMs.MultiConductorVector(_parse_array(max.(abs.(genDict["qmin"].values), abs.(genDict["qmax"].values)), nodes, nconductors))
+        genDict["ramp_10"] = genDict["pmax"]
+        genDict["ramp_30"] = genDict["pmax"]
 
-            genDict["ramp_q"] = _PMs.MultiConductorVector(_parse_array(max.(abs.(genDict["qmin"].values), abs.(genDict["qmax"].values)), nodes, nconductors))
-            genDict["ramp_10"] = genDict["pmax"]
-            genDict["ramp_30"] = genDict["pmax"]
+        genDict["control_model"] = defaults["model"]
 
-            genDict["control_model"] = defaults["model"]
-
-            # if PV generator mode convert attached bus to PV bus
-            if genDict["control_model"] == 3
-                pmd_data["bus"][genDict["gen_bus"]]["bus_type"] = 2
-            end
-
-            genDict["model"] = 2
-            genDict["startup"] = 0.0
-            genDict["shutdown"] = 0.0
-            genDict["ncost"] = 3
-            genDict["cost"] = [0.0, 1.0, 0.0]
-
-            genDict["index"] = length(pmd_data["gen"]) + 1
-
-            genDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-            genDict["source_id"] = "generator.$(defaults["name"])"
-
-            used = ["name", "phases", "bus1"]
-            _PMs._import_remaining!(genDict, defaults, import_all; exclude=used)
-
-            push!(pmd_data["gen"], genDict)
+        # if PV generator mode convert attached bus to PV bus
+        if genDict["control_model"] == 3
+            pmd_data["bus"][genDict["gen_bus"]]["bus_type"] = 2
         end
+
+        genDict["model"] = 2
+        genDict["startup"] = 0.0
+        genDict["shutdown"] = 0.0
+        genDict["ncost"] = 3
+        genDict["cost"] = [0.0, 1.0, 0.0]
+
+        genDict["index"] = length(pmd_data["gen"]) + 1
+
+        genDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+        genDict["source_id"] = "generator.$(defaults["name"])"
+
+        used = ["name", "phases", "bus1"]
+        _PMs._import_remaining!(genDict, defaults, import_all; exclude=used)
+
+        push!(pmd_data["gen"], genDict)
     end
 
-    if haskey(dss_data, "pvsystem")
-        for pv in dss_data["pvsystem"]
-            Memento.warn(_LOGGER, "Converting PVSystem \"$(pv["name"])\" into generator with limits determined by OpenDSS property 'kVA'")
+    for pv in get(dss_data, "pvsystem", [])
+        Memento.warn(_LOGGER, "Converting PVSystem \"$(pv["name"])\" into generator with limits determined by OpenDSS property 'kVA'")
 
-            if haskey(pv, "like")
-                pv = merge(_find_component(dss_data, pv["like"], "pvsystem"), pv)
-            end
+        _apply_like!(pv, dss_data, "pvsystem")
+        defaults = _apply_ordered_properties(_create_pvsystem(pv["bus1"], pv["name"]; _to_sym_keys(pv)...), pv)
 
-            defaults = _create_pvsystem(pv["bus1"], pv["name"]; _to_sym_keys(pv)...)
+        pvDict = Dict{String,Any}()
 
-            pvDict = Dict{String,Any}()
+        nconductors = pmd_data["conductors"]
+        name, nodes = _parse_busname(defaults["bus1"])
 
-            nconductors = pmd_data["conductors"]
-            name, nodes = _parse_busname(defaults["bus1"])
+        pvDict["name"] = defaults["name"]
+        pvDict["gen_bus"] = find_bus(name, pmd_data)
 
-            pvDict["name"] = defaults["name"]
-            pvDict["gen_bus"] = _find_bus(name, pmd_data)
+        pvDict["pg"] = _PMs.MultiConductorVector(_parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
+        pvDict["qg"] = _PMs.MultiConductorVector(_parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
+        pvDict["vg"] = _PMs.MultiConductorVector(_parse_array(defaults["kv"] / pmd_data["basekv"], nodes, nconductors))
 
-            pvDict["pg"] = _PMs.MultiConductorVector(_parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
-            pvDict["qg"] = _PMs.MultiConductorVector(_parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
-            pvDict["vg"] = _PMs.MultiConductorVector(_parse_array(defaults["kv"] / pmd_data["basekv"], nodes, nconductors))
+        pvDict["pmin"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
+        pvDict["pmax"] = _PMs.MultiConductorVector(_parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
 
-            pvDict["pmin"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
-            pvDict["pmax"] = _PMs.MultiConductorVector(_parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
+        pvDict["qmin"] = -_PMs.MultiConductorVector(_parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
+        pvDict["qmax"] =  _PMs.MultiConductorVector(_parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
 
-            pvDict["qmin"] = -_PMs.MultiConductorVector(_parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
-            pvDict["qmax"] =  _PMs.MultiConductorVector(_parse_array(defaults["kva"] / (1e3 * nconductors), nodes, nconductors))
+        pvDict["gen_status"] = convert(Int, defaults["enabled"])
 
-            pvDict["gen_status"] = convert(Int, defaults["enabled"])
+        pvDict["model"] = 2
+        pvDict["startup"] = 0.0
+        pvDict["shutdown"] = 0.0
+        pvDict["ncost"] = 3
+        pvDict["cost"] = [0.0, 1.0, 0.0]
 
-            pvDict["model"] = 2
-            pvDict["startup"] = 0.0
-            pvDict["shutdown"] = 0.0
-            pvDict["ncost"] = 3
-            pvDict["cost"] = [0.0, 1.0, 0.0]
+        pvDict["index"] = length(pmd_data["gen"]) + 1
 
-            pvDict["index"] = length(pmd_data["gen"]) + 1
+        pvDict["active_phases"] = [nodes[n] > 0 ? 1 : 0 for n in 1:nconductors]
+        pvDict["source_id"] = "pvsystem.$(defaults["name"])"
 
-            pvDict["active_phases"] = [nodes[n] > 0 ? 1 : 0 for n in 1:nconductors]
-            pvDict["source_id"] = "pvsystem.$(defaults["name"])"
+        used = ["name", "phases", "bus1"]
+        _PMs._import_remaining!(pvDict, defaults, import_all; exclude=used)
 
-            used = ["name", "phases", "bus1"]
-            _PMs._import_remaining!(pvDict, defaults, import_all; exclude=used)
-
-            push!(pmd_data["gen"], pvDict)
-        end
+        push!(pmd_data["gen"], pvDict)
     end
 end
 
@@ -602,101 +569,101 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         pmd_data["branch"] = []
     end
 
+    nconductors = pmd_data["conductors"]
 
-    if haskey(dss_data, "line")
-        for line in dss_data["line"]
-            if haskey(line, "like")
-                line = merge(_find_component(dss_data, line["like"], "line"), line)
+    for line in get(dss_data, "line", [])
+        _apply_like!(line, dss_data, "line")
+
+        if haskey(line, "linecode")
+            linecode = deepcopy(_get_linecode(dss_data, get(line, "linecode", "")))
+            if haskey(linecode, "like")
+                linecode = merge(find_component(dss_data, linecode["like"], "linecode"), linecode)
             end
 
-            if haskey(line, "linecode")
-                linecode = deepcopy(_get_linecode(dss_data, get(line, "linecode", "")))
-                if haskey(linecode, "like")
-                    linecode = merge(_find_component(dss_data, linecode["like"], "linecode"), linecode)
-                end
+            linecode["units"] = get(line, "units", "none") == "none" ? "none" : get(linecode, "units", "none")
+            linecode["circuit_basefreq"] = pmd_data["basefreq"]
 
-                linecode["units"] = get(line, "units", "none") == "none" ? "none" : get(linecode, "units", "none")
-
-                linecode = _create_linecode(get(linecode, "name", ""); _to_sym_keys(linecode)...)
-                delete!(linecode, "name")
-            else
-                linecode = Dict{String,Any}()
-            end
-
-            if haskey(line, "basefreq") && line["basefreq"] != pmd_data["basefreq"]
-                Memento.warn(_LOGGER, "basefreq=$(line["basefreq"]) on line $(line["name"]) does not match circuit basefreq=$(pmd_data["basefreq"])")
-                line["freq"] = deepcopy(line["basefreq"])
-                line["basefreq"] = deepcopy(pmd_data["basefreq"])
-            end
-
-            defaults = _create_line(line["bus1"], line["bus2"], line["name"]; _to_sym_keys(line)...)
-            merge!(defaults, linecode)
-
-            bf, nodes = _parse_busname(defaults["bus1"])
-            bt = _parse_busname(defaults["bus2"])[1]
-
-            branchDict = Dict{String,Any}()
-
-            nconductors = pmd_data["conductors"]
-
-            branchDict["name"] = defaults["name"]
-
-            branchDict["f_bus"] = _find_bus(bf, pmd_data)
-            branchDict["t_bus"] = _find_bus(bt, pmd_data)
-
-            branchDict["length"] = defaults["length"]
-
-            rmatrix = _parse_matrix(defaults["rmatrix"], nodes, nconductors)
-            xmatrix = _parse_matrix(defaults["xmatrix"], nodes, nconductors)
-            cmatrix = _parse_matrix(defaults["cmatrix"], nodes, nconductors)
-            Zbase = (pmd_data["basekv"] / sqrt(3))^2 * nconductors / (pmd_data["baseMVA"])
-
-            Zbase = Zbase/3
-            # The factor 3 here is needed to convert from a voltage base
-            # in line-to-line (LL) to a voltage base in line-to-neutral (LN).
-            # V_LL = √3*V_LN
-            # Zbase_new = Zbase_old*(Vbase_new/Vbase_old)^2 = Zbase_old*(1/√3)^2
-            # In the parser, LL voltage base is used for per unit conversion.
-            # However, in the mathematical model, the voltage magnitude per phase
-            # is fixed at 1. So implicitly, we later on state that the voltage base
-            # is actually in LN. We compensate here for that.
-
-            branchDict["br_r"] = _PMs.MultiConductorMatrix(rmatrix * defaults["length"] / Zbase)
-            branchDict["br_x"] = _PMs.MultiConductorMatrix(xmatrix * defaults["length"] / Zbase)
-
-            branchDict["g_fr"] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>_parse_array(0.0, nodes, nconductors)))
-            branchDict["g_to"] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>_parse_array(0.0, nodes, nconductors)))
-
-            branchDict["b_fr"] = _PMs.MultiConductorMatrix(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0)
-            branchDict["b_to"] = _PMs.MultiConductorMatrix(Zbase * (2.0 * pi * defaults["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0)
-
-            # TODO: pick a better value for emergamps
-            branchDict["rate_a"] = _PMs.MultiConductorVector(_parse_array(defaults["normamps"], nodes, nconductors))
-            branchDict["rate_b"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
-            branchDict["rate_c"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
-
-            branchDict["tap"] = _PMs.MultiConductorVector(_parse_array(1.0, nodes, nconductors, 1.0))
-            branchDict["shift"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
-
-            branchDict["br_status"] = convert(Int, defaults["enabled"])
-
-            branchDict["angmin"] = _PMs.MultiConductorVector(_parse_array(-60.0, nodes, nconductors, -60.0))
-            branchDict["angmax"] = _PMs.MultiConductorVector(_parse_array( 60.0, nodes, nconductors,  60.0))
-
-            branchDict["transformer"] = false
-            branchDict["switch"] = defaults["switch"]
-
-            branchDict["index"] = length(pmd_data["branch"]) + 1
-
-            nodes = .+([_parse_busname(defaults[n])[2] for n in ["bus1", "bus2"]]...)
-            branchDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-            branchDict["source_id"] = "line.$(defaults["name"])"
-
-            used = ["name", "bus1", "bus2", "rmatrix", "xmatrix"]
-            _PMs._import_remaining!(branchDict, defaults, import_all; exclude=used)
-
-            push!(pmd_data["branch"], branchDict)
+            linecode = _create_linecode(get(linecode, "name", ""); _to_sym_keys(linecode)...)
+            delete!(linecode, "name")
+        else
+            linecode = Dict{String,Any}()
         end
+
+        if haskey(line, "basefreq") && line["basefreq"] != pmd_data["basefreq"]
+            Memento.warn(_LOGGER, "basefreq=$(line["basefreq"]) on line $(line["name"]) does not match circuit basefreq=$(pmd_data["basefreq"])")
+            line["circuit_basefreq"] = pmd_data["basefreq"]
+        end
+
+        defaults = _apply_ordered_properties(_create_line(line["bus1"], line["bus2"], line["name"]; _to_sym_keys(line)...), line; linecode=linecode)
+
+        bf, nodes = _parse_busname(defaults["bus1"])
+
+        phase_order_fr = _get_conductors_ordered(defaults["bus1"]; neutral=false, nconductors=nconductors)
+        phase_order_to = _get_conductors_ordered(defaults["bus2"]; neutral=false, nconductors=nconductors)
+
+        @assert phase_order_fr == phase_order_to "Order of connections must be identical on either end of a line"
+
+        bt = _parse_busname(defaults["bus2"])[1]
+
+        branchDict = Dict{String,Any}()
+
+        branchDict["name"] = defaults["name"]
+
+        branchDict["f_bus"] = find_bus(bf, pmd_data)
+        branchDict["t_bus"] = find_bus(bt, pmd_data)
+
+        branchDict["length"] = defaults["length"]
+
+        rmatrix = _reorder_matrix(_parse_matrix(defaults["rmatrix"], nodes, nconductors), phase_order_fr)
+        xmatrix = _reorder_matrix(_parse_matrix(defaults["xmatrix"], nodes, nconductors), phase_order_fr)
+        cmatrix = _reorder_matrix(_parse_matrix(defaults["cmatrix"], nodes, nconductors), phase_order_fr)
+
+        Zbase = (pmd_data["basekv"] / sqrt(3))^2 * nconductors / (pmd_data["baseMVA"])
+
+        Zbase = Zbase/3
+        # The factor 3 here is needed to convert from a voltage base
+        # in line-to-line (LL) to a voltage base in line-to-neutral (LN).
+        # V_LL = √3*V_LN
+        # Zbase_new = Zbase_old*(Vbase_new/Vbase_old)^2 = Zbase_old*(1/√3)^2
+        # In the parser, LL voltage base is used for per unit conversion.
+        # However, in the mathematical model, the voltage magnitude per phase
+        # is fixed at 1. So implicitly, we later on state that the voltage base
+        # is actually in LN. We compensate here for that.
+
+        branchDict["br_r"] = _PMs.MultiConductorMatrix(rmatrix * defaults["length"] / Zbase)
+        branchDict["br_x"] = _PMs.MultiConductorMatrix(xmatrix * defaults["length"] / Zbase)
+
+        branchDict["g_fr"] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>_parse_array(0.0, nodes, nconductors)))
+        branchDict["g_to"] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>_parse_array(0.0, nodes, nconductors)))
+
+        branchDict["b_fr"] = _PMs.MultiConductorMatrix(Zbase * (2.0 * pi * pmd_data["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0)
+        branchDict["b_to"] = _PMs.MultiConductorMatrix(Zbase * (2.0 * pi * pmd_data["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0)
+
+        branchDict["c_rating_a"] = _PMs.MultiConductorVector(_parse_array(defaults["normamps"], nodes, nconductors))
+        branchDict["c_rating_b"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
+        branchDict["c_rating_c"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
+
+        branchDict["tap"] = _PMs.MultiConductorVector(_parse_array(1.0, nodes, nconductors, 1.0))
+        branchDict["shift"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
+
+        branchDict["br_status"] = convert(Int, defaults["enabled"])
+
+        branchDict["angmin"] = _PMs.MultiConductorVector(_parse_array(-60.0, nodes, nconductors, -60.0))
+        branchDict["angmax"] = _PMs.MultiConductorVector(_parse_array( 60.0, nodes, nconductors,  60.0))
+
+        branchDict["transformer"] = false
+        branchDict["switch"] = defaults["switch"]
+
+        branchDict["index"] = length(pmd_data["branch"]) + 1
+
+        nodes = .+([_parse_busname(defaults[n])[2] for n in ["bus1", "bus2"]]...)
+        branchDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+        branchDict["source_id"] = "line.$(defaults["name"])"
+
+        used = ["name", "bus1", "bus2", "rmatrix", "xmatrix"]
+        _PMs._import_remaining!(branchDict, defaults, import_all; exclude=used)
+
+        push!(pmd_data["branch"], branchDict)
     end
 end
 
@@ -707,168 +674,170 @@ end
 Adds ThreePhasePowerModels-style transformers to `pmd_data` from `dss_data`.
 """
 function _dss2pmd_transformer!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
+   if !haskey(pmd_data, "transformer_comp")
+        pmd_data["transformer_comp"] = Array{Any,1}()
+    end
 
-    if haskey(dss_data, "transformer")
-        if !haskey(pmd_data, "trans_comp")
-            pmd_data["trans_comp"] = Array{Any,1}()
+    for transformer in get(dss_data, "transformer", [])
+        _apply_like!(transformer, dss_data, "transformer")
+        defaults = _apply_ordered_properties(_create_transformer(transformer["name"]; _to_sym_keys(transformer)...), transformer)
+
+        nconductors = pmd_data["conductors"]
+        nrw = defaults["windings"]
+        prop_suffix_w = ["", ["_$w" for w in 2:nrw]...]
+        if nrw>3
+            # All of the code is compatible with any number of windings,
+            # except for the parsing of the loss model (the pair-wise reactance)
+            Memento.error(_LOGGER, "For now parsing of xscarray is not supported. At most 3 windings are allowed, not $nrw.")
         end
-        for transformer in dss_data["transformer"]
-            if haskey(transformer, "like")
-                transformer = merge(_find_component(dss_data, transformer["like"], "transformer"), transformer)
-            end
 
-            defaults = _create_transformer(transformer["name"]; _to_sym_keys(transformer)...)
-
-            nconductors = pmd_data["conductors"]
-            nrw = defaults["windings"]
-            prop_suffix_w = ["", ["_$w" for w in 2:nrw]...]
-            if nrw>3
-                # All of the code is compatible with any number of windings,
-                # except for the parsing of the loss model (the pair-wise reactance)
-                Memento.error(_LOGGER, "For now parsing of xscarray is not supported. At most 3 windings are allowed, not $nrw.")
-            end
-
-            transDict = Dict{String,Any}()
-            transDict["name"] = defaults["name"]
-            transDict["source_id"] = "transformer.$(defaults["name"])"
-            transDict["active_phases"] = [1, 2, 3]
-            transDict["buses"] = Array{Int, 1}(undef, nrw)
-            for i in 1:nrw
-                bnstr = defaults["buses"][i]
-                bus, nodes = _parse_busname(bnstr)
-                nodes_0123 = [true true true true]
-                nodes_123 = [true true true false]
-                if !(nodes==nodes_0123 || nodes==nodes_123)
-                    Memento.warn(_LOGGER, "Only three-phase transformers are supported. The bus specification $bnstr is treated as $bus instead.")
-                end
-                transDict["buses"][i] = _find_bus(bus, pmd_data)
-            end
-
-            # voltage and power ratings
-            #transDict["vnom_kv"] = defaults["kvs"]
-            #transDict["snom_kva"] = defaults["kvas"]
-            transDict["rate_a"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
-            transDict["rate_b"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
-            transDict["rate_c"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["emerghkva"] for i  in 1:nrw]
-            # convert to 1 MVA base
-            transDict["rate_a"] *= 1E-3
-            transDict["rate_b"] *= 1E-3
-            transDict["rate_c"] *= 1E-3
-            # connection properties
-            dyz_map = Dict("wye"=>"wye", "delta"=>"delta", "ll"=>"delta", "ln"=>"wye")
-            dyz_primary = dyz_map[defaults["conns"][1]]
-            transDict["conns"] = Array{String,1}(undef, nrw)
-
-            transDict["config"] = Dict{Int,Any}()
-            transDict["config"][1] = Dict(
-                "type"=>dyz_primary,
-                "polarity"=>'+',
-                "cnd"=>[1, 2, 3],
-                "grounded"=>true,
-                "vm_nom"=>defaults["kvs"][1]
-            )
-            #transDict["conns"][1] = string("123+", dyz_primary)
-            for w in 2:nrw
-                type = dyz_map[defaults["conns"][w]]
-                if dyz_primary==type
-                    cnd = [1,2,3]
-                    polarity = '+'
-                else
-                    if defaults["leadlag"] in ["ansi", "lag"]
-                        #Yd1 => (123+y,123+d)
-                        #Dy1 => (123+d,231-y)
-                        #pp_w = (type=="delta") ? "123+" : "231-"
-                        cnd = (type=="delta") ? [1, 2, 3] : [2, 3, 1]
-                        polarity = (type=="delta") ? '+' : '-'
-                    else # hence defaults["leadlag"] in ["euro", "lead"]
-                        #Yd11 => (123+y,312-d)
-                        #Dy11 => (123+d,123+y)
-                        #pp_w = (type=="delta") ? "312-" : "123+"
-                        cnd = (type=="delta") ? [3, 1, 2] : [1, 2, 3]
-                        polarity = (type=="delta") ? '-' : '+'
+        transDict = Dict{String,Any}()
+        transDict["name"] = defaults["name"]
+        transDict["source_id"] = "transformer.$(defaults["name"])"
+        transDict["buses"] = Array{Int, 1}(undef, nrw)
+        if !isempty(defaults["bank"])
+            transDict["bank"] = defaults["bank"]
+        end
+        for i in 1:nrw
+            bnstr = defaults["buses"][i]
+            bus, nodes = _parse_busname(bnstr)
+            active_phases = [n for n in 1:nconductors if nodes[n] > 0]
+            nodes_123 = [true true true]
+            if !all(nodes[1:3]) && isempty(defaults["bank"])
+                Memento.warn(_LOGGER, "Only three-phase transformers are supported. The bus specification $bnstr is treated as $bus instead.")
+            elseif !isempty(defaults["bank"])
+                if haskey(transDict, "active_phases")
+                    if transDict["active_phases"] != active_phases
+                        Memento.error(_LOGGER, "Mismatched phase connections on transformer windings not supported when banking transformers")
                     end
+                else
+                    transDict["active_phases"] = active_phases
                 end
-                transDict["config"][w] = Dict(
-                    "type"=>type,
-                    "polarity"=>polarity,
-                    "cnd"=>cnd,
-                    "vm_nom"=>defaults["kvs"][w]
-                )
-                if type=="wye"
-                    transDict["config"][w]["grounded"] = true
+            elseif all(nodes[1:3])
+                transDict["active_phases"] = [1, 2, 3]
+            else
+                transDict["active_phases"] = [1, 2, 3]
+                Memento.warn(_LOGGER, "Only three-phase transformers are supported. The bus specification $bnstr is treated as $bus instead.")
+            end
+            transDict["buses"][i] = find_bus(bus, pmd_data)
+        end
+
+        # voltage and power ratings
+        #transDict["vnom_kv"] = defaults["kvs"]
+        #transDict["snom_kva"] = defaults["kvas"]
+        transDict["rate_a"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
+        transDict["rate_b"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["normhkva"] for i in 1:nrw]
+        transDict["rate_c"] = [_PMs.MultiConductorVector(ones(nconductors))*defaults["emerghkva"] for i  in 1:nrw]
+        # convert to 1 MVA base
+        transDict["rate_a"] *= 1E-3
+        transDict["rate_b"] *= 1E-3
+        transDict["rate_c"] *= 1E-3
+        # connection properties
+        dyz_map = Dict("wye"=>"wye", "delta"=>"delta", "ll"=>"delta", "ln"=>"wye")
+        dyz_primary = dyz_map[defaults["conns"][1]]
+        transDict["conns"] = Array{String,1}(undef, nrw)
+
+        transDict["config"] = Dict{Int,Any}()
+        transDict["config"][1] = Dict(
+            "type"=>dyz_primary,
+            "polarity"=>'+',
+            "cnd"=>[1, 2, 3],
+            "grounded"=>true,
+            "vm_nom"=>defaults["kvs"][1]
+        )
+        #transDict["conns"][1] = string("123+", dyz_primary)
+        for w in 2:nrw
+            type = dyz_map[defaults["conns"][w]]
+            if dyz_primary==type
+                cnd = [1,2,3]
+                polarity = '+'
+            else
+                if defaults["leadlag"] in ["ansi", "lag"]
+                    #Yd1 => (123+y,123+d)
+                    #Dy1 => (123+d,231-y)
+                    #pp_w = (type=="delta") ? "123+" : "231-"
+                    cnd = (type=="delta") ? [1, 2, 3] : [2, 3, 1]
+                    polarity = (type=="delta") ? '+' : '-'
+                else # hence defaults["leadlag"] in ["euro", "lead"]
+                    #Yd11 => (123+y,312-d)
+                    #Dy11 => (123+d,123+y)
+                    #pp_w = (type=="delta") ? "312-" : "123+"
+                    cnd = (type=="delta") ? [3, 1, 2] : [1, 2, 3]
+                    polarity = (type=="delta") ? '-' : '+'
                 end
             end
-
-            # tap properties
-            transDict["tm"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["taps"][i] for i in 1:nrw]
-            transDict["tm_min"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["mintap"] for i in 1:nrw]
-            transDict["tm_max"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["maxtap"] for i in 1:nrw]
-            transDict["tm_step"] = [_PMs.MultiConductorVector(ones(Int,3))*defaults["numtaps"] for i in 1:nrw]
-            transDict["fixed"] = [_PMs.MultiConductorVector(ones(Bool,3)) for i in 1:nrw]
-
-            # loss model (converted to SI units, referred to secondary)
-            function zpn_to_abc(z, p, n; atol=1E-13)
-                a = exp(im*2*pi/3)
-                C = 1/sqrt(3)*[1 1 1; 1 a a^2; 1 a^2 a]
-                res = inv(C)*[z 0 0; 0 p 0; 0 0 n]*C
-                res = (abs.(res).>atol).*res
-                return res
+            transDict["config"][w] = Dict(
+                "type"=>type,
+                "polarity"=>polarity,
+                "cnd"=>cnd,
+                "vm_nom"=>defaults["kvs"][w]
+            )
+            if type=="wye"
+                transDict["config"][w]["grounded"] = true
             end
-            pos_to_abc(p) = zpn_to_abc(p, p, p)
-            zbase = 1^2/(defaults["kvas"][1]/1E3)
-            transDict["rs"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
-            transDict["gsh"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
-            transDict["bsh"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
-            # deal with dual definition of rs in defaults dict
-            # if non-zero, pick "%rs", else go for the per winding spec
-            rs_alt = [defaults["%r$suffix"] for suffix in prop_suffix_w]
-            rs = all(defaults["%rs"].==0) ? rs_alt : defaults["%rs"]
-            for w in 1:nrw
-                zs_w_p = rs[w]/100*zbase
-                Zs_w = pos_to_abc(zs_w_p)
-                #TODO handle %loadloss property
-                # Problem is that for the two-winding case, both %loadloss
-                # and %rs map to values for the winding series resistance.
-                # Both are set to a (possibly default) value, so it is
-                # impossible to know at this point which was actually specified
-                # by the user. %rs is more general, so %loadloss is not
-                # supported for now.
-                Memento.warn(_LOGGER, "The %loadloss property is ignored for now.")
+        end
+
+        # tap properties
+        transDict["tm"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["taps"][i] for i in 1:nrw]
+        transDict["tm_min"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["mintap"] for i in 1:nrw]
+        transDict["tm_max"] = [_PMs.MultiConductorVector(ones(Float64,3))*defaults["maxtap"] for i in 1:nrw]
+        transDict["tm_step"] = [_PMs.MultiConductorVector(ones(Int,3))*defaults["numtaps"] for i in 1:nrw]
+        transDict["fixed"] = [_PMs.MultiConductorVector(ones(Bool,3)) for i in 1:nrw]
+
+        # loss model (converted to SI units, referred to secondary)
+        function zpn_to_abc(z, p, n; atol=1E-13)
+            a = exp(im*2*pi/3)
+            C = 1/sqrt(3)*[1 1 1; 1 a a^2; 1 a^2 a]
+            res = inv(C)*[z 0 0; 0 p 0; 0 0 n]*C
+            res = (abs.(res).>atol).*res
+            return res
+        end
+        pos_to_abc(p) = zpn_to_abc(p, p, p)
+        zbase = 1^2/(defaults["kvas"][1]/1E3)
+        transDict["rs"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
+        transDict["gsh"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
+        transDict["bsh"] = Array{_PMs.MultiConductorMatrix{Float64}, 1}(undef, nrw)
+        for w in 1:nrw
+            zs_w_p = defaults["%rs"][w]/100*zbase
+            Zs_w = pos_to_abc(zs_w_p)
+
+            if haskey(transformer, "rneut") || haskey(transformer, "xneut")
                 #TODO handle neutral impedance
                 # neutral impedance is ignored for now; all transformers are
                 # grounded (that is, those with a wye and zig-zag winding).
-                Memento.warn(_LOGGER, "The neutral impedance, (rg and xg properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.")
-                transDict["rs"][w] = _PMs.MultiConductorMatrix(real.(Zs_w))
-                # shunt elements are added at second winding
-                if w==2
-                    ysh_w_p = (defaults["%noloadloss"]-im*defaults["%imag"])/100/zbase
-                    Ysh_w = pos_to_abc(ysh_w_p)
-                    transDict["gsh"][w] = _PMs.MultiConductorMatrix(real.(Ysh_w))
-                    transDict["bsh"][w] = _PMs.MultiConductorMatrix(imag.(Ysh_w))
-                else
-                    transDict["gsh"][w] = _PMs.MultiConductorMatrix(zeros(Float64, 3, 3))
-                    transDict["bsh"][w] = _PMs.MultiConductorMatrix(zeros(Float64, 3, 3))
-                end
-            end
-            transDict["xs"] = Dict{String, _PMs.MultiConductorMatrix{Float64}}()
-
-            Zsc = Dict{Tuple{Int,Int}, Complex}()
-            if nrw==2
-                xs_map = Dict("xhl"=>(1,2))
-            elseif nrw==3
-                xs_map = Dict("xhl"=>(1,2), "xht"=>(1,3), "xlt"=>(2,3))
-            end
-            for (k,v) in xs_map
-                Zsc[(v)] = im*defaults[k]/100*zbase
-            end
-            Zbr = _sc2br_impedance(Zsc)
-            for (k,zs_ij_p) in Zbr
-                Zs_ij = pos_to_abc(zs_ij_p)
-                transDict["xs"]["$(k[1])-$(k[2])"] = _PMs.MultiConductorMatrix(imag.(Zs_ij))
+                Memento.warn(_LOGGER, "The neutral impedance, (rneut and xneut properties), is ignored; the neutral (for wye and zig-zag windings) is connected directly to the ground.")
             end
 
-            push!(pmd_data["trans_comp"], transDict)
+            transDict["rs"][w] = _PMs.MultiConductorMatrix(real.(Zs_w))
+            # shunt elements are added at second winding
+            if w==2
+                ysh_w_p = (defaults["%noloadloss"]-im*defaults["%imag"])/100/zbase
+                Ysh_w = pos_to_abc(ysh_w_p)
+                transDict["gsh"][w] = _PMs.MultiConductorMatrix(real.(Ysh_w))
+                transDict["bsh"][w] = _PMs.MultiConductorMatrix(imag.(Ysh_w))
+            else
+                transDict["gsh"][w] = _PMs.MultiConductorMatrix(zeros(Float64, 3, 3))
+                transDict["bsh"][w] = _PMs.MultiConductorMatrix(zeros(Float64, 3, 3))
+            end
         end
+        transDict["xs"] = Dict{String, _PMs.MultiConductorMatrix{Float64}}()
+
+        Zsc = Dict{Tuple{Int,Int}, Complex}()
+        if nrw==2
+            xs_map = Dict("xhl"=>(1,2))
+        elseif nrw==3
+            xs_map = Dict("xhl"=>(1,2), "xht"=>(1,3), "xlt"=>(2,3))
+        end
+        for (k,v) in xs_map
+            Zsc[(v)] = im*defaults[k]/100*zbase
+        end
+        Zbr = _sc2br_impedance(Zsc)
+        for (k,zs_ij_p) in Zbr
+            Zs_ij = pos_to_abc(zs_ij_p)
+            transDict["xs"]["$(k[1])-$(k[2])"] = _PMs.MultiConductorMatrix(imag.(Zs_ij))
+        end
+
+        push!(pmd_data["transformer_comp"], transDict)
     end
 end
 
@@ -933,11 +902,8 @@ function _dss2pmd_reactor!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         Memento.warn(_LOGGER, "reactors as constant impedance elements is not yet supported, treating like line")
         for reactor in dss_data["reactor"]
             if haskey(reactor, "bus2")
-                if haskey(reactor, "like")
-                    reactor = merge(_find_component(dss_data, reactor["like"], "reactor"), reactor)
-                end
-
-                defaults = _create_reactor(reactor["bus1"], reactor["name"], reactor["bus2"]; _to_sym_keys(reactor)...)
+                _apply_like!(reactor, dss_data, "reactor")
+                defaults = _apply_ordered_properties(_create_reactor(reactor["bus1"], reactor["name"], reactor["bus2"]; _to_sym_keys(reactor)...), reactor)
 
                 reactDict = Dict{String,Any}()
 
@@ -947,8 +913,8 @@ function _dss2pmd_reactor!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
                 t_bus = _parse_busname(defaults["bus2"])[1]
 
                 reactDict["name"] = defaults["name"]
-                reactDict["f_bus"] = _find_bus(f_bus, pmd_data)
-                reactDict["t_bus"] = _find_bus(t_bus, pmd_data)
+                reactDict["f_bus"] = find_bus(f_bus, pmd_data)
+                reactDict["t_bus"] = find_bus(t_bus, pmd_data)
 
                 reactDict["br_r"] = _PMs.MultiConductorMatrix(_parse_matrix(diagm(0 => fill(0.2, nconductors)), nodes, nconductors))
                 reactDict["br_x"] = _PMs.MultiConductorMatrix(_parse_matrix(zeros(nconductors, nconductors), nodes, nconductors))
@@ -962,9 +928,9 @@ function _dss2pmd_reactor!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
                     reactDict[key] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>reactDict[key].values))
                 end
 
-                reactDict["rate_a"] = _PMs.MultiConductorVector(_parse_array(defaults["normamps"], nodes, nconductors))
-                reactDict["rate_b"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
-                reactDict["rate_c"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
+                reactDict["c_rating_a"] = _PMs.MultiConductorVector(_parse_array(defaults["normamps"], nodes, nconductors))
+                reactDict["c_rating_b"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
+                reactDict["c_rating_c"] = _PMs.MultiConductorVector(_parse_array(defaults["emergamps"], nodes, nconductors))
 
                 reactDict["tap"] = _PMs.MultiConductorVector(_parse_array(1.0, nodes, nconductors, NaN))
                 reactDict["shift"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
@@ -1002,31 +968,30 @@ function _dss2pmd_pvsystem!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         pmd_data["pvsystem"] = []
     end
 
-    if haskey(dss_data, "pvsystem")
-        for pvsystem in dss_data["pvsystem"]
-            defaults = _create_pvsystem(pvsystem["bus1"], pvsystem["name"]; _to_sym_keys(pvsystem)...)
+    for pvsystem in get(dss_data, "pvsystem", [])
+        _apply_like!(pvsystem, dss_data, "pvsystem")
+        defaults = _apply_ordered_properties(_create_pvsystem(pvsystem["bus1"], pvsystem["name"]; _to_sym_keys(pvsystem)...), pvsystem)
 
-            pvsystemDict = Dict{String,Any}()
+        pvsystemDict = Dict{String,Any}()
 
-            nconductors = pmd_data["conductors"]
-            name, nodes = _parse_busname(defaults["bus1"])
+        nconductors = pmd_data["conductors"]
+        name, nodes = _parse_busname(defaults["bus1"])
 
-            pvsystemDict["name"] = defaults["name"]
-            pvsystemDict["pv_bus"] = _find_bus(name, pmd_data)
-            pvsystemDict["p"] = _PMs.MultiConductorVector(_parse_array(defaults["kw"] / 1e3, nodes, nconductors))
-            pvsystemDict["q"] = _PMs.MultiConductorVector(_parse_array(defaults["kvar"] / 1e3, nodes, nconductors))
-            pvsystemDict["status"] = convert(Int, defaults["enabled"])
+        pvsystemDict["name"] = defaults["name"]
+        pvsystemDict["pv_bus"] = find_bus(name, pmd_data)
+        pvsystemDict["p"] = _PMs.MultiConductorVector(_parse_array(defaults["kw"] / 1e3, nodes, nconductors))
+        pvsystemDict["q"] = _PMs.MultiConductorVector(_parse_array(defaults["kvar"] / 1e3, nodes, nconductors))
+        pvsystemDict["status"] = convert(Int, defaults["enabled"])
 
-            pvsystemDict["index"] = length(pmd_data["pvsystem"]) + 1
+        pvsystemDict["index"] = length(pmd_data["pvsystem"]) + 1
 
-            pvsystemDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-            pvsystemDict["source_id"] = "pvsystem.$(defaults["name"])"
+        pvsystemDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+        pvsystemDict["source_id"] = "pvsystem.$(defaults["name"])"
 
-            used = ["phases", "bus1", "name"]
-            _PMs._import_remaining!(pvsystemDict, defaults, import_all; exclude=used)
+        used = ["phases", "bus1", "name"]
+        _PMs._import_remaining!(pvsystemDict, defaults, import_all; exclude=used)
 
-            push!(pmd_data["pvsystem"], pvsystemDict)
-        end
+        push!(pmd_data["pvsystem"], pvsystemDict)
     end
 end
 
@@ -1041,44 +1006,45 @@ function _dss2pmd_storage!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         pmd_data["storage"] = []
     end
 
-    if haskey(dss_data, "storage")
-        for storage in dss_data["storage"]
-            defaults = _create_storage(storage["bus1"], storage["name"]; _to_sym_keys(storage)...)
+    for storage in get(dss_data, "storage", [])
+        _apply_like!(storage, dss_data, "storage")
+        defaults = _apply_ordered_properties(_create_storage(storage["bus1"], storage["name"]; _to_sym_keys(storage)...), storage)
 
-            storageDict = Dict{String,Any}()
+        storageDict = Dict{String,Any}()
 
-            nconductors = pmd_data["conductors"]
-            name, nodes = _parse_busname(defaults["bus1"])
+        nconductors = pmd_data["conductors"]
+        name, nodes = _parse_busname(defaults["bus1"])
 
-            storageDict["name"] = defaults["name"]
-            storageDict["storage_bus"] = _find_bus(name, pmd_data)
-            storageDict["energy"] = defaults["kwhstored"] / 1e3
-            storageDict["energy_rating"] = defaults["kwhrated"] / 1e3
-            storageDict["charge_rating"] = defaults["%charge"] * defaults["kwrated"] / 1e3 / 100.0
-            storageDict["discharge_rating"] = defaults["%discharge"] * defaults["kwrated"] / 1e3 / 100.0
-            storageDict["charge_efficiency"] = defaults["%effcharge"] / 100.0
-            storageDict["discharge_efficiency"] = defaults["%effdischarge"] / 100.0
-            storageDict["thermal_rating"] = _PMs.MultiConductorVector(_parse_array(defaults["kva"] / 1e3 / nconductors, nodes, nconductors))
-            storageDict["qmin"] = _PMs.MultiConductorVector(_parse_array(-defaults["kvar"] / 1e3 / nconductors, nodes, nconductors))
-            storageDict["qmax"] = _PMs.MultiConductorVector(_parse_array( defaults["kvar"] / 1e3 / nconductors, nodes, nconductors))
-            storageDict["r"] = _PMs.MultiConductorVector(_parse_array(defaults["%r"] / 100.0, nodes, nconductors))
-            storageDict["x"] = _PMs.MultiConductorVector(_parse_array(defaults["%x"] / 100.0, nodes, nconductors))
-            storageDict["standby_loss"] = defaults["%idlingkw"] * defaults["kwrated"] / 1e3
-            storageDict["status"] = convert(Int, defaults["enabled"])
+        storageDict["name"] = defaults["name"]
+        storageDict["storage_bus"] = find_bus(name, pmd_data)
+        storageDict["energy"] = defaults["kwhstored"] / 1e3
+        storageDict["energy_rating"] = defaults["kwhrated"] / 1e3
+        storageDict["charge_rating"] = defaults["%charge"] * defaults["kwrated"] / 1e3 / 100.0
+        storageDict["discharge_rating"] = defaults["%discharge"] * defaults["kwrated"] / 1e3 / 100.0
+        storageDict["charge_efficiency"] = defaults["%effcharge"] / 100.0
+        storageDict["discharge_efficiency"] = defaults["%effdischarge"] / 100.0
+        storageDict["thermal_rating"] = _PMs.MultiConductorVector(_parse_array(defaults["kva"] / 1e3 / nconductors, nodes, nconductors))
+        storageDict["qmin"] = _PMs.MultiConductorVector(_parse_array(-defaults["kvar"] / 1e3 / nconductors, nodes, nconductors))
+        storageDict["qmax"] = _PMs.MultiConductorVector(_parse_array( defaults["kvar"] / 1e3 / nconductors, nodes, nconductors))
+        storageDict["r"] = _PMs.MultiConductorVector(_parse_array(defaults["%r"] / 100.0, nodes, nconductors))
+        storageDict["x"] = _PMs.MultiConductorVector(_parse_array(defaults["%x"] / 100.0, nodes, nconductors))
+        storageDict["p_loss"] = defaults["%idlingkw"] * defaults["kwrated"] / 1e3
+        storageDict["q_loss"] = defaults["%idlingkvar"] * defaults["kvar"] / 1e3
 
-            storageDict["ps"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
-            storageDict["qs"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
+        storageDict["status"] = convert(Int, defaults["enabled"])
 
-            storageDict["index"] = length(pmd_data["storage"]) + 1
+        storageDict["ps"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
+        storageDict["qs"] = _PMs.MultiConductorVector(_parse_array(0.0, nodes, nconductors))
 
-            storageDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-            storageDict["source_id"] = "storage.$(defaults["name"])"
+        storageDict["index"] = length(pmd_data["storage"]) + 1
 
-            used = ["phases", "bus1", "name"]
-            _PMs._import_remaining!(storageDict, defaults, import_all; exclude=used)
+        storageDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+        storageDict["source_id"] = "storage.$(defaults["name"])"
 
-            push!(pmd_data["storage"], storageDict)
-        end
+        used = ["phases", "bus1", "name"]
+        _PMs._import_remaining!(storageDict, defaults, import_all; exclude=used)
+
+        push!(pmd_data["storage"], storageDict)
     end
 end
 
@@ -1095,15 +1061,15 @@ was adjusted to accomodate that.
 """
 function _adjust_sourcegen_bounds!(pmd_data)
     emergamps = Array{Float64,1}([0.0])
-    #sourcebus_n = _find_bus("sourcebus", pmd_data)
-    sourcebus_n = [bus["index"] for (_,bus) in pmd_data["bus"] if haskey(bus, "name") && bus["name"]==pmd_data["sourcebus"]][1]
+    sourcebus_n = find_bus(pmd_data["sourcebus"], pmd_data)
     for (_,line) in pmd_data["branch"]
-        if line["f_bus"] == sourcebus_n || line["t_bus"] == sourcebus_n
-            append!(emergamps, line["rate_b"].values)
+        if (line["f_bus"] == sourcebus_n || line["t_bus"] == sourcebus_n) && !startswith(line["source_id"], "virtual")
+            append!(emergamps, get(line, "c_rating_b", get(line, "rate_b", missing)).values)
         end
     end
-    if haskey(pmd_data, "trans")
-        for (_,trans) in pmd_data["trans"]
+
+    if haskey(pmd_data, "transformer")
+        for (_,trans) in pmd_data["transformer"]
             if trans["f_bus"] == sourcebus_n || trans["t_bus"] == sourcebus_n
                 append!(emergamps, trans["rate_b"].values)
             end
@@ -1127,11 +1093,11 @@ Replaces complex transformers with a composition of ideal transformers and branc
 which model losses. New buses (virtual, no physical meaning) are added.
 """
 function _decompose_transformers!(pmd_data; import_all::Bool=false)
-    if !haskey(pmd_data, "trans")
-        pmd_data["trans"] = Dict{String, Any}()
+    if !haskey(pmd_data, "transformer")
+        pmd_data["transformer"] = Dict{String, Any}()
     end
     ncnds = pmd_data["conductors"]
-    for (tr_id, trans) in pmd_data["trans_comp"]
+    for (tr_id, trans) in pmd_data["transformer_comp"]
         nrw = length(trans["buses"])
         endnode_id_w = Array{Int, 1}(undef, nrw)
         bus_reduce = []
@@ -1146,7 +1112,7 @@ function _decompose_transformers!(pmd_data; import_all::Bool=false)
             trans_dict["name"] = "tr$(tr_id)_w$(w)"
             trans_dict["source_id"] = "$(trans["source_id"])_$(w)"
             trans_dict["active_phases"] = [1, 2, 3]
-            _push_dict_ret_key!(pmd_data["trans"], trans_dict)
+            _push_dict_ret_key!(pmd_data["transformer"], trans_dict)
             # connection settings
             trans_dict["config_fr"] = trans["config"][w]
             trans_dict["config_to"] = Dict(
@@ -1208,9 +1174,9 @@ function _decompose_transformers!(pmd_data; import_all::Bool=false)
         end
         _rm_redundant_pd_elements!(pmd_data, buses=string.(bus_reduce), branches=string.(branch_reduce))
     end
-    # remove the trans_comp dict unless import_all is flagged
+    # remove the transformer_comp dict unless import_all is flagged
     if !import_all
-        delete!(pmd_data, "trans_comp")
+        delete!(pmd_data, "transformer_comp")
     end
 end
 
@@ -1270,7 +1236,7 @@ function _create_vbranch!(pmd_data, f_bus::Int, t_bus::Int; name="", source_id="
     vbranch["transformer"] = false
     vbranch["switch"] = false
     vbranch["br_status"] = 1
-    for k in [:rate_a, :rate_b, :rate_c]
+    for k in [:rate_a, :rate_b, :rate_c, :c_rating_a, :c_rating_b, :c_rating_c]
         if haskey(kwargs, k)
             vbranch[string(k)] = kwargs[k]
         end
@@ -1320,7 +1286,7 @@ function _rm_redundant_pd_elements!(pmd_data; buses=keys(pmd_data["bus"]), branc
             is_reducable = string(f_bus) in buses || string(t_bus) in buses
             if is_shorted && is_reducable
                 # choose bus to remove
-                rm_bus = (f_bus in buses)  ? f_bus :  t_bus
+                rm_bus = (f_bus in buses) ? f_bus :  t_bus
                 kp_bus = (rm_bus==f_bus) ? t_bus : f_bus
             elseif is_selfloop
                 kp_bus = t_bus
@@ -1360,7 +1326,7 @@ function _rm_redundant_pd_elements!(pmd_data; buses=keys(pmd_data["bus"]), branc
                     end
                 end
                 # replace bus references in transformers
-                for (_, tr) in pmd_data["trans"]
+                for (_, tr) in pmd_data["transformer"]
                     if tr["f_bus"] == rm_bus
                         tr["f_bus"] = kp_bus
                     end
@@ -1368,11 +1334,27 @@ function _rm_redundant_pd_elements!(pmd_data; buses=keys(pmd_data["bus"]), branc
                         tr["t_bus"] = kp_bus
                     end
                 end
+                # replace bus references in gens, loads, shunts, storage
+                for comp_type in ["gen", "load", "shunt", "storage"]
+                    for (_, comp) in pmd_data[comp_type]
+                        if comp["$(comp_type)_bus"] == rm_bus
+                            comp["$(comp_type)_bus"] = kp_bus
+                        end
+                    end
+                end
+                # fix new shunt buses
+                for shunts in [shunts_g, shunts_b]
+                    for (bus, shunt) in shunts
+                        if bus == rm_bus
+                            shunts[kp_bus] .+= shunt
+                            delete!(shunts, bus)
+                        end
+                    end
+                end
                 # TODO clean up other references to the removed bus
                 # like for example loads, generators, ...
                 # skipped  for now, not relevant for transformer loss model
-                # + LOADS
-                # + shunts
+                # + pvsystem
                 # ...
             end
         elseif f_bus==t_bus
@@ -1429,7 +1411,7 @@ and addmittances are rescaled to be consistent with the new voltage bases.
 function _adjust_base!(pmd_data; start_at_first_tr_prim=false)
     # initialize arrays etc. for the recursive part
     edges_br = [(br["index"], br["f_bus"], br["t_bus"]) for (br_id_str, br) in pmd_data["branch"]]
-    edges_tr = [(tr["index"], tr["f_bus"], tr["t_bus"]) for (tr_id_str, tr) in pmd_data["trans"]]
+    edges_tr = [(tr["index"], tr["f_bus"], tr["t_bus"]) for (tr_id_str, tr) in pmd_data["transformer"]]
     edges_br_visited = Dict{Int, Bool}([(edge[1], false) for edge in edges_br])
     edges_tr_visited = Dict{Int, Bool}([(edge[1], false) for edge in edges_tr])
     bus_ids = [parse(Int, x) for x in keys(pmd_data["bus"])]
@@ -1437,8 +1419,8 @@ function _adjust_base!(pmd_data; start_at_first_tr_prim=false)
     # retrieve old voltage bases from connected nodes before starting
     br_basekv_old = Dict([(br["index"], pmd_data["bus"][string(br["f_bus"])]["base_kv"]) for (br_id_str, br) in pmd_data["branch"]])
     # start from the primary of the first transformer
-    if start_at_first_tr_prim && haskey(pmd_data, "trans") && haskey(pmd_data["trans"], "1")
-        trans_first = pmd_data["trans"]["1"]
+    if start_at_first_tr_prim && haskey(pmd_data, "transformer") && haskey(pmd_data["transformer"], "1")
+        trans_first = pmd_data["transformer"]["1"]
         source = trans_first["f_bus"]
         base_kv_new = trans_first["config_fr"]["vm_nom"]
     else
@@ -1525,7 +1507,7 @@ function _adjust_base_rec!(pmd_data, source::Int, base_kv_new::Float64, nodes_vi
             edges_tr_visited[tr_id] = true
             source_new = (f_bus==source) ? t_bus : f_bus
             # scale the basekv across the transformer
-            trans = pmd_data["trans"][string(tr_id)]
+            trans = pmd_data["transformer"][string(tr_id)]
             base_kv_new_tr = deepcopy(base_kv_new)
             if source_new==t_bus
                 base_kv_new_tr *= (trans["config_to"]["vm_nom"]/trans["config_fr"]["vm_nom"])
@@ -1604,6 +1586,81 @@ function _correct_duplicate_components!(dss_data::Dict)
 end
 
 
+"Creates a virtual branch between the `virtual_sourcebus` and `sourcebus` with the impedance given by `circuit`"
+function _create_sourcebus_vbranch!(pmd_data::Dict, circuit::Dict)
+    sourcebus = find_bus(pmd_data["sourcebus"], pmd_data)
+    vsourcebus = find_bus("virtual_sourcebus", pmd_data)
+
+    br_r = _PMs.MultiConductorMatrix(circuit["rmatrix"])
+    br_x = _PMs.MultiConductorMatrix(circuit["xmatrix"])
+
+    vbranch = _create_vbranch!(pmd_data, sourcebus, vsourcebus; name="sourcebus_vbranch", br_r=br_r, br_x=br_x)
+end
+
+
+"Combines transformers with 'bank' keyword into a single transformer"
+function _bank_transformers!(pmd_data::Dict)
+    transformer_names = Dict(trans["name"] => n for (n, trans) in get(pmd_data, "transformer_comp", Dict()))
+    bankable_transformers = [trans for trans in values(get(pmd_data, "transformer_comp", Dict())) if haskey(trans, "bank")]
+    banked_transformers = Dict()
+    for transformer in bankable_transformers
+        bank = transformer["bank"]
+
+        if !(bank in keys(banked_transformers))
+            n = length(pmd_data["transformer_comp"])+length(banked_transformers)+1
+
+            banked_transformers[bank] = deepcopy(transformer)
+            banked_transformers[bank]["name"] = deepcopy(transformer["bank"])
+            banked_transformers[bank]["source_id"] = "transformer.$(transformer["bank"])"
+            banked_transformers[bank]["index"] = n
+            # set impedances / admittances to zero; only the specified phases should be non-zero
+            for key in ["rs", "xs", "bsh", "gsh"]
+                inds = key=="xs" ? keys(banked_transformers[bank][key]) : 1:length(banked_transformers[bank][key])
+                for w in inds
+                    banked_transformers[bank][key][w] *= 0
+                end
+            end
+            delete!(banked_transformers[bank], "bank")
+        end
+
+        banked_transformer = banked_transformers[bank]
+        for phase in transformer["active_phases"]
+            push!(banked_transformer["active_phases"], phase)
+            for (k, v) in banked_transformer
+                if isa(v, _PMs.MultiConductorVector)
+                    banked_transformer[k][phase] = deepcopy(transformer[k][phase])
+                elseif isa(v, _PMs.MultiConductorMatrix)
+                    banked_transformer[k][phase, :] .= deepcopy(transformer[k][phase, :])
+                elseif isa(v, Array) && eltype(v) <: _PMs.MultiConductorVector
+                    # most properties are arrays (indexed over the windings)
+                    for w in 1:length(v)
+                        banked_transformer[k][w][phase] = deepcopy(transformer[k][w][phase])
+                    end
+                elseif isa(v, Array) && eltype(v) <: _PMs.MultiConductorMatrix
+                    # most properties are arrays (indexed over the windings)
+                    for w in 1:length(v)
+                        banked_transformer[k][w][phase, :] .= deepcopy(transformer[k][w][phase, :])
+                    end
+                elseif k=="xs"
+                    # xs is a Dictionary indexed over pairs of windings
+                    for w in keys(v)
+                        banked_transformer[k][w][phase, :] .= deepcopy(transformer[k][w][phase, :])
+                    end
+                end
+            end
+        end
+    end
+
+    for transformer in bankable_transformers
+        delete!(pmd_data["transformer_comp"], transformer_names[transformer["name"]])
+    end
+
+    for transformer in values(banked_transformers)
+        pmd_data["transformer_comp"]["$(transformer["index"])"] = deepcopy(transformer)
+    end
+end
+
+
 """
     parse_options(options)
 
@@ -1627,7 +1684,7 @@ end
 
 
 "Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format"
-function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1)::Dict
+function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1, bank_transformers::Bool=true)::Dict
     pmd_data = Dict{String,Any}()
 
     _correct_duplicate_components!(dss_data)
@@ -1676,8 +1733,13 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     _dss2pmd_storage!(pmd_data, dss_data, import_all)
 
     pmd_data["dcline"] = []
+    pmd_data["switch"] = []
 
     InfrastructureModels.arrays_to_dicts!(pmd_data)
+
+    if bank_transformers
+        _bank_transformers!(pmd_data)
+    end
 
     for optional in ["dcline", "load", "shunt", "storage", "pvsystem", "branch"]
         if length(pmd_data[optional]) == 0
@@ -1685,12 +1747,14 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
         end
     end
 
-    if haskey(pmd_data, "trans_comp")
+    _create_sourcebus_vbranch!(pmd_data, defaults)
+
+    if haskey(pmd_data, "transformer_comp")
         # this has to be done before calling _adjust_sourcegen_bounds!
         _decompose_transformers!(pmd_data; import_all=import_all)
         _adjust_base!(pmd_data)
     else
-        pmd_data["trans"] = Dict{String, Any}()
+        pmd_data["transformer"] = Dict{String, Any}()
     end
 
     _adjust_sourcegen_bounds!(pmd_data)
@@ -1702,7 +1766,7 @@ end
 
 
 "Parses a DSS file into a PowerModels usable format"
-function parse_opendss(io::IOStream; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1)::Dict
+function parse_opendss(io::IOStream; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1, bank_transformers::Bool=true)::Dict
     dss_data = parse_dss(io)
 
     return parse_opendss(dss_data; import_all=import_all)

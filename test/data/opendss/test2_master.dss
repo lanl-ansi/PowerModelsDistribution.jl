@@ -14,10 +14,10 @@ New Line.L1  bus1=b1 bus2=_b2 length=0.001 units=mi r1=0.001 r0=0.001 x1=0.01 x0
 New Line.L1-2 bus1=b3-1.2 bus2=b4.2 length=0.032175613 units=km Linecode=lc1
 New Line.L2 bus1=b5 bus2=b6_check-chars length=0.013516796 units=none linecode=lc/2
 New "Line.L3" phases=3 bus1=b7.1.2.3 bus2=b9.1.2.3 linecode=300 normamps=400 emergamps=600 faultrate=0.1 pctperm=20 repair=0 length=2.58
-New "Line._L4" phases=3 bus1=b8.1.2.3 bus2=b10.1.2.3 linecode=300 normamps=400 emergamps=600 faultrate=0.1 pctperm=20 repair=0 length=1.73
+New "Line._L4" phases=3 bus1=b8.1.2.3 bus2=b10.1.2.3 linecode=300 normamps=400 emergamps=600 faultrate=0.1 pctperm=20 repair=0 length=1.73 switch=y
 New line.l5 phases=3 bus1=_b2.1.2.3.0 bus2=b7.1.2.3.0 linecode=lc8
 New line.l6 phases=3 bus1=b1.1.2.3 bus2=b10.1.2.3 linecode=lc9
-new line.l7 bus1=_b2 bus2=b10 like=L2 linecode=lc10 switch=y
+new line.l7 bus1=_b2 bus2=b10 like=L2 linecode=lc10
 
 ! Loads
 New Load.ld1 phases=1 Bus1=b7.1.2  kv=0.208  status=variable model=1 conn=wye kW=3.89   pf=0.97  Vminpu=.88
@@ -41,7 +41,7 @@ new reactor.reactor4 bus1=b8 like=reactor3
 New "Transformer.t1" phases=1 windings=2 buses=[testsource,  _b2, ] conns=[wye, wye, ] kVs=[15.0, 15.0, ] kVAs=[50000, 50000, ] Xhl=1
 New "Transformer.t2" phases=3 windings=2 Xhl=0.02 buses=[testsource, b3-1, ] conns=[delta, wye, ] kVs=[69, 24.9, ] kVAs=[25000, 25000, ] taps=[1, 1, ] wdg=1 %R=0.0005 wdg=2 %R=0.0005
 New Transformer.t3a phases=1  windings=2  buses=(b7.1,  b10.1)  conns=(wye, wye)  kvs=(10.0, 10)  kvas=(30000, 30000)  xhl=0.1 %loadloss=.002 wdg=2 Maxtap=1.05 Mintap=0.95 ppm=0
-New Transformer.t4  phases=3  windings=2  buses=(b8, b9.1.2.3.0)
+New Transformer.t4  phases=3  windings=2  buses=(b8, b9.1.2.3.0) rneut=0 xneut=0
 ~ conns=(delta wye)
 ! 14.7->115 for kvs[2], otherwise inconsistent voltage base
 ~ kvs=(115, 115)  kvas=(30000, 30000)

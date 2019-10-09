@@ -2,19 +2,19 @@ import LinearAlgebra: diag, diagm
 import MathOptInterface
 
 ""
-function variable_tp_branch_current(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: AbstractUBFForm
-    variable_tp_branch_series_current_prod_hermitian(pm; kwargs...)
+function variable_mc_branch_current(pm::AbstractUBFModels; kwargs...)
+    variable_mc_branch_series_current_prod_hermitian(pm; kwargs...)
 end
 
 
 ""
-function variable_tp_voltage(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: AbstractUBFForm
-    variable_tp_voltage_prod_hermitian(pm; kwargs...)
+function variable_mc_voltage(pm::AbstractUBFModels; kwargs...)
+    variable_mc_voltage_prod_hermitian(pm; kwargs...)
 end
 
 
 ""
-function variable_tp_voltage_prod_hermitian(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
+function variable_mc_voltage_prod_hermitian(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
     bus_ids = collect(_PMs.ids(pm, nw, :bus))
 
     if bounded
@@ -39,7 +39,7 @@ end
 
 
 ""
-function variable_tp_branch_series_current_prod_hermitian(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
+function variable_mc_branch_series_current_prod_hermitian(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
     branches = _PMs.ref(pm, nw, :branch)
     buses = _PMs.ref(pm, nw, :bus)
 
@@ -85,7 +85,9 @@ end
 
 
 ""
-function variable_tp_branch_flow(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
+function variable_mc_branch_flow(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
+    @assert n_cond<=5
+
     # calculate S bound
     branch_arcs = _PMs.ref(pm, nw, :arcs)
     if bounded
@@ -116,13 +118,13 @@ end
 
 
 ""
-function constraint_tp_theta_ref(pm::_PMs.GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
-    constraint_tp_theta_ref(pm, nw, i)
+function constraint_mc_theta_ref(pm::AbstractUBFModels, i::Int; nw::Int=pm.cnw)
+    constraint_mc_theta_ref(pm, nw, i)
 end
 
 
 "Defines branch flow model power flow equations"
-function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to) where T <: AbstractUBFForm
+function constraint_mc_flow_losses(pm::AbstractUBFModels, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
     p_to = _PMs.var(pm, n, :P)[t_idx]
     q_to = _PMs.var(pm, n, :Q)[t_idx]
 
@@ -144,7 +146,7 @@ end
 
 
 ""
-function constraint_tp_theta_ref(pm::_PMs.GenericPowerModel{T}, n::Int, i) where T <: AbstractUBFForm
+function constraint_mc_theta_ref(pm::AbstractUBFModels, n::Int, i)
     nconductors = length(_PMs.conductor_ids(pm))
 
     w_re = _PMs.var(pm, n, :Wr)[i]
@@ -163,7 +165,7 @@ end
 
 
 "Defines voltage drop over a branch, linking from and to side voltage"
-function constraint_tp_model_voltage_magnitude_difference(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: AbstractUBFForm
+function constraint_mc_model_voltage_magnitude_difference(pm::AbstractUBFModels, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
     w_fr_re = _PMs.var(pm, n, :Wr)[f_bus]
     w_fr_im = _PMs.var(pm, n, :Wi)[f_bus]
 
@@ -192,13 +194,13 @@ function constraint_tp_model_voltage_magnitude_difference(pm::_PMs.GenericPowerM
 end
 
 
-function variable_tp_generation_mx(pm::_PMs.GenericPowerModel; nw=pm.cnw)
-    variable_tp_generation_current_mx(pm; nw=nw)
-    variable_tp_generation_power_mx(pm; nw=nw)
+function variable_mc_generation_mx(pm::AbstractUBFModels; nw=pm.cnw)
+    variable_mc_generation_current_mx(pm; nw=nw)
+    variable_mc_generation_power_mx(pm; nw=nw)
 end
 
 
-function variable_tp_generation_power_mx(pm::_PMs.GenericPowerModel; nw=pm.cnw)
+function variable_mc_generation_power_mx(pm::AbstractUBFModels; nw=pm.cnw)
     gen_ids = collect(_PMs.ids(pm, nw, :gen))
     # delegate creation of diagonal elements back to PMs as before
     for id in gen_ids, c in _PMs.conductor_ids(pm, nw)
@@ -229,7 +231,7 @@ function variable_tp_generation_power_mx(pm::_PMs.GenericPowerModel; nw=pm.cnw)
 end
 
 
-function variable_tp_generation_current_mx(pm::_PMs.GenericPowerModel; nw=pm.cnw)
+function variable_mc_generation_current_mx(pm::AbstractUBFModels; nw=pm.cnw)
     gen_ids = collect(_PMs.ids(pm, nw, :gen))
     ncnds = length(_PMs.conductor_ids(pm, nw))
     # calculate bounds
@@ -247,14 +249,14 @@ function variable_tp_generation_current_mx(pm::_PMs.GenericPowerModel; nw=pm.cnw
 end
 
 
-function variable_tp_load_mx(pm::_PMs.GenericPowerModel; nw=pm.cnw)
+function variable_mc_load_mx(pm::AbstractUBFModels; nw=pm.cnw)
     load_wye_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="wye"]
     load_del_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="delta"]
     load_cone_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if _load_needs_cone(load)]
     # first create the wye loads; will create keys :Pd, :Qd
-    variable_tp_load_power_wye_mx(pm, load_wye_ids)
+    variable_mc_load_power_wye_mx(pm, load_wye_ids)
     # now, create delta loads; will create :Xdr, :Xdi
-    variable_tp_load_power_delta(pm, load_del_ids)
+    variable_mc_load_power_delta(pm, load_del_ids)
     # define :Pd, :Qd for delta loads as lin. transformation of :Xdr and :Wdim
     Td = [1 -1 0; 0 1 -1; -1 0 1]
     for id in load_del_ids
@@ -262,12 +264,12 @@ function variable_tp_load_mx(pm::_PMs.GenericPowerModel; nw=pm.cnw)
         _PMs.var(pm, nw, :Qd)[id] = _PMs.var(pm, nw, :Xdi, id)*Td
     end
     # both loads need a current variable; bounds adjusted for connection type
-    variable_tp_load_current_mx(pm, [load_wye_ids..., load_del_ids...])
-    variable_tp_load_power_vector(pm, load_cone_ids)
+    variable_mc_load_current_mx(pm, [load_wye_ids..., load_del_ids...])
+    variable_mc_load_power_vector(pm, load_cone_ids)
 end
 
 
-function variable_tp_load(pm::_PMs.GenericPowerModel{T}; nw=pm.cnw) where T <: AbstractUBFForm
+function variable_mc_load(pm::AbstractUBFModels; nw=pm.cnw)
     load_wye_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="wye"]
     load_del_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="delta"]
     load_cone_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if _load_needs_cone(load)]
@@ -277,14 +279,14 @@ function variable_tp_load(pm::_PMs.GenericPowerModel{T}; nw=pm.cnw) where T <: A
         _PMs.var(pm, nw, c)[:qd] = Dict()
     end
     # now, create delta loads; will create :Xdr, :Xdi
-    variable_tp_load_power_delta(pm, load_del_ids)
-    variable_tp_load_current_mx(pm, load_del_ids)
+    variable_mc_load_power_delta(pm, load_del_ids)
+    variable_mc_load_current_mx(pm, load_del_ids)
     # only delta loads need a current matrix variable
-    variable_tp_load_power_vector(pm, load_cone_ids)
+    variable_mc_load_power_vector(pm, load_cone_ids)
 end
 
 
-function variable_tp_load_power_vector(pm::_PMs.GenericPowerModel, load_ids::Array{Int,1}; nw=pm.cnw)
+function variable_mc_load_power_vector(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw)
     # calculate bounds for all loads
     pmin = Dict()
     pmax = Dict()
@@ -312,7 +314,7 @@ function variable_tp_load_power_vector(pm::_PMs.GenericPowerModel, load_ids::Arr
 end
 
 
-function variable_tp_load_power_wye_mx(pm::_PMs.GenericPowerModel, load_ids::Array{Int,1}; nw=pm.cnw)
+function variable_mc_load_power_wye_mx(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw)
     ncnds = length(_PMs.conductor_ids(pm, nw))
     # calculate bounds
     bound = Dict{eltype(load_ids), Array{Real,2}}()
@@ -355,7 +357,7 @@ See upcoming paper for discussion of bounds. [reference added when accepted]
 Note: this does not have the mx suffix because it is needed for both vec and
 mat KCL.
 """
-function variable_tp_load_power_delta(pm::_PMs.GenericPowerModel, load_ids::Array{Int,1}; nw=pm.cnw, eps=0.1)
+function variable_mc_load_power_delta(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw, eps=0.1)
     ncnds = length(_PMs.conductor_ids(pm, nw))
     # calculate bounds
     bound = Dict{eltype(load_ids), Array{Real,2}}()
@@ -374,7 +376,7 @@ function variable_tp_load_power_delta(pm::_PMs.GenericPowerModel, load_ids::Arra
 end
 
 
-function variable_tp_load_current_mx(pm::_PMs.GenericPowerModel, load_ids::Array{Int,1}; nw=pm.cnw)
+function variable_mc_load_current_mx(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw)
     ncnds = length(_PMs.conductor_ids(pm, nw))
     # calculate bounds
     cmin = Dict{eltype(load_ids), Array{Real,1}}()
@@ -392,7 +394,7 @@ function variable_tp_load_current_mx(pm::_PMs.GenericPowerModel, load_ids::Array
 end
 
 
-function constraint_tp_generation_mx_SWL(pm::_PMs.GenericPowerModel{T}, gen_id::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
+function constraint_mc_generation_mx_SWL(pm::AbstractUBFModels, gen_id::Int; nw::Int=pm.cnw)
     Pg = _PMs.var(pm, nw, :Pg, gen_id)
     Qg = _PMs.var(pm, nw, :Qg, gen_id)
     bus_id = _PMs.ref(pm, nw, :gen, gen_id)["gen_bus"]
@@ -404,7 +406,7 @@ function constraint_tp_generation_mx_SWL(pm::_PMs.GenericPowerModel{T}, gen_id::
 end
 
 
-function constraint_tp_load_vector(pm::_PMs.GenericPowerModel, load_id::Int; nw=pm.cnw)
+function constraint_mc_load_vector(pm::AbstractUBFModels, load_id::Int; nw=pm.cnw)
     load = _PMs.ref(pm, nw, :load, load_id)
     pd = load["pd"].values
     qd = load["qd"].values
@@ -495,7 +497,7 @@ function constraint_pqw(model::JuMP.Model, w, p, a::Real, α::Real, wmin::Real, 
 end
 
 
-function constraint_tp_load(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
+function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     # shared variables and parameters
     load = _PMs.ref(pm, nw, :load, load_id)
     pd = load["pd"].values
@@ -504,7 +506,7 @@ function constraint_tp_load(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::Int
     ncnds = length(pd)
 
     # take care of voltage-dependency load models
-    constraint_tp_load_vector(pm, load_id, nw=nw)
+    constraint_mc_load_vector(pm, load_id, nw=nw)
     pl = [_PMs.var(pm, nw, c, :pl, load_id) for c in 1:ncnds]
     ql = [_PMs.var(pm, nw, c, :ql, load_id) for c in 1:ncnds]
 
@@ -536,14 +538,14 @@ end
 
 
 
-function constraint_tp_load_mx(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
+function constraint_mc_load_mx(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     # shared variables and parameters
     load = _PMs.ref(pm, nw, :load, load_id)
     bus_id = load["load_bus"]
     ncnds = length(load["pd"])
 
     # take care of voltage-dependency load models
-    constraint_tp_load_vector(pm, load_id, nw=nw)
+    constraint_mc_load_vector(pm, load_id, nw=nw)
     pl = [_PMs.var(pm, nw, c, :pl, load_id) for c in 1:ncnds]
     ql = [_PMs.var(pm, nw, c, :ql, load_id) for c in 1:ncnds]
 
@@ -579,7 +581,7 @@ function constraint_tp_load_mx(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::
 end
 
 
-function constraint_tp_load_mx_SWL(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
+function constraint_mc_load_mx_SWL(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     # shared variables and parameters
     load = _PMs.ref(pm, nw, :load, load_id)
     bus_id = load["load_bus"]
@@ -603,7 +605,7 @@ function constraint_tp_load_mx_SWL(pm::_PMs.GenericPowerModel{T}, load_id::Int; 
 end
 
 
-function constraint_tp_load_mx_SWL_only_delta(pm::_PMs.GenericPowerModel{T}, load_id::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
+function constraint_mc_load_mx_SWL_only_delta(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     # shared variables and parameters
     load = _PMs.ref(pm, nw, :load, load_id)
     bus_id = load["load_bus"]
@@ -621,7 +623,7 @@ function constraint_tp_load_mx_SWL_only_delta(pm::_PMs.GenericPowerModel{T}, loa
 end
 
 
-function constraint_tp_voltage_psd(pm::_PMs.GenericPowerModel; nw=pm.cnw)
+function constraint_mc_voltage_psd(pm::AbstractUBFModels; nw=pm.cnw)
     buses_covered = [i for (l,i,j) in _PMs.ref(pm, nw, :arcs)]
     buses_psd = [i for i in _PMs.ids(pm, nw, :bus) if !(i in buses_covered)]
     for bus_id in buses_psd
@@ -645,7 +647,7 @@ end
 
 
 ""
-function constraint_power_balance_shunt(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+function constraint_power_balance_shunt(pm::AbstractUBFModels, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     if !haskey(_PMs.con(pm, nw, cnd), :kcl_p)
         _PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,JuMP.ConstraintRef}()
     end
@@ -667,7 +669,7 @@ function constraint_power_balance_shunt(pm::_PMs.GenericPowerModel, i::Int; nw::
 end
 
 
-function constraint_power_balance_shunt(pm::_PMs.GenericPowerModel, n::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_gs, bus_bs)
+function constraint_power_balance_shunt(pm::AbstractUBFModels, n::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_gs, bus_bs)
     w    = _PMs.var(pm, n, c, :w, i)
     pg   = _PMs.var(pm, n, c, :pg)
     qg   = _PMs.var(pm, n, c, :qg)
@@ -684,7 +686,7 @@ end
 
 
 ""
-function constraint_tp_power_balance_mx_shunt(pm::_PMs.GenericPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_power_balance_mx_shunt(pm::AbstractUBFModels, i::Int; nw::Int=pm.cnw)
     if !haskey(_PMs.con(pm, nw), :kcl_P)
         _PMs.con(pm, nw)[:kcl_P] = Dict{Int,Array{JuMP.ConstraintRef,2}}()
     end
@@ -702,7 +704,7 @@ function constraint_tp_power_balance_mx_shunt(pm::_PMs.GenericPowerModel, i::Int
     bus_Gs = Dict(k => LinearAlgebra.diagm(0=>_PMs.ref(pm, nw, :shunt, k, "gs").values) for k in bus_shunts)
     bus_Bs = Dict(k => LinearAlgebra.diagm(0=>_PMs.ref(pm, nw, :shunt, k, "bs").values) for k in bus_shunts)
 
-    constraint_tp_power_balance_mx_shunt(pm, nw, i, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_Gs, bus_Bs)
+    constraint_mc_power_balance_mx_shunt(pm, nw, i, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_Gs, bus_Bs)
 end
 
 
@@ -714,7 +716,7 @@ S = U.I' = U.(Y.U)' = U.U'.Y' = W.Y'
 P =  Wre.G'+Wim.B'
 Q = -Wre.B'+Wim.G'
 """
-function constraint_tp_power_balance_mx_shunt(pm::_PMs.GenericPowerModel{T}, n::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_Gs, bus_Bs) where T <: AbstractUBFForm
+function constraint_mc_power_balance_mx_shunt(pm::AbstractUBFModels, n::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_Gs, bus_Bs)
     Wre = _PMs.var(pm, n, :Wr, i)
     Wim = _PMs.var(pm, n, :Wi, i)
     P = _PMs.var(pm, n, :P)

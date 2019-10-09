@@ -1,20 +1,12 @@
-bus_name2id(pmd_data, name) = [bus["index"] for (_,bus) in pmd_data["bus"] if haskey(bus, "name") && bus["name"]==name][1]
-load_name2id(pmd_data, name) = [load["index"] for (_,load) in pmd_data["load"] if haskey(load, "name") && load["name"]==name][1]
-va(sol, pmd_data, name) = PMD.wraptopi(sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["va"][:])
-vm(sol, pmd_data, name) = sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["vm"][:]
-pdvar(pm, pmd_data, name) = [PMs.var(pm, pm.cnw, c, :pd, load_name2id(pmd_data, name)) for c in 1:3]
-pd(pm, pmd_data, name) = [isa(x, Number) ? x : JuMP.value(x) for x in pdvar(pm, pmd_data, name)]
-qdvar(pm, pmd_data, name) = [PMs.var(pm, pm.cnw, c, :qd, load_name2id(pmd_data, name)) for c in 1:3]
-qd(pm, pmd_data, name) = [isa(x, Number) ? x : JuMP.value(x) for x in qdvar(pm, pmd_data, name)]
-sd(pm, pmd_data, name) = pd(sol, pmd_data, name)+im*qd(sol, pmd_data, name)
+@info "running load models tests"
 
-@testset "loadmodels pf" begin
-    @testset "connection variations" begin
+@testset "test loadmodels pf" begin
+    @testset "loadmodels connection variations" begin
         pmd = PMD.parse_file("../test/data/opendss/case3_lm_1230.dss")
-        pm = PMs.build_model(pmd, PMs.ACPPowerModel, PMD.post_tp_pf_lm, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+        pm = PMs.build_model(pmd, PMs.ACPPowerModel, PMD.post_mc_pf_lm, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
         sol = PMs.optimize_model!(pm, ipopt_solver)
         # voltage magnitude at load bus
-        @test isapprox(vm(sol, pmd, "loadbus"), [1, 1, 1], atol=1E-5)
+        @test isapprox(vm(sol, pmd, "loadbus"), [0.999993, 0.999992, 0.999993], atol=1E-5)
         # single-phase delta loads
         @test isapprox(pd(pm, pmd, "d1ph"), [0.4000, 0, 0], atol=1E-4)
         @test isapprox(qd(pm, pmd, "d1ph"), [0.3000, 0, 0], atol=1E-4)
@@ -56,9 +48,9 @@ sd(pm, pmd_data, name) = pd(sol, pmd_data, name)+im*qd(sol, pmd_data, name)
         @test isapprox(pd(pm, pmd, "d3ph3120"), [0.1333, 0.1333, 0.1333], atol=1E-4)
         @test isapprox(qd(pm, pmd, "d3ph3120"), [0.100, 0.100, 0.100], atol=1E-4)
     end
-    @testset "models 1/2/5 in acp pf" begin
+    @testset "loadmodels 1/2/5 in acp pf" begin
         pmd = PMD.parse_file("../test/data/opendss/case3_lm_models.dss")
-        pm = PMs.build_model(pmd, PMs.ACPPowerModel, PMD.post_tp_pf_lm, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+        pm = PMs.build_model(pmd, PMs.ACPPowerModel, PMD.post_mc_pf_lm, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
         sol = PMs.optimize_model!(pm, ipopt_solver)
         # voltage magnitude at load bus
         @test isapprox(vm(sol, pmd, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)
@@ -90,9 +82,9 @@ sd(pm, pmd_data, name) = pd(sol, pmd_data, name)+im*qd(sol, pmd_data, name)
         @test isapprox(pd(pm, pmd, "y3phm5"), [0.1108, 0.1329, 0.1341], atol=1E-4)
         @test isapprox(qd(pm, pmd, "y3phm5"), [0.0831, 0.0997, 0.1006], atol=1E-4)
     end
-    @testset "models 1/2/5 in acr pf" begin
+    @testset "loadmodels 1/2/5 in acr pf" begin
         pmd = PMD.parse_file("../test/data/opendss/case3_lm_models.dss")
-        pm = PMs.build_model(pmd, PMs.ACRPowerModel, PMD.post_tp_pf_lm, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+        pm = PMs.build_model(pmd, PMs.ACRPowerModel, PMD.post_mc_pf_lm, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
         sol = PMs.optimize_model!(pm, ipopt_solver)
         # voltage magnitude at load bus
         @test isapprox(vm(sol, pmd, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)

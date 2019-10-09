@@ -268,16 +268,6 @@ end
 
 
 """
-    _get_prop_name(ctype, i)
-
-Returns the `i`th property name for a given component type `ctype`.
-"""
-function _get_prop_name(ctype::AbstractString, i::Int)::String
-    return _get_prop_name(ctype)[i]
-end
-
-
-"""
     _parse_matrix(dtype, data)
 
 Parses a OpenDSS style triangular matrix string `data` into a two dimensional
@@ -349,6 +339,18 @@ function _isa_matrix(data::AbstractString)::Bool
     else
         return false
     end
+end
+
+
+"Reorders a `matrix` based on the order that phases are listed in on the from- (`pof`) and to-sides (`pot`)"
+function _reorder_matrix(matrix, phase_order)
+    mat = zeros(size(matrix))
+    for (i, n) in zip(sort(phase_order), phase_order)
+        for (j, m) in zip(sort(phase_order), phase_order)
+            mat[i, j] = matrix[n, m]
+        end
+    end
+    return mat
 end
 
 
@@ -578,6 +580,17 @@ exists inside `compDict`, the original value is converted to an array, and the
 new value is appended to the end.
 """
 function _add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
+    if !haskey(compDict, "prop_order")
+        compDict["prop_order"] = Array{String,1}(["name"])
+    end
+
+    cur_wdg = "wdg" in compDict["prop_order"] ? string(filter(p->occursin("wdg", p), compDict["prop_order"])[end][end]) : ""
+    cur_wdg = cur_wdg == "g" ? "" : cur_wdg
+
+    if key in ["wdg", "bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
+        key = join(filter(p->!isempty(p), [key, cur_wdg]), "_")
+    end
+
     if haskey(compDict, lowercase(key))
         rmatch = match(r"_(\d+)$", key)
         if typeof(rmatch) != Nothing
@@ -589,6 +602,7 @@ function _add_property(compDict::Dict, key::AbstractString, value::Any)::Dict
     end
 
     compDict[lowercase(key)] = value
+    push!(compDict["prop_order"], lowercase(key))
 
     return compDict
 end
@@ -622,29 +636,23 @@ function _parse_component(component::AbstractString, properties::AbstractString,
             property = join([propNames[propIdx], property], '=')
             propIdx += 1
         else
-            if split(component,'.')[1] == "loadshape" && startswith(property, "mult")
+            if ctype == "loadshape" && startswith(property, "mult")
                 property = replace(property, "mult" => "pmult")
+            elseif ctype == "transformer"
+                prop_name, _ = split(property,'=')
+                if prop_name == "ppm"
+                    property = replace(property, prop_name => "ppm_antifloat")
+                elseif prop_name == "x12"
+                    property = replace(property, prop_name => "xhl")
+                elseif prop_name == "x23"
+                    property = replace(property, prop_name => "xlt")
+                elseif prop_name == "x13"
+                    property = replace(property, prop_name => "xht")
+                end
             end
 
-            try
-                propIdxs = findall(e->e==split(property,'=')[1], propNames)
-                if length(propIdxs) > 0
-                    propIdx = findall(e->e==split(property,'=')[1], propNames)[1] + 1
-                end
-            catch e
-                if split(component,'.')[1] == "transformer"
-                    if split(property,'=')[1] == "ppm"
-                        property = replace(property, "ppm" => "ppm_antifloat")
-                    elseif split(property,'=')[1] == "x12"
-                        property = replace(property, "x12" => "xhl")
-                    elseif split(property,'=')[1] == "x23"
-                        property = replace(property, "x23" => "xlt")
-                    elseif split(property,'=')[1] == "x13"
-                        property = replace(property, "x13" => "xht")
-                    end
-                else
-                    throw(e)
-                end
+            propIdxs = findall(e->e==split(property,'=')[1], propNames)
+            if length(propIdxs) > 0
                 propIdx = findall(e->e==split(property,'=')[1], propNames)[1] + 1
             end
         end
@@ -816,9 +824,20 @@ function parse_dss(io::IOStream)::Dict
                 try
                     cType, cName, props = split(lowercase(line), '.'; limit=3)
                     propsOut = _parse_properties(props)
+                    wdg = ""
                     for prop in propsOut
                         propName, propValue = split(prop, '=')
-                        _assign_property!(dss_data, cType, cName, propName, propValue)
+                        if cType == "transformer"
+                            wdg = propName == "wdg" && propValue != "1" ? propValue : propName == "wdg" && propValue == "1" ? "" : wdg
+
+                            if propName in ["wdg", "bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
+                                propName = join(filter(p->!isempty(p), [propName, wdg]), "_")
+                            end
+
+                            _assign_property!(dss_data, cType, cName, propName, propValue)
+                        else
+                            _assign_property!(dss_data, cType, cName, propName, propValue)
+                        end
                     end
                 catch
                     Memento.warn(_LOGGER, "Command \"$cmd\" on line $real_line_num in \"$currentFile\" is not supported, skipping.")
@@ -953,17 +972,24 @@ end
 
 
 """
-    _get_conductors_ordered(busname)
+    _get_conductors_ordered(busname; neutral=true)
 
-Returns an ordered list of defined conductors.
+Returns an ordered list of defined conductors. If ground=false, will omit any `0`
 """
-function _get_conductors_ordered(busname::AbstractString)
+function _get_conductors_ordered(busname::AbstractString; neutral::Bool=true, nconductors::Int=3)::Array
     parts = split(busname, '.'; limit=2)
     ret = []
     if length(parts)==2
         conds_str = split(parts[2], '.')
-        ret = [parse(Int, i) for i in conds_str]
+        if neutral
+            ret = [parse(Int, i) for i in conds_str]
+        else
+            ret = [parse(Int, i) for i in conds_str if i != "0"]
+        end
+    else
+        ret = collect(1:nconductors)
     end
+
     return ret
 end
 
@@ -972,3 +998,77 @@ end
 function _to_sym_keys(data::Dict{String,Any})::Dict{Symbol,Any}
     return Dict{Symbol,Any}((Symbol(k), v) for (k, v) in data)
 end
+
+
+""
+function _apply_ordered_properties(defaults::Dict{String,Any}, raw_dss::Dict{String,Any}; linecode::Dict{String,Any}=Dict{String,Any}())
+    _defaults = deepcopy(defaults)
+
+    for prop in filter(p->p!="like", raw_dss["prop_order"])
+        if prop == "linecode"
+            merge!(defaults, linecode)
+        else
+            defaults[prop] = _defaults[prop]
+        end
+    end
+
+    return defaults
+end
+
+
+"applies `like` to component"
+function _apply_like!(raw_dss, dss_data, comp_type)
+    default_exclusions =
+    links = ["like"]
+    if any(link in raw_dss["prop_order"] for link in links)
+        new_prop_order = []
+        raw_dss_copy = deepcopy(raw_dss)
+
+        for prop in raw_dss["prop_order"]
+            push!(new_prop_order, prop)
+
+            if prop in get(_like_exclusions, comp_type, []) || prop in _like_exclusions["all"]
+                continue
+            end
+
+            if prop in links
+                linked_dss = find_component(dss_data, raw_dss[prop], comp_type)
+                if isempty(linked_dss)
+                    Memento.warn(_LOGGER, "$comp_type.$(raw_dss["name"]): $prop=$(raw_dss[prop]) cannot be found")
+                else
+                    for linked_prop in linked_dss["prop_order"]
+                        if linked_prop in get(_like_exclusions, comp_type, []) || linked_prop in _like_exclusions["all"]
+                            continue
+                        end
+
+                        push!(new_prop_order, linked_prop)
+                        if linked_prop in links
+                            _apply_like!(linked_dss, dss_data, comp_type)
+                        else
+                            raw_dss[linked_prop] = deepcopy(linked_dss[linked_prop])
+                        end
+                    end
+                end
+            else
+                raw_dss[prop] = deepcopy(raw_dss_copy[prop])
+            end
+        end
+
+        final_prop_order = []
+        while !isempty(new_prop_order)
+            prop = popfirst!(new_prop_order)
+            if !(prop in new_prop_order)
+                push!(final_prop_order, prop)
+            end
+        end
+        raw_dss["prop_order"] = final_prop_order
+    end
+end
+
+
+"properties that should be excluded from being overwritten during the application of `like`"
+const _like_exclusions = Dict{String,Array}("all" => ["name", "bus1", "bus2", "phases", "nphases", "enabled"],
+                                            "line" => ["switch"],
+                                            "transformer" => ["bank", "bus", "bus_2", "bus_3", "buses", "windings", "wdg", "wdg_2", "wdg_3"],
+                                            "linegeometry" => ["nconds"]
+                                            )

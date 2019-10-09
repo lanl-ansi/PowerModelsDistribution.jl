@@ -2,17 +2,17 @@ import LinearAlgebra: diagm
 
 
 "Defines relationship between branch (series) power flow, branch (series) current and node voltage magnitude"
-function constraint_tp_model_current(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr) where T <: AbstractLPUBFForm
+function constraint_mc_model_current(pm::AbstractLPUBFModel, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
 end
 
 
 ""
-function variable_tp_branch_current(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: AbstractLPUBFForm
+function variable_mc_branch_current(pm::AbstractLPUBFModel; kwargs...)
 end
 
 
 ""
-function variable_tp_voltage_prod_hermitian(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: LPdiagUBFForm
+function variable_mc_voltage_prod_hermitian(pm::LPdiagUBFModel; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
     n_diag_el = n_cond
     n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
     for c in 1:n_diag_el
@@ -29,7 +29,7 @@ end
 
 
 ""
-function variable_tp_branch_flow(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where  T<: LPfullUBFForm
+function variable_mc_branch_flow(pm::LPfullUBFModel; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
     n_diag_el = n_cond
     n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
 
@@ -76,7 +76,7 @@ end
 
 
 ""
-function variable_tp_branch_flow(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T<:LPdiagUBFForm
+function variable_mc_branch_flow(pm::LPdiagUBFModel; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
     n_diag_el = n_cond
 
     for i in 1:n_diag_el
@@ -117,7 +117,7 @@ end
 
 
 "Defines branch flow model power flow equations"
-function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to) where T <: LPfullUBFForm
+function constraint_mc_flow_losses(pm::LPfullUBFModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
     p_fr = _PMs.var(pm, n, :P)[f_idx]
     q_fr = _PMs.var(pm, n, :Q)[f_idx]
 
@@ -136,7 +136,7 @@ end
 
 
 "Defines branch flow model power flow equations"
-function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to) where T <: LPdiagUBFForm
+function constraint_mc_flow_losses(pm::LPdiagUBFModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
     p_fr = _PMs.var(pm, n, :P)[f_idx]
     q_fr = _PMs.var(pm, n, :Q)[f_idx]
 
@@ -152,7 +152,7 @@ end
 
 
 "Defines voltage drop over a branch, linking from and to side voltage"
-function constraint_tp_model_voltage_magnitude_difference(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: LPfullUBFForm
+function constraint_mc_model_voltage_magnitude_difference(pm::LPfullUBFModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
     w_fr_re = _PMs.var(pm, n, :Wr)[f_bus]
     w_fr_im = _PMs.var(pm, n, :Wi)[f_bus]
 
@@ -171,7 +171,7 @@ end
 
 
 "Defines voltage drop over a branch, linking from and to side voltage"
-function constraint_tp_model_voltage_magnitude_difference(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: LPdiagUBFForm
+function constraint_mc_model_voltage_magnitude_difference(pm::LPdiagUBFModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
     w_fr_re = _PMs.var(pm, n, :Wr)[f_bus]
     w_to_re = _PMs.var(pm, n, :Wr)[t_bus]
 
@@ -195,7 +195,7 @@ end
 
 
 "balanced three-phase phasor"
-function constraint_tp_theta_ref(pm::_PMs.GenericPowerModel{T}, n::Int, i) where T <: LPdiagUBFForm
+function constraint_mc_theta_ref(pm::LPdiagUBFModel, n::Int, i)
     nconductors = length(_PMs.conductor_ids(pm))
 
     w_re = _PMs.var(pm, n, :Wr)[i]
