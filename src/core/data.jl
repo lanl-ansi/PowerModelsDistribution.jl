@@ -113,3 +113,118 @@ function count_nodes(pmd_data::Dict{String,Any})::Int
 
     return n_nodes
 end
+
+"""
+Returns bounds in LN base.
+"""
+function _bus_vm_ll_bounds(bus::Dict; eps=0.1)
+    vmax = bus["vmax"].values
+    vmin = bus["vmin"].values
+    if haskey(bus, "vm_ll_max")
+        vdmax = bus["vm_ll_max"].values*sqrt(3)
+    else
+        vdmax = 2*vmax
+    end
+    if haskey(bus, "vm_ll_min")
+        vdmin = bus["vm_ll_min"].values*sqrt(3)
+    else
+        vdmin = ones(3)*eps*sqrt(3)
+    end
+    return (vdmin, vdmax)
+end
+
+
+function _load_pq_bounds(load::Dict, bus::Dict)
+    a, α, b, β = _load_expmodel_params(load, bus)
+    vmin, vmax = _load_vbounds(load, bus)
+    # get bounds
+    pmin = min.(a.*vmin.^α, a.*vmax.^α)
+    pmax = max.(a.*vmin.^α, a.*vmax.^α)
+    qmin = min.(b.*vmin.^β, b.*vmax.^β)
+    qmax = max.(b.*vmin.^β, b.*vmax.^β)
+    return (pmin, pmax, qmin, qmax)
+end
+
+function _load_curr_max(load::Dict, bus::Dict)
+    pmin, pmax, qmin, qmax = _load_pq_bounds(load, bus)
+    pabsmax = max.(abs.(pmin), abs.(pmax))
+    qabsmax = max.(abs.(qmin), abs.(qmax))
+    smax = sqrt.(pabsmax.^2 + qabsmax.^2)
+
+    vmin, vmax = _load_vbounds(load, bus)
+
+    return smax./vmin
+end
+
+function _load_curr_mag_bounds(load::Dict, bus::Dict)
+    a, α, b, β = _load_expmodel_params(load, bus)
+    vmin, vmax = _load_vbounds(load, bus)
+    cb1 = sqrt.(a.^(2).*vmin.^(2*α.-2) + b.^(2).*vmin.^(2*β.-2))
+    cb2 = sqrt.(a.^(2).*vmax.^(2*α.-2) + b.^(2).*vmax.^(2*β.-2))
+    cmin = min.(cb1, cb2)
+    cmax = max.(cb1, cb2)
+    return cmin, cmax
+end
+
+
+function _load_expmodel_params(load::Dict, bus::Dict)
+    pd = load["pd"].values
+    qd = load["qd"].values
+    ncnds = length(pd)
+    if load["model"]=="constant_power"
+        return (pd, zeros(ncnds), qd, zeros(ncnds))
+    else
+        # get exponents
+        if load["model"]=="constant_current"
+            α = ones(ncnds)
+            β  =ones(ncnds)
+        elseif load["model"]=="constant_impedance"
+            α = ones(ncnds)*2
+            β  =ones(ncnds)*2
+        elseif load["model"]=="exponential"
+            α = load["alpha"].values
+            β = load["beta"].values
+        end
+        # calculate proportionality constants
+        v0 = load["vnom_kv"]/(bus["base_kv"]/sqrt(3))
+        a = pd./v0.^α
+        b = qd./v0.^β
+        # get bounds
+        return (a, α, b, β)
+    end
+end
+
+function _load_vbounds(load::Dict, bus::Dict)
+    if load["conn"]=="wye"
+        vmin = bus["vmin"].values
+        vmax = bus["vmax"].values
+    elseif load["conn"]=="delta"
+        vmin, vmax = _bus_vm_ll_bounds(bus)
+    end
+    return vmin, vmax
+end
+
+"""
+Returns a Bool, indicating whether the convex hull of the voltage-dependent
+relationship needs a cone inclusion constraint.
+"""
+function _load_needs_cone(load::Dict)
+    if load["model"]=="constant_current"
+        return true
+    elseif load["model"]=="exponential"
+        return true
+    else
+        return false
+    end
+end
+
+
+function _gen_curr_max(gen::Dict, bus::Dict)
+    pabsmax = max.(abs.(gen["pmin"].values), abs.(gen["pmax"].values))
+    qabsmax = max.(abs.(gen["qmax"].values), abs.(gen["qmax"].values))
+    smax = sqrt.(pabsmax.^2 + qabsmax.^2)
+
+    vmin = bus["vmin"].values
+
+    return smax./vmin
+end

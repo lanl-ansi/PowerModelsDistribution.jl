@@ -760,7 +760,7 @@ end
 """
 exponential model in acp voltage coordinates
 """
-function constraint_tp_load_exponential_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, a, α, b, β)
+function constraint_mc_load_exponential_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, a, α, b, β)
     nph = 3
 
     vm = [_PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:nph]

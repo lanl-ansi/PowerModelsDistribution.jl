@@ -1,5 +1,4 @@
 import LinearAlgebra: diag, diagm
-import MathOptInterface
 
 ""
 function variable_mc_branch_current(pm::AbstractUBFModels; kwargs...)
@@ -22,18 +21,18 @@ function variable_mc_voltage_prod_hermitian(pm::AbstractUBFModels; n_cond::Int=3
         vmax = Dict([(id, _PMs.ref(pm, nw, :bus, id, "vmax").values) for id in bus_ids])
         vmin = Dict([(id, _PMs.ref(pm, nw, :bus, id, "vmin").values) for id in bus_ids])
         # create bounded Hermitian matrix variables
-        (Wre,Wim) = variable_mx_hermitian_sqrt_bounds(pm.model, bus_ids, n_cond,
+        (Wr,Wi) = variable_mx_hermitian_sqrt_bounds(pm.model, bus_ids, n_cond,
             vmax, vmin; name="W", prefix="$nw")
     else
         # create unbounded Hermitian matrix variables
-        (Wre,Wim) = variable_mx_hermitian(pm.model, bus_ids, n_cond; name="W", prefix="$nw", lb_diag_zero=0)
+        (Wr,Wi) = variable_mx_hermitian(pm.model, bus_ids, n_cond; name="W", prefix="$nw", lb_diag_zero=0)
     end
 
     # save references in dict
-    _PMs.var(pm, nw)[:Wr] = Wre
-    _PMs.var(pm, nw)[:Wi] = Wim
+    _PMs.var(pm, nw)[:Wr] = Wr
+    _PMs.var(pm, nw)[:Wi] = Wi
     for c in 1:n_cond
-        _PMs.var(pm, nw, c)[:w] = Dict{Int, Any}([(id, Wre[id][c,c]) for id in bus_ids])
+        _PMs.var(pm, nw, c)[:w] = Dict{Int, Any}([(id, Wr[id][c,c]) for id in bus_ids])
     end
 end
 
@@ -70,16 +69,16 @@ function variable_mc_branch_series_current_prod_hermitian(pm::AbstractUBFModels;
             cmax[key] = max.(cmaxfr, cmaxto)
         end
         # create matrix variables
-        (Lre,Lim) = variable_mx_hermitian_sqrt_bounds(pm.model, branch_ids, n_cond, cmax; name="CC", prefix="$nw")
+        (Lr,Li) = variable_mx_hermitian_sqrt_bounds(pm.model, branch_ids, n_cond, cmax; name="CC", prefix="$nw")
     else
-        (Lre,Lim) = variable_mx_hermitian(pm.model, branch_ids, n_cond; name="CC", prefix="$nw", lb_diag_zero=true)
+        (Lr,Li) = variable_mx_hermitian(pm.model, branch_ids, n_cond; name="CC", prefix="$nw", lb_diag_zero=true)
     end
 
     # save reference
-    _PMs.var(pm, nw)[:CC_re] = Lre
-    _PMs.var(pm, nw)[:CC_im] = Lim
+    _PMs.var(pm, nw)[:CCr] = Lr
+    _PMs.var(pm, nw)[:CCi] = Li
     for c in 1:n_cond
-        _PMs.var(pm, nw, c)[:cm] = Dict([(id, Lre[id][c,c]) for id in branch_ids])
+        _PMs.var(pm, nw, c)[:cm] = Dict([(id, Lr[id][c,c]) for id in branch_ids])
     end
 end
 
@@ -137,8 +136,8 @@ function constraint_mc_flow_losses(pm::AbstractUBFModels, n::Int, i, f_bus, t_bu
     w_to_im = _PMs.var(pm, n, :Wi)[t_bus]
     w_fr_im = _PMs.var(pm, n, :Wi)[f_bus]
 
-    ccm_re =  _PMs.var(pm, n, :CC_re)[i]
-    ccm_im =  _PMs.var(pm, n, :CC_im)[i]
+    ccm_re =  _PMs.var(pm, n, :CCr)[i]
+    ccm_im =  _PMs.var(pm, n, :CCi)[i]
 
     JuMP.@constraint(pm.model, p_fr + p_to .==  w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)' + r*ccm_re - x*ccm_im +  w_to_re*(g_sh_to)'  + w_to_im*(b_sh_to)')
     JuMP.@constraint(pm.model, q_fr + q_to .==  w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)' + x*ccm_re + r*ccm_im +  w_to_im*(g_sh_to)'  - w_to_re*(b_sh_to)')
@@ -178,8 +177,8 @@ function constraint_mc_model_voltage_magnitude_difference(pm::AbstractUBFModels,
     p_s_fr = p_fr - (w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)')
     q_s_fr = q_fr - (w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)')
 
-    ccm_re =  _PMs.var(pm, n, :CC_re)[i]
-    ccm_im =  _PMs.var(pm, n, :CC_im)[i]
+    ccm_re =  _PMs.var(pm, n, :CCr)[i]
+    ccm_im =  _PMs.var(pm, n, :CCi)[i]
 
     #KVL over the line:
     JuMP.@constraint(pm.model, diag(w_to_re) .== diag(
@@ -647,7 +646,7 @@ end
 
 
 ""
-function constraint_power_balance_shunt(pm::AbstractUBFModels, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+function constraint_mc_power_balance_shunt(pm::AbstractUBFModels, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     if !haskey(_PMs.con(pm, nw, cnd), :kcl_p)
         _PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,JuMP.ConstraintRef}()
     end
@@ -669,7 +668,7 @@ function constraint_power_balance_shunt(pm::AbstractUBFModels, i::Int; nw::Int=p
 end
 
 
-function constraint_power_balance_shunt(pm::AbstractUBFModels, n::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_gs, bus_bs)
+function constraint_mc_power_balance_shunt(pm::AbstractUBFModels, n::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_gs, bus_bs)
     w    = _PMs.var(pm, n, c, :w, i)
     pg   = _PMs.var(pm, n, c, :pg)
     qg   = _PMs.var(pm, n, c, :qg)
@@ -712,13 +711,13 @@ end
 Shunt handling in matrix form:
 I = Y.U
 S = U.I' = U.(Y.U)' = U.U'.Y' = W.Y'
-  = (Wre+j.Wim)(G+jB)' = (Wre+j.Wim)(G'-j.B') = (Wre.G'+Wim.B')+j(-Wre.B'+Wim.G')
-P =  Wre.G'+Wim.B'
-Q = -Wre.B'+Wim.G'
+  = (Wr+j.Wi)(G+jB)' = (Wr+j.Wi)(G'-j.B') = (Wr.G'+Wi.B')+j(-Wr.B'+Wi.G')
+P =  Wr.G'+Wi.B'
+Q = -Wr.B'+Wi.G'
 """
 function constraint_mc_power_balance_mx_shunt(pm::AbstractUBFModels, n::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_Gs, bus_Bs)
-    Wre = _PMs.var(pm, n, :Wr, i)
-    Wim = _PMs.var(pm, n, :Wi, i)
+    Wr = _PMs.var(pm, n, :Wr, i)
+    Wi = _PMs.var(pm, n, :Wi, i)
     P = _PMs.var(pm, n, :P)
     Q = _PMs.var(pm, n, :Q)
     Pg = _PMs.var(pm, n, :Pg)
@@ -727,13 +726,13 @@ function constraint_mc_power_balance_mx_shunt(pm::AbstractUBFModels, n::Int, i::
     Qd = _PMs.var(pm, n, :Qd)
     # ignore dc for now
     #TODO add DC in matrix version?
-    ncnds = size(Wre)[1]
+    ncnds = size(Wr)[1]
     G = (length(bus_Gs)>0) ? sum(values(bus_Gs)) : zeros(ncnds, ncnds)
     B = (length(bus_Bs)>0) ? sum(values(bus_Bs)) : zeros(ncnds, ncnds)
 
     # changed the ordering
     # LHS: all variables with generator sign convention
     # RHS: all variables with load sign convention
-    _PMs.con(pm, n, :kcl_P)[i] = JuMP.@constraint(pm.model, sum(Pg[g] for g in bus_gens) .== sum(P[a] for a in bus_arcs) + sum(Pd[d] for d in bus_loads) + ( Wre*G'+Wim*B'))
-    _PMs.con(pm, n, :kcl_Q)[i] = JuMP.@constraint(pm.model, sum(Qg[g] for g in bus_gens) .== sum(Q[a] for a in bus_arcs) + sum(Qd[d] for d in bus_loads) + (-Wre*B'+Wim*G'))
+    _PMs.con(pm, n, :kcl_P)[i] = JuMP.@constraint(pm.model, sum(Pg[g] for g in bus_gens) .== sum(P[a] for a in bus_arcs) + sum(Pd[d] for d in bus_loads) + ( Wr*G'+Wi*B'))
+    _PMs.con(pm, n, :kcl_Q)[i] = JuMP.@constraint(pm.model, sum(Qg[g] for g in bus_gens) .== sum(Q[a] for a in bus_arcs) + sum(Qd[d] for d in bus_loads) + (-Wr*B'+Wi*G'))
 end

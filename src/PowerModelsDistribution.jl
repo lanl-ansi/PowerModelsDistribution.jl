@@ -1,6 +1,7 @@
 module PowerModelsDistribution
 
     import JuMP
+    import MathOptInterface
     import PowerModels
     import InfrastructureModels
     import Memento
