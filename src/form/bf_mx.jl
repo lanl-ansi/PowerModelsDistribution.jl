@@ -472,7 +472,7 @@ function constraint_pqw(model::JuMP.Model, w, p, a::Real, α::Real, wmin::Real, 
         @assert(α>=0, "α has to greater than or equal to zero.")
         if α==0
             JuMP.@constraint(model, p==a)
-        if α==1
+        elseif α==1
             #       p/a <= w^(1/2)
             # <=>   (p/a)^2 <= w
             # <=>   2*(w/2)*1 >= ||p/a||^2_2
