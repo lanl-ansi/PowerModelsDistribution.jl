@@ -21,11 +21,12 @@ function variable_mc_voltage_prod_hermitian(pm::AbstractUBFModels; n_cond::Int=3
         vmax = Dict([(id, _PMs.ref(pm, nw, :bus, id, "vmax").values) for id in bus_ids])
         vmin = Dict([(id, _PMs.ref(pm, nw, :bus, id, "vmin").values) for id in bus_ids])
         # create bounded Hermitian matrix variables
-        (Wr,Wi) = variable_mx_hermitian_sqrt_bounds(pm.model, bus_ids, n_cond,
-            vmax, vmin; name="W", prefix="$nw")
+        (Wr,Wi) = variable_mx_hermitian(pm.model, bus_ids, n_cond;
+            sqrt_upper_bound=vmax, sqrt_lower_bound=vmin, name="W", prefix="$nw")
     else
         # create unbounded Hermitian matrix variables
-        (Wr,Wi) = variable_mx_hermitian(pm.model, bus_ids, n_cond; name="W", prefix="$nw", lb_diag_zero=0)
+        (Wr,Wi) = variable_mx_hermitian(pm.model, bus_ids, n_cond;
+            set_lower_bound_diag_to_zero=true, name="W", prefix="$nw")
     end
 
     # save references in dict
@@ -69,9 +70,12 @@ function variable_mc_branch_series_current_prod_hermitian(pm::AbstractUBFModels;
             cmax[key] = max.(cmaxfr, cmaxto)
         end
         # create matrix variables
-        (Lr,Li) = variable_mx_hermitian_sqrt_bounds(pm.model, branch_ids, n_cond, cmax; name="CC", prefix="$nw")
+        (Lr,Li) = variable_mx_hermitian(pm.model, branch_ids, n_cond;
+            sqrt_upper_bound=cmax, set_lower_bound_diag_to_zero=true,
+            name="CC", prefix="$nw")
     else
-        (Lr,Li) = variable_mx_hermitian(pm.model, branch_ids, n_cond; name="CC", prefix="$nw", lb_diag_zero=true)
+        (Lr,Li) = variable_mx_hermitian(pm.model, branch_ids, n_cond;
+            set_lower_bound_diag_to_zero=true, name="CC", prefix="$nw")
     end
 
     # save reference
@@ -102,9 +106,11 @@ function variable_mc_branch_flow(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=p
             end
         end
         # create matrix variables
-        (P,Q) = variable_mx_complex(pm.model, branch_arcs, n_cond, n_cond, bound; name=("P", "Q"), prefix="$nw")
+        (P,Q) = variable_mx_complex(pm.model, branch_arcs, n_cond, n_cond;
+            symm_bound=bound, name=("P", "Q"), prefix="$nw")
     else
-        (P,Q) = variable_mx_complex(pm.model, branch_arcs, n_cond, n_cond; name=("P", "Q"), prefix="$nw")
+        (P,Q) = variable_mx_complex(pm.model, branch_arcs, n_cond, n_cond;
+            name=("P", "Q"), prefix="$nw")
     end
     # save reference
     _PMs.var(pm, nw)[:P] = P
@@ -130,17 +136,17 @@ function constraint_mc_flow_losses(pm::AbstractUBFModels, n::Int, i, f_bus, t_bu
     p_fr = _PMs.var(pm, n, :P)[f_idx]
     q_fr = _PMs.var(pm, n, :Q)[f_idx]
 
-    w_to_re = _PMs.var(pm, n, :Wr)[t_bus]
-    w_fr_re = _PMs.var(pm, n, :Wr)[f_bus]
+    Wr_to = _PMs.var(pm, n, :Wr)[t_bus]
+    Wr_fr = _PMs.var(pm, n, :Wr)[f_bus]
 
-    w_to_im = _PMs.var(pm, n, :Wi)[t_bus]
-    w_fr_im = _PMs.var(pm, n, :Wi)[f_bus]
+    Wi_to = _PMs.var(pm, n, :Wi)[t_bus]
+    Wi_fr = _PMs.var(pm, n, :Wi)[f_bus]
 
-    ccm_re =  _PMs.var(pm, n, :CCr)[i]
-    ccm_im =  _PMs.var(pm, n, :CCi)[i]
+    CCr =  _PMs.var(pm, n, :CCr)[i]
+    CCi =  _PMs.var(pm, n, :CCi)[i]
 
-    JuMP.@constraint(pm.model, p_fr + p_to .==  w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)' + r*ccm_re - x*ccm_im +  w_to_re*(g_sh_to)'  + w_to_im*(b_sh_to)')
-    JuMP.@constraint(pm.model, q_fr + q_to .==  w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)' + x*ccm_re + r*ccm_im +  w_to_im*(g_sh_to)'  - w_to_re*(b_sh_to)')
+    JuMP.@constraint(pm.model, p_fr + p_to .==  Wr_fr*(g_sh_fr)' + Wi_fr*(b_sh_fr)' + r*CCr - x*CCi +  Wr_to*(g_sh_to)'  + Wi_to*(b_sh_to)')
+    JuMP.@constraint(pm.model, q_fr + q_to .==  Wi_fr*(g_sh_fr)' - Wr_fr*(b_sh_fr)' + x*CCr + r*CCi +  Wi_to*(g_sh_to)'  - Wr_to*(b_sh_to)')
 end
 
 
@@ -148,48 +154,48 @@ end
 function constraint_mc_theta_ref(pm::AbstractUBFModels, n::Int, i)
     nconductors = length(_PMs.conductor_ids(pm))
 
-    w_re = _PMs.var(pm, n, :Wr)[i]
-    w_im = _PMs.var(pm, n, :Wi)[i]
+    Wr = _PMs.var(pm, n, :Wr)[i]
+    Wi = _PMs.var(pm, n, :Wi)[i]
 
     alpha = exp(-im*_wrap_to_pi(2 * pi / nconductors ))
     beta = (alpha*ones(nconductors)).^(0:nconductors-1)
     gamma = beta*beta'
 
-    w_re_ref = real(gamma).*w_re[1,1]
-    w_im_ref = imag(gamma).*w_re[1,1]
-    JuMP.@constraint(pm.model, diag(w_re)[2:nconductors]        .== diag(w_re_ref)[2:nconductors]) # first equality is implied
-    JuMP.@constraint(pm.model, _mat2utrivec!(w_re) .== _mat2utrivec!(w_re_ref))
-    JuMP.@constraint(pm.model, _mat2utrivec!(w_im) .== _mat2utrivec!(w_im_ref))
+    Wr_ref = real(gamma).*Wr[1,1]
+    Wi_ref = imag(gamma).*Wr[1,1]
+    JuMP.@constraint(pm.model, diag(Wr)[2:nconductors]        .== diag(Wr_ref)[2:nconductors]) # first equality is implied
+    JuMP.@constraint(pm.model, _mat2utrivec!(Wr) .== _mat2utrivec!(Wr_ref))
+    JuMP.@constraint(pm.model, _mat2utrivec!(Wi) .== _mat2utrivec!(Wi_ref))
 end
 
 
 "Defines voltage drop over a branch, linking from and to side voltage"
 function constraint_mc_model_voltage_magnitude_difference(pm::AbstractUBFModels, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
-    w_fr_re = _PMs.var(pm, n, :Wr)[f_bus]
-    w_fr_im = _PMs.var(pm, n, :Wi)[f_bus]
+    Wr_fr = _PMs.var(pm, n, :Wr)[f_bus]
+    Wi_fr = _PMs.var(pm, n, :Wi)[f_bus]
 
-    w_to_re = _PMs.var(pm, n, :Wr)[t_bus]
-    w_to_im = _PMs.var(pm, n, :Wi)[t_bus]
+    Wr_to = _PMs.var(pm, n, :Wr)[t_bus]
+    Wi_to = _PMs.var(pm, n, :Wi)[t_bus]
 
     p_fr = _PMs.var(pm, n, :P)[f_idx]
     q_fr = _PMs.var(pm, n, :Q)[f_idx]
 
-    p_s_fr = p_fr - (w_fr_re*(g_sh_fr)' + w_fr_im*(b_sh_fr)')
-    q_s_fr = q_fr - (w_fr_im*(g_sh_fr)' - w_fr_re*(b_sh_fr)')
+    p_s_fr = p_fr - (Wr_fr*(g_sh_fr)' + Wi_fr*(b_sh_fr)')
+    q_s_fr = q_fr - (Wi_fr*(g_sh_fr)' - Wr_fr*(b_sh_fr)')
 
-    ccm_re =  _PMs.var(pm, n, :CCr)[i]
-    ccm_im =  _PMs.var(pm, n, :CCi)[i]
+    CCr =  _PMs.var(pm, n, :CCr)[i]
+    CCi =  _PMs.var(pm, n, :CCi)[i]
 
     #KVL over the line:
-    JuMP.@constraint(pm.model, diag(w_to_re) .== diag(
-    w_fr_re   - p_s_fr  *r' - q_s_fr*x'        - r*p_s_fr'    - x*q_s_fr'
-    + r*ccm_re*r' - x     *ccm_im*r' + x*ccm_re *x' + r*ccm_im *x'))
-    JuMP.@constraint(pm.model, _mat2utrivec!(w_to_re) .== _mat2utrivec!(
-    w_fr_re   - p_s_fr  *r' - q_s_fr*x'        - r*p_s_fr'    - x*q_s_fr'
-    + r*ccm_re*r' - x     *ccm_im*r' + x*ccm_re *x' + r*ccm_im *x'))
-    JuMP.@constraint(pm.model, _mat2utrivec!(w_to_im) .== _mat2utrivec!(
-    w_fr_im   - q_s_fr  *r' + p_s_fr*x'        - x*p_s_fr'    + r*q_s_fr'
-    + x*ccm_re*r' + r     *ccm_im*r' - r*ccm_re *x' + x*ccm_im *x'))
+    JuMP.@constraint(pm.model, diag(Wr_to) .== diag(
+    Wr_fr   - p_s_fr  *r' - q_s_fr*x'        - r*p_s_fr'    - x*q_s_fr'
+    + r*CCr*r' - x     *CCi*r' + x*CCr *x' + r*CCi *x'))
+    JuMP.@constraint(pm.model, _mat2utrivec!(Wr_to) .== _mat2utrivec!(
+    Wr_fr   - p_s_fr  *r' - q_s_fr*x'        - r*p_s_fr'    - x*q_s_fr'
+    + r*CCr*r' - x     *CCi*r' + x*CCr *x' + r*CCi *x'))
+    JuMP.@constraint(pm.model, _mat2utrivec!(Wi_to) .== _mat2utrivec!(
+    Wi_fr   - q_s_fr  *r' + p_s_fr*x'        - x*p_s_fr'    + r*q_s_fr'
+    + x*CCr*r' + r     *CCi*r' - r*CCr *x' + x*CCi *x'))
 end
 
 
@@ -222,7 +228,7 @@ function variable_mc_generation_power_mx(pm::AbstractUBFModels; nw=pm.cnw)
         bound[id] = vmax*cmax'
     end
     # create matrix variables, whilst injecting diagonals
-    (Pg,Qg) = variable_mx_complex_with_diag(pm.model, gen_ids, ncnds, bound;
+    (Pg,Qg) = variable_mx_complex_with_diag(pm.model, gen_ids, ncnds; symm_bound=bound,
         diag_re=diag_re, diag_im=diag_im, name=("Pg", "Qg"), prefix="$nw")
     # save references
     _PMs.var(pm, nw)[:Pg] = Pg
@@ -241,7 +247,7 @@ function variable_mc_generation_current_mx(pm::AbstractUBFModels; nw=pm.cnw)
         bound[id] = cmax*cmax'
     end
     # create matrix variables
-    (CCgr,CCgi) = variable_mx_hermitian(pm.model, gen_ids, ncnds, bound; name="CCg", prefix="$nw")
+    (CCgr,CCgi) = variable_mx_hermitian(pm.model, gen_ids, ncnds; symm_bound=bound, name="CCg", prefix="$nw")
     # save references
     _PMs.var(pm, nw)[:CCgr] = CCgr
     _PMs.var(pm, nw)[:CCgi] = CCgi
@@ -325,7 +331,7 @@ function variable_mc_load_power_wye_mx(pm::AbstractUBFModels, load_ids::Array{In
         bound[id] = bus["vmax"].values*cmax'
     end
     # create matrix variables
-    (Pd,Qd) = variable_mx_complex_with_diag(pm.model, load_ids, ncnds, bound; name=("Pd", "Qd"), prefix="$nw")
+    (Pd,Qd) = variable_mx_complex_with_diag(pm.model, load_ids, ncnds; symm_bound=bound, name=("Pd", "Qd"), prefix="$nw")
     # save references
     _PMs.var(pm, nw)[:Pd] = Pd
     _PMs.var(pm, nw)[:Qd] = Qd
@@ -368,7 +374,8 @@ function variable_mc_load_power_delta(pm::AbstractUBFModels, load_ids::Array{Int
         bound[id] = bus["vmax"].values*cmax'
     end
     # create matrix variables
-    (Xdre,Xdim) = variable_mx_complex(pm.model, load_ids, ncnds, ncnds, bound; name="Xd", prefix="$nw")
+    (Xdre,Xdim) = variable_mx_complex(pm.model, load_ids, ncnds, ncnds;
+        symm_bound=bound, name="Xd", prefix="$nw")
     # save references
     _PMs.var(pm, nw)[:Xdr] = Xdre
     _PMs.var(pm, nw)[:Xdi] = Xdim
@@ -386,7 +393,8 @@ function variable_mc_load_current_mx(pm::AbstractUBFModels, load_ids::Array{Int,
         cmin[id], cmax[id] = _load_curr_mag_bounds(load, bus)
     end
     # create matrix variables
-    (CCdr, CCdi) = variable_mx_hermitian_sqrt_bounds(pm.model, load_ids, ncnds, cmax, cmin; name="CCd", prefix="$nw")
+    (CCdr, CCdi) = variable_mx_hermitian(pm.model, load_ids, ncnds;
+        sqrt_upper_bound=cmax, sqrt_lower_bound=cmin, name="CCd", prefix="$nw")
     # save references
     _PMs.var(pm, nw)[:CCdr] = CCdr
     _PMs.var(pm, nw)[:CCdi] = CCdi
