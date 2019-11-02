@@ -64,7 +64,7 @@ function variable_mc_branch_series_current_prod_hermitian(pm::AbstractUBFModels;
             y_to = branch["g_to"].values + im* branch["b_to"].values
 
             println(keys(branch))
-            smax = branch["c_rating_a"].values
+            smax = branch["rate_a"].values
             cmaxfr = smax./vmin_fr + abs.(y_fr)*vmax_fr
             cmaxto = smax./vmin_to + abs.(y_to)*vmax_to
 
