@@ -270,6 +270,7 @@ function matlab_to_pmd(ml_data::Dict{String,Any})
     ml_data["per_unit"] = false
     ml_data["conductors"] = 3
     ml_data["dcline"] = []
+    ml_data["switch"] = []
     ml_data["storage"] = []
 
     # required default values
@@ -366,6 +367,11 @@ function _ml2pmd_branch!(data::Dict{String,Any})
         branch["b_fr"] = _PMs.MultiConductorVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
         branch["b_to"] = _PMs.MultiConductorVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
 
+        # convert branch shunts to matrices
+        for key in ["b_fr", "b_to", "g_fr", "g_to"]
+            branch[key] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>branch[key].values))
+        end
+
         delete!(branch, "b_1")
         delete!(branch, "b_2")
         delete!(branch, "b_3")
@@ -410,5 +416,3 @@ function _set_default(data::Dict{String,Any}, key::String, default_value)
         data[key] = default_value
     end
 end
-
-

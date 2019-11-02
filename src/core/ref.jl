@@ -2,7 +2,7 @@ import LinearAlgebra: diagm
 
 
 ""
-function _calc_tp_voltage_product_bounds(pm::_PMs.GenericPowerModel, buspairs; nw::Int=pm.cnw)
+function _calc_mc_voltage_product_bounds(pm::_PMs.AbstractPowerModel, buspairs; nw::Int=pm.cnw)
     wr_min = Dict([(bp, -Inf) for bp in buspairs])
     wr_max = Dict([(bp,  Inf) for bp in buspairs])
     wi_min = Dict([(bp, -Inf) for bp in buspairs])
@@ -34,7 +34,7 @@ end
 
 
 ""
-function _find_ref_buses(pm::_PMs.GenericPowerModel, nw)
+function _find_ref_buses(pm::_PMs.AbstractPowerModel, nw)
     buses = _PMs.ref(pm, nw, :bus)
     return [b for (b,bus) in buses if bus["bus_type"]==3]
     # return [bus for (b,bus) in buses ]
@@ -42,26 +42,28 @@ end
 
 
 "Adds arcs for PMD transformers; for dclines and branches this is done in PMs"
-function ref_add_arcs_trans!(pm::_PMs.GenericPowerModel)
-    if !haskey(_PMs.ref(pm, pm.cnw), :trans)
-        # this might happen when parsing data from matlab format
-        # the OpenDSS parser always inserts a trans dict
-        _PMs.ref(pm, pm.cnw)[:trans] = Dict{Int, Any}()
-    end
-    # dirty fix add arcs_from/to_trans and bus_arcs_trans
-    pm.ref[:nw][0][:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in _PMs.ref(pm, :trans)]
-    pm.ref[:nw][0][:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in _PMs.ref(pm, :trans)]
-    pm.ref[:nw][0][:arcs_trans] = [pm.ref[:nw][0][:arcs_from_trans]..., pm.ref[:nw][0][:arcs_to_trans]...]
-    pm.ref[:nw][0][:bus_arcs_trans] = Dict{Int64, Array{Any, 1}}()
-    for i in _PMs.ids(pm, :bus)
-        pm.ref[:nw][0][:bus_arcs_trans][i] = [e for e in pm.ref[:nw][0][:arcs_trans] if e[2]==i]
+function ref_add_arcs_trans!(pm::_PMs.AbstractPowerModel)
+    for nw in _PMs.nw_ids(pm)
+        if !haskey(_PMs.ref(pm, nw), :transformer)
+            # this might happen when parsing data from matlab format
+            # the OpenDSS parser always inserts a trans dict
+            _PMs.ref(pm, nw)[:transformer] = Dict{Int, Any}()
+        end
+        # dirty fix add arcs_from/to_trans and bus_arcs_trans
+        pm.ref[:nw][nw][:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in _PMs.ref(pm, nw, :transformer)]
+        pm.ref[:nw][nw][:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in _PMs.ref(pm, nw, :transformer)]
+        pm.ref[:nw][nw][:arcs_trans] = [pm.ref[:nw][nw][:arcs_from_trans]..., pm.ref[:nw][nw][:arcs_to_trans]...]
+        pm.ref[:nw][nw][:bus_arcs_trans] = Dict{Int64, Array{Any, 1}}()
+        for i in _PMs.ids(pm, :bus)
+            pm.ref[:nw][nw][:bus_arcs_trans][i] = [e for e in pm.ref[:nw][nw][:arcs_trans] if e[2]==i]
+        end
     end
 end
 
 
 ""
-function _calc_tp_trans_Tvi(pm::_PMs.GenericPowerModel, i::Int; nw=pm.cnw)
-    trans = _PMs.ref(pm, nw, :trans,  i)
+function _calc_mc_transformer_Tvi(pm::_PMs.AbstractPowerModel, i::Int; nw=pm.cnw)
+    trans = _PMs.ref(pm, nw, :transformer,  i)
     # transformation matrices
     # Tv and Ti will be compositions of these
     Tbr = [0 0 1; 1 0 0; 0 1 0]                             # barrel roll

@@ -2,7 +2,7 @@ name = "PowerModelsDistribution"
 uuid = "d7431456-977f-11e9-2de3-97ff7677985e"
 authors = ["David M Fobes <dfobes@lanl.gov>", "Carleton Coffrin"]
 repo = "https://github.com/lanl-ansi/PowerModelsDistribution.jl.git"
-version = "0.5.1"
+version = "0.6.0"
 
 [deps]
 InfrastructureModels = "2030c09a-7f63-5d83-885d-db604e0e9cc0"
@@ -14,13 +14,14 @@ PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
 
 [compat]
 Cbc = ">= 0.4"
-InfrastructureModels = "^0.2"
+InfrastructureModels = "~0.3.1"
 Ipopt = ">= 0.4"
 JSON = ">= 0.18"
-JuMP = "^0.19.2"
+JuMP = "~0.19.2, ~0.20"
 Juniper = ">= 0.4"
-Memento = ">= 0.8, < 0.13"
-PowerModels = "^0.12.2"
+MathOptInterface = "~0.8, ~0.9"
+Memento = "~0.10, ~0.11, ~0.12"
+PowerModels = "~0.13"
 SCS = ">= 0.4"
 julia = "^1"
 

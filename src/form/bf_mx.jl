@@ -2,19 +2,19 @@ import LinearAlgebra: diag
 
 
 ""
-function variable_tp_branch_current(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: AbstractUBFForm
-    variable_tp_branch_series_current_prod_hermitian(pm; kwargs...)
+function variable_mc_branch_current(pm::AbstractUBFModels; kwargs...)
+    variable_mc_branch_series_current_prod_hermitian(pm; kwargs...)
 end
 
 
 ""
-function variable_tp_voltage(pm::_PMs.GenericPowerModel{T}; kwargs...) where T <: AbstractUBFForm
-    variable_tp_voltage_prod_hermitian(pm; kwargs...)
+function variable_mc_voltage(pm::AbstractUBFModels; kwargs...)
+    variable_mc_voltage_prod_hermitian(pm; kwargs...)
 end
 
 
 ""
-function variable_tp_voltage_prod_hermitian(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
+function variable_mc_voltage_prod_hermitian(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
     n_diag_el = n_cond
     n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
     for c in 1:n_diag_el
@@ -72,7 +72,7 @@ end
 
 
 ""
-function variable_tp_branch_series_current_prod_hermitian(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
+function variable_mc_branch_series_current_prod_hermitian(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
     branches = _PMs.ref(pm, nw, :branch)
     buses = _PMs.ref(pm, nw, :bus)
 
@@ -95,8 +95,8 @@ function variable_tp_branch_series_current_prod_hermitian(pm::_PMs.GenericPowerM
         y_to_mag = abs.(branch["g_to"].values + im* branch["b_to"].values)
 
         smax = branch["rate_a"].values
-        cmaxfr = smax./vmin_fr + vmax_fr.*y_fr_mag
-        cmaxto = smax./vmin_to + vmax_to.*y_to_mag
+        cmaxfr = smax./vmin_fr + y_fr_mag*vmax_fr
+        cmaxto = smax./vmin_to + y_to_mag*vmax_to
 
         cmax[key] = max.(cmaxfr, cmaxto)
     end
@@ -166,7 +166,7 @@ end
 
 
 ""
-function variable_tp_branch_flow(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, nw::Int=pm.cnw, bounded = true) where T <: AbstractUBFForm
+function variable_mc_branch_flow(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
     n_diag_el = n_cond
     n_lower_triangle_el = Int((n_cond^2 - n_cond)/2)
     @assert n_cond<=5
@@ -177,10 +177,10 @@ function variable_tp_branch_flow(pm::_PMs.GenericPowerModel{T}; n_cond::Int=3, n
     end
 
     for i in 1:n_lower_triangle_el
-        variable_tp_lower_triangle_active_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
-        variable_tp_lower_triangle_reactive_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
-        variable_tp_upper_triangle_active_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
-        variable_tp_upper_triangle_reactive_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
+        variable_mc_lower_triangle_active_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
+        variable_mc_lower_triangle_reactive_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
+        variable_mc_upper_triangle_active_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
+        variable_mc_upper_triangle_reactive_branch_flow(pm, nw=nw, cnd=i, bounded=bounded)
     end
     #Store dictionary with matrix variables by arc
     p_mat_dict = Dict{Tuple{Int64,Int64,Int64}, Any}()
@@ -207,7 +207,7 @@ end
 
 
 "variable: `p_lt[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_tp_lower_triangle_active_branch_flow(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
+function variable_mc_lower_triangle_active_branch_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
     smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
 
     for (l,i,j) in _PMs.ref(pm, nw, :arcs)
@@ -234,7 +234,7 @@ end
 
 
 "variable: `q_lt[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_tp_lower_triangle_reactive_branch_flow(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
+function variable_mc_lower_triangle_reactive_branch_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
     smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
 
     for (l,i,j) in _PMs.ref(pm, nw, :arcs)
@@ -261,7 +261,7 @@ end
 
 
 "variable: `p_ut[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_tp_upper_triangle_active_branch_flow(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
+function variable_mc_upper_triangle_active_branch_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
     smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
 
     for (l,i,j) in _PMs.ref(pm, nw, :arcs)
@@ -288,7 +288,7 @@ end
 
 
 "variable: `q_ut[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_tp_upper_triangle_reactive_branch_flow(pm::_PMs.GenericPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
+function variable_mc_upper_triangle_reactive_branch_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded = true)
     smaxdict = Dict{Tuple{Int64, Int64, Int64}, Any}()
 
     for (l,i,j) in _PMs.ref(pm, nw, :arcs)
@@ -314,13 +314,13 @@ end
 
 
 ""
-function constraint_tp_theta_ref(pm::_PMs.GenericPowerModel{T}, i::Int; nw::Int=pm.cnw) where T <: AbstractUBFForm
-    constraint_tp_theta_ref(pm, nw, i)
+function constraint_mc_theta_ref(pm::AbstractUBFModels, i::Int; nw::Int=pm.cnw)
+    constraint_mc_theta_ref(pm, nw, i)
 end
 
 
 "Defines branch flow model power flow equations"
-function constraint_tp_flow_losses(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to) where T <: AbstractUBFForm
+function constraint_mc_flow_losses(pm::AbstractUBFModels, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
     p_to = _PMs.var(pm, n, :P_mx)[t_idx]
     q_to = _PMs.var(pm, n, :Q_mx)[t_idx]
 
@@ -342,7 +342,7 @@ end
 
 
 ""
-function constraint_tp_theta_ref(pm::_PMs.GenericPowerModel{T}, n::Int, i) where T <: AbstractUBFForm
+function constraint_mc_theta_ref(pm::AbstractUBFModels, n::Int, i)
     nconductors = length(_PMs.conductor_ids(pm))
 
     w_re = _PMs.var(pm, n, :W_re)[i]
@@ -361,7 +361,7 @@ end
 
 
 "Defines voltage drop over a branch, linking from and to side voltage"
-function constraint_tp_model_voltage_magnitude_difference(pm::_PMs.GenericPowerModel{T}, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm) where T <: AbstractUBFForm
+function constraint_mc_model_voltage_magnitude_difference(pm::AbstractUBFModels, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
     w_fr_re = _PMs.var(pm, n, :W_re)[f_bus]
     w_fr_im = _PMs.var(pm, n, :W_im)[f_bus]
 

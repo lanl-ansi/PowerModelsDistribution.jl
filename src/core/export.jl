@@ -40,5 +40,5 @@ for status_code_enum in [TerminationStatusCode, ResultStatusCode]
 end
 
 # so that users do not need to import PowerModels
-import PowerModels: ACPPowerModel, ACRPowerModel, DCPPowerModel, NFAPowerModel
-export ACPPowerModel, ACRPowerModel, DCPPowerModel, NFAPowerModel
+import PowerModels: ACPPowerModel, ACRPowerModel, DCPPowerModel, NFAPowerModel, SOCWRPowerModel
+export ACPPowerModel, ACRPowerModel, DCPPowerModel, NFAPowerModel, SOCWRPowerModel

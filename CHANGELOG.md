@@ -4,6 +4,34 @@ PowerModelsDistribution.jl Change Log
 ### staged
 - none
 
+### v0.6.0
+- Adds `count_nodes` function to count the number of nodes in a parsed network (#183)
+- Exports `find_bus` and `find_component` functions for better user experience (#183)
+- Fixed `solution_bf!` for branch flow solution building (#182)
+- Refactored problem definitions to remove any explicit loops over conductors (#181)
+- Added data format documentation (#180)
+- Moved storage to main MLD and OPF problems (#179)
+- Refactor to remove dcline variables and constraints (#179)
+- Refactor to genericize `constraint_mc_power_balance` (#179)
+- Fix bug in OpenDSS circuit initialization (vsource) (#178)
+- Make current rating (c_rating_a|b|c) be the default on branches (breaking)
+- Fix bug in transformer `ref` extension where all refs were not built for all `nw` in multinetworks (#171)
+- Fix bug in OpenDSS parser where properties were not applied in the order they were received (#170)
+- Rename "trans" in data and ref to `transformer` for component naming consistency (breaking) (#169)
+- Change internal variable and constraint functions to loop over phases internally (breaking) (#168)
+- Fix bug in OpenDSS parser on Lines where the connected phases are listed out of order (#167)
+- Add ability to "bank" single phase OpenDSS transformers into a single multiphase transformer (#166)
+- Add virtual line to sourcebus to model source impedance (#165)
+- Update to JuMP v0.20 / MOI v0.9 (#164)
+- Fix bug in OpenDSS parser on Lines / Linecodes related to basefreq (#163)
+- Fix bug in OpenDSS parser on Transformers (#162)
+- Fix bug in OpenDSS parser on Lines where `switch=y` property is used (#161)
+- Update Formulation types to follow PowerModels v0.13 conventions (breaking) (#160)
+
+### v0.5.2
+- Fix bug in OpenDSS parser on Capacitors (#158)
+- Add support for full matrix line shunts (#153)
+
 ### v0.5.1
 - Add continuous load shedding problem (mld)
 
