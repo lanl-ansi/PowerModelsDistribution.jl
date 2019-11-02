@@ -117,18 +117,22 @@ end
 """
 Returns bounds in LN base.
 """
-function _bus_vm_ll_bounds(bus::Dict; eps=0.1)
+function _bus_vm_ll_bounds(bus::Dict; vdmin_eps=0.1, vdmax_eps=2)
     vmax = bus["vmax"].values
     vmin = bus["vmin"].values
     if haskey(bus, "vm_ll_max")
         vdmax = bus["vm_ll_max"].values*sqrt(3)
     else
-        vdmax = 2*vmax
+        vdmax = vdmax_eps*vmax
+        id = bus["index"]
+        Memento.info(_LOGGER, "Bus $id has no phase-to-phase vm lower bound; instead, $vdmin_eps was used as a valid lower bound.")
     end
     if haskey(bus, "vm_ll_min")
         vdmin = bus["vm_ll_min"].values*sqrt(3)
     else
-        vdmin = ones(3)*eps*sqrt(3)
+        vdmin = ones(3)*vdmin_eps*sqrt(3)
+        id = bus["index"]
+        Memento.info(_LOGGER, "Bus $id has no phase-to-phase vm upper bound; instead, $vdmin_eps was used as a valid upper bound.")
     end
     return (vdmin, vdmax)
 end

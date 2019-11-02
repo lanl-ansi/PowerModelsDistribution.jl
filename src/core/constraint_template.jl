@@ -369,7 +369,7 @@ function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw
             end
         elseif conn=="delta"
             @assert(_PMs.ref(pm, 0, :conductors)==3)
-            constraint_tp_load_exponential_delta(pm, nw, id, load["load_bus"], a, α, b, β)
+            constraint_mc_load_exponential_delta(pm, nw, id, load["load_bus"], a, α, b, β)
         end
 
     else

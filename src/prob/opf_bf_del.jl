@@ -11,7 +11,7 @@ end
 
 
 ""
-function post_mc_opf_bf_del(pm::_PMs.GenericPowerModel)
+function post_mc_opf_bf_del(pm::_PMs.AbstractPowerModel)
     # Variables
     variable_mc_voltage(pm)
     variable_mc_branch_current(pm)
