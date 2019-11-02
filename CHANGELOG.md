@@ -2,6 +2,9 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
+- none
+
+### v0.6.0
 - Adds `count_nodes` function to count the number of nodes in a parsed network (#183)
 - Exports `find_bus` and `find_component` functions for better user experience (#183)
 - Fixed `solution_bf!` for branch flow solution building (#182)
@@ -23,8 +26,6 @@ PowerModelsDistribution.jl Change Log
 - Fix bug in OpenDSS parser on Lines / Linecodes related to basefreq (#163)
 - Fix bug in OpenDSS parser on Transformers (#162)
 - Fix bug in OpenDSS parser on Lines where `switch=y` property is used (#161)
-
-### v0.6.0
 - Update Formulation types to follow PowerModels v0.13 conventions (breaking) (#160)
 
 ### v0.5.2

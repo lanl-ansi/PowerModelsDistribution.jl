@@ -1082,6 +1082,16 @@ function _adjust_sourcegen_bounds!(pmd_data)
     pmd_data["gen"]["1"]["pmax"] = _PMs.MultiConductorVector(fill( bound, size(pmd_data["gen"]["1"]["pmin"])))
     pmd_data["gen"]["1"]["qmin"] = _PMs.MultiConductorVector(fill(-bound, size(pmd_data["gen"]["1"]["pmin"])))
     pmd_data["gen"]["1"]["qmax"] = _PMs.MultiConductorVector(fill( bound, size(pmd_data["gen"]["1"]["pmin"])))
+
+    # set current rating of vbranch modelling internal impedance
+    sourcegen = pmd_data["gen"]["1"]
+    sourcebus = pmd_data["bus"][string(sourcegen["gen_bus"])]
+    sid = sourcebus["index"]
+    # the branch modelling the internal impedance, is the only branch connected to the sourcebus
+    vbranch = [br for (id, br) in pmd_data["branch"] if br["f_bus"]==sid || br["t_bus"]==sid][1]
+    vbranch["rate_a"] = _PMs.MultiConductorVector(fill(bound, length(vbranch["rate_a"])))
+    #vbranch["rate_b"] = bound
+    #vbranch["rate_c"] = bound
 end
 
 
@@ -1206,7 +1216,10 @@ This function adds a new branch to the data model and returns its dictionary.
 It is virtual in the sense that it does not correspond to a branch in the
 network, but is part of the decomposition of the transformer.
 """
-function _create_vbranch!(pmd_data, f_bus::Int, t_bus::Int; name="", source_id="", active_phases=[1, 2, 3], kwargs...)
+function _create_vbranch!(pmd_data, f_bus::Int, t_bus::Int;
+    name="", source_id="", active_phases=[1, 2, 3],
+    rate_a = _PMs.MultiConductorVector(fill(Inf, length(active_phases))),
+    kwargs...)
     ncnd = pmd_data["conductors"]
     kwargs = Dict{Symbol,Any}(kwargs)
     vbase = haskey(kwargs, :vbase) ? kwargs[:vbase] : pmd_data["basekv"]
@@ -1231,6 +1244,7 @@ function _create_vbranch!(pmd_data, f_bus::Int, t_bus::Int; name="", source_id="
     end
     vbranch["angmin"] = -_PMs.MultiConductorVector(ones(ncnd))*60
     vbranch["angmax"] = _PMs.MultiConductorVector(ones(ncnd))*60
+    vbranch["rate_a"] = rate_a
     vbranch["shift"] = _PMs.MultiConductorVector(zeros(ncnd))
     vbranch["tap"] = _PMs.MultiConductorVector(ones(ncnd))
     vbranch["transformer"] = false
