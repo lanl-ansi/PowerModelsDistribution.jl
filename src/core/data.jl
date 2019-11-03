@@ -149,6 +149,7 @@ function _load_pq_bounds(load::Dict, bus::Dict)
     return (pmin, pmax, qmin, qmax)
 end
 
+
 function _load_curr_max(load::Dict, bus::Dict)
     pmin, pmax, qmin, qmax = _load_pq_bounds(load, bus)
     pabsmax = max.(abs.(pmin), abs.(pmax))
@@ -160,6 +161,10 @@ function _load_curr_max(load::Dict, bus::Dict)
     return smax./vmin
 end
 
+
+"""
+Returns magnitude bounds for the current going through the load.
+"""
 function _load_curr_mag_bounds(load::Dict, bus::Dict)
     a, α, b, β = _load_expmodel_params(load, bus)
     vmin, vmax = _load_vbounds(load, bus)
@@ -231,4 +236,60 @@ function _gen_curr_max(gen::Dict, bus::Dict)
     vmin = bus["vmin"].values
 
     return smax./vmin
+end
+
+
+function _branch_curr_max_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
+    bounds_fr = []
+    bounds_to = []
+    if haskey(branch, "c_rating_a")
+        push!(bounds_fr, branch["c_rating_a"].values)
+        push!(bounds_to, branch["c_rating_a"].values)
+    end
+    if haskey(branch, "rate_a")
+        push!(bounds_fr, branch["rate_a"].values./bus_fr["vmin"].values)
+        push!(bounds_to, branch["rate_a"].values./bus_to["vmin"].values)
+    end
+    @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
+    return min.(bounds_fr...), min.(bounds_to...)
+end
+
+
+function _branch_power_max_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
+    bounds_fr = []
+    bounds_to = []
+    if haskey(branch, "c_rating_a")
+        push!(bounds_fr, branch["c_rating_a"].values.*bus_fr["vmax"].values)
+        push!(bounds_to, branch["c_rating_a"].values.*bus_to["vmax"].values)
+    end
+    if haskey(branch, "rate_a")
+        push!(bounds_fr, branch["rate_a"].values)
+        push!(bounds_to, branch["rate_a"].values)
+    end
+    @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
+    return min.(bounds_fr...), min.(bounds_to...)
+end
+
+
+function _branch_series_curr_max(branch::Dict, bus_fr::Dict, bus_to::Dict)
+    vmin_fr = bus_fr["vmin"].values
+    vmin_to = bus_to["vmin"].values
+
+    vmax_fr = bus_fr["vmax"].values
+    vmax_to = bus_to["vmax"].values
+
+    # assumed to be matrices already
+    # temportary fix by shunts_diag2mat!
+
+    # get valid bounds on total current
+    c_max_fr_tot, c_max_to_tot = _branch_curr_max_frto(branch, bus_fr, bus_to)
+
+    # get valid bounds on shunt current
+    y_fr = branch["g_fr"].values + im* branch["b_fr"].values
+    y_to = branch["g_to"].values + im* branch["b_to"].values
+    c_max_fr_sh = abs.(y_fr)*vmax_fr
+    c_max_to_sh = abs.(y_to)*vmax_to
+
+    # now select element-wise lowest valid bound between fr and to
+    return min.(c_max_fr_sh.+c_max_fr_tot, c_max_to_sh.+c_max_to_tot)
 end

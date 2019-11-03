@@ -21,7 +21,6 @@ function post_mc_opf_bf_del(pm::_PMs.AbstractPowerModel)
 
     for c in _PMs.conductor_ids(pm)
         _PMs.variable_generation(pm, cnd=c)
-        _PMs.variable_dcline_flow(pm, cnd=c)
     end
 
     # Constraints
@@ -33,27 +32,20 @@ function post_mc_opf_bf_del(pm::_PMs.AbstractPowerModel)
 
     for i in _PMs.ids(pm, :branch)
         constraint_mc_flow_losses(pm, i)
-
         constraint_mc_model_voltage_magnitude_difference(pm, i)
 
-        for c in _PMs.conductor_ids(pm)
-            #_PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
+        constraint_mc_voltage_angle_difference(pm, i)
 
-            _PMs.constraint_thermal_limit_from(pm, i, cnd=c)
-            _PMs.constraint_thermal_limit_to(pm, i, cnd=c)
-        end
+        constraint_mc_thermal_limit_from(pm, i)
+        constraint_mc_thermal_limit_to(pm, i)
     end
 
     for i in _PMs.ids(pm, :load)
         constraint_mc_load(pm, i)
     end
 
-    for i in _PMs.ids(pm, :dcline), c in _PMs.conductor_ids(pm)
-        _PMs.constraint_dcline(pm, i, cnd=c)
-    end
-
-    for i in _PMs.ids(pm, :bus), c in _PMs.conductor_ids(pm)
-        constraint_mc_power_balance_shunt(pm, i, cnd=c)
+    for i in _PMs.ids(pm, :bus)
+        constraint_mc_power_balance(pm, i)
     end
 
     # Objective

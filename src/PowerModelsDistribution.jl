@@ -52,6 +52,7 @@ module PowerModelsDistribution
     include("prob/opf_bctr.jl")
     include("prob/opf_bf.jl")
     include("prob/opf_bf_del.jl")
+    include("prob/opf_bf_del_mx.jl")
     include("prob/pf.jl")
     include("prob/pf_lm.jl")
     include("prob/pf_bf.jl")

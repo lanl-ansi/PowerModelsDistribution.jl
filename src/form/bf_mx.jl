@@ -51,24 +51,7 @@ function variable_mc_branch_series_current_prod_hermitian(pm::AbstractUBFModels;
         for (key, branch) in branches
             bus_fr = buses[branch["f_bus"]]
             bus_to = buses[branch["t_bus"]]
-
-            vmin_fr = bus_fr["vmin"].values
-            vmin_to = bus_to["vmin"].values
-
-            vmax_fr = bus_fr["vmax"].values
-            vmax_to = bus_to["vmax"].values
-
-            # assumed to be matrices already
-            # temportary fix by shunts_diag2mat!
-            y_fr = branch["g_fr"].values + im* branch["b_fr"].values
-            y_to = branch["g_to"].values + im* branch["b_to"].values
-
-            println(keys(branch))
-            smax = branch["rate_a"].values
-            cmaxfr = smax./vmin_fr + abs.(y_fr)*vmax_fr
-            cmaxto = smax./vmin_to + abs.(y_to)*vmax_to
-
-            cmax[key] = max.(cmaxfr, cmaxto)
+            cmax[key] = _branch_series_curr_max(branch, bus_fr, bus_to)
         end
         # create matrix variables
         (Lr,Li) = variable_mx_hermitian(pm.model, branch_ids, n_cond;
@@ -96,14 +79,22 @@ function variable_mc_branch_flow(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=p
     branch_arcs = _PMs.ref(pm, nw, :arcs)
     if bounded
         bound = Dict{eltype(branch_arcs), Array{Real,2}}()
-        for (l,i,j) in branch_arcs
-            vmin = _PMs.ref(pm, nw, :bus, i)["vmin"].values
-            vmax = _PMs.ref(pm, nw, :bus, i)["vmax"].values
-            smax = _PMs.ref(pm, nw, :branch, l)["rate_a"].values
-            cmax = smax./vmin
-            bound[(l,i,j)] = vmax*cmax'
-            for c in 1:length(smax)
-                bound[(l,i,j)][c,c] = smax[c]
+        for (br, branch) in _PMs.ref(pm, nw, :branch)
+            bus_fr = _PMs.ref(pm, nw, :bus, branch["f_bus"])
+            bus_to = _PMs.ref(pm, nw, :bus, branch["t_bus"])
+
+            smax_fr, smax_to = _branch_power_max_frto(branch, bus_fr, bus_to)
+            cmax_fr, cmax_to = _branch_curr_max_frto(branch, bus_fr, bus_to)
+
+            tuple_fr = (br, bus_fr["index"], bus_to["index"])
+            tuple_to = (br, bus_to["index"], bus_fr["index"])
+
+            bound[tuple_fr] = bus_fr["vmax"].values.*cmax_fr'
+            bound[tuple_to] = bus_to["vmax"].values.*cmax_to'
+
+            for c in 1:length(smax_fr)
+                bound[tuple_fr][c,c] = smax_fr[c]
+                bound[tuple_to][c,c] = smax_to[c]
             end
         end
         # create matrix variables
@@ -219,13 +210,9 @@ function variable_mc_generation_power_mx(pm::AbstractUBFModels; nw=pm.cnw)
     # calculate bounds for matrix variable
     bound = Dict{eltype(gen_ids), Array{Real,2}}()
     for (id, gen) in _PMs.ref(pm, nw, :gen)
-        bus_id = gen["gen_bus"]
-        vmax = _PMs.ref(pm, nw, :bus, bus_id)["vmax"].values
-        vmin = _PMs.ref(pm, nw, :bus, bus_id)["vmin"].values
-        pmax = max(abs.(gen["pmax"].values), abs.(gen["pmin"].values))
-        qmax = max(abs.(gen["qmax"].values), abs.(gen["qmin"].values))
-        smax = sqrt.(pmax.^2 + qmax.^2)
-        cmax = smax./vmin
+        bus = _PMs.ref(pm, nw, :bus, gen["gen_bus"])
+        vmax = bus["vmax"].values
+        cmax = _gen_curr_max(gen, bus)
         bound[id] = vmax*cmax'
     end
     # create matrix variables, whilst injecting diagonals
@@ -259,19 +246,21 @@ function variable_mc_load_mx(pm::AbstractUBFModels; nw=pm.cnw)
     load_wye_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="wye"]
     load_del_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="delta"]
     load_cone_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if _load_needs_cone(load)]
-    # first create the wye loads; will create keys :Pd, :Qd
-    variable_mc_load_power_wye_mx(pm, load_wye_ids)
-    # now, create delta loads; will create :Xdr, :Xdi
-    variable_mc_load_power_delta(pm, load_del_ids)
-    # define :Pd, :Qd for delta loads as lin. transformation of :Xdr and :Wdim
-    Td = [1 -1 0; 0 1 -1; -1 0 1]
-    for id in load_del_ids
-        _PMs.var(pm, nw, :Pd)[id] = _PMs.var(pm, nw, :Xdr, id)*Td
-        _PMs.var(pm, nw, :Qd)[id] = _PMs.var(pm, nw, :Xdi, id)*Td
+    # create dictionaries
+    _PMs.var(pm, nw)[:Pd] = Dict()
+    _PMs.var(pm, nw)[:Qd] = Dict()
+    for c in _PMs.conductor_ids(pm)
+        _PMs.var(pm, nw, c)[:pl] = Dict()
+        _PMs.var(pm, nw, c)[:ql] = Dict()
     end
-    # both loads need a current variable; bounds adjusted for connection type
-    variable_mc_load_current_mx(pm, [load_wye_ids..., load_del_ids...])
-    variable_mc_load_power_vector(pm, load_cone_ids)
+    # now, create auxilary power variable X for delta loads
+    variable_mc_load_delta_aux(pm, load_del_ids)
+    # all loads need a current variable now
+    variable_mc_load_current(pm, collect(_PMs.ids(pm, nw, :load)))
+    # for all wye-connected loads, we need variables fot the off-diagonals of Pd/Qd
+    variable_mc_load_power_wye_mx(pm, load_wye_ids)
+    # for wye loads with a cone inclusion constraint, we need to create a variable for the diagonal
+    variable_mc_load_power(pm, intersect(load_wye_ids, load_cone_ids))
 end
 
 """
@@ -281,7 +270,7 @@ function variable_mc_load(pm::AbstractUBFModels; nw=pm.cnw)
     load_wye_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="wye"]
     load_del_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="delta"]
     load_cone_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if _load_needs_cone(load)]
-    # create dictionary for wye loads
+    # create dictionaries
     for c in _PMs.conductor_ids(pm)
         _PMs.var(pm, nw, c)[:pd] = Dict()
         _PMs.var(pm, nw, c)[:qd] = Dict()
@@ -342,12 +331,9 @@ function variable_mc_load_power_wye_mx(pm::AbstractUBFModels, load_ids::Array{In
     end
     # create matrix variables
     (Pd,Qd) = variable_mx_complex_with_diag(pm.model, load_ids, ncnds; symm_bound=bound, name=("Pd", "Qd"), prefix="$nw")
-    # save references
-    _PMs.var(pm, nw)[:Pd] = Pd
-    _PMs.var(pm, nw)[:Qd] = Qd
-    for c in 1:ncnds
-        _PMs.var(pm, nw, c)[:pd] =Dict([(id, Pd[id][c,c]) for id in load_ids])
-        _PMs.var(pm, nw, c)[:qd] =Dict([(id, Qd[id][c,c]) for id in load_ids])
+    for id in load_ids
+        _PMs.var(pm, nw, :Pd)[id] = Pd[id]
+        _PMs.var(pm, nw, :Qd)[id] = Qd[id]
     end
 end
 
@@ -392,7 +378,7 @@ function variable_mc_load_delta_aux(pm::AbstractUBFModels, load_ids::Array{Int,1
 end
 
 
-function variable_mc_load_current_mx(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw)
+function variable_mc_load_current(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw)
     ncnds = length(_PMs.conductor_ids(pm, nw))
     # calculate bounds
     cmin = Dict{eltype(load_ids), Array{Real,1}}()
@@ -411,7 +397,7 @@ function variable_mc_load_current_mx(pm::AbstractUBFModels, load_ids::Array{Int,
 end
 
 
-function constraint_mc_generation_mx_SWL(pm::AbstractUBFModels, gen_id::Int; nw::Int=pm.cnw)
+function constraint_mc_generation_mx(pm::AbstractUBFModels, gen_id::Int; nw::Int=pm.cnw)
     Pg = _PMs.var(pm, nw, :Pg, gen_id)
     Qg = _PMs.var(pm, nw, :Qg, gen_id)
     bus_id = _PMs.ref(pm, nw, :gen, gen_id)["gen_bus"]
@@ -422,51 +408,6 @@ function constraint_mc_generation_mx_SWL(pm::AbstractUBFModels, gen_id::Int; nw:
     constraint_SWL_psd(pm.model, Pg, Qg, Wr, Wi, CCgr, CCgi)
 end
 
-
-function constraint_mc_load_vector(pm::AbstractUBFModels, load_id::Int; nw=pm.cnw)
-    load = _PMs.ref(pm, nw, :load, load_id)
-    pd = load["pd"].values
-    qd = load["qd"].values
-    bus = _PMs.ref(pm, nw, :bus, load["load_bus"])
-    ncnds = length(pd)
-
-    if load["model"]=="constant_power"
-        for c in 1:ncnds
-            _PMs.var(pm, nw, c, :pl)[load_id] = pd[c]
-            _PMs.var(pm, nw, c, :ql)[load_id] = qd[c]
-        end
-    else
-        # obtain a reference for w
-        Wyr = _PMs.var(pm, nw, :Wr, bus["index"])
-        Td = [1 -1 0; 0 1 -1; -1 0 1]
-        if load["conn"]=="wye"
-            Wr = Wyr
-        elseif load["conn"]=="delta"
-            Wr = Td*Wyr*Td'
-        end
-        # create a, α, b and β
-        a, α, b, β = _load_expmodel_params(load, bus)
-        if load["model"]=="constant_impedance"
-            for c in 1:ncnds
-                _PMs.var(pm, nw, c, :pl)[load_id] = a[c]*Wr[c,c]
-                _PMs.var(pm, nw, c, :ql)[load_id] = b[c]*Wr[c,c]
-            end
-        else
-
-            a, α, b, β = _load_expmodel_params(load, bus)
-            vmin, vmax = _load_vbounds(load, bus)
-            wmin = vmin.^2
-            wmax = vmax.^2
-            pmin, pmax, qmin, qmax = _load_pq_bounds(load, bus)
-            for c in 1:ncnds
-                pl = _PMs.var(pm, nw, c, :pl)[load_id]
-                ql = _PMs.var(pm, nw, c, :ql)[load_id]
-                constraint_pqw(pm.model, Wr[c,c], pl, a[c], α[c], wmin[c], wmax[c], pmin[c], pmax[c])
-                constraint_pqw(pm.model, Wr[c,c], ql, b[c], β[c], wmin[c], wmax[c], qmin[c], qmax[c])
-            end
-        end
-    end
-end
 
 function constraint_pqw(model::JuMP.Model, w, p, a::Real, α::Real, wmin::Real, wmax::Real, pmin::Real, pmax::Real)
     if a==0
@@ -531,7 +472,8 @@ function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     pd0 = load["pd"].values
     qd0 = load["qd"].values
     bus_id = load["load_bus"]
-    ncnds = length(pd)
+    bus = _PMs.ref(pm, nw, :bus, bus_id)
+    ncnds = length(pd0)
 
     # calculate load params
     a, α, b, β = _load_expmodel_params(load, bus)
@@ -610,100 +552,95 @@ function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     end
 end
 
-
-
 function constraint_mc_load_mx(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     # shared variables and parameters
     load = _PMs.ref(pm, nw, :load, load_id)
+    pd0 = load["pd"].values
+    qd0 = load["qd"].values
     bus_id = load["load_bus"]
-    ncnds = length(load["pd"])
+    bus = _PMs.ref(pm, nw, :bus, bus_id)
+    ncnds = length(pd0)
 
-    # take care of voltage-dependency load models
-    constraint_mc_load_vector(pm, load_id, nw=nw)
-    pl = [_PMs.var(pm, nw, c, :pl, load_id) for c in 1:ncnds]
-    ql = [_PMs.var(pm, nw, c, :ql, load_id) for c in 1:ncnds]
+    # calculate load params
+    a, α, b, β = _load_expmodel_params(load, bus)
+    vmin, vmax = _load_vbounds(load, bus)
+    wmin = vmin.^2
+    wmax = vmax.^2
+    pmin, pmax, qmin, qmax = _load_pq_bounds(load, bus)
 
-
+    # take care of connections
     Wr = _PMs.var(pm, nw, :Wr, bus_id)
     Wi = _PMs.var(pm, nw, :Wi, bus_id)
     CCdr = _PMs.var(pm, nw, :CCdr, load_id)
     CCdi = _PMs.var(pm, nw, :CCdi, load_id)
+
     if load["conn"]=="wye"
-        # set the diagonal values
+        if load["model"]=="constant_power"
+            for c in 1:ncnds
+                _PMs.var(pm, nw, c, :pl)[load_id] = pd0[c]
+                _PMs.var(pm, nw, c, :ql)[load_id] = qd0[c]
+            end
+        elseif load["model"]=="constant_impedance"
+            w = [_PMs.var(pm, nw, :Wr, bus_id)[c,c] for c in 1:ncnds]
+            for c in 1:ncnds
+                _PMs.var(pm, nw, c, :pl)[load_id] = a[c]*w[c]
+                _PMs.var(pm, nw, c, :ql)[load_id] = b[c]*w[c]
+            end
+        # in this case, :pl has a JuMP variable
+        else
+            pl = [_PMs.var(pm, nw, c, :pl, load_id) for c in 1:ncnds]
+            ql = [_PMs.var(pm, nw, c, :ql, load_id) for c in 1:ncnds]
+            for c in 1:ncnds
+                constraint_pqw(pm.model, Wr[c,c], pl[c], a[c], α[c], wmin[c], wmax[c], pmin[c], pmax[c])
+                constraint_pqw(pm.model, Wr[c,c], ql[c], b[c], β[c], wmin[c], wmax[c], qmin[c], qmax[c])
+            end
+        end
+        # diagonal of :Pd is identical to :pl now
         Pd = _PMs.var(pm, nw, :Pd, load_id)
         Qd = _PMs.var(pm, nw, :Qd, load_id)
         for c in 1:ncnds
-            Pd[c,c] = pl[c]
-            Qd[c,c] = ql[c]
-            _PMs.var(pm, nw, c, :pd)[load_id] = pl[c]
-            _PMs.var(pm, nw, c, :qd)[load_id] = ql[c]
+            Pd[c,c] = _PMs.var(pm, nw, c, :pl)[load_id]
+            Qd[c,c] = _PMs.var(pm, nw, c, :ql)[load_id]
         end
-        # link S, W and L
+
         #constraint_SWL_psd(pm.model, Pd, Qd, Wr, Wi, CCdr, CCdi)
+
     elseif load["conn"]=="delta"
-        Xdre = _PMs.var(pm, nw, :Xdr, load_id)
-        Xdim = _PMs.var(pm, nw, :Xdi, load_id)
+        # link Wy, CCd and X
+        Xdr = _PMs.var(pm, nw, :Xdr, load_id)
+        Xdi = _PMs.var(pm, nw, :Xdi, load_id)
         Td = [1 -1 0; 0 1 -1; -1 0 1]
-        JuMP.@constraint(pm.model, LinearAlgebra.diag(Td*Xdre) .== pl)
-        JuMP.@constraint(pm.model, LinearAlgebra.diag(Td*Xdim) .== ql)
-        #constraint_SWL_psd(pm.model, Xdre, Xdim, Wr, Wi, CCdr, CCdi)
-        Pd = Xdre*Td
-        Qd = Xdim*Td
-        _PMs.var(pm, nw, :Pd)[load_id] = Pd
-        _PMs.var(pm, nw, :Qd)[load_id] = Qd
-    end
-end
+        constraint_SWL_psd(pm.model, Xdr, Xdi, Wr, Wi, CCdr, CCdi)
+        # define pd/qd and pl/ql as affine transformations of X
+        Pd = Xdr*Td
+        Qd = Xdi*Td
+        pl = LinearAlgebra.diag(Td*Xdr)
+        ql = LinearAlgebra.diag(Td*Xdi)
+        for c in 1:ncnds
+            _PMs.var(pm, nw, c, :Pd)[load_id] = Pd
+            _PMs.var(pm, nw, c, :Qd)[load_id] = Qd
+            _PMs.var(pm, nw, c, :pl)[load_id] = pl[c]
+            _PMs.var(pm, nw, c, :ql)[load_id] = ql[c]
+        end
 
-
-function constraint_mc_load_mx_SWL(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
-    # shared variables and parameters
-    load = _PMs.ref(pm, nw, :load, load_id)
-    bus_id = load["load_bus"]
-    ncnds = length(load["pd"])
-
-    Wr = _PMs.var(pm, nw, :Wr, bus_id)
-    Wi = _PMs.var(pm, nw, :Wi, bus_id)
-    CCdr = _PMs.var(pm, nw, :CCdr, load_id)
-    CCdi = _PMs.var(pm, nw, :CCdi, load_id)
-    if load["conn"]=="wye"
-        # set the diagonal values
-        Pd = _PMs.var(pm, nw, :Pd, load_id)
-        Qd = _PMs.var(pm, nw, :Qd, load_id)
-        # link S, W and L
-        constraint_SWL_psd(pm.model, Pd, Qd, Wr, Wi, CCdr, CCdi)
-    elseif load["conn"]=="delta"
-        Xdre = _PMs.var(pm, nw, :Xdr, load_id)
-        Xdim = _PMs.var(pm, nw, :Xdi, load_id)
-        constraint_SWL_psd(pm.model, Xdre, Xdim, Wr, Wi, CCdr, CCdi)
-    end
-end
-
-
-function constraint_mc_load_mx_SWL_only_delta(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
-    # shared variables and parameters
-    load = _PMs.ref(pm, nw, :load, load_id)
-    bus_id = load["load_bus"]
-    ncnds = length(load["pd"])
-
-    Wr = _PMs.var(pm, nw, :Wr, bus_id)
-    Wi = _PMs.var(pm, nw, :Wi, bus_id)
-    CCdr = _PMs.var(pm, nw, :CCdr, load_id)
-    CCdi = _PMs.var(pm, nw, :CCdi, load_id)
-    if load["conn"]=="delta"
-        Xdre = _PMs.var(pm, nw, :Xdr, load_id)
-        Xdim = _PMs.var(pm, nw, :Xdi, load_id)
-        constraint_SWL_psd(pm.model, Xdre, Xdim, Wr, Wi, CCdr, CCdi)
-    end
-end
-
-
-function constraint_mc_voltage_psd(pm::AbstractUBFModels; nw=pm.cnw)
-    buses_covered = [i for (l,i,j) in _PMs.ref(pm, nw, :arcs)]
-    buses_psd = [i for i in _PMs.ids(pm, nw, :bus) if !(i in buses_covered)]
-    for bus_id in buses_psd
-        Wr = _PMs.var(pm, nw, :Wr, bus_id)
-        Wi = _PMs.var(pm, nw, :Wi, bus_id)
-        constraint_M_psd(Wr, Wi)
+        # |Vd|^2 is a linear transformation of Wr
+        wd = LinearAlgebra.diag(Td*Wyr*Td')
+        if load["model"]=="constant_power"
+            for c in 1:ncnds
+                JuMP.@constraint(pm.model, pl[c]==pd0[c])
+                JuMP.@constraint(pm.model, ql[c]==qd0[c])
+            end
+        elseif load["model"]=="constant_impedance"
+            for c in 1:ncnds
+                JuMP.@constraint(pm.model, pl[c]==a[c]*wd[c])
+                JuMP.@constraint(pm.model, ql[c]==b[c]*wd[c])
+            end
+        else
+            for c in 1:ncnds
+                constraint_pqw(pm.model, wd[c], pl[c], a[c], α[c], wmin[c], wmax[c], pmin[c], pmax[c])
+                constraint_pqw(pm.model, wd[c], ql[c], b[c], β[c], wmin[c], wmax[c], qmin[c], qmax[c])
+            end
+        end
     end
 end
 
@@ -739,7 +676,7 @@ function constraint_mc_power_balance_shunt(pm::AbstractUBFModels, i::Int; nw::In
     bus_gs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "gs", cnd) for k in bus_shunts)
     bus_bs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
 
-    constraint_power_balance_shunt(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_gs, bus_bs)
+    constraint_mc_power_balance_shunt(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_gs, bus_bs)
 end
 
 
@@ -751,11 +688,9 @@ function constraint_mc_power_balance_shunt(pm::AbstractUBFModels, n::Int, c::Int
     qd   = _PMs.var(pm, n, c, :qd)
     p    = _PMs.var(pm, n, c, :p)
     q    = _PMs.var(pm, n, c, :q)
-    p_dc = _PMs.var(pm, n, c, :p_dc)
-    q_dc = _PMs.var(pm, n, c, :q_dc)
 
-    JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) + sum(p_dc[a_dc] for a_dc in bus_arcs_dc) == sum(pg[g] for g in bus_gens) - sum(pd[d] for d in bus_loads) - sum(gs for gs in values(bus_gs))*w)
-    JuMP.@constraint(pm.model, sum(q[a] for a in bus_arcs) + sum(q_dc[a_dc] for a_dc in bus_arcs_dc) == sum(qg[g] for g in bus_gens) - sum(qd[d] for d in bus_loads) + sum(bs for bs in values(bus_bs))*w)
+    JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) == sum(pg[g] for g in bus_gens) - sum(pd[d] for d in bus_loads) - sum(gs for gs in values(bus_gs))*w)
+    JuMP.@constraint(pm.model, sum(q[a] for a in bus_arcs) == sum(qg[g] for g in bus_gens) - sum(qd[d] for d in bus_loads) + sum(bs for bs in values(bus_bs))*w)
 end
 
 
