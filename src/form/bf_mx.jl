@@ -191,12 +191,20 @@ function constraint_mc_model_voltage_magnitude_difference(pm::AbstractUBFModels,
 end
 
 
+"""
+For the matrix KCL formulation (mx), the generator needs an explicit current and
+power variable.
+"""
 function variable_mc_generation_mx(pm::AbstractUBFModels; nw=pm.cnw)
     variable_mc_generation_current_mx(pm; nw=nw)
     variable_mc_generation_power_mx(pm; nw=nw)
 end
 
 
+"""
+For the matrix KCL formulation (mx), the generator needs an explicit power
+variable.
+"""
 function variable_mc_generation_power_mx(pm::AbstractUBFModels; nw=pm.cnw)
     gen_ids = collect(_PMs.ids(pm, nw, :gen))
     # delegate creation of diagonal elements back to PMs as before
@@ -224,6 +232,10 @@ function variable_mc_generation_power_mx(pm::AbstractUBFModels; nw=pm.cnw)
 end
 
 
+"""
+For the matrix KCL formulation (mx), the generator needs an explicit current
+variable.
+"""
 function variable_mc_generation_current_mx(pm::AbstractUBFModels; nw=pm.cnw)
     gen_ids = collect(_PMs.ids(pm, nw, :gen))
     ncnds = length(_PMs.conductor_ids(pm, nw))
@@ -242,6 +254,18 @@ function variable_mc_generation_current_mx(pm::AbstractUBFModels; nw=pm.cnw)
 end
 
 
+"""
+The variable creation for the loads is rather complicated because Expressions
+are used wherever possible instead of explicit variables.
+All loads need a current variable; for wye loads, this variable will be in the
+wye reference frame whilst for delta currents it will be in the delta reference
+frame.
+All loads need variables for the off-diagonals of the nodal power variables. In
+some cases, the diagonals elements can be created as Expressions.
+Delta loads only need a current variable and auxilary power variable (X), and
+all other load model variables are then linear transformations of these
+(linear Expressions).
+"""
 function variable_mc_load_mx(pm::AbstractUBFModels; nw=pm.cnw)
     load_wye_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="wye"]
     load_del_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="delta"]
@@ -258,13 +282,21 @@ function variable_mc_load_mx(pm::AbstractUBFModels; nw=pm.cnw)
     # all loads need a current variable now
     variable_mc_load_current(pm, collect(_PMs.ids(pm, nw, :load)))
     # for all wye-connected loads, we need variables fot the off-diagonals of Pd/Qd
-    variable_mc_load_power_wye_mx(pm, load_wye_ids)
+    variable_mc_load_power_bus_mx(pm, load_wye_ids)
     # for wye loads with a cone inclusion constraint, we need to create a variable for the diagonal
     variable_mc_load_power(pm, intersect(load_wye_ids, load_cone_ids))
 end
 
+
 """
-The variables we need depend on whether
+The variable creation for the loads is rather complicated because Expressions
+are used wherever possible instead of explicit variables.
+Delta loads always need a current variable and auxilary power variable (X), and
+all other load model variables are then linear transformations of these
+(linear Expressions).
+Wye loads however, don't need any variables when the load is modelled as
+constant power or constant impedance. In all other cases (e.g. when a cone is
+used to constrain the power), variables need to be created.
 """
 function variable_mc_load(pm::AbstractUBFModels; nw=pm.cnw)
     load_wye_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="wye"]
@@ -287,8 +319,9 @@ end
 
 
 """
-These variables reflect the power consumed by the load, NOT the power injected into the bus nodes;
-these are different for wye
+These variables reflect the power consumed by the load, NOT the power injected
+into the bus nodes; these variables only coincide for wye-connected loads
+with a grounded neutral.
 """
 function variable_mc_load_power(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw)
     # calculate bounds for all loads
@@ -318,7 +351,13 @@ function variable_mc_load_power(pm::AbstractUBFModels, load_ids::Array{Int,1}; n
 end
 
 
-function variable_mc_load_power_wye_mx(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw)
+"""
+The bus qualifier denotes that this is the power withdrawn at the bus; Only for
+grounded wye-connected loads, this is the same as the power consumed by the
+multi-phase load. The off-diagonals only need to be created for the matrix KCL
+formulation, denoted by 'mx'.
+"""
+function variable_mc_load_power_bus_mx(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw)
     ncnds = length(_PMs.conductor_ids(pm, nw))
     # calculate bounds
     bound = Dict{eltype(load_ids), Array{Real,2}}()
@@ -378,6 +417,11 @@ function variable_mc_load_delta_aux(pm::AbstractUBFModels, load_ids::Array{Int,1
 end
 
 
+"""
+All loads need a current variable; for wye loads, this variable will be in the
+wye reference frame whilst for delta currents it will be in the delta reference
+frame.
+"""
 function variable_mc_load_current(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw)
     ncnds = length(_PMs.conductor_ids(pm, nw))
     # calculate bounds
@@ -397,6 +441,10 @@ function variable_mc_load_current(pm::AbstractUBFModels, load_ids::Array{Int,1};
 end
 
 
+"""
+Link the current and power withdrawn by a generator at the bus through a PSD
+constraint. The rank-1 constraint is dropped in this formulation.
+"""
 function constraint_mc_generation_mx(pm::AbstractUBFModels, gen_id::Int; nw::Int=pm.cnw)
     Pg = _PMs.var(pm, nw, :Pg, gen_id)
     Qg = _PMs.var(pm, nw, :Qg, gen_id)
@@ -409,6 +457,12 @@ function constraint_mc_generation_mx(pm::AbstractUBFModels, gen_id::Int; nw::Int
 end
 
 
+"""
+Creates the constraints modelling the (relaxed) voltage-dependency of the
+power consumed in each phase, s=p+jq. This is completely symmetrical for p and
+q, with appropriate substitutions of the variables and parameters:
+p->q, a->b, α->β, pmin->qmin, pmax->qmax
+"""
 function constraint_pqw(model::JuMP.Model, w, p, a::Real, α::Real, wmin::Real, wmax::Real, pmin::Real, pmax::Real)
     if a==0
         JuMP.@constraint(model, p==0)
@@ -466,6 +520,9 @@ function constraint_pqw(model::JuMP.Model, w, p, a::Real, α::Real, wmin::Real, 
 end
 
 
+"""
+Creates the constraints modelling the (relaxed) voltage-dependent loads.
+"""
 function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     # shared variables and parameters
     load = _PMs.ref(pm, nw, :load, load_id)
@@ -552,6 +609,11 @@ function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     end
 end
 
+
+"""
+Creates the constraints modelling the (relaxed) voltage-dependent loads for
+the matrix KCL formulation (mx).
+"""
 function constraint_mc_load_mx(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     # shared variables and parameters
     load = _PMs.ref(pm, nw, :load, load_id)
@@ -645,6 +707,16 @@ function constraint_mc_load_mx(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.c
 end
 
 
+"""
+Take a multi-conductor voltage variable V and a current variable I. The
+associated power is then defined as S = V*I^H
+Define the lifted variables as W and L as
+W = V*V^H, L = I*I^H
+Then, it is equally valid that
+[W S; S^H L] ∈ PSDCone, rank([W S; S^H L])=1
+This function adds this PSD constraint for the rectangular coordinates of S, W
+and L.
+"""
 function constraint_SWL_psd(model::JuMP.Model, P, Q, Wr, Wi, L_re, L_im)
     M_re = [Wr P; P' L_re]
     M_im = [Wi Q; -Q' L_im]
@@ -652,49 +724,19 @@ function constraint_SWL_psd(model::JuMP.Model, P, Q, Wr, Wi, L_re, L_im)
 end
 
 
+"""
+For rectangular coordinates of a complex matrix M=M_re+im*M_im,
+this function applies constraints equivalent to requiring that M itself is PSD.
+"""
 function constraint_M_psd(model::JuMP.Model, M_re, M_im)
     JuMP.@constraint(model, [M_re -M_im; M_im M_re] in JuMP.PSDCone())
 end
 
 
-""
-function constraint_mc_power_balance_shunt(pm::AbstractUBFModels, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
-    if !haskey(_PMs.con(pm, nw, cnd), :kcl_p)
-        _PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,JuMP.ConstraintRef}()
-    end
-    if !haskey(_PMs.con(pm, nw, cnd), :kcl_q)
-        _PMs.con(pm, nw, cnd)[:kcl_q] = Dict{Int,JuMP.ConstraintRef}()
-    end
-
-    bus = _PMs.ref(pm, nw, :bus, i)
-    bus_arcs = _PMs.ref(pm, nw, :bus_arcs, i)
-    bus_arcs_dc = _PMs.ref(pm, nw, :bus_arcs_dc, i)
-    bus_gens = _PMs.ref(pm, nw, :bus_gens, i)
-    bus_loads = _PMs.ref(pm, nw, :bus_loads, i)
-    bus_shunts = _PMs.ref(pm, nw, :bus_shunts, i)
-
-    bus_gs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "gs", cnd) for k in bus_shunts)
-    bus_bs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
-
-    constraint_mc_power_balance_shunt(pm, nw, cnd, i, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_gs, bus_bs)
-end
-
-
-function constraint_mc_power_balance_shunt(pm::AbstractUBFModels, n::Int, c::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_gs, bus_bs)
-    w    = _PMs.var(pm, n, c, :w, i)
-    pg   = _PMs.var(pm, n, c, :pg)
-    qg   = _PMs.var(pm, n, c, :qg)
-    pd   = _PMs.var(pm, n, c, :pd)
-    qd   = _PMs.var(pm, n, c, :qd)
-    p    = _PMs.var(pm, n, c, :p)
-    q    = _PMs.var(pm, n, c, :q)
-
-    JuMP.@constraint(pm.model, sum(p[a] for a in bus_arcs) == sum(pg[g] for g in bus_gens) - sum(pd[d] for d in bus_loads) - sum(gs for gs in values(bus_gs))*w)
-    JuMP.@constraint(pm.model, sum(q[a] for a in bus_arcs) == sum(qg[g] for g in bus_gens) - sum(qd[d] for d in bus_loads) + sum(bs for bs in values(bus_bs))*w)
-end
-
-
-""
+"""
+The mx qualifier indicates that the power balance is now formulated with
+matrix variables.
+"""
 function constraint_mc_power_balance_mx_shunt(pm::AbstractUBFModels, i::Int; nw::Int=pm.cnw)
     if !haskey(_PMs.con(pm, nw), :kcl_P)
         _PMs.con(pm, nw)[:kcl_P] = Dict{Int,Array{JuMP.ConstraintRef,2}}()

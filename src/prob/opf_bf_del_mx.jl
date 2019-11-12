@@ -43,7 +43,6 @@ function post_mc_opf_bf_del_mx(pm::_PMs.AbstractPowerModel)
 
     for i in _PMs.ids(pm, :load)
         constraint_mc_load_mx(pm, i)
-        #constraint_mc_load_mx_SWL(pm, i)
     end
 
     for i in _PMs.ids(pm, :gen)
