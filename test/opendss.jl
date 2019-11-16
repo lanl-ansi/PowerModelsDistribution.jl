@@ -295,6 +295,12 @@
         @test circuit["isc3"] == 10041.0
         @test circuit["isc1"] == 10500.0
     end
+
+    @testset "opendss verify sourcebus_vbranch rate_a" begin
+        data = PMD.parse_file("../test/data/opendss/case3_balanced.dss")
+        vbranch = [br for (id,br) in data["branch"] if br["name"]=="sourcebus_vbranch"][1]
+        @test haskey(vbranch, "rate_a")
+    end
 end
 
 @testset "test json parser" begin
