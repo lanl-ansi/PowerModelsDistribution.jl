@@ -81,11 +81,6 @@ function constraint_mc_ohms_yt_to(pm::_PMs.AbstractNFAModel, n::Int, c::Int, f_b
 end
 
 
-"nothing to do, no voltage variables"
-function constraint_mc_transformer_voltage(pm::_PMs.AbstractNFAModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to)
-end
-
-
 "nothing to do, this model is symmetric"
-function constraint_mc_transformer_flow(pm::_PMs.AbstractNFAModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to)
+function constraint_mc_trans(pm::_PMs.AbstractNFAModel, i::Int; nw::Int=pm.cnw)
 end

@@ -334,6 +334,96 @@ function constraint_mc_transformer_flow(pm::_PMs.AbstractACPModel, nw::Int, i::I
 end
 
 
+function constraint_mc_trans_yy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+    nph = _PMs.ref(pm, :conductors)
+
+    vm_fr = [_PMs.var(pm, nw, p, :vm, f_bus) for p in f_cnd]
+    vm_to = [_PMs.var(pm, nw, p, :vm, t_bus) for p in t_cnd]
+    va_fr = [_PMs.var(pm, nw, p, :va, f_bus) for p in f_cnd]
+    va_to = [_PMs.var(pm, nw, p, :va, t_bus) for p in t_cnd]
+
+    # construct tm as a parameter or scaled variable depending on whether it is fixed or not
+    tm = [tm_fixed[p] ? tm_set[p] : _PMs.var(pm, nw, p, :tap, trans_id) for p in 1:nph]
+
+    for p in 1:nph
+        if tm_fixed[p]
+            JuMP.@constraint(pm.model, vm_fr[p] == tm_scale*tm[p]*vm_to[p])
+        else
+            JuMP.@NLconstraint(pm.model, vm_fr[p] == tm_scale*tm[p]*vm_to[p])
+        end
+        pol_angle = pol==1 ? 0 : pi
+        JuMP.@constraint(pm.model, va_fr[p] == va_to[p] + pol_angle)
+    end
+
+    p_fr = [_PMs.var(pm, nw, p, :pt, f_idx) for p in f_cnd]
+    p_to = [_PMs.var(pm, nw, p, :pt, t_idx) for p in t_cnd]
+    q_fr = [_PMs.var(pm, nw, p, :qt, f_idx) for p in f_cnd]
+    q_to = [_PMs.var(pm, nw, p, :qt, t_idx) for p in t_cnd]
+
+    JuMP.@constraint(pm.model, p_fr + p_to .== 0)
+    JuMP.@constraint(pm.model, q_fr + q_to .== 0)
+end
+
+
+function constraint_mc_trans_dy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+    nph = _PMs.ref(pm, :conductors)
+
+    vm_fr = [_PMs.var(pm, nw, p, :vm, f_bus) for p in f_cnd]
+    vm_to = [_PMs.var(pm, nw, p, :vm, t_bus) for p in t_cnd]
+    va_fr = [_PMs.var(pm, nw, p, :va, f_bus) for p in f_cnd]
+    va_to = [_PMs.var(pm, nw, p, :va, t_bus) for p in t_cnd]
+
+    # construct tm as a parameter or scaled variable depending on whether it is fixed or not
+    tm = [tm_fixed[p] ? tm_set[p] : _PMs.var(pm, nw, p, :tap, trans_id) for p in 1:nph]
+
+    # introduce auxialiary variable vd = Md*v_fr
+    vd_re = Array{Any,1}(undef, nph)
+    vd_im = Array{Any,1}(undef, nph)
+    for p in 1:nph
+        # rotate by 1 to get 'previous' phase
+        # e.g., for nph=3: 1->3, 2->1, 3->2
+        q = (p-1+1)%nph+1
+        vd_re[p] = JuMP.@NLexpression(pm.model, vm_fr[p]*cos(va_fr[p])-vm_fr[q]*cos(va_fr[q]))
+        vd_im[p] = JuMP.@NLexpression(pm.model, vm_fr[p]*sin(va_fr[p])-vm_fr[q]*sin(va_fr[q]))
+        JuMP.@NLconstraint(pm.model, vd_re[p] == pol*tm_scale*tm[p]*vm_to[p]*cos(va_to[p]))
+        JuMP.@NLconstraint(pm.model, vd_im[p] == pol*tm_scale*tm[p]*vm_to[p]*sin(va_to[p]))
+    end
+
+    p_fr = [_PMs.var(pm, nw, p, :pt, f_idx) for p in f_cnd]
+    p_to = [_PMs.var(pm, nw, p, :pt, t_idx) for p in t_cnd]
+    q_fr = [_PMs.var(pm, nw, p, :qt, f_idx) for p in f_cnd]
+    q_to = [_PMs.var(pm, nw, p, :qt, t_idx) for p in t_cnd]
+
+    id_re = Array{Any,1}(undef, nph)
+    id_im = Array{Any,1}(undef, nph)
+    # s/v      = (p+jq)/|v|^2*conj(v)
+    #          = (p+jq)/|v|*(cos(va)-j*sin(va))
+    # Re(s/v)  = (p*cos(va)+q*sin(va))/|v|
+    # -Im(s/v) = -(q*cos(va)-p*sin(va))/|v|
+    for p in 1:nph
+        # id = conj(s_to/v_to)./tm
+        id_re[p] = JuMP.@NLexpression(pm.model,  (p_to[p]*cos(va_to[p])+q_to[p]*sin(va_to[p]))/vm_to[p]/(tm_scale*tm[p])/pol)
+        id_im[p] = JuMP.@NLexpression(pm.model, -(q_to[p]*cos(va_to[p])-p_to[p]*sin(va_to[p]))/vm_to[p]/(tm_scale*tm[p])/pol)
+    end
+    for p in 1:nph
+        # rotate by nph-1 to get 'previous' phase
+        # e.g., for nph=3: 1->3, 2->1, 3->2
+        q = (p-1+nph-1)%nph+1
+        # s_fr  = v_fr*conj(i_fr)
+        #       = v_fr*conj(id[q]-id[p])
+        #       = v_fr*(id_re[q]-j*id_im[q]-id_re[p]+j*id_im[p])
+        JuMP.@NLconstraint(pm.model, p_fr[p] ==
+             vm_fr[p]*cos(va_fr[p])*(id_re[q]-id_re[p])
+            -vm_fr[p]*sin(va_fr[p])*(-id_im[q]+id_im[p])
+        )
+        JuMP.@NLconstraint(pm.model, q_fr[p] ==
+             vm_fr[p]*cos(va_fr[p])*(-id_im[q]+id_im[p])
+            +vm_fr[p]*sin(va_fr[p])*(id_re[q]-id_re[p])
+        )
+    end
+end
+
+
 "Links the voltage at both windings of a variable tap transformer."
 function constraint_mc_oltc_voltage(pm::_PMs.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, Tv_fr, Tv_im, Cv_to)
     ncnd  = 3
