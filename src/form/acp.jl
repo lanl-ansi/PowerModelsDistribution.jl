@@ -335,7 +335,6 @@ end
 
 
 function constraint_mc_trans_yy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-    nph = _PMs.ref(pm, :conductors)
 
     vm_fr = [_PMs.var(pm, nw, p, :vm, f_bus) for p in f_cnd]
     vm_to = [_PMs.var(pm, nw, p, :vm, t_bus) for p in t_cnd]
@@ -343,9 +342,10 @@ function constraint_mc_trans_yy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::In
     va_to = [_PMs.var(pm, nw, p, :va, t_bus) for p in t_cnd]
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
-    tm = [tm_fixed[p] ? tm_set[p] : _PMs.var(pm, nw, p, :tap, trans_id) for p in 1:nph]
+    tm = [tm_fixed[p] ? tm_set[p] : _PMs.var(pm, nw, p, :tap, trans_id) for p in _PMs.conductor_ids(pm)]
 
-    for p in 1:nph
+
+    for p in _PMs.conductor_ids(pm)
         if tm_fixed[p]
             JuMP.@constraint(pm.model, vm_fr[p] == tm_scale*tm[p]*vm_to[p])
         else
@@ -366,17 +366,16 @@ end
 
 
 function constraint_mc_trans_dy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-    nph = _PMs.ref(pm, :conductors)
-
     vm_fr = [_PMs.var(pm, nw, p, :vm, f_bus) for p in f_cnd]
     vm_to = [_PMs.var(pm, nw, p, :vm, t_bus) for p in t_cnd]
     va_fr = [_PMs.var(pm, nw, p, :va, f_bus) for p in f_cnd]
     va_to = [_PMs.var(pm, nw, p, :va, t_bus) for p in t_cnd]
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
-    tm = [tm_fixed[p] ? tm_set[p] : _PMs.var(pm, nw, p, :tap, trans_id) for p in 1:nph]
+    tm = [tm_fixed[p] ? tm_set[p] : _PMs.var(pm, nw, p, :tap, trans_id) for p in _PMs.conductor_ids(pm)]
 
     # introduce auxialiary variable vd = Md*v_fr
+    nph = length(_PMs.conductor_ids(pm))
     vd_re = Array{Any,1}(undef, nph)
     vd_im = Array{Any,1}(undef, nph)
     for p in 1:nph
@@ -400,12 +399,12 @@ function constraint_mc_trans_dy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::In
     #          = (p+jq)/|v|*(cos(va)-j*sin(va))
     # Re(s/v)  = (p*cos(va)+q*sin(va))/|v|
     # -Im(s/v) = -(q*cos(va)-p*sin(va))/|v|
-    for p in 1:nph
+    for p in _PMs.conductor_ids(pm)
         # id = conj(s_to/v_to)./tm
         id_re[p] = JuMP.@NLexpression(pm.model,  (p_to[p]*cos(va_to[p])+q_to[p]*sin(va_to[p]))/vm_to[p]/(tm_scale*tm[p])/pol)
         id_im[p] = JuMP.@NLexpression(pm.model, -(q_to[p]*cos(va_to[p])-p_to[p]*sin(va_to[p]))/vm_to[p]/(tm_scale*tm[p])/pol)
     end
-    for p in 1:nph
+    for p in _PMs.conductor_ids(pm)
         # rotate by nph-1 to get 'previous' phase
         # e.g., for nph=3: 1->3, 2->1, 3->2
         q = (p-1+nph-1)%nph+1

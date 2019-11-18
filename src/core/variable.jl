@@ -190,8 +190,8 @@ end
 
 "Create tap variables."
 function variable_mc_oltc_tap(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded=true)
-    nph = 3
-    for p in 1:nph
+    # when extending to 4-wire, this should iterate only over the phase conductors
+    for p in _PMs.conductor_ids(pm)
         p_oltc_ids = [id for (id,trans) in _PMs.ref(pm, nw, :transformer) if !trans["fixed"][p]]
         _PMs.var(pm, nw, p)[:tap] = JuMP.@variable(pm.model,
             [i in p_oltc_ids],

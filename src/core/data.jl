@@ -132,10 +132,10 @@ function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, b
         tm_scale *= 1/sqrt(3)
     end
     if f_type == "zig-zag"
-        Memento.error("Zig-zag not yet supported.")
+        Memento.error(_LOGGER, "Zig-zag not yet supported.")
     end
     if t_type == "zig-zag"
-        Memento.error("Zig-zag not yet supported.")
+        Memento.error(_LOGGER, "Zig-zag not yet supported.")
     end
 
     return tm_scale
