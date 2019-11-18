@@ -51,7 +51,7 @@ function variable_mc_branch_series_current_prod_hermitian(pm::AbstractUBFModels;
         for (key, branch) in branches
             bus_fr = buses[branch["f_bus"]]
             bus_to = buses[branch["t_bus"]]
-            cmax[key] = _branch_series_curr_max(branch, bus_fr, bus_to)
+            cmax[key] = _calc_branch_series_current_ub(branch, bus_fr, bus_to)
         end
         # create matrix variables
         (Lr,Li) = variable_mx_hermitian(pm.model, branch_ids, n_cond;
@@ -83,8 +83,8 @@ function variable_mc_branch_flow(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=p
             bus_fr = _PMs.ref(pm, nw, :bus, branch["f_bus"])
             bus_to = _PMs.ref(pm, nw, :bus, branch["t_bus"])
 
-            smax_fr, smax_to = _branch_power_max_frto(branch, bus_fr, bus_to)
-            cmax_fr, cmax_to = _branch_curr_max_frto(branch, bus_fr, bus_to)
+            smax_fr, smax_to = _calc_branch_power_ub_frto(branch, bus_fr, bus_to)
+            cmax_fr, cmax_to = _branch_current_max_frto(branch, bus_fr, bus_to)
 
             tuple_fr = (br, bus_fr["index"], bus_to["index"])
             tuple_to = (br, bus_to["index"], bus_fr["index"])
@@ -220,7 +220,7 @@ function variable_mc_generation_power_mx(pm::AbstractUBFModels; nw=pm.cnw)
     for (id, gen) in _PMs.ref(pm, nw, :gen)
         bus = _PMs.ref(pm, nw, :bus, gen["gen_bus"])
         vmax = bus["vmax"].values
-        cmax = _gen_curr_max(gen, bus)
+        cmax = _gen_current_max(gen, bus)
         bound[id] = vmax*cmax'
     end
     # create matrix variables, whilst injecting diagonals
@@ -243,7 +243,7 @@ function variable_mc_generation_current_mx(pm::AbstractUBFModels; nw=pm.cnw)
     bound = Dict{eltype(gen_ids), Array{Real,2}}()
     for (id, gen) in _PMs.ref(pm, nw, :gen)
         bus = _PMs.ref(pm, nw, :bus, gen["gen_bus"])
-        cmax = _gen_curr_max(gen, bus)
+        cmax = _gen_current_max(gen, bus)
         bound[id] = cmax*cmax'
     end
     # create matrix variables
@@ -332,7 +332,7 @@ function variable_mc_load_power(pm::AbstractUBFModels, load_ids::Array{Int,1}; n
     for id in load_ids
         load = _PMs.ref(pm, nw, :load, id)
         bus = _PMs.ref(pm, nw, :bus, load["load_bus"])
-        pmin[id], pmax[id], qmin[id], qmax[id] = _load_pq_bounds(load, bus)
+        pmin[id], pmax[id], qmin[id], qmax[id] = _calc_load_pq_bounds(load, bus)
     end
 
     # create variables
@@ -365,7 +365,7 @@ function variable_mc_load_power_bus_mx(pm::AbstractUBFModels, load_ids::Array{In
         load = _PMs.ref(pm, nw, :load, id)
         @assert(load["conn"]=="wye")
         bus = _PMs.ref(pm, nw, :bus, load["load_bus"])
-        cmax = _load_curr_max(load, bus)
+        cmax = _load_current_max(load, bus)
         bound[id] = bus["vmax"].values*cmax'
     end
     # create matrix variables
@@ -405,7 +405,7 @@ function variable_mc_load_delta_aux(pm::AbstractUBFModels, load_ids::Array{Int,1
         load = _PMs.ref(pm, nw, :load, id)
         bus_id = load["load_bus"]
         bus = _PMs.ref(pm, nw, :bus, bus_id)
-        cmax = _load_curr_max(load, bus)
+        cmax = _load_current_max(load, bus)
         bound[id] = bus["vmax"].values*cmax'
     end
     # create matrix variables
@@ -430,7 +430,7 @@ function variable_mc_load_current(pm::AbstractUBFModels, load_ids::Array{Int,1};
     for (id, load) in _PMs.ref(pm, nw, :load)
         bus_id = load["load_bus"]
         bus = _PMs.ref(pm, nw, :bus, bus_id)
-        cmin[id], cmax[id] = _load_curr_mag_bounds(load, bus)
+        cmin[id], cmax[id] = _calc_load_current_magnitude_bounds(load, bus)
     end
     # create matrix variables
     (CCdr, CCdi) = variable_mx_hermitian(pm.model, load_ids, ncnds;
@@ -461,20 +461,20 @@ end
 Creates the constraints modelling the (relaxed) voltage-dependency of the
 power consumed in each phase, s=p+jq. This is completely symmetrical for p and
 q, with appropriate substitutions of the variables and parameters:
-p->q, a->b, α->β, pmin->qmin, pmax->qmax
+p->q, a->b, alpha->beta, pmin->qmin, pmax->qmax
 """
-function constraint_pqw(model::JuMP.Model, w, p, a::Real, α::Real, wmin::Real, wmax::Real, pmin::Real, pmax::Real)
+function constraint_pqw(model::JuMP.Model, w, p, a::Real, alpha::Real, wmin::Real, wmax::Real, pmin::Real, pmax::Real)
     if a==0
         JuMP.@constraint(model, p==0)
     else
-        @assert(α>=0, "α has to greater than or equal to zero.")
+        @assert(alpha>=0, "alpha has to greater than or equal to zero.")
 
         # CONSTANT POWER
-        if α==0
+        if alpha==0
             JuMP.@constraint(model, p==a)
 
         # CONSTANT IMPEDANCE
-        elseif α==2
+        elseif alpha==2
             JuMP.@constraint(model, p==a*w)
 
         # CONE INCLUSIONS
@@ -488,32 +488,32 @@ function constraint_pqw(model::JuMP.Model, w, p, a::Real, α::Real, wmin::Real, 
                 l = (1/a)*(pmin-pmax)/(wmax-wmin)*(w-wmin) + pmax/a
             end
             # affine overestimator
-            if α>2
+            if alpha>2
                 JuMP.@constraint(model, p/a <= l)
             # affine underestimator
-            elseif 0<α<2
+            elseif 0<alpha<2
                 JuMP.@constraint(model, p/a >= l)
             end
 
             # constant current case, simplifies to a RotatedSecondOrderCone
-            if α==1
+            if alpha==1
                 #       p/a <= w^(1/2)
                 # <=>   (p/a)^2 <= w
                 # <=>   2*(w/2)*1 >= ||p/a||^2_2
                 # <=>   (w/2, 1, p/a) ∈ RotatedSecondOrderCone(3)
                 JuMP.@constraint(model, [w/2, 1, p/a] in JuMP.RotatedSecondOrderCone())
             # general power cone
-            elseif 0<α<2
-                #       p/a <= w^(α/2)
-                # <=>   w^(α/2) >= p/a
+            elseif 0<alpha<2
+                #       p/a <= w^(alpha/2)
+                # <=>   w^(alpha/2) >= p/a
                 # <=>   (w, 1, p/a) ∈ PowerCone(3)
-                JuMP.@constraint(model, [w, 1, p/a] in MathOptInterface.PowerCone(α/2))
+                JuMP.@constraint(model, [w, 1, p/a] in MathOptInterface.PowerCone(alpha/2))
             # general power cone
-            else # α>2
-                #       p/a >= w^(α/2)
-                # <=>   (p/a)^(2/α) >= w
+            else # alpha>2
+                #       p/a >= w^(alpha/2)
+                # <=>   (p/a)^(2/alpha) >= w
                 # <=>   (p/a, 1, w) ∈ PowerCone(3)
-                JuMP.@constraint(model, [p/a, 1, w] in MathOptInterface.PowerCone(2/α))
+                JuMP.@constraint(model, [p/a, 1, w] in MathOptInterface.PowerCone(2/alpha))
             end
         end
     end
@@ -533,11 +533,11 @@ function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     ncnds = length(pd0)
 
     # calculate load params
-    a, α, b, β = _load_expmodel_params(load, bus)
-    vmin, vmax = _load_vbounds(load, bus)
+    a, alpha, b, beta = _load_expmodel_params(load, bus)
+    vmin, vmax = _calc_load_vbounds(load, bus)
     wmin = vmin.^2
     wmax = vmax.^2
-    pmin, pmax, qmin, qmax = _load_pq_bounds(load, bus)
+    pmin, pmax, qmin, qmax = _calc_load_pq_bounds(load, bus)
 
     # take care of connections
     if load["conn"]=="wye"
@@ -557,8 +557,8 @@ function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
             pl = [_PMs.var(pm, nw, c, :pl, load_id) for c in 1:ncnds]
             ql = [_PMs.var(pm, nw, c, :ql, load_id) for c in 1:ncnds]
             for c in 1:ncnds
-                constraint_pqw(pm.model, Wr[c,c], pl[c], a[c], α[c], wmin[c], wmax[c], pmin[c], pmax[c])
-                constraint_pqw(pm.model, Wr[c,c], ql[c], b[c], β[c], wmin[c], wmax[c], qmin[c], qmax[c])
+                constraint_pqw(pm.model, Wr[c,c], pl[c], a[c], alpha[c], wmin[c], wmax[c], pmin[c], pmax[c])
+                constraint_pqw(pm.model, Wr[c,c], ql[c], b[c], beta[c], wmin[c], wmax[c], qmin[c], qmax[c])
             end
         end
         # :pd is identical to :pl now
@@ -602,8 +602,8 @@ function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
             end
         else
             for c in 1:ncnds
-                constraint_pqw(pm.model, wd[c], pl[c], a[c], α[c], wmin[c], wmax[c], pmin[c], pmax[c])
-                constraint_pqw(pm.model, wd[c], ql[c], b[c], β[c], wmin[c], wmax[c], qmin[c], qmax[c])
+                constraint_pqw(pm.model, wd[c], pl[c], a[c], alpha[c], wmin[c], wmax[c], pmin[c], pmax[c])
+                constraint_pqw(pm.model, wd[c], ql[c], b[c], beta[c], wmin[c], wmax[c], qmin[c], qmax[c])
             end
         end
     end
@@ -624,11 +624,11 @@ function constraint_mc_load_mx(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.c
     ncnds = length(pd0)
 
     # calculate load params
-    a, α, b, β = _load_expmodel_params(load, bus)
-    vmin, vmax = _load_vbounds(load, bus)
+    a, alpha, b, beta = _load_expmodel_params(load, bus)
+    vmin, vmax = _calc_load_vbounds(load, bus)
     wmin = vmin.^2
     wmax = vmax.^2
-    pmin, pmax, qmin, qmax = _load_pq_bounds(load, bus)
+    pmin, pmax, qmin, qmax = _calc_load_pq_bounds(load, bus)
 
     # take care of connections
     Wr = _PMs.var(pm, nw, :Wr, bus_id)
@@ -653,8 +653,8 @@ function constraint_mc_load_mx(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.c
             pl = [_PMs.var(pm, nw, c, :pl, load_id) for c in 1:ncnds]
             ql = [_PMs.var(pm, nw, c, :ql, load_id) for c in 1:ncnds]
             for c in 1:ncnds
-                constraint_pqw(pm.model, Wr[c,c], pl[c], a[c], α[c], wmin[c], wmax[c], pmin[c], pmax[c])
-                constraint_pqw(pm.model, Wr[c,c], ql[c], b[c], β[c], wmin[c], wmax[c], qmin[c], qmax[c])
+                constraint_pqw(pm.model, Wr[c,c], pl[c], a[c], alpha[c], wmin[c], wmax[c], pmin[c], pmax[c])
+                constraint_pqw(pm.model, Wr[c,c], ql[c], b[c], beta[c], wmin[c], wmax[c], qmin[c], qmax[c])
             end
         end
         # diagonal of :Pd is identical to :pl now
@@ -699,8 +699,8 @@ function constraint_mc_load_mx(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.c
             end
         else
             for c in 1:ncnds
-                constraint_pqw(pm.model, wd[c], pl[c], a[c], α[c], wmin[c], wmax[c], pmin[c], pmax[c])
-                constraint_pqw(pm.model, wd[c], ql[c], b[c], β[c], wmin[c], wmax[c], qmin[c], qmax[c])
+                constraint_pqw(pm.model, wd[c], pl[c], a[c], alpha[c], wmin[c], wmax[c], pmin[c], pmax[c])
+                constraint_pqw(pm.model, wd[c], ql[c], b[c], beta[c], wmin[c], wmax[c], qmin[c], qmax[c])
             end
         end
     end

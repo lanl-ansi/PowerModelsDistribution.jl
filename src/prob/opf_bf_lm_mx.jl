@@ -1,17 +1,24 @@
+# This problem includes load models beyond simple constant power ones; this is
+# handled in variable_mc_load_mx and constraint_mc_load_mx.
+# Also, KCL now links the full matrix variables, and not only the diagonals.
+# This is what 'mx' refers to. Long-term, this might become a formulation and
+# not a separate problem specification.
+
+
 ""
-function run_mc_opf_bf_del_mx(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_mc_opf_bf_del_mx; solution_builder=solution_tp!, multiconductor=true, kwargs...)
+function run_mc_opf_bf_lm_mx(data::Dict{String,Any}, model_constructor, solver; kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_mc_opf_bf_lm_mx; solution_builder=solution_tp!, multiconductor=true, kwargs...)
 end
 
 
 ""
-function run_mc_opf_bf_del_mx(file::String, model_constructor, solver; kwargs...)
-    return run_mc_opf_bf_del_mx(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
+function run_mc_opf_bf_lm_mx(file::String, model_constructor, solver; kwargs...)
+    return run_mc_opf_bf_lm_mx(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
 end
 
 
 ""
-function post_mc_opf_bf_del_mx(pm::_PMs.AbstractPowerModel)
+function post_mc_opf_bf_lm_mx(pm::_PMs.AbstractPowerModel)
     # Variables
     variable_mc_voltage(pm)
     variable_mc_branch_current(pm)
@@ -19,10 +26,6 @@ function post_mc_opf_bf_del_mx(pm::_PMs.AbstractPowerModel)
 
     variable_mc_generation_mx(pm)
     variable_mc_load_mx(pm)
-
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_dcline_flow(pm, cnd=c)
-    end
 
     # Constraints
     constraint_mc_model_current(pm)

@@ -1,17 +1,21 @@
+# This problem includes load models beyond simple constant power ones; this is
+# handled in variable_mc_load and constraint_mc_load.
+
+
 ""
-function run_mc_opf_bf_del(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_mc_opf_bf_del; solution_builder=solution_tp!, multiconductor=true, kwargs...)
+function run_mc_opf_bf_lm(data::Dict{String,Any}, model_constructor, solver; kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, post_mc_opf_bf_lm; solution_builder=solution_tp!, multiconductor=true, kwargs...)
 end
 
 
 ""
-function run_mc_opf_bf_del(file::String, model_constructor, solver; kwargs...)
-    return run_mc_opf_bf_del(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
+function run_mc_opf_bf_lm(file::String, model_constructor, solver; kwargs...)
+    return run_mc_opf_bf_lm(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
 end
 
 
 ""
-function post_mc_opf_bf_del(pm::_PMs.AbstractPowerModel)
+function post_mc_opf_bf_lm(pm::_PMs.AbstractPowerModel)
     # Variables
     variable_mc_voltage(pm)
     variable_mc_branch_current(pm)

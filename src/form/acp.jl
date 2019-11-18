@@ -523,10 +523,10 @@ end
 
 
 ""
-function constraint_load_exponential_wye(pm::_PMs.AbstractACPModel, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, a::Real, α::Real, b::Real, β::Real)
+function constraint_load_exponential_wye(pm::_PMs.AbstractACPModel, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, a::Real, alpha::Real, b::Real, beta::Real)
     vm = _PMs.var(pm, nw, cnd, :vm, load_bus_id)
-    _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, a*vm^α)
-    _PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, b*vm^β)
+    _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, a*vm^alpha)
+    _PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, b*vm^beta)
 end
 
 
@@ -760,8 +760,8 @@ end
 """
 exponential model in acp voltage coordinates
 """
-function constraint_mc_load_exponential_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, a, α, b, β)
-    nph = 3
+function constraint_mc_load_exponential_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, a, alpha, b, beta)
+    nph = length(_PMs.conductor_ids(pm))
 
     vm = [_PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:nph]
     va = [_PMs.var(pm, nw, c, :va, load_bus_id) for c in 1:nph]
@@ -769,17 +769,17 @@ function constraint_mc_load_exponential_delta(pm::_PMs.AbstractACPModel, nw::Int
     # vd = Td*v
     vdr = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])-vm[mod(i,nph)+1]*cos(va[mod(i,nph)+1]))
     vdi = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*sin(va[i])-vm[mod(i,nph)+1]*sin(va[mod(i,nph)+1]))
-    pl = JuMP.@NLexpression(pm.model, [i in 1:nph], a[i]*(vdr[i]^2+vdi[i]^2)^(α[i]/2))
-    ql = JuMP.@NLexpression(pm.model, [i in 1:nph], b[i]*(vdr[i]^2+vdi[i]^2)^(β[i]/2))
+    pl = JuMP.@NLexpression(pm.model, [i in 1:nph], a[i]*(vdr[i]^2+vdi[i]^2)^(alpha[i]/2))
+    ql = JuMP.@NLexpression(pm.model, [i in 1:nph], b[i]*(vdr[i]^2+vdi[i]^2)^(beta[i]/2))
 
     # idc: conjugate of delta current
     # idc = sl./vd
-    #     = (pl + j.ql)/vd = (a.|vd|^α + j.b.|vd|^β)/vd, now use 1/c = conj(c)/|c|^2
-    #     = (vdr-j.vdi).(a.|vd|^α + j.b.|vd|^β)/|vd|^2
-    #     = (vdr-j.vdi).(a.|vd|^(α-2) + j.b.|vd|^(β-2))
+    #     = (pl + j.ql)/vd = (a.|vd|^alpha + j.b.|vd|^beta)/vd, now use 1/c = conj(c)/|c|^2
+    #     = (vdr-j.vdi).(a.|vd|^alpha + j.b.|vd|^beta)/|vd|^2
+    #     = (vdr-j.vdi).(a.|vd|^(alpha-2) + j.b.|vd|^(beta-2))
     #  now also use that |vd| = (vdr^2 + wdi^2)^(1/2)
-    idcr = JuMP.@NLexpression(pm.model, [i in 1:nph], vdr[i]*a[i]*(vdr[i]^2+vdi[i]^2)^(α[i]/2-1) + vdi[i]*b[i]*(vdr[i]^2+vdi[i]^2)^(β[i]/2-1))
-    idci = JuMP.@NLexpression(pm.model, [i in 1:nph], vdr[i]*b[i]*(vdr[i]^2+vdi[i]^2)^(β[i]/2-1) - vdi[i]*a[i]*(vdr[i]^2+vdi[i]^2)^(α[i]/2-1))
+    idcr = JuMP.@NLexpression(pm.model, [i in 1:nph], vdr[i]*a[i]*(vdr[i]^2+vdi[i]^2)^(alpha[i]/2-1) + vdi[i]*b[i]*(vdr[i]^2+vdi[i]^2)^(beta[i]/2-1))
+    idci = JuMP.@NLexpression(pm.model, [i in 1:nph], vdr[i]*b[i]*(vdr[i]^2+vdi[i]^2)^(beta[i]/2-1) - vdi[i]*a[i]*(vdr[i]^2+vdi[i]^2)^(alpha[i]/2-1))
 
     # icr = Td'*idcr
     icr = JuMP.@NLexpression(pm.model, [i in 1:nph], idcr[i]-idcr[mod(i+nph-2,nph)+1])
@@ -788,13 +788,13 @@ function constraint_mc_load_exponential_delta(pm::_PMs.AbstractACPModel, nw::Int
     # s = v.*conj(ic)
     pd = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])*icr[i] - vm[i]*sin(va[i])*ici[i])
     qd = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])*ici[i] + vm[i]*sin(va[i])*icr[i])
-    for c in 1:nph
+    for c in _PMs.conductor_ids(pm)
         _PMs.var(pm, nw, c, :pd)[load_id] = pd[c]
         _PMs.var(pm, nw, c, :qd)[load_id] = qd[c]
     end
 
     # also save pl, ql for inspection
-    for c in 1:nph
+    for c in _PMs.conductor_ids(pm)
         if !haskey(_PMs.var(pm, nw, c), :pl)
             _PMs.var(pm, nw, c)[:pl] = Dict()
             _PMs.var(pm, nw, c)[:ql] = Dict()

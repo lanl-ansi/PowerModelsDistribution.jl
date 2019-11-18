@@ -1,30 +1,5 @@
 # UTILITY MATRIX VARIABLE FUNCTIONS
 
-# Each function has several methods, allowing to
-# + pass upper and lower bounds,
-# + a single symmetric bound
-# + or no bounds at all.
-
-# General matrix variables of size (N,M) are created by
-# + variable_mx_real
-# + variable_mx_complex
-# An alternative is provided which allows to pass the diagonal elements as
-# a keyword argument; this is a use case that appears often for P,Q matrices
-# + variable_mx_real_with_diag
-# + variable_mx_complex_with_diag
-
-# Symmetric, skewsymmetric and Hermitian matrix variables are always square
-# variable_mx_symmetric
-# variable_mx_skewsymmetric
-# variable_mx_hermitian
-
-# A special function is available for the Hermitian matrix of the form W=UU',
-# allowing to pass magnitude bounds on U instead
-# variable_mx_hermitian_sqrt_bounds
-
-# Most of the method arguments are strongly typed, to make it clear what is expected.
-# These functions only depend on JuMP models, not PowerModels.
-
 
 """
 Sometimes we want to bound only a subset of the elements of a matrix variable.
@@ -213,7 +188,7 @@ end
 """
 Same as variable_mx_real, but adds symmetry structure
 """
-function variable_mx_symmetric(model::JuMP.Model, indices::Array{T,1}, N::Int;
+function variable_mx_real_symmetric(model::JuMP.Model, indices::Array{T,1}, N::Int;
         upper_bound::Union{Missing, Dict{T,<:Array{<:Real,2}}}=missing, lower_bound::Union{Missing, Dict{T,<:Array{<:Real,2}}}=missing,
         name="", prefix="") where T
     # the output is a dictionary of (index, matrix) pairs
@@ -252,7 +227,7 @@ end
 """
 Same as variable_mx_real, but adds skew-symmetry structure.
 """
-function variable_mx_skewsymmetric(model::JuMP.Model, indices::Array{T,1}, N::Int;
+function variable_mx_real_skewsymmetric(model::JuMP.Model, indices::Array{T,1}, N::Int;
         upper_bound::Union{Missing, Dict{T,<:Array{<:Real,2}}}=missing, lower_bound::Union{Missing, Dict{T,<:Array{<:Real,2}}}=missing,
         set_diag_to_zero::Bool=true, name="", prefix="") where T
     # the output is a dictionary of (index, matrix) pairs
@@ -334,10 +309,10 @@ function variable_mx_hermitian(model::JuMP.Model, indices::Array{T,1}, N::Int;
 
     name_real = isa(name, Tuple) ? name[1] : "$(name)r"
     name_imag = isa(name, Tuple) ? name[2] : "$(name)i"
-    Mre = variable_mx_symmetric(model, indices, N;
+    Mre = variable_mx_real_symmetric(model, indices, N;
         upper_bound=upper_bound, lower_bound=lower_bound,
         prefix=prefix, name=name_real)
-    Mim = variable_mx_skewsymmetric(model, indices, N;
+    Mim = variable_mx_real_skewsymmetric(model, indices, N;
         upper_bound=upper_bound, lower_bound=lower_bound,
         set_diag_to_zero=imag_set_diag_to_zero, prefix=prefix, name=name_imag)
     return (Mre,Mim)
