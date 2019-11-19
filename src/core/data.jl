@@ -188,7 +188,7 @@ end
 
 
 "Returns a magnitude bound for the current going through the load."
-function _load_current_max(load::Dict, bus::Dict)
+function _calc_load_current_max(load::Dict, bus::Dict)
     pmin, pmax, qmin, qmax = _calc_load_pq_bounds(load, bus)
     pabsmax = max.(abs.(pmin), abs.(pmax))
     qabsmax = max.(abs.(qmin), abs.(qmax))
@@ -269,7 +269,7 @@ end
 Returns a Bool, indicating whether the convex hull of the voltage-dependent
 relationship needs a cone inclusion constraint.
 """
-function _load_needs_cone(load::Dict)
+function _check_load_needs_cone(load::Dict)
     if load["model"]=="constant_current"
         return true
     elseif load["model"]=="exponential"
@@ -283,7 +283,7 @@ end
 """
 Returns a current magnitude bound for the generators.
 """
-function _gen_current_max(gen::Dict, bus::Dict)
+function _calc_gen_current_max(gen::Dict, bus::Dict)
     pabsmax = max.(abs.(gen["pmin"].values), abs.(gen["pmax"].values))
     qabsmax = max.(abs.(gen["qmax"].values), abs.(gen["qmax"].values))
     smax = sqrt.(pabsmax.^2 + qabsmax.^2)
@@ -299,7 +299,7 @@ Returns a total (shunt+series) current magnitude bound for the from and to side
 of a branch. The total power rating also implies a current bound through the
 lower bound on the voltage magnitude of the connected buses.
 """
-function _branch_current_max_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
+function _calc_branch_current_max_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
     bounds_fr = []
     bounds_to = []
     if haskey(branch, "c_rating_a")
@@ -350,7 +350,7 @@ function _calc_branch_series_current_ub(branch::Dict, bus_fr::Dict, bus_to::Dict
     # temportary fix by shunts_diag2mat!
 
     # get valid bounds on total current
-    c_max_fr_tot, c_max_to_tot = _branch_current_max_frto(branch, bus_fr, bus_to)
+    c_max_fr_tot, c_max_to_tot = _calc_branch_current_max_frto(branch, bus_fr, bus_to)
 
     # get valid bounds on shunt current
     y_fr = branch["g_fr"].values + im* branch["b_fr"].values

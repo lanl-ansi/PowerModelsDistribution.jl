@@ -84,7 +84,7 @@ function variable_mc_branch_flow(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=p
             bus_to = _PMs.ref(pm, nw, :bus, branch["t_bus"])
 
             smax_fr, smax_to = _calc_branch_power_ub_frto(branch, bus_fr, bus_to)
-            cmax_fr, cmax_to = _branch_current_max_frto(branch, bus_fr, bus_to)
+            cmax_fr, cmax_to = _calc_branch_current_max_frto(branch, bus_fr, bus_to)
 
             tuple_fr = (br, bus_fr["index"], bus_to["index"])
             tuple_to = (br, bus_to["index"], bus_fr["index"])
@@ -220,7 +220,7 @@ function variable_mc_generation_power_mx(pm::AbstractUBFModels; nw=pm.cnw)
     for (id, gen) in _PMs.ref(pm, nw, :gen)
         bus = _PMs.ref(pm, nw, :bus, gen["gen_bus"])
         vmax = bus["vmax"].values
-        cmax = _gen_current_max(gen, bus)
+        cmax = _calc_gen_current_max(gen, bus)
         bound[id] = vmax*cmax'
     end
     # create matrix variables, whilst injecting diagonals
@@ -243,7 +243,7 @@ function variable_mc_generation_current_mx(pm::AbstractUBFModels; nw=pm.cnw)
     bound = Dict{eltype(gen_ids), Array{Real,2}}()
     for (id, gen) in _PMs.ref(pm, nw, :gen)
         bus = _PMs.ref(pm, nw, :bus, gen["gen_bus"])
-        cmax = _gen_current_max(gen, bus)
+        cmax = _calc_gen_current_max(gen, bus)
         bound[id] = cmax*cmax'
     end
     # create matrix variables
@@ -269,7 +269,7 @@ all other load model variables are then linear transformations of these
 function variable_mc_load_mx(pm::AbstractUBFModels; nw=pm.cnw)
     load_wye_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="wye"]
     load_del_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="delta"]
-    load_cone_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if _load_needs_cone(load)]
+    load_cone_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if _check_load_needs_cone(load)]
     # create dictionaries
     _PMs.var(pm, nw)[:Pd] = Dict()
     _PMs.var(pm, nw)[:Qd] = Dict()
@@ -301,7 +301,7 @@ used to constrain the power), variables need to be created.
 function variable_mc_load(pm::AbstractUBFModels; nw=pm.cnw)
     load_wye_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="wye"]
     load_del_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="delta"]
-    load_cone_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if _load_needs_cone(load)]
+    load_cone_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if _check_load_needs_cone(load)]
     # create dictionaries
     for c in _PMs.conductor_ids(pm)
         _PMs.var(pm, nw, c)[:pd] = Dict()
@@ -365,7 +365,7 @@ function variable_mc_load_power_bus_mx(pm::AbstractUBFModels, load_ids::Array{In
         load = _PMs.ref(pm, nw, :load, id)
         @assert(load["conn"]=="wye")
         bus = _PMs.ref(pm, nw, :bus, load["load_bus"])
-        cmax = _load_current_max(load, bus)
+        cmax = _calc_load_current_max(load, bus)
         bound[id] = bus["vmax"].values*cmax'
     end
     # create matrix variables
@@ -405,7 +405,7 @@ function variable_mc_load_delta_aux(pm::AbstractUBFModels, load_ids::Array{Int,1
         load = _PMs.ref(pm, nw, :load, id)
         bus_id = load["load_bus"]
         bus = _PMs.ref(pm, nw, :bus, bus_id)
-        cmax = _load_current_max(load, bus)
+        cmax = _calc_load_current_max(load, bus)
         bound[id] = bus["vmax"].values*cmax'
     end
     # create matrix variables
