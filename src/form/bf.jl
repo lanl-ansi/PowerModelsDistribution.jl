@@ -72,13 +72,8 @@ function variable_mc_bus_voltage_on_off(pm::LPLinUBFModel; kwargs...)
 end
 
 
-"nothing to do, no voltage variables"
-function constraint_mc_transformer_voltage(pm::LPLinUBFModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::_PMs.MultiConductorVector, Tv_fr, Tv_im, Cv_to)
-end
-
-
 "nothing to do, this model is symmetric"
-function constraint_mc_transformer_flow(pm::LPLinUBFModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::_PMs.MultiConductorVector, Ti_fr, Ti_im, Cv_to)
+function constraint_mc_trans(pm::LPLinUBFModel, i::Int; nw::Int=pm.cnw)
 end
 
 

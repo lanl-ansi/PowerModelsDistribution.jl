@@ -190,18 +190,18 @@ end
 
 "Create tap variables."
 function variable_mc_oltc_tap(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded=true)
-    nphases = 3
-    oltc_ids = _PMs.ids(pm, pm.cnw, :transformer)
-    for c in 1:nphases
-        _PMs.var(pm, nw, c)[:tap] = JuMP.@variable(pm.model,
-            [i in oltc_ids],
-            base_name="$(nw)_tm",
-            start=_PMs.ref(pm, nw, :transformer, i, "tm")[c]
+    # when extending to 4-wire, this should iterate only over the phase conductors
+    for p in _PMs.conductor_ids(pm)
+        p_oltc_ids = [id for (id,trans) in _PMs.ref(pm, nw, :transformer) if !trans["fixed"][p]]
+        _PMs.var(pm, nw, p)[:tap] = JuMP.@variable(pm.model,
+            [i in p_oltc_ids],
+            base_name="$(nw)_$(p)_tm",
+            start=_PMs.ref(pm, nw, :transformer, i, "tm")[p]
         )
         if bounded
-            for tr_id in oltc_ids
-                JuMP.set_lower_bound(_PMs.var(pm, nw, c)[:tap][tr_id], _PMs.ref(pm, nw, :transformer, tr_id, "tm_min")[c])
-                JuMP.set_upper_bound(_PMs.var(pm, nw, c)[:tap][tr_id], _PMs.ref(pm, nw, :transformer, tr_id, "tm_max")[c])
+            for tr_id in p_oltc_ids
+                JuMP.set_lower_bound(_PMs.var(pm, nw, p)[:tap][tr_id], _PMs.ref(pm, nw, :transformer, tr_id, "tm_min")[p])
+                JuMP.set_upper_bound(_PMs.var(pm, nw, p)[:tap][tr_id], _PMs.ref(pm, nw, :transformer, tr_id, "tm_max")[p])
             end
         end
     end

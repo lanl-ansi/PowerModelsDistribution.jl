@@ -115,6 +115,33 @@ function count_nodes(pmd_data::Dict{String,Any})::Int
 end
 
 
+"Calculates the tap scale factor for the non-dimensionalized equations."
+function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, bus_to::Dict{String,Any})
+    f_vnom = trans["config_fr"]["vm_nom"]
+    t_vnom = trans["config_to"]["vm_nom"]
+    f_vbase = bus_fr["base_kv"]
+    t_vbase = bus_to["base_kv"]
+    f_type = trans["config_fr"]["type"]
+    t_type = trans["config_to"]["type"]
+
+    tm_scale = (f_vnom/t_vnom)*(t_vbase/f_vbase)
+    if f_type == "delta"
+        tm_scale *= sqrt(3)
+    end
+    if t_type == "delta"
+        tm_scale *= 1/sqrt(3)
+    end
+    if f_type == "zig-zag"
+        Memento.error(_LOGGER, "Zig-zag not yet supported.")
+    end
+    if t_type == "zig-zag"
+        Memento.error(_LOGGER, "Zig-zag not yet supported.")
+    end
+
+    return tm_scale
+end
+
+
 """
 Returns bounds in line-to-line bounds on the voltage magnitude.
 If these are not part of the problem specification, then a valid upper bound is
