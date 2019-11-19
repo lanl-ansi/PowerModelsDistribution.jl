@@ -45,7 +45,7 @@ function post_mc_opf_oltc(pm::_PMs.AbstractPowerModel)
     end
 
     for i in _PMs.ids(pm, :transformer)
-        constraint_mc_oltc(pm, i)
+        constraint_mc_trans(pm, i, fix_taps=false)
     end
 
     _PMs.objective_min_fuel_cost(pm)

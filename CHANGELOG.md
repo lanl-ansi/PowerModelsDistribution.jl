@@ -2,6 +2,7 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
+- Cleaned up the transformer/oltc methods, including ACP formulation
 - added `rate_a` setting to virtual lines (#185, #186)
 
 ### v0.6.0
