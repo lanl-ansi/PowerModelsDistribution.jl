@@ -209,7 +209,9 @@ function _load_expmodel_params(load::Dict, bus::Dict)
             beta  =ones(ncnds)*2
         elseif load["model"]=="exponential"
             alpha = load["alpha"].values
+            @assert(all(alpha.>=0))
             beta = load["beta"].values
+            @assert(all(beta.>=0))
         end
         # calculate proportionality constants
         v0 = load["vnom_kv"]/(bus["base_kv"]/sqrt(3))
