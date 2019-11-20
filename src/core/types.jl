@@ -13,12 +13,20 @@ AbstractUBFModels = Union{AbstractNLPUBFModel, AbstractConicUBFModel}
 abstract type SDPUBFModel <: AbstractConicUBFModel end
 
 
+"SDP BFM with KCL as matrix equation, Geth 2020 (under review)"
+abstract type SDPUBFKCLMXModel <: SDPUBFModel end
+
+
+KCLMXModels = Union{SDPUBFKCLMXModel}
+
+
 "SOC relaxation of SDPUBFModel per Kim, Kojima, & Yamashita 2003, cast as an QCP"
 abstract type SOCNLPUBFModel <: AbstractNLPUBFModel end
 
 
 "SOC relaxation of SDPUBFModel per Kim, Kojima, & Yamashita 2003, cast as a SOC"
 abstract type SOCConicUBFModel <: AbstractConicUBFModel end
+
 
 SOCUBFModels = Union{SOCNLPUBFModel, SOCConicUBFModel}
 
@@ -37,6 +45,10 @@ abstract type LPdiagUBFModel <: AbstractLPUBFModel end
 
 "default SDP unbalanced DistFlow constructor"
 mutable struct SDPUBFPowerModel <: SDPUBFModel _PMs.@pm_fields end
+
+
+"default SDP unbalanced DistFlow with matrix KCL constructor"
+mutable struct SDPUBFKCLMXPowerModel <: SDPUBFKCLMXModel _PMs.@pm_fields end
 
 
 "default SOC unbalanced DistFlow constructor"

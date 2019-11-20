@@ -21,11 +21,8 @@ function post_mc_opf_bf_lm(pm::_PMs.AbstractPowerModel)
     variable_mc_branch_current(pm)
     variable_mc_branch_flow(pm)
 
+    variable_mc_generation(pm)
     variable_mc_load(pm)
-
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_generation(pm, cnd=c)
-    end
 
     # Constraints
     constraint_mc_model_current(pm)
@@ -46,6 +43,10 @@ function post_mc_opf_bf_lm(pm::_PMs.AbstractPowerModel)
 
     for i in _PMs.ids(pm, :load)
         constraint_mc_load(pm, i)
+    end
+
+    for i in _PMs.ids(pm, :gen)
+        constraint_mc_generation(pm, i)
     end
 
     for i in _PMs.ids(pm, :bus)
