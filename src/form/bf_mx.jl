@@ -192,7 +192,7 @@ end
 
 
 """
-For the matrix KCL formulation (mx), the generator needs an explicit current and
+For the matrix KCL formulation, the generator needs an explicit current and
 power variable.
 """
 function variable_mc_generation(pm::SDPUBFKCLMXModel; nw=pm.cnw)
@@ -202,7 +202,7 @@ end
 
 
 """
-For the matrix KCL formulation (mx), the generator needs an explicit power
+For the matrix KCL formulation, the generator needs an explicit power
 variable.
 """
 function variable_mc_generation_power(pm::SDPUBFKCLMXModel; nw=pm.cnw)
@@ -233,7 +233,7 @@ end
 
 
 """
-For the matrix KCL formulation (mx), the generator needs an explicit current
+For the matrix KCL formulation, the generator needs an explicit current
 variable.
 """
 function variable_mc_generation_current(pm::AbstractUBFModels; nw=pm.cnw)
@@ -355,7 +355,7 @@ end
 The bus qualifier denotes that this is the power withdrawn at the bus; Only for
 grounded wye-connected loads, this is the same as the power consumed by the
 multi-phase load. The off-diagonals only need to be created for the matrix KCL
-formulation, denoted by 'mx'.
+formulation.
 """
 function variable_mc_load_power_bus(pm::SDPUBFKCLMXModel, load_ids::Array{Int,1}; nw=pm.cnw)
     ncnds = length(_PMs.conductor_ids(pm, nw))
@@ -393,9 +393,6 @@ See the paper by Zhao et al. for the first convex relaxation of delta transforma
 }
 
 See upcoming paper for discussion of bounds. [reference added when accepted]
-
-Note: this does not have the mx suffix because it is needed for both vec and
-mat KCL.
 """
 function variable_mc_load_delta_aux(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw, eps=0.1)
     ncnds = length(_PMs.conductor_ids(pm, nw))
@@ -620,7 +617,7 @@ end
 
 """
 Creates the constraints modelling the (relaxed) voltage-dependent loads for
-the matrix KCL formulation (mx).
+the matrix KCL formulation.
 """
 function constraint_mc_load(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int=pm.cnw)
     # shared variables and parameters
@@ -742,8 +739,7 @@ end
 
 
 """
-The mx qualifier indicates that the power balance is now formulated with
-matrix variables.
+For KCLMXModels, a new power balance constraint is required.
 """
 function constraint_mc_power_balance(pm::KCLMXModels, i::Int; nw::Int=pm.cnw)
     if !haskey(_PMs.con(pm, nw), :kcl_P)
