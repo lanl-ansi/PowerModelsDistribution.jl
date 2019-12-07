@@ -308,6 +308,7 @@ So for delta, sn is constrained indirectly.
 """
 function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw)
     load = _PMs.ref(pm, nw, :load, id)
+    bus = _PMs.ref(pm, nw,:bus, load["load_bus"])
     model = load["model"]
     conn = _PMs.ref(pm, nw, :load, id, "conn")
     @assert(conn in ["delta", "wye"])
@@ -362,9 +363,20 @@ function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw
             @assert(_PMs.ref(pm, 0, :conductors)==3)
             constraint_mc_load_impedance_delta(pm, nw, id, load["load_bus"], cp, cq)
         end
+    elseif model=="exponential"
+        a, alpha, b, beta = _load_expmodel_params(load, bus)
+
+        if conn=="wye"
+            for c in _PMs.conductor_ids(pm)
+                constraint_load_exponential_wye(pm, nw, c, id, load["load_bus"], a[c], alpha[c], b[c], beta[c])
+            end
+        elseif conn=="delta"
+            @assert(_PMs.ref(pm, 0, :conductors)==3)
+            constraint_mc_load_exponential_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
+        end
 
     else
-        Memento.@error(LOGGER, "Unknown model $model for load $id.")
+        Memento.@error(_LOGGER, "Unknown model $model for load $id.")
     end
 end
 

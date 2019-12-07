@@ -1,6 +1,7 @@
 module PowerModelsDistribution
 
     import JuMP
+    import MathOptInterface
     import PowerModels
     import InfrastructureModels
     import Memento
@@ -18,6 +19,7 @@ module PowerModelsDistribution
     include("core/ref.jl")
     include("core/multiconductor.jl")
     include("core/variable.jl")
+    include("core/variable_mx.jl")
     include("core/constraint.jl")
     include("core/objective.jl")
     include("core/solution.jl")
@@ -49,6 +51,7 @@ module PowerModelsDistribution
     include("prob/opf_oltc.jl")
     include("prob/opf_bctr.jl")
     include("prob/opf_bf.jl")
+    include("prob/opf_bf_lm.jl")
     include("prob/pf.jl")
     include("prob/pf_lm.jl")
     include("prob/pf_bf.jl")

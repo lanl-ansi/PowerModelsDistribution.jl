@@ -147,6 +147,9 @@ function _parse_matlab_string(data_string::String)
         for (i,load_row) in enumerate(matlab_data["pmdc.load"])
             load_data = InfrastructureModels.row_to_typed_dict(load_row, _pmd_load_columns)
             load_data["index"] = i
+            # default values for conn and model
+            load_data["conn"] = "wye"
+            load_data["model"] = "constant_power"
             push!(loads, load_data)
         end
         case["load"] = loads

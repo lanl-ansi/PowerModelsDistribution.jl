@@ -140,3 +140,224 @@ function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, b
 
     return tm_scale
 end
+
+
+"""
+Returns bounds in line-to-line bounds on the voltage magnitude.
+If these are not part of the problem specification, then a valid upper bound is
+implied by the line-to-neutral bounds, but a lower bound (greater than zero) is
+not. Therefore, a default lower bound is then used, specified by the keyword
+argument vdmin_eps.
+The returned bounds are for the pairs 1->2, 2->3, 3->1
+"""
+function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps=0.1)
+    vmax = bus["vmax"].values
+    vmin = bus["vmin"].values
+    if haskey(bus, "vm_ll_max")
+        vdmax = bus["vm_ll_max"].values*sqrt(3)
+    else
+        # implied valid upper bound
+        vdmax = [1 1 0; 0 1 1; 1 0 1]*vmax
+        id = bus["index"]
+    end
+    if haskey(bus, "vm_ll_min")
+        vdmin = bus["vm_ll_min"].values*sqrt(3)
+    else
+        vdmin = ones(3)*vdmin_eps*sqrt(3)
+        id = bus["index"]
+        Memento.info(_LOGGER, "Bus $id has no phase-to-phase vm upper bound; instead, $vdmin_eps was used as a valid upper bound.")
+    end
+    return (vdmin, vdmax)
+end
+
+
+"""
+Calculates lower and upper bounds for the loads themselves (not the power
+withdrawn at the bus).
+"""
+function _calc_load_pq_bounds(load::Dict, bus::Dict)
+    a, alpha, b, beta = _load_expmodel_params(load, bus)
+    vmin, vmax = _calc_load_vbounds(load, bus)
+    # get bounds
+    pmin = min.(a.*vmin.^alpha, a.*vmax.^alpha)
+    pmax = max.(a.*vmin.^alpha, a.*vmax.^alpha)
+    qmin = min.(b.*vmin.^beta, b.*vmax.^beta)
+    qmax = max.(b.*vmin.^beta, b.*vmax.^beta)
+    return (pmin, pmax, qmin, qmax)
+end
+
+
+"Returns a magnitude bound for the current going through the load."
+function _calc_load_current_max(load::Dict, bus::Dict)
+    pmin, pmax, qmin, qmax = _calc_load_pq_bounds(load, bus)
+    pabsmax = max.(abs.(pmin), abs.(pmax))
+    qabsmax = max.(abs.(qmin), abs.(qmax))
+    smax = sqrt.(pabsmax.^2 + qabsmax.^2)
+
+    vmin, vmax = _calc_load_vbounds(load, bus)
+
+    return smax./vmin
+end
+
+
+"""
+Returns magnitude bounds for the current going through the load.
+"""
+function _calc_load_current_magnitude_bounds(load::Dict, bus::Dict)
+    a, alpha, b, beta = _load_expmodel_params(load, bus)
+    vmin, vmax = _calc_load_vbounds(load, bus)
+    cb1 = sqrt.(a.^(2).*vmin.^(2*alpha.-2) + b.^(2).*vmin.^(2*beta.-2))
+    cb2 = sqrt.(a.^(2).*vmax.^(2*alpha.-2) + b.^(2).*vmax.^(2*beta.-2))
+    cmin = min.(cb1, cb2)
+    cmax = max.(cb1, cb2)
+    return cmin, cmax
+end
+
+
+"""
+Returns the exponential load model parameters for a load.
+For an exponential load it simply returns certain data model properties, whilst
+for constant_power, constant_current and constant_impedance it returns the
+equivalent exponential model parameters.
+"""
+function _load_expmodel_params(load::Dict, bus::Dict)
+    pd = load["pd"].values
+    qd = load["qd"].values
+    ncnds = length(pd)
+    if load["model"]=="constant_power"
+        return (pd, zeros(ncnds), qd, zeros(ncnds))
+    else
+        # get exponents
+        if load["model"]=="constant_current"
+            alpha = ones(ncnds)
+            beta  =ones(ncnds)
+        elseif load["model"]=="constant_impedance"
+            alpha = ones(ncnds)*2
+            beta  =ones(ncnds)*2
+        elseif load["model"]=="exponential"
+            alpha = load["alpha"].values
+            @assert(all(alpha.>=0))
+            beta = load["beta"].values
+            @assert(all(beta.>=0))
+        end
+        # calculate proportionality constants
+        v0 = load["vnom_kv"]/(bus["base_kv"]/sqrt(3))
+        a = pd./v0.^alpha
+        b = qd./v0.^beta
+        # get bounds
+        return (a, alpha, b, beta)
+    end
+end
+
+
+"""
+Returns the voltage magnitude bounds for the individual load elements in a
+multiphase load. These are inferred from vmin/vmax for wye loads and from
+_calc_bus_vm_ll_bounds for delta loads.
+"""
+function _calc_load_vbounds(load::Dict, bus::Dict)
+    if load["conn"]=="wye"
+        vmin = bus["vmin"].values
+        vmax = bus["vmax"].values
+    elseif load["conn"]=="delta"
+        vmin, vmax = _calc_bus_vm_ll_bounds(bus)
+    end
+    return vmin, vmax
+end
+
+"""
+Returns a Bool, indicating whether the convex hull of the voltage-dependent
+relationship needs a cone inclusion constraint.
+"""
+function _check_load_needs_cone(load::Dict)
+    if load["model"]=="constant_current"
+        return true
+    elseif load["model"]=="exponential"
+        return true
+    else
+        return false
+    end
+end
+
+
+"""
+Returns a current magnitude bound for the generators.
+"""
+function _calc_gen_current_max(gen::Dict, bus::Dict)
+    pabsmax = max.(abs.(gen["pmin"].values), abs.(gen["pmax"].values))
+    qabsmax = max.(abs.(gen["qmax"].values), abs.(gen["qmax"].values))
+    smax = sqrt.(pabsmax.^2 + qabsmax.^2)
+
+    vmin = bus["vmin"].values
+
+    return smax./vmin
+end
+
+
+"""
+Returns a total (shunt+series) current magnitude bound for the from and to side
+of a branch. The total power rating also implies a current bound through the
+lower bound on the voltage magnitude of the connected buses.
+"""
+function _calc_branch_current_max_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
+    bounds_fr = []
+    bounds_to = []
+    if haskey(branch, "c_rating_a")
+        push!(bounds_fr, branch["c_rating_a"].values)
+        push!(bounds_to, branch["c_rating_a"].values)
+    end
+    if haskey(branch, "rate_a")
+        push!(bounds_fr, branch["rate_a"].values./bus_fr["vmin"].values)
+        push!(bounds_to, branch["rate_a"].values./bus_to["vmin"].values)
+    end
+    @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
+    return min.(bounds_fr...), min.(bounds_to...)
+end
+
+
+"""
+Returns a total (shunt+series) power magnitude bound for the from and to side
+of a branch. The total current rating also implies a current bound through the
+upper bound on the voltage magnitude of the connected buses.
+"""
+function _calc_branch_power_ub_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
+    bounds_fr = []
+    bounds_to = []
+    if haskey(branch, "c_rating_a")
+        push!(bounds_fr, branch["c_rating_a"].values.*bus_fr["vmax"].values)
+        push!(bounds_to, branch["c_rating_a"].values.*bus_to["vmax"].values)
+    end
+    if haskey(branch, "rate_a")
+        push!(bounds_fr, branch["rate_a"].values)
+        push!(bounds_to, branch["rate_a"].values)
+    end
+    @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
+    return min.(bounds_fr...), min.(bounds_to...)
+end
+
+
+"""
+Returns a valid series current magnitude bound for a branch.
+"""
+function _calc_branch_series_current_ub(branch::Dict, bus_fr::Dict, bus_to::Dict)
+    vmin_fr = bus_fr["vmin"].values
+    vmin_to = bus_to["vmin"].values
+
+    vmax_fr = bus_fr["vmax"].values
+    vmax_to = bus_to["vmax"].values
+
+    # assumed to be matrices already
+    # temportary fix by shunts_diag2mat!
+
+    # get valid bounds on total current
+    c_max_fr_tot, c_max_to_tot = _calc_branch_current_max_frto(branch, bus_fr, bus_to)
+
+    # get valid bounds on shunt current
+    y_fr = branch["g_fr"].values + im* branch["b_fr"].values
+    y_to = branch["g_to"].values + im* branch["b_to"].values
+    c_max_fr_sh = abs.(y_fr)*vmax_fr
+    c_max_to_sh = abs.(y_to)*vmax_to
+
+    # now select element-wise lowest valid bound between fr and to
+    return min.(c_max_fr_sh.+c_max_fr_tot, c_max_to_sh.+c_max_to_tot)
+end
