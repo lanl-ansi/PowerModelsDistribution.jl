@@ -134,40 +134,43 @@ function constraint_mc_flow_losses(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=
 end
 
 
-""
-function constraint_mc_trans(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+"Transformer constraints, considering winding type, conductor order, polarity and tap settings."
+function constraint_mc_trans(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, fix_taps::Bool=true)
     if _PMs.ref(pm, pm.cnw, :conductors)!=3
         Memento.error(_LOGGER, "Transformers only work with networks with three conductors.")
     end
-    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = _calc_mc_transformer_Tvi(pm, i)
-    f_bus = _PMs.ref(pm, :transformer, i)["f_bus"]
-    t_bus = _PMs.ref(pm, :transformer, i)["t_bus"]
-    tm = _PMs.ref(pm, :transformer, i)["tm"]
-    constraint_mc_transformer_voltage(pm, nw, i, f_bus, t_bus, tm, Tv_fr, Tv_im, Cv_to)
-    f_idx = (i, f_bus, t_bus)
-    t_idx = (i, t_bus, f_bus)
-    constraint_mc_transformer_flow(pm, nw, i, f_bus, t_bus, f_idx, t_idx, tm, Ti_fr, Ti_im, Cv_to)
-end
 
-
-""
-function constraint_mc_oltc(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    if _PMs.ref(pm, pm.cnw, :conductors)!=3
-        Memento.error(_LOGGER, "Transformers only work with networks with three conductors.")
-    end
-    (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to) = _calc_mc_transformer_Tvi(pm, i)
     trans = _PMs.ref(pm, :transformer, i)
     f_bus = trans["f_bus"]
     t_bus = trans["t_bus"]
-    constraint_mc_oltc_voltage(pm, nw, i, f_bus, t_bus, Tv_fr, Tv_im, Cv_to)
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
-    constraint_mc_oltc_flow(pm, nw, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im, Cv_to)
-    # fix the taps with a constraint which are not free
-    trans = _PMs.ref(pm, :transformer, i)
-    fixed = trans["fixed"]
-    tm = trans["tm"]
-    constraint_mc_oltc_tap_fix(pm, i, fixed, tm)
+    f_type = trans["config_fr"]["type"]
+    t_type = trans["config_to"]["type"]
+    f_cnd = trans["config_fr"]["cnd"]
+    t_cnd = trans["config_to"]["cnd"]
+    tm_set = trans["tm"]
+    tm_fixed = fix_taps ? ones(Bool, length(tm_set)) : trans["fixed"]
+    tm_scale = calculate_tm_scale(trans, _PMs.ref(pm, nw, :bus, f_bus), _PMs.ref(pm, nw, :bus, t_bus))
+
+    #TODO change data model
+    # there is redundancy in specifying polarity seperately on from and to side
+    f_pol = trans["config_fr"]["polarity"]=='+' ? 1 : -1
+    t_pol = trans["config_to"]["polarity"]=='+' ? 1 : -1
+    pol = f_pol*t_pol
+
+    if f_type=="wye" && t_type=="wye"
+        constraint_mc_trans_yy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+    elseif f_type=="delta" && t_type=="wye"
+        constraint_mc_trans_dy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+    elseif f_type=="wye" && t_type=="delta"
+        constraint_mc_trans_dy(pm, nw, i, t_bus, f_bus, t_idx, f_idx, t_cnd, f_cnd, pol, tm_set, tm_fixed, (tm_scale)^-1)
+    elseif f_type=="delta" && t_type=="delta"
+        Memento.error(_LOGGER, "Dd transformers are not supported at the low-level data format. This can be cast as a combo of two dy transformers.")
+    end
+    if f_type=="zig-zag" || t_type=="zig-zag"
+        Memento.error(_LOGGER, "Zig-zag not yet supported.")
+    end
 end
 
 
@@ -305,6 +308,7 @@ So for delta, sn is constrained indirectly.
 """
 function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw)
     load = _PMs.ref(pm, nw, :load, id)
+    bus = _PMs.ref(pm, nw,:bus, load["load_bus"])
     model = load["model"]
     conn = _PMs.ref(pm, nw, :load, id, "conn")
     @assert(conn in ["delta", "wye"])
@@ -359,9 +363,20 @@ function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw
             @assert(_PMs.ref(pm, 0, :conductors)==3)
             constraint_mc_load_impedance_delta(pm, nw, id, load["load_bus"], cp, cq)
         end
+    elseif model=="exponential"
+        a, alpha, b, beta = _load_expmodel_params(load, bus)
+
+        if conn=="wye"
+            for c in _PMs.conductor_ids(pm)
+                constraint_load_exponential_wye(pm, nw, c, id, load["load_bus"], a[c], alpha[c], b[c], beta[c])
+            end
+        elseif conn=="delta"
+            @assert(_PMs.ref(pm, 0, :conductors)==3)
+            constraint_mc_load_exponential_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
+        end
 
     else
-        Memento.@error(LOGGER, "Unknown model $model for load $id.")
+        Memento.@error(_LOGGER, "Unknown model $model for load $id.")
     end
 end
 

@@ -171,7 +171,7 @@ function add_rank_voltage_variable!(sol, pm::AbstractUBFModels; tol = 1e-6)
         for (b, bus) in buses
             Wre, Wim = _make_hermitian_matrix_variable(sol["bus"]["$b"]["w"].values, sol["bus"]["$b"]["wr"].values, sol["bus"]["$b"]["wi"].values)
             W = Wre + im*Wim
-            sol["bus"]["$b"]["rank"] = rank(W, tol)
+            sol["bus"]["$b"]["rank"] = LinearAlgebra.rank(W, tol)
         end
     end
 end
@@ -184,7 +184,7 @@ function add_rank_current_variable!(sol, pm::AbstractUBFModels; tol = 1e-6)
         for (b, branch) in branches
             CCre, CCim = _make_hermitian_matrix_variable(sol["branch"]["$b"]["cc"].values, sol["branch"]["$b"]["ccr"].values, sol["branch"]["$b"]["cci"].values)
             CC = CCre + im*CCim
-            sol["branch"]["$b"]["CC_rank"] = rank(CC, tol)
+            sol["branch"]["$b"]["CC_rank"] = LinearAlgebra.rank(CC, tol)
         end
     end
 end
@@ -212,7 +212,7 @@ function add_rank_branch_flow!(sol, pm::AbstractUBFModels; tol = 1e-6)
             Ssij = Sij - W'*y_fr'
 
             f = [W Ssij; Ssij' CC]
-            sol["branch"]["$b"]["rank"] = rank(f, tol)
+            sol["branch"]["$b"]["rank"] = LinearAlgebra.rank(f, tol)
         end
     end
 end

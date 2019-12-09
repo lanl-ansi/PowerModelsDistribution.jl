@@ -123,9 +123,10 @@
             @test result["termination_status"] == PMs.OPTIMAL
             @test isapprox(result["objective"], 56091.7; atol = 2e0)
 
-            @test isapprox(result["solution"]["gen"]["1"]["qg"][1],   0.2362121; atol = 2e-2)
-            @test isapprox(result["solution"]["gen"]["1"]["qg"][2],  -0.0219214; atol = 2e-2)
-            @test isapprox(result["solution"]["gen"]["1"]["qg"][3],  -0.0249553; atol = 2e-2)
+            @test isapprox(result["solution"]["bus"]["1"]["vm"][1],   1.076184696745133; atol = 1E-3)
+            @test isapprox(result["solution"]["bus"]["2"]["vm"][1],   1.063950148862639; atol = 1E-3)
+            @test isapprox(result["solution"]["bus"]["3"]["vm"][1],   1.073074502462763; atol = 1E-3)
+            @test isapprox(result["solution"]["bus"]["4"]["vm"][1],   1.053610154771143; atol = 1E-3)
         end
 
         @testset "5-bus independent meshed different sdpubf opf_bf" begin

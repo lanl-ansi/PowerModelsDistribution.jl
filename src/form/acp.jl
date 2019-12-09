@@ -334,73 +334,90 @@ function constraint_mc_transformer_flow(pm::_PMs.AbstractACPModel, nw::Int, i::I
 end
 
 
-"Links the voltage at both windings of a variable tap transformer."
-function constraint_mc_oltc_voltage(pm::_PMs.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, Tv_fr, Tv_im, Cv_to)
-    ncnd  = 3
-    # from side
-    vm_fr = [_PMs.var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
-    va_fr = [_PMs.var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
-    # tap
-    tap = [_PMs.var(pm, nw, c, :tap)[i] for c in 1:ncnd]
-    # to side
-    vm_to = [_PMs.var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
-    va_to = [_PMs.var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
-    # the intermediate bus voltage is saved as an expression
-    # vm_im[c] = vm_to[c]*tap[c]*Cv_to
-    # va_im = va_to
-    for n in 1:size(Tv_fr)[1]
-        JuMP.@NLconstraint(pm.model,
-              sum(Tv_fr[n,c]*vm_fr[c]*cos(va_fr[c]) for c in 1:ncnd)
-            ==sum(Tv_im[n,c]*(vm_to[c]*tap[c]*Cv_to)*cos(va_to[c]) for c in 1:ncnd)
-        )
-        JuMP.@NLconstraint(pm.model,
-              sum(Tv_fr[n,c]*vm_fr[c]*sin(va_fr[c]) for c in 1:ncnd)
-            ==sum(Tv_im[n,c]*(vm_to[c]*tap[c]*Cv_to)*sin(va_to[c]) for c in 1:ncnd)
-        )
+function constraint_mc_trans_yy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+
+    vm_fr = [_PMs.var(pm, nw, p, :vm, f_bus) for p in f_cnd]
+    vm_to = [_PMs.var(pm, nw, p, :vm, t_bus) for p in t_cnd]
+    va_fr = [_PMs.var(pm, nw, p, :va, f_bus) for p in f_cnd]
+    va_to = [_PMs.var(pm, nw, p, :va, t_bus) for p in t_cnd]
+
+    # construct tm as a parameter or scaled variable depending on whether it is fixed or not
+    tm = [tm_fixed[p] ? tm_set[p] : _PMs.var(pm, nw, p, :tap, trans_id) for p in _PMs.conductor_ids(pm)]
+
+
+    for p in _PMs.conductor_ids(pm)
+        if tm_fixed[p]
+            JuMP.@constraint(pm.model, vm_fr[p] == tm_scale*tm[p]*vm_to[p])
+        else
+            JuMP.@NLconstraint(pm.model, vm_fr[p] == tm_scale*tm[p]*vm_to[p])
+        end
+        pol_angle = pol==1 ? 0 : pi
+        JuMP.@constraint(pm.model, va_fr[p] == va_to[p] + pol_angle)
     end
+
+    p_fr = [_PMs.var(pm, nw, p, :pt, f_idx) for p in f_cnd]
+    p_to = [_PMs.var(pm, nw, p, :pt, t_idx) for p in t_cnd]
+    q_fr = [_PMs.var(pm, nw, p, :qt, f_idx) for p in f_cnd]
+    q_to = [_PMs.var(pm, nw, p, :qt, t_idx) for p in t_cnd]
+
+    JuMP.@constraint(pm.model, p_fr + p_to .== 0)
+    JuMP.@constraint(pm.model, q_fr + q_to .== 0)
 end
 
 
-"Links the power flowing into both windings of a variable tap transformer."
-function constraint_mc_oltc_flow(pm::_PMs.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im, Cv_to)
-    ncnd  = 3
-    # from side variables
-    vm_fr = [_PMs.var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
-    va_fr = [_PMs.var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
-    p_fr = [_PMs.var(pm, nw, c, :pt, f_idx) for c in 1:ncnd]
-    q_fr = [_PMs.var(pm, nw, c, :qt, f_idx) for c in 1:ncnd]
-    # tap
-    tap = [_PMs.var(pm, nw, c, :tap, i) for c in 1:ncnd]
-    # to side
-    vm_to = [_PMs.var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
-    va_to = [_PMs.var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
-    p_to = [_PMs.var(pm, nw, c, :pt, t_idx) for c in 1:ncnd]
-    q_to = [_PMs.var(pm, nw, c, :qt, t_idx) for c in 1:ncnd]
-    # the intermediate bus voltage is saved as an expression
-    # vm_im[c] = vm_to[c]*tap[c]*Cv_to
-    # va_im = va_to
-    for n in 1:size(Ti_fr)[1]
-        # i_fr_re[c] = 1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c]))
-        # i_fr_im[c] = 1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c]))
-        # i_to_re[c] = 1/vm_to[c]*(p_to[c]*cos(va_im[c])+q_to[c]*sin(va_im[c]))
-        # i_to_im[c] = 1/vm_to[c]*(p_to[c]*sin(va_im[c])-q_to[c]*cos(va_im[c]))
-        JuMP.@NLconstraint(pm.model,
-              sum(Ti_fr[n,c]*
-                    1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c])) # i_fr_re[c]
-              for c in 1:ncnd)
-            + sum(Ti_im[n,c]*
-                    1/(vm_to[c]*tap[c]*Cv_to)*(p_to[c]*cos(va_to[c])+q_to[c]*sin(va_to[c])) # i_to_re[c]
-              for c in 1:ncnd)
-            == 0
+function constraint_mc_trans_dy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+    vm_fr = [_PMs.var(pm, nw, p, :vm, f_bus) for p in f_cnd]
+    vm_to = [_PMs.var(pm, nw, p, :vm, t_bus) for p in t_cnd]
+    va_fr = [_PMs.var(pm, nw, p, :va, f_bus) for p in f_cnd]
+    va_to = [_PMs.var(pm, nw, p, :va, t_bus) for p in t_cnd]
+
+    # construct tm as a parameter or scaled variable depending on whether it is fixed or not
+    tm = [tm_fixed[p] ? tm_set[p] : _PMs.var(pm, nw, p, :tap, trans_id) for p in _PMs.conductor_ids(pm)]
+
+    # introduce auxialiary variable vd = Md*v_fr
+    nph = length(_PMs.conductor_ids(pm))
+    vd_re = Array{Any,1}(undef, nph)
+    vd_im = Array{Any,1}(undef, nph)
+    for p in 1:nph
+        # rotate by 1 to get 'previous' phase
+        # e.g., for nph=3: 1->3, 2->1, 3->2
+        q = (p-1+1)%nph+1
+        vd_re[p] = JuMP.@NLexpression(pm.model, vm_fr[p]*cos(va_fr[p])-vm_fr[q]*cos(va_fr[q]))
+        vd_im[p] = JuMP.@NLexpression(pm.model, vm_fr[p]*sin(va_fr[p])-vm_fr[q]*sin(va_fr[q]))
+        JuMP.@NLconstraint(pm.model, vd_re[p] == pol*tm_scale*tm[p]*vm_to[p]*cos(va_to[p]))
+        JuMP.@NLconstraint(pm.model, vd_im[p] == pol*tm_scale*tm[p]*vm_to[p]*sin(va_to[p]))
+    end
+
+    p_fr = [_PMs.var(pm, nw, p, :pt, f_idx) for p in f_cnd]
+    p_to = [_PMs.var(pm, nw, p, :pt, t_idx) for p in t_cnd]
+    q_fr = [_PMs.var(pm, nw, p, :qt, f_idx) for p in f_cnd]
+    q_to = [_PMs.var(pm, nw, p, :qt, t_idx) for p in t_cnd]
+
+    id_re = Array{Any,1}(undef, nph)
+    id_im = Array{Any,1}(undef, nph)
+    # s/v      = (p+jq)/|v|^2*conj(v)
+    #          = (p+jq)/|v|*(cos(va)-j*sin(va))
+    # Re(s/v)  = (p*cos(va)+q*sin(va))/|v|
+    # -Im(s/v) = -(q*cos(va)-p*sin(va))/|v|
+    for p in _PMs.conductor_ids(pm)
+        # id = conj(s_to/v_to)./tm
+        id_re[p] = JuMP.@NLexpression(pm.model,  (p_to[p]*cos(va_to[p])+q_to[p]*sin(va_to[p]))/vm_to[p]/(tm_scale*tm[p])/pol)
+        id_im[p] = JuMP.@NLexpression(pm.model, -(q_to[p]*cos(va_to[p])-p_to[p]*sin(va_to[p]))/vm_to[p]/(tm_scale*tm[p])/pol)
+    end
+    for p in _PMs.conductor_ids(pm)
+        # rotate by nph-1 to get 'previous' phase
+        # e.g., for nph=3: 1->3, 2->1, 3->2
+        q = (p-1+nph-1)%nph+1
+        # s_fr  = v_fr*conj(i_fr)
+        #       = v_fr*conj(id[q]-id[p])
+        #       = v_fr*(id_re[q]-j*id_im[q]-id_re[p]+j*id_im[p])
+        JuMP.@NLconstraint(pm.model, p_fr[p] ==
+             vm_fr[p]*cos(va_fr[p])*(id_re[q]-id_re[p])
+            -vm_fr[p]*sin(va_fr[p])*(-id_im[q]+id_im[p])
         )
-        JuMP.@NLconstraint(pm.model,
-              sum(Ti_fr[n,c]*
-                    1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c])) # i_fr_im[c]
-              for c in 1:ncnd)
-            + sum(Ti_im[n,c]*
-                    1/(vm_to[c]*tap[c]*Cv_to)*(p_to[c]*sin(va_to[c])-q_to[c]*cos(va_to[c])) # i_to_im[c]
-              for c in 1:ncnd)
-            == 0
+        JuMP.@NLconstraint(pm.model, q_fr[p] ==
+             vm_fr[p]*cos(va_fr[p])*(-id_im[q]+id_im[p])
+            +vm_fr[p]*sin(va_fr[p])*(id_re[q]-id_re[p])
         )
     end
 end
@@ -519,6 +536,14 @@ function constraint_load_impedance_wye(pm::_PMs.AbstractACPModel, nw::Int, cnd::
     vm = _PMs.var(pm, nw, cnd, :vm, load_bus_id)
     _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, cp*vm^2)
     _PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, cq*vm^2)
+end
+
+
+""
+function constraint_load_exponential_wye(pm::_PMs.AbstractACPModel, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, a::Real, alpha::Real, b::Real, beta::Real)
+    vm = _PMs.var(pm, nw, cnd, :vm, load_bus_id)
+    _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, a*vm^alpha)
+    _PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, b*vm^beta)
 end
 
 
@@ -746,6 +771,54 @@ function constraint_mc_load_impedance_delta(pm::_PMs.AbstractACPModel, nw::Int, 
     _PMs.var(pm, nw, 1, :qd)[load_id] = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
     _PMs.var(pm, nw, 2, :qd)[load_id] = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
     _PMs.var(pm, nw, 3, :qd)[load_id] = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+end
+
+
+"""
+exponential model in acp voltage coordinates
+"""
+function constraint_mc_load_exponential_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, a, alpha, b, beta)
+    nph = length(_PMs.conductor_ids(pm))
+
+    vm = [_PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:nph]
+    va = [_PMs.var(pm, nw, c, :va, load_bus_id) for c in 1:nph]
+
+    # vd = Td*v
+    vdr = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])-vm[mod(i,nph)+1]*cos(va[mod(i,nph)+1]))
+    vdi = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*sin(va[i])-vm[mod(i,nph)+1]*sin(va[mod(i,nph)+1]))
+    pl = JuMP.@NLexpression(pm.model, [i in 1:nph], a[i]*(vdr[i]^2+vdi[i]^2)^(alpha[i]/2))
+    ql = JuMP.@NLexpression(pm.model, [i in 1:nph], b[i]*(vdr[i]^2+vdi[i]^2)^(beta[i]/2))
+
+    # idc: conjugate of delta current
+    # idc = sl./vd
+    #     = (pl + j.ql)/vd = (a.|vd|^alpha + j.b.|vd|^beta)/vd, now use 1/c = conj(c)/|c|^2
+    #     = (vdr-j.vdi).(a.|vd|^alpha + j.b.|vd|^beta)/|vd|^2
+    #     = (vdr-j.vdi).(a.|vd|^(alpha-2) + j.b.|vd|^(beta-2))
+    #  now also use that |vd| = (vdr^2 + wdi^2)^(1/2)
+    idcr = JuMP.@NLexpression(pm.model, [i in 1:nph], vdr[i]*a[i]*(vdr[i]^2+vdi[i]^2)^(alpha[i]/2-1) + vdi[i]*b[i]*(vdr[i]^2+vdi[i]^2)^(beta[i]/2-1))
+    idci = JuMP.@NLexpression(pm.model, [i in 1:nph], vdr[i]*b[i]*(vdr[i]^2+vdi[i]^2)^(beta[i]/2-1) - vdi[i]*a[i]*(vdr[i]^2+vdi[i]^2)^(alpha[i]/2-1))
+
+    # icr = Td'*idcr
+    icr = JuMP.@NLexpression(pm.model, [i in 1:nph], idcr[i]-idcr[mod(i+nph-2,nph)+1])
+    ici = JuMP.@NLexpression(pm.model, [i in 1:nph], idci[i]-idci[mod(i+nph-2,nph)+1])
+
+    # s = v.*conj(ic)
+    pd = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])*icr[i] - vm[i]*sin(va[i])*ici[i])
+    qd = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])*ici[i] + vm[i]*sin(va[i])*icr[i])
+    for c in _PMs.conductor_ids(pm)
+        _PMs.var(pm, nw, c, :pd)[load_id] = pd[c]
+        _PMs.var(pm, nw, c, :qd)[load_id] = qd[c]
+    end
+
+    # also save pl, ql for inspection
+    for c in _PMs.conductor_ids(pm)
+        if !haskey(_PMs.var(pm, nw, c), :pl)
+            _PMs.var(pm, nw, c)[:pl] = Dict()
+            _PMs.var(pm, nw, c)[:ql] = Dict()
+        end
+        _PMs.var(pm, nw, c, :pl)[load_id] = pl[c]
+        _PMs.var(pm, nw, c, :ql)[load_id] = ql[c]
+    end
 end
 
 
