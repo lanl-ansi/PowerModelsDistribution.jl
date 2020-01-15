@@ -3,7 +3,7 @@ function run_mc_pf_bf(data::Dict{String,Any}, model_type, solver; kwargs...)
     if model_type != SDPUBFPowerModel && model_type != SOCNLPUBFPowerModel && model_type != SOCConicUBFPowerModel && model_type != LPLinUBFPowerModel && model_type != LPdiagUBFPowerModel && model_type !=  SOCBFPowerModel
         Memento.error(_LOGGER, "The problem type mc_opf_bf at the moment only supports a limited set of formulations")
     end
-    return _PMs.run_model(data, model_type, solver, post_mc_pf_bf; solution_builder=solution_bf!, ref_extensions=[ref_add_arcs_trans!], multiconductor=true, kwargs...)
+    return _PMs.run_model(data, model_type, solver, build_mc_pf_bf; solution_builder=solution_bf!, ref_extensions=[ref_add_arcs_trans!], multiconductor=true, kwargs...)
 end
 
 
@@ -14,7 +14,7 @@ end
 
 
 ""
-function post_mc_pf_bf(pm::_PMs.AbstractPowerModel)
+function build_mc_pf_bf(pm::_PMs.AbstractPowerModel)
     # Variables
     variable_mc_voltage(pm; bounded=false)
     variable_mc_branch_current(pm)

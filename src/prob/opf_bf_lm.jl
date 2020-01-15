@@ -4,7 +4,7 @@
 
 ""
 function run_mc_opf_bf_lm(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, post_mc_opf_bf_lm; solution_builder=solution_tp!, multiconductor=true, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, build_mc_opf_bf_lm; solution_builder=solution_tp!, multiconductor=true, kwargs...)
 end
 
 
@@ -15,7 +15,7 @@ end
 
 
 ""
-function post_mc_opf_bf_lm(pm::_PMs.AbstractPowerModel)
+function build_mc_opf_bf_lm(pm::_PMs.AbstractPowerModel)
     # Variables
     variable_mc_voltage(pm)
     variable_mc_branch_current(pm)
