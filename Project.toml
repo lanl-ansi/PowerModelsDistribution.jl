@@ -21,7 +21,7 @@ JuMP = "~0.19.2, ~0.20"
 Juniper = ">= 0.4"
 MathOptInterface = "~0.8, ~0.9"
 Memento = "~0.10, ~0.11, ~0.12"
-PowerModels = "~0.13"
+PowerModels = "~0.14"
 SCS = ">= 0.4"
 julia = "^1"
 
