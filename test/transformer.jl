@@ -33,7 +33,7 @@
             pmd_data["transformer"]["1"]["fixed"] = PMs.MultiConductorVector(zeros(Bool, 3))
             pmd_data["transformer"]["2"]["fixed"] = PMs.MultiConductorVector(zeros(Bool, 3))
             pm = PMs.instantiate_model(pmd_data, PMs.ACPPowerModel, PMD.post_mc_opf_oltc, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
-            sol = PMs.optimize_model!(pm, ipopt_solver)
+            sol = PMs.optimize_model!(pm, optimizer=ipopt_solver)
             # check that taps are set as to boost the voltage in the branches as much as possible;
             # this is trivially optimal if the voltage bounds are not binding
             # and without significant shunts (both branch and transformer)
