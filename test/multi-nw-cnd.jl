@@ -273,4 +273,14 @@
         @test !InfrastructureModels.compare_dict(mn_mc_data, build_mn_mc_data!("../test/data/matpower/case5_dc.m", "../test/data/matpower/case5_asym.m", conductors_1=4, conductors_2=0))
     end
 
+    @testset "test errors and warnings" begin
+        mn_data = build_mn_data("../test/data/matpower/case5.m")
+
+        Memento.setlevel!(TESTLOG, "warn")
+        @test_nowarn PowerModels.make_multiconductor!(mn_data, 3)
+        @test_nowarn PowerModels.check_conductors(mn_data)
+        Memento.setlevel!(TESTLOG, "error")
+
+        @test_throws(TESTLOG, ErrorException, PowerModels.run_ac_opf(mn_data, ipopt_solver))
+    end
 end
