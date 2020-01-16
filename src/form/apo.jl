@@ -84,3 +84,4 @@ end
 "nothing to do, this model is symmetric"
 function constraint_mc_trans(pm::_PMs.AbstractNFAModel, i::Int; nw::Int=pm.cnw)
 end
+
