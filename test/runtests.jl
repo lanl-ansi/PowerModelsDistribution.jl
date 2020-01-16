@@ -58,4 +58,8 @@ include("common.jl")
     include("loadmodels.jl")
 
     include("mld.jl")
+
+    include("multiconductor.jl")
+
+    include("multi-nw-cnd.jl")
 end
