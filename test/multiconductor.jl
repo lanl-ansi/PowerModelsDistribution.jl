@@ -1,7 +1,7 @@
 TESTLOG = Memento.getlogger(PowerModels)
 
 "an example of building a multi-phase model in an extention package"
-function build_tp_opf(pm::AbstractPowerModel)
+function build_tp_opf(pm::_PMs.AbstractPowerModel)
     for c in PowerModels.conductor_ids(pm)
         PowerModels.variable_voltage(pm, cnd=c)
         PowerModels.variable_generation(pm, cnd=c)
@@ -63,17 +63,17 @@ end
         @test pti_data == pti_json_file
 
         mc_data = build_mc_data!("../test/data/matpower/case5.m")
-        mc_data["gen"]["1"]["pmax"] = PowerModels.MultiConductorVector([Inf, Inf, Inf])
-        mc_data["gen"]["1"]["qmin"] = PowerModels.MultiConductorVector([-Inf, -Inf, -Inf])
-        mc_data["gen"]["1"]["bool_test"] = PowerModels.MultiConductorVector([true, true, false])
-        mc_data["gen"]["1"]["string_test"] = PowerModels.MultiConductorVector(["a", "b", "c"])
+        mc_data["gen"]["1"]["pmax"] = MultiConductorVector([Inf, Inf, Inf])
+        mc_data["gen"]["1"]["qmin"] = MultiConductorVector([-Inf, -Inf, -Inf])
+        mc_data["gen"]["1"]["bool_test"] = MultiConductorVector([true, true, false])
+        mc_data["gen"]["1"]["string_test"] = MultiConductorVector(["a", "b", "c"])
         mc_data["branch"]["1"]["br_x"][1,2] = -Inf
         mc_data["branch"]["1"]["br_x"][1,3] = Inf
 
         mc_data_json = PowerModels.parse_json(JSON.json(mc_data))
         @test mc_data_json == mc_data
 
-        mc_data["gen"]["1"]["nan_test"] = PowerModels.MultiConductorVector([0, NaN, 0])
+        mc_data["gen"]["1"]["nan_test"] = MultiConductorVector([0, NaN, 0])
         mc_data_json = PowerModels.parse_json(JSON.json(mc_data))
         @test isnan(mc_data_json["gen"]["1"]["nan_test"][2])
     end
@@ -500,7 +500,7 @@ end
         mp_data = build_mc_data!("../test/data/matpower/case3.m")
 
         a, b, c, d = mp_data["branch"]["1"]["br_r"], mp_data["branch"]["1"]["br_x"], mp_data["branch"]["1"]["b_fr"], mp_data["branch"]["1"]["b_to"]
-        e = PowerModels.MultiConductorVector([0.225, 0.225, 0.225, 0.225])
+        e = MultiConductorVector([0.225, 0.225, 0.225, 0.225])
         angs_rad = mp_data["branch"]["1"]["angmin"]
 
         # Transpose
@@ -518,10 +518,10 @@ end
         @test all(z.values - [0.0403 0.0 0.0; 0.0 0.0403 0.0; 0.0 0.0 0.0403] .<= 1e-12)
         @test all(w.values - [0.104839 0.0 0.0; 0.0 0.104839 0.0; 0.0 0.0 0.104839] .<= 1e-12)
 
-        @test isa(x, PowerModels.MultiConductorMatrix)
-        @test isa(y, PowerModels.MultiConductorMatrix)
-        @test isa(z, PowerModels.MultiConductorMatrix)
-        @test isa(w, PowerModels.MultiConductorMatrix)
+        @test isa(x, MultiConductorMatrix)
+        @test isa(y, MultiConductorMatrix)
+        @test isa(z, MultiConductorMatrix)
+        @test isa(w, MultiConductorMatrix)
 
         # Basic Math Vectors
         x = c + d
@@ -538,11 +538,11 @@ end
         @test all(w.values - [4.444444444444445, 4.444444444444445, 4.444444444444445] .<= 1e-12)
         @test all(u.values - d.values .<= 1e-12)
 
-        @test isa(x, PowerModels.MultiConductorVector)
-        @test isa(y, PowerModels.MultiConductorVector)
-        @test isa(z, PowerModels.MultiConductorVector)
-        @test isa(w, PowerModels.MultiConductorVector)
-        @test isa(u, PowerModels.MultiConductorVector)
+        @test isa(x, MultiConductorVector)
+        @test isa(y, MultiConductorVector)
+        @test isa(z, MultiConductorVector)
+        @test isa(w, MultiConductorVector)
+        @test isa(u, MultiConductorVector)
 
         # Broadcasting
         @test all(a .+ c - [0.29   0.225  0.225; 0.225  0.29   0.225; 0.225  0.225  0.29] .<= 1e-12)
@@ -568,13 +568,13 @@ end
         @test all(angs_deg.values - [-30.0, -30.0, -30.0] .<= 1e-12)
         @test all(angs_deg_rad.values - angs_rad.values .<= 1e-12)
 
-        @test isa(angs_deg, PowerModels.MultiConductorVector)
-        @test isa(deg2rad(angs_deg), PowerModels.MultiConductorVector)
+        @test isa(angs_deg, MultiConductorVector)
+        @test isa(deg2rad(angs_deg), MultiConductorVector)
 
         a_rad = rad2deg(a)
         @test all(a_rad.values - [3.72423 0.0 0.0; 0.0 3.72423 0.0; 0.0 0.0 3.72423] .<= 1e-12)
-        @test isa(rad2deg(a), PowerModels.MultiConductorMatrix)
-        @test isa(deg2rad(a), PowerModels.MultiConductorMatrix)
+        @test isa(rad2deg(a), MultiConductorMatrix)
+        @test isa(deg2rad(a), MultiConductorMatrix)
 
         Memento.setlevel!(TESTLOG, "warn")
         @test_nowarn show(devnull, a)
@@ -588,11 +588,11 @@ end
 
         # Test broadcasting edge-case
         v = ones(Real, 3)
-        mcv = PowerModels.MultiConductorVector(v)
-        @test all(floor.(mcv) .+ mcv .== PowerModels.MultiConductorVector(floor.(v) .+ v))
+        mcv = MultiConductorVector(v)
+        @test all(floor.(mcv) .+ mcv .== MultiConductorVector(floor.(v) .+ v))
 
         m = LinearAlgebra.diagm(0 => v)
-        mcm = PowerModels.MultiConductorMatrix(m)
-        @test all(floor.(mcm) .+ mcm .== PowerModels.MultiConductorMatrix(floor.(m) .+ m))
+        mcm = MultiConductorMatrix(m)
+        @test all(floor.(mcm) .+ mcm .== MultiConductorMatrix(floor.(m) .+ m))
     end
 end

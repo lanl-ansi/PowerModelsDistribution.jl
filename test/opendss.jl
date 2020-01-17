@@ -219,7 +219,7 @@
                         "r", "x", "p_loss", "q_loss", "status", "source_id", "active_phases"]
                 @test haskey(bat, key)
                 if key in ["x", "r", "qmin", "qmax", "thermal_rating"]
-                    @test isa(bat[key], PowerModels.MultiConductorVector)
+                    @test isa(bat[key], MultiConductorVector)
                 end
             end
         end

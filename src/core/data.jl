@@ -33,7 +33,7 @@ function make_multiconductor!(mp_data, n_conductors::Int)
     # replace matrix shunts by matrices instead of vectors
     for (_, br) in mp_data["branch"]
         for key in ["b_fr", "b_to", "g_fr", "g_to"]
-            br[key] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>br[key].values))
+            br[key] = MultiConductorMatrix(LinearAlgebra.diagm(0=>br[key].values))
         end
     end
 end

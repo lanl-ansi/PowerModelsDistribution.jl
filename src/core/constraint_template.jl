@@ -238,8 +238,8 @@ function constraint_mc_voltage_balance(pm::_PMs.AbstractPowerModel, bus_id::Int;
     end
 
     if haskey(bus, "vm_ll_min")|| haskey(bus, "vm_ll_max")
-        vm_ll_min = haskey(bus, "vm_ll_min") ? bus["vm_ll_min"] : _PMs.MultiConductorVector(fill(0, 3))
-        vm_ll_max = haskey(bus, "vm_ll_max") ? bus["vm_ll_max"] : _PMs.MultiConductorVector(fill(Inf, 3))
+        vm_ll_min = haskey(bus, "vm_ll_min") ? bus["vm_ll_min"] : MultiConductorVector(fill(0, 3))
+        vm_ll_max = haskey(bus, "vm_ll_max") ? bus["vm_ll_max"] : MultiConductorVector(fill(Inf, 3))
         constraint_mc_vm_ll(pm, nw, bus_id, vm_ll_min, vm_ll_max)
     end
 end
