@@ -1,5 +1,6 @@
 module PowerModelsDistribution
 
+    import JSON
     import JuMP
     import MathOptInterface
     import PowerModels
@@ -14,10 +15,10 @@ module PowerModelsDistribution
         global _LOGGER = Memento.getlogger(PowerModels)
     end
 
+    include("core/multiconductor.jl")
     include("core/types.jl")
     include("core/data.jl")
     include("core/ref.jl")
-    include("core/multiconductor.jl")
     include("core/variable.jl")
     include("core/variable_mx.jl")
     include("core/constraint.jl")

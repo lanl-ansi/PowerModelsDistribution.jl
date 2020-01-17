@@ -34,7 +34,7 @@ function add_setpoint_bus_voltage_balance_indicators!(pm::_PMs.AbstractPowerMode
         sol_item["vm_seq_neg"] = abs(v_neg)
         sol_item["vm_seq_zero"] = abs(v_zero)
         sol_item["vuf"] = abs(v_neg)/abs(v_pos)
-        sol_item["vm_ll"] = _PMs.MultiConductorVector(abs.([1 -1 0; 0 1 -1; -1 0 1]*v_abc)./sqrt(3))
+        sol_item["vm_ll"] = MultiConductorVector(abs.([1 -1 0; 0 1 -1; -1 0 1]*v_abc)./sqrt(3))
     end
 end
 

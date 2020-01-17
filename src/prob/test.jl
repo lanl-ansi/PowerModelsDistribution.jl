@@ -85,7 +85,7 @@ function _run_mc_ucopf(file, model_type::Type, solver; kwargs...)
 end
 
 ""
-function _build_mc_ucopf(pm::AbstractPowerModel)
+function _build_mc_ucopf(pm::_PMs.AbstractPowerModel)
     variable_generation_indicator(pm)
 
     variable_storage_indicator(pm)
@@ -156,7 +156,7 @@ function _run_mc_opf(file, model_type::Type, optimizer; kwargs...)
 end
 
 ""
-function _build_mc_opf(pm::AbstractPowerModel)
+function _build_mc_opf(pm::_PMs.AbstractPowerModel)
     for c in conductor_ids(pm)
         variable_voltage(pm, cnd=c)
         variable_generation(pm, cnd=c)
@@ -198,7 +198,7 @@ function _run_mc_opf_iv(file, model_type::Type, optimizer; kwargs...)
 end
 
 ""
-function _build_mc_opf_iv(pm::AbstractPowerModel)
+function _build_mc_opf_iv(pm::_PMs.AbstractPowerModel)
     for c in conductor_ids(pm)
         variable_voltage(pm, cnd=c)
         variable_branch_current(pm, cnd=c)
@@ -241,7 +241,7 @@ function _run_mn_mc_opf(file, model_type::Type, optimizer; kwargs...)
 end
 
 ""
-function _build_mn_mc_opf(pm::AbstractPowerModel)
+function _build_mn_mc_opf(pm::_PMs.AbstractPowerModel)
     for (n, network) in nws(pm)
         for c in conductor_ids(pm, nw=n)
             variable_voltage(pm, nw=n, cnd=c)
@@ -285,7 +285,7 @@ function _run_mn_mc_opf_strg(file, model_type::Type, optimizer; kwargs...)
 end
 
 "warning: this model is not realistic or physically reasonable, it is only for test coverage"
-function _build_mn_mc_opf_strg(pm::AbstractPowerModel)
+function _build_mn_mc_opf_strg(pm::_PMs.AbstractPowerModel)
     for (n, network) in nws(pm)
         variable_storage_energy(pm, nw=n)
         variable_storage_charge(pm, nw=n)

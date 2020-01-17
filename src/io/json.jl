@@ -29,14 +29,14 @@ function _parse_mcv!(pm_data)
                             else
                                 values = value["values"]
                             end
-                            pm_data[comp_type][n][field] = PowerModels.MultiConductorVector(convert(Array{eltypes[element_type]}, values))
+                            pm_data[comp_type][n][field] = MultiConductorVector(convert(Array{eltypes[element_type]}, values))
                         elseif startswith(value["type"], "MultiConductorMatrix") || startswith(value["type"], "PowerModels.MultiConductorMatrix")
                             if element_type != "String"
                                 values = [[isa(v, AbstractString) ? parse(eltypes[element_type], v) : v for v in row] for row in value["values"]]
                             else
                                 values = value["values"]
                             end
-                            pm_data[comp_type][n][field] = PowerModels.MultiConductorMatrix(convert(Array{eltypes[element_type]}, hcat(values...)))
+                            pm_data[comp_type][n][field] = MultiConductorMatrix(convert(Array{eltypes[element_type]}, hcat(values...)))
                         end
                     end
                 end

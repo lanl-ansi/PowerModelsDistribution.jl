@@ -159,8 +159,8 @@ Base.rad2deg(a::MultiConductorMatrix) = MultiConductorMatrix(map(rad2deg, a.valu
 Base.deg2rad(a::MultiConductorVector) = MultiConductorVector(map(deg2rad, a.values))
 Base.deg2rad(a::MultiConductorMatrix) = MultiConductorMatrix(map(deg2rad, a.values))
 
-JSON.lower(mcv::PowerModels.MultiConductorValue) = Dict("values"=>[eltype(mcv) != String && (isinf(v) || isnan(v)) ? string(v) : v for v in mcv.values], "type"=>string(typeof(mcv)))
-function JSON.show_json(io::JSON.StructuralContext, s::JSON.CommonSerialization, p::PowerModels.MultiConductorValue)
+JSON.lower(mcv::MultiConductorValue) = Dict("values"=>[eltype(mcv) != String && (isinf(v) || isnan(v)) ? string(v) : v for v in mcv.values], "type"=>string(typeof(mcv)))
+function JSON.show_json(io::JSON.StructuralContext, s::JSON.CommonSerialization, p::MultiConductorValue)
     if eltype(p) != String
         if isa(p, MultiConductorMatrix)
             values = [[!isa(v, String) && isinf(v) || isnan(v) ? string(v) : v for v in row] for row in p.values]
