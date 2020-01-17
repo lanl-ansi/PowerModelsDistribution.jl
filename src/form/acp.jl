@@ -1,8 +1,8 @@
 ""
 function variable_mc_voltage(pm::_PMs.AbstractACPModel; nw=pm.cnw, kwargs...)
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_voltage(pm, cnd=c; nw=nw, kwargs...)
-    end
+    variable_mc_voltage_angle(pm; kwargs...)
+    variable_mc_voltage_magnitude(pm; kwargs...)
+
     # This is needed for delta loads, where division occurs by the difference
     # of voltage phasors. If the voltage phasors at one bus are initialized
     # in the same point, this would lead to division by zero.
@@ -14,7 +14,7 @@ function variable_mc_voltage(pm::_PMs.AbstractACPModel; nw=pm.cnw, kwargs...)
         if !haskey(busref, "va_start")
         # if it has this key, it was set at PM level
             for c in 1:ncnd
-                JuMP.set_start_value(_PMs.var(pm, nw, c, :va, id), theta[c])
+                JuMP.set_start_value(_PMs.var(pm, nw, :va, id)[c], theta[c])
             end
         end
     end
