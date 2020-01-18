@@ -2,6 +2,9 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
+- none
+
+### v0.6.1
 - Fixed bug with new default SCS settings causing tests to fail (#190)
 - Changed unit test '5-bus independent radial different sdpubf opf_bf', testing vm instead of qg
 - Added exponential load models, including convex relaxations
