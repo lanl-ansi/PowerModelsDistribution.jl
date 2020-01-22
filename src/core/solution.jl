@@ -1,5 +1,19 @@
 import LinearAlgebra: tr
 
+
+# extend solution builder for linear varibale case
+""
+#function _PMs._build_solution_values(var::JuMP.Containers.DenseAxisArray{JuMP.VariableRef,1,Tuple{UnitRange{Int64}},Tuple{Dict{Int64,Int64}}})
+function _PMs._build_solution_values(var::JuMP.Containers.DenseAxisArray{JuMP.VariableRef,1,<:Any,<:Any})
+    # TODO report that this does not work to JuMP
+    #return [_PMs._build_solution_values(val) for val in var]
+    vals = Float64[]
+    for val in var
+        push!(vals, _PMs._build_solution_values(val))
+    end
+    return vals
+end
+
 "adds voltage balance indicators; should only be called after add_setpoint_bus_voltage!"
 function add_setpoint_bus_voltage_balance_indicators!(pm::_PMs.AbstractPowerModel, sol)
     sol_dict = _PMs.get(sol, "bus", Dict{String,Any}())
