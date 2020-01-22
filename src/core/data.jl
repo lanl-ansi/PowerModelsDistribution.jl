@@ -420,3 +420,22 @@ function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
         end
     end
 end
+
+
+
+
+
+""
+function InfrastructureModels._value2string(v, float_precision::Int)
+    if typeof(v) <: AbstractFloat
+        return InfrastructureModels._float2string(v, float_precision)
+    end
+    if typeof(v) <: Array
+        return "[$(join([InfrastructureModels._float2string(val, float_precision) for val in v], ", "))]"
+    end
+    if typeof(v) <: Dict
+        return "{($(length(v)))}"
+    end
+
+    return "$(v)"
+end

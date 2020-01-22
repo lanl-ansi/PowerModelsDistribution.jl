@@ -1,3 +1,13 @@
+
+function comp_start_value(comp::Dict{String,<:Any}, key::String, conductor=1, default=0.0)
+    val = _PMs.comp_start_value(comp, key, default)
+    if length(val) > 1
+        return val[conductor]
+    else
+        return val
+    end
+end
+
 "voltage variables, delegated back to PowerModels"
 function variable_mc_voltage(pm::_PMs.AbstractPowerModel; kwargs...)
     variable_mc_voltage_angle(pm; kwargs...)
@@ -9,14 +19,11 @@ end
 function variable_mc_voltage_angle(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
 
-    va = _PMs.var(pm, nw)[:va] = Dict{Int,Any}()
-
-    for i in _PMs.ids(pm, nw, :bus)
-        va[i] = JuMP.@variable(pm.model,
+    va = _PMs.var(pm, nw)[:va] = Dict(i => JuMP.@variable(pm.model,
             [c in cnds], base_name="$(nw)_va_$(i)",
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "va_start", c)
-        )
-    end
+            start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "va_start", c)
+        ) for i in _PMs.ids(pm, nw, :bus)
+    )
 
     report && _PMs.sol_component_value(pm, nw, :bus, :va, _PMs.ids(pm, nw, :bus), va)
 end
@@ -25,14 +32,11 @@ end
 function variable_mc_voltage_magnitude(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
 
-    vm = _PMs.var(pm, nw)[:vm] = Dict{Int,Any}()
-
-    for i in _PMs.ids(pm, nw, :bus)
-        vm[i] = JuMP.@variable(pm.model,
+    vm = _PMs.var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
             [c in cnds], base_name="$(nw)_vm_$(i)",
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "vm_start", c)
-        )
-    end
+            start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "vm_start", c)
+        ) for i in _PMs.ids(pm, nw, :bus)
+    )
 
     if bounded
         for (i,bus) in _PMs.ref(pm, nw, :bus), c in cnds
@@ -47,11 +51,91 @@ end
 
 
 "branch flow variables, delegated back to PowerModels"
-function variable_mc_branch_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
-    for c in _PMs.conductor_ids(pm; nw=nw)
-        _PMs.variable_branch_flow(pm; cnd=c, nw=nw, kwargs...)
-    end
+function variable_mc_branch_flow(pm::_PMs.AbstractPowerModel; kwargs...)
+    variable_mc_branch_flow_active(pm; kwargs...)
+    variable_mc_branch_flow_reactive(pm; kwargs...)
 end
+
+"variable: `p[l,i,j]` for `(l,i,j)` in `arcs`"
+function variable_mc_branch_flow_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+
+    p = _PMs.var(pm, nw)[:p] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in cnds], base_name="$(nw)_p_$((l,i,j))",
+            start = comp_start_value(_PMs.ref(pm, nw, :branch, l), "p_start", c)
+        ) for (l,i,j) in _PMs.ref(pm, nw, :arcs)
+    )
+
+    if bounded
+        for c in cnds
+            flow_lb, flow_ub = _PMs.ref_calc_branch_flow_bounds(_PMs.ref(pm, nw, :branch), _PMs.ref(pm, nw, :bus), c)
+
+            for arc in _PMs.ref(pm, nw, :arcs)
+                l,i,j = arc
+                if !isinf(flow_lb[l])
+                    JuMP.set_lower_bound(p[arc][c], flow_lb[l])
+                end
+                if !isinf(flow_ub[l])
+                    JuMP.set_upper_bound(p[arc][c], flow_ub[l])
+                end
+            end
+        end
+    end
+
+    for (l,branch) in _PMs.ref(pm, nw, :branch)
+        if haskey(branch, "pf_start")
+            f_idx = (l, branch["f_bus"], branch["t_bus"])
+            JuMP.set_start_value(p[f_idx], branch["pf_start"])
+        end
+        if haskey(branch, "pt_start")
+            t_idx = (l, branch["t_bus"], branch["f_bus"])
+            JuMP.set_start_value(p[t_idx], branch["pt_start"])
+        end
+    end
+
+    report && _PMs.sol_component_value_edge(pm, nw, :branch, :pf, :pt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), p)
+end
+
+"variable: `q[l,i,j]` for `(l,i,j)` in `arcs`"
+function variable_mc_branch_flow_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+
+    q = _PMs.var(pm, nw)[:q] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in cnds], base_name="$(nw)_q_$((l,i,j))",
+            start = comp_start_value(_PMs.ref(pm, nw, :branch, l), "q_start", c)
+        ) for (l,i,j) in _PMs.ref(pm, nw, :arcs)
+    )
+
+    if bounded
+        for c in cnds
+            flow_lb, flow_ub = _PMs.ref_calc_branch_flow_bounds(_PMs.ref(pm, nw, :branch), _PMs.ref(pm, nw, :bus), c)
+
+            for arc in _PMs.ref(pm, nw, :arcs)
+                l,i,j = arc
+                if !isinf(flow_lb[l])
+                    JuMP.set_lower_bound(q[arc][c], flow_lb[l])
+                end
+                if !isinf(flow_ub[l])
+                    JuMP.set_upper_bound(q[arc][c], flow_ub[l])
+                end
+            end
+        end
+    end
+
+    for (l,branch) in _PMs.ref(pm, nw, :branch)
+        if haskey(branch, "qf_start")
+            f_idx = (l, branch["f_bus"], branch["t_bus"])
+            JuMP.set_start_value(q[f_idx], branch["qf_start"])
+        end
+        if haskey(branch, "qt_start")
+            t_idx = (l, branch["t_bus"], branch["f_bus"])
+            JuMP.set_start_value(q[t_idx], branch["qt_start"])
+        end
+    end
+
+    report && _PMs.sol_component_value_edge(pm, nw, :branch, :qf, :qt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), q)
+end
+
 
 
 "voltage variables, relaxed form"
@@ -141,15 +225,69 @@ end
 
 
 "variables for modeling storage units, includes grid injection and internal variables"
-function variable_mc_storage(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
-    for c in _PMs.conductor_ids(pm; nw=nw)
-        _PMs.variable_active_storage(pm; cnd=c, nw=nw, kwargs...)
-        _PMs.variable_reactive_storage(pm; cnd=c, nw=nw, kwargs...)
-    end
-    _PMs.variable_storage_energy(pm; nw=nw, kwargs...)
-    _PMs.variable_storage_charge(pm; nw=nw, kwargs...)
-    _PMs.variable_storage_discharge(pm; nw=nw, kwargs...)
+function variable_mc_storage(pm::_PMs.AbstractPowerModel; kwargs...)
+    variable_mc_storage_active(pm; kwargs...)
+    variable_mc_storage_reactive(pm; kwargs...)
+
+    _PMs.variable_storage_energy(pm; kwargs...)
+    _PMs.variable_storage_charge(pm; kwargs...)
+    _PMs.variable_storage_discharge(pm; kwargs...)
 end
+
+function variable_mc_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+
+    ps = _PMs.var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
+            [c in cnds], base_name="$(nw)_ps_$(i)",
+            start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "ps_start", c)
+        ) for i in _PMs.ids(pm, nw, :storage)
+    )
+
+    if bounded
+        for c in cnds
+            flow_lb, flow_ub = _PMs.ref_calc_storage_injection_bounds(_PMs.ref(pm, nw, :storage), _PMs.ref(pm, nw, :bus), c)
+
+            for i in _PMs.ids(pm, nw, :storage)
+                if !isinf(flow_lb[i])
+                    JuMP.set_lower_bound(ps[i][c], flow_lb[i])
+                end
+                if !isinf(flow_ub[l])
+                    JuMP.set_upper_bound(ps[i][c], flow_ub[i])
+                end
+            end
+        end
+    end
+
+    report && _PMs.sol_component_value(pm, nw, :storage, :ps, _PMs.ids(pm, nw, :storage), ps)
+end
+
+function variable_mc_storage_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+
+    qs = _PMs.var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
+            [c in cnds], base_name="$(nw)_qs_$(i)",
+            start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "qs_start", c)
+        ) for i in _PMs.ids(pm, nw, :storage)
+    )
+
+    if bounded
+        for c in cnds
+            flow_lb, flow_ub = _PMs.ref_calc_storage_injection_bounds(_PMs.ref(pm, nw, :storage), _PMs.ref(pm, nw, :bus), c)
+
+            for i in _PMs.ids(pm, nw, :storage)
+                if !isinf(flow_lb[i])
+                    JuMP.set_lower_bound(qs[i][c], flow_lb[i])
+                end
+                if !isinf(flow_ub[l])
+                    JuMP.set_upper_bound(qs[i][c], flow_ub[i])
+                end
+            end
+        end
+    end
+
+    report && _PMs.sol_component_value(pm, nw, :storage, :qs, _PMs.ids(pm, nw, :storage), qs)
+end
+
 
 
 "generates variables for both `active` and `reactive` slack at each bus"
@@ -187,44 +325,75 @@ end
 
 
 "Create variables for the active power flowing into all transformer windings."
-function variable_mc_transformer_active_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded=true)
-    for cnd in _PMs.conductor_ids(pm; nw=nw)
-        _PMs.var(pm, nw, cnd)[:pt] = JuMP.@variable(pm.model,
-            [(l,i,j) in _PMs.ref(pm, nw, :arcs_trans)],
-            base_name="$(nw)_$(cnd)_p_trans",
-            start=0
-        )
-        if bounded
-            for arc in _PMs.ref(pm, nw, :arcs_trans)
-                tr_id = arc[1]
-                flow_lb  = -_PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
-                flow_ub  =  _PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
-                JuMP.set_lower_bound(_PMs.var(pm, nw, cnd, :pt, arc), flow_lb)
-                JuMP.set_upper_bound(_PMs.var(pm, nw, cnd, :pt, arc), flow_ub)
+function variable_mc_transformer_active_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+
+    pt = _PMs.var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in cnds], base_name="$(nw)_pt_$((l,i,j))",
+        ) for (l,i,j) in _PMs.ref(pm, nw, :arcs_trans)
+    )
+
+    if bounded
+        for arc in _PMs.ref(pm, nw, :arcs_trans)
+            tr_id = arc[1]
+            flow_lb  = -_PMs.ref(pm, nw, :transformer, tr_id, "rate_a")
+            flow_ub  =  _PMs.ref(pm, nw, :transformer, tr_id, "rate_a")
+            for c in cnds
+                JuMP.set_lower_bound(pt[arc][c], flow_lb[c])
+                JuMP.set_upper_bound(pt[arc][c], flow_ub[c])
             end
         end
     end
+
+    for (l,transformer) in _PMs.ref(pm, nw, :transformer)
+        if haskey(transformer, "pf_start")
+            f_idx = (l, transformer["f_bus"], transformer["t_bus"])
+            JuMP.set_start_value(pt[f_idx], branch["pf_start"])
+        end
+        if haskey(transformer, "pt_start")
+            t_idx = (l, transformer["t_bus"], transformer["f_bus"])
+            JuMP.set_start_value(pt[t_idx], transformer["pt_start"])
+        end
+    end
+
+    report && _PMs.sol_component_value_edge(pm, nw, :transformer, :pf, :pt, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), pt)
 end
 
 
 "Create variables for the reactive power flowing into all transformer windings."
-function variable_mc_transformer_reactive_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
-    for cnd in _PMs.conductor_ids(pm; nw=nw)
-        _PMs.var(pm, nw, cnd)[:qt] = JuMP.@variable(pm.model,
-            [(l,i,j) in _PMs.ref(pm, nw, :arcs_trans)],
-            base_name="$(nw)_$(cnd)_q_trans",
-            start=0
-        )
-        if bounded
-            for arc in _PMs.ref(pm, nw, :arcs_trans)
-                tr_id = arc[1]
-                flow_lb  = -_PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
-                flow_ub  = _PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
-                JuMP.set_lower_bound(_PMs.var(pm, nw, cnd, :qt, arc), flow_lb)
-                JuMP.set_upper_bound(_PMs.var(pm, nw, cnd, :qt, arc), flow_ub)
+function variable_mc_transformer_reactive_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+
+    qt = _PMs.var(pm, nw)[:qt] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in cnds], base_name="$(nw)_qt_$((l,i,j))",
+            start = 0.0
+        ) for (l,i,j) in _PMs.ref(pm, nw, :arcs_trans)
+    )
+
+    if bounded
+        for arc in _PMs.ref(pm, nw, :arcs_trans)
+            tr_id = arc[1]
+            flow_lb  = -_PMs.ref(pm, nw, :transformer, tr_id, "rate_a")
+            flow_ub  =  _PMs.ref(pm, nw, :transformer, tr_id, "rate_a")
+            for c in cnds
+                JuMP.set_lower_bound(qt[arc][c], flow_lb[c])
+                JuMP.set_upper_bound(qt[arc][c], flow_ub[c])
             end
         end
     end
+
+    for (l,transformer) in _PMs.ref(pm, nw, :transformer)
+        if haskey(transformer, "qf_start")
+            f_idx = (l, transformer["f_bus"], transformer["t_bus"])
+            JuMP.set_start_value(qt[f_idx], branch["qf_start"])
+        end
+        if haskey(transformer, "qt_start")
+            t_idx = (l, transformer["t_bus"], transformer["f_bus"])
+            JuMP.set_start_value(qt[t_idx], transformer["qt_start"])
+        end
+    end
+
+    report && _PMs.sol_component_value_edge(pm, nw, :transformer, :qf, :qt, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), qt)
 end
 
 
@@ -401,11 +570,50 @@ end
 
 
 "create variables for generators, delegate to PowerModels"
-function variable_mc_generation(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
-    for c in _PMs.conductor_ids(pm; nw=nw)
-        _PMs.variable_generation(pm; cnd=c, nw=nw, kwargs...)
-    end
+function variable_mc_generation(pm::_PMs.AbstractPowerModel; kwargs...)
+    variable_mc_generation_active(pm; kwargs...)
+    variable_mc_generation_reactive(pm; kwargs...)
 end
+
+function variable_mc_generation_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+
+    pg = _PMs.var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
+            [c in cnds], base_name="$(nw)_pg_$(i)",
+            start = comp_start_value(_PMs.ref(pm, nw, :gen, i), "pg_start", c)
+        ) for i in _PMs.ids(pm, nw, :gen)
+    )
+
+    if bounded
+        for (i,gen) in _PMs.ref(pm, nw, :gen), c in cnds
+            JuMP.set_lower_bound(pg[i][c], gen["pmin"][c])
+            JuMP.set_upper_bound(pg[i][c], gen["pmax"][c])
+        end
+    end
+
+    report && _PMs.sol_component_value(pm, nw, :gen, :pg, _PMs.ids(pm, nw, :gen), pg)
+end
+
+function variable_mc_generation_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+
+    qg = _PMs.var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
+            [c in cnds], base_name="$(nw)_qg_$(i)",
+            start = comp_start_value(_PMs.ref(pm, nw, :gen, i), "qg_start", c)
+        ) for i in _PMs.ids(pm, nw, :gen)
+    )
+
+    if bounded
+        for (i,gen) in _PMs.ref(pm, nw, :gen), c in cnds
+            JuMP.set_lower_bound(qg[i][c], gen["qmin"][c])
+            JuMP.set_upper_bound(qg[i][c], gen["qmax"][c])
+        end
+    end
+
+    report && _PMs.sol_component_value(pm, nw, :gen, :qg, _PMs.ids(pm, nw, :gen), qg)
+end
+
+
 
 
 "create on/off variables for generators, delegate to PowerModels"
