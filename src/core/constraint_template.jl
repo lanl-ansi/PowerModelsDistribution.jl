@@ -511,9 +511,9 @@ end
 
 "voltage magnitude setpoint constraint, delegate to PowerModels per conductor"
 function constraint_mc_voltage_magnitude_setpoint(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
-    for c in _PMs.conductor_ids(pm; nw=nw)
-        _PMs.constraint_voltage_magnitude_setpoint(pm, i; nw=nw, cnd=c, kwargs...)
-    end
+    bus = _PMs.ref(pm, nw, :bus, i)
+    vmref = bus["vm"].values #Not sure why this is needed
+    constraint_mc_voltage_magnitude_setpoint(pm, nw, i, vmref)
 end
 
 

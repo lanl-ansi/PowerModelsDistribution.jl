@@ -885,3 +885,11 @@ function constraint_mc_bus_voltage_on_off(pm::_PMs.AbstractACPModel; nw::Int=pm.
         constraint_mc_voltage_magnitude_on_off(pm, i; nw=nw, cnd=cnd)
     end
 end
+
+"`vm[i] == vmref`"
+function constraint_mc_voltage_magnitude_setpoint(pm::_PMs.AbstractACPModel, n::Int, i::Int, vmref)
+    vm = _PMs.var(pm, n, :vm, i)
+    for c in _PMs.conductor_ids(pm)
+        JuMP.@constraint(pm.model, vm[c] == vmref[c])
+    end
+end
