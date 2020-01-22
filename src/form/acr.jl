@@ -475,3 +475,13 @@ function constraint_mc_load_impedance_delta(pm::_PMs.AbstractACRModel, nw::Int, 
     _PMs.var(pm, nw, :qd)[load_id][2] = q_x(vre_b, vim_b, ire_bc, iim_bc, ire_ab, iim_ab)
     _PMs.var(pm, nw, :qd)[load_id][3] = q_x(vre_c, vim_c, ire_ca, iim_ca, ire_bc, iim_bc)
 end
+
+
+"`vm[i] == vmref`"
+function constraint_mc_voltage_magnitude_setpoint(pm::_PMs.AbstractACRModel, n::Int, i::Int, vmref)
+    vr = _PMs.var(pm, n, :vr, i)
+    vi = _PMs.var(pm, n, :vi, i)
+    for c in _PMs.conductor_ids(pm)
+        JuMP.@constraint(pm.model, vr[c]^2 + vi[c]^2  == vmref[c]^2)
+    end
+end
