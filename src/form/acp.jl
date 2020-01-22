@@ -94,8 +94,8 @@ function constraint_mc_power_balance_slack(pm::_PMs.AbstractACPModel, nw::Int, i
     end
 
     if _PMs.report_duals(pm)
-        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_p] = cstr_p
-        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_q] = cstr_q
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
 end
 
@@ -147,8 +147,8 @@ function constraint_mc_power_balance_shed(pm::_PMs.AbstractACPModel, nw::Int, i:
     end
 
     if _PMs.report_duals(pm)
-        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_p] = cstr_p
-        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_q] = cstr_q
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
 end
 
@@ -197,8 +197,8 @@ function constraint_mc_power_balance(pm::_PMs.AbstractACPModel, nw::Int, i::Int,
     end
 
     if _PMs.report_duals(pm)
-        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_p] = cstr_p
-        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_q] = cstr_q
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
 end
 
@@ -249,8 +249,8 @@ function constraint_mc_power_balance_load(pm::_PMs.AbstractACPModel, nw::Int, i:
     end
 
     if _PMs.report_duals(pm)
-        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_p] = cstr_p
-        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_q] = cstr_q
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
 end
 
