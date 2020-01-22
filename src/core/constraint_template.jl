@@ -57,7 +57,7 @@ function constraint_mc_ohms_yt_from(pm::_PMs.AbstractPowerModel, i::Int; nw::Int
     #TODO why was this not required before?
     if length(size(g_fr)) == 1
         tmp = MultiConductorMatrix(0.0, length(g_fr))
-        for c in length(g_fr)
+        for c in 1:length(g_fr)
             tmp[c,c] = g_fr[c]
         end
         g_fr = tmp
@@ -65,7 +65,7 @@ function constraint_mc_ohms_yt_from(pm::_PMs.AbstractPowerModel, i::Int; nw::Int
 
     if length(size(b_fr)) == 1
         tmp = MultiConductorMatrix(0.0, length(b_fr))
-        for c in length(b_fr)
+        for c in 1:length(b_fr)
             tmp[c,c] = b_fr[c]
         end
         b_fr = tmp
@@ -92,7 +92,7 @@ function constraint_mc_ohms_yt_to(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=p
     #TODO why was this not required before?
     if length(size(g_to)) == 1
         tmp = MultiConductorMatrix(0.0, length(g_to))
-        for c in length(g_to)
+        for c in 1:length(g_to)
             tmp[c,c] = g_to[c]
         end
         g_to = tmp
@@ -100,7 +100,7 @@ function constraint_mc_ohms_yt_to(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=p
 
     if length(size(b_to)) == 1
         tmp = MultiConductorMatrix(0.0, length(b_to))
-        for c in length(b_to)
+        for c in 1:length(b_to)
             tmp[c,c] = b_to[c]
         end
         b_to = tmp
