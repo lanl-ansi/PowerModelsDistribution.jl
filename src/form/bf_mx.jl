@@ -300,6 +300,7 @@ function variable_mc_load(pm::AbstractUBFModels; nw=pm.cnw)
     variable_mc_load_current(pm, load_del_ids)
     # for wye loads with a cone inclusion constraint, we need to create a variable
     variable_mc_load_power(pm, intersect(load_wye_ids, load_cone_ids))
+
 end
 
 
@@ -341,7 +342,8 @@ These variables reflect the power consumed by the load, NOT the power injected
 into the bus nodes; these variables only coincide for wye-connected loads
 with a grounded neutral.
 """
-function variable_mc_load_power(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw)
+function variable_mc_load_power(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw, bounded::Bool=true, report::Bool=true)
+    @assert(bounded)
     # calculate bounds for all loads
     pmin = Dict()
     pmax = Dict()
@@ -355,7 +357,7 @@ function variable_mc_load_power(pm::AbstractUBFModels, load_ids::Array{Int,1}; n
 
     # create variables
     ncnds = length(_PMs.conductor_ids(pm, nw))
-    @show load_ids
+
     pl = Dict(i => JuMP.@variable(pm.model,
             [c in 1:ncnds], base_name="$(nw)_pl_$(i)",
             lower_bound=pmin[i][c], upper_bound=pmax[i][c]
@@ -371,6 +373,9 @@ function variable_mc_load_power(pm::AbstractUBFModels, load_ids::Array{Int,1}; n
         _PMs.var(pm, nw)[:pl][i] = pl[i]
         _PMs.var(pm, nw)[:ql][i] = ql[i]
     end
+
+    report && _PMs.sol_component_value(pm, nw, :load, :pl, load_ids, pl)
+    report && _PMs.sol_component_value(pm, nw, :load, :ql, load_ids, ql)
 end
 
 
@@ -380,7 +385,8 @@ grounded wye-connected loads, this is the same as the power consumed by the
 multi-phase load. The off-diagonals only need to be created for the matrix KCL
 formulation.
 """
-function variable_mc_load_power_bus(pm::SDPUBFKCLMXModel, load_ids::Array{Int,1}; nw=pm.cnw)
+function variable_mc_load_power_bus(pm::SDPUBFKCLMXModel, load_ids::Array{Int,1}; nw=pm.cnw, bounded::Bool=true, report::Bool=true)
+    @assert(bounded)
     ncnds = length(_PMs.conductor_ids(pm, nw))
     # calculate bounds
     bound = Dict{eltype(load_ids), Array{Real,2}}()
@@ -397,6 +403,9 @@ function variable_mc_load_power_bus(pm::SDPUBFKCLMXModel, load_ids::Array{Int,1}
         _PMs.var(pm, nw, :Pd)[id] = Pd[id]
         _PMs.var(pm, nw, :Qd)[id] = Qd[id]
     end
+
+    report && _PMs.sol_component_value(pm, nw, :load, :Pd, load_ids, Pd)
+    report && _PMs.sol_component_value(pm, nw, :load, :Qd, load_ids, Qd)
 end
 
 
@@ -417,7 +426,8 @@ See the paper by Zhao et al. for the first convex relaxation of delta transforma
 
 See upcoming paper for discussion of bounds. [reference added when accepted]
 """
-function variable_mc_load_delta_aux(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw, eps=0.1)
+function variable_mc_load_delta_aux(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw, eps=0.1, bounded::Bool=true, report::Bool=true)
+    @assert(bounded)
     ncnds = length(_PMs.conductor_ids(pm, nw))
     # calculate bounds
     bound = Dict{eltype(load_ids), Array{Real,2}}()
@@ -434,6 +444,9 @@ function variable_mc_load_delta_aux(pm::AbstractUBFModels, load_ids::Array{Int,1
     # save references
     _PMs.var(pm, nw)[:Xdr] = Xdre
     _PMs.var(pm, nw)[:Xdi] = Xdim
+
+    report && _PMs.sol_component_value(pm, nw, :load, :Xdr, load_ids, Xdr)
+    report && _PMs.sol_component_value(pm, nw, :load, :Xdi, load_ids, Xdi)
 end
 
 
@@ -442,7 +455,9 @@ All loads need a current variable; for wye loads, this variable will be in the
 wye reference frame whilst for delta currents it will be in the delta reference
 frame.
 """
-function variable_mc_load_current(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw)
+function variable_mc_load_current(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw, bounded::Bool=true, report::Bool=true)
+    @assert(bounded)
+
     ncnds = length(_PMs.conductor_ids(pm, nw))
     # calculate bounds
     cmin = Dict{eltype(load_ids), Array{Real,1}}()
@@ -458,6 +473,9 @@ function variable_mc_load_current(pm::AbstractUBFModels, load_ids::Array{Int,1};
     # save references
     _PMs.var(pm, nw)[:CCdr] = CCdr
     _PMs.var(pm, nw)[:CCdi] = CCdi
+
+    report && _PMs.sol_component_value(pm, nw, :load, :CCdr, load_ids, CCdr)
+    report && _PMs.sol_component_value(pm, nw, :load, :CCdi, load_ids, CCdi)
 end
 
 
@@ -799,19 +817,12 @@ function constraint_mc_power_balance(pm::KCLMXModels, n::Int, i::Int, bus_arcs, 
     Wr = _PMs.var(pm, n, :Wr, i)
     Wi = _PMs.var(pm, n, :Wi, i)
 
-    # P = get(_PMs.var(pm, n), :P, Dict()); _PMs._check_var_keys(P, bus_arcs, "active power", "branch")
-    # Q = get(_PMs.var(pm, n), :Q, Dict()); _PMs._check_var_keys(Q, bus_arcs, "reactive power", "branch")
-    # Pg = get(_PMs.var(pm, n), :Pg, Dict()); _PMs._check_var_keys(Pg, bus_gens, "active power", "generator")
-    # Qg = get(_PMs.var(pm, n), :Qg, Dict()); _PMs._check_var_keys(Qg, bus_gens, "reactive power", "generator")
-    # Pd = get(_PMs.var(pm, n), :Pd, Dict()); _PMs._check_var_keys(Pd, bus_loads, "active power", "load")
-    # Qd = get(_PMs.var(pm, n), :Qd, Dict()); _PMs._check_var_keys(Qd, bus_loads, "reactive power", "load")
-
-    P = _PMs.var(pm, n, :P)
-    Q = _PMs.var(pm, n, :Q)
-    Pg = _PMs.var(pm, n, :Pg)
-    Qg = _PMs.var(pm, n, :Qg)
-    Pd = _PMs.var(pm, n, :Pd)
-    Qd = _PMs.var(pm, n, :Qd)
+    P = get(_PMs.var(pm, n), :P, Dict()); _PMs._check_var_keys(P, bus_arcs, "active power", "branch")
+    Q = get(_PMs.var(pm, n), :Q, Dict()); _PMs._check_var_keys(Q, bus_arcs, "reactive power", "branch")
+    Pg = get(_PMs.var(pm, n), :Pg, Dict()); _PMs._check_var_keys(Pg, bus_gens, "active power", "generator")
+    Qg = get(_PMs.var(pm, n), :Qg, Dict()); _PMs._check_var_keys(Qg, bus_gens, "reactive power", "generator")
+    Pd = get(_PMs.var(pm, n), :Pd, Dict()); _PMs._check_var_keys(Pd, bus_loads, "active power", "load")
+    Qd = get(_PMs.var(pm, n), :Qd, Dict()); _PMs._check_var_keys(Qd, bus_loads, "reactive power", "load")
 
     # ignore dc for now
     #TODO add DC in matrix version?
