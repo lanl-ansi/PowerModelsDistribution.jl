@@ -1,8 +1,8 @@
 ""
 function variable_mc_voltage(pm::_PMs.AbstractACRModel; nw=pm.cnw, kwargs...)
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_voltage(pm, cnd=c; nw=nw, kwargs...)
-    end
+    variable_mc_voltage_real(pm; nw=nw, kwargs...)
+    variable_mc_voltage_imaginary(pm; nw=nw, kwargs...)
+
     # local infeasbility issues without proper initialization;
     # convergence issues start when the equivalent angles of the starting point
     # are further away than 90 degrees from the solution (as given by ACP)
@@ -18,8 +18,8 @@ function variable_mc_voltage(pm::_PMs.AbstractACRModel; nw=pm.cnw, kwargs...)
             for c in 1:ncnd
                 vr = vm*cos(theta[c])
                 vi = vm*sin(theta[c])
-                JuMP.set_start_value(_PMs.var(pm, nw, c, :vr, id), vr)
-                JuMP.set_start_value(_PMs.var(pm, nw, c, :vi, id), vi)
+                JuMP.set_start_value(_PMs.var(pm, nw, :vr, id)[c], vr)
+                JuMP.set_start_value(_PMs.var(pm, nw, :vi, id)[c], vi)
             end
         end
     end
@@ -27,153 +27,211 @@ end
 
 
 "Creates phase angle constraints at reference buses"
-function constraint_mc_theta_ref(pm::_PMs.AbstractACRModel, n::Int, c::Int, d)
-    vr = _PMs.var(pm, n, c, :vr, d)
-    vi = _PMs.var(pm, n, c, :vi, d)
-    nconductors = length(_PMs.conductor_ids(pm))
-    theta = _wrap_to_pi(2 * pi / nconductors * (1-c))
+function constraint_mc_theta_ref(pm::_PMs.AbstractACRModel, n::Int, d)
+    vr = _PMs.var(pm, n, :vr, d)
+    vi = _PMs.var(pm, n, :vi, d)
+    cnds = _PMs.conductor_ids(pm; nw=n)
+    nconductors = length(cnds)
+    theta = [_wrap_to_pi(2 * pi / nconductors * (1-c)) for c in 1:nconductors]
     # deal with cases first where tan(theta)==Inf or tan(theta)==0
-    if theta == pi/2
-        JuMP.@constraint(pm.model, vr == 0)
-        JuMP.@constraint(pm.model, vi >= 0)
-    elseif theta == -pi/2
-        JuMP.@constraint(pm.model, vr == 0)
-        JuMP.@constraint(pm.model, vi <= 0)
-    elseif theta == 0
-        JuMP.@constraint(pm.model, vr >= 0)
-        JuMP.@constraint(pm.model, vi == 0)
-    elseif theta == pi
-        JuMP.@constraint(pm.model, vr >= 0)
-        JuMP.@constraint(pm.model, vi == 0)
-    else
-        JuMP.@constraint(pm.model, vi == tan(theta)*vr)
-        # theta also implies a sign for vr, vi
-        if 0<=theta && theta <= pi
-            JuMP.@constraint(pm.model, vi >= 0)
+
+    for c in cnds
+        if theta[c] == pi/2
+            JuMP.@constraint(pm.model, vr[c] == 0)
+            JuMP.@constraint(pm.model, vi[c] >= 0)
+        elseif theta[c] == -pi/2
+            JuMP.@constraint(pm.model, vr[c] == 0)
+            JuMP.@constraint(pm.model, vi[c] <= 0)
+        elseif theta[c] == 0
+            JuMP.@constraint(pm.model, vr[c] >= 0)
+            JuMP.@constraint(pm.model, vi[c] == 0)
+        elseif theta[c] == pi
+            JuMP.@constraint(pm.model, vr[c] >= 0)
+            JuMP.@constraint(pm.model, vi[c] == 0)
         else
-            JuMP.@constraint(pm.model, vi <= 0)
+            JuMP.@constraint(pm.model, vi[c] == tan(theta[c])*vr[c])
+            # theta also implies a sign for vr, vi
+            if 0<=theta[c] && theta[c] <= pi
+                JuMP.@constraint(pm.model, vi[c] >= 0)
+            else
+                JuMP.@constraint(pm.model, vi[c] <= 0)
+            end
         end
+    end
+end
+
+function constraint_mc_voltage_angle_difference(pm::_PMs.AbstractACRModel, n::Int, f_idx, angmin, angmax)
+    i, f_bus, t_bus = f_idx
+
+    vr_fr = _PMs.var(pm, n, :vr, f_bus)
+    vi_fr = _PMs.var(pm, n, :vi, f_bus)
+    vr_to = _PMs.var(pm, n, :vr, t_bus)
+    vi_to = _PMs.var(pm, n, :vi, t_bus)
+
+    for c in _PMs.conductor_ids(pm; nw=n)
+        JuMP.@constraint(pm.model, (vi_fr[c]*vr_to[c] - vr_fr[c]*vi_to[c]) <= tan(angmax[c])*(vr_fr[c]*vr_to[c] + vi_fr[c]*vi_to[c]))
+        JuMP.@constraint(pm.model, (vi_fr[c]*vr_to[c] - vr_fr[c]*vi_to[c]) >= tan(angmin[c])*(vr_fr[c]*vr_to[c] + vi_fr[c]*vi_to[c]))
+    end
+end
+
+
+
+""
+function constraint_mc_power_balance_slack(pm::_PMs.AbstractACRModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    vr = _PMs.var(pm, nw, :vr, i)
+    vi = _PMs.var(pm, nw, :vi, i)
+    p    = get(_PMs.var(pm, nw),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
+    q    = get(_PMs.var(pm, nw),    :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
+    pg   = get(_PMs.var(pm, nw),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    qg   = get(_PMs.var(pm, nw),   :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps   = get(_PMs.var(pm, nw),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
+    qs   = get(_PMs.var(pm, nw),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    psw  = get(_PMs.var(pm, nw),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(_PMs.var(pm, nw),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(_PMs.var(pm, nw),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+    p_slack = _PMs.var(pm, nw, :p_slack, i)
+    q_slack = _PMs.var(pm, nw, :q_slack, i)
+
+    cstr_p = []
+    cstr_q = []
+
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        cp = JuMP.@constraint(pm.model,
+            sum(p[a][c] for a in bus_arcs)
+            + sum(psw[a_sw][c] for a_sw in bus_arcs_sw)
+            + sum(pt[a_trans][c] for a_trans in bus_arcs_trans)
+            ==
+            sum(pg[g][c] for g in bus_gens)
+            - sum(ps[s][c] for s in bus_storage)
+            - sum(pd[c] for pd in values(bus_pd))
+            - sum(gs[c] for gs in values(bus_gs))*(vr[c]^2 + vi[c]^2)
+            + p_slack[c]
+        )
+        push!(cstr_p, cp)
+
+        cq = JuMP.@constraint(pm.model,
+            sum(q[a][c] for a in bus_arcs)
+            + sum(qsw[a_sw][c] for a_sw in bus_arcs_sw)
+            + sum(qt[a_trans][c] for a_trans in bus_arcs_trans)
+            ==
+            sum(qg[g][c] for g in bus_gens)
+            - sum(qs[s][c] for s in bus_storage)
+            - sum(qd[c] for qd in values(bus_qd))
+            + sum(bs[c] for bs in values(bus_bs))*(vr[c]^2 + vi[c]^2)
+            + q_slack[c]
+        )
+        push!(cstr_q, cq)
+    end
+
+    if _PMs.report_duals(pm)
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
 end
 
 
 ""
-function constraint_mc_power_balance_slack(pm::_PMs.AbstractACRModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
-    vr = _PMs.var(pm, nw, c, :vr, i)
-    vi = _PMs.var(pm, nw, c, :vi, i)
-    p    = get(_PMs.var(pm, nw, c),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
-    q    = get(_PMs.var(pm, nw, c),    :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
-    pg   = get(_PMs.var(pm, nw, c),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
-    qg   = get(_PMs.var(pm, nw, c),   :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps   = get(_PMs.var(pm, nw, c),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs   = get(_PMs.var(pm, nw, c),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
-    psw  = get(_PMs.var(pm, nw, c),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    qsw  = get(_PMs.var(pm, nw, c),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
-    pt   = get(_PMs.var(pm, nw, c),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
-    qt   = get(_PMs.var(pm, nw, c),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
-    p_slack = _PMs.var(pm, nw, c, :p_slack, i)
-    q_slack = _PMs.var(pm, nw, c, :q_slack, i)
+function constraint_mc_power_balance(pm::_PMs.AbstractACRModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    vr = _PMs.var(pm, nw, :vr, i)
+    vi = _PMs.var(pm, nw, :vi, i)
+    p    = get(_PMs.var(pm, nw),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
+    q    = get(_PMs.var(pm, nw),    :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
+    pg   = get(_PMs.var(pm, nw),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    qg   = get(_PMs.var(pm, nw),   :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps   = get(_PMs.var(pm, nw),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
+    qs   = get(_PMs.var(pm, nw),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    psw  = get(_PMs.var(pm, nw),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(_PMs.var(pm, nw),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(_PMs.var(pm, nw),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
 
-    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model,
-        sum(p[a] for a in bus_arcs)
-        + sum(psw[a_sw] for a_sw in bus_arcs_sw)
-        + sum(pt[a_trans] for a_trans in bus_arcs_trans)
-        ==
-        sum(pg[g] for g in bus_gens)
-        - sum(ps[s] for s in bus_storage)
-        - sum(pd for pd in values(bus_pd))
-        - sum(gs for gs in values(bus_gs))*(vr^2 + vi^2)
-        + p_slack
-    )
-    _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@constraint(pm.model,
-        sum(q[a] for a in bus_arcs)
-        + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
-        + sum(qt[a_trans] for a_trans in bus_arcs_trans)
-        ==
-        sum(qg[g] for g in bus_gens)
-        - sum(qs[s] for s in bus_storage)
-        - sum(qd for qd in values(bus_qd))
-        + sum(bs for bs in values(bus_bs))*(vr^2 + vi^2)
-        + q_slack
-    )
+    cstr_p = []
+    cstr_q = []
+
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        cp = JuMP.@constraint(pm.model,
+            sum(p[a][c] for a in bus_arcs)
+            + sum(psw[a_sw][c] for a_sw in bus_arcs_sw)
+            + sum(pt[a_trans][c] for a_trans in bus_arcs_trans)
+            ==
+            sum(pg[g][c] for g in bus_gens)
+            - sum(ps[s][c] for s in bus_storage)
+            - sum(pd[c] for pd in values(bus_pd))
+            - sum(gs[c] for gs in values(bus_gs))*(vr[c]^2 + vi[c]^2)
+        )
+        push!(cstr_p, cp)
+
+        cq = JuMP.@constraint(pm.model,
+            sum(q[a][c] for a in bus_arcs)
+            + sum(qsw[a_sw][c] for a_sw in bus_arcs_sw)
+            + sum(qt[a_trans][c] for a_trans in bus_arcs_trans)
+            ==
+            sum(qg[g][c] for g in bus_gens)
+            - sum(qs[s][c] for s in bus_storage)
+            - sum(qd[c] for qd in values(bus_qd))
+            + sum(bs[c] for bs in values(bus_bs))*(vr[c]^2 + vi[c]^2)
+        )
+        push!(cstr_q, cq)
+    end
+
+    if _PMs.report_duals(pm)
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
+    end
 end
 
 
 ""
-function constraint_mc_power_balance(pm::_PMs.AbstractACRModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
-    vr = _PMs.var(pm, nw, c, :vr, i)
-    vi = _PMs.var(pm, nw, c, :vi, i)
-    p    = get(_PMs.var(pm, nw, c),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
-    q    = get(_PMs.var(pm, nw, c),    :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
-    pg   = get(_PMs.var(pm, nw, c),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
-    qg   = get(_PMs.var(pm, nw, c),   :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps   = get(_PMs.var(pm, nw, c),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs   = get(_PMs.var(pm, nw, c),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
-    psw  = get(_PMs.var(pm, nw, c),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    qsw  = get(_PMs.var(pm, nw, c),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
-    pt   = get(_PMs.var(pm, nw, c),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
-    qt   = get(_PMs.var(pm, nw, c),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+function constraint_mc_power_balance_load(pm::_PMs.AbstractACRModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+    vr = _PMs.var(pm, nw, :vr, i)
+    vi = _PMs.var(pm, nw, :vi, i)
+    p    = get(_PMs.var(pm, nw),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
+    q    = get(_PMs.var(pm, nw),    :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
+    pg   = get(_PMs.var(pm, nw),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    qg   = get(_PMs.var(pm, nw),   :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps   = get(_PMs.var(pm, nw),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
+    qs   = get(_PMs.var(pm, nw),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    psw  = get(_PMs.var(pm, nw),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(_PMs.var(pm, nw),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(_PMs.var(pm, nw),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+    pd   = get(_PMs.var(pm, nw),  :pd, Dict()); _PMs._check_var_keys(pd, bus_loads, "active power", "load")
+    qd   = get(_PMs.var(pm, nw),  :qd, Dict()); _PMs._check_var_keys(pd, bus_loads, "reactive power", "load")
 
-    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model,
-        sum(p[a] for a in bus_arcs)
-        + sum(psw[a_sw] for a_sw in bus_arcs_sw)
-        + sum(pt[a_trans] for a_trans in bus_arcs_trans)
-        ==
-        sum(pg[g] for g in bus_gens)
-        - sum(ps[s] for s in bus_storage)
-        - sum(pd for pd in values(bus_pd))
-        - sum(gs for gs in values(bus_gs))*(vr^2 + vi^2)
-    )
-    _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@constraint(pm.model,
-        sum(q[a] for a in bus_arcs)
-        + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
-        + sum(qt[a_trans] for a_trans in bus_arcs_trans)
-        ==
-        sum(qg[g] for g in bus_gens)
-        - sum(qs[s] for s in bus_storage)
-        - sum(qd for qd in values(bus_qd))
-        + sum(bs for bs in values(bus_bs))*(vr^2 + vi^2)
-    )
-end
+    cstr_p = []
+    cstr_q = []
 
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        cp = JuMP.@NLconstraint(pm.model,
+            sum(p[a][c] for a in bus_arcs)
+            + sum(psw[a_sw][c] for a_sw in bus_arcs_sw)
+            + sum(pt[a_trans][c] for a_trans in bus_arcs_trans)
+            ==
+            sum(pg[g][c] for g in bus_gens)
+            - sum(ps[s][c] for s in bus_storage)
+            - sum(pd[l][c] for l in bus_loads)
+            - sum(gs[c] for gs in values(bus_gs))*(vr[c]^2 + vi[c]^2)
+        )
+        push!(cstr_p, cp)
 
-""
-function constraint_mc_power_balance_load(pm::_PMs.AbstractACRModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
-    vr = _PMs.var(pm, nw, c, :vr, i)
-    vi = _PMs.var(pm, nw, c, :vi, i)
-    p    = get(_PMs.var(pm, nw, c),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
-    q    = get(_PMs.var(pm, nw, c),    :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
-    pg   = get(_PMs.var(pm, nw, c),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
-    qg   = get(_PMs.var(pm, nw, c),   :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps   = get(_PMs.var(pm, nw, c),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs   = get(_PMs.var(pm, nw, c),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
-    psw  = get(_PMs.var(pm, nw, c),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    qsw  = get(_PMs.var(pm, nw, c),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
-    pt   = get(_PMs.var(pm, nw, c),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
-    qt   = get(_PMs.var(pm, nw, c),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
-    pd   = get(_PMs.var(pm, nw, c),  :pd, Dict()); _PMs._check_var_keys(pd, bus_loads, "active power", "load")
-    qd   = get(_PMs.var(pm, nw, c),  :qd, Dict()); _PMs._check_var_keys(pd, bus_loads, "reactive power", "load")
+        cq = JuMP.@NLconstraint(pm.model,
+            sum(q[a][c] for a in bus_arcs)
+            + sum(qsw[a_sw][c] for a_sw in bus_arcs_sw)
+            + sum(qt[a_trans][c] for a_trans in bus_arcs_trans)
+            ==
+            sum(qg[g][c] for g in bus_gens)
+            - sum(qs[s][c] for s in bus_storage)
+            - sum(qd[l][c] for l in bus_loads)
+            + sum(bs for bs in values(bus_bs))*(vr[c]^2 + vi[c]^2)
+        )
+        push!(cstr_q, cq)
+    end
 
-    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@NLconstraint(pm.model,
-        sum(p[a] for a in bus_arcs)
-        + sum(psw[a_sw] for a_sw in bus_arcs_sw)
-        + sum(pt[a_trans] for a_trans in bus_arcs_trans)
-        ==
-        sum(pg[g] for g in bus_gens)
-        - sum(ps[s] for s in bus_storage)
-        - sum(pd[l] for l in bus_loads)
-        - sum(gs for gs in values(bus_gs))*(vr^2 + vi^2)
-    )
-    _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@NLconstraint(pm.model,
-        sum(q[a] for a in bus_arcs)
-        + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
-        + sum(qt[a_trans] for a_trans in bus_arcs_trans)
-        ==
-        sum(qg[g] for g in bus_gens)
-        - sum(qs[s] for s in bus_storage)
-        - sum(qd[l] for l in bus_loads)
-        + sum(bs for bs in values(bus_bs))*(vr^2 + vi^2)
-    )
+    if _PMs.report_duals(pm)
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
+    end
 end
 
 
@@ -199,34 +257,39 @@ q_fr ==  sum(
             for d in _PMs.conductor_ids(pm))
 ```
 """
-function constraint_mc_ohms_yt_from(pm::_PMs.AbstractACRModel, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
-    p_fr  = _PMs.var(pm, n, c,  :p, f_idx)
-    q_fr  = _PMs.var(pm, n, c,  :q, f_idx)
-    vr_fr = [_PMs.var(pm, n, d, :vr, f_bus) for d in _PMs.conductor_ids(pm)]
-    vr_to = [_PMs.var(pm, n, d, :vr, t_bus) for d in _PMs.conductor_ids(pm)]
-    vi_fr = [_PMs.var(pm, n, d, :vi, f_bus) for d in _PMs.conductor_ids(pm)]
-    vi_to = [_PMs.var(pm, n, d, :vi, t_bus) for d in _PMs.conductor_ids(pm)]
+function constraint_mc_ohms_yt_from(pm::_PMs.AbstractACRModel, n::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
+    p_fr  = _PMs.var(pm, n, :p, f_idx)
+    q_fr  = _PMs.var(pm, n, :q, f_idx)
+    vr_fr = _PMs.var(pm, n, :vr, f_bus)
+    vr_to = _PMs.var(pm, n, :vr, t_bus)
+    vi_fr = _PMs.var(pm, n, :vi, f_bus)
+    vi_to = _PMs.var(pm, n, :vi, t_bus)
 
-    JuMP.@NLconstraint(pm.model, p_fr ==  sum(
-                                             vr_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
-                                            -vi_fr[c]*(-b[c,d]*(vr_fr[d]-vr_to[d])-g[c,d]*(vi_fr[d]-vi_to[d]))
-                                            for d in _PMs.conductor_ids(pm))
-                                          # the shunt element is identical but vr_to=vi_to=0
-                                          + sum(
-                                             vr_fr[c]*(g_fr[c,d]*vr_fr[d]-b_fr[c,d]*vi_fr[d])
-                                            -vi_fr[c]*(-b_fr[c,d]*vr_fr[d]-g_fr[c,d]*vi_fr[d])
-                                            for d in _PMs.conductor_ids(pm))
-    )
-    JuMP.@NLconstraint(pm.model, q_fr ==  sum(
-                                            -vr_fr[c]*(b[c,d]*(vr_fr[d]-vr_to[d])+g[c,d]*(vi_fr[d]-vi_to[d]))
-                                            +vi_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
-                                            for d in _PMs.conductor_ids(pm))
-                                          # the shunt element is identical but vr_to=vi_to=0
-                                          + sum(
-                                            -vr_fr[c]*(b_fr[c,d]*vr_fr[d]+g_fr[c,d]*vi_fr[d])
-                                            +vi_fr[c]*(g_fr[c,d]*vr_fr[d]-b_fr[c,d]*vi_fr[d])
-                                            for d in _PMs.conductor_ids(pm))
-    )
+    cnds = _PMs.conductor_ids(pm; nw=n)
+    for c in cnds
+        JuMP.@NLconstraint(pm.model,
+                p_fr[c] ==  sum(
+                                 vr_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
+                                -vi_fr[c]*(-b[c,d]*(vr_fr[d]-vr_to[d])-g[c,d]*(vi_fr[d]-vi_to[d]))
+                            for d in cnds)
+                          # the shunt element is identical but vr_to=vi_to=0
+                          + sum(
+                                 vr_fr[c]*(g_fr[c,d]*vr_fr[d]-b_fr[c,d]*vi_fr[d])
+                                -vi_fr[c]*(-b_fr[c,d]*vr_fr[d]-g_fr[c,d]*vi_fr[d])
+                            for d in cnds)
+        )
+        JuMP.@NLconstraint(pm.model,
+                q_fr[c] ==  sum(
+                                -vr_fr[c]*(b[c,d]*(vr_fr[d]-vr_to[d])+g[c,d]*(vi_fr[d]-vi_to[d]))
+                                +vi_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
+                            for d in cnds)
+                          # the shunt element is identical but vr_to=vi_to=0
+                          + sum(
+                                -vr_fr[c]*(b_fr[c,d]*vr_fr[d]+g_fr[c,d]*vi_fr[d])
+                                +vi_fr[c]*(g_fr[c,d]*vr_fr[d]-b_fr[c,d]*vi_fr[d])
+                            for d in cnds)
+        )
+    end
 end
 
 
@@ -238,33 +301,39 @@ p[t_idx] ==  (g+g_to)*v[t_bus]^2 + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[t_bu
 q[t_idx] == -(b+b_to)*v[t_bus]^2 - (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[f_bus]-t[t_bus])) + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus]))
 ```
 """
-function constraint_mc_ohms_yt_to(pm::_PMs.AbstractACRModel, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
-    constraint_mc_ohms_yt_from(pm, n, c, t_bus, f_bus, t_idx, f_idx, g, b, g_to, b_to, tr, ti, tm)
+function constraint_mc_ohms_yt_to(pm::_PMs.AbstractACRModel, n::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
+    constraint_mc_ohms_yt_from(pm, n, t_bus, f_bus, t_idx, f_idx, g, b, g_to, b_to, tr, ti, tm)
 end
 
 
 ""
-function constraint_load_power_wye(pm::_PMs.AbstractACRModel, nw::Int, cnd::Int, load_id::Int, pd::Real, qd::Real)
-    _PMs.var(pm, nw, cnd, :pd)[load_id] = pd
-    _PMs.var(pm, nw, cnd, :qd)[load_id] = qd
+function constraint_load_power_wye(pm::_PMs.AbstractACRModel, nw::Int, load_id::Int, pd::Real, qd::Real)
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        _PMs.var(pm, nw, :pd)[load_id][c] = pd[c]
+        _PMs.var(pm, nw, :qd)[load_id][c] = qd[c]
+    end
 end
 
 
 ""
-function constraint_load_current_wye(pm::_PMs.AbstractACRModel, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real)
-    vr = _PMs.var(pm, nw, cnd, :vr, load_bus_id)
-    vi = _PMs.var(pm, nw, cnd, :vi, load_bus_id)
-    _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, cp*sqrt(vr^2+vi^2))
-    _PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, cq*sqrt(vr^2+vi^2))
+function constraint_load_current_wye(pm::_PMs.AbstractACRModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real)
+    vr = _PMs.var(pm, nw, :vr, load_bus_id)
+    vi = _PMs.var(pm, nw, :vi, load_bus_id)
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        _PMs.var(pm, nw, :pd)[load_id][c] = JuMP.@NLexpression(pm.model, cp*sqrt(vr[c]^2+vi[c]^2))
+        _PMs.var(pm, nw, :qd)[load_id][c] = JuMP.@NLexpression(pm.model, cq*sqrt(vr[c]^2+vi[c]^2))
+    end
 end
 
 
 ""
-function constraint_load_impedance_wye(pm::_PMs.AbstractACRModel, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real)
-    vr = _PMs.var(pm, nw, cnd, :vr, load_bus_id)
-    vi = _PMs.var(pm, nw, cnd, :vi, load_bus_id)
-    _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, cp*(vr^2+vi^2))
-    _PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, cq*(vr^2+vi^2))
+function constraint_load_impedance_wye(pm::_PMs.AbstractACRModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real)
+    vr = _PMs.var(pm, nw, :vr, load_bus_id)
+    vi = _PMs.var(pm, nw, :vi, load_bus_id)
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        _PMs.var(pm, nw, :pd)[load_id][c] = JuMP.@NLexpression(pm.model, cp*(vr[c]^2+vi[c]^2))
+        _PMs.var(pm, nw, :qd)[load_id][c] = JuMP.@NLexpression(pm.model, cq*(vr[c]^2+vi[c]^2))
+    end
 end
 
 
@@ -326,8 +395,8 @@ idem for s_b and s_c
 function constraint_mc_load_current_delta(pm::_PMs.AbstractACRModel, nw::Int, load_id::Int, load_bus_id::Int, cp::MultiConductorVector, cq::MultiConductorVector)
     cp_ab, cp_bc, cp_ca = cp
     cq_ab, cq_bc, cq_ca = cq
-    vre_a, vre_b, vre_c = [_PMs.var(pm, nw, c, :vr, load_bus_id) for c in 1:3]
-    vim_a, vim_b, vim_c = [_PMs.var(pm, nw, c, :vi, load_bus_id) for c in 1:3]
+    vre_a, vre_b, vre_c = _PMs.var(pm, nw, :vr, load_bus_id)
+    vim_a, vim_b, vim_c = _PMs.var(pm, nw, :vi, load_bus_id)
     # v_xy = v_x - v_y
     vre_xy(vre_x, vre_y) = JuMP.@NLexpression(pm.model, vre_x-vre_y)
     vim_xy(vim_x, vim_y) = JuMP.@NLexpression(pm.model, vim_x-vim_y)
@@ -352,12 +421,12 @@ function constraint_mc_load_current_delta(pm::_PMs.AbstractACRModel, nw::Int, lo
     p_x(vre_x, vim_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vre_x*(ire_xy-ire_zx) + vim_x*(iim_xy-iim_zx))
     q_x(vre_x, vim_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vim_x*(ire_xy-ire_zx) - vre_x*(iim_xy-iim_zx))
     # s_x = s_x,ref
-    _PMs.var(pm, nw, 1, :pd)[load_id] = p_x(vre_a, vim_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    _PMs.var(pm, nw, 2, :pd)[load_id] = p_x(vre_b, vim_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    _PMs.var(pm, nw, 3, :pd)[load_id] = p_x(vre_c, vim_c, ire_ca, iim_ca, ire_bc, iim_bc)
-    _PMs.var(pm, nw, 1, :qd)[load_id] = q_x(vre_a, vim_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    _PMs.var(pm, nw, 2, :qd)[load_id] = q_x(vre_b, vim_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    _PMs.var(pm, nw, 3, :qd)[load_id] = q_x(vre_c, vim_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    _PMs.var(pm, nw, :pd)[load_id][1] = p_x(vre_a, vim_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    _PMs.var(pm, nw, :pd)[load_id][2] = p_x(vre_b, vim_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    _PMs.var(pm, nw, :pd)[load_id][3] = p_x(vre_c, vim_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    _PMs.var(pm, nw, :qd)[load_id][1] = q_x(vre_a, vim_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    _PMs.var(pm, nw, :qd)[load_id][2] = q_x(vre_b, vim_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    _PMs.var(pm, nw, :qd)[load_id][3] = q_x(vre_c, vim_c, ire_ca, iim_ca, ire_bc, iim_bc)
 end
 
 
@@ -373,8 +442,8 @@ idem for s_b and s_c
 function constraint_mc_load_impedance_delta(pm::_PMs.AbstractACRModel, nw::Int, load_id::Int, load_bus_id::Int, cp::MultiConductorVector, cq::MultiConductorVector)
     cp_ab, cp_bc, cp_ca = cp
     cq_ab, cq_bc, cq_ca = cq
-    vre_a, vre_b, vre_c = [_PMs.var(pm, nw, c, :vr, load_bus_id) for c in 1:3]
-    vim_a, vim_b, vim_c = [_PMs.var(pm, nw, c, :vi, load_bus_id) for c in 1:3]
+    vre_a, vre_b, vre_c = _PMs.var(pm, nw, :vr, load_bus_id)
+    vim_a, vim_b, vim_c = _PMs.var(pm, nw, :vi, load_bus_id)
     # v_xy = v_x - v_y
     vre_xy(vre_x, vre_y) = JuMP.@NLexpression(pm.model, vre_x-vre_y)
     vim_xy(vim_x, vim_y) = JuMP.@NLexpression(pm.model, vim_x-vim_y)
@@ -399,10 +468,20 @@ function constraint_mc_load_impedance_delta(pm::_PMs.AbstractACRModel, nw::Int, 
     p_x(vre_x, vim_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vre_x*(ire_xy-ire_zx) + vim_x*(iim_xy-iim_zx))
     q_x(vre_x, vim_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vim_x*(ire_xy-ire_zx) - vre_x*(iim_xy-iim_zx))
     # s_x = s_x,ref
-    _PMs.var(pm, nw, 1, :pd)[load_id] = p_x(vre_a, vim_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    _PMs.var(pm, nw, 2, :pd)[load_id] = p_x(vre_b, vim_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    _PMs.var(pm, nw, 3, :pd)[load_id] = p_x(vre_c, vim_c, ire_ca, iim_ca, ire_bc, iim_bc)
-    _PMs.var(pm, nw, 1, :qd)[load_id] = q_x(vre_a, vim_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    _PMs.var(pm, nw, 2, :qd)[load_id] = q_x(vre_b, vim_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    _PMs.var(pm, nw, 3, :qd)[load_id] = q_x(vre_c, vim_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    _PMs.var(pm, nw, :pd)[load_id][1] = p_x(vre_a, vim_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    _PMs.var(pm, nw, :pd)[load_id][2] = p_x(vre_b, vim_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    _PMs.var(pm, nw, :pd)[load_id][3] = p_x(vre_c, vim_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    _PMs.var(pm, nw, :qd)[load_id][1] = q_x(vre_a, vim_a, ire_ab, iim_ab, ire_ca, iim_ca)
+    _PMs.var(pm, nw, :qd)[load_id][2] = q_x(vre_b, vim_b, ire_bc, iim_bc, ire_ab, iim_ab)
+    _PMs.var(pm, nw, :qd)[load_id][3] = q_x(vre_c, vim_c, ire_ca, iim_ca, ire_bc, iim_bc)
+end
+
+
+"`vm[i] == vmref`"
+function constraint_mc_voltage_magnitude_setpoint(pm::_PMs.AbstractACRModel, n::Int, i::Int, vmref)
+    vr = _PMs.var(pm, n, :vr, i)
+    vi = _PMs.var(pm, n, :vi, i)
+    for c in _PMs.conductor_ids(pm)
+        JuMP.@constraint(pm.model, vr[c]^2 + vi[c]^2  == vmref[c]^2)
+    end
 end

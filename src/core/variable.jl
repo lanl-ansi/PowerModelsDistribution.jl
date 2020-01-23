@@ -48,6 +48,45 @@ function variable_mc_voltage_magnitude(pm::_PMs.AbstractPowerModel; nw::Int=pm.c
     report && _PMs.sol_component_value(pm, nw, :bus, :vm, _PMs.ids(pm, nw, :bus), vm)
 end
 
+""
+function variable_mc_voltage_real(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+
+    vr = _PMs.var(pm, nw)[:vr] = Dict(i => JuMP.@variable(pm.model,
+            [c in cnds], base_name="$(nw)_vr_$(i)",
+            start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "vr_start", c)
+        ) for i in _PMs.ids(pm, nw, :bus)
+    )
+
+    if bounded
+        for (i,bus) in _PMs.ref(pm, nw, :bus), c in cnds
+            JuMP.set_lower_bound(vr[i][c], -bus["vmax"][c])
+            JuMP.set_upper_bound(vr[i][c],  bus["vmax"][c])
+        end
+    end
+
+    report && _PMs.sol_component_value(pm, nw, :bus, :vr, _PMs.ids(pm, nw, :bus), vr)
+end
+
+""
+function variable_mc_voltage_imaginary(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+
+    vi = _PMs.var(pm, nw)[:vi] = Dict(i => JuMP.@variable(pm.model,
+            [c in cnds], base_name="$(nw)_vi_$(i)",
+            start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "vi_start", c)
+        ) for i in _PMs.ids(pm, nw, :bus)
+    )
+
+    if bounded
+        for (i,bus) in _PMs.ref(pm, nw, :bus), c in cnds
+            JuMP.set_lower_bound(vi[i][c], -bus["vmax"][c])
+            JuMP.set_upper_bound(vi[i][c],  bus["vmax"][c])
+        end
+    end
+
+    report && _PMs.sol_component_value(pm, nw, :bus, :vi, _PMs.ids(pm, nw, :bus), vi)
+end
 
 
 "branch flow variables, delegated back to PowerModels"
