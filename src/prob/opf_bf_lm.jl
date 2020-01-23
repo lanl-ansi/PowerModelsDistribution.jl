@@ -4,7 +4,7 @@
 
 ""
 function run_mc_opf_bf_lm(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return _PMs.run_model(data, model_constructor, solver, build_mc_opf_bf_lm; solution_builder=solution_tp!, multiconductor=true, kwargs...)
+    return _PMs.run_model(data, model_constructor, solver, build_mc_opf_bf_lm;  multiconductor=true, kwargs...)
 end
 
 
