@@ -18,9 +18,10 @@ end
 ""
 function variable_mc_voltage_angle(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
 
     va = _PMs.var(pm, nw)[:va] = Dict(i => JuMP.@variable(pm.model,
-            [c in cnds], base_name="$(nw)_va_$(i)",
+            [c in 1:ncnds], base_name="$(nw)_va_$(i)",
             start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "va_start", c)
         ) for i in _PMs.ids(pm, nw, :bus)
     )
@@ -31,10 +32,11 @@ end
 ""
 function variable_mc_voltage_magnitude(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
 
     vm = _PMs.var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
-            [c in cnds], base_name="$(nw)_vm_$(i)",
-            start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "vm_start", c)
+            [c in 1:ncnds], base_name="$(nw)_vm_$(i)",
+            start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "vm_start", c, 1.0)
         ) for i in _PMs.ids(pm, nw, :bus)
     )
 
@@ -51,9 +53,10 @@ end
 ""
 function variable_mc_voltage_real(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
 
     vr = _PMs.var(pm, nw)[:vr] = Dict(i => JuMP.@variable(pm.model,
-            [c in cnds], base_name="$(nw)_vr_$(i)",
+            [c in 1:ncnds], base_name="$(nw)_vr_$(i)",
             start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "vr_start", c)
         ) for i in _PMs.ids(pm, nw, :bus)
     )
@@ -71,9 +74,10 @@ end
 ""
 function variable_mc_voltage_imaginary(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
 
     vi = _PMs.var(pm, nw)[:vi] = Dict(i => JuMP.@variable(pm.model,
-            [c in cnds], base_name="$(nw)_vi_$(i)",
+            [c in 1:ncnds], base_name="$(nw)_vi_$(i)",
             start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "vi_start", c)
         ) for i in _PMs.ids(pm, nw, :bus)
     )
@@ -98,9 +102,10 @@ end
 "variable: `p[l,i,j]` for `(l,i,j)` in `arcs`"
 function variable_mc_branch_flow_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
 
     p = _PMs.var(pm, nw)[:p] = Dict((l,i,j) => JuMP.@variable(pm.model,
-            [c in cnds], base_name="$(nw)_p_$((l,i,j))",
+            [c in 1:ncnds], base_name="$(nw)_p_$((l,i,j))",
             start = comp_start_value(_PMs.ref(pm, nw, :branch, l), "p_start", c)
         ) for (l,i,j) in _PMs.ref(pm, nw, :arcs)
     )
@@ -138,9 +143,10 @@ end
 "variable: `q[l,i,j]` for `(l,i,j)` in `arcs`"
 function variable_mc_branch_flow_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
 
     q = _PMs.var(pm, nw)[:q] = Dict((l,i,j) => JuMP.@variable(pm.model,
-            [c in cnds], base_name="$(nw)_q_$((l,i,j))",
+            [c in 1:ncnds], base_name="$(nw)_q_$((l,i,j))",
             start = comp_start_value(_PMs.ref(pm, nw, :branch, l), "q_start", c)
         ) for (l,i,j) in _PMs.ref(pm, nw, :arcs)
     )
@@ -275,9 +281,10 @@ end
 
 function variable_mc_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
 
     ps = _PMs.var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
-            [c in cnds], base_name="$(nw)_ps_$(i)",
+            [c in 1:ncnds], base_name="$(nw)_ps_$(i)",
             start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "ps_start", c)
         ) for i in _PMs.ids(pm, nw, :storage)
     )
@@ -302,9 +309,10 @@ end
 
 function variable_mc_storage_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
 
     qs = _PMs.var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
-            [c in cnds], base_name="$(nw)_qs_$(i)",
+            [c in 1:ncnds], base_name="$(nw)_qs_$(i)",
             start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "qs_start", c)
         ) for i in _PMs.ids(pm, nw, :storage)
     )
@@ -366,9 +374,10 @@ end
 "Create variables for the active power flowing into all transformer windings."
 function variable_mc_transformer_active_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
 
     pt = _PMs.var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
-            [c in cnds], base_name="$(nw)_pt_$((l,i,j))",
+            [c in 1:ncnds], base_name="$(nw)_pt_$((l,i,j))",
         ) for (l,i,j) in _PMs.ref(pm, nw, :arcs_trans)
     )
 
@@ -402,9 +411,10 @@ end
 "Create variables for the reactive power flowing into all transformer windings."
 function variable_mc_transformer_reactive_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
 
     qt = _PMs.var(pm, nw)[:qt] = Dict((l,i,j) => JuMP.@variable(pm.model,
-            [c in cnds], base_name="$(nw)_qt_$((l,i,j))",
+            [c in 1:ncnds], base_name="$(nw)_qt_$((l,i,j))",
             start = 0.0
         ) for (l,i,j) in _PMs.ref(pm, nw, :arcs_trans)
     )
@@ -462,10 +472,8 @@ Depending on the load model, this can be a parameter or a NLexpression.
 These will be inserted into KCL.
 """
 function variable_mc_load(pm::_PMs.AbstractPowerModel; nw=pm.cnw, bounded=true)
-    for cnd in _PMs.conductor_ids(pm; nw=nw)
-        _PMs.var(pm, nw, cnd)[:pd] = Dict{Int, Any}()
-        _PMs.var(pm, nw, cnd)[:qd] = Dict{Int, Any}()
-    end
+    _PMs.var(pm, nw)[:pd] = Dict{Int, Any}()
+    _PMs.var(pm, nw)[:qd] = Dict{Int, Any}()
 end
 
 
@@ -616,9 +624,10 @@ end
 
 function variable_mc_generation_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
 
     pg = _PMs.var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
-            [c in cnds], base_name="$(nw)_pg_$(i)",
+            [c in 1:ncnds], base_name="$(nw)_pg_$(i)",
             start = comp_start_value(_PMs.ref(pm, nw, :gen, i), "pg_start", c)
         ) for i in _PMs.ids(pm, nw, :gen)
     )
@@ -635,9 +644,10 @@ end
 
 function variable_mc_generation_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
 
     qg = _PMs.var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
-            [c in cnds], base_name="$(nw)_qg_$(i)",
+            [c in 1:ncnds], base_name="$(nw)_qg_$(i)",
             start = comp_start_value(_PMs.ref(pm, nw, :gen, i), "qg_start", c)
         ) for i in _PMs.ids(pm, nw, :gen)
     )
