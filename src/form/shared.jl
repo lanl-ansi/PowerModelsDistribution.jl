@@ -170,19 +170,6 @@ function constraint_mc_power_balance(pm::_PMs.AbstractWModels, nw::Int, i, bus_a
     ps   = get(_PMs.var(pm, nw),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
     qs   = get(_PMs.var(pm, nw),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
 
-    # P = _PMs.var(pm, nw, :P)
-    # Q = _PMs.var(pm, nw, :Q)
-    # Psw  = _PMs.var(pm, nw, :Psw)
-    # Qsw  = _PMs.var(pm, nw, :Qsw)
-    # Pt   = _PMs.var(pm, nw, :Pt)
-    # Qt   = _PMs.var(pm, nw, :Qt)
-
-    # pg = _PMs.var(pm, nw, :pg)
-    # qg = _PMs.var(pm, nw, :qg)
-    # ps   = _PMs.var(pm, nw, :ps)
-    # qs   = _PMs.var(pm, nw, :qs)
-
-
     cstr_p = []
     cstr_q = []
 

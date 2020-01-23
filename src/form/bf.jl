@@ -76,15 +76,6 @@ end
 function constraint_mc_trans(pm::LPLinUBFModel, i::Int; nw::Int=pm.cnw)
 end
 
-
-# "This is duplicated at PMD level to correctly handle the indexing of the shunts."
-# function constraint_mc_voltage_angle_difference(pm::_PMs.AbstractBFModel, n::Int, f_idx, angmin, angmax)
-#     for c in _PMs.conductor_ids(pm; nw=n)
-#         constraint_mls_voltage_angle_difference(pm, n, c, f_idx, angmin[c], angmax[c])
-#     end
-# end
-
-
 "This is duplicated at PMD level to correctly handle the indexing of the shunts."
 function constraint_mc_voltage_angle_difference(pm::_PMs.AbstractBFModel, n::Int, f_idx, angmin, angmax)
     i, f_bus, t_bus = f_idx
