@@ -320,7 +320,6 @@ function variable_mc_load(pm::SDPUBFKCLMXModel; nw=pm.cnw)
     load_wye_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="wye"]
     load_del_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="delta"]
     load_cone_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if _check_load_needs_cone(load)]
-    @show load_cone_ids
     # create dictionaries
     _PMs.var(pm, nw)[:Pd] = Dict{Int, Any}()
     _PMs.var(pm, nw)[:Qd] = Dict{Int, Any}()
@@ -439,11 +438,11 @@ function variable_mc_load_delta_aux(pm::AbstractUBFModels, load_ids::Array{Int,1
         bound[id] = bus["vmax"].values*cmax'
     end
     # create matrix variables
-    (Xdre,Xdim) = variable_mx_complex(pm.model, load_ids, ncnds, ncnds;
+    (Xdr,Xdi) = variable_mx_complex(pm.model, load_ids, ncnds, ncnds;
         symm_bound=bound, name="Xd", prefix="$nw")
     # save references
-    _PMs.var(pm, nw)[:Xdr] = Xdre
-    _PMs.var(pm, nw)[:Xdi] = Xdim
+    _PMs.var(pm, nw)[:Xdr] = Xdr
+    _PMs.var(pm, nw)[:Xdi] = Xdi
 
     report && _PMs.sol_component_value(pm, nw, :load, :Xdr, load_ids, Xdr)
     report && _PMs.sol_component_value(pm, nw, :load, :Xdi, load_ids, Xdi)
@@ -594,10 +593,10 @@ function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
             # end
         elseif load["model"]=="constant_impedance"
             w = _PMs.var(pm, nw, :w)[bus_id]
-            for c in 1:ncnds
-                _PMs.var(pm, nw, :pl)[load_id][c] = a[c]*w[c]
-                _PMs.var(pm, nw, :ql)[load_id][c] = b[c]*w[c]
-            end
+            # for c in 1:ncnds
+            _PMs.var(pm, nw, :pl)[load_id] = a.*w
+            _PMs.var(pm, nw, :ql)[load_id] = b.*w
+            # end
         # in this case, :pl has a JuMP variable
         else
             pl = _PMs.var(pm, nw, :pl)[load_id]
@@ -627,15 +626,15 @@ function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
         qd = LinearAlgebra.diag(Xdi*Td)
         pl = LinearAlgebra.diag(Td*Xdr)
         ql = LinearAlgebra.diag(Td*Xdi)
-        for c in 1:ncnds
-            _PMs.var(pm, nw, :pd)[load_id][c] = pd[c]
-            _PMs.var(pm, nw, :qd)[load_id][c] = qd[c]
-            _PMs.var(pm, nw, :pl)[load_id][c] = pl[c]
-            _PMs.var(pm, nw, :ql)[load_id][c] = ql[c]
-        end
+        # for c in 1:ncnds
+            _PMs.var(pm, nw, :pd)[load_id] = pd
+            _PMs.var(pm, nw, :qd)[load_id] = qd
+            _PMs.var(pm, nw, :pl)[load_id] = pl
+            _PMs.var(pm, nw, :ql)[load_id] = ql
+        # end
 
         # |Vd|^2 is a linear transformation of Wr
-        wd = LinearAlgebra.diag(Td*Wyr*Td')
+        wd = LinearAlgebra.diag(Td*Wr*Td')
         if load["model"]=="constant_power"
             for c in 1:ncnds
                 JuMP.@constraint(pm.model, pl[c]==pd0[c])
@@ -684,17 +683,14 @@ function constraint_mc_load(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int=pm.cnw)
 
     if load["conn"]=="wye"
         if load["model"]=="constant_power"
-            # for c in 1:ncnds
-                @show typeof(_PMs.var(pm, nw, :pl))
-                _PMs.var(pm, nw, :pl)[load_id] = pd0
-                _PMs.var(pm, nw, :ql)[load_id] = qd0
-            # end
+            _PMs.var(pm, nw, :pl)[load_id] = pd0
+            _PMs.var(pm, nw, :ql)[load_id] = qd0
         elseif load["model"]=="constant_impedance"
             w = _PMs.var(pm, nw, :w, bus_id)
-            for c in 1:ncnds
-                _PMs.var(pm, nw, :pl)[load_id][c] = a[c]*w[c]
-                _PMs.var(pm, nw, :ql)[load_id][c] = b[c]*w[c]
-            end
+            # for c in 1:ncnds
+            _PMs.var(pm, nw, :pl)[load_id] = a.*w
+            _PMs.var(pm, nw, :ql)[load_id] = b.*w
+            # end
         # in this case, :pl has a JuMP variable
         else
             pl = _PMs.var(pm, nw, :pl)[load_id]
@@ -705,14 +701,12 @@ function constraint_mc_load(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int=pm.cnw)
             end
         end
         # diagonal of :Pd is identical to :pl now
-        Pd = _PMs.var(pm, nw, :Pd, load_id)
-        Qd = _PMs.var(pm, nw, :Qd, load_id)
+        Pd = _PMs.var(pm, nw, :Pd)[load_id]
+        Qd = _PMs.var(pm, nw, :Qd)[load_id]
         for c in 1:ncnds
             Pd[c,c] = _PMs.var(pm, nw, :pl)[load_id][c]
             Qd[c,c] = _PMs.var(pm, nw, :ql)[load_id][c]
         end
-
-        #constraint_SWL_psd(pm.model, Pd, Qd, Wr, Wi, CCdr, CCdi)
 
     elseif load["conn"]=="delta"
         # link Wy, CCd and X
@@ -725,15 +719,14 @@ function constraint_mc_load(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int=pm.cnw)
         Qd = Xdi*Td
         pl = LinearAlgebra.diag(Td*Xdr)
         ql = LinearAlgebra.diag(Td*Xdi)
-        # for c in 1:ncnds
-            _PMs.var(pm, nw, :Pd)[load_id] = Pd
-            _PMs.var(pm, nw, :Qd)[load_id] = Qd
-            _PMs.var(pm, nw, :pl)[load_id] = pl
-            _PMs.var(pm, nw, :ql)[load_id] = ql
-        # end
+
+        _PMs.var(pm, nw, :Pd)[load_id] = Pd
+        _PMs.var(pm, nw, :Qd)[load_id] = Qd
+        _PMs.var(pm, nw, :pl)[load_id] = pl
+        _PMs.var(pm, nw, :ql)[load_id] = ql
 
         # |Vd|^2 is a linear transformation of Wr
-        wd = LinearAlgebra.diag(Td*Wyr*Td')
+        wd = LinearAlgebra.diag(Td*Wr*Td')
         if load["model"]=="constant_power"
             for c in 1:ncnds
                 JuMP.@constraint(pm.model, pl[c]==pd0[c])
