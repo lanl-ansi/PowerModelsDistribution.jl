@@ -224,26 +224,26 @@ function constraint_mc_power_balance_load(pm::_PMs.AbstractACPModel, nw::Int, i:
 
     for c in _PMs.conductor_ids(pm; nw=nw)
         cp = JuMP.@NLconstraint(pm.model,
-            sum(p[a] for a in bus_arcs)
-            + sum(psw[a_sw] for a_sw in bus_arcs_sw)
-            + sum(pt[a_trans] for a_trans in bus_arcs_trans)
+            sum(p[a][c] for a in bus_arcs)
+            + sum(psw[a_sw][c] for a_sw in bus_arcs_sw)
+            + sum(pt[a_trans][c] for a_trans in bus_arcs_trans)
             ==
-            sum(pg[g] for g in bus_gens)
-            - sum(ps[s] for s in bus_storage)
-            - sum(pd[l] for l in bus_loads)
-            - sum(gs for gs in values(bus_gs))*vm^2
+            sum(pg[g][c] for g in bus_gens)
+            - sum(ps[s][c] for s in bus_storage)
+            - sum(pd[l][c] for l in bus_loads)
+            - sum(gs[c] for gs in values(bus_gs))*vm[c]^2
         )
         push!(cstr_p, cp)
 
         cq = JuMP.@NLconstraint(pm.model,
-            sum(q[a] for a in bus_arcs)
-            + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
-            + sum(qt[a_trans] for a_trans in bus_arcs_trans)
+            sum(q[a][c] for a in bus_arcs)
+            + sum(qsw[a_sw][c] for a_sw in bus_arcs_sw)
+            + sum(qt[a_trans][c] for a_trans in bus_arcs_trans)
             ==
-            sum(qg[g] for g in bus_gens)
-            - sum(qs[s] for s in bus_storage)
-            - sum(qd[l] for l in bus_loads)
-            + sum(bs for bs in values(bus_bs))*vm^2
+            sum(qg[g][c] for g in bus_gens)
+            - sum(qs[s][c] for s in bus_storage)
+            - sum(qd[l][c] for l in bus_loads)
+            + sum(bs[c] for bs in values(bus_bs))*vm[c]^2
         )
         push!(cstr_q, cq)
     end
@@ -572,9 +572,9 @@ end
 
 
 ""
-function constraint_load_power_wye(pm::_PMs.AbstractACPModel, nw::Int, cnd::Int, load_id::Int, pd::Real, qd::Real)
-    _PMs.var(pm, nw, cnd, :pd)[load_id] = pd
-    _PMs.var(pm, nw, cnd, :qd)[load_id] = qd
+function constraint_mc_load_power_wye(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, pd, qd)
+    _PMs.var(pm, nw, :pd)[load_id] = pd
+    _PMs.var(pm, nw, :qd)[load_id] = qd
 end
 
 
