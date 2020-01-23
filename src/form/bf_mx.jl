@@ -587,16 +587,12 @@ function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     # take care of connections
     if load["conn"]=="wye"
         if load["model"]=="constant_power"
-            # for c in 1:ncnds
-                _PMs.var(pm, nw, :pl)[load_id] = pd0
-                _PMs.var(pm, nw, :ql)[load_id] = qd0
-            # end
+            _PMs.var(pm, nw, :pl)[load_id] = pd0
+            _PMs.var(pm, nw, :ql)[load_id] = qd0
         elseif load["model"]=="constant_impedance"
             w = _PMs.var(pm, nw, :w)[bus_id]
-            # for c in 1:ncnds
             _PMs.var(pm, nw, :pl)[load_id] = a.*w
             _PMs.var(pm, nw, :ql)[load_id] = b.*w
-            # end
         # in this case, :pl has a JuMP variable
         else
             pl = _PMs.var(pm, nw, :pl)[load_id]
@@ -607,10 +603,8 @@ function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
             end
         end
         # :pd is identical to :pl now
-        # for c in 1:ncnds
-            _PMs.var(pm, nw, :pd)[load_id] = _PMs.var(pm, nw, :pl)[load_id]
-            _PMs.var(pm, nw, :qd)[load_id] = _PMs.var(pm, nw, :ql)[load_id]
-        # end
+        _PMs.var(pm, nw, :pd)[load_id] = _PMs.var(pm, nw, :pl)[load_id]
+        _PMs.var(pm, nw, :qd)[load_id] = _PMs.var(pm, nw, :ql)[load_id]
     elseif load["conn"]=="delta"
         # link Wy, CCd and X
         Wr = _PMs.var(pm, nw, :Wr, bus_id)
@@ -626,12 +620,11 @@ function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
         qd = LinearAlgebra.diag(Xdi*Td)
         pl = LinearAlgebra.diag(Td*Xdr)
         ql = LinearAlgebra.diag(Td*Xdi)
-        # for c in 1:ncnds
-            _PMs.var(pm, nw, :pd)[load_id] = pd
-            _PMs.var(pm, nw, :qd)[load_id] = qd
-            _PMs.var(pm, nw, :pl)[load_id] = pl
-            _PMs.var(pm, nw, :ql)[load_id] = ql
-        # end
+
+        _PMs.var(pm, nw, :pd)[load_id] = pd
+        _PMs.var(pm, nw, :qd)[load_id] = qd
+        _PMs.var(pm, nw, :pl)[load_id] = pl
+        _PMs.var(pm, nw, :ql)[load_id] = ql
 
         # |Vd|^2 is a linear transformation of Wr
         wd = LinearAlgebra.diag(Td*Wr*Td')
