@@ -32,9 +32,8 @@ function variable_mc_voltage_prod_hermitian(pm::AbstractUBFModels; n_cond::Int=3
     # save references in dict
     _PMs.var(pm, nw)[:Wr] = Wr
     _PMs.var(pm, nw)[:Wi] = Wi
-    for c in 1:n_cond
-        _PMs.var(pm, nw, c)[:w] = Dict{Int, Any}([(id, Wr[id][c,c]) for id in bus_ids])
-    end
+    # maintain compatibility
+    _PMs.var(pm, nw)[:w] = Dict{Int, Any}([(id, diag(Wr[id])) for id in bus_ids])
 end
 
 
@@ -65,9 +64,7 @@ function variable_mc_branch_series_current_prod_hermitian(pm::AbstractUBFModels;
     # save reference
     _PMs.var(pm, nw)[:CCr] = Lr
     _PMs.var(pm, nw)[:CCi] = Li
-    for c in 1:n_cond
-        _PMs.var(pm, nw, c)[:cm] = Dict([(id, Lr[id][c,c]) for id in branch_ids])
-    end
+    _PMs.var(pm, nw)[:cm] = Dict([(id, diag(Lr[id])) for id in branch_ids])
 end
 
 
@@ -107,10 +104,9 @@ function variable_mc_branch_flow(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=p
     # save reference
     _PMs.var(pm, nw)[:P] = P
     _PMs.var(pm, nw)[:Q] = Q
-    for c in 1:n_cond
-        _PMs.var(pm, nw, c)[:p] = Dict([(id,P[id][c,c]) for id in branch_arcs])
-        _PMs.var(pm, nw, c)[:q] = Dict([(id,Q[id][c,c]) for id in branch_arcs])
-    end
+
+    _PMs.var(pm, nw)[:p] = Dict([(id,diag(P[id])) for id in branch_arcs])
+    _PMs.var(pm, nw)[:q] = Dict([(id,diag(Q[id])) for id in branch_arcs])
 end
 
 
@@ -207,14 +203,8 @@ variable.
 """
 function variable_mc_generation_power(pm::SDPUBFKCLMXModel; nw=pm.cnw)
     gen_ids = collect(_PMs.ids(pm, nw, :gen))
-    # delegate creation of diagonal elements back to PMs as before
-    for id in gen_ids, c in _PMs.conductor_ids(pm, nw)
-        _PMs.variable_generation(pm, nw=nw, cnd=c)
-    end
-    # create vectors of the diagonal elements
     ncnds = length(_PMs.conductor_ids(pm, nw))
-    diag_re = Dict([(id, [_PMs.var(pm, nw, c, :pg, id) for c in 1:ncnds]) for id in gen_ids])
-    diag_im = Dict([(id, [_PMs.var(pm, nw, c, :qg, id) for c in 1:ncnds]) for id in gen_ids])
+
     # calculate bounds for matrix variable
     bound = Dict{eltype(gen_ids), Array{Real,2}}()
     for (id, gen) in _PMs.ref(pm, nw, :gen)
@@ -224,11 +214,24 @@ function variable_mc_generation_power(pm::SDPUBFKCLMXModel; nw=pm.cnw)
         bound[id] = vmax*cmax'
     end
     # create matrix variables, whilst injecting diagonals
-    (Pg,Qg) = variable_mx_complex_with_diag(pm.model, gen_ids, ncnds; symm_bound=bound,
-        diag_re=diag_re, diag_im=diag_im, name=("Pg", "Qg"), prefix="$nw")
+    (Pg,Qg) = variable_mx_complex(pm.model, gen_ids, ncnds, ncnds;
+        symm_bound=bound, name=("Pg", "Qg"), prefix="$nw")
+
+    #overwrite diagonal bounds
+    for (id, gen) in _PMs.ref(pm, nw, :gen)
+        for c in _PMs.conductor_ids(pm, nw)
+            JuMP.set_lower_bound(Pg[id][c,c], gen["pmin"][c])
+            JuMP.set_upper_bound(Pg[id][c,c], gen["pmax"][c])
+            JuMP.set_lower_bound(Qg[id][c,c], gen["qmin"][c])
+            JuMP.set_upper_bound(Qg[id][c,c], gen["qmax"][c])
+        end
+    end
     # save references
     _PMs.var(pm, nw)[:Pg] = Pg
     _PMs.var(pm, nw)[:Qg] = Qg
+    _PMs.var(pm, nw)[:pg] = Dict{Int, Any}([(id, diag(Pg[id])) for id in gen_ids])
+    _PMs.var(pm, nw)[:qg] = Dict{Int, Any}([(id, diag(Qg[id])) for id in gen_ids])
+
 end
 
 
@@ -774,12 +777,13 @@ Q = -Wr.B'+Wi.G'
 function constraint_mc_power_balance(pm::KCLMXModels, n::Int, i::Int, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_Gs, bus_Bs)
     Wr = _PMs.var(pm, n, :Wr, i)
     Wi = _PMs.var(pm, n, :Wi, i)
-    P = _PMs.var(pm, n, :P)
-    Q = _PMs.var(pm, n, :Q)
-    Pg = _PMs.var(pm, n, :Pg)
-    Qg = _PMs.var(pm, n, :Qg)
-    Pd = _PMs.var(pm, n, :Pd)
-    Qd = _PMs.var(pm, n, :Qd)
+
+    P = get(_PMs.var(pm, n), :P, Dict()); _PMs._check_var_keys(P, bus_arcs, "active power", "branch")
+    Q = get(_PMs.var(pm, n), :Q, Dict()); _PMs._check_var_keys(Q, bus_arcs, "reactive power", "branch")
+    Pg = get(_PMs.var(pm, n), :Pg, Dict()); _PMs._check_var_keys(Pg, bus_gens, "active power", "generator")
+    Qg = get(_PMs.var(pm, n), :Qg, Dict()); _PMs._check_var_keys(Qg, bus_gens, "reactive power", "generator")
+    Pd = get(_PMs.var(pm, n), :Pd, Dict()); _PMs._check_var_keys(Pd, bus_loads, "active power", "load")
+    Qd = get(_PMs.var(pm, n), :Qd, Dict()); _PMs._check_var_keys(Qd, bus_loads, "reactive power", "load")
     # ignore dc for now
     #TODO add DC in matrix version?
     ncnds = size(Wr)[1]
@@ -789,6 +793,8 @@ function constraint_mc_power_balance(pm::KCLMXModels, n::Int, i::Int, bus_arcs, 
     # changed the ordering
     # LHS: all variables with generator sign convention
     # RHS: all variables with load sign convention
-    _PMs.con(pm, n, :kcl_P)[i] = JuMP.@constraint(pm.model, sum(Pg[g] for g in bus_gens) .== sum(P[a] for a in bus_arcs) + sum(Pd[d] for d in bus_loads) + ( Wr*G'+Wi*B'))
-    _PMs.con(pm, n, :kcl_Q)[i] = JuMP.@constraint(pm.model, sum(Qg[g] for g in bus_gens) .== sum(Q[a] for a in bus_arcs) + sum(Qd[d] for d in bus_loads) + (-Wr*B'+Wi*G'))
+    # _PMs.con(pm, n, :kcl_P)[i] =
+    JuMP.@constraint(pm.model, sum(Pg[g] for g in bus_gens) .== sum(P[a] for a in bus_arcs) + sum(Pd[d] for d in bus_loads) + ( Wr*G'+Wi*B'))
+    # _PMs.con(pm, n, :kcl_Q)[i] =
+    JuMP.@constraint(pm.model, sum(Qg[g] for g in bus_gens) .== sum(Q[a] for a in bus_arcs) + sum(Qd[d] for d in bus_loads) + (-Wr*B'+Wi*G'))
 end
