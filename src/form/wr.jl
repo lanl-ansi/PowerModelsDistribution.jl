@@ -1,17 +1,19 @@
 ""
-function constraint_mc_model_voltage(pm::_PMs.AbstractWRModel, n::Int, c::Int)
+function constraint_mc_model_voltage(pm::_PMs.AbstractWRModel, n::Int)
     w  = _PMs.var(pm, n,  :w)
     wr = _PMs.var(pm, n, :wr)
     wi = _PMs.var(pm, n, :wi)
 
-    for d in c:length(_PMs.conductor_ids(pm))
-        for (i,j) in _PMs.ids(pm, n, :buspairs)
-            InfrastructureModels.relaxation_complex_product(pm.model, w[(i,d)], w[(j,c)], wr[(i,j,c,d)], wi[(i,j,c,d)])
-        end
+    for c in 1:length(_PMs.conductor_ids(pm, n))
+        for d in c:length(_PMs.conductor_ids(pm))
+            for (i,j) in _PMs.ids(pm, n, :buspairs)
+                InfrastructureModels.relaxation_complex_product(pm.model, w[i][d], w[j][c], wr[(i,j,c,d)], wi[(i,j,c,d)])
+            end
 
-        if d != c
-            for i in _PMs.ids(pm, n, :bus)
-                InfrastructureModels.relaxation_complex_product(pm.model, w[(i,d)], w[(i,c)], wr[(i,i,c,d)], wi[(i,i,c,d)])
+            if d != c
+                for i in _PMs.ids(pm, n, :bus)
+                    InfrastructureModels.relaxation_complex_product(pm.model, w[i][d], w[i][c], wr[(i,i,c,d)], wi[(i,i,c,d)])
+                end
             end
         end
     end
@@ -54,4 +56,3 @@ function constraint_mc_power_balance(pm::_PMs.AbstractWRModel, nw::Int, c::Int, 
         + sum(bs for bs in values(bus_bs))*w
     )
 end
-

@@ -213,32 +213,27 @@ end
 
 
 ""
-function variable_mc_voltage_product(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
-    _PMs.var(pm, nw)[:wr] = Dict{Tuple{Int,Int},Any}()
-    _PMs.var(pm, nw)[:wi] = Dict{Tuple{Int,Int},Any}()
-    for (i, j) in _PMs.ids(pm, nw, :buspairs)
-        _PMs.var(pm, nw, cnd, :wr)[(i,j)] = Dict()
-        _PMs.var(pm, nw, cnd, :wi)[(i,j)] = Dict()
-    end
+function variable_mc_voltage_product(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded=true)
+    bp_cndf_cndt = [(i, j, c, d) for (i,j) in keys(_PMs.ref(pm, nw, :buspairs)) for c in _PMs.conductor_ids(pm) for d in _PMs.conductor_ids(pm)]
+    bus_cnd = [(i, i, c, d) for i in _PMs.ids(pm, nw, :bus) for c in _PMs.conductor_ids(pm) for d in _PMs.conductor_ids(pm) if c != d]
+    append!(bus_cnd, bp_cndf_cndt)
+
+    WR = _PMs.var(pm, nw)[:wr] = JuMP.@variable(pm.model,
+        [b in bus_cnd], base_name="$(nw)_wr",
+        start = comp_start_value(b[1] != b[2] ? _PMs.ref(pm, nw, :buspairs, b[1:2]) : _PMs.ref(pm, nw, :bus, b[1]), "wr_start", b[3], 1.0)
+    )
+
+    WI = _PMs.var(pm, nw)[:wi] = JuMP.@variable(pm.model,
+        [b in bus_cnd], base_name="$(nw)_wi",
+        start = comp_start_value(b[1] != b[2] ? _PMs.ref(pm, nw, :buspairs, b[1:2]) : _PMs.ref(pm, nw, :bus, b[1]), "wi_start", b[3])
+    )
 
     for cnd in _PMs.conductor_ids(pm, nw)
-        bp_cndf_cndt = [(i, j, c, d) for (i,j) in keys(_PMs.ref(pm, nw, :buspairs)) for c in _PMs.conductor_ids(pm) for d in _PMs.conductor_ids(pm)]
-        bus_cnd = [(i, i, c, d) for i in _PMs.ids(pm, nw, :bus) for c in _PMs.conductor_ids(pm) for d in _PMs.conductor_ids(pm) if c != d]
-        append!(bus_cnd, bp_cndf_cndt)
-
-        WR = _PMs.var(pm, nw)[:wr] = JuMP.@variable(pm.model,
-            [b in bus_cnd], base_name="$(nw)_wr",
-            start = comp_start_value(b[1] != b[2] ? _PMs.ref(pm, nw, :buspairs, b[1:2]) : _PMs.ref(pm, nw, :bus, b[1]), "wr_start", b[3], 1.0)
-        )
-
-        WI = _PMs.var(pm, nw)[:wi] = JuMP.@variable(pm.model,
-            [b in bus_cnd], base_name="$(nw)_wi",
-            start = comp_start_value(b[1] != b[2] ? _PMs.ref(pm, nw, :buspairs, b[1:2]) : _PMs.ref(pm, nw, :bus, b[1]), "wi_start", b[3])
-        )
-
         if bounded
             # Diagonal bounds
-            wr_min, wr_max, wi_min, wi_max = _PMs.ref_calc_voltage_product_bounds(_PMs.ref(pm, nw, :buspairs), cnd)
+            # filter out branch property in the buspair, because this breaks PowerModels when cnd!=1
+            buspairs = Dict([(bp, Dict([(k,v) for (k,v) in buspair if k!="branch"])) for (bp, buspair) in _PMs.ref(pm, nw, :buspairs)])
+            wr_min, wr_max, wi_min, wi_max = _PMs.ref_calc_voltage_product_bounds(buspairs, cnd)
             for (i, j) in _PMs.ids(pm, nw, :buspairs)
                 JuMP.set_upper_bound(WR[(i, j, cnd, cnd)], wr_max[(i,j)])
                 JuMP.set_upper_bound(WI[(i, j, cnd, cnd)], wi_max[(i,j)])
@@ -260,11 +255,6 @@ function variable_mc_voltage_product(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw
                     end
                 end
             end
-        end
-
-        for (i, j) in _PMs.ids(pm, nw, :buspairs)
-            _PMs.var(pm, nw, :wr)[(i,j)][cnd] = WR[(i, j, cnd, cnd)]
-            _PMs.var(pm, nw, :wi)[(i,j)][cnd] = WI[(i, j, cnd, cnd)]
         end
     end
 end
