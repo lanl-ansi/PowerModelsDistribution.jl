@@ -1,7 +1,7 @@
 @info "running branch-flow optimal power flow (opf_bf) tests"
 
-calc_vm_w(id, result) = sqrt.(result["solution"]["bus"][id]["w"])
-calc_vm_WR(id, result) = sqrt.(diag(result["solution"]["bus"][id]["Wr"]))
+calc_vm_w(result, id) = sqrt.(      result["solution"]["bus"][id]["w"])
+calc_vm_W(result, id) = sqrt.(diag( result["solution"]["bus"][id]["Wr"]))
 
 
 
@@ -15,7 +15,7 @@ calc_vm_WR(id, result) = sqrt.(diag(result["solution"]["bus"][id]["Wr"]))
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 44880; atol = 1e0)
             # @test isapprox(result["solution"]["bus"]["3"]["vm"].values, 0.911466*[1,1,1]; atol = 1e-3)
-            vm = calc_vm_w(3, result)
+            vm = calc_vm_w(result, "3")
             @test isapprox(vm, 0.911466*[1,1,1]; atol = 1e-3)
 
         end
@@ -26,7 +26,8 @@ calc_vm_WR(id, result) = sqrt.(diag(result["solution"]["bus"][id]["Wr"]))
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 54870.0; atol = 1e-1)
-            @test isapprox(result["solution"]["bus"]["3"]["vm"].values, 1.02472*[1,1,1]; atol = 1e-3)
+            vm = calc_vm_w(result, "3")
+            @test isapprox(vm, 1.02472*[1,1,1]; atol = 1e-3)
         end
 
         @testset "5-bus independent radial different lplinubf opf_bf" begin
@@ -35,7 +36,8 @@ calc_vm_WR(id, result) = sqrt.(diag(result["solution"]["bus"][id]["Wr"]))
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 55307.7; atol = 1e-1)
-            @test isapprox(result["solution"]["bus"]["3"]["vm"].values, [0.930548, 0.930543, 0.930543]; atol = 1e-3)
+            vm = calc_vm_w(result, "3")
+            @test isapprox(vm, [0.930548, 0.930543, 0.930543]; atol = 1e-3)
         end
 
         @testset "3-bus balanced lplinubf opf_bf" begin
@@ -73,7 +75,8 @@ calc_vm_WR(id, result) = sqrt.(diag(result["solution"]["bus"][id]["Wr"]))
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 54870.0; atol = 1e-1)
-            @test isapprox(result["solution"]["bus"]["3"]["vm"].values, 1.02472*[1,1,1]; atol = 1e-3)
+            vm = calc_vm_w(result, "3")
+            @test isapprox(vm, 1.02472*[1,1,1]; atol = 1e-3)
         end
 
         @testset "5-bus independent radial different lpdiagubf opf_bf" begin
@@ -82,7 +85,8 @@ calc_vm_WR(id, result) = sqrt.(diag(result["solution"]["bus"][id]["Wr"]))
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 55307.7; atol = 1e-1)
-            @test isapprox(result["solution"]["bus"]["3"]["vm"].values, [0.930014, 0.930014, 0.930014]; atol = 1e-3)
+            vm = calc_vm_w(result, "3")
+            @test isapprox(vm, [0.930014, 0.930014, 0.930014]; atol = 1e-3)
         end
     end
 
@@ -110,7 +114,8 @@ calc_vm_WR(id, result) = sqrt.(diag(result["solution"]["bus"][id]["Wr"]))
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 55307.7; atol = 1e-1)
-            @test isapprox(result["solution"]["bus"]["3"]["vm"].values, [0.930014, 0.930014, 0.930014]; atol = 1e-3)
+            vm = calc_vm_W(result, "3")
+            @test isapprox(vm, [0.930014, 0.930014, 0.930014]; atol = 1e-3)
 
         end
     end
@@ -130,11 +135,14 @@ calc_vm_WR(id, result) = sqrt.(diag(result["solution"]["bus"][id]["Wr"]))
 
             @test result["termination_status"] == PMs.OPTIMAL
             @test isapprox(result["objective"], 56091.7; atol = 2e0)
-
-            @test isapprox(result["solution"]["bus"]["1"]["vm"][1],   1.076184696745133; atol = 1E-3)
-            @test isapprox(result["solution"]["bus"]["2"]["vm"][1],   1.063950148862639; atol = 1E-3)
-            @test isapprox(result["solution"]["bus"]["3"]["vm"][1],   1.073074502462763; atol = 1E-3)
-            @test isapprox(result["solution"]["bus"]["4"]["vm"][1],   1.053610154771143; atol = 1E-3)
+            vm1 = calc_vm_W(result, "1")
+            vm2 = calc_vm_W(result, "2")
+            vm3 = calc_vm_W(result, "3")
+            vm4 = calc_vm_W(result, "4")
+            @test isapprox(vm1[1],   1.076184696745133; atol = 1E-3)
+            @test isapprox(vm2[1],   1.063950148862639; atol = 1E-3)
+            @test isapprox(vm3[1],   1.073074502462763; atol = 1E-3)
+            @test isapprox(vm4[1],   1.053610154771143; atol = 1E-3)
         end
 
         @testset "5-bus independent meshed different sdpubf opf_bf" begin
@@ -160,10 +168,10 @@ calc_vm_WR(id, result) = sqrt.(diag(result["solution"]["bus"][id]["Wr"]))
 
             @test result["termination_status"] == PMs.OPTIMAL
             @test isapprox(result["objective"], 55434.8; atol = 2e1)
-
+            vm = calc_vm_W(result, "2")
             for c in 1:mp_data["conductors"]
                 @test isapprox(result["solution"]["gen"]["1"]["pg"][c], 0.4; atol = 1e-3)
-                @test isapprox(result["solution"]["bus"]["2"]["vm"][c], 1.08620; atol = 1e-3)
+                @test isapprox(vm[c], 1.08620; atol = 1e-3)
             end
         end
 

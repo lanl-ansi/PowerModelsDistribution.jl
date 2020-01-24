@@ -25,18 +25,18 @@ function _roll(array::Array{T, 1}, idx::Int; right=true) where T <: Number
 
     return out
 end
-
-
-"Corrects the shunts from vectors to matrices after the call to PMs."
-function make_multiconductor!(mp_data, n_conductors::Int)
-    PowerModels.make_multiconductor!(mp_data, n_conductors)
-    # replace matrix shunts by matrices instead of vectors
-    for (_, br) in mp_data["branch"]
-        for key in ["b_fr", "b_to", "g_fr", "g_to"]
-            br[key] = MultiConductorMatrix(LinearAlgebra.diagm(0=>br[key].values))
-        end
-    end
-end
+#
+#
+# "Corrects the shunts from vectors to matrices after the call to PMs."
+# function make_multiconductor!(mp_data, n_conductors::Int)
+#     PowerModels.make_multiconductor!(mp_data, n_conductors)
+#     # replace matrix shunts by matrices instead of vectors
+#     for (_, br) in mp_data["branch"]
+#         for key in ["b_fr", "b_to", "g_fr", "g_to"]
+#             br[key] = MultiConductorMatrix(LinearAlgebra.diagm(0=>br[key].values))
+#         end
+#     end
+# end
 
 
 "Replaces NaN values with zeros"
@@ -376,15 +376,15 @@ function make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
 end
 
 
-"feild names that should not be multi-conductor values"
+"field names that should not be multi-conductor values"
 const _conductorless = Set(["index", "bus_i", "bus_type", "status", "gen_status",
     "br_status", "gen_bus", "load_bus", "shunt_bus", "storage_bus", "f_bus", "t_bus",
     "transformer", "area", "zone", "base_kv", "energy", "energy_rating", "charge_rating",
     "discharge_rating", "charge_efficiency", "discharge_efficiency", "p_loss", "q_loss",
     "model", "ncost", "cost", "startup", "shutdown", "name", "source_id", "active_phases"])
 
-"feild names that should become multi-conductor matrix not arrays"
-const _conductor_matrix = Set(["br_r", "br_x"])
+"field names that should become multi-conductor matrix not arrays"
+const _conductor_matrix = Set(["br_r", "br_x", "b_fr", "b_to", "g_fr", "g_to"])
 
 
 ""
