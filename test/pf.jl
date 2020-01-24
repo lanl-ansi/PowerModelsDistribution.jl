@@ -247,7 +247,7 @@ end
 
 @testset "test pf_bf" begin
     @testset "test opendss pf_bf" begin
-        @testset "3-bus unbalanced acp pf_bf branch_flows original_variables" begin
+        @testset "3-bus unbalanced lp pf_bf branch_flows original_variables" begin
             pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced.dss")
             sol = PMD.run_mc_pf_bf(pmd, LPLinUBFPowerModel, ipopt_solver, setting=Dict("output"=>Dict("branch_flows"=>true, "original_variables"=>true)))
 
