@@ -56,3 +56,9 @@ function constraint_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel,
         JuMP.@constraint(pm.model, w >= vmin^2*z_voltage)
     end
 end
+
+
+function constraint_mc_active_gen_setpoint(pm::_PMs.AbstractPowerModel, n::Int, i, pg)
+    pg_var = _PMs.var(pm, n, :pg, i)
+    JuMP.@constraint(pm.model, pg_var .== pg)
+end

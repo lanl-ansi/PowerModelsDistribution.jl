@@ -266,28 +266,19 @@ end
 
 "KCL including transformer arcs and load variables."
 function constraint_mc_power_balance_load(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    for cnd in _PMs.conductor_ids(pm; nw=nw)
-        if !haskey(_PMs.con(pm, nw, cnd), :kcl_p)
-            _PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,JuMP.ConstraintRef}()
-        end
-        if !haskey(_PMs.con(pm, nw, cnd), :kcl_q)
-            _PMs.con(pm, nw, cnd)[:kcl_q] = Dict{Int,JuMP.ConstraintRef}()
-        end
+    bus = _PMs.ref(pm, nw, :bus, i)
+    bus_arcs = _PMs.ref(pm, nw, :bus_arcs, i)
+    bus_arcs_sw = _PMs.ref(pm, nw, :bus_arcs_sw, i)
+    bus_arcs_trans = _PMs.ref(pm, nw, :bus_arcs_trans, i)
+    bus_gens = _PMs.ref(pm, nw, :bus_gens, i)
+    bus_storage = _PMs.ref(pm, nw, :bus_storage, i)
+    bus_loads = _PMs.ref(pm, nw, :bus_loads, i)
+    bus_shunts = _PMs.ref(pm, nw, :bus_shunts, i)
 
-        bus = _PMs.ref(pm, nw, :bus, i)
-        bus_arcs = _PMs.ref(pm, nw, :bus_arcs, i)
-        bus_arcs_sw = _PMs.ref(pm, nw, :bus_arcs_sw, i)
-        bus_arcs_trans = _PMs.ref(pm, nw, :bus_arcs_trans, i)
-        bus_gens = _PMs.ref(pm, nw, :bus_gens, i)
-        bus_storage = _PMs.ref(pm, nw, :bus_storage, i)
-        bus_loads = _PMs.ref(pm, nw, :bus_loads, i)
-        bus_shunts = _PMs.ref(pm, nw, :bus_shunts, i)
+    bus_gs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "gs") for k in bus_shunts)
+    bus_bs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "bs") for k in bus_shunts)
 
-        bus_gs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "gs", cnd) for k in bus_shunts)
-        bus_bs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
-
-        constraint_mc_power_balance_load(pm, nw, cnd, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
-    end
+    constraint_mc_power_balance_load(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
 end
 
 
@@ -338,7 +329,7 @@ function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw
 
         if conn=="wye"
             for c in _PMs.conductor_ids(pm; nw=nw)
-                constraint_load_power_wye(pm, nw, c, id, pd[c], qd[c])
+                constraint_mc_load_power_wye(pm, nw, id, pd, qd)
             end
         elseif conn=="delta"
             @assert(_PMs.ref(pm, 0, :conductors)==3)
@@ -483,7 +474,7 @@ function constraint_mc_storage_thermal_limit(pm::_PMs.AbstractPowerModel, i::Int
 end
 
 
-"branch thermal constraints from, delegate to PowerModels per conductor"
+"branch thermal constraints from"
 function constraint_mc_thermal_limit_from(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     branch = _PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
@@ -496,7 +487,7 @@ function constraint_mc_thermal_limit_from(pm::_PMs.AbstractPowerModel, i::Int; n
 end
 
 
-"branch thermal constraints to, delegate to PowerModels per conductor"
+"branch thermal constraints to"
 function constraint_mc_thermal_limit_to(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     branch = _PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
@@ -509,7 +500,7 @@ function constraint_mc_thermal_limit_to(pm::_PMs.AbstractPowerModel, i::Int; nw:
 end
 
 
-"voltage magnitude setpoint constraint, delegate to PowerModels per conductor"
+"voltage magnitude setpoint constraint"
 function constraint_mc_voltage_magnitude_setpoint(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
     bus = _PMs.ref(pm, nw, :bus, i)
     vmref = bus["vm"].values #Not sure why this is needed
@@ -517,9 +508,19 @@ function constraint_mc_voltage_magnitude_setpoint(pm::_PMs.AbstractPowerModel, i
 end
 
 
-"generator active power setpoint constraint, delegate to PowerModels"
+"generator active power setpoint constraint"
 function constraint_mc_active_gen_setpoint(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
-    for c in _PMs.conductor_ids(pm; nw=nw)
-        _PMs.constraint_active_gen_setpoint(pm, i; nw=nw, cnd=c, kwargs...)
-    end
+    pg_set = _PMs.ref(pm, nw, :gen, i)["pg"].values
+    constraint_mc_active_gen_setpoint(pm, nw, i, pg_set)
+end
+
+
+"""
+This constraint captures problem agnostic constraints that define limits for
+voltage magnitudes (where variable bounds cannot be used)
+Notable examples include IVRPowerModel and ACRPowerModel
+"""
+function constraint_mc_voltage_magnitude_bounds(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    bus = _PMs.ref(pm, nw, :bus, i)
+    constraint_mc_voltage_magnitude_bounds(pm, nw, i, bus["vmin"], bus["vmax"])
 end

@@ -1,7 +1,7 @@
 ""
-function variable_mc_voltage(pm::_PMs.AbstractACRModel; nw=pm.cnw, kwargs...)
-    variable_mc_voltage_real(pm; nw=nw, kwargs...)
-    variable_mc_voltage_imaginary(pm; nw=nw, kwargs...)
+function variable_mc_voltage(pm::_PMs.AbstractACRModel; nw=pm.cnw, bounded::Bool=true, kwargs...)
+    variable_mc_voltage_real(pm; nw=nw, bounded=bounded, kwargs...)
+    variable_mc_voltage_imaginary(pm; nw=nw, bounded=bounded, kwargs...)
 
     # local infeasbility issues without proper initialization;
     # convergence issues start when the equivalent angles of the starting point
@@ -23,6 +23,24 @@ function variable_mc_voltage(pm::_PMs.AbstractACRModel; nw=pm.cnw, kwargs...)
             end
         end
     end
+
+    # apply bounds if bounded
+    if bounded
+        for i in _PMs.ids(pm, nw, :bus)
+            constraint_mc_voltage_magnitude_bounds(pm, i, nw=nw)
+        end
+    end
+end
+
+
+"`vmin <= vm[i] <= vmax`"
+function constraint_mc_voltage_magnitude_bounds(pm::_PMs.AbstractACRModel, n::Int, i, vmin, vmax)
+    @assert all(vmin .<= vmax)
+    vr = _PMs.var(pm, n, :vr, i)
+    vi = _PMs.var(pm, n, :vi, i)
+
+    JuMP.@constraint(pm.model, vmin.^2 .<= vr.^2 + vi.^2)
+    JuMP.@constraint(pm.model, vmax.^2 .>= vr.^2 + vi.^2)
 end
 
 
@@ -307,16 +325,14 @@ end
 
 
 ""
-function constraint_load_power_wye(pm::_PMs.AbstractACRModel, nw::Int, load_id::Int, pd::Real, qd::Real)
-    for c in _PMs.conductor_ids(pm; nw=nw)
-        _PMs.var(pm, nw, :pd)[load_id][c] = pd[c]
-        _PMs.var(pm, nw, :qd)[load_id][c] = qd[c]
-    end
+function constraint_mc_load_power_wye(pm::_PMs.AbstractACRModel, nw::Int, load_id::Int, pd, qd)
+    _PMs.var(pm, nw, :pd)[load_id] = pd
+    _PMs.var(pm, nw, :qd)[load_id] = qd
 end
 
 
 ""
-function constraint_load_current_wye(pm::_PMs.AbstractACRModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real)
+function constraint_mc_load_current_wye(pm::_PMs.AbstractACRModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real)
     vr = _PMs.var(pm, nw, :vr, load_bus_id)
     vi = _PMs.var(pm, nw, :vi, load_bus_id)
     for c in _PMs.conductor_ids(pm; nw=nw)
@@ -327,7 +343,7 @@ end
 
 
 ""
-function constraint_load_impedance_wye(pm::_PMs.AbstractACRModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real)
+function constraint_mc_load_impedance_wye(pm::_PMs.AbstractACRModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real)
     vr = _PMs.var(pm, nw, :vr, load_bus_id)
     vi = _PMs.var(pm, nw, :vi, load_bus_id)
     for c in _PMs.conductor_ids(pm; nw=nw)
