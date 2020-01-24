@@ -1,6 +1,6 @@
 "Run load shedding problem with storage"
 function run_mc_mld(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, build_mc_mld; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
+    return _PMs.run_model(data, model_type, solver, build_mc_mld; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
 end
 
 
@@ -15,7 +15,7 @@ function run_mc_mld_bf(data::Dict{String,Any}, model_type, solver; kwargs...)
     if model_type != LPLinUBFPowerModel
         Memento.error(_LOGGER, "The problem type mc_mld_bf only supports a limited set of formulations at the moment")
     end
-    return _PMs.run_model(data, model_type, solver, build_mc_mld_bf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld_bf!, kwargs...)
+    return _PMs.run_model(data, model_type, solver, build_mc_mld_bf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
 end
 
 
@@ -27,7 +27,7 @@ end
 
 "Run unit commitment load shedding problem (!relaxed)"
 function run_mc_mld_uc(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, build_mc_mld_uc; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
+    return _PMs.run_model(data, model_type, solver, build_mc_mld_uc; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
 end
 
 
