@@ -12,23 +12,25 @@ end
 
 
 "Defines voltage drop over a branch, linking from and to side voltage magnitude"
-function constraint_mc_voltage_magnitude_difference(pm::LPLinUBFModel, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
-    p_fr = [_PMs.var(pm, n, d, :p, f_idx) for d in _PMs.conductor_ids(pm)]
-    q_fr = [_PMs.var(pm, n, d, :q, f_idx) for d in _PMs.conductor_ids(pm)]
-    w_fr = _PMs.var(pm, n, c, :w, f_bus)
-    w_to = _PMs.var(pm, n, c, :w, t_bus)
+function constraint_mc_voltage_magnitude_difference(pm::LPLinUBFModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
+    p_fr = _PMs.var(pm, n, :p, f_idx)
+    q_fr = _PMs.var(pm, n, :q, f_idx)
+    w_fr = _PMs.var(pm, n, :w, f_bus)
+    w_to = _PMs.var(pm, n, :w, t_bus)
 
-    np = length(_PMs.conductor_ids(pm))
-    rot = _roll([_wrap_to_pi(2*pi/np*(1-d)) for d in _PMs.conductor_ids(pm)], c-1)
+    for c in _PMs.conductor_ids(pm, n)
+        np = length(_PMs.conductor_ids(pm))
+        rot = _roll([_wrap_to_pi(2*pi/np*(1-d)) for d in _PMs.conductor_ids(pm)], c-1)
 
-    #KVL over the line:
-    JuMP.@constraint(pm.model, w_to == w_fr - 2*sum((r[c,d]*cos(rot[d])-x[c,d]*sin(rot[d]))*(p_fr[d] - g_sh_fr*(w_fr/tm^2)) +
-                                               (r[c,d]*sin(rot[d])+x[c,d]*cos(rot[d]))*(q_fr[d] + b_sh_fr*(w_fr/tm^2)) for d in _PMs.conductor_ids(pm)) )
+        #KVL over the line:
+        JuMP.@constraint(pm.model, w_to[c] == w_fr[c] - 2*sum((r[c,d]*cos(rot[d])-x[c,d]*sin(rot[d]))*(p_fr[d] - g_sh_fr[c]*(w_fr[c]/tm[c]^2)) +
+                                                   (r[c,d]*sin(rot[d])+x[c,d]*cos(rot[d]))*(q_fr[d] + b_sh_fr[c]*(w_fr[c]/tm[c]^2)) for d in _PMs.conductor_ids(pm)) )
+    end
 end
 
 
 "do nothing"
-function _PMs.constraint_model_current(pm::LPLinUBFModel, n::Int, c::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr, tm)
+function constraint_mc_model_current(pm::LPLinUBFModel, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
 end
 
 
@@ -36,7 +38,7 @@ end
 function constraint_mc_flow_losses(pm::LPLinUBFModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
     tm = [1,1,1] #TODO
     for c in _PMs.conductor_ids(pm)
-        constraint_mc_flow_losses(pm, n, c, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr[c,c], g_sh_to[c,c], b_sh_fr[c,c], b_sh_to[c,c], tm[c])
+        constraint_mc_flow_losses(pm, n, i, f_bus, t_bus, f_idx, t_idx, r, x, diag(g_sh_fr), diag(g_sh_to), diag(b_sh_fr), diag(b_sh_to), tm)
     end
 end
 
@@ -44,31 +46,27 @@ end
 "Defines branch flow model power flow equations"
 function constraint_mc_model_voltage_magnitude_difference(pm::LPLinUBFModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
     tm = [1,1,1] #TODO
-    for c in _PMs.conductor_ids(pm)
-        constraint_mc_voltage_magnitude_difference(pm, n, c, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr[c,c], b_sh_fr[c,c], tm[c])
-    end
+    constraint_mc_voltage_magnitude_difference(pm, n, i, f_bus, t_bus, f_idx, t_idx, r, x, diag(g_sh_fr), diag(b_sh_fr), tm)
 end
 
 
 "Defines branch flow model power flow equations"
-function constraint_mc_flow_losses(pm::LPLinUBFModel, n::Int, c::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
-    p_fr = _PMs.var(pm, n, c, :p, f_idx)
-    q_fr = _PMs.var(pm, n, c, :q, f_idx)
-    p_to = _PMs.var(pm, n, c, :p, t_idx)
-    q_to = _PMs.var(pm, n, c, :q, t_idx)
-    w_fr = _PMs.var(pm, n, c, :w, f_bus)
-    w_to = _PMs.var(pm, n, c, :w, t_bus)
+function constraint_mc_flow_losses(pm::LPLinUBFModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
+    p_fr = _PMs.var(pm, n, :p, f_idx)
+    q_fr = _PMs.var(pm, n, :q, f_idx)
+    p_to = _PMs.var(pm, n, :p, t_idx)
+    q_to = _PMs.var(pm, n, :q, t_idx)
+    w_fr = _PMs.var(pm, n, :w, f_bus)
+    w_to = _PMs.var(pm, n, :w, t_bus)
 
-    JuMP.@constraint(pm.model, p_fr + p_to ==  g_sh_fr*(w_fr/tm^2) +  g_sh_to*w_to)
-    JuMP.@constraint(pm.model, q_fr + q_to == -b_sh_fr*(w_fr/tm^2) + -b_sh_to*w_to)
+    JuMP.@constraint(pm.model, p_fr + p_to .==  g_sh_fr.*(w_fr./tm.^2) +  g_sh_to.*w_to)
+    JuMP.@constraint(pm.model, q_fr + q_to .== -b_sh_fr.*(w_fr./tm.^2) + -b_sh_to.*w_to)
 end
 
 
 "Create voltage variables for branch flow model"
 function variable_mc_bus_voltage_on_off(pm::LPLinUBFModel; kwargs...)
-    for cnd in _PMs.conductor_ids(pm)
-        variable_mc_voltage_magnitude_sqr_on_off(pm; cnd=cnd, kwargs...)
-    end
+    variable_mc_voltage_magnitude_sqr_on_off(pm; kwargs...)
 end
 
 

@@ -129,7 +129,7 @@ end
 
 
 ""
-function constraint_mc_model_current(pm::AbstractUBFModels; nw::Int=pm.cnw)
+function constraint_mc_model_current(pm::Union{AbstractUBFModels,LPLinUBFPowerModel}; nw::Int=pm.cnw)
     for (i,branch) in _PMs.ref(pm, nw, :branch)
         f_bus = branch["f_bus"]
         t_bus = branch["t_bus"]
@@ -153,12 +153,14 @@ function constraint_mc_flow_losses(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=
 
     r = branch["br_r"].values
     x = branch["br_x"].values
-    g_sh_fr = branch["g_fr"].values
-    g_sh_to = branch["g_to"].values
-    b_sh_fr = branch["b_fr"].values
-    b_sh_to = branch["b_to"].values
+    g_sh_fr = diag(branch["g_fr"].values)
+    g_sh_to = diag(branch["g_to"].values)
+    b_sh_fr = diag(branch["b_fr"].values)
+    b_sh_to = diag(branch["b_to"].values)
 
-    constraint_mc_flow_losses(pm::_PMs.AbstractPowerModel, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
+    tm = [1, 1, 1] #TODO
+
+    constraint_mc_flow_losses(pm::_PMs.AbstractPowerModel, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
 end
 
 
@@ -423,25 +425,23 @@ end
 
 "on/off constraint for bus voltages"
 function constraint_mc_bus_voltage_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
-    for c in _PMs.conductor_ids(pm; nw=nw)
-        constraint_mc_bus_voltage_on_off(pm, nw, c; kwargs...)
-    end
+    constraint_mc_bus_voltage_on_off(pm, nw; kwargs...)
 end
 
 
 "on/off voltage magnitude constraint"
-function constraint_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+function constraint_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     bus = _PMs.ref(pm, nw, :bus, i)
 
-    constraint_mc_voltage_magnitude_on_off(pm, nw, cnd, i, bus["vmin"][cnd], bus["vmax"][cnd])
+    constraint_mc_voltage_magnitude_on_off(pm, nw, i, bus["vmin"], bus["vmax"])
 end
 
 
 "on/off voltage magnitude squared constraint for relaxed formulations"
-function constraint_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
+function constraint_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     bus = _PMs.ref(pm, nw, :bus, i)
 
-    constraint_mc_voltage_magnitude_sqr_on_off(pm, nw, cnd, i, bus["vmin"][cnd], bus["vmax"][cnd])
+    constraint_mc_voltage_magnitude_sqr_on_off(pm, nw, i, bus["vmin"], bus["vmax"])
 end
 
 
@@ -462,7 +462,11 @@ end
 
 "storage loss constraints, delegate to PowerModels"
 function constraint_mc_storage_loss(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
-    _PMs.constraint_storage_loss(pm, i; conductors=_PMs.conductor_ids(pm; nw=nw), nw=nw, kwargs...)
+    storage = ref(pm, nw, :storage, i)
+
+    _PMs.constraint_storage_loss(pm, nw, i, storage["storage_bus"], storage["r"], storage["x"], storage["p_loss"], storage["q_loss"];
+        conductors = _PMs.conductor_ids(pm, nw)
+    )
 end
 
 

@@ -24,36 +24,29 @@ function constraint_mc_thermal_limit_to(pm::_PMs.AbstractPowerModel, n::Int, t_i
 end
 
 
-
-
-"model current constraints"
-function constraint_mc_model_current(pm::_PMs.AbstractPowerModel; kwargs...)
-    for c in _PMs.conductor_ids(pm)
-        _PMs.constraint_model_current(pm; cnd=c, kwargs...)
-    end
-end
-
 "on/off bus voltage magnitude constraint"
-function constraint_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel, n::Int, c::Int, i::Int, vmin, vmax)
-    vm = _PMs.var(pm, n, c, :vm, i)
+function constraint_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel, n::Int, i::Int, vmin, vmax)
+    vm = _PMs.var(pm, n, :vm, i)
     z_voltage = _PMs.var(pm, n, :z_voltage, i)
 
-    JuMP.@constraint(pm.model, vm <= vmax*z_voltage)
-    JuMP.@constraint(pm.model, vm >= vmin*z_voltage)
+    JuMP.@constraint(pm.model, vm .<= vmax.*z_voltage)
+    JuMP.@constraint(pm.model, vm .>= vmin.*z_voltage)
 end
 
 
 "on/off bus voltage magnitude squared constraint for relaxed formulations"
-function constraint_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel, n::Int, c::Int, i::Int, vmin, vmax)
-    w = _PMs.var(pm, n, c, :w, i)
+function constraint_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel, n::Int, i::Int, vmin, vmax)
+    w = _PMs.var(pm, n, :w, i)
     z_voltage = _PMs.var(pm, n, :z_voltage, i)
 
-    if isfinite(vmax)
-        JuMP.@constraint(pm.model, w <= vmax^2*z_voltage)
-    end
+    for c in _PMs.conductor_ids(pm, n)
+        if isfinite(vmax[c])
+            JuMP.@constraint(pm.model, w[c] <= vmax[c]^2*z_voltage)
+        end
 
-    if isfinite(vmin)
-        JuMP.@constraint(pm.model, w >= vmin^2*z_voltage)
+        if isfinite(vmin[c])
+            JuMP.@constraint(pm.model, w[c] >= vmin[c]^2*z_voltage)
+        end
     end
 end
 

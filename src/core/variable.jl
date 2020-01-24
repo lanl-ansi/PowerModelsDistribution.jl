@@ -299,7 +299,7 @@ function variable_mc_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw,
                 if !isinf(flow_lb[i])
                     JuMP.set_lower_bound(ps[i][c], flow_lb[i])
                 end
-                if !isinf(flow_ub[l])
+                if !isinf(flow_ub[i])
                     JuMP.set_upper_bound(ps[i][c], flow_ub[i])
                 end
             end
@@ -327,7 +327,7 @@ function variable_mc_storage_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cn
                 if !isinf(flow_lb[i])
                     JuMP.set_lower_bound(qs[i][c], flow_lb[i])
                 end
-                if !isinf(flow_ub[l])
+                if !isinf(flow_ub[i])
                     JuMP.set_upper_bound(qs[i][c], flow_ub[i])
                 end
             end
@@ -582,10 +582,12 @@ function variabe_mc_on_off_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=p
         inj_lb[cnd], inj_ub[cnd] = _PMs.ref_calc_storage_injection_bounds(_PMs.ref(pm, nw, :storage), _PMs.ref(pm, nw, :bus), cnd)
     end
 
+    @show inj_lb
+
     _PMs.var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_$(cnd)_ps",
-        lower_bound = inj_lb[i],
-        upper_bound = inj_ub[i],
+        lower_bound = inj_lb[cnd][i],
+        upper_bound = inj_ub[cnd][i],
         start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "ps_start", cnd)
     ) for i in _PMs.ids(pm, nw, :storage))
 end
