@@ -190,25 +190,25 @@ function variable_mc_voltage(pm::_PMs.AbstractWRModel; nw::Int=pm.cnw, kwargs...
 end
 
 
-"variable: `w[i] >= 0` for `i` in `bus`es"
-function variable_mc_voltage_magnitude_sqr(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded=true)
-    bus_cnd = [(i, c) for i in _PMs.ids(pm, nw, :bus) for c in _PMs.conductor_ids(pm)]
-    ncnds = length(_PMs.conductor_ids(pm))
+"variable: `w[i] >= 0` for `i` in `buses"
+function variable_mc_voltage_magnitude_sqr(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    w = _PMs.var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
+            [c in 1:ncnds], base_name="$(nw)_w_$(i)",
+            start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start")
+        ) for i in _PMs.ids(pm, nw, :bus)
+    )
 
     if bounded
-        _PMs.var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
-            [c in 1:ncnds], base_name="$(nw)_w_$(i)",
-            lower_bound = _PMs.ref(pm, nw, :bus, i, "vmin", c)^2,
-            upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax", c)^2,
-            start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
-        ) for i in _PMs.ids(pm, nw, :bus))
-    else
-        _PMs.var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
-            [c in 1:ncnds], base_name="$(nw)_w_$(i)",
-            lower_bound = 0,
-            start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
-        ) for i in _PMs.ids(pm, nw, :bus))
+        for (i,bus) in _PMs.ref(pm, nw, :bus), c in cnds
+            JuMP.set_lower_bound(w[i][c], bus["vmin"][c]^2)
+            JuMP.set_upper_bound(w[i][c], bus["vmax"][c]^2)
+        end
     end
+
+    report && _PMs.sol_component_value(pm, nw, :bus, :w, _PMs.ids(pm, nw, :bus), w)
 end
 
 
