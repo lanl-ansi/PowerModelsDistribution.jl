@@ -820,7 +820,12 @@ function constraint_mc_power_balance(pm::KCLMXModels, n::Int, i::Int, bus_arcs, 
     # LHS: all variables with generator sign convention
     # RHS: all variables with load sign convention
     # _PMs.con(pm, n, :kcl_P)[i] =
-    JuMP.@constraint(pm.model, sum(Pg[g] for g in bus_gens) .== sum(P[a] for a in bus_arcs) + sum(Pd[d] for d in bus_loads) + ( Wr*G'+Wi*B'))
+    cp = JuMP.@constraint(pm.model, sum(Pg[g] for g in bus_gens) .== sum(P[a] for a in bus_arcs) + sum(Pd[d] for d in bus_loads) + ( Wr*G'+Wi*B'))
     # _PMs.con(pm, n, :kcl_Q)[i] =
-    JuMP.@constraint(pm.model, sum(Qg[g] for g in bus_gens) .== sum(Q[a] for a in bus_arcs) + sum(Qd[d] for d in bus_loads) + (-Wr*B'+Wi*G'))
+    cq = JuMP.@constraint(pm.model, sum(Qg[g] for g in bus_gens) .== sum(Q[a] for a in bus_arcs) + sum(Qd[d] for d in bus_loads) + (-Wr*B'+Wi*G'))
+
+    if _PMs.report_duals(pm)
+        _PMs.sol(pm, n, :bus, i)[:lam_kcl_r] = cp
+        _PMs.sol(pm, n, :bus, i)[:lam_kcl_i] = cq
+    end
 end

@@ -157,7 +157,7 @@ end
 ""
 function constraint_mc_power_balance(pm::_PMs.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
     Wr = _PMs.var(pm, nw, :Wr, i)
-    Wi = _PMs.var(pm, nw, :Wi, i)
+    # Wi = _PMs.var(pm, nw, :Wi, i)
     P = get(_PMs.var(pm, nw), :P, Dict()); _PMs._check_var_keys(P, bus_arcs, "active power", "branch")
     Q = get(_PMs.var(pm, nw), :Q, Dict()); _PMs._check_var_keys(Q, bus_arcs, "reactive power", "branch")
     Psw  = get(_PMs.var(pm, nw),  :Psw, Dict()); _PMs._check_var_keys(Psw, bus_arcs_sw, "active power", "switch")
@@ -182,7 +182,7 @@ function constraint_mc_power_balance(pm::_PMs.AbstractWModels, nw::Int, i, bus_a
             sum(pg[g][c] for g in bus_gens)
             - sum(ps[s][c] for s in bus_storage)
             - sum(pd[c] for pd in values(bus_pd))
-            - sum(gs[c] for gs in values(bus_gs))*w
+            - sum(gs[c] for gs in values(bus_gs))*Wr[c,c]
         )
         push!(cstr_p, cp)
 
@@ -194,7 +194,7 @@ function constraint_mc_power_balance(pm::_PMs.AbstractWModels, nw::Int, i, bus_a
             sum(qg[g][c] for g in bus_gens)
             - sum(qs[s][c] for s in bus_storage)
             - sum(qd[c] for qd in values(bus_qd))
-            + sum(bs[c] for bs in values(bus_bs))*w
+            + sum(bs[c] for bs in values(bus_bs))*Wr[c,c]
         )
         push!(cstr_q, cq)
     end
