@@ -2,7 +2,7 @@
 # that do not converge using the standard formulations
 "OPF problem with slack power at every bus"
 function run_mc_opf_pbs(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, post_mc_opf_pbs; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_pbs!, kwargs...)
+    return _PMs.run_model(data, model_type, solver, build_mc_opf_pbs; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_pbs!, kwargs...)
 end
 
 
@@ -14,7 +14,7 @@ end
 
 "PF problem with slack power at every bus"
 function run_mc_pf_pbs(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, post_mc_pf_pbs; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_pbs!, kwargs...)
+    return _PMs.run_model(data, model_type, solver, build_mc_pf_pbs; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_pbs!, kwargs...)
 end
 
 
@@ -25,7 +25,7 @@ end
 
 
 "OPF problem with slack power at every bus"
-function post_mc_opf_pbs(pm::_PMs.AbstractPowerModel)
+function build_mc_opf_pbs(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm)
 
     variable_mc_branch_flow(pm)
@@ -60,7 +60,7 @@ end
 
 
 "PF problem with slack power at every bus"
-function post_mc_pf_pbs(pm::_PMs.AbstractPowerModel)
+function build_mc_pf_pbs(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm; bounded=false)
 
     variable_mc_branch_flow(pm; bounded=false)

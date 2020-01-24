@@ -6,7 +6,7 @@
 ######
 "multi-network opf with storage"
 function _run_mn_mc_opf(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, _post_mn_mc_strg_opf; ref_extensions=[ref_add_arcs_trans!], multiconductor=true, multinetwork=true, kwargs...)
+    return _PMs.run_model(data, model_type, solver, _build_mn_mc_strg_opf; ref_extensions=[ref_add_arcs_trans!], multiconductor=true, multinetwork=true, kwargs...)
 end
 
 
@@ -17,7 +17,7 @@ end
 
 
 "multi-network opf with storage"
-function _post_mn_mc_strg_opf(pm::_PMs.AbstractPowerModel)
+function _build_mn_mc_strg_opf(pm::_PMs.AbstractPowerModel)
     for (n, network) in _PMs.nws(pm)
         variable_mc_voltage(pm; nw=n)
         constraint_mc_model_voltage(pm; nw=n)

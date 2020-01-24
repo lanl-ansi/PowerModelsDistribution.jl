@@ -1,6 +1,6 @@
 "Run load shedding problem with storage"
 function run_mc_mld(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, post_mc_mld; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
+    return _PMs.run_model(data, model_type, solver, build_mc_mld; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
 end
 
 
@@ -15,7 +15,7 @@ function run_mc_mld_bf(data::Dict{String,Any}, model_type, solver; kwargs...)
     if model_type != LPLinUBFPowerModel
         Memento.error(_LOGGER, "The problem type mc_mld_bf only supports a limited set of formulations at the moment")
     end
-    return _PMs.run_model(data, model_type, solver, post_mc_mld_bf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld_bf!, kwargs...)
+    return _PMs.run_model(data, model_type, solver, build_mc_mld_bf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld_bf!, kwargs...)
 end
 
 
@@ -27,7 +27,7 @@ end
 
 "Run unit commitment load shedding problem (!relaxed)"
 function run_mc_mld_uc(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, post_mc_mld_uc; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
+    return _PMs.run_model(data, model_type, solver, build_mc_mld_uc; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], solution_builder=solution_mld!, kwargs...)
 end
 
 
@@ -38,7 +38,7 @@ end
 
 
 "Load shedding problem including storage"
-function post_mc_mld(pm::_PMs.AbstractPowerModel)
+function build_mc_mld(pm::_PMs.AbstractPowerModel)
     variable_mc_indicator_bus_voltage(pm; relax=true)
     variable_mc_bus_voltage_on_off(pm)
 
@@ -97,7 +97,7 @@ end
 
 
 "Load shedding problem for Branch Flow model"
-function post_mc_mld_bf(pm::_PMs.AbstractPowerModel)
+function build_mc_mld_bf(pm::_PMs.AbstractPowerModel)
     variable_mc_indicator_bus_voltage(pm; relax=true)
     variable_mc_bus_voltage_on_off(pm)
 
@@ -146,7 +146,7 @@ end
 
 
 "Standard unit commitment (!relaxed) load shedding problem"
-function post_mc_mld_uc(pm::_PMs.AbstractPowerModel)
+function build_mc_mld_uc(pm::_PMs.AbstractPowerModel)
     variable_mc_indicator_bus_voltage(pm; relax=false)
     variable_mc_bus_voltage_on_off(pm)
 

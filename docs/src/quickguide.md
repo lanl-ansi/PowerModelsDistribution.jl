@@ -41,7 +41,7 @@ The following example demonstrates how to break a `run_mc_opf` call into seperat
 
 ```julia
 data = PowerModelsDistribution.parse_file("case3_unbalanced.dss")
-pm = PowerModels.build_model(data, ACPPowerModel, PowerModelsDistribution.post_mc_opf; multiconductor=true)
+pm = PowerModels.instantiate_model(data, ACPPowerModel, PowerModelsDistribution.build_mc_opf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!])
 print(pm.model)
-optimize_model!(pm, with_optimizer(Ipopt.Optimizer))
+optimize_model!(pm, optimizer=with_optimizer(Ipopt.Optimizer))
 ```

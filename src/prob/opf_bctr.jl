@@ -1,6 +1,6 @@
 ""
 function run_mc_opf_bctr(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, post_mc_opf_bctr; multiconductor=true, solution_builder=solution_bctr!, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+    return _PMs.run_model(data, model_type, solver, build_mc_opf_bctr; multiconductor=true, solution_builder=solution_bctr!, ref_extensions=[ref_add_arcs_trans!], kwargs...)
 end
 
 
@@ -11,7 +11,7 @@ end
 
 
 ""
-function post_mc_opf_bctr(pm::_PMs.AbstractPowerModel)
+function build_mc_opf_bctr(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm)
     variable_mc_branch_flow(pm)
     variable_mc_transformer_flow(pm)

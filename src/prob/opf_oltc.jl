@@ -6,7 +6,7 @@ end
 
 ""
 function run_mc_opf_oltc(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, post_mc_opf_oltc; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+    return _PMs.run_model(data, model_type, solver, build_mc_opf_oltc; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
 end
 
 
@@ -17,7 +17,7 @@ end
 
 
 ""
-function post_mc_opf_oltc(pm::_PMs.AbstractPowerModel)
+function build_mc_opf_oltc(pm::_PMs.AbstractPowerModel)
     variable_mc_voltage(pm)
     variable_mc_branch_flow(pm)
     variable_mc_generation(pm)
