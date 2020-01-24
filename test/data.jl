@@ -1,9 +1,10 @@
 @info "running misc data handling tests"
 
 @testset "test impedance to admittance" begin
+    branch = Dict()
     branch["br_r"] = MultiConductorMatrix([1 2;3 4])
     branch["br_x"] = MultiConductorMatrix([1 2;3 4])
-    g,b  = PowerModels.calc_branch_y(branch)
+    g,b  = PMs.calc_branch_y(branch)
 
     @test typeof(g) <: MultiConductorMatrix
     @test isapprox(g.values, [-1.0 0.5; 0.75 -0.25])
@@ -11,7 +12,7 @@
 
     branch["br_r"] = MultiConductorMatrix([1 2 0;3 4 0; 0 0 0])
     branch["br_x"] = MultiConductorMatrix([1 2 0;3 4 0; 0 0 0])
-    g,b  = PowerModels.calc_branch_y(branch)
+    g,b  = PMs.calc_branch_y(branch)
 
     @test typeof(g) <: MultiConductorMatrix
     @test isapprox(g.values, [-1.0 0.5 0; 0.75 -0.25 0; 0 0 0])
