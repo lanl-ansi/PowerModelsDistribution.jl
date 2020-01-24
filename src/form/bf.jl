@@ -1,8 +1,10 @@
+
+
+
 ""
-function variable_mc_voltage(pm::LPLinUBFModel; kwargs...)
-    for cnd in _PMs.conductor_ids(pm)
-        _PMs.variable_voltage_magnitude_sqr(pm; cnd=cnd, kwargs...)
-    end
+function variable_mc_voltage(pm::LPLinUBFModel; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
+    @show "hallo"
+    variable_mc_voltage_magnitude_sqr(pm, nw=nw)
 end
 
 
@@ -12,7 +14,7 @@ end
 
 
 "Defines voltage drop over a branch, linking from and to side voltage magnitude"
-function constraint_mc_voltage_magnitude_difference(pm::LPLinUBFModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
+function constraint_mc_model_voltage_magnitude_difference(pm::LPLinUBFModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
     p_fr = _PMs.var(pm, n, :p, f_idx)
     q_fr = _PMs.var(pm, n, :q, f_idx)
     w_fr = _PMs.var(pm, n, :w, f_bus)
