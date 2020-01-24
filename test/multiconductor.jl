@@ -139,7 +139,7 @@ end
     @testset "test multi-conductor acp opf" begin
         @testset "3-bus 3-conductor case" begin
             mp_data = build_mc_data!("../test/data/matpower/case3.m", conductors=3)
-            result = PMD._run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
+            result = PMD.run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 47267.9; atol = 1e-1)
@@ -157,7 +157,7 @@ end
                 load["pd"][2] /= 2
                 load["pd"][3] /= 3
             end
-            result = PMD._run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
+            result = PMD.run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 17826.8; atol = 1e-1)
@@ -185,7 +185,7 @@ end
         @testset "5-bus 5-conductor case" begin
             mp_data = build_mc_data!("../test/data/matpower/case5.m", conductors=5)
 
-            result = PMD._run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
+            result = PMD.run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 91345.5; atol = 1e-1)
@@ -198,7 +198,7 @@ end
         @testset "30-bus 3-conductor case" begin
             mp_data = build_mc_data!("../test/data/matpower/case30.m", conductors=3)
 
-            result = PMD._run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
+            result = PMD.run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 614.905; atol = 1e-1)
@@ -215,7 +215,7 @@ end
         mp_data = build_mc_data!("../test/data/matpower/case5_dc.m")
 
         @testset "ac 5-bus case" begin
-            result = PMD._run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
+            result = PMD.run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 54468.5; atol = 1e-1)
@@ -238,7 +238,7 @@ end
         end
 
         @testset "dc 5-bus case" begin
-            result = PMD._run_mc_opf(mp_data, PowerModels.DCPPowerModel, ipopt_solver)
+            result = PMD.run_mc_opf(mp_data, PowerModels.DCPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 54272.7; atol = 1e-1)
@@ -249,7 +249,7 @@ end
         end
 
         @testset "soc 5-bus case" begin
-            result = PMD._run_mc_opf(mp_data, PowerModels.SOCWRPowerModel, ipopt_solver)
+            result = PMD.run_mc_opf(mp_data, PowerModels.SOCWRPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 46314.1; atol = 1e-1)
@@ -305,7 +305,7 @@ end
         @testset "test dc polar opf" begin
             mp_data = build_mc_data!("../test/data/matpower/case5.m")
 
-            result = PMD._run_mc_opf(mp_data, PowerModels.DCPPowerModel, ipopt_solver, setting = Dict("output" => Dict("duals" => true)))
+            result = PMD.run_mc_opf(mp_data, PowerModels.DCPPowerModel, ipopt_solver, setting = Dict("output" => Dict("duals" => true)))
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 52839.6; atol = 1e0)
@@ -337,7 +337,7 @@ end
     @testset "test solution feedback" begin
         mp_data = build_mc_data!("../test/data/matpower/case5_asym.m")
 
-        result = PMD._run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
+        result = PMD.run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 52655.7; atol = 1e0)
