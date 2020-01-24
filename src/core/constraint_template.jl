@@ -474,7 +474,7 @@ function constraint_mc_storage_thermal_limit(pm::_PMs.AbstractPowerModel, i::Int
 end
 
 
-"branch thermal constraints from, delegate to PowerModels per conductor"
+"branch thermal constraints from"
 function constraint_mc_thermal_limit_from(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     branch = _PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
@@ -487,7 +487,7 @@ function constraint_mc_thermal_limit_from(pm::_PMs.AbstractPowerModel, i::Int; n
 end
 
 
-"branch thermal constraints to, delegate to PowerModels per conductor"
+"branch thermal constraints to"
 function constraint_mc_thermal_limit_to(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     branch = _PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
@@ -500,7 +500,7 @@ function constraint_mc_thermal_limit_to(pm::_PMs.AbstractPowerModel, i::Int; nw:
 end
 
 
-"voltage magnitude setpoint constraint, delegate to PowerModels per conductor"
+"voltage magnitude setpoint constraint"
 function constraint_mc_voltage_magnitude_setpoint(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
     bus = _PMs.ref(pm, nw, :bus, i)
     vmref = bus["vm"].values #Not sure why this is needed
@@ -508,7 +508,7 @@ function constraint_mc_voltage_magnitude_setpoint(pm::_PMs.AbstractPowerModel, i
 end
 
 
-"generator active power setpoint constraint, delegate to PowerModels"
+"generator active power setpoint constraint"
 function constraint_mc_active_gen_setpoint(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
     pg_set = _PMs.ref(pm, nw, :gen, i)["pg"].values
     constraint_mc_active_gen_setpoint(pm, nw, i, pg_set)
