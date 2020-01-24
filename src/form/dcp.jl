@@ -9,9 +9,7 @@ end
 
 ""
 function variable_mc_bus_voltage_on_off(pm::_PMs.AbstractDCPModel; kwargs...)
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_voltage_angle(pm; cnd=c, kwargs...)
-    end
+    variable_mc_voltage_angle(pm; kwargs...)
 end
 
 
