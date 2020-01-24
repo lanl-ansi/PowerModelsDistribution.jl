@@ -13,23 +13,24 @@ end
 "minimum load delta objective (continuous load shed) with storage"
 function objective_mc_min_load_delta(pm::_PMs.AbstractPowerModel)
     for (n, nw_ref) in _PMs.nws(pm)
+        ncnds = length(_PMs.conductor_ids(pm, n))
         for c in _PMs.conductor_ids(pm, n)
-            _PMs.var(pm, n, c)[:delta_pg] = JuMP.@variable(pm.model,
-                [i in _PMs.ids(pm, n, :gen)], base_name="$(n)_$(c)_delta_pg",
+            _PMs.var(pm, n)[:delta_pg] = Dict(i => JuMP.@variable(pm.model,
+                [c in 1:ncnds], base_name="$(n)_$(i)_delta_pg",
                 start = 0.0
-            )
+            ) for i in _PMs.ids(pm, n, :gen))
             for (i, gen) in nw_ref[:gen]
-                JuMP.@constraint(pm.model, _PMs.var(pm, n, c, :delta_pg, i) >=  (gen["pg"][c] - _PMs.var(pm, n, c, :pg, i)))
-                JuMP.@constraint(pm.model, _PMs.var(pm, n, c, :delta_pg, i) >= -(gen["pg"][c] - _PMs.var(pm, n, c, :pg, i)))
+                JuMP.@constraint(pm.model, _PMs.var(pm, n, :delta_pg, i)[c] >=  (gen["pg"][c] - _PMs.var(pm, n, :pg, i)[c]))
+                JuMP.@constraint(pm.model, _PMs.var(pm, n, :delta_pg, i)[c] >= -(gen["pg"][c] - _PMs.var(pm, n, :pg, i)[c]))
             end
 
-            _PMs.var(pm, n, c)[:delta_ps] = JuMP.@variable(pm.model,
-                [i in _PMs.ids(pm, n, :storage)], base_name="$(n)_$(c)_delta_ps",
+            _PMs.var(pm, n)[:delta_ps] = Dict(i => JuMP.@variable(pm.model,
+                [c in 1:ncnds], base_name="$(n)_$(c)_delta_ps",
                 start = 0.0
-            )
+            ) for i in _PMs.ids(pm, n, :storage))
             for (i, strg) in nw_ref[:storage]
-                JuMP.@constraint(pm.model, _PMs.var(pm, n, c, :delta_ps, i) >=  (strg["ps"][c] - _PMs.var(pm, n, c, :ps, i)))
-                JuMP.@constraint(pm.model, _PMs.var(pm, n, c, :delta_ps, i) >= -(strg["ps"][c] - _PMs.var(pm, n, c, :ps, i)))
+                JuMP.@constraint(pm.model, _PMs.var(pm, n, :delta_ps, i)[c] >=  (strg["ps"][c] - _PMs.var(pm, n, :ps, i)[c]))
+                JuMP.@constraint(pm.model, _PMs.var(pm, n, :delta_ps, i)[c] >= -(strg["ps"][c] - _PMs.var(pm, n, :ps, i)[c]))
             end
 
         end
@@ -44,8 +45,8 @@ function objective_mc_min_load_delta(pm::_PMs.AbstractPowerModel)
                 sum( (                 10*(1 - _PMs.var(pm, n, :z_voltage, i)) for i in keys(nw_ref[:bus]))) +
                 sum( (            M[n][c]*(1 - _PMs.var(pm, n, :z_demand, i))) for i in keys(nw_ref[:load])) +
                 sum( (abs(shunt["gs"][c])*(1 - _PMs.var(pm, n, :z_shunt, i))) for (i,shunt) in nw_ref[:shunt]) +
-                sum( (                     _PMs.var(pm, n, c, :delta_pg, i) for i in keys(nw_ref[:gen]))) +
-                sum( (                     _PMs.var(pm, n, c, :delta_ps, i) for i in keys(nw_ref[:storage])))
+                sum( (                     _PMs.var(pm, n, :delta_pg, i)[c] for i in keys(nw_ref[:gen]))) +
+                sum( (                     _PMs.var(pm, n, :delta_ps, i)[c] for i in keys(nw_ref[:storage])))
             for c in _PMs.conductor_ids(pm, n))
         for (n, nw_ref) in _PMs.nws(pm))
     )
