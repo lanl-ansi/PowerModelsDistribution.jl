@@ -2,8 +2,8 @@
 
 
 ""
-function variable_mc_voltage(pm::LPLinUBFModel; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
-    variable_mc_voltage_magnitude_sqr(pm, nw=nw)
+function variable_mc_voltage(pm::LPLinUBFModel; kwargs...)
+    variable_mc_voltage_magnitude_sqr(pm; kwargs...)
 end
 
 
