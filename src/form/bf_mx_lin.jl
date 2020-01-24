@@ -65,36 +65,6 @@ function variable_mc_branch_flow(pm::LPdiagUBFModel; n_cond::Int=3, nw::Int=pm.c
     @assert(n_cond == 3)
     variable_mc_branch_flow_active(pm, nw=nw, bounded=bounded)
     variable_mc_branch_flow_reactive(pm, nw=nw, bounded=bounded)
-
-    # #Store dictionary with matrix variables by arc
-    # p_mat_dict = Dict{Tuple{Int64,Int64,Int64}, Any}()
-    # q_mat_dict = Dict{Tuple{Int64,Int64,Int64}, Any}()
-    #
-    # for i in _PMs.ref(pm, nw, :arcs)
-    #     l = i[1]
-    #     f_bus = i[2]
-    #     branch = _PMs.ref(pm, nw, :branch, l)
-    #     p_d =  _PMs.var(pm, nw, :p)[i]
-    #     q_d =  _PMs.var(pm, nw, :q)[i]
-    #
-    #     ps_mat = p_d
-    #     qs_mat = q_d
-    #
-    #     g_sh_fr = branch["g_fr"].values
-    #     b_sh_fr = branch["b_fr"].values
-    #
-    #     w_fr_re = _PMs.var(pm, nw, :w)[f_bus]
-    #     W_fr_re = [w_fr_re[1] 0 0; 0 w_fr_re[2] 0; 0 0 w_fr_re[3]]
-    #
-    #     p_mat = ps_mat + diag(( W_fr_re*(g_sh_fr)'))
-    #     q_mat = qs_mat + diag((-W_fr_re*(b_sh_fr)'))
-    #
-    #
-    #     p_mat_dict[i] = p_mat
-    #     q_mat_dict[i] = q_mat
-    # end
-    # _PMs.var(pm, nw)[:P] = p_mat_dict
-    # _PMs.var(pm, nw)[:Q] = q_mat_dict
 end
 
 
@@ -177,10 +147,10 @@ end
 "balanced three-phase phasor"
 function constraint_mc_theta_ref(pm::LPdiagUBFModel, n::Int, i)
     ncnds = length(_PMs.conductor_ids(pm))
-    @assert(ncnds == 3)
+    @assert(ncnds >= 2)
 
-    w_re = _PMs.var(pm, n, :w)[i]
-    JuMP.@constraint(pm.model, w_re[2:3]   .== w_re[1])
+    w = _PMs.var(pm, n, :w)[i]
+    JuMP.@constraint(pm.model, w[2:ncnds]   .== w[1])
 end
 
 
@@ -190,10 +160,11 @@ function constraint_mc_power_balance(pm::LPdiagUBFModel, nw::Int, i, bus_arcs, b
 
     p = get(_PMs.var(pm, nw), :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
     q = get(_PMs.var(pm, nw), :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
-    # Psw  = get(_PMs.var(pm, nw),  :Psw, Dict()); _PMs._check_var_keys(Psw, bus_arcs_sw, "active power", "switch")
-    # Qsw  = get(_PMs.var(pm, nw),  :Qsw, Dict()); _PMs._check_var_keys(Qsw, bus_arcs_sw, "reactive power", "switch")
-    # Pt   = get(_PMs.var(pm, nw),   :Pt, Dict()); _PMs._check_var_keys(Pt, bus_arcs_trans, "active power", "transformer")
-    # Qt   = get(_PMs.var(pm, nw),   :Qt, Dict()); _PMs._check_var_keys(Qt, bus_arcs_trans, "reactive power", "transformer")
+    # TODO support TF and switches with diagonal forms
+    psw  = get(_PMs.var(pm, nw),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(_PMs.var(pm, nw),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(_PMs.var(pm, nw),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
 
     pg = get(_PMs.var(pm, nw), :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
     qg = get(_PMs.var(pm, nw), :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
@@ -203,31 +174,29 @@ function constraint_mc_power_balance(pm::LPdiagUBFModel, nw::Int, i, bus_arcs, b
     cstr_p = []
     cstr_q = []
 
-    for c in _PMs.conductor_ids(pm; nw=nw)
-        cp = JuMP.@constraint(pm.model,
-            sum(p[a][c] for a in bus_arcs)
-            # + sum(Psw[a_sw][c,c] for a_sw in bus_arcs_sw)
-            # + sum(Pt[a_trans][c,c] for a_trans in bus_arcs_trans)
-            ==
-            sum(pg[g][c] for g in bus_gens)
-            - sum(ps[s][c] for s in bus_storage)
-            - sum(pd[c] for pd in values(bus_pd))
-            - sum(gs[c] for gs in values(bus_gs))*w[c]
+    # for c in _PMs.conductor_ids(pm; nw=nw)
+        cstr_p = JuMP.@constraint(pm.model,
+            sum(p[a] for a in bus_arcs)
+            + sum(psw[a_sw] for a_sw in bus_arcs_sw)
+            + sum(pt[a_trans] for a_trans in bus_arcs_trans)
+            .==
+            sum(pg[g] for g in bus_gens)
+            - sum(ps[s] for s in bus_storage)
+            - sum(pd for pd in values(bus_pd))
+            - sum(gs for gs in values(bus_gs))*w[c]
         )
-        push!(cstr_p, cp)
 
-        cq = JuMP.@constraint(pm.model,
-            sum(q[a][c] for a in bus_arcs)
-            # + sum(Qsw[a_sw][c,c] for a_sw in bus_arcs_sw)
-            # + sum(Qt[a_trans][c,c] for a_trans in bus_arcs_trans)
-            ==
-            sum(qg[g][c] for g in bus_gens)
-            - sum(qs[s][c] for s in bus_storage)
-            - sum(qd[c] for qd in values(bus_qd))
-            + sum(bs[c] for bs in values(bus_bs))*w[c]
+        cstr_q = JuMP.@constraint(pm.model,
+            sum(q[a] for a in bus_arcs)
+            + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
+            + sum(qt[a_trans] for a_trans in bus_arcs_trans)
+            .==
+            sum(qg[g] for g in bus_gens)
+            - sum(qs[s] for s in bus_storage)
+            - sum(qd for qd in values(bus_qd))
+            + sum(bs for bs in values(bus_bs))*w[c]
         )
-        push!(cstr_q, cq)
-    end
+    # end
 
     if _PMs.report_duals(pm)
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
