@@ -184,9 +184,9 @@ end
 
 
 "voltage variables, relaxed form"
-function variable_mc_voltage(pm::_PMs.AbstractWRModel; nw::Int=pm.cnw, kwargs...)
-    variable_mc_voltage_magnitude_sqr(pm; nw=nw, kwargs...)
-    variable_mc_voltage_product(pm; nw=nw, kwargs...)
+function variable_mc_voltage(pm::_PMs.AbstractWRModel; kwargs...)
+    variable_mc_voltage_magnitude_sqr(pm; kwargs...)
+    variable_mc_voltage_product(pm; kwargs...)
 end
 
 
