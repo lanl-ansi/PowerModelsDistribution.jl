@@ -201,3 +201,52 @@ function constraint_mc_power_balance(pm::LPdiagUBFModel, nw::Int, i, bus_arcs, b
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
 end
+
+
+""
+function constraint_mc_power_balance(pm::LPLinUBFPowerModel, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    w = _PMs.var(pm, nw, :w, i)
+
+    p = get(_PMs.var(pm, nw), :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
+    q = get(_PMs.var(pm, nw), :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
+
+    psw  = get(_PMs.var(pm, nw),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(_PMs.var(pm, nw),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(_PMs.var(pm, nw),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+
+    pg = get(_PMs.var(pm, nw), :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    qg = get(_PMs.var(pm, nw), :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps   = get(_PMs.var(pm, nw),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
+    qs   = get(_PMs.var(pm, nw),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
+
+    cstr_p = []
+    cstr_q = []
+
+    cstr_p = JuMP.@constraint(pm.model,
+        sum(p[a] for a in bus_arcs)
+        + sum(psw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(pt[a_trans] for a_trans in bus_arcs_trans)
+        .==
+        sum(pg[g] for g in bus_gens)
+        - sum(ps[s] for s in bus_storage)
+        - sum(pd for pd in values(bus_pd))
+        - sum(gs for gs in values(bus_gs))*w
+    )
+
+    cstr_q = JuMP.@constraint(pm.model,
+        sum(q[a] for a in bus_arcs)
+        + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(qt[a_trans] for a_trans in bus_arcs_trans)
+        .==
+        sum(qg[g] for g in bus_gens)
+        - sum(qs[s] for s in bus_storage)
+        - sum(qd for qd in values(bus_qd))
+        + sum(bs for bs in values(bus_bs))*w
+    )
+
+    if _PMs.report_duals(pm)
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
+    end
+end

@@ -1,5 +1,10 @@
 @info "running branch-flow optimal power flow (opf_bf) tests"
 
+calc_vm_w(id, result) = sqrt.(result["solution"]["bus"][id]["w"])
+calc_vm_WR(id, result) = sqrt.(diag(result["solution"]["bus"][id]["Wr"]))
+
+
+
 @testset "test distflow formulations" begin
     @testset "test linearised distflow opf_bf" begin
         @testset "5-bus lplinubf opf_bf" begin
@@ -9,7 +14,10 @@
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 44880; atol = 1e0)
-            @test isapprox(result["solution"]["bus"]["3"]["vm"].values, 0.911466*[1,1,1]; atol = 1e-3)
+            # @test isapprox(result["solution"]["bus"]["3"]["vm"].values, 0.911466*[1,1,1]; atol = 1e-3)
+            vm = calc_vm_w(3, result)
+            @test isapprox(vm, 0.911466*[1,1,1]; atol = 1e-3)
+
         end
 
         @testset "5-bus independent radial identical lplinubf opf_bf" begin
