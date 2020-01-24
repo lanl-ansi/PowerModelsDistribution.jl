@@ -160,7 +160,7 @@ function constraint_mc_power_balance(pm::LPdiagUBFModel, nw::Int, i, bus_arcs, b
 
     p = get(_PMs.var(pm, nw), :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
     q = get(_PMs.var(pm, nw), :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
-    # TODO support TF and switches with diagonal forms
+
     psw  = get(_PMs.var(pm, nw),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
     qsw  = get(_PMs.var(pm, nw),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
     pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
@@ -182,7 +182,7 @@ function constraint_mc_power_balance(pm::LPdiagUBFModel, nw::Int, i, bus_arcs, b
         sum(pg[g] for g in bus_gens)
         - sum(ps[s] for s in bus_storage)
         - sum(pd for pd in values(bus_pd))
-        - sum(gs for gs in values(bus_gs))*w[c]
+        - sum(gs for gs in values(bus_gs))*w
     )
 
     cstr_q = JuMP.@constraint(pm.model,
@@ -193,7 +193,7 @@ function constraint_mc_power_balance(pm::LPdiagUBFModel, nw::Int, i, bus_arcs, b
         sum(qg[g] for g in bus_gens)
         - sum(qs[s] for s in bus_storage)
         - sum(qd for qd in values(bus_qd))
-        + sum(bs for bs in values(bus_bs))*w[c]
+        + sum(bs for bs in values(bus_bs))*w
     )
 
     if _PMs.report_duals(pm)
