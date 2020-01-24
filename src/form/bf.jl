@@ -3,7 +3,6 @@
 
 ""
 function variable_mc_voltage(pm::LPLinUBFModel; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
-    @show "hallo"
     variable_mc_voltage_magnitude_sqr(pm, nw=nw)
 end
 
