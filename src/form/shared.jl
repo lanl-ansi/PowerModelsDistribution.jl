@@ -305,7 +305,7 @@ function constraint_mc_voltage_angle_difference(pm::_PMs.AbstractWModels, n::Int
 
     JuMP.@constraint(pm.model, wi .<= tan.(angmax).*wr)
     JuMP.@constraint(pm.model, wi .>= tan.(angmin).*wr)
-
+    
     for c in 1:ncnds
         _PMs.cut_complex_product_and_angle_difference(pm.model, w_fr[c], w_to[c], wr[c], wi[c], angmin[c], angmax[c])
     end
