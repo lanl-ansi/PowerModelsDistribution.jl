@@ -64,7 +64,7 @@ function build_mc_mld(pm::_PMs.AbstractPowerModel)
     constraint_mc_bus_voltage_on_off(pm)
 
     for i in _PMs.ids(pm, :gen)
-        _PMs.constraint_generation_on_off(pm, i)
+        constraint_mc_generation_on_off(pm, i)
     end
 
     for i in _PMs.ids(pm, :bus)
@@ -120,7 +120,7 @@ function build_mc_mld_bf(pm::_PMs.AbstractPowerModel)
     constraint_mc_bus_voltage_on_off(pm)
 
     for i in _PMs.ids(pm, :gen)
-        _PMs.constraint_generation_on_off(pm, i)
+        constraint_mc_generation_on_off(pm, i)
     end
 
     for i in _PMs.ids(pm, :bus)
@@ -172,7 +172,7 @@ function build_mc_mld_uc(pm::_PMs.AbstractPowerModel)
     constraint_mc_bus_voltage_on_off(pm)
 
     for i in _PMs.ids(pm, :gen)
-        _PMs.constraint_generation_on_off(pm, i)
+        constraint_mc_generation_on_off(pm, i)
     end
 
     for i in _PMs.ids(pm, :bus)

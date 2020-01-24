@@ -23,9 +23,7 @@ end
 
 ""
 function variable_mc_bus_voltage_on_off(pm::_PMs.AbstractACPModel; kwargs...)
-    for c in _PMs.conductor_ids(pm)
-        _PMs.variable_voltage_angle(pm; cnd=c, kwargs...)
-    end
+    variable_mc_voltage_angle(pm; kwargs...)
     variable_mc_voltage_magnitude_on_off(pm; kwargs...)
 
     nw = get(kwargs, :nw, pm.cnw)
@@ -38,7 +36,7 @@ function variable_mc_bus_voltage_on_off(pm::_PMs.AbstractACPModel; kwargs...)
         if !haskey(busref, "va_start")
         # if it has this key, it was set at PM level
             for c in 1:ncnd
-                JuMP.set_start_value(_PMs.var(pm, nw, c, :va, id), theta[c])
+                JuMP.set_start_value(_PMs.var(pm, nw, :va, id)[c], theta[c])
             end
         end
     end
@@ -880,9 +878,9 @@ end
 
 
 "bus voltage on/off constraint for load shed problem"
-function constraint_mc_bus_voltage_on_off(pm::_PMs.AbstractACPModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, kwargs...)
+function constraint_mc_bus_voltage_on_off(pm::_PMs.AbstractACPModel; nw::Int=pm.cnw, kwargs...)
     for (i,bus) in _PMs.ref(pm, nw, :bus)
-        constraint_mc_voltage_magnitude_on_off(pm, i; nw=nw, cnd=cnd)
+        constraint_mc_voltage_magnitude_on_off(pm, i; nw=nw)
     end
 end
 

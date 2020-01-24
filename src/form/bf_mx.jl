@@ -126,12 +126,12 @@ end
 
 
 "Defines branch flow model power flow equations"
-function constraint_mc_flow_losses(pm::AbstractUBFModels, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
-    p_to = _PMs.var(pm, n, :P)[t_idx]
-    q_to = _PMs.var(pm, n, :Q)[t_idx]
+function constraint_mc_flow_losses(pm::AbstractUBFModels, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
+    P_to = _PMs.var(pm, n, :P)[t_idx]
+    Q_to = _PMs.var(pm, n, :Q)[t_idx]
 
-    p_fr = _PMs.var(pm, n, :P)[f_idx]
-    q_fr = _PMs.var(pm, n, :Q)[f_idx]
+    P_fr = _PMs.var(pm, n, :P)[f_idx]
+    Q_fr = _PMs.var(pm, n, :Q)[f_idx]
 
     Wr_to = _PMs.var(pm, n, :Wr)[t_bus]
     Wr_fr = _PMs.var(pm, n, :Wr)[f_bus]
@@ -142,8 +142,8 @@ function constraint_mc_flow_losses(pm::AbstractUBFModels, n::Int, i, f_bus, t_bu
     CCr =  _PMs.var(pm, n, :CCr)[i]
     CCi =  _PMs.var(pm, n, :CCi)[i]
 
-    JuMP.@constraint(pm.model, p_fr + p_to .==  Wr_fr*(g_sh_fr)' + Wi_fr*(b_sh_fr)' + r*CCr - x*CCi +  Wr_to*(g_sh_to)'  + Wi_to*(b_sh_to)')
-    JuMP.@constraint(pm.model, q_fr + q_to .==  Wi_fr*(g_sh_fr)' - Wr_fr*(b_sh_fr)' + x*CCr + r*CCi +  Wi_to*(g_sh_to)'  - Wr_to*(b_sh_to)')
+    JuMP.@constraint(pm.model, P_fr + P_to .==  Wr_fr*(g_sh_fr)' + Wi_fr*(b_sh_fr)' + r*CCr - x*CCi +  Wr_to*(g_sh_to)'  + Wi_to*(b_sh_to)')
+    JuMP.@constraint(pm.model, Q_fr + Q_to .==  Wi_fr*(g_sh_fr)' - Wr_fr*(b_sh_fr)' + x*CCr + r*CCi +  Wi_to*(g_sh_to)'  - Wr_to*(b_sh_to)')
 end
 
 
