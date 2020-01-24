@@ -148,7 +148,7 @@
 
         for k in keys(pmd["gen"]["3"])
             if !(k in ["gen_bus", "index", "name", "source_id", "active_phases"])
-                if isa(pmd["gen"]["3"][k], PMs.MultiConductorValue)
+                if isa(pmd["gen"]["3"][k], PMD.MultiConductorValue)
                     @test all(isapprox.(pmd["gen"]["4"][k].values, pmd["gen"]["3"][k].values; atol=1e-12))
                 else
                     @test all(isapprox.(pmd["gen"]["4"][k], pmd["gen"]["3"][k]; atol=1e-12))
@@ -166,7 +166,7 @@
                     zmult = (basekv_br3/basekv_br8)^2
                     mult = (k in ["br_r", "br_x"]) ? zmult : 1/zmult
                 end
-                if isa(pmd["branch"]["11"][k], PMs.MultiConductorValue)
+                if isa(pmd["branch"]["11"][k], PMD.MultiConductorValue)
                     @test all(isapprox.(pmd["branch"]["3"][k].values.*mult, pmd["branch"]["8"][k].values; atol=1e-12))
                 else
                     @test all(isapprox.(pmd["branch"]["3"][k].*mult, pmd["branch"]["8"][k]; atol=1e-12))
