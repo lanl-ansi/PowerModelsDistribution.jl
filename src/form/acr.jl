@@ -1,7 +1,7 @@
 ""
 function variable_mc_voltage(pm::_PMs.AbstractACRModel; nw=pm.cnw, bounded::Bool=true, kwargs...)
-    variable_mc_voltage_real(pm; nw=nw, kwargs...)
-    variable_mc_voltage_imaginary(pm; nw=nw, kwargs...)
+    variable_mc_voltage_real(pm; nw=nw, bounded=bounded, kwargs...)
+    variable_mc_voltage_imaginary(pm; nw=nw, bounded=bounded, kwargs...)
 
     # local infeasbility issues without proper initialization;
     # convergence issues start when the equivalent angles of the starting point
@@ -39,8 +39,8 @@ function constraint_mc_voltage_magnitude_bounds(pm::_PMs.AbstractACRModel, n::In
     vr = _PMs.var(pm, n, :vr, i)
     vi = _PMs.var(pm, n, :vi, i)
 
-    JuMP.@constraint(pm.model, vmin.^2 .<= (vr.^2 + vi.^2))
-    JuMP.@constraint(pm.model, vmax.^2 .>= (vr.^2 + vi.^2))
+    JuMP.@constraint(pm.model, vmin.^2 .<= vr.^2 + vi.^2)
+    JuMP.@constraint(pm.model, vmax.^2 .>= vr.^2 + vi.^2)
 end
 
 
