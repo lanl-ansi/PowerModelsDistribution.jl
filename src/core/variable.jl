@@ -197,23 +197,25 @@ function variable_mc_voltage_magnitude_sqr(pm::_PMs.AbstractPowerModel; nw::Int=
     bus_cnd = [(i, c) for i in _PMs.ids(pm, nw, :bus) for c in _PMs.conductor_ids(pm)]
 
     if bounded
+        i = bus_cnd[1]
+        @show _PMs.ref(pm, nw, :bus, i[1], "vmin", i[2])
         W = _PMs.var(pm, nw)[:w] = JuMP.@variable(pm.model,
             [i in bus_cnd], base_name="$(nw)_w",
             lower_bound = _PMs.ref(pm, nw, :bus, i[1], "vmin", i[2])^2,
             upper_bound = _PMs.ref(pm, nw, :bus, i[1], "vmax", i[2])^2,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i[1]), "w_start", i[2], 1.001)
+            start = comp_start_value(_PMs.ref(pm, nw, :bus, i[1]), "w_start", i[2], 1.001)
         )
     else
         W = _PMs.var(pm, nw)[:w] = JuMP.@variable(pm.model,
             [i in bus_cnd], base_name="$(nw)_w",
             lower_bound = 0,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i[1]), "w_start", i[2], 1.001)
+            start = comp_start_value(_PMs.ref(pm, nw, :bus, i[1]), "w_start", i[2], 1.001)
         )
     end
 
-    _PMs.var(pm, nw, cnd)[:w] = Dict{Int,Any}()
+    _PMs.var(pm, nw)[:w] = Dict{Int,Any}()
     for i in _PMs.ids(pm, nw, :bus)
-        _PMs.var(pm, nw, cnd, :w)[i] = W[(i, cnd)]
+        _PMs.var(pm, nw, :w)[i] = [W[(i, cnd)] for cnd in _PMs.conductor_ids(pm)]
     end
 end
 
@@ -226,12 +228,12 @@ function variable_mc_voltage_product(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw
 
     WR = _PMs.var(pm, nw)[:wr] = JuMP.@variable(pm.model,
         [b in bus_cnd], base_name="$(nw)_wr",
-        start = _PMs.comp_start_value(b[1] != b[2] ? _PMs.ref(pm, nw, :buspairs, b[1:2]) : _PMs.ref(pm, nw, :bus, b[1]), "wr_start", b[3], 1.0)
+        start = comp_start_value(b[1] != b[2] ? _PMs.ref(pm, nw, :buspairs, b[1:2]) : _PMs.ref(pm, nw, :bus, b[1]), "wr_start", b[3], 1.0)
     )
 
     WI = _PMs.var(pm, nw)[:wi] = JuMP.@variable(pm.model,
         [b in bus_cnd], base_name="$(nw)_wi",
-        start = _PMs.comp_start_value(b[1] != b[2] ? _PMs.ref(pm, nw, :buspairs, b[1:2]) : _PMs.ref(pm, nw, :bus, b[1]), "wi_start", b[3])
+        start = comp_start_value(b[1] != b[2] ? _PMs.ref(pm, nw, :buspairs, b[1:2]) : _PMs.ref(pm, nw, :bus, b[1]), "wi_start", b[3])
     )
 
     if bounded
@@ -260,11 +262,11 @@ function variable_mc_voltage_product(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw
         end
     end
 
-    _PMs.var(pm, nw, cnd)[:wr] = Dict{Tuple{Int,Int},Any}()
-    _PMs.var(pm, nw, cnd)[:wi] = Dict{Tuple{Int,Int},Any}()
+    _PMs.var(pm, nw)[:wr] = Dict{Tuple{Int,Int},Any}()
+    _PMs.var(pm, nw)[:wi] = Dict{Tuple{Int,Int},Any}()
     for (i, j) in _PMs.ids(pm, nw, :buspairs)
-        _PMs.var(pm, nw, cnd, :wr)[(i,j)] = WR[(i, j, cnd, cnd)]
-        _PMs.var(pm, nw, cnd, :wi)[(i,j)] = WI[(i, j, cnd, cnd)]
+        _PMs.var(pm, nw, :wr)[(i,j)] = [WR[(i, j, cnd, cnd)] for cnd in _PMs.conductor_ids(pm)]
+        _PMs.var(pm, nw, :wi)[(i,j)] = [WI[(i, j, cnd, cnd)] for cnd in _PMs.conductor_ids(pm)]
     end
 end
 
@@ -350,7 +352,7 @@ end
 function variable_mc_active_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     _PMs.var(pm, nw, cnd)[:p_slack] = JuMP.@variable(pm.model,
         [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(cnd)_p_slack",
-        start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "p_slack_start", cnd)
+        start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "p_slack_start", cnd)
     )
 end
 
@@ -359,7 +361,7 @@ end
 function variable_mc_reactive_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd)
     _PMs.var(pm, nw, cnd)[:q_slack] = JuMP.@variable(pm.model,
         [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(cnd)_q_slack",
-        start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "q_slack_start", cnd)
+        start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "q_slack_start", cnd)
     )
 end
 
@@ -484,13 +486,13 @@ function variable_mc_indicator_demand(pm::_PMs.AbstractPowerModel; nw::Int=pm.cn
             [i in _PMs.ids(pm, nw, :load)], base_name="$(nw)_z_demand",
             lower_bound = 0,
             upper_bound = 1,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :load, i), "z_demand_on_start", cnd, 1.0)
+            start = comp_start_value(_PMs.ref(pm, nw, :load, i), "z_demand_on_start", cnd, 1.0)
         )
     else
         _PMs.var(pm, nw)[:z_demand] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :load)], base_name="$(nw)_z_demand",
             binary = true,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :load, i), "z_demand_on_start", cnd, 1.0)
+            start = comp_start_value(_PMs.ref(pm, nw, :load, i), "z_demand_on_start", cnd, 1.0)
         )
     end
 end
@@ -503,13 +505,13 @@ function variable_mc_indicator_shunt(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw
             [i in _PMs.ids(pm, nw, :shunt)], base_name="$(nw)_z_shunt",
             lower_bound = 0,
             upper_bound = 1,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :shunt, i), "z_shunt_on_start", cnd, 1.0)
+            start = comp_start_value(_PMs.ref(pm, nw, :shunt, i), "z_shunt_on_start", cnd, 1.0)
         )
     else
         _PMs.var(pm, nw)[:z_shunt] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :shunt)], base_name="$(nw)_z_shunt",
             binary=true,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :shunt, i), "z_shunt_on_start", cnd, 1.0)
+            start = comp_start_value(_PMs.ref(pm, nw, :shunt, i), "z_shunt_on_start", cnd, 1.0)
         )
     end
 end
@@ -521,14 +523,14 @@ function variable_mc_indicator_bus_voltage(pm::_PMs.AbstractPowerModel; nw::Int=
         _PMs.var(pm, nw)[:z_voltage] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_z_voltage",
             binary = true,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "z_voltage_start", 1, 1.0)
+            start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "z_voltage_start", 1, 1.0)
         )
     else
         _PMs.var(pm, nw)[:z_voltage] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_z_voltage",
             lower_bound = 0,
             upper_bound = 1,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "z_voltage_start", 1, 1.0)
+            start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "z_voltage_start", 1, 1.0)
         )
     end
 end
@@ -546,14 +548,14 @@ function variable_mc_indicator_storage(pm::_PMs.AbstractPowerModel; nw::Int=pm.c
         _PMs.var(pm, nw)[:z_storage] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :storage)], base_name="$(nw)-z_storage",
             binary = true,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :storage, i), "z_storage_start", 1, 1.0)
+            start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "z_storage_start", 1, 1.0)
         )
     else
         _PMs.var(pm, nw)[:z_storage] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :storage)], base_name="$(nw)_z_storage",
             lower_bound = 0,
             upper_bound = 1,
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :storage, i), "z_storage_start", 1, 1.0)
+            start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "z_storage_start", 1, 1.0)
         )
     end
 end
@@ -576,7 +578,7 @@ function variabe_mc_on_off_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=p
         [i in _PMs.ids(pm, nw, :storage)], base_name="$(nw)_$(cnd)_ps",
         lower_bound = inj_lb[i],
         upper_bound = inj_ub[i],
-        start = _PMs.comp_start_value(_PMs.ref(pm, nw, :storage, i), "ps_start", cnd)
+        start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "ps_start", cnd)
     )
 end
 
@@ -587,7 +589,7 @@ function variable_mc_on_off_storage_reactive(pm::_PMs.AbstractPowerModel; nw::In
         [i in _PMs.ids(pm, nw, :storage)], base_name="$(nw)_$(cnd)_qs",
         lower_bound = min(0, _PMs.ref(pm, nw, :storage, i, "qmin", cnd)),
         upper_bound = max(0, _PMs.ref(pm, nw, :storage, i, "qmax", cnd)),
-        start = _PMs.comp_start_value(_PMs.ref(pm, nw, :storage, i), "qs_start", cnd)
+        start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "qs_start", cnd)
     )
 end
 
@@ -598,7 +600,7 @@ function variable_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel; n
         [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(cnd)_w",
         lower_bound = 0,
         upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax", cnd)^2,
-        start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", cnd, 1.001)
+        start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", cnd, 1.001)
     )
 end
 
@@ -610,7 +612,7 @@ function variable_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel; nw::I
             [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(cnd)_vm",
             lower_bound = 0,
             upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax", cnd),
-            start = _PMs.comp_start_value(_PMs.ref(pm, nw, :bus, i), "vm_start", cnd, 1.0)
+            start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "vm_start", cnd, 1.0)
         )
     end
 end
