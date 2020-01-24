@@ -1,7 +1,7 @@
-TESTLOG = Memento.getlogger(PowerModels)
+# TESTLOG = Memento.getlogger(PowerModels)
 
 "an example of building a multi-phase model in an extention package"
-function build_tp_opf(pm::_PMs.AbstractPowerModel)
+function build_tp_opf(pm::PMs.AbstractPowerModel)
     for c in PowerModels.conductor_ids(pm)
         PowerModels.variable_voltage(pm, cnd=c)
         PowerModels.variable_generation(pm, cnd=c)
@@ -63,17 +63,17 @@ end
         @test pti_data == pti_json_file
 
         mc_data = build_mc_data!("../test/data/matpower/case5.m")
-        mc_data["gen"]["1"]["pmax"] = MultiConductorVector([Inf, Inf, Inf])
-        mc_data["gen"]["1"]["qmin"] = MultiConductorVector([-Inf, -Inf, -Inf])
-        mc_data["gen"]["1"]["bool_test"] = MultiConductorVector([true, true, false])
-        mc_data["gen"]["1"]["string_test"] = MultiConductorVector(["a", "b", "c"])
+        mc_data["gen"]["1"]["pmax"] = PMD.MultiConductorVector([Inf, Inf, Inf])
+        mc_data["gen"]["1"]["qmin"] = PMD.MultiConductorVector([-Inf, -Inf, -Inf])
+        mc_data["gen"]["1"]["bool_test"] = PMD.MultiConductorVector([true, true, false])
+        mc_data["gen"]["1"]["string_test"] = PMD.MultiConductorVector(["a", "b", "c"])
         mc_data["branch"]["1"]["br_x"][1,2] = -Inf
         mc_data["branch"]["1"]["br_x"][1,3] = Inf
 
         mc_data_json = PowerModels.parse_json(JSON.json(mc_data))
         @test mc_data_json == mc_data
 
-        mc_data["gen"]["1"]["nan_test"] = MultiConductorVector([0, NaN, 0])
+        mc_data["gen"]["1"]["nan_test"] = PMD.MultiConductorVector([0, NaN, 0])
         mc_data_json = PowerModels.parse_json(JSON.json(mc_data))
         @test isnan(mc_data_json["gen"]["1"]["nan_test"][2])
     end
@@ -136,10 +136,10 @@ end
     end
 
 
-    @testset "test multi-conductor ac opf" begin
+    @testset "test multi-conductor acp opf" begin
         @testset "3-bus 3-conductor case" begin
             mp_data = build_mc_data!("../test/data/matpower/case3.m", conductors=3)
-            result = PowerModels._run_mc_opf(mp_data, ACPPowerModel, ipopt_solver)
+            result = PMD._run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 47267.9; atol = 1e-1)
@@ -157,7 +157,7 @@ end
                 load["pd"][2] /= 2
                 load["pd"][3] /= 3
             end
-            result = PowerModels._run_mc_opf(mp_data, ACPPowerModel, ipopt_solver)
+            result = PMD._run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 17826.8; atol = 1e-1)
@@ -170,7 +170,7 @@ end
 
         @testset "3-bus 3-conductor case with theta_ref=pi" begin
             mp_data = build_mc_data!("../test/data/matpower/case3.m", conductors=3)
-            pm = PowerModels.instantiate_model(mp_data, ACRPowerModel, PowerModels._build_mc_opf, multiconductor=true)
+            pm = PowerModels.instantiate_model(mp_data, PowerModels.ACRPowerModel, PMD._build_mc_opf, multiconductor=true)
             result = PowerModels.optimize_model!(pm, optimizer=ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
@@ -185,7 +185,7 @@ end
         @testset "5-bus 5-conductor case" begin
             mp_data = build_mc_data!("../test/data/matpower/case5.m", conductors=5)
 
-            result = PowerModels._run_mc_opf(mp_data, ACPPowerModel, ipopt_solver)
+            result = PMD._run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 91345.5; atol = 1e-1)
@@ -198,7 +198,7 @@ end
         @testset "30-bus 3-conductor case" begin
             mp_data = build_mc_data!("../test/data/matpower/case30.m", conductors=3)
 
-            result = PowerModels._run_mc_opf(mp_data, ACPPowerModel, ipopt_solver)
+            result = PMD._run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 614.905; atol = 1e-1)
@@ -215,7 +215,7 @@ end
         mp_data = build_mc_data!("../test/data/matpower/case5_dc.m")
 
         @testset "ac 5-bus case" begin
-            result = PowerModels._run_mc_opf(mp_data, ACPPowerModel, ipopt_solver)
+            result = PMD._run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 54468.5; atol = 1e-1)
@@ -227,7 +227,7 @@ end
 
 
         @testset "iv 5-bus case" begin
-            result = PowerModels._run_mc_opf_iv(mp_data, IVRPowerModel, ipopt_solver)
+            result = PMD._run_mc_opf_iv(mp_data, PowerModels.IVRPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 54468.5; atol = 1e-1)
@@ -238,7 +238,7 @@ end
         end
 
         @testset "dc 5-bus case" begin
-            result = PowerModels._run_mc_opf(mp_data, DCPPowerModel, ipopt_solver)
+            result = PMD._run_mc_opf(mp_data, PowerModels.DCPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 54272.7; atol = 1e-1)
@@ -249,7 +249,7 @@ end
         end
 
         @testset "soc 5-bus case" begin
-            result = PowerModels._run_mc_opf(mp_data, SOCWRPowerModel, ipopt_solver)
+            result = PMD._run_mc_opf(mp_data, PowerModels.SOCWRPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 46314.1; atol = 1e-1)
@@ -267,7 +267,7 @@ end
         mp_strg_data = build_mc_data!("../test/data/matpower/case5_strg.m")
 
         @testset "ac 5-bus uc case" begin
-            result = PowerModels._run_mc_ucopf(mp_uc_data, ACPPowerModel, juniper_solver)
+            result = PMD._run_mc_ucopf(mp_uc_data, PowerModels.ACPPowerModel, juniper_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 54810.0; atol = 1e-1)
@@ -275,7 +275,7 @@ end
         end
 
         @testset "ac 5-bus storage case" begin
-            result = PowerModels._run_mc_ucopf(mp_strg_data, ACPPowerModel, juniper_solver)
+            result = PMD._run_mc_ucopf(mp_strg_data, PowerModels.ACPPowerModel, juniper_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 52633.8; atol = 1e-1)
@@ -283,7 +283,7 @@ end
 
 
         @testset "dc 5-bus uc case" begin
-            result = PowerModels._run_mc_ucopf(mp_uc_data, DCPPowerModel, cbc_solver)
+            result = PMD._run_mc_ucopf(mp_uc_data, PowerModels.DCPPowerModel, cbc_solver)
 
             @test result["termination_status"] == OPTIMAL
             @test isapprox(result["objective"], 52839.6; atol = 1e-1)
@@ -291,7 +291,7 @@ end
         end
 
         @testset "dc 5-bus storage case" begin
-            result = PowerModels._run_mc_ucopf(mp_strg_data, DCPPowerModel, cbc_solver)
+            result = PMD._run_mc_ucopf(mp_strg_data, PowerModels.DCPPowerModel, cbc_solver)
 
             @test result["termination_status"] == OPTIMAL
             @test isapprox(result["objective"], 52081.3; atol = 1e-1)
@@ -305,7 +305,7 @@ end
         @testset "test dc polar opf" begin
             mp_data = build_mc_data!("../test/data/matpower/case5.m")
 
-            result = PowerModels._run_mc_opf(mp_data, DCPPowerModel, ipopt_solver, setting = Dict("output" => Dict("duals" => true)))
+            result = PMD._run_mc_opf(mp_data, PowerModels.DCPPowerModel, ipopt_solver, setting = Dict("output" => Dict("duals" => true)))
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 52839.6; atol = 1e0)
@@ -337,7 +337,7 @@ end
     @testset "test solution feedback" begin
         mp_data = build_mc_data!("../test/data/matpower/case5_asym.m")
 
-        result = PowerModels._run_mc_opf(mp_data, ACPPowerModel, ipopt_solver)
+        result = PMD._run_mc_opf(mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 52655.7; atol = 1e0)
@@ -352,8 +352,8 @@ end
         mp_data_2p = PowerModels.parse_file("../test/data/matpower/case3.m")
         mp_data_3p = PowerModels.parse_file("../test/data/matpower/case3.m")
 
-        PowerModels.make_multiconductor!(mp_data_2p, 2)
-        PowerModels.make_multiconductor!(mp_data_3p, 3)
+        PMD.make_multiconductor!(mp_data_2p, 2)
+        PMD.make_multiconductor!(mp_data_3p, 3)
 
         @test_throws(TESTLOG, ErrorException, PowerModels.update_data!(mp_data_2p, mp_data_3p))
         @test_throws(TESTLOG, ErrorException, PowerModels._check_keys(mp_data_3p, ["load"]))
@@ -405,7 +405,7 @@ end
         @test_warn(TESTLOG, "this code only supports angmax values in -90 deg. to 90 deg., tightening the value on branch 1, conductor 1 from 180.0 to 60.0 deg.",
             PowerModels.correct_voltage_angle_differences!(mp_data_2p))
 
-        @test_warn(TESTLOG, "skipping network that is already multiconductor", PowerModels.make_multiconductor!(mp_data_3p, 3))
+        @test_warn(TESTLOG, "skipping network that is already multiconductor", PMD.make_multiconductor!(mp_data_3p, 3))
 
         mp_data_3p["load"]["1"]["pd"] = mp_data_3p["load"]["1"]["qd"] = [0, 0, 0]
         mp_data_3p["shunt"]["1"] = Dict("gs"=>[0,0,0], "bs"=>[0,0,0], "status"=>1, "shunt_bus"=>1, "index"=>1)
@@ -469,7 +469,7 @@ end
 
     @testset "multiconductor extensions" begin
         mp_data = build_mc_data!("../test/data/matpower/case3.m")
-        pm = instantiate_model(mp_data, PowerModels.ACPPowerModel, build_tp_opf; multiconductor=true)
+        pm = PowerModels.instantiate_model(mp_data, PowerModels.ACPPowerModel, build_tp_opf; multiconductor=true)
 
         @test haskey(var(pm, pm.cnw), :cnd)
         @test length(var(pm, pm.cnw)) == 1
@@ -478,7 +478,7 @@ end
         @test length(var(pm, pm.cnw, :cnd, 1)) == 8
         @test length(var(pm)) == 8
         @test haskey(var(pm, pm.cnw, :cnd, 1), :vm)
-        @test var(pm, :vm, 1) == var(pm, pm.cnw, pm.ccnd, :vm, 1)
+        @test PowerModels.var(pm, :vm, 1) == PowerModels.var(pm, pm.cnw, pm.ccnd, :vm, 1)
 
         @test haskey(PowerModels.con(pm, pm.cnw), :cnd)
         @test length(PowerModels.con(pm, pm.cnw)) == 1
@@ -500,7 +500,7 @@ end
         mp_data = build_mc_data!("../test/data/matpower/case3.m")
 
         a, b, c, d = mp_data["branch"]["1"]["br_r"], mp_data["branch"]["1"]["br_x"], mp_data["branch"]["1"]["b_fr"], mp_data["branch"]["1"]["b_to"]
-        e = MultiConductorVector([0.225, 0.225, 0.225, 0.225])
+        e = PMD.MultiConductorVector([0.225, 0.225, 0.225, 0.225])
         angs_rad = mp_data["branch"]["1"]["angmin"]
 
         # Transpose
@@ -518,10 +518,10 @@ end
         @test all(z.values - [0.0403 0.0 0.0; 0.0 0.0403 0.0; 0.0 0.0 0.0403] .<= 1e-12)
         @test all(w.values - [0.104839 0.0 0.0; 0.0 0.104839 0.0; 0.0 0.0 0.104839] .<= 1e-12)
 
-        @test isa(x, MultiConductorMatrix)
-        @test isa(y, MultiConductorMatrix)
-        @test isa(z, MultiConductorMatrix)
-        @test isa(w, MultiConductorMatrix)
+        @test isa(x, PMD.MultiConductorMatrix)
+        @test isa(y, PMD.MultiConductorMatrix)
+        @test isa(z, PMD.MultiConductorMatrix)
+        @test isa(w, PMD.MultiConductorMatrix)
 
         # Basic Math Vectors
         x = c + d
@@ -538,11 +538,11 @@ end
         @test all(w.values - [4.444444444444445, 4.444444444444445, 4.444444444444445] .<= 1e-12)
         @test all(u.values - d.values .<= 1e-12)
 
-        @test isa(x, MultiConductorVector)
-        @test isa(y, MultiConductorVector)
-        @test isa(z, MultiConductorVector)
-        @test isa(w, MultiConductorVector)
-        @test isa(u, MultiConductorVector)
+        @test isa(x, PMD.MultiConductorVector)
+        @test isa(y, PMD.MultiConductorVector)
+        @test isa(z, PMD.MultiConductorVector)
+        @test isa(w, PMD.MultiConductorVector)
+        @test isa(u, PMD.MultiConductorVector)
 
         # Broadcasting
         @test all(a .+ c - [0.29   0.225  0.225; 0.225  0.29   0.225; 0.225  0.225  0.29] .<= 1e-12)
@@ -568,13 +568,13 @@ end
         @test all(angs_deg.values - [-30.0, -30.0, -30.0] .<= 1e-12)
         @test all(angs_deg_rad.values - angs_rad.values .<= 1e-12)
 
-        @test isa(angs_deg, MultiConductorVector)
-        @test isa(deg2rad(angs_deg), MultiConductorVector)
+        @test isa(angs_deg, PMD.MultiConductorVector)
+        @test isa(deg2rad(angs_deg), PMD.MultiConductorVector)
 
         a_rad = rad2deg(a)
         @test all(a_rad.values - [3.72423 0.0 0.0; 0.0 3.72423 0.0; 0.0 0.0 3.72423] .<= 1e-12)
-        @test isa(rad2deg(a), MultiConductorMatrix)
-        @test isa(deg2rad(a), MultiConductorMatrix)
+        @test isa(rad2deg(a), PMD.MultiConductorMatrix)
+        @test isa(deg2rad(a), PMD.MultiConductorMatrix)
 
         Memento.setlevel!(TESTLOG, "warn")
         @test_nowarn show(devnull, a)
@@ -588,11 +588,11 @@ end
 
         # Test broadcasting edge-case
         v = ones(Real, 3)
-        mcv = MultiConductorVector(v)
-        @test all(floor.(mcv) .+ mcv .== MultiConductorVector(floor.(v) .+ v))
+        mcv = PMD.MultiConductorVector(v)
+        @test all(floor.(mcv) .+ mcv .== PMD.MultiConductorVector(floor.(v) .+ v))
 
         m = LinearAlgebra.diagm(0 => v)
-        mcm = MultiConductorMatrix(m)
-        @test all(floor.(mcm) .+ mcm .== MultiConductorMatrix(floor.(m) .+ m))
+        mcm = PMD.MultiConductorMatrix(m)
+        @test all(floor.(mcm) .+ mcm .== PMD.MultiConductorMatrix(floor.(m) .+ m))
     end
 end

@@ -31,14 +31,14 @@ sd(pm, pmd_data, name) = pd(sol, pmd_data, name)+im*qd(sol, pmd_data, name)
 
 function build_mc_data!(base_data; conductors::Int=3)
     mp_data = PowerModels.parse_file(base_data)
-    PowerModels.make_multiconductor!(mp_data, conductors)
+    PMD.make_multiconductor!(mp_data, conductors)
     return mp_data
 end
 
 
 function build_mn_mc_data!(base_data; replicates::Int=3, conductors::Int=3)
     mp_data = PowerModels.parse_file(base_data)
-    PowerModels.make_multiconductor!(mp_data, conductors)
+    PMD.make_multiconductor!(mp_data, conductors)
     mn_mc_data = PowerModels.replicate(mp_data, replicates)
     mn_mc_data["conductors"] = mn_mc_data["nw"]["1"]["conductors"]
     return mn_mc_data
@@ -52,11 +52,11 @@ function build_mn_mc_data!(base_data_1, base_data_2; conductors_1::Int=3, conduc
     @assert mp_data_1["per_unit"] == mp_data_2["per_unit"]
 
     if conductors_1 > 0
-        PowerModels.make_multiconductor!(mp_data_1, conductors_1)
+        PMD.make_multiconductor!(mp_data_1, conductors_1)
     end
 
     if conductors_2 > 0
-        PowerModels.make_multiconductor!(mp_data_2, conductors_2)
+        PMD.make_multiconductor!(mp_data_2, conductors_2)
     end
 
     mn_data = Dict(
@@ -77,4 +77,9 @@ function build_mn_mc_data!(base_data_1, base_data_2; conductors_1::Int=3, conduc
     PowerModels.standardize_cost_terms!(mn_data)
 
     return mn_data
+end
+
+function build_mn_data(base_data; replicates::Int=2)
+    mp_data = PowerModels.parse_file(base_data)
+    return PowerModels.replicate(mp_data, replicates)
 end

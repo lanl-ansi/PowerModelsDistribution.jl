@@ -81,7 +81,7 @@ end
 
 ""
 function _run_mc_ucopf(file, model_type::Type, solver; kwargs...)
-    return run_model(file, model_type, solver, _build_mc_ucopf; solution_builder = _solution_uc!, multiconductor=true, kwargs...)
+    return _PMs.run_model(file, model_type, solver, _build_mc_ucopf; solution_builder = _solution_uc!, multiconductor=true, kwargs...)
 end
 
 ""
@@ -152,7 +152,7 @@ end
 
 ""
 function _run_mc_opf(file, model_type::Type, optimizer; kwargs...)
-    return run_model(file, model_type, optimizer, _build_mc_opf; multiconductor=true, kwargs...)
+    return _PMs.run_model(file, model_type, optimizer, _build_mc_opf; multiconductor=true, kwargs...)
 end
 
 ""
@@ -281,7 +281,7 @@ end
 
 ""
 function _run_mn_mc_opf_strg(file, model_type::Type, optimizer; kwargs...)
-    return run_model(file, model_type, optimizer, _build_mn_mc_opf_strg; multinetwork=true, multiconductor=true, kwargs...)
+    return _PMs.run_model(file, model_type, optimizer, _build_mn_mc_opf_strg; multinetwork=true, multiconductor=true, kwargs...)
 end
 
 "warning: this model is not realistic or physically reasonable, it is only for test coverage"
