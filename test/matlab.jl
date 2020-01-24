@@ -10,11 +10,11 @@
         @test length(data["gen"]) == 5
         @test length(data["branch"]) == 4
 
-        @test isa(data["bus"]["1"]["vm"], MultiConductorVector{Float64})
-        @test isa(data["load"]["1"]["pd"], MultiConductorVector{Float64})
-        @test isa(data["gen"]["1"]["pg"], MultiConductorVector{Float64})
-        @test isa(data["branch"]["1"]["b_fr"], PMs.MultiConductorMatrix{Float64})
-        @test isa(data["branch"]["1"]["br_x"], PMs.MultiConductorMatrix{Float64})
+        @test isa(data["bus"]["1"]["vm"], PMD.MultiConductorVector{Float64})
+        @test isa(data["load"]["1"]["pd"], PMD.MultiConductorVector{Float64})
+        @test isa(data["gen"]["1"]["pg"], PMD.MultiConductorVector{Float64})
+        @test isa(data["branch"]["1"]["b_fr"], PMD.MultiConductorMatrix{Float64})
+        @test isa(data["branch"]["1"]["br_x"], PMD.MultiConductorMatrix{Float64})
 
         @test haskey(data["bus"]["1"], "bus_name")
     end
@@ -28,6 +28,6 @@
         @test length(data["gen"]) == 5
         @test length(data["branch"]) == 4
 
-        @test isa(data["shunt"]["1"]["bs"], MultiConductorVector{Float64})
+        @test isa(data["shunt"]["1"]["bs"], PMD.MultiConductorVector{Float64})
     end
 end
