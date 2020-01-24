@@ -40,46 +40,50 @@ end
 
 
 "Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)"
-function constraint_mc_ohms_yt_from(pm::_PMs.AbstractWRModels, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
-    p_fr = _PMs.var(pm, n, c, :p, f_idx)
-    q_fr = _PMs.var(pm, n, c, :q, f_idx)
-    w    = _PMs.var(pm, n, :w)
-    wr   = _PMs.var(pm, n, :wr)
-    wi   = _PMs.var(pm, n, :wi)
+function constraint_mc_ohms_yt_from(pm::_PMs.AbstractWRModels, n::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
+    for c in _PMs.conductor_ids(pm, n)
+        p_fr = _PMs.var(pm, n, :p, f_idx)[c]
+        q_fr = _PMs.var(pm, n, :q, f_idx)[c]
+        w    = _PMs.var(pm, n, :w)
+        wr   = _PMs.var(pm, n, :wr)
+        wi   = _PMs.var(pm, n, :wi)
 
-    #TODO extend to shunt matrices; this ignores the off-diagonals
-    JuMP.@constraint(pm.model, p_fr ==  ( g_fr[c,c]+g[c,c]) * w[(f_bus, c)] +
-                                sum( g[c,d] * wr[(f_bus, f_bus, c, d)] +
-                                     b[c,d] * wi[(f_bus, f_bus, c, d)] for d in _PMs.conductor_ids(pm) if d != c) +
-                                sum(-g[c,d] * wr[(f_bus, t_bus, c, d)] +
-                                    -b[c,d] * wi[(f_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm)) )
-    JuMP.@constraint(pm.model, q_fr == -( b_fr[c,c]+b[c,c]) * w[(f_bus, c)] -
-                                sum( b[c,d] * wr[(f_bus, f_bus, c, d)] -
-                                     g[c,d] * wi[(f_bus, f_bus, c, d)] for d in _PMs.conductor_ids(pm) if d != c) -
-                                sum(-b[c,d] * wr[(f_bus, t_bus, c, d)] +
-                                     g[c,d] * wi[(f_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm)) )
+        #TODO extend to shunt matrices; this ignores the off-diagonals
+        JuMP.@constraint(pm.model, p_fr ==  ( g_fr[c,c]+g[c,c]) * w[f_bus][c] +
+                                    sum( g[c,d] * wr[(f_bus, f_bus, c, d)] +
+                                         b[c,d] * wi[(f_bus, f_bus, c, d)] for d in _PMs.conductor_ids(pm) if d != c) +
+                                    sum(-g[c,d] * wr[(f_bus, t_bus, c, d)] +
+                                        -b[c,d] * wi[(f_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm)) )
+        JuMP.@constraint(pm.model, q_fr == -( b_fr[c,c]+b[c,c]) * w[f_bus][c] -
+                                    sum( b[c,d] * wr[(f_bus, f_bus, c, d)] -
+                                         g[c,d] * wi[(f_bus, f_bus, c, d)] for d in _PMs.conductor_ids(pm) if d != c) -
+                                    sum(-b[c,d] * wr[(f_bus, t_bus, c, d)] +
+                                         g[c,d] * wi[(f_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm)) )
+        end
 end
 
 
 "Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)"
-function constraint_mc_ohms_yt_to(pm::_PMs.AbstractWRModels, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
-    q_to = _PMs.var(pm, n, c, :q, t_idx)
-    p_to = _PMs.var(pm, n, c, :p, t_idx)
-    w    = _PMs.var(pm, n, :w)
-    wr   = _PMs.var(pm, n, :wr)
-    wi   = _PMs.var(pm, n, :wi)
+function constraint_mc_ohms_yt_to(pm::_PMs.AbstractWRModels, n::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
+    for c in _PMs.conductor_ids(pm, n)
+        q_to = _PMs.var(pm, n, :q, t_idx)[c]
+        p_to = _PMs.var(pm, n, :p, t_idx)[c]
+        w    = _PMs.var(pm, n, :w)
+        wr   = _PMs.var(pm, n, :wr)
+        wi   = _PMs.var(pm, n, :wi)
 
-    #TODO extend to shunt matrices; this ignores the off-diagonals
-    JuMP.@constraint(pm.model, p_to ==  ( g_to[c,c]+g[c,c]) * w[(t_bus, c)] +
-                                sum( g[c,d] * wr[(t_bus, t_bus, c, d)] +
-                                     b[c,d] *-wi[(t_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm) if d != c) +
-                                sum(-g[c,d] * wr[(f_bus, t_bus, c, d)] +
-                                    -b[c,d] *-wi[(f_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm)) )
-    JuMP.@constraint(pm.model, q_to == -( b_to[c,c]+b[c,c]) * w[(t_bus, c)] -
-                                sum( b[c,d] * wr[(t_bus, t_bus, c, d)] -
-                                     g[c,d] *-wi[(t_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm) if d != c) -
-                                sum(-b[c,d] * wr[(f_bus, t_bus, c, d)] +
-                                     g[c,d] *-wi[(f_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm)) )
+        #TODO extend to shunt matrices; this ignores the off-diagonals
+        JuMP.@constraint(pm.model, p_to ==  ( g_to[c,c]+g[c,c]) * w[t_bus][c] +
+                                    sum( g[c,d] * wr[(t_bus, t_bus, c, d)] +
+                                         b[c,d] *-wi[(t_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm) if d != c) +
+                                    sum(-g[c,d] * wr[(f_bus, t_bus, c, d)] +
+                                        -b[c,d] *-wi[(f_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm)) )
+        JuMP.@constraint(pm.model, q_to == -( b_to[c,c]+b[c,c]) * w[t_bus][c] -
+                                    sum( b[c,d] * wr[(t_bus, t_bus, c, d)] -
+                                         g[c,d] *-wi[(t_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm) if d != c) -
+                                    sum(-b[c,d] * wr[(f_bus, t_bus, c, d)] +
+                                         g[c,d] *-wi[(f_bus, t_bus, c, d)] for d in _PMs.conductor_ids(pm)) )
+    end
 end
 
 
@@ -151,6 +155,55 @@ function constraint_mc_power_balance_shed(pm::_PMs.AbstractWModels, nw::Int, i, 
         - sum(qd.*z_demand[n] for (n,qd) in bus_qd)
         + sum(bs*1.0^2  .*z_shunt[n] for (n,bs) in bus_bs)*w
     )
+end
+
+
+""
+function constraint_mc_power_balance(pm::_PMs.AbstractWRModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    w = _PMs.var(pm, nw, :w, i)
+
+    p = get(_PMs.var(pm, nw), :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
+    q = get(_PMs.var(pm, nw), :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
+
+    psw  = get(_PMs.var(pm, nw),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(_PMs.var(pm, nw),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(_PMs.var(pm, nw),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+
+    pg = get(_PMs.var(pm, nw), :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    qg = get(_PMs.var(pm, nw), :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps   = get(_PMs.var(pm, nw),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
+    qs   = get(_PMs.var(pm, nw),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
+
+    cstr_p = []
+    cstr_q = []
+
+    cstr_p = JuMP.@constraint(pm.model,
+        sum(p[a] for a in bus_arcs)
+        + sum(psw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(pt[a_trans] for a_trans in bus_arcs_trans)
+        .==
+        sum(pg[g] for g in bus_gens)
+        - sum(ps[s] for s in bus_storage)
+        - sum(pd for pd in values(bus_pd))
+        - sum(gs for gs in values(bus_gs))*w
+    )
+
+    cstr_q = JuMP.@constraint(pm.model,
+        sum(q[a] for a in bus_arcs)
+        + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(qt[a_trans] for a_trans in bus_arcs_trans)
+        .==
+        sum(qg[g] for g in bus_gens)
+        - sum(qs[s] for s in bus_storage)
+        - sum(qd for qd in values(bus_qd))
+        + sum(bs for bs in values(bus_bs))*w
+    )
+
+    if _PMs.report_duals(pm)
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
+    end
 end
 
 
@@ -235,5 +288,25 @@ function constraint_mc_voltage_angle_difference(pm::_PMs.AbstractPolarModels, n:
     for c in _PMs.conductor_ids(pm; nw=n)
         JuMP.@constraint(pm.model, va_fr[c] - va_to[c] <= angmax[c])
         JuMP.@constraint(pm.model, va_fr[c] - va_to[c] >= angmin[c])
+    end
+end
+
+
+""
+function constraint_mc_voltage_angle_difference(pm::_PMs.AbstractWModels, n::Int, f_idx, angmin, angmax)
+    i, f_bus, t_bus = f_idx
+
+    ncnds = length(_PMs.conductor_ids(pm, n))
+
+    w_fr = _PMs.var(pm, n, :w, f_bus)
+    w_to = _PMs.var(pm, n, :w, t_bus)
+    wr   = [_PMs.var(pm, n, :wr)[(f_bus, t_bus, c, c)] for c in 1:ncnds]
+    wi   = [_PMs.var(pm, n, :wi)[(f_bus, t_bus, c, c)] for c in 1:ncnds]
+
+    JuMP.@constraint(pm.model, wi .<= tan.(angmax).*wr)
+    JuMP.@constraint(pm.model, wi .>= tan.(angmin).*wr)
+
+    for c in 1:ncnds
+        _PMs.cut_complex_product_and_angle_difference(pm.model, w_fr[c], w_to[c], wr[c], wi[c], angmin[c], angmax[c])
     end
 end
