@@ -34,20 +34,20 @@ function constraint_mc_model_current(pm::LPLinUBFModel, n::Int, i, f_bus, f_idx,
 end
 
 
-"Defines branch flow model power flow loss equations"
-function constraint_mc_flow_losses(pm::LPLinUBFModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
-    tm = [1,1,1] #TODO
-    for c in _PMs.conductor_ids(pm)
-        constraint_mc_flow_losses(pm, n, i, f_bus, t_bus, f_idx, t_idx, r, x, diag(g_sh_fr), diag(g_sh_to), diag(b_sh_fr), diag(b_sh_to), tm)
-    end
-end
+# "Defines branch flow model power flow loss equations"
+# function constraint_mc_flow_losses(pm::LPLinUBFModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
+#     # tm = [1,1,1] #TODO
+#     # for c in _PMs.conductor_ids(pm)
+#         constraint_mc_flow_losses(pm, n, i, f_bus, t_bus, f_idx, t_idx, r, x, diag(g_sh_fr), diag(g_sh_to), diag(b_sh_fr), diag(b_sh_to), tm)
+#     # end
+# end
 
 
-"Defines branch flow model power flow equations"
-function constraint_mc_model_voltage_magnitude_difference(pm::LPLinUBFModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
-    tm = [1,1,1] #TODO
-    constraint_mc_voltage_magnitude_difference(pm, n, i, f_bus, t_bus, f_idx, t_idx, r, x, diag(g_sh_fr), diag(b_sh_fr), tm)
-end
+# "Defines branch flow model power flow equations"
+# function constraint_mc_model_voltage_magnitude_difference(pm::LPLinUBFModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
+#     # tm = [1,1,1] #TODO
+#     constraint_mc_voltage_magnitude_difference(pm, n, i, f_bus, t_bus, f_idx, t_idx, r, x, diag(g_sh_fr), diag(b_sh_fr), tm)
+# end
 
 
 "Defines branch flow model power flow equations"
@@ -59,8 +59,8 @@ function constraint_mc_flow_losses(pm::LPLinUBFModel, n::Int, i, f_bus, t_bus, f
     w_fr = _PMs.var(pm, n, :w, f_bus)
     w_to = _PMs.var(pm, n, :w, t_bus)
 
-    JuMP.@constraint(pm.model, p_fr + p_to .==  g_sh_fr.*(w_fr./tm.^2) +  g_sh_to.*w_to)
-    JuMP.@constraint(pm.model, q_fr + q_to .== -b_sh_fr.*(w_fr./tm.^2) + -b_sh_to.*w_to)
+    JuMP.@constraint(pm.model, p_fr + p_to .==  diag(g_sh_fr).*(w_fr./tm.^2) +  diag(g_sh_to).*w_to)
+    JuMP.@constraint(pm.model, q_fr + q_to .== -diag(b_sh_fr).*(w_fr./tm.^2) + -diag(b_sh_to).*w_to)
 end
 
 

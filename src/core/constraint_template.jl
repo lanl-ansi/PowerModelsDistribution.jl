@@ -153,14 +153,14 @@ function constraint_mc_flow_losses(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=
 
     r = branch["br_r"].values
     x = branch["br_x"].values
-    g_sh_fr = diag(branch["g_fr"].values)
-    g_sh_to = diag(branch["g_to"].values)
-    b_sh_fr = diag(branch["b_fr"].values)
-    b_sh_to = diag(branch["b_to"].values)
+    g_sh_fr = branch["g_fr"].values
+    g_sh_to = branch["g_to"].values
+    b_sh_fr = branch["b_fr"].values
+    b_sh_to = branch["b_to"].values
 
     tm = [1, 1, 1] #TODO
 
-    constraint_mc_flow_losses(pm::_PMs.AbstractPowerModel, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
+    constraint_mc_flow_losses(pm, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
 end
 
 
