@@ -1,3 +1,10 @@
+
+"`vm[i] == vmref`"
+function constraint_mc_voltage_magnitude_setpoint(pm::_PMs.AbstractWModels, n::Int, i::Int, vmref)
+    w = _PMs.var(pm, n, :w, i)
+    JuMP.@constraint(pm.model, w .== vmref.^2)
+end
+
 ""
 function constraint_mc_power_balance_slack(pm::_PMs.AbstractWModels, nw::Int, c::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
     w    = _PMs.var(pm, nw, c, :w, i)
