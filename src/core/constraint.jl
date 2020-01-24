@@ -62,3 +62,16 @@ function constraint_mc_active_gen_setpoint(pm::_PMs.AbstractPowerModel, n::Int, 
     pg_var = _PMs.var(pm, n, :pg, i)
     JuMP.@constraint(pm.model, pg_var .== pg)
 end
+
+
+"on/off constraint for generators"
+function constraint_mc_generation_on_off(pm::_PMs.AbstractPowerModel, n::Int, i::Int, pmin, pmax, qmin, qmax)
+    pg = _PMs.var(pm, n, :pg, i)
+    qg = _PMs.var(pm, n, :qg, i)
+    z = _PMs.var(pm, n, :z_gen, i)
+
+    JuMP.@constraint(pm.model, pg .<= pmax.*z)
+    JuMP.@constraint(pm.model, pg .>= pmin.*z)
+    JuMP.@constraint(pm.model, qg .<= qmax.*z)
+    JuMP.@constraint(pm.model, qg .>= qmin.*z)
+end

@@ -1,7 +1,7 @@
 ### generic features that apply to all active-power-only (apo) approximations
 
 "do nothing, no reactive power in this model"
-function variable_mc_transformer_reactive_flow(pm::_PMs.AbstractActivePowerModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, bounded=true)
+function variable_mc_transformer_reactive_flow(pm::_PMs.AbstractActivePowerModel; nw::Int=pm.cnw, bounded=true)
 end
 
 
@@ -30,22 +30,26 @@ end
 ######## Lossless Models ########
 "Create variables for the active power flowing into all transformer windings"
 function variable_mc_transformer_active_flow(pm::_PMs.AbstractAPLossLessModels; nw::Int=pm.cnw, bounded=true)
+    ncnds = length(_PMs.conductor_ids(pm))
+
+    pt = _PMs.var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in 1:ncnds], base_name="$(nw)_pt_$((l,i,j))", start=0
+        ) for (l,i,j) in _PMs.ref(pm, nw, :arcs_from_trans)
+    )
+
     for cnd in _PMs.conductor_ids(pm)
-        pt = _PMs.var(pm, nw, cnd)[:pt] = JuMP.@variable(pm.model,
-            [(l,i,j) in _PMs.ref(pm, nw, :arcs_from_trans)],
-            base_name="$(nw)_$(cnd)_p_trans",
-            start=0
-        )
+
         if bounded
             for arc in _PMs.ref(pm, nw, :arcs_from_trans)
                 tr_id = arc[1]
                 flow_lb  = -_PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
                 flow_ub  =  _PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
-                JuMP.set_lower_bound(pt[arc], flow_lb)
-                JuMP.set_upper_bound(pt[arc], flow_ub)
+                JuMP.set_lower_bound(pt[arc][cnd], flow_lb)
+                JuMP.set_upper_bound(pt[arc][cnd], flow_ub)
             end
         end
 
+        #TODO what does this dfo, and p does not seem to be defined!
         for (l,branch) in _PMs.ref(pm, nw, :branch)
             if haskey(branch, "pf_start")
                 f_idx = (l, branch["f_bus"], branch["t_bus"])
@@ -53,35 +57,35 @@ function variable_mc_transformer_active_flow(pm::_PMs.AbstractAPLossLessModels; 
             end
         end
 
-        # this explicit type erasure is necessary
-        p_expr = Dict{Any,Any}( ((l,i,j), pt[(l,i,j)]) for (l,i,j) in _PMs.ref(pm, nw, :arcs_from_trans) )
-        p_expr = merge(p_expr, Dict( ((l,j,i), -1.0*pt[(l,i,j)]) for (l,i,j) in _PMs.ref(pm, nw, :arcs_from_trans)))
-        _PMs.var(pm, nw, cnd)[:pt] = p_expr
     end
+
+    # this explicit type erasure is necessary
+    p_expr = Dict{Any,Any}( ((l,i,j), pt[(l,i,j)]) for (l,i,j) in _PMs.ref(pm, nw, :arcs_from_trans) )
+    p_expr = merge(p_expr, Dict( ((l,j,i), -1.0*pt[(l,i,j)]) for (l,i,j) in _PMs.ref(pm, nw, :arcs_from_trans)))
+    _PMs.var(pm, nw)[:pt] = p_expr
 end
 
 
 "Do nothing, this model is symmetric"
-function constraint_mc_ohms_yt_to(pm::_PMs.AbstractAPLossLessModels, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
+function constraint_mc_ohms_yt_to(pm::_PMs.AbstractAPLossLessModels, n::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
 end
 
 ### Network Flow Approximation ###
 "nothing to do, no voltage angle variables"
-function constraint_mc_theta_ref(pm::_PMs.AbstractNFAModel, n::Int, c::Int, d)
+function constraint_mc_theta_ref(pm::_PMs.AbstractNFAModel, n::Int, d)
 end
 
 
 "nothing to do, no voltage angle variables"
-function constraint_mc_ohms_yt_from(pm::_PMs.AbstractNFAModel, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
+function constraint_mc_ohms_yt_from(pm::_PMs.AbstractNFAModel, n::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
 end
 
 
 "nothing to do, this model is symmetric"
-function constraint_mc_ohms_yt_to(pm::_PMs.AbstractNFAModel, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
+function constraint_mc_ohms_yt_to(pm::_PMs.AbstractNFAModel, n::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
 end
 
 
 "nothing to do, this model is symmetric"
 function constraint_mc_trans(pm::_PMs.AbstractNFAModel, i::Int; nw::Int=pm.cnw)
 end
-

@@ -394,11 +394,11 @@ end
 "KCL for load shed problem with transformers"
 function constraint_mc_power_balance_shed(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     for cnd in _PMs.conductor_ids(pm; nw=nw)
-        if !haskey(_PMs.con(pm, nw, cnd), :kcl_p)
-            _PMs.con(pm, nw, cnd)[:kcl_p] = Dict{Int,JuMP.ConstraintRef}()
+        if !haskey(_PMs.con(pm, nw), :kcl_p)
+            _PMs.con(pm, nw)[:kcl_p] = Dict{Int,Array{JuMP.ConstraintRef,1}}()
         end
-        if !haskey(_PMs.con(pm, nw, cnd), :kcl_q)
-            _PMs.con(pm, nw, cnd)[:kcl_q] = Dict{Int,JuMP.ConstraintRef}()
+        if !haskey(_PMs.con(pm, nw), :kcl_q)
+            _PMs.con(pm, nw)[:kcl_q] = Dict{Int,Array{JuMP.ConstraintRef,1}}()
         end
 
         bus = _PMs.ref(pm, nw, :bus, i)
@@ -410,13 +410,13 @@ function constraint_mc_power_balance_shed(pm::_PMs.AbstractPowerModel, i::Int; n
         bus_loads = _PMs.ref(pm, nw, :bus_loads, i)
         bus_shunts = _PMs.ref(pm, nw, :bus_shunts, i)
 
-        bus_pd = Dict(k => _PMs.ref(pm, nw, :load, k, "pd", cnd) for k in bus_loads)
-        bus_qd = Dict(k => _PMs.ref(pm, nw, :load, k, "qd", cnd) for k in bus_loads)
+        bus_pd = Dict(k => _PMs.ref(pm, nw, :load, k, "pd") for k in bus_loads)
+        bus_qd = Dict(k => _PMs.ref(pm, nw, :load, k, "qd") for k in bus_loads)
 
-        bus_gs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "gs", cnd) for k in bus_shunts)
-        bus_bs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "bs", cnd) for k in bus_shunts)
+        bus_gs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "gs") for k in bus_shunts)
+        bus_bs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "bs") for k in bus_shunts)
 
-        constraint_mc_power_balance_shed(pm, nw, cnd, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+        constraint_mc_power_balance_shed(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
     end
 end
 
@@ -523,4 +523,11 @@ Notable examples include IVRPowerModel and ACRPowerModel
 function constraint_mc_voltage_magnitude_bounds(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     bus = _PMs.ref(pm, nw, :bus, i)
     constraint_mc_voltage_magnitude_bounds(pm, nw, i, bus["vmin"], bus["vmax"])
+end
+
+
+function constraint_mc_generation_on_off(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    gen = _PMs.ref(pm, nw, :gen, i)
+
+    constraint_mc_generation_on_off(pm, nw, i, gen["pmin"], gen["pmax"], gen["qmin"], gen["qmax"])
 end

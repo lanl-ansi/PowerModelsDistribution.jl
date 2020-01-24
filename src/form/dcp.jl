@@ -23,39 +23,40 @@ Creates Ohms constraints (yt post fix indicates that Y and T values are in recta
 p[f_idx] == -b*(t[f_bus] - t[t_bus])
 ```
 """
-function constraint_mc_ohms_yt_from(pm::_PMs.AbstractDCPModel, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
-    p_fr  = _PMs.var(pm, n, c,  :p, f_idx)
-    va_fr = [_PMs.var(pm, n, d, :va, f_bus) for d in _PMs.conductor_ids(pm)]
-    va_to = [_PMs.var(pm, n, d, :va, t_bus) for d in _PMs.conductor_ids(pm)]
+function constraint_mc_ohms_yt_from(pm::_PMs.AbstractDCPModel, n::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
+    p_fr  = _PMs.var(pm, n,  :p, f_idx)
+    va_fr = _PMs.var(pm, n, :va, f_bus)
+    va_to = _PMs.var(pm, n, :va, t_bus)
 
-    JuMP.@constraint(pm.model, p_fr == -sum(b[c,d]*(va_fr[c] - va_to[d]) for d in _PMs.conductor_ids(pm)))
+    for c in _PMs.conductor_ids(pm, n)
+        JuMP.@constraint(pm.model, p_fr[c] == -sum(b[c,d]*(va_fr[c] - va_to[d]) for d in _PMs.conductor_ids(pm)))
+    end
 end
 
 
 "power balance constraint with line shunts and transformers for load shed problem, DCP formulation"
-function constraint_mc_power_balance_shed(pm::_PMs.AbstractDCPModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
-    p        = get(_PMs.var(pm, nw, c),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
-    pg       = get(_PMs.var(pm, nw, c),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
-    ps       = get(_PMs.var(pm, nw, c),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
-    psw      = get(_PMs.var(pm, nw, c),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    pt       = get(_PMs.var(pm, nw, c),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+function constraint_mc_power_balance_shed(pm::_PMs.AbstractDCPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    p        = get(_PMs.var(pm, nw),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
+    pg       = get(_PMs.var(pm, nw),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    ps       = get(_PMs.var(pm, nw),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
+    psw      = get(_PMs.var(pm, nw),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    pt       = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
     z_demand = _PMs.var(pm, nw, :z_demand)
     z_shunt  = _PMs.var(pm, nw, :z_shunt)
 
-    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model,
+    _PMs.con(pm, nw, :kcl_p)[i] = JuMP.@constraint(pm.model,
         sum(p[a] for a in bus_arcs)
         + sum(psw[a_sw] for a_sw in bus_arcs_sw)
         + sum(pt[a_trans] for a_trans in bus_arcs_trans)
-        ==
+        .==
         sum(pg[g] for g in bus_gens)
         - sum(ps[s] for s in bus_storage)
-        - sum(pd*z_demand[n] for (n,pd) in bus_pd)
-        - sum(gs*1.0^2*z_shunt[n] for (n,gs) in bus_gs)
+        - sum(pd.*z_demand[n] for (n,pd) in bus_pd)
+        - sum(gs*1.0^2 .*z_shunt[n] for (n,gs) in bus_gs)
     )
 end
 
 
 "on/off bus voltage constraint for DCP formulation, nothing to do"
-function constraint_mc_bus_voltage_on_off(pm::_PMs.AbstractDCPModel; nw::Int=pm.cnw, cnd::Int=pm.ccnd, kwargs...)
+function constraint_mc_bus_voltage_on_off(pm::_PMs.AbstractDCPModel; nw::Int=pm.cnw, kwargs...)
 end
-
