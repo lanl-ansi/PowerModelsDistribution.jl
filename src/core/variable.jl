@@ -368,13 +368,13 @@ end
 
 "Creates variables for both `active` and `reactive` power flow at each transformer."
 function variable_mc_transformer_flow(pm::_PMs.AbstractPowerModel; kwargs...)
-    variable_mc_transformer_active_flow(pm; kwargs...)
-    variable_mc_transformer_reactive_flow(pm; kwargs...)
+    variable_mc_transformer_flow_active(pm; kwargs...)
+    variable_mc_transformer_flow_reactive(pm; kwargs...)
 end
 
 
 "Create variables for the active power flowing into all transformer windings."
-function variable_mc_transformer_active_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_transformer_flow_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -411,7 +411,7 @@ end
 
 
 "Create variables for the reactive power flowing into all transformer windings."
-function variable_mc_transformer_reactive_flow(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_transformer_flow_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 

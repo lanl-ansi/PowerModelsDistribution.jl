@@ -58,3 +58,43 @@ end
 "on/off bus voltage constraint for DCP formulation, nothing to do"
 function constraint_mc_bus_voltage_on_off(pm::_PMs.AbstractDCPModel; nw::Int=pm.cnw, kwargs...)
 end
+
+
+""
+function variable_mc_branch_flow_active(pm::_PMs.AbstractAPLossLessModels; nw::Int=pm.cnw, bounded::Bool = true, report::Bool = true)
+    cnds = _PMs.conductor_ids(pm)
+    ncnds = length(cnds)
+
+    p = Dict((l,i,j) => JuMP.@variable(pm.model,
+        [c in 1:ncnds], base_name="$(nw)_($l,$i,$j)_p",
+        start = comp_start_value(ref(pm, nw, :branch, l), "p_start", c)
+    ) for (l,i,j) in ref(pm, nw, :arcs_from))
+
+    if bounded
+        for cnd in cnds
+            flow_lb, flow_ub = _PMs.ref_calc_branch_flow_bounds(ref(pm, nw, :branch), ref(pm, nw, :bus), cnd)
+
+            for arc in ref(pm, nw, :arcs_from)
+                l,i,j = arc
+                if !isinf(flow_lb[l])
+                    JuMP.set_lower_bound(p[arc][cnd], flow_lb[l])
+                end
+                if !isinf(flow_ub[l])
+                    JuMP.set_upper_bound(p[arc][cnd], flow_ub[l])
+                end
+            end
+        end
+    end
+
+    for (l,branch) in ref(pm, nw, :branch)
+        if haskey(branch, "pf_start")
+            f_idx = (l, branch["f_bus"], branch["t_bus"])
+            JuMP.set_start_value(p[f_idx], branch["pf_start"])
+        end
+    end
+
+    # this explicit type erasure is necessary
+    p_expr = Dict{Any,Any}( ((l,i,j), p[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_from) )
+    p_expr = merge(p_expr, Dict( ((l,j,i), -1.0*p[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_from)))
+    _PMs.var(pm, nw)[:p] = p_expr
+end
