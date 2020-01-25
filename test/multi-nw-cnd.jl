@@ -114,7 +114,7 @@
 
             @test length(mn_mc_data["nw"]) == 3
 
-            result = PowerModels._run_mn_mc_opf(mn_mc_data, ACPPowerModel, ipopt_solver)
+            result = PMD._run_mn_mc_opf(mn_mc_data, PMs.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 157967.0; atol = 1e0)
@@ -159,7 +159,7 @@
 
             @test length(mn_mc_data["nw"]) == 2
 
-            result = PowerModels._run_mn_mc_opf(mn_mc_data, ACPPowerModel, ipopt_solver)
+            result = PMD._run_mn_mc_opf(mn_mc_data, PMs.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 2.67529e5; atol = 1e0)
@@ -176,7 +176,7 @@
 
             @test length(mn_mc_data["nw"]) == 2
 
-            result = PowerModels._run_mn_mc_opf(mn_mc_data, ACPPowerModel, ipopt_solver)
+            result = PMD._run_mn_mc_opf(mn_mc_data, PMs.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 120623.0; atol = 1e1)
@@ -198,21 +198,21 @@
         mn_mc_data = build_mn_mc_data!("../test/data/matpower/case5_dc.m", "../test/data/matpower/case14.m", conductors_1=4, conductors_2=0)
 
         @testset "ac 5/14-bus case" begin
-            result = PowerModels._run_mn_mc_opf(mn_mc_data, ACPPowerModel, ipopt_solver)
+            result = PMD._run_mn_mc_opf(mn_mc_data, PMs.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 80706.2; atol = 1e-1)
         end
 
         @testset "dc 5/14-bus case" begin
-            result = PowerModels._run_mn_mc_opf(mn_mc_data, DCPPowerModel, ipopt_solver)
+            result = PowerModels._run_mn_mc_opf(mn_mc_data, PMs.DCPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 80006.2; atol = 1e-1)
         end
 
         @testset "soc 5/14-bus case" begin
-            result = PowerModels._run_mn_mc_opf(mn_mc_data, SOCWRPowerModel, ipopt_solver)
+            result = PowerModels._run_mn_mc_opf(mn_mc_data, PMs.SOCWRPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 69827.3; atol = 1e-1)
@@ -225,7 +225,7 @@
         mn_mc_data = build_mn_mc_data!("../test/data/matpower/case5_strg.m")
 
         @testset "ac 5-bus storage case" begin
-            result = PowerModels._run_mn_mc_opf_strg(mn_mc_data, PowerModels.ACPPowerModel, ipopt_solver)
+            result = PMD._run_mn_mc_opf_strg(mn_mc_data, PowerModels.ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 1.59445e5; atol = 1e2)
@@ -252,7 +252,7 @@
         =#
 
         @testset "nfa 5 bus storage case" begin
-            result = PowerModels._run_mn_mc_opf_strg(mn_mc_data, PowerModels.NFAPowerModel, ipopt_solver)
+            result = PMD._run_mn_mc_opf_strg(mn_mc_data, PowerModels.NFAPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 132030.0; atol = 1e2)
@@ -263,7 +263,7 @@
     @testset "test solution feedback" begin
         mn_mc_data = build_mn_mc_data!("../test/data/matpower/case5_dc.m", "../test/data/matpower/case5_asym.m", conductors_1=4, conductors_2=0)
 
-        result = PowerModels._run_mn_mc_opf(mn_mc_data, ACPPowerModel, ipopt_solver)
+        result = PMD._run_mn_mc_opf(mn_mc_data, PMs.ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 90176.6; atol = 1e0)
@@ -277,7 +277,7 @@
         mn_data = build_mn_data("../test/data/matpower/case5.m")
 
         Memento.setlevel!(TESTLOG, "warn")
-        @test_nowarn PowerModels.make_multiconductor!(mn_data, 3)
+        @test_nowarn PMD.make_multiconductor!(mn_data, 3)
         @test_nowarn PowerModels.check_conductors(mn_data)
         Memento.setlevel!(TESTLOG, "error")
 

@@ -1,8 +1,5 @@
 ""
 function run_mc_pf_bf(data::Dict{String,Any}, model_type, solver; kwargs...)
-    if model_type != SDPUBFPowerModel && model_type != SOCNLPUBFPowerModel && model_type != SOCConicUBFPowerModel && model_type != LPLinUBFPowerModel && model_type != LPdiagUBFPowerModel && model_type !=  SOCBFPowerModel
-        Memento.error(_LOGGER, "The problem type mc_opf_bf at the moment only supports a limited set of formulations")
-    end
     return _PMs.run_model(data, model_type, solver, build_mc_pf_bf; ref_extensions=[ref_add_arcs_trans!], multiconductor=true, kwargs...)
 end
 

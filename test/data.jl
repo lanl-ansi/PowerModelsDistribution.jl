@@ -1,7 +1,7 @@
 @info "running misc data handling tests"
 
 @testset "test impedance to admittance" begin
-    branch = Dict()
+    branch = Dict{String, Any}()
     branch["br_r"] = MultiConductorMatrix([1 2;3 4])
     branch["br_x"] = MultiConductorMatrix([1 2;3 4])
     g,b  = PMs.calc_branch_y(branch)
