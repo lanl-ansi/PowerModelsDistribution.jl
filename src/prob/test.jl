@@ -237,7 +237,7 @@ end
 
 ""
 function _run_mn_mc_opf(file, model_type::Type, optimizer; kwargs...)
-    return run_model(file, model_type, optimizer, _build_mn_mc_opf; multinetwork=true, multiconductor=true, kwargs...)
+    return _PMs.run_model(file, model_type, optimizer, _build_mn_mc_opf; multinetwork=true, multiconductor=true, kwargs...)
 end
 
 ""
@@ -286,7 +286,7 @@ end
 
 "warning: this model is not realistic or physically reasonable, it is only for test coverage"
 function _build_mn_mc_opf_strg(pm::_PMs.AbstractPowerModel)
-    for (n, network) in nws(pm)
+    for (n, network) in _PMs.nws(pm)
         variable_storage_energy(pm, nw=n)
         variable_storage_charge(pm, nw=n)
         variable_storage_discharge(pm, nw=n)
