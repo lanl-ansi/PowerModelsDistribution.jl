@@ -321,83 +321,14 @@ function constraint_mc_ohms_yt_to(pm::_PMs.AbstractACPModel, n::Int, f_bus, t_bu
 end
 
 
-"Links the voltage at both windings of a fixed tap transformer"
-function constraint_mc_transformer_voltage(pm::_PMs.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, tm::MultiConductorVector, Tv_fr, Tv_im, Cv_to)
-    ncnd  = 3
-    # from side
-    vm_fr = [_PMs.var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
-    va_fr = [_PMs.var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
-    # to side
-    vm_to = [_PMs.var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
-    va_to = [_PMs.var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
-    # the intermediate bus voltage is saved as an expression
-    # vm_im[c] = vm_to[c]*tm[c]*Cv_to
-    # va_im = va_to
-    for n in 1:size(Tv_fr)[1]
-        JuMP.@NLconstraint(pm.model,
-              sum(Tv_fr[n,c]*vm_fr[c]*cos(va_fr[c]) for c in 1:ncnd)
-            ==sum(Tv_im[n,c]*(vm_to[c]*tm[c]*Cv_to)*cos(va_to[c]) for c in 1:ncnd)
-        )
-        JuMP.@NLconstraint(pm.model,
-              sum(Tv_fr[n,c]*vm_fr[c]*sin(va_fr[c]) for c in 1:ncnd)
-            ==sum(Tv_im[n,c]*(vm_to[c]*tm[c]*Cv_to)*sin(va_to[c]) for c in 1:ncnd)
-        )
-    end
-end
-
-
-"Links the power flowing into both windings of a fixed tap transformer"
-function constraint_mc_transformer_flow(pm::_PMs.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, tm::MultiConductorVector, Ti_fr, Ti_im, Cv_to)
-    ncnd  = 3
-    # from side variables
-    vm_fr = [_PMs.var(pm, nw, c, :vm, f_bus) for c in 1:ncnd]
-    va_fr = [_PMs.var(pm, nw, c, :va, f_bus) for c in 1:ncnd]
-    p_fr = [_PMs.var(pm, nw, c, :pt, f_idx) for c in 1:ncnd]
-    q_fr = [_PMs.var(pm, nw, c, :qt, f_idx) for c in 1:ncnd]
-    # to side
-    vm_to = [_PMs.var(pm, nw, c, :vm, t_bus) for c in 1:ncnd]
-    va_to = [_PMs.var(pm, nw, c, :va, t_bus) for c in 1:ncnd]
-    p_to = [_PMs.var(pm, nw, c, :pt, t_idx) for c in 1:ncnd]
-    q_to = [_PMs.var(pm, nw, c, :qt, t_idx) for c in 1:ncnd]
-    # the intermediate bus voltage is saved as an expression
-    # vm_im[c] = vm_to[c]*tm[c]*Cv_to
-    # va_im = va_to
-    for n in 1:size(Ti_fr)[1]
-        # i_fr_re[c] = 1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c]))
-        # i_fr_im[c] = 1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c]))
-        # i_to_re[c] = 1/vm_to[c]*(p_to[c]*cos(va_im[c])+q_to[c]*sin(va_im[c]))
-        # i_to_im[c] = 1/vm_to[c]*(p_to[c]*sin(va_im[c])-q_to[c]*cos(va_im[c]))
-        JuMP.@NLconstraint(pm.model,
-              sum(Ti_fr[n,c]*
-                    1/vm_fr[c]*(p_fr[c]*cos(va_fr[c])+q_fr[c]*sin(va_fr[c])) # i_fr_re[c]
-              for c in 1:ncnd)
-            + sum(Ti_im[n,c]*
-                    1/(vm_to[c]*tm[c]*Cv_to)*(p_to[c]*cos(va_to[c])+q_to[c]*sin(va_to[c])) # i_to_re[c]
-              for c in 1:ncnd)
-            == 0
-        )
-        JuMP.@NLconstraint(pm.model,
-              sum(Ti_fr[n,c]*
-                    1/vm_fr[c]*(p_fr[c]*sin(va_fr[c])-q_fr[c]*cos(va_fr[c])) # i_fr_im[c]
-              for c in 1:ncnd)
-            + sum(Ti_im[n,c]*
-                    1/(vm_to[c]*tm[c]*Cv_to)*(p_to[c]*sin(va_to[c])-q_to[c]*cos(va_to[c])) # i_to_im[c]
-              for c in 1:ncnd)
-            == 0
-        )
-    end
-end
-
-
 function constraint_mc_trans_yy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-
-    vm_fr = [_PMs.var(pm, nw, p, :vm, f_bus) for p in f_cnd]
-    vm_to = [_PMs.var(pm, nw, p, :vm, t_bus) for p in t_cnd]
-    va_fr = [_PMs.var(pm, nw, p, :va, f_bus) for p in f_cnd]
-    va_to = [_PMs.var(pm, nw, p, :va, t_bus) for p in t_cnd]
+    vm_fr = _PMs.var(pm, nw, :vm, f_bus)[f_cnd]
+    vm_to = _PMs.var(pm, nw, :vm, t_bus)[t_cnd]
+    va_fr = _PMs.var(pm, nw, :va, f_bus)[f_cnd]
+    va_to = _PMs.var(pm, nw, :va, t_bus)[t_cnd]
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
-    tm = [tm_fixed[p] ? tm_set[p] : _PMs.var(pm, nw, p, :tap, trans_id) for p in _PMs.conductor_ids(pm)]
+    tm = [tm_fixed[p] ? tm_set[p] : _PMs.var(pm, nw, :tap, trans_id)[p] for p in _PMs.conductor_ids(pm)]
 
 
     for p in _PMs.conductor_ids(pm)
@@ -410,10 +341,10 @@ function constraint_mc_trans_yy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::In
         JuMP.@constraint(pm.model, va_fr[p] == va_to[p] + pol_angle)
     end
 
-    p_fr = [_PMs.var(pm, nw, p, :pt, f_idx) for p in f_cnd]
-    p_to = [_PMs.var(pm, nw, p, :pt, t_idx) for p in t_cnd]
-    q_fr = [_PMs.var(pm, nw, p, :qt, f_idx) for p in f_cnd]
-    q_to = [_PMs.var(pm, nw, p, :qt, t_idx) for p in t_cnd]
+    p_fr = _PMs.var(pm, nw, :pt, f_idx)[f_cnd]
+    p_to = _PMs.var(pm, nw, :pt, t_idx)[t_cnd]
+    q_fr = _PMs.var(pm, nw, :qt, f_idx)[f_cnd]
+    q_to = _PMs.var(pm, nw, :qt, t_idx)[t_cnd]
 
     JuMP.@constraint(pm.model, p_fr + p_to .== 0)
     JuMP.@constraint(pm.model, q_fr + q_to .== 0)
@@ -421,10 +352,10 @@ end
 
 
 function constraint_mc_trans_dy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-    vm_fr = [_PMs.var(pm, nw, p, :vm, f_bus) for p in f_cnd]
-    vm_to = [_PMs.var(pm, nw, p, :vm, t_bus) for p in t_cnd]
-    va_fr = [_PMs.var(pm, nw, p, :va, f_bus) for p in f_cnd]
-    va_to = [_PMs.var(pm, nw, p, :va, t_bus) for p in t_cnd]
+    vm_fr = [_PMs.var(pm, nw, :vm, f_bus)[p] for p in f_cnd]
+    vm_to = [_PMs.var(pm, nw, :vm, t_bus)[p] for p in t_cnd]
+    va_fr = [_PMs.var(pm, nw, :va, f_bus)[p] for p in f_cnd]
+    va_to = [_PMs.var(pm, nw, :va, t_bus)[p] for p in t_cnd]
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
     tm = [tm_fixed[p] ? tm_set[p] : _PMs.var(pm, nw, p, :tap, trans_id) for p in _PMs.conductor_ids(pm)]
@@ -443,10 +374,10 @@ function constraint_mc_trans_dy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::In
         JuMP.@NLconstraint(pm.model, vd_im[p] == pol*tm_scale*tm[p]*vm_to[p]*sin(va_to[p]))
     end
 
-    p_fr = [_PMs.var(pm, nw, p, :pt, f_idx) for p in f_cnd]
-    p_to = [_PMs.var(pm, nw, p, :pt, t_idx) for p in t_cnd]
-    q_fr = [_PMs.var(pm, nw, p, :qt, f_idx) for p in f_cnd]
-    q_to = [_PMs.var(pm, nw, p, :qt, t_idx) for p in t_cnd]
+    p_fr = [_PMs.var(pm, nw, :pt, f_idx)[p] for p in f_cnd]
+    p_to = [_PMs.var(pm, nw, :pt, t_idx)[p] for p in t_cnd]
+    q_fr = [_PMs.var(pm, nw, :qt, f_idx)[p] for p in f_cnd]
+    q_to = [_PMs.var(pm, nw, :qt, t_idx)[p] for p in t_cnd]
 
     id_re = Array{Any,1}(undef, nph)
     id_im = Array{Any,1}(undef, nph)
