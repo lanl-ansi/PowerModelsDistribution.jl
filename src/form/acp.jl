@@ -891,3 +891,12 @@ function constraint_mc_voltage_magnitude_setpoint(pm::_PMs.AbstractACPModel, n::
         JuMP.@constraint(pm.model, vm[c] == vmref[c])
     end
 end
+
+""
+function constraint_storage_current_limit(pm::_PMs.AbstractACPModel, n::Int, i, bus, rating)
+    vm = var(pm, n, :vm, bus)
+    ps = var(pm, n, :ps, i)
+    qs = var(pm, n, :qs, i)
+
+    JuMP.@constraint(pm.model, ps.^2 + qs.^2 <= rating.^2*vm.^2)
+end

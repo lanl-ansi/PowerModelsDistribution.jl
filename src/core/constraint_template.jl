@@ -470,12 +470,12 @@ function constraint_mc_storage_loss(pm::_PMs.AbstractPowerModel, i::Int; nw::Int
 end
 
 
-"storage thermal limit constraints, delegate to PowerModels per conductor"
-function constraint_mc_storage_thermal_limit(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
-    for c in _PMs.conductor_ids(pm; nw=nw)
-        _PMs.constraint_storage_thermal_limit(pm, i; cnd=c, nw=nw, kwargs...)
-    end
-end
+# "storage thermal limit constraints, delegate to PowerModels per conductor"
+# function constraint_mc_storage_thermal_limit(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
+#     for c in _PMs.conductor_ids(pm; nw=nw)
+#         _PMs.constraint_storage_thermal_limit(pm, i; cnd=c, nw=nw, kwargs...)
+#     end
+# end
 
 
 "branch thermal constraints from"
@@ -534,4 +534,16 @@ function constraint_mc_generation_on_off(pm::_PMs.AbstractPowerModel, i::Int; nw
     gen = _PMs.ref(pm, nw, :gen, i)
 
     constraint_mc_generation_on_off(pm, nw, i, gen["pmin"], gen["pmax"], gen["qmin"], gen["qmax"])
+end
+
+""
+function constraint_mc_storage_thermal_limit(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    storage = ref(pm, nw, :storage, i)
+    constraint_mc_storage_thermal_limit(pm, nw, i, storage["thermal_rating"])
+end
+
+""
+function constraint_storage_current_limit(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    storage = ref(pm, nw, :storage, i)
+    constraint_storage_current_limit(pm, nw, i, storage["storage_bus"], storage["current_rating"])
 end
