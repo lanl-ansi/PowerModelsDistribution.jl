@@ -197,6 +197,7 @@ function variable_mc_voltage_magnitude_sqr(pm::_PMs.AbstractPowerModel; nw::Int=
 
     w = _PMs.var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:ncnds], base_name="$(nw)_w_$(i)",
+            lower_bound = 0.0,
             start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start")
         ) for i in _PMs.ids(pm, nw, :bus)
     )
@@ -440,18 +441,17 @@ end
 "Create tap variables."
 function variable_mc_oltc_tap(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded=true)
     # when extending to 4-wire, this should iterate only over the phase conductors
-    for p in _PMs.conductor_ids(pm)
-        p_oltc_ids = [id for (id,trans) in _PMs.ref(pm, nw, :transformer) if !trans["fixed"][p]]
-        _PMs.var(pm, nw, p)[:tap] = JuMP.@variable(pm.model,
-            [i in p_oltc_ids],
-            base_name="$(nw)_$(p)_tm",
-            start=_PMs.ref(pm, nw, :transformer, i, "tm")[p]
-        )
-        if bounded
-            for tr_id in p_oltc_ids
-                JuMP.set_lower_bound(_PMs.var(pm, nw, p)[:tap][tr_id], _PMs.ref(pm, nw, :transformer, tr_id, "tm_min")[p])
-                JuMP.set_upper_bound(_PMs.var(pm, nw, p)[:tap][tr_id], _PMs.ref(pm, nw, :transformer, tr_id, "tm_max")[p])
-            end
+    nph = 3
+    p_oltc_ids = [id for (id,trans) in _PMs.ref(pm, nw, :transformer) if !all(trans["fixed"])]
+    _PMs.var(pm, nw)[:tap] = Dict(i => JuMP.@variable(pm.model,
+        [p in 1:nph],
+        base_name="$(nw)_$(p)_tm",
+        start=_PMs.ref(pm, nw, :transformer, i, "tm")[p]
+    ) for i in p_oltc_ids)
+    if bounded
+        for tr_id in p_oltc_ids, p in 1:nph
+            JuMP.set_lower_bound(_PMs.var(pm, nw)[:tap][tr_id][p], _PMs.ref(pm, nw, :transformer, tr_id, "tm_min")[p])
+            JuMP.set_upper_bound(_PMs.var(pm, nw)[:tap][tr_id][p], _PMs.ref(pm, nw, :transformer, tr_id, "tm_max")[p])
         end
     end
 end
