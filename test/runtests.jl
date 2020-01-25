@@ -35,31 +35,31 @@ include("common.jl")
 
 @testset "PowerModelsDistribution" begin
 
-    # include("matlab.jl")
-    #
-    # include("opendss.jl")
+    include("matlab.jl")
+
+    include("opendss.jl")
 
     include("data.jl")
 
-    # include("pf.jl")
-    #
-    # include("opf.jl")
-    #
-    # include("opf_bf.jl")
+    include("pf.jl")
+
+    include("opf.jl")
+
+    include("opf_bf.jl")
 
     include("storage.jl")
 
-    # include("debug.jl")
-    #
-    # include("multinetwork.jl")
-    #
-    # include("transformer.jl")
-    #
-    # include("loadmodels.jl")
-    #
-    # include("mld.jl")
-    #
-    # include("multiconductor.jl")
-    #
-    # include("multi-nw-cnd.jl")
+    include("debug.jl")
+
+    include("multinetwork.jl")
+
+    include("transformer.jl")
+
+    include("loadmodels.jl")
+
+    include("mld.jl")
+
+    include("multiconductor.jl")
+
+    include("multi-nw-cnd.jl")
 end

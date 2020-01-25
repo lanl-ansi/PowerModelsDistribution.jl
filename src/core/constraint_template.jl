@@ -470,14 +470,6 @@ function constraint_mc_storage_loss(pm::_PMs.AbstractPowerModel, i::Int; nw::Int
 end
 
 
-# "storage thermal limit constraints, delegate to PowerModels per conductor"
-# function constraint_mc_storage_thermal_limit(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
-#     for c in _PMs.conductor_ids(pm; nw=nw)
-#         _PMs.constraint_storage_thermal_limit(pm, i; cnd=c, nw=nw, kwargs...)
-#     end
-# end
-
-
 "branch thermal constraints from"
 function constraint_mc_thermal_limit_from(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     branch = _PMs.ref(pm, nw, :branch, i)
