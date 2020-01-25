@@ -68,3 +68,11 @@ function constraint_mc_generation_on_off(pm::_PMs.AbstractPowerModel, n::Int, i:
     JuMP.@constraint(pm.model, qg .<= qmax.*z)
     JuMP.@constraint(pm.model, qg .>= qmin.*z)
 end
+
+""
+function constraint_mc_storage_thermal_limit(pm::_PMs.AbstractPowerModel, n::Int, i, rating)
+    ps = _PMs.var(pm, n, :ps, i)
+    qs = _PMs.var(pm, n, :qs, i)
+
+    JuMP.@constraint(pm.model, ps.^2 + qs.^2 .<= rating.^2)
+end
