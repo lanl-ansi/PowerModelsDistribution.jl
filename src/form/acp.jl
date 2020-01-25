@@ -577,28 +577,37 @@ end
 
 
 ""
-function constraint_load_current_wye(pm::_PMs.AbstractACPModel, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, scale_p::Real, scale_q::Real)
-    vm = _PMs.var(pm, nw, cnd, :vm, load_bus_id)
+function constraint_mc_load_current_wye(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, scale_p, scale_q)
+    vm = _PMs.var(pm, nw, :vm, load_bus_id)
     # this has to be a NLexpression and not an expression;
     # might be mixed in KCL with NLexpression, so has to also be NLexpression
-    _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, scale_p*vm)
-    _PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, scale_q*vm)
+
+    ncnds = length(_PMs.conductor_ids(pm, nw))
+
+    _PMs.var(pm, nw, :pd)[load_id] = JuMP.@NLexpression(pm.model, [c in 1:ncnds], scale_p[c]*vm[c])
+    _PMs.var(pm, nw, :qd)[load_id] = JuMP.@NLexpression(pm.model, [c in 1:ncnds], scale_q[c]*vm[c])
 end
 
 
 ""
-function constraint_load_impedance_wye(pm::_PMs.AbstractACPModel, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, cp::Real, cq::Real)
-    vm = _PMs.var(pm, nw, cnd, :vm, load_bus_id)
-    _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, cp*vm^2)
-    _PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, cq*vm^2)
+function constraint_mc_load_impedance_wye(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, cp, cq)
+    vm = _PMs.var(pm, nw, :vm, load_bus_id)
+
+    ncnds = length(_PMs.conductor_ids(pm, nw))
+
+    _PMs.var(pm, nw, :pd)[load_id] = JuMP.@NLexpression(pm.model, [c in 1:ncnds], cp[c]*vm[c]^2)
+    _PMs.var(pm, nw, :qd)[load_id] = JuMP.@NLexpression(pm.model, [c in 1:ncnds], cq[c]*vm[c]^2)
 end
 
 
 ""
-function constraint_load_exponential_wye(pm::_PMs.AbstractACPModel, nw::Int, cnd::Int, load_id::Int, load_bus_id::Int, a::Real, alpha::Real, b::Real, beta::Real)
-    vm = _PMs.var(pm, nw, cnd, :vm, load_bus_id)
-    _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, a*vm^alpha)
-    _PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, b*vm^beta)
+function constraint_mc_load_exponential_wye(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, a, alpha, b, beta)
+    vm = _PMs.var(pm, nw, :vm, load_bus_id)
+
+    cnds = length(_PMs.conductor_ids(pm, nw))
+
+    _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, [c in 1:ncnds], a[c]*vm[c]^alpha[c])
+    _PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, [c in 1:ncnds],b[c]*vm[c]^beta[c])
 end
 
 
@@ -647,8 +656,8 @@ s_c = v_c*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 function constraint_mc_load_power_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, pd::MultiConductorVector, qd::MultiConductorVector)
     p_ab, p_bc, p_ca = pd
     q_ab, q_bc, q_ca = qd
-    vm_a, vm_b, vm_c = [_PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:3]
-    va_a, va_b, va_c = [_PMs.var(pm, nw, c, :va, load_bus_id) for c in 1:3]
+    vm_a, vm_b, vm_c = _PMs.var(pm, nw, :vm, load_bus_id)
+    va_a, va_b, va_c = _PMs.var(pm, nw, :va, load_bus_id)
     # v_xy = v_x - v_y
     vre_xy(vm_x, va_x, vm_y, va_y) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)-vm_y*cos(va_y))
     vim_xy(vm_x, va_x, vm_y, va_y) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)-vm_y*sin(va_y))
@@ -673,12 +682,14 @@ function constraint_mc_load_power_delta(pm::_PMs.AbstractACPModel, nw::Int, load
     p_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx))
     q_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx))
     # s_x = s_x,ref
-    _PMs.var(pm, nw, 1, :pd)[load_id] = p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    _PMs.var(pm, nw, 2, :pd)[load_id] = p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    _PMs.var(pm, nw, 3, :pd)[load_id] = p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
-    _PMs.var(pm, nw, 1, :qd)[load_id] = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    _PMs.var(pm, nw, 2, :qd)[load_id] = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    _PMs.var(pm, nw, 3, :qd)[load_id] = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    _PMs.var(pm, nw, :pd)[load_id] = [
+        p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca),
+        p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab),
+        p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)]
+    _PMs.var(pm, nw, :qd)[load_id] = [
+        q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca),
+        q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab),
+        q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)]
 end
 
 
@@ -723,8 +734,8 @@ idem for s_b and s_c
 function constraint_mc_load_current_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, cp::MultiConductorVector, cq::MultiConductorVector)
     cp_ab, cp_bc, cp_ca = cp
     cq_ab, cq_bc, cq_ca = cq
-    vm_a, vm_b, vm_c = [_PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:3]
-    va_a, va_b, va_c = [_PMs.var(pm, nw, c, :va, load_bus_id) for c in 1:3]
+    vm_a, vm_b, vm_c = _PMs.var(pm, nw, :vm, load_bus_id)
+    va_a, va_b, va_c = _PMs.var(pm, nw, :va, load_bus_id)
     # v_xy = v_x - v_y
     vre_xy(vm_x, va_x, vm_y, va_y) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)-vm_y*cos(va_y))
     vim_xy(vm_x, va_x, vm_y, va_y) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)-vm_y*sin(va_y))
@@ -749,12 +760,14 @@ function constraint_mc_load_current_delta(pm::_PMs.AbstractACPModel, nw::Int, lo
     p_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx))
     q_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx))
     # s_x = s_x,ref
-    _PMs.var(pm, nw, 1, :pd)[load_id] = p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    _PMs.var(pm, nw, 2, :pd)[load_id] = p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    _PMs.var(pm, nw, 3, :pd)[load_id] = p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
-    _PMs.var(pm, nw, 1, :qd)[load_id] = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    _PMs.var(pm, nw, 2, :qd)[load_id] = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    _PMs.var(pm, nw, 3, :qd)[load_id] = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    _PMs.var(pm, nw, :pd)[load_id] = [
+        p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca),
+        p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab),
+        p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)]
+    _PMs.var(pm, nw, :qd)[load_id] = [
+        q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca),
+        q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab),
+        q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)]
 end
 
 
@@ -794,8 +807,8 @@ idem for s_b and s_c
 function constraint_mc_load_impedance_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, cp::MultiConductorVector, cq::MultiConductorVector)
     cp_ab, cp_bc, cp_ca = cp
     cq_ab, cq_bc, cq_ca = cq
-    vm_a, vm_b, vm_c = [_PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:3]
-    va_a, va_b, va_c = [_PMs.var(pm, nw, c, :va, load_bus_id) for c in 1:3]
+    vm_a, vm_b, vm_c = _PMs.var(pm, nw, :vm, load_bus_id)
+    va_a, va_b, va_c = _PMs.var(pm, nw, :va, load_bus_id)
     # v_xy = v_x - v_y
     vre_xy(vm_x, va_x, vm_y, va_y) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)-vm_y*cos(va_y))
     vim_xy(vm_x, va_x, vm_y, va_y) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)-vm_y*sin(va_y))
@@ -820,12 +833,14 @@ function constraint_mc_load_impedance_delta(pm::_PMs.AbstractACPModel, nw::Int, 
     p_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx))
     q_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx))
     # s_x = s_x,ref
-    _PMs.var(pm, nw, 1, :pd)[load_id] = p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    _PMs.var(pm, nw, 2, :pd)[load_id] = p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    _PMs.var(pm, nw, 3, :pd)[load_id] = p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
-    _PMs.var(pm, nw, 1, :qd)[load_id] = q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca)
-    _PMs.var(pm, nw, 2, :qd)[load_id] = q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab)
-    _PMs.var(pm, nw, 3, :qd)[load_id] = q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)
+    _PMs.var(pm, nw, :pd)[load_id] = [
+        p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca),
+        p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab),
+        p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)]
+    _PMs.var(pm, nw, :qd)[load_id] = [
+        q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca),
+        q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab),
+        q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)]
 end
 
 
@@ -835,8 +850,8 @@ exponential model in acp voltage coordinates
 function constraint_mc_load_exponential_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, a, alpha, b, beta)
     nph = length(_PMs.conductor_ids(pm))
 
-    vm = [_PMs.var(pm, nw, c, :vm, load_bus_id) for c in 1:nph]
-    va = [_PMs.var(pm, nw, c, :va, load_bus_id) for c in 1:nph]
+    vm = _PMs.var(pm, nw, c, :vm, load_bus_id)
+    va = _PMs.var(pm, nw, c, :va, load_bus_id)
 
     # vd = Td*v
     vdr = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])-vm[mod(i,nph)+1]*cos(va[mod(i,nph)+1]))
@@ -860,10 +875,9 @@ function constraint_mc_load_exponential_delta(pm::_PMs.AbstractACPModel, nw::Int
     # s = v.*conj(ic)
     pd = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])*icr[i] - vm[i]*sin(va[i])*ici[i])
     qd = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])*ici[i] + vm[i]*sin(va[i])*icr[i])
-    for c in _PMs.conductor_ids(pm)
-        _PMs.var(pm, nw, c, :pd)[load_id] = pd[c]
-        _PMs.var(pm, nw, c, :qd)[load_id] = qd[c]
-    end
+
+    _PMs.var(pm, nw, :pd)[load_id] = pd
+    _PMs.var(pm, nw, :qd)[load_id] = qd
 
     # also save pl, ql for inspection
     for c in _PMs.conductor_ids(pm)
@@ -887,9 +901,8 @@ end
 "`vm[i] == vmref`"
 function constraint_mc_voltage_magnitude_setpoint(pm::_PMs.AbstractACPModel, n::Int, i::Int, vmref)
     vm = _PMs.var(pm, n, :vm, i)
-    for c in _PMs.conductor_ids(pm)
-        JuMP.@constraint(pm.model, vm[c] == vmref[c])
-    end
+
+    JuMP.@constraint(pm.model, vm .== vmref)
 end
 
 ""
