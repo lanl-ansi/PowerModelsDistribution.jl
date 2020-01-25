@@ -197,6 +197,7 @@ function variable_mc_voltage_magnitude_sqr(pm::_PMs.AbstractPowerModel; nw::Int=
 
     w = _PMs.var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:ncnds], base_name="$(nw)_w_$(i)",
+            lower_bound = 0.0,
             start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start")
         ) for i in _PMs.ids(pm, nw, :bus)
     )
