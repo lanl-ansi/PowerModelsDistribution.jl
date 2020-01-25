@@ -318,7 +318,7 @@ sn_a = v_a.conj(i_a)
     = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 So for delta, sn is constrained indirectly.
 """
-function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw)
+function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
     load = _PMs.ref(pm, nw, :load, id)
     bus = _PMs.ref(pm, nw,:bus, load["load_bus"])
     model = load["model"]
@@ -349,9 +349,7 @@ function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw
         cq = qd/(vnom_kv/vbase_kv_LN)
 
         if conn=="wye"
-            for c in _PMs.conductor_ids(pm; nw=nw)
-                constraint_load_current_wye(pm, nw, c, id, load["load_bus"], cp[c], cq[c])
-            end
+            constraint_mc_load_current_wye(pm, nw, id, load["load_bus"], cp, cq)
         elseif conn=="delta"
             @assert(_PMs.ref(pm, 0, :conductors)==3)
             constraint_mc_load_current_delta(pm, nw, id, load["load_bus"], cp, cq)
@@ -368,9 +366,7 @@ function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw
         cq = qd/(vnom_kv/vbase_kv_LN)^2
 
         if conn=="wye"
-            for c in _PMs.conductor_ids(pm; nw=nw)
-                constraint_load_impedance_wye(pm, nw, c, id, load["load_bus"], cp[c], cq[c])
-            end
+            constraint_mc_load_impedance_wye(pm, nw, id, load["load_bus"], cp, cq)
         elseif conn=="delta"
             @assert(_PMs.ref(pm, 0, :conductors)==3)
             constraint_mc_load_impedance_delta(pm, nw, id, load["load_bus"], cp, cq)
@@ -379,9 +375,7 @@ function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw
         a, alpha, b, beta = _load_expmodel_params(load, bus)
 
         if conn=="wye"
-            for c in _PMs.conductor_ids(pm)
-                constraint_load_exponential_wye(pm, nw, c, id, load["load_bus"], a[c], alpha[c], b[c], beta[c])
-            end
+            constraint_mc_load_exponential_wye(pm, nw, id, load["load_bus"], a, alpha, b, beta)
         elseif conn=="delta"
             @assert(_PMs.ref(pm, 0, :conductors)==3)
             constraint_mc_load_exponential_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
@@ -389,6 +383,11 @@ function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw
 
     else
         Memento.@error(_LOGGER, "Unknown model $model for load $id.")
+    end
+
+    if report
+        _PMs.sol(pm, nw, :load, id)[:pd] = _PMs.var(pm, nw, :pd, id)
+        _PMs.sol(pm, nw, :load, id)[:qd] = _PMs.var(pm, nw, :qd, id)
     end
 end
 
