@@ -2,40 +2,36 @@
 
 "an example of building a multi-phase model in an extention package"
 function build_tp_opf(pm::PMs.AbstractPowerModel)
-    for c in PowerModels.conductor_ids(pm)
-        PowerModels.variable_voltage(pm, cnd=c)
-        PowerModels.variable_generation(pm, cnd=c)
-        PowerModels.variable_branch_flow(pm, cnd=c)
-        PowerModels.variable_dcline_flow(pm, cnd=c)
+    PMD.variable_mc_voltage(pm)
+    PMD.variable_mc_branch_flow(pm)
+    PMD.variable_mc_transformer_flow(pm)
+    PMD.variable_mc_generation(pm)
+
+    PMD.constraint_mc_model_voltage(pm)
+
+    for i in PMs.ids(pm, :ref_buses)
+        PMD.constraint_mc_theta_ref(pm, i)
     end
 
-    for c in PowerModels.conductor_ids(pm)
-        PowerModels.constraint_model_voltage(pm, cnd=c)
-
-        for i in ids(pm, :ref_buses)
-            PowerModels.constraint_theta_ref(pm, i, cnd=c)
-        end
-
-        for i in ids(pm, :bus)
-            PowerModels.constraint_power_balance(pm, i, cnd=c)
-        end
-
-        for i in ids(pm, :branch)
-            PowerModels.constraint_ohms_yt_from(pm, i, cnd=c)
-            PowerModels.constraint_ohms_yt_to(pm, i, cnd=c)
-
-            PowerModels.constraint_voltage_angle_difference(pm, i, cnd=c)
-
-            PowerModels.constraint_thermal_limit_from(pm, i, cnd=c)
-            PowerModels.constraint_thermal_limit_to(pm, i, cnd=c)
-        end
-
-        for i in ids(pm, :dcline)
-            PowerModels.constraint_dcline(pm, i, cnd=c)
-        end
+    for i in PMs.ids(pm, :bus)
+        PMD.constraint_mc_power_balance(pm, i)
     end
 
-    PowerModels.objective_min_fuel_and_flow_cost(pm)
+    for i in PMs.ids(pm, :branch)
+        PMD.constraint_mc_ohms_yt_from(pm, i)
+        PMD.constraint_mc_ohms_yt_to(pm, i)
+
+        PMD.constraint_mc_voltage_angle_difference(pm, i)
+
+        PMD.constraint_mc_thermal_limit_from(pm, i)
+        PMD.constraint_mc_thermal_limit_to(pm, i)
+    end
+
+    for i in PMs.ids(pm, :transformer)
+        PMD.constraint_mc_trans(pm, i)
+    end
+
+    PMs.objective_min_fuel_cost(pm)
 end
 
 
@@ -170,7 +166,7 @@ end
 
         @testset "3-bus 3-conductor case with theta_ref=pi" begin
             mp_data = build_mc_data!("../test/data/matpower/case3.m", conductors=3)
-            pm = PowerModels.instantiate_model(mp_data, PowerModels.ACRPowerModel, PMD._build_mc_opf, multiconductor=true)
+            pm = PowerModels.instantiate_model(mp_data, PowerModels.ACRPowerModel, PMD._build_mc_opf, multiconductor=true, ref_extensions=[PMD.ref_add_arcs_trans!])
             result = PowerModels.optimize_model!(pm, optimizer=ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
@@ -469,7 +465,7 @@ end
 
     @testset "multiconductor extensions" begin
         mp_data = build_mc_data!("../test/data/matpower/case3.m")
-        pm = PowerModels.instantiate_model(mp_data, PowerModels.ACPPowerModel, build_tp_opf; multiconductor=true)
+        pm = PowerModels.instantiate_model(mp_data, PowerModels.ACPPowerModel, build_tp_opf; multiconductor=true, ref_extensions=[PMD.ref_add_arcs_trans!])
 
         @test haskey(var(pm, pm.cnw), :cnd)
         @test length(var(pm, pm.cnw)) == 1
@@ -551,13 +547,13 @@ end
         @test all(c .+ b.values - [0.845  0.225  0.225; 0.225  0.845  0.225; 0.225  0.225  0.845] .<= 1e-12)
 
         # Custom Functions
-        @test PowerModels.conductors(c) == 3
-        @test PowerModels.conductors(a) == 3
+        @test PMD.conductors(c) == 3
+        @test PMD.conductors(a) == 3
         @test all(size(a) == (3,3))
         @test isa(JSON.lower(a), Dict)
         @test all(JSON.lower(a)["values"] == a.values)
         @test !isapprox(d, e)
-        @test PowerModels.conductor_value(a, 1, 1) == a[1,1]
+        @test PMD.conductor_value(a, 1, 1) == a[1,1]
 
         # diagm
         @test all(LinearAlgebra.diagm(0 => c).values .== [0.225 0.0 0.0; 0.0 0.225 0.0; 0.0 0.0 0.225])

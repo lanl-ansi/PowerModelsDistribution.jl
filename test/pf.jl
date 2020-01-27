@@ -247,17 +247,3 @@ calc_vm_W(result, id) = sqrt.(diag( result["solution"]["bus"][id]["Wr"]))
         end
     end
 end
-
-@testset "test pf_bf" begin
-    @testset "test opendss pf_bf" begin
-        @testset "3-bus unbalanced lp pf_bf branch_flows original_variables" begin
-            pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced.dss")
-            sol = PMD.run_mc_pf_bf(pmd, LPLinUBFPowerModel, ipopt_solver, setting=Dict("output"=>Dict("branch_flows"=>true, "original_variables"=>true)))
-            vm = calc_vm_w(sol, "1")
-            @test sol["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(sol["objective"], 0.0209; atol=1e-4)
-            @test all(isapprox.(vm, 0.9959; atol=1e-4))
-            @test all(haskey(sol["solution"]["branch"]["1"],key) for key in [ "qf_ut" "pt" "qt_lt" "cci" "ccr" "ctm" "cta" "qt_ut" "qf_lt" "pt_lt" "pf_lt" "ccm" "cfm" "cc" "qf" "pt_ut" "qt" "cfa" "pf" "pf_ut" ])
-        end
-    end
-end

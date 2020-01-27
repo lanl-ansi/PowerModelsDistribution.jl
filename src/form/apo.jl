@@ -35,6 +35,17 @@ function constraint_mc_gen_setpoint_reactive(pm::_PMs.AbstractActivePowerModel, 
 end
 
 
+"nothing to do, these models do not have complex voltage variables"
+function variable_mc_voltage(pm::_PMs.AbstractNFAModel; nw=pm.cnw, kwargs...)
+end
+
+"nothing to do, these models do not have angle difference constraints"
+function constraint_mc_voltage_angle_difference(pm::_PMs.AbstractNFAModel, n::Int, f_idx, angmin, angmax)
+end
+
+
+
+
 "apo models ignore reactive power flows"
 function variable_mc_transformer_flow_reactive(pm::_PMs.AbstractActivePowerModel; nw::Int=pm.cnw, bounded=true)
 end
@@ -59,6 +70,10 @@ function constraint_mc_power_balance(pm::_PMs.AbstractActivePowerModel, nw::Int,
         - sum(gs for gs in values(bus_gs))*1.0^2
     )
     # omit reactive constraint
+
+    if _PMs.report_duals(pm)
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+    end
 end
 
 
