@@ -496,7 +496,15 @@ function variable_mc_indicator_demand(pm::_PMs.AbstractPowerModel; nw::Int=pm.cn
         )
     end
 
+    # expressions for pd and qd
+    pd = _PMs.var(pm, nw)[:pd] = Dict(i => _PMs.var(pm, nw)[:z_demand][i].*_PMs.ref(pm, nw, :load, i)["pd"]
+     for i in _PMs.ids(pm, nw, :load))
+    qd = _PMs.var(pm, nw)[:qd] = Dict(i => _PMs.var(pm, nw)[:z_demand][i].*_PMs.ref(pm, nw, :load, i)["qd"]
+     for i in _PMs.ids(pm, nw, :load))
+
     report && _PMs.sol_component_value(pm, nw, :load, :status, _PMs.ids(pm, nw, :load), z_demand)
+    report && _PMs.sol_component_value(pm, nw, :load, :pd, _PMs.ids(pm, nw, :load), pd)
+    report && _PMs.sol_component_value(pm, nw, :load, :qd, _PMs.ids(pm, nw, :load), qd)
 end
 
 
