@@ -333,7 +333,7 @@ end
 ""
 function variable_mc_active_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
-    ncnds = length(_PMs.conductor_ids(pm, nw))
+    ncnds = length(cnds)
 
     p_slack = _PMs.var(pm, nw)[:p_slack] = Dict(i => JuMP.@variable(pm.model,
             [cnd in 1:ncnds], base_name="$(nw)_p_slack_$(i)",
@@ -348,7 +348,7 @@ end
 ""
 function variable_mc_reactive_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
-    ncnds = length(_PMs.conductor_ids(pm, nw))
+    ncnds = length(cnds)
 
     q_slack = _PMs.var(pm, nw)[:q_slack] = Dict(i => JuMP.@variable(pm.model,
             [cnd in 1:ncnds], base_name="$(nw)_q_slack_$(i)",
@@ -446,7 +446,7 @@ end
 function variable_mc_oltc_tap(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     # when extending to 4-wire, this should iterate only over the phase conductors
     cnds = _PMs.conductor_ids(pm; nw=nw)
-    ncnds = length(_PMs.conductor_ids(pm, nw))
+    ncnds = length(cnds)
 
     nph = 3
     p_oltc_ids = [id for (id,trans) in _PMs.ref(pm, nw, :transformer) if !all(trans["fixed"])]
@@ -596,7 +596,7 @@ end
 "Create variables for `active` storage injection"
 function variable_mc_on_off_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
-    ncnds = length(_PMs.conductor_ids(pm, nw))
+    ncnds = length(cnds)
 
     inj_lb = Dict()
     inj_ub = Dict()
@@ -618,7 +618,7 @@ end
 "Create variables for `reactive` storage injection"
 function variable_mc_on_off_storage_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
-    ncnds = length(_PMs.conductor_ids(pm, nw))
+    ncnds = length(cnds)
 
     qs = _PMs.var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_qs_$(i)",
@@ -634,7 +634,7 @@ end
 "voltage variable magnitude squared (relaxed form)"
 function variable_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
-    ncnds = length(_PMs.conductor_ids(pm, nw))
+    ncnds = length(cnds)
 
     w = _PMs.var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_w_$(i)",
@@ -650,7 +650,7 @@ end
 "on/off voltage magnitude variable"
 function variable_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
-    ncnds = length(_PMs.conductor_ids(pm, nw))
+    ncnds = length(cnds)
 
     vm = _PMs.var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_vm_$(i)",
@@ -734,7 +734,7 @@ end
 
 function variable_mc_reactive_generation_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
-    ncnds = length(_PMs.conductor_ids(pm, nw))
+    ncnds = length(cnds)
 
     qg = _PMs.var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_qg_$(i)",
