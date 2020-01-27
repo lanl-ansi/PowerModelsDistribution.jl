@@ -1,10 +1,13 @@
 ### simple active power only approximations (e.g. DC Power Flow)
 
 
-""
+"nothing to do, these models do not have complex voltage variables"
 function variable_mc_voltage(pm::_PMs.AbstractNFAModel; nw=pm.cnw, kwargs...)
 end
 
+"nothing to do, these models do not have angle difference  constraints"
+function constraint_mc_voltage_angle_difference(pm::_PMs.AbstractNFAModel, n::Int, f_idx, angmin, angmax)
+end
 
 
 ""
