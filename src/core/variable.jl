@@ -277,7 +277,7 @@ function variable_mc_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw,
 
     ps = _PMs.var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:ncnds], base_name="$(nw)_ps_$(i)",
-            start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "ps_start", c)
+            start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "ps_start", 0)
         ) for i in _PMs.ids(pm, nw, :storage)
     )
 
@@ -305,7 +305,7 @@ function variable_mc_storage_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cn
 
     qs = _PMs.var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:ncnds], base_name="$(nw)_qs_$(i)",
-            start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "qs_start", c)
+            start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "qs_start", 0)
         ) for i in _PMs.ids(pm, nw, :storage)
     )
 
