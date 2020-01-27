@@ -295,13 +295,6 @@ function _build_mn_mc_opf_strg(pm::_PMs.AbstractPowerModel)
         variable_mc_branch_flow(pm, nw=n)
         variable_mc_transformer_flow(pm, nw=n)
         variable_mc_generation(pm, nw=n)
-        #
-        # variable_storage_energy(pm, nw=n)
-        # variable_storage_charge(pm, nw=n)
-        # variable_storage_discharge(pm, nw=n)
-        #
-        # variable_active_storage(pm, nw=n)
-        # variable_reactive_storage(pm, nw=n)
 
         variable_mc_storage(pm, nw=n)
 
@@ -331,28 +324,29 @@ function _build_mn_mc_opf_strg(pm::_PMs.AbstractPowerModel)
             constraint_mc_trans(pm, i, nw=n)
         end
 
-        for i in ids(pm, :storage, nw=n)
-            constraint_storage_thermal_limit(pm, i, nw=n, cnd=c)
+        for i in _PMs.ids(pm, :storage, nw=n)
+            constraint_mc_storage_thermal_limit(pm, i, nw=n)
         end
 
         # for i in ids(pm, :dcline, nw=n)
         #     constraint_mc_dcline(pm, i, nw=n)
         # end
 
-        network_ids = sort(collect(_PMs.nw_ids(pm)))
 
-        n_1 = network_ids[1]
-        for i in ids(pm, :storage, nw=n_1)
-            constraint_storage_state(pm, i, nw=n_1)
+
+    end
+    network_ids = sort(collect(_PMs.nw_ids(pm)))
+
+    n_1 = network_ids[1]
+    for i in _PMs.ids(pm, :storage, nw=n_1)
+        _PMs.constraint_storage_state(pm, i, nw=n_1)
+    end
+
+    for n_2 in network_ids[2:end]
+        for i in _PMs.ids(pm, :storage, nw=n_2)
+            _PMs.constraint_storage_state(pm, i, n_1, n_2)
         end
-
-        for n_2 in network_ids[2:end]
-            for i in ids(pm, :storage, nw=n_2)
-                constraint_storage_state(pm, i, n_1, n_2)
-            end
-            n_1 = n_2
-        end
-
+        n_1 = n_2
     end
     _PMs.objective_min_fuel_cost(pm)
 
