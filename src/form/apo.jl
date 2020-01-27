@@ -144,33 +144,49 @@ end
 
 "`-rate_a <= p[f_idx] <= rate_a`"
 function constraint_mc_thermal_limit_from(pm::_PMs.AbstractActivePowerModel, n::Int, f_idx, rate_a)
-    for c in _PMs.conductor_ids(pm, n)
+    cnds = _PMs.conductor_ids(pm, n)
+    ncnds = length(cnds)
+    mu_sm_fr = []
+
+    for c in 1:ncnds
         p_fr =_PMs.var(pm, n, :p, f_idx)[c]
         if isa(p_fr, JuMP.VariableRef) && JuMP.has_lower_bound(p_fr)
-           #_PMs.con(pm, n, :sm_fr, f_idx[1])[c] = JuMP.LowerBoundRef(p_fr)
+           push!(mu_sm_fr,JuMP.LowerBoundRef(p_fr))
             JuMP.lower_bound(p_fr) < -rate_a[c] && JuMP.set_lower_bound(p_fr, -rate_a[c])
             if JuMP.has_upper_bound(p_fr)
                 JuMP.upper_bound(p_fr) > rate_a[c] && JuMP.set_upper_bound(p_fr, rate_a[c])
             end
         else
-           #_PMs.con(pm, n, :sm_fr, f_idx[1])[c] = JuMP.@constraint(pm.model, p_fr <= rate_a[c])
+           push!(mu_sm_fr, JuMP.@constraint(pm.model, p_fr <= rate_a[c]))
         end
+    end
+
+    if _PMs.report_duals(pm)
+        _PMs.sol(pm, n, :branch, f_idx[1])[:mu_sm_fr] = mu_sm_fr
     end
 end
 
 ""
 function constraint_mc_thermal_limit_to(pm::_PMs.AbstractActivePowerModel, n::Int, t_idx, rate_a)
-    for c in _PMs.conductor_ids(pm, n)
+    cnds = _PMs.conductor_ids(pm, n)
+    ncnds = length(cnds)
+    mu_sm_to = []
+
+    for c in 1:ncnds
         p_to =_PMs.var(pm, n, :p, t_idx)[c]
         if isa(p_to, JuMP.VariableRef) && JuMP.has_lower_bound(p_to)
-           #_PMs.con(pm, n, :sm_to, t_idx[1])[c] = JuMP.LowerBoundRef(p_to)
+           push!(mu_sm_to, JuMP.LowerBoundRef(p_to))
             JuMP.lower_bound(p_to) < -rate_a[c] && JuMP.set_lower_bound(p_to, -rate_a[c])
             if JuMP.has_upper_bound(p_to)
                 JuMP.upper_bound(p_to) >  rate_a[c] && JuMP.set_upper_bound(p_to,  rate_a[c])
             end
         else
-           #_PMs.con(pm, n, :sm_to, t_idx[1])[c] = JuMP.@constraint(pm.model, p_to <= rate_a[c])
+           push!(mu_sm_to, JuMP.@constraint(pm.model, p_to <= rate_a[c]))
         end
+    end
+
+    if _PMs.report_duals(pm)
+        _PMs.sol(pm, n, :branch, t_idx[1])[:mu_sm_to] = mu_sm_to
     end
 end
 
