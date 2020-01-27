@@ -337,22 +337,28 @@ end
 
 
 ""
-function variable_mc_active_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw)
+function variable_mc_active_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     ncnds = length(_PMs.conductor_ids(pm, nw))
 
-    _PMs.var(pm, nw)[:p_slack] = Dict(i => JuMP.@variable(pm.model,
-        [cnd in 1:cnds], base_name="$(nw)_$(cnd)_p_slack",
+    p_slack = _PMs.var(pm, nw)[:p_slack] = Dict(i => JuMP.@variable(pm.model,
+        [cnd in 1:cnds], base_name="$(nw)_p_slack_$(cnd)",
         start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "p_slack_start", cnd)
     ) for i in _PMs.ids(pm, nw, :bus))
+
+    report && _PMs.sol_component_value(pm, nw, :bus, :p_slack, _PMs.ids(pm, nw, :bus), p_slack)
 end
 
 
 ""
-function variable_mc_reactive_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw)
-    _PMs.var(pm, nw, cnd)[:q_slack] = JuMP.@variable(pm.model,
-        [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_$(cnd)_q_slack",
+function variable_mc_reactive_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
+    ncnds = length(_PMs.conductor_ids(pm, nw))
+
+    q_slack = _PMs.var(pm, nw)[:q_slack] = Dict(i => JuMP.@variable(pm.model,
+        [cnd in 1:cnds], base_name="$(nw)_q_slack_$(cnd)",
         start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "q_slack_start", cnd)
-    )
+    ) for i in _PMs.ids(pm, nw, :bus))
+
+    report && _PMs.sol_component_value(pm, nw, :bus, :q_slack, _PMs.ids(pm, nw, :bus), q_slack)
 end
 
 
@@ -439,11 +445,11 @@ end
 
 
 "Create tap variables."
-function variable_mc_oltc_tap(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded=true)
+function variable_mc_oltc_tap(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded=true, report::Bool=true)
     # when extending to 4-wire, this should iterate only over the phase conductors
     nph = 3
     p_oltc_ids = [id for (id,trans) in _PMs.ref(pm, nw, :transformer) if !all(trans["fixed"])]
-    _PMs.var(pm, nw)[:tap] = Dict(i => JuMP.@variable(pm.model,
+    tap = _PMs.var(pm, nw)[:tap] = Dict(i => JuMP.@variable(pm.model,
         [p in 1:nph],
         base_name="$(nw)_$(p)_tm",
         start=_PMs.ref(pm, nw, :transformer, i, "tm")[p]
@@ -454,6 +460,8 @@ function variable_mc_oltc_tap(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bound
             JuMP.set_upper_bound(_PMs.var(pm, nw)[:tap][tr_id][p], _PMs.ref(pm, nw, :transformer, tr_id, "tm_max")[p])
         end
     end
+
+    report && _PMs.sol_component_value(pm, nw, :transformer, :tap, _PMs.ids(pm, nw, :transformer), tap)
 end
 
 
@@ -469,88 +477,112 @@ end
 
 
 "Create variables for demand status"
-function variable_mc_indicator_demand(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, relax=false)
+function variable_mc_indicator_demand(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, relax=false, report::Bool=true)
     # this is not indexedon cnd; why used in start value?
     cnd = 1
     if relax
-        _PMs.var(pm, nw)[:z_demand] = JuMP.@variable(pm.model,
+        z_demand = _PMs.var(pm, nw)[:z_demand] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :load)], base_name="$(nw)_z_demand",
             lower_bound = 0,
             upper_bound = 1,
             start = comp_start_value(_PMs.ref(pm, nw, :load, i), "z_demand_on_start", cnd, 1.0)
         )
     else
-        _PMs.var(pm, nw)[:z_demand] = JuMP.@variable(pm.model,
+        z_demand = _PMs.var(pm, nw)[:z_demand] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :load)], base_name="$(nw)_z_demand",
             binary = true,
             start = comp_start_value(_PMs.ref(pm, nw, :load, i), "z_demand_on_start", cnd, 1.0)
         )
     end
+
+    report && _PMs.sol_component_value(pm, nw, :load, :status, _PMs.ids(pm, nw, :load), z_demand)
 end
 
 
 "Create variables for shunt status"
-function variable_mc_indicator_shunt(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, relax=false)
+function variable_mc_indicator_shunt(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, relax=false, report::Bool=true)
     # this is not indexedon cnd; why used in start value?
     cnd = 1
     if relax
-        _PMs.var(pm, nw)[:z_shunt] = JuMP.@variable(pm.model,
+        z_shunt = _PMs.var(pm, nw)[:z_shunt] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :shunt)], base_name="$(nw)_z_shunt",
             lower_bound = 0,
             upper_bound = 1,
             start = comp_start_value(_PMs.ref(pm, nw, :shunt, i), "z_shunt_on_start", cnd, 1.0)
         )
     else
-        _PMs.var(pm, nw)[:z_shunt] = JuMP.@variable(pm.model,
+        z_shunt = _PMs.var(pm, nw)[:z_shunt] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :shunt)], base_name="$(nw)_z_shunt",
             binary=true,
             start = comp_start_value(_PMs.ref(pm, nw, :shunt, i), "z_shunt_on_start", cnd, 1.0)
         )
     end
+
+    report && _PMs.sol_component_value(pm, nw, :shunt, :status, _PMs.ids(pm, nw, :shunt), z_demand)
 end
 
 
 "Create variables for bus status"
-function variable_mc_indicator_bus_voltage(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, relax=false)
+function variable_mc_indicator_bus_voltage(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, relax=false, report::Bool=true)
     if !relax
-        _PMs.var(pm, nw)[:z_voltage] = JuMP.@variable(pm.model,
+        z_voltage = _PMs.var(pm, nw)[:z_voltage] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_z_voltage",
             binary = true,
             start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "z_voltage_start", 1, 1.0)
         )
     else
-        _PMs.var(pm, nw)[:z_voltage] = JuMP.@variable(pm.model,
+        z_voltage =_PMs.var(pm, nw)[:z_voltage] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :bus)], base_name="$(nw)_z_voltage",
             lower_bound = 0,
             upper_bound = 1,
             start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "z_voltage_start", 1, 1.0)
         )
     end
+
+    report && _PMs.sol_component_value(pm, nw, :bus, :status, _PMs.ids(pm, nw, :bus), z_voltage)
 end
 
 
 "Create variables for generator status"
-function variable_mc_indicator_generation(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, relax=false)
-    _PMs.variable_generation_indicator(pm; nw=nw, relax=relax)
+function variable_mc_indicator_generation(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, relax=false, report::Bool=true)
+    # _PMs.variable_generation_indicator(pm; nw=nw, relax=relax)
+    if !relax
+        z_gen = _PMs.var(pm, nw)[:z_gen] = JuMP.@variable(pm.model,
+            [i in _PMs.ids(pm, nw, :gen)], base_name="$(nw)_z_gen",
+            binary = true,
+            start = comp_start_value(ref(pm, nw, :gen, i), "z_gen_start", 1, 1.0)
+        )
+    else
+        z_gen = _PMs.var(pm, nw)[:z_gen] = JuMP.@variable(pm.model,
+            [i in _PMs.ids(pm, nw, :gen)], base_name="$(nw)_z_gen",
+            lower_bound = 0,
+            upper_bound = 1,
+            start = comp_start_value(ref(pm, nw, :gen, i), "z_gen_start", 1, 1.0)
+        )
+    end
+
+    report && _PMs.sol_component_value(pm, nw, :gen, :status, _PMs.ids(pm, nw, :gen), z_gen)
 end
 
 
 "Create variables for storage status"
-function variable_mc_indicator_storage(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, relax=false)
+function variable_mc_indicator_storage(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, relax=false, report::Bool=true)
     if !relax
-        _PMs.var(pm, nw)[:z_storage] = JuMP.@variable(pm.model,
+        z_storage = _PMs.var(pm, nw)[:z_storage] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :storage)], base_name="$(nw)-z_storage",
             binary = true,
             start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "z_storage_start", 1, 1.0)
         )
     else
-        _PMs.var(pm, nw)[:z_storage] = JuMP.@variable(pm.model,
+        z_storage = _PMs.var(pm, nw)[:z_storage] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, nw, :storage)], base_name="$(nw)_z_storage",
             lower_bound = 0,
             upper_bound = 1,
             start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "z_storage_start", 1, 1.0)
         )
     end
+
+    report && _PMs.sol_component_value(pm, nw, :storage, :status, _PMs.ids(pm, nw, :storage), z_storage)
 end
 
 
@@ -562,7 +594,7 @@ end
 
 
 "Create variables for `active` storage injection"
-function variabe_mc_on_off_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw)
+function variabe_mc_on_off_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     ncnds = length(_PMs.conductor_ids(pm, nw))
 
     inj_lb = Dict()
@@ -571,51 +603,60 @@ function variabe_mc_on_off_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=p
         inj_lb[cnd], inj_ub[cnd] = _PMs.ref_calc_storage_injection_bounds(_PMs.ref(pm, nw, :storage), _PMs.ref(pm, nw, :bus), cnd)
     end
 
-    _PMs.var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
+    ps = _PMs.var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_ps_$(i)",
         lower_bound = inj_lb[cnd][i],
         upper_bound = inj_ub[cnd][i],
         start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "ps_start", cnd)
     ) for i in _PMs.ids(pm, nw, :storage))
+
+    report && _PMs.sol_component_value(pm, nw, :storage, :ps, _PMs.ids(pm, nw, :storage), ps)
 end
 
 
 "Create variables for `reactive` storage injection"
-function variable_mc_on_off_storage_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw)
+function variable_mc_on_off_storage_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     ncnds = length(_PMs.conductor_ids(pm, nw))
 
-    _PMs.var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
+    qs = _PMs.var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_qs_$(i)",
         lower_bound = min(0, _PMs.ref(pm, nw, :storage, i, "qmin", cnd)),
         upper_bound = max(0, _PMs.ref(pm, nw, :storage, i, "qmax", cnd)),
         start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "qs_start", cnd)
     ) for i in _PMs.ids(pm, nw, :storage))
+
+    report && _PMs.sol_component_value(pm, nw, :storage, :qs, _PMs.ids(pm, nw, :storage), qs)
 end
 
 
 "voltage variable magnitude squared (relaxed form)"
-function variable_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw)
+function variable_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     ncnds = length(_PMs.conductor_ids(pm, nw))
 
-    _PMs.var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
+    w = _PMs.var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_w_$(i)",
         lower_bound = 0,
         upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax", cnd)^2,
         start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", cnd, 1.001)
     ) for i in _PMs.ids(pm, nw, :bus))
+
+    report && _PMs.sol_component_value(pm, nw, :bus, :w, _PMs.ids(pm, nw, :bus), w)
 end
 
 
 "on/off voltage magnitude variable"
-function variable_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw)
+function variable_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     ncnds = length(_PMs.conductor_ids(pm, nw))
 
-    _PMs.var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
+    vm = _PMs.var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_vm_$(i)",
         lower_bound = 0,
         upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax", cnd),
         start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "vm_start", cnd, 1.0)
     ) for i in _PMs.ids(pm, nw, :bus))
+
+    report && _PMs.sol_component_value(pm, nw, :bus, :vm, _PMs.ids(pm, nw, :bus), vm)
+
 end
 
 
@@ -672,25 +713,29 @@ function variable_mc_generation_on_off(pm::_PMs.AbstractPowerModel; kwargs...)
 end
 
 
-function variable_mc_active_generation_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw)
+function variable_mc_active_generation_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     ncnds = length(_PMs.conductor_ids(pm, nw))
 
-    _PMs.var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
+    pg = _PMs.var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_pg_$(i)",
         lower_bound = min(0, ref(pm, nw, :gen, i, "pmin", cnd)),
         upper_bound = max(0, ref(pm, nw, :gen, i, "pmax", cnd)),
         start = comp_start_value(ref(pm, nw, :gen, i), "pg_start", cnd)
     ) for i in _PMs.ids(pm, nw, :gen))
+
+    report && _PMs.sol_component_value(pm, nw, :gen, :pg, _PMs.ids(pm, nw, :gen), pg)
 end
 
 
-function variable_mc_reactive_generation_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw)
+function variable_mc_reactive_generation_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     ncnds = length(_PMs.conductor_ids(pm, nw))
 
-    _PMs.var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
+    qg = _PMs.var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_qg_$(i)",
         lower_bound = min(0, ref(pm, nw, :gen, i, "qmin", cnd)),
         upper_bound = max(0, ref(pm, nw, :gen, i, "qmax", cnd)),
         start = comp_start_value(ref(pm, nw, :gen, i), "qg_start", cnd)
     ) for i in _PMs.ids(pm, nw, :gen))
+
+    report && _PMs.sol_component_value(pm, nw, :gen, :qg, _PMs.ids(pm, nw, :gen), qg)
 end
