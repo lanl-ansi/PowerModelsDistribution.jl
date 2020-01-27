@@ -1,15 +1,6 @@
 ### simple active power only approximations (e.g. DC Power Flow)
 
 
-"nothing to do, these models do not have complex voltage variables"
-function variable_mc_voltage(pm::_PMs.AbstractNFAModel; nw=pm.cnw, kwargs...)
-end
-
-"nothing to do, these models do not have angle difference  constraints"
-function constraint_mc_voltage_angle_difference(pm::_PMs.AbstractNFAModel, n::Int, f_idx, angmin, angmax)
-end
-
-
 ""
 function variable_mc_voltage(pm::_PMs.AbstractDCPModel; nw=pm.cnw, kwargs...)
     variable_mc_voltage_angle(pm; nw=nw, kwargs...)
@@ -57,7 +48,7 @@ function constraint_mc_power_balance_shed(pm::_PMs.AbstractDCPModel, nw::Int, i:
     z_demand = _PMs.var(pm, nw, :z_demand)
     z_shunt  = _PMs.var(pm, nw, :z_shunt)
 
-    _PMs.con(pm, nw, :kcl_p)[i] = JuMP.@constraint(pm.model,
+    cp = JuMP.@constraint(pm.model,
         sum(p[a] for a in bus_arcs)
         + sum(psw[a_sw] for a_sw in bus_arcs_sw)
         + sum(pt[a_trans] for a_trans in bus_arcs_trans)
@@ -67,6 +58,10 @@ function constraint_mc_power_balance_shed(pm::_PMs.AbstractDCPModel, nw::Int, i:
         - sum(pd.*z_demand[n] for (n,pd) in bus_pd)
         - sum(gs*1.0^2 .*z_shunt[n] for (n,gs) in bus_gs)
     )
+
+    if _PMs.report_duals(pm)
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cp
+    end
 end
 
 

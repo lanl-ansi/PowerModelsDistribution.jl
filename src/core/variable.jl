@@ -637,10 +637,10 @@ function variable_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel; n
     ncnds = length(cnds)
 
     w = _PMs.var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
-        [cnd in 1:ncnds], base_name="$(nw)_w_$(i)",
+        [c in 1:ncnds], base_name="$(nw)_w_$(i)",
         lower_bound = 0,
         upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax")[c]^2,
-        start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", cnd, 1.001)
+        start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
     ) for i in _PMs.ids(pm, nw, :bus))
 
     report && _PMs.sol_component_value(pm, nw, :bus, :w, _PMs.ids(pm, nw, :bus), w)
@@ -653,10 +653,10 @@ function variable_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel; nw::I
     ncnds = length(cnds)
 
     vm = _PMs.var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
-        [cnd in 1:ncnds], base_name="$(nw)_vm_$(i)",
+        [c in 1:ncnds], base_name="$(nw)_vm_$(i)",
         lower_bound = 0,
         upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax")[c],
-        start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "vm_start", cnd, 1.0)
+        start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "vm_start", c, 1.0)
     ) for i in _PMs.ids(pm, nw, :bus))
 
     report && _PMs.sol_component_value(pm, nw, :bus, :vm, _PMs.ids(pm, nw, :bus), vm)
