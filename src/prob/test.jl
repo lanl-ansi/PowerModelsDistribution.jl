@@ -91,7 +91,6 @@ function _build_mc_ucopf(pm::_PMs.AbstractPowerModel)
         variable_mc_branch_flow(pm, nw=n)
         variable_mc_transformer_flow(pm, nw=n)
         variable_mc_generation(pm, nw=n)
-        # variable_generation_indicator(pm)
         variable_mc_indicator_generation(pm, nw=n)
 
 
