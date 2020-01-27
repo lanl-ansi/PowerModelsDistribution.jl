@@ -475,9 +475,12 @@ Create a dictionary with values of type Any for the load.
 Depending on the load model, this can be a parameter or a NLexpression.
 These will be inserted into KCL.
 """
-function variable_mc_load(pm::_PMs.AbstractPowerModel; nw=pm.cnw, bounded=true)
-    _PMs.var(pm, nw)[:pd] = Dict{Int, Any}()
-    _PMs.var(pm, nw)[:qd] = Dict{Int, Any}()
+function variable_mc_load(pm::_PMs.AbstractPowerModel; nw=pm.cnw, bounded=true, report::Bool=true)
+    pd = _PMs.var(pm, nw)[:pd] = Dict{Int, Any}()
+    qd = _PMs.var(pm, nw)[:qd] = Dict{Int, Any}()
+
+    # report && _PMs.sol_component_value(pm, nw, :load, :pd, _PMs.ids(pm, nw, :load), pd)
+    # report && _PMs.sol_component_value(pm, nw, :load, :qd, _PMs.ids(pm, nw, :load), qd)
 end
 
 
@@ -523,7 +526,7 @@ function variable_mc_indicator_shunt(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw
         )
     end
 
-    report && _PMs.sol_component_value(pm, nw, :shunt, :status, _PMs.ids(pm, nw, :shunt), z_demand)
+    report && _PMs.sol_component_value(pm, nw, :shunt, :status, _PMs.ids(pm, nw, :shunt), z_shunt)
 end
 
 
@@ -566,7 +569,7 @@ function variable_mc_indicator_generation(pm::_PMs.AbstractPowerModel; nw::Int=p
         )
     end
 
-    report && _PMs.sol_component_value(pm, nw, :gen, :status, _PMs.ids(pm, nw, :gen), z_gen)
+    report && _PMs.sol_component_value(pm, nw, :gen, :gen_status, _PMs.ids(pm, nw, :gen), z_gen)
 end
 
 
