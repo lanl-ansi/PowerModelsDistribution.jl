@@ -6,44 +6,60 @@ function constraint_mc_voltage_magnitude_setpoint(pm::_PMs.AbstractWModels, n::I
 end
 
 ""
-function constraint_mc_power_balance_slack(pm::_PMs.AbstractWModels, nw::Int, c::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
-    w    = _PMs.var(pm, nw, c, :w, i)
-    p    = get(_PMs.var(pm, nw, c),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
-    q    = get(_PMs.var(pm, nw, c),    :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
-    pg   = get(_PMs.var(pm, nw, c),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
-    qg   = get(_PMs.var(pm, nw, c),   :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps   = get(_PMs.var(pm, nw, c),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs   = get(_PMs.var(pm, nw, c),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
-    psw  = get(_PMs.var(pm, nw, c),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    qsw  = get(_PMs.var(pm, nw, c),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
-    pt   = get(_PMs.var(pm, nw, c),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
-    qt   = get(_PMs.var(pm, nw, c),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
-    p_slack = _PMs.var(pm, nw, c, :p_slack, i)
-    q_slack = _PMs.var(pm, nw, c, :q_slack, i)
+function constraint_mc_power_balance_slack(pm::_PMs.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    w    = _PMs.var(pm, nw, :w, i)
+    p    = get(_PMs.var(pm, nw),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
+    q    = get(_PMs.var(pm, nw),    :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
+    pg   = get(_PMs.var(pm, nw),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    qg   = get(_PMs.var(pm, nw),   :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps   = get(_PMs.var(pm, nw),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
+    qs   = get(_PMs.var(pm, nw),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    psw  = get(_PMs.var(pm, nw),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(_PMs.var(pm, nw),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(_PMs.var(pm, nw),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+    p_slack = _PMs.var(pm, nw, :p_slack, i)
+    q_slack = _PMs.var(pm, nw, :q_slack, i)
 
-    _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model,
-        sum(p[a] for a in bus_arcs)
-        + sum(psw[a_sw] for a_sw in bus_arcs_sw)
-        + sum(pt[a_trans] for a_trans in bus_arcs_trans)
-        ==
-        sum(pg[g] for g in bus_gens)
-        - sum(ps[s] for s in bus_storage)
-        - sum(pd for pd in values(bus_pd))
-        - sum(gs for gs in values(bus_gs))*w
-        + p_slack
-    )
-    _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@constraint(pm.model,
-        sum(q[a] for a in bus_arcs)
-        + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
-        + sum(qt[a_trans] for a_trans in bus_arcs_trans)
-        ==
-        sum(qg[g] for g in bus_gens)
-        - sum(qs[s] for s in bus_storage)
-        - sum(qd for qd in values(bus_qd))
-        + sum(bs for bs in values(bus_bs))*w
-        + q_slack
-    )
+    cstr_p = []
+    cstr_q = []
+
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        cp = JuMP.@constraint(pm.model,
+            sum(p[a][c] for a in bus_arcs)
+            + sum(psw[a_sw][c] for a_sw in bus_arcs_sw)
+            + sum(pt[a_trans][c] for a_trans in bus_arcs_trans)
+            ==
+            sum(pg[g][c] for g in bus_gens)
+            - sum(ps[s][c] for s in bus_storage)
+            - sum(pd[c] for pd in values(bus_pd))
+            - sum(gs[c] for gs in values(bus_gs))*w[c]
+            + p_slack[c]
+        )
+        push!(cstr_p, cp)
+
+        cq = JuMP.@constraint(pm.model,
+            sum(q[a][c] for a in bus_arcs)
+            + sum(qsw[a_sw][c] for a_sw in bus_arcs_sw)
+            + sum(qt[a_trans][c] for a_trans in bus_arcs_trans)
+            ==
+            sum(qg[g][c] for g in bus_gens)
+            - sum(qs[s][c] for s in bus_storage)
+            - sum(qd[c] for qd in values(bus_qd))
+            + sum(bs[c] for bs in values(bus_bs))*w
+            + q_slack[c]
+        )
+        push!(cstr_q, cq)
+
+    end
+
+    if _PMs.report_duals(pm)
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
+    end
 end
+
+
 
 
 "Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)"
