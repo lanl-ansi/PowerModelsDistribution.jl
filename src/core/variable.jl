@@ -336,9 +336,10 @@ function variable_mc_active_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::Int
     ncnds = length(_PMs.conductor_ids(pm, nw))
 
     p_slack = _PMs.var(pm, nw)[:p_slack] = Dict(i => JuMP.@variable(pm.model,
-        [cnd in 1:cnds], base_name="$(nw)_p_slack_$(cnd)",
-        start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "p_slack_start", cnd)
-    ) for i in _PMs.ids(pm, nw, :bus))
+            [cnd in 1:ncnds], base_name="$(nw)_p_slack_$(cnd)",
+            start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "p_slack_start", cnd)
+        ) for i in _PMs.ids(pm, nw, :bus)
+    )
 
     report && _PMs.sol_component_value(pm, nw, :bus, :p_slack, _PMs.ids(pm, nw, :bus), p_slack)
 end
@@ -350,9 +351,10 @@ function variable_mc_reactive_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::I
     ncnds = length(_PMs.conductor_ids(pm, nw))
 
     q_slack = _PMs.var(pm, nw)[:q_slack] = Dict(i => JuMP.@variable(pm.model,
-        [cnd in 1:cnds], base_name="$(nw)_q_slack_$(cnd)",
-        start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "q_slack_start", cnd)
-    ) for i in _PMs.ids(pm, nw, :bus))
+            [cnd in 1:ncnds], base_name="$(nw)_q_slack_$(cnd)",
+            start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "q_slack_start", cnd)
+        ) for i in _PMs.ids(pm, nw, :bus)
+    )
 
     report && _PMs.sol_component_value(pm, nw, :bus, :q_slack, _PMs.ids(pm, nw, :bus), q_slack)
 end
