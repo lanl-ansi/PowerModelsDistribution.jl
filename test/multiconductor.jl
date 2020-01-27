@@ -309,11 +309,10 @@ end
 
             for (i, bus) in result["solution"]["bus"]
                 @test haskey(bus, "lam_kcl_r")
-                @test haskey(bus, "lam_kcl_i")
+                @test !haskey(bus, "lam_kcl_i")
 
                 for c in 1:mp_data["conductors"]
                     @test bus["lam_kcl_r"][c] >= -4000 && bus["lam_kcl_r"][c] <= 0
-                    @test isnan(bus["lam_kcl_i"][c])
                 end
             end
             for (i, branch) in result["solution"]["branch"]
@@ -465,26 +464,16 @@ end
 
     @testset "multiconductor extensions" begin
         mp_data = build_mc_data!("../test/data/matpower/case3.m")
-        pm = PowerModels.instantiate_model(mp_data, PowerModels.ACPPowerModel, build_tp_opf; multiconductor=true, ref_extensions=[PMD.ref_add_arcs_trans!])
+        pm = PowerModels.instantiate_model(mp_data, PowerModels.ACPPowerModel, build_mc_opf; multiconductor=true, ref_extensions=[PMD.ref_add_arcs_trans!])
 
-        @test haskey(var(pm, pm.cnw), :cnd)
-        @test length(var(pm, pm.cnw)) == 1
+        @test length(PMs.var(pm, pm.cnw)) == 13
 
-        @test length(var(pm, pm.cnw, :cnd)) == 3
-        @test length(var(pm, pm.cnw, :cnd, 1)) == 8
-        @test length(var(pm)) == 8
-        @test haskey(var(pm, pm.cnw, :cnd, 1), :vm)
-        @test PowerModels.var(pm, :vm, 1) == PowerModels.var(pm, pm.cnw, pm.ccnd, :vm, 1)
+        @test haskey(PMs.var(pm, pm.cnw), :vm)
+        @test length(PMs.var(pm, pm.cnw, :vm)) == 3
 
-        @test haskey(PowerModels.con(pm, pm.cnw), :cnd)
-        @test length(PowerModels.con(pm, pm.cnw)) == 1
-        @test length(PowerModels.con(pm, pm.cnw, :cnd)) == 3
-        @test length(PowerModels.con(pm, pm.cnw, :cnd, 1)) == 4
-        @test PowerModels.con(pm, pm.cnw, pm.ccnd, :kcl_p, 1) == PowerModels.con(pm, :kcl_p, 1)
-        @test length(PowerModels.con(pm)) == 4
-
-        @test PowerModels.ref(pm, pm.cnw, :bus, 1, "bus_i") == 1
-        @test PowerModels.ref(pm, :bus, 1, "vmax") == 1.1
+        @test PowerModels.ref(pm, pm.cnw, :bus)
+        @test PowerModels.ref(pm, pm.cnw, :bus, 1)["bus_i"] == 1
+        @test PowerModels.ref(pm, :bus, 1)["vmax"][1] == 1.1
 
         @test PowerModels.ismulticonductor(pm)
         @test PowerModels.ismulticonductor(pm, pm.cnw)
@@ -496,6 +485,8 @@ end
         mp_data = build_mc_data!("../test/data/matpower/case3.m")
 
         a, b, c, d = mp_data["branch"]["1"]["br_r"], mp_data["branch"]["1"]["br_x"], mp_data["branch"]["1"]["b_fr"], mp_data["branch"]["1"]["b_to"]
+        c = diag(c)
+        d = diag(d)
         e = PMD.MultiConductorVector([0.225, 0.225, 0.225, 0.225])
         angs_rad = mp_data["branch"]["1"]["angmin"]
 
