@@ -29,8 +29,15 @@ function constraint_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel, n::
     vm = _PMs.var(pm, n, :vm, i)
     z_voltage = _PMs.var(pm, n, :z_voltage, i)
 
-    JuMP.@constraint(pm.model, vm .<= vmax.*z_voltage)
-    JuMP.@constraint(pm.model, vm .>= vmin.*z_voltage)
+    for c in _PMs.conductor_ids(pm, n)
+        if isfinite(vmax[c])
+            JuMP.@constraint(pm.model, vm[c] <= vmax[c]*z_voltage)
+        end
+
+        if isfinite(vmin[c])
+            JuMP.@constraint(pm.model, vm[c] >= vmin[c]*z_voltage)
+        end
+    end
 end
 
 
