@@ -1,6 +1,18 @@
 ### simple active power only approximations (e.g. DC Power Flow)
 
 
+""
+function variable_mc_voltage(pm::_PMs.AbstractNFAModel; nw=pm.cnw, kwargs...)
+end
+
+
+
+""
+function variable_mc_voltage(pm::_PMs.AbstractDCPModel; nw=pm.cnw, kwargs...)
+    variable_mc_voltage_angle(pm; nw=nw, kwargs...)
+end
+
+
 ######## AbstractDCPForm Models (has va but assumes vm is 1.0) ########
 "nothing to do, these models do not have complex voltage constraints"
 function constraint_mc_model_voltage(pm::_PMs.AbstractDCPModel, n::Int, c::Int)
