@@ -6,11 +6,12 @@ function variable_mc_voltage(pm::_PMs.AbstractACPModel; nw=pm.cnw, kwargs...)
     # This is needed for delta loads, where division occurs by the difference
     # of voltage phasors. If the voltage phasors at one bus are initialized
     # in the same point, this would lead to division by zero.
-    ncnd = length(_PMs.conductor_ids(pm))
-    theta = [_wrap_to_pi(2 * pi / ncnd * (1-c)) for c in 1:ncnd]
+
     vm = 1
-    for id in _PMs.ids(pm, :bus)
+    for id in _PMs.ids(pm, nw, :bus)
         busref = _PMs.ref(pm, nw, :bus, id)
+        ncnd = length(_PMs.conductor_ids(pm, nw))
+        theta = [_wrap_to_pi(2 * pi / ncnd * (1-c)) for c in 1:ncnd]
         if !haskey(busref, "va_start")
         # if it has this key, it was set at PM level
             for c in 1:ncnd
@@ -28,11 +29,12 @@ function variable_mc_bus_voltage_on_off(pm::_PMs.AbstractACPModel; kwargs...)
 
     nw = get(kwargs, :nw, pm.cnw)
 
-    ncnd = length(_PMs.conductor_ids(pm))
-    theta = [_wrap_to_pi(2 * pi / ncnd * (1-c)) for c in 1:ncnd]
+
     vm = 1
-    for id in _PMs.ids(pm, :bus)
+    for id in _PMs.ids(pm, nw, :bus)
         busref = _PMs.ref(pm, nw, :bus, id)
+        ncnd = length(_PMs.conductor_ids(pm, nw))
+        theta = [_wrap_to_pi(2 * pi / ncnd * (1-c)) for c in 1:ncnd]
         if !haskey(busref, "va_start")
         # if it has this key, it was set at PM level
             for c in 1:ncnd

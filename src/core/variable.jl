@@ -8,11 +8,11 @@ function comp_start_value(comp::Dict{String,<:Any}, key::String, conductor=1, de
     end
 end
 
-"voltage variables, delegated back to PowerModels"
-function variable_mc_voltage(pm::_PMs.AbstractPowerModel; kwargs...)
-    variable_mc_voltage_angle(pm; kwargs...)
-    variable_mc_voltage_magnitude(pm; kwargs...)
-end
+# "voltage variables, delegated back to PowerModels"
+# function variable_mc_voltage(pm::_PMs.AbstractPowerModel; kwargs...)
+#     variable_mc_voltage_angle(pm; kwargs...)
+#     variable_mc_voltage_magnitude(pm; kwargs...)
+# end
 
 
 ""
