@@ -49,7 +49,7 @@ include("common.jl") # all passing
 
     include("storage.jl") # all passing
 
-    include("debug.jl")
+    include("debug.jl") # all passing
 
     include("multinetwork.jl")
 

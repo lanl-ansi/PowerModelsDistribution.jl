@@ -336,7 +336,7 @@ function variable_mc_active_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::Int
     ncnds = length(_PMs.conductor_ids(pm, nw))
 
     p_slack = _PMs.var(pm, nw)[:p_slack] = Dict(i => JuMP.@variable(pm.model,
-            [cnd in 1:ncnds], base_name="$(nw)_p_slack_$(cnd)",
+            [cnd in 1:ncnds], base_name="$(nw)_p_slack_$(i)",
             start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "p_slack_start", cnd)
         ) for i in _PMs.ids(pm, nw, :bus)
     )
@@ -351,7 +351,7 @@ function variable_mc_reactive_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::I
     ncnds = length(_PMs.conductor_ids(pm, nw))
 
     q_slack = _PMs.var(pm, nw)[:q_slack] = Dict(i => JuMP.@variable(pm.model,
-            [cnd in 1:ncnds], base_name="$(nw)_q_slack_$(cnd)",
+            [cnd in 1:ncnds], base_name="$(nw)_q_slack_$(i)",
             start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "q_slack_start", cnd)
         ) for i in _PMs.ids(pm, nw, :bus)
     )
@@ -452,7 +452,7 @@ function variable_mc_oltc_tap(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bound
     p_oltc_ids = [id for (id,trans) in _PMs.ref(pm, nw, :transformer) if !all(trans["fixed"])]
     tap = _PMs.var(pm, nw)[:tap] = Dict(i => JuMP.@variable(pm.model,
         [p in 1:nph],
-        base_name="$(nw)_$(p)_tm",
+        base_name="$(nw)_tm_$(i)",
         start=_PMs.ref(pm, nw, :transformer, i, "tm")[p]
     ) for i in p_oltc_ids)
     if bounded
@@ -639,7 +639,7 @@ function variable_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel; n
     w = _PMs.var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_w_$(i)",
         lower_bound = 0,
-        upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax", cnd)^2,
+        upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax")[c]^2,
         start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", cnd, 1.001)
     ) for i in _PMs.ids(pm, nw, :bus))
 
@@ -655,7 +655,7 @@ function variable_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel; nw::I
     vm = _PMs.var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_vm_$(i)",
         lower_bound = 0,
-        upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax", cnd),
+        upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax")[c],
         start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "vm_start", cnd, 1.0)
     ) for i in _PMs.ids(pm, nw, :bus))
 
