@@ -166,7 +166,7 @@ end
 
         @testset "3-bus 3-conductor case with theta_ref=pi" begin
             mp_data = build_mc_data!("../test/data/matpower/case3.m", conductors=3)
-            pm = PowerModels.instantiate_model(mp_data, PowerModels.ACRPowerModel, PMD._build_mc_opf, multiconductor=true)
+            pm = PowerModels.instantiate_model(mp_data, PowerModels.ACRPowerModel, PMD._build_mc_opf, multiconductor=true, ref_extensions=[PMD.ref_add_arcs_trans!])
             result = PowerModels.optimize_model!(pm, optimizer=ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
@@ -465,7 +465,7 @@ end
 
     @testset "multiconductor extensions" begin
         mp_data = build_mc_data!("../test/data/matpower/case3.m")
-        pm = PowerModels.instantiate_model(mp_data, PowerModels.ACPPowerModel, build_tp_opf; multiconductor=true)
+        pm = PowerModels.instantiate_model(mp_data, PowerModels.ACPPowerModel, build_tp_opf; multiconductor=true, ref_extensions=[PMD.ref_add_arcs_trans!])
 
         @test haskey(var(pm, pm.cnw), :cnd)
         @test length(var(pm, pm.cnw)) == 1

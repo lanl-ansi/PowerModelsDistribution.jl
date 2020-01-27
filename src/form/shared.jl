@@ -46,7 +46,7 @@ function constraint_mc_power_balance_slack(pm::_PMs.AbstractWModels, nw::Int, i,
             sum(qg[g][c] for g in bus_gens)
             - sum(qs[s][c] for s in bus_storage)
             - sum(qd[c] for qd in values(bus_qd))
-            + sum(bs[c] for bs in values(bus_bs))*w
+            + sum(bs[c] for bs in values(bus_bs))*w[c]
             + q_slack[c]
         )
         push!(cstr_q, cq)
