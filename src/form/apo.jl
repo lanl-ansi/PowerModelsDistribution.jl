@@ -286,9 +286,9 @@ end
 
 ""
 function constraint_mc_storage_loss(pm::_PMs.AbstractActivePowerModel, n::Int, i, bus, conductors, r, x, p_loss, q_loss)
-    ps = PMs.var(pm, n, :ps, i)
-    sc =_PMs.var(pm, n, :sc, i)
-    sd =_PMs.var(pm, n, :sd, i)
+    ps = _PMs.var(pm, n, :ps, i)
+    sc = _PMs.var(pm, n, :sc, i)
+    sd = _PMs.var(pm, n, :sd, i)
 
     JuMP.@constraint(pm.model,
         sum(ps[c] for c in conductors) + (sd - sc)
@@ -298,8 +298,6 @@ function constraint_mc_storage_loss(pm::_PMs.AbstractActivePowerModel, n::Int, i
 end
 
 function constraint_mc_storage_on_off(pm::_PMs.AbstractActivePowerModel, n::Int, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
-    @assert all(pmin.<=pmax)
-    @assert all(qmin.<=qmax)
 
     z_storage =_PMs.var(pm, n, :z_storage, i)
     ps =_PMs.var(pm, n, :ps, i)
