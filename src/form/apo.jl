@@ -276,17 +276,17 @@ function constraint_storage_loss(pm::_PMs.AbstractActivePowerModel, n::Int, i, b
     )
 end
 
-function constraint_storage_on_off(pm::_PMs.AbstractActivePowerModel, n::Int, c::Int, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
+function constraint_mc_storage_on_off(pm::_PMs.AbstractActivePowerModel, n::Int, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
     z_storage =_PMs.var(pm, n, :z_storage, i)
     ps =_PMs.var(pm, n, c, :ps, i)
 
-    JuMP.@constraint(pm.model, ps <= z_storage*pmax)
-    JuMP.@constraint(pm.model, ps >= z_storage*pmin)
+    JuMP.@constraint(pm.model, ps .<= z_storage.*pmax)
+    JuMP.@constraint(pm.model, ps .>= z_storage.*pmin)
 end
 
-
-""
-function add_setpoint_switch_flow!(sol, pm::_PMs.AbstractActivePowerModel)
-    add_setpoint!(sol, pm, "switch", "psw", :psw, var_key = (idx,item) -> (idx, item["f_bus"], item["t_bus"]))
-    add_setpoint_fixed!(sol, pm, "switch", "qsw")
-end
+# 
+# ""
+# function add_setpoint_switch_flow!(sol, pm::_PMs.AbstractActivePowerModel)
+#     add_setpoint!(sol, pm, "switch", "psw", :psw, var_key = (idx,item) -> (idx, item["f_bus"], item["t_bus"]))
+#     add_setpoint_fixed!(sol, pm, "switch", "qsw")
+# end

@@ -90,8 +90,8 @@ function _build_mc_ucopf(pm::_PMs.AbstractPowerModel)
         variable_mc_voltage(pm, nw=n)
         variable_mc_branch_flow(pm, nw=n)
         variable_mc_transformer_flow(pm, nw=n)
-        variable_mc_generation(pm, nw=n)
         variable_mc_indicator_generation(pm, nw=n)
+        variable_mc_generation_on_off(pm, nw=n)
 
 
         constraint_mc_model_voltage(pm, nw=n)
@@ -99,9 +99,6 @@ function _build_mc_ucopf(pm::_PMs.AbstractPowerModel)
         _PMs.variable_storage_indicator(pm, nw=n)
         _PMs.variable_storage_complementary_indicator(pm, nw=n)
 
-        for i in  _PMs.ids(pm, :gen)
-            variable_mc_generation_on_off(pm, nw=n)
-        end
 
         for i in _PMs.ids(pm, :ref_buses, nw=n)
             constraint_mc_theta_ref(pm, i, nw=n)
@@ -130,20 +127,31 @@ function _build_mc_ucopf(pm::_PMs.AbstractPowerModel)
         # for i in ids(pm, :dcline, nw=n)
         #     constraint_mc_dcline(pm, i, nw=n)
         # end
+
+        for i in _PMs.ids(pm, :storage; nw=n)
+            # _PMs.constraint_storage_state(pm, i; nw=n)
+            _PMs.constraint_storage_complementarity_mi(pm, i; nw=n)
+            constraint_mc_storage_loss(pm, i; nw=n)
+            constraint_mc_storage_thermal_limit(pm, i; nw=n)
+
+            constraint_mc_storage_on_off(pm, i; nw=n)
+
+        end
     end
 
+    network_ids = sort(collect(_PMs.nw_ids(pm)))
 
-    # for i in ids(pm, :storage)
-    #     constraint_storage_state(pm, i)
-    #     constraint_storage_complementarity_mi(pm, i)
-    #     constraint_storage_loss(pm, i, conductors=conductor_ids(pm))
-    #
-    #     for c in conductor_ids(pm)
-    #         constraint_storage_on_off(pm, i, cnd=c)
-    #         constraint_storage_thermal_limit(pm, i, cnd=c)
-    #     end
-    # end
+    n_1 = network_ids[1]
+    for i in _PMs.ids(pm, :storage, nw=n_1)
+        _PMs.constraint_storage_state(pm, i, nw=n_1)
+    end
 
+    for n_2 in network_ids[2:end]
+        for i in _PMs.ids(pm, :storage, nw=n_2)
+            _PMs.constraint_storage_state(pm, i, n_1, n_2)
+        end
+        n_1 = n_2
+    end
     _PMs.objective_min_fuel_cost(pm)
 end
 
