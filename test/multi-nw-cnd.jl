@@ -211,12 +211,12 @@
             @test isapprox(result["objective"], 80006.2; atol = 1e-1)
         end
 
-        @testset "soc 5/14-bus case" begin
-            result = PMD._run_mn_mc_opf(mn_mc_data, PMs.SOCWRPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(result["objective"], 69827.3; atol = 1e-1)
-        end
+        # @testset "soc 5/14-bus case" begin
+        #     result = PMD._run_mn_mc_opf(mn_mc_data, PMs.SOCWRPowerModel, ipopt_solver)
+        #
+        #     @test result["termination_status"] == LOCALLY_SOLVED
+        #     @test isapprox(result["objective"], 69827.3; atol = 1e-1)
+        # end
 
     end
 

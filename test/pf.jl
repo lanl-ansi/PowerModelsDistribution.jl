@@ -47,12 +47,12 @@ calc_vm_W(result, id) = sqrt.(diag( result["solution"]["bus"][id]["Wr"]))
             @test isapprox(result["objective"], 0.0; atol=1e-2)
         end
 
-        @testset "5-bus coupled meshed network (b) soc pf" begin
-            result = run_mc_pf("../test/data/matlab/case5_c_m_b.m", PMs.SOCWRPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 0.0; atol=1e-2)
-        end
+        # @testset "5-bus coupled meshed network (b) soc pf" begin
+        #     result = run_mc_pf("../test/data/matlab/case5_c_m_b.m", PMs.SOCWRPowerModel, ipopt_solver)
+        #
+        #     @test result["termination_status"] == PMs.LOCALLY_SOLVED
+        #     @test isapprox(result["objective"], 0.0; atol=1e-2)
+        # end
 
         @testset "5-bus independent radial w/ shunts acp pf" begin
             result = run_ac_mc_pf("../test/data/matlab/case5_i_r_b.m", ipopt_solver)

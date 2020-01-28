@@ -27,16 +27,16 @@
             @test all(isapprox(calc_va("2")[c], PMD._wrap_to_pi(-0.0538204+2*pi/mp_data["conductors"]*(1-c)); atol=1e-5) for c in 1:mp_data["conductors"])
         end
 
-        @testset "5-bus matpower soc opf" begin
-            mp_data = PMs.parse_file("../test/data/matpower/case5.m")
-            PMD.make_multiconductor!(mp_data, 3)
-            result = run_mc_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 45365.17; atol=1e-1)
-
-            @test all(isapprox(result["solution"]["gen"]["1"]["pg"][c],  0.3999999; atol=1e-3) for c in 1:mp_data["conductors"])
-        end
+        # @testset "5-bus matpower soc opf" begin
+        #     mp_data = PMs.parse_file("../test/data/matpower/case5.m")
+        #     PMD.make_multiconductor!(mp_data, 3)
+        #     result = run_mc_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
+        #
+        #     @test result["termination_status"] == PMs.LOCALLY_SOLVED
+        #     @test isapprox(result["objective"], 45365.17; atol=1e-1)
+        #
+        #     @test all(isapprox(result["solution"]["gen"]["1"]["pg"][c],  0.3999999; atol=1e-3) for c in 1:mp_data["conductors"])
+        # end
 
         @testset "30-bus matpower acp opf" begin
             mp_data = PMs.parse_file("../test/data/matpower/case30.m")
@@ -81,16 +81,16 @@
             @test isapprox(result["objective"], 458.006; atol=1e-1)
         end
 
-        @testset "30-bus matpower soc opf" begin
-            mp_data = PMs.parse_file("../test/data/matpower/case30.m")
-            PMD.make_multiconductor!(mp_data, 3)
-            result = run_mc_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 517.588; atol=1e-1)
-
-            @test all(isapprox(result["solution"]["gen"]["1"]["pg"][c],  2.821313; atol=1e-3) for c in 1:mp_data["conductors"])
-        end
+        # @testset "30-bus matpower soc opf" begin
+        #     mp_data = PMs.parse_file("../test/data/matpower/case30.m")
+        #     PMD.make_multiconductor!(mp_data, 3)
+        #     result = run_mc_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
+        #
+        #     @test result["termination_status"] == PMs.LOCALLY_SOLVED
+        #     @test isapprox(result["objective"], 517.588; atol=1e-1)
+        #
+        #     @test all(isapprox(result["solution"]["gen"]["1"]["pg"][c],  2.821313; atol=1e-3) for c in 1:mp_data["conductors"])
+        # end
     end
 
     @testset "test pmd matlab opf" begin
@@ -166,15 +166,15 @@
             @test isapprox(result["objective"], 44700.0; atol=1e-1)
         end
 
-        @testset "5-bus coupled meshed soc opf" begin
-            mp_data = PMD.parse_file("../test/data/matlab/case5_c_m_a.m")
-            result = run_mc_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], -0.000272; atol=1e-3)
-
-            @test all(isapprox.(result["solution"]["gen"]["1"]["qg"], [0.0451820, 0.0290373, 0.0343748]; atol=1e-3))
-        end
+        # @testset "5-bus coupled meshed soc opf" begin
+        #     mp_data = PMD.parse_file("../test/data/matlab/case5_c_m_a.m")
+        #     result = run_mc_opf(mp_data, PMs.SOCWRPowerModel, ipopt_solver)
+        #
+        #     @test result["termination_status"] == PMs.LOCALLY_SOLVED
+        #     @test isapprox(result["objective"], -0.000272; atol=1e-3)
+        #
+        #     @test all(isapprox.(result["solution"]["gen"]["1"]["qg"], [0.0451820, 0.0290373, 0.0343748]; atol=1e-3))
+        # end
 
         @testset "5-bus coupled meshed infeasible acp opf" begin
             mp_data = PMD.parse_file("../test/data/matlab/case5_c_m_b.m")
@@ -316,12 +316,12 @@
             @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00919404; atol=1.2e-5)
         end
 
-        @testset "3-bus balanced soc opf" begin
-            pmd = PMD.parse_file("../test/data/opendss/case3_balanced.dss")
-            sol = PMD.run_mc_opf(pmd, PMs.SOCWRPowerModel, ipopt_solver)
-
-            @test sol["termination_status"] == PMs.LOCALLY_SOLVED
-        end
+        # @testset "3-bus balanced soc opf" begin
+        #     pmd = PMD.parse_file("../test/data/opendss/case3_balanced.dss")
+        #     sol = PMD.run_mc_opf(pmd, PMs.SOCWRPowerModel, ipopt_solver)
+        #
+        #     @test sol["termination_status"] == PMs.LOCALLY_SOLVED
+        # end
 
         @testset "3-bus unbalanced acp opf" begin
             pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced.dss")
@@ -340,12 +340,12 @@
             @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00927263; atol=1e-5)
         end
 
-        @testset "3-bus unbalanced soc opf" begin
-            pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced.dss")
-            sol = PMD.run_mc_opf(pmd, PMs.SOCWRPowerModel, ipopt_solver)
-
-            @test sol["termination_status"] == PMs.LOCALLY_SOLVED
-        end
+        # @testset "3-bus unbalanced soc opf" begin
+        #     pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced.dss")
+        #     sol = PMD.run_mc_opf(pmd, PMs.SOCWRPowerModel, ipopt_solver)
+        #
+        #     @test sol["termination_status"] == PMs.LOCALLY_SOLVED
+        # end
 
         @testset "3-bus unbalanced isc acp opf" begin
             pmd = PMD.parse_file("../test/data/opendss/case3_balanced_isc.dss")
@@ -403,11 +403,11 @@
             @test isapprox(result["objective"], 0.616; atol=1e-3)
         end
 
-        @testset "1-bus soc opf" begin
-            pmd = PMD.parse_file("../test/data/opendss/test_simple.dss")
-            sol = PMD.run_mc_opf(pmd, PowerModels.SOCWRPowerModel, ipopt_solver)
-
-            @test sol["termination_status"] == PMs.LOCALLY_SOLVED
-        end
+        # @testset "1-bus soc opf" begin
+        #     pmd = PMD.parse_file("../test/data/opendss/test_simple.dss")
+        #     sol = PMD.run_mc_opf(pmd, PowerModels.SOCWRPowerModel, ipopt_solver)
+        #
+        #     @test sol["termination_status"] == PMs.LOCALLY_SOLVED
+        # end
     end
 end
