@@ -68,7 +68,7 @@ function variable_mx_real(model::JuMP.Model, indices::Array{T,1}, N::Int, M::Int
     dict_mat_vars_temp = Dict{T, Array{Any, 2}}([(i,fill(missing,N,M)) for i in indices])
     for n in 1:N
         for m in 1:M
-            varname = isempty(prefix) ? "$(name)_$(n)$(m)" : "$(prefix)_$(n)$(m)"
+            varname = isempty(prefix) ? "$(name)_$(n)$(m)" : "$(prefix)_$(name)_$(n)$(m)"
             # create the element (n,m) for all indices
             mat_nm = _make_matrix_variable_element(model, indices, n, m;
                 upper_bound=upper_bound, lower_bound=lower_bound, varname=varname)
