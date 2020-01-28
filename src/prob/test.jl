@@ -90,8 +90,8 @@ function _build_mc_ucopf(pm::_PMs.AbstractPowerModel)
         variable_mc_voltage(pm, nw=n)
         variable_mc_branch_flow(pm, nw=n)
         variable_mc_transformer_flow(pm, nw=n)
-        variable_mc_generation(pm, nw=n)
         variable_mc_indicator_generation(pm, nw=n)
+        variable_mc_generation_on_off(pm, nw=n)
 
 
         constraint_mc_model_voltage(pm, nw=n)
@@ -99,9 +99,6 @@ function _build_mc_ucopf(pm::_PMs.AbstractPowerModel)
         _PMs.variable_storage_indicator(pm, nw=n)
         _PMs.variable_storage_complementary_indicator(pm, nw=n)
 
-        for i in  _PMs.ids(pm, :gen)
-            variable_mc_generation_on_off(pm, nw=n)
-        end
 
         for i in _PMs.ids(pm, :ref_buses, nw=n)
             constraint_mc_theta_ref(pm, i, nw=n)
