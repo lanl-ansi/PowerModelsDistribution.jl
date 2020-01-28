@@ -90,12 +90,19 @@ function _build_mc_ucopf(pm::_PMs.AbstractPowerModel)
         variable_mc_voltage(pm, nw=n)
         variable_mc_branch_flow(pm, nw=n)
         variable_mc_transformer_flow(pm, nw=n)
+
         variable_mc_indicator_generation(pm, nw=n)
         variable_mc_generation_on_off(pm, nw=n)
 
 
         constraint_mc_model_voltage(pm, nw=n)
 
+
+
+        variable_mc_on_off_storage(pm, nw=n)
+        _PMs.variable_storage_energy(pm, nw=n)
+        _PMs.variable_storage_charge(pm, nw=n)
+        _PMs.variable_storage_discharge(pm, nw=n)
         _PMs.variable_storage_indicator(pm, nw=n)
         _PMs.variable_storage_complementary_indicator(pm, nw=n)
 
