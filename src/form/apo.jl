@@ -293,7 +293,6 @@ function constraint_mc_storage_on_off(pm::_PMs.AbstractActivePowerModel, n::Int,
 
     z_storage =_PMs.var(pm, n, :z_storage, i)
     ps =_PMs.var(pm, n, :ps, i)
-    @show typeof(pmin), charge_ub, typeof(ps), typeof(z_storage)
 
     JuMP.@constraint(pm.model, ps .<= pmax.*z_storage)
     JuMP.@constraint(pm.model, ps .>= pmin.*z_storage)
