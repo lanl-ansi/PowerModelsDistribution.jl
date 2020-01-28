@@ -248,17 +248,17 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
             end
         end
 
-        @testset "soc 5-bus case" begin
-            result = PMD.run_mc_opf(mp_data, PowerModels.SOCWRPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(result["objective"], 46314.1; atol = 1e-1)
-            for c in 1:mp_data["conductors"]
-                vm = calc_vm_w(result, "2")
-                @test isapprox(result["solution"]["gen"]["1"]["pg"][c],  0.4; atol = 1e-3)
-                @test isapprox(vm[c],  1.08578; atol = 1e-3)
-            end
-        end
+        # @testset "soc 5-bus case" begin
+        #     result = PMD.run_mc_opf(mp_data, PowerModels.SOCWRPowerModel, ipopt_solver)
+        #
+        #     @test result["termination_status"] == LOCALLY_SOLVED
+        #     @test isapprox(result["objective"], 46314.1; atol = 1e-1)
+        #     for c in 1:mp_data["conductors"]
+        #         vm = calc_vm_w(result, "2")
+        #         @test isapprox(result["solution"]["gen"]["1"]["pg"][c],  0.4; atol = 1e-3)
+        #         @test isapprox(vm[c],  1.08578; atol = 1e-3)
+        #     end
+        # end
 
     end
 
