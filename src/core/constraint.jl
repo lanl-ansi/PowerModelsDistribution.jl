@@ -8,8 +8,10 @@ function constraint_mc_thermal_limit_from(pm::_PMs.AbstractPowerModel, n::Int, f
     p_fr = _PMs.var(pm, n, :p, f_idx)
     q_fr = _PMs.var(pm, n, :q, f_idx)
 
-    for c in _PMs.conductor_ids(pm; nw=n)
-        JuMP.@constraint(pm.model, p_fr[c]^2 + q_fr[c]^2 <= rate_a[c]^2)
+    mu_sm_fr = JuMP.@constraint(pm.model, p_fr.^2 + q_fr.^2 .<= rate_a.^2)
+
+    if _PMs.report_duals(pm)
+        _PMs.sol(pm, n, :branch, f_idx[1])[:mu_sm_fr] = mu_sm_fr
     end
 end
 
@@ -18,8 +20,10 @@ function constraint_mc_thermal_limit_to(pm::_PMs.AbstractPowerModel, n::Int, t_i
     p_to = _PMs.var(pm, n, :p, t_idx)
     q_to = _PMs.var(pm, n, :q, t_idx)
 
-    for c in _PMs.conductor_ids(pm; nw=n)
-        JuMP.@constraint(pm.model, p_to[c]^2 + q_to[c]^2 <= rate_a[c]^2)
+    mu_sm_to = JuMP.@constraint(pm.model, p_to.^2 + q_to.^2 .<= rate_a.^2)
+
+    if _PMs.report_duals(pm)
+        _PMs.sol(pm, n, :branch, t_idx[1])[:mu_sm_to] = mu_sm_to
     end
 end
 

@@ -51,7 +51,7 @@ include("common.jl") # all passing
 
     include("debug.jl") # all passing
 
-    include("multinetwork.jl")
+    include("multinetwork.jl") # all passing
 
     include("transformer.jl") # all passing
 

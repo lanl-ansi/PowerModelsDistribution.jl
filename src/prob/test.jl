@@ -96,15 +96,11 @@ function _build_mc_ucopf(pm::_PMs.AbstractPowerModel)
 
         constraint_mc_model_voltage(pm, nw=n)
 
-        variable_storage_indicator(pm)
-        variable_storage_complementary_indicator(pm)
+        _PMs.variable_storage_indicator(pm, nw=n)
+        _PMs.variable_storage_complementary_indicator(pm, nw=n)
 
-        for c in conductor_ids(pm)
-            variable_generation_on_off(pm, cnd=c)
-        end
-
-        for i in ids(pm, :gen)
-            constraint_generation_on_off(pm, i, cnd=c)
+        for i in  _PMs.ids(pm, :gen)
+            variable_mc_generation_on_off(pm, nw=n)
         end
 
         for i in _PMs.ids(pm, :ref_buses, nw=n)
@@ -135,20 +131,18 @@ function _build_mc_ucopf(pm::_PMs.AbstractPowerModel)
         #     constraint_mc_dcline(pm, i, nw=n)
         # end
     end
-    _PMs.objective_min_fuel_cost(pm)
 
 
-
-    for i in ids(pm, :storage)
-        constraint_storage_state(pm, i)
-        constraint_storage_complementarity_mi(pm, i)
-        constraint_storage_loss(pm, i, conductors=conductor_ids(pm))
-
-        for c in conductor_ids(pm)
-            constraint_storage_on_off(pm, i, cnd=c)
-            constraint_storage_thermal_limit(pm, i, cnd=c)
-        end
-    end
+    # for i in ids(pm, :storage)
+    #     constraint_storage_state(pm, i)
+    #     constraint_storage_complementarity_mi(pm, i)
+    #     constraint_storage_loss(pm, i, conductors=conductor_ids(pm))
+    #
+    #     for c in conductor_ids(pm)
+    #         constraint_storage_on_off(pm, i, cnd=c)
+    #         constraint_storage_thermal_limit(pm, i, cnd=c)
+    #     end
+    # end
 
     _PMs.objective_min_fuel_cost(pm)
 end
@@ -197,47 +191,47 @@ end
 # end
 
 
-""
-function _run_mc_opf_iv(file, model_type::Type, optimizer; kwargs...)
-    return run_model(file, model_type, optimizer, _build_mc_opf_iv; multiconductor=true, kwargs...)
-end
-
-""
-function _build_mc_opf_iv(pm::_PMs.AbstractPowerModel)
-    for c in conductor_ids(pm)
-        variable_voltage(pm, cnd=c)
-        variable_branch_current(pm, cnd=c)
-
-        variable_gen(pm, cnd=c)
-        variable_dcline(pm, cnd=c)
-
-
-        for i in ids(pm, :ref_buses)
-            constraint_theta_ref(pm, i, cnd=c)
-        end
-
-        for i in ids(pm, :bus)
-            constraint_current_balance(pm, i, cnd=c)
-        end
-
-        for i in ids(pm, :branch)
-            constraint_current_from(pm, i, cnd=c)
-            constraint_current_to(pm, i, cnd=c)
-
-            constraint_voltage_drop(pm, i, cnd=c)
-            constraint_voltage_angle_difference(pm, i, cnd=c)
-
-            constraint_thermal_limit_from(pm, i, cnd=c)
-            constraint_thermal_limit_to(pm, i, cnd=c)
-        end
-
-        for i in ids(pm, :dcline)
-            constraint_dcline(pm, i, cnd=c)
-        end
-    end
-
-    _PMs.objective_min_fuel_cost(pm)
-end
+# ""
+# function _run_mc_opf_iv(file, model_type::Type, optimizer; kwargs...)
+#     return run_model(file, model_type, optimizer, _build_mc_opf_iv; multiconductor=true, kwargs...)
+# end
+#
+# ""
+# function _build_mc_opf_iv(pm::_PMs.AbstractPowerModel)
+#     for c in conductor_ids(pm)
+#         variable_voltage(pm, cnd=c)
+#         variable_branch_current(pm, cnd=c)
+#
+#         variable_gen(pm, cnd=c)
+#         variable_dcline(pm, cnd=c)
+#
+#
+#         for i in ids(pm, :ref_buses)
+#             constraint_theta_ref(pm, i, cnd=c)
+#         end
+#
+#         for i in ids(pm, :bus)
+#             constraint_current_balance(pm, i, cnd=c)
+#         end
+#
+#         for i in ids(pm, :branch)
+#             constraint_current_from(pm, i, cnd=c)
+#             constraint_current_to(pm, i, cnd=c)
+#
+#             constraint_voltage_drop(pm, i, cnd=c)
+#             constraint_voltage_angle_difference(pm, i, cnd=c)
+#
+#             constraint_thermal_limit_from(pm, i, cnd=c)
+#             constraint_thermal_limit_to(pm, i, cnd=c)
+#         end
+#
+#         for i in ids(pm, :dcline)
+#             constraint_dcline(pm, i, cnd=c)
+#         end
+#     end
+#
+#     _PMs.objective_min_fuel_cost(pm)
+# end
 
 
 ""
