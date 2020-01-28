@@ -532,7 +532,7 @@ function constraint_mc_storage_thermal_limit(pm::_PMs.AbstractPowerModel, i::Int
 end
 
 ""
-function constraint_storage_current_limit(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_storage_current_limit(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     storage = ref(pm, nw, :storage, i)
-    constraint_storage_current_limit(pm, nw, i, storage["storage_bus"], storage["current_rating"])
+    constraint_mc_storage_current_limit(pm, nw, i, storage["storage_bus"], storage["current_rating"])
 end
