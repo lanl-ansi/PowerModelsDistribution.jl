@@ -314,7 +314,7 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
 
             for (i, bus) in result["solution"]["bus"]
                 @test haskey(bus, "lam_kcl_r")
-                @test !haskey(bus, "lam_kcl_i")
+                @test haskey(bus, "lam_kcl_i")
 
                 for c in 1:mp_data["conductors"]
                     @test bus["lam_kcl_r"][c] >= -4000 && bus["lam_kcl_r"][c] <= 0

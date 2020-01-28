@@ -70,7 +70,7 @@ function constraint_mc_power_balance(pm::_PMs.AbstractActivePowerModel, nw::Int,
         - sum(gs.values for gs in values(bus_gs))*1.0^2
     )
     # omit reactive constraint
-    cnds = _PMs.conductor_ids(pm, n)
+    cnds = _PMs.conductor_ids(pm, nw)
     ncnds = length(cnds)
 
     if _PMs.report_duals(pm)

@@ -614,8 +614,8 @@ function variable_mc_on_off_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=
 
     ps = _PMs.var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_ps_$(i)",
-        lower_bound = inj_lb[cnd][i],
-        upper_bound = inj_ub[cnd][i],
+        lower_bound = min(0, inj_lb[cnd][i]),
+        upper_bound = max(0, inj_ub[cnd][i]),
         start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "ps_start", cnd)
     ) for i in _PMs.ids(pm, nw, :storage))
 
