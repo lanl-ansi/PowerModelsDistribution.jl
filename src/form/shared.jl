@@ -333,3 +333,16 @@ function constraint_mc_voltage_angle_difference(pm::_PMs.AbstractWModels, n::Int
         _PMs.cut_complex_product_and_angle_difference(pm.model, w_fr[c], w_to[c], wr[c], wi[c], angmin[c], angmax[c])
     end
 end
+
+
+function constraint_mc_storage_on_off(pm::_PMs.AbstractPowerModel, n::Int, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
+    z_storage =_PMs.var(pm, n, :z_storage, i)
+    ps =_PMs.var(pm, n, :ps, i)
+    qs =_PMs.var(pm, n, :qs, i)
+
+    JuMP.@constraint(pm.model, ps .<= z_storage.*pmax)
+    JuMP.@constraint(pm.model, ps .>= z_storage.*pmin)
+
+    JuMP.@constraint(pm.model, qs .<= z_storage.*qmax)
+    JuMP.@constraint(pm.model, qs .>= z_storage.*qmin)
+end

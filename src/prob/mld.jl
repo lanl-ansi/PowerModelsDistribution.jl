@@ -37,7 +37,7 @@ function run_mc_mld_uc(file::String, model_type, solver; kwargs...)
 end
 
 
-"Load shedding problem including storage"
+"Load shedding problem including storage (snap-shot)"
 function build_mc_mld(pm::_PMs.AbstractPowerModel)
     variable_mc_indicator_bus_voltage(pm; relax=true)
     variable_mc_bus_voltage_on_off(pm)
@@ -48,7 +48,10 @@ function build_mc_mld(pm::_PMs.AbstractPowerModel)
     variable_mc_indicator_generation(pm; relax=true)
     variable_mc_generation_on_off(pm)
 
-    variable_mc_storage(pm)
+    # variable_mc_storage(pm)
+    _PMs.variable_storage_energy(pm)
+    _PMs.variable_storage_charge(pm)
+    _PMs.variable_storage_discharge(pm)
     variable_mc_indicator_storage(pm; relax=true)
     variable_mc_on_off_storage(pm)
 
