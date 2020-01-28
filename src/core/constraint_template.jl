@@ -536,3 +536,27 @@ function constraint_mc_storage_current_limit(pm::_PMs.AbstractPowerModel, i::Int
     storage = ref(pm, nw, :storage, i)
     constraint_mc_storage_current_limit(pm, nw, i, storage["storage_bus"], storage["current_rating"])
 end
+
+""
+function constraint_mc_storage_on_off(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    storage = ref(pm, nw, :storage, i)
+    charge_ub = storage["charge_rating"]
+    discharge_ub = storage["discharge_rating"]
+
+    cnds = _PMs.conductor_ids(pm, nw)
+    ncnds = length(cnds)
+    pmin = zeros(ncnds)
+    pmax = zeros(ncnds)
+    qmin = zeros(ncnds)
+    qmax = zeros(ncnds)
+
+    for c in 1:ncnds
+        inj_lb, inj_ub = _PMs.ref_calc_storage_injection_bounds(_PMs.ref(pm, nw, :storage), _PMs.ref(pm, nw, :bus), c)
+        pmin[c] = inj_lb[i]
+        pmax[c] = inj_ub[i]
+        qmin[c] = max(inj_lb[i], _PMs.ref(pm, nw, :storage, i, "qmin", c))
+        qmax[c] = min(inj_ub[i], _PMs.ref(pm, nw, :storage, i, "qmax", c))
+    end
+
+    constraint_mc_storage_on_off(pm, nw, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
+end

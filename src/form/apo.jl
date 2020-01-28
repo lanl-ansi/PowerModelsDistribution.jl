@@ -6,17 +6,17 @@ end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_generation_on_off_reactive(pm::_PMs.AbstractActivePowerModel; kwargs...)
+function variable_mc_reactive_generation_on_off(pm::_PMs.AbstractActivePowerModel; kwargs...)
 end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_reactive_storage(pm::_PMs.AbstractActivePowerModel; kwargs...)
+function variable_mc_storage_reactive(pm::_PMs.AbstractActivePowerModel; kwargs...)
 end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_storage_on_off_reactive(pm::_PMs.AbstractActivePowerModel; kwargs...)
+function variable_mc_on_off_storage_reactive(pm::_PMs.AbstractActivePowerModel; kwargs...)
 end
 
 
@@ -30,9 +30,9 @@ function variable_mc_branch_flow_ne_reactive(pm::_PMs.AbstractActivePowerModel; 
 end
 
 
-"do nothing, apo models do not have reactive variables"
-function constraint_mc_gen_setpoint_reactive(pm::_PMs.AbstractActivePowerModel, n::Int, c::Int, i, qg)
-end
+# "do nothing, apo models do not have reactive variables"
+# function constraint_mc_gen_setpoint_reactive(pm::_PMs.AbstractActivePowerModel, n::Int, c::Int, i, qg)
+# end
 
 
 "nothing to do, these models do not have complex voltage variables"
@@ -194,8 +194,8 @@ function constraint_mc_thermal_limit_to(pm::_PMs.AbstractActivePowerModel, n::In
 end
 
 ""
-function constraint_current_limit(pm::_PMs.AbstractActivePowerModel, n::Int, c::Int, f_idx, c_rating_a)
-    p_fr =_PMs.var(pm, n, c, :p, f_idx)
+function constraint_mc_current_limit(pm::_PMs.AbstractActivePowerModel, n::Int, f_idx, c_rating_a)
+    p_fr =_PMs.var(pm, n, :p, f_idx)
 
     JuMP.lower_bound(p_fr) < -c_rating_a && JuMP.set_lower_bound(p_fr, -c_rating_a)
     JuMP.upper_bound(p_fr) >  c_rating_a && JuMP.set_upper_bound(p_fr,  c_rating_a)
@@ -203,7 +203,7 @@ end
 
 
 ""
-function constraint_thermal_limit_from_on_off(pm::_PMs.AbstractActivePowerModel, n::Int, c::Int, i, f_idx, rate_a)
+function constraint_mc_thermal_limit_from_on_off(pm::_PMs.AbstractActivePowerModel, n::Int, i, f_idx, rate_a)
     p_fr =_PMs.var(pm, n, c, :p, f_idx)
     z =_PMs.var(pm, n, :z_branch, i)
 
@@ -212,8 +212,8 @@ function constraint_thermal_limit_from_on_off(pm::_PMs.AbstractActivePowerModel,
 end
 
 ""
-function constraint_thermal_limit_to_on_off(pm::_PMs.AbstractActivePowerModel, n::Int, c::Int, i, t_idx, rate_a)
-    p_to =_PMs.var(pm, n, c, :p, t_idx)
+function constraint_mc_thermal_limit_to_on_off(pm::_PMs.AbstractActivePowerModel, n::Int, i, t_idx, rate_a)
+    p_to =_PMs.var(pm, n, :p, t_idx)
     z =_PMs.var(pm, n, :z_branch, i)
 
     JuMP.@constraint(pm.model, p_to <=  rate_a*z)
@@ -221,8 +221,8 @@ function constraint_thermal_limit_to_on_off(pm::_PMs.AbstractActivePowerModel, n
 end
 
 ""
-function constraint_thermal_limit_from_ne(pm::_PMs.AbstractActivePowerModel, n::Int, c::Int, i, f_idx, rate_a)
-    p_fr =_PMs.var(pm, n, c, :p_ne, f_idx)
+function constraint_mc_thermal_limit_from_ne(pm::_PMs.AbstractActivePowerModel, n::Int, i, f_idx, rate_a)
+    p_fr =_PMs.var(pm, n, :p_ne, f_idx)
     z =_PMs.var(pm, n, :branch_ne, i)
 
     JuMP.@constraint(pm.model, p_fr <=  rate_a*z)
@@ -230,8 +230,8 @@ function constraint_thermal_limit_from_ne(pm::_PMs.AbstractActivePowerModel, n::
 end
 
 ""
-function constraint_thermal_limit_to_ne(pm::_PMs.AbstractActivePowerModel, n::Int, c::Int, i, t_idx, rate_a)
-    p_to =_PMs.var(pm, n, c, :p_ne, t_idx)
+function constraint_mc_thermal_limit_to_ne(pm::_PMs.AbstractActivePowerModel, n::Int, i, t_idx, rate_a)
+    p_to =_PMs.var(pm, n, :p_ne, t_idx)
     z =_PMs.var(pm, n, :branch_ne, i)
 
     JuMP.@constraint(pm.model, p_to <=  rate_a*z)
@@ -239,36 +239,44 @@ function constraint_thermal_limit_to_ne(pm::_PMs.AbstractActivePowerModel, n::In
 end
 
 
-
 ""
-function constraint_switch_thermal_limit(pm::_PMs.AbstractActivePowerModel, n::Int, c::Int, f_idx, rating)
-    psw =_PMs.var(pm, n, c, :psw, f_idx)
+function constraint_mc_switch_thermal_limit(pm::_PMs.AbstractActivePowerModel, n::Int, f_idx, rating)
+    psw =_PMs.var(pm, n, :psw, f_idx)
 
     JuMP.lower_bound(psw) < -rating && JuMP.set_lower_bound(psw, -rating)
     JuMP.upper_bound(psw) >  rating && JuMP.set_upper_bound(psw,  rating)
 end
 
 
-
 ""
-function constraint_storage_thermal_limit(pm::_PMs.AbstractActivePowerModel, n::Int, c::Int, i, rating)
-    ps =_PMs.var(pm, n, c, :ps, i)
+function constraint_mc_storage_thermal_limit(pm::_PMs.AbstractActivePowerModel, n::Int, i, rating)
+    ps =_PMs.var(pm, n, :ps, i)
 
-    JuMP.lower_bound(ps) < -rating && JuMP.set_lower_bound(ps, -rating)
-    JuMP.upper_bound(ps) >  rating && JuMP.set_upper_bound(ps,  rating)
+    cnds = _PMs.conductor_ids(pm, n)
+    ncnds = length(cnds)
+
+    for c in 1:ncnds
+        JuMP.lower_bound(ps[c]) < -rating[c] && JuMP.set_lower_bound(ps[c], -rating[c])
+        JuMP.upper_bound(ps[c]) >  rating[c] && JuMP.set_upper_bound(ps[c],  rating[c])
+    end
 end
 
 ""
-function constraint_storage_current_limit(pm::_PMs.AbstractActivePowerModel, n::Int, c::Int, i, bus, rating)
-    ps =_PMs.var(pm, n, c, :ps, i)
+function constraint_mc_storage_current_limit(pm::_PMs.AbstractActivePowerModel, n::Int, i, bus, rating)
+    ps =_PMs.var(pm, n, :ps, i)
 
-    JuMP.lower_bound(ps) < -rating && JuMP.set_lower_bound(ps, -rating)
-    JuMP.upper_bound(ps) >  rating && JuMP.set_upper_bound(ps,  rating)
+    cnds = _PMs.conductor_ids(pm, n)
+    ncnds = length(cnds)
+
+    for c in 1:ncnds
+        JuMP.lower_bound(ps[c]) < -rating[c] && JuMP.set_lower_bound(ps[c], -rating[c])
+        JuMP.upper_bound(ps[c]) >  rating[c] && JuMP.set_upper_bound(ps[c],  rating[c])
+    end
 end
 
 ""
-function constraint_storage_loss(pm::_PMs.AbstractActivePowerModel, n::Int, i, bus, conductors, r, x, p_loss, q_loss)
-    ps = Dict(c =>_PMs.var(pm, n, c, :ps, i) for c in conductors)
+function constraint_mc_storage_loss(pm::_PMs.AbstractActivePowerModel, n::Int, i, bus, conductors, r, x, p_loss, q_loss)
+    ps = PMs.var(pm, n, :ps, i)
     sc =_PMs.var(pm, n, :sc, i)
     sd =_PMs.var(pm, n, :sd, i)
 
@@ -280,11 +288,16 @@ function constraint_storage_loss(pm::_PMs.AbstractActivePowerModel, n::Int, i, b
 end
 
 function constraint_mc_storage_on_off(pm::_PMs.AbstractActivePowerModel, n::Int, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
-    z_storage =_PMs.var(pm, n, :z_storage, i)
-    ps =_PMs.var(pm, n, c, :ps, i)
+    @assert all(pmin.<=pmax)
+    @assert all(qmin.<=qmax)
 
-    JuMP.@constraint(pm.model, ps .<= z_storage.*pmax)
-    JuMP.@constraint(pm.model, ps .>= z_storage.*pmin)
+    z_storage =_PMs.var(pm, n, :z_storage, i)
+    ps =_PMs.var(pm, n, :ps, i)
+    @show typeof(pmin), charge_ub, typeof(ps), typeof(z_storage)
+
+    JuMP.@constraint(pm.model, ps .<= pmax.*z_storage)
+    JuMP.@constraint(pm.model, ps .>= pmin.*z_storage)
+
 end
 
 #
