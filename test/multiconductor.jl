@@ -41,25 +41,25 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
 @testset "test multi-conductor" begin
 
     @testset "json parser" begin
-        mc_data = build_mc_data!("../test/data/pti/parser_test_defaults.raw")
-        mc_json_string = PowerModels.parse_json(JSON.json(mc_data))
-        @test mc_data == mc_json_string
+        # mc_data = build_mc_data!("../test/data/pti/parser_test_defaults.raw")
+        # mc_json_string = PowerModelsDistribution.parse_json(JSON.json(mc_data))
+        # @test mc_data == mc_json_string
 
-        io = PipeBuffer()
-        JSON.print(io, mc_data)
-        mc_json_file = PowerModels.parse_file(io)
-        @test mc_data == mc_json_file
+        # io = PipeBuffer()
+        # JSON.print(io, mc_data)
+        # mc_json_file = PowerModelsDistribution.parse_file(io)
+        # @test mc_data == mc_json_file
 
         mc_strg_data = build_mc_data!("../test/data/matpower/case5_strg.m")
-        mc_strg_json_string = PowerModels.parse_json(JSON.json(mc_strg_data))
+        mc_strg_json_string = PowerModelsDistribution.parse_json(JSON.json(mc_strg_data))
         @test mc_strg_data == mc_strg_json_string
 
         # test that non-multiconductor json still parses, pti_json_file will result in error if fails
-        pti_data = PowerModels.parse_file("../test/data/pti/parser_test_defaults.raw")
-        io = PipeBuffer()
-        JSON.print(io, pti_data)
-        pti_json_file = PowerModels.parse_file(io)
-        @test pti_data == pti_json_file
+        # pti_data = PowerModelsDistribution.parse_file("../test/data/pti/parser_test_defaults.raw")
+        # io = PipeBuffer()
+        # JSON.print(io, pti_data)
+        # pti_json_file = PowerModelsDistribution.parse_file(io)
+        # @test pti_data == pti_json_file
 
         mc_data = build_mc_data!("../test/data/matpower/case5.m")
         mc_data["gen"]["1"]["pmax"] = PMD.MultiConductorVector([Inf, Inf, Inf])
@@ -69,11 +69,11 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
         mc_data["branch"]["1"]["br_x"][1,2] = -Inf
         mc_data["branch"]["1"]["br_x"][1,3] = Inf
 
-        mc_data_json = PowerModels.parse_json(JSON.json(mc_data))
+        mc_data_json = PMD.parse_json(JSON.json(mc_data))
         @test mc_data_json == mc_data
 
         mc_data["gen"]["1"]["nan_test"] = PMD.MultiConductorVector([0, NaN, 0])
-        mc_data_json = PowerModels.parse_json(JSON.json(mc_data))
+        mc_data_json = PMD.parse_json(JSON.json(mc_data))
         @test isnan(mc_data_json["gen"]["1"]["nan_test"][2])
     end
 
@@ -349,13 +349,13 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
 
 
     @testset "test errors and warnings" begin
-        mp_data_2p = PowerModels.parse_file("../test/data/matpower/case3.m")
+        # mp_data_2p = PowerModels.parse_file("../test/data/matpower/case3.m")
         mp_data_3p = PowerModels.parse_file("../test/data/matpower/case3.m")
 
-        PMD.make_multiconductor!(mp_data_2p, 2)
+        # PMD.make_multiconductor!(mp_data_2p, 2)
         PMD.make_multiconductor!(mp_data_3p, 3)
 
-        @test_throws(TESTLOG, ErrorException, PowerModels.update_data!(mp_data_2p, mp_data_3p))
+        # @test_throws(TESTLOG, ErrorException, PowerModels.update_data!(mp_data_2p, mp_data_3p))
         @test_throws(TESTLOG, ErrorException, PowerModels._check_keys(mp_data_3p, ["load"]))
 
         # check_cost_functions
@@ -387,23 +387,23 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
 
         @test_nowarn PowerModels.correct_voltage_angle_differences!(mp_data_3p)
 
-        mp_data_2p["branch"]["1"]["angmin"] = [-pi, 0]
-        mp_data_2p["branch"]["1"]["angmax"] = [ pi, 0]
+        # mp_data_2p["branch"]["1"]["angmin"] = [-pi, 0]
+        # mp_data_2p["branch"]["1"]["angmax"] = [ pi, 0]
 
-        @test_warn(TESTLOG, "this code only supports angmin values in -90 deg. to 90 deg., tightening the value on branch 1, conductor 1 from -180.0 to -60.0 deg.",
-            PowerModels.correct_voltage_angle_differences!(mp_data_2p))
+        # @test_warn(TESTLOG, "this code only supports angmin values in -90 deg. to 90 deg., tightening the value on branch 1, conductor 1 from -180.0 to -60.0 deg.",
+            # PowerModels.correct_voltage_angle_differences!(mp_data_2p))
 
-        mp_data_2p["branch"]["1"]["angmin"] = [-pi, 0]
-        mp_data_2p["branch"]["1"]["angmax"] = [ pi, 0]
-
-        @test_warn(TESTLOG, "angmin and angmax values are 0, widening these values on branch 1, conductor 2 to +/- 60.0 deg.",
-            PowerModels.correct_voltage_angle_differences!(mp_data_2p))
-
-        mp_data_2p["branch"]["1"]["angmin"] = [-pi, 0]
-        mp_data_2p["branch"]["1"]["angmax"] = [ pi, 0]
-
-        @test_warn(TESTLOG, "this code only supports angmax values in -90 deg. to 90 deg., tightening the value on branch 1, conductor 1 from 180.0 to 60.0 deg.",
-            PowerModels.correct_voltage_angle_differences!(mp_data_2p))
+        # mp_data_2p["branch"]["1"]["angmin"] = [-pi, 0]
+        # mp_data_2p["branch"]["1"]["angmax"] = [ pi, 0]
+        #
+        # @test_warn(TESTLOG, "angmin and angmax values are 0, widening these values on branch 1, conductor 2 to +/- 60.0 deg.",
+        #     PowerModels.correct_voltage_angle_differences!(mp_data_2p))
+        #
+        # mp_data_2p["branch"]["1"]["angmin"] = [-pi, 0]
+        # mp_data_2p["branch"]["1"]["angmax"] = [ pi, 0]
+        #
+        # @test_warn(TESTLOG, "this code only supports angmax values in -90 deg. to 90 deg., tightening the value on branch 1, conductor 1 from 180.0 to 60.0 deg.",
+        #     PowerModels.correct_voltage_angle_differences!(mp_data_2p))
 
         @test_warn(TESTLOG, "skipping network that is already multiconductor", PMD.make_multiconductor!(mp_data_3p, 3))
 
@@ -414,26 +414,26 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
         @test mp_data_3p["load"]["1"]["status"] == 0
         @test mp_data_3p["shunt"]["1"]["status"] == 0
 
-        mp_data_3p["dcline"]["1"]["loss0"][2] = -1.0
-        @test_warn(TESTLOG, "this code only supports positive loss0 values, changing the value on dcline 1, conductor 2 from -100.0 to 0.0", PowerModels.correct_dcline_limits!(mp_data_3p))
+        # mp_data_3p["dcline"]["1"]["loss0"][2] = -1.0
+        # @test_warn(TESTLOG, "this code only supports positive loss0 values, changing the value on dcline 1, conductor 2 from -100.0 to 0.0", PowerModels.correct_dcline_limits!(mp_data_3p))
+        #
+        # mp_data_3p["dcline"]["1"]["loss1"][2] = -1.0
+        # @test_warn(TESTLOG, "this code only supports positive loss1 values, changing the value on dcline 1, conductor 2 from -1.0 to 0.0", PowerModels.correct_dcline_limits!(mp_data_3p))
+        #
+        # @test mp_data_3p["dcline"]["1"]["loss0"][2] == 0.0
+        # @test mp_data_3p["dcline"]["1"]["loss1"][2] == 0.0
+        #
+        # mp_data_3p["dcline"]["1"]["loss1"][2] = 100.0
+        # @test_warn(TESTLOG, "this code only supports loss1 values < 1, changing the value on dcline 1, conductor 2 from 100.0 to 0.0", PowerModels.correct_dcline_limits!(mp_data_3p))
 
-        mp_data_3p["dcline"]["1"]["loss1"][2] = -1.0
-        @test_warn(TESTLOG, "this code only supports positive loss1 values, changing the value on dcline 1, conductor 2 from -1.0 to 0.0", PowerModels.correct_dcline_limits!(mp_data_3p))
+        # delete!(mp_data_3p["branch"]["1"], "tap")
+        # @test_warn(TESTLOG, "branch found without tap value, setting a tap to 1.0", PowerModels.correct_transformer_parameters!(mp_data_3p))
 
-        @test mp_data_3p["dcline"]["1"]["loss0"][2] == 0.0
-        @test mp_data_3p["dcline"]["1"]["loss1"][2] == 0.0
+        # delete!(mp_data_3p["branch"]["1"], "shift")
+        # @test_warn(TESTLOG, "branch found without shift value, setting a shift to 0.0", PowerModels.correct_transformer_parameters!(mp_data_3p))
 
-        mp_data_3p["dcline"]["1"]["loss1"][2] = 100.0
-        @test_warn(TESTLOG, "this code only supports loss1 values < 1, changing the value on dcline 1, conductor 2 from 100.0 to 0.0", PowerModels.correct_dcline_limits!(mp_data_3p))
-
-        delete!(mp_data_3p["branch"]["1"], "tap")
-        @test_warn(TESTLOG, "branch found without tap value, setting a tap to 1.0", PowerModels.correct_transformer_parameters!(mp_data_3p))
-
-        delete!(mp_data_3p["branch"]["1"], "shift")
-        @test_warn(TESTLOG, "branch found without shift value, setting a shift to 0.0", PowerModels.correct_transformer_parameters!(mp_data_3p))
-
-        mp_data_3p["branch"]["1"]["tap"][2] = -1.0
-        @test_warn(TESTLOG, "branch found with non-positive tap value of -1.0, setting a tap to 1.0", PowerModels.correct_transformer_parameters!(mp_data_3p))
+        # mp_data_3p["branch"]["1"]["tap"][2] = -1.0
+        # @test_warn(TESTLOG, "branch found with non-positive tap value of -1.0, setting a tap to 1.0", PowerModels.correct_transformer_parameters!(mp_data_3p))
 
         mp_data_3p["branch"]["1"]["rate_a"][2] = -1.0
         @test_throws(TESTLOG, ErrorException, PowerModels.correct_thermal_limits!(mp_data_3p))
@@ -446,14 +446,14 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
         @test mp_data_3p["branch"]["4"]["f_bus"] == mp_data_3p["branch"]["1"]["f_bus"]
         @test mp_data_3p["branch"]["4"]["t_bus"] == mp_data_3p["branch"]["1"]["t_bus"]
 
-        mp_data_3p["gen"]["1"]["vg"][2] = 2.0
-        @test_warn(TESTLOG, "the conductor 2 voltage setpoint on generator 1 does not match the value at bus 1", PowerModels.check_voltage_setpoints(mp_data_3p))
-
-        mp_data_3p["dcline"]["1"]["vf"][2] = 2.0
-        @test_warn(TESTLOG, "the conductor 2 from bus voltage setpoint on dc line 1 does not match the value at bus 1", PowerModels.check_voltage_setpoints(mp_data_3p))
-
-        mp_data_3p["dcline"]["1"]["vt"][2] = 2.0
-        @test_warn(TESTLOG, "the conductor 2 to bus voltage setpoint on dc line 1 does not match the value at bus 2", PowerModels.check_voltage_setpoints(mp_data_3p))
+        # mp_data_3p["gen"]["1"]["vg"][2] = 2.0
+        # @test_warn(TESTLOG, "the conductor 2 voltage setpoint on generator 1 does not match the value at bus 1", PowerModels.check_voltage_setpoints(mp_data_3p))
+        #
+        # mp_data_3p["dcline"]["1"]["vf"][2] = 2.0
+        # @test_warn(TESTLOG, "the conductor 2 from bus voltage setpoint on dc line 1 does not match the value at bus 1", PowerModels.check_voltage_setpoints(mp_data_3p))
+        #
+        # mp_data_3p["dcline"]["1"]["vt"][2] = 2.0
+        # @test_warn(TESTLOG, "the conductor 2 to bus voltage setpoint on dc line 1 does not match the value at bus 2", PowerModels.check_voltage_setpoints(mp_data_3p))
 
 
         Memento.setlevel!(TESTLOG, "error")
