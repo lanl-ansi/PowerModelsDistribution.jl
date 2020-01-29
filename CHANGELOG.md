@@ -5,9 +5,12 @@ PowerModelsDistribution.jl Change Log
 - Update solution building infrastructure (PMs #77) (breaking). The reported
   solution is now consistent with the variable space of the formulation.
 - Moved multi-conductor support from PowerModels into PowerModelsDistribution. (breaking)
+- PMs.var no longer takes conductor as an argument
   Constraints have been (partially) re-written to use vectorized JuMP syntax where possible.
 - Bugfixes: generator on-off and storage on-off constraints were incorrect
 - Removal of SOCWRPowerModel
+- Drop support for matpower format
+- Possible regressions in MLD problem types
 
 
 ### staged

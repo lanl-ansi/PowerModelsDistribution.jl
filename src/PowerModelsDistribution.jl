@@ -10,7 +10,7 @@ module PowerModelsDistribution
     import LinearAlgebra
 
     const _PMs = PowerModels
-    
+
     function __init__()
         global _LOGGER = Memento.getlogger(PowerModels)
     end
@@ -18,7 +18,6 @@ module PowerModelsDistribution
     include("core/multiconductor.jl")
     include("core/types.jl")
     include("core/data.jl")
-    include("core/base.jl")
     include("core/ref.jl")
     include("core/variable.jl")
     include("core/variable_mx.jl")

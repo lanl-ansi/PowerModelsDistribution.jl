@@ -444,7 +444,7 @@ end
 
 "storage loss constraints, delegate to PowerModels"
 function constraint_mc_storage_loss(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
-    storage = ref(pm, nw, :storage, i)
+    storage = _PMs.ref(pm, nw, :storage, i)
 
     _PMs.constraint_storage_loss(pm, nw, i, storage["storage_bus"], storage["r"], storage["x"], storage["p_loss"], storage["q_loss"];
         conductors = _PMs.conductor_ids(pm, nw)
@@ -512,19 +512,19 @@ end
 
 ""
 function constraint_mc_storage_thermal_limit(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    storage = ref(pm, nw, :storage, i)
+    storage = _PMs.ref(pm, nw, :storage, i)
     constraint_mc_storage_thermal_limit(pm, nw, i, storage["thermal_rating"])
 end
 
 ""
 function constraint_mc_storage_current_limit(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    storage = ref(pm, nw, :storage, i)
+    storage = _PMs.ref(pm, nw, :storage, i)
     constraint_mc_storage_current_limit(pm, nw, i, storage["storage_bus"], storage["current_rating"])
 end
 
 ""
 function constraint_mc_storage_on_off(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    storage = ref(pm, nw, :storage, i)
+    storage = _PMs.ref(pm, nw, :storage, i)
     charge_ub = storage["charge_rating"]
     discharge_ub = storage["discharge_rating"]
 
@@ -539,8 +539,8 @@ function constraint_mc_storage_on_off(pm::_PMs.AbstractPowerModel, i::Int; nw::I
         inj_lb, inj_ub = _PMs.ref_calc_storage_injection_bounds(_PMs.ref(pm, nw, :storage), _PMs.ref(pm, nw, :bus), c)
         pmin[c] = inj_lb[i]
         pmax[c] = inj_ub[i]
-        qmin[c] = max(inj_lb[i], _PMs.ref(pm, nw, :storage, i, "qmin", c))
-        qmax[c] = min(inj_ub[i], _PMs.ref(pm, nw, :storage, i, "qmax", c))
+        qmin[c] = max(inj_lb[i], _PMs.ref(pm, nw, :storage, i, "qmin")[c])
+        qmax[c] = min(inj_ub[i], _PMs.ref(pm, nw, :storage, i, "qmax")[c])
     end
 
     constraint_mc_storage_on_off(pm, nw, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
