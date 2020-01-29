@@ -352,10 +352,21 @@ function _dss2pmd_shunt!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         # now convent b_cap to per unit
         b_cap_pu = b_cap/Ybase_ln
 
+        b = fill(b_cap_pu, defaults["phases"])
+        N = length(b)
+        if shunt["conn"]=="wye"
+            B = LinearAlgebra.diagm(0=>b)
+        else # shunt["conn"]=="delta"
+            # create delta transformation matrix Md
+            Md = LinearAlgebra.diagm(0=>ones(N), 1=>-ones(N-1))
+            Md[N,1] = -1
+            B = Md'*LinearAlgebra.diagm(0=>b)*Md
+        end
+
         shuntDict["shunt_bus"] = find_bus(name, pmd_data)
         shuntDict["name"] = defaults["name"]
-        shuntDict["gs"] = MultiConductorVector(_parse_array(0.0, nodes, nconductors))  # TODO:
-        shuntDict["bs"] = MultiConductorVector(_parse_array(b_cap_pu, nodes, nconductors))
+        shuntDict["gs"] = MultiConductorMatrix(fill(0.0, N, N))
+        shuntDict["bs"] = MultiConductorMatrix(B)
         shuntDict["status"] = convert(Int, defaults["enabled"])
         shuntDict["index"] = length(pmd_data["shunt"]) + 1
 
