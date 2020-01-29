@@ -763,13 +763,6 @@ end
 For KCLMXModels, a new power balance constraint is required.
 """
 function constraint_mc_power_balance(pm::KCLMXModels, i::Int; nw::Int=pm.cnw)
-    if !haskey(_PMs.con(pm, nw), :kcl_P)
-        _PMs.con(pm, nw)[:kcl_P] = Dict{Int,Array{JuMP.ConstraintRef,2}}()
-    end
-    if !haskey(_PMs.con(pm, nw), :kcl_Q)
-        _PMs.con(pm, nw)[:kcl_Q] = Dict{Int,Array{JuMP.ConstraintRef,2}}()
-    end
-
     bus = _PMs.ref(pm, nw, :bus, i)
     bus_arcs = _PMs.ref(pm, nw, :bus_arcs, i)
     bus_arcs_dc = _PMs.ref(pm, nw, :bus_arcs_dc, i)
