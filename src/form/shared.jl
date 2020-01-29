@@ -111,7 +111,7 @@ end
 #
 
 "do nothing, no way to represent this in these variables"
-function constraint_mc_theta_ref(pm::_PMs.AbstractWModels, n::Int, d)
+function constraint_mc_theta_ref(pm::_PMs.AbstractWModels, n::Int, d::Int, va_ref)
 end
 
 
