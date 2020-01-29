@@ -45,30 +45,29 @@ end
 
 
 "Creates phase angle constraints at reference buses"
-function constraint_mc_theta_ref(pm::_PMs.AbstractACRModel, n::Int, d)
+function constraint_mc_theta_ref(pm::_PMs.AbstractACRModel, n::Int, d::Int, va_ref)
     vr = _PMs.var(pm, n, :vr, d)
     vi = _PMs.var(pm, n, :vi, d)
     cnds = _PMs.conductor_ids(pm; nw=n)
-    theta = _PMs.ref(pm, n, :bus, d)["va"].values
     # deal with cases first where tan(theta)==Inf or tan(theta)==0
 
     for c in cnds
-        if theta[c] == pi/2
+        if va_ref[c] == pi/2
             JuMP.@constraint(pm.model, vr[c] == 0)
             JuMP.@constraint(pm.model, vi[c] >= 0)
-        elseif theta[c] == -pi/2
+        elseif va_ref[c] == -pi/2
             JuMP.@constraint(pm.model, vr[c] == 0)
             JuMP.@constraint(pm.model, vi[c] <= 0)
-        elseif theta[c] == 0
+        elseif va_ref[c] == 0
             JuMP.@constraint(pm.model, vr[c] >= 0)
             JuMP.@constraint(pm.model, vi[c] == 0)
-        elseif theta[c] == pi
+        elseif va_ref[c] == pi
             JuMP.@constraint(pm.model, vr[c] >= 0)
             JuMP.@constraint(pm.model, vi[c] == 0)
         else
-            JuMP.@constraint(pm.model, vi[c] == tan(theta[c])*vr[c])
-            # theta also implies a sign for vr, vi
-            if 0<=theta[c] && theta[c] <= pi
+            JuMP.@constraint(pm.model, vi[c] == tan(va_ref[c])*vr[c])
+            # va_ref also implies a sign for vr, vi
+            if 0<=va_ref[c] && va_ref[c] <= pi
                 JuMP.@constraint(pm.model, vi[c] >= 0)
             else
                 JuMP.@constraint(pm.model, vi[c] <= 0)
