@@ -418,7 +418,7 @@ function InfrastructureModels._value2string(v, float_precision::Int)
         return InfrastructureModels._float2string(v, float_precision)
     end
     if typeof(v) <: Array
-        return "[$(join([InfrastructureModels._float2string(val, float_precision) for val in v], ", "))]"
+        return "[$(join([InfrastructureModels._value2string(val, float_precision) for val in v], ", "))]"
     end
     if typeof(v) <: Dict
         return "{($(length(v)))}"
