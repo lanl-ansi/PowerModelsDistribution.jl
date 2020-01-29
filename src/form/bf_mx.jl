@@ -148,7 +148,7 @@ function constraint_mc_theta_ref(pm::AbstractUBFModels, n::Int, i::Int, va_ref)
     Wr = _PMs.var(pm, n, :Wr)[i]
     Wi = _PMs.var(pm, n, :Wi)[i]
 
-    beta = reshape(va_ref, length(va_ref), 1)
+    beta = exp.(im.*va_ref)
     gamma = beta*beta'
 
     Wr_ref = real(gamma).*Wr[1,1]
