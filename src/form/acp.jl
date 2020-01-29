@@ -7,14 +7,20 @@ function variable_mc_voltage(pm::_PMs.AbstractACPModel; nw=pm.cnw, kwargs...)
     # of voltage phasors. If the voltage phasors at one bus are initialized
     # in the same point, this would lead to division by zero.
 
+    ncnds = length(_PMs.conductor_ids(pm, nw))
+
+    bus_t1 = [bus for (_, bus) in _PMs.ref(pm, nw, :bus) if bus["bus_type"]==1]
+    if length(bus_t1)>0
+        theta = bus_t1[1]["va"].values
+    else
+        theta = [_wrap_to_pi(2 * pi / ncnds * (1-c)) for c in 1:ncnds]
+    end
     vm = 1
     for id in _PMs.ids(pm, nw, :bus)
         busref = _PMs.ref(pm, nw, :bus, id)
-        ncnd = length(_PMs.conductor_ids(pm, nw))
-        theta = [_wrap_to_pi(2 * pi / ncnd * (1-c)) for c in 1:ncnd]
         if !haskey(busref, "va_start")
         # if it has this key, it was set at PM level
-            for c in 1:ncnd
+            for c in 1:ncnds
                 JuMP.set_start_value(_PMs.var(pm, nw, :va, id)[c], theta[c])
             end
         end

@@ -121,10 +121,11 @@ function constraint_mc_theta_ref(pm::_PMs.AbstractPolarModels, n::Int, d)
     nconductors = length(cnds)
 
     va = _PMs.var(pm, n, :va, d)
+    va_ref = _PMs.ref(pm, n, :bus, d)["va"].values
 
-    for c in cnds
-        JuMP.@constraint(pm.model, va[c] == _wrap_to_pi(2 * pi / nconductors * (1-c)))
-    end
+    @show d,va_ref
+
+    JuMP.@constraint(pm.model, va .== va_ref)
 end
 
 
