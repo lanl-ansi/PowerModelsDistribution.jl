@@ -111,20 +111,18 @@ end
 #
 
 "do nothing, no way to represent this in these variables"
-function constraint_mc_theta_ref(pm::_PMs.AbstractWModels, n::Int, d)
+function constraint_mc_theta_ref(pm::_PMs.AbstractWModels, n::Int, d::Int, va_ref)
 end
 
 
 "Creates phase angle constraints at reference buses"
-function constraint_mc_theta_ref(pm::_PMs.AbstractPolarModels, n::Int, d)
+function constraint_mc_theta_ref(pm::_PMs.AbstractPolarModels, n::Int, d::Int, va_ref)
     cnds = _PMs.conductor_ids(pm; nw=n)
     nconductors = length(cnds)
 
     va = _PMs.var(pm, n, :va, d)
 
-    for c in cnds
-        JuMP.@constraint(pm.model, va[c] == _wrap_to_pi(2 * pi / nconductors * (1-c)))
-    end
+    JuMP.@constraint(pm.model, va .== va_ref)
 end
 
 

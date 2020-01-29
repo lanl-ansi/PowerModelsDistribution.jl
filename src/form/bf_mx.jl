@@ -119,12 +119,6 @@ function variable_mc_branch_flow(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=p
 end
 
 
-""
-function constraint_mc_theta_ref(pm::AbstractUBFModels, i::Int; nw::Int=pm.cnw)
-    constraint_mc_theta_ref(pm, nw, i)
-end
-
-
 "Defines branch flow model power flow equations"
 function constraint_mc_flow_losses(pm::AbstractUBFModels, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
     P_to = _PMs.var(pm, n, :P)[t_idx]
@@ -148,14 +142,13 @@ end
 
 
 ""
-function constraint_mc_theta_ref(pm::AbstractUBFModels, n::Int, i)
+function constraint_mc_theta_ref(pm::AbstractUBFModels, n::Int, i::Int, va_ref)
     nconductors = length(_PMs.conductor_ids(pm))
 
     Wr = _PMs.var(pm, n, :Wr)[i]
     Wi = _PMs.var(pm, n, :Wi)[i]
 
-    alpha = exp(-im*_wrap_to_pi(2 * pi / nconductors ))
-    beta = (alpha*ones(nconductors)).^(0:nconductors-1)
+    beta = exp.(im.*va_ref)
     gamma = beta*beta'
 
     Wr_ref = real(gamma).*Wr[1,1]
