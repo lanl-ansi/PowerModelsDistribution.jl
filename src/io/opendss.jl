@@ -93,7 +93,7 @@ function _dss2pmd_bus!(pmd_data::Dict, dss_data::Dict, import_all::Bool=false, v
         busDict["bus_type"] = 1
 
         busDict["vm"] = MultiConductorVector(_parse_array(1.0, nodes, nconductors))
-        busDict["va"] = MultiConductorVector(_parse_array([-rad2deg(2*pi/nconductors*(i-1)) for i in 1:nconductors], nodes, nconductors))
+        busDict["va"] = MultiConductorVector(_parse_array([_wrap_to_180(-rad2deg(2*pi/nconductors*(i-1))) for i in 1:nconductors], nodes, nconductors))
 
         busDict["vmin"] = MultiConductorVector(_parse_array(vmin, nodes, nconductors, vmin))
         busDict["vmax"] = MultiConductorVector(_parse_array(vmax, nodes, nconductors, vmax))
@@ -121,7 +121,7 @@ function _dss2pmd_bus!(pmd_data::Dict, dss_data::Dict, import_all::Bool=false, v
     busDict["bus_type"] = 3
 
     busDict["vm"] = MultiConductorVector(_parse_array(vm, nodes, nconductors))
-    busDict["va"] = MultiConductorVector(_parse_array([-rad2deg(2*pi/nconductors*(i-1))+ph1_ang for i in 1:nconductors], nodes, nconductors))
+    busDict["va"] = MultiConductorVector(_parse_array([_wrap_to_180(-rad2deg(2*pi/nconductors*(i-1))+ph1_ang) for i in 1:nconductors], nodes, nconductors))
 
     busDict["vmin"] = MultiConductorVector(_parse_array(vmi, nodes, nconductors, vmi))
     busDict["vmax"] = MultiConductorVector(_parse_array(vma, nodes, nconductors, vma))
