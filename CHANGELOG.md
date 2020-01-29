@@ -2,12 +2,6 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
-- none
-
-### v0.7.0
-- Updates function names for PowerModels v0.14 compatibility (breaking) (#194)
-
-### v0.6.1
 - Fixed bug with new default SCS settings causing tests to fail (#190)
 - Changed unit test '5-bus independent radial different sdpubf opf_bf', testing vm instead of qg
 - Added exponential load models, including convex relaxations
@@ -15,6 +9,15 @@ PowerModelsDistribution.jl Change Log
 - Added helper functions for creating matrix variables
 - Cleaned up the transformer/oltc methods, including ACP formulation
 - added `rate_a` setting to virtual lines (#185, #186)
+
+### v0.7.0
+- Updates function names for PowerModels v0.14 compatibility (breaking) (#194)
+
+### v0.6.1
+- Update solution building infrastructure (PMs #77) (breaking)
+- Moved multi-conductor support from PowerModels into PowerModelsDistribution. (breaking)
+- Bugfixes: generator on-off and storage on-off constraints were incorrect
+- Removal of SOCWRPowerModel
 
 ### v0.6.0
 - Adds `count_nodes` function to count the number of nodes in a parsed network (#183)
