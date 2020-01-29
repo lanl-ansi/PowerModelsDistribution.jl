@@ -171,45 +171,45 @@
             end
         end
 
-        @testset "14+24 mixed-conductor hybrid case" begin
-            mn_mc_data = build_mn_mc_data!("../test/data/matpower/case14.m", "../test/data/matpower/case24.m", conductors_1=4, conductors_2=0)
-
-            @test length(mn_mc_data["nw"]) == 2
-
-            result = PMD._run_mn_mc_opf(mn_mc_data, PMs.ACPPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(result["objective"], 120623.0; atol = 1e1)
-
-            @test length(result["solution"]["nw"]) == 2
-
-            nw_sol_1 = result["solution"]["nw"]["1"]
-            nw_sol_2 = result["solution"]["nw"]["2"]
-
-            @test nw_sol_1["conductors"] == 4
-            @test !haskey(nw_sol_2, "conductors")
-
-        end
+        # @testset "14+24 mixed-conductor hybrid case" begin
+        #     mn_mc_data = build_mn_mc_data!("../test/data/matpower/case14.m", "../test/data/matpower/case24.m", conductors_1=4, conductors_2=0)
+        #
+        #     @test length(mn_mc_data["nw"]) == 2
+        #
+        #     result = PMD._run_mn_mc_opf(mn_mc_data, PMs.ACPPowerModel, ipopt_solver)
+        #
+        #     @test result["termination_status"] == LOCALLY_SOLVED
+        #     @test isapprox(result["objective"], 120623.0; atol = 1e1)
+        #
+        #     @test length(result["solution"]["nw"]) == 2
+        #
+        #     nw_sol_1 = result["solution"]["nw"]["1"]
+        #     nw_sol_2 = result["solution"]["nw"]["2"]
+        #
+        #     @test nw_sol_1["conductors"] == 4
+        #     @test !haskey(nw_sol_2, "conductors")
+        #
+        # end
     end
 
 
 
-    @testset "test multi-network multi-conductor opf formulation variants" begin
-        mn_mc_data = build_mn_mc_data!("../test/data/matpower/case5_dc.m", "../test/data/matpower/case14.m", conductors_1=4, conductors_2=0)
-
-        @testset "ac 5/14-bus case" begin
-            result = PMD._run_mn_mc_opf(mn_mc_data, PMs.ACPPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(result["objective"], 80706.2; atol = 1e-1)
-        end
-
-        @testset "dc 5/14-bus case" begin
-            result = PMD._run_mn_mc_opf(mn_mc_data, PMs.DCPPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(result["objective"], 80006.2; atol = 1e-1)
-        end
+    # @testset "test multi-network multi-conductor opf formulation variants" begin
+        # mn_mc_data = build_mn_mc_data!("../test/data/matpower/case5_dc.m", "../test/data/matpower/case14.m", conductors_1=4, conductors_2=0)
+        #
+        # @testset "ac 5/14-bus case" begin
+        #     result = PMD._run_mn_mc_opf(mn_mc_data, PMs.ACPPowerModel, ipopt_solver)
+        #
+        #     @test result["termination_status"] == LOCALLY_SOLVED
+        #     @test isapprox(result["objective"], 80706.2; atol = 1e-1)
+        # end
+        #
+        # @testset "dc 5/14-bus case" begin
+        #     result = PMD._run_mn_mc_opf(mn_mc_data, PMs.DCPPowerModel, ipopt_solver)
+        #
+        #     @test result["termination_status"] == LOCALLY_SOLVED
+        #     @test isapprox(result["objective"], 80006.2; atol = 1e-1)
+        # end
 
         # @testset "soc 5/14-bus case" begin
         #     result = PMD._run_mn_mc_opf(mn_mc_data, PMs.SOCWRPowerModel, ipopt_solver)
@@ -218,7 +218,7 @@
         #     @test isapprox(result["objective"], 69827.3; atol = 1e-1)
         # end
 
-    end
+    # end
 
 
     @testset "test multi-network multi-conductor opf with storage" begin
