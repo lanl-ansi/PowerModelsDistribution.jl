@@ -2,6 +2,13 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
+- Update solution building infrastructure (PMs #77) (breaking)
+- Moved multi-conductor support from PowerModels into PowerModelsDistribution. (breaking)
+- Bugfixes: generator on-off and storage on-off constraints were incorrect
+- Removal of SOCWRPowerModel
+
+
+### staged
 - Fixed bug with new default SCS settings causing tests to fail (#190)
 - Changed unit test '5-bus independent radial different sdpubf opf_bf', testing vm instead of qg
 - Added exponential load models, including convex relaxations
