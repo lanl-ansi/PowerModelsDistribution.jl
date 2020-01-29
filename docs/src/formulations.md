@@ -14,7 +14,6 @@ We begin with the top of the hierarchy, where we can distinguish between AC and 
 ```julia
 PowerModels.AbstractACPModel <: PowerModels.AbstractPowerModel
 PowerModels.AbstractDCPModel <: PowerModels.AbstractPowerModel
-PowerModels.AbstractWRModel <: PowerModels.AbstractPowerModel
 PowerModelsDistribution.AbstractNLPUBFModel <: PowerModels.AbstractBFQPModel
 PowerModelsDistribution.AbstractConicUBFModel <: PowerModels.AbstractBFConicModel
 PowerModelsDistribution.AbstractLPUBFModel <: PowerModelsDistribution.AbstractNLPUBFModel
@@ -25,7 +24,6 @@ From there, different Models are possible:
 #Bus injection models:
 PowerModels.AbstractACPModel <: PowerModels.AbstractPowerModel
 PowerModels.AbstractDCPModel <: PowerModels.AbstractPowerModel
-PowerModels.SOCWRModel <: PowerModels.AbstractWRModels
 
 #Branch flow models:
 PowerModelsDistribution.SDPUBFModel <: PowerModelsDistribution.AbstractConicUBFModel

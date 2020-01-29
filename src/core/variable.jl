@@ -177,11 +177,11 @@ end
 
 
 
-"voltage variables, relaxed form"
-function variable_mc_voltage(pm::_PMs.AbstractWRModel; kwargs...)
-    variable_mc_voltage_magnitude_sqr(pm; kwargs...)
-    variable_mc_voltage_product(pm; kwargs...)
-end
+# "voltage variables, relaxed form"
+# function variable_mc_voltage(pm::_PMs.AbstractWRModel; kwargs...)
+#     variable_mc_voltage_magnitude_sqr(pm; kwargs...)
+#     variable_mc_voltage_product(pm; kwargs...)
+# end
 
 
 "variable: `w[i] >= 0` for `i` in `buses"
