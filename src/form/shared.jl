@@ -123,8 +123,6 @@ function constraint_mc_theta_ref(pm::_PMs.AbstractPolarModels, n::Int, d)
     va = _PMs.var(pm, n, :va, d)
     va_ref = _PMs.ref(pm, n, :bus, d)["va"].values
 
-    @show d,va_ref
-
     JuMP.@constraint(pm.model, va .== va_ref)
 end
 
