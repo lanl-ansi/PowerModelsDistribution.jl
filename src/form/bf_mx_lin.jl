@@ -145,7 +145,7 @@ end
 
 
 "balanced three-phase phasor"
-function constraint_mc_theta_ref(pm::LPdiagUBFModel, n::Int, i)
+function constraint_mc_theta_ref(pm::LPdiagUBFModel, n::Int, i::Int, va_ref)
     ncnds = length(_PMs.conductor_ids(pm))
     @assert(ncnds >= 2)
 

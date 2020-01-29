@@ -125,7 +125,7 @@ end
 
 ### Network Flow Approximation ###
 "nothing to do, no voltage angle variables"
-function constraint_mc_theta_ref(pm::_PMs.AbstractNFAModel, n::Int, d)
+function constraint_mc_theta_ref(pm::_PMs.AbstractNFAModel, n::Int, d::Int, va_ref)
 end
 
 
