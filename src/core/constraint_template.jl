@@ -1,6 +1,7 @@
 "reference angle constraints"
 function constraint_mc_theta_ref(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    constraint_mc_theta_ref(pm, nw, i)
+    va_ref = _PMs.ref(pm, nw, :bus, i, "va").values
+    constraint_mc_theta_ref(pm, nw, i, va_ref)
 end
 
 

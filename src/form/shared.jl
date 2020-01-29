@@ -116,12 +116,11 @@ end
 
 
 "Creates phase angle constraints at reference buses"
-function constraint_mc_theta_ref(pm::_PMs.AbstractPolarModels, n::Int, d)
+function constraint_mc_theta_ref(pm::_PMs.AbstractPolarModels, n::Int, d::Int, va_ref)
     cnds = _PMs.conductor_ids(pm; nw=n)
     nconductors = length(cnds)
 
     va = _PMs.var(pm, n, :va, d)
-    va_ref = _PMs.ref(pm, n, :bus, d)["va"].values
 
     JuMP.@constraint(pm.model, va .== va_ref)
 end
