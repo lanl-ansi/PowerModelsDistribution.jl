@@ -156,7 +156,7 @@ function constraint_mc_power_balance_shed(pm::_PMs.AbstractWModels, nw::Int, i, 
     z_demand = _PMs.var(pm, nw, :z_demand)
     z_shunt  = _PMs.var(pm, nw, :z_shunt)
 
-    _PMs.con(pm, nw, :kcl_p)[i] = JuMP.@constraint(pm.model,
+    cstr_p = JuMP.@constraint(pm.model,
         sum(p[a] for a in bus_arcs)
         + sum(psw[a_sw] for a_sw in bus_arcs_sw)
         + sum(pt[a_trans] for a_trans in bus_arcs_trans)
@@ -166,7 +166,7 @@ function constraint_mc_power_balance_shed(pm::_PMs.AbstractWModels, nw::Int, i, 
         - sum(pd .*z_demand[n] for (n,pd) in bus_pd)
         - sum(gs*1.0^2 .*z_shunt[n] for (n,gs) in bus_gs)*w
     )
-    _PMs.con(pm, nw, :kcl_q)[i] = JuMP.@constraint(pm.model,
+    cstr_q = JuMP.@constraint(pm.model,
         sum(q[a] for a in bus_arcs)
         + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
         + sum(qt[a_trans] for a_trans in bus_arcs_trans)
@@ -176,6 +176,11 @@ function constraint_mc_power_balance_shed(pm::_PMs.AbstractWModels, nw::Int, i, 
         - sum(qd.*z_demand[n] for (n,qd) in bus_qd)
         + sum(bs*1.0^2  .*z_shunt[n] for (n,bs) in bus_bs)*w
     )
+
+    if _PMs.report_duals(pm)
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
+    end
 end
 
 

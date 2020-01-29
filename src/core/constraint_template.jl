@@ -7,13 +7,6 @@ end
 
 ""
 function constraint_mc_power_balance_slack(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    if !haskey(_PMs.con(pm, nw), :lam_kcl_r)
-        _PMs.con(pm, nw)[:lam_kcl_r] = Dict{Int,JuMP.ConstraintRef}()
-    end
-    if !haskey(_PMs.con(pm, nw), :lam_kcl_i)
-        _PMs.con(pm, nw)[:lam_kcl_i] = Dict{Int,JuMP.ConstraintRef}()
-    end
-
     bus = _PMs.ref(pm, nw, :bus, i)
     bus_arcs = _PMs.ref(pm, nw, :bus_arcs, i)
     bus_arcs_sw = _PMs.ref(pm, nw, :bus_arcs_sw, i)
@@ -393,13 +386,6 @@ end
 
 "KCL for load shed problem with transformers"
 function constraint_mc_power_balance_shed(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    if !haskey(_PMs.con(pm, nw), :kcl_p)
-        _PMs.con(pm, nw)[:kcl_p] = Dict{Int,Array{JuMP.ConstraintRef,1}}()
-    end
-    if !haskey(_PMs.con(pm, nw), :kcl_q)
-        _PMs.con(pm, nw)[:kcl_q] = Dict{Int,Array{JuMP.ConstraintRef,1}}()
-    end
-
     bus = _PMs.ref(pm, nw, :bus, i)
     bus_arcs = _PMs.ref(pm, nw, :bus_arcs, i)
     bus_arcs_sw = _PMs.ref(pm, nw, :bus_arcs_sw, i)
