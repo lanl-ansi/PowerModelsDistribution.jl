@@ -49,8 +49,7 @@ function constraint_mc_theta_ref(pm::_PMs.AbstractACRModel, n::Int, d)
     vr = _PMs.var(pm, n, :vr, d)
     vi = _PMs.var(pm, n, :vi, d)
     cnds = _PMs.conductor_ids(pm; nw=n)
-    nconductors = length(cnds)
-    theta = [_wrap_to_pi(2 * pi / nconductors * (1-c)) for c in 1:nconductors]
+    theta = _PMs.ref(pm, n, :bus, d)["va"].values
     # deal with cases first where tan(theta)==Inf or tan(theta)==0
 
     for c in cnds
