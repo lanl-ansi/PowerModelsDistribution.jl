@@ -10,6 +10,16 @@ function variable_mc_reactive_generation_on_off(pm::_PMs.AbstractActivePowerMode
 end
 
 
+"on/off constraint for generators"
+function constraint_mc_generation_on_off(pm::_PMs.AbstractActivePowerModel, n::Int, i::Int, pmin, pmax, qmin, qmax)
+    pg = _PMs.var(pm, n, :pg, i)
+    z = _PMs.var(pm, n, :z_gen, i)
+
+    JuMP.@constraint(pm.model, pg .<= pmax.*z)
+    JuMP.@constraint(pm.model, pg .>= pmin.*z)
+end
+
+
 "apo models ignore reactive power flows"
 function variable_mc_storage_reactive(pm::_PMs.AbstractActivePowerModel; kwargs...)
 end
