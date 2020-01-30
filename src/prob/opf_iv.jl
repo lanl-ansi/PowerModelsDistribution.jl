@@ -6,7 +6,7 @@ end
 
 ""
 function run_mc_opf_iv(file::String, model_type, solver; kwargs...)
-    return run_mc_opf_bf(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
+    return run_mc_opf_iv(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
 end
 
 

@@ -59,6 +59,7 @@ module PowerModelsDistribution
     include("prob/pf.jl")
     include("prob/pf_lm.jl")
     include("prob/pf_bf.jl")
+    include("prob/pf_iv.jl")
     include("prob/debug.jl")
     include("prob/test.jl")
 
