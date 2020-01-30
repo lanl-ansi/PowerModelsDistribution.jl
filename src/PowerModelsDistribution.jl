@@ -29,6 +29,7 @@ module PowerModelsDistribution
     include("form/acr.jl")
     include("form/apo.jl")
     include("form/dcp.jl")
+    include("form/ivr.jl")
     include("form/bf.jl")
     include("form/bf_mx.jl")
     include("form/bf_mx_lin.jl")
@@ -49,6 +50,7 @@ module PowerModelsDistribution
 
     include("prob/mld.jl")
     include("prob/opf.jl")
+    include("prob/opf_iv.jl")
     include("prob/opf_lm.jl")
     include("prob/opf_oltc.jl")
     include("prob/opf_bctr.jl")

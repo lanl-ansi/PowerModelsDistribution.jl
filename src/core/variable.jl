@@ -179,7 +179,182 @@ function variable_mc_branch_flow_reactive(pm::_PMs.AbstractPowerModel; nw::Int=p
     report && _PMs.sol_component_value_edge(pm, nw, :branch, :qf, :qt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), q)
 end
 
+"variable: `cr[l,i,j]` for `(l,i,j)` in `arcs`"
+function variable_mc_branch_current_real(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    branch = _PMs.ref(pm, nw, :branch)
+    bus = _PMs.ref(pm, nw, :bus)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
 
+    cr = _PMs.var(pm, nw)[:cr] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in 1:ncnds], base_name="$(nw)_cr_$((l,i,j))",
+            start = comp_start_value(_PMs.ref(pm, nw, :branch, l), "cr_start", c, 0.0)
+        ) for (l,i,j) in _PMs.ref(pm, nw, :arcs)
+    )
+
+    if bounded
+        ub = Dict()
+        for (l,i,j) in _PMs.ref(pm, nw, :arcs_from)
+            b = branch[l]
+            # ub[l] = Inf
+            if haskey(b, "rate_a")
+                rate_fr = b["rate_a"].*b["tap"]
+                rate_to = b["rate_a"]
+                ub[l]  = max.(rate_fr./bus[i]["vmin"], rate_to./bus[j]["vmin"])
+            end
+            if haskey(b, "c_rating_a")
+                ub[l] = b["c_rating_a"]
+            end
+        end
+
+        for (l,i,j) in _PMs.ref(pm, nw, :arcs)
+            for c in _PMs.conductor_ids(pm; nw=nw)
+                if !isinf(ub[l][c])
+                    JuMP.set_lower_bound(cr[(l,i,j)][c], -ub[l][c])
+                    JuMP.set_upper_bound(cr[(l,i,j)][c],  ub[l][c])
+                end
+            end
+        end
+    end
+
+    report && _PMs.sol_component_value_edge(pm, nw, :branch, :cr_fr, :cr_to, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), cr)
+end
+
+
+"variable: `ci[l,i,j] ` for `(l,i,j)` in `arcs`"
+function variable_mc_branch_current_imaginary(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    branch = _PMs.ref(pm, nw, :branch)
+    bus = _PMs.ref(pm, nw, :bus)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    ci = _PMs.var(pm, nw)[:ci] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in 1:ncnds], base_name="$(nw)_ci_$((l,i,j))",
+            start = comp_start_value(_PMs.ref(pm, nw, :branch, l), "ci_start", c, 0.0)
+        ) for (l,i,j) in _PMs.ref(pm, nw, :arcs)
+    )
+
+    if bounded
+        ub = Dict()
+        for (l,i,j) in _PMs.ref(pm, nw, :arcs_from)
+            b = branch[l]
+            # ub[l] = Inf
+            if haskey(b, "rate_a")
+                rate_fr = b["rate_a"].*b["tap"]
+                rate_to = b["rate_a"]
+                ub[l]  = max.(rate_fr./bus[i]["vmin"], rate_to./bus[j]["vmin"])
+            end
+            if haskey(b, "c_rating_a")
+                ub[l] = b["c_rating_a"]
+            end
+        end
+
+        for (l,i,j) in _PMs.ref(pm, nw, :arcs)
+            for c in _PMs.conductor_ids(pm; nw=nw)
+                if !isinf(ub[l][c])
+                    JuMP.set_lower_bound(ci[(l,i,j)][c], -ub[l][c])
+                    JuMP.set_upper_bound(ci[(l,i,j)][c],  ub[l][c])
+                end
+            end
+        end
+    end
+
+    report && _PMs.sol_component_value_edge(pm, nw, :branch, :ci_fr, :ci_to, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), ci)
+end
+
+"variable: `csr[l]` for `l` in `branch`"
+function variable_mc_branch_series_current_real(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    branch = _PMs.ref(pm, nw, :branch)
+    bus = _PMs.ref(pm, nw, :bus)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    csr = _PMs.var(pm, nw)[:csr] = Dict(l => JuMP.@variable(pm.model,
+            [c in 1:ncnds], base_name="$(nw)_csr_$(l)",
+            start = comp_start_value(_PMs.ref(pm, nw, :branch, l), "csr_start", c, 0.0)
+        ) for l in _PMs.ids(pm, nw, :branch)
+    )
+
+    if bounded
+        ub = Dict()
+        for (l,i,j) in _PMs.ref(pm, nw, :arcs_from)
+            b = branch[l]
+            ub[l] = Inf
+            if haskey(b, "rate_a")
+                rate = b["rate_a"].*b["tap"]
+                y_fr = abs.(b["g_fr"] + im*b["b_fr"])
+                y_to = abs.(b["g_to"] + im*b["b_to"])
+                shuntcurrent = max.(y_fr*bus[i]["vmax"].^2, y_to*bus[j]["vmax"].^2)
+                seriescurrent = max.(rate./bus[i]["vmin"], rate./bus[j]["vmin"])
+                ub[l] = seriescurrent + shuntcurrent
+            end
+            if haskey(b, "c_rating_a")
+                totalcurrent = b["c_rating_a"]
+                y_fr = abs.(b["g_fr"] + im*b["b_fr"])
+                y_to = abs.(b["g_to"] + im*b["b_to"])
+                shuntcurrent = max.(y_fr*bus[i]["vmax"].^2, y_to*bus[j]["vmax"].^2)
+                ub[l] = totalcurrent + shuntcurrent
+            end
+        end
+
+        for l in _PMs.ids(pm, nw, :branch)
+            for c in _PMs.conductor_ids(pm; nw=nw)
+                if !isinf(ub[l][c])
+                    JuMP.set_lower_bound(csr[l][c], -ub[l][c])
+                    JuMP.set_upper_bound(csr[l][c],  ub[l][c])
+                end
+            end
+        end
+    end
+    report && _PMs.sol_component_value(pm, nw, :branch, :csr_fr, _PMs.ids(pm, nw, :branch), csr)
+end
+
+"variable: `csi[l]` for `l` in `branch`"
+function variable_mc_branch_series_current_imaginary(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    branch = _PMs.ref(pm, nw, :branch)
+    bus = _PMs.ref(pm, nw, :bus)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    csi = _PMs.var(pm, nw)[:csi] = Dict(l => JuMP.@variable(pm.model,
+            [c in 1:ncnds], base_name="$(nw)_csi_$(l)",
+            start = comp_start_value(_PMs.ref(pm, nw, :branch, l), "csi_start", c, 0.0)
+        ) for l in _PMs.ids(pm, nw, :branch)
+    )
+
+    if bounded
+        ub = Dict()
+        for (l,i,j) in _PMs.ref(pm, nw, :arcs_from)
+            b = branch[l]
+            ub[l] = Inf
+            if haskey(b, "rate_a")
+                rate = b["rate_a"].*b["tap"]
+                y_fr = abs.(b["g_fr"] + im*b["b_fr"])
+                y_to = abs.(b["g_to"] + im*b["b_to"])
+                shuntcurrent = max.(y_fr*bus[i]["vmax"].^2, y_to*bus[j]["vmax"].^2)
+                seriescurrent = max.(rate./bus[i]["vmin"], rate./bus[j]["vmin"])
+                ub[l] = seriescurrent + shuntcurrent
+            end
+            if haskey(b, "c_rating_a")
+                totalcurrent = b["c_rating_a"]
+                y_fr = abs.(b["g_fr"] + im*b["b_fr"])
+                y_to = abs.(b["g_to"] + im*b["b_to"])
+                shuntcurrent = max.(y_fr*bus[i]["vmax"].^2, y_to*bus[j]["vmax"].^2)
+                ub[l] = totalcurrent + shuntcurrent
+            end
+        end
+
+        for l in  _PMs.ids(pm, nw, :branch)
+            for c in _PMs.conductor_ids(pm; nw=nw)
+                if !isinf(ub[l][c])
+                    JuMP.set_lower_bound(csi[l][c], -ub[l][c])
+                    JuMP.set_upper_bound(csi[l][c],  ub[l][c])
+                end
+            end
+        end
+    end
+    report && _PMs.sol_component_value(pm, nw, :branch, :csi_fr, _PMs.ids(pm, nw, :branch), csi)
+end
 
 # "voltage variables, relaxed form"
 # function variable_mc_voltage(pm::_PMs.AbstractWRModel; kwargs...)
@@ -721,6 +896,70 @@ function variable_mc_generation_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm
 
     report && _PMs.sol_component_value(pm, nw, :gen, :qg, _PMs.ids(pm, nw, :gen), qg)
 end
+
+
+"variable: `crg[j]` for `j` in `gen`"
+function variable_mc_generation_current_real(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    gen = _PMs.ref(pm, nw, :gen)
+    bus = _PMs.ref(pm, nw, :bus)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    crg = _PMs.var(pm, nw)[:crg] = Dict(i => JuMP.@variable(pm.model,
+            [c in 1:ncnds], base_name="$(nw)_crg_$(i)",
+            start = comp_start_value(_PMs.ref(pm, nw, :gen, i), "crg_start", c, 0.0)
+        ) for i in _PMs.ids(pm, nw, :gen)
+    )
+    if bounded
+        ub = Dict()
+        for (i, g) in gen
+            vmin = bus[g["gen_bus"]]["vmin"]
+            s = abs.(max.(abs.(g["pmax"]),abs.(g["pmin"])) + im.*max.(abs.(g["qmax"]), abs.(g["qmin"])))
+            ub[i] = s./vmin
+        end
+
+        for (i, g) in gen
+            for c in cnds
+                JuMP.set_lower_bound(crg[i][c], -ub[i][c])
+                JuMP.set_upper_bound(crg[i][c], ub[i][c])
+            end
+        end
+    end
+
+    report && _PMs.sol_component_value(pm, nw, :gen, :crg, _PMs.ids(pm, nw, :gen), crg)
+end
+
+"variable: `cig[j]` for `j` in `gen`"
+function variable_mc_generation_current_imaginary(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    gen = _PMs.ref(pm, nw, :gen)
+    bus = _PMs.ref(pm, nw, :bus)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    cig = _PMs.var(pm, nw)[:cig] = Dict(i => JuMP.@variable(pm.model,
+            [c in 1:ncnds], base_name="$(nw)_cig_$(i)",
+            start = comp_start_value(_PMs.ref(pm, nw, :gen, i), "cig_start", c, 0.0)
+        ) for i in _PMs.ids(pm, nw, :gen)
+    )
+    if bounded
+        ub = Dict()
+        for (i, g) in gen
+            vmin = bus[g["gen_bus"]]["vmin"]
+            s = abs.(max.(abs.(g["pmax"]),abs.(g["pmin"])) + im.*max.(abs.(g["qmax"]), abs.(g["qmin"])))
+            ub[i] = s./vmin
+        end
+
+        for (i, g) in gen
+            for c in cnds
+                JuMP.set_lower_bound(cig[i][c], -ub[i][c])
+                JuMP.set_upper_bound(cig[i][c], ub[i][c])
+            end
+        end
+    end
+
+    report && _PMs.sol_component_value(pm, nw, :gen, :cig, _PMs.ids(pm, nw, :gen), cig)
+end
+
 
 
 function variable_mc_generation_on_off(pm::_PMs.AbstractPowerModel; kwargs...)
