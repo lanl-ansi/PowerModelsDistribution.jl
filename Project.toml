@@ -15,7 +15,7 @@ PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
 
 [compat]
 Cbc = ">= 0.4"
-InfrastructureModels = "~0.3.1"
+InfrastructureModels = "~0.4"
 Ipopt = ">= 0.4"
 JSON = "~0.18, ~0.19, ~0.20, ~0.21"
 JuMP = "~0.19.2, ~0.20"
