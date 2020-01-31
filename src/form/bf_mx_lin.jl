@@ -43,8 +43,8 @@ function variable_mc_branch_flow(pm::LPfullUBFModel; n_cond::Int=3, nw::Int=pm.c
         ps_mat = real(Gamma)*p_d_mx - imag(Gamma)*q_d_mx
         qs_mat = imag(Gamma)*p_d_mx + real(Gamma)*q_d_mx
 
-        g_sh_fr = branch["g_fr"].values
-        b_sh_fr = branch["b_fr"].values
+        g_sh_fr = branch["g_fr"]
+        b_sh_fr = branch["b_fr"]
 
         w_fr_re = _PMs.var(pm, nw, :Wr)[f_bus]
         w_fr_im = _PMs.var(pm, nw, :Wi)[f_bus]
@@ -182,7 +182,7 @@ function constraint_mc_power_balance(pm::LPdiagUBFModel, nw::Int, i, bus_arcs, b
         sum(pg[g] for g in bus_gens)
         - sum(ps[s] for s in bus_storage)
         - sum(pd for pd in values(bus_pd))
-        - sum(gs for gs in values(bus_gs))*w
+        - sum(gs.*w for gs in values(bus_gs))
     )
 
     cstr_q = JuMP.@constraint(pm.model,
@@ -193,7 +193,7 @@ function constraint_mc_power_balance(pm::LPdiagUBFModel, nw::Int, i, bus_arcs, b
         sum(qg[g] for g in bus_gens)
         - sum(qs[s] for s in bus_storage)
         - sum(qd for qd in values(bus_qd))
-        + sum(bs for bs in values(bus_bs))*w
+        + sum(bs.*w for bs in values(bus_bs))
     )
 
     if _PMs.report_duals(pm)
@@ -231,7 +231,7 @@ function constraint_mc_power_balance(pm::LPLinUBFPowerModel, nw::Int, i, bus_arc
         sum(pg[g] for g in bus_gens)
         - sum(ps[s] for s in bus_storage)
         - sum(pd for pd in values(bus_pd))
-        - sum(gs for gs in values(bus_gs))*w
+        - sum(gs.*w for gs in values(bus_gs))
     )
 
     cstr_q = JuMP.@constraint(pm.model,
@@ -242,7 +242,7 @@ function constraint_mc_power_balance(pm::LPLinUBFPowerModel, nw::Int, i, bus_arc
         sum(qg[g] for g in bus_gens)
         - sum(qs[s] for s in bus_storage)
         - sum(qd for qd in values(bus_qd))
-        + sum(bs for bs in values(bus_bs))*w
+        + sum(bs.*w for bs in values(bus_bs))
     )
 
     if _PMs.report_duals(pm)

@@ -349,12 +349,12 @@ end
 "convert raw branch data into arrays"
 function _ml2pmd_branch!(data::Dict{String,Any})
     for branch in data["branch"]
-        branch["rate_a"] = MultiConductorVector(branch["rate_a"], 3)
-        branch["rate_b"] = MultiConductorVector(branch["rate_b"], 3)
-        branch["rate_c"] = MultiConductorVector(branch["rate_c"], 3)
+        branch["rate_a"] = fill(branch["rate_a"], 3)
+        branch["rate_b"] = fill(branch["rate_b"], 3)
+        branch["rate_c"] = fill(branch["rate_c"], 3)
 
-        branch["angmin"] = MultiConductorVector(branch["angmin"], 3)
-        branch["angmax"] = MultiConductorVector(branch["angmax"], 3)
+        branch["angmin"] = fill(branch["angmin"], 3)
+        branch["angmax"] = fill(branch["angmax"], 3)
 
         _set_default(branch, "g_fr_1", 0.0)
         _set_default(branch, "g_fr_2", 0.0)
@@ -367,33 +367,33 @@ function _ml2pmd_branch!(data::Dict{String,Any})
         _make_mpv!(branch, "g_fr", ["g_fr_1", "g_fr_2", "g_fr_3"])
         _make_mpv!(branch, "g_to", ["g_to_1", "g_to_2", "g_to_3"])
 
-        branch["b_fr"] = MultiConductorVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
-        branch["b_to"] = MultiConductorVector([branch["b_1"], branch["b_2"], branch["b_3"]]) / 2.0
+        branch["b_fr"] = [branch["b_1"], branch["b_2"], branch["b_3"]] / 2.0
+        branch["b_to"] = [branch["b_1"], branch["b_2"], branch["b_3"]] / 2.0
 
         # convert branch shunts to matrices
         for key in ["b_fr", "b_to", "g_fr", "g_to"]
-            branch[key] = MultiConductorMatrix(LinearAlgebra.diagm(0=>branch[key].values))
+            branch[key] = LinearAlgebra.diagm(0=>branch[key])
         end
 
         delete!(branch, "b_1")
         delete!(branch, "b_2")
         delete!(branch, "b_3")
 
-        branch["tap"] = MultiConductorVector(1.0, 3)
-        branch["shift"] = MultiConductorVector(0.0, 3)
+        branch["tap"] = fill(1.0, 3)
+        branch["shift"] = fill(0.0, 3)
         branch["transformer"] = false
 
-        branch["br_r"] = MultiConductorMatrix([
+        branch["br_r"] = [
             branch["r_11"]     branch["r_12"]/2.0 branch["r_13"]/2.0;
             branch["r_12"]/2.0 branch["r_22"]     branch["r_23"]/2.0;
             branch["r_13"]/2.0 branch["r_23"]/2.0 branch["r_33"];
-        ])
+        ]
 
-        branch["br_x"] = MultiConductorMatrix([
+        branch["br_x"] = [
             branch["x_11"]     branch["x_12"]/2.0 branch["x_13"]/2.0;
             branch["x_12"]/2.0 branch["x_22"]     branch["x_23"]/2.0;
             branch["x_13"]/2.0 branch["x_23"]/2.0 branch["x_33"];
-        ])
+        ]
 
         for k in ["r_11", "r_12", "r_13", "r_22", "r_23", "r_33",
             "x_11", "x_12", "x_13", "x_22", "x_23", "x_33"]
@@ -406,7 +406,7 @@ end
 "collects several from_keys in an array and sets it to the to_key, removes from_keys"
 function _make_mpv!(data::Dict{String,Any}, to_key::String, from_keys::Array{String,1})
     @assert !(haskey(data, to_key))
-    data[to_key] = MultiConductorVector([data[k] for k in from_keys])
+    data[to_key] = [data[k] for k in from_keys]
     for k in from_keys
         delete!(data, k)
     end

@@ -18,8 +18,8 @@ function variable_mc_voltage_prod_hermitian(pm::AbstractUBFModels; n_cond::Int=3
 
     if bounded
         # get bounds
-        vmax = Dict([(id, _PMs.ref(pm, nw, :bus, id, "vmax").values) for id in bus_ids])
-        vmin = Dict([(id, _PMs.ref(pm, nw, :bus, id, "vmin").values) for id in bus_ids])
+        vmax = Dict([(id, _PMs.ref(pm, nw, :bus, id, "vmax")) for id in bus_ids])
+        vmin = Dict([(id, _PMs.ref(pm, nw, :bus, id, "vmin")) for id in bus_ids])
         # create bounded Hermitian matrix variables
         (Wr,Wi) = variable_mx_hermitian(pm.model, bus_ids, n_cond;
             sqrt_upper_bound=vmax, sqrt_lower_bound=vmin, name="W", prefix="$nw")
@@ -92,8 +92,8 @@ function variable_mc_branch_flow(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=p
             tuple_fr = (br, bus_fr["index"], bus_to["index"])
             tuple_to = (br, bus_to["index"], bus_fr["index"])
 
-            bound[tuple_fr] = bus_fr["vmax"].values.*cmax_fr'
-            bound[tuple_to] = bus_to["vmax"].values.*cmax_to'
+            bound[tuple_fr] = bus_fr["vmax"].*cmax_fr'
+            bound[tuple_to] = bus_to["vmax"].*cmax_to'
 
             for c in 1:length(smax_fr)
                 bound[tuple_fr][c,c] = smax_fr[c]
@@ -213,7 +213,7 @@ function variable_mc_generation_power(pm::SDPUBFKCLMXModel; nw::Int=pm.cnw, boun
     bound = Dict{eltype(gen_ids), Array{Real,2}}()
     for (id, gen) in _PMs.ref(pm, nw, :gen)
         bus = _PMs.ref(pm, nw, :bus, gen["gen_bus"])
-        vmax = bus["vmax"].values
+        vmax = bus["vmax"]
         cmax = _calc_gen_current_max(gen, bus)
         bound[id] = vmax*cmax'
     end
@@ -387,7 +387,7 @@ function variable_mc_load_power_bus(pm::SDPUBFKCLMXModel, load_ids::Array{Int,1}
         @assert(load["conn"]=="wye")
         bus = _PMs.ref(pm, nw, :bus, load["load_bus"])
         cmax = _calc_load_current_max(load, bus)
-        bound[id] = bus["vmax"].values*cmax'
+        bound[id] = bus["vmax"]*cmax'
     end
     # create matrix variables
     (Pd,Qd) = variable_mx_complex_with_diag(pm.model, load_ids, ncnds; symm_bound=bound, name=("Pd", "Qd"), prefix="$nw")
@@ -428,7 +428,7 @@ function variable_mc_load_delta_aux(pm::AbstractUBFModels, load_ids::Array{Int,1
         bus_id = load["load_bus"]
         bus = _PMs.ref(pm, nw, :bus, bus_id)
         cmax = _calc_load_current_max(load, bus)
-        bound[id] = bus["vmax"].values*cmax'
+        bound[id] = bus["vmax"]*cmax'
     end
     # create matrix variables
     (Xdr,Xdi) = variable_mx_complex(pm.model, load_ids, ncnds, ncnds;
@@ -564,8 +564,8 @@ Creates the constraints modelling the (relaxed) voltage-dependent loads.
 function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     # shared variables and parameters
     load = _PMs.ref(pm, nw, :load, load_id)
-    pd0 = load["pd"].values
-    qd0 = load["qd"].values
+    pd0 = load["pd"]
+    qd0 = load["qd"]
     bus_id = load["load_bus"]
     bus = _PMs.ref(pm, nw, :bus, bus_id)
     ncnds = length(pd0)
@@ -648,8 +648,8 @@ the matrix KCL formulation.
 function constraint_mc_load(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int=pm.cnw)
     # shared variables and parameters
     load = _PMs.ref(pm, nw, :load, load_id)
-    pd0 = load["pd"].values
-    qd0 = load["qd"].values
+    pd0 = load["pd"]
+    qd0 = load["qd"]
     bus_id = load["load_bus"]
     bus = _PMs.ref(pm, nw, :bus, bus_id)
     ncnds = length(pd0)
@@ -770,8 +770,8 @@ function constraint_mc_power_balance(pm::KCLMXModels, i::Int; nw::Int=pm.cnw)
     bus_loads = _PMs.ref(pm, nw, :bus_loads, i)
     bus_shunts = _PMs.ref(pm, nw, :bus_shunts, i)
 
-    bus_Gs = Dict(k => LinearAlgebra.diagm(0=>_PMs.ref(pm, nw, :shunt, k, "gs").values) for k in bus_shunts)
-    bus_Bs = Dict(k => LinearAlgebra.diagm(0=>_PMs.ref(pm, nw, :shunt, k, "bs").values) for k in bus_shunts)
+    bus_Gs = Dict(k => LinearAlgebra.diagm(0=>_PMs.ref(pm, nw, :shunt, k, "gs")) for k in bus_shunts)
+    bus_Bs = Dict(k => LinearAlgebra.diagm(0=>_PMs.ref(pm, nw, :shunt, k, "bs")) for k in bus_shunts)
 
     constraint_mc_power_balance(pm, nw, i, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_Gs, bus_Bs)
 end

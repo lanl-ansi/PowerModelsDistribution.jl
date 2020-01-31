@@ -11,7 +11,7 @@ function variable_mc_voltage(pm::_PMs.AbstractACPModel; nw=pm.cnw, kwargs...)
 
     bus_t1 = [bus for (_, bus) in _PMs.ref(pm, nw, :bus) if bus["bus_type"]==1]
     if length(bus_t1)>0
-        theta = bus_t1[1]["va"].values
+        theta = bus_t1[1]["va"]
     else
         theta = [_wrap_to_pi(2 * pi / ncnds * (1-c)) for c in 1:ncnds]
     end
@@ -592,7 +592,7 @@ s_a = v_a*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 s_b = v_b*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 s_c = v_c*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 """
-function constraint_mc_load_power_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, pd::MultiConductorVector, qd::MultiConductorVector)
+function constraint_mc_load_power_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, pd::Vector, qd::Vector)
     p_ab, p_bc, p_ca = pd
     q_ab, q_bc, q_ca = qd
     vm_a, vm_b, vm_c = _PMs.var(pm, nw, :vm, load_bus_id)
@@ -670,7 +670,7 @@ And then
 s_a = v_a.conj(i_a) = v_a.conj(i_ab-i_ca)
 idem for s_b and s_c
 """
-function constraint_mc_load_current_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, cp::MultiConductorVector, cq::MultiConductorVector)
+function constraint_mc_load_current_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Vector, cq::Vector)
     cp_ab, cp_bc, cp_ca = cp
     cq_ab, cq_bc, cq_ca = cq
     vm_a, vm_b, vm_c = _PMs.var(pm, nw, :vm, load_bus_id)
@@ -711,7 +711,7 @@ end
 
 
 ""
-function constraint_mc_vm_ll(pm::_PMs.AbstractACPModel, nw::Int, bus_id::Int, vm_ll_min::MultiConductorVector, vm_ll_max::MultiConductorVector)
+function constraint_mc_vm_ll(pm::_PMs.AbstractACPModel, nw::Int, bus_id::Int, vm_ll_min::Vector, vm_ll_max::Vector)
     # 3 conductors asserted in template already
     vm_ln = [_PMs.var(pm, nw, i, :vm, bus_id) for i in 1:3]
     va_ln = [_PMs.var(pm, nw, i, :va, bus_id) for i in 1:3]
@@ -743,7 +743,7 @@ And then
 s_a = v_a.conj(i_a) = v_a.conj(i_ab-i_ca)
 idem for s_b and s_c
 """
-function constraint_mc_load_impedance_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, cp::MultiConductorVector, cq::MultiConductorVector)
+function constraint_mc_load_impedance_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Vector, cq::Vector)
     cp_ab, cp_bc, cp_ca = cp
     cq_ab, cq_bc, cq_ca = cq
     vm_a, vm_b, vm_c = _PMs.var(pm, nw, :vm, load_bus_id)

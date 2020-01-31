@@ -138,17 +138,17 @@ argument vdmin_eps.
 The returned bounds are for the pairs 1->2, 2->3, 3->1
 """
 function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps=0.1)
-    vmax = bus["vmax"].values
-    vmin = bus["vmin"].values
+    vmax = bus["vmax"]
+    vmin = bus["vmin"]
     if haskey(bus, "vm_ll_max")
-        vdmax = bus["vm_ll_max"].values*sqrt(3)
+        vdmax = bus["vm_ll_max"]*sqrt(3)
     else
         # implied valid upper bound
         vdmax = [1 1 0; 0 1 1; 1 0 1]*vmax
         id = bus["index"]
     end
     if haskey(bus, "vm_ll_min")
-        vdmin = bus["vm_ll_min"].values*sqrt(3)
+        vdmin = bus["vm_ll_min"]*sqrt(3)
     else
         vdmin = ones(3)*vdmin_eps*sqrt(3)
         id = bus["index"]
@@ -208,8 +208,8 @@ for constant_power, constant_current and constant_impedance it returns the
 equivalent exponential model parameters.
 """
 function _load_expmodel_params(load::Dict, bus::Dict)
-    pd = load["pd"].values
-    qd = load["qd"].values
+    pd = load["pd"]
+    qd = load["qd"]
     ncnds = length(pd)
     if load["model"]=="constant_power"
         return (pd, zeros(ncnds), qd, zeros(ncnds))
@@ -222,9 +222,9 @@ function _load_expmodel_params(load::Dict, bus::Dict)
             alpha = ones(ncnds)*2
             beta  =ones(ncnds)*2
         elseif load["model"]=="exponential"
-            alpha = load["alpha"].values
+            alpha = load["alpha"]
             @assert(all(alpha.>=0))
-            beta = load["beta"].values
+            beta = load["beta"]
             @assert(all(beta.>=0))
         end
         # calculate proportionality constants
@@ -244,8 +244,8 @@ _calc_bus_vm_ll_bounds for delta loads.
 """
 function _calc_load_vbounds(load::Dict, bus::Dict)
     if load["conn"]=="wye"
-        vmin = bus["vmin"].values
-        vmax = bus["vmax"].values
+        vmin = bus["vmin"]
+        vmax = bus["vmax"]
     elseif load["conn"]=="delta"
         vmin, vmax = _calc_bus_vm_ll_bounds(bus)
     end
@@ -271,11 +271,11 @@ end
 Returns a current magnitude bound for the generators.
 """
 function _calc_gen_current_max(gen::Dict, bus::Dict)
-    pabsmax = max.(abs.(gen["pmin"].values), abs.(gen["pmax"].values))
-    qabsmax = max.(abs.(gen["qmax"].values), abs.(gen["qmax"].values))
+    pabsmax = max.(abs.(gen["pmin"]), abs.(gen["pmax"]))
+    qabsmax = max.(abs.(gen["qmax"]), abs.(gen["qmax"]))
     smax = sqrt.(pabsmax.^2 + qabsmax.^2)
 
-    vmin = bus["vmin"].values
+    vmin = bus["vmin"]
 
     return smax./vmin
 end
@@ -290,12 +290,12 @@ function _calc_branch_current_max_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
     bounds_fr = []
     bounds_to = []
     if haskey(branch, "c_rating_a")
-        push!(bounds_fr, branch["c_rating_a"].values)
-        push!(bounds_to, branch["c_rating_a"].values)
+        push!(bounds_fr, branch["c_rating_a"])
+        push!(bounds_to, branch["c_rating_a"])
     end
     if haskey(branch, "rate_a")
-        push!(bounds_fr, branch["rate_a"].values./bus_fr["vmin"].values)
-        push!(bounds_to, branch["rate_a"].values./bus_to["vmin"].values)
+        push!(bounds_fr, branch["rate_a"]./bus_fr["vmin"])
+        push!(bounds_to, branch["rate_a"]./bus_to["vmin"])
     end
     @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
     return min.(bounds_fr...), min.(bounds_to...)
@@ -311,12 +311,12 @@ function _calc_branch_power_ub_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
     bounds_fr = []
     bounds_to = []
     if haskey(branch, "c_rating_a")
-        push!(bounds_fr, branch["c_rating_a"].values.*bus_fr["vmax"].values)
-        push!(bounds_to, branch["c_rating_a"].values.*bus_to["vmax"].values)
+        push!(bounds_fr, branch["c_rating_a"].*bus_fr["vmax"])
+        push!(bounds_to, branch["c_rating_a"].*bus_to["vmax"])
     end
     if haskey(branch, "rate_a")
-        push!(bounds_fr, branch["rate_a"].values)
-        push!(bounds_to, branch["rate_a"].values)
+        push!(bounds_fr, branch["rate_a"])
+        push!(bounds_to, branch["rate_a"])
     end
     @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
     return min.(bounds_fr...), min.(bounds_to...)
@@ -327,11 +327,11 @@ end
 Returns a valid series current magnitude bound for a branch.
 """
 function _calc_branch_series_current_ub(branch::Dict, bus_fr::Dict, bus_to::Dict)
-    vmin_fr = bus_fr["vmin"].values
-    vmin_to = bus_to["vmin"].values
+    vmin_fr = bus_fr["vmin"]
+    vmin_to = bus_to["vmin"]
 
-    vmax_fr = bus_fr["vmax"].values
-    vmax_to = bus_to["vmax"].values
+    vmax_fr = bus_fr["vmax"]
+    vmax_to = bus_to["vmax"]
 
     # assumed to be matrices already
     # temportary fix by shunts_diag2mat!
@@ -340,8 +340,8 @@ function _calc_branch_series_current_ub(branch::Dict, bus_fr::Dict, bus_to::Dict
     c_max_fr_tot, c_max_to_tot = _calc_branch_current_max_frto(branch, bus_fr, bus_to)
 
     # get valid bounds on shunt current
-    y_fr = branch["g_fr"].values + im* branch["b_fr"].values
-    y_to = branch["g_to"].values + im* branch["b_to"].values
+    y_fr = branch["g_fr"] + im* branch["b_fr"]
+    y_to = branch["g_to"] + im* branch["b_to"]
     c_max_fr_sh = abs.(y_fr)*vmax_fr
     c_max_to_sh = abs.(y_to)*vmax_to
 
@@ -393,9 +393,9 @@ function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
                             item_ref_data[param] = value
                         else
                             if param in _conductor_matrix
-                                item_ref_data[param] = MultiConductorMatrix(value, conductors)
+                                item_ref_data[param] = LinearAlgebra.diagm(0=>fill(value, conductors))
                             else
-                                item_ref_data[param] = MultiConductorVector(value, conductors)
+                                item_ref_data[param] = fill(value, conductors)
                             end
                         end
                     end

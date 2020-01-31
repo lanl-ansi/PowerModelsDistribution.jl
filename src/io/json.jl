@@ -1,6 +1,9 @@
 # Parse PowerModels data from JSON exports of PowerModels data structures.
-# Necessary in order to support MultiConductorValues
+# Customize JSON printing of matrices
 
+import JSON.Serializations: CommonSerialization, StandardSerialization
+import JSON.Writer: StructuralContext, show_json
+struct PMDSerialization <: CommonSerialization end
 
 function _jsonver2juliaver!(pm_data)
     if haskey(pm_data, "source_version") && isa(pm_data["source_version"], Dict)
@@ -9,38 +12,36 @@ function _jsonver2juliaver!(pm_data)
 end
 
 
-function _parse_mcv!(pm_data)
-    eltypes = Dict("Float"=>Float64,
-                   "Int"=>Int64,
-                   "Real"=>Real,
-                   "Complex"=>Complex,
-                   "String"=>String,
-                   "Bool"=>Bool)
-
-    for (comp_type, comp_items) in pm_data
-        if isa(comp_items, Dict)
-            for (n, item) in comp_items
-                for (field, value) in item
-                    if isa(value, Dict) && haskey(value, "values") && haskey(value, "type")
-                        element_type = match(r"MultiConductor(?:Vector|Matrix){([a-zA-Z]+)\d*}", value["type"]).captures[1]
-                        if startswith(value["type"], "MultiConductorVector") || startswith(value["type"], "PowerModels.MultiConductorVector")
-                            if element_type != "String"
-                                values = [isa(v, AbstractString) ? parse(eltypes[element_type], v) : v for v in value["values"]]
-                            else
-                                values = value["values"]
-                            end
-                            pm_data[comp_type][n][field] = MultiConductorVector(convert(Array{eltypes[element_type]}, values))
-                        elseif startswith(value["type"], "MultiConductorMatrix") || startswith(value["type"], "PowerModels.MultiConductorMatrix")
-                            if element_type != "String"
-                                values = [[isa(v, AbstractString) ? parse(eltypes[element_type], v) : v for v in row] for row in value["values"]]
-                            else
-                                values = value["values"]
-                            end
-                            pm_data[comp_type][n][field] = MultiConductorMatrix(convert(Array{eltypes[element_type]}, hcat(values...)))
-                        end
-                    end
-                end
+function _parse_mats_recursive!(dict)
+    parse =  haskey(dict, "type") && dict["type"]=="Matrix" && haskey(dict, "eltype") && haskey(dict, "value")
+    if parse
+        return _parse_matrix_value(dict["value"], dict["eltype"])
+    else
+        for (k,v) in dict
+            if isa(v, Dict)
+                dict[k] = _parse_mats!(v)
+            elseif isa(v, Vector) && Dict <: eltype(v)
+                dict[k] = [isa(x, Dict) ? _parse_mats!(x) : x for x in v]
             end
+        end
+
+        return dict
+    end
+end
+
+
+function _parse_mats!(root_dict)
+    stack = [(root_dict, k, v) for (k, v) in root_dict]
+    while !isempty(stack)
+        (store, k, v) = pop!(stack)
+
+        parse =  isa(v, Dict) && haskey(v, "type") && v["type"]=="Matrix" && haskey(v, "eltype") && haskey(v, "value")
+        if parse
+            store[k] = _parse_matrix_value(v["value"], v["eltype"])
+        elseif isa(v, Dict)
+            append!(stack, [(v, xk, xv) for (xk, xv) in v])
+        elseif isa(v, Vector) && Dict <: eltype(v)
+            append!(stack, [(v, i, xv) for (i, xv) in enumerate(v) if isa(xv, Dict)])
         end
     end
 end
@@ -52,13 +53,45 @@ function parse_json(io::Union{IO,String}; kwargs...)::Dict{String,Any}
 
     _jsonver2juliaver!(pm_data)
 
-    if haskey(pm_data, "conductors")
-        _parse_mcv!(pm_data)
-    end
+    _parse_mats!(pm_data)
 
     if get(kwargs, :validate, true)
         PowerModels.correct_network_data!(pm_data)
     end
 
     return pm_data
+end
+
+
+function print_file(path::String, pmd_data)
+    open(path, "w") do io
+        print_file(io, pmd_data)
+    end
+end
+
+
+function print_file(io::IO, pmd_data)
+    JSON.print(io, JSON.parse(sprint(show_json, PMDSerialization(), pmd_data)))
+end
+
+
+function show_json(io::StructuralContext, ::PMDSerialization, f::Matrix{<:Any})
+    N, M = size(f)
+    value = string("[", join([join([f[i,j] for j in 1:M], " ") for i in 1:N], "; "), "]")
+    eltyp = isempty(f) ? eltype(f) : typeof(f[1,1])
+        out = Dict(:type=>:Matrix, :eltype=>eltyp, :value=>value)
+    return show_json(io, StandardSerialization(), out)
+end
+
+
+function _parse_matrix_value(value::String, eltyp::String)
+    if value=="[]"
+        eltyp =
+        return Array{eval(Symbol(eltyp)), 2}(undef, 0, 0)
+    else
+        tmp = [split(strip(row_str), " ") for row_str in split(value[2:end-1], ";")]
+        tmp = [tmp[i][j] for i in 1:length(tmp), j in 1:length(tmp[1])]
+        M = parse.(eval(Symbol(eltyp)), string.(tmp))
+        return M
+    end
 end

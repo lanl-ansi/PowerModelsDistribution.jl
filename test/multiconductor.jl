@@ -62,17 +62,17 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
         # @test pti_data == pti_json_file
 
         mc_data = build_mc_data!("../test/data/matpower/case5.m")
-        mc_data["gen"]["1"]["pmax"] = PMD.MultiConductorVector([Inf, Inf, Inf])
-        mc_data["gen"]["1"]["qmin"] = PMD.MultiConductorVector([-Inf, -Inf, -Inf])
-        mc_data["gen"]["1"]["bool_test"] = PMD.MultiConductorVector([true, true, false])
-        mc_data["gen"]["1"]["string_test"] = PMD.MultiConductorVector(["a", "b", "c"])
+        mc_data["gen"]["1"]["pmax"] = [Inf, Inf, Inf]
+        mc_data["gen"]["1"]["qmin"] = [-Inf, -Inf, -Inf]
+        mc_data["gen"]["1"]["bool_test"] = [true, true, false]
+        mc_data["gen"]["1"]["string_test"] = ["a", "b", "c"]
         mc_data["branch"]["1"]["br_x"][1,2] = -Inf
         mc_data["branch"]["1"]["br_x"][1,3] = Inf
 
         mc_data_json = PMD.parse_json(JSON.json(mc_data))
         @test mc_data_json == mc_data
 
-        mc_data["gen"]["1"]["nan_test"] = PMD.MultiConductorVector([0, NaN, 0])
+        mc_data["gen"]["1"]["nan_test"] = [0, NaN, 0]
         mc_data_json = PMD.parse_json(JSON.json(mc_data))
         @test isnan(mc_data_json["gen"]["1"]["nan_test"][2])
     end
@@ -491,7 +491,7 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
         a, b, c, d = mp_data["branch"]["1"]["br_r"], mp_data["branch"]["1"]["br_x"], mp_data["branch"]["1"]["b_fr"], mp_data["branch"]["1"]["b_to"]
         c = diag(c)
         d = diag(d)
-        e = PMD.MultiConductorVector([0.225, 0.225, 0.225, 0.225])
+        e = [0.225, 0.225, 0.225, 0.225]
         angs_rad = mp_data["branch"]["1"]["angmin"]
 
         # Transpose
@@ -579,8 +579,8 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
 
         # Test broadcasting edge-case
         v = ones(Real, 3)
-        mcv = PMD.MultiConductorVector(v)
-        @test all(floor.(mcv) .+ mcv .== PMD.MultiConductorVector(floor.(v) .+ v))
+        mcv = v
+        @test all(floor.(mcv) .+ mcv .== floor.(v) .+ v)
 
         m = LinearAlgebra.diagm(0 => v)
         mcm = PMD.MultiConductorMatrix(m)
