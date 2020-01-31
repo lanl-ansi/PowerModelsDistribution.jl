@@ -23,7 +23,6 @@ module PowerModelsDistribution
     include("core/variable_mx.jl")
     include("core/constraint.jl")
     include("core/objective.jl")
-    include("core/solution.jl")
 
     include("form/acp.jl")
     include("form/acr.jl")
