@@ -29,7 +29,8 @@ qdvar(pm, pmd_data, name) = [PMs.var(pm, pm.cnw, c, :qd, load_name2id(pmd_data, 
 qd(sol, pmd_data, name) = sol["solution"]["load"][string(load_name2id(pmd_data, name))]["qd"]
 sd(pm, pmd_data, name) = pd(sol, pmd_data, name)+im*qd(sol, pmd_data, name)
 
-
+calc_vm_w(result, id) = sqrt.(      result["solution"]["bus"][id]["w"])
+calc_vm_W(result, id) = sqrt.(diag( result["solution"]["bus"][id]["Wr"]))
 
 function build_mc_data!(base_data; conductors::Int=3)
     mp_data = PowerModels.parse_file(base_data)

@@ -1,8 +1,5 @@
 @info "running power flow (pf) tests"
 
-calc_vm_w(result, id) = sqrt.(      result["solution"]["bus"][id]["w"])
-calc_vm_W(result, id) = sqrt.(diag( result["solution"]["bus"][id]["Wr"]))
-
 @testset "test pf" begin
     @testset "test pmd matlab pf" begin
         @testset "5-bus independent meshed network acp pf" begin
@@ -42,13 +39,6 @@ calc_vm_W(result, id) = sqrt.(diag( result["solution"]["bus"][id]["Wr"]))
 
         # @testset "5-bus coupled meshed network (b) acr pf" begin
         #     result = PMD.run_mc_pf("../test/data/matlab/case5_c_m_b.m", PMs.ACRPowerModel, ipopt_solver)
-        #
-        #     @test result["termination_status"] == PMs.LOCALLY_SOLVED
-        #     @test isapprox(result["objective"], 0.0; atol=1e-2)
-        # end
-
-        # @testset "5-bus coupled meshed network (b) soc pf" begin
-        #     result = run_mc_pf("../test/data/matlab/case5_c_m_b.m", PMs.SOCWRPowerModel, ipopt_solver)
         #
         #     @test result["termination_status"] == PMs.LOCALLY_SOLVED
         #     @test isapprox(result["objective"], 0.0; atol=1e-2)
