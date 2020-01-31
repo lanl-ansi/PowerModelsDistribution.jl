@@ -399,7 +399,8 @@ function objective_variable_pg_cost(pm::_PMs.AbstractIVRModel; report::Bool=true
 end
 
 
-function constraint_mc_trans_yy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+function constraint_mc_trans_yy(pm::_PMs.AbstractIVRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+    @show(keys(_PMs.var(pm, nw)))
     vr_fr_P = _PMs.var(pm, nw, :vr, f_bus)[f_cnd]
     vi_fr_P = _PMs.var(pm, nw, :vi, f_bus)[f_cnd]
     vr_fr_n = 0
@@ -420,12 +421,12 @@ function constraint_mc_trans_yy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::In
 
     JuMP.@constraint(pm.model, (vr_fr_P[p].-vr_fr_n) .== scale.*(vr_to_P[p].-vr_to_n))
     JuMP.@constraint(pm.model, (vi_fr_P[p].-vi_fr_n) .== scale.*(vi_to_P[p].-vi_to_n))
-    JuMP.@constraint(pm.model, scale.*cr_fr_P[p] .+ cr_to_P[p] == 0)
-    JuMP.@constraint(pm.model, scale.*ci_fr_P[p] .+ ci_to_P[p] == 0)
+    JuMP.@constraint(pm.model, scale.*cr_fr_P[p] .+ cr_to_P[p] .== 0)
+    JuMP.@constraint(pm.model, scale.*ci_fr_P[p] .+ ci_to_P[p] .== 0)
 end
 
 
-function constraint_mc_trans_dy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+function constraint_mc_trans_dy(pm::_PMs.AbstractIVRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
     vr_fr_P = _PMs.var(pm, nw, :vr, f_bus)[f_cnd]
     vi_fr_P = _PMs.var(pm, nw, :vi, f_bus)[f_cnd]
     vr_to_P = _PMs.var(pm, nw, :vr, t_bus)[t_cnd]
@@ -445,8 +446,8 @@ function constraint_mc_trans_dy(pm::_PMs.AbstractACPModel, nw::Int, trans_id::In
     n_phases = length(tm)
     Md = _get_delta_transformation_matrix(n_phases)
 
-    JuMP.@constraint(pm.model, Md*vr_fr_P .= scale.*(vr_to_P .- vr_to_n))
-    JuMP.@constraint(pm.model, Md*vi_fr_P .= scale.*(vi_to_P .- vi_to_n))
+    JuMP.@constraint(pm.model, Md*vr_fr_P .== scale.*(vr_to_P .- vr_to_n))
+    JuMP.@constraint(pm.model, Md*vi_fr_P .== scale.*(vi_to_P .- vi_to_n))
 
     JuMP.@constraint(pm.model, scale.*cr_fr_P[p] .+ Md*cr_to_P[p] .== 0)
     JuMP.@constraint(pm.model, scale.*ci_fr_P[p] .+ Md*ci_to_P[p] .== 0)
