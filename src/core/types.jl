@@ -56,6 +56,10 @@ mutable struct SOCNLPUBFPowerModel <: SOCNLPUBFModel _PMs.@pm_fields end
 
 
 "default SOC unbalanced DistFlow constructor"
+mutable struct QPUBFPowerModel <: SOCNLPUBFModel _PMs.@pm_fields end
+
+
+"default SOC unbalanced DistFlow constructor"
 mutable struct SOCConicUBFPowerModel <: SOCConicUBFModel _PMs.@pm_fields end
 
 

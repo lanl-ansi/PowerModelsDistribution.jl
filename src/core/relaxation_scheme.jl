@@ -176,3 +176,92 @@ function relaxation_psd_to_psd_real(m, mxreal, mximag; ndim=3)
         JuMP.@constraint(m, [mr -mi; mi mr] in JuMP.PSDCone())
     end
 end
+
+
+"""
+This constraint models
+M = [ Ar+im*Ai    Cr+im*Ci
+     (Cr+im*Ci)'  Br+im*Bi]
+M in PSDCone, rank(M) = 1
+as a set of polynomial matrix equations
+(Cr+im*Ci) (Cr+im*Ci)' = tr(Br)(Ar+im*Ai)
+(Cr+im*Ci)'(Cr+im*Ci)  = tr(Ar)(Br+im*Bi)
+"""
+function reformulation_psd_rank1_to_quadratic(model, Ar, Ai, Br, Bi, Cr, Ci)
+    @assert size(Ar) == size(Ai)
+    @assert size(Br) == size(Bi)
+    @assert size(Cr) == size(Ci)
+    @assert size(Cr,1) == size(Ar,1)
+    @assert size(Cr,2) == size(Br,2)
+
+    # (Cr+im*Ci) (Cr+im*Ci)' = tr(Br)(Ar+im*Ai)
+    matrix_product_real(model, Ar, Br, Cr, Ci)
+    matrix_product_imag(model, Ai, Br, Cr, Ci)
+
+    # equations are redundant when size(Cr) == (1,1)
+    if size(Cr) != (1, 1)
+        # (Cr+im*Ci)'(Cr+im*Ci)  = tr(Ar)(Br+im*Bi)
+        # swap A and B, take complex conjugate transpose of C
+        matrix_product_real(model, Br, Ar, Cr', -Ci')
+        matrix_product_imag(model, Bi, Ar, Cr', -Ci')
+    end
+end
+
+"""
+This constraints models
+M = Mr + im*Mi in PSDCone, rank(M) = 1
+as a set of quadratic matrix equations by partitioning M in four equal quadrants
+Ar+im*Ai the upper diagonal block
+Br+im*Bi the lower diagonal block
+Cr+im*Ci the upper right block
+
+and then calls reformulation_psd_rank1_to_quadratic(model, Ar, Ai, Br, Bi, Cr, Ci)
+"""
+function reformulation_psd_rank1_to_quadratic(model, Mr, Mi)
+    @assert size(Mr) == size(Mi)
+    @assert size(Mr,1) == size(Mr,2)
+    @assert iseven(size(Mr,1))
+
+    n = Int(size(Mr,1)/2)
+
+    Ar = Mr[1:n,    1:n]
+    Ai = Mi[1:n,    1:n]
+    Br = Mr[n+1:2n, n+1:2n]
+    Bi = Mi[n+1:2n, n+1:2n]
+    Cr = Mr[1:n,    n+1:2n]
+    Ci = Mi[1:n,    n+1:2n]
+
+    reformulation_psd_rank1_to_quadratic(model, Ar, Ai, Br, Bi, Cr, Ci)
+end
+
+"""
+This constraints models the matrix equation
+(Cr)(Cr)' + (Ci)(Ci)' = tr(Br)(Ar)
+as a set of scalar equations.
+The lower triangular elements generate redundant constraints due to symmetry, and are therefore not constructed
+"""
+function matrix_product_real(model, Ar, Br, Cr, Ci)
+    n = size(Cr,1)
+    m = size(Cr,2)
+    utridiag   = [(i,j) for i=1:n, j=1:n if i<=j] # upper triangle + diagonal elements of A
+
+    for (a,b) in utridiag
+        JuMP.@constraint(model, sum(Cr[a,j]*Cr[b,j] + Ci[a,j]*Ci[b,j] for j in 1:m) == Ar[a,b] * sum(Br[j,j] for j in 1:m))
+    end
+end
+
+"""
+This constraints models the matrix equation
+(Ci)(Cr)' - (Cr)(Ci)' = tr(Br)(Ai)
+as a set of scalar equations.
+The lower triangular and diagonal elements generate redundant constraints due to symmetry, and are therefore not constructed
+"""
+function matrix_product_imag(model, Ai, Br, Cr, Ci)
+    n = size(Cr,1)
+    m = size(Cr,2)
+    utri       = [(i,j) for i=1:n, j=1:n if i< j] # upper triangle elements of A
+
+    for (a,b) in utri
+        JuMP.@constraint(model, sum(Ci[a,j]*Cr[b,j] - Cr[a,j]*Ci[b,j] for j in 1:m) == Ai[a,b] * sum(Br[j,j] for j in 1:m))
+    end
+end
