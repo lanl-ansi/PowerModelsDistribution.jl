@@ -15,7 +15,7 @@ function build_mc_pf_iv(pm::_PMs.AbstractPowerModel)
     # Variables
     variable_mc_voltage(pm, bounded = false)
     variable_mc_branch_current(pm, bounded = false)
-    # variable_mc_transformer_flow(pm)
+    variable_mc_transformer_current(pm, bounded = false)
     variable_mc_generation(pm, bounded = false)
 
     # Constraints

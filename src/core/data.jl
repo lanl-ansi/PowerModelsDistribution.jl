@@ -13,7 +13,7 @@ end
 "creates a delta transformation matrix"
 function _get_delta_transformation_matrix(n_phases::Int)
     @assert(n_phases>2, "We only define delta transforms for three and more conductors.")
-    Md = LineearAlgebra.diagm(0=>fill(1, n_phases), 1=>ones(-1, n_phases-1))
+    Md = LinearAlgebra.diagm(0=>fill(1, n_phases), 1=>fill(-1, n_phases-1))
     Md[end,1] = -1
     return Md
 end

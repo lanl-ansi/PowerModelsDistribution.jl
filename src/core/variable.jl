@@ -356,6 +356,92 @@ function variable_mc_branch_series_current_imaginary(pm::_PMs.AbstractPowerModel
     report && _PMs.sol_component_value(pm, nw, :branch, :csi_fr, _PMs.ids(pm, nw, :branch), csi)
 end
 
+
+"variable: `cr[l,i,j]` for `(l,i,j)` in `arcs`"
+function variable_mc_transformer_current_real(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    #trans = _PMs.ref(pm, nw, :transformer)
+    #bus = _PMs.ref(pm, nw, :bus)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    cr = _PMs.var(pm, nw)[:crt] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in 1:ncnds], base_name="$(nw)_crt_$((l,i,j))",
+            start = comp_start_value(_PMs.ref(pm, nw, :transformer, l), "cr_start", c, 0.0)
+        ) for (l,i,j) in _PMs.ref(pm, nw, :arcs_trans)
+    )
+
+    #TODO add bounds
+    # if bounded
+    #     ub = Dict()
+    #     for (l,i,j) in _PMs.ref(pm, nw, :arcs_from)
+    #         b = branch[l]
+    #         # ub[l] = Inf
+    #         if haskey(b, "rate_a")
+    #             rate_fr = b["rate_a"].*b["tap"]
+    #             rate_to = b["rate_a"]
+    #             ub[l]  = max.(rate_fr./bus[i]["vmin"], rate_to./bus[j]["vmin"])
+    #         end
+    #         if haskey(b, "c_rating_a")
+    #             ub[l] = b["c_rating_a"]
+    #         end
+    #     end
+    #
+    #     for (l,i,j) in _PMs.ref(pm, nw, :arcs)
+    #         for c in _PMs.conductor_ids(pm; nw=nw)
+    #             if !isinf(ub[l][c])
+    #                 JuMP.set_lower_bound(cr[(l,i,j)][c], -ub[l][c])
+    #                 JuMP.set_upper_bound(cr[(l,i,j)][c],  ub[l][c])
+    #             end
+    #         end
+    #     end
+    # end
+
+    report && _PMs.sol_component_value_edge(pm, nw, :transformer, :cr_fr, :cr_to, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), cr)
+end
+
+
+"variable: `ci[l,i,j] ` for `(l,i,j)` in `arcs`"
+function variable_mc_transformer_current_imaginary(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    #trans = _PMs.ref(pm, nw, :transformer)
+    #bus = _PMs.ref(pm, nw, :bus)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    ci = _PMs.var(pm, nw)[:cit] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in 1:ncnds], base_name="$(nw)_cit_$((l,i,j))",
+            start = comp_start_value(_PMs.ref(pm, nw, :transformer, l), "ci_start", c, 0.0)
+        ) for (l,i,j) in _PMs.ref(pm, nw, :arcs_trans)
+    )
+
+    #TODO add bounds
+    # if bounded
+    #     ub = Dict()
+    #     for (l,i,j) in _PMs.ref(pm, nw, :arcs_from)
+    #         b = branch[l]
+    #         # ub[l] = Inf
+    #         if haskey(b, "rate_a")
+    #             rate_fr = b["rate_a"].*b["tap"]
+    #             rate_to = b["rate_a"]
+    #             ub[l]  = max.(rate_fr./bus[i]["vmin"], rate_to./bus[j]["vmin"])
+    #         end
+    #         if haskey(b, "c_rating_a")
+    #             ub[l] = b["c_rating_a"]
+    #         end
+    #     end
+    #
+    #     for (l,i,j) in _PMs.ref(pm, nw, :arcs)
+    #         for c in _PMs.conductor_ids(pm; nw=nw)
+    #             if !isinf(ub[l][c])
+    #                 JuMP.set_lower_bound(ci[(l,i,j)][c], -ub[l][c])
+    #                 JuMP.set_upper_bound(ci[(l,i,j)][c],  ub[l][c])
+    #             end
+    #         end
+    #     end
+    # end
+
+    report && _PMs.sol_component_value_edge(pm, nw, :transformer, :ci_fr, :ci_to, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), ci)
+end
+
 # "voltage variables, relaxed form"
 # function variable_mc_voltage(pm::_PMs.AbstractWRModel; kwargs...)
 #     variable_mc_voltage_magnitude_sqr(pm; kwargs...)

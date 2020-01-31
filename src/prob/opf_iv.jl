@@ -15,7 +15,7 @@ function build_mc_opf_iv(pm::_PMs.AbstractPowerModel)
     # Variables
     variable_mc_voltage(pm)
     variable_mc_branch_current(pm)
-    # variable_mc_transformer_flow(pm)
+    variable_mc_transformer_current(pm)
     variable_mc_generation(pm)
 
     # Constraints

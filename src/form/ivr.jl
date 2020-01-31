@@ -36,6 +36,42 @@ function variable_mc_branch_current(pm::_PMs.AbstractIVRModel; nw::Int=pm.cnw, b
     variable_mc_branch_series_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
 end
 
+
+""
+function variable_mc_transformer_current(pm::_PMs.AbstractIVRModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true, kwargs...)
+    variable_mc_transformer_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    variable_mc_transformer_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+
+    # store expressions in rectangular power variable space
+    p = Dict()
+    q = Dict()
+
+    f_cnd = [1, 2, 3] #TODO extend to this being passed in constraint template
+    t_cnd = [1, 2, 3] #TODO extend to this being passed in constraint template
+
+    for (l,i,j) in _PMs.ref(pm, nw, :arcs_from_trans)
+        vr_fr = _PMs.var(pm, nw, :vr, i)[f_cnd]
+        vi_fr = _PMs.var(pm, nw, :vi, i)[f_cnd]
+        cr_fr = _PMs.var(pm, nw, :crt, (l,i,j))
+        ci_fr = _PMs.var(pm, nw, :cit, (l,i,j))
+
+        vr_to = _PMs.var(pm, nw, :vr, j)[t_cnd]
+        vi_to = _PMs.var(pm, nw, :vi, j)[t_cnd]
+        cr_to = _PMs.var(pm, nw, :crt, (l,j,i))
+        ci_to = _PMs.var(pm, nw, :cit, (l,j,i))
+        p[(l,i,j)] = vr_fr.*cr_fr  + vi_fr.*ci_fr
+        q[(l,i,j)] = vi_fr.*cr_fr  - vr_fr.*ci_fr
+        p[(l,j,i)] = vr_to.*cr_to  + vi_to.*ci_to
+        q[(l,j,i)] = vi_to.*cr_to  - vr_to.*ci_to
+    end
+
+    _PMs.var(pm, nw)[:p] = p
+    _PMs.var(pm, nw)[:q] = q
+    report && _PMs.sol_component_value_edge(pm, nw, :transformer, :pf, :pt, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), p)
+    report && _PMs.sol_component_value_edge(pm, nw, :transformer, :qf, :qt, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), q)
+end
+
+
 ""
 function variable_mc_generation(pm::_PMs.AbstractIVRModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true, kwargs...)
     variable_mc_generation_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
@@ -400,7 +436,6 @@ end
 
 
 function constraint_mc_trans_yy(pm::_PMs.AbstractIVRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-    @show(keys(_PMs.var(pm, nw)))
     vr_fr_P = _PMs.var(pm, nw, :vr, f_bus)[f_cnd]
     vi_fr_P = _PMs.var(pm, nw, :vi, f_bus)[f_cnd]
     vr_fr_n = 0
@@ -410,19 +445,19 @@ function constraint_mc_trans_yy(pm::_PMs.AbstractIVRModel, nw::Int, trans_id::In
     vr_to_n = 0
     vi_to_n = 0
 
-    cr_fr_P = _PMs.var(pm, nw, :cr, f_idx)[f_cnd]
-    ci_to_P = _PMs.var(pm, nw, :ci, t_idx)[t_cnd]
-    cr_fr_P = _PMs.var(pm, nw, :cr, f_idx)[f_cnd]
-    ci_to_P = _PMs.var(pm, nw, :ci, t_idx)[t_cnd]
+    cr_fr_P = _PMs.var(pm, nw, :crt, f_idx)[f_cnd]
+    ci_fr_P = _PMs.var(pm, nw, :cit, f_idx)[f_cnd]
+    cr_to_P = _PMs.var(pm, nw, :crt, t_idx)[t_cnd]
+    ci_to_P = _PMs.var(pm, nw, :cit, t_idx)[t_cnd]
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
     tm = [tm_fixed[p] ? tm_set[p] : _PMs.var(pm, nw, :tap, trans_id)[p] for p in _PMs.conductor_ids(pm)]
     scale = (tm_scale*pol).*tm_set
 
-    JuMP.@constraint(pm.model, (vr_fr_P[p].-vr_fr_n) .== scale.*(vr_to_P[p].-vr_to_n))
-    JuMP.@constraint(pm.model, (vi_fr_P[p].-vi_fr_n) .== scale.*(vi_to_P[p].-vi_to_n))
-    JuMP.@constraint(pm.model, scale.*cr_fr_P[p] .+ cr_to_P[p] .== 0)
-    JuMP.@constraint(pm.model, scale.*ci_fr_P[p] .+ ci_to_P[p] .== 0)
+    JuMP.@constraint(pm.model, (vr_fr_P.-vr_fr_n) .== scale.*(vr_to_P.-vr_to_n))
+    JuMP.@constraint(pm.model, (vi_fr_P.-vi_fr_n) .== scale.*(vi_to_P.-vi_to_n))
+    JuMP.@constraint(pm.model, scale.*cr_fr_P .+ cr_to_P .== 0)
+    JuMP.@constraint(pm.model, scale.*ci_fr_P .+ ci_to_P .== 0)
 end
 
 
@@ -434,10 +469,10 @@ function constraint_mc_trans_dy(pm::_PMs.AbstractIVRModel, nw::Int, trans_id::In
     vr_to_n = 0
     vi_to_n = 0
 
-    cr_fr_P = _PMs.var(pm, nw, :cr, f_idx)[f_cnd]
-    ci_to_P = _PMs.var(pm, nw, :ci, t_idx)[t_cnd]
-    cr_fr_P = _PMs.var(pm, nw, :cr, f_idx)[f_cnd]
-    ci_to_P = _PMs.var(pm, nw, :ci, t_idx)[t_cnd]
+    cr_fr_P = _PMs.var(pm, nw, :crt, f_idx)[f_cnd]
+    ci_fr_P = _PMs.var(pm, nw, :cit, f_idx)[f_cnd]
+    cr_to_P = _PMs.var(pm, nw, :crt, t_idx)[t_cnd]
+    ci_to_P = _PMs.var(pm, nw, :cit, t_idx)[t_cnd]
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
     tm = [tm_fixed[p] ? tm_set[p] : _PMs.var(pm, nw, :tap, trans_id)[p] for p in _PMs.conductor_ids(pm)]
@@ -449,6 +484,6 @@ function constraint_mc_trans_dy(pm::_PMs.AbstractIVRModel, nw::Int, trans_id::In
     JuMP.@constraint(pm.model, Md*vr_fr_P .== scale.*(vr_to_P .- vr_to_n))
     JuMP.@constraint(pm.model, Md*vi_fr_P .== scale.*(vi_to_P .- vi_to_n))
 
-    JuMP.@constraint(pm.model, scale.*cr_fr_P[p] .+ Md*cr_to_P[p] .== 0)
-    JuMP.@constraint(pm.model, scale.*ci_fr_P[p] .+ Md*ci_to_P[p] .== 0)
+    JuMP.@constraint(pm.model, scale.*cr_fr_P .+ Md'*cr_to_P .== 0)
+    JuMP.@constraint(pm.model, scale.*ci_fr_P .+ Md'*ci_to_P .== 0)
 end
