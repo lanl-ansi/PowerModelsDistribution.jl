@@ -210,54 +210,6 @@ function variable_mc_voltage_magnitude_sqr(pm::_PMs.AbstractPowerModel; nw::Int=
     report && _PMs.sol_component_value(pm, nw, :bus, :w, _PMs.ids(pm, nw, :bus), w)
 end
 
-#
-# ""
-# function variable_mc_voltage_product(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded=true)
-#     bp_cndf_cndt = [(i, j, c, d) for (i,j) in keys(_PMs.ref(pm, nw, :buspairs)) for c in _PMs.conductor_ids(pm) for d in _PMs.conductor_ids(pm)]
-#     bus_cnd = [(i, i, c, d) for i in _PMs.ids(pm, nw, :bus) for c in _PMs.conductor_ids(pm) for d in _PMs.conductor_ids(pm) if c != d]
-#     append!(bus_cnd, bp_cndf_cndt)
-#
-#     WR = _PMs.var(pm, nw)[:wr] = JuMP.@variable(pm.model,
-#         [b in bus_cnd], base_name="$(nw)_wr",
-#         start = comp_start_value(b[1] != b[2] ? _PMs.ref(pm, nw, :buspairs, b[1:2]) : _PMs.ref(pm, nw, :bus, b[1]), "wr_start", b[3], 1.0)
-#     )
-#
-#     WI = _PMs.var(pm, nw)[:wi] = JuMP.@variable(pm.model,
-#         [b in bus_cnd], base_name="$(nw)_wi",
-#         start = comp_start_value(b[1] != b[2] ? _PMs.ref(pm, nw, :buspairs, b[1:2]) : _PMs.ref(pm, nw, :bus, b[1]), "wi_start", b[3], 0.0)
-#     )
-#
-#     for cnd in _PMs.conductor_ids(pm, nw)
-#         if bounded
-#             # Diagonal bounds
-#             # filter out branch property in the buspair, because this breaks PowerModels when cnd!=1
-#             buspairs = Dict([(bp, Dict([(k,v) for (k,v) in buspair if k!="branch"])) for (bp, buspair) in _PMs.ref(pm, nw, :buspairs)])
-#             wr_min, wr_max, wi_min, wi_max = _PMs.ref_calc_voltage_product_bounds(buspairs, cnd)
-#             for (i, j) in _PMs.ids(pm, nw, :buspairs)
-#                 JuMP.set_upper_bound(WR[(i, j, cnd, cnd)], wr_max[(i,j)])
-#                 JuMP.set_upper_bound(WI[(i, j, cnd, cnd)], wi_max[(i,j)])
-#
-#                 JuMP.set_lower_bound(WR[(i, j, cnd, cnd)], wr_min[(i,j)])
-#                 JuMP.set_lower_bound(WI[(i, j, cnd, cnd)], wi_min[(i,j)])
-#             end
-#
-#             # Off-diagonal bounds
-#             for c in _PMs.conductor_ids(pm)
-#                 if c != cnd
-#                     wr_min, wr_max, wi_min, wi_max = _calc_mc_voltage_product_bounds(pm, bus_cnd)
-#                     for k in bus_cnd
-#                         JuMP.set_upper_bound(WR[k], wr_max[k])
-#                         JuMP.set_upper_bound(WI[k], wi_max[k])
-#
-#                         JuMP.set_lower_bound(WR[k], wr_min[k])
-#                         JuMP.set_lower_bound(WI[k], wi_min[k])
-#                     end
-#                 end
-#             end
-#         end
-#     end
-# end
-#
 
 "variables for modeling storage units, includes grid injection and internal variables"
 function variable_mc_storage(pm::_PMs.AbstractPowerModel; kwargs...)
