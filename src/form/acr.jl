@@ -162,10 +162,16 @@ function constraint_mc_power_balance(pm::_PMs.AbstractACRModel, nw::Int, i::Int,
     pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
     qt   = get(_PMs.var(pm, nw),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
 
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    gs = sum([values(bus_gs)..., fill(0.0, ncnds, ncnds)])
+    bs = sum([values(bus_bs)..., fill(0.0, ncnds, ncnds)])
+
     cstr_p = []
     cstr_q = []
 
-    for c in _PMs.conductor_ids(pm; nw=nw)
+    for c in cnds
         cp = JuMP.@constraint(pm.model,
             sum(p[a][c] for a in bus_arcs)
             + sum(psw[a_sw][c] for a_sw in bus_arcs_sw)
@@ -174,7 +180,10 @@ function constraint_mc_power_balance(pm::_PMs.AbstractACRModel, nw::Int, i::Int,
             sum(pg[g][c] for g in bus_gens)
             - sum(ps[s][c] for s in bus_storage)
             - sum(pd[c] for pd in values(bus_pd))
-            - sum(gs[c] for gs in values(bus_gs))*(vr[c]^2 + vi[c]^2)
+            - sum( # shunt
+                   vr[c] * ( gs[c,d]*vr[d] - bs[c,d]*vi[d])
+                  -vi[c] * (-bs[c,d]*vr[d] - gs[c,d]*vi[d])
+              for d in cnds)
         )
         push!(cstr_p, cp)
 
@@ -186,7 +195,10 @@ function constraint_mc_power_balance(pm::_PMs.AbstractACRModel, nw::Int, i::Int,
             sum(qg[g][c] for g in bus_gens)
             - sum(qs[s][c] for s in bus_storage)
             - sum(qd[c] for qd in values(bus_qd))
-            + sum(bs[c] for bs in values(bus_bs))*(vr[c]^2 + vi[c]^2)
+            - sum( # shunt
+                  -vr[c] * (bs[c,d]*vr[d] + gs[c,d]*vi[d])
+                  +vi[c] * (gs[c,d]*vr[d] - bs[c,d]*vi[d])
+              for d in cnds)
         )
         push!(cstr_q, cq)
     end

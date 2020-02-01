@@ -162,6 +162,7 @@ end
 ""
 function constraint_mc_power_balance(pm::_PMs.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
     vm   = _PMs.var(pm, nw, :vm, i)
+    vm   = _PMs.var(pm, nw, :va, i)
     p    = get(_PMs.var(pm, nw),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
     q    = get(_PMs.var(pm, nw),    :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
     pg   = get(_PMs.var(pm, nw),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
@@ -173,10 +174,18 @@ function constraint_mc_power_balance(pm::_PMs.AbstractACPModel, nw::Int, i::Int,
     pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
     qt   = get(_PMs.var(pm, nw),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
 
+
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+    
+    gs = sum([values(bus_gs)..., fill(0.0, ncnds, ncnds)])
+    bs = sum([values(bus_bs)..., fill(0.0, ncnds, ncnds)])
+
     cstr_p = []
     cstr_q = []
+    for c in cnds
 
-    for c in _PMs.conductor_ids(pm; nw=nw)
+    for c in cnds
         cp = JuMP.@constraint(pm.model,
             sum(p[a][c] for a in bus_arcs)
             + sum(psw[a_sw][c] for a_sw in bus_arcs_sw)
@@ -185,7 +194,12 @@ function constraint_mc_power_balance(pm::_PMs.AbstractACPModel, nw::Int, i::Int,
             sum(pg[g][c] for g in bus_gens)
             - sum(ps[s][c] for s in bus_storage)
             - sum(pd[c] for pd in values(bus_pd))
-            - sum(gs[c] for gs in values(bus_gs))*vm[c]^2
+            - ( # shunt
+                gs[c,c] * vm[c]^2
+                +sum( gs[c,d] * vm[c]*vm[d] * cos(va[c]-va[d])
+                     +bs[c,d] * vm[c]*vm[d] * sin(va[c]-va[d])
+                     for d in cnds if d != c)
+            )
         )
         push!(cstr_p, cp)
 
@@ -197,7 +211,12 @@ function constraint_mc_power_balance(pm::_PMs.AbstractACPModel, nw::Int, i::Int,
             sum(qg[g][c] for g in bus_gens)
             - sum(qs[s][c] for s in bus_storage)
             - sum(qd[c] for qd in values(bus_qd))
-            + sum(bs[c] for bs in values(bus_bs))*vm[c]^2
+            - (
+                -bs[c,c] * vm[c]^2
+                -sum( bs[c,d] * vm[c]*vm[d] * cos(va[c]-va[d])
+                     -gs[c,d] * vm[c]*vm[d] *sin(va[c]-va[d])
+                     for d in cnds if d != c)
+            )
         )
         push!(cstr_q, cq)
     end
