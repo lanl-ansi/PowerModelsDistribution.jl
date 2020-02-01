@@ -941,6 +941,69 @@ function variable_mc_generation_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm
 end
 
 
+"variable: `crg[j]` for `j` in `gen`"
+function variable_mc_generation_current_real(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    gen = _PMs.ref(pm, nw, :gen)
+    bus = _PMs.ref(pm, nw, :bus)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    crg = _PMs.var(pm, nw)[:crg] = Dict(i => JuMP.@variable(pm.model,
+            [c in 1:ncnds], base_name="$(nw)_crg_$(i)",
+            start = comp_start_value(_PMs.ref(pm, nw, :gen, i), "crg_start", c, 0.0)
+        ) for i in _PMs.ids(pm, nw, :gen)
+    )
+    if bounded
+        ub = Dict()
+        for (i, g) in gen
+            vmin = bus[g["gen_bus"]]["vmin"]
+            s = abs.(max.(abs.(g["pmax"]),abs.(g["pmin"])) + im.*max.(abs.(g["qmax"]), abs.(g["qmin"])))
+            ub[i] = s./vmin
+        end
+
+        for (i, g) in gen
+            for c in cnds
+                JuMP.set_lower_bound(crg[i][c], -ub[i][c])
+                JuMP.set_upper_bound(crg[i][c], ub[i][c])
+            end
+        end
+    end
+
+    report && _PMs.sol_component_value(pm, nw, :gen, :crg, _PMs.ids(pm, nw, :gen), crg)
+end
+
+"variable: `cig[j]` for `j` in `gen`"
+function variable_mc_generation_current_imaginary(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    gen = _PMs.ref(pm, nw, :gen)
+    bus = _PMs.ref(pm, nw, :bus)
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    cig = _PMs.var(pm, nw)[:cig] = Dict(i => JuMP.@variable(pm.model,
+            [c in 1:ncnds], base_name="$(nw)_cig_$(i)",
+            start = comp_start_value(_PMs.ref(pm, nw, :gen, i), "cig_start", c, 0.0)
+        ) for i in _PMs.ids(pm, nw, :gen)
+    )
+    if bounded
+        ub = Dict()
+        for (i, g) in gen
+            vmin = bus[g["gen_bus"]]["vmin"]
+            s = abs.(max.(abs.(g["pmax"]),abs.(g["pmin"])) + im.*max.(abs.(g["qmax"]), abs.(g["qmin"])))
+            ub[i] = s./vmin
+        end
+
+        for (i, g) in gen
+            for c in cnds
+                JuMP.set_lower_bound(cig[i][c], -ub[i][c])
+                JuMP.set_upper_bound(cig[i][c], ub[i][c])
+            end
+        end
+    end
+
+    report && _PMs.sol_component_value(pm, nw, :gen, :cig, _PMs.ids(pm, nw, :gen), cig)
+end
+
+
 function variable_mc_generation_on_off(pm::_PMs.AbstractPowerModel; kwargs...)
     variable_mc_active_generation_on_off(pm; kwargs...)
     variable_mc_reactive_generation_on_off(pm; kwargs...)
