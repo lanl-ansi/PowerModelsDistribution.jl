@@ -42,28 +42,11 @@ function constraint_mc_ohms_yt_from(pm::_PMs.AbstractPowerModel, i::Int; nw::Int
 
     g, b = _PMs.calc_branch_y(branch)
     tr, ti = _PMs.calc_branch_t(branch)
-    g_fr = branch["g_fr"]
-    b_fr = branch["b_fr"]
+    g_fr = branch["g_fr"].values
+    b_fr = branch["b_fr"].values
     tm = branch["tap"]
 
-    #TODO why was this not required before?
-    if length(size(g_fr)) == 1
-        tmp = MultiConductorMatrix(0.0, length(g_fr))
-        for c in 1:length(g_fr)
-            tmp[c,c] = g_fr[c]
-        end
-        g_fr = tmp
-    end
-
-    if length(size(b_fr)) == 1
-        tmp = MultiConductorMatrix(0.0, length(b_fr))
-        for c in 1:length(b_fr)
-            tmp[c,c] = b_fr[c]
-        end
-        b_fr = tmp
-    end
-
-    constraint_mc_ohms_yt_from(pm, nw, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
+    constraint_mc_ohms_yt_from(pm, nw, f_bus, t_bus, f_idx, t_idx, g.values, b.values, g_fr, b_fr, tr, ti, tm)
 end
 
 
@@ -77,28 +60,11 @@ function constraint_mc_ohms_yt_to(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=p
 
     g, b = _PMs.calc_branch_y(branch)
     tr, ti = _PMs.calc_branch_t(branch)
-    g_to = branch["g_to"]
-    b_to = branch["b_to"]
+    g_to = branch["g_to"].values
+    b_to = branch["b_to"].values
     tm = branch["tap"]
 
-    #TODO why was this not required before?
-    if length(size(g_to)) == 1
-        tmp = MultiConductorMatrix(0.0, length(g_to))
-        for c in 1:length(g_to)
-            tmp[c,c] = g_to[c]
-        end
-        g_to = tmp
-    end
-
-    if length(size(b_to)) == 1
-        tmp = MultiConductorMatrix(0.0, length(b_to))
-        for c in 1:length(b_to)
-            tmp[c,c] = b_to[c]
-        end
-        b_to = tmp
-    end
-
-    constraint_mc_ohms_yt_to(pm, nw, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
+    constraint_mc_ohms_yt_to(pm, nw, f_bus, t_bus, f_idx, t_idx, g.values, b.values, g_to, b_to, tr, ti, tm)
 end
 
 
@@ -210,8 +176,8 @@ function constraint_mc_power_balance(pm::_PMs.AbstractPowerModel, i::Int; nw::In
     bus_pd = Dict(k => _PMs.ref(pm, nw, :load, k, "pd") for k in bus_loads)
     bus_qd = Dict(k => _PMs.ref(pm, nw, :load, k, "qd") for k in bus_loads)
 
-    bus_gs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "gs") for k in bus_shunts)
-    bus_bs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "bs") for k in bus_shunts)
+    bus_gs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "gs").values for k in bus_shunts)
+    bus_bs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "bs").values for k in bus_shunts)
 
     constraint_mc_power_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
 end

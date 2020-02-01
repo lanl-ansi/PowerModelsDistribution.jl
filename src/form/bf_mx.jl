@@ -758,23 +758,23 @@ function constraint_M_psd(model::JuMP.Model, M_re, M_im)
     JuMP.@constraint(model, [M_re -M_im; M_im M_re] in JuMP.PSDCone())
 end
 
-
-"""
-For KCLMXModels, a new power balance constraint is required.
-"""
-function constraint_mc_power_balance(pm::KCLMXModels, i::Int; nw::Int=pm.cnw)
-    bus = _PMs.ref(pm, nw, :bus, i)
-    bus_arcs = _PMs.ref(pm, nw, :bus_arcs, i)
-    bus_arcs_dc = _PMs.ref(pm, nw, :bus_arcs_dc, i)
-    bus_gens = _PMs.ref(pm, nw, :bus_gens, i)
-    bus_loads = _PMs.ref(pm, nw, :bus_loads, i)
-    bus_shunts = _PMs.ref(pm, nw, :bus_shunts, i)
-
-    bus_Gs = Dict(k => LinearAlgebra.diagm(0=>_PMs.ref(pm, nw, :shunt, k, "gs").values) for k in bus_shunts)
-    bus_Bs = Dict(k => LinearAlgebra.diagm(0=>_PMs.ref(pm, nw, :shunt, k, "bs").values) for k in bus_shunts)
-
-    constraint_mc_power_balance(pm, nw, i, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_Gs, bus_Bs)
-end
+#
+# """
+# For KCLMXModels, a new power balance constraint is required.
+# """
+# function constraint_mc_power_balance(pm::KCLMXModels, i::Int; nw::Int=pm.cnw)
+#     bus = _PMs.ref(pm, nw, :bus, i)
+#     bus_arcs = _PMs.ref(pm, nw, :bus_arcs, i)
+#     bus_arcs_dc = _PMs.ref(pm, nw, :bus_arcs_dc, i)
+#     bus_gens = _PMs.ref(pm, nw, :bus_gens, i)
+#     bus_loads = _PMs.ref(pm, nw, :bus_loads, i)
+#     bus_shunts = _PMs.ref(pm, nw, :bus_shunts, i)
+#
+#     bus_Gs = Dict(k => LinearAlgebra.diagm(0=>_PMs.ref(pm, nw, :shunt, k, "gs").values) for k in bus_shunts)
+#     bus_Bs = Dict(k => LinearAlgebra.diagm(0=>_PMs.ref(pm, nw, :shunt, k, "bs").values) for k in bus_shunts)
+#
+#     constraint_mc_power_balance(pm, nw, i, bus_arcs, bus_arcs_dc, bus_gens, bus_loads, bus_Gs, bus_Bs)
+# end
 
 
 """
@@ -799,16 +799,16 @@ function constraint_mc_power_balance(pm::KCLMXModels, n::Int, i::Int, bus_arcs, 
     # ignore dc for now
     #TODO add DC in matrix version?
     ncnds = size(Wr)[1]
-    G = (length(bus_Gs)>0) ? sum(values(bus_Gs)) : zeros(ncnds, ncnds)
-    B = (length(bus_Bs)>0) ? sum(values(bus_Bs)) : zeros(ncnds, ncnds)
+    Gt = isempty(bus_gs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_gs))
+    Bt = isempty(bus_bs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_bs))
 
     # changed the ordering
     # LHS: all variables with generator sign convention
     # RHS: all variables with load sign convention
     # _PMs.con(pm, n, :kcl_P)[i] =
-    cp = JuMP.@constraint(pm.model, sum(Pg[g] for g in bus_gens) .== sum(P[a] for a in bus_arcs) + sum(Pd[d] for d in bus_loads) + ( Wr*G'+Wi*B'))
+    cp = JuMP.@constraint(pm.model, sum(Pg[g] for g in bus_gens) .== sum(P[a] for a in bus_arcs) + sum(Pd[d] for d in bus_loads) + ( Wr*Gt'+Wi*Bt'))
     # _PMs.con(pm, n, :kcl_Q)[i] =
-    cq = JuMP.@constraint(pm.model, sum(Qg[g] for g in bus_gens) .== sum(Q[a] for a in bus_arcs) + sum(Qd[d] for d in bus_loads) + (-Wr*B'+Wi*G'))
+    cq = JuMP.@constraint(pm.model, sum(Qg[g] for g in bus_gens) .== sum(Q[a] for a in bus_arcs) + sum(Qd[d] for d in bus_loads) + (-Wr*Bt'+Wi*Gt'))
 
     if _PMs.report_duals(pm)
         _PMs.sol(pm, n, :bus, i)[:lam_kcl_r] = cp

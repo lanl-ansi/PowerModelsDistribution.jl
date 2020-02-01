@@ -329,6 +329,8 @@ function _ml2pmd_shunt!(data::Dict{String,Any})
     for load in data["shunt"]
         _make_mpv!(load, "gs", ["gs_1", "gs_2", "gs_3"])
         _make_mpv!(load, "bs", ["bs_1", "bs_2", "bs_3"])
+        load["gs"] = MultiConductorMatrix(LinearAlgebra.diagm(0=>load["gs"].values))
+        load["bs"] = MultiConductorMatrix(LinearAlgebra.diagm(0=>load["bs"].values))
     end
 end
 

@@ -380,7 +380,7 @@ const _conductorless = Set(["index", "bus_i", "bus_type", "status", "gen_status"
     "model", "ncost", "cost", "startup", "shutdown", "name", "source_id", "active_phases"])
 
 "field names that should become multi-conductor matrix not arrays"
-const _conductor_matrix = Set(["br_r", "br_x", "b_fr", "b_to", "g_fr", "g_to"])
+const _conductor_matrix = Set(["br_r", "br_x", "b_fr", "b_to", "g_fr", "g_to", "gs", "bs"])
 
 
 ""
