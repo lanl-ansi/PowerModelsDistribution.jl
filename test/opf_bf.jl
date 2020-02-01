@@ -1,5 +1,10 @@
 @info "running branch-flow optimal power flow (opf_bf) tests"
 
+calc_vm_w(result, id) = sqrt.(      result["solution"]["bus"][id]["w"])
+calc_vm_W(result, id) = sqrt.(diag( result["solution"]["bus"][id]["Wr"]))
+
+
+
 @testset "test distflow formulations" begin
     @testset "test linearised distflow opf_bf" begin
         @testset "5-bus lplinubf opf_bf" begin

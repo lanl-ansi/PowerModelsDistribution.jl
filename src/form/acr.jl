@@ -162,34 +162,35 @@ function constraint_mc_power_balance(pm::_PMs.AbstractACRModel, nw::Int, i::Int,
     pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
     qt   = get(_PMs.var(pm, nw),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
 
-    cstr_p = []
-    cstr_q = []
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
 
-    for c in _PMs.conductor_ids(pm; nw=nw)
-        cp = JuMP.@constraint(pm.model,
-            sum(p[a][c] for a in bus_arcs)
-            + sum(psw[a_sw][c] for a_sw in bus_arcs_sw)
-            + sum(pt[a_trans][c] for a_trans in bus_arcs_trans)
-            ==
-            sum(pg[g][c] for g in bus_gens)
-            - sum(ps[s][c] for s in bus_storage)
-            - sum(pd[c] for pd in values(bus_pd))
-            - sum(gs[c] for gs in values(bus_gs))*(vr[c]^2 + vi[c]^2)
-        )
-        push!(cstr_p, cp)
+    Gt = isempty(bus_gs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_gs))
+    Bt = isempty(bus_bs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_bs))
 
-        cq = JuMP.@constraint(pm.model,
-            sum(q[a][c] for a in bus_arcs)
-            + sum(qsw[a_sw][c] for a_sw in bus_arcs_sw)
-            + sum(qt[a_trans][c] for a_trans in bus_arcs_trans)
-            ==
-            sum(qg[g][c] for g in bus_gens)
-            - sum(qs[s][c] for s in bus_storage)
-            - sum(qd[c] for qd in values(bus_qd))
-            + sum(bs[c] for bs in values(bus_bs))*(vr[c]^2 + vi[c]^2)
-        )
-        push!(cstr_q, cq)
-    end
+    cstr_p = JuMP.@constraint(pm.model,
+        sum(p[a] for a in bus_arcs)
+        + sum(psw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(pt[a_trans] for a_trans in bus_arcs_trans)
+        .==
+        sum(pg[g] for g in bus_gens)
+        - sum(ps[s] for s in bus_storage)
+        - sum(pd for pd in values(bus_pd))
+        # shunt
+        - (vr.*(Gt*vr-Bt*vi) + vi.*(Gt*vi+Bt*vr))
+    )
+
+    cstr_q = JuMP.@constraint(pm.model,
+        sum(q[a] for a in bus_arcs)
+        + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
+        + sum(qt[a_trans] for a_trans in bus_arcs_trans)
+        .==
+        sum(qg[g] for g in bus_gens)
+        - sum(qs[s] for s in bus_storage)
+        - sum(qd for qd in values(bus_qd))
+        # shunt
+        - (-vr.*(Gt*vi+Bt*vr) + vi.*(Gt*vr-Bt*vi))
+    )
 
     if _PMs.report_duals(pm)
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
@@ -215,9 +216,16 @@ function constraint_mc_power_balance_load(pm::_PMs.AbstractACRModel, nw::Int, i:
     pd   = get(_PMs.var(pm, nw),  :pd, Dict()); _PMs._check_var_keys(pd, bus_loads, "active power", "load")
     qd   = get(_PMs.var(pm, nw),  :qd, Dict()); _PMs._check_var_keys(pd, bus_loads, "reactive power", "load")
 
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    Gt = isempty(bus_gs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_gs))
+    Bt = isempty(bus_bs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_bs))
+
     cstr_p = []
     cstr_q = []
 
+    # pd/qd can be NLexpressions, so cannot be vectorized
     for c in _PMs.conductor_ids(pm; nw=nw)
         cp = JuMP.@NLconstraint(pm.model,
             sum(p[a][c] for a in bus_arcs)
@@ -227,7 +235,10 @@ function constraint_mc_power_balance_load(pm::_PMs.AbstractACRModel, nw::Int, i:
             sum(pg[g][c] for g in bus_gens)
             - sum(ps[s][c] for s in bus_storage)
             - sum(pd[l][c] for l in bus_loads)
-            - sum(gs[c] for gs in values(bus_gs))*(vr[c]^2 + vi[c]^2)
+            - sum( # shunt
+                   vr[c] * ( Gt[c,d]*vr[d] - Bt[c,d]*vi[d])
+                  -vi[c] * (-Bt[c,d]*vr[d] - Gt[c,d]*vi[d])
+              for d in cnds)
         )
         push!(cstr_p, cp)
 
@@ -239,7 +250,10 @@ function constraint_mc_power_balance_load(pm::_PMs.AbstractACRModel, nw::Int, i:
             sum(qg[g][c] for g in bus_gens)
             - sum(qs[s][c] for s in bus_storage)
             - sum(qd[l][c] for l in bus_loads)
-            + sum(bs for bs in values(bus_bs))*(vr[c]^2 + vi[c]^2)
+            - sum( # shunt
+                  -vr[c] * (Bt[c,d]*vr[d] + Gt[c,d]*vi[d])
+                  +vi[c] * (Gt[c,d]*vr[d] - Bt[c,d]*vi[d])
+              for d in cnds)
         )
         push!(cstr_q, cq)
     end
@@ -252,28 +266,13 @@ end
 
 
 """
-Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
+Creates Ohms constraints
 
-```
-p_fr ==  sum(
-             vr_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
-            -vi_fr[c]*(-b[c,d]*(vr_fr[d]-vr_to[d])-g[c,d]*(vi_fr[d]-vi_to[d]))
-            for d in _PMs.conductor_ids(pm))
-         + sum(
-             vr_fr[c]*(g_fr[c,d]*vr_fr[d]-b_fr[c,d]*vi_fr[d])
-            -vi_fr[c]*(-b_fr[c,d]*vr_fr[d]-g_fr[c,d]*vi_fr[d])
-            for d in _PMs.conductor_ids(pm))
-q_fr ==  sum(
-            -vr_fr[c]*(b[c,d]*(vr_fr[d]-vr_to[d])+g[c,d]*(vi_fr[d]-vi_to[d]))
-            +vi_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
-            for d in _PMs.conductor_ids(pm))
-          + sum(
-            -vr_fr[c]*(b_fr[c,d]*vr_fr[d]+g_fr[c,d]*vi_fr[d])
-            +vi_fr[c]*(g_fr[c,d]*vr_fr[d]-b_fr[c,d]*vi_fr[d])
-            for d in _PMs.conductor_ids(pm))
-```
+s_fr = v_fr.*conj(Y*(v_fr-v_to))
+s_fr = (vr_fr+im*vi_fr).*(G-im*B)*([vr_fr-vr_to]-im*[vi_fr-vi_to])
+s_fr = (vr_fr+im*vi_fr).*([G*vr_fr-G*vr_to-B*vi_fr+B*vi_to]-im*[G*vi_fr-G*vi_to+B*vr_fr-B*vr_to])
 """
-function constraint_mc_ohms_yt_from(pm::_PMs.AbstractACRModel, n::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
+function constraint_mc_ohms_yt_from(pm::_PMs.AbstractACRModel, n::Int, f_bus, t_bus, f_idx, t_idx, G, B, G_fr, B_fr, tr, ti, tm)
     p_fr  = _PMs.var(pm, n, :p, f_idx)
     q_fr  = _PMs.var(pm, n, :q, f_idx)
     vr_fr = _PMs.var(pm, n, :vr, f_bus)
@@ -282,30 +281,48 @@ function constraint_mc_ohms_yt_from(pm::_PMs.AbstractACRModel, n::Int, f_bus, t_
     vi_to = _PMs.var(pm, n, :vi, t_bus)
 
     cnds = _PMs.conductor_ids(pm; nw=n)
-    for c in cnds
-        JuMP.@NLconstraint(pm.model,
-                p_fr[c] ==  sum(
-                                 vr_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
-                                -vi_fr[c]*(-b[c,d]*(vr_fr[d]-vr_to[d])-g[c,d]*(vi_fr[d]-vi_to[d]))
-                            for d in cnds)
-                          # the shunt element is identical but vr_to=vi_to=0
-                          + sum(
-                                 vr_fr[c]*(g_fr[c,d]*vr_fr[d]-b_fr[c,d]*vi_fr[d])
-                                -vi_fr[c]*(-b_fr[c,d]*vr_fr[d]-g_fr[c,d]*vi_fr[d])
-                            for d in cnds)
-        )
-        JuMP.@NLconstraint(pm.model,
-                q_fr[c] ==  sum(
-                                -vr_fr[c]*(b[c,d]*(vr_fr[d]-vr_to[d])+g[c,d]*(vi_fr[d]-vi_to[d]))
-                                +vi_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
-                            for d in cnds)
-                          # the shunt element is identical but vr_to=vi_to=0
-                          + sum(
-                                -vr_fr[c]*(b_fr[c,d]*vr_fr[d]+g_fr[c,d]*vi_fr[d])
-                                +vi_fr[c]*(g_fr[c,d]*vr_fr[d]-b_fr[c,d]*vi_fr[d])
-                            for d in cnds)
-        )
-    end
+
+    JuMP.@constraint(pm.model,
+            p_fr .==  vr_fr.*(G*vr_fr-G*vr_to-B*vi_fr+B*vi_to)
+                     +vi_fr.*(G*vi_fr-G*vi_to+B*vr_fr-B*vr_to)
+                     # shunt
+                     +vr_fr.*(G_fr*vr_fr-B_fr*vi_fr)
+                     +vi_fr.*(G_fr*vi_fr+B_fr*vr_fr)
+    )
+    JuMP.@constraint(pm.model,
+            q_fr .== -vr_fr.*(G*vi_fr-G*vi_to+B*vr_fr-B*vr_to)
+                     +vi_fr.*(G*vr_fr-G*vr_to-B*vi_fr+B*vi_to)
+                     # shunt
+                     -vr_fr.*(G_fr*vi_fr+B_fr*vr_fr)
+                     +vi_fr.*(G_fr*vr_fr-B_fr*vi_fr)
+    )
+
+
+
+    # for c in cnds
+    #     JuMP.@NLconstraint(pm.model,
+    #             p_fr[c] ==  sum(
+    #                              vr_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
+    #                             -vi_fr[c]*(-b[c,d]*(vr_fr[d]-vr_to[d])-g[c,d]*(vi_fr[d]-vi_to[d]))
+    #                         for d in cnds)
+    #                       # the shunt element is identical but vr_to=vi_to=0
+    #                       + sum(
+    #                              vr_fr[c]*(g_fr[c,d]*vr_fr[d]-b_fr[c,d]*vi_fr[d])
+    #                             -vi_fr[c]*(-b_fr[c,d]*vr_fr[d]-g_fr[c,d]*vi_fr[d])
+    #                         for d in cnds)
+    #     )
+    #     JuMP.@NLconstraint(pm.model,
+    #             q_fr[c] ==  sum(
+    #                             -vr_fr[c]*(b[c,d]*(vr_fr[d]-vr_to[d])+g[c,d]*(vi_fr[d]-vi_to[d]))
+    #                             +vi_fr[c]*(g[c,d]*(vr_fr[d]-vr_to[d])-b[c,d]*(vi_fr[d]-vi_to[d]))
+    #                         for d in cnds)
+    #                       # the shunt element is identical but vr_to=vi_to=0
+    #                       + sum(
+    #                             -vr_fr[c]*(b_fr[c,d]*vr_fr[d]+g_fr[c,d]*vi_fr[d])
+    #                             +vi_fr[c]*(g_fr[c,d]*vr_fr[d]-b_fr[c,d]*vi_fr[d])
+    #                         for d in cnds)
+    #     )
+    # end
 end
 
 

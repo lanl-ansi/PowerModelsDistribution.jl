@@ -1,4 +1,5 @@
 ### generic features that apply to all active-power-only (apo) approximations
+import LinearAlgebra: diag
 
 "apo models ignore reactive power flows"
 function variable_mc_generation_reactive(pm::_PMs.AbstractActivePowerModel; kwargs...)
@@ -76,8 +77,8 @@ function constraint_mc_power_balance(pm::_PMs.AbstractActivePowerModel, nw::Int,
         .==
         sum(pg[g] for g in bus_gens)
         - sum(ps[s] for s in bus_storage)
-        - sum(pd.values for pd in values(bus_pd))
-        - sum(gs.values for gs in values(bus_gs))*1.0^2
+        - sum(pd for pd in values(bus_pd))
+        - sum(diag(gs) for gs in values(bus_gs))*1.0^2
     )
     # omit reactive constraint
     cnds = _PMs.conductor_ids(pm, nw)

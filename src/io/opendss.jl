@@ -345,21 +345,40 @@ function _dss2pmd_shunt!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         end
         # 'kvar' is specified for all phases at once; we want the per-phase one, in MVar
         qnom = (defaults["kvar"]/1E3)/defaults["phases"]
-        b_cap = qnom/vnom_ln^2
+        b_cap = qnom[1]/vnom_ln^2
         #  get the base addmittance, with a LN voltage base
         Sbase = 1 # not yet pmd_data["baseMVA"] because this is done in _PMs.make_per_unit
         Ybase_ln = Sbase/(pmd_data["basekv"]/sqrt(3))^2
         # now convent b_cap to per unit
         b_cap_pu = b_cap/Ybase_ln
 
+        b = fill(b_cap_pu, defaults["phases"])
+        N = length(b)
+        if defaults["conn"]=="wye"
+            B = LinearAlgebra.diagm(0=>b)
+        else # shunt["conn"]=="delta"
+            # create delta transformation matrix Md
+            Md = LinearAlgebra.diagm(0=>ones(N), 1=>-ones(N-1))
+            Md[N,1] = -1
+            B = Md'*LinearAlgebra.diagm(0=>b)*Md
+        end
+
+        active_phases = [n for n in 1:nconductors if nodes[n] > 0]
+
+        if length(active_phases) < 3
+            Bf = zeros(3, 3)
+            Bf[active_phases, active_phases] = B
+            B = Bf
+        end
+
         shuntDict["shunt_bus"] = find_bus(name, pmd_data)
         shuntDict["name"] = defaults["name"]
-        shuntDict["gs"] = MultiConductorVector(_parse_array(0.0, nodes, nconductors))  # TODO:
-        shuntDict["bs"] = MultiConductorVector(_parse_array(b_cap_pu, nodes, nconductors))
+        shuntDict["gs"] = MultiConductorMatrix(fill(0.0, 3, 3))
+        shuntDict["bs"] = MultiConductorMatrix(B)
         shuntDict["status"] = convert(Int, defaults["enabled"])
         shuntDict["index"] = length(pmd_data["shunt"]) + 1
 
-        shuntDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
+        shuntDict["active_phases"] = active_phases
         shuntDict["source_id"] = "capacitor.$(defaults["name"])"
 
         used = ["bus1", "phases", "name"]
@@ -1303,8 +1322,8 @@ function _rm_redundant_pd_elements!(pmd_data; buses=keys(pmd_data["bus"]), branc
             end
             # move shunts to the bus that will be left
             if !haskey(shunts_g, kp_bus)
-                shunts_g[kp_bus] =  MultiConductorVector(zeros(3))
-                shunts_b[kp_bus] =  MultiConductorVector(zeros(3))
+                shunts_g[kp_bus] =  MultiConductorMatrix(zeros(3, 3))
+                shunts_b[kp_bus] =  MultiConductorMatrix(zeros(3, 3))
             end
 
             # bus shunts are diagonal, but branch shunts can b e full matrices
@@ -1314,10 +1333,10 @@ function _rm_redundant_pd_elements!(pmd_data; buses=keys(pmd_data["bus"]), branc
                 @assert(all(br[key]-diagm(0=>diag(br[key])).==0))
             end
 
-            shunts_g[kp_bus] .+= diag(br["g_fr"])
-            shunts_g[kp_bus] .+= diag(br["g_to"])
-            shunts_b[kp_bus] .+= diag(br["b_fr"])
-            shunts_b[kp_bus] .+= diag(br["b_to"])
+            shunts_g[kp_bus] .+= br["g_fr"]
+            shunts_g[kp_bus] .+= br["g_to"]
+            shunts_b[kp_bus] .+= br["b_fr"]
+            shunts_b[kp_bus] .+= br["b_to"]
             # remove branch from pmd_data
             delete!(pmd_data["branch"], string(br_id))
             if is_shorted && is_reducable
@@ -1380,8 +1399,8 @@ function _rm_redundant_pd_elements!(pmd_data; buses=keys(pmd_data["bus"]), branc
             # unlike PMD level components. The shunts here originate from PMD level
             # components which were already scaled. Therefore, we have to undo the
             # scaling here to prevent double scaling later on.
-            gs = shunt_g/1*pmd_data["baseMVA"]
-            bs = shunt_b/1*pmd_data["baseMVA"]
+            gs = shunt_g./1*pmd_data["baseMVA"]
+            bs = shunt_b./1*pmd_data["baseMVA"]
             _add_shunt!(pmd_data, bus, gs=gs,  bs=bs)
         end
     end

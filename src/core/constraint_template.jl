@@ -42,28 +42,11 @@ function constraint_mc_ohms_yt_from(pm::_PMs.AbstractPowerModel, i::Int; nw::Int
 
     g, b = _PMs.calc_branch_y(branch)
     tr, ti = _PMs.calc_branch_t(branch)
-    g_fr = branch["g_fr"]
-    b_fr = branch["b_fr"]
+    g_fr = branch["g_fr"].values
+    b_fr = branch["b_fr"].values
     tm = branch["tap"]
 
-    #TODO why was this not required before?
-    if length(size(g_fr)) == 1
-        tmp = MultiConductorMatrix(0.0, length(g_fr))
-        for c in 1:length(g_fr)
-            tmp[c,c] = g_fr[c]
-        end
-        g_fr = tmp
-    end
-
-    if length(size(b_fr)) == 1
-        tmp = MultiConductorMatrix(0.0, length(b_fr))
-        for c in 1:length(b_fr)
-            tmp[c,c] = b_fr[c]
-        end
-        b_fr = tmp
-    end
-
-    constraint_mc_ohms_yt_from(pm, nw, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
+    constraint_mc_ohms_yt_from(pm, nw, f_bus, t_bus, f_idx, t_idx, g.values, b.values, g_fr, b_fr, tr, ti, tm)
 end
 
 
@@ -77,28 +60,11 @@ function constraint_mc_ohms_yt_to(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=p
 
     g, b = _PMs.calc_branch_y(branch)
     tr, ti = _PMs.calc_branch_t(branch)
-    g_to = branch["g_to"]
-    b_to = branch["b_to"]
+    g_to = branch["g_to"].values
+    b_to = branch["b_to"].values
     tm = branch["tap"]
 
-    #TODO why was this not required before?
-    if length(size(g_to)) == 1
-        tmp = MultiConductorMatrix(0.0, length(g_to))
-        for c in 1:length(g_to)
-            tmp[c,c] = g_to[c]
-        end
-        g_to = tmp
-    end
-
-    if length(size(b_to)) == 1
-        tmp = MultiConductorMatrix(0.0, length(b_to))
-        for c in 1:length(b_to)
-            tmp[c,c] = b_to[c]
-        end
-        b_to = tmp
-    end
-
-    constraint_mc_ohms_yt_to(pm, nw, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
+    constraint_mc_ohms_yt_to(pm, nw, f_bus, t_bus, f_idx, t_idx, g.values, b.values, g_to, b_to, tr, ti, tm)
 end
 
 
@@ -210,8 +176,8 @@ function constraint_mc_power_balance(pm::_PMs.AbstractPowerModel, i::Int; nw::In
     bus_pd = Dict(k => _PMs.ref(pm, nw, :load, k, "pd") for k in bus_loads)
     bus_qd = Dict(k => _PMs.ref(pm, nw, :load, k, "qd") for k in bus_loads)
 
-    bus_gs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "gs") for k in bus_shunts)
-    bus_bs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "bs") for k in bus_shunts)
+    bus_gs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "gs").values for k in bus_shunts)
+    bus_bs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "bs").values for k in bus_shunts)
 
     constraint_mc_power_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
 end
@@ -544,4 +510,84 @@ function constraint_mc_storage_on_off(pm::_PMs.AbstractPowerModel, i::Int; nw::I
     end
 
     constraint_mc_storage_on_off(pm, nw, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
+end
+
+"defines limits on active power output of a generator where bounds can't be used"
+function constraint_mc_generation_active_power_limits(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    gen = _PMs.ref(pm, nw, :gen, i)
+    bus = gen["gen_bus"]
+    constraint_mc_generation_active_power_limits(pm, nw, i, bus, gen["pmax"], gen["pmin"])
+end
+
+"defines limits on reactive power output of a generator where bounds can't be used"
+function constraint_mc_generation_reactive_power_limits(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    gen = _PMs.ref(pm, nw, :gen, i)
+    bus = gen["gen_bus"]
+    constraint_mc_generation_reactive_power_limits(pm, nw, i, bus, gen["qmax"], gen["qmin"])
+end
+""
+function constraint_mc_current_balance(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    bus = _PMs.ref(pm, nw, :bus, i)
+    bus_arcs = _PMs.ref(pm, nw, :bus_arcs, i)
+    bus_arcs_sw = _PMs.ref(pm, nw, :bus_arcs_sw, i)
+    bus_arcs_trans = _PMs.ref(pm, nw, :bus_arcs_trans, i)
+    bus_gens = _PMs.ref(pm, nw, :bus_gens, i)
+    bus_storage = _PMs.ref(pm, nw, :bus_storage, i)
+    bus_loads = _PMs.ref(pm, nw, :bus_loads, i)
+    bus_shunts = _PMs.ref(pm, nw, :bus_shunts, i)
+
+    bus_pd = Dict(k => _PMs.ref(pm, nw, :load, k, "pd") for k in bus_loads)
+    bus_qd = Dict(k => _PMs.ref(pm, nw, :load, k, "qd") for k in bus_loads)
+
+    bus_gs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "gs") for k in bus_shunts)
+    bus_bs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "bs") for k in bus_shunts)
+
+    constraint_mc_current_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+end
+
+
+""
+function constraint_mc_current_from(pm::_PMs.AbstractIVRModel, i::Int; nw::Int=pm.cnw)
+    branch = _PMs.ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+
+    tr, ti = _PMs.calc_branch_t(branch)
+    g_fr = branch["g_fr"]
+    b_fr = branch["b_fr"]
+    tm = branch["tap"]
+
+    constraint_mc_current_from(pm, nw, f_bus, f_idx, g_fr, b_fr, tr, ti, tm)
+end
+
+""
+function constraint_mc_current_to(pm::_PMs.AbstractIVRModel, i::Int; nw::Int=pm.cnw)
+    branch = _PMs.ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+    t_idx = (i, t_bus, f_bus)
+
+    tr, ti = _PMs.calc_branch_t(branch)
+    g_to = branch["g_to"]
+    b_to = branch["b_to"]
+    tm = branch["tap"]
+
+    constraint_mc_current_to(pm, nw, t_bus, f_idx, t_idx, g_to, b_to)
+end
+
+""
+function constraint_mc_voltage_drop(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    branch = _PMs.ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+
+    tr, ti = _PMs.calc_branch_t(branch)
+    r = branch["br_r"]
+    x = branch["br_x"]
+    tm = branch["tap"]
+
+    constraint_mc_voltage_drop(pm, nw, i, f_bus, t_bus, f_idx, r, x, tr, ti, tm)
 end
