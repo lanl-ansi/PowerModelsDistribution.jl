@@ -125,34 +125,30 @@
 
     @testset "opendss parse generic branch values verification" begin
         basekv_br3 = pmd["bus"][string(pmd["branch"]["3"]["f_bus"])]["base_kv"]
-        @test all(isapprox.(pmd["branch"]["3"]["br_r"].values, rmatrix * len / basekv_br3^2 * pmd["baseMVA"]; atol=1e-6))
-        @test all(isapprox.(pmd["branch"]["3"]["br_x"].values, xmatrix * len / basekv_br3^2 * pmd["baseMVA"]; atol=1e-6))
-        @test all(isapprox.(pmd["branch"]["3"]["b_fr"].values, diag(basekv_br3^2 / pmd["baseMVA"] * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0; atol=1e-6))
+        @test all(isapprox.(pmd["branch"]["3"]["br_r"], rmatrix * len / basekv_br3^2 * pmd["baseMVA"]; atol=1e-6))
+        @test all(isapprox.(pmd["branch"]["3"]["br_x"], xmatrix * len / basekv_br3^2 * pmd["baseMVA"]; atol=1e-6))
+        @test all(isapprox.(pmd["branch"]["3"]["b_fr"], diag(basekv_br3^2 / pmd["baseMVA"] * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0; atol=1e-6))
 
         for i in 6:7
             basekv_bri = pmd["bus"][string(pmd["branch"]["$i"]["f_bus"])]["base_kv"]
-            @test all(isapprox.(diag(pmd["branch"]["$i"]["b_fr"].values), (3.4 * 2.0 + 1.6) / 3.0 * (basekv_bri^2 / pmd["baseMVA"] * 2.0 * pi * 60.0 / 1e9) / 2.0 / 3; atol=1e-6))
+            @test all(isapprox.(diag(pmd["branch"]["$i"]["b_fr"]), (3.4 * 2.0 + 1.6) / 3.0 * (basekv_bri^2 / pmd["baseMVA"] * 2.0 * pi * 60.0 / 1e9) / 2.0 / 3; atol=1e-6))
         end
 
-        @test all(isapprox.(pmd["branch"]["1"]["br_r"].values.*(115/69)^2, diagm(0 => fill(6.3012e-8, 3)); atol=1e-12))
-        @test all(isapprox.(pmd["branch"]["1"]["br_x"].values.*(115/69)^2, diagm(0 => fill(6.3012e-7, 3)); atol=1e-12))
+        @test all(isapprox.(pmd["branch"]["1"]["br_r"].*(115/69)^2, diagm(0 => fill(6.3012e-8, 3)); atol=1e-12))
+        @test all(isapprox.(pmd["branch"]["1"]["br_x"].*(115/69)^2, diagm(0 => fill(6.3012e-7, 3)); atol=1e-12))
 
         for k in ["qd", "pd"]
-            @test all(isapprox.(pmd["load"]["4"][k].values, pmd["load"]["2"][k].values; atol=1e-12))
+            @test all(isapprox.(pmd["load"]["4"][k], pmd["load"]["2"][k]; atol=1e-12))
         end
 
         for k in ["gs", "bs"]
-            @test all(isapprox.(pmd["shunt"]["2"][k].values, pmd["shunt"]["3"][k].values; atol=1e-12))
-            @test all(isapprox.(pmd["shunt"]["4"][k].values, pmd["shunt"]["5"][k].values; atol=1e-12))
+            @test all(isapprox.(pmd["shunt"]["2"][k], pmd["shunt"]["3"][k]; atol=1e-12))
+            @test all(isapprox.(pmd["shunt"]["4"][k], pmd["shunt"]["5"][k]; atol=1e-12))
         end
 
         for k in keys(pmd["gen"]["3"])
             if !(k in ["gen_bus", "index", "name", "source_id", "active_phases"])
-                if isa(pmd["gen"]["3"][k], PMD.MultiConductorValue)
-                    @test all(isapprox.(pmd["gen"]["4"][k].values, pmd["gen"]["3"][k].values; atol=1e-12))
-                else
-                    @test all(isapprox.(pmd["gen"]["4"][k], pmd["gen"]["3"][k]; atol=1e-12))
-                end
+                @test all(isapprox.(pmd["gen"]["4"][k], pmd["gen"]["3"][k]; atol=1e-12))
             end
         end
 
@@ -166,11 +162,7 @@
                     zmult = (basekv_br3/basekv_br8)^2
                     mult = (k in ["br_r", "br_x"]) ? zmult : 1/zmult
                 end
-                if isa(pmd["branch"]["11"][k], PMD.MultiConductorValue)
-                    @test all(isapprox.(pmd["branch"]["3"][k].values.*mult, pmd["branch"]["8"][k].values; atol=1e-12))
-                else
-                    @test all(isapprox.(pmd["branch"]["3"][k].*mult, pmd["branch"]["8"][k]; atol=1e-12))
-                end
+                @test all(isapprox.(pmd["branch"]["3"][k].*mult, pmd["branch"]["8"][k]; atol=1e-12))
             end
         end
     end
@@ -178,9 +170,9 @@
     @testset "opendss parse length units" begin
         @test pmd["branch"]["9"]["length"] == 1000.0 * len
         basekv_br9 = pmd["bus"][string(pmd["branch"]["9"]["f_bus"])]["base_kv"]
-        @test all(isapprox.(pmd["branch"]["9"]["br_r"].values, rmatrix * len / basekv_br9^2 * pmd["baseMVA"]; atol=1e-6))
-        @test all(isapprox.(pmd["branch"]["9"]["br_x"].values, xmatrix * len / basekv_br9^2 * pmd["baseMVA"]; atol=1e-6))
-        @test all(isapprox.(pmd["branch"]["9"]["b_fr"].values, diag(basekv_br9^2 / pmd["baseMVA"] * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0 / 3; atol=1e-6))
+        @test all(isapprox.(pmd["branch"]["9"]["br_r"], rmatrix * len / basekv_br9^2 * pmd["baseMVA"]; atol=1e-6))
+        @test all(isapprox.(pmd["branch"]["9"]["br_x"], xmatrix * len / basekv_br9^2 * pmd["baseMVA"]; atol=1e-6))
+        @test all(isapprox.(pmd["branch"]["9"]["b_fr"], diag(basekv_br9^2 / pmd["baseMVA"] * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0 / 3; atol=1e-6))
     end
 
     @testset "opendss parse switch length verify" begin
@@ -219,7 +211,7 @@
                         "r", "x", "p_loss", "q_loss", "status", "source_id", "active_phases"]
                 @test haskey(bat, key)
                 if key in ["x", "r", "qmin", "qmax", "thermal_rating"]
-                    @test isa(bat[key], MultiConductorVector)
+                    @test isa(bat[key], Vector)
                 end
             end
         end
@@ -307,7 +299,7 @@ end
     pmd = PMD.parse_file("../test/data/opendss/case3_balanced.dss")
 
     io = PipeBuffer()
-    JSON.print(io, pmd)
+    PMD.print_file(io, pmd)
     pmd_json_file = PMD.parse_file(io)
 
     @test pmd == pmd_json_file

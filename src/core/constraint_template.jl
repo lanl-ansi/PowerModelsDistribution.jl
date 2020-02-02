@@ -1,6 +1,6 @@
 "reference angle constraints"
 function constraint_mc_theta_ref(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    va_ref = _PMs.ref(pm, nw, :bus, i, "va").values
+    va_ref = _PMs.ref(pm, nw, :bus, i, "va")
     constraint_mc_theta_ref(pm, nw, i, va_ref)
 end
 
@@ -48,7 +48,7 @@ function constraint_mc_ohms_yt_from(pm::_PMs.AbstractPowerModel, i::Int; nw::Int
 
     #TODO why was this not required before?
     if length(size(g_fr)) == 1
-        tmp = MultiConductorMatrix(0.0, length(g_fr))
+        tmp = fill(0.0, length(g_fr), length(g_fr))
         for c in 1:length(g_fr)
             tmp[c,c] = g_fr[c]
         end
@@ -56,7 +56,7 @@ function constraint_mc_ohms_yt_from(pm::_PMs.AbstractPowerModel, i::Int; nw::Int
     end
 
     if length(size(b_fr)) == 1
-        tmp = MultiConductorMatrix(0.0, length(b_fr))
+        tmp = fill(0.0, length(b_fr), length(b_fr))
         for c in 1:length(b_fr)
             tmp[c,c] = b_fr[c]
         end
@@ -83,7 +83,7 @@ function constraint_mc_ohms_yt_to(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=p
 
     #TODO why was this not required before?
     if length(size(g_to)) == 1
-        tmp = MultiConductorMatrix(0.0, length(g_to))
+        tmp = fill(0.0, length(g_to), length(g_to))
         for c in 1:length(g_to)
             tmp[c,c] = g_to[c]
         end
@@ -91,7 +91,7 @@ function constraint_mc_ohms_yt_to(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=p
     end
 
     if length(size(b_to)) == 1
-        tmp = MultiConductorMatrix(0.0, length(b_to))
+        tmp = fill(0.0, length(b_to), length(b_to))
         for c in 1:length(b_to)
             tmp[c,c] = b_to[c]
         end
@@ -110,11 +110,11 @@ function constraint_mc_model_voltage_magnitude_difference(pm::_PMs.AbstractPower
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
 
-    r = branch["br_r"].values
-    x = branch["br_x"].values
-    g_sh_fr = branch["g_fr"].values
-    b_sh_fr = branch["b_fr"].values
-    tm = branch["tap"].values
+    r = branch["br_r"]
+    x = branch["br_x"]
+    g_sh_fr = branch["g_fr"]
+    b_sh_fr = branch["b_fr"]
+    tm = branch["tap"]
 
     constraint_mc_model_voltage_magnitude_difference(pm, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
 end
@@ -127,8 +127,8 @@ function constraint_mc_model_current(pm::Union{AbstractUBFModels,LPLinUBFPowerMo
         t_bus = branch["t_bus"]
         f_idx = (i, f_bus, t_bus)
 
-        g_sh_fr = branch["g_fr"].values
-        b_sh_fr = branch["b_fr"].values
+        g_sh_fr = branch["g_fr"]
+        b_sh_fr = branch["b_fr"]
 
         constraint_mc_model_current(pm, nw, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
     end
@@ -143,12 +143,12 @@ function constraint_mc_flow_losses(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
 
-    r = branch["br_r"].values
-    x = branch["br_x"].values
-    g_sh_fr = branch["g_fr"].values
-    g_sh_to = branch["g_to"].values
-    b_sh_fr = branch["b_fr"].values
-    b_sh_to = branch["b_to"].values
+    r = branch["br_r"]
+    x = branch["br_x"]
+    g_sh_fr = branch["g_fr"]
+    g_sh_to = branch["g_to"]
+    b_sh_fr = branch["b_fr"]
+    b_sh_to = branch["b_to"]
 
     tm = [1, 1, 1] #TODO
 
@@ -251,8 +251,8 @@ function constraint_mc_voltage_balance(pm::_PMs.AbstractPowerModel, bus_id::Int;
     end
 
     if haskey(bus, "vm_ll_min")|| haskey(bus, "vm_ll_max")
-        vm_ll_min = haskey(bus, "vm_ll_min") ? bus["vm_ll_min"] : MultiConductorVector(fill(0, 3))
-        vm_ll_max = haskey(bus, "vm_ll_max") ? bus["vm_ll_max"] : MultiConductorVector(fill(Inf, 3))
+        vm_ll_min = haskey(bus, "vm_ll_min") ? bus["vm_ll_min"] : fill(0, 3)
+        vm_ll_max = haskey(bus, "vm_ll_max") ? bus["vm_ll_max"] : fill(Inf, 3)
         constraint_mc_vm_ll(pm, nw, bus_id, vm_ll_min, vm_ll_max)
     end
 end
@@ -481,14 +481,14 @@ end
 "voltage magnitude setpoint constraint"
 function constraint_mc_voltage_magnitude_setpoint(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
     bus = _PMs.ref(pm, nw, :bus, i)
-    vmref = bus["vm"].values #Not sure why this is needed
+    vmref = bus["vm"] #Not sure why this is needed
     constraint_mc_voltage_magnitude_setpoint(pm, nw, i, vmref)
 end
 
 
 "generator active power setpoint constraint"
 function constraint_mc_active_gen_setpoint(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
-    pg_set = _PMs.ref(pm, nw, :gen, i)["pg"].values
+    pg_set = _PMs.ref(pm, nw, :gen, i)["pg"]
     constraint_mc_active_gen_setpoint(pm, nw, i, pg_set)
 end
 
