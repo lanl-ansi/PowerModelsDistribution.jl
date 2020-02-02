@@ -40,15 +40,27 @@ function _parse_mats!(root_dict)
             store[k] = _parse_matrix_value(v["value"], v["eltype"])
         elseif isa(v, Dict)
             append!(stack, [(v, xk, xv) for (xk, xv) in v])
-        elseif isa(v, Vector) && Dict <: eltype(v)
-            append!(stack, [(v, i, xv) for (i, xv) in enumerate(v) if isa(xv, Dict)])
+        elseif isa(v, Vector)
+            store[k] = [x for x in v]
+            if Dict <: eltype(v)
+                append!(stack, [(v, i, xv) for (i, xv) in enumerate(v) if isa(xv, Dict)])
+            end
         end
     end
 end
 
 
+""
+function parse_json(file::String; kwargs...)
+    pmd_data = open(file) do io
+        parse_json(io; filetype=split(lowercase(file), '.')[end], kwargs...)
+    end
+    return pmd_data
+end
+
+
 "Parses json from iostream or string"
-function parse_json(io::Union{IO,String}; kwargs...)::Dict{String,Any}
+function parse_json(io::IO; kwargs...)::Dict{String,Any}
     pm_data = JSON.parse(io)
 
     _jsonver2juliaver!(pm_data)
