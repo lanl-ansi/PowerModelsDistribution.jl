@@ -1,3 +1,53 @@
+
+"""
+SDP to SOC relaxation of type 1, applied to complex-value matrix, extended from:
+```
+@article{Kim2003,
+author = {Kim, S and Kojima, M and Yamashita, M},
+title = {{Second order cone programming relaxation of a positive semidefinite constraint}},
+doi = {10.1080/1055678031000148696},
+journal = {Optimization Methods and Software},
+number = {5},
+pages = {535--541},
+volume = {18},
+year = {2003}
+}
+```
+"""
+function relaxation_psd_to_soc_complex_kim_kojima(model, Are, Aim, are, aim, alphare, Ure, Uim; tol=1e-8)
+    @assert size(Are) == size(Aim)
+    @assert size(are) == size(aim)
+
+    @assert size(Are)[1] == size(are)[1]
+
+    Ure[abs.(Ure).<=tol] .=0
+    Uim[abs.(Uim).<=tol] .=0
+
+    U = Ure+im*Uim
+    C = U*U'
+    Cre = real(C)
+    Cim = imag(C)
+    Cre[abs.(Cre).<=tol] .=0
+    Cim[abs.(Cim).<=tol] .=0
+
+    @assert size(Cre) == size(Are)
+
+    rhs_1 = alphare
+    rhs_2 = sum(Cre.*Are) + sum(Cim.*Aim)
+
+    lhs_re = Ure'* are + Uim'* aim
+    lhs_im = Ure'* aim - Uim'* are
+    @show rhs_1, rhs_2
+    @show lhs_re, lhs_im
+
+    JuMP.@constraint(model, rhs_2 >= 0)
+    JuMP.@constraint(model,     [rhs_1+rhs_2;
+                                 rhs_1-rhs_2;
+                                 2*lhs_re;
+                                 2*lhs_im] in JuMP.SecondOrderCone())
+
+end
+
 """
 SDP to SOC relaxation of type 2, applied to real-value matrix,  as described in:
 ```
