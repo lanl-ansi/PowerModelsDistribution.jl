@@ -11,6 +11,8 @@ PowerModelsDistribution.jl Change Log
 - Removal of SOCWRPowerModel
 - Drop support for matpower format
 - Possible regressions in MLD problem types
+- Simplified linear UBF formulations. LPLinUBFModel and LPdiagUBFModel are equivalent, and are replaced by LPUBFDiagModel. The more popular name 'LinDist3FlowModel' was added as an alias for LPUBFDiagModel.
+- The linearization by Gan & Low is also equivalent to LPUBFDiagModel, though it has redundudant variables and equations. LPfullUBFModel is now implemented as an alias of LPUBFDiagModel, 'LPUBFFullModel'.
 
 ### v0.7.0
 - Updates function names for PowerModels v0.14 compatibility (breaking) (#194)

@@ -31,8 +31,8 @@ PowerModelsDistribution.SOCNLPUBFModel <: PowerModelsDistribution.AbstractNLPUBF
 PowerModelsDistribution.SOCConicUBFModel <: PowerModelsDistribution.AbstractConicUBFModel
 
 PowerModelsDistribution.LPLinUBFModel <: PowerModels.AbstractBFModel
-PowerModelsDistribution.LPfullUBFModel <: PowerModelsDistribution.AbstractLPUBFModel
-PowerModelsDistribution.LPdiagUBFModel <: PowerModelsDistribution.AbstractLPUBFModel
+PowerModelsDistribution.LPUBFFullModel <: PowerModelsDistribution.AbstractLPUBFModel
+PowerModelsDistribution.LPUBFDiagModel <: PowerModelsDistribution.AbstractLPUBFModel
 ```
 
 ## Power Models
@@ -47,8 +47,8 @@ mutable struct PowerModelsDistribution.SDPUBFPowerModel <: PowerModelsDistributi
 mutable struct PowerModelsDistribution.SOCNLPUBFPowerModel <: PowerModelsDistribution.SOCNLPUBFModel PowerModels.@pm_fields end
 mutable struct PowerModelsDistribution.SOCConicUBFPowerModel <: PowerModelsDistribution.SOCConicUBFModel PowerModels.@pm_fields end
 
-mutable struct PowerModelsDistribution.LPfullUBFPowerModel <: PowerModelsDistribution.LPfullUBFModel PowerModels.@pm_fields end
-mutable struct PowerModelsDistribution.LPdiagUBFPowerModel <: PowerModelsDistribution.LPdiagUBFModel PowerModels.@pm_fields end
+mutable struct PowerModelsDistribution.LPUBFFullPowerModel <: PowerModelsDistribution.LPUBFFullModel PowerModels.@pm_fields end
+mutable struct PowerModelsDistribution.LPUBFDiagPowerModel <: PowerModelsDistribution.LPUBFDiagModel PowerModels.@pm_fields end
 mutable struct PowerModelsDistribution.LPLinUBFPowerModel <: PowerModelsDistribution.LPLinUBFModel PowerModels.@pm_fields end
 ```
 
@@ -64,10 +64,10 @@ AbstractUBFModels = Union{AbstractNLPUBFModel, AbstractConicUBFModel}
 - NLP (nonconvex): ACPPowerModel
 - SDP: SDPUBFPowerModel
 - SOC(-representable): SOCWRPowerModel, SOCNLPUBFPowerModel, SOCConicUBFPowerModel
-- Linear: LPfullUBFPowerModel, LPdiagUBFPowerModel, LPLinUBFPowerModel, DCPPowerModel
+- Linear: LPUBFFullPowerModel, LPUBFDiagPowerModel, LPLinUBFPowerModel, DCPPowerModel
 
 
 ## Matrix equations versus scalar equations
 JuMP supports vectorized syntax, but not for nonlinear constraints. Therefore, certain formulations must be implemented in a scalar fashion. Other formulations can be written as matrix (in)equalities. The current implementations are categorized as follows:
 - Scalar: ACPPowerModel, DCPPowerModel, LPLinUBFPowerModel, SOCWRPowerModel
-- Matrix: SDPUBFPowerModel, SOCNLPUBFPowerModel, SOCConicUBFPowerModel, LPfullUBFPowerModel, LPdiagUBFPowerModel
+- Matrix: SDPUBFPowerModel, SOCNLPUBFPowerModel, SOCConicUBFPowerModel, LPUBFFullPowerModel, LPUBFDiagPowerModel
