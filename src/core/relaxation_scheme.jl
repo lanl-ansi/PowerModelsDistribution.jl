@@ -1,3 +1,83 @@
+function partition_matrix_with_scalar(Mre, Mim)
+    n = size(Mre, 1)
+    alphare = Mre[1,1]
+    Are = Mre[2:n, 2:n]
+    Aim = Mim[2:n, 2:n]
+    are = Mre[2:n, 1]
+    aim = Mim[2:n, 1]
+    return Are, Aim, are, aim, alphare
+end
+
+function relaxation_psd_to_soc_complex_kim_kojima_3x3(model, Mre, Mim)
+    @assert size(Mre) == size(Mim) == (3,3)
+    cre = [1;1]
+    cim = [0;0]
+
+    pm1 = [1; 2; 3]
+    Are, Aim, are, aim, alphare = partition_matrix_with_scalar(Mre[pm1,pm1], Mim[pm1,pm1])
+    relaxation_psd_to_soc_complex_kim_kojima(model, Are, Aim, are, aim, alphare, cre, cim)
+
+    pm2 = [2; 3; 1]
+    Are, Aim, are, aim, alphare = partition_matrix_with_scalar(Mre[pm2,pm2], Mim[pm2,pm2])
+    relaxation_psd_to_soc_complex_kim_kojima(model, Are, Aim, are, aim, alphare, cre, cim)
+
+    pm3 = [3; 1; 2]
+    Are, Aim, are, aim, alphare = partition_matrix_with_scalar(Mre[pm3,pm3], Mim[pm3,pm3])
+    relaxation_psd_to_soc_complex_kim_kojima(model, Are, Aim, are, aim, alphare, cre, cim)
+
+    cre = [1;0]
+    cim = [0;1]
+    pm1 = [1; 2; 3]
+    Are, Aim, are, aim, alphare = partition_matrix_with_scalar(Mre[pm1,pm1], Mim[pm1,pm1])
+    relaxation_psd_to_soc_complex_kim_kojima(model, Are, Aim, are, aim, alphare, cre, cim)
+
+    pm2 = [2; 3; 1]
+    Are, Aim, are, aim, alphare = partition_matrix_with_scalar(Mre[pm2,pm2], Mim[pm2,pm2])
+    relaxation_psd_to_soc_complex_kim_kojima(model, Are, Aim, are, aim, alphare, cre, cim)
+
+    pm3 = [3; 1; 2]
+    Are, Aim, are, aim, alphare = partition_matrix_with_scalar(Mre[pm3,pm3], Mim[pm3,pm3])
+    relaxation_psd_to_soc_complex_kim_kojima(model, Are, Aim, are, aim, alphare, cre, cim)
+
+
+end
+
+
+function relaxation_psd_to_soc_complex_kim_kojima_3x3_conic(model, Mre, Mim)
+    @assert size(Mre) == size(Mim) == (3,3)
+    cre = [1;1]
+    cim = [0;0]
+
+    pm1 = [1; 2; 3]
+    Are, Aim, are, aim, alphare = partition_matrix_with_scalar(Mre[pm1,pm1], Mim[pm1,pm1])
+    relaxation_psd_to_soc_complex_kim_kojima_conic(model, Are, Aim, are, aim, alphare, cre, cim)
+
+    pm2 = [2; 3; 1]
+    Are, Aim, are, aim, alphare = partition_matrix_with_scalar(Mre[pm2,pm2], Mim[pm2,pm2])
+    relaxation_psd_to_soc_complex_kim_kojima_conic(model, Are, Aim, are, aim, alphare, cre, cim)
+
+    pm3 = [3; 1; 2]
+    Are, Aim, are, aim, alphare = partition_matrix_with_scalar(Mre[pm3,pm3], Mim[pm3,pm3])
+    relaxation_psd_to_soc_complex_kim_kojima_conic(model, Are, Aim, are, aim, alphare, cre, cim)
+
+    cre = [1;0]
+    cim = [0;1]
+
+    pm1 = [1; 2; 3]
+    Are, Aim, are, aim, alphare = partition_matrix_with_scalar(Mre[pm1,pm1], Mim[pm1,pm1])
+    relaxation_psd_to_soc_complex_kim_kojima_conic(model, Are, Aim, are, aim, alphare, cre, cim)
+
+    pm2 = [2; 3; 1]
+    Are, Aim, are, aim, alphare = partition_matrix_with_scalar(Mre[pm2,pm2], Mim[pm2,pm2])
+    relaxation_psd_to_soc_complex_kim_kojima_conic(model, Are, Aim, are, aim, alphare, cre, cim)
+
+    pm3 = [3; 1; 2]
+    Are, Aim, are, aim, alphare = partition_matrix_with_scalar(Mre[pm3,pm3], Mim[pm3,pm3])
+    relaxation_psd_to_soc_complex_kim_kojima_conic(model, Are, Aim, are, aim, alphare, cre, cim)
+
+end
+
+
 
 """
 SDP to SOC relaxation of type 1, applied to complex-value matrix, extended from:
@@ -14,17 +94,17 @@ year = {2003}
 }
 ```
 """
-function relaxation_psd_to_soc_complex_kim_kojima(model, Are, Aim, are, aim, alphare, Ure, Uim; tol=1e-8)
+function relaxation_psd_to_soc_complex_kim_kojima(model, Are, Aim, are, aim, alphare, cre, cim; tol=1e-8)
     @assert size(Are) == size(Aim)
     @assert size(are) == size(aim)
 
     @assert size(Are)[1] == size(are)[1]
 
-    Ure[abs.(Ure).<=tol] .=0
-    Uim[abs.(Uim).<=tol] .=0
+    cre[abs.(cre).<=tol] .=0
+    cim[abs.(cim).<=tol] .=0
 
-    U = Ure+im*Uim
-    C = U*U'
+    c = cre+im*cim
+    C = c*c'
     Cre = real(C)
     Cim = imag(C)
     Cre[abs.(Cre).<=tol] .=0
@@ -35,10 +115,55 @@ function relaxation_psd_to_soc_complex_kim_kojima(model, Are, Aim, are, aim, alp
     rhs_1 = alphare
     rhs_2 = sum(Cre.*Are) + sum(Cim.*Aim)
 
-    lhs_re = Ure'* are + Uim'* aim
-    lhs_im = Ure'* aim - Uim'* are
-    @show rhs_1, rhs_2
-    @show lhs_re, lhs_im
+    lhs_re = cre'* are + cim'* aim
+    lhs_im = cre'* aim - cim'* are
+    # @show rhs_1, rhs_2
+    # @show lhs_re, lhs_im
+
+    JuMP.@constraint(model, rhs_2 >= 0)
+    JuMP.@constraint(model, lhs_re'*lhs_re + lhs_im'*lhs_im <= rhs_1*rhs_2)
+
+end
+
+
+"""
+SDP to SOC relaxation of type 1, applied to complex-value matrix, extended from:
+```
+@article{Kim2003,
+author = {Kim, S and Kojima, M and Yamashita, M},
+title = {{Second order cone programming relaxation of a positive semidefinite constraint}},
+doi = {10.1080/1055678031000148696},
+journal = {Optimization Methods and Software},
+number = {5},
+pages = {535--541},
+volume = {18},
+year = {2003}
+}
+```
+"""
+function relaxation_psd_to_soc_complex_kim_kojima_conic(model, Are, Aim, are, aim, alphare, cre, cim; tol=1e-8)
+    @assert size(Are) == size(Aim)
+    @assert size(are) == size(aim)
+
+    @assert size(Are)[1] == size(are)[1]
+
+    cre[abs.(cre).<=tol] .=0
+    cim[abs.(cim).<=tol] .=0
+
+    c = cre+im*cim
+    C = c*c'
+    Cre = real(C)
+    Cim = imag(C)
+    Cre[abs.(Cre).<=tol] .=0
+    Cim[abs.(Cim).<=tol] .=0
+
+    @assert size(Cre) == size(Are)
+
+    rhs_1 = alphare
+    rhs_2 = sum(Cre.*Are) + sum(Cim.*Aim)
+
+    lhs_re = cre'* are + cim'* aim
+    lhs_im = cre'* aim - cim'* are
 
     JuMP.@constraint(model, rhs_2 >= 0)
     JuMP.@constraint(model,     [rhs_1+rhs_2;

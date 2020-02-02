@@ -9,6 +9,16 @@ end
 ""
 function variable_mc_voltage(pm::AbstractUBFModels; kwargs...)
     variable_mc_voltage_prod_hermitian(pm; kwargs...)
+
+    #enforce PSDness of leaf nodes that are not captured otherwise
+    for nw in _PMs.nw_ids(pm)
+        allbuses = Set(_PMs.ids(pm, nw, :bus))
+        startingbuses = Set(i for (l,i,j)  in _PMs.ref(pm, nw, :arcs_from))
+        leafnodes = setdiff(allbuses, startingbuses)
+        for i in leafnodes
+            constraint_mc_voltage_psd(pm, nw, i)
+        end
+    end
 end
 
 
@@ -517,6 +527,60 @@ function constraint_mc_generation(pm::SDPUBFKCLMXModel, gen_id::Int; nw::Int=pm.
     constraint_SWL_psd(pm.model, Pg, Qg, Wr, Wi, CCgr, CCgi)
 end
 
+"""
+Link the current and power withdrawn by a generator at the bus through a PSD
+constraint. The rank-1 constraint is dropped in this formulation.
+"""
+function constraint_mc_generation(pm::SOCConicUBFKCLMXKimKojimaPowerModel, gen_id::Int; nw::Int=pm.cnw)
+    Pg = _PMs.var(pm, nw, :Pg, gen_id)
+    Qg = _PMs.var(pm, nw, :Qg, gen_id)
+    bus_id = _PMs.ref(pm, nw, :gen, gen_id)["gen_bus"]
+    Wr = _PMs.var(pm, nw, :Wr, bus_id)
+    Wi = _PMs.var(pm, nw, :Wi, bus_id)
+    CCgr = _PMs.var(pm, nw, :CCgr, gen_id)
+    CCgi = _PMs.var(pm, nw, :CCgi, gen_id)
+    # constraint_SWL_psd(pm.model, Pg, Qg, Wr, Wi, CCgr, CCgi)
+
+    mat_real = [
+    Wr     Pg  ;
+    Pg'    CCgr
+    ]
+
+    mat_imag = [
+    Wi     Qg  ;
+    -Qg'    CCgi
+    ]
+    relaxation_psd_to_soc_conic(pm.model, mat_real, mat_imag, complex=true)
+    relaxation_psd_to_soc_complex_kim_kojima_3x3_conic(pm.model, CCgr, CCgi)
+end
+
+
+"""
+Link the current and power withdrawn by a generator at the bus through a PSD
+constraint. The rank-1 constraint is dropped in this formulation.
+"""
+function constraint_mc_generation(pm::SOCNLPUBFKCLMXKimKojimaPowerModel, gen_id::Int; nw::Int=pm.cnw)
+    Pg = _PMs.var(pm, nw, :Pg, gen_id)
+    Qg = _PMs.var(pm, nw, :Qg, gen_id)
+    bus_id = _PMs.ref(pm, nw, :gen, gen_id)["gen_bus"]
+    Wr = _PMs.var(pm, nw, :Wr, bus_id)
+    Wi = _PMs.var(pm, nw, :Wi, bus_id)
+    CCgr = _PMs.var(pm, nw, :CCgr, gen_id)
+    CCgi = _PMs.var(pm, nw, :CCgi, gen_id)
+    # constraint_SWL_psd(pm.model, Pg, Qg, Wr, Wi, CCgr, CCgi)
+
+    mat_real = [
+    Wr     Pg  ;
+    Pg'    CCgr
+    ]
+
+    mat_imag = [
+    Wi     Qg  ;
+    -Qg'    CCgi
+    ]
+    relaxation_psd_to_soc(pm.model, mat_real, mat_imag, complex=true)
+    relaxation_psd_to_soc_complex_kim_kojima_3x3(pm.model, CCgr, CCgi)
+end
 
 """
 Creates the constraints modelling the (relaxed) voltage-dependency of the

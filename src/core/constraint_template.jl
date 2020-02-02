@@ -136,6 +136,12 @@ end
 
 
 ""
+function constraint_mc_voltage_psd(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    constraint_mc_voltage_psd(pm, nw, i)
+end
+
+
+""
 function constraint_mc_flow_losses(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     branch = _PMs.ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]

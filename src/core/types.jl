@@ -27,6 +27,12 @@ abstract type SOCNLPUBFModel <: AbstractNLPUBFModel end
 "SOC relaxation of SDPUBFModel per Kim, Kojima, & Yamashita 2003, cast as a SOC"
 abstract type SOCConicUBFModel <: AbstractConicUBFModel end
 
+"default Kim Kojima SOC unbalanced DistFlow constructor, with KCL MX form (conic form)"
+mutable struct SOCConicUBFKimKojimaPowerModel <: SOCConicUBFModel _PMs.@pm_fields end
+
+"default Kim Kojima SOC unbalanced DistFlow constructor, with KCL MX form (nlp form)"
+mutable struct SOCNLPUBFKimKojimaPowerModel <: SOCNLPUBFModel _PMs.@pm_fields end
+
 
 SOCUBFModels = Union{SOCNLPUBFModel, SOCConicUBFModel}
 
@@ -54,13 +60,21 @@ mutable struct SDPUBFKCLMXPowerModel <: SDPUBFKCLMXModel _PMs.@pm_fields end
 "default SOC unbalanced DistFlow constructor"
 mutable struct SOCNLPUBFPowerModel <: SOCNLPUBFModel _PMs.@pm_fields end
 
-
 "default SOC unbalanced DistFlow constructor"
 mutable struct QPUBFPowerModel <: SOCNLPUBFModel _PMs.@pm_fields end
 
-
 "default SOC unbalanced DistFlow constructor"
 mutable struct SOCConicUBFPowerModel <: SOCConicUBFModel _PMs.@pm_fields end
+
+"default principal 2x2 minor SOC unbalanced DistFlow constructor, with KCL MX form (conic form)"
+mutable struct SOCConicUBFKCLMXPowerModel <: SDPUBFKCLMXModel _PMs.@pm_fields end
+
+"default Kim Kojima SOC unbalanced DistFlow constructor, with KCL MX form (conic form)"
+mutable struct SOCConicUBFKCLMXKimKojimaPowerModel <: SDPUBFKCLMXModel _PMs.@pm_fields end
+
+"default Kim Kojima SOC unbalanced DistFlow constructor, with KCL MX form (nlp form)"
+mutable struct SOCNLPUBFKCLMXKimKojimaPowerModel <: SDPUBFKCLMXModel _PMs.@pm_fields end
+
 
 
 "default LP unbalanced DistFlow constructor"
