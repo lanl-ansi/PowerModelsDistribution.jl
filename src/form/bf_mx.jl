@@ -29,6 +29,20 @@ function variable_mc_voltage_prod_hermitian(pm::AbstractUBFModels; n_cond::Int=3
             set_lower_bound_diag_to_zero=true, name="W", prefix="$nw")
     end
 
+    v_start = exp.((im*2*pi/3).*[0; -1; 1])
+    W_start = v_start*v_start'
+    for (id,_) in Wr
+        for i in 1:3
+            for j in 1:i
+                JuMP.set_start_value(Wr[id][i,j], real.(W_start)[i,j])
+                if j<i
+                    Wi_ij = collect(keys(Wi[id][i,j].terms))[1]
+                    JuMP.set_start_value(Wi_ij, imag.(W_start)[i,j])
+                end
+            end
+        end
+    end
+
     # save references in dict
     _PMs.var(pm, nw)[:Wr] = Wr
     _PMs.var(pm, nw)[:Wi] = Wi
@@ -62,6 +76,10 @@ function variable_mc_branch_series_current_prod_hermitian(pm::AbstractUBFModels;
     else
         (Lr,Li) = variable_mx_hermitian(pm.model, branch_ids, n_cond;
             set_lower_bound_diag_to_zero=true, name="CC", prefix="$nw")
+    end
+
+    for (id, L) in Lr
+        JuMP.set_start_value.(LinearAlgebra.diag(Lr[id]), 0.01)
     end
 
     # save reference
@@ -110,6 +128,11 @@ function variable_mc_branch_flow(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=p
     # save reference
     _PMs.var(pm, nw)[:P] = P
     _PMs.var(pm, nw)[:Q] = Q
+
+    for (id, _) in P
+        #JuMP.set_start_value.(LinearAlgebra.diag(P[id]), 0.5)
+        #JuMP.set_start_value.(LinearAlgebra.diag(Q[id]), 0.5)
+    end
 
     _PMs.var(pm, nw)[:p] = Dict([(id,diag(P[id])) for id in branch_arcs])
     _PMs.var(pm, nw)[:q] = Dict([(id,diag(Q[id])) for id in branch_arcs])
