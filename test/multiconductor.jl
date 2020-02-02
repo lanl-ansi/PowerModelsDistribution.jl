@@ -62,10 +62,6 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
         # @test pti_data == pti_json_file
 
         mc_data = build_mc_data!("../test/data/matpower/case5.m")
-        mc_data["gen"]["1"]["pmax"] = [Inf, Inf, Inf]
-        mc_data["gen"]["1"]["qmin"] = [-Inf, -Inf, -Inf]
-        mc_data["gen"]["1"]["bool_test"] = [true, true, false]
-        mc_data["gen"]["1"]["string_test"] = ["a", "b", "c"]
         mc_data["branch"]["1"]["br_x"][1,2] = -Inf
         mc_data["branch"]["1"]["br_x"][1,3] = Inf
 

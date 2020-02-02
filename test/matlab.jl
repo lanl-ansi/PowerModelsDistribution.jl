@@ -28,6 +28,6 @@
         @test length(data["gen"]) == 5
         @test length(data["branch"]) == 4
 
-        @test isa(data["shunt"]["1"]["bs"], PMD.Vector{Float64})
+        @test isa(data["shunt"]["1"]["bs"], Vector{Float64})
     end
 end
