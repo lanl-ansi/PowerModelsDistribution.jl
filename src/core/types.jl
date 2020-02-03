@@ -40,11 +40,6 @@ abstract type LPUBFDiagModel <: AbstractLPUBFModel end
 const LinDist3FlowModel = LPUBFDiagModel # more popular name for it
 
 
-"Simplified BFM per Gan and Low 2014, PSCC, using matrix variables for power, voltage and current"
-# This formulation is equivalent to LPUBFDiagModel, with redundant variables and constraints
-const LPUBFFullModel = LPUBFDiagModel
-
-
 "default SDP unbalanced DistFlow constructor"
 mutable struct SDPUBFPowerModel <: SDPUBFModel _PMs.@pm_fields end
 
@@ -64,12 +59,3 @@ mutable struct SOCConicUBFPowerModel <: SOCConicUBFModel _PMs.@pm_fields end
 "default LP unbalanced DistFlow constructor"
 mutable struct LPUBFDiagPowerModel <: LPUBFDiagModel _PMs.@pm_fields end
 const LinDist3FlowPowerModel = LPUBFDiagPowerModel # more popular name
-
-
-"Legacy name for LPUBFDiagModel; print a warning that this will be dropped soon."
-const LPUBFFullPowerModel = LPUBFDiagPowerModel
-
-
-"This is completely equivalent to LPUBFDiagModel."
-#const LPLinUBFPowerModel = LPdiagUBFPowerModel
-mutable struct LPLinUBFPowerModel <: LPUBFDiagModel _PMs.@pm_fields end
