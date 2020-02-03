@@ -121,7 +121,7 @@ end
 
 
 ""
-function constraint_mc_model_current(pm::Union{AbstractUBFModels,LPLinUBFPowerModel}; nw::Int=pm.cnw)
+function constraint_mc_model_current(pm::AbstractUBFModels; nw::Int=pm.cnw)
     for (i,branch) in _PMs.ref(pm, nw, :branch)
         f_bus = branch["f_bus"]
         t_bus = branch["t_bus"]
