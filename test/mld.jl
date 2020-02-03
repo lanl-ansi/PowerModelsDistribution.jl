@@ -82,9 +82,9 @@
         @test isapprox(result["solution"]["load"]["1"]["status"], 1.0, atol = 1e-3)
     end
 
-    # @testset "5-bus lplinubf mld" begin
+    # @testset "5-bus lpubfdiag mld" begin
     #     mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case5.m"); PMD.make_multiconductor!(mp_data, 3)
-    #     result = run_mc_mld_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
+    #     result = run_mc_mld_bf(mp_data, LPUBFDiagPowerModel, ipopt_solver)
 
     #     @test result["termination_status"] == PMs.LOCALLY_SOLVED
     #     @test isapprox(result["objective"], 0.1557; atol = 1e-4)
@@ -94,9 +94,9 @@
     #     @test_throws(TESTLOG, ErrorException, run_mc_mld_bf(mp_data, PMs.NFAPowerModel, ipopt_solver))
     # end
 
-    # @testset "3-bus lplinubf mld" begin
+    # @testset "3-bus lpubfdiag mld" begin
     #     mp_data = PMs.parse_file("../test/data/matpower/case3_ml.m"); PMD.make_multiconductor!(mp_data, 3)
-    #     result = run_mc_mld_bf(mp_data, LPLinUBFPowerModel, ipopt_solver)
+    #     result = run_mc_mld_bf(mp_data, LPUBFDiagPowerModel, ipopt_solver)
 
     #     @test result["termination_status"] == PMs.LOCALLY_SOLVED
     #     @test isapprox(result["objective"], 24.98; atol = 1e-1)
@@ -106,7 +106,7 @@
 
     # @testset "transformer case" begin
     #     dss = PowerModelsDistribution.parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
-    #     result = run_mc_mld_bf(dss, LPLinUBFPowerModel, ipopt_solver)
+    #     result = run_mc_mld_bf(dss, LPUBFDiagPowerModel, ipopt_solver)
 
     #     @test result["termination_status"] == PMs.LOCALLY_SOLVED
     #     @test isapprox(result["objective"], 0.0; atol=1e-3)
