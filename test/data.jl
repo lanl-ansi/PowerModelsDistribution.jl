@@ -20,14 +20,6 @@
 end
 
 @testset "test data handling functions" begin
-    @testset "test idempotent units transformations - 5-bus case" begin
-        data = PMD.parse_file("../test/data/matlab/case5_i_r_b.m")
-        data_base = deepcopy(data)
-
-        PMs.make_mixed_units!(data)
-        PMs.make_per_unit!(data)
-        @test data == data_base
-    end
 
     @testset "angle wrapper functions" begin
         wrappedradians = PMD._wrap_to_pi([0, pi/2, pi, 3pi/2, 2pi])
@@ -80,11 +72,9 @@ end
     @testset "node counting functions" begin
         dss = PMD.parse_dss("../test/data/opendss/case5_phase_drop.dss")
         pmd = PMD.parse_file("../test/data/opendss/case5_phase_drop.dss")
-        matlab = PMD.parse_file("../test/data/matlab/case5_i_r_b.m")
 
         @test count_nodes(dss) == 7
         @test count_nodes(dss) == count_nodes(pmd)
-        @test count_nodes(matlab) == 15
 
         dss = PMD.parse_dss("../test/data/opendss/ut_trans_2w_yy.dss")
         @test count_nodes(dss) == 9

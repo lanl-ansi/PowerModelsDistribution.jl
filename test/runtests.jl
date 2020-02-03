@@ -32,10 +32,8 @@ scs_solver = with_optimizer(SCS.Optimizer, max_iters=20000, eps=1e-5, alpha=0.4,
 juniper_solver = with_optimizer(Juniper.Optimizer, nl_solver=with_optimizer(Ipopt.Optimizer, tol=1e-4, print_level=0), mip_solver=cbc_solver, log_levels=[])
 
 include("common.jl") # all passing
-##
-@testset "PowerModelsDistribution" begin
 
-    include("matlab.jl") # all passing
+@testset "PowerModelsDistribution" begin
 
     include("opendss.jl") # all passing
 

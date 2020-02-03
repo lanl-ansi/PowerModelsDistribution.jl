@@ -1,63 +1,6 @@
 @info "running power flow (pf) tests"
 
 @testset "test pf" begin
-    @testset "test pmd matlab pf" begin
-        @testset "5-bus independent meshed network acp pf" begin
-            result = run_ac_mc_pf("../test/data/matlab/case5_i_m_b.m", ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 0.0; atol=1e-2)
-        end
-
-        @testset "5-bus independent meshed network acr pf" begin
-            result = PMD.run_mc_pf("../test/data/matlab/case5_i_m_b.m", PMs.ACRPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 0.0; atol=1e-2)
-        end
-
-        @testset "5-bus coupled meshed network (a) acp pf" begin
-            result = run_ac_mc_pf("../test/data/matlab/case5_c_m_a.m", ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 0.0; atol=1e-2)
-        end
-
-        @testset "5-bus coupled meshed network (a) acr pf" begin
-            result = PMD.run_mc_pf("../test/data/matlab/case5_c_m_a.m", PMs.ACRPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 0.0; atol=1e-2)
-        end
-
-        @testset "5-bus coupled meshed network (b) acp pf" begin
-            result = run_ac_mc_pf("../test/data/matlab/case5_c_m_b.m", ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 0.0; atol=1e-2)
-        end
-
-        # @testset "5-bus coupled meshed network (b) acr pf" begin
-        #     result = PMD.run_mc_pf("../test/data/matlab/case5_c_m_b.m", PMs.ACRPowerModel, ipopt_solver)
-        #
-        #     @test result["termination_status"] == PMs.LOCALLY_SOLVED
-        #     @test isapprox(result["objective"], 0.0; atol=1e-2)
-        # end
-
-        @testset "5-bus independent radial w/ shunts acp pf" begin
-            result = run_ac_mc_pf("../test/data/matlab/case5_i_r_b.m", ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 0.0; atol=1e-2)
-        end
-
-        @testset "5-bus independent radial w/ shunts acr pf" begin
-            result = PMD.run_mc_pf("../test/data/matlab/case5_i_r_b.m", PMs.ACRPowerModel, ipopt_solver)
-
-            @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 0.0; atol=1e-2)
-        end
-    end
 
     @testset "test opendss pf" begin
         @testset "2-bus diagonal acp pf" begin
