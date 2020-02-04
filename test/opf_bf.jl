@@ -9,7 +9,7 @@
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 44880; atol = 1e0)
-            # @test isapprox(result["solution"]["bus"]["3"]["vm"].values, 0.911466*[1,1,1]; atol = 1e-3)
+            # @test isapprox(result["solution"]["bus"]["3"]["vm"], 0.911466*[1,1,1]; atol = 1e-3)
             vm = calc_vm_w(result, "3")
             @test isapprox(vm, 0.911466*[1,1,1]; atol = 1e-3)
 

@@ -500,10 +500,10 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
         z = a * b
         w = a / b
 
-        @test all(x.values - [0.685 0.0 0.0; 0.0 0.685 0.0; 0.0 0.0 0.685] .<= 1e-12)
-        @test all(y.values - [-0.555 0.0 0.0; 0.0 -0.555 0.0; 0.0 0.0 -0.555] .<= 1e-12)
-        @test all(z.values - [0.0403 0.0 0.0; 0.0 0.0403 0.0; 0.0 0.0 0.0403] .<= 1e-12)
-        @test all(w.values - [0.104839 0.0 0.0; 0.0 0.104839 0.0; 0.0 0.0 0.104839] .<= 1e-12)
+        @test all(x - [0.685 0.0 0.0; 0.0 0.685 0.0; 0.0 0.0 0.685] .<= 1e-12)
+        @test all(y - [-0.555 0.0 0.0; 0.0 -0.555 0.0; 0.0 0.0 -0.555] .<= 1e-12)
+        @test all(z - [0.0403 0.0 0.0; 0.0 0.0403 0.0; 0.0 0.0 0.0403] .<= 1e-12)
+        @test all(w - [0.104839 0.0 0.0; 0.0 0.104839 0.0; 0.0 0.0 0.104839] .<= 1e-12)
 
         @test isa(x, PMD.MultiConductorMatrix)
         @test isa(y, PMD.MultiConductorMatrix)
@@ -517,13 +517,13 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
         w = 1 ./ c
         u = 1 .* d
 
-        @test all(x.values - [0.45, 0.45, 0.45] .<= 1e-12)
-        @test all(y.values - [0.0, 0.0, 0.0] .<= 1e-12)
+        @test all(x - [0.45, 0.45, 0.45] .<= 1e-12)
+        @test all(y - [0.0, 0.0, 0.0] .<= 1e-12)
         @test all(c .* d - [0.050625, 0.050625, 0.050625] .<= 1e-12)
         @test all(c ./ d - [1.0, 1.0, 1.0] .<= 1e-12)
-        @test all(z.values - [0.050625, 0.050625, 0.050625] .<= 1e-12)
-        @test all(w.values - [4.444444444444445, 4.444444444444445, 4.444444444444445] .<= 1e-12)
-        @test all(u.values - d.values .<= 1e-12)
+        @test all(z - [0.050625, 0.050625, 0.050625] .<= 1e-12)
+        @test all(w - [4.444444444444445, 4.444444444444445, 4.444444444444445] .<= 1e-12)
+        @test all(u - d .<= 1e-12)
 
         @test isa(x, PMD.MultiConductorVector)
         @test isa(y, PMD.MultiConductorVector)
@@ -534,32 +534,32 @@ calc_va_acr(result, id) = angle.(result["solution"]["bus"][id]["vr"] +im* result
         # Broadcasting
         @test all(a .+ c - [0.29   0.225  0.225; 0.225  0.29   0.225; 0.225  0.225  0.29] .<= 1e-12)
         @test all(c .+ b - [0.845  0.225  0.225; 0.225  0.845  0.225; 0.225  0.225  0.845] .<= 1e-12)
-        @test all(a.values .+ c - [0.29   0.225  0.225; 0.225  0.29   0.225; 0.225  0.225  0.29] .<= 1e-12)
-        @test all(c .+ b.values - [0.845  0.225  0.225; 0.225  0.845  0.225; 0.225  0.225  0.845] .<= 1e-12)
+        @test all(a .+ c - [0.29   0.225  0.225; 0.225  0.29   0.225; 0.225  0.225  0.29] .<= 1e-12)
+        @test all(c .+ b - [0.845  0.225  0.225; 0.225  0.845  0.225; 0.225  0.225  0.845] .<= 1e-12)
 
         # Custom Functions
         @test PMD.conductors(c) == 3
         @test PMD.conductors(a) == 3
         @test all(size(a) == (3,3))
         @test isa(JSON.lower(a), Dict)
-        @test all(JSON.lower(a)["values"] == a.values)
+        @test all(JSON.lower(a)["values"] == a)
         @test !isapprox(d, e)
         @test PMD.conductor_value(a, 1, 1) == a[1,1]
 
         # diagm
-        @test all(LinearAlgebra.diagm(0 => c).values .== [0.225 0.0 0.0; 0.0 0.225 0.0; 0.0 0.0 0.225])
+        @test all(LinearAlgebra.diagm(0 => c) .== [0.225 0.0 0.0; 0.0 0.225 0.0; 0.0 0.0 0.225])
 
         # rad2deg/deg2rad
         angs_deg = rad2deg(angs_rad)
         angs_deg_rad = deg2rad(angs_deg)
-        @test all(angs_deg.values - [-30.0, -30.0, -30.0] .<= 1e-12)
-        @test all(angs_deg_rad.values - angs_rad.values .<= 1e-12)
+        @test all(angs_deg - [-30.0, -30.0, -30.0] .<= 1e-12)
+        @test all(angs_deg_rad - angs_rad .<= 1e-12)
 
         @test isa(angs_deg, PMD.MultiConductorVector)
         @test isa(deg2rad(angs_deg), PMD.MultiConductorVector)
 
         a_rad = rad2deg(a)
-        @test all(a_rad.values - [3.72423 0.0 0.0; 0.0 3.72423 0.0; 0.0 0.0 3.72423] .<= 1e-12)
+        @test all(a_rad - [3.72423 0.0 0.0; 0.0 3.72423 0.0; 0.0 0.0 3.72423] .<= 1e-12)
         @test isa(rad2deg(a), PMD.MultiConductorMatrix)
         @test isa(deg2rad(a), PMD.MultiConductorMatrix)
 

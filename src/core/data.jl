@@ -10,6 +10,15 @@ function _wrap_to_pi(radians)
 end
 
 
+"creates a delta transformation matrix"
+function _get_delta_transformation_matrix(n_phases::Int)
+    @assert(n_phases>2, "We only define delta transforms for three and more conductors.")
+    Md = LinearAlgebra.diagm(0=>fill(1, n_phases), 1=>fill(-1, n_phases-1))
+    Md[end,1] = -1
+    return Md
+end
+
+
 "rolls a 1d array left or right by idx"
 function _roll(array::Array{T, 1}, idx::Int; right=true) where T <: Number
     out = Array{T}(undef, size(array))
@@ -371,7 +380,7 @@ const _conductorless = Set(["index", "bus_i", "bus_type", "status", "gen_status"
     "model", "ncost", "cost", "startup", "shutdown", "name", "source_id", "active_phases"])
 
 "field names that should become multi-conductor matrix not arrays"
-const _conductor_matrix = Set(["br_r", "br_x", "b_fr", "b_to", "g_fr", "g_to"])
+const _conductor_matrix = Set(["br_r", "br_x", "b_fr", "b_to", "g_fr", "g_to", "gs", "bs"])
 
 
 ""
