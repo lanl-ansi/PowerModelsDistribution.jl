@@ -56,8 +56,4 @@ include("common.jl") # all passing
     include("loadmodels.jl") # all passing
 
     include("mld.jl") # all passing
-
-    # include("multiconductor.jl")
-
-    # include("multi-nw-cnd.jl")
 end
