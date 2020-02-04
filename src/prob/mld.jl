@@ -12,9 +12,6 @@ end
 
 "Run Branch Flow Model Load Shedding Problem"
 function run_mc_mld_bf(data::Dict{String,Any}, model_type, solver; kwargs...)
-    if model_type != LPLinUBFPowerModel
-        Memento.error(_LOGGER, "The problem type mc_mld_bf only supports a limited set of formulations at the moment")
-    end
     return _PMs.run_model(data, model_type, solver, build_mc_mld_bf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
 end
 
