@@ -4,7 +4,7 @@
 Parses the IOStream of a file into a Three-Phase PowerModels data structure.
 """
 function parse_file(io::IO; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1, filetype::AbstractString="json", bank_transformers::Bool=true)
-    elseif filetype == "dss"
+    if filetype == "dss"
         Memento.warn(_LOGGER, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported.")
         pmd_data = PowerModelsDistribution.parse_opendss(io; import_all=import_all, vmin=vmin, vmax=vmax, bank_transformers=bank_transformers)
     elseif filetype == "json"

@@ -652,8 +652,8 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         branchDict["br_r"] = rmatrix * defaults["length"] / Zbase
         branchDict["br_x"] = xmatrix * defaults["length"] / Zbase
 
-        branchDict["g_fr"] = LinearAlgebra.diagm(0=>_parse_array(0.0, nodes, nconductors)))
-        branchDict["g_to"] = LinearAlgebra.diagm(0=>_parse_array(0.0, nodes, nconductors)))
+        branchDict["g_fr"] = LinearAlgebra.diagm(0=>_parse_array(0.0, nodes, nconductors))
+        branchDict["g_to"] = LinearAlgebra.diagm(0=>_parse_array(0.0, nodes, nconductors))
 
         branchDict["b_fr"] = Zbase * (2.0 * pi * pmd_data["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0
         branchDict["b_to"] = Zbase * (2.0 * pi * pmd_data["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0

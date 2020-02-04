@@ -78,7 +78,7 @@ function constraint_mc_power_balance_slack(pm::_PMs.AbstractACPModel, nw::Int, i
     cstr_q = []
 
     for c in _PMs.conductor_ids(pm; nw=nw)
-        cp = JuMP.@constraint(pm.model,
+        cp = JuMP.@NLconstraint(pm.model,
             sum(p[a][c] for a in bus_arcs)
             + sum(psw[a_sw][c] for a_sw in bus_arcs_sw)
             + sum(pt[a_trans][c] for a_trans in bus_arcs_trans)
@@ -96,7 +96,7 @@ function constraint_mc_power_balance_slack(pm::_PMs.AbstractACPModel, nw::Int, i
         )
         push!(cstr_p, cp)
 
-        cq = JuMP.@constraint(pm.model,
+        cq = JuMP.@NLconstraint(pm.model,
             sum(q[a][c] for a in bus_arcs)
             + sum(qsw[a_sw][c] for a_sw in bus_arcs_sw)
             + sum(qt[a_trans][c] for a_trans in bus_arcs_trans)
