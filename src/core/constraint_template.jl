@@ -322,9 +322,7 @@ function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw
         qd = load["qd"]
 
         if conn=="wye"
-            for c in _PMs.conductor_ids(pm; nw=nw)
-                constraint_mc_load_power_wye(pm, nw, id, pd, qd)
-            end
+            constraint_mc_load_power_wye(pm, nw, id, pd, qd)
         elseif conn=="delta"
             @assert(_PMs.ref(pm, 0, :conductors)==3)
             constraint_mc_load_power_delta(pm, nw, id, load["load_bus"], pd, qd)
