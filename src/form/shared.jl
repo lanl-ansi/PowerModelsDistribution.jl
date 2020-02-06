@@ -253,12 +253,12 @@ end
 
 
 ""
-function constraint_mc_generation_wye(pm::_PMs.AbstractPowerModel, nw::Int, id::Int, bus_id::Int; report::Bool=true)
+function constraint_mc_generation_wye(pm::_PMs.AbstractPowerModel, nw::Int, id::Int, bus_id::Int, pmin::Vector, pmax::Vector, qmin::Vector, qmax::Vector; report::Bool=true, bounded::Bool=true)
     _PMs.var(pm, nw, :pg_bus)[id] = _PMs.var(pm, nw, :pg, id)
     _PMs.var(pm, nw, :qg_bus)[id] = _PMs.var(pm, nw, :qg, id)
 
     if report
         _PMs.sol(pm, nw, :gen, id)[:pg_bus] = _PMs.var(pm, nw, :pg_bus, id)
-        _PMs.sol(pm, nw, :gen, id)[:qq_bus] = _PMs.var(pm, nw, :qg_bus, id)
+        _PMs.sol(pm, nw, :gen, id)[:qg_bus] = _PMs.var(pm, nw, :qg_bus, id)
     end
 end

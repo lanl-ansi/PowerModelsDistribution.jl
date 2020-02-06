@@ -304,15 +304,19 @@ sn_a = v_a.conj(i_a)
     = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 So for delta, sn is constrained indirectly.
 """
-function constraint_mc_generation(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
+function constraint_mc_generation(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true, bounded::Bool=true)
     generator = _PMs.ref(pm, nw, :gen, id)
     bus = _PMs.ref(pm, nw,:bus, generator["gen_bus"])
 
-    if !haskey(generator, "configuration") || generator["configuration"]=="wye"
-        constraint_mc_generation_wye(pm, nw, id, bus["index"], report=report)
+    pmin = generator["pmin"]
+    pmax = generator["pmax"]
+    qmin = generator["qmin"]
+    qmax = generator["qmax"]
+
+    if generator["conn"]=="wye"
+        constraint_mc_generation_wye(pm, nw, id, bus["index"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
     else
-        @assert(_PMs.ref(pm, 0, :conductors)==3)
-        constraint_mc_generation_delta(pm, nw, id, bus["index"], report=report)
+        constraint_mc_generation_delta(pm, nw, id, bus["index"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
     end
 end
 

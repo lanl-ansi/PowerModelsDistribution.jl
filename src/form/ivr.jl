@@ -92,33 +92,18 @@ function variable_mc_generation(pm::_PMs.AbstractIVRModel; nw::Int=pm.cnw, bound
     _PMs.var(pm, nw)[:cig_bus] = Dict{Int, Any}()
 
     # store active and reactive power expressions for use in objective + post processing
-    pg = Dict()
-    qg = Dict()
-    for (i,gen) in _PMs.ref(pm, nw, :gen)
-        busid = gen["gen_bus"]
-        vr = _PMs.var(pm, nw, :vr, busid)
-        vi = _PMs.var(pm, nw, :vi, busid)
-        crg = _PMs.var(pm, nw, :crg, i)
-        cig = _PMs.var(pm, nw, :cig, i)
+    _PMs.var(pm, nw)[:pg] = Dict{Int, Any}()
+    _PMs.var(pm, nw)[:qg] = Dict{Int, Any}()
 
-        pg[i] = []
-        qg[i] = []
-        for c in 1:ncnds
-            push!(pg[i], JuMP.@NLexpression(pm.model, vr[c]*crg[c]  + vi[c]*cig[c]))
-            push!(qg[i], JuMP.@NLexpression(pm.model, vi[c]*crg[c]  - vr[c]*cig[c]))
-        end
-    end
-    _PMs.var(pm, nw)[:pg] = pg
-    _PMs.var(pm, nw)[:qg] = qg
-    report && _PMs.sol_component_value(pm, nw, :gen, :pg, _PMs.ids(pm, nw, :gen), pg)
-    report && _PMs.sol_component_value(pm, nw, :gen, :qg, _PMs.ids(pm, nw, :gen), qg)
+    # report && _PMs.sol_component_value(pm, nw, :gen, :pg, _PMs.ids(pm, nw, :gen), pg)
+    # report && _PMs.sol_component_value(pm, nw, :gen, :qg, _PMs.ids(pm, nw, :gen), qg)
 
-    if bounded
-        for (i,gen) in _PMs.ref(pm, nw, :gen)
-            constraint_mc_generation_active_power_limits(pm, i, nw=nw)
-            constraint_mc_generation_reactive_power_limits(pm, i, nw=nw)
-        end
-    end
+    # if bounded
+    #     for (i,gen) in _PMs.ref(pm, nw, :gen)
+    #         constraint_mc_generation_active_power_limits(pm, i, nw=nw)
+    #         constraint_mc_generation_reactive_power_limits(pm, i, nw=nw)
+    #     end
+    # end
 end
 
 
@@ -577,6 +562,14 @@ function constraint_mc_load_wye(pm::_PMs.IVRPowerModel, nw::Int, id::Int, bus_id
 
         _PMs.sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         _PMs.sol(pm, nw, :load, id)[:qd_bus] = qd_bus
+
+        _PMs.sol(pm, nw, :load, id)[:crd_bus] = crd
+        _PMs.sol(pm, nw, :load, id)[:cid_bus] = cid
+
+        pd = JuMP.@NLexpression(pm.model, [i in 1:nph], a[i]*(vr[i]^2+vi[i]^2)^(alpha[i]/2) )
+        qd = JuMP.@NLexpression(pm.model, [i in 1:nph], b[i]*(vr[i]^2+vi[i]^2)^(beta[i]/2)  )
+        _PMs.sol(pm, nw, :load, id)[:pd] = pd
+        _PMs.sol(pm, nw, :load, id)[:qd] = qd
     end
 end
 
@@ -614,50 +607,85 @@ function constraint_mc_load_delta(pm::_PMs.IVRPowerModel, nw::Int, id::Int, bus_
 
         _PMs.sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         _PMs.sol(pm, nw, :load, id)[:qd_bus] = qd_bus
+
+        pd = JuMP.@NLexpression(pm.model, [i in 1:nph], a[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2) )
+        qd = JuMP.@NLexpression(pm.model, [i in 1:nph], b[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2)  )
+        _PMs.sol(pm, nw, :load, id)[:pd] = pd
+        _PMs.sol(pm, nw, :load, id)[:qd] = qd
     end
 end
 
 
 ""
-function constraint_mc_generation_wye(pm::_PMs.IVRPowerModel, nw::Int, id::Int, bus_id::Int; report::Bool=true)
-    _PMs.var(pm, nw, :crg_bus)[id] = _PMs.var(pm, nw, :crg, id)
-    _PMs.var(pm, nw, :cig_bus)[id] = _PMs.var(pm, nw, :cig, id)
+function constraint_mc_generation_wye(pm::_PMs.IVRPowerModel, nw::Int, id::Int, bus_id::Int, pmin::Vector, pmax::Vector, qmin::Vector, qmax::Vector; report::Bool=true, bounded::Bool=true)
+    vr = _PMs.var(pm, nw, :vr, bus_id)
+    vi = _PMs.var(pm, nw, :vi, bus_id)
+    crg = _PMs.var(pm, nw, :crg, id)
+    cig = _PMs.var(pm, nw, :cig, id)
+
+    nph = 3
+
+    pg = JuMP.@NLexpression(pm.model, [i in 1:nph],  vr[i]*crg[i]+vi[i]*cig[i])
+    qg = JuMP.@NLexpression(pm.model, [i in 1:nph], -vr[i]*cig[i]+vi[i]*crg[i])
+
+    if bounded
+        JuMP.@constraint(pm.model, pmin .<= vr.*crg  + vi.*cig)
+        JuMP.@constraint(pm.model, pmax .>= vr.*crg  + vi.*cig)
+        JuMP.@constraint(pm.model, qmin .<= vi.*crg  - vr.*cig)
+        JuMP.@constraint(pm.model, qmax .>= vi.*crg  - vr.*cig)
+    end
+
+    _PMs.var(pm, nw, :crg_bus)[id] = crg
+    _PMs.var(pm, nw, :cig_bus)[id] = cig
+    _PMs.var(pm, nw, :pg)[id] = pg
+    _PMs.var(pm, nw, :qg)[id] = qg
 
     if report
         _PMs.sol(pm, nw, :gen, id)[:crg_bus] = _PMs.var(pm, nw, :crg_bus, id)
         _PMs.sol(pm, nw, :gen, id)[:cig_bus] = _PMs.var(pm, nw, :crg_bus, id)
+
+        _PMs.sol(pm, nw, :gen, id)[:pg] = pg
+        _PMs.sol(pm, nw, :gen, id)[:qg] = qg
     end
 end
 
 
 ""
-function constraint_mc_generation_delta(pm::_PMs.IVRPowerModel, nw::Int, id::Int, bus_id::Int; report::Bool=true)
+function constraint_mc_generation_delta(pm::_PMs.IVRPowerModel, nw::Int, id::Int, bus_id::Int, pmin::Vector, pmax::Vector, qmin::Vector, qmax::Vector; report::Bool=true, bounded::Bool=true)
     vr = _PMs.var(pm, nw, :vr, bus_id)
     vi = _PMs.var(pm, nw, :vi, bus_id)
-    pg = _PMs.var(pm, nw, :pg, id)
-    qg = _PMs.var(pm, nw, :qg, id)
-
-    crg = []
-    cig = []
+    crg = _PMs.var(pm, nw, :crg, id)
+    cig = _PMs.var(pm, nw, :cig, id)
 
     nph = 3
     prev = Dict(i=>(i+nph-2)%nph+1 for i in 1:nph)
     next = Dict(i=>i%nph+1 for i in 1:nph)
+
+    vrg = JuMP.@NLexpression(pm.model, [i in 1:nph], vr[i]-vr[next[i]])
+    vig = JuMP.@NLexpression(pm.model, [i in 1:nph], vi[i]-vi[next[i]])
+
+    pg = JuMP.@NLexpression(pm.model, [i in 1:nph],  vrg[i]*crg[i]+vig[i]*cig[i])
+    qg = JuMP.@NLexpression(pm.model, [i in 1:nph], -vrg[i]*cig[i]+vig[i]*crg[i])
+
+    if bounded
+        JuMP.@NLconstraint(pm.model, [i in 1:nph], pmin[i] <= pg[i])
+        JuMP.@NLconstraint(pm.model, [i in 1:nph], pmax[i] >= pg[i])
+        JuMP.@NLconstraint(pm.model, [i in 1:nph], qmin[i] <= qg[i])
+        JuMP.@NLconstraint(pm.model, [i in 1:nph], qmax[i] >= qg[i])
+    end
 
     crg_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], crg[i]-crg[prev[i]])
     cig_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], cig[i]-cig[prev[i]])
 
     _PMs.var(pm, nw, :crg_bus)[id] = crg_bus
     _PMs.var(pm, nw, :cig_bus)[id] = cig_bus
+    _PMs.var(pm, nw, :pg)[id] = pg
+    _PMs.var(pm, nw, :qg)[id] = qg
 
     if report
-        pg_bus = JuMP.@NLexpression(pm.model, [i in 1:nph],  vr[i]*crg_bus[i]+vi[i]*cig_bus[i])
-        qg_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], -vr[i]*cig_bus[i]+vi[i]*crg_bus[i])
-
         _PMs.sol(pm, nw, :gen, id)[:crg_bus] = crg_bus
         _PMs.sol(pm, nw, :gen, id)[:cig_bus] = cig_bus
-
-        _PMs.sol(pm, nw, :gen, id)[:pg_bus] = pg_bus
-        _PMs.sol(pm, nw, :gen, id)[:qg_bus] = qg_bus
+        _PMs.sol(pm, nw, :gen, id)[:pg] = pg
+        _PMs.sol(pm, nw, :gen, id)[:qg] = qg
     end
 end

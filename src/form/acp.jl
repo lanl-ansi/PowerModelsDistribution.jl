@@ -781,6 +781,11 @@ function constraint_mc_load_wye(pm::_PMs.AbstractACPModel, nw::Int, id::Int, bus
     if report
         _PMs.sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         _PMs.sol(pm, nw, :load, id)[:qd_bus] = qd_bus
+
+        pd = JuMP.@NLexpression(pm.model, [i in 1:nph], a[i]*vm[i]^alpha[i] )
+        qd = JuMP.@NLexpression(pm.model, [i in 1:nph], b[i]*vm[i]^beta[i]  )
+        _PMs.sol(pm, nw, :load, id)[:pd] = pd
+        _PMs.sol(pm, nw, :load, id)[:qd] = qd
     end
 end
 
@@ -818,12 +823,17 @@ function constraint_mc_load_delta(pm::_PMs.AbstractACPModel, nw::Int, id::Int, b
     if report
         _PMs.sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         _PMs.sol(pm, nw, :load, id)[:qd_bus] = qd_bus
+
+        pd = JuMP.@NLexpression(pm.model, [i in 1:nph], a[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2) )
+        qd = JuMP.@NLexpression(pm.model, [i in 1:nph], b[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2)  )
+        _PMs.sol(pm, nw, :load, id)[:pd] = pd
+        _PMs.sol(pm, nw, :load, id)[:qd] = qd
     end
 end
 
 
 ""
-function constraint_mc_generation_delta(pm::_PMs.AbstractACPModel, nw::Int, id::Int, bus_id::Int; report::Bool=true)
+function constraint_mc_generation_delta(pm::_PMs.AbstractACPModel, nw::Int, id::Int, bus_id::Int, pmin::Vector, pmax::Vector, qmin::Vector, qmax::Vector; report::Bool=true, bounded::Bool=true)
     vm = _PMs.var(pm, nw, :vm, bus_id)
     va = _PMs.var(pm, nw, :va, bus_id)
     pg = _PMs.var(pm, nw, :pg, id)
@@ -836,14 +846,14 @@ function constraint_mc_generation_delta(pm::_PMs.AbstractACPModel, nw::Int, id::
     prev = Dict(i=>(i+nph-2)%nph+1 for i in 1:nph)
     next = Dict(i=>i%nph+1 for i in 1:nph)
 
-    vrg = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])-vm[next[i]]*cos(vm[next[i]]))
-    vig = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*sin(va[i])-vm[next[i]]*sin(vm[next[i]]))
+    vrg = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])-vm[next[i]]*cos(va[next[i]]))
+    vig = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*sin(va[i])-vm[next[i]]*sin(va[next[i]]))
 
     crg = JuMP.@NLexpression(pm.model, [i in 1:nph], (pg[i]*vrg[i]+qg[i]*vig[i])/(vrg[i]^2+vig[i]^2) )
     cig = JuMP.@NLexpression(pm.model, [i in 1:nph], (pg[i]*vig[i]-qg[i]*vrg[i])/(vrg[i]^2+vig[i]^2) )
 
-    crg_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], cig[i]-cig[prev[i]])
-    cig_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], crg[i]-crg[prev[i]])
+    crg_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], crg[i]-crg[prev[i]])
+    cig_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], cig[i]-cig[prev[i]])
 
     pg_bus = JuMP.@NLexpression(pm.model, [i in 1:nph],  vm[i]*cos(va[i])*crg_bus[i]+vm[i]*sin(va[i])*cig_bus[i])
     qg_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], -vm[i]*cos(va[i])*cig_bus[i]+vm[i]*sin(va[i])*crg_bus[i])
@@ -853,6 +863,6 @@ function constraint_mc_generation_delta(pm::_PMs.AbstractACPModel, nw::Int, id::
 
     if report
         _PMs.sol(pm, nw, :gen, id)[:pg_bus] = pg_bus
-        _PMs.sol(pm, nw, :gen, id)[:qq_bus] = qg_bus
+        _PMs.sol(pm, nw, :gen, id)[:qg_bus] = qg_bus
     end
 end

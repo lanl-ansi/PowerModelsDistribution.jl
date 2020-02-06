@@ -59,6 +59,8 @@ include("common.jl") # all passing
 
     include("loadmodels.jl") # all passing
 
+    include("delta_gens.jl") # all passing
+
     include("mld.jl") # partial passing
 
     # include("multiconductor.jl")

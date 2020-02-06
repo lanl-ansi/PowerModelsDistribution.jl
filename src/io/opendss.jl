@@ -464,6 +464,8 @@ function _dss2pmd_gen!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
     genDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
     genDict["source_id"] = "vsource.$(defaults["name"])"
 
+    genDict["conn"] = "wye"
+
     used = ["name", "phases", "bus1"]
     _PMs._import_remaining!(genDict, defaults, import_all; exclude=used)
 
@@ -527,6 +529,8 @@ function _dss2pmd_gen!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         genDict["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
         genDict["source_id"] = "generator.$(defaults["name"])"
 
+        genDict["conn"] = "wye"
+
         used = ["name", "phases", "bus1"]
         _PMs._import_remaining!(genDict, defaults, import_all; exclude=used)
 
@@ -569,6 +573,8 @@ function _dss2pmd_gen!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
         pvDict["active_phases"] = [nodes[n] > 0 ? 1 : 0 for n in 1:nconductors]
         pvDict["source_id"] = "pvsystem.$(defaults["name"])"
+
+        pvDict["conn"] = "wye"
 
         used = ["name", "phases", "bus1"]
         _PMs._import_remaining!(pvDict, defaults, import_all; exclude=used)
