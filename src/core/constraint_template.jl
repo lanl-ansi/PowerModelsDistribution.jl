@@ -276,76 +276,43 @@ sn_a = v_a.conj(i_a)
     = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 So for delta, sn is constrained indirectly.
 """
-function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
+function constraint_mc_load(pm::_PMs.AbstractACRModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
     load = _PMs.ref(pm, nw, :load, id)
     bus = _PMs.ref(pm, nw,:bus, load["load_bus"])
-    model = load["model"]
-    conn = _PMs.ref(pm, nw, :load, id, "conn")
-    @assert(conn in ["delta", "wye"])
 
-    if model=="constant_power"
-        pd = load["pd"]
-        qd = load["qd"]
+    conn = haskey(load, "conn") ? load["conn"] : "wye"
 
-        if conn=="wye"
-            for c in _PMs.conductor_ids(pm; nw=nw)
-                constraint_mc_load_power_wye(pm, nw, id, pd, qd)
-            end
-        elseif conn=="delta"
-            @assert(_PMs.ref(pm, 0, :conductors)==3)
-            constraint_mc_load_power_delta(pm, nw, id, load["load_bus"], pd, qd)
-        end
+    a, alpha, b, beta = _load_expmodel_params(load, bus)
 
-    elseif model=="constant_current"
-        vnom_kv = load["vnom_kv"]
-        vbase_kv_LL = _PMs.ref(pm, nw, :bus, load["load_bus"])["base_kv"]
-        vbase_kv_LN = vbase_kv_LL/sqrt(3)
-
-        pd = load["pd"]
-        qd = load["qd"]
-        cp = pd/(vnom_kv/vbase_kv_LN)
-        cq = qd/(vnom_kv/vbase_kv_LN)
-
-        if conn=="wye"
-            constraint_mc_load_current_wye(pm, nw, id, load["load_bus"], cp, cq)
-        elseif conn=="delta"
-            @assert(_PMs.ref(pm, 0, :conductors)==3)
-            constraint_mc_load_current_delta(pm, nw, id, load["load_bus"], cp, cq)
-        end
-
-    elseif model=="constant_impedance"
-        vnom_kv = load["vnom_kv"]
-        vbase_kv_LL = _PMs.ref(pm, nw, :bus, load["load_bus"])["base_kv"]
-        vbase_kv_LN = vbase_kv_LL/sqrt(3)
-
-        pd = load["pd"]
-        qd = load["qd"]
-        cp = pd/(vnom_kv/vbase_kv_LN)^2
-        cq = qd/(vnom_kv/vbase_kv_LN)^2
-
-        if conn=="wye"
-            constraint_mc_load_impedance_wye(pm, nw, id, load["load_bus"], cp, cq)
-        elseif conn=="delta"
-            @assert(_PMs.ref(pm, 0, :conductors)==3)
-            constraint_mc_load_impedance_delta(pm, nw, id, load["load_bus"], cp, cq)
-        end
-    elseif model=="exponential"
-        a, alpha, b, beta = _load_expmodel_params(load, bus)
-
-        if conn=="wye"
-            constraint_mc_load_exponential_wye(pm, nw, id, load["load_bus"], a, alpha, b, beta)
-        elseif conn=="delta"
-            @assert(_PMs.ref(pm, 0, :conductors)==3)
-            constraint_mc_load_exponential_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
-        end
-
+    if conn=="wye"
+        constraint_mc_load_wye(pm, nw, id, load["load_bus"], a, alpha, b, beta)
     else
-        Memento.@error(_LOGGER, "Unknown model $model for load $id.")
+        constraint_mc_load_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
     end
+end
 
-    if report
-        _PMs.sol(pm, nw, :load, id)[:pd] = _PMs.var(pm, nw, :pd, id)
-        _PMs.sol(pm, nw, :load, id)[:qd] = _PMs.var(pm, nw, :qd, id)
+
+"""
+DELTA
+When connected in delta, the load power gives the reference in the delta reference
+frame. This means
+sd_1 = v_ab.conj(i_ab) = (v_a-v_b).conj(i_ab)
+We can relate this to the per-phase power by
+sn_a = v_a.conj(i_a)
+    = v_a.conj(i_ab-i_ca)
+    = v_a.conj(conj(s_ab/v_ab) - conj(s_ca/v_ca))
+    = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
+So for delta, sn is constrained indirectly.
+"""
+function constraint_mc_generation(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
+    generator = _PMs.ref(pm, nw, :gen, id)
+    bus = _PMs.ref(pm, nw,:bus, generator["gen_bus"])
+
+    if !haskey(generator, "configuration") || generator["configuration"]=="wye"
+        constraint_mc_generation_wye(pm, nw, id, bus["index"], report=report)
+    else
+        @assert(_PMs.ref(pm, 0, :conductors)==3)
+        constraint_mc_generation_delta(pm, nw, id, bus["index"], report=report)
     end
 end
 
@@ -526,7 +493,7 @@ function constraint_mc_generation_reactive_power_limits(pm::_PMs.AbstractPowerMo
     constraint_mc_generation_reactive_power_limits(pm, nw, i, bus, gen["qmax"], gen["qmin"])
 end
 ""
-function constraint_mc_current_balance(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_current_balance_load(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     bus = _PMs.ref(pm, nw, :bus, i)
     bus_arcs = _PMs.ref(pm, nw, :bus_arcs, i)
     bus_arcs_sw = _PMs.ref(pm, nw, :bus_arcs_sw, i)
@@ -536,13 +503,10 @@ function constraint_mc_current_balance(pm::_PMs.AbstractPowerModel, i::Int; nw::
     bus_loads = _PMs.ref(pm, nw, :bus_loads, i)
     bus_shunts = _PMs.ref(pm, nw, :bus_shunts, i)
 
-    bus_pd = Dict(k => _PMs.ref(pm, nw, :load, k, "pd") for k in bus_loads)
-    bus_qd = Dict(k => _PMs.ref(pm, nw, :load, k, "qd") for k in bus_loads)
-
     bus_gs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "gs") for k in bus_shunts)
     bus_bs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "bs") for k in bus_shunts)
 
-    constraint_mc_current_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    constraint_mc_current_balance_load(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
 end
 
 

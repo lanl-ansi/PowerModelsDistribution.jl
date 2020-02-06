@@ -73,12 +73,23 @@ end
 
 
 ""
+function variable_mc_load(pm::_PMs.AbstractIVRModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true, kwargs...)
+    _PMs.var(pm, nw)[:crd] = Dict{Int, Any}()
+    _PMs.var(pm, nw)[:cid] = Dict{Int, Any}()
+    _PMs.var(pm, nw)[:crd_bus] = Dict{Int, Any}()
+    _PMs.var(pm, nw)[:cid_bus] = Dict{Int, Any}()
+end
+
+""
 function variable_mc_generation(pm::_PMs.AbstractIVRModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true, kwargs...)
     variable_mc_generation_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_generation_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
 
     cnds = _PMs.conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
+
+    _PMs.var(pm, nw)[:crg_bus] = Dict{Int, Any}()
+    _PMs.var(pm, nw)[:cig_bus] = Dict{Int, Any}()
 
     # store active and reactive power expressions for use in objective + post processing
     pg = Dict()
@@ -231,14 +242,16 @@ end
 Kirchhoff's current law applied to buses
 `sum(cr + im*ci) = 0`
 """
-function constraint_mc_current_balance(pm::_PMs.AbstractIVRModel, n::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_current_balance_load(pm::_PMs.AbstractIVRModel, n::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
     vr = _PMs.var(pm, n, :vr, i)
     vi = _PMs.var(pm, n, :vi, i)
 
     cr    = get(_PMs.var(pm, n),    :cr, Dict()); _PMs._check_var_keys(cr, bus_arcs, "real current", "branch")
     ci    = get(_PMs.var(pm, n),    :ci, Dict()); _PMs._check_var_keys(ci, bus_arcs, "imaginary current", "branch")
-    crg   = get(_PMs.var(pm, n),   :crg, Dict()); _PMs._check_var_keys(crg, bus_gens, "real current", "generator")
-    cig   = get(_PMs.var(pm, n),   :cig, Dict()); _PMs._check_var_keys(cig, bus_gens, "imaginary current", "generator")
+    crd   = get(_PMs.var(pm, n),   :crd_bus, Dict()); _PMs._check_var_keys(crd, bus_loads, "real current", "load")
+    cid   = get(_PMs.var(pm, n),   :cid_bus, Dict()); _PMs._check_var_keys(cid, bus_loads, "imaginary current", "load")
+    crg   = get(_PMs.var(pm, n),   :crg_bus, Dict()); _PMs._check_var_keys(crg, bus_gens, "real current", "generator")
+    cig   = get(_PMs.var(pm, n),   :cig_bus, Dict()); _PMs._check_var_keys(cig, bus_gens, "imaginary current", "generator")
     crs   = get(_PMs.var(pm, n),   :crs, Dict()); _PMs._check_var_keys(crs, bus_storage, "real currentr", "storage")
     cis   = get(_PMs.var(pm, n),   :cis, Dict()); _PMs._check_var_keys(cis, bus_storage, "imaginary current", "storage")
     crsw  = get(_PMs.var(pm, n),  :crsw, Dict()); _PMs._check_var_keys(crsw, bus_arcs_sw, "real current", "switch")
@@ -256,7 +269,7 @@ function constraint_mc_current_balance(pm::_PMs.AbstractIVRModel, n::Int, i, bus
                                     ==
                                     sum(crg[g][c] for g in bus_gens)
                                     - sum(crs[s][c] for s in bus_storage)
-                                    - (sum(pd[c] for pd in values(bus_pd))*vr[c] + sum(qd[c] for qd in values(bus_qd))*vi[c])/(vr[c]^2 + vi[c]^2)
+                                    - sum(crd[d][c] for d in bus_loads)
                                     - sum(gs[c] for gs in values(bus_gs))*vr[c] + sum(bs[c] for bs in values(bus_bs))*vi[c]
                                     )
         JuMP.@NLconstraint(pm.model, sum(ci[a][c] for a in bus_arcs)
@@ -265,7 +278,7 @@ function constraint_mc_current_balance(pm::_PMs.AbstractIVRModel, n::Int, i, bus
                                     ==
                                     sum(cig[g][c] for g in bus_gens)
                                     - sum(cis[s][c] for s in bus_storage)
-                                    - (sum(pd[c] for pd in values(bus_pd))*vi[c] - sum(qd[c] for qd in values(bus_qd))*vr[c])/(vr[c]^2 + vi[c]^2)
+                                    - sum(cid[d][c] for d in bus_loads)
                                     - sum(gs[c] for gs in values(bus_gs))*vi[c] - sum(bs[c] for bs in values(bus_bs))*vr[c]
                                     )
     end
@@ -486,4 +499,165 @@ function constraint_mc_trans_dy(pm::_PMs.AbstractIVRModel, nw::Int, trans_id::In
 
     JuMP.@constraint(pm.model, scale.*cr_fr_P .+ Md'*cr_to_P .== 0)
     JuMP.@constraint(pm.model, scale.*ci_fr_P .+ Md'*ci_to_P .== 0)
+end
+
+
+"""
+CONSTANT POWER
+Fixes the load power sd.
+sd = [sd_1, sd_2, sd_3]
+What is actually fixed, depends on whether the load is connected in delta or wye.
+When connected in wye, the load power equals the per-phase power sn drawn at the
+bus to which the load is connected.
+sd_1 = v_a.conj(i_a) = sn_a
+
+CONSTANT CURRENT
+Sets the active and reactive load power sd to be proportional to
+the the voltage magnitude.
+pd = cp.|vm|
+qd = cq.|vm|
+sd = cp.|vm| + j.cq.|vm|
+
+CONSTANT IMPEDANCE
+Sets the active and reactive power drawn by the load to be proportional to
+the square of the voltage magnitude.
+pd = cp.|vm|^2
+qd = cq.|vm|^2
+sd = cp.|vm|^2 + j.cq.|vm|^2
+
+DELTA
+When connected in delta, the load power gives the reference in the delta reference
+frame. This means
+sd_1 = v_ab.conj(i_ab) = (v_a-v_b).conj(i_ab)
+We can relate this to the per-phase power by
+sn_a = v_a.conj(i_a)
+    = v_a.conj(i_ab-i_ca)
+    = v_a.conj(conj(s_ab/v_ab) - conj(s_ca/v_ca))
+    = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
+So for delta, sn is constrained indirectly.
+"""
+function constraint_mc_load(pm::_PMs.IVRPowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
+    load = _PMs.ref(pm, nw, :load, id)
+    bus = _PMs.ref(pm, nw,:bus, load["load_bus"])
+    #TODO adjust this once data model updated
+    conn = load["conn"]
+
+    a, alpha, b, beta = _load_expmodel_params(load, bus)
+
+    if conn=="wye"
+        constraint_mc_load_wye(pm, nw, id, load["load_bus"], a, alpha, b, beta)
+    else
+        constraint_mc_load_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
+    end
+end
+
+
+""
+function constraint_mc_load_wye(pm::_PMs.IVRPowerModel, nw::Int, id::Int, bus_id::Int, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+    vr = _PMs.var(pm, nw, :vr, bus_id)
+    vi = _PMs.var(pm, nw, :vi, bus_id)
+
+    nph = 3
+
+    crd = JuMP.@NLexpression(pm.model, [i in 1:nph],
+        a[i]*vr[i]*(vr[i]^2+vi[i]^2)^(alpha[i]/2-1)
+       +b[i]*vi[i]*(vr[i]^2+vi[i]^2)^(beta[i]/2 -1)
+    )
+    cid = JuMP.@NLexpression(pm.model, [i in 1:nph],
+        a[i]*vi[i]*(vr[i]^2+vi[i]^2)^(alpha[i]/2-1)
+       -b[i]*vr[i]*(vr[i]^2+vi[i]^2)^(beta[i]/2 -1)
+    )
+
+    _PMs.var(pm, nw, :crd_bus)[id] = crd
+    _PMs.var(pm, nw, :cid_bus)[id] = cid
+
+    if report
+        pd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph],  vr[i]*crd[i]+vi[i]*cid[i])
+        qd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], -vr[i]*cid[i]+vi[i]*crd[i])
+
+        _PMs.sol(pm, nw, :load, id)[:pd_bus] = pd_bus
+        _PMs.sol(pm, nw, :load, id)[:qd_bus] = qd_bus
+    end
+end
+
+
+""
+function constraint_mc_load_delta(pm::_PMs.IVRPowerModel, nw::Int, id::Int, bus_id::Int, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+    vr = _PMs.var(pm, nw, :vr, bus_id)
+    vi = _PMs.var(pm, nw, :vi, bus_id)
+
+    nph = 3
+    prev = Dict(i=>(i+nph-2)%nph+1 for i in 1:nph)
+    next = Dict(i=>i%nph+1 for i in 1:nph)
+
+    vrd = JuMP.@NLexpression(pm.model, [i in 1:nph], vr[i]-vr[next[i]])
+    vid = JuMP.@NLexpression(pm.model, [i in 1:nph], vi[i]-vi[next[i]])
+
+    crd = JuMP.@NLexpression(pm.model, [i in 1:nph],
+        a[i]*vrd[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2-1)
+       +b[i]*vid[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2 -1)
+    )
+    cid = JuMP.@NLexpression(pm.model, [i in 1:nph],
+        a[i]*vid[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2-1)
+       -b[i]*vrd[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2 -1)
+    )
+
+    crd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], crd[i]-crd[prev[i]])
+    cid_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], cid[i]-cid[prev[i]])
+
+    _PMs.var(pm, nw, :crd_bus)[id] = crd_bus
+    _PMs.var(pm, nw, :cid_bus)[id] = cid_bus
+
+    if report
+        pd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph],  vr[i]*crd_bus[i]+vi[i]*cid_bus[i])
+        qd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], -vr[i]*cid_bus[i]+vi[i]*crd_bus[i])
+
+        _PMs.sol(pm, nw, :load, id)[:pd_bus] = pd_bus
+        _PMs.sol(pm, nw, :load, id)[:qd_bus] = qd_bus
+    end
+end
+
+
+""
+function constraint_mc_generation_wye(pm::_PMs.IVRPowerModel, nw::Int, id::Int, bus_id::Int; report::Bool=true)
+    _PMs.var(pm, nw, :crg_bus)[id] = _PMs.var(pm, nw, :crg, id)
+    _PMs.var(pm, nw, :cig_bus)[id] = _PMs.var(pm, nw, :cig, id)
+
+    if report
+        _PMs.sol(pm, nw, :gen, id)[:crg_bus] = _PMs.var(pm, nw, :crg_bus, id)
+        _PMs.sol(pm, nw, :gen, id)[:cig_bus] = _PMs.var(pm, nw, :crg_bus, id)
+    end
+end
+
+
+""
+function constraint_mc_generation_delta(pm::_PMs.IVRPowerModel, nw::Int, id::Int, bus_id::Int; report::Bool=true)
+    vr = _PMs.var(pm, nw, :vr, bus_id)
+    vi = _PMs.var(pm, nw, :vi, bus_id)
+    pg = _PMs.var(pm, nw, :pg, id)
+    qg = _PMs.var(pm, nw, :qg, id)
+
+    crg = []
+    cig = []
+
+    nph = 3
+    prev = Dict(i=>(i+nph-2)%nph+1 for i in 1:nph)
+    next = Dict(i=>i%nph+1 for i in 1:nph)
+
+    crg_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], crg[i]-crg[prev[i]])
+    cig_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], cig[i]-cig[prev[i]])
+
+    _PMs.var(pm, nw, :crg_bus)[id] = crg_bus
+    _PMs.var(pm, nw, :cig_bus)[id] = cig_bus
+
+    if report
+        pg_bus = JuMP.@NLexpression(pm.model, [i in 1:nph],  vr[i]*crg_bus[i]+vi[i]*cig_bus[i])
+        qg_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], -vr[i]*cig_bus[i]+vi[i]*crg_bus[i])
+
+        _PMs.sol(pm, nw, :gen, id)[:crg_bus] = crg_bus
+        _PMs.sol(pm, nw, :gen, id)[:cig_bus] = cig_bus
+
+        _PMs.sol(pm, nw, :gen, id)[:pg_bus] = pg_bus
+        _PMs.sol(pm, nw, :gen, id)[:qg_bus] = qg_bus
+    end
 end

@@ -403,8 +403,8 @@ function _dss2pmd_shunt!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
             shuntDict["shunt_bus"] = find_bus(name, pmd_data)
             shuntDict["name"] = defaults["name"]
-            shuntDict["gs"] = _parse_array(0.0, nodes, nconductors)  # TODO:
-            shuntDict["bs"] = _parse_array(Gcap, nodes, nconductors)
+            shuntDict["gs"] = LinearAlgebra.diagm(0=>_parse_array(0.0, nodes, nconductors))  # TODO:
+            shuntDict["bs"] = LinearAlgebra.diagm(0=>_parse_array(Gcap, nodes, nconductors))
             shuntDict["status"] = convert(Int, defaults["enabled"])
             shuntDict["index"] = length(pmd_data["shunt"]) + 1
 

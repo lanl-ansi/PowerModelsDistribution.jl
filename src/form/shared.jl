@@ -134,7 +134,7 @@ end
 
 
 ""
-function constraint_mc_power_balance(pm::_PMs.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_power_balance_load(pm::_PMs.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
     Wr = _PMs.var(pm, nw, :Wr, i)
     Wi = _PMs.var(pm, nw, :Wi, i)
     P = get(_PMs.var(pm, nw), :P, Dict()); _PMs._check_var_keys(P, bus_arcs, "active power", "branch")
@@ -144,8 +144,10 @@ function constraint_mc_power_balance(pm::_PMs.AbstractWModels, nw::Int, i, bus_a
     Pt   = get(_PMs.var(pm, nw),   :Pt, Dict()); _PMs._check_var_keys(Pt, bus_arcs_trans, "active power", "transformer")
     Qt   = get(_PMs.var(pm, nw),   :Qt, Dict()); _PMs._check_var_keys(Qt, bus_arcs_trans, "reactive power", "transformer")
 
-    pg = get(_PMs.var(pm, nw), :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
-    qg = get(_PMs.var(pm, nw), :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
+    pd = get(_PMs.var(pm, nw), :pd_bus, Dict()); _PMs._check_var_keys(pg, bus_loads, "active power", "load")
+    qd = get(_PMs.var(pm, nw), :qd_bus, Dict()); _PMs._check_var_keys(qg, bus_loads, "reactive power", "load")
+    pg = get(_PMs.var(pm, nw), :pg_bus, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    qg = get(_PMs.var(pm, nw), :qg_bus, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
     ps   = get(_PMs.var(pm, nw),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
     qs   = get(_PMs.var(pm, nw),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
 
@@ -162,7 +164,7 @@ function constraint_mc_power_balance(pm::_PMs.AbstractWModels, nw::Int, i, bus_a
         .==
         sum(pg[g] for g in bus_gens)
         - sum(ps[s] for s in bus_storage)
-        - sum(pd for pd in values(bus_pd))
+        - sum(pd[d] for d in bus_loads)
         - diag(Wr*Gt'+Wi*Bt')
     )
 
@@ -173,7 +175,7 @@ function constraint_mc_power_balance(pm::_PMs.AbstractWModels, nw::Int, i, bus_a
         .==
         sum(qg[g] for g in bus_gens)
         - sum(qs[s] for s in bus_storage)
-        - sum(qd for qd in values(bus_qd))
+        - sum(qd[d] for d in bus_loads)
         - diag(-Wr*Bt'+Wi*Gt')
     )
 
@@ -247,4 +249,16 @@ function constraint_mc_storage_on_off(pm::_PMs.AbstractPowerModel, n::Int, i, pm
 
     JuMP.@constraint(pm.model, qs .<= z_storage.*qmax)
     JuMP.@constraint(pm.model, qs .>= z_storage.*qmin)
+end
+
+
+""
+function constraint_mc_generation_wye(pm::_PMs.AbstractPowerModel, nw::Int, id::Int, bus_id::Int; report::Bool=true)
+    _PMs.var(pm, nw, :pg_bus)[id] = _PMs.var(pm, nw, :pg, id)
+    _PMs.var(pm, nw, :qg_bus)[id] = _PMs.var(pm, nw, :qg, id)
+
+    if report
+        _PMs.sol(pm, nw, :gen, id)[:pg_bus] = _PMs.var(pm, nw, :pg_bus, id)
+        _PMs.sol(pm, nw, :gen, id)[:qq_bus] = _PMs.var(pm, nw, :qg_bus, id)
+    end
 end

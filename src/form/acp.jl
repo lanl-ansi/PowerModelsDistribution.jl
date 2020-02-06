@@ -263,16 +263,16 @@ function constraint_mc_power_balance_load(pm::_PMs.AbstractACPModel, nw::Int, i:
     va   = _PMs.var(pm, nw, :va, i)
     p    = get(_PMs.var(pm, nw),   :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
     q    = get(_PMs.var(pm, nw),   :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
-    pg   = get(_PMs.var(pm, nw),  :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
-    qg   = get(_PMs.var(pm, nw),  :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
+    pg   = get(_PMs.var(pm, nw),  :pg_bus, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    qg   = get(_PMs.var(pm, nw),  :qg_bus, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
     ps   = get(_PMs.var(pm, nw),  :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
     qs   = get(_PMs.var(pm, nw),  :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
     psw  = get(_PMs.var(pm, nw), :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
     qsw  = get(_PMs.var(pm, nw), :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
     pt   = get(_PMs.var(pm, nw),  :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
     qt   = get(_PMs.var(pm, nw),  :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
-    pd   = get(_PMs.var(pm, nw),  :pd, Dict()); _PMs._check_var_keys(pd, bus_loads, "active power", "load")
-    qd   = get(_PMs.var(pm, nw),  :qd, Dict()); _PMs._check_var_keys(pd, bus_loads, "reactive power", "load")
+    pd   = get(_PMs.var(pm, nw),  :pd_bus, Dict()); _PMs._check_var_keys(pd, bus_loads, "active power", "load")
+    qd   = get(_PMs.var(pm, nw),  :qd_bus, Dict()); _PMs._check_var_keys(pd, bus_loads, "reactive power", "load")
 
     cnds = _PMs.conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
@@ -573,48 +573,6 @@ end
 =#
 
 
-""
-function constraint_mc_load_power_wye(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, pd, qd)
-    _PMs.var(pm, nw, :pd)[load_id] = pd
-    _PMs.var(pm, nw, :qd)[load_id] = qd
-end
-
-
-""
-function constraint_mc_load_current_wye(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, scale_p, scale_q)
-    vm = _PMs.var(pm, nw, :vm, load_bus_id)
-    # this has to be a NLexpression and not an expression;
-    # might be mixed in KCL with NLexpression, so has to also be NLexpression
-
-    ncnds = length(_PMs.conductor_ids(pm, nw))
-
-    _PMs.var(pm, nw, :pd)[load_id] = JuMP.@NLexpression(pm.model, [c in 1:ncnds], scale_p[c]*vm[c])
-    _PMs.var(pm, nw, :qd)[load_id] = JuMP.@NLexpression(pm.model, [c in 1:ncnds], scale_q[c]*vm[c])
-end
-
-
-""
-function constraint_mc_load_impedance_wye(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, cp, cq)
-    vm = _PMs.var(pm, nw, :vm, load_bus_id)
-
-    ncnds = length(_PMs.conductor_ids(pm, nw))
-
-    _PMs.var(pm, nw, :pd)[load_id] = JuMP.@NLexpression(pm.model, [c in 1:ncnds], cp[c]*vm[c]^2)
-    _PMs.var(pm, nw, :qd)[load_id] = JuMP.@NLexpression(pm.model, [c in 1:ncnds], cq[c]*vm[c]^2)
-end
-
-
-""
-function constraint_mc_load_exponential_wye(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, a, alpha, b, beta)
-    vm = _PMs.var(pm, nw, :vm, load_bus_id)
-
-    cnds = length(_PMs.conductor_ids(pm, nw))
-
-    _PMs.var(pm, nw, cnd, :pd)[load_id] = JuMP.@NLexpression(pm.model, [c in 1:ncnds], a[c]*vm[c]^alpha[c])
-    _PMs.var(pm, nw, cnd, :qd)[load_id] = JuMP.@NLexpression(pm.model, [c in 1:ncnds],b[c]*vm[c]^beta[c])
-end
-
-
 """
 a = exp(im*2π/3)
 U+ = (1*Ua + a*Ub a^2*Uc)/3
@@ -647,53 +605,6 @@ function constraint_mc_vm_pos_seq(pm::_PMs.AbstractACPModel, nw::Int, bus_id::In
     vmpossqr = JuMP.@NLexpression(pm.model, vrepos^2+vimpos^2)
     # finally, apply constraint
     JuMP.@NLconstraint(pm.model, vmpossqr <= vmposmax^2)
-end
-
-
-"""
-For a delta load, sd = (s_ab, s_bc, s_ca), but we want to fix s = (s_a, s_b, s_c)
-s is a non-linear transform of v and sd, s=f(v,sd)
-s_a = v_a*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
-s_b = v_b*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
-s_c = v_c*conj(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
-"""
-function constraint_mc_load_power_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, pd::Vector, qd::Vector)
-    p_ab, p_bc, p_ca = pd
-    q_ab, q_bc, q_ca = qd
-    vm_a, vm_b, vm_c = _PMs.var(pm, nw, :vm, load_bus_id)
-    va_a, va_b, va_c = _PMs.var(pm, nw, :va, load_bus_id)
-    # v_xy = v_x - v_y
-    vre_xy(vm_x, va_x, vm_y, va_y) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)-vm_y*cos(va_y))
-    vim_xy(vm_x, va_x, vm_y, va_y) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)-vm_y*sin(va_y))
-    vre_ab = vre_xy(vm_a, va_a, vm_b, va_b)
-    vim_ab = vim_xy(vm_a, va_a, vm_b, va_b)
-    vre_bc = vre_xy(vm_b, va_b, vm_c, va_c)
-    vim_bc = vim_xy(vm_b, va_b, vm_c, va_c)
-    vre_ca = vre_xy(vm_c, va_c, vm_a, va_a)
-    vim_ca = vim_xy(vm_c, va_c, vm_a, va_a)
-    # i_xy = conj(s_xy/v_xy)
-    ire_xy(p_xy, q_xy, vre_xy, vim_xy) = JuMP.@NLexpression(pm.model, (p_xy*vre_xy+q_xy*vim_xy)/(vre_xy^2+vim_xy^2))
-    iim_xy(p_xy, q_xy, vre_xy, vim_xy) = JuMP.@NLexpression(pm.model, (p_xy*vim_xy-q_xy*vre_xy)/(vre_xy^2+vim_xy^2))
-    ire_ab = ire_xy(p_ab, q_ab, vre_ab, vim_ab)
-    iim_ab = iim_xy(p_ab, q_ab, vre_ab, vim_ab)
-    ire_bc = ire_xy(p_bc, q_bc, vre_bc, vim_bc)
-    iim_bc = iim_xy(p_bc, q_bc, vre_bc, vim_bc)
-    ire_ca = ire_xy(p_ca, q_ca, vre_ca, vim_ca)
-    iim_ca = iim_xy(p_ca, q_ca, vre_ca, vim_ca)
-    # s_x = v_x*conj(i_xy-i_zx)
-    # p_x = vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx)
-    # q_x = vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx)
-    p_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx))
-    q_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx))
-    # s_x = s_x,ref
-    _PMs.var(pm, nw, :pd)[load_id] = [
-        p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca),
-        p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab),
-        p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)]
-    _PMs.var(pm, nw, :qd)[load_id] = [
-        q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca),
-        q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab),
-        q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)]
 end
 
 
@@ -764,11 +675,11 @@ function constraint_mc_load_current_delta(pm::_PMs.AbstractACPModel, nw::Int, lo
     p_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx))
     q_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx))
     # s_x = s_x,ref
-    _PMs.var(pm, nw, :pd)[load_id] = [
+    _PMs.var(pm, nw, :pd_bus)[load_id] = [
         p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca),
         p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab),
         p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)]
-    _PMs.var(pm, nw, :qd)[load_id] = [
+    _PMs.var(pm, nw, :qd_bus)[load_id] = [
         q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca),
         q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab),
         q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)]
@@ -799,102 +710,6 @@ function constraint_mc_vm_ll(pm::_PMs.AbstractACPModel, nw::Int, bus_id::Int, vm
 end
 
 
-"""
-We want to express
-s_ab = cp.|v_ab|^2+im.cq.|v_ab|^2
-i_ab = conj(s_ab/v_ab) = |v_ab|^2.(cq-im.cq)/conj(v_ab) = (cp-im.cq)*v_ab
-idem for i_bc and i_ca
-And then
-s_a = v_a.conj(i_a) = v_a.conj(i_ab-i_ca)
-idem for s_b and s_c
-"""
-function constraint_mc_load_impedance_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Vector, cq::Vector)
-    cp_ab, cp_bc, cp_ca = cp
-    cq_ab, cq_bc, cq_ca = cq
-    vm_a, vm_b, vm_c = _PMs.var(pm, nw, :vm, load_bus_id)
-    va_a, va_b, va_c = _PMs.var(pm, nw, :va, load_bus_id)
-    # v_xy = v_x - v_y
-    vre_xy(vm_x, va_x, vm_y, va_y) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)-vm_y*cos(va_y))
-    vim_xy(vm_x, va_x, vm_y, va_y) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)-vm_y*sin(va_y))
-    vre_ab = vre_xy(vm_a, va_a, vm_b, va_b)
-    vim_ab = vim_xy(vm_a, va_a, vm_b, va_b)
-    vre_bc = vre_xy(vm_b, va_b, vm_c, va_c)
-    vim_bc = vim_xy(vm_b, va_b, vm_c, va_c)
-    vre_ca = vre_xy(vm_c, va_c, vm_a, va_a)
-    vim_ca = vim_xy(vm_c, va_c, vm_a, va_a)
-    # i_xy = conj(s_xy/v_xy)
-    ire_xy(cp_xy, cq_xy, vre_xy, vim_xy) = JuMP.@NLexpression(pm.model, cp_xy*vre_xy+cq_xy*vim_xy)
-    iim_xy(cp_xy, cq_xy, vre_xy, vim_xy) = JuMP.@NLexpression(pm.model, cp_xy*vim_xy-cq_xy*vre_xy)
-    ire_ab = ire_xy(cp_ab, cq_ab, vre_ab, vim_ab)
-    iim_ab = iim_xy(cp_ab, cq_ab, vre_ab, vim_ab)
-    ire_bc = ire_xy(cp_bc, cq_bc, vre_bc, vim_bc)
-    iim_bc = iim_xy(cp_bc, cq_bc, vre_bc, vim_bc)
-    ire_ca = ire_xy(cp_ca, cq_ca, vre_ca, vim_ca)
-    iim_ca = iim_xy(cp_ca, cq_ca, vre_ca, vim_ca)
-    # s_x = v_x*conj(i_xy-i_zx)
-    # p_x = vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx)
-    # q_x = vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx)
-    p_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*cos(va_x)*(ire_xy-ire_zx) + vm_x*sin(va_x)*(iim_xy-iim_zx))
-    q_x(vm_x, va_x, ire_xy, iim_xy, ire_zx, iim_zx) = JuMP.@NLexpression(pm.model, vm_x*sin(va_x)*(ire_xy-ire_zx) - vm_x*cos(va_x)*(iim_xy-iim_zx))
-    # s_x = s_x,ref
-    _PMs.var(pm, nw, :pd)[load_id] = [
-        p_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca),
-        p_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab),
-        p_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)]
-    _PMs.var(pm, nw, :qd)[load_id] = [
-        q_x(vm_a, va_a, ire_ab, iim_ab, ire_ca, iim_ca),
-        q_x(vm_b, va_b, ire_bc, iim_bc, ire_ab, iim_ab),
-        q_x(vm_c, va_c, ire_ca, iim_ca, ire_bc, iim_bc)]
-end
-
-
-"""
-exponential model in acp voltage coordinates
-"""
-function constraint_mc_load_exponential_delta(pm::_PMs.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, a, alpha, b, beta)
-    nph = length(_PMs.conductor_ids(pm))
-
-    vm = _PMs.var(pm, nw, c, :vm, load_bus_id)
-    va = _PMs.var(pm, nw, c, :va, load_bus_id)
-
-    # vd = Td*v
-    vdr = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])-vm[mod(i,nph)+1]*cos(va[mod(i,nph)+1]))
-    vdi = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*sin(va[i])-vm[mod(i,nph)+1]*sin(va[mod(i,nph)+1]))
-    pl = JuMP.@NLexpression(pm.model, [i in 1:nph], a[i]*(vdr[i]^2+vdi[i]^2)^(alpha[i]/2))
-    ql = JuMP.@NLexpression(pm.model, [i in 1:nph], b[i]*(vdr[i]^2+vdi[i]^2)^(beta[i]/2))
-
-    # idc: conjugate of delta current
-    # idc = sl./vd
-    #     = (pl + j.ql)/vd = (a.|vd|^alpha + j.b.|vd|^beta)/vd, now use 1/c = conj(c)/|c|^2
-    #     = (vdr-j.vdi).(a.|vd|^alpha + j.b.|vd|^beta)/|vd|^2
-    #     = (vdr-j.vdi).(a.|vd|^(alpha-2) + j.b.|vd|^(beta-2))
-    #  now also use that |vd| = (vdr^2 + wdi^2)^(1/2)
-    idcr = JuMP.@NLexpression(pm.model, [i in 1:nph], vdr[i]*a[i]*(vdr[i]^2+vdi[i]^2)^(alpha[i]/2-1) + vdi[i]*b[i]*(vdr[i]^2+vdi[i]^2)^(beta[i]/2-1))
-    idci = JuMP.@NLexpression(pm.model, [i in 1:nph], vdr[i]*b[i]*(vdr[i]^2+vdi[i]^2)^(beta[i]/2-1) - vdi[i]*a[i]*(vdr[i]^2+vdi[i]^2)^(alpha[i]/2-1))
-
-    # icr = Td'*idcr
-    icr = JuMP.@NLexpression(pm.model, [i in 1:nph], idcr[i]-idcr[mod(i+nph-2,nph)+1])
-    ici = JuMP.@NLexpression(pm.model, [i in 1:nph], idci[i]-idci[mod(i+nph-2,nph)+1])
-
-    # s = v.*conj(ic)
-    pd = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])*icr[i] - vm[i]*sin(va[i])*ici[i])
-    qd = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])*ici[i] + vm[i]*sin(va[i])*icr[i])
-
-    _PMs.var(pm, nw, :pd)[load_id] = pd
-    _PMs.var(pm, nw, :qd)[load_id] = qd
-
-    # also save pl, ql for inspection
-    for c in _PMs.conductor_ids(pm)
-        if !haskey(_PMs.var(pm, nw, c), :pl)
-            _PMs.var(pm, nw, c)[:pl] = Dict()
-            _PMs.var(pm, nw, c)[:ql] = Dict()
-        end
-        _PMs.var(pm, nw, c, :pl)[load_id] = pl[c]
-        _PMs.var(pm, nw, c, :ql)[load_id] = ql[c]
-    end
-end
-
-
 "bus voltage on/off constraint for load shed problem"
 function constraint_mc_bus_voltage_on_off(pm::_PMs.AbstractACPModel; nw::Int=pm.cnw, kwargs...)
     for (i,bus) in _PMs.ref(pm, nw, :bus)
@@ -916,4 +731,128 @@ function constraint_mc_storage_current_limit(pm::_PMs.AbstractACPModel, n::Int, 
     qs = var(pm, n, :qs, i)
 
     JuMP.@constraint(pm.model, ps.^2 + qs.^2 <= rating.^2 .* vm.^2)
+end
+
+
+function constraint_mc_load(pm::_PMs.AbstractACPModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
+    load = _PMs.ref(pm, nw, :load, id)
+    bus = _PMs.ref(pm, nw,:bus, load["load_bus"])
+
+    conn = haskey(load, "conn") ? load["conn"] : "wye"
+
+    a, alpha, b, beta = _load_expmodel_params(load, bus)
+
+    if conn=="wye"
+        constraint_mc_load_wye(pm, nw, id, load["load_bus"], a, alpha, b, beta)
+    else
+        constraint_mc_load_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
+    end
+end
+
+
+""
+function constraint_mc_load_wye(pm::_PMs.AbstractACPModel, nw::Int, id::Int, bus_id::Int, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+    vm = _PMs.var(pm, nw, :vm, bus_id)
+    va = _PMs.var(pm, nw, :va, bus_id)
+
+    nph = 3
+
+    # if constant power load
+    if all(alpha.==0) && all(beta.==0)
+        pd_bus = a
+        qd_bus = b
+    else
+        crd = JuMP.@NLexpression(pm.model, [i in 1:nph],
+            a[i]*vm[i]*cos(va[i])*(vm[i]^2)^(alpha[i]/2-1)
+           +b[i]*vm[i]*sin(va[i])*(vm[i]^2)^(beta[i]/2 -1)
+        )
+        cid = JuMP.@NLexpression(pm.model, [i in 1:nph],
+            a[i]*vm[i]*sin(va[i])*(vm[i]^2)^(alpha[i]/2-1)
+           -b[i]*vm[i]*cos(va[i])*(vm[i]^2)^(beta[i]/2 -1)
+        )
+
+        pd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph],  vm[i]*cos(va[i])*crd[i]+vm[i]*sin(va[i])*cid[i])
+        qd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], -vm[i]*cos(va[i])*cid[i]+vm[i]*sin(va[i])*crd[i])
+    end
+
+    _PMs.var(pm, nw, :pd_bus)[id] = pd_bus
+    _PMs.var(pm, nw, :qd_bus)[id] = qd_bus
+
+    if report
+        _PMs.sol(pm, nw, :load, id)[:pd_bus] = pd_bus
+        _PMs.sol(pm, nw, :load, id)[:qd_bus] = qd_bus
+    end
+end
+
+
+""
+function constraint_mc_load_delta(pm::_PMs.AbstractACPModel, nw::Int, id::Int, bus_id::Int, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+    vm = _PMs.var(pm, nw, :vm, bus_id)
+    va = _PMs.var(pm, nw, :va, bus_id)
+
+    nph = 3
+    prev = Dict(i=>(i+nph-2)%nph+1 for i in 1:nph)
+    next = Dict(i=>i%nph+1 for i in 1:nph)
+
+    vrd = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])-vm[next[i]]*cos(va[next[i]]))
+    vid = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*sin(va[i])-vm[next[i]]*sin(va[next[i]]))
+
+    crd = JuMP.@NLexpression(pm.model, [i in 1:nph],
+        a[i]*vrd[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2-1)
+       +b[i]*vid[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2 -1)
+    )
+    cid = JuMP.@NLexpression(pm.model, [i in 1:nph],
+        a[i]*vid[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2-1)
+       -b[i]*vrd[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2 -1)
+    )
+
+    crd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], crd[i]-crd[prev[i]])
+    cid_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], cid[i]-cid[prev[i]])
+
+    pd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph],  vm[i]*cos(va[i])*crd_bus[i]+vm[i]*sin(va[i])*cid_bus[i])
+    qd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], -vm[i]*cos(va[i])*cid_bus[i]+vm[i]*sin(va[i])*crd_bus[i])
+
+    _PMs.var(pm, nw, :pd_bus)[id] = pd_bus
+    _PMs.var(pm, nw, :qd_bus)[id] = qd_bus
+
+    if report
+        _PMs.sol(pm, nw, :load, id)[:pd_bus] = pd_bus
+        _PMs.sol(pm, nw, :load, id)[:qd_bus] = qd_bus
+    end
+end
+
+
+""
+function constraint_mc_generation_delta(pm::_PMs.AbstractACPModel, nw::Int, id::Int, bus_id::Int; report::Bool=true)
+    vm = _PMs.var(pm, nw, :vm, bus_id)
+    va = _PMs.var(pm, nw, :va, bus_id)
+    pg = _PMs.var(pm, nw, :pg, id)
+    qg = _PMs.var(pm, nw, :qg, id)
+
+    crg = []
+    cig = []
+
+    nph = 3
+    prev = Dict(i=>(i+nph-2)%nph+1 for i in 1:nph)
+    next = Dict(i=>i%nph+1 for i in 1:nph)
+
+    vrg = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*cos(va[i])-vm[next[i]]*cos(vm[next[i]]))
+    vig = JuMP.@NLexpression(pm.model, [i in 1:nph], vm[i]*sin(va[i])-vm[next[i]]*sin(vm[next[i]]))
+
+    crg = JuMP.@NLexpression(pm.model, [i in 1:nph], (pg[i]*vrg[i]+qg[i]*vig[i])/(vrg[i]^2+vig[i]^2) )
+    cig = JuMP.@NLexpression(pm.model, [i in 1:nph], (pg[i]*vig[i]-qg[i]*vrg[i])/(vrg[i]^2+vig[i]^2) )
+
+    crg_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], cig[i]-cig[prev[i]])
+    cig_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], crg[i]-crg[prev[i]])
+
+    pg_bus = JuMP.@NLexpression(pm.model, [i in 1:nph],  vm[i]*cos(va[i])*crg_bus[i]+vm[i]*sin(va[i])*cig_bus[i])
+    qg_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], -vm[i]*cos(va[i])*cig_bus[i]+vm[i]*sin(va[i])*crg_bus[i])
+
+    _PMs.var(pm, nw, :pg_bus)[id] = pg_bus
+    _PMs.var(pm, nw, :qg_bus)[id] = qg_bus
+
+    if report
+        _PMs.sol(pm, nw, :gen, id)[:pg_bus] = pg_bus
+        _PMs.sol(pm, nw, :gen, id)[:qq_bus] = qg_bus
+    end
 end

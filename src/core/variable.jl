@@ -694,8 +694,10 @@ Depending on the load model, this can be a parameter or a NLexpression.
 These will be inserted into KCL.
 """
 function variable_mc_load(pm::_PMs.AbstractPowerModel; nw=pm.cnw, bounded::Bool=true, report::Bool=true)
-    pd = _PMs.var(pm, nw)[:pd] = Dict{Int, Any}()
-    qd = _PMs.var(pm, nw)[:qd] = Dict{Int, Any}()
+    _PMs.var(pm, nw)[:pd] = Dict{Int, Any}()
+    _PMs.var(pm, nw)[:qd] = Dict{Int, Any}()
+    _PMs.var(pm, nw)[:pd_bus] = Dict{Int, Any}()
+    _PMs.var(pm, nw)[:qd_bus] = Dict{Int, Any}()
 end
 
 
@@ -900,6 +902,7 @@ function variable_mc_generation(pm::_PMs.AbstractPowerModel; kwargs...)
     variable_mc_generation_reactive(pm; kwargs...)
 end
 
+
 function variable_mc_generation_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
@@ -917,8 +920,11 @@ function variable_mc_generation_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.c
         end
     end
 
+    _PMs.var(pm, nw)[:pg_bus] = Dict{Int, Any}()
+
     report && _PMs.sol_component_value(pm, nw, :gen, :pg, _PMs.ids(pm, nw, :gen), pg)
 end
+
 
 function variable_mc_generation_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
@@ -936,6 +942,8 @@ function variable_mc_generation_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm
             JuMP.set_upper_bound(qg[i][c], gen["qmax"][c])
         end
     end
+
+    _PMs.var(pm, nw)[:qg_bus] = Dict{Int, Any}()
 
     report && _PMs.sol_component_value(pm, nw, :gen, :qg, _PMs.ids(pm, nw, :gen), qg)
 end

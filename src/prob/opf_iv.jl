@@ -17,14 +17,25 @@ function build_mc_opf_iv(pm::_PMs.AbstractPowerModel)
     variable_mc_branch_current(pm)
     variable_mc_transformer_current(pm)
     variable_mc_generation(pm)
+    variable_mc_load(pm)
 
     # Constraints
     for i in _PMs.ids(pm, :ref_buses)
         constraint_mc_theta_ref(pm, i)
     end
 
+    # gens should be constrained before KCL, or Pd/Qd undefined
+    for id in _PMs.ids(pm, :gen)
+        constraint_mc_generation(pm, id)
+    end
+
+    # loads should be constrained before KCL, or Pd/Qd undefined
+    for id in _PMs.ids(pm, :load)
+        constraint_mc_load(pm, id)
+    end
+
     for i in _PMs.ids(pm, :bus)
-        constraint_mc_current_balance(pm, i)
+        constraint_mc_current_balance_load(pm, i)
     end
 
     for i in _PMs.ids(pm, :branch)
