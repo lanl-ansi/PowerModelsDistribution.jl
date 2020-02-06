@@ -541,3 +541,39 @@ function _make_full_matrix_variable(diag, lowertriangle, uppertriangle)
     # matrix = diagm(0 => diag) + _vec2ltri!(lowertriangle) + _vec2utri!(uppertriangle)
     return matrix
 end
+
+
+function _has_nl_expression(x)::Bool
+    if isa(x, JuMP.NonlinearExpression)
+        return true
+    elseif isa(x, Vector)
+        for i in x
+            if _has_nl_expression(i)
+                return true
+            end
+        end
+    elseif isa(x, Dict)
+        for i in values(x)
+            if _has_nl_expression(i)
+                return true
+            end
+        end
+    end
+    return false
+end
+
+
+macro smart_constraint(model, vars, expr)
+    esc(_smart_constraint(model, vars, exp))
+end
+
+
+function _smart_constraint(model, vars, expr)
+    quote
+        if _has_nl_expression($vars)
+            return JuMP.@NLconstraint($model, $expr)
+        else
+            return JuMP.@constraint($model, $expr)
+        end
+    end
+end

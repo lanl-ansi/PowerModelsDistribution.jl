@@ -247,6 +247,9 @@ function constraint_mc_current_balance_load(pm::_PMs.AbstractIVRModel, n::Int, i
     cnds = _PMs.conductor_ids(pm; nw=n)
     ncnds = length(cnds)
 
+    Gt = isempty(bus_gs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_gs))
+    Bt = isempty(bus_bs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_bs))
+
     for c in cnds
         JuMP.@NLconstraint(pm.model, sum(cr[a][c] for a in bus_arcs)
                                     + sum(crsw[a_sw][c] for a_sw in bus_arcs_sw)
@@ -256,15 +259,19 @@ function constraint_mc_current_balance_load(pm::_PMs.AbstractIVRModel, n::Int, i
                                     - sum(crs[s][c] for s in bus_storage)
                                     - sum(crd[d][c] for d in bus_loads)
                                     - sum(gs[c] for gs in values(bus_gs))*vr[c] + sum(bs[c] for bs in values(bus_bs))*vi[c]
+                                      sum(crg[g][c]         for g in bus_gens)
+                                    - sum(crs[s][c]         for s in bus_storage)
+                                    - sum(crd[d][c]         for d in bus_loads)
+                                    - sum( Gt[c,d]*vr[d] -Bt[c,d]*vi[d] for d in cnds) # shunts
                                     )
         JuMP.@NLconstraint(pm.model, sum(ci[a][c] for a in bus_arcs)
                                     + sum(cisw[a_sw][c] for a_sw in bus_arcs_sw)
                                     + sum(cit[a_trans][c] for a_trans in bus_arcs_trans)
                                     ==
-                                    sum(cig[g][c] for g in bus_gens)
-                                    - sum(cis[s][c] for s in bus_storage)
-                                    - sum(cid[d][c] for d in bus_loads)
-                                    - sum(gs[c] for gs in values(bus_gs))*vi[c] - sum(bs[c] for bs in values(bus_bs))*vr[c]
+                                      sum(cig[g][c]         for g in bus_gens)
+                                    - sum(cis[s][c]         for s in bus_storage)
+                                    - sum(cid[d][c]         for d in bus_loads)
+                                    - sum( Gt[c,d]*vi[d] +Bt[c,d]*vr[d] for d in cnds) # shunts
                                     )
     end
 end
