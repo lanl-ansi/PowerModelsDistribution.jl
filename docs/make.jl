@@ -2,7 +2,7 @@ using Documenter, PowerModelsDistribution
 
 makedocs(
     modules = [PowerModelsDistribution],
-    format = Documenter.HTML(analytics = ""),
+    format = Documenter.HTML(analytics = "", mathengine = Documenter.MathJax()),
     sitename = "PowerModelsDistribution",
     authors = "David Fobes, Carleton Coffrin, Frederik Geth, Sander Claeys, and contributors.",
     pages = [
