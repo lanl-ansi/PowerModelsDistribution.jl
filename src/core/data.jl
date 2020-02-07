@@ -564,16 +564,11 @@ end
 
 
 macro smart_constraint(model, vars, expr)
-    esc(_smart_constraint(model, vars, exp))
-end
-
-
-function _smart_constraint(model, vars, expr)
-    quote
-        if _has_nl_expression($vars)
-            return JuMP.@NLconstraint($model, $expr)
+    esc(quote
+        if PMD._has_nl_expression($vars)
+            JuMP.@NLconstraint($model, $expr)
         else
-            return JuMP.@constraint($model, $expr)
+            JuMP.@constraint($model, $expr)
         end
-    end
+    end)
 end
