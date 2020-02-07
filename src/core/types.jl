@@ -75,6 +75,9 @@ mutable struct SOCConicUBFKCLMXKimKojimaPowerModel <: SDPUBFKCLMXModel _PMs.@pm_
 "default Kim Kojima SOC unbalanced DistFlow constructor, with KCL MX form (nlp form)"
 mutable struct SOCNLPUBFKCLMXKimKojimaPowerModel <: SDPUBFKCLMXModel _PMs.@pm_fields end
 
+"default nonconvex unbalanced DistFlow constructor, with KCL MX form (nlp form)"
+mutable struct QPUBFKCLMXPowerModel <: SDPUBFKCLMXModel _PMs.@pm_fields end
+
 
 
 "default LP unbalanced DistFlow constructor"

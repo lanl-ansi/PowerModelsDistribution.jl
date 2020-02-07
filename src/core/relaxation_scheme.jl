@@ -117,8 +117,7 @@ function relaxation_psd_to_soc_complex_kim_kojima(model, Are, Aim, are, aim, alp
 
     lhs_re = cre'* are + cim'* aim
     lhs_im = cre'* aim - cim'* are
-    # @show rhs_1, rhs_2
-    # @show lhs_re, lhs_im
+
 
     JuMP.@constraint(model, rhs_2 >= 0)
     JuMP.@constraint(model, lhs_re'*lhs_re + lhs_im'*lhs_im <= rhs_1*rhs_2)
@@ -421,7 +420,7 @@ function matrix_product_real(model, Ar, Br, Cr, Ci)
     utridiag   = [(i,j) for i=1:n, j=1:n if i<=j] # upper triangle + diagonal elements of A
 
     for (a,b) in utridiag
-        JuMP.@constraint(model, sum(Cr[a,j]*Cr[b,j] + Ci[a,j]*Ci[b,j] for j in 1:m) == Ar[a,b] * sum(Br[j,j] for j in 1:m))
+            JuMP.@constraint(model, sum(Cr[a,j]*Cr[b,j] + Ci[a,j]*Ci[b,j] for j in 1:m) == Ar[a,b] * sum(Br[j,j] for j in 1:m))
     end
 end
 

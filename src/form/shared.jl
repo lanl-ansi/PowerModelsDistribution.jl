@@ -121,8 +121,10 @@ function constraint_mc_theta_ref(pm::_PMs.AbstractPolarModels, n::Int, d::Int, v
     nconductors = length(cnds)
 
     va = _PMs.var(pm, n, :va, d)
+    vm = _PMs.var(pm, n, :vm, d)
 
     JuMP.@constraint(pm.model, va .== va_ref)
+    JuMP.@constraint(pm.model, vm[1] .== vm[2:end])
 end
 
 

@@ -140,8 +140,8 @@ function variable_mc_branch_flow(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=p
     _PMs.var(pm, nw)[:Q] = Q
 
     for (id, _) in P
-        #JuMP.set_start_value.(LinearAlgebra.diag(P[id]), 0.5)
-        #JuMP.set_start_value.(LinearAlgebra.diag(Q[id]), 0.5)
+        JuMP.set_start_value.(P[id], 0.001)
+        JuMP.set_start_value.(Q[id], 0.001)
     end
 
     _PMs.var(pm, nw)[:p] = Dict([(id,diag(P[id])) for id in branch_arcs])
@@ -295,6 +295,10 @@ function variable_mc_generation_current(pm::AbstractUBFModels; nw::Int=pm.cnw, b
     # save references
     _PMs.var(pm, nw)[:CCgr] = CCgr
     _PMs.var(pm, nw)[:CCgi] = CCgi
+
+    for (id, CC) in CCgr
+        JuMP.set_start_value.(LinearAlgebra.diag(CCgr[id]), 0.01)
+    end
 
     report && _PMs.sol_component_value(pm, nw, :gen, :CCgr, _PMs.ids(pm, nw, :gen), CCgr)
     report && _PMs.sol_component_value(pm, nw, :gen, :CCgi, _PMs.ids(pm, nw, :gen), CCgi)
@@ -555,32 +559,7 @@ function constraint_mc_generation(pm::SOCConicUBFKCLMXKimKojimaPowerModel, gen_i
 end
 
 
-"""
-Link the current and power withdrawn by a generator at the bus through a PSD
-constraint. The rank-1 constraint is dropped in this formulation.
-"""
-function constraint_mc_generation(pm::SOCNLPUBFKCLMXKimKojimaPowerModel, gen_id::Int; nw::Int=pm.cnw)
-    Pg = _PMs.var(pm, nw, :Pg, gen_id)
-    Qg = _PMs.var(pm, nw, :Qg, gen_id)
-    bus_id = _PMs.ref(pm, nw, :gen, gen_id)["gen_bus"]
-    Wr = _PMs.var(pm, nw, :Wr, bus_id)
-    Wi = _PMs.var(pm, nw, :Wi, bus_id)
-    CCgr = _PMs.var(pm, nw, :CCgr, gen_id)
-    CCgi = _PMs.var(pm, nw, :CCgi, gen_id)
-    # constraint_SWL_psd(pm.model, Pg, Qg, Wr, Wi, CCgr, CCgi)
 
-    mat_real = [
-    Wr     Pg  ;
-    Pg'    CCgr
-    ]
-
-    mat_imag = [
-    Wi     Qg  ;
-    -Qg'    CCgi
-    ]
-    relaxation_psd_to_soc(pm.model, mat_real, mat_imag, complex=true)
-    relaxation_psd_to_soc_complex_kim_kojima_3x3(pm.model, CCgr, CCgi)
-end
 
 """
 Creates the constraints modelling the (relaxed) voltage-dependency of the
