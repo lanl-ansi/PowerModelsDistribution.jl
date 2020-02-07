@@ -1,5 +1,6 @@
 module PowerModelsDistribution
 
+    import JSON
     import JuMP
     import MathOptInterface
     import PowerModels
@@ -17,12 +18,10 @@ module PowerModelsDistribution
     include("core/types.jl")
     include("core/data.jl")
     include("core/ref.jl")
-    include("core/multiconductor.jl")
     include("core/variable.jl")
     include("core/variable_mx.jl")
     include("core/constraint.jl")
     include("core/objective.jl")
-    include("core/solution.jl")
 
     include("form/acp.jl")
     include("form/acr.jl")
@@ -39,8 +38,8 @@ module PowerModelsDistribution
     include("core/constraint_template.jl")
     include("core/relaxation_scheme.jl")
 
-    include("io/matlab.jl")
     include("io/common.jl")
+    include("io/json.jl")
     include("io/dss_parse.jl")
     include("io/dss_structs.jl")
     include("io/opendss.jl")
@@ -49,7 +48,6 @@ module PowerModelsDistribution
     include("prob/opf.jl")
     include("prob/opf_lm.jl")
     include("prob/opf_oltc.jl")
-    include("prob/opf_bctr.jl")
     include("prob/opf_bf.jl")
     include("prob/opf_bf_lm.jl")
     include("prob/pf.jl")

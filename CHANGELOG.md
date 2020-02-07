@@ -4,6 +4,18 @@ PowerModelsDistribution.jl Change Log
 ### staged
 - none
 
+### v0.8.0
+- Update solution building infrastructure (PMs #77) (breaking). The reported solution is now consistent with the variable space of the formulation.
+- Moved multi-conductor support from PowerModels into PowerModelsDistribution. (breaking)
+- PMs.var no longer takes conductor as an argument
+- Constraints have been (partially) re-written to use vectorized JuMP syntax where possible.
+- Bugfixes: generator on-off and storage on-off constraints were incorrect
+- Removal of SOCWRPowerModel
+- Drop support for matpower format
+- Possible regressions in MLD problem types
+- Simplified linear UBF formulations. LPLinUBFModel and LPdiagUBFModel are equivalent, and are replaced by LPUBFDiagModel. The more popular name 'LinDist3FlowModel' was added as an alias for LPUBFDiagModel.
+- The linearization by Gan & Low is also equivalent to LPUBFDiagModel, though it has redundudant variables and equations. LPfullUBFModel is now implemented as an alias of LPUBFDiagModel, 'LPUBFFullModel'.
+
 ### v0.7.0
 - Updates function names for PowerModels v0.14 compatibility (breaking) (#194)
 

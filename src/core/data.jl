@@ -26,19 +26,6 @@ function _roll(array::Array{T, 1}, idx::Int; right=true) where T <: Number
     return out
 end
 
-
-"Corrects the shunts from vectors to matrices after the call to PMs."
-function make_multiconductor!(mp_data, n_conductors::Int)
-    PowerModels.make_multiconductor!(mp_data, n_conductors)
-    # replace matrix shunts by matrices instead of vectors
-    for (_, br) in mp_data["branch"]
-        for key in ["b_fr", "b_to", "g_fr", "g_to"]
-            br[key] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>br[key].values))
-        end
-    end
-end
-
-
 "Replaces NaN values with zeros"
 _replace_nan(v) = map(x -> isnan(x) ? zero(x) : x, v)
 
@@ -151,17 +138,17 @@ argument vdmin_eps.
 The returned bounds are for the pairs 1->2, 2->3, 3->1
 """
 function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps=0.1)
-    vmax = bus["vmax"].values
-    vmin = bus["vmin"].values
+    vmax = bus["vmax"]
+    vmin = bus["vmin"]
     if haskey(bus, "vm_ll_max")
-        vdmax = bus["vm_ll_max"].values*sqrt(3)
+        vdmax = bus["vm_ll_max"]*sqrt(3)
     else
         # implied valid upper bound
         vdmax = [1 1 0; 0 1 1; 1 0 1]*vmax
         id = bus["index"]
     end
     if haskey(bus, "vm_ll_min")
-        vdmin = bus["vm_ll_min"].values*sqrt(3)
+        vdmin = bus["vm_ll_min"]*sqrt(3)
     else
         vdmin = ones(3)*vdmin_eps*sqrt(3)
         id = bus["index"]
@@ -221,8 +208,8 @@ for constant_power, constant_current and constant_impedance it returns the
 equivalent exponential model parameters.
 """
 function _load_expmodel_params(load::Dict, bus::Dict)
-    pd = load["pd"].values
-    qd = load["qd"].values
+    pd = load["pd"]
+    qd = load["qd"]
     ncnds = length(pd)
     if load["model"]=="constant_power"
         return (pd, zeros(ncnds), qd, zeros(ncnds))
@@ -235,9 +222,9 @@ function _load_expmodel_params(load::Dict, bus::Dict)
             alpha = ones(ncnds)*2
             beta  =ones(ncnds)*2
         elseif load["model"]=="exponential"
-            alpha = load["alpha"].values
+            alpha = load["alpha"]
             @assert(all(alpha.>=0))
-            beta = load["beta"].values
+            beta = load["beta"]
             @assert(all(beta.>=0))
         end
         # calculate proportionality constants
@@ -257,8 +244,8 @@ _calc_bus_vm_ll_bounds for delta loads.
 """
 function _calc_load_vbounds(load::Dict, bus::Dict)
     if load["conn"]=="wye"
-        vmin = bus["vmin"].values
-        vmax = bus["vmax"].values
+        vmin = bus["vmin"]
+        vmax = bus["vmax"]
     elseif load["conn"]=="delta"
         vmin, vmax = _calc_bus_vm_ll_bounds(bus)
     end
@@ -284,11 +271,11 @@ end
 Returns a current magnitude bound for the generators.
 """
 function _calc_gen_current_max(gen::Dict, bus::Dict)
-    pabsmax = max.(abs.(gen["pmin"].values), abs.(gen["pmax"].values))
-    qabsmax = max.(abs.(gen["qmax"].values), abs.(gen["qmax"].values))
+    pabsmax = max.(abs.(gen["pmin"]), abs.(gen["pmax"]))
+    qabsmax = max.(abs.(gen["qmax"]), abs.(gen["qmax"]))
     smax = sqrt.(pabsmax.^2 + qabsmax.^2)
 
-    vmin = bus["vmin"].values
+    vmin = bus["vmin"]
 
     return smax./vmin
 end
@@ -303,12 +290,12 @@ function _calc_branch_current_max_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
     bounds_fr = []
     bounds_to = []
     if haskey(branch, "c_rating_a")
-        push!(bounds_fr, branch["c_rating_a"].values)
-        push!(bounds_to, branch["c_rating_a"].values)
+        push!(bounds_fr, branch["c_rating_a"])
+        push!(bounds_to, branch["c_rating_a"])
     end
     if haskey(branch, "rate_a")
-        push!(bounds_fr, branch["rate_a"].values./bus_fr["vmin"].values)
-        push!(bounds_to, branch["rate_a"].values./bus_to["vmin"].values)
+        push!(bounds_fr, branch["rate_a"]./bus_fr["vmin"])
+        push!(bounds_to, branch["rate_a"]./bus_to["vmin"])
     end
     @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
     return min.(bounds_fr...), min.(bounds_to...)
@@ -324,12 +311,12 @@ function _calc_branch_power_ub_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
     bounds_fr = []
     bounds_to = []
     if haskey(branch, "c_rating_a")
-        push!(bounds_fr, branch["c_rating_a"].values.*bus_fr["vmax"].values)
-        push!(bounds_to, branch["c_rating_a"].values.*bus_to["vmax"].values)
+        push!(bounds_fr, branch["c_rating_a"].*bus_fr["vmax"])
+        push!(bounds_to, branch["c_rating_a"].*bus_to["vmax"])
     end
     if haskey(branch, "rate_a")
-        push!(bounds_fr, branch["rate_a"].values)
-        push!(bounds_to, branch["rate_a"].values)
+        push!(bounds_fr, branch["rate_a"])
+        push!(bounds_to, branch["rate_a"])
     end
     @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
     return min.(bounds_fr...), min.(bounds_to...)
@@ -340,11 +327,11 @@ end
 Returns a valid series current magnitude bound for a branch.
 """
 function _calc_branch_series_current_ub(branch::Dict, bus_fr::Dict, bus_to::Dict)
-    vmin_fr = bus_fr["vmin"].values
-    vmin_to = bus_to["vmin"].values
+    vmin_fr = bus_fr["vmin"]
+    vmin_to = bus_to["vmin"]
 
-    vmax_fr = bus_fr["vmax"].values
-    vmax_to = bus_to["vmax"].values
+    vmax_fr = bus_fr["vmax"]
+    vmax_to = bus_to["vmax"]
 
     # assumed to be matrices already
     # temportary fix by shunts_diag2mat!
@@ -353,11 +340,186 @@ function _calc_branch_series_current_ub(branch::Dict, bus_fr::Dict, bus_to::Dict
     c_max_fr_tot, c_max_to_tot = _calc_branch_current_max_frto(branch, bus_fr, bus_to)
 
     # get valid bounds on shunt current
-    y_fr = branch["g_fr"].values + im* branch["b_fr"].values
-    y_to = branch["g_to"].values + im* branch["b_to"].values
+    y_fr = branch["g_fr"] + im* branch["b_fr"]
+    y_to = branch["g_to"] + im* branch["b_to"]
     c_max_fr_sh = abs.(y_fr)*vmax_fr
     c_max_to_sh = abs.(y_to)*vmax_to
 
     # now select element-wise lowest valid bound between fr and to
     return min.(c_max_fr_sh.+c_max_fr_tot, c_max_to_sh.+c_max_to_tot)
+end
+
+
+# from PowerModels
+"Transforms single-conductor network data into multi-conductor data"
+function make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
+    if InfrastructureModels.ismultinetwork(data)
+        for (i,nw_data) in data["nw"]
+            _make_multiconductor!(nw_data, conductors)
+        end
+    else
+         _make_multiconductor!(data, conductors)
+    end
+end
+
+
+"field names that should not be multi-conductor values"
+const _conductorless = Set(["index", "bus_i", "bus_type", "status", "gen_status",
+    "br_status", "gen_bus", "load_bus", "shunt_bus", "storage_bus", "f_bus", "t_bus",
+    "transformer", "area", "zone", "base_kv", "energy", "energy_rating", "charge_rating",
+    "discharge_rating", "charge_efficiency", "discharge_efficiency", "p_loss", "q_loss",
+    "model", "ncost", "cost", "startup", "shutdown", "name", "source_id", "active_phases"])
+
+"field names that should become multi-conductor matrix not arrays"
+const _conductor_matrix = Set(["br_r", "br_x", "b_fr", "b_to", "g_fr", "g_to"])
+
+
+""
+function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
+    if haskey(data, "conductors")
+        Memento.warn(_LOGGER, "skipping network that is already multiconductor")
+        return
+    end
+
+    data["conductors"] = conductors
+
+    for (key, item) in data
+        if isa(item, Dict{String,Any})
+            for (item_id, item_data) in item
+                if isa(item_data, Dict{String,Any})
+                    item_ref_data = Dict{String,Any}()
+                    for (param, value) in item_data
+                        if param in _conductorless
+                            item_ref_data[param] = value
+                        else
+                            if param in _conductor_matrix
+                                item_ref_data[param] = LinearAlgebra.diagm(0=>fill(value, conductors))
+                            else
+                                item_ref_data[param] = fill(value, conductors)
+                            end
+                        end
+                    end
+                    item[item_id] = item_ref_data
+                end
+            end
+        else
+            #root non-dict items
+        end
+    end
+end
+
+
+"https://stackoverflow.com/questions/39039553/lower-triangular-matrix-in-julia"
+function _vec2utri!(v::Vector{T}) where T
+    d = length(v)
+    n = Int((sqrt(8d+1)+1)/2)
+    n*(n-1)/2 == d || error("vec2utri: length of vector is not triangular")
+    [ i<j ? v[Int((j-1)*(j-2)/2)+i] : 0 for i=1:n, j=1:n ]
+end
+
+
+""
+function _vec2ltri!(v::Vector{T}) where T
+    _vec2utri!(v)'
+end
+
+
+""
+function _mat2utrivec!(m::Union{Matrix{T}, LinearAlgebra.Symmetric{T}}) where T
+    @assert size(m,1) == size(m,2)
+    n = size(m,1)
+    [m[i,j] for i=1:n, j=1:n if i < j]
+end
+
+
+""
+function _mat2ltrivec!(m::Union{Matrix{T}, LinearAlgebra.Symmetric{T}}) where T
+    @assert size(m,1) == size(m,2)
+    n = size(m,1)
+    [m[j,i] for i=1:n, j=1:n if i < j]
+end
+
+
+""
+function _make_hermitian_matrix_variable(diag, lowertrianglereal, lowertriangleimag)
+    #TODO clean up
+    matrixreal = []
+    if length(diag) == 3
+        matrixreal = [
+        diag[1]                 lowertrianglereal[1]    lowertrianglereal[2];
+        lowertrianglereal[1]    diag[2]                 lowertrianglereal[3];
+        lowertrianglereal[2]    lowertrianglereal[3]    diag[3]
+        ]
+    elseif length(diag) == 4
+        matrixreal = [
+        diag[1]                 lowertrianglereal[1]    lowertrianglereal[2]    lowertrianglereal[4];
+        lowertrianglereal[1]    diag[2]                 lowertrianglereal[3]    lowertrianglereal[5];
+        lowertrianglereal[2]    lowertrianglereal[3]    diag[3]                 lowertrianglereal[6];
+        lowertrianglereal[4]    lowertrianglereal[5]    lowertrianglereal[6]    diag[4]
+        ]
+    elseif length(diag) == 5
+        matrixreal = [
+        diag[1]                 lowertrianglereal[1]    lowertrianglereal[2]    lowertrianglereal[4]    lowertrianglereal[7];
+        lowertrianglereal[1]    diag[2]                 lowertrianglereal[3]    lowertrianglereal[5]    lowertrianglereal[8];
+        lowertrianglereal[2]    lowertrianglereal[3]    diag[3]                 lowertrianglereal[6]    lowertrianglereal[9];
+        lowertrianglereal[4]    lowertrianglereal[5]    lowertrianglereal[6]    diag[4]                 lowertrianglereal[10];
+        lowertrianglereal[7]    lowertrianglereal[8]    lowertrianglereal[9]    lowertrianglereal[10]    diag[5]
+        ]
+    end
+
+    matriximag = []
+    if length(diag) == 3
+        matriximag = [
+        0                       -lowertriangleimag[1]   -lowertriangleimag[2];
+        lowertriangleimag[1]    0                       -lowertriangleimag[3];
+        lowertriangleimag[2]    lowertriangleimag[3]    0
+        ]
+    elseif length(diag) == 4
+        matriximag = [
+        0                       -lowertriangleimag[1]   -lowertriangleimag[2]   -lowertriangleimag[4];
+        lowertriangleimag[1]    0                       -lowertriangleimag[3]   -lowertriangleimag[5];
+        lowertriangleimag[2]    lowertriangleimag[3]    0                       -lowertriangleimag[6];
+        lowertriangleimag[4]    lowertriangleimag[5]    lowertriangleimag[6]    0
+        ]
+    elseif length(diag) == 5
+        matriximag = [
+        0                       -lowertriangleimag[1]   -lowertriangleimag[2]   -lowertriangleimag[4]   -lowertriangleimag[7];
+        lowertriangleimag[1]    0                       -lowertriangleimag[3]   -lowertriangleimag[5]   -lowertriangleimag[8];
+        lowertriangleimag[2]    lowertriangleimag[3]    0                       -lowertriangleimag[6]   -lowertriangleimag[9];
+        lowertriangleimag[4]    lowertriangleimag[5]    lowertriangleimag[6]    0                       -lowertriangleimag[10];
+        lowertriangleimag[7]    lowertriangleimag[8]    lowertriangleimag[9]    lowertriangleimag[10]    0
+        ]
+    end
+    return matrixreal, matriximag
+end
+
+
+""
+function _make_full_matrix_variable(diag, lowertriangle, uppertriangle)
+    #TODO clean up
+    matrix = []
+    if length(diag) == 3
+        matrix = [
+        diag[1]             uppertriangle[1]    uppertriangle[2];
+        lowertriangle[1]    diag[2]             uppertriangle[3];
+        lowertriangle[2]    lowertriangle[3]    diag[3]
+        ]
+    elseif length(diag) == 4
+        matrix = [
+        diag[1]             uppertriangle[1]    uppertriangle[2]    uppertriangle[4];
+        lowertriangle[1]    diag[2]             uppertriangle[3]    uppertriangle[5];
+        lowertriangle[2]    lowertriangle[3]    diag[3]             uppertriangle[6];
+        lowertriangle[4]    lowertriangle[5]    lowertriangle[6]    diag[4]
+        ]
+    elseif length(diag) == 5
+        matrix = [
+        diag[1]             uppertriangle[1]    uppertriangle[2]    uppertriangle[4]    uppertriangle[7];
+        lowertriangle[1]    diag[2]             uppertriangle[3]    uppertriangle[5]    uppertriangle[8];
+        lowertriangle[2]    lowertriangle[3]    diag[3]             uppertriangle[6]    uppertriangle[9];
+        lowertriangle[4]    lowertriangle[5]    lowertriangle[6]    diag[4]             uppertriangle[10]
+        lowertriangle[7]    lowertriangle[8]    lowertriangle[9]    lowertriangle[10]    diag[5]
+        ]
+    end
+    # matrix = diagm(0 => diag) + _vec2ltri!(lowertriangle) + _vec2utri!(uppertriangle)
+    return matrix
 end

@@ -28,34 +28,32 @@ pmd_path = joinpath(dirname(pathof(PowerModelsDistribution)), "..")
 
 ipopt_solver = with_optimizer(Ipopt.Optimizer, tol=1e-6, print_level=0)
 cbc_solver = with_optimizer(Cbc.Optimizer, logLevel=0)
-scs_solver = with_optimizer(SCS.Optimizer, max_iters=20000, eps=1e-5, alpha=1.8, verbose=0)
+scs_solver = with_optimizer(SCS.Optimizer, max_iters=20000, eps=1e-5, alpha=0.4, verbose=0)
 juniper_solver = with_optimizer(Juniper.Optimizer, nl_solver=with_optimizer(Ipopt.Optimizer, tol=1e-4, print_level=0), mip_solver=cbc_solver, log_levels=[])
 
-include("common.jl")
+include("common.jl") # all passing
 
 @testset "PowerModelsDistribution" begin
 
-    include("matlab.jl")
+    include("opendss.jl") # all passing
 
-    include("opendss.jl")
+    include("data.jl") # all passing
 
-    include("data.jl")
+    include("pf.jl") # all passing
 
-    include("pf.jl")
+    include("opf.jl") # all passing
 
-    include("opf.jl")
+    include("opf_bf.jl") # all passing
 
-    include("opf_bf.jl")
+    include("storage.jl") # all passing
 
-    include("test.jl")
+    include("debug.jl") # all passing
 
-    include("debug.jl")
+    include("multinetwork.jl") # all passing
 
-    include("multinetwork.jl")
+    include("transformer.jl") # all passing
 
-    include("transformer.jl")
+    include("loadmodels.jl") # all passing
 
-    include("loadmodels.jl")
-
-    include("mld.jl")
+    include("mld.jl") # all passing
 end

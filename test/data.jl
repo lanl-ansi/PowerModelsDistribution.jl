@@ -1,14 +1,25 @@
 @info "running misc data handling tests"
 
-@testset "test data handling functions" begin
-    @testset "test idempotent units transformations - 5-bus case" begin
-        data = PMD.parse_file("../test/data/matlab/case5_i_r_b.m")
-        data_base = deepcopy(data)
+@testset "test impedance to admittance" begin
+    branch = Dict{String, Any}()
+    branch["br_r"] = [1 2;3 4]
+    branch["br_x"] = [1 2;3 4]
+    g,b  = PMs.calc_branch_y(branch)
 
-        PMs.make_mixed_units!(data)
-        PMs.make_per_unit!(data)
-        @test data == data_base
-    end
+    @test typeof(g) <: Matrix
+    @test isapprox(g, [-1.0 0.5; 0.75 -0.25])
+    @test isapprox(b, [1.0 -0.5; -0.75 0.25])
+
+    branch["br_r"] = [1 2 0;3 4 0; 0 0 0]
+    branch["br_x"] = [1 2 0;3 4 0; 0 0 0]
+    g,b  = PMs.calc_branch_y(branch)
+
+    @test typeof(g) <: Matrix
+    @test isapprox(g, [-1.0 0.5 0; 0.75 -0.25 0; 0 0 0])
+    @test isapprox(b, [1.0 -0.5 0; -0.75 0.25 0; 0 0 0])
+end
+
+@testset "test data handling functions" begin
 
     @testset "angle wrapper functions" begin
         wrappedradians = PMD._wrap_to_pi([0, pi/2, pi, 3pi/2, 2pi])
@@ -61,11 +72,9 @@
     @testset "node counting functions" begin
         dss = PMD.parse_dss("../test/data/opendss/case5_phase_drop.dss")
         pmd = PMD.parse_file("../test/data/opendss/case5_phase_drop.dss")
-        matlab = PMD.parse_file("../test/data/matlab/case5_i_r_b.m")
 
         @test count_nodes(dss) == 7
         @test count_nodes(dss) == count_nodes(pmd)
-        @test count_nodes(matlab) == 15
 
         dss = PMD.parse_dss("../test/data/opendss/ut_trans_2w_yy.dss")
         @test count_nodes(dss) == 9
