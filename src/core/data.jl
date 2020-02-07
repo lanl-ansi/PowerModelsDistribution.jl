@@ -565,7 +565,7 @@ end
 
 macro smart_constraint(model, vars, expr)
     esc(quote
-        if PMD._has_nl_expression($vars)
+        if _has_nl_expression($vars)
             JuMP.@NLconstraint($model, $expr)
         else
             JuMP.@constraint($model, $expr)
