@@ -9,7 +9,7 @@ function variable_mc_voltage(pm::_PMs.AbstractACPModel; nw=pm.cnw, kwargs...)
 
     ncnds = length(_PMs.conductor_ids(pm, nw))
 
-    bus_t1 = [bus for (_, bus) in _PMs.ref(pm, nw, :bus) if bus["bus_type"]==1]
+    bus_t1 = [bus for (_, bus) in _PMs.ref(pm, nw, :bus) if bus["bus_type"]==3]
     if length(bus_t1)>0
         theta = bus_t1[1]["va"]
     else
