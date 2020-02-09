@@ -1,12 +1,12 @@
 using PowerModelsDistribution
-const PMD = PowerModelsDistribution
+#const PMD = PowerModelsDistribution
 
 import Memento
 
 import InfrastructureModels
 
 import PowerModels
-const PMs = PowerModels
+#const PMs = PowerModels
 
 # Suppress warnings during testing.
 const TESTLOG = Memento.getlogger(PowerModels)
@@ -41,9 +41,13 @@ include("common.jl") # all passing
 
     include("pf.jl") # all passing
 
+    include("pf_iv.jl") # all passing
+
     include("opf.jl") # all passing
 
     include("opf_bf.jl") # all passing
+
+    include("opf_iv.jl") # all passing
 
     include("storage.jl") # all passing
 
@@ -54,6 +58,10 @@ include("common.jl") # all passing
     include("transformer.jl") # all passing
 
     include("loadmodels.jl") # all passing
+
+    include("delta_gens.jl") # all passing
+
+    include("shunt.jl") # all passing
 
     include("mld.jl") # all passing
 end

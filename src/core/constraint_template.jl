@@ -46,23 +46,6 @@ function constraint_mc_ohms_yt_from(pm::_PMs.AbstractPowerModel, i::Int; nw::Int
     b_fr = branch["b_fr"]
     tm = branch["tap"]
 
-    #TODO why was this not required before?
-    if length(size(g_fr)) == 1
-        tmp = fill(0.0, length(g_fr), length(g_fr))
-        for c in 1:length(g_fr)
-            tmp[c,c] = g_fr[c]
-        end
-        g_fr = tmp
-    end
-
-    if length(size(b_fr)) == 1
-        tmp = fill(0.0, length(b_fr), length(b_fr))
-        for c in 1:length(b_fr)
-            tmp[c,c] = b_fr[c]
-        end
-        b_fr = tmp
-    end
-
     constraint_mc_ohms_yt_from(pm, nw, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
 end
 
@@ -80,23 +63,6 @@ function constraint_mc_ohms_yt_to(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=p
     g_to = branch["g_to"]
     b_to = branch["b_to"]
     tm = branch["tap"]
-
-    #TODO why was this not required before?
-    if length(size(g_to)) == 1
-        tmp = fill(0.0, length(g_to), length(g_to))
-        for c in 1:length(g_to)
-            tmp[c,c] = g_to[c]
-        end
-        g_to = tmp
-    end
-
-    if length(size(b_to)) == 1
-        tmp = fill(0.0, length(b_to), length(b_to))
-        for c in 1:length(b_to)
-            tmp[c,c] = b_to[c]
-        end
-        b_to = tmp
-    end
 
     constraint_mc_ohms_yt_to(pm, nw, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
 end
@@ -310,74 +276,47 @@ sn_a = v_a.conj(i_a)
     = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 So for delta, sn is constrained indirectly.
 """
-function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
+function constraint_mc_load(pm::_PMs.AbstractACRModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
     load = _PMs.ref(pm, nw, :load, id)
     bus = _PMs.ref(pm, nw,:bus, load["load_bus"])
-    model = load["model"]
-    conn = _PMs.ref(pm, nw, :load, id, "conn")
-    @assert(conn in ["delta", "wye"])
 
-    if model=="constant_power"
-        pd = load["pd"]
-        qd = load["qd"]
+    conn = haskey(load, "conn") ? load["conn"] : "wye"
 
-        if conn=="wye"
-            constraint_mc_load_power_wye(pm, nw, id, pd, qd)
-        elseif conn=="delta"
-            @assert(_PMs.ref(pm, 0, :conductors)==3)
-            constraint_mc_load_power_delta(pm, nw, id, load["load_bus"], pd, qd)
-        end
+    a, alpha, b, beta = _load_expmodel_params(load, bus)
 
-    elseif model=="constant_current"
-        vnom_kv = load["vnom_kv"]
-        vbase_kv_LL = _PMs.ref(pm, nw, :bus, load["load_bus"])["base_kv"]
-        vbase_kv_LN = vbase_kv_LL/sqrt(3)
-
-        pd = load["pd"]
-        qd = load["qd"]
-        cp = pd/(vnom_kv/vbase_kv_LN)
-        cq = qd/(vnom_kv/vbase_kv_LN)
-
-        if conn=="wye"
-            constraint_mc_load_current_wye(pm, nw, id, load["load_bus"], cp, cq)
-        elseif conn=="delta"
-            @assert(_PMs.ref(pm, 0, :conductors)==3)
-            constraint_mc_load_current_delta(pm, nw, id, load["load_bus"], cp, cq)
-        end
-
-    elseif model=="constant_impedance"
-        vnom_kv = load["vnom_kv"]
-        vbase_kv_LL = _PMs.ref(pm, nw, :bus, load["load_bus"])["base_kv"]
-        vbase_kv_LN = vbase_kv_LL/sqrt(3)
-
-        pd = load["pd"]
-        qd = load["qd"]
-        cp = pd/(vnom_kv/vbase_kv_LN)^2
-        cq = qd/(vnom_kv/vbase_kv_LN)^2
-
-        if conn=="wye"
-            constraint_mc_load_impedance_wye(pm, nw, id, load["load_bus"], cp, cq)
-        elseif conn=="delta"
-            @assert(_PMs.ref(pm, 0, :conductors)==3)
-            constraint_mc_load_impedance_delta(pm, nw, id, load["load_bus"], cp, cq)
-        end
-    elseif model=="exponential"
-        a, alpha, b, beta = _load_expmodel_params(load, bus)
-
-        if conn=="wye"
-            constraint_mc_load_exponential_wye(pm, nw, id, load["load_bus"], a, alpha, b, beta)
-        elseif conn=="delta"
-            @assert(_PMs.ref(pm, 0, :conductors)==3)
-            constraint_mc_load_exponential_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
-        end
-
+    if conn=="wye"
+        constraint_mc_load_wye(pm, nw, id, load["load_bus"], a, alpha, b, beta)
     else
-        Memento.@error(_LOGGER, "Unknown model $model for load $id.")
+        constraint_mc_load_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
     end
+end
 
-    if report
-        _PMs.sol(pm, nw, :load, id)[:pd] = _PMs.var(pm, nw, :pd, id)
-        _PMs.sol(pm, nw, :load, id)[:qd] = _PMs.var(pm, nw, :qd, id)
+
+"""
+DELTA
+When connected in delta, the load power gives the reference in the delta reference
+frame. This means
+sd_1 = v_ab.conj(i_ab) = (v_a-v_b).conj(i_ab)
+We can relate this to the per-phase power by
+sn_a = v_a.conj(i_a)
+    = v_a.conj(i_ab-i_ca)
+    = v_a.conj(conj(s_ab/v_ab) - conj(s_ca/v_ca))
+    = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
+So for delta, sn is constrained indirectly.
+"""
+function constraint_mc_generation(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true, bounded::Bool=true)
+    generator = _PMs.ref(pm, nw, :gen, id)
+    bus = _PMs.ref(pm, nw,:bus, generator["gen_bus"])
+
+    pmin = generator["pmin"]
+    pmax = generator["pmax"]
+    qmin = generator["qmin"]
+    qmax = generator["qmax"]
+
+    if generator["conn"]=="wye"
+        constraint_mc_generation_wye(pm, nw, id, bus["index"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
+    else
+        constraint_mc_generation_delta(pm, nw, id, bus["index"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
     end
 end
 
@@ -542,4 +481,81 @@ function constraint_mc_storage_on_off(pm::_PMs.AbstractPowerModel, i::Int; nw::I
     end
 
     constraint_mc_storage_on_off(pm, nw, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
+end
+
+"defines limits on active power output of a generator where bounds can't be used"
+function constraint_mc_generation_active_power_limits(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    gen = _PMs.ref(pm, nw, :gen, i)
+    bus = gen["gen_bus"]
+    constraint_mc_generation_active_power_limits(pm, nw, i, bus, gen["pmax"], gen["pmin"])
+end
+
+"defines limits on reactive power output of a generator where bounds can't be used"
+function constraint_mc_generation_reactive_power_limits(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    gen = _PMs.ref(pm, nw, :gen, i)
+    bus = gen["gen_bus"]
+    constraint_mc_generation_reactive_power_limits(pm, nw, i, bus, gen["qmax"], gen["qmin"])
+end
+""
+function constraint_mc_current_balance_load(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    bus = _PMs.ref(pm, nw, :bus, i)
+    bus_arcs = _PMs.ref(pm, nw, :bus_arcs, i)
+    bus_arcs_sw = _PMs.ref(pm, nw, :bus_arcs_sw, i)
+    bus_arcs_trans = _PMs.ref(pm, nw, :bus_arcs_trans, i)
+    bus_gens = _PMs.ref(pm, nw, :bus_gens, i)
+    bus_storage = _PMs.ref(pm, nw, :bus_storage, i)
+    bus_loads = _PMs.ref(pm, nw, :bus_loads, i)
+    bus_shunts = _PMs.ref(pm, nw, :bus_shunts, i)
+
+    bus_gs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "gs") for k in bus_shunts)
+    bus_bs = Dict(k => _PMs.ref(pm, nw, :shunt, k, "bs") for k in bus_shunts)
+
+    constraint_mc_current_balance_load(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+end
+
+
+""
+function constraint_mc_current_from(pm::_PMs.AbstractIVRModel, i::Int; nw::Int=pm.cnw)
+    branch = _PMs.ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+
+    tr, ti = _PMs.calc_branch_t(branch)
+    g_fr = branch["g_fr"]
+    b_fr = branch["b_fr"]
+    tm = branch["tap"]
+
+    constraint_mc_current_from(pm, nw, f_bus, f_idx, g_fr, b_fr, tr, ti, tm)
+end
+
+""
+function constraint_mc_current_to(pm::_PMs.AbstractIVRModel, i::Int; nw::Int=pm.cnw)
+    branch = _PMs.ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+    t_idx = (i, t_bus, f_bus)
+
+    tr, ti = _PMs.calc_branch_t(branch)
+    g_to = branch["g_to"]
+    b_to = branch["b_to"]
+    tm = branch["tap"]
+
+    constraint_mc_current_to(pm, nw, t_bus, f_idx, t_idx, g_to, b_to)
+end
+
+""
+function constraint_mc_voltage_drop(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    branch = _PMs.ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+
+    tr, ti = _PMs.calc_branch_t(branch)
+    r = branch["br_r"]
+    x = branch["br_x"]
+    tm = branch["tap"]
+
+    constraint_mc_voltage_drop(pm, nw, i, f_bus, t_bus, f_idx, r, x, tr, ti, tm)
 end

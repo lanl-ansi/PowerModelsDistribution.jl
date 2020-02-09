@@ -2,7 +2,12 @@ PowerModelsDistribution.jl Change Log
 ===================================
 
 ### staged
-- none
+- The pf and opf problem specifications now contain delta connected, and voltage-dependent load models by default; pf_lm and opf_lm were removed.
+- Generators can now also be connected in both delta and wye.
+- The delta/voltage-dependent loads in the ACP power models were refactored to be consistent with the new ones.
+- The non-linear formulations now support matrix shunts.
+- A current-voltage (IVR) formulation was added, and supports all features that ACP supports as well.
+- Several power balance constraints now require NLconstraints because the load power/current can contain a NLexpression. This might be optimized further in the future if it leads to performance issues.
 
 ### v0.8.0
 - Update solution building infrastructure (PMs #77) (breaking). The reported solution is now consistent with the variable space of the formulation.

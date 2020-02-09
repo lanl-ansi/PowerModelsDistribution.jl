@@ -1,4 +1,5 @@
 ### generic features that apply to all active-power-only (apo) approximations
+import LinearAlgebra: diag
 
 "apo models ignore reactive power flows"
 function variable_mc_generation_reactive(pm::_PMs.AbstractActivePowerModel; kwargs...)
@@ -62,12 +63,13 @@ end
 
 
 "power balanace constraint with line shunts and transformers, active power only"
-function constraint_mc_power_balance(pm::_PMs.AbstractActivePowerModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_power_balance_load(pm::_PMs.AbstractActivePowerModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
     p    = get(_PMs.var(pm, nw),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
-    pg   = get(_PMs.var(pm, nw),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
+    pg   = get(_PMs.var(pm, nw),   :pg_bus, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
     ps   = get(_PMs.var(pm, nw),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
     psw  = get(_PMs.var(pm, nw),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
     pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    pd   = get(_PMs.var(pm, nw),   :pd_bus, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
 
     cstr_p = JuMP.@constraint(pm.model,
         sum(p[a] for a in bus_arcs)
@@ -76,8 +78,8 @@ function constraint_mc_power_balance(pm::_PMs.AbstractActivePowerModel, nw::Int,
         .==
         sum(pg[g] for g in bus_gens)
         - sum(ps[s] for s in bus_storage)
-        - sum(pd for pd in values(bus_pd))
-        - sum(gs for gs in values(bus_gs))*1.0^2
+        - sum(pd[d] for d in bus_loads)
+        - sum(diag(gs) for gs in values(bus_gs))*1.0^2
     )
     # omit reactive constraint
     cnds = _PMs.conductor_ids(pm, nw)
@@ -323,3 +325,29 @@ end
 #     add_setpoint!(sol, pm, "switch", "psw", :psw, var_key = (idx,item) -> (idx, item["f_bus"], item["t_bus"]))
 #     add_setpoint_fixed!(sol, pm, "switch", "qsw")
 # end
+
+
+
+"""
+Only support wye-connected generators.
+"""
+function constraint_mc_generation(pm::_PMs.AbstractActivePowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
+    _PMs.var(pm, nw, :pg_bus)[id] = _PMs.var(pm, nw, :pg, id)
+end
+
+
+"Only support wye-connected, constant-power loads."
+function constraint_mc_load(pm::_PMs.AbstractActivePowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
+    load = _PMs.ref(pm, nw, :load, id)
+
+    pd = load["pd"]
+
+    _PMs.var(pm, nw, :pd)[id] = pd
+    _PMs.var(pm, nw, :pd_bus)[id] = _PMs.var(pm, nw, :pd, id)
+
+
+    if report
+        _PMs.sol(pm, nw, :load, id)[:pd] = _PMs.var(pm, nw, :pd, id)
+        _PMs.sol(pm, nw, :load, id)[:pd_bus] = _PMs.var(pm, nw, :pd_bus, id)
+    end
+end

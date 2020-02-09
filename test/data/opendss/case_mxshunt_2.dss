@@ -1,0 +1,32 @@
+Clear
+
+Set DefaultBaseFreq=50
+
+New Circuit.3Bus_example
+!  define a really stiff source
+~ basekv=0.4   pu=1.0  MVAsc1=1e12  MVAsc3=1e12 basemva=1 frequency=50
+
+!Define Linecodes
+
+
+New linecode.LINECODE1 nphases=3 basefreq=50  ! ohms per 5 mile
+~ rmatrix = (0.45 | 0.72 0.34 |  0.77 0.77 0.92)
+~ xmatrix = (0.83 | 0.09 0.40 | 0.97 0.63 0.52)
+~ cmatrix = (1.8e5 | 8.7e5 5.5e5 | 9.4e5 2.8e5 6.7e5) ! small capacitance
+
+!Define lines
+
+New Line.LINE1  bus1=sourcebus.1.2.3.0  loadbus.1.2.3.0  linecode = LINECODE1   length=0.5
+!Loads - single phase
+
+! This will parse to a matrix shunt
+New Capacitor.dcap bus1=loadbus.1.2.3 phases=3 conn=delta kv=0.4 kvar=30
+
+! single-phase loads
+
+Set voltagebases=[0.4]
+Set tolerance=0.000001
+Set defaultbasefreq=50
+Calcvoltagebases
+
+Solve
