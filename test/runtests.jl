@@ -1,12 +1,12 @@
 using PowerModelsDistribution
-#const PMD = PowerModelsDistribution
+const PMD = PowerModelsDistribution
 
 import Memento
 
 import InfrastructureModels
 
 import PowerModels
-#const PMs = PowerModels
+const PMs = PowerModels
 
 # Suppress warnings during testing.
 const TESTLOG = Memento.getlogger(PowerModels)

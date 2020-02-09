@@ -88,7 +88,7 @@ end
 
 "KCL for load shed problem with transformers (AbstractWForms)"
 function constraint_mc_power_balance_shed(pm::_PMs.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
-    w    = _PMs.var(pm, nw, :w, i)
+    w        = _PMs.var(pm, nw, :w, i)
     p        = get(_PMs.var(pm, nw),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
     q        = get(_PMs.var(pm, nw),    :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
     pg       = get(_PMs.var(pm, nw),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
@@ -112,7 +112,7 @@ function constraint_mc_power_balance_shed(pm::_PMs.AbstractWModels, nw::Int, i, 
         sum(pg[g] for g in bus_gens)
         - sum(ps[s] for s in bus_storage)
         - sum(pd .*z_demand[n] for (n,pd) in bus_pd)
-        - sum(z_shunt[n].*diag(Wr*Gt'+Wi*Bt') for (n,Gs,Bs) in bus_GsBs)
+        - sum(z_shunt[n].*(w.*diag(Gt')) for (n,Gs,Bs) in bus_GsBs)
     )
     cstr_q = JuMP.@constraint(pm.model,
         sum(q[a] for a in bus_arcs)
@@ -122,8 +122,7 @@ function constraint_mc_power_balance_shed(pm::_PMs.AbstractWModels, nw::Int, i, 
         sum(qg[g] for g in bus_gens)
         - sum(qs[s] for s in bus_storage)
         - sum(qd.*z_demand[n] for (n,qd) in bus_qd)
-        - diag(-Wr*Bt'+Wi*Gt')
-        - sum(z_shunt[n].*diag(-Wr*Bt'+Wi*Gt') for (n,Gs,Bs) in bus_GsBs)
+        - sum(z_shunt[n].*(-w.*diag(Bt')) for (n,Gs,Bs) in bus_GsBs)
     )
 
     if _PMs.report_duals(pm)

@@ -49,8 +49,8 @@
                 qd_bus = sol_1["solution"]["load"][load]["qd"]
                 pg_bus = sol_2["solution"]["gen"][gen]["pg"]
                 qg_bus = sol_2["solution"]["gen"][gen]["qg"]
-                @test(isapprox(pd_bus, -pg_bus))
-                @test(isapprox(qd_bus, -qg_bus))
+                @test(isapprox(pd_bus, -pg_bus, atol=1E-5))
+                @test(isapprox(qd_bus, -qg_bus, atol=1E-5))
             end
         end
     end
