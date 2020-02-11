@@ -345,7 +345,9 @@ function _dss2pmd_shunt!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         end
         # 'kvar' is specified for all phases at once; we want the per-phase one, in MVar
         qnom = (defaults["kvar"]/1E3)/defaults["phases"]
-        b_cap = qnom/vnom_ln^2
+        # indexing qnom[1] is a dirty fix to support both kvar=[x] and kvar=x
+        # TODO fix this in a clear way, in dss_structs.jl
+        b_cap = qnom[1]/vnom_ln^2
         #  get the base addmittance, with a LN voltage base
         Sbase = 1 # not yet pmd_data["baseMVA"] because this is done in _PMs.make_per_unit
         Ybase_ln = Sbase/(pmd_data["basekv"]/sqrt(3))^2

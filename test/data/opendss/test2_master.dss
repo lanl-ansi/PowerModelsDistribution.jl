@@ -27,8 +27,8 @@ new load.ld4 bus1=b1 like=ld2
 New "Load.ld2" bus1=b9 phases=3 conn=Wye model=5 kV=24.9 kW=27 kvar=21 Vminpu=.85
 
 ! Capacitors
-New "Capacitor.c1" bus1=b5 phases=3 kvar=250 kv=20.0
-New "Capacitor.c2" bus1=b8 phases=3 kvar=500 kv=25.0
+New "Capacitor.c1" bus1=b5 phases=3 kvar=[ 250] kv=20.0
+New "Capacitor.c2" bus1=b8 phases=3 kvar=[ 500] kv=25.0
 new capacitor.c3 bus1=b1 like=c2
 
 ! Reactors
