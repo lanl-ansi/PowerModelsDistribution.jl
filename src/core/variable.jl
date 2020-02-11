@@ -373,31 +373,18 @@ function variable_mc_transformer_current_real(pm::_PMs.AbstractPowerModel; nw::I
         ) for (l,i,j) in _PMs.ref(pm, nw, :arcs_trans)
     )
 
-    #TODO add bounds
-    # if bounded
-    #     ub = Dict()
-    #     for (l,i,j) in _PMs.ref(pm, nw, :arcs_from)
-    #         b = branch[l]
-    #         # ub[l] = Inf
-    #         if haskey(b, "rate_a")
-    #             rate_fr = b["rate_a"].*b["tap"]
-    #             rate_to = b["rate_a"]
-    #             ub[l]  = max.(rate_fr./bus[i]["vmin"], rate_to./bus[j]["vmin"])
-    #         end
-    #         if haskey(b, "c_rating_a")
-    #             ub[l] = b["c_rating_a"]
-    #         end
-    #     end
-    #
-    #     for (l,i,j) in _PMs.ref(pm, nw, :arcs)
-    #         for c in _PMs.conductor_ids(pm; nw=nw)
-    #             if !isinf(ub[l][c])
-    #                 JuMP.set_lower_bound(cr[(l,i,j)][c], -ub[l][c])
-    #                 JuMP.set_upper_bound(cr[(l,i,j)][c],  ub[l][c])
-    #             end
-    #         end
-    #     end
-    # end
+    if bounded
+        for (l,i,j) in _PMs.ref(pm, nw, :arcs_from_trans)
+            trans = _PMs.ref(pm, nw, :trans, l)
+            f_bus = _PMs.ref(pm, nw, :bus, i)
+            t_bus = _PMs.ref(pm, nw, :bus, j)
+            cmax_fr, cmax_to = _calc_transformer_current_max_frto(trans, f_bus, t_bus)
+            JuMP.set_lower_bound(ci[(l,i,j)], -cmax_fr)
+            JuMP.set_lower_bound(ci[(l,j,i)], -cmax_to)
+            JuMP.set_upper_bound(ci[(l,i,j)],  cmax_fr)
+            JuMP.set_upper_bound(ci[(l,j,i)],  cmax_to)
+        end
+    end
 
     report && _PMs.sol_component_value_edge(pm, nw, :transformer, :cr_fr, :cr_to, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), cr)
 end
@@ -416,31 +403,18 @@ function variable_mc_transformer_current_imaginary(pm::_PMs.AbstractPowerModel; 
         ) for (l,i,j) in _PMs.ref(pm, nw, :arcs_trans)
     )
 
-    #TODO add bounds
-    # if bounded
-    #     ub = Dict()
-    #     for (l,i,j) in _PMs.ref(pm, nw, :arcs_from)
-    #         b = branch[l]
-    #         # ub[l] = Inf
-    #         if haskey(b, "rate_a")
-    #             rate_fr = b["rate_a"].*b["tap"]
-    #             rate_to = b["rate_a"]
-    #             ub[l]  = max.(rate_fr./bus[i]["vmin"], rate_to./bus[j]["vmin"])
-    #         end
-    #         if haskey(b, "c_rating_a")
-    #             ub[l] = b["c_rating_a"]
-    #         end
-    #     end
-    #
-    #     for (l,i,j) in _PMs.ref(pm, nw, :arcs)
-    #         for c in _PMs.conductor_ids(pm; nw=nw)
-    #             if !isinf(ub[l][c])
-    #                 JuMP.set_lower_bound(ci[(l,i,j)][c], -ub[l][c])
-    #                 JuMP.set_upper_bound(ci[(l,i,j)][c],  ub[l][c])
-    #             end
-    #         end
-    #     end
-    # end
+    if bounded
+        for (l,i,j) in _PMs.ref(pm, nw, :arcs_from_trans)
+            trans = _PMs.ref(pm, nw, :trans, l)
+            f_bus = _PMs.ref(pm, nw, :bus, i)
+            t_bus = _PMs.ref(pm, nw, :bus, j)
+            cmax_fr, cmax_to = _calc_transformer_current_max_frto(trans, f_bus, t_bus)
+            JuMP.set_lower_bound(ci[(l,i,j)], -cmax_fr)
+            JuMP.set_lower_bound(ci[(l,j,i)], -cmax_to)
+            JuMP.set_upper_bound(ci[(l,i,j)],  cmax_fr)
+            JuMP.set_upper_bound(ci[(l,j,i)],  cmax_to)
+        end
+    end
 
     report && _PMs.sol_component_value_edge(pm, nw, :transformer, :ci_fr, :ci_to, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), ci)
 end

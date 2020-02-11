@@ -312,6 +312,48 @@ end
 
 
 """
+Returns a power magnitude bound for the from and to side of a transformer.
+The total current rating also implies a current bound through the
+upper bound on the voltage magnitude of the connected buses.
+"""
+function _calc_transformer_power_ub_frto(trans::Dict, bus_fr::Dict, bus_to::Dict)
+    bounds_fr = []
+    bounds_to = []
+    if haskey(trans, "c_rating_a")
+        push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
+        push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
+    end
+    if haskey(trans, "rate_a")
+        push!(bounds_fr, trans["rate_a"])
+        push!(bounds_to, trans["rate_a"])
+    end
+    @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
+    return min.(bounds_fr...), min.(bounds_to...)
+end
+
+
+"""
+Returns a current magnitude bound for the from and to side of a transformer.
+The total power rating also implies a current bound through the lower bound on
+the voltage magnitude of the connected buses.
+"""
+function _calc_transformer_current_max_frto(trans::Dict, bus_fr::Dict, bus_to::Dict)
+    bounds_fr = []
+    bounds_to = []
+    if haskey(trans, "c_rating_a")
+        push!(bounds_fr, trans["c_rating_a"])
+        push!(bounds_to, trans["c_rating_a"])
+    end
+    if haskey(branch, "rate_a")
+        push!(bounds_fr, trans["rate_a"]./bus_fr["vmin"])
+        push!(bounds_to, trans["rate_a"]./bus_to["vmin"])
+    end
+    @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
+    return min.(bounds_fr...), min.(bounds_to...)
+end
+
+
+"""
 Returns a total (shunt+series) power magnitude bound for the from and to side
 of a branch. The total current rating also implies a current bound through the
 upper bound on the voltage magnitude of the connected buses.
