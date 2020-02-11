@@ -276,7 +276,7 @@ sn_a = v_a.conj(i_a)
     = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 So for delta, sn is constrained indirectly.
 """
-function constraint_mc_load(pm::_PMs.AbstractACRModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
+function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
     load = _PMs.ref(pm, nw, :load, id)
     bus = _PMs.ref(pm, nw,:bus, load["load_bus"])
 

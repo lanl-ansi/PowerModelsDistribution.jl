@@ -94,16 +94,6 @@ function variable_mc_generation(pm::_PMs.AbstractIVRModel; nw::Int=pm.cnw, bound
     # store active and reactive power expressions for use in objective + post processing
     _PMs.var(pm, nw)[:pg] = Dict{Int, Any}()
     _PMs.var(pm, nw)[:qg] = Dict{Int, Any}()
-
-    # report && _PMs.sol_component_value(pm, nw, :gen, :pg, _PMs.ids(pm, nw, :gen), pg)
-    # report && _PMs.sol_component_value(pm, nw, :gen, :qg, _PMs.ids(pm, nw, :gen), qg)
-
-    # if bounded
-    #     for (i,gen) in _PMs.ref(pm, nw, :gen)
-    #         constraint_mc_generation_active_power_limits(pm, i, nw=nw)
-    #         constraint_mc_generation_reactive_power_limits(pm, i, nw=nw)
-    #     end
-    # end
 end
 
 
@@ -487,56 +477,6 @@ function constraint_mc_trans_dy(pm::_PMs.AbstractIVRModel, nw::Int, trans_id::In
 
     JuMP.@constraint(pm.model, scale.*cr_fr_P .+ Md'*cr_to_P .== 0)
     JuMP.@constraint(pm.model, scale.*ci_fr_P .+ Md'*ci_to_P .== 0)
-end
-
-
-"""
-CONSTANT POWER
-Fixes the load power sd.
-sd = [sd_1, sd_2, sd_3]
-What is actually fixed, depends on whether the load is connected in delta or wye.
-When connected in wye, the load power equals the per-phase power sn drawn at the
-bus to which the load is connected.
-sd_1 = v_a.conj(i_a) = sn_a
-
-CONSTANT CURRENT
-Sets the active and reactive load power sd to be proportional to
-the the voltage magnitude.
-pd = cp.|vm|
-qd = cq.|vm|
-sd = cp.|vm| + j.cq.|vm|
-
-CONSTANT IMPEDANCE
-Sets the active and reactive power drawn by the load to be proportional to
-the square of the voltage magnitude.
-pd = cp.|vm|^2
-qd = cq.|vm|^2
-sd = cp.|vm|^2 + j.cq.|vm|^2
-
-DELTA
-When connected in delta, the load power gives the reference in the delta reference
-frame. This means
-sd_1 = v_ab.conj(i_ab) = (v_a-v_b).conj(i_ab)
-We can relate this to the per-phase power by
-sn_a = v_a.conj(i_a)
-    = v_a.conj(i_ab-i_ca)
-    = v_a.conj(conj(s_ab/v_ab) - conj(s_ca/v_ca))
-    = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
-So for delta, sn is constrained indirectly.
-"""
-function constraint_mc_load(pm::_PMs.IVRPowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
-    load = _PMs.ref(pm, nw, :load, id)
-    bus = _PMs.ref(pm, nw,:bus, load["load_bus"])
-    #TODO adjust this once data model updated
-    conn = load["conn"]
-
-    a, alpha, b, beta = _load_expmodel_params(load, bus)
-
-    if conn=="wye"
-        constraint_mc_load_wye(pm, nw, id, load["load_bus"], a, alpha, b, beta)
-    else
-        constraint_mc_load_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
-    end
 end
 
 

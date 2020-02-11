@@ -19,10 +19,8 @@ function variable_mc_voltage(pm::_PMs.AbstractACPModel; nw=pm.cnw, kwargs...)
     for id in _PMs.ids(pm, nw, :bus)
         busref = _PMs.ref(pm, nw, :bus, id)
         if !haskey(busref, "va_start")
-        # if it has this key, it was set at PM level
-            for c in 1:ncnds
-                JuMP.set_start_value.(_PMs.var(pm, nw, :va, id), theta)
-            end
+            # if it has this key, it was set at PM level
+            JuMP.set_start_value.(_PMs.var(pm, nw, :va, id), theta)
         end
     end
 end
@@ -731,22 +729,6 @@ function constraint_mc_storage_current_limit(pm::_PMs.AbstractACPModel, n::Int, 
     qs = var(pm, n, :qs, i)
 
     JuMP.@constraint(pm.model, ps.^2 + qs.^2 <= rating.^2 .* vm.^2)
-end
-
-
-function constraint_mc_load(pm::_PMs.AbstractACPModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
-    load = _PMs.ref(pm, nw, :load, id)
-    bus = _PMs.ref(pm, nw,:bus, load["load_bus"])
-
-    conn = haskey(load, "conn") ? load["conn"] : "wye"
-
-    a, alpha, b, beta = _load_expmodel_params(load, bus)
-
-    if conn=="wye"
-        constraint_mc_load_wye(pm, nw, id, load["load_bus"], a, alpha, b, beta)
-    else
-        constraint_mc_load_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
-    end
 end
 
 
