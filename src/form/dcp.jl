@@ -56,7 +56,7 @@ function constraint_mc_power_balance_shed(pm::_PMs.AbstractDCPModel, nw::Int, i:
         sum(pg[g] for g in bus_gens)
         - sum(ps[s] for s in bus_storage)
         - sum(pd.*z_demand[n] for (n,pd) in bus_pd)
-        - sum(gs*1.0^2 .*z_shunt[n] for (n,gs) in bus_gs)
+        - sum(diag(gs)*1.0^2 .*z_shunt[n] for (n,gs) in bus_gs)
     )
 
     if _PMs.report_duals(pm)

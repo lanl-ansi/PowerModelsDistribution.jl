@@ -14,19 +14,20 @@ end
 
 # helper functions to access solutions by their OpenDSS names
 bus_name2id(pmd_data, name) = [bus["index"] for (_,bus) in pmd_data["bus"] if haskey(bus, "name") && bus["name"]==name][1]
-va(sol, pmd_data, name) = round.(PMD._wrap_to_pi(sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["va"][:])*180/pi; digits=1)
+va(sol, pmd_data, name) = PMD._wrap_to_pi(sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["va"][:])*180/pi
 vm(sol, pmd_data, name) = sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["vm"]
 tap(i, pm) = JuMP.value.(PMs.var(pm, pm.cnw, :tap)[i])
 vi(sol, pmd_data, name) = sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["vi"]
 vr(sol, pmd_data, name) = sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["vr"]
 calc_vm_acr(sol, pmd_data, name) = sqrt.(vi(sol, pmd_data, name).^2 .+ vr(sol, pmd_data, name).^2)
+calc_va_acr(sol, pmd_data, name) = rad2deg.(PMD._wrap_to_pi(atan.(vi(sol, pmd_data, name), vr(sol, pmd_data, name))))
 
 # Helper functions for load models tests
 load_name2id(pmd_data, name) = [load["index"] for (_,load) in pmd_data["load"] if haskey(load, "name") && load["name"]==name][1]
 pdvar(pm, pmd_data, name) = [PMs.var(pm, pm.cnw, c, :pd, load_name2id(pmd_data, name)) for c in 1:3]
-pd(sol, pmd_data, name) = sol["solution"]["load"][string(load_name2id(pmd_data, name))]["pd"]
+pd(sol, pmd_data, name) = sol["solution"]["load"][string(load_name2id(pmd_data, name))]["pd_bus"]
 qdvar(pm, pmd_data, name) = [PMs.var(pm, pm.cnw, c, :qd, load_name2id(pmd_data, name)) for c in 1:3]
-qd(sol, pmd_data, name) = sol["solution"]["load"][string(load_name2id(pmd_data, name))]["qd"]
+qd(sol, pmd_data, name) = sol["solution"]["load"][string(load_name2id(pmd_data, name))]["qd_bus"]
 sd(pm, pmd_data, name) = pd(sol, pmd_data, name)+im*qd(sol, pmd_data, name)
 
 calc_vm_w(result, id) = sqrt.(      result["solution"]["bus"][id]["w"])

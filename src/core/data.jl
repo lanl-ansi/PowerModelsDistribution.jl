@@ -10,6 +10,15 @@ function _wrap_to_pi(radians)
 end
 
 
+"creates a delta transformation matrix"
+function _get_delta_transformation_matrix(n_phases::Int)
+    @assert(n_phases>2, "We only define delta transforms for three and more conductors.")
+    Md = LinearAlgebra.diagm(0=>fill(1, n_phases), 1=>fill(-1, n_phases-1))
+    Md[end,1] = -1
+    return Md
+end
+
+
 "rolls a 1d array left or right by idx"
 function _roll(array::Array{T, 1}, idx::Int; right=true) where T <: Number
     out = Array{T}(undef, size(array))
@@ -303,6 +312,48 @@ end
 
 
 """
+Returns a power magnitude bound for the from and to side of a transformer.
+The total current rating also implies a current bound through the
+upper bound on the voltage magnitude of the connected buses.
+"""
+function _calc_transformer_power_ub_frto(trans::Dict, bus_fr::Dict, bus_to::Dict)
+    bounds_fr = []
+    bounds_to = []
+    if haskey(trans, "c_rating_a")
+        push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
+        push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
+    end
+    if haskey(trans, "rate_a")
+        push!(bounds_fr, trans["rate_a"])
+        push!(bounds_to, trans["rate_a"])
+    end
+    @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
+    return min.(bounds_fr...), min.(bounds_to...)
+end
+
+
+"""
+Returns a current magnitude bound for the from and to side of a transformer.
+The total power rating also implies a current bound through the lower bound on
+the voltage magnitude of the connected buses.
+"""
+function _calc_transformer_current_max_frto(trans::Dict, bus_fr::Dict, bus_to::Dict)
+    bounds_fr = []
+    bounds_to = []
+    if haskey(trans, "c_rating_a")
+        push!(bounds_fr, trans["c_rating_a"])
+        push!(bounds_to, trans["c_rating_a"])
+    end
+    if haskey(branch, "rate_a")
+        push!(bounds_fr, trans["rate_a"]./bus_fr["vmin"])
+        push!(bounds_to, trans["rate_a"]./bus_to["vmin"])
+    end
+    @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
+    return min.(bounds_fr...), min.(bounds_to...)
+end
+
+
+"""
 Returns a total (shunt+series) power magnitude bound for the from and to side
 of a branch. The total current rating also implies a current bound through the
 upper bound on the voltage magnitude of the connected buses.
@@ -371,7 +422,7 @@ const _conductorless = Set(["index", "bus_i", "bus_type", "status", "gen_status"
     "model", "ncost", "cost", "startup", "shutdown", "name", "source_id", "active_phases"])
 
 "field names that should become multi-conductor matrix not arrays"
-const _conductor_matrix = Set(["br_r", "br_x", "b_fr", "b_to", "g_fr", "g_to"])
+const _conductor_matrix = Set(["br_r", "br_x", "b_fr", "b_to", "g_fr", "g_to", "gs", "bs"])
 
 
 ""
@@ -405,6 +456,15 @@ function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
         else
             #root non-dict items
         end
+    end
+
+    for (_, load) in data["load"]
+        load["model"] = "constant_power"
+        load["conn"] = "wye"
+    end
+
+    for (_, load) in data["gen"]
+        load["conn"] = "wye"
     end
 end
 
@@ -522,4 +582,35 @@ function _make_full_matrix_variable(diag, lowertriangle, uppertriangle)
     end
     # matrix = diagm(0 => diag) + _vec2ltri!(lowertriangle) + _vec2utri!(uppertriangle)
     return matrix
+end
+
+
+function _has_nl_expression(x)::Bool
+    if isa(x, JuMP.NonlinearExpression)
+        return true
+    elseif isa(x, Vector)
+        for i in x
+            if _has_nl_expression(i)
+                return true
+            end
+        end
+    elseif isa(x, Dict)
+        for i in values(x)
+            if _has_nl_expression(i)
+                return true
+            end
+        end
+    end
+    return false
+end
+
+
+macro smart_constraint(model, vars, expr)
+    esc(quote
+        if _has_nl_expression($vars)
+            JuMP.@NLconstraint($model, $expr)
+        else
+            JuMP.@constraint($model, $expr)
+        end
+    end)
 end

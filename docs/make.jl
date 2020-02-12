@@ -17,6 +17,9 @@ makedocs(
             "Problem Specifications" => "specifications.md",
             "Modeling Components" => "library.md",
         ],
+        "Basics" => [
+            "Load Models" => "load-model.md",
+        ],
         "Developer" => [
             "Developer" => "developer.md",
             "Formulation Details" => "formulation-details.md",
