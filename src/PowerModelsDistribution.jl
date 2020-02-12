@@ -45,6 +45,14 @@ module PowerModelsDistribution
     include("io/dss_structs.jl")
     include("io/opendss.jl")
 
+    include("io/common_dm.jl")
+    include("io/opendss_dm.jl")
+    include("io/data_model_components.jl")
+    include("io/data_model_mapping.jl")
+    include("io/data_model_pu.jl")
+    include("io/data_model_test.jl")
+    include("io/data_model_util.jl")
+
     include("prob/mld.jl")
     include("prob/opf.jl")
     include("prob/opf_iv.jl")
