@@ -126,8 +126,8 @@ function _check_connectivity(data, comp_dict; context=missing)
         _check_bus_and_terminals(data, comp_dict["f_bus"], comp_dict["f_connections"], context)
         _check_bus_and_terminals(data, comp_dict["t_bus"], comp_dict["t_connections"], context)
     elseif haskey(comp_dict, "bus")
-        if isa(comp_dict, Vector)
-            for i in in length(comp_dict["bus"])
+        if isa(comp_dict["bus"], Vector)
+            for i in 1:length(comp_dict["bus"])
                 _check_bus_and_terminals(data, comp_dict["bus"][i], comp_dict["connections"][i], context)
             end
         else
@@ -210,7 +210,7 @@ DTYPES[:line] = Dict(
     :s_rating =>Vector{<:Real},
 )
 
-REQUIRED_FIELDS[:line] = [:id, :f_bus, :f_connections, :t_bus, :t_connections, :linecode, :length]
+REQUIRED_FIELDS[:line] = [:id, :status, :f_bus, :f_connections, :t_bus, :t_connections, :linecode, :length]
 
 CHECKS[:line] = function check_line(data, line)
     i = line["id"]
@@ -251,6 +251,8 @@ function create_line(id, f_bus, t_bus, linecode, length; kwargs...)
     line["t_bus"] = t_bus
     line["linecode"] = linecode
     line["length"] = length
+
+    add_kwarg!(line, kwargs, :status, 1)
     add_kwarg!(line, kwargs, :f_connections, collect(1:4))
     add_kwarg!(line, kwargs, :t_connections, collect(1:4))
     return line
@@ -260,6 +262,7 @@ end
 
 DTYPES[:bus] = Dict(
     :id => AbstractString,
+    :status => Int,
     :terminals => Array{<:Any},
     :phases => Array{<:Int},
     :neutral => Union{Int, Missing},
@@ -276,7 +279,7 @@ DTYPES[:bus] = Dict(
     :va_fix => Array{<:Real, 1},
 )
 
-REQUIRED_FIELDS[:bus] = [:id, :terminals, :grounded, :rg, :xg]
+REQUIRED_FIELDS[:bus] = [:id, :status, :terminals, :grounded, :rg, :xg]
 
 CHECKS[:bus] = function check_bus(data, bus)
     id = bus["id"]
@@ -294,6 +297,8 @@ end
 function create_bus(id; kwargs...)
     bus = Dict{String,Any}()
     bus["id"] = id
+
+    add_kwarg!(bus, kwargs, :status, 1)
     add_kwarg!(bus, kwargs, :terminals, collect(1:4))
     add_kwarg!(bus, kwargs, :grounded, [])
     add_kwarg!(bus, kwargs, :rg, Array{Float64, 1}())
@@ -306,6 +311,7 @@ end
 
 DTYPES[:load] = Dict(
     :id => AbstractString,
+    :status => Int,
     :bus => String,
     :connections => Array{<:Int},
     :configuration => String,
@@ -319,7 +325,7 @@ DTYPES[:load] = Dict(
     :beta => Array{<:Real, 1},
 )
 
-REQUIRED_FIELDS[:load] = [:id, :bus, :connections, :configuration]
+REQUIRED_FIELDS[:load] = [:id, :status, :bus, :connections, :configuration]
 
 CHECKS[:load] = function check_load(data, load)
     id = load["id"]
@@ -348,6 +354,7 @@ function create_load(id, bus; kwargs...)
     load["id"] = id
     load["bus"] = bus
 
+    add_kwarg!(load, kwargs, :status, 1)
     add_kwarg!(load, kwargs, :configuration, "wye")
     add_kwarg!(load, kwargs, :connections, load["configuration"]=="wye" ? [1, 2, 3, 4] : [1, 2, 3])
     add_kwarg!(load, kwargs, :model, "constant_power")
@@ -366,6 +373,7 @@ end
 
 DTYPES[:generator] = Dict(
     :id => AbstractString,
+    :status => Int,
     :bus => String,
     :connections => Array{<:Int},
     :configuration => String,
@@ -377,7 +385,7 @@ DTYPES[:generator] = Dict(
     :qd_max => Array{<:Real, 1},
 )
 
-REQUIRED_FIELDS[:generator] = [:id, :bus, :connections]
+REQUIRED_FIELDS[:generator] = [:id, :status, :bus, :connections]
 
 CHECKS[:generator] = function check_generator(data, generator)
     id = generator["id"]
@@ -392,6 +400,7 @@ function create_generator(id, bus; kwargs...)
     generator = Dict{String,Any}()
     generator["id"] = id
     generator["bus"] = bus
+    add_kwarg!(generator, kwargs, :status, 1)
     add_kwarg!(generator, kwargs, :configuration, "wye")
     add_kwarg!(generator, kwargs, :connections, generator["configuration"]=="wye" ? [1, 2, 3, 4] : [1, 2, 3])
     copy_kwargs_to_dict_if_present!(generator, kwargs, [:pd_min, :pd_max, :qd_min, :qd_max])
@@ -438,6 +447,8 @@ CHECKS[:transformer_nw] = function check_transformer_nw(data, trans)
         push!(nphs, nph)
         #TODO check length other properties
     end
+
+    _check_connectivity(data, trans; context="transformer_nw $id")
 end
 
 
@@ -550,6 +561,7 @@ end
 
 DTYPES[:shunt] = Dict(
     :id => AbstractString,
+    :status => 1,
     :bus => String,
     :terminals => Array{Int, 1},
     :g_sh => Array{<:Real, 2},
@@ -566,6 +578,8 @@ function create_shunt(id, bus, terminals; kwargs...)
     shunt["id"] = id
     shunt["bus"] = bus
     shunt["terminals"] = terminals
+
+    add_kwarg!(shunt, kwargs, :status, 1)
     add_kwarg!(shunt, kwargs, :g_sh, fill(0.0, length(terminals), length(terminals)))
     add_kwarg!(shunt, kwargs, :b_sh, fill(0.0, length(terminals), length(terminals)))
     return shunt

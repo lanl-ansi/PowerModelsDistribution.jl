@@ -36,6 +36,8 @@ function make_test_data_model()
     add!(data_model, "bus", create_bus("6", terminals=[1,3,4]))
     add!(data_model, "bus", create_bus("7", terminals=[2,4]))
     add!(data_model, "bus", create_bus("8", terminals=[1,2]))
+    add!(data_model, "bus", create_bus("9", terminals=[1,2,3,4]))
+    add!(data_model, "bus", create_bus("10", terminals=[1,2,3]))
 
     #
     add!(data_model, "load", create_load("1", "7", connections=[2,4], pd=[1.0], qd=[1.0]))
@@ -50,7 +52,7 @@ function make_test_data_model()
 
     add!(data_model, "generator", create_generator("1", "1", configuration="wye"))
 
-    add!(data_model, "transformer_nw", create_transformer_nw("1", 3, ["4", "8", "9"], [[1,2,3], [1,2,3,4], [1,2,3]],
+    add!(data_model, "transformer_nw", create_transformer_nw("1", 3, ["5", "9", "10"], [[1,2,3], [1,2,3,4], [1,2,3]],
         [0.230, 0.230, 0.230], [0.230, 0.230, 0.230],
             configuration=["delta", "wye", "delta"],
             xsc=[0.0, 0.0, 0.0],
@@ -58,17 +60,40 @@ function make_test_data_model()
             loadloss=0.05,
             imag=0.05,
     ))
-    
+
     add!(data_model, "capacitor", create_capacitor("cap_3ph", "3", 0.230*sqrt(3), qd_ref=[1, 2, 3]))
-    add!(data_model, "capacitor", create_capacitor("cap_3ph_delta", "4", 0.230*sqrt(3), qd_ref=[1, 2, 3], configuration="delta", terminals=[1,2,3]))
-    add!(data_model, "capacitor", create_capacitor("cap_2ph_yg", "6", 0.230*sqrt(3), qd_ref=[1, 2], terminals=[1,2],  configuration="wye-grounded"))
-    add!(data_model, "capacitor", create_capacitor("cap_2ph_yfl", "6", 0.230*sqrt(3), qd_ref=[1, 2], terminals=[1,2],  configuration="wye-floating"))
-    add!(data_model, "capacitor", create_capacitor("cap_2ph_y", "5", 0.230*sqrt(3), qd_ref=[1, 2], terminals=[1,3,4]))
+    add!(data_model, "capacitor", create_capacitor("cap_3ph_delta", "4", 0.230*sqrt(3), qd_ref=[1, 2, 3], configuration="delta", connections=[1,2,3]))
+    add!(data_model, "capacitor", create_capacitor("cap_2ph_yg", "6", 0.230*sqrt(3), qd_ref=[1, 2], connections=[1,2],  configuration="wye-grounded"))
+    add!(data_model, "capacitor", create_capacitor("cap_2ph_yfl", "6", 0.230*sqrt(3), qd_ref=[1, 2], connections=[1,2],  configuration="wye-floating"))
+    add!(data_model, "capacitor", create_capacitor("cap_2ph_y", "5", 0.230*sqrt(3), qd_ref=[1, 2], connections=[1,3,4]))
 
     return data_model
 end
 
-@time dm = make_test_data_model()
-@time check_data_model(dm)
-dm
-#index_data_model(dm, components=["capacitor"])
+
+function make_3wire_data_model()
+
+    data_model = create_data_model()
+
+    add!(data_model, "linecode", create_linecode("3_conds", rs=ones(3, 3), xs=ones(3, 3)))
+
+    # 3 phase conductors
+    add!(data_model, "line", create_line("1", "1", "2", "3_conds", 1.3; f_connections=collect(1:3), t_connections=collect(1:3)))
+
+    add!(data_model, "bus", create_bus("1", terminals=collect(1:4)))
+    add!(data_model, "bus", create_bus("2", terminals=collect(1:4)))
+
+    #
+    add!(data_model, "load", create_load("1", "2", connections=collect(1:4), pd=[1.0, 2.0, 3.0], qd=[1.0, 2.0, 3.0]))
+
+    add!(data_model, "generator", create_generator("1", "1", connections=collect(1:4)))
+
+    return data_model
+end
+
+
+dm_hl = make_3wire_data_model()
+check_data_model(dm_hl)
+##
+dm = map_down_data_model(dm_hl)
+data_model_index!(dm)

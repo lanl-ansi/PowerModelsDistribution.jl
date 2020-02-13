@@ -32,20 +32,24 @@ function delete_component!(data_model, comp_type, comp)
     end
 end
 
-function add_mapping!(data_model::Dict{String, Any}, mapping_type::String, mapping::Dict{String, <:Any})
-    if !haskey(data_model, "mapping")
-        data_model["mapping"] = Dict{String, Any}()
+function add_mappings!(data_model::Dict{String, Any}, mapping_type::String, mappings::Vector)
+    if !haskey(data_model, "mappings")
+        data_model["mappings"] = []
     end
 
-    if !haskey(data_model["mapping"], mapping_type)
-        data_model["mapping"][mapping_type] = Array{Dict{String, Any}, 1}()
-    end
-
-    push!(data_model["mapping"][mapping_type], mapping)
+    append!(data_model["mappings"], [(mapping_type, mapping) for mapping in mappings])
 end
 
 
-function data_model_index!(data_model; components=["line", "bus", "shunt", "transformer_2w_ideal", "load", "generator"])
+function data_model_index!(data_model; components=["line", "shunt", "generator", "load", "transformer_2wa"])
+    bus_id2ind = Dict()
+
+    for (i, id) in enumerate(keys(data_model["bus"]))
+        data_model["bus"][id]["index"] = i
+        bus_id2ind[id] = i
+    end
+    data_model["bus"] = Dict(string(bus_id2ind[id])=>bus for (id, bus) in data_model["bus"])
+
     for comp_type in components
         comp_dict = Dict{String, Any}()
         for (i,(id,comp)) in enumerate(data_model[comp_type])
@@ -53,6 +57,11 @@ function data_model_index!(data_model; components=["line", "bus", "shunt", "tran
             comp["index"] = i
             comp["id"] = id
             comp_dict["$i"] = comp
+            for bus_key in ["f_bus", "t_bus", "bus"]
+                if haskey(comp, bus_key)
+                    comp[bus_key] = bus_id2ind[comp[bus_key]]
+                end
+            end
         end
         data_model[comp_type] = comp_dict
     end

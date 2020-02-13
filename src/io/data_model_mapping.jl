@@ -2,39 +2,23 @@ import LinearAlgebra
 
 
 function map_down_data_model(data_model_user)
-    data_model_base = deepcopy(data_model_user)
-    data_model_base["source_data_model"] = data_model_user
+    data_model = deepcopy(data_model_user)
+    data_model = data_model_user
 
-    _expand_linecode!(data_model_base)
-    _expand_voltage_zone!(data_model_base)
-    _load_to_shunt!(data_model_base)
-    _capacitor_to_shunt!(data_model_base)
-    _decompose_transformer_nw_lossy!(data_model_base)
+    !haskey(data_model, "mappings")
+
+    _expand_linecode!(data_model)
+    add_mappings!(data_model, "load_to_shunt", _load_to_shunt!(data_model))
+    add_mappings!(data_model, "capacitor_to_shunt", _capacitor_to_shunt!(data_model))
+    add_mappings!(data_model, "decompose_transformer_nw", _decompose_transformer_nw!(data_model))
 
     # add low level component types if not present yet
-    for comp_type in ["load", "generator", "bus", "line", "shunt", "transformer_2w_ideal"]
-        if !haskey(data_model_base, comp_type)
-            data_model_base[comp_type] = Dict{String, Any}()
+    for comp_type in ["load", "generator", "bus", "line", "shunt", "transformer_2wa", "storage", "switch"]
+        if !haskey(data_model, comp_type)
+            data_model[comp_type] = Dict{String, Any}()
         end
     end
-    return data_model_base
-end
-
-
-function _expand_voltage_zone!(data_model)
-    # expand line codes
-    for (id, bus) in data_model["bus"]
-        if haskey(bus, "voltage_zone")
-            voltage_zone = data_model["voltage_zone"][bus["voltage_zone"]]
-            bus["vnom"] = voltage_zone["vnom"]
-            for key in ["vm_ln_min", "vm_ln_max", "vm_lg_min", "vm_lg_max", "vm_ng_min", "vm_ng_max", "vm_ll_min", "vm_ll_max"]
-                if haskey(voltage_zone, key)
-                    bus[key] = voltage_zone[key]
-                end
-            end
-            delete!(bus, "voltage_zone")
-        end
-    end
+    return data_model
 end
 
 
@@ -50,15 +34,17 @@ function _expand_linecode!(data_model)
             delete!(line, "length")
         end
     end
+    delete!(data_model, "linecode")
 end
 
 
 function _load_to_shunt!(data_model)
+    mappings = []
     if haskey(data_model, "load")
         for (id, load) in data_model["load"]
             if load["model"]=="constant_impedance"
-                b = load["qd"]./load["vm_nom"].^2*1E3
-                g = load["pd"]./load["vm_nom"].^2*1E3
+                b = load["qd_ref"]./load["vnom"].^2*1E3
+                g = load["pd_ref"]./load["vnom"].^2*1E3
                 y = b.+im*g
                 N = length(b)
 
@@ -74,24 +60,28 @@ function _load_to_shunt!(data_model)
                     Y = vcat(Y_fr, -ones(N)'*Y_fr)*hcat(LinearAlgebra.diagm(0=>ones(N)),  -ones(N))
                 end
 
-                shunt = create_shunt(NaN, load["bus"], load["terminals"], b_sh=imag.(Y), g_sh=real.(Y))
+                shunt = create_shunt(NaN, load["bus"], load["connections"], b_sh=imag.(Y), g_sh=real.(Y))
                 add_component!(data_model, "shunt", shunt)
                 delete_component!(data_model, "load", load)
 
-                add_mapping!(data_model, "load_to_shunt", Dict(
-                    "load" => data_model["source_data_model"]["load"][id],
+                push!(mappings, Dict(
+                    "load" => load,
                     "shunt" => shunt,
                 ))
             end
         end
     end
+
+    return mappings
 end
 
 
 function _capacitor_to_shunt!(data_model)
+    mappings = []
+
     if haskey(data_model, "capacitor")
         for (id, cap) in data_model["capacitor"]
-            b = cap["qd_ref"]./cap["vm_nom"]^2*1E3
+            b = cap["qd_ref"]./cap["vnom"]^2*1E3
             N = length(b)
 
             if cap["configuration"]=="delta"
@@ -114,16 +104,18 @@ function _capacitor_to_shunt!(data_model)
                 B = vcat(B_fr, -ones(N)'*B_fr)*hcat(LinearAlgebra.diagm(0=>ones(N)),  -ones(N))
             end
 
-            shunt = create_shunt(NaN, cap["bus"], cap["terminals"], b_sh=B)
+            shunt = create_shunt(NaN, cap["bus"], cap["connections"], b_sh=B)
             add_component!(data_model, "shunt", shunt)
             delete_component!(data_model, "capacitor", cap)
 
-            add_mapping!(data_model, "capacitor_to_shunt", Dict(
-                "capacitor" => data_model["source_data_model"]["capacitor"][id],
+            push!(mappings, Dict(
+                "capacitor" => cap,
                 "shunt" => shunt,
             ))
         end
     end
+
+    return mappings
 end
 
 
@@ -135,67 +127,73 @@ end
 Replaces complex transformers with a composition of ideal transformers and lines
 which model losses. New buses (virtual, no physical meaning) are added.
 """
-function _decompose_transformer_nw_lossy!(data_model)
-    for (tr_id, trans) in data_model["transformer_nw_lossy"]
+function _decompose_transformer_nw!(data_model)
+    mappings = []
 
-        vnom = trans["vnom"]*data_model["v_var_scalar"]
-        snom = trans["snom"]*data_model["v_var_scalar"]
+    if haskey(data_model, "transformer_nw")
+        for (tr_id, trans) in data_model["transformer_nw"]
 
-        nrw = length(trans["buses"])
+            vnom = trans["vnom"]*data_model["v_var_scalar"]
+            snom = trans["snom"]*data_model["v_var_scalar"]
 
-        # calculate zbase in which the data is specified, and convert to SI
-        zbase = (vnom.^2)./snom
-        # x_sc is specified with respect to first winding
-        x_sc = trans["xsc"].*zbase[1]
-        # rs is specified with respect to each winding
-        r_s = trans["rs"].*zbase
+            nrw = length(trans["bus"])
 
-        g_sh = (trans["noloadloss"]*snom[1]/3)/vnom[1]^2
-        b_sh = (trans["imag"]*snom[1]/3)/vnom[1]^2
+            # calculate zbase in which the data is specified, and convert to SI
+            zbase = (vnom.^2)./snom
+            # x_sc is specified with respect to first winding
+            x_sc = trans["xsc"].*zbase[1]
+            # rs is specified with respect to each winding
+            r_s = trans["rs"].*zbase
 
-        # data is measured externally, but we now refer it to the internal side
-        ratios = vnom/1E3
-        x_sc = x_sc./ratios[1]^2
-        r_s = r_s./ratios.^2
-        g_sh = g_sh*ratios[1]^2
-        b_sh = b_sh*ratios[1]^2
+            g_sh = (trans["noloadloss"]*snom[1]/3)/vnom[1]^2
+            b_sh = (trans["imag"]*snom[1]/3)/vnom[1]^2
 
-        # convert x_sc from list of upper triangle elements to an explicit dict
-        y_sh = g_sh + im*b_sh
-        z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
+            # data is measured externally, but we now refer it to the internal side
+            ratios = vnom/1E3
+            x_sc = x_sc./ratios[1]^2
+            r_s = r_s./ratios.^2
+            g_sh = g_sh*ratios[1]^2
+            b_sh = b_sh*ratios[1]^2
 
-        vbuses, vlines, trans_t_bus_w = _build_loss_model!(data_model, r_s, z_sc, y_sh)
+            # convert x_sc from list of upper triangle elements to an explicit dict
+            y_sh = g_sh + im*b_sh
+            z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
 
-        trans_w = Array{Dict, 1}(undef, nrw)
-        for w in 1:nrw
-            # 2-WINDING TRANSFORMER
-            # make virtual bus and mark it for reduction
-            tm_nom = trans["configuration"][w]=="delta" ? trans["vnom"][w]*sqrt(3) : trans["vnom"][w]
-            trans_w[w] = create_transformer_2w_ideal(NaN,
-                trans["buses"][w], trans_t_bus_w[w], tm_nom,
-                f_terminals     = trans["terminals"][w],
-                t_terminals     = collect(1:4),
-                configuration   = trans["configuration"][w],
-                polarity        = trans["polarity"][w],
-                #tm_set         = trans["tm_set"][w],
-                tm_fix          = trans["tm_fix"][w],
-                #tm_max         = trans["tm_max"][w],
-                #tm_min         = trans["tm_min"][w],
-                #tm_step        = trans["tm_step"][w],
-            )
+            vbuses, vlines, trans_t_bus_w = _build_loss_model!(data_model, r_s, z_sc, y_sh)
 
-            add_component!(data_model, "transformer_2w_ideal", trans_w[w])
+            trans_w = Array{Dict, 1}(undef, nrw)
+            for w in 1:nrw
+                # 2-WINDING TRANSFORMER
+                # make virtual bus and mark it for reduction
+                tm_nom = trans["configuration"][w]=="delta" ? trans["vnom"][w]*sqrt(3) : trans["vnom"][w]
+                trans_w[w] = create_transformer_2w_ideal(NaN,
+                    trans["bus"][w], trans_t_bus_w[w], tm_nom,
+                    f_terminals     = trans["connections"][w],
+                    t_terminals     = collect(1:4),
+                    configuration   = trans["configuration"][w],
+                    polarity        = trans["polarity"][w],
+                    #tm_set         = trans["tm_set"][w],
+                    tm_fix          = trans["tm_fix"][w],
+                    #tm_max         = trans["tm_max"][w],
+                    #tm_min         = trans["tm_min"][w],
+                    #tm_step        = trans["tm_step"][w],
+                )
+
+                add_component!(data_model, "transformer_2wa", trans_w[w])
+            end
+
+            delete_component!(data_model, "transformer_nw", trans)
+
+            push!(mappings, Dict(
+                "trans"=>trans,
+                "trans_w"=>trans_w,
+                "vlines"=>vlines,
+                "vbuses"=>vbuses,
+            ))
         end
-
-        delete_component!(data_model, "transformer_nw_lossy", trans)
-
-        add_mapping!(data_model, "transformer_decomposition", Dict(
-            "trans"=>data_model["source_data_model"]["transformer_nw_lossy"][tr_id],
-            "trans_w"=>trans_w,
-            "vlines"=>vlines,
-            "vbuses"=>vbuses,
-        ))
     end
+
+    return mappings
 end
 
 
@@ -338,4 +336,31 @@ function _build_loss_model!(data_model, r_s, zsc, ysh; n_phases=3)
     end
 
     return bus_ids, line_ids, [bus_ids[bus] for bus in tr_t_bus]
+end
+
+function make_compatible_v8!(data_model)
+    for (_, bus) in data_model["bus"]
+        bus["bus_type"] = 1
+        bus["status"] = 1
+    end
+
+    for (_, load) in data_model["load"]
+        load["load_bus"] = load["bus"]
+    end
+
+    data_model["gen"] = data_model["generator"]
+    data_model["branch"] = data_model["line"]
+
+    for (_, gen) in data_model["gen"]
+        gen["gen_status"] = gen["status"]
+        gen["gen_bus"] = gen["bus"]
+    end
+
+    for (_, br) in data_model["branch"]
+        br["br_status"] = br["status"]
+    end
+
+    data_model["dc_line"] = Dict()
+    
+    return data_model
 end
