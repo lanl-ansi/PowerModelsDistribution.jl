@@ -69,7 +69,7 @@ function data_model_index!(data_model; components=["line", "shunt", "generator",
 end
 
 
-function solution_ind2id!(solution, data_model; id_prop="id")
+function solution_identify!(solution, data_model; id_prop="id")
     for comp_type in keys(solution)
         if isa(solution[comp_type], Dict)
             comp_dict = Dict{Any, Any}()
@@ -82,4 +82,18 @@ function solution_ind2id!(solution, data_model; id_prop="id")
     end
 
     return solution
+end
+
+function add_solution!(solution, comp_type, id, data)
+    if !haskey(solution, comp_type)
+        solution[comp_type] = Dict()
+    end
+
+    if !haskey(solution[comp_type], id)
+        solution[comp_type][id] = Dict{String, Any}()
+    end
+
+    for (key, prop) in data
+        solution[comp_type][id][key] = prop
+    end
 end

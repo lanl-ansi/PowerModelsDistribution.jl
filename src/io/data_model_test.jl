@@ -122,14 +122,13 @@ function make_3wire_data_model()
 end
 
 
-@time dm_hl = make_3wire_data_model()
+data_model = make_3wire_data_model()
+check_data_model(data_model)
 
-@time check_data_model(dm_hl)
-dm_hl
-#
-dm = map_down_data_model(dm_hl)
-make_pu!(dm, vbases=Dict("source"=>230.0))
-data_model_index!(dm)
+data_model_map!(data_model)
+data_model_make_pu!(data_model, vbases=Dict("source"=>230.0))
+data_model_index!(data_model)
+data_model_make_compatible_v8!(data_model)
 ##
 import PowerModelsDistribution
 PMD = PowerModelsDistribution
@@ -141,13 +140,10 @@ IM = InfrastructureModels
 import JuMP, Ipopt
 
 ipopt_solver = JuMP.with_optimizer(Ipopt.Optimizer)
-
-#dm_comp = PMD.parse_file("/Users/sclaeys/code/PowerModelsDistribution.jl/test/data/opendss/case3_balanced.dss")
-dm = make_compatible_v8!(dm)
-dm
-##
-pm = PMs.instantiate_model(dm, PMs.ACPPowerModel, PMD.build_mc_opf, multiconductor=true, ref_extensions=[PMD.ref_add_arcs_trans!])
+pm = PMs.instantiate_model(data_model, PMs.ACPPowerModel, PMD.build_mc_opf, multiconductor=true, ref_extensions=[PMD.ref_add_arcs_trans!])
 sol = PMs.optimize_model!(pm, optimizer=ipopt_solver)
 
-sol_remove_pu!(sol["solution"], dm)
-solution_ind2id!(sol["solution"], dm)
+solution_unmake_pu!(sol["solution"], data_model)
+solution_identify!(sol["solution"], data_model)
+solution_unmap!(sol["solution"], data_model)
+sol["solution"]

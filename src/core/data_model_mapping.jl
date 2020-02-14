@@ -2,9 +2,7 @@ import LinearAlgebra
 
 # MAP DATA MODEL DOWN
 
-function map_down_data_model(data_model_user)
-    data_model = deepcopy(data_model_user)
-    data_model = data_model_user
+function data_model_map!(data_model)
 
     !haskey(data_model, "mappings")
 
@@ -162,12 +160,12 @@ function _decompose_transformer_nw!(data_model)
 
             vbuses, vlines, trans_t_bus_w = _build_loss_model!(data_model, r_s, z_sc, y_sh)
 
-            trans_w = Array{Dict, 1}(undef, nrw)
+            trans_w = Array{String, 1}(undef, nrw)
             for w in 1:nrw
                 # 2-WINDING TRANSFORMER
                 # make virtual bus and mark it for reduction
                 tm_nom = trans["configuration"][w]=="delta" ? trans["vnom"][w]*sqrt(3) : trans["vnom"][w]
-                trans_w[w] = Dict(
+                trans_w[w] = add_virtual_get_id!(data_model, "transformer_2wa", Dict(
                     "f_bus"         => trans["bus"][w],
                     "t_bus"         => trans_t_bus_w[w],
                     "tm_nom"        => tm_nom,
@@ -180,16 +178,14 @@ function _decompose_transformer_nw!(data_model)
                     "tm_max"        => trans["tm_max"][w],
                     "tm_min"        => trans["tm_min"][w],
                     "tm_step"       => trans["tm_step"][w],
-                )
-
-                add_virtual_get_id!(data_model, "transformer_2wa", trans_w[w])
+                ))
             end
 
             delete_component!(data_model, "transformer_nw", trans)
 
             push!(mappings, Dict(
                 "trans"=>trans,
-                "trans_w"=>trans_w,
+                "trans_2wa"=>trans_w,
                 "vlines"=>vlines,
                 "vbuses"=>vbuses,
             ))
@@ -342,7 +338,7 @@ function _build_loss_model!(data_model, r_s, zsc, ysh; n_phases=3)
     return bus_ids, line_ids, [bus_ids[bus] for bus in tr_t_bus]
 end
 
-function make_compatible_v8!(data_model)
+function data_model_make_compatible_v8!(data_model)
     data_model["conductors"] = 3
     for (_, bus) in data_model["bus"]
         bus["bus_type"] = 1
@@ -402,12 +398,32 @@ end
 
 # MAP SOLUTION UP
 
-function map_solution_up(data_model::Dict, solution::Dict)
-    sol_hl = deepcopy(solution)
+function solution_unmap!(solution::Dict, data_model::Dict)
     for i in length(data_model["mappings"]):-1:1
         (name, data) = data_model["mappings"][i]
         if name=="decompose_transformer_nw"
-            @show data
+            for bus_id in values(data["vbuses"])
+                delete!(solution["bus"], bus_id)
+            end
+
+            for line_id in values(data["vlines"])
+                delete!(solution["branch"], line_id)
+            end
+
+            pt = [solution["transformer"][tr_id]["pf"] for tr_id in data["trans_2wa"]]
+            qt = [solution["transformer"][tr_id]["qf"] for tr_id in data["trans_2wa"]]
+            for tr_id in data["trans_2wa"]
+                delete!(solution["transformer"], tr_id)
+            end
+
+            add_solution!(solution, "transformer_nw", data["trans"]["id"], Dict("pt"=>pt, "qt"=>qt))
+        end
+    end
+
+    # remove component dicts if empty
+    for (comp_type, comp_dict) in solution
+        if isa(comp_dict, Dict) && isempty(comp_dict)
+            delete!(solution, comp_type)
         end
     end
 end

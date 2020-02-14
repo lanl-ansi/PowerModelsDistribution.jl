@@ -81,7 +81,7 @@ function _calc_vbase(data_model, vbase_sources::Dict{String,<:Real})
 end
 
 
-function make_pu!(data_model; sbase=1, vbases=missing)
+function data_model_make_pu!(data_model; sbase=1, vbases=missing)
     v_var_scalar = data_model["v_var_scalar"]
 
     sbase_old = get(data_model, "sbase", missing)
@@ -277,7 +277,7 @@ function add_big_M!(data_model; kwargs...)
     data_model["big_M"] = big_M
 end
 
-function sol_remove_pu!(solution, data_model)
+function solution_unmake_pu!(solution, data_model)
     sbase = data_model["sbase"]
     for (comp_type, comp_dict) in [(x,y) for (x,y) in solution if isa(y, Dict)]
         for (id, comp) in comp_dict
