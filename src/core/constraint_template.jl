@@ -133,30 +133,24 @@ function constraint_mc_trans(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw
     t_bus = trans["t_bus"]
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
-    f_type = trans["config_fr"]["type"]
-    t_type = trans["config_to"]["type"]
-    f_cnd = trans["config_fr"]["cnd"]
-    t_cnd = trans["config_to"]["cnd"]
+    config = trans["configuration"]
+    type = trans["configuration"]
+    f_cnd = trans["f_connections"][1:3]
+    t_cnd = trans["t_connections"][1:3]
     tm_set = trans["tm"]
-    tm_fixed = fix_taps ? ones(Bool, length(tm_set)) : trans["fixed"]
+    tm_fixed = fix_taps ? ones(Bool, length(tm_set)) : trans["tm_fix"]
     tm_scale = calculate_tm_scale(trans, _PMs.ref(pm, nw, :bus, f_bus), _PMs.ref(pm, nw, :bus, t_bus))
 
     #TODO change data model
     # there is redundancy in specifying polarity seperately on from and to side
-    f_pol = trans["config_fr"]["polarity"]=='+' ? 1 : -1
-    t_pol = trans["config_to"]["polarity"]=='+' ? 1 : -1
-    pol = f_pol*t_pol
+    pol = trans["polarity"]
 
-    if f_type=="wye" && t_type=="wye"
+    if config=="wye"
         constraint_mc_trans_yy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-    elseif f_type=="delta" && t_type=="wye"
+    elseif config=="delta"
         constraint_mc_trans_dy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-    elseif f_type=="wye" && t_type=="delta"
-        constraint_mc_trans_dy(pm, nw, i, t_bus, f_bus, t_idx, f_idx, t_cnd, f_cnd, pol, tm_set, tm_fixed, (tm_scale)^-1)
-    elseif f_type=="delta" && t_type=="delta"
-        Memento.error(_LOGGER, "Dd transformers are not supported at the low-level data format. This can be cast as a combo of two dy transformers.")
     end
-    if f_type=="zig-zag" || t_type=="zig-zag"
+    if type=="zig-zag"
         Memento.error(_LOGGER, "Zig-zag not yet supported.")
     end
 end
