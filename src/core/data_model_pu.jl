@@ -49,7 +49,7 @@ function _calc_vbase(data_model, vbase_sources::Dict{String,<:Real})
     # transformers form the edges between these zones
     zone_edges = Dict([(zone,[]) for zone in keys(zones)])
     edges = Set()
-    for (i,(_,trans)) in enumerate(data_model["transformer_2w_ideal"])
+    for (i,(_,trans)) in enumerate(data_model["transformer_2wa"])
         push!(edges,i)
         f_zone = bus_to_zone[trans["f_bus"]]
         t_zone = bus_to_zone[trans["t_bus"]]
@@ -119,7 +119,7 @@ function make_pu!(data_model; sbase=1, vbases=missing)
         #_rebase_pu_generator!(gen, bus_vbase[gen["bus"]], sbase_old, sbase, v_var_scalar)
     end
 
-    for (id, trans) in data_model["transformer_2w_ideal"]
+    for (id, trans) in data_model["transformer_2wa"]
         # voltage base across transformer does not have to be consistent with the ratio!
         f_vbase = bus_vbase[trans["f_bus"]]
         t_vbase = bus_vbase[trans["t_bus"]]
@@ -275,4 +275,21 @@ function add_big_M!(data_model; kwargs...)
     big_M["v_neutral_pu_max"] = add_kwarg!(big_M, kwargs, :v_neutral_pu_max, 0.5)
 
     data_model["big_M"] = big_M
+end
+
+function sol_remove_pu!(solution, data_model)
+    sbase = data_model["sbase"]
+    for (comp_type, comp_dict) in [(x,y) for (x,y) in solution if isa(y, Dict)]
+        for (id, comp) in comp_dict
+            for (prop, val) in comp
+                if any([occursin(x, prop) for x in ["p", "q"]])
+                    comp[prop] = val*sbase
+                elseif occursin("vm", prop)
+                    comp[prop] = val*data_model[comp_type][id]["vbase"]
+                end
+            end
+        end
+    end
+
+    return solution
 end

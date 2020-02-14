@@ -9,12 +9,12 @@ function scale(dict, key, scale)
 end
 
 
-function add_component!(data_model, comp_type, comp)
+function add_virtual_get_id!(data_model, comp_type, comp)
     if !haskey(data_model, comp_type)
-        data_model[comp_type] = Dict{String, Any}()
+        data_model[comp_type] = Dict{Any, Any}()
     end
     comp_dict = data_model[comp_type]
-    virtual_ids = [parse(Int, x[1]) for x in [match(r"_virtual_([1-9]{1}[0-9]*)", id) for id in keys(comp_dict)] if !isnothing(x)]
+    virtual_ids = [parse(Int, x[1]) for x in [match(r"_virtual_([1-9]{1}[0-9]*)", id) for id in keys(comp_dict) if isa(id, AbstractString)] if !isnothing(x)]
     if isempty(virtual_ids)
         id = "_virtual_1"
     else
@@ -48,7 +48,7 @@ function data_model_index!(data_model; components=["line", "shunt", "generator",
         data_model["bus"][id]["index"] = i
         bus_id2ind[id] = i
     end
-    data_model["bus"] = Dict(string(bus_id2ind[id])=>bus for (id, bus) in data_model["bus"])
+    data_model["bus"] = Dict{String, Any}(string(bus_id2ind[id])=>bus for (id, bus) in data_model["bus"])
 
     for comp_type in components
         comp_dict = Dict{String, Any}()
@@ -69,10 +69,10 @@ function data_model_index!(data_model; components=["line", "shunt", "generator",
 end
 
 
-function solution_ind2id(solution, data_model; id_prop="id")
+function solution_ind2id!(solution, data_model; id_prop="id")
     for comp_type in keys(solution)
         if isa(solution[comp_type], Dict)
-            comp_dict = Dict{String, Any}()
+            comp_dict = Dict{Any, Any}()
             for (ind, comp) in solution[comp_type]
                 id = data_model[comp_type][ind][id_prop]
                 comp_dict[id] = comp

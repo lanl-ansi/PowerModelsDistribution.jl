@@ -47,7 +47,7 @@ function add!(data_model, comp_type, comp_dict)
     @assert(haskey(comp_dict, "id"), "The component does not have an id defined.")
     id = comp_dict["id"]
     if !haskey(data_model, comp_type)
-        data_model[comp_type] = Dict{String, Any}()
+        data_model[comp_type] = Dict{Any, Any}()
     else
         @assert(!haskey(data_model[comp_type], id), "There is already a $comp_type with id $id.")
     end
@@ -162,7 +162,7 @@ end
 # linecode
 
 DTYPES[:linecode] = Dict(
-    :id => AbstractString,
+    :id => Any,
     :rs => Array{<:Real, 2},
     :xs => Array{<:Real, 2},
     :g_fr => Array{<:Real, 2},
@@ -198,7 +198,7 @@ end
 # line
 
 DTYPES[:line] = Dict(
-    :id => AbstractString,
+    :id => Any,
     :status => Int,
     :f_bus => AbstractString,
     :t_bus => AbstractString,
@@ -208,6 +208,8 @@ DTYPES[:line] = Dict(
     :length => Real,
     :c_rating =>Vector{<:Real},
     :s_rating =>Vector{<:Real},
+    :angmin=>Vector{<:Real},
+    :angmax=>Vector{<:Real}
 )
 
 REQUIRED_FIELDS[:line] = [:id, :status, :f_bus, :f_connections, :t_bus, :t_connections, :linecode, :length]
@@ -229,7 +231,6 @@ CHECKS[:line] = function check_line(data, line)
         end
 
         N = size(linecode["rs"])[1]
-        @show(N)
         @assert(length(line["f_connections"])==N, "line $i: the number of terminals should match the number of conductors in the linecode.")
         @assert(length(line["t_connections"])==N, "line $i: the number of terminals should match the number of conductors in the linecode.")
     else
@@ -244,24 +245,28 @@ CHECKS[:line] = function check_line(data, line)
 end
 
 
-function create_line(id, f_bus, t_bus, linecode, length; kwargs...)
+function create_line(id, f_bus, t_bus, linecode, len; kwargs...)
     line = Dict{String,Any}()
     line["id"] = id
     line["f_bus"] = f_bus
     line["t_bus"] = t_bus
     line["linecode"] = linecode
-    line["length"] = length
+    line["length"] = len
 
     add_kwarg!(line, kwargs, :status, 1)
     add_kwarg!(line, kwargs, :f_connections, collect(1:4))
     add_kwarg!(line, kwargs, :t_connections, collect(1:4))
+
+    N = length(line["f_connections"])
+    add_kwarg!(line, kwargs, :angmin, fill(-60/180*pi, N))
+    add_kwarg!(line, kwargs, :angmax, fill( 60/180*pi, N))
     return line
 end
 
 # Bus
 
 DTYPES[:bus] = Dict(
-    :id => AbstractString,
+    :id => Any,
     :status => Int,
     :terminals => Array{<:Any},
     :phases => Array{<:Int},
@@ -310,7 +315,7 @@ end
 # Load
 
 DTYPES[:load] = Dict(
-    :id => AbstractString,
+    :id => Any,
     :status => Int,
     :bus => String,
     :connections => Array{<:Int},
@@ -372,17 +377,17 @@ end
 # generator
 
 DTYPES[:generator] = Dict(
-    :id => AbstractString,
+    :id => Any,
     :status => Int,
     :bus => String,
     :connections => Array{<:Int},
     :configuration => String,
-    :pd => Array{<:Real, 1},
-    :qd => Array{<:Real, 1},
-    :pd_min => Array{<:Real, 1},
-    :pd_max => Array{<:Real, 1},
-    :qd_min => Array{<:Real, 1},
-    :qd_max => Array{<:Real, 1},
+    :pg => Array{<:Real, 1},
+    :qg => Array{<:Real, 1},
+    :pg_min => Array{<:Real, 1},
+    :pg_max => Array{<:Real, 1},
+    :qg_min => Array{<:Real, 1},
+    :qg_max => Array{<:Real, 1},
 )
 
 REQUIRED_FIELDS[:generator] = [:id, :status, :bus, :connections]
@@ -403,7 +408,7 @@ function create_generator(id, bus; kwargs...)
     add_kwarg!(generator, kwargs, :status, 1)
     add_kwarg!(generator, kwargs, :configuration, "wye")
     add_kwarg!(generator, kwargs, :connections, generator["configuration"]=="wye" ? [1, 2, 3, 4] : [1, 2, 3])
-    copy_kwargs_to_dict_if_present!(generator, kwargs, [:pd_min, :pd_max, :qd_min, :qd_max])
+    copy_kwargs_to_dict_if_present!(generator, kwargs, [:pg_min, :pg_max, :qg_min, :qg_max])
     return generator
 end
 
@@ -412,7 +417,7 @@ end
 
 
 DTYPES[:transformer_nw] = Dict(
-    :id => AbstractString,
+    :id => Any,
     :bus => Array{<:AbstractString, 1},
     :connections => Array{<:Array{<:Any, 1}, 1},
     :vnom => Array{<:Real, 1},
@@ -480,7 +485,7 @@ end
 # # Transformer, two-winding three-phase
 #
 # DTYPES[:transformer_2w_ideal] = Dict(
-#     :id => AbstractString,
+#     :id => Any,
 #     :f_bus => String,
 #     :t_bus => String,
 #     :configuration => String,
@@ -520,7 +525,7 @@ end
 # Capacitor
 
 DTYPES[:capacitor] = Dict(
-    :id => AbstractString,
+    :id => Any,
     :bus => String,
     :connections => Array{Int, 1},
     :configuration => String,
@@ -560,7 +565,7 @@ end
 # Shunt
 
 DTYPES[:shunt] = Dict(
-    :id => AbstractString,
+    :id => Any,
     :status => 1,
     :bus => String,
     :terminals => Array{Int, 1},

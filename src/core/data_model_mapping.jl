@@ -1,5 +1,6 @@
 import LinearAlgebra
 
+# MAP DATA MODEL DOWN
 
 function map_down_data_model(data_model_user)
     data_model = deepcopy(data_model_user)
@@ -166,20 +167,22 @@ function _decompose_transformer_nw!(data_model)
                 # 2-WINDING TRANSFORMER
                 # make virtual bus and mark it for reduction
                 tm_nom = trans["configuration"][w]=="delta" ? trans["vnom"][w]*sqrt(3) : trans["vnom"][w]
-                trans_w[w] = create_transformer_2w_ideal(NaN,
-                    trans["bus"][w], trans_t_bus_w[w], tm_nom,
-                    f_terminals     = trans["connections"][w],
-                    t_terminals     = collect(1:4),
-                    configuration   = trans["configuration"][w],
-                    polarity        = trans["polarity"][w],
-                    #tm_set         = trans["tm_set"][w],
-                    tm_fix          = trans["tm_fix"][w],
-                    #tm_max         = trans["tm_max"][w],
-                    #tm_min         = trans["tm_min"][w],
-                    #tm_step        = trans["tm_step"][w],
+                trans_w[w] = Dict(
+                    "f_bus"         => trans["bus"][w],
+                    "t_bus"         => trans_t_bus_w[w],
+                    "tm_nom"        => tm_nom,
+                    "f_connections" => trans["connections"][w],
+                    "t_connections" => collect(1:4),
+                    "configuration" => trans["configuration"][w],
+                    "polarity"      => trans["polarity"][w],
+                    "tm"            => trans["tm"][w],
+                    "tm_fix"        => trans["tm_fix"][w],
+                    "tm_max"        => trans["tm_max"][w],
+                    "tm_min"        => trans["tm_min"][w],
+                    "tm_step"       => trans["tm_step"][w],
                 )
 
-                add_component!(data_model, "transformer_2wa", trans_w[w])
+                add_virtual_get_id!(data_model, "transformer_2wa", trans_w[w])
             end
 
             delete_component!(data_model, "transformer_nw", trans)
@@ -306,7 +309,7 @@ function _build_loss_model!(data_model, r_s, zsc, ysh; n_phases=3)
 
     bus_ids = Dict()
     for bus in buses
-        bus_ids[bus] = add_component!(data_model, "bus", create_bus(""))
+        bus_ids[bus] = add_virtual_get_id!(data_model, "bus", create_bus(""))
     end
     line_ids = Dict()
     for (l,(i,j)) in lines
@@ -322,16 +325,17 @@ function _build_loss_model!(data_model, r_s, zsc, ysh; n_phases=3)
             b_fr = imag(shunts[j])
             delete!(shunts, j)
         end
-        line_ids[l] = add_component!(data_model, "line", create_line("",
-            bus_ids[i], bus_ids[j], n_phases,
-            f_terminals = collect(1:n_phases),
-            t_terminals = collect(1:n_phases),
-            rs = LinearAlgebra.diagm(0=>fill(real(z[l]), n_phases)),
-            xs = LinearAlgebra.diagm(0=>fill(imag(z[l]), n_phases)),
-            g_fr = LinearAlgebra.diagm(0=>fill(g_fr, n_phases)),
-            b_fr = LinearAlgebra.diagm(0=>fill(b_fr, n_phases)),
-            g_to = LinearAlgebra.diagm(0=>fill(g_to, n_phases)),
-            b_to = LinearAlgebra.diagm(0=>fill(b_to, n_phases)),
+        line_ids[l] = add_virtual_get_id!(data_model, "line", Dict(
+            "status"=>1,
+            "f_bus"=>bus_ids[i], "t_bus"=>bus_ids[j],
+            "f_connections"=>collect(1:n_phases),
+            "t_connections"=>collect(1:n_phases),
+            "rs"=>LinearAlgebra.diagm(0=>fill(real(z[l]), n_phases)),
+            "xs"=>LinearAlgebra.diagm(0=>fill(imag(z[l]), n_phases)),
+            "g_fr"=>LinearAlgebra.diagm(0=>fill(g_fr, n_phases)),
+            "b_fr"=>LinearAlgebra.diagm(0=>fill(b_fr, n_phases)),
+            "g_to"=>LinearAlgebra.diagm(0=>fill(g_to, n_phases)),
+            "b_to"=>LinearAlgebra.diagm(0=>fill(b_to, n_phases)),
         ))
     end
 
@@ -339,9 +343,13 @@ function _build_loss_model!(data_model, r_s, zsc, ysh; n_phases=3)
 end
 
 function make_compatible_v8!(data_model)
+    data_model["conductors"] = 3
     for (_, bus) in data_model["bus"]
         bus["bus_type"] = 1
         bus["status"] = 1
+        bus["bus_i"] = bus["index"]
+        bus["vmin"] = fill(0.9, 3)
+        bus["vmax"] = fill(1.1, 3)
     end
 
     for (_, load) in data_model["load"]
@@ -349,18 +357,57 @@ function make_compatible_v8!(data_model)
     end
 
     data_model["gen"] = data_model["generator"]
-    data_model["branch"] = data_model["line"]
 
     for (_, gen) in data_model["gen"]
         gen["gen_status"] = gen["status"]
         gen["gen_bus"] = gen["bus"]
+        gen["pmin"] = gen["pg_min"]
+        gen["pmax"] = gen["pg_max"]
+        gen["qmin"] = gen["qg_min"]
+        gen["qmax"] = gen["qg_max"]
+        gen["conn"] = gen["configuration"]
+        gen["cost"] = [1.0, 0]
+        gen["model"] = 2
     end
 
+    data_model["branch"] = data_model["line"]
     for (_, br) in data_model["branch"]
         br["br_status"] = br["status"]
+        br["br_r"] = br["rs"]
+        br["br_x"] = br["xs"]
+        br["tap"] = 1.0
+        br["shift"] = 0
+        @show br
+        if !haskey(br, "angmin")
+            N = size(br["br_r"])[1]
+            br["angmin"] = fill(-pi/2, N)
+            br["angmax"] = fill(pi/2, N)
+        end
     end
 
-    data_model["dc_line"] = Dict()
-    
+    for (_, tr) in data_model["transformer_2wa"]
+        tr["rate_a"] = fill(1000.0, 3)
+    end
+
+    data_model["dcline"] = Dict()
+    data_model["transformer"] = data_model["transformer_2wa"]
+
+    data_model["per_unit"] = true
+    data_model["baseMVA"] = 1E12
+    data_model["name"] = "IDC"
+
+
     return data_model
+end
+
+# MAP SOLUTION UP
+
+function map_solution_up(data_model::Dict, solution::Dict)
+    sol_hl = deepcopy(solution)
+    for i in length(data_model["mappings"]):-1:1
+        (name, data) = data_model["mappings"][i]
+        if name=="decompose_transformer_nw"
+            @show data
+        end
+    end
 end
