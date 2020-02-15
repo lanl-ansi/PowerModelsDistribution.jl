@@ -572,10 +572,20 @@ function constraint_mc_generation_wye(pm::_PMs.IVRPowerModel, nw::Int, id::Int, 
     qg = JuMP.@NLexpression(pm.model, [i in 1:nph], -vr[i]*cig[i]+vi[i]*crg[i])
 
     if bounded
-        JuMP.@constraint(pm.model, pmin .<= vr.*crg  + vi.*cig)
-        JuMP.@constraint(pm.model, pmax .>= vr.*crg  + vi.*cig)
-        JuMP.@constraint(pm.model, qmin .<= vi.*crg  - vr.*cig)
-        JuMP.@constraint(pm.model, qmax .>= vi.*crg  - vr.*cig)
+        for c in 1:nph
+            if pmin[c]>-Inf
+                JuMP.@constraint(pm.model, pmin[c] .<= vr[c]*crg[c]  + vi[c]*cig[c])
+            end
+            if pmax[c]< Inf
+                JuMP.@constraint(pm.model, pmax[c] .>= vr[c]*crg[c]  + vi[c]*cig[c])
+            end
+            if qmin[c]>-Inf
+                JuMP.@constraint(pm.model, qmin[c] .<= vi[c]*crg[c]  - vr[c]*cig[c])
+            end
+            if qmax[c]< Inf
+                JuMP.@constraint(pm.model, qmax[c] .>= vi[c]*crg[c]  - vr[c]*cig[c])
+            end
+        end
     end
 
     _PMs.var(pm, nw, :crg_bus)[id] = crg

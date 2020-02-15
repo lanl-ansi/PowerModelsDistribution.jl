@@ -272,13 +272,37 @@ end
 Returns a current magnitude bound for the generators.
 """
 function _calc_gen_current_max(gen::Dict, bus::Dict)
-    pabsmax = max.(abs.(gen["pmin"]), abs.(gen["pmax"]))
-    qabsmax = max.(abs.(gen["qmax"]), abs.(gen["qmax"]))
-    smax = sqrt.(pabsmax.^2 + qabsmax.^2)
+    if all([haskey(gen, "pmax") for prop in ["pmax", "pmin", "qmax", "qmin"]]) && haskey(bus, "vmin")
+        pabsmax = max.(abs.(gen["pmin"]), abs.(gen["pmax"]))
+        qabsmax = max.(abs.(gen["qmin"]), abs.(gen["qmax"]))
+        smax = sqrt.(pabsmax.^2 + qabsmax.^2)
 
-    vmin = bus["vmin"]
+        vmin = bus["vmin"]
 
-    return smax./vmin
+        return smax./vmin
+    else
+        return missing
+    end
+end
+
+
+"""
+Returns a total (shunt+series) current magnitude bound for the from and to side
+of a branch. The total power rating also implies a current bound through the
+lower bound on the voltage magnitude of the connected buses.
+"""
+function _calc_branch_current_max(branch::Dict, bus::Dict)
+    bounds = []
+    if haskey(branch, "c_rating_a")
+        push!(bounds, branch["c_rating_a"])
+    end
+    if haskey(branch, "rate_a") && haskey(bus, "vmin")
+        push!(bounds, branch["rate_a"]./bus["vmin"])
+    end
+    if length(bounds)==0
+        return missing
+    end
+    return min.(bounds...)
 end
 
 
@@ -332,16 +356,16 @@ the voltage magnitude of the connected buses.
 function _calc_transformer_current_max_frto(trans::Dict, bus_fr::Dict, bus_to::Dict)
     bounds_fr = []
     bounds_to = []
-    if haskey(trans, "c_rating_a")
-        push!(bounds_fr, trans["c_rating_a"])
-        push!(bounds_to, trans["c_rating_a"])
-    end
-    if haskey(branch, "rate_a")
-        push!(bounds_fr, trans["rate_a"]./bus_fr["vmin"])
-        push!(bounds_to, trans["rate_a"]./bus_to["vmin"])
-    end
-    @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
-    return min.(bounds_fr...), min.(bounds_to...)
+    # if haskey(trans, "c_rating_a")
+    #     push!(bounds_fr, trans["c_rating_a"])
+    #     push!(bounds_to, trans["c_rating_a"])
+    # end
+    # if haskey(trans, "rate_a")
+    #     push!(bounds_fr, trans["rate_a"]./bus_fr["vmin"])
+    #     push!(bounds_to, trans["rate_a"]./bus_to["vmin"])
+    # end
+    # return min.(bounds_fr...), min.(bounds_to...)
+    return missing, missing
 end
 
 
@@ -350,37 +374,41 @@ Returns a total (shunt+series) power magnitude bound for the from and to side
 of a branch. The total current rating also implies a current bound through the
 upper bound on the voltage magnitude of the connected buses.
 """
-function _calc_branch_power_ub_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
-    bounds_fr = []
-    bounds_to = []
-    if haskey(branch, "c_rating_a")
-        push!(bounds_fr, branch["c_rating_a"].*bus_fr["vmax"])
-        push!(bounds_to, branch["c_rating_a"].*bus_to["vmax"])
+function _calc_branch_power_max(branch::Dict, bus::Dict)
+    bounds = []
+    if haskey(branch, "c_rating_a") && haskey(bus, "vmax")
+        push!(bounds, branch["c_rating_a"].*bus["vmax"])
     end
     if haskey(branch, "rate_a")
-        push!(bounds_fr, branch["rate_a"])
-        push!(bounds_to, branch["rate_a"])
+        push!(bounds, branch["rate_a"])
     end
-    @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
-    return min.(bounds_fr...), min.(bounds_to...)
+    if length(bounds)==0
+        return missing
+    end
+    return min.(bounds...)
 end
 
 
 """
 Returns a valid series current magnitude bound for a branch.
 """
-function _calc_branch_series_current_ub(branch::Dict, bus_fr::Dict, bus_to::Dict)
-    vmin_fr = bus_fr["vmin"]
-    vmin_to = bus_to["vmin"]
+function _calc_branch_series_current_max(branch::Dict, bus_fr::Dict, bus_to::Dict)
+    ncnds = 3 #TODO update for four-wire
+    vmin_fr = get(bus_fr, "vmin", fill(0.0, ncnds))
+    vmin_to = get(bus_to, "vmin", fill(0.0, ncnds))
 
-    vmax_fr = bus_fr["vmax"]
-    vmax_to = bus_to["vmax"]
+    vmax_fr = get(bus_fr, "vmax", fill(Inf, ncnds))
+    vmax_to = get(bus_to, "vmax", fill(Inf, ncnds))
 
     # assumed to be matrices already
     # temportary fix by shunts_diag2mat!
 
     # get valid bounds on total current
-    c_max_fr_tot, c_max_to_tot = _calc_branch_current_max_frto(branch, bus_fr, bus_to)
+    c_max_fr_tot = _calc_branch_current_max(branch, bus_fr)
+    c_max_to_tot = _calc_branch_current_max(branch, bus_to)
+    if ismissing(c_max_fr_tot) || ismissing(c_max_to_tot)
+        return missing
+    end
 
     # get valid bounds on shunt current
     y_fr = branch["g_fr"] + im* branch["b_fr"]

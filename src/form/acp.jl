@@ -281,6 +281,8 @@ function constraint_mc_power_balance_load(pm::_PMs.AbstractACPModel, nw::Int, i:
     cstr_p = []
     cstr_q = []
 
+    @show(bus_loads)
+
     for c in _PMs.conductor_ids(pm; nw=nw)
         cp = JuMP.@NLconstraint(pm.model,
             sum(p[a][c] for a in bus_arcs)
@@ -290,12 +292,12 @@ function constraint_mc_power_balance_load(pm::_PMs.AbstractACPModel, nw::Int, i:
             sum(pg[g][c] for g in bus_gens)
             - sum(ps[s][c] for s in bus_storage)
             - sum(pd[l][c] for l in bus_loads)
-            - ( # shunt
-                Gt[c,c] * vm[c]^2
-                +sum( Gt[c,d] * vm[c]*vm[d] * cos(va[c]-va[d])
-                     +Bt[c,d] * vm[c]*vm[d] * sin(va[c]-va[d])
-                     for d in cnds if d != c)
-            )
+            # - ( # shunt
+            #     Gt[c,c] * vm[c]^2
+            #     +sum( Gt[c,d] * vm[c]*vm[d] * cos(va[c]-va[d])
+            #          +Bt[c,d] * vm[c]*vm[d] * sin(va[c]-va[d])
+            #          for d in cnds if d != c)
+            # )
         )
         push!(cstr_p, cp)
 
@@ -307,12 +309,12 @@ function constraint_mc_power_balance_load(pm::_PMs.AbstractACPModel, nw::Int, i:
             sum(qg[g][c] for g in bus_gens)
             - sum(qs[s][c] for s in bus_storage)
             - sum(qd[l][c] for l in bus_loads)
-            - ( # shunt
-                -Bt[c,c] * vm[c]^2
-                -sum( Bt[c,d] * vm[c]*vm[d] * cos(va[c]-va[d])
-                     -Gt[c,d] * vm[c]*vm[d] * sin(va[c]-va[d])
-                     for d in cnds if d != c)
-            )
+            # - ( # shunt
+            #     -Bt[c,c] * vm[c]^2
+            #     -sum( Bt[c,d] * vm[c]*vm[d] * cos(va[c]-va[d])
+            #          -Gt[c,d] * vm[c]*vm[d] * sin(va[c]-va[d])
+            #          for d in cnds if d != c)
+            # )
         )
         push!(cstr_q, cq)
     end

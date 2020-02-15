@@ -302,10 +302,11 @@ function constraint_mc_generation(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=
     generator = _PMs.ref(pm, nw, :gen, id)
     bus = _PMs.ref(pm, nw,:bus, generator["gen_bus"])
 
-    pmin = generator["pmin"]
-    pmax = generator["pmax"]
-    qmin = generator["qmin"]
-    qmax = generator["qmax"]
+    N = 3
+    pmin = get(generator, "pmin", fill(-Inf, N))
+    pmax = get(generator, "pmax", fill( Inf, N))
+    qmin = get(generator, "qmin", fill(-Inf, N))
+    qmax = get(generator, "qmax", fill( Inf, N))
 
     if generator["conn"]=="wye"
         constraint_mc_generation_wye(pm, nw, id, bus["index"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
@@ -365,11 +366,8 @@ function constraint_mc_voltage_angle_difference(pm::_PMs.AbstractPowerModel, i::
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
     pair = (f_bus, t_bus)
-    buspair = _PMs.ref(pm, nw, :buspairs, pair)
 
-    if buspair["branch"] == i
-        constraint_mc_voltage_angle_difference(pm, nw, f_idx, buspair["angmin"], buspair["angmax"])
-    end
+    constraint_mc_voltage_angle_difference(pm, nw, f_idx, branch["angmin"], branch["angmax"])
 end
 
 
@@ -431,7 +429,9 @@ Notable examples include IVRPowerModel and ACRPowerModel
 """
 function constraint_mc_voltage_magnitude_bounds(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     bus = _PMs.ref(pm, nw, :bus, i)
-    constraint_mc_voltage_magnitude_bounds(pm, nw, i, bus["vmin"], bus["vmax"])
+    vmin = get(bus, "vmin", fill(0.0, 3)) #TODO update for four-wire
+    vmax = get(bus, "vmax", fill(Inf, 3)) #TODO update for four-wire
+    constraint_mc_voltage_magnitude_bounds(pm, nw, i, vmin, vmax)
 end
 
 
