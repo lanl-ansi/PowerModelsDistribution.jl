@@ -54,8 +54,16 @@ function add!(data_model, comp_type, comp_dict)
     data_model[comp_type][id] = comp_dict
 end
 
+function _add_unused_kwargs!(comp_dict, kwargs)
+    for (prop, val) in kwargs
+        if !haskey(comp_dict, "$prop")
+            comp_dict["$prop"] = val
+        end
+    end
+end
+
 function check_data_model(data)
-    for component in [:bus, :linecode, :line, :load, :generator, :transformer_nw, :capacitor, :shunt]
+    for component in keys(DTYPES)
         if haskey(data, string(component))
             for (id, comp_dict) in data[string(component)]
                 if haskey(REQUIRED_FIELDS, component)
@@ -177,9 +185,9 @@ CHECKS[:linecode] = function check_linecode(data, linecode)
     _check_same_size(linecode, [:rs, :xs, :g_fr, :g_to, :b_fr, :b_to])
 end
 
-function create_linecode(id; kwargs...)
+function create_linecode(; kwargs...)
     linecode = Dict{String,Any}()
-    linecode["id"] = id
+
     n_conductors = 0
     for key in [:rs, :xs, :g_fr, :g_to, :b_fr, :b_to]
         if haskey(kwargs, key)
@@ -192,6 +200,8 @@ function create_linecode(id; kwargs...)
     add_kwarg!(linecode, kwargs, :b_fr, fill(0.0, n_conductors, n_conductors))
     add_kwarg!(linecode, kwargs, :g_to, fill(0.0, n_conductors, n_conductors))
     add_kwarg!(linecode, kwargs, :b_to, fill(0.0, n_conductors, n_conductors))
+
+    _add_unused_kwargs!(linecode, kwargs)
     return linecode
 end
 
@@ -245,13 +255,8 @@ CHECKS[:line] = function check_line(data, line)
 end
 
 
-function create_line(id, f_bus, t_bus, linecode, len; kwargs...)
+function create_line(; kwargs...)
     line = Dict{String,Any}()
-    line["id"] = id
-    line["f_bus"] = f_bus
-    line["t_bus"] = t_bus
-    line["linecode"] = linecode
-    line["length"] = len
 
     add_kwarg!(line, kwargs, :status, 1)
     add_kwarg!(line, kwargs, :f_connections, collect(1:4))
@@ -260,6 +265,8 @@ function create_line(id, f_bus, t_bus, linecode, len; kwargs...)
     N = length(line["f_connections"])
     add_kwarg!(line, kwargs, :angmin, fill(-60/180*pi, N))
     add_kwarg!(line, kwargs, :angmax, fill( 60/180*pi, N))
+
+    _add_unused_kwargs!(line, kwargs)
     return line
 end
 
@@ -299,16 +306,16 @@ CHECKS[:bus] = function check_bus(data, bus)
     end
 end
 
-function create_bus(id; kwargs...)
+function create_bus(; kwargs...)
     bus = Dict{String,Any}()
-    bus["id"] = id
 
     add_kwarg!(bus, kwargs, :status, 1)
     add_kwarg!(bus, kwargs, :terminals, collect(1:4))
     add_kwarg!(bus, kwargs, :grounded, [])
     add_kwarg!(bus, kwargs, :rg, Array{Float64, 1}())
     add_kwarg!(bus, kwargs, :xg, Array{Float64, 1}())
-    copy_kwargs_to_dict_if_present!(bus, kwargs, [:phases, :neutral, :vm_max, :vm_min, :vm_pp_max, :vm_pp_min, :vm_pn_max, :vm_pn_min, :vm_fix, :va_fix])
+
+    _add_unused_kwargs!(bus, kwargs)
     return bus
 end
 
@@ -354,10 +361,8 @@ CHECKS[:load] = function check_load(data, load)
 end
 
 
-function create_load(id, bus; kwargs...)
+function create_load(; kwargs...)
     load = Dict{String,Any}()
-    load["id"] = id
-    load["bus"] = bus
 
     add_kwarg!(load, kwargs, :status, 1)
     add_kwarg!(load, kwargs, :configuration, "wye")
@@ -369,8 +374,9 @@ function create_load(id, bus; kwargs...)
     else
         add_kwarg!(load, kwargs, :pd_ref, fill(0.0, 3))
         add_kwarg!(load, kwargs, :qd_ref, fill(0.0, 3))
-        copy_kwargs_to_dict_if_present!(load, kwargs, [:pd_ref, :qd_ref, :vnom, :alpha, :beta])
     end
+
+    _add_unused_kwargs!(load, kwargs)
     return load
 end
 
@@ -401,14 +407,14 @@ CHECKS[:generator] = function check_generator(data, generator)
     _check_connectivity(data, generator; context="generator $id")
 end
 
-function create_generator(id, bus; kwargs...)
+function create_generator(; kwargs...)
     generator = Dict{String,Any}()
-    generator["id"] = id
-    generator["bus"] = bus
+
     add_kwarg!(generator, kwargs, :status, 1)
     add_kwarg!(generator, kwargs, :configuration, "wye")
     add_kwarg!(generator, kwargs, :connections, generator["configuration"]=="wye" ? [1, 2, 3, 4] : [1, 2, 3])
-    copy_kwargs_to_dict_if_present!(generator, kwargs, [:pg_min, :pg_max, :qg_min, :qg_max])
+
+    _add_unused_kwargs!(generator, kwargs)
     return generator
 end
 
@@ -418,6 +424,7 @@ end
 
 DTYPES[:transformer_nw] = Dict(
     :id => Any,
+    :status => Int,
     :bus => Array{<:AbstractString, 1},
     :connections => Array{<:Array{<:Any, 1}, 1},
     :vnom => Array{<:Real, 1},
@@ -434,6 +441,8 @@ DTYPES[:transformer_nw] = Dict(
     :tm_max => Array{<:Array{<:Real, 1}, 1},
     :tm_step => Array{<:Array{<:Real, 1}, 1},
 )
+
+REQUIRED_FIELDS[:transformer_nw] = keys(DTYPES[:transformer_nw])
 
 
 CHECKS[:transformer_nw] = function check_transformer_nw(data, trans)
@@ -457,15 +466,12 @@ CHECKS[:transformer_nw] = function check_transformer_nw(data, trans)
 end
 
 
-function create_transformer_nw(id, n_windings, bus, connections, vnom, snom; kwargs...)
+function create_transformer_nw(; kwargs...)
     trans = Dict{String,Any}()
-    trans["id"] = id
-    trans["bus"] = bus
-    trans["connections"] = connections
-    trans["vnom"] = vnom
-    trans["snom"] = snom
 
-    n_windings = length(connections)
+    @assert(haskey(kwargs, :bus), "You have to specify at least the buses.")
+    n_windings = length(kwargs[:bus])
+    add_kwarg!(trans, kwargs, :status, 1)
     add_kwarg!(trans, kwargs, :configuration, fill("wye", n_windings))
     add_kwarg!(trans, kwargs, :polarity, fill(true, n_windings))
     add_kwarg!(trans, kwargs, :rs, fill(0.0, n_windings))
@@ -477,7 +483,8 @@ function create_transformer_nw(id, n_windings, bus, connections, vnom, snom; kwa
     add_kwarg!(trans, kwargs, :tm_max, fill(fill(1.1, 3), n_windings))
     add_kwarg!(trans, kwargs, :tm_step, fill(fill(1/32, 3), n_windings))
     add_kwarg!(trans, kwargs, :tm_fix, fill(fill(true, 3), n_windings))
-    copy_kwargs_to_dict_if_present!(trans, kwargs, [:tm_min, :tm_max])
+
+    _add_unused_kwargs!(trans, kwargs)
     return trans
 end
 
@@ -526,6 +533,7 @@ end
 
 DTYPES[:capacitor] = Dict(
     :id => Any,
+    :status => Int,
     :bus => String,
     :connections => Array{Int, 1},
     :configuration => String,
@@ -533,31 +541,35 @@ DTYPES[:capacitor] = Dict(
     :vnom => Real,
 )
 
+REQUIRED_FIELDS[:capacitor] = keys(DTYPES[:capacitor])
+
 
 CHECKS[:capacitor] = function check_capacitor(data, cap)
     id = cap["id"]
     N = length(cap["connections"])
     config = cap["configuration"]
     if config=="wye"
-        @assert(length(cap["qd_ref"])==N-1, "Capacitor $id: qd_ref should have $(N-1) elements.")
+        @assert(length(cap["qd_ref"])==N-1, "capacitor $id: qd_ref should have $(N-1) elements.")
     else
-        @assert(length(cap["qd_ref"])==N, "Capacitor $id: qd_ref should have $N elements.")
+        @assert(length(cap["qd_ref"])==N, "capacitor $id: qd_ref should have $N elements.")
     end
     @assert(config in ["delta", "wye", "wye-grounded", "wye-floating"])
     if config=="delta"
         @assert(N>=3, "Capacitor $id: delta-connected capacitors should have at least 3 elements.")
     end
+
+    _check_connectivity(data, cap; context="capacitor $id")
 end
 
 
-function create_capacitor(id, bus, vnom; kwargs...)
+function create_capacitor(; kwargs...)
     cap = Dict{String,Any}()
-    cap["id"] = id
-    cap["bus"] = bus
-    cap["vnom"] = vnom
+
     add_kwarg!(cap, kwargs, :configuration, "wye")
     add_kwarg!(cap, kwargs, :connections, collect(1:4))
     add_kwarg!(cap, kwargs, :qd_ref, fill(0.0, 3))
+
+    _add_unused_kwargs!(cap, kwargs)
     return cap
 end
 
@@ -566,26 +578,66 @@ end
 
 DTYPES[:shunt] = Dict(
     :id => Any,
-    :status => 1,
+    :status => Int,
     :bus => String,
     :terminals => Array{Int, 1},
     :g_sh => Array{<:Real, 2},
     :b_sh => Array{<:Real, 2},
 )
 
+REQUIRED_FIELDS[:capacitor] = keys(DTYPES[:shunt])
+
 
 CHECKS[:shunt] = function check_shunt(data, shunt)
+    _check_connectivity(data, shunt; context="shunt $id")
+
 end
 
 
-function create_shunt(id, bus, terminals; kwargs...)
+function create_shunt(; kwargs...)
     shunt = Dict{String,Any}()
-    shunt["id"] = id
-    shunt["bus"] = bus
-    shunt["terminals"] = terminals
 
     add_kwarg!(shunt, kwargs, :status, 1)
     add_kwarg!(shunt, kwargs, :g_sh, fill(0.0, length(terminals), length(terminals)))
     add_kwarg!(shunt, kwargs, :b_sh, fill(0.0, length(terminals), length(terminals)))
+
+    _add_unused_kwargs!(shunt, kwargs)
     return shunt
+end
+
+
+# voltage source
+
+DTYPES[:voltage_source] = Dict(
+    :id => Any,
+    :status => Int,
+    :bus => String,
+    :connections => Array{Int, 1},
+    :vm =>Array{<:Real},
+    :va =>Array{<:Real},
+    :pg_max =>Array{<:Real},
+    :pg_min =>Array{<:Real},
+    :qg_max =>Array{<:Real},
+    :qg_min =>Array{<:Real},
+)
+
+REQUIRED_FIELDS[:voltage_source] = [:id, :status, :bus, :connections, :vm, :va]
+
+CHECKS[:voltage_source] = function check_voltage_source(data, vs)
+    id = vs["id"]
+    _check_connectivity(data, vs; context="voltage source $id")
+    N = length(vs["connections"])
+    _check_has_size(vs, ["vm", "va", "pg_max", "pg_min", "qg_max", "qg_min"], N, context="voltage source $id")
+
+end
+
+
+function create_voltage_source(; kwargs...)
+    vs = Dict{String,Any}()
+
+    add_kwarg!(vs, kwargs, :status, 1)
+    add_kwarg!(vs, kwargs, :connections, collect(1:3))
+
+    _add_unused_kwargs!(vs, kwargs)
+    return vs
 end

@@ -135,15 +135,15 @@ end
 function _rebase_pu_bus!(bus, vbase, sbase, sbase_old, v_var_scalar)
 
     # if not in p.u., these are normalized with respect to vnom
-    prop_vnom = ["vm_set", "vm_ln_min", "vm_ln_max", "vm_lg_min", "vm_lg_max", "vm_ng_min", "vm_ng_max", "vm_ll_min", "vm_ll_max"]
+    prop_vnom = ["vmax", "vmin", "vm_set", "vm_ln_min", "vm_ln_max", "vm_lg_min", "vm_lg_max", "vm_ng_min", "vm_ng_max", "vm_ll_min", "vm_ll_max"]
 
     if !haskey(bus, "vbase")
 
-        if haskey(bus, "vnom")
-            vnom = bus["vnom"]
-            _scale_props!(bus, prop_vnom, vnom/vbase)
-            _scale_props!(bus, ["vnom"], 1/vbase)
-        end
+        # if haskey(bus, "vnom")
+        #     vnom = bus["vnom"]
+        #     _scale_props!(bus, ["vnom"], 1/vbase)
+        # end
+        _scale_props!(bus, prop_vnom, 1/vbase)
 
         z_old = 1.0
     else

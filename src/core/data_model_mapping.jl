@@ -7,6 +7,7 @@ function data_model_map!(data_model)
     !haskey(data_model, "mappings")
 
     _expand_linecode!(data_model)
+    add_mappings!(data_model, "decompose_voltage_source", _decompose_voltage_source!(data_model))
     add_mappings!(data_model, "load_to_shunt", _load_to_shunt!(data_model))
     add_mappings!(data_model, "capacitor_to_shunt", _capacitor_to_shunt!(data_model))
     add_mappings!(data_model, "decompose_transformer_nw", _decompose_transformer_nw!(data_model))
@@ -65,7 +66,7 @@ function _load_to_shunt!(data_model)
 
                 push!(mappings, Dict(
                     "load" => load,
-                    "shunt" => shunt,
+                    "shunt_id" => shunt["id"],
                 ))
             end
         end
@@ -104,12 +105,12 @@ function _capacitor_to_shunt!(data_model)
             end
 
             shunt = create_shunt(NaN, cap["bus"], cap["connections"], b_sh=B)
-            add_component!(data_model, "shunt", shunt)
+            add_virtual!(data_model, "shunt", shunt)
             delete_component!(data_model, "capacitor", cap)
 
             push!(mappings, Dict(
                 "capacitor" => cap,
-                "shunt" => shunt,
+                "shunt_id" => shunt["id"],
             ))
         end
     end
@@ -118,7 +119,36 @@ function _capacitor_to_shunt!(data_model)
 end
 
 
-# test
+function _decompose_voltage_source!(data_model)
+    mappings = []
+    for (id, vs) in data_model["voltage_source"]
+        gen = create_generator("", vs["bus"], connections=vs["connections"])
+        @show vs
+        for prop in ["pg_max", "pg_min", "qg_max", "qg_min"]
+            if haskey(vs, prop)
+                gen[prop] = vs[prop]
+            end
+        end
+        gen_id = add_virtual_get_id!(data_model, "generator", gen)
+
+        bus = data_model["bus"][vs["bus"]]
+        conns = vs["connections"]
+        terminals = bus["terminals"]
+
+        @assert(Set(conns)==Set(terminals), "A voltage source should connect to all terminals of its associated bus!")
+        tmp = Dict(enumerate(conns))
+        bus["vm"] = bus["vmax"] = bus["vmin"] = [vs["vm"][tmp[t]] for t in terminals]
+        bus["va"] = [vs["va"][tmp[t]] for t in terminals]
+        bus["bus_type"] = 3
+
+        delete_component!(data_model, "voltage_source", vs["id"])
+        push!(mappings, Dict("voltage_source"=>vs, "gen_id"=>gen_id))
+    end
+
+    return mappings
+end
+
+
 """
 
     function decompose_transformer_nw_lossy!(data_model)
@@ -338,14 +368,19 @@ function _build_loss_model!(data_model, r_s, zsc, ysh; n_phases=3)
     return bus_ids, line_ids, [bus_ids[bus] for bus in tr_t_bus]
 end
 
+function _alias!(dict, fr, to)
+    if haskey(dict, fr)
+        dict[to] = dict[fr]
+    end
+end
+
 function data_model_make_compatible_v8!(data_model)
     data_model["conductors"] = 3
+    data_model["buspairs"] = nothing
     for (_, bus) in data_model["bus"]
         bus["bus_type"] = 1
         bus["status"] = 1
         bus["bus_i"] = bus["index"]
-        bus["vmin"] = fill(0.9, 3)
-        bus["vmax"] = fill(1.1, 3)
     end
 
     for (_, load) in data_model["load"]
@@ -357,10 +392,10 @@ function data_model_make_compatible_v8!(data_model)
     for (_, gen) in data_model["gen"]
         gen["gen_status"] = gen["status"]
         gen["gen_bus"] = gen["bus"]
-        gen["pmin"] = gen["pg_min"]
-        gen["pmax"] = gen["pg_max"]
-        gen["qmin"] = gen["qg_min"]
-        gen["qmax"] = gen["qg_max"]
+        _alias!(gen, "pg_min", "pmin")
+        _alias!(gen, "qg_min", "qmin")
+        _alias!(gen, "pg_max", "pmax")
+        _alias!(gen, "qg_max", "qmax")
         gen["conn"] = gen["configuration"]
         gen["cost"] = [1.0, 0]
         gen["model"] = 2
@@ -373,7 +408,7 @@ function data_model_make_compatible_v8!(data_model)
         br["br_x"] = br["xs"]
         br["tap"] = 1.0
         br["shift"] = 0
-        @show br
+
         if !haskey(br, "angmin")
             N = size(br["br_r"])[1]
             br["angmin"] = fill(-pi/2, N)
@@ -383,6 +418,12 @@ function data_model_make_compatible_v8!(data_model)
 
     for (_, tr) in data_model["transformer_2wa"]
         tr["rate_a"] = fill(1000.0, 3)
+    end
+
+    for (_, shunt) in data_model["shunt"]
+        shunt["shunt_bus"] = shunt["bus"]
+        shunt["gs"] = shunt["g_sh"]
+        shunt["bs"] = shunt["b_sh"]
     end
 
     data_model["dcline"] = Dict()
@@ -401,6 +442,7 @@ end
 function solution_unmap!(solution::Dict, data_model::Dict)
     for i in length(data_model["mappings"]):-1:1
         (name, data) = data_model["mappings"][i]
+
         if name=="decompose_transformer_nw"
             for bus_id in values(data["vbuses"])
                 delete!(solution["bus"], bus_id)
@@ -417,6 +459,19 @@ function solution_unmap!(solution::Dict, data_model::Dict)
             end
 
             add_solution!(solution, "transformer_nw", data["trans"]["id"], Dict("pt"=>pt, "qt"=>qt))
+        elseif name=="capacitor_to_shunt"
+            # shunt has no solutions defined
+            delete_solution!(solution, "shunt", data["shunt_id"])
+            add_solution!(solution, "capacitor", data["capacitor"]["id"], Dict())
+        elseif name=="load_to_shunt"
+            # shunt has no solutions, but a load should have!
+            delete!(solution, "shunt", data["shunt_id"])
+            add_solution!(solution, "load", data["load"]["id"], Dict())
+        elseif name=="decompose_voltage_source"
+            gen = solution["gen"][data["gen_id"]]
+            delete_solution!(solution, "gen", data["gen_id"])
+            add_solution!(solution, "voltage_source", data["voltage_source"]["id"], Dict("pg"=>gen["pg"], "qg"=>gen["qg"]))
+
         end
     end
 

@@ -25,8 +25,17 @@ function add_virtual_get_id!(data_model, comp_type, comp)
     return id
 end
 
-function delete_component!(data_model, comp_type, comp)
+add_virtual! = add_virtual_get_id!
+
+function delete_component!(data_model, comp_type, comp::Dict)
     delete!(data_model[comp_type], comp["id"])
+    if isempty(data_model[comp_type])
+        delete!(data_model, comp_type)
+    end
+end
+
+function delete_component!(data_model, comp_type, id::Any)
+    delete!(data_model[comp_type], id)
     if isempty(data_model[comp_type])
         delete!(data_model, comp_type)
     end
@@ -95,5 +104,25 @@ function add_solution!(solution, comp_type, id, data)
 
     for (key, prop) in data
         solution[comp_type][id][key] = prop
+    end
+end
+
+
+function delete_solution!(solution, comp_type, id, props)
+    if haskey(solution, comp_type)
+        if haskey(solution[comp_type], id)
+            for prop in props
+                delete!(solution[comp_type][id], prop)
+            end
+        end
+    end
+end
+
+
+function delete_solution!(solution, comp_type, id)
+    if haskey(solution, comp_type)
+        if haskey(solution[comp_type], id)
+            delete!(solution[comp_type], id)
+        end
     end
 end
