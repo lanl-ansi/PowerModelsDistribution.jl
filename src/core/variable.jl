@@ -41,7 +41,6 @@ function variable_mc_voltage_magnitude(pm::_PMs.AbstractPowerModel; nw::Int=pm.c
     if bounded
         for (i,bus) in _PMs.ref(pm, nw, :bus)
             if haskey(bus, "vmin")
-                @show vm, bus["vmin"]
                 JuMP.set_lower_bound.(vm[i], bus["vmin"])
             end
             if haskey(bus, "vmax")
@@ -248,7 +247,6 @@ function variable_mc_branch_series_current_real(pm::_PMs.AbstractPowerModel; nw:
         for (l,i,j) in _PMs.ref(pm, nw, :arcs_from)
             cmax = _calc_branch_series_current_max(_PMs.ref(pm, nw, :branch, l), _PMs.ref(pm, nw, :bus, i), _PMs.ref(pm, nw, :bus, j))
             if !ismissing(cmax)
-                @show cmax
                 JuMP.set_upper_bound.(csr[l],  cmax)
                 JuMP.set_lower_bound.(csr[l], -cmax)
             end

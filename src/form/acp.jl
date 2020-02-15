@@ -281,8 +281,6 @@ function constraint_mc_power_balance_load(pm::_PMs.AbstractACPModel, nw::Int, i:
     cstr_p = []
     cstr_q = []
 
-    @show(bus_loads)
-
     for c in _PMs.conductor_ids(pm; nw=nw)
         cp = JuMP.@NLconstraint(pm.model,
             sum(p[a][c] for a in bus_arcs)

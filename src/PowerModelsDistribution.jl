@@ -47,10 +47,10 @@ module PowerModelsDistribution
 
     #include("io/common_dm.jl")
     #include("io/opendss_dm.jl")
-    # include("io/data_model_components.jl")
-    # include("core/data_model_mapping.jl")
-    # include("core/data_model_pu.jl")
-    # include("io/data_model_util.jl")
+    include("io/data_model_components.jl")
+    include("core/data_model_mapping.jl")
+    include("core/data_model_pu.jl")
+    include("io/data_model_util.jl")
 
     include("prob/mld.jl")
     include("prob/opf.jl")

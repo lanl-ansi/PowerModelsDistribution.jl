@@ -121,28 +121,31 @@ end
 
 function _decompose_voltage_source!(data_model)
     mappings = []
-    for (id, vs) in data_model["voltage_source"]
-        gen = create_generator("", vs["bus"], connections=vs["connections"])
-        @show vs
-        for prop in ["pg_max", "pg_min", "qg_max", "qg_min"]
-            if haskey(vs, prop)
-                gen[prop] = vs[prop]
+
+    if haskey(data_model, "voltage_source")
+        for (id, vs) in data_model["voltage_source"]
+            gen = create_generator(bus=vs["bus"], connections=vs["connections"])
+
+            for prop in ["pg_max", "pg_min", "qg_max", "qg_min"]
+                if haskey(vs, prop)
+                    gen[prop] = vs[prop]
+                end
             end
+            gen_id = add_virtual_get_id!(data_model, "generator", gen)
+
+            bus = data_model["bus"][vs["bus"]]
+            conns = vs["connections"]
+            terminals = bus["terminals"]
+
+            @assert(Set(conns)==Set(terminals), "A voltage source should connect to all terminals of its associated bus!")
+            tmp = Dict(enumerate(conns))
+            bus["vm"] = bus["vmax"] = bus["vmin"] = [vs["vm"][tmp[t]] for t in terminals]
+            bus["va"] = [vs["va"][tmp[t]] for t in terminals]
+            bus["bus_type"] = 3
+
+            delete_component!(data_model, "voltage_source", vs["id"])
+            push!(mappings, Dict("voltage_source"=>vs, "gen_id"=>gen_id))
         end
-        gen_id = add_virtual_get_id!(data_model, "generator", gen)
-
-        bus = data_model["bus"][vs["bus"]]
-        conns = vs["connections"]
-        terminals = bus["terminals"]
-
-        @assert(Set(conns)==Set(terminals), "A voltage source should connect to all terminals of its associated bus!")
-        tmp = Dict(enumerate(conns))
-        bus["vm"] = bus["vmax"] = bus["vmin"] = [vs["vm"][tmp[t]] for t in terminals]
-        bus["va"] = [vs["va"][tmp[t]] for t in terminals]
-        bus["bus_type"] = 3
-
-        delete_component!(data_model, "voltage_source", vs["id"])
-        push!(mappings, Dict("voltage_source"=>vs, "gen_id"=>gen_id))
     end
 
     return mappings
@@ -335,7 +338,7 @@ function _build_loss_model!(data_model, r_s, zsc, ysh; n_phases=3)
 
     bus_ids = Dict()
     for bus in buses
-        bus_ids[bus] = add_virtual_get_id!(data_model, "bus", create_bus(""))
+        bus_ids[bus] = add_virtual_get_id!(data_model, "bus", create_bus(id=""))
     end
     line_ids = Dict()
     for (l,(i,j)) in lines

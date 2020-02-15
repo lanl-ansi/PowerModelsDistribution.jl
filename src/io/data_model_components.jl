@@ -202,6 +202,7 @@ function create_linecode(; kwargs...)
     add_kwarg!(linecode, kwargs, :b_to, fill(0.0, n_conductors, n_conductors))
 
     _add_unused_kwargs!(linecode, kwargs)
+
     return linecode
 end
 
@@ -267,6 +268,7 @@ function create_line(; kwargs...)
     add_kwarg!(line, kwargs, :angmax, fill( 60/180*pi, N))
 
     _add_unused_kwargs!(line, kwargs)
+
     return line
 end
 
@@ -316,6 +318,7 @@ function create_bus(; kwargs...)
     add_kwarg!(bus, kwargs, :xg, Array{Float64, 1}())
 
     _add_unused_kwargs!(bus, kwargs)
+
     return bus
 end
 
@@ -377,6 +380,7 @@ function create_load(; kwargs...)
     end
 
     _add_unused_kwargs!(load, kwargs)
+
     return load
 end
 
@@ -415,6 +419,7 @@ function create_generator(; kwargs...)
     add_kwarg!(generator, kwargs, :connections, generator["configuration"]=="wye" ? [1, 2, 3, 4] : [1, 2, 3])
 
     _add_unused_kwargs!(generator, kwargs)
+
     return generator
 end
 
@@ -485,6 +490,7 @@ function create_transformer_nw(; kwargs...)
     add_kwarg!(trans, kwargs, :tm_fix, fill(fill(true, 3), n_windings))
 
     _add_unused_kwargs!(trans, kwargs)
+
     return trans
 end
 
@@ -565,11 +571,13 @@ end
 function create_capacitor(; kwargs...)
     cap = Dict{String,Any}()
 
+    add_kwarg!(cap, kwargs, :status, 1)
     add_kwarg!(cap, kwargs, :configuration, "wye")
     add_kwarg!(cap, kwargs, :connections, collect(1:4))
     add_kwarg!(cap, kwargs, :qd_ref, fill(0.0, 3))
 
     _add_unused_kwargs!(cap, kwargs)
+
     return cap
 end
 
@@ -580,12 +588,12 @@ DTYPES[:shunt] = Dict(
     :id => Any,
     :status => Int,
     :bus => String,
-    :terminals => Array{Int, 1},
+    :connections => Array{Int, 1},
     :g_sh => Array{<:Real, 2},
     :b_sh => Array{<:Real, 2},
 )
 
-REQUIRED_FIELDS[:capacitor] = keys(DTYPES[:shunt])
+REQUIRED_FIELDS[:shunt] = keys(DTYPES[:shunt])
 
 
 CHECKS[:shunt] = function check_shunt(data, shunt)
@@ -594,7 +602,7 @@ CHECKS[:shunt] = function check_shunt(data, shunt)
 end
 
 
-function create_shunt(; kwargs...)
+function add_shunt!(; kwargs...)
     shunt = Dict{String,Any}()
 
     add_kwarg!(shunt, kwargs, :status, 1)
@@ -602,6 +610,7 @@ function create_shunt(; kwargs...)
     add_kwarg!(shunt, kwargs, :b_sh, fill(0.0, length(terminals), length(terminals)))
 
     _add_unused_kwargs!(shunt, kwargs)
+
     return shunt
 end
 
@@ -639,5 +648,12 @@ function create_voltage_source(; kwargs...)
     add_kwarg!(vs, kwargs, :connections, collect(1:3))
 
     _add_unused_kwargs!(vs, kwargs)
+
     return vs
+end
+
+
+# create add_comp! methods
+for comp in keys(DTYPES)
+    eval(Meta.parse("add_$(comp)!(data_model; kwargs...) = add!(data_model, \"$comp\", create_$comp(; kwargs...))"))
 end
