@@ -438,13 +438,172 @@ function _isa_array(data::AbstractString)::Bool
             return true
         elseif startswith(clean_data, "(") && endswith(clean_data, ")")
             return true
-        elseif startswith(clean_data, "{") && endswith(clean_data, ")")
+        elseif startswith(clean_data, "{") && endswith(clean_data, "}")
             return true
         else
             return false
         end
     else
         return false
+    end
+end
+
+
+"parses single column load profile files"
+function _parse_loadshape_csv(path::AbstractString, type::AbstractString; header::Bool=false, column::Int=1, interval::Bool=false)
+    open(path, "r") do f
+        lines = readlines(f)
+        if header
+            lines = lines[2:end]
+        end
+
+        if type == "mult"
+            return [split(line, ",")[column] for line in lines]
+        elseif type == "csvfile"
+            if interval
+                hour, mult = [], []
+                for line in lines
+                    d = split(line, ",")
+                    push!(hour, d[1])
+                    push!(mult, d[2])
+                end
+                return hour, mult
+            else
+                return [split(line, ",")[1] for line in lines]
+            end
+        elseif type == "pqcsvfile"
+            if interval
+                hour, pmult, qmult = [], [], []
+                for line in lines
+                    d = split(line, ",")
+                    push!(hour, d[1])
+                    push!(pmult, d[2])
+                    push!(qmult, d[3])
+                end
+
+                return hour, pmult, qmult
+            else
+                pmult, qmult = [], []
+                for line in lines
+                    d = split(line, ",")
+                    push!(pmult, d[1])
+                    push!(qmult, d[2])
+                end
+
+                return pmult, qmult
+            end
+        end
+    end
+end
+
+
+"parses sng and dbl precision loadshape binary files"
+function _parse_binary(path::AbstractString, precision::Type; npts::Union{Int,Nothing}=nothing, interval::Bool=false)
+    open(path, "r") do f
+        if npts === nothing
+            data = precision[]
+            while true
+                try
+                    n = read(f, precision)
+                    push!(data, n)
+                catch EOFError
+                    break
+                end
+            end
+
+            return data
+        else
+            data = Array{precision, 1}(undef, interval ? npts * 2 : npts)
+
+            try
+                read!(f, data)
+            catch EOFError
+                error("Error reading binary file: likely npts is wrong")
+            end
+
+            if interval
+                data = reshape(data, 2, :)
+                return data[1, :], data[2, :]
+            else
+                return data
+            end
+        end
+    end
+end
+
+
+"parses csv or binary loadshape files"
+function _parse_loadshape_file(path::AbstractString, type::AbstractString, npts::Union{Int,Nothing}; header::Bool=false, interval::Bool=false, column::Int=1)
+    if type in ["csvfile", "mult", "pqcsvfile"]
+        return _parse_loadshape_csv(path, type; header=header, column=column, interval=interval)
+    elseif type in ["sngfile", "dblfile"]
+        return _parse_binary(path, Dict("sngfile" => Float32, "dblfile" => Float64)[type]; npts=npts, interval=interval)
+    end
+end
+
+
+"parses pmult and qmult entries on loadshapes"
+function _parse_mult(mult_string::AbstractString; path::AbstractString="", npts::Union{Int,Nothing}=nothing)
+    if !occursin("=", mult_string)
+        return mult_string
+    else
+        props = Dict{String,Any}(split(p, "=") for p in _parse_properties(mult_string[2:end-1]))
+        if haskey(props, "header")
+            header = props["header"]
+            props["header"] = header == "yes" || header == "true" ? true : false
+        end
+
+        if haskey(props, "col")
+            props["column"] = pop!(props, "col")
+        end
+
+        file_key = [prop for prop in keys(props) if endswith(prop, "file")][1]
+        fullpath = path == "" ? props[file_key] : join([path, props[file_key]], '/')
+        type = file_key == "file" ? "mult" : file_key
+
+        return "($(join(_parse_loadshape_file(fullpath, type, npts; header=get(props, "header", false), column=parse(Int, get(props, "column", "1"))), ",")))"
+    end
+end
+
+
+"parses loadshape component"
+function _parse_loadshape!(curCompDict::Dict{String,Any}; path::AbstractString="")
+    if any(parse.(Float64, [get(curCompDict, "interval", "1.0"), get(curCompDict, "minterval", "60.0"), get(curCompDict, "sinterval", "3600.0")]) .<= 0.0)
+        interval = true
+    else
+        interval = false
+    end
+
+    npts = parse(Int, get(curCompDict, "npts", "1"))
+
+    for prop in curCompDict["prop_order"]
+        if prop in ["pmult", "qmult"]
+             curCompDict[prop] = _parse_mult(curCompDict[prop]; path=path, npts=npts)
+        elseif prop in ["csvfile", "pqcsvfile", "sngfile", "dblfile"]
+            fullpath = path == "" ? curCompDict[prop] : join([path, curCompDict[prop]], '/')
+            data = _parse_loadshape_file(fullpath, prop, parse(Int, get(curCompDict, "npts", "1")); interval=interval, header=false)
+            if prop == "pqcsvfile"
+                if interval
+                    curCompDict["hour"], curCompDict["pmult"], curCompDict["qmult"] = data
+                else
+                    curCompDict["pmult"], curCompDict["qmult"] = data
+                end
+            else
+                if interval
+                    curCompDict["hour"], curCompDict["pmult"] = data
+                else
+                    curCompDict["pmult"] = data
+                end
+            end
+        end
+    end
+
+    for prop in ["pmult", "qmult", "hour"]
+        if haskey(curCompDict, prop) && isa(curCompDict[prop], Array)
+            curCompDict[prop] = "($(join(curCompDict[prop], ",")))"
+        elseif haskey(curCompDict, prop) && isa(curCompDict[prop], String) && !_isa_array(curCompDict[prop])
+            curCompDict[prop] = "($(curCompDict[prop]))"
+        end
     end
 end
 
@@ -516,6 +675,8 @@ function _parse_properties(properties::AbstractString)::Array
         if length(sstr_out) == 2 && sstr_out[2] != ""
             endEquality = true
         elseif !occursin("=", str_out) && (char == ' ' || n == nchars)
+            endEquality = true
+        elseif occursin("=", str_out) && (char == ' ' || n == nchars) && endArray
             endEquality = true
         else
             endEquality = false
@@ -615,7 +776,7 @@ Parses a `component` with `properties` into a `compDict`. If `compDict` is not
 defined, an empty dictionary will be used. Assumes that unnamed properties are
 given in order, but named properties can be given anywhere.
 """
-function _parse_component(component::AbstractString, properties::AbstractString, compDict::Dict=Dict{String,Any}())
+function _parse_component(component::AbstractString, properties::AbstractString, compDict::Dict=Dict{String,Any}(); path::AbstractString="")
     Memento.debug(_LOGGER, "Properties: $properties")
     ctype, name = split(component, '.'; limit=2)
 
@@ -659,6 +820,10 @@ function _parse_component(component::AbstractString, properties::AbstractString,
 
         key, value = split(property, '='; limit=2)
 
+        if occursin(r"\(\s*(sng|dbl)*file=(.+)\)", value)
+            value = _parse_mult(value; path=path)
+        end
+
         _add_property(compDict, key, value)
     end
 
@@ -690,7 +855,7 @@ end
 Parses an already separated line given by `elements` (an array) of an OpenDSS
 file into `curCompDict`. If not defined, `curCompDict` is an empty dictionary.
 """
-function _parse_line(elements::Array, curCompDict::Dict=Dict{String,Any}())
+function _parse_line(elements::Array, curCompDict::Dict=Dict{String,Any}(); path::AbstractString="")
     curCtypeName = strip(elements[2], ['\"', '\''])
     if startswith(curCtypeName, "object")
         curCtypeName = split(curCtypeName, '=')[2]
@@ -702,7 +867,7 @@ function _parse_line(elements::Array, curCompDict::Dict=Dict{String,Any}())
             properties = elements[3]
         end
 
-        curCompDict = _parse_component(curCtypeName, properties)
+        curCompDict = _parse_component(curCtypeName, properties; path=path)
     end
 
     return curCtypeName, curCompDict
@@ -819,7 +984,11 @@ function parse_dss(io::IOStream)::Dict
                 dss_data["buscoords"] = _parse_buscoords(fullpath)
 
             elseif cmd == "new"
-                curCtypeName, curCompDict = _parse_line([lowercase(line_element) for line_element in line_elements])
+                curCtypeName, curCompDict = _parse_line([lowercase(line_element) for line_element in line_elements]; path=path)
+
+                if startswith(curCtypeName, "loadshape")
+                    _parse_loadshape!(curCompDict; path=path)
+                end
             else
                 try
                     cType, cName, props = split(lowercase(line), '.'; limit=3)
@@ -1001,12 +1170,12 @@ end
 
 
 ""
-function _apply_ordered_properties(defaults::Dict{String,Any}, raw_dss::Dict{String,Any}; linecode::Dict{String,Any}=Dict{String,Any}())
+function _apply_ordered_properties(defaults::Dict{String,Any}, raw_dss::Dict{String,Any}; code_dict::Dict{String,Any}=Dict{String,Any}())
     _defaults = deepcopy(defaults)
 
     for prop in filter(p->p!="like", raw_dss["prop_order"])
-        if prop == "linecode"
-            merge!(defaults, linecode)
+        if prop in ["linecode", "loadshape"]
+            merge!(defaults, code_dict)
         else
             defaults[prop] = _defaults[prop]
         end

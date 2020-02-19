@@ -621,7 +621,7 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
             line["circuit_basefreq"] = pmd_data["basefreq"]
         end
 
-        defaults = _apply_ordered_properties(_create_line(line["bus1"], line["bus2"], line["name"]; _to_sym_keys(line)...), line; linecode=linecode)
+        defaults = _apply_ordered_properties(_create_line(line["bus1"], line["bus2"], line["name"]; _to_sym_keys(line)...), line; code_dict=linecode)
 
         bf, nodes = _parse_busname(defaults["bus1"])
 

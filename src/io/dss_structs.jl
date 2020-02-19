@@ -1,5 +1,6 @@
 # Defines data structures (defaults) for OpenDSS objects
 import LinearAlgebra: diagm
+import Statistics: mean, std
 
 
 _convert_to_meters = Dict{String,Any}("mi" => 1609.3,
@@ -1041,6 +1042,54 @@ function _create_storage(bus1="", name::AbstractString=""; kwargs...)
 end
 
 
+"""
+    _create_loadshape(name; kwargs...)
+
+Creates a Dict{String,Any} containing all expected properties for a LoadShape
+element. See OpenDSS documentation for valid fields and ways to specify
+different properties.
+"""
+function _create_loadshape(name::AbstractString=""; kwargs...)
+    kwargs = Dict{Symbol,Any}(kwargs)
+
+    if haskey(kwargs, :minterval)
+        kwargs[:interval] = kwargs[:minterval] / 60
+    elseif haskey(kwargs, :sinterval)
+        kwargs[:interval] = kwargs[:sinterval] / 60 / 60
+    end
+
+    npts = get(kwargs, :npts, 1)
+
+    pmult = get(kwargs, :pmult, fill(1.0, npts))[1:npts]
+    qmult = get(kwargs, :qmult, fill(1.0, npts))[1:npts]
+
+    hour = get(kwargs, :hour, collect(range(1.0, step=get(kwargs, :interval, 1.0), length=npts)))[1:npts]
+
+    loadshape = Dict{String,Any}("name" => name,
+                                 "npts" => npts,
+                                 "interval" => get(kwargs, :interval, 1.0),
+                                 "minterval" => get(kwargs, :interval, 1.0) .* 60,
+                                 "sinterval" => get(kwargs, :interval, 1.0) .* 3600,
+                                 "pmult" => pmult,
+                                 "qmult" => qmult,
+                                 "hour" => hour,
+                                 "mean" => get(kwargs, :mean, mean(pmult)),
+                                 "stddev" => get(kwargs, :stddev, std(pmult)),
+                                 "csvfile" => get(kwargs, :csvfile, ""),
+                                 "sngfile" => get(kwargs, :sngfile, ""),
+                                 "dblfile" => get(kwargs, :dblfile, ""),
+                                 "pqcsvfile" => get(kwargs, :pqcsvfile, ""),
+                                 "action" => get(kwargs, :action, ""),
+                                 "useactual" => get(kwargs, :useactual, true),
+                                 "pmax" => get(kwargs, :pmax, 1.0),
+                                 "qmax" => get(kwargs, :qmax, 1.0),
+                                 "pbase" => get(kwargs, :pbase, 0.0),
+                                )
+
+    return loadshape
+end
+
+
 "Returns a Dict{String,Type} for the desired component `comp`, giving all of the expected data types"
 function _get_dtypes(comp::AbstractString)::Dict
     return Dict{String,Type}((k, typeof(v)) for (k, v) in _constructors[comp]())
@@ -1058,5 +1107,6 @@ const _constructors = Dict{String,Any}("line" => _create_line,
                                        "circuit" => _create_vsource,
                                        "pvsystem" => _create_pvsystem,
                                        "vsource" => _create_vsource,
-                                       "storage" => _create_storage
+                                       "storage" => _create_storage,
+                                       "loadshape" => _create_loadshape
                                        )
