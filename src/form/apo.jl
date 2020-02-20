@@ -102,17 +102,19 @@ function variable_mc_transformer_flow_active(pm::_PMs.AbstractAPLossLessModels; 
         ) for (l,i,j) in _PMs.ref(pm, nw, :arcs_from_trans)
     )
 
-    for cnd in _PMs.conductor_ids(pm)
+    if bounded
+        for arc in _PMs.ref(pm, nw, :arcs_from_trans)
+            (t,i,j) = arc
+            s_rating_fr, s_rating_to = _calc_transformer_power_ub_frto(_PMs.ref(pm, nw, :transformer, t), _PMs.ref(pm, nw, :bus, i), _PMs.ref(pm, nw, :bus, j))
 
-        if bounded
-            for arc in _PMs.ref(pm, nw, :arcs_from_trans)
-                tr_id = arc[1]
-                flow_lb  = -_PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
-                flow_ub  =  _PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
-                JuMP.set_lower_bound(pt[arc][cnd], flow_lb)
-                JuMP.set_upper_bound(pt[arc][cnd], flow_ub)
+            if !(ismissing(s_rating_fr) || ismissing(s_rating_to))
+                JuMP.set_lower_bound.(pt[(t,i,j)], -min.(s_rating_fr, s_rating_to))
+                JuMP.set_upper_bound.(pt[(t,i,j)],  min.(s_rating_fr, s_rating_to))
             end
         end
+    end
+
+    for cnd in _PMs.conductor_ids(pm)
 
         #TODO what does this dfo, and p does not seem to be defined!
         for (l,branch) in _PMs.ref(pm, nw, :branch)
@@ -157,8 +159,8 @@ end
 
 ## From PowerModels
 
-"`-rate_a <= p[f_idx] <= rate_a`"
-function constraint_mc_thermal_limit_from(pm::_PMs.AbstractActivePowerModel, n::Int, f_idx, rate_a)
+"`-s_rating <= p[f_idx] <= s_rating`"
+function constraint_mc_thermal_limit_from(pm::_PMs.AbstractActivePowerModel, n::Int, f_idx, s_rating)
     cnds = _PMs.conductor_ids(pm, n)
     ncnds = length(cnds)
     mu_sm_fr = []
@@ -167,12 +169,12 @@ function constraint_mc_thermal_limit_from(pm::_PMs.AbstractActivePowerModel, n::
         p_fr =_PMs.var(pm, n, :p, f_idx)[c]
         if isa(p_fr, JuMP.VariableRef) && JuMP.has_lower_bound(p_fr)
            push!(mu_sm_fr,JuMP.LowerBoundRef(p_fr))
-            JuMP.lower_bound(p_fr) < -rate_a[c] && JuMP.set_lower_bound(p_fr, -rate_a[c])
+            JuMP.lower_bound(p_fr) < -s_rating[c] && JuMP.set_lower_bound(p_fr, -s_rating[c])
             if JuMP.has_upper_bound(p_fr)
-                JuMP.upper_bound(p_fr) > rate_a[c] && JuMP.set_upper_bound(p_fr, rate_a[c])
+                JuMP.upper_bound(p_fr) > s_rating[c] && JuMP.set_upper_bound(p_fr, s_rating[c])
             end
         else
-           push!(mu_sm_fr, JuMP.@constraint(pm.model, p_fr <= rate_a[c]))
+           push!(mu_sm_fr, JuMP.@constraint(pm.model, p_fr <= s_rating[c]))
         end
     end
 
@@ -182,7 +184,7 @@ function constraint_mc_thermal_limit_from(pm::_PMs.AbstractActivePowerModel, n::
 end
 
 ""
-function constraint_mc_thermal_limit_to(pm::_PMs.AbstractActivePowerModel, n::Int, t_idx, rate_a)
+function constraint_mc_thermal_limit_to(pm::_PMs.AbstractActivePowerModel, n::Int, t_idx, s_rating)
     cnds = _PMs.conductor_ids(pm, n)
     ncnds = length(cnds)
     mu_sm_to = []
@@ -191,12 +193,12 @@ function constraint_mc_thermal_limit_to(pm::_PMs.AbstractActivePowerModel, n::In
         p_to =_PMs.var(pm, n, :p, t_idx)[c]
         if isa(p_to, JuMP.VariableRef) && JuMP.has_lower_bound(p_to)
            push!(mu_sm_to, JuMP.LowerBoundRef(p_to))
-            JuMP.lower_bound(p_to) < -rate_a[c] && JuMP.set_lower_bound(p_to, -rate_a[c])
+            JuMP.lower_bound(p_to) < -s_rating[c] && JuMP.set_lower_bound(p_to, -s_rating[c])
             if JuMP.has_upper_bound(p_to)
-                JuMP.upper_bound(p_to) >  rate_a[c] && JuMP.set_upper_bound(p_to,  rate_a[c])
+                JuMP.upper_bound(p_to) >  s_rating[c] && JuMP.set_upper_bound(p_to,  s_rating[c])
             end
         else
-           push!(mu_sm_to, JuMP.@constraint(pm.model, p_to <= rate_a[c]))
+           push!(mu_sm_to, JuMP.@constraint(pm.model, p_to <= s_rating[c]))
         end
     end
 
@@ -206,53 +208,53 @@ function constraint_mc_thermal_limit_to(pm::_PMs.AbstractActivePowerModel, n::In
 end
 
 ""
-function constraint_mc_current_limit(pm::_PMs.AbstractActivePowerModel, n::Int, f_idx, c_rating_a)
+function constraint_mc_current_limit(pm::_PMs.AbstractActivePowerModel, n::Int, f_idx, c_rating)
     p_fr =_PMs.var(pm, n, :p, f_idx)
 
     cnds = _PMs.conductor_ids(pm, n)
     ncnds = length(cnds)
 
     for c in 1:ncnds
-        JuMP.lower_bound(p_fr[c]) < -c_rating_a[c] && JuMP.set_lower_bound(p_fr[c], -c_rating_a[c])
-        JuMP.upper_bound(p_fr[c]) >  c_rating_a[c] && JuMP.set_upper_bound(p_fr[c],  c_rating_a[c])
+        JuMP.lower_bound(p_fr[c]) < -c_rating[c] && JuMP.set_lower_bound(p_fr[c], -c_rating[c])
+        JuMP.upper_bound(p_fr[c]) >  c_rating[c] && JuMP.set_upper_bound(p_fr[c],  c_rating[c])
     end
 end
 
 
 ""
-function constraint_mc_thermal_limit_from_on_off(pm::_PMs.AbstractActivePowerModel, n::Int, i, f_idx, rate_a)
+function constraint_mc_thermal_limit_from_on_off(pm::_PMs.AbstractActivePowerModel, n::Int, i, f_idx, s_rating)
     p_fr =_PMs.var(pm, n, :p, f_idx)
     z =_PMs.var(pm, n, :z_branch, i)
 
-    JuMP.@constraint(pm.model, p_fr .<=  rate_a.*z)
-    JuMP.@constraint(pm.model, p_fr .>= -rate_a.*z)
+    JuMP.@constraint(pm.model, p_fr .<=  s_rating.*z)
+    JuMP.@constraint(pm.model, p_fr .>= -s_rating.*z)
 end
 
 ""
-function constraint_mc_thermal_limit_to_on_off(pm::_PMs.AbstractActivePowerModel, n::Int, i, t_idx, rate_a)
+function constraint_mc_thermal_limit_to_on_off(pm::_PMs.AbstractActivePowerModel, n::Int, i, t_idx, s_rating)
     p_to =_PMs.var(pm, n, :p, t_idx)
     z =_PMs.var(pm, n, :z_branch, i)
 
-    JuMP.@constraint(pm.model, p_to .<=  rate_a.*z)
-    JuMP.@constraint(pm.model, p_to .>= -rate_a.*z)
+    JuMP.@constraint(pm.model, p_to .<=  s_rating.*z)
+    JuMP.@constraint(pm.model, p_to .>= -s_rating.*z)
 end
 
 ""
-function constraint_mc_thermal_limit_from_ne(pm::_PMs.AbstractActivePowerModel, n::Int, i, f_idx, rate_a)
+function constraint_mc_thermal_limit_from_ne(pm::_PMs.AbstractActivePowerModel, n::Int, i, f_idx, s_rating)
     p_fr =_PMs.var(pm, n, :p_ne, f_idx)
     z =_PMs.var(pm, n, :branch_ne, i)
 
-    JuMP.@constraint(pm.model, p_fr .<=  rate_a.*z)
-    JuMP.@constraint(pm.model, p_fr .>= -rate_a.*z)
+    JuMP.@constraint(pm.model, p_fr .<=  s_rating.*z)
+    JuMP.@constraint(pm.model, p_fr .>= -s_rating.*z)
 end
 
 ""
-function constraint_mc_thermal_limit_to_ne(pm::_PMs.AbstractActivePowerModel, n::Int, i, t_idx, rate_a)
+function constraint_mc_thermal_limit_to_ne(pm::_PMs.AbstractActivePowerModel, n::Int, i, t_idx, s_rating)
     p_to =_PMs.var(pm, n, :p_ne, t_idx)
     z =_PMs.var(pm, n, :branch_ne, i)
 
-    JuMP.@constraint(pm.model, p_to .<=  rate_a.*z)
-    JuMP.@constraint(pm.model, p_to .>= -rate_a.*z)
+    JuMP.@constraint(pm.model, p_to .<=  s_rating.*z)
+    JuMP.@constraint(pm.model, p_to .>= -s_rating.*z)
 end
 
 

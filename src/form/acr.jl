@@ -39,8 +39,12 @@ function constraint_mc_voltage_magnitude_bounds(pm::_PMs.AbstractACRModel, n::In
     vr = _PMs.var(pm, n, :vr, i)
     vi = _PMs.var(pm, n, :vi, i)
 
-    JuMP.@constraint(pm.model, vmin.^2 .<= vr.^2 + vi.^2)
-    JuMP.@constraint(pm.model, vmax.^2 .>= vr.^2 + vi.^2)
+    for t in 1:length(vr)
+        JuMP.@constraint(pm.model, vmin[t]^2 .<= vr[t]^2 + vi[t]^2)
+        if vmax[t] < Inf
+            JuMP.@constraint(pm.model, vmax[t]^2 .>= vr[t]^2 + vi[t]^2)
+        end
+    end
 end
 
 

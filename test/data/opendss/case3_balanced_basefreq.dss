@@ -19,8 +19,8 @@ New linecode.4/0QUAD nphases=3 ! ohms per 100ft
 
 !Define lines
 
-New Line.OHLine  bus1=sourcebus.1.2.3.0  Primary.1.2.3.0  linecode = 556MCM   length=1  ! 5 mile line
-New Line.Quad    Bus1=Primary.1.2.3.0  loadbus.1.2.3.0  linecode = 4/0QUAD  length=1   ! 100 ft
+New Line.OHLine  bus1=sourcebus.1.2.3  Primary.1.2.3  linecode = 556MCM   length=1  ! 5 mile line
+New Line.Quad    Bus1=Primary.1.2.3  loadbus.1.2.3  linecode = 4/0QUAD  length=1   ! 100 ft
 
 !Loads - single phase
 

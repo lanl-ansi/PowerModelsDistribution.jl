@@ -1151,6 +1151,13 @@ function _decompose_transformers!(pmd_data; import_all::Bool=false)
                 "grounded"=>true,
                 "vm_nom"=>1.0
             )
+            # temporary fix for prop renaming
+            trans_dict["configuration"] = trans_dict["config_fr"]["type"]
+            trans_dict["f_connections"] = trans_dict["config_fr"]["cnd"]
+            trans_dict["t_connections"] = trans_dict["config_to"]["cnd"]
+            scale = trans_dict["configuration"]=="delta" ? sqrt(3) : 1.0
+            trans_dict["tm_nom"] = trans_dict["config_fr"]["vm_nom"]*scale
+
             trans_dict["f_bus"] = trans["buses"][w]
             # make virtual bus and mark it for reduction
             vbus_tr = _create_vbus!(pmd_data, basekv=1.0, name="tr$(tr_id)_w$(w)_b1")
