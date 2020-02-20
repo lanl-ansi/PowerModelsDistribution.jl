@@ -1689,6 +1689,16 @@ function _bank_transformers!(pmd_data::Dict)
 end
 
 
+"Parses buscoords [lon,lat] (if present) into their respective buses"
+function _dss2pmd_buscoords!(pmd_data::Dict, dss_data::Dict)
+    for bc in get(dss_data, "buscoords", [])
+        bus = pmd_data["bus"]["$(find_bus(bc["name"], pmd_data))"]
+        bus["lon"] = bc["x"]
+        bus["lat"] = bc["y"]
+    end
+end
+
+
 """
     parse_options(options)
 
@@ -1764,6 +1774,8 @@ function parse_opendss(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9
     pmd_data["switch"] = []
 
     InfrastructureModels.arrays_to_dicts!(pmd_data)
+
+    _dss2pmd_buscoords!(pmd_data, dss_data)
 
     if bank_transformers
         _bank_transformers!(pmd_data)

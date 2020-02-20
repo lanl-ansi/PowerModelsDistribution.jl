@@ -133,6 +133,10 @@
     xmatrix=PMD._parse_matrix(Float64, "[1.0000  |0.500000  0.50000  |0.500000  0.50000  1.000000  ]") * 3
     cmatrix = PMD._parse_matrix(Float64, "[8.0000  |-2.00000  9.000000  |-1.75000  -2.50000  8.00000  ]") / 3
 
+    @testset "buscoords automatic parsing" begin
+        @test all(haskey(bus, "lon") && haskey(bus, "lat") for bus in values(pmd["bus"]) if "bus_i" in collect(range(1,10; step=1)))
+    end
+
     @testset "opendss parse generic parser verification" begin
         dss = PMD.parse_dss("../test/data/opendss/test2_master.dss")
 

@@ -642,10 +642,9 @@ function _parse_buscoords(file::AbstractString)::Array
     coordArray = []
     for line in lines
         bus, x, y = split(line, regex; limit=3)
-        push!(coordArray, Dict{String,Any}("bus"=>strip(bus, [',']),
-                                            "name"=>strip(bus, [',']),
-                                            "x"=>parse(Float64, strip(x, [','])),
-                                            "y"=>parse(Float64, strip(y, [',', '\r']))))
+        push!(coordArray, Dict{String,Any}("name"=>lowercase(strip(bus, [','])),
+                                           "x"=>parse(Float64, strip(x, [','])),
+                                           "y"=>parse(Float64, strip(y, [',', '\r']))))
     end
     return coordArray
 end
