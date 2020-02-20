@@ -262,8 +262,8 @@ function constraint_mc_current_balance_load(pm::_PMs.AbstractIVRModel, n::Int, i
     end
 end
 
-"`p[f_idx]^2 + q[f_idx]^2 <= rate_a^2`"
-function constraint_mc_thermal_limit_from(pm::_PMs.AbstractIVRModel, n::Int, f_idx, rate_a)
+"`p[f_idx]^2 + q[f_idx]^2 <= s_rating^2`"
+function constraint_mc_thermal_limit_from(pm::_PMs.AbstractIVRModel, n::Int, f_idx, s_rating)
     (l, f_bus, t_bus) = f_idx
 
     vr = _PMs.var(pm, n, :vr, f_bus)
@@ -275,12 +275,12 @@ function constraint_mc_thermal_limit_from(pm::_PMs.AbstractIVRModel, n::Int, f_i
     ncnds = length(cnds)
 
     for c in cnds
-        JuMP.@NLconstraint(pm.model, (vr[c]^2 + vi[c]^2)*(crf[c]^2 + cif[c]^2) <= rate_a[c]^2)
+        JuMP.@NLconstraint(pm.model, (vr[c]^2 + vi[c]^2)*(crf[c]^2 + cif[c]^2) <= s_rating[c]^2)
     end
 end
 
-"`p[t_idx]^2 + q[t_idx]^2 <= rate_a^2`"
-function constraint_mc_thermal_limit_to(pm::_PMs.AbstractIVRModel, n::Int, t_idx, rate_a)
+"`p[t_idx]^2 + q[t_idx]^2 <= s_rating^2`"
+function constraint_mc_thermal_limit_to(pm::_PMs.AbstractIVRModel, n::Int, t_idx, s_rating)
     (l, t_bus, f_bus) = t_idx
 
     vr = _PMs.var(pm, n, :vr, t_bus)
@@ -292,7 +292,7 @@ function constraint_mc_thermal_limit_to(pm::_PMs.AbstractIVRModel, n::Int, t_idx
     ncnds = length(cnds)
 
     for c in cnds
-        JuMP.@NLconstraint(pm.model, (vr[c]^2 + vi[c]^2)*(crt[c]^2 + cit[c]^2) <= rate_a[c]^2)
+        JuMP.@NLconstraint(pm.model, (vr[c]^2 + vi[c]^2)*(crt[c]^2 + cit[c]^2) <= s_rating[c]^2)
     end
 end
 

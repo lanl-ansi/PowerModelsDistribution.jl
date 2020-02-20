@@ -39,6 +39,9 @@ module PowerModelsDistribution
     include("core/constraint_template.jl")
     include("core/relaxation_scheme.jl")
 
+    include("io/common_dm.jl")
+    include("io/opendss_dm.jl")
+
     include("io/common.jl")
     include("io/json.jl")
     include("io/dss_parse.jl")

@@ -81,22 +81,40 @@ function _calc_vbase(data_model, vbase_sources::Dict{String,<:Real})
 end
 
 
-function data_model_make_pu!(data_model; sbase=1, vbases=missing)
-    v_var_scalar = data_model["v_var_scalar"]
+function data_model_make_pu!(data_model; sbase=missing, vbases=missing)
+    v_var_scalar = data_model["settings"]["v_var_scalar"]
 
-    sbase_old = get(data_model, "sbase", missing)
+    if haskey(data_model["settings"], "sbase")
+        sbase_old = data_model["settings"]["sbase"]
+    else
+        sbase_old = 1
+    end
+
+    if ismissing(sbase)
+        if haskey(data_model["settings"], "set_sbase_val")
+            sbase = data_model["settings"]["set_sbase_val"]
+        else
+            sbase = 1
+        end
+    end
 
     # automatically find a good vbase
     if ismissing(vbases)
-        buses_vnom = [(id, bus["vnom"]) for (id,bus) in data_model["bus"] if haskey(bus, "vnom")]
-        if !isempty(buses_vnom)
-            vbases = Dict([buses_vnom[1]])
+        if haskey(data_model["settings"], "set_vbase_val") && haskey(data_model["settings"], "set_vbase_bus")
+            vbases = Dict(data_model["settings"]["set_vbase_bus"]=>data_model["settings"]["set_vbase_val"])
         else
-            Memento.error("Please specify vbases manually; cannot make an educated guess for this data model.")
+            buses_type_3 = [(id, sum(bus["vm"])/length(bus["vm"])) for (id,bus) in data_model["bus"] if haskey(bus, "bus_type") && bus["bus_type"]==3]
+            if !isempty(buses_type_3)
+                vbases = Dict([buses_type_3[1]])
+            else
+                Memento.error("Please specify vbases manually; cannot make an educated guess for this data model.")
+            end
         end
     end
 
     bus_vbase, line_vbase = _calc_vbase(data_model, vbases)
+
+    @show bus_vbase
 
     for (id, bus) in data_model["bus"]
         _rebase_pu_bus!(bus, bus_vbase[id], sbase, sbase_old, v_var_scalar)
@@ -116,7 +134,7 @@ function data_model_make_pu!(data_model; sbase=1, vbases=missing)
     end
 
     for (id, gen) in data_model["generator"]
-        #_rebase_pu_generator!(gen, bus_vbase[gen["bus"]], sbase_old, sbase, v_var_scalar)
+        _rebase_pu_generator!(gen, bus_vbase[gen["bus"]], sbase, sbase_old, v_var_scalar)
     end
 
     for (id, trans) in data_model["transformer_2wa"]
@@ -126,7 +144,7 @@ function data_model_make_pu!(data_model; sbase=1, vbases=missing)
         _rebase_pu_transformer_2w_ideal!(trans, f_vbase, t_vbase, sbase_old, sbase, v_var_scalar)
     end
 
-    data_model["sbase"] = sbase
+    data_model["settings"]["sbase"] = sbase
 
     return data_model
 end
@@ -135,7 +153,7 @@ end
 function _rebase_pu_bus!(bus, vbase, sbase, sbase_old, v_var_scalar)
 
     # if not in p.u., these are normalized with respect to vnom
-    prop_vnom = ["vmax", "vmin", "vm_set", "vm_ln_min", "vm_ln_max", "vm_lg_min", "vm_lg_max", "vm_ng_min", "vm_ng_max", "vm_ll_min", "vm_ll_max"]
+    prop_vnom = ["vm", "vmax", "vmin", "vm_set", "vm_ln_min", "vm_ln_max", "vm_lg_min", "vm_lg_max", "vm_ng_min", "vm_ng_max", "vm_ll_min", "vm_ll_max"]
 
     if !haskey(bus, "vbase")
 
@@ -143,6 +161,7 @@ function _rebase_pu_bus!(bus, vbase, sbase, sbase_old, v_var_scalar)
         #     vnom = bus["vnom"]
         #     _scale_props!(bus, ["vnom"], 1/vbase)
         # end
+        @show vbase
         _scale_props!(bus, prop_vnom, 1/vbase)
 
         z_old = 1.0
@@ -225,13 +244,18 @@ function _rebase_pu_load!(load, vbase, sbase, sbase_old, v_var_scalar)
 end
 
 
-function _rebase_pu_generator!(gen, vbase_new, sbase_old, sbase_new, v_var_scalar)
+function _rebase_pu_generator!(gen, vbase, sbase, sbase_old, v_var_scalar)
     vbase_old = get(gen, "vbase", 1.0/v_var_scalar)
-    vbase_scale = vbase_old/vbase_new
+    vbase_scale = vbase_old/vbase
+    sbase_scale = sbase_old/sbase
 
     for key in ["pd_set", "qd_set", "pd_min", "qd_min", "pd_max", "qd_max"]
         scale(gen, key, sbase_scale)
     end
+
+    @show gen["cost"]
+    scale(gen, "cost", 1/sbase_scale)
+    @show gen["cost"]
 
     # save new vbase
     gen["vbase"] = vbase
@@ -284,7 +308,7 @@ function solution_unmake_pu!(solution, data_model)
             for (prop, val) in comp
                 if any([occursin(x, prop) for x in ["p", "q"]])
                     comp[prop] = val*sbase
-                elseif occursin("vm", prop)
+                elseif any([occursin(x, prop) for x in ["vm", "vr", "vi"]])
                     comp[prop] = val*data_model[comp_type][id]["vbase"]
                 end
             end

@@ -510,13 +510,18 @@ function variable_mc_transformer_flow_active(pm::_PMs.AbstractPowerModel; nw::In
     )
 
     if bounded
-        for arc in _PMs.ref(pm, nw, :arcs_trans)
-            tr_id = arc[1]
-            flow_lb  = -_PMs.ref(pm, nw, :transformer, tr_id, "rate_a")
-            flow_ub  =  _PMs.ref(pm, nw, :transformer, tr_id, "rate_a")
-            for c in cnds
-                JuMP.set_lower_bound(pt[arc][c], flow_lb[c])
-                JuMP.set_upper_bound(pt[arc][c], flow_ub[c])
+        for arc in _PMs.ref(pm, nw, :arcs_from_trans)
+            (t,i,j) = arc
+            s_rating_fr, s_rating_to = _calc_transformer_power_ub_frto(_PMs.ref(pm, nw, :transformer, t), _PMs.ref(pm, nw, :bus, i), _PMs.ref(pm, nw, :bus, j))
+
+            if !ismissing(s_rating_fr)
+                JuMP.set_lower_bound.(pt[(t,i,j)], -s_rating_fr)
+                JuMP.set_upper_bound.(pt[(t,i,j)],  s_rating_fr)
+            end
+
+            if !ismissing(s_rating_to)
+                JuMP.set_lower_bound.(pt[(t,j,i)], -s_rating_fr)
+                JuMP.set_upper_bound.(pt[(t,j,i)],  s_rating_fr)
             end
         end
     end
@@ -548,13 +553,18 @@ function variable_mc_transformer_flow_reactive(pm::_PMs.AbstractPowerModel; nw::
     )
 
     if bounded
-        for arc in _PMs.ref(pm, nw, :arcs_trans)
-            tr_id = arc[1]
-            flow_lb  = -_PMs.ref(pm, nw, :transformer, tr_id, "rate_a")
-            flow_ub  =  _PMs.ref(pm, nw, :transformer, tr_id, "rate_a")
-            for c in cnds
-                JuMP.set_lower_bound(qt[arc][c], flow_lb[c])
-                JuMP.set_upper_bound(qt[arc][c], flow_ub[c])
+        for arc in _PMs.ref(pm, nw, :arcs_from_trans)
+            (t,i,j) = arc
+            s_rating_fr, s_rating_to = _calc_transformer_power_ub_frto(_PMs.ref(pm, nw, :transformer, t), _PMs.ref(pm, nw, :bus, i), _PMs.ref(pm, nw, :bus, j))
+
+            if !ismissing(s_rating_fr)
+                JuMP.set_lower_bound.(qt[(t,i,j)], -s_rating_fr)
+                JuMP.set_upper_bound.(qt[(t,i,j)],  s_rating_fr)
+            end
+
+            if !ismissing(s_rating_to)
+                JuMP.set_lower_bound.(qt[(t,j,i)], -s_rating_fr)
+                JuMP.set_upper_bound.(qt[(t,j,i)],  s_rating_fr)
             end
         end
     end
@@ -853,10 +863,10 @@ function variable_mc_generation_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm
     if bounded
         for (i,gen) in _PMs.ref(pm, nw, :gen)
             if haskey(gen, "qmin")
-                JuMP.set_lower_bound.(pg[i], gen["qmin"])
+                JuMP.set_lower_bound.(qg[i], gen["qmin"])
             end
             if haskey(gen, "qmax")
-                JuMP.set_upper_bound.(pg[i], gen["qmax"])
+                JuMP.set_upper_bound.(qg[i], gen["qmax"])
             end
         end
     end

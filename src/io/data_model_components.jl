@@ -37,7 +37,7 @@ function check_dtypes(dict, dtypes, comp_type, id)
         if haskey(dtypes, symb)
             @assert(isa(dict[key], dtypes[symb]), "$comp_type $id: the property $key should be a $(dtypes[symb]), not a $(typeof(dict[key])).")
         else
-            @assert(false, "$comp_type $id: the property $key is unknown.")
+            #@assert(false, "$comp_type $id: the property $key is unknown.")
         end
     end
 end
@@ -83,9 +83,13 @@ function check_data_model(data)
 end
 
 
-function create_data_model(;kwargs...)
-    data_model = Dict{String, Any}()
-    add_kwarg!(data_model, kwargs, :v_var_scalar, 1E3)
+function create_data_model(; kwargs...)
+    data_model = Dict{String, Any}("settings"=>Dict{String, Any}())
+
+    add_kwarg!(data_model["settings"], kwargs, :v_var_scalar, 1E3)
+
+    _add_unused_kwargs!(data_model["settings"], kwargs)
+
     return data_model
 end
 
@@ -102,7 +106,7 @@ DTYPES[:autotransformer] = Dict()
 DTYPES[:synchronous_generator] = Dict()
 DTYPES[:zip_load] = Dict()
 DTYPES[:grounding] = Dict(
-    :bus => String,
+    :bus => Any,
     :rg => Real,
     :xg => Real,
 )
@@ -220,7 +224,13 @@ DTYPES[:line] = Dict(
     :c_rating =>Vector{<:Real},
     :s_rating =>Vector{<:Real},
     :angmin=>Vector{<:Real},
-    :angmax=>Vector{<:Real}
+    :angmax=>Vector{<:Real},
+    :rs => Array{<:Real, 2},
+    :xs => Array{<:Real, 2},
+    :g_fr => Array{<:Real, 2},
+    :g_to => Array{<:Real, 2},
+    :b_fr => Array{<:Real, 2},
+    :b_to => Array{<:Real, 2},
 )
 
 REQUIRED_FIELDS[:line] = [:id, :status, :f_bus, :f_connections, :t_bus, :t_connections, :linecode, :length]
@@ -228,8 +238,8 @@ REQUIRED_FIELDS[:line] = [:id, :status, :f_bus, :f_connections, :t_bus, :t_conne
 CHECKS[:line] = function check_line(data, line)
     i = line["id"]
 
-    # for now, always require a lione code
-    if true || haskey(line, "linecode")
+    # for now, always require a line code
+    if haskey(line, "linecode")
         # line is defined with a linecode
         @assert(haskey(line, "length"), "line $i: a line defined through a linecode, should have a length property.")
 
@@ -267,6 +277,22 @@ function create_line(; kwargs...)
     add_kwarg!(line, kwargs, :angmin, fill(-60/180*pi, N))
     add_kwarg!(line, kwargs, :angmax, fill( 60/180*pi, N))
 
+    # if no linecode, then populate loss parameters with zero
+    if !haskey(kwargs, :linecode)
+        n_conductors = 0
+        for key in [:rs, :xs, :g_fr, :g_to, :b_fr, :b_to]
+            if haskey(kwargs, key)
+                n_conductors = size(kwargs[key])[1]
+            end
+        end
+        add_kwarg!(line, kwargs, :rs, fill(0.0, n_conductors, n_conductors))
+        add_kwarg!(line, kwargs, :xs, fill(0.0, n_conductors, n_conductors))
+        add_kwarg!(line, kwargs, :g_fr, fill(0.0, n_conductors, n_conductors))
+        add_kwarg!(line, kwargs, :b_fr, fill(0.0, n_conductors, n_conductors))
+        add_kwarg!(line, kwargs, :g_to, fill(0.0, n_conductors, n_conductors))
+        add_kwarg!(line, kwargs, :b_to, fill(0.0, n_conductors, n_conductors))
+    end
+
     _add_unused_kwargs!(line, kwargs)
 
     return line
@@ -277,6 +303,7 @@ end
 DTYPES[:bus] = Dict(
     :id => Any,
     :status => Int,
+    :bus_type => Int,
     :terminals => Array{<:Any},
     :phases => Array{<:Int},
     :neutral => Union{Int, Missing},
@@ -314,6 +341,7 @@ function create_bus(; kwargs...)
     add_kwarg!(bus, kwargs, :status, 1)
     add_kwarg!(bus, kwargs, :terminals, collect(1:4))
     add_kwarg!(bus, kwargs, :grounded, [])
+    add_kwarg!(bus, kwargs, :bus_type, 1)
     add_kwarg!(bus, kwargs, :rg, Array{Float64, 1}())
     add_kwarg!(bus, kwargs, :xg, Array{Float64, 1}())
 
@@ -327,8 +355,8 @@ end
 DTYPES[:load] = Dict(
     :id => Any,
     :status => Int,
-    :bus => String,
-    :connections => Array{<:Int},
+    :bus => Any,
+    :connections => Vector,
     :configuration => String,
     :model => String,
     :pd => Array{<:Real, 1},
@@ -389,9 +417,10 @@ end
 DTYPES[:generator] = Dict(
     :id => Any,
     :status => Int,
-    :bus => String,
-    :connections => Array{<:Int},
+    :bus => Any,
+    :connections => Vector,
     :configuration => String,
+    :cost => Vector{<:Real},
     :pg => Array{<:Real, 1},
     :qg => Array{<:Real, 1},
     :pg_min => Array{<:Real, 1},
@@ -416,6 +445,7 @@ function create_generator(; kwargs...)
 
     add_kwarg!(generator, kwargs, :status, 1)
     add_kwarg!(generator, kwargs, :configuration, "wye")
+    add_kwarg!(generator, kwargs, :cost, [1.0, 0.0]*1E-3)
     add_kwarg!(generator, kwargs, :connections, generator["configuration"]=="wye" ? [1, 2, 3, 4] : [1, 2, 3])
 
     _add_unused_kwargs!(generator, kwargs)
@@ -431,7 +461,7 @@ DTYPES[:transformer_nw] = Dict(
     :id => Any,
     :status => Int,
     :bus => Array{<:AbstractString, 1},
-    :connections => Array{<:Array{<:Any, 1}, 1},
+    :connections => Vector,
     :vnom => Array{<:Real, 1},
     :snom => Array{<:Real, 1},
     :configuration => Array{String, 1},
@@ -540,8 +570,8 @@ end
 DTYPES[:capacitor] = Dict(
     :id => Any,
     :status => Int,
-    :bus => String,
-    :connections => Array{Int, 1},
+    :bus => Any,
+    :connections => Vector,
     :configuration => String,
     :qd_ref => Array{<:Real, 1},
     :vnom => Real,
@@ -587,8 +617,8 @@ end
 DTYPES[:shunt] = Dict(
     :id => Any,
     :status => Int,
-    :bus => String,
-    :connections => Array{Int, 1},
+    :bus => Any,
+    :connections => Vector,
     :g_sh => Array{<:Real, 2},
     :b_sh => Array{<:Real, 2},
 )
@@ -602,12 +632,14 @@ CHECKS[:shunt] = function check_shunt(data, shunt)
 end
 
 
-function add_shunt!(; kwargs...)
+function create_shunt(; kwargs...)
     shunt = Dict{String,Any}()
 
+    N = length(kwargs[:connections])
+
     add_kwarg!(shunt, kwargs, :status, 1)
-    add_kwarg!(shunt, kwargs, :g_sh, fill(0.0, length(terminals), length(terminals)))
-    add_kwarg!(shunt, kwargs, :b_sh, fill(0.0, length(terminals), length(terminals)))
+    add_kwarg!(shunt, kwargs, :g_sh, fill(0.0, N, N))
+    add_kwarg!(shunt, kwargs, :b_sh, fill(0.0, N, N))
 
     _add_unused_kwargs!(shunt, kwargs)
 
@@ -620,8 +652,8 @@ end
 DTYPES[:voltage_source] = Dict(
     :id => Any,
     :status => Int,
-    :bus => String,
-    :connections => Array{Int, 1},
+    :bus => Any,
+    :connections => Vector,
     :vm =>Array{<:Real},
     :va =>Array{<:Real},
     :pg_max =>Array{<:Real},

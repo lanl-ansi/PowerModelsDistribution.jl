@@ -6,9 +6,11 @@ function data_model_map!(data_model)
 
     !haskey(data_model, "mappings")
 
-    _expand_linecode!(data_model)
+    # needs to happen before _expand_linecode, as it might contain a linecode for the internal impedance
     add_mappings!(data_model, "decompose_voltage_source", _decompose_voltage_source!(data_model))
-    add_mappings!(data_model, "load_to_shunt", _load_to_shunt!(data_model))
+    _expand_linecode!(data_model)
+    # creates shunt of 4x4; disabled for now (incompatible 3-wire kron-reduced)
+    #add_mappings!(data_model, "load_to_shunt", _load_to_shunt!(data_model))
     add_mappings!(data_model, "capacitor_to_shunt", _capacitor_to_shunt!(data_model))
     add_mappings!(data_model, "decompose_transformer_nw", _decompose_transformer_nw!(data_model))
 
@@ -60,8 +62,8 @@ function _load_to_shunt!(data_model)
                     Y = vcat(Y_fr, -ones(N)'*Y_fr)*hcat(LinearAlgebra.diagm(0=>ones(N)),  -ones(N))
                 end
 
-                shunt = create_shunt(NaN, load["bus"], load["connections"], b_sh=imag.(Y), g_sh=real.(Y))
-                add_component!(data_model, "shunt", shunt)
+                shunt = add_virtual!(data_model, "shunt", create_shunt(bus=load["bus"], connections=load["connections"], b_sh=imag.(Y), g_sh=real.(Y)))
+
                 delete_component!(data_model, "load", load)
 
                 push!(mappings, Dict(
@@ -124,27 +126,48 @@ function _decompose_voltage_source!(data_model)
 
     if haskey(data_model, "voltage_source")
         for (id, vs) in data_model["voltage_source"]
-            gen = create_generator(bus=vs["bus"], connections=vs["connections"])
+
+            bus = data_model["bus"][vs["bus"]]
+
+            line_kwargs = Dict(Symbol(prop)=>vs[prop] for prop in ["rs", "xs", "g_fr", "b_fr", "g_to", "b_to", "linecode", "length"] if haskey(vs, prop))
+            lossy = !isempty(line_kwargs)
+
+            # if any loss parameters (or linecode) were supplied, then create a line and internal bus
+            if lossy
+                sourcebus = add_virtual!(data_model, "bus", create_bus(terminals=deepcopy(vs["connections"])))
+
+                line = add_virtual!(data_model, "line", create_line(;
+                    f_bus=sourcebus["id"], f_connections=vs["connections"], t_bus=bus["id"], t_connections=vs["connections"],
+                    line_kwargs...
+                ))
+            else
+                sourcebus = bus
+            end
+
+            ground = _get_ground!(sourcebus)
+            gen = create_generator(bus=sourcebus["id"], connections=[vs["connections"]..., ground])
 
             for prop in ["pg_max", "pg_min", "qg_max", "qg_min"]
                 if haskey(vs, prop)
                     gen[prop] = vs[prop]
                 end
             end
-            gen_id = add_virtual_get_id!(data_model, "generator", gen)
 
-            bus = data_model["bus"][vs["bus"]]
+            add_virtual!(data_model, "generator", gen)
+
             conns = vs["connections"]
             terminals = bus["terminals"]
 
-            @assert(Set(conns)==Set(terminals), "A voltage source should connect to all terminals of its associated bus!")
             tmp = Dict(enumerate(conns))
-            bus["vm"] = bus["vmax"] = bus["vmin"] = [vs["vm"][tmp[t]] for t in terminals]
-            bus["va"] = [vs["va"][tmp[t]] for t in terminals]
-            bus["bus_type"] = 3
+            sourcebus["vm"] = sourcebus["vmax"] = sourcebus["vmin"] = [haskey(tmp, t) ? vs["vm"][tmp[t]] : NaN for t in terminals]
+            sourcebus["va"] = [haskey(tmp, t) ? vs["va"][tmp[t]] : NaN for t in terminals]
+            sourcebus["bus_type"] = 3
 
             delete_component!(data_model, "voltage_source", vs["id"])
-            push!(mappings, Dict("voltage_source"=>vs, "gen_id"=>gen_id))
+            push!(mappings, Dict("voltage_source"=>vs, "gen_id"=>gen["id"],
+                "vbus_id"  => lossy ? sourcebus["id"] : nothing,
+                "vline_id" => lossy ? line["id"]      : nothing,
+            ))
         end
     end
 
@@ -165,8 +188,9 @@ function _decompose_transformer_nw!(data_model)
     if haskey(data_model, "transformer_nw")
         for (tr_id, trans) in data_model["transformer_nw"]
 
-            vnom = trans["vnom"]*data_model["v_var_scalar"]
-            snom = trans["snom"]*data_model["v_var_scalar"]
+            @show trans
+            vnom = trans["vnom"]*data_model["settings"]["v_var_scalar"]
+            snom = trans["snom"]*data_model["settings"]["v_var_scalar"]
 
             nrw = length(trans["bus"])
 
@@ -193,12 +217,13 @@ function _decompose_transformer_nw!(data_model)
 
             vbuses, vlines, trans_t_bus_w = _build_loss_model!(data_model, r_s, z_sc, y_sh)
 
-            trans_w = Array{String, 1}(undef, nrw)
+            trans_ids_w = Array{String, 1}(undef, nrw)
             for w in 1:nrw
                 # 2-WINDING TRANSFORMER
                 # make virtual bus and mark it for reduction
                 tm_nom = trans["configuration"][w]=="delta" ? trans["vnom"][w]*sqrt(3) : trans["vnom"][w]
-                trans_w[w] = add_virtual_get_id!(data_model, "transformer_2wa", Dict(
+                @show trans
+                trans_2wa = add_virtual!(data_model, "transformer_2wa", Dict(
                     "f_bus"         => trans["bus"][w],
                     "t_bus"         => trans_t_bus_w[w],
                     "tm_nom"        => tm_nom,
@@ -207,18 +232,23 @@ function _decompose_transformer_nw!(data_model)
                     "configuration" => trans["configuration"][w],
                     "polarity"      => trans["polarity"][w],
                     "tm"            => trans["tm"][w],
-                    "tm_fix"        => trans["tm_fix"][w],
-                    "tm_max"        => trans["tm_max"][w],
-                    "tm_min"        => trans["tm_min"][w],
-                    "tm_step"       => trans["tm_step"][w],
+                    "fixed"         => trans["fixed"][w],
                 ))
+
+                for prop in ["tm_min", "tm_max", "tm_step"]
+                    if haskey(trans, prop)
+                        trans_2wa[prop] = trans[prop][w]
+                    end
+                end
+
+                trans_ids_w[w] = trans_2wa["id"]
             end
 
             delete_component!(data_model, "transformer_nw", trans)
 
             push!(mappings, Dict(
                 "trans"=>trans,
-                "trans_2wa"=>trans_w,
+                "trans_2wa"=>trans_ids_w,
                 "vlines"=>vlines,
                 "vbuses"=>vbuses,
             ))
@@ -377,38 +407,92 @@ function _alias!(dict, fr, to)
     end
 end
 
-function data_model_make_compatible_v8!(data_model)
+function _pad_props!(comp, keys, phases_comp, phases_all)
+    pos = Dict((x,i) for (i,x) in enumerate(phases_all))
+    inds = [pos[x] for x in phases_comp]
+    for prop in keys
+        if haskey(comp, prop)
+            if isa(comp[prop], Vector)
+                tmp = zeros(length(phases_all))
+                tmp[inds] = comp[prop]
+                comp[prop] = tmp
+            elseif isa(comp[prop], Matrix)
+                tmp = zeros(length(phases_all), length(phases_all))
+                tmp[inds, inds] = comp[prop]
+                comp[prop] = tmp
+            else
+                error("Property is not a vector or matrix!")
+            end
+        end
+    end
+end
+
+function data_model_make_compatible_v8!(data_model; phases=[1, 2, 3], neutral=4)
     data_model["conductors"] = 3
     data_model["buspairs"] = nothing
     for (_, bus) in data_model["bus"]
-        bus["bus_type"] = 1
-        bus["status"] = 1
         bus["bus_i"] = bus["index"]
+        terminals = bus["terminals"]
+        @assert(all(t in phases for t in terminals)||all(terminals.==[phases..., neutral]))
+        for prop in ["vm", "va", "vmin", "vmax"]
+            if haskey(bus, prop)
+                if length(bus[prop])==4
+                    val = bus[prop]
+                    bus[prop] = val[terminals.!=neutral]
+                end
+            end
+        end
     end
 
     for (_, load) in data_model["load"]
+        # remove neutral
+        if load["configuration"]=="wye"
+            @assert(load["connections"][end]==4)
+            load["connections"] = load["connections"][1:end-1]
+            _pad_props!(load, ["pd", "qd"], load["connections"], phases)
+        else
+            # three-phase loads can only be delta-connected
+            #@assert(all(load["connections"].==phases))
+        end
+
         load["load_bus"] = load["bus"]
     end
 
     data_model["gen"] = data_model["generator"]
 
+    # has to be three-phase
     for (_, gen) in data_model["gen"]
-        gen["gen_status"] = gen["status"]
-        gen["gen_bus"] = gen["bus"]
+        if gen["configuration"]=="wye"
+            @show gen["connections"]
+            @assert(all(gen["connections"].==[phases..., neutral]))
+        else
+            @assert(all(gen["connections"].==phases))
+        end
+
+        _alias!(gen, "status", "gen_status")
+        _alias!(gen, "bus", "gen_bus")
         _alias!(gen, "pg_min", "pmin")
         _alias!(gen, "qg_min", "qmin")
         _alias!(gen, "pg_max", "pmax")
         _alias!(gen, "qg_max", "qmax")
-        gen["conn"] = gen["configuration"]
-        gen["cost"] = [1.0, 0]
+        _alias!(gen, "configuration", "conn")
+
         gen["model"] = 2
     end
 
     data_model["branch"] = data_model["line"]
     for (_, br) in data_model["branch"]
-        br["br_status"] = br["status"]
-        br["br_r"] = br["rs"]
-        br["br_x"] = br["xs"]
+        @show br
+        @assert(all(x in phases for x in br["f_connections"]))
+        @assert(all(x in phases for x in br["t_connections"]))
+        @assert(all(br["f_connections"].==br["t_connections"]))
+        _pad_props!(br, ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to", "s_rating", "c_rating"], br["f_connections"], phases)
+
+        # rename
+        _alias!(br, "status", "br_status")
+        _alias!(br, "rs", "br_r")
+        _alias!(br, "xs", "br_x")
+
         br["tap"] = 1.0
         br["shift"] = 0
 
@@ -419,21 +503,19 @@ function data_model_make_compatible_v8!(data_model)
         end
     end
 
-    for (_, tr) in data_model["transformer_2wa"]
-        tr["rate_a"] = fill(1000.0, 3)
-    end
-
     for (_, shunt) in data_model["shunt"]
-        shunt["shunt_bus"] = shunt["bus"]
-        shunt["gs"] = shunt["g_sh"]
-        shunt["bs"] = shunt["b_sh"]
+        @assert(all(x in phases for x in shunt["connections"]))
+        _pad_props!(shunt, ["g_sh", "b_sh"], shunt["connections"], phases)
+        _alias!(shunt, "bus", "shunt_bus")
+        _alias!(shunt, "g_sh", "gs")
+        _alias!(shunt, "b_sh", "bs")
     end
 
     data_model["dcline"] = Dict()
     data_model["transformer"] = data_model["transformer_2wa"]
 
     data_model["per_unit"] = true
-    data_model["baseMVA"] = 1E12
+    data_model["baseMVA"] = data_model["settings"]["sbase"]*data_model["settings"]["v_var_scalar"]/1E6
     data_model["name"] = "IDC"
 
 

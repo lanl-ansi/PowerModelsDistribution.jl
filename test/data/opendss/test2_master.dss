@@ -15,7 +15,7 @@ New Line.L1-2 bus1=b3-1.2 bus2=b4.2 length=0.032175613 units=km Linecode=lc1
 New Line.L2 bus1=b5 bus2=b6_check-chars length=0.013516796 units=none linecode=lc/2
 New "Line.L3" phases=3 bus1=b7.1.2.3 bus2=b9.1.2.3 linecode=300 normamps=400 emergamps=600 faultrate=0.1 pctperm=20 repair=0 length=2.58
 New "Line._L4" phases=3 bus1=b8.1.2.3 bus2=b10.1.2.3 linecode=300 normamps=400 emergamps=600 faultrate=0.1 pctperm=20 repair=0 length=1.73 switch=y
-New line.l5 phases=3 bus1=_b2.1.2.3.0 bus2=b7.1.2.3.0 linecode=lc8
+New line.l5 phases=3 bus1=_b2.1.2.3 bus2=b7.1.2.3 linecode=lc8
 New line.l6 phases=3 bus1=b1.1.2.3 bus2=b10.1.2.3 linecode=lc9
 new line.l7 bus1=_b2 bus2=b10 like=L2 linecode=lc10
 

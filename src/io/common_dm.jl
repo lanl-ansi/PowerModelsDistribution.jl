@@ -26,5 +26,9 @@ function parse_file_dm(file::String; kwargs...)
     pmd_data = open(file) do io
         parse_file_dm(io; filetype=split(lowercase(file), '.')[end], kwargs...)
     end
+    data_model_map!(pmd_data)
+    data_model_make_pu!(pmd_data)
+    data_model_index!(pmd_data)
+    data_model_make_compatible_v8!(pmd_data)
     return pmd_data
 end

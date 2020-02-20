@@ -143,7 +143,8 @@ function constraint_mc_trans(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw
 
     #TODO change data model
     # there is redundancy in specifying polarity seperately on from and to side
-    pol = trans["polarity"]
+    #TODO change this once migrated to new data model
+    pol = haskey(trans, "poalrity") ? trans["polarity"] : trans["config_fr"]["polarity"]
 
     if config=="wye"
         constraint_mc_trans_yy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
@@ -388,8 +389,8 @@ function constraint_mc_thermal_limit_from(pm::_PMs.AbstractPowerModel, i::Int; n
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
 
-    if haskey(branch, "rate_a")
-        constraint_mc_thermal_limit_from(pm, nw, f_idx, branch["rate_a"])
+    if haskey(branch, "s_rating")
+        constraint_mc_thermal_limit_from(pm, nw, f_idx, branch["s_rating"])
     end
 end
 
@@ -401,8 +402,8 @@ function constraint_mc_thermal_limit_to(pm::_PMs.AbstractPowerModel, i::Int; nw:
     t_bus = branch["t_bus"]
     t_idx = (i, t_bus, f_bus)
 
-    if haskey(branch, "rate_a")
-        constraint_mc_thermal_limit_to(pm, nw, t_idx, branch["rate_a"])
+    if haskey(branch, "s_rating")
+        constraint_mc_thermal_limit_to(pm, nw, t_idx, branch["s_rating"])
     end
 end
 

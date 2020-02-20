@@ -1,4 +1,5 @@
 using PowerModelsDistribution
+import LinearAlgebra
 
 function make_test_data_model()
 
@@ -75,8 +76,10 @@ function make_3wire_data_model()
 
     add_linecode!(data_model, id="3_conds", rs=LinearAlgebra.diagm(0=>fill(1.0, 3)), xs=LinearAlgebra.diagm(0=>fill(1.0, 3)))
 
-    add_voltage_source!(data_model, id="source", bus="sourcebus", vm=[0.23, 0.23, 0.23], va=[0.0, -2*pi/3, 2*pi/3],
-        #pg_max=fill(10E10,3), pg_min=fill(-10E10,3), qg_max=fill(10E10,3), qg_min=fill(-10E10,3),
+    add_voltage_source!(data_model, id="source", bus="sourcebus", connections=collect(1:3),
+        vm=[0.23, 0.23, 0.23], va=[0.0, -2*pi/3, 2*pi/3],
+        pg_max=fill(10E10,3), pg_min=fill(-10E10,3), qg_max=fill(10E10,3), qg_min=fill(-10E10,3),
+        rs=ones(3,3)/10
     )
 
     # 3 phase conductors
@@ -126,15 +129,16 @@ end
 
 data_model = make_3wire_data_model()
 check_data_model(data_model)
-##
+data_model
+#
 data_model_map!(data_model)
 #bsh = data_model["shunt"]["_virtual_1"]["b_sh"]
-#
+##
 data_model_make_pu!(data_model, vbases=Dict("sourcebus"=>0.230))
 #
 data_model_index!(data_model)
 data_model_make_compatible_v8!(data_model)
-#
+##
 import PowerModelsDistribution
 PMD = PowerModelsDistribution
 import PowerModels
