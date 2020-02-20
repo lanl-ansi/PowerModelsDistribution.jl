@@ -22,9 +22,9 @@ new line.l7 bus1=_b2 bus2=b10 like=L2 linecode=lc10
 ! Loads
 New Load.ld1 phases=1 Bus1=b7.1.2  kv=0.208  status=variable model=1 conn=wye kW=3.89   pf=0.97  Vminpu=.88
 New "Load.ld2" bus1=b9 phases=3 conn=Wye model=5 kV=24.9 kW=27 kvar=21 Vminpu=.85
-New "Load.ld3" bus1=b10 phases=3 conn=Wye model=2 kV=24.9 kW=405 kvar=315 Vminpu=.85
+New "Load.ld3" bus1=b10 phases=3 conn=Wye model=2 kV=24.9 kW=405 kvar=315 Vminpu=.85 yearly=(sngfile=load_profile.sng)
 new load.ld4 bus1=b1 like=ld2
-New "Load.ld2" bus1=b9 phases=3 conn=Wye model=5 kV=24.9 kW=27 kvar=21 Vminpu=.85
+New "Load.ld2" bus1=b9 phases=3 conn=Wye model=5 kV=24.9 kW=27 kvar=21 Vminpu=.85 daily=(file=load_profile.csv)
 
 ! Capacitors
 New "Capacitor.c1" bus1=b5 phases=3 kvar=[ 250] kv=20.0

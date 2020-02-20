@@ -1,6 +1,32 @@
 @info "running opendss parser tests"
 
 @testset "test opendss parser" begin
+
+    @testset "loadshape parsing" begin
+        dss = PMD.parse_dss("../test/data/opendss/loadshapes.dss")
+        PMD.parse_dss_with_dtypes!(dss, ["loadshape"])
+
+        loadshapes = Dict{String,Any}()
+        for ls in dss["loadshape"]
+            loadshapes[ls["name"]] = PMD._create_loadshape(ls["name"]; PMD._to_sym_keys(ls)...)
+        end
+
+        @test isapprox(loadshapes["1"]["interval"], 1.0/60)
+        @test all(length(ls["pmult"]) == 10 for ls in values(loadshapes) if ls["name"] != "3")
+        @test all(haskey.([loadshapes["$i"] for i in [3, 8, 9]], "qmult"))
+        @test all(haskey.([loadshapes["$i"] for i in [4, 6, 8]], "hour"))
+    end
+
+    @testset "arrays from files" begin
+        dss = PMD.parse_file("../test/data/opendss/test2_master.dss"; import_all=true)
+
+        @test isa(dss["load"]["3"]["yearly"], Array)
+        @test isa(dss["load"]["4"]["daily"], Array)
+
+        @test length(dss["load"]["3"]["yearly"]) == 10
+        @test length(dss["load"]["4"]["daily"]) == 10
+    end
+
     @testset "reverse polish notation" begin
         @test isapprox(PMD._parse_rpn("2 pi * 60 * .001 *"), 2 * pi * 60 * .001; atol=1e-12)
         @test isapprox(PMD._parse_rpn("(14.4 13.8 / sqr 300 *"), (14.4 / 13.8)^2 * 300; atol=1e-12)
