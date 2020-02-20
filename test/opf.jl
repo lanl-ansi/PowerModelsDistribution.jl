@@ -145,8 +145,8 @@
             @test all(isapprox.(sol["solution"]["bus"]["2"]["vm"], 0.984377; atol=1e-4))
             @test all(isapprox.(sol["solution"]["bus"]["2"]["va"], PMD._wrap_to_pi.([2 * pi / pmd["conductors"] * (1 - c) - deg2rad(0.79) for c in 1:pmd["conductors"]]); atol=deg2rad(0.2)))
 
-            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.018209; atol=1e-5)
-            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.000208979; atol=1e-5)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0181409; atol=1e-5)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.0; atol=1e-4)
         end
 
         @testset "3-bus balanced acp opf" begin
@@ -160,8 +160,8 @@
                 @test all(isapprox.(sol["solution"]["bus"][bus]["vm"], vm; atol=1e-4))
             end
 
-            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.018345; atol=1e-6)
-            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00919404; atol=1.2e-5)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.018276; atol=1e-6)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.008922; atol=1.2e-5)
         end
 
         @testset "3-bus unbalanced acp opf" begin
@@ -186,7 +186,7 @@
             sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
             @test sol["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(sol["objective"], 0.0183961; atol=1e-4)
+            @test isapprox(sol["objective"], 0.0185; atol=1e-4)
         end
 
         @testset "3-bus balanced pv acp opf" begin
