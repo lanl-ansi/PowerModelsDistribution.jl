@@ -111,8 +111,6 @@ function _dss2pmd_bus!(pmd_data::Dict, dss_data::Dict, import_all::Bool=false, v
     nodes = Array{Bool}([1 1 1 0])
     ph1_ang = circuit["angle"]
     vm = circuit["pu"]
-    vmi = circuit["pu"] - circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"])
-    vma = circuit["pu"] + circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"])
 
     busDict["bus_i"] = length(pmd_data["bus"])+1
     busDict["index"] = length(pmd_data["bus"])+1
@@ -123,8 +121,8 @@ function _dss2pmd_bus!(pmd_data::Dict, dss_data::Dict, import_all::Bool=false, v
     busDict["vm"] = _parse_array(vm, nodes, nconductors)
     busDict["va"] = _parse_array([_wrap_to_180(-rad2deg(2*pi/nconductors*(i-1))+ph1_ang) for i in 1:nconductors], nodes, nconductors)
 
-    busDict["vmin"] = _parse_array(vmi, nodes, nconductors, vmi)
-    busDict["vmax"] = _parse_array(vma, nodes, nconductors, vma)
+    busDict["vmin"] = _parse_array(vm, nodes, nconductors, vm)
+    busDict["vmax"] = _parse_array(vm, nodes, nconductors, vm)
 
     busDict["base_kv"] = pmd_data["basekv"]
 

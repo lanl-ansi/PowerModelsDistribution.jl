@@ -2,6 +2,7 @@
 
 ## staged
 
+- Updates virtual_sourcebus, which is intended to represent a voltage source, to have a fixed voltage magnitude (#246,#248)
 - Add parsing of series data files into array fields in OpenDSS parser
 - Add LoadShape parsing to OpenDSS parser (#247)
 - The pf and opf problem specifications now contain delta connected, and voltage-dependent load models by default; pf_lm and opf_lm were removed.
