@@ -273,7 +273,7 @@ end
 Returns a current magnitude bound for the generators.
 """
 function _calc_gen_current_max(gen::Dict, bus::Dict)
-    if all([haskey(gen, "pmax") for prop in ["pmax", "pmin", "qmax", "qmin"]]) && haskey(bus, "vmin")
+    if all([haskey(gen, prop) for prop in ["pmax", "pmin", "qmax", "qmin"]]) && haskey(bus, "vmin")
         pabsmax = max.(abs.(gen["pmin"]), abs.(gen["pmax"]))
         qabsmax = max.(abs.(gen["qmin"]), abs.(gen["qmax"]))
         smax = sqrt.(pabsmax.^2 + qabsmax.^2)
@@ -496,14 +496,6 @@ function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
 
     for (_, load) in data["gen"]
         load["conn"] = "wye"
-    end
-
-    #rename bounds from PMs to PMD
-    for (_, branch) in data["branch"]
-        if haskey(branch, "rate_a")
-            branch["rate_a"] = branch["rate_a"]
-            delete!(branch, "rate_a")
-        end
     end
 end
 
