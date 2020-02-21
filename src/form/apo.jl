@@ -107,10 +107,8 @@ function variable_mc_transformer_flow_active(pm::_PMs.AbstractAPLossLessModels; 
             (t,i,j) = arc
             s_rating_fr, s_rating_to = _calc_transformer_power_ub_frto(_PMs.ref(pm, nw, :transformer, t), _PMs.ref(pm, nw, :bus, i), _PMs.ref(pm, nw, :bus, j))
 
-            if !(ismissing(s_rating_fr) || ismissing(s_rating_to))
-                JuMP.set_lower_bound.(pt[(t,i,j)], -min.(s_rating_fr, s_rating_to))
-                JuMP.set_upper_bound.(pt[(t,i,j)],  min.(s_rating_fr, s_rating_to))
-            end
+            set_lower_bound.(pt[(t,i,j)], -min.(s_rating_fr, s_rating_to))
+            set_upper_bound.(pt[(t,i,j)],  min.(s_rating_fr, s_rating_to))
         end
     end
 
