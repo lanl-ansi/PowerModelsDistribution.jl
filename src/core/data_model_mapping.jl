@@ -188,7 +188,6 @@ function _decompose_transformer_nw!(data_model)
     if haskey(data_model, "transformer_nw")
         for (tr_id, trans) in data_model["transformer_nw"]
 
-            @show trans
             vnom = trans["vnom"]*data_model["settings"]["v_var_scalar"]
             snom = trans["snom"]*data_model["settings"]["v_var_scalar"]
 
@@ -222,7 +221,7 @@ function _decompose_transformer_nw!(data_model)
                 # 2-WINDING TRANSFORMER
                 # make virtual bus and mark it for reduction
                 tm_nom = trans["configuration"][w]=="delta" ? trans["vnom"][w]*sqrt(3) : trans["vnom"][w]
-                @show trans
+
                 trans_2wa = add_virtual!(data_model, "transformer_2wa", Dict(
                     "f_bus"         => trans["bus"][w],
                     "t_bus"         => trans_t_bus_w[w],
@@ -463,7 +462,6 @@ function data_model_make_compatible_v8!(data_model; phases=[1, 2, 3], neutral=4)
     # has to be three-phase
     for (_, gen) in data_model["gen"]
         if gen["configuration"]=="wye"
-            @show gen["connections"]
             @assert(all(gen["connections"].==[phases..., neutral]))
         else
             @assert(all(gen["connections"].==phases))
@@ -482,7 +480,6 @@ function data_model_make_compatible_v8!(data_model; phases=[1, 2, 3], neutral=4)
 
     data_model["branch"] = data_model["line"]
     for (_, br) in data_model["branch"]
-        @show br
         @assert(all(x in phases for x in br["f_connections"]))
         @assert(all(x in phases for x in br["t_connections"]))
         @assert(all(br["f_connections"].==br["t_connections"]))

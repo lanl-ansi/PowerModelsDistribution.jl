@@ -114,8 +114,6 @@ function data_model_make_pu!(data_model; sbase=missing, vbases=missing)
 
     bus_vbase, line_vbase = _calc_vbase(data_model, vbases)
 
-    @show bus_vbase
-
     for (id, bus) in data_model["bus"]
         _rebase_pu_bus!(bus, bus_vbase[id], sbase, sbase_old, v_var_scalar)
     end
@@ -161,7 +159,6 @@ function _rebase_pu_bus!(bus, vbase, sbase, sbase_old, v_var_scalar)
         #     vnom = bus["vnom"]
         #     _scale_props!(bus, ["vnom"], 1/vbase)
         # end
-        @show vbase
         _scale_props!(bus, prop_vnom, 1/vbase)
 
         z_old = 1.0
@@ -253,9 +250,7 @@ function _rebase_pu_generator!(gen, vbase, sbase, sbase_old, v_var_scalar)
         scale(gen, key, sbase_scale)
     end
 
-    @show gen["cost"]
     scale(gen, "cost", 1/sbase_scale)
-    @show gen["cost"]
 
     # save new vbase
     gen["vbase"] = vbase

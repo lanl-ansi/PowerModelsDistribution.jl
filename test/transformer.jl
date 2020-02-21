@@ -107,26 +107,6 @@
             @test norm(vm(sol, pmd_data, "3")-[0.969531, 0.938369, 0.944748], Inf) <= 1.5E-5
             @test norm(va(sol, pmd_data, "3")-[30.7, -90.0, 152.0], Inf) <= 0.1
         end
-
-        @testset "3w transformer acp pf dyy - voltage base" begin
-            # make sure that different voltage bases lead to the same solution
-            # (after rescaling)
-            file = "../test/data/opendss/ut_trans_3w_dyy_basetest.dss"
-            pmd1 = PMD.parse_file(file)
-            pmd2 = deepcopy(pmd1)
-            PMD._adjust_base!(pmd2, start_at_first_tr_prim=false)
-            scale_2to1 = pmd2["bus"]["3"]["base_kv"]/pmd1["bus"]["3"]["base_kv"]
-            sol1 = PMD.run_ac_mc_pf(pmd1, ipopt_solver, multiconductor=true)
-            sol2 = PMD.run_ac_mc_pf(pmd2, ipopt_solver, multiconductor=true)
-            for bus_id_str in keys(sol1["solution"]["bus"])
-                vm1 = sol1["solution"]["bus"][bus_id_str]["vm"]
-                vm2 = sol2["solution"]["bus"][bus_id_str]["vm"]
-                va1 = PMD._wrap_to_pi(sol1["solution"]["bus"][bus_id_str]["va"][:])
-                va2 = PMD._wrap_to_pi(sol2["solution"]["bus"][bus_id_str]["va"][:])
-                @test norm(vm1-vm2*scale_2to1, Inf) <= 1E-6
-                @test norm(va1-va2, Inf) <= 1E-3
-            end
-        end
     end
 
     @testset "oltc tests" begin

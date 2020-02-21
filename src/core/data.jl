@@ -114,7 +114,7 @@ end
 "Calculates the tap scale factor for the non-dimensionalized equations."
 function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, bus_to::Dict{String,Any})
     tm_nom = trans["tm_nom"]
-    @show bus_fr
+    
     f_vbase = haskey(bus_fr, "vbase") ? bus_fr["vbase"] : bus_fr["base_kv"]
     t_vbase = haskey(bus_to, "vbase") ? bus_to["vbase"] : bus_to["base_kv"]
     config = trans["configuration"]
