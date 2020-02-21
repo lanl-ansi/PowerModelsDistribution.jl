@@ -492,11 +492,11 @@ function variable_mc_transformer_flow_active(pm::_PMs.AbstractPowerModel; nw::In
     if bounded
         for arc in _PMs.ref(pm, nw, :arcs_from_trans)
             (t,i,j) = arc
-            s_rating_fr, s_rating_to = _calc_transformer_power_ub_frto(_PMs.ref(pm, nw, :transformer, t), _PMs.ref(pm, nw, :bus, i), _PMs.ref(pm, nw, :bus, j))
-            set_lower_bound.(pt[(t,i,j)], -s_rating_fr)
-            set_upper_bound.(pt[(t,i,j)],  s_rating_fr)
-            set_lower_bound.(pt[(t,j,i)], -s_rating_fr)
-            set_upper_bound.(pt[(t,j,i)],  s_rating_fr)
+            rate_a_fr, rate_a_to = _calc_transformer_power_ub_frto(_PMs.ref(pm, nw, :transformer, t), _PMs.ref(pm, nw, :bus, i), _PMs.ref(pm, nw, :bus, j))
+            set_lower_bound.(pt[(t,i,j)], -rate_a_fr)
+            set_upper_bound.(pt[(t,i,j)],  rate_a_fr)
+            set_lower_bound.(pt[(t,j,i)], -rate_a_fr)
+            set_upper_bound.(pt[(t,j,i)],  rate_a_fr)
         end
     end
 
@@ -529,12 +529,12 @@ function variable_mc_transformer_flow_reactive(pm::_PMs.AbstractPowerModel; nw::
     if bounded
         for arc in _PMs.ref(pm, nw, :arcs_from_trans)
             (t,i,j) = arc
-            s_rating_fr, s_rating_to = _calc_transformer_power_ub_frto(_PMs.ref(pm, nw, :transformer, t), _PMs.ref(pm, nw, :bus, i), _PMs.ref(pm, nw, :bus, j))
+            rate_a_fr, rate_a_to = _calc_transformer_power_ub_frto(_PMs.ref(pm, nw, :transformer, t), _PMs.ref(pm, nw, :bus, i), _PMs.ref(pm, nw, :bus, j))
 
-            JuMP.set_lower_bound.(qt[(t,i,j)], -s_rating_fr)
-            JuMP.set_upper_bound.(qt[(t,i,j)],  s_rating_fr)
-            JuMP.set_lower_bound.(qt[(t,j,i)], -s_rating_fr)
-            JuMP.set_upper_bound.(qt[(t,j,i)],  s_rating_fr)
+            JuMP.set_lower_bound.(qt[(t,i,j)], -rate_a_fr)
+            JuMP.set_upper_bound.(qt[(t,i,j)],  rate_a_fr)
+            JuMP.set_lower_bound.(qt[(t,j,i)], -rate_a_fr)
+            JuMP.set_upper_bound.(qt[(t,j,i)],  rate_a_fr)
         end
     end
 

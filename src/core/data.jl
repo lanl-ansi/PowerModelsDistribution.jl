@@ -296,11 +296,11 @@ lower bound on the voltage magnitude of the connected buses.
 function _calc_branch_current_max(branch::Dict, bus::Dict)
     bounds = []
 
-    if haskey(branch, "c_rating")
-        push!(bounds, branch["c_rating"])
+    if haskey(branch, "c_rating_a")
+        push!(bounds, branch["c_rating_a"])
     end
-    if haskey(branch, "s_rating") && haskey(bus, "vmin")
-        push!(bounds, branch["s_rating"]./bus["vmin"])
+    if haskey(branch, "rate_a") && haskey(bus, "vmin")
+        push!(bounds, branch["rate_a"]./bus["vmin"])
     end
 
     N = 3 #TODO update for 4-wire
@@ -317,13 +317,13 @@ function _calc_branch_current_max_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
     bounds_fr = []
     bounds_to = []
 
-    if haskey(branch, "c_rating")
-        push!(bounds_fr, branch["c_rating"])
-        push!(bounds_to, branch["c_rating"])
+    if haskey(branch, "c_rating_a")
+        push!(bounds_fr, branch["c_rating_a"])
+        push!(bounds_to, branch["c_rating_a"])
     end
-    if haskey(branch, "s_rating")
-        push!(bounds_fr, branch["s_rating"]./bus_fr["vmin"])
-        push!(bounds_to, branch["s_rating"]./bus_to["vmin"])
+    if haskey(branch, "rate_a")
+        push!(bounds_fr, branch["rate_a"]./bus_fr["vmin"])
+        push!(bounds_to, branch["rate_a"]./bus_to["vmin"])
     end
 
     N = 3 #TODO update for 4-wire
@@ -340,13 +340,13 @@ function _calc_transformer_power_ub_frto(trans::Dict, bus_fr::Dict, bus_to::Dict
     bounds_fr = []
     bounds_to = []
     #TODO redefine transformer bounds
-    # if haskey(trans, "c_rating")
-    #     push!(bounds_fr, trans["c_rating"].*bus_fr["vmax"])
-    #     push!(bounds_to, trans["c_rating"].*bus_to["vmax"])
+    # if haskey(trans, "c_rating_a")
+    #     push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
+    #     push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
     # end
-    # if haskey(trans, "s_rating")
-    #     push!(bounds_fr, trans["s_rating"])
-    #     push!(bounds_to, trans["s_rating"])
+    # if haskey(trans, "rate_a")
+    #     push!(bounds_fr, trans["rate_a"])
+    #     push!(bounds_to, trans["rate_a"])
     # end
 
 
@@ -364,13 +364,13 @@ function _calc_transformer_current_max_frto(trans::Dict, bus_fr::Dict, bus_to::D
     bounds_fr = []
     bounds_to = []
     #TODO redefine transformer bounds
-    # if haskey(trans, "c_rating")
-    #     push!(bounds_fr, trans["c_rating"].*bus_fr["vmax"])
-    #     push!(bounds_to, trans["c_rating"].*bus_to["vmax"])
+    # if haskey(trans, "c_rating_a")
+    #     push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
+    #     push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
     # end
-    # if haskey(trans, "s_rating")
-    #     push!(bounds_fr, trans["s_rating"])
-    #     push!(bounds_to, trans["s_rating"])
+    # if haskey(trans, "rate_a")
+    #     push!(bounds_fr, trans["rate_a"])
+    #     push!(bounds_to, trans["rate_a"])
     # end
 
 
@@ -387,11 +387,11 @@ upper bound on the voltage magnitude of the connected buses.
 function _calc_branch_power_max(branch::Dict, bus::Dict)
     bounds = []
 
-    if haskey(branch, "c_rating") && haskey(bus, "vmax")
-        push!(bounds, branch["c_rating"].*bus["vmax"])
+    if haskey(branch, "c_rating_a") && haskey(bus, "vmax")
+        push!(bounds, branch["c_rating_a"].*bus["vmax"])
     end
-    if haskey(branch, "s_rating")
-        push!(bounds, branch["s_rating"])
+    if haskey(branch, "rate_a")
+        push!(bounds, branch["rate_a"])
     end
 
     N = 3 #TODO update for 4-wire
@@ -501,7 +501,7 @@ function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
     #rename bounds from PMs to PMD
     for (_, branch) in data["branch"]
         if haskey(branch, "rate_a")
-            branch["s_rating"] = branch["rate_a"]
+            branch["rate_a"] = branch["rate_a"]
             delete!(branch, "rate_a")
         end
     end
