@@ -114,7 +114,7 @@ end
 "Calculates the tap scale factor for the non-dimensionalized equations."
 function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, bus_to::Dict{String,Any})
     tm_nom = trans["tm_nom"]
-    @show bus_fr
+
     f_vbase = haskey(bus_fr, "vbase") ? bus_fr["vbase"] : bus_fr["base_kv"]
     t_vbase = haskey(bus_to, "vbase") ? bus_to["vbase"] : bus_to["base_kv"]
     config = trans["configuration"]
@@ -273,7 +273,7 @@ end
 Returns a current magnitude bound for the generators.
 """
 function _calc_gen_current_max(gen::Dict, bus::Dict)
-    if all([haskey(gen, "pmax") for prop in ["pmax", "pmin", "qmax", "qmin"]]) && haskey(bus, "vmin")
+    if all([haskey(gen, prop) for prop in ["pmax", "pmin", "qmax", "qmin"]]) && haskey(bus, "vmin")
         pabsmax = max.(abs.(gen["pmin"]), abs.(gen["pmax"]))
         qabsmax = max.(abs.(gen["qmin"]), abs.(gen["qmax"]))
         smax = sqrt.(pabsmax.^2 + qabsmax.^2)
@@ -282,7 +282,8 @@ function _calc_gen_current_max(gen::Dict, bus::Dict)
 
         return smax./vmin
     else
-        return missing
+        N = 3 #TODO update for 4-wire
+        return fill(Inf, N)
     end
 end
 
@@ -294,16 +295,16 @@ lower bound on the voltage magnitude of the connected buses.
 """
 function _calc_branch_current_max(branch::Dict, bus::Dict)
     bounds = []
-    if haskey(branch, "c_rating")
-        push!(bounds, branch["c_rating"])
+
+    if haskey(branch, "c_rating_a")
+        push!(bounds, branch["c_rating_a"])
     end
-    if haskey(branch, "s_rating") && haskey(bus, "vmin")
-        push!(bounds, branch["s_rating"]./bus["vmin"])
+    if haskey(branch, "rate_a") && haskey(bus, "vmin")
+        push!(bounds, branch["rate_a"]./bus["vmin"])
     end
-    if length(bounds)==0
-        return missing
-    end
-    return min.(bounds...)
+
+    N = 3 #TODO update for 4-wire
+    return min.(fill(Inf, N), bounds...)
 end
 
 
@@ -315,16 +316,18 @@ lower bound on the voltage magnitude of the connected buses.
 function _calc_branch_current_max_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
     bounds_fr = []
     bounds_to = []
-    if haskey(branch, "c_rating")
-        push!(bounds_fr, branch["c_rating"])
-        push!(bounds_to, branch["c_rating"])
+
+    if haskey(branch, "c_rating_a")
+        push!(bounds_fr, branch["c_rating_a"])
+        push!(bounds_to, branch["c_rating_a"])
     end
-    if haskey(branch, "s_rating")
-        push!(bounds_fr, branch["s_rating"]./bus_fr["vmin"])
-        push!(bounds_to, branch["s_rating"]./bus_to["vmin"])
+    if haskey(branch, "rate_a")
+        push!(bounds_fr, branch["rate_a"]./bus_fr["vmin"])
+        push!(bounds_to, branch["rate_a"]./bus_to["vmin"])
     end
-    @assert(length(bounds_fr)>=0, "no (implied/valid) current bounds defined")
-    return min.(bounds_fr...), min.(bounds_to...)
+
+    N = 3 #TODO update for 4-wire
+    return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
 end
 
 
@@ -336,18 +339,19 @@ upper bound on the voltage magnitude of the connected buses.
 function _calc_transformer_power_ub_frto(trans::Dict, bus_fr::Dict, bus_to::Dict)
     bounds_fr = []
     bounds_to = []
-    if haskey(trans, "c_rating")
-        push!(bounds_fr, trans["c_rating"].*bus_fr["vmax"])
-        push!(bounds_to, trans["c_rating"].*bus_to["vmax"])
-    end
-    if haskey(trans, "s_rating")
-        push!(bounds_fr, trans["s_rating"])
-        push!(bounds_to, trans["s_rating"])
-    end
+    #TODO redefine transformer bounds
+    # if haskey(trans, "c_rating_a")
+    #     push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
+    #     push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
+    # end
+    # if haskey(trans, "rate_a")
+    #     push!(bounds_fr, trans["rate_a"])
+    #     push!(bounds_to, trans["rate_a"])
+    # end
 
-    bounds_fr = isempty(bounds_fr) ? missing : min.(bounds_fr...)
-    bounds_to = isempty(bounds_to) ? missing : min.(bounds_to...)
-    return bounds_fr, bounds_to
+
+    N = 3 #TODO update for 4-wire
+    return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
 end
 
 
@@ -359,18 +363,19 @@ the voltage magnitude of the connected buses.
 function _calc_transformer_current_max_frto(trans::Dict, bus_fr::Dict, bus_to::Dict)
     bounds_fr = []
     bounds_to = []
-    # if haskey(trans, "c_rating")
-    #     push!(bounds_fr, trans["c_rating"])
-    #     push!(bounds_to, trans["c_rating"])
+    #TODO redefine transformer bounds
+    # if haskey(trans, "c_rating_a")
+    #     push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
+    #     push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
     # end
-    # if haskey(trans, "s_rating")
-    #     push!(bounds_fr, trans["s_rating"]./bus_fr["vmin"])
-    #     push!(bounds_to, trans["s_rating"]./bus_to["vmin"])
+    # if haskey(trans, "rate_a")
+    #     push!(bounds_fr, trans["rate_a"])
+    #     push!(bounds_to, trans["rate_a"])
     # end
 
-    bounds_fr = isempty(bounds_fr) ? missing : min.(bounds_fr...)
-    bounds_to = isempty(bounds_to) ? missing : min.(bounds_to...)
-    return bounds_fr, bounds_to
+
+    N = 3 #TODO update for 4-wire
+    return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
 end
 
 
@@ -381,15 +386,16 @@ upper bound on the voltage magnitude of the connected buses.
 """
 function _calc_branch_power_max(branch::Dict, bus::Dict)
     bounds = []
-    if haskey(branch, "c_rating") && haskey(bus, "vmax")
-        push!(bounds, branch["c_rating"].*bus["vmax"])
+
+    if haskey(branch, "c_rating_a") && haskey(bus, "vmax")
+        push!(bounds, branch["c_rating_a"].*bus["vmax"])
     end
-    if haskey(branch, "s_rating")
-        push!(bounds, branch["s_rating"])
+    if haskey(branch, "rate_a")
+        push!(bounds, branch["rate_a"])
     end
 
-    bounds = isempty(bounds) ? missing : min.(bounds...)
-    return bounds
+    N = 3 #TODO update for 4-wire
+    return min.(fill(Inf, N), bounds...)
 end
 
 
@@ -421,7 +427,8 @@ function _calc_branch_series_current_max(branch::Dict, bus_fr::Dict, bus_to::Dic
     c_max_to_sh = abs.(y_to)*vmax_to
 
     # now select element-wise lowest valid bound between fr and to
-    return min.(c_max_fr_sh.+c_max_fr_tot, c_max_to_sh.+c_max_to_tot)
+    N = 3 #TODO update for 4-wire
+    return min.(fill(Inf, N), c_max_fr_sh.+c_max_fr_tot, c_max_to_sh.+c_max_to_tot)
 end
 
 
@@ -489,14 +496,6 @@ function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
 
     for (_, load) in data["gen"]
         load["conn"] = "wye"
-    end
-
-    #rename bounds from PMs to PMD
-    for (_, branch) in data["branch"]
-        if haskey(branch, "rate_a")
-            branch["s_rating"] = branch["rate_a"]
-            delete!(branch, "rate_a")
-        end
     end
 end
 
@@ -645,4 +644,20 @@ macro smart_constraint(model, vars, expr)
             JuMP.@constraint($model, $expr)
         end
     end)
+end
+
+
+"Local wrapper method for JuMP.set_lower_bound, which skips NaN and infinite (-Inf only)"
+function set_lower_bound(x::JuMP.VariableRef, bound)
+    if !(isnan(bound) || bound==-Inf)
+        JuMP.set_lower_bound(x, bound)
+    end
+end
+
+
+"Local wrapper method for JuMP.set_upper_bound, which skips NaN and infinite (+Inf only)"
+function set_upper_bound(x::JuMP.VariableRef, bound)
+    if !(isnan(bound) || bound==Inf)
+        JuMP.set_upper_bound(x, bound)
+    end
 end

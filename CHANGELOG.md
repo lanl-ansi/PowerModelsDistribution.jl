@@ -1,7 +1,10 @@
-PowerModelsDistribution.jl Change Log
-===================================
+# PowerModelsDistribution.jl Change Log
 
-### staged
+## staged
+
+- Updates virtual_sourcebus, which is intended to represent a voltage source, to have a fixed voltage magnitude (#246,#248)
+- Add parsing of series data files into array fields in OpenDSS parser
+- Add LoadShape parsing to OpenDSS parser (#247)
 - The pf and opf problem specifications now contain delta connected, and voltage-dependent load models by default; pf_lm and opf_lm were removed.
 - Generators can now also be connected in both delta and wye.
 - The delta/voltage-dependent loads in the ACP power models were refactored to be consistent with the new ones.
@@ -9,7 +12,8 @@ PowerModelsDistribution.jl Change Log
 - A current-voltage (IVR) formulation was added, and supports all features that ACP supports as well.
 - Several power balance constraints now require NLconstraints because the load power/current can contain a NLexpression. This might be optimized further in the future if it leads to performance issues.
 
-### v0.8.0
+## v0.8.0
+
 - Update solution building infrastructure (PMs #77) (breaking). The reported solution is now consistent with the variable space of the formulation.
 - Moved multi-conductor support from PowerModels into PowerModelsDistribution. (breaking)
 - PMs.var no longer takes conductor as an argument
@@ -21,10 +25,12 @@ PowerModelsDistribution.jl Change Log
 - Simplified linear UBF formulations. LPLinUBFModel and LPdiagUBFModel are equivalent, and are replaced by LPUBFDiagModel. The more popular name 'LinDist3FlowModel' was added as an alias for LPUBFDiagModel.
 - The linearization by Gan & Low is also equivalent to LPUBFDiagModel, though it has redundudant variables and equations. LPfullUBFModel is now implemented as an alias of LPUBFDiagModel, 'LPUBFFullModel'.
 
-### v0.7.0
+## v0.7.0
+
 - Updates function names for PowerModels v0.14 compatibility (breaking) (#194)
 
-### v0.6.1
+## v0.6.1
+
 - Fixed bug with new default SCS settings causing tests to fail (#190)
 - Changed unit test '5-bus independent radial different sdpubf opf_bf', testing vm instead of qg
 - Added exponential load models, including convex relaxations
@@ -33,7 +39,8 @@ PowerModelsDistribution.jl Change Log
 - Cleaned up the transformer/oltc methods, including ACP formulation
 - added `rate_a` setting to virtual lines (#185, #186)
 
-### v0.6.0
+## v0.6.0
+
 - Adds `count_nodes` function to count the number of nodes in a parsed network (#183)
 - Exports `find_bus` and `find_component` functions for better user experience (#183)
 - Fixed `solution_bf!` for branch flow solution building (#182)
@@ -57,41 +64,50 @@ PowerModelsDistribution.jl Change Log
 - Fix bug in OpenDSS parser on Lines where `switch=y` property is used (#161)
 - Update Formulation types to follow PowerModels v0.13 conventions (breaking) (#160)
 
-### v0.5.2
+## v0.5.2
+
 - Fix bug in OpenDSS parser on Capacitors (#158)
 - Add support for full matrix line shunts (#153)
 
-### v0.5.1
+## v0.5.1
+
 - Add continuous load shedding problem (mld)
 
-### v0.5.0
+## v0.5.0
+
 - Enforce function naming conventions (starts with `_`: internal function; ends with `!`: transforms data; `correct_`: corrects network data; `check_`: warnings about network data) (breaking)
 - Update for PowerModels.jl v0.12 (breaking)
 - Enforce constraint/variable naming conventions to include `_tp` (breaking)
 - Add automatic export of non-internal functions (all functions not prefixed with `_`)
 - Enforce function naming conventions (starts with `_`: internal function; ends with `!`: transforms data; `correct_`: corrects network data; `check_`: warnings about network data)
 
-### v0.4
+## v0.4
+
 - First version of PowerModelsDistribution.jl
 
-### v0.3.2
+## v0.3.2
+
 - Final version of ThreePhasePowerModels.jl before name change to PowerModelsDistribution.jl (adds depreciation warnings)
 
-### v0.3.1
+## v0.3.1
+
 - Allow for arbitrarily named sourcebus
 - Add json parser
 - Add support for additional load models (constant power, constant impedance, constant current; delta or wye connected) (#127)
 - Fix bug in OpenDSS parse of Capacitors [zbase factor and wrong sign] (#138)
 - Add voltage balance constraints (#129)
 
-### v0.3.0
+## v0.3.0
+
 - Update to JuMP v0.19/MathOptInterface
 
-### v0.2.1
+## v0.2.1
+
 - Add transformer support to active power only models
 - Fix bug in source_ids of new components created for transformer support
 
-### v0.2.0
+## v0.2.0
+
 - Add transformer to TPPM: wye and delta windings, vector group variations (indirectly) and variable taps per phase with bounds
 - Add ACPForm for transformers
 - Add transformer parsing to OpenDSS, including mapping of loss model
@@ -100,13 +116,16 @@ PowerModelsDistribution.jl Change Log
 - Remove support for Julia versions < 1.0
 - Switch to using `import` instead of `using` internally
 
-### v0.1.5
+## v0.1.5
+
 - Minor fix to OpenDSS line parsing (length units mismatch with linecode)
 
-### v0.1.4
+## v0.1.4
+
 - Update to PowerModels v0.9
 
-### v0.1.3
+## v0.1.3
+
 - Add opf with multi-phase storage model
 - Add support for parsing OpenDSS Storage objects
 - Minor fix to branch parsing in matlab format
@@ -116,18 +135,21 @@ PowerModelsDistribution.jl Change Log
 - Add conversion of OpenDSS PVSystem objects into generators, using KVA for generator limits
 - Add compatibility for Julia v0.7/v1.0
 
-### v0.1.2
+## v0.1.2
+
 - Add support for network flow approximation formulation, NFAPowerModel
 - Updates to problem specifications
 - Update tests for SCS v0.4
 - Minor improvements to OpenDSS parser
 
-### v0.1.1
+## v0.1.1
+
 - Added a variety of matrix-based branch flow formulations
 - Updated LPLinUBFForm to more closely match published refrence model
 - Update MINLP solvers used in testing
 - Added basic docs setup
 - Minor improvements to OpenDSS parser #29, #59, #62, #63, #64, #65
 
-### v0.1.0
+## v0.1.0
+
 - Initial release

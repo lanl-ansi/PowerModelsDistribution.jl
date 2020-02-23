@@ -262,8 +262,8 @@ function constraint_mc_current_balance_load(pm::_PMs.AbstractIVRModel, n::Int, i
     end
 end
 
-"`p[f_idx]^2 + q[f_idx]^2 <= s_rating^2`"
-function constraint_mc_thermal_limit_from(pm::_PMs.AbstractIVRModel, n::Int, f_idx, s_rating)
+"`p[f_idx]^2 + q[f_idx]^2 <= rate_a^2`"
+function constraint_mc_thermal_limit_from(pm::_PMs.AbstractIVRModel, n::Int, f_idx, rate_a)
     (l, f_bus, t_bus) = f_idx
 
     vr = _PMs.var(pm, n, :vr, f_bus)
@@ -275,12 +275,12 @@ function constraint_mc_thermal_limit_from(pm::_PMs.AbstractIVRModel, n::Int, f_i
     ncnds = length(cnds)
 
     for c in cnds
-        JuMP.@NLconstraint(pm.model, (vr[c]^2 + vi[c]^2)*(crf[c]^2 + cif[c]^2) <= s_rating[c]^2)
+        JuMP.@NLconstraint(pm.model, (vr[c]^2 + vi[c]^2)*(crf[c]^2 + cif[c]^2) <= rate_a[c]^2)
     end
 end
 
-"`p[t_idx]^2 + q[t_idx]^2 <= s_rating^2`"
-function constraint_mc_thermal_limit_to(pm::_PMs.AbstractIVRModel, n::Int, t_idx, s_rating)
+"`p[t_idx]^2 + q[t_idx]^2 <= rate_a^2`"
+function constraint_mc_thermal_limit_to(pm::_PMs.AbstractIVRModel, n::Int, t_idx, rate_a)
     (l, t_bus, f_bus) = t_idx
 
     vr = _PMs.var(pm, n, :vr, t_bus)
@@ -292,16 +292,16 @@ function constraint_mc_thermal_limit_to(pm::_PMs.AbstractIVRModel, n::Int, t_idx
     ncnds = length(cnds)
 
     for c in cnds
-        JuMP.@NLconstraint(pm.model, (vr[c]^2 + vi[c]^2)*(crt[c]^2 + cit[c]^2) <= s_rating[c]^2)
+        JuMP.@NLconstraint(pm.model, (vr[c]^2 + vi[c]^2)*(crt[c]^2 + cit[c]^2) <= rate_a[c]^2)
     end
 end
 
 """
 Bounds the current magnitude at both from and to side of a branch
-`cr[f_idx]^2 + ci[f_idx]^2 <= c_rating^2`
-`cr[t_idx]^2 + ci[t_idx]^2 <= c_rating^2`
+`cr[f_idx]^2 + ci[f_idx]^2 <= c_rating_a^2`
+`cr[t_idx]^2 + ci[t_idx]^2 <= c_rating_a^2`
 """
-function constraint_mc_current_limit(pm::_PMs.AbstractIVRModel, n::Int, f_idx, c_rating)
+function constraint_mc_current_limit(pm::_PMs.AbstractIVRModel, n::Int, f_idx, c_rating_a)
     (l, f_bus, t_bus) = f_idx
     t_idx = (l, t_bus, f_bus)
 
@@ -311,8 +311,8 @@ function constraint_mc_current_limit(pm::_PMs.AbstractIVRModel, n::Int, f_idx, c
     crt =  _PMs.var(pm, n, :cr, t_idx)
     cit =  _PMs.var(pm, n, :ci, t_idx)
 
-    JuMP.@constraint(pm.model, crf.^2 + cif.^2 .<= c_rating.^2)
-    JuMP.@constraint(pm.model, crt.^2 + cit.^2 .<= c_rating.^2)
+    JuMP.@constraint(pm.model, crf.^2 + cif.^2 .<= c_rating_a.^2)
+    JuMP.@constraint(pm.model, crt.^2 + cit.^2 .<= c_rating_a.^2)
 end
 
 """

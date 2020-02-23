@@ -224,10 +224,10 @@ function variable_mc_generation_power(pm::SDPUBFKCLMXModel; nw::Int=pm.cnw, boun
     #overwrite diagonal bounds
     for (id, gen) in _PMs.ref(pm, nw, :gen)
         for c in _PMs.conductor_ids(pm, nw)
-            JuMP.set_lower_bound(Pg[id][c,c], gen["pmin"][c])
-            JuMP.set_upper_bound(Pg[id][c,c], gen["pmax"][c])
-            JuMP.set_lower_bound(Qg[id][c,c], gen["qmin"][c])
-            JuMP.set_upper_bound(Qg[id][c,c], gen["qmax"][c])
+            set_lower_bound(Pg[id][c,c], gen["pmin"][c])
+            set_upper_bound(Pg[id][c,c], gen["pmax"][c])
+            set_lower_bound(Qg[id][c,c], gen["qmin"][c])
+            set_upper_bound(Qg[id][c,c], gen["qmax"][c])
         end
     end
     # save references

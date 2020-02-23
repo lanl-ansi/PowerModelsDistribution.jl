@@ -111,8 +111,6 @@ function _dss2pmd_bus!(pmd_data::Dict, dss_data::Dict, import_all::Bool=false, v
     nodes = Array{Bool}([1 1 1 0])
     ph1_ang = circuit["angle"]
     vm = circuit["pu"]
-    vmi = circuit["pu"] - circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"])
-    vma = circuit["pu"] + circuit["pu"] / (circuit["mvasc3"] / circuit["basemva"])
 
     busDict["bus_i"] = length(pmd_data["bus"])+1
     busDict["index"] = length(pmd_data["bus"])+1
@@ -123,8 +121,8 @@ function _dss2pmd_bus!(pmd_data::Dict, dss_data::Dict, import_all::Bool=false, v
     busDict["vm"] = _parse_array(vm, nodes, nconductors)
     busDict["va"] = _parse_array([_wrap_to_180(-rad2deg(2*pi/nconductors*(i-1))+ph1_ang) for i in 1:nconductors], nodes, nconductors)
 
-    busDict["vmin"] = _parse_array(vmi, nodes, nconductors, vmi)
-    busDict["vmax"] = _parse_array(vma, nodes, nconductors, vma)
+    busDict["vmin"] = _parse_array(vm, nodes, nconductors, vm)
+    busDict["vmax"] = _parse_array(vm, nodes, nconductors, vm)
 
     busDict["base_kv"] = pmd_data["basekv"]
 
@@ -621,7 +619,7 @@ function _dss2pmd_branch!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
             line["circuit_basefreq"] = pmd_data["basefreq"]
         end
 
-        defaults = _apply_ordered_properties(_create_line(line["bus1"], line["bus2"], line["name"]; _to_sym_keys(line)...), line; linecode=linecode)
+        defaults = _apply_ordered_properties(_create_line(line["bus1"], line["bus2"], line["name"]; _to_sym_keys(line)...), line; code_dict=linecode)
 
         bf, nodes = _parse_busname(defaults["bus1"])
 
@@ -767,7 +765,7 @@ function _dss2pmd_transformer!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
         transDict["config"] = Dict{Int,Any}()
         transDict["config"][1] = Dict(
             "type"=>dyz_primary,
-            "polarity"=>'+',
+            "polarity"=>1,
             "cnd"=>[1, 2, 3],
             "grounded"=>true,
             "vm_nom"=>defaults["kvs"][1]
@@ -777,20 +775,20 @@ function _dss2pmd_transformer!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
             type = dyz_map[defaults["conns"][w]]
             if dyz_primary==type
                 cnd = [1,2,3]
-                polarity = '+'
+                polarity = 1
             else
                 if defaults["leadlag"] in ["ansi", "lag"]
                     #Yd1 => (123+y,123+d)
                     #Dy1 => (123+d,231-y)
                     #pp_w = (type=="delta") ? "123+" : "231-"
                     cnd = (type=="delta") ? [1, 2, 3] : [2, 3, 1]
-                    polarity = (type=="delta") ? '+' : '-'
+                    polarity = (type=="delta") ? 1 : -1
                 else # hence defaults["leadlag"] in ["euro", "lead"]
                     #Yd11 => (123+y,312-d)
                     #Dy11 => (123+d,123+y)
                     #pp_w = (type=="delta") ? "312-" : "123+"
                     cnd = (type=="delta") ? [3, 1, 2] : [1, 2, 3]
-                    polarity = (type=="delta") ? '-' : '+'
+                    polarity = (type=="delta") ? -1 : 1
                 end
             end
             transDict["config"][w] = Dict(
@@ -1552,8 +1550,10 @@ function _adjust_base_rec!(pmd_data, source::Int, base_kv_new::Float64, nodes_vi
             base_kv_new_tr = deepcopy(base_kv_new)
             if source_new==t_bus
                 base_kv_new_tr *= (trans["config_to"]["vm_nom"]/trans["config_fr"]["vm_nom"])
+                trans["tm_nom"] *= (base_kv_new_tr/base_kv_prev)
             else
                 base_kv_new_tr *= (trans["config_fr"]["vm_nom"]/trans["config_to"]["vm_nom"])
+                trans["tm_nom"] *= (base_kv_prev/base_kv_new_tr)
             end
             # follow the edge to the adjacent node and repeat
             _adjust_base_rec!(pmd_data, source_new, base_kv_new_tr, nodes_visited, edges_br, edges_br_visited, edges_tr, edges_tr_visited, br_basekv_old)

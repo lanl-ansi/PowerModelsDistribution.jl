@@ -138,7 +138,7 @@ function constraint_mc_trans(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw
     f_cnd = trans["f_connections"][1:3]
     t_cnd = trans["t_connections"][1:3]
     tm_set = trans["tm"]
-    tm_fixed = fix_taps ? ones(Bool, length(tm_set)) : trans["tm_fix"]
+    tm_fixed = fix_taps ? ones(Bool, length(tm_set)) : trans["fixed"]
     tm_scale = calculate_tm_scale(trans, _PMs.ref(pm, nw, :bus, f_bus), _PMs.ref(pm, nw, :bus, t_bus))
 
     #TODO change data model
@@ -389,8 +389,8 @@ function constraint_mc_thermal_limit_from(pm::_PMs.AbstractPowerModel, i::Int; n
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
 
-    if haskey(branch, "s_rating")
-        constraint_mc_thermal_limit_from(pm, nw, f_idx, branch["s_rating"])
+    if haskey(branch, "rate_a")
+        constraint_mc_thermal_limit_from(pm, nw, f_idx, branch["rate_a"])
     end
 end
 
@@ -402,8 +402,8 @@ function constraint_mc_thermal_limit_to(pm::_PMs.AbstractPowerModel, i::Int; nw:
     t_bus = branch["t_bus"]
     t_idx = (i, t_bus, f_bus)
 
-    if haskey(branch, "s_rating")
-        constraint_mc_thermal_limit_to(pm, nw, t_idx, branch["s_rating"])
+    if haskey(branch, "rate_a")
+        constraint_mc_thermal_limit_to(pm, nw, t_idx, branch["rate_a"])
     end
 end
 
