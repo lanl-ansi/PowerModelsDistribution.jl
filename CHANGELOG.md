@@ -2,6 +2,8 @@
 
 ## staged
 
+- Makes bounds optional, turned on by default (#250)
+- Updated transformer data model in the mathematical model (#250)
 - Updates virtual_sourcebus, which is intended to represent a voltage source, to have a fixed voltage magnitude (#246,#248)
 - Add parsing of series data files into array fields in OpenDSS parser
 - Add LoadShape parsing to OpenDSS parser (#247)
