@@ -50,30 +50,62 @@ function add_mappings!(data_model::Dict{String, Any}, mapping_type::String, mapp
 end
 
 
-function data_model_index!(data_model; components=["line", "shunt", "generator", "load", "transformer_2wa"])
-    bus_id2ind = Dict()
-
-    for (i, id) in enumerate(keys(data_model["bus"]))
-        data_model["bus"][id]["index"] = i
-        bus_id2ind[id] = i
+function _get_next_index(last_index, presets)
+    new_index = last_index+1
+    while new_index in presets
+        new_index += 1
     end
-    data_model["bus"] = Dict{String, Any}(string(bus_id2ind[id])=>bus for (id, bus) in data_model["bus"])
+    return new_index
+end
 
+
+function data_model_index!(data_model; components=["bus", "line", "shunt", "generator", "load", "transformer_2wa"], index_presets=Dict())
+    comp_id2ind = Dict()
+
+    # bus should be the first component, because we want to
     for comp_type in components
         comp_dict = Dict{String, Any}()
-        for (i,(id,comp)) in enumerate(data_model[comp_type])
-            @assert(!haskey(comp, "index"), "$comp_type $id: component already has an index.")
-            comp["index"] = i
-            comp["id"] = id
-            comp_dict["$i"] = comp
+
+        if !haskey(index_presets, comp_type)
+            for (i,(id,comp)) in enumerate(data_model[comp_type])
+                @assert(!haskey(comp, "index"), "$comp_type $id: component already has an index.")
+                comp["index"] = i
+                comp["id"] = id
+                comp_dict["$i"] = comp
+            end
+        else
+            last_index = 0
+
+            for (id, comp) in data_model[comp_type]
+                @assert(!haskey(comp, "index"), "$comp_type $id: component already has an index.")
+                if haskey(index_presets[comp_type], id)
+                    println("$comp_type: $id found, ->$(index_presets[comp_type][id])")
+                    comp["index"] = index_presets[comp_type][id]
+                else
+                    comp["index"] = _get_next_index(last_index, values(index_presets[comp_type]))
+                    last_index = comp["index"]
+                end
+
+                comp["id"] = id
+                comp_dict["$(comp["index"])"] = comp
+            end
+        end
+
+        data_model[comp_type] = comp_dict
+        comp_id2ind[comp_type] = Dict(comp["id"]=>comp["index"] for comp in values(comp_dict))
+    end
+
+    # update bus references
+    for comp_type in components
+        for (_, comp) in data_model[comp_type]
             for bus_key in ["f_bus", "t_bus", "bus"]
                 if haskey(comp, bus_key)
-                    comp[bus_key] = bus_id2ind[comp[bus_key]]
+                    comp[bus_key] = comp_id2ind["bus"][comp[bus_key]]
                 end
             end
         end
-        data_model[comp_type] = comp_dict
     end
+
     return data_model
 end
 

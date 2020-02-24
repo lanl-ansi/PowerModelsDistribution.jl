@@ -581,7 +581,7 @@ function _dss2pmd_line_dm!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
             line["circuit_basefreq"] = pmd_data["settings"]["basefreq"]
         end
 
-        defaults = _apply_ordered_properties(_create_line(line["bus1"], line["bus2"], line["name"]; _to_sym_keys(line)...), line; linecode=linecode)
+        defaults = _apply_ordered_properties(_create_line(line["bus1"], line["bus2"], line["name"]; _to_sym_keys(line)...), line; code_dict=linecode)
 
         lineDict = Dict{String,Any}()
 
@@ -591,12 +591,15 @@ function _dss2pmd_line_dm!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 
         #lineDict["length"] = defaults["length"]
 
-        nphases = defaults["phases"]
+        #TODO nphases not being read correctly from linecode; infer indirectly instead
+        nphases = size(defaults["rmatrix"])[1]
         lineDict["n_conductors"] = nphases
 
-        rmatrix = defaults["rmatrix"]
-        xmatrix = defaults["xmatrix"]
-        cmatrix = defaults["cmatrix"]
+        #TODO fix this in a cleaner way
+        # ensure that this actually is a matrix and not a vector for 1x1 data
+        rmatrix = reshape(defaults["rmatrix"], nphases, nphases)
+        xmatrix = reshape(defaults["xmatrix"], nphases, nphases)
+        cmatrix = reshape(defaults["cmatrix"], nphases, nphases)
 
         lineDict["f_connections"] = _get_conductors_ordered_dm(defaults["bus1"], default=collect(1:nphases))
         lineDict["t_connections"] = _get_conductors_ordered_dm(defaults["bus2"], default=collect(1:nphases))
@@ -1174,7 +1177,6 @@ function _find_neutrals(pmd_data)
     for (_, tr) in pmd_data["transformer_nw"]
         for w in 1:length(tr["connections"])
             if tr["configuration"][w] == "wye"
-                @show tr
                 push!(trans_neutrals, (tr["bus"][w], tr["connections"][w][end]))
             end
         end
