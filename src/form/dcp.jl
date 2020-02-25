@@ -81,17 +81,11 @@ function variable_mc_branch_flow_active(pm::_PMs.AbstractAPLossLessModels; nw::I
     ) for (l,i,j) in _PMs.ref(pm, nw, :arcs_from))
 
     if bounded
-        for cnd in cnds
-            flow_lb, flow_ub = _PMs.ref_calc_branch_flow_bounds(_PMs.ref(pm, nw, :branch), _PMs.ref(pm, nw, :bus), cnd)
-
-            for arc in _PMs.ref(pm, nw, :arcs_from)
-                l,i,j = arc
-                if !isinf(flow_lb[l])
-                    JuMP.set_lower_bound(p[arc][cnd], flow_lb[l])
-                end
-                if !isinf(flow_ub[l])
-                    JuMP.set_upper_bound(p[arc][cnd], flow_ub[l])
-                end
+        for (l,i,j) in _PMs.ref(pm, nw, :arcs_from)
+            smax = _calc_branch_power_max(_PMs.ref(pm, nw, :branch, l), _PMs.ref(pm, nw, :bus, i))
+            if !ismissing(smax)
+                JuMP.set_upper_bound.(p[(l,i,j)],  smax)
+                JuMP.set_lower_bound.(p[(l,i,j)], -smax)
             end
         end
     end

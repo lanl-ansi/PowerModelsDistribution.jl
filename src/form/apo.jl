@@ -102,17 +102,17 @@ function variable_mc_transformer_flow_active(pm::_PMs.AbstractAPLossLessModels; 
         ) for (l,i,j) in _PMs.ref(pm, nw, :arcs_from_trans)
     )
 
-    for cnd in _PMs.conductor_ids(pm)
+    if bounded
+        for arc in _PMs.ref(pm, nw, :arcs_from_trans)
+            (t,i,j) = arc
+            rate_a_fr, rate_a_to = _calc_transformer_power_ub_frto(_PMs.ref(pm, nw, :transformer, t), _PMs.ref(pm, nw, :bus, i), _PMs.ref(pm, nw, :bus, j))
 
-        if bounded
-            for arc in _PMs.ref(pm, nw, :arcs_from_trans)
-                tr_id = arc[1]
-                flow_lb  = -_PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
-                flow_ub  =  _PMs.ref(pm, nw, :transformer, tr_id, "rate_a")[cnd]
-                JuMP.set_lower_bound(pt[arc][cnd], flow_lb)
-                JuMP.set_upper_bound(pt[arc][cnd], flow_ub)
-            end
+            set_lower_bound.(pt[(t,i,j)], -min.(rate_a_fr, rate_a_to))
+            set_upper_bound.(pt[(t,i,j)],  min.(rate_a_fr, rate_a_to))
         end
+    end
+
+    for cnd in _PMs.conductor_ids(pm)
 
         #TODO what does this dfo, and p does not seem to be defined!
         for (l,branch) in _PMs.ref(pm, nw, :branch)

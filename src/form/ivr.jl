@@ -298,10 +298,10 @@ end
 
 """
 Bounds the current magnitude at both from and to side of a branch
-`cr[f_idx]^2 + ci[f_idx]^2 <= c_rating^2`
-`cr[t_idx]^2 + ci[t_idx]^2 <= c_rating^2`
+`cr[f_idx]^2 + ci[f_idx]^2 <= c_rating_a^2`
+`cr[t_idx]^2 + ci[t_idx]^2 <= c_rating_a^2`
 """
-function constraint_mc_current_limit(pm::_PMs.AbstractIVRModel, n::Int, f_idx, c_rating)
+function constraint_mc_current_limit(pm::_PMs.AbstractIVRModel, n::Int, f_idx, c_rating_a)
     (l, f_bus, t_bus) = f_idx
     t_idx = (l, t_bus, f_bus)
 
@@ -311,8 +311,8 @@ function constraint_mc_current_limit(pm::_PMs.AbstractIVRModel, n::Int, f_idx, c
     crt =  _PMs.var(pm, n, :cr, t_idx)
     cit =  _PMs.var(pm, n, :ci, t_idx)
 
-    JuMP.@constraint(pm.model, crf.^2 + cif.^2 .<= c_rating.^2)
-    JuMP.@constraint(pm.model, crt.^2 + cit.^2 .<= c_rating.^2)
+    JuMP.@constraint(pm.model, crf.^2 + cif.^2 .<= c_rating_a.^2)
+    JuMP.@constraint(pm.model, crt.^2 + cit.^2 .<= c_rating_a.^2)
 end
 
 """
@@ -572,10 +572,20 @@ function constraint_mc_generation_wye(pm::_PMs.IVRPowerModel, nw::Int, id::Int, 
     qg = JuMP.@NLexpression(pm.model, [i in 1:nph], -vr[i]*cig[i]+vi[i]*crg[i])
 
     if bounded
-        JuMP.@constraint(pm.model, pmin .<= vr.*crg  + vi.*cig)
-        JuMP.@constraint(pm.model, pmax .>= vr.*crg  + vi.*cig)
-        JuMP.@constraint(pm.model, qmin .<= vi.*crg  - vr.*cig)
-        JuMP.@constraint(pm.model, qmax .>= vi.*crg  - vr.*cig)
+        for c in 1:nph
+            if pmin[c]>-Inf
+                JuMP.@constraint(pm.model, pmin[c] .<= vr[c]*crg[c]  + vi[c]*cig[c])
+            end
+            if pmax[c]< Inf
+                JuMP.@constraint(pm.model, pmax[c] .>= vr[c]*crg[c]  + vi[c]*cig[c])
+            end
+            if qmin[c]>-Inf
+                JuMP.@constraint(pm.model, qmin[c] .<= vi[c]*crg[c]  - vr[c]*cig[c])
+            end
+            if qmax[c]< Inf
+                JuMP.@constraint(pm.model, qmax[c] .>= vi[c]*crg[c]  - vr[c]*cig[c])
+            end
+        end
     end
 
     _PMs.var(pm, nw, :crg_bus)[id] = crg

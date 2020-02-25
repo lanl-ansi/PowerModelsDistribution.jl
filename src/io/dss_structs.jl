@@ -397,9 +397,11 @@ Capacitor. If `bus2` is not specified, the capacitor will be treated as a shunt.
 See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _create_capacitor(bus1="", name::AbstractString="", bus2=0; kwargs...)
+function _create_capacitor(bus1="", name::AbstractString=""; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
     phases = get(kwargs, :phases, 3)
+
+    bus2 = get(kwargs, :bus2, string(split(bus1, ".")[1],".",join(fill("0", phases), ".")))
 
     return Dict{String,Any}("name" => name,
                             "bus1" => bus1,

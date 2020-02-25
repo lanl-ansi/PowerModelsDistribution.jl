@@ -16,7 +16,7 @@ New linecode.LINECODE1 nphases=3 basefreq=50  ! ohms per 5 mile
 
 !Define lines
 
-New Line.LINE1  bus1=sourcebus.1.2.3.0  loadbus.1.2.3.0  linecode = LINECODE1   length=0.5
+New Line.LINE1  bus1=sourcebus.1.2.3  loadbus.1.2.3  linecode = LINECODE1   length=0.5
 !Loads - single phase
 
 ! single-phase loads
