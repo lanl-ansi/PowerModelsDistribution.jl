@@ -1146,12 +1146,13 @@ function _decompose_transformers!(pmd_data; import_all::Bool=false)
             trans_dict["config_fr"] = trans["config"][w]
             trans_dict["config_to"] = Dict(
                 "type"=>"wye",
-                "polarity"=>'+',
+                "polarity"=>1,
                 "cnd"=>[1, 2, 3],
                 "grounded"=>true,
                 "vm_nom"=>1.0
             )
             # temporary fix for prop renaming
+            trans_dict["polarity"] =      trans_dict["config_fr"]["polarity"]
             trans_dict["configuration"] = trans_dict["config_fr"]["type"]
             trans_dict["f_connections"] = trans_dict["config_fr"]["cnd"]
             trans_dict["t_connections"] = trans_dict["config_to"]["cnd"]

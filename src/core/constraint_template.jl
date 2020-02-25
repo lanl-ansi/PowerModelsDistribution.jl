@@ -144,7 +144,7 @@ function constraint_mc_trans(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw
     #TODO change data model
     # there is redundancy in specifying polarity seperately on from and to side
     #TODO change this once migrated to new data model
-    pol = haskey(trans, "poalrity") ? trans["polarity"] : trans["config_fr"]["polarity"]
+    pol = trans["polarity"]
 
     if config=="wye"
         constraint_mc_trans_yy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)

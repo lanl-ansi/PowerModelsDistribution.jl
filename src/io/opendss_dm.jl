@@ -669,7 +669,7 @@ function _dss2pmd_transformer_dm!(pmd_data::Dict, dss_data::Dict, import_all::Bo
         transDict["snom"] = [defaults["kvas"][w] for w in 1:nrw]
         transDict["connections"] = Array{Array{Int, 1}, 1}(undef, nrw)
         transDict["configuration"] = Array{String, 1}(undef, nrw)
-        transDict["polarity"] = Array{String, 1}(undef, nrw)
+        transDict["polarity"] = Array{Int, 1}(undef, nrw)
 
         for w in 1:nrw
             transDict["bus"][w] = _parse_busname(defaults["buses"][w])[1]
@@ -687,7 +687,7 @@ function _dss2pmd_transformer_dm!(pmd_data::Dict, dss_data::Dict, import_all::Bo
                 end
                 push!(pmd_data["bus"][bus]["awaiting_ground"], transDict)
             end
-            transDict["polarity"][w] = "forward"
+            transDict["polarity"][w] = 1
             transDict["tm"][w] = fill(defaults["taps"][w], nphases)
         end
 
@@ -1115,14 +1115,16 @@ function _discover_terminals!(pmd_data)
     terminals = Dict{String, Set{Int}}([(bus["id"], Set{Int}()) for (_,bus) in pmd_data["bus"]])
 
     for (_,line) in pmd_data["line"]
-        push!(terminals[line["f_bus"]], line["f_connections"]...)
-        push!(terminals[line["t_bus"]], line["t_connections"]...)
+        # ignore 0 terminal
+        push!(terminals[line["f_bus"]], setdiff(line["f_connections"], [0])...)
+        push!(terminals[line["t_bus"]], setdiff(line["t_connections"], [0])...)
     end
 
-    if haskey(pmd_data, "transformer_nw3ph_lossy")
-        for (_,tr) in pmd_data["transformer_nw3ph_lossy"]
-            for w in tr["n_windings"]
-                push!(terminals[buses[w]], terminals[w]...)
+    if haskey(pmd_data, "transformer_nw")
+        for (_,tr) in pmd_data["transformer_nw"]
+            for w in 1:length(tr["bus"])
+                # ignore 0 terminal
+                push!(terminals[tr["bus"][w]], setdiff(tr["connections"][w], [0])...)
             end
         end
     end
@@ -1158,8 +1160,9 @@ function _discover_terminals!(pmd_data)
                     else
                         comp["connections"] .+= (comp["connections"].==0)*neutral
                     end
+                    @show comp["connections"]
                 end
-                delete!(bus, "awaiting_ground")
+                #delete!(bus, "awaiting_ground")
             end
         end
         phases = haskey(bus, "neutral") ? setdiff(bus["terminals"], bus["neutral"]) : bus["terminals"]

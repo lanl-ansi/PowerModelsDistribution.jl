@@ -79,7 +79,6 @@ function data_model_index!(data_model; components=["bus", "line", "shunt", "gene
             for (id, comp) in data_model[comp_type]
                 @assert(!haskey(comp, "index"), "$comp_type $id: component already has an index.")
                 if haskey(index_presets[comp_type], id)
-                    println("$comp_type: $id found, ->$(index_presets[comp_type][id])")
                     comp["index"] = index_presets[comp_type][id]
                 else
                     comp["index"] = _get_next_index(last_index, values(index_presets[comp_type]))
