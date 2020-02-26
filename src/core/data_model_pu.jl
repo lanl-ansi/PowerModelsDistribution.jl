@@ -1,4 +1,5 @@
 
+"finds voltage zones"
 function _find_zones(data_model)
     unused_line_ids = Set(keys(data_model["line"]))
     bus_lines = Dict([(id,Set()) for id in keys(data_model["bus"])])
@@ -32,6 +33,7 @@ function _find_zones(data_model)
 end
 
 
+"calculates voltage bases for each voltage zone"
 function _calc_vbase(data_model, vbase_sources::Dict{String,<:Real})
     # find zones of buses connected by lines
     zones = _find_zones(data_model)
@@ -81,6 +83,7 @@ function _calc_vbase(data_model, vbase_sources::Dict{String,<:Real})
 end
 
 
+"converts to per unit from SI"
 function data_model_make_pu!(data_model; sbase=missing, vbases=missing)
     v_var_scalar = data_model["settings"]["v_var_scalar"]
 
@@ -148,8 +151,8 @@ function data_model_make_pu!(data_model; sbase=missing, vbases=missing)
 end
 
 
+"per-unit conversion for buses"
 function _rebase_pu_bus!(bus, vbase, sbase, sbase_old, v_var_scalar)
-
     # if not in p.u., these are normalized with respect to vnom
     prop_vnom = ["vm", "vmax", "vmin", "vm_set", "vm_ln_min", "vm_ln_max", "vm_lg_min", "vm_lg_max", "vm_ng_min", "vm_ng_max", "vm_ll_min", "vm_ll_max"]
 
@@ -179,8 +182,8 @@ function _rebase_pu_bus!(bus, vbase, sbase, sbase_old, v_var_scalar)
 end
 
 
+"per-unit conversion for lines"
 function _rebase_pu_line!(line, vbase, sbase, sbase_old, v_var_scalar)
-
     if !haskey(line, "vbase")
         z_old = 1
     else
@@ -199,8 +202,8 @@ function _rebase_pu_line!(line, vbase, sbase, sbase_old, v_var_scalar)
 end
 
 
+"per-unit conversion for shunts"
 function _rebase_pu_shunt!(shunt, vbase, sbase, sbase_old, v_var_scalar)
-
     if !haskey(shunt, "vbase")
         z_old = 1
     else
@@ -219,8 +222,8 @@ function _rebase_pu_shunt!(shunt, vbase, sbase, sbase_old, v_var_scalar)
 end
 
 
+"per-unit conversion for loads"
 function _rebase_pu_load!(load, vbase, sbase, sbase_old, v_var_scalar)
-
     if !haskey(load, "vbase")
         vbase_old = 1
         sbase_old = 1
@@ -241,6 +244,7 @@ function _rebase_pu_load!(load, vbase, sbase, sbase_old, v_var_scalar)
 end
 
 
+"per-unit conversion for generators"
 function _rebase_pu_generator!(gen, vbase, sbase, sbase_old, v_var_scalar)
     vbase_old = get(gen, "vbase", 1.0/v_var_scalar)
     vbase_scale = vbase_old/vbase
@@ -257,6 +261,7 @@ function _rebase_pu_generator!(gen, vbase, sbase, sbase_old, v_var_scalar)
 end
 
 
+"per-unit conversion for ideal 2-winding transformers"
 function _rebase_pu_transformer_2w_ideal!(trans, f_vbase_new, t_vbase_new, sbase_old, sbase_new, v_var_scalar)
     f_vbase_old = get(trans, "f_vbase", 1.0)
     t_vbase_old = get(trans, "t_vbase", 1.0)
@@ -271,6 +276,7 @@ function _rebase_pu_transformer_2w_ideal!(trans, f_vbase_new, t_vbase_new, sbase
 end
 
 
+"helper function to apply a scale factor to given properties"
 function _scale_props!(comp::Dict{String, Any}, prop_names::Array{String, 1}, scale::Real)
     for name in prop_names
         if haskey(comp, name)
@@ -279,12 +285,8 @@ function _scale_props!(comp::Dict{String, Any}, prop_names::Array{String, 1}, sc
     end
 end
 
-#data_model_user = make_test_data_model()
-#data_model_base = map_down_data_model(data_model_user)
-#bus_vbase, line_vbase = get_vbase(data_model_base, Dict("1"=>230.0))
 
-#make_pu!(data_model_base)
-
+""
 function add_big_M!(data_model; kwargs...)
     big_M = Dict{String, Any}()
 
@@ -296,8 +298,10 @@ function add_big_M!(data_model; kwargs...)
     data_model["big_M"] = big_M
 end
 
-function solution_unmake_pu!(solution, data_model)
-    sbase = data_model["sbase"]
+
+""
+function solution_make_si!(solution, data_model)
+    sbase = data_model["settings"]["sbase"]
     for (comp_type, comp_dict) in [(x,y) for (x,y) in solution if isa(y, Dict)]
         for (id, comp) in comp_dict
             for (prop, val) in comp
