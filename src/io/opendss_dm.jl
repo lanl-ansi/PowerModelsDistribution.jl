@@ -8,11 +8,7 @@ const _dss_supported_components = ["line", "linecode", "load", "generator", "cap
 const _dss_option_dtypes = Dict{String,Type}("defaultbasefreq" => Float64, "voltagebases" => Float64)
 
 
-"""
-    _discover_buses(data_dss)
-
-Discovers all of the buses (not separately defined in OpenDSS), from "lines".
-"""
+"Discovers all of the buses (not separately defined in OpenDSS), from \"lines\""
 function _discover_buses(data_dss::Dict{String,<:Any})::Array
     bus_names = []
     buses = []
@@ -101,11 +97,33 @@ function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
 end
 
 
-"""
-    _dss2pmd_load!(data_eng, data_dss, import_all)
+""
+function _dss2eng_loadshape!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool=false)
+    for (name, dss_obj) in get(data_dss, "loadshape", Dict{String,Any}())
+        _apply_like!(dss_obj, data_dss, "loadshape")
+        defaults = _apply_ordered_properties(_create_loadshape(name; _to_sym_keys(dss_obj)...), dss_obj)
 
-Adds PowerModels-style loads to `data_eng` from `data_dss`.
-"""
+        eng_obj = Dict{String,Any}()
+
+        eng_obj["hour"] = defaults["hour"]
+        eng_obj["pmult"] = defaults["pmult"]
+        eng_obj["qmult"] = defaults["qmult"]
+        eng_obj["use_actual"] = defaults["useactual"]
+
+        if !haskey(data_eng, "loadshape")
+            data_eng["loadshape"] = Dict{String,Any}()
+        end
+
+        if import_all
+            _import_all!(eng_obj, defaults, dss_obj["prop_order"])
+        end
+
+        data_eng["loadshape"][name] = eng_obj
+    end
+end
+
+
+"Adds loads to `data_eng` from `data_dss`"
 function _dss2eng_load!(data_eng::Dict, data_dss::Dict, import_all::Bool, ground_terminal::Int=4)
     for (name, dss_obj) in get(data_dss, "load", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "load")
@@ -224,7 +242,6 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             # it corresponds to a delta winding
             t_terminals = [f_terminals[2:end]..., f_terminals[1]]
         end
-
 
         # 'kv' is specified as phase-to-phase for phases=2/3 (unsure for 4 and more)
         #TODO figure out for more than 3 phases
@@ -957,7 +974,7 @@ function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, 
 
     #_dss2eng_line_reactor!(data_eng, data_dss, import_all)
 
-    # _dss2eng_loadshape!(data_eng, data_dss, import_all)
+    _dss2eng_loadshape!(data_eng, data_dss, import_all)
     _dss2eng_load!(data_eng, data_dss, import_all)
 
     _dss2eng_capacitor!(data_eng, data_dss, import_all)
