@@ -223,11 +223,11 @@ function _decompose_transformer_nw!(data_model)
             # rs is specified with respect to each winding
             r_s = trans["rs"].*zbase
 
-            g_sh = (trans["noloadloss"]*snom[1]/3)/vnom[1]^2
-            b_sh = (trans["imag"]*snom[1]/3)/vnom[1]^2
+            g_sh =  (trans["noloadloss"]*snom[1])/vnom[1]^2
+            b_sh = -(trans["imag"]*snom[1])/vnom[1]^2
 
             # data is measured externally, but we now refer it to the internal side
-            ratios = vnom/1E3
+            ratios = vnom/data_model["settings"]["v_var_scalar"]
             x_sc = x_sc./ratios[1]^2
             r_s = r_s./ratios.^2
             g_sh = g_sh*ratios[1]^2

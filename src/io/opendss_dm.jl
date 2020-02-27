@@ -629,6 +629,18 @@ function _dss2pmd_line_dm!(pmd_data::Dict, dss_data::Dict, import_all::Bool)
 end
 
 
+function _barrel_roll(x::Vector, shift)
+    N = length(x)
+    if shift < 0
+        shift = shift + ceil(Int, shift/N)*N
+    end
+
+    shift = mod(shift, N)
+
+    return x[[(i-1+shift)%N+1 for i in 1:N]]
+end
+
+
 """
     _dss2pmd_transformer!(pmd_data, dss_data, import_all)
 
@@ -674,12 +686,15 @@ function _dss2pmd_transformer_dm!(pmd_data::Dict, dss_data::Dict, import_all::Bo
         for w in 1:nrw
             transDict["bus"][w] = _parse_busname(defaults["buses"][w])[1]
 
-            conn = dyz_map[defaults["conns"][w]]
-            transDict["configuration"][w] = conn
+            conf = dyz_map[defaults["conns"][w]]
+            transDict["configuration"][w] = conf
 
-            terminals_default = conn=="wye" ? [1:nphases..., 0] : collect(1:nphases)
-            terminals_w = _get_conductors_ordered_dm(defaults["buses"][w], default=terminals_default)
+            terminals_default = conf=="wye" ? [1:nphases..., 0] : collect(1:nphases)
+
+            # append ground if connections one too short
+            terminals_w = _get_conductors_ordered_dm(defaults["buses"][w], default=terminals_default, pad_ground=(conf=="wye"))
             transDict["connections"][w] = terminals_w
+
             if 0 in terminals_w
                 bus = transDict["bus"][w]
                 if !haskey(pmd_data["bus"][bus], "awaiting_ground")
@@ -689,6 +704,24 @@ function _dss2pmd_transformer_dm!(pmd_data::Dict, dss_data::Dict, import_all::Bo
             end
             transDict["polarity"][w] = 1
             transDict["tm"][w] = fill(defaults["taps"][w], nphases)
+
+            if w>1
+                prim_conf = transDict["configuration"][1]
+                if defaults["leadlag"] in ["ansi", "lag"]
+                    if prim_conf=="delta" && conf=="wye"
+                        transDict["polarity"][w] = -1
+                        transDict["connections"][w] = [_barrel_roll(transDict["connections"][w][1:end-1], 1)..., transDict["connections"][w][end]]
+                    end
+                else # hence defaults["leadlag"] in ["euro", "lead"]
+                    if prim_conf=="wye" && conf=="delta"
+                        @show defaults["leadlag"], prim_conf, conf
+                        transDict["polarity"][w] = -1
+                        transDict["connections"][w] = _barrel_roll(transDict["connections"][w], -1)
+                    end
+
+                end
+            end
+            @show transDict["connections"]
         end
 
         #transDict["source_id"] = "transformer.$(defaults["name"])"
@@ -706,9 +739,11 @@ function _dss2pmd_transformer_dm!(pmd_data::Dict, dss_data::Dict, import_all::Bo
             transDict["xsc"] = [defaults[x] for x in ["xhl", "xht", "xlt"]]/100
         end
 
-        add_virtual!(pmd_data, "transformer_nw", create_transformer_nw(;
+        trans = create_transformer_nw(;
             Dict(Symbol.(keys(transDict)).=>values(transDict))...
-        ))
+        )
+
+        add_virtual!(pmd_data, "transformer_nw", trans)
     end
 end
 
@@ -950,91 +985,6 @@ function _create_sourcebus_vbranch_dm!(pmd_data::Dict, circuit::Dict)
 end
 
 
-"Combines transformers with 'bank' keyword into a single transformer"
-function _bank_transformers!(pmd_data::Dict)
-    transformer_names = Dict(trans["name"] => n for (n, trans) in get(pmd_data, "transformer_comp", Dict()))
-    bankable_transformers = [trans for trans in values(get(pmd_data, "transformer_comp", Dict())) if haskey(trans, "bank")]
-    banked_transformers = Dict()
-    for transformer in bankable_transformers
-        bank = transformer["bank"]
-
-        if !(bank in keys(banked_transformers))
-            n = length(pmd_data["transformer_comp"])+length(banked_transformers)+1
-
-            banked_transformers[bank] = deepcopy(transformer)
-            banked_transformers[bank]["name"] = deepcopy(transformer["bank"])
-            banked_transformers[bank]["source_id"] = "transformer.$(transformer["bank"])"
-            banked_transformers[bank]["index"] = n
-            # set impedances / admittances to zero; only the specified phases should be non-zero
-            for key in ["rs", "xs", "bsh", "gsh"]
-                inds = key=="xs" ? keys(banked_transformers[bank][key]) : 1:length(banked_transformers[bank][key])
-                for w in inds
-                    banked_transformers[bank][key][w] *= 0
-                end
-            end
-            delete!(banked_transformers[bank], "bank")
-        end
-
-        banked_transformer = banked_transformers[bank]
-        for phase in transformer["active_phases"]
-            push!(banked_transformer["active_phases"], phase)
-            for (k, v) in banked_transformer
-                if isa(v, _PMs.MultiConductorVector)
-                    banked_transformer[k][phase] = deepcopy(transformer[k][phase])
-                elseif isa(v, _PMs.MultiConductorMatrix)
-                    banked_transformer[k][phase, :] .= deepcopy(transformer[k][phase, :])
-                elseif isa(v, Array) && eltype(v) <: _PMs.MultiConductorVector
-                    # most properties are arrays (indexed over the windings)
-                    for w in 1:length(v)
-                        banked_transformer[k][w][phase] = deepcopy(transformer[k][w][phase])
-                    end
-                elseif isa(v, Array) && eltype(v) <: _PMs.MultiConductorMatrix
-                    # most properties are arrays (indexed over the windings)
-                    for w in 1:length(v)
-                        banked_transformer[k][w][phase, :] .= deepcopy(transformer[k][w][phase, :])
-                    end
-                elseif k=="xs"
-                    # xs is a Dictionary indexed over pairs of windings
-                    for w in keys(v)
-                        banked_transformer[k][w][phase, :] .= deepcopy(transformer[k][w][phase, :])
-                    end
-                end
-            end
-        end
-    end
-
-    for transformer in bankable_transformers
-        delete!(pmd_data["transformer_comp"], transformer_names[transformer["name"]])
-    end
-
-    for transformer in values(banked_transformers)
-        pmd_data["transformer_comp"]["$(transformer["index"])"] = deepcopy(transformer)
-    end
-end
-
-
-"""
-    parse_options(options)
-
-Parses options defined with the `set` command in OpenDSS.
-"""
-function parse_options(options)
-    out = Dict{String,Any}()
-    if haskey(options, "voltagebases")
-        out["voltagebases"] = _parse_array(Float64, options["voltagebases"])
-    end
-
-    if !haskey(options, "defaultbasefreq")
-        Memento.warn(_LOGGER, "defaultbasefreq is not defined, default for circuit set to 60 Hz")
-        out["defaultbasefreq"] = 60.0
-    else
-        out["defaultbasefreq"] = parse(Float64, options["defaultbasefreq"])
-    end
-
-    return out
-end
-
-
 "Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format"
 function parse_opendss_dm(dss_data::Dict; import_all::Bool=false, vmin::Float64=0.9, vmax::Float64=1.1, bank_transformers::Bool=true)::Dict
     pmd_data = create_data_model()
@@ -1219,7 +1169,7 @@ end
 
 Returns an ordered list of defined conductors. If ground=false, will omit any `0`
 """
-function _get_conductors_ordered_dm(busname::AbstractString; default=[], check_length=true)::Array
+function _get_conductors_ordered_dm(busname::AbstractString; default=[], check_length=true, pad_ground=false)::Array
     parts = split(busname, '.'; limit=2)
     ret = []
     if length(parts)==2
@@ -1227,6 +1177,10 @@ function _get_conductors_ordered_dm(busname::AbstractString; default=[], check_l
         ret = [parse(Int, i) for i in conds_str]
     else
         return default
+    end
+
+    if pad_ground && length(ret)==length(default)-1
+        ret = [ret..., 0]
     end
 
     if check_length && length(default)!=length(ret)

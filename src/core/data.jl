@@ -661,3 +661,27 @@ function set_upper_bound(x::JuMP.VariableRef, bound)
         JuMP.set_upper_bound(x, bound)
     end
 end
+
+
+""
+function sol_polar_voltage!(pm::_PMs.AbstractPowerModel, solution::Dict)
+    if haskey(solution, "nw")
+        nws_data = solution["nw"]
+    else
+        nws_data = Dict("0" => solution)
+    end
+
+    for (n, nw_data) in nws_data
+        if haskey(nw_data, "bus")
+            for (i,bus) in nw_data["bus"]
+                if haskey(bus, "vr") && haskey(bus, "vi")
+                    bus["vm"] = sqrt.(bus["vr"].^2 + bus["vi"].^2)
+                    bus["va"] = _wrap_to_pi(atan.(bus["vi"], bus["vr"]))
+
+                    delete!(bus, "vr")
+                    delete!(bus, "vi")
+                end
+            end
+        end
+    end
+end
