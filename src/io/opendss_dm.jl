@@ -49,13 +49,24 @@ function _discover_buses(data_dss::Dict{String,<:Any})::Array
 end
 
 
+"Parses buscoords [lon,lat] (if present) into their respective buses"
+function _dss2eng_buscoords!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any})
+    for (name, coords) in get(data_dss, "buscoords", Dict{String,Any}())
+        if haskey(data_eng["bus"], name)
+            bus = data_eng["bus"][name]
+            bus["lon"] = coords["x"]
+            bus["lat"] = coords["y"]
+        end
+    end
+end
+
+
 """
     _dss2pmd_bus!(data_eng, data_dss)
 
 Adds PowerModels-style buses to `data_eng` from `data_dss`.
 """
 function _dss2eng_bus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool=false)
-
     buses = _discover_buses(data_dss)
     for (n, (bus, nodes)) in enumerate(buses)
 
@@ -63,7 +74,6 @@ function _dss2eng_bus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any
 
         add_bus!(data_eng, id=bus, status=1, bus_type=1)
     end
-
 end
 
 
@@ -922,12 +932,13 @@ function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, 
 
         data_eng["name"] = circuit["name"]
         data_eng["sourcebus"] = defaults["bus1"]
-        data_eng["model"] = "engineering"
+        data_eng["data_model"] = "engineering"
 
-        data_eng["settings"]["v_var_scalar"] = 1e3
-        data_eng["settings"]["set_vbase_val"] = (defaults["basekv"]/sqrt(3))*1e3/data_eng["settings"]["v_var_scalar"]
+        # TODO rename fields
+        data_eng["settings"]["kv_kvar_scalar"] = 1
+        data_eng["settings"]["set_vbase_val"] = (defaults["basekv"]/sqrt(3))/data_eng["settings"]["v_var_scalar"]
         data_eng["settings"]["set_vbase_bus"] = data_eng["sourcebus"]
-        data_eng["settings"]["set_sbase_val"] = defaults["basemva"]*1e6/data_eng["settings"]["v_var_scalar"]
+        data_eng["settings"]["set_sbase_val"] = defaults["basemva"]*1e3/data_eng["settings"]["v_var_scalar"]
         data_eng["settings"]["basefreq"] = get(get(data_dss, "options", Dict()), "defaultbasefreq", 60.0)
 
         data_eng["files"] = data_dss["filename"]
@@ -936,6 +947,7 @@ function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, 
     end
 
     _dss2eng_bus!(data_eng, data_dss, import_all)
+    _dss2eng_buscoords!(data_eng, data_dss)
 
     _dss2eng_linecode!(data_eng, data_dss, import_all)
     _dss2eng_line!(data_eng, data_dss, import_all)

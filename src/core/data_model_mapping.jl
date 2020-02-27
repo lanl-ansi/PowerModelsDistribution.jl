@@ -22,7 +22,7 @@ function data_model_map!(data_model)
         end
     end
 
-    data_model["model"] = "mathematical"
+    data_model["data_model"] = "mathematical"
 
     return data_model
 end
