@@ -57,11 +57,7 @@ function _dss2eng_buscoords!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
 end
 
 
-"""
-    _dss2pmd_bus!(data_eng, data_dss)
-
-Adds PowerModels-style buses to `data_eng` from `data_dss`.
-"""
+"Adds nodes as buses to `data_eng` from `data_dss`"
 function _dss2eng_bus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool=false)
     buses = _discover_buses(data_dss)
     for (n, (bus, nodes)) in enumerate(buses)
@@ -73,7 +69,7 @@ function _dss2eng_bus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any
 end
 
 
-""
+"Adds sourcebus as a voltage source to `data_eng` from `data_dss`"
 function _dss2eng_sourcebus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool=false)
     # create virtual sourcebus
     circuit = _create_vsource(get(data_dss["circuit"], "bus1", "sourcebus"), data_dss["circuit"]["name"]; _to_sym_keys(data_dss["circuit"])...)
@@ -92,12 +88,12 @@ function _dss2eng_sourcebus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
 end
 
 
-""
+"Adds voltage sources to `data_eng` from `data_dss`"
 function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool=false)
 end
 
 
-""
+"Adds loadshapes to `data_eng` from `data_dss`"
 function _dss2eng_loadshape!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool=false)
     for (name, dss_obj) in get(data_dss, "loadshape", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "loadshape")
@@ -362,6 +358,7 @@ function _calc_ground_shunt_admittance_matrix(cnds, Y, ground)
 end
 
 
+""
 function _rm_floating_cnd(cnds, Y, f)
     P = setdiff(cnds, f)
     f_inds = _get_idxs(cnds, [f])
@@ -417,6 +414,7 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
 end
 
 
+"Adds lines to `data_eng` from `data_dss`"
 function _dss2eng_linecode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "linecode", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "linecode")
@@ -443,11 +441,7 @@ function _dss2eng_linecode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
 end
 
 
-"""
-    _dss2pmd_line!(data_eng, data_dss, import_all)
-
-Adds PowerModels-style lines to `data_eng` from `data_dss`.
-"""
+"Adds lines to `data_eng` from `data_dss`"
 function _dss2eng_line!(data_eng::Dict, data_dss::Dict, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "line", Dict())
         _apply_like!(dss_obj, data_dss, "line")
@@ -519,11 +513,7 @@ function _dss2eng_line!(data_eng::Dict, data_dss::Dict, import_all::Bool)
 end
 
 
-"""
-    _dss2pmd_transformer!(data_eng, data_dss, import_all)
-
-Adds PMD-style transformers to `data_eng` from `data_dss`.
-"""
+"Adds transformers to `data_eng` from `data_dss`"
 function _dss2eng_transformer!(data_eng::Dict, data_dss::Dict, import_all::Bool)
    if !haskey(data_eng, "transformer_nw")
         data_eng["transformer_nw"] = Dict{String,Any}()
@@ -660,7 +650,7 @@ function _dss2eng_line_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{Str
 end
 
 
-"Adds PowerModels-style pvsystems to `data_eng` from `data_dss`"
+"Adds pvsystems to `data_eng` from `data_dss`"
 function _dss2eng_pvsystem!(data_eng::Dict, data_dss::Dict, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "pvsystem", Dict{String,Any}())
         Memento.warn(_LOGGER, "Converting PVSystem \"$(dss_obj["name"])\" into generator with limits determined by OpenDSS property 'kVA'")
@@ -702,11 +692,7 @@ function _dss2eng_pvsystem!(data_eng::Dict, data_dss::Dict, import_all::Bool)
 end
 
 
-"""
-    _dss2pmd_storage!(data_eng, data_dss, import_all)
-
-Adds PowerModels-style storage to `data_eng` from `data_dss`
-"""
+"Adds storage to `data_eng` from `data_dss`"
 function _dss2eng_storage!(data_eng::Dict, data_dss::Dict, import_all::Bool)
 
     for (name, dss_obj) in get(data_dss, "storage", Dict{String,Any}())
