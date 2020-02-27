@@ -1209,7 +1209,7 @@ function _apply_like!(raw_dss, data_dss, comp_type)
             end
 
             if prop in links
-                linked_dss = find_component(data_dss, raw_dss[prop], comp_type)
+                linked_dss = get(get(data_dss, comp_type, Dict{String,Any}()), raw_dss[prop], Dict{String,Any}())
                 if isempty(linked_dss)
                     Memento.warn(_LOGGER, "$comp_type.$(raw_dss["name"]): $prop=$(raw_dss[prop]) cannot be found")
                 else
