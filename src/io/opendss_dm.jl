@@ -602,84 +602,66 @@ function _dss2eng_transformer!(data_eng::Dict, data_dss::Dict, import_all::Bool)
 end
 
 
-"""
-    _dss2pmd_reactor!(data_eng, data_dss, import_all)
+"Adds line reactors to `data_eng` from `data_dss`"
+function _dss2eng_line_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
+    for (name, dss_obj) in get(data_dss, "reactor", Dict{String,Any}())
+        if haskey(dss_obj, "bus2")
+            Memento.warn(_LOGGER, "reactors as constant impedance elements is not yet supported, treating reactor.$name like line")
+            _apply_like!(dss_obj, data_dss, "reactor")
+            defaults = _apply_ordered_properties(_create_reactor(dss_obj["bus1"], name, dss_obj["bus2"]; _to_sym_keys(dss_obj)...), dss_obj)
 
-Adds PowerModels-style branch components based on DSS reactors to `data_eng` from `data_dss`
-"""
-function _dss2eng_reactor!(data_eng::Dict, data_dss::Dict, import_all::Bool)
-    if !haskey(data_eng, "branch")
-        data_eng["branch"] = []
-    end
+            eng_obj = Dict{String,Any}()
 
-    if haskey(data_dss, "reactor")
-        Memento.warn(_LOGGER, "reactors as constant impedance elements is not yet supported, treating like line")
-        for (name, reactor) in data_dss["reactor"]
-            if haskey(reactor, "bus2")
-                _apply_like!(reactor, data_dss, "reactor")
-                defaults = _apply_ordered_properties(_create_reactor(reactor["bus1"], reactor["name"], reactor["bus2"]; _to_sym_keys(reactor)...), reactor)
+            nphases = defaults["phases"]
+            eng_obj["phases"] = nphases
 
-                eng_obj = Dict{String,Any}()
+            eng_obj["f_bus"] = _parse_busname(defaults["bus1"])[1]
+            eng_obj["t_bus"] = _parse_busname(defaults["bus2"])[1]
 
-                nconductors = data_eng["conductors"]
+            eng_obj["br_r"] = diagm(0 => fill(0.2, nphases))
+            eng_obj["br_x"] = zeros(nphases, nphases)
 
-                f_bus, nodes = _parse_busname(defaults["bus1"])
-                t_bus = _parse_busname(defaults["bus2"])[1]
+            eng_obj["g_fr"] = fill(0.0, nphases)
+            eng_obj["g_to"] = fill(0.0, nphases)
+            eng_obj["b_fr"] = fill(0.0, nphases)
+            eng_obj["b_to"] = fill(0.0, nphases)
 
-                eng_obj["name"] = name
-                eng_obj["f_bus"] = find_bus(f_bus, data_eng)
-                eng_obj["t_bus"] = find_bus(t_bus, data_eng)
-
-                eng_obj["br_r"] = _PMs.MultiConductorMatrix(_parse_matrix(diagm(0 => fill(0.2, nconductors)), nodes, nconductors))
-                eng_obj["br_x"] = _PMs.MultiConductorMatrix(_parse_matrix(zeros(nconductors, nconductors), nodes, nconductors))
-
-                eng_obj["g_fr"] = _parse_array(0.0, nodes, nconductors)
-                eng_obj["g_to"] = _parse_array(0.0, nodes, nconductors)
-                eng_obj["b_fr"] = _parse_array(0.0, nodes, nconductors)
-                eng_obj["b_to"] = _parse_array(0.0, nodes, nconductors)
-
-                for key in ["g_fr", "g_to", "b_fr", "b_to"]
-                    eng_obj[key] = _PMs.MultiConductorMatrix(LinearAlgebra.diagm(0=>eng_obj[key].values))
-                end
-
-                eng_obj["c_rating_a"] = _parse_array(defaults["normamps"], nodes, nconductors)
-                eng_obj["c_rating_b"] = _parse_array(defaults["emergamps"], nodes, nconductors)
-                eng_obj["c_rating_c"] = _parse_array(defaults["emergamps"], nodes, nconductors)
-
-                eng_obj["tap"] = _parse_array(1.0, nodes, nconductors, NaN)
-                eng_obj["shift"] = _parse_array(0.0, nodes, nconductors)
-
-                eng_obj["br_status"] = convert(Int, defaults["enabled"])
-
-                eng_obj["angmin"] = _parse_array(-60.0, nodes, nconductors, -60.0)
-                eng_obj["angmax"] = _parse_array( 60.0, nodes, nconductors,  60.0)
-
-                eng_obj["transformer"] = true
-
-                eng_obj["index"] = length(data_eng["branch"]) + 1
-
-                nodes = .+([_parse_busname(defaults[n])[2] for n in ["bus1", "bus2"]]...)
-                eng_obj["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-                eng_obj["source_id"] = "reactor.$(name)"
-
-                if import_all
-                    _import_all!(eng_obj, defaults, dss_obj["prop_order"])
-                end
-
-                push!(data_eng["branch"], eng_obj)
+            for key in ["g_fr", "g_to", "b_fr", "b_to"]
+                eng_obj[key] = LinearAlgebra.diagm(0=>eng_obj[key])
             end
+
+            eng_obj["c_rating_a"] = defaults["normamps"]
+            eng_obj["c_rating_b"] = defaults["emergamps"]
+            eng_obj["c_rating_c"] = defaults["emergamps"]
+
+            eng_obj["tap"] = fill(1.0, nphases)
+            eng_obj["shift"] = fill(0.0, nphases)
+
+            eng_obj["br_status"] = convert(Int, defaults["enabled"])
+
+            eng_obj["angmin"] = fill(-60.0, nphases)
+            eng_obj["angmax"] = fill( 60.0, nphases)
+
+            eng_obj["transformer"] = true
+
+            eng_obj["source_id"] = "reactor.$(name)"
+
+            if import_all
+                _import_all!(eng_obj, defaults, dss_obj["prop_order"])
+            end
+
+            if !haskey(data_eng, "line_reactor")
+                data_eng["line_reactor"] = Dict{String,Any}()
+            end
+
+            data_eng["line_reactor"][name] = eng_obj
         end
     end
 end
 
 
-"""
-    _dss2pmd_pvsystem!(data_eng, data_dss)
-
-Adds PowerModels-style pvsystems to `data_eng` from `data_dss`.
-"""
+"Adds PowerModels-style pvsystems to `data_eng` from `data_dss`"
 function _dss2eng_pvsystem!(data_eng::Dict, data_dss::Dict, import_all::Bool)
-
     for (name, dss_obj) in get(data_dss, "pvsystem", Dict{String,Any}())
         Memento.warn(_LOGGER, "Converting PVSystem \"$(dss_obj["name"])\" into generator with limits determined by OpenDSS property 'kVA'")
 
@@ -785,49 +767,6 @@ function _push_dict_ret_key!(dict::Dict{String, Any}, v::Dict{String, Any}; assu
     dict[string(k)] = v
     v["index"] = k
     return k
-end
-
-
-"""
-    _where_is_comp(data, comp_id)
-
-Finds existing component of id `comp_id` in array of `data` and returns index.
-Assumes all components in `data` are unique.
-"""
-function _where_is_comp(data::Array, comp_id::AbstractString)::Int
-    for (i, e) in enumerate(data)
-        if e["name"] == comp_id
-            return i
-        end
-    end
-    return 0
-end
-
-
-"""
-    _correct_duplicate_components!(data_dss)
-
-Finds duplicate components in `data_dss` and merges up, meaning that older
-data (lower indices) is always overwritten by newer data (higher indices).
-"""
-function _correct_duplicate_components!(data_dss::Dict)
-    out = Dict{String,Array}()
-    for (k, v) in data_dss
-        if !(k in _exclude_duplicate_check)
-            out[k] = []
-            for comp in v
-                if isa(comp, Dict)
-                    idx = _where_is_comp(out[k], comp["name"])
-                    if idx > 0
-                        merge!(out[k][idx], comp)
-                    else
-                        push!(out[k], comp)
-                    end
-                end
-            end
-        end
-    end
-    merge!(data_dss, out)
 end
 
 
@@ -972,7 +911,7 @@ function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, 
     # _dss2eng_xfrmcode!(data_eng, data_dss, import_all)
     _dss2eng_transformer!(data_eng, data_dss, import_all)
 
-    #_dss2eng_line_reactor!(data_eng, data_dss, import_all)
+    _dss2eng_line_reactor!(data_eng, data_dss, import_all)
 
     _dss2eng_loadshape!(data_eng, data_dss, import_all)
     _dss2eng_load!(data_eng, data_dss, import_all)
@@ -991,7 +930,6 @@ function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, 
     end
 
     _discover_terminals!(data_eng)
-
 
     return data_eng
 end
