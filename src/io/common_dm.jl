@@ -3,7 +3,7 @@
 
 Parses the IOStream of a file into a Three-Phase PowerModels data structure.
 """
-function parse_file_dm(io::IO; import_all::Bool=false, filetype::AbstractString="json", bank_transformers::Bool=true)
+function parse_file_dm(io::IO; data_model::String="engineering", import_all::Bool=false, filetype::AbstractString="json", bank_transformers::Bool=true)
     if filetype == "m"
         pmd_data = PowerModelsDistribution.parse_matlab(io)
     elseif filetype == "dss"
@@ -15,6 +15,10 @@ function parse_file_dm(io::IO; import_all::Bool=false, filetype::AbstractString=
         Memento.error(_LOGGER, "only .m and .dss files are supported")
     end
 
+    if data_model == "mathematical"
+        transform_data_model!(pmd_data)
+    end
+
     #correct_network_data!(pmd_data)
 
     return pmd_data
@@ -22,13 +26,9 @@ end
 
 
 ""
-function parse_file_dm(file::String; data_model::String="engineering", kwargs...)
+function parse_file_dm(file::String; kwargs...)
     pmd_data = open(file) do io
         parse_file_dm(io; filetype=split(lowercase(file), '.')[end], kwargs...)
-    end
-
-    if data_model == "mathematical"
-        transform_data_model!(pmd_data)
     end
 
     return pmd_data
