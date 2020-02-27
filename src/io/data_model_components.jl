@@ -21,61 +21,232 @@ end
 
 function component_dict_from_list!(list)
     dict = Dict{String, Any}()
-    for comp_dict in list
-        dict[comp_dict["id"]] = comp_dict
+    for object in list
+        dict[object["obj_name"]] = object
     end
     return dict
 end
 
-REQUIRED_FIELDS = Dict{Symbol, Any}()
-DTYPES = Dict{Symbol, Any}()
-CHECKS = Dict{Symbol, Any}()
+const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
+    :linecode => Dict{Symbol,Type}(
+        :obj_name => Any,
+        :rs => Array{<:Real, 2},
+        :xs => Array{<:Real, 2},
+        :g_fr => Array{<:Real, 2},
+        :g_to => Array{<:Real, 2},
+        :b_fr => Array{<:Real, 2},
+        :b_to => Array{<:Real, 2}
+    ),
+    :line => Dict{Symbol,Type}(
+        :obj_name => Any,
+        :status => Int,
+        :f_bus => AbstractString,
+        :t_bus => AbstractString,
+        :f_connections => Vector{<:Int},
+        :t_connections => Vector{<:Int},
+        :linecode => AbstractString,
+        :length => Real,
+        :c_rating =>Vector{<:Real},
+        :s_rating =>Vector{<:Real},
+        :angmin=>Vector{<:Real},
+        :angmax=>Vector{<:Real},
+        :rs => Array{<:Real, 2},
+        :xs => Array{<:Real, 2},
+        :g_fr => Array{<:Real, 2},
+        :g_to => Array{<:Real, 2},
+        :b_fr => Array{<:Real, 2},
+        :b_to => Array{<:Real, 2},
+    ),
+    :bus => Dict{Symbol,Type}(
+        :obj_name => Any,
+        :status => Int,
+        :bus_type => Int,
+        :terminals => Array{<:Any},
+        :phases => Array{<:Int},
+        :neutral => Union{Int, Missing},
+        :grounded => Array{<:Any},
+        :rg => Array{<:Real},
+        :xg => Array{<:Real},
+        :vm_pn_min => Real,
+        :vm_pn_max => Real,
+        :vm_pp_min => Real,
+        :vm_pp_max => Real,
+        :vm_min => Array{<:Real, 1},
+        :vm_max => Array{<:Real, 1},
+        :vm_fix => Array{<:Real, 1},
+        :va_fix => Array{<:Real, 1},
+    ),
+    :load => Dict{Symbol,Type}(
+        :obj_name => Any,
+        :status => Int,
+        :bus => Any,
+        :connections => Vector,
+        :configuration => String,
+        :model => String,
+        :pd => Array{<:Real, 1},
+        :qd => Array{<:Real, 1},
+        :pd_ref => Array{<:Real, 1},
+        :qd_ref => Array{<:Real, 1},
+        :vnom => Array{<:Real, 1},
+        :alpha => Array{<:Real, 1},
+        :beta => Array{<:Real, 1},
+    ),
+    :generator => Dict{Symbol,Type}(
+        :obj_name => Any,
+        :status => Int,
+        :bus => Any,
+        :connections => Vector,
+        :configuration => String,
+        :cost => Vector{<:Real},
+        :pg => Array{<:Real, 1},
+        :qg => Array{<:Real, 1},
+        :pg_min => Array{<:Real, 1},
+        :pg_max => Array{<:Real, 1},
+        :qg_min => Array{<:Real, 1},
+        :qg_max => Array{<:Real, 1},
+    ),
+    :transformer_nw => Dict{Symbol,Type}(
+        :obj_name => Any,
+        :status => Int,
+        :bus => Array{<:AbstractString, 1},
+        :connections => Vector,
+        :vnom => Array{<:Real, 1},
+        :snom => Array{<:Real, 1},
+        :configuration => Array{String, 1},
+        :polarity => Array{Bool, 1},
+        :xsc => Array{<:Real, 1},
+        :rs => Array{<:Real, 1},
+        :noloadloss => Real,
+        :imag => Real,
+        :tm_fix => Array{Array{Bool, 1}, 1},
+        :tm => Array{<:Array{<:Real, 1}, 1},
+        :tm_min => Array{<:Array{<:Real, 1}, 1},
+        :tm_max => Array{<:Array{<:Real, 1}, 1},
+        :tm_step => Array{<:Array{<:Real, 1}, 1},
+    ),
+    :capacitor => Dict{Symbol,Type}(
+        :obj_name => Any,
+        :status => Int,
+        :bus => Any,
+        :connections => Vector,
+        :configuration => String,
+        :qd_ref => Array{<:Real, 1},
+        :vnom => Real,
+    ),
+    :shunt => Dict{Symbol,Type}(
+        :obj_name => Any,
+        :status => Int,
+        :bus => Any,
+        :connections => Vector,
+        :g_sh => Array{<:Real, 2},
+        :b_sh => Array{<:Real, 2},
+    ),
+    :voltage_source => Dict{Symbol,Type}(
+        :obj_name => Any,
+        :status => Int,
+        :bus => Any,
+        :connections => Vector,
+        :vm =>Array{<:Real},
+        :va =>Array{<:Real},
+        :pg_max =>Array{<:Real},
+        :pg_min =>Array{<:Real},
+        :qg_max =>Array{<:Real},
+        :qg_min =>Array{<:Real},
+    ),
+    :ev => Dict{Symbol,Type}(),
+    :storage => Dict{Symbol,Type}(),
+    :pv => Dict{Symbol,Type}(),
+    :wind => Dict{Symbol,Type}(),
+    :switch => Dict{Symbol,Type}(),
+    :autotransformer => Dict{Symbol,Type}(),
+    :synchronous_generator => Dict{Symbol,Type}(),
+    :zip_load => Dict{Symbol,Type}(),
+    :grounding => Dict{Symbol,Type}(
+        :bus => Any,
+        :rg => Real,
+        :xg => Real,
+    ),
+    :boundary => Dict{Symbol,Type}(),
+    :meter => Dict{Symbol,Type}()
+)
 
-function check_dtypes(dict, dtypes, comp_type, id)
+const _eng_model_req_fields= Dict{Symbol,Array{Symbol,1}}(
+    :linecode => Array{Symbol,1}([:obj_name, :rs, :xs, :g_fr, :g_to, :b_fr, :b_to]),
+    :line => Array{Symbol,1}([:obj_name, :status, :f_bus, :f_connections, :t_bus, :t_connections, :linecode, :length]),
+    :bus => Array{Symbol,1}([:obj_name, :status, :terminals, :grounded, :rg, :xg]),
+    :load => Array{Symbol,1}([:obj_name, :status, :bus, :connections, :configuration]),
+    :generator => Array{Symbol,1}([:obj_name, :status, :bus, :connections]),
+    :transformer_nw => Array{Symbol,1}([:obj_name, :status, :bus, :connections, :vnom, :snom, :configuration, :polarity, :xsc, :rs, :noloadloss, :imag, :tm_fix, :tm, :tm_min, :tm_max, :tm_step]),
+    :capacitor => Array{Symbol,1}([:obj_name, :status, :bus, :connections, :configuration, :qd_ref, :vnom]),
+    :shunt => Array{Symbol,1}([:obj_name, :status, :bus, :connections, :g_sh, :b_sh]),
+    :voltage_source => Array{Symbol,1}([:obj_name, :status, :bus, :connections, :vm, :va]),
+    :ev => Array{Symbol,1}([]),
+    :storage => Array{Symbol,1}([]),
+    :pv => Array{Symbol,1}([]),
+    :wind => Array{Symbol,1}([]),
+    :switch => Array{Symbol,1}([]),
+    :autotransformer => Array{Symbol,1}([]),
+    :synchronous_generator => Array{Symbol,1}([]),
+    :zip_load => Array{Symbol,1}([]),
+    :grounding => Array{Symbol,1}([]),
+    :boundary => Array{Symbol,1}([]),
+    :meter => Array{Symbol,1}([])
+)
+
+_eng_model_checks = Dict()
+
+
+""
+function check__eng_model_dtypes(dict, _eng_model_dtypes, comp_type, obj_name)
     for key in keys(dict)
         symb = Symbol(key)
-        if haskey(dtypes, symb)
-            @assert(isa(dict[key], dtypes[symb]), "$comp_type $id: the property $key should be a $(dtypes[symb]), not a $(typeof(dict[key])).")
+        if haskey(_eng_model_dtypes, symb)
+            @assert(isa(dict[key], _eng_model_dtypes[symb]), "$comp_type $obj_name: the property $key should be a $(_eng_model_dtypes[symb]), not a $(typeof(dict[key])).")
         else
-            #@assert(false, "$comp_type $id: the property $key is unknown.")
+            #@assert(false, "$comp_type $obj_name: the property $key is unknown.")
         end
     end
 end
 
 
-function add!(data_model, comp_type, comp_dict)
-    @assert(haskey(comp_dict, "id"), "The component does not have an id defined.")
-    id = comp_dict["id"]
-    if !haskey(data_model, comp_type)
-        data_model[comp_type] = Dict{Any, Any}()
+""
+function add!(data_eng::Dict{String,<:Any}, obj_type::AbstractString, obj_name::AbstractString, object::Dict{String,<:Any})
+    # @assert(haskey(object, "obj_name"), "The component does not have an obj_name defined.")
+    if !haskey(data_eng, obj_type)
+        data_eng[obj_type] = Dict{String,Any}()
     else
-        @assert(!haskey(data_model[comp_type], id), "There is already a $comp_type with id $id.")
+        @assert(!haskey(data_eng[obj_type], obj_name), "There is already a $obj_type with name $obj_name.")
     end
-    data_model[comp_type][id] = comp_dict
+
+    data_eng[obj_type][obj_name] = object
 end
 
-function _add_unused_kwargs!(comp_dict, kwargs)
+
+""
+function _add_unused_kwargs!(object, kwargs)
     for (prop, val) in kwargs
-        if !haskey(comp_dict, "$prop")
-            comp_dict["$prop"] = val
+        if !haskey(object, "$prop")
+            object["$prop"] = val
         end
     end
 end
 
+
+""
 function check_data_model(data)
-    for component in keys(DTYPES)
+    for component in keys(_eng_model_dtypes)
         if haskey(data, string(component))
-            for (id, comp_dict) in data[string(component)]
-                if haskey(REQUIRED_FIELDS, component)
-                    for field in REQUIRED_FIELDS[component]
-                        @assert(haskey(comp_dict, string(field)), "The property \'$field\' is missing for $component $id.")
+            for (obj_name, object) in data[string(component)]
+                if haskey(_eng_model_req_fields, component)
+                    for field in _eng_model_req_fields[component]
+                        @assert(haskey(object, string(field)), "The property \'$field\' is missing for $component $obj_name.")
                     end
                 end
-                if haskey(DTYPES, component)
-                    check_dtypes(comp_dict, DTYPES[component], component, id)
+                if haskey(_eng_model_dtypes, component)
+                    check__eng_model_dtypes(object, _eng_model_dtypes[component], component, obj_name)
                 end
-                if haskey(CHECKS, component)
-                    CHECKS[component](data, comp_dict)
+                if haskey(_eng_model_checks, component)
+                    _eng_model_checks[component](data, object)
                 end
             end
         end
@@ -83,38 +254,19 @@ function check_data_model(data)
 end
 
 
+""
 function create_data_model(; kwargs...)
     data_model = Dict{String, Any}("settings"=>Dict{String, Any}())
 
-    add_kwarg!(data_model["settings"], kwargs, :v_var_scalar, 1E3)
+    add_kwarg!(data_model["settings"], kwargs, :v_var_scalar, 1e3)
 
     _add_unused_kwargs!(data_model["settings"], kwargs)
 
     return data_model
 end
 
-# COMPONENTS
-#*#################
 
-DTYPES[:ev] = Dict()
-DTYPES[:storage] = Dict()
-DTYPES[:pv] = Dict()
-DTYPES[:wind] = Dict()
-DTYPES[:switch] = Dict()
-DTYPES[:shunt] = Dict()
-DTYPES[:autotransformer] = Dict()
-DTYPES[:synchronous_generator] = Dict()
-DTYPES[:zip_load] = Dict()
-DTYPES[:grounding] = Dict(
-    :bus => Any,
-    :rg => Real,
-    :xg => Real,
-)
-DTYPES[:synchronous_generator] = Dict()
-DTYPES[:boundary] = Dict()
-DTYPES[:meter] = Dict()
-
-
+""
 function _check_same_size(data, keys; context=missing)
     size_comp = size(data[string(keys[1])])
     for key in keys[2:end]
@@ -123,6 +275,7 @@ function _check_same_size(data, keys; context=missing)
 end
 
 
+""
 function _check_has_size(data, keys, size_comp; context=missing, allow_missing=true)
     for key in keys
         if haskey(data, key) || !allow_missing
@@ -131,61 +284,53 @@ function _check_has_size(data, keys, size_comp; context=missing, allow_missing=t
     end
 end
 
-function _check_connectivity(data, comp_dict; context=missing)
 
-    if haskey(comp_dict, "f_bus")
+""
+function _check_connectivity(data, object; context=missing)
+    if haskey(object, "f_bus")
         # two-port element
-        _check_bus_and_terminals(data, comp_dict["f_bus"], comp_dict["f_connections"], context)
-        _check_bus_and_terminals(data, comp_dict["t_bus"], comp_dict["t_connections"], context)
-    elseif haskey(comp_dict, "bus")
-        if isa(comp_dict["bus"], Vector)
-            for i in 1:length(comp_dict["bus"])
-                _check_bus_and_terminals(data, comp_dict["bus"][i], comp_dict["connections"][i], context)
+        _check_bus_and_terminals(data, object["f_bus"], object["f_connections"], context)
+        _check_bus_and_terminals(data, object["t_bus"], object["t_connections"], context)
+    elseif haskey(object, "bus")
+        if isa(object["bus"], Vector)
+            for i in 1:length(object["bus"])
+                _check_bus_and_terminals(data, object["bus"][i], object["connections"][i], context)
             end
         else
-            _check_bus_and_terminals(data, comp_dict["bus"], comp_dict["connections"], context)
+            _check_bus_and_terminals(data, object["bus"], object["connections"], context)
         end
     end
 end
 
 
-function _check_bus_and_terminals(data, bus_id, terminals, context=missing)
-    @assert(haskey(data, "bus") && haskey(data["bus"], bus_id), "$context: the bus $bus_id is not defined.")
-    bus = data["bus"][bus_id]
+""
+function _check_bus_and_terminals(data, bus_obj_name, terminals, context=missing)
+    @assert(haskey(data, "bus") && haskey(data["bus"], bus_obj_name), "$context: the bus $bus_obj_name is not defined.")
+    bus = data["bus"][bus_obj_name]
     for t in terminals
-        @assert(t in bus["terminals"], "$context: bus $(bus["id"]) does not have terminal \'$t\'.")
+        @assert(t in bus["terminals"], "$context: bus $(bus["obj_name"]) does not have terminal \'$t\'.")
     end
 end
 
 
-function _check_has_keys(comp_dict, keys; context=missing)
+""
+function _check_has_keys(object, keys; context=missing)
     for key in keys
-        @assert(haskey(comp_dict, key), "$context: the property $key is missing.")
+        @assert(haskey(object, key), "$context: the property $key is missing.")
     end
 end
 
-function _check_configuration_infer_dim(comp_dict; context=missing)
-    conf = comp_dict["configuration"]
+
+""
+function _check_configuration_infer_dim(object; context=missing)
+    conf = object["configuration"]
     @assert(conf in ["delta", "wye"], "$context: the configuration should be \'delta\' or \'wye\', not \'$conf\'.")
-    return conf=="wye" ? length(comp_dict["connections"])-1 : length(comp_dict["connections"])
+    return conf=="wye" ? length(object["connections"])-1 : length(object["connections"])
 end
 
 
 # linecode
-
-DTYPES[:linecode] = Dict(
-    :id => Any,
-    :rs => Array{<:Real, 2},
-    :xs => Array{<:Real, 2},
-    :g_fr => Array{<:Real, 2},
-    :g_to => Array{<:Real, 2},
-    :b_fr => Array{<:Real, 2},
-    :b_to => Array{<:Real, 2},
-)
-
-REQUIRED_FIELDS[:linecode] = keys(DTYPES[:linecode])
-
-CHECKS[:linecode] = function check_linecode(data, linecode)
+_eng_model_checks[:linecode] = function check_linecode(data, linecode)
     _check_same_size(linecode, [:rs, :xs, :g_fr, :g_to, :b_fr, :b_to])
 end
 
@@ -211,41 +356,17 @@ function create_linecode(; kwargs...)
 end
 
 # line
-
-DTYPES[:line] = Dict(
-    :id => Any,
-    :status => Int,
-    :f_bus => AbstractString,
-    :t_bus => AbstractString,
-    :f_connections => Vector{<:Int},
-    :t_connections => Vector{<:Int},
-    :linecode => AbstractString,
-    :length => Real,
-    :c_rating =>Vector{<:Real},
-    :s_rating =>Vector{<:Real},
-    :angmin=>Vector{<:Real},
-    :angmax=>Vector{<:Real},
-    :rs => Array{<:Real, 2},
-    :xs => Array{<:Real, 2},
-    :g_fr => Array{<:Real, 2},
-    :g_to => Array{<:Real, 2},
-    :b_fr => Array{<:Real, 2},
-    :b_to => Array{<:Real, 2},
-)
-
-REQUIRED_FIELDS[:line] = [:id, :status, :f_bus, :f_connections, :t_bus, :t_connections, :linecode, :length]
-
-CHECKS[:line] = function check_line(data, line)
-    i = line["id"]
+_eng_model_checks[:line] = function check_line(data, line)
+    i = line["obj_name"]
 
     # for now, always require a line code
     if haskey(line, "linecode")
         # line is defined with a linecode
         @assert(haskey(line, "length"), "line $i: a line defined through a linecode, should have a length property.")
 
-        linecode_id = line["linecode"]
-        @assert(haskey(data, "linecode") && haskey(data["linecode"], "$linecode_id"), "line $i: the linecode $linecode_id is not defined.")
-        linecode = data["linecode"]["$linecode_id"]
+        linecode_obj_name = line["linecode"]
+        @assert(haskey(data, "linecode") && haskey(data["linecode"], "$linecode_obj_name"), "line $i: the linecode $linecode_obj_name is not defined.")
+        linecode = data["linecode"]["$linecode_obj_name"]
 
         for key in ["n_conductors", "rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
             @assert(!haskey(line, key), "line $i: a line with a linecode, should not specify $key; this is already done by the linecode.")
@@ -262,7 +383,7 @@ CHECKS[:line] = function check_line(data, line)
         end
     end
 
-    _check_connectivity(data, line, context="line $(line["id"])")
+    _check_connectivity(data, line, context="line $(line["obj_name"])")
 end
 
 
@@ -299,39 +420,16 @@ function create_line(; kwargs...)
 end
 
 # Bus
+_eng_model_checks[:bus] = function check_bus(data, bus)
+    obj_name = bus["obj_name"]
 
-DTYPES[:bus] = Dict(
-    :id => Any,
-    :status => Int,
-    :bus_type => Int,
-    :terminals => Array{<:Any},
-    :phases => Array{<:Int},
-    :neutral => Union{Int, Missing},
-    :grounded => Array{<:Any},
-    :rg => Array{<:Real},
-    :xg => Array{<:Real},
-    :vm_pn_min => Real,
-    :vm_pn_max => Real,
-    :vm_pp_min => Real,
-    :vm_pp_max => Real,
-    :vm_min => Array{<:Real, 1},
-    :vm_max => Array{<:Real, 1},
-    :vm_fix => Array{<:Real, 1},
-    :va_fix => Array{<:Real, 1},
-)
-
-REQUIRED_FIELDS[:bus] = [:id, :status, :terminals, :grounded, :rg, :xg]
-
-CHECKS[:bus] = function check_bus(data, bus)
-    id = bus["id"]
-
-    _check_same_size(bus, ["grounded", "rg", "xg"], context="bus $id")
+    _check_same_size(bus, ["grounded", "rg", "xg"], context="bus $obj_name")
 
     N = length(bus["terminals"])
-    _check_has_size(bus, ["vm_max", "vm_min", "vm", "va"], N, context="bus $id")
+    _check_has_size(bus, ["vm_max", "vm_min", "vm", "va"], N, context="bus $obj_name")
 
     if haskey(bus, "neutral")
-        assert(haskey(bus, "phases"), "bus $id: has a neutral, but no phases.")
+        assert(haskey(bus, "phases"), "bus $obj_name: has a neutral, but no phases.")
     end
 end
 
@@ -351,44 +449,25 @@ function create_bus(; kwargs...)
 end
 
 # Load
+_eng_model_checks[:load] = function check_load(data, load)
+    obj_name = load["obj_name"]
 
-DTYPES[:load] = Dict(
-    :id => Any,
-    :status => Int,
-    :bus => Any,
-    :connections => Vector,
-    :configuration => String,
-    :model => String,
-    :pd => Array{<:Real, 1},
-    :qd => Array{<:Real, 1},
-    :pd_ref => Array{<:Real, 1},
-    :qd_ref => Array{<:Real, 1},
-    :vnom => Array{<:Real, 1},
-    :alpha => Array{<:Real, 1},
-    :beta => Array{<:Real, 1},
-)
-
-REQUIRED_FIELDS[:load] = [:id, :status, :bus, :connections, :configuration]
-
-CHECKS[:load] = function check_load(data, load)
-    id = load["id"]
-
-    N = _check_configuration_infer_dim(load; context="load $id")
+    N = _check_configuration_infer_dim(load; context="load $obj_name")
 
     model = load["model"]
     @assert(model in ["constant_power", "constant_impedance", "constant_current", "exponential"])
     if model=="constant_power"
-        _check_has_keys(load, ["pd", "qd"], context="load $id, $model:")
-        _check_has_size(load, ["pd", "qd"], N, context="load $id, $model:")
+        _check_has_keys(load, ["pd", "qd"], context="load $obj_name, $model:")
+        _check_has_size(load, ["pd", "qd"], N, context="load $obj_name, $model:")
     elseif model=="exponential"
-        _check_has_keys(load, ["pd_ref", "qd_ref", "vnom", "alpha", "beta"], context="load $id, $model")
-        _check_has_size(load, ["pd_ref", "qd_ref", "vnom", "alpha", "beta"], N, context="load $id, $model:")
+        _check_has_keys(load, ["pd_ref", "qd_ref", "vnom", "alpha", "beta"], context="load $obj_name, $model")
+        _check_has_size(load, ["pd_ref", "qd_ref", "vnom", "alpha", "beta"], N, context="load $obj_name, $model:")
     else
-        _check_has_keys(load, ["pd_ref", "qd_ref", "vnom"], context="load $id, $model")
-        _check_has_size(load, ["pd_ref", "qd_ref", "vnom"], N, context="load $id, $model:")
+        _check_has_keys(load, ["pd_ref", "qd_ref", "vnom"], context="load $obj_name, $model")
+        _check_has_size(load, ["pd_ref", "qd_ref", "vnom"], N, context="load $obj_name, $model:")
     end
 
-    _check_connectivity(data, load; context="load $id")
+    _check_connectivity(data, load; context="load $obj_name")
 end
 
 
@@ -413,31 +492,13 @@ function create_load(; kwargs...)
 end
 
 # generator
+_eng_model_checks[:generator] = function check_generator(data, generator)
+    obj_name = generator["obj_name"]
 
-DTYPES[:generator] = Dict(
-    :id => Any,
-    :status => Int,
-    :bus => Any,
-    :connections => Vector,
-    :configuration => String,
-    :cost => Vector{<:Real},
-    :pg => Array{<:Real, 1},
-    :qg => Array{<:Real, 1},
-    :pg_min => Array{<:Real, 1},
-    :pg_max => Array{<:Real, 1},
-    :qg_min => Array{<:Real, 1},
-    :qg_max => Array{<:Real, 1},
-)
+    N = _check_configuration_infer_dim(generator; context="generator $obj_name")
+    _check_has_size(generator, ["pd", "qd", "pd_min", "pd_max", "qd_min", "qd_max"], N, context="generator $obj_name")
 
-REQUIRED_FIELDS[:generator] = [:id, :status, :bus, :connections]
-
-CHECKS[:generator] = function check_generator(data, generator)
-    id = generator["id"]
-
-    N = _check_configuration_infer_dim(generator; context="generator $id")
-    _check_has_size(generator, ["pd", "qd", "pd_min", "pd_max", "qd_min", "qd_max"], N, context="generator $id")
-
-    _check_connectivity(data, generator; context="generator $id")
+    _check_connectivity(data, generator; context="generator $obj_name")
 end
 
 function create_generator(; kwargs...)
@@ -455,35 +516,10 @@ end
 
 
 # Transformer, n-windings three-phase lossy
-
-
-DTYPES[:transformer_nw] = Dict(
-    :id => Any,
-    :status => Int,
-    :bus => Array{<:AbstractString, 1},
-    :connections => Vector,
-    :vnom => Array{<:Real, 1},
-    :snom => Array{<:Real, 1},
-    :configuration => Array{String, 1},
-    :polarity => Array{Bool, 1},
-    :xsc => Array{<:Real, 1},
-    :rs => Array{<:Real, 1},
-    :noloadloss => Real,
-    :imag => Real,
-    :tm_fix => Array{Array{Bool, 1}, 1},
-    :tm => Array{<:Array{<:Real, 1}, 1},
-    :tm_min => Array{<:Array{<:Real, 1}, 1},
-    :tm_max => Array{<:Array{<:Real, 1}, 1},
-    :tm_step => Array{<:Array{<:Real, 1}, 1},
-)
-
-REQUIRED_FIELDS[:transformer_nw] = keys(DTYPES[:transformer_nw])
-
-
-CHECKS[:transformer_nw] = function check_transformer_nw(data, trans)
-    id = trans["id"]
+_eng_model_checks[:transformer_nw] = function check_transformer_nw(data, trans)
+    obj_name = trans["obj_name"]
     nrw = length(trans["bus"])
-    _check_has_size(trans, ["bus", "connections", "vnom", "snom", "configuration", "polarity", "rs", "tm_fix", "tm_set", "tm_min", "tm_max", "tm_step"], nrw, context="trans $id")
+    _check_has_size(trans, ["bus", "connections", "vnom", "snom", "configuration", "polarity", "rs", "tm_fix", "tm_set", "tm_min", "tm_max", "tm_step"], nrw, context="trans $obj_name")
     @assert(length(trans["xsc"])==(nrw^2-nrw)/2)
 
     nphs = []
@@ -492,12 +528,12 @@ CHECKS[:transformer_nw] = function check_transformer_nw(data, trans)
         conf = trans["configuration"][w]
         conns = trans["connections"][w]
         nph = conf=="wye" ? length(conns)-1 : length(conns)
-        @assert(all(nph.==nphs), "transformer $id: winding $w has a different number of phases than the previous ones.")
+        @assert(all(nph.==nphs), "transformer $obj_name: winding $w has a different number of phases than the previous ones.")
         push!(nphs, nph)
         #TODO check length other properties
     end
 
-    _check_connectivity(data, trans; context="transformer_nw $id")
+    _check_connectivity(data, trans; context="transformer_nw $obj_name")
 end
 
 
@@ -527,8 +563,8 @@ end
 #
 # # Transformer, two-winding three-phase
 #
-# DTYPES[:transformer_2w_ideal] = Dict(
-#     :id => Any,
+# _eng_model_dtypes[:transformer_2w_obj_nameeal] = Dict(
+#     :obj_name => Any,
 #     :f_bus => String,
 #     :t_bus => String,
 #     :configuration => String,
@@ -543,13 +579,13 @@ end
 # )
 #
 #
-# CHECKS[:transformer_2w_ideal] = function check_transformer_2w_ideal(data, trans)
+# _eng_model_checks[:transformer_2w_obj_nameeal] = function check_transformer_2w_obj_nameeal(data, trans)
 # end
 #
 #
-# function create_transformer_2w_ideal(id, f_bus, t_bus, tm_nom; kwargs...)
+# function create_transformer_2w_obj_nameeal(obj_name, f_bus, t_bus, tm_nom; kwargs...)
 #     trans = Dict{String,Any}()
-#     trans["id"] = id
+#     trans["obj_name"] = obj_name
 #     trans["f_bus"] = f_bus
 #     trans["t_bus"] = t_bus
 #     trans["tm_nom"] = tm_nom
@@ -566,35 +602,21 @@ end
 
 
 # Capacitor
-
-DTYPES[:capacitor] = Dict(
-    :id => Any,
-    :status => Int,
-    :bus => Any,
-    :connections => Vector,
-    :configuration => String,
-    :qd_ref => Array{<:Real, 1},
-    :vnom => Real,
-)
-
-REQUIRED_FIELDS[:capacitor] = keys(DTYPES[:capacitor])
-
-
-CHECKS[:capacitor] = function check_capacitor(data, cap)
-    id = cap["id"]
+_eng_model_checks[:capacitor] = function check_capacitor(data, cap)
+    obj_name = cap["obj_name"]
     N = length(cap["connections"])
     config = cap["configuration"]
     if config=="wye"
-        @assert(length(cap["qd_ref"])==N-1, "capacitor $id: qd_ref should have $(N-1) elements.")
+        @assert(length(cap["qd_ref"])==N-1, "capacitor $obj_name: qd_ref should have $(N-1) elements.")
     else
-        @assert(length(cap["qd_ref"])==N, "capacitor $id: qd_ref should have $N elements.")
+        @assert(length(cap["qd_ref"])==N, "capacitor $obj_name: qd_ref should have $N elements.")
     end
     @assert(config in ["delta", "wye", "wye-grounded", "wye-floating"])
     if config=="delta"
-        @assert(N>=3, "Capacitor $id: delta-connected capacitors should have at least 3 elements.")
+        @assert(N>=3, "Capacitor $obj_name: delta-connected capacitors should have at least 3 elements.")
     end
 
-    _check_connectivity(data, cap; context="capacitor $id")
+    _check_connectivity(data, cap; context="capacitor $obj_name")
 end
 
 
@@ -613,21 +635,8 @@ end
 
 
 # Shunt
-
-DTYPES[:shunt] = Dict(
-    :id => Any,
-    :status => Int,
-    :bus => Any,
-    :connections => Vector,
-    :g_sh => Array{<:Real, 2},
-    :b_sh => Array{<:Real, 2},
-)
-
-REQUIRED_FIELDS[:shunt] = keys(DTYPES[:shunt])
-
-
-CHECKS[:shunt] = function check_shunt(data, shunt)
-    _check_connectivity(data, shunt; context="shunt $id")
+_eng_model_checks[:shunt] = function check_shunt(data, shunt)
+    _check_connectivity(data, shunt; context="shunt $obj_name")
 
 end
 
@@ -648,27 +657,11 @@ end
 
 
 # voltage source
-
-DTYPES[:voltage_source] = Dict(
-    :id => Any,
-    :status => Int,
-    :bus => Any,
-    :connections => Vector,
-    :vm =>Array{<:Real},
-    :va =>Array{<:Real},
-    :pg_max =>Array{<:Real},
-    :pg_min =>Array{<:Real},
-    :qg_max =>Array{<:Real},
-    :qg_min =>Array{<:Real},
-)
-
-REQUIRED_FIELDS[:voltage_source] = [:id, :status, :bus, :connections, :vm, :va]
-
-CHECKS[:voltage_source] = function check_voltage_source(data, vs)
-    id = vs["id"]
-    _check_connectivity(data, vs; context="voltage source $id")
+_eng_model_checks[:voltage_source] = function check_voltage_source(data, vs)
+    obj_name = vs["obj_name"]
+    _check_connectivity(data, vs; context="voltage source $obj_name")
     N = length(vs["connections"])
-    _check_has_size(vs, ["vm", "va", "pg_max", "pg_min", "qg_max", "qg_min"], N, context="voltage source $id")
+    _check_has_size(vs, ["vm", "va", "pg_max", "pg_min", "qg_max", "qg_min"], N, context="voltage source $obj_name")
 
 end
 
@@ -686,6 +679,6 @@ end
 
 
 # create add_comp! methods
-for comp in keys(DTYPES)
-    eval(Meta.parse("add_$(comp)!(data_model; kwargs...) = add!(data_model, \"$comp\", create_$comp(; kwargs...))"))
+for comp in keys(_eng_model_dtypes)
+    eval(Meta.parse("add_$(comp)!(data_model, name; kwargs...) = add!(data_model, \"$comp\", name, create_$comp(; kwargs...))"))
 end
