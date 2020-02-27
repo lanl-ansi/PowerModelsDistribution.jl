@@ -28,13 +28,7 @@ function parse_file_dm(file::String; data_model::String="engineering", kwargs...
     end
 
     if data_model == "mathematical"
-        # to get the old indexing
-        pmd_data_old = open(file) do io
-            parse_file(io; filetype=split(lowercase(file), '.')[end], kwargs...)
-        end
-        index_presets = Dict(comp_type=>Dict(comp["name"]=>comp["index"] for (id, comp) in pmd_data_old[comp_type]) for comp_type in ["bus"])
-
-        transform_data_model!(pmd_data; index_presets=index_presets)
+        transform_data_model!(pmd_data)
     end
 
     return pmd_data
@@ -42,11 +36,11 @@ end
 
 
 "transforms model between engineering (high-level) and mathematical (low-level) models"
-function transform_data_model!(data::Dict{String,<:Any}; index_presets::Dict{String,<:Any}=Dict{String,Any}())
+function transform_data_model!(data::Dict{String,<:Any})
     if get(data, "data_model", "mathematical") == "engineering"
         data_model_map!(data)
         data_model_make_pu!(data)
-        data_model_index!(data, index_presets=index_presets)
+        data_model_index!(data)
         data_model_make_compatible_v8!(data)
     else
         if haskey(data, "")
