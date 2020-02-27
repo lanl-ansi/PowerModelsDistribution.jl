@@ -152,7 +152,7 @@ ipopt_solver = JuMP.with_optimizer(Ipopt.Optimizer)
 pm = PMs.instantiate_model(data_model, PMs.IVRPowerModel, PMD.build_mc_opf_iv, multiconductor=true, ref_extensions=[PMD.ref_add_arcs_trans!])
 sol = PMs.optimize_model!(pm, optimizer=ipopt_solver)
 
-solution_unmake_pu!(sol["solution"], data_model)
+solution_make_si!(sol["solution"], data_model)
 solution_identify!(sol["solution"], data_model)
 solution_unmap!(sol["solution"], data_model)
 #vm = sol["solution"]["bus"]["tr_sec"]["vm"]

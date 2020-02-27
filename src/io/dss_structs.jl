@@ -16,8 +16,6 @@ _convert_to_meters = Dict{String,Any}("mi" => 1609.3,
 
 
 """
-    _create_linecode(name; kwargs...)
-
 Creates a Dict{String,Any} containing all of the properties of a Linecode. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties. DEPRECIATED: Calculation all done inside of _create_line() due to Rg,
@@ -113,8 +111,6 @@ end
 
 
 """
-    _create_line(bus1, bus2, name; kwargs...)
-
 Creates a Dict{String,Any} containing all of the properties for a Line. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
@@ -239,8 +235,6 @@ end
 
 
 """
-    _create_load(bus1, name; kwargs...)
-
 Creates a Dict{String,Any} containing all of the expected properties for a
 Load. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
@@ -325,8 +319,6 @@ end
 
 
 """
-    _create_generator(bus1, name; kwargs...)
-
 Creates a Dict{String,Any} containing all of the expected properties for a
 Generator. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
@@ -390,8 +382,6 @@ end
 
 
 """
-    _create_capacitor(bus1, name, bus2=0; kwargs)
-
 Creates a Dict{String,Any} containing all of the expected properties for a
 Capacitor. If `bus2` is not specified, the capacitor will be treated as a shunt.
 See OpenDSS documentation for valid fields and ways to specify the
@@ -573,8 +563,6 @@ end
 
 
 """
-    _create_vsource(bus1, name, bus2=0; kwargs...)
-
 Creates a Dict{String,Any} containing all of the expected properties for a
 Voltage Source. If `bus2` is not specified, VSource will be treated like a
 generator. Mostly used as `sourcebus` which represents the circuit. See
@@ -784,8 +772,6 @@ end
 
 
 """
-    _create_transformer(name; kwargs...)
-
 Creates a Dict{String,Any} containing all of the expected properties for a
 Transformer. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
@@ -909,8 +895,6 @@ end
 
 
 """
-    _create_pvsystem(bus1, name; kwargs...)
-
 Creates a Dict{String,Any} containing all of the expected properties for a
 PVSystem. See OpenDSS document
 https://github.com/tshort/OpenDSS/blob/master/Doc/OpenDSS%20PVSystem%20Model.doc
@@ -988,8 +972,6 @@ end
 
 
 """
-    _create_storage(bus1, name; kwargs...)
-
 Creates a Dict{String,Any} containing all expected properties for a storage
 element. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
@@ -1045,8 +1027,6 @@ end
 
 
 """
-    _create_loadshape(name; kwargs...)
-
 Creates a Dict{String,Any} containing all expected properties for a LoadShape
 element. See OpenDSS documentation for valid fields and ways to specify
 different properties.

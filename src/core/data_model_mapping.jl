@@ -21,6 +21,9 @@ function data_model_map!(data_model)
             data_model[comp_type] = Dict{String, Any}()
         end
     end
+
+    data_model["data_model"] = "mathematical"
+
     return data_model
 end
 
@@ -545,9 +548,7 @@ end
 # MAP SOLUTION UP
 
 function solution_unmap!(solution::Dict, data_model::Dict)
-    for i in length(data_model["mappings"]):-1:1
-        (name, data) = data_model["mappings"][i]
-
+    for (name, data) in reverse(data_model["mappings"])
         if name=="decompose_transformer_nw"
             for bus_id in values(data["vbuses"])
                 delete!(solution["bus"], bus_id)
@@ -586,4 +587,11 @@ function solution_unmap!(solution::Dict, data_model::Dict)
             delete!(solution, comp_type)
         end
     end
+end
+
+
+function transform_solution!(solution, data_model)
+    solution_make_si!(solution, data_model)
+    solution_identify!(solution, data_model)
+    solution_unmap!(solution, data_model)
 end

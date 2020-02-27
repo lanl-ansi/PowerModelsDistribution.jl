@@ -16,7 +16,7 @@ The data model below allows us to include buses of arbitrary many terminals (i.e
 
 | name      | default   | type          | description                                   |
 | --------- | --------- | ------------- | --------------------------------------------- |
-| terminals | [1,2,3,4] | Vector        |
+| terminals | [1,2,3,4] | Vector        |                                               |
 | vm_max    | /         | Vector        | maximum conductor-to-ground voltage magnitude |
 | vm_min    | /         | Vector        | minimum conductor-to-ground voltage magnitude |
 | vm_cd_max | /         | Vector{Tuple} | e.g.  [(1,2,210)] means \|U1-U2\|>210         |
@@ -41,7 +41,7 @@ Since this might be confusing for novice users, we also allow the user to define
 | name      | default | type   | description                                               |
 | --------- | ------- | ------ | --------------------------------------------------------- |
 | id        | /       |        | unique identifier                                         |
-| phases    | [1,2,3] | Vector |
+| phases    | [1,2,3] | Vector |                                                           |
 | neutral   | 4       |        | maximum conductor-to-ground voltage magnitude             |
 | vm_pn_max | /       | Real   | maximum phase-to-neutral voltage magnitude for all phases |
 | vm_pn_min | /       | Real   | minimum phase-to-neutral voltage magnitude for all phases |
@@ -55,9 +55,9 @@ This is a pi-model branch. A linecode implies `rs`, `xs`, `b_fr`, `b_to`, `g_fr`
 | name          | default | type | description                                                              |
 | ------------- | ------- | ---- | ------------------------------------------------------------------------ |
 | id            | /       |      | unique identifier                                                        |
-| f_bus         | /       |      |
+| f_bus         | /       |      |                                                                          |
 | f_connections | /       |      | indicates for each conductor, to which terminal of the f_bus it connects |
-| t_bus         | /       |      |
+| t_bus         | /       |      |                                                                          |
 | t_connections | /       |      | indicates for each conductor, to which terminal of the t_bus it connects |
 | linecode      | /       |      | a linecode                                                               |
 | rs            | /       |      | series resistance matrix, size of n_conductors x n_conductors            |
@@ -88,8 +88,8 @@ This is a pi-model branch. A linecode implies `rs`, `xs`, `b_fr`, `b_to`, `g_fr`
 | name        | default | type | description                                                |
 | ----------- | ------- | ---- | ---------------------------------------------------------- |
 | id          | /       |      | unique identifier                                          |
-| bus         | /       |      |
-| connections | /       |      |
+| bus         | /       |      |                                                            |
+| connections | /       |      |                                                            |
 | g           | /       |      | conductance, size should be \|connections\|x\|connections\ |
 | b           | /       |      | susceptance, size should be \|connections\|x\|connections\ |
 
@@ -98,8 +98,8 @@ This is a pi-model branch. A linecode implies `rs`, `xs`, `b_fr`, `b_to`, `g_fr`
 | name        | default | type | description                                                |
 | ----------- | ------- | ---- | ---------------------------------------------------------- |
 | id          | /       |      | unique identifier                                          |
-| bus         | /       |      |
-| connections | /       |      |
+| bus         | /       |      |                                                            |
+| connections | /       |      |                                                            |
 | qd_ref      | /       |      | conductance, size should be \|connections\|x\|connections\ |
 | vnom        | /       |      | conductance, size should be \|connections\|x\|connections\ |
 
@@ -108,8 +108,8 @@ This is a pi-model branch. A linecode implies `rs`, `xs`, `b_fr`, `b_to`, `g_fr`
 | name          | default | type         | description                                                     |
 | ------------- | ------- | ------------ | --------------------------------------------------------------- |
 | id            | /       |              | unique identifier                                               |
-| bus           | /       |              |
-| connections   | /       |              |
+| bus           | /       |              |                                                                 |
+| connections   | /       |              |                                                                 |
 | configuration | /       | {wye, delta} | if wye-connected, the last connection will indicate the neutral |
 | model         | /       |              | indicates the type of voltage-dependency                        |
 
@@ -117,34 +117,34 @@ This is a pi-model branch. A linecode implies `rs`, `xs`, `b_fr`, `b_to`, `g_fr`
 
 | name | default | type         | description |
 | ---- | ------- | ------------ | ----------- |
-| pd   | /       | Vector{Real} |
-| qd   | /       | Vector{Real} |
+| pd   | /       | Vector{Real} |             |
+| qd   | /       | Vector{Real} |             |
 
 ### `model=constant_current/impedance`
 
 | name   | default | type         | description |
 | ------ | ------- | ------------ | ----------- |
-| pd_ref | /       | Vector{Real} |
-| qd_ref | /       | Vector{Real} |
-| vnom   | /       | Real         |
+| pd_ref | /       | Vector{Real} |             |
+| qd_ref | /       | Vector{Real} |             |
+| vnom   | /       | Real         |             |
 
 ### `model=exponential`
 
 | name   | default | type         | description |
 | ------ | ------- | ------------ | ----------- |
-| pd_ref | /       | Vector{Real} |
-| qd_ref | /       | Vector{Real} |
-| vnom   | /       | Real         |
-| exp_p  | /       | Vector{Real} |
-| exp_q  | /       | Vector{Real} |
+| pd_ref | /       | Vector{Real} |             |
+| qd_ref | /       | Vector{Real} |             |
+| vnom   | /       | Real         |             |
+| exp_p  | /       | Vector{Real} |             |
+| exp_q  | /       | Vector{Real} |             |
 
 ## Generator
 
 | name          | default | type         | description                                                     |
 | ------------- | ------- | ------------ | --------------------------------------------------------------- |
 | id            | /       |              | unique identifier                                               |
-| bus           | /       |              |
-| connections   | /       |              |
+| bus           | /       |              |                                                                 |
+| connections   | /       |              |                                                                 |
 | configuration | /       | {wye, delta} | if wye-connected, the last connection will indicate the neutral |
 | pg_min        | /       |              | lower bound on active power generation per phase                |
 | pg_max        | /       |              | upper bound on active power generation per phase                |
@@ -159,9 +159,9 @@ These are transformers are assymetric (A), lossless (L) and two-winding (2W). As
 | ------------- | ---------------------- | ------------ | ------------------------------------------------------------------------ |
 | id            | /                      |              | unique identifier                                                        |
 | n_phases      | size(rs)[1]            | Int>0        | number of phases                                                         |
-| f_bus         | /                      |              |
+| f_bus         | /                      |              |                                                                          |
 | f_connections | /                      |              | indicates for each conductor, to which terminal of the f_bus it connects |
-| t_bus         | /                      |              |
+| t_bus         | /                      |              |                                                                          |
 | t_connections | /                      |              | indicates for each conductor, to which terminal of the t_bus it connects |
 | configuration | /                      | {wye, delta} | for the from-side; the to-side is always connected in wye                |
 | tm_nom        | /                      | Real         | nominal tap ratio for the transformer                                    |
