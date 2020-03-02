@@ -16,7 +16,7 @@ function parse_file_dm(io::IO; data_model::String="engineering", import_all::Boo
     end
 
     if data_model == "mathematical"
-        transform_data_model!(pmd_data)
+        pmd_data = transform_data_model(pmd_data)
     end
 
     #correct_network_data!(pmd_data)
@@ -36,16 +36,15 @@ end
 
 
 "transforms model between engineering (high-level) and mathematical (low-level) models"
-function transform_data_model!(data::Dict{String,<:Any})
-    if get(data, "data_model", "mathematical") == "engineering"
-        data_model_map!(data)
-        data_model_make_pu!(data)
-        data_model_index!(data)
-        data_model_make_compatible_v8!(data)
+function transform_data_model(data::Dict{<:Any,<:Any})
+    current_data_model = get(data, "data_model", "mathematical")
+
+    if current_data_model == "engineering"
+        return _map_eng2math(data)
+    elseif current_data_model == "mathematical"
+        return _map_math2eng!(data)
     else
-        if haskey(data, "")
-        else
-            Memento.warn(_LOGGER, "Cannot transform mathematical model to engineering model, no mapping information available")
-        end
+        @warn "Data model '$current_data_model' is not recognized, no transformation performed"
+        return data
     end
 end
