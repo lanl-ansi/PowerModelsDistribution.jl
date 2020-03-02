@@ -5,7 +5,7 @@ import LinearAlgebra: isdiag, diag, pinv
 const _exclude_duplicate_check = ["options", "filename", "circuit"]
 const _dss_edge_components = ["line", "transformer", "reactor"]
 const _dss_supported_components = ["line", "linecode", "load", "generator", "capacitor", "reactor", "circuit", "transformer", "pvsystem", "storage", "loadshape"]
-const _dss_option_dtypes = Dict{String,Type}("defaultbasefreq" => Float64, "voltagebases" => Float64)
+const _dss_option_dtypes = Dict{String,Type}("defaultbasefreq" => Float64, "voltagebases" => Float64, "tolerance" => Float64)
 
 
 "Discovers all of the buses (not separately defined in OpenDSS), from \"lines\""
@@ -84,7 +84,7 @@ function _dss2eng_sourcebus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
     vm = fill(vm_pu, 3)*vnom
     va = _wrap_to_pi.([-2*pi/phases*(i-1)+deg2rad(ph1_ang) for i in 1:phases])
 
-    add_voltage_source!(data_eng, "sourcebus"; bus="sourcebus", connections=collect(1:phases), vm=vm, va=va, rs=circuit["rmatrix"], xs=circuit["xmatrix"])
+    add_voltage_source!(data_eng, "sourcebus"; bus="sourcebus", connections=collect(1:phases), vm=vm, va=va, rmatrix=circuit["rmatrix"], xmatrix=circuit["xmatrix"])
 end
 
 
@@ -486,17 +486,6 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         eng_obj["f_connections"] = _get_conductors_ordered_dm(defaults["bus1"], default=collect(1:nphases))
         eng_obj["t_connections"] = _get_conductors_ordered_dm(defaults["bus2"], default=collect(1:nphases))
 
-
-        # TODO calculate these in the conversion/mapping to mathematical model
-        # eng_obj["rs"] = rmatrix * defaults["length"]
-        # eng_obj["xs"] = xmatrix * defaults["length"]
-
-        # eng_obj["g_fr"] = fill(0.0, nphases, nphases)
-        # eng_obj["g_to"] = fill(0.0, nphases, nphases)
-
-        # eng_obj["b_fr"] = (2.0 * pi * data_eng["settings"]["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0
-        # eng_obj["b_to"] = (2.0 * pi * data_eng["settings"]["basefreq"] * cmatrix * defaults["length"] / 1e9) / 2.0
-
         eng_obj["status"] = convert(Int, defaults["enabled"])
 
         eng_obj["source_id"] = "line.$(name)"
@@ -748,7 +737,6 @@ end
 
 "Adds storage to `data_eng` from `data_dss`"
 function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
-
     for (name, dss_obj) in get(data_dss, "storage", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "storage")
         defaults = _apply_ordered_properties(_create_storage(dss_obj["bus1"], dss_obj["name"]; _to_sym_keys(dss_obj)...), dss_obj)
@@ -790,6 +778,20 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         end
 
         data_eng["storage"][name] = eng_obj
+    end
+end
+
+
+"Adds vsources to `data_eng` from `data_dss`"
+function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
+    for (name, dss_obj) in get(data_dss, "vsource", Dict{<:Any,<:Any}())
+        eng_obj = Dict{String,Any}()
+
+        if !haskey(data_eng, "vsource")
+            data_eng["vsource"] = Dict{String,Dict{String,Any}}()
+        end
+
+        data_eng["vsource"][name] = eng_obj
     end
 end
 
@@ -894,7 +896,11 @@ function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, 
 
     parse_dss_with_dtypes!(data_dss, _dss_supported_components)
 
-    data_eng["dss_options"] = parse_options(get(data_dss, "options", Dict{String,Any}()))
+    data_dss["options"] = parse_options(get(data_dss, "options", Dict{String,Any}()))
+
+    if import_all
+        data_eng["dss_options"] = data_dss["options"]
+    end
 
     if haskey(data_dss, "circuit")
         circuit = data_dss["circuit"]
@@ -905,11 +911,11 @@ function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, 
         data_eng["data_model"] = "engineering"
 
         # TODO rename fields
-        data_eng["settings"]["kv_kvar_scalar"] = 1
-        data_eng["settings"]["set_vbase_val"] = (defaults["basekv"]/sqrt(3))/data_eng["settings"]["v_var_scalar"]
+        data_eng["settings"]["kv_kvar_scalar"] = 1e-3
+        data_eng["settings"]["set_vbase_val"] = (defaults["basekv"]/sqrt(3))/data_eng["settings"]["kv_kvar_scalar"]
         data_eng["settings"]["set_vbase_bus"] = data_eng["sourcebus"]
-        data_eng["settings"]["set_sbase_val"] = defaults["basemva"]*1e3/data_eng["settings"]["v_var_scalar"]
-        data_eng["settings"]["basefreq"] = get(get(data_dss, "options", Dict()), "defaultbasefreq", 60.0)
+        data_eng["settings"]["set_sbase_val"] = defaults["basemva"]*1/data_eng["settings"]["kv_kvar_scalar"]
+        data_eng["settings"]["basefreq"] = get(data_dss["options"], "defaultbasefreq", 60.0)
 
         data_eng["files"] = data_dss["filename"]
     else
@@ -933,11 +939,12 @@ function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, 
     _dss2eng_capacitor!(data_eng, data_dss, import_all)
     _dss2eng_shunt_reactor!(data_eng, data_dss, import_all)
 
+    _dss2eng_sourcebus!(data_eng, data_dss, import_all)
     _dss2eng_generator!(data_eng, data_dss, import_all)
-
     _dss2eng_pvsystem!(data_eng, data_dss, import_all)
-
     _dss2eng_storage!(data_eng, data_dss, import_all)
+
+    # _dss2eng_vsource!(data_eng, data_dss, import_all)
 
     if bank_transformers
         _bank_transformers!(data_eng)

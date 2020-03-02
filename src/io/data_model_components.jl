@@ -258,7 +258,7 @@ end
 function create_data_model(; kwargs...)
     data_model = Dict{String, Any}("settings"=>Dict{String, Any}())
 
-    add_kwarg!(data_model["settings"], kwargs, :v_var_scalar, 1e3)
+    add_kwarg!(data_model["settings"], kwargs, :kv_kvar_scalar, 1e3)
 
     _add_unused_kwargs!(data_model["settings"], kwargs)
 
