@@ -3,7 +3,7 @@ import LinearAlgebra
 
 const _1to1_maps = Dict{String,Vector{String}}(
     "bus" => ["vm", "va", "vmin", "vmax"],
-    "load" => ["model", "configuration", "status"],
+    "load" => ["model", "configuration", "status", "source_id"],
     "capacitor" => ["status"],
     "shunt_reactor" => ["status"],
     "generator" => ["model", "startup", "shutdown", "ncost", "cost", "source_id"],
@@ -190,9 +190,11 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
     end
 
     for (name, eng_obj) in get(data_eng, "load", Dict{Any,Dict{String,Any}}())
-        math_obj = _map_defaults(eng_obj, "load", name, kron_reduced)
+        # math_obj = _map_defaults(eng_obj, "load", name, kron_reduced)
+        math_obj = Dict{String,Any}()
 
         phases = get(eng_obj, "phases", [1, 2, 3])
+        conductors = collect(1:data_math["conductors"])
 
         if eng_obj["configuration"] == "wye"
             bus = data_eng["bus"][eng_obj["bus"]]
@@ -203,13 +205,19 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             @assert all(load["connections"] .== phases)
         end
 
-        _pad_properties!(eng_obj, ["pd", "qd"], eng_obj["connections"], phases)
+        for key in _1to1_maps["load"]
+            math_obj[key] = eng_obj[key]
+        end
+
+        math_obj["load_bus"] = data_math["lookup"]["bus"][eng_obj["bus"]]
 
         math_obj["pd"] = eng_obj["pd"] / 1e3
         math_obj["qd"] = eng_obj["qd"] / 1e3
+
         math_obj["vnom_kv"] = get(eng_obj, "vnom", data_eng["settings"]["set_vbase_val"]/sqrt(3)*1e3)
 
-        math_obj["load_bus"] = data_math["lookup"]["bus"][eng_obj["bus"]]
+        # @warn name math_obj["pd"] eng_obj["connections"] phases
+        _pad_properties!(math_obj, ["pd", "qd"], eng_obj["connections"], phases; neutral=data_eng["bus"][eng_obj["bus"]]["neutral"])
 
         math_obj["index"] = length(data_math["load"]) + 1
 
@@ -280,6 +288,9 @@ function _map_eng2math_capacitor!(data_math::Dict{String,<:Any}, data_eng::Dict{
         math_obj["gs"] = fill(0.0, nphases, nphases)
         math_obj["bs"] = B
 
+        neutral = get(data_eng["bus"][eng_obj["bus"]], "neutral", 4)
+
+        _pad_properties!(math_obj, ["gs", "bs"], eng_obj["f_terminals"], collect(1:data_math["conductors"]); neutral=neutral)
         math_obj["index"] = length(data_math["shunt"]) + 1
 
         data_math["shunt"]["$(math_obj["index"])"] = math_obj
@@ -534,6 +545,12 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         math_obj["shift"] = zeros(nphases)
         math_obj["tap"] = ones(nphases)
 
+        f_bus = data_eng["bus"][eng_obj["f_bus"]]
+        t_bus = data_eng["bus"][eng_obj["t_bus"]]
+        neutral = haskey(f_bus, "neutral") ? f_bus["neutral"] : haskey(t_bus, "neutral") ? t_bus["neutral"] : nphases+1
+
+        _pad_properties!(math_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "angmin", "angmax", "tap", "shift"], eng_obj["f_connections"], collect(1:nconductors); neutral=neutral)
+
         math_obj["switch"] = false
 
         math_obj["br_status"] = eng_obj["status"]
@@ -654,64 +671,6 @@ function _map_eng2math_sourcebus!(data_math::Dict{String,<:Any}, data_eng::Dict{
     # branch_obj = _create_vbranch(data_math, data_math["lookup"]["bus"][sourcebus], bus_obj["bus_i"]; name="_virtual_sourcebus", br_r=sourcebus_vsource["rs"]/1e3, br_x=sourcebus_vsource["xs"]/1e3)
 
     data_math["branch"]["$(branch_obj["index"])"] = branch_obj
-end
-
-
-"""
-This function adds a new branch to the data model and returns its dictionary.
-It is virtual in the sense that it does not correspond to a branch in the
-network, but is part of the decomposition of the transformer.
-"""
-function _create_vbranch(data_math::Dict{<:Any,<:Any}, f_bus::Int, t_bus::Int; name::String="", source_id::String="", active_phases::Vector{Int}=[1, 2, 3], kwargs...)
-    ncnd = data_math["conductors"]
-
-    kwargs = Dict{Symbol,Any}(kwargs)
-
-    vbase = haskey(kwargs, :vbase) ? kwargs[:vbase] : data_math["basekv"]
-    # TODO assumes per_unit will be flagged
-    sbase = haskey(kwargs, :sbase) ? kwargs[:sbase] : data_math["baseMVA"]
-    zbase = vbase^2/sbase
-    # convert to LN vbase in instead of LL vbase
-    zbase *= (1/3)
-
-    vbranch = Dict{String, Any}("f_bus"=>f_bus, "t_bus"=>t_bus, "name"=>name)
-
-    vbranch["active_phases"] = active_phases
-    vbranch["source_id"] = "virtual_branch.$name"
-
-    for k in [:br_r, :br_x, :g_fr, :g_to, :b_fr, :b_to]
-        if !haskey(kwargs, k)
-            vbranch[string(k)] = zeros(ncnd, ncnd)
-        else
-            if k in [:br_r, :br_x]
-                vbranch[string(k)] = kwargs[k]./zbase
-            else
-                vbranch[string(k)] = kwargs[k].*zbase
-            end
-        end
-    end
-
-    vbranch["angmin"] = -ones(ncnd)*60
-    vbranch["angmax"] = ones(ncnd)*60
-
-    vbranch["rate_a"] = get(kwargs, :rate_a, fill(Inf, length(active_phases)))
-
-    vbranch["shift"] = zeros(ncnd)
-    vbranch["tap"] = ones(ncnd)
-
-    vbranch["transformer"] = false
-    vbranch["switch"] = false
-    vbranch["br_status"] = 1
-
-    for k in [:rate_a, :rate_b, :rate_c, :c_rating_a, :c_rating_b, :c_rating_c]
-        if haskey(kwargs, k)
-            vbranch[string(k)] = kwargs[k]
-        end
-    end
-
-    vbranch["index"] = length(data_math["branch"])+1
-
-    return vbranch
 end
 
 
