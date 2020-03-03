@@ -9,8 +9,8 @@
 
             @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
-            @test all(isapprox.(sol["solution"]["bus"]["2"]["vm"], 0.984377; atol=1e-4))
-            @test all(isapprox.(sol["solution"]["bus"]["2"]["va"], [PMD._wrap_to_pi(2*pi/pmd["conductors"]*(1-c) - deg2rad(0.79)) for c in 1:pmd["conductors"]]; atol=deg2rad(0.2)))
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], 0.984377; atol=1e-4))
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["va"], [PMD._wrap_to_pi(2*pi/pmd["conductors"]*(1-c) - deg2rad(0.79)) for c in 1:pmd["conductors"]]; atol=deg2rad(0.2)))
 
             @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.018209; atol=1e-5)
             @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.000208979; atol=1e-5)
@@ -24,8 +24,8 @@
 
             calc_vm(id) = sqrt.(sol["solution"]["bus"][id]["vr"].^2+sol["solution"]["bus"][id]["vi"].^2)
             calc_va(id) = atan.(sol["solution"]["bus"][id]["vi"], sol["solution"]["bus"][id]["vr"])
-            @test all(isapprox.(calc_vm("2"), 0.984377; atol=1e-4))
-            @test all(isapprox.(calc_va("2"), [PMD._wrap_to_pi(2*pi/pmd["conductors"]*(1-c) - deg2rad(0.79)) for c in 1:pmd["conductors"]]; atol=deg2rad(0.2)))
+            @test all(isapprox.(calc_vm("1"), 0.984377; atol=1e-4))
+            @test all(isapprox.(calc_va("1"), [PMD._wrap_to_pi(2*pi/pmd["conductors"]*(1-c) - deg2rad(0.79)) for c in 1:pmd["conductors"]]; atol=deg2rad(0.2)))
 
             @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.018209; atol=1e-5)
             @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.000208979; atol=1e-5)
@@ -37,7 +37,7 @@
 
             @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
-            for (bus, va, vm) in zip(["1", "2", "3"], [0.0, deg2rad(-0.08), deg2rad(-0.17)], [0.9959, 0.986976, 0.976611])
+            for (bus, va, vm) in zip(["2", "1", "3"], [0.0, deg2rad(-0.08), deg2rad(-0.17)], [0.9959, 0.986976, 0.976611])
                 @test all(isapprox.(sol["solution"]["bus"][bus]["va"], [PMD._wrap_to_pi(2*pi/pmd["conductors"]*(1-c) .+ va) for c in 1:pmd["conductors"]]; atol=deg2rad(0.2)))
                 @test all(isapprox.(sol["solution"]["bus"][bus]["vm"], vm; atol=1e-3))
             end
@@ -52,7 +52,7 @@
 
             @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
-            for (bus, va, vm) in zip(["1", "2", "3"], [0.0, deg2rad(-0.08), deg2rad(-0.17)], [0.9959, 0.986976, 0.976611])
+            for (bus, va, vm) in zip(["2", "1", "3"], [0.0, deg2rad(-0.08), deg2rad(-0.17)], [0.9959, 0.986976, 0.976611])
                 calc_vm(id) = sqrt.(sol["solution"]["bus"][id]["vr"].^2+sol["solution"]["bus"][id]["vi"].^2)
                 calc_va(id) = atan.(sol["solution"]["bus"][id]["vi"], sol["solution"]["bus"][id]["vr"])
                 @test all(isapprox.(calc_va(bus), [PMD._wrap_to_pi(2*pi/pmd["conductors"]*(1-c) .+ va) for c in 1:pmd["conductors"]]; atol=deg2rad(0.2)))
@@ -81,7 +81,7 @@
 
             @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
-            for (bus, va, vm) in zip(["1", "2", "3"], [0.0, 0.0, deg2rad(-0.04)], [0.9959, 0.995729, 0.985454])
+            for (bus, va, vm) in zip(["2", "1", "3"], [0.0, 0.0, deg2rad(-0.04)], [0.9959, 0.995729, 0.985454])
                 @test all(isapprox.(sol["solution"]["bus"][bus]["va"], [PMD._wrap_to_pi(2*pi/pmd["conductors"]*(1-c) .+ va) for c in 1:pmd["conductors"]]; atol=deg2rad(0.2)))
                 @test all(isapprox.(sol["solution"]["bus"][bus]["vm"], vm; atol=1e-3))
             end
@@ -93,7 +93,7 @@
 
             @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
-            for (bus, va, vm) in zip(["1", "2", "3"],
+            for (bus, va, vm) in zip(["2", "1", "3"],
                                     [0.0, deg2rad.([-0.22, -0.11, 0.12]), deg2rad.([-0.48, -0.24, 0.27])],
                                     [0.9959, [0.98094, 0.989365, 0.987043], [0.96355, 0.981767, 0.976786]])
                 @test all(isapprox.(sol["solution"]["bus"][bus]["va"], PMD._wrap_to_pi([2*pi/pmd["conductors"]*(1-c) for c in 1:pmd["conductors"]] .+ va); atol=deg2rad(0.2)))
@@ -110,7 +110,7 @@
 
             @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
-            for (bus, va, vm) in zip(["1", "2", "3"],
+            for (bus, va, vm) in zip(["2", "1", "3"],
                                     [0.0, deg2rad.([-0.22, -0.11, 0.12]), deg2rad.([-0.48, -0.24, 0.27])],
                                     [0.9959, [0.98094, 0.989365, 0.987043], [0.96355, 0.981767, 0.976786]])
                 calc_vm(id) = sqrt.(sol["solution"]["bus"][id]["vr"].^2+sol["solution"]["bus"][id]["vi"].^2)
@@ -129,8 +129,8 @@
 
             @test sol["termination_status"] == PMs.LOCALLY_SOLVED
 
-            @test all(isapprox.(sol["solution"]["bus"]["2"]["vm"], [0.983453, 0.98718, 0.981602]; atol=1e-5))
-            @test all(isapprox.(sol["solution"]["bus"]["2"]["va"], deg2rad.([-0.07, -120.19, 120.29]); atol=1e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [0.983453, 0.98718, 0.981602]; atol=1e-5))
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["va"], deg2rad.([-0.07, -120.19, 120.29]); atol=1e-2))
         end
 
         @testset "5-bus phase drop acp pf" begin
@@ -140,7 +140,7 @@
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.0; atol = 1e-4)
 
-            @test all(isapprox.(result["solution"]["bus"]["2"]["vm"], [0.973519, 0.964902, 0.956465]; atol = 1e-3))
+            @test all(isapprox.(result["solution"]["bus"]["3"]["vm"], [0.973519, 0.964902, 0.956465]; atol = 1e-3))
         end
 
         @testset "5-bus phase drop acr pf" begin
@@ -151,9 +151,9 @@
             @test isapprox(result["objective"], 0.0; atol = 1e-4)
 
             calc_vm(id) = sqrt.(result["solution"]["bus"][id]["vr"].^2+result["solution"]["bus"][id]["vi"].^2)
-            @test isapprox(calc_vm("2")[1], 0.973519; atol = 1e-4)
-            @test isapprox(calc_vm("2")[2], 0.964902; atol = 1e-4)
-            @test isapprox(calc_vm("2")[3], 0.956465; atol = 1e-4)
+            @test isapprox(calc_vm("3")[1], 0.973519; atol = 1e-4)
+            @test isapprox(calc_vm("3")[2], 0.964902; atol = 1e-4)
+            @test isapprox(calc_vm("3")[3], 0.956465; atol = 1e-4)
         end
 
         @testset "matrix branch shunts acp pf" begin
