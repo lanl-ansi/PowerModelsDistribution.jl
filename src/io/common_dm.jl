@@ -3,7 +3,7 @@
 
 Parses the IOStream of a file into a Three-Phase PowerModels data structure.
 """
-function parse_file_dm(io::IO; data_model::String="engineering", import_all::Bool=false, filetype::AbstractString="json", bank_transformers::Bool=true)
+function parse_file(io::IO; data_model::String="mathematical", import_all::Bool=false, filetype::AbstractString="json", bank_transformers::Bool=true)
     if filetype == "m"
         pmd_data = PowerModelsDistribution.parse_matlab(io)
     elseif filetype == "dss"
@@ -26,9 +26,9 @@ end
 
 
 ""
-function parse_file_dm(file::String; kwargs...)
+function parse_file(file::String; kwargs...)
     pmd_data = open(file) do io
-        parse_file_dm(io; filetype=split(lowercase(file), '.')[end], kwargs...)
+        parse_file(io; filetype=split(lowercase(file), '.')[end], kwargs...)
     end
 
     return pmd_data
@@ -52,9 +52,7 @@ end
 
 ""
 function correct_network_data!(data::Dict{String,Any})
-    @warn "here" data["bus"]["1"] data["branch"]["1"]
     _PMs.make_per_unit!(data)
-    @warn "here" data["bus"]["1"] data["branch"]["1"]
 
     _PMs.check_connectivity(data)
     _PMs.correct_transformer_parameters!(data)
