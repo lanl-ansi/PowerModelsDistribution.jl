@@ -583,6 +583,76 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
     if !haskey(data_math, "switch")
         data_math["switch"] = Dict{String,Any}()
     end
+
+    # TODO Make real switches, not just lines
+    for (name, eng_obj) in get(data_eng, "switch", Dict{Any,Dict{String,Any}}())
+        if haskey(eng_obj, "linecode")
+            linecode = data_eng["linecode"][eng_obj["linecode"]]
+
+            for property in ["rs", "xs", "cs"]
+                if !haskey(eng_obj, property) && haskey(linecode, property)
+                    eng_obj[property] = linecode[property]
+                end
+            end
+        end
+
+        nphases = length(eng_obj["f_connections"])
+        nconductors = data_math["conductors"]
+
+        Zbase = (data_math["basekv"] / sqrt(3))^2 * nconductors / (data_math["baseMVA"])
+        Zbase = Zbase / 3
+
+        math_obj = _map_defaults(eng_obj, "line", name, kron_reduced)
+
+        math_obj["f_bus"] = data_math["lookup"]["bus"][eng_obj["f_bus"]]
+        math_obj["t_bus"] = data_math["lookup"]["bus"][eng_obj["t_bus"]]
+
+        math_obj["br_r"] = eng_obj["rs"] * eng_obj["length"] / Zbase
+        math_obj["br_x"] = eng_obj["xs"] * eng_obj["length"] / Zbase
+
+        math_obj["g_fr"] = fill(0.0, nphases, nphases)
+        math_obj["g_to"] = fill(0.0, nphases, nphases)
+
+        math_obj["b_fr"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["cs"] * eng_obj["length"] / 1e9) / 2.0
+        math_obj["b_to"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["cs"] * eng_obj["length"] / 1e9) / 2.0
+
+        math_obj["angmin"] = fill(-60.0, nphases)
+        math_obj["angmax"] = fill( 60.0, nphases)
+
+        math_obj["transformer"] = false
+        math_obj["shift"] = zeros(nphases)
+        math_obj["tap"] = ones(nphases)
+
+        f_bus = data_eng["bus"][eng_obj["f_bus"]]
+        t_bus = data_eng["bus"][eng_obj["t_bus"]]
+        neutral = haskey(f_bus, "neutral") ? f_bus["neutral"] : haskey(t_bus, "neutral") ? t_bus["neutral"] : nphases+1
+
+        _pad_properties!(math_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "angmin", "angmax", "tap", "shift"], eng_obj["f_connections"], collect(1:nconductors); neutral=neutral)
+
+        math_obj["switch"] = true
+
+        math_obj["br_status"] = eng_obj["status"]
+
+        math_obj["index"] = length(data_math["branch"])+1
+
+        data_math["branch"]["$(math_obj["index"])"] = math_obj
+
+        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
+            :component_type => "switch",
+            :from_id => name,
+            :to_id => "$(math_obj["index"])",
+            :unmap_function => :_map_math2eng_switch!,
+            :kron_reduced => kron_reduced,
+            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["switch"])
+        )
+
+        if !haskey(data_math["lookup"], "switch")
+            data_math["lookup"]["switch"] = Dict{Any,Int}()
+        end
+
+        data_math["lookup"]["switch"][name] = math_obj["index"]
+
+    end
 end
 
 
