@@ -17,9 +17,9 @@ function parse_file_dm(io::IO; data_model::String="engineering", import_all::Boo
 
     if data_model == "mathematical"
         pmd_data = transform_data_model(pmd_data)
-    end
 
-    #correct_network_data!(pmd_data)
+        correct_network_data!(pmd_data)
+    end
 
     return pmd_data
 end
@@ -47,4 +47,23 @@ function transform_data_model(data::Dict{<:Any,<:Any})
         @warn "Data model '$current_data_model' is not recognized, no transformation performed"
         return data
     end
+end
+
+
+""
+function correct_network_data!(data::Dict{String,Any})
+    @warn "here" data["bus"]["1"] data["branch"]["1"]
+    _PMs.make_per_unit!(data)
+    @warn "here" data["bus"]["1"] data["branch"]["1"]
+
+    _PMs.check_connectivity(data)
+    _PMs.correct_transformer_parameters!(data)
+    _PMs.correct_voltage_angle_differences!(data)
+    _PMs.correct_thermal_limits!(data)
+    _PMs.correct_branch_directions!(data)
+    _PMs.check_branch_loops(data)
+    _PMs.correct_bus_types!(data)
+    _PMs.correct_dcline_limits!(data)
+    _PMs.correct_cost_functions!(data)
+    _PMs.standardize_cost_terms!(data)
 end

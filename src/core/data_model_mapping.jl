@@ -3,7 +3,7 @@ import LinearAlgebra
 
 const _1to1_maps = Dict{String,Array{String,1}}(
     "bus" => ["vm", "va", "vmin", "vmax"],
-    "load" => ["pd", "qd", "model", "configuration", "status"],
+    "load" => ["model", "configuration", "status"],
     "capacitor" => ["status"],
     "shunt_reactor" => ["status"],
     "generator" => ["configuration", "status"],
@@ -32,11 +32,11 @@ const _edge_elements = ["line", "switch", "transformer"]
 function _map_eng2math(data_eng; kron_reduced::Bool=true)
     @assert get(data_eng, "data_model", "mathematical") == "engineering"
 
-    data_model_make_pu!(data_eng)
+    # data_model_make_pu!(data_eng)
 
     data_math = Dict{String,Any}(
         "name" => data_eng["name"],
-        "per_unit" => get(data_eng, "per_unit", false)
+        # "per_unit" => get(data_eng, "per_unit", false)
     )
 
     data_math["map"] = Dict{Int,Dict{Symbol,Any}}(
@@ -164,10 +164,10 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
         math_obj["vm"] = get(eng_obj, "vm", fill(1.0, length(phases)))
         math_obj["va"] = get(eng_obj, "va", [_wrap_to_180(-rad2deg(2*pi/length(phases)*(i-1))) for i in phases])
 
-        math_obj["vmin"] = fill(NaN, length(phases))
-        math_obj["vmax"] = fill(NaN, length(phases))
+        math_obj["vmin"] = fill(0.9, length(phases))
+        math_obj["vmax"] = fill(1.1, length(phases))
 
-        math_obj["base_kv"] = eng_obj["vbase"]
+        math_obj["base_kv"] = data_eng["settings"]["set_vbase_val"]
 
         math_obj["bus_type"] = eng_obj["status"] == 1 ? 1 : 4
 
@@ -203,6 +203,8 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
     for (name, eng_obj) in get(data_eng, "load", Dict{Any,Dict{String,Any}}())
         math_obj = _map_defaults(eng_obj, "load", name, kron_reduced)
 
+        phases = get(eng_obj, "phases", [1, 2, 3])
+
         if eng_obj["configuration"] == "wye"
             bus = data_eng["bus"][eng_obj["bus"]]
             # TODO add message for failure
@@ -211,6 +213,12 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             # TODO add message for failure
             @assert all(load["connections"] .== phases)
         end
+
+        _pad_properties!(eng_obj, ["pd", "qd"], eng_obj["connections"], phases)
+
+        math_obj["pd"] = eng_obj["pd"] / 1e3
+        math_obj["qd"] = eng_obj["qd"] / 1e3
+        math_obj["vnom_kv"] = get(eng_obj, "vnom", data_eng["settings"]["set_vbase_val"]/sqrt(3)*1e3)
 
         math_obj["load_bus"] = data_math["lookup"]["bus"][eng_obj["bus"]]
 
@@ -323,7 +331,7 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         if haskey(eng_obj, "linecode")
             linecode = data_eng["linecode"][eng_obj["linecode"]]
 
-            for property in ["rmatrix", "xmatrix", "cmatrix"]
+            for property in ["rs", "xs", "cs"]
                 if !haskey(eng_obj, property) && haskey(linecode, property)
                     eng_obj[property] = linecode[property]
                 end
@@ -331,20 +339,24 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         end
 
         nphases = length(eng_obj["f_connections"])
+        nconductors = data_math["conductors"]
+
+        Zbase = (data_math["basekv"] / sqrt(3))^2 * nconductors / (data_math["baseMVA"])
+        Zbase = Zbase / 3
 
         math_obj = _map_defaults(eng_obj, "line", name, kron_reduced)
 
         math_obj["f_bus"] = data_math["lookup"]["bus"][eng_obj["f_bus"]]
         math_obj["t_bus"] = data_math["lookup"]["bus"][eng_obj["t_bus"]]
 
-        math_obj["br_r"] = eng_obj["rmatrix"] * eng_obj["length"]
-        math_obj["br_x"] = eng_obj["xmatrix"] * eng_obj["length"]
+        math_obj["br_r"] = eng_obj["rs"] * eng_obj["length"] / Zbase
+        math_obj["br_x"] = eng_obj["xs"] * eng_obj["length"] / Zbase
 
         math_obj["g_fr"] = fill(0.0, nphases, nphases)
         math_obj["g_to"] = fill(0.0, nphases, nphases)
 
-        math_obj["b_fr"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["cmatrix"] * eng_obj["length"] / 1e9) / 2.0
-        math_obj["b_to"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["cmatrix"] * eng_obj["length"] / 1e9) / 2.0
+        math_obj["b_fr"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["cs"] * eng_obj["length"] / 1e9) / 2.0
+        math_obj["b_to"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["cs"] * eng_obj["length"] / 1e9) / 2.0
 
         math_obj["angmin"] = fill(-60.0, nphases)
         math_obj["angmax"] = fill( 60.0, nphases)
@@ -419,10 +431,10 @@ function _map_eng2math_sourcebus!(data_math::Dict{String,<:Any}, data_eng::Dict{
         "index" => length(data_math["bus"])+1,
         "name" => "_virtual_sourcebus",
         "bus_type" => 3,
-        "vm" => sourcebus_vsource["vm"],
+        "vm" => sourcebus_vsource["vm"] ./ data_eng["settings"]["set_vbase_val"],
         "va" => sourcebus_vsource["va"],
-        "vmin" => sourcebus_vsource["vm"],
-        "vmax" => sourcebus_vsource["vm"],
+        "vmin" => sourcebus_vsource["vm"] ./ data_eng["settings"]["set_vbase_val"],
+        "vmax" => sourcebus_vsource["vm"] ./ data_eng["settings"]["set_vbase_val"],
         "basekv" => data_math["basekv"]
     )
 
@@ -462,8 +474,8 @@ function _map_eng2math_sourcebus!(data_math::Dict{String,<:Any}, data_eng::Dict{
         "tranformer" => false,
         "switch" => false,
         "br_status" => 1,
-        "br_r" => sourcebus_vsource["rmatrix"]./zbase,
-        "br_x" => sourcebus_vsource["xmatrix"]./zbase,
+        "br_r" => sourcebus_vsource["rs"]./zbase,
+        "br_x" => sourcebus_vsource["xs"]./zbase,
         "g_fr" => zeros(nconductors, nconductors),
         "g_to" => zeros(nconductors, nconductors),
         "b_fr" => zeros(nconductors, nconductors),
