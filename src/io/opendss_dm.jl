@@ -3,45 +3,36 @@ import LinearAlgebra: isdiag, diag, pinv
 
 
 const _exclude_duplicate_check = ["options", "filename", "circuit"]
+
 const _dss_edge_components = ["line", "transformer", "reactor"]
+
 const _dss_supported_components = ["line", "linecode", "load", "generator", "capacitor", "reactor", "circuit", "transformer", "pvsystem", "storage", "loadshape"]
-const _dss_option_dtypes = Dict{String,Type}("defaultbasefreq" => Float64, "voltagebases" => Float64, "tolerance" => Float64)
+
+const _dss_option_dtypes = Dict{String,Type}(
+    "defaultbasefreq" => Float64,
+    "voltagebases" => Float64,
+    "tolerance" => Float64)
 
 
 "Discovers all of the buses (not separately defined in OpenDSS), from \"lines\""
-function _discover_buses(data_dss::Dict{String,<:Any})::Array
-    bus_names = []
-    buses = []
+function _discover_buses(data_dss::Dict{String,<:Any})::Set
+    buses = Set([])
     for obj_type in _dss_edge_components
-        if haskey(data_dss, obj_type)
-            dss_objs = data_dss[obj_type]
-            for dss_obj in values(dss_objs)
-                if obj_type == "transformer"
-                    dss_obj = _create_transformer(dss_obj["name"]; _to_sym_keys(dss_obj)...)
-                    for bus in dss_obj["buses"]
-                        name, nodes = _parse_busname(bus)
-                        if !(name in bus_names)
-                            push!(bus_names, name)
-                            push!(buses, (name, nodes))
-                        end
-                    end
-                elseif haskey(dss_obj, "bus2")
-                    for key in ["bus1", "bus2"]
-                        name, nodes = _parse_busname(dss_obj[key])
-                        if !(name in bus_names)
-                            push!(bus_names, name)
-                            push!(buses, (name, nodes))
-                        end
-                    end
+        for (name, dss_obj) in get(data_dss, obj_type, Dict{String,Any}())
+            if obj_type == "transformer"
+                dss_obj = _create_transformer(dss_obj["name"]; _to_sym_keys(dss_obj)...)
+                for bus in dss_obj["buses"]
+                    push!(buses, split(bus, '.'; limit=2)[1])
+                end
+            elseif haskey(dss_obj, "bus2")
+                for key in ["bus1", "bus2"]
+                    push!(buses, split(dss_obj[key], '.'; limit=2)[1])
                 end
             end
         end
     end
-    if length(buses) == 0
-        Memento.error(_LOGGER, "data_dss has no edge components!")
-    else
-        return buses
-    end
+
+    return buses
 end
 
 
@@ -60,9 +51,9 @@ end
 "Adds nodes as buses to `data_eng` from `data_dss`"
 function _dss2eng_bus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool=false)
     buses = _discover_buses(data_dss)
-    for (n, (bus, nodes)) in enumerate(buses)
 
-        @assert(!(length(bus)>=8 && bus[1:8]=="_virtual"), "Bus $bus: identifiers should not start with _virtual.")
+    for bus in buses
+        @assert !startswith(bus, "_virtual") "Bus $bus: identifiers should not start with _virtual"
 
         add_bus!(data_eng, bus; status=1, bus_type=1)
     end
@@ -71,7 +62,6 @@ end
 
 "Adds sourcebus as a voltage source to `data_eng` from `data_dss`"
 function _dss2eng_sourcebus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool=false)
-    # create virtual sourcebus
     circuit = _create_vsource(get(data_dss["circuit"], "bus1", "sourcebus"), data_dss["circuit"]["name"]; _to_sym_keys(data_dss["circuit"])...)
 
     nodes = Array{Bool}([1 1 1 0])
@@ -81,15 +71,10 @@ function _dss2eng_sourcebus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
     phases = circuit["phases"]
     vnom = data_eng["settings"]["set_vbase_val"]
 
-    vm = fill(vm_pu, 3)*vnom
-    va = _wrap_to_pi.([-2*pi/phases*(i-1)+deg2rad(ph1_ang) for i in 1:phases])
+    vm = fill(vm_pu, phases)*vnom
+    va = rad2deg.(_wrap_to_pi.([-2*pi/phases*(i-1)+deg2rad(ph1_ang) for i in 1:phases]))
 
-    add_voltage_source!(data_eng, "sourcebus"; bus="sourcebus", connections=collect(1:phases), vm=vm, va=va, rmatrix=circuit["rmatrix"], xmatrix=circuit["xmatrix"])
-end
-
-
-"Adds voltage sources to `data_eng` from `data_dss`"
-function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool=false)
+    add_voltage_source!(data_eng, "sourcebus"; bus="sourcebus", connections=collect(1:phases), vm=vm, va=va, rs=circuit["rmatrix"], xs=circuit["xmatrix"])
 end
 
 
@@ -119,7 +104,21 @@ function _dss2eng_loadshape!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
 end
 
 
-"Adds loads to `data_eng` from `data_dss`"
+"""
+Adds loads to `data_eng` from `data_dss`
+
+Constant can still be scaled by other settings, fixed cannot
+Note that in the current feature set, fixed therefore equals constant
+
+1: Constant P and Q, default
+2: Constant Z
+3: Constant P and quadratic Q
+4: Exponential
+5: Constant I
+6: Constant P and fixed Q
+# 7: Constant P and quadratic Q (i.e., fixed reactance)
+# 8: ZIP
+"""
 function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool, ground_terminal::Int=4)
     for (name, dss_obj) in get(data_dss, "load", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "load")
@@ -127,45 +126,29 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
 
         # parse the model
         model = defaults["model"]
-        # some info on OpenDSS load models
-        ##################################
-        # Constant can still be scaled by other settings, fixed cannot
-        # Note that in the current feature set, fixed therefore equals constant
-        # 1: Constant P and Q, default
-        if model == 2
-        # 2: Constant Z
-        elseif model == 3
-        # 3: Constant P and quadratic Q
+
+        if model == 3
             Memento.warn(_LOGGER, "$load_name: load model 3 not supported. Treating as model 1.")
             model = 1
         elseif model == 4
-        # 4: Exponential
             Memento.warn(_LOGGER, "$load_name: load model 4 not supported. Treating as model 1.")
             model = 1
-        elseif model == 5
-        # 5: Constant I
-            #warn(_LOGGER, "$name: load model 5 not supported. Treating as model 1.")
-            #model = 1
         elseif model == 6
-        # 6: Constant P and fixed Q
             Memento.warn(_LOGGER, "$load_name: load model 6 identical to model 1 in current feature set. Treating as model 1.")
             model = 1
         elseif model == 7
-        # 7: Constant P and quadratic Q (i.e., fixed reactance)
             Memento.warn(_LOGGER, "$load_name: load model 7 not supported. Treating as model 1.")
             model = 1
         elseif model == 8
-        # 8: ZIP
             Memento.warn(_LOGGER, "$load_name: load model 8 not supported. Treating as model 1.")
             model = 1
         end
-        # save adjusted model type to dict, human-readable
+
         model_int2str = Dict(1=>"constant_power", 2=>"constant_impedance", 5=>"constant_current")
         model = model_int2str[model]
 
         nphases = defaults["phases"]
         conf = defaults["conn"]
-
 
         # connections
         bus = _parse_busname(defaults["bus1"])[1]
@@ -186,6 +169,7 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             if !haskey(data_eng["bus"][bus], "awaiting_ground")
                 data_eng["bus"][bus]["awaiting_ground"] = []
             end
+
             push!(data_eng["bus"][bus]["awaiting_ground"], eng_obj)
         end
 
@@ -227,13 +211,13 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
 
         nphases = defaults["phases"]
 
-        dyz_map = Dict("wye"=>"wye", "delta"=>"delta", "ll"=>"delta", "ln"=>"wye")
-        conn = dyz_map[defaults["conn"]]
+        conn = defaults["conn"]
 
         bus_name = _parse_busname(defaults["bus1"])[1]
         bus2_name = _parse_busname(defaults["bus2"])[1]
+
         if bus_name!=bus2_name
-            Memento.error("Capacitor $(name): bus1 and bus2 should connect to the same bus.")
+            Memento.error(_LOGGER, "Capacitor $(name): bus1 and bus2 should connect to the same bus.")
         end
 
         f_terminals = _get_conductors_ordered_dm(defaults["bus1"], default=collect(1:nphases))
@@ -320,7 +304,7 @@ end
 Given a vector and a list of elements to find, this method will return a list
 of the positions of the elements in that vector.
 """
-function _get_idxs(vec::Array{<:Any,1}, els::Array{<:Any,1})
+function _get_idxs(vec::Vector{<:Any}, els::Vector{<:Any})::Vector{Int}
     ret = Array{Int, 1}(undef, length(els))
     for (i,f) in enumerate(els)
         for (j,l) in enumerate(vec)
@@ -437,9 +421,9 @@ function _dss2eng_linecode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
 
         nphases = size(defaults["rmatrix"])[1]
 
-        eng_obj["rmatrix"] = reshape(defaults["rmatrix"], nphases, nphases)
-        eng_obj["xmatrix"] = reshape(defaults["xmatrix"], nphases, nphases)
-        eng_obj["cmatrix"] = reshape(defaults["cmatrix"], nphases, nphases)
+        eng_obj["rs"] = reshape(defaults["rmatrix"], nphases, nphases)
+        eng_obj["xs"] = reshape(defaults["xmatrix"], nphases, nphases)
+        eng_obj["cs"] = reshape(defaults["cmatrix"], nphases, nphases)
 
         if !haskey(data_eng, "linecode")
             data_eng["linecode"] = Dict{String,Any}()
@@ -477,9 +461,9 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             eng_obj["linecode"] = dss_obj["linecode"]
         end
 
-        for key in ["rmatrix", "xmatrix", "cmatrix"]
-            if haskey(dss_obj, key)
-                eng_obj[key] = reshape(defaults[key], nphases, nphases)
+        for (assign, property) in zip(["rs", "xs", "cs"], ["rmatrix", "xmatrix", "cmatrix"])
+            if haskey(dss_obj, property)
+                eng_obj[assign] = reshape(defaults[property], nphases, nphases)
             end
         end
 
@@ -911,10 +895,10 @@ function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, 
         data_eng["data_model"] = "engineering"
 
         # TODO rename fields
-        data_eng["settings"]["kv_kvar_scalar"] = 1e-3
-        data_eng["settings"]["set_vbase_val"] = (defaults["basekv"]/sqrt(3))/data_eng["settings"]["kv_kvar_scalar"]
+        # data_eng["settings"]["kv_kvar_scalar"] = 1e-3
+        data_eng["settings"]["set_vbase_val"] = defaults["basekv"]
         data_eng["settings"]["set_vbase_bus"] = data_eng["sourcebus"]
-        data_eng["settings"]["set_sbase_val"] = defaults["basemva"]*1/data_eng["settings"]["kv_kvar_scalar"]
+        data_eng["settings"]["set_sbase_val"] = defaults["basemva"]
         data_eng["settings"]["basefreq"] = get(data_dss["options"], "defaultbasefreq", 60.0)
 
         data_eng["files"] = data_dss["filename"]
@@ -944,7 +928,7 @@ function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, 
     _dss2eng_pvsystem!(data_eng, data_dss, import_all)
     _dss2eng_storage!(data_eng, data_dss, import_all)
 
-    # _dss2eng_vsource!(data_eng, data_dss, import_all)
+    _dss2eng_vsource!(data_eng, data_dss, import_all)
 
     if bank_transformers
         _bank_transformers!(data_eng)
