@@ -55,7 +55,13 @@ function _dss2eng_bus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any
     for bus in buses
         @assert !startswith(bus, "_virtual") "Bus $bus: identifiers should not start with _virtual"
 
-        add_bus!(data_eng, bus; status=1, bus_type=1)
+        eng_obj = create_bus(status=1, bus_type=1)
+
+        if !haskey(data_eng, "bus")
+            data_eng["bus"] = Dict{String,Any}()
+        end
+
+        data_eng["bus"][bus] = eng_obj
     end
 end
 
@@ -229,23 +235,23 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             t_terminals = [f_terminals[2:end]..., f_terminals[1]]
         end
 
-        # 'kv' is specified as phase-to-phase for phases=2/3 (unsure for 4 and more)
-        #TODO figure out for more than 3 phases
-        vnom_ln = defaults["kv"]
-        if defaults["phases"] in [2,3]
-            vnom_ln = vnom_ln/sqrt(3)
-        end
-        # 'kvar' is specified for all phases at once; we want the per-phase one, in MVar
-        qnom = (defaults["kvar"]/1E3)/nphases
-        b = fill(qnom/vnom_ln^2, nphases)
+        eng_obj = Dict{String,Any}()
 
-        # convert to a shunt matrix
-        terminals, B = calc_shunt(f_terminals, t_terminals, b)
+        eng_obj["bus"] = bus_name
 
-        # if one terminal is ground (0), reduce shunt addmittance matrix
-        terminals, B = _calc_ground_shunt_admittance_matrix(terminals, B, 0)
+        eng_obj["configuration"] = conn
 
-        eng_obj = create_shunt(status=convert(Int, defaults["enabled"]), bus=bus_name, connections=terminals, g_sh=fill(0.0, size(B)...), b_sh=B)
+        eng_obj["f_terminals"] = f_terminals
+        eng_obj["t_terminals"] = t_terminals
+
+        eng_obj["kv"] = defaults["kv"]
+        eng_obj["kvar"] = defaults["kvar"]
+
+        eng_obj["phases"] = defaults["phases"]
+
+        eng_obj["status"] = convert(Int, defaults["enabled"])
+
+        eng_obj["source_id"] = "capacitor.$name"
 
         if import_all
             _import_all!(eng_obj, defaults, dss_obj["prop_order"])
@@ -317,50 +323,6 @@ function _get_idxs(vec::Vector{<:Any}, els::Vector{<:Any})::Vector{Int}
 end
 
 
-"""
-Given a set of addmittances 'y' connected from the conductors 'f_cnds' to the
-conductors 't_cnds', this method will return a list of conductors 'cnd' and a
-matrix 'Y', which will satisfy I[cnds] = Y*V[cnds].
-"""
-function calc_shunt(f_cnds, t_cnds, y)
-    # TODO add types
-    cnds = unique([f_cnds..., t_cnds...])
-    e(f,t) = reshape([c==f ? 1 : c==t ? -1 : 0 for c in cnds], length(cnds), 1)
-    Y = sum([e(f_cnds[i], t_cnds[i])*y[i]*e(f_cnds[i], t_cnds[i])' for i in 1:length(y)])
-    return (cnds, Y)
-end
-
-
-
-"""
-Given a set of terminals 'cnds' with associated shunt addmittance 'Y', this
-method will calculate the reduced addmittance matrix if terminal 'ground' is
-grounded.
-"""
-function _calc_ground_shunt_admittance_matrix(cnds, Y, ground)
-    # TODO add types
-    if ground in cnds
-        cndsr = setdiff(cnds, ground)
-        cndsr_inds = _get_idxs(cnds, cndsr)
-        Yr = Y[cndsr_inds, cndsr_inds]
-        return (cndsr, Yr)
-    else
-        return cnds, Y
-    end
-end
-
-
-""
-function _rm_floating_cnd(cnds, Y, f)
-    # TODO add types
-    P = setdiff(cnds, f)
-    f_inds = _get_idxs(cnds, [f])
-    P_inds = _get_idxs(cnds, P)
-    Yrm = Y[P_inds,P_inds]-(1/Y[f_inds,f_inds][1])*Y[P_inds,f_inds]*Y[f_inds,P_inds]
-    return (P,Yrm)
-end
-
-
 "Adds generators to `data_eng` from `data_dss`"
 function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "generator", Dict{String,Any}())
@@ -373,22 +335,22 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
 
         eng_obj["bus"] = _parse_busname(defaults["bus1"])[1]
 
-        eng_obj["pg"] = defaults["kw"]
-        eng_obj["qg"] = defaults["kvar"]
-        eng_obj["vg"] = defaults["kv"]
+        eng_obj["kw"] = defaults["kw"]
+        eng_obj["kvar"] = defaults["kvar"]
+        eng_obj["kv"] = defaults["kv"]
+
+        eng_obj["kvar_min"] = defaults["minkvar"]
+        eng_obj["kvar_max"] = defaults["maxkvar"]
 
         eng_obj["control_model"] = defaults["model"]
-
-        # if PV generator mode convert attached bus to PV bus
-        # if eng_obj["control_model"] == 3
-        #     data_eng["bus"][eng_obj["bus"]]["bus_type"] = 2
-        # end
 
         eng_obj["model"] = 2
         eng_obj["startup"] = 0.0
         eng_obj["shutdown"] = 0.0
         eng_obj["ncost"] = 3
         eng_obj["cost"] = [0.0, 1.0, 0.0]
+
+        eng_obj["configuration"] = "wye"
 
         eng_obj["status"] = convert(Int, defaults["enabled"])
 
@@ -461,10 +423,16 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             eng_obj["linecode"] = dss_obj["linecode"]
         end
 
-        for (assign, property) in zip(["rs", "xs", "cs"], ["rmatrix", "xmatrix", "cmatrix"])
-            if haskey(dss_obj, property)
-                eng_obj[assign] = reshape(defaults[property], nphases, nphases)
-            end
+        if any(haskey(dss_obj, key) for key in ["r0", "r1", "rg", "rmatrix"]) || !haskey(dss_obj, "linecode")
+            eng_obj["rs"] = reshape(defaults["rmatrix"], nphases, nphases)
+        end
+
+        if any(haskey(dss_obj, key) for key in ["x0", "x1", "xg", "xmatrix"]) || !haskey(dss_obj, "linecode")
+            eng_obj["xs"] = reshape(defaults["xmatrix"], nphases, nphases)
+        end
+
+        if any(haskey(dss_obj, key) for key in ["b0", "b1", "c0", "c1", "cmatrix"]) || !haskey(dss_obj, "linecode")
+            eng_obj["cs"] = reshape(defaults["cmatrix"], nphases, nphases)
         end
 
         eng_obj["f_connections"] = _get_conductors_ordered_dm(defaults["bus1"], default=collect(1:nphases))
@@ -692,15 +660,16 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
 
         eng_obj["phases"] = defaults["phases"]
 
-        eng_obj["ppv"] = defaults["kva"]
-        eng_obj["qpv"] = defaults["kva"]
-        eng_obj["vpv"] = defaults["kv"]
+        eng_obj["kva"] = defaults["kva"]
+        eng_obj["kv"] = defaults["kv"]
 
         eng_obj["model"] = 2
         eng_obj["startup"] = 0.0
         eng_obj["shutdown"] = 0.0
         eng_obj["ncost"] = 3
         eng_obj["cost"] = [0.0, 1.0, 0.0]
+
+        eng_obj["configuration"] = "wye"
 
         eng_obj["status"] = convert(Int, defaults["enabled"])
 
@@ -732,24 +701,23 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         eng_obj["name"] = name
         eng_obj["bus"] = _parse_busname(defaults["bus1"])[1]
 
-        eng_obj["energy"] = defaults["kwhstored"]
-        eng_obj["energy_rating"] = defaults["kwhrated"]
-        eng_obj["charge_rating"] = defaults["%charge"] * defaults["kwrated"] / 100.0
-        eng_obj["discharge_rating"] = defaults["%discharge"] * defaults["kwrated"] / 100.0
-        eng_obj["charge_efficiency"] = defaults["%effcharge"] / 100.0
-        eng_obj["discharge_efficiency"] = defaults["%effdischarge"] / 100.0
-        eng_obj["thermal_rating"] = defaults["kva"]
-        eng_obj["qmin"] = -defaults["kvar"]
-        eng_obj["qmax"] =  defaults["kvar"]
-        eng_obj["r"] = defaults["%r"] / 100.0
-        eng_obj["x"] = defaults["%x"] / 100.0
-        eng_obj["p_loss"] = defaults["%idlingkw"] * defaults["kwrated"]
-        eng_obj["q_loss"] = defaults["%idlingkvar"] * defaults["kvar"]
+        eng_obj["kwhstored"] = defaults["kwhstored"]
+        eng_obj["kwhrated"] = defaults["kwhrated"]
+        eng_obj["kwrated"] = defaults["kwrated"]
+
+        eng_obj["%charge"] = defaults["%charge"]
+        eng_obj["%discharge"] = defaults["%discharge"]
+        eng_obj["%effcharge"] = defaults["%effcharge"]
+        eng_obj["%effdischarge"] = defaults["%effdischarge"]
+        eng_obj["kva"] = defaults["kva"]
+        eng_obj["kvar"] = defaults["kvar"]
+        eng_obj["%r"] = defaults["%r"]
+        eng_obj["%x"] = defaults["%x"]
+        eng_obj["%idlingkw"] = defaults["%idlingkw"]
+        eng_obj["%idlingkvar"] = defaults["%idlingkvar"]
 
         eng_obj["status"] = convert(Int, defaults["enabled"])
 
-        eng_obj["ps"] = 0.0
-        eng_obj["qs"] = 0.0
 
         eng_obj["source_id"] = "storage.$(name)"
 
@@ -895,7 +863,9 @@ function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, 
         data_eng["data_model"] = "engineering"
 
         # TODO rename fields
-        # data_eng["settings"]["kv_kvar_scalar"] = 1e-3
+        # TODO fix scale factors
+        data_eng["settings"]["v_var_scalar"] = 1e3
+        # data_eng["settings"]["set_vbase_val"] = defaults["basekv"] / sqrt(3) * 1e3
         data_eng["settings"]["set_vbase_val"] = defaults["basekv"]
         data_eng["settings"]["set_vbase_bus"] = data_eng["sourcebus"]
         data_eng["settings"]["set_sbase_val"] = defaults["basemva"]
