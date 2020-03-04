@@ -640,7 +640,7 @@ end
 
 
 ""
-function parse_dss(filename::AbstractString)::Dict
+function parse_dss(filename::AbstractString)::Dict{String,Any}
     data_dss = open(filename) do io
         parse_dss(io)
     end
@@ -772,6 +772,8 @@ function parse_dss(io::IOStream)::Dict{String,Any}
     parse_dss_with_dtypes!(data_dss)
 
     parse_dss_options!(data_dss)
+
+    data_dss["source_type"] = "dss"
 
     return data_dss
 end

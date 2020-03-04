@@ -39,30 +39,19 @@ end
 _replace_nan(v) = map(x -> isnan(x) ? zero(x) : x, v)
 
 
+
 "Counts number of nodes in network"
-function count_nodes(dss_data::Dict{String,Array})::Int
-    sourcebus = get(dss_data["circuit"][1], "bus1", "sourcebus")
-    all_nodes = Dict()
-    for comp_type in values(dss_data)
-        for comp in values(comp_type)
-            if isa(comp, Dict) && haskey(comp, "buses")
-                for busname in values(_parse_array(String, comp["buses"]))
-                    name, nodes = _parse_busname(busname)
+function count_nodes(data::Dict{String,<:Any})::Int
+    n_nodes = 0
 
-                    if !haskey(all_nodes, name)
-                        all_nodes[name] = Set([])
-                    end
-
-                    for (n, node) in enumerate(nodes[1:3])
-                        if node
-                            push!(all_nodes[name], n)
-                        end
-                    end
-                end
-            elseif isa(comp, Dict)
-                for (prop, val) in comp
-                    if startswith(prop, "bus") && prop != "buses"
-                        name, nodes = _parse_busname(val)
+    if get(data, "source_type", "none") == "dss" && !haskey(data, "data_model")
+        sourcebus = get(data["circuit"], "bus1", "sourcebus")
+        all_nodes = Dict()
+        for comp_type in values(data)
+            for comp in values(comp_type)
+                if isa(comp, Dict) && haskey(comp, "buses")
+                    for busname in values(comp["buses"])
+                        name, nodes = _parse_busname(busname)
 
                         if !haskey(all_nodes, name)
                             all_nodes[name] = Set([])
@@ -74,37 +63,50 @@ function count_nodes(dss_data::Dict{String,Array})::Int
                             end
                         end
                     end
+                elseif isa(comp, Dict)
+                    for (prop, val) in comp
+                        if startswith(prop, "bus") && prop != "buses"
+                            name, nodes = _parse_busname(val)
+
+                            if !haskey(all_nodes, name)
+                                all_nodes[name] = Set([])
+                            end
+
+                            for (n, node) in enumerate(nodes[1:3])
+                                if node
+                                    push!(all_nodes[name], n)
+                                end
+                            end
+                        end
+                    end
                 end
             end
         end
-    end
 
-    n_nodes = 0
-    for (name, phases) in all_nodes
-        if name != sourcebus
-            n_nodes += length(phases)
-        end
-    end
-
-    return n_nodes
-end
-
-
-"Counts number of nodes in network"
-function count_nodes(pmd_data::Dict{String,Any})::Int
-    if pmd_data["source_type"] == "dss"
-        Memento.info(_LOGGER, "counting nodes from PowerModelsDistribution structure may not be as accurate as directly from `parse_dss` data due to virtual buses, etc.")
-    end
-
-    n_nodes = 0
-    for bus in values(pmd_data["bus"])
-        if pmd_data["source_type"] == "matlab"
-            n_nodes += sum(bus["vm"] .> 0.0)
-        elseif pmd_data["source_type"] == "dss"
-            if !(pmd_data["source_type"] == "dss" && bus["name"] in ["virtual_sourcebus", pmd_data["sourcebus"]]) && !(pmd_data["source_type"] == "dss" && startswith(bus["name"], "tr") && endswith(bus["name"], r"_b\d"))
-                n_nodes += sum(bus["vm"] .> 0.0)
+        for (name, phases) in all_nodes
+            if name != sourcebus
+                n_nodes += length(phases)
             end
         end
+
+    elseif get(data, "source_type", "none") == "dss" && haskey(data, "data_model")
+
+        if get(data, "data_model", "mathematical") == "mathematical"
+            Memento.info(_LOGGER, "counting nodes from PowerModelsDistribution structure may not be as accurate as directly from `parse_dss` data due to virtual buses, etc.")
+        end
+
+        n_nodes = 0
+        for bus in values(data["bus"])
+            if get(data, "source_type", "none") == "matlab"
+                n_nodes += sum(bus["vm"] .> 0.0)
+            elseif get(data, "source_type", "none") == "dss"
+                if !(data["source_type"] == "dss" && bus["name"] in ["_virtual_sourcebus", data["sourcebus"]]) && !(data["source_type"] == "dss" && startswith(bus["name"], "tr") && endswith(bus["name"], r"_b\d"))
+                    n_nodes += sum(bus["vm"] .> 0.0)
+                end
+            end
+        end
+    else
+        Memento.error(_LOGGER, "Origin of data structure not recognized, cannot count nodes reliably")
     end
 
     return n_nodes

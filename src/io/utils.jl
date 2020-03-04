@@ -217,7 +217,7 @@ Parses a OpenDSS style array string `data` into a one dimensional array of type
 `dtype`. Array strings are capped by either brackets, single quotes, or double
 quotes, and elements are separated by spaces.
 """
-function _parse_array(dtype::Type, data::AbstractString)
+function _parse_array(dtype::Type, data::AbstractString)::Vector
     if occursin(",", data)
         split_char = ','
     else
@@ -242,7 +242,7 @@ function _parse_array(dtype::Type, data::AbstractString)
     end
 
     if dtype == String || dtype == AbstractString || dtype == Char
-        array = []
+        array = Vector{String}([])
         for el in elements
             push!(array, el)
         end
@@ -636,7 +636,9 @@ end
 
 "parses the raw dss values into their expected data types"
 function _parse_element_with_dtype(dtype, element)
-    if _isa_matrix(element)
+    if _isa_rpn(element)
+        out = _parse_rpn(element, dtype)
+    elseif _isa_matrix(element)
         out = _parse_matrix(eltype(dtype), element)
     elseif _isa_array(element)
         out = _parse_array(eltype(dtype), element)

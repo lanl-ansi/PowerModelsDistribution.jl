@@ -714,7 +714,10 @@ end
 
 "Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format"
 function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, bank_transformers::Bool=true)::Dict{String,Any}
-    data_eng = create_data_model()
+    data_eng = Dict{String,Any}(
+        "source_type" => data_dss["source_type"],
+        "settings" => Dict{String,Any}(),
+    )
 
     if import_all
         data_eng["dss_options"] = data_dss["options"]

@@ -43,7 +43,9 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
 
     data_math = Dict{String,Any}(
         "name" => data_eng["name"],
-        "per_unit" => get(data_eng, "per_unit", false)
+        "per_unit" => get(data_eng, "per_unit", false),
+        "source_type" => get(data_eng, "source_type", "none"),
+        "sourcebus" => get(data_eng, "sourcebus", "sourcebus"),
     )
 
     data_math["conductors"] = kron_reduced ? 3 : 4
@@ -134,6 +136,8 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
         @assert all(t in [phases..., neutral] for t in terminals)
 
         math_obj = _init_math_obj("bus", eng_obj, length(data_math["bus"])+1)
+
+        math_obj["name"] = name
 
         math_obj["bus_i"] = math_obj["index"]
         math_obj["bus_type"] = eng_obj["status"] == 1 ? 1 : 4
