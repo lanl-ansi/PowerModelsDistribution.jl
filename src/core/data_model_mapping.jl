@@ -5,7 +5,7 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "bus" => ["vm", "va", "vmin", "vmax"],
     "load" => ["model", "configuration", "status", "source_id"],
     "capacitor" => ["status"],
-    "shunt_reactor" => ["status"],
+    "shunt_reactor" => ["status", "source_id"],
     "generator" => ["model", "startup", "shutdown", "ncost", "cost", "source_id"],
     "pvsystem" => ["model", "startup", "shutdown", "ncost", "cost", "source_id"],
     "storage" => ["status", "source_id"],
@@ -219,6 +219,7 @@ function _map_eng2math_capacitor!(data_math::Dict{String,<:Any}, data_eng::Dict{
         math_obj = _init_math_obj("capacitor", eng_obj, length(data_math["shunt"])+1)
 
         # TODO change to new capacitor shunt calc logic
+        math_obj["name"] = name
         math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
         nphases = eng_obj["phases"]
@@ -273,6 +274,30 @@ end
 
 ""
 function _map_eng2math_shunt_reactor!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
+    for (name, eng_obj) in get(data_eng, "shunt_reactor", Dict{Any,Dict{String,Any}}())
+        math_obj = _init_math_obj("shunt_reactor", eng_obj, length(data_math["shunt"])+1)
+
+        nphases = eng_obj["phases"]
+
+        Zbase = (data_math["basekv"] / sqrt(3.0))^2 * nphases / data_math["baseMVA"]  # Use single-phase base impedance for each phase
+        Gcap = Zbase * sum(eng_obj["kvar"]) / (nphases * 1e3 * (data_math["basekv"] / sqrt(3.0))^2)
+
+        math_obj["name"] = name
+        math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
+
+        math_obj["gs"] = fill(0.0, nphases, nphases)
+        math_obj["bs"] = diagm(0=>fill(Gcap, nphases))
+
+        data_math["shunt"]["$(math_obj["index"])"] = math_obj
+
+        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
+            :from => "shunt_reactor.$name",
+            :to => "shunt.$(math_obj["index"])",
+            :unmap_function => :_map_math2eng_shunt_reactor!,
+            :kron_reduced => kron_reduced,
+            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["shunt_reactor"])
+        )
+    end
 end
 
 
@@ -307,7 +332,6 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         data_math["gen"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :component_type => "generator",
             :from => "generator.$name",
             :to => "gen.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_generator!,

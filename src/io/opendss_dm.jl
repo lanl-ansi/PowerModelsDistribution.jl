@@ -286,41 +286,30 @@ end
 
 "Adds shunt reactors to `data_eng` from `data_dss`"
 function _dss2eng_shunt_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
-    #TODO revisit this in the future
-    # for (name, dss_obj) in get(data_dss, "reactor", Dict{String,Any}())
-    #     if !haskey(dss_obj, "bus2")
-    #         _apply_like!(dss_obj, data_dss, "reactor")
-    #         defaults = _apply_ordered_properties(_create_reactor(dss_obj["bus1"], dss_obj["name"]; _to_sym_keys(dss_obj)...), dss_obj)
+    for (name, dss_obj) in get(data_dss, "reactor", Dict{String,Any}())
+        if !haskey(dss_obj, "bus2")
+            _apply_like!(dss_obj, data_dss, "reactor")
+            defaults = _apply_ordered_properties(_create_reactor(dss_obj["bus1"], dss_obj["name"]; _to_sym_keys(dss_obj)...), dss_obj)
 
-    #         eng_obj = Dict{String,Any}()
+            eng_obj = Dict{String,Any}()
 
-    #         nphases = defaults["phases"]
-    #         name, nodes = _parse_busname(defaults["bus1"])
+            eng_obj["phases"] = defaults["phases"]
+            eng_obj["bus"] = _parse_busname(defaults["bus1"])[1]
+            eng_obj["kvar"] = defaults["kvar"]
+            eng_obj["status"] = convert(Int, defaults["enabled"])
+            eng_obj["source_id"] = "reactor.$name"
 
-    #         Zbase = (data_eng["basekv"] / sqrt(3.0))^2 * nphases / data_eng["baseMVA"]  # Use single-phase base impedance for each phase
-    #         Gcap = Zbase * sum(defaults["kvar"]) / (nphases * 1e3 * (data_eng["basekv"] / sqrt(3.0))^2)
+            if import_all
+                _import_all!(eng_obj, defaults, dss_obj["prop_order"])
+            end
 
-    #         eng_obj["shunt_bus"] = find_bus(name, data_eng)
-    #         eng_obj["name"] = name
-    #         eng_obj["gs"] = _parse_array(0.0, nodes, nphases)  # TODO:
-    #         eng_obj["bs"] = _parse_array(Gcap, nodes, nconductors)
-    #         eng_obj["status"] = convert(Int, defaults["enabled"])
-    #         eng_obj["index"] = length(data_eng["shunt"]) + 1
+            if !haskey(data_eng, "shunt_reactor")
+                data_eng["shunt_reactor"] = Dict{String,Any}()
+            end
 
-    #         eng_obj["active_phases"] = [n for n in 1:nconductors if nodes[n] > 0]
-    #         eng_obj["source_id"] = "reactor.$(name)"
-
-    #         if import_all
-    #             _import_all!(eng_obj, defaults, dss_obj["prop_order"])
-    #         end
-
-    #         if !haskey(data_eng, "shunt_reactor")
-    #             data_eng["shunt_reactor"] = Dict{String,Any}()
-    #         end
-
-    #         data_eng["shunt_reactor"][name] = eng_obj
-    #     end
-    # end
+            data_eng["shunt_reactor"][name] = eng_obj
+        end
+    end
 end
 
 
