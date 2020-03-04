@@ -1,4 +1,4 @@
-import LinearAlgebra
+import LinearAlgebra: diagm
 
 
 const _1to1_maps = Dict{String,Vector{String}}(
@@ -9,11 +9,11 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "generator" => ["model", "startup", "shutdown", "ncost", "cost", "source_id"],
     "pvsystem" => ["model", "startup", "shutdown", "ncost", "cost", "source_id"],
     "storage" => ["status", "source_id"],
-    "line" => [],
-    "switch" => [],
-    "line_reactor" => [],
-    "transformer" => [],
-    "voltage_source" => [],
+    "line" => ["source_id"],
+    "switch" => ["source_id"],
+    "line_reactor" => ["source_id"],
+    "transformer" => ["source_id"],
+    "voltage_source" => ["source_id"],
 )
 
 const _extra_eng_data = Dict{String,Vector{String}}(
@@ -32,13 +32,12 @@ const _extra_eng_data = Dict{String,Vector{String}}(
     "voltage_source" => [],
 )
 
-
 const _node_elements = ["load", "capacitor", "shunt_reactor", "generator", "pvsystem", "storage", "vsource"]
 
 const _edge_elements = ["line", "switch", "transformer"]
 
-# MAP DATA MODEL DOWN
 
+""
 function _map_eng2math(data_eng; kron_reduced::Bool=true)
     @assert get(data_eng, "data_model", "mathematical") == "engineering"
 
@@ -46,6 +45,12 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
         "name" => data_eng["name"],
         "per_unit" => get(data_eng, "per_unit", false)
     )
+
+    data_math["conductors"] = kron_reduced ? 3 : 4
+    data_math["basekv"] = data_eng["settings"]["set_vbase_val"]
+    data_math["baseMVA"] = data_eng["settings"]["set_sbase_val"]
+
+    data_math["data_model"] = "mathematical"
 
     data_math["map"] = Dict{Int,Dict{Symbol,Any}}(
         1 => Dict{Symbol,Any}(
@@ -55,13 +60,7 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
         )
     )
 
-    data_math["settings"] = deepcopy(data_eng["settings"])
-
-    data_math["lookup"] = Dict{String,Dict{Any,Int}}()
-
-    data_math["conductors"] = kron_reduced ? 3 : 4
-    data_math["basekv"] = data_eng["settings"]["set_vbase_val"]
-    data_math["baseMVA"] = data_eng["settings"]["set_sbase_val"]
+    _init_base_components!(data_math)
 
     _map_eng2math_bus!(data_math, data_eng; kron_reduced=kron_reduced)
 
@@ -73,74 +72,60 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
     _map_eng2math_generator!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_pvsystem!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_storage!(data_math, data_eng; kron_reduced=kron_reduced)
-    # _map_eng2math_vsource!(data_math, data_eng; kron_reduced=kron_reduced)  # TODO
+    _map_eng2math_vsource!(data_math, data_eng; kron_reduced=kron_reduced)  # TODO
 
     _map_eng2math_line!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_switch!(data_math, data_eng; kron_reduced=kron_reduced)
 
-    # _map_eng2math_transformer!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_transformer!(data_math, data_eng; kron_reduced=kron_reduced)  # TODO
 
     _map_eng2math_sourcebus!(data_math, data_eng; kron_reduced=kron_reduced)
-
-    data_math["dcline"] = Dict{String,Any}()
-
-    delete!(data_math, "lookup")
-
-
-    data_math["data_model"] = "mathematical"
 
     return data_math
 end
 
 
 ""
-function _map_defaults(eng_obj::Dict{String,Any}, component_type::String, component_name::Any, kron_reduced::Bool=true; phases::Vector{Int}=[1, 2, 3], neutral::Int=4)::Dict{String,Any}
+function _init_math_obj(obj_type::String, eng_obj::Dict{String,<:Any}, index::Int)::Dict{String,Any}
     math_obj = Dict{String,Any}()
 
-    math_obj["name"] = component_name
-
-    if component_type in _node_elements
-        math_obj["source_id"] = eng_obj["source_id"]
-        terminals = eng_obj["connections"]
-    elseif component_type in _edge_elements
-        f_terminals = eng_obj["f_connections"]
-        t_terminals = eng_obj["t_connections"]
-    elseif component_type == "bus"
-        terminals = eng_obj["terminals"]
-    end
-
-    # TODO clean this up
-    for key in _1to1_maps[component_type]
+    for key in _1to1_maps[obj_type]
         if haskey(eng_obj, key)
-            if kron_reduced
-                if component_type == "bus"
-                    terminals = eng_obj["terminals"]
-                    math_obj[key] = eng_obj[key][terminals.!=neutral]
-                elseif component_type in _node_elements
-                    math_obj[key] = eng_obj[key]
-                    _pad_properties!(math_obj, [key], eng_obj["connections"], phases)
-                elseif component_type in _edge_elements
-                    math_obj[key] = eng_obj[key]
-                    # TODO
-                end
-            else
-                math_obj[key] = eng_obj[key]
-            end
+            math_obj[key] = eng_obj[key]
         end
     end
+
+    math_obj["index"] = index
 
     return math_obj
 end
 
 
 ""
-function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
-    if !haskey(data_math, "bus")
-        data_math["bus"] = Dict{String,Any}()
+function _init_base_components!(data_math::Dict{String,<:Any})
+    for key in ["bus", "load", "shunt", "gen", "branch", "switch", "transformer", "storage", "dcline"]
+        if !haskey(data_math, key)
+            data_math[key] = Dict{String,Any}()
+        end
     end
+end
 
+
+""
+function _init_lookup!(data_math::Dict{String,<:Any})
+
+
+    for key in keys(_1to1_maps)
+        if !haskey(data_math["lookup"], key)
+            data_math["lookup"][key] = Dict{Any,Int}()
+        end
+    end
+end
+
+
+""
+function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
     for (name, eng_obj) in get(data_eng, "bus", Dict{String,Any}())
-
         # TODO fix vnom
         phases = get(eng_obj, "phases", [1, 2, 3])
         neutral = get(eng_obj, "neutral", 4)
@@ -148,50 +133,51 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
 
         @assert all(t in [phases..., neutral] for t in terminals)
 
-        math_obj = _map_defaults(eng_obj, "bus", name, kron_reduced; phases=phases, neutral=neutral)
+        math_obj = _init_math_obj("bus", eng_obj, length(data_math["bus"])+1)
 
-        math_obj["vm"] = get(eng_obj, "vm", fill(1.0, length(phases)))
-        math_obj["va"] = get(eng_obj, "va", [_wrap_to_180(-rad2deg(2*pi/length(phases)*(i-1))) for i in phases])
+        math_obj["bus_i"] = math_obj["index"]
+        math_obj["bus_type"] = eng_obj["status"] == 1 ? 1 : 4
 
-        math_obj["vmin"] = fill(0.9, length(phases))
-        math_obj["vmax"] = fill(1.1, length(phases))
+        math_obj["vm"] = get(eng_obj, "vm", fill(1.0, length(terminals)))
+        math_obj["va"] = get(eng_obj, "va", [_wrap_to_180(-rad2deg(2*pi/length(phases)*(i-1))) for i in terminals])
+
+        math_obj["vmin"] = fill(0.0, length(terminals))
+        math_obj["vmax"] = fill(Inf, length(terminals))
 
         math_obj["base_kv"] = data_eng["settings"]["set_vbase_val"]
 
-        math_obj["bus_type"] = eng_obj["status"] == 1 ? 1 : 4
+        if kron_reduced
+            for key in ["vm", "va", "vmin", "vmax"]
+                if haskey(math_obj, key)
+                    math_obj[key] = math_obj[key][terminals.!=neutral]
+                end
+            end
+        end
 
-        math_obj["index"] = length(data_math["bus"]) + 1
-        math_obj["bus_i"] = math_obj["index"]
+        data_math["bus"]["$(math_obj["index"])"] = math_obj
 
-        data_math["bus"][string(math_obj["index"])] = math_obj
+        if !haskey(data_math, "bus_lookup")
+            data_math["bus_lookup"] = Dict{Any,Int}()
+        end
+
+        data_math["bus_lookup"][name] = math_obj["index"]
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :component_type => "bus",
-            :from => name,
-            :to => "$(math_obj["index"])",
+            :from => "bus.$name",
+            :to => ["bus.$(math_obj["index"])"],
             :unmap_function => :_map_math2eng_bus!,
             :kron_reduced => kron_reduced,
             :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["bus"])
         )
-
-        if !haskey(data_math["lookup"], "bus")
-            data_math["lookup"]["bus"] = Dict{Any,Int}()
-        end
-
-        data_math["lookup"]["bus"][name] = math_obj["index"]
     end
 end
 
 
 ""
 function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
-    if !haskey(data_math, "load")
-        data_math["load"] = Dict{String,Any}()
-    end
-
+    # TODO add delta loads
     for (name, eng_obj) in get(data_eng, "load", Dict{Any,Dict{String,Any}}())
-        # math_obj = _map_defaults(eng_obj, "load", name, kron_reduced)
-        math_obj = Dict{String,Any}()
+        math_obj = _init_math_obj("load", eng_obj, length(data_math["load"])+1)
 
         phases = get(eng_obj, "phases", [1, 2, 3])
         conductors = collect(1:data_math["conductors"])
@@ -205,55 +191,35 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             @assert all(load["connections"] .== phases)
         end
 
-        for key in _1to1_maps["load"]
-            math_obj[key] = eng_obj[key]
-        end
-
-        math_obj["load_bus"] = data_math["lookup"]["bus"][eng_obj["bus"]]
+        math_obj["load_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
         math_obj["pd"] = eng_obj["pd"] / 1e3
         math_obj["qd"] = eng_obj["qd"] / 1e3
 
         math_obj["vnom_kv"] = get(eng_obj, "vnom", data_eng["settings"]["set_vbase_val"]/sqrt(3)*1e3)
 
-        # @warn name math_obj["pd"] eng_obj["connections"] phases
         _pad_properties!(math_obj, ["pd", "qd"], eng_obj["connections"], phases; neutral=data_eng["bus"][eng_obj["bus"]]["neutral"])
-
-        math_obj["index"] = length(data_math["load"]) + 1
 
         data_math["load"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :component_type => "load",
-            :from => name,
-            :to => "$(math_obj["index"])",
+            :from => "load.$name",
+            :to => "load.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_load!,
             :kron_reduced => kron_reduced,
             :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["load"])
         )
-
-        if !haskey(data_math["lookup"], "load")
-            data_math["lookup"]["load"] = Dict{Any,Int}()
-        end
-
-        data_math["lookup"]["load"][name] = math_obj["index"]
     end
 end
 
 
 ""
 function _map_eng2math_capacitor!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
-    if !haskey(data_math, "shunt")
-        data_math["shunt"] = Dict{String,Any}()
-    end
-
     for (name, eng_obj) in get(data_eng, "capacitor", Dict{Any,Dict{String,Any}}())
-        math_obj = Dict{String,Any}(
-            "status" => eng_obj["status"]
-        )
+        math_obj = _init_math_obj("capacitor", eng_obj, length(data_math["shunt"])+1)
 
         # TODO change to new capacitor shunt calc logic
-        math_obj["shunt_bus"] = data_math["lookup"]["bus"][eng_obj["bus"]]
+        math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
         nphases = eng_obj["phases"]
 
@@ -277,12 +243,12 @@ function _map_eng2math_capacitor!(data_math::Dict{String,<:Any}, data_eng::Dict{
         N = length(b)
 
         if eng_obj["configuration"] == "wye"
-            B = LinearAlgebra.diagm(0=>b)
-        else # shunt["conn"]=="delta"
+            B = diagm(0=>b)
+        else
             # create delta transformation matrix Md
-            Md = LinearAlgebra.diagm(0=>ones(N), 1=>-ones(N-1))
+            Md = diagm(0=>ones(N), 1=>-ones(N-1))
             Md[N,1] = -1
-            B = Md'*LinearAlgebra.diagm(0=>b)*Md
+            B = Md'*diagm(0=>b)*Md
         end
 
         math_obj["gs"] = fill(0.0, nphases, nphases)
@@ -291,49 +257,33 @@ function _map_eng2math_capacitor!(data_math::Dict{String,<:Any}, data_eng::Dict{
         neutral = get(data_eng["bus"][eng_obj["bus"]], "neutral", 4)
 
         _pad_properties!(math_obj, ["gs", "bs"], eng_obj["f_terminals"], collect(1:data_math["conductors"]); neutral=neutral)
-        math_obj["index"] = length(data_math["shunt"]) + 1
 
         data_math["shunt"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :component_type => "capacitor",
-            :from => name,
-            :to => "$(math_obj["index"])",
+            :from => "capacitor.$name",
+            :to => "shunt.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_capacitor!,
             :kron_reduced => kron_reduced,
             :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["capacitor"])
         )
-
-        if !haskey(data_math["lookup"], "capacitor")
-            data_math["lookup"]["capacitor"] = Dict{Any,Int}()
-        end
-
-        data_math["lookup"]["capacitor"][name] = math_obj["index"]
     end
 end
 
 
 ""
 function _map_eng2math_shunt_reactor!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
-    if !haskey(data_math, "shunt")
-        data_math["shunt"] = Dict{String,Any}()
-    end
-
 end
 
 
 ""
 function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
-    if !haskey(data_math, "gen")
-        data_math["gen"] = Dict{String,Any}()
-    end
-
     for (name, eng_obj) in get(data_eng, "generator", Dict{String,Any}())
-        math_obj = Dict{String,Any}()
+        math_obj = _init_math_obj("generator", eng_obj, length(data_math["gen"])+1)
 
         phases = eng_obj["phases"]
 
-        math_obj["gen_bus"] = data_math["lookup"]["bus"][eng_obj["bus"]]
+        math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["name"] = name
         math_obj["gen_status"] = eng_obj["status"]
 
@@ -349,50 +299,34 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
 
         math_obj["conn"] = eng_obj["configuration"]
 
-        for key in _1to1_maps["generator"]
-            math_obj[key] = eng_obj[key]
-        end
-
         # if PV generator mode convert attached bus to PV bus
         if eng_obj["control_model"] == 3
-            data_math["bus"][data_math["lookup"]["bus"][eng_obj["bus"]]]["bus_type"] = 2
+            data_math["bus"][data_math["bus_lookup"][eng_obj["bus"]]]["bus_type"] = 2
         end
-
-        math_obj["index"] = length(data_math["gen"]) + 1
 
         data_math["gen"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
             :component_type => "generator",
-            :from => name,
-            :to => "$(math_obj["index"])",
+            :from => "generator.$name",
+            :to => "gen.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_generator!,
             :kron_reduced => kron_reduced,
-            # :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["generator"])
+            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["generator"])
         )
-
-        if !haskey(data_math["lookup"], "generator")
-            data_math["lookup"]["generator"] = Dict{Any,Int}()
-        end
-
-        data_math["lookup"]["generator"][name] = math_obj["index"]
     end
 end
 
 
 ""
 function _map_eng2math_pvsystem!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
-    if !haskey(data_math, "gen")
-        data_math["gen"] = Dict{String,Any}()
-    end
-
-    for (name, eng_obj) in get(data_eng, "pvsystem", Dict{String,Any}())
-        math_obj = Dict{String,Any}()
+    for (name, eng_obj) in get(data_eng, "pvsystem", Dict{Any,Dict{String,Any}}())
+        math_obj = _init_math_obj("pvsystem", eng_obj, length(data_math["gen"])+1)
 
         phases = eng_obj["phases"]
 
         math_obj["name"] = name
-        math_obj["gen_bus"] = data_math["lookup"]["bus"][eng_obj["bus"]]
+        math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["gen_status"] = eng_obj["status"]
 
         math_obj["pg"] = fill(eng_obj["kva"] / 1e3 / phases, phases)
@@ -405,47 +339,30 @@ function _map_eng2math_pvsystem!(data_math::Dict{String,<:Any}, data_eng::Dict{<
         math_obj["qmin"] =  fill(-eng_obj["kva"] / 1e3 / phases, phases)
         math_obj["qmax"] =  fill( eng_obj["kva"] / 1e3 / phases, phases)
 
-        for key in _1to1_maps["pvsystem"]
-            math_obj[key] = eng_obj[key]
-        end
-
         math_obj["conn"] = eng_obj["configuration"]
-
-        math_obj["index"] = length(data_math["gen"]) + 1
 
         data_math["gen"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :component_type => "pvsystem",
-            :from => name,
-            :to => "$(math_obj["index"])",
+            :from => "pvsystem.$name",
+            :to => "gen.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_pvsystem!,
             :kron_reduced => kron_reduced,
-            # :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["pvsystem"])
+            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["pvsystem"])
         )
-
-        if !haskey(data_math["lookup"], "pvsystem")
-            data_math["lookup"]["pvsystem"] = Dict{Any,Int}()
-        end
-
-        data_math["lookup"]["pvsystem"][name] = math_obj["index"]
     end
 end
 
 
 ""
 function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
-    if !haskey(data_math, "storage")
-        data_math["storage"] = Dict{String,Any}()
-    end
-
-    for (name, eng_obj) in get(data_eng, "storage", Dict{String,Any}())
-        math_obj = Dict{String,Any}()
+    for (name, eng_obj) in get(data_eng, "storage", Dict{Any,Dict{String,Any}}())
+        math_obj = _init_math_obj("storage", eng_obj, length(data_math["storage"])+1)
 
         phases = eng_obj["phases"]
 
         math_obj["name"] = name
-        math_obj["storage_bus"] = data_math["lookup"]["bus"][eng_obj["bus"]]
+        math_obj["storage_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
         math_obj["energy"] = eng_obj["kwhstored"] / 1e3
         math_obj["energy_rating"] = eng_obj["kwhrated"] / 1e3
@@ -464,49 +381,30 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
         math_obj["ps"] = fill(0.0, phases)
         math_obj["qs"] = fill(0.0, phases)
 
-        for key in _1to1_maps["storage"]
-            math_obj[key] = eng_obj[key]
-        end
-
-        math_obj["index"] = length(data_math["storage"]) + 1
-
         data_math["storage"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :component_type => "storage",
-            :from => name,
-            :to => "$(math_obj["index"])",
+            :from => "storage.$name",
+            :to => "storage.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_storage!,
             :kron_reduced => kron_reduced,
-            # :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["storage"])
+            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["storage"])
         )
-
-        if !haskey(data_math["lookup"], "storage")
-            data_math["lookup"]["storage"] = Dict{Any,Int}()
-        end
-
-        data_math["lookup"]["storage"][name] = math_obj["index"]
-
     end
 end
 
 
 ""
 function _map_eng2math_vsource!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
-    if !haskey(data_math, "gen")
-        data_math["gen"] = Dict{String,Any}()
+    for (name, eng_obj) in get(data_eng, "voltage_source", Dict{Any,Dict{String,Any}}())
+        if eng_obj["bus"] != data_eng["sourcebus"]
+        end
     end
-
-
 end
 
 
 ""
 function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
-    if !haskey(data_math, "branch")
-        data_math["branch"] = Dict{String,Any}()
-    end
-
     for (name, eng_obj) in get(data_eng, "line", Dict{Any,Dict{String,Any}}())
         if haskey(eng_obj, "linecode")
             linecode = data_eng["linecode"][eng_obj["linecode"]]
@@ -518,16 +416,16 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             end
         end
 
+        math_obj = _init_math_obj("line", eng_obj, length(data_math["branch"])+1)
+
         nphases = length(eng_obj["f_connections"])
         nconductors = data_math["conductors"]
 
         Zbase = (data_math["basekv"] / sqrt(3))^2 * nconductors / (data_math["baseMVA"])
         Zbase = Zbase / 3
 
-        math_obj = _map_defaults(eng_obj, "line", name, kron_reduced)
-
-        math_obj["f_bus"] = data_math["lookup"]["bus"][eng_obj["f_bus"]]
-        math_obj["t_bus"] = data_math["lookup"]["bus"][eng_obj["t_bus"]]
+        math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
+        math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
 
         math_obj["br_r"] = eng_obj["rs"] * eng_obj["length"] / Zbase
         math_obj["br_x"] = eng_obj["xs"] * eng_obj["length"] / Zbase
@@ -555,37 +453,43 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
 
         math_obj["br_status"] = eng_obj["status"]
 
-        math_obj["index"] = length(data_math["branch"])+1
-
         data_math["branch"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :component_type => "line",
-            :from => name,
-            :to => "$(math_obj["index"])",
+            :from => "line.$name",
+            :to => "branch.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_load!,
             :kron_reduced => kron_reduced,
             :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["line"])
         )
-
-        if !haskey(data_math["lookup"], "line")
-            data_math["lookup"]["line"] = Dict{Any,Int}()
-        end
-
-        data_math["lookup"]["line"][name] = math_obj["index"]
-
     end
 end
 
 
 ""
 function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
-    if !haskey(data_math, "switch")
-        data_math["switch"] = Dict{String,Any}()
-    end
-
-    # TODO Make real switches, not just lines
+    # TODO enable real switches (right now only using vitual lines)
     for (name, eng_obj) in get(data_eng, "switch", Dict{Any,Dict{String,Any}}())
+        nphases = length(eng_obj["f_connections"])
+        nconductors = data_math["conductors"]
+
+        # build virtual bus
+        f_bus = data_math["bus"]["$(data_math["bus_lookup"][eng_obj["f_bus"]])"]
+
+        bus_obj = Dict{String,Any}(
+            "name" => "_virtual_bus.switch.$name",
+            "bus_i" => length(data_math["bus"])+1,
+            "bus_type" => 1,
+            "vmin" => f_bus["vmin"],
+            "vmax" => f_bus["vmax"],
+            "base_kv" => f_bus["base_kv"],
+            "status" => 1,
+            "index" => length(data_math["bus"])+1,
+        )
+
+        # data_math["bus"]["$(bus_obj["index"])"] = bus_obj
+
+        # build virtual branch
         if haskey(eng_obj, "linecode")
             linecode = data_eng["linecode"][eng_obj["linecode"]]
 
@@ -596,151 +500,220 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
             end
         end
 
-        nphases = length(eng_obj["f_connections"])
-        nconductors = data_math["conductors"]
+        branch_obj = _init_math_obj("switch", eng_obj, length(data_math["branch"])+1)
 
         Zbase = (data_math["basekv"] / sqrt(3))^2 * nconductors / (data_math["baseMVA"])
         Zbase = Zbase / 3
 
-        math_obj = _map_defaults(eng_obj, "line", name, kron_reduced)
+        _branch_obj = Dict{String,Any}(
+            "name" => "_virtual_branch.switch.$name",
+            "source_id" => "_virtual_branch.switch.$name",
+            # "f_bus" => bus_obj["bus_i"],  # TODO enable real switches
+            "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
+            "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
+            "br_r" => eng_obj["rs"] * eng_obj["length"] / Zbase,
+            "br_x" => eng_obj["xs"] * eng_obj["length"] / Zbase,
+            "g_fr" => fill(0.0, nphases, nphases),
+            "g_to" => fill(0.0, nphases, nphases),
+            "b_fr" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["cs"] * eng_obj["length"] / 1e9) / 2.0,
+            "b_to" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["cs"] * eng_obj["length"] / 1e9) / 2.0,
+            "angmin" => fill(-60.0, nphases),
+            "angmax" => fill( 60.0, nphases),
+            "transformer" => false,
+            "shift" => zeros(nphases),
+            "tap" => ones(nphases),
+            "switch" => false,
+            "br_status" => 1,
+        )
 
-        math_obj["f_bus"] = data_math["lookup"]["bus"][eng_obj["f_bus"]]
-        math_obj["t_bus"] = data_math["lookup"]["bus"][eng_obj["t_bus"]]
-
-        math_obj["br_r"] = eng_obj["rs"] * eng_obj["length"] / Zbase
-        math_obj["br_x"] = eng_obj["xs"] * eng_obj["length"] / Zbase
-
-        math_obj["g_fr"] = fill(0.0, nphases, nphases)
-        math_obj["g_to"] = fill(0.0, nphases, nphases)
-
-        math_obj["b_fr"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["cs"] * eng_obj["length"] / 1e9) / 2.0
-        math_obj["b_to"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["cs"] * eng_obj["length"] / 1e9) / 2.0
-
-        math_obj["angmin"] = fill(-60.0, nphases)
-        math_obj["angmax"] = fill( 60.0, nphases)
-
-        math_obj["transformer"] = false
-        math_obj["shift"] = zeros(nphases)
-        math_obj["tap"] = ones(nphases)
+        merge!(branch_obj, _branch_obj)
 
         f_bus = data_eng["bus"][eng_obj["f_bus"]]
         t_bus = data_eng["bus"][eng_obj["t_bus"]]
         neutral = haskey(f_bus, "neutral") ? f_bus["neutral"] : haskey(t_bus, "neutral") ? t_bus["neutral"] : nphases+1
 
-        _pad_properties!(math_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "angmin", "angmax", "tap", "shift"], eng_obj["f_connections"], collect(1:nconductors); neutral=neutral)
+        _pad_properties!(branch_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "angmin", "angmax", "tap", "shift"], eng_obj["f_connections"], collect(1:nconductors); neutral=neutral)
 
-        math_obj["switch"] = true
+        data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 
-        math_obj["br_status"] = eng_obj["status"]
+        # build switch
+        switch_obj = Dict{String,Any}(
+            "name" => name,
+            "source_id" => eng_obj["source_id"],
+            "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
+            "t_bus" => bus_obj["bus_i"],
+            "status" => eng_obj["status"],
+            "index" => length(data_math["switch"])+1
+        )
 
-        math_obj["index"] = length(data_math["branch"])+1
-
-        data_math["branch"]["$(math_obj["index"])"] = math_obj
+        # data_math["switch"]["$(switch_obj["index"])"] = switch_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :component_type => "switch",
-            :from_id => name,
-            :to_id => "$(math_obj["index"])",
+            :from_id => "switch.$name",
+            # :to_id => ["switch.$(switch_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],  # TODO enable real switches
+            :to_id => ["branch.$(branch_obj["index"])"],
             :unmap_function => :_map_math2eng_switch!,
             :kron_reduced => kron_reduced,
             :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["switch"])
         )
-
-        if !haskey(data_math["lookup"], "switch")
-            data_math["lookup"]["switch"] = Dict{Any,Int}()
-        end
-
-        data_math["lookup"]["switch"][name] = math_obj["index"]
-
     end
 end
 
 
 ""
 function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
+    for (name, eng_obj) in get(data_eng, "transformer", Dict{Any,Dict{String,Any}}())
+        # Build map first, so we can update it as we decompose the transformer
+        map_idx = length(data_math["map"])+1
+        data_math["map"][map_idx] = Dict{Symbol,Any}(
+            :from_id => "transformer.$name",
+            :to_id => Vector{String}([]),
+            :unmap_function => :_map_math2eng_transformer!,
+            :kron_reduced => kron_reduced,
+            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["transformer"])
+        )
 
+        to_map = data_math["map"][map_idx][:to_id]
+
+        vnom = eng_obj["vnom"] * data_eng["settings"]["v_var_scalar"]
+        snom = eng_obj["snom"] * data_eng["settings"]["v_var_scalar"]
+
+        nrw = length(eng_obj["bus"])
+
+        # calculate zbase in which the data is specified, and convert to SI
+        zbase = (vnom.^2) ./ snom
+
+        # x_sc is specified with respect to first winding
+        x_sc = eng_obj["xsc"] .* zbase[1]
+
+        # rs is specified with respect to each winding
+        r_s = eng_obj["rs"] .* zbase
+
+        g_sh =  (eng_obj["noloadloss"]*snom[1])/vnom[1]^2
+        b_sh = -(eng_obj["imag"]*snom[1])/vnom[1]^2
+
+        # data is measured externally, but we now refer it to the internal side
+        ratios = vnom/data_eng["settings"]["v_var_scalar"]
+        x_sc = x_sc./ratios[1]^2
+        r_s = r_s./ratios.^2
+        g_sh = g_sh*ratios[1]^2
+        b_sh = b_sh*ratios[1]^2
+
+        # convert x_sc from list of upper triangle elements to an explicit dict
+        y_sh = g_sh + im*b_sh
+        z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
+
+        transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh)
+
+        for w in 1:nrw
+            # 2-WINDING TRANSFORMER
+            # make virtual bus and mark it for reduction
+            tm_nom = eng_obj["configuration"][w]=="delta" ? eng_obj["vnom"][w]*sqrt(3) : eng_obj["vnom"][w]
+
+            transformer_2wa_obj = Dict{String,Any}(
+                "name"          => "_virtual_transformer.$name.$w",
+                "f_bus"         => data_math["bus_lookup"][eng_obj["bus"][w]],
+                "t_bus"         => transformer_t_bus_w[w],
+                "tm_nom"        => tm_nom,
+                "f_connections" => eng_obj["connections"][w],
+                "t_connections" => collect(1:4),
+                "configuration" => eng_obj["configuration"][w],
+                "polarity"      => eng_obj["polarity"][w],
+                "tm"            => eng_obj["tm"][w],
+                "fixed"         => eng_obj["fixed"][w],
+                "index"         => length(data_math["transformer"])+1
+            )
+
+            for prop in ["tm_min", "tm_max", "tm_step"]
+                if haskey(eng_obj, prop)
+                    transformer_2wa_obj[prop] = eng_obj[prop][w]
+                end
+            end
+
+            data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
+
+            push!(to_map, "transformer.$(transformer_2wa_obj["index"])")
+        end
+    end
 end
 
 
 ""
 function _map_eng2math_sourcebus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
-    if !haskey(data_math, "bus")
-        data_math["bus"] = Dict{String,Any}()
+    # TODO create option for lossy vs lossless sourcebus connection
+    for (name, eng_obj) in data_eng["voltage_source"]
+        if eng_obj["bus"] == data_eng["sourcebus"]
+            nconductors = data_math["conductors"]
+
+            # TODO fix per unit problem
+            bus_obj = Dict{String,Any}(
+                "bus_i" => length(data_math["bus"])+1,
+                "index" => length(data_math["bus"])+1,
+                "name" => "_virtual_sourcebus",
+                "bus_type" => 3,
+                "vm" => eng_obj["vm"] ./ data_eng["settings"]["set_vbase_val"],
+                "va" => eng_obj["va"],
+                "vmin" => eng_obj["vm"] ./ data_eng["settings"]["set_vbase_val"],
+                "vmax" => eng_obj["vm"] ./ data_eng["settings"]["set_vbase_val"],
+                "basekv" => data_math["basekv"]
+            )
+
+            data_math["bus"]["$(bus_obj["index"])"] = bus_obj
+
+            gen_obj = Dict{String,Any}(
+                "gen_bus" => bus_obj["bus_i"],
+                "name" => "_virtual_sourcebus",
+                "gen_status" => 1,
+                "pg" => fill(0.0, nconductors),
+                "qg" => fill(0.0, nconductors),
+                "model" => 2,
+                "startup" => 0.0,
+                "shutdown" => 0.0,
+                "ncost" => 3,
+                "cost" => [0.0, 1.0, 0.0],
+                "conn" => "wye",  # TODO change name to configuration
+                "index" => length(data_math["gen"]) + 1,
+                "source_id" => "vsource._virtual_sourcebus"
+            )
+
+            data_math["gen"]["$(gen_obj["index"])"] = gen_obj
+
+            vbase = data_math["basekv"]
+            sbase = data_math["baseMVA"]
+            zbase = vbase^2 / sbase / 3
+
+            branch_obj = Dict{String,Any}(
+                "name" => "_virtual_sourcebus",
+                "source_id" => "vsource._virtual_sourcebus",
+                "f_bus" => bus_obj["bus_i"],
+                "t_bus" => data_math["bus_lookup"][data_eng["sourcebus"]],
+                "angmin" => fill(-60.0, nconductors),
+                "angmax" => fill( 60.0, nconductors),
+                "shift" => fill(0.0, nconductors),
+                "tap" => fill(1.0, nconductors),
+                "tranformer" => false,
+                "switch" => false,
+                "br_status" => 1,
+                "br_r" => eng_obj["rs"]./zbase,
+                "br_x" => eng_obj["xs"]./zbase,
+                "g_fr" => zeros(nconductors, nconductors),
+                "g_to" => zeros(nconductors, nconductors),
+                "b_fr" => zeros(nconductors, nconductors),
+                "b_to" => zeros(nconductors, nconductors),
+                "index" => length(data_math["branch"])+1
+            )
+
+            data_math["branch"]["$(branch_obj["index"])"] = branch_obj
+
+            data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
+                :from_id => "voltage_source.$name",
+                :to_id => ["gen.$(gen_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],
+                :unmap_function => :_map_math2eng_sourcebus!,
+                :kron_reduced => kron_reduced,
+                :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["voltage_source"])
+            )
+        end
     end
-
-    if !haskey(data_math, "gen")
-        data_math["gen"] = Dict{String,Any}()
-    end
-
-    if !haskey(data_math, "branch")
-        data_math["branch"] = Dict{String,Any}()
-    end
-
-    sourcebus = data_eng["sourcebus"]
-    sourcebus_vsource = data_eng["voltage_source"][sourcebus]
-
-    nconductors = data_math["conductors"]
-
-    # TODO fix per unit problem
-    bus_obj = Dict{String,Any}(
-        "bus_i" => length(data_math["bus"])+1,
-        "index" => length(data_math["bus"])+1,
-        "name" => "_virtual_sourcebus",
-        "bus_type" => 3,
-        "vm" => sourcebus_vsource["vm"] ./ data_eng["settings"]["set_vbase_val"],
-        "va" => sourcebus_vsource["va"],
-        "vmin" => sourcebus_vsource["vm"] ./ data_eng["settings"]["set_vbase_val"],
-        "vmax" => sourcebus_vsource["vm"] ./ data_eng["settings"]["set_vbase_val"],
-        "basekv" => data_math["basekv"]
-    )
-
-    data_math["bus"]["$(bus_obj["index"])"] = bus_obj
-
-    gen_obj = Dict{String,Any}(
-        "gen_bus" => bus_obj["bus_i"],
-        "name" => "_virtual_sourcebus",
-        "gen_status" => sourcebus_vsource["status"],
-        "pg" => fill(0.0, nconductors),
-        "qg" => fill(0.0, nconductors),
-        "model" => 2,
-        "startup" => 0.0,
-        "shutdown" => 0.0,
-        "ncost" => 3,
-        "cost" => [0.0, 1.0, 0.0],
-        "conn" => "wye",  # TODO change name to configuration
-        "index" => length(data_math["gen"]) + 1,
-        "source_id" => "vsource._virtual_sourcebus"
-    )
-
-    data_math["gen"]["$(gen_obj["index"])"] = gen_obj
-
-    vbase = data_math["basekv"]
-    sbase = data_math["baseMVA"]
-    zbase = vbase^2 / sbase / 3
-
-    branch_obj = Dict{String,Any}(
-        "name" => "_virtual_sourcebus",
-        "source_id" => "vsource._virtual_sourcebus",
-        "f_bus" => bus_obj["bus_i"],
-        "t_bus" => data_math["lookup"]["bus"][sourcebus],
-        "angmin" => fill(-60.0, nconductors),
-        "angmax" => fill( 60.0, nconductors),
-        "shift" => fill(0.0, nconductors),
-        "tap" => fill(1.0, nconductors),
-        "tranformer" => false,
-        "switch" => false,
-        "br_status" => 1,
-        "br_r" => sourcebus_vsource["rs"]./zbase,
-        "br_x" => sourcebus_vsource["xs"]./zbase,
-        "g_fr" => zeros(nconductors, nconductors),
-        "g_to" => zeros(nconductors, nconductors),
-        "b_fr" => zeros(nconductors, nconductors),
-        "b_to" => zeros(nconductors, nconductors),
-        "index" => length(data_math["branch"])+1
-    )
-    # branch_obj = _create_vbranch(data_math, data_math["lookup"]["bus"][sourcebus], bus_obj["bus_i"]; name="_virtual_sourcebus", br_r=sourcebus_vsource["rs"]/1e3, br_x=sourcebus_vsource["xs"]/1e3)
-
-    data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 end
 
 
@@ -788,7 +761,7 @@ function _lossy_ground_to_shunt!(data_model)
 
             if !isempty(grounding_lossy)
                 zg = bus["rg"][grounding_lossy_inds].+im*bus["xg"][grounding_lossy_inds]
-                Y_sh = LinearAlgebra.diagm(0=>inv.(zg)) # diagonal matrix, so matrix inverse is element-wise inverse
+                Y_sh = diagm(0=>inv.(zg)) # diagonal matrix, so matrix inverse is element-wise inverse
                 add_virtual!(data_model, "shunt", create_shunt(bus=bus["id"], connections=grounding_lossy,
                     g_sh=real.(Y_sh), b_sh=imag.(Y_sh)
                 ))
@@ -812,14 +785,14 @@ function _load_to_shunt!(data_model)
 
                 if load["configuration"]=="delta"
                     # create delta transformation matrix Md
-                    Md = LinearAlgebra.diagm(0=>ones(N), 1=>-ones(N-1))
+                    Md = diagm(0=>ones(N), 1=>-ones(N-1))
                     Md[N,1] = -1
-                    Y = Md'*LinearAlgebra.diagm(0=>y)*Md
+                    Y = Md'*diagm(0=>y)*Md
 
                 else # load["configuration"]=="wye"
-                    Y_fr = LinearAlgebra.diagm(0=>y)
+                    Y_fr = diagm(0=>y)
                     # B = [[b]; -1'*[b]]*[I -1]
-                    Y = vcat(Y_fr, -ones(N)'*Y_fr)*hcat(LinearAlgebra.diagm(0=>ones(N)),  -ones(N))
+                    Y = vcat(Y_fr, -ones(N)'*Y_fr)*hcat(diagm(0=>ones(N)),  -ones(N))
                 end
 
                 shunt = add_virtual!(data_model, "shunt", create_shunt(bus=load["bus"], connections=load["connections"], b_sh=imag.(Y), g_sh=real.(Y)))
@@ -849,22 +822,22 @@ function _capacitor_to_shunt!(data_model)
 
             if cap["configuration"]=="delta"
                 # create delta transformation matrix Md
-                Md = LinearAlgebra.diagm(0=>ones(N), 1=>-ones(N-1))
+                Md = diagm(0=>ones(N), 1=>-ones(N-1))
                 Md[N,1] = -1
-                B = Md'*LinearAlgebra.diagm(0=>b)*Md
+                B = Md'*diagm(0=>b)*Md
 
             elseif cap["configuration"]=="wye-grounded"
-                B = LinearAlgebra.diagm(0=>b)
+                B = diagm(0=>b)
 
             elseif cap["configuration"]=="wye-floating"
                 # this is a floating wye-segment
                 # B = [b]*(I-1/(b'*1)*[b';...;b'])
-                B = LinearAlgebra.diagm(0=>b)*(LinearAlgebra.diagm(0=>ones(N)) - 1/sum(b)*repeat(b',N,1))
+                B = diagm(0=>b)*(diagm(0=>ones(N)) - 1/sum(b)*repeat(b',N,1))
 
             else # cap["configuration"]=="wye"
-                B_fr = LinearAlgebra.diagm(0=>b)
+                B_fr = diagm(0=>b)
                 # B = [[b]; -1'*[b]]*[I -1]
-                B = vcat(B_fr, -ones(N)'*B_fr)*hcat(LinearAlgebra.diagm(0=>ones(N)),  -ones(N))
+                B = vcat(B_fr, -ones(N)'*B_fr)*hcat(diagm(0=>ones(N)),  -ones(N))
             end
 
             shunt = create_shunt(NaN, cap["bus"], cap["connections"], b_sh=B)
@@ -881,139 +854,6 @@ function _capacitor_to_shunt!(data_model)
     return mappings
 end
 
-
-""
-function _decompose_voltage_source!(data_model)
-    mappings = []
-
-    if haskey(data_model, "voltage_source")
-        for (id, vs) in data_model["voltage_source"]
-
-            bus = data_model["bus"][vs["bus"]]
-
-            line_kwargs = Dict(Symbol(prop)=>vs[prop] for prop in ["rs", "xs", "g_fr", "b_fr", "g_to", "b_to", "linecode", "length"] if haskey(vs, prop))
-            lossy = !isempty(line_kwargs)
-
-            # if any loss parameters (or linecode) were supplied, then create a line and internal bus
-            if lossy
-                sourcebus = add_virtual!(data_model, "bus", create_bus(terminals=deepcopy(vs["connections"])))
-
-                line = add_virtual!(data_model, "line", create_line(;
-                    f_bus=sourcebus["id"], f_connections=vs["connections"], t_bus=bus["id"], t_connections=vs["connections"],
-                    line_kwargs...
-                ))
-            else
-                sourcebus = bus
-            end
-
-            ground = _get_ground!(sourcebus)
-            gen = create_generator(bus=sourcebus["id"], connections=[vs["connections"]..., ground])
-
-            for prop in ["pg_max", "pg_min", "qg_max", "qg_min"]
-                if haskey(vs, prop)
-                    gen[prop] = vs[prop]
-                end
-            end
-
-            add_virtual!(data_model, "generator", gen)
-
-            conns = vs["connections"]
-            terminals = bus["terminals"]
-
-            tmp = Dict(enumerate(conns))
-            sourcebus["vm"] = sourcebus["vmax"] = sourcebus["vmin"] = [haskey(tmp, t) ? vs["vm"][tmp[t]] : NaN for t in terminals]
-            sourcebus["va"] = [haskey(tmp, t) ? vs["va"][tmp[t]] : NaN for t in terminals]
-            sourcebus["bus_type"] = 3
-
-            delete_component!(data_model, "voltage_source", vs["id"])
-            push!(mappings, Dict("voltage_source"=>vs, "gen_id"=>gen["id"],
-                "vbus_id"  => lossy ? sourcebus["id"] : nothing,
-                "vline_id" => lossy ? line["id"]      : nothing,
-            ))
-        end
-    end
-
-    return mappings
-end
-
-
-"""
-Replaces complex transformers with a composition of ideal transformers and lines
-which model losses. New buses (virtual, no physical meaning) are added.
-"""
-function _decompose_transformer_nw!(data_model)
-    mappings = []
-
-    if haskey(data_model, "transformer_nw")
-        for (tr_id, trans) in data_model["transformer_nw"]
-
-            vnom = trans["vnom"]*data_model["settings"]["v_var_scalar"]
-            snom = trans["snom"]*data_model["settings"]["v_var_scalar"]
-
-            nrw = length(trans["bus"])
-
-            # calculate zbase in which the data is specified, and convert to SI
-            zbase = (vnom.^2)./snom
-            # x_sc is specified with respect to first winding
-            x_sc = trans["xsc"].*zbase[1]
-            # rs is specified with respect to each winding
-            r_s = trans["rs"].*zbase
-
-            g_sh =  (trans["noloadloss"]*snom[1])/vnom[1]^2
-            b_sh = -(trans["imag"]*snom[1])/vnom[1]^2
-
-            # data is measured externally, but we now refer it to the internal side
-            ratios = vnom/data_model["settings"]["v_var_scalar"]
-            x_sc = x_sc./ratios[1]^2
-            r_s = r_s./ratios.^2
-            g_sh = g_sh*ratios[1]^2
-            b_sh = b_sh*ratios[1]^2
-
-            # convert x_sc from list of upper triangle elements to an explicit dict
-            y_sh = g_sh + im*b_sh
-            z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
-
-            vbuses, vlines, trans_t_bus_w = _build_loss_model!(data_model, r_s, z_sc, y_sh)
-
-            trans_ids_w = Array{String, 1}(undef, nrw)
-            for w in 1:nrw
-                # 2-WINDING TRANSFORMER
-                # make virtual bus and mark it for reduction
-                tm_nom = trans["configuration"][w]=="delta" ? trans["vnom"][w]*sqrt(3) : trans["vnom"][w]
-                trans_2wa = add_virtual!(data_model, "transformer", Dict(
-                    "f_bus"         => trans["bus"][w],
-                    "t_bus"         => trans_t_bus_w[w],
-                    "tm_nom"        => tm_nom,
-                    "f_connections" => trans["connections"][w],
-                    "t_connections" => collect(1:4),
-                    "configuration" => trans["configuration"][w],
-                    "polarity"      => trans["polarity"][w],
-                    "tm"            => trans["tm"][w],
-                    "fixed"         => trans["fixed"][w],
-                ))
-
-                for prop in ["tm_min", "tm_max", "tm_step"]
-                    if haskey(trans, prop)
-                        trans_2wa[prop] = trans[prop][w]
-                    end
-                end
-
-                trans_ids_w[w] = trans_2wa["id"]
-            end
-
-            delete_component!(data_model, "transformer_nw", trans)
-
-            push!(mappings, Dict(
-                "trans"=>trans,
-                "trans_2wa"=>trans_ids_w,
-                "vlines"=>vlines,
-                "vbuses"=>vbuses,
-            ))
-        end
-    end
-
-    return mappings
-end
 
 
 """
@@ -1063,18 +903,20 @@ end
 
 
 ""
-function _build_loss_model!(data_model, r_s, zsc, ysh; n_phases=3)
+function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::String, to_map::Vector{String}, r_s::Vector{Float64}, zsc::Dict{Tuple{Int,Int},Complex{Float64}}, ysh::Complex{Float64}; nphases::Int=3)
     # precompute the minimal set of buses and lines
     N = length(r_s)
     tr_t_bus = collect(1:N)
     buses = Set(1:2*N)
+
     edges = [[[i,i+N] for i in 1:N]..., [[i+N,j+N] for (i,j) in keys(zsc)]...]
     lines = Dict(enumerate(edges))
+
     z = Dict(enumerate([r_s..., values(zsc)...]))
+
     shunts = Dict(2=>ysh)
 
     # remove Inf lines
-
     for (l,edge) in lines
         if real(z[l])==Inf || imag(z[l])==Inf
             delete!(lines, l)
@@ -1083,23 +925,25 @@ function _build_loss_model!(data_model, r_s, zsc, ysh; n_phases=3)
     end
 
     # merge short circuits
-
     stack = Set(keys(lines))
 
     while !isempty(stack)
         l = pop!(stack)
         if z[l] == 0
             (i,j) = lines[l]
+
             # remove line
             delete!(lines, l)
+
             # remove  bus j
             delete!(buses, j)
+
             # update lines
             for (k,(edge)) in lines
-                if edge[1]==j
+                if edge[1] == j
                     edge[1] = i
                 end
-                if edge[2]==j
+                if edge[2] == j
                     edge[2] = i
                 end
                 if edge[1]==edge[2]
@@ -1107,6 +951,7 @@ function _build_loss_model!(data_model, r_s, zsc, ysh; n_phases=3)
                     delete!(stack, k)
                 end
             end
+
             # move shunts
             if haskey(shunts, j)
                 if haskey(shunts, i)
@@ -1115,9 +960,10 @@ function _build_loss_model!(data_model, r_s, zsc, ysh; n_phases=3)
                     shunts[i] = shunts[j]
                 end
             end
+
             # update transformer buses
             for w in 1:N
-                if tr_t_bus[w]==j
+                if tr_t_bus[w] == j
                     tr_t_bus[w] = i
                 end
             end
@@ -1126,45 +972,70 @@ function _build_loss_model!(data_model, r_s, zsc, ysh; n_phases=3)
 
     bus_ids = Dict()
     for bus in buses
-        bus_ids[bus] = add_virtual_get_id!(data_model, "bus", create_bus(id=""))
+        bus_obj = Dict{String,Any}(
+            "name" => "_virtual_bus.transformer.$(transformer_name)_$(bus)",
+            "bus_i" => length(data_math["bus"])+1,
+            "vm" => fill(1.0, nphases),
+            "va" => fill(0.0, nphases),
+            "vmin" => fill(0.0, nphases),
+            "vmax" => fill(Inf, nphases),
+            "base_kv" => 1.0,
+            "bus_type" => 1,
+            "status" => 1,
+            "index" => length(data_math["bus"])+1,
+        )
+
+        data_math["bus"]["$(bus_obj["index"])"] = bus_obj
+
+        bus_ids[bus] = bus_obj["bus_i"]
+
+        push!(to_map, "bus.$(bus_obj["index"])")
     end
-    line_ids = Dict()
+
+
     for (l,(i,j)) in lines
         # merge the shunts into the shunts of the pi model of the line
         g_fr = b_fr = g_to = b_to = 0
+
         if haskey(shunts, i)
             g_fr = real(shunts[i])
             b_fr = imag(shunts[i])
             delete!(shunts, i)
         end
+
         if haskey(shunts, j)
             g_fr = real(shunts[j])
             b_fr = imag(shunts[j])
             delete!(shunts, j)
         end
-        line_ids[l] = add_virtual_get_id!(data_model, "line", Dict(
-            "status"=>1,
-            "f_bus"=>bus_ids[i], "t_bus"=>bus_ids[j],
-            "f_connections"=>collect(1:n_phases),
-            "t_connections"=>collect(1:n_phases),
-            "rs"=>LinearAlgebra.diagm(0=>fill(real(z[l]), n_phases)),
-            "xs"=>LinearAlgebra.diagm(0=>fill(imag(z[l]), n_phases)),
-            "g_fr"=>LinearAlgebra.diagm(0=>fill(g_fr, n_phases)),
-            "b_fr"=>LinearAlgebra.diagm(0=>fill(b_fr, n_phases)),
-            "g_to"=>LinearAlgebra.diagm(0=>fill(g_to, n_phases)),
-            "b_to"=>LinearAlgebra.diagm(0=>fill(b_to, n_phases)),
-        ))
+
+        branch_obj = Dict{String,Any}(
+            "name" => "_virtual_branch.transformer.$(transformer_name)_$(l)",
+            "source_id" => "_virtual_branch.transformer.$(transformer_name)_$(l)",
+            "index" => length(data_math["branch"])+1,
+            "br_status"=>1,
+            "f_bus"=>bus_ids[i],
+            "t_bus"=>bus_ids[j],
+            "f_connections"=>collect(1:nphases),
+            "t_connections"=>collect(1:nphases),
+            "br_r" => diagm(0=>fill(real(z[l]), nphases)),
+            "br_x" => diagm(0=>fill(imag(z[l]), nphases)),
+            "g_fr" => diagm(0=>fill(g_fr, nphases)),
+            "b_fr" => diagm(0=>fill(b_fr, nphases)),
+            "g_to" => diagm(0=>fill(g_to, nphases)),
+            "b_to" => diagm(0=>fill(b_to, nphases)),
+            "angmin" => fill(-60.0, nphases),
+            "angmax" => fill( 60.0, nphases),
+            "shift" => zeros(nphases),
+            "tap" => ones(nphases)
+        )
+
+        data_math["branch"]["$(branch_obj["index"])"] = branch_obj
+
+        push!(to_map, "branch.$(branch_obj["index"])")
     end
 
-    return bus_ids, line_ids, [bus_ids[bus] for bus in tr_t_bus]
-end
-
-
-""
-function _alias!(dict, fr, to)
-    if haskey(dict, fr)
-        dict[to] = dict[fr]
-    end
+    return [bus_ids[bus] for bus in tr_t_bus]
 end
 
 
@@ -1190,102 +1061,6 @@ function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String},
             end
         end
     end
-end
-
-
-""
-function data_model_make_compatible_v8!(data_model; phases=[1, 2, 3], neutral=4)
-    data_model["conductors"] = 3
-    data_model["buspairs"] = nothing
-    for (_, bus) in data_model["bus"]
-        bus["bus_i"] = bus["index"]
-        terminals = bus["terminals"]
-        @assert(all(t in [phases..., neutral] for t in terminals))
-        for prop in ["vm", "va", "vmin", "vmax"]
-            if haskey(bus, prop)
-                if length(bus[prop])==4
-                    val = bus[prop]
-                    bus[prop] = val[terminals.!=neutral]
-                end
-            end
-        end
-    end
-
-    for (_, load) in data_model["load"]
-        # remove neutral
-        if load["configuration"]=="wye"
-            bus = data_model["bus"][string(load["bus"])]
-            @assert(length(bus["grounded"])==1 && bus["grounded"][1]==load["connections"][end])
-            load["connections"] = load["connections"][1:end-1]
-            _pad_properties!(load, ["pd", "qd"], load["connections"], phases)
-        else
-            # three-phase loads can only be delta-connected
-            #@assert(all(load["connections"].==phases))
-        end
-        _alias!(load, "bus", "load_bus")
-    end
-
-    data_model["gen"] = data_model["generator"]
-
-    # has to be three-phase
-    for (_, gen) in data_model["gen"]
-        if gen["configuration"]=="wye"
-            @assert(all(gen["connections"].==[phases..., neutral]))
-        else
-            @assert(all(gen["connections"].==phases))
-        end
-
-        _alias!(gen, "status", "gen_status")
-        _alias!(gen, "bus", "gen_bus")
-        _alias!(gen, "pg_min", "pmin")
-        _alias!(gen, "qg_min", "qmin")
-        _alias!(gen, "pg_max", "pmax")
-        _alias!(gen, "qg_max", "qmax")
-        _alias!(gen, "configuration", "conn")
-
-        gen["model"] = 2
-    end
-
-    data_model["branch"] = data_model["line"]
-    for (_, br) in data_model["branch"]
-        @assert(all(x in phases for x in br["f_connections"]))
-        @assert(all(x in phases for x in br["t_connections"]))
-        @assert(all(br["f_connections"].==br["t_connections"]))
-
-        _pad_properties!(br, ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to", "s_rating", "c_rating"], br["f_connections"], phases)
-
-        # rename
-        _alias!(br, "status", "br_status")
-        _alias!(br, "rs", "br_r")
-        _alias!(br, "xs", "br_x")
-
-        br["tap"] = 1.0
-        br["shift"] = 0
-
-        if !haskey(br, "angmin")
-            N = size(br["br_r"])[1]
-            br["angmin"] = fill(-pi/2, N)
-            br["angmax"] = fill(pi/2, N)
-        end
-    end
-
-    for (_, shunt) in data_model["shunt"]
-        @assert(all(x in phases for x in shunt["connections"]))
-        _pad_properties!(shunt, ["g_sh", "b_sh"], shunt["connections"], phases)
-        _alias!(shunt, "bus", "shunt_bus")
-        _alias!(shunt, "g_sh", "gs")
-        _alias!(shunt, "b_sh", "bs")
-    end
-
-    data_model["dcline"] = Dict()
-    data_model["transformer"] = data_model["transformer"]
-
-    data_model["per_unit"] = true
-    data_model["baseMVA"] = data_model["settings"]["sbase"]*data_model["settings"]["v_var_scalar"]/1E6
-    data_model["name"] = "IDC"
-
-
-    return data_model
 end
 
 
@@ -1333,13 +1108,6 @@ function solution_unmap!(solution::Dict, data_model::Dict)
     end
 end
 
-
-""
-function transform_solution!(solution, data_model)
-    solution_make_si!(solution, data_model)
-    solution_identify!(solution, data_model)
-    solution_unmap!(solution, data_model)
-end
 
 
 """
