@@ -409,7 +409,7 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         if haskey(eng_obj, "linecode")
             linecode = data_eng["linecode"][eng_obj["linecode"]]
 
-            for property in ["rs", "xs", "cs"]
+            for property in ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
                 if !haskey(eng_obj, property) && haskey(linecode, property)
                     eng_obj[property] = linecode[property]
                 end
@@ -430,11 +430,11 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         math_obj["br_r"] = eng_obj["rs"] * eng_obj["length"] / Zbase
         math_obj["br_x"] = eng_obj["xs"] * eng_obj["length"] / Zbase
 
-        math_obj["g_fr"] = fill(0.0, nphases, nphases)
-        math_obj["g_to"] = fill(0.0, nphases, nphases)
+        math_obj["g_fr"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9)
+        math_obj["g_to"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_to"] * eng_obj["length"] / 1e9)
 
-        math_obj["b_fr"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["cs"] * eng_obj["length"] / 1e9) / 2.0
-        math_obj["b_to"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["cs"] * eng_obj["length"] / 1e9) / 2.0
+        math_obj["b_fr"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9)
+        math_obj["b_to"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_to"] * eng_obj["length"] / 1e9)
 
         math_obj["angmin"] = fill(-60.0, nphases)
         math_obj["angmax"] = fill( 60.0, nphases)
@@ -493,7 +493,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
         if haskey(eng_obj, "linecode")
             linecode = data_eng["linecode"][eng_obj["linecode"]]
 
-            for property in ["rs", "xs", "cs"]
+            for property in ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
                 if !haskey(eng_obj, property) && haskey(linecode, property)
                     eng_obj[property] = linecode[property]
                 end
@@ -513,10 +513,10 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
             "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
             "br_r" => eng_obj["rs"] * eng_obj["length"] / Zbase,
             "br_x" => eng_obj["xs"] * eng_obj["length"] / Zbase,
-            "g_fr" => fill(0.0, nphases, nphases),
-            "g_to" => fill(0.0, nphases, nphases),
-            "b_fr" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["cs"] * eng_obj["length"] / 1e9) / 2.0,
-            "b_to" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["cs"] * eng_obj["length"] / 1e9) / 2.0,
+            "g_fr" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9),
+            "g_to" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_to"] * eng_obj["length"] / 1e9),
+            "b_fr" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9),
+            "b_to" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_to"] * eng_obj["length"] / 1e9),
             "angmin" => fill(-60.0, nphases),
             "angmax" => fill( 60.0, nphases),
             "transformer" => false,

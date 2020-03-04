@@ -403,7 +403,11 @@ function _dss2eng_linecode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
 
         eng_obj["rs"] = reshape(defaults["rmatrix"], nphases, nphases)
         eng_obj["xs"] = reshape(defaults["xmatrix"], nphases, nphases)
-        eng_obj["cs"] = reshape(defaults["cmatrix"], nphases, nphases)
+
+        eng_obj["b_fr"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
+        eng_obj["b_to"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
+        eng_obj["g_fr"] = fill(0.0, nphases, nphases)
+        eng_obj["g_to"] = fill(0.0, nphases, nphases)
 
         if !haskey(data_eng, "linecode")
             data_eng["linecode"] = Dict{String,Any}()
@@ -450,7 +454,10 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         end
 
         if any(haskey(dss_obj, key) for key in ["b0", "b1", "c0", "c1", "cmatrix"]) || !haskey(dss_obj, "linecode")
-            eng_obj["cs"] = reshape(defaults["cmatrix"], nphases, nphases)
+            eng_obj["b_fr"] = defaults["cmatrix"] ./ 2.0
+            eng_obj["b_to"] = defaults["cmatrix"] ./ 2.0
+            eng_obj["g_fr"] = fill(0.0, nphases, nphases)
+            eng_obj["g_to"] = fill(0.0, nphases, nphases)
         end
 
         eng_obj["f_connections"] = _get_conductors_ordered_dm(defaults["bus1"], default=collect(1:nphases))
