@@ -75,7 +75,7 @@
     #
     #     dss = PMD.parse_dss(file)
     #     PMD.parse_dss_with_dtypes!(dss, ["line", "load", "transformer"])
-    #     trans = PMD._create_transformer(dss["transformer"][1]["name"]; PMD._to_sym_keys(dss["transformer"][1])...)
+    #     trans = PMD._create_transformer(dss["transformer"][1]["name"]; PMD._to_kwargs(dss["transformer"][1])...)
     #     @test all(trans["%rs"] .== [1.0, 2.0])
     # end
 

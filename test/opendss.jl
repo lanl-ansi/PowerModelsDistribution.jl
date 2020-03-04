@@ -8,7 +8,7 @@
 
         loadshapes = Dict{String,Any}()
         for ls in dss["loadshape"]
-            loadshapes[ls["name"]] = PMD._create_loadshape(ls["name"]; PMD._to_sym_keys(ls)...)
+            loadshapes[ls["name"]] = PMD._create_loadshape(ls["name"]; PMD._to_kwargs(ls)...)
         end
 
         @test isapprox(loadshapes["1"]["interval"], 1.0/60)
@@ -292,7 +292,7 @@
     @testset "opendss parse verify mvasc3/mvasc1 circuit parse" begin
         dss = PMD.parse_dss("../test/data/opendss/test_simple.dss")
         PMD.parse_dss_with_dtypes!(dss, ["circuit"])
-        circuit = PMD._create_vsource("sourcebus", "simple"; PMD._to_sym_keys(dss["circuit"][1])...)
+        circuit = PMD._create_vsource("sourcebus", "simple"; PMD._to_kwargs(dss["circuit"][1])...)
 
         @test circuit["mvasc1"] == 2100.0
         @test circuit["mvasc3"] == 1900.0
@@ -301,7 +301,7 @@
 
         dss = PMD.parse_dss("../test/data/opendss/test_simple3.dss")
         PMD.parse_dss_with_dtypes!(dss, ["circuit"])
-        circuit = PMD._create_vsource("sourcebus", "simple"; PMD._to_sym_keys(dss["circuit"][1])...)
+        circuit = PMD._create_vsource("sourcebus", "simple"; PMD._to_kwargs(dss["circuit"][1])...)
 
         @test circuit["mvasc1"] == 2100.0
         @test isapprox(circuit["mvasc3"], 1900.0; atol=1e-1)
@@ -310,7 +310,7 @@
 
         dss = PMD.parse_dss("../test/data/opendss/test_simple4.dss")
         PMD.parse_dss_with_dtypes!(dss, ["circuit"])
-        circuit = PMD._create_vsource("sourcebus", "simple"; PMD._to_sym_keys(dss["circuit"][1])...)
+        circuit = PMD._create_vsource("sourcebus", "simple"; PMD._to_kwargs(dss["circuit"][1])...)
 
         @test isapprox(circuit["mvasc1"], 2091.5; atol=1e-1)
         @test circuit["mvasc3"] == 2000.0

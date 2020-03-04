@@ -1,451 +1,210 @@
-"Squares `x`, for parsing Reverse Polish Notation"
-function _sqr(x::Float64)
-    return x * x
-end
-
-
-_double_operators = Dict("+" => +, "-" => -, "*" => *, "/" => /, "^" => ^, "atan2" => (x, y) -> rad2deg(atan2(y, x)))
-
-_single_operators = Dict("sqr" => _sqr, "sqrt" => sqrt, "inv" => inv, "ln" => log,
-                         "exp" => exp, "log10" => log10, "sin" => sind, "cos" => cosd,
-                         "tan" => tand, "asin" => asind, "acos" => acosd, "atan" => atand)
-
-const _array_delimiters = ['\"', '\'', '[', '{', '(', ']', '}', ')']
-
-"parses Reverse Polish Notation `expr`"
-function _parse_rpn(expr::AbstractString, dtype::Type=Float64)
-    clean_expr = strip(expr, _array_delimiters)
-
-    if occursin("rollup", clean_expr) || occursin("rolldn", clean_expr) || occursin("swap", clean_expr)
-        Memento.warn(_LOGGER, "_parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String")
-        return expr
-    end
-
-    stack = []
-    split_expr = occursin(",", clean_expr) ? split(clean_expr, ',') : split(clean_expr)
-
-    for item in split_expr
-        try
-            if haskey(_double_operators, item)
-                b = pop!(stack)
-                a = pop!(stack)
-                push!(stack, _double_operators[item](a, b))
-            elseif haskey(_single_operators, item)
-                push!(stack, _single_operators[item](pop!(stack)))
-            else
-                if item == "pi"
-                    push!(stack, pi)
-                else
-                    push!(stack, parse(dtype, item))
-                end
-            end
-        catch error
-            if isa(error, ArgumentError)
-                Memento.warn(_LOGGER, "\"$expr\" is not valid Reverse Polish Notation, leaving as String")
-                return expr
-            end
-        end
-    end
-    if length(stack) > 1
-        Memento.warn(_LOGGER, "\"$expr\" is not valid Reverse Polish Notation, leaving as String")
-        return expr
-    else
-        return stack[1]
-    end
-end
-
-
-"detects if `expr` is Reverse Polish Notation expression"
-function _isa_rpn(expr::AbstractString)::Bool
-    expr = split(strip(expr, _array_delimiters))
-    op_keys = keys(merge(_double_operators, _single_operators))
-    for item in expr
-        if item in op_keys
-            return true
-        end
-    end
-    return false
-end
-
-
-"parses connection \"conn\" specification reducing to wye or delta"
-function _parse_conn(conn::String)::String
-    if conn in ["wye", "y", "ln"]
-        return "wye"
-    elseif conn in ["delta", "ll"]
-        return "delta"
-    else
-        Memento.warn(_LOGGER, "Unsupported connection $conn, defaulting to \"wye\"")
-        return "wye"
-    end
-end
-
-
-"checks is a string is a connection by checking the values"
-function _isa_conn(expr::AbstractString)::Bool
-    if expr in ["wye", "y", "ln", "delta", "ll"]
-        return true
-    else
-        return false
-    end
-end
-
-
-"""
-    _get_prop_name(obj_type)
-
-Returns the property names in order for a given component type `obj_type`.
-"""
-function _get_prop_name(obj_type::AbstractString)::Array
-    linecode = ["nphases", "r1", "x1", "r0", "x0", "c1", "c0", "units",
-                "rmatrix", "xmatrix", "cmatrix", "basefreq", "normamps",
-                "emergamps", "faultrate", "pctperm", "repair", "kron",
-                "rg", "xg", "rho", "neutral", "b1", "b0", "like"]
-
-    linegeometry = ["nconds", "nphases", "cond", "wire", "x", "h", "units",
-                    "normamps", "emergamps", "reduce", "spacing", "wires",
-                    "cncable", "tscable", "cncables", "tscables", "like"]
-
-    linespacing = ["nconds", "nphases", "x", "h", "units"]
-
-    loadshape = ["npts", "interval", "minterval", "sinterval", "pmult",
-                 "qmult", "hour", "mean", "stddev", "csvfile", "sngfile",
-                 "pqcsvfile", "action", "useactual", "pmax", "qmax",
-                 "pbase", "like"]
-
-    growthshape = ["npts", "year", "mult", "csvfile", "sngfile", "dblfile",
-                   "like"]
-
-    tcc_curve = ["npts", "c_array", "t_array", "like"]
-
-    cndata = []
-
-    tsdata = []
-
-    wiredata = ["rdc", "rac", "runits", "gmrac", "gmrunits", "radius",
-                "radunits", "normamps", "emergamps", "diam", "like"]
-
-    xfmrcode = []
-
-    vsource = ["bus1", "bus2", "basekv", "pu", "angle", "frequency", "phases",
-               "mvasc3", "mvasc1", "x1r1", "x0r0", "isc3", "isc1", "r1", "x1",
-               "r0", "x0", "scantype", "sequence", "spectrum", "z1", "z2", "z0",
-               "puz1", "puz2", "puz0", "basemva", "basefreq", "like", "enabled"]
-
-    isource = ["phases", "bus1", "amps", "angle", "frequency", "scantype",
-               "sequence", "spectrum", "basefreq", "enabled", "like"]
-
-    fault = ["phases", "bus1", "bus2", "r", "gmatrix", "minamps", "ontime",
-             "pctperm", "temporary", "%stddev", "normamps", "emergamps",
-             "basefreq", "faultrate", "repair", "enabled", "like"]
-
-    capacitor = ["bus1", "bus2", "phases", "kvar", "kv", "conn", "cmatrix",
-                 "cuf", "r", "xl", "harm", "numsteps", "states", "normamps",
-                 "emergamps", "faultrate", "pctperm", "basefreq", "enabled",
-                 "like"]
-
-    line = ["bus1", "bus2", "linecode", "length", "phases",
-            "r1", "x1", "r0", "x0", "c1", "c0", "b1",
-            "b0", "normamps", "emergamps", "faultrate", "pctperm",
-            "repair", "basefreq", "rmatrix", "xmatrix", "cmatrix",
-            "switch", "rg", "xg", "rho", "geometry", "earthmodel",
-            "units", "enabled", "like"]
-
-    reactor = ["phases", "bus1", "bus2", "kv", "kvar", "conn", "parallel",
-               "r", "rmatrix", "rp", "x", "xmatrix", "z", "z1", "z2", "z0",
-               "rcurve", "lcurve", "lmh", "normamps", "emergamps", "repair",
-               "faultrate", "pctperm", "basefreq", "enabled", "like"]
-
-    transformer = ["phases", "windings", "wdg", "bus", "conn", "kv", "kva",
-                   "tap", "%r", "rneut", "xneut", "buses", "conns", "kvs",
-                   "kvas", "taps", "%rs", "xhl", "xlt", "xht", "xscarray",
-                   "thermal", "n", "m", "flrise", "hsrise", "%loadloss",
-                   "%noloadloss", "%imag", "ppm_antifloat", "normhkva",
-                   "emerghkva", "sub", "maxtap", "mintap", "numtaps",
-                   "subname", "bank", "xfmrcode", "xrconst", "leadlag",
-                   "faultrate", "basefreq", "enabled", "like"]
-
-    gictransformer = ["basefreq", "bush", "busnh", "busnx", "busx",
-                      "emergamps", "enabled", "phases", "r1", "r2", "type",
-                      "mva", "kvll1", "kvll2", "%r1", "%r2", "k", "varcurve",
-                      "like", "normamps", "emergamps", "pctperm", "repair"]
-
-    gicline = ["angle", "bus1", "bus2", "c", "ee", "en", "frequency", "lat1",
-               "lat2", "lon1", "lon2", "phases", "r", "volts", "x", "like",
-               "basefreq", "enabled", "spectrum"]
-
-    load = ["phases", "bus1", "kv", "kw", "pf", "model",
-            "yearly", "daily", "duty", "growth", "conn", "kvar",
-            "rneut", "xneut", "status", "class", "vminpu", "vmaxpu",
-            "vminnorm", "vminemerg", "xfkva", "allocationfactor",
-            "kva", "%mean", "%stddev", "cvrwatts", "cvrvars", "kwh",
-            "kwhdays", "cfactor", "cvrcurve", "numcust", "spectrum",
-            "zipv", "%seriesrl", "relweight", "vlowpu", "puxharm",
-            "xrharm", "spectrum", "basefreq", "enabled", "like"]
-
-    generator = ["bus1", "phases", "kv", "kw", "pf", "model", "yearly",
-                 "daily", "duty", "dispvalue", "conn", "kvar", "rneut",
-                 "xneut", "status", "class", "vpu", "maxkvar", "minkvar",
-                 "pvfactor", "debugtrace", "vminpu", "vmaxpu", "forceon",
-                 "kva", "mva", "xd", "xdp", "xdpp", "h", "d", "usermodel",
-                 "userdata", "shaftmodel", "shaftdata", "dutystart", "balanced",
-                 "xrdp", "spectrum", "basefreq", "enabled", "like"]
-
-    indmach012 = ["phases", "bus1", "kv", "kw", "pf", "conn", "kva", "h",
-                  "d", "purs", "puxs", "purr", "puxr", "puxm", "slip",
-                  "maxslip", "slipoption", "spectrum", "enabled"]
-
-    storage = ["phases", "bus1", "%charge", "%discharge", "%effcharge", "%idlingkvar",
-               "idlingkw", "%r", "%reserve", "%stored", "%x", "basefreq",
-               "chargetrigger", "class", "conn", "daily", "yearly", "debugtrace",
-               "dischargetrigger", "dispmode", "duty", "dynadata", "dynadll", "enabled",
-               "kv", "kva", "kvar", "kw", "kwhrated", "kwhstored", "kwrated", "like",
-               "model", "pf", "spectrum", "state", "timechargetrig", "userdata",
-               "usermodel", "vmaxpu", "vminpu", "yearly"]
-
-    capcontrol = ["element", "capacitor", "type", "ctphase", "ctratio", "deadtime",
-                  "delay", "delayoff", "eventlog", "offsetting", "onsetting",
-                  "ptphase", "ptratio", "terminal", "vbus", "vmax", "vmin",
-                  "voltoverride", "enabled"]
-
-    regcontrol = ["transformer", "winding", "vreg", "band", "delay", "ptratio",
-                  "ctprim", "r", "x", "pthase", "tapwinding", "bus",
-                  "remoteptratio", "debugtrace", "eventlog", "inversetime",
-                  "maxtapchange", "revband", "revdelay", "reversible",
-                  "revneutral", "revr", "revthreshold", "revvreg", "revx",
-                  "tapdelay", "tapnum", "vlimit", "ldc_z", "rev_z", "cogen",
-                  "enabled"]
-
-    energymeter = ["element", "terminal", "action", "clear", "save", "take",
-                   "option", "kwnorm", "kwemerg", "peakcurrent", "zonelist",
-                   "zonelist", "zonelist", "localonly", "mask", "losses",
-                   "linelosses", "xfmrlosses", "seqlosses", "3phaselosses",
-                   "vbaselosses", "basefreq", "enabled", "like"]
-
-   pvsystem =    ["phases", "bus1", "kv", "irradiance", "pmpp", "temperature",
-                  "pf", "conn", "kvar", "kva", "%cutin", "%cutout",
-                  "effcurve", "p-tcurve", "%r", "%x", "model", "vminpu",
-                  "vmaxpu", "yearly", "daily", "duty", "tyearly", "tduty",
-                  "class", "usermodel", "userdata", "debugtrace", "spectrum"]
-
-    obj_types = Dict{String, Array}("linecode" => linecode,
-                                 "linegeometry" => linegeometry,
-                                 "linespacing" =>linespacing,
-                                 "loadshape" => loadshape,
-                                 "growthshape" => growthshape,
-                                 "tcc_curve" => tcc_curve,
-                                 "cndata" => cndata,
-                                 "tsdata" => tsdata,
-                                 "wiredata" => wiredata,
-                                 "xfmrcode" => xfmrcode,
-                                 "vsource" => vsource,
-                                 "isource" => isource,
-                                 "fault" => fault,
-                                 "capacitor" => capacitor,
-                                 "line" => line,
-                                 "reactor" => reactor,
-                                 "transformer" => transformer,
-                                 "gictransformer" => gictransformer,
-                                 "gicline" => gicline,
-                                 "load" => load,
-                                 "generator" => generator,
-                                 "indmach012" => indmach012,
-                                 "storage" => storage,
-                                 "capcontrol" => capcontrol,
-                                 "regcontrol" => regcontrol,
-                                 "energymeter" => energymeter,
-                                 "pvsystem" => pvsystem,
-                                 "circuit" => vsource
-                                )
-
-    return obj_types[obj_type]
-end
-
-
-"""
-    _parse_matrix(dtype, data)
-
-Parses a OpenDSS style triangular matrix string `data` into a two dimensional
-array of type `dtype`. Matrix strings are capped by either parenthesis or
-brackets, rows are separated by "|", and columns are separated by spaces.
-"""
-function _parse_matrix(dtype::Type, data::AbstractString)::Array
-    rows = []
-    for line in split(strip(data, _array_delimiters), '|')
-        cols = []
-        for item in split(line)
-            push!(cols, parse(dtype, item))
-        end
-        push!(rows, cols)
-    end
-
-    nphases = maximum([length(row) for row in rows])
-
-    if dtype == AbstractString || dtype == String
-        matrix = fill("", nphases, nphases)
-    elseif dtype == Char
-        matrix = fill(' ', nphases, nphases)
-    else
-        matrix = zeros(dtype, nphases, nphases)
-    end
-
-    if length(rows) == 1
-        for i in 1:nphases
-            matrix[i, i] = rows[1][1]
-        end
-    elseif all([length(row) for row in rows] .== [i for i in 1:nphases])
-        for (i, row) in enumerate(rows)
-            for (j, col) in enumerate(row)
-                matrix[i, j] = matrix[j, i] = col
-            end
-        end
-    elseif all([length(row) for row in rows] .== nphases)
-        for (i, row) in enumerate(rows)
-            for (j, col) in enumerate(row)
-                matrix[i, j] = col
-            end
-        end
-    end
-
-    return matrix
-end
-
-
-"parse matrices according to active nodes"
-function _parse_matrix(data::Array{T}, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array where T
-    mat = fill(fill_val, (nph, nph))
-    idxs = findall(nodes[1:nph])
-
-    for i in 1:size(idxs)[1]
-        mat[idxs[i], idxs[i]] = data[i, i]
-        for j in 1:i-1
-            mat[idxs[i],idxs[j]] = mat[idxs[j],idxs[i]] = data[i, j]
-        end
-    end
-
-    return mat
-end
-
-
-"checks if `data` is an opendss-style matrix string"
-function _isa_matrix(data::AbstractString)::Bool
-    if occursin("|", data)
-        return true
-    else
-        return false
-    end
-end
-
-
-"Reorders a `matrix` based on the order that phases are listed in on the from- (`pof`) and to-sides (`pot`)"
-function _reorder_matrix(matrix, phase_order)
-    mat = zeros(size(matrix))
-    for (i, n) in zip(sort(phase_order), phase_order)
-        for (j, m) in zip(sort(phase_order), phase_order)
-            mat[i, j] = matrix[n, m]
-        end
-    end
-    return mat
-end
-
-
-"""
-    _parse_array(dtype, data)
-
-Parses a OpenDSS style array string `data` into a one dimensional array of type
-`dtype`. Array strings are capped by either brackets, single quotes, or double
-quotes, and elements are separated by spaces.
-"""
-function _parse_array(dtype::Type, data::AbstractString)
-    if occursin(",", data)
-        split_char = ','
-    else
-        split_char = ' '
-    end
-
-    if _isa_rpn(data)
-        matches = collect((m.match for m = eachmatch(Regex(string("[",join(_array_delimiters, '\\'),"]")), data, overlap=false)))
-        if length(matches) == 2
-            if dtype == String
-                return data
-            else
-                return _parse_rpn(data, dtype)
-            end
-
-        else
-            elements = _parse_properties(data[2:end-1])
-        end
-    else
-        elements = split(strip(data, _array_delimiters), split_char)
-        elements = [strip(el) for el in elements if strip(el) != ""]
-    end
-
-    if dtype == String || dtype == AbstractString || dtype == Char
-        array = []
-        for el in elements
-            push!(array, el)
-        end
-    else
-        array = zeros(dtype, length(elements))
-        for (i, el) in enumerate(elements)
-            if _isa_rpn(data)
-                array[i] = _parse_rpn(el, dtype)
-            else
-                array[i] = parse(dtype, el)
-            end
-        end
-    end
-
-    return array
-end
-
-
-"parse matrices according to active nodes"
-function _parse_array(data, nodes::Array{Bool}, nph::Int=3, fill_val=0.0)::Array
-    mat = fill(fill_val, nph)
-    idxs = findall(nodes[1:nph])
-
-    if length(data) == 1 && nph > 1
-        for i in idxs
-            mat[i] = data[1]
-        end
-    else
-        for i in 1:length(idxs)
-            mat[idxs[i]] = data[i]
-        end
-    end
-
-    return mat
-end
-
-
-"checks if `data` is an opendss-style array string"
-function _isa_array(data::AbstractString)::Bool
-    clean_data = strip(data)
-    if !occursin("|", clean_data)
-        if occursin(",", clean_data)
-            return true
-        elseif startswith(clean_data, "[") && endswith(clean_data, "]")
-            return true
-        elseif startswith(clean_data, "\"") && endswith(clean_data, "\"")
-            return true
-        elseif startswith(clean_data, "\'") && endswith(clean_data, "\'")
-            return true
-        elseif startswith(clean_data, "(") && endswith(clean_data, ")")
-            return true
-        elseif startswith(clean_data, "{") && endswith(clean_data, "}")
-            return true
-        else
-            return false
-        end
-    else
-        return false
-    end
-end
+const _linecode_properties = Vector{String}([
+    "nphases", "r1", "x1", "r0","x0", "c1", "c0", "units", "rmatrix",
+    "xmatrix", "cmatrix", "basefreq", "normamps", "emergamps", "faultrate",
+    "pctperm", "repair", "kron", "rg", "xg", "rho", "neutral", "b1", "b0",
+    "like"
+])
+
+const _linegeometry_properties = Vector{String}([
+    "nconds", "nphases", "cond", "wire", "x", "h", "units", "normamps",
+    "emergamps", "reduce", "spacing", "wires", "cncable", "tscable",
+    "cncables", "tscables", "like"
+])
+
+const _linespacing_properties = Vector{String}([
+    "nconds", "nphases", "x", "h", "units"
+])
+
+const _loadshape_properties = Vector{String}([
+    "npts", "interval", "minterval", "sinterval", "pmult", "qmult", "hour",
+    "mean", "stddev", "csvfile", "sngfile", "pqcsvfile", "action", "useactual",
+    "pmax", "qmax", "pbase", "like"
+])
+
+const _growthshape_properties = Vector{String}([
+    "npts", "year", "mult", "csvfile", "sngfile", "dblfile", "like"
+])
+
+const _tcc_curve_properties = Vector{String}([
+    "npts", "c_array", "t_array", "like"
+])
+
+const _cndata_properties = Vector{String}([])
+
+const _tsdata_properties = Vector{String}([])
+
+const _wiredata_properties = Vector{String}([
+    "rdc", "rac", "runits", "gmrac", "gmrunits", "radius", "radunits",
+    "normamps", "emergamps", "diam", "like"
+])
+
+const _xfmrcode_properties = Vector{String}([])
+
+const _vsource_properties = Vector{String}([
+    "bus1", "bus2", "basekv", "pu", "angle", "frequency", "phases", "mvasc3",
+    "mvasc1", "x1r1", "x0r0", "isc3", "isc1", "r1", "x1", "r0", "x0",
+    "scantype", "sequence", "spectrum", "z1", "z2", "z0", "puz1", "puz2",
+    "puz0", "basemva", "basefreq", "like", "enabled"
+])
+
+const _isource_properties = Vector{String}([
+    "phases", "bus1", "amps", "angle", "frequency", "scantype", "sequence",
+    "spectrum", "basefreq", "enabled", "like"
+])
+
+const _fault_properties = Vector{String}([
+    "phases", "bus1", "bus2", "r", "gmatrix", "minamps", "ontime", "pctperm",
+    "temporary", "%stddev", "normamps", "emergamps", "basefreq", "faultrate",
+    "repair", "enabled", "like"
+])
+
+const _capacitor_properties = Vector{String}([
+    "bus1", "bus2", "phases", "kvar", "kv", "conn", "cmatrix", "cuf", "r",
+    "xl", "harm", "numsteps", "states", "normamps", "emergamps", "faultrate",
+    "pctperm", "basefreq", "enabled", "like"
+])
+
+const _line_properties = Vector{String}([
+    "bus1", "bus2", "linecode", "length", "phases", "r1", "x1", "r0", "x0",
+    "c1", "c0", "b1", "b0", "normamps", "emergamps", "faultrate", "pctperm",
+    "repair", "basefreq", "rmatrix", "xmatrix", "cmatrix", "switch", "rg",
+    "xg", "rho", "geometry", "earthmodel", "units", "enabled", "like"
+])
+
+const _reactor_properties = Vector{String}([
+    "phases", "bus1", "bus2", "kv", "kvar", "conn", "parallel", "r", "rmatrix",
+    "rp", "x", "xmatrix", "z", "z1", "z2", "z0", "rcurve", "lcurve", "lmh",
+    "normamps", "emergamps", "repair", "faultrate", "pctperm", "basefreq",
+    "enabled", "like"
+])
+
+const _transformer_properties = Vector{String}([
+    "phases", "windings", "wdg", "bus", "conn", "kv", "kva", "tap", "%r",
+    "rneut", "xneut", "buses", "conns", "kvs", "kvas", "taps", "%rs", "xhl",
+    "xlt", "xht", "xscarray", "thermal", "n", "m", "flrise", "hsrise",
+    "%loadloss", "%noloadloss", "%imag", "ppm_antifloat", "normhkva",
+    "emerghkva", "sub", "maxtap", "mintap", "numtaps", "subname", "bank",
+    "xfmrcode", "xrconst", "leadlag", "faultrate", "basefreq", "enabled",
+    "like"
+])
+
+const _gictransformer_properties = Vector{String}([
+    "basefreq", "bush", "busnh", "busnx", "busx", "emergamps", "enabled",
+    "phases", "r1", "r2", "type", "mva", "kvll1", "kvll2", "%r1", "%r2", "k",
+    "varcurve", "like", "normamps", "emergamps", "pctperm", "repair"
+])
+
+const _gicline_properties = Vector{String}([
+    "angle", "bus1", "bus2", "c", "ee", "en", "frequency", "lat1", "lat2",
+    "lon1", "lon2", "phases", "r", "volts", "x", "like", "basefreq",
+    "enabled", "spectrum"
+])
+
+const _load_properties = Vector{String}([
+    "phases", "bus1", "kv", "kw", "pf", "model", "yearly", "daily", "duty",
+    "growth", "conn", "kvar", "rneut", "xneut", "status", "class", "vminpu",
+    "vmaxpu", "vminnorm", "vminemerg", "xfkva", "allocationfactor", "kva",
+    "%mean", "%stddev", "cvrwatts", "cvrvars", "kwh", "kwhdays", "cfactor",
+    "cvrcurve", "numcust", "spectrum", "zipv", "%seriesrl", "relweight",
+    "vlowpu", "puxharm", "xrharm", "spectrum", "basefreq", "enabled", "like"
+])
+
+const _generator_properties = Vector{String}([
+    "bus1", "phases", "kv", "kw", "pf", "model", "yearly", "daily", "duty",
+    "dispvalue", "conn", "kvar", "rneut", "xneut", "status", "class", "vpu",
+    "maxkvar", "minkvar", "pvfactor", "debugtrace", "vminpu", "vmaxpu",
+    "forceon", "kva", "mva", "xd", "xdp", "xdpp", "h", "d", "usermodel",
+    "userdata", "shaftmodel", "shaftdata", "dutystart", "balanced", "xrdp",
+    "spectrum", "basefreq", "enabled", "like"
+])
+
+const _indmach012_properties = Vector{String}([
+    "phases", "bus1", "kv", "kw", "pf", "conn", "kva", "h", "d", "purs",
+    "puxs", "purr", "puxr", "puxm", "slip", "maxslip", "slipoption",
+    "spectrum", "enabled"
+])
+
+const _storage_properties = Vector{String}([
+    "phases", "bus1", "%charge", "%discharge", "%effcharge", "%idlingkvar",
+    "idlingkw", "%r", "%reserve", "%stored", "%x", "basefreq", "chargetrigger",
+    "class", "conn", "daily", "yearly", "debugtrace", "dischargetrigger",
+    "dispmode", "duty", "dynadata", "dynadll", "enabled", "kv", "kva", "kvar",
+    "kw", "kwhrated", "kwhstored", "kwrated", "like", "model", "pf",
+    "spectrum", "state", "timechargetrig", "userdata", "usermodel", "vmaxpu",
+    "vminpu", "yearly"
+])
+
+const _capcontrol_properties = Vector{String}([
+    "element", "capacitor", "type", "ctphase", "ctratio", "deadtime", "delay",
+    "delayoff", "eventlog", "offsetting", "onsetting", "ptphase", "ptratio",
+    "terminal", "vbus", "vmax", "vmin", "voltoverride", "enabled"
+])
+
+const _regcontrol_properties = Vector{String}([
+    "transformer", "winding", "vreg", "band", "delay", "ptratio", "ctprim",
+    "r", "x", "pthase", "tapwinding", "bus", "remoteptratio", "debugtrace",
+    "eventlog", "inversetime", "maxtapchange", "revband", "revdelay",
+    "reversible", "revneutral", "revr", "revthreshold", "revvreg", "revx",
+    "tapdelay", "tapnum", "vlimit", "ldc_z", "rev_z", "cogen", "enabled"
+])
+
+const _energymeter_properties = Vector{String}([
+    "element", "terminal", "action", "clear", "save", "take", "option",
+    "kwnorm", "kwemerg", "peakcurrent", "zonelist", "zonelist", "zonelist",
+    "localonly", "mask", "losses", "linelosses", "xfmrlosses", "seqlosses",
+    "3phaselosses", "vbaselosses", "basefreq", "enabled", "like"
+])
+
+const _pvsystem_properties = Vector{String}([
+    "phases", "bus1", "kv", "irradiance", "pmpp", "temperature", "pf",
+    "conn", "kvar", "kva", "%cutin", "%cutout", "effcurve", "p-tcurve", "%r",
+    "%x", "model", "vminpu", "vmaxpu", "yearly", "daily", "duty", "tyearly",
+    "tduty", "class", "usermodel", "userdata", "debugtrace", "spectrum"
+])
+
+const _relay_properties = Vector{String}([])
+
+const _recloser_properties = Vector{String}([])
+
+const _fuse_properties = Vector{String}([])
+
+const _dss_object_properties = Dict{String,Vector{String}}(
+    "linecode" => _linecode_properties,
+    "linegeometry" => _linegeometry_properties,
+    "linespacing" => _linespacing_properties,
+    "loadshape" => _loadshape_properties,
+    "growthshape" => _growthshape_properties,
+    "tcc_curve" => _tcc_curve_properties,
+    "cndata" => _cndata_properties,
+    "tsdata" => _tsdata_properties,
+    "wiredata" => _wiredata_properties,
+    "xfmrcode" => _xfmrcode_properties,
+    "vsource" => _vsource_properties,
+    "circuit" => _vsource_properties,  # alias circuit to vsource
+    "isource" => _isource_properties,
+    "fault" => _fault_properties,
+    "capacitor" => _capacitor_properties,
+    "line" => _line_properties,
+    "reactor" => _reactor_properties,
+    "transformer" => _transformer_properties,
+    "gictransformer" => _gictransformer_properties,
+    "gicline" => _gicline_properties,
+    "load" => _load_properties,
+    "generator" => _generator_properties,
+    "indmach012" => _indmach012_properties,
+    "storage" => _storage_properties,
+    "capcontrol" => _capacitor_properties,
+    "regcontrol" => _regcontrol_properties,
+    "energymeter" => _energymeter_properties,
+    "pvsystem" => _pvsystem_properties,
+    "relay" => _relay_properties,
+    "recloser" => _reactor_properties,
+    "fuse" => _fuse_properties
+)
 
 
 "parses single column load profile files"
-function _parse_loadshape_csv(path::AbstractString, type::AbstractString; header::Bool=false, column::Int=1, interval::Bool=false)
+function _parse_loadshape_csv_file(path::AbstractString, type::AbstractString; header::Bool=false, column::Int=1, interval::Bool=false)
     open(path, "r") do f
         lines = readlines(f)
         if header
@@ -493,7 +252,7 @@ end
 
 
 "parses sng and dbl precision loadshape binary files"
-function _parse_binary(path::AbstractString, precision::Type; npts::Union{Int,Nothing}=nothing, interval::Bool=false)
+function _parse_binary_file(path::AbstractString, precision::Type; npts::Union{Int,Nothing}=nothing, interval::Bool=false)
     open(path, "r") do f
         if npts === nothing
             data = precision[]
@@ -530,15 +289,15 @@ end
 "parses csv or binary loadshape files"
 function _parse_loadshape_file(path::AbstractString, type::AbstractString, npts::Union{Int,Nothing}; header::Bool=false, interval::Bool=false, column::Int=1)
     if type in ["csvfile", "mult", "pqcsvfile"]
-        return _parse_loadshape_csv(path, type; header=header, column=column, interval=interval)
+        return _parse_loadshape_csv_file(path, type; header=header, column=column, interval=interval)
     elseif type in ["sngfile", "dblfile"]
-        return _parse_binary(path, Dict("sngfile" => Float32, "dblfile" => Float64)[type]; npts=npts, interval=interval)
+        return _parse_binary_file(path, Dict("sngfile" => Float32, "dblfile" => Float64)[type]; npts=npts, interval=interval)
     end
 end
 
 
 "parses pmult and qmult entries on loadshapes"
-function _parse_mult(mult_string::AbstractString; path::AbstractString="", npts::Union{Int,Nothing}=nothing)
+function _parse_mult_parameter(mult_string::AbstractString; path::AbstractString="", npts::Union{Int,Nothing}=nothing)
     if !occursin("=", mult_string)
         return mult_string
     else
@@ -573,7 +332,7 @@ function _parse_loadshape!(current_obj::Dict{String,Any}; path::AbstractString="
 
     for prop in current_obj["prop_order"]
         if prop in ["pmult", "qmult"]
-             current_obj[prop] = _parse_mult(current_obj[prop]; path=path, npts=npts)
+             current_obj[prop] = _parse_mult_parameter(current_obj[prop]; path=path, npts=npts)
         elseif prop in ["csvfile", "pqcsvfile", "sngfile", "dblfile"]
             full_path = path == "" ? current_obj[prop] : join([path, current_obj[prop]], '/')
             data = _parse_loadshape_file(full_path, prop, parse(Int, get(current_obj, "npts", "1")); interval=interval, header=false)
@@ -619,13 +378,11 @@ end
 
 
 """
-    _parse_buscoords(file)
-
 Parses a Bus Coordinate `file`, in either "dat" or "csv" formats, where in
 "dat", columns are separated by spaces, and in "csv" by commas. File expected
 to contain "bus,x,y" on each line.
 """
-function _parse_buscoords(file::AbstractString)::Dict{String,Any}
+function _parse_buscoords_file(file::AbstractString)::Dict{String,Any}
     file_str = read(open(file), String)
     regex = r",\s*"
     if endswith(lowercase(file), "csv") || endswith(lowercase(file), "dss")
@@ -645,8 +402,6 @@ end
 
 
 """
-    _parse_properties(properties)
-
 Parses a string of `properties` of a component type, character by character
 into an array with each element containing (if present) the property name, "=",
 and the property value.
@@ -708,8 +463,6 @@ end
 
 
 """
-    _add_component!(data_dss, obj_type_name, object)
-
 Adds a component of type `obj_type_name` with properties given by `object` to
 the existing `data_dss` structure. If a component of the same type has already
 been added to `data_dss`, the new component is appeneded to the existing array
@@ -732,8 +485,6 @@ end
 
 
 """
-    _add_property(object, key, value)
-
 Adds a property to an existing component properties dictionary `object` given
 the `key` and `value` of the property. If a property of the same name already
 exists inside `object`, the original value is converted to an array, and the
@@ -769,14 +520,11 @@ end
 
 
 """
-    _parse_component(component, properies, object=Dict{String,Any}())
-
 Parses a `component` with `properties` into a `object`. If `object` is not
 defined, an empty dictionary will be used. Assumes that unnamed properties are
 given in order, but named properties can be given anywhere.
 """
 function _parse_component(component::AbstractString, properties::AbstractString, object::Dict{String,<:Any}=Dict{String,Any}(); path::AbstractString="")
-    Memento.debug(_LOGGER, "Properties: $properties")
     obj_type, name = split(component, '.'; limit=2)
 
     if !haskey(object, "name")
@@ -784,9 +532,8 @@ function _parse_component(component::AbstractString, properties::AbstractString,
     end
 
     property_array = _parse_properties(properties)
-    Memento.debug(_LOGGER, "property_array: $property_array")
 
-    property_names = _get_prop_name(obj_type)
+    property_names = _dss_object_properties[obj_type]
     property_idx = 1
 
     for (n, property) in enumerate(property_array)
@@ -820,7 +567,7 @@ function _parse_component(component::AbstractString, properties::AbstractString,
         key, value = split(property, '='; limit=2)
 
         if occursin(r"\(\s*(sng|dbl)*file=(.+)\)", value)
-            value = _parse_mult(value; path=path)
+            value = _parse_mult_parameter(value; path=path)
         end
 
         _add_property(object, key, value)
@@ -831,8 +578,6 @@ end
 
 
 """
-    _merge_dss!(dss_prime, dss_to_add)
-
 Merges two (partially) parsed OpenDSS files to the same dictionary `dss_prime`.
 Used in cases where files are referenced via the "compile" or "redirect"
 OpenDSS commands inside the originating file.
@@ -849,8 +594,6 @@ end
 
 
 """
-    _parse_line(elements, current_obj=Dict{String,Any}())
-
 Parses an already separated line given by `elements` (an array) of an OpenDSS
 file into `current_obj`. If not defined, `current_obj` is an empty dictionary.
 """
@@ -880,8 +623,6 @@ end
 
 
 """
-    _assign_property!(data_dss, obj_type, obj_name, property_name, property_value)
-
 Assigns a property with name `property_name` and value `property_value` to the component
 of type `obj_type` named `obj_name` in `data_dss`.
 """
@@ -898,9 +639,16 @@ function _assign_property!(data_dss::Dict, obj_type::AbstractString, obj_name::A
 end
 
 
-"""
-    parse_dss(filename)
+""
+function parse_dss(filename::AbstractString)::Dict
+    data_dss = open(filename) do io
+        parse_dss(io)
+    end
+    return data_dss
+end
 
+
+"""
 Parses a OpenDSS file given by `filename` into a Dict{Array{Dict}}. Only
 supports components and options, but not commands, e.g. "plot" or "solve".
 Will also parse files defined inside of the originating DSS file via the
@@ -925,7 +673,6 @@ function parse_dss(io::IOStream)::Dict{String,Any}
 
     for (n, line) in enumerate(stripped_lines)
         real_line_num = findall(lines .== line)[1]
-        Memento.debug(_LOGGER, "LINE $real_line_num: $line")
         line = _strip_comments(line)
 
         if startswith(strip(line), '~')
@@ -961,7 +708,6 @@ function parse_dss(io::IOStream)::Dict{String,Any}
                 continue
 
             elseif cmd == "set"
-                Memento.debug(_LOGGER, "set command: $line_elements")
                 properties = _parse_properties(join(line_elements[2:end], " "))
                 if length(line_elements) == 2
                     property, value = split(lowercase(line_elements[2]), '='; limit=2)
@@ -979,8 +725,7 @@ function parse_dss(io::IOStream)::Dict{String,Any}
             elseif cmd == "buscoords"
                 file = line_elements[2]
                 full_path = path == "" ? file : join([path, file], '/')
-                Memento.debug(_LOGGER, "Buscoords path: $full_path")
-                data_dss["buscoords"] = _parse_buscoords(full_path)
+                data_dss["buscoords"] = _parse_buscoords_file(full_path)
 
             elseif cmd == "new"
                 current_obj_type, current_obj = _parse_line([lowercase(line_element) for line_element in line_elements]; path=path)
@@ -1012,7 +757,6 @@ function parse_dss(io::IOStream)::Dict{String,Any}
                 end
             end
 
-            Memento.debug(_LOGGER, "size current_obj: $(length(current_obj))")
             if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')
                 continue
             elseif length(current_obj) > 0
@@ -1024,228 +768,10 @@ function parse_dss(io::IOStream)::Dict{String,Any}
     end
 
     Memento.info(_LOGGER, "Done parsing $filename")
+
+    parse_dss_with_dtypes!(data_dss)
+
+    parse_dss_options!(data_dss)
+
     return data_dss
 end
-
-
-""
-function parse_dss(filename::AbstractString)::Dict
-    data_dss = open(filename) do io
-        parse_dss(io)
-    end
-    return data_dss
-end
-
-
-"parses the raw dss values into their expected data types"
-function _parse_element_with_dtype(dtype, element)
-    if _isa_matrix(element)
-        out = _parse_matrix(eltype(dtype), element)
-    elseif _isa_array(element)
-        out = _parse_array(eltype(dtype), element)
-    elseif dtype <: Bool
-        if element in ["n", "no"]
-            element = "false"
-        elseif element in ["y", "yes"]
-            element = "true"
-        end
-        out = parse(dtype, element)
-    elseif _isa_rpn(element)
-        out = _parse_rpn(element)
-    elseif dtype == String
-        out = element
-    else
-        if _isa_conn(element)
-            out = _parse_conn(element)
-        else
-            try
-                out = parse(dtype, element)
-            catch
-                Memento.warn(_LOGGER, "cannot parse $element as $dtype, leaving as String.")
-                out = element
-            end
-        end
-    end
-
-    return out
-end
-
-
-"""
-    parse_dss_with_dtypes!(data_dss, to_parse)
-
-Parses the data in keys defined by `to_parse` in `data_dss` using types given by
-the default properties from the `get_prop_default` function.
-"""
-function parse_dss_with_dtypes!(data_dss::Dict{String,<:Any}, to_parse::Array{String}=[])
-    for obj_type in to_parse
-        if haskey(data_dss, obj_type)
-            Memento.debug(_LOGGER, "type: $obj_type")
-            dtypes = _get_dtypes(obj_type)
-            if obj_type == "circuit"
-                _parse_obj_dtypes!(obj_type, data_dss[obj_type], dtypes)
-            else
-                for object in values(data_dss[obj_type])
-                    _parse_obj_dtypes!(obj_type, object, dtypes)
-                end
-            end
-        end
-    end
-end
-
-
-""
-function _parse_obj_dtypes!(obj_type, object, dtypes)
-    for (k, v) in object
-        if haskey(dtypes, k)
-            Memento.debug(_LOGGER, "key: $k")
-            if isa(v, Array)
-                arrout = []
-                for el in v
-                    if isa(v, AbstractString)
-                        push!(arrout, _parse_element_with_dtype(dtypes[k], el))
-                    else
-                        push!(arrout, el)
-                    end
-                end
-                object[k] = arrout
-            elseif isa(v, AbstractString)
-                object[k] = _parse_element_with_dtype(dtypes[k], v)
-            else
-                Memento.error(_LOGGER, "dtype unknown $obj_type, $k, $v")
-            end
-        end
-    end
-end
-
-
-"""
-    _parse_busname(busname)
-
-Parses busnames as defined in OpenDSS, e.g. "primary.1.2.3.0".
-"""
-function _parse_busname(busname::AbstractString)
-    parts = split(busname, '.'; limit=2)
-    name = parts[1]
-    elements = "1.2.3"
-
-    if length(parts) >= 2
-        name, elements = split(busname, '.'; limit=2)
-    end
-
-    nodes = Array{Bool}([0 0 0 0])
-
-    for num in 1:3
-        if occursin("$num", elements)
-            nodes[num] = true
-        end
-    end
-
-    if occursin("0", elements) || sum(nodes[1:3]) == 1
-        nodes[4] = true
-    end
-
-    return name, nodes
-end
-
-
-"""
-    _get_conductors_ordered(busname; neutral=true)
-
-Returns an ordered list of defined conductors. If ground=false, will omit any `0`
-"""
-function _get_conductors_ordered(busname::AbstractString; neutral::Bool=true, nconductors::Int=3)::Array
-    parts = split(busname, '.'; limit=2)
-    ret = []
-    if length(parts)==2
-        conductors_string = split(parts[2], '.')
-        if neutral
-            ret = [parse(Int, i) for i in conductors_string]
-        else
-            ret = [parse(Int, i) for i in conductors_string if i != "0"]
-        end
-    else
-        ret = collect(1:nconductors)
-    end
-
-    return ret
-end
-
-
-"converts Dict{String,Any} to Dict{Symbol,Any} for passing as kwargs"
-function _to_sym_keys(data::Dict{String,Any})::Dict{Symbol,Any}
-    return Dict{Symbol,Any}((Symbol(k), v) for (k, v) in data)
-end
-
-
-""
-function _apply_ordered_properties(defaults::Dict{String,<:Any}, raw_dss::Dict{String,<:Any}; code_dict::Dict{String,<:Any}=Dict{String,Any}())
-    _defaults = deepcopy(defaults)
-
-    for prop in filter(p->p!="like", raw_dss["prop_order"])
-        if prop in ["linecode", "loadshape"]
-            merge!(defaults, code_dict)
-        else
-            defaults[prop] = _defaults[prop]
-        end
-    end
-
-    return defaults
-end
-
-
-"applies `like` to component"
-function _apply_like!(raw_dss, data_dss, comp_type)
-    links = ["like"]
-    if any(link in raw_dss["prop_order"] for link in links)
-        new_prop_order = []
-        raw_dss_copy = deepcopy(raw_dss)
-
-        for prop in raw_dss["prop_order"]
-            push!(new_prop_order, prop)
-
-            if prop in get(_like_exclusions, comp_type, []) || prop in _like_exclusions["all"]
-                continue
-            end
-
-            if prop in links
-                linked_dss = get(get(data_dss, comp_type, Dict{String,Any}()), raw_dss[prop], Dict{String,Any}())
-                if isempty(linked_dss)
-                    Memento.warn(_LOGGER, "$comp_type.$(raw_dss["name"]): $prop=$(raw_dss[prop]) cannot be found")
-                else
-                    for linked_prop in linked_dss["prop_order"]
-                        if linked_prop in get(_like_exclusions, comp_type, []) || linked_prop in _like_exclusions["all"]
-                            continue
-                        end
-
-                        push!(new_prop_order, linked_prop)
-                        if linked_prop in links
-                            _apply_like!(linked_dss, data_dss, comp_type)
-                        else
-                            raw_dss[linked_prop] = deepcopy(linked_dss[linked_prop])
-                        end
-                    end
-                end
-            else
-                raw_dss[prop] = deepcopy(raw_dss_copy[prop])
-            end
-        end
-
-        final_prop_order = []
-        while !isempty(new_prop_order)
-            prop = popfirst!(new_prop_order)
-            if !(prop in new_prop_order)
-                push!(final_prop_order, prop)
-            end
-        end
-        raw_dss["prop_order"] = final_prop_order
-    end
-end
-
-
-"properties that should be excluded from being overwritten during the application of `like`"
-const _like_exclusions = Dict{String,Array}("all" => ["name", "bus1", "bus2", "phases", "nphases", "enabled"],
-                                            "line" => ["switch"],
-                                            "transformer" => ["bank", "bus", "bus_2", "bus_3", "buses", "windings", "wdg", "wdg_2", "wdg_3"],
-                                            "linegeometry" => ["nconds"]
-                                            )

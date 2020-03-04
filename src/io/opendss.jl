@@ -716,10 +716,6 @@ end
 function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, bank_transformers::Bool=true)::Dict{String,Any}
     data_eng = create_data_model()
 
-    # parse_dss_with_dtypes!(data_dss, _dss_supported_components)
-
-    data_dss["options"] = _parse_options(get(data_dss, "options", Dict{String,Any}()))
-
     if import_all
         data_eng["dss_options"] = data_dss["options"]
     end
