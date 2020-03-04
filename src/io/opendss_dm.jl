@@ -80,7 +80,25 @@ function _dss2eng_sourcebus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
     vm = fill(vm_pu, phases)*vnom
     va = rad2deg.(_wrap_to_pi.([-2*pi/phases*(i-1)+deg2rad(ph1_ang) for i in 1:phases]))
 
-    add_voltage_source!(data_eng, "sourcebus"; bus="sourcebus", connections=collect(1:phases), vm=vm, va=va, rs=circuit["rmatrix"], xs=circuit["xmatrix"])
+    eng_obj = Dict{String,Any}(
+        "bus" => circuit["bus1"],
+        "connections" => collect(1:phases),
+        "vm" => vm,
+        "va" => va,
+        "rs" => circuit["rmatrix"],
+        "xs" => circuit["xmatrix"],
+        "status" => 1
+    )
+
+    if import_all
+        _import_all!(eng_obj, circuit, data_dss["circuit"]["prop_order"])
+    end
+
+    if !haskey(data_eng, "voltage_source")
+        data_eng["voltage_source"] = Dict{String,Any}()
+    end
+
+    data_eng["voltage_source"][circuit["name"]] = eng_obj
 end
 
 
