@@ -224,6 +224,11 @@ function _dss2eng_shunt_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{St
             eng_obj = Dict{String,Any}()
 
             eng_obj["phases"] = defaults["phases"]
+
+            eng_obj["configuration"] = defaults["conn"]
+            connections_default = eng_obj["configuration"] == "wye" ? [collect(1:eng_obj["phases"])..., 0] : collect(1:eng_obj["phases"])
+            eng_obj["connections"] = _get_conductors_ordered_dm(defaults["bus1"], default=connections_default, check_length=false)
+
             eng_obj["bus"] = _parse_busname(defaults["bus1"])[1]
             eng_obj["kvar"] = defaults["kvar"]
             eng_obj["status"] = convert(Int, defaults["enabled"])
@@ -254,6 +259,7 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
         eng_obj = Dict{String,Any}()
 
         eng_obj["phases"] = defaults["phases"]
+        eng_obj["connections"] = _get_conductors_ordered_dm(defaults["bus1"], check_length=false)
 
         eng_obj["bus"] = _parse_busname(defaults["bus1"])[1]
 
@@ -372,8 +378,8 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         end
 
         if any(haskey(dss_obj, key) for key in ["b0", "b1", "c0", "c1", "cmatrix"]) || !haskey(dss_obj, "linecode")
-            eng_obj["b_fr"] = defaults["cmatrix"] ./ 2.0
-            eng_obj["b_to"] = defaults["cmatrix"] ./ 2.0
+            eng_obj["b_fr"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
+            eng_obj["b_to"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
             eng_obj["g_fr"] = fill(0.0, nphases, nphases)
             eng_obj["g_to"] = fill(0.0, nphases, nphases)
         end
@@ -589,6 +595,7 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
         eng_obj["bus"] = _parse_busname(defaults["bus1"])[1]
 
         eng_obj["phases"] = defaults["phases"]
+        eng_obj["connections"] = _get_conductors_ordered_dm(defaults["bus1"], check_length=false)
 
         eng_obj["kva"] = defaults["kva"]
         eng_obj["kv"] = defaults["kv"]
@@ -627,6 +634,7 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         eng_obj = Dict{String,Any}()
 
         eng_obj["phases"] = defaults["phases"]
+        eng_obj["connections"] = _get_conductors_ordered_dm(defaults["bus1"], check_length=false)
 
         eng_obj["name"] = name
         eng_obj["bus"] = _parse_busname(defaults["bus1"])[1]
