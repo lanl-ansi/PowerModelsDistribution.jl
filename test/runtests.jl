@@ -49,7 +49,7 @@ include("common.jl")
 
     include("opf_iv.jl") # all passing
 
-    # include("storage.jl")
+    include("storage.jl")  # all passing
 
     # include("debug.jl")
 
