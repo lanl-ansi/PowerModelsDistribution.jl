@@ -275,7 +275,7 @@ function constraint_mc_load(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=pm.cnw
     load = _PMs.ref(pm, nw, :load, id)
     bus = _PMs.ref(pm, nw,:bus, load["load_bus"])
 
-    conn = haskey(load, "conn") ? load["conn"] : "wye"
+    conn = haskey(load, "configuration") ? load["configuration"] : "wye"
 
     a, alpha, b, beta = _load_expmodel_params(load, bus)
 
@@ -309,7 +309,7 @@ function constraint_mc_generation(pm::_PMs.AbstractPowerModel, id::Int; nw::Int=
     qmin = get(generator, "qmin", fill(-Inf, N))
     qmax = get(generator, "qmax", fill( Inf, N))
 
-    if generator["conn"]=="wye"
+    if get(generator, "configuration", "wye") == "wye"
         constraint_mc_generation_wye(pm, nw, id, bus["index"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
     else
         constraint_mc_generation_delta(pm, nw, id, bus["index"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)

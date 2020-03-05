@@ -279,8 +279,8 @@ constant power or constant impedance. In all other cases (e.g. when a cone is
 used to constrain the power), variables need to be created.
 """
 function variable_mc_load(pm::AbstractUBFModels; nw=pm.cnw)
-    load_wye_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="wye"]
-    load_del_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="delta"]
+    load_wye_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["configuration"]=="wye"]
+    load_del_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["configuration"]=="delta"]
     load_cone_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if _check_load_needs_cone(load)]
     # create dictionaries
     _PMs.var(pm, nw)[:pd] = Dict()
@@ -310,8 +310,8 @@ all other load model variables are then linear transformations of these
 (linear Expressions).
 """
 function variable_mc_load(pm::SDPUBFKCLMXModel; nw=pm.cnw)
-    load_wye_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="wye"]
-    load_del_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["conn"]=="delta"]
+    load_wye_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["configuration"]=="wye"]
+    load_del_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if load["configuration"]=="delta"]
     load_cone_ids = [id for (id, load) in _PMs.ref(pm, nw, :load) if _check_load_needs_cone(load)]
     # create dictionaries
     _PMs.var(pm, nw)[:Pd] = Dict{Int, Any}()
@@ -384,7 +384,7 @@ function variable_mc_load_power_bus(pm::SDPUBFKCLMXModel, load_ids::Array{Int,1}
     bound = Dict{eltype(load_ids), Array{Real,2}}()
     for id in load_ids
         load = _PMs.ref(pm, nw, :load, id)
-        @assert(load["conn"]=="wye")
+        @assert(load["configuration"]=="wye")
         bus = _PMs.ref(pm, nw, :bus, load["load_bus"])
         cmax = _calc_load_current_max(load, bus)
         bound[id] = bus["vmax"]*cmax'
@@ -578,7 +578,7 @@ function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     pmin, pmax, qmin, qmax = _calc_load_pq_bounds(load, bus)
 
     # take care of connections
-    if load["conn"]=="wye"
+    if load["configuration"]=="wye"
         if load["model"]=="constant_power"
             _PMs.var(pm, nw, :pl)[load_id] = pd0
             _PMs.var(pm, nw, :ql)[load_id] = qd0
@@ -598,7 +598,7 @@ function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
         # :pd is identical to :pl now
         _PMs.var(pm, nw, :pd)[load_id] = _PMs.var(pm, nw, :pl)[load_id]
         _PMs.var(pm, nw, :qd)[load_id] = _PMs.var(pm, nw, :ql)[load_id]
-    elseif load["conn"]=="delta"
+    elseif load["configuration"]=="delta"
         # link Wy, CCd and X
         Wr = _PMs.var(pm, nw, :Wr, bus_id)
         Wi = _PMs.var(pm, nw, :Wi, bus_id)
@@ -667,7 +667,7 @@ function constraint_mc_load(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int=pm.cnw)
     CCdr = _PMs.var(pm, nw, :CCdr, load_id)
     CCdi = _PMs.var(pm, nw, :CCdi, load_id)
 
-    if load["conn"]=="wye"
+    if load["configuration"]=="wye"
         if load["model"]=="constant_power"
             _PMs.var(pm, nw, :pl)[load_id] = pd0
             _PMs.var(pm, nw, :ql)[load_id] = qd0
@@ -694,7 +694,7 @@ function constraint_mc_load(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int=pm.cnw)
             Qd[c,c] = _PMs.var(pm, nw, :ql)[load_id][c]
         end
 
-    elseif load["conn"]=="delta"
+    elseif load["configuration"]=="delta"
         # link Wy, CCd and X
         Xdr = _PMs.var(pm, nw, :Xdr, load_id)
         Xdi = _PMs.var(pm, nw, :Xdi, load_id)

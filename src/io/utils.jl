@@ -302,10 +302,10 @@ end
 function _discover_terminals!(data_eng::Dict{String,<:Any})
     terminals = Dict{String, Set{Int}}([(name, Set{Int}()) for (name,bus) in data_eng["bus"]])
 
-    for (_,dss_obj) in data_eng["line"]
+    for (_,eng_obj) in data_eng["line"]
         # ignore 0 terminal
-        push!(terminals[dss_obj["f_bus"]], setdiff(dss_obj["f_connections"], [0])...)
-        push!(terminals[dss_obj["t_bus"]], setdiff(dss_obj["t_connections"], [0])...)
+        push!(terminals[eng_obj["f_bus"]], setdiff(eng_obj["f_connections"], [0])...)
+        push!(terminals[eng_obj["t_bus"]], setdiff(eng_obj["t_connections"], [0])...)
     end
 
     if haskey(data_eng, "transformer")
@@ -363,7 +363,7 @@ end
 function _find_neutrals(data_eng::Dict{String,<:Any})
     vertices = [(id, t) for (id, bus) in data_eng["bus"] for t in bus["terminals"]]
     neutrals = []
-    edges = Set([((dss_obj["f_bus"], dss_obj["f_connections"][c]),(dss_obj["t_bus"], dss_obj["t_connections"][c])) for (id, dss_obj) in data_eng["line"] for c in 1:length(dss_obj["f_connections"])])
+    edges = Set([((eng_obj["f_bus"], eng_obj["f_connections"][c]),(eng_obj["t_bus"], eng_obj["t_connections"][c])) for (id, eng_obj) in data_eng["line"] for c in 1:length(eng_obj["f_connections"])])
 
     bus_neutrals = [(id,bus["neutral"]) for (id,bus) in data_eng["bus"] if haskey(bus, "neutral")]
     trans_neutrals = []
@@ -374,7 +374,7 @@ function _find_neutrals(data_eng::Dict{String,<:Any})
             end
         end
     end
-    load_neutrals = [(dss_obj["bus"],dss_obj["connections"][end]) for (_,dss_obj) in get(data_eng, "load", Dict{String,Any}()) if dss_obj["configuration"]=="wye"]
+    load_neutrals = [(eng_obj["bus"],eng_obj["connections"][end]) for (_,eng_obj) in get(data_eng, "load", Dict{String,Any}()) if eng_obj["configuration"]=="wye"]
     neutrals = Set(vcat(bus_neutrals, trans_neutrals, load_neutrals))
     neutrals = Set([(bus,t) for (bus,t) in neutrals if t!=0])
     stack = deepcopy(neutrals)

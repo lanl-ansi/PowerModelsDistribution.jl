@@ -21,7 +21,7 @@
 
             gen["index"] = i+1
             gen["cost"] *= 0
-            gen["conn"] = load["conn"]
+            gen["configuration"] = load["configuration"]
             gen["pmax"] = gen["pmin"] = -load["pd"]
             gen["qmin"] = gen["qmax"] = -load["qd"]
             gen["gen_bus"] = load["load_bus"]
@@ -68,7 +68,7 @@
     #
     #         gen["index"] = i+1
     #         gen["cost"] *= 0.01
-    #         gen["conn"] = load["conn"]
+    #         gen["configuration"] = load["configuration"]
     #         gen["pmax"] = (-load["pd"])/10
     #         gen["pmin"] *= 0
     #         gen["qmin"] = -abs.(gen["pmax"])/10

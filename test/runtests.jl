@@ -59,9 +59,9 @@ include("common.jl")
 
     # include("loadmodels.jl")
 
-    # include("delta_gens.jl")
+    include("delta_gens.jl") # all passing
 
-    include("shunt.jl")
+    include("shunt.jl") # all passing
 
     include("mld.jl") # only transformer tests failing
 end

@@ -132,13 +132,14 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             kv = kv/sqrt(3)
         end
 
+        eng_obj["vnom"] = kv
+
         if model=="constant_power"
             eng_obj["pd"] = fill(defaults["kw"]/nphases, nphases)
             eng_obj["qd"] = fill(defaults["kvar"]/nphases, nphases)
         else
             eng_obj["pd_ref"] = fill(defaults["kw"]/nphases, nphases)
             eng_obj["qd_ref"] = fill(defaults["kvar"]/nphases, nphases)
-            eng_obj["vnom"] = kv
         end
 
         eng_obj["status"] = convert(Int, defaults["enabled"])
@@ -246,8 +247,6 @@ function _dss2eng_shunt_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{St
         end
     end
 end
-
-
 
 
 "Adds generators to `data_eng` from `data_dss`"
@@ -706,10 +705,6 @@ function _dss2eng_sourcebus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
 
     data_eng["voltage_source"][circuit["name"]] = eng_obj
 end
-
-
-
-
 
 
 "Parses a DSS file into a PowerModels usable format"

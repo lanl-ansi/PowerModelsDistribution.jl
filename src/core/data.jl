@@ -493,11 +493,11 @@ function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
 
     for (_, load) in data["load"]
         load["model"] = "constant_power"
-        load["conn"] = "wye"
+        load["configuration"] = "wye"
     end
 
     for (_, load) in data["gen"]
-        load["conn"] = "wye"
+        load["configuration"] = "wye"
     end
 end
 

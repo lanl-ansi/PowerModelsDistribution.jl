@@ -98,7 +98,7 @@ function _calc_mc_transformer_Tvi(pm::_PMs.AbstractPowerModel, i::Int; nw=pm.cnw
         Memento.error(_LOGGER, "The winding type should be either delta or wye, but got \'$dyz\'.")
     end
     # for now, grounded by default
-    #grounded = length(trans["conn"])>5 && trans["conn"][6]=='n'
+    #grounded = length(trans["configuration"])>5 && trans["configuration"][6]=='n'
     # Tw will contain transformations related to permutation and polarity
     perm_to_trans = Dict(
         [1,2,3]=>diagm(0=>ones(Float64, 3)),

@@ -6,7 +6,7 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "load" => ["model", "configuration", "status", "source_id"],
     "capacitor" => ["status"],
     "shunt_reactor" => ["status", "source_id"],
-    "generator" => ["model", "startup", "shutdown", "ncost", "cost", "source_id"],
+    "generator" => ["model", "startup", "shutdown", "ncost", "cost", "source_id", "configuration"],
     "pvsystem" => ["model", "startup", "shutdown", "ncost", "cost", "source_id"],
     "storage" => ["status", "source_id"],
     "line" => ["source_id"],
@@ -185,17 +185,19 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
     # TODO add delta loads
     for (name, eng_obj) in get(data_eng, "load", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("load", eng_obj, length(data_math["load"])+1)
+        math_obj["name"] = name
 
-        phases = get(eng_obj, "phases", [1, 2, 3])
-        conductors = collect(1:data_math["conductors"])
+        connections = eng_obj["connections"]
+        neutral = data_eng["bus"][eng_obj["bus"]]["neutral"]
+        phases = connections[connections.!=neutral]
+        nconductors = data_math["conductors"]
 
         if eng_obj["configuration"] == "wye"
             bus = data_eng["bus"][eng_obj["bus"]]
             # TODO add message for failure
             @assert length(bus["grounded"]) == 1 && bus["grounded"][1] == eng_obj["connections"][end]
         else
-            # TODO add message for failure
-            @assert all(load["connections"] .== phases)
+            # @assert all(eng_obj["connections"] .== phases)
         end
 
         math_obj["load_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
@@ -203,9 +205,9 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         math_obj["pd"] = eng_obj["pd"] / 1e3
         math_obj["qd"] = eng_obj["qd"] / 1e3
 
-        math_obj["vnom_kv"] = get(eng_obj, "vnom", data_eng["settings"]["set_vbase_val"]/sqrt(3)*1e3)
+        _pad_properties!(math_obj, ["pd", "qd"], connections, collect(1:nconductors); neutral=neutral)
 
-        _pad_properties!(math_obj, ["pd", "qd"], eng_obj["connections"], phases; neutral=data_eng["bus"][eng_obj["bus"]]["neutral"])
+        math_obj["vnom_kv"] = eng_obj["vnom"]
 
         data_math["load"]["$(math_obj["index"])"] = math_obj
 
@@ -335,7 +337,7 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         math_obj["pmax"] = fill(eng_obj["kw"] / 1e3 / phases, phases)
         math_obj["pmin"] = fill(0.0, phases)
 
-        math_obj["conn"] = eng_obj["configuration"]
+        math_obj["configuration"] = eng_obj["configuration"]
 
         _pad_properties!(math_obj, ["pg", "qg", "vg", "pmin", "pmax", "qmin", "qmax"], connections, collect(1:nconductors))
 
@@ -380,7 +382,7 @@ function _map_eng2math_pvsystem!(data_math::Dict{String,<:Any}, data_eng::Dict{<
         math_obj["qmin"] =  fill(-eng_obj["kva"] / 1e3 / phases, phases)
         math_obj["qmax"] =  fill( eng_obj["kva"] / 1e3 / phases, phases)
 
-        math_obj["conn"] = eng_obj["configuration"]
+        math_obj["configuration"] = eng_obj["configuration"]
 
         _pad_properties!(math_obj, ["pg", "qg", "vg", "pmin", "pmax", "qmin", "qmax"], connections, collect(1:nconductors))
 
@@ -718,7 +720,7 @@ function _map_eng2math_sourcebus!(data_math::Dict{String,<:Any}, data_eng::Dict{
                 "shutdown" => 0.0,
                 "ncost" => 3,
                 "cost" => [0.0, 1.0, 0.0],
-                "conn" => "wye",  # TODO change name to configuration
+                "configuration" => "wye",  # TODO change name to configuration
                 "index" => length(data_math["gen"]) + 1,
                 "source_id" => "vsource._virtual_sourcebus"
             )
