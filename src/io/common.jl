@@ -41,8 +41,8 @@ function transform_data_model(data::Dict{<:Any,<:Any})
 
     if current_data_model == "engineering"
         return _map_eng2math(data)
-    elseif current_data_model == "mathematical"
-        return _map_math2eng!(data)
+    # elseif current_data_model == "mathematical"
+    #     return _map_math2eng!(data)
     else
         @warn "Data model '$current_data_model' is not recognized, no transformation performed"
         return data

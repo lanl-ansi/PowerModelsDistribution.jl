@@ -116,7 +116,15 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
 
         # now we can create the load; if you do not have the correct model,
         # pd/qd fields will be populated by default (should not happen for constant current/impedance)
-        eng_obj = create_load(model=model, connections=connections, bus=bus, configuration=conf)
+        eng_obj = Dict{String,Any}(
+            "name" => name,
+            "bus" => bus,
+            "model" => model,
+            "configuration" => conf,
+            "connections" => connections,
+            "source_id" => "load.$name",
+            "status" => convert(Int, defaults["enabled"])
+        )
 
         # if the ground is used directly, register load
         if 0 in connections
@@ -134,16 +142,8 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
 
         eng_obj["vnom"] = kv
 
-        if model=="constant_power"
-            eng_obj["pd"] = fill(defaults["kw"]/nphases, nphases)
-            eng_obj["qd"] = fill(defaults["kvar"]/nphases, nphases)
-        else
-            eng_obj["pd_ref"] = fill(defaults["kw"]/nphases, nphases)
-            eng_obj["qd_ref"] = fill(defaults["kvar"]/nphases, nphases)
-        end
-
-        eng_obj["status"] = convert(Int, defaults["enabled"])
-        eng_obj["source_id"] = "load.$name"
+        eng_obj["pd"] = fill(defaults["kw"]/nphases, nphases)
+        eng_obj["qd"] = fill(defaults["kvar"]/nphases, nphases)
 
         if import_all
             _import_all!(eng_obj, defaults, dss_obj["prop_order"])
@@ -322,7 +322,7 @@ function _dss2eng_linecode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
 
         eng_obj = Dict{String,Any}()
 
-        nphases = size(defaults["rmatrix"])[1]
+        nphases = defaults["nphases"]
 
         eng_obj["rs"] = reshape(defaults["rmatrix"], nphases, nphases)
         eng_obj["xs"] = reshape(defaults["xmatrix"], nphases, nphases)
@@ -360,8 +360,7 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
 
         eng_obj["length"] = defaults["length"]
 
-        # TODO nphases not being read correctly from linecode; infer indirectly instead
-        nphases = size(defaults["rmatrix"])[1]
+        nphases = defaults["phases"]
         eng_obj["n_conductors"] = nphases
 
         if haskey(dss_obj, "linecode")

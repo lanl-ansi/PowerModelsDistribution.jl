@@ -686,8 +686,6 @@ function _parse_obj_dtypes!(obj_type, object, dtypes)
                 object[k] = arrout
             elseif isa(v, AbstractString)
                 object[k] = _parse_element_with_dtype(dtypes[k], v)
-            else
-                Memento.error(_LOGGER, "dtype unknown $obj_type, $k, $v")
             end
         end
     end
