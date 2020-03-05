@@ -61,7 +61,7 @@ include("common.jl")
 
     # include("delta_gens.jl")
 
-    # include("shunt.jl")
+    include("shunt.jl")
 
     include("mld.jl") # only transformer tests failing
 end
