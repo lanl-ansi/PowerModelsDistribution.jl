@@ -45,9 +45,9 @@ include("common.jl")
 
     include("opf.jl") # all passing
 
-    # include("opf_bf.jl")
+    include("opf_bf.jl") # all passing
 
-    # include("opf_iv.jl")
+    include("opf_iv.jl") # all passing
 
     # include("storage.jl")
 
