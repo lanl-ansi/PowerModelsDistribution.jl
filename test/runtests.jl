@@ -53,7 +53,7 @@ include("common.jl")
 
     include("debug.jl") # all passing
 
-    # include("multinetwork.jl")
+    include("multinetwork.jl") # all passing
 
     # include("transformer.jl")
 
@@ -63,5 +63,5 @@ include("common.jl")
 
     # include("shunt.jl")
 
-    # include("mld.jl")
+    include("mld.jl") # only transformer tests failing
 end

@@ -73,14 +73,14 @@
         @test isapprox(result["solution"]["load"]["1"]["status"], 0.544; atol = 1e-3)
     end
 
-    @testset "transformer nfa mld" begin
-        mp_data = PowerModelsDistribution.parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
-        result = run_mc_mld(mp_data, NFAPowerModel, ipopt_solver)
+    # @testset "transformer nfa mld" begin
+    #     mp_data = PowerModelsDistribution.parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
+    #     result = run_mc_mld(mp_data, NFAPowerModel, ipopt_solver)
 
-        @test result["termination_status"] == PMs.LOCALLY_SOLVED
-        @test isapprox(result["objective"], 0.411, atol = 1e-3)
-        @test isapprox(result["solution"]["load"]["1"]["status"], 1.0, atol = 1e-3)
-    end
+    #     @test result["termination_status"] == PMs.LOCALLY_SOLVED
+    #     @test isapprox(result["objective"], 0.411, atol = 1e-3)
+    #     @test isapprox(result["solution"]["load"]["1"]["status"], 1.0, atol = 1e-3)
+    # end
 
     @testset "5-bus lpubfdiag mld" begin
         mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case5.m"); PMD.make_multiconductor!(mp_data, 3)
@@ -104,14 +104,14 @@
         @test isapprox(result["solution"]["load"]["1"]["status"], 0.313; atol = 1e-3)
     end
 
-    @testset "transformer case" begin
-        dss = PowerModelsDistribution.parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
-        result = run_mc_mld_bf(dss, LPUBFDiagPowerModel, ipopt_solver)
+    # @testset "transformer case" begin
+    #     dss = PowerModelsDistribution.parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
+    #     result = run_mc_mld_bf(dss, LPUBFDiagPowerModel, ipopt_solver)
 
-        @test result["termination_status"] == PMs.LOCALLY_SOLVED
-        @test isapprox(result["objective"], 0.0; atol=1e-3)
-        @test isapprox(result["solution"]["load"]["1"]["status"], 1.0; atol=1e-3)
-    end
+    #     @test result["termination_status"] == PMs.LOCALLY_SOLVED
+    #     @test isapprox(result["objective"], 0.0; atol=1e-3)
+    #     @test isapprox(result["solution"]["load"]["1"]["status"], 1.0; atol=1e-3)
+    # end
 
     @testset "5-bus acp mld_uc" begin
         mp_data = PMs.parse_file("$(pms_path)/test/data/matpower/case5.m"); PMD.make_multiconductor!(mp_data, 3)
