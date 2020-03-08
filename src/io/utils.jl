@@ -317,44 +317,43 @@ function _discover_terminals!(data_eng::Dict{String,<:Any})
         end
     end
 
+    for comp_type in [x for x in ["voltage_source", "load", "shunt", "gen"] if haskey(data_eng, x)]
+        for comp in values(data_eng[comp_type])
+            push!(terminals[comp["bus"]], setdiff(comp["connections"], [0])...)
+        end
+    end
+
     for (id, bus) in data_eng["bus"]
         data_eng["bus"][id]["terminals"] = sort(collect(terminals[id]))
     end
 
-    # identify neutrals and propagate along cables
-    bus_neutral = _find_neutrals(data_eng)
-
     for (id,bus) in data_eng["bus"]
-        if haskey(bus, "awaiting_ground") || haskey(bus_neutral, id)
-            # this bus will need a neutral
-            if haskey(bus_neutral, id)
-                neutral = bus_neutral[id]
-            else
-                neutral = maximum(bus["terminals"])+1
-                push!(bus["terminals"], neutral)
-            end
-            bus["neutral"] = neutral
-            if haskey(bus, "awaiting_ground")
-                bus["grounded"] = [neutral]
-                bus["rg"] = [0.0]
-                bus["xg"] = [0.0]
-                for comp in bus["awaiting_ground"]
-                    if eltype(comp["connections"])<:Array
-                        for w in 1:length(comp["connections"])
-                            if comp["bus"][w]==id
-                                comp["connections"][w] .+= (comp["connections"][w].==0)*neutral
-                            end
-                        end
-                    else
-                        comp["connections"] .+= (comp["connections"].==0)*neutral
-                    end
-                    # @show comp["connections"]
-                end
-                #delete!(bus, "awaiting_ground")
+        if haskey(bus, "awaiting_ground")
+            neutral =  !(4 in bus["terminals"]) ? 4 : maximum(bus["terminals"])+1
+            push!(bus["terminals"], neutral)
+
+            bus["grounded"] = [neutral]
+            bus["rg"] = [0.0]
+            bus["xg"] = [0.0]
+            for i in 1:length(bus["awaiting_ground"])
+                bus["awaiting_ground"][i][bus["awaiting_ground"][i].==0] .= neutral
             end
         end
-        phases = haskey(bus, "neutral") ? setdiff(bus["terminals"], bus["neutral"]) : bus["terminals"]
-        bus["phases"] = phases
+    end
+end
+
+
+function _discover_phases_neutral!(data_eng::Dict{String,<:Any})
+    bus_neutral = _find_neutrals(data_eng)
+    for (id, bus) in data_eng["bus"]
+        terminals = bus["terminals"]
+        if haskey(bus_neutral, id)
+            bus["neutral"] = bus_neutral[id]
+            phases = setdiff(terminals, bus["neutral"])
+        else
+            phases = terminals
+        end
+        @assert(length(phases)<=3, "At bus $id, we found $(length(phases))>3 phases; aborting discovery, requires manual inspection.")
     end
 end
 
@@ -439,6 +438,11 @@ function _get_idxs(vec::Vector{<:Any}, els::Vector{<:Any})::Vector{Int}
         end
     end
     return ret
+end
+
+
+function _get_ilocs(vec::Vector{<:Any}, loc::Any)::Vector{Int}
+    return collect(1:length(vec))[vec.==loc]
 end
 
 
@@ -689,4 +693,47 @@ function _parse_obj_dtypes!(obj_type, object, dtypes)
             end
         end
     end
+end
+
+
+"""
+Given a set of addmittances 'y' connected from the conductors 'f_cnds' to the
+conductors 't_cnds', this method will return a list of conductors 'cnd' and a
+matrix 'Y', which will satisfy I[cnds] = Y*V[cnds].
+"""
+function _calc_shunt(f_cnds, t_cnds, y)
+    # TODO add types
+    cnds = unique([f_cnds..., t_cnds...])
+    e(f,t) = reshape([c==f ? 1 : c==t ? -1 : 0 for c in cnds], length(cnds), 1)
+    Y = sum([e(f_cnds[i], t_cnds[i])*y[i]*e(f_cnds[i], t_cnds[i])' for i in 1:length(y)])
+    return (cnds, Y)
+end
+
+
+"""
+Given a set of terminals 'cnds' with associated shunt addmittance 'Y', this
+method will calculate the reduced addmittance matrix if terminal 'ground' is
+grounded.
+"""
+function _calc_ground_shunt_admittance_matrix(cnds, Y, ground)
+    # TODO add types
+    if ground in cnds
+        cndsr = setdiff(cnds, ground)
+        cndsr_inds = _get_idxs(cnds, cndsr)
+        Yr = Y[cndsr_inds, cndsr_inds]
+        return (cndsr, Yr)
+    else
+        return cnds, Y
+    end
+end
+
+
+""
+function _rm_floating_cnd(cnds, Y, f)
+    # TODO add types
+    P = setdiff(cnds, f)
+    f_inds = _get_idxs(cnds, [f])
+    P_inds = _get_idxs(cnds, P)
+    Yrm = Y[P_inds,P_inds]-(1/Y[f_inds,f_inds][1])*Y[P_inds,f_inds]*Y[f_inds,P_inds]
+    return (P,Yrm)
 end

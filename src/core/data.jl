@@ -101,7 +101,7 @@ function count_nodes(data::Dict{String,<:Any})::Int
                 n_nodes += sum(bus["vm"] .> 0.0)
             elseif get(data, "source_type", "none") == "dss"
                 if !(data["source_type"] == "dss" && bus["name"] in ["_virtual_sourcebus", data["sourcebus"]]) && !(data["source_type"] == "dss" && startswith(bus["name"], "tr") && endswith(bus["name"], r"_b\d"))
-                    n_nodes += sum(bus["vm"] .> 0.0)
+                    n_nodes += sum(bus["vmax"] .> 0.0)
                 end
             end
         end

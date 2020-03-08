@@ -405,6 +405,72 @@ function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String},
 end
 
 
+""
+function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int})
+    @assert(all(c in phases for c in connections))
+    inds = _get_idxs(phases, connections)
+
+    for property in properties
+        if haskey(object, property)
+            if isa(object[property], Vector)
+                tmp = zeros(length(phases))
+                tmp[inds] = object[property]
+                object[property] = tmp
+            elseif isa(object[property], Matrix)
+                tmp = zeros(length(phases), length(phases))
+                tmp[inds, inds] = object[property]
+                object[property] = tmp
+            end
+        end
+    end
+end
+
+
+""
+function _pad_properties_delta!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; invert=false)
+    @assert(all(c in phases for c in connections))
+    @assert(length(connections) in [2, 3], "A delta configuration has to have at least 2 or 3 connections!")
+    @assert(length(phases)==3, "Padding only possible to a |phases|==3!")
+
+    for property in properties
+        val = object[property]
+        val_length = length(connections)==2 ? 1 : length(connections)
+        @assert(isa(val, Vector) && length(val)==val_length)
+
+        # build tmp
+        tmp = Dict()
+        sign = invert ? -1 : 1
+        if val_length==1
+            tmp[(connections[1], connections[2])] =      val[1]
+            tmp[(connections[2], connections[1])] = sign*val[1]
+        else
+            tmp[(connections[1], connections[2])] =      val[1]
+            tmp[(connections[2], connections[3])] =      val[2]
+            tmp[(connections[3], connections[1])] =      val[3]
+        end
+        merge!(tmp, Dict((k[2], k[1])=>sign*v for (k,v) in tmp))
+        get_val(x,y) = haskey(tmp, (x,y)) ? tmp[(x,y)] : 0.0
+
+        object[property] = [get_val(phases[1], phases[2]), get_val(phases[2], phases[3]), get_val(phases[3], phases[1])]
+    end
+end
+
+
+function _apply_filter!(obj, properties, filter)
+    for property in properties
+        if haskey(obj, property)
+            if isa(obj[property], Vector)
+                obj[property] = obj[property][filter]
+            elseif isa(obj[property], Matrix)
+                obj[property] = obj[property][filter, filter]
+            else
+                error("The property $property is not a Vector or a Matrix!")
+            end
+        end
+    end
+end
+
+
 """
 Given a set of addmittances 'y' connected from the conductors 'f_cnds' to the
 conductors 't_cnds', this method will return a list of conductors 'cnd' and a

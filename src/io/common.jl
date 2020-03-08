@@ -36,13 +36,20 @@ end
 
 
 "transforms model between engineering (high-level) and mathematical (low-level) models"
-function transform_data_model(data::Dict{<:Any,<:Any})
+function transform_data_model(data::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
     current_data_model = get(data, "data_model", "mathematical")
 
     if current_data_model == "engineering"
-        return _map_eng2math(data)
-    # elseif current_data_model == "mathematical"
-    #     return _map_math2eng!(data)
+        out = _map_eng2math(data, kron_reduced=kron_reduced)
+
+        bus_indexed_id = string(out["bus_lookup"][data["settings"]["set_vbase_bus"]])
+        vbases = Dict(bus_indexed_id=>data["settings"]["set_vbase_val"])
+        sbase = data["settings"]["set_sbase_val"]
+
+        data_model_make_pu!(out, vbases=vbases, sbase=sbase, v_var_scalar=data["settings"]["v_var_scalar"])
+        return out
+    elseif current_data_model == "mathematical"
+        return _map_math2eng!(data)
     else
         @warn "Data model '$current_data_model' is not recognized, no transformation performed"
         return data
@@ -52,7 +59,7 @@ end
 
 ""
 function correct_network_data!(data::Dict{String,Any})
-    _PMs.make_per_unit!(data)
+    #_PMs.make_per_unit!(data)
 
     _PMs.check_connectivity(data)
     _PMs.correct_transformer_parameters!(data)

@@ -1,11 +1,11 @@
 
 "finds voltage zones"
 function _find_zones(data_model)
-    unused_line_ids = Set(keys(data_model["line"]))
+    unused_line_ids = Set(keys(data_model["branch"]))
     bus_lines = Dict([(id,Set()) for id in keys(data_model["bus"])])
-    for (line_id,line) in data_model["line"]
-        f_bus = line["f_bus"]
-        t_bus = line["t_bus"]
+    for (line_id,line) in data_model["branch"]
+        f_bus = string(line["f_bus"])
+        t_bus = string(line["t_bus"])
         push!(bus_lines[f_bus], (line_id,t_bus))
         push!(bus_lines[t_bus], (line_id,f_bus))
     end
@@ -51,10 +51,10 @@ function _calc_vbase(data_model, vbase_sources::Dict{String,<:Real})
     # transformers form the edges between these zones
     zone_edges = Dict([(zone,[]) for zone in keys(zones)])
     edges = Set()
-    for (i,(_,trans)) in enumerate(data_model["transformer_2wa"])
+    for (i,(_,trans)) in enumerate(data_model["transformer"])
         push!(edges,i)
-        f_zone = bus_to_zone[trans["f_bus"]]
-        t_zone = bus_to_zone[trans["t_bus"]]
+        f_zone = bus_to_zone[string(trans["f_bus"])]
+        t_zone = bus_to_zone[string(trans["t_bus"])]
         tm_nom = trans["configuration"]=="delta" ? trans["tm_nom"]/sqrt(3) : trans["tm_nom"]
         push!(zone_edges[f_zone], (i, t_zone, 1/tm_nom))
         push!(zone_edges[t_zone], (i, f_zone, tm_nom))
@@ -78,33 +78,31 @@ function _calc_vbase(data_model, vbase_sources::Dict{String,<:Real})
     end
 
     bus_vbase = Dict([(bus,zone_vbase[zone]) for (bus,zone) in bus_to_zone])
-    line_vbase = Dict([(id, bus_vbase[line["f_bus"]]) for (id,line) in data_model["line"]])
+    line_vbase = Dict([(id, bus_vbase[string(line["f_bus"])]) for (id,line) in data_model["branch"]])
     return (bus_vbase, line_vbase)
 end
 
 
 "converts to per unit from SI"
-function data_model_make_pu!(data_model; sbase=missing, vbases=missing)
-    v_var_scalar = data_model["settings"]["v_var_scalar"]
-
-    if haskey(data_model["settings"], "sbase")
-        sbase_old = data_model["settings"]["sbase"]
-    else
-        sbase_old = 1
+function data_model_make_pu!(data_model; settings=missing, sbase=1.0, vbases=missing, v_var_scalar=missing)
+    if ismissing(sbase)
+        if !ismissing(settings) && haskey(settings, "set_sbase")
+            sbase = settings["set_sbase"]
+        else
+            sbase = 1.0
+        end
     end
 
-    if ismissing(sbase)
-        if haskey(data_model["settings"], "set_sbase_val")
-            sbase = data_model["settings"]["set_sbase_val"]
-        else
-            sbase = 1
-        end
+    if haskey(data_model, "sbase")
+        sbase_old = data_model["sbase"]
+    else
+        sbase_old = 1.0
     end
 
     # automatically find a good vbase
     if ismissing(vbases)
-        if haskey(data_model["settings"], "set_vbase_val") && haskey(data_model["settings"], "set_vbase_bus")
-            vbases = Dict(data_model["settings"]["set_vbase_bus"]=>data_model["settings"]["set_vbase_val"])
+        if !ismissing(settings) && haskey(settings, "set_vbases")
+            vbases = settings["vbases"]
         else
             buses_type_3 = [(id, sum(bus["vm"])/length(bus["vm"])) for (id,bus) in data_model["bus"] if haskey(bus, "bus_type") && bus["bus_type"]==3]
             if !isempty(buses_type_3)
@@ -121,31 +119,32 @@ function data_model_make_pu!(data_model; sbase=missing, vbases=missing)
         _rebase_pu_bus!(bus, bus_vbase[id], sbase, sbase_old, v_var_scalar)
     end
 
-    for (id, line) in data_model["line"]
+    for (id, line) in data_model["branch"]
         vbase = line_vbase[id]
         _rebase_pu_line!(line, line_vbase[id], sbase, sbase_old, v_var_scalar)
     end
 
     for (id, shunt) in data_model["shunt"]
-        _rebase_pu_shunt!(shunt, bus_vbase[shunt["bus"]], sbase, sbase_old, v_var_scalar)
+        _rebase_pu_shunt!(shunt, bus_vbase[string(shunt["shunt_bus"])], sbase, sbase_old, v_var_scalar)
     end
 
     for (id, load) in data_model["load"]
-        _rebase_pu_load!(load, bus_vbase[load["bus"]], sbase, sbase_old, v_var_scalar)
+        _rebase_pu_load!(load, bus_vbase[string(load["load_bus"])], sbase, sbase_old, v_var_scalar)
     end
 
-    for (id, gen) in data_model["generator"]
-        _rebase_pu_generator!(gen, bus_vbase[gen["bus"]], sbase, sbase_old, v_var_scalar)
+    for (id, gen) in data_model["gen"]
+        _rebase_pu_generator!(gen, bus_vbase[string(gen["gen_bus"])], sbase, sbase_old, v_var_scalar, data_model)
     end
 
-    for (id, trans) in data_model["transformer_2wa"]
+    for (id, trans) in data_model["transformer"]
         # voltage base across transformer does not have to be consistent with the ratio!
-        f_vbase = bus_vbase[trans["f_bus"]]
-        t_vbase = bus_vbase[trans["t_bus"]]
+        f_vbase = bus_vbase[string(trans["f_bus"])]
+        t_vbase = bus_vbase[string(trans["t_bus"])]
         _rebase_pu_transformer_2w_ideal!(trans, f_vbase, t_vbase, sbase_old, sbase, v_var_scalar)
     end
 
-    data_model["settings"]["sbase"] = sbase
+    data_model["sbase"] = sbase
+    data_model["per_unit"] = true
 
     return data_model
 end
@@ -194,7 +193,7 @@ function _rebase_pu_line!(line, vbase, sbase, sbase_old, v_var_scalar)
     z_scale = z_old/z_new
     y_scale = 1/z_scale
 
-    _scale_props!(line, ["rs", "xs"], z_scale)
+    _scale_props!(line, ["br_r", "br_x"], z_scale)
     _scale_props!(line, ["b_fr", "g_fr", "b_to", "g_to"], y_scale)
 
     # save new vbase
@@ -212,10 +211,11 @@ function _rebase_pu_shunt!(shunt, vbase, sbase, sbase_old, v_var_scalar)
 
     # rebase grounding resistance
     z_new = vbase^2/sbase*v_var_scalar
+
     z_scale = z_old/z_new
     y_scale = 1/z_scale
-    scale(shunt, "g_sh", y_scale)
-    scale(shunt, "b_sh", y_scale)
+    scale(shunt, "gs", y_scale)
+    scale(shunt, "bs", y_scale)
 
     # save new vbase
     shunt["vbase"] = vbase
@@ -245,16 +245,24 @@ end
 
 
 "per-unit conversion for generators"
-function _rebase_pu_generator!(gen, vbase, sbase, sbase_old, v_var_scalar)
+function _rebase_pu_generator!(gen, vbase, sbase, sbase_old, v_var_scalar, data_model)
     vbase_old = get(gen, "vbase", 1.0/v_var_scalar)
     vbase_scale = vbase_old/vbase
     sbase_scale = sbase_old/sbase
 
-    for key in ["pd_set", "qd_set", "pd_min", "qd_min", "pd_max", "qd_max"]
+    for key in ["pg", "qg", "pmin", "qmin", "pmax", "qmax"]
         scale(gen, key, sbase_scale)
     end
 
-    scale(gen, "cost", 1/sbase_scale)
+    # if not in per unit yet, the cost has is in $/MWh
+    if !haskey(data_model, "sbase")
+        sbase_old_cost = 1E6/v_var_scalar
+        sbase_scale_cost = sbase_old_cost/sbase
+    else
+        sbase_scale_cost = sbase_scale
+    end
+
+    _PMs._rescale_cost_model!(gen, 1/sbase_scale_cost)
 
     # save new vbase
     gen["vbase"] = vbase
