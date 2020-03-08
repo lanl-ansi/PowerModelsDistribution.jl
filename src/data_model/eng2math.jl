@@ -306,12 +306,8 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
         math_obj["name"] = name
         math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
-        Zbase = (data_math["basekv"])^2 / (data_math["baseMVA"])
-        Zbase = 1
-
-
-        math_obj["gs"] = eng_obj["g_sh"]*Zbase
-        math_obj["bs"] = eng_obj["b_sh"]*Zbase
+        math_obj["gs"] = eng_obj["g_sh"]
+        math_obj["bs"] = eng_obj["b_sh"]
 
         if kron_reduced
             filter = _kron_reduce_branch!(math_obj,
@@ -346,8 +342,7 @@ function _map_eng2math_shunt_reactor!(data_math::Dict{String,<:Any}, data_eng::D
         connections = eng_obj["connections"]
         nconductors = data_math["conductors"]
 
-        Zbase = (data_math["basekv"] / sqrt(3.0))^2 * nphases / data_math["baseMVA"]  # Use single-phase base impedance for each phase
-        Gcap = Zbase * sum(eng_obj["kvar"]) / (nphases * 1e3 * (data_math["basekv"] / sqrt(3.0))^2)
+        Gcap = sum(eng_obj["kvar"]) / (nphases * 1e3 * (data_math["basekv"])^2)
 
         math_obj["name"] = name
         math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
@@ -544,20 +539,17 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         nphases = length(eng_obj["f_connections"])
         nconductors = data_math["conductors"]
 
-        Zbase = (data_math["basekv"])^2 / (data_math["baseMVA"])
-        Zbase = 1
-
         math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
         math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
 
-        math_obj["br_r"] = eng_obj["rs"] * eng_obj["length"] / Zbase
-        math_obj["br_x"] = eng_obj["xs"] * eng_obj["length"] / Zbase
+        math_obj["br_r"] = eng_obj["rs"] * eng_obj["length"]
+        math_obj["br_x"] = eng_obj["xs"] * eng_obj["length"]
 
-        math_obj["g_fr"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9)
-        math_obj["g_to"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_to"] * eng_obj["length"] / 1e9)
+        math_obj["g_fr"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9)
+        math_obj["g_to"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_to"] * eng_obj["length"] / 1e9)
 
-        math_obj["b_fr"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9)
-        math_obj["b_to"] = Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_to"] * eng_obj["length"] / 1e9)
+        math_obj["b_fr"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9)
+        math_obj["b_to"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_to"] * eng_obj["length"] / 1e9)
 
         math_obj["angmin"] = fill(-60.0, nphases)
         math_obj["angmax"] = fill( 60.0, nphases)
@@ -849,11 +841,6 @@ function _map_eng2math_sourcebus!(data_math::Dict{String,<:Any}, data_eng::Dict{
 
             data_math["gen"]["$(gen_obj["index"])"] = gen_obj
 
-            vbase = data_math["basekv"]
-            sbase = data_math["baseMVA"]
-            zbase = vbase^2 / (sbase)
-            zbase = 1
-
             branch_obj = Dict{String,Any}(
                 "name" => "_virtual_sourcebus",
                 "source_id" => "vsource._virtual_sourcebus",
@@ -866,8 +853,8 @@ function _map_eng2math_sourcebus!(data_math::Dict{String,<:Any}, data_eng::Dict{
                 "tranformer" => false,
                 "switch" => false,
                 "br_status" => 1,
-                "br_r" => eng_obj["rs"]./zbase,
-                "br_x" => eng_obj["xs"]./zbase,
+                "br_r" => eng_obj["rs"],
+                "br_x" => eng_obj["xs"],
                 "g_fr" => zeros(nconductors, nconductors),
                 "g_to" => zeros(nconductors, nconductors),
                 "b_fr" => zeros(nconductors, nconductors),
