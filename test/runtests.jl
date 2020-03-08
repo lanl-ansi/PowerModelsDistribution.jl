@@ -55,9 +55,9 @@ include("common.jl")
 
     include("multinetwork.jl") # all passing
 
-    # include("transformer.jl")
+    include("transformer.jl")
 
-    # include("loadmodels.jl")
+    include("loadmodels.jl")
 
     include("delta_gens.jl") # all passing
 

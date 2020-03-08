@@ -329,7 +329,7 @@ function _discover_terminals!(data_eng::Dict{String,<:Any})
 
     for (id,bus) in data_eng["bus"]
         if haskey(bus, "awaiting_ground")
-            neutral =  !(4 in bus["terminals"]) ? 4 : maximum(bus["terminals"])+1
+            neutral = !(4 in bus["terminals"]) ? 4 : maximum(bus["terminals"])+1
             push!(bus["terminals"], neutral)
 
             bus["grounded"] = [neutral]
@@ -338,6 +338,8 @@ function _discover_terminals!(data_eng::Dict{String,<:Any})
             for i in 1:length(bus["awaiting_ground"])
                 bus["awaiting_ground"][i][bus["awaiting_ground"][i].==0] .= neutral
             end
+
+            delete!(bus, "awaiting_ground")
         end
     end
 end

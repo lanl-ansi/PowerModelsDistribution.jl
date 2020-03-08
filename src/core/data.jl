@@ -232,7 +232,7 @@ function _load_expmodel_params(load::Dict, bus::Dict)
             @assert(all(beta.>=0))
         end
         # calculate proportionality constants
-        v0 = load["vnom_kv"]/(bus["base_kv"]/sqrt(3))
+        v0 = load["vnom_kv"]
         a = pd./v0.^alpha
         b = qd./v0.^beta
         # get bounds

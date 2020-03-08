@@ -90,19 +90,19 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         model = defaults["model"]
 
         if model == 3
-            Memento.warn(_LOGGER, "$load_name: load model 3 not supported. Treating as model 1.")
+            Memento.warn(_LOGGER, "$name: load model 3 not supported. Treating as model 1.")
             model = 1
         elseif model == 4
-            Memento.warn(_LOGGER, "$load_name: load model 4 not supported. Treating as model 1.")
+            Memento.warn(_LOGGER, "$name: load model 4 not supported. Treating as model 1.")
             model = 1
         elseif model == 6
-            Memento.warn(_LOGGER, "$load_name: load model 6 identical to model 1 in current feature set. Treating as model 1.")
+            Memento.warn(_LOGGER, "$name: load model 6 identical to model 1 in current feature set. Treating as model 1.")
             model = 1
         elseif model == 7
-            Memento.warn(_LOGGER, "$load_name: load model 7 not supported. Treating as model 1.")
+            Memento.warn(_LOGGER, "$name: load model 7 not supported. Treating as model 1.")
             model = 1
         elseif model == 8
-            Memento.warn(_LOGGER, "$load_name: load model 8 not supported. Treating as model 1.")
+            Memento.warn(_LOGGER, "$name: load model 8 not supported. Treating as model 1.")
             model = 1
         end
 
@@ -112,15 +112,16 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         nphases = defaults["phases"]
         conf = defaults["conn"]
 
+        if conf=="delta"
+            @assert(nphases in [1, 3], "$name: only 1 and 3-phase delta loads are supported!")
+        end
+
         # connections
         bus = _parse_busname(defaults["bus1"])[1]
+        connections_default = conf=="wye" ? [collect(1:nphases)..., 0] : nphases==1 ? [1,2] : [1,2,3]
+        connections = _get_conductors_ordered_dm(defaults["bus1"], default=connections_default, pad_ground=(conf=="wye"))
 
-        connections_default = conf=="wye" ? [collect(1:nphases)..., 0] : collect(1:nphases)
-        connections = _get_conductors_ordered_dm(defaults["bus1"], default=connections_default, check_length=false)
-        # if wye connected and neutral not specified, append ground
-        if conf=="wye" && length(connections)==nphases
-            connections = [connections..., 0]
-        end
+        @assert(length(unique(connections))==length(connections), "$name: connections cannot be made to a terminal more than once.")
 
         # now we can create the load; if you do not have the correct model,
         # pd/qd fields will be populated by default (should not happen for constant current/impedance)
@@ -519,6 +520,8 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
         eng_obj["bus"] = Array{String, 1}(undef, nrw)
         eng_obj["connections"] = Array{Array{Int, 1}, 1}(undef, nrw)
         eng_obj["tm"] = Array{Array{Real, 1}, 1}(undef, nrw)
+        eng_obj["tm_min"] = Array{Array{Real, 1}, 1}(undef, nrw)
+        eng_obj["tm_max"] = Array{Array{Real, 1}, 1}(undef, nrw)
         eng_obj["fixed"] = [[true for i in 1:nphases] for j in 1:nrw]
         eng_obj["vnom"] = [defaults["kvs"][w] for w in 1:nrw]
         eng_obj["snom"] = [defaults["kvas"][w] for w in 1:nrw]
@@ -546,6 +549,8 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
 
             eng_obj["polarity"][w] = 1
             eng_obj["tm"][w] = fill(defaults["taps"][w], nphases)
+            eng_obj["tm_min"][w] = fill(defaults["mintap"], nphases)
+            eng_obj["tm_max"][w] = fill(defaults["maxtap"], nphases)
 
             if w>1
                 prim_conf = eng_obj["configuration"][1]

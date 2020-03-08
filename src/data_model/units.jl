@@ -233,7 +233,7 @@ function _rebase_pu_load!(load, vbase, sbase, sbase_old, v_var_scalar)
 
     vbase_old = get(load, "vbase", 1.0)
     vbase_scale = vbase_old/vbase
-    scale(load, "vnom", vbase_scale)
+    scale(load, "vnom_kv", vbase_scale)
 
     sbase_scale = sbase_old/sbase
     scale(load, "pd", sbase_scale)
