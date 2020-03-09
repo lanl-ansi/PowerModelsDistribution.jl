@@ -322,7 +322,6 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
 
                     for (i, wdg) in enumerate(transformer[key])
                         for (j, v) in enumerate(wdg)
-                            @warn key i transformer[key] eng_obj[key] wdg v transformer["connections"][j]
                             eng_obj[key][i][transformer["connections"][i][j]] = v
                         end
                     end
