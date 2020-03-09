@@ -78,8 +78,8 @@
             file = "../test/data/opendss/ut_trans_3w_dyy_1.dss"
             pmd_data = PMD.parse_file(file)
             sol = PMD.run_ac_mc_pf(pmd_data, ipopt_solver, multiconductor=true)
-            @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.9318, 0.88828, 0.88581], Inf) <= 1.5E-5
-            @test norm(va(sol, pmd_data, "3")-[30.1, -90.7, 151.2], Inf) <= 0.1
+            @test norm(sol["solution"]["bus"]["4"]["vm"]-[0.9318, 0.88828, 0.88581], Inf) <= 1.5E-5
+            @test norm(sol["solution"]["bus"]["4"]["va"]-deg2rad.([30.1, -90.7, 151.2]), Inf) <= 0.1
         end
 
         @testset "3w transformer ac pf dyy - some non-zero" begin
@@ -87,8 +87,8 @@
             pmd_data = PMD.parse_file(file)
             sol = PMD.run_ac_mc_pf(pmd_data, ipopt_solver, multiconductor=true)
             #@test isapprox(vm(sol, pmd_data, "3"), [0.93876, 0.90227, 0.90454], atol=1E-4)
-            @test norm(vm(sol, pmd_data, "3")-[0.93876, 0.90227, 0.90454], Inf) <= 1.5E-5
-            @test norm(va(sol, pmd_data, "3")-[31.6, -88.8, 153.3], Inf) <= 0.1
+            @test norm(sol["solution"]["bus"]["4"]["vm"]-[0.93876, 0.90227, 0.90454], Inf) <= 1.5E-5
+            @test norm(sol["solution"]["bus"]["4"]["va"]-deg2rad.([31.6, -88.8, 153.3]), Inf) <= 0.1
         end
 
         @testset "3w transformer ac pf dyy - all zero" begin

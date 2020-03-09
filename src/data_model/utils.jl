@@ -217,6 +217,12 @@ function _sc2br_impedance(Zsc)
             end
         end
     end
+
+    # if all zero, return all zeros
+    if all(values(Zsc).==0.0)
+        return Zsc
+    end
+
     # make Zb
     Zb = zeros(Complex{Float64}, N-1,N-1)
     for i in 1:N-1
@@ -250,10 +256,12 @@ function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Str
     tr_t_bus = collect(1:N)
     buses = Set(1:2*N)
 
-    edges = [[[i,i+N] for i in 1:N]..., [[i+N,j+N] for (i,j) in keys(zsc)]...]
+    zbr = _sc2br_impedance(zsc)
+
+    edges = [[[i,i+N] for i in 1:N]..., [[i+N,j+N] for (i,j) in keys(zbr)]...]
     lines = Dict(enumerate(edges))
 
-    z = Dict(enumerate([r_s..., values(zsc)...]))
+    z = Dict(enumerate([r_s..., values(zbr)...]))
 
     shunts = Dict(2=>ysh)
 
@@ -333,7 +341,6 @@ function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Str
         push!(to_map, "bus.$(bus_obj["index"])")
     end
 
-
     for (l,(i,j)) in lines
         # merge the shunts into the shunts of the pi model of the line
         g_fr = b_fr = g_to = b_to = 0
@@ -345,8 +352,8 @@ function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Str
         end
 
         if haskey(shunts, j)
-            g_fr = real(shunts[j])
-            b_fr = imag(shunts[j])
+            g_to = real(shunts[j])
+            b_to = imag(shunts[j])
             delete!(shunts, j)
         end
 

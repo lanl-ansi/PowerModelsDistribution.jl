@@ -584,8 +584,8 @@ OpenDSS commands inside the originating file.
 """
 function _merge_dss!(dss_prime::Dict{String,<:Any}, dss_to_add::Dict{String,<:Any})
     for (k, v) in dss_to_add
-        if k in keys(dss_prime) && isa(v, Array)
-            append!(dss_prime[k], v)
+        if k in keys(dss_prime) && isa(v, Dict)
+            merge!(dss_prime[k], v)
         else
             dss_prime[k] = v
         end
