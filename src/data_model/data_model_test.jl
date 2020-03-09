@@ -134,7 +134,7 @@ data_model
 data_model_map!(data_model)
 #bsh = data_model["shunt"]["_virtual_1"]["b_sh"]
 ##
-data_model_make_pu!(data_model, vbases=Dict("sourcebus"=>0.230))
+make_per_unit!(data_model, vbases=Dict("sourcebus"=>0.230))
 #
 data_model_index!(data_model)
 data_model_make_compatible_v8!(data_model)

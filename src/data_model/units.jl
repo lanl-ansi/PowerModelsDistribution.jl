@@ -1,4 +1,3 @@
-
 "finds voltage zones"
 function _find_zones(data_model)
     unused_line_ids = Set(keys(data_model["branch"]))
@@ -84,7 +83,7 @@ end
 
 
 "converts to per unit from SI"
-function data_model_make_pu!(data_model; settings=missing, sbase=1.0, vbases=missing, v_var_scalar=missing)
+function make_per_unit!(data_model; settings=missing, sbase=1.0, vbases=missing, v_var_scalar=missing)
     if ismissing(sbase)
         if !ismissing(settings) && haskey(settings, "set_sbase")
             sbase = settings["set_sbase"]
@@ -121,7 +120,7 @@ function data_model_make_pu!(data_model; settings=missing, sbase=1.0, vbases=mis
 
     for (id, line) in data_model["branch"]
         vbase = line_vbase[id]
-        _rebase_pu_line!(line, line_vbase[id], sbase, sbase_old, v_var_scalar)
+        _rebase_pu_branch!(line, line_vbase[id], sbase, sbase_old, v_var_scalar)
     end
 
     for (id, shunt) in data_model["shunt"]
@@ -136,11 +135,21 @@ function data_model_make_pu!(data_model; settings=missing, sbase=1.0, vbases=mis
         _rebase_pu_generator!(gen, bus_vbase[string(gen["gen_bus"])], sbase, sbase_old, v_var_scalar, data_model)
     end
 
-    for (id, trans) in data_model["transformer"]
-        # voltage base across transformer does not have to be consistent with the ratio!
-        f_vbase = bus_vbase[string(trans["f_bus"])]
-        t_vbase = bus_vbase[string(trans["t_bus"])]
-        _rebase_pu_transformer_2w_ideal!(trans, f_vbase, t_vbase, sbase_old, sbase, v_var_scalar)
+    for (id, storage) in data_model["storage"]
+        # TODO
+    end
+
+    for (id, switch) in data_model["switch"]
+        # TODO are there any properties that need to be converted to pu?
+    end
+
+    if haskey(data_model, "transformer") # transformers are not required by PowerModels
+        for (id, trans) in data_model["transformer"]
+            # voltage base across transformer does not have to be consistent with the ratio!
+            f_vbase = bus_vbase[string(trans["f_bus"])]
+            t_vbase = bus_vbase[string(trans["t_bus"])]
+            _rebase_pu_transformer_2w_ideal!(trans, f_vbase, t_vbase, sbase_old, sbase, v_var_scalar)
+        end
     end
 
     data_model["sbase"] = sbase
@@ -176,14 +185,18 @@ function _rebase_pu_bus!(bus, vbase, sbase, sbase_old, v_var_scalar)
     z_scale = z_old/z_new
     _scale_props!(bus, ["rg", "xg"], z_scale)
 
+    if haskey(bus, "va")
+        bus["va"] = deg2rad.(bus["va"])
+    end
+
     # save new vbase
     bus["vbase"] = vbase
 end
 
 
-"per-unit conversion for lines"
-function _rebase_pu_line!(line, vbase, sbase, sbase_old, v_var_scalar)
-    if !haskey(line, "vbase")
+"per-unit conversion for branches"
+function _rebase_pu_branch!(branch, vbase, sbase, sbase_old, v_var_scalar)
+    if !haskey(branch, "vbase")
         z_old = 1
     else
         z_old = vbase_old^2/sbase_old*v_var_scalar
@@ -193,11 +206,14 @@ function _rebase_pu_line!(line, vbase, sbase, sbase_old, v_var_scalar)
     z_scale = z_old/z_new
     y_scale = 1/z_scale
 
-    _scale_props!(line, ["br_r", "br_x"], z_scale)
-    _scale_props!(line, ["b_fr", "g_fr", "b_to", "g_to"], y_scale)
+    _scale_props!(branch, ["br_r", "br_x"], z_scale)
+    _scale_props!(branch, ["b_fr", "g_fr", "b_to", "g_to"], y_scale)
+
+    branch["angmin"] = deg2rad.(branch["angmin"])
+    branch["angmax"] = deg2rad.(branch["angmax"])
 
     # save new vbase
-    line["vbase"] = vbase
+    branch["vbase"] = vbase
 end
 
 

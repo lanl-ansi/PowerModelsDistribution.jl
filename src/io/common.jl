@@ -46,7 +46,7 @@ function transform_data_model(data::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
         vbases = Dict(bus_indexed_id=>data["settings"]["set_vbase_val"])
         sbase = data["settings"]["set_sbase_val"]
 
-        data_model_make_pu!(out, vbases=vbases, sbase=sbase, v_var_scalar=data["settings"]["v_var_scalar"])
+        make_per_unit!(out, vbases=vbases, sbase=sbase, v_var_scalar=data["settings"]["v_var_scalar"])
         return out
     elseif current_data_model == "mathematical"
         return _map_math2eng!(data)
