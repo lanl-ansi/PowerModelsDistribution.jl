@@ -150,7 +150,7 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
             math_obj["vm"] = eng_obj["vm"]
         end
         if haskey(eng_obj, "va")
-            math_obj["va"] = deg2rad(eng_obj["va"])
+            math_obj["va"] = eng_obj["va"]
         end
 
         math_obj["vmin"] = fill(0.0, length(terminals))
