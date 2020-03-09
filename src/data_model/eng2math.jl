@@ -129,7 +129,7 @@ end
 
 
 ""
-function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases=[1, 2, 3], kr_neutral=4)
+function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "bus", Dict{String,Any}())
         # TODO fix vnom
         phases = get(eng_obj, "phases", [1, 2, 3])
@@ -187,7 +187,7 @@ end
 
 
 ""
-function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases=[1, 2, 3], kr_neutral=4)
+function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     # TODO add delta loads
     for (name, eng_obj) in get(data_eng, "load", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("load", eng_obj, length(data_math["load"])+1)
@@ -230,7 +230,7 @@ end
 
 
 ""
-function _map_eng2math_capacitor!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases=[1, 2, 3], kr_neutral=4)
+function _map_eng2math_capacitor!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "capacitor", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("capacitor", eng_obj, length(data_math["shunt"])+1)
 
@@ -298,7 +298,7 @@ end
 
 
 ""
-function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases=[1, 2, 3], kr_neutral=4)
+function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "shunt", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("shunt", eng_obj, length(data_math["shunt"])+1)
 
@@ -366,7 +366,7 @@ end
 
 
 ""
-function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases=[1, 2, 3], kr_neutral=4)
+function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "generator", Dict{String,Any}())
         math_obj = _init_math_obj("generator", eng_obj, length(data_math["gen"])+1)
 
@@ -420,7 +420,7 @@ end
 
 
 ""
-function _map_eng2math_pvsystem!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases=[1, 2, 3], kr_neutral=4)
+function _map_eng2math_pvsystem!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "pvsystem", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("pvsystem", eng_obj, length(data_math["gen"])+1)
 
@@ -469,7 +469,7 @@ end
 
 
 ""
-function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
+function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "storage", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("storage", eng_obj, length(data_math["storage"])+1)
 
@@ -497,7 +497,9 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
         math_obj["ps"] = fill(0.0, phases)
         math_obj["qs"] = fill(0.0, phases)
 
-        _pad_properties!(math_obj, ["thermal_rating", "qmin", "qmax", "r", "x", "ps", "qs"], connections, collect(1:nconductors))
+        if kron_reduced
+            _pad_properties!(math_obj, ["thermal_rating", "qmin", "qmax", "r", "x", "ps", "qs"], connections, kr_phases)
+        end
 
         data_math["storage"]["$(math_obj["index"])"] = math_obj
 
@@ -513,7 +515,7 @@ end
 
 
 ""
-function _map_eng2math_vsource!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
+function _map_eng2math_vsource!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1,2,3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "voltage_source", Dict{Any,Dict{String,Any}}())
         if eng_obj["bus"] != data_eng["sourcebus"]
         end
@@ -522,7 +524,7 @@ end
 
 
 ""
-function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases=[1, 2, 3], kr_neutral=4)
+function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "line", Dict{Any,Dict{String,Any}}())
         if haskey(eng_obj, "linecode")
             linecode = data_eng["linecode"][eng_obj["linecode"]]
@@ -593,44 +595,8 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
 end
 
 
-function _kron_reduce_branch!(obj, Zs_keys, Ys_keys, terminals, neutral)
-    Zs = [obj[k] for k in Zs_keys]
-    Ys = [obj[k] for k in Ys_keys]
-    Zs_kr, Ys_kr, terminals_kr = _kron_reduce_branch(Zs, Ys, terminals, neutral)
-
-    for (i,k) in enumerate(Zs_keys)
-        obj[k] = Zs_kr[i]
-    end
-
-    for (i,k) in enumerate(Ys_keys)
-        obj[k] = Ys_kr[i]
-    end
-
-    return _get_idxs(terminals, terminals_kr)
-end
-
-
-function _kron_reduce_branch(Zs, Ys, terminals, neutral)
-    Zs_kr = [deepcopy(Z) for Z in Zs]
-    Ys_kr = [deepcopy(Y) for Y in Ys]
-    terminals_kr = deepcopy(terminals)
-
-    while neutral in terminals_kr
-        n = _get_ilocs(terminals_kr, neutral)[1]
-        P = setdiff(collect(1:length(terminals_kr)), n)
-
-        Zs_kr = [Z[P,P]-(1/Z[n,n])*Z[P,[n]]*Z[[n],P] for Z in Zs_kr]
-        Ys_kr = [Y[P,P] for Y in Ys_kr]
-
-        terminals_kr = terminals_kr[P]
-    end
-
-    return Zs_kr, Ys_kr, terminals_kr
-end
-
-
 ""
-function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases=[1, 2, 3], kr_neutral=4)
+function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     # TODO enable real switches (right now only using vitual lines)
     for (name, eng_obj) in get(data_eng, "switch", Dict{Any,Dict{String,Any}}())
         nphases = length(eng_obj["f_connections"])
@@ -732,7 +698,7 @@ end
 
 
 ""
-function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
+function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "transformer", Dict{Any,Dict{String,Any}}())
         # Build map first, so we can update it as we decompose the transformer
         map_idx = length(data_math["map"])+1
@@ -801,6 +767,16 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 end
             end
 
+            if kron_reduced
+                # TODO fix how padding works, this is a workaround to get bank working
+                if all(eng_obj["configuration"] .== "wye")
+                    f_connections = transformer_2wa_obj["f_connections"]
+                    _pad_properties!(transformer_2wa_obj, ["tm_min", "tm_max", "tm", "fixed"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=1.0)
+
+                    transformer_2wa_obj["f_connections"] = transformer_2wa_obj["t_connections"]
+                end
+            end
+
             data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
 
             push!(to_map, "transformer.$(transformer_2wa_obj["index"])")
@@ -810,7 +786,7 @@ end
 
 
 ""
-function _map_eng2math_sourcebus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
+function _map_eng2math_sourcebus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1,2,3], kr_neutral::Int=4)
     # TODO create option for lossy vs lossless sourcebus connection
     for (name, eng_obj) in data_eng["voltage_source"]
         if eng_obj["bus"] == data_eng["sourcebus"]

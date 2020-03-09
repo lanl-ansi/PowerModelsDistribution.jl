@@ -54,24 +54,23 @@
         end
     end
 
+    @testset "2w transformer ac pf yy - banked transformers" begin
+        file = "../test/data/opendss/ut_trans_2w_yy_bank.dss"
+        pmd1 = PMD.parse_file(file)
+        pmd2 = PMD.parse_file(file; bank_transformers=false)
+        result1 = run_ac_mc_pf(pmd1, ipopt_solver)
+        result2 = run_ac_mc_pf(pmd2, ipopt_solver)
 
-    # @testset "2w transformer ac pf yy - banked transformers" begin
-    #     file = "../test/data/opendss/ut_trans_2w_yy_bank.dss"
-    #     pmd1 = PMD.parse_file(file)
-    #     pmd2 = PMD.parse_file(file; bank_transformers=false)
-    #     result1 = run_ac_mc_pf(pmd1, ipopt_solver)
-    #     result2 = run_ac_mc_pf(pmd2, ipopt_solver)
-    #
-    #     @test result1["termination_status"] == PMs.LOCALLY_SOLVED
-    #     @test result2["termination_status"] == PMs.LOCALLY_SOLVED
-    #     @test result1["solution"]["bus"] == result2["solution"]["bus"]
-    #     @test result1["solution"]["gen"] == result2["solution"]["gen"]
-    #
-    #     dss = PMD.parse_dss(file)
-    #     PMD.parse_dss_with_dtypes!(dss, ["line", "load", "transformer"])
-    #     trans = PMD._create_transformer(dss["transformer"][1]["name"]; PMD._to_kwargs(dss["transformer"][1])...)
-    #     @test all(trans["%rs"] .== [1.0, 2.0])
-    # end
+        @test result1["termination_status"] == PMs.LOCALLY_SOLVED
+        @test result2["termination_status"] == PMs.LOCALLY_SOLVED
+
+        # @test result1["solution"]["bus"] == result2["solution"]["bus"] # TODO need a new test, transformer model changed, use voltages on real bus
+        # @test result1["solution"]["gen"] == result2["solution"]["gen"] # TODO need a new test, transformer model changed, use voltages on real bus
+
+        dss = PMD.parse_dss(file)
+        trans = PMD._create_transformer(dss["transformer"]["tx1"]["name"]; PMD._to_kwargs(dss["transformer"]["tx1"])...)
+        @test all(trans["%rs"] .== [1.0, 2.0])
+    end
 
     @testset "three winding transformer pf" begin
         @testset "3w transformer ac pf dyy - all non-zero"  begin

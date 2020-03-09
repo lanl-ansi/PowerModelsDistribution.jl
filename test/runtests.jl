@@ -55,7 +55,7 @@ include("common.jl")
 
     include("multinetwork.jl") # all passing
 
-    include("transformer.jl") # banked transformers failing
+    include("transformer.jl") # all passing
 
     include("loadmodels.jl") # all passing
 

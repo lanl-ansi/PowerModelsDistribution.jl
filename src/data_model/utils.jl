@@ -388,18 +388,56 @@ end
 
 
 ""
-function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int})
+function _kron_reduce_branch!(obj, Zs_keys, Ys_keys, terminals, neutral)
+    Zs = [obj[k] for k in Zs_keys]
+    Ys = [obj[k] for k in Ys_keys]
+    Zs_kr, Ys_kr, terminals_kr = _kron_reduce_branch(Zs, Ys, terminals, neutral)
+
+    for (i,k) in enumerate(Zs_keys)
+        obj[k] = Zs_kr[i]
+    end
+
+    for (i,k) in enumerate(Ys_keys)
+        obj[k] = Ys_kr[i]
+    end
+
+    return _get_idxs(terminals, terminals_kr)
+end
+
+
+""
+function _kron_reduce_branch(Zs, Ys, terminals, neutral)
+    Zs_kr = [deepcopy(Z) for Z in Zs]
+    Ys_kr = [deepcopy(Y) for Y in Ys]
+    terminals_kr = deepcopy(terminals)
+
+    while neutral in terminals_kr
+        n = _get_ilocs(terminals_kr, neutral)[1]
+        P = setdiff(collect(1:length(terminals_kr)), n)
+
+        Zs_kr = [Z[P,P]-(1/Z[n,n])*Z[P,[n]]*Z[[n],P] for Z in Zs_kr]
+        Ys_kr = [Y[P,P] for Y in Ys_kr]
+
+        terminals_kr = terminals_kr[P]
+    end
+
+    return Zs_kr, Ys_kr, terminals_kr
+end
+
+
+""
+function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; pad_value::Real=0.0)
     @assert(all(c in phases for c in connections))
     inds = _get_idxs(phases, connections)
 
     for property in properties
         if haskey(object, property)
             if isa(object[property], Vector)
-                tmp = zeros(length(phases))
+                tmp = fill(pad_value, length(phases))
                 tmp[inds] = object[property]
                 object[property] = tmp
             elseif isa(object[property], Matrix)
-                tmp = zeros(length(phases), length(phases))
+                tmp = fill(pad_value, length(phases), length(phases))
                 tmp[inds, inds] = object[property]
                 object[property] = tmp
             end
