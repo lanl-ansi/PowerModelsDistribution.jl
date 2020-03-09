@@ -438,8 +438,14 @@ end
 
 function constraint_mc_generation_on_off(pm::_PMs.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     gen = _PMs.ref(pm, nw, :gen, i)
+    ncnds = length(_PMs.conductor_ids(pm; nw=nw))
 
-    constraint_mc_generation_on_off(pm, nw, i, gen["pmin"], gen["pmax"], gen["qmin"], gen["qmax"])
+    pmin = get(gen, "pmin", fill(-Inf, ncnds))
+    pmax = get(gen, "pmax", fill( Inf, ncnds))
+    qmin = get(gen, "qmin", fill(-Inf, ncnds))
+    qmax = get(gen, "qmax", fill( Inf, ncnds))
+
+    constraint_mc_generation_on_off(pm, nw, i, pmin, pmax, qmin, qmax)
 end
 
 ""

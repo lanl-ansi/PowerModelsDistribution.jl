@@ -16,8 +16,15 @@ function constraint_mc_generation_on_off(pm::_PMs.AbstractActivePowerModel, n::I
     pg = _PMs.var(pm, n, :pg, i)
     z = _PMs.var(pm, n, :z_gen, i)
 
-    JuMP.@constraint(pm.model, pg .<= pmax.*z)
-    JuMP.@constraint(pm.model, pg .>= pmin.*z)
+    for c in _PMs.conductor_ids(pm, n)
+        if isfinite(pmax[c])
+            JuMP.@constraint(pm.model, pg[c] .<= pmax[c].*z)
+        end
+
+        if isfinite(pmin[c])
+            JuMP.@constraint(pm.model, pg[c] .>= pmin[c].*z)
+        end
+    end
 end
 
 

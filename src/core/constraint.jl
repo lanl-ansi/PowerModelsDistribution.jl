@@ -74,11 +74,25 @@ function constraint_mc_generation_on_off(pm::_PMs.AbstractPowerModel, n::Int, i:
     qg = _PMs.var(pm, n, :qg, i)
     z = _PMs.var(pm, n, :z_gen, i)
 
-    JuMP.@constraint(pm.model, pg .<= pmax.*z)
-    JuMP.@constraint(pm.model, pg .>= pmin.*z)
-    JuMP.@constraint(pm.model, qg .<= qmax.*z)
-    JuMP.@constraint(pm.model, qg .>= qmin.*z)
+    for c in _PMs.conductor_ids(pm, n)
+        if isfinite(pmax[c])
+            JuMP.@constraint(pm.model, pg[c] .<= pmax[c].*z)
+        end
+
+        if isfinite(pmin[c])
+            JuMP.@constraint(pm.model, pg[c] .>= pmin[c].*z)
+        end
+
+        if isfinite(qmax[c])
+            JuMP.@constraint(pm.model, qg[c] .<= qmax[c].*z)
+        end
+
+        if isfinite(qmin[c])
+            JuMP.@constraint(pm.model, qg[c] .>= qmin[c].*z)
+        end
+    end
 end
+
 
 ""
 function constraint_mc_storage_thermal_limit(pm::_PMs.AbstractPowerModel, n::Int, i, rating)

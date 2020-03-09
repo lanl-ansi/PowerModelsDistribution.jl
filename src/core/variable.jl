@@ -715,70 +715,99 @@ end
 
 
 "Create variables for `active` storage injection"
-function variable_mc_on_off_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
+function variable_mc_on_off_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
-    inj_lb = Dict()
-    inj_ub = Dict()
-    for cnd in 1:ncnds
-        inj_lb[cnd], inj_ub[cnd] = _PMs.ref_calc_storage_injection_bounds(_PMs.ref(pm, nw, :storage), _PMs.ref(pm, nw, :bus), cnd)
-    end
-
     ps = _PMs.var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_ps_$(i)",
-        lower_bound = min(0, inj_lb[cnd][i]),
-        upper_bound = max(0, inj_ub[cnd][i]),
         start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "ps_start", cnd, 0.0)
     ) for i in _PMs.ids(pm, nw, :storage))
+
+    if bounded
+        for cnd in 1:ncnds
+            inj_lb, inj_ub = _PMs.ref_calc_storage_injection_bounds(_PMs.ref(pm, nw, :storage), _PMs.ref(pm, nw, :bus), cnd)
+
+            for (i, strg) in _PMs.ref(pm, nw, :storage)
+                set_lower_bound.(ps[i], inj_lb[i])
+                set_upper_bound.(ps[i], inj_ub[i])
+            end
+        end
+    end
 
     report && _PMs.sol_component_value(pm, nw, :storage, :ps, _PMs.ids(pm, nw, :storage), ps)
 end
 
 
 "Create variables for `reactive` storage injection"
-function variable_mc_on_off_storage_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
+function variable_mc_on_off_storage_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
     qs = _PMs.var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_qs_$(i)",
-        lower_bound = min(0, _PMs.ref(pm, nw, :storage, i, "qmin")[cnd]),
-        upper_bound = max(0, _PMs.ref(pm, nw, :storage, i, "qmax")[cnd]),
         start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "qs_start", cnd, 0.0)
     ) for i in _PMs.ids(pm, nw, :storage))
+
+    if bounded
+        for (i, strg) in _PMs.ref(pm, nw, :storage)
+            if haskey(strg, "qmin")
+                set_lower_bound.(qs[i], strg["qmin"])
+            end
+
+            if haskey(strg, "qmax")
+                set_upper_bound.(qs[i], strg["qmax"])
+            end
+        end
+    end
 
     report && _PMs.sol_component_value(pm, nw, :storage, :qs, _PMs.ids(pm, nw, :storage), qs)
 end
 
 
 "voltage variable magnitude squared (relaxed form)"
-function variable_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
+function variable_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
     w = _PMs.var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
         [c in 1:ncnds], base_name="$(nw)_w_$(i)",
-        lower_bound = 0,
-        upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax")[c]^2,
         start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
     ) for i in _PMs.ids(pm, nw, :bus))
+
+    if bounded
+        for (i, bus) in _PMs.ref(pm, nw, :bus)
+            set_lower_bound.(w[i], 0.0)
+
+            if haskey(bus, "vmax")
+                set_upper_bound.(w[i], bus["vmax"].^2)
+            end
+        end
+    end
 
     report && _PMs.sol_component_value(pm, nw, :bus, :w, _PMs.ids(pm, nw, :bus), w)
 end
 
 
 "on/off voltage magnitude variable"
-function variable_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
+function variable_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
     vm = _PMs.var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
         [c in 1:ncnds], base_name="$(nw)_vm_$(i)",
-        lower_bound = 0,
-        upper_bound = _PMs.ref(pm, nw, :bus, i, "vmax")[c],
         start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "vm_start", c, 1.0)
     ) for i in _PMs.ids(pm, nw, :bus))
+
+    if bounded
+        for (i, bus) in _PMs.ref(pm, nw, :bus)
+            set_lower_bound.(vm[i], 0.0)
+
+            if haskey(bus, "vmax")
+                set_upper_bound.(vm[i], bus["vmax"])
+            end
+        end
+    end
 
     report && _PMs.sol_component_value(pm, nw, :bus, :vm, _PMs.ids(pm, nw, :bus), vm)
 
@@ -899,31 +928,51 @@ function variable_mc_generation_on_off(pm::_PMs.AbstractPowerModel; kwargs...)
 end
 
 
-function variable_mc_active_generation_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
+function variable_mc_active_generation_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
     ncnds = length(_PMs.conductor_ids(pm, nw))
 
     pg = _PMs.var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_pg_$(i)",
-        lower_bound = min(0, _PMs.ref(pm, nw, :gen, i, "pmin")[cnd]),
-        upper_bound = max(0, _PMs.ref(pm, nw, :gen, i, "pmax")[cnd]),
         start = comp_start_value(_PMs.ref(pm, nw, :gen, i), "pg_start", cnd, 0.0)
     ) for i in _PMs.ids(pm, nw, :gen))
+
+    if bounded
+        for (i, gen) in _PMs.ref(pm, nw, :gen)
+            if haskey(gen, "pmin")
+                set_lower_bound.(pg[i], gen["pmin"])
+            end
+
+            if haskey(gen, "pmax")
+                set_upper_bound.(pg[i], gen["pmax"])
+            end
+        end
+    end
 
     report && _PMs.sol_component_value(pm, nw, :gen, :pg, _PMs.ids(pm, nw, :gen), pg)
 end
 
 
-function variable_mc_reactive_generation_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
+function variable_mc_reactive_generation_on_off(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
     qg = _PMs.var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
         [cnd in 1:ncnds], base_name="$(nw)_qg_$(i)",
-        lower_bound = min(0, _PMs.ref(pm, nw, :gen, i, "qmin")[cnd]),
-        upper_bound = max(0, _PMs.ref(pm, nw, :gen, i, "qmax")[cnd]),
         start = comp_start_value(_PMs.ref(pm, nw, :gen, i), "qg_start", cnd, 0.0)
     ) for i in _PMs.ids(pm, nw, :gen))
+
+    if bounded
+        for (i, gen) in _PMs.ref(pm, nw, :gen)
+            if haskey(gen, "qmin")
+                set_lower_bound.(qg[i], gen["qmin"])
+            end
+
+            if haskey(gen, "qmax")
+                set_upper_bound.(qg[i], gen["qmax"])
+            end
+        end
+    end
 
     report && _PMs.sol_component_value(pm, nw, :gen, :qg, _PMs.ids(pm, nw, :gen), qg)
 end

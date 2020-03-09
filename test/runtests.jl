@@ -55,13 +55,13 @@ include("common.jl")
 
     include("multinetwork.jl") # all passing
 
-    include("transformer.jl")
+    include("transformer.jl") # banked transformers failing
 
-    include("loadmodels.jl")
+    include("loadmodels.jl") # all passing
 
     include("delta_gens.jl") # all passing
 
     include("shunt.jl") # all passing
 
-    include("mld.jl") # only transformer tests failing
+    include("mld.jl") # all passing
 end
