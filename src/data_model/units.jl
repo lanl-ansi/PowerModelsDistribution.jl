@@ -185,9 +185,10 @@ function _rebase_pu_bus!(bus, vbase, sbase, sbase_old, v_var_scalar)
     z_scale = z_old/z_new
     _scale_props!(bus, ["rg", "xg"], z_scale)
 
-    if haskey(bus, "va")
-        bus["va"] = deg2rad.(bus["va"])
-    end
+    # TODO fix
+    # if haskey(bus ,"va")
+    #     bus["va"] = deg2rad.(bus["va"])
+    # end
 
     # save new vbase
     bus["vbase"] = vbase
