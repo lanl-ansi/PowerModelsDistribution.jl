@@ -388,31 +388,6 @@ end
 
 
 ""
-function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; neutral::Int=4, kron_reduced::Bool=true)
-    if kron_reduced
-        pos = Dict((x,i) for (i,x) in enumerate(phases))
-        inds = [pos[x] for x in connections[connections.!=neutral]]
-    else
-        # TODO
-    end
-
-    for property in properties
-        if haskey(object, property)
-            if isa(object[property], Vector)
-                tmp = zeros(length(phases))
-                tmp[inds] = object[property]
-                object[property] = tmp
-            elseif isa(object[property], Matrix)
-                tmp = zeros(length(phases), length(phases))
-                tmp[inds, inds] = object[property]
-                object[property] = tmp
-            end
-        end
-    end
-end
-
-
-""
 function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int})
     @assert(all(c in phases for c in connections))
     inds = _get_idxs(phases, connections)

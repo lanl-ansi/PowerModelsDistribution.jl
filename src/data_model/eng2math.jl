@@ -630,7 +630,7 @@ end
 
 
 ""
-function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
+function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases=[1, 2, 3], kr_neutral=4)
     # TODO enable real switches (right now only using vitual lines)
     for (name, eng_obj) in get(data_eng, "switch", Dict{Any,Dict{String,Any}}())
         nphases = length(eng_obj["f_connections"])
@@ -691,11 +691,19 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
 
         merge!(branch_obj, _branch_obj)
 
-        f_bus = data_eng["bus"][eng_obj["f_bus"]]
-        t_bus = data_eng["bus"][eng_obj["t_bus"]]
-        neutral = haskey(f_bus, "neutral") ? f_bus["neutral"] : haskey(t_bus, "neutral") ? t_bus["neutral"] : nphases+1
-
-        _pad_properties!(branch_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "angmin", "angmax", "tap", "shift"], eng_obj["f_connections"], collect(1:nconductors); neutral=neutral)
+        if kron_reduced
+            @assert(all(eng_obj["f_connections"].==eng_obj["t_connections"]), "Kron reduction is only supported if f_connections is the same as t_connections.")
+            filter = _kron_reduce_branch!(branch_obj,
+                ["br_r", "br_x"], ["g_fr", "b_fr", "g_to", "b_to"],
+                eng_obj["f_connections"], kr_neutral
+            )
+            _apply_filter!(branch_obj, ["angmin", "angmax", "tap", "shift"], filter)
+            connections = eng_obj["f_connections"][filter]
+            _pad_properties!(branch_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "angmin", "angmax", "tap", "shift"], connections, kr_phases)
+        else
+            branch_obj["f_connections"] = eng_obj["f_connections"]
+            branch_obj["f_connections"] = eng_obj["t_connections"]
+        end
 
         data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 
