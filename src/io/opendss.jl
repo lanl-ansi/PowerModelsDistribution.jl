@@ -2,14 +2,6 @@
 import LinearAlgebra: diagm
 
 
-function _register_awaiting_ground!(bus, connections)
-    if !haskey(bus, "awaiting_ground")
-        bus["awaiting_ground"] = []
-    end
-    push!(bus["awaiting_ground"], connections)
-end
-
-
 "Parses buscoords [lon,lat] (if present) into their respective buses"
 function _dss2eng_buscoords!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any})
     for (name, coords) in get(data_dss, "buscoords", Dict{String,Any}())
@@ -803,15 +795,15 @@ end
 
 
 "Parses a DSS file into a PowerModels usable format"
-function parse_opendss_dm(io::IOStream; import_all::Bool=false, bank_transformers::Bool=true)::Dict
+function parse_opendss(io::IOStream; import_all::Bool=false, bank_transformers::Bool=true)::Dict
     data_dss = parse_dss(io)
 
-    return parse_opendss_dm(data_dss; import_all=import_all)
+    return parse_opendss(data_dss; import_all=import_all, bank_transformers=bank_transformers)
 end
 
 
 "Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format"
-function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, bank_transformers::Bool=true)::Dict{String,Any}
+function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, bank_transformers::Bool=true)::Dict{String,Any}
     data_eng = Dict{String,Any}(
         "source_type" => data_dss["source_type"],
         "settings" => Dict{String,Any}(),
@@ -867,11 +859,11 @@ function parse_opendss_dm(data_dss::Dict{String,<:Any}; import_all::Bool=false, 
 
     _dss2eng_vsource!(data_eng, data_dss, import_all)
 
+    _discover_terminals!(data_eng)
+
     if bank_transformers
         _bank_transformers!(data_eng)
     end
-
-    _discover_terminals!(data_eng)
 
     return data_eng
 end

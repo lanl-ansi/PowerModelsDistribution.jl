@@ -280,9 +280,57 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
 
         total_phases = sum(Int[transformer["nphases"] for transformer in transformers])
 
-        # TODO
         if !haskey(banked, bank)
-            banked[bank] = deepcopy(transformers[1])
+            eng_obj = Dict{String,Any}(
+                "source_id" => "transformer.$bank"
+            )
+
+            for transformer in transformers
+                for key in ["polarity", "bus", "configuration", "status", "bank", "rs", "noloadloss", "tm_step", "xsc", "imag", "snom", "vnom"]
+                    if !haskey(eng_obj, key)
+                        eng_obj[key] = transformer[key]
+                    else
+                        @assert transformer[key] == eng_obj[key] "$key property of transformers does not match, cannot bank"
+                    end
+                end
+
+                if !haskey(eng_obj, "connections")
+                    eng_obj["connections"] = transformer["connections"]
+                else
+                    @assert length(transformer["connections"]) == length(eng_obj["connections"]) "inconsistent number of windings, cannot bank"
+
+                    for (i, wdg) in enumerate(transformer["connections"])
+                        for conn in wdg
+                            if !(conn in eng_obj["connections"][i])
+                                push!(eng_obj["connections"][i], conn)
+                            end
+                        end
+                        eng_obj["connections"][i] = _roll(sort(eng_obj["connections"][i]), count(j->j==0, eng_obj["connections"][i]); right=false)
+                    end
+                end
+
+                if !haskey(eng_obj, "nphases")
+                    eng_obj["nphases"] = transformer["nphases"]
+                else
+                    eng_obj["nphases"] += transformer["nphases"]
+                end
+
+                for key in ["tm", "tm_max", "tm_min", "fixed"]
+                    if !haskey(eng_obj, key)
+                        eng_obj[key] = [zeros(3), zeros(3)]
+                    end
+
+                    for (i, wdg) in enumerate(transformer[key])
+                        for (j, v) in enumerate(wdg)
+                            @warn key i transformer[key] eng_obj[key] wdg v transformer["connections"][j]
+                            eng_obj[key][i][transformer["connections"][i][j]] = v
+                        end
+                    end
+                end
+
+            end
+
+            banked[bank] = eng_obj
         end
     end
 
@@ -738,4 +786,12 @@ function _rm_floating_cnd(cnds, Y, f)
     P_inds = _get_idxs(cnds, P)
     Yrm = Y[P_inds,P_inds]-(1/Y[f_inds,f_inds][1])*Y[P_inds,f_inds]*Y[f_inds,P_inds]
     return (P,Yrm)
+end
+
+
+function _register_awaiting_ground!(bus, connections)
+    if !haskey(bus, "awaiting_ground")
+        bus["awaiting_ground"] = []
+    end
+    push!(bus["awaiting_ground"], connections)
 end

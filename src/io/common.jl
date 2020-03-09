@@ -8,7 +8,7 @@ function parse_file(io::IO; data_model::String="mathematical", import_all::Bool=
         pmd_data = PowerModelsDistribution.parse_matlab(io)
     elseif filetype == "dss"
         Memento.warn(_LOGGER, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported.")
-        pmd_data = PowerModelsDistribution.parse_opendss_dm(io; import_all=import_all, bank_transformers=bank_transformers)
+        pmd_data = PowerModelsDistribution.parse_opendss(io; import_all=import_all, bank_transformers=bank_transformers)
     elseif filetype == "json"
         pmd_data = PowerModels.parse_json(io; validate=false)
     else
