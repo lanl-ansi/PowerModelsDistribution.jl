@@ -468,7 +468,7 @@ the existing `data_dss` structure. If a component of the same type has already
 been added to `data_dss`, the new component is appeneded to the existing array
 of components of that type, otherwise a new array is created.
 """
-function _add_component!(data_dss::Dict, obj_type_name::AbstractString, object::Dict)
+function _add_component!(data_dss::Dict{String,<:Any}, obj_type_name::AbstractString, object::Dict{String,<:Any})
     obj_type = split(obj_type_name, '.'; limit=2)[1]
     if obj_type == "circuit"
         if haskey(data_dss, "circuit")
@@ -480,6 +480,32 @@ function _add_component!(data_dss::Dict, obj_type_name::AbstractString, object::
         data_dss[obj_type][object["name"]] = object
     else
         data_dss[obj_type] = Dict{String,Any}(object["name"] => object)
+    end
+end
+
+
+function _add_component_edits!(data_dss::Dict{String,<:Any}, obj_type_name::AbstractString, object::Dict{String,<:Any})
+    obj_type = split(obj_type_name, '.'; limit=2)[1]
+    if obj_type == "vsource" && object["name"] == "source"
+        delete!(object, "name")
+
+        if !haskey(data_dss, "circuit")
+            data_dss["circuit"] = object
+        else
+            merge!(data_dss["circuit"], object)
+        end
+    else
+        if !haskey(data_dss, obj_type)
+            data_dss[obj_type] = Dict{String,Any}(
+                object["name"] => object
+            )
+        else
+            if !haskey(data_dss[obj_type], object["name"])
+                data_dss[obj_type][object["name"]] = object
+            else
+                merge!(data_dss[obj_type][object["name"]], object)
+            end
+        end
     end
 end
 
@@ -720,6 +746,12 @@ function parse_dss(io::IOStream)::Dict{String,Any}
                 end
 
                 data_dss["options"]["$(property)"] = value
+                continue
+
+            elseif cmd == "edit"
+                current_obj_type, current_obj = _parse_line([lowercase(line_element) for line_element in line_elements]; path=path)
+
+                _add_component_edits!(data_dss, current_obj_type, current_obj)
                 continue
 
             elseif cmd == "buscoords"
