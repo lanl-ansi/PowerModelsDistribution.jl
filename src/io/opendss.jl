@@ -500,7 +500,7 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
 
         # test if this transformer conforms with limitations
         if nphases<3 && "delta" in confs
-            Memento.error("Transformers with delta windings should have at least 3 phases to be well-defined.")
+            Memento.error("Transformers with delta windings should have at least 3 phases to be well-defined: $name.")
         end
         if nrw>3
             # All of the code is compatible with any number of windings,
@@ -768,7 +768,7 @@ function _dss2eng_sourcebus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
     va = rad2deg.(_wrap_to_pi.([-2*pi/phases*(i-1)+deg2rad(ph1_ang) for i in 1:phases]))
 
     eng_obj = Dict{String,Any}(
-        "bus" => circuit["bus1"],
+        "bus" => _parse_busname(circuit["bus1"])[1],
         "connections" => collect(1:phases),
         "vm" => vm,
         "va" => va,
