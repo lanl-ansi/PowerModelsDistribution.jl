@@ -652,13 +652,9 @@ end
 Assigns a property with name `property_name` and value `property_value` to the component
 of type `obj_type` named `obj_name` in `data_dss`.
 """
-function _assign_property!(data_dss::Dict, obj_type::AbstractString, obj_name::AbstractString, property_name::AbstractString, property_value::Any)
-    if haskey(data_dss, obj_type)
-        for obj in data_dss[obj_type]
-            if obj["name"] == obj_name
-                obj[property_name] = property_value
-            end
-        end
+function _assign_property!(data_dss::Dict{String,<:Any}, obj_type::AbstractString, obj_name::AbstractString, property_name::AbstractString, property_value::Any)
+    if haskey(data_dss, obj_type) && haskey(data_dss[obj_type], obj_name)
+        data_dss[obj_type][obj_name][property_name] = property_value
     else
         Memento.warn(_LOGGER, "Cannot find $obj_type object $obj_name.")
     end
