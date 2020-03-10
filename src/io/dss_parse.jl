@@ -1,3 +1,21 @@
+const _dss_unsupported_commands = Vector{String}([
+    "cleanup", "connect", "disconnect", "_docontrolactions", "_initsnap",
+    "_samplecontrols", "_showcontrolqueue", "_solvedirect", "solvenocontrol",
+    "_solvepflow", "?", "about", "addbusmarker", "alignfile", "allocateloads",
+    "batchedit", "buildy", "calcvoltagebases", "capacity", "cd", "cktlosses",
+    "clearbusmarkers", "close", "closedi", "comparecases", "currents",
+    "di_plot", "distribute", "doscmd", "dump", "estimate", "export",
+    "fileedit", "finishtimestep", "formedit", "get", "guids", "help", "init",
+    "interpolate", "losses", "makebuslist", "makeposseq", "nodelist",
+    "nodediff", "obfuscate", "open", "phaselosses", "plot", "powers",
+    "pstcalc", "reconductor", "reduce", "relcalc", "remove", "rephase",
+    "reprocessbuses", "reset", "rotate", "sample", "save", "select",
+    "seqcurrents", "seqpowers", "seqvoltages", "setkvbase", "show", "solve",
+    "summary", "totals", "updatestorage", "var", "variable", "varnames",
+    "vdiff", "visualize", "voltages", "yearlycurves", "ysc", "zsc", "zsc10",
+    "zscrefresh"
+])
+
 const _linecode_properties = Vector{String}([
     "nphases", "r1", "x1", "r0","x0", "c1", "c0", "units", "rmatrix",
     "xmatrix", "cmatrix", "basefreq", "normamps", "emergamps", "faultrate",
@@ -12,7 +30,7 @@ const _linegeometry_properties = Vector{String}([
 ])
 
 const _linespacing_properties = Vector{String}([
-    "nconds", "nphases", "x", "h", "units"
+    "nconds", "nphases", "x", "h", "units", "like"
 ])
 
 const _loadshape_properties = Vector{String}([
@@ -29,16 +47,31 @@ const _tcc_curve_properties = Vector{String}([
     "npts", "c_array", "t_array", "like"
 ])
 
-const _cndata_properties = Vector{String}([])
+const _cndata_properties = Vector{String}([
+    "diacable", "diains", "diam", "diastrand", "emergamps", "epsr", "gmrac",
+    "gmrstrang", "gmrunits", "inslayer", "k", "like", "normamps", "rac",
+    "radius", "radunits", "rdc", "rstrand", "runits"
+])
 
-const _tsdata_properties = Vector{String}([])
+const _tsdata_properties = Vector{String}([
+    "diacable", "diains", "diam", "diashield", "emergamps", "epsr", "gmrac",
+    "gmrunits", "inslayer", "like", "normamps", "rac", "radius", "radunits",
+    "rdc", "runits", "taplap", "taplayer"
+])
 
 const _wiredata_properties = Vector{String}([
     "rdc", "rac", "runits", "gmrac", "gmrunits", "radius", "radunits",
     "normamps", "emergamps", "diam", "like"
 ])
 
-const _xfmrcode_properties = Vector{String}([])
+const _xfmrcode_properties = Vector{String}([
+    "phases", "windings", "wdg", "conn", "kv", "kva", "tap", "%r", "rneut",
+    "xneut", "conns", "kvs", "kvas", "taps", "%rs", "xhl", "xlt", "xht",
+    "xscarray", "thermal", "n", "m", "flrise", "hsrise", "%loadloss",
+    "%noloadloss", "%imag", "ppm_antifloat", "normhkva", "emerghkva", "sub",
+    "maxtap", "mintap", "numtaps", "subname", "xrconst", "leadlag",
+    "faultrate", "basefreq", "enabled", "like"
+])
 
 const _vsource_properties = Vector{String}([
     "bus1", "bus2", "basekv", "pu", "angle", "frequency", "phases", "mvasc3",
@@ -162,11 +195,33 @@ const _pvsystem_properties = Vector{String}([
     "tduty", "class", "usermodel", "userdata", "debugtrace", "spectrum"
 ])
 
-const _relay_properties = Vector{String}([])
+const _recloser_properties = Vector{String}([
+    "monitoredobj", "monitoredterm", "switchedobj", "switchedterm", "numfast",
+    "phasefast", "phasedelayed", "groundfast", "grounddelayed", "phasetrip",
+    "groundtrip", "phaseinst", "groundinst", "reset", "shots",
+    "recloseintervals", "delay", "action", "tdphfast", "tdgrfast",
+    "tdphdelayed", "tdgrdelayed", "basefreq", "enabled", "like"
+])
 
-const _recloser_properties = Vector{String}([])
+const _relay_properties = Vector{String}([
+    "monitoredobj", "monitoredterm", "switchedobj", "switchedterm", "type",
+    "phasecurve", "groundcurve", "phasetrip", "groundtrip", "tdphase",
+    "tdground", "phaseinst", "groundinst", "reset", "shots",
+    "recloseintervals", "delay", "overvoltcurve", "undervoltcurve",
+    "kvbase", "47%pickup", "46baseamps", "46%pickup", "46isqt",
+    "variable", "overtrip", "undertrip", "breakertime", "action", "basefreq",
+    "enabled"
+])
 
-const _fuse_properties = Vector{String}([])
+const _fuse_properties = Vector{String}([
+    "monitoredobj", "monitoredterm", "switchedobj", "switchedterm",
+    "fusecurve", "ratedcurrent", "delay", "action", "basefreq", "enabled"
+])
+
+const _swtcontrol_properties = Vector{String}([
+    "action", "basefreq", "delay", "enabled", "like", "lock", "normal",
+    "reset", "state", "switchedobj", "switchedterm"
+])
 
 const _dss_object_properties = Dict{String,Vector{String}}(
     "linecode" => _linecode_properties,
@@ -199,7 +254,8 @@ const _dss_object_properties = Dict{String,Vector{String}}(
     "pvsystem" => _pvsystem_properties,
     "relay" => _relay_properties,
     "recloser" => _reactor_properties,
-    "fuse" => _fuse_properties
+    "fuse" => _fuse_properties,
+    "swtcontrol" => _swtcontrol_properties,
 )
 
 
@@ -486,25 +542,15 @@ end
 
 function _add_component_edits!(data_dss::Dict{String,<:Any}, obj_type_name::AbstractString, object::Dict{String,<:Any})
     obj_type = split(obj_type_name, '.'; limit=2)[1]
-    if obj_type == "vsource" && object["name"] == "source"
-        delete!(object, "name")
-
-        if !haskey(data_dss, "circuit")
-            data_dss["circuit"] = object
-        else
-            merge!(data_dss["circuit"], object)
-        end
+    if !haskey(data_dss, obj_type)
+        data_dss[obj_type] = Dict{String,Any}(
+            object["name"] => object
+        )
     else
-        if !haskey(data_dss, obj_type)
-            data_dss[obj_type] = Dict{String,Any}(
-                object["name"] => object
-            )
+        if !haskey(data_dss[obj_type], object["name"])
+            data_dss[obj_type][object["name"]] = object
         else
-            if !haskey(data_dss[obj_type], object["name"])
-                data_dss[obj_type][object["name"]] = object
-            else
-                merge!(data_dss[obj_type][object["name"]], object)
-            end
+            merge!(data_dss[obj_type][object["name"]], object)
         end
     end
 end
@@ -610,8 +656,12 @@ OpenDSS commands inside the originating file.
 """
 function _merge_dss!(dss_prime::Dict{String,<:Any}, dss_to_add::Dict{String,<:Any})
     for (k, v) in dss_to_add
-        if k in keys(dss_prime) && isa(v, Dict)
-            merge!(dss_prime[k], v)
+        if k in keys(dss_prime) && (isa(v, Dict) || isa(v, Set))
+            if isa(v, Dict)
+                merge!(dss_prime[k], v)
+            elseif isa(v, Set)
+                union!(dss_prime[k], v)
+            end
         else
             dss_prime[k] = v
         end
@@ -678,12 +728,12 @@ Will also parse files defined inside of the originating DSS file via the
 """
 function parse_dss(io::IOStream)::Dict{String,Any}
     filename = match(r"^<file\s(.+)>$", io.name).captures[1]
-    Memento.info(_LOGGER, "Calling parse_dss on $filename")
+    # Memento.info(_LOGGER, "Calling parse_dss on $filename")
     current_file = split(filename, "/")[end]
     path = join(split(filename, '/')[1:end-1], '/')
     data_dss = Dict{String,Any}()
 
-    data_dss["filename"] = [string(current_file)]
+    data_dss["filename"] = Set{String}([string(current_file)])
 
     current_obj = Dict{String,Any}()
     current_obj_type = ""
@@ -697,7 +747,11 @@ function parse_dss(io::IOStream)::Dict{String,Any}
         real_line_num = findall(lines .== line)[1]
         line = _strip_comments(line)
 
-        if startswith(strip(line), '~')
+        if startswith(strip(line), '~') || startswith(strip(lowercase(line)), "more")
+            if startswith(strip(lowercase(line)), "more")
+                line = lowercase(strip(line)[5:end])
+            end
+
             current_obj = _parse_component(current_obj_type, strip(strip(lowercase(line)),  '~'), current_obj)
 
             if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')
@@ -710,23 +764,23 @@ function parse_dss(io::IOStream)::Dict{String,Any}
             line_elements = split(line, r"\s+"; limit=3)
             cmd = lowercase(line_elements[1])
 
-            if cmd == "clear"
-                Memento.info(_LOGGER, "`data_dss` has been reset with the \"clear\" command.")
+            if cmd in _dss_unsupported_commands
+                Memento.warn(_LOGGER, "Command \"$cmd\" on line $real_line_num in \"$current_file\" is not supported, skipping.")
+
+            elseif cmd == "clear"
+                Memento.info(_LOGGER, "Circuit has been reset with the \"clear\" on line $real_line_num in \"$current_file\"")
                 data_dss = Dict{String,Any}("filename"=>data_dss["filename"])
                 continue
 
-            elseif cmd == "redirect"
-                file = line_elements[2]
-                full_path = path == "" ? file : join([path, file], '/')
-                Memento.info(_LOGGER, "Redirecting to file \"$file\"")
-                _merge_dss!(data_dss, parse_dss(full_path))
-                continue
-
-            elseif cmd == "compile"
+            elseif cmd in ["redirect", "compile"]
                 file = split(strip(line_elements[2], ['(',')']), '\\')[end]
-                full_path = path == "" ? file : join([path, file], '/')
-                Memento.info(_LOGGER, "Compiling file \"$file\"")
-                _merge_dss!(data_dss, parse_dss(full_path))
+
+                if !(file in data_dss["filename"])
+                    full_path = path == "" ? file : join([path, file], '/')
+                    Memento.info(_LOGGER, "Redirecting to \"$file\" on line $real_line_num in \"$current_file\"")
+                    _merge_dss!(data_dss, parse_dss(full_path))
+                end
+
                 continue
 
             elseif cmd == "set"
@@ -750,9 +804,18 @@ function parse_dss(io::IOStream)::Dict{String,Any}
                 _add_component_edits!(data_dss, current_obj_type, current_obj)
                 continue
 
-            elseif cmd == "buscoords"
+            elseif cmd in ["disable", "enable"]
+                current_obj_type, current_obj_name = split(join(line_element[2:end], ""), ".")
+
+                enabled = cmd == "enable" ? "true" : "false"
+
+                _add_component_edits!(data_dss, current_obj_type, Dict{String,Any}("name"=>current_obj_name, "enabled"=>enabled))
+                continue
+
+            elseif cmd in ["buscoords", "latloncoords"]
                 file = line_elements[2]
                 full_path = path == "" ? file : join([path, file], '/')
+                Memento.info(_LOGGER, "Reading Buscoords in \"$file\" on line $real_line_num in \"$current_file\"")
                 data_dss["buscoords"] = _parse_buscoords_file(full_path)
 
             elseif cmd == "new"
@@ -761,28 +824,34 @@ function parse_dss(io::IOStream)::Dict{String,Any}
                 if startswith(current_obj_type, "loadshape")
                     _parse_loadshape!(current_obj; path=path)
                 end
-            else
-                try
-                    obj_type, obj_name, props = split(lowercase(line), '.'; limit=3)
-                    parsed_properties = _parse_properties(props)
-                    wdg = ""
-                    for prop in parsed_properties
-                        property_name, property_value = split(prop, '=')
-                        if obj_type == "transformer"
-                            wdg = property_name == "wdg" && property_value != "1" ? property_value : property_name == "wdg" && property_value == "1" ? "" : wdg
 
-                            if property_name in ["wdg", "bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
-                                property_name = join(filter(p->!isempty(p), [property_name, wdg]), "_")
-                            end
+                if startswith(current_obj_type, "circuit")
+                    current_obj_type = "vsource.source"
 
-                            _assign_property!(data_dss, obj_type, obj_name, property_name, property_value)
-                        else
-                            _assign_property!(data_dss, obj_type, obj_name, property_name, property_value)
-                        end
-                    end
-                catch
-                    Memento.warn(_LOGGER, "Command \"$cmd\" on line $real_line_num in \"$current_file\" is not supported, skipping.")
+                    data_dss["circuit"] = current_obj["name"]
+
+                    current_obj["name"] = "source"
                 end
+            elseif split(cmd, '.')[1] in keys(_dss_object_properties)
+                obj_type, obj_name, props = split(lowercase(line), '.'; limit=3)
+                parsed_properties = _parse_properties(props)
+                wdg = ""
+                for prop in parsed_properties
+                    property_name, property_value = split(prop, '=')
+                    if obj_type == "transformer"
+                        wdg = property_name == "wdg" && property_value != "1" ? property_value : property_name == "wdg" && property_value == "1" ? "" : wdg
+
+                        if property_name in ["wdg", "bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
+                            property_name = join(filter(p->!isempty(p), [property_name, wdg]), "_")
+                        end
+
+                        _assign_property!(data_dss, obj_type, obj_name, property_name, property_value)
+                    else
+                        _assign_property!(data_dss, obj_type, obj_name, property_name, property_value)
+                    end
+                end
+            else
+                Memento.warn(_LOGGER, "Command \"$cmd\" on line $real_line_num in \"$current_file\" is not recognized, skipping.")
             end
 
             if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')
@@ -795,13 +864,9 @@ function parse_dss(io::IOStream)::Dict{String,Any}
         end
     end
 
-    Memento.info(_LOGGER, "Done parsing $filename")
-
     parse_dss_with_dtypes!(data_dss)
 
-    parse_dss_options!(data_dss)
-
-    data_dss["source_type"] = "dss"
+    data_dss["data_model"] = "dss"
 
     return data_dss
 end

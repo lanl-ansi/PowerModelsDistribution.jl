@@ -2,7 +2,11 @@
 const _dss_edge_components = ["line", "transformer", "reactor"]
 
 "components currently supported for automatic data type parsing"
-const _dss_supported_components = ["line", "linecode", "load", "generator", "capacitor", "reactor", "circuit", "transformer", "pvsystem", "storage", "loadshape"]
+const _dss_supported_components = [
+    "line", "linecode", "load", "generator", "capacitor", "reactor",
+    "transformer", "pvsystem", "storage", "loadshape", "options",
+    "xfmrcode", "vsource",
+]
 
 "two number operators for reverse polish notation"
 _double_operators = Dict(
@@ -654,7 +658,7 @@ function parse_dss_with_dtypes!(data_dss::Dict{String,<:Any}, to_parse::Array{St
     for obj_type in to_parse
         if haskey(data_dss, obj_type)
             dtypes = _dss_parameter_data_types[obj_type]
-            if obj_type == "circuit"
+            if obj_type in ["circuit", "options"]
                 _parse_obj_dtypes!(obj_type, data_dss[obj_type], dtypes)
             else
                 for object in values(data_dss[obj_type])

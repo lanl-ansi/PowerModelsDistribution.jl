@@ -367,6 +367,43 @@ function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
 
         if !haskey(data_eng, "vsource")
             data_eng["vsource"] = Dict{String,Dict{String,Any}}()
+
+            defaults = _create_vsource(get(dss_obj, "bus1", "sourcebus"), name; _to_kwargs(dss_obj)...)
+
+            ph1_ang = defaults["angle"]
+            vm_pu = defaults["pu"]
+
+            phases = defaults["phases"]
+            vnom = data_eng["settings"]["set_vbase_val"]
+
+            vm = fill(vm_pu, phases)*vnom
+            va = rad2deg.(_wrap_to_pi.([-2*pi/phases*(i-1)+deg2rad(ph1_ang) for i in 1:phases]))
+
+            eng_obj = Dict{String,Any}(
+                "bus" => _parse_busname(defaults["bus1"])[1],
+                "connections" => collect(1:phases),
+                "vm" => vm,
+                "va" => va,
+                "rs" => defaults["rmatrix"],
+                "xs" => defaults["xmatrix"],
+                "source_id" => "vsource.$name",
+                "status" => 1
+            )
+
+            # if the ground is used directly, register load
+            if 0 in eng_obj["connections"]
+                _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
+            end
+
+            if import_all
+                _import_all!(eng_obj, defaults, dss_obj["prop_order"])
+            end
+
+            if !haskey(data_eng, "voltage_source")
+                data_eng["voltage_source"] = Dict{String,Any}()
+            end
+
+            data_eng["voltage_source"][name] = eng_obj
         end
 
         data_eng["vsource"][name] = eng_obj
@@ -753,47 +790,6 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
 end
 
 
-"Adds sourcebus as a voltage source to `data_eng` from `data_dss`"
-function _dss2eng_sourcebus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool=false)
-    circuit = _create_vsource(get(data_dss["circuit"], "bus1", "sourcebus"), data_dss["circuit"]["name"]; _to_kwargs(data_dss["circuit"])...)
-
-    nodes = Array{Bool}([1 1 1 0])
-    ph1_ang = circuit["angle"]
-    vm_pu = circuit["pu"]
-
-    phases = circuit["phases"]
-    vnom = data_eng["settings"]["set_vbase_val"]
-
-    vm = fill(vm_pu, phases)*vnom
-    va = rad2deg.(_wrap_to_pi.([-2*pi/phases*(i-1)+deg2rad(ph1_ang) for i in 1:phases]))
-
-    eng_obj = Dict{String,Any}(
-        "bus" => _parse_busname(circuit["bus1"])[1],
-        "connections" => collect(1:phases),
-        "vm" => vm,
-        "va" => va,
-        "rs" => circuit["rmatrix"],
-        "xs" => circuit["xmatrix"],
-        "status" => 1
-    )
-
-    # if the ground is used directly, register load
-    if 0 in eng_obj["connections"]
-        _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
-    end
-
-    if import_all
-        _import_all!(eng_obj, circuit, data_dss["circuit"]["prop_order"])
-    end
-
-    if !haskey(data_eng, "voltage_source")
-        data_eng["voltage_source"] = Dict{String,Any}()
-    end
-
-    data_eng["voltage_source"][circuit["name"]] = eng_obj
-end
-
-
 "Parses a DSS file into a PowerModels usable format"
 function parse_opendss(io::IOStream; import_all::Bool=false, bank_transformers::Bool=true)::Dict
     data_dss = parse_dss(io)
@@ -805,7 +801,7 @@ end
 "Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format"
 function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, bank_transformers::Bool=true)::Dict{String,Any}
     data_eng = Dict{String,Any}(
-        "source_type" => data_dss["source_type"],
+        "data_model" => "engineering",
         "settings" => Dict{String,Any}(),
     )
 
@@ -813,11 +809,11 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
         data_eng["dss_options"] = data_dss["options"]
     end
 
-    if haskey(data_dss, "circuit")
-        circuit = data_dss["circuit"]
-        defaults = _create_vsource(get(circuit, "bus1", "sourcebus"), circuit["name"]; _to_kwargs(circuit)...)
+    if haskey(data_dss, "vsource") && haskey(data_dss["vsource"], "source") && haskey(data_dss, "circuit")
+        source = data_dss["vsource"]["source"]
+        defaults = _create_vsource(get(source, "bus1", "sourcebus"), source["name"]; _to_kwargs(source)...)
 
-        data_eng["name"] = circuit["name"]
+        data_eng["name"] = data_dss["circuit"]
         data_eng["sourcebus"] = defaults["bus1"]
         data_eng["data_model"] = "engineering"
 
@@ -852,12 +848,11 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
     _dss2eng_capacitor_to_shunt!(data_eng, data_dss, import_all)
     _dss2eng_shunt_reactor!(data_eng, data_dss, import_all)
 
-    _dss2eng_sourcebus!(data_eng, data_dss, import_all)
+    # _dss2eng_sourcebus!(data_eng, data_dss, import_all)
+    _dss2eng_vsource!(data_eng, data_dss, import_all)
     _dss2eng_generator!(data_eng, data_dss, import_all)
     _dss2eng_pvsystem!(data_eng, data_dss, import_all)
     _dss2eng_storage!(data_eng, data_dss, import_all)
-
-    _dss2eng_vsource!(data_eng, data_dss, import_all)
 
     _discover_terminals!(data_eng)
 

@@ -898,6 +898,119 @@ function _create_transformer(name::AbstractString=""; kwargs...)
 end
 
 
+"Transformer codes contain all of the same properties as a transformer except bus, buses, bank, xfmrcode"
+function _create_xfmrcode(name::AbstractString=""; kwargs...)
+    kwargs = Dict{Symbol,Any}(kwargs)
+    windings = isempty(name) ? 3 : get(kwargs, :windings, 2)
+    phases = get(kwargs, :phases, 3)
+
+    prcnt_rs = fill(0.2, windings)
+    if haskey(kwargs, Symbol("%rs"))
+        prcnt_rs = kwargs[Symbol("%rs")]
+    elseif haskey(kwargs, Symbol("%loadloss"))
+        prcnt_rs[1] = prcnt_rs[2] = kwargs[Symbol("%loadloss")] / 2.0
+    end
+
+    temp = Dict{String,Any}(
+        "taps" => get(kwargs, :taps, fill(1.0, windings)),
+        "conns" => get(kwargs, :conns, fill("wye", windings)),
+        "kvs" => get(kwargs, :kvs, fill(12.47, windings)),
+        "kvas" => get(kwargs, :kvas, fill(10.0, windings)),
+        "%rs" => prcnt_rs,
+        "rneuts" => fill(0.0, windings),
+        "xneuts" => fill(0.0, windings)
+    )
+
+    for wdg in [:wdg, :wdg_2, :wdg_3]
+        if haskey(kwargs, wdg)
+            suffix = kwargs[wdg] == 1 ? "" : "_$(kwargs[wdg])"
+            for key in [:bus, :tap, :conn, :kv, :kva, Symbol("%r"), :rneut, :xneut]
+                subkey = Symbol(string(key, suffix))
+                if haskey(kwargs, subkey)
+                    temp[string(key, "s")][kwargs[wdg]] = kwargs[subkey]
+                end
+            end
+        end
+    end
+
+    xfmrcode = Dict{String,Any}(
+        "name" => name,
+        "phases" => phases,
+        "windings" => windings,
+        # Per wdg
+        "wdg" => 1,
+        "conn" => temp["conns"][1],
+        "kv" => temp["kvs"][1],
+        "kva" => temp["kvas"][1],
+        "tap" => temp["taps"][1],
+        "%r" => temp["%rs"][1],
+        "rneut" => temp["rneuts"][1],
+        "xneut" => temp["xneuts"][1],
+
+        "wdg_2" => 2,
+        "conn_2" => temp["conns"][2],
+        "kv_2" => temp["kvs"][2],
+        "kva_2" => temp["kvas"][2],
+        "tap_2" => temp["taps"][2],
+        "%r_2" => temp["%rs"][2],
+        "rneut_2" => temp["rneuts"][2],
+        "xneut_2" => temp["xneuts"][2],
+
+        # General
+        "conns" => temp["conns"],
+        "kvs" => temp["kvs"],
+        "kvas" => temp["kvas"],
+        "taps" => temp["taps"],
+        "xhl" => get(kwargs, :xhl, 7.0),
+        "xht" => get(kwargs, :xht, 35.0),
+        "xlt" => get(kwargs, :xlt, 30.0),
+        "xscarray" => get(kwargs, :xscarry, ""),
+        "thermal" => get(kwargs, :thermal, 2.0),
+        "n" => get(kwargs, :n, 0.8),
+        "m" => get(kwargs, :m, 0.8),
+        "flrise" => get(kwargs, :flrise, 65.0),
+        "hsrise" => get(kwargs, :hsrise, 15.0),
+        "%loadloss" => get(kwargs, Symbol("%loadloss"), sum(temp["%rs"][1:2])),
+        "%noloadloss" => get(kwargs, Symbol("%noloadloss"), 0.0),
+        "normhkva" => get(kwargs, :normhkva, 1.1 * temp["kvas"][1]),
+        "emerghkva" => get(kwargs, :emerghkva, 1.5 * temp["kvas"][1]),
+        "sub" => get(kwargs, :sub, false),
+        "maxtap" => get(kwargs, :maxtap, 1.10),
+        "mintap" => get(kwargs, :mintap, 0.90),
+        "numtaps" => get(kwargs, :numtaps, 32),
+        "subname" => get(kwargs, :subname, ""),
+        "%imag" => get(kwargs, Symbol("%imag"), 0.0),
+        "ppm_antifloat" => get(kwargs, :ppm_antifloat, 1.0),
+        "%rs" => temp["%rs"],
+        "xrconst" => get(kwargs, :xrconst, false),
+        "x12" => get(kwargs, :xhl, 7.0),
+        "x13" => get(kwargs, :xht, 35.0),
+        "x23" => get(kwargs, :xlt, 30.0),
+        "leadlag" => get(kwargs, :leadlag, "lag"),
+        # Inherited Properties
+        "faultrate" => get(kwargs, :faultrate, 0.1),
+        "basefreq" => get(kwargs, :basefreq, 60.0),
+        "enabled" => get(kwargs, :enabled, true)
+    )
+
+    if windings == 3
+        xfmrcode3 = Dict{String,Any}(
+            "wdg_3" => 3,
+            "conn_3" => temp["conns"][3],
+            "kv_3" => temp["kvs"][3],
+            "kva_3" => temp["kvas"][3],
+            "tap_3" => temp["taps"][3],
+            "%r_3" => temp["%rs"][3],
+            "rneut_3" => temp["rneuts"][3],
+            "xneut_3" => temp["xneuts"][3],
+        )
+
+        merge!(xfmrcode, xfmrcode3)
+    end
+
+    return xfmrcode
+end
+
 
 """
 Creates a Dict{String,Any} containing all of the expected properties for a
@@ -1074,6 +1187,114 @@ function _create_loadshape(name::AbstractString=""; kwargs...)
         "pbase" => get(kwargs, :pbase, 0.0),
     )
 end
+
+
+""
+function _create_options(; kwargs...)
+    kwargs = Dict{Symbol,Any}(kwargs)
+
+    Dict{String,Any}(
+        "%growth" => get(kwargs, Symbol("%growth"), 2.5),
+        "%mean" => get(kwargs, Symbol("%mean"), 65.0),
+        "%normal" => get(kwargs, Symbol("%normal"), 100.0),
+        "%stddev" => get(kwargs, Symbol("%stddev"), 9.0),
+        "addtype" => get(kwargs, :addtype, "generator"),
+        "algorithm" => get(kwargs, :algorithm, "newton"),
+        "allocationfactors" => get(kwargs, :allocationfactors, ""),
+        "allowduplicates" => get(kwargs, :allowduplicates, false),
+        "autobuslist" => get(kwargs, :autobuslist, Vector{String}([])),
+        "basefrequency" => get(kwargs, :basefrequency, 60.0),
+        "bus" => get(kwargs, :bus, ""),
+        "capkvar" => get(kwargs, :capkvar, 600.0),
+        "casename" => get(kwargs, :casename, ""),
+        "capmarkercode" => get(kwargs, :capmarkercode, 37),
+        "capmarkersize" => get(kwargs, :capmarkersize, 3),
+        "cfactors" => get(kwargs, :cfactors, 4.0),
+        "circuit" => get(kwargs, :circuit, ""),
+        "cktmodel" => get(kwargs, :cktmodel, "multiphase"),
+        "class" => get(kwargs, :class, ""),
+        "controlmode" => get(kwargs, :controlmode, "static"),
+        "datapath" => get(kwargs, :datapath, ""),
+        "defaultbasefrequency" => get(kwargs, :defaultbasefrequency, 60.0),
+        "defaultbasefreq" => get(kwargs, :defaultbasefreq, 60.0), # Alias to defaultbasefrequency
+        "defaultdaily" => get(kwargs, :defaultdaily, "default"),
+        "defaultyearly" => get(kwargs, :defaultyearly, "default"),
+        "demandinterval" => get(kwargs, :demandinterval, false),
+        "diverbose" => get(kwargs, :diverbose, false),
+        "dssvisualizationtool" => get(kwargs, :dssvisualizationtool, ""),
+        "earthmodel" => get(kwargs, :earthmodel, "deri"),
+        "editor" => get(kwargs, :editor, "notepad"),
+        "element" => get(kwargs, :element, ""),
+        "emergvmaxpu" => get(kwargs, :emergvmaxpu, 1.08),
+        "emergvminpu" => get(kwargs, :emergvminpu, 0.90),
+        "frequency" => get(kwargs, :frequency, 60.0),
+        "genkw" => get(kwargs, :genkw, 1000.0),
+        "genmult" => get(kwargs, :genmult, 1.0),
+        "h" => get(kwargs, :h, ""),
+        "harmonics" => get(kwargs, :harmonics, "all"),
+        "hour" => get(kwargs, :hour, 1.0),
+        "keeplist" => get(kwargs, :keeplist, Vector{String}([])),
+        "ldcurve" => get(kwargs, :ldcurve, "nil"),
+        "loadmodel" => get(kwargs, :loadmodel, "admittance"),
+        "loadmult" => get(kwargs, :loadmult, 1.0),
+        "log" => get(kwargs, :log, false),
+        "lossregs" => get(kwargs, :lossregs, 13),
+        "lossweight" => get(kwargs, :lossweight, 1.0),
+        "markercode" => get(kwargs, :markercode, 0),
+        "markswitches" => get(kwargs, :markswitches, false),
+        "markcapacitors" => get(kwargs, :markcapacitors, false),
+        "markpvsystems" => get(kwargs, :markpvsystems, false),
+        "markregulators" => get(kwargs, :markregulators, false),
+        "markstorage" => get(kwargs, :markstorage, false),
+        "marktransformers" => get(kwargs, :marktransformers, false),
+        "maxcontroliter" => get(kwargs, :maxcontroliter, 10),
+        "maxiter" => get(kwargs, :maxiter, 15),
+        "miniterations" => get(kwargs, :miniterations, 2),
+        "mode" => get(kwargs, :mode, "Snap"),
+        "name" => get(kwargs, :name, ""),
+        "nodewidth" => get(kwargs, :nodewidth, 1),
+        "normvmaxpu" => get(kwargs, :normvmaxpu, 1.05),
+        "normvminpu" => get(kwargs, :normvminpu, 0.95),
+        "numallociterations" => get(kwargs, :numallociterations, 2),
+        "number" => get(kwargs, :number, 0),
+        "object" => get(kwargs, :object, ""),
+        "overloadreport" => get(kwargs, :overloadreport, false),
+        "neglectloady" => get(kwargs, :neglectloady, false),
+        "pricecurve" => get(kwargs, :pricecurve, ""),
+        "pricesignal" => get(kwargs, :pricesignal, 25),
+        "pvmarkercode" => get(kwargs, :pvmarkercode, 15),
+        "pvmarkersize" => get(kwargs, :pvmarkersize, 1),
+        "random" => get(kwargs, :random, "uniform"),
+        "recorder" => get(kwargs, :recorder, false),
+        "reduceoption" => get(kwargs, :reduceoption, "default"),
+        "registryupdate" => get(kwargs, :registryupdate, true),
+        "regmarkercode" => get(kwargs, :regmarkercode, 47),
+        "regmarkersize" => get(kwargs, :regmarkersize, 1),
+        "sampleenergymeters" => get(kwargs, :sampleenergymeters, false),
+        "sec" => get(kwargs, :sec, 0.0),
+        "showexport" => get(kwargs, :showexport, false),
+        "stepsize" => get(kwargs, :stepsize, "1h"),
+        "switchmarkercode" => get(kwargs, :switchmarkercode, 4),
+        "terminal" => get(kwargs, :terminal, ""),
+        "time" => get(kwargs, :time, Vector{Float64}([0.0, 0.0])),
+        "tolerance" => get(kwargs, :tolerance, 0.0001),
+        "totaltime" => get(kwargs, :totaltime, 0.0),
+        "tracecontrol" => get(kwargs, :tracecontrol, false),
+        "transmarkercode" => get(kwargs, :transmarkercode, 35),
+        "transmarkersize" => get(kwargs, :transmarkersize, 1),
+        "storemarkercode" => get(kwargs, :storemarkercode, 9),
+        "storemarkersize" => get(kwargs, :storemarkersize, 1),
+        "trapezoidal" => get(kwargs, :trapezoidal, false),
+        "type" => get(kwargs, :type, ""),
+        "ueregs" => get(kwargs, :ueregs, 11),
+        "ueweight" => get(kwargs, :ueweight, 1.0),
+        "voltagebases" => get(kwargs, :voltagebases, Vector{Float64}([])),
+        "voltexceptionreport" => get(kwargs, :voltexceptionreport, false),
+        "year" => get(kwargs, :year, 0),
+        "zonelock" => get(kwargs, :zonelock, false),
+    )
+end
+
 
 
 "Returns a Dict{String,Type} for the desired component `comp`, giving all of the expected data types"
