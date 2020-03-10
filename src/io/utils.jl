@@ -263,84 +263,63 @@ end
 
 "Combines transformers with 'bank' keyword into a single transformer"
 function _bank_transformers!(data_eng::Dict{String,<:Any})
-    banks = Dict{String,Array{String,1}}()
-    for (name, transformer) in get(data_eng, "transformer", Dict{String,Any}())
-        if haskey(transformer, "bank")
-            if !haskey(banks, transformer["bank"])
-                banks[transformer["bank"]] = Array{String,1}([name])
-            else
-                push!(banks[transformer["bank"]], name)
+    bankable_transformers = Dict()
+    for (id, tr) in data_eng["transformer"]
+        if haskey(tr, "bank")
+            bank = tr["bank"]
+            if !haskey(bankable_transformers, bank)
+                bankable_transformers[bank] = ([], [])
             end
+            push!(bankable_transformers[bank][1], id)
+            push!(bankable_transformers[bank][2], tr)
         end
     end
 
-    banked = Dict{String,Any}()
-    for (bank, names) in banks
-        transformers = [data_eng["transformer"][name] for name in names]
-
-        total_phases = sum(Int[transformer["nphases"] for transformer in transformers])
-
-        if !haskey(banked, bank)
-            eng_obj = Dict{String,Any}(
-                "source_id" => "transformer.$bank"
-            )
-
-            for transformer in transformers
-                for key in ["polarity", "bus", "configuration", "status", "bank", "rs", "noloadloss", "tm_step", "xsc", "imag", "snom", "vnom"]
-                    if !haskey(eng_obj, key)
-                        eng_obj[key] = transformer[key]
-                    else
-                        @assert transformer[key] == eng_obj[key] "$key property of transformers does not match, cannot bank"
-                    end
-                end
-
-                if !haskey(eng_obj, "connections")
-                    eng_obj["connections"] = transformer["connections"]
-                else
-                    @assert length(transformer["connections"]) == length(eng_obj["connections"]) "inconsistent number of windings, cannot bank"
-
-                    for (i, wdg) in enumerate(transformer["connections"])
-                        for conn in wdg
-                            if !(conn in eng_obj["connections"][i])
-                                push!(eng_obj["connections"][i], conn)
-                            end
-                        end
-                        eng_obj["connections"][i] = _roll(sort(eng_obj["connections"][i]), count(j->j==0, eng_obj["connections"][i]); right=false)
-                    end
-                end
-
-                if !haskey(eng_obj, "nphases")
-                    eng_obj["nphases"] = transformer["nphases"]
-                else
-                    eng_obj["nphases"] += transformer["nphases"]
-                end
-
-                for key in ["tm", "tm_max", "tm_min", "fixed"]
-                    if !haskey(eng_obj, key)
-                        eng_obj[key] = [zeros(3), zeros(3)]
-                    end
-
-                    for (i, wdg) in enumerate(transformer[key])
-                        for (j, v) in enumerate(wdg)
-                            eng_obj[key][i][transformer["connections"][i][j]] = v
-                        end
-                    end
-                end
-
-            end
-
-            banked[bank] = eng_obj
+    for (bank, (ids, trs)) in bankable_transformers
+        # across-phase properties should be the same to be eligible for banking
+        props = ["bus", "noloadloss", "xsc", "rs", "imag", "vnom", "snom", "polarity", "configuration"]
+        btrans = Dict{String, Any}(prop=>trs[1][prop] for prop in props)
+        if !all(tr[prop]==btrans[prop] for tr in trs, prop in props)
+            continue
         end
-    end
+        nrw = length(btrans["bus"])
 
-    for (bank, names) in banks
-        if haskey(banked, bank)
-            for name in names
-                delete!(data_eng["transformer"], name)
+        # only attempt to bank wye-connected transformers
+        if !all(all(tr["configuration"].=="wye") for tr in trs)
+            continue
+        end
+        neutrals = [conns[end] for conns in trs[1]["connections"]]
+        # ensure all windings have the same neutral
+        if !all(all(conns[end]==neutrals[w] for (w, conns) in enumerate(tr["connections"])) for tr in trs)
+            continue
+        end
+
+        # this will merge the per-phase properties in such a way that the
+        # f_connections will be sorted from small to large
+        f_phases_loc = Dict(hcat([[(c,(i,p)) for (p, c) in enumerate(tr["connections"][1][1:end-1])] for (i, tr) in enumerate(trs)]...))
+        locs = [f_phases_loc[x] for x in sort(collect(keys(f_phases_loc)))]
+        props_merge = ["connections", "tm", "tm_max", "tm_min", "fixed"]
+        for prop in props_merge
+            btrans[prop] = [[trs[i][prop][w][p] for (i,p) in locs] for w in 1:nrw]
+
+            # for the connections, also prefix the neutral per winding
+            if prop=="connections"
+                for w in 1:nrw
+                    push!(btrans[prop][w], neutrals[w])
+                end
             end
         end
 
-        data_eng["transformer"][bank] = banked[bank]
+        # edit the transformer dict
+        for id in ids
+            delete!(data_eng["transformer"], id)
+        end
+        btrans_name = bank
+        if haskey(data_eng["transformer"], bank)
+            Memento.warn("The bank name ($bank) is already used for another transformer; using the name of the first transformer $(ids[1]) in the bank instead.")
+            btrans_name = ids[1]
+        end
+        data_eng["transformer"][btrans_name] = btrans
     end
 end
 
