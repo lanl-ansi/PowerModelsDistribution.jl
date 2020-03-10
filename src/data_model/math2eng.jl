@@ -15,45 +15,35 @@ end
 
 # MAP SOLUTION UP
 ""
-function solution_unmap!(solution::Dict, data_model::Dict)
-    for (name, data) in reverse(data_model["mappings"])
-        if name=="decompose_transformer_nw"
-            for bus_id in values(data["vbuses"])
-                delete!(solution["bus"], bus_id)
+function solution_math2eng(sol_math::Dict, data_math::Dict; make_si::Bool=true, make_deg::Bool=true)
+    sol_eng = Dict{String, Any}()
+
+    if make_deg || make_si
+        sol_math = solution_make_si(sol_math, data_math; mult_vbase=make_si, mult_sbase=make_si, convert_rad2deg=make_deg)
+    end
+
+    map_keys = sort(collect(keys(data_math["map"])); rev=true)
+    for map_key in map_keys
+        map = data_math["map"][map_key]
+        umap_type = map[:unmap_function]
+
+        if     umap_type==:_map_math2eng_sourcebus!
+        elseif umap_type==:_map_math2eng_transformer!
+        elseif umap_type==:_map_math2eng_root!
+        else
+            comp_type_eng,  name  = split(map[:from], ".")
+            comp_type_math, index = split(map[:to], ".")
+            if !haskey(sol_eng, comp_type_eng)
+                sol_eng[comp_type_eng] = Dict{String, Any}()
             end
-
-            for line_id in values(data["vlines"])
-                delete!(solution["branch"], line_id)
+            if haskey(sol_math, comp_type_math)
+                sol_eng[comp_type_eng][name] = sol_math[comp_type_math][index]
+            else
+                #TODO add empty dicts if math object has no solution object?
+                sol_eng[comp_type_eng][name] = Dict{String, Any}()
             end
-
-            pt = [solution["transformer"][tr_id]["pf"] for tr_id in data["trans_2wa"]]
-            qt = [solution["transformer"][tr_id]["qf"] for tr_id in data["trans_2wa"]]
-            for tr_id in data["trans_2wa"]
-                delete!(solution["transformer"], tr_id)
-            end
-
-            add_solution!(solution, "transformer_nw", data["trans"]["id"], Dict("pt"=>pt, "qt"=>qt))
-        elseif name=="capacitor_to_shunt"
-            # shunt has no solutions defined
-            delete_solution!(solution, "shunt", data["shunt_id"])
-            add_solution!(solution, "capacitor", data["capacitor"]["id"], Dict())
-        elseif name=="load_to_shunt"
-            # shunt has no solutions, but a load should have!
-            delete!(solution, "shunt", data["shunt_id"])
-            add_solution!(solution, "load", data["load"]["id"], Dict())
-        elseif name=="decompose_voltage_source"
-            gen = solution["gen"][data["gen_id"]]
-            delete_solution!(solution, "gen", data["gen_id"])
-            add_solution!(solution, "voltage_source", data["voltage_source"]["id"], Dict("pg"=>gen["pg"], "qg"=>gen["qg"]))
-
         end
     end
 
-    # remove component dicts if empty
-    for (comp_type, comp_dict) in solution
-        if isa(comp_dict, Dict) && isempty(comp_dict)
-            delete!(solution, comp_type)
-        end
-    end
+    return sol_eng
 end
-

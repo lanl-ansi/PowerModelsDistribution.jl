@@ -324,20 +324,42 @@ function add_big_M!(data_model; kwargs...)
 end
 
 
+const _dimensionalize_math = Dict(
+    "bus"  => Dict("rad2deg"=>["va"], "vbase"=>["vm", "vr", "vi"]),
+    "gen"  => Dict("sbase"=>["pg", "qg", "pg_bus", "qg_bus"]),
+    "load" => Dict("sbase"=>["pd", "qd", "pd_bus", "qd_bus"]),
+    "line" => Dict("sbase"=>["pf", "qf", "pt", "qt"]),
+)
+
+
 ""
-function solution_make_si!(solution, data_model)
-    sbase = data_model["settings"]["sbase"]
-    for (comp_type, comp_dict) in [(x,y) for (x,y) in solution if isa(y, Dict)]
+function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true, convert_rad2deg=true)
+    solution_si = deepcopy(solution)
+
+    sbase = math_model["sbase"]
+
+    for (comp_type, comp_dict) in [(x,y) for (x,y) in solution_si if isa(y, Dict)]
+        dimensionalize_math_comp = get(_dimensionalize_math, comp_type, Dict())
+        vbase_props   = mult_vbase      ? get(dimensionalize_math_comp, "vbase", [])   : []
+        sbase_props   = mult_sbase      ? get(dimensionalize_math_comp, "sbase", [])   : []
+        rad2deg_props = convert_rad2deg ? get(dimensionalize_math_comp, "rad2deg", []) : []
+
         for (id, comp) in comp_dict
+            if !isempty(vbase_props)
+                vbase = math_model[comp_type][id]["vbase"]
+            end
+
             for (prop, val) in comp
-                if any([occursin(x, prop) for x in ["p", "q"]])
+                if prop in vbase_props
+                    comp[prop] = val*vbase
+                elseif prop in sbase_props
                     comp[prop] = val*sbase
-                elseif any([occursin(x, prop) for x in ["vm", "vr", "vi"]])
-                    comp[prop] = val*data_model[comp_type][id]["vbase"]
+                elseif prop in rad2deg_props
+                    comp[prop] = _wrap_to_180(rad2deg.(val))
                 end
             end
         end
     end
 
-    return solution
+    return solution_si
 end

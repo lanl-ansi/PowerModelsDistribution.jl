@@ -177,7 +177,7 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
             :from => "bus.$name",
-            :to => ["bus.$(math_obj["index"])"],
+            :to => "bus.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_bus!,
             :kron_reduced => kron_reduced,
             :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["bus"])
