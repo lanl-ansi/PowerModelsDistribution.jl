@@ -15,11 +15,11 @@ end
 
 # MAP SOLUTION UP
 ""
-function solution_math2eng(sol_math::Dict, data_math::Dict; make_si::Bool=true, make_deg::Bool=true)
-    sol_eng = Dict{String, Any}()
+function solution_math2eng(solution_math::Dict, data_math::Dict; make_si::Bool=true, make_deg::Bool=true)
+    solution_eng = Dict{String, Any}()
 
     if make_deg || make_si
-        sol_math = solution_make_si(sol_math, data_math; mult_vbase=make_si, mult_sbase=make_si, convert_rad2deg=make_deg)
+        solution_math = solution_make_si(solution_math, data_math; mult_vbase=make_si, mult_sbase=make_si, convert_rad2deg=make_deg)
     end
 
     map_keys = sort(collect(keys(data_math["map"])); rev=true)
@@ -28,22 +28,39 @@ function solution_math2eng(sol_math::Dict, data_math::Dict; make_si::Bool=true, 
         umap_type = map[:unmap_function]
 
         if     umap_type==:_map_math2eng_sourcebus!
-        elseif umap_type==:_map_math2eng_transformer!
+            # nothing to do for the solution
         elseif umap_type==:_map_math2eng_root!
+            # nothing to do for the solution
+        elseif umap_type==:_map_math2eng_transformer!
+            _,  name  = split(map[:from_id], ".")
+            trans_2wa_ids = [index for (comp_type, index) in split.(map[:to_id], ".", limit=2) if comp_type=="transformer"]
+
+            if !haskey(solution_eng, "transformer")
+                solution_eng["transformer"] = Dict{String, Any}()
+            end
+
+            trans = Dict()
+            prop_map = Dict("pf"=>"p", "qf"=>"q")
+            for (prop_from, prop_to) in prop_map
+                trans[prop_to] = [get(solution_math["transformer"][id], prop_from, NaN) for id in trans_2wa_ids]
+            end
+
+            solution_eng["transformer"][name] = trans
+
         else
             comp_type_eng,  name  = split(map[:from], ".")
             comp_type_math, index = split(map[:to], ".")
-            if !haskey(sol_eng, comp_type_eng)
-                sol_eng[comp_type_eng] = Dict{String, Any}()
+            if !haskey(solution_eng, comp_type_eng)
+                solution_eng[comp_type_eng] = Dict{String, Any}()
             end
-            if haskey(sol_math, comp_type_math)
-                sol_eng[comp_type_eng][name] = sol_math[comp_type_math][index]
+            if haskey(solution_math, comp_type_math)
+                solution_eng[comp_type_eng][name] = solution_math[comp_type_math][index]
             else
                 #TODO add empty dicts if math object has no solution object?
-                sol_eng[comp_type_eng][name] = Dict{String, Any}()
+                solution_eng[comp_type_eng][name] = Dict{String, Any}()
             end
         end
     end
 
-    return sol_eng
+    return solution_eng
 end
