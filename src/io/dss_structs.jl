@@ -78,32 +78,33 @@ function _create_linecode(name::AbstractString=""; kwargs...)::Dict{String,Any}
 
     units = get(kwargs, :units, "none")
 
-    return Dict{String,Any}("name" => name,
-                            "nphases" => phases,
-                            "r1" => r1 / _convert_to_meters[units],
-                            "x1" => x1 / _convert_to_meters[units],
-                            "r0" => r0 / _convert_to_meters[units],
-                            "x0" => x0 / _convert_to_meters[units],
-                            "c1" => c1 / _convert_to_meters[units],
-                            "c0" => c0 / _convert_to_meters[units],
-                            "units" => "m",
-                            "rmatrix" => rmatrix / _convert_to_meters[units],
-                            "xmatrix" => xmatrix / _convert_to_meters[units],
-                            "cmatrix" => cmatrix / _convert_to_meters[units],
-                            "basefreq" => basefreq,
-                            "normamps" => get(kwargs, :normamps, 400.0),
-                            "emergamps" => get(kwargs, :emergamps, 600.0),
-                            "faultrate" => get(kwargs, :faultrate, 0.1),
-                            "pctperm" => get(kwargs, :pctperm, 20.0),
-                            "repair" => get(kwargs, :repair, 3.0),
-                            "kron" => get(kwargs, :kron, false),
-                            "rg" => get(kwargs, :rg, 0.01805),
-                            "xg" => get(kwargs, :xg, 0.155081),
-                            "rho" => get(kwargs, :rho, 100.0),
-                            "neutral" => get(kwargs, :neutral, 3),
-                            "b1" => b1 / _convert_to_meters[units],
-                            "b0" => b0 / _convert_to_meters[units]
-                            )
+    Dict{String,Any}(
+        "name" => name,
+        "nphases" => phases,
+        "r1" => r1 / _convert_to_meters[units],
+        "x1" => x1 / _convert_to_meters[units],
+        "r0" => r0 / _convert_to_meters[units],
+        "x0" => x0 / _convert_to_meters[units],
+        "c1" => c1 / _convert_to_meters[units],
+        "c0" => c0 / _convert_to_meters[units],
+        "units" => "m",
+        "rmatrix" => rmatrix / _convert_to_meters[units],
+        "xmatrix" => xmatrix / _convert_to_meters[units],
+        "cmatrix" => cmatrix / _convert_to_meters[units],
+        "basefreq" => basefreq,
+        "normamps" => get(kwargs, :normamps, 400.0),
+        "emergamps" => get(kwargs, :emergamps, 600.0),
+        "faultrate" => get(kwargs, :faultrate, 0.1),
+        "pctperm" => get(kwargs, :pctperm, 20.0),
+        "repair" => get(kwargs, :repair, 3.0),
+        "kron" => get(kwargs, :kron, false),
+        "rg" => get(kwargs, :rg, 0.01805),
+        "xg" => get(kwargs, :xg, 0.155081),
+        "rho" => get(kwargs, :rho, 100.0),
+        "neutral" => get(kwargs, :neutral, 3),
+        "b1" => b1 / _convert_to_meters[units],
+        "b0" => b0 / _convert_to_meters[units]
+    )
 end
 
 

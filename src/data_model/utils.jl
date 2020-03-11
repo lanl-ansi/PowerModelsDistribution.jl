@@ -375,7 +375,9 @@ function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Str
             "angmin" => fill(-60.0, nphases),
             "angmax" => fill( 60.0, nphases),
             "shift" => zeros(nphases),
-            "tap" => ones(nphases)
+            "tap" => ones(nphases),
+            "switch" => false,
+            "transformer" => false,
         )
 
         data_math["branch"]["$(branch_obj["index"])"] = branch_obj
@@ -415,8 +417,10 @@ function _kron_reduce_branch(Zs, Ys, terminals, neutral)
         n = _get_ilocs(terminals_kr, neutral)[1]
         P = setdiff(collect(1:length(terminals_kr)), n)
 
-        Zs_kr = [Z[P,P]-(1/Z[n,n])*Z[P,[n]]*Z[[n],P] for Z in Zs_kr]
-        Ys_kr = [Y[P,P] for Y in Ys_kr]
+        if all(size(Z) == (length(terminals_kr), length(terminals_kr)) for Z in Zs_kr)
+            Zs_kr = [Z[P,P]-(1/Z[n,n])*Z[P,[n]]*Z[[n],P] for Z in Zs_kr]
+            Ys_kr = [Y[P,P] for Y in Ys_kr]
+        end
 
         terminals_kr = terminals_kr[P]
     end

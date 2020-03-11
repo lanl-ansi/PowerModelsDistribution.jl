@@ -564,7 +564,7 @@ new value is appended to the end.
 """
 function _add_property(object::Dict, key::AbstractString, value::Any)::Dict
     if !haskey(object, "prop_order")
-        object["prop_order"] = Array{String,1}(["name"])
+        object["prop_order"] = Vector{String}(["name"])
     end
 
     current_wdg = "wdg" in object["prop_order"] ? string(filter(p->occursin("wdg", p), object["prop_order"])[end][end]) : ""
@@ -585,7 +585,7 @@ function _add_property(object::Dict, key::AbstractString, value::Any)::Dict
     end
 
     object[lowercase(key)] = value
-    push!(object["prop_order"], lowercase(key))
+    push!(object["prop_order"], string(lowercase(key)))
 
     return object
 end

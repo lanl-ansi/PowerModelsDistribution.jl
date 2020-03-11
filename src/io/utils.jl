@@ -1,5 +1,5 @@
 "all edge types that can help define buses"
-const _dss_edge_components = ["line", "transformer", "reactor"]
+const _dss_edge_components = ["line", "transformer", "reactor", "capacitor"]
 
 "components currently supported for automatic data type parsing"
 const _dss_supported_components = [
@@ -314,6 +314,8 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
             end
         end
 
+        btrans["source_id"] = "transformer.$bank"
+
         # edit the transformer dict
         for id in ids
             delete!(data_eng["transformer"], id)
@@ -332,10 +334,12 @@ end
 function _discover_terminals!(data_eng::Dict{String,<:Any})
     terminals = Dict{String, Set{Int}}([(name, Set{Int}()) for (name,bus) in data_eng["bus"]])
 
-    for (_,eng_obj) in data_eng["line"]
-        # ignore 0 terminal
-        push!(terminals[eng_obj["f_bus"]], setdiff(eng_obj["f_connections"], [0])...)
-        push!(terminals[eng_obj["t_bus"]], setdiff(eng_obj["t_connections"], [0])...)
+    if haskey(data_eng, "line")
+        for (_,eng_obj) in data_eng["line"]
+            # ignore 0 terminal
+            push!(terminals[eng_obj["f_bus"]], setdiff(eng_obj["f_connections"], [0])...)
+            push!(terminals[eng_obj["t_bus"]], setdiff(eng_obj["t_connections"], [0])...)
+        end
     end
 
     if haskey(data_eng, "transformer")
@@ -428,7 +432,7 @@ end
 
 
 "Returns an ordered list of defined conductors. If ground=false, will omit any `0`"
-function _get_conductors_ordered_dm(busname::AbstractString; default::Array=[], check_length::Bool=true, pad_ground::Bool=false)::Array
+function _get_conductors_ordered(busname::AbstractString; default::Array=[], check_length::Bool=true, pad_ground::Bool=false)::Array
     parts = split(busname, '.'; limit=2)
     ret = []
     if length(parts)==2
@@ -451,7 +455,7 @@ end
 
 
 ""
-function _import_all!(component::Dict{String,<:Any}, defaults::Dict{String,<:Any}, prop_order::Array{<:AbstractString,1})
+function _import_all!(component::Dict{String,<:Any}, defaults::Dict{String,<:Any}, prop_order::Vector{String})
     component["dss"] = Dict{String,Any}((key, defaults[key]) for key in prop_order)
 end
 
@@ -539,25 +543,6 @@ function _parse_busname(busname::AbstractString)
 end
 
 
-"Returns an ordered list of defined conductors. If ground=false, will omit any `0`"
-function _get_conductors_ordered(busname::AbstractString; neutral::Bool=true, nconductors::Int=3)::Array
-    parts = split(busname, '.'; limit=2)
-    ret = []
-    if length(parts)==2
-        conductors_string = split(parts[2], '.')
-        if neutral
-            ret = [parse(Int, i) for i in conductors_string]
-        else
-            ret = [parse(Int, i) for i in conductors_string if i != "0"]
-        end
-    else
-        ret = collect(1:nconductors)
-    end
-
-    return ret
-end
-
-
 "converts Dict{String,Any} to Dict{Symbol,Any} for passing as kwargs"
 function _to_kwargs(data::Dict{String,Any})::Dict{Symbol,Any}
     return Dict{Symbol,Any}((Symbol(k), v) for (k, v) in data)
@@ -584,7 +569,7 @@ end
 function _apply_like!(raw_dss, data_dss, comp_type)
     links = ["like"]
     if any(link in raw_dss["prop_order"] for link in links)
-        new_prop_order = []
+        new_prop_order = Vector{String}([])
         raw_dss_copy = deepcopy(raw_dss)
 
         for prop in raw_dss["prop_order"]
@@ -617,7 +602,7 @@ function _apply_like!(raw_dss, data_dss, comp_type)
             end
         end
 
-        final_prop_order = []
+        final_prop_order = Vector{String}([])
         while !isempty(new_prop_order)
             prop = popfirst!(new_prop_order)
             if !(prop in new_prop_order)
@@ -771,9 +756,27 @@ function _rm_floating_cnd(cnds, Y, f)
 end
 
 
+""
 function _register_awaiting_ground!(bus, connections)
     if !haskey(bus, "awaiting_ground")
         bus["awaiting_ground"] = []
     end
     push!(bus["awaiting_ground"], connections)
+end
+
+
+""
+function _is_after_linecode(prop_order::Vector{String}, property::String)::Bool
+    linecode_idx = 0
+    property_idx = 0
+
+    for (i, prop) in enumerate(prop_order)
+        if prop == "linecode"
+            linecode_idx = i
+        elseif prop == property
+            property_idx = i
+        end
+    end
+
+    return linecode_idx < property_idx
 end

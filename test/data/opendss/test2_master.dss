@@ -15,12 +15,12 @@ New Line.L1-2 bus1=b3-1.2 bus2=b4.2 length=0.032175613 units=km Linecode=lc1
 New Line.L2 bus1=b5 bus2=b6_check-chars length=0.013516796 units=none linecode=lc/2
 New "Line.L3" phases=3 bus1=b7.1.2.3 bus2=b9.1.2.3 linecode=300 normamps=400 emergamps=600 faultrate=0.1 pctperm=20 repair=0 length=2.58
 New "Line._L4" phases=3 bus1=b8.1.2.3 bus2=b10.1.2.3 linecode=300 normamps=400 emergamps=600 faultrate=0.1 pctperm=20 repair=0 length=1.73 switch=y
-New line.l5 phases=3 bus1=_b2.1.2.3.0 bus2=b7.1.2.3.0 linecode=lc8
+New line.l5 phases=3 bus1=_b2.1.2.3 bus2=b7.1.2.3 linecode=lc8
 New line.l6 phases=3 bus1=b1.1.2.3 bus2=b10.1.2.3 linecode=lc9
 new line.l7 bus1=_b2 bus2=b10 like=L2 linecode=lc10
 
 ! Loads
-New Load.ld1 phases=1 Bus1=b7.1.2  kv=0.208  status=variable model=1 conn=wye kW=3.89   pf=0.97  Vminpu=.88
+New Load.ld1 phases=1 Bus1=b7.1.0  kv=0.208  status=variable model=1 conn=wye kW=3.89   pf=0.97  Vminpu=.88
 New "Load.ld2" bus1=b9 phases=3 conn=Wye model=5 kV=24.9 kW=27 kvar=21 Vminpu=.85
 New "Load.ld3" bus1=b10 phases=3 conn=Wye model=2 kV=24.9 kW=405 kvar=315 Vminpu=.85 yearly=(sngfile=load_profile.sng)
 new load.ld4 bus1=b1 like=ld2
@@ -52,13 +52,13 @@ new transformer.t5 buses=(b3-1, b5) like=t4
 
 ! Generators
 New Generator.g1 Bus1=b1  kV= 150 kW=1 Model=3 Vpu=1.05 Maxkvar=70000 Minkvar=10000 !  kvar=50000
-New Generator.g2 Bus1=testsource  kV= 120 kW=1 Phases=1 Model=3 Vpu=1.05 Maxkvar=70000 Minkvar=10000   !  kvar=60000
-new generator.g3 bus1=b7 like=g2
+New Generator.g2 Bus1=testsource.1  kV= 120 kW=1 Phases=1 Model=3 Vpu=1.05 Maxkvar=70000 Minkvar=10000   !  kvar=60000
+new generator.g3 bus1=b7.1 phases=1 like=g2
 
 Set voltagebases=[115, 12.47, 0.48, 0.208]
 
-Load.s860.vminpu=.85
-Load.s840.vminpu=.85
+Load.ld1.vminpu=.85
+Load.ld3.vminpu=.85
 Load.s844.vminpu=.85
 
 Transformer.t1.wdg=2 Tap=(0.01000  15 * 1 +)   ! Tap

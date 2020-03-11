@@ -4,13 +4,14 @@ import LinearAlgebra: diagm
 const _1to1_maps = Dict{String,Vector{String}}(
     "bus" => ["vm", "va", "vmin", "vmax"],
     "load" => ["model", "configuration", "status", "source_id"],
-    "capacitor" => ["status"],
-    "shunt" => ["status"],
+    "capacitor" => ["status", "source_id"],
+    "shunt" => ["status", "source_id"],
     "shunt_reactor" => ["status", "source_id"],
     "generator" => ["model", "startup", "shutdown", "ncost", "cost", "source_id", "configuration"],
     "pvsystem" => ["model", "startup", "shutdown", "ncost", "cost", "source_id"],
     "storage" => ["status", "source_id"],
     "line" => ["source_id"],
+    "line_reactor" => ["source_id"],
     "switch" => ["source_id"],
     "line_reactor" => ["source_id"],
     "transformer" => ["source_id"],
@@ -78,6 +79,7 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
     _map_eng2math_vsource!(data_math, data_eng; kron_reduced=kron_reduced)
 
     _map_eng2math_line!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_line_reactor!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_switch!(data_math, data_eng; kron_reduced=kron_reduced)
 
     _map_eng2math_transformer!(data_math, data_eng; kron_reduced=kron_reduced)
@@ -202,7 +204,7 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         if kron_reduced
             if math_obj["configuration"]=="wye"
                 @assert(connections[end]==kr_neutral)
-                _pad_properties!(math_obj, ["pd", "qd"], connections[1:end-1], kr_phases)
+                _pad_properties!(math_obj, ["pd", "qd"], connections[connections.!=kr_neutral], kr_phases)
             else
                 _pad_properties_delta!(math_obj, ["pd", "qd"], connections, kr_phases)
             end
@@ -346,7 +348,13 @@ function _map_eng2math_shunt_reactor!(data_math::Dict{String,<:Any}, data_eng::D
         math_obj["gs"] = fill(0.0, nphases, nphases)
         math_obj["bs"] = diagm(0=>fill(Gcap, nphases))
 
-        _pad_properties!(math_obj, ["gs", "bs"], connections, collect(1:nconductors))
+        if kron_reduced
+            if eng_obj["configuration"] == "wye"
+                _pad_properties!(math_obj, ["gs", "bs"], connections[1:end-1], kr_phases)
+            else
+                _pad_properties!(math_obj, ["gs", "bs"], connections, kr_phases)
+            end
+        end
 
         data_math["shunt"]["$(math_obj["index"])"] = math_obj
 
@@ -399,7 +407,7 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
 
         # if PV generator mode convert attached bus to PV bus
         if eng_obj["control_model"] == 3
-            data_math["bus"][data_math["bus_lookup"][eng_obj["bus"]]]["bus_type"] = 2
+            data_math["bus"]["$(data_math["bus_lookup"][eng_obj["bus"]])"]["bus_type"] = 2
         end
 
         data_math["gen"]["$(math_obj["index"])"] = math_obj
@@ -513,7 +521,7 @@ end
 ""
 function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "line", Dict{Any,Dict{String,Any}}())
-        if haskey(eng_obj, "linecode")
+        if haskey(eng_obj, "linecode") && haskey(data_eng, "linecode") && haskey(data_eng["linecode"], eng_obj["linecode"])
             linecode = data_eng["linecode"][eng_obj["linecode"]]
 
             for property in ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
@@ -524,6 +532,7 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         end
 
         math_obj = _init_math_obj("line", eng_obj, length(data_math["branch"])+1)
+        math_obj["name"] = name
 
         nphases = length(eng_obj["f_connections"])
         nconductors = data_math["conductors"]
@@ -549,7 +558,6 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
 
         f_bus = data_eng["bus"][eng_obj["f_bus"]]
         t_bus = data_eng["bus"][eng_obj["t_bus"]]
-        # neutral = haskey(f_bus, "neutral") ? f_bus["neutral"] : haskey(t_bus, "neutral") ? t_bus["neutral"] : nphases+1
 
         if kron_reduced
             @assert(all(eng_obj["f_connections"].==eng_obj["t_connections"]), "Kron reduction is only supported if f_connections is the same as t_connections.")
@@ -574,9 +582,72 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
             :from => "line.$name",
             :to => "branch.$(math_obj["index"])",
-            :unmap_function => :_map_math2eng_load!,
+            :unmap_function => :_map_math2eng_line!,
             :kron_reduced => kron_reduced,
             :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["line"])
+        )
+    end
+end
+
+
+""
+function _map_eng2math_line_reactor!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+    # TODO support line reactors natively, currently treated like branches
+    for (name, eng_obj) in get(data_eng, "line_reactor", Dict{Any,Dict{String,Any}}())
+        math_obj = _init_math_obj("line", eng_obj, length(data_math["branch"])+1)
+        math_obj["name"] = "_virtual_branch.$(eng_obj["source_id"])"
+
+        nphases = length(eng_obj["f_connections"])
+        nconductors = data_math["conductors"]
+
+        math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
+        math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
+
+        math_obj["br_r"] = eng_obj["rs"] * eng_obj["length"]
+        math_obj["br_x"] = eng_obj["xs"] * eng_obj["length"]
+
+        math_obj["g_fr"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9)
+        math_obj["g_to"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_to"] * eng_obj["length"] / 1e9)
+
+        math_obj["b_fr"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9)
+        math_obj["b_to"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_to"] * eng_obj["length"] / 1e9)
+
+        math_obj["angmin"] = fill(-60.0, nphases)
+        math_obj["angmax"] = fill( 60.0, nphases)
+
+        math_obj["transformer"] = false
+        math_obj["shift"] = zeros(nphases)
+        math_obj["tap"] = ones(nphases)
+
+        f_bus = data_eng["bus"][eng_obj["f_bus"]]
+        t_bus = data_eng["bus"][eng_obj["t_bus"]]
+
+        if kron_reduced
+            @assert(all(eng_obj["f_connections"].==eng_obj["t_connections"]), "Kron reduction is only supported if f_connections is the same as t_connections.")
+            filter = _kron_reduce_branch!(math_obj,
+                ["br_r", "br_x"], ["g_fr", "b_fr", "g_to", "b_to"],
+                eng_obj["f_connections"], kr_neutral
+            )
+            _apply_filter!(math_obj, ["angmin", "angmax", "tap", "shift"], filter)
+            connections = eng_obj["f_connections"][filter]
+            _pad_properties!(math_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "angmin", "angmax", "tap", "shift"], connections, kr_phases)
+        else
+            math_obj["f_connections"] = eng_obj["f_connections"]
+            math_obj["f_connections"] = eng_obj["t_connections"]
+        end
+
+        math_obj["switch"] = false
+
+        math_obj["br_status"] = eng_obj["status"]
+
+        data_math["branch"]["$(math_obj["index"])"] = math_obj
+
+        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
+            :from => "line_reactor.$name",
+            :to => "branch.$(math_obj["index"])",
+            :unmap_function => :_map_math2eng_line_reactor!,
+            :kron_reduced => kron_reduced,
+            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["line_reactor"])
         )
     end
 end
@@ -733,9 +804,9 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
             # 2-WINDING TRANSFORMER
             # make virtual bus and mark it for reduction
             tm_nom = eng_obj["configuration"][w]=="delta" ? eng_obj["vnom"][w]*sqrt(3) : eng_obj["vnom"][w]
-
             transformer_2wa_obj = Dict{String,Any}(
                 "name"          => "_virtual_transformer.$name.$w",
+                "source_id"     => "_virtual_transformer.$(eng_obj["source_id"]).$w",
                 "f_bus"         => data_math["bus_lookup"][eng_obj["bus"][w]],
                 "t_bus"         => transformer_t_bus_w[w],
                 "tm_nom"        => tm_nom,
@@ -806,7 +877,7 @@ function _map_eng2math_vsource!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
             "cost" => [0.0, 1.0, 0.0],
             "configuration" => "wye",
             "index" => length(data_math["gen"]) + 1,
-            "source_id" => "_virtual_branch.$(eng_obj["source_id"])"
+            "source_id" => "_virtual_gen.$(eng_obj["source_id"])"
         )
 
         data_math["gen"]["$(gen_obj["index"])"] = gen_obj

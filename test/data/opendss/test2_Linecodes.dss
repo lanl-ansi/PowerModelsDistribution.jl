@@ -31,3 +31,5 @@ New Linecode.lc8 nphases=3 units=km b1=(3.4 2 pi 60.0 * * *)
 New Linecode.lc9 nphases=3 b1=(3.4 2 pi 60.0 * * *) b0=(1.6 2 pi 60 * * *)
 
 new linecode.lc10 like=lc/2
+
+new linecode.300 like=lc/2

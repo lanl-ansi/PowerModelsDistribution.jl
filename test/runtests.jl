@@ -35,7 +35,7 @@ include("common.jl")
 
 @testset "PowerModelsDistribution" begin
 
-    # include("opendss.jl")
+    include("opendss.jl")  # three tests disabled temporarily
 
     include("data.jl") # all passing
 
