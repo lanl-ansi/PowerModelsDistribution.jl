@@ -138,13 +138,19 @@ function constraint_mc_power_balance_shed(pm::_PMs.AbstractACPModel, nw::Int, i:
     z_demand = _PMs.var(pm, nw, :z_demand)
     z_shunt  = _PMs.var(pm, nw, :z_shunt)
 
+    cnds = _PMs.conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    Gt = isempty(bus_gs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_gs))
+    Bt = isempty(bus_bs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_bs))
+
     cstr_p = []
     cstr_q = []
 
     bus_GsBs = [(n,bus_gs[n], bus_bs[n]) for n in keys(bus_gs)]
 
     for c in _PMs.conductor_ids(pm; nw=nw)
-        cp = JuMP.@constraint(pm.model,
+        cp = JuMP.@NLconstraint(pm.model,
             sum(p[a][c] for a in bus_arcs)
             + sum(psw[a_sw][c] for a_sw in bus_arcs_sw)
             + sum(pt[a_trans][c] for a_trans in bus_arcs_trans)
@@ -161,7 +167,7 @@ function constraint_mc_power_balance_shed(pm::_PMs.AbstractACPModel, nw::Int, i:
         )
         push!(cstr_p, cp)
 
-        cq = JuMP.@constraint(pm.model,
+        cq = JuMP.@NLconstraint(pm.model,
             sum(q[a][c] for a in bus_arcs)
             + sum(qsw[a_sw][c] for a_sw in bus_arcs_sw)
             + sum(qt[a_trans][c] for a_trans in bus_arcs_trans)
