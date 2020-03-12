@@ -2,6 +2,11 @@
 
 ## staged
 
+- none
+
+## v0.8.1
+
+- Update to support JuMP v0.21
 - Makes bounds optional, turned on by default (#250)
 - Updated transformer data model in the mathematical model (#250)
 - Add automatic parsing of lon,lat from buscoords file into PMD data structure (#245, #249)
