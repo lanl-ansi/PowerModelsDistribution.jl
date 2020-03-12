@@ -78,16 +78,21 @@ function constraint_mc_power_balance_load(pm::_PMs.AbstractActivePowerModel, nw:
     pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
     pd   = get(_PMs.var(pm, nw),   :pd_bus, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
 
-    cstr_p = JuMP.@constraint(pm.model,
-        sum(p[a] for a in bus_arcs)
-        + sum(psw[a_sw] for a_sw in bus_arcs_sw)
-        + sum(pt[a_trans] for a_trans in bus_arcs_trans)
-        .==
-        sum(pg[g] for g in bus_gens)
-        - sum(ps[s] for s in bus_storage)
-        - sum(pd[d] for d in bus_loads)
-        - sum(diag(gs) for gs in values(bus_gs))*1.0^2
-    )
+    cstr_p = []
+
+    for c in _PMs.conductor_ids(pm; nw=nw)
+        cp = JuMP.@constraint(pm.model,
+            sum(p[a][c] for a in bus_arcs)
+            + sum(psw[a_sw][c] for a_sw in bus_arcs_sw)
+            + sum(pt[a_trans][c] for a_trans in bus_arcs_trans)
+            ==
+            sum(pg[g][c] for g in bus_gens)
+            - sum(ps[s][c] for s in bus_storage)
+            - sum(pd[d][c] for d in bus_loads)
+            - sum(diag(gs)[c] for gs in values(bus_gs))*1.0^2
+        )
+        push!(cstr_p, cp)
+    end
     # omit reactive constraint
     cnds = _PMs.conductor_ids(pm, nw)
     ncnds = length(cnds)
