@@ -682,3 +682,21 @@ end
 for comp in keys(_eng_model_dtypes)
     eval(Meta.parse("add_$(comp)!(data_model, name; kwargs...) = add!(data_model, \"$comp\", name, create_$comp(; kwargs...))"))
 end
+
+
+""
+function delete_component!(data_eng, comp_type, comp::Dict)
+    delete!(data_eng[comp_type], comp["id"])
+    if isempty(data_eng[comp_type])
+        delete!(data_eng, comp_type)
+    end
+end
+
+
+""
+function delete_component!(data_eng, comp_type, id::Any)
+    delete!(data_eng[comp_type], id)
+    if isempty(data_eng[comp_type])
+        delete!(data_eng, comp_type)
+    end
+end

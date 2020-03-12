@@ -309,7 +309,7 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
 
         if kron_reduced
             filter = _kron_reduce_branch!(math_obj,
-                [], ["gs", "bs"],
+                Vector{String}([]), ["gs", "bs"],
                 eng_obj["connections"], kr_neutral
             )
             connections = eng_obj["connections"][filter]

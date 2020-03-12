@@ -1,15 +1,15 @@
 "all edge types that can help define buses"
-const _dss_edge_components = ["line", "transformer", "reactor", "capacitor"]
+const _dss_edge_components = Vector{String}(["line", "transformer", "reactor", "capacitor"])
 
 "components currently supported for automatic data type parsing"
-const _dss_supported_components = [
+const _dss_supported_components = Vector{String}([
     "line", "linecode", "load", "generator", "capacitor", "reactor",
     "transformer", "pvsystem", "storage", "loadshape", "options",
     "xfmrcode", "vsource",
-]
+])
 
 "two number operators for reverse polish notation"
-_double_operators = Dict(
+_double_operators = Dict{String,Any}(
     "+" => +,
     "-" => -,
     "*" => *,
@@ -19,7 +19,7 @@ _double_operators = Dict(
 )
 
 "single number operators in reverse polish notation"
-_single_operators = Dict(
+_single_operators = Dict{String,Any}(
     "sqr" => x -> x * x,
     "sqrt" => sqrt,
     "inv" => inv,
@@ -35,10 +35,10 @@ _single_operators = Dict(
 )
 
 "different acceptable delimiters for arrays"
-const _array_delimiters = ['\"', '\'', '[', '{', '(', ']', '}', ')']
+const _array_delimiters = Vector{Char}(['\"', '\'', '[', '{', '(', ']', '}', ')'])
 
 "properties that should be excluded from being overwritten during the application of `like`"
-const _like_exclusions = Dict{String,Array}(
+const _like_exclusions = Dict{String,Vector{String}}(
     "all" => ["name", "bus1", "bus2", "phases", "nphases", "enabled"],
     "line" => ["switch"],
     "transformer" => ["bank", "bus", "bus_2", "bus_3", "buses", "windings", "wdg", "wdg_2", "wdg_3"],
@@ -149,7 +149,7 @@ Parses a OpenDSS style triangular matrix string `data` into a two dimensional
 array of type `dtype`. Matrix strings are capped by either parenthesis or
 brackets, rows are separated by "|", and columns are separated by spaces.
 """
-function _parse_matrix(dtype::Type, data::AbstractString)::Array
+function _parse_matrix(dtype::Type, data::AbstractString)::Matrix{dtype}
     rows = []
     for line in split(strip(data, _array_delimiters), '|')
         cols = []
@@ -195,17 +195,12 @@ end
 function _isa_array(data::AbstractString)::Bool
     clean_data = strip(data)
     if !occursin("|", clean_data)
-        if occursin(",", clean_data)
-            return true
-        elseif startswith(clean_data, "[") && endswith(clean_data, "]")
-            return true
-        elseif startswith(clean_data, "\"") && endswith(clean_data, "\"")
-            return true
-        elseif startswith(clean_data, "\'") && endswith(clean_data, "\'")
-            return true
-        elseif startswith(clean_data, "(") && endswith(clean_data, ")")
-            return true
-        elseif startswith(clean_data, "{") && endswith(clean_data, "}")
+        if occursin(",", clean_data) ||
+            (startswith(clean_data, "[") && endswith(clean_data, "]")) ||
+            (startswith(clean_data, "\"") && endswith(clean_data, "\"")) ||
+            (startswith(clean_data, "\'") && endswith(clean_data, "\'")) ||
+            (startswith(clean_data, "(") && endswith(clean_data, ")")) ||
+            (startswith(clean_data, "{") && endswith(clean_data, "}"))
             return true
         else
             return false
@@ -221,7 +216,7 @@ Parses a OpenDSS style array string `data` into a one dimensional array of type
 `dtype`. Array strings are capped by either brackets, single quotes, or double
 quotes, and elements are separated by spaces.
 """
-function _parse_array(dtype::Type, data::AbstractString)::Vector
+function _parse_array(dtype::Type, data::AbstractString)::Vector{dtype}
     if occursin(",", data)
         split_char = ','
     else
@@ -330,7 +325,7 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
 end
 
 
-""
+"discovers all terminals in the network"
 function _discover_terminals!(data_eng::Dict{String,<:Any})
     terminals = Dict{String, Set{Int}}([(name, Set{Int}()) for (name,bus) in data_eng["bus"]])
 
@@ -379,6 +374,7 @@ function _discover_terminals!(data_eng::Dict{String,<:Any})
 end
 
 
+"discovers all phases and neutrals in the network"
 function _discover_phases_neutral!(data_eng::Dict{String,<:Any})
     bus_neutral = _find_neutrals(data_eng)
     for (id, bus) in data_eng["bus"]
@@ -394,7 +390,7 @@ function _discover_phases_neutral!(data_eng::Dict{String,<:Any})
 end
 
 
-""
+"Discovers all neutrals in the network"
 function _find_neutrals(data_eng::Dict{String,<:Any})
     vertices = [(id, t) for (id, bus) in data_eng["bus"] for t in bus["terminals"]]
     neutrals = []
@@ -432,7 +428,7 @@ end
 
 
 "Returns an ordered list of defined conductors. If ground=false, will omit any `0`"
-function _get_conductors_ordered(busname::AbstractString; default::Array=[], check_length::Bool=true, pad_ground::Bool=false)::Array
+function _get_conductors_ordered(busname::AbstractString; default::Vector{Int}=Vector{Int}([]), check_length::Bool=true, pad_ground::Bool=false)::Vector{Int}
     parts = split(busname, '.'; limit=2)
     ret = []
     if length(parts)==2
@@ -454,9 +450,9 @@ function _get_conductors_ordered(busname::AbstractString; default::Array=[], che
 end
 
 
-""
-function _import_all!(component::Dict{String,<:Any}, defaults::Dict{String,<:Any}, prop_order::Vector{String})
-    component["dss"] = Dict{String,Any}((key, defaults[key]) for key in prop_order)
+"creates a `dss` dict inside `object` that imports all items in `prop_order` from `dss_obj`"
+function _import_all!(object::Dict{String,<:Any}, dss_obj::Dict{String,<:Any}, prop_order::Vector{String})
+    object["dss"] = Dict{String,Any}((key, dss_obj[key]) for key in prop_order)
 end
 
 
@@ -477,6 +473,7 @@ function _get_idxs(vec::Vector{<:Any}, els::Vector{<:Any})::Vector{Int}
 end
 
 
+""
 function _get_ilocs(vec::Vector{<:Any}, loc::Any)::Vector{Int}
     return collect(1:length(vec))[vec.==loc]
 end
@@ -504,8 +501,8 @@ function _discover_buses(data_dss::Dict{String,<:Any})::Set
 end
 
 
-""
-function _barrel_roll(x::Vector, shift)
+"shifts a vector by `shift` spots to the left"
+function _barrel_roll(x::Vector{T}, shift::Int)::Vector{T} where T
     N = length(x)
     if shift < 0
         shift = shift + ceil(Int, shift/N)*N
@@ -518,7 +515,7 @@ end
 
 
 "Parses busnames as defined in OpenDSS, e.g. \"primary.1.2.3.0\""
-function _parse_busname(busname::AbstractString)
+function _parse_busname(busname::AbstractString)::Tuple{String,Vector{Bool}}
     parts = split(busname, '.'; limit=2)
     name = parts[1]
     elements = "1.2.3"
@@ -527,7 +524,7 @@ function _parse_busname(busname::AbstractString)
         name, elements = split(busname, '.'; limit=2)
     end
 
-    nodes = Array{Bool}([0 0 0 0])
+    nodes = Vector{Bool}([0, 0, 0, 0])
 
     for num in 1:3
         if occursin("$num", elements)
@@ -550,7 +547,7 @@ end
 
 
 ""
-function _apply_ordered_properties(defaults::Dict{String,<:Any}, raw_dss::Dict{String,<:Any}; code_dict::Dict{String,<:Any}=Dict{String,Any}())
+function _apply_ordered_properties(defaults::Dict{String,<:Any}, raw_dss::Dict{String,<:Any}; code_dict::Dict{String,<:Any}=Dict{String,Any}())::Dict{String,Any}
     _defaults = deepcopy(defaults)
 
     for prop in filter(p->p!="like", raw_dss["prop_order"])
@@ -566,7 +563,7 @@ end
 
 
 "applies `like` to component"
-function _apply_like!(raw_dss, data_dss, comp_type)
+function _apply_like!(raw_dss::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, comp_type::String)
     links = ["like"]
     if any(link in raw_dss["prop_order"] for link in links)
         new_prop_order = Vector{String}([])
@@ -639,7 +636,7 @@ end
 Parses the data in keys defined by `to_parse` in `data_dss` using types given by
 the default properties from the `get_prop_default` function.
 """
-function parse_dss_with_dtypes!(data_dss::Dict{String,<:Any}, to_parse::Array{String}=_dss_supported_components)
+function parse_dss_with_dtypes!(data_dss::Dict{String,<:Any}, to_parse::Vector{String}=_dss_supported_components)
     for obj_type in to_parse
         if haskey(data_dss, obj_type)
             dtypes = _dss_parameter_data_types[obj_type]
@@ -656,7 +653,7 @@ end
 
 
 "parses the raw dss values into their expected data types"
-function _parse_element_with_dtype(dtype, element)
+function _parse_element_with_dtype(dtype::Type, element::AbstractString)
     if _isa_rpn(element)
         out = _parse_rpn(element, dtype)
     elseif _isa_matrix(element)
@@ -692,7 +689,7 @@ end
 
 
 ""
-function _parse_obj_dtypes!(obj_type, object, dtypes)
+function _parse_obj_dtypes!(obj_type::String, object::Dict{String,Any}, dtypes::Dict{String,Type})
     for (k, v) in object
         if haskey(dtypes, k)
             if isa(v, Array)
@@ -732,7 +729,7 @@ Given a set of terminals 'cnds' with associated shunt addmittance 'Y', this
 method will calculate the reduced addmittance matrix if terminal 'ground' is
 grounded.
 """
-function _calc_ground_shunt_admittance_matrix(cnds, Y, ground)
+function _calc_ground_shunt_admittance_matrix(cnds::Vector{Int}, Y::Matrix{T}, ground::Int)::Tuple{Vector{Int}, Matrix{T}} where T
     # TODO add types
     if ground in cnds
         cndsr = setdiff(cnds, ground)
@@ -746,37 +743,46 @@ end
 
 
 ""
-function _rm_floating_cnd(cnds, Y, f)
-    # TODO add types
+function _rm_floating_cnd(cnds::Vector{Int}, Y::Matrix{T}, f::Int) where T
     P = setdiff(cnds, f)
+
     f_inds = _get_idxs(cnds, [f])
     P_inds = _get_idxs(cnds, P)
+
     Yrm = Y[P_inds,P_inds]-(1/Y[f_inds,f_inds][1])*Y[P_inds,f_inds]*Y[f_inds,P_inds]
+
     return (P,Yrm)
 end
 
 
 ""
-function _register_awaiting_ground!(bus, connections)
+function _register_awaiting_ground!(bus::Dict{String,<:Any}, connections::Vector{Int})
     if !haskey(bus, "awaiting_ground")
         bus["awaiting_ground"] = []
     end
+
     push!(bus["awaiting_ground"], connections)
 end
 
 
-""
+"checks to see if a property is after linecode"
 function _is_after_linecode(prop_order::Vector{String}, property::String)::Bool
-    linecode_idx = 0
-    property_idx = 0
+    return _is_after(prop_order, property, "linecode")
+end
+
+
+"checks to see if property1 is after property2 in the prop_order"
+function _is_after(prop_order::Vector{String}, property1::String, property2::String)::Bool
+    property1_idx = 0
+    property2_idx = 0
 
     for (i, prop) in enumerate(prop_order)
-        if prop == "linecode"
-            linecode_idx = i
-        elseif prop == property
-            property_idx = i
+        if prop == property1
+            property1_idx = i
+        elseif prop == property2
+            property2_idx = i
         end
     end
 
-    return linecode_idx < property_idx
+    return property1_idx > property2_idx
 end

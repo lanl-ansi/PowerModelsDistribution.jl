@@ -1,7 +1,5 @@
 
-#import PowerModelsDistribution
-#get = PowerModelsDistribution.get
-
+""
 function scale(dict, key, scale)
     if haskey(dict, key)
         dict[key] *= scale
@@ -9,47 +7,7 @@ function scale(dict, key, scale)
 end
 
 
-function add_virtual!(data_model, comp_type, comp)
-    if !haskey(data_model, comp_type)
-        data_model[comp_type] = Dict{Any, Any}()
-    end
-    comp_dict = data_model[comp_type]
-    virtual_ids = [parse(Int, x[1]) for x in [match(r"_virtual_([1-9]{1}[0-9]*)", id) for id in keys(comp_dict) if isa(id, AbstractString)] if x!=nothing]
-    if isempty(virtual_ids)
-        id = "_virtual_1"
-    else
-        id = "_virtual_$(maximum(virtual_ids)+1)"
-    end
-    comp["id"] = id
-    comp_dict[id] = comp
-    return comp
-end
-
-add_virtual_get_id!(data_model, comp_type, comp) = add_virtual!(data_model, comp_type, comp)["id"]
-
-function delete_component!(data_model, comp_type, comp::Dict)
-    delete!(data_model[comp_type], comp["id"])
-    if isempty(data_model[comp_type])
-        delete!(data_model, comp_type)
-    end
-end
-
-function delete_component!(data_model, comp_type, id::Any)
-    delete!(data_model[comp_type], id)
-    if isempty(data_model[comp_type])
-        delete!(data_model, comp_type)
-    end
-end
-
-function add_mappings!(data_model::Dict{String, Any}, mapping_type::String, mappings::Vector)
-    if !haskey(data_model, "mappings")
-        data_model["mappings"] = []
-    end
-
-    append!(data_model["mappings"], [(mapping_type, mapping) for mapping in mappings])
-end
-
-
+""
 function _get_next_index(last_index, presets)
     new_index = last_index+1
     while new_index in presets
@@ -59,56 +17,7 @@ function _get_next_index(last_index, presets)
 end
 
 
-function data_model_index!(data_model; components=["bus", "line", "shunt", "generator", "load", "transformer_2wa"], index_presets=Dict())
-    comp_id2ind = Dict()
-
-    # bus should be the first component, because we want to
-    for comp_type in components
-        comp_dict = Dict{String, Any}()
-
-        if !haskey(index_presets, comp_type)
-            for (i,(id,comp)) in enumerate(data_model[comp_type])
-                @assert(!haskey(comp, "index"), "$comp_type $id: component already has an index.")
-                comp["index"] = i
-                comp["id"] = id
-                comp_dict["$i"] = comp
-            end
-        else
-            last_index = 0
-
-            for (id, comp) in data_model[comp_type]
-                @assert(!haskey(comp, "index"), "$comp_type $id: component already has an index.")
-                if haskey(index_presets[comp_type], id)
-                    comp["index"] = index_presets[comp_type][id]
-                else
-                    comp["index"] = _get_next_index(last_index, values(index_presets[comp_type]))
-                    last_index = comp["index"]
-                end
-
-                comp["id"] = id
-                comp_dict["$(comp["index"])"] = comp
-            end
-        end
-
-        data_model[comp_type] = comp_dict
-        comp_id2ind[comp_type] = Dict(comp["id"]=>comp["index"] for comp in values(comp_dict))
-    end
-
-    # update bus references
-    for comp_type in components
-        for (_, comp) in data_model[comp_type]
-            for bus_key in ["f_bus", "t_bus", "bus"]
-                if haskey(comp, bus_key)
-                    comp[bus_key] = comp_id2ind["bus"][comp[bus_key]]
-                end
-            end
-        end
-    end
-
-    return data_model
-end
-
-
+""
 function solution_identify!(solution, data_model; id_prop="id")
     for comp_type in keys(solution)
         if isa(solution[comp_type], Dict)
@@ -124,6 +33,8 @@ function solution_identify!(solution, data_model; id_prop="id")
     return solution
 end
 
+
+""
 function add_solution!(solution, comp_type, id, data)
     if !haskey(solution, comp_type)
         solution[comp_type] = Dict()
@@ -139,6 +50,7 @@ function add_solution!(solution, comp_type, id, data)
 end
 
 
+""
 function delete_solution!(solution, comp_type, id, props)
     if haskey(solution, comp_type)
         if haskey(solution[comp_type], id)
@@ -150,6 +62,7 @@ function delete_solution!(solution, comp_type, id, props)
 end
 
 
+""
 function delete_solution!(solution, comp_type, id)
     if haskey(solution, comp_type)
         if haskey(solution[comp_type], id)
@@ -158,7 +71,8 @@ function delete_solution!(solution, comp_type, id)
     end
 end
 
-##
+
+""
 function _get_new_ground(terminals)
     if isa(terminals, Vector{Int})
         return maximum(terminals)+1
@@ -174,7 +88,8 @@ function _get_new_ground(terminals)
 end
 
 
-function _get_ground!(bus)
+""
+function _get_ground!(bus::Dict{String,<:Any})
     # find perfect groundings (true ground)
     grounded_perfect = []
     for i in 1:length(bus["grounded"])
@@ -201,7 +116,7 @@ Reference:
 R. C. Dugan, “A perspective on transformer modeling for distribution system analysis,”
 in 2003 IEEE Power Engineering Society General Meeting (IEEE Cat. No.03CH37491), 2003, vol. 1, pp. 114-119 Vol. 1.
 """
-function _sc2br_impedance(Zsc)
+function _sc2br_impedance(Zsc::Dict{Tuple{Int,Int},Complex{Float64}})::Dict{Tuple{Int,Int},Complex}
     N = maximum([maximum(k) for k in keys(Zsc)])
     # check whether no keys are missing
     # Zsc should contain tupples for upper triangle of NxN
@@ -239,7 +154,7 @@ function _sc2br_impedance(Zsc)
     Y = [-Y*ones(N-1) Y]
     Y = [-ones(1,N-1)*Y; Y]
     # extract elements
-    Zbr = Dict()
+    Zbr = Dict{Tuple{Int,Int},Complex}()
     for k in keys(Zsc)
         Zbr[k] = (abs(Y[k...])==0) ? Inf : -1/Y[k...]
     end
@@ -247,10 +162,8 @@ function _sc2br_impedance(Zsc)
 end
 
 
-
-
-""
-function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::String, to_map::Vector{String}, r_s::Vector{Float64}, zsc::Dict{Tuple{Int,Int},Complex{Float64}}, ysh::Complex{Float64}; nphases::Int=3)
+"loss model builder for transformer decomposition"
+function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::String, to_map::Vector{String}, r_s::Vector{Float64}, zsc::Dict{Tuple{Int,Int},Complex{Float64}}, ysh::Complex{Float64}; nphases::Int=3)::Vector{Int}
     # precompute the minimal set of buses and lines
     N = length(r_s)
     tr_t_bus = collect(1:N)
@@ -319,7 +232,7 @@ function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Str
         end
     end
 
-    bus_ids = Dict()
+    bus_ids = Dict{Int,Int}()
     for bus in buses
         bus_obj = Dict{String,Any}(
             "name" => "_virtual_bus.transformer.$(transformer_name)_$(bus)",
@@ -385,22 +298,22 @@ function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Str
         push!(to_map, "branch.$(branch_obj["index"])")
     end
 
-    return [bus_ids[bus] for bus in tr_t_bus]
+    return Vector{Int}([bus_ids[bus] for bus in tr_t_bus])
 end
 
 
 ""
-function _kron_reduce_branch!(obj, Zs_keys, Ys_keys, terminals, neutral)
-    Zs = [obj[k] for k in Zs_keys]
-    Ys = [obj[k] for k in Ys_keys]
+function _kron_reduce_branch!(object::Dict{String,<:Any}, Zs_keys::Vector{String}, Ys_keys::Vector{String}, terminals::Vector{Int}, neutral::Int)::Vector{Int}
+    Zs = Vector{Matrix}([object[k] for k in Zs_keys])
+    Ys = Vector{Matrix}([object[k] for k in Ys_keys])
     Zs_kr, Ys_kr, terminals_kr = _kron_reduce_branch(Zs, Ys, terminals, neutral)
 
     for (i,k) in enumerate(Zs_keys)
-        obj[k] = Zs_kr[i]
+        object[k] = Zs_kr[i]
     end
 
     for (i,k) in enumerate(Ys_keys)
-        obj[k] = Ys_kr[i]
+        object[k] = Ys_kr[i]
     end
 
     return _get_idxs(terminals, terminals_kr)
@@ -408,9 +321,9 @@ end
 
 
 ""
-function _kron_reduce_branch(Zs, Ys, terminals, neutral)
-    Zs_kr = [deepcopy(Z) for Z in Zs]
-    Ys_kr = [deepcopy(Y) for Y in Ys]
+function _kron_reduce_branch(Zs::Vector{Matrix}, Ys::Vector{Matrix}, terminals::Vector{Int}, neutral::Int)::Tuple{Vector{Matrix}, Vector{Matrix}, Vector{Int}}
+    Zs_kr = Vector{Matrix}([deepcopy(Z) for Z in Zs])
+    Ys_kr = Vector{Matrix}([deepcopy(Y) for Y in Ys])
     terminals_kr = deepcopy(terminals)
 
     while neutral in terminals_kr
@@ -418,8 +331,8 @@ function _kron_reduce_branch(Zs, Ys, terminals, neutral)
         P = setdiff(collect(1:length(terminals_kr)), n)
 
         if all(size(Z) == (length(terminals_kr), length(terminals_kr)) for Z in Zs_kr)
-            Zs_kr = [Z[P,P]-(1/Z[n,n])*Z[P,[n]]*Z[[n],P] for Z in Zs_kr]
-            Ys_kr = [Y[P,P] for Y in Ys_kr]
+            Zs_kr = Vector{Matrix}([Z[P,P]-(1/Z[n,n])*Z[P,[n]]*Z[[n],P] for Z in Zs_kr])
+            Ys_kr = Vector{Matrix}([Y[P,P] for Y in Ys_kr])
         end
 
         terminals_kr = terminals_kr[P]
@@ -451,7 +364,7 @@ end
 
 
 ""
-function _pad_properties_delta!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; invert=false)
+function _pad_properties_delta!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; invert::Bool=false)
     @assert(all(c in phases for c in connections))
     @assert(length(connections) in [2, 3], "A delta configuration has to have at least 2 or 3 connections!")
     @assert(length(phases)==3, "Padding only possible to a |phases|==3!")
@@ -480,6 +393,7 @@ function _pad_properties_delta!(object::Dict{<:Any,<:Any}, properties::Vector{St
 end
 
 
+""
 function _apply_filter!(obj, properties, filter)
     for property in properties
         if haskey(obj, property)
@@ -488,7 +402,7 @@ function _apply_filter!(obj, properties, filter)
             elseif isa(obj[property], Matrix)
                 obj[property] = obj[property][filter, filter]
             else
-                error("The property $property is not a Vector or a Matrix!")
+                Memento.error(_LOGGER, "The property $property is not a Vector or a Matrix!")
             end
         end
     end
@@ -500,7 +414,7 @@ Given a set of addmittances 'y' connected from the conductors 'f_cnds' to the
 conductors 't_cnds', this method will return a list of conductors 'cnd' and a
 matrix 'Y', which will satisfy I[cnds] = Y*V[cnds].
 """
-function calc_shunt(f_cnds::Vector{Int}, t_cnds::Vector{Int}, y::Vector{Float64})
+function calc_shunt(f_cnds::Vector{Int}, t_cnds::Vector{Int}, y::Vector{T})::Tuple{Vector{Int}, Matrix{T}} where T <: Number
     cnds = unique([f_cnds..., t_cnds...])
     e(f,t) = reshape([c==f ? 1 : c==t ? -1 : 0 for c in cnds], length(cnds), 1)
     Y = sum([e(f_cnds[i], t_cnds[i])*y[i]*e(f_cnds[i], t_cnds[i])' for i in 1:length(y)])
@@ -514,7 +428,7 @@ Given a set of terminals 'cnds' with associated shunt addmittance 'Y', this
 method will calculate the reduced addmittance matrix if terminal 'ground' is
 grounded.
 """
-function _calc_ground_shunt_admittance_matrix(cnds::Vector{Int}, Y::Matrix{Float64}, ground::Int)
+function _calc_ground_shunt_admittance_matrix(cnds::Vector{Int}, Y::Matrix{T}, ground::Int)::Tuple{Vector{Int}, Matrix{T}} where T <: Number
     # TODO add types
     if ground in cnds
         cndsr = setdiff(cnds, ground)
@@ -524,137 +438,4 @@ function _calc_ground_shunt_admittance_matrix(cnds::Vector{Int}, Y::Matrix{Float
     else
         return cnds, Y
     end
-end
-
-
-""
-function _rm_floating_cnd(cnds::Vector{Int}, Y::Matrix{Float64}, f::Int)
-    P = setdiff(cnds, f)
-    f_inds = _get_idxs(cnds, [f])
-    P_inds = _get_idxs(cnds, P)
-    Yrm = Y[P_inds,P_inds]-(1/Y[f_inds,f_inds][1])*Y[P_inds,f_inds]*Y[f_inds,P_inds]
-    return (P,Yrm)
-end
-
-
-""
-function _expand_linecode!(data_model)
-    # expand line codes
-    for (id, line) in data_model["line"]
-        if haskey(line, "linecode")
-            linecode = data_model["linecode"][line["linecode"]]
-            for key in ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
-                line[key] = line["length"]*linecode[key]
-            end
-            delete!(line, "linecode")
-            delete!(line, "length")
-        end
-    end
-    delete!(data_model, "linecode")
-end
-
-
-""
-function _lossy_ground_to_shunt!(data_model)
-    mappings = []
-
-    if haskey(data_model, "bus")
-        for (id, bus) in data_model["bus"]
-            grounding_lossy_inds = [i for (i,t) in enumerate(bus["grounded"]) if bus["rg"][i]!=0 || bus["xg"][i]!=0]
-            grounding_lossy = bus["grounded"][grounding_lossy_inds]
-            grounding_perfect = bus["grounded"][setdiff(1:length(bus["grounded"]), grounding_lossy_inds)]
-
-            if !isempty(grounding_lossy)
-                zg = bus["rg"][grounding_lossy_inds].+im*bus["xg"][grounding_lossy_inds]
-                Y_sh = diagm(0=>inv.(zg)) # diagonal matrix, so matrix inverse is element-wise inverse
-                add_virtual!(data_model, "shunt", create_shunt(bus=bus["id"], connections=grounding_lossy,
-                    g_sh=real.(Y_sh), b_sh=imag.(Y_sh)
-                ))
-            end
-        end
-    end
-    return mappings
-end
-
-
-""
-function _load_to_shunt!(data_model)
-    mappings = []
-    if haskey(data_model, "load")
-        for (id, load) in data_model["load"]
-            if load["model"]=="constant_impedance"
-                b = load["qd_ref"]./load["vnom"].^2*1E3
-                g = load["pd_ref"]./load["vnom"].^2*1E3
-                y = b.+im*g
-                N = length(b)
-
-                if load["configuration"]=="delta"
-                    # create delta transformation matrix Md
-                    Md = diagm(0=>ones(N), 1=>-ones(N-1))
-                    Md[N,1] = -1
-                    Y = Md'*diagm(0=>y)*Md
-
-                else # load["configuration"]=="wye"
-                    Y_fr = diagm(0=>y)
-                    # B = [[b]; -1'*[b]]*[I -1]
-                    Y = vcat(Y_fr, -ones(N)'*Y_fr)*hcat(diagm(0=>ones(N)),  -ones(N))
-                end
-
-                shunt = add_virtual!(data_model, "shunt", create_shunt(bus=load["bus"], connections=load["connections"], b_sh=imag.(Y), g_sh=real.(Y)))
-
-                delete_component!(data_model, "load", load)
-
-                push!(mappings, Dict(
-                    "load" => load,
-                    "shunt_id" => shunt["id"],
-                ))
-            end
-        end
-    end
-
-    return mappings
-end
-
-
-""
-function _capacitor_to_shunt!(data_model)
-    mappings = []
-
-    if haskey(data_model, "capacitor")
-        for (id, cap) in data_model["capacitor"]
-            b = cap["qd_ref"]./cap["vnom"]^2*1E3
-            N = length(b)
-
-            if cap["configuration"]=="delta"
-                # create delta transformation matrix Md
-                Md = diagm(0=>ones(N), 1=>-ones(N-1))
-                Md[N,1] = -1
-                B = Md'*diagm(0=>b)*Md
-
-            elseif cap["configuration"]=="wye-grounded"
-                B = diagm(0=>b)
-
-            elseif cap["configuration"]=="wye-floating"
-                # this is a floating wye-segment
-                # B = [b]*(I-1/(b'*1)*[b';...;b'])
-                B = diagm(0=>b)*(diagm(0=>ones(N)) - 1/sum(b)*repeat(b',N,1))
-
-            else # cap["configuration"]=="wye"
-                B_fr = diagm(0=>b)
-                # B = [[b]; -1'*[b]]*[I -1]
-                B = vcat(B_fr, -ones(N)'*B_fr)*hcat(diagm(0=>ones(N)),  -ones(N))
-            end
-
-            shunt = create_shunt(NaN, cap["bus"], cap["connections"], b_sh=B)
-            add_virtual!(data_model, "shunt", shunt)
-            delete_component!(data_model, "capacitor", cap)
-
-            push!(mappings, Dict(
-                "capacitor" => cap,
-                "shunt_id" => shunt["id"],
-            ))
-        end
-    end
-
-    return mappings
 end
