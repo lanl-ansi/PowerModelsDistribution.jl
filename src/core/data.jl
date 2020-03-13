@@ -1,6 +1,4 @@
-const _excluded_count_busname_patterns = Vector{Regex}([
-    r"^_virtual.*",
-])
+import LinearAlgebra: Adjoint
 
 "wraps angles in degrees to 180"
 function _wrap_to_180(degrees)
@@ -48,13 +46,13 @@ _replace_nan(v) = map(x -> isnan(x) ? zero(x) : x, v)
 function count_nodes(data::Dict{String,<:Any})::Int
     n_nodes = 0
 
-    if get(data, "data_model", missing) == "dss"
-        sourcebus = get(data["vsource"]["source"], "bus1", "sourcebus")
+    if get(data, "source_type", "none") == "dss" && !haskey(data, "data_model")
+        sourcebus = get(data["circuit"], "bus1", "sourcebus")
         all_nodes = Dict()
-        for obj_type in values(data)
-            for object in values(obj_type)
-                if isa(object, Dict) && haskey(object, "buses")
-                    for busname in values(object["buses"])
+        for comp_type in values(data)
+            for comp in values(comp_type)
+                if isa(comp, Dict) && haskey(comp, "buses")
+                    for busname in values(comp["buses"])
                         name, nodes = _parse_busname(busname)
 
                         if !haskey(all_nodes, name)
@@ -67,8 +65,8 @@ function count_nodes(data::Dict{String,<:Any})::Int
                             end
                         end
                     end
-                elseif isa(object, Dict)
-                    for (prop, val) in object
+                elseif isa(comp, Dict)
+                    for (prop, val) in comp
                         if startswith(prop, "bus") && prop != "buses"
                             name, nodes = _parse_busname(val)
 
@@ -92,21 +90,19 @@ function count_nodes(data::Dict{String,<:Any})::Int
                 n_nodes += length(phases)
             end
         end
-    elseif get(data, "data_model", missing) in ["mathematical", "engineering"] || (haskey(data, "source_type") && data["source_type"] == "matlab")
-        if get(data, "data_model", missing) == "mathematical"
+
+    elseif get(data, "source_type", "none") == "dss" && haskey(data, "data_model")
+
+        if get(data, "data_model", "mathematical") == "mathematical"
             Memento.info(_LOGGER, "counting nodes from PowerModelsDistribution structure may not be as accurate as directly from `parse_dss` data due to virtual buses, etc.")
         end
 
         n_nodes = 0
-        for (name, bus) in data["bus"]
-            if get(data, "data_model", missing) == "matpower" || (haskey(data, "source_type") && data["source_type"] == "matlab")
+        for bus in values(data["bus"])
+            if get(data, "source_type", "none") == "matlab"
                 n_nodes += sum(bus["vm"] .> 0.0)
-            else
-                if data["data_model"] == "mathematical"
-                    name = bus["name"]
-                end
-
-                if all(!occursin(pattern, name) for pattern in [_excluded_count_busname_patterns..., data["sourcebus"]])
+            elseif get(data, "source_type", "none") == "dss"
+                if !(data["source_type"] == "dss" && bus["name"] in ["_virtual_sourcebus", data["sourcebus"]]) && !(data["source_type"] == "dss" && startswith(bus["name"], "tr") && endswith(bus["name"], r"_b\d"))
                     n_nodes += sum(bus["vmax"] .> 0.0)
                 end
             end
@@ -151,19 +147,18 @@ function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps=0.1)
     vmax = bus["vmax"]
     vmin = bus["vmin"]
     if haskey(bus, "vm_ll_max")
-        vdmax = bus["vm_ll_max"]*sqrt(3)
+        vdmax = bus["vm_ll_max"]
     else
         # implied valid upper bound
-        vdmax = [1 1 0; 0 1 1; 1 0 1]*vmax
+        vdmax = _mat_mult_rm_nan([1 1 0; 0 1 1; 1 0 1], vmax)
         id = bus["index"]
     end
     if haskey(bus, "vm_ll_min")
-        vdmin = bus["vm_ll_min"]*sqrt(3)
+        vdmin = bus["vm_ll_min"]
     else
-        vdmin = ones(3)*vdmin_eps*sqrt(3)
-        id = bus["index"]
-        Memento.info(_LOGGER, "Bus $id has no phase-to-phase vm upper bound; instead, $vdmin_eps was used as a valid upper bound.")
+        vdmin = fill(0.0, length(vmin))
     end
+
     return (vdmin, vdmax)
 end
 
@@ -176,10 +171,10 @@ function _calc_load_pq_bounds(load::Dict, bus::Dict)
     a, alpha, b, beta = _load_expmodel_params(load, bus)
     vmin, vmax = _calc_load_vbounds(load, bus)
     # get bounds
-    pmin = min.(a.*vmin.^alpha, a.*vmax.^alpha)
-    pmax = max.(a.*vmin.^alpha, a.*vmax.^alpha)
-    qmin = min.(b.*vmin.^beta, b.*vmax.^beta)
-    qmax = max.(b.*vmin.^beta, b.*vmax.^beta)
+    pmin = _nan2zero(min.(a.*vmin.^alpha, a.*vmax.^alpha), a)
+    pmax = _nan2zero(max.(a.*vmin.^alpha, a.*vmax.^alpha), a)
+    qmin = _nan2zero(min.(b.*vmin.^beta, b.*vmax.^beta), b)
+    qmax = _nan2zero(max.(b.*vmin.^beta, b.*vmax.^beta), b)
     return (pmin, pmax, qmin, qmax)
 end
 
@@ -203,8 +198,8 @@ Returns magnitude bounds for the current going through the load.
 function _calc_load_current_magnitude_bounds(load::Dict, bus::Dict)
     a, alpha, b, beta = _load_expmodel_params(load, bus)
     vmin, vmax = _calc_load_vbounds(load, bus)
-    cb1 = sqrt.(a.^(2).*vmin.^(2*alpha.-2) + b.^(2).*vmin.^(2*beta.-2))
-    cb2 = sqrt.(a.^(2).*vmax.^(2*alpha.-2) + b.^(2).*vmax.^(2*beta.-2))
+    cb1 = sqrt.(_nan2zero(a.^(2).*vmin.^(2*alpha.-2), a) + _nan2zero(b.^(2).*vmin.^(2*beta.-2), b))
+    cb2 = sqrt.(_nan2zero(a.^(2).*vmax.^(2*alpha.-2), a) + _nan2zero(b.^(2).*vmax.^(2*beta.-2), b))
     cmin = min.(cb1, cb2)
     cmax = max.(cb1, cb2)
     return cmin, cmax
@@ -253,10 +248,10 @@ multiphase load. These are inferred from vmin/vmax for wye loads and from
 _calc_bus_vm_ll_bounds for delta loads.
 """
 function _calc_load_vbounds(load::Dict, bus::Dict)
-    if load["conn"]=="wye"
+    if load["configuration"]=="wye"
         vmin = bus["vmin"]
         vmax = bus["vmax"]
-    elseif load["conn"]=="delta"
+    elseif load["configuration"]=="delta"
         vmin, vmax = _calc_bus_vm_ll_bounds(bus)
     end
     return vmin, vmax
@@ -408,6 +403,16 @@ end
 
 
 """
+Returns a total (shunt+series) power magnitude bound for the from and to side
+of a branch. The total current rating also implies a current bound through the
+upper bound on the voltage magnitude of the connected buses.
+"""
+function _calc_branch_power_max_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
+    return _calc_branch_power_max(branch, bus_fr), _calc_branch_power_max(branch, bus_to)
+end
+
+
+"""
 Returns a valid series current magnitude bound for a branch.
 """
 function _calc_branch_series_current_max(branch::Dict, bus_fr::Dict, bus_to::Dict)
@@ -424,15 +429,12 @@ function _calc_branch_series_current_max(branch::Dict, bus_fr::Dict, bus_to::Dic
     # get valid bounds on total current
     c_max_fr_tot = _calc_branch_current_max(branch, bus_fr)
     c_max_to_tot = _calc_branch_current_max(branch, bus_to)
-    if ismissing(c_max_fr_tot) || ismissing(c_max_to_tot)
-        return missing
-    end
 
     # get valid bounds on shunt current
     y_fr = branch["g_fr"] + im* branch["b_fr"]
     y_to = branch["g_to"] + im* branch["b_to"]
-    c_max_fr_sh = abs.(y_fr)*vmax_fr
-    c_max_to_sh = abs.(y_to)*vmax_to
+    c_max_fr_sh = _mat_mult_rm_nan(abs.(y_fr), vmax_fr)
+    c_max_to_sh = _mat_mult_rm_nan(abs.(y_to), vmax_to)
 
     # now select element-wise lowest valid bound between fr and to
     N = 3 #TODO update for 4-wire
@@ -656,17 +658,25 @@ end
 
 
 "Local wrapper method for JuMP.set_lower_bound, which skips NaN and infinite (-Inf only)"
-function set_lower_bound(x::JuMP.VariableRef, bound)
+function set_lower_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category=:default)
     if !(isnan(bound) || bound==-Inf)
         JuMP.set_lower_bound(x, bound)
+    elseif loose_bounds
+        lbs = pm.ext[:loose_bounds]
+        JuMP.set_lower_bound(x, -lbs.bound_values[category])
+        push!(lbs.loose_lb_vars, x)
     end
 end
 
 
 "Local wrapper method for JuMP.set_upper_bound, which skips NaN and infinite (+Inf only)"
-function set_upper_bound(x::JuMP.VariableRef, bound)
+function set_upper_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category=:default)
     if !(isnan(bound) || bound==Inf)
         JuMP.set_upper_bound(x, bound)
+    elseif loose_bounds
+        lbs = pm.ext[:loose_bounds]
+        JuMP.set_upper_bound(x, lbs.bound_values[category])
+        push!(lbs.loose_ub_vars, x)
     end
 end
 
@@ -692,4 +702,26 @@ function sol_polar_voltage!(pm::_PMs.AbstractPowerModel, solution::Dict)
             end
         end
     end
+end
+
+# BOUND manipulation methods (0*Inf->0 is often desired)
+_sum_rm_nan(X::Vector) = sum([X[(!).(isnan.(X))]..., 0.0])
+
+
+function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, Adjoint}) where T
+    N, A_ncols = size(A)
+    B_nrows, M = size(B)
+    @assert(A_ncols==B_nrows)
+    return [_sum_rm_nan(A[n,:].*B[:,m]) for n in 1:N, m in 1:M]
+end
+
+
+_mat_mult_rm_nan(A::Union{Matrix, Adjoint}, b::Vector) = dropdims(_mat_mult_rm_nan(A, reshape(b, length(b), 1)), dims=2)
+_mat_mult_rm_nan(a::Vector, B::Union{Matrix, Adjoint}) = _mat_mult_rm_nan(reshape(a, length(a), 1), B)
+
+
+function _nan2zero(b, a; val=0)
+    and(x, y) = x && y
+    b[and.(isnan.(b), a.==val)] .= 0.0
+    return b
 end

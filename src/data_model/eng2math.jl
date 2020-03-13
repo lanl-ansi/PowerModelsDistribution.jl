@@ -162,7 +162,8 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
             @assert(all(t in kr_phases for t in terminals_kr))
 
             _apply_filter!(math_obj, ["vm", "va", "vmin", "vmax"], filter)
-            _pad_properties!(math_obj, ["vm", "va", "vmin", "vmax"], terminals_kr, kr_phases)
+            _pad_properties!(math_obj, ["vmax"], terminals_kr, kr_phases, pad_value=Inf)
+            _pad_properties!(math_obj, ["vm", "va", "vmin"], terminals_kr, kr_phases)
         end
 
         data_math["bus"]["$(math_obj["index"])"] = math_obj
