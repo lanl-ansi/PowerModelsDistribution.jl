@@ -1,5 +1,9 @@
 import LinearAlgebra: Adjoint
 
+const _excluded_count_busname_patterns = Vector{Regex}([
+    r"^_virtual.*",
+])
+
 "wraps angles in degrees to 180"
 function _wrap_to_180(degrees)
     return degrees - 360*floor.((degrees .+ 180)/360)
@@ -46,13 +50,13 @@ _replace_nan(v) = map(x -> isnan(x) ? zero(x) : x, v)
 function count_nodes(data::Dict{String,<:Any})::Int
     n_nodes = 0
 
-    if get(data, "source_type", "none") == "dss" && !haskey(data, "data_model")
-        sourcebus = get(data["circuit"], "bus1", "sourcebus")
+    if get(data, "data_model", missing) == "dss"
+        sourcebus = get(data["vsource"]["source"], "bus1", "sourcebus")
         all_nodes = Dict()
-        for comp_type in values(data)
-            for comp in values(comp_type)
-                if isa(comp, Dict) && haskey(comp, "buses")
-                    for busname in values(comp["buses"])
+        for obj_type in values(data)
+            for object in values(obj_type)
+                if isa(object, Dict) && haskey(object, "buses")
+                    for busname in values(object["buses"])
                         name, nodes = _parse_busname(busname)
 
                         if !haskey(all_nodes, name)
@@ -65,8 +69,8 @@ function count_nodes(data::Dict{String,<:Any})::Int
                             end
                         end
                     end
-                elseif isa(comp, Dict)
-                    for (prop, val) in comp
+                elseif isa(object, Dict)
+                    for (prop, val) in object
                         if startswith(prop, "bus") && prop != "buses"
                             name, nodes = _parse_busname(val)
 
@@ -90,19 +94,21 @@ function count_nodes(data::Dict{String,<:Any})::Int
                 n_nodes += length(phases)
             end
         end
-
-    elseif get(data, "source_type", "none") == "dss" && haskey(data, "data_model")
-
-        if get(data, "data_model", "mathematical") == "mathematical"
+    elseif get(data, "data_model", missing) in ["mathematical", "engineering"] || (haskey(data, "source_type") && data["source_type"] == "matlab")
+        if get(data, "data_model", missing) == "mathematical"
             Memento.info(_LOGGER, "counting nodes from PowerModelsDistribution structure may not be as accurate as directly from `parse_dss` data due to virtual buses, etc.")
         end
 
         n_nodes = 0
-        for bus in values(data["bus"])
-            if get(data, "source_type", "none") == "matlab"
+        for (name, bus) in data["bus"]
+            if get(data, "data_model", missing) == "matpower" || (haskey(data, "source_type") && data["source_type"] == "matlab")
                 n_nodes += sum(bus["vm"] .> 0.0)
-            elseif get(data, "source_type", "none") == "dss"
-                if !(data["source_type"] == "dss" && bus["name"] in ["_virtual_sourcebus", data["sourcebus"]]) && !(data["source_type"] == "dss" && startswith(bus["name"], "tr") && endswith(bus["name"], r"_b\d"))
+            else
+                if data["data_model"] == "mathematical"
+                    name = bus["name"]
+                end
+
+                if all(!occursin(pattern, name) for pattern in [_excluded_count_busname_patterns..., data["sourcebus"]])
                     n_nodes += sum(bus["vmax"] .> 0.0)
                 end
             end
@@ -160,6 +166,22 @@ function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps=0.1)
     end
 
     return (vdmin, vdmax)
+end
+
+
+"""
+Calculates lower and upper bounds for the loads themselves (not the power
+withdrawn at the bus).
+"""
+function _calc_load_pq_bounds(load::Dict, bus::Dict)
+    a, alpha, b, beta = _load_expmodel_params(load, bus)
+    vmin, vmax = _calc_load_vbounds(load, bus)
+    # get bounds
+    pmin = min.(a.*vmin.^alpha, a.*vmax.^alpha)
+    pmax = max.(a.*vmin.^alpha, a.*vmax.^alpha)
+    qmin = min.(b.*vmin.^beta, b.*vmax.^beta)
+    qmax = max.(b.*vmin.^beta, b.*vmax.^beta)
+    return (pmin, pmax, qmin, qmax)
 end
 
 
