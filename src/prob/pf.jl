@@ -12,7 +12,7 @@ end
 
 ""
 function run_mc_pf(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, build_mc_pf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+    return run_mc_model(data, model_type, solver, build_mc_pf; kwargs...)
 end
 
 

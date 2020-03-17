@@ -55,8 +55,8 @@ function create_eng_model(name; kwargs...)::Dict{String,Any}
     data_model = Dict{String,Any}(
         "name" => name,
         "data_model" => "engineering",
-        "settings"=>Dict{String,Any}(
-            "v_var_scalar" = get(kwargs, :v_var_scalar, 1e3)
+        "settings" => Dict{String,Any}(
+            "v_var_scalar" => get(kwargs, :v_var_scalar, 1e3)
         )
     )
 

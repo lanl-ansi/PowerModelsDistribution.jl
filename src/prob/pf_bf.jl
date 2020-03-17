@@ -1,6 +1,6 @@
 ""
 function run_mc_pf_bf(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, build_mc_pf_bf; ref_extensions=[ref_add_arcs_trans!], multiconductor=true, kwargs...)
+    return run_mc_model(data, model_type, solver, build_mc_pf_bf; kwargs...)
 end
 
 

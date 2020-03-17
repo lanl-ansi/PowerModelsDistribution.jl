@@ -1,6 +1,6 @@
 "Run load shedding problem with storage"
 function run_mc_mld(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, build_mc_mld; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+    return run_mc_model(data, model_type, solver, build_mc_mld; kwargs...)
 end
 
 
@@ -12,7 +12,7 @@ end
 
 "Run Branch Flow Model Load Shedding Problem"
 function run_mc_mld_bf(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, build_mc_mld_bf; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+    return run_mc_model(data, model_type, solver, build_mc_mld_bf; kwargs...)
 end
 
 
@@ -24,7 +24,7 @@ end
 
 "Run unit commitment load shedding problem (!relaxed)"
 function run_mc_mld_uc(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, build_mc_mld_uc; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+    return run_mc_model(data, model_type, solver, build_mc_mld_uc; kwargs...)
 end
 
 

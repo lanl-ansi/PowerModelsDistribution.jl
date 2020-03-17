@@ -6,7 +6,7 @@
 ######
 # "multi-network opf with storage"
 # function _run_mn_mc_opf(data::Dict{String,Any}, model_type, solver; kwargs...)
-#     return _PMs.run_model(data, model_type, solver, _build_mn_mc_strg_opf; ref_extensions=[ref_add_arcs_trans!], multiconductor=true, multinetwork=true, kwargs...)
+#     return run_mc_model(data, model_type, solver, _build_mn_mc_strg_opf; multinetwork=true, kwargs...)
 # end
 #
 #
@@ -81,7 +81,7 @@
 
 ""
 function _run_mc_ucopf(file, model_type::Type, solver; kwargs...)
-    return _PMs.run_model(file, model_type, solver, _build_mc_ucopf; ref_extensions=[ref_add_arcs_trans!], multiconductor=true, kwargs...)
+    return run_mc_model(file, model_type, solver, _build_mc_ucopf; kwargs...)
 end
 
 ""
@@ -165,7 +165,7 @@ end
 
 ""
 function _run_mn_mc_opf(file, model_type::Type, optimizer; kwargs...)
-    return _PMs.run_model(file, model_type, optimizer, _build_mn_mc_opf; ref_extensions=[ref_add_arcs_trans!], multinetwork=true, multiconductor=true, kwargs...)
+    return run_mc_model(file, model_type, optimizer, _build_mn_mc_opf; multinetwork=true, kwargs...)
 end
 
 ""
@@ -212,7 +212,7 @@ end
 
 ""
 function _run_mn_mc_opf_strg(file, model_type::Type, optimizer; kwargs...)
-    return _PMs.run_model(file, model_type, optimizer, _build_mn_mc_opf_strg; ref_extensions=[ref_add_arcs_trans!], multinetwork=true, multiconductor=true, kwargs...)
+    return run_mc_model(file, model_type, optimizer, _build_mn_mc_opf_strg; multinetwork=true, kwargs...)
 end
 
 "warning: this model is not realistic or physically reasonable, it is only for test coverage"

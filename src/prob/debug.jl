@@ -2,7 +2,7 @@
 # that do not converge using the standard formulations
 "OPF problem with slack power at every bus"
 function run_mc_opf_pbs(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, build_mc_opf_pbs; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+    return run_mc_model(data, model_type, solver, build_mc_opf_pbs; kwargs...)
 end
 
 
@@ -14,7 +14,7 @@ end
 
 "PF problem with slack power at every bus"
 function run_mc_pf_pbs(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, build_mc_pf_pbs; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+    return run_mc_model(data, model_type, solver, build_mc_pf_pbs; kwargs...)
 end
 
 
