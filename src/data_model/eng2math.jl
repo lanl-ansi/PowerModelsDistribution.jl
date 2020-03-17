@@ -4,11 +4,12 @@ import LinearAlgebra: diagm
 const _1to1_maps = Dict{String,Vector{String}}(
     "bus" => ["vm", "va", "vmin", "vmax"],
     "load" => ["model", "configuration", "status", "source_id"],
-    "capacitor" => ["status", "source_id"],
+    "shunt_capacitor" => ["status", "source_id"],
+    "series_capacitor" => [],
     "shunt" => ["status", "source_id"],
     "shunt_reactor" => ["status", "source_id"],
     "generator" => ["model", "startup", "shutdown", "ncost", "cost", "source_id", "configuration"],
-    "pvsystem" => ["model", "startup", "shutdown", "ncost", "cost", "source_id"],
+    "solar" => ["model", "startup", "shutdown", "ncost", "cost", "source_id"],
     "storage" => ["status", "source_id"],
     "line" => ["source_id"],
     "line_reactor" => ["source_id"],
@@ -22,11 +23,12 @@ const _extra_eng_data = Dict{String,Vector{String}}(
     "root" => ["sourcebus", "files", "dss_options", "settings"],
     "bus" => ["grounded", "neutral", "awaiting_ground", "xg", "phases", "rg", "terminals"],
     "load" => [],
-    "capacitor" => [],
+    "shunt_capacitor" => [],
+    "series_capacitor" => [],
     "shunt" => [],
     "shunt_reactor" => [],
     "generator" => ["control_model"],
-    "pvsystem" => [],
+    "solar" => [],
     "storage" => [],
     "line" => ["f_connections", "t_connections", "linecode"],
     "switch" => [],
@@ -35,9 +37,9 @@ const _extra_eng_data = Dict{String,Vector{String}}(
     "voltage_source" => [],
 )
 
-const _node_elements = ["load", "capacitor", "shunt_reactor", "generator", "pvsystem", "storage", "vsource"]
+const _node_elements = ["load", "capacitor", "shunt_reactor", "generator", "solar", "storage", "vsource"]
 
-const _edge_elements = ["line", "switch", "transformer"]
+const _edge_elements = ["line", "switch", "transformer", "line_reactor", "series_capacitor"]
 
 
 ""
@@ -69,14 +71,14 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
 
     _map_eng2math_load!(data_math, data_eng; kron_reduced=kron_reduced)
 
-    _map_eng2math_capacitor!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_shunt_capacitor!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_shunt!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_shunt_reactor!(data_math, data_eng; kron_reduced=kron_reduced)
 
     _map_eng2math_generator!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_pvsystem!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_solar!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_storage!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_vsource!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_voltage_source!(data_math, data_eng; kron_reduced=kron_reduced)
 
     _map_eng2math_line!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_line_reactor!(data_math, data_eng; kron_reduced=kron_reduced)
@@ -174,7 +176,7 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
         data_math["bus_lookup"][name] = math_obj["index"]
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => "bus.$name",
+            :from => name,
             :to => "bus.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_bus!,
             :kron_reduced => kron_reduced,
@@ -195,6 +197,8 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         nconductors = data_math["conductors"]
 
         math_obj["load_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
+
+        math_obj["status"] = data_math["status"]
 
         math_obj["pd"] = eng_obj["pd"]
         math_obj["qd"] = eng_obj["qd"]
@@ -217,7 +221,7 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         data_math["load"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => "load.$name",
+            :from => name,
             :to => "load.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_load!,
             :kron_reduced => kron_reduced,
@@ -228,7 +232,7 @@ end
 
 
 ""
-function _map_eng2math_capacitor!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+function _map_eng2math_shunt_capacitor!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "capacitor", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("capacitor", eng_obj, length(data_math["shunt"])+1)
 
@@ -285,9 +289,9 @@ function _map_eng2math_capacitor!(data_math::Dict{String,<:Any}, data_eng::Dict{
         data_math["shunt"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => "capacitor.$name",
+            :from => name,
             :to => "shunt.$(math_obj["index"])",
-            :unmap_function => :_map_math2eng_capacitor!,
+            :unmap_function => :_map_math2eng_shunt_capacitor!,
             :kron_reduced => kron_reduced,
             :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["capacitor"])
         )
@@ -321,7 +325,7 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
         data_math["shunt"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => "shunt.$name",
+            :from => name,
             :to => "shunt.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_capacitor!,
             :kron_reduced => kron_reduced,
@@ -359,7 +363,7 @@ function _map_eng2math_shunt_reactor!(data_math::Dict{String,<:Any}, data_eng::D
         data_math["shunt"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => "shunt_reactor.$name",
+            :from => name,
             :to => "shunt.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_shunt_reactor!,
             :kron_reduced => kron_reduced,
@@ -413,7 +417,7 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         data_math["gen"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => "generator.$name",
+            :from => name,
             :to => "gen.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_generator!,
             :kron_reduced => kron_reduced,
@@ -424,9 +428,9 @@ end
 
 
 ""
-function _map_eng2math_pvsystem!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
-    for (name, eng_obj) in get(data_eng, "pvsystem", Dict{Any,Dict{String,Any}}())
-        math_obj = _init_math_obj("pvsystem", eng_obj, length(data_math["gen"])+1)
+function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+    for (name, eng_obj) in get(data_eng, "solar", Dict{Any,Dict{String,Any}}())
+        math_obj = _init_math_obj("solar", eng_obj, length(data_math["gen"])+1)
 
         phases = eng_obj["phases"]
         connections = eng_obj["connections"]
@@ -462,11 +466,11 @@ function _map_eng2math_pvsystem!(data_math::Dict{String,<:Any}, data_eng::Dict{<
         data_math["gen"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => "pvsystem.$name",
+            :from => "solar.$name",
             :to => "gen.$(math_obj["index"])",
-            :unmap_function => :_map_math2eng_pvsystem!,
+            :unmap_function => :_map_math2eng_solar!,
             :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["pvsystem"])
+            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["solar"])
         )
     end
 end
@@ -508,7 +512,7 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
         data_math["storage"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => "storage.$name",
+            :from => name,
             :to => "storage.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_storage!,
             :kron_reduced => kron_reduced,
@@ -580,7 +584,7 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         data_math["branch"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => "line.$name",
+            :from => name,
             :to => "branch.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_line!,
             :kron_reduced => kron_reduced,
@@ -643,7 +647,7 @@ function _map_eng2math_line_reactor!(data_math::Dict{String,<:Any}, data_eng::Di
         data_math["branch"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => "line_reactor.$name",
+            :from => name,
             :to => "branch.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_line_reactor!,
             :kron_reduced => kron_reduced,
@@ -744,7 +748,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
         # data_math["switch"]["$(switch_obj["index"])"] = switch_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from_id => "switch.$name",
+            :from_id => name,
             # :to_id => ["switch.$(switch_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],  # TODO enable real switches
             :to_id => ["branch.$(branch_obj["index"])"],
             :unmap_function => :_map_math2eng_switch!,
@@ -761,7 +765,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
         # Build map first, so we can update it as we decompose the transformer
         map_idx = length(data_math["map"])+1
         data_math["map"][map_idx] = Dict{Symbol,Any}(
-            :from_id => "transformer.$name",
+            :from_id => name,
             :to_id => Vector{String}([]),
             :unmap_function => :_map_math2eng_transformer!,
             :kron_reduced => kron_reduced,
@@ -844,7 +848,7 @@ end
 
 
 ""
-function _map_eng2math_vsource!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1,2,3], kr_neutral::Int=4)
+function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1,2,3], kr_neutral::Int=4)
     # TODO create option for lossy vs lossless sourcebus connection
     for (name, eng_obj) in data_eng["voltage_source"]
         nconductors = data_math["conductors"]
@@ -856,7 +860,7 @@ function _map_eng2math_vsource!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
             "name" => "_virtual_bus.voltage_source.$name",
             "bus_type" => 3,
             "vm" => eng_obj["vm"],
-            "va" => deg2rad.(eng_obj["va"]),
+            "va" => eng_obj["va"],
             "vmin" => eng_obj["vm"],
             "vmax" => eng_obj["vm"],
             "basekv" => data_math["basekv"]
@@ -906,9 +910,9 @@ function _map_eng2math_vsource!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
         data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from_id => "voltage_source.$name",
+            :from_id => name,
             :to_id => ["gen.$(gen_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],
-            :unmap_function => :_map_math2eng_sourcebus!,
+            :unmap_function => :_map_math2eng_voltage_source!,
             :kron_reduced => kron_reduced,
             :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["voltage_source"])
         )

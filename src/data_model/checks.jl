@@ -14,7 +14,7 @@ const _eng_model_checks = Dict{Symbol,Symbol}(
     :shunt => :_check_shunt,
     :generator => :_check_generator,
     :voltage_source => :_check_voltage_source,
-    # :pvsystem => :_check_pvsystem,
+    # :solar => :_check_solar,
     # :storage => :_check_storage,
     # :grounding => :_check_grounding,
 )
@@ -137,7 +137,7 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
         :qg_max =>Array{<:Real},
         :qg_min =>Array{<:Real},
     ),
-    :pvsystem => Dict{Symbol,Type}(),
+    :solar => Dict{Symbol,Type}(),
     :storage => Dict{Symbol,Type}(),
     :switch => Dict{Symbol,Type}(),
     :grounding => Dict{Symbol,Type}(
@@ -194,7 +194,7 @@ const _eng_model_req_fields= Dict{Symbol,Vector{Symbol}}(
     :voltage_source => Vector{Symbol}([
         :status, :bus, :connections, :vm, :va
         ]),
-    :pvsystem => Vector{Symbol}([]),
+    :solar => Vector{Symbol}([]),
     :storage => Vector{Symbol}([]),
     :grounding => Vector{Symbol}([]),
     # Future Components

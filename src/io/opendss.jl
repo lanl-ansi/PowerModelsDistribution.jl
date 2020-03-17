@@ -686,8 +686,6 @@ end
 "Adds pvsystems to `data_eng` from `data_dss`"
 function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "pvsystem", Dict{String,Any}())
-        Memento.warn(_LOGGER, "Converting PVSystem \"$(dss_obj["name"])\" into generator with limits determined by OpenDSS property 'kVA'")
-
         _apply_like!(dss_obj, data_dss, "pvsystem")
         defaults = _apply_ordered_properties(_create_pvsystem(dss_obj["bus1"], dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
 
@@ -724,11 +722,11 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
         end
 
-        if !haskey(data_eng, "pvsystem")
-            data_eng["pvsystem"] = Dict{String,Any}()
+        if !haskey(data_eng, "solar")
+            data_eng["solar"] = Dict{String,Any}()
         end
 
-        data_eng["pvsystem"][name] = eng_obj
+        data_eng["solar"][name] = eng_obj
     end
 end
 
