@@ -439,3 +439,31 @@ function _calc_ground_shunt_admittance_matrix(cnds::Vector{Int}, Y::Matrix{T}, g
         return cnds, Y
     end
 end
+
+
+"initialization actions for unmapping"
+function _init_unmap_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, map::Dict{Symbol,Any})::Dict{String,Any}
+    if !haskey(data_eng, eng_obj_type)
+        data_eng[eng_obj_type] = Dict{Any,Any}()
+    end
+
+    eng_obj = Dict{String,Any}()
+    return merge(eng_obj, map[:extras])
+end
+
+
+"returns component from the mathematical data model"
+function _get_math_obj(data_math::Dict{String,<:Any}, to_id::String)::Dict{String,Any}
+    math_type, math_id = split(map[:to], '.')
+    return data_math[math_type][math_id]
+end
+
+
+"convert cost model names"
+function _add_gen_cost_model!(math_obj::Dict{String,<:Any}, eng_obj::Dict{String,<:Any})
+    math_obj["model"] = get(eng_obj, "cost_model", 2)
+    math_obj["startup"] = get(eng_obj, "startup_cost", 0.0)
+    math_obj["shutdown"] = get(eng_obj, "shutdown_cost", 0.0)
+    math_obj["ncost"] = get(eng_obj, "ncost_terms", 3)
+    math_obj["cost"] = get(eng_obj, "cost", [0.0, 1.0, 0.0])
+end

@@ -231,13 +231,6 @@
         @test pmd_storage["storage"]["1"]["source_id"] == "storage.s1"
     end
 
-    @testset "opendss parse pvsystem" begin
-        Memento.setlevel!(TESTLOG, "warn")
-        @test_warn(TESTLOG, "Converting PVSystem \"pv1\" into generator with limits determined by OpenDSS property 'kVA'",
-                PMD.parse_file("../test/data/opendss/case3_balanced_pv.dss"))
-        Memento.setlevel!(TESTLOG, "error")
-    end
-
     @testset "opendss parse verify source_id" begin
         @test pmd["shunt"]["2"]["source_id"] == "capacitor.c1"
         @test pmd["shunt"]["4"]["source_id"] == "reactor.reactor3"

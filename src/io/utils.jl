@@ -262,65 +262,67 @@ end
 
 "Combines transformers with 'bank' keyword into a single transformer"
 function _bank_transformers!(data_eng::Dict{String,<:Any})
-    bankable_transformers = Dict()
-    for (id, tr) in data_eng["transformer"]
-        if haskey(tr, "bank")
-            bank = tr["bank"]
-            if !haskey(bankable_transformers, bank)
-                bankable_transformers[bank] = ([], [])
+    if haskey(data_eng, "transformer")
+        bankable_transformers = Dict()
+        for (id, tr) in data_eng["transformer"]
+            if haskey(tr, "bank")
+                bank = tr["bank"]
+                if !haskey(bankable_transformers, bank)
+                    bankable_transformers[bank] = ([], [])
+                end
+                push!(bankable_transformers[bank][1], id)
+                push!(bankable_transformers[bank][2], tr)
             end
-            push!(bankable_transformers[bank][1], id)
-            push!(bankable_transformers[bank][2], tr)
-        end
-    end
-
-    for (bank, (ids, trs)) in bankable_transformers
-        # across-phase properties should be the same to be eligible for banking
-        props = ["bus", "noloadloss", "xsc", "rs", "imag", "vnom", "snom", "polarity", "configuration"]
-        btrans = Dict{String, Any}(prop=>trs[1][prop] for prop in props)
-        if !all(tr[prop]==btrans[prop] for tr in trs, prop in props)
-            continue
-        end
-        nrw = length(btrans["bus"])
-
-        # only attempt to bank wye-connected transformers
-        if !all(all(tr["configuration"].=="wye") for tr in trs)
-            continue
-        end
-        neutrals = [conns[end] for conns in trs[1]["connections"]]
-        # ensure all windings have the same neutral
-        if !all(all(conns[end]==neutrals[w] for (w, conns) in enumerate(tr["connections"])) for tr in trs)
-            continue
         end
 
-        # this will merge the per-phase properties in such a way that the
-        # f_connections will be sorted from small to large
-        f_phases_loc = Dict(hcat([[(c,(i,p)) for (p, c) in enumerate(tr["connections"][1][1:end-1])] for (i, tr) in enumerate(trs)]...))
-        locs = [f_phases_loc[x] for x in sort(collect(keys(f_phases_loc)))]
-        props_merge = ["connections", "tm", "tm_max", "tm_min", "fixed"]
-        for prop in props_merge
-            btrans[prop] = [[trs[i][prop][w][p] for (i,p) in locs] for w in 1:nrw]
+        for (bank, (ids, trs)) in bankable_transformers
+            # across-phase properties should be the same to be eligible for banking
+            props = ["bus", "noloadloss", "xsc", "rs", "imag", "vnom", "snom", "polarity", "configuration"]
+            btrans = Dict{String, Any}(prop=>trs[1][prop] for prop in props)
+            if !all(tr[prop]==btrans[prop] for tr in trs, prop in props)
+                continue
+            end
+            nrw = length(btrans["bus"])
 
-            # for the connections, also prefix the neutral per winding
-            if prop=="connections"
-                for w in 1:nrw
-                    push!(btrans[prop][w], neutrals[w])
+            # only attempt to bank wye-connected transformers
+            if !all(all(tr["configuration"].=="wye") for tr in trs)
+                continue
+            end
+            neutrals = [conns[end] for conns in trs[1]["connections"]]
+            # ensure all windings have the same neutral
+            if !all(all(conns[end]==neutrals[w] for (w, conns) in enumerate(tr["connections"])) for tr in trs)
+                continue
+            end
+
+            # this will merge the per-phase properties in such a way that the
+            # f_connections will be sorted from small to large
+            f_phases_loc = Dict(hcat([[(c,(i,p)) for (p, c) in enumerate(tr["connections"][1][1:end-1])] for (i, tr) in enumerate(trs)]...))
+            locs = [f_phases_loc[x] for x in sort(collect(keys(f_phases_loc)))]
+            props_merge = ["connections", "tm", "tm_max", "tm_min", "fixed"]
+            for prop in props_merge
+                btrans[prop] = [[trs[i][prop][w][p] for (i,p) in locs] for w in 1:nrw]
+
+                # for the connections, also prefix the neutral per winding
+                if prop=="connections"
+                    for w in 1:nrw
+                        push!(btrans[prop][w], neutrals[w])
+                    end
                 end
             end
-        end
 
-        btrans["source_id"] = "transformer.$bank"
+            btrans["source_id"] = "transformer.$bank"
 
-        # edit the transformer dict
-        for id in ids
-            delete!(data_eng["transformer"], id)
+            # edit the transformer dict
+            for id in ids
+                delete!(data_eng["transformer"], id)
+            end
+            btrans_name = bank
+            if haskey(data_eng["transformer"], bank)
+                Memento.warn("The bank name ($bank) is already used for another transformer; using the name of the first transformer $(ids[1]) in the bank instead.")
+                btrans_name = ids[1]
+            end
+            data_eng["transformer"][btrans_name] = btrans
         end
-        btrans_name = bank
-        if haskey(data_eng["transformer"], bank)
-            Memento.warn("The bank name ($bank) is already used for another transformer; using the name of the first transformer $(ids[1]) in the bank instead.")
-            btrans_name = ids[1]
-        end
-        data_eng["transformer"][btrans_name] = btrans
     end
 end
 
@@ -346,7 +348,7 @@ function _discover_terminals!(data_eng::Dict{String,<:Any})
         end
     end
 
-    for comp_type in [x for x in ["voltage_source", "load", "shunt", "gen"] if haskey(data_eng, x)]
+    for comp_type in [x for x in ["voltage_source", "load", "gen"] if haskey(data_eng, x)]
         for comp in values(data_eng[comp_type])
             push!(terminals[comp["bus"]], setdiff(comp["connections"], [0])...)
         end
@@ -785,4 +787,14 @@ function _is_after(prop_order::Vector{String}, property1::String, property2::Str
     end
 
     return property1_idx > property2_idx
+end
+
+
+"add engineering data object to engineering data model"
+function _add_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, eng_obj_id::Any, eng_obj::Dict{String,<:Any})
+    if !haskey(data_eng, eng_obj_type)
+        data_eng[eng_obj_type] = Dict{Any,Any}()
+    end
+
+    data_eng[eng_obj_type][eng_obj_id] = eng_obj
 end

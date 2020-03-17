@@ -34,8 +34,8 @@ function solution_math2eng(solution_math::Dict, data_math::Dict; make_si::Bool=t
         elseif umap_type==:_map_math2eng_root!
             # nothing to do for the solution
         elseif umap_type==:_map_math2eng_transformer!
-            _,  name  = split(map[:from_id], ".")
-            trans_2wa_ids = [index for (comp_type, index) in split.(map[:to_id], ".", limit=2) if comp_type=="transformer"]
+            name  = map[:from]
+            trans_2wa_ids = [index for (comp_type, index) in split.(map[:to], ".", limit=2) if comp_type=="transformer"]
 
             if !haskey(solution_eng, "transformer")
                 solution_eng["transformer"] = Dict{String, Any}()
@@ -50,16 +50,19 @@ function solution_math2eng(solution_math::Dict, data_math::Dict; make_si::Bool=t
             solution_eng["transformer"][name] = trans
 
         else
-            comp_type_eng,  name  = split(map[:from], ".")
-            comp_type_math, index = split(map[:to], ".")
-            if !haskey(solution_eng, comp_type_eng)
-                solution_eng[comp_type_eng] = Dict{String, Any}()
-            end
-            if haskey(solution_math, comp_type_math)
-                solution_eng[comp_type_eng][name] = solution_math[comp_type_math][index]
-            else
-                #TODO add empty dicts if math object has no solution object?
-                solution_eng[comp_type_eng][name] = Dict{String, Any}()
+            comp_type_eng = match(r"_map_math2eng_(\w+)!", string(umap_type)).captures[1]
+            name  = map[:from]
+            if !isa(map[:to], Vector)
+                comp_type_math, index = split(map[:to], ".")
+                if !haskey(solution_eng, comp_type_eng)
+                    solution_eng[comp_type_eng] = Dict{String, Any}()
+                end
+                if haskey(solution_math, comp_type_math)
+                    solution_eng[comp_type_eng][name] = solution_math[comp_type_math][index]
+                else
+                    #TODO add empty dicts if math object has no solution object?
+                    solution_eng[comp_type_eng][name] = Dict{String, Any}()
+                end
             end
         end
     end

@@ -38,22 +38,18 @@ function _dss2eng_loadshape!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
         _apply_like!(dss_obj, data_dss, "loadshape")
         defaults = _apply_ordered_properties(_create_loadshape(name; _to_kwargs(dss_obj)...), dss_obj)
 
-        eng_obj = Dict{String,Any}()
-
-        eng_obj["hour"] = defaults["hour"]
-        eng_obj["pmult"] = defaults["pmult"]
-        eng_obj["qmult"] = defaults["qmult"]
-        eng_obj["use_actual"] = defaults["useactual"]
-
-        if !haskey(data_eng, "loadshape")
-            data_eng["loadshape"] = Dict{String,Any}()
-        end
+        eng_obj = Dict{String,Any}(
+            "hour" => defaults["hour"],
+            "pmult" => defaults["pmult"],
+            "qmult" => defaults["qmult"],
+            "use_actual" => defaults["useactual"]
+        )
 
         if import_all
             _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
         end
 
-        data_eng["loadshape"][name] = eng_obj
+        _add_eng_obj!(data_eng, "loadshape", name, eng_obj)
     end
 end
 
@@ -156,80 +152,13 @@ end
 
 
 "Adds capacitors to `data_eng` from `data_dss`"
-function _dss2eng_capacitor_to_shunt!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
-    for (name, dss_obj) in get(data_dss, "capacitor", Dict{String,Any}())
-        _apply_like!(dss_obj, data_dss, "capacitor")
-        defaults = _apply_ordered_properties(_create_capacitor(dss_obj["bus1"], dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
-
-        nphases = defaults["phases"]
-
-        dyz_map = Dict("wye"=>"wye", "delta"=>"delta", "ll"=>"delta", "ln"=>"wye")
-        conn = dyz_map[defaults["conn"]]
-
-        bus_name = _parse_busname(defaults["bus1"])[1]
-        bus2_name = _parse_busname(defaults["bus2"])[1]
-        if bus_name!=bus2_name
-            Memento.error("Capacitor $(name): bus1 and bus2 should connect to the same bus.")
-        end
-
-        f_terminals = _get_conductors_ordered(defaults["bus1"], default=collect(1:nphases))
-        if conn=="wye"
-            t_terminals = _get_conductors_ordered(defaults["bus2"], default=fill(0,nphases))
-        else
-            # if delta connected, ignore bus2 and generate t_terminals such that
-            # it corresponds to a delta winding
-            t_terminals = [f_terminals[2:end]..., f_terminals[1]]
-        end
-
-        # 'kv' is specified as phase-to-phase for phases=2/3 (unsure for 4 and more)
-        #TODO figure out for more than 3 phases
-        vnom_ln = defaults["kv"]
-        if defaults["phases"] in [2,3]
-            vnom_ln = vnom_ln/sqrt(3)
-        end
-        # 'kvar' is specified for all phases at once; we want the per-phase one, in MVar
-        qnom = (defaults["kvar"]/1E3)/nphases
-        b = fill(qnom/vnom_ln^2, nphases)
-
-        # convert to a shunt matrix
-        terminals, B = _calc_shunt(f_terminals, t_terminals, b)
-
-        # if one terminal is ground (0), reduce shunt addmittance matrix
-        terminals, B = _calc_ground_shunt_admittance_matrix(terminals, B, 0)
-
-        eng_obj = create_shunt(status=convert(Int, defaults["enabled"]), bus=bus_name, connections=terminals, g_sh=fill(0.0, size(B)...), b_sh=B)
-
-        eng_obj["source_id"] = "capacitor.$name"
-
-        if import_all
-            _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
-        end
-
-        if !haskey(data_eng, "shunt")
-            data_eng["shunt"] = Dict{String,Any}()
-        end
-
-        data_eng["shunt"][name] = eng_obj
-    end
-end
-
-
-"Adds capacitors to `data_eng` from `data_dss`"
 function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "capacitor", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "capacitor")
         defaults = _apply_ordered_properties(_create_capacitor(dss_obj["bus1"], dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
 
         nphases = defaults["phases"]
-
         conn = defaults["conn"]
-
-        bus_name = _parse_busname(defaults["bus1"])[1]
-        bus2_name = _parse_busname(defaults["bus2"])[1]
-
-        if bus_name!=bus2_name
-            Memento.error(_LOGGER, "Capacitor $(name): bus1 and bus2 should connect to the same bus.")
-        end
 
         f_terminals = _get_conductors_ordered(defaults["bus1"], default=collect(1:nphases))
         if conn=="wye"
@@ -240,56 +169,68 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             t_terminals = [f_terminals[2:end]..., f_terminals[1]]
         end
 
-        eng_obj = Dict{String,Any}()
-
-        eng_obj["bus"] = bus_name
-
-        eng_obj["configuration"] = conn
-
-        eng_obj["f_terminals"] = f_terminals
-        eng_obj["t_terminals"] = t_terminals
-
-        eng_obj["kv"] = defaults["kv"]
-        eng_obj["kvar"] = defaults["kvar"]
-
-        eng_obj["phases"] = defaults["phases"]
-
-        eng_obj["status"] = convert(Int, defaults["enabled"])
-
-        eng_obj["source_id"] = "capacitor.$name"
+        eng_obj = Dict{String,Any}(
+            "configuration" => conn,
+            "status" => convert(Int, defaults["enabled"]),
+            "source_id" => "capacitor.$name",
+            "phases" => nphases,
+            "f_connections" => f_terminals,
+            "t_connections" => t_terminals,
+        )
 
         if import_all
             _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
         end
 
-        if !haskey(data_eng, "capacitor")
-            data_eng["capacitor"] = Dict{String,Any}()
-        end
+        bus_name = _parse_busname(defaults["bus1"])[1]
+        bus2_name = _parse_busname(defaults["bus2"])[1]
+        if bus_name == bus2_name
+            eng_obj["bus"] = bus_name
 
-        data_eng["capacitor"][name] = eng_obj
+            # 'kv' is specified as phase-to-phase for phases=2/3 (unsure for 4 and more)
+            #TODO figure out for more than 3 phases
+            vnom_ln = defaults["kv"]
+            if defaults["phases"] in [2,3]
+                vnom_ln = vnom_ln/sqrt(3)
+            end
+            eng_obj["kv"] = fill(vnom_ln, nphases)
+
+            # 'kvar' is specified for all phases at once; we want the per-phase one
+            eng_obj["kvar"] = fill(defaults["kvar"] / nphases, nphases)
+
+            _add_eng_obj!(data_eng, "shunt_capacitor", name, eng_obj)
+        else
+            eng_obj["f_bus"] = bus_name
+            eng_obj["t_bus"] = bus2_name
+
+            eng_obj["kv"] = fill(defaults["kv"] / nphases, phases)
+            eng_obj["kvar"] = fill(defaults["kvar"] / nphases, phases)
+
+            _add_eng_obj!(data_eng, "series_capacitor", name, eng_obj)
+        end
     end
 end
 
 
+
 "Adds shunt reactors to `data_eng` from `data_dss`"
-function _dss2eng_shunt_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
+function _dss2eng_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "reactor", Dict{String,Any}())
         if !haskey(dss_obj, "bus2")
             _apply_like!(dss_obj, data_dss, "reactor")
             defaults = _apply_ordered_properties(_create_reactor(dss_obj["bus1"], dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
 
-            eng_obj = Dict{String,Any}()
+            eng_obj = Dict{String,Any}(
+                "phases" => defaults["phases"],
+                "configuration" => defaults["conn"],
+                "bus" => _parse_busname(defaults["bus1"])[1],
+                "kvar"  => defaults["kvar"],
+                "status" => convert(Int, defaults["enabled"]),
+                "source_id" => "reactor.$name",
+            )
 
-            eng_obj["phases"] = defaults["phases"]
-
-            eng_obj["configuration"] = defaults["conn"]
             connections_default = eng_obj["configuration"] == "wye" ? [collect(1:eng_obj["phases"])..., 0] : collect(1:eng_obj["phases"])
             eng_obj["connections"] = _get_conductors_ordered(defaults["bus1"], default=connections_default, check_length=false)
-
-            eng_obj["bus"] = _parse_busname(defaults["bus1"])[1]
-            eng_obj["kvar"] = defaults["kvar"]
-            eng_obj["status"] = convert(Int, defaults["enabled"])
-            eng_obj["source_id"] = "reactor.$name"
 
             # if the ground is used directly, register
             if 0 in eng_obj["connections"]
@@ -300,11 +241,48 @@ function _dss2eng_shunt_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{St
                 _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
             end
 
-            if !haskey(data_eng, "shunt_reactor")
-                data_eng["shunt_reactor"] = Dict{String,Any}()
+            _add_eng_obj!(data_eng, "shunt_reactor", name, eng_obj)
+        else
+            Memento.warn(_LOGGER, "reactors as constant impedance elements is not yet supported, treating reactor.$name like line")
+            _apply_like!(dss_obj, data_dss, "reactor")
+            defaults = _apply_ordered_properties(_create_reactor(dss_obj["bus1"], name, dss_obj["bus2"]; _to_kwargs(dss_obj)...), dss_obj)
+
+            eng_obj = Dict{String,Any}()
+
+            nphases = defaults["phases"]
+            eng_obj["phases"] = nphases
+
+            eng_obj["f_bus"] = _parse_busname(defaults["bus1"])[1]
+            eng_obj["t_bus"] = _parse_busname(defaults["bus2"])[1]
+
+            eng_obj["length"] = 1.0
+
+            eng_obj["rs"] = diagm(0 => fill(0.2, nphases))
+
+            for key in ["xs", "g_fr", "g_to", "b_fr", "b_to"]
+                eng_obj[key] = zeros(nphases, nphases)
             end
 
-            data_eng["shunt_reactor"][name] = eng_obj
+            eng_obj["f_connections"] = _get_conductors_ordered(defaults["bus1"], default=collect(1:nphases))
+            eng_obj["t_connections"] = _get_conductors_ordered(defaults["bus2"], default=collect(1:nphases))
+
+            # if the ground is used directly, register
+            if 0 in eng_obj["f_connections"]
+                _register_awaiting_ground!(data_eng["bus"][eng_obj["f_bus"]], eng_obj["f_connections"])
+            end
+            if 0 in eng_obj["t_connections"]
+                _register_awaiting_ground!(data_eng["bus"][eng_obj["t_bus"]], eng_obj["t_connections"])
+            end
+
+            eng_obj["status"] = convert(Int, defaults["enabled"])
+
+            eng_obj["source_id"] = "reactor.$(name)"
+
+            if import_all
+                _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
+            end
+
+            _add_eng_obj!(data_eng, "line_reactor", name, eng_obj)
         end
     end
 end
@@ -316,48 +294,33 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
         _apply_like!(dss_obj, data_dss, "generator")
         defaults = _apply_ordered_properties(_create_generator(dss_obj["bus1"], dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
 
-        eng_obj = Dict{String,Any}()
+        nphases = defaults["phases"]
 
-        eng_obj["phases"] = defaults["phases"]
-        eng_obj["connections"] = _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=collect(1:defaults["phases"]+1))
-
-        eng_obj["bus"] = _parse_busname(defaults["bus1"])[1]
+        eng_obj = Dict{String,Any}(
+            "phases" => nphases,
+            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=collect(1:defaults["phases"]+1)),
+            "bus" => _parse_busname(defaults["bus1"])[1],
+            "kw" => fill(defaults["kw"] / nphases, nphases),
+            "kvar" => fill(defaults["kvar"] / nphases, nphases),
+            "kv" => fill(defaults["kv"], nphases),
+            "kvar_min" => fill(defaults["minkvar"] / nphases, nphases),
+            "kvar_max" => fill(defaults["maxkvar"] / nphases, nphases),
+            "control_model" => defaults["model"],
+            "configuration" => "wye",
+            "status" => convert(Int, defaults["enabled"]),
+            "source_id" => "generator.$(name)"
+        )
 
         # if the ground is used directly, register load
         if 0 in eng_obj["connections"]
             _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
         end
 
-        eng_obj["kw"] = defaults["kw"]
-        eng_obj["kvar"] = defaults["kvar"]
-        eng_obj["kv"] = defaults["kv"]
-
-        eng_obj["kvar_min"] = defaults["minkvar"]
-        eng_obj["kvar_max"] = defaults["maxkvar"]
-
-        eng_obj["control_model"] = defaults["model"]
-
-        eng_obj["model"] = 2
-        eng_obj["startup"] = 0.0
-        eng_obj["shutdown"] = 0.0
-        eng_obj["ncost"] = 3
-        eng_obj["cost"] = [0.0, 1.0, 0.0]
-
-        eng_obj["configuration"] = "wye"
-
-        eng_obj["status"] = convert(Int, defaults["enabled"])
-
-        eng_obj["source_id"] = "generator.$(name)"
-
         if import_all
             _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
         end
 
-        if !haskey(data_eng, "generator")
-            data_eng["generator"] = Dict{String,Any}()
-        end
-
-        data_eng["generator"][name] = eng_obj
+        _add_eng_obj!(data_eng, "generator", name, eng_obj)
     end
 end
 
@@ -365,50 +328,40 @@ end
 "Adds vsources to `data_eng` from `data_dss`"
 function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "vsource", Dict{<:Any,<:Any}())
-        eng_obj = Dict{String,Any}()
+        _apply_like!(dss_obj, data_dss, "vsource")
+        defaults = _create_vsource(get(dss_obj, "bus1", "sourcebus"), name; _to_kwargs(dss_obj)...)
 
-        if !haskey(data_eng, "vsource")
-            data_eng["vsource"] = Dict{String,Dict{String,Any}}()
 
-            defaults = _create_vsource(get(dss_obj, "bus1", "sourcebus"), name; _to_kwargs(dss_obj)...)
+        ph1_ang = defaults["angle"]
+        vm_pu = defaults["pu"]
 
-            ph1_ang = defaults["angle"]
-            vm_pu = defaults["pu"]
+        phases = defaults["phases"]
+        vnom = data_eng["settings"]["set_vbase_val"]
 
-            phases = defaults["phases"]
-            vnom = data_eng["settings"]["set_vbase_val"]
+        vm = fill(vm_pu, phases)*vnom
+        va = rad2deg.(_wrap_to_pi.([-2*pi/phases*(i-1)+deg2rad(ph1_ang) for i in 1:phases]))
 
-            vm = fill(vm_pu, phases)*vnom
-            va = rad2deg.(_wrap_to_pi.([-2*pi/phases*(i-1)+deg2rad(ph1_ang) for i in 1:phases]))
+        eng_obj = Dict{String,Any}(
+            "bus" => _parse_busname(defaults["bus1"])[1],
+            "connections" => collect(1:phases),
+            "vm" => vm,
+            "va" => va,
+            "rs" => defaults["rmatrix"],
+            "xs" => defaults["xmatrix"],
+            "source_id" => "vsource.$name",
+            "status" => convert(Int, defaults["enabled"])
+        )
 
-            eng_obj = Dict{String,Any}(
-                "bus" => _parse_busname(defaults["bus1"])[1],
-                "connections" => collect(1:phases),
-                "vm" => vm,
-                "va" => va,
-                "rs" => defaults["rmatrix"],
-                "xs" => defaults["xmatrix"],
-                "source_id" => "vsource.$name",
-                "status" => 1
-            )
-
-            # if the ground is used directly, register load
-            if 0 in eng_obj["connections"]
-                _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
-            end
-
-            if import_all
-                _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
-            end
-
-            if !haskey(data_eng, "voltage_source")
-                data_eng["voltage_source"] = Dict{String,Any}()
-            end
-
-            data_eng["voltage_source"][name] = eng_obj
+        # if the ground is used directly, register load
+        if 0 in eng_obj["connections"]
+            _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
         end
 
-        data_eng["vsource"][name] = eng_obj
+        if import_all
+            _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
+        end
+
+        _add_eng_obj!(data_eng, "voltage_source", name, eng_obj)
     end
 end
 
@@ -435,11 +388,7 @@ function _dss2eng_linecode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
         eng_obj["g_fr"] = fill(0.0, nphases, nphases)
         eng_obj["g_to"] = fill(0.0, nphases, nphases)
 
-        if !haskey(data_eng, "linecode")
-            data_eng["linecode"] = Dict{String,Any}()
-        end
-
-        data_eng["linecode"][name] = eng_obj
+        _add_eng_obj!(data_eng, "linecode", name, eng_obj)
     end
 end
 
@@ -455,15 +404,17 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
 
         defaults = _apply_ordered_properties(_create_line(dss_obj["bus1"], dss_obj["bus2"], dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
 
-        eng_obj = Dict{String,Any}()
-
-        eng_obj["f_bus"] = _parse_busname(defaults["bus1"])[1]
-        eng_obj["t_bus"] = _parse_busname(defaults["bus2"])[1]
-
-        eng_obj["length"] = defaults["length"]
-
         nphases = defaults["phases"]
-        eng_obj["n_conductors"] = nphases
+
+        eng_obj = Dict{String,Any}(
+            "f_bus" => _parse_busname(defaults["bus1"])[1],
+            "t_bus" => _parse_busname(defaults["bus2"])[1],
+            "length" => defaults["length"],
+            "f_connections" => _get_conductors_ordered(defaults["bus1"], default=collect(1:nphases)),
+            "t_connections" => _get_conductors_ordered(defaults["bus2"], default=collect(1:nphases)),
+            "status" => convert(Int, defaults["enabled"]),
+            "source_id" => "line.$name"
+        )
 
         if haskey(dss_obj, "linecode")
             eng_obj["linecode"] = dss_obj["linecode"]
@@ -484,9 +435,6 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             eng_obj["g_to"] = fill(0.0, nphases, nphases)
         end
 
-        eng_obj["f_connections"] = _get_conductors_ordered(defaults["bus1"], default=collect(1:nphases))
-        eng_obj["t_connections"] = _get_conductors_ordered(defaults["bus2"], default=collect(1:nphases))
-
         # if the ground is used directly, register
         if 0 in eng_obj["f_connections"]
             _register_awaiting_ground!(data_eng["bus"][eng_obj["f_bus"]], eng_obj["f_connections"])
@@ -495,26 +443,14 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             _register_awaiting_ground!(data_eng["bus"][eng_obj["t_bus"]], eng_obj["t_connections"])
         end
 
-        eng_obj["status"] = convert(Int, defaults["enabled"])
-
-        eng_obj["source_id"] = "line.$(name)"
-
         if import_all
             _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
         end
 
         if defaults["switch"]
-            if !haskey(data_eng, "switch")
-                data_eng["switch"] = Dict{String,Any}()
-            end
-
-            data_eng["switch"][name] = eng_obj
+            _add_eng_obj!(data_eng, "switch", name, eng_obj)
         else
-            if !haskey(data_eng, "line")
-                data_eng["line"] = Dict{String, Any}()
-            end
-
-            data_eng["line"][name] = eng_obj
+            _add_eng_obj!(data_eng, "line", name, eng_obj)
         end
     end
 end
@@ -522,10 +458,6 @@ end
 
 "Adds transformers to `data_eng` from `data_dss`"
 function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
-   if !haskey(data_eng, "transformer")
-        data_eng["transformer"] = Dict{String,Any}()
-    end
-
     for (name, dss_obj) in get(data_dss, "transformer", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "transformer")
         defaults = _apply_ordered_properties(_create_transformer(dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
@@ -625,60 +557,7 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
             _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
         end
 
-        data_eng["transformer"][name] = eng_obj
-    end
-end
-
-
-"Adds line reactors to `data_eng` from `data_dss`"
-function _dss2eng_line_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
-    for (name, dss_obj) in get(data_dss, "reactor", Dict{String,Any}())
-        if haskey(dss_obj, "bus2")
-            Memento.warn(_LOGGER, "reactors as constant impedance elements is not yet supported, treating reactor.$name like line")
-            _apply_like!(dss_obj, data_dss, "reactor")
-            defaults = _apply_ordered_properties(_create_reactor(dss_obj["bus1"], name, dss_obj["bus2"]; _to_kwargs(dss_obj)...), dss_obj)
-
-            eng_obj = Dict{String,Any}()
-
-            nphases = defaults["phases"]
-            eng_obj["phases"] = nphases
-
-            eng_obj["f_bus"] = _parse_busname(defaults["bus1"])[1]
-            eng_obj["t_bus"] = _parse_busname(defaults["bus2"])[1]
-
-            eng_obj["length"] = 1.0
-
-            eng_obj["rs"] = diagm(0 => fill(0.2, nphases))
-
-            for key in ["xs", "g_fr", "g_to", "b_fr", "b_to"]
-                eng_obj[key] = zeros(nphases, nphases)
-            end
-
-            eng_obj["f_connections"] = _get_conductors_ordered(defaults["bus1"], default=collect(1:nphases))
-            eng_obj["t_connections"] = _get_conductors_ordered(defaults["bus2"], default=collect(1:nphases))
-
-            # if the ground is used directly, register
-            if 0 in eng_obj["f_connections"]
-                _register_awaiting_ground!(data_eng["bus"][eng_obj["f_bus"]], eng_obj["f_connections"])
-            end
-            if 0 in eng_obj["t_connections"]
-                _register_awaiting_ground!(data_eng["bus"][eng_obj["t_bus"]], eng_obj["t_connections"])
-            end
-
-            eng_obj["status"] = convert(Int, defaults["enabled"])
-
-            eng_obj["source_id"] = "reactor.$(name)"
-
-            if import_all
-                _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
-            end
-
-            if !haskey(data_eng, "line_reactor")
-                data_eng["line_reactor"] = Dict{String,Any}()
-            end
-
-            data_eng["line_reactor"][name] = eng_obj
-        end
+        _add_eng_obj!(data_eng, "transformer", name, eng_obj)
     end
 end
 
@@ -689,44 +568,31 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
         _apply_like!(dss_obj, data_dss, "pvsystem")
         defaults = _apply_ordered_properties(_create_pvsystem(dss_obj["bus1"], dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
 
-        eng_obj = Dict{String,Any}()
+        # TODO pick parameters for solar objects
 
-        eng_obj["name"] = name
-        eng_obj["bus"] = _parse_busname(defaults["bus1"])[1]
+        nphases = defaults["phases"]
 
-        eng_obj["phases"] = defaults["phases"]
-
-        eng_obj["configuration"] = "wye"
-
-        eng_obj["connections"] = _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=collect(1:defaults["phases"]+1))
+        eng_obj = Dict{String,Any}(
+            "bus" => _parse_busname(defaults["bus1"])[1],
+            "phases" => nphases,
+            "configuration" => "wye",
+            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=collect(1:defaults["phases"]+1)),
+            "kva" => fill(defaults["kva"] / nphases, nphases),
+            "kv" => fill(defaults["kv"] / nphases, nphases),
+            "status" => convert(Int, defaults["enabled"]),
+            "source_id" => "pvsystem.$name",
+        )
 
         # if the ground is used directly, register load
         if 0 in eng_obj["connections"]
             _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
         end
 
-        eng_obj["kva"] = defaults["kva"]
-        eng_obj["kv"] = defaults["kv"]
-
-        eng_obj["model"] = 2
-        eng_obj["startup"] = 0.0
-        eng_obj["shutdown"] = 0.0
-        eng_obj["ncost"] = 3
-        eng_obj["cost"] = [0.0, 1.0, 0.0]
-
-        eng_obj["status"] = convert(Int, defaults["enabled"])
-
-        eng_obj["source_id"] = "pvsystem.$(name)"
-
         if import_all
             _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
         end
 
-        if !haskey(data_eng, "solar")
-            data_eng["solar"] = Dict{String,Any}()
-        end
-
-        data_eng["solar"][name] = eng_obj
+        _add_eng_obj!(data_eng, "solar", name, eng_obj)
     end
 end
 
@@ -774,11 +640,7 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             _import_all(eng_obj, defaults, dss_obj["prop_order"])
         end
 
-        if !haskey(data_eng, "storage")
-            data_eng["storage"] = Dict{String,Any}()
-        end
-
-        data_eng["storage"][name] = eng_obj
+        _add_eng_obj!(data_eng, "storage", name, eng_obj)
     end
 end
 
@@ -833,13 +695,11 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
     # _dss2eng_xfrmcode!(data_eng, data_dss, import_all)  # TODO
     _dss2eng_transformer!(data_eng, data_dss, import_all)
 
-    _dss2eng_line_reactor!(data_eng, data_dss, import_all)
+    _dss2eng_capacitor!(data_eng, data_dss, import_all)
+    _dss2eng_reactor!(data_eng, data_dss, import_all)
 
     _dss2eng_loadshape!(data_eng, data_dss, import_all)
     _dss2eng_load!(data_eng, data_dss, import_all)
-
-    _dss2eng_capacitor_to_shunt!(data_eng, data_dss, import_all)
-    _dss2eng_shunt_reactor!(data_eng, data_dss, import_all)
 
     # _dss2eng_sourcebus!(data_eng, data_dss, import_all)
     _dss2eng_vsource!(data_eng, data_dss, import_all)

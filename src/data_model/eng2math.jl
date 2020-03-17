@@ -8,8 +8,8 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "series_capacitor" => [],
     "shunt" => ["status", "source_id"],
     "shunt_reactor" => ["status", "source_id"],
-    "generator" => ["model", "startup", "shutdown", "ncost", "cost", "source_id", "configuration"],
-    "solar" => ["model", "startup", "shutdown", "ncost", "cost", "source_id"],
+    "generator" => ["source_id", "configuration"],
+    "solar" => ["source_id", "configuration"],
     "storage" => ["status", "source_id"],
     "line" => ["source_id"],
     "line_reactor" => ["source_id"],
@@ -72,8 +72,8 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
     _map_eng2math_load!(data_math, data_eng; kron_reduced=kron_reduced)
 
     _map_eng2math_shunt_capacitor!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_shunt!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_shunt_reactor!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_shunt!(data_math, data_eng; kron_reduced=kron_reduced)
 
     _map_eng2math_generator!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_solar!(data_math, data_eng; kron_reduced=kron_reduced)
@@ -81,6 +81,7 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
     _map_eng2math_voltage_source!(data_math, data_eng; kron_reduced=kron_reduced)
 
     _map_eng2math_line!(data_math, data_eng; kron_reduced=kron_reduced)
+    # _map_eng2math_series_capacitor(data_math, data_eng; kron_reduced=kron_reduced)  # TODO
     _map_eng2math_line_reactor!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_switch!(data_math, data_eng; kron_reduced=kron_reduced)
 
@@ -188,7 +189,6 @@ end
 
 ""
 function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
-    # TODO add delta loads
     for (name, eng_obj) in get(data_eng, "load", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("load", eng_obj, length(data_math["load"])+1)
         math_obj["name"] = name
@@ -198,7 +198,7 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
 
         math_obj["load_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
-        math_obj["status"] = data_math["status"]
+        math_obj["status"] = eng_obj["status"]
 
         math_obj["pd"] = eng_obj["pd"]
         math_obj["qd"] = eng_obj["qd"]
@@ -233,52 +233,33 @@ end
 
 ""
 function _map_eng2math_shunt_capacitor!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
-    for (name, eng_obj) in get(data_eng, "capacitor", Dict{Any,Dict{String,Any}}())
-        math_obj = _init_math_obj("capacitor", eng_obj, length(data_math["shunt"])+1)
+    for (name, eng_obj) in get(data_eng, "shunt_capacitor", Dict{Any,Dict{String,Any}}())
+        math_obj = _init_math_obj("shunt_capacitor", eng_obj, length(data_math["shunt"])+1)
 
         # TODO change to new capacitor shunt calc logic
         math_obj["name"] = name
         math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
-        nphases = eng_obj["phases"]
+        f_terminals = eng_obj["f_connections"]
+        t_terminals = eng_obj["t_connections"]
 
         vnom_ln = eng_obj["kv"]
-        # 'kv' is specified as phase-to-phase for phases=2/3 (unsure for 4 and more)
-        if eng_obj["phases"] > 1
-            vnom_ln = vnom_ln/sqrt(3)
-        end
-        # 'kvar' is specified for all phases at once; we want the per-phase one, in MVar
-        qnom = (eng_obj["kvar"]/1E3)/nphases
-        # indexing qnom[1] is a dirty fix to support both kvar=[x] and kvar=x
-        # TODO fix this in a clear way, in dss_structs.jl
-        b_cap = qnom[1]/vnom_ln^2
-        #  get the base addmittance, with a LN voltage base
-        Sbase = 1 # not yet pmd_data["baseMVA"] because this is done in _PMs.make_per_unit
-        Ybase_ln = Sbase/(data_math["basekv"]/sqrt(3))^2
-        # now convent b_cap to per unit
-        b_cap_pu = b_cap/Ybase_ln
+        qnom = eng_obj["kvar"] ./ 1e3
+        b = qnom ./ vnom_ln.^2
 
-        b = fill(b_cap_pu, nphases)
-        N = length(b)
+        # convert to a shunt matrix
+        terminals, B = _calc_shunt(f_terminals, t_terminals, b)
 
-        if eng_obj["configuration"] == "wye"
-            B = diagm(0=>b)
-        else
-            # create delta transformation matrix Md
-            Md = diagm(0=>ones(N), 1=>-ones(N-1))
-            Md[N,1] = -1
-            B = Md'*diagm(0=>b)*Md
-        end
+        # if one terminal is ground (0), reduce shunt addmittance matrix
+        terminals, B = _calc_ground_shunt_admittance_matrix(terminals, B, 0)
 
-        math_obj["gs"] = fill(0.0, nphases, nphases)
         math_obj["bs"] = B
-
-        # neutral = get(data_eng["bus"][eng_obj["bus"]], "neutral", 4)
+        math_obj["gs"] = zeros(size(B))
 
         if kron_reduced
             filter = _kron_reduce_branch!(math_obj,
-                [], ["gs", "bs"],
-                eng_obj["connections"], kr_neutral
+                Vector{String}([]), ["gs", "bs"],
+                eng_obj["f_connections"], kr_neutral
             )
             connections = eng_obj["f_connections"][filter]
             _pad_properties!(math_obj, ["gs", "bs"], connections, kr_phases)
@@ -293,7 +274,7 @@ function _map_eng2math_shunt_capacitor!(data_math::Dict{String,<:Any}, data_eng:
             :to => "shunt.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_shunt_capacitor!,
             :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["capacitor"])
+            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["shunt_capacitor"])
         )
     end
 end
@@ -386,15 +367,17 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         math_obj["name"] = name
         math_obj["gen_status"] = eng_obj["status"]
 
-        math_obj["pg"] = fill(eng_obj["kw"] / phases, phases)
-        math_obj["qg"] = fill(eng_obj["kvar"] / phases, phases)
-        math_obj["vg"] = fill(eng_obj["kv"] / data_math["basekv"])
+        math_obj["pg"] = eng_obj["kw"]
+        math_obj["qg"] = eng_obj["kvar"]
+        math_obj["vg"] = eng_obj["kv"] ./ data_math["basekv"]
 
-        math_obj["qmin"] = fill(eng_obj["kvar_min"] / phases, phases)
-        math_obj["qmax"] = fill(eng_obj["kvar_max"] / phases, phases)
+        math_obj["qmin"] = eng_obj["kvar_min"]
+        math_obj["qmax"] = eng_obj["kvar_max"]
 
-        math_obj["pmax"] = fill(eng_obj["kw"] / phases, phases)
-        math_obj["pmin"] = fill(0.0, phases)
+        math_obj["pmax"] = eng_obj["kw"]
+        math_obj["pmin"] = zeros(phases)
+
+        _add_gen_cost_model!(math_obj, eng_obj)
 
         math_obj["configuration"] = eng_obj["configuration"]
 
@@ -440,17 +423,17 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["gen_status"] = eng_obj["status"]
 
-        math_obj["pg"] = fill(eng_obj["kva"] / phases, phases)
-        math_obj["qg"] = fill(eng_obj["kva"] / phases, phases)
-        math_obj["vg"] = fill(eng_obj["kv"] / data_math["basekv"], phases)
+        math_obj["pg"] = eng_obj["kva"]
+        math_obj["qg"] = eng_obj["kva"]
+        math_obj["vg"] = eng_obj["kv"]
 
         math_obj["pmin"] = fill(0.0, phases)
-        math_obj["pmax"] = fill(eng_obj["kva"] / phases, phases)
+        math_obj["pmax"] = eng_obj["kva"]
 
-        math_obj["qmin"] =  fill(-eng_obj["kva"] / phases, phases)
-        math_obj["qmax"] =  fill( eng_obj["kva"] / phases, phases)
+        math_obj["qmin"] =  -eng_obj["kva"]
+        math_obj["qmax"] =   eng_obj["kva"]
 
-        math_obj["configuration"] = eng_obj["configuration"]
+        _add_gen_cost_model!(math_obj, eng_obj)
 
         if kron_reduced
             if math_obj["configuration"]=="wye"
@@ -748,9 +731,9 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
         # data_math["switch"]["$(switch_obj["index"])"] = switch_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from_id => name,
+            :from => name,
             # :to_id => ["switch.$(switch_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],  # TODO enable real switches
-            :to_id => ["branch.$(branch_obj["index"])"],
+            :to => ["branch.$(branch_obj["index"])"],
             :unmap_function => :_map_math2eng_switch!,
             :kron_reduced => kron_reduced,
             :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["switch"])
@@ -765,14 +748,14 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
         # Build map first, so we can update it as we decompose the transformer
         map_idx = length(data_math["map"])+1
         data_math["map"][map_idx] = Dict{Symbol,Any}(
-            :from_id => name,
-            :to_id => Vector{String}([]),
+            :from => name,
+            :to => Vector{String}([]),
             :unmap_function => :_map_math2eng_transformer!,
             :kron_reduced => kron_reduced,
             :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["transformer"])
         )
 
-        to_map = data_math["map"][map_idx][:to_id]
+        to_map = data_math["map"][map_idx][:to]
 
         vnom = eng_obj["vnom"] * data_eng["settings"]["v_var_scalar"]
         snom = eng_obj["snom"] * data_eng["settings"]["v_var_scalar"]
@@ -860,7 +843,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
             "name" => "_virtual_bus.voltage_source.$name",
             "bus_type" => 3,
             "vm" => eng_obj["vm"],
-            "va" => eng_obj["va"],
+            "va" => deg2rad.(eng_obj["va"]),
             "vmin" => eng_obj["vm"],
             "vmax" => eng_obj["vm"],
             "basekv" => data_math["basekv"]
@@ -910,8 +893,8 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
         data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from_id => name,
-            :to_id => ["gen.$(gen_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],
+            :from => name,
+            :to => ["gen.$(gen_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],
             :unmap_function => :_map_math2eng_voltage_source!,
             :kron_reduced => kron_reduced,
             :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["voltage_source"])
