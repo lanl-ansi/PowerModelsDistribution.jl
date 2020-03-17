@@ -47,11 +47,13 @@ module PowerModelsDistribution
     include("io/common.jl")
 
     include("data_model/utils.jl")
+    include("data_model/checks.jl")
     include("data_model/components.jl")
     include("data_model/eng2math.jl")
     include("data_model/math2eng.jl")
     include("data_model/units.jl")
 
+    include("prob/common.jl")
     include("prob/mld.jl")
     include("prob/opf.jl")
     include("prob/opf_iv.jl")

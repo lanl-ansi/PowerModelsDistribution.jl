@@ -177,22 +177,6 @@ function _calc_load_pq_bounds(load::Dict, bus::Dict)
     a, alpha, b, beta = _load_expmodel_params(load, bus)
     vmin, vmax = _calc_load_vbounds(load, bus)
     # get bounds
-    pmin = min.(a.*vmin.^alpha, a.*vmax.^alpha)
-    pmax = max.(a.*vmin.^alpha, a.*vmax.^alpha)
-    qmin = min.(b.*vmin.^beta, b.*vmax.^beta)
-    qmax = max.(b.*vmin.^beta, b.*vmax.^beta)
-    return (pmin, pmax, qmin, qmax)
-end
-
-
-"""
-Calculates lower and upper bounds for the loads themselves (not the power
-withdrawn at the bus).
-"""
-function _calc_load_pq_bounds(load::Dict, bus::Dict)
-    a, alpha, b, beta = _load_expmodel_params(load, bus)
-    vmin, vmax = _calc_load_vbounds(load, bus)
-    # get bounds
     pmin = _nan2zero(min.(a.*vmin.^alpha, a.*vmax.^alpha), a)
     pmax = _nan2zero(max.(a.*vmin.^alpha, a.*vmax.^alpha), a)
     qmin = _nan2zero(min.(b.*vmin.^beta, b.*vmax.^beta), b)

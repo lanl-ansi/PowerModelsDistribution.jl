@@ -90,7 +90,7 @@ function make_3wire_data_model()
     add_bus!(data_model, "tr_sec",     terminals=collect(1:4))
     #add!(data_model, "bus", create_bus("4", terminals=collect(1:4)))
 
-    # add!(data_model, "transformer_nw", create_transformer_nw("1", 3, ["2", "3", "4"], [[1,2,3], [1,2,3,4], [1,2,3]],
+    # add!(data_model, "transformer_nw", create_transformer("1", 3, ["2", "3", "4"], [[1,2,3], [1,2,3,4], [1,2,3]],
     #     [0.230, 0.230, 0.230], [0.230, 0.230, 0.230],
     #         configuration=["delta", "wye", "delta"],
     #         xsc=[0.0, 0.0, 0.0],

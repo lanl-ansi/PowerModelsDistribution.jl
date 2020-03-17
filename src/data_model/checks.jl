@@ -441,7 +441,7 @@ function _check_shunt_capacitor(data_eng::Dict{String,<:Any}, name::Any)
         @assert length(shunt_capacitor["qd_ref"])==N "capacitor $name: qd_ref should have $N elements."
     end
 
-    @assert config in ["delta", "wye", "wye-grounded" "wye-floating"]
+    @assert config in ["delta", "wye", "wye-grounded", "wye-floating"]
 
     if config=="delta"
         @assert N>=3 "Capacitor $name: delta-connected capacitors should have at least 3 elements."

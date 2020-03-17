@@ -615,7 +615,7 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
             eng_obj["xsc"] = [defaults[x] for x in ["xhl", "xht", "xlt"]]/100
         end
 
-        eng_obj = create_transformer_nw(; Dict(Symbol.(keys(eng_obj)).=>values(eng_obj))...)
+        eng_obj = create_transformer(; Dict(Symbol.(keys(eng_obj)).=>values(eng_obj))...)
 
         if !haskey(data_eng, "transformer")
             data_eng["transformer"] = Dict{String,Any}()

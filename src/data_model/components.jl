@@ -133,11 +133,11 @@ function create_load(; kwargs...)
 
     load["connections"] = get(kwargs, :connections, load["configuration"]=="wye" ? [1, 2, 3, 4] : [1, 2, 3]),
     if load["model"]=="constant_power"
-        load["pd"] get(kwargs, :pd, fill(0.0, 3))
-        load["qd"] get(kwargs, :qd, fill(0.0, 3))
+        load["pd"] = get(kwargs, :pd, fill(0.0, 3))
+        load["qd"] = get(kwargs, :qd, fill(0.0, 3))
     else
-        load["pd_ref"] => get(kwargs, :pd_ref, fill(0.0, 3))
-        load["qd_ref"] => get(kwargs, :qd_ref, fill(0.0, 3))
+        load["pd_ref"] = get(kwargs, :pd_ref, fill(0.0, 3))
+        load["qd_ref"] = get(kwargs, :qd_ref, fill(0.0, 3))
     end
 
     _add_unused_kwargs!(load, kwargs)
@@ -174,7 +174,7 @@ function create_transformer(; kwargs...)
     transformer = Dict{String,Any}(
         "status" => get(kwargs, :status, 1),
         "configuration" => get(kwargs, :configuration, fill("wye", n_windings)),
-        "polarity" => get(kwargs, :polarity, fill(true, "n_windings")),
+        "polarity" => get(kwargs, :polarity, fill(true, n_windings)),
         "rs" => get(kwargs, :rs, zeros(n_windings)),
         "xsc" => get(kwargs, :xsc, zeros(n_windings^2-n_windings)),
         "noloadloss" => get(kwargs, :noloadloss, 0.0),
@@ -249,7 +249,7 @@ function delete_component!(data_eng::Dict{String,<:Any}, component_type::String,
 end
 
 
-"create add_{component_type}! methods that will create a component and add it to the engineering data model"
+# create add_{component_type}! methods that will create a component and add it to the engineering data model
 for comp in keys(_eng_model_dtypes)
-    @eval Meta.parse("add_$(comp)!(data_model, name; kwargs...) = add_object!(data_model, \"$comp\", name, create_$comp(; kwargs...))")
+    eval(Meta.parse("add_$(comp)!(data_model, name; kwargs...) = add_object!(data_model, \"$comp\", name, create_$comp(; kwargs...))"))
 end
