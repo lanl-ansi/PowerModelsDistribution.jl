@@ -55,14 +55,10 @@ function solution_math2eng(solution_math::Dict, data_math::Dict; make_si::Bool=t
             if !isa(map[:to], Vector)
                 comp_type_math, index = split(map[:to], ".")
                 if !haskey(solution_eng, comp_type_eng)
-                    solution_eng[comp_type_eng] = Dict{String, Any}()
+                    solution_eng[comp_type_eng] = Dict{Any,Any}()
                 end
-                if haskey(solution_math, comp_type_math)
-                    solution_eng[comp_type_eng][name] = solution_math[comp_type_math][index]
-                else
-                    #TODO add empty dicts if math object has no solution object?
-                    solution_eng[comp_type_eng][name] = Dict{String, Any}()
-                end
+
+                solution_eng[comp_type_eng][name] = solution_math[comp_type_math][index]
             end
         end
     end
