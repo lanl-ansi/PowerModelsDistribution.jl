@@ -1,3 +1,11 @@
+const _dimensionalize_math = Dict(
+    "bus"  => Dict("rad2deg"=>["va"], "vbase"=>["vm", "vr", "vi"]),
+    "gen"  => Dict("sbase"=>["pg", "qg", "pg_bus", "qg_bus"]),
+    "load" => Dict("sbase"=>["pd", "qd", "pd_bus", "qd_bus"]),
+    "line" => Dict("sbase"=>["pf", "qf", "pt", "qt"]),
+)
+
+
 "finds voltage zones"
 function _find_zones(data_model)
     unused_line_ids = Set(keys(data_model["branch"]))
@@ -186,9 +194,9 @@ function _rebase_pu_bus!(bus, vbase, sbase, sbase_old, v_var_scalar)
     _scale_props!(bus, ["rg", "xg"], z_scale)
 
     # TODO fix
-    # if haskey(bus ,"va")
-    #     bus["va"] = deg2rad.(bus["va"])
-    # end
+    if haskey(bus ,"va")
+        bus["va"] = deg2rad.(bus["va"])
+    end
 
     # save new vbase
     bus["vbase"] = vbase
@@ -322,14 +330,6 @@ function add_big_M!(data_model; kwargs...)
 
     data_model["big_M"] = big_M
 end
-
-
-const _dimensionalize_math = Dict(
-    "bus"  => Dict("rad2deg"=>["va"], "vbase"=>["vm", "vr", "vi"]),
-    "gen"  => Dict("sbase"=>["pg", "qg", "pg_bus", "qg_bus"]),
-    "load" => Dict("sbase"=>["pd", "qd", "pd_bus", "qd_bus"]),
-    "line" => Dict("sbase"=>["pf", "qf", "pt", "qt"]),
-)
 
 
 ""

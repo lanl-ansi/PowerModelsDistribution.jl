@@ -833,7 +833,7 @@ end
 ""
 function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1,2,3], kr_neutral::Int=4)
     # TODO create option for lossy vs lossless sourcebus connection
-    for (name, eng_obj) in data_eng["voltage_source"]
+    for (name, eng_obj) in get(data_eng, "voltage_source", Dict{Any,Any}())
         nconductors = data_math["conductors"]
 
         # TODO fix per unit problem
@@ -843,7 +843,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
             "name" => "_virtual_bus.voltage_source.$name",
             "bus_type" => 3,
             "vm" => eng_obj["vm"],
-            "va" => deg2rad.(eng_obj["va"]),
+            "va" => eng_obj["va"],
             "vmin" => eng_obj["vm"],
             "vmax" => eng_obj["vm"],
             "basekv" => data_math["basekv"]
