@@ -20,43 +20,56 @@ function add_object!(data_eng::Dict{String,<:Any}, obj_type::String, obj_id::Any
         data_eng[obj_type] = Dict{Any,Any}()
     end
 
+    if !haskey(object, "source_id")
+        object["source_id"] = "$obj_type.$obj_id"
+    end
+
+    if obj_type == "voltage_source"
+        if !haskey(data_eng["settings"], "set_vbase_bus")
+            data_eng["settings"]["set_vbase_bus"] = object["bus"]
+        end
+
+        if !haskey(data_eng, "sourcebus")
+            data_eng["sourcebus"] = object["bus"]
+        end
+    end
+
+    for bus_key in ["f_", "t_", ""]
+        if haskey(object, "$(bus_key)bus")
+            if !haskey(data_eng, "bus")
+                data_eng["bus"] = Dict{Any,Any}()
+            end
+
+            if obj_type == "transformer"
+                for (wdg, bus_id) in enumerate(data_eng["bus"])
+                    if !haskey(data_eng["bus"], bus_id)
+                        data_eng["bus"][bus_id] = create_bus(; terminals=object["connections"][wdg])
+                    end
+                end
+            else
+                if !haskey(data_eng["bus"], object["$(bus_key)bus"])
+                    data_eng["bus"][object["$(bus_key)bus"]] = create_bus(; terminals=object["$(bus_key)connections"])
+                end
+            end
+        end
+    end
+
     data_eng[obj_type][obj_id] = object
 end
 
 
-""
-function create_linecode(; kwargs...)
-    linecode = Dict{String,Any}(
-        "rs" => get(kwargs, :rs, fill(0.0, n_conductors, n_conductors)),
-        "xs" => get(kwargs, :xs, fill(0.0, n_conductors, n_conductors)),
-        "g_fr" => get(kwargs, :g_fr, fill(0.0, n_conductors, n_conductors)),
-        "b_fr" => get(kwargs, :b_fr, fill(0.0, n_conductors, n_conductors)),
-        "g_to" => get(kwargs, :g_to, fill(0.0, n_conductors, n_conductors)),
-        "b_to" => get(kwargs, :b_to, fill(0.0, n_conductors, n_conductors)),
-)
-
-    n_conductors = 0
-    for key in [:rs, :xs, :g_fr, :g_to, :b_fr, :b_to]
-        if haskey(kwargs, key)
-            n_conductors = size(kwargs[key])[1]
-        end
-    end
-
-    _add_unused_kwargs!(linecode, kwargs)
-
-    return linecode
-end
-
-
 "creates an engineering model"
-function create_eng_model(name; kwargs...)::Dict{String,Any}
+function Model(kwargs...)::Dict{String,Any}
     kwargs = Dict{Symbol,Any}(kwargs)
 
     data_model = Dict{String,Any}(
-        "name" => name,
+        "name" => get(kwargs, :name, ""),
         "data_model" => "engineering",
         "settings" => Dict{String,Any}(
-            "v_var_scalar" => get(kwargs, :v_var_scalar, 1e3)
+            "v_var_scalar" => get(kwargs, :v_var_scalar, 1e3),
+            "set_vbase_val" => get(kwargs, :basekv, 1.0),
+            "set_sbase_val" => get(kwargs, :baseMVA, 1.0),
+            "basefreq" => get(kwargs, :basefreq, 60.0),
         )
     )
 
@@ -67,14 +80,40 @@ end
 
 
 ""
+function create_linecode(; kwargs...)
+    n_conductors = 0
+    for key in [:rs, :xs, :g_fr, :g_to, :b_fr, :b_to]
+        if haskey(kwargs, key)
+            n_conductors = size(kwargs[key])[1]
+        end
+    end
+
+    linecode = Dict{String,Any}(
+        "rs" => get(kwargs, :rs, fill(0.0, n_conductors, n_conductors)),
+        "xs" => get(kwargs, :xs, fill(0.0, n_conductors, n_conductors)),
+        "g_fr" => get(kwargs, :g_fr, fill(0.0, n_conductors, n_conductors)),
+        "b_fr" => get(kwargs, :b_fr, fill(0.0, n_conductors, n_conductors)),
+        "g_to" => get(kwargs, :g_to, fill(0.0, n_conductors, n_conductors)),
+        "b_to" => get(kwargs, :b_to, fill(0.0, n_conductors, n_conductors)),
+    )
+
+    _add_unused_kwargs!(linecode, kwargs)
+
+    return linecode
+end
+
+
+""
 function create_line(; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
+
+    @assert haskey(kwargs, :f_bus) && haskey(kwargs, :t_bus) "Line must at least have f_bus and t_bus specified"
 
     N = length(get(kwargs, :f_connections, collect(1:4)))
 
     # if no linecode, then populate loss parameters with zero
     if !haskey(kwargs, :linecode)
-        n_conductors = 0
+        n_conductors = N
         for key in [:rs, :xs, :g_fr, :g_to, :b_fr, :b_to]
             if haskey(kwargs, key)
                 n_conductors = size(kwargs[key])[1]
@@ -83,17 +122,20 @@ function create_line(; kwargs...)
     end
 
     line = Dict{String,Any}(
+        "f_bus" => kwargs[:f_bus],
+        "t_bus" => kwargs[:t_bus],
         "status" => get(kwargs, :status, 1),
         "f_connections" => get(kwargs, :f_connections, collect(1:4)),
         "t_connections" => get(kwargs, :t_connections, collect(1:4)),
         "angmin" => get(kwargs, :angmin, fill(-60/180*pi, N)),
         "angmax" => get(kwargs, :angmax, fill( 60/180*pi, N)),
-        "rs" => get(kwargs, :rs, fill(0.0, n_conductors, n_conductors)),
-        "xs" => get(kwargs, :xs, fill(0.0, n_conductors, n_conductors)),
-        "g_fr" => get(kwargs, :g_fr, fill(0.0, n_conductors, n_conductors)),
-        "b_fr" => get(kwargs, :b_fr, fill(0.0, n_conductors, n_conductors)),
-        "g_to" => get(kwargs, :g_to, fill(0.0, n_conductors, n_conductors)),
-        "b_to" => get(kwargs, :b_to, fill(0.0, n_conductors, n_conductors)),
+        "length" => get(kwargs, :length, 1.0),
+        "rs" => get(kwargs, :rs, diagm(0 => fill(0.01, n_conductors))),
+        "xs" => get(kwargs, :xs, diagm(0 => fill(0.01, n_conductors))),
+        "g_fr" => get(kwargs, :g_fr, diagm(0 => fill(0.0, n_conductors))),
+        "b_fr" => get(kwargs, :b_fr, diagm(0 => fill(0.0, n_conductors))),
+        "g_to" => get(kwargs, :g_to, diagm(0 => fill(0.0, n_conductors))),
+        "b_to" => get(kwargs, :b_to, diagm(0 => fill(0.0, n_conductors))),
     )
 
     _add_unused_kwargs!(line, kwargs)
@@ -129,9 +171,10 @@ function create_load(; kwargs...)
         "status" => get(kwargs, :status, 1),
         "configuration" => get(kwargs, :configuration, "wye"),
         "model" => get(kwargs, :model, "constant_power"),
+        "connections" => get(kwargs, :connections, get(kwargs, :configuration, "wye")=="wye" ? [1, 2, 3, 4] : [1, 2, 3]),
+        "vnom" => get(kwargs, :vnom, 1.0)
     )
 
-    load["connections"] = get(kwargs, :connections, load["configuration"]=="wye" ? [1, 2, 3, 4] : [1, 2, 3]),
     if load["model"]=="constant_power"
         load["pd"] = get(kwargs, :pd, fill(0.0, 3))
         load["qd"] = get(kwargs, :qd, fill(0.0, 3))
@@ -184,6 +227,7 @@ function create_transformer(; kwargs...)
         "tm_max" => get(kwargs, :tm_max, fill(fill(1.1, 3), n_windings)),
         "tm_step" => get(kwargs, :tm_step, fill(fill(1/32, 3), n_windings)),
         "tm_fix" => get(kwargs, :tm_fix, fill(fill(true, 3), n_windings)),
+        "connections" => get(kwargs, :connections, fill(collect(1:4), n_windings)),
     )
 
     _add_unused_kwargs!(transformer, kwargs)
@@ -234,6 +278,12 @@ function create_voltage_source(; kwargs...)
         "connections" => get(kwargs, :connections, collect(1:3)),
     )
 
+    nphases = length(voltage_source["connections"])
+    voltage_source["vm"] = get(kwargs, :vm, fill(1.0, nphases))
+    voltage_source["va"] = deg2rad.(get(kwargs, :va, rad2deg.(_wrap_to_pi.([-2*pi/nphases*(i-1) for i in 1:nphases]))))
+    voltage_source["rs"] = fill(0.1, nphases, nphases)
+    voltage_source["xs"] = fill(0.0, nphases, nphases)
+
     _add_unused_kwargs!(voltage_source, kwargs)
 
     return voltage_source
@@ -248,8 +298,26 @@ function delete_component!(data_eng::Dict{String,<:Any}, component_type::String,
     end
 end
 
+# Data objects
+add_bus!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "bus", id, create_bus(; kwargs...))
+add_linecode!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "linecode", id, create_linecode(; kwargs...))
+# add_xfmrcode!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "xfmrcode", id, create_xfmrcode(; kwargs...))
+# add_timeseries!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "timeseries", id, create_timeseries(; kwargs...))
 
-# create add_{component_type}! methods that will create a component and add it to the engineering data model
-for comp in keys(_eng_model_dtypes)
-    eval(Meta.parse("add_$(comp)!(data_model, name; kwargs...) = add_object!(data_model, \"$comp\", name, create_$comp(; kwargs...))"))
-end
+# Edge objects
+add_line!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any; kwargs...) = add_object!(data_eng, "line", id, create_line(; f_bus=f_bus, t_bus=t_bus, kwargs...))
+add_transformer!(data_eng::Dict{String,<:Any}, id::Any, bus::Vector{Any}; kwargs...) = add_object!(data_eng, "transformer", id, create_transformer(; bus=bus, kwargs...))
+# add_switch!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any; kwargs...) = add_object!(data_eng, "switch", id, create_switch(; f_bus=f_bus, t_bus=t_bus, kwargs...))
+# add_series_capacitor!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any; kwargs...) = add_object!(data_eng, "series_capacitor", id, create_series_capacitor(; f_bus=f_bus, t_bus=t_bus, kwargs...))
+# add_line_reactor!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any; kwargs...) = add_object!(data_eng, "line_reactor", id, create_line_reactor(; f_bus=f_bus, t_bus=t_bus, kwargs...))
+
+# Node objects
+add_load!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "load", id, create_load(; bus=bus, kwargs...))
+add_shunt_capacitor!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "shunt_capacitor", id, create_shunt_capacitor(; bus=bus, kwargs...))
+# add_shunt_reactor!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "shunt_reactor", id, create_shunt_reactor(; bus=bus, kwargs...))
+add_shunt!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "shunt", id, create_shunt(; bus=bus, kwargs...))
+add_voltage_source!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "voltage_source", id, create_voltage_source(; bus=bus, kwargs...))
+add_generator!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "generator", id, create_generator(; bus=bus, kwargs...))
+# add_storage!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "storage", id, create_storage(; bus=bus, kwargs...))
+# add_solar!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "solar", id, create_solar(; bus=bus, kwargs...))
+# add_wind!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "wind", id, create_wind(; bus=bus, kwargs...))
