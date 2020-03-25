@@ -13,7 +13,6 @@ function _add_unused_kwargs!(object::Dict{String,<:Any}, kwargs::Dict{Symbol,<:A
 end
 
 
-
 "Generic add function to add components to an engineering data model"
 function add_object!(data_eng::Dict{String,<:Any}, obj_type::String, obj_id::Any, object::Dict{String,<:Any})
     if !haskey(data_eng, obj_type)
@@ -54,22 +53,44 @@ function add_object!(data_eng::Dict{String,<:Any}, obj_type::String, obj_id::Any
 end
 
 
-"creates an engineering model"
-function Model(kwargs...)::Dict{String,Any}
+"Instantiates a PowerModelsDistribution data model"
+function Model(model_type::String="engineering"; kwargs...)::Dict{String,Any}
     kwargs = Dict{Symbol,Any}(kwargs)
 
-    data_model = Dict{String,Any}(
-        "name" => get(kwargs, :name, ""),
-        "data_model" => "engineering",
-        "settings" => Dict{String,Any}(
-            "v_var_scalar" => get(kwargs, :v_var_scalar, 1e3),
-            "set_vbase_val" => get(kwargs, :basekv, 1.0),
-            "set_sbase_val" => get(kwargs, :baseMVA, 1.0),
-            "basefreq" => get(kwargs, :basefreq, 60.0),
+    if model_type == "engineering"
+        data_model = Dict{String,Any}(
+            "data_model" => "engineering",
+            "per_unit" => false,
+            "settings" => Dict{String,Any}(
+                "v_var_scalar" => get(kwargs, :v_var_scalar, 1e3),
+                "set_vbase_val" => get(kwargs, :basekv, 1.0),
+                "set_sbase_val" => get(kwargs, :baseMVA, 1.0),
+                "basefreq" => get(kwargs, :basefreq, 60.0),
+            )
         )
-    )
 
-    _add_unused_kwargs!(data_model["settings"], kwargs)
+        _add_unused_kwargs!(data_model["settings"], kwargs)
+    elseif model_type == "mathematical"
+        Memento.warn(_LOGGER, "There are not currently any helper functions to help build a mathematical model, this will only instantiate required fields.")
+        data_model = Dict{String,Any}(
+            "bus" => Dict{String,Any}(),
+            "load" => Dict{String,Any}(),
+            "shunt" => Dict{String,Any}(),
+            "gen" => Dict{String,Any}(),
+            "storage" => Dict{String,Any}(),
+            "branch" => Dict{String,Any}(),
+            "switch" => Dict{String,Any}(),
+            "dcline" => Dict{String,Any}(),
+            "per_unit" => false,
+            "baseMVA" => 100.0,
+            "basekv" => 1.0,
+            "data_model" => "mathematical"
+        )
+
+        _add_unused_kwargs!(data_model, kwargs)
+    else
+        Memento.error(_LOGGER, "Model type '$model_type' not recognized")
+    end
 
     return data_model
 end
