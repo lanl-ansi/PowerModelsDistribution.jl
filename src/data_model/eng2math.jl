@@ -13,7 +13,7 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "storage" => ["status", "source_id"],
     "line" => ["source_id"],
     "line_reactor" => ["source_id"],
-    "switch" => ["source_id"],
+    "switch" => ["source_id", "state", "status"],
     "line_reactor" => ["source_id"],
     "transformer" => ["source_id"],
     "voltage_source" => ["source_id"],
@@ -43,7 +43,7 @@ const _edge_elements = ["line", "switch", "transformer", "line_reactor", "series
 
 
 ""
-function _map_eng2math(data_eng; kron_reduced::Bool=true)
+function _map_eng2math(data_eng; kron_reduced::Bool=true, lossless::Bool=false, use_dss_bounds::Bool=true)
     @assert get(data_eng, "data_model", "mathematical") == "engineering"
 
     data_math = Dict{String,Any}(
@@ -75,17 +75,21 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
     _map_eng2math_shunt_reactor!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_shunt!(data_math, data_eng; kron_reduced=kron_reduced)
 
-    _map_eng2math_generator!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_solar!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_storage!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_voltage_source!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_generator!(data_math, data_eng; kron_reduced=kron_reduced, lossless=lossless)
+    _map_eng2math_solar!(data_math, data_eng; kron_reduced=kron_reduced, lossless=lossless)
+    _map_eng2math_storage!(data_math, data_eng; kron_reduced=kron_reduced, lossless=lossless)
+    _map_eng2math_voltage_source!(data_math, data_eng; kron_reduced=kron_reduced, lossless=lossless)
 
     _map_eng2math_line!(data_math, data_eng; kron_reduced=kron_reduced)
     # _map_eng2math_series_capacitor(data_math, data_eng; kron_reduced=kron_reduced)  # TODO
     _map_eng2math_line_reactor!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_switch!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_switch!(data_math, data_eng; kron_reduced=kron_reduced, lossless=lossless)
 
     _map_eng2math_transformer!(data_math, data_eng; kron_reduced=kron_reduced)
+
+    if !use_dss_bounds
+        # _find_new_bounds(data_math) # TODO
+    end
 
     return data_math
 end
@@ -355,7 +359,7 @@ end
 
 
 ""
-function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4, lossless::Bool=false)
     for (name, eng_obj) in get(data_eng, "generator", Dict{String,Any}())
         math_obj = _init_math_obj("generator", eng_obj, length(data_math["gen"])+1)
 
@@ -411,7 +415,7 @@ end
 
 
 ""
-function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4, lossless::Bool=false)
     for (name, eng_obj) in get(data_eng, "solar", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("solar", eng_obj, length(data_math["gen"])+1)
 
@@ -460,7 +464,7 @@ end
 
 
 ""
-function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4, lossless::Bool=false)
     for (name, eng_obj) in get(data_eng, "storage", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("storage", eng_obj, length(data_math["storage"])+1)
 
@@ -641,103 +645,123 @@ end
 
 
 ""
-function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4, lossless::Bool=false)
     # TODO enable real switches (right now only using vitual lines)
     for (name, eng_obj) in get(data_eng, "switch", Dict{Any,Dict{String,Any}}())
         nphases = length(eng_obj["f_connections"])
         nconductors = data_math["conductors"]
 
-        # build virtual bus
-        f_bus = data_math["bus"]["$(data_math["bus_lookup"][eng_obj["f_bus"]])"]
+        if lossless
+            math_obj = _init_math_obj("switch", eng_obj, length(data_math["switch"])+1)
+            math_obj["name"] = name
 
-        bus_obj = Dict{String,Any}(
-            "name" => "_virtual_bus.switch.$name",
-            "bus_i" => length(data_math["bus"])+1,
-            "bus_type" => 1,
-            "vmin" => f_bus["vmin"],
-            "vmax" => f_bus["vmax"],
-            "base_kv" => f_bus["base_kv"],
-            "status" => 1,
-            "index" => length(data_math["bus"])+1,
-        )
+            math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
+            math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
 
-        # data_math["bus"]["$(bus_obj["index"])"] = bus_obj
+            data_math["switch"]["$(math_obj["index"])"] = math_obj
 
-        # build virtual branch
-        if haskey(eng_obj, "linecode")
-            linecode = data_eng["linecode"][eng_obj["linecode"]]
+            data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
+                :from => name,
+                :to => "switch.$(math_obj["index"])",
+                :unmap_function => :_map_math2eng_switch!,
+                :kron_reduced => kron_reduced,
+                :lossless => lossless,
+                :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["switch"])
+            )
+        else
+            # build virtual bus
+            f_bus = data_math["bus"]["$(data_math["bus_lookup"][eng_obj["f_bus"]])"]
 
-            for property in ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
-                if !haskey(eng_obj, property) && haskey(linecode, property)
-                    eng_obj[property] = linecode[property]
+            bus_obj = Dict{String,Any}(
+                "name" => "_virtual_bus.switch.$name",
+                "bus_i" => length(data_math["bus"])+1,
+                "bus_type" => 1,
+                "vmin" => f_bus["vmin"],
+                "vmax" => f_bus["vmax"],
+                "base_kv" => f_bus["base_kv"],
+                "status" => 1,
+                "index" => length(data_math["bus"])+1,
+            )
+
+            # data_math["bus"]["$(bus_obj["index"])"] = bus_obj
+
+            # build virtual branch
+            if haskey(eng_obj, "linecode")
+                linecode = data_eng["linecode"][eng_obj["linecode"]]
+
+                for property in ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
+                    if !haskey(eng_obj, property) && haskey(linecode, property)
+                        eng_obj[property] = linecode[property]
+                    end
                 end
             end
-        end
 
-        branch_obj = _init_math_obj("switch", eng_obj, length(data_math["branch"])+1)
+            branch_obj = _init_math_obj("line", eng_obj, length(data_math["branch"])+1)
 
-        Zbase = (data_math["basekv"])^2 / (data_math["baseMVA"])
-        Zbase = 1
+            Zbase = (data_math["basekv"])^2 / (data_math["baseMVA"])
+            Zbase = 1
 
-        _branch_obj = Dict{String,Any}(
-            "name" => "_virtual_branch.switch.$name",
-            "source_id" => "_virtual_branch.switch.$name",
-            # "f_bus" => bus_obj["bus_i"],  # TODO enable real switches
-            "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
-            "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
-            "br_r" => eng_obj["rs"] * eng_obj["length"] / Zbase,
-            "br_x" => eng_obj["xs"] * eng_obj["length"] / Zbase,
-            "g_fr" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9),
-            "g_to" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_to"] * eng_obj["length"] / 1e9),
-            "b_fr" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9),
-            "b_to" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_to"] * eng_obj["length"] / 1e9),
-            "angmin" => fill(-60.0, nphases),
-            "angmax" => fill( 60.0, nphases),
-            "transformer" => false,
-            "shift" => zeros(nphases),
-            "tap" => ones(nphases),
-            "switch" => false,
-            "br_status" => 1,
-        )
-
-        merge!(branch_obj, _branch_obj)
-
-        if kron_reduced
-            @assert(all(eng_obj["f_connections"].==eng_obj["t_connections"]), "Kron reduction is only supported if f_connections is the same as t_connections.")
-            filter = _kron_reduce_branch!(branch_obj,
-                ["br_r", "br_x"], ["g_fr", "b_fr", "g_to", "b_to"],
-                eng_obj["f_connections"], kr_neutral
+            _branch_obj = Dict{String,Any}(
+                "name" => "_virtual_branch.switch.$name",
+                "source_id" => "_virtual_branch.switch.$name",
+                # "f_bus" => bus_obj["bus_i"],  # TODO enable real switches
+                "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
+                "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
+                "br_r" => eng_obj["rs"] * eng_obj["length"] / Zbase,
+                "br_x" => eng_obj["xs"] * eng_obj["length"] / Zbase,
+                "g_fr" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9),
+                "g_to" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_to"] * eng_obj["length"] / 1e9),
+                "b_fr" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9),
+                "b_to" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_to"] * eng_obj["length"] / 1e9),
+                "angmin" => fill(-60.0, nphases),
+                "angmax" => fill( 60.0, nphases),
+                "transformer" => false,
+                "shift" => zeros(nphases),
+                "tap" => ones(nphases),
+                "switch" => false,
+                "br_status" => 1,
             )
-            _apply_filter!(branch_obj, ["angmin", "angmax", "tap", "shift"], filter)
-            connections = eng_obj["f_connections"][filter]
-            _pad_properties!(branch_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "angmin", "angmax", "tap", "shift"], connections, kr_phases)
-        else
-            branch_obj["f_connections"] = eng_obj["f_connections"]
-            branch_obj["f_connections"] = eng_obj["t_connections"]
+
+            merge!(branch_obj, _branch_obj)
+
+            if kron_reduced
+                @assert(all(eng_obj["f_connections"].==eng_obj["t_connections"]), "Kron reduction is only supported if f_connections is the same as t_connections.")
+                filter = _kron_reduce_branch!(branch_obj,
+                    ["br_r", "br_x"], ["g_fr", "b_fr", "g_to", "b_to"],
+                    eng_obj["f_connections"], kr_neutral
+                )
+                _apply_filter!(branch_obj, ["angmin", "angmax", "tap", "shift"], filter)
+                connections = eng_obj["f_connections"][filter]
+                _pad_properties!(branch_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "angmin", "angmax", "tap", "shift"], connections, kr_phases)
+            else
+                branch_obj["f_connections"] = eng_obj["f_connections"]
+                branch_obj["f_connections"] = eng_obj["t_connections"]
+            end
+
+            data_math["branch"]["$(branch_obj["index"])"] = branch_obj
+
+            # build switch
+            switch_obj = Dict{String,Any}(
+                "name" => name,
+                "source_id" => eng_obj["source_id"],
+                "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
+                "t_bus" => bus_obj["bus_i"],
+                "status" => eng_obj["status"],
+                "index" => length(data_math["switch"])+1
+            )
+
+            # data_math["switch"]["$(switch_obj["index"])"] = switch_obj
+
+            data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
+                :from => name,
+                # :to_id => ["switch.$(switch_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],  # TODO enable real switches
+                :to => ["branch.$(branch_obj["index"])"],
+                :unmap_function => :_map_math2eng_switch!,
+                :kron_reduced => kron_reduced,
+                :lossless => lossless,
+                :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["switch"])
+            )
         end
-
-        data_math["branch"]["$(branch_obj["index"])"] = branch_obj
-
-        # build switch
-        switch_obj = Dict{String,Any}(
-            "name" => name,
-            "source_id" => eng_obj["source_id"],
-            "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
-            "t_bus" => bus_obj["bus_i"],
-            "status" => eng_obj["status"],
-            "index" => length(data_math["switch"])+1
-        )
-
-        # data_math["switch"]["$(switch_obj["index"])"] = switch_obj
-
-        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => name,
-            # :to_id => ["switch.$(switch_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],  # TODO enable real switches
-            :to => ["branch.$(branch_obj["index"])"],
-            :unmap_function => :_map_math2eng_switch!,
-            :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["switch"])
-        )
     end
 end
 
@@ -831,73 +855,95 @@ end
 
 
 ""
-function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1,2,3], kr_neutral::Int=4)
-    # TODO create option for lossy vs lossless source connection
+function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1,2,3], kr_neutral::Int=4, lossless::Bool=false)
     for (name, eng_obj) in get(data_eng, "voltage_source", Dict{Any,Any}())
         nconductors = data_math["conductors"]
 
-        # TODO fix per unit problem
-        bus_obj = Dict{String,Any}(
-            "bus_i" => length(data_math["bus"])+1,
-            "index" => length(data_math["bus"])+1,
-            "name" => "_virtual_bus.voltage_source.$name",
-            "bus_type" => 3,
-            "vm" => eng_obj["vm"],
-            "va" => eng_obj["va"],
-            "vmin" => eng_obj["vm"],
-            "vmax" => eng_obj["vm"],
-            "basekv" => data_math["basekv"]
-        )
+        if lossless
+            math_obj = _init_math_obj("voltage_source", eng_obj, length(data_math["gen"])+1)
 
-        data_math["bus"]["$(bus_obj["index"])"] = bus_obj
+            math_obj["name"] = name
+            math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
+            math_obj["gen_status"] = eng_obj["status"]
+            math_obj["pg"] = fill(0.0, nconductors)
+            math_obj["qg"] = fill(0.0, nconductors)
+            math_obj["configuration"] = "wye"
 
-        gen_obj = Dict{String,Any}(
-            "gen_bus" => bus_obj["bus_i"],
-            "name" => "_virtual_gen.voltage_source.$name",
-            "gen_status" => 1,
-            "pg" => fill(0.0, nconductors),
-            "qg" => fill(0.0, nconductors),
-            "model" => 2,
-            "startup" => 0.0,
-            "shutdown" => 0.0,
-            "ncost" => 3,
-            "cost" => [0.0, 1.0, 0.0],
-            "configuration" => "wye",
-            "index" => length(data_math["gen"]) + 1,
-            "source_id" => "_virtual_gen.$(eng_obj["source_id"])"
-        )
+            _add_gen_cost_model!(math_obj, eng_obj)
 
-        data_math["gen"]["$(gen_obj["index"])"] = gen_obj
+            data_math["gen"]["$(math_obj["index"])"] = math_obj
 
-        branch_obj = Dict{String,Any}(
-            "name" => "_virtual_branch.voltage_source.$name",
-            "source_id" => "_virtual_branch.$(eng_obj["source_id"])",
-            "f_bus" => bus_obj["bus_i"],
-            "t_bus" => data_math["bus_lookup"][eng_obj["bus"]],
-            "angmin" => fill(-60.0, nconductors),
-            "angmax" => fill( 60.0, nconductors),
-            "shift" => fill(0.0, nconductors),
-            "tap" => fill(1.0, nconductors),
-            "tranformer" => false,
-            "switch" => false,
-            "br_status" => 1,
-            "br_r" => eng_obj["rs"],
-            "br_x" => eng_obj["xs"],
-            "g_fr" => zeros(nconductors, nconductors),
-            "g_to" => zeros(nconductors, nconductors),
-            "b_fr" => zeros(nconductors, nconductors),
-            "b_to" => zeros(nconductors, nconductors),
-            "index" => length(data_math["branch"])+1
-        )
+            data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
+                :from => name,
+                :to => "gen.$(math_obj["index"])",
+                :unmap_function => :_map_math2eng_voltage_source!,
+                :kron_reduced => kron_reduced,
+                :lossless => lossless,
+                :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["voltage_source"])
+            )
+        else
+            bus_obj = Dict{String,Any}(
+                "bus_i" => length(data_math["bus"])+1,
+                "index" => length(data_math["bus"])+1,
+                "name" => "_virtual_bus.voltage_source.$name",
+                "bus_type" => 3,
+                "vm" => eng_obj["vm"],
+                "va" => eng_obj["va"],
+                "vmin" => eng_obj["vm"],
+                "vmax" => eng_obj["vm"],
+                "basekv" => data_math["basekv"]
+            )
 
-        data_math["branch"]["$(branch_obj["index"])"] = branch_obj
+            data_math["bus"]["$(bus_obj["index"])"] = bus_obj
 
-        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => name,
-            :to => ["gen.$(gen_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],
-            :unmap_function => :_map_math2eng_voltage_source!,
-            :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["voltage_source"])
-        )
+            gen_obj = Dict{String,Any}(
+                "gen_bus" => bus_obj["bus_i"],
+                "name" => "_virtual_gen.voltage_source.$name",
+                "gen_status" => eng_obj["status"],
+                "pg" => fill(0.0, nconductors),
+                "qg" => fill(0.0, nconductors),
+                "model" => 2,
+                "startup" => 0.0,
+                "shutdown" => 0.0,
+                "ncost" => 3,
+                "cost" => [0.0, 1.0, 0.0],
+                "configuration" => "wye",
+                "index" => length(data_math["gen"]) + 1,
+                "source_id" => "_virtual_gen.$(eng_obj["source_id"])"
+            )
+
+            data_math["gen"]["$(gen_obj["index"])"] = gen_obj
+
+            branch_obj = Dict{String,Any}(
+                "name" => "_virtual_branch.voltage_source.$name",
+                "source_id" => "_virtual_branch.$(eng_obj["source_id"])",
+                "f_bus" => bus_obj["bus_i"],
+                "t_bus" => data_math["bus_lookup"][eng_obj["bus"]],
+                "angmin" => fill(-60.0, nconductors),
+                "angmax" => fill( 60.0, nconductors),
+                "shift" => fill(0.0, nconductors),
+                "tap" => fill(1.0, nconductors),
+                "tranformer" => false,
+                "switch" => false,
+                "br_status" => 1,
+                "br_r" => eng_obj["rs"],
+                "br_x" => eng_obj["xs"],
+                "g_fr" => zeros(nconductors, nconductors),
+                "g_to" => zeros(nconductors, nconductors),
+                "b_fr" => zeros(nconductors, nconductors),
+                "b_to" => zeros(nconductors, nconductors),
+                "index" => length(data_math["branch"])+1
+            )
+
+            data_math["branch"]["$(branch_obj["index"])"] = branch_obj
+
+            data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
+                :from => name,
+                :to => ["gen.$(gen_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],
+                :unmap_function => :_map_math2eng_voltage_source!,
+                :kron_reduced => kron_reduced,
+                :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["voltage_source"])
+            )
+        end
     end
 end

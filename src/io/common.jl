@@ -3,12 +3,12 @@
 
 Parses the IOStream of a file into a Three-Phase PowerModels data structure.
 """
-function parse_file(io::IO, filetype::AbstractString="json"; data_model::String="mathematical", import_all::Bool=false, bank_transformers::Bool=true, lossless::Bool=false)::Dict{String,Any}
+function parse_file(io::IO, filetype::AbstractString="json"; data_model::String="mathematical", import_all::Bool=false, bank_transformers::Bool=true, lossless::Bool=false, use_dss_bounds::Bool=true)::Dict{String,Any}
     if filetype == "dss"
         data_eng = PowerModelsDistribution.parse_opendss(io; import_all=import_all, bank_transformers=bank_transformers)
 
         if data_model == "mathematical"
-            return transform_data_model(data_eng; make_pu=true)
+            return transform_data_model(data_eng; make_pu=true, lossless=lossless, use_dss_bounds=use_dss_bounds)
         else
             return data_eng
         end
@@ -16,7 +16,7 @@ function parse_file(io::IO, filetype::AbstractString="json"; data_model::String=
         pmd_data = parse_json(io; validate=false)
 
         if get(pmd_data, "data_model", "mathematical") != data_model
-            return transform_data_model(pmd_data)
+            return transform_data_model(pmd_data; lossless=lossless, use_dss_bounds=use_dss_bounds)
         else
             return pmd_data
         end
@@ -37,11 +37,11 @@ end
 
 
 "transforms model between engineering (high-level) and mathematical (low-level) models"
-function transform_data_model(data::Dict{String,<:Any}; kron_reduced::Bool=true, make_pu::Bool=false)::Dict{String,Any}
+function transform_data_model(data::Dict{String,<:Any}; kron_reduced::Bool=true, make_pu::Bool=false, lossless::Bool=false, use_dss_bounds::Bool=true)::Dict{String,Any}
     current_data_model = get(data, "data_model", "mathematical")
 
     if current_data_model == "engineering"
-        data_math = _map_eng2math(data; kron_reduced=kron_reduced)
+        data_math = _map_eng2math(data; kron_reduced=kron_reduced, lossless=lossless, use_dss_bounds=use_dss_bounds)
 
         correct_network_data!(data_math; make_pu=make_pu)
 
