@@ -667,9 +667,9 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
     if haskey(data_dss, "vsource") && haskey(data_dss["vsource"], "source") && haskey(data_dss, "circuit")
         source = data_dss["vsource"]["source"]
         defaults = _create_vsource(get(source, "bus1", "sourcebus"), source["name"]; _to_kwargs(source)...)
+        source_bus = defaults["bus1"]
 
         data_eng["name"] = data_dss["circuit"]
-        data_eng["sourcebus"] = _parse_busname(defaults["bus1"])[1]
         data_eng["data_model"] = "engineering"
 
         # TODO rename fields
@@ -677,7 +677,7 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
         data_eng["settings"]["v_var_scalar"] = 1e3
         # data_eng["settings"]["set_vbase_val"] = defaults["basekv"] / sqrt(3) * 1e3
         data_eng["settings"]["set_vbase_val"] = defaults["basekv"]/sqrt(3)
-        data_eng["settings"]["set_vbase_bus"] = data_eng["sourcebus"]
+        data_eng["settings"]["set_vbase_bus"] = source_bus
         data_eng["settings"]["set_sbase_val"] = defaults["basemva"]*1E3
         data_eng["settings"]["basefreq"] = get(get(data_dss, "options", Dict{String,Any}()), "defaultbasefreq", 60.0)
 
@@ -701,7 +701,6 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
     _dss2eng_loadshape!(data_eng, data_dss, import_all)
     _dss2eng_load!(data_eng, data_dss, import_all)
 
-    # _dss2eng_sourcebus!(data_eng, data_dss, import_all)
     _dss2eng_vsource!(data_eng, data_dss, import_all)
     _dss2eng_generator!(data_eng, data_dss, import_all)
     _dss2eng_pvsystem!(data_eng, data_dss, import_all)

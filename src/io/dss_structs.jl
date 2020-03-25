@@ -564,7 +564,7 @@ end
 """
 Creates a Dict{String,Any} containing all of the expected properties for a
 Voltage Source. If `bus2` is not specified, VSource will be treated like a
-generator. Mostly used as `sourcebus` which represents the circuit. See
+generator. Mostly used as `source` which represents the circuit. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """

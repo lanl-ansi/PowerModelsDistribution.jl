@@ -73,10 +73,10 @@ end
         dss = PMD.parse_dss("../test/data/opendss/case5_phase_drop.dss")
         pmd = PMD.parse_file("../test/data/opendss/case5_phase_drop.dss")
 
-        @test count_nodes(dss) == 7
+        @test count_nodes(dss) == 10 # stopped excluding source from node count
         @test count_nodes(dss) == count_nodes(pmd)
 
         dss = PMD.parse_dss("../test/data/opendss/ut_trans_2w_yy.dss")
-        @test count_nodes(dss) == 9
+        @test count_nodes(dss) == 12  # stopped excluding source from node count
     end
 end

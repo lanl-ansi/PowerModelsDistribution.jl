@@ -51,7 +51,6 @@ function count_nodes(data::Dict{String,<:Any})::Int
     n_nodes = 0
 
     if get(data, "data_model", missing) == "dss"
-        sourcebus = get(data["vsource"]["source"], "bus1", "sourcebus")
         all_nodes = Dict()
         for obj_type in values(data)
             for object in values(obj_type)
@@ -90,9 +89,7 @@ function count_nodes(data::Dict{String,<:Any})::Int
         end
 
         for (name, phases) in all_nodes
-            if name != sourcebus
-                n_nodes += length(phases)
-            end
+            n_nodes += length(phases)
         end
     elseif get(data, "data_model", missing) in ["mathematical", "engineering"] || (haskey(data, "source_type") && data["source_type"] == "matlab")
         if get(data, "data_model", missing) == "mathematical"
@@ -108,7 +105,7 @@ function count_nodes(data::Dict{String,<:Any})::Int
                     name = bus["name"]
                 end
 
-                if all(!occursin(pattern, name) for pattern in [_excluded_count_busname_patterns..., data["sourcebus"]])
+                if all(!occursin(pattern, name) for pattern in [_excluded_count_busname_patterns...])
                     n_nodes += sum(bus["vmax"] .> 0.0)
                 end
             end

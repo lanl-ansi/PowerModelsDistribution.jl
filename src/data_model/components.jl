@@ -28,10 +28,6 @@ function add_object!(data_eng::Dict{String,<:Any}, obj_type::String, obj_id::Any
         if !haskey(data_eng["settings"], "set_vbase_bus")
             data_eng["settings"]["set_vbase_bus"] = object["bus"]
         end
-
-        if !haskey(data_eng, "sourcebus")
-            data_eng["sourcebus"] = object["bus"]
-        end
     end
 
     for bus_key in ["f_", "t_", ""]

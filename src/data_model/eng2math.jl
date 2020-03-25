@@ -20,7 +20,7 @@ const _1to1_maps = Dict{String,Vector{String}}(
 )
 
 const _extra_eng_data = Dict{String,Vector{String}}(
-    "root" => ["sourcebus", "files", "dss_options", "settings"],
+    "root" => ["files", "dss_options", "settings"],
     "bus" => ["grounded", "neutral", "awaiting_ground", "xg", "phases", "rg", "terminals"],
     "load" => [],
     "shunt_capacitor" => [],
@@ -50,7 +50,7 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
         "name" => data_eng["name"],
         "per_unit" => get(data_eng, "per_unit", false),
         "data_model" => "mathematical",
-        "sourcebus" => get(data_eng, "sourcebus", "sourcebus"),
+        "settings" => data_eng["settings"],
     )
 
     data_math["conductors"] = kron_reduced ? 3 : 4
@@ -832,7 +832,7 @@ end
 
 ""
 function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1,2,3], kr_neutral::Int=4)
-    # TODO create option for lossy vs lossless sourcebus connection
+    # TODO create option for lossy vs lossless source connection
     for (name, eng_obj) in get(data_eng, "voltage_source", Dict{Any,Any}())
         nconductors = data_math["conductors"]
 
@@ -873,7 +873,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
             "name" => "_virtual_branch.voltage_source.$name",
             "source_id" => "_virtual_branch.$(eng_obj["source_id"])",
             "f_bus" => bus_obj["bus_i"],
-            "t_bus" => data_math["bus_lookup"][data_eng["sourcebus"]],
+            "t_bus" => data_math["bus_lookup"][eng_obj["bus"]],
             "angmin" => fill(-60.0, nconductors),
             "angmax" => fill( 60.0, nconductors),
             "shift" => fill(0.0, nconductors),
