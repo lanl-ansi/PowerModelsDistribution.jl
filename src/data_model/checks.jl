@@ -208,6 +208,28 @@ const _eng_model_req_fields= Dict{Symbol,Vector{Symbol}}(
 )
 
 
+"checks the engineering data model for correct data types, required fields and applies default checks"
+function check_eng_data_model(data_eng::Dict{String,<:Any})
+    for (component_type, components) in data_eng
+        if isa(components, Dict)
+            for (name, component) in keys(components)
+                _check_eng_component_dtypes(data_eng, component_type, name)
+
+                for field in get(_eng_model_req_fields, Symbol(component_type), Vector{Symbol}([]))
+                    @assert haskey(component, string(field)) "The property \'$field\' is missing on $component_type $name"
+                end
+
+                for check in get(_eng_model_checks, Symbol(component_type), missing)
+                    if !ismissing(check)
+                        @eval $(check)(data_eng, name)
+                    end
+                end
+            end
+        end
+    end
+end
+
+
 "checks that an engineering model component has the correct data types"
 function _check_eng_component_dtypes(data_eng::Dict{String,<:Any}, component_type::String, component_name::String; additional_dtypes=Dict{Symbol,Type}())
     if haskey(_eng_model_dtypes, Symbol(component_type))
@@ -290,28 +312,6 @@ function _check_configuration_infer_dim(object::Dict{String,<:Any}; context::Uni
     @assert conf in ["delta", "wye"] "$context: the configuration should be \'delta\' or \'wye\', not \'$conf\'."
 
     return conf=="wye" ? length(object["connections"])-1 : length(object["connections"])
-end
-
-
-"checks the engineering data model for correct data types, required fields and applies default checks"
-function check_eng_data_model(data_eng::Dict{String,<:Any})
-    for (component_type, components) in data_eng
-        if isa(components, Dict)
-            for (name, component) in keys(components)
-                _check_eng_component_dtypes(data_eng, component_type, name)
-
-                for field in get(_eng_model_req_fields, Symbol(component_type), Vector{Symbol}([]))
-                    @assert haskey(component, string(field)) "The property \'$field\' is missing on $component_type $name"
-                end
-
-                for check in get(_eng_model_checks, Symbol(component_type), missing)
-                    if !ismissing(check)
-                        @eval $(check)(data_eng, name)
-                    end
-                end
-            end
-        end
-    end
 end
 
 

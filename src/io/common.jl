@@ -3,72 +3,81 @@
 
 Parses the IOStream of a file into a Three-Phase PowerModels data structure.
 """
-function parse_file(io::IO; data_model::String="mathematical", import_all::Bool=false, filetype::AbstractString="json", bank_transformers::Bool=true)
-    if filetype == "m"
-        pmd_data = PowerModelsDistribution.parse_matlab(io)
-    elseif filetype == "dss"
-        Memento.warn(_LOGGER, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported.")
-        pmd_data = PowerModelsDistribution.parse_opendss(io; import_all=import_all, bank_transformers=bank_transformers)
+function parse_file(io::IO, filetype::AbstractString="json"; data_model::String="mathematical", import_all::Bool=false, bank_transformers::Bool=true, lossless::Bool=false)::Dict{String,Any}
+    if filetype == "dss"
+        data_eng = PowerModelsDistribution.parse_opendss(io; import_all=import_all, bank_transformers=bank_transformers)
+
+        if data_model == "mathematical"
+            return transform_data_model(data_eng; make_pu=true)
+        else
+            return data_eng
+        end
     elseif filetype == "json"
-        pmd_data = PowerModels.parse_json(io; validate=false)
+        pmd_data = parse_json(io; validate=false)
+
+        if get(pmd_data, "data_model", "mathematical") != data_model
+            return transform_data_model(pmd_data)
+        else
+            return pmd_data
+        end
     else
-        Memento.error(_LOGGER, "only .m and .dss files are supported")
+        Memento.error(_LOGGER, "only .dss and .json files are supported")
     end
-
-    if data_model == "mathematical"
-        pmd_data = transform_data_model(pmd_data)
-
-        correct_network_data!(pmd_data)
-    end
-
-    return pmd_data
 end
 
 
 ""
-function parse_file(file::String; kwargs...)
-    pmd_data = open(file) do io
-        parse_file(io; filetype=split(lowercase(file), '.')[end], kwargs...)
+function parse_file(file::String; kwargs...)::Dict{String,Any}
+    data = open(file) do io
+        parse_file(io, split(lowercase(file), '.')[end]; kwargs...)
     end
 
-    return pmd_data
+    return data
 end
 
 
 "transforms model between engineering (high-level) and mathematical (low-level) models"
-function transform_data_model(data::Dict{<:Any,<:Any}; kron_reduced::Bool=true)
+function transform_data_model(data::Dict{String,<:Any}; kron_reduced::Bool=true, make_pu::Bool=false)::Dict{String,Any}
     current_data_model = get(data, "data_model", "mathematical")
 
     if current_data_model == "engineering"
-        out = _map_eng2math(data, kron_reduced=kron_reduced)
+        data_math = _map_eng2math(data; kron_reduced=kron_reduced)
 
-        bus_indexed_id = string(out["bus_lookup"][data["settings"]["set_vbase_bus"]])
-        vbases = Dict(bus_indexed_id=>data["settings"]["set_vbase_val"])
-        sbase = data["settings"]["set_sbase_val"]
+        correct_network_data!(data_math; make_pu=make_pu)
 
-        make_per_unit!(out, vbases=vbases, sbase=sbase, v_var_scalar=data["settings"]["v_var_scalar"])
-        return out
+        return data_math
     elseif current_data_model == "mathematical"
-        return _map_math2eng!(data)
+        data_eng = _map_math2eng(data)
+
+        correct_network_data!(data_eng; make_pu=make_pu)
     else
-        @warn "Data model '$current_data_model' is not recognized, no transformation performed"
+        @warn "Data model '$current_data_model' is not recognized, no model type transformation performed"
         return data
     end
 end
 
 
 ""
-function correct_network_data!(data::Dict{String,Any})
-    #_PMs.make_per_unit!(data)
+function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true)
+    if get(data, "data_model", "mathematical") == "engineering"
+        check_eng_data_model(data)
+        if make_pu
+            make_per_unit!(data)
+        end
+    else
+        if make_pu
+            make_per_unit!(data)
 
-    _PMs.check_connectivity(data)
-    _PMs.correct_transformer_parameters!(data)
-    _PMs.correct_voltage_angle_differences!(data)
-    _PMs.correct_thermal_limits!(data)
-    _PMs.correct_branch_directions!(data)
-    _PMs.check_branch_loops(data)
-    _PMs.correct_bus_types!(data)
-    _PMs.correct_dcline_limits!(data)
-    _PMs.correct_cost_functions!(data)
-    _PMs.standardize_cost_terms!(data)
+            _PMs.check_connectivity(data)
+            _PMs.correct_transformer_parameters!(data)
+            _PMs.correct_voltage_angle_differences!(data)
+            _PMs.correct_thermal_limits!(data)
+            _PMs.correct_branch_directions!(data)
+            _PMs.check_branch_loops(data)
+            _PMs.correct_bus_types!(data)
+            _PMs.correct_dcline_limits!(data)
+            _PMs.correct_cost_functions!(data)
+            _PMs.standardize_cost_terms!(data)
+        end
+    end
 end

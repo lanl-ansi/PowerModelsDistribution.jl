@@ -74,9 +74,6 @@
     @testset "opendss parse generic warnings and errors" begin
         Memento.setlevel!(TESTLOG, "info")
 
-        @test_warn(TESTLOG, "Not all OpenDSS features are supported, currently only minimal support for lines, loads, generators, and capacitors as shunts. Transformers and reactors as transformer branches are included, but value translation is not fully supported.",
-                PMD.parse_file("../test/data/opendss/test_simple.dss"))
-
         @test_throws(TESTLOG, ErrorException,
                    PMD.parse_file("../test/data/opendss/test_simple2.dss"))
 
