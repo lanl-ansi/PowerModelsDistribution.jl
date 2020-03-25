@@ -568,15 +568,6 @@ function constraint_mc_vm_neg_seq(pm::_PMs.AbstractACPModel, nw::Int, bus_id::In
 end
 
 
-#= TODO unused function, remove?
-"Links the power flowing into both windings of a variable tap transformer."
-function constraint_mc_transformer_flow_var(pm::_PMs.AbstractPowerModel, i::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, Ti_fr, Ti_im; nw::Int=pm.cnw)
-    # for ac formulation, indentical to fixed tap
-    constraint_mc_transformer_flow(pm, i, f_bus, t_bus, f_idx, t_idx, Ti_fr, Ti_im)
-end
-=#
-
-
 """
 a = exp(im*2π/3)
 U+ = (1*Ua + a*Ub a^2*Uc)/3
