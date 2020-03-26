@@ -1,3 +1,6 @@
+import Base.Iterators: flatten
+
+
 "all edge types that can help define buses"
 const _dss_edge_components = Vector{String}(["line", "transformer", "reactor", "capacitor"])
 
@@ -45,11 +48,11 @@ const _like_exclusions = Dict{String,Vector{String}}(
     "linegeometry" => ["nconds"]
 )
 
-"data types of various dss option inputs"
-const _dss_option_dtypes = Dict{String,Type}(
-    "defaultbasefreq" => Float64,
-    "voltagebases" => Float64,
-    "tolerance" => Float64
+""
+const _dtype_regex = Dict{Regex, Type}(
+    r"^[+-]{0,1}\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*[+-]\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*[ij]$" => ComplexF64,
+    r"^[+-]{0,1}\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*$" => Float64,
+    r"^\d+$" => Int,
 )
 
 
@@ -556,7 +559,9 @@ function _apply_ordered_properties(defaults::Dict{String,<:Any}, raw_dss::Dict{S
         if prop in ["linecode", "loadshape"]
             merge!(defaults, code_dict)
         else
-            defaults[prop] = _defaults[prop]
+            if haskey(_defaults, prop)
+                defaults[prop] = _defaults[prop]
+            end
         end
     end
 
@@ -613,25 +618,6 @@ function _apply_like!(raw_dss::Dict{String,<:Any}, data_dss::Dict{String,<:Any},
 end
 
 
-"Parses options defined with the `set` command in OpenDSS"
-function parse_dss_options!(data_dss::Dict{String,<:Any})
-    if haskey(data_dss, "options")
-        for (k,v) in data_dss["options"]
-            if haskey(_dss_option_dtypes, k)
-                dtype = _dss_option_dtypes[k]
-                if _isa_array(v)
-                    data_dss["options"][k] = _parse_array(dtype, v)
-                elseif _isa_matrix(v)
-                    data_dss["options"][k] = _parse_matrix(dtype, v)
-                else
-                    data_dss["options"][k] = parse(dtype, v)
-                end
-            end
-        end
-    end
-end
-
-
 """
     parse_dss_with_dtypes!(data_dss, to_parse)
 
@@ -642,7 +628,7 @@ function parse_dss_with_dtypes!(data_dss::Dict{String,<:Any}, to_parse::Vector{S
     for obj_type in to_parse
         if haskey(data_dss, obj_type)
             dtypes = _dss_parameter_data_types[obj_type]
-            if obj_type in ["circuit", "options"]
+            if obj_type == "options"
                 _parse_obj_dtypes!(obj_type, data_dss[obj_type], dtypes)
             else
                 for object in values(data_dss[obj_type])
@@ -693,20 +679,24 @@ end
 ""
 function _parse_obj_dtypes!(obj_type::String, object::Dict{String,Any}, dtypes::Dict{String,Type})
     for (k, v) in object
-        if haskey(dtypes, k)
-            if isa(v, Array)
-                arrout = []
-                for el in v
-                    if isa(v, AbstractString)
-                        push!(arrout, _parse_element_with_dtype(dtypes[k], el))
-                    else
-                        push!(arrout, el)
+        if isa(v, Vector) && eltype(v) == Any || isa(eltype(v), AbstractString)
+            _dtype = get(dtypes, k, _guess_dtype("[$(join(v, ","))]"))
+            for i in 1:length(v)
+                if isa(v[i], AbstractString)
+                    v[i] = _parse_element_with_dtype(_dtype, v[i])
+                end
+            end
+        elseif isa(v, Matrix) && eltype(v) == Any || isa(eltype(v), AbstractString)
+            _dtype = get(dtypes, k, _guess_dtype("$(join(collect(flatten(v)), " "))"))
+            for i in 1:size(v)[1]
+                for j in 1:size(v)[2]
+                    if isa(v[i,j], AbstractString)
+                        v[i,j] = _parse_element_with_dtype(_dtype, v[i,j])
                     end
                 end
-                object[k] = arrout
-            elseif isa(v, AbstractString)
-                object[k] = _parse_element_with_dtype(dtypes[k], v)
             end
+        elseif isa(v, AbstractString)
+            object[k] = _parse_element_with_dtype(get(dtypes, k, _guess_dtype(v)), v)
         end
     end
 end
@@ -797,4 +787,34 @@ function _add_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, eng_o
     end
 
     data_eng[eng_obj_type][eng_obj_id] = eng_obj
+end
+
+
+"guesses the data type of a value using regex, returning Float64, Int, ComplexF64, or String (if number type cannot be determined)"
+function _guess_dtype(value::AbstractString)::Type
+    if _isa_matrix(value) || _isa_array(value) || _isa_rpn(value)
+        for delim in [keys(_double_operators)..., keys(_single_operators)..., _array_delimiters..., "|", ","]
+            value = replace(value, delim => " ")
+        end
+        _dtypes = unique([_guess_dtype(v) for v in split(value)])
+        if length(_dtypes) == 1
+            return _dtypes[1]
+        elseif all(isa(v, Int) for v in _dtypes)
+            return Int
+        elseif any(isa(v, Complex) for v in _dtypes)
+            return ComplexF64
+        elseif any(isa(v, Float64) for v in _dtypes)
+            return Float64
+        else
+            return String
+        end
+    else
+        for (re, typ) in _dtype_regex
+            if occursin(re, value)
+                return typ
+            end
+        end
+
+        return String
+    end
 end

@@ -103,7 +103,8 @@ function _create_linecode(name::AbstractString=""; kwargs...)::Dict{String,Any}
         "rho" => get(kwargs, :rho, 100.0),
         "neutral" => get(kwargs, :neutral, 3),
         "b1" => b1 / _convert_to_meters[units],
-        "b0" => b0 / _convert_to_meters[units]
+        "b0" => b0 / _convert_to_meters[units],
+        "like" => get(kwargs, :like, "")
     )
 end
 
@@ -229,6 +230,7 @@ function _create_line(bus1="", bus2="", name::AbstractString=""; kwargs...)::Dic
         "repair" => get(kwargs, :repair, 3.0),
         "basefreq" => basefreq,
         "enabled" => get(kwargs, :enabled, true),
+        "like" => get(kwargs, :like, "")
     )
 end
 
@@ -311,7 +313,8 @@ function _create_load(bus1="", name::AbstractString=""; kwargs...)::Dict{String,
         # Inherited Properties
         "spectrum" => get(kwargs, :spectrum, "defaultload"),
         "basefreq" => get(kwargs, :basefreq, 60.0),
-        "enabled" => get(kwargs, :enabled, true)
+        "enabled" => get(kwargs, :enabled, true),
+        "like" => get(kwargs, :like, "")
     )
 end
 
@@ -375,7 +378,8 @@ function _create_generator(bus1="", name::AbstractString=""; kwargs...)::Dict{St
         # Inherited Properties
         "spectrum" => get(kwargs, :spectrum, "defaultgen"),
         "basefreq" => get(kwargs, :basefreq, 60.0),
-        "enabled" => get(kwargs, :enabled, true)
+        "enabled" => get(kwargs, :enabled, true),
+        "like" => get(kwargs, :like, "")
     )
 end
 
@@ -413,7 +417,8 @@ function _create_capacitor(bus1="", name::AbstractString=""; kwargs...)::Dict{St
         "faultrate" => get(kwargs, :faultrate, 0.1),
         "pctperm" => get(kwargs, :pctperm, 20.0),
         "basefreq" => get(kwargs, :basefreq, 60.0),
-        "enabled" => get(kwargs, :enabled, true)
+        "enabled" => get(kwargs, :enabled, true),
+        "like" => get(kwargs, :like, "")
     )
 end
 
@@ -556,7 +561,8 @@ function _create_reactor(bus1="", name::AbstractString="", bus2=""; kwargs...)::
         "faultrate" => get(kwargs, :faultrate, 0.1),
         "pctperm" => get(kwargs, :pctperm, 20.0),
         "basefreq" => basefreq,
-        "enabled" => get(kwargs, :enabled, true)
+        "enabled" => get(kwargs, :enabled, true),
+        "like" => get(kwargs, :like, "")
     )
 end
 
@@ -766,7 +772,8 @@ function _create_vsource(bus1="", name::AbstractString="", bus2=0; kwargs...)::D
         # Derived Properties
         "rmatrix" => real(Z),
         "xmatrix" => imag(Z),
-        "vmag" => Vmag
+        "vmag" => Vmag,
+        "like" => get(kwargs, :like, "")
     )
 end
 
@@ -876,7 +883,8 @@ function _create_transformer(name::AbstractString=""; kwargs...)
         # Inherited Properties
         "faultrate" => get(kwargs, :faultrate, 0.1),
         "basefreq" => get(kwargs, :basefreq, 60.0),
-        "enabled" => get(kwargs, :enabled, true)
+        "enabled" => get(kwargs, :enabled, true),
+        "like" => get(kwargs, :like, "")
     )
 
     if windings == 3
@@ -991,7 +999,8 @@ function _create_xfmrcode(name::AbstractString=""; kwargs...)
         # Inherited Properties
         "faultrate" => get(kwargs, :faultrate, 0.1),
         "basefreq" => get(kwargs, :basefreq, 60.0),
-        "enabled" => get(kwargs, :enabled, true)
+        "enabled" => get(kwargs, :enabled, true),
+        "like" => get(kwargs, :like, "")
     )
 
     if windings == 3
@@ -1085,7 +1094,8 @@ function _create_pvsystem(bus1="", name::AbstractString=""; kwargs...)
         "spectrum" => get(kwargs, :spectrum, "defaultpvsystem"),
         # Inherited Properties
         "basefreq" => get(kwargs, :basefreq, 60.0),
-        "enabled" => get(kwargs, :enabled, true)
+        "enabled" => get(kwargs, :enabled, true),
+        "like" => get(kwargs, :like, "")
     )
 end
 
@@ -1141,6 +1151,7 @@ function _create_storage(bus1="", name::AbstractString=""; kwargs...)
         "vmaxpu" => get(kwargs, :vmaxpu, 1.1),
         "vminpu" => get(kwargs, :vimpu, 0.9),
         "yearly" => get(kwargs, :yearly, [1.0, 1.0]),
+        "like" => get(kwargs, :like, "")
     )
 end
 
@@ -1186,6 +1197,7 @@ function _create_loadshape(name::AbstractString=""; kwargs...)
         "pmax" => get(kwargs, :pmax, 1.0),
         "qmax" => get(kwargs, :qmax, 1.0),
         "pbase" => get(kwargs, :pbase, 0.0),
+        "like" => get(kwargs, :like, "")
     )
 end
 

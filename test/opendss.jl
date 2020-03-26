@@ -119,6 +119,8 @@
     @testset "opendss parse generic parser verification" begin
         dss = PMD.parse_dss("../test/data/opendss/test2_master.dss")
 
+        @test dss["line"]["l7"]["test_param"] == 100.0
+
         @test pmd["name"] == "test2"
 
         @test length(pmd) == 19
