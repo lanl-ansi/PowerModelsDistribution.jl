@@ -124,7 +124,7 @@
         @test pmd["name"] == "test2"
 
         @test length(pmd) == 19
-        @test length(dss) == 14
+        @test length(dss) == 15
 
         for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "transformer"], [33, 4, 5, 27, 4, 0, 10])
             @test haskey(pmd, key)
@@ -185,6 +185,13 @@
         @test all(isapprox.(pmd["branch"]["4"]["br_r"], rmatrix * len / basekv_br4^2 * pmd["baseMVA"]; atol=1e-6))
         @test all(isapprox.(pmd["branch"]["4"]["br_x"], xmatrix * len / basekv_br4^2 * pmd["baseMVA"]; atol=1e-6))
         @test all(isapprox.(pmd["branch"]["4"]["b_fr"], diag(basekv_br4^2 / pmd["baseMVA"] * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0 / 3; atol=1e-6))
+    end
+
+    @testset "opendss parse xycurve" begin
+        @test eng["xycurve"]["test_curve1"]["interpolated_curve"](0.0226) == 4.52
+        @test eng["xycurve"]["test_curve2"]["interpolated_curve"](2.5) == 2.5
+        @test eng["xycurve"]["test_curve3"]["interpolated_curve"](0.55) == 5.5
+        @test eng["xycurve"]["test_curve4"]["interpolated_curve"](0.55) == 5.5
     end
 
     @testset "opendss parse switch length verify" begin

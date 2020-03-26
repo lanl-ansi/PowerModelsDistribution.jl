@@ -42,7 +42,8 @@ function _dss2eng_loadshape!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             "hour" => defaults["hour"],
             "pmult" => defaults["pmult"],
             "qmult" => defaults["qmult"],
-            "use_actual" => defaults["useactual"]
+            "use_actual" => defaults["useactual"],
+            "source_id" => "loadshape.$name",
         )
 
         if import_all
@@ -50,6 +51,33 @@ function _dss2eng_loadshape!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
         end
 
         _add_eng_obj!(data_eng, "loadshape", name, eng_obj)
+    end
+end
+
+
+"Adds xycurve objects to `data_eng` from `data_dss`"
+function _dss2eng_xycurve!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool=false)
+    for (name, dss_obj) in get(data_dss, "xycurve", Dict{String,Any}())
+        _apply_like!(dss_obj, data_dss, "xycurve")
+        defaults = _apply_ordered_properties(_create_xycurve(name; _to_kwargs(dss_obj)...), dss_obj)
+
+        xarray = defaults["xarray"] .* defaults["xscale"] .+ defaults["xshift"]
+        yarray = defaults["yarray"] .* defaults["yscale"] .+ defaults["yshift"]
+
+        @assert length(xarray) >= 2 && length(yarray) >= 2 "XYCurve data must have two or more points"
+
+        k = length(xarray) - 1
+
+        eng_obj = Dict{String,Any}(
+            "interpolated_curve" => Spline1D(xarray, yarray; k=min(k, 5)),
+            "source_id" => "xycurve.$name",
+        )
+
+        if import_all
+            _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
+        end
+
+        _add_eng_obj!(data_eng, "xycurve", name, eng_obj)
     end
 end
 
@@ -203,8 +231,8 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             eng_obj["f_bus"] = bus_name
             eng_obj["t_bus"] = bus2_name
 
-            eng_obj["kv"] = fill(defaults["kv"] / nphases, phases)
-            eng_obj["kvar"] = fill(defaults["kvar"] / nphases, phases)
+            eng_obj["kv"] = fill(defaults["kv"] / nphases, nphases)
+            eng_obj["kvar"] = fill(defaults["kvar"] / nphases, nphases)
 
             _add_eng_obj!(data_eng, "series_capacitor", name, eng_obj)
         end
@@ -574,11 +602,13 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
 
         eng_obj = Dict{String,Any}(
             "bus" => _parse_busname(defaults["bus1"])[1],
-            "phases" => nphases,
             "configuration" => "wye",
             "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=collect(1:defaults["phases"]+1)),
             "kva" => fill(defaults["kva"] / nphases, nphases),
+            "kvar" => fill(defaults["kvar"] / nphases, nphases),
             "kv" => fill(defaults["kv"] / nphases, nphases),
+            "irradiance" => defaults["irradiance"],
+            "p-tcurve" => defaults["p-tcurve"],
             "status" => convert(Int, defaults["enabled"]),
             "source_id" => "pvsystem.$name",
         )
@@ -605,7 +635,7 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
 
         eng_obj = Dict{String,Any}()
 
-        eng_obj["phases"] = defaults["phases"]
+        nphases = defaults["phases"]
         eng_obj["connections"] = _get_conductors_ordered(defaults["bus1"], check_length=false)
 
         eng_obj["name"] = name
@@ -624,10 +654,10 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         eng_obj["%discharge"] = defaults["%discharge"]
         eng_obj["%effcharge"] = defaults["%effcharge"]
         eng_obj["%effdischarge"] = defaults["%effdischarge"]
-        eng_obj["kva"] = defaults["kva"]
-        eng_obj["kvar"] = defaults["kvar"]
-        eng_obj["%r"] = defaults["%r"]
-        eng_obj["%x"] = defaults["%x"]
+        eng_obj["kva"] = fill(defaults["kva"] / nphases, nphases)
+        eng_obj["kvar"] = fill(defaults["kvar"] / nphases, nphases)
+        eng_obj["%r"] = fill(defaults["%r"] / nphases, nphases)
+        eng_obj["%x"] = fill(defaults["%x"] / nphases, nphases)
         eng_obj["%idlingkw"] = defaults["%idlingkw"]
         eng_obj["%idlingkvar"] = defaults["%idlingkvar"]
 
@@ -673,12 +703,10 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
         data_eng["data_model"] = "engineering"
 
         # TODO rename fields
-        # TODO fix scale factors
         data_eng["settings"]["v_var_scalar"] = 1e3
-        # data_eng["settings"]["set_vbase_val"] = defaults["basekv"] / sqrt(3) * 1e3
-        data_eng["settings"]["set_vbase_val"] = defaults["basekv"]/sqrt(3)
+        data_eng["settings"]["set_vbase_val"] = defaults["basekv"] / sqrt(3)
         data_eng["settings"]["set_vbase_bus"] = source_bus
-        data_eng["settings"]["set_sbase_val"] = defaults["basemva"]*1E3
+        data_eng["settings"]["set_sbase_val"] = defaults["basemva"] * 1e3
         data_eng["settings"]["basefreq"] = get(get(data_dss, "options", Dict{String,Any}()), "defaultbasefreq", 60.0)
 
         data_eng["files"] = data_dss["filename"]
@@ -700,6 +728,8 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
 
     _dss2eng_loadshape!(data_eng, data_dss, import_all)
     _dss2eng_load!(data_eng, data_dss, import_all)
+
+    _dss2eng_xycurve!(data_eng, data_dss, import_all)
 
     _dss2eng_vsource!(data_eng, data_dss, import_all)
     _dss2eng_generator!(data_eng, data_dss, import_all)

@@ -8,7 +8,7 @@ const _dss_edge_components = Vector{String}(["line", "transformer", "reactor", "
 const _dss_supported_components = Vector{String}([
     "line", "linecode", "load", "generator", "capacitor", "reactor",
     "transformer", "pvsystem", "storage", "loadshape", "options",
-    "xfmrcode", "vsource",
+    "xfmrcode", "vsource", "xycurve"
 ])
 
 "two number operators for reverse polish notation"

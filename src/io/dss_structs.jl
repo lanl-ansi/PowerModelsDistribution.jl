@@ -1202,6 +1202,60 @@ function _create_loadshape(name::AbstractString=""; kwargs...)
 end
 
 
+"""
+Creates a Dict{String,Any} containing all expected properties for a XYCurve
+object. See OpenDSS documentation for valid fields and ways to specify
+different properties.
+"""
+function _create_xycurve(name::AbstractString=""; kwargs...)
+    kwargs = Dict{Symbol,Any}(kwargs)
+
+    if haskey(kwargs, :points)
+        xarray = Vector{Float64}([])
+        yarray = Vector{Float64}([])
+
+        i = 1
+        for point in kwargs[:points]
+            if i % 2 == 1
+                push!(xarray, point)
+            else
+                push!(yarray, point)
+            end
+            i += 1
+        end
+    else
+        xarray = get(kwargs, :xarray, Vector{Float64}([]))
+        yarray = get(kwargs, :yarray, Vector{Float64}([]))
+    end
+
+    npts = min(length(xarray), length(yarray))
+
+    points = Vector{Float64}([])
+    for (x, y) in zip(xarray, yarray)
+        push!(points, x)
+        push!(points, y)
+    end
+
+    Dict{String,Any}(
+        "name" => name,
+        "npts" => npts,
+        "points" => points,
+        "yarray" => yarray,
+        "xarray" => xarray,
+        "csvfile" => get(kwargs, :csvfile, ""),
+        "sngfile" => get(kwargs, :sngfile, ""),
+        "dblfile" => get(kwargs, :dblfile, ""),
+        "x" => get(kwargs, :x, isempty(xarray) ? 0.0 : xarray[1]),
+        "y" => get(kwargs, :y, isempty(yarray) ? 0.0 : yarray[1]),
+        "xshift" => get(kwargs, :xshift, 0),
+        "yshift" => get(kwargs, :yshift, 0),
+        "xscale" => get(kwargs, :xscale, 1.0),
+        "yscale" => get(kwargs, :yscale, 1.0),
+        "like" => get(kwargs, :like, ""),
+    )
+end
+
+
 ""
 function _create_options(; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)

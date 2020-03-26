@@ -194,16 +194,15 @@
 
             @test length(pmd["gen"]) == 2
             @test all(pmd["gen"]["1"]["qmin"] .== -pmd["gen"]["1"]["qmax"])
-            @test all(pmd["gen"]["1"]["pmax"] .==  pmd["gen"]["1"]["qmax"])
             @test all(pmd["gen"]["1"]["pmin"] .== 0.0)
 
             sol = PMD.run_mc_opf(pmd, PMs.ACPPowerModel, ipopt_solver)
 
             @test sol["termination_status"] == PMs.LOCALLY_SOLVED
             @test sum(sol["solution"]["gen"]["2"]["pg"] * sol["solution"]["baseMVA"]) < 0.0
-            @test sum(sol["solution"]["gen"]["2"]["qg"] * sol["solution"]["baseMVA"]) < 0.0
+            @test sum(sol["solution"]["gen"]["2"]["qg"] * sol["solution"]["baseMVA"]) < 0.005
             @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183685; atol=1e-4)
-            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00919404; atol=1e-4)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.0048248; atol=1e-4)
         end
 
         @testset "3-bus unbalanced single-phase pv acp opf" begin

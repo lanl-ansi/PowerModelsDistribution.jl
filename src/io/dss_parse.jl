@@ -39,6 +39,11 @@ const _loadshape_properties = Vector{String}([
     "pmax", "qmax", "pbase", "like"
 ])
 
+const _xycurve_properties = Vector{String}([
+    "npts", "points", "yarray", "xarray", "csvfile", "sngfile", "dblfile",
+    "x", "y", "xshift", "yshift", "xscale", "yscale", "like"
+])
+
 const _growthshape_properties = Vector{String}([
     "npts", "year", "mult", "csvfile", "sngfile", "dblfile", "like"
 ])
@@ -228,6 +233,7 @@ const _dss_object_properties = Dict{String,Vector{String}}(
     "linegeometry" => _linegeometry_properties,
     "linespacing" => _linespacing_properties,
     "loadshape" => _loadshape_properties,
+    "xycurve" => _xycurve_properties,
     "growthshape" => _growthshape_properties,
     "tcc_curve" => _tcc_curve_properties,
     "cndata" => _cndata_properties,
@@ -260,7 +266,7 @@ const _dss_object_properties = Dict{String,Vector{String}}(
 
 
 "parses single column load profile files"
-function _parse_loadshape_csv_file(path::AbstractString, type::AbstractString; header::Bool=false, column::Int=1, interval::Bool=false)
+function _parse_csv_file(path::AbstractString, type::AbstractString; header::Bool=false, column::Int=1, interval::Bool=false)
     open(path, "r") do f
         lines = readlines(f)
         if header
@@ -320,8 +326,6 @@ function _parse_binary_file(path::AbstractString, precision::Type; npts::Union{I
                     break
                 end
             end
-
-            return data
         else
             data = Array{precision, 1}(undef, interval ? npts * 2 : npts)
 
@@ -330,22 +334,22 @@ function _parse_binary_file(path::AbstractString, precision::Type; npts::Union{I
             catch EOFError
                 error("Error reading binary file: likely npts is wrong")
             end
+        end
 
-            if interval
-                data = reshape(data, 2, :)
-                return data[1, :], data[2, :]
-            else
-                return data
-            end
+        if interval
+            data = reshape(data, 2, :)
+            return data[1, :], data[2, :]
+        else
+            return data
         end
     end
 end
 
 
 "parses csv or binary loadshape files"
-function _parse_loadshape_file(path::AbstractString, type::AbstractString, npts::Union{Int,Nothing}; header::Bool=false, interval::Bool=false, column::Int=1)
+function _parse_data_file(path::AbstractString, type::AbstractString, npts::Union{Int,Nothing}; header::Bool=false, interval::Bool=false, column::Int=1)
     if type in ["csvfile", "mult", "pqcsvfile"]
-        return _parse_loadshape_csv_file(path, type; header=header, column=column, interval=interval)
+        return _parse_csv_file(path, type; header=header, column=column, interval=interval)
     elseif type in ["sngfile", "dblfile"]
         return _parse_binary_file(path, Dict("sngfile" => Float32, "dblfile" => Float64)[type]; npts=npts, interval=interval)
     end
@@ -371,13 +375,13 @@ function _parse_mult_parameter(mult_string::AbstractString; path::AbstractString
         full_path = path == "" ? props[file_key] : join([path, props[file_key]], '/')
         type = file_key == "file" ? "mult" : file_key
 
-        return "($(join(_parse_loadshape_file(full_path, type, npts; header=get(props, "header", false), column=parse(Int, get(props, "column", "1"))), ",")))"
+        return "($(join(_parse_data_file(full_path, type, npts; header=get(props, "header", false), column=parse(Int, get(props, "column", "1"))), ",")))"
     end
 end
 
 
 "parses loadshape component"
-function _parse_loadshape!(current_obj::Dict{String,Any}; path::AbstractString="")
+function _parse_loadshape!(current_obj::Dict{String,<:Any}; path::AbstractString="")
     if any(parse.(Float64, [get(current_obj, "interval", "1.0"), get(current_obj, "minterval", "60.0"), get(current_obj, "sinterval", "3600.0")]) .<= 0.0)
         interval = true
     else
@@ -391,7 +395,7 @@ function _parse_loadshape!(current_obj::Dict{String,Any}; path::AbstractString="
              current_obj[prop] = _parse_mult_parameter(current_obj[prop]; path=path, npts=npts)
         elseif prop in ["csvfile", "pqcsvfile", "sngfile", "dblfile"]
             full_path = path == "" ? current_obj[prop] : join([path, current_obj[prop]], '/')
-            data = _parse_loadshape_file(full_path, prop, parse(Int, get(current_obj, "npts", "1")); interval=interval, header=false)
+            data = _parse_data_file(full_path, prop, parse(Int, get(current_obj, "npts", "1")); interval=interval, header=false)
             if prop == "pqcsvfile"
                 if interval
                     current_obj["hour"], current_obj["pmult"], current_obj["qmult"] = data
@@ -409,6 +413,27 @@ function _parse_loadshape!(current_obj::Dict{String,Any}; path::AbstractString="
     end
 
     for prop in ["pmult", "qmult", "hour"]
+        if haskey(current_obj, prop) && isa(current_obj[prop], Array)
+            current_obj[prop] = "($(join(current_obj[prop], ",")))"
+        elseif haskey(current_obj, prop) && isa(current_obj[prop], String) && !_isa_array(current_obj[prop])
+            current_obj[prop] = "($(current_obj[prop]))"
+        end
+    end
+end
+
+
+"parse xycurve component"
+function _parse_xycurve!(current_obj::Dict{String,<:Any}; path::AbstractString="")
+    for prop in current_obj["prop_order"]
+        if prop in ["csvfile", "sngfile", "dblfile"]
+            full_path = isempty(path) ? current_obj[prop] : join([path, current_obj[prop]], '/')
+            data = _parse_data_file(full_path, prop, nothing; interval=true, header=false)
+            current_obj["xarray"], current_obj["yarray"] = data
+        end
+
+    end
+
+    for prop in ["xarray", "yarray", "points"]
         if haskey(current_obj, prop) && isa(current_obj[prop], Array)
             current_obj[prop] = "($(join(current_obj[prop], ",")))"
         elseif haskey(current_obj, prop) && isa(current_obj[prop], String) && !_isa_array(current_obj[prop])
@@ -805,7 +830,7 @@ function parse_dss(io::IOStream)::Dict{String,Any}
                 continue
 
             elseif cmd in ["disable", "enable"]
-                current_obj_type, current_obj_name = split(join(line_element[2:end], ""), ".")
+                current_obj_type, current_obj_name = split(join(line_elements[2:end], ""), ".")
 
                 enabled = cmd == "enable" ? "true" : "false"
 
@@ -823,6 +848,8 @@ function parse_dss(io::IOStream)::Dict{String,Any}
 
                 if startswith(current_obj_type, "loadshape")
                     _parse_loadshape!(current_obj; path=path)
+                elseif startswith(current_obj_type, "xycurve")
+                    _parse_xycurve!(current_obj; path=path)
                 end
 
                 if startswith(current_obj_type, "circuit")

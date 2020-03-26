@@ -419,7 +419,6 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
     for (name, eng_obj) in get(data_eng, "solar", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("solar", eng_obj, length(data_math["gen"])+1)
 
-        phases = eng_obj["phases"]
         connections = eng_obj["connections"]
         nconductors = data_math["conductors"]
 
@@ -428,14 +427,14 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
         math_obj["gen_status"] = eng_obj["status"]
 
         math_obj["pg"] = eng_obj["kva"]
-        math_obj["qg"] = eng_obj["kva"]
+        math_obj["qg"] = eng_obj["kvar"]
         math_obj["vg"] = eng_obj["kv"]
 
-        math_obj["pmin"] = fill(0.0, phases)
-        math_obj["pmax"] = eng_obj["kva"]
+        math_obj["pmin"] = get(eng_obj, "minkva", zeros(size(eng_obj["kva"])))
+        math_obj["pmax"] = get(eng_obj, "maxkva", eng_obj["kva"])
 
-        math_obj["qmin"] =  -eng_obj["kva"]
-        math_obj["qmax"] =   eng_obj["kva"]
+        math_obj["qmin"] =  get(eng_obj, "minkvar", -eng_obj["kvar"])
+        math_obj["qmax"] =  get(eng_obj, "maxkvar",  eng_obj["kvar"])
 
         _add_gen_cost_model!(math_obj, eng_obj)
 
@@ -468,7 +467,6 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
     for (name, eng_obj) in get(data_eng, "storage", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("storage", eng_obj, length(data_math["storage"])+1)
 
-        phases = eng_obj["phases"]
         connections = eng_obj["connections"]
         nconductors = data_math["conductors"]
 
@@ -481,16 +479,16 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
         math_obj["discharge_rating"] = eng_obj["%discharge"] * eng_obj["kwrated"] / 1e3 / 100.0
         math_obj["charge_efficiency"] = eng_obj["%effcharge"] / 100.0
         math_obj["discharge_efficiency"] = eng_obj["%effdischarge"] / 100.0
-        math_obj["thermal_rating"] = fill(eng_obj["kva"] / 1e3 / phases, phases)
-        math_obj["qmin"] = fill(-eng_obj["kvar"] / 1e3 / phases, phases)
-        math_obj["qmax"] = fill( eng_obj["kvar"] / 1e3 / phases, phases)
-        math_obj["r"] = fill(eng_obj["%r"] / 100.0, phases)
-        math_obj["x"] = fill(eng_obj["%x"] / 100.0, phases)
-        math_obj["p_loss"] = eng_obj["%idlingkw"] * eng_obj["kwrated"] / 1e3
-        math_obj["q_loss"] = eng_obj["%idlingkvar"] * eng_obj["kvar"] / 1e3
+        math_obj["thermal_rating"] = eng_obj["kva"] ./ 1e3
+        math_obj["qmin"] = -eng_obj["kvar"] ./ 1e3
+        math_obj["qmax"] =  eng_obj["kvar"] ./ 1e3
+        math_obj["r"] = eng_obj["%r"] ./ 100.0
+        math_obj["x"] = eng_obj["%x"] ./ 100.0
+        math_obj["p_loss"] = eng_obj["%idlingkw"] .* eng_obj["kwrated"] ./ 1e3
+        math_obj["q_loss"] = eng_obj["%idlingkvar"] * sum(eng_obj["kvar"]) / 1e3
 
-        math_obj["ps"] = fill(0.0, phases)
-        math_obj["qs"] = fill(0.0, phases)
+        math_obj["ps"] = get(eng_obj, "ps", zeros(size(eng_obj["kva"])))
+        math_obj["qs"] = get(eng_obj, "qs", zeros(size(eng_obj["kva"])))
 
         if kron_reduced
             _pad_properties!(math_obj, ["thermal_rating", "qmin", "qmax", "r", "x", "ps", "qs"], connections, kr_phases)
