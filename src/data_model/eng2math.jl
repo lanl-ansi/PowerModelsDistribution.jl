@@ -782,6 +782,49 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
         vnom = eng_obj["vnom"] * data_eng["settings"]["v_var_scalar"]
         snom = eng_obj["snom"] * data_eng["settings"]["v_var_scalar"]
 
+        if haskey(eng_obj, "xfmrcode") && haskey(data_eng, "xfmrcode") && haskey(data_eng["xfmrcode"], eng_obj["xfmrcode"])
+            xfmrcode = data_eng["xfmrcode"][eng_obj["xfmrcode"]]
+
+            if haskey(xfmrcode, "leadlag")
+                eng_obj["leadlag"] = xfmrcode["leadlag"]
+            end
+
+            for w in 1:length("configuration")
+                for prop in ["configuration", "tm", "tm_min", "tm_max", "vnom", "snom", "rs"]
+                    if !ismissing(xfmrcode[prop][w])
+                        eng_obj[prop][w] = xfmrcode[prop][w]
+                    end
+                end
+
+                if w>1
+                    prim_conf = eng_obj["configuration"][1]
+                    if eng_obj["leadlag"] in ["ansi", "lag"]
+                        if prim_conf=="delta" && xfmrcode["configuration"][w]=="wye"
+                            eng_obj["polarity"][w] = -1
+                            eng_obj["connections"][w] = [_barrel_roll(eng_obj["connections"][w][1:end-1], 1)..., eng_obj["connections"][w][end]]
+                        end
+                    else # hence eng_obj["leadlag"] in ["euro", "lead"]
+                        if prim_conf=="wye" && xfmrcode["configuration"][w]=="delta"
+                            eng_obj["polarity"][w] = -1
+                            eng_obj["connections"][w] = _barrel_roll(eng_obj["connections"][w], -1)
+                        end
+                    end
+                end
+            end
+
+            for prop in ["noloadloss", "imag", "xsc"]
+                if prop == "xsc"
+                    for (i, v) in enumerate(xfmrcode[prop])
+                        if !ismissing(v)
+                            eng_obj[prop] = v
+                        end
+                    end
+                elseif !ismissing(xfmrcode[prop])
+                    eng_obj[prop] = xfmrcode[prop]
+                end
+            end
+        end
+
         nrw = length(eng_obj["bus"])
 
         # calculate zbase in which the data is specified, and convert to SI

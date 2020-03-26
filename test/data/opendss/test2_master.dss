@@ -38,9 +38,9 @@ new reactor.reactor3 bus1=b9 kvar=10.0
 new reactor.reactor4 bus1=b8 like=reactor3
 
 ! Transformers
-New "Transformer.t1" phases=1 windings=2 buses=[testsource,  _b2, ] conns=[wye, wye, ] kVs=[15.0, 15.0, ] kVAs=[50000, 50000, ] Xhl=1
+New "Transformer.t1" phases=1 buses=[testsource,  _b2, ] xfmrcode=t1 Xhl=1
 New "Transformer.t2" phases=3 windings=2 Xhl=0.02 buses=[testsource, b3-1, ] conns=[delta, wye, ] kVs=[69, 24.9, ] kVAs=[25000, 25000, ] taps=[1, 1, ] wdg=1 %R=0.0005 wdg=2 %R=0.0005
-New Transformer.t3a phases=1  windings=2  buses=(b7.1,  b10.1)  conns=(wye, wye)  kvs=(10.0, 10)  kvas=(30000, 30000)  xhl=0.1 %loadloss=.002 wdg=2 Maxtap=1.05 Mintap=0.95 ppm=0
+New Transformer.t3a phases=1 buses=(b7.1,  b10.1)  xfmrcode=t1  kvs=(10.0, 10)  kvas=(30000, 30000)  xhl=0.1 %loadloss=.002 wdg=2 Maxtap=1.05 Mintap=0.95 ppm=0
 New Transformer.t4  phases=3  windings=2  buses=(b8, b9.1.2.3.0) rneut=0 xneut=0
 ~ conns=(delta wye)
 ! 14.7->115 for kvs[2], otherwise inconsistent voltage base
@@ -75,3 +75,5 @@ new xycurve.test_curve1 xarray=(file=load_profile.csv) yarray=(sngfile=load_prof
 new xycurve.test_curve2 points=[1 1 2 2 3 3]
 new xycurve.test_curve3 csvfile=load_profile_pq.csv
 new xycurve.test_curve4 dblfile=load_profile_interval.dbl
+
+new xfmrcode.t1 phases=1 windings=2 conns=[wye,wye] kvs=[15, 15] kvas=[50000 50000]

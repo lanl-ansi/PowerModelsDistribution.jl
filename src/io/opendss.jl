@@ -485,6 +485,110 @@ end
 
 
 "Adds transformers to `data_eng` from `data_dss`"
+function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
+    for (name, dss_obj) in get(data_dss, "xfmrcode", Dict{String,Any}())
+        _apply_like!(dss_obj, data_dss, "xfmrcode")
+        defaults = _apply_ordered_properties(_create_xfmrcode(dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
+
+        nphases = defaults["phases"]
+        nrw = defaults["windings"]
+
+        _eng_obj = Dict{String,Any}(
+            "tm" => Vector{Any}(missing, nrw),
+            "tm_min" => Vector{Any}(missing, nrw),
+            "tm_max" => Vector{Any}(missing, nrw),
+            "fixed" => Vector{Any}(missing, nrw),
+            "vnom" => Vector{Any}(missing, nrw),
+            "snom" => Vector{Any}(missing, nrw),
+            "configuration" => Vector{Any}(missing, nrw),
+            "rs" => Vector{Any}(missing, nrw),
+            "noloadloss" => missing,
+            "imag" => missing,
+            "xsc" => Vector{Any}(missing, nrw == 2 ? 1 : 3),
+            "leadlag" => missing,
+            "source_id" => "xfmrcode.$name"
+        )
+
+        eng_obj = Dict{String,Any}()
+
+        winding_key = ["", "_2", "_3"]
+        for w in 1:nrw
+            if haskey(dss_obj, "conns") || haskey(dss_obj, "conn$(winding_key[w])")
+                eng_obj["configuration"] = _eng_obj["configuration"]
+                eng_obj["configuration"][w] = defaults["conns"][w]
+            end
+
+            if haskey(dss_obj, "taps") || haskey(dss_obj, "tap$(winding_key[w])")
+                eng_obj["tm"] = _eng_obj["tm"]
+                eng_obj["tm"][w] = fill(defaults["taps"][w], nphases)
+            end
+
+            if haskey(dss_obj, "mintap")
+                eng_obj["tm_min"] = _eng_obj["tm_min"]
+                eng_obj["tm_min"][w] = fill(defaults["mintap"], nphases)
+            end
+
+            if haskey(dss_obj, "maxtap")
+                eng_obj["tm_max"] = _eng_obj["tm_max"]
+                eng_obj["tm_max"][w] = fill(defaults["maxtap"], nphases)
+            end
+
+            if haskey(dss_obj, "kvs") || haskey(dss_obj, "kv$(winding_key[w])")
+                eng_obj["vnom"] = _eng_obj["vnom"]
+                eng_obj["vnom"][w] = defaults["kvs"][w]
+            end
+
+            if haskey(dss_obj, "kvas") || haskey(dss_obj, "kva$(winding_key[w])")
+                eng_obj["snom"] = _eng_obj["snom"]
+                eng_obj["snom"][w] = defaults["kvas"][w]
+            end
+
+            if haskey(dss_obj, "%rs") || haskey(dss_obj, "%r$(winding_key[w])")
+                eng_obj["rs"] = _eng_obj["rs"]
+                eng_obj["rs"][w] = defaults["%rs"][w] / 100
+            end
+        end
+
+        if haskey(dss_obj, "%noloadloss")
+            eng_obj["noloadloss"] = _eng_obj["noloadloss"]
+            eng_obj["noloadloss"] = defaults["%noloadloss"] / 100
+        end
+
+        if haskey(dss_obj, "%imag")
+            eng_obj["imag"] = _eng_obj["imag"]
+            eng_obj["imag"] = defaults["%imag"] / 100
+        end
+
+        if haskey(dss_obj, "xhl")
+            eng_obj["xsc"] = _eng_obj["xsc"]
+            eng_obj["xsc"][1] = defaults["xhl"] / 100
+        end
+
+        if haskey(dss_obj, "xht") && nrw == 3
+            eng_obj["xsc"] = _eng_obj["xsc"]
+            eng_obj["xsc"][2] = defaults["xht"] / 100
+        end
+
+        if haskey(dss_obj, "xlt") && nrw == 3
+            eng_obj["xsc"] = _eng_obj["xsc"]
+            eng_obj["xsc"][3] = defaults["xlt"] / 100
+        end
+
+        if haskey(dss_obj, "leadlag")
+            eng_obj["leadlag"] = defaults["leadlag"]
+        end
+
+        if import_all
+            _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
+        end
+
+        _add_eng_obj!(data_eng, "xfmrcode", name, eng_obj)
+    end
+end
+
+
+
+"Adds transformers to `data_eng` from `data_dss`"
 function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "transformer", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "transformer")
@@ -518,6 +622,7 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
         eng_obj["connections"] = Array{Array{Int, 1}, 1}(undef, nrw)
         eng_obj["configuration"] = Array{String, 1}(undef, nrw)
         eng_obj["polarity"] = Array{Int, 1}(undef, nrw)
+        eng_obj["leadlag"] = defaults["leadlag"]
 
         eng_obj["nphases"] = defaults["phases"]
 
@@ -554,7 +659,6 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
                         eng_obj["polarity"][w] = -1
                         eng_obj["connections"][w] = _barrel_roll(eng_obj["connections"][w], -1)
                     end
-
                 end
             end
         end
@@ -720,7 +824,7 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
     _dss2eng_linecode!(data_eng, data_dss, import_all)
     _dss2eng_line!(data_eng, data_dss, import_all)
 
-    # _dss2eng_xfrmcode!(data_eng, data_dss, import_all)  # TODO
+    _dss2eng_xfmrcode!(data_eng, data_dss, import_all)
     _dss2eng_transformer!(data_eng, data_dss, import_all)
 
     _dss2eng_capacitor!(data_eng, data_dss, import_all)
