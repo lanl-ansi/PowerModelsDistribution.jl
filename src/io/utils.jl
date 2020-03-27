@@ -239,7 +239,10 @@ function _parse_array(dtype::Type, data::AbstractString)::Vector{dtype}
             elements = _parse_properties(data[2:end-1])
         end
     else
-        elements = split(strip(data, _array_delimiters), split_char)
+        for delim in _array_delimiters
+            data = replace(data, delim => "")
+        end
+        elements = split(data, split_char)
         elements = [strip(el) for el in elements if strip(el) != ""]
     end
 
@@ -249,7 +252,7 @@ function _parse_array(dtype::Type, data::AbstractString)::Vector{dtype}
             push!(array, el)
         end
     else
-        array = zeros(dtype, length(elements))
+        array = Vector{dtype}(undef, length(elements))
         for (i, el) in enumerate(elements)
             if _isa_rpn(data)
                 array[i] = _parse_rpn(el, dtype)
