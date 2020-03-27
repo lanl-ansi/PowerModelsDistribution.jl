@@ -706,13 +706,18 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
 
         eng_obj = Dict{String,Any}(
             "bus" => _parse_busname(defaults["bus1"])[1],
-            "configuration" => "wye",
+            "configuration" => defaults["conn"],
             "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=collect(1:defaults["phases"]+1)),
             "kva" => fill(defaults["kva"] / nphases, nphases),
             "kvar" => fill(defaults["kvar"] / nphases, nphases),
             "kv" => fill(defaults["kv"] / nphases, nphases),
+            "max_rated_power" => fill(defaults["pmpp"] / nphases, nphases),
             "irradiance" => defaults["irradiance"],
-            "p-tcurve" => defaults["p-tcurve"],
+            "temperature" => defaults["temperature"],
+            "p-t_curve" => defaults["p-tcurve"],
+            "efficiency_curve" => defaults["effcurve"],
+            "rs" => diagm(0 => fill(defaults["%r"] / 100., nphases)),
+            "xs" => diagm(0 => fill(defaults["%x"] / 100., nphases)),
             "status" => convert(Int, defaults["enabled"]),
             "source_id" => "pvsystem.$name",
         )
@@ -801,7 +806,7 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
     if haskey(data_dss, "vsource") && haskey(data_dss["vsource"], "source") && haskey(data_dss, "circuit")
         source = data_dss["vsource"]["source"]
         defaults = _create_vsource(get(source, "bus1", "sourcebus"), source["name"]; _to_kwargs(source)...)
-        source_bus = defaults["bus1"]
+        source_bus = _parse_busname(defaults["bus1"])[1]
 
         data_eng["name"] = data_dss["circuit"]
         data_eng["data_model"] = "engineering"
