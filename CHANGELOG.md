@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Add support for Memento v0.13, v1.0
 
 ## v0.8.1
 
