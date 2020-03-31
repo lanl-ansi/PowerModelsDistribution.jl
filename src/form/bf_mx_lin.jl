@@ -27,14 +27,14 @@ end
 
 "Defines branch flow model power flow equations"
 function constraint_mc_flow_losses(pm::LPUBFDiagModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
-    p_fr = _PMs.var(pm, n, :p)[f_idx]
-    q_fr = _PMs.var(pm, n, :q)[f_idx]
+    p_fr = var(pm, n, :p)[f_idx]
+    q_fr = var(pm, n, :q)[f_idx]
 
-    p_to = _PMs.var(pm, n, :p)[t_idx]
-    q_to = _PMs.var(pm, n, :q)[t_idx]
+    p_to = var(pm, n, :p)[t_idx]
+    q_to = var(pm, n, :q)[t_idx]
 
-    w_fr = _PMs.var(pm, n, :w)[f_bus]
-    w_to = _PMs.var(pm, n, :w)[t_bus]
+    w_fr = var(pm, n, :w)[f_bus]
+    w_to = var(pm, n, :w)[t_bus]
 
     JuMP.@constraint(pm.model, p_fr + p_to .== diag( g_sh_fr).*w_fr + diag( g_sh_to).*w_to)
     JuMP.@constraint(pm.model, q_fr + q_to .== diag(-b_sh_fr).*w_fr + diag(-b_sh_to).*w_to)
@@ -43,11 +43,11 @@ end
 
 "Defines voltage drop over a branch, linking from and to side voltage"
 function constraint_mc_model_voltage_magnitude_difference(pm::LPUBFDiagModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr, tm)
-    w_fr = _PMs.var(pm, n, :w)[f_bus]
-    w_to = _PMs.var(pm, n, :w)[t_bus]
+    w_fr = var(pm, n, :w)[f_bus]
+    w_to = var(pm, n, :w)[t_bus]
 
-    p_fr = _PMs.var(pm, n, :p)[f_idx]
-    q_fr = _PMs.var(pm, n, :q)[f_idx]
+    p_fr = var(pm, n, :p)[f_idx]
+    q_fr = var(pm, n, :q)[f_idx]
 
     p_s_fr = p_fr - diag(g_sh_fr).*w_fr
     q_s_fr = q_fr + diag(b_sh_fr).*w_to
@@ -65,30 +65,30 @@ end
 
 "balanced three-phase phasor"
 function constraint_mc_theta_ref(pm::LPUBFDiagModel, n::Int, i::Int, va_ref)
-    ncnds = length(_PMs.conductor_ids(pm))
+    ncnds = length(conductor_ids(pm))
     @assert(ncnds >= 2)
 
-    w = _PMs.var(pm, n, :w)[i]
+    w = var(pm, n, :w)[i]
     JuMP.@constraint(pm.model, w[2:ncnds]   .== w[1])
 end
 
 
 ""
 function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
-    w = _PMs.var(pm, nw, :w, i)
+    w = var(pm, nw, :w, i)
 
-    p = get(_PMs.var(pm, nw), :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
-    q = get(_PMs.var(pm, nw), :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
+    p = get(var(pm, nw), :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
+    q = get(var(pm, nw), :q, Dict()); _PM._check_var_keys(q, bus_arcs, "reactive power", "branch")
 
-    psw  = get(_PMs.var(pm, nw),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    qsw  = get(_PMs.var(pm, nw),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
-    pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
-    qt   = get(_PMs.var(pm, nw),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+    psw  = get(var(pm, nw),  :psw, Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(var(pm, nw),  :qsw, Dict()); _PM._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(var(pm, nw),   :pt, Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(var(pm, nw),   :qt, Dict()); _PM._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
 
-    pg = get(_PMs.var(pm, nw), :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
-    qg = get(_PMs.var(pm, nw), :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps   = get(_PMs.var(pm, nw),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs   = get(_PMs.var(pm, nw),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    pg = get(var(pm, nw), :pg, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
+    qg = get(var(pm, nw), :qg, Dict()); _PM._check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
+    qs   = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_storage, "reactive power", "storage")
 
     cstr_p = []
     cstr_q = []
@@ -115,8 +115,8 @@ function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, b
         + sum(bs.*w for bs in values(bus_bs))
     )
 
-    if _PMs.report_duals(pm)
-        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
-        _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
+    if _PM.report_duals(pm)
+        sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
 end

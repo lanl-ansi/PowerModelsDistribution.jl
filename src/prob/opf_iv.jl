@@ -11,7 +11,7 @@ end
 
 
 ""
-function build_mc_opf_iv(pm::_PMs.AbstractPowerModel)
+function build_mc_opf_iv(pm::_PM.AbstractPowerModel)
     # Variables
     variable_mc_voltage(pm)
     variable_mc_branch_current(pm)
@@ -20,25 +20,25 @@ function build_mc_opf_iv(pm::_PMs.AbstractPowerModel)
     variable_mc_load(pm)
 
     # Constraints
-    for i in _PMs.ids(pm, :ref_buses)
+    for i in ids(pm, :ref_buses)
         constraint_mc_theta_ref(pm, i)
     end
 
     # gens should be constrained before KCL, or Pd/Qd undefined
-    for id in _PMs.ids(pm, :gen)
+    for id in ids(pm, :gen)
         constraint_mc_generation(pm, id)
     end
 
     # loads should be constrained before KCL, or Pd/Qd undefined
-    for id in _PMs.ids(pm, :load)
+    for id in ids(pm, :load)
         constraint_mc_load(pm, id)
     end
 
-    for i in _PMs.ids(pm, :bus)
+    for i in ids(pm, :bus)
         constraint_mc_current_balance_load(pm, i)
     end
 
-    for i in _PMs.ids(pm, :branch)
+    for i in ids(pm, :branch)
         constraint_mc_current_from(pm, i)
         constraint_mc_current_to(pm, i)
 
@@ -50,10 +50,10 @@ function build_mc_opf_iv(pm::_PMs.AbstractPowerModel)
         constraint_mc_thermal_limit_to(pm, i)
     end
 
-    for i in _PMs.ids(pm, :transformer)
+    for i in ids(pm, :transformer)
         constraint_mc_trans(pm, i)
     end
 
     # Objective
-    _PMs.objective_min_fuel_cost(pm)
+    _PM.objective_min_fuel_cost(pm)
 end

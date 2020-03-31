@@ -1,27 +1,27 @@
 "This is duplicated at PMD level to correctly handle the indexing of the shunts."
-function constraint_mc_voltage_angle_difference(pm::_PMs.AbstractBFModel, n::Int, f_idx, angmin, angmax)
+function constraint_mc_voltage_angle_difference(pm::_PM.AbstractBFModel, n::Int, f_idx, angmin, angmax)
     i, f_bus, t_bus = f_idx
     t_idx = (i, t_bus, f_bus)
 
-    branch = _PMs.ref(pm, n, :branch, i)
+    branch = ref(pm, n, :branch, i)
 
-    for c in _PMs.conductor_ids(pm; nw=n)
+    for c in conductor_ids(pm; nw=n)
         tm = branch["tap"][c]
         g_fr = branch["g_fr"][c,c]
         g_to = branch["g_to"][c,c]
         b_fr = branch["b_fr"][c,c]
         b_to = branch["b_to"][c,c]
 
-        tr, ti = _PMs.calc_branch_t(branch)
+        tr, ti = _PM.calc_branch_t(branch)
         tr, ti = tr[c], ti[c]
 
         r = branch["br_r"][c,c]
         x = branch["br_x"][c,c]
 
         # getting the variables
-        w_fr = _PMs.var(pm, n, :w, f_bus)[c]
-        p_fr = _PMs.var(pm, n, :p, f_idx)[c]
-        q_fr = _PMs.var(pm, n, :q, f_idx)[c]
+        w_fr = var(pm, n, :w, f_bus)[c]
+        p_fr = var(pm, n, :p, f_idx)[c]
+        q_fr = var(pm, n, :q, f_idx)[c]
 
         tzr = r*tr + x*ti
         tzi = r*ti - x*tr

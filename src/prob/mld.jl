@@ -35,7 +35,7 @@ end
 
 
 "Load shedding problem including storage (snap-shot)"
-function build_mc_mld(pm::_PMs.AbstractPowerModel)
+function build_mc_mld(pm::_PM.AbstractPowerModel)
     variable_mc_indicator_bus_voltage(pm; relax=true)
     variable_mc_bus_voltage_on_off(pm)
 
@@ -46,9 +46,9 @@ function build_mc_mld(pm::_PMs.AbstractPowerModel)
     variable_mc_generation_on_off(pm)
 
     # variable_mc_storage(pm)
-    _PMs.variable_storage_energy(pm)
-    _PMs.variable_storage_charge(pm)
-    _PMs.variable_storage_discharge(pm)
+    _PM.variable_storage_energy(pm)
+    _PM.variable_storage_charge(pm)
+    _PM.variable_storage_discharge(pm)
     variable_mc_indicator_storage(pm; relax=true)
     variable_mc_on_off_storage(pm)
 
@@ -57,28 +57,28 @@ function build_mc_mld(pm::_PMs.AbstractPowerModel)
 
     constraint_mc_model_voltage(pm)
 
-    for i in _PMs.ids(pm, :ref_buses)
+    for i in ids(pm, :ref_buses)
         constraint_mc_theta_ref(pm, i)
     end
 
     constraint_mc_bus_voltage_on_off(pm)
 
-    for i in _PMs.ids(pm, :gen)
+    for i in ids(pm, :gen)
         constraint_mc_generation_on_off(pm, i)
     end
 
-    for i in _PMs.ids(pm, :bus)
+    for i in ids(pm, :bus)
         constraint_mc_power_balance_shed(pm, i)
     end
 
-    for i in _PMs.ids(pm, :storage)
-        _PMs.constraint_storage_state(pm, i)
-        _PMs.constraint_storage_complementarity_nl(pm, i)
+    for i in ids(pm, :storage)
+        _PM.constraint_storage_state(pm, i)
+        _PM.constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_loss(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end
 
-    for i in _PMs.ids(pm, :branch)
+    for i in ids(pm, :branch)
         constraint_mc_ohms_yt_from(pm, i)
         constraint_mc_ohms_yt_to(pm, i)
 
@@ -88,7 +88,7 @@ function build_mc_mld(pm::_PMs.AbstractPowerModel)
         constraint_mc_thermal_limit_to(pm, i)
     end
 
-    for i in _PMs.ids(pm, :transformer)
+    for i in ids(pm, :transformer)
         constraint_mc_trans(pm, i)
     end
 
@@ -97,7 +97,7 @@ end
 
 
 "Load shedding problem for Branch Flow model"
-function build_mc_mld_bf(pm::_PMs.AbstractPowerModel)
+function build_mc_mld_bf(pm::_PM.AbstractPowerModel)
     variable_mc_indicator_bus_voltage(pm; relax=true)
     variable_mc_bus_voltage_on_off(pm)
 
@@ -113,21 +113,21 @@ function build_mc_mld_bf(pm::_PMs.AbstractPowerModel)
 
     constraint_mc_model_current(pm)
 
-    for i in _PMs.ids(pm, :ref_buses)
+    for i in ids(pm, :ref_buses)
         constraint_mc_theta_ref(pm, i)
     end
 
     constraint_mc_bus_voltage_on_off(pm)
 
-    for i in _PMs.ids(pm, :gen)
+    for i in ids(pm, :gen)
         constraint_mc_generation_on_off(pm, i)
     end
 
-    for i in _PMs.ids(pm, :bus)
+    for i in ids(pm, :bus)
         constraint_mc_power_balance_shed(pm, i)
     end
 
-    for i in _PMs.ids(pm, :branch)
+    for i in ids(pm, :branch)
         constraint_mc_flow_losses(pm, i)
         constraint_mc_model_voltage_magnitude_difference(pm, i)
 
@@ -137,7 +137,7 @@ function build_mc_mld_bf(pm::_PMs.AbstractPowerModel)
         constraint_mc_thermal_limit_to(pm, i)
     end
 
-    for i in _PMs.ids(pm, :transformer)
+    for i in ids(pm, :transformer)
         constraint_mc_trans(pm, i)
     end
 
@@ -146,7 +146,7 @@ end
 
 
 "Standard unit commitment (!relaxed) load shedding problem"
-function build_mc_mld_uc(pm::_PMs.AbstractPowerModel)
+function build_mc_mld_uc(pm::_PM.AbstractPowerModel)
     variable_mc_indicator_bus_voltage(pm; relax=false)
     variable_mc_bus_voltage_on_off(pm)
 
@@ -165,28 +165,28 @@ function build_mc_mld_uc(pm::_PMs.AbstractPowerModel)
 
     constraint_mc_model_voltage(pm)
 
-    for i in _PMs.ids(pm, :ref_buses)
+    for i in ids(pm, :ref_buses)
         constraint_mc_theta_ref(pm, i)
     end
 
     constraint_mc_bus_voltage_on_off(pm)
 
-    for i in _PMs.ids(pm, :gen)
+    for i in ids(pm, :gen)
         constraint_mc_generation_on_off(pm, i)
     end
 
-    for i in _PMs.ids(pm, :bus)
+    for i in ids(pm, :bus)
         constraint_mc_power_balance_shed(pm, i)
     end
 
-    for i in _PMs.ids(pm, :storage)
-        _PMs.constraint_storage_state(pm, i)
-        _PMs.constraint_storage_complementarity_nl(pm, i)
+    for i in ids(pm, :storage)
+        _PM.constraint_storage_state(pm, i)
+        _PM.constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_loss(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end
 
-    for i in _PMs.ids(pm, :branch)
+    for i in ids(pm, :branch)
         constraint_mc_ohms_yt_from(pm, i)
         constraint_mc_ohms_yt_to(pm, i)
 
@@ -196,7 +196,7 @@ function build_mc_mld_uc(pm::_PMs.AbstractPowerModel)
         constraint_mc_thermal_limit_to(pm, i)
     end
 
-    for i in _PMs.ids(pm, :transformer)
+    for i in ids(pm, :transformer)
         constraint_mc_trans(pm, i)
     end
 

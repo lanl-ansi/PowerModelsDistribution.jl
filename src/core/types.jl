@@ -1,9 +1,9 @@
 ""
-abstract type AbstractNLPUBFModel <: _PMs.AbstractBFQPModel end
+abstract type AbstractNLPUBFModel <: _PM.AbstractBFQPModel end
 
 
 ""
-abstract type AbstractConicUBFModel <: _PMs.AbstractBFConicModel end
+abstract type AbstractConicUBFModel <: _PM.AbstractBFConicModel end
 
 
 AbstractUBFModels = Union{AbstractNLPUBFModel, AbstractConicUBFModel}
@@ -41,21 +41,21 @@ const LinDist3FlowModel = LPUBFDiagModel # more popular name for it
 
 
 "default SDP unbalanced DistFlow constructor"
-mutable struct SDPUBFPowerModel <: SDPUBFModel _PMs.@pm_fields end
+mutable struct SDPUBFPowerModel <: SDPUBFModel _PM.@pm_fields end
 
 
 "default SDP unbalanced DistFlow with matrix KCL constructor"
-mutable struct SDPUBFKCLMXPowerModel <: SDPUBFKCLMXModel _PMs.@pm_fields end
+mutable struct SDPUBFKCLMXPowerModel <: SDPUBFKCLMXModel _PM.@pm_fields end
 
 
 "default SOC unbalanced DistFlow constructor"
-mutable struct SOCNLPUBFPowerModel <: SOCNLPUBFModel _PMs.@pm_fields end
+mutable struct SOCNLPUBFPowerModel <: SOCNLPUBFModel _PM.@pm_fields end
 
 
 "default SOC unbalanced DistFlow constructor"
-mutable struct SOCConicUBFPowerModel <: SOCConicUBFModel _PMs.@pm_fields end
+mutable struct SOCConicUBFPowerModel <: SOCConicUBFModel _PM.@pm_fields end
 
 
 "default LP unbalanced DistFlow constructor"
-mutable struct LPUBFDiagPowerModel <: LPUBFDiagModel _PMs.@pm_fields end
+mutable struct LPUBFDiagPowerModel <: LPUBFDiagModel _PM.@pm_fields end
 const LinDist3FlowPowerModel = LPUBFDiagPowerModel # more popular name

@@ -68,16 +68,16 @@ function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true)
         if make_pu
             make_per_unit!(data)
 
-            _PMs.check_connectivity(data)
-            _PMs.correct_transformer_parameters!(data)
-            _PMs.correct_voltage_angle_differences!(data)
-            _PMs.correct_thermal_limits!(data)
-            _PMs.correct_branch_directions!(data)
-            _PMs.check_branch_loops(data)
-            _PMs.correct_bus_types!(data)
-            _PMs.correct_dcline_limits!(data)
-            _PMs.correct_cost_functions!(data)
-            _PMs.standardize_cost_terms!(data)
+            _PM.check_connectivity(data)
+            _PM.correct_transformer_parameters!(data)
+            _PM.correct_voltage_angle_differences!(data)
+            _PM.correct_thermal_limits!(data)
+            _PM.correct_branch_directions!(data)
+            _PM.check_branch_loops(data)
+            _PM.correct_bus_types!(data)
+            _PM.correct_dcline_limits!(data)
+            _PM.correct_cost_functions!(data)
+            _PM.standardize_cost_terms!(data)
         end
     end
 end

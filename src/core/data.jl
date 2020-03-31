@@ -685,7 +685,7 @@ end
 
 
 ""
-function sol_polar_voltage!(pm::_PMs.AbstractPowerModel, solution::Dict)
+function sol_polar_voltage!(pm::_PM.AbstractPowerModel, solution::Dict)
     if haskey(solution, "nw")
         nws_data = solution["nw"]
     else

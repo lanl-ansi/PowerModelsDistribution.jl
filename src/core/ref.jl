@@ -2,7 +2,7 @@ import LinearAlgebra: diagm
 
 
 ""
-function _calc_mc_voltage_product_bounds(pm::_PMs.AbstractPowerModel, buspairs; nw::Int=pm.cnw)
+function _calc_mc_voltage_product_bounds(pm::_PM.AbstractPowerModel, buspairs; nw::Int=pm.cnw)
     wr_min = Dict([(bp, -Inf) for bp in buspairs])
     wr_max = Dict([(bp,  Inf) for bp in buspairs])
     wi_min = Dict([(bp, -Inf) for bp in buspairs])
@@ -10,13 +10,13 @@ function _calc_mc_voltage_product_bounds(pm::_PMs.AbstractPowerModel, buspairs; 
 
     for (i, j, c, d) in buspairs
         if i == j
-            bus = _PMs.ref(pm, nw, :bus)[i]
+            bus = ref(pm, nw, :bus)[i]
             vm_fr_max = bus["vmax"][c]
             vm_to_max = bus["vmax"][d]
             vm_fr_min = bus["vmin"][c]
             vm_to_min = bus["vmin"][d]
         else
-            buspair = _PMs.ref(pm, nw, :buspairs)[(i, j)]
+            buspair = ref(pm, nw, :buspairs)[(i, j)]
             vm_fr_max = buspair["vm_fr_max"][c]
             vm_to_max = buspair["vm_to_max"][d]
             vm_fr_min = buspair["vm_fr_min"][c]
@@ -34,27 +34,27 @@ end
 
 
 ""
-function _find_ref_buses(pm::_PMs.AbstractPowerModel, nw)
-    buses = _PMs.ref(pm, nw, :bus)
+function _find_ref_buses(pm::_PM.AbstractPowerModel, nw)
+    buses = ref(pm, nw, :bus)
     return [b for (b,bus) in buses if bus["bus_type"]==3]
     # return [bus for (b,bus) in buses ]
 end
 
 
 "Adds arcs for PMD transformers; for dclines and branches this is done in PMs"
-function ref_add_arcs_trans!(pm::_PMs.AbstractPowerModel)
-    for nw in _PMs.nw_ids(pm)
-        if !haskey(_PMs.ref(pm, nw), :transformer)
+function ref_add_arcs_trans!(pm::_PM.AbstractPowerModel)
+    for nw in nw_ids(pm)
+        if !haskey(ref(pm, nw), :transformer)
             # this might happen when parsing data from matlab format
             # the OpenDSS parser always inserts a trans dict
-            _PMs.ref(pm, nw)[:transformer] = Dict{Int, Any}()
+            ref(pm, nw)[:transformer] = Dict{Int, Any}()
         end
         # dirty fix add arcs_from/to_trans and bus_arcs_trans
-        pm.ref[:nw][nw][:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in _PMs.ref(pm, nw, :transformer)]
-        pm.ref[:nw][nw][:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in _PMs.ref(pm, nw, :transformer)]
+        pm.ref[:nw][nw][:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in ref(pm, nw, :transformer)]
+        pm.ref[:nw][nw][:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in ref(pm, nw, :transformer)]
         pm.ref[:nw][nw][:arcs_trans] = [pm.ref[:nw][nw][:arcs_from_trans]..., pm.ref[:nw][nw][:arcs_to_trans]...]
         pm.ref[:nw][nw][:bus_arcs_trans] = Dict{Int64, Array{Any, 1}}()
-        for i in _PMs.ids(pm, nw, :bus)
+        for i in ids(pm, nw, :bus)
             pm.ref[:nw][nw][:bus_arcs_trans][i] = [e for e in pm.ref[:nw][nw][:arcs_trans] if e[2]==i]
         end
     end
@@ -62,8 +62,8 @@ end
 
 
 ""
-function _calc_mc_transformer_Tvi(pm::_PMs.AbstractPowerModel, i::Int; nw=pm.cnw)
-    trans = _PMs.ref(pm, nw, :transformer,  i)
+function _calc_mc_transformer_Tvi(pm::_PM.AbstractPowerModel, i::Int; nw=pm.cnw)
+    trans = ref(pm, nw, :transformer,  i)
     # transformation matrices
     # Tv and Ti will be compositions of these
     Tbr = [0 0 1; 1 0 0; 0 1 0]                             # barrel roll
@@ -131,8 +131,8 @@ function _calc_mc_transformer_Tvi(pm::_PMs.AbstractPowerModel, i::Int; nw=pm.cnw
     # make equations dimensionless
     # if vbase across a transformer scales according to the ratio of vnom_kv,
     # this will simplify to 1.0
-    bkv_fr = _PMs.ref(pm, nw, :bus, trans["f_bus"], "base_kv")
-    bkv_to = _PMs.ref(pm, nw, :bus, trans["t_bus"], "base_kv")
+    bkv_fr = ref(pm, nw, :bus, trans["f_bus"], "base_kv")
+    bkv_to = ref(pm, nw, :bus, trans["t_bus"], "base_kv")
     Cv_to = trans["config_fr"]["vm_nom"]/trans["config_to"]["vm_nom"]*bkv_to/bkv_fr
     # compensate for change of LN voltage of a delta winding
     Cv_to *= vmult

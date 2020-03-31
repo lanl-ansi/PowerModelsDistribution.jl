@@ -11,7 +11,7 @@ end
 
 
 ""
-function build_mc_opf_bf(pm::_PMs.AbstractPowerModel)
+function build_mc_opf_bf(pm::_PM.AbstractPowerModel)
     # Variables
     variable_mc_voltage(pm)
     variable_mc_branch_current(pm)
@@ -22,15 +22,15 @@ function build_mc_opf_bf(pm::_PMs.AbstractPowerModel)
     # Constraints
     constraint_mc_model_current(pm)
 
-    for i in _PMs.ids(pm, :ref_buses)
+    for i in ids(pm, :ref_buses)
         constraint_mc_theta_ref(pm, i)
     end
 
-    for i in _PMs.ids(pm, :bus)
+    for i in ids(pm, :bus)
         constraint_mc_power_balance(pm, i)
     end
 
-    for i in _PMs.ids(pm, :branch)
+    for i in ids(pm, :branch)
         constraint_mc_flow_losses(pm, i)
         constraint_mc_model_voltage_magnitude_difference(pm, i)
 
@@ -40,10 +40,10 @@ function build_mc_opf_bf(pm::_PMs.AbstractPowerModel)
         constraint_mc_thermal_limit_to(pm, i)
     end
 
-    for i in _PMs.ids(pm, :transformer)
+    for i in ids(pm, :transformer)
         constraint_mc_trans(pm, i)
     end
 
     # Objective
-    _PMs.objective_min_fuel_cost(pm)
+    _PM.objective_min_fuel_cost(pm)
 end

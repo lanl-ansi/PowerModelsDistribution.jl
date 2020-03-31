@@ -11,7 +11,11 @@ module PowerModelsDistribution
 
     import LinearAlgebra
 
-    const _PMs = PowerModels
+    const _PM = PowerModels
+    const _IM = InfrastructureModels
+
+    import PowerModels: ACPPowerModel, ACRPowerModel, DCPPowerModel, NFAPowerModel, SOCWRPowerModel, conductor_ids, ismulticonductor
+    import InfrastructureModels: ids, ref, var, con, sol, nw_ids, nws, ismultinetwork
 
     function __init__()
         global _LOGGER = Memento.getlogger(PowerModels)

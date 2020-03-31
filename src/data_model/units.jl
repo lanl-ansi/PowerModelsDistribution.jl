@@ -315,7 +315,7 @@ function _rebase_pu_generator!(gen, vbase, sbase, sbase_old, v_var_scalar, data_
         sbase_scale_cost = sbase_scale
     end
 
-    _PMs._rescale_cost_model!(gen, 1/sbase_scale_cost)
+    _PM._rescale_cost_model!(gen, 1/sbase_scale_cost)
 
     # save new vbase
     gen["vbase"] = vbase

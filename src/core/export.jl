@@ -39,6 +39,8 @@ for status_code_enum in [TerminationStatusCode, ResultStatusCode]
     end
 end
 
-# so that users do not need to import PowerModels
-import PowerModels: ACPPowerModel, ACRPowerModel, DCPPowerModel, NFAPowerModel, SOCWRPowerModel
-export ACPPowerModel, ACRPowerModel, DCPPowerModel, NFAPowerModel, SOCWRPowerModel
+# PowerModels Exports
+export ACPPowerModel, ACRPowerModel, DCPPowerModel, NFAPowerModel, SOCWRPowerModel, conductor_ids, ismulticonductor
+
+# InfrastructureModels Exports
+export ids, ref, var, con, sol, nw_ids, nws, ismultinetwork, ismulticonductor, conductor_ids
