@@ -266,7 +266,7 @@ const _dss_object_properties = Dict{String,Vector{String}}(
 
 
 "parses single column load profile files"
-function _parse_csv_file(path::AbstractString, type::AbstractString; header::Bool=false, column::Int=1, interval::Bool=false)
+function _parse_csv_file(path::AbstractString, type::AbstractString; header::Bool=false, column::Int=1, interval::Bool=false)::Union{Vector{String}, Tuple{Vector{String}, Vector{String}, Vector{String}}, Tuple{Vector{String}, Vector{String}}}
     open(path, "r") do f
         lines = readlines(f)
         if header
@@ -274,36 +274,36 @@ function _parse_csv_file(path::AbstractString, type::AbstractString; header::Boo
         end
 
         if type == "mult"
-            return [split(line, ",")[column] for line in lines]
+            return Vector{String}([split(line, ",")[column] for line in lines])
         elseif type == "csvfile"
             if interval
-                hour, mult = [], []
+                hour, mult = Vector{String}([]), Vector{String}([])
                 for line in lines
                     d = split(line, ",")
-                    push!(hour, d[1])
-                    push!(mult, d[2])
+                    push!(hour, string(d[1]))
+                    push!(mult, string(d[2]))
                 end
                 return hour, mult
             else
-                return [split(line, ",")[1] for line in lines]
+                return Vector{String}([split(line, ",")[1] for line in lines])
             end
         elseif type == "pqcsvfile"
             if interval
-                hour, pmult, qmult = [], [], []
+                hour, pmult, qmult = Vector{String}([]), Vector{String}([]), Vector{String}([])
                 for line in lines
                     d = split(line, ",")
-                    push!(hour, d[1])
-                    push!(pmult, d[2])
-                    push!(qmult, d[3])
+                    push!(hour, string(d[1]))
+                    push!(pmult, string(d[2]))
+                    push!(qmult, string(d[3]))
                 end
 
                 return hour, pmult, qmult
             else
-                pmult, qmult = [], []
+                pmult, qmult = Vector{String}([]), Vector{String}([])
                 for line in lines
                     d = split(line, ",")
-                    push!(pmult, d[1])
-                    push!(qmult, d[2])
+                    push!(pmult, string(d[1]))
+                    push!(qmult, string(d[2]))
                 end
 
                 return pmult, qmult
@@ -314,7 +314,7 @@ end
 
 
 "parses sng and dbl precision loadshape binary files"
-function _parse_binary_file(path::AbstractString, precision::Type; npts::Union{Int,Nothing}=nothing, interval::Bool=false)
+function _parse_binary_file(path::AbstractString, precision::Type; npts::Union{Int,Nothing}=nothing, interval::Bool=false)::Union{Vector{precision}, Tuple{Vector{precision}, Vector{precision}}}
     open(path, "r") do f
         if npts === nothing
             data = precision[]
@@ -357,7 +357,7 @@ end
 
 
 "parses pmult and qmult entries on loadshapes"
-function _parse_mult_parameter(mult_string::AbstractString; path::AbstractString="", npts::Union{Int,Nothing}=nothing)
+function _parse_mult_parameter(mult_string::AbstractString; path::AbstractString="", npts::Union{Int,Nothing}=nothing)::String
     if !occursin("=", mult_string)
         return mult_string
     else
@@ -444,9 +444,9 @@ end
 
 
 "strips lines that are either commented (block or single) or empty"
-function _strip_lines(lines::Array)::Array
+function _strip_lines(lines::Vector{<:AbstractString})::Vector{String}
     blockComment = false
-    stripped_lines = []
+    stripped_lines = Vector{String}([])
     for line in lines
         if startswith(strip(line), "/*") || endswith(strip(line), "*/")
             blockComment = !blockComment
@@ -463,7 +463,7 @@ Parses a Bus Coordinate `file`, in either "dat" or "csv" formats, where in
 "dat", columns are separated by spaces, and in "csv" by commas. File expected
 to contain "bus,x,y" on each line.
 """
-function _parse_buscoords_file(file::AbstractString)::Dict{String,Any}
+function _parse_buscoords_file(file::String)::Dict{String,Any}
     file_str = read(open(file), String)
     regex = r",\s*"
     if endswith(lowercase(file), "csv") || endswith(lowercase(file), "dss")
@@ -487,8 +487,8 @@ Parses a string of `properties` of a component type, character by character
 into an array with each element containing (if present) the property name, "=",
 and the property value.
 """
-function _parse_properties(properties::AbstractString)::Array{<:Any, 1}
-    parsed_properties = []
+function _parse_properties(properties::AbstractString)::Vector{String}
+    parsed_properties = Vector{SubString{String}}([])
     end_array = true
     end_property = false
     end_equality = false
@@ -565,7 +565,7 @@ function _add_component!(data_dss::Dict{String,<:Any}, obj_type_name::AbstractSt
 end
 
 
-function _add_component_edits!(data_dss::Dict{String,<:Any}, obj_type_name::AbstractString, object::Dict{String,<:Any})
+function _add_component_edits!(data_dss::Dict{String,<:Any}, obj_type_name::SubString{String}, object::Dict{String,<:Any})
     obj_type = split(obj_type_name, '.'; limit=2)[1]
     if !haskey(data_dss, obj_type)
         data_dss[obj_type] = Dict{String,Any}(
@@ -587,7 +587,7 @@ the `key` and `value` of the property. If a property of the same name already
 exists inside `object`, the original value is converted to an array, and the
 new value is appended to the end.
 """
-function _add_property(object::Dict, key::AbstractString, value::Any)::Dict
+function _add_property(object::Dict{String,<:Any}, key::SubString{String}, value::Any)::Dict{String,Any}
     if !haskey(object, "prop_order")
         object["prop_order"] = Vector{String}(["name"])
     end
@@ -621,11 +621,11 @@ Parses a `component` with `properties` into a `object`. If `object` is not
 defined, an empty dictionary will be used. Assumes that unnamed properties are
 given in order, but named properties can be given anywhere.
 """
-function _parse_component(component::AbstractString, properties::AbstractString, object::Dict{String,<:Any}=Dict{String,Any}(); path::AbstractString="")
+function _parse_component(component::AbstractString, properties::AbstractString, object::Dict{String,<:Any}=Dict{String,Any}(); path::String="")::Dict{String,Any}
     obj_type, name = split(component, '.'; limit=2)
 
     if !haskey(object, "name")
-        object["name"] = name
+        object["name"] = string(name)
     end
 
     property_array = _parse_properties(properties)
@@ -698,7 +698,7 @@ end
 Parses an already separated line given by `elements` (an array) of an OpenDSS
 file into `current_obj`. If not defined, `current_obj` is an empty dictionary.
 """
-function _parse_line(elements::Array, current_obj::Dict=Dict{String,Any}(); path::AbstractString="")
+function _parse_line(elements::Vector{String}; current_obj::Dict{String,<:Any}=Dict{String,Any}(), path::AbstractString="")::Tuple{SubString{String}, Dict{String,Any}}
     current_obj_type = strip(elements[2], ['\"', '\''])
     if startswith(current_obj_type, "object")
         current_obj_type = split(current_obj_type, '=')[2]

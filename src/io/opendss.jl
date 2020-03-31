@@ -100,7 +100,7 @@ Note that in the current feature set, fixed therefore equals constant
 function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool, ground_terminal::Int=4)
     for (name, dss_obj) in get(data_dss, "load", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "load")
-        defaults = _apply_ordered_properties(_create_load(dss_obj["bus1"], dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
+        defaults = _apply_ordered_properties(_create_load(name; _to_kwargs(dss_obj)...), dss_obj)
 
         # parse the model
         model = defaults["model"]
@@ -183,7 +183,7 @@ end
 function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "capacitor", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "capacitor")
-        defaults = _apply_ordered_properties(_create_capacitor(dss_obj["bus1"], dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
+        defaults = _apply_ordered_properties(_create_capacitor(name; _to_kwargs(dss_obj)...), dss_obj)
 
         nphases = defaults["phases"]
         conn = defaults["conn"]
@@ -246,7 +246,7 @@ function _dss2eng_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
     for (name, dss_obj) in get(data_dss, "reactor", Dict{String,Any}())
         if !haskey(dss_obj, "bus2")
             _apply_like!(dss_obj, data_dss, "reactor")
-            defaults = _apply_ordered_properties(_create_reactor(dss_obj["bus1"], dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
+            defaults = _apply_ordered_properties(_create_reactor(name; _to_kwargs(dss_obj)...), dss_obj)
 
             eng_obj = Dict{String,Any}(
                 "phases" => defaults["phases"],
@@ -273,7 +273,7 @@ function _dss2eng_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         else
             Memento.warn(_LOGGER, "reactors as constant impedance elements is not yet supported, treating reactor.$name like line")
             _apply_like!(dss_obj, data_dss, "reactor")
-            defaults = _apply_ordered_properties(_create_reactor(dss_obj["bus1"], name, dss_obj["bus2"]; _to_kwargs(dss_obj)...), dss_obj)
+            defaults = _apply_ordered_properties(_create_reactor(name; _to_kwargs(dss_obj)...), dss_obj)
 
             eng_obj = Dict{String,Any}()
 
@@ -320,7 +320,7 @@ end
 function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "generator", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "generator")
-        defaults = _apply_ordered_properties(_create_generator(dss_obj["bus1"], dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
+        defaults = _apply_ordered_properties(_create_generator(name; _to_kwargs(dss_obj)...), dss_obj)
 
         nphases = defaults["phases"]
 
@@ -357,14 +357,14 @@ end
 function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "vsource", Dict{<:Any,<:Any}())
         _apply_like!(dss_obj, data_dss, "vsource")
-        defaults = _create_vsource(get(dss_obj, "bus1", "sourcebus"), name; _to_kwargs(dss_obj)...)
+        defaults = _create_vsource(name; _to_kwargs(dss_obj)...)
 
 
         ph1_ang = defaults["angle"]
         vm_pu = defaults["pu"]
 
         phases = defaults["phases"]
-        vnom = data_eng["settings"]["set_vbase_val"]
+        vnom = data_eng["settings"]["vbase"]
 
         vm = fill(vm_pu, phases)*vnom
         va = rad2deg.(_wrap_to_pi.([-2*pi/phases*(i-1)+deg2rad(ph1_ang) for i in 1:phases]))
@@ -399,8 +399,7 @@ function _dss2eng_linecode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
     for (name, dss_obj) in get(data_dss, "linecode", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "linecode")
 
-        dss_obj["units"] = get(dss_obj, "units", "none")
-        dss_obj["circuit_basefreq"] = data_eng["settings"]["basefreq"]
+        dss_obj["circuit_basefreq"] = data_eng["settings"]["base_frequency"]
 
         defaults = _apply_ordered_properties(_create_linecode(name; _to_kwargs(dss_obj)...), dss_obj)
 
@@ -426,11 +425,11 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
     for (name, dss_obj) in get(data_dss, "line", Dict())
         _apply_like!(dss_obj, data_dss, "line")
 
-        if haskey(dss_obj, "basefreq") && dss_obj["basefreq"] != data_eng["settings"]["basefreq"]
-            Memento.warn(_LOGGER, "basefreq=$(dss_obj["basefreq"]) on line $(dss_obj["name"]) does not match circuit basefreq=$(data_eng["settings"]["basefreq"])")
+        if haskey(dss_obj, "basefreq") && dss_obj["basefreq"] != data_eng["settings"]["base_frequency"]
+            Memento.warn(_LOGGER, "basefreq=$(dss_obj["basefreq"]) on line $(dss_obj["name"]) does not match circuit basefreq=$(data_eng["settings"]["base_frequency"])")
         end
 
-        defaults = _apply_ordered_properties(_create_line(dss_obj["bus1"], dss_obj["bus2"], dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
+        defaults = _apply_ordered_properties(_create_line(name; _to_kwargs(dss_obj)...), dss_obj)
 
         nphases = defaults["phases"]
 
@@ -488,7 +487,7 @@ end
 function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "xfmrcode", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "xfmrcode")
-        defaults = _apply_ordered_properties(_create_xfmrcode(dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
+        defaults = _apply_ordered_properties(_create_xfmrcode(name; _to_kwargs(dss_obj)...), dss_obj)
 
         nphases = defaults["phases"]
         nrw = defaults["windings"]
@@ -592,7 +591,7 @@ end
 function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "transformer", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "transformer")
-        defaults = _apply_ordered_properties(_create_transformer(dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
+        defaults = _apply_ordered_properties(_create_transformer(name; _to_kwargs(dss_obj)...), dss_obj)
 
         nphases = defaults["phases"]
         nrw = defaults["windings"]
@@ -698,7 +697,7 @@ end
 function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "pvsystem", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "pvsystem")
-        defaults = _apply_ordered_properties(_create_pvsystem(dss_obj["bus1"], dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
+        defaults = _apply_ordered_properties(_create_pvsystem(name; _to_kwargs(dss_obj)...), dss_obj)
 
         # TODO pick parameters for solar objects
 
@@ -740,7 +739,7 @@ end
 function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
     for (name, dss_obj) in get(data_dss, "storage", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "storage")
-        defaults = _apply_ordered_properties(_create_storage(dss_obj["bus1"], dss_obj["name"]; _to_kwargs(dss_obj)...), dss_obj)
+        defaults = _apply_ordered_properties(_create_storage(name; _to_kwargs(dss_obj)...), dss_obj)
 
         eng_obj = Dict{String,Any}()
 
@@ -804,8 +803,7 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
     end
 
     if haskey(data_dss, "vsource") && haskey(data_dss["vsource"], "source") && haskey(data_dss, "circuit")
-        source = data_dss["vsource"]["source"]
-        defaults = _create_vsource(get(source, "bus1", "sourcebus"), source["name"]; _to_kwargs(source)...)
+        defaults = _create_vsource("source"; _to_kwargs(data_dss["vsource"]["source"])...)
         source_bus = _parse_busname(defaults["bus1"])[1]
 
         data_eng["name"] = data_dss["circuit"]
@@ -813,10 +811,10 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
 
         # TODO rename fields
         data_eng["settings"]["v_var_scalar"] = 1e3
-        data_eng["settings"]["set_vbase_val"] = defaults["basekv"] / sqrt(3)
-        data_eng["settings"]["set_vbase_bus"] = source_bus
-        data_eng["settings"]["set_sbase_val"] = defaults["basemva"] * 1e3
-        data_eng["settings"]["basefreq"] = get(get(data_dss, "options", Dict{String,Any}()), "defaultbasefreq", 60.0)
+        data_eng["settings"]["vbase"] = defaults["basekv"] / sqrt(3)
+        data_eng["settings"]["base_bus"] = source_bus
+        data_eng["settings"]["sbase"] = defaults["basemva"] * 1e3
+        data_eng["settings"]["base_frequency"] = get(get(data_dss, "options", Dict{String,Any}()), "defaultbasefreq", 60.0)
 
         data_eng["files"] = data_dss["filename"]
     else

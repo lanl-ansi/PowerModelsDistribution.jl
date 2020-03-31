@@ -12,9 +12,9 @@ function make_per_unit!(data::Dict{String,<:Any})
 
     if  data_model_type == "mathematical"
         if !get(data, "per_unit", false)
-            bus_indexed_id = string(data["bus_lookup"][data["settings"]["set_vbase_bus"]])
-            vbases = Dict(bus_indexed_id=>data["settings"]["set_vbase_val"])
-            sbase = data["settings"]["set_sbase_val"]
+            bus_indexed_id = string(data["bus_lookup"][data["settings"]["base_bus"]])
+            vbases = Dict(bus_indexed_id=>data["settings"]["vbase"])
+            sbase = data["settings"]["sbase"]
 
             _make_math_per_unit!(data, vbases=vbases, sbase=sbase, v_var_scalar=data["settings"]["v_var_scalar"])
         else
@@ -388,6 +388,8 @@ function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true
             end
         end
     end
+
+    solution_si["per_unit"] = false
 
     return solution_si
 end

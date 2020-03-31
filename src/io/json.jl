@@ -5,33 +5,34 @@ import JSON.Serializations: CommonSerialization, StandardSerialization
 import JSON.Writer: StructuralContext, show_json
 struct PMDSerialization <: CommonSerialization end
 
-function _jsonver2juliaver!(pm_data)
-    if haskey(pm_data, "source_version") && isa(pm_data["source_version"], Dict)
-        pm_data["source_version"] = "$(pm_data["source_version"]["major"]).$(pm_data["source_version"]["minor"]).$(pm_data["source_version"]["patch"])"
+
+function _jsonver2juliaver!(data::Dict{String,<:Any})
+    if haskey(data, "source_version") && isa(data["source_version"], Dict)
+        data["source_version"] = "$(data["source_version"]["major"]).$(data["source_version"]["minor"]).$(data["source_version"]["patch"])"
     end
 end
 
 
-function _parse_mats_recursive!(dict)
-    parse =  haskey(dict, "type") && dict["type"]=="Matrix" && haskey(dict, "eltype") && haskey(dict, "value")
+function _parse_mats_recursive!(data::Dict{String,<:Any})::Dict{String,Any}
+    parse =  haskey(data, "type") && data["type"]=="Matrix" && haskey(data, "eltype") && haskey(data, "value")
     if parse
-        return _parse_matrix_value(dict["value"], dict["eltype"])
+        return _parse_matrix_value(data["value"], data["eltype"])
     else
-        for (k,v) in dict
+        for (k,v) in data
             if isa(v, Dict)
-                dict[k] = _parse_mats!(v)
+                data[k] = _parse_mats!(v)
             elseif isa(v, Vector) && Dict <: eltype(v)
-                dict[k] = [isa(x, Dict) ? _parse_mats!(x) : x for x in v]
+                data[k] = [isa(x, Dict) ? _parse_mats!(x) : x for x in v]
             end
         end
 
-        return dict
+        return data
     end
 end
 
 
-function _parse_mats!(root_dict)
-    stack = [(root_dict, k, v) for (k, v) in root_dict]
+function _parse_mats!(data::Dict{String,<:Any})
+    stack = [(data, k, v) for (k, v) in data]
     while !isempty(stack)
         (store, k, v) = pop!(stack)
 
@@ -52,38 +53,38 @@ end
 
 ""
 function parse_json(file::String; kwargs...)
-    pmd_data = open(file) do io
+    data = open(file) do io
         parse_json(io; filetype=split(lowercase(file), '.')[end], kwargs...)
     end
-    return pmd_data
+    return data
 end
 
 
 "Parses json from iostream or string"
 function parse_json(io::IO; kwargs...)::Dict{String,Any}
-    pm_data = JSON.parse(io)
+    data = JSON.parse(io)
 
-    _jsonver2juliaver!(pm_data)
+    _jsonver2juliaver!(data)
 
-    _parse_mats!(pm_data)
+    _parse_mats!(data)
 
     if get(kwargs, :validate, true)
-        PowerModels.correct_network_data!(pm_data)
+        PowerModels.correct_network_data!(data)
     end
 
-    return pm_data
+    return data
 end
 
 
-function print_file(path::String, pmd_data)
+function print_file(path::String, data)
     open(path, "w") do io
-        print_file(io, pmd_data)
+        print_file(io, data)
     end
 end
 
 
-function print_file(io::IO, pmd_data)
-    JSON.print(io, JSON.parse(sprint(show_json, PMDSerialization(), pmd_data)))
+function print_file(io::IO, data)
+    JSON.print(io, JSON.parse(sprint(show_json, PMDSerialization(), data)))
 end
 
 

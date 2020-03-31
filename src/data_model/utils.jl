@@ -442,15 +442,12 @@ end
 
 
 "initialization actions for unmapping"
-function _init_unmap_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, map::Dict{Symbol,Any}; map_solution::Bool=false)::Dict{String,Any}
+function _init_unmap_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, map::Dict{Symbol,Any})::Dict{String,Any}
     if !haskey(data_eng, eng_obj_type)
         data_eng[eng_obj_type] = Dict{Any,Any}()
     end
 
     eng_obj = Dict{String,Any}()
-    if !map_solution
-        merge!(eng_obj, map[:extras])
-    end
 
     return eng_obj
 end
@@ -459,7 +456,7 @@ end
 "returns component from the mathematical data model"
 function _get_math_obj(data_math::Dict{String,<:Any}, to_id::String)::Dict{String,Any}
     math_type, math_id = split(to_id, '.')
-    return data_math[math_type][math_id]
+    return haskey(data_math, math_type) && haskey(data_math[math_type], math_id) ? data_math[math_type][math_id] : Dict{String,Any}()
 end
 
 

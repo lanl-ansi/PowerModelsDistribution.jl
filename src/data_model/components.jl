@@ -24,8 +24,8 @@ function add_object!(data_eng::Dict{String,<:Any}, obj_type::String, obj_id::Any
     end
 
     if obj_type == "voltage_source"
-        if !haskey(data_eng["settings"], "set_vbase_bus")
-            data_eng["settings"]["set_vbase_bus"] = object["bus"]
+        if !haskey(data_eng["settings"], "base_bus")
+            data_eng["settings"]["base_bus"] = object["bus"]
         end
     end
 
@@ -63,8 +63,8 @@ function Model(model_type::String="engineering"; kwargs...)::Dict{String,Any}
             "per_unit" => false,
             "settings" => Dict{String,Any}(
                 "v_var_scalar" => get(kwargs, :v_var_scalar, 1e3),
-                "set_vbase_val" => get(kwargs, :basekv, 1.0),
-                "set_sbase_val" => get(kwargs, :baseMVA, 1.0),
+                "vbase" => get(kwargs, :basekv, 1.0),
+                "sbase" => get(kwargs, :baseMVA, 1.0),
                 "basefreq" => get(kwargs, :basefreq, 60.0),
             )
         )

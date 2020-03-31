@@ -493,7 +493,7 @@ function _discover_buses(data_dss::Dict{String,<:Any})::Set
     for obj_type in _dss_edge_components
         for (name, dss_obj) in get(data_dss, obj_type, Dict{String,Any}())
             if obj_type == "transformer"
-                dss_obj = _create_transformer(dss_obj["name"]; _to_kwargs(dss_obj)...)
+                dss_obj = _create_transformer(name; _to_kwargs(dss_obj)...)
                 for bus in dss_obj["buses"]
                     push!(buses, split(bus, '.'; limit=2)[1])
                 end

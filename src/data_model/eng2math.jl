@@ -19,31 +19,13 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "voltage_source" => ["source_id"],
 )
 
-const _extra_eng_data = Dict{String,Vector{String}}(
-    "root" => ["files", "dss_options", "settings"],
-    "bus" => ["grounded", "neutral", "awaiting_ground", "xg", "phases", "rg", "terminals"],
-    "load" => [],
-    "shunt_capacitor" => [],
-    "series_capacitor" => [],
-    "shunt" => [],
-    "shunt_reactor" => [],
-    "generator" => ["control_model"],
-    "solar" => [],
-    "storage" => [],
-    "line" => ["f_connections", "t_connections", "linecode"],
-    "switch" => [],
-    "line_reactor" => [],
-    "transformer" => [],
-    "voltage_source" => [],
-)
-
 const _node_elements = ["load", "capacitor", "shunt_reactor", "generator", "solar", "storage", "vsource"]
 
 const _edge_elements = ["line", "switch", "transformer", "line_reactor", "series_capacitor"]
 
 
 ""
-function _map_eng2math(data_eng; kron_reduced::Bool=true, lossless::Bool=false, use_dss_bounds::Bool=true)
+function _map_eng2math(data_eng; kron_reduced::Bool=true, lossless::Bool=false, adjust_bounds::Bool=true)
     @assert get(data_eng, "data_model", "mathematical") == "engineering"
 
     data_math = Dict{String,Any}(
@@ -54,14 +36,12 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true, lossless::Bool=false, 
     )
 
     data_math["conductors"] = kron_reduced ? 3 : 4
-    data_math["basekv"] = data_eng["settings"]["set_vbase_val"]
-    data_math["baseMVA"] = data_eng["settings"]["set_sbase_val"]*data_eng["settings"]["v_var_scalar"]/1E6
+    data_math["basekv"] = data_eng["settings"]["vbase"]
+    data_math["baseMVA"] = data_eng["settings"]["sbase"]*data_eng["settings"]["v_var_scalar"]/1E6
 
     data_math["map"] = Dict{Int,Dict{Symbol,Any}}(
         1 => Dict{Symbol,Any}(
-            :component_type => "root",
             :unmap_function => :_map_math2eng_root!,
-            :extra => Dict{String,Any}((k,v) for (k,v) in data_eng if k in _extra_eng_data["root"])
         )
     )
 
@@ -87,7 +67,7 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true, lossless::Bool=false, 
 
     _map_eng2math_transformer!(data_math, data_eng; kron_reduced=kron_reduced)
 
-    if !use_dss_bounds
+    if !adjust_bounds
         # _find_new_bounds(data_math) # TODO
     end
 
@@ -161,7 +141,7 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
         math_obj["vmin"] = fill(0.0, length(terminals))
         math_obj["vmax"] = fill(Inf, length(terminals))
 
-        math_obj["base_kv"] = data_eng["settings"]["set_vbase_val"]
+        math_obj["base_kv"] = data_eng["settings"]["vbase"]
 
         if kron_reduced
             filter = terminals.!=kr_neutral
@@ -184,8 +164,6 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
             :from => name,
             :to => "bus.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_bus!,
-            :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["bus"])
         )
     end
 end
@@ -228,8 +206,6 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             :from => name,
             :to => "load.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_load!,
-            :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["load"])
         )
     end
 end
@@ -277,8 +253,6 @@ function _map_eng2math_shunt_capacitor!(data_math::Dict{String,<:Any}, data_eng:
             :from => name,
             :to => "shunt.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_shunt_capacitor!,
-            :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["shunt_capacitor"])
         )
     end
 end
@@ -313,8 +287,6 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
             :from => name,
             :to => "shunt.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_capacitor!,
-            :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["shunt"])
         )
     end
 end
@@ -351,8 +323,6 @@ function _map_eng2math_shunt_reactor!(data_math::Dict{String,<:Any}, data_eng::D
             :from => name,
             :to => "shunt.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_shunt_reactor!,
-            :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["shunt_reactor"])
         )
     end
 end
@@ -407,8 +377,6 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
             :from => name,
             :to => "gen.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_generator!,
-            :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["generator"])
         )
     end
 end
@@ -455,8 +423,6 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
             :from => "solar.$name",
             :to => "gen.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_solar!,
-            :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["solar"])
         )
     end
 end
@@ -500,8 +466,6 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
             :from => name,
             :to => "storage.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_storage!,
-            :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["storage"])
         )
     end
 end
@@ -532,11 +496,11 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         math_obj["br_r"] = eng_obj["rs"] * eng_obj["length"]
         math_obj["br_x"] = eng_obj["xs"] * eng_obj["length"]
 
-        math_obj["g_fr"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9)
-        math_obj["g_to"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_to"] * eng_obj["length"] / 1e9)
+        math_obj["g_fr"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9)
+        math_obj["g_to"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["g_to"] * eng_obj["length"] / 1e9)
 
-        math_obj["b_fr"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9)
-        math_obj["b_to"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_to"] * eng_obj["length"] / 1e9)
+        math_obj["b_fr"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9)
+        math_obj["b_to"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["b_to"] * eng_obj["length"] / 1e9)
 
         math_obj["angmin"] = fill(-60.0, nphases)
         math_obj["angmax"] = fill( 60.0, nphases)
@@ -572,8 +536,6 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             :from => name,
             :to => "branch.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_line!,
-            :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["line"])
         )
     end
 end
@@ -595,11 +557,11 @@ function _map_eng2math_line_reactor!(data_math::Dict{String,<:Any}, data_eng::Di
         math_obj["br_r"] = eng_obj["rs"] * eng_obj["length"]
         math_obj["br_x"] = eng_obj["xs"] * eng_obj["length"]
 
-        math_obj["g_fr"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9)
-        math_obj["g_to"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_to"] * eng_obj["length"] / 1e9)
+        math_obj["g_fr"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9)
+        math_obj["g_to"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["g_to"] * eng_obj["length"] / 1e9)
 
-        math_obj["b_fr"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9)
-        math_obj["b_to"] = (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_to"] * eng_obj["length"] / 1e9)
+        math_obj["b_fr"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9)
+        math_obj["b_to"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["b_to"] * eng_obj["length"] / 1e9)
 
         math_obj["angmin"] = fill(-60.0, nphases)
         math_obj["angmax"] = fill( 60.0, nphases)
@@ -635,8 +597,6 @@ function _map_eng2math_line_reactor!(data_math::Dict{String,<:Any}, data_eng::Di
             :from => name,
             :to => "branch.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_line_reactor!,
-            :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["line_reactor"])
         )
     end
 end
@@ -662,9 +622,6 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 :from => name,
                 :to => "switch.$(math_obj["index"])",
                 :unmap_function => :_map_math2eng_switch!,
-                :kron_reduced => kron_reduced,
-                :lossless => lossless,
-                :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["switch"])
             )
         else
             # build virtual bus
@@ -707,10 +664,10 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
                 "br_r" => eng_obj["rs"] * eng_obj["length"] / Zbase,
                 "br_x" => eng_obj["xs"] * eng_obj["length"] / Zbase,
-                "g_fr" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9),
-                "g_to" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["g_to"] * eng_obj["length"] / 1e9),
-                "b_fr" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9),
-                "b_to" => Zbase * (2.0 * pi * data_eng["settings"]["basefreq"] * eng_obj["b_to"] * eng_obj["length"] / 1e9),
+                "g_fr" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9),
+                "g_to" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["g_to"] * eng_obj["length"] / 1e9),
+                "b_fr" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9),
+                "b_to" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["b_to"] * eng_obj["length"] / 1e9),
                 "angmin" => fill(-60.0, nphases),
                 "angmax" => fill( 60.0, nphases),
                 "transformer" => false,
@@ -755,9 +712,6 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 # :to_id => ["switch.$(switch_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],  # TODO enable real switches
                 :to => ["branch.$(branch_obj["index"])"],
                 :unmap_function => :_map_math2eng_switch!,
-                :kron_reduced => kron_reduced,
-                :lossless => lossless,
-                :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["switch"])
             )
         end
     end
@@ -773,8 +727,6 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
             :from => name,
             :to => Vector{String}([]),
             :unmap_function => :_map_math2eng_transformer!,
-            :kron_reduced => kron_reduced,
-            :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["transformer"])
         )
 
         to_map = data_math["map"][map_idx][:to]
@@ -918,9 +870,6 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 :from => name,
                 :to => "gen.$(math_obj["index"])",
                 :unmap_function => :_map_math2eng_voltage_source!,
-                :kron_reduced => kron_reduced,
-                :lossless => lossless,
-                :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["voltage_source"])
             )
         else
             bus_obj = Dict{String,Any}(
@@ -982,8 +931,6 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 :from => name,
                 :to => ["gen.$(gen_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],
                 :unmap_function => :_map_math2eng_voltage_source!,
-                :kron_reduced => kron_reduced,
-                :extra => Dict{String,Any}((k,v) for (k,v) in eng_obj if k in _extra_eng_data["voltage_source"])
             )
         end
     end

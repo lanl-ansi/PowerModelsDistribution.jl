@@ -272,7 +272,7 @@
 
     @testset "opendss parse verify mvasc3/mvasc1 circuit parse" begin
         dss = PMD.parse_dss("../test/data/opendss/test_simple.dss")
-        circuit = PMD._create_vsource("sourcebus", "source"; PMD._to_kwargs(dss["vsource"]["source"])...)
+        circuit = PMD._create_vsource("source"; PMD._to_kwargs(dss["vsource"]["source"])...)
 
         @test circuit["mvasc1"] == 2100.0
         @test circuit["mvasc3"] == 1900.0
@@ -280,7 +280,7 @@
         @test isapprox(circuit["isc1"], 10543.0; atol=1e-1)
 
         dss = PMD.parse_dss("../test/data/opendss/test_simple3.dss")
-        circuit = PMD._create_vsource("sourcebus", "source"; PMD._to_kwargs(dss["vsource"]["source"])...)
+        circuit = PMD._create_vsource("source"; PMD._to_kwargs(dss["vsource"]["source"])...)
 
         @test circuit["mvasc1"] == 2100.0
         @test isapprox(circuit["mvasc3"], 1900.0; atol=1e-1)
@@ -288,7 +288,7 @@
         @test isapprox(circuit["isc1"], 10543.0; atol=1e-1)
 
         dss = PMD.parse_dss("../test/data/opendss/test_simple4.dss")
-        circuit = PMD._create_vsource("sourcebus", "source"; PMD._to_kwargs(dss["vsource"]["source"])...)
+        circuit = PMD._create_vsource("source"; PMD._to_kwargs(dss["vsource"]["source"])...)
 
         @test isapprox(circuit["mvasc1"], 2091.5; atol=1e-1)
         @test circuit["mvasc3"] == 2000.0

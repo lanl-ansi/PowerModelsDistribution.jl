@@ -21,8 +21,7 @@ Creates a Dict{String,Any} containing all of the properties of a Linecode. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
-function _create_linecode(name::AbstractString=""; kwargs...)::Dict{String,Any}
-    kwargs = Dict{Symbol,Any}(kwargs)
+function _create_linecode(name::String=""; kwargs...)::Dict{String,Any}
     phases = get(kwargs, :nphases, 3)
     circuit_basefreq = get(kwargs, :circuit_basefreq, 60.0)
     basefreq = get(kwargs, :basefreq, circuit_basefreq)
@@ -114,8 +113,10 @@ Creates a Dict{String,Any} containing all of the properties for a Line. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
-function _create_line(bus1="", bus2="", name::AbstractString=""; kwargs...)::Dict{String,Any}
-    kwargs = Dict{Symbol,Any}(kwargs)
+function _create_line(name::String=""; kwargs...)::Dict{String,Any}
+    bus1 = get(kwargs, :bus1, "")
+    bus2 = get(kwargs, :bus2, "")
+
     phases = get(kwargs, :phases, 3)
     circuit_basefreq = get(kwargs, :circuit_basefreq, 60.0)
     basefreq = get(kwargs, :basefreq, circuit_basefreq)
@@ -154,8 +155,8 @@ function _create_line(bus1="", bus2="", name::AbstractString=""; kwargs...)::Dic
     Ys = (complex(0.0, 2 * pi * basefreq * c1) * 2.0 + complex(0.0, 2 * pi * basefreq * c0)) / 3.0
     Ym = (complex(0.0, 2 * pi * basefreq * c0) - complex(0.0, 2 * pi * basefreq * c1)) / 3.0
 
-    Z = zeros(Complex{Float64}, phases, phases)
-    Yc = zeros(Complex{Float64}, phases, phases)
+    Z  = Matrix{Complex{Float64}}(undef, phases, phases)
+    Yc = Matrix{Complex{Float64}}(undef, phases, phases)
     for i in 1:phases
         Z[i,i] = Zs
         Yc[i,i] = Ys
@@ -240,8 +241,9 @@ Creates a Dict{String,Any} containing all of the expected properties for a
 Load. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _create_load(bus1="", name::AbstractString=""; kwargs...)::Dict{String,Any}
-    kwargs = Dict{Symbol,Any}(kwargs)
+function _create_load(name::String=""; kwargs...)::Dict{String,Any}
+    bus1 = get(kwargs, :bus1, "")
+
     kv = get(kwargs, :kv, 12.47)
     kw = get(kwargs, :kw, 10.0)
     pf = get(kwargs, :pf, 0.88)
@@ -305,7 +307,7 @@ function _create_load(bus1="", name::AbstractString=""; kwargs...)::Dict{String,
         "cvrcurve" => get(kwargs, :cvrcurve, ""),
         "numcust" => get(kwargs, :numcust, 1),
         "zipv" => get(kwargs, :zipv, ""),
-        "%seriesrl" => get(kwargs, "%seriesrl", 0.5),
+        "%seriesrl" => get(kwargs, Symbol("%seriesrl"), 0.5),
         "relweight" => get(kwargs, :relweight, 1.0),
         "vlowpu" => get(kwargs, :vlowpu, 0.5),
         "puxharm" => get(kwargs, :puxharm, 0.0),
@@ -324,8 +326,9 @@ Creates a Dict{String,Any} containing all of the expected properties for a
 Generator. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _create_generator(bus1="", name::AbstractString=""; kwargs...)::Dict{String,Any}
-    kwargs = Dict{Symbol,Any}(kwargs)
+function _create_generator(name::String=""; kwargs...)::Dict{String,Any}
+    bus1 = get(kwargs, :bus1, "")
+
     conn = get(kwargs, :conn, "wye")
 
     kw = get(kwargs, :kw, 100.0)
@@ -344,7 +347,7 @@ function _create_generator(bus1="", name::AbstractString=""; kwargs...)::Dict{St
         "model" => get(kwargs, :model, 1),
         "yearly" => get(kwargs, :yearly, get(kwargs, :daily, Vector{Float64}([0.0, 0.0]))),
         "daily" => get(kwargs, :daily, Vector{Float64}([0.0, 0.0])),
-        "duty" => get(kwargs, "duty", ""),
+        "duty" => get(kwargs, :duty, ""),
         "dispmode" => get(kwargs, :dispmode, "default"),
         "disvalue" => get(kwargs, :dispvalue, 0.0),
         "conn" => conn,
@@ -390,8 +393,9 @@ Capacitor. If `bus2` is not specified, the capacitor will be treated as a shunt.
 See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _create_capacitor(bus1="", name::AbstractString=""; kwargs...)::Dict{String,Any}
-    kwargs = Dict{Symbol,Any}(kwargs)
+function _create_capacitor(name::String=""; kwargs...)::Dict{String,Any}
+    bus1 = get(kwargs, :bus1, "")
+
     phases = get(kwargs, :phases, 3)
 
     bus2 = get(kwargs, :bus2, string(split(bus1, ".")[1],".",join(fill("0", phases), ".")))
@@ -429,8 +433,10 @@ Reactor. If `bus2` is not specified Reactor is treated like a shunt. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
-function _create_reactor(bus1="", name::AbstractString="", bus2=""; kwargs...)::Dict{String,Any}
-    kwargs = Dict{Symbol,Any}(kwargs)
+function _create_reactor(name::String=""; kwargs...)::Dict{String,Any}
+    bus1 = get(kwargs, :bus1, "")
+    bus2 = get(kwargs, :bus2, "")
+
     phases = get(kwargs, :phases, 3)
     kvar = get(kwargs, :kvar, 1200.0)
     kv = get(kwargs, :kv, 12.47)
@@ -455,7 +461,7 @@ function _create_reactor(bus1="", name::AbstractString="", bus2=""; kwargs...)::
 
     # TODO: handle `parallel`
     if (haskey(kwargs, :kv) && haskey(kwargs, :kvar)) || haskey(kwargs, :x) || haskey(kwargs, :lmh) || haskey(kwargs, :z)
-        if haskey(kwargs, :kvar) && haskey(:kv)
+        if haskey(kwargs, :kvar) && haskey(kwargs, :kv)
             kvarperphase = kvar / phases
             if conn == "delta"
                 phasekv = kv
@@ -574,8 +580,10 @@ generator. Mostly used as `source` which represents the circuit. See
 OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
-function _create_vsource(bus1="", name::AbstractString="", bus2=0; kwargs...)::Dict{String,Any}
-    kwargs = Dict{Symbol,Any}(kwargs)
+function _create_vsource(name::String=""; kwargs...)::Dict{String,Any}
+    bus1 = get(kwargs, :bus1, "sourcebus")
+    bus2 = get(kwargs, :bus2, "")
+
     x1r1 = get(kwargs, :x1r1, 4.0)
     x0r0 = get(kwargs, :x0r0, 3.0)
 
@@ -787,8 +795,7 @@ Creates a Dict{String,Any} containing all of the expected properties for a
 Transformer. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _create_transformer(name::AbstractString=""; kwargs...)
-    kwargs = Dict{Symbol,Any}(kwargs)
+function _create_transformer(name::String=""; kwargs...)
     windings = isempty(name) ? 3 : get(kwargs, :windings, 2)
     phases = get(kwargs, :phases, 3)
 
@@ -908,8 +915,7 @@ end
 
 
 "Transformer codes contain all of the same properties as a transformer except bus, buses, bank, xfmrcode"
-function _create_xfmrcode(name::AbstractString=""; kwargs...)
-    kwargs = Dict{Symbol,Any}(kwargs)
+function _create_xfmrcode(name::String=""; kwargs...)
     windings = isempty(name) ? 3 : get(kwargs, :windings, 2)
     phases = get(kwargs, :phases, 3)
 
@@ -1028,8 +1034,9 @@ PVSystem. See OpenDSS document
 https://github.com/tshort/OpenDSS/blob/master/Doc/OpenDSS%20PVSystem%20Model.doc
 for valid fields and ways to specify the different properties.
 """
-function _create_pvsystem(bus1="", name::AbstractString=""; kwargs...)
-    kwargs = Dict{Symbol,Any}(kwargs)
+function _create_pvsystem(name::String=""; kwargs...)
+    bus1 = get(kwargs, :bus1, "")
+
     kv = get(kwargs, :kv, 12.47)
     kw = get(kwargs, :kw, 10.0)
     pf = get(kwargs, :pf, 0.88)
@@ -1105,9 +1112,7 @@ Creates a Dict{String,Any} containing all expected properties for a storage
 element. See OpenDSS documentation for valid fields and ways to specify the
 different properties.
 """
-function _create_storage(bus1="", name::AbstractString=""; kwargs...)
-    kwargs = Dict{Symbol,Any}(kwargs)
-
+function _create_storage(name::String=""; kwargs...)
     Dict{String,Any}(
         "name" => name,
         "%charge" => get(kwargs, :charge, 100.0),
@@ -1121,7 +1126,7 @@ function _create_storage(bus1="", name::AbstractString=""; kwargs...)
         "%stored" => get(kwargs, :stored, 100.0),
         "%x" => get(kwargs, :x, 50.0),
         "basefreq" => get(kwargs, :basefreq, 60.0),
-        "bus1" => bus1,
+        "bus1" => get(kwargs, :bus1, ""),
         "chargetrigger" => get(kwargs, :chargetrigger, 0.0),
         "class" => get(kwargs, :class, 0),
         "conn" => get(kwargs, :conn, "wye"),
@@ -1161,13 +1166,13 @@ Creates a Dict{String,Any} containing all expected properties for a LoadShape
 element. See OpenDSS documentation for valid fields and ways to specify
 different properties.
 """
-function _create_loadshape(name::AbstractString=""; kwargs...)
-    kwargs = Dict{Symbol,Any}(kwargs)
-
+function _create_loadshape(name::String=""; kwargs...)
     if haskey(kwargs, :minterval)
-        kwargs[:interval] = kwargs[:minterval] / 60
+        interval = kwargs[:minterval] / 60
     elseif haskey(kwargs, :sinterval)
-        kwargs[:interval] = kwargs[:sinterval] / 60 / 60
+        interval = kwargs[:sinterval] / 60 / 60
+    else
+        interval = get(kwargs, :interval, 1.0)
     end
 
     npts = get(kwargs, :npts, 1)
@@ -1175,14 +1180,14 @@ function _create_loadshape(name::AbstractString=""; kwargs...)
     pmult = get(kwargs, :pmult, fill(1.0, npts))[1:npts]
     qmult = get(kwargs, :qmult, fill(1.0, npts))[1:npts]
 
-    hour = get(kwargs, :hour, collect(range(1.0, step=get(kwargs, :interval, 1.0), length=npts)))[1:npts]
+    hour = get(kwargs, :hour, collect(range(1.0, step=interval, length=npts)))[1:npts]
 
     Dict{String,Any}(
         "name" => name,
         "npts" => npts,
-        "interval" => get(kwargs, :interval, 1.0),
-        "minterval" => get(kwargs, :interval, 1.0) .* 60,
-        "sinterval" => get(kwargs, :interval, 1.0) .* 3600,
+        "interval" => interval,
+        "minterval" => interval * 60,
+        "sinterval" => interval * 3600,
         "pmult" => pmult,
         "qmult" => qmult,
         "hour" => hour,
@@ -1207,9 +1212,7 @@ Creates a Dict{String,Any} containing all expected properties for a XYCurve
 object. See OpenDSS documentation for valid fields and ways to specify
 different properties.
 """
-function _create_xycurve(name::AbstractString=""; kwargs...)
-    kwargs = Dict{Symbol,Any}(kwargs)
-
+function _create_xycurve(name::String=""; kwargs...)
     if haskey(kwargs, :points)
         xarray = Vector{Float64}([])
         yarray = Vector{Float64}([])
@@ -1258,8 +1261,6 @@ end
 
 ""
 function _create_options(; kwargs...)
-    kwargs = Dict{Symbol,Any}(kwargs)
-
     Dict{String,Any}(
         "%growth" => get(kwargs, Symbol("%growth"), 2.5),
         "%mean" => get(kwargs, Symbol("%mean"), 65.0),
