@@ -76,7 +76,7 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
         :qd => Array{<:Real, 1},
         :pd_ref => Array{<:Real, 1},
         :qd_ref => Array{<:Real, 1},
-        :vnom => Array{<:Real, 1},
+        :vnom => Real,
         :alpha => Array{<:Real, 1},
         :beta => Array{<:Real, 1},
     ),
@@ -212,17 +212,16 @@ const _eng_model_req_fields= Dict{Symbol,Vector{Symbol}}(
 function check_eng_data_model(data_eng::Dict{String,<:Any})
     for (component_type, components) in data_eng
         if isa(components, Dict)
-            for (name, component) in keys(components)
+            for (name, component) in components
                 _check_eng_component_dtypes(data_eng, component_type, name)
 
                 for field in get(_eng_model_req_fields, Symbol(component_type), Vector{Symbol}([]))
                     @assert haskey(component, string(field)) "The property \'$field\' is missing on $component_type $name"
                 end
 
-                for check in get(_eng_model_checks, Symbol(component_type), missing)
-                    if !ismissing(check)
-                        @eval $(check)(data_eng, name)
-                    end
+                check = get(_eng_model_checks, Symbol(component_type), missing)
+                if !ismissing(check)
+                    getfield(PowerModelsDistribution, check)(data_eng, name)
                 end
             end
         end
@@ -231,7 +230,7 @@ end
 
 
 "checks that an engineering model component has the correct data types"
-function _check_eng_component_dtypes(data_eng::Dict{String,<:Any}, component_type::String, component_name::String; additional_dtypes=Dict{Symbol,Type}())
+function _check_eng_component_dtypes(data_eng::Dict{String,<:Any}, component_type::String, component_name::Any; additional_dtypes=Dict{Symbol,Type}())
     if haskey(_eng_model_dtypes, Symbol(component_type))
         dtypes = merge(_eng_model_dtypes[Symbol(component_type)], additional_dtypes)
     else
@@ -243,7 +242,7 @@ function _check_eng_component_dtypes(data_eng::Dict{String,<:Any}, component_typ
 
         for (field, dtype) in dtypes
             if haskey(component, string(field))
-                @assert isa(component[field], dtype) "$component_type $component_name: the property $field should be a $dtype, not a $(typeof(component[field]))"
+                @assert isa(component[string(field)], dtype) "$component_type $component_name: the property $field should be a $dtype, not a $(typeof(component[string(field)]))"
             end
         end
     else
@@ -260,8 +259,8 @@ end
 
 
 "check that `fields` has size `data_size`"
-function _check_has_size(component::Dict{String,<:Any}, fields::Vector{String}, data_size::Tuple; context::Union{String,Missing}=missing, allow_missing::Bool=true)
-    for key in keys
+function _check_has_size(component::Dict{String,<:Any}, fields::Vector{String}, data_size::Union{Int, Tuple}; context::Union{String,Missing}=missing, allow_missing::Bool=true)
+    for key in fields
         if haskey(component, key) || !allow_missing
             @assert all(size(component[string(key)]).==data_size) "$context: the property $key should have as size $data_size"
         end
@@ -356,7 +355,7 @@ end
 
 "linecode data checks"
 function _check_linecode(data_eng::Dict{String,<:Any}, name::Any)
-    _check_same_size(data_eng["linecode"][name], [:rs, :xs, :g_fr, :g_to, :b_fr, :b_to])
+    _check_same_size(data_eng["linecode"][name], string.([:rs, :xs, :g_fr, :g_to, :b_fr, :b_to]))
 end
 
 
@@ -373,9 +372,9 @@ function _check_line(data_eng::Dict{String,<:Any}, name::Any)
         @assert haskey(data_eng, "linecode") && haskey(data_eng["linecode"], "$linecode_obj_name")  "line $name: the linecode $linecode_obj_name is not defined."
         linecode = data_eng["linecode"]["$linecode_obj_name"]
 
-        for key in ["n_conductors", "rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
-            @assert !haskey(line, key) "line $name: a line with a linecode, should not specify $key; this is already done by the linecode."
-        end
+        # for key in ["n_conductors", "rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
+        #     @assert !haskey(line, key) "line $name: a line with a linecode, should not specify $key; this is already done by the linecode."
+        # end
 
         N = size(linecode["rs"])[1]
         @assert length(line["f_connections"])==N "line $name: the number of terminals should match the number of conductors in the linecode."

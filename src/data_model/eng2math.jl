@@ -29,7 +29,7 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true, lossless::Bool=false, 
     @assert get(data_eng, "data_model", "mathematical") == "engineering"
 
     data_math = Dict{String,Any}(
-        "name" => data_eng["name"],
+        "name" => get(data_eng, "name", ""),
         "per_unit" => get(data_eng, "per_unit", false),
         "data_model" => "mathematical",
         "settings" => data_eng["settings"],

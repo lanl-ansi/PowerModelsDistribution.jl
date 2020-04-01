@@ -4,7 +4,7 @@
 
 
 "adds kwargs that were specified but unused by the required defaults to the component"
-function _add_unused_kwargs!(object::Dict{String,<:Any}, kwargs::Dict{Symbol,<:Any})
+function _add_unused_kwargs!(object::Dict{String,<:Any}, kwargs)
     for (property, value) in kwargs
         if !haskey(object, string(property))
             object[string(property)] = value
@@ -36,7 +36,7 @@ function add_object!(data_eng::Dict{String,<:Any}, obj_type::String, obj_id::Any
             end
 
             if obj_type == "transformer"
-                for (wdg, bus_id) in enumerate(data_eng["bus"])
+                for (wdg, bus_id) in enumerate(object["bus"])
                     if !haskey(data_eng["bus"], bus_id)
                         data_eng["bus"][bus_id] = create_bus(; terminals=object["connections"][wdg])
                     end
@@ -65,7 +65,7 @@ function Model(model_type::String="engineering"; kwargs...)::Dict{String,Any}
                 "v_var_scalar" => get(kwargs, :v_var_scalar, 1e3),
                 "vbase" => get(kwargs, :basekv, 1.0),
                 "sbase" => get(kwargs, :baseMVA, 1.0),
-                "basefreq" => get(kwargs, :basefreq, 60.0),
+                "base_frequency" => get(kwargs, :basefreq, 60.0),
             )
         )
 
@@ -127,10 +127,10 @@ function create_line(; kwargs...)
     @assert haskey(kwargs, :f_bus) && haskey(kwargs, :t_bus) "Line must at least have f_bus and t_bus specified"
 
     N = length(get(kwargs, :f_connections, collect(1:4)))
+    n_conductors = N
 
     # if no linecode, then populate loss parameters with zero
     if !haskey(kwargs, :linecode)
-        n_conductors = N
         for key in [:rs, :xs, :g_fr, :g_to, :b_fr, :b_to]
             if haskey(kwargs, key)
                 n_conductors = size(kwargs[key])[1]
@@ -244,6 +244,7 @@ function create_transformer(; kwargs...)
         "tm_max" => get(kwargs, :tm_max, fill(fill(1.1, 3), n_windings)),
         "tm_step" => get(kwargs, :tm_step, fill(fill(1/32, 3), n_windings)),
         "tm_fix" => get(kwargs, :tm_fix, fill(fill(true, 3), n_windings)),
+        "fixed" => get(kwargs, :fixed, fill(1, n_windings)),
         "connections" => get(kwargs, :connections, fill(collect(1:4), n_windings)),
     )
 
@@ -323,7 +324,7 @@ add_linecode!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(da
 
 # Edge objects
 add_line!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any; kwargs...) = add_object!(data_eng, "line", id, create_line(; f_bus=f_bus, t_bus=t_bus, kwargs...))
-add_transformer!(data_eng::Dict{String,<:Any}, id::Any, bus::Vector{Any}; kwargs...) = add_object!(data_eng, "transformer", id, create_transformer(; bus=bus, kwargs...))
+add_transformer!(data_eng::Dict{String,<:Any}, id::Any, bus::Vector{<:Any}; kwargs...) = add_object!(data_eng, "transformer", id, create_transformer(; bus=bus, kwargs...))
 # add_switch!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any; kwargs...) = add_object!(data_eng, "switch", id, create_switch(; f_bus=f_bus, t_bus=t_bus, kwargs...))
 # add_series_capacitor!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any; kwargs...) = add_object!(data_eng, "series_capacitor", id, create_series_capacitor(; f_bus=f_bus, t_bus=t_bus, kwargs...))
 # add_line_reactor!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any; kwargs...) = add_object!(data_eng, "line_reactor", id, create_line_reactor(; f_bus=f_bus, t_bus=t_bus, kwargs...))
