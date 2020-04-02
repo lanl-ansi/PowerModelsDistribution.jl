@@ -43,4 +43,4 @@ end
 export ACPPowerModel, ACRPowerModel, DCPPowerModel, NFAPowerModel, SOCWRPowerModel, conductor_ids, ismulticonductor
 
 # InfrastructureModels Exports
-export ids, ref, var, con, sol, nw_ids, nws, ismultinetwork, ismulticonductor, conductor_ids
+export ids, ref, var, con, sol, nw_ids, nws, ismultinetwork
