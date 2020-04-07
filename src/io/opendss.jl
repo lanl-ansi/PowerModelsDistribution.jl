@@ -638,13 +638,16 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
             Memento.error(_LOGGER, "For now parsing of xscarray is not supported. At most 3 windings are allowed, not $nrw.")
         end
 
-        #TODO default is 2-element if xfmrcode is 3-winding
-        # eng_obj["tm"] = [fill(defaults["taps"][w], nphases) for w in 1:nrw]
+        if haskey(dss_obj, "taps")
+            eng_obj["tm"] = [fill(defaults["taps"][w], nphases) for w in 1:nrw]
+        else
+            eng_obj["tm"] = [fill(1.0, nphases) for w in 1:nrw]
+        end
         eng_obj["fixed"] = [fill(true, nphases) for w in 1:nrw]
 
         eng_obj["bus"] = Array{String, 1}(undef, nrw)
         eng_obj["connections"] = Array{Array{Int, 1}, 1}(undef, nrw)
-        eng_obj["polarity"] = Array{Int, 1}(undef, nrw)
+        eng_obj["polarity"] = fill(1, nrw)
         eng_obj["leadlag"] = defaults["leadlag"] #TODO import from xfmrcode or not? yes I guess
 
         for w in 1:nrw
@@ -674,8 +677,6 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
                         eng_obj["connections"][w] = _barrel_roll(eng_obj["connections"][w], -1)
                     end
                 end
-            else
-                eng_obj["polarity"][w] = 1
             end
         end
 
