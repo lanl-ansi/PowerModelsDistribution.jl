@@ -505,10 +505,10 @@ function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             "imag" => missing,
             "xsc" => Vector{Any}(missing, nrw == 2 ? 1 : 3),
             "leadlag" => missing,
-            "source_id" => "xfmrcode.$name"
+            "source_id" => "xfmrcode.$name",
         )
 
-        eng_obj = Dict{String,Any}()
+        eng_obj = Dict{String,Any}("phases"=>nphases, "windings"=>nrw)
 
         winding_key = ["", "_2", "_3"]
         for w in 1:nrw
@@ -577,6 +577,10 @@ function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             eng_obj["leadlag"] = defaults["leadlag"]
         end
 
+        if !haskey(eng_obj, "configuration")
+            eng_obj["configuration"] = fill("wye", nrw)
+        end
+
         if import_all
             _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
         end
@@ -593,11 +597,36 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
         _apply_like!(dss_obj, data_dss, "transformer")
         defaults = _apply_ordered_properties(_create_transformer(name; _to_kwargs(dss_obj)...), dss_obj)
 
-        nphases = defaults["phases"]
-        nrw = defaults["windings"]
+        eng_obj = Dict{String, Any}()
 
-        dyz_map = Dict("wye"=>"wye", "delta"=>"delta", "ll"=>"delta", "ln"=>"wye")
-        confs = [dyz_map[x] for x in defaults["conns"]]
+        # import certain properties from the xfmrcode; needed to check connectivity
+        if haskey(dss_obj, "xfmrcode")
+            xfmrcode = data_eng["xfmrcode"][dss_obj["xfmrcode"]]
+            @show xfmrcode
+            nphases = xfmrcode["phases"]
+            nrw = xfmrcode["windings"]
+            confs = xfmrcode["configuration"]
+            #TODO also tm_min/tm_max
+        else
+            # import defaults and save in eng_obj
+            nphases = defaults["phases"]
+            nrw = defaults["windings"]
+            dyz_map = Dict("wye"=>"wye", "delta"=>"delta", "ll"=>"delta", "ln"=>"wye")
+            eng_obj["configuration"] = confs = [dyz_map[x] for x in defaults["conns"]]
+            eng_obj["tm_min"] = fill(fill(defaults["mintap"], nphases), nrw)
+            eng_obj["tm_max"] = fill(fill(defaults["maxtap"], nphases), nrw)
+            eng_obj["vnom"] = [defaults["kvs"][w] for w in 1:nrw]
+            eng_obj["snom"] = [defaults["kvas"][w] for w in 1:nrw]
+            # loss model (converted to SI units, referred to secondary)
+            eng_obj["rs"] = [defaults["%rs"][w]/100 for w in 1:nrw]
+            eng_obj["noloadloss"] = defaults["%noloadloss"]/100
+            eng_obj["imag"] = defaults["%imag"]/100
+            if nrw==2
+                eng_obj["xsc"] = [defaults["xhl"]]/100
+            elseif nrw==3
+                eng_obj["xsc"] = [defaults[x] for x in ["xhl", "xht", "xlt"]]/100
+            end
+        end
 
         # test if this transformer conforms with limitations
         if nphases<3 && "delta" in confs
@@ -609,28 +638,19 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
             Memento.error(_LOGGER, "For now parsing of xscarray is not supported. At most 3 windings are allowed, not $nrw.")
         end
 
-        eng_obj = Dict{String, Any}()
+        #TODO default is 2-element if xfmrcode is 3-winding
+        # eng_obj["tm"] = [fill(defaults["taps"][w], nphases) for w in 1:nrw]
+        eng_obj["fixed"] = [fill(true, nphases) for w in 1:nrw]
+
         eng_obj["bus"] = Array{String, 1}(undef, nrw)
         eng_obj["connections"] = Array{Array{Int, 1}, 1}(undef, nrw)
-        eng_obj["tm"] = Array{Array{Real, 1}, 1}(undef, nrw)
-        eng_obj["tm_min"] = Array{Array{Real, 1}, 1}(undef, nrw)
-        eng_obj["tm_max"] = Array{Array{Real, 1}, 1}(undef, nrw)
-        eng_obj["fixed"] = [[true for i in 1:nphases] for j in 1:nrw]
-        eng_obj["vnom"] = [defaults["kvs"][w] for w in 1:nrw]
-        eng_obj["snom"] = [defaults["kvas"][w] for w in 1:nrw]
-        eng_obj["connections"] = Array{Array{Int, 1}, 1}(undef, nrw)
-        eng_obj["configuration"] = Array{String, 1}(undef, nrw)
         eng_obj["polarity"] = Array{Int, 1}(undef, nrw)
-        eng_obj["leadlag"] = defaults["leadlag"]
-
-        eng_obj["nphases"] = defaults["phases"]
+        eng_obj["leadlag"] = defaults["leadlag"] #TODO import from xfmrcode or not? yes I guess
 
         for w in 1:nrw
             eng_obj["bus"][w] = _parse_busname(defaults["buses"][w])[1]
 
-            conf = dyz_map[defaults["conns"][w]]
-            eng_obj["configuration"][w] = conf
-
+            conf = confs[w]
             terminals_default = conf=="wye" ? [1:nphases..., 0] : collect(1:nphases)
 
             # append ground if connections one too short
@@ -641,13 +661,8 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
                 _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"][w]], eng_obj["connections"][w])
             end
 
-            eng_obj["polarity"][w] = 1
-            eng_obj["tm"][w] = fill(defaults["taps"][w], nphases)
-            eng_obj["tm_min"][w] = fill(defaults["mintap"], nphases)
-            eng_obj["tm_max"][w] = fill(defaults["maxtap"], nphases)
-
             if w>1
-                prim_conf = eng_obj["configuration"][1]
+                prim_conf = confs[1]
                 if defaults["leadlag"] in ["ansi", "lag"]
                     if prim_conf=="delta" && conf=="wye"
                         eng_obj["polarity"][w] = -1
@@ -659,6 +674,8 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
                         eng_obj["connections"][w] = _barrel_roll(eng_obj["connections"][w], -1)
                     end
                 end
+            else
+                eng_obj["polarity"][w] = 1
             end
         end
 
@@ -666,16 +683,6 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
 
         if !isempty(defaults["bank"])
             eng_obj["bank"] = defaults["bank"]
-        end
-
-        # loss model (converted to SI units, referred to secondary)
-        eng_obj["rs"] = [defaults["%rs"][w]/100 for w in 1:nrw]
-        eng_obj["noloadloss"] = defaults["%noloadloss"]/100
-        eng_obj["imag"] = defaults["%imag"]/100
-        if nrw==2
-            eng_obj["xsc"] = [defaults["xhl"]]/100
-        elseif nrw==3
-            eng_obj["xsc"] = [defaults[x] for x in ["xhl", "xht", "xlt"]]/100
         end
 
         eng_obj = create_transformer(; Dict(Symbol.(keys(eng_obj)).=>values(eng_obj))...)
