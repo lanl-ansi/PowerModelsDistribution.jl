@@ -2,6 +2,11 @@
 
 ## staged
 
+- nothing
+
+## v0.9.0
+
+- Update to PowerModels v0.16
 - Add support for Memento v0.13, v1.0
 
 ## v0.8.1
