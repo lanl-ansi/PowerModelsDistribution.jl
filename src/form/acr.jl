@@ -144,7 +144,7 @@ function constraint_mc_power_balance_slack(pm::_PMs.AbstractACRModel, nw::Int, i
         push!(cstr_q, cq)
     end
 
-    if _PMs.report_duals(pm)
+    if InfrastructureModels.report_duals(pm)
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
@@ -196,7 +196,7 @@ function constraint_mc_power_balance(pm::_PMs.AbstractACRModel, nw::Int, i::Int,
         - (-vr.*(Gt*vi+Bt*vr) + vi.*(Gt*vr-Bt*vi))
     )
 
-    if _PMs.report_duals(pm)
+    if InfrastructureModels.report_duals(pm)
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
@@ -262,7 +262,7 @@ function constraint_mc_power_balance_load(pm::_PMs.AbstractACRModel, nw::Int, i:
         push!(cstr_q, cq)
     end
 
-    if _PMs.report_duals(pm)
+    if InfrastructureModels.report_duals(pm)
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end

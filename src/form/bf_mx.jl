@@ -35,8 +35,8 @@ function variable_mc_voltage_prod_hermitian(pm::AbstractUBFModels; n_cond::Int=3
     # maintain compatibility
     _PMs.var(pm, nw)[:w] = Dict{Int, Any}([(id, diag(Wr[id])) for id in bus_ids])
 
-    report && _PMs.sol_component_value(pm, nw, :bus, :Wr, _PMs.ids(pm, nw, :bus), Wr)
-    report && _PMs.sol_component_value(pm, nw, :bus, :Wi, _PMs.ids(pm, nw, :bus), Wi)
+    report && InfrastructureModels.sol_component_value(pm, nw, :bus, :Wr, _PMs.ids(pm, nw, :bus), Wr)
+    report && InfrastructureModels.sol_component_value(pm, nw, :bus, :Wi, _PMs.ids(pm, nw, :bus), Wi)
 end
 
 
@@ -69,8 +69,8 @@ function variable_mc_branch_series_current_prod_hermitian(pm::AbstractUBFModels;
     _PMs.var(pm, nw)[:CCi] = Li
     _PMs.var(pm, nw)[:cm] = Dict([(id, diag(Lr[id])) for id in branch_ids])
 
-    report && _PMs.sol_component_value(pm, nw, :branch, :CCr, _PMs.ids(pm, nw, :branch), Lr)
-    report && _PMs.sol_component_value(pm, nw, :branch, :CCi, _PMs.ids(pm, nw, :branch), Li)
+    report && InfrastructureModels.sol_component_value(pm, nw, :branch, :CCr, _PMs.ids(pm, nw, :branch), Lr)
+    report && InfrastructureModels.sol_component_value(pm, nw, :branch, :CCi, _PMs.ids(pm, nw, :branch), Li)
 end
 
 
@@ -114,8 +114,8 @@ function variable_mc_branch_flow(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=p
     _PMs.var(pm, nw)[:p] = Dict([(id,diag(P[id])) for id in branch_arcs])
     _PMs.var(pm, nw)[:q] = Dict([(id,diag(Q[id])) for id in branch_arcs])
 
-    report && _PMs.sol_component_value_edge(pm, nw, :branch, :Pf, :Pt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), P)
-    report && _PMs.sol_component_value_edge(pm, nw, :branch, :Qf, :Qt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), Q)
+    report && InfrastructureModels.sol_component_value_edge(pm, nw, :branch, :Pf, :Pt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), P)
+    report && InfrastructureModels.sol_component_value_edge(pm, nw, :branch, :Qf, :Qt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), Q)
 end
 
 
@@ -236,8 +236,8 @@ function variable_mc_generation_power(pm::SDPUBFKCLMXModel; nw::Int=pm.cnw, boun
     _PMs.var(pm, nw)[:pg] = Dict{Int, Any}([(id, diag(Pg[id])) for id in gen_ids])
     _PMs.var(pm, nw)[:qg] = Dict{Int, Any}([(id, diag(Qg[id])) for id in gen_ids])
 
-    report && _PMs.sol_component_value(pm, nw, :gen, :Pg, _PMs.ids(pm, nw, :gen), Pg)
-    report && _PMs.sol_component_value(pm, nw, :gen, :Qg, _PMs.ids(pm, nw, :gen), Qg)
+    report && InfrastructureModels.sol_component_value(pm, nw, :gen, :Pg, _PMs.ids(pm, nw, :gen), Pg)
+    report && InfrastructureModels.sol_component_value(pm, nw, :gen, :Qg, _PMs.ids(pm, nw, :gen), Qg)
 end
 
 
@@ -263,8 +263,8 @@ function variable_mc_generation_current(pm::AbstractUBFModels; nw::Int=pm.cnw, b
     _PMs.var(pm, nw)[:CCgr] = CCgr
     _PMs.var(pm, nw)[:CCgi] = CCgi
 
-    report && _PMs.sol_component_value(pm, nw, :gen, :CCgr, _PMs.ids(pm, nw, :gen), CCgr)
-    report && _PMs.sol_component_value(pm, nw, :gen, :CCgi, _PMs.ids(pm, nw, :gen), CCgi)
+    report && InfrastructureModels.sol_component_value(pm, nw, :gen, :CCgr, _PMs.ids(pm, nw, :gen), CCgr)
+    report && InfrastructureModels.sol_component_value(pm, nw, :gen, :CCgi, _PMs.ids(pm, nw, :gen), CCgi)
 end
 
 
@@ -366,8 +366,8 @@ function variable_mc_load_power(pm::AbstractUBFModels, load_ids::Array{Int,1}; n
         _PMs.var(pm, nw)[:ql][i] = ql[i]
     end
 
-    report && _PMs.sol_component_value(pm, nw, :load, :pl, load_ids, pl)
-    report && _PMs.sol_component_value(pm, nw, :load, :ql, load_ids, ql)
+    report && InfrastructureModels.sol_component_value(pm, nw, :load, :pl, load_ids, pl)
+    report && InfrastructureModels.sol_component_value(pm, nw, :load, :ql, load_ids, ql)
 end
 
 
@@ -396,8 +396,8 @@ function variable_mc_load_power_bus(pm::SDPUBFKCLMXModel, load_ids::Array{Int,1}
         _PMs.var(pm, nw, :Qd)[id] = Qd[id]
     end
 
-    report && _PMs.sol_component_value(pm, nw, :load, :Pd, load_ids, Pd)
-    report && _PMs.sol_component_value(pm, nw, :load, :Qd, load_ids, Qd)
+    report && InfrastructureModels.sol_component_value(pm, nw, :load, :Pd, load_ids, Pd)
+    report && InfrastructureModels.sol_component_value(pm, nw, :load, :Qd, load_ids, Qd)
 end
 
 
@@ -437,8 +437,8 @@ function variable_mc_load_delta_aux(pm::AbstractUBFModels, load_ids::Array{Int,1
     _PMs.var(pm, nw)[:Xdr] = Xdr
     _PMs.var(pm, nw)[:Xdi] = Xdi
 
-    report && _PMs.sol_component_value(pm, nw, :load, :Xdr, load_ids, Xdr)
-    report && _PMs.sol_component_value(pm, nw, :load, :Xdi, load_ids, Xdi)
+    report && InfrastructureModels.sol_component_value(pm, nw, :load, :Xdr, load_ids, Xdr)
+    report && InfrastructureModels.sol_component_value(pm, nw, :load, :Xdi, load_ids, Xdi)
 end
 
 
@@ -466,8 +466,8 @@ function variable_mc_load_current(pm::AbstractUBFModels, load_ids::Array{Int,1};
     _PMs.var(pm, nw)[:CCdr] = CCdr
     _PMs.var(pm, nw)[:CCdi] = CCdi
 
-    report && _PMs.sol_component_value(pm, nw, :load, :CCdr, load_ids, CCdr)
-    report && _PMs.sol_component_value(pm, nw, :load, :CCdi, load_ids, CCdi)
+    report && InfrastructureModels.sol_component_value(pm, nw, :load, :CCdr, load_ids, CCdr)
+    report && InfrastructureModels.sol_component_value(pm, nw, :load, :CCdi, load_ids, CCdi)
 end
 
 
@@ -810,7 +810,7 @@ function constraint_mc_power_balance(pm::KCLMXModels, n::Int, i::Int, bus_arcs, 
     # _PMs.con(pm, n, :kcl_Q)[i] =
     cq = JuMP.@constraint(pm.model, sum(Qg[g] for g in bus_gens) .== sum(Q[a] for a in bus_arcs) + sum(Qd[d] for d in bus_loads) + (-Wr*Bt'+Wi*Gt'))
 
-    if _PMs.report_duals(pm)
+    if InfrastructureModels.report_duals(pm)
         _PMs.sol(pm, n, :bus, i)[:lam_kcl_r] = cp
         _PMs.sol(pm, n, :bus, i)[:lam_kcl_i] = cq
     end

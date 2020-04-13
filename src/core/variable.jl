@@ -24,7 +24,7 @@ function variable_mc_voltage_angle(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, 
         ) for i in _PMs.ids(pm, nw, :bus)
     )
 
-    report && _PMs.sol_component_value(pm, nw, :bus, :va, _PMs.ids(pm, nw, :bus), va)
+    report && InfrastructureModels.sol_component_value(pm, nw, :bus, :va, _PMs.ids(pm, nw, :bus), va)
 end
 
 ""
@@ -49,7 +49,7 @@ function variable_mc_voltage_magnitude(pm::_PMs.AbstractPowerModel; nw::Int=pm.c
         end
     end
 
-    report && _PMs.sol_component_value(pm, nw, :bus, :vm, _PMs.ids(pm, nw, :bus), vm)
+    report && InfrastructureModels.sol_component_value(pm, nw, :bus, :vm, _PMs.ids(pm, nw, :bus), vm)
 end
 
 ""
@@ -72,7 +72,7 @@ function variable_mc_voltage_real(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, b
         end
     end
 
-    report && _PMs.sol_component_value(pm, nw, :bus, :vr, _PMs.ids(pm, nw, :bus), vr)
+    report && InfrastructureModels.sol_component_value(pm, nw, :bus, :vr, _PMs.ids(pm, nw, :bus), vr)
 end
 
 ""
@@ -95,7 +95,7 @@ function variable_mc_voltage_imaginary(pm::_PMs.AbstractPowerModel; nw::Int=pm.c
         end
     end
 
-    report && _PMs.sol_component_value(pm, nw, :bus, :vi, _PMs.ids(pm, nw, :bus), vi)
+    report && InfrastructureModels.sol_component_value(pm, nw, :bus, :vi, _PMs.ids(pm, nw, :bus), vi)
 end
 
 
@@ -135,7 +135,7 @@ function variable_mc_branch_flow_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.
         end
     end
 
-    report && _PMs.sol_component_value_edge(pm, nw, :branch, :pf, :pt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), p)
+    report && InfrastructureModels.sol_component_value_edge(pm, nw, :branch, :pf, :pt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), p)
 end
 
 "variable: `q[l,i,j]` for `(l,i,j)` in `arcs`"
@@ -168,7 +168,7 @@ function variable_mc_branch_flow_reactive(pm::_PMs.AbstractPowerModel; nw::Int=p
         end
     end
 
-    report && _PMs.sol_component_value_edge(pm, nw, :branch, :qf, :qt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), q)
+    report && InfrastructureModels.sol_component_value_edge(pm, nw, :branch, :qf, :qt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), q)
 end
 
 
@@ -193,7 +193,7 @@ function variable_mc_branch_current_real(pm::_PMs.AbstractPowerModel; nw::Int=pm
         end
     end
 
-    report && _PMs.sol_component_value_edge(pm, nw, :branch, :cr_fr, :cr_to, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), cr)
+    report && InfrastructureModels.sol_component_value_edge(pm, nw, :branch, :cr_fr, :cr_to, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), cr)
 end
 
 
@@ -218,7 +218,7 @@ function variable_mc_branch_current_imaginary(pm::_PMs.AbstractPowerModel; nw::I
         end
     end
 
-    report && _PMs.sol_component_value_edge(pm, nw, :branch, :ci_fr, :ci_to, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), ci)
+    report && InfrastructureModels.sol_component_value_edge(pm, nw, :branch, :ci_fr, :ci_to, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), ci)
 end
 
 
@@ -243,7 +243,7 @@ function variable_mc_branch_series_current_real(pm::_PMs.AbstractPowerModel; nw:
         end
     end
 
-    report && _PMs.sol_component_value(pm, nw, :branch, :csr_fr, _PMs.ids(pm, nw, :branch), csr)
+    report && InfrastructureModels.sol_component_value(pm, nw, :branch, :csr_fr, _PMs.ids(pm, nw, :branch), csr)
 end
 
 
@@ -268,7 +268,7 @@ function variable_mc_branch_series_current_imaginary(pm::_PMs.AbstractPowerModel
         end
     end
 
-    report && _PMs.sol_component_value(pm, nw, :branch, :csi_fr, _PMs.ids(pm, nw, :branch), csi)
+    report && InfrastructureModels.sol_component_value(pm, nw, :branch, :csi_fr, _PMs.ids(pm, nw, :branch), csi)
 end
 
 
@@ -298,7 +298,7 @@ function variable_mc_transformer_current_real(pm::_PMs.AbstractPowerModel; nw::I
         end
     end
 
-    report && _PMs.sol_component_value_edge(pm, nw, :transformer, :cr_fr, :cr_to, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), cr)
+    report && InfrastructureModels.sol_component_value_edge(pm, nw, :transformer, :cr_fr, :cr_to, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), cr)
 end
 
 
@@ -328,7 +328,7 @@ function variable_mc_transformer_current_imaginary(pm::_PMs.AbstractPowerModel; 
         end
     end
 
-    report && _PMs.sol_component_value_edge(pm, nw, :transformer, :ci_fr, :ci_to, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), ci)
+    report && InfrastructureModels.sol_component_value_edge(pm, nw, :transformer, :ci_fr, :ci_to, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), ci)
 end
 
 
@@ -363,7 +363,7 @@ function variable_mc_voltage_magnitude_sqr(pm::_PMs.AbstractPowerModel; nw::Int=
         end
     end
 
-    report && _PMs.sol_component_value(pm, nw, :bus, :w, _PMs.ids(pm, nw, :bus), w)
+    report && InfrastructureModels.sol_component_value(pm, nw, :bus, :w, _PMs.ids(pm, nw, :bus), w)
 end
 
 
@@ -402,7 +402,7 @@ function variable_mc_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw,
         end
     end
 
-    report && _PMs.sol_component_value(pm, nw, :storage, :ps, _PMs.ids(pm, nw, :storage), ps)
+    report && InfrastructureModels.sol_component_value(pm, nw, :storage, :ps, _PMs.ids(pm, nw, :storage), ps)
 end
 
 function variable_mc_storage_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
@@ -430,7 +430,7 @@ function variable_mc_storage_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm.cn
         end
     end
 
-    report && _PMs.sol_component_value(pm, nw, :storage, :qs, _PMs.ids(pm, nw, :storage), qs)
+    report && InfrastructureModels.sol_component_value(pm, nw, :storage, :qs, _PMs.ids(pm, nw, :storage), qs)
 end
 
 
@@ -453,7 +453,7 @@ function variable_mc_active_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::Int
         ) for i in _PMs.ids(pm, nw, :bus)
     )
 
-    report && _PMs.sol_component_value(pm, nw, :bus, :p_slack, _PMs.ids(pm, nw, :bus), p_slack)
+    report && InfrastructureModels.sol_component_value(pm, nw, :bus, :p_slack, _PMs.ids(pm, nw, :bus), p_slack)
 end
 
 
@@ -468,7 +468,7 @@ function variable_mc_reactive_bus_power_slack(pm::_PMs.AbstractPowerModel; nw::I
         ) for i in _PMs.ids(pm, nw, :bus)
     )
 
-    report && _PMs.sol_component_value(pm, nw, :bus, :q_slack, _PMs.ids(pm, nw, :bus), q_slack)
+    report && InfrastructureModels.sol_component_value(pm, nw, :bus, :q_slack, _PMs.ids(pm, nw, :bus), q_slack)
 end
 
 
@@ -511,7 +511,7 @@ function variable_mc_transformer_flow_active(pm::_PMs.AbstractPowerModel; nw::In
         end
     end
 
-    report && _PMs.sol_component_value_edge(pm, nw, :transformer, :pf, :pt, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), pt)
+    report && InfrastructureModels.sol_component_value_edge(pm, nw, :transformer, :pf, :pt, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), pt)
 end
 
 
@@ -549,7 +549,7 @@ function variable_mc_transformer_flow_reactive(pm::_PMs.AbstractPowerModel; nw::
         end
     end
 
-    report && _PMs.sol_component_value_edge(pm, nw, :transformer, :qf, :qt, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), qt)
+    report && InfrastructureModels.sol_component_value_edge(pm, nw, :transformer, :qf, :qt, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), qt)
 end
 
 
@@ -573,7 +573,7 @@ function variable_mc_oltc_tap(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bound
         end
     end
 
-    report && _PMs.sol_component_value(pm, nw, :transformer, :tap, _PMs.ids(pm, nw, :transformer), tap)
+    report && InfrastructureModels.sol_component_value(pm, nw, :transformer, :tap, _PMs.ids(pm, nw, :transformer), tap)
 end
 
 
@@ -615,9 +615,9 @@ function variable_mc_indicator_demand(pm::_PMs.AbstractPowerModel; nw::Int=pm.cn
     qd = _PMs.var(pm, nw)[:qd] = Dict(i => _PMs.var(pm, nw)[:z_demand][i].*_PMs.ref(pm, nw, :load, i)["qd"]
      for i in _PMs.ids(pm, nw, :load))
 
-    report && _PMs.sol_component_value(pm, nw, :load, :status, _PMs.ids(pm, nw, :load), z_demand)
-    report && _PMs.sol_component_value(pm, nw, :load, :pd, _PMs.ids(pm, nw, :load), pd)
-    report && _PMs.sol_component_value(pm, nw, :load, :qd, _PMs.ids(pm, nw, :load), qd)
+    report && InfrastructureModels.sol_component_value(pm, nw, :load, :status, _PMs.ids(pm, nw, :load), z_demand)
+    report && InfrastructureModels.sol_component_value(pm, nw, :load, :pd, _PMs.ids(pm, nw, :load), pd)
+    report && InfrastructureModels.sol_component_value(pm, nw, :load, :qd, _PMs.ids(pm, nw, :load), qd)
 end
 
 
@@ -640,7 +640,7 @@ function variable_mc_indicator_shunt(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw
         )
     end
 
-    report && _PMs.sol_component_value(pm, nw, :shunt, :status, _PMs.ids(pm, nw, :shunt), z_shunt)
+    report && InfrastructureModels.sol_component_value(pm, nw, :shunt, :status, _PMs.ids(pm, nw, :shunt), z_shunt)
 end
 
 
@@ -661,7 +661,7 @@ function variable_mc_indicator_bus_voltage(pm::_PMs.AbstractPowerModel; nw::Int=
         )
     end
 
-    report && _PMs.sol_component_value(pm, nw, :bus, :status, _PMs.ids(pm, nw, :bus), z_voltage)
+    report && InfrastructureModels.sol_component_value(pm, nw, :bus, :status, _PMs.ids(pm, nw, :bus), z_voltage)
 end
 
 
@@ -682,7 +682,7 @@ function variable_mc_indicator_generation(pm::_PMs.AbstractPowerModel; nw::Int=p
         )
     end
 
-    report && _PMs.sol_component_value(pm, nw, :gen, :gen_status, _PMs.ids(pm, nw, :gen), z_gen)
+    report && InfrastructureModels.sol_component_value(pm, nw, :gen, :gen_status, _PMs.ids(pm, nw, :gen), z_gen)
 end
 
 
@@ -703,7 +703,7 @@ function variable_mc_indicator_storage(pm::_PMs.AbstractPowerModel; nw::Int=pm.c
         )
     end
 
-    report && _PMs.sol_component_value(pm, nw, :storage, :status, _PMs.ids(pm, nw, :storage), z_storage)
+    report && InfrastructureModels.sol_component_value(pm, nw, :storage, :status, _PMs.ids(pm, nw, :storage), z_storage)
 end
 
 
@@ -732,7 +732,7 @@ function variable_mc_on_off_storage_active(pm::_PMs.AbstractPowerModel; nw::Int=
         start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "ps_start", cnd, 0.0)
     ) for i in _PMs.ids(pm, nw, :storage))
 
-    report && _PMs.sol_component_value(pm, nw, :storage, :ps, _PMs.ids(pm, nw, :storage), ps)
+    report && InfrastructureModels.sol_component_value(pm, nw, :storage, :ps, _PMs.ids(pm, nw, :storage), ps)
 end
 
 
@@ -748,7 +748,7 @@ function variable_mc_on_off_storage_reactive(pm::_PMs.AbstractPowerModel; nw::In
         start = comp_start_value(_PMs.ref(pm, nw, :storage, i), "qs_start", cnd, 0.0)
     ) for i in _PMs.ids(pm, nw, :storage))
 
-    report && _PMs.sol_component_value(pm, nw, :storage, :qs, _PMs.ids(pm, nw, :storage), qs)
+    report && InfrastructureModels.sol_component_value(pm, nw, :storage, :qs, _PMs.ids(pm, nw, :storage), qs)
 end
 
 
@@ -764,7 +764,7 @@ function variable_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel; n
         start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "w_start", c, 1.001)
     ) for i in _PMs.ids(pm, nw, :bus))
 
-    report && _PMs.sol_component_value(pm, nw, :bus, :w, _PMs.ids(pm, nw, :bus), w)
+    report && InfrastructureModels.sol_component_value(pm, nw, :bus, :w, _PMs.ids(pm, nw, :bus), w)
 end
 
 
@@ -780,7 +780,7 @@ function variable_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel; nw::I
         start = comp_start_value(_PMs.ref(pm, nw, :bus, i), "vm_start", c, 1.0)
     ) for i in _PMs.ids(pm, nw, :bus))
 
-    report && _PMs.sol_component_value(pm, nw, :bus, :vm, _PMs.ids(pm, nw, :bus), vm)
+    report && InfrastructureModels.sol_component_value(pm, nw, :bus, :vm, _PMs.ids(pm, nw, :bus), vm)
 
 end
 
@@ -815,7 +815,7 @@ function variable_mc_generation_active(pm::_PMs.AbstractPowerModel; nw::Int=pm.c
 
     _PMs.var(pm, nw)[:pg_bus] = Dict{Int, Any}()
 
-    report && _PMs.sol_component_value(pm, nw, :gen, :pg, _PMs.ids(pm, nw, :gen), pg)
+    report && InfrastructureModels.sol_component_value(pm, nw, :gen, :pg, _PMs.ids(pm, nw, :gen), pg)
 end
 
 
@@ -842,7 +842,7 @@ function variable_mc_generation_reactive(pm::_PMs.AbstractPowerModel; nw::Int=pm
 
     _PMs.var(pm, nw)[:qg_bus] = Dict{Int, Any}()
 
-    report && _PMs.sol_component_value(pm, nw, :gen, :qg, _PMs.ids(pm, nw, :gen), qg)
+    report && InfrastructureModels.sol_component_value(pm, nw, :gen, :qg, _PMs.ids(pm, nw, :gen), qg)
 end
 
 
@@ -866,7 +866,7 @@ function variable_mc_generation_current_real(pm::_PMs.AbstractPowerModel; nw::In
         end
     end
 
-    report && _PMs.sol_component_value(pm, nw, :gen, :crg, _PMs.ids(pm, nw, :gen), crg)
+    report && InfrastructureModels.sol_component_value(pm, nw, :gen, :crg, _PMs.ids(pm, nw, :gen), crg)
 end
 
 "variable: `cig[j]` for `j` in `gen`"
@@ -889,7 +889,7 @@ function variable_mc_generation_current_imaginary(pm::_PMs.AbstractPowerModel; n
         end
     end
 
-    report && _PMs.sol_component_value(pm, nw, :gen, :cig, _PMs.ids(pm, nw, :gen), cig)
+    report && InfrastructureModels.sol_component_value(pm, nw, :gen, :cig, _PMs.ids(pm, nw, :gen), cig)
 end
 
 
@@ -910,7 +910,7 @@ function variable_mc_active_generation_on_off(pm::_PMs.AbstractPowerModel; nw::I
         start = comp_start_value(_PMs.ref(pm, nw, :gen, i), "pg_start", cnd, 0.0)
     ) for i in _PMs.ids(pm, nw, :gen))
 
-    report && _PMs.sol_component_value(pm, nw, :gen, :pg, _PMs.ids(pm, nw, :gen), pg)
+    report && InfrastructureModels.sol_component_value(pm, nw, :gen, :pg, _PMs.ids(pm, nw, :gen), pg)
 end
 
 
@@ -925,5 +925,5 @@ function variable_mc_reactive_generation_on_off(pm::_PMs.AbstractPowerModel; nw:
         start = comp_start_value(_PMs.ref(pm, nw, :gen, i), "qg_start", cnd, 0.0)
     ) for i in _PMs.ids(pm, nw, :gen))
 
-    report && _PMs.sol_component_value(pm, nw, :gen, :qg, _PMs.ids(pm, nw, :gen), qg)
+    report && InfrastructureModels.sol_component_value(pm, nw, :gen, :qg, _PMs.ids(pm, nw, :gen), qg)
 end

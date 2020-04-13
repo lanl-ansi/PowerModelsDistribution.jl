@@ -164,7 +164,7 @@
 
         @testset "matrix branch shunts acr pf" begin
             data_pmd = PMD.parse_file("../test/data/opendss/case_mxshunt.dss")
-            pm = PMs.instantiate_model(data_pmd, PMs.ACRPowerModel, PMD.build_mc_pf, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+            pm = PMs.instantiate_model(data_pmd, PMs.ACRPowerModel, PMD.build_mc_pf, ref_extensions=[PMD.ref_add_arcs_trans!])
             sol = PMs.optimize_model!(pm, optimizer=ipopt_solver)
 
             calc_vm(id) = sqrt.(sol["solution"]["bus"][id]["vr"].^2+sol["solution"]["bus"][id]["vi"].^2)

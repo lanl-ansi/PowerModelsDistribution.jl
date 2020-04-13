@@ -49,7 +49,7 @@ function constraint_mc_power_balance_slack(pm::_PMs.AbstractWModels, nw::Int, i,
         + q_slack
     )
 
-    if _PMs.report_duals(pm)
+    if InfrastructureModels.report_duals(pm)
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
@@ -125,7 +125,7 @@ function constraint_mc_power_balance_shed(pm::_PMs.AbstractWModels, nw::Int, i, 
         - sum(z_shunt[n].*(-w.*diag(Bt')) for (n,Gs,Bs) in bus_GsBs)
     )
 
-    if _PMs.report_duals(pm)
+    if InfrastructureModels.report_duals(pm)
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
@@ -178,7 +178,7 @@ function constraint_mc_power_balance_load(pm::_PMs.AbstractWModels, nw::Int, i, 
         - diag(-Wr*Bt'+Wi*Gt')
     )
 
-    if _PMs.report_duals(pm)
+    if InfrastructureModels.report_duals(pm)
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end

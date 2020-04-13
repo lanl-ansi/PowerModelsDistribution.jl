@@ -35,11 +35,11 @@
                 [PMs.ACPPowerModel, PMs.ACRPowerModel, PMs.IVRPowerModel],
                 [PMD.build_mc_opf, PMD.build_mc_opf, PMD.build_mc_opf_iv]
             )
-            pm_1  = PMs.instantiate_model(pmd_1, form, build_method, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+            pm_1  = PMs.instantiate_model(pmd_1, form, build_method, ref_extensions=[PMD.ref_add_arcs_trans!])
             sol_1 = PMs.optimize_model!(pm_1, optimizer=ipopt_solver)
             @assert(sol_1["termination_status"]==LOCALLY_SOLVED)
 
-            pm_2  = PMs.instantiate_model(pmd_2, form, build_method, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+            pm_2  = PMs.instantiate_model(pmd_2, form, build_method, ref_extensions=[PMD.ref_add_arcs_trans!])
             sol_2 = PMs.optimize_model!(pm_2, optimizer=ipopt_solver)
             @assert(sol_2["termination_status"]==LOCALLY_SOLVED)
 
@@ -77,11 +77,11 @@
     #         gen["model"] = 2
     #     end
     #
-    #     pm_ivr  = PMs.instantiate_model(pmd, PMs.IVRPowerModel, PMD.build_mc_opf_iv, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+    #     pm_ivr  = PMs.instantiate_model(pmd, PMs.IVRPowerModel, PMD.build_mc_opf_iv, ref_extensions=[PMD.ref_add_arcs_trans!])
     #     sol_ivr = PMs.optimize_model!(pm_ivr, optimizer=ipopt_solver)
     #     @assert(sol_1["termination_status"]==LOCALLY_SOLVED)
     #
-    #     pm_acr  = PMs.instantiate_model(pmd, PMs.ACRPowerModel, PMD.build_mc_opf, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+    #     pm_acr  = PMs.instantiate_model(pmd, PMs.ACRPowerModel, PMD.build_mc_opf, ref_extensions=[PMD.ref_add_arcs_trans!])
     #     sol_acr = PMs.optimize_model!(pm_acr, optimizer=ipopt_solver)
     #     @assert(sol_2["termination_status"]==LOCALLY_SOLVED)
     #

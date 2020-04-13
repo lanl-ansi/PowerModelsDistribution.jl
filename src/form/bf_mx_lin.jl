@@ -115,7 +115,7 @@ function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, b
         + sum(bs.*w for bs in values(bus_bs))
     )
 
-    if _PMs.report_duals(pm)
+    if InfrastructureModels.report_duals(pm)
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
         _PMs.sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end

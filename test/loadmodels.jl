@@ -3,7 +3,7 @@
 @testset "test loadmodels pf" begin
     @testset "loadmodels connection variations" begin
         pmd = PMD.parse_file("../test/data/opendss/case3_lm_1230.dss")
-        pm = PMs.instantiate_model(pmd, PMs.ACPPowerModel, PMD.build_mc_pf, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+        pm = PMs.instantiate_model(pmd, PMs.ACPPowerModel, PMD.build_mc_pf, ref_extensions=[PMD.ref_add_arcs_trans!])
         sol = PMs.optimize_model!(pm, optimizer=ipopt_solver)
         # voltage magnitude at load bus
         @test isapprox(vm(sol, pmd, "loadbus"), [0.999993, 0.999992, 0.999993], atol=1E-5)
@@ -50,7 +50,7 @@
     end
     @testset "loadmodels 1/2/5 in acp pf" begin
         pmd = PMD.parse_file("../test/data/opendss/case3_lm_models.dss")
-        pm = PMs.instantiate_model(pmd, PMs.ACPPowerModel, PMD.build_mc_pf, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+        pm = PMs.instantiate_model(pmd, PMs.ACPPowerModel, PMD.build_mc_pf, ref_extensions=[PMD.ref_add_arcs_trans!])
         sol = PMs.optimize_model!(pm, optimizer=ipopt_solver)
         # voltage magnitude at load bus
         @test isapprox(vm(sol, pmd, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)
@@ -84,7 +84,7 @@
     end
     @testset "loadmodels 1/2/5 in acr pf" begin
         pmd = PMD.parse_file("../test/data/opendss/case3_lm_models.dss")
-        pm = PMs.instantiate_model(pmd, PMs.ACRPowerModel, PMD.build_mc_pf, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+        pm = PMs.instantiate_model(pmd, PMs.ACRPowerModel, PMD.build_mc_pf, ref_extensions=[PMD.ref_add_arcs_trans!])
         sol = PMs.optimize_model!(pm, optimizer=ipopt_solver)
         # voltage magnitude at load bus
         @test isapprox(calc_vm_acr(sol, pmd, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)
@@ -118,7 +118,7 @@
     end
     @testset "loadmodels 1/2/5 in ivr pf" begin
         pmd = PMD.parse_file("../test/data/opendss/case3_lm_models.dss")
-        pm = PMs.instantiate_model(pmd, PMs.IVRPowerModel, PMD.build_mc_pf_iv, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+        pm = PMs.instantiate_model(pmd, PMs.IVRPowerModel, PMD.build_mc_pf_iv, ref_extensions=[PMD.ref_add_arcs_trans!])
         sol = PMs.optimize_model!(pm, optimizer=ipopt_solver)
         # voltage magnitude at load bus
         @test isapprox(calc_vm_acr(sol, pmd, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)

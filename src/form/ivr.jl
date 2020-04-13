@@ -29,8 +29,8 @@ function variable_mc_branch_current(pm::_PMs.AbstractIVRModel; nw::Int=pm.cnw, b
 
     _PMs.var(pm, nw)[:p] = p
     _PMs.var(pm, nw)[:q] = q
-    report && _PMs.sol_component_value_edge(pm, nw, :branch, :pf, :pt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), p)
-    report && _PMs.sol_component_value_edge(pm, nw, :branch, :qf, :qt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), q)
+    report && InfrastructureModels.sol_component_value_edge(pm, nw, :branch, :pf, :pt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), p)
+    report && InfrastructureModels.sol_component_value_edge(pm, nw, :branch, :qf, :qt, _PMs.ref(pm, nw, :arcs_from), _PMs.ref(pm, nw, :arcs_to), q)
 
     variable_mc_branch_series_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_branch_series_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
@@ -67,8 +67,8 @@ function variable_mc_transformer_current(pm::_PMs.AbstractIVRModel; nw::Int=pm.c
 
     _PMs.var(pm, nw)[:p] = p
     _PMs.var(pm, nw)[:q] = q
-    report && _PMs.sol_component_value_edge(pm, nw, :transformer, :pf, :pt, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), p)
-    report && _PMs.sol_component_value_edge(pm, nw, :transformer, :qf, :qt, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), q)
+    report && InfrastructureModels.sol_component_value_edge(pm, nw, :transformer, :pf, :pt, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), p)
+    report && InfrastructureModels.sol_component_value_edge(pm, nw, :transformer, :qf, :qt, _PMs.ref(pm, nw, :arcs_from_trans), _PMs.ref(pm, nw, :arcs_to_trans), q)
 end
 
 
@@ -411,7 +411,7 @@ function objective_variable_pg_cost(pm::_PMs.AbstractIVRModel; report::Bool=true
         pg_cost = _PMs.var(pm, n)[:pg_cost] = JuMP.@variable(pm.model,
             [i in _PMs.ids(pm, n, :gen)], base_name="$(n)_pg_cost",
         )
-        report && _PMs.sol_component_value(pm, n, :gen, :pg_cost, _PMs.ids(pm, n, :gen), pg_cost)
+        report && InfrastructureModels.sol_component_value(pm, n, :gen, :pg_cost, _PMs.ids(pm, n, :gen), pg_cost)
 
         nc = length(conductor_ids(pm, n))
 
