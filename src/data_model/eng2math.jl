@@ -474,15 +474,7 @@ end
 ""
 function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "line", Dict{Any,Dict{String,Any}}())
-        if haskey(eng_obj, "linecode") && haskey(data_eng, "linecode") && haskey(data_eng["linecode"], eng_obj["linecode"])
-            linecode = data_eng["linecode"][eng_obj["linecode"]]
-
-            for property in ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
-                if !haskey(eng_obj, property) && haskey(linecode, property)
-                    eng_obj[property] = linecode[property]
-                end
-            end
-        end
+        _apply_linecode!(eng_obj, data_eng)
 
         math_obj = _init_math_obj("line", eng_obj, length(data_math["branch"])+1)
         math_obj["name"] = name
@@ -731,51 +723,10 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
 
         to_map = data_math["map"][map_idx][:to]
 
+        _apply_xfmrcode!(eng_obj, data_eng)
+
         vnom = eng_obj["vnom"] * data_eng["settings"]["v_var_scalar"]
         snom = eng_obj["snom"] * data_eng["settings"]["v_var_scalar"]
-
-        if haskey(eng_obj, "xfmrcode") && haskey(data_eng, "xfmrcode") && haskey(data_eng["xfmrcode"], eng_obj["xfmrcode"])
-            xfmrcode = data_eng["xfmrcode"][eng_obj["xfmrcode"]]
-
-            if haskey(xfmrcode, "leadlag")
-                eng_obj["leadlag"] = xfmrcode["leadlag"]
-            end
-
-            for w in 1:length("configuration")
-                for prop in ["configuration", "tm", "tm_min", "tm_max", "vnom", "snom", "rs"]
-                    if !ismissing(xfmrcode[prop][w])
-                        eng_obj[prop][w] = xfmrcode[prop][w]
-                    end
-                end
-
-                if w>1
-                    prim_conf = eng_obj["configuration"][1]
-                    if eng_obj["leadlag"] in ["ansi", "lag"]
-                        if prim_conf=="delta" && xfmrcode["configuration"][w]=="wye"
-                            eng_obj["polarity"][w] = -1
-                            eng_obj["connections"][w] = [_barrel_roll(eng_obj["connections"][w][1:end-1], 1)..., eng_obj["connections"][w][end]]
-                        end
-                    else # hence eng_obj["leadlag"] in ["euro", "lead"]
-                        if prim_conf=="wye" && xfmrcode["configuration"][w]=="delta"
-                            eng_obj["polarity"][w] = -1
-                            eng_obj["connections"][w] = _barrel_roll(eng_obj["connections"][w], -1)
-                        end
-                    end
-                end
-            end
-
-            for prop in ["noloadloss", "imag", "xsc"]
-                if prop == "xsc"
-                    for (i, v) in enumerate(xfmrcode[prop])
-                        if !ismissing(v)
-                            eng_obj[prop] = v
-                        end
-                    end
-                elseif !ismissing(xfmrcode[prop])
-                    eng_obj[prop] = xfmrcode[prop]
-                end
-            end
-        end
 
         nrw = length(eng_obj["bus"])
 

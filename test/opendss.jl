@@ -267,7 +267,7 @@
 
         @test dss1 != dss2
         @test all(a == b for (a, b) in zip(dss2["line"]["ohline"]["prop_order"],["name", "bus1", "bus2", "linecode", "rmatrix", "length"]))
-        @test all(a == b for (a, b) in zip(dss2["line"]["quad"]["prop_order"],["name", "bus1", "bus2", "like", "linecode", "length"]))
+        @test all(a == b for (a, b) in zip(dss2["line"]["quad"]["prop_order"],["name", "like", "bus1", "bus2", "linecode", "length"]))
     end
 
     @testset "opendss parse verify mvasc3/mvasc1 circuit parse" begin

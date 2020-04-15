@@ -462,9 +462,41 @@ end
 
 "convert cost model names"
 function _add_gen_cost_model!(math_obj::Dict{String,<:Any}, eng_obj::Dict{String,<:Any})
-    math_obj["model"] = get(eng_obj, "cost_model", 2)
-    math_obj["startup"] = get(eng_obj, "startup_cost", 0.0)
-    math_obj["shutdown"] = get(eng_obj, "shutdown_cost", 0.0)
-    math_obj["ncost"] = get(eng_obj, "ncost_terms", 3)
-    math_obj["cost"] = get(eng_obj, "cost", [0.0, 1.0, 0.0])
+    math_obj["model"] = get(eng_obj, "cost_pg_model", 2)
+    math_obj["startup"] = 0.0
+    math_obj["shutdown"] = 0.0
+    math_obj["cost"] = get(eng_obj, "cost_pg_parameters", [0.0, 1.0, 0.0])
+    math_obj["ncost"] = length(math_obj["cost"])
+end
+
+
+function _apply_xfmrcode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+    if haskey(eng_obj, "xfmrcode") && haskey(data_eng, "xfmrcode") && haskey(data_eng["xfmrcode"], eng_obj["xfmrcode"])
+        xfmrcode = data_eng["xfmrcode"][eng_obj["xfmrcode"]]
+
+        for (k, v) in xfmrcode
+            if !haskey(eng_obj, k)
+                eng_obj[k] = v
+            elseif haskey(eng_obj, k) && k in ["vnom", "snom", "tm"]
+                for (w, vw) in enumerate(eng_obj[k])
+                    if ismissing(vw)
+                        eng_obj[k][w] = v[w]
+                    end
+                end
+            end
+        end
+    end
+end
+
+
+function _apply_linecode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+    if haskey(eng_obj, "linecode") && haskey(data_eng, "linecode") && haskey(data_eng["linecode"], eng_obj["linecode"])
+        linecode = data_eng["linecode"][eng_obj["linecode"]]
+
+        for property in ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
+            if !haskey(eng_obj, property) && haskey(linecode, property)
+                eng_obj[property] = linecode[property]
+            end
+        end
+    end
 end

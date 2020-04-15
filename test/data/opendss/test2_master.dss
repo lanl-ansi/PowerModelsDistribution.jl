@@ -48,7 +48,7 @@ New Transformer.t4  phases=3  windings=2  buses=(b8, b9.1.2.3.0) rneut=0 xneut=0
 ~ xhl=20.5  sub=y  subname=t4_sub
 ~ wdg=1  %r=0.75000
 ~ wdg=2  %r=0.75000
-new transformer.t5 buses=(b3-1, b5) like=t4
+new transformer.t5 like=t4 buses=(b3-1, b5)
 
 ! Generators
 New Generator.g1 Bus1=b1  kV= 150 kW=1 Model=3 Vpu=1.05 Maxkvar=70000 Minkvar=10000 !  kvar=50000

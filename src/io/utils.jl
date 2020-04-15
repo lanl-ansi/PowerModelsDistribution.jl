@@ -41,11 +41,10 @@ _single_operators = Dict{String,Any}(
 const _array_delimiters = Vector{Char}(['\"', '\'', '[', '{', '(', ']', '}', ')'])
 
 "properties that should be excluded from being overwritten during the application of `like`"
-const _like_exclusions = Dict{String,Vector{String}}(
-    "all" => ["name", "bus1", "bus2", "phases", "nphases", "enabled"],
-    "line" => ["switch"],
-    "transformer" => ["bank", "bus", "bus_2", "bus_3", "buses", "windings", "wdg", "wdg_2", "wdg_3"],
-    "linegeometry" => ["nconds"]
+const _like_exclusions = Dict{String,Vector{Regex}}(
+    "all" => Vector{Regex}([r"name", r"enabled"]),
+    "line" => [r"switch"],
+    "transformer" => []
 )
 
 ""
@@ -582,7 +581,7 @@ function _apply_like!(raw_dss::Dict{String,<:Any}, data_dss::Dict{String,<:Any},
         for prop in raw_dss["prop_order"]
             push!(new_prop_order, prop)
 
-            if prop in get(_like_exclusions, comp_type, []) || prop in _like_exclusions["all"]
+            if any(match(key, prop) !== nothing for key in [get(_like_exclusions, comp_type, [])..., _like_exclusions["all"]...])
                 continue
             end
 
@@ -763,6 +762,12 @@ end
 "checks to see if a property is after linecode"
 function _is_after_linecode(prop_order::Vector{String}, property::String)::Bool
     return _is_after(prop_order, property, "linecode")
+end
+
+
+"checks to see if a property is after xfmrcode"
+function _is_after_xfmrcode(prop_order::Vector{String}, property::String)::Bool
+    return _is_after(prop_order, property, "xfmrcode")
 end
 
 
