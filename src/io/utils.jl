@@ -309,7 +309,7 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
             # f_connections will be sorted from small to large
             f_phases_loc = Dict(hcat([[(c,(i,p)) for (p, c) in enumerate(tr["connections"][1][1:end-1])] for (i, tr) in enumerate(trs)]...))
             locs = [f_phases_loc[x] for x in sort(collect(keys(f_phases_loc)))]
-            props_merge = ["connections", "tm", "tm_max", "tm_min", "fixed"]
+            props_merge = ["connections", "tm", "tm_max", "tm_min", "fixed", "tm_step", "tm_fix"]
             for prop in props_merge
                 btrans[prop] = [[trs[i][prop][w][p] for (i,p) in locs] for w in 1:nrw]
 

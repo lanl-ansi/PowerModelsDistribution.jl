@@ -506,7 +506,6 @@ function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             "noloadloss" => defaults["%noloadloss"] / 100,
             "imag" => defaults["%imag"] / 100,
             "xsc" => nrw == 2 ? [defaults["xhl"] / 100] : [defaults["xhl"], defaults["xht"], defaults["xlt"]] ./ 100,
-            "leadlag" => defaults["leadlag"],
             "source_id" => "xfmrcode.$name",
         )
 
