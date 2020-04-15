@@ -477,7 +477,7 @@ function _apply_xfmrcode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:A
         for (k, v) in xfmrcode
             if !haskey(eng_obj, k)
                 eng_obj[k] = v
-            elseif haskey(eng_obj, k) && k in ["vnom", "snom", "tm"]
+            elseif haskey(eng_obj, k) && k in ["vnom", "snom", "tm", "rs"]
                 for (w, vw) in enumerate(eng_obj[k])
                     if ismissing(vw)
                         eng_obj[k][w] = v[w]

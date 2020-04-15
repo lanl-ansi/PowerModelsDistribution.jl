@@ -74,7 +74,7 @@
         # @test result1["solution"]["gen"] == result2["solution"]["gen"] # TODO need a new test, transformer model changed, use voltages on real bus
 
         dss = PMD.parse_dss(file)
-        trans = PMD._create_transformer(dss["transformer"]["tx1"]["name"]; PMD._to_kwargs(dss["transformer"]["tx1"])...)
+        trans = PMD._create_transformer(dss["transformer"]["tx1a"]["name"]; PMD._to_kwargs(dss["transformer"]["tx1"])...)
         @test all(trans["%rs"] .== [1.0, 2.0])
     end
 

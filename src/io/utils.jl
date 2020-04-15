@@ -276,26 +276,32 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
                     bankable_transformers[bank] = ([], [])
                 end
                 push!(bankable_transformers[bank][1], id)
-                push!(bankable_transformers[bank][2], tr)
+                push!(bankable_transformers[bank][2], deepcopy(tr))
             end
         end
 
         for (bank, (ids, trs)) in bankable_transformers
+            for tr in trs
+                _apply_xfmrcode!(tr, data_eng)
+            end
             # across-phase properties should be the same to be eligible for banking
             props = ["bus", "noloadloss", "xsc", "rs", "imag", "vnom", "snom", "polarity", "configuration"]
             btrans = Dict{String, Any}(prop=>trs[1][prop] for prop in props)
             if !all(tr[prop]==btrans[prop] for tr in trs, prop in props)
+                Memento.warn(_LOGGER, "Not all across-phase properties match among transfomers identified by bank='$bank', aborting attempt to bank")
                 continue
             end
             nrw = length(btrans["bus"])
 
             # only attempt to bank wye-connected transformers
             if !all(all(tr["configuration"].=="wye") for tr in trs)
+                Memento.warn(_LOGGER, "Not all configurations 'wye' on transformers identified by bank='$bank', aborting attempt to bank")
                 continue
             end
             neutrals = [conns[end] for conns in trs[1]["connections"]]
             # ensure all windings have the same neutral
             if !all(all(conns[end]==neutrals[w] for (w, conns) in enumerate(tr["connections"])) for tr in trs)
+                Memento.warn(_LOGGER, "Not all neutral phases match on transfomers identified by bank='$bank', aborting attempt to bank")
                 continue
             end
 
@@ -321,12 +327,7 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
             for id in ids
                 delete!(data_eng["transformer"], id)
             end
-            btrans_name = bank
-            if haskey(data_eng["transformer"], bank)
-                Memento.warn("The bank name ($bank) is already used for another transformer; using the name of the first transformer $(ids[1]) in the bank instead.")
-                btrans_name = ids[1]
-            end
-            data_eng["transformer"][btrans_name] = btrans
+            data_eng["transformer"][bank] = btrans
         end
     end
 end

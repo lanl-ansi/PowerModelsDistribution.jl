@@ -593,9 +593,23 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
         end
 
         # %noloadloss, %imag
-        for (fr_key, to_key) in zip(["%noloadloss", "%imag", "%rs"], ["noloadloss", "imag", "rs"])
+        for (fr_key, to_key) in zip(["%noloadloss", "%imag"], ["noloadloss", "imag"])
             if isempty(defaults["xfmrcode"]) || (haskey(dss_obj, fr_key) && _is_after_xfmrcode(dss_obj["prop_order"], fr_key))
                 eng_obj[to_key] = defaults[fr_key] / 100
+            end
+        end
+
+        # %rs
+        if isempty(defaults["xfmrcode"]) || (haskey(dss_obj, "%rs") && _is_after_xfmrcode(dss_obj["prop_order"], "%rs")) || all(haskey(dss_obj, k) && _is_after_xfmrcode(dss_obj["prop_order"], k) for k in ["%r", "%r_2", "%r_3"])
+            eng_obj["rs"] = defaults["%rs"] / 100
+        else
+            for (w, key_suffix) in enumerate(["", "_2", "_3"])
+                if haskey(dss_obj, "%r$(key_suffix)") && _is_after_xfmrcode(dss_obj["prop_order"], "%r$(key_suffix)")
+                    if !haskey(eng_obj, "rs")
+                        eng_obj["rs"] = Vector{Any}(missing, nrw)
+                    end
+                    eng_obj["rs"][w] = defaults["%rs"][defaults["wdg$(key_suffix)"]] / 100
+                end
             end
         end
 
