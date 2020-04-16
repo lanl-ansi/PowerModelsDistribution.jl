@@ -902,7 +902,7 @@ function parse_dss(io::IOStream)::Dict{String,Any}
         end
     end
 
-    parse_dss_with_dtypes!(data_dss)
+    _parse_dss_with_dtypes!(data_dss)
 
     data_dss["data_model"] = "dss"
 

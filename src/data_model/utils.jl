@@ -1,83 +1,18 @@
 
-""
-function scale(dict, key, scale)
+"function for applying a scale to a paramter"
+function _scale(dict::Dict{String,<:Any}, key::String, scale::Real)
     if haskey(dict, key)
         dict[key] *= scale
     end
 end
 
 
-""
-function _get_next_index(last_index, presets)
-    new_index = last_index+1
-    while new_index in presets
-        new_index += 1
-    end
-    return new_index
-end
-
-
-""
-function solution_identify!(solution, data_model; id_prop="id")
-    for comp_type in keys(solution)
-        if isa(solution[comp_type], Dict)
-            comp_dict = Dict{Any, Any}()
-            for (ind, comp) in solution[comp_type]
-                id = data_model[comp_type][ind][id_prop]
-                comp_dict[id] = comp
-            end
-            solution[comp_type] = comp_dict
-        end
-    end
-
-    return solution
-end
-
-
-""
-function add_solution!(solution, comp_type, id, data)
-    if !haskey(solution, comp_type)
-        solution[comp_type] = Dict()
-    end
-
-    if !haskey(solution[comp_type], id)
-        solution[comp_type][id] = Dict{String, Any}()
-    end
-
-    for (key, prop) in data
-        solution[comp_type][id][key] = prop
-    end
-end
-
-
-""
-function delete_solution!(solution, comp_type, id, props)
-    if haskey(solution, comp_type)
-        if haskey(solution[comp_type], id)
-            for prop in props
-                delete!(solution[comp_type][id], prop)
-            end
-        end
-    end
-end
-
-
-""
-function delete_solution!(solution, comp_type, id)
-    if haskey(solution, comp_type)
-        if haskey(solution[comp_type], id)
-            delete!(solution[comp_type], id)
-        end
-    end
-end
-
-
-""
-function _get_new_ground(terminals)
+"_get_ground helper function"
+function _get_new_ground(terminals::Vector{<:Any})
     if isa(terminals, Vector{Int})
         return maximum(terminals)+1
     else
-        nrs = [parse(Int, x[1]) for x in [match(r"n([1-9]{1}[0-9]*)", string(t)) for t in terminals] if x!=nothing]
+        nrs = [parse(Int, x[1]) for x in [match(r"n([1-9]{1}[0-9]*)", string(t)) for t in terminals] if x !== nothing]
         new = isempty(nrs) ? 1 : maximum(nrs)+1
         if isa(terminals, Vector{Symbol})
             return Symbol("g$new")
@@ -88,7 +23,7 @@ function _get_new_ground(terminals)
 end
 
 
-""
+"gets the grounding information for a bus"
 function _get_ground!(bus::Dict{String,<:Any})
     # find perfect groundings (true ground)
     grounded_perfect = []
@@ -302,7 +237,7 @@ function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Str
 end
 
 
-""
+"performs kron reduction on branch"
 function _kron_reduce_branch!(object::Dict{String,<:Any}, Zs_keys::Vector{String}, Ys_keys::Vector{String}, terminals::Vector{Int}, neutral::Int)::Vector{Int}
     Zs = Vector{Matrix}([object[k] for k in Zs_keys])
     Ys = Vector{Matrix}([object[k] for k in Ys_keys])
@@ -320,7 +255,13 @@ function _kron_reduce_branch!(object::Dict{String,<:Any}, Zs_keys::Vector{String
 end
 
 
-""
+"get locations of terminal in connections list"
+function _get_ilocs(vec::Vector{<:Any}, loc::Any)::Vector{Int}
+    return collect(1:length(vec))[vec.==loc]
+end
+
+
+"performs kron reduction on branch - helper function"
 function _kron_reduce_branch(Zs::Vector{Matrix}, Ys::Vector{Matrix}, terminals::Vector{Int}, neutral::Int)::Tuple{Vector{Matrix}, Vector{Matrix}, Vector{Int}}
     Zs_kr = Vector{Matrix}([deepcopy(Z) for Z in Zs])
     Ys_kr = Vector{Matrix}([deepcopy(Y) for Y in Ys])
@@ -342,7 +283,7 @@ function _kron_reduce_branch(Zs::Vector{Matrix}, Ys::Vector{Matrix}, terminals::
 end
 
 
-""
+"pads properties to have the total number of conductors for the whole system"
 function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; pad_value::Real=0.0)
     @assert(all(c in phases for c in connections))
     inds = _get_idxs(phases, connections)
@@ -363,7 +304,7 @@ function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String},
 end
 
 
-""
+"pads properties to have the total number of conductors for the whole system - delta connection variant"
 function _pad_properties_delta!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; invert::Bool=false)
     @assert(all(c in phases for c in connections))
     @assert(length(connections) in [2, 3], "A delta configuration has to have at least 2 or 3 connections!")
@@ -393,8 +334,8 @@ function _pad_properties_delta!(object::Dict{<:Any,<:Any}, properties::Vector{St
 end
 
 
-""
-function _apply_filter!(obj, properties, filter)
+"Filters out values of a vector or matrix for certain properties"
+function _apply_filter!(obj::Dict{String,<:Any}, properties::Vector{String}, filter::Union{Array,BitArray})
     for property in properties
         if haskey(obj, property)
             if isa(obj[property], Vector)
@@ -414,7 +355,8 @@ Given a set of addmittances 'y' connected from the conductors 'f_cnds' to the
 conductors 't_cnds', this method will return a list of conductors 'cnd' and a
 matrix 'Y', which will satisfy I[cnds] = Y*V[cnds].
 """
-function calc_shunt(f_cnds::Vector{Int}, t_cnds::Vector{Int}, y::Vector{T})::Tuple{Vector{Int}, Matrix{T}} where T <: Number
+function _calc_shunt(f_cnds::Vector{Int}, t_cnds::Vector{Int}, y)::Tuple{Vector{Int}, Matrix{Real}}
+    #TODO fix y::Type
     cnds = unique([f_cnds..., t_cnds...])
     e(f,t) = reshape([c==f ? 1 : c==t ? -1 : 0 for c in cnds], length(cnds), 1)
     Y = sum([e(f_cnds[i], t_cnds[i])*y[i]*e(f_cnds[i], t_cnds[i])' for i in 1:length(y)])
@@ -429,7 +371,6 @@ method will calculate the reduced addmittance matrix if terminal 'ground' is
 grounded.
 """
 function _calc_ground_shunt_admittance_matrix(cnds::Vector{Int}, Y::Matrix{T}, ground::Int)::Tuple{Vector{Int}, Matrix{T}} where T <: Number
-    # TODO add types
     if ground in cnds
         cndsr = setdiff(cnds, ground)
         cndsr_inds = _get_idxs(cnds, cndsr)
@@ -470,6 +411,7 @@ function _add_gen_cost_model!(math_obj::Dict{String,<:Any}, eng_obj::Dict{String
 end
 
 
+"applies a xfmrcode to a transformer in preparation for converting to mathematical model"
 function _apply_xfmrcode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     if haskey(eng_obj, "xfmrcode") && haskey(data_eng, "xfmrcode") && haskey(data_eng["xfmrcode"], eng_obj["xfmrcode"])
         xfmrcode = data_eng["xfmrcode"][eng_obj["xfmrcode"]]
@@ -489,6 +431,7 @@ function _apply_xfmrcode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:A
 end
 
 
+"applies a linecode to a line in preparation for converting to mathematical model"
 function _apply_linecode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     if haskey(eng_obj, "linecode") && haskey(data_eng, "linecode") && haskey(data_eng["linecode"], eng_obj["linecode"])
         linecode = data_eng["linecode"][eng_obj["linecode"]]
@@ -498,5 +441,37 @@ function _apply_linecode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:A
                 eng_obj[property] = linecode[property]
             end
         end
+    end
+end
+
+
+"parses {}_times_series parameters into the expected InfrastructureModels format"
+function _parse_time_series_parameter!(data_math::Dict{String,<:Any}, time_series::Dict{String,<:Any}, fr_parameter::Any, to_component_type::String, to_component_id::String, to_parameter::String)
+    if !haskey(data_math, "time_series")
+        data_math["time_series"] => Dict{String,Any}()
+    end
+
+    if !haskey(data_math["time_series"], "time")
+        data_math["time_series"]["time_point"] = time_series["time"]
+    else
+        if time_series["time"] == data_math["time_series"]["time_point"]
+            Memento.warn(_LOGGER, "Time series data doesn't match between different objects, aborting")
+        end
+    end
+
+    data_math["time_series"]["num_steps"] = length(time_series["time"])
+
+    if !haskey(data_math["time_series"], to_component_type)
+        data_math["time_series"][to_component_type] = Dict{String,Any}()
+    end
+
+    if !haskey(data_math["time_series"][to_component_type], to_component_id)
+        data_math["time_series"][to_component_type][to_component_id] = Dict{String,Any}()
+    end
+
+    if time_series["replace"]
+        data_math["time_series"][to_component_type][to_component_id][to_parameter] = time_series["values"]
+    else
+        data_math["time_series"][to_component_type][to_component_id][to_parameter] = fr_parameter .* time_series["values"]
     end
 end

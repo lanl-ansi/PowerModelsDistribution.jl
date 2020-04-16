@@ -66,10 +66,9 @@ const _array_delimiters = Vector{Char}(['\"', '\'', '[', '{', '(', ']', '}', ')'
 const _like_exclusions = Dict{String,Vector{Regex}}(
     "all" => Vector{Regex}([r"name", r"enabled"]),
     "line" => [r"switch"],
-    "transformer" => []
 )
 
-""
+"Regexes for determining data types"
 const _dtype_regex = Dict{Regex, Type}(
     r"^[+-]{0,1}\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*[+-]\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*[ij]$" => ComplexF64,
     r"^[+-]{0,1}\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*$" => Float64,
@@ -460,7 +459,7 @@ end
 "Returns an ordered list of defined conductors. If ground=false, will omit any `0`"
 function _get_conductors_ordered(busname::AbstractString; default::Vector{Int}=Vector{Int}([]), check_length::Bool=true, pad_ground::Bool=false)::Vector{Int}
     parts = split(busname, '.'; limit=2)
-    ret = []
+    ret = Vector{Int}([])
     if length(parts)==2
         conds_str = split(parts[2], '.')
         ret = [parse(Int, i) for i in conds_str]
@@ -500,12 +499,6 @@ function _get_idxs(vec::Vector{<:Any}, els::Vector{<:Any})::Vector{Int}
         end
     end
     return ret
-end
-
-
-""
-function _get_ilocs(vec::Vector{<:Any}, loc::Any)::Vector{Int}
-    return collect(1:length(vec))[vec.==loc]
 end
 
 
@@ -597,7 +590,7 @@ function _to_kwargs(data::Dict{String,Any})::Dict{Symbol,Any}
 end
 
 
-""
+"apply properties in the order that they are given"
 function _apply_ordered_properties(defaults::Dict{String,<:Any}, raw_dss::Dict{String,<:Any}; code_dict::Dict{String,<:Any}=Dict{String,Any}())::Dict{String,Any}
     _defaults = deepcopy(defaults)
 
@@ -665,12 +658,10 @@ end
 
 
 """
-    parse_dss_with_dtypes!(data_dss, to_parse)
-
 Parses the data in keys defined by `to_parse` in `data_dss` using types given by
 the default properties from the `get_prop_default` function.
 """
-function parse_dss_with_dtypes!(data_dss::Dict{String,<:Any}, to_parse::Vector{String}=_dss_supported_components)
+function _parse_dss_with_dtypes!(data_dss::Dict{String,<:Any}, to_parse::Vector{String}=_dss_supported_components)
     for obj_type in to_parse
         if haskey(data_dss, obj_type)
             dtypes = _dss_parameter_data_types[obj_type]
@@ -722,7 +713,7 @@ function _parse_element_with_dtype(dtype::Type, element::AbstractString)
 end
 
 
-""
+"parses data type of properties of objects"
 function _parse_obj_dtypes!(obj_type::String, object::Dict{String,Any}, dtypes::Dict{String,Type})
     for (k, v) in object
         if isa(v, Vector) && eltype(v) == Any || isa(eltype(v), AbstractString)
@@ -745,51 +736,6 @@ function _parse_obj_dtypes!(obj_type::String, object::Dict{String,Any}, dtypes::
             object[k] = _parse_element_with_dtype(get(dtypes, k, _guess_dtype(v)), v)
         end
     end
-end
-
-
-"""
-Given a set of addmittances 'y' connected from the conductors 'f_cnds' to the
-conductors 't_cnds', this method will return a list of conductors 'cnd' and a
-matrix 'Y', which will satisfy I[cnds] = Y*V[cnds].
-"""
-function _calc_shunt(f_cnds, t_cnds, y)
-    # TODO add types
-    cnds = unique([f_cnds..., t_cnds...])
-    e(f,t) = reshape([c==f ? 1 : c==t ? -1 : 0 for c in cnds], length(cnds), 1)
-    Y = sum([e(f_cnds[i], t_cnds[i])*y[i]*e(f_cnds[i], t_cnds[i])' for i in 1:length(y)])
-    return (cnds, Y)
-end
-
-
-"""
-Given a set of terminals 'cnds' with associated shunt addmittance 'Y', this
-method will calculate the reduced addmittance matrix if terminal 'ground' is
-grounded.
-"""
-function _calc_ground_shunt_admittance_matrix(cnds::Vector{Int}, Y::Matrix{T}, ground::Int)::Tuple{Vector{Int}, Matrix{T}} where T
-    # TODO add types
-    if ground in cnds
-        cndsr = setdiff(cnds, ground)
-        cndsr_inds = _get_idxs(cnds, cndsr)
-        Yr = Y[cndsr_inds, cndsr_inds]
-        return (cndsr, Yr)
-    else
-        return cnds, Y
-    end
-end
-
-
-""
-function _rm_floating_cnd(cnds::Vector{Int}, Y::Matrix{T}, f::Int) where T
-    P = setdiff(cnds, f)
-
-    f_inds = _get_idxs(cnds, [f])
-    P_inds = _get_idxs(cnds, P)
-
-    Yrm = Y[P_inds,P_inds]-(1/Y[f_inds,f_inds][1])*Y[P_inds,f_inds]*Y[f_inds,P_inds]
-
-    return (P,Yrm)
 end
 
 

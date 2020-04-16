@@ -1,8 +1,18 @@
-const _dimensionalize_math = Dict(
-    "bus"  => Dict("rad2deg"=>["va"], "vbase"=>["vm", "vr", "vi"]),
-    "gen"  => Dict("sbase"=>["pg", "qg", "pg_bus", "qg_bus"]),
-    "load" => Dict("sbase"=>["pd", "qd", "pd_bus", "qd_bus"]),
-    "line" => Dict("sbase"=>["pf", "qf", "pt", "qt"]),
+"lists of scaling factors and what they apply to"
+const _dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
+    "bus"  => Dict{String,Vector{String}}(
+        "rad2deg"=>Vector{String}(["va"]),
+        "vbase"=>Vector{String}(["vm", "vr", "vi"])
+    ),
+    "gen"  => Dict{String,Vector{String}}(
+        "sbase"=>Vector{String}(["pg", "qg", "pg_bus", "qg_bus"])
+    ),
+    "load" => Dict{String,Vector{String}}(
+        "sbase"=>Vector{String}(["pd", "qd", "pd_bus", "qd_bus"])
+    ),
+    "line" => Dict{String,Vector{String}}(
+        "sbase"=>Vector{String}(["pf", "qf", "pt", "qt"])
+    ),
 )
 
 
@@ -218,7 +228,6 @@ function _rebase_pu_bus!(bus::Dict{String,<:Any}, vbase::Real, sbase::Real, sbas
     z_scale = z_old/z_new
     _scale_props!(bus, ["rg", "xg"], z_scale)
 
-    # TODO fix
     if haskey(bus ,"va")
         bus["va"] = deg2rad.(bus["va"])
     end
@@ -264,8 +273,8 @@ function _rebase_pu_shunt!(shunt::Dict{String,<:Any}, vbase::Real, sbase::Real, 
 
     z_scale = z_old/z_new
     y_scale = 1/z_scale
-    scale(shunt, "gs", y_scale)
-    scale(shunt, "bs", y_scale)
+    _scale(shunt, "gs", y_scale)
+    _scale(shunt, "bs", y_scale)
 
     # save new vbase
     shunt["vbase"] = vbase
@@ -283,11 +292,11 @@ function _rebase_pu_load!(load::Dict{String,<:Any}, vbase::Real, sbase::Real, sb
 
     vbase_old = get(load, "vbase", 1.0)
     vbase_scale = vbase_old/vbase
-    scale(load, "vnom_kv", vbase_scale)
+    _scale(load, "vnom_kv", vbase_scale)
 
     sbase_scale = sbase_old/sbase
-    scale(load, "pd", sbase_scale)
-    scale(load, "qd", sbase_scale)
+    _scale(load, "pd", sbase_scale)
+    _scale(load, "qd", sbase_scale)
 
     # save new vbase
     load["vbase"] = vbase
@@ -301,7 +310,7 @@ function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real
     sbase_scale = sbase_old/sbase
 
     for key in ["pg", "qg", "pmin", "qmin", "pmax", "qmax"]
-        scale(gen, key, sbase_scale)
+        _scale(gen, key, sbase_scale)
     end
 
     # if not in per unit yet, the cost has is in $/MWh
@@ -326,7 +335,7 @@ function _rebase_pu_transformer_2w_ideal!(transformer::Dict{String,<:Any}, f_vba
     f_vbase_scale = f_vbase_old/f_vbase_new
     t_vbase_scale = t_vbase_old/t_vbase_new
 
-    scale(transformer, "tm_nom", f_vbase_scale/t_vbase_scale)
+    _scale(transformer, "tm_nom", f_vbase_scale/t_vbase_scale)
 
     # save new vbase
     transformer["f_vbase"] = f_vbase_new
@@ -344,21 +353,19 @@ function _scale_props!(comp::Dict{String,<:Any}, prop_names::Vector{String}, sca
 end
 
 
-""
+"adds big M to data model"
 function add_big_M!(data_model::Dict{String,<:Any}; kwargs...)
-    big_M = Dict{String, Any}()
-
-    big_M["v_phase_pu_min"] = add_kwarg!(big_M, kwargs, :v_phase_pu_min, 0.5)
-    big_M["v_phase_pu_max"] = add_kwarg!(big_M, kwargs, :v_phase_pu_max, 2.0)
-    big_M["v_neutral_pu_min"] = add_kwarg!(big_M, kwargs, :v_neutral_pu_min, 0.0)
-    big_M["v_neutral_pu_max"] = add_kwarg!(big_M, kwargs, :v_neutral_pu_max, 0.5)
-
-    data_model["big_M"] = big_M
+    data_model["big_M"] = Dict{String, Any}(
+        "v_phase_pu_lb" => get(kwargs, :v_phase_pu_lb, 0.5),
+        "v_phase_pu_ub" => get(kwargs, :v_phase_pu_ub, 2.0),
+        "v_neutral_pu_lb" => get(kwargs, :v_neutral_pu_lb, 0.0),
+        "v_neutral_pu_ub" => get(kwargs, :v_neutral_pu_ub, 0.5)
+    )
 end
 
 
-""
-function solution_make_si(solution::Dict{String,<:Any}, math_model::Dict{String,<:Any}; mult_sbase::Bool=true, mult_vbase::Bool=true, convert_rad2deg::Bool=true)
+"converts solution to si units"
+function solution_make_si(solution::Dict{String,<:Any}, math_model::Dict{String,<:Any}; mult_sbase::Bool=true, mult_vbase::Bool=true, convert_rad2deg::Bool=true)::Dict{String,Any}
     solution_si = deepcopy(solution)
 
     sbase = math_model["sbase"]

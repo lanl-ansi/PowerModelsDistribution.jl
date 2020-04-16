@@ -1,8 +1,8 @@
 import LinearAlgebra: diagm
 
-
+"items that are mapped one-to-one from engineering to math models"
 const _1to1_maps = Dict{String,Vector{String}}(
-    "bus" => ["vm", "va", "vmin", "vmax", "dss"],
+    "bus" => ["vm", "va", "dss"],
     "load" => ["model", "configuration", "status", "source_id", "dss"],
     "shunt_capacitor" => ["status", "source_id", "dss"],
     "series_capacitor" => ["source_id", "dss"],
@@ -19,12 +19,18 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "voltage_source" => ["source_id", "dss"],
 )
 
-const _node_elements = ["load", "capacitor", "shunt_reactor", "generator", "solar", "storage", "vsource"]
+"list of nodal type elements in the engineering model"
+const _node_elements = Vector{String}([
+    "load", "capacitor", "shunt_reactor", "generator", "solar", "storage", "vsource"
+])
 
-const _edge_elements = ["line", "switch", "transformer", "line_reactor", "series_capacitor"]
+"list of edge type elements in the engineering model"
+const _edge_elements = Vector{String}([
+    "line", "switch", "transformer", "line_reactor", "series_capacitor"
+])
 
 
-""
+"base function for converting engineering model to mathematical model"
 function _map_eng2math(data_eng; kron_reduced::Bool=true, lossless::Bool=false, adjust_bounds::Bool=true)
     @assert get(data_eng, "data_model", "mathematical") == "engineering"
 
@@ -75,7 +81,7 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true, lossless::Bool=false, 
 end
 
 
-""
+"initializes the base math object of any type, and copies any one-to-one mappings"
 function _init_math_obj(obj_type::String, eng_obj::Dict{String,<:Any}, index::Int)::Dict{String,Any}
     math_obj = Dict{String,Any}()
 
@@ -91,7 +97,7 @@ function _init_math_obj(obj_type::String, eng_obj::Dict{String,<:Any}, index::In
 end
 
 
-""
+"initializes the base components that are expected by powermodelsdistribution in the mathematical model"
 function _init_base_components!(data_math::Dict{String,<:Any})
     for key in ["bus", "load", "shunt", "gen", "branch", "switch", "transformer", "storage", "dcline"]
         if !haskey(data_math, key)
@@ -101,10 +107,8 @@ function _init_base_components!(data_math::Dict{String,<:Any})
 end
 
 
-""
+"Initializes the lookup table"
 function _init_lookup!(data_math::Dict{String,<:Any})
-
-
     for key in keys(_1to1_maps)
         if !haskey(data_math["lookup"], key)
             data_math["lookup"][key] = Dict{Any,Int}()
@@ -113,10 +117,9 @@ function _init_lookup!(data_math::Dict{String,<:Any})
 end
 
 
-""
+"converts engineering bus components into mathematical bus components"
 function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "bus", Dict{String,Any}())
-        # TODO fix vnom
         phases = get(eng_obj, "phases", [1, 2, 3])
         neutral = get(eng_obj, "neutral", 4)
         terminals = eng_obj["terminals"]
@@ -138,8 +141,8 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
             math_obj["va"] = eng_obj["va"]
         end
 
-        math_obj["vmin"] = fill(0.0, length(terminals))
-        math_obj["vmax"] = fill(Inf, length(terminals))
+        math_obj["vmin"] = get(eng_obj, "vm_lb", fill(0.0, length(terminals)))
+        math_obj["vmax"] = get(eng_obj, "vm_ub", fill(Inf, length(terminals)))
 
         math_obj["base_kv"] = data_eng["settings"]["vbase"]
 
@@ -165,11 +168,25 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
             :to => "bus.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_bus!,
         )
+
+        # time series
+        for (fr, to) in zip(["status", "vm", "va", "vm_lb", "vm_ub"], ["bus_type", "vm", "va", "vmin", "vmax"])
+            if haskey(eng_obj, "$(fr)_time_series")
+                if to == "bus_type"
+                    time_series = deepcopy(data_eng["time_series"][eng_obj["$(fr)_time_series"]])
+                    time_series = [status == 1 ? 1 : 4 for status in time_series["values"]]
+                    @assert time_series["replace"]
+                else
+                    time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
+                end
+                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "bus", "$(math_obj["index"])", to)
+            end
+        end
     end
 end
 
 
-""
+"converts engineering load components into mathematical load components"
 function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "load", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("load", eng_obj, length(data_math["load"])+1)
@@ -179,8 +196,6 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         nconductors = data_math["conductors"]
 
         math_obj["load_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
-
-        math_obj["status"] = eng_obj["status"]
 
         math_obj["pd"] = eng_obj["pd"]
         math_obj["qd"] = eng_obj["qd"]
@@ -207,6 +222,14 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             :to => "load.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_load!,
         )
+
+        # time series
+        for (fr, to) in zip(["status", "pd", "qd"], ["status", "pd", "qd"])
+            if haskey(eng_obj, "$(fr)_time_series")
+                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
+                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "load", "$(math_obj["index"])", to)
+            end
+        end
     end
 end
 
@@ -216,7 +239,6 @@ function _map_eng2math_shunt_capacitor!(data_math::Dict{String,<:Any}, data_eng:
     for (name, eng_obj) in get(data_eng, "shunt_capacitor", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("shunt_capacitor", eng_obj, length(data_math["shunt"])+1)
 
-        # TODO change to new capacitor shunt calc logic
         math_obj["name"] = name
         math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
@@ -254,6 +276,15 @@ function _map_eng2math_shunt_capacitor!(data_math::Dict{String,<:Any}, data_eng:
             :to => "shunt.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_shunt_capacitor!,
         )
+
+        # time series
+        # TODO
+        for (fr, to) in zip(["status"], ["status"])
+            if haskey(eng_obj, "$(fr)_time_series")
+                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
+                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "shunt", "$(math_obj["index"])", to)
+            end
+        end
     end
 end
 
@@ -288,6 +319,14 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
             :to => "shunt.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_capacitor!,
         )
+
+        # time series
+        for (fr, to) in zip(["status", "g_sh", "b_sh"], ["status", "gs", "bs"])
+            if haskey(eng_obj, "$(fr)_time_series")
+                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
+                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "shunt", "$(math_obj["index"])", to)
+            end
+        end
     end
 end
 
@@ -324,6 +363,15 @@ function _map_eng2math_shunt_reactor!(data_math::Dict{String,<:Any}, data_eng::D
             :to => "shunt.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_shunt_reactor!,
         )
+
+        # time series
+        # TODO
+        for (fr, to) in zip(["status"], ["status"])
+            if haskey(eng_obj, "$(fr)_time_series")
+                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
+                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "shunt", "$(math_obj["index"])", to)
+            end
+        end
     end
 end
 
@@ -378,6 +426,15 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
             :to => "gen.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_generator!,
         )
+
+        # time series
+        # TODO
+        for (fr, to) in zip(["status"], ["status"])
+            if haskey(eng_obj, "$(fr)_time_series")
+                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
+                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "gen", "$(math_obj["index"])", to)
+            end
+        end
     end
 end
 
@@ -424,6 +481,15 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
             :to => "gen.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_solar!,
         )
+
+        # time series
+        # TODO
+        for (fr, to) in zip(["status"], ["status"])
+            if haskey(eng_obj, "$(fr)_time_series")
+                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
+                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "gen", "$(math_obj["index"])", to)
+            end
+        end
     end
 end
 
@@ -467,6 +533,15 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
             :to => "storage.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_storage!,
         )
+
+        # time series
+        # TODO
+        for (fr, to) in zip(["status"], ["status"])
+            if haskey(eng_obj, "$(fr)_time_series")
+                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
+                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "storage", "$(math_obj["index"])", to)
+            end
+        end
     end
 end
 
@@ -529,6 +604,15 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             :to => "branch.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_line!,
         )
+
+        # time series
+        # TODO
+        for (fr, to) in zip(["status"], ["status"])
+            if haskey(eng_obj, "$(fr)_time_series")
+                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
+                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "branch", "$(math_obj["index"])", to)
+            end
+        end
     end
 end
 
@@ -590,6 +674,15 @@ function _map_eng2math_line_reactor!(data_math::Dict{String,<:Any}, data_eng::Di
             :to => "branch.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_line_reactor!,
         )
+
+        # time series
+        # TODO
+        for (fr, to) in zip(["status"], ["status"])
+            if haskey(eng_obj, "$(fr)_time_series")
+                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
+                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "branch", "$(math_obj["index"])", to)
+            end
+        end
     end
 end
 
@@ -615,6 +708,15 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 :to => "switch.$(math_obj["index"])",
                 :unmap_function => :_map_math2eng_switch!,
             )
+
+            # time series
+            # TODO
+            for (fr, to) in zip(["status"], ["status"])
+                if haskey(eng_obj, "$(fr)_time_series")
+                    time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
+                    _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "switch", "$(math_obj["index"])", to)
+                end
+            end
         else
             # build virtual bus
             f_bus = data_math["bus"]["$(data_math["bus_lookup"][eng_obj["f_bus"]])"]
