@@ -415,6 +415,10 @@ function _dss2eng_linecode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
         eng_obj["g_fr"] = fill(0.0, nphases, nphases)
         eng_obj["g_to"] = fill(0.0, nphases, nphases)
 
+        if import_all
+            _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
+        end
+
         _add_eng_obj!(data_eng, "linecode", name, eng_obj)
     end
 end

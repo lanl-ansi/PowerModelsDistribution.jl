@@ -110,8 +110,8 @@
         Memento.setlevel!(TESTLOG, "error")
     end
 
-    eng = PMD.parse_file("../test/data/opendss/test2_master.dss"; data_model="engineering")
-    pmd = PMD.parse_file("../test/data/opendss/test2_master.dss")
+    eng = PMD.parse_file("../test/data/opendss/test2_master.dss"; data_model="engineering", import_all=true)
+    pmd = PMD.parse_file("../test/data/opendss/test2_master.dss"; data_model="mathematical", import_all=true)
 
     len = 0.013516796
     rmatrix=PMD._parse_matrix(Float64, "[1.5000  |0.200000  1.50000  |0.250000  0.25000  2.00000  ]")
@@ -120,6 +120,11 @@
 
     @testset "buscoords automatic parsing" begin
         @test all(haskey(bus, "lon") && haskey(bus, "lat") for bus in values(pmd["bus"]) if "bus_i" in 1:10)
+    end
+
+    @testset "import_all parsing" begin
+        @test all(haskey(comp, "dss") && isa(comp["dss"], Dict) for (comp_type, comps) in eng if isa(comps, Dict) for (_,comp) in comps if isa(comp, Dict) && comp_type != "bus" && comp_type != "settings")
+        @test all(haskey(comp, "dss") && isa(comp["dss"], Dict) for (comp_type, comps) in pmd if isa(comps, Dict) for (id,comp) in comps if isa(comp, Dict) && comp_type != "bus" && comp_type != "settings" && comp_type != "map" && !startswith(comp["name"], "_virtual"))
     end
 
     @testset "opendss parse generic parser verification" begin

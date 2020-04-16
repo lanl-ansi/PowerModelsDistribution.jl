@@ -2,21 +2,21 @@ import LinearAlgebra: diagm
 
 
 const _1to1_maps = Dict{String,Vector{String}}(
-    "bus" => ["vm", "va", "vmin", "vmax"],
-    "load" => ["model", "configuration", "status", "source_id"],
-    "shunt_capacitor" => ["status", "source_id"],
-    "series_capacitor" => [],
-    "shunt" => ["status", "source_id"],
-    "shunt_reactor" => ["status", "source_id"],
-    "generator" => ["source_id", "configuration"],
-    "solar" => ["source_id", "configuration"],
-    "storage" => ["status", "source_id"],
-    "line" => ["source_id"],
-    "line_reactor" => ["source_id"],
-    "switch" => ["source_id", "state", "status"],
-    "line_reactor" => ["source_id"],
-    "transformer" => ["source_id"],
-    "voltage_source" => ["source_id"],
+    "bus" => ["vm", "va", "vmin", "vmax", "dss"],
+    "load" => ["model", "configuration", "status", "source_id", "dss"],
+    "shunt_capacitor" => ["status", "source_id", "dss"],
+    "series_capacitor" => ["source_id", "dss"],
+    "shunt" => ["status", "source_id", "dss"],
+    "shunt_reactor" => ["status", "source_id", "dss"],
+    "generator" => ["source_id", "configuration", "dss"],
+    "solar" => ["source_id", "configuration", "dss", "dss"],
+    "storage" => ["status", "source_id", "dss"],
+    "line" => ["source_id", "dss"],
+    "line_reactor" => ["source_id", "dss"],
+    "switch" => ["source_id", "state", "status", "dss"],
+    "line_reactor" => ["source_id", "dss"],
+    "transformer" => ["source_id", "dss"],
+    "voltage_source" => ["source_id", "dss"],
 )
 
 const _node_elements = ["load", "capacitor", "shunt_reactor", "generator", "solar", "storage", "vsource"]
