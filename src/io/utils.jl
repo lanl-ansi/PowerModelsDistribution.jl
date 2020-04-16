@@ -1,8 +1,30 @@
 import Base.Iterators: flatten
 
+"all node types that can help define buses"
+const _dss_node_objects = Vector{String}([
+    "isource", "load", "generator", "indmach012", "storage", "pvsystem"
+])
 
 "all edge types that can help define buses"
-const _dss_edge_components = Vector{String}(["line", "transformer", "reactor", "capacitor"])
+const _dss_edge_objects = Vector{String}([
+    "vsource", "fault", "capacitor", "line", "reactor", "transformer", "gictransformer", "gicline"
+])
+
+"all data holding objects"
+const _dss_data_objects = Vector{String}([
+    "options", "xfmrcode", "linecode", "loadshape", "xycurve", "linegeometry",
+    "linespacing", "growthshape", "tcc_curve", "cndata", "tsdata", "wiredata"
+])
+
+"all objects that define controls"
+const _dss_control_objects = Vector{String}([
+    "capcontrol", "regcontrol", "swtcontrol", "relay", "recloser", "fuse"
+])
+
+"all objects that provide montoring"
+const _dss_monitor_objects = Vector{String}([
+    "energymeter", "monitor"
+])
 
 "components currently supported for automatic data type parsing"
 const _dss_supported_components = Vector{String}([
@@ -490,16 +512,37 @@ end
 "Discovers all of the buses (not separately defined in OpenDSS), from \"lines\""
 function _discover_buses(data_dss::Dict{String,<:Any})::Set
     buses = Set([])
-    for obj_type in _dss_edge_components
+    for obj_type in _dss_node_objects
         for (name, dss_obj) in get(data_dss, obj_type, Dict{String,Any}())
+            _apply_like!(dss_obj, data_dss, obj_type)
+            push!(buses, split(dss_obj["bus1"], '.'; limit=2)[1])
+        end
+    end
+
+    for obj_type in _dss_edge_objects
+        for (name, dss_obj) in get(data_dss, obj_type, Dict{String,Any}())
+            _apply_like!(dss_obj, data_dss, obj_type)
             if obj_type == "transformer"
-                dss_obj = _create_transformer(name; _to_kwargs(dss_obj)...)
-                for bus in dss_obj["buses"]
+                transformer = _create_transformer(name; _to_kwargs(dss_obj)...)
+                for bus in transformer["buses"]
                     push!(buses, split(bus, '.'; limit=2)[1])
                 end
-            elseif haskey(dss_obj, "bus2")
+            elseif obj_type == "gictransformer"
+                for key in ["bush", "busx", "busnh", "busnx"]
+                    if haskey(dss_obj, key)
+                        push!(buses, split(dss_obj[key], '.'; limit=2)[1])
+                    end
+                end
+            elseif obj_type == "vsource"
+                push!(buses, split(get(dss_obj, "bus1", "sourcebus"), '.'; limit=2)[1])
+                if haskey(dss_obj, "bus2")
+                    push!(buses, split(dss_obj["bus2"], '.'; limit=2)[1])
+                end
+            else
                 for key in ["bus1", "bus2"]
-                    push!(buses, split(dss_obj[key], '.'; limit=2)[1])
+                    if haskey(dss_obj, key)
+                        push!(buses, split(dss_obj[key], '.'; limit=2)[1])
+                    end
                 end
             end
         end

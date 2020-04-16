@@ -1,0 +1,29 @@
+new circuit.test_islands
+
+new line.1 bus1=1 bus2=2
+
+new transformer.1 windings=3 buses=[3 4 5]
+
+new reactor.1 bus1=6 bus2=7
+
+new capacitor.1 bus1=8 bus2=9
+
+new gictransformer.1 bush=10 busx=11
+
+new gicline.1 bus1=12 bus2=13
+
+new vsource.1 bus1=14 bus2=15
+
+new fault.1 bus1=16 bus2=17
+
+new isource.1 bus1=18
+
+new load.1 bus1=19
+
+new generator.1 bus1=20
+
+new indmach012.1 bus1=21
+
+new storage.1 bus1=22
+
+new pvsystem.1 bus1=23

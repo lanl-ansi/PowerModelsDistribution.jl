@@ -1,6 +1,12 @@
 @info "running opendss parser tests"
 
 @testset "test opendss parser" begin
+    @testset "bus discovery parsing" begin
+        eng = PMD.parse_file("../test/data/opendss/test_bus_discovery.dss"; data_model="engineering")
+
+        @test length(eng["bus"]) == 24
+        @test all(k in keys(eng["bus"]) for k in [["$i" for i in 1:23]..., "sourcebus"])
+    end
 
     @testset "loadshape parsing" begin
         dss = PMD.parse_dss("../test/data/opendss/loadshapes.dss")

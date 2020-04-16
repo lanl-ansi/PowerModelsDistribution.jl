@@ -193,6 +193,10 @@ const _energymeter_properties = Vector{String}([
     "3phaselosses", "vbaselosses", "basefreq", "enabled", "like"
 ])
 
+const _monitor_properties = Vector{String}([
+    "element", "terminal", "mode", "action"
+])
+
 const _pvsystem_properties = Vector{String}([
     "phases", "bus1", "kv", "irradiance", "pmpp", "temperature", "pf",
     "conn", "kvar", "kva", "%cutin", "%cutout", "effcurve", "p-tcurve", "%r",
@@ -257,6 +261,7 @@ const _dss_object_properties = Dict{String,Vector{String}}(
     "capcontrol" => _capacitor_properties,
     "regcontrol" => _regcontrol_properties,
     "energymeter" => _energymeter_properties,
+    "monitor" => _monitor_properties,
     "pvsystem" => _pvsystem_properties,
     "relay" => _relay_properties,
     "recloser" => _reactor_properties,
@@ -624,9 +629,15 @@ given in order, but named properties can be given anywhere.
 function _parse_component(component::AbstractString, properties::AbstractString, object::Dict{String,<:Any}=Dict{String,Any}(); path::String="")::Dict{String,Any}
     obj_type, name = split(component, '.'; limit=2)
 
+    if !haskey(object, "prop_order")
+        object["prop_order"] = Vector{String}([])
+    end
+
     if !haskey(object, "name")
         object["name"] = string(name)
     end
+
+    push!(object["prop_order"], "name")
 
     property_array = _parse_properties(properties)
 
