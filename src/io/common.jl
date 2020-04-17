@@ -3,12 +3,12 @@
 
 Parses the IOStream of a file into a Three-Phase PowerModels data structure.
 """
-function parse_file(io::IO, filetype::AbstractString="json"; data_model::String="mathematical", import_all::Bool=false, bank_transformers::Bool=true, lossless::Bool=false, adjust_bounds::Bool=false, transformations::Vector{Function}=Vector{Function}([]))::Dict{String,Any}
+function parse_file(io::IO, filetype::AbstractString="json"; data_model::String="mathematical", import_all::Bool=false, bank_transformers::Bool=true, transformations::Vector{Function}=Vector{Function}([]))::Dict{String,Any}
     if filetype == "dss"
         data_eng = PowerModelsDistribution.parse_opendss(io; import_all=import_all, bank_transformers=bank_transformers)
 
         if data_model == "mathematical"
-            return transform_data_model(data_eng; make_pu=true, lossless=lossless, adjust_bounds=adjust_bounds)
+            return transform_data_model(data_eng; make_pu=true)
         else
             return data_eng
         end
@@ -16,7 +16,7 @@ function parse_file(io::IO, filetype::AbstractString="json"; data_model::String=
         pmd_data = parse_json(io; validate=false)
 
         if get(pmd_data, "data_model", "mathematical") != data_model
-            return transform_data_model(pmd_data; lossless=lossless, adjust_bounds=adjust_bounds)
+            return transform_data_model(pmd_data)
         else
             return pmd_data
         end
@@ -37,19 +37,18 @@ end
 
 
 "transforms model between engineering (high-level) and mathematical (low-level) models"
-function transform_data_model(data::Dict{String,<:Any}; kron_reduced::Bool=true, make_pu::Bool=false, lossless::Bool=false, adjust_bounds::Bool=false)::Dict{String,Any}
+function transform_data_model(data::Dict{String,<:Any}; kron_reduced::Bool=true, make_pu::Bool=false)::Dict{String,Any}
     current_data_model = get(data, "data_model", "mathematical")
 
     if current_data_model == "engineering"
-        data_math = _map_eng2math(data; kron_reduced=kron_reduced, lossless=lossless, adjust_bounds=adjust_bounds)
+        data_math = _map_eng2math(data; kron_reduced=kron_reduced)
 
         correct_network_data!(data_math; make_pu=make_pu)
 
         return data_math
     elseif current_data_model == "mathematical"
-        data_eng = _map_math2eng(data)
-
-        correct_network_data!(data_eng; make_pu=make_pu)
+        Memento.warn(_LOGGER, "A mathematical data model cannot be converted back to an engineering data model, irreversible transformations have been made")
+        return data
     else
         @warn "Data model '$current_data_model' is not recognized, no model type transformation performed"
         return data
@@ -61,9 +60,6 @@ end
 function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true)
     if get(data, "data_model", "mathematical") == "engineering"
         check_eng_data_model(data)
-        if make_pu
-            make_per_unit!(data)
-        end
     else
         if make_pu
             make_per_unit!(data)

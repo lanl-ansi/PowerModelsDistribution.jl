@@ -31,7 +31,7 @@ const _edge_elements = Vector{String}([
 
 
 "base function for converting engineering model to mathematical model"
-function _map_eng2math(data_eng; kron_reduced::Bool=true, lossless::Bool=false, adjust_bounds::Bool=true)
+function _map_eng2math(data_eng; kron_reduced::Bool=true)
     @assert get(data_eng, "data_model", "mathematical") == "engineering"
 
     data_math = Dict{String,Any}(
@@ -61,21 +61,17 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true, lossless::Bool=false, 
     _map_eng2math_shunt_reactor!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_shunt!(data_math, data_eng; kron_reduced=kron_reduced)
 
-    _map_eng2math_generator!(data_math, data_eng; kron_reduced=kron_reduced, lossless=lossless)
-    _map_eng2math_solar!(data_math, data_eng; kron_reduced=kron_reduced, lossless=lossless)
-    _map_eng2math_storage!(data_math, data_eng; kron_reduced=kron_reduced, lossless=lossless)
-    _map_eng2math_voltage_source!(data_math, data_eng; kron_reduced=kron_reduced, lossless=lossless)
+    _map_eng2math_generator!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_solar!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_storage!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_voltage_source!(data_math, data_eng; kron_reduced=kron_reduced)
 
     _map_eng2math_line!(data_math, data_eng; kron_reduced=kron_reduced)
     # _map_eng2math_series_capacitor(data_math, data_eng; kron_reduced=kron_reduced)  # TODO
     _map_eng2math_line_reactor!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_switch!(data_math, data_eng; kron_reduced=kron_reduced, lossless=lossless)
+    _map_eng2math_switch!(data_math, data_eng; kron_reduced=kron_reduced)
 
     _map_eng2math_transformer!(data_math, data_eng; kron_reduced=kron_reduced)
-
-    if !adjust_bounds
-        # _find_new_bounds(data_math) # TODO
-    end
 
     return data_math
 end
@@ -377,7 +373,7 @@ end
 
 
 ""
-function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4, lossless::Bool=false)
+function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "generator", Dict{String,Any}())
         math_obj = _init_math_obj("generator", eng_obj, length(data_math["gen"])+1)
 
@@ -440,7 +436,7 @@ end
 
 
 ""
-function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4, lossless::Bool=false)
+function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "solar", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("solar", eng_obj, length(data_math["gen"])+1)
 
@@ -495,7 +491,7 @@ end
 
 
 ""
-function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4, lossless::Bool=false)
+function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "storage", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("storage", eng_obj, length(data_math["storage"])+1)
 
@@ -688,38 +684,40 @@ end
 
 
 ""
-function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4, lossless::Bool=false)
+function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     # TODO enable real switches (right now only using vitual lines)
     for (name, eng_obj) in get(data_eng, "switch", Dict{Any,Dict{String,Any}}())
         nphases = length(eng_obj["f_connections"])
         nconductors = data_math["conductors"]
 
-        if lossless
-            math_obj = _init_math_obj("switch", eng_obj, length(data_math["switch"])+1)
-            math_obj["name"] = name
+        math_obj = _init_math_obj("switch", eng_obj, length(data_math["switch"])+1)
+        math_obj["name"] = name
 
-            math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
-            math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
+        math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
+        math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
 
-            data_math["switch"]["$(math_obj["index"])"] = math_obj
-
-            data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-                :from => name,
-                :to => "switch.$(math_obj["index"])",
-                :unmap_function => :_map_math2eng_switch!,
-            )
-
-            # time series
-            # TODO
-            for (fr, to) in zip(["status"], ["status"])
-                if haskey(eng_obj, "$(fr)_time_series")
-                    time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
-                    _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "switch", "$(math_obj["index"])", to)
-                end
+        # OPF bounds
+        for (fr_key, to_key) in zip(["cm_ub"], ["c_rating"])
+            if haskey(eng_obj, fr_key)
+                math_obj[to_key] = eng_obj[fr_key]
             end
-        else
+        end
+
+        map_to = "switch.$(math_obj["index"])"
+
+        # time series
+        # TODO switch time series
+        for (fr, to) in zip(["status", "state"], ["status", "state"])
+            if haskey(eng_obj, "$(fr)_time_series")
+                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
+                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "switch", "$(math_obj["index"])", to)
+            end
+        end
+
+        if any(haskey(eng_obj, k) for k in ["rs", "xs", "linecode"])
             # build virtual bus
-            f_bus = data_math["bus"]["$(data_math["bus_lookup"][eng_obj["f_bus"]])"]
+
+            f_bus = data_math["bus"]["$(math_obj["f_bus"])"]
 
             bus_obj = Dict{String,Any}(
                 "name" => "_virtual_bus.switch.$name",
@@ -732,23 +730,18 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "index" => length(data_math["bus"])+1,
             )
 
+            #= TODO enable real switches
+            # math_obj["t_bus"] = bus_obj["bus_i"]
             # data_math["bus"]["$(bus_obj["index"])"] = bus_obj
+            =#
 
             # build virtual branch
-            if haskey(eng_obj, "linecode")
-                linecode = data_eng["linecode"][eng_obj["linecode"]]
-
-                for property in ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
-                    if !haskey(eng_obj, property) && haskey(linecode, property)
-                        eng_obj[property] = linecode[property]
-                    end
-                end
-            end
+            _apply_linecode!(eng_obj, data_eng)
 
             branch_obj = _init_math_obj("line", eng_obj, length(data_math["branch"])+1)
 
             Zbase = (data_math["basekv"])^2 / (data_math["baseMVA"])
-            Zbase = 1
+            Zbase = 1 # TODO why Zbase=1 on switch impedance branch?
 
             _branch_obj = Dict{String,Any}(
                 "name" => "_virtual_branch.switch.$name",
@@ -758,10 +751,10 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
                 "br_r" => eng_obj["rs"] * eng_obj["length"] / Zbase,
                 "br_x" => eng_obj["xs"] * eng_obj["length"] / Zbase,
-                "g_fr" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9),
-                "g_to" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["g_to"] * eng_obj["length"] / 1e9),
-                "b_fr" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9),
-                "b_to" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["b_to"] * eng_obj["length"] / 1e9),
+                "g_fr" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * get(eng_obj,"g_fr",zeros(size(eng_obj["rs"]))) * eng_obj["length"] / 1e9),
+                "g_to" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * get(eng_obj,"g_to",zeros(size(eng_obj["rs"]))) * eng_obj["length"] / 1e9),
+                "b_fr" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * get(eng_obj,"b_fr",zeros(size(eng_obj["rs"]))) * eng_obj["length"] / 1e9),
+                "b_to" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * get(eng_obj,"b_to",zeros(size(eng_obj["rs"]))) * eng_obj["length"] / 1e9),
                 "angmin" => fill(-60.0, nphases),
                 "angmax" => fill( 60.0, nphases),
                 "transformer" => false,
@@ -801,13 +794,18 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
 
             # data_math["switch"]["$(switch_obj["index"])"] = switch_obj
 
-            data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-                :from => name,
-                # :to_id => ["switch.$(switch_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],  # TODO enable real switches
-                :to => ["branch.$(branch_obj["index"])"],
-                :unmap_function => :_map_math2eng_switch!,
-            )
+            map_to = ["branch.$(branch_obj["index"])"]
+            # map_to = [map_to, "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"]  # TODO enable real switches
         end
+
+        # data_math["switch"]["$(math_obj["index"])"] = math_obj  # TODO enable real switches
+
+        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
+            :from => name,
+            :to => map_to,
+            :unmap_function => :_map_math2eng_switch!,
+        )
+
     end
 end
 
@@ -901,30 +899,25 @@ end
 
 
 ""
-function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1,2,3], kr_neutral::Int=4, lossless::Bool=false)
+function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1,2,3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "voltage_source", Dict{Any,Any}())
         nconductors = data_math["conductors"]
 
-        if lossless
-            math_obj = _init_math_obj("voltage_source", eng_obj, length(data_math["gen"])+1)
+        math_obj = _init_math_obj("voltage_source", eng_obj, length(data_math["gen"])+1)
 
-            math_obj["name"] = name
-            math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
-            math_obj["gen_status"] = eng_obj["status"]
-            math_obj["pg"] = fill(0.0, nconductors)
-            math_obj["qg"] = fill(0.0, nconductors)
-            math_obj["configuration"] = "wye"
+        math_obj["name"] = "_virtual_gen.voltage_source.$name"
+        math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
+        math_obj["gen_status"] = eng_obj["status"]
+        math_obj["pg"] = fill(0.0, nconductors)
+        math_obj["qg"] = fill(0.0, nconductors)
+        math_obj["configuration"] = "wye"
+        math_obj["source_id"] = "_virtual_gen.$(eng_obj["source_id"])"
 
-            _add_gen_cost_model!(math_obj, eng_obj)
+        _add_gen_cost_model!(math_obj, eng_obj)
 
-            data_math["gen"]["$(math_obj["index"])"] = math_obj
+        map_to = "gen.$(math_obj["index"])"
 
-            data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-                :from => name,
-                :to => "gen.$(math_obj["index"])",
-                :unmap_function => :_map_math2eng_voltage_source!,
-            )
-        else
+        if haskey(eng_obj, "rs") && haskey(eng_obj, "xs")
             bus_obj = Dict{String,Any}(
                 "bus_i" => length(data_math["bus"])+1,
                 "index" => length(data_math["bus"])+1,
@@ -937,25 +930,9 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "basekv" => data_math["basekv"]
             )
 
+            math_obj["gen_bus"] = bus_obj["bus_i"]
+
             data_math["bus"]["$(bus_obj["index"])"] = bus_obj
-
-            gen_obj = Dict{String,Any}(
-                "gen_bus" => bus_obj["bus_i"],
-                "name" => "_virtual_gen.voltage_source.$name",
-                "gen_status" => eng_obj["status"],
-                "pg" => fill(0.0, nconductors),
-                "qg" => fill(0.0, nconductors),
-                "model" => 2,
-                "startup" => 0.0,
-                "shutdown" => 0.0,
-                "ncost" => 3,
-                "cost" => [0.0, 1.0, 0.0],
-                "configuration" => "wye",
-                "index" => length(data_math["gen"]) + 1,
-                "source_id" => "_virtual_gen.$(eng_obj["source_id"])"
-            )
-
-            data_math["gen"]["$(gen_obj["index"])"] = gen_obj
 
             branch_obj = Dict{String,Any}(
                 "name" => "_virtual_branch.voltage_source.$name",
@@ -980,11 +957,15 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
 
             data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 
-            data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-                :from => name,
-                :to => ["gen.$(gen_obj["index"])", "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"],
-                :unmap_function => :_map_math2eng_voltage_source!,
-            )
+            map_to = [map_to, "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"]
         end
+
+        data_math["gen"]["$(math_obj["index"])"] = math_obj
+
+        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
+            :from => name,
+            :to => map_to,
+            :unmap_function => :_map_math2eng_voltage_source!,
+        )
     end
 end
