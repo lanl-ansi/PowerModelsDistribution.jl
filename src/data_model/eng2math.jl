@@ -8,7 +8,7 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "series_capacitor" => ["source_id", "dss"],
     "shunt" => ["status", "source_id", "dss"],
     "shunt_reactor" => ["status", "source_id", "dss"],
-    "generator" => ["source_id", "configuration", "dss"],
+    "generator" => ["source_id", "configuration", "dss", "pg", "qg"],
     "solar" => ["source_id", "configuration", "dss", "dss"],
     "storage" => ["status", "source_id", "dss"],
     "line" => ["source_id", "dss"],
@@ -29,6 +29,119 @@ const _edge_elements = Vector{String}([
     "line", "switch", "transformer", "line_reactor", "series_capacitor"
 ])
 
+"list of time-series supported parameters that map one-to-one"
+const _time_series_parameters = Dict{String,Dict{String,Tuple{Function, String}}}(
+    "switch" => Dict{String,Tuple{Function, String}}(
+        "status" => (_no_conversion, "status"),
+        "state" => (_no_conversion, "state"),
+        "c_rating" => (_no_conversion, "cm_ub"),
+        "s_rating" => (_no_conversion, "sm_ub"),
+        "br_r" => (_impedance_conversion, "rs"),
+        "br_x" => (_impedance_conversion, "xs"),
+        "g_fr" => (_admittance_conversion, "g_fr"),
+        "g_to" => (_admittance_conversion, "g_to"),
+        "b_fr" => (_admittance_conversion, "b_fr"),
+        "b_to" => (_admittance_conversion, "b_to")
+    ),
+    "fuse" => Dict{String,Tuple{Function, String}}(
+        "status" => (_no_conversion, "status"),
+        "state" => (_no_conversion, "state"),
+        "c_rating" => (_no_conversion, "cm_ub"),
+        "s_rating" => (_no_conversion, "sm_ub"),
+        "br_r" => (_impedance_conversion, "rs"),
+        "br_x" => (_impedance_conversion, "xs"),
+        "g_fr" => (_admittance_conversion, "g_fr"),
+        "g_to" => (_admittance_conversion, "g_to"),
+        "b_fr" => (_admittance_conversion, "b_fr"),
+        "b_to" => (_admittance_conversion, "b_to")
+    ),
+    "line" => Dict{String,Tuple{Function, String}}(
+        "br_status" => (_no_conversion, "status"),
+        "c_rating" => (_no_conversion, "cm_ub"),
+        "s_rating" => (_no_conversion, "sm_ub"),
+        "br_r" => (_impedance_conversion, "rs"),
+        "br_x" => (_impedance_conversion, "xs"),
+        "g_fr" => (_admittance_conversion, "g_fr"),
+        "g_to" => (_admittance_conversion, "g_to"),
+        "b_fr" => (_admittance_conversion, "b_fr"),
+        "b_to" => (_admittance_conversion, "b_to")
+    ),
+    "transformer" => Dict{String,Tuple{Function, String}}(
+        "status" => (_no_conversion, "status"),
+        # TODO need to figure out how to convert values for time series for decomposed transformers
+    ),
+    "bus" => Dict{String,Tuple{Function, String}}(
+        "bus_type" => (_bus_type_conversion, "status"),
+        "vmin" => (_no_conversion, "vm_lb"),
+        "vmax" => (_no_conversion, "vm_ub"),
+        "vm" => (_no_conversion, "vm"),
+        "va" => (_no_conversion, "va")
+    ),
+    "shunt" => Dict{String,Tuple{Function, String}}(
+        "status" => (_no_conversion, "status"),
+        "gs" => (_no_conversion, "gs"),
+        "bs" => (_no_conversion, "bs"),
+    ),
+    "shunt_capacitor" => Dict{String,Tuple{Function, String}}(
+        "status" => (_no_conversion, "status"),
+        "gs" => (_no_conversion, "gs"),
+        "bs" => (_no_conversion, "bs"),
+    ),
+    "shunt_reactor" => Dict{String,Tuple{Function, String}}(
+        "status" => (_no_conversion, "status"),
+        "gs" => (_no_conversion, "gs"),
+        "bs" => (_no_conversion, "bs"),
+    ),
+    "load" => Dict{String,Tuple{Function, String}}(
+        "status" => (_no_conversion, "status"),
+        "pd_ref" => (_no_conversion, "pd_nom"),
+        "qd_ref" => (_no_conversion, "qd_nom"),
+    ),
+    "generator" => Dict{String,Tuple{Function, String}}(
+        "gen_status" => (_no_conversion, "status"),
+        "pg" => (_no_conversion, "pg"),
+        "qg" => (_no_conversion, "qg"),
+        "vg" => (_vnom_conversion, "vg"),
+        "pmin" => (_no_conversion, "pg_lb"),
+        "pmax" => (_no_conversion, "pg_ub"),
+        "qmin" => (_no_conversion, "qg_lb"),
+        "qmax" => (_no_conversion, "qg_ub"),
+    ),
+    "solar" => Dict{String,Tuple{Function, String}}(
+        "gen_status" => (_no_conversion, "status"),
+        "pg" => (_no_conversion, "pg"),
+        "qg" => (_no_conversion, "qg"),
+        "vg" => (_vnom_conversion, "vg"),
+        "pmin" => (_no_conversion, "pg_lb"),
+        "pmax" => (_no_conversion, "pg_ub"),
+        "qmin" => (_no_conversion, "qg_lb"),
+        "qmax" => (_no_conversion, "qg_ub"),
+    ),
+    "storage" => Dict{String,Tuple{Function, String}}(
+        "status" => (_no_conversion, "status"),
+        "energy" => (_no_conversion, "energy"),
+        "energy_rating" => (_no_conversion, "energy_ub"),
+        "charge_rating" => (_no_conversion, "charge_ub"),
+        "discharge_rating" => (_no_conversion, "discharge_ub"),
+        "charge_efficiency" => (_no_conversion, "charge_efficiency"),
+        "discharge_efficiency" => (_no_conversion, "discharge_efficiency"),
+        "thermal_rating" => (_no_conversion, "cm_ub"),
+        "qmin" => (_no_conversion, "qs_lb"),
+        "qmax" => (_no_conversion, "qs_ub"),
+        "r" => (_no_conversion, "rs"),
+        "x" => (_no_conversion, "xs"),
+        "p_loss" => (_no_conversion, "pex"),
+        "q_loss" => (_no_conversion, "qex"),
+        "ps" => (_no_conversion, "ps"),
+        "qs" => (_no_conversion, "qs"),
+    ),
+    "voltage_source" => Dict{String,Tuple{Function, String}}(
+        "gen_status" => (_no_conversion, "status"),
+        "vm" => (_no_conversion, "vm"),
+        "va" => (_angle_shift_conversion, "va"),
+    ),
+
+)
 
 "base function for converting engineering model to mathematical model"
 function _map_eng2math(data_eng; kron_reduced::Bool=true)
@@ -128,7 +241,7 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
         math_obj["name"] = name
 
         math_obj["bus_i"] = math_obj["index"]
-        math_obj["bus_type"] = eng_obj["status"] == 1 ? 1 : 4
+        math_obj["bus_type"] = _bus_type_conversion(data_eng, eng_obj, "status")
 
         if haskey(eng_obj, "vm")
             math_obj["vm"] = eng_obj["vm"]
@@ -385,14 +498,14 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         math_obj["name"] = name
         math_obj["gen_status"] = eng_obj["status"]
 
-        math_obj["pg"] = eng_obj["kw"]
-        math_obj["qg"] = eng_obj["kvar"]
-        math_obj["vg"] = eng_obj["kv"] ./ data_math["basekv"]
+        math_obj["pg"] = eng_obj["pg"]
+        math_obj["qg"] = eng_obj["qg"]
+        math_obj["vg"] = eng_obj["vg"] ./ data_math["basekv"]
 
-        math_obj["qmin"] = eng_obj["kvar_min"]
-        math_obj["qmax"] = eng_obj["kvar_max"]
+        math_obj["qmin"] = eng_obj["qg_lb"]
+        math_obj["qmax"] = eng_obj["qg_ub"]
 
-        math_obj["pmax"] = eng_obj["kw"]
+        math_obj["pmax"] = eng_obj["pg"]
         math_obj["pmin"] = zeros(phases)
 
         _add_gen_cost_model!(math_obj, eng_obj)
@@ -411,7 +524,7 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         end
 
         # if PV generator mode convert attached bus to PV bus
-        if eng_obj["control_model"] == 3
+        if eng_obj["control_mode"] == 3
             data_math["bus"]["$(data_math["bus_lookup"][eng_obj["bus"]])"]["bus_type"] = 2
         end
 
@@ -480,10 +593,10 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
 
         # time series
         # TODO
-        for (fr, to) in zip(["status"], ["status"])
+        for (fr, (f, to)) in _time_series_parameters["solar"]
             if haskey(eng_obj, "$(fr)_time_series")
                 time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
-                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "gen", "$(math_obj["index"])", to)
+                _parse_time_series_parameter!(data_math, time_series, eng_obj, "gen", "$(math_obj["index"])", fr, to, f)
             end
         end
     end
@@ -556,14 +669,14 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
         math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
 
-        math_obj["br_r"] = eng_obj["rs"] * eng_obj["length"]
-        math_obj["br_x"] = eng_obj["xs"] * eng_obj["length"]
+        math_obj["br_r"] = _impedance_conversion(data_eng, eng_obj, "rs")
+        math_obj["br_x"] = _impedance_conversion(data_eng, eng_obj, "xs")
 
-        math_obj["g_fr"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9)
-        math_obj["g_to"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["g_to"] * eng_obj["length"] / 1e9)
+        math_obj["g_fr"] = _admittance_conversion(data_eng, eng_obj, "g_fr")
+        math_obj["g_to"] = _admittance_conversion(data_eng, eng_obj, "g_to")
 
-        math_obj["b_fr"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9)
-        math_obj["b_to"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["b_to"] * eng_obj["length"] / 1e9)
+        math_obj["b_fr"] = _admittance_conversion(data_eng, eng_obj, "b_fr")
+        math_obj["b_to"] = _admittance_conversion(data_eng, eng_obj, "b_to")
 
         math_obj["angmin"] = fill(-60.0, nphases)
         math_obj["angmax"] = fill( 60.0, nphases)
@@ -626,14 +739,14 @@ function _map_eng2math_line_reactor!(data_math::Dict{String,<:Any}, data_eng::Di
         math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
         math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
 
-        math_obj["br_r"] = eng_obj["rs"] * eng_obj["length"]
-        math_obj["br_x"] = eng_obj["xs"] * eng_obj["length"]
+        math_obj["br_r"] = _impedance_conversion(data_eng, eng_obj, "rs")
+        math_obj["br_x"] = _impedance_conversion(data_eng, eng_obj, "xs")
 
-        math_obj["g_fr"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9)
-        math_obj["g_to"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["g_to"] * eng_obj["length"] / 1e9)
+        math_obj["g_fr"] = _admittance_conversion(data_eng, eng_obj, "g_fr")
+        math_obj["g_to"] = _admittance_conversion(data_eng, eng_obj, "g_to")
 
-        math_obj["b_fr"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["b_fr"] * eng_obj["length"] / 1e9)
-        math_obj["b_to"] = (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["b_to"] * eng_obj["length"] / 1e9)
+        math_obj["b_fr"] = _admittance_conversion(data_eng, eng_obj, "b_fr")
+        math_obj["b_to"] = _admittance_conversion(data_eng, eng_obj, "b_to")
 
         math_obj["angmin"] = fill(-60.0, nphases)
         math_obj["angmax"] = fill( 60.0, nphases)
@@ -740,21 +853,18 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
 
             branch_obj = _init_math_obj("line", eng_obj, length(data_math["branch"])+1)
 
-            Zbase = (data_math["basekv"])^2 / (data_math["baseMVA"])
-            Zbase = 1 # TODO why Zbase=1 on switch impedance branch?
-
             _branch_obj = Dict{String,Any}(
                 "name" => "_virtual_branch.switch.$name",
                 "source_id" => "_virtual_branch.switch.$name",
                 # "f_bus" => bus_obj["bus_i"],  # TODO enable real switches
                 "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
                 "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
-                "br_r" => eng_obj["rs"] * eng_obj["length"] / Zbase,
-                "br_x" => eng_obj["xs"] * eng_obj["length"] / Zbase,
-                "g_fr" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * get(eng_obj,"g_fr",zeros(size(eng_obj["rs"]))) * eng_obj["length"] / 1e9),
-                "g_to" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * get(eng_obj,"g_to",zeros(size(eng_obj["rs"]))) * eng_obj["length"] / 1e9),
-                "b_fr" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * get(eng_obj,"b_fr",zeros(size(eng_obj["rs"]))) * eng_obj["length"] / 1e9),
-                "b_to" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * get(eng_obj,"b_to",zeros(size(eng_obj["rs"]))) * eng_obj["length"] / 1e9),
+                "br_r" => _impedance_conversion(data_eng, eng_obj, "rs"),
+                "br_x" => _impedance_conversion(data_eng, eng_obj, "xs"),
+                "g_fr" => _admittance_conversion(data_eng, eng_obj, "g_fr"),
+                "g_to" => _admittance_conversion(data_eng, eng_obj, "g_to"),
+                "b_fr" => _admittance_conversion(data_eng, eng_obj, "b_fr"),
+                "b_to" => _admittance_conversion(data_eng, eng_obj, "b_to"),
                 "angmin" => fill(-60.0, nphases),
                 "angmax" => fill( 60.0, nphases),
                 "transformer" => false,
@@ -946,8 +1056,8 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "tranformer" => false,
                 "switch" => false,
                 "br_status" => 1,
-                "br_r" => eng_obj["rs"],
-                "br_x" => eng_obj["xs"],
+                "br_r" => _impedance_conversion(data_eng, eng_obj, "rs"),
+                "br_x" => _impedance_conversion(data_eng, eng_obj, "xs"),
                 "g_fr" => zeros(nconductors, nconductors),
                 "g_to" => zeros(nconductors, nconductors),
                 "b_fr" => zeros(nconductors, nconductors),

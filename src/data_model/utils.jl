@@ -446,7 +446,7 @@ end
 
 
 "parses {}_times_series parameters into the expected InfrastructureModels format"
-function _parse_time_series_parameter!(data_math::Dict{String,<:Any}, time_series::Dict{String,<:Any}, fr_parameter::Any, to_component_type::String, to_component_id::String, to_parameter::String)
+function _parse_time_series_parameter!(data_math::Dict{String,<:Any}, time_series::Dict{String,<:Any}, to_component_type::String, to_component_id::String, fr_parameter::Any, to_parameter::String, conversion_function::Function)
     if !haskey(data_math, "time_series")
         data_math["time_series"] => Dict{String,Any}()
     end
@@ -474,4 +474,40 @@ function _parse_time_series_parameter!(data_math::Dict{String,<:Any}, time_serie
     else
         data_math["time_series"][to_component_type][to_component_id][to_parameter] = fr_parameter .* time_series["values"]
     end
+end
+
+
+""
+function _no_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
+    eng_obj[key]
+end
+
+
+""
+function _impedance_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
+    eng_obj[key] .* get(eng_obj, "length", 1.0)
+end
+
+
+""
+function _admittance_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
+    2.0 .* pi .* data_eng["settings"]["base_frequency"] .* eng_obj[key] .* get(eng_obj, "length", 1.0) ./ 1e9
+end
+
+
+""
+function _bus_type_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
+    eng_obj[key] == 0 ? 4 : 1
+end
+
+
+""
+function _vnom_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
+    eng_obj[key] ./ data_eng["settings"]["vbase"]
+end
+
+
+""
+function _angle_shift_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
+    _wrap_to_180([120.0 * i for i in 1:3] .+ eng_obj[key])
 end
