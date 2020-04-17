@@ -1,6 +1,8 @@
 "initializes the base math object of any type, and copies any one-to-one mappings"
-function _init_math_obj(obj_type::String, eng_obj::Dict{String,<:Any}, index::Int)::Dict{String,Any}
-    math_obj = Dict{String,Any}()
+function _init_math_obj(obj_type::String, eng_id::Any, eng_obj::Dict{String,<:Any}, index::Int)::Dict{String,Any}
+    math_obj = Dict{String,Any}(
+        "name" => "$eng_id"
+    )
 
     for key in _1to1_maps[obj_type]
         if haskey(eng_obj, key)
