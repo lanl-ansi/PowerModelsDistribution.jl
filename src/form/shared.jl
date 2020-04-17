@@ -69,6 +69,8 @@ function constraint_mc_theta_ref(pm::_PMs.AbstractPolarModels, n::Int, d::Int, v
     va = _PMs.var(pm, n, :va, d)
 
     JuMP.@constraint(pm.model, va .== va_ref)
+    #TODO should this stay?
+    JuMP.@constraint(pm.model, vm[1] .== vm[2:end])
 end
 
 

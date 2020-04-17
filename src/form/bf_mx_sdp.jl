@@ -30,3 +30,15 @@ function constraint_mc_model_current(pm::SDPUBFModel, n::Int, i, f_bus, f_idx, g
     ] in JuMP.PSDCone())
 
 end
+
+"Add explicit PSD-ness of W for nodes where it is not implied"
+function constraint_mc_voltage_psd(pm::SDPUBFModel, n::Int, i)
+    Wr = _PMs.var(pm, n, :Wr)[i]
+    Wi = _PMs.var(pm, n, :Wi)[i]
+
+    JuMP.@constraint(pm.model,
+    [
+    Wr  -Wi;
+    Wi   Wr
+    ] in JuMP.PSDCone())
+end
