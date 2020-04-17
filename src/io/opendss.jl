@@ -163,8 +163,8 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
 
         eng_obj["vnom"] = kv
 
-        eng_obj["pd"] = fill(defaults["kw"]/nphases, nphases)
-        eng_obj["qd"] = fill(defaults["kvar"]/nphases, nphases)
+        eng_obj["pd_nom"] = fill(defaults["kw"]/nphases, nphases)
+        eng_obj["qd_nom"] = fill(defaults["kvar"]/nphases, nphases)
 
         if import_all
             _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
@@ -756,38 +756,33 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         _apply_like!(dss_obj, data_dss, "storage")
         defaults = _apply_ordered_properties(_create_storage(name; _to_kwargs(dss_obj)...), dss_obj)
 
-        eng_obj = Dict{String,Any}()
-
         nphases = defaults["phases"]
-        eng_obj["connections"] = _get_conductors_ordered(defaults["bus1"], check_length=false)
 
-        eng_obj["name"] = name
-        eng_obj["bus"] = _parse_busname(defaults["bus1"])[1]
+        eng_obj = Dict{String,Any}(
+            "bus" => _parse_busname(defaults["bus1"])[1],
+            "connections" => _get_conductors_ordered(defaults["bus1"], check_length=false),
+            "configuration" => "wye",
+            "energy" => defaults["kwhstored"],
+            "energy_ub" => defaults["kwrated"],
+            "charge_ub" => defaults["%charge"] / 100.0 * defaults["kwrated"],
+            "discharge_ub" => defaults["%discharge"] / 100.0 * defaults["kwrated"],
+            "cm_ub" => fill(defaults["kva"] / nphases, nphases),
+            "charge_efficiency" => defaults["%effcharge"],
+            "discharge_efficiency" => defaults["%effdischarge"],
+            "qs_lb" => -fill(defaults["kvar"] / nphases, nphases),
+            "qs_ub" =>  fill(defaults["kvar"] / nphases, nphases),
+            "rs" => fill(defaults["%r"] / nphases / 100.0, nphases),
+            "xs" => fill(defaults["%x"] / nphases / 100.0, nphases),
+            "pex" => defaults["%idlingkw"] .* defaults["kwrated"],
+            "qex" => defaults["%idlingkvar"] .* defaults["kvar"],
+            "status" => convert(Int, defaults["enabled"]),
+            "source_id" => "storage.$(name)",
+        )
 
         # if the ground is used directly, register load
         if 0 in eng_obj["connections"]
             _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
         end
-
-        eng_obj["kwhstored"] = defaults["kwhstored"]
-        eng_obj["kwhrated"] = defaults["kwhrated"]
-        eng_obj["kwrated"] = defaults["kwrated"]
-
-        eng_obj["%charge"] = defaults["%charge"]
-        eng_obj["%discharge"] = defaults["%discharge"]
-        eng_obj["%effcharge"] = defaults["%effcharge"]
-        eng_obj["%effdischarge"] = defaults["%effdischarge"]
-        eng_obj["kva"] = fill(defaults["kva"] / nphases, nphases)
-        eng_obj["kvar"] = fill(defaults["kvar"] / nphases, nphases)
-        eng_obj["%r"] = fill(defaults["%r"] / nphases, nphases)
-        eng_obj["%x"] = fill(defaults["%x"] / nphases, nphases)
-        eng_obj["%idlingkw"] = defaults["%idlingkw"]
-        eng_obj["%idlingkvar"] = defaults["%idlingkvar"]
-
-        eng_obj["status"] = convert(Int, defaults["enabled"])
-
-
-        eng_obj["source_id"] = "storage.$(name)"
 
         if import_all
             _import_all(eng_obj, defaults, dss_obj["prop_order"])

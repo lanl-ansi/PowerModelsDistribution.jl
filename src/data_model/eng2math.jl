@@ -910,22 +910,23 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
 
         math_obj["storage_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
-        math_obj["energy"] = eng_obj["kwhstored"] / 1e3
-        math_obj["energy_rating"] = eng_obj["kwhrated"] / 1e3
-        math_obj["charge_rating"] = eng_obj["%charge"] * eng_obj["kwrated"] / 1e3 / 100.0
-        math_obj["discharge_rating"] = eng_obj["%discharge"] * eng_obj["kwrated"] / 1e3 / 100.0
-        math_obj["charge_efficiency"] = eng_obj["%effcharge"] / 100.0
-        math_obj["discharge_efficiency"] = eng_obj["%effdischarge"] / 100.0
-        math_obj["thermal_rating"] = eng_obj["kva"] ./ 1e3
-        math_obj["qmin"] = -eng_obj["kvar"] ./ 1e3
-        math_obj["qmax"] =  eng_obj["kvar"] ./ 1e3
-        math_obj["r"] = eng_obj["%r"] ./ 100.0
-        math_obj["x"] = eng_obj["%x"] ./ 100.0
-        math_obj["p_loss"] = eng_obj["%idlingkw"] .* eng_obj["kwrated"] ./ 1e3
-        math_obj["q_loss"] = eng_obj["%idlingkvar"] * sum(eng_obj["kvar"]) / 1e3
+        # needs to be in units MW
+        math_obj["energy"] = eng_obj["energy"] * data_eng["settings"]["v_var_scalar"] / 1e6
+        math_obj["energy_rating"] = eng_obj["energy_ub"] * data_eng["settings"]["v_var_scalar"] / 1e6
+        math_obj["charge_rating"] = eng_obj["charge_ub"] * data_eng["settings"]["v_var_scalar"] / 1e6
+        math_obj["discharge_rating"] = eng_obj["discharge_ub"] * data_eng["settings"]["v_var_scalar"] / 1e6
+        math_obj["charge_efficiency"] = eng_obj["charge_efficiency"] / 100.0
+        math_obj["discharge_efficiency"] = eng_obj["discharge_efficiency"] / 100.0
+        math_obj["thermal_rating"] = eng_obj["cm_ub"] .* data_eng["settings"]["v_var_scalar"] ./ 1e6
+        math_obj["qmin"] = eng_obj["qs_lb"] .* data_eng["settings"]["v_var_scalar"] ./ 1e6
+        math_obj["qmax"] =  eng_obj["qs_ub"] .* data_eng["settings"]["v_var_scalar"] ./ 1e6
+        math_obj["r"] = eng_obj["rs"]
+        math_obj["x"] = eng_obj["xs"]
+        math_obj["p_loss"] = eng_obj["pex"] .* data_eng["settings"]["v_var_scalar"] ./ 1e6
+        math_obj["q_loss"] = eng_obj["qex"] .* data_eng["settings"]["v_var_scalar"] ./ 1e6
 
-        math_obj["ps"] = get(eng_obj, "ps", zeros(size(eng_obj["kva"])))
-        math_obj["qs"] = get(eng_obj, "qs", zeros(size(eng_obj["kva"])))
+        math_obj["ps"] = get(eng_obj, "ps", zeros(size(eng_obj["cm_ub"])))
+        math_obj["qs"] = get(eng_obj, "qs", zeros(size(eng_obj["cm_ub"])))
 
         if kron_reduced
             _pad_properties!(math_obj, ["thermal_rating", "qmin", "qmax", "r", "x", "ps", "qs"], connections, kr_phases)
