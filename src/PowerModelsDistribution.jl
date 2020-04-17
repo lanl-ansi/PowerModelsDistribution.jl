@@ -57,6 +57,7 @@ module PowerModelsDistribution
     include("data_model/components.jl")
     include("data_model/eng2math.jl")
     include("data_model/math2eng.jl")
+    include("data_model/transformations.jl")
     include("data_model/units.jl")
 
     include("prob/common.jl")
