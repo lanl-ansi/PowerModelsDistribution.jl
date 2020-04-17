@@ -199,9 +199,7 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
 
         @assert all(t in [phases..., neutral] for t in terminals)
 
-        math_obj = _init_math_obj("bus", eng_obj, length(data_math["bus"])+1)
-
-        math_obj["name"] = name
+        math_obj = _init_math_obj("bus", name, eng_obj, length(data_math["bus"])+1)
 
         math_obj["bus_i"] = math_obj["index"]
         math_obj["bus_type"] = _bus_type_conversion(data_eng, eng_obj, "status")
@@ -257,8 +255,7 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
     for (name, eng_obj) in get(data_eng, "line", Dict{Any,Dict{String,Any}}())
         _apply_linecode!(eng_obj, data_eng)
 
-        math_obj = _init_math_obj("line", eng_obj, length(data_math["branch"])+1)
-        math_obj["name"] = name
+        math_obj = _init_math_obj("line", name, eng_obj, length(data_math["branch"])+1)
 
         nphases = length(eng_obj["f_connections"])
         nconductors = data_math["conductors"]
@@ -418,8 +415,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
         nphases = length(eng_obj["f_connections"])
         nconductors = data_math["conductors"]
 
-        math_obj = _init_math_obj("switch", eng_obj, length(data_math["switch"])+1)
-        math_obj["name"] = name
+        math_obj = _init_math_obj("switch", name, eng_obj, length(data_math["switch"])+1)
 
         math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
         math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
@@ -466,7 +462,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
             # build virtual branch
             _apply_linecode!(eng_obj, data_eng)
 
-            branch_obj = _init_math_obj("line", eng_obj, length(data_math["branch"])+1)
+            branch_obj = _init_math_obj("line", name, eng_obj, length(data_math["branch"])+1)
 
             _branch_obj = Dict{String,Any}(
                 "name" => "_virtual_branch.switch.$name",
@@ -539,7 +535,7 @@ end
 function _map_eng2math_line_reactor!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     # TODO support line reactors natively, currently treated like branches
     for (name, eng_obj) in get(data_eng, "line_reactor", Dict{Any,Dict{String,Any}}())
-        math_obj = _init_math_obj("line", eng_obj, length(data_math["branch"])+1)
+        math_obj = _init_math_obj("line", name, eng_obj, length(data_math["branch"])+1)
         math_obj["name"] = "_virtual_branch.$(eng_obj["source_id"])"
 
         nphases = length(eng_obj["f_connections"])
@@ -958,7 +954,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
     for (name, eng_obj) in get(data_eng, "voltage_source", Dict{Any,Any}())
         nconductors = data_math["conductors"]
 
-        math_obj = _init_math_obj("voltage_source", eng_obj, length(data_math["gen"])+1)
+        math_obj = _init_math_obj("voltage_source", name, eng_obj, length(data_math["gen"])+1)
 
         math_obj["name"] = "_virtual_gen.voltage_source.$name"
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
