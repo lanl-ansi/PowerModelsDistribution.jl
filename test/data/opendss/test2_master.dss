@@ -10,32 +10,32 @@ Redirect test2_Linecodes.dss
 Compile test2_Loadshape.dss
 
 ! Lines
-New Line.L1  bus1=b1 bus2=_b2 length=0.001 units=mi r1=0.001 r0=0.001 x1=0.01 x0=0.01 c1=0 c0=0 rg=0.01805 xg=0.155081 like=something
+New Line.L1 like=something bus1=b1 bus2=_b2 length=0.001 units=mi r1=0.001 r0=0.001 x1=0.01 x0=0.01 c1=0 c0=0 rg=0.01805 xg=0.155081
 New Line.L1-2 bus1=b3-1.2 bus2=b4.2 length=0.032175613 units=km Linecode=lc1
 New Line.L2 bus1=b5 bus2=b6_check-chars length=0.013516796 units=none linecode=lc/2
 New "Line.L3" phases=3 bus1=b7.1.2.3 bus2=b9.1.2.3 linecode=300 normamps=400 emergamps=600 faultrate=0.1 pctperm=20 repair=0 length=2.58
 New "Line._L4" phases=3 bus1=b8.1.2.3 bus2=b10.1.2.3 linecode=300 normamps=400 emergamps=600 faultrate=0.1 pctperm=20 repair=0 length=1.73 switch=y
 New line.l5 phases=3 bus1=_b2.1.2.3 bus2=b7.1.2.3 linecode=lc8
 New line.l6 phases=3 bus1=b1.1.2.3 bus2=b10.1.2.3 linecode=lc9
-new line.l7 bus1=_b2 bus2=b10 like=L2 linecode=lc10 test_param=100.0
+new line.l7 like=L2 bus1=_b2 bus2=b10 linecode=lc10 test_param=100.0
 
 ! Loads
 New Load.ld1 phases=1 Bus1=b7.1.0  kv=0.208  status=variable model=1 conn=wye kW=3.89   pf=0.97  Vminpu=.88
 New "Load.ld2" bus1=b9 phases=3 conn=Wye model=5 kV=24.9 kW=27 kvar=21 Vminpu=.85
 New "Load.ld3" bus1=b10 phases=3 conn=Wye model=2 kV=24.9 kW=405 kvar=315 Vminpu=.85 yearly=(sngfile=load_profile.sng)
-new load.ld4 bus1=b1 like=ld2
+new load.ld4 like=ld2 bus1=b1
 New "Load.ld2" bus1=b9 phases=3 conn=Wye model=5 kV=24.9 kW=27 kvar=21 Vminpu=.85 daily=(file=load_profile.csv)
 
 ! Capacitors
 New "Capacitor.c1" bus1=b5 phases=3 kvar=[ 250] kv=20.0
 New "Capacitor.c2" bus1=b8 phases=3 kvar=[ 500] kv=25.0
-new capacitor.c3 bus1=b1 like=c2
+new capacitor.c3 like=c2 bus1=b1
 
 ! Reactors
-New Reactor.reactor1  bus1=testsource  bus2=b1  r=0  x=(1.05 0.75 0.001 5 * - - 125 15.0 / sqr *) normamps=400  emergamps=600
-new reactor.reactor2 bus1=_b2 bus2=b10 like=reactor1
+New Reactor.reactor1 bus1=testsource  bus2=b1  r=0  x=(1.05 0.75 0.001 5 * - - 125 15.0 / sqr *) normamps=400  emergamps=600
+new reactor.reactor2 like=reactor1 bus1=_b2 bus2=b10
 new reactor.reactor3 bus1=b9 kvar=10.0
-new reactor.reactor4 bus1=b8 like=reactor3
+new reactor.reactor4 like=reactor3 bus1=b8
 
 ! Transformers
 New "Transformer.t1" phases=1 buses=[testsource,  _b2, ] xfmrcode=t1 Xhl=1
@@ -51,9 +51,9 @@ New Transformer.t4  phases=3  windings=2  buses=(b8, b9.1.2.3.0) rneut=0 xneut=0
 new transformer.t5 like=t4 buses=(b3-1, b5)
 
 ! Generators
-New Generator.g1 Bus1=b1  kV= 150 kW=1 Model=3 Vpu=1.05 Maxkvar=70000 Minkvar=10000 !  kvar=50000
+New Generator.g1 Bus1=b1 kV= 150 kW=1 Model=3 Vpu=1.05 Maxkvar=70000 Minkvar=10000 !  kvar=50000
 New Generator.g2 Bus1=testsource.1  kV= 120 kW=1 Phases=1 Model=3 Vpu=1.05 Maxkvar=70000 Minkvar=10000   !  kvar=60000
-new generator.g3 bus1=b7.1 phases=1 like=g2
+new generator.g3 like=g2 bus1=b7.1 phases=1
 
 Set voltagebases=[115, 12.47, 0.48, 0.208]
 

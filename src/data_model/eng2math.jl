@@ -178,9 +178,9 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
     # convert nodes
     _map_eng2math_load!(data_math, data_eng; kron_reduced=kron_reduced)
 
+    _map_eng2math_shunt!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_shunt_capacitor!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_shunt_reactor!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_shunt!(data_math, data_eng; kron_reduced=kron_reduced)
 
     _map_eng2math_generator!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_solar!(data_math, data_eng; kron_reduced=kron_reduced)
@@ -651,21 +651,7 @@ function _map_eng2math_shunt_capacitor!(data_math::Dict{String,<:Any}, data_eng:
 
         math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
-        f_terminals = eng_obj["f_connections"]
-        t_terminals = eng_obj["t_connections"]
-
-        vnom_ln = eng_obj["kv"]
-        qnom = eng_obj["kvar"] ./ 1e3
-        b = qnom ./ vnom_ln.^2
-
-        # convert to a shunt matrix
-        terminals, B = _calc_shunt(f_terminals, t_terminals, b)
-
-        # if one terminal is ground (0), reduce shunt addmittance matrix
-        terminals, B = _calc_ground_shunt_admittance_matrix(terminals, B, 0)
-
-        math_obj["bs"] = B
-        math_obj["gs"] = zeros(size(B))
+        math_obj["gs"] = zeros(size(eng_obj["bs"]))
 
         if kron_reduced
             filter = _kron_reduce_branch!(math_obj,
@@ -703,16 +689,12 @@ function _map_eng2math_shunt_reactor!(data_math::Dict{String,<:Any}, data_eng::D
     for (name, eng_obj) in get(data_eng, "shunt_reactor", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("shunt_reactor", name, eng_obj, length(data_math["shunt"])+1)
 
-        nphases = eng_obj["phases"]
         connections = eng_obj["connections"]
         nconductors = data_math["conductors"]
 
-        Gcap = sum(eng_obj["kvar"]) / (nphases * 1e3 * (data_math["basekv"])^2)
-
         math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
-        math_obj["gs"] = fill(0.0, nphases, nphases)
-        math_obj["bs"] = diagm(0=>fill(Gcap, nphases))
+        math_obj["gs"] = fill(0.0, size(eng_obj["bs"])...)
 
         if kron_reduced
             if eng_obj["configuration"] == "wye"

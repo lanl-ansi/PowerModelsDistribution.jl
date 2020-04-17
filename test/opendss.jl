@@ -113,11 +113,6 @@
     eng = PMD.parse_file("../test/data/opendss/test2_master.dss"; data_model="engineering", import_all=true)
     pmd = PMD.parse_file("../test/data/opendss/test2_master.dss"; data_model="mathematical", import_all=true)
 
-    len = 0.013516796
-    rmatrix=PMD._parse_matrix(Float64, "[1.5000  |0.200000  1.50000  |0.250000  0.25000  2.00000  ]")
-    xmatrix=PMD._parse_matrix(Float64, "[1.0000  |0.500000  0.50000  |0.500000  0.50000  1.000000  ]")
-    cmatrix = PMD._parse_matrix(Float64, "[8.0000  |-2.00000  9.000000  |-1.75000  -2.50000  8.00000  ]")
-
     @testset "buscoords automatic parsing" begin
         @test all(haskey(bus, "lon") && haskey(bus, "lat") for bus in values(pmd["bus"]) if "bus_i" in 1:10)
     end
@@ -146,12 +141,7 @@
     end
 
     # TODO fix, the way we calculate voltage bases changed
-    # @testset "opendss parse generic branch values verification" begin
-    #     basekv_br5 = pmd["bus"][string(pmd["branch"]["5"]["f_bus"])]["base_kv"]
-    #     @test all(isapprox.(pmd["branch"]["5"]["br_r"], rmatrix * len / basekv_br5^2 * pmd["baseMVA"]; atol=1e-6))
-    #     @test all(isapprox.(pmd["branch"]["5"]["br_x"], xmatrix * len / basekv_br5^2 * pmd["baseMVA"]; atol=1e-6))
-    #     @test all(isapprox.(pmd["branch"]["5"]["b_fr"], diag(basekv_br5^2 / pmd["baseMVA"] * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0; atol=1e-6))
-
+    @testset "opendss parse like" begin
     #     for i in [6, 3]
     #         basekv_bri = pmd["bus"][string(pmd["branch"]["$i"]["f_bus"])]["base_kv"]
     #         @test all(isapprox.(diag(pmd["branch"]["$i"]["b_fr"]), (3.4 * 2.0 + 1.6) / 3.0 * (basekv_bri^2 / pmd["baseMVA"] * 2.0 * pi * 60.0 / 1e9) / 2.0; atol=1e-6))
@@ -160,20 +150,19 @@
     #     @test all(isapprox.(pmd["branch"]["9"]["br_r"].*(115/69)^2, diagm(0 => fill(6.3012e-8, 3)); atol=1e-12))
     #     @test all(isapprox.(pmd["branch"]["9"]["br_x"].*(115/69)^2, diagm(0 => fill(6.3012e-7, 3)); atol=1e-12))
 
-    #     for k in ["qd", "pd"]
-    #         @test all(isapprox.(pmd["load"]["2"][k], pmd["load"]["2"][k]; atol=1e-12))
-    #     end
+        for k in ["pd_nom", "qd_nom"]
+            @test all(isapprox.(eng["load"]["ld2"][k], eng["load"]["ld4"][k]; atol=1e-12))
+        end
 
-    #     for k in ["gs", "bs"]
-    #         @test all(isapprox.(pmd["shunt"]["1"][k], pmd["shunt"]["3"][k]; atol=1e-12))
-    #         @test all(isapprox.(pmd["shunt"]["4"][k], pmd["shunt"]["5"][k]; atol=1e-12))
-    #     end
+        # TODO fix shunt_capacitor and shunt_reactor eng parameters
+        # @test all(isapprox.(eng["shunt_capacitor"]["c1"]["bs"], eng["shunt_capacitor"]["c3"]["bs"]; atol=1e-12))
+        # @test all(isapprox.(eng["shunt_reactor"]["reactor3"]["bs"], eng["shunt_reactor"]["reactor4"]["bs"]; atol=1e-12))
 
-    #     for k in keys(pmd["gen"]["1"])
-    #         if !(k in ["gen_bus", "index", "name", "source_id", "connections"])
-    #             @test all(isapprox.(pmd["gen"]["3"][k], pmd["gen"]["1"][k]; atol=1e-12))
-    #         end
-    #     end
+        for (k,v) in eng["generator"]["g2"]
+            if !(k in ["bus", "source_id", "dss"])
+                @test all(isapprox.(v, eng["generator"]["g3"][k]; atol=1e-12))
+            end
+        end
 
     #     for k in keys(pmd["branch"]["11"])
     #         if !(k in ["f_bus", "t_bus", "index", "name", "linecode", "source_id", "t_connections", "f_connections"])
@@ -188,14 +177,10 @@
     #             @test all(isapprox.(pmd["branch"]["5"][k].*mult, pmd["branch"]["2"][k]; atol=1e-12))
     #         end
     #     end
-    # end
+    end
 
     @testset "opendss parse length units" begin
-        @test eng["line"]["l8"]["length"] == 1000.0 * len
-        basekv_br4 = pmd["bus"][string(pmd["branch"]["4"]["f_bus"])]["base_kv"]
-        @test all(isapprox.(pmd["branch"]["4"]["br_r"], rmatrix * len / basekv_br4^2 * pmd["baseMVA"]; atol=1e-6))
-        @test all(isapprox.(pmd["branch"]["4"]["br_x"], xmatrix * len / basekv_br4^2 * pmd["baseMVA"]; atol=1e-6))
-        @test all(isapprox.(pmd["branch"]["4"]["b_fr"], diag(basekv_br4^2 / pmd["baseMVA"] * 2.0 * pi * 60.0 * cmatrix * len / 1e9) / 2.0 / 3; atol=1e-6))
+        @test eng["line"]["l8"]["length"] == 1000.0 * 0.013516796
     end
 
     @testset "opendss parse xycurve" begin
@@ -252,9 +237,9 @@
         @test pmd["shunt"]["2"]["source_id"] == "capacitor.c1"
         @test pmd["shunt"]["4"]["source_id"] == "reactor.reactor3"
 
-        @test pmd["branch"]["9"]["source_id"] == "line.l1"
+        @test pmd["branch"]["8"]["source_id"] == "line.l1"
         @test pmd["transformer"]["9"]["source_id"] == "_virtual_transformer.transformer.t4.1"  # winding indicated by .1
-        @test pmd["branch"]["10"]["source_id"] == "reactor.reactor1"
+        @test pmd["branch"]["25"]["source_id"] == "reactor.reactor1"
 
         @test pmd["gen"]["4"]["source_id"] == "_virtual_gen.vsource.source"
         @test pmd["gen"]["1"]["source_id"] == "generator.g2"

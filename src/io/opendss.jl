@@ -221,10 +221,23 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             if defaults["phases"] in [2,3]
                 vnom_ln = vnom_ln/sqrt(3)
             end
-            eng_obj["kv"] = fill(vnom_ln, nphases)
+            defaults["kv"] = fill(vnom_ln, nphases)
 
             # 'kvar' is specified for all phases at once; we want the per-phase one
-            eng_obj["kvar"] = fill(defaults["kvar"] / nphases, nphases)
+            defaults["kvar"] = fill(defaults["kvar"] / nphases, nphases)
+
+            # TODO check unit conversion on qnom/b
+            vnom_ln = defaults["kv"]
+            qnom = defaults["kvar"] ./ 1e3
+            b = qnom ./ vnom_ln.^2
+
+            # convert to a shunt matrix
+            terminals, B = _calc_shunt(f_terminals, t_terminals, b)
+
+            # if one terminal is ground (0), reduce shunt addmittance matrix
+            terminals, B = _calc_ground_shunt_admittance_matrix(terminals, B, 0)
+
+            eng_obj["bs"] = B
 
             _add_eng_obj!(data_eng, "shunt_capacitor", name, eng_obj)
         else
@@ -248,22 +261,27 @@ function _dss2eng_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             _apply_like!(dss_obj, data_dss, "reactor")
             defaults = _apply_ordered_properties(_create_reactor(name; _to_kwargs(dss_obj)...), dss_obj)
 
+            nphases = defaults["phases"]
+
             eng_obj = Dict{String,Any}(
-                "phases" => defaults["phases"],
                 "configuration" => defaults["conn"],
                 "bus" => _parse_busname(defaults["bus1"])[1],
-                "kvar"  => defaults["kvar"],
                 "status" => convert(Int, defaults["enabled"]),
                 "source_id" => "reactor.$name",
             )
 
-            connections_default = eng_obj["configuration"] == "wye" ? [collect(1:eng_obj["phases"])..., 0] : collect(1:eng_obj["phases"])
+            connections_default = eng_obj["configuration"] == "wye" ? [collect(1:nphases)..., 0] : collect(1:nphases)
             eng_obj["connections"] = _get_conductors_ordered(defaults["bus1"], default=connections_default, check_length=false)
 
             # if the ground is used directly, register
             if 0 in eng_obj["connections"]
                 _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
             end
+
+            # TODO Check unit conversion on Gcap
+            Gcap = sum(defaults["kvar"]) / (nphases * 1e3 * (data_eng["settings"]["vbase"])^2)
+
+            eng_obj["bs"] = diagm(0=>fill(Gcap, nphases))
 
             if import_all
                 _import_all!(eng_obj, dss_obj, dss_obj["prop_order"])
@@ -278,7 +296,6 @@ function _dss2eng_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             eng_obj = Dict{String,Any}()
 
             nphases = defaults["phases"]
-            eng_obj["phases"] = nphases
 
             eng_obj["f_bus"] = _parse_busname(defaults["bus1"])[1]
             eng_obj["t_bus"] = _parse_busname(defaults["bus2"])[1]
