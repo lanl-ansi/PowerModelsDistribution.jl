@@ -165,8 +165,17 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
 
     _init_base_components!(data_math)
 
+    # convert buses
     _map_eng2math_bus!(data_math, data_eng; kron_reduced=kron_reduced)
 
+    # convert edges
+    _map_eng2math_line!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_switch!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_transformer!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_line_reactor!(data_math, data_eng; kron_reduced=kron_reduced)
+    # _map_eng2math_series_capacitor(data_math, data_eng; kron_reduced=kron_reduced)  # TODO build conversion for series capacitors
+
+    # convert nodes
     _map_eng2math_load!(data_math, data_eng; kron_reduced=kron_reduced)
 
     _map_eng2math_shunt_capacitor!(data_math, data_eng; kron_reduced=kron_reduced)
@@ -177,13 +186,6 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
     _map_eng2math_solar!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_storage!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_voltage_source!(data_math, data_eng; kron_reduced=kron_reduced)
-
-    _map_eng2math_line!(data_math, data_eng; kron_reduced=kron_reduced)
-    # _map_eng2math_series_capacitor(data_math, data_eng; kron_reduced=kron_reduced)  # TODO build conversion for series capacitors
-    _map_eng2math_line_reactor!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_switch!(data_math, data_eng; kron_reduced=kron_reduced)
-
-    _map_eng2math_transformer!(data_math, data_eng; kron_reduced=kron_reduced)
 
     return data_math
 end
@@ -834,7 +836,7 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
 
         # time series
         # TODO
-        for (fr, to) in zip(["status"], ["status"])
+        for (fr, (f, to)) in _time_series_parameters["generator"]
             if haskey(eng_obj, "$(fr)_time_series")
                 time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
                 _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "gen", "$(math_obj["index"])", to)
@@ -939,7 +941,7 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
 
         # time series
         # TODO
-        for (fr, to) in zip(["status"], ["status"])
+        for (fr, (f, to)) in _time_series_parameters["storage"]
             if haskey(eng_obj, "$(fr)_time_series")
                 time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
                 _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "storage", "$(math_obj["index"])", to)
