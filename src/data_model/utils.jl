@@ -1,3 +1,38 @@
+"initializes the base math object of any type, and copies any one-to-one mappings"
+function _init_math_obj(obj_type::String, eng_obj::Dict{String,<:Any}, index::Int)::Dict{String,Any}
+    math_obj = Dict{String,Any}()
+
+    for key in _1to1_maps[obj_type]
+        if haskey(eng_obj, key)
+            math_obj[key] = eng_obj[key]
+        end
+    end
+
+    math_obj["index"] = index
+
+    return math_obj
+end
+
+
+"initializes the base components that are expected by powermodelsdistribution in the mathematical model"
+function _init_base_components!(data_math::Dict{String,<:Any})
+    for key in ["bus", "load", "shunt", "gen", "branch", "switch", "transformer", "storage", "dcline"]
+        if !haskey(data_math, key)
+            data_math[key] = Dict{String,Any}()
+        end
+    end
+end
+
+
+"Initializes the lookup table"
+function _init_lookup!(data_math::Dict{String,<:Any})
+    for key in keys(_1to1_maps)
+        if !haskey(data_math["lookup"], key)
+            data_math["lookup"][key] = Dict{Any,Int}()
+        end
+    end
+end
+
 
 "function for applying a scale to a paramter"
 function _scale(dict::Dict{String,<:Any}, key::String, scale::Real)

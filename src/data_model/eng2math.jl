@@ -190,42 +190,6 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
 end
 
 
-"initializes the base math object of any type, and copies any one-to-one mappings"
-function _init_math_obj(obj_type::String, eng_obj::Dict{String,<:Any}, index::Int)::Dict{String,Any}
-    math_obj = Dict{String,Any}()
-
-    for key in _1to1_maps[obj_type]
-        if haskey(eng_obj, key)
-            math_obj[key] = eng_obj[key]
-        end
-    end
-
-    math_obj["index"] = index
-
-    return math_obj
-end
-
-
-"initializes the base components that are expected by powermodelsdistribution in the mathematical model"
-function _init_base_components!(data_math::Dict{String,<:Any})
-    for key in ["bus", "load", "shunt", "gen", "branch", "switch", "transformer", "storage", "dcline"]
-        if !haskey(data_math, key)
-            data_math[key] = Dict{String,Any}()
-        end
-    end
-end
-
-
-"Initializes the lookup table"
-function _init_lookup!(data_math::Dict{String,<:Any})
-    for key in keys(_1to1_maps)
-        if !haskey(data_math["lookup"], key)
-            data_math["lookup"][key] = Dict{Any,Int}()
-        end
-    end
-end
-
-
 "converts engineering bus components into mathematical bus components"
 function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "bus", Dict{String,Any}())
@@ -279,16 +243,10 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
         )
 
         # time series
-        for (fr, to) in zip(["status", "vm", "va", "vm_lb", "vm_ub"], ["bus_type", "vm", "va", "vmin", "vmax"])
+        for (fr, (f, to)) in _time_series_parameters["bus"]
             if haskey(eng_obj, "$(fr)_time_series")
-                if to == "bus_type"
-                    time_series = deepcopy(data_eng["time_series"][eng_obj["$(fr)_time_series"]])
-                    time_series = [status == 1 ? 1 : 4 for status in time_series["values"]]
-                    @assert time_series["replace"]
-                else
-                    time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
-                end
-                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "bus", "$(math_obj["index"])", to)
+                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
+                _parse_time_series_parameter!(data_math, time_series, eng_obj, "bus", "$(math_obj["index"])", fr, to, f)
             end
         end
     end
