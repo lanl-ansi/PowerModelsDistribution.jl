@@ -353,19 +353,11 @@ function _scale_props!(comp::Dict{String,<:Any}, prop_names::Vector{String}, sca
 end
 
 
-"adds big M to data model"
-function add_big_M!(data_model::Dict{String,<:Any}; kwargs...)
-    data_model["big_M"] = Dict{String, Any}(
-        "v_phase_pu_lb" => get(kwargs, :v_phase_pu_lb, 0.5),
-        "v_phase_pu_ub" => get(kwargs, :v_phase_pu_ub, 2.0),
-        "v_neutral_pu_lb" => get(kwargs, :v_neutral_pu_lb, 0.0),
-        "v_neutral_pu_ub" => get(kwargs, :v_neutral_pu_ub, 0.5)
-    )
-end
+_apply_func_vals(x, f) = isa(x, Dict) ? Dict(k=>f(v) for (k,v) in x) : f.(x)
 
 
-"converts solution to si units"
-function solution_make_si(solution::Dict{String,<:Any}, math_model::Dict{String,<:Any}; mult_sbase::Bool=true, mult_vbase::Bool=true, convert_rad2deg::Bool=true)::Dict{String,Any}
+""
+function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true, mult_ibase=true, convert_rad2deg=true)
     solution_si = deepcopy(solution)
 
     sbase = math_model["sbase"]
@@ -374,20 +366,24 @@ function solution_make_si(solution::Dict{String,<:Any}, math_model::Dict{String,
         dimensionalize_math_comp = get(_dimensionalize_math, comp_type, Dict())
         vbase_props   = mult_vbase      ? get(dimensionalize_math_comp, "vbase", [])   : []
         sbase_props   = mult_sbase      ? get(dimensionalize_math_comp, "sbase", [])   : []
+        ibase_props   = mult_ibase      ? get(dimensionalize_math_comp, "ibase", [])   : []
         rad2deg_props = convert_rad2deg ? get(dimensionalize_math_comp, "rad2deg", []) : []
 
         for (id, comp) in comp_dict
-            if !isempty(vbase_props)
+            if !isempty(vbase_props) || !isempty(ibase_props)
                 vbase = math_model[comp_type][id]["vbase"]
+                ibase = sbase/vbase
             end
 
             for (prop, val) in comp
                 if prop in vbase_props
-                    comp[prop] = val*vbase
+                    comp[prop] = _apply_func_vals(comp[prop], x->x*vbase)
                 elseif prop in sbase_props
-                    comp[prop] = val*sbase
+                    comp[prop] = _apply_func_vals(comp[prop], x->x*sbase)
+                elseif prop in ibase_props
+                    comp[prop] = _apply_func_vals(comp[prop], x->x*ibase)
                 elseif prop in rad2deg_props
-                    comp[prop] = _wrap_to_180(rad2deg.(val))
+                    comp[prop] = _apply_func_vals(comp[prop], x->x*_wrap_to_180(rad2deg(x)))
                 end
             end
         end

@@ -135,7 +135,7 @@ end
 
 
 "loss model builder for transformer decomposition"
-function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::String, to_map::Vector{String}, r_s::Vector{Float64}, zsc::Dict{Tuple{Int,Int},Complex{Float64}}, ysh::Complex{Float64}; nphases::Int=3)::Vector{Int}
+function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::String, to_map::Vector{String}, r_s::Vector{Float64}, zsc::Dict{Tuple{Int,Int},Complex{Float64}}, ysh::Complex{Float64}; nphases::Int=3, kron_reduced=false)::Vector{Int}
     # precompute the minimal set of buses and lines
     N = length(r_s)
     tr_t_bus = collect(1:N)
@@ -209,15 +209,29 @@ function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Str
         bus_obj = Dict{String,Any}(
             "name" => "_virtual_bus.transformer.$(transformer_name)_$(bus)",
             "bus_i" => length(data_math["bus"])+1,
-            "vm" => fill(1.0, nphases),
-            "va" => fill(0.0, nphases),
             "vmin" => fill(0.0, nphases),
             "vmax" => fill(Inf, nphases),
+            "grounded" => fill(false, nphases),
             "base_kv" => 1.0,
             "bus_type" => 1,
             "status" => 1,
             "index" => length(data_math["bus"])+1,
         )
+
+        if !kron_reduced
+            if bus in tr_t_bus
+                bus_obj["terminals"] = collect(1:nphases+1)
+                bus_obj["vmin"] = fill(0.0, nphases+1)
+                bus_obj["vmax"] = fill(Inf, nphases+1)
+                bus_obj["grounded"] = [fill(false, nphases)..., true]
+                bus_obj["rg"] = [0.0]
+                bus_obj["xg"] = [0.0]
+            else
+                bus_obj["terminals"] = collect(1:nphases)
+                bus_obj["vmin"] = fill(0.0, nphases)
+                bus_obj["vmax"] = fill(Inf, nphases)
+            end
+        end
 
         data_math["bus"]["$(bus_obj["index"])"] = bus_obj
 
@@ -547,4 +561,26 @@ end
 ""
 function _angle_shift_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
     _wrap_to_180([120.0 * i for i in 1:3] .+ eng_obj[key])
+end
+
+
+"lossy grounding to perfect grounding and shunts"
+function _convert_grounding(terminals, grounded, rg, xg)
+    grouped = Dict(t=>[] for t in unique(grounded))
+    for (i,t) in enumerate(grounded)
+        push!(grouped[t], rg[i]+im*xg[i])
+    end
+    t_lookup = Dict(t=>i for (i,t) in enumerate(terminals))
+    grounded_lossless = fill(false, length(terminals))
+    shunts = []
+    for (t, zgs) in grouped
+        if any(iszero.(zgs))
+            grounded_lossless[t_lookup[t]] = true
+        else
+            ygs = 1 ./zgs
+            yg = sum(ygs)
+            push!(shunts, ([t], [yg]))
+        end
+    end
+    return grounded_lossless, shunts
 end
