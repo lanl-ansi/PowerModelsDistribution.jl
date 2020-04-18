@@ -1,8 +1,8 @@
 "lists of scaling factors and what they apply to"
 const _dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
     "bus"  => Dict{String,Vector{String}}(
-        "rad2deg"=>Vector{String}(["va"]),
-        "vbase"=>Vector{String}(["vm", "vr", "vi"])
+        "rad2deg"=>Vector{String}(["va", "va_pp", "va_pn"]),
+        "vbase"=>Vector{String}(["vm", "vr", "vi", "vm_pp", "vm_pn"])
     ),
     "gen"  => Dict{String,Vector{String}}(
         "sbase"=>Vector{String}(["pg", "qg", "pg_bus", "qg_bus"])

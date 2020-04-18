@@ -696,11 +696,15 @@ function sol_polar_voltage!(pm::_PM.AbstractPowerModel, solution::Dict)
         if haskey(nw_data, "bus")
             for (i,bus) in nw_data["bus"]
                 if haskey(bus, "vr") && haskey(bus, "vi")
-                    bus["vm"] = sqrt.(bus["vr"].^2 + bus["vi"].^2)
-                    bus["va"] = _wrap_to_pi(atan.(bus["vi"], bus["vr"]))
-
-                    delete!(bus, "vr")
-                    delete!(bus, "vi")
+                    vr = bus["vr"]
+                    vi = bus["vi"]
+                    if isa(vr, Dict)
+                        bus["vm"] = Dict(t=>abs(vr[t]+im*vi[t]) for t in keys(vr))
+                        bus["va"] = Dict(t=>_wrap_to_pi(atan(vi[t], vr[t])) for t in keys(vr))
+                    else
+                        bus["vm"] = abs.(vr .+ im*vi)
+                        bus["va"] = _wrap_to_pi(atan.(vi, vr))
+                    end
                 end
             end
         end
