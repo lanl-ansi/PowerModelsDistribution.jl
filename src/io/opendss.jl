@@ -519,7 +519,7 @@ function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             "tm_max" => Vector{Vector{Float64}}(fill(fill(defaults["maxtap"], nphases), nrw)),
             "tm_fix" => Vector{Vector{Int}}([fill(1, nphases) for w in 1:nrw]),
             "tm_step" => Vector{Vector{Float64}}(fill(fill(1/32, nphases), nrw)),
-            "fixed" => Vector{Int}(fill(1, nrw)),
+            "fixed" => Vector{Int}(fill(fill(true, nphases), nrw)),
             "vnom" => Vector{Float64}(defaults["kvs"]),
             "snom" => Vector{Float64}(defaults["kvas"]),
             "configuration" => Vector{String}(defaults["conns"]),
@@ -653,7 +653,7 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
         if isempty(defaults["xfmrcode"])
             eng_obj["tm_fix"] = [fill(1, nphases) for w in 1:nrw]
             eng_obj["tm_step"] = fill(fill(1/32, nphases), nrw)
-            eng_obj["fixed"] = fill(1, nrw)
+            eng_obj["fixed"] = fill(fill(true, nphases), nrw)
         end
 
         # always required
@@ -683,12 +683,7 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
             terminals_default = conf=="wye" ? [1:nphases..., 0] : collect(1:nphases)
 
             # append ground if connections one too short
-            terminals_w = _get_conductors_ordered(defaults["buses"][w], default=terminals_default, pad_ground=(conf=="wye"))
-            eng_obj["connections"][w] = terminals_w
-
-            if 0 in terminals_w
-                _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"][w]], eng_obj["connections"][w])
-            end
+            eng_obj["connections"][w] = _get_conductors_ordered(defaults["buses"][w], default=terminals_default, pad_ground=(conf=="wye"))
 
             if w>1
                 prim_conf = confs[1]
@@ -703,6 +698,10 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
                         eng_obj["connections"][w] = _barrel_roll(eng_obj["connections"][w], -1)
                     end
                 end
+            end
+
+            if 0 in eng_obj["connections"][w]
+                _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"][w]], eng_obj["connections"][w])
             end
         end
 
