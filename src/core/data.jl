@@ -1,3 +1,5 @@
+import LinearAlgebra: Adjoint
+
 "wraps angles in degrees to 180"
 function _wrap_to_180(degrees)
     return degrees - 360*floor.((degrees .+ 180)/360)
@@ -661,3 +663,18 @@ function set_upper_bound(x::JuMP.VariableRef, bound)
         JuMP.set_upper_bound(x, bound)
     end
 end
+
+# BOUND manipulation methods (0*Inf->0 is often desired)
+_sum_rm_nan(X::Vector) = sum([X[(!).(isnan.(X))]..., 0.0])
+
+
+function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, Adjoint}) where T
+    N, A_ncols = size(A)
+    B_nrows, M = size(B)
+    @assert(A_ncols==B_nrows)
+    return [_sum_rm_nan(A[n,:].*B[:,m]) for n in 1:N, m in 1:M]
+end
+
+
+_mat_mult_rm_nan(A::Union{Matrix, Adjoint}, b::Vector) = dropdims(_mat_mult_rm_nan(A, reshape(b, length(b), 1)), dims=2)
+_mat_mult_rm_nan(a::Vector, B::Union{Matrix, Adjoint}) = _mat_mult_rm_nan(reshape(a, length(a), 1), B)

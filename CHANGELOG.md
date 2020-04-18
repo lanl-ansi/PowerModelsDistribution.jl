@@ -3,6 +3,8 @@
 ## staged
 
 - Add support for Memento v0.13, v1.0
+- SDP and SOC relaxations were broken but are fixed again (unit tests added)
+- opf_bf_lm removed, functionality available in opf_bf instead
 
 ## v0.8.1
 

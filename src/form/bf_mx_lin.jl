@@ -74,7 +74,7 @@ end
 
 
 ""
-function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_power_balance_load(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
     w = _PMs.var(pm, nw, :w, i)
 
     p = get(_PMs.var(pm, nw), :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
@@ -85,6 +85,8 @@ function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, b
     pt   = get(_PMs.var(pm, nw),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
     qt   = get(_PMs.var(pm, nw),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
 
+    pd = get(_PMs.var(pm, nw), :pd, Dict()); _PMs._check_var_keys(pd, bus_loads, "active power", "load")
+    qd = get(_PMs.var(pm, nw), :qd, Dict()); _PMs._check_var_keys(qd, bus_loads, "reactive power", "load")
     pg = get(_PMs.var(pm, nw), :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
     qg = get(_PMs.var(pm, nw), :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
     ps   = get(_PMs.var(pm, nw),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
@@ -100,7 +102,7 @@ function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, b
         .==
         sum(pg[g] for g in bus_gens)
         - sum(ps[s] for s in bus_storage)
-        - sum(pd for pd in values(bus_pd))
+        - sum(pd[d] for d in bus_loads)
         - sum(gs.*w for gs in values(bus_gs))
     )
 
@@ -111,7 +113,7 @@ function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, b
         .==
         sum(qg[g] for g in bus_gens)
         - sum(qs[s] for s in bus_storage)
-        - sum(qd for qd in values(bus_qd))
+        - sum(qd[d] for d in bus_loads)
         + sum(bs.*w for bs in values(bus_bs))
     )
 

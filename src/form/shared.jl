@@ -143,8 +143,8 @@ function constraint_mc_power_balance_load(pm::_PMs.AbstractWModels, nw::Int, i, 
     Pt   = get(_PMs.var(pm, nw),   :Pt, Dict()); _PMs._check_var_keys(Pt, bus_arcs_trans, "active power", "transformer")
     Qt   = get(_PMs.var(pm, nw),   :Qt, Dict()); _PMs._check_var_keys(Qt, bus_arcs_trans, "reactive power", "transformer")
 
-    pd = get(_PMs.var(pm, nw), :pd_bus, Dict()); _PMs._check_var_keys(pg, bus_loads, "active power", "load")
-    qd = get(_PMs.var(pm, nw), :qd_bus, Dict()); _PMs._check_var_keys(qg, bus_loads, "reactive power", "load")
+    pd = get(_PMs.var(pm, nw), :pd_bus, Dict()); _PMs._check_var_keys(pd, bus_loads, "active power", "load")
+    qd = get(_PMs.var(pm, nw), :qd_bus, Dict()); _PMs._check_var_keys(qd, bus_loads, "reactive power", "load")
     pg = get(_PMs.var(pm, nw), :pg_bus, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
     qg = get(_PMs.var(pm, nw), :qg_bus, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
     ps   = get(_PMs.var(pm, nw),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
