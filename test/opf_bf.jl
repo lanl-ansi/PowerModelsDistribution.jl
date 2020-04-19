@@ -117,7 +117,7 @@
             result = run_mc_opf_bf(data, SOCConicUBFPowerModel, scs_solver)
 
             @test result["termination_status"] == PMs.ALMOST_OPTIMAL
-            @test isapprox(result["objective"], 2.117; atol = 1e-3)
+            @test isapprox(result["objective"], 2.117; atol = 1e-2)
         end
     end
 end
