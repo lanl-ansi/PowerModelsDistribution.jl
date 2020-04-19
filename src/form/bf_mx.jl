@@ -9,6 +9,15 @@ end
 ""
 function variable_mc_voltage(pm::AbstractUBFModels; kwargs...)
     variable_mc_voltage_prod_hermitian(pm; kwargs...)
+    #enforce PSDness of leaf nodes that are not captured otherwise
+    for nw in _PMs.nw_ids(pm)
+        allbuses = Set(_PMs.ids(pm, nw, :bus))
+        startingbuses = Set(i for (l,i,j)  in _PMs.ref(pm, nw, :arcs_from))
+        leafnodes = setdiff(allbuses, startingbuses)
+        for i in leafnodes
+            constraint_mc_voltage_psd(pm, nw, i)
+        end
+    end
 end
 
 
@@ -28,7 +37,19 @@ function variable_mc_voltage_prod_hermitian(pm::AbstractUBFModels; n_cond::Int=3
         (Wr,Wi) = variable_mx_hermitian(pm.model, bus_ids, n_cond;
             set_lower_bound_diag_to_zero=true, name="W", prefix="$nw")
     end
-
+    v_start = exp.((im*2*pi/3).*[0; -1; 1]) #TODO this should be made more generic eventually
+    W_start = v_start*v_start'
+    for (id,_) in Wr
+        for i in 1:3
+            for j in 1:i
+                JuMP.set_start_value(Wr[id][i,j], real.(W_start)[i,j])
+                if j<i
+                    Wi_ij = collect(keys(Wi[id][i,j].terms))[1]
+                    JuMP.set_start_value(Wi_ij, imag.(W_start)[i,j])
+                end
+            end
+        end
+    end
     # save references in dict
     _PMs.var(pm, nw)[:Wr] = Wr
     _PMs.var(pm, nw)[:Wi] = Wi
@@ -64,6 +85,9 @@ function variable_mc_branch_series_current_prod_hermitian(pm::AbstractUBFModels;
             set_lower_bound_diag_to_zero=true, name="CC", prefix="$nw")
     end
 
+    for (id, L) in Lr
+        JuMP.set_start_value.(LinearAlgebra.diag(Lr[id]), 0.01)
+    end
     # save reference
     _PMs.var(pm, nw)[:CCr] = Lr
     _PMs.var(pm, nw)[:CCi] = Li
@@ -197,9 +221,9 @@ end
 For the matrix KCL formulation, the generator needs an explicit current and
 power variable.
 """
-function variable_mc_generation(pm::SDPUBFKCLMXModel; nw=pm.cnw)
-    variable_mc_generation_current(pm; nw=nw)
-    variable_mc_generation_power(pm; nw=nw)
+function variable_mc_generation(pm::SDPUBFKCLMXModel; kwargs...)
+    variable_mc_generation_current(pm; kwargs...)
+    variable_mc_generation_power(pm; kwargs...)
 end
 
 

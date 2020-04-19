@@ -12,7 +12,7 @@ end
 
 
 ""
-function variable_mc_voltage_prod_hermitian(pm::LPUBFDiagModel; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
+function variable_mc_voltage(pm::LPUBFDiagModel; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
     variable_mc_voltage_magnitude_sqr(pm, nw=nw)
 end
 

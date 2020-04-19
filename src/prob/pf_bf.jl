@@ -13,23 +13,38 @@ end
 ""
 function build_mc_pf_bf(pm::_PMs.AbstractPowerModel)
     # Variables
-    variable_mc_voltage(pm; bounded=false)
+    variable_mc_voltage(pm; bounded=true) #TODO should be false
     variable_mc_branch_current(pm)
     variable_mc_branch_flow(pm)
+    variable_mc_transformer_flow(pm)
     variable_mc_generation(pm; bounded=false)
+    variable_mc_load(pm)
 
     # Constraints
     constraint_mc_model_current(pm)
 
     for (i,bus) in _PMs.ref(pm, :ref_buses)
-        constraint_mc_theta_ref(pm, i)
+        if typeof(pm)<:LPUBFDiagPowerModel
+            #do nothing, adding theta_ref would lead to redundant constraints
+        else
+            constraint_mc_theta_ref(pm, i)
+        end
 
         @assert bus["bus_type"] == 3
         constraint_mc_voltage_magnitude_setpoint(pm, i)
     end
 
-    for i in _PMs.ids(pm, :bus)
-        constraint_mc_power_balance(pm, i)
+    for id in _PMs.ids(pm, :gen)
+        constraint_mc_generation(pm, id)
+    end
+
+    # loads should be constrained before KCL, or Pd/Qd undefined
+    for id in _PMs.ids(pm, :load)
+        constraint_mc_load(pm, id)
+    end
+
+    for (i,bus) in _PMs.ref(pm, :bus)
+        constraint_mc_power_balance_load(pm, i)
 
         # PV Bus Constraints
         if length(_PMs.ref(pm, :bus_gens, i)) > 0 && !(i in _PMs.ids(pm,:ref_buses))
@@ -52,6 +67,7 @@ function build_mc_pf_bf(pm::_PMs.AbstractPowerModel)
         constraint_mc_thermal_limit_to(pm, i)
     end
 
-    # Objective
-    _PMs.objective_min_fuel_cost(pm)
+    for i in _PMs.ids(pm, :transformer)
+        constraint_mc_trans(pm, i)
+    end
 end

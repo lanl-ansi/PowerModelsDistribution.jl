@@ -1,6 +1,6 @@
 @info "running branch-flow optimal power flow (opf_bf) tests"
 
-@testset "test distflow formulations" begin
+@testset "test distflow formulations in opf" begin
     @testset "test linearised distflow opf_bf" begin
         @testset "5-bus lpubfdiag opf_bf" begin
             mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
@@ -56,19 +56,15 @@
         end
     end
 
-    function case3_unbalanced_with_bounds()
+    function case3_unbalanced_with_bounds_opf()
         file = "../test/data/opendss/case3_unbalanced.dss"
         data = PowerModelsDistribution.parse_file(file)
+        data["gen"]["1"]["cost"] =  1000*data["gen"]["1"]["cost"]
+        data["gen"]["1"]["pmin"] = 0*[1.0, 1.0, 1.0]
+        data["gen"]["1"]["pmax"] = 10*[1.0, 1.0, 1.0]
+        data["gen"]["1"]["qmin"] = -10*[1.0, 1.0, 1.0]
+        data["gen"]["1"]["qmax"] =  10*[1.0, 1.0, 1.0]
 
-        baseMVA = data["baseMVA"]
-        #set some reasonable bounds
-        data["gen"]["1"]["cost"] =  100*data["gen"]["1"]["cost"]
-        data["gen"]["1"]["pmin"] = 0*[1.0, 1.0, 1.0]/baseMVA
-        data["gen"]["1"]["pmax"] = [1.0, 1.0, 1.0]/baseMVA
-        data["gen"]["1"]["qmin"] = -1*[1.0, 1.0, 1.0]/baseMVA
-        data["gen"]["1"]["qmax"] =  [1.0, 1.0, 1.0]/baseMVA
-
-        #improve numerical properties by removing source bus impedance
         data["bus"]["1"]["bus_type"] = 3
         data["bus"]["1"]["vm"] = data["bus"]["4"]["vm"]
         data["bus"]["1"]["vmin"] = data["bus"]["4"]["vmin"]
@@ -78,46 +74,53 @@
         data["gen"]["1"]["gen_bus"] = 1
 
         for (n, branch) in (data["branch"])
-                branch["rate_a"] = [1.0, 1.0, 1.0]/baseMVA
+                branch["rate_a"] = [10.0, 10.0, 10.0]
         end
+        #add second gen to make it an actual OPF test
+        data["gen"]["2"] = deepcopy(data["gen"]["1"])
+        data["gen"]["2"]["gen_bus"] = 2
+        data["gen"]["2"]["cost"] = 1.2*data["gen"]["2"]["cost"]
+        data["gen"]["2"]["qmin"] = 0*data["gen"]["2"]["qmin"]
+        data["gen"]["2"]["qmax"] = 0*data["gen"]["2"]["qmin"]
+
         return data
     end
 
     @testset "test sdp distflow opf_bf" begin
         @testset "3-bus SDPUBF opf_bf" begin
-            data = case3_unbalanced_with_bounds()
+            data = case3_unbalanced_with_bounds_opf()
             result = run_mc_opf_bf(data, SDPUBFPowerModel, scs_solver)
 
             @test result["termination_status"] == PMs.OPTIMAL
-            @test isapprox(result["objective"], 2.148; atol = 1e-3)
+            @test isapprox(result["objective"], 21.48; atol = 1e-2)
         end
     end
 
     @testset "test sdp distflow opf_bf in full matrix form" begin
         @testset "3-bus SDPUBFKCLMX opf_bf" begin
-            data = case3_unbalanced_with_bounds()
+            data = case3_unbalanced_with_bounds_opf()
             result = run_mc_opf_bf(data, SDPUBFKCLMXPowerModel, scs_solver)
 
             @test result["termination_status"] == PMs.OPTIMAL
-            @test isapprox(result["objective"], 2.148; atol = 1e-3)
+            @test isapprox(result["objective"], 21.48; atol = 1e-2)
         end
     end
 
 
     @testset "test soc distflow opf_bf" begin
         @testset "3-bus SOCNLPUBF opf_bf" begin
-            data = case3_unbalanced_with_bounds()
+            data = case3_unbalanced_with_bounds_opf()
             result = run_mc_opf_bf(data, SOCNLPUBFPowerModel, ipopt_solver)
 
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
-            @test isapprox(result["objective"], 2.117; atol = 1e-2)
+            @test isapprox(result["objective"], 21.179; atol = 1e-1)
         end
-        @testset "3-bus SOCConicUBF opf_bf" begin
-            data = case3_unbalanced_with_bounds()
-            result = run_mc_opf_bf(data, SOCConicUBFPowerModel, scs_solver)
-
-            @test result["termination_status"] == PMs.ALMOST_OPTIMAL
-            @test isapprox(result["objective"], 2.117; atol = 1e-2)
-        end
+        # @testset "3-bus SOCConicUBF opf_bf" begin
+        #     data = case3_unbalanced_with_bounds()
+        #     result = run_mc_opf_bf(data, SOCConicUBFPowerModel, scs_solver)
+        #
+        #     @test result["termination_status"] == PMs.ALMOST_OPTIMAL
+        #     @test isapprox(result["objective"], 21.17; atol = 1e-2)
+        # end
     end
 end
