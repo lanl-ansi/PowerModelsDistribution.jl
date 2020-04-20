@@ -575,16 +575,23 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
         nphases = _shared["phases"]
         nrw = _shared["windings"]
 
+        # two-phase delta transformers have single coil
+        if all(confs.=="delta") && nphases==2
+            ncoils = 1
+        else
+            ncoils = nphases
+        end
+
         # taps
         if isempty(defaults["xfmrcode"]) || (haskey(dss_obj, "taps") && _is_after_xfmrcode(dss_obj["prop_order"], "taps")) || all(haskey(dss_obj, k) && _is_after_xfmrcode(dss_obj["prop_order"], k) for k in ["tap", "tap_2", "tap_3"])
-            eng_obj["tm"] = [fill(defaults["taps"][w], nphases) for w in 1:nrw]
+            eng_obj["tm"] = [fill(defaults["taps"][w], ncoils) for w in 1:nrw]
         else
             for (w, key_suffix) in enumerate(["", "_2", "_3"])
                 if haskey(dss_obj, "tap$(key_suffix)") && _is_after_xfmrcode(dss_obj["prop_order"], "tap$(key_suffix)")
                     if !haskey(eng_obj, "tm")
                         eng_obj["tm"] = Vector{Any}(missing, nrw)
                     end
-                    eng_obj["tm"][w] = fill(defaults["taps"][defaults["wdg$(key_suffix)"]], nphases)
+                    eng_obj["tm"][w] = fill(defaults["taps"][defaults["wdg$(key_suffix)"]], ncoils)
                 end
             end
         end
@@ -651,9 +658,9 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
 
         # tm_fix, tm_step don't appear in opendss
         if isempty(defaults["xfmrcode"])
-            eng_obj["tm_fix"] = [fill(1, nphases) for w in 1:nrw]
-            eng_obj["tm_step"] = fill(fill(1/32, nphases), nrw)
-            eng_obj["fixed"] = fill(fill(true, nphases), nrw)
+            eng_obj["tm_fix"] = [fill(1, ncoils) for w in 1:nrw]
+            eng_obj["tm_step"] = fill(fill(1/32, ncoils), nrw)
+            eng_obj["fixed"] = fill(fill(true, ncoils), nrw)
         end
 
         # always required
@@ -668,7 +675,7 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
 
         # test if this transformer conforms with limitations
         if nphases<3 && "delta" in confs
-            Memento.error(_LOGGER, "Transformers with delta windings should have at least 3 phases to be well-defined: $name.")
+            # Memento.error(_LOGGER, "Transformers with delta windings should have at least 3 phases to be well-defined: $name.")
         end
         if nrw>3
             # All of the code is compatible with any number of windings,
