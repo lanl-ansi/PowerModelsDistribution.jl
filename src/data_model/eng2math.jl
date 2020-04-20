@@ -69,6 +69,11 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true, lossless::Bool=false, 
 
     _map_eng2math_transformer!(data_math, data_eng; kron_reduced=kron_reduced)
 
+    # post fix
+    #TODO fix this in place / throw error instead? IEEE8500 leads to switches
+    # with 3x3 R matrices but only 1 phase
+    _slice_branches!(data_math)
+
     if !adjust_bounds
         # _find_new_bounds(data_math) # TODO
     end
@@ -611,7 +616,9 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
             math_obj["name"] = name
 
             math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
-            math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
+            math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
+            math_obj["f_connections"] = eng_obj["f_connections"]
+            math_obj["t_connections"] = eng_obj["t_connections"]
 
             data_math["switch"]["$(math_obj["index"])"] = math_obj
 
@@ -622,15 +629,16 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
             )
         else
             # build virtual bus
-            f_bus = data_math["bus"]["$(data_math["bus_lookup"][eng_obj["f_bus"]])"]
+            t_bus = data_math["bus"]["$(data_math["bus_lookup"][eng_obj["t_bus"]])"]
 
             bus_obj = Dict{String,Any}(
                 "name" => "_virtual_bus.switch.$name",
                 "bus_i" => length(data_math["bus"])+1,
+                "terminals" => collect(1:nphases),
                 "bus_type" => 1,
-                "vmin" => f_bus["vmin"],
-                "vmax" => f_bus["vmax"],
-                "base_kv" => f_bus["base_kv"],
+                "vmin" => t_bus["vmin"], #TODO handle slicing correctly if switch size <= to-side bus size
+                "vmax" => t_bus["vmax"], #TODO handle slicing correctly if switch size <= to-side bus size
+                "base_kv" => t_bus["base_kv"],
                 "status" => 1,
                 "index" => length(data_math["bus"])+1,
             )
@@ -658,7 +666,9 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "source_id" => "_virtual_branch.switch.$name",
                 # "f_bus" => bus_obj["bus_i"],  # TODO enable real switches
                 "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
-                "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
+                "t_bus" => bus_obj["bus_i"],
+                "f_connections" => eng_obj["f_connections"],
+                "t_connections" => collect(1:nphases),
                 "br_r" => eng_obj["rs"] * eng_obj["length"] / Zbase,
                 "br_x" => eng_obj["xs"] * eng_obj["length"] / Zbase,
                 "g_fr" => Zbase * (2.0 * pi * data_eng["settings"]["base_frequency"] * eng_obj["g_fr"] * eng_obj["length"] / 1e9),
@@ -685,9 +695,6 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 _apply_filter!(branch_obj, ["angmin", "angmax", "tap", "shift"], filter)
                 connections = eng_obj["f_connections"][filter]
                 _pad_properties!(branch_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "angmin", "angmax", "tap", "shift"], connections, kr_phases)
-            else
-                branch_obj["f_connections"] = eng_obj["f_connections"]
-                branch_obj["f_connections"] = eng_obj["t_connections"]
             end
 
             data_math["branch"]["$(branch_obj["index"])"] = branch_obj
@@ -696,13 +703,21 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
             switch_obj = Dict{String,Any}(
                 "name" => name,
                 "source_id" => eng_obj["source_id"],
-                "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
-                "t_bus" => bus_obj["bus_i"],
+                "f_bus" => bus_obj["bus_i"],
+                "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
+                "f_connections" => collect(1:nphases),
+                "t_connections" => eng_obj["t_connections"],
                 "status" => eng_obj["status"],
                 "index" => length(data_math["switch"])+1
             )
 
-            # data_math["switch"]["$(switch_obj["index"])"] = switch_obj
+            ommit_switch = true
+            if ommit_switch
+                branch_obj["t_bus"] = switch_obj["t_bus"]
+                branch_obj["t_connections"] = switch_obj["t_connections"]
+            else
+                data_math["switch"]["$(switch_obj["index"])"] = switch_obj
+            end
 
             data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
                 :from => name,

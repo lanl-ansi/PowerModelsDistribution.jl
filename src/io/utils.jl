@@ -366,6 +366,14 @@ function _discover_terminals!(data_eng::Dict{String,<:Any})
         end
     end
 
+    if haskey(data_eng, "switch")
+        for (_,eng_obj) in data_eng["switch"]
+            # ignore 0 terminal
+            push!(terminals[eng_obj["f_bus"]], setdiff(eng_obj["f_connections"], [0])...)
+            push!(terminals[eng_obj["t_bus"]], setdiff(eng_obj["t_connections"], [0])...)
+        end
+    end
+
     if haskey(data_eng, "transformer")
         for (_,tr) in data_eng["transformer"]
             for w in 1:length(tr["bus"])
@@ -814,5 +822,17 @@ function _guess_dtype(value::AbstractString)::Type
         end
 
         return String
+    end
+end
+
+
+function _slice_branches!(data_math)
+    for (_, branch) in data_math["branch"]
+        if haskey(branch, "f_connections")
+            N = length(branch["f_connections"])
+            for prop in ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to"]
+                branch[prop] = branch[prop][1:N,1:N]
+            end
+        end
     end
 end

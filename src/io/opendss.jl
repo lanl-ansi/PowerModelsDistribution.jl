@@ -455,12 +455,15 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         _like_is_switch = haskey(dss_obj, "like") && get(get(data_dss["line"], dss_obj["like"], Dict{String,Any}()), "switch", false)
         nphases = defaults["phases"]
 
+        f_connections = _get_conductors_ordered(defaults["bus1"], default=collect(1:nphases))
+        t_connections = _get_conductors_ordered(defaults["bus2"], default=collect(1:nphases))
+
         eng_obj = Dict{String,Any}(
             "f_bus" => _parse_busname(defaults["bus1"])[1],
             "t_bus" => _parse_busname(defaults["bus2"])[1],
             "length" => defaults["switch"] || _like_is_switch ? 0.001 : defaults["length"],
-            "f_connections" => _get_conductors_ordered(defaults["bus1"], default=collect(1:nphases)),
-            "t_connections" => _get_conductors_ordered(defaults["bus2"], default=collect(1:nphases)),
+            "f_connections" => f_connections,
+            "t_connections" => t_connections,
             "status" => convert(Int, defaults["enabled"]),
             "source_id" => "line.$name"
         )
@@ -519,7 +522,7 @@ function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             "tm_max" => Vector{Vector{Float64}}(fill(fill(defaults["maxtap"], nphases), nrw)),
             "tm_fix" => Vector{Vector{Int}}([fill(1, nphases) for w in 1:nrw]),
             "tm_step" => Vector{Vector{Float64}}(fill(fill(1/32, nphases), nrw)),
-            "fixed" => Vector{Int}(fill(fill(true, nphases), nrw)),
+            "fixed" => Vector{Vector{Int}}(fill(fill(1, nphases), nrw)),
             "vnom" => Vector{Float64}(defaults["kvs"]),
             "snom" => Vector{Float64}(defaults["kvas"]),
             "configuration" => Vector{String}(defaults["conns"]),
@@ -615,7 +618,7 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
         # mintap, maxtap
         for (fr_key, to_key) in zip(["mintap", "maxtap"], ["tm_min", "tm_max"])
             if isempty(defaults["xfmrcode"]) || (haskey(dss_obj, fr_key) && _is_after_xfmrcode(dss_obj["prop_order"], fr_key))
-                eng_obj[to_key] = fill(fill(defaults[fr_key], nphases), nrw)
+                eng_obj[to_key] = fill(fill(defaults[fr_key], ncoils), nrw)
             end
         end
 
