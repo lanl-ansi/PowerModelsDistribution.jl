@@ -236,5 +236,63 @@
             @test result["termination_status"] == PMs.LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.616; atol=1e-3)
         end
+
+        function case3_unbalanced_with_bounds_opf_bim()
+            file = "../test/data/opendss/case3_unbalanced.dss"
+            data = PowerModelsDistribution.parse_file(file)
+            data["gen"]["1"]["cost"] =  1000*data["gen"]["1"]["cost"]
+            data["gen"]["1"]["pmin"] = 0*[1.0, 1.0, 1.0]
+            data["gen"]["1"]["pmax"] = 10*[1.0, 1.0, 1.0]
+            data["gen"]["1"]["qmin"] = -10*[1.0, 1.0, 1.0]
+            data["gen"]["1"]["qmax"] =  10*[1.0, 1.0, 1.0]
+
+            data["bus"]["1"]["bus_type"] = 3
+            data["bus"]["1"]["vm"] = data["bus"]["4"]["vm"]
+            data["bus"]["1"]["vmin"] = data["bus"]["4"]["vmin"]
+            data["bus"]["1"]["vmax"] = data["bus"]["4"]["vmax"]
+            delete!(data["branch"], "3")
+            delete!(data["bus"], "4")
+            data["gen"]["1"]["gen_bus"] = 1
+
+            for (n, branch) in (data["branch"])
+                branch["rate_a"] = [10.0, 10.0, 10.0]
+            end
+            #add second gen to make it an actual OPF test
+            data["gen"]["2"] = deepcopy(data["gen"]["1"])
+            data["gen"]["2"]["gen_bus"] = 2
+            data["gen"]["2"]["cost"] = 2*data["gen"]["2"]["cost"]
+            data["gen"]["2"]["qmin"] = data["gen"]["2"]["qmin"]
+            data["gen"]["2"]["qmax"] = 0*data["gen"]["2"]["qmin"]
+
+            return data
+        end
+
+        @testset "test sdp BIM opf" begin
+            @testset "3-bus SDPWRMKCLMX opf" begin
+                data = case3_unbalanced_with_bounds_opf_bim()
+                result = run_mc_opf(data, SDPWRMKCLMXPowerModel, scs_solver)
+
+                @test result["termination_status"] == PMs.ALMOST_OPTIMAL
+                @test isapprox(result["objective"], 21.48; atol = 1e0)
+            end
+
+            @testset "3-bus SDPWRM opf_bf" begin
+                data = case3_unbalanced_with_bounds_opf_bim()
+                result = run_mc_opf(data, PMs.SDPWRMPowerModel, scs_solver)
+
+                @test result["termination_status"] == PMs.ALMOST_OPTIMAL
+                @test isapprox(result["objective"], 21.48; atol = 1e0)
+            end
+        end
+        @testset "test soc BIM opf" begin
+            @testset "3-bus SOCWR opf_bf" begin
+                data = case3_unbalanced_with_bounds_opf_bim()
+                result = run_mc_opf(data, PMs.SOCWRPowerModel, scs_solver)
+
+                @test result["termination_status"] == PMs.ALMOST_OPTIMAL
+                @test isapprox(result["objective"], 21.48; atol = 1e0)
+            end
+        end
+
     end
 end

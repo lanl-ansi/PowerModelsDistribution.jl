@@ -55,6 +55,17 @@ function constraint_mc_power_balance_slack(pm::_PMs.AbstractWModels, nw::Int, i,
     end
 end
 
+"this function adds voltagepositive semidefiniteness constraints for all leaf buses"
+function constraint_mc_voltage_leaf_buses_psd(pm)
+    for nw in _PMs.nw_ids(pm)
+        allbuses = Set(_PMs.ids(pm, nw, :bus))
+        startingbuses = Set(i for (l,i,j)  in _PMs.ref(pm, nw, :arcs_from))
+        leafnodes = setdiff(allbuses, startingbuses)
+        for i in leafnodes
+            constraint_mc_voltage_psd(pm, nw, i)
+        end
+    end
+end
 
 "do nothing, no way to represent this in these variables"
 function constraint_mc_theta_ref(pm::_PMs.AbstractWModels, n::Int, d::Int, va_ref)

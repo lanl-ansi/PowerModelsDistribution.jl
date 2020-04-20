@@ -1,58 +1,123 @@
-# ""
-# function constraint_mc_model_voltage(pm::_PMs.AbstractWRModel, n::Int)
-#     w  = _PMs.var(pm, n,  :w)
-#     wr = _PMs.var(pm, n, :wr)
-#     wi = _PMs.var(pm, n, :wi)
-#
-#     for c in 1:length(_PMs.conductor_ids(pm, n))
-#         for d in c:length(_PMs.conductor_ids(pm))
-#             for (i,j) in _PMs.ids(pm, n, :buspairs)
-#                 InfrastructureModels.relaxation_complex_product(pm.model, w[i][d], w[j][c], wr[(i,j,c,d)], wi[(i,j,c,d)])
-#             end
-#
-#             if d != c
-#                 for i in _PMs.ids(pm, n, :bus)
-#                     InfrastructureModels.relaxation_complex_product(pm.model, w[i][d], w[i][c], wr[(i,i,c,d)], wi[(i,i,c,d)])
-#                 end
-#             end
-#         end
-#     end
+import LinearAlgebra: tr
+
+
+function variable_mc_branch_flow(pm::_PMs.AbstractWRModels; kwargs...)
+    variable_mc_branch_flow_full(pm; kwargs...)
+end
+
+""
+function variable_mc_voltage(pm::_PMs.AbstractWRModels; kwargs...)
+    variable_mc_voltage_prod_hermitian(pm; kwargs...)
+    variable_mc_voltage_cross_product(pm; kwargs...)
+    constraint_mc_voltage_leaf_buses_psd(pm)
+end
+
+""
+function variable_mc_voltage_cross_product(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true,  report::Bool=true)
+    n_cond = 3
+
+    bus_pairs = [key for (key, value) in _PMs.ref(pm, nw, :buspairs)]
+
+    if bounded
+        bound = Dict{eltype(bus_pairs), Array{Real,2}}()
+        for (i,j) in bus_pairs
+            bus_fr = _PMs.ref(pm, nw, :bus, i)
+            bus_to = _PMs.ref(pm, nw, :bus, j)
+            bound[(i,j)] = bus_fr["vmax"] * bus_to["vmax"]'
+        end
+        # create matrix variables
+        (Wijr,Wiji) = variable_mx_complex(pm.model, bus_pairs, n_cond, n_cond;
+            symm_bound=bound, name=("Wijr", "Wiji"), prefix="$nw")
+    else
+        (Wijr,Wiji) = variable_mx_complex(pm.model, bus_pairs, n_cond, n_cond;
+            name=("Wijr", "Wiji"), prefix="$nw")
+    end
+    # save reference
+
+    Wjir = Dict((j,i) =>  M' for ((i,j), M) in Wijr)
+    Wjii = Dict((j,i) => -M' for ((i,j), M) in Wiji)
+
+    _PMs.var(pm, nw)[:Wijr] = merge(Wijr, Wjir)
+    _PMs.var(pm, nw)[:Wiji] = merge(Wiji, Wjii)
+
+    # TODO
+    # report && _PMs.sol_component_value_edge(pm, nw, :branch, :Wijr, :Wjir, _PMs.ref(pm, nw, :buspairs), _PMs.ref(pm, nw, :buspairs), Wijr)
+    # report && _PMs.sol_component_value_edge(pm, nw, :branch, :Wiji, :Wjii, _PMs.ref(pm, nw, :buspairs), _PMs.ref(pm, nw, :buspairs), Wiji)
+end
+
+
+
+# """
+# For the matrix KCL formulation, the generator needs an explicit current and
+# power variable.
+# """
+# function variable_mc_generation(pm::_PMs.AbstractWRModels; nw=pm.cnw)
+#     variable_mc_generation_current(pm; nw=nw)
+#     variable_mc_generation_power(pm; nw=nw)
 # end
 
 
-# "power balance constraint with line shunts and transformers for relaxed WR forms"
-# function constraint_mc_power_balance(pm::_PMs.AbstractWRModel, nw::Int, c::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
-#     w    = _PMs.var(pm, nw, c, :w, i)
-#     p    = get(_PMs.var(pm, nw, c),    :p, Dict()); _PMs._check_var_keys(p, bus_arcs, "active power", "branch")
-#     q    = get(_PMs.var(pm, nw, c),    :q, Dict()); _PMs._check_var_keys(q, bus_arcs, "reactive power", "branch")
-#     pg   = get(_PMs.var(pm, nw, c),   :pg, Dict()); _PMs._check_var_keys(pg, bus_gens, "active power", "generator")
-#     qg   = get(_PMs.var(pm, nw, c),   :qg, Dict()); _PMs._check_var_keys(qg, bus_gens, "reactive power", "generator")
-#     ps   = get(_PMs.var(pm, nw, c),   :ps, Dict()); _PMs._check_var_keys(ps, bus_storage, "active power", "storage")
-#     qs   = get(_PMs.var(pm, nw, c),   :qs, Dict()); _PMs._check_var_keys(qs, bus_storage, "reactive power", "storage")
-#     psw  = get(_PMs.var(pm, nw, c),  :psw, Dict()); _PMs._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-#     qsw  = get(_PMs.var(pm, nw, c),  :qsw, Dict()); _PMs._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
-#     pt   = get(_PMs.var(pm, nw, c),   :pt, Dict()); _PMs._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
-#     qt   = get(_PMs.var(pm, nw, c),   :qt, Dict()); _PMs._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
-#
-#
-#     _PMs.con(pm, nw, c, :kcl_p)[i] = JuMP.@constraint(pm.model,
-#         sum(p[a] for a in bus_arcs)
-#         + sum(psw[a_sw] for a_sw in bus_arcs_sw)
-#         + sum(pt[a_trans] for a_trans in bus_arcs_trans)
-#         ==
-#         sum(pg[g] for g in bus_gens)
-#         - sum(ps[s] for s in bus_storage)
-#         - sum(pd for pd in values(bus_pd))
-#         - sum(gs for gs in values(bus_gs))*w
-#     )
-#     _PMs.con(pm, nw, c, :kcl_q)[i] = JuMP.@constraint(pm.model,
-#         sum(q[a] for a in bus_arcs)
-#         + sum(qsw[a_sw] for a_sw in bus_arcs_sw)
-#         + sum(qt[a_trans] for a_trans in bus_arcs_trans)
-#         ==
-#         sum(qg[g] for g in bus_gens)
-#         - sum(qs[s] for s in bus_storage)
-#         - sum(qd for qd in values(bus_qd))
-#         + sum(bs for bs in values(bus_bs))*w
-#     )
-# end
+"Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)"
+function constraint_mc_ohms_yt_from(pm::_PMs.AbstractWRModels, n::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
+    (l,i,j) = f_idx
+    Wr = _PMs.var(pm, n, :Wr, i)
+    Wi = _PMs.var(pm, n, :Wi, i)
+
+    Wijr = _PMs.var(pm, n, :Wijr)[(i,j)]
+    Wiji = _PMs.var(pm, n, :Wiji)[(i,j)]
+
+    P = _PMs.var(pm, n, :P)[f_idx]
+    Q = _PMs.var(pm, n, :Q)[f_idx]
+
+    JuMP.@constraint(pm.model, P .== Wr*(g_fr + g)' + Wi*(b_fr+b)' - Wijr*g' - Wiji*b')
+    JuMP.@constraint(pm.model, Q .== Wi*(g_fr + g)' - Wr*(b_fr+b)' - Wiji*g' + Wijr*b')
+end
+
+"""
+Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
+```
+p[t_idx] ==  (g+g_to)*v[t_bus]^2 + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[t_bus]-t[f_bus])) + (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus]))
+q[t_idx] == -(b+b_to)*v[t_bus]^2 - (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[f_bus]-t[t_bus])) + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus]))
+```
+"""
+#TODO   not assume it is symmetric?
+function constraint_mc_ohms_yt_to(pm::_PMs.AbstractWRModels, n::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
+    constraint_mc_ohms_yt_from(pm, n, t_bus, f_bus, t_idx, f_idx, g, b, g_to, b_to, tr, ti, tm)
+end
+
+function constraint_mc_voltage_angle_difference(pm::_PMs.AbstractWRModels, n::Int, f_idx, angmin, angmax)
+    i, f_bus, t_bus = f_idx
+
+    ncnds = length(_PMs.conductor_ids(pm, n))
+
+    w_fr = _PMs.var(pm, n, :w, f_bus)
+    w_to = _PMs.var(pm, n, :w, t_bus)
+
+    wr   = [_PMs.var(pm, n, :Wijr)[(f_bus, t_bus)][c,c] for c in 1:ncnds]
+    wi   = [_PMs.var(pm, n, :Wiji)[(f_bus, t_bus)][c,c] for c in 1:ncnds]
+
+    JuMP.@constraint(pm.model, wi .<= tan.(angmax).*wr)
+    JuMP.@constraint(pm.model, wi .>= tan.(angmin).*wr)
+
+    for c in 1:ncnds
+        _PMs.cut_complex_product_and_angle_difference(pm.model, w_fr[c], w_to[c], wr[c], wi[c], angmin[c], angmax[c])
+    end
+end
+
+
+""
+function constraint_mc_theta_ref(pm::_PMs.AbstractWRModels, n::Int, i::Int, va_ref)
+    nconductors = length(_PMs.conductor_ids(pm))
+
+    Wr = _PMs.var(pm, n, :Wr)[i]
+    Wi = _PMs.var(pm, n, :Wi)[i]
+
+    beta = exp.(im.*va_ref)
+    gamma = beta*beta'
+
+    Wr_ref = real(gamma).*Wr[1,1]
+    Wi_ref = imag(gamma).*Wr[1,1]
+    JuMP.@constraint(pm.model, diag(Wr)[2:nconductors]        .== diag(Wr_ref)[2:nconductors]) # first equality is implied
+    JuMP.@constraint(pm.model, _mat2utrivec!(Wr) .== _mat2utrivec!(Wr_ref))
+    JuMP.@constraint(pm.model, _mat2utrivec!(Wi) .== _mat2utrivec!(Wi_ref))
+end

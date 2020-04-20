@@ -35,6 +35,8 @@ module PowerModelsDistribution
     include("form/bf_mx_sdp.jl")
     include("form/shared.jl")
     include("form/wr.jl")
+    include("form/wr_soc.jl")
+    include("form/wr_sdp.jl")
 
     include("core/constraint_template.jl")
     include("core/relaxation_scheme.jl")

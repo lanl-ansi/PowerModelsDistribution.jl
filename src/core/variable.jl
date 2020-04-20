@@ -332,14 +332,6 @@ function variable_mc_transformer_current_imaginary(pm::_PMs.AbstractPowerModel; 
 end
 
 
-
-# "voltage variables, relaxed form"
-# function variable_mc_voltage(pm::_PMs.AbstractWRModel; kwargs...)
-#     variable_mc_voltage_magnitude_sqr(pm; kwargs...)
-#     variable_mc_voltage_product(pm; kwargs...)
-# end
-
-
 "variable: `w[i] >= 0` for `i` in `buses"
 function variable_mc_voltage_magnitude_sqr(pm::_PMs.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = _PMs.conductor_ids(pm; nw=nw)
