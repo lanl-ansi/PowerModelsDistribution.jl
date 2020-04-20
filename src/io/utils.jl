@@ -824,15 +824,3 @@ function _guess_dtype(value::AbstractString)::Type
         return String
     end
 end
-
-
-function _slice_branches!(data_math)
-    for (_, branch) in data_math["branch"]
-        if haskey(branch, "f_connections")
-            N = length(branch["f_connections"])
-            for prop in ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to"]
-                branch[prop] = branch[prop][1:N,1:N]
-            end
-        end
-    end
-end
