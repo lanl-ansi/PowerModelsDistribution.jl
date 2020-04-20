@@ -764,7 +764,14 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
         for w in 1:nrw
             # 2-WINDING TRANSFORMER
             # make virtual bus and mark it for reduction
-            tm_nom = eng_obj["configuration"][w]=="delta" ? eng_obj["vnom"][w]*sqrt(3) : eng_obj["vnom"][w]
+            tm_nom = eng_obj["vnom"][w]
+            # three-phase delta transformers need a correction of sqrt(3)
+            if eng_obj["configuration"][w]=="delta" && length(eng_obj["connections"][w])==3
+                tm_nom = eng_obj["vnom"][w]*sqrt(3)
+            end
+            # tm_nom = eng_obj["configuration"][w]=="delta" ? eng_obj["vnom"][w]*sqrt(3) : eng_obj["vnom"][w]
+
+
             transformer_2wa_obj = Dict{String,Any}(
                 "name"          => "_virtual_transformer.$name.$w",
                 "source_id"     => "_virtual_transformer.$(eng_obj["source_id"]).$w",
