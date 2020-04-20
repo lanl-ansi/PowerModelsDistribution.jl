@@ -584,3 +584,16 @@ function _convert_grounding(terminals, grounded, rg, xg)
     end
     return grounded_lossless, shunts
 end
+
+
+"slices branches based on connected terminals"
+function _slice_branches!(data_math::Dict{String,<:Any})
+    for (_, branch) in data_math["branch"]
+        if haskey(branch, "f_connections")
+            N = length(branch["f_connections"])
+            for prop in ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to"]
+                branch[prop] = branch[prop][1:N,1:N]
+            end
+        end
+    end
+end
