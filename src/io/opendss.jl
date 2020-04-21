@@ -202,8 +202,6 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             "status" => convert(Int, defaults["enabled"]),
             "source_id" => "capacitor.$name",
             "phases" => nphases,
-            "f_connections" => f_terminals,
-            "t_connections" => t_terminals,
         )
 
         if import_all
@@ -238,6 +236,7 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             terminals, B = _calc_ground_shunt_admittance_matrix(terminals, B, 0)
 
             eng_obj["bs"] = B
+            eng_obj["connections"] = terminals
 
             _add_eng_obj!(data_eng, "shunt_capacitor", name, eng_obj)
         else
