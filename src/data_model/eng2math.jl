@@ -190,9 +190,15 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
     _map_eng2math_voltage_source!(data_math, data_eng; kron_reduced=kron_reduced)
 
     # post fix
-    #TODO fix this in place / throw error instead? IEEE8500 leads to switches
-    # with 3x3 R matrices but only 1 phase
-    _slice_branches!(data_math)
+    if kron_reduced
+        #TODO move this out when kron-reducing becomes a transformation
+        _kron_reduce_buses!(data_math)
+    else
+        #TODO fix this in place / throw error instead? IEEE8500 leads to switches
+        # with 3x3 R matrices but only 1 phase
+        #NOTE: Don't do this when kron-reducing, it will undo the padding
+        _slice_branches!(data_math)
+    end
 
     return data_math
 end
