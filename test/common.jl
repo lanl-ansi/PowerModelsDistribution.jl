@@ -22,6 +22,12 @@ vr(sol, pmd_data, name) = sol["solution"]["bus"][string(bus_name2id(pmd_data, na
 calc_vm_acr(sol, pmd_data, name) = sqrt.(vi(sol, pmd_data, name).^2 .+ vr(sol, pmd_data, name).^2)
 calc_va_acr(sol, pmd_data, name) = rad2deg.(PMD._wrap_to_pi(atan.(vi(sol, pmd_data, name), vr(sol, pmd_data, name))))
 
+# Helper functions adjusted for eng model
+vi(sol, name) = sol["solution"]["bus"][name]["vi"]
+vr(sol, name) = sol["solution"]["bus"][name]["vr"]
+calc_vm_acr(sol, name) = sqrt.(vi(sol, name).^2 .+ vr(sol, name).^2)
+calc_va_acr(sol, name) = rad2deg.(PMD._wrap_to_pi(atan.(vi(sol, name), vr(sol, name))))
+
 # Helper functions for load models tests
 load_name2id(pmd_data, name) = [load["index"] for (_,load) in pmd_data["load"] if haskey(load, "name") && load["name"]==name][1]
 pdvar(pm, pmd_data, name) = [PMs.var(pm, pm.cnw, c, :pd, load_name2id(pmd_data, name)) for c in 1:3]
@@ -35,14 +41,14 @@ calc_vm_W(result, id) = sqrt.(diag( result["solution"]["bus"][id]["Wr"]))
 
 function build_mc_data!(base_data; conductors::Int=3)
     mp_data = PowerModels.parse_file(base_data)
-    PMD.make_multiconductor!(mp_data, conductors)
+    make_multiconductor!(mp_data, conductors)
     return mp_data
 end
 
 
 function build_mn_mc_data!(base_data; replicates::Int=3, conductors::Int=3)
     mp_data = PowerModels.parse_file(base_data)
-    PMD.make_multiconductor!(mp_data, conductors)
+    make_multiconductor!(mp_data, conductors)
     mn_mc_data = PowerModels.replicate(mp_data, replicates)
     mn_mc_data["conductors"] = mn_mc_data["nw"]["1"]["conductors"]
     return mn_mc_data
@@ -56,11 +62,11 @@ function build_mn_mc_data!(base_data_1, base_data_2; conductors_1::Int=3, conduc
     @assert mp_data_1["per_unit"] == mp_data_2["per_unit"]
 
     if conductors_1 > 0
-        PMD.make_multiconductor!(mp_data_1, conductors_1)
+        make_multiconductor!(mp_data_1, conductors_1)
     end
 
     if conductors_2 > 0
-        PMD.make_multiconductor!(mp_data_2, conductors_2)
+        make_multiconductor!(mp_data_2, conductors_2)
     end
 
     mn_data = Dict(
