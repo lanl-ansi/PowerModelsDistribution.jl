@@ -106,7 +106,11 @@ function count_nodes(data::Dict{String,<:Any})::Int
                 end
 
                 if all(!occursin(pattern, name) for pattern in [_excluded_count_busname_patterns...])
-                    n_nodes += sum(bus["vmax"] .> 0.0)
+                    if data["data_model"] == "mathematical"
+                        n_nodes += length(bus["terminals"][.!get(bus, "grounded", zeros(length(bus["terminals"])))])
+                    else
+                        n_nodes += length([n for n in bus["terminals"] if !(n in get(bus, "grounded", []))])
+                    end
                 end
             end
         end
