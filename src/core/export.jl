@@ -45,7 +45,7 @@ for status_code_enum in [TerminationStatusCode, ResultStatusCode]
 end
 
 # PowerModels Exports
-export ACPPowerModel, ACRPowerModel, DCPPowerModel, NFAPowerModel, SOCWRPowerModel, conductor_ids, ismulticonductor
+export ACPPowerModel, ACRPowerModel, DCPPowerModel, IVRPowerModel, NFAPowerModel, conductor_ids, ismulticonductor
 
 # InfrastructureModels Exports
 export ids, ref, var, con, sol, nw_ids, nws, ismultinetwork

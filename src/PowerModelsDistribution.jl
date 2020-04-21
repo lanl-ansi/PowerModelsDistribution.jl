@@ -14,7 +14,7 @@ module PowerModelsDistribution
     const _PM = PowerModels
     const _IM = InfrastructureModels
 
-    import PowerModels: ACPPowerModel, ACRPowerModel, DCPPowerModel, NFAPowerModel, SOCWRPowerModel, conductor_ids, ismulticonductor
+    import PowerModels: ACPPowerModel, ACRPowerModel, DCPPowerModel, IVRPowerModel, NFAPowerModel, conductor_ids, ismulticonductor
     import InfrastructureModels: ids, ref, var, con, sol, nw_ids, nws, ismultinetwork
 
     function __init__()
