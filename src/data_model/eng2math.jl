@@ -393,6 +393,8 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
 
         transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh)
 
+        dims = length(eng_obj["tm"][1])
+
         for w in 1:nrw
             # 2-WINDING TRANSFORMER
             # make virtual bus and mark it for reduction
@@ -404,7 +406,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 "t_bus"         => transformer_t_bus_w[w],
                 "tm_nom"        => tm_nom,
                 "f_connections" => eng_obj["connections"][w],
-                "t_connections" => collect(1:4),
+                "t_connections" => collect(1:dims+1),
                 "configuration" => eng_obj["configuration"][w],
                 "polarity"      => eng_obj["polarity"][w],
                 "tm"            => eng_obj["tm"][w],
