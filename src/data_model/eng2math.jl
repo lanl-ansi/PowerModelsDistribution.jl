@@ -893,7 +893,7 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
         data_math["gen"]["$(math_obj["index"])"] = math_obj
 
         data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => "solar.$name",
+            :from => name,
             :to => "gen.$(math_obj["index"])",
             :unmap_function => :_map_math2eng_solar!,
         )

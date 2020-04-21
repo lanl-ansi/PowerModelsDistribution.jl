@@ -94,8 +94,6 @@ function _map_math2eng_generator!(data_eng::Dict{String,<:Any}, data_math::Dict{
     eng_obj = _init_unmap_eng_obj!(data_eng, "generator", map)
     math_obj = _get_math_obj(data_math, map[:to])
 
-    @warn "gen" math_obj eng_obj
-
     merge!(eng_obj, math_obj)
 
     if !isempty(eng_obj)
@@ -105,10 +103,26 @@ end
 
 
 function _map_math2eng_solar!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{Symbol,<:Any}, bus_lookup::Dict{Int,<:Any})
+    eng_obj = _init_unmap_eng_obj!(data_eng, "solar", map)
+    math_obj = _get_math_obj(data_math, map[:to])
+
+    merge!(eng_obj, math_obj)
+
+    if !isempty(eng_obj)
+        data_eng["solar"][map[:from]] = eng_obj
+    end
 end
 
 
 function _map_math2eng_storage!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{Symbol,<:Any}, bus_lookup::Dict{Int,<:Any})
+    eng_obj = _init_unmap_eng_obj!(data_eng, "storage", map)
+    math_obj = _get_math_obj(data_math, map[:to])
+
+    merge!(eng_obj, math_obj)
+
+    if !isempty(eng_obj)
+        data_eng["storage"][map[:from]] = eng_obj
+    end
 end
 
 
