@@ -597,3 +597,15 @@ function _slice_branches!(data_math::Dict{String,<:Any})
         end
     end
 end
+
+
+"transformations might have introduced buses with four-terminals; crop here"
+function _kron_reduce_buses!(data_math)
+    for (_, bus) in data_math["bus"]
+        for prop in ["vm", "va", "vmax", "vmin"]
+            if haskey(bus, prop) && length(bus[prop])>3
+                bus[prop] = bus[prop][1:3]
+            end
+        end
+    end
+end

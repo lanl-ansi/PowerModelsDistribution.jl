@@ -383,7 +383,7 @@ function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true
                 elseif prop in ibase_props
                     comp[prop] = _apply_func_vals(comp[prop], x->x*ibase)
                 elseif prop in rad2deg_props
-                    comp[prop] = _apply_func_vals(comp[prop], x->x*_wrap_to_180(rad2deg(x)))
+                    comp[prop] = _apply_func_vals(comp[prop], x->_wrap_to_180(rad2deg(x)))
                 end
             end
         end
