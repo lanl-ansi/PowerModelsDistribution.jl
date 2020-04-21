@@ -6,7 +6,7 @@ import Memento
 import InfrastructureModels
 
 import PowerModels
-const PMs = PowerModels
+const PM = PowerModels
 
 # Suppress warnings during testing.
 const TESTLOG = Memento.getlogger(PowerModels)

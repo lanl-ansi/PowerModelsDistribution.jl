@@ -4,7 +4,7 @@
     # This test checks the generators are connected properly by comparing them
     # to equivalent constant-power loads. This is achieved by fixing their bounds.
     @testset "ACP/ACR tests" begin
-        pmd_1 = PMD.parse_file("$pmd_path/test/data/opendss/case3_delta_gens.dss"; data_model="mathematical")
+        pmd_1 = parse_file("$pmd_path/test/data/opendss/case3_delta_gens.dss"; data_model="mathematical")
 
         # convert to constant power loads
         for (_, load) in pmd_1["load"]
@@ -32,15 +32,15 @@
 
         # check ACP and ACR
         for (form, build_method) in zip(
-                [PMs.ACPPowerModel, PMs.ACRPowerModel, PMs.IVRPowerModel],
-                [PMD.build_mc_opf, PMD.build_mc_opf, PMD.build_mc_opf_iv]
+                [ACPPowerModel, ACRPowerModel, IVRPowerModel],
+                [build_mc_opf, build_mc_opf, build_mc_opf_iv]
             )
-            pm_1  = PMs.instantiate_model(pmd_1, form, build_method, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
-            sol_1 = PMs.optimize_model!(pm_1, optimizer=ipopt_solver)
+            pm_1  = PM.instantiate_model(pmd_1, form, build_method, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+            sol_1 = PM.optimize_model!(pm_1, optimizer=ipopt_solver)
             @assert(sol_1["termination_status"]==LOCALLY_SOLVED)
 
-            pm_2  = PMs.instantiate_model(pmd_2, form, build_method, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
-            sol_2 = PMs.optimize_model!(pm_2, optimizer=ipopt_solver)
+            pm_2  = PM.instantiate_model(pmd_2, form, build_method, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+            sol_2 = PM.optimize_model!(pm_2, optimizer=ipopt_solver)
             @assert(sol_2["termination_status"]==LOCALLY_SOLVED)
 
             # check that gens are equivalent to the loads

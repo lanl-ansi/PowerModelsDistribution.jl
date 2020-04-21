@@ -4,7 +4,7 @@
     branch = Dict{String, Any}()
     branch["br_r"] = [1 2;3 4]
     branch["br_x"] = [1 2;3 4]
-    g,b  = PMs.calc_branch_y(branch)
+    g,b  = PM.calc_branch_y(branch)
 
     @test typeof(g) <: Matrix
     @test isapprox(g, [-1.0 0.5; 0.75 -0.25])
@@ -12,7 +12,7 @@
 
     branch["br_r"] = [1 2 0;3 4 0; 0 0 0]
     branch["br_x"] = [1 2 0;3 4 0; 0 0 0]
-    g,b  = PMs.calc_branch_y(branch)
+    g,b  = PM.calc_branch_y(branch)
 
     @test typeof(g) <: Matrix
     @test isapprox(g, [-1.0 0.5 0; 0.75 -0.25 0; 0 0 0])
