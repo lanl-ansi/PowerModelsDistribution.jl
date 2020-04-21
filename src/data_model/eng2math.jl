@@ -15,7 +15,7 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "generator" => ["pg", "qg", "configuration", "connections", "source_id", "dss"],
     "solar" => ["configuration", "connections", "source_id", "dss"],
     "storage" => ["status", "energy", "ps", "qs", "connections", "source_id", "dss"],
-    "voltage_source" => ["connections", "source_id", "dss"],
+    "voltage_source" => ["source_id", "dss"],
 )
 
 "list of nodal type elements in the engineering model"
@@ -684,9 +684,9 @@ function _map_eng2math_shunt_capacitor!(data_math::Dict{String,<:Any}, data_eng:
         if kron_reduced
             filter = _kron_reduce_branch!(math_obj,
                 Vector{String}([]), ["gs", "bs"],
-                eng_obj["f_connections"], kr_neutral
+                eng_obj["connections"], kr_neutral
             )
-            connections = eng_obj["f_connections"][filter]
+            connections = eng_obj["connections"][filter]
             _pad_properties!(math_obj, ["gs", "bs"], connections, kr_phases)
         else
             math_obj["connections"] = eng_obj["connections"]
@@ -970,7 +970,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
         math_obj = _init_math_obj("voltage_source", name, eng_obj, length(data_math["gen"])+1)
 
         math_obj["name"] = "_virtual_gen.voltage_source.$name"
-        math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
+        math_obj["gen_bus"] = gen_bus = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["gen_status"] = eng_obj["status"]
         math_obj["pg"] = fill(0.0, nconductors)
         math_obj["qg"] = fill(0.0, nconductors)
@@ -1005,7 +1005,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 bus_obj["vmax"] = bus_obj["vmax"][1:end-1]
             end
 
-            math_obj["gen_bus"] = bus_obj["bus_i"]
+            math_obj["gen_bus"] = gen_bus = bus_obj["bus_i"]
 
             data_math["bus"]["$(bus_obj["index"])"] = bus_obj
 
@@ -1031,6 +1031,10 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "b_to" => zeros(nconductors, nconductors),
                 "index" => length(data_math["branch"])+1
             )
+
+            # finally, we have to set a neutral for the virtual generator
+            neutral = _get_ground_math!(data_math["bus"]["$gen_bus"], exclude_terminals=[1:nconductors...])
+            math_obj["connections"] = [collect(1:nconductors)..., neutral]
 
             data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 

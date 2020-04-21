@@ -609,3 +609,21 @@ function _kron_reduce_buses!(data_math)
         end
     end
 end
+
+
+"generate a new, unique terminal"
+new_t(terms) = maximum([terms[isa.(terms, Int)]..., 3])+1
+
+
+"get a grounded terminal from a bus; if not present, create one"
+function _get_ground_math!(bus; exclude_terminals=[])
+    tgs = setdiff(bus["terminals"][bus["grounded"]], exclude_terminals)
+    if !isempty(tgs)
+        return tgs[1]
+    else
+        n = new_t[bus["terminals"]]
+        push!(bus["terminals"], n)
+        push!(bus["grounded"], true)
+        return n
+    end
+end
