@@ -391,7 +391,8 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
         y_sh = g_sh + im*b_sh
         z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
 
-        dims = length(eng_obj["tm"][1])
+        #TODO remove once moving out kron-reduction
+        dims = kron_reduced ? 3 : length(eng_obj["tm"][1])
         transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh, nphases=dims)
 
         for w in 1:nrw
