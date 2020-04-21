@@ -32,7 +32,7 @@ end
 
 
 function _parse_mats!(data::Dict{String,<:Any})
-    stack = [(data, k, v) for (k, v) in data]
+    stack = Array{Tuple{Any, Any, Any}}([(data, k, v) for (k, v) in data])
     while !isempty(stack)
         (store, k, v) = pop!(stack)
 
@@ -76,15 +76,19 @@ function parse_json(io::IO; kwargs...)::Dict{String,Any}
 end
 
 
-function print_file(path::String, data)
+function print_file(path::String, data; kwargs...)
     open(path, "w") do io
-        print_file(io, data)
+        print_file(io, data; kwargs...)
     end
 end
 
 
-function print_file(io::IO, data)
-    JSON.print(io, JSON.parse(sprint(show_json, PMDSerialization(), data)))
+function print_file(io::IO, data; indent=false)
+    if indent
+        JSON.print(io, JSON.parse(sprint(show_json, PMDSerialization(), data)), 4)
+    else
+        JSON.print(io, JSON.parse(sprint(show_json, PMDSerialization(), data)))
+    end
 end
 
 
