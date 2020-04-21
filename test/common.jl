@@ -27,6 +27,11 @@ vi(sol, name) = sol["solution"]["bus"][name]["vi"]
 vr(sol, name) = sol["solution"]["bus"][name]["vr"]
 calc_vm_acr(sol, name) = sqrt.(vi(sol, name).^2 .+ vr(sol, name).^2)
 calc_va_acr(sol, name) = rad2deg.(PMD._wrap_to_pi(atan.(vi(sol, name), vr(sol, name))))
+va(sol, name) = PMD._wrap_to_pi(sol["solution"]["bus"][name]["va"][:])*180/pi
+vm(sol, name) = sol["solution"]["bus"][name]["vm"]
+pd(sol, name) = sol["solution"]["load"][name]["pd_bus"]
+qd(sol, name) = sol["solution"]["load"][name]["qd_bus"]
+
 
 # Helper functions for load models tests
 load_name2id(pmd_data, name) = [load["index"] for (_,load) in pmd_data["load"] if haskey(load, "name") && load["name"]==name][1]
