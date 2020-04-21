@@ -215,7 +215,7 @@
         end
 
         @testset "3w transformer nfa opf" begin
-            mp_data = parse_file("../test/data/opendss/ut_trans_3w_dyy_1.dss", data_model="mathematical")
+            mp_data = parse_file("../test/data/opendss/ut_trans_3w_dyy_1.dss")
             result = run_mc_opf(mp_data, NFAPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
