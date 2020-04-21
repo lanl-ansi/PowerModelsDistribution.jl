@@ -5,13 +5,20 @@ const _dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
         "vbase"=>Vector{String}(["vm", "vr", "vi", "vm_pp", "vm_pn"])
     ),
     "gen"  => Dict{String,Vector{String}}(
-        "sbase"=>Vector{String}(["pg", "qg", "pg_bus", "qg_bus"])
+        "sbase"=>Vector{String}(["pg", "qg", "pg_bus", "qg_bus"]),
+        "ibase"=>Vector{String}(["crg", "cig", "crg_bus", "cig_bus"])
     ),
     "load" => Dict{String,Vector{String}}(
-        "sbase"=>Vector{String}(["pd", "qd", "pd_bus", "qd_bus"])
+        "sbase"=>Vector{String}(["pd", "qd", "pd_bus", "qd_bus"]),
+        "ibase"=>Vector{String}(["crd", "cid", "crd_bus", "cid_bus"])
     ),
-    "line" => Dict{String,Vector{String}}(
-        "sbase"=>Vector{String}(["pf", "qf", "pt", "qt"])
+    "branch" => Dict{String,Vector{String}}(
+        "sbase"=>Vector{String}(["pf", "qf", "pt", "qt"]),
+        "ibase"=>Vector{String}(["cr_fr", "ci_fr", "cr_to", "cr_to"])
+    ),
+    "transformer" => Dict{String,Vector{String}}(
+        "ibase_fr"=>Vector{String}(["crt_fr", "cit_fr"]),
+        "ibase_to"=>Vector{String}(["crt_to", "cit_to"])
     ),
 )
 
@@ -369,6 +376,8 @@ function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true
         ibase_props   = mult_ibase      ? get(dimensionalize_math_comp, "ibase", [])   : []
         rad2deg_props = convert_rad2deg ? get(dimensionalize_math_comp, "rad2deg", []) : []
 
+
+
         for (id, comp) in comp_dict
             if !isempty(vbase_props) || !isempty(ibase_props)
                 vbase = math_model[comp_type][id]["vbase"]
@@ -384,6 +393,24 @@ function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true
                     comp[prop] = _apply_func_vals(comp[prop], x->x*ibase)
                 elseif prop in rad2deg_props
                     comp[prop] = _apply_func_vals(comp[prop], x->_wrap_to_180(rad2deg(x)))
+                end
+            end
+
+            if comp_type=="transformer"
+                # transformers have different vbase/ibase on each side
+                f_bus = math_model["transformer"][id]["f_bus"]
+                f_vbase = math_model["bus"]["$f_bus"]["vbase"]
+                t_bus = math_model["transformer"][id]["t_bus"]
+                t_vbase = math_model["bus"]["$t_bus"]["vbase"]
+                f_ibase = sbase/f_vbase
+                t_ibase = sbase/t_vbase
+
+                for (prop, val) in comp
+                    if prop in dimensionalize_math_comp["ibase_fr"]
+                        comp[prop] = _apply_func_vals(comp[prop], x->x*f_ibase)
+                    elseif prop in dimensionalize_math_comp["ibase_to"]
+                        comp[prop] = _apply_func_vals(comp[prop], x->x*t_ibase)
+                    end
                 end
             end
         end
