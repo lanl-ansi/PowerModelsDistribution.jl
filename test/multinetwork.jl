@@ -9,7 +9,7 @@
 
 #         result = PMD._run_mn_mc_opf_strg(mn_mp_data, PowerModels.ACPPowerModel, ipopt_solver)
 
-#         @test result["termination_status"] == PMs.LOCALLY_SOLVED
+#         @test result["termination_status"] == PM.LOCALLY_SOLVED
 #         @test isapprox(result["objective"], 2.64596e5; atol = 1e2)
 
 #         for (n, network) in result["solution"]["nw"], c in 1:network["conductors"]
