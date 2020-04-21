@@ -74,7 +74,7 @@
     end
 
     @testset "transformer nfa mld" begin
-        mp_data = PowerModelsDistribution.parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
+        mp_data = PowerModelsDistribution.parse_file("../test/data/opendss/ut_trans_2w_yy.dss"; data_model="mathematical")
         result = run_mc_mld(mp_data, NFAPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED
@@ -105,7 +105,7 @@
     end
 
     @testset "transformer case" begin
-        dss = PowerModelsDistribution.parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
+        dss = PowerModelsDistribution.parse_file("../test/data/opendss/ut_trans_2w_yy.dss"; data_model="mathematical")
         result = run_mc_mld_bf(dss, LPUBFDiagPowerModel, ipopt_solver)
 
         @test result["termination_status"] == PMs.LOCALLY_SOLVED

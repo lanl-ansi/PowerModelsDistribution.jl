@@ -3,9 +3,13 @@
 
 Parses the IOStream of a file into a Three-Phase PowerModels data structure.
 """
-function parse_file(io::IO, filetype::AbstractString="json"; data_model::String="mathematical", import_all::Bool=false, bank_transformers::Bool=true, transformations::Vector{Function}=Vector{Function}([]))::Dict{String,Any}
+function parse_file(io::IO, filetype::AbstractString="json"; data_model::String="engineering", import_all::Bool=false, bank_transformers::Bool=true, transformations::Vector{<:Function}=Vector{Function}([]))::Dict{String,Any}
     if filetype == "dss"
         data_eng = PowerModelsDistribution.parse_opendss(io; import_all=import_all, bank_transformers=bank_transformers)
+
+        for transformation in transformations
+            transformation(data_eng)
+        end
 
         if data_model == "mathematical"
             return transform_data_model(data_eng; make_pu=true)
@@ -37,7 +41,7 @@ end
 
 
 "transforms model between engineering (high-level) and mathematical (low-level) models"
-function transform_data_model(data::Dict{String,<:Any}; kron_reduced::Bool=true, make_pu::Bool=false)::Dict{String,Any}
+function transform_data_model(data::Dict{String,<:Any}; kron_reduced::Bool=true, make_pu::Bool=true)::Dict{String,Any}
     current_data_model = get(data, "data_model", "mathematical")
 
     if current_data_model == "engineering"
@@ -50,7 +54,7 @@ function transform_data_model(data::Dict{String,<:Any}; kron_reduced::Bool=true,
         Memento.warn(_LOGGER, "A mathematical data model cannot be converted back to an engineering data model, irreversible transformations have been made")
         return data
     else
-        @warn "Data model '$current_data_model' is not recognized, no model type transformation performed"
+        Memento.warn(_LOGGER, "Data model '$current_data_model' is not recognized, no model type transformation performed")
         return data
     end
 end

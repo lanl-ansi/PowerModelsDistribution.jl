@@ -71,10 +71,10 @@ end
 
     @testset "node counting functions" begin
         dss = PMD.parse_dss("../test/data/opendss/case5_phase_drop.dss")
-        pmd = PMD.parse_file("../test/data/opendss/case5_phase_drop.dss")
+        math = PMD.parse_file("../test/data/opendss/case5_phase_drop.dss"; data_model="mathematical")
 
         @test count_nodes(dss) == 10 # stopped excluding source from node count
-        @test count_nodes(dss) == count_nodes(pmd)
+        @test count_nodes(dss) == count_nodes(math)
 
         dss = PMD.parse_dss("../test/data/opendss/ut_trans_2w_yy.dss")
         @test count_nodes(dss) == 12  # stopped excluding source from node count

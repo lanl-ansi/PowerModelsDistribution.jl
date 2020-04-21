@@ -16,7 +16,7 @@
         end
 
         @testset "3-bus balanced lpubfdiag opf_bf" begin
-            pmd = PMD.parse_file("../test/data/opendss/case3_balanced.dss")
+            pmd = PMD.parse_file("../test/data/opendss/case3_balanced.dss"; data_model="mathematical")
             sol = PMD.run_mc_opf_bf(pmd, LPUBFDiagPowerModel, ipopt_solver)
 
             @test sol["termination_status"] == PMs.LOCALLY_SOLVED
@@ -25,7 +25,7 @@
         end
 
         @testset "3-bus unbalanced lpubfdiag opf_bf" begin
-            pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced.dss")
+            pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced.dss"; data_model="mathematical")
             sol = PMD.run_mc_opf_bf(pmd, LPUBFDiagPowerModel, ipopt_solver)
 
             @test sol["termination_status"] == PMs.LOCALLY_SOLVED

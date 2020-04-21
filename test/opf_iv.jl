@@ -3,7 +3,7 @@
 @testset "test current-voltage formulations" begin
     @testset "test IVR opf_iv" begin
         @testset "2-bus diagonal acp opf" begin
-            pmd = PMD.parse_file("../test/data/opendss/case2_diag.dss")
+            pmd = PMD.parse_file("../test/data/opendss/case2_diag.dss"; data_model="mathematical")
             sol = PMD.run_mc_opf_iv(pmd, PMs.IVRPowerModel, ipopt_solver)
 
             @test sol["termination_status"] == PMs.LOCALLY_SOLVED
@@ -14,7 +14,7 @@
         end
 
         @testset "3-bus balanced acp opf" begin
-            pmd = PMD.parse_file("../test/data/opendss/case3_balanced.dss")
+            pmd = PMD.parse_file("../test/data/opendss/case3_balanced.dss"; data_model="mathematical")
             sol = PMD.run_mc_opf_iv(pmd, PMs.IVRPowerModel, ipopt_solver)
 
             @test sol["termination_status"] == PMs.LOCALLY_SOLVED
@@ -25,7 +25,7 @@
         end
 
         @testset "3-bus unbalanced acp opf" begin
-            pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced.dss")
+            pmd = PMD.parse_file("../test/data/opendss/case3_unbalanced.dss"; data_model="mathematical")
             sol = PMD.run_mc_opf_iv(pmd, PMs.IVRPowerModel, ipopt_solver)
 
             @test sol["termination_status"] == PMs.LOCALLY_SOLVED

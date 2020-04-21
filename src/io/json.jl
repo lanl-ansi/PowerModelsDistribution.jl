@@ -68,6 +68,10 @@ function parse_json(io::IO; kwargs...)::Dict{String,Any}
 
     _parse_mats!(data)
 
+    if haskey(data, "files")
+        data["files"] = Set(data["files"])
+    end
+
     if get(kwargs, :validate, true)
         PowerModels.correct_network_data!(data)
     end

@@ -4,7 +4,7 @@
     # This test checks the generators are connected properly by comparing them
     # to equivalent constant-power loads. This is achieved by fixing their bounds.
     @testset "ACP/ACR tests" begin
-        pmd_1 = PMD.parse_file("$pmd_path/test/data/opendss/case3_delta_gens.dss")
+        pmd_1 = PMD.parse_file("$pmd_path/test/data/opendss/case3_delta_gens.dss"; data_model="mathematical")
 
         # convert to constant power loads
         for (_, load) in pmd_1["load"]
