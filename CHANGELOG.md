@@ -2,6 +2,27 @@
 
 ## staged
 
+- none
+
+## v0.9.0
+
+-
+- Adds some commonly used InfrastructureModels and PowerModels functions as exports
+- Adds model building functions `add_{component}!` to aid in building simple models for testing (experimental)
+- Add run_mc_model (adds ref_add_arcs_transformer! to ref_extensions, and sets multiconductor=true by default) (breaking)
+- Rename ref_add_arcs_trans -> ref_add_arcs_transformer (breaking)
+- Update `count_nodes`, now counts source nodes as well, excludes _virtual objects
+- Change _PMs and _IMs to _PM, _IM, respectively
+- Add example for PMD usage (see Jupyter notebooks in `/examples`)
+- Update transformer mathematical model
+- Introduce new data models: ENGINEERING, MATHEMATICAL (see data model documentation) (breaking)
+- Update DSS parser to be more robust, and parse into new format (breaking)
+- Updates DSS paser to parse more options/commands, moves these into `"options"` dict (breaking)
+- Updates how dss `like` is applied to better match opendss (almost all properties are copied with like) (breaking)
+- Add support for new OpenDSS components (loadshape, xfmrcode, xycurve)
+- Add support for JuMP v0.22 (exports optimizer_with_attributtes by default)
+- Add support for InfrastructureModels v0.5
+- Add support for PowerModels v0.16 (breaking)
 - Add support for Memento v0.13, v1.0
 
 ## v0.8.1
