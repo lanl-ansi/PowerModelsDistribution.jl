@@ -6,7 +6,11 @@
 
 ## v0.9.0
 
--
+- Add support for Memento 1.1
+- Add support for PowerModels v0.17 (breaking)
+- Add support for InfrastructureModels v0.5
+- Updates JSON parser to handle enum (`"data_model"` values)
+- Adds Dierckx dependency for creation of 1d splines for xycurve object
 - Adds some commonly used InfrastructureModels and PowerModels functions as exports
 - Adds model building functions `add_{component}!` to aid in building simple models for testing (experimental)
 - Add run_mc_model (adds ref_add_arcs_transformer! to ref_extensions, and sets multiconductor=true by default) (breaking)
@@ -21,7 +25,6 @@
 - Updates how dss `like` is applied to better match opendss (almost all properties are copied with like) (breaking)
 - Add support for new OpenDSS components (loadshape, xfmrcode, xycurve)
 - Add support for JuMP v0.22 (exports optimizer_with_attributtes by default)
-- Add support for InfrastructureModels v0.5
 - Add support for PowerModels v0.16 (breaking)
 - Add support for Memento v0.13, v1.0
 

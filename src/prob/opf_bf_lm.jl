@@ -1,5 +1,5 @@
 # This problem includes load models beyond simple constant power ones; this is
-# handled in variable_mc_load and constraint_mc_load.
+# handled in variable_mc_load_setpoint and constraint_mc_load_setpoint.
 
 
 ""
@@ -17,12 +17,12 @@ end
 ""
 function build_mc_opf_bf_lm(pm::_PM.AbstractPowerModel)
     # Variables
-    variable_mc_voltage(pm)
+    variable_mc_bus_voltage(pm)
     variable_mc_branch_current(pm)
-    variable_mc_branch_flow(pm)
+    variable_mc_branch_power(pm)
 
-    variable_mc_generation(pm)
-    variable_mc_load(pm)
+    variable_mc_gen_power_setpoint(pm)
+    variable_mc_load_setpoint(pm)
 
     # Constraints
     constraint_mc_model_current(pm)
@@ -32,7 +32,7 @@ function build_mc_opf_bf_lm(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :branch)
-        constraint_mc_flow_losses(pm, i)
+        constraint_mc_power_losses(pm, i)
         constraint_mc_model_voltage_magnitude_difference(pm, i)
 
         constraint_mc_voltage_angle_difference(pm, i)
@@ -42,11 +42,11 @@ function build_mc_opf_bf_lm(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :load)
-        constraint_mc_load(pm, i)
+        constraint_mc_load_setpoint(pm, i)
     end
 
     for i in ids(pm, :gen)
-        constraint_mc_generation(pm, i)
+        constraint_mc_gen_setpoint(pm, i)
     end
 
     for i in ids(pm, :bus)

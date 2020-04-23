@@ -28,5 +28,4 @@ function constraint_mc_model_current(pm::SDPUBFModel, n::Int, i, f_bus, f_idx, g
     mat_real  -mat_imag;
     mat_imag   mat_real
     ] in JuMP.PSDCone())
-
 end

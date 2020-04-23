@@ -40,10 +40,10 @@ end
 
 "Create voltage variables for branch flow model"
 function variable_mc_bus_voltage_on_off(pm::LPUBFDiagModel; kwargs...)
-    variable_mc_voltage_magnitude_sqr_on_off(pm; kwargs...)
+    variable_mc_bus_voltage_magnitude_sqr_on_off(pm; kwargs...)
 end
 
 
 "nothing to do, this model is symmetric"
-function constraint_mc_trans_yy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
 end

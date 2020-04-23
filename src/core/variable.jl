@@ -14,7 +14,7 @@ end
 
 
 ""
-function variable_mc_voltage_angle(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_bus_voltage_angle(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -28,7 +28,7 @@ function variable_mc_voltage_angle(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, b
 end
 
 ""
-function variable_mc_voltage_magnitude(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_bus_voltage_magnitude_only(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -53,7 +53,7 @@ function variable_mc_voltage_magnitude(pm::_PM.AbstractPowerModel; nw::Int=pm.cn
 end
 
 ""
-function variable_mc_voltage_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_bus_voltage_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -76,7 +76,7 @@ function variable_mc_voltage_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bo
 end
 
 ""
-function variable_mc_voltage_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_bus_voltage_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -100,13 +100,13 @@ end
 
 
 "branch flow variables, delegated back to PowerModels"
-function variable_mc_branch_flow(pm::_PM.AbstractPowerModel; kwargs...)
-    variable_mc_branch_flow_active(pm; kwargs...)
-    variable_mc_branch_flow_reactive(pm; kwargs...)
+function variable_mc_branch_power(pm::_PM.AbstractPowerModel; kwargs...)
+    variable_mc_branch_power_real(pm; kwargs...)
+    variable_mc_branch_power_imaginary(pm; kwargs...)
 end
 
 "variable: `p[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_mc_branch_flow_active(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_power_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -139,7 +139,7 @@ function variable_mc_branch_flow_active(pm::_PM.AbstractPowerModel; nw::Int=pm.c
 end
 
 "variable: `q[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_mc_branch_flow_reactive(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -223,7 +223,7 @@ end
 
 
 "variable: `csr[l]` for `l` in `branch`"
-function variable_mc_branch_series_current_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_current_series_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     branch = ref(pm, nw, :branch)
     bus = ref(pm, nw, :bus)
     cnds = conductor_ids(pm; nw=nw)
@@ -248,7 +248,7 @@ end
 
 
 "variable: `csi[l]` for `l` in `branch`"
-function variable_mc_branch_series_current_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_current_series_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     branch = ref(pm, nw, :branch)
     bus = ref(pm, nw, :bus)
     cnds = conductor_ids(pm; nw=nw)
@@ -332,16 +332,8 @@ function variable_mc_transformer_current_imaginary(pm::_PM.AbstractPowerModel; n
 end
 
 
-
-# "voltage variables, relaxed form"
-# function variable_mc_voltage(pm::_PM.AbstractWRModel; kwargs...)
-#     variable_mc_voltage_magnitude_sqr(pm; kwargs...)
-#     variable_mc_voltage_product(pm; kwargs...)
-# end
-
-
 "variable: `w[i] >= 0` for `i` in `buses"
-function variable_mc_voltage_magnitude_sqr(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_bus_voltage_magnitude_sqr(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -368,16 +360,62 @@ end
 
 
 "variables for modeling storage units, includes grid injection and internal variables"
-function variable_mc_storage(pm::_PM.AbstractPowerModel; kwargs...)
-    variable_mc_storage_active(pm; kwargs...)
-    variable_mc_storage_reactive(pm; kwargs...)
-
+function variable_mc_storage_power(pm::_PM.AbstractPowerModel; kwargs...)
+    variable_mc_storage_power_real(pm; kwargs...)
+    variable_mc_storage_power_imaginary(pm; kwargs...)
+    variable_mc_storage_power_control_imaginary(pm; kwargs...)
+    _PM.variable_storage_current(pm; kwargs...) # TODO storage current variable for multiconductor
     _PM.variable_storage_energy(pm; kwargs...)
     _PM.variable_storage_charge(pm; kwargs...)
     _PM.variable_storage_discharge(pm; kwargs...)
 end
 
-function variable_mc_storage_active(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+
+""
+function variable_mc_storage_power_mi(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
+    _PM.variable_storage_current(pm; kwargs...) # TODO storage current variable for multiconductor
+    _PM.variable_storage_energy(pm; kwargs...)
+    _PM.variable_storage_charge(pm; kwargs...)
+    _PM.variable_storage_discharge(pm; kwargs...)
+    variable_mc_storage_indicator(pm; relax=relax, kwargs...)
+    variable_mc_storage_power_on_off(pm; kwargs...)
+    variable_mc_storage_power_control_imaginary(pm; kwargs...)
+end
+
+
+"""
+a reactive power slack variable that enables the storage device to inject or
+consume reactive power at its connecting bus, subject to the injection limits
+of the device.
+"""
+function variable_mc_storage_power_control_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    # TODO properly adapt this new control variable to multiconductor
+    cnds = conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    qsc = var(pm, nw)[:qsc] = JuMP.@variable(pm.model,
+        [i in ids(pm, nw, :storage)], base_name="$(nw)_qsc_$(i)",
+        start = _PM.comp_start_value(ref(pm, nw, :storage, i), "qsc_start")
+    )
+
+    if bounded
+        inj_lb, inj_ub = _PM.ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus))
+        for (i,storage) in ref(pm, nw, :storage)
+            if !isinf(sum(inj_lb[i])) || haskey(storage, "qmin")
+                set_lower_bound(qsc[i], max(sum(inj_lb[i]), sum(get(storage, "qmin", -Inf))))
+            end
+            if !isinf(sum(inj_ub[i])) || haskey(storage, "qmax")
+                set_upper_bound(qsc[i], min(sum(inj_ub[i]), sum(get(storage, "qmax",  Inf))))
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
+end
+
+
+""
+function variable_mc_storage_power_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -405,7 +443,9 @@ function variable_mc_storage_active(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, 
     report && _IM.sol_component_value(pm, nw, :storage, :ps, ids(pm, nw, :storage), ps)
 end
 
-function variable_mc_storage_reactive(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+
+""
+function variable_mc_storage_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -434,16 +474,15 @@ function variable_mc_storage_reactive(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw
 end
 
 
-
 "generates variables for both `active` and `reactive` slack at each bus"
-function variable_mc_bus_power_slack(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
-    variable_mc_active_bus_power_slack(pm; nw=nw, kwargs...)
-    variable_mc_reactive_bus_power_slack(pm; nw=nw, kwargs...)
+function variable_mc_slack_bus_power(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
+    variable_mc_slack_bus_power_real(pm; nw=nw, kwargs...)
+    variable_mc_slack_bus_power_imaginary(pm; nw=nw, kwargs...)
 end
 
 
 ""
-function variable_mc_active_bus_power_slack(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
+function variable_mc_slack_bus_power_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -458,7 +497,7 @@ end
 
 
 ""
-function variable_mc_reactive_bus_power_slack(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
+function variable_mc_slack_bus_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -473,14 +512,14 @@ end
 
 
 "Creates variables for both `active` and `reactive` power flow at each transformer."
-function variable_mc_transformer_flow(pm::_PM.AbstractPowerModel; kwargs...)
-    variable_mc_transformer_flow_active(pm; kwargs...)
-    variable_mc_transformer_flow_reactive(pm; kwargs...)
+function variable_mc_transformer_power(pm::_PM.AbstractPowerModel; kwargs...)
+    variable_mc_transformer_power_real(pm; kwargs...)
+    variable_mc_transformer_power_imaginary(pm; kwargs...)
 end
 
 
 "Create variables for the active power flowing into all transformer windings."
-function variable_mc_transformer_flow_active(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_transformer_power_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -516,7 +555,7 @@ end
 
 
 "Create variables for the reactive power flowing into all transformer windings."
-function variable_mc_transformer_flow_reactive(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_transformer_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -554,7 +593,7 @@ end
 
 
 "Create tap variables."
-function variable_mc_oltc_tap(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_oltc_transformer_tap(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     # when extending to 4-wire, this should iterate only over the phase conductors
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
@@ -582,7 +621,7 @@ Create a dictionary with values of type Any for the load.
 Depending on the load model, this can be a parameter or a NLexpression.
 These will be inserted into KCL.
 """
-function variable_mc_load(pm::_PM.AbstractPowerModel; nw=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_load_setpoint(pm::_PM.AbstractPowerModel; nw=pm.cnw, bounded::Bool=true, report::Bool=true)
     var(pm, nw)[:pd] = Dict{Int, Any}()
     var(pm, nw)[:qd] = Dict{Int, Any}()
     var(pm, nw)[:pd_bus] = Dict{Int, Any}()
@@ -591,7 +630,7 @@ end
 
 
 "Create variables for demand status"
-function variable_mc_indicator_demand(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, relax::Bool=false, report::Bool=true)
+function variable_mc_load_indicator(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, relax::Bool=false, report::Bool=true)
     # this is not indexedon cnd; why used in start value?
     cnd = 1
     if relax
@@ -622,7 +661,7 @@ end
 
 
 "Create variables for shunt status"
-function variable_mc_indicator_shunt(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, relax=false, report::Bool=true)
+function variable_mc_shunt_indicator(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, relax=false, report::Bool=true)
     # this is not indexedon cnd; why used in start value?
     cnd = 1
     if relax
@@ -645,7 +684,7 @@ end
 
 
 "Create variables for bus status"
-function variable_mc_indicator_bus_voltage(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, relax::Bool=false, report::Bool=true)
+function variable_mc_bus_voltage_indicator(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, relax::Bool=false, report::Bool=true)
     if !relax
         z_voltage = var(pm, nw)[:z_voltage] = JuMP.@variable(pm.model,
             [i in ids(pm, nw, :bus)], base_name="$(nw)_z_voltage",
@@ -666,7 +705,7 @@ end
 
 
 "Create variables for generator status"
-function variable_mc_indicator_generation(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, relax::Bool=false, report::Bool=true)
+function variable_mc_gen_indicator(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, relax::Bool=false, report::Bool=true)
     if !relax
         z_gen = var(pm, nw)[:z_gen] = JuMP.@variable(pm.model,
             [i in ids(pm, nw, :gen)], base_name="$(nw)_z_gen",
@@ -687,7 +726,7 @@ end
 
 
 "Create variables for storage status"
-function variable_mc_indicator_storage(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, relax::Bool=false, report::Bool=true)
+function variable_mc_storage_indicator(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, relax::Bool=false, report::Bool=true)
     if !relax
         z_storage = var(pm, nw)[:z_storage] = JuMP.@variable(pm.model,
             [i in ids(pm, nw, :storage)], base_name="$(nw)-z_storage",
@@ -708,14 +747,14 @@ end
 
 
 "Create variables for `active` and `reactive` storage injection"
-function variable_mc_on_off_storage(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
-    variable_mc_on_off_storage_active(pm; nw=nw, kwargs...)
-    variable_mc_on_off_storage_reactive(pm; nw=nw, kwargs...)
+function variable_mc_storage_power_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
+    variable_mc_storage_power_real_on_off(pm; nw=nw, kwargs...)
+    variable_mc_storage_power_imaginary_on_off(pm; nw=nw, kwargs...)
 end
 
 
 "Create variables for `active` storage injection"
-function variable_mc_on_off_storage_active(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_storage_power_real_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -740,7 +779,7 @@ end
 
 
 "Create variables for `reactive` storage injection"
-function variable_mc_on_off_storage_reactive(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_storage_power_imaginary_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -766,7 +805,7 @@ end
 
 
 "voltage variable magnitude squared (relaxed form)"
-function variable_mc_voltage_magnitude_sqr_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_bus_voltage_magnitude_sqr_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -790,7 +829,7 @@ end
 
 
 "on/off voltage magnitude variable"
-function variable_mc_voltage_magnitude_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_bus_voltage_magnitude_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -815,13 +854,13 @@ end
 
 
 "create variables for generators, delegate to PowerModels"
-function variable_mc_generation(pm::_PM.AbstractPowerModel; kwargs...)
-    variable_mc_generation_active(pm; kwargs...)
-    variable_mc_generation_reactive(pm; kwargs...)
+function variable_mc_gen_power_setpoint(pm::_PM.AbstractPowerModel; kwargs...)
+    variable_mc_gen_power_setpoint_real(pm; kwargs...)
+    variable_mc_gen_power_setpoint_imaginary(pm; kwargs...)
 end
 
 
-function variable_mc_generation_active(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_gen_power_setpoint_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -848,7 +887,7 @@ function variable_mc_generation_active(pm::_PM.AbstractPowerModel; nw::Int=pm.cn
 end
 
 
-function variable_mc_generation_reactive(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_gen_power_setpoint_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -876,7 +915,7 @@ end
 
 
 "variable: `crg[j]` for `j` in `gen`"
-function variable_mc_generation_current_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_gen_current_setpoint_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     gen = ref(pm, nw, :gen)
     bus = ref(pm, nw, :bus)
     cnds = conductor_ids(pm; nw=nw)
@@ -899,7 +938,7 @@ function variable_mc_generation_current_real(pm::_PM.AbstractPowerModel; nw::Int
 end
 
 "variable: `cig[j]` for `j` in `gen`"
-function variable_mc_generation_current_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_gen_current_setpoint_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     gen = ref(pm, nw, :gen)
     bus = ref(pm, nw, :bus)
     cnds = conductor_ids(pm; nw=nw)
@@ -922,13 +961,13 @@ function variable_mc_generation_current_imaginary(pm::_PM.AbstractPowerModel; nw
 end
 
 
-function variable_mc_generation_on_off(pm::_PM.AbstractPowerModel; kwargs...)
-    variable_mc_active_generation_on_off(pm; kwargs...)
-    variable_mc_reactive_generation_on_off(pm; kwargs...)
+function variable_mc_gen_power_setpoint_on_off(pm::_PM.AbstractPowerModel; kwargs...)
+    variable_mc_gen_power_setpoint_real_on_off(pm; kwargs...)
+    variable_mc_gen_power_setpoint_imaginary_on_off(pm; kwargs...)
 end
 
 
-function variable_mc_active_generation_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_gen_power_setpoint_real_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(conductor_ids(pm, nw))
 
@@ -953,7 +992,7 @@ function variable_mc_active_generation_on_off(pm::_PM.AbstractPowerModel; nw::In
 end
 
 
-function variable_mc_reactive_generation_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_gen_power_setpoint_imaginary_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 

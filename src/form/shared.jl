@@ -1,13 +1,15 @@
 import LinearAlgebra: diag
 
+
 "`vm[i] == vmref`"
-function constraint_mc_voltage_magnitude_setpoint(pm::_PM.AbstractWModels, n::Int, i::Int, vmref)
+function constraint_mc_voltage_magnitude_only(pm::_PM.AbstractWModels, n::Int, i::Int, vmref)
     w = var(pm, n, :w, i)
     JuMP.@constraint(pm.model, w .== vmref.^2)
 end
 
+
 ""
-function constraint_mc_power_balance_slack(pm::_PM.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_slack_power_balance(pm::_PM.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
     w    = var(pm, nw, :w, i)
     p    = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
     q    = get(var(pm, nw),    :q, Dict()); _PM._check_var_keys(q, bus_arcs, "reactive power", "branch")
@@ -87,7 +89,7 @@ end
 
 
 "KCL for load shed problem with transformers (AbstractWForms)"
-function constraint_mc_power_balance_shed(pm::_PM.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_shed_power_balance(pm::_PM.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
     w        = var(pm, nw, :w, i)
     p        = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
     q        = get(var(pm, nw),    :q, Dict()); _PM._check_var_keys(q, bus_arcs, "reactive power", "branch")
@@ -133,7 +135,7 @@ end
 
 
 ""
-function constraint_mc_power_balance_load(pm::_PM.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+function constraint_mc_load_power_balance(pm::_PM.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
     Wr = var(pm, nw, :Wr, i)
     Wi = var(pm, nw, :Wi, i)
     P = get(var(pm, nw), :P, Dict()); _PM._check_var_keys(P, bus_arcs, "active power", "branch")
@@ -200,11 +202,12 @@ end
 "on/off bus voltage constraint for relaxed forms"
 function constraint_mc_bus_voltage_on_off(pm::_PM.AbstractWModels, n::Int; kwargs...)
     for (i, bus) in ref(pm, n, :bus)
-        constraint_mc_voltage_magnitude_sqr_on_off(pm, i, nw=n)
+        constraint_mc_bus_voltage_magnitude_sqr_on_off(pm, i, nw=n)
     end
 end
 
 
+""
 function constraint_mc_voltage_angle_difference(pm::_PM.AbstractPolarModels, n::Int, f_idx, angmin, angmax)
     i, f_bus, t_bus = f_idx
 
@@ -238,6 +241,7 @@ function constraint_mc_voltage_angle_difference(pm::_PM.AbstractWModels, n::Int,
 end
 
 
+""
 function constraint_mc_storage_on_off(pm::_PM.AbstractPowerModel, n::Int, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
     z_storage =var(pm, n, :z_storage, i)
     ps =var(pm, n, :ps, i)
@@ -252,7 +256,7 @@ end
 
 
 ""
-function constraint_mc_generation_wye(pm::_PM.AbstractPowerModel, nw::Int, id::Int, bus_id::Int, pmin::Vector, pmax::Vector, qmin::Vector, qmax::Vector; report::Bool=true, bounded::Bool=true)
+function constraint_mc_gen_setpoint_wye(pm::_PM.AbstractPowerModel, nw::Int, id::Int, bus_id::Int, pmin::Vector, pmax::Vector, qmin::Vector, qmax::Vector; report::Bool=true, bounded::Bool=true)
     var(pm, nw, :pg_bus)[id] = var(pm, nw, :pg, id)
     var(pm, nw, :qg_bus)[id] = var(pm, nw, :qg, id)
 

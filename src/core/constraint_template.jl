@@ -6,7 +6,7 @@ end
 
 
 ""
-function constraint_mc_power_balance_slack(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_slack_power_balance(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     bus = ref(pm, nw, :bus, i)
     bus_arcs = ref(pm, nw, :bus_arcs, i)
     bus_arcs_sw = ref(pm, nw, :bus_arcs_sw, i)
@@ -22,7 +22,7 @@ function constraint_mc_power_balance_slack(pm::_PM.AbstractPowerModel, i::Int; n
     bus_gs = Dict(k => ref(pm, nw, :shunt, k, "gs") for k in bus_shunts)
     bus_bs = Dict(k => ref(pm, nw, :shunt, k, "bs") for k in bus_shunts)
 
-    constraint_mc_power_balance_slack(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    constraint_mc_slack_power_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
 end
 
 
@@ -102,7 +102,7 @@ end
 
 
 ""
-function constraint_mc_flow_losses(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_power_losses(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -118,40 +118,38 @@ function constraint_mc_flow_losses(pm::_PM.AbstractPowerModel, i::Int; nw::Int=p
 
     tm = [1, 1, 1] #TODO
 
-    constraint_mc_flow_losses(pm, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
+    constraint_mc_power_losses(pm, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
 end
 
 
 "Transformer constraints, considering winding type, conductor order, polarity and tap settings."
-function constraint_mc_trans(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, fix_taps::Bool=true)
+function constraint_mc_transformer_power(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, fix_taps::Bool=true)
     if ref(pm, pm.cnw, :conductors)!=3
         Memento.error(_LOGGER, "Transformers only work with networks with three conductors.")
     end
 
-    trans = ref(pm, :transformer, i)
-    f_bus = trans["f_bus"]
-    t_bus = trans["t_bus"]
+    transformer = ref(pm, :transformer, i)
+    f_bus = transformer["f_bus"]
+    t_bus = transformer["t_bus"]
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
-    config = trans["configuration"]
-    type = trans["configuration"]
-    f_cnd = trans["f_connections"][1:3]
-    t_cnd = trans["t_connections"][1:3]
-    tm_set = trans["tm_set"]
-    tm_fixed = fix_taps ? ones(Bool, length(tm_set)) : trans["tm_fix"]
-    tm_scale = calculate_tm_scale(trans, ref(pm, nw, :bus, f_bus), ref(pm, nw, :bus, t_bus))
+    config = transformer["configuration"]
+    f_cnd = transformer["f_connections"][1:3]
+    t_cnd = transformer["t_connections"][1:3]
+    tm_set = transformer["tm_set"]
+    tm_fixed = fix_taps ? ones(Bool, length(tm_set)) : transformer["tm_fix"]
+    tm_scale = calculate_tm_scale(transformer, ref(pm, nw, :bus, f_bus), ref(pm, nw, :bus, t_bus))
 
     #TODO change data model
     # there is redundancy in specifying polarity seperately on from and to side
     #TODO change this once migrated to new data model
-    pol = trans["polarity"]
+    pol = transformer["polarity"]
 
-    if config=="wye"
-        constraint_mc_trans_yy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-    elseif config=="delta"
-        constraint_mc_trans_dy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-    end
-    if type=="zig-zag"
+    if config == "wye"
+        constraint_mc_transformer_power_yy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+    elseif config == "delta"
+        constraint_mc_transformer_power_dy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+    elseif config == "zig-zag"
         Memento.error(_LOGGER, "Zig-zag not yet supported.")
     end
 end
@@ -190,37 +188,37 @@ For a discussion of sequence components and voltage unbalance factor (VUF), see
     url={https://molzahn.github.io/pubs/girigoudar_molzahn_roald-2019.pdf}
 }
 """
-function constraint_mc_voltage_balance(pm::_PM.AbstractPowerModel, bus_id::Int; nw=pm.cnw)
+function constraint_mc_bus_voltage_balance(pm::_PM.AbstractPowerModel, bus_id::Int; nw=pm.cnw)
     @assert(ref(pm, nw, :conductors)==3)
 
     bus = ref(pm, nw, :bus, bus_id)
 
     if haskey(bus, "vm_vuf_max")
-        constraint_mc_vm_vuf(pm, nw, bus_id, bus["vm_vuf_max"])
+        constraint_mc_bus_voltage_magnitude_vuf(pm, nw, bus_id, bus["vm_vuf_max"])
     end
 
     if haskey(bus, "vm_seq_neg_max")
-        constraint_mc_vm_neg_seq(pm, nw, bus_id, bus["vm_seq_neg_max"])
+        constraint_mc_bus_voltage_magnitude_negative_sequence(pm, nw, bus_id, bus["vm_seq_neg_max"])
     end
 
     if haskey(bus, "vm_seq_pos_max")
-        constraint_mc_vm_pos_seq(pm, nw, bus_id, bus["vm_seq_pos_max"])
+        constraint_mc_bus_voltage_magnitude_positive_sequence(pm, nw, bus_id, bus["vm_seq_pos_max"])
     end
 
     if haskey(bus, "vm_seq_zero_max")
-        constraint_mc_vm_zero_seq(pm, nw, bus_id, bus["vm_seq_zero_max"])
+        constraint_mc_bus_voltage_magnitude_zero_sequence(pm, nw, bus_id, bus["vm_seq_zero_max"])
     end
 
     if haskey(bus, "vm_ll_min")|| haskey(bus, "vm_ll_max")
         vm_ll_min = haskey(bus, "vm_ll_min") ? bus["vm_ll_min"] : fill(0, 3)
         vm_ll_max = haskey(bus, "vm_ll_max") ? bus["vm_ll_max"] : fill(Inf, 3)
-        constraint_mc_vm_ll(pm, nw, bus_id, vm_ll_min, vm_ll_max)
+        constraint_mc_bus_voltage_magnitude_ll(pm, nw, bus_id, vm_ll_min, vm_ll_max)
     end
 end
 
 
 "KCL including transformer arcs and load variables."
-function constraint_mc_power_balance_load(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_load_power_balance(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     bus = ref(pm, nw, :bus, i)
     bus_arcs = ref(pm, nw, :bus_arcs, i)
     bus_arcs_sw = ref(pm, nw, :bus_arcs_sw, i)
@@ -233,7 +231,7 @@ function constraint_mc_power_balance_load(pm::_PM.AbstractPowerModel, i::Int; nw
     bus_gs = Dict(k => ref(pm, nw, :shunt, k, "gs") for k in bus_shunts)
     bus_bs = Dict(k => ref(pm, nw, :shunt, k, "bs") for k in bus_shunts)
 
-    constraint_mc_power_balance_load(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+    constraint_mc_load_power_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
 end
 
 
@@ -271,7 +269,7 @@ sn_a = v_a.conj(i_a)
     = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 So for delta, sn is constrained indirectly.
 """
-function constraint_mc_load(pm::_PM.AbstractPowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
+function constraint_mc_load_setpoint(pm::_PM.AbstractPowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
     load = ref(pm, nw, :load, id)
     bus = ref(pm, nw,:bus, load["load_bus"])
 
@@ -280,9 +278,9 @@ function constraint_mc_load(pm::_PM.AbstractPowerModel, id::Int; nw::Int=pm.cnw,
     a, alpha, b, beta = _load_expmodel_params(load, bus)
 
     if conn=="wye"
-        constraint_mc_load_wye(pm, nw, id, load["load_bus"], a, alpha, b, beta)
+        constraint_mc_load_setpoint_wye(pm, nw, id, load["load_bus"], a, alpha, b, beta)
     else
-        constraint_mc_load_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
+        constraint_mc_load_setpoint_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
     end
 end
 
@@ -299,7 +297,7 @@ sn_a = v_a.conj(i_a)
     = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
 So for delta, sn is constrained indirectly.
 """
-function constraint_mc_generation(pm::_PM.AbstractPowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true, bounded::Bool=true)
+function constraint_mc_gen_setpoint(pm::_PM.AbstractPowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true, bounded::Bool=true)
     generator = ref(pm, nw, :gen, id)
     bus = ref(pm, nw,:bus, generator["gen_bus"])
 
@@ -310,15 +308,15 @@ function constraint_mc_generation(pm::_PM.AbstractPowerModel, id::Int; nw::Int=p
     qmax = get(generator, "qmax", fill( Inf, N))
 
     if get(generator, "configuration", "wye") == "wye"
-        constraint_mc_generation_wye(pm, nw, id, bus["index"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
+        constraint_mc_gen_setpoint_wye(pm, nw, id, bus["index"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
     else
-        constraint_mc_generation_delta(pm, nw, id, bus["index"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
+        constraint_mc_gen_setpoint_delta(pm, nw, id, bus["index"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
     end
 end
 
 
 "KCL for load shed problem with transformers"
-function constraint_mc_power_balance_shed(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_shed_power_balance(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     bus = ref(pm, nw, :bus, i)
     bus_arcs = ref(pm, nw, :bus_arcs, i)
     bus_arcs_sw = ref(pm, nw, :bus_arcs_sw, i)
@@ -334,7 +332,7 @@ function constraint_mc_power_balance_shed(pm::_PM.AbstractPowerModel, i::Int; nw
     bus_gs = Dict(k => ref(pm, nw, :shunt, k, "gs") for k in bus_shunts)
     bus_bs = Dict(k => ref(pm, nw, :shunt, k, "bs") for k in bus_shunts)
 
-    constraint_mc_power_balance_shed(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    constraint_mc_shed_power_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
 end
 
 
@@ -345,18 +343,18 @@ end
 
 
 "on/off voltage magnitude constraint"
-function constraint_mc_voltage_magnitude_on_off(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_bus_voltage_magnitude_on_off(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     bus = ref(pm, nw, :bus, i)
 
-    constraint_mc_voltage_magnitude_on_off(pm, nw, i, bus["vmin"], bus["vmax"])
+    constraint_mc_bus_voltage_magnitude_on_off(pm, nw, i, bus["vmin"], bus["vmax"])
 end
 
 
 "on/off voltage magnitude squared constraint for relaxed formulations"
-function constraint_mc_voltage_magnitude_sqr_on_off(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     bus = ref(pm, nw, :bus, i)
 
-    constraint_mc_voltage_magnitude_sqr_on_off(pm, nw, i, bus["vmin"], bus["vmax"])
+    constraint_mc_bus_voltage_magnitude_sqr_on_off(pm, nw, i, bus["vmin"], bus["vmax"])
 end
 
 
@@ -373,10 +371,10 @@ end
 
 
 "storage loss constraints, delegate to PowerModels"
-function constraint_mc_storage_loss(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
+function constraint_mc_storage_losses(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
     storage = ref(pm, nw, :storage, i)
 
-    _PM.constraint_storage_loss(pm, nw, i, storage["storage_bus"], storage["r"], storage["x"], storage["p_loss"], storage["q_loss"];
+    _PM.constraint_storage_losses(pm, nw, i, storage["storage_bus"], storage["r"], storage["x"], storage["p_loss"], storage["q_loss"];
         conductors = conductor_ids(pm, nw)
     )
 end
@@ -409,17 +407,17 @@ end
 
 
 "voltage magnitude setpoint constraint"
-function constraint_mc_voltage_magnitude_setpoint(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
+function constraint_mc_voltage_magnitude_only(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
     bus = ref(pm, nw, :bus, i)
     vmref = bus["vm"] #Not sure why this is needed
-    constraint_mc_voltage_magnitude_setpoint(pm, nw, i, vmref)
+    constraint_mc_voltage_magnitude_only(pm, nw, i, vmref)
 end
 
 
 "generator active power setpoint constraint"
-function constraint_mc_active_gen_setpoint(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
+function constraint_mc_gen_power_setpoint_real(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
     pg_set = ref(pm, nw, :gen, i)["pg"]
-    constraint_mc_active_gen_setpoint(pm, nw, i, pg_set)
+    constraint_mc_gen_power_setpoint_real(pm, nw, i, pg_set)
 end
 
 
@@ -436,7 +434,8 @@ function constraint_mc_voltage_magnitude_bounds(pm::_PM.AbstractPowerModel, i::I
 end
 
 
-function constraint_mc_generation_on_off(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+""
+function constraint_mc_gen_power_on_off(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     gen = ref(pm, nw, :gen, i)
     ncnds = length(conductor_ids(pm; nw=nw))
 
@@ -445,8 +444,9 @@ function constraint_mc_generation_on_off(pm::_PM.AbstractPowerModel, i::Int; nw:
     qmin = get(gen, "qmin", fill(-Inf, ncnds))
     qmax = get(gen, "qmax", fill( Inf, ncnds))
 
-    constraint_mc_generation_on_off(pm, nw, i, pmin, pmax, qmin, qmax)
+    constraint_mc_gen_power_on_off(pm, nw, i, pmin, pmax, qmin, qmax)
 end
+
 
 ""
 function constraint_mc_storage_thermal_limit(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
@@ -454,11 +454,13 @@ function constraint_mc_storage_thermal_limit(pm::_PM.AbstractPowerModel, i::Int;
     constraint_mc_storage_thermal_limit(pm, nw, i, storage["thermal_rating"])
 end
 
+
 ""
 function constraint_mc_storage_current_limit(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     storage = ref(pm, nw, :storage, i)
     constraint_mc_storage_current_limit(pm, nw, i, storage["storage_bus"], storage["current_rating"])
 end
+
 
 ""
 function constraint_mc_storage_on_off(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
@@ -484,21 +486,25 @@ function constraint_mc_storage_on_off(pm::_PM.AbstractPowerModel, i::Int; nw::In
     constraint_mc_storage_on_off(pm, nw, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
 end
 
+
 "defines limits on active power output of a generator where bounds can't be used"
-function constraint_mc_generation_active_power_limits(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_gen_active_bounds(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     gen = ref(pm, nw, :gen, i)
     bus = gen["gen_bus"]
-    constraint_mc_generation_active_power_limits(pm, nw, i, bus, gen["pmax"], gen["pmin"])
+    constraint_mc_gen_active_bounds(pm, nw, i, bus, gen["pmax"], gen["pmin"])
 end
 
+
 "defines limits on reactive power output of a generator where bounds can't be used"
-function constraint_mc_generation_reactive_power_limits(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_gen_reactive_bounds(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     gen = ref(pm, nw, :gen, i)
     bus = gen["gen_bus"]
-    constraint_mc_generation_reactive_power_limits(pm, nw, i, bus, gen["qmax"], gen["qmin"])
+    constraint_mc_gen_reactive_bounds(pm, nw, i, bus, gen["qmax"], gen["qmin"])
 end
+
+
 ""
-function constraint_mc_current_balance_load(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_load_current_balance(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     bus = ref(pm, nw, :bus, i)
     bus_arcs = ref(pm, nw, :bus_arcs, i)
     bus_arcs_sw = ref(pm, nw, :bus_arcs_sw, i)
@@ -511,7 +517,7 @@ function constraint_mc_current_balance_load(pm::_PM.AbstractPowerModel, i::Int; 
     bus_gs = Dict(k => ref(pm, nw, :shunt, k, "gs") for k in bus_shunts)
     bus_bs = Dict(k => ref(pm, nw, :shunt, k, "bs") for k in bus_shunts)
 
-    constraint_mc_current_balance_load(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+    constraint_mc_load_current_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
 end
 
 
@@ -530,6 +536,7 @@ function constraint_mc_current_from(pm::_PM.AbstractIVRModel, i::Int; nw::Int=pm
     constraint_mc_current_from(pm, nw, f_bus, f_idx, g_fr, b_fr, tr, ti, tm)
 end
 
+
 ""
 function constraint_mc_current_to(pm::_PM.AbstractIVRModel, i::Int; nw::Int=pm.cnw)
     branch = ref(pm, nw, :branch, i)
@@ -546,8 +553,9 @@ function constraint_mc_current_to(pm::_PM.AbstractIVRModel, i::Int; nw::Int=pm.c
     constraint_mc_current_to(pm, nw, t_bus, f_idx, t_idx, g_to, b_to)
 end
 
+
 ""
-function constraint_mc_voltage_drop(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_bus_voltage_drop(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -558,5 +566,5 @@ function constraint_mc_voltage_drop(pm::_PM.AbstractPowerModel, i::Int; nw::Int=
     x = branch["br_x"]
     tm = branch["tap"]
 
-    constraint_mc_voltage_drop(pm, nw, i, f_bus, t_bus, f_idx, r, x, tr, ti, tm)
+    constraint_mc_bus_voltage_drop(pm, nw, i, f_bus, t_bus, f_idx, r, x, tr, ti, tm)
 end

@@ -13,11 +13,11 @@ end
 ""
 function build_mc_opf_bf(pm::_PM.AbstractPowerModel)
     # Variables
-    variable_mc_voltage(pm)
+    variable_mc_bus_voltage(pm)
     variable_mc_branch_current(pm)
-    variable_mc_branch_flow(pm)
-    variable_mc_transformer_flow(pm)
-    variable_mc_generation(pm)
+    variable_mc_branch_power(pm)
+    variable_mc_transformer_power(pm)
+    variable_mc_gen_power_setpoint(pm)
 
     # Constraints
     constraint_mc_model_current(pm)
@@ -31,7 +31,7 @@ function build_mc_opf_bf(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :branch)
-        constraint_mc_flow_losses(pm, i)
+        constraint_mc_power_losses(pm, i)
         constraint_mc_model_voltage_magnitude_difference(pm, i)
 
         constraint_mc_voltage_angle_difference(pm, i)
@@ -41,7 +41,7 @@ function build_mc_opf_bf(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :transformer)
-        constraint_mc_trans(pm, i)
+        constraint_mc_transformer_power(pm, i)
     end
 
     # Objective

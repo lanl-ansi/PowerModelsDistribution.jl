@@ -1,7 +1,7 @@
 ""
-function variable_mc_voltage(pm::_PM.AbstractACPModel; nw=pm.cnw, kwargs...)
-    variable_mc_voltage_angle(pm; nw=nw, kwargs...)
-    variable_mc_voltage_magnitude(pm; nw=nw, kwargs...)
+function variable_mc_bus_voltage(pm::_PM.AbstractACPModel; nw=pm.cnw, kwargs...)
+    variable_mc_bus_voltage_angle(pm; nw=nw, kwargs...)
+    variable_mc_bus_voltage_magnitude_only(pm; nw=nw, kwargs...)
 
     # This is needed for delta loads, where division occurs by the difference
     # of voltage phasors. If the voltage phasors at one bus are initialized
@@ -28,8 +28,8 @@ end
 
 ""
 function variable_mc_bus_voltage_on_off(pm::_PM.AbstractACPModel; kwargs...)
-    variable_mc_voltage_angle(pm; kwargs...)
-    variable_mc_voltage_magnitude_on_off(pm; kwargs...)
+    variable_mc_bus_voltage_angle(pm; kwargs...)
+    variable_mc_bus_voltage_magnitude_on_off(pm; kwargs...)
 
     nw = get(kwargs, :nw, pm.cnw)
 
@@ -50,7 +50,7 @@ end
 
 
 ""
-function constraint_mc_power_balance_slack(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_slack_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
     vm   = var(pm, nw, :vm, i)
     va   = var(pm, nw, :va, i)
     p    = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
@@ -122,7 +122,7 @@ end
 
 
 ""
-function constraint_mc_power_balance_shed(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_shed_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
     vm       = var(pm, nw, :vm, i)
     va       = var(pm, nw, :va, i)
     p        = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
@@ -262,7 +262,7 @@ end
 
 
 ""
-function constraint_mc_power_balance_load(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+function constraint_mc_load_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
     vm   = var(pm, nw, :vm, i)
     va   = var(pm, nw, :va, i)
     p    = get(var(pm, nw),   :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
@@ -398,7 +398,8 @@ function constraint_mc_ohms_yt_to(pm::_PM.AbstractACPModel, n::Int, f_bus, t_bus
 end
 
 
-function constraint_mc_trans_yy(pm::_PM.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+""
+function constraint_mc_transformer_power_yy(pm::_PM.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
     vm_fr = var(pm, nw, :vm, f_bus)[f_cnd]
     vm_to = var(pm, nw, :vm, t_bus)[t_cnd]
     va_fr = var(pm, nw, :va, f_bus)[f_cnd]
@@ -428,7 +429,8 @@ function constraint_mc_trans_yy(pm::_PM.AbstractACPModel, nw::Int, trans_id::Int
 end
 
 
-function constraint_mc_trans_dy(pm::_PM.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+""
+function constraint_mc_transformer_power_dy(pm::_PM.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
     vm_fr = [var(pm, nw, :vm, f_bus)[p] for p in f_cnd]
     vm_to = [var(pm, nw, :vm, t_bus)[p] for p in t_cnd]
     va_fr = [var(pm, nw, :va, f_bus)[p] for p in f_cnd]
@@ -494,7 +496,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_vm_vuf(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vufmax::Float64)
+function constraint_mc_bus_voltage_magnitude_vuf(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vufmax::Float64)
     if !haskey(var(pm, pm.cnw), :vmpossqr)
         var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
         var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
@@ -541,7 +543,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_vm_neg_seq(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vmnegmax::Float64)
+function constraint_mc_bus_voltage_magnitude_negative_sequence(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vmnegmax::Float64)
     if !haskey(var(pm, pm.cnw), :vmpossqr)
         var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
         var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
@@ -576,7 +578,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_vm_pos_seq(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vmposmax::Float64)
+function constraint_mc_bus_voltage_magnitude_positive_sequence(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vmposmax::Float64)
     if !haskey(var(pm, pm.cnw), :vmpossqr)
         var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
         var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
@@ -611,7 +613,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_vm_zero_seq(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vmzeromax::Float64)
+function constraint_mc_bus_voltage_magnitude_zero_sequence(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vmzeromax::Float64)
     if !haskey(var(pm, pm.cnw), :vmpossqr)
         var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
         var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
@@ -682,7 +684,7 @@ end
 
 
 ""
-function constraint_mc_vm_ll(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vm_ll_min::Vector, vm_ll_max::Vector)
+function constraint_mc_bus_voltage_magnitude_ll(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vm_ll_min::Vector, vm_ll_max::Vector)
     # 3 conductors asserted in template already
     vm_ln = [var(pm, nw, i, :vm, bus_id) for i in 1:3]
     va_ln = [var(pm, nw, i, :va, bus_id) for i in 1:3]
@@ -708,16 +710,18 @@ end
 "bus voltage on/off constraint for load shed problem"
 function constraint_mc_bus_voltage_on_off(pm::_PM.AbstractACPModel; nw::Int=pm.cnw, kwargs...)
     for (i,bus) in ref(pm, nw, :bus)
-        constraint_mc_voltage_magnitude_on_off(pm, i; nw=nw)
+        constraint_mc_bus_voltage_magnitude_on_off(pm, i; nw=nw)
     end
 end
 
+
 "`vm[i] == vmref`"
-function constraint_mc_voltage_magnitude_setpoint(pm::_PM.AbstractACPModel, n::Int, i::Int, vmref)
+function constraint_mc_voltage_magnitude_only(pm::_PM.AbstractACPModel, n::Int, i::Int, vmref)
     vm = var(pm, n, :vm, i)
 
     JuMP.@constraint(pm.model, vm .== vmref)
 end
+
 
 ""
 function constraint_mc_storage_current_limit(pm::_PM.AbstractACPModel, n::Int, i, bus, rating)
@@ -730,7 +734,7 @@ end
 
 
 ""
-function constraint_mc_load_wye(pm::_PM.AbstractACPModel, nw::Int, id::Int, bus_id::Int, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+function constraint_mc_load_setpoint_wye(pm::_PM.AbstractACPModel, nw::Int, id::Int, bus_id::Int, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
     vm = var(pm, nw, :vm, bus_id)
     va = var(pm, nw, :va, bus_id)
 
@@ -770,7 +774,7 @@ end
 
 
 ""
-function constraint_mc_load_delta(pm::_PM.AbstractACPModel, nw::Int, id::Int, bus_id::Int, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+function constraint_mc_load_setpoint_delta(pm::_PM.AbstractACPModel, nw::Int, id::Int, bus_id::Int, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
     vm = var(pm, nw, :vm, bus_id)
     va = var(pm, nw, :va, bus_id)
 
@@ -812,7 +816,7 @@ end
 
 
 ""
-function constraint_mc_generation_delta(pm::_PM.AbstractACPModel, nw::Int, id::Int, bus_id::Int, pmin::Vector, pmax::Vector, qmin::Vector, qmax::Vector; report::Bool=true, bounded::Bool=true)
+function constraint_mc_gen_setpoint_delta(pm::_PM.AbstractACPModel, nw::Int, id::Int, bus_id::Int, pmin::Vector, pmax::Vector, qmin::Vector, qmax::Vector; report::Bool=true, bounded::Bool=true)
     vm = var(pm, nw, :vm, bus_id)
     va = var(pm, nw, :va, bus_id)
     pg = var(pm, nw, :pg, id)

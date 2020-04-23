@@ -12,21 +12,21 @@ end
 
 
 ""
-function variable_mc_voltage_prod_hermitian(pm::LPUBFDiagModel; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
-    variable_mc_voltage_magnitude_sqr(pm, nw=nw)
+function variable_mc_bus_voltage_prod_hermitian(pm::LPUBFDiagModel; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
+    variable_mc_bus_voltage_magnitude_sqr(pm, nw=nw)
 end
 
 
 ""
-function variable_mc_branch_flow(pm::LPUBFDiagModel; n_cond::Int=3, nw::Int=pm.cnw, bounded::Bool=true,  report::Bool=true)
+function variable_mc_branch_power(pm::LPUBFDiagModel; n_cond::Int=3, nw::Int=pm.cnw, bounded::Bool=true,  report::Bool=true)
     @assert(n_cond == 3)
-    variable_mc_branch_flow_active(pm, nw=nw, bounded=bounded)
-    variable_mc_branch_flow_reactive(pm, nw=nw, bounded=bounded)
+    variable_mc_branch_power_real(pm, nw=nw, bounded=bounded)
+    variable_mc_branch_power_imaginary(pm, nw=nw, bounded=bounded)
 end
 
 
 "Defines branch flow model power flow equations"
-function constraint_mc_flow_losses(pm::LPUBFDiagModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
+function constraint_mc_power_losses(pm::LPUBFDiagModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
     p_fr = var(pm, n, :p)[f_idx]
     q_fr = var(pm, n, :q)[f_idx]
 

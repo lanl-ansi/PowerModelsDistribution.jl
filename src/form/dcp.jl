@@ -1,13 +1,11 @@
-### simple active power only approximations (e.g. DC Power Flow)
-
-
 ""
-function variable_mc_voltage(pm::_PM.AbstractDCPModel; nw=pm.cnw, kwargs...)
-    variable_mc_voltage_angle(pm; nw=nw, kwargs...)
+function variable_mc_bus_voltage(pm::_PM.AbstractDCPModel; nw=pm.cnw, kwargs...)
+    variable_mc_bus_voltage_angle(pm; nw=nw, kwargs...)
 end
 
 
 ######## AbstractDCPForm Models (has va but assumes vm is 1.0) ########
+
 "nothing to do, these models do not have complex voltage constraints"
 function constraint_mc_model_voltage(pm::_PM.AbstractDCPModel, n::Int, c::Int)
 end
@@ -15,11 +13,12 @@ end
 
 ""
 function variable_mc_bus_voltage_on_off(pm::_PM.AbstractDCPModel; kwargs...)
-    variable_mc_voltage_angle(pm; kwargs...)
+    variable_mc_bus_voltage_angle(pm; kwargs...)
 end
 
 
 ### DC Power Flow Approximation ###
+
 """
 Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)
 
@@ -39,7 +38,7 @@ end
 
 
 "power balance constraint with line shunts and transformers for load shed problem, DCP formulation"
-function constraint_mc_power_balance_shed(pm::_PM.AbstractDCPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_shed_power_balance(pm::_PM.AbstractDCPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
     p        = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
     pg       = get(var(pm, nw),   :pg, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
     ps       = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
@@ -71,7 +70,7 @@ end
 
 
 ""
-function variable_mc_branch_flow_active(pm::_PM.AbstractAPLossLessModels; nw::Int=pm.cnw, bounded::Bool = true, report::Bool = true)
+function variable_mc_branch_power_real(pm::_PM.AbstractAPLossLessModels; nw::Int=pm.cnw, bounded::Bool = true, report::Bool = true)
     cnds = conductor_ids(pm)
     ncnds = length(cnds)
 

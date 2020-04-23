@@ -1,7 +1,7 @@
 ""
-function variable_mc_voltage(pm::_PM.AbstractACRModel; nw=pm.cnw, bounded::Bool=true, kwargs...)
-    variable_mc_voltage_real(pm; nw=nw, bounded=bounded, kwargs...)
-    variable_mc_voltage_imaginary(pm; nw=nw, bounded=bounded, kwargs...)
+function variable_mc_bus_voltage(pm::_PM.AbstractACRModel; nw=pm.cnw, bounded::Bool=true, kwargs...)
+    variable_mc_bus_voltage_real(pm; nw=nw, bounded=bounded, kwargs...)
+    variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, kwargs...)
 
     # local infeasbility issues without proper initialization;
     # convergence issues start when the equivalent angles of the starting point
@@ -80,6 +80,8 @@ function constraint_mc_theta_ref(pm::_PM.AbstractACRModel, n::Int, d::Int, va_re
     end
 end
 
+
+""
 function constraint_mc_voltage_angle_difference(pm::_PM.AbstractACRModel, n::Int, f_idx, angmin, angmax)
     i, f_bus, t_bus = f_idx
 
@@ -95,9 +97,8 @@ function constraint_mc_voltage_angle_difference(pm::_PM.AbstractACRModel, n::Int
 end
 
 
-
 ""
-function constraint_mc_power_balance_slack(pm::_PM.AbstractACRModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_slack_power_balance(pm::_PM.AbstractACRModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
     vr = var(pm, nw, :vr, i)
     vi = var(pm, nw, :vi, i)
     p    = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
@@ -204,7 +205,7 @@ end
 
 
 ""
-function constraint_mc_power_balance_load(pm::_PM.AbstractACRModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+function constraint_mc_load_power_balance(pm::_PM.AbstractACRModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
     vr = var(pm, nw, :vr, i)
     vi = var(pm, nw, :vi, i)
     p    = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
@@ -344,7 +345,7 @@ end
 
 
 ""
-function constraint_mc_load_wye(pm::_PM.AbstractACRModel, nw::Int, id::Int, bus_id::Int, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+function constraint_mc_load_setpoint_wye(pm::_PM.AbstractACRModel, nw::Int, id::Int, bus_id::Int, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
 
@@ -384,7 +385,7 @@ end
 
 
 ""
-function constraint_mc_load_delta(pm::_PM.AbstractACRModel, nw::Int, id::Int, bus_id::Int, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+function constraint_mc_load_setpoint_delta(pm::_PM.AbstractACRModel, nw::Int, id::Int, bus_id::Int, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
 
@@ -426,7 +427,7 @@ end
 
 
 "`vm[i] == vmref`"
-function constraint_mc_voltage_magnitude_setpoint(pm::_PM.AbstractACRModel, n::Int, i::Int, vmref)
+function constraint_mc_voltage_magnitude_only(pm::_PM.AbstractACRModel, n::Int, i::Int, vmref)
     vr = var(pm, n, :vr, i)
     vi = var(pm, n, :vi, i)
 
@@ -435,7 +436,7 @@ end
 
 
 ""
-function constraint_mc_generation_delta(pm::_PM.AbstractACRModel, nw::Int, id::Int, bus_id::Int, pmin::Vector, pmax::Vector, qmin::Vector, qmax::Vector; report::Bool=true, bounded::Bool=true)
+function constraint_mc_gen_setpoint_delta(pm::_PM.AbstractACRModel, nw::Int, id::Int, bus_id::Int, pmin::Vector, pmax::Vector, qmin::Vector, qmax::Vector; report::Bool=true, bounded::Bool=true)
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
     pg = var(pm, nw, :pg, id)

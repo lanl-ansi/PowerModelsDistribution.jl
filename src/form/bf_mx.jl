@@ -1,19 +1,20 @@
 import LinearAlgebra: diag, diagm
 
+
 ""
 function variable_mc_branch_current(pm::AbstractUBFModels; kwargs...)
-    variable_mc_branch_series_current_prod_hermitian(pm; kwargs...)
+    constraint_mc_branch_current_series_product_hermitian(pm; kwargs...)
 end
 
 
 ""
-function variable_mc_voltage(pm::AbstractUBFModels; kwargs...)
-    variable_mc_voltage_prod_hermitian(pm; kwargs...)
+function variable_mc_bus_voltage(pm::AbstractUBFModels; kwargs...)
+    variable_mc_bus_voltage_prod_hermitian(pm; kwargs...)
 end
 
 
 ""
-function variable_mc_voltage_prod_hermitian(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=pm.cnw, bounded::Bool=true,  report::Bool=true)
+function variable_mc_bus_voltage_prod_hermitian(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=pm.cnw, bounded::Bool=true,  report::Bool=true)
     bus_ids = collect(ids(pm, nw, :bus))
 
     if bounded
@@ -41,7 +42,7 @@ end
 
 
 ""
-function variable_mc_branch_series_current_prod_hermitian(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=pm.cnw, bounded::Bool=true,  report::Bool=true)
+function constraint_mc_branch_current_series_product_hermitian(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=pm.cnw, bounded::Bool=true,  report::Bool=true)
     branches = ref(pm, nw, :branch)
     buses = ref(pm, nw, :bus)
 
@@ -75,7 +76,7 @@ end
 
 
 ""
-function variable_mc_branch_flow(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=pm.cnw, bounded::Bool=true,  report::Bool=true)
+function variable_mc_branch_power(pm::AbstractUBFModels; n_cond::Int=3, nw::Int=pm.cnw, bounded::Bool=true,  report::Bool=true)
     @assert n_cond<=5
 
     # calculate S bound
@@ -120,7 +121,7 @@ end
 
 
 "Defines branch flow model power flow equations"
-function constraint_mc_flow_losses(pm::AbstractUBFModels, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
+function constraint_mc_power_losses(pm::AbstractUBFModels, n::Int, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to, tm)
     P_to = var(pm, n, :P)[t_idx]
     Q_to = var(pm, n, :Q)[t_idx]
 
@@ -193,9 +194,9 @@ end
 For the matrix KCL formulation, the generator needs an explicit current and
 power variable.
 """
-function variable_mc_generation(pm::SDPUBFKCLMXModel; nw=pm.cnw)
-    variable_mc_generation_current(pm; nw=nw)
-    variable_mc_generation_power(pm; nw=nw)
+function variable_mc_gen_power_setpoint(pm::SDPUBFKCLMXModel; nw=pm.cnw)
+    variable_mc_gen_current(pm; nw=nw)
+    variable_mc_gen_power(pm; nw=nw)
 end
 
 
@@ -203,7 +204,7 @@ end
 For the matrix KCL formulation, the generator needs an explicit power
 variable.
 """
-function variable_mc_generation_power(pm::SDPUBFKCLMXModel; nw::Int=pm.cnw, bounded::Bool=true,  report::Bool=true)
+function variable_mc_gen_power(pm::SDPUBFKCLMXModel; nw::Int=pm.cnw, bounded::Bool=true,  report::Bool=true)
     @assert(bounded)
 
     gen_ids = collect(ids(pm, nw, :gen))
@@ -245,7 +246,7 @@ end
 For the matrix KCL formulation, the generator needs an explicit current
 variable.
 """
-function variable_mc_generation_current(pm::AbstractUBFModels; nw::Int=pm.cnw, bounded::Bool=true,  report::Bool=true)
+function variable_mc_gen_current(pm::AbstractUBFModels; nw::Int=pm.cnw, bounded::Bool=true,  report::Bool=true)
     @assert(bounded)
 
     gen_ids = collect(ids(pm, nw, :gen))
@@ -278,7 +279,7 @@ Wye loads however, don't need any variables when the load is modelled as
 constant power or constant impedance. In all other cases (e.g. when a cone is
 used to constrain the power), variables need to be created.
 """
-function variable_mc_load(pm::AbstractUBFModels; nw=pm.cnw)
+function variable_mc_load_setpoint(pm::AbstractUBFModels; nw=pm.cnw)
     load_wye_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]=="wye"]
     load_del_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]=="delta"]
     load_cone_ids = [id for (id, load) in ref(pm, nw, :load) if _check_load_needs_cone(load)]
@@ -288,7 +289,7 @@ function variable_mc_load(pm::AbstractUBFModels; nw=pm.cnw)
     var(pm, nw)[:pl] = Dict()
     var(pm, nw)[:ql] = Dict()
     # now, create auxilary power variable X for delta loads
-    variable_mc_load_delta_aux(pm, load_del_ids)
+    variable_mc_load_power_delta_aux(pm, load_del_ids)
     # only delta loads need a current variable
     variable_mc_load_current(pm, load_del_ids)
     # for wye loads with a cone inclusion constraint, we need to create a variable
@@ -309,7 +310,7 @@ Delta loads only need a current variable and auxilary power variable (X), and
 all other load model variables are then linear transformations of these
 (linear Expressions).
 """
-function variable_mc_load(pm::SDPUBFKCLMXModel; nw=pm.cnw)
+function variable_mc_load_setpoint(pm::SDPUBFKCLMXModel; nw=pm.cnw)
     load_wye_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]=="wye"]
     load_del_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]=="delta"]
     load_cone_ids = [id for (id, load) in ref(pm, nw, :load) if _check_load_needs_cone(load)]
@@ -319,7 +320,7 @@ function variable_mc_load(pm::SDPUBFKCLMXModel; nw=pm.cnw)
     var(pm, nw)[:pl] = Dict{Int, Any}()
     var(pm, nw)[:ql] = Dict{Int, Any}()
     # now, create auxilary power variable X for delta loads
-    variable_mc_load_delta_aux(pm, load_del_ids)
+    variable_mc_load_power_delta_aux(pm, load_del_ids)
     # all loads need a current variable now
     variable_mc_load_current(pm, collect(ids(pm, nw, :load)))
     # for all wye-connected loads, we need variables for the off-diagonals of Pd/Qd
@@ -418,7 +419,7 @@ See the paper by Zhao et al. for the first convex relaxation of delta transforma
 
 See upcoming paper for discussion of bounds. [reference added when accepted]
 """
-function variable_mc_load_delta_aux(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw, eps=0.1, bounded::Bool=true, report::Bool=true)
+function variable_mc_load_power_delta_aux(pm::AbstractUBFModels, load_ids::Array{Int,1}; nw=pm.cnw, eps=0.1, bounded::Bool=true, report::Bool=true)
     @assert(bounded)
     ncnds = length(conductor_ids(pm, nw))
     # calculate bounds
@@ -474,7 +475,7 @@ end
 """
 Only KCLModels need to further constrain the generator variables.
 """
-function constraint_mc_generation(pm::AbstractUBFModels, gen_id::Int; nw::Int=pm.cnw)
+function constraint_mc_gen_setpoint(pm::AbstractUBFModels, gen_id::Int; nw::Int=pm.cnw)
     # do nothing
 end
 
@@ -483,7 +484,7 @@ end
 Link the current and power withdrawn by a generator at the bus through a PSD
 constraint. The rank-1 constraint is dropped in this formulation.
 """
-function constraint_mc_generation(pm::SDPUBFKCLMXModel, gen_id::Int; nw::Int=pm.cnw)
+function constraint_mc_gen_setpoint(pm::SDPUBFKCLMXModel, gen_id::Int; nw::Int=pm.cnw)
     Pg = var(pm, nw, :Pg, gen_id)
     Qg = var(pm, nw, :Qg, gen_id)
     bus_id = ref(pm, nw, :gen, gen_id)["gen_bus"]
@@ -561,7 +562,7 @@ end
 """
 Creates the constraints modelling the (relaxed) voltage-dependent loads.
 """
-function constraint_mc_load(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
+function constraint_mc_load_setpoint(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw)
     # shared variables and parameters
     load = ref(pm, nw, :load, load_id)
     pd0 = load["pd"]
@@ -645,7 +646,7 @@ end
 Creates the constraints modelling the (relaxed) voltage-dependent loads for
 the matrix KCL formulation.
 """
-function constraint_mc_load(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int=pm.cnw)
+function constraint_mc_load_setpoint(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int=pm.cnw)
     # shared variables and parameters
     load = ref(pm, nw, :load, load_id)
     pd0 = load["pd"]

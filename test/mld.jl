@@ -18,11 +18,10 @@
     end
 
     @testset "5-bus storage acp mld" begin
-        mp_data =
         result = run_mc_mld(case5_strg, ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 0.3553; atol=1e-2)
+        @test isapprox(result["objective"], 0.3432; atol=1e-2)
 
         @test isapprox(result["solution"]["load"]["1"]["status"], 1.000; atol=1e-3)
     end

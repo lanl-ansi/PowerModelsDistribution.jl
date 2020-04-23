@@ -1,5 +1,5 @@
 "a quadratic penalty for bus power slack variables"
-function objective_min_bus_power_slack(pm::_PM.AbstractPowerModel)
+function objective_mc_min_slack_bus_power(pm::_PM.AbstractPowerModel)
     return JuMP.@objective(pm.model, Min,
         sum(
             sum(
@@ -11,7 +11,7 @@ end
 
 
 "minimum load delta objective (continuous load shed) with storage"
-function objective_mc_min_load_delta(pm::_PM.AbstractPowerModel)
+function objective_mc_min_load_setpoint_delta(pm::_PM.AbstractPowerModel)
     for (n, nw_ref) in nws(pm)
         var(pm, n)[:delta_pg] = Dict(i => JuMP.@variable(pm.model,
                 [c in conductor_ids(pm, n)], base_name="$(n)_$(i)_delta_pg",
@@ -54,7 +54,7 @@ end
 
 
 "maximum loadability objective (continuous load shed) with storage"
-function objective_mc_max_loadability(pm::_PM.AbstractPowerModel)
+function objective_mc_max_load_setpoint(pm::_PM.AbstractPowerModel)
     load_weight = Dict(n => Dict(i => get(load, "weight", 1.0) for (i,load) in ref(pm, n, :load)) for n in nw_ids(pm))
     M = Dict(n => Dict(c => 10*maximum([load_weight[n][i]*abs(load["pd"][c]) for (i,load) in ref(pm, n, :load)]) for c in conductor_ids(pm, n)) for n in nw_ids(pm))
 

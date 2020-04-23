@@ -2,8 +2,8 @@
 function constraint_mc_model_voltage(pm::_PM.AbstractPowerModel, n::Int)
 end
 
-# Generic thermal limit constraint
-""
+
+"Generic thermal limit constraint from-side"
 function constraint_mc_thermal_limit_from(pm::_PM.AbstractPowerModel, n::Int, f_idx, rate_a)
     p_fr = var(pm, n, :p, f_idx)
     q_fr = var(pm, n, :q, f_idx)
@@ -15,7 +15,8 @@ function constraint_mc_thermal_limit_from(pm::_PM.AbstractPowerModel, n::Int, f_
     end
 end
 
-""
+
+"Generic thermal limit constraint to-side"
 function constraint_mc_thermal_limit_to(pm::_PM.AbstractPowerModel, n::Int, t_idx, rate_a)
     p_to = var(pm, n, :p, t_idx)
     q_to = var(pm, n, :q, t_idx)
@@ -29,7 +30,7 @@ end
 
 
 "on/off bus voltage magnitude constraint"
-function constraint_mc_voltage_magnitude_on_off(pm::_PM.AbstractPowerModel, n::Int, i::Int, vmin, vmax)
+function constraint_mc_bus_voltage_magnitude_on_off(pm::_PM.AbstractPowerModel, n::Int, i::Int, vmin, vmax)
     vm = var(pm, n, :vm, i)
     z_voltage = var(pm, n, :z_voltage, i)
 
@@ -46,7 +47,7 @@ end
 
 
 "on/off bus voltage magnitude squared constraint for relaxed formulations"
-function constraint_mc_voltage_magnitude_sqr_on_off(pm::_PM.AbstractPowerModel, n::Int, i::Int, vmin, vmax)
+function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::_PM.AbstractPowerModel, n::Int, i::Int, vmin, vmax)
     w = var(pm, n, :w, i)
     z_voltage = var(pm, n, :z_voltage, i)
 
@@ -62,14 +63,14 @@ function constraint_mc_voltage_magnitude_sqr_on_off(pm::_PM.AbstractPowerModel, 
 end
 
 
-function constraint_mc_active_gen_setpoint(pm::_PM.AbstractPowerModel, n::Int, i, pg)
+function constraint_mc_gen_power_setpoint_real(pm::_PM.AbstractPowerModel, n::Int, i, pg)
     pg_var = var(pm, n, :pg, i)
     JuMP.@constraint(pm.model, pg_var .== pg)
 end
 
 
 "on/off constraint for generators"
-function constraint_mc_generation_on_off(pm::_PM.AbstractPowerModel, n::Int, i::Int, pmin, pmax, qmin, qmax)
+function constraint_mc_gen_power_on_off(pm::_PM.AbstractPowerModel, n::Int, i::Int, pmin, pmax, qmin, qmax)
     pg = var(pm, n, :pg, i)
     qg = var(pm, n, :qg, i)
     z = var(pm, n, :z_gen, i)

@@ -1,18 +1,18 @@
-### generic features that apply to all active-power-only (apo) approximations
 import LinearAlgebra: diag
 
+
 "apo models ignore reactive power flows"
-function variable_mc_generation_reactive(pm::_PM.AbstractActivePowerModel; kwargs...)
+function variable_mc_gen_power_setpoint_imaginary(pm::_PM.AbstractActivePowerModel; kwargs...)
 end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_reactive_generation_on_off(pm::_PM.AbstractActivePowerModel; kwargs...)
+function variable_mc_gen_power_setpoint_imaginary_on_off(pm::_PM.AbstractActivePowerModel; kwargs...)
 end
 
 
 "on/off constraint for generators"
-function constraint_mc_generation_on_off(pm::_PM.AbstractActivePowerModel, n::Int, i::Int, pmin, pmax, qmin, qmax)
+function constraint_mc_gen_power_on_off(pm::_PM.AbstractActivePowerModel, n::Int, i::Int, pmin, pmax, qmin, qmax)
     pg = var(pm, n, :pg, i)
     z = var(pm, n, :z_gen, i)
 
@@ -29,17 +29,17 @@ end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_storage_reactive(pm::_PM.AbstractActivePowerModel; kwargs...)
+function variable_mc_storage_power_imaginary(pm::_PM.AbstractActivePowerModel; kwargs...)
 end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_on_off_storage_reactive(pm::_PM.AbstractActivePowerModel; kwargs...)
+function variable_mc_storage_power_imaginary_on_off(pm::_PM.AbstractActivePowerModel; kwargs...)
 end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_branch_flow_reactive(pm::_PM.AbstractActivePowerModel; kwargs...)
+function variable_mc_branch_power_imaginary(pm::_PM.AbstractActivePowerModel; kwargs...)
 end
 
 
@@ -48,13 +48,8 @@ function variable_mc_branch_flow_ne_reactive(pm::_PM.AbstractActivePowerModel; k
 end
 
 
-# "do nothing, apo models do not have reactive variables"
-# function constraint_mc_gen_setpoint_reactive(pm::_PM.AbstractActivePowerModel, n::Int, c::Int, i, qg)
-# end
-
-
 "nothing to do, these models do not have complex voltage variables"
-function variable_mc_voltage(pm::_PM.AbstractNFAModel; nw=pm.cnw, kwargs...)
+function variable_mc_bus_voltage(pm::_PM.AbstractNFAModel; nw=pm.cnw, kwargs...)
 end
 
 "nothing to do, these models do not have angle difference constraints"
@@ -62,15 +57,13 @@ function constraint_mc_voltage_angle_difference(pm::_PM.AbstractNFAModel, n::Int
 end
 
 
-
-
 "apo models ignore reactive power flows"
-function variable_mc_transformer_flow_reactive(pm::_PM.AbstractActivePowerModel; nw::Int=pm.cnw, bounded=true)
+function variable_mc_transformer_power_imaginary(pm::_PM.AbstractActivePowerModel; nw::Int=pm.cnw, bounded=true)
 end
 
 
 "power balanace constraint with line shunts and transformers, active power only"
-function constraint_mc_power_balance_load(pm::_PM.AbstractActivePowerModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+function constraint_mc_load_power_balance(pm::_PM.AbstractActivePowerModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
     p    = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
     pg   = get(var(pm, nw),   :pg_bus, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
     ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
@@ -105,8 +98,9 @@ end
 
 
 ######## Lossless Models ########
+
 "Create variables for the active power flowing into all transformer windings"
-function variable_mc_transformer_flow_active(pm::_PM.AbstractAPLossLessModels; nw::Int=pm.cnw, bounded=true)
+function variable_mc_transformer_power_real(pm::_PM.AbstractAPLossLessModels; nw::Int=pm.cnw, bounded=true)
     ncnds = length(conductor_ids(pm))
 
     pt = var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
@@ -148,6 +142,7 @@ function constraint_mc_ohms_yt_to(pm::_PM.AbstractAPLossLessModels, n::Int, f_bu
 end
 
 ### Network Flow Approximation ###
+
 "nothing to do, no voltage angle variables"
 function constraint_mc_theta_ref(pm::_PM.AbstractNFAModel, n::Int, d::Int, va_ref)
 end
@@ -164,10 +159,9 @@ end
 
 
 "nothing to do, this model is symmetric"
-function constraint_mc_trans(pm::_PM.AbstractNFAModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_transformer_power(pm::_PM.AbstractNFAModel, i::Int; nw::Int=pm.cnw)
 end
 
-## From PowerModels
 
 "`-rate_a <= p[f_idx] <= rate_a`"
 function constraint_mc_thermal_limit_from(pm::_PM.AbstractActivePowerModel, n::Int, f_idx, rate_a)
@@ -192,6 +186,7 @@ function constraint_mc_thermal_limit_from(pm::_PM.AbstractActivePowerModel, n::I
         sol(pm, n, :branch, f_idx[1])[:mu_sm_fr] = mu_sm_fr
     end
 end
+
 
 ""
 function constraint_mc_thermal_limit_to(pm::_PM.AbstractActivePowerModel, n::Int, t_idx, rate_a)
@@ -249,6 +244,7 @@ function constraint_mc_thermal_limit_to_on_off(pm::_PM.AbstractActivePowerModel,
     JuMP.@constraint(pm.model, p_to .>= -rate_a.*z)
 end
 
+
 ""
 function constraint_mc_thermal_limit_from_ne(pm::_PM.AbstractActivePowerModel, n::Int, i, f_idx, rate_a)
     p_fr =var(pm, n, :p_ne, f_idx)
@@ -257,6 +253,7 @@ function constraint_mc_thermal_limit_from_ne(pm::_PM.AbstractActivePowerModel, n
     JuMP.@constraint(pm.model, p_fr .<=  rate_a.*z)
     JuMP.@constraint(pm.model, p_fr .>= -rate_a.*z)
 end
+
 
 ""
 function constraint_mc_thermal_limit_to_ne(pm::_PM.AbstractActivePowerModel, n::Int, i, t_idx, rate_a)
@@ -295,6 +292,7 @@ function constraint_mc_storage_thermal_limit(pm::_PM.AbstractActivePowerModel, n
     end
 end
 
+
 ""
 function constraint_mc_storage_current_limit(pm::_PM.AbstractActivePowerModel, n::Int, i, bus, rating)
     ps =var(pm, n, :ps, i)
@@ -308,8 +306,9 @@ function constraint_mc_storage_current_limit(pm::_PM.AbstractActivePowerModel, n
     end
 end
 
+
 ""
-function constraint_mc_storage_loss(pm::_PM.AbstractActivePowerModel, n::Int, i, bus, conductors, r, x, p_loss, q_loss)
+function constraint_mc_storage_losses(pm::_PM.AbstractActivePowerModel, n::Int, i, bus, conductors, r, x, p_loss, q_loss)
     ps = var(pm, n, :ps, i)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)
@@ -321,6 +320,8 @@ function constraint_mc_storage_loss(pm::_PM.AbstractActivePowerModel, n::Int, i,
     )
 end
 
+
+""
 function constraint_mc_storage_on_off(pm::_PM.AbstractActivePowerModel, n::Int, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
 
     z_storage =var(pm, n, :z_storage, i)
@@ -331,25 +332,15 @@ function constraint_mc_storage_on_off(pm::_PM.AbstractActivePowerModel, n::Int, 
 
 end
 
-#
-# ""
-# function add_setpoint_switch_flow!(sol, pm::_PM.AbstractActivePowerModel)
-#     add_setpoint!(sol, pm, "switch", "psw", :psw, var_key = (idx,item) -> (idx, item["f_bus"], item["t_bus"]))
-#     add_setpoint_fixed!(sol, pm, "switch", "qsw")
-# end
 
-
-
-"""
-Only support wye-connected generators.
-"""
-function constraint_mc_generation(pm::_PM.AbstractActivePowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
+"Only support wye-connected generators."
+function constraint_mc_gen_setpoint(pm::_PM.AbstractActivePowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
     var(pm, nw, :pg_bus)[id] = var(pm, nw, :pg, id)
 end
 
 
 "Only support wye-connected, constant-power loads."
-function constraint_mc_load(pm::_PM.AbstractActivePowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
+function constraint_mc_load_setpoint(pm::_PM.AbstractActivePowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
     load = ref(pm, nw, :load, id)
 
     pd = load["pd"]
