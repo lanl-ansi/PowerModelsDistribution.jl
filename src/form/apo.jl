@@ -97,7 +97,7 @@ function constraint_mc_power_balance_load(pm::_PM.AbstractActivePowerModel, nw::
     cnds = conductor_ids(pm, nw)
     ncnds = length(cnds)
 
-    if _PM.report_duals(pm)
+    if _IM.report_duals(pm)
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
         sol(pm, nw, :bus, i)[:lam_kcl_i] = [NaN for i in 1:ncnds]
     end
@@ -188,7 +188,7 @@ function constraint_mc_thermal_limit_from(pm::_PM.AbstractActivePowerModel, n::I
         end
     end
 
-    if _PM.report_duals(pm)
+    if _IM.report_duals(pm)
         sol(pm, n, :branch, f_idx[1])[:mu_sm_fr] = mu_sm_fr
     end
 end
@@ -212,7 +212,7 @@ function constraint_mc_thermal_limit_to(pm::_PM.AbstractActivePowerModel, n::Int
         end
     end
 
-    if _PM.report_duals(pm)
+    if _IM.report_duals(pm)
         sol(pm, n, :branch, t_idx[1])[:mu_sm_to] = mu_sm_to
     end
 end

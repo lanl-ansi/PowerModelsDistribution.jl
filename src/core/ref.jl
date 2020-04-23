@@ -42,20 +42,30 @@ end
 
 
 "Adds arcs for PMD transformers; for dclines and branches this is done in PMs"
-function ref_add_arcs_trans!(pm::_PM.AbstractPowerModel)
-    for nw in nw_ids(pm)
-        if !haskey(ref(pm, nw), :transformer)
+function ref_add_arcs_transformer!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
+    if _IM.ismultinetwork(data)
+        nws_data = data["nw"]
+    else
+        nws_data = Dict("0" => data)
+    end
+
+    for (n, nw_data) in nws_data
+        nw_id = parse(Int, n)
+        nw_ref = ref[:nw][nw_id]
+
+        if !haskey(nw_ref, :transformer)
             # this might happen when parsing data from matlab format
             # the OpenDSS parser always inserts a trans dict
-            ref(pm, nw)[:transformer] = Dict{Int, Any}()
+            nw_ref[:transformer] = Dict{Int, Any}()
         end
-        # dirty fix add arcs_from/to_trans and bus_arcs_trans
-        pm.ref[:nw][nw][:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in ref(pm, nw, :transformer)]
-        pm.ref[:nw][nw][:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in ref(pm, nw, :transformer)]
-        pm.ref[:nw][nw][:arcs_trans] = [pm.ref[:nw][nw][:arcs_from_trans]..., pm.ref[:nw][nw][:arcs_to_trans]...]
-        pm.ref[:nw][nw][:bus_arcs_trans] = Dict{Int64, Array{Any, 1}}()
-        for i in ids(pm, nw, :bus)
-            pm.ref[:nw][nw][:bus_arcs_trans][i] = [e for e in pm.ref[:nw][nw][:arcs_trans] if e[2]==i]
+
+        nw_ref[:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in nw_ref[:transformer]]
+        nw_ref[:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in nw_ref[:transformer]]
+        nw_ref[:arcs_trans] = [nw_ref[:arcs_from_trans]..., nw_ref[:arcs_to_trans]...]
+        nw_ref[:bus_arcs_trans] = Dict{Int64, Array{Any, 1}}()
+
+        for (i,bus) in nw_ref[:bus]
+            nw_ref[:bus_arcs_trans][i] = [e for e in nw_ref[:arcs_trans] if e[2]==i]
         end
     end
 end

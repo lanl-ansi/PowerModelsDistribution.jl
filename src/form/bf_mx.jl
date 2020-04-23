@@ -810,7 +810,7 @@ function constraint_mc_power_balance(pm::KCLMXModels, n::Int, i::Int, bus_arcs, 
     # con(pm, n, :kcl_Q)[i] =
     cq = JuMP.@constraint(pm.model, sum(Qg[g] for g in bus_gens) .== sum(Q[a] for a in bus_arcs) + sum(Qd[d] for d in bus_loads) + (-Wr*Bt'+Wi*Gt'))
 
-    if _PM.report_duals(pm)
+    if _IM.report_duals(pm)
         sol(pm, n, :bus, i)[:lam_kcl_r] = cp
         sol(pm, n, :bus, i)[:lam_kcl_i] = cq
     end

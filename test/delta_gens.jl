@@ -4,7 +4,7 @@
     # This test checks the generators are connected properly by comparing them
     # to equivalent constant-power loads. This is achieved by fixing their bounds.
     @testset "ACP/ACR tests" begin
-        pmd_1 = parse_file("$pmd_path/test/data/opendss/case3_delta_gens.dss"; data_model="mathematical")
+        pmd_1 = parse_file("$pmd_path/test/data/opendss/case3_delta_gens.dss"; data_model=MATHEMATICAL)
 
         # convert to constant power loads
         for (_, load) in pmd_1["load"]
@@ -35,11 +35,11 @@
                 [ACPPowerModel, ACRPowerModel, IVRPowerModel],
                 [build_mc_opf, build_mc_opf, build_mc_opf_iv]
             )
-            pm_1  = PM.instantiate_model(pmd_1, form, build_method, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+            pm_1  = PM.instantiate_model(pmd_1, form, build_method, ref_extensions=[PMD.ref_add_arcs_transformer!])
             sol_1 = PM.optimize_model!(pm_1, optimizer=ipopt_solver)
             @assert(sol_1["termination_status"]==LOCALLY_SOLVED)
 
-            pm_2  = PM.instantiate_model(pmd_2, form, build_method, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+            pm_2  = PM.instantiate_model(pmd_2, form, build_method, ref_extensions=[PMD.ref_add_arcs_transformer!])
             sol_2 = PM.optimize_model!(pm_2, optimizer=ipopt_solver)
             @assert(sol_2["termination_status"]==LOCALLY_SOLVED)
 
@@ -77,11 +77,11 @@
     #         gen["model"] = 2
     #     end
     #
-    #     pm_ivr  = PMs.instantiate_model(pmd, PMs.IVRPowerModel, PMD.build_mc_opf_iv, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+    #     pm_ivr  = PMs.instantiate_model(pmd, PMs.IVRPowerModel, PMD.build_mc_opf_iv, ref_extensions=[PMD.ref_add_arcs_transformer!])
     #     sol_ivr = PMs.optimize_model!(pm_ivr, optimizer=ipopt_solver)
     #     @assert(sol_1["termination_status"]==LOCALLY_SOLVED)
     #
-    #     pm_acr  = PMs.instantiate_model(pmd, PMs.ACRPowerModel, PMD.build_mc_opf, ref_extensions=[PMD.ref_add_arcs_trans!], multiconductor=true)
+    #     pm_acr  = PMs.instantiate_model(pmd, PMs.ACRPowerModel, PMD.build_mc_opf, ref_extensions=[PMD.ref_add_arcs_transformer!])
     #     sol_acr = PMs.optimize_model!(pm_acr, optimizer=ipopt_solver)
     #     @assert(sol_2["termination_status"]==LOCALLY_SOLVED)
     #

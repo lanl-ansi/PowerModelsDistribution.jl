@@ -59,7 +59,7 @@ function constraint_mc_power_balance_shed(pm::_PM.AbstractDCPModel, nw::Int, i::
         - sum(diag(gs)*1.0^2 .*z_shunt[n] for (n,gs) in bus_gs)
     )
 
-    if _PM.report_duals(pm)
+    if _IM.report_duals(pm)
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cp
     end
 end
