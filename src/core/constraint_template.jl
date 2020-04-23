@@ -137,8 +137,8 @@ function constraint_mc_trans(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw,
     type = trans["configuration"]
     f_cnd = trans["f_connections"][1:3]
     t_cnd = trans["t_connections"][1:3]
-    tm_set = trans["tm"]
-    tm_fixed = fix_taps ? ones(Bool, length(tm_set)) : trans["fixed"]
+    tm_set = trans["tm_set"]
+    tm_fixed = fix_taps ? ones(Bool, length(tm_set)) : trans["tm_fix"]
     tm_scale = calculate_tm_scale(trans, ref(pm, nw, :bus, f_bus), ref(pm, nw, :bus, t_bus))
 
     #TODO change data model

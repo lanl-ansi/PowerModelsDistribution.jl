@@ -72,7 +72,7 @@ end
     @testset "node counting functions" begin
         dss  = parse_dss("../test/data/opendss/case5_phase_drop.dss")
         eng  = parse_file("../test/data/opendss/case5_phase_drop.dss")
-        math = parse_file("../test/data/opendss/case5_phase_drop.dss"; data_model="mathematical")
+        math = parse_file("../test/data/opendss/case5_phase_drop.dss"; data_model=MATHEMATICAL)
 
         @test count_nodes(dss) == 10 # stopped excluding source from node count
         @test count_nodes(dss) == count_nodes(eng)

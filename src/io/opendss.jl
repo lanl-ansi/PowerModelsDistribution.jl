@@ -516,12 +516,11 @@ function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
         nrw = defaults["windings"]
 
         eng_obj = Dict{String,Any}(
-            "tm" => Vector{Vector{Float64}}([fill(tap, nphases) for tap in defaults["taps"]]),
-            "tm_min" => Vector{Vector{Float64}}(fill(fill(defaults["mintap"], nphases), nrw)),
-            "tm_max" => Vector{Vector{Float64}}(fill(fill(defaults["maxtap"], nphases), nrw)),
-            "tm_fix" => Vector{Vector{Int}}([fill(1, nphases) for w in 1:nrw]),
+            "tm_set" => Vector{Vector{Float64}}([fill(tap, nphases) for tap in defaults["taps"]]),
+            "tm_lb" => Vector{Vector{Float64}}(fill(fill(defaults["mintap"], nphases), nrw)),
+            "tm_ub" => Vector{Vector{Float64}}(fill(fill(defaults["maxtap"], nphases), nrw)),
+            "tm_fix" => Vector{Vector{Bool}}(fill(ones(Bool, nphases), nrw)),
             "tm_step" => Vector{Vector{Float64}}(fill(fill(1/32, nphases), nrw)),
-            "fixed" => Vector{Vector{Int}}(fill(fill(1, nphases), nrw)),
             "vnom" => Vector{Float64}(defaults["kvs"]),
             "snom" => Vector{Float64}(defaults["kvas"]),
             "configuration" => Vector{String}(defaults["conns"]),
@@ -586,14 +585,14 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
 
         # taps
         if isempty(defaults["xfmrcode"]) || (haskey(dss_obj, "taps") && _is_after_xfmrcode(dss_obj["prop_order"], "taps")) || all(haskey(dss_obj, k) && _is_after_xfmrcode(dss_obj["prop_order"], k) for k in ["tap", "tap_2", "tap_3"])
-            eng_obj["tm"] = [fill(defaults["taps"][w], ncoils) for w in 1:nrw]
+            eng_obj["tm_set"] = [fill(defaults["taps"][w], ncoils) for w in 1:nrw]
         else
             for (w, key_suffix) in enumerate(["", "_2", "_3"])
                 if haskey(dss_obj, "tap$(key_suffix)") && _is_after_xfmrcode(dss_obj["prop_order"], "tap$(key_suffix)")
-                    if !haskey(eng_obj, "tm")
-                        eng_obj["tm"] = Vector{Any}(missing, nrw)
+                    if !haskey(eng_obj, "tm_set")
+                        eng_obj["tm_set"] = Vector{Any}(missing, nrw)
                     end
-                    eng_obj["tm"][w] = fill(defaults["taps"][defaults["wdg$(key_suffix)"]], ncoils)
+                    eng_obj["tm_set"][w] = fill(defaults["taps"][defaults["wdg$(key_suffix)"]], ncoils)
                 end
             end
         end
@@ -615,7 +614,7 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
         end
 
         # mintap, maxtap
-        for (fr_key, to_key) in zip(["mintap", "maxtap"], ["tm_min", "tm_max"])
+        for (fr_key, to_key) in zip(["mintap", "maxtap"], ["tm_lb", "tm_ub"])
             if isempty(defaults["xfmrcode"]) || (haskey(dss_obj, fr_key) && _is_after_xfmrcode(dss_obj["prop_order"], fr_key))
                 eng_obj[to_key] = fill(fill(defaults[fr_key], ncoils), nrw)
             end
@@ -660,9 +659,8 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
 
         # tm_fix, tm_step don't appear in opendss
         if isempty(defaults["xfmrcode"])
-            eng_obj["tm_fix"] = [fill(1, ncoils) for w in 1:nrw]
+            eng_obj["tm_fix"] = fill(ones(Bool, ncoils), nrw)
             eng_obj["tm_step"] = fill(fill(1/32, ncoils), nrw)
-            eng_obj["fixed"] = fill(fill(true, ncoils), nrw)
         end
 
         # always required
@@ -829,7 +827,7 @@ end
 "Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format"
 function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, bank_transformers::Bool=true)::Dict{String,Any}
     data_eng = Dict{String,Any}(
-        "data_model" => "engineering",
+        "data_model" => ENGINEERING,
         "settings" => Dict{String,Any}(),
     )
 
@@ -842,16 +840,14 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
         source_bus = _parse_busname(defaults["bus1"])[1]
 
         data_eng["name"] = data_dss["circuit"]
-        data_eng["data_model"] = "engineering"
-
-        # TODO rename fields
         data_eng["settings"]["v_var_scalar"] = 1e3
         data_eng["settings"]["vbase"] = defaults["basekv"] / sqrt(3)
         data_eng["settings"]["base_bus"] = source_bus
         data_eng["settings"]["sbase"] = defaults["basemva"] * 1e3
         data_eng["settings"]["base_frequency"] = get(get(data_dss, "options", Dict{String,Any}()), "defaultbasefreq", 60.0)
 
-        data_eng["files"] = data_dss["filename"]
+        # collect turns the Set into Array, making it serializable
+        data_eng["files"] = collect(data_dss["filename"])
     else
         Memento.error(_LOGGER, "Circuit not defined, not a valid circuit!")
     end

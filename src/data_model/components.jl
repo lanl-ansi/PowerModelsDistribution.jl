@@ -54,12 +54,12 @@ end
 
 
 "Instantiates a PowerModelsDistribution data model"
-function Model(model_type::String="engineering"; kwargs...)::Dict{String,Any}
+function Model(model_type::String=ENGINEERING; kwargs...)::Dict{String,Any}
     kwargs = Dict{Symbol,Any}(kwargs)
 
-    if model_type == "engineering"
+    if model_type == ENGINEERING
         data_model = Dict{String,Any}(
-            "data_model" => "engineering",
+            "data_model" => model_type,
             "per_unit" => false,
             "settings" => Dict{String,Any}(
                 "v_var_scalar" => get(kwargs, :v_var_scalar, 1e3),
@@ -70,7 +70,7 @@ function Model(model_type::String="engineering"; kwargs...)::Dict{String,Any}
         )
 
         _add_unused_kwargs!(data_model["settings"], kwargs)
-    elseif model_type == "mathematical"
+    elseif model_type == MATHEMATICAL
         Memento.warn(_LOGGER, "There are not currently any helper functions to help build a mathematical model, this will only instantiate required fields.")
         data_model = Dict{String,Any}(
             "bus" => Dict{String,Any}(),
@@ -84,7 +84,7 @@ function Model(model_type::String="engineering"; kwargs...)::Dict{String,Any}
             "per_unit" => false,
             "baseMVA" => 100.0,
             "basekv" => 1.0,
-            "data_model" => "mathematical"
+            "data_model" => model_type
         )
 
         _add_unused_kwargs!(data_model, kwargs)
@@ -239,12 +239,11 @@ function create_transformer(; kwargs...)
         "xsc" => get(kwargs, :xsc, zeros(n_windings^2-n_windings)),
         "noloadloss" => get(kwargs, :noloadloss, 0.0),
         "imag" => get(kwargs, :imag, 0.0),
-        "tm" => get(kwargs, :tm, fill(fill(1.0, 3), n_windings)),
-        "tm_min" => get(kwargs, :tm_min, fill(fill(0.9, 3), n_windings)),
-        "tm_max" => get(kwargs, :tm_max, fill(fill(1.1, 3), n_windings)),
+        "tm_set" => get(kwargs, :tm, fill(fill(1.0, 3), n_windings)),
+        "tm_lb" => get(kwargs, :tm_min, fill(fill(0.9, 3), n_windings)),
+        "tm_ub" => get(kwargs, :tm_max, fill(fill(1.1, 3), n_windings)),
         "tm_step" => get(kwargs, :tm_step, fill(fill(1/32, 3), n_windings)),
-        "tm_fix" => get(kwargs, :tm_fix, fill(fill(true, 3), n_windings)),
-        "fixed" => get(kwargs, :fixed, fill(1, n_windings)),
+        "tm_fix" => get(kwargs, :tm_fix, fill(ones(Bool, 3), n_windings)),
         "connections" => get(kwargs, :connections, fill(collect(1:4), n_windings)),
     )
 

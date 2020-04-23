@@ -50,36 +50,40 @@ _replace_nan(v) = map(x -> isnan(x) ? zero(x) : x, v)
 function count_nodes(data::Dict{String,<:Any})::Int
     n_nodes = 0
 
-    if get(data, "data_model", missing) == "dss"
+    if get(data, "data_model", missing) == DSS
         all_nodes = Dict()
         for obj_type in values(data)
-            for object in values(obj_type)
-                if isa(object, Dict) && haskey(object, "buses")
-                    for busname in values(object["buses"])
-                        name, nodes = _parse_busname(busname)
+            if isa(obj_type, Dict)
+                for object in values(obj_type)
+                    if isa(object, Dict)
+                        if haskey(object, "buses")
+                            for busname in values(object["buses"])
+                                name, nodes = _parse_busname(busname)
 
-                        if !haskey(all_nodes, name)
-                            all_nodes[name] = Set([])
-                        end
+                                if !haskey(all_nodes, name)
+                                    all_nodes[name] = Set([])
+                                end
 
-                        for (n, node) in enumerate(nodes[1:3])
-                            if node
-                                push!(all_nodes[name], n)
+                                for (n, node) in enumerate(nodes[1:3])
+                                    if node
+                                        push!(all_nodes[name], n)
+                                    end
+                                end
                             end
-                        end
-                    end
-                elseif isa(object, Dict)
-                    for (prop, val) in object
-                        if startswith(prop, "bus") && prop != "buses"
-                            name, nodes = _parse_busname(val)
+                        else
+                            for (prop, val) in object
+                                if startswith(prop, "bus") && prop != "buses"
+                                    name, nodes = _parse_busname(val)
 
-                            if !haskey(all_nodes, name)
-                                all_nodes[name] = Set([])
-                            end
+                                    if !haskey(all_nodes, name)
+                                        all_nodes[name] = Set([])
+                                    end
 
-                            for (n, node) in enumerate(nodes[1:3])
-                                if node
-                                    push!(all_nodes[name], n)
+                                    for (n, node) in enumerate(nodes[1:3])
+                                        if node
+                                            push!(all_nodes[name], n)
+                                        end
+                                    end
                                 end
                             end
                         end
@@ -91,22 +95,18 @@ function count_nodes(data::Dict{String,<:Any})::Int
         for (name, phases) in all_nodes
             n_nodes += length(phases)
         end
-    elseif get(data, "data_model", missing) in ["mathematical", "engineering"] || (haskey(data, "source_type") && data["source_type"] == "matlab")
-        if get(data, "data_model", missing) == "mathematical"
-            Memento.info(_LOGGER, "counting nodes from PowerModelsDistribution structure may not be as accurate as directly from `parse_dss` data due to virtual buses, etc.")
-        end
-
+    elseif get(data, "data_model", missing) in [MATHEMATICAL, ENGINEERING] || (haskey(data, "source_type") && data["source_type"] == "matlab")
         n_nodes = 0
         for (name, bus) in data["bus"]
-            if get(data, "data_model", missing) == "matpower" || (haskey(data, "source_type") && data["source_type"] == "matlab")
+            if get(data, "data_model", missing) == MATPOWER || (haskey(data, "source_type") && data["source_type"] == "matlab")
                 n_nodes += sum(bus["vm"] .> 0.0)
             else
-                if data["data_model"] == "mathematical"
+                if data["data_model"] == MATHEMATICAL
                     name = bus["name"]
                 end
 
                 if all(!occursin(pattern, name) for pattern in [_excluded_count_busname_patterns...])
-                    if data["data_model"] == "mathematical"
+                    if data["data_model"] == MATHEMATICAL
                         n_nodes += length(bus["terminals"][.!get(bus, "grounded", zeros(length(bus["terminals"])))])
                     else
                         n_nodes += length([n for n in bus["terminals"] if !(n in get(bus, "grounded", []))])

@@ -1,7 +1,7 @@
 @info "running matrix shunt tests"
 
 @testset "matrix shunts ACP/ACR/IVR" begin
-    data = parse_file("data/opendss/case_mxshunt_2.dss"; data_model="mathematical")
+    data = parse_file("data/opendss/case_mxshunt_2.dss"; data_model=MATHEMATICAL)
     shunt = data["shunt"]["1"]
     @test(isa(shunt["gs"], Matrix))
     @test(isa(shunt["bs"], Matrix))

@@ -153,7 +153,7 @@
     end
 
     @testset "virtual sourcebus creation acp pf" begin
-        pmd = parse_file("../test/data/opendss/virtual_sourcebus.dss"; data_model="mathematical")
+        pmd = parse_file("../test/data/opendss/virtual_sourcebus.dss"; data_model=MATHEMATICAL)
         result = run_ac_mc_pf(pmd, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED

@@ -434,7 +434,7 @@ end
 
 
 "initialization actions for unmapping"
-function _init_unmap_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, map::Dict{Symbol,Any})::Dict{String,Any}
+function _init_unmap_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, map::Dict{String,<:Any})::Dict{String,Any}
     if !haskey(data_eng, eng_obj_type)
         data_eng[eng_obj_type] = Dict{Any,Any}()
     end
@@ -470,7 +470,7 @@ function _apply_xfmrcode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:A
         for (k, v) in xfmrcode
             if !haskey(eng_obj, k)
                 eng_obj[k] = v
-            elseif haskey(eng_obj, k) && k in ["vnom", "snom", "tm", "rs"]
+            elseif haskey(eng_obj, k) && k in ["vnom", "snom", "tm_set", "rs"]
                 for (w, vw) in enumerate(eng_obj[k])
                     if ismissing(vw)
                         eng_obj[k][w] = v[w]

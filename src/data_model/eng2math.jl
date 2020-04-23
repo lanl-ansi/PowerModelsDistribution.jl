@@ -5,7 +5,7 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "bus" => ["vm", "va", "terminals", "phases", "neutral", "dss"],
     "line" => ["f_connections", "t_connections", "source_id", "dss"],
     "transformer" => ["f_connections", "t_connections", "source_id", "dss"],
-    "switch" => ["status", "state", "f_connections", "t_connections", "source_id", "dss"],
+    "switch" => ["status", "f_connections", "t_connections", "source_id", "dss"],
     "line_reactor" => ["f_connections", "t_connections", "source_id", "dss"],
     "series_capacitor" => ["f_connections", "t_connections", "source_id", "dss"],
     "shunt" => ["status", "gs", "bs", "connections", "source_id", "dss"],
@@ -144,12 +144,12 @@ const _time_series_parameters = Dict{String,Dict{String,Tuple{Function, String}}
 
 "base function for converting engineering model to mathematical model"
 function _map_eng2math(data_eng; kron_reduced::Bool=true)
-    @assert get(data_eng, "data_model", "mathematical") == "engineering"
+    @assert get(data_eng, "data_model", MATHEMATICAL) == ENGINEERING
 
     data_math = Dict{String,Any}(
         "name" => get(data_eng, "name", ""),
         "per_unit" => get(data_eng, "per_unit", false),
-        "data_model" => "mathematical",
+        "data_model" => MATHEMATICAL,
         "settings" => data_eng["settings"],
     )
 
@@ -159,11 +159,9 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
     data_math["basekv"] = data_eng["settings"]["vbase"]
     data_math["baseMVA"] = data_eng["settings"]["sbase"]*data_eng["settings"]["v_var_scalar"]/1E6
 
-    data_math["map"] = Dict{Int,Dict{Symbol,Any}}(
-        1 => Dict{Symbol,Any}(
-            :unmap_function => :_map_math2eng_root!,
-        )
-    )
+    data_math["map"] = Vector{Dict{String,Any}}([
+        Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
+    ])
 
     _init_base_components!(data_math)
 
@@ -247,7 +245,7 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
         if kron_reduced
             filter = terminals.!=kr_neutral
             terminals_kr = terminals[filter]
-            @assert(all(t in kr_phases for t in terminals_kr))
+            @assert all(t in kr_phases for t in terminals_kr) "bus $name has terminals $(terminals), outside of $kr_phases, cannot be kron reduced"
 
             _apply_filter!(math_obj, ["vm", "va", "vmin", "vmax"], filter)
             _pad_properties!(math_obj, ["vm", "va", "vmin", "vmax"], terminals_kr, kr_phases)
@@ -261,11 +259,11 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
 
         data_math["bus_lookup"][name] = math_obj["index"]
 
-        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => name,
-            :to => "bus.$(math_obj["index"])",
-            :unmap_function => :_map_math2eng_bus!,
-        )
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "bus.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_bus!",
+        ))
 
         # time series
         for (fr, (f, to)) in _time_series_parameters["bus"]
@@ -330,11 +328,11 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
 
         data_math["branch"]["$(math_obj["index"])"] = math_obj
 
-        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => name,
-            :to => "branch.$(math_obj["index"])",
-            :unmap_function => :_map_math2eng_line!,
-        )
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "branch.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_line!",
+        ))
 
         # time series
         # TODO
@@ -352,14 +350,13 @@ end
 function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "transformer", Dict{Any,Dict{String,Any}}())
         # Build map first, so we can update it as we decompose the transformer
-        map_idx = length(data_math["map"])+1
-        data_math["map"][map_idx] = Dict{Symbol,Any}(
-            :from => name,
-            :to => Vector{String}([]),
-            :unmap_function => :_map_math2eng_transformer!,
-        )
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => Vector{String}([]),
+            "unmap_function" => "_map_math2eng_transformer!",
+        ))
 
-        to_map = data_math["map"][map_idx][:to]
+        to_map = data_math["map"][end]["to"]
 
         _apply_xfmrcode!(eng_obj, data_eng)
 
@@ -392,7 +389,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
         z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
 
         #TODO remove once moving out kron-reduction
-        dims = kron_reduced ? 3 : length(eng_obj["tm"][1])
+        dims = kron_reduced ? 3 : length(eng_obj["tm_set"][1])
         transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh, nphases=dims)
 
         for w in 1:nrw
@@ -409,12 +406,12 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 "t_connections" => collect(1:dims+1),
                 "configuration" => eng_obj["configuration"][w],
                 "polarity"      => eng_obj["polarity"][w],
-                "tm"            => eng_obj["tm"][w],
-                "fixed"         => eng_obj["fixed"][w],
+                "tm_set"        => eng_obj["tm_set"][w],
+                "tm_fix"        => eng_obj["tm_fix"][w],
                 "index"         => length(data_math["transformer"])+1
             )
 
-            for prop in ["tm_min", "tm_max", "tm_step"]
+            for prop in ["tm_lb", "tm_ub", "tm_step"]
                 if haskey(eng_obj, prop)
                     transformer_2wa_obj[prop] = eng_obj[prop][w]
                 end
@@ -424,7 +421,8 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 # TODO fix how padding works, this is a workaround to get bank working
                 if all(eng_obj["configuration"] .== "wye")
                     f_connections = transformer_2wa_obj["f_connections"]
-                    _pad_properties!(transformer_2wa_obj, ["tm_min", "tm_max", "tm", "fixed"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=1.0)
+                    _pad_properties!(transformer_2wa_obj, ["tm_lb", "tm_ub", "tm_set"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=1.0)
+                    _pad_properties!(transformer_2wa_obj, ["tm_fix"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=false)
 
                     transformer_2wa_obj["f_connections"] = transformer_2wa_obj["t_connections"]
                 end
@@ -449,6 +447,8 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
 
         math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
         math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
+
+        math_obj["state"] = lowercase(get(eng_obj, "state", "closed")) == "open" ? 0 : 1
 
         # OPF bounds
         for (fr_key, to_key) in zip(["cm_ub"], ["c_rating"])
@@ -476,11 +476,10 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
             bus_obj = Dict{String,Any}(
                 "name" => "_virtual_bus.switch.$name",
                 "bus_i" => length(data_math["bus"])+1,
-                "bus_type" => 1,
+                "bus_type" => lowercase(get(eng_obj, "state", "closed")) == "open" ? 4 : 1,
                 "vmin" => f_bus["vmin"],
                 "vmax" => f_bus["vmax"],
                 "base_kv" => f_bus["base_kv"],
-                "status" => 1,
                 "index" => length(data_math["bus"])+1,
             )
 
@@ -512,7 +511,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "shift" => zeros(nphases),
                 "tap" => ones(nphases),
                 "switch" => false,
-                "br_status" => 1,
+                "br_status" => lowercase(get(eng_obj, "state", "closed")) == "open" ? 0 : 1,
             )
 
             merge!(branch_obj, _branch_obj)
@@ -551,12 +550,11 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
 
         # data_math["switch"]["$(math_obj["index"])"] = math_obj  # TODO enable real switches
 
-        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => name,
-            :to => map_to,
-            :unmap_function => :_map_math2eng_switch!,
-        )
-
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => map_to,
+            "unmap_function" => "_map_math2eng_switch!",
+        ))
     end
 end
 
@@ -613,11 +611,11 @@ function _map_eng2math_line_reactor!(data_math::Dict{String,<:Any}, data_eng::Di
 
         data_math["branch"]["$(math_obj["index"])"] = math_obj
 
-        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => name,
-            :to => "branch.$(math_obj["index"])",
-            :unmap_function => :_map_math2eng_line_reactor!,
-        )
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "branch.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_line_reactor!",
+        ))
 
         # time series
         # TODO
@@ -655,11 +653,11 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
 
         data_math["shunt"]["$(math_obj["index"])"] = math_obj
 
-        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => name,
-            :to => "shunt.$(math_obj["index"])",
-            :unmap_function => :_map_math2eng_capacitor!,
-        )
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "shunt.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_capacitor!",
+        ))
 
         # time series
         for (fr, (f, to)) in _time_series_parameters["shunt"]
@@ -694,11 +692,11 @@ function _map_eng2math_shunt_capacitor!(data_math::Dict{String,<:Any}, data_eng:
 
         data_math["shunt"]["$(math_obj["index"])"] = math_obj
 
-        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => name,
-            :to => "shunt.$(math_obj["index"])",
-            :unmap_function => :_map_math2eng_shunt_capacitor!,
-        )
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "shunt.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_shunt_capacitor!",
+        ))
 
         # time series
         # TODO
@@ -734,11 +732,11 @@ function _map_eng2math_shunt_reactor!(data_math::Dict{String,<:Any}, data_eng::D
 
         data_math["shunt"]["$(math_obj["index"])"] = math_obj
 
-        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => name,
-            :to => "shunt.$(math_obj["index"])",
-            :unmap_function => :_map_math2eng_shunt_reactor!,
-        )
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "shunt.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_shunt_reactor!",
+        ))
 
         # time series
         # TODO
@@ -779,11 +777,11 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
 
         data_math["load"]["$(math_obj["index"])"] = math_obj
 
-        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => name,
-            :to => "load.$(math_obj["index"])",
-            :unmap_function => :_map_math2eng_load!,
-        )
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "load.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_load!",
+        ))
 
         # time series
         for (fr, (f, to)) in _time_series_parameters["load"]
@@ -838,11 +836,11 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
 
         data_math["gen"]["$(math_obj["index"])"] = math_obj
 
-        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => name,
-            :to => "gen.$(math_obj["index"])",
-            :unmap_function => :_map_math2eng_generator!,
-        )
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "gen.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_generator!",
+        ))
 
         # time series
         # TODO
@@ -892,11 +890,11 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
 
         data_math["gen"]["$(math_obj["index"])"] = math_obj
 
-        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => name,
-            :to => "gen.$(math_obj["index"])",
-            :unmap_function => :_map_math2eng_solar!,
-        )
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "gen.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_solar!",
+        ))
 
         # time series
         # TODO
@@ -944,11 +942,11 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
 
         data_math["storage"]["$(math_obj["index"])"] = math_obj
 
-        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => name,
-            :to => "storage.$(math_obj["index"])",
-            :unmap_function => :_map_math2eng_storage!,
-        )
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "storage.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_storage!",
+        ))
 
         # time series
         # TODO
@@ -1043,10 +1041,10 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
 
         data_math["gen"]["$(math_obj["index"])"] = math_obj
 
-        data_math["map"][length(data_math["map"])+1] = Dict{Symbol,Any}(
-            :from => name,
-            :to => map_to,
-            :unmap_function => :_map_math2eng_voltage_source!,
-        )
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => map_to,
+            "unmap_function" => "_map_math2eng_voltage_source!",
+        ))
     end
 end

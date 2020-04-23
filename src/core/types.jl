@@ -1,3 +1,7 @@
+"Supported data model types"
+@enum DataModelType ENGINEERING MATHEMATICAL DSS MATPOWER
+
+
 ""
 abstract type AbstractNLPUBFModel <: _PM.AbstractBFQPModel end
 

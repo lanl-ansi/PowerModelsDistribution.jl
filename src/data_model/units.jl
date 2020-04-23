@@ -24,10 +24,8 @@ const _dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
 
 
 "converts data model between per-unit and SI units"
-function make_per_unit!(data::Dict{String,<:Any})
-    data_model_type = get(data, "data_model", "mathematical")
-
-    if  data_model_type == "mathematical"
+function make_per_unit!(data::Dict{String,<:Any}; data_model_type=get(data, "data_model", MATHEMATICAL))
+    if  data_model_type == MATHEMATICAL
         if !get(data, "per_unit", false)
             bus_indexed_id = string(data["bus_lookup"][data["settings"]["base_bus"]])
             vbases = Dict(bus_indexed_id=>data["settings"]["vbase"])
@@ -35,13 +33,7 @@ function make_per_unit!(data::Dict{String,<:Any})
 
             _make_math_per_unit!(data, vbases=vbases, sbase=sbase, v_var_scalar=data["settings"]["v_var_scalar"])
         else
-            # make math model si units
-        end
-    elseif data_model_type == "engineering"
-        if !get(data, "per_unit", false)
-            # make eng model per unit
-        else
-            # make eng model si units
+            # TODO make math model si units
         end
     else
         Memento.warn(_LOGGER, "Data model '$data_model_type' is not recognized, no per-unit transformation performed")

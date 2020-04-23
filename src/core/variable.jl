@@ -560,16 +560,16 @@ function variable_mc_oltc_tap(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounde
     ncnds = length(cnds)
 
     nph = 3
-    p_oltc_ids = [id for (id,trans) in ref(pm, nw, :transformer) if !all(trans["fixed"])]
+    p_oltc_ids = [id for (id,trans) in ref(pm, nw, :transformer) if !all(trans["tm_fix"])]
     tap = var(pm, nw)[:tap] = Dict(i => JuMP.@variable(pm.model,
         [p in 1:nph],
         base_name="$(nw)_tm_$(i)",
-        start=ref(pm, nw, :transformer, i, "tm")[p]
+        start=ref(pm, nw, :transformer, i, "tm_set")[p]
     ) for i in p_oltc_ids)
     if bounded
         for tr_id in p_oltc_ids, p in 1:nph
-            set_lower_bound(var(pm, nw)[:tap][tr_id][p], ref(pm, nw, :transformer, tr_id, "tm_min")[p])
-            set_upper_bound(var(pm, nw)[:tap][tr_id][p], ref(pm, nw, :transformer, tr_id, "tm_max")[p])
+            set_lower_bound(var(pm, nw)[:tap][tr_id][p], ref(pm, nw, :transformer, tr_id, "tm_lb")[p])
+            set_upper_bound(var(pm, nw)[:tap][tr_id][p], ref(pm, nw, :transformer, tr_id, "tm_ub")[p])
         end
     end
 

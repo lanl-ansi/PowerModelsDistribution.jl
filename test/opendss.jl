@@ -81,7 +81,7 @@
         Memento.setlevel!(TESTLOG, "info")
 
         @test_throws(TESTLOG, ErrorException,
-                   parse_file("../test/data/opendss/test_simple2.dss"; data_model="mathematical"))
+                   parse_file("../test/data/opendss/test_simple2.dss"; data_model=MATHEMATICAL))
 
         @test_warn(TESTLOG, "Command \"solve\" on line 69 in \"test2_master.dss\" is not supported, skipping.",
                    parse_file("../test/data/opendss/test2_master.dss"))
@@ -111,7 +111,7 @@
     end
 
     eng = parse_file("../test/data/opendss/test2_master.dss", import_all=true)
-    math = parse_file("../test/data/opendss/test2_master.dss"; data_model="mathematical", import_all=true)
+    math = parse_file("../test/data/opendss/test2_master.dss"; data_model=MATHEMATICAL, import_all=true)
 
     @testset "buscoords automatic parsing" begin
         @test all(haskey(bus, "lon") && haskey(bus, "lat") for bus in values(math["bus"]) if "bus_i" in 1:10)
@@ -213,12 +213,12 @@
         PMD._apply_like!(dss_data["transformer"]["reg4b"], dss_data, "transformer")
         @test dss_data["transformer"]["reg4b"]["%loadloss"] == dss_data["transformer"]["reg4a"]["%loadloss"]
 
-        eng_data = parse_file("../test/data/opendss/test_transformer_formatting.dss"; data_model="engineering")
-        @test all(all(eng_data["transformer"]["$n"]["tm"] .==  tm) for (n, tm) in zip(["transformer_test", "reg4"], [[fill(1.075, 3), fill(1.5, 3), fill(0.9, 3)], [ones(3), ones(3)]]))
+        eng_data = parse_file("../test/data/opendss/test_transformer_formatting.dss")
+        @test all(all(eng_data["transformer"]["$n"]["tm_set"] .==  tm) for (n, tm) in zip(["transformer_test", "reg4"], [[fill(1.075, 3), fill(1.5, 3), fill(0.9, 3)], [ones(3), ones(3)]]))
     end
 
     @testset "opendss parse storage" begin
-        math_storage = parse_file("../test/data/opendss/case3_balanced_battery.dss"; data_model="mathematical")
+        math_storage = parse_file("../test/data/opendss/case3_balanced_battery.dss"; data_model=MATHEMATICAL)
         for bat in values(math_storage["storage"])
             for key in ["energy", "storage_bus", "energy_rating", "charge_rating", "discharge_rating",
                         "charge_efficiency", "discharge_efficiency", "thermal_rating", "qmin", "qmax",
@@ -250,8 +250,8 @@
     end
 
     @testset "opendss parse verify order of properties on line" begin
-        math1 = parse_file("../test/data/opendss/case3_balanced.dss"; data_model="mathematical")
-        math2 = parse_file("../test/data/opendss/case3_balanced_prop-order.dss"; data_model="mathematical")
+        math1 = parse_file("../test/data/opendss/case3_balanced.dss"; data_model=MATHEMATICAL)
+        math2 = parse_file("../test/data/opendss/case3_balanced_prop-order.dss"; data_model=MATHEMATICAL)
 
         delete!(math1, "map")
         delete!(math2, "map")

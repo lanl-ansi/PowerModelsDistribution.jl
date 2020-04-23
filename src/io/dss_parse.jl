@@ -764,7 +764,6 @@ Will also parse files defined inside of the originating DSS file via the
 """
 function parse_dss(io::IOStream)::Dict{String,Any}
     filename = match(r"^<file\s(.+)>$", io.name).captures[1]
-    # Memento.info(_LOGGER, "Calling parse_dss on $filename")
     current_file = split(filename, "/")[end]
     path = join(split(filename, '/')[1:end-1], '/')
     data_dss = Dict{String,Any}()
@@ -904,7 +903,7 @@ function parse_dss(io::IOStream)::Dict{String,Any}
 
     _parse_dss_with_dtypes!(data_dss)
 
-    data_dss["data_model"] = "dss"
+    data_dss["data_model"] = DSS
 
     return data_dss
 end

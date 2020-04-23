@@ -6,6 +6,7 @@ import JSON.Writer: StructuralContext, show_json
 struct PMDSerialization <: CommonSerialization end
 
 
+"converts julia Version into serializable structure"
 function _jsonver2juliaver!(data::Dict{String,<:Any})
     if haskey(data, "source_version") && isa(data["source_version"], Dict)
         data["source_version"] = "$(data["source_version"]["major"]).$(data["source_version"]["minor"]).$(data["source_version"]["patch"])"
@@ -13,6 +14,7 @@ function _jsonver2juliaver!(data::Dict{String,<:Any})
 end
 
 
+"recursive helper function for parsing serialized matrices"
 function _parse_mats_recursive!(data::Dict{String,<:Any})::Dict{String,Any}
     parse =  haskey(data, "type") && data["type"]=="Matrix" && haskey(data, "eltype") && haskey(data, "value")
     if parse
@@ -31,6 +33,7 @@ function _parse_mats_recursive!(data::Dict{String,<:Any})::Dict{String,Any}
 end
 
 
+"parser function for serialized matrices"
 function _parse_mats!(data::Dict{String,<:Any})
     stack = Array{Tuple{Any, Any, Any}}([(data, k, v) for (k, v) in data])
     while !isempty(stack)
@@ -51,60 +54,71 @@ function _parse_mats!(data::Dict{String,<:Any})
 end
 
 
-""
-function parse_json(file::String; kwargs...)
+"Parses a JSON file into a PMD data structure"
+function parse_json(file::String; validate::Bool=false)
     data = open(file) do io
-        parse_json(io; filetype=split(lowercase(file), '.')[end], kwargs...)
+        parse_json(io; filetype=split(lowercase(file), '.')[end], validate=validate)
     end
     return data
 end
 
 
-"Parses json from iostream or string"
-function parse_json(io::IO; kwargs...)::Dict{String,Any}
+"Parses a JSON file into a PMD data structure"
+function parse_json(io::IO; validate::Bool=false)::Dict{String,Any}
     data = JSON.parse(io)
 
     _jsonver2juliaver!(data)
 
     _parse_mats!(data)
 
-    if haskey(data, "files")
-        data["files"] = Set(data["files"])
-    end
+    # converts data model in into enum, default is MATHEMATICAL == 1
+    data["data_model"] = DataModelType(get(data, "data_model", 1))
 
-    if get(kwargs, :validate, true)
-        PowerModels.correct_network_data!(data)
+    if validate
+        correct_network_data!(data)
     end
 
     return data
 end
 
 
-function print_file(path::String, data; kwargs...)
+"prints a PMD data structure into a JSON file"
+function print_file(path::String, data::Dict{String,<:Any}; indent::Int=2)
     open(path, "w") do io
-        print_file(io, data; kwargs...)
+        print_file(io, data; indent=indent)
     end
 end
 
 
-function print_file(io::IO, data; indent=false)
-    if indent
-        JSON.print(io, JSON.parse(sprint(show_json, PMDSerialization(), data)), 4)
-    else
+"prints a PMD data structure into a JSON file"
+function print_file(io::IO, data::Dict{String,<:Any}; indent::Int=2)
+    if indent == 0
         JSON.print(io, JSON.parse(sprint(show_json, PMDSerialization(), data)))
+    else
+        JSON.print(io, JSON.parse(sprint(show_json, PMDSerialization(), data)), indent)
     end
 end
 
 
+"turns a matrix into a serializable structure"
 function show_json(io::StructuralContext, ::PMDSerialization, f::Matrix{<:Any})
     N, M = size(f)
     value = string("[", join([join([f[i,j] for j in 1:M], " ") for i in 1:N], "; "), "]")
     eltyp = isempty(f) ? eltype(f) : typeof(f[1,1])
-        out = Dict(:type=>:Matrix, :eltype=>eltyp, :value=>value)
+    out = Dict(:type=>:Matrix, :eltype=>eltyp, :value=>value)
     return show_json(io, StandardSerialization(), out)
 end
 
 
+function show_json(io::StructuralContext, ::CommonSerialization, f::DataModelType)
+    return show_json(io, StandardSerialization(), Int(f))
+end
+
+"custom handling for data model type enums"
+JSON.lower(p::DataModelType) = Int(p)
+
+
+"parses in a serialized matrix"
 function _parse_matrix_value(value::String, eltyp::String)
     if value=="[]"
         eltyp =
