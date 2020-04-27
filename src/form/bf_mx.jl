@@ -280,8 +280,8 @@ constant power or constant impedance. In all other cases (e.g. when a cone is
 used to constrain the power), variables need to be created.
 """
 function variable_mc_load_setpoint(pm::AbstractUBFModels; nw=pm.cnw)
-    load_wye_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]=="wye"]
-    load_del_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]=="delta"]
+    load_wye_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]==WYE]
+    load_del_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]==DELTA]
     load_cone_ids = [id for (id, load) in ref(pm, nw, :load) if _check_load_needs_cone(load)]
     # create dictionaries
     var(pm, nw)[:pd] = Dict()
@@ -311,8 +311,8 @@ all other load model variables are then linear transformations of these
 (linear Expressions).
 """
 function variable_mc_load_setpoint(pm::SDPUBFKCLMXModel; nw=pm.cnw)
-    load_wye_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]=="wye"]
-    load_del_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]=="delta"]
+    load_wye_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]==WYE]
+    load_del_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]==DELTA]
     load_cone_ids = [id for (id, load) in ref(pm, nw, :load) if _check_load_needs_cone(load)]
     # create dictionaries
     var(pm, nw)[:Pd] = Dict{Int, Any}()
@@ -385,7 +385,7 @@ function variable_mc_load_power_bus(pm::SDPUBFKCLMXModel, load_ids::Array{Int,1}
     bound = Dict{eltype(load_ids), Array{Real,2}}()
     for id in load_ids
         load = ref(pm, nw, :load, id)
-        @assert(load["configuration"]=="wye")
+        @assert(load["configuration"]==WYE)
         bus = ref(pm, nw, :bus, load["load_bus"])
         cmax = _calc_load_current_max(load, bus)
         bound[id] = bus["vmax"]*cmax'
@@ -579,11 +579,11 @@ function constraint_mc_load_setpoint(pm::AbstractUBFModels, load_id::Int; nw::In
     pmin, pmax, qmin, qmax = _calc_load_pq_bounds(load, bus)
 
     # take care of connections
-    if load["configuration"]=="wye"
-        if load["model"]=="constant_power"
+    if load["configuration"]==WYE
+        if load["model"]==POWER
             var(pm, nw, :pl)[load_id] = pd0
             var(pm, nw, :ql)[load_id] = qd0
-        elseif load["model"]=="constant_impedance"
+        elseif load["model"]==IMPEDANCE
             w = var(pm, nw, :w)[bus_id]
             var(pm, nw, :pl)[load_id] = a.*w
             var(pm, nw, :ql)[load_id] = b.*w
@@ -599,7 +599,7 @@ function constraint_mc_load_setpoint(pm::AbstractUBFModels, load_id::Int; nw::In
         # :pd is identical to :pl now
         var(pm, nw, :pd)[load_id] = var(pm, nw, :pl)[load_id]
         var(pm, nw, :qd)[load_id] = var(pm, nw, :ql)[load_id]
-    elseif load["configuration"]=="delta"
+    elseif load["configuration"]==DELTA
         # link Wy, CCd and X
         Wr = var(pm, nw, :Wr, bus_id)
         Wi = var(pm, nw, :Wi, bus_id)
@@ -622,12 +622,12 @@ function constraint_mc_load_setpoint(pm::AbstractUBFModels, load_id::Int; nw::In
 
         # |Vd|^2 is a linear transformation of Wr
         wd = LinearAlgebra.diag(Td*Wr*Td')
-        if load["model"]=="constant_power"
+        if load["model"]==POWER
             for c in 1:ncnds
                 JuMP.@constraint(pm.model, pl[c]==pd0[c])
                 JuMP.@constraint(pm.model, ql[c]==qd0[c])
             end
-        elseif load["model"]=="constant_impedance"
+        elseif load["model"]==IMPEDANCE
             for c in 1:ncnds
                 JuMP.@constraint(pm.model, pl[c]==a[c]*wd[c])
                 JuMP.@constraint(pm.model, ql[c]==b[c]*wd[c])
@@ -668,11 +668,11 @@ function constraint_mc_load_setpoint(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int
     CCdr = var(pm, nw, :CCdr, load_id)
     CCdi = var(pm, nw, :CCdi, load_id)
 
-    if load["configuration"]=="wye"
-        if load["model"]=="constant_power"
+    if load["configuration"]==WYE
+        if load["model"]==POWER
             var(pm, nw, :pl)[load_id] = pd0
             var(pm, nw, :ql)[load_id] = qd0
-        elseif load["model"]=="constant_impedance"
+        elseif load["model"]==IMPEDANCE
             w = var(pm, nw, :w, bus_id)
             # for c in 1:ncnds
             var(pm, nw, :pl)[load_id] = a.*w
@@ -695,7 +695,7 @@ function constraint_mc_load_setpoint(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int
             Qd[c,c] = var(pm, nw, :ql)[load_id][c]
         end
 
-    elseif load["configuration"]=="delta"
+    elseif load["configuration"]==DELTA
         # link Wy, CCd and X
         Xdr = var(pm, nw, :Xdr, load_id)
         Xdi = var(pm, nw, :Xdi, load_id)
@@ -714,12 +714,12 @@ function constraint_mc_load_setpoint(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int
 
         # |Vd|^2 is a linear transformation of Wr
         wd = LinearAlgebra.diag(Td*Wr*Td')
-        if load["model"]=="constant_power"
+        if load["model"]==POWER
             for c in 1:ncnds
                 JuMP.@constraint(pm.model, pl[c]==pd0[c])
                 JuMP.@constraint(pm.model, ql[c]==qd0[c])
             end
-        elseif load["model"]=="constant_impedance"
+        elseif load["model"]==IMPEDANCE
             for c in 1:ncnds
                 JuMP.@constraint(pm.model, pl[c]==a[c]*wd[c])
                 JuMP.@constraint(pm.model, ql[c]==b[c]*wd[c])

@@ -131,7 +131,7 @@ function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, b
     config = trans["configuration"]
 
     tm_scale = tm_nom*(t_vbase/f_vbase)
-    if config == "delta"
+    if config == DELTA
         #TODO is this still needed?
         tm_scale *= sqrt(3)
     elseif config == "zig-zag"
@@ -223,17 +223,17 @@ function _load_expmodel_params(load::Dict, bus::Dict)
     pd = load["pd"]
     qd = load["qd"]
     ncnds = length(pd)
-    if load["model"]=="constant_power"
+    if load["model"]==POWER
         return (pd, zeros(ncnds), qd, zeros(ncnds))
     else
         # get exponents
-        if load["model"]=="constant_current"
+        if load["model"]==CURRENT
             alpha = ones(ncnds)
             beta  =ones(ncnds)
-        elseif load["model"]=="constant_impedance"
+        elseif load["model"]==IMPEDANCE
             alpha = ones(ncnds)*2
             beta  =ones(ncnds)*2
-        elseif load["model"]=="exponential"
+        elseif load["model"]==EXPONENTIAL
             alpha = load["alpha"]
             @assert(all(alpha.>=0))
             beta = load["beta"]
@@ -255,10 +255,10 @@ multiphase load. These are inferred from vmin/vmax for wye loads and from
 _calc_bus_vm_ll_bounds for delta loads.
 """
 function _calc_load_vbounds(load::Dict, bus::Dict)
-    if load["configuration"]=="wye"
+    if load["configuration"]==WYE
         vmin = bus["vmin"]
         vmax = bus["vmax"]
-    elseif load["configuration"]=="delta"
+    elseif load["configuration"]==DELTA
         vmin, vmax = _calc_bus_vm_ll_bounds(bus)
     end
     return vmin, vmax
@@ -269,9 +269,9 @@ Returns a Bool, indicating whether the convex hull of the voltage-dependent
 relationship needs a cone inclusion constraint.
 """
 function _check_load_needs_cone(load::Dict)
-    if load["model"]=="constant_current"
+    if load["model"]==CURRENT
         return true
-    elseif load["model"]=="exponential"
+    elseif load["model"]==EXPONENTIAL
         return true
     else
         return false
@@ -507,12 +507,12 @@ function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
     end
 
     for (_, load) in data["load"]
-        load["model"] = "constant_power"
-        load["configuration"] = "wye"
+        load["model"] = POWER
+        load["configuration"] = WYE
     end
 
     for (_, load) in data["gen"]
-        load["configuration"] = "wye"
+        load["configuration"] = WYE
     end
 end
 

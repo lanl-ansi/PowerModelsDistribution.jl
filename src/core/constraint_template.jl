@@ -145,9 +145,9 @@ function constraint_mc_transformer_power(pm::_PM.AbstractPowerModel, i::Int; nw:
     #TODO change this once migrated to new data model
     pol = transformer["polarity"]
 
-    if config == "wye"
+    if config == WYE
         constraint_mc_transformer_power_yy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-    elseif config == "delta"
+    elseif config == DELTA
         constraint_mc_transformer_power_dy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
     elseif config == "zig-zag"
         Memento.error(_LOGGER, "Zig-zag not yet supported.")
@@ -273,11 +273,11 @@ function constraint_mc_load_setpoint(pm::_PM.AbstractPowerModel, id::Int; nw::In
     load = ref(pm, nw, :load, id)
     bus = ref(pm, nw,:bus, load["load_bus"])
 
-    conn = haskey(load, "configuration") ? load["configuration"] : "wye"
+    conn = haskey(load, "configuration") ? load["configuration"] : WYE
 
     a, alpha, b, beta = _load_expmodel_params(load, bus)
 
-    if conn=="wye"
+    if conn==WYE
         constraint_mc_load_setpoint_wye(pm, nw, id, load["load_bus"], a, alpha, b, beta)
     else
         constraint_mc_load_setpoint_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
@@ -307,7 +307,7 @@ function constraint_mc_gen_setpoint(pm::_PM.AbstractPowerModel, id::Int; nw::Int
     qmin = get(generator, "qmin", fill(-Inf, N))
     qmax = get(generator, "qmax", fill( Inf, N))
 
-    if get(generator, "configuration", "wye") == "wye"
+    if get(generator, "configuration", WYE) == WYE
         constraint_mc_gen_setpoint_wye(pm, nw, id, bus["index"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
     else
         constraint_mc_gen_setpoint_delta(pm, nw, id, bus["index"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)

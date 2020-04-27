@@ -429,9 +429,9 @@ end
 "checks the connection configuration and infers the dimensions of the connection (number of connected terminals)"
 function _check_configuration_infer_dim(object::Dict{String,<:Any}; context::Union{String,Missing}=missing)::Int
     conf = object["configuration"]
-    @assert conf in ["delta", "wye"] "$context: the configuration should be \'delta\' or \'wye\', not \'$conf\'."
+    @assert conf in [DELTA, WYE] "$context: the configuration should be \'delta\' or \'wye\', not \'$conf\'."
 
-    return conf=="wye" ? length(object["connections"])-1 : length(object["connections"])
+    return conf==WYE ? length(object["connections"])-1 : length(object["connections"])
 end
 
 
@@ -457,12 +457,12 @@ function _check_load(data_eng::Dict{String,<:Any}, name::Any)
     N = _check_configuration_infer_dim(load; context="load $name")
 
     model = load["model"]
-    @assert model in ["constant_power", "constant_impedance", "constant_current", "exponential"]
+    @assert model in [POWER, IMPEDANCE, CURRENT, EXPONENTIAL]
 
-    if model=="constant_power"
+    if model==POWER
         _check_has_keys(load, ["pd", "qd"], context="load $name, $model:")
         _check_has_size(load, ["pd", "qd"], N, context="load $name, $model:")
-    elseif model=="exponential"
+    elseif model==EXPONENTIAL
         _check_has_keys(load, ["pd_ref", "qd_ref", "vnom", "alpha", "beta"], context="load $name, $model")
         _check_has_size(load, ["pd_ref", "qd_ref", "vnom", "alpha", "beta"], N, context="load $name, $model:")
     else
@@ -534,11 +534,11 @@ function _check_transformer(data_eng::Dict{String,<:Any}, name::Any)
 
     nphs = []
     for w in 1:nrw
-        @assert transformer["configuration"][w] in ["wye", "delta"]
+        @assert transformer["configuration"][w] in [WYE, DELTA]
 
         conf = transformer["configuration"][w]
         conns = transformer["connections"][w]
-        nph = conf=="wye" ? length(conns)-1 : length(conns)
+        nph = conf==WYE ? length(conns)-1 : length(conns)
         @assert all(nph.==nphs) "transformer $name: winding $w has a different number of phases than the previous ones."
 
         push!(nphs, nph)
@@ -555,15 +555,15 @@ function _check_shunt_capacitor(data_eng::Dict{String,<:Any}, name::Any)
 
     N = length(shunt_capacitor["connections"])
     config = shunt_capacitor["configuration"]
-    if config=="wye"
+    if config==WYE
         @assert length(shunt_capacitor["qd_ref"])==N-1 "capacitor $name: qd_ref should have $(N-1) elements."
     else
         @assert length(shunt_capacitor["qd_ref"])==N "capacitor $name: qd_ref should have $N elements."
     end
 
-    @assert config in ["delta", "wye", "wye-grounded", "wye-floating"]
+    @assert config in [DELTA, WYE, "wye-grounded", "wye-floating"]
 
-    if config=="delta"
+    if config==DELTA
         @assert N>=3 "Capacitor $name: delta-connected capacitors should have at least 3 elements."
     end
 

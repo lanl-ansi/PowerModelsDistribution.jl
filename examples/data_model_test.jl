@@ -41,20 +41,20 @@ function make_test_data_model()
 
     #
     add_load!(data_model, "1", bus="7", connections=[2,4], pd=[1.0], qd=[1.0])
-    add_load!(data_model, "2", bus="8", connections=[1,2], pd_ref=[1.0], qd_ref=[1.0], model="constant_current", vnom=[230*sqrt(3)])
-    add_load!(data_model, "3", bus="6", connections=[1,4], pd_ref=[1.0], qd_ref=[1.0], model="constant_impedance", vnom=[230])
-    add_load!(data_model, "4", bus="6", connections=[3,4], pd_ref=[1.0], qd_ref=[1.0], model="exponential", vnom=[230], alpha=[1.2], beta=[1.5])
-    add_load!(data_model, "5", bus="4", configuration="wye", pd=fill(1.0, 3), qd=fill(1.0, 3))
-    add_load!(data_model, "6", bus="4", configuration="wye", pd=fill(1.0, 3), qd=fill(1.0, 3), model="constant_current", vnom=fill(230, 3))
-    add_load!(data_model, "7", bus="4", configuration="wye", pd=fill(1.0, 3), qd=fill(1.0, 3), model="constant_impedance", vnom=fill(230, 3))
-    add_load!(data_model, "8", bus="4", configuration="wye", pd=fill(1.0, 3), qd=fill(1.0, 3), model="exponential", vnom=fill(230, 3), alpha=[2.1,2.4,2.5], beta=[2.1,2.4,2.5])
-    add_load!(data_model, "9", bus="5", configuration="delta", pd=fill(1.0, 3), qd=fill(1.0, 3))
+    add_load!(data_model, "2", bus="8", connections=[1,2], pd_ref=[1.0], qd_ref=[1.0], model=CURRENT, vnom=[230*sqrt(3)])
+    add_load!(data_model, "3", bus="6", connections=[1,4], pd_ref=[1.0], qd_ref=[1.0], model=IMPEDANCE, vnom=[230])
+    add_load!(data_model, "4", bus="6", connections=[3,4], pd_ref=[1.0], qd_ref=[1.0], model=EXPONENTIAL, vnom=[230], alpha=[1.2], beta=[1.5])
+    add_load!(data_model, "5", bus="4", configuration=WYE, pd=fill(1.0, 3), qd=fill(1.0, 3))
+    add_load!(data_model, "6", bus="4", configuration=WYE, pd=fill(1.0, 3), qd=fill(1.0, 3), model=CURRENT, vnom=fill(230, 3))
+    add_load!(data_model, "7", bus="4", configuration=WYE, pd=fill(1.0, 3), qd=fill(1.0, 3), model=IMPEDANCE, vnom=fill(230, 3))
+    add_load!(data_model, "8", bus="4", configuration=WYE, pd=fill(1.0, 3), qd=fill(1.0, 3), model=EXPONENTIAL, vnom=fill(230, 3), alpha=[2.1,2.4,2.5], beta=[2.1,2.4,2.5])
+    add_load!(data_model, "9", bus="5", configuration=DELTA, pd=fill(1.0, 3), qd=fill(1.0, 3))
 
-    add_generator!(data_model, "1", bus="1", configuration="wye")
+    add_generator!(data_model, "1", bus="1", configuration=WYE)
 
     add_transformer_nw!(data_model, "1", bus=["5", "9", "10"], connections=[[1,2,3], [1,2,3,4], [1,2,3]],
         vnom=[0.230, 0.230, 0.230], snom=[0.230, 0.230, 0.230],
-        configuration=["delta", "wye", "delta"],
+        configuration=[DELTA, WYE, DELTA],
         xsc=[0.0, 0.0, 0.0],
         rs=[0.0, 0.0, 1.0],
         noloadloss=0.05,
@@ -62,7 +62,7 @@ function make_test_data_model()
     )
 
     add_capacitor!(data_model, "cap_3ph",        bus="3", vnom=0.230*sqrt(3), qd_ref=[1, 2, 3])
-    add_capacitor!(data_model, "cap_3ph_delta",  bus="4", vnom=0.230*sqrt(3), qd_ref=[1, 2, 3], configuration="delta", connections=[1,2,3])
+    add_capacitor!(data_model, "cap_3ph_delta",  bus="4", vnom=0.230*sqrt(3), qd_ref=[1, 2, 3], configuration=DELTA, connections=[1,2,3])
     add_capacitor!(data_model, "cap_2ph_yg",     bus="6", vnom=0.230*sqrt(3), qd_ref=[1, 2], connections=[1,3],  configuration="wye-grounded")
     add_capacitor!(data_model, "cap_2ph_yfl",    bus="6", vnom=0.230*sqrt(3), qd_ref=[1, 2], connections=[1,3],  configuration="wye-floating")
     add_capacitor!(data_model, "cap_2ph_y",      bus="5", vnom=0.230*sqrt(3), qd_ref=[1, 2], connections=[1,3,4])
@@ -93,7 +93,7 @@ function make_3wire_data_model()
 
     # add!(data_model, "transformer_nw", create_transformer("1", 3, ["2", "3", "4"], [[1,2,3], [1,2,3,4], [1,2,3]],
     #     [0.230, 0.230, 0.230], [0.230, 0.230, 0.230],
-    #         configuration=["delta", "wye", "delta"],
+    #         configuration=[DELTA, WYE, DELTA],
     #         xsc=[0.0, 0.0, 0.0],
     #         rs=[0.0, 0.0, 0.0],
     #         loadloss=0.00,
@@ -102,7 +102,7 @@ function make_3wire_data_model()
 
     add_transformer!(data_model, "1", ["tr_prim", "tr_sec"], connections=[[1,2,3,4], [1,2,3,4]],
         vnom=[0.230, 0.230], snom=[0.230, 0.230],
-        configuration=["wye", "wye"],
+        configuration=[WYE, WYE],
         xsc=[0.0],
         rs=[0.0, 0.0],
         noloadloss=0.00,
@@ -122,7 +122,7 @@ function make_3wire_data_model()
     #     qg_max=fill( 100, 3),
     # ))
 
-    #add!(data_model, "capacitor", create_capacitor(1, "tr_sec", 0.230*sqrt(3), qd_ref=[1.0, 1.0, 1.0]*1E-3, connections=[1,2,3], configuration="delta"))
+    #add!(data_model, "capacitor", create_capacitor(1, "tr_sec", 0.230*sqrt(3), qd_ref=[1.0, 1.0, 1.0]*1E-3, connections=[1,2,3], configuration=DELTA))
 
     return data_model
 end

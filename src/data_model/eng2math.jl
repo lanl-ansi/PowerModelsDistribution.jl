@@ -395,7 +395,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
         for w in 1:nrw
             # 2-WINDING TRANSFORMER
             # make virtual bus and mark it for reduction
-            tm_nom = eng_obj["configuration"][w]=="delta" ? eng_obj["vnom"][w]*sqrt(3) : eng_obj["vnom"][w]
+            tm_nom = eng_obj["configuration"][w]==DELTA ? eng_obj["vnom"][w]*sqrt(3) : eng_obj["vnom"][w]
             transformer_2wa_obj = Dict{String,Any}(
                 "name"          => "_virtual_transformer.$name.$w",
                 "source_id"     => "_virtual_transformer.$(eng_obj["source_id"]).$w",
@@ -419,7 +419,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
 
             if kron_reduced
                 # TODO fix how padding works, this is a workaround to get bank working
-                if all(eng_obj["configuration"] .== "wye")
+                if all(eng_obj["configuration"] .== WYE)
                     f_connections = transformer_2wa_obj["f_connections"]
                     _pad_properties!(transformer_2wa_obj, ["tm_lb", "tm_ub", "tm_set"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=1.0)
                     _pad_properties!(transformer_2wa_obj, ["tm_fix"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=false)
@@ -448,7 +448,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
         math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
         math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
 
-        math_obj["state"] = lowercase(get(eng_obj, "state", "closed")) == "open" ? 0 : 1
+        math_obj["state"] = get(eng_obj, "state", CLOSED)
 
         # OPF bounds
         for (fr_key, to_key) in zip(["cm_ub"], ["c_rating"])
@@ -476,7 +476,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
             bus_obj = Dict{String,Any}(
                 "name" => "_virtual_bus.switch.$name",
                 "bus_i" => length(data_math["bus"])+1,
-                "bus_type" => lowercase(get(eng_obj, "state", "closed")) == "open" ? 4 : 1,
+                "bus_type" => get(eng_obj, "state", CLOSED) == OPEN ? 4 : 1,
                 "vmin" => f_bus["vmin"],
                 "vmax" => f_bus["vmax"],
                 "base_kv" => f_bus["base_kv"],
@@ -511,7 +511,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "shift" => zeros(nphases),
                 "tap" => ones(nphases),
                 "switch" => false,
-                "br_status" => lowercase(get(eng_obj, "state", "closed")) == "open" ? 0 : 1,
+                "br_status" => get(eng_obj, "state", CLOSED) == OPEN ? 0 : 1,
             )
 
             merge!(branch_obj, _branch_obj)
@@ -723,7 +723,7 @@ function _map_eng2math_shunt_reactor!(data_math::Dict{String,<:Any}, data_eng::D
         math_obj["gs"] = fill(0.0, size(eng_obj["bs"])...)
 
         if kron_reduced
-            if eng_obj["configuration"] == "wye"
+            if eng_obj["configuration"] == WYE
                 _pad_properties!(math_obj, ["gs", "bs"], connections[1:end-1], kr_phases)
             else
                 _pad_properties!(math_obj, ["gs", "bs"], connections, kr_phases)
@@ -763,7 +763,7 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         math_obj["qd"] = eng_obj["qd_nom"]
 
         if kron_reduced
-            if math_obj["configuration"]=="wye"
+            if math_obj["configuration"]==WYE
                 @assert(connections[end]==kr_neutral)
                 _pad_properties!(math_obj, ["pd", "qd"], connections[connections.!=kr_neutral], kr_phases)
             else
@@ -819,7 +819,7 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         math_obj["configuration"] = eng_obj["configuration"]
 
         if kron_reduced
-            if math_obj["configuration"]=="wye"
+            if math_obj["configuration"]==WYE
                 @assert(connections[end]==kr_neutral)
                 _pad_properties!(math_obj, ["pg", "qg", "vg", "pmin", "pmax", "qmin", "qmax"], connections[1:end-1], kr_phases)
             else
@@ -878,7 +878,7 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
         _add_gen_cost_model!(math_obj, eng_obj)
 
         if kron_reduced
-            if math_obj["configuration"]=="wye"
+            if math_obj["configuration"]==WYE
                 @assert(connections[end]==kr_neutral)
                 _pad_properties!(math_obj, ["pg", "qg", "vg", "pmin", "pmax", "qmin", "qmax"], connections[1:end-1], kr_phases)
             else
@@ -972,7 +972,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
         math_obj["gen_status"] = eng_obj["status"]
         math_obj["pg"] = fill(0.0, nconductors)
         math_obj["qg"] = fill(0.0, nconductors)
-        math_obj["configuration"] = "wye"
+        math_obj["configuration"] = WYE
         math_obj["source_id"] = "_virtual_gen.$(eng_obj["source_id"])"
 
         _add_gen_cost_model!(math_obj, eng_obj)

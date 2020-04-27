@@ -8,7 +8,7 @@
 
         # convert to constant power loads
         for (_, load) in pmd_1["load"]
-            load["model"] = "constant_power"
+            load["model"] = POWER
         end
 
         # create data model with equivalent generators

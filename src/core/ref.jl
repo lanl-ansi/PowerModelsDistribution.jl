@@ -85,7 +85,7 @@ function _calc_mc_transformer_Tvi(pm::_PM.AbstractPowerModel, i::Int; nw=pm.cnw)
         end
     end
     # make sure the secondary is y+123
-    if trans["config_to"]["type"]!="wye"
+    if trans["config_to"]["type"]!=WYE
         Memento.error(_LOGGER, "Secondary should always be of wye type.")
     end
     if trans["config_to"]["cnd"]!=[1,2,3]
@@ -104,7 +104,7 @@ function _calc_mc_transformer_Tvi(pm::_PM.AbstractPowerModel, i::Int; nw=pm.cnw)
         Memento.error(_LOGGER, "The polarity should be either \'+\' or \'-\', but got \'$polarity\'.")
     end
     dyz = trans["config_fr"]["type"]
-    if !(dyz in ["delta", "wye"])
+    if !(dyz in [DELTA, WYE])
         Memento.error(_LOGGER, "The winding type should be either delta or wye, but got \'$dyz\'.")
     end
     # for now, grounded by default
@@ -119,7 +119,7 @@ function _calc_mc_transformer_Tvi(pm::_PM.AbstractPowerModel, i::Int; nw=pm.cnw)
     Tw = (polarity=='+') ? Tw : -Tw
     #Tw = diagm(0=>ones(Float64, 3))
     vmult = 1.0 # compensate for change in LN
-    if dyz=="wye"
+    if dyz==WYE
         Tv_fr = Tw
         Tv_im = diagm(0=>ones(Float64, 3))
         Ti_fr = Tw
@@ -129,7 +129,7 @@ function _calc_mc_transformer_Tvi(pm::_PM.AbstractPowerModel, i::Int; nw=pm.cnw)
         #     Ti_fr = [Ti_fr; ones(1,3)]
         #     Ti_im = [Ti_im; zeros(1,3)]
         # end
-    elseif dyz=="delta"
+    elseif dyz==DELTA
         Tv_fr = Tdelt*Tw
         Tv_im = diagm(0=>ones(Float64, 3))
         Ti_fr = Tw
