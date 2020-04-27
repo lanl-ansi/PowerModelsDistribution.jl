@@ -284,7 +284,7 @@ function _create_load(name::String=""; kwargs...)::Dict{String,Any}
         "daily" => get(kwargs, :daily, Vector{Float64}([1.0, 1.0])),
         "duty" => get(kwargs, :duty, ""),
         "growth" => get(kwargs, :growth, ""),
-        "conn" => get(kwargs, :conn, "wye"),
+        "conn" => get(kwargs, :conn, WYE),
         "kvar" => kvar,
         "rneut" => get(kwargs, :rneut, -1.0),
         "xneut" => get(kwargs, :xneut, 0.0),
@@ -329,7 +329,7 @@ different properties.
 function _create_generator(name::String=""; kwargs...)::Dict{String,Any}
     bus1 = get(kwargs, :bus1, "")
 
-    conn = get(kwargs, :conn, "wye")
+    conn = get(kwargs, :conn, WYE)
 
     kw = get(kwargs, :kw, 100.0)
     kva = get(kwargs, :kva, kw * 1.2)
@@ -407,7 +407,7 @@ function _create_capacitor(name::String=""; kwargs...)::Dict{String,Any}
         "phases" => phases,
         "kvar" => get(kwargs, :kvar, 1200.0),
         "kv" => get(kwargs, :kv, 12.47),
-        "conn" => get(kwargs, :conn, "wye"),
+        "conn" => get(kwargs, :conn, WYE),
         "cmatrix" => get(kwargs, :cmatrix, zeros(phases, phases)),
         "cuf" => get(kwargs, :cuf, zeros(phases)),
         "r" => get(kwargs, :r, zeros(phases)),
@@ -440,7 +440,7 @@ function _create_reactor(name::String=""; kwargs...)::Dict{String,Any}
     phases = get(kwargs, :phases, 3)
     kvar = get(kwargs, :kvar, 1200.0)
     kv = get(kwargs, :kv, 12.47)
-    conn = get(kwargs, :conn, "wye")
+    conn = get(kwargs, :conn, WYE)
     parallel = get(kwargs, :parallel, false)
 
     normamps = get(kwargs, :normamps, 400.0)
@@ -463,7 +463,7 @@ function _create_reactor(name::String=""; kwargs...)::Dict{String,Any}
     if (haskey(kwargs, :kv) && haskey(kwargs, :kvar)) || haskey(kwargs, :x) || haskey(kwargs, :lmh) || haskey(kwargs, :z)
         if haskey(kwargs, :kvar) && haskey(kwargs, :kv)
             kvarperphase = kvar / phases
-            if conn == "delta"
+            if conn == DELTA
                 phasekv = kv
             else
                 if phases == 2 || phases == 3
@@ -808,7 +808,7 @@ function _create_transformer(name::String=""; kwargs...)
 
     temp = Dict{String,Any}("buss" => get(kwargs, :buses, fill("", windings)),
                             "taps" => get(kwargs, :taps, fill(1.0, windings)),
-                            "conns" => get(kwargs, :conns, fill("wye", windings)),
+                            "conns" => get(kwargs, :conns, fill(WYE, windings)),
                             "kvs" => get(kwargs, :kvs, fill(12.47, windings)),
                             "kvas" => get(kwargs, :kvas, fill(10.0, windings)),
                             "%rs" => prcnt_rs,
@@ -928,7 +928,7 @@ function _create_xfmrcode(name::String=""; kwargs...)
 
     temp = Dict{String,Any}(
         "taps" => get(kwargs, :taps, fill(1.0, windings)),
-        "conns" => get(kwargs, :conns, fill("wye", windings)),
+        "conns" => get(kwargs, :conns, fill(WYE, windings)),
         "kvs" => get(kwargs, :kvs, fill(12.47, windings)),
         "kvas" => get(kwargs, :kvas, fill(10.0, windings)),
         "%rs" => prcnt_rs,
@@ -1081,7 +1081,7 @@ function _create_pvsystem(name::String=""; kwargs...)
         "irradiance" => get(kwargs, :irradiance, 0),
         "pmpp" => get(kwargs, :pmpp, 0),
         "temperature" => get(kwargs, :temperature, 0),
-        "conn" => get(kwargs, :conn, "wye"),
+        "conn" => get(kwargs, :conn, WYE),
         "kvar" => kvar,
         "kva" => kva,
         "%cutin" => get(kwargs, :cutin, 0), #TODO not sure what to do with this
@@ -1129,7 +1129,7 @@ function _create_storage(name::String=""; kwargs...)
         "bus1" => get(kwargs, :bus1, ""),
         "chargetrigger" => get(kwargs, :chargetrigger, 0.0),
         "class" => get(kwargs, :class, 0),
-        "conn" => get(kwargs, :conn, "wye"),
+        "conn" => get(kwargs, :conn, WYE),
         "daily" => get(kwargs, :daily, [1.0, 1.0]),
         "debugtrace" => get(kwargs, :debugtrace, false),
         "dischargetrigger" => get(kwargs, :dischargetrigger, 0.0),

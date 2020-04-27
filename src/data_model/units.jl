@@ -97,7 +97,7 @@ function _calc_vbase(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,
         push!(edges,i)
         f_zone = bus_to_zone[string(transformer["f_bus"])]
         t_zone = bus_to_zone[string(transformer["t_bus"])]
-        tm_nom = transformer["configuration"]=="delta" ? transformer["tm_nom"]/sqrt(3) : transformer["tm_nom"]
+        tm_nom = transformer["configuration"]==DELTA ? transformer["tm_nom"]/sqrt(3) : transformer["tm_nom"]
         push!(zone_edges[f_zone], (i, t_zone, 1/tm_nom))
         push!(zone_edges[t_zone], (i, f_zone, tm_nom))
     end

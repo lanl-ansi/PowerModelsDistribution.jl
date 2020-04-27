@@ -102,40 +102,17 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         _apply_like!(dss_obj, data_dss, "load")
         defaults = _apply_ordered_properties(_create_load(name; _to_kwargs(dss_obj)...), dss_obj)
 
-        # parse the model
-        model = defaults["model"]
-
-        if model == 3
-            Memento.warn(_LOGGER, "$name: load model 3 not supported. Treating as model 1.")
-            model = 1
-        elseif model == 4
-            Memento.warn(_LOGGER, "$name: load model 4 not supported. Treating as model 1.")
-            model = 1
-        elseif model == 6
-            Memento.warn(_LOGGER, "$name: load model 6 identical to model 1 in current feature set. Treating as model 1.")
-            model = 1
-        elseif model == 7
-            Memento.warn(_LOGGER, "$name: load model 7 not supported. Treating as model 1.")
-            model = 1
-        elseif model == 8
-            Memento.warn(_LOGGER, "$name: load model 8 not supported. Treating as model 1.")
-            model = 1
-        end
-
-        model_int2str = Dict(1=>"constant_power", 2=>"constant_impedance", 5=>"constant_current")
-        model = model_int2str[model]
-
         nphases = defaults["phases"]
         conf = defaults["conn"]
 
-        if conf=="delta"
+        if conf==DELTA
             @assert(nphases in [1, 3], "$name: only 1 and 3-phase delta loads are supported!")
         end
 
         # connections
         bus = _parse_busname(defaults["bus1"])[1]
-        connections_default = conf=="wye" ? [collect(1:nphases)..., 0] : nphases==1 ? [1,2] : [1,2,3]
-        connections = _get_conductors_ordered(defaults["bus1"], default=connections_default, pad_ground=(conf=="wye"))
+        connections_default = conf==WYE ? [collect(1:nphases)..., 0] : nphases==1 ? [1,2] : [1,2,3]
+        connections = _get_conductors_ordered(defaults["bus1"], default=connections_default, pad_ground=(conf==WYE))
 
         @assert(length(unique(connections))==length(connections), "$name: connections cannot be made to a terminal more than once.")
 
@@ -144,12 +121,14 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         eng_obj = Dict{String,Any}(
             "name" => name,
             "bus" => bus,
-            "model" => model,
+            "model" => defaults["model"],
             "configuration" => conf,
             "connections" => connections,
             "source_id" => "load.$name",
             "status" => convert(Int, defaults["enabled"])
         )
+
+        _parse_dss_load_model!(eng_obj, name)
 
         # if the ground is used directly, register load
         if 0 in connections
@@ -157,7 +136,7 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         end
 
         kv = defaults["kv"]
-        if conf=="wye" && nphases in [2, 3]
+        if conf==WYE && nphases in [2, 3]
             kv = kv/sqrt(3)
         end
 
@@ -189,7 +168,7 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
         conn = defaults["conn"]
 
         f_terminals = _get_conductors_ordered(defaults["bus1"], default=collect(1:nphases))
-        if conn=="wye"
+        if conn==WYE
             t_terminals = _get_conductors_ordered(defaults["bus2"], default=fill(0,nphases))
         else
             # if delta connected, ignore bus2 and generate t_terminals such that
@@ -201,7 +180,6 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             "configuration" => conn,
             "status" => convert(Int, defaults["enabled"]),
             "source_id" => "capacitor.$name",
-            "phases" => nphases,
         )
 
         if import_all
@@ -269,7 +247,7 @@ function _dss2eng_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
                 "source_id" => "reactor.$name",
             )
 
-            connections_default = eng_obj["configuration"] == "wye" ? [collect(1:nphases)..., 0] : collect(1:nphases)
+            connections_default = eng_obj["configuration"] == WYE ? [collect(1:nphases)..., 0] : collect(1:nphases)
             eng_obj["connections"] = _get_conductors_ordered(defaults["bus1"], default=connections_default, check_length=false)
 
             # if the ground is used directly, register
@@ -350,10 +328,12 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             "qg_lb" => fill(defaults["minkvar"] / nphases, nphases),
             "qg_ub" => fill(defaults["maxkvar"] / nphases, nphases),
             "control_mode" => defaults["model"],
-            "configuration" => "wye",
+            "configuration" => WYE,
             "status" => convert(Int, defaults["enabled"]),
             "source_id" => "generator.$(name)"
         )
+
+        _parse_dss_generator_model!(eng_obj, name)
 
         # if the ground is used directly, register load
         if 0 in eng_obj["connections"]
@@ -523,7 +503,7 @@ function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             "tm_step" => Vector{Vector{Float64}}(fill(fill(1/32, nphases), nrw)),
             "vnom" => Vector{Float64}(defaults["kvs"]),
             "snom" => Vector{Float64}(defaults["kvas"]),
-            "configuration" => Vector{String}(defaults["conns"]),
+            "configuration" => Vector{ConnectionConfiguration}(defaults["conns"]),
             "rs" => Vector{Float64}(defaults["%rs"] ./ 100),
             "noloadloss" => defaults["%noloadloss"] / 100,
             "imag" => defaults["%imag"] / 100,
@@ -577,7 +557,7 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
         nrw = _shared["windings"]
 
         # two-phase delta transformers have single coil
-        if all(confs.=="delta") && nphases==2
+        if all(confs.==DELTA) && nphases==2
             ncoils = 1
         else
             ncoils = nphases
@@ -674,7 +654,7 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
         end
 
         # test if this transformer conforms with limitations
-        if nphases<3 && "delta" in confs
+        if nphases<3 && DELTA in confs
             # Memento.error(_LOGGER, "Transformers with delta windings should have at least 3 phases to be well-defined: $name.")
         end
         if nrw>3
@@ -687,20 +667,20 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
             eng_obj["bus"][w] = _parse_busname(defaults["buses"][w])[1]
 
             conf = confs[w]
-            terminals_default = conf=="wye" ? [1:nphases..., 0] : collect(1:nphases)
+            terminals_default = conf==WYE ? [1:nphases..., 0] : collect(1:nphases)
 
             # append ground if connections one too short
-            eng_obj["connections"][w] = _get_conductors_ordered(defaults["buses"][w], default=terminals_default, pad_ground=(conf=="wye"))
+            eng_obj["connections"][w] = _get_conductors_ordered(defaults["buses"][w], default=terminals_default, pad_ground=(conf==WYE))
 
             if w>1
                 prim_conf = confs[1]
                 if leadlag in ["ansi", "lag"]
-                    if prim_conf=="delta" && conf=="wye"
+                    if prim_conf==DELTA && conf==WYE
                         eng_obj["polarity"][w] = -1
                         eng_obj["connections"][w] = [_barrel_roll(eng_obj["connections"][w][1:end-1], 1)..., eng_obj["connections"][w][end]]
                     end
                 else # hence defaults["leadlag"] in ["euro", "lead"]
-                    if prim_conf=="wye" && conf=="delta"
+                    if prim_conf==WYE && conf==DELTA
                         eng_obj["polarity"][w] = -1
                         eng_obj["connections"][w] = _barrel_roll(eng_obj["connections"][w], -1)
                     end
@@ -784,7 +764,7 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         eng_obj = Dict{String,Any}(
             "bus" => _parse_busname(defaults["bus1"])[1],
             "connections" => _get_conductors_ordered(defaults["bus1"], check_length=false),
-            "configuration" => "wye",
+            "configuration" => WYE,
             "energy" => defaults["kwhstored"],
             "energy_ub" => defaults["kwrated"],
             "charge_ub" => defaults["%charge"] / 100.0 * defaults["kwrated"],

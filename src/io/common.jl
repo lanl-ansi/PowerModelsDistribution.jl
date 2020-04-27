@@ -3,7 +3,7 @@
 
 Parses the IOStream of a file into a PowerModelsDistribution data structure.
 """
-function parse_file(io::IO, filetype::AbstractString="json"; data_model::DataModelType=ENGINEERING, import_all::Bool=false, bank_transformers::Bool=true, transformations::Vector{<:Function}=Vector{Function}([]))::Dict{String,Any}
+function parse_file(io::IO, filetype::AbstractString="json"; data_model::DataModel=ENGINEERING, import_all::Bool=false, bank_transformers::Bool=true, transformations::Vector{<:Function}=Vector{Function}([]))::Dict{String,Any}
     if filetype == "dss"
         data_eng = PowerModelsDistribution.parse_opendss(io; import_all=import_all, bank_transformers=bank_transformers)
 

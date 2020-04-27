@@ -1,15 +1,28 @@
 "Supported data model types"
-@enum DataModelType ENGINEERING MATHEMATICAL DSS MATPOWER
+@enum DataModel ENGINEERING MATHEMATICAL DSS MATPOWER
+
+"Load Models"
+@enum LoadModel POWER CURRENT IMPEDANCE EXPONENTIAL ZIP
+
+"Switch States"
+@enum SwitchState OPEN CLOSED FIXED_OPEN FIXED_CLOSED
+
+"Generator Control Modes"
+@enum GeneratorControlMode PQ PV Z INVERTER  # TODO needs better names
+
+"Configurations"
+@enum ConnectionConfiguration WYE DELTA
 
 
-""
+"Base Abstract NLP Unbalanced Branch Flow Model"
 abstract type AbstractNLPUBFModel <: _PM.AbstractBFQPModel end
 
 
-""
+"Base Abstract Conic Unbalanced Branch Flow Model"
 abstract type AbstractConicUBFModel <: _PM.AbstractBFConicModel end
 
 
+"Collection of Unbalanced Branch Flow Models"
 AbstractUBFModels = Union{AbstractNLPUBFModel, AbstractConicUBFModel}
 
 
@@ -21,6 +34,7 @@ abstract type SDPUBFModel <: AbstractConicUBFModel end
 abstract type SDPUBFKCLMXModel <: SDPUBFModel end
 
 
+"Collection of Semidefinite Models"  # TODO Better documentation, name?
 KCLMXModels = Union{SDPUBFKCLMXModel}
 
 
@@ -32,6 +46,7 @@ abstract type SOCNLPUBFModel <: AbstractNLPUBFModel end
 abstract type SOCConicUBFModel <: AbstractConicUBFModel end
 
 
+"Collection of Second Order Cone Models"
 SOCUBFModels = Union{SOCNLPUBFModel, SOCConicUBFModel}
 
 

@@ -54,6 +54,40 @@ function _parse_mats!(data::Dict{String,<:Any})
 end
 
 
+"parses enums from json"
+function _parse_enums!(data::Dict{String,<:Any})
+    data["data_model"] = DataModel(get(data, "data_model", 1))
+
+    for (root_type, root_value) in data
+        if isa(root_value, Dict)
+            for (component_id, component) in root_value
+                if isa(component, Dict)
+                    if haskey(component, "configuration")
+                        if isa(component["configuration"], Vector)
+                            component["configuration"] = Vector{ConnectionConfiguration}([ConnectionConfiguration(el) for el in component["configuration"]])
+                        else
+                            component["configuration"] = ConnectionConfiguration(component["configuration"])
+                        end
+                    end
+
+                    if root_type == "switch" && haskey(component, "state")
+                        component["state"] = SwitchState(component["state"])
+                    end
+
+                    if root_type == "generator" && haskey(component, "control_mode")
+                        component["generator"] = GeneratorControlMode(component["control_model"])
+                    end
+
+                    if root_type == "load" && haskey(component, "model")
+                        component["model"] = LoadModel(component["model"])
+                    end
+                end
+            end
+        end
+    end
+end
+
+
 "Parses a JSON file into a PMD data structure"
 function parse_json(file::String; validate::Bool=false)
     data = open(file) do io
@@ -71,8 +105,7 @@ function parse_json(io::IO; validate::Bool=false)::Dict{String,Any}
 
     _parse_mats!(data)
 
-    # converts data model in into enum, default is MATHEMATICAL == 1
-    data["data_model"] = DataModelType(get(data, "data_model", 1))
+    _parse_enums!(data)
 
     if validate
         correct_network_data!(data)
@@ -110,12 +143,14 @@ function show_json(io::StructuralContext, ::PMDSerialization, f::Matrix{<:Any})
 end
 
 
-function show_json(io::StructuralContext, ::CommonSerialization, f::DataModelType)
+"custom handling for enums output to json"
+function show_json(io::StructuralContext, ::CommonSerialization, f::Union{DataModel,LoadModel,SwitchState,GeneratorControlMode,ConnectionConfiguration})
     return show_json(io, StandardSerialization(), Int(f))
 end
 
-"custom handling for data model type enums"
-JSON.lower(p::DataModelType) = Int(p)
+
+"custom handling for enums output to json"
+JSON.lower(p::Union{DataModel,LoadModel,SwitchState,GeneratorControlMode,ConnectionConfiguration}) = Int(p)
 
 
 "parses in a serialized matrix"

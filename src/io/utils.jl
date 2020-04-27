@@ -76,6 +76,25 @@ const _dtype_regex = Dict{Regex, Type}(
 )
 
 
+"dss to pmd load model"
+const _dss2pmd_load_model = Dict{Int,LoadModel}(
+    1 => POWER,
+    2 => IMPEDANCE,
+    5 => CURRENT,
+    4 => EXPONENTIAL,  # TODO add official support for exponential load model
+    8 => ZIP,  # TODO add official support for ZIP load model
+)
+
+
+"dss to pmd generator model"
+const _dss2pmd_gen_model = Dict{Int,GeneratorControlMode}(
+    1 => PQ,
+    2 => Z,
+    3 => PV,
+    7 => INVERTER,
+)
+
+
 "detects if `expr` is Reverse Polish Notation expression"
 function _isa_rpn(expr::AbstractString)::Bool
     expr = split(strip(expr, _array_delimiters))
@@ -145,14 +164,14 @@ end
 
 
 "parses connection \"conn\" specification reducing to wye or delta"
-function _parse_conn(conn::String)::String
+function _parse_conn(conn::AbstractString)::ConnectionConfiguration
     if conn in ["wye", "y", "ln"]
-        return "wye"
+        return WYE
     elseif conn in ["delta", "ll"]
-        return "delta"
+        return DELTA
     else
-        Memento.warn(_LOGGER, "Unsupported connection $conn, defaulting to \"wye\"")
-        return "wye"
+        Memento.warn(_LOGGER, "Unsupported connection $conn, defaulting to WYE")
+        return WYE
     end
 end
 
@@ -266,7 +285,13 @@ function _parse_array(dtype::Type, data::AbstractString)::Vector{dtype}
         elements = [strip(el) for el in elements if strip(el) != ""]
     end
 
-    if dtype == String || dtype == AbstractString || dtype == Char
+    if all(_isa_conn(el) for el in elements)
+        array = Vector{ConnectionConfiguration}([])
+        for el in elements
+            a = _parse_conn(el)
+            push!(array, a)
+        end
+    elseif dtype == String || dtype == AbstractString || dtype == Char
         array = Vector{String}([])
         for el in elements
             push!(array, el)
@@ -315,7 +340,7 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
             nrw = length(btrans["bus"])
 
             # only attempt to bank wye-connected transformers
-            if !all(all(tr["configuration"].=="wye") for tr in trs)
+            if !all(all(tr["configuration"].==WYE) for tr in trs)
                 Memento.warn(_LOGGER, "Not all configurations 'wye' on transformers identified by bank='$bank', aborting attempt to bank")
                 continue
             end
@@ -437,12 +462,12 @@ function _find_neutrals(data_eng::Dict{String,<:Any})
     trans_neutrals = []
     for (_, tr) in data_eng["transformer"]
         for w in 1:length(tr["connections"])
-            if tr["configuration"][w] == "wye"
+            if tr["configuration"][w] == WYE
                 push!(trans_neutrals, (tr["bus"][w], tr["connections"][w][end]))
             end
         end
     end
-    load_neutrals = [(eng_obj["bus"],eng_obj["connections"][end]) for (_,eng_obj) in get(data_eng, "load", Dict{String,Any}()) if eng_obj["configuration"]=="wye"]
+    load_neutrals = [(eng_obj["bus"],eng_obj["connections"][end]) for (_,eng_obj) in get(data_eng, "load", Dict{String,Any}()) if eng_obj["configuration"]==WYE]
     neutrals = Set(vcat(bus_neutrals, trans_neutrals, load_neutrals))
     neutrals = Set([(bus,t) for (bus,t) in neutrals if t!=0])
     stack = deepcopy(neutrals)
@@ -823,4 +848,33 @@ function _guess_dtype(value::AbstractString)::Type
 
         return String
     end
+end
+
+
+"converts dss load model to supported PMD LoadModel enum"
+function _parse_dss_load_model!(eng_obj::Dict{String,<:Any}, id::Any)
+    model = eng_obj["model"]
+
+    if model in [3, 4, 7, 8]
+        Memento.warn(_LOGGER, "$id: dss load model $model not supported. Treating as constant POWER model")
+        model = 1
+    elseif model == 6
+        Memento.warn(_LOGGER, "$id: dss load model $model identical to model 1 in current feature set. Treating as constant POWER model")
+        model = 1
+    end
+
+    eng_obj["model"] = _dss2pmd_load_model[model]
+end
+
+
+"converts dss generator model into PMD GeneratorControlMode enum"
+function _parse_dss_generator_model!(eng_obj::Dict{String,<:Any}, id::Any)
+    model = eng_obj["control_mode"]
+
+    if model in [2, 4, 5, 6, 7]
+        Memento.warn(_LOGGER, "$id: dss generator model $model not supported. Treating as constant PQ model")
+        model = 1
+    end
+
+    eng_obj["control_mode"] = _dss2pmd_gen_model[model]
 end

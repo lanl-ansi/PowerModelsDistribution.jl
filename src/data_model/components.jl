@@ -186,13 +186,13 @@ function create_load(; kwargs...)
 
     load = Dict{String,Any}(
         "status" => get(kwargs, :status, 1),
-        "configuration" => get(kwargs, :configuration, "wye"),
-        "model" => get(kwargs, :model, "constant_power"),
-        "connections" => get(kwargs, :connections, get(kwargs, :configuration, "wye")=="wye" ? [1, 2, 3, 4] : [1, 2, 3]),
+        "configuration" => get(kwargs, :configuration, WYE),
+        "model" => get(kwargs, :model, POWER),
+        "connections" => get(kwargs, :connections, get(kwargs, :configuration, WYE)==WYE ? [1, 2, 3, 4] : [1, 2, 3]),
         "vnom" => get(kwargs, :vnom, 1.0)
     )
 
-    if load["model"]=="constant_power"
+    if load["model"]==POWER
         load["pd"] = get(kwargs, :pd, fill(0.0, 3))
         load["qd"] = get(kwargs, :qd, fill(0.0, 3))
     else
@@ -212,11 +212,11 @@ function create_generator(; kwargs...)
 
     generator = Dict{String,Any}(
         "status" => get(kwargs, :status, 1),
-        "configuration" => get(kwargs, :configuration, "wye"),
+        "configuration" => get(kwargs, :configuration, WYE),
         "cost" => get(kwargs, :cost, [1.0, 0.0]*1E-3),
     )
 
-    generator["connections"] = get(kwargs, :connections, generator["configuration"]=="wye" ? [1, 2, 3, 4] : [1, 2, 3])
+    generator["connections"] = get(kwargs, :connections, generator["configuration"]==WYE ? [1, 2, 3, 4] : [1, 2, 3])
 
     _add_unused_kwargs!(generator, kwargs)
 
@@ -233,7 +233,7 @@ function create_transformer(; kwargs...)
 
     transformer = Dict{String,Any}(
         "status" => get(kwargs, :status, 1),
-        "configuration" => get(kwargs, :configuration, fill("wye", n_windings)),
+        "configuration" => get(kwargs, :configuration, fill(WYE, n_windings)),
         "polarity" => get(kwargs, :polarity, fill(true, n_windings)),
         "rs" => get(kwargs, :rs, zeros(n_windings)),
         "xsc" => get(kwargs, :xsc, zeros(n_windings^2-n_windings)),
@@ -257,7 +257,7 @@ end
 function create_shunt_capacitor(; kwargs...)
     shunt_capacitor = Dict{String,Any}(
         "status" => get(kwargs, :status, 1),
-        "configuration" => get(kwargs, :configuration, "wye"),
+        "configuration" => get(kwargs, :configuration, WYE),
         "connections" => get(kwargs, :connections, collect(1:4)),
         "qd_ref" => get(kwargs, :qd_ref, fill(0.0, 3)),
     )

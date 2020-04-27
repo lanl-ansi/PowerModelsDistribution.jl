@@ -69,9 +69,9 @@
     @testset "opendss parse load model warnings" begin
         for model in [3, 4, 7, 8]
            dss = parse_dss("../test/data/opendss/loadparser_warn_model.dss")
-           dss["load"] = Dict{String,Any}((n,l) for (n,l) in dss["load"] if l["name"]=="d1phm$model")
+           dss["load"] = Dict{String,Any}((n,l) for (n,l) in dss["load"] if n=="d1phm$model")
            Memento.setlevel!(TESTLOG, "info")
-           @test_warn(TESTLOG, ": load model $model not supported. Treating as model 1.", parse_opendss(dss))
+           @test_warn(TESTLOG, ": dss load model $model not supported. Treating as constant POWER model", parse_opendss(dss))
            Memento.setlevel!(TESTLOG, "error")
         end
     end
@@ -206,7 +206,7 @@
         @test transformer["%loadloss"] == 0.01
         @test transformer["xhl"] == 0.02
         @test transformer["kv_2"] == 12.47
-        @test transformer["conn_2"] == "wye"
+        @test transformer["conn_2"] == WYE
         @test transformer["tap_3"] == 0.9
         @test transformer["wdg_3"] == 3
 
