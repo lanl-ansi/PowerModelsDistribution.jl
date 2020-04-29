@@ -86,15 +86,6 @@ const _dss2pmd_load_model = Dict{Int,LoadModel}(
 )
 
 
-"dss to pmd generator model"
-const _dss2pmd_gen_model = Dict{Int,GeneratorControlMode}(
-    1 => PQ,
-    2 => Z,
-    3 => PV,
-    7 => INVERTER,
-)
-
-
 "detects if `expr` is Reverse Polish Notation expression"
 function _isa_rpn(expr::AbstractString)::Bool
     expr = split(strip(expr, _array_delimiters))
@@ -164,7 +155,7 @@ end
 
 
 "parses connection \"conn\" specification reducing to wye or delta"
-function _parse_conn(conn::AbstractString)::ConnectionConfiguration
+function _parse_conn(conn::AbstractString)::ConnConfig
     if conn in ["wye", "y", "ln"]
         return WYE
     elseif conn in ["delta", "ll"]
@@ -286,7 +277,7 @@ function _parse_array(dtype::Type, data::AbstractString)::Vector{dtype}
     end
 
     if all(_isa_conn(el) for el in elements)
-        array = Vector{ConnectionConfiguration}([])
+        array = Vector{ConnConfig}([])
         for el in elements
             a = _parse_conn(el)
             push!(array, a)
@@ -513,8 +504,8 @@ end
 
 
 "creates a `dss` dict inside `object` that imports all items in `prop_order` from `dss_obj`"
-function _import_all!(object::Dict{String,<:Any}, dss_obj::Dict{String,<:Any}, prop_order::Vector{String})
-    object["dss"] = Dict{String,Any}((key, dss_obj[key]) for key in prop_order)
+function _import_all!(object::Dict{String,<:Any}, dss_obj::Dict{String,<:Any})
+    object["dss"] = Dict{String,Any}((key, dss_obj[key]) for key in dss_obj["prop_order"])
 end
 
 
@@ -592,7 +583,7 @@ end
 
 
 "Parses busnames as defined in OpenDSS, e.g. \"primary.1.2.3.0\""
-function _parse_busname(busname::AbstractString)::Tuple{String,Vector{Bool}}
+function _parse_bus_id(busname::AbstractString)::Tuple{String,Vector{Bool}}
     parts = split(busname, '.'; limit=2)
     name = parts[1]
     elements = "1.2.3"
@@ -817,6 +808,11 @@ function _add_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, eng_o
         data_eng[eng_obj_type] = Dict{Any,Any}()
     end
 
+    if haskey(data_eng[eng_obj_type], eng_obj_id)
+        Memento.warn(_LOGGER, "id '$eng_obj_id' already exists in $eng_obj_type, renaming to '$(eng_obj["source_id"])'")
+        eng_obj_id = eng_obj["source_id"]
+    end
+
     data_eng[eng_obj_type][eng_obj_id] = eng_obj
 end
 
@@ -867,14 +863,34 @@ function _parse_dss_load_model!(eng_obj::Dict{String,<:Any}, id::Any)
 end
 
 
-"converts dss generator model into PMD GeneratorControlMode enum"
-function _parse_dss_generator_model!(eng_obj::Dict{String,<:Any}, id::Any)
-    model = eng_obj["control_mode"]
+"checks if loadshape has both pmult and qmult"
+function _is_loadshape_split(dss_obj::Dict{String,<:Any})
+    haskey(dss_obj, "pmult") && haskey(dss_obj, "qmult") && all(dss_obj["pmult"] .!= dss_obj["qmult"])
+end
 
-    if model in [2, 4, 5, 6, 7]
-        Memento.warn(_LOGGER, "$id: dss generator model $model not supported. Treating as constant PQ model")
-        model = 1
+
+""
+function _parse_dss_xycurve(dss_obj::Dict{String,<:Any})::Array{Vector{Real},2}
+    _apply_like!(dss_obj, data_dss, "xycurve")
+    defaults = _apply_ordered_properties(_create_xycurve(id; _to_kwargs(dss_obj)...), dss_obj)
+
+    xarray = defaults["xarray"] .* defaults["xscale"] .+ defaults["xshift"]
+    yarray = defaults["yarray"] .* defaults["yscale"] .+ defaults["yshift"]
+
+    @assert length(xarray) >= 2 && length(yarray) >= 2 "XYCurve data must have two or more points"
+
+    return Array{Vector{Real},2}([xarray, yarray])
+end
+
+
+""
+function _apply_time_series!(eng_obj::Dict{String,<:Any}, defaults::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, time_series::String="daily")
+    eng_obj["time_series"] = Dict{String,Any}()
+    if _is_loadshape_split(data_dss["loadshape"][defaults[time_series]])
+        eng_obj["time_series"]["pd_nom"] = "$(defaults[time_series])_p"
+        eng_obj["time_series"]["qd_nom"] = "$(defaults[time_series])_q"
+    else
+        eng_obj["time_series"]["pd_nom"] = defaults[time_series]
+        eng_obj["time_series"]["qd_nom"] = defaults[time_series]
     end
-
-    eng_obj["control_mode"] = _dss2pmd_gen_model[model]
 end

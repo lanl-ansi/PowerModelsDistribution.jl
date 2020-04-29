@@ -234,18 +234,6 @@
     end
 
     @testset "opendss parse verify source_id" begin
-        @test math["shunt"]["2"]["source_id"] == "capacitor.c1"
-        @test math["shunt"]["4"]["source_id"] == "reactor.reactor3"
-
-        @test math["branch"]["8"]["source_id"] == "line.l1"
-        @test math["transformer"]["9"]["source_id"] == "_virtual_transformer.transformer.t4.1"  # winding indicated by .1
-        @test math["branch"]["25"]["source_id"] == "reactor.reactor1"
-
-        @test math["gen"]["4"]["source_id"] == "_virtual_gen.vsource.source"
-        @test math["gen"]["1"]["source_id"] == "generator.g2"
-
-        @test math["load"]["1"]["source_id"] == "load.ld1"
-
         @test all(haskey(component, "source_id") for component_type in PMD._dss_supported_components for component in values(get(math, component_type, Dict())) if component_type != "bus")
     end
 

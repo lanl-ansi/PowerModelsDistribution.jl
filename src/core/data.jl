@@ -58,7 +58,7 @@ function count_nodes(data::Dict{String,<:Any})::Int
                     if isa(object, Dict)
                         if haskey(object, "buses")
                             for busname in values(object["buses"])
-                                name, nodes = _parse_busname(busname)
+                                name, nodes = _parse_bus_id(busname)
 
                                 if !haskey(all_nodes, name)
                                     all_nodes[name] = Set([])
@@ -73,7 +73,7 @@ function count_nodes(data::Dict{String,<:Any})::Int
                         else
                             for (prop, val) in object
                                 if startswith(prop, "bus") && prop != "buses"
-                                    name, nodes = _parse_busname(val)
+                                    name, nodes = _parse_bus_id(val)
 
                                     if !haskey(all_nodes, name)
                                         all_nodes[name] = Set([])

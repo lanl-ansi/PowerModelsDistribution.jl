@@ -141,7 +141,7 @@ function create_line(; kwargs...)
     line = Dict{String,Any}(
         "f_bus" => kwargs[:f_bus],
         "t_bus" => kwargs[:t_bus],
-        "status" => get(kwargs, :status, 1),
+        "status" => get(kwargs, :status, ENABLED),
         "f_connections" => get(kwargs, :f_connections, collect(1:4)),
         "t_connections" => get(kwargs, :t_connections, collect(1:4)),
         "angmin" => get(kwargs, :angmin, fill(-60/180*pi, N)),
@@ -162,14 +162,13 @@ end
 
 
 "creates a bus object with some defaults"
-function create_bus(; kwargs...)
+function create_bus(; status::Status=ENABLED, terminals::Union{Vector{Int},Vector{String}}=collect(1:4), grounded::Union{Vector{Int},Vector{String}}=Vector{Int}([]), rg::Vector{<:Real}=Vector{Float64}([]), xg::Vector{<:Real}=Vector{Float64}([]), kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
 
     bus = Dict{String,Any}(
-        "status" => get(kwargs, :status, 1),
+        "status" => get(kwargs, :status, ENABLED),
         "terminals" => get(kwargs, :terminals, collect(1:4)),
         "grounded" => get(kwargs, :grounded, []),
-        "bus_type" => get(kwargs, :bus_type, 1),
         "rg" => get(kwargs, :rg, Array{Float64, 1}()),
         "xg" => get(kwargs, :xg, Array{Float64, 1}()),
     )
@@ -185,7 +184,7 @@ function create_load(; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
 
     load = Dict{String,Any}(
-        "status" => get(kwargs, :status, 1),
+        "status" => get(kwargs, :status, ENABLED),
         "configuration" => get(kwargs, :configuration, WYE),
         "model" => get(kwargs, :model, POWER),
         "connections" => get(kwargs, :connections, get(kwargs, :configuration, WYE)==WYE ? [1, 2, 3, 4] : [1, 2, 3]),
@@ -211,7 +210,7 @@ function create_generator(; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
 
     generator = Dict{String,Any}(
-        "status" => get(kwargs, :status, 1),
+        "status" => get(kwargs, :status, ENABLED),
         "configuration" => get(kwargs, :configuration, WYE),
         "cost" => get(kwargs, :cost, [1.0, 0.0]*1E-3),
     )
@@ -232,7 +231,7 @@ function create_transformer(; kwargs...)
     n_windings = length(kwargs[:bus])
 
     transformer = Dict{String,Any}(
-        "status" => get(kwargs, :status, 1),
+        "status" => get(kwargs, :status, ENABLED),
         "configuration" => get(kwargs, :configuration, fill(WYE, n_windings)),
         "polarity" => get(kwargs, :polarity, fill(true, n_windings)),
         "rs" => get(kwargs, :rs, zeros(n_windings)),
@@ -256,7 +255,7 @@ end
 "creates a shunt capacitor object with some defaults"
 function create_shunt_capacitor(; kwargs...)
     shunt_capacitor = Dict{String,Any}(
-        "status" => get(kwargs, :status, 1),
+        "status" => get(kwargs, :status, ENABLED),
         "configuration" => get(kwargs, :configuration, WYE),
         "connections" => get(kwargs, :connections, collect(1:4)),
         "qd_ref" => get(kwargs, :qd_ref, fill(0.0, 3)),
@@ -275,7 +274,7 @@ function create_shunt(; kwargs...)
     N = length(get(kwargs, :connections, collect(1:4)))
 
     shunt = Dict{String,Any}(
-        "status" => get(kwargs, :status, 1),
+        "status" => get(kwargs, :status, ENABLED),
         "g_sh" => get(kwargs, :g_sh, fill(0.0, N, N)),
         "b_sh" => get(kwargs, :b_sh, fill(0.0, N, N)),
     )
@@ -291,7 +290,7 @@ function create_voltage_source(; kwargs...)
     kwargs = Dict{Symbol,Any}(kwargs)
 
     voltage_source = Dict{String,Any}(
-        "status" => get(kwargs, :status, 1),
+        "status" => get(kwargs, :status, ENABLED),
         "connections" => get(kwargs, :connections, collect(1:3)),
     )
 

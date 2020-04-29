@@ -62,11 +62,19 @@ function _parse_enums!(data::Dict{String,<:Any})
         if isa(root_value, Dict)
             for (component_id, component) in root_value
                 if isa(component, Dict)
+                    if haskey(component, "status")
+                        component["status"] = Status(component["status"])
+                    end
+
+                    if haskey(component, "dispatchable")
+                        component["dispatchable"] = Dispatchable(component["dispatchable"])
+                    end
+
                     if haskey(component, "configuration")
                         if isa(component["configuration"], Vector)
-                            component["configuration"] = Vector{ConnectionConfiguration}([ConnectionConfiguration(el) for el in component["configuration"]])
+                            component["configuration"] = Vector{ConnConfig}([ConnConfig(el) for el in component["configuration"]])
                         else
-                            component["configuration"] = ConnectionConfiguration(component["configuration"])
+                            component["configuration"] = ConnConfig(component["configuration"])
                         end
                     end
 
@@ -75,11 +83,15 @@ function _parse_enums!(data::Dict{String,<:Any})
                     end
 
                     if root_type == "generator" && haskey(component, "control_mode")
-                        component["generator"] = GeneratorControlMode(component["control_model"])
+                        component["generator"] = ControlMode(component["control_model"])
                     end
 
                     if root_type == "load" && haskey(component, "model")
                         component["model"] = LoadModel(component["model"])
+                    end
+
+                    if root_type == "shunt" && haskey(component, "model")
+                        component["model"] = ShuntModel(component["model"])
                     end
                 end
             end
@@ -144,13 +156,13 @@ end
 
 
 "custom handling for enums output to json"
-function show_json(io::StructuralContext, ::CommonSerialization, f::Union{DataModel,LoadModel,SwitchState,GeneratorControlMode,ConnectionConfiguration})
+function show_json(io::StructuralContext, ::CommonSerialization, f::PowerModelsDistributionEnums)
     return show_json(io, StandardSerialization(), Int(f))
 end
 
 
 "custom handling for enums output to json"
-JSON.lower(p::Union{DataModel,LoadModel,SwitchState,GeneratorControlMode,ConnectionConfiguration}) = Int(p)
+JSON.lower(p::PowerModelsDistributionEnums) = Int(p)
 
 
 "parses in a serialized matrix"
