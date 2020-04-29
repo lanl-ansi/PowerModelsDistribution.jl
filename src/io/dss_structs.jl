@@ -269,7 +269,6 @@ function _create_load(name::String=""; kwargs...)::Dict{String,Any}
             kva = abs(kw) + kvar^2
     end
 
-    # TODO: yearly, daily, duty, growth, model
     # TODO: ZIPV (7 coefficient array, depends on model keyword)
 
     Dict{String,Any}(
@@ -280,8 +279,8 @@ function _create_load(name::String=""; kwargs...)::Dict{String,Any}
         "kw" => kw,
         "pf" => pf,
         "model" => get(kwargs, :model, 1),
-        "yearly" => get(kwargs, :yearly, get(kwargs, :daily, Vector{Float64}([1.0, 1.0]))),
-        "daily" => get(kwargs, :daily, Vector{Float64}([1.0, 1.0])),
+        "yearly" => get(kwargs, :yearly, ""),
+        "daily" => get(kwargs, :daily, ""),
         "duty" => get(kwargs, :duty, ""),
         "growth" => get(kwargs, :growth, ""),
         "conn" => get(kwargs, :conn, WYE),

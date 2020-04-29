@@ -4,15 +4,25 @@
 "Load Models"
 @enum LoadModel POWER CURRENT IMPEDANCE EXPONENTIAL ZIP
 
-"Switch States"
-@enum SwitchState OPEN CLOSED FIXED_OPEN FIXED_CLOSED
+"Shunt Models"
+@enum ShuntModel GENERIC CAPACITOR REACTOR
 
-"Generator Control Modes"
-@enum GeneratorControlMode PQ PV Z INVERTER  # TODO needs better names
+"Switch States"
+@enum SwitchState OPEN CLOSED
+
+"Generator, Solar, Storage, Wind Control Modes"
+@enum ControlMode DROOP ISOCHRONOUS
 
 "Configurations"
-@enum ConnectionConfiguration WYE DELTA
+@enum ConnConfig WYE DELTA
 
+"Dispatchable"
+@enum Dispatchable NO YES
+
+"Status"
+@enum Status DISABLED ENABLED
+
+PowerModelsDistributionEnums = Union{DataModel,LoadModel,ShuntModel,SwitchState,ControlMode,ConnConfig,Dispatchable,Status}
 
 "Base Abstract NLP Unbalanced Branch Flow Model"
 abstract type AbstractNLPUBFModel <: _PM.AbstractBFQPModel end

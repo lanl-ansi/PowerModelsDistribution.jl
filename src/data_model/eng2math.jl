@@ -7,20 +7,17 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "transformer" => ["f_connections", "t_connections", "source_id", "dss"],
     "switch" => ["status", "f_connections", "t_connections", "source_id", "dss"],
     "line_reactor" => ["f_connections", "t_connections", "source_id", "dss"],
-    "series_capacitor" => ["f_connections", "t_connections", "source_id", "dss"],
-    "shunt" => ["status", "gs", "bs", "connections", "source_id", "dss"],
-    "shunt_capacitor" => ["status", "bs", "connections", "source_id", "dss"],
-    "shunt_reactor" => ["status", "connections", "source_id", "dss"],
-    "load" => ["model", "configuration", "connections", "status", "source_id", "dss"],
+    "shunt" => ["status", "dispatchable", "gs", "bs", "connections", "source_id", "dss"],
+    "load" => ["model", "configuration", "connections", "dispatchable", "status", "source_id", "dss"],
     "generator" => ["pg", "qg", "configuration", "connections", "source_id", "dss"],
-    "solar" => ["configuration", "connections", "source_id", "dss"],
+    "solar" => ["pg", "qg", "configuration", "connections", "source_id", "dss"],
     "storage" => ["status", "energy", "ps", "qs", "connections", "source_id", "dss"],
     "voltage_source" => ["source_id", "dss"],
 )
 
 "list of nodal type elements in the engineering model"
 const _node_elements = Vector{String}([
-    "load", "capacitor", "shunt_reactor", "generator", "solar", "storage", "vsource"
+    "load", "shunt", "generator", "solar", "storage", "voltage_source"
 ])
 
 "list of edge type elements in the engineering model"
@@ -28,119 +25,6 @@ const _edge_elements = Vector{String}([
     "line", "switch", "transformer", "line_reactor", "series_capacitor"
 ])
 
-"list of time-series supported parameters that map one-to-one"
-const _time_series_parameters = Dict{String,Dict{String,Tuple{Function, String}}}(
-    "switch" => Dict{String,Tuple{Function, String}}(
-        "status" => (_no_conversion, "status"),
-        "state" => (_no_conversion, "state"),
-        "c_rating" => (_no_conversion, "cm_ub"),
-        "s_rating" => (_no_conversion, "sm_ub"),
-        "br_r" => (_impedance_conversion, "rs"),
-        "br_x" => (_impedance_conversion, "xs"),
-        "g_fr" => (_admittance_conversion, "g_fr"),
-        "g_to" => (_admittance_conversion, "g_to"),
-        "b_fr" => (_admittance_conversion, "b_fr"),
-        "b_to" => (_admittance_conversion, "b_to")
-    ),
-    "fuse" => Dict{String,Tuple{Function, String}}(
-        "status" => (_no_conversion, "status"),
-        "state" => (_no_conversion, "state"),
-        "c_rating" => (_no_conversion, "cm_ub"),
-        "s_rating" => (_no_conversion, "sm_ub"),
-        "br_r" => (_impedance_conversion, "rs"),
-        "br_x" => (_impedance_conversion, "xs"),
-        "g_fr" => (_admittance_conversion, "g_fr"),
-        "g_to" => (_admittance_conversion, "g_to"),
-        "b_fr" => (_admittance_conversion, "b_fr"),
-        "b_to" => (_admittance_conversion, "b_to")
-    ),
-    "line" => Dict{String,Tuple{Function, String}}(
-        "br_status" => (_no_conversion, "status"),
-        "c_rating" => (_no_conversion, "cm_ub"),
-        "s_rating" => (_no_conversion, "sm_ub"),
-        "br_r" => (_impedance_conversion, "rs"),
-        "br_x" => (_impedance_conversion, "xs"),
-        "g_fr" => (_admittance_conversion, "g_fr"),
-        "g_to" => (_admittance_conversion, "g_to"),
-        "b_fr" => (_admittance_conversion, "b_fr"),
-        "b_to" => (_admittance_conversion, "b_to")
-    ),
-    "transformer" => Dict{String,Tuple{Function, String}}(
-        "status" => (_no_conversion, "status"),
-        # TODO need to figure out how to convert values for time series for decomposed transformers
-    ),
-    "bus" => Dict{String,Tuple{Function, String}}(
-        "bus_type" => (_bus_type_conversion, "status"),
-        "vmin" => (_no_conversion, "vm_lb"),
-        "vmax" => (_no_conversion, "vm_ub"),
-        "vm" => (_no_conversion, "vm"),
-        "va" => (_no_conversion, "va")
-    ),
-    "shunt" => Dict{String,Tuple{Function, String}}(
-        "status" => (_no_conversion, "status"),
-        "gs" => (_no_conversion, "gs"),
-        "bs" => (_no_conversion, "bs"),
-    ),
-    "shunt_capacitor" => Dict{String,Tuple{Function, String}}(
-        "status" => (_no_conversion, "status"),
-        "gs" => (_no_conversion, "gs"),
-        "bs" => (_no_conversion, "bs"),
-    ),
-    "shunt_reactor" => Dict{String,Tuple{Function, String}}(
-        "status" => (_no_conversion, "status"),
-        "gs" => (_no_conversion, "gs"),
-        "bs" => (_no_conversion, "bs"),
-    ),
-    "load" => Dict{String,Tuple{Function, String}}(
-        "status" => (_no_conversion, "status"),
-        "pd_ref" => (_no_conversion, "pd_nom"),
-        "qd_ref" => (_no_conversion, "qd_nom"),
-    ),
-    "generator" => Dict{String,Tuple{Function, String}}(
-        "gen_status" => (_no_conversion, "status"),
-        "pg" => (_no_conversion, "pg"),
-        "qg" => (_no_conversion, "qg"),
-        "vg" => (_vnom_conversion, "vg"),
-        "pmin" => (_no_conversion, "pg_lb"),
-        "pmax" => (_no_conversion, "pg_ub"),
-        "qmin" => (_no_conversion, "qg_lb"),
-        "qmax" => (_no_conversion, "qg_ub"),
-    ),
-    "solar" => Dict{String,Tuple{Function, String}}(
-        "gen_status" => (_no_conversion, "status"),
-        "pg" => (_no_conversion, "pg"),
-        "qg" => (_no_conversion, "qg"),
-        "vg" => (_vnom_conversion, "vg"),
-        "pmin" => (_no_conversion, "pg_lb"),
-        "pmax" => (_no_conversion, "pg_ub"),
-        "qmin" => (_no_conversion, "qg_lb"),
-        "qmax" => (_no_conversion, "qg_ub"),
-    ),
-    "storage" => Dict{String,Tuple{Function, String}}(
-        "status" => (_no_conversion, "status"),
-        "energy" => (_no_conversion, "energy"),
-        "energy_rating" => (_no_conversion, "energy_ub"),
-        "charge_rating" => (_no_conversion, "charge_ub"),
-        "discharge_rating" => (_no_conversion, "discharge_ub"),
-        "charge_efficiency" => (_no_conversion, "charge_efficiency"),
-        "discharge_efficiency" => (_no_conversion, "discharge_efficiency"),
-        "thermal_rating" => (_no_conversion, "cm_ub"),
-        "qmin" => (_no_conversion, "qs_lb"),
-        "qmax" => (_no_conversion, "qs_ub"),
-        "r" => (_no_conversion, "rs"),
-        "x" => (_no_conversion, "xs"),
-        "p_loss" => (_no_conversion, "pex"),
-        "q_loss" => (_no_conversion, "qex"),
-        "ps" => (_no_conversion, "ps"),
-        "qs" => (_no_conversion, "qs"),
-    ),
-    "voltage_source" => Dict{String,Tuple{Function, String}}(
-        "gen_status" => (_no_conversion, "status"),
-        "vm" => (_no_conversion, "vm"),
-        "va" => (_angle_shift_conversion, "va"),
-    ),
-
-)
 
 "base function for converting engineering model to mathematical model"
 function _map_eng2math(data_eng; kron_reduced::Bool=true)
@@ -172,15 +56,11 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
     _map_eng2math_line!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_switch!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_transformer!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_line_reactor!(data_math, data_eng; kron_reduced=kron_reduced)
-    # _map_eng2math_series_capacitor(data_math, data_eng; kron_reduced=kron_reduced)  # TODO build conversion for series capacitors
 
     # convert nodes
     _map_eng2math_load!(data_math, data_eng; kron_reduced=kron_reduced)
 
     _map_eng2math_shunt!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_shunt_capacitor!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_shunt_reactor!(data_math, data_eng; kron_reduced=kron_reduced)
 
     _map_eng2math_generator!(data_math, data_eng; kron_reduced=kron_reduced)
     _map_eng2math_solar!(data_math, data_eng; kron_reduced=kron_reduced)
@@ -266,11 +146,9 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
         ))
 
         # time series
-        for (fr, (f, to)) in _time_series_parameters["bus"]
-            if haskey(eng_obj, "$(fr)_time_series")
-                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
-                _parse_time_series_parameter!(data_math, time_series, eng_obj, "bus", "$(math_obj["index"])", fr, to, f)
-            end
+        # TODO
+        for (k, v) in get(eng_obj, "time_series", Dict{String,Any}())
+            time_series = data_eng["time_series"][v]
         end
     end
 end
@@ -324,7 +202,7 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
 
         math_obj["switch"] = false
 
-        math_obj["br_status"] = eng_obj["status"]
+        math_obj["br_status"] = Int(eng_obj["status"])
 
         data_math["branch"]["$(math_obj["index"])"] = math_obj
 
@@ -333,15 +211,6 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             "to" => "branch.$(math_obj["index"])",
             "unmap_function" => "_map_math2eng_line!",
         ))
-
-        # time series
-        # TODO
-        for (fr, to) in zip(["status"], ["status"])
-            if haskey(eng_obj, "$(fr)_time_series")
-                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
-                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "branch", "$(math_obj["index"])", to)
-            end
-        end
     end
 end
 
@@ -459,15 +328,6 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
 
         map_to = "switch.$(math_obj["index"])"
 
-        # time series
-        # TODO switch time series
-        for (fr, to) in zip(["status", "state"], ["status", "state"])
-            if haskey(eng_obj, "$(fr)_time_series")
-                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
-                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "switch", "$(math_obj["index"])", to)
-            end
-        end
-
         if any(haskey(eng_obj, k) for k in ["rs", "xs", "linecode"])
             # build virtual bus
 
@@ -532,18 +392,6 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
 
             data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 
-            # build switch
-            switch_obj = Dict{String,Any}(
-                "name" => name,
-                "source_id" => eng_obj["source_id"],
-                "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
-                "t_bus" => bus_obj["bus_i"],
-                "status" => eng_obj["status"],
-                "index" => length(data_math["switch"])+1
-            )
-
-            # data_math["switch"]["$(switch_obj["index"])"] = switch_obj
-
             map_to = ["branch.$(branch_obj["index"])"]
             # map_to = [map_to, "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"]  # TODO enable real switches
         end
@@ -559,76 +407,6 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
 end
 
 
-"converts engineering line reactors into mathematical branches"
-function _map_eng2math_line_reactor!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
-    # TODO support line reactors natively, currently treated like branches
-    for (name, eng_obj) in get(data_eng, "line_reactor", Dict{Any,Dict{String,Any}}())
-        math_obj = _init_math_obj("line", name, eng_obj, length(data_math["branch"])+1)
-        math_obj["name"] = "_virtual_branch.$(eng_obj["source_id"])"
-
-        nphases = length(eng_obj["f_connections"])
-        nconductors = data_math["conductors"]
-
-        math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
-        math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
-
-        math_obj["br_r"] = _impedance_conversion(data_eng, eng_obj, "rs")
-        math_obj["br_x"] = _impedance_conversion(data_eng, eng_obj, "xs")
-
-        math_obj["g_fr"] = _admittance_conversion(data_eng, eng_obj, "g_fr")
-        math_obj["g_to"] = _admittance_conversion(data_eng, eng_obj, "g_to")
-
-        math_obj["b_fr"] = _admittance_conversion(data_eng, eng_obj, "b_fr")
-        math_obj["b_to"] = _admittance_conversion(data_eng, eng_obj, "b_to")
-
-        math_obj["angmin"] = fill(-60.0, nphases)
-        math_obj["angmax"] = fill( 60.0, nphases)
-
-        math_obj["transformer"] = false
-        math_obj["shift"] = zeros(nphases)
-        math_obj["tap"] = ones(nphases)
-
-        f_bus = data_eng["bus"][eng_obj["f_bus"]]
-        t_bus = data_eng["bus"][eng_obj["t_bus"]]
-
-        if kron_reduced
-            @assert(all(eng_obj["f_connections"].==eng_obj["t_connections"]), "Kron reduction is only supported if f_connections is the same as t_connections.")
-            filter = _kron_reduce_branch!(math_obj,
-                ["br_r", "br_x"], ["g_fr", "b_fr", "g_to", "b_to"],
-                eng_obj["f_connections"], kr_neutral
-            )
-            _apply_filter!(math_obj, ["angmin", "angmax", "tap", "shift"], filter)
-            connections = eng_obj["f_connections"][filter]
-            _pad_properties!(math_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "angmin", "angmax", "tap", "shift"], connections, kr_phases)
-        else
-            math_obj["f_connections"] = eng_obj["f_connections"]
-            math_obj["t_connections"] = eng_obj["t_connections"]
-        end
-
-        math_obj["switch"] = false
-
-        math_obj["br_status"] = eng_obj["status"]
-
-        data_math["branch"]["$(math_obj["index"])"] = math_obj
-
-        push!(data_math["map"], Dict{String,Any}(
-            "from" => name,
-            "to" => "branch.$(math_obj["index"])",
-            "unmap_function" => "_map_math2eng_line_reactor!",
-        ))
-
-        # time series
-        # TODO
-        for (fr, to) in zip(["status"], ["status"])
-            if haskey(eng_obj, "$(fr)_time_series")
-                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
-                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "branch", "$(math_obj["index"])", to)
-            end
-        end
-    end
-end
-
-
 "converts engineering generic shunt components into mathematical shunt components"
 function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
     for (name, eng_obj) in get(data_eng, "shunt", Dict{Any,Dict{String,Any}}())
@@ -637,8 +415,7 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
         # TODO change to new capacitor shunt calc logic
         math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
-        math_obj["gs"] = eng_obj["gs"]
-        math_obj["bs"] = eng_obj["bs"]
+        math_obj["gs"] = get(eng_obj, "gs", zeros(size(eng_obj["bs"])))
 
         if kron_reduced
             filter = _kron_reduce_branch!(math_obj,
@@ -656,96 +433,8 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
         push!(data_math["map"], Dict{String,Any}(
             "from" => name,
             "to" => "shunt.$(math_obj["index"])",
-            "unmap_function" => "_map_math2eng_capacitor!",
+            "unmap_function" => "_map_math2eng_shunt!",
         ))
-
-        # time series
-        for (fr, (f, to)) in _time_series_parameters["shunt"]
-            if haskey(eng_obj, "$(fr)_time_series")
-                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
-                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "shunt", "$(math_obj["index"])", to)
-            end
-        end
-    end
-end
-
-
-"converts engineering shunt capacitors into mathematical shunts"
-function _map_eng2math_shunt_capacitor!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
-    for (name, eng_obj) in get(data_eng, "shunt_capacitor", Dict{Any,Dict{String,Any}}())
-        math_obj = _init_math_obj("shunt_capacitor", name, eng_obj, length(data_math["shunt"])+1)
-
-        math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
-
-        math_obj["gs"] = zeros(size(eng_obj["bs"]))
-
-        if kron_reduced
-            filter = _kron_reduce_branch!(math_obj,
-                Vector{String}([]), ["gs", "bs"],
-                eng_obj["connections"], kr_neutral
-            )
-            connections = eng_obj["connections"][filter]
-            _pad_properties!(math_obj, ["gs", "bs"], connections, kr_phases)
-        else
-            math_obj["connections"] = eng_obj["connections"]
-        end
-
-        data_math["shunt"]["$(math_obj["index"])"] = math_obj
-
-        push!(data_math["map"], Dict{String,Any}(
-            "from" => name,
-            "to" => "shunt.$(math_obj["index"])",
-            "unmap_function" => "_map_math2eng_shunt_capacitor!",
-        ))
-
-        # time series
-        # TODO
-        for (fr, (f, to)) in _time_series_parameters["shunt_capacitor"]
-            if haskey(eng_obj, "$(fr)_time_series")
-                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
-                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "shunt", "$(math_obj["index"])", to)
-            end
-        end
-    end
-end
-
-
-"converts engineering shunt reactors into mathematical shunts"
-function _map_eng2math_shunt_reactor!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
-    for (name, eng_obj) in get(data_eng, "shunt_reactor", Dict{Any,Dict{String,Any}}())
-        math_obj = _init_math_obj("shunt_reactor", name, eng_obj, length(data_math["shunt"])+1)
-
-        connections = eng_obj["connections"]
-        nconductors = data_math["conductors"]
-
-        math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
-
-        math_obj["gs"] = fill(0.0, size(eng_obj["bs"])...)
-
-        if kron_reduced
-            if eng_obj["configuration"] == WYE
-                _pad_properties!(math_obj, ["gs", "bs"], connections[1:end-1], kr_phases)
-            else
-                _pad_properties!(math_obj, ["gs", "bs"], connections, kr_phases)
-            end
-        end
-
-        data_math["shunt"]["$(math_obj["index"])"] = math_obj
-
-        push!(data_math["map"], Dict{String,Any}(
-            "from" => name,
-            "to" => "shunt.$(math_obj["index"])",
-            "unmap_function" => "_map_math2eng_shunt_reactor!",
-        ))
-
-        # time series
-        # TODO
-        for (fr, (f, to)) in _time_series_parameters["shunt_reactor"]
-            if haskey(eng_obj, "$(fr)_time_series")
-                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
-                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "shunt", "$(math_obj["index"])", to)
-            end
-        end
     end
 end
 
@@ -782,14 +471,6 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             "to" => "load.$(math_obj["index"])",
             "unmap_function" => "_map_math2eng_load!",
         ))
-
-        # time series
-        for (fr, (f, to)) in _time_series_parameters["load"]
-            if haskey(eng_obj, "$(fr)_time_series")
-                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
-                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "load", "$(math_obj["index"])", to)
-            end
-        end
     end
 end
 
@@ -841,15 +522,6 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
             "to" => "gen.$(math_obj["index"])",
             "unmap_function" => "_map_math2eng_generator!",
         ))
-
-        # time series
-        # TODO
-        for (fr, (f, to)) in _time_series_parameters["generator"]
-            if haskey(eng_obj, "$(fr)_time_series")
-                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
-                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "gen", "$(math_obj["index"])", to)
-            end
-        end
     end
 end
 
@@ -865,15 +537,11 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["gen_status"] = eng_obj["status"]
 
-        math_obj["pg"] = eng_obj["kva"]
-        math_obj["qg"] = eng_obj["kvar"]
-        math_obj["vg"] = eng_obj["kv"]
-
-        math_obj["pmin"] = get(eng_obj, "minkva", zeros(size(eng_obj["kva"])))
-        math_obj["pmax"] = get(eng_obj, "maxkva", eng_obj["kva"])
-
-        math_obj["qmin"] =  get(eng_obj, "minkvar", -eng_obj["kvar"])
-        math_obj["qmax"] =  get(eng_obj, "maxkvar",  eng_obj["kvar"])
+        for (fr_k, to_k) in [("vg", "vg"), ("pg_lb", "pmin"), ("pg_ub", "pmax"), ("qg_lb", "qmin"), ("qg_ub", "qmax")]
+            if haskey(eng_obj, fr_k)
+                math_obj[to_k] = eng_obj[fr_k]
+            end
+        end
 
         _add_gen_cost_model!(math_obj, eng_obj)
 
@@ -895,15 +563,6 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
             "to" => "gen.$(math_obj["index"])",
             "unmap_function" => "_map_math2eng_solar!",
         ))
-
-        # time series
-        # TODO
-        for (fr, (f, to)) in _time_series_parameters["solar"]
-            if haskey(eng_obj, "$(fr)_time_series")
-                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
-                _parse_time_series_parameter!(data_math, time_series, eng_obj, "gen", "$(math_obj["index"])", fr, to, f)
-            end
-        end
     end
 end
 
@@ -947,15 +606,6 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
             "to" => "storage.$(math_obj["index"])",
             "unmap_function" => "_map_math2eng_storage!",
         ))
-
-        # time series
-        # TODO
-        for (fr, (f, to)) in _time_series_parameters["storage"]
-            if haskey(eng_obj, "$(fr)_time_series")
-                time_series = data_eng["time_series"][eng_obj["$(fr)_time_series"]]
-                _parse_time_series_parameter!(data_math, time_series, eng_obj[fr], "storage", "$(math_obj["index"])", to)
-            end
-        end
     end
 end
 
