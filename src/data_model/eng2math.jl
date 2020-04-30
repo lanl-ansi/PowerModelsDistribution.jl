@@ -40,8 +40,6 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
     #TODO the PM tests break for branches which are not of the size indicated by conductors;
     # for now, set to 1 to prevent this from breaking when not kron-reduced
     data_math["conductors"] = kron_reduced ? 3 : 1
-    data_math["basekv"] = data_eng["settings"]["vbase"]
-    data_math["baseMVA"] = data_eng["settings"]["sbase"]*data_eng["settings"]["v_var_scalar"]/1E6
 
     data_math["map"] = Vector{Dict{String,Any}}([
         Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
@@ -119,8 +117,6 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
 
         math_obj["vmin"] = get(eng_obj, "vm_lb", fill(0.0, length(terminals)))
         math_obj["vmax"] = get(eng_obj, "vm_ub", fill(Inf, length(terminals)))
-
-        math_obj["base_kv"] = data_eng["settings"]["vbase"]
 
         if kron_reduced
             filter = terminals.!=kr_neutral
@@ -229,8 +225,8 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
 
         _apply_xfmrcode!(eng_obj, data_eng)
 
-        vnom = eng_obj["vnom"] * data_eng["settings"]["v_var_scalar"]
-        snom = eng_obj["snom"] * data_eng["settings"]["v_var_scalar"]
+        vnom = eng_obj["vnom"] * data_eng["settings"]["voltage_scale_factor"]
+        snom = eng_obj["snom"] * data_eng["settings"]["power_scale_factor"]
 
         nrw = length(eng_obj["bus"])
 
@@ -247,7 +243,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
         b_sh = -(eng_obj["imag"]*snom[1])/vnom[1]^2
 
         # data is measured externally, but we now refer it to the internal side
-        ratios = vnom/data_eng["settings"]["v_var_scalar"]
+        ratios = vnom/data_eng["settings"]["voltage_scale_factor"]
         x_sc = x_sc./ratios[1]^2
         r_s = r_s./ratios.^2
         g_sh = g_sh*ratios[1]^2
@@ -339,7 +335,6 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "bus_type" => get(eng_obj, "state", CLOSED) == OPEN ? 4 : 1,
                 "vmin" => f_bus["vmin"],
                 "vmax" => f_bus["vmax"],
-                "base_kv" => f_bus["base_kv"],
                 "index" => length(data_math["bus"])+1,
             )
 
@@ -487,7 +482,7 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["gen_status"] = eng_obj["status"]
 
-        math_obj["vg"] = eng_obj["vg"] ./ data_math["basekv"]
+        math_obj["vg"] = eng_obj["vg"]
 
         math_obj["qmin"] = eng_obj["qg_lb"]
         math_obj["qmax"] = eng_obj["qg_ub"]
@@ -578,19 +573,21 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
         math_obj["storage_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
         # needs to be in units MW
-        math_obj["energy"] = eng_obj["energy"] * data_eng["settings"]["v_var_scalar"] / 1e6
-        math_obj["energy_rating"] = eng_obj["energy_ub"] * data_eng["settings"]["v_var_scalar"] / 1e6
-        math_obj["charge_rating"] = eng_obj["charge_ub"] * data_eng["settings"]["v_var_scalar"] / 1e6
-        math_obj["discharge_rating"] = eng_obj["discharge_ub"] * data_eng["settings"]["v_var_scalar"] / 1e6
+        math_obj["energy"] = eng_obj["energy"] * data_eng["settings"]["power_scale_factor"] / 1e6
+        #TODO is scale factor correct?
+        math_obj["energy_rating"] = eng_obj["energy_ub"] * data_eng["settings"]["power_scale_factor"] / 1e6
+        math_obj["charge_rating"] = eng_obj["charge_ub"] * data_eng["settings"]["power_scale_factor"] / 1e6
+        math_obj["discharge_rating"] = eng_obj["discharge_ub"] * data_eng["settings"]["power_scale_factor"] / 1e6
         math_obj["charge_efficiency"] = eng_obj["charge_efficiency"] / 100.0
         math_obj["discharge_efficiency"] = eng_obj["discharge_efficiency"] / 100.0
-        math_obj["thermal_rating"] = eng_obj["cm_ub"] .* data_eng["settings"]["v_var_scalar"] ./ 1e6
-        math_obj["qmin"] = eng_obj["qs_lb"] .* data_eng["settings"]["v_var_scalar"] ./ 1e6
-        math_obj["qmax"] =  eng_obj["qs_ub"] .* data_eng["settings"]["v_var_scalar"] ./ 1e6
+        #TODO is scale factor correct? what  should be the  unit?
+        math_obj["thermal_rating"] = eng_obj["cm_ub"] .* data_eng["settings"]["power_scale_factor"] ./ 1e6
+        math_obj["qmin"] = eng_obj["qs_lb"] .* data_eng["settings"]["power_scale_factor"] ./ 1e6
+        math_obj["qmax"] =  eng_obj["qs_ub"] .* data_eng["settings"]["power_scale_factor"] ./ 1e6
         math_obj["r"] = eng_obj["rs"]
         math_obj["x"] = eng_obj["xs"]
-        math_obj["p_loss"] = eng_obj["pex"] .* data_eng["settings"]["v_var_scalar"] ./ 1e6
-        math_obj["q_loss"] = eng_obj["qex"] .* data_eng["settings"]["v_var_scalar"] ./ 1e6
+        math_obj["p_loss"] = eng_obj["pex"] .* data_eng["settings"]["power_scale_factor"] ./ 1e6
+        math_obj["q_loss"] = eng_obj["qex"] .* data_eng["settings"]["power_scale_factor"] ./ 1e6
 
         math_obj["ps"] = get(eng_obj, "ps", zeros(size(eng_obj["cm_ub"])))
         math_obj["qs"] = get(eng_obj, "qs", zeros(size(eng_obj["cm_ub"])))
@@ -640,8 +637,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "vm" => [eng_obj["vm"]..., 0.0],
                 "va" => [eng_obj["va"]..., 0.0],
                 "vmin" => [eng_obj["vm"]..., 0.0],
-                "vmax" => [eng_obj["vm"]..., 0.0],
-                "basekv" => data_math["basekv"]
+                "vmax" => [eng_obj["vm"]..., 0.0]
             )
 
             if kron_reduced

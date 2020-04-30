@@ -64,9 +64,13 @@ end
 function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true)
     if get(data, "data_model", MATHEMATICAL) == ENGINEERING
         check_eng_data_model(data)
-    else
+    else #TODO if DSS is also a data_model enum, then use elseif instead
         if make_pu
             make_per_unit!(data)
+            #TODO system-wide vbase does not make sense anymore...
+            #take highest vbase just so it does not break anything for now
+            data["basekv"]  = maximum(bus["vbase"] for (_, bus) in data["bus"])
+            data["baseMVA"] = data["settings"]["sbase"]*data["settings"]["power_scale_factor"]/1E6
 
             _PM.check_connectivity(data)
             _PM.correct_transformer_parameters!(data)

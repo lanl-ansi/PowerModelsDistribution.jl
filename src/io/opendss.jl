@@ -395,7 +395,7 @@ function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         vm_pu = defaults["pu"]
 
         phases = defaults["phases"]
-        vnom = data_eng["settings"]["vbase"]
+        vnom = first(data_eng["settings"]["vbases_default"])[2]
 
         vm = fill(vm_pu, phases)*vnom
         va = rad2deg.(_wrap_to_pi.([-2*pi/phases*(i-1)+deg2rad(ph1_ang) for i in 1:phases]))
@@ -899,10 +899,11 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
         source_bus = _parse_bus_id(defaults["bus1"])[1]
 
         data_eng["name"] = data_dss["circuit"]
-        data_eng["settings"]["v_var_scalar"] = 1e3
-        data_eng["settings"]["vbase"] = defaults["basekv"] / sqrt(3)
-        data_eng["settings"]["base_bus"] = source_bus
-        data_eng["settings"]["sbase"] = defaults["basemva"] * 1e3
+        
+        data_eng["settings"]["voltage_scale_factor"] = 1e3
+        data_eng["settings"]["power_scale_factor"] = 1e3
+        data_eng["settings"]["vbases_default"] = Dict(source_bus=>defaults["basekv"] / sqrt(3))
+        data_eng["settings"]["sbase_default"] = defaults["basemva"] * 1e3
         data_eng["settings"]["base_frequency"] = get(get(data_dss, "options", Dict{String,Any}()), "defaultbasefreq", 60.0)
 
         # collect turns the Set into Array, making it serializable

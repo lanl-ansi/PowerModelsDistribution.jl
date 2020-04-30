@@ -24,14 +24,17 @@ const _dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
 
 
 "converts data model between per-unit and SI units"
-function make_per_unit!(data::Dict{String,<:Any}; data_model_type=get(data, "data_model", MATHEMATICAL))
+function make_per_unit!(data::Dict{String,<:Any}; vbases=nothing, sbase=nothing, data_model_type=get(data, "data_model", MATHEMATICAL))
     if  data_model_type == MATHEMATICAL
         if !get(data, "per_unit", false)
-            bus_indexed_id = string(data["bus_lookup"][data["settings"]["base_bus"]])
-            vbases = Dict(bus_indexed_id=>data["settings"]["vbase"])
-            sbase = data["settings"]["sbase"]
+            if vbases==nothing
+                vbases = Dict(string(data["bus_lookup"][id])=>vbase for (id, vbase) in data["settings"]["vbases_default"])
+            end
+            if sbase==nothing
+                sbase = data["settings"]["sbase_default"]
+            end
 
-            _make_math_per_unit!(data, vbases=vbases, sbase=sbase, v_var_scalar=data["settings"]["v_var_scalar"])
+            _make_math_per_unit!(data, vbases=vbases, sbase=sbase)
         else
             # TODO make math model si units
         end
@@ -125,25 +128,25 @@ end
 
 
 "converts to per unit from SI"
-function _make_math_per_unit!(data_model::Dict{String,<:Any}; settings::Union{Missing,Dict{String,<:Any}}=missing, sbase::Union{Real,Missing}=1.0, vbases::Union{Dict{String,<:Real},Missing}=missing, v_var_scalar::Union{Missing,Real}=missing)
+function _make_math_per_unit!(data_model::Dict{String,<:Any}; sbase::Union{Real,Missing}=missing, vbases::Union{Dict{String,<:Real},Missing}=missing, voltage_scale_factor::Union{Missing,Real}=missing)
     if ismissing(sbase)
-        if !ismissing(settings) && haskey(settings, "set_sbase")
-            sbase = settings["set_sbase"]
+        if haskey(data_model["settings"], "sbase_default")
+            sbase = settings["sbase_default"]
         else
             sbase = 1.0
         end
     end
 
-    if haskey(data_model, "sbase")
-        sbase_old = data_model["sbase"]
+    if haskey(data_model["settings"], "sbase")
+        sbase_old = data_model["settings"]["sbase"]
     else
         sbase_old = 1.0
     end
 
     # automatically find a good vbase
     if ismissing(vbases)
-        if !ismissing(settings) && haskey(settings, "set_vbases")
-            vbases = settings["vbases"]
+        if haskey(data_model["settings"], "vbases_default")
+            vbases = settings["vbases_default"]
         else
             buses_type_3 = [(id, sum(bus["vm"])/length(bus["vm"])) for (id,bus) in data_model["bus"] if haskey(bus, "bus_type") && bus["bus_type"]==3]
             if !isempty(buses_type_3)
@@ -155,26 +158,27 @@ function _make_math_per_unit!(data_model::Dict{String,<:Any}; settings::Union{Mi
     end
 
     bus_vbase, line_vbase = _calc_vbase(data_model, vbases)
+    voltage_scale_factor = data_model["settings"]["voltage_scale_factor"]
 
     for (id, bus) in data_model["bus"]
-        _rebase_pu_bus!(bus, bus_vbase[id], sbase, sbase_old, v_var_scalar)
+        _rebase_pu_bus!(bus, bus_vbase[id], sbase, sbase_old, voltage_scale_factor)
     end
 
     for (id, line) in data_model["branch"]
         vbase = line_vbase[id]
-        _rebase_pu_branch!(line, line_vbase[id], sbase, sbase_old, v_var_scalar)
+        _rebase_pu_branch!(line, line_vbase[id], sbase, sbase_old, voltage_scale_factor)
     end
 
     for (id, shunt) in data_model["shunt"]
-        _rebase_pu_shunt!(shunt, bus_vbase[string(shunt["shunt_bus"])], sbase, sbase_old, v_var_scalar)
+        _rebase_pu_shunt!(shunt, bus_vbase[string(shunt["shunt_bus"])], sbase, sbase_old, voltage_scale_factor)
     end
 
     for (id, load) in data_model["load"]
-        _rebase_pu_load!(load, bus_vbase[string(load["load_bus"])], sbase, sbase_old, v_var_scalar)
+        _rebase_pu_load!(load, bus_vbase[string(load["load_bus"])], sbase, sbase_old, voltage_scale_factor)
     end
 
     for (id, gen) in data_model["gen"]
-        _rebase_pu_generator!(gen, bus_vbase[string(gen["gen_bus"])], sbase, sbase_old, v_var_scalar, data_model)
+        _rebase_pu_generator!(gen, bus_vbase[string(gen["gen_bus"])], sbase, sbase_old, voltage_scale_factor, data_model)
     end
 
     for (id, storage) in data_model["storage"]
@@ -190,11 +194,11 @@ function _make_math_per_unit!(data_model::Dict{String,<:Any}; settings::Union{Mi
             # voltage base across transformer does not have to be consistent with the ratio!
             f_vbase = bus_vbase[string(trans["f_bus"])]
             t_vbase = bus_vbase[string(trans["t_bus"])]
-            _rebase_pu_transformer_2w_ideal!(trans, f_vbase, t_vbase, sbase_old, sbase, v_var_scalar)
+            _rebase_pu_transformer_2w_ideal!(trans, f_vbase, t_vbase, sbase_old, sbase, voltage_scale_factor)
         end
     end
 
-    data_model["sbase"] = sbase
+    data_model["settings"]["sbase"] = sbase
     data_model["per_unit"] = true
 
     return data_model
@@ -202,7 +206,7 @@ end
 
 
 "per-unit conversion for buses"
-function _rebase_pu_bus!(bus::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, v_var_scalar::Real)
+function _rebase_pu_bus!(bus::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
     # if not in p.u., these are normalized with respect to vnom
     prop_vnom = ["vm", "vmax", "vmin", "vm_set", "vm_ln_min", "vm_ln_max", "vm_lg_min", "vm_lg_max", "vm_ng_min", "vm_ng_max", "vm_ll_min", "vm_ll_max"]
 
@@ -219,11 +223,11 @@ function _rebase_pu_bus!(bus::Dict{String,<:Any}, vbase::Real, sbase::Real, sbas
         vbase_old = bus["vbase"]
         _scale_props!(bus, [prop_vnom..., "vnom"], vbase_old/vbase)
 
-        z_old = vbase_old^2*sbase_old*v_var_scalar
+        z_old = vbase_old^2*sbase_old*voltage_scale_factor
     end
 
     # rebase grounding resistance
-    z_new = vbase^2/sbase*v_var_scalar
+    z_new = vbase^2/sbase*voltage_scale_factor
     z_scale = z_old/z_new
     _scale_props!(bus, ["rg", "xg"], z_scale)
 
@@ -237,14 +241,14 @@ end
 
 
 "per-unit conversion for branches"
-function _rebase_pu_branch!(branch::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, v_var_scalar::Real)
+function _rebase_pu_branch!(branch::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
     if !haskey(branch, "vbase")
         z_old = 1
     else
-        z_old = vbase_old^2/sbase_old*v_var_scalar
+        z_old = vbase_old^2/sbase_old*voltage_scale_factor
     end
 
-    z_new = vbase^2/sbase*v_var_scalar
+    z_new = vbase^2/sbase*voltage_scale_factor
     z_scale = z_old/z_new
     y_scale = 1/z_scale
 
@@ -260,15 +264,15 @@ end
 
 
 "per-unit conversion for shunts"
-function _rebase_pu_shunt!(shunt::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, v_var_scalar::Real)
+function _rebase_pu_shunt!(shunt::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
     if !haskey(shunt, "vbase")
         z_old = 1
     else
-        z_old = vbase_old^2/sbase_old*v_var_scalar
+        z_old = vbase_old^2/sbase_old*voltage_scale_factor
     end
 
     # rebase grounding resistance
-    z_new = vbase^2/sbase*v_var_scalar
+    z_new = vbase^2/sbase*voltage_scale_factor
 
     z_scale = z_old/z_new
     y_scale = 1/z_scale
@@ -281,7 +285,7 @@ end
 
 
 "per-unit conversion for loads"
-function _rebase_pu_load!(load::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, v_var_scalar::Real)
+function _rebase_pu_load!(load::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
     if !haskey(load, "vbase")
         vbase_old = 1
         sbase_old = 1
@@ -303,8 +307,8 @@ end
 
 
 "per-unit conversion for generators"
-function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, v_var_scalar::Real, data_model::Dict{String,<:Any})
-    vbase_old = get(gen, "vbase", 1.0/v_var_scalar)
+function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real, data_model::Dict{String,<:Any})
+    vbase_old = get(gen, "vbase", 1.0/voltage_scale_factor)
     vbase_scale = vbase_old/vbase
     sbase_scale = sbase_old/sbase
 
@@ -313,8 +317,8 @@ function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real
     end
 
     # if not in per unit yet, the cost has is in $/MWh
-    if !haskey(data_model, "sbase")
-        sbase_old_cost = 1E6/v_var_scalar
+    if !haskey(data_model["settings"], "sbase")
+        sbase_old_cost = 1E6/voltage_scale_factor
         sbase_scale_cost = sbase_old_cost/sbase
     else
         sbase_scale_cost = sbase_scale
@@ -328,7 +332,7 @@ end
 
 
 "per-unit conversion for ideal 2-winding transformers"
-function _rebase_pu_transformer_2w_ideal!(transformer::Dict{String,<:Any}, f_vbase_new::Real, t_vbase_new::Real, sbase_old::Real, sbase_new::Real, v_var_scalar::Real)
+function _rebase_pu_transformer_2w_ideal!(transformer::Dict{String,<:Any}, f_vbase_new::Real, t_vbase_new::Real, sbase_old::Real, sbase_new::Real, voltage_scale_factor::Real)
     f_vbase_old = get(transformer, "f_vbase", 1.0)
     t_vbase_old = get(transformer, "t_vbase", 1.0)
     f_vbase_scale = f_vbase_old/f_vbase_new
@@ -359,7 +363,7 @@ _apply_func_vals(x, f) = isa(x, Dict) ? Dict(k=>f(v) for (k,v) in x) : f.(x)
 function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true, mult_ibase=true, convert_rad2deg=true)
     solution_si = deepcopy(solution)
 
-    sbase = math_model["sbase"]
+    sbase = math_model["settings"]["sbase"]
 
     for (comp_type, comp_dict) in [(x,y) for (x,y) in solution_si if isa(y, Dict)]
         dimensionalize_math_comp = get(_dimensionalize_math, comp_type, Dict())
