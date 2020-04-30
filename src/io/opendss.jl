@@ -610,7 +610,7 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
         nrw = _shared["windings"]
 
         # two-phase delta transformers have single coil
-        if all(confs.==DELTA) && nphases==2
+        if all(conf==DELTA for conf in confs) && nphases==2
             ncoils = 1
         else
             ncoils = nphases

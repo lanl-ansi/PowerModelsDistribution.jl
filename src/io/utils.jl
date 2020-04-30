@@ -331,7 +331,7 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
             nrw = length(btrans["bus"])
 
             # only attempt to bank wye-connected transformers
-            if !all(all(tr["configuration"].==WYE) for tr in trs)
+            if !all(all(conf==WYE for conf in tr["configuration"]) for tr in trs)
                 Memento.warn(_LOGGER, "Not all configurations 'wye' on transformers identified by bank='$bank', aborting attempt to bank")
                 continue
             end

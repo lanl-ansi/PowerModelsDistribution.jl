@@ -288,7 +288,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
 
             if kron_reduced
                 # TODO fix how padding works, this is a workaround to get bank working
-                if all(eng_obj["configuration"] .== WYE)
+                if all(conf==WYE for conf in eng_obj["configuration"])
                     f_connections = transformer_2wa_obj["f_connections"]
                     _pad_properties!(transformer_2wa_obj, ["tm_lb", "tm_ub", "tm_set"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=1.0)
                     _pad_properties!(transformer_2wa_obj, ["tm_fix"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=false)
