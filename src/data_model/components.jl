@@ -64,8 +64,8 @@ function Model(model_type::String=ENGINEERING; kwargs...)::Dict{String,Any}
             "settings" => Dict{String,Any}(
                 "voltage_scale_factor" => get(kwargs, :voltage_scale_factor, 1e3),
                 "power_scale_factor" => get(kwargs, :power_scale_factor, 1e3),
-                "vbase" => get(kwargs, :basekv, 1.0),
-                "sbase" => get(kwargs, :baseMVA, 1.0),
+                "vbases_default" => get(kwargs, :vbases_default, Dict{<:Any,<:Real}()),
+                "sbase_default" => get(kwargs, :sbase_default, 1.0),
                 "base_frequency" => get(kwargs, :basefreq, 60.0),
             )
         )
@@ -97,23 +97,44 @@ function Model(model_type::String=ENGINEERING; kwargs...)::Dict{String,Any}
 end
 
 
-""
-function create_linecode(; kwargs...)
-    n_conductors = 0
-    for key in [:rs, :xs, :g_fr, :g_to, :b_fr, :b_to]
-        if haskey(kwargs, key)
-            n_conductors = size(kwargs[key])[1]
+"creates a linecode with some defaults"
+function create_linecode(;
+    rs::Union{Matrix{<:Real},Missing}=missing,
+    xs::Union{Matrix{<:Real},Missing}=missing,
+    g_fr::Union{Matrix{<:Real},Missing}=missing,
+    b_fr::Union{Matrix{<:Real},Missing}=missing,
+    g_to::Union{Matrix{<:Real},Missing}=missing,
+    b_to::Union{Matrix{<:Real},Missing}=missing,
+    cm_ub::Union{Vector{<:Real},Missing}=missing,
+    kwargs...
+        )::Dict{String,Any}
+
+    shape = ()
+    for v in [rs, xs, g_fr, g_to, b_fr, b_to]
+        if !ismissing(v)
+            shape = size(v)
+            break
+        end
+    end
+
+    for v in [rs, xs, g_fr, g_to, b_fr, b_to]
+        if !ismissing(v)
+            @assert size(v) == shape "not all of the properties are the same size, aborting linecode creation"
         end
     end
 
     linecode = Dict{String,Any}(
-        "rs" => get(kwargs, :rs, fill(0.0, n_conductors, n_conductors)),
-        "xs" => get(kwargs, :xs, fill(0.0, n_conductors, n_conductors)),
-        "g_fr" => get(kwargs, :g_fr, fill(0.0, n_conductors, n_conductors)),
-        "b_fr" => get(kwargs, :b_fr, fill(0.0, n_conductors, n_conductors)),
-        "g_to" => get(kwargs, :g_to, fill(0.0, n_conductors, n_conductors)),
-        "b_to" => get(kwargs, :b_to, fill(0.0, n_conductors, n_conductors)),
+        "rs" => !ismissing(rs) ? rs : fill(0.01, shape...),
+        "xs" => !ismissing(xs) ? xs : fill(0.2, shape...),
+        "g_fr" => !ismissing(g_fr) ? g_fr : fill(0.0, shape...),
+        "b_fr" => !ismissing(b_fr) ? b_fr : fill(0.0, shape...),
+        "g_to" => !ismissing(g_to) ? g_to : fill(0.0, shape...),
+        "b_to" => !ismissing(b_to) ? b_to : fill(0.0, shape...),
     )
+
+    if !ismissing(cm_ub)
+        linecode["cm_ub"] = cm_ub
+    end
 
     _add_unused_kwargs!(linecode, kwargs)
 
@@ -121,14 +142,34 @@ function create_linecode(; kwargs...)
 end
 
 
-""
-function create_line(; kwargs...)
-    kwargs = Dict{Symbol,Any}(kwargs)
+"Create a line with some default values"
+function create_line(f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}};
+    linecode::Any=missing,
+    rs::Union{Matrix{<:Real},Missing}=missing,
+    xs::Union{Matrix{<:Real},Missing}=missing,
+    g_fr::Union{Matrix{<:Real},Missing}=missing,
+    b_fr::Union{Matrix{<:Real},Missing}=missing,
+    g_to::Union{Matrix{<:Real},Missing}=missing,
+    b_to::Union{Matrix{<:Real},Missing}=missing,
+    length::Real=1.0,
+    cm_ub::Union{Vector{<:Real},Missing}=missing,
+    sm_ub::Union{Vector{<:Real},Missing}=missing,
+    vad_lb::Union{Vector{<:Real},Missing}=missing,
+    vad_ub::Union{Vector{<:Real},Missing}=missing,
+    status::Status=ENABLED,
+    kwargs...
+        )::Dict{String,Any}
 
-    @assert haskey(kwargs, :f_bus) && haskey(kwargs, :t_bus) "Line must at least have f_bus and t_bus specified"
+    n_conductors = length(f_connections)
+    shape = (n_conductors, n_conductors)
 
-    N = length(get(kwargs, :f_connections, collect(1:4)))
-    n_conductors = N
+    for v in [rs, xs, g_fr, b_fr, g_to, b_to, cm_ub, sm_ub, vad_lb, vad_ub]
+        if isa(v, Matrix)
+            @assert size(v) == shape
+        else
+            @assert length(v) == n_conductors
+        end
+    end
 
     # if no linecode, then populate loss parameters with zero
     if !haskey(kwargs, :linecode)
@@ -140,21 +181,38 @@ function create_line(; kwargs...)
     end
 
     line = Dict{String,Any}(
-        "f_bus" => kwargs[:f_bus],
-        "t_bus" => kwargs[:t_bus],
-        "status" => get(kwargs, :status, ENABLED),
-        "f_connections" => get(kwargs, :f_connections, collect(1:4)),
-        "t_connections" => get(kwargs, :t_connections, collect(1:4)),
-        "angmin" => get(kwargs, :angmin, fill(-60/180*pi, N)),
-        "angmax" => get(kwargs, :angmax, fill( 60/180*pi, N)),
-        "length" => get(kwargs, :length, 1.0),
-        "rs" => get(kwargs, :rs, diagm(0 => fill(0.01, n_conductors))),
-        "xs" => get(kwargs, :xs, diagm(0 => fill(0.01, n_conductors))),
-        "g_fr" => get(kwargs, :g_fr, diagm(0 => fill(0.0, n_conductors))),
-        "b_fr" => get(kwargs, :b_fr, diagm(0 => fill(0.0, n_conductors))),
-        "g_to" => get(kwargs, :g_to, diagm(0 => fill(0.0, n_conductors))),
-        "b_to" => get(kwargs, :b_to, diagm(0 => fill(0.0, n_conductors))),
+        "f_bus" => f_bus,
+        "t_bus" => t_bus,
+        "status" => status,
+        "f_connections" => f_connections,
+        "t_connections" => t_connections,
+        "vad_lb" => !ismissing(vad_lb) ? vad_lb : fill(-60.0, n_conductors),
+        "vad_ub" => !ismissing(vad_lb) ? vad_lb : fill( 60.0, n_conductors),
+        "length" => length,
     )
+
+    if !ismissing(linecode)
+        line["rs"] = !ismissing(rs) ? rs : fill(0.01, shape...)
+        line["rs"] => !ismissing(rs) ? rs : fill(0.01, shape...)
+        line["xs"] = !ismissing(xs) ? xs : fill(0.2, shape...)
+        line["g_fr"] = !ismissing(g_fr) ? g_fr : fill(0.0, shape...)
+        line["b_fr"] = !ismissing(b_fr) ? b_fr : fill(0.0, shape...)
+        line["g_to"] = !ismissing(g_to) ? g_to : fill(0.0, shape...)
+        line["b_to"] = !ismissing(b_to) ? b_to : fill(0.0, shape...)
+    else
+        line["linecode"] = linecode
+        for (k,v) in [("rs", rs), ("xs", xs), ("g_fr", g_fr), ("b_fr", b_fr), ("g_to", g_to), ("b_to", b_to)]
+            if !ismissing(v)
+                line[k] = v
+            end
+        end
+    end
+
+    for (k,v) in [("cm_ub", "sm_ub")]
+        if !ismissing(v)
+            line[k] = v
+        end
+    end
 
     _add_unused_kwargs!(line, kwargs)
 
@@ -162,16 +220,57 @@ function create_line(; kwargs...)
 end
 
 
+"creates a switch object with some defaults"
+function create_switch(f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}};
+    cm_ub::Union{Vector{<:Real},Missing}=missing,
+    sm_ub::Union{Vector{<:Real},Missing}=missing,
+    linecode::Any=missing,
+    rs::Union{Matrix{<:Real},Missing}=missing,
+    xs::Union{Matrix{<:Real},Missing}=missing,
+    dipatchable::Dispatchable=NO,
+    state::SwitchState=CLOSED,
+    status::Status=ENABLED,
+    kwargs...
+        )::Dict{String,Any}
+
+    eng_obj = Dict{String,Any}(
+        "f_bus" => f_bus,
+        "t_bus" => t_bus,
+        "f_connections" => f_connections,
+        "t_connections" => t_connections,
+        "dispatchable" => dispatchable,
+        "state" => state,
+        "status" => status,
+    )
+
+    for (k,v) in [("cm_ub", cm_ub), ("sm_ub", sm_ub), ("linecode", linecode), ("rs", rs), ("xs", xs)]
+        if !ismissing(v)
+            eng_obj[k] = v
+        end
+    end
+
+    _add_unused_kwargs!(eng_obj, kwargs)
+
+    return eng_obj
+end
+
+
 "creates a bus object with some defaults"
-function create_bus(; status::Status=ENABLED, terminals::Union{Vector{Int},Vector{String}}=collect(1:4), grounded::Union{Vector{Int},Vector{String}}=Vector{Int}([]), rg::Vector{<:Real}=Vector{Float64}([]), xg::Vector{<:Real}=Vector{Float64}([]), kwargs...)
-    kwargs = Dict{Symbol,Any}(kwargs)
+function create_bus(;
+    status::Status=ENABLED,
+    terminals::Union{Vector{Int},Vector{String}}=Vector{Int}([]),
+    grounded::Union{Vector{Int},Vector{String}}=Vector{Int}([]),
+    rg::Vector{<:Real}=Vector{Float64}([]),
+    xg::Vector{<:Real}=Vector{Float64}([]),
+    kwargs...
+        )::Dict{String,Any}
 
     bus = Dict{String,Any}(
-        "status" => get(kwargs, :status, ENABLED),
-        "terminals" => get(kwargs, :terminals, collect(1:4)),
-        "grounded" => get(kwargs, :grounded, []),
-        "rg" => get(kwargs, :rg, Array{Float64, 1}()),
-        "xg" => get(kwargs, :xg, Array{Float64, 1}()),
+        "status" => status,
+        "terminals" => terminals,
+        "grounded" => grounded,
+        "rg" => rg,
+        "xg" => xg,
     )
 
     _add_unused_kwargs!(bus, kwargs)
@@ -181,24 +280,36 @@ end
 
 
 "creates a load object with some defaults"
-function create_load(; kwargs...)
-    kwargs = Dict{Symbol,Any}(kwargs)
+function create_load(bus::Any, connections::Union{Vector{Int},Vector{String}};
+    configuration::ConnConfig=WYE,
+    model::LoadModel=POWER,
+    pd_nom::Union{Vector{<:Real},Missing}=missing,
+    qd_nom::Union{Vector{<:Real},Missing}=missing,
+    vm_nom::Real=1.0,
+    dispatchable::Dispatchable=NO,
+    status::Status=ENABLED,
+    kwargs...
+        )::Dict{String,Any}
+
+    n_conductors = length(connections)
+
+    for v in [pd_nom, qd_nom]
+        if !ismissing(v)
+            @assert length(v) == n_conductors
+        end
+    end
 
     load = Dict{String,Any}(
-        "status" => get(kwargs, :status, ENABLED),
-        "configuration" => get(kwargs, :configuration, WYE),
-        "model" => get(kwargs, :model, POWER),
-        "connections" => get(kwargs, :connections, get(kwargs, :configuration, WYE)==WYE ? [1, 2, 3, 4] : [1, 2, 3]),
-        "vnom" => get(kwargs, :vnom, 1.0)
+        "bus" => bus,
+        "connections" => connections,
+        "configuration" => configuration,
+        "model" => model,
+        "pd_nom" => !ismissing(pd_nom) ? pd_nom : fill(0.0, n_conductors),
+        "qd_nom" => !ismissing(qd_nom) ? qd_nom : fill(0.0, n_conductors),
+        "vm_nom" => vm_nom,
+        "dispatchable" => dispatchable,
+        "status" => status,
     )
-
-    if load["model"]==POWER
-        load["pd"] = get(kwargs, :pd, fill(0.0, 3))
-        load["qd"] = get(kwargs, :qd, fill(0.0, 3))
-    else
-        load["pd_ref"] = get(kwargs, :pd_ref, fill(0.0, 3))
-        load["qd_ref"] = get(kwargs, :qd_ref, fill(0.0, 3))
-    end
 
     _add_unused_kwargs!(load, kwargs)
 
@@ -207,16 +318,36 @@ end
 
 
 "creates a generator object with some defaults"
-function create_generator(; kwargs...)
-    kwargs = Dict{Symbol,Any}(kwargs)
+function create_generator(bus::Any, connections::Union{Vector{Int},Vector{String}};
+    configuration::ConnConfig=WYE,
+    pg::Union{Vector{<:Real},Missing}=missing,
+    qg::Union{Vector{<:Real},Missing}=missing,
+    vg::Union{Vector{<:Real},Missing}=missing,
+    pg_lb::Union{Vector{<:Real},Missing}=missing,
+    pg_ub::Union{Vector{<:Real},Missing}=missing,
+    qg_lb::Union{Vector{<:Real},Missing}=missing,
+    qg_ub::Union{Vector{<:Real},Missing}=missing,
+    control_mode::ControlMode=DROOP,
+    status::Status=ENABLED,
+    kwargs...
+        )::Dict{String,Any}
+
+    n_conductors = length(connections)
 
     generator = Dict{String,Any}(
-        "status" => get(kwargs, :status, ENABLED),
-        "configuration" => get(kwargs, :configuration, WYE),
-        "cost" => get(kwargs, :cost, [1.0, 0.0]*1E-3),
+        "bus" => bus,
+        "connections" => connections,
+        "configuration" => configuration,
+        "control_mode" => control_mode,
+        "status" => status,
     )
 
-    generator["connections"] = get(kwargs, :connections, generator["configuration"]==WYE ? [1, 2, 3, 4] : [1, 2, 3])
+    for v in [("pg", pg), ("qg", qg), ("vg", vg), ("pg_lb", pg_lb), ("pg_ub", pg_ub), ("qg_lb", qg_lb), ("qg_ub", qg_ub)]
+        if !ismissing(v)
+            @assert length(v) == n_conductors
+            generator[k] = v
+        end
+    end
 
     _add_unused_kwargs!(generator, kwargs)
 
@@ -224,28 +355,70 @@ function create_generator(; kwargs...)
 end
 
 
-"creates a n-winding transformer object with some defaults"
-function create_transformer(; kwargs...)
-    kwargs = Dict{Symbol,Any}(kwargs)
+"creates transformer code with some defaults"
+function create_xfmrcode(;
+    configurations::Union{Vector{ConnConfig},Missing}=missing,
+    xsc::Union{Vector{<:Real},Missing}=missing,
+    rw::Union{Vector{<:Real},Missing}=missing,
+    tm_nom::Union{Vector{<:Real},Missing}=missing,
+    tm_lb::Union{Vector{Vector{<:Real}},Missing}=missing,
+    tm_ub::Union{Vector{Vector{<:Real}},Missing}=missing,
+    tm_set::Union{Vector{Vector{<:Real}},Missing}=missing,
+    tm_fix::Union{Vector{Vector{<:Real}},Missing}=missing,
+    kwargs...
+)::Dict{String,Any}
 
-    @assert haskey(kwargs, :bus) "bus must be defined at the very least"
-    n_windings = length(kwargs[:bus])
+    eng_obj = Dict{String,Any}(
+        # TODO
+    )
+
+    return eng_obj
+end
+
+
+"creates a n-winding transformer object with some defaults"
+function create_transformer(buses::Vector{Any}, connections::Vector{Union{Vector{Int},Vector{String}}};
+    configurations::Union{Vector{ConnConfig},Missing}=missing,
+    xfmrcode::Any=missing,
+    xsc::Union{Vector{<:Real},Missing}=missing,
+    rw::Union{Vector{<:Real},Missing}=missing,
+    imag::Real=0.0,
+    noloadloss::Real=0.0,
+    tm_nom::Union{Vector{<:Real},Missing}=missing,
+    tm_lb::Union{Vector{Vector{<:Real}},Missing}=missing,
+    tm_ub::Union{Vector{Vector{<:Real}},Missing}=missing,
+    tm_set::Union{Vector{Vector{<:Real}},Missing}=missing,
+    tm_fix::Union{Vector{Vector{Bool}},Missing}=missing,
+    polarity::Union{Vector{Int},Missing}=missing,
+    vm_nom::Union{Vector{<:Real},Missing}=missing,
+    sm_nom::Union{Vector{<:Real},Missing}=missing,
+    status::Status=ENABLED,
+    kwargs...
+        )::Dict{String,Any}
+
+    n_windings = length(buses)
+    n_conductors = length(connections[1])
 
     transformer = Dict{String,Any}(
-        "status" => get(kwargs, :status, ENABLED),
-        "configuration" => get(kwargs, :configuration, fill(WYE, n_windings)),
-        "polarity" => get(kwargs, :polarity, fill(true, n_windings)),
-        "rs" => get(kwargs, :rs, zeros(n_windings)),
-        "xsc" => get(kwargs, :xsc, zeros(n_windings^2-n_windings)),
-        "noloadloss" => get(kwargs, :noloadloss, 0.0),
-        "imag" => get(kwargs, :imag, 0.0),
-        "tm_set" => get(kwargs, :tm, fill(fill(1.0, 3), n_windings)),
-        "tm_lb" => get(kwargs, :tm_min, fill(fill(0.9, 3), n_windings)),
-        "tm_ub" => get(kwargs, :tm_max, fill(fill(1.1, 3), n_windings)),
-        "tm_step" => get(kwargs, :tm_step, fill(fill(1/32, 3), n_windings)),
-        "tm_fix" => get(kwargs, :tm_fix, fill(ones(Bool, 3), n_windings)),
-        "connections" => get(kwargs, :connections, fill(collect(1:4), n_windings)),
+        "buses" => buses,
+        "connections" => connections,
+        "configurations" => !ismissing(configurations) ? configurations : fill(WYE, n_windings),
+        "xsc" => !ismissing(xsc) ? xsc : zeros(Int(n_windings * (n_windings-1)//2)),
+        "rw" => !ismissing(rw) ? rw : zeros(n_windings),
+        "imag" => imag,
+        "noloadloss" => noloadloss,
+        "tm_nom" => !ismissing(tm_nom) ? tm_nom : ones(n_windings),
+        "tm_set" => !ismissing(tm_set) ? tm_set : fill(fill(1.0, n_conductors), n_windings),
+        "tm_fix" => !ismissing(tm_fix) ? tm_fix : fill(fill(true, n_conductors), n_windings),
+        "polarity" => !ismissing(polarity) ? polarity : fill(1, n_windings),
+        "status" => status,
     )
+
+    for (k,v) in [("tm_lb", tm_lb), ("tm_ub", tm_ub), ("vm_nom", vm_nom), ("sm_nom", sm_nom)]
+        if !ismissing(v)
+            transformer[k] = v
+        end
+    end
 
     _add_unused_kwargs!(transformer, kwargs)
 
@@ -253,31 +426,26 @@ function create_transformer(; kwargs...)
 end
 
 
-"creates a shunt capacitor object with some defaults"
-function create_shunt_capacitor(; kwargs...)
-    shunt_capacitor = Dict{String,Any}(
-        "status" => get(kwargs, :status, ENABLED),
-        "configuration" => get(kwargs, :configuration, WYE),
-        "connections" => get(kwargs, :connections, collect(1:4)),
-        "qd_ref" => get(kwargs, :qd_ref, fill(0.0, 3)),
-    )
-
-    _add_unused_kwargs!(shunt_capacitor, kwargs)
-
-    return shunt_capacitor
-end
-
-
 "creates a generic shunt with some defaults"
-function create_shunt(; kwargs...)
-    kwargs = Dict{Symbol,Any}(kwargs)
+function create_shunt(bus, connections;
+    gs::Union{Vector{<:Real},Missing}=missing,
+    bs::Union{Vector{<:Real},Missing}=missing,
+    model::ShuntModel=GENERIC,
+    dispatchable::Dispatchable=NO,
+    status::Status=ENABLED,
+    kwargs...
+        )::Dict{String,Any}
 
-    N = length(get(kwargs, :connections, collect(1:4)))
+    n_conductors = length(connections)
 
     shunt = Dict{String,Any}(
-        "status" => get(kwargs, :status, ENABLED),
-        "g_sh" => get(kwargs, :g_sh, fill(0.0, N, N)),
-        "b_sh" => get(kwargs, :b_sh, fill(0.0, N, N)),
+        "bus" => bus,
+        "connections" => connections,
+        "gs" => !ismissing(gs) ? gs : fill(0.0, n_conductors),
+        "bs" => !ismissing(bs) ? bs : fill(0.0, n_conductors),
+        "model" => model,
+        "dispatchable" => dispatchable,
+        "status" => status,
     )
 
     _add_unused_kwargs!(shunt, kwargs)
@@ -286,20 +454,103 @@ function create_shunt(; kwargs...)
 end
 
 
-"creates a voltage source with some defaults"
-function create_voltage_source(; kwargs...)
-    kwargs = Dict{Symbol,Any}(kwargs)
+"creates a solar generator with some defaults"
+function create_solar(bus::Any, connections::Union{Vector{Int},Vector{String}};
+    configuration::ConnConfig=WYE,
+    pg_lb::Union{Vector{<:Real},Missing}=missing,
+    pg_ub::Union{Vector{<:Real},Missing}=missing,
+    qg_lb::Union{Vector{<:Real},Missing}=missing,
+    qg_ub::Union{Vector{<:Real},Missing}=missing,
+    pg::Union{Vector{<:Real},Missing}=missing,
+    qg::Union{Vector{<:Real},Missing}=missing,
+    status::Status=ENABLED,
+    kwargs...
+        )::Dict{String,Any}
 
-    voltage_source = Dict{String,Any}(
-        "status" => get(kwargs, :status, ENABLED),
-        "connections" => get(kwargs, :connections, collect(1:3)),
+    eng_obj = Dict{String,Any}(
+        "bus" => bus,
+        "connections" => connections,
+        "configuration" => configuration,
+        "status" => status
+    )
+    # TODO
+    return eng_obj
+end
+
+
+"creates energy storage object with some defaults"
+function create_solar(bus::Any, connections::Union{Vector{Int},Vector{String}};
+    configuration::ConnConfig=WYE,
+    energy::Real=0.0,
+    energy_ub::Real=0.0,
+    charge_ub::Real=0.0,
+    discharge_ub::Real=0.0,
+    sm_ub::Union{Vector{<:Real},Missing}=missing,
+    cm_ub::Union{Vector{<:Real},Missing}=missing,
+    charge_efficiency::Real=0.9,
+    discharge_efficiency::Real=0.9,
+    qs_lb::Union{Vector{<:Real},Missing}=missing,
+    qs_ub::Union{Vector{<:Real},Missing}=missing,
+    rs::Union{Vector{<:Real},Missing}=missing,
+    xs::Union{Vector{<:Real},Missing}=missing,
+    pex::Real=0.0,
+    qex::Real=0.0,
+    ps::Union{Vector{<:Real},Missing}=missing,
+    qs::Union{Vector{<:Real},Missing}=missing,
+    status::Status=ENABLED,
+    kwargs...
+        )::Dict{String,Any}
+
+    n_conductors = length(connections)
+
+    eng_obj = Dict{String,Any}(
+        "bus" => bus,
+        "connections" => connections,
+        "configuration" => configuration,
+        "energy" => energy,
+        "energy_ub" => energy_ub,
+        "charge_ub" => charge_ub,
+        "discharge_ub" => discharge_ub,
+        "charge_efficiency" => charge_efficiency,
+        "discharge_efficiency" => discharge_efficiency,
+        "pex" => pex,
+        "qex" => qex,
+        "status" => status
     )
 
-    nphases = length(voltage_source["connections"])
-    voltage_source["vm"] = get(kwargs, :vm, fill(1.0, nphases))
-    voltage_source["va"] = deg2rad.(get(kwargs, :va, rad2deg.(_wrap_to_pi.([-2*pi/nphases*(i-1) for i in 1:nphases]))))
-    voltage_source["rs"] = fill(0.1, nphases, nphases)
-    voltage_source["xs"] = fill(0.0, nphases, nphases)
+    # TODO
+
+    return eng_obj
+end
+
+
+"creates a voltage source with some defaults"
+function create_voltage_source(bus, connections;
+    configuration::ConnConfig=WYE,
+    vm::Union{Vector{<:Real},Missing}=missing,
+    va::Union{Vector{<:Real},Missing}=missing,
+    rs::Union{Vector{<:Real},Missing}=missing,
+    xs::Union{Vector{<:Real},Missing}=missing,
+    status::Status=ENABLED,
+    kwargs...
+        )::Dict{String,Any}
+
+    n_conductors = length(connections)
+
+    voltage_source = Dict{String,Any}(
+        "bus" => bus,
+        "connections" => connections,
+        "configuration" => configuration,
+        "vm" => !ismissing(vm) ? vm : ones(n_conductors),
+        "va" => !ismissing(va) ? va : zeros(n_conductors),
+        "status" => get(kwargs, :status, ENABLED),
+    )
+
+    for (k,v) in [("rs", rs), ("xs", xs)]
+        if !ismissing(v)
+            voltage_source[k] = v
+        end
+    end
 
     _add_unused_kwargs!(voltage_source, kwargs)
 
@@ -318,23 +569,18 @@ end
 # Data objects
 add_bus!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "bus", id, create_bus(; kwargs...))
 add_linecode!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "linecode", id, create_linecode(; kwargs...))
-# add_xfmrcode!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "xfmrcode", id, create_xfmrcode(; kwargs...))
-# add_timeseries!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "timeseries", id, create_timeseries(; kwargs...))
+add_xfmrcode!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "xfmrcode", id, create_xfmrcode(; kwargs...))
+# add_time_series!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "time_series", id, create_timeseries(; kwargs...))
 
 # Edge objects
-add_line!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any; kwargs...) = add_object!(data_eng, "line", id, create_line(; f_bus=f_bus, t_bus=t_bus, kwargs...))
-add_transformer!(data_eng::Dict{String,<:Any}, id::Any, bus::Vector{<:Any}; kwargs...) = add_object!(data_eng, "transformer", id, create_transformer(; bus=bus, kwargs...))
-# add_switch!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any; kwargs...) = add_object!(data_eng, "switch", id, create_switch(; f_bus=f_bus, t_bus=t_bus, kwargs...))
-# add_series_capacitor!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any; kwargs...) = add_object!(data_eng, "series_capacitor", id, create_series_capacitor(; f_bus=f_bus, t_bus=t_bus, kwargs...))
-# add_line_reactor!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any; kwargs...) = add_object!(data_eng, "line_reactor", id, create_line_reactor(; f_bus=f_bus, t_bus=t_bus, kwargs...))
+add_line!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "line", id, create_line(f_bus, t_bus, f_connections, t_connections; kwargs...))
+add_transformer!(data_eng::Dict{String,<:Any}, id::Any, buses::Vector{<:Any}, connections::Vector{Union{Vector{Int},Vector{String}}}; kwargs...) = add_object!(data_eng, "transformer", id, create_transformer(buses, connections; kwargs...))
+add_switch!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "switch", id, create_switch(f_bus, t_bus, f_connections, t_connections; kwargs...))
 
 # Node objects
-add_load!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "load", id, create_load(; bus=bus, kwargs...))
-add_shunt_capacitor!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "shunt_capacitor", id, create_shunt_capacitor(; bus=bus, kwargs...))
-# add_shunt_reactor!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "shunt_reactor", id, create_shunt_reactor(; bus=bus, kwargs...))
-add_shunt!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "shunt", id, create_shunt(; bus=bus, kwargs...))
-add_voltage_source!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "voltage_source", id, create_voltage_source(; bus=bus, kwargs...))
-add_generator!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "generator", id, create_generator(; bus=bus, kwargs...))
-# add_storage!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "storage", id, create_storage(; bus=bus, kwargs...))
-# add_solar!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "solar", id, create_solar(; bus=bus, kwargs...))
-# add_wind!(data_eng::Dict{String,<:Any}, id::Any, bus::Any; kwargs...) = add_object!(data_eng, "wind", id, create_wind(; bus=bus, kwargs...))
+add_load!(data_eng::Dict{String,<:Any}, id::Any, bus::Any, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "load", id, create_load(bus, connections; kwargs...))
+add_shunt!(data_eng::Dict{String,<:Any}, id::Any, bus::Any, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "shunt", id, create_shunt(bus, connections; kwargs...))
+add_voltage_source!(data_eng::Dict{String,<:Any}, id::Any, bus::Any, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "voltage_source", id, create_voltage_source(bus, connections; kwargs...))
+add_generator!(data_eng::Dict{String,<:Any}, id::Any, bus::Any, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "generator", id, create_generator(bus, connections; kwargs...))
+add_storage!(data_eng::Dict{String,<:Any}, id::Any, bus::Any, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "storage", id, create_storage(bus, connections; kwargs...))
+add_solar!(data_eng::Dict{String,<:Any}, id::Any, bus::Any, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "solar", id, create_solar(bus, connections; kwargs...))

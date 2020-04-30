@@ -185,7 +185,7 @@ function _make_math_per_unit!(data_model::Dict{String,<:Any}, data_math; sbase::
     end
 
     for (id, gen) in data_model["gen"]
-        _rebase_pu_generator!(gen, bus_vbase[string(gen["gen_bus"])], sbase, sbase_old, voltage_scale_factor, data_math)
+        _rebase_pu_generator!(gen, bus_vbase[string(gen["gen_bus"])], sbase, sbase_old, data_math)
     end
 
     for (id, storage) in data_model["storage"]
@@ -312,8 +312,8 @@ end
 
 
 "per-unit conversion for generators"
-function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real, data_model::Dict{String,<:Any})
-    vbase_old = get(gen, "vbase", 1.0/voltage_scale_factor)
+function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, data_model::Dict{String,<:Any})
+    vbase_old = get(gen, "vbase", 1.0/data_model["settings"]["voltage_scale_factor"])
     vbase_scale = vbase_old/vbase
     sbase_scale = sbase_old/sbase
 
@@ -323,7 +323,7 @@ function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real
 
     # if not in per unit yet, the cost has is in $/MWh
     if !haskey(data_model["settings"], "sbase")
-        sbase_old_cost = 1E6/voltage_scale_factor
+        sbase_old_cost = 1E6/data_model["settings"]["power_scale_factor"]
         sbase_scale_cost = sbase_old_cost/sbase
     else
         sbase_scale_cost = sbase_scale
