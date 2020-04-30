@@ -25,16 +25,23 @@ const _dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
 
 "converts data model between per-unit and SI units"
 function make_per_unit!(data::Dict{String,<:Any}; vbases=nothing, sbase=nothing, data_model_type=get(data, "data_model", MATHEMATICAL))
-    if  data_model_type == MATHEMATICAL
+    if data_model_type == MATHEMATICAL
         if !get(data, "per_unit", false)
-            if vbases==nothing
+            if vbases === nothing
                 vbases = Dict(string(data["bus_lookup"][id])=>vbase for (id, vbase) in data["settings"]["vbases_default"])
             end
-            if sbase==nothing
+
+            if sbase === nothing
                 sbase = data["settings"]["sbase_default"]
             end
 
-            _make_math_per_unit!(data, vbases=vbases, sbase=sbase)
+            if ismultinetwork(data)
+                for (n, nw) in data["nw"]
+                    _make_math_per_unit!(nw, data; sbase=sbase, vbases=vbases)
+                end
+            else
+                _make_math_per_unit!(data, data; sbase=sbase, vbases=vbases)
+            end
         else
             # TODO make math model si units
         end
@@ -128,37 +135,37 @@ end
 
 
 "converts to per unit from SI"
-function _make_math_per_unit!(data_model::Dict{String,<:Any}; sbase::Union{Real,Missing}=missing, vbases::Union{Dict{String,<:Real},Missing}=missing, voltage_scale_factor::Union{Missing,Real}=missing)
+function _make_math_per_unit!(data_model::Dict{String,<:Any}, data_math; sbase::Union{Real,Missing}=missing, vbases::Union{Dict{String,<:Real},Missing}=missing)
     if ismissing(sbase)
-        if haskey(data_model["settings"], "sbase_default")
-            sbase = settings["sbase_default"]
+        if haskey(data_math["settings"], "sbase_default")
+            sbase = data_math["settings"]["sbase_default"]
         else
             sbase = 1.0
         end
     end
 
-    if haskey(data_model["settings"], "sbase")
-        sbase_old = data_model["settings"]["sbase"]
+    if haskey(data_math["settings"], "sbase")
+        sbase_old = data_math["settings"]["sbase"]
     else
         sbase_old = 1.0
     end
 
-    # automatically find a good vbase
+    # automatically find a good vbase if not provided
     if ismissing(vbases)
-        if haskey(data_model["settings"], "vbases_default")
-            vbases = settings["vbases_default"]
+        if haskey(data_math["settings"], "vbases_default")
+            vbases = data_math["settings"]["vbases_default"]
         else
             buses_type_3 = [(id, sum(bus["vm"])/length(bus["vm"])) for (id,bus) in data_model["bus"] if haskey(bus, "bus_type") && bus["bus_type"]==3]
-            if !isempty(buses_type_3)
-                vbases = Dict([buses_type_3[1]])
-            else
-                Memento.error("Please specify vbases manually; cannot make an educated guess for this data model.")
+                if !isempty(buses_type_3)
+                    vbases = Dict([buses_type_3[1]])
+                else
+                    Memento.error("Please specify vbases manually; cannot make an educated guess for this data model.")
+                end
             end
         end
-    end
 
     bus_vbase, line_vbase = _calc_vbase(data_model, vbases)
-    voltage_scale_factor = data_model["settings"]["voltage_scale_factor"]
+    voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
 
     for (id, bus) in data_model["bus"]
         _rebase_pu_bus!(bus, bus_vbase[id], sbase, sbase_old, voltage_scale_factor)
@@ -178,7 +185,7 @@ function _make_math_per_unit!(data_model::Dict{String,<:Any}; sbase::Union{Real,
     end
 
     for (id, gen) in data_model["gen"]
-        _rebase_pu_generator!(gen, bus_vbase[string(gen["gen_bus"])], sbase, sbase_old, voltage_scale_factor, data_model)
+        _rebase_pu_generator!(gen, bus_vbase[string(gen["gen_bus"])], sbase, sbase_old, voltage_scale_factor, data_math)
     end
 
     for (id, storage) in data_model["storage"]
@@ -198,10 +205,8 @@ function _make_math_per_unit!(data_model::Dict{String,<:Any}; sbase::Union{Real,
         end
     end
 
-    data_model["settings"]["sbase"] = sbase
-    data_model["per_unit"] = true
-
-    return data_model
+    data_math["settings"]["sbase"] = sbase
+    data_math["per_unit"] = true
 end
 
 

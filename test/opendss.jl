@@ -22,16 +22,6 @@
         @test all(haskey.([loadshapes["$i"] for i in [4, 6, 8]], "hour"))
     end
 
-    @testset "arrays from files" begin
-        dss = parse_dss("../test/data/opendss/test2_master.dss")
-
-        @test isa(dss["load"]["ld3"]["yearly"], Vector)
-        @test isa(dss["load"]["ld2"]["daily"], Vector)
-
-        @test length(dss["load"]["ld3"]["yearly"]) == 10
-        @test length(dss["load"]["ld2"]["daily"]) == 10
-    end
-
     @testset "reverse polish notation" begin
         @test isapprox(PMD._parse_rpn("2 pi * 60 * .001 *"), 2 * pi * 60 * .001; atol=1e-12)
         @test isapprox(PMD._parse_rpn("(14.4 13.8 / sqr 300 *"), (14.4 / 13.8)^2 * 300; atol=1e-12)
@@ -54,17 +44,6 @@
 
         Memento.setlevel!(TESTLOG, "error")
     end
-
-    # TODO fix, do we support these previously erroring cases now?
-    # @testset "opendss parse load model errors" begin
-    #     dss = parse_dss("../test/data/opendss/loadparser_error.dss")
-    #     for (name, load) in dss["load"]
-    #         _dss = deepcopy(dss)
-    #         _dss["load"] = Dict{String,Any}(name => load)
-
-    #        @test_throws(TESTLOG, AssertionError, parse_opendss(_dss))
-    #     end
-    # end
 
     @testset "opendss parse load model warnings" begin
         for model in [3, 4, 7, 8]
@@ -129,7 +108,7 @@
 
         @test math["name"] == "test2"
 
-        @test length(math) == 19
+        @test length(math) == 18
         @test length(dss) == 16
 
         for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "transformer"], [33, 4, 5, 27, 4, 0, 10])
@@ -140,54 +119,20 @@
         @test all(haskey(dss, key) for key in ["loadshape", "linecode", "buscoords", "options", "filename"])
     end
 
-    # TODO fix, the way we calculate voltage bases changed
     @testset "opendss parse like" begin
-    #     for i in [6, 3]
-    #         basekv_bri = math["bus"][string(math["branch"]["$i"]["f_bus"])]["base_kv"]
-    #         @test all(isapprox.(diag(math["branch"]["$i"]["b_fr"]), (3.4 * 2.0 + 1.6) / 3.0 * (basekv_bri^2 / math["baseMVA"] * 2.0 * pi * 60.0 / 1e9) / 2.0; atol=1e-6))
-    #     end
-
-    #     @test all(isapprox.(math["branch"]["9"]["br_r"].*(115/69)^2, diagm(0 => fill(6.3012e-8, 3)); atol=1e-12))
-    #     @test all(isapprox.(math["branch"]["9"]["br_x"].*(115/69)^2, diagm(0 => fill(6.3012e-7, 3)); atol=1e-12))
-
         for k in ["pd_nom", "qd_nom"]
             @test all(isapprox.(eng["load"]["ld2"][k], eng["load"]["ld4"][k]; atol=1e-12))
         end
-
-        # TODO fix shunt_capacitor and shunt_reactor eng parameters
-        # @test all(isapprox.(eng["shunt_capacitor"]["c1"]["bs"], eng["shunt_capacitor"]["c3"]["bs"]; atol=1e-12))
-        # @test all(isapprox.(eng["shunt_reactor"]["reactor3"]["bs"], eng["shunt_reactor"]["reactor4"]["bs"]; atol=1e-12))
 
         for (k,v) in eng["generator"]["g2"]
             if !(k in ["bus", "source_id", "dss"])
                 @test all(isapprox.(v, eng["generator"]["g3"][k]; atol=1e-12))
             end
         end
-
-    #     for k in keys(math["branch"]["11"])
-    #         if !(k in ["f_bus", "t_bus", "index", "name", "linecode", "source_id", "t_connections", "f_connections"])
-    #             mult = 1.0
-    #             if k in ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to"]
-    #                 # compensation for the different voltage base
-    #                 basekv_br5 = math["bus"][string(math["branch"]["5"]["f_bus"])]["base_kv"]
-    #                 basekv_br2 = math["bus"][string(math["branch"]["2"]["f_bus"])]["base_kv"]
-    #                 zmult = (basekv_br5/basekv_br2)^2
-    #                 mult = (k in ["br_r", "br_x"]) ? zmult : 1/zmult
-    #             end
-    #             @test all(isapprox.(math["branch"]["5"][k].*mult, math["branch"]["2"][k]; atol=1e-12))
-    #         end
-    #     end
     end
 
     @testset "opendss parse length units" begin
         @test eng["line"]["l8"]["length"] == 1000.0 * 0.013516796
-    end
-
-    @testset "opendss parse xycurve" begin
-        @test eng["xycurve"]["test_curve1"]["interpolated_curve"](0.0226) == 4.52
-        @test eng["xycurve"]["test_curve2"]["interpolated_curve"](2.5) == 2.5
-        @test eng["xycurve"]["test_curve3"]["interpolated_curve"](0.55) == 5.5
-        @test eng["xycurve"]["test_curve4"]["interpolated_curve"](0.55) == 5.5
     end
 
     @testset "opendss parse switch length verify" begin

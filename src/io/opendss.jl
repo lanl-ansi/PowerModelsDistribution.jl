@@ -138,17 +138,6 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             end
         end
 
-        if haskey(dss_obj, time_series) && haskey(data_dss, "loadshape") && haskey(data_dss["loadshape"], defaults[time_series])
-            eng_obj["time_series"] = Dict{String,Any}()
-            if _is_loadshape_split(data_dss["loadshape"][defaults[time_series]])
-                eng_obj["time_series"]["pg"] = "$(defaults[time_series])_p"
-                eng_obj["time_series"]["qg"] = "$(defaults[time_series])_q"
-            else
-                eng_obj["time_series"]["pg"] = defaults[time_series]
-                eng_obj["time_series"]["qg"] = defaults[time_series]
-            end
-        end
-
         if import_all
             _import_all!(eng_obj, dss_obj)
         end
@@ -285,7 +274,7 @@ function _dss2eng_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             end
 
             # TODO Check unit conversion on Gcap
-            Gcap = sum(defaults["kvar"]) / (nphases * 1e3 * (data_eng["settings"]["vbase"])^2)
+            Gcap = sum(defaults["kvar"]) / (nphases * 1e3 * (first(data_eng["settings"]["vbases_default"])[2])^2)
 
             eng_obj["bs"] = diagm(0=>fill(Gcap, nphases))
             eng_obj["gs"] = zeros(size(eng_obj["bs"]))
@@ -899,7 +888,7 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
         source_bus = _parse_bus_id(defaults["bus1"])[1]
 
         data_eng["name"] = data_dss["circuit"]
-        
+
         data_eng["settings"]["voltage_scale_factor"] = 1e3
         data_eng["settings"]["power_scale_factor"] = 1e3
         data_eng["settings"]["vbases_default"] = Dict(source_bus=>defaults["basekv"] / sqrt(3))

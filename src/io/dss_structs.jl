@@ -1174,10 +1174,13 @@ function _create_loadshape(name::String=""; kwargs...)
         interval = get(kwargs, :interval, 1.0)
     end
 
-    npts = get(kwargs, :npts, 1)
+    pmult = get(kwargs, :pmult, Vector{Float64}([]))
+    qmult = get(kwargs, :qmult, pmult)
 
-    pmult = get(kwargs, :pmult, fill(1.0, npts))[1:npts]
-    qmult = get(kwargs, :qmult, fill(1.0, npts))[1:npts]
+    npts = get(kwargs, :npts, length(pmult) == 0 && length(qmult) == 0 ? 0 : minimum(Int[length(a) for a in [pmult, qmult] if length(a) > 0]))
+
+    pmult = pmult[1:npts]
+    qmult = qmult[1:npts]
 
     hour = get(kwargs, :hour, collect(range(1.0, step=interval, length=npts)))[1:npts]
 

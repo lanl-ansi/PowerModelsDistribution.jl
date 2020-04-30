@@ -870,7 +870,7 @@ end
 
 
 ""
-function _parse_dss_xycurve(dss_obj::Dict{String,<:Any})::Array{Vector{Real},2}
+function _parse_dss_xycurve(dss_obj::Dict{String,<:Any}, data_dss::Dict{String,<:Any})::Array{Vector{Real},2}
     _apply_like!(dss_obj, data_dss, "xycurve")
     defaults = _apply_ordered_properties(_create_xycurve(id; _to_kwargs(dss_obj)...), dss_obj)
 
@@ -880,17 +880,4 @@ function _parse_dss_xycurve(dss_obj::Dict{String,<:Any})::Array{Vector{Real},2}
     @assert length(xarray) >= 2 && length(yarray) >= 2 "XYCurve data must have two or more points"
 
     return Array{Vector{Real},2}([xarray, yarray])
-end
-
-
-""
-function _apply_time_series!(eng_obj::Dict{String,<:Any}, defaults::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, time_series::String="daily")
-    eng_obj["time_series"] = Dict{String,Any}()
-    if _is_loadshape_split(data_dss["loadshape"][defaults[time_series]])
-        eng_obj["time_series"]["pd_nom"] = "$(defaults[time_series])_p"
-        eng_obj["time_series"]["qd_nom"] = "$(defaults[time_series])_q"
-    else
-        eng_obj["time_series"]["pd_nom"] = defaults[time_series]
-        eng_obj["time_series"]["qd_nom"] = defaults[time_series]
-    end
 end

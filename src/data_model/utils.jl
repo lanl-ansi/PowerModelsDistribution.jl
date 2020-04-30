@@ -1,3 +1,8 @@
+const _pmd_eng_global_keys = Set{String}([
+    "settings", "files", "name", "data_model"
+])
+
+
 "initializes the base math object of any type, and copies any one-to-one mappings"
 function _init_math_obj(obj_type::String, eng_id::Any, eng_obj::Dict{String,<:Any}, index::Int)::Dict{String,Any}
     math_obj = Dict{String,Any}(
@@ -501,44 +506,6 @@ function _apply_linecode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:A
 end
 
 
-"parses {}_times_series parameters into the expected InfrastructureModels format"
-function _parse_time_series_parameter!(data_math::Dict{String,<:Any}, time_series::Dict{String,<:Any}, to_component_type::String, to_component_id::String, fr_parameter::Any, to_parameter::String, conversion_function::Function)
-    if !haskey(data_math, "time_series")
-        data_math["time_series"] => Dict{String,Any}()
-    end
-
-    if !haskey(data_math["time_series"], "time")
-        data_math["time_series"]["time_point"] = time_series["time"]
-    else
-        if time_series["time"] == data_math["time_series"]["time_point"]
-            Memento.warn(_LOGGER, "Time series data doesn't match between different objects, aborting")
-        end
-    end
-
-    data_math["time_series"]["num_steps"] = length(time_series["time"])
-
-    if !haskey(data_math["time_series"], to_component_type)
-        data_math["time_series"][to_component_type] = Dict{String,Any}()
-    end
-
-    if !haskey(data_math["time_series"][to_component_type], to_component_id)
-        data_math["time_series"][to_component_type][to_component_id] = Dict{String,Any}()
-    end
-
-    if time_series["replace"]
-        data_math["time_series"][to_component_type][to_component_id][to_parameter] = time_series["values"]
-    else
-        data_math["time_series"][to_component_type][to_component_id][to_parameter] = fr_parameter .* time_series["values"]
-    end
-end
-
-
-""
-function _no_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
-    eng_obj[key]
-end
-
-
 ""
 function _impedance_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
     eng_obj[key] .* get(eng_obj, "length", 1.0)
@@ -554,18 +521,6 @@ end
 ""
 function _bus_type_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
     eng_obj[key] == 0 ? 4 : 1
-end
-
-
-""
-function _vnom_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
-    eng_obj[key] ./ data_eng["settings"]["vbase"]
-end
-
-
-""
-function _angle_shift_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
-    _wrap_to_180([120.0 * i for i in 1:3] .+ eng_obj[key])
 end
 
 
@@ -630,5 +585,88 @@ function _get_ground_math!(bus; exclude_terminals=[])
         push!(bus["terminals"], n)
         push!(bus["grounded"], true)
         return n
+    end
+end
+
+
+"initializes a time_series data structure in the InfrastructureModels style"
+function _init_time_series!(data::Dict{String,<:Any}, component_type::String, component_id::Any)
+    if !haskey(data, "time_series")
+        data["time_series"] = Dict{String,Any}()
+    end
+
+    if !haskey(data["time_series"], component_type)
+        data["time_series"][component_type] = Dict{String,Any}()
+    end
+
+    if !haskey(data["time_series"][component_type], "$component_id")
+        data["time_series"][component_type]["$component_id"] = Dict{String,Any}()
+    end
+end
+
+
+"Builds a Multinetwork"
+function _build_eng_multinetwork(data_eng::Dict{String,<:Any})::Dict{String,Any}
+    _data_eng = Dict{String,Any}(
+        "time_series" => Dict{String,Any}(
+            "step_mismatch" => false
+        )
+    )
+
+    for (eng_obj_type, eng_objs) in data_eng
+        if !(eng_obj_type in _pmd_eng_global_keys) && isa(eng_objs, Dict{<:Any,<:Any})
+            for (id, eng_obj) in eng_objs
+                if haskey(eng_obj, "time_series")
+                    _init_time_series!(_data_eng, eng_obj_type, id)
+
+                    for (k, v) in eng_obj["time_series"]
+                        time_series = data_eng["time_series"][v]
+
+                        if !haskey(_data_eng["time_series"], "num_steps")
+                            _data_eng["time_series"]["time"] = time_series["time"]
+                            _data_eng["time_series"]["num_steps"] = length(time_series["time"])
+                        end
+
+                        if length(time_series["time"]) != _data_eng["time_series"]["num_steps"]
+                            _data_eng["time_series"]["step_mismatch"] = true
+                        end
+
+                        if time_series["replace"]
+                            _data_eng["time_series"][eng_obj_type][id][k] = [zeros(size(eng_obj[k])) .+ val for val in time_series["values"]]
+                        else
+                            _data_eng["time_series"][eng_obj_type][id][k] = [eng_obj[k] .* val for val in time_series["values"]]
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    data_eng_new = Dict{String,Any}()
+    ### HACK to get make_multinetwork working
+    for (eng_obj_type, eng_objs) in data_eng
+        if isa(eng_objs, Dict{Any,Any})
+            eng_objs_new = Dict{String,Any}()
+            for (k, v) in eng_objs
+                key_new = "$k"
+                if key_new != k
+                    Memento.warn(_LOGGER, "$eng_obj_type id $k converted to String")
+                end
+                eng_objs_new[key_new] = v
+            end
+            data_eng_new[eng_obj_type] = eng_objs_new
+        else
+            data_eng_new[eng_obj_type] = eng_objs
+        end
+    end
+
+    _pre_mn_data = merge(data_eng_new, _data_eng)
+
+    if _pre_mn_data["time_series"]["step_mismatch"]
+        Memento.warn(_LOGGER, "There is a mismatch between the num_steps of different time_series, cannot automatically build multinetwork structure")
+        return _pre_mn_data
+    else
+        delete!(_data_eng["time_series"], "step_mismatch")
+        return _IM.make_multinetwork(_pre_mn_data, _pmd_eng_global_keys)
     end
 end

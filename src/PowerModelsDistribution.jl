@@ -7,8 +7,6 @@ module PowerModelsDistribution
     import InfrastructureModels
     import Memento
 
-    import Dierckx: Spline1D
-
     import LinearAlgebra
 
     const _PM = PowerModels

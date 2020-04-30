@@ -3,7 +3,16 @@
 
 Parses the IOStream of a file into a PowerModelsDistribution data structure.
 """
-function parse_file(io::IO, filetype::AbstractString="json"; data_model::DataModel=ENGINEERING, import_all::Bool=false, bank_transformers::Bool=true, transformations::Vector{<:Function}=Vector{Function}([]))::Dict{String,Any}
+function parse_file(
+    io::IO, filetype::AbstractString="json";
+    data_model::DataModel=ENGINEERING,
+    import_all::Bool=false,
+    bank_transformers::Bool=true,
+    transformations::Vector{<:Function}=Vector{Function}([]),
+    build_multinetwork::Bool=false,
+    kron_reduced::Bool=true
+        )::Dict{String,Any}
+
     if filetype == "dss"
         data_eng = PowerModelsDistribution.parse_opendss(io; import_all=import_all, bank_transformers=bank_transformers)
 
@@ -12,7 +21,7 @@ function parse_file(io::IO, filetype::AbstractString="json"; data_model::DataMod
         end
 
         if data_model == MATHEMATICAL
-            return transform_data_model(data_eng; make_pu=true)
+            return transform_data_model(data_eng; make_pu=true, kron_reduced=kron_reduced, build_multinetwork=build_multinetwork)
         else
             return data_eng
         end
@@ -20,7 +29,7 @@ function parse_file(io::IO, filetype::AbstractString="json"; data_model::DataMod
         pmd_data = parse_json(io; validate=false)
 
         if pmd_data["data_model"] != data_model && data_model == ENGINEERING
-            return transform_data_model(pmd_data)
+            return transform_data_model(pmd_data; kron_reduced=kron_reduced, build_multinetwork=build_multinetwork)
         else
             return pmd_data
         end
@@ -41,11 +50,20 @@ end
 
 
 "transforms model between engineering (high-level) and mathematical (low-level) models"
-function transform_data_model(data::Dict{String,<:Any}; kron_reduced::Bool=true, make_pu::Bool=true)::Dict{String,Any}
+function transform_data_model(data::Dict{String,<:Any}; kron_reduced::Bool=true, make_pu::Bool=true, build_multinetwork::Bool=false)::Dict{String,Any}
     current_data_model = get(data, "data_model", MATHEMATICAL)
 
     if current_data_model == ENGINEERING
-        data_math = _map_eng2math(data; kron_reduced=kron_reduced)
+        if build_multinetwork && haskey(data, "time_series")
+            mn_data = _build_eng_multinetwork(data)
+            if ismultinetwork(mn_data)
+                data_math = _map_eng2math_multinetwork(mn_data; kron_reduced=kron_reduced)
+            else
+                data_math = _map_eng2math(mn_data; kron_reduced=kron_reduced)
+            end
+        else
+            data_math = _map_eng2math(data; kron_reduced=kron_reduced)
+        end
 
         correct_network_data!(data_math; make_pu=make_pu)
 
@@ -64,24 +82,28 @@ end
 function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true)
     if get(data, "data_model", MATHEMATICAL) == ENGINEERING
         check_eng_data_model(data)
-    else #TODO if DSS is also a data_model enum, then use elseif instead
+    elseif get(data, "data_model", MATHEMATICAL) == MATHEMATICAL
         if make_pu
             make_per_unit!(data)
             #TODO system-wide vbase does not make sense anymore...
             #take highest vbase just so it does not break anything for now
-            data["basekv"]  = maximum(bus["vbase"] for (_, bus) in data["bus"])
             data["baseMVA"] = data["settings"]["sbase"]*data["settings"]["power_scale_factor"]/1E6
 
-            _PM.check_connectivity(data)
-            _PM.correct_transformer_parameters!(data)
-            _PM.correct_voltage_angle_differences!(data)
-            _PM.correct_thermal_limits!(data)
-            _PM.correct_branch_directions!(data)
-            _PM.check_branch_loops(data)
-            _PM.correct_bus_types!(data)
-            _PM.correct_dcline_limits!(data)
-            _PM.correct_cost_functions!(data)
-            _PM.standardize_cost_terms!(data)
+            if ismultinetwork(data)
+                data["basekv"]  = maximum(maximum(bus["vbase"] for (_, bus) in nw["bus"]) for nw in values(data["nw"]))
+            else ismultinetwork(data)
+                data["basekv"]  = maximum(bus["vbase"] for (_, bus) in data["bus"])
+                _PM.check_connectivity(data)
+                _PM.correct_transformer_parameters!(data)
+                _PM.correct_voltage_angle_differences!(data)
+                _PM.correct_thermal_limits!(data)
+                _PM.correct_branch_directions!(data)
+                _PM.check_branch_loops(data)
+                _PM.correct_bus_types!(data)
+                _PM.correct_dcline_limits!(data)
+                _PM.correct_cost_functions!(data)
+                _PM.standardize_cost_terms!(data)
+            end
         end
     end
 end

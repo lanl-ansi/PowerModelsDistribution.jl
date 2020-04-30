@@ -25,6 +25,34 @@ const _edge_elements = Vector{String}([
     "line", "switch", "transformer", "line_reactor", "series_capacitor"
 ])
 
+"list of multinetwork keys that belong at the root level"
+const _pmd_math_global_keys = Set{String}([
+    "conductors", "data_model", "per_unit", "name", "settings", "map", "bus_lookup"
+])
+
+
+"converts a engineering multinetwork to a math multinetwork"
+function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced::Bool=kron_reduced)::Dict{String,Any}
+    data_math_mn = Dict{String,Any}(
+        "nw" => Dict{String,Any}(),
+        "multinetwork" => true
+    )
+    for (n, nw) in data_eng_mn["nw"]
+        for k in _pmd_eng_global_keys
+            nw[k] = data_eng_mn[k]
+        end
+
+        data_math_mn["nw"][n] = _map_eng2math(nw; kron_reduced=kron_reduced)
+
+        for k in _pmd_math_global_keys
+            data_math_mn[k] = data_math_mn["nw"][n][k]
+            delete!(data_math_mn["nw"][n], k)
+        end
+    end
+
+    return data_math_mn
+end
+
 
 "base function for converting engineering model to mathematical model"
 function _map_eng2math(data_eng; kron_reduced::Bool=true)
@@ -140,12 +168,6 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
             "to" => "bus.$(math_obj["index"])",
             "unmap_function" => "_map_math2eng_bus!",
         ))
-
-        # time series
-        # TODO
-        for (k, v) in get(eng_obj, "time_series", Dict{String,Any}())
-            time_series = data_eng["time_series"][v]
-        end
     end
 end
 
@@ -316,7 +338,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
         math_obj["state"] = get(eng_obj, "state", CLOSED)
 
         # OPF bounds
-        for (fr_key, to_key) in zip(["cm_ub"], ["c_rating"])
+        for (fr_key, to_key) in [("cm_ub", "c_rating")]
             if haskey(eng_obj, fr_key)
                 math_obj[to_key] = eng_obj[fr_key]
             end
@@ -356,10 +378,10 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
                 "br_r" => _impedance_conversion(data_eng, eng_obj, "rs"),
                 "br_x" => _impedance_conversion(data_eng, eng_obj, "xs"),
-                "g_fr" => _admittance_conversion(data_eng, eng_obj, "g_fr"),
-                "g_to" => _admittance_conversion(data_eng, eng_obj, "g_to"),
-                "b_fr" => _admittance_conversion(data_eng, eng_obj, "b_fr"),
-                "b_to" => _admittance_conversion(data_eng, eng_obj, "b_to"),
+                "g_fr" => zeros(nphases, nphases),
+                "g_to" => zeros(nphases, nphases),
+                "b_fr" => zeros(nphases, nphases),
+                "b_to" => zeros(nphases, nphases),
                 "angmin" => fill(-60.0, nphases),
                 "angmax" => fill( 60.0, nphases),
                 "transformer" => false,
@@ -466,7 +488,7 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             "to" => "load.$(math_obj["index"])",
             "unmap_function" => "_map_math2eng_load!",
         ))
-    end
+   end
 end
 
 

@@ -22,9 +22,9 @@ new line.l7 like=L2 bus1=_b2 bus2=b10 linecode=lc10 test_param=100.0
 ! Loads
 New Load.ld1 phases=1 Bus1=b7.1.0  kv=0.208  status=variable model=1 conn=wye kW=3.89   pf=0.97  Vminpu=.88
 New "Load.ld2" bus1=b9 phases=3 conn=Wye model=5 kV=24.9 kW=27 kvar=21 Vminpu=.85
-New "Load.ld3" bus1=b10 phases=3 conn=Wye model=2 kV=24.9 kW=405 kvar=315 Vminpu=.85 yearly=(sngfile=load_profile.sng)
+New "Load.ld3" bus1=b10 phases=3 conn=Wye model=2 kV=24.9 kW=405 kvar=315 Vminpu=.85 yearly=ld3_yearly
 new load.ld4 like=ld2 bus1=b1
-New "Load.ld2" bus1=b9 phases=3 conn=Wye model=5 kV=24.9 kW=27 kvar=21 Vminpu=.85 daily=(file=load_profile.csv)
+New "Load.ld2" bus1=b9 phases=3 conn=Wye model=5 kV=24.9 kW=27 kvar=21 Vminpu=.85 daily=ld2_daily
 
 ! Capacitors
 New "Capacitor.c1" bus1=b5 phases=3 kvar=[ 250] kv=20.0
@@ -77,3 +77,6 @@ new xycurve.test_curve3 csvfile=load_profile_pq.csv
 new xycurve.test_curve4 dblfile=load_profile_interval.dbl
 
 new xfmrcode.t1 phases=1 windings=2 conns=[wye,wye] kvs=[15, 15] kvas=[50000 50000]
+
+new loadshape.ld3_yearly pmult=(sngfile=load_profile.sng)
+new loadshape.ld2_daily pmult=(file=load_profile.csv)
