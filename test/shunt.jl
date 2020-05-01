@@ -13,7 +13,7 @@
     sol_acp_diag = run_mc_pf(data_diag_shunt, ACPPowerModel, ipopt_solver)
     sol_acp = run_mc_pf(data, ACPPowerModel, ipopt_solver)
     sol_acr = run_mc_pf(data, ACRPowerModel, ipopt_solver)
-    sol_iv = run_mc_pf_iv(data, IVRPowerModel, ipopt_solver)
+    sol_iv = run_mc_pf(data, IVRPowerModel, ipopt_solver)
 
     # check the results are different with only diagonal elements
     @test(!isapprox(sol_acp["solution"]["bus"]["2"]["vm"], sol_acp_diag["solution"]["bus"]["2"]["vm"]))

@@ -13,13 +13,13 @@
 
         # create data model with equivalent generators
         pmd_2 = deepcopy(pmd_1)
-        pmd_2["load"] = Dict()
-        gen2load = Dict()
-        for (i,(id, load)) in enumerate(pmd_1["load"])
+        pmd_2["load"] = Dict{String,Any}()
+        gen2load = Dict{String,Any}()
+        for (i, (id, load)) in enumerate(pmd_1["load"])
             load = pmd_1["load"][id]
             gen = deepcopy(pmd_1["gen"]["1"])
 
-            gen["index"] = i+1
+            gen["index"] = i + 1
             gen["cost"] *= 0
             gen["configuration"] = load["configuration"]
             gen["pmax"] = gen["pmin"] = -load["pd"]
@@ -31,17 +31,12 @@
         end
 
         # check ACP and ACR
-        for (form, build_method) in zip(
-                [ACPPowerModel, ACRPowerModel, IVRPowerModel],
-                [build_mc_opf, build_mc_opf, build_mc_opf_iv]
-            )
-            pm_1  = PM.instantiate_model(pmd_1, form, build_method, ref_extensions=[PMD.ref_add_arcs_transformer!])
-            sol_1 = PM.optimize_model!(pm_1, optimizer=ipopt_solver)
-            @assert(sol_1["termination_status"]==LOCALLY_SOLVED)
+        for form in [ACPPowerModel, ACRPowerModel, IVRPowerModel]
+            sol_1 = run_mc_opf(pmd_1, form, ipopt_solver)
+            @test sol_1["termination_status"] == LOCALLY_SOLVED
 
-            pm_2  = PM.instantiate_model(pmd_2, form, build_method, ref_extensions=[PMD.ref_add_arcs_transformer!])
-            sol_2 = PM.optimize_model!(pm_2, optimizer=ipopt_solver)
-            @assert(sol_2["termination_status"]==LOCALLY_SOLVED)
+            sol_2 = run_mc_opf(pmd_2, form, ipopt_solver)
+            @test sol_2["termination_status"] == LOCALLY_SOLVED
 
             # check that gens are equivalent to the loads
             for (gen, load) in gen2load
@@ -49,8 +44,8 @@
                 qd_bus = sol_1["solution"]["load"][load]["qd"]
                 pg_bus = sol_2["solution"]["gen"][gen]["pg"]
                 qg_bus = sol_2["solution"]["gen"][gen]["qg"]
-                @test(isapprox(pd_bus, -pg_bus, atol=1E-5))
-                @test(isapprox(qd_bus, -qg_bus, atol=1E-5))
+                @test isapprox(pd_bus, -pg_bus, atol=1E-5)
+                @test isapprox(qd_bus, -qg_bus, atol=1E-5)
             end
         end
     end
@@ -77,7 +72,7 @@
     #         gen["model"] = 2
     #     end
     #
-    #     pm_ivr  = PMs.instantiate_model(pmd, PMs.IVRPowerModel, PMD.build_mc_opf_iv, ref_extensions=[PMD.ref_add_arcs_transformer!])
+    #     pm_ivr  = PMs.instantiate_model(pmd, PMs.IVRPowerModel, PMD.build_mc_opf, ref_extensions=[PMD.ref_add_arcs_transformer!])
     #     sol_ivr = PMs.optimize_model!(pm_ivr, optimizer=ipopt_solver)
     #     @assert(sol_1["termination_status"]==LOCALLY_SOLVED)
     #

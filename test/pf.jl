@@ -163,7 +163,7 @@
     end
 
     @testset "2-bus diagonal ivr pf" begin
-        sol = run_mc_pf_iv(case2_diag, IVRPowerModel, ipopt_solver)
+        sol = run_mc_pf(case2_diag, IVRPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -172,7 +172,7 @@
     end
 
     @testset "3-bus balanced ivr pf" begin
-        sol = run_mc_pf_iv(case3_balanced, IVRPowerModel, ipopt_solver)
+        sol = run_mc_pf(case3_balanced, IVRPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == LOCALLY_SOLVED
 

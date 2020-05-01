@@ -226,6 +226,7 @@ function _load_expmodel_params(load::Dict, bus::Dict)
     if load["model"]==POWER
         return (pd, zeros(ncnds), qd, zeros(ncnds))
     else
+        @warn load["model"]
         # get exponents
         if load["model"]==CURRENT
             alpha = ones(ncnds)

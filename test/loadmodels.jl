@@ -76,7 +76,7 @@
     end
     @testset "loadmodels 1/2/5 in ivr pf" begin
         pmd = parse_file("../test/data/opendss/case3_lm_models.dss")
-        sol = run_mc_pf_iv(pmd, IVRPowerModel, ipopt_solver; make_si=false)
+        sol = run_mc_pf(pmd, IVRPowerModel, ipopt_solver; make_si=false)
         # voltage magnitude at load bus
         @test isapprox(calc_vm_acr(sol, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)
         # delta and wye single-phase load models

@@ -6,6 +6,7 @@
 
 ## v0.9.0
 
+- Remove `run_mc_opf_iv`, `run_mc_opf_bf`, `run_mc_opf_bf_lm`, `run_mc_pf_bf`, `run_mc_pf_iv`, these can be accessed by using the correct formulation with `run_mc_opf` and `run_mc_pf`
 - Add support for Memento 1.1
 - Add support for PowerModels v0.17 (breaking)
 - Add support for InfrastructureModels v0.5

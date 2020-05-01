@@ -21,17 +21,21 @@ This enables the definition of a wide variety of power network formulations and 
 
 ## Core Network Formulations
 
-- AC (polar and rectangular coordinates)
-- SDP BFM relaxation
-- SOC BFM and BIM relaxation (W-space)
-- Linear approximation (LinDist3Flow and simplified unbalanced DistFlow)
+- Nonlinear
+  - ACP
+  - ACR
+  - IVR
+- Relaxations
+  - SDP BFM
+  - SOC BFM and BIM relaxation (W-space)
+- Linear Approximations
+  - LinDist3Flow
+  - NFA
+  - DCP
 
 ## Network Data Formats
 
-- Matlab ".m" files (extended for three-phase)
 - OpenDSS ".dss" files
-
-**Warning:** This package is under active development and may change drastically without warning.
 
 ## Development
 

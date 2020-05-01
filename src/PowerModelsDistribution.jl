@@ -61,13 +61,8 @@ module PowerModelsDistribution
     include("prob/common.jl")
     include("prob/mld.jl")
     include("prob/opf.jl")
-    include("prob/opf_iv.jl")
     include("prob/opf_oltc.jl")
-    include("prob/opf_bf.jl")
-    include("prob/opf_bf_lm.jl")
     include("prob/pf.jl")
-    include("prob/pf_bf.jl")
-    include("prob/pf_iv.jl")
     include("prob/debug.jl")
     include("prob/test.jl")
 
