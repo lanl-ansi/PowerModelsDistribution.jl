@@ -62,7 +62,7 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
         "name" => get(data_eng, "name", ""),
         "per_unit" => get(data_eng, "per_unit", false),
         "data_model" => MATHEMATICAL,
-        "settings" => data_eng["settings"],
+        "settings" => deepcopy(data_eng["settings"]),
     )
 
     #TODO the PM tests break for branches which are not of the size indicated by conductors;

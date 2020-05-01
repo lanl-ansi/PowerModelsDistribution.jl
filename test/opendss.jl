@@ -125,7 +125,7 @@
         end
 
         for (k,v) in eng["generator"]["g2"]
-            if !(k in ["bus", "source_id", "dss"])
+            if isa(v, Real)
                 @test all(isapprox.(v, eng["generator"]["g3"][k]; atol=1e-12))
             end
         end
