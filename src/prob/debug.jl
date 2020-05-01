@@ -1,26 +1,14 @@
 # These problem formulations are used to debug Distribution datasets
 # that do not converge using the standard formulations
 "OPF problem with slack power at every bus"
-function run_mc_opf_pbs(data::Dict{String,Any}, model_type, solver; kwargs...)
+function run_mc_opf_pbs(data::Union{Dict{String,<:Any},String}, model_type::DataType, solver; kwargs...)
     return run_mc_model(data, model_type, solver, build_mc_opf_pbs; kwargs...)
 end
 
 
-"OPF problem with slack power at every bus"
-function run_mc_opf_pbs(file::String, model_type, solver; kwargs...)
-    return run_mc_opf_pbs(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
-end
-
-
 "PF problem with slack power at every bus"
-function run_mc_pf_pbs(data::Dict{String,Any}, model_type, solver; kwargs...)
+function run_mc_pf_pbs(data::Union{Dict{String,<:Any},String}, model_type::DataType, solver; kwargs...)
     return run_mc_model(data, model_type, solver, build_mc_pf_pbs; kwargs...)
-end
-
-
-"PF problem with slack power at every bus"
-function run_mc_pf_pbs(file::String, model_type, solver; kwargs...)
-    return run_mc_pf_pbs(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
 end
 
 

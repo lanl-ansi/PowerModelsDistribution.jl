@@ -1,36 +1,18 @@
 "Run load shedding problem with storage"
-function run_mc_mld(data::Dict{String,Any}, model_type, solver; kwargs...)
+function run_mc_mld(data::Union{Dict{String,<:Any},String}, model_type::DataType, solver; kwargs...)
     return run_mc_model(data, model_type, solver, build_mc_mld; kwargs...)
 end
 
 
-""
-function run_mc_mld(file::String, model_type, solver; kwargs...)
-    return run_mc_mld(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
-end
-
-
 "Run Branch Flow Model Load Shedding Problem"
-function run_mc_mld_bf(data::Dict{String,Any}, model_type, solver; kwargs...)
+function run_mc_mld_bf(data::Union{Dict{String,<:Any},String}, model_type::DataType, solver; kwargs...)
     return run_mc_model(data, model_type, solver, build_mc_mld_bf; kwargs...)
 end
 
 
-""
-function run_mc_mld_bf(file::String, model_type, solver; kwargs...)
-    return run_mc_mld_bf(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
-end
-
-
 "Run unit commitment load shedding problem (!relaxed)"
-function run_mc_mld_uc(data::Dict{String,Any}, model_type, solver; kwargs...)
+function run_mc_mld_uc(data::Union{Dict{String,<:Any},String}, model_type::DataType, solver; kwargs...)
     return run_mc_model(data, model_type, solver, build_mc_mld_uc; kwargs...)
-end
-
-
-""
-function run_mc_mld_uc(file::String, model_type, solver; kwargs...)
-    return run_mc_mld(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
 end
 
 

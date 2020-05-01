@@ -2,19 +2,13 @@
 # handled in variable_mc_load_setpoint and constraint_mc_load_setpoint.
 
 
-""
-function run_mc_opf_bf_lm(data::Dict{String,Any}, model_constructor, solver; kwargs...)
-    return run_mc_model(data, model_constructor, solver, build_mc_opf_bf_lm; kwargs...)
+"branch flow with loadmodels"
+function run_mc_opf_bf_lm(data::Union{Dict{String,<:Any},String}, model_type::DataType, solver; kwargs...)
+    return run_mc_model(data, model_type, solver, build_mc_opf_bf_lm; kwargs...)
 end
 
 
-""
-function run_mc_opf_bf_lm(file::String, model_constructor, solver; kwargs...)
-    return run_mc_opf_bf_lm(PowerModelsDistribution.parse_file(file), model_constructor, solver; kwargs...)
-end
-
-
-""
+"constructor for branch flow with loadmodels"
 function build_mc_opf_bf_lm(pm::_PM.AbstractPowerModel)
     # Variables
     variable_mc_bus_voltage(pm)

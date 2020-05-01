@@ -1,28 +1,16 @@
-""
-function run_ac_mc_pf(data, solver; kwargs...)
+"Power Flow problem with ACPPowerModel"
+function run_ac_mc_pf(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
     return run_mc_pf(data, _PM.ACPPowerModel, solver; kwargs...)
 end
 
 
-""
-function run_dc_mc_pf(data, solver; kwargs...)
-    return run_mc_pf(data, _PM.DCPPowerModel, solver; kwargs...)
-end
-
-
-""
-function run_mc_pf(data::Dict{String,Any}, model_type, solver; kwargs...)
+"Power Flow Problem"
+function run_mc_pf(data::Union{Dict{String,<:Any},String}, model_type::DataType, solver; kwargs...)
     return run_mc_model(data, model_type, solver, build_mc_pf; kwargs...)
 end
 
 
-""
-function run_mc_pf(file::String, model_type, solver; kwargs...)
-    return run_mc_pf(PowerModelsDistribution.parse_file(file), model_type, solver;  kwargs...)
-end
-
-
-""
+"Constructor for Power Flow Problem"
 function build_mc_pf(pm::_PM.AbstractPowerModel)
     variable_mc_bus_voltage(pm; bounded=false)
     variable_mc_branch_power(pm; bounded=false)

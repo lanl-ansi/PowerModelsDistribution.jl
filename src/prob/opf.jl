@@ -1,22 +1,16 @@
-""
-function run_ac_mc_opf(file, solver; kwargs...)
-    return run_mc_opf(file, _PM.ACPPowerModel, solver; kwargs...)
+"OPF with ACPPowerModel"
+function run_ac_mc_opf(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
+    return run_mc_opf(data, ACPPowerModel, solver; kwargs...)
 end
 
 
-""
-function run_mc_opf(data::Dict{String,Any}, model_type, solver; kwargs...)
+"Optimal Power Flow"
+function run_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::DataType, solver; kwargs...)
     return run_mc_model(data, model_type, solver, build_mc_opf; kwargs...)
 end
 
 
-""
-function run_mc_opf(file::String, model_type, solver; kwargs...)
-    return run_mc_opf(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
-end
-
-
-""
+"Constructor for Optimal Power Flow"
 function build_mc_opf(pm::_PM.AbstractPowerModel)
     variable_mc_bus_voltage(pm)
     variable_mc_branch_power(pm)

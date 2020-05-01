@@ -1,16 +1,10 @@
-""
-function run_mc_opf_bf(data::Dict{String,Any}, model_type, solver; kwargs...)
+"branch flow opf"
+function run_mc_opf_bf(data::Union{Dict{String,<:Any},String}, model_type::DataType, solver; kwargs...)
     return run_mc_model(data, model_type, solver, build_mc_opf_bf; kwargs...)
 end
 
 
-""
-function run_mc_opf_bf(file::String, model_type, solver; kwargs...)
-    return run_mc_opf_bf(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
-end
-
-
-""
+"constructor for branch flow opf"
 function build_mc_opf_bf(pm::_PM.AbstractPowerModel)
     # Variables
     variable_mc_bus_voltage(pm)

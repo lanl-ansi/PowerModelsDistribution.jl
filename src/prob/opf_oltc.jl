@@ -1,22 +1,16 @@
-""
-function run_ac_mc_opf_oltc(file, solver; kwargs...)
-    return run_mc_opf_oltc(file, _PM.ACPPowerModel, solver; kwargs...)
+"Online tap changing OPF with ACPPowerModel"
+function run_ac_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
+    return run_mc_opf_oltc(data, ACPPowerModel, solver; kwargs...)
 end
 
 
-""
-function run_mc_opf_oltc(data::Dict{String,Any}, model_type, solver; kwargs...)
+"Online tap changing OPF"
+function run_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, model_type::DataType, solver; kwargs...)
     return run_mc_model(data, model_type, solver, build_mc_opf_oltc; kwargs...)
 end
 
 
-""
-function run_mc_opf_oltc(file::String, model_type, solver; kwargs...)
-    return run_mc_opf_oltc(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
-end
-
-
-""
+"constructor for Online tap changing OPF"
 function build_mc_opf_oltc(pm::_PM.AbstractPowerModel)
     variable_mc_bus_voltage(pm)
     variable_mc_branch_power(pm)
