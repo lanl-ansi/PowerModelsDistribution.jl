@@ -212,7 +212,11 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             )
             _apply_filter!(math_obj, ["angmin", "angmax", "tap", "shift"], filter)
             connections = eng_obj["f_connections"][filter]
-            _pad_properties!(math_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "angmin", "angmax", "tap", "shift"], connections, kr_phases)
+            _pad_properties!(math_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "shift"], connections, kr_phases)
+            _pad_properties!(math_obj, ["angmin"], connections, kr_phases; pad_value=-60.0)
+            _pad_properties!(math_obj, ["angmax"], connections, kr_phases; pad_value=60.0)
+            _pad_properties!(math_obj, ["tap"], connections, kr_phases; pad_value=1.0)
+
         else
             math_obj["f_connections"] = eng_obj["f_connections"]
             math_obj["t_connections"] = eng_obj["t_connections"]
@@ -401,7 +405,10 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 )
                 _apply_filter!(branch_obj, ["angmin", "angmax", "tap", "shift"], filter)
                 connections = eng_obj["f_connections"][filter]
-                _pad_properties!(branch_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "angmin", "angmax", "tap", "shift"], connections, kr_phases)
+                _pad_properties!(math_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "shift"], connections, kr_phases)
+                _pad_properties!(math_obj, ["angmin"], connections, kr_phases; pad_value=-60.0)
+                _pad_properties!(math_obj, ["angmax"], connections, kr_phases; pad_value=60.0)
+                _pad_properties!(math_obj, ["tap"], connections, kr_phases; pad_value=1.0)
             else
                 branch_obj["f_connections"] = eng_obj["f_connections"]
                 branch_obj["f_connections"] = eng_obj["t_connections"]
