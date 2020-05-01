@@ -16,8 +16,14 @@ This enables the definition of a wide variety of power network formulations and 
 ## Core Problem Specifications
 
 - Power Flow (pf)
-- Optimal Power Flow (opf), for the Bus Injection Model (BIM) as well as the Branch Flow Model (BFM)
-- Continuous load shed, minimum load delta (mld), for the Branch Flow Model (LPLinUBFPowerModel), AC Polar (ACPPowerModel), and Network Flow Approximation (NFAPowerModel)
+  - ACP, ACR, IVR, LinDist3Flow, NFA, DCP
+- Optimal Power Flow (opf)
+  - ACP, ACR, IVR, LinDist3Flow, NFA, DCP
+- Continuous load shed, minimum load delta (mld)
+  - ACP, LinDist3Flow, NFA
+- Optimal Power Flow with on-load tap-changer (opf_oltc)
+
+**Note: The documentation is somewhat lagging behind development and the parings of network features with problem specifications with formulations has not been enumerated. We are working to correct this for you.**
 
 ## Core Network Formulations
 
