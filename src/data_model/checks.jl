@@ -6,17 +6,12 @@ const _eng_model_checks = Dict{Symbol,Symbol}(
     :line => :_check_line,
     :transformer => :_check_transformer,
     # :switch => :_check_switch,
-    # :line_reactor => :_check_line_reactor,
-    # :series_capacitor => :_check_series_capacitor,
     :load => :_check_load,
-    :shunt_capacitor => :_check_shunt_capacitor,
-    # :shunt_reactor => :_check_shunt_reactor,
     :shunt => :_check_shunt,
     :generator => :_check_generator,
     :voltage_source => :_check_voltage_source,
     # :solar => :_check_solar,
     # :storage => :_check_storage,
-    # :grounding => :_check_grounding,
 )
 
 "Data types of accepted fields in the engineering data model"
@@ -246,18 +241,10 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
         :values => Vector{<:Real},
         :replace => Bool,
     ),
-    :grounding => Dict{Symbol,Type}(
-        :bus => Any,
-        :rg => Real,
-        :xg => Real,
-    ),
     # Future Components
     # :ev => Dict{Symbol,Type}(),
     # :wind => Dict{Symbol,Type}(),
     # :autotransformer => Dict{Symbol,Type}(),
-    # :synchronous_generator => Dict{Symbol,Type}(),
-    # :zip_load => Dict{Symbol,Type}(),
-    # :boundary => Dict{Symbol,Type}(),
     # :meter => Dict{Symbol,Type}()
 )
 
@@ -324,7 +311,6 @@ const _eng_model_req_fields= Dict{Symbol,Vector{Symbol}}(
     # :ev => Vector{Symbol}([]),
     # :wind => Vector{Symbol}([]),
     # :autotransformer => Vector{Symbol}([]),
-    # :synchronous_generator => Vector{Symbol}([]), # same as generator?
     # :meter => Vector{Symbol}([])
 )
 
@@ -492,10 +478,6 @@ function _check_line(data_eng::Dict{String,<:Any}, name::Any)
         linecode_obj_name = line["linecode"]
         @assert haskey(data_eng, "linecode") && haskey(data_eng["linecode"], "$linecode_obj_name")  "line $name: the linecode $linecode_obj_name is not defined."
         linecode = data_eng["linecode"]["$linecode_obj_name"]
-
-        # for key in ["n_conductors", "rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
-        #     @assert !haskey(line, key) "line $name: a line with a linecode, should not specify $key; this is already done by the linecode."
-        # end
 
         N = size(linecode["rs"])[1]
         @assert length(line["f_connections"])==N "line $name: the number of terminals should match the number of conductors in the linecode."
