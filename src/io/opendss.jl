@@ -79,7 +79,7 @@ Note that in the current feature set, fixed therefore equals constant
 # 7: Constant P and quadratic Q (i.e., fixed reactance)
 # 8: ZIP
 """
-function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool, ground_terminal::Int=4, time_series::String="daily")
+function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool, time_series::String="daily")
     for (id, dss_obj) in get(data_dss, "load", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "load")
         defaults = _apply_ordered_properties(_create_load(id; _to_kwargs(dss_obj)...), dss_obj)
@@ -127,16 +127,7 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         eng_obj["pd_nom"] = fill(defaults["kw"]/nphases, nphases)
         eng_obj["qd_nom"] = fill(defaults["kvar"]/nphases, nphases)
 
-        if haskey(dss_obj, time_series) && haskey(data_dss, "loadshape") && haskey(data_dss["loadshape"], defaults[time_series])
-            eng_obj["time_series"] = Dict{String,Any}()
-            if _is_loadshape_split(data_dss["loadshape"][defaults[time_series]])
-                eng_obj["time_series"]["pd_nom"] = "$(defaults[time_series])_p"
-                eng_obj["time_series"]["qd_nom"] = "$(defaults[time_series])_q"
-            else
-                eng_obj["time_series"]["pd_nom"] = defaults[time_series]
-                eng_obj["time_series"]["qd_nom"] = defaults[time_series]
-            end
-        end
+        _build_time_series_reference!(eng_obj, dss_obj, data_dss, defaults, time_series, "pd_nom", "qd_nom")
 
         if import_all
             _import_all!(eng_obj, dss_obj)
@@ -353,16 +344,7 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
         end
 
-        if haskey(dss_obj, time_series) && haskey(data_dss, "loadshape") && haskey(data_dss["loadshape"], defaults[time_series])
-            eng_obj["time_series"] = Dict{String,Any}()
-            if _is_loadshape_split(data_dss["loadshape"][defaults[time_series]])
-                eng_obj["time_series"]["pg"] = "$(defaults[time_series])_p"
-                eng_obj["time_series"]["qg"] = "$(defaults[time_series])_q"
-            else
-                eng_obj["time_series"]["pg"] = defaults[time_series]
-                eng_obj["time_series"]["qg"] = defaults[time_series]
-            end
-        end
+        _build_time_series_reference!(eng_obj, dss_obj, data_dss, defaults, time_series, "pg", "qg")
 
         if import_all
             _import_all!(eng_obj, dss_obj)
@@ -405,16 +387,7 @@ function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
         end
 
-        if haskey(dss_obj, time_series) && haskey(data_dss, "loadshape") && haskey(data_dss["loadshape"], defaults[time_series])
-            eng_obj["time_series"] = Dict{String,Any}()
-            if _is_loadshape_split(data_dss["loadshape"][defaults[time_series]])
-                eng_obj["time_series"]["pg"] = "$(defaults[time_series])_p"
-                eng_obj["time_series"]["qg"] = "$(defaults[time_series])_q"
-            else
-                eng_obj["time_series"]["pg"] = defaults[time_series]
-                eng_obj["time_series"]["qg"] = defaults[time_series]
-            end
-        end
+        _build_time_series_reference!(eng_obj, dss_obj, data_dss, defaults, time_series, "pg", "qg")
 
         if import_all
             _import_all!(eng_obj, dss_obj)
@@ -790,16 +763,7 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
         end
 
-        if haskey(dss_obj, time_series) && haskey(data_dss, "loadshape") && haskey(data_dss["loadshape"], defaults[time_series])
-            eng_obj["time_series"] = Dict{String,Any}()
-            if _is_loadshape_split(data_dss["loadshape"][defaults[time_series]])
-                eng_obj["time_series"]["pg"] = "$(defaults[time_series])_p"
-                eng_obj["time_series"]["qg"] = "$(defaults[time_series])_q"
-            else
-                eng_obj["time_series"]["pg"] = defaults[time_series]
-                eng_obj["time_series"]["qg"] = defaults[time_series]
-            end
-        end
+        _build_time_series_reference!(eng_obj, dss_obj, data_dss, defaults, time_series, "pg", "qg")
 
         if import_all
             _import_all!(eng_obj, dss_obj)
@@ -844,16 +808,7 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
         end
 
-        if haskey(dss_obj, time_series) && haskey(data_dss, "loadshape") && haskey(data_dss["loadshape"], defaults[time_series])
-            eng_obj["time_series"] = Dict{String,Any}()
-            if _is_loadshape_split(data_dss["loadshape"][defaults[time_series]])
-                eng_obj["time_series"]["ps"] = "$(defaults[time_series])_p"
-                eng_obj["time_series"]["qs"] = "$(defaults[time_series])_q"
-            else
-                eng_obj["time_series"]["ps"] = defaults[time_series]
-                eng_obj["time_series"]["qs"] = defaults[time_series]
-            end
-        end
+        _build_time_series_reference!(eng_obj, dss_obj, data_dss, defaults, time_series, "ps", "qs")
 
         if import_all
             _import_all!(eng_obj, dss_obj)
@@ -865,15 +820,29 @@ end
 
 
 "Parses a DSS file into a PowerModels usable format"
-function parse_opendss(io::IOStream; import_all::Bool=false, bank_transformers::Bool=true)::Dict
+function parse_opendss(io::IOStream;
+    import_all::Bool=false,
+    bank_transformers::Bool=true,
+    time_series::String="daily"
+        )::Dict{String,Any}
+
     data_dss = parse_dss(io)
 
-    return parse_opendss(data_dss; import_all=import_all, bank_transformers=bank_transformers)
+    return parse_opendss(data_dss;
+        import_all=import_all,
+        bank_transformers=bank_transformers,
+        time_series=time_series
+    )
 end
 
 
 "Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format"
-function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, bank_transformers::Bool=true)::Dict{String,Any}
+function parse_opendss(data_dss::Dict{String,<:Any};
+    import_all::Bool=false,
+    bank_transformers::Bool=true,
+    time_series::String="daily"
+        )::Dict{String,Any}
+
     data_eng = Dict{String,Any}(
         "data_model" => ENGINEERING,
         "settings" => Dict{String,Any}(),
@@ -914,12 +883,12 @@ function parse_opendss(data_dss::Dict{String,<:Any}; import_all::Bool=false, ban
     _dss2eng_reactor!(data_eng, data_dss, import_all)
 
     _dss2eng_loadshape!(data_eng, data_dss, import_all)
-    _dss2eng_load!(data_eng, data_dss, import_all)
+    _dss2eng_load!(data_eng, data_dss, import_all, time_series)
 
-    _dss2eng_vsource!(data_eng, data_dss, import_all)
-    _dss2eng_generator!(data_eng, data_dss, import_all)
-    _dss2eng_pvsystem!(data_eng, data_dss, import_all)
-    _dss2eng_storage!(data_eng, data_dss, import_all)
+    _dss2eng_vsource!(data_eng, data_dss, import_all, time_series)
+    _dss2eng_generator!(data_eng, data_dss, import_all, time_series)
+    _dss2eng_pvsystem!(data_eng, data_dss, import_all, time_series)
+    _dss2eng_storage!(data_eng, data_dss, import_all, time_series)
 
     _discover_terminals!(data_eng)
 

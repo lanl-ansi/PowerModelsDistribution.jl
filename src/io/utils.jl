@@ -870,7 +870,7 @@ end
 
 
 ""
-function _parse_dss_xycurve(dss_obj::Dict{String,<:Any}, data_dss::Dict{String,<:Any})::Array{Vector{Real},2}
+function _parse_dss_xycurve(dss_obj::Dict{String,<:Any}, id::Any, data_dss::Dict{String,<:Any})::Array{Vector{Real},2}
     _apply_like!(dss_obj, data_dss, "xycurve")
     defaults = _apply_ordered_properties(_create_xycurve(id; _to_kwargs(dss_obj)...), dss_obj)
 
@@ -880,4 +880,19 @@ function _parse_dss_xycurve(dss_obj::Dict{String,<:Any}, data_dss::Dict{String,<
     @assert length(xarray) >= 2 && length(yarray) >= 2 "XYCurve data must have two or more points"
 
     return Array{Vector{Real},2}([xarray, yarray])
+end
+
+
+"helper function to properly reference time series variables from opendss"
+function _build_time_series_reference!(eng_obj::Dict{String,<:Any}, dss_obj::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, defaults::Dict{String,<:Any}, time_series::String, active::String, reactive::String)
+    if haskey(dss_obj, time_series) && haskey(data_dss, "loadshape") && haskey(data_dss["loadshape"], defaults[time_series])
+        eng_obj["time_series"] = Dict{String,Any}()
+        if _is_loadshape_split(data_dss["loadshape"][defaults[time_series]])
+            eng_obj["time_series"][active] = "$(defaults[time_series])_p"
+            eng_obj["time_series"][reactive] = "$(defaults[time_series])_q"
+        else
+            eng_obj["time_series"][active] = defaults[time_series]
+            eng_obj["time_series"][reactive] = defaults[time_series]
+        end
+    end
 end

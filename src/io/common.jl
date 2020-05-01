@@ -10,18 +10,27 @@ function parse_file(
     bank_transformers::Bool=true,
     transformations::Vector{<:Function}=Vector{Function}([]),
     build_multinetwork::Bool=false,
-    kron_reduced::Bool=true
+    kron_reduced::Bool=true,
+    time_series::String="daily"
         )::Dict{String,Any}
 
     if filetype == "dss"
-        data_eng = PowerModelsDistribution.parse_opendss(io; import_all=import_all, bank_transformers=bank_transformers)
+        data_eng = PowerModelsDistribution.parse_opendss(io;
+            import_all=import_all,
+            bank_transformers=bank_transformers,
+            time_series=time_series
+        )
 
         for transformation in transformations
             transformation(data_eng)
         end
 
         if data_model == MATHEMATICAL
-            return transform_data_model(data_eng; make_pu=true, kron_reduced=kron_reduced, build_multinetwork=build_multinetwork)
+            return transform_data_model(data_eng;
+                make_pu=true,
+                kron_reduced=kron_reduced,
+                build_multinetwork=build_multinetwork
+            )
         else
             return data_eng
         end
@@ -29,7 +38,10 @@ function parse_file(
         pmd_data = parse_json(io; validate=false)
 
         if pmd_data["data_model"] != data_model && data_model == ENGINEERING
-            return transform_data_model(pmd_data; kron_reduced=kron_reduced, build_multinetwork=build_multinetwork)
+            return transform_data_model(pmd_data;
+                kron_reduced=kron_reduced,
+                build_multinetwork=build_multinetwork
+            )
         else
             return pmd_data
         end
@@ -50,7 +62,12 @@ end
 
 
 "transforms model between engineering (high-level) and mathematical (low-level) models"
-function transform_data_model(data::Dict{String,<:Any}; kron_reduced::Bool=true, make_pu::Bool=true, build_multinetwork::Bool=false)::Dict{String,Any}
+function transform_data_model(data::Dict{String,<:Any};
+        kron_reduced::Bool=true,
+        make_pu::Bool=true,
+        build_multinetwork::Bool=false
+            )::Dict{String,Any}
+
     current_data_model = get(data, "data_model", MATHEMATICAL)
 
     if current_data_model == ENGINEERING
