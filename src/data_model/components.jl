@@ -479,7 +479,7 @@ end
 
 
 "creates energy storage object with some defaults"
-function create_solar(bus::Any, connections::Union{Vector{Int},Vector{String}};
+function create_storage(bus::Any, connections::Union{Vector{Int},Vector{String}};
     configuration::ConnConfig=WYE,
     energy::Real=0.0,
     energy_ub::Real=0.0,
