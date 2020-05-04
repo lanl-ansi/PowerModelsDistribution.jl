@@ -7,7 +7,6 @@ const _pmd_eng_global_keys = Set{String}([
 function _init_math_obj(obj_type::String, eng_id::Any, eng_obj::Dict{String,<:Any}, index::Int)::Dict{String,Any}
     math_obj = Dict{String,Any}(
         "name" => "$eng_id",
-        "status" => Int(eng_obj["status"])
     )
 
     for key in _1to1_maps[obj_type]
@@ -372,25 +371,27 @@ function _pad_properties_delta!(object::Dict{<:Any,<:Any}, properties::Vector{St
     @assert(length(phases)==3, "Padding only possible to a |phases|==3!")
 
     for property in properties
-        val = object[property]
-        val_length = length(connections)==2 ? 1 : length(connections)
-        @assert(isa(val, Vector) && length(val)==val_length)
+        if haskey(object, property)
+            val = object[property]
+            val_length = length(connections)==2 ? 1 : length(connections)
+            @assert(isa(val, Vector) && length(val)==val_length)
 
-        # build tmp
-        tmp = Dict()
-        sign = invert ? -1 : 1
-        if val_length==1
-            tmp[(connections[1], connections[2])] =      val[1]
-            tmp[(connections[2], connections[1])] = sign*val[1]
-        else
-            tmp[(connections[1], connections[2])] =      val[1]
-            tmp[(connections[2], connections[3])] =      val[2]
-            tmp[(connections[3], connections[1])] =      val[3]
+            # build tmp
+            tmp = Dict()
+            sign = invert ? -1 : 1
+            if val_length==1
+                tmp[(connections[1], connections[2])] =      val[1]
+                tmp[(connections[2], connections[1])] = sign*val[1]
+            else
+                tmp[(connections[1], connections[2])] =      val[1]
+                tmp[(connections[2], connections[3])] =      val[2]
+                tmp[(connections[3], connections[1])] =      val[3]
+            end
+            merge!(tmp, Dict((k[2], k[1])=>sign*v for (k,v) in tmp))
+            get_val(x,y) = haskey(tmp, (x,y)) ? tmp[(x,y)] : 0.0
+
+            object[property] = [get_val(phases[1], phases[2]), get_val(phases[2], phases[3]), get_val(phases[3], phases[1])]
         end
-        merge!(tmp, Dict((k[2], k[1])=>sign*v for (k,v) in tmp))
-        get_val(x,y) = haskey(tmp, (x,y)) ? tmp[(x,y)] : 0.0
-
-        object[property] = [get_val(phases[1], phases[2]), get_val(phases[2], phases[3]), get_val(phases[3], phases[1])]
     end
 end
 

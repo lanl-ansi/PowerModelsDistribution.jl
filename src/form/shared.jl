@@ -145,8 +145,8 @@ function constraint_mc_load_power_balance(pm::_PM.AbstractWModels, nw::Int, i, b
     Pt   = get(var(pm, nw),   :Pt, Dict()); _PM._check_var_keys(Pt, bus_arcs_trans, "active power", "transformer")
     Qt   = get(var(pm, nw),   :Qt, Dict()); _PM._check_var_keys(Qt, bus_arcs_trans, "reactive power", "transformer")
 
-    pd = get(var(pm, nw), :pd_bus, Dict()); _PM._check_var_keys(pg, bus_loads, "active power", "load")
-    qd = get(var(pm, nw), :qd_bus, Dict()); _PM._check_var_keys(qg, bus_loads, "reactive power", "load")
+    pd = get(var(pm, nw), :pd_bus, Dict()); _PM._check_var_keys(pd, bus_loads, "active power", "load")
+    qd = get(var(pm, nw), :qd_bus, Dict()); _PM._check_var_keys(qd, bus_loads, "reactive power", "load")
     pg = get(var(pm, nw), :pg_bus, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
     qg = get(var(pm, nw), :qg_bus, Dict()); _PM._check_var_keys(qg, bus_gens, "reactive power", "generator")
     ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")

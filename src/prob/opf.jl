@@ -130,8 +130,18 @@ function build_mc_opf(pm::AbstractUBFModels)
         constraint_mc_theta_ref(pm, i)
     end
 
+    # gens should be constrained before KCL, or Pd/Qd undefined
+    for id in ids(pm, :gen)
+        constraint_mc_gen_setpoint(pm, id)
+    end
+
+    # loads should be constrained before KCL, or Pd/Qd undefined
+    for id in ids(pm, :load)
+        constraint_mc_load_setpoint(pm, id)
+    end
+
     for i in ids(pm, :bus)
-        constraint_mc_power_balance(pm, i)
+        constraint_mc_load_power_balance(pm, i)
     end
 
     for i in ids(pm, :branch)
@@ -144,14 +154,6 @@ function build_mc_opf(pm::AbstractUBFModels)
         constraint_mc_thermal_limit_to(pm, i)
     end
 
-    for i in ids(pm, :load)
-        constraint_mc_load_setpoint(pm, i)
-    end
-
-    for i in ids(pm, :gen)
-        constraint_mc_gen_setpoint(pm, i)
-    end
-
     for i in ids(pm, :transformer)
         constraint_mc_transformer_power(pm, i)
     end
@@ -159,5 +161,3 @@ function build_mc_opf(pm::AbstractUBFModels)
     # Objective
     _PM.objective_min_fuel_cost(pm)
 end
-
-

@@ -90,7 +90,6 @@
         end
 
         @testset "5-bus phase drop acp opf" begin
-
             result = run_mc_opf(case5_phase_drop, ACPPowerModel, ipopt_solver; make_si=false)
 
             @test result["termination_status"] == LOCALLY_SOLVED

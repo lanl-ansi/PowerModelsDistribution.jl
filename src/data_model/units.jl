@@ -256,9 +256,11 @@ function _rebase_pu_branch!(branch::Dict{String,<:Any}, vbase::Real, sbase::Real
     z_new = vbase^2/sbase*voltage_scale_factor
     z_scale = z_old/z_new
     y_scale = 1/z_scale
+    sbase_scale = sbase_old/sbase
 
     _scale_props!(branch, ["br_r", "br_x"], z_scale)
     _scale_props!(branch, ["b_fr", "g_fr", "b_to", "g_to"], y_scale)
+    _scale_props!(branch, ["c_rating_a", "c_rating_b", "c_rating_c", "rate_a", "rate_b", "rate_c"], sbase_scale)
 
     branch["angmin"] = deg2rad.(branch["angmin"])
     branch["angmax"] = deg2rad.(branch["angmax"])

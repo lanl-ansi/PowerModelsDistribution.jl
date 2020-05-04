@@ -4,46 +4,51 @@
     # This test checks the generators are connected properly by comparing them
     # to equivalent constant-power loads. This is achieved by fixing their bounds.
     @testset "ACP/ACR tests" begin
-        pmd_1 = parse_file("$pmd_path/test/data/opendss/case3_delta_gens.dss"; data_model=MATHEMATICAL)
+        eng_1 = parse_file("../test/data/opendss/case3_delta_gens.dss")
 
-        # convert to constant power loads
-        for (_, load) in pmd_1["load"]
+        for (_,load) in eng_1["load"]
             load["model"] = POWER
         end
 
-        # create data model with equivalent generators
-        pmd_2 = deepcopy(pmd_1)
-        pmd_2["load"] = Dict{String,Any}()
-        gen2load = Dict{String,Any}()
-        for (i, (id, load)) in enumerate(pmd_1["load"])
-            load = pmd_1["load"][id]
-            gen = deepcopy(pmd_1["gen"]["1"])
+        for (_,line) in eng_1["line"]
+            line["cm_ub"] = fill(1e4, size(line["cm_ub"])...)
+        end
 
-            gen["index"] = i + 1
-            gen["cost"] *= 0
-            gen["configuration"] = load["configuration"]
-            gen["pmax"] = gen["pmin"] = -load["pd"]
-            gen["qmin"] = gen["qmax"] = -load["qd"]
-            gen["gen_bus"] = load["load_bus"]
-            gen["model"] = 2
-            gen2load["$(i+1)"] = id
-            pmd_2["gen"]["$(i+1)"] = gen
+        eng_2 = deepcopy(eng_1)
+        eng_2["load"] = Dict{Any,Any}()
+        eng_2["generator"] = Dict{Any,Any}()
+        for (id,load) in eng_1["load"]
+            gen = Dict{String,Any}(
+                "source_id" => load["source_id"],
+                "configuration" => load["configuration"],
+                "bus" => load["bus"],
+                "connections" => load["connections"],
+                "cost_pg_parameters" => [0, 0, 0],
+                "control_mode" => DROOP,
+                "pg_lb" => -load["pd_nom"],
+                "pg_ub" => -load["pd_nom"],
+                "qg_lb" => -load["qd_nom"],
+                "qg_ub" => -load["qd_nom"],
+                "status" => ENABLED,
+            )
+
+            eng_2["generator"][id] = gen
         end
 
         # check ACP and ACR
         for form in [ACPPowerModel, ACRPowerModel, IVRPowerModel]
-            sol_1 = run_mc_opf(pmd_1, form, ipopt_solver)
+            sol_1 = run_mc_opf(eng_1, form, ipopt_solver)
             @test sol_1["termination_status"] == LOCALLY_SOLVED
 
-            sol_2 = run_mc_opf(pmd_2, form, ipopt_solver)
+            sol_2 = run_mc_opf(eng_2, form, ipopt_solver)
             @test sol_2["termination_status"] == LOCALLY_SOLVED
 
             # check that gens are equivalent to the loads
-            for (gen, load) in gen2load
-                pd_bus = sol_1["solution"]["load"][load]["pd"]
-                qd_bus = sol_1["solution"]["load"][load]["qd"]
-                pg_bus = sol_2["solution"]["gen"][gen]["pg"]
-                qg_bus = sol_2["solution"]["gen"][gen]["qg"]
+            for (id,_) in eng_1["load"]
+                pd_bus = sol_1["solution"]["load"][id]["pd"]
+                qd_bus = sol_1["solution"]["load"][id]["qd"]
+                pg_bus = sol_2["solution"]["generator"][id]["pg"]
+                qg_bus = sol_2["solution"]["generator"][id]["qg"]
                 @test isapprox(pd_bus, -pg_bus, atol=1E-5)
                 @test isapprox(qd_bus, -qg_bus, atol=1E-5)
             end

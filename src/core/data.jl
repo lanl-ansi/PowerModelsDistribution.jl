@@ -719,6 +719,7 @@ end
 _sum_rm_nan(X::Vector) = sum([X[(!).(isnan.(X))]..., 0.0])
 
 
+""
 function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, Adjoint}) where T
     N, A_ncols = size(A)
     B_nrows, M = size(B)
@@ -731,6 +732,7 @@ _mat_mult_rm_nan(A::Union{Matrix, Adjoint}, b::Vector) = dropdims(_mat_mult_rm_n
 _mat_mult_rm_nan(a::Vector, B::Union{Matrix, Adjoint}) = _mat_mult_rm_nan(reshape(a, length(a), 1), B)
 
 
+""
 function _nan2zero(b, a; val=0)
     and(x, y) = x && y
     b[and.(isnan.(b), a.==val)] .= 0.0

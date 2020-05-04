@@ -119,23 +119,35 @@ end
 "Constructor for Branch Flow Power Flow"
 function build_mc_pf(pm::AbstractUBFModels)
     # Variables
-    variable_mc_bus_voltage(pm; bounded=false)
+    variable_mc_bus_voltage(pm; bounded=true) # TODO should be false
     variable_mc_branch_current(pm)
     variable_mc_branch_power(pm)
+    variable_mc_transformer_power(pm; bounded=false)
     variable_mc_gen_power_setpoint(pm; bounded=false)
+    variable_mc_load_setpoint(pm)
 
     # Constraints
     constraint_mc_model_current(pm)
 
     for (i,bus) in ref(pm, :ref_buses)
-        constraint_mc_theta_ref(pm, i)
+        if !(typeof(pm)<:LPUBFDiagPowerModel)
+            constraint_mc_theta_ref(pm, i)
+        end
 
         @assert bus["bus_type"] == 3
         constraint_mc_voltage_magnitude_only(pm, i)
     end
 
-    for i in ids(pm, :bus)
-        constraint_mc_power_balance(pm, i)
+    for id in ids(pm, :gen)
+        constraint_mc_gen_setpoint(pm, id)
+    end
+
+    for id in ids(pm, :load)
+        constraint_mc_load_setpoint(pm, id)
+    end
+
+    for (i,bus) in ref(pm, :bus)
+        constraint_mc_load_power_balance(pm, i)
 
         # PV Bus Constraints
         if length(ref(pm, :bus_gens, i)) > 0 && !(i in ids(pm,:ref_buses))
@@ -158,6 +170,7 @@ function build_mc_pf(pm::AbstractUBFModels)
         constraint_mc_thermal_limit_to(pm, i)
     end
 
-    # Objective
-    _PM.objective_min_fuel_cost(pm)
+    for i in _PM.ids(pm, :transformer)
+        constraint_mc_transformer_power(pm, i)
+    end
 end

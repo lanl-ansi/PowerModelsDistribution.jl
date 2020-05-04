@@ -173,9 +173,9 @@ function constraint_mc_thermal_limit_from(pm::_PM.AbstractActivePowerModel, n::I
         p_fr =var(pm, n, :p, f_idx)[c]
         if isa(p_fr, JuMP.VariableRef) && JuMP.has_lower_bound(p_fr)
            push!(mu_sm_fr,JuMP.LowerBoundRef(p_fr))
-            JuMP.lower_bound(p_fr) < -rate_a[c] && JuMP.set_lower_bound(p_fr, -rate_a[c])
+            JuMP.lower_bound(p_fr) < -rate_a[c] && set_lower_bound(p_fr, -rate_a[c])
             if JuMP.has_upper_bound(p_fr)
-                JuMP.upper_bound(p_fr) > rate_a[c] && JuMP.set_upper_bound(p_fr, rate_a[c])
+                JuMP.upper_bound(p_fr) > rate_a[c] && set_upper_bound(p_fr, rate_a[c])
             end
         else
            push!(mu_sm_fr, JuMP.@constraint(pm.model, p_fr <= rate_a[c]))
@@ -198,9 +198,9 @@ function constraint_mc_thermal_limit_to(pm::_PM.AbstractActivePowerModel, n::Int
         p_to =var(pm, n, :p, t_idx)[c]
         if isa(p_to, JuMP.VariableRef) && JuMP.has_lower_bound(p_to)
            push!(mu_sm_to, JuMP.LowerBoundRef(p_to))
-            JuMP.lower_bound(p_to) < -rate_a[c] && JuMP.set_lower_bound(p_to, -rate_a[c])
+            JuMP.lower_bound(p_to) < -rate_a[c] && set_lower_bound(p_to, -rate_a[c])
             if JuMP.has_upper_bound(p_to)
-                JuMP.upper_bound(p_to) >  rate_a[c] && JuMP.set_upper_bound(p_to,  rate_a[c])
+                JuMP.upper_bound(p_to) >  rate_a[c] && set_upper_bound(p_to,  rate_a[c])
             end
         else
            push!(mu_sm_to, JuMP.@constraint(pm.model, p_to <= rate_a[c]))
@@ -220,8 +220,8 @@ function constraint_mc_current_limit(pm::_PM.AbstractActivePowerModel, n::Int, f
     ncnds = length(cnds)
 
     for c in 1:ncnds
-        JuMP.lower_bound(p_fr[c]) < -c_rating_a[c] && JuMP.set_lower_bound(p_fr[c], -c_rating_a[c])
-        JuMP.upper_bound(p_fr[c]) >  c_rating_a[c] && JuMP.set_upper_bound(p_fr[c],  c_rating_a[c])
+        JuMP.lower_bound(p_fr[c]) < -c_rating_a[c] && set_lower_bound(p_fr[c], -c_rating_a[c])
+        JuMP.upper_bound(p_fr[c]) >  c_rating_a[c] && set_upper_bound(p_fr[c],  c_rating_a[c])
     end
 end
 
@@ -273,8 +273,8 @@ function constraint_mc_switch_thermal_limit(pm::_PM.AbstractActivePowerModel, n:
     ncnds = length(cnds)
 
     for c in 1:ncnds
-        JuMP.lower_bound(psw[c]) < -rating[c] && JuMP.set_lower_bound(psw[c], -rating[c])
-        JuMP.upper_bound(psw[c]) >  rating[c] && JuMP.set_upper_bound(psw[c],  rating[c])
+        JuMP.lower_bound(psw[c]) < -rating[c] && set_lower_bound(psw[c], -rating[c])
+        JuMP.upper_bound(psw[c]) >  rating[c] && set_upper_bound(psw[c],  rating[c])
     end
 end
 
@@ -287,8 +287,8 @@ function constraint_mc_storage_thermal_limit(pm::_PM.AbstractActivePowerModel, n
     ncnds = length(cnds)
 
     for c in 1:ncnds
-        JuMP.lower_bound(ps[c]) < -rating[c] && JuMP.set_lower_bound(ps[c], -rating[c])
-        JuMP.upper_bound(ps[c]) >  rating[c] && JuMP.set_upper_bound(ps[c],  rating[c])
+        JuMP.lower_bound(ps[c]) < -rating[c] && set_lower_bound(ps[c], -rating[c])
+        JuMP.upper_bound(ps[c]) >  rating[c] && set_upper_bound(ps[c],  rating[c])
     end
 end
 
@@ -301,8 +301,8 @@ function constraint_mc_storage_current_limit(pm::_PM.AbstractActivePowerModel, n
     ncnds = length(cnds)
 
     for c in 1:ncnds
-        JuMP.lower_bound(ps[c]) < -rating[c] && JuMP.set_lower_bound(ps[c], -rating[c])
-        JuMP.upper_bound(ps[c]) >  rating[c] && JuMP.set_upper_bound(ps[c],  rating[c])
+        JuMP.lower_bound(ps[c]) < -rating[c] && set_lower_bound(ps[c], -rating[c])
+        JuMP.upper_bound(ps[c]) >  rating[c] && set_upper_bound(ps[c],  rating[c])
     end
 end
 

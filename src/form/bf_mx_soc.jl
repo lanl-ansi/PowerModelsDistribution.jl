@@ -34,6 +34,15 @@ function constraint_mc_model_current(pm::SOCUBFModels, n::Int, i, f_bus, f_idx, 
 end
 
 
+"Add explicit PSD-ness of W for nodes where it is not implied"
+function constraint_mc_voltage_psd(pm::SOCUBFModels, n::Int, i)
+    Wr = var(pm, n, :Wr)[i]
+    Wi = var(pm, n, :Wi)[i]
+
+    relaxation_psd_to_soc(pm.model, Wr, Wi)
+end
+
+
 "Defines relationship between branch (series) power flow, branch (series) current and node voltage magnitude"
 function constraint_mc_model_current(pm::SOCConicUBFModel, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
     p_fr = var(pm, n, :P)[f_idx]
@@ -59,4 +68,13 @@ function constraint_mc_model_current(pm::SOCConicUBFModel, n::Int, i, f_bus, f_i
     ]
 
     relaxation_psd_to_soc_conic(pm.model, mat_real, mat_imag, complex=true)
+end
+
+
+"Add explicit PSD-ness of W for nodes where it is not implied"
+function constraint_mc_voltage_psd(pm::SOCConicUBFModel, n::Int, i)
+    Wr = var(pm, n, :Wr)[i]
+    Wi = var(pm, n, :Wi)[i]
+
+    relaxation_psd_to_soc_conic(pm.model, Wr, Wi)
 end

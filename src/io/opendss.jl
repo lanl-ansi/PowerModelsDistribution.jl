@@ -18,16 +18,12 @@ end
 function _dss2eng_bus!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool=false)
     buses = _discover_buses(data_dss)
 
-    for bus in buses
-        @assert !startswith(bus, "_virtual") "Bus $bus: identifiers should not start with _virtual"
+    for id in buses
+        @assert !startswith(id, "_virtual") "Bus $id: identifiers should not start with _virtual"
 
         eng_obj = create_bus(status=ENABLED)
 
-        if !haskey(data_eng, "bus")
-            data_eng["bus"] = Dict{String,Any}()
-        end
-
-        data_eng["bus"][bus] = eng_obj
+        _add_eng_obj!(data_eng, "bus", id, eng_obj)
     end
 end
 
@@ -333,6 +329,8 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             "vg" => fill(defaults["kv"], nphases),
             "qg_lb" => fill(defaults["minkvar"] / nphases, nphases),
             "qg_ub" => fill(defaults["maxkvar"] / nphases, nphases),
+            "pg_lb" => fill(0.0, nphases),
+            "pg_ub" => fill(defaults["kw"] / nphases, nphases),
             "control_mode" => DROOP,
             "configuration" => WYE,
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
@@ -451,6 +449,9 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             "length" => defaults["switch"] || _like_is_switch ? 0.001 : defaults["length"],
             "f_connections" => f_connections,
             "t_connections" => t_connections,
+            "cm_ub" => fill(defaults["normamps"], nphases),
+            "cm_ub_b" => fill(defaults["emergamps"], nphases),
+            "cm_ub_c" => fill(defaults["emergamps"], nphases),
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
             "source_id" => "line.$id"
         )

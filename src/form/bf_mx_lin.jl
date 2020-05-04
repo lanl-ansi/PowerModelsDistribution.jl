@@ -12,13 +12,13 @@ end
 
 
 ""
-function variable_mc_bus_voltage_prod_hermitian(pm::LPUBFDiagModel; n_cond::Int=3, nw::Int=pm.cnw, bounded = true)
+function variable_mc_bus_voltage(pm::LPUBFDiagModel; n_cond::Int=3, nw::Int=pm.cnw, bounded::Bool=true)
     variable_mc_bus_voltage_magnitude_sqr(pm, nw=nw)
 end
 
 
 ""
-function variable_mc_branch_power(pm::LPUBFDiagModel; n_cond::Int=3, nw::Int=pm.cnw, bounded::Bool=true,  report::Bool=true)
+function variable_mc_branch_power(pm::LPUBFDiagModel; n_cond::Int=3, nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     @assert(n_cond == 3)
     variable_mc_branch_power_real(pm, nw=nw, bounded=bounded)
     variable_mc_branch_power_imaginary(pm, nw=nw, bounded=bounded)
@@ -74,7 +74,7 @@ end
 
 
 ""
-function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
     w = var(pm, nw, :w, i)
 
     p = get(var(pm, nw), :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
@@ -85,6 +85,8 @@ function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, b
     pt   = get(var(pm, nw),   :pt, Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
     qt   = get(var(pm, nw),   :qt, Dict()); _PM._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
 
+    pd = get(var(pm, nw), :pd, Dict()); _PM._check_var_keys(pd, bus_loads, "active power", "load")
+    qd = get(var(pm, nw), :qd, Dict()); _PM._check_var_keys(qd, bus_loads, "reactive power", "load")
     pg = get(var(pm, nw), :pg, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
     qg = get(var(pm, nw), :qg, Dict()); _PM._check_var_keys(qg, bus_gens, "reactive power", "generator")
     ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
@@ -100,7 +102,7 @@ function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, b
         .==
         sum(pg[g] for g in bus_gens)
         - sum(ps[s] for s in bus_storage)
-        - sum(pd for pd in values(bus_pd))
+        - sum(pd[d] for d in bus_loads)
         - sum(gs.*w for gs in values(bus_gs))
     )
 
@@ -111,7 +113,7 @@ function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, b
         .==
         sum(qg[g] for g in bus_gens)
         - sum(qs[s] for s in bus_storage)
-        - sum(qd for qd in values(bus_qd))
+        - sum(qd[d] for d in bus_loads)
         + sum(bs.*w for bs in values(bus_bs))
     )
 

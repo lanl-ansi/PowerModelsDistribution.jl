@@ -9,7 +9,7 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "line_reactor" => ["f_connections", "t_connections", "source_id", "dss"],
     "shunt" => ["status", "dispatchable", "gs", "bs", "connections", "source_id", "dss"],
     "load" => ["model", "configuration", "connections", "dispatchable", "status", "source_id", "dss"],
-    "generator" => ["pg", "qg", "configuration", "connections", "source_id", "dss"],
+    "generator" => ["pg", "qg", "vg", "configuration", "connections", "source_id", "dss"],
     "solar" => ["pg", "qg", "configuration", "connections", "source_id", "dss"],
     "storage" => ["status", "energy", "ps", "qs", "connections", "source_id", "dss"],
     "voltage_source" => ["source_id", "dss"],
@@ -194,8 +194,15 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         math_obj["b_fr"] = _admittance_conversion(data_eng, eng_obj, "b_fr")
         math_obj["b_to"] = _admittance_conversion(data_eng, eng_obj, "b_to")
 
-        math_obj["angmin"] = fill(-60.0, nphases)
-        math_obj["angmax"] = fill( 60.0, nphases)
+        math_obj["angmin"] = get(eng_obj, "vad_lb", fill(-60.0, nphases))
+        math_obj["angmax"] = get(eng_obj, "vad_ub", fill( 60.0, nphases))
+
+        for (f_key, t_key) in [("cm_ub", "c_rating_a"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
+            ("sm_ub", "rate_a"), ("sm_ub_b", "rate_b"), ("sm_ub_c", "rate_c")]
+            if haskey(eng_obj, f_key)
+                math_obj[t_key] = eng_obj[f_key]
+            end
+        end
 
         math_obj["transformer"] = false
         math_obj["shift"] = zeros(nphases)
@@ -217,6 +224,12 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             _pad_properties!(math_obj, ["angmax"], connections, kr_phases; pad_value=60.0)
             _pad_properties!(math_obj, ["tap"], connections, kr_phases; pad_value=1.0)
 
+            for key in ["c_rating_a", "c_rating_b", "c_rating_c", "rate_a", "rate_b", "rate_c"]
+                if haskey(math_obj, key)
+                    _apply_filter!(math_obj, [key], filter)
+                    _pad_properties!(math_obj, [key], connections, kr_phases)
+                end
+            end
         else
             math_obj["f_connections"] = eng_obj["f_connections"]
             math_obj["t_connections"] = eng_obj["t_connections"]
@@ -504,24 +517,22 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
     for (name, eng_obj) in get(data_eng, "generator", Dict{String,Any}())
         math_obj = _init_math_obj("generator", name, eng_obj, length(data_math["gen"])+1)
 
-        phases = eng_obj["phases"]
         connections = eng_obj["connections"]
         nconductors = data_math["conductors"]
 
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
-        math_obj["gen_status"] = eng_obj["status"]
+        math_obj["gen_status"] = Int(eng_obj["status"])
+        math_obj["control_mode"] = get(eng_obj, "control_mode", DROOP)
 
-        math_obj["vg"] = eng_obj["vg"]
-
-        math_obj["qmin"] = eng_obj["qg_lb"]
-        math_obj["qmax"] = eng_obj["qg_ub"]
-
-        math_obj["pmax"] = eng_obj["pg"]
-        math_obj["pmin"] = zeros(phases)
+        for (f_key, t_key) in [("qg_lb", "qmin"), ("qg_ub", "qmax"), ("pg_lb", "pmin"), ("pg_ub", "pmax")]
+            if haskey(eng_obj, f_key)
+                math_obj[t_key] = eng_obj[f_key]
+            end
+        end
 
         _add_gen_cost_model!(math_obj, eng_obj)
 
-        math_obj["configuration"] = eng_obj["configuration"]
+        math_obj["configuration"] = get(eng_obj, "configuration", WYE)
 
         if kron_reduced
             if math_obj["configuration"]==WYE
@@ -535,7 +546,7 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         end
 
         # if PV generator mode convert attached bus to PV bus
-        if eng_obj["control_mode"] == 3
+        if math_obj["control_mode"] == ISOCHRONOUS
             data_math["bus"]["$(data_math["bus_lookup"][eng_obj["bus"]])"]["bus_type"] = 2
         end
 
@@ -559,7 +570,7 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
         nconductors = data_math["conductors"]
 
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
-        math_obj["gen_status"] = eng_obj["status"]
+        math_obj["gen_status"] = Int(eng_obj["status"])
 
         for (fr_k, to_k) in [("vg", "vg"), ("pg_lb", "pmin"), ("pg_ub", "pmax"), ("qg_lb", "qmin"), ("qg_ub", "qmax")]
             if haskey(eng_obj, fr_k)
@@ -645,9 +656,13 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
 
         math_obj["name"] = "_virtual_gen.voltage_source.$name"
         math_obj["gen_bus"] = gen_bus = data_math["bus_lookup"][eng_obj["bus"]]
-        math_obj["gen_status"] = eng_obj["status"]
+        math_obj["gen_status"] = Int(eng_obj["status"])
         math_obj["pg"] = fill(0.0, nconductors)
         math_obj["qg"] = fill(0.0, nconductors)
+        math_obj["pmin"] = get(eng_obj, "pg_lb", fill(-Inf, nconductors))
+        math_obj["pmax"] = get(eng_obj, "pg_ub", fill( Inf, nconductors))
+        math_obj["qmin"] = get(eng_obj, "qg_lb", fill(-Inf, nconductors))
+        math_obj["qmax"] = get(eng_obj, "qg_ub", fill( Inf, nconductors))
         math_obj["configuration"] = WYE
         math_obj["source_id"] = "_virtual_gen.$(eng_obj["source_id"])"
 
@@ -712,6 +727,12 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
             data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 
             map_to = [map_to, "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"]
+        else
+            data_math["bus"]["$gen_bus"]["vmin"] = [eng_obj["vm"]..., 0.0]
+            data_math["bus"]["$gen_bus"]["vmax"] = [eng_obj["vm"]..., 0.0]
+            data_math["bus"]["$gen_bus"]["vm"] = [eng_obj["vm"]..., 0.0]
+            data_math["bus"]["$gen_bus"]["va"] = [eng_obj["va"]..., 0.0]
+            data_math["bus"]["$gen_bus"]["bus_type"] = 3
         end
 
         data_math["gen"]["$(math_obj["index"])"] = math_obj

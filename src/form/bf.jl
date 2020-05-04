@@ -47,3 +47,9 @@ end
 "nothing to do, this model is symmetric"
 function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
 end
+
+
+"TODO"
+function constraint_mc_transformer_power_dy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+    Memento.error(_LOGGER, "Delta-Wye transformers are not currently supported in the LPUBFDiagModel type of power flow models")
+end

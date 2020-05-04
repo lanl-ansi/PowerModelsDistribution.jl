@@ -83,8 +83,8 @@ function variable_mc_branch_power_real(pm::_PM.AbstractAPLossLessModels; nw::Int
         for (l,i,j) in ref(pm, nw, :arcs_from)
             smax = _calc_branch_power_max(ref(pm, nw, :branch, l), ref(pm, nw, :bus, i))
             if !ismissing(smax)
-                JuMP.set_upper_bound.(p[(l,i,j)],  smax)
-                JuMP.set_lower_bound.(p[(l,i,j)], -smax)
+                set_upper_bound.(p[(l,i,j)],  smax)
+                set_lower_bound.(p[(l,i,j)], -smax)
             end
         end
     end
