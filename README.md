@@ -54,6 +54,21 @@ This code has been developed as part of the Advanced Network Science Initiative 
 - Sander Claeys (@sanderclaeys) KU Leuven, transformer models and ACR formulation
 - Frederik Geth (@frederikgeth) CSIRO, Distribution modeling advise
 
+## Citing PowerModelsDistribution
+
+If you find PowerModelsDistribution useful for your work, we kindly request that you cite the following [https://arxiv.org/abs/2004.10081](publication):
+
+```bibtex
+@misc{fobes2020powermodelsdistributionjl,
+    title={PowerModelsDistribution.jl: An Open-Source Framework for Exploring Distribution Power Flow Formulations},
+    author={David M Fobes and Sander Claeys and Frederik Geth and Carleton Coffrin},
+    year={2020},
+    eprint={2004.10081},
+    archivePrefix={arXiv},
+    primaryClass={cs.CE}
+}
+```
+
 ## License
 
 This code is provided under a BSD license as part of the Multi-Infrastructure Control and Optimization Toolkit (MICOT) project, LA-CC-13-108.
