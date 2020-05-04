@@ -123,15 +123,15 @@ If all of these are specified, these bounds also imply valid bounds for the indi
 
 Instead of defining the bounds directly, they can be specified through an associated voltage zone.
 
-| Name           | Default | Type                          | Units | Used   | Description                                                   |
-| -------------- | ------- | ----------------------------- | ----- | ------ | ------------------------------------------------------------- |
-| `phases`       |         | `Vector{Int}||Vector{String}` |       | always | Identifies the terminal that represents the neutral conductor |
-| `neutral`      |         | `Int||String`                 |       | always | Identifies the terminal that represents the neutral conductor |
-| `vm_pn_lb`     |         | `Real`                        |       | opf    | Minimum phase-to-neutral voltage magnitude for all phases     |
-| `vm_pn_ub`     |         | `Real`                        |       | opf    | Maximum phase-to-neutral voltage magnitude for all phases     |
-| `vm_pp_lb`     |         | `Real`                        |       | opf    | Minimum phase-to-phase voltage magnitude for all phases       |
-| `vm_pp_ub`     |         | `Real`                        |       | opf    | Maximum phase-to-phase voltage magnitude for all phases       |
-| `vm_ng_ub`     |         | `Real`                        |       | opf    | Maximum neutral-to-ground voltage magnitude                   |
+| Name       | Default | Type                          | Units | Used   | Description                                                   |
+| ---------- | ------- | ----------------------------- | ----- | ------ | ------------------------------------------------------------- |
+| `phases`   |         | `Vector{Int}||Vector{String}` |       | always | Identifies the terminal that represents the neutral conductor |
+| `neutral`  |         | `Int||String`                 |       | always | Identifies the terminal that represents the neutral conductor |
+| `vm_pn_lb` |         | `Real`                        |       | opf    | Minimum phase-to-neutral voltage magnitude for all phases     |
+| `vm_pn_ub` |         | `Real`                        |       | opf    | Maximum phase-to-neutral voltage magnitude for all phases     |
+| `vm_pp_lb` |         | `Real`                        |       | opf    | Minimum phase-to-phase voltage magnitude for all phases       |
+| `vm_pp_ub` |         | `Real`                        |       | opf    | Maximum phase-to-phase voltage magnitude for all phases       |
+| `vm_ng_ub` |         | `Real`                        |       | opf    | Maximum neutral-to-ground voltage magnitude                   |
 
 ## Edge Objects
 
@@ -445,7 +445,7 @@ Some parameters for components specified in this document can support a time ser
 | --------- | ------- | -------------- | ----- | ------ | ------------------------------------------------------------------------------------- |
 | `time`    |         | `Vector{Real}` | hour  | always | Time points at which values are specified                                             |
 | `values`  |         | `Vector{Real}` |       | always | Multipers at each time step given in `time`                                           |
-| `offset`  | 0       | `Real`         | hour  | always | Start time offset                                                                     |
+| `offset`  | `0`     | `Real`         | hour  | always | Start time offset                                                                     |
 | `replace` | `true`  | `Bool`         |       | always | Indicates to replace with data, instead of multiply. Will only work on non-Array data |
 
 ### Fuses (`fuse`)
