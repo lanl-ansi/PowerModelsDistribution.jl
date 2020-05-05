@@ -14,7 +14,11 @@ function make_lossless!(data_eng::Dict{String,<:Any})
             for (id, eng_obj) in data_eng[object_type]
                 for parameter in parameters
                     if haskey(eng_obj, parameter)
-                        delete!(eng_obj, parameter)
+                        if object_type == "transformer"
+                            eng_obj[parameter] = 0 .* eng_obj[parameter]
+                        else
+                            delete!(eng_obj, parameter)
+                        end
                     end
                 end
             end
