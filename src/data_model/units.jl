@@ -24,14 +24,14 @@ const _dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
 
 
 "converts data model between per-unit and SI units"
-function make_per_unit!(data::Dict{String,<:Any}; vbases=nothing, sbase=nothing, data_model_type=get(data, "data_model", MATHEMATICAL))
+function make_per_unit!(data::Dict{String,<:Any}; vbases::Union{Dict{<:Any,<:Real},Missing}=missing, sbase::Union{Real,Missing}=missing, data_model_type::DataModel=get(data, "data_model", MATHEMATICAL))
     if data_model_type == MATHEMATICAL
         if !get(data, "per_unit", false)
-            if vbases === nothing
-                vbases = Dict(string(data["bus_lookup"][id])=>vbase for (id, vbase) in data["settings"]["vbases_default"])
+            if ismissing(vbases)
+                vbases = Dict{String,Real}("$(data["bus_lookup"][id])"=>vbase for (id, vbase) in data["settings"]["vbases_default"])
             end
 
-            if sbase === nothing
+            if ismissing(sbase)
                 sbase = data["settings"]["sbase_default"]
             end
 
@@ -52,41 +52,44 @@ end
 
 
 "finds voltage zones"
-function _find_zones(data_model::Dict{String,<:Any})
-    unused_line_ids = Set(keys(data_model["branch"]))
-    bus_lines = Dict([(id,Set()) for id in keys(data_model["bus"])])
-    for (line_id,line) in data_model["branch"]
-        f_bus = string(line["f_bus"])
-        t_bus = string(line["t_bus"])
-        push!(bus_lines[f_bus], (line_id,t_bus))
-        push!(bus_lines[t_bus], (line_id,f_bus))
+function _find_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{String}}
+    unused_components = Set("$comp_type.$id" for comp_type in ["branch", "switch"] for id in keys(data_model[comp_type]))
+    bus_connectors = Dict([(id,Set()) for id in keys(data_model["bus"])])
+    for comp_type in ["branch", "switch"]
+        for (id,obj) in data_model[comp_type]
+            f_bus = string(obj["f_bus"])
+            t_bus = string(obj["t_bus"])
+            push!(bus_connectors[f_bus], ("$comp_type.$id",t_bus))
+            push!(bus_connectors[t_bus], ("$comp_type.$id",f_bus))
+        end
     end
+
     zones = []
     buses = Set(keys(data_model["bus"]))
     while !isempty(buses)
         stack = [pop!(buses)]
-        zone = Set()
+        zone = Set{String}()
         while !isempty(stack)
             bus = pop!(stack)
             delete!(buses, bus)
             push!(zone, bus)
-            for (line_id,bus_to) in bus_lines[bus]
-                if line_id in unused_line_ids && bus_to in buses
-                    delete!(unused_line_ids, line_id)
+            for (id,bus_to) in bus_connectors[bus]
+                if id in unused_components && bus_to in buses
+                    delete!(unused_components, id)
                     push!(stack, bus_to)
                 end
             end
         end
         append!(zones, [zone])
     end
-    zones = Dict(enumerate(zones))
+    zones = Dict{Int,Set{String}}(enumerate(zones))
 
     return zones
 end
 
 
 "calculates voltage bases for each voltage zone"
-function _calc_vbase(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})
+function _calc_vbase(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict}
     # find zones of buses connected by lines
     zones = _find_zones(data_model)
     bus_to_zone = Dict([(bus,zone) for (zone, buses) in zones for bus in buses])
@@ -101,29 +104,23 @@ function _calc_vbase(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,
     end
 
     # transformers form the edges between these zones
-    zone_edges = Dict([(zone,[]) for zone in keys(zones)])
-    edges = Set()
-    for (i,(_,transformer)) in enumerate(get(data_model, "transformer", Dict{Any,Dict{String,Any}}()))
-        push!(edges,i)
-        f_zone = bus_to_zone[string(transformer["f_bus"])]
-        t_zone = bus_to_zone[string(transformer["t_bus"])]
+    zone_edges = Dict{Int,Vector{Tuple{Int,Real}}}([(zone,[]) for zone in keys(zones)])
+    for (_,transformer) in get(data_model, "transformer", Dict{Any,Dict{String,Any}}())
+        f_zone = bus_to_zone["$(transformer["f_bus"])"]
+        t_zone = bus_to_zone["$(transformer["t_bus"])"]
         tm_nom = transformer["configuration"]==DELTA ? transformer["tm_nom"]/sqrt(3) : transformer["tm_nom"]
-        push!(zone_edges[f_zone], (i, t_zone, 1/tm_nom))
-        push!(zone_edges[t_zone], (i, f_zone, tm_nom))
+        push!(zone_edges[f_zone], (t_zone, 1/tm_nom))
+        push!(zone_edges[t_zone], (f_zone,   tm_nom))
     end
 
     # initialize the stack with all specified zones
     stack = [zone for (zone,vbase) in zone_vbase if !ismissing(vbase)]
-
     while !isempty(stack)
-        zone = pop!(stack)
-
-        for (edge_id, zone_to, scale) in zone_edges[zone]
-            delete!(edges, edge_id)
-
-            if ismissing(zone_vbase[zone_to])
-                zone_vbase[zone_to] = zone_vbase[zone]*scale
-                push!(stack, zone_to)
+        f_zone = pop!(stack)
+        for (t_zone, scale) in zone_edges[f_zone]
+            if ismissing(zone_vbase[t_zone])
+                zone_vbase[t_zone] = zone_vbase[f_zone]*scale
+                push!(stack, t_zone)
             end
         end
     end
@@ -135,7 +132,7 @@ end
 
 
 "converts to per unit from SI"
-function _make_math_per_unit!(data_model::Dict{String,<:Any}, data_math; sbase::Union{Real,Missing}=missing, vbases::Union{Dict{String,<:Real},Missing}=missing)
+function _make_math_per_unit!(data_model::Dict{String,<:Any}, data_math::Dict{String,<:Any}; sbase::Union{Real,Missing}=missing, vbases::Union{Dict{String,<:Real},Missing}=missing)
     if ismissing(sbase)
         if haskey(data_math["settings"], "sbase_default")
             sbase = data_math["settings"]["sbase_default"]
@@ -153,7 +150,7 @@ function _make_math_per_unit!(data_model::Dict{String,<:Any}, data_math; sbase::
     # automatically find a good vbase if not provided
     if ismissing(vbases)
         if haskey(data_math["settings"], "vbases_default")
-            vbases = data_math["settings"]["vbases_default"]
+            vbases = Dict{String,Real}("$(data_math["bus_lookup"][id])" => vbase for (id, vbase) in data_math["settings"]["vbases_default"])
         else
             buses_type_3 = [(id, sum(bus["vm"])/length(bus["vm"])) for (id,bus) in data_model["bus"] if haskey(bus, "bus_type") && bus["bus_type"]==3]
                 if !isempty(buses_type_3)
@@ -193,7 +190,7 @@ function _make_math_per_unit!(data_model::Dict{String,<:Any}, data_math; sbase::
     end
 
     for (id, switch) in data_model["switch"]
-        # TODO are there any properties that need to be converted to pu?
+        # TODO
     end
 
     if haskey(data_model, "transformer") # transformers are not required by PowerModels

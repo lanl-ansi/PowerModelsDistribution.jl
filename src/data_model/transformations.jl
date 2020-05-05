@@ -1,7 +1,7 @@
 # This file contains useful transformation functions for the engineering data model
 
 const _loss_model_objects = Dict{String,Vector{String}}(
-    "switch" => Vector{String}(["linecode", "rs", "xs", "g_fr", "b_fr", "g_to", "b_to"]),
+    "switch" => Vector{String}(["linecode", "rs", "xs"]),
     "voltage_source" => Vector{String}(["rs", "xs"]),
     "transformer" => Vector{String}(["rs", "xsc", "imag", "noloadloss"])
 )
@@ -14,10 +14,10 @@ function make_lossless!(data_eng::Dict{String,<:Any})
             for (id, eng_obj) in data_eng[object_type]
                 for parameter in parameters
                     if haskey(eng_obj, parameter)
-                        if object_type == "transformer"
-                            eng_obj[parameter] = 0 .* eng_obj[parameter]
-                        else
+                        if parameter == "linecode"
                             delete!(eng_obj, parameter)
+                        else
+                            eng_obj[parameter] = 0 .* eng_obj[parameter]
                         end
                     end
                 end

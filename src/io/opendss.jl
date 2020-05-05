@@ -443,15 +443,17 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         f_connections = _get_conductors_ordered(defaults["bus1"], default=collect(1:nphases))
         t_connections = _get_conductors_ordered(defaults["bus2"], default=collect(1:nphases))
 
+        ncond = length(f_connections)
+
         eng_obj = Dict{String,Any}(
             "f_bus" => _parse_bus_id(defaults["bus1"])[1],
             "t_bus" => _parse_bus_id(defaults["bus2"])[1],
             "length" => defaults["switch"] || _like_is_switch ? 0.001 : defaults["length"],
             "f_connections" => f_connections,
             "t_connections" => t_connections,
-            "cm_ub" => fill(defaults["normamps"], nphases),
-            "cm_ub_b" => fill(defaults["emergamps"], nphases),
-            "cm_ub_c" => fill(defaults["emergamps"], nphases),
+            "cm_ub" => fill(defaults["normamps"], ncond),
+            "cm_ub_b" => fill(defaults["emergamps"], ncond),
+            "cm_ub_c" => fill(defaults["emergamps"], ncond),
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
             "source_id" => "line.$id"
         )
@@ -461,18 +463,18 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         end
 
         if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["r0", "r1", "rg", "rmatrix"]) || !haskey(dss_obj, "linecode")
-            eng_obj["rs"] = reshape(defaults["rmatrix"], nphases, nphases)
+            eng_obj["rs"] = reshape(defaults["rmatrix"], ncond, ncond)
         end
 
         if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["x0", "x1", "xg", "xmatrix"]) || !haskey(dss_obj, "linecode")
-            eng_obj["xs"] = reshape(defaults["xmatrix"], nphases, nphases)
+            eng_obj["xs"] = reshape(defaults["xmatrix"], ncond, ncond)
         end
 
         if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["b0", "b1", "c0", "c1", "cmatrix"]) || !haskey(dss_obj, "linecode")
-            eng_obj["b_fr"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
-            eng_obj["b_to"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
-            eng_obj["g_fr"] = fill(0.0, nphases, nphases)
-            eng_obj["g_to"] = fill(0.0, nphases, nphases)
+            eng_obj["b_fr"] = reshape(defaults["cmatrix"], ncond, ncond) ./ 2.0
+            eng_obj["b_to"] = reshape(defaults["cmatrix"], ncond, ncond) ./ 2.0
+            eng_obj["g_fr"] = fill(0.0, ncond, ncond)
+            eng_obj["g_to"] = fill(0.0, ncond, ncond)
         end
 
         # if the ground is used directly, register

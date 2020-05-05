@@ -350,7 +350,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
         math_obj = _init_math_obj("switch", name, eng_obj, length(data_math["switch"])+1)
 
         math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
-        math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
+        math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
 
         math_obj["state"] = get(eng_obj, "state", CLOSED)
 
@@ -363,7 +363,12 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
 
         map_to = "switch.$(math_obj["index"])"
 
-        if any(haskey(eng_obj, k) for k in ["rs", "xs", "linecode"])
+        if haskey(eng_obj, "linecode")
+            _apply_linecode!(eng_obj, data_eng)
+        end
+
+        if true
+        # if !all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && !all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0)) # TODO enable real switches
             # build virtual bus
 
             f_bus = data_math["bus"]["$(math_obj["f_bus"])"]
@@ -382,8 +387,14 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
             # data_math["bus"]["$(bus_obj["index"])"] = bus_obj
             =#
 
-            # build virtual branch
-            _apply_linecode!(eng_obj, data_eng)
+            # TODO remove after enabling real switches
+            if all(isapprox.(get(eng_obj, "rs", zeros(nphases, nphases)), 0))
+                eng_obj["rs"] = fill(1e-4, nphases, nphases)
+            end
+
+            if all(isapprox.(get(eng_obj, "xs", zeros(nphases, nphases)), 0))
+                eng_obj["xs"] = fill(1e-3, nphases, nphases)
+            end
 
             branch_obj = _init_math_obj("line", name, eng_obj, length(data_math["branch"])+1)
 
@@ -418,10 +429,10 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 )
                 _apply_filter!(branch_obj, ["angmin", "angmax", "tap", "shift"], filter)
                 connections = eng_obj["f_connections"][filter]
-                _pad_properties!(math_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "shift"], connections, kr_phases)
-                _pad_properties!(math_obj, ["angmin"], connections, kr_phases; pad_value=-60.0)
-                _pad_properties!(math_obj, ["angmax"], connections, kr_phases; pad_value=60.0)
-                _pad_properties!(math_obj, ["tap"], connections, kr_phases; pad_value=1.0)
+                _pad_properties!(branch_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "shift"], connections, kr_phases)
+                _pad_properties!(branch_obj, ["angmin"], connections, kr_phases; pad_value=-60.0)
+                _pad_properties!(branch_obj, ["angmax"], connections, kr_phases; pad_value=60.0)
+                _pad_properties!(branch_obj, ["tap"], connections, kr_phases; pad_value=1.0)
             else
                 branch_obj["f_connections"] = eng_obj["f_connections"]
                 branch_obj["f_connections"] = eng_obj["t_connections"]
@@ -670,7 +681,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
 
         map_to = "gen.$(math_obj["index"])"
 
-        if haskey(eng_obj, "rs") && haskey(eng_obj, "xs")
+        if !all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && !all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0))
             bus_obj = Dict{String,Any}(
                 "bus_i" => length(data_math["bus"])+1,
                 "index" => length(data_math["bus"])+1,

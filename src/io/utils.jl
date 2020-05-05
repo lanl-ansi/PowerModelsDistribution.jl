@@ -497,7 +497,7 @@ function _get_conductors_ordered(busname::AbstractString; default::Vector{Int}=V
 
     if check_length && length(default)!=length(ret)
         # TODO
-        Memento.warn(_LOGGER, "An incorrect number of nodes was specified on $(parts[1]); |$(parts[2])|!=$(length(default)).")
+        Memento.info(_LOGGER, "An inconsistent number of nodes was specified on $(parts[1]); |$(parts[2])|!=$(length(default)).")
     end
     return ret
 end
