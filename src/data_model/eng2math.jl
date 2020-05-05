@@ -6,7 +6,6 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "line" => ["f_connections", "t_connections", "source_id", "dss"],
     "transformer" => ["f_connections", "t_connections", "source_id", "dss"],
     "switch" => ["status", "f_connections", "t_connections", "source_id", "dss"],
-    "line_reactor" => ["f_connections", "t_connections", "source_id", "dss"],
     "shunt" => ["status", "dispatchable", "gs", "bs", "connections", "source_id", "dss"],
     "load" => ["model", "configuration", "connections", "dispatchable", "status", "source_id", "dss"],
     "generator" => ["pg", "qg", "vg", "configuration", "connections", "source_id", "dss"],
@@ -16,13 +15,23 @@ const _1to1_maps = Dict{String,Vector{String}}(
 )
 
 "list of nodal type elements in the engineering model"
-const _node_elements = Vector{String}([
+const _eng_node_elements = Vector{String}([
     "load", "shunt", "generator", "solar", "storage", "voltage_source"
 ])
 
 "list of edge type elements in the engineering model"
-const _edge_elements = Vector{String}([
-    "line", "switch", "transformer", "line_reactor", "series_capacitor"
+const _eng_edge_elements = Vector{String}([
+    "line", "switch", "transformer"
+])
+
+"list of nodal type elements in the engineering model"
+const _math_node_elements = Vector{String}([
+    "load", "shunt", "gen", "storage"
+])
+
+"list of edge type elements in the engineering model"
+const _math_edge_elements = Vector{String}([
+    "branch", "switch", "transformer", "dcline"
 ])
 
 "list of multinetwork keys that belong at the root level"
@@ -264,8 +273,8 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
 
         _apply_xfmrcode!(eng_obj, data_eng)
 
-        vnom = eng_obj["vnom"] * data_eng["settings"]["voltage_scale_factor"]
-        snom = eng_obj["snom"] * data_eng["settings"]["power_scale_factor"]
+        vnom = eng_obj["vm_nom"] * data_eng["settings"]["voltage_scale_factor"]
+        snom = eng_obj["sm_nom"] * data_eng["settings"]["power_scale_factor"]
 
         nrw = length(eng_obj["bus"])
 
@@ -299,7 +308,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
         for w in 1:nrw
             # 2-WINDING TRANSFORMER
             # make virtual bus and mark it for reduction
-            tm_nom = eng_obj["configuration"][w]==DELTA ? eng_obj["vnom"][w]*sqrt(3) : eng_obj["vnom"][w]
+            tm_nom = eng_obj["configuration"][w]==DELTA ? eng_obj["vm_nom"][w]*sqrt(3) : eng_obj["vm_nom"][w]
             transformer_2wa_obj = Dict{String,Any}(
                 "name"          => "_virtual_transformer.$name.$w",
                 "source_id"     => "_virtual_transformer.$(eng_obj["source_id"]).$w",
@@ -510,7 +519,7 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             math_obj["connections"] = connections
         end
 
-        math_obj["vnom_kv"] = eng_obj["vnom"]
+        math_obj["vnom_kv"] = eng_obj["vm_nom"]
 
         data_math["load"]["$(math_obj["index"])"] = math_obj
 

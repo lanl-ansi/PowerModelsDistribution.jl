@@ -481,7 +481,7 @@ function _apply_xfmrcode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:A
         for (k, v) in xfmrcode
             if !haskey(eng_obj, k)
                 eng_obj[k] = v
-            elseif haskey(eng_obj, k) && k in ["vnom", "snom", "tm_set", "rs"]
+            elseif haskey(eng_obj, k) && k in ["vm_nom", "sm_nom", "tm_set", "rs"]
                 for (w, vw) in enumerate(eng_obj[k])
                     if ismissing(vw)
                         eng_obj[k][w] = v[w]
@@ -671,3 +671,4 @@ function _build_eng_multinetwork(data_eng::Dict{String,<:Any})::Dict{String,Any}
         return _IM.make_multinetwork(_pre_mn_data, _pmd_eng_global_keys)
     end
 end
+

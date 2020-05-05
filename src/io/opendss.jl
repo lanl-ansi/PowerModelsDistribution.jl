@@ -118,7 +118,7 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             kv = kv/sqrt(3)
         end
 
-        eng_obj["vnom"] = kv
+        eng_obj["vm_nom"] = kv
 
         eng_obj["pd_nom"] = fill(defaults["kw"]/nphases, nphases)
         eng_obj["qd_nom"] = fill(defaults["kvar"]/nphases, nphases)
@@ -519,8 +519,8 @@ function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             "tm_ub" => Vector{Vector{Float64}}(fill(fill(defaults["maxtap"], nphases), nrw)),
             "tm_fix" => Vector{Vector{Bool}}(fill(ones(Bool, nphases), nrw)),
             "tm_step" => Vector{Vector{Float64}}(fill(fill(1/32, nphases), nrw)),
-            "vnom" => Vector{Float64}(defaults["kvs"]),
-            "snom" => Vector{Float64}(defaults["kvas"]),
+            "vm_nom" => Vector{Float64}(defaults["kvs"]),
+            "sm_nom" => Vector{Float64}(defaults["kvas"]),
             "configuration" => Vector{ConnConfig}(defaults["conns"]),
             "rs" => Vector{Float64}(defaults["%rs"] ./ 100),
             "noloadloss" => defaults["%noloadloss"] / 100,
@@ -596,7 +596,7 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
         end
 
         # kvs, kvas
-        for (fr_key, to_key) in zip(["kv", "kva"], ["vnom", "snom"])
+        for (fr_key, to_key) in zip(["kv", "kva"], ["vm_nom", "sm_nom"])
             if isempty(defaults["xfmrcode"]) || (haskey(dss_obj, "$(fr_key)s") && _is_after_xfmrcode(dss_obj["prop_order"], "$(fr_key)s")) || all(haskey(dss_obj, "$(fr_key)$(key_suffix)") && _is_after_xfmrcode(dss_obj["prop_order"], "$(fr_key)$(key_suffix)") for key_suffix in ["", "_2", "_3"])
                 eng_obj[to_key] = defaults["$(fr_key)s"]
             else

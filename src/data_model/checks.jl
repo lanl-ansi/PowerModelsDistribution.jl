@@ -449,11 +449,11 @@ function _check_load(data_eng::Dict{String,<:Any}, name::Any)
         _check_has_keys(load, ["pd", "qd"], context="load $name, $model:")
         _check_has_size(load, ["pd", "qd"], N, context="load $name, $model:")
     elseif model==EXPONENTIAL
-        _check_has_keys(load, ["pd_ref", "qd_ref", "vnom", "alpha", "beta"], context="load $name, $model")
-        _check_has_size(load, ["pd_ref", "qd_ref", "vnom", "alpha", "beta"], N, context="load $name, $model:")
+        _check_has_keys(load, ["pd_ref", "qd_ref", "vm_nom", "alpha", "beta"], context="load $name, $model")
+        _check_has_size(load, ["pd_ref", "qd_ref", "vm_nom", "alpha", "beta"], N, context="load $name, $model:")
     else
-        _check_has_keys(load, ["pd_ref", "qd_ref", "vnom"], context="load $name, $model")
-        _check_has_size(load, ["pd_ref", "qd_ref", "vnom"], N, context="load $name, $model:")
+        _check_has_keys(load, ["pd_ref", "qd_ref", "vm_nom"], context="load $name, $model")
+        _check_has_size(load, ["pd_ref", "qd_ref", "vm_nom"], N, context="load $name, $model:")
     end
 
     _check_connectivity(data_eng, load; context="load $name")
@@ -510,7 +510,7 @@ function _check_transformer(data_eng::Dict{String,<:Any}, name::Any)
     transformer = data_eng["transformer"][name]
 
     nrw = length(transformer["bus"])
-    _check_has_size(transformer, ["bus", "connections", "vnom", "snom", "configuration", "polarity", "rs", "tm_fix", "tm_set", "tm_lb", "tm_ub", "tm_step"], nrw, context="trans $name")
+    _check_has_size(transformer, ["bus", "connections", "vm_nom", "sm_nom", "configuration", "polarity", "rs", "tm_fix", "tm_set", "tm_lb", "tm_ub", "tm_step"], nrw, context="trans $name")
 
     @assert length(transformer["xsc"])==(nrw^2-nrw)/2
 

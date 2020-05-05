@@ -52,11 +52,14 @@ end
 
 
 "finds voltage zones"
-function _find_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{String}}
-    unused_components = Set("$comp_type.$id" for comp_type in ["branch", "switch"] for id in keys(data_model[comp_type]))
-    bus_connectors = Dict([(id,Set()) for id in keys(data_model["bus"])])
-    for comp_type in ["branch", "switch"]
-        for (id,obj) in data_model[comp_type]
+function discover_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{Any}}
+    @assert data_model["data_model"] in [MATHEMATICAL, ENGINEERING] "unsupported data model"
+    edge_elements = data_model["data_model"] == MATHEMATICAL ? _math_edge_elements : _eng_edge_elements
+
+    unused_components = Set("$comp_type.$id" for comp_type in edge_elements[edge_elements .!= "transformer"] for id in keys(get(data_model, comp_type, Dict())))
+    bus_connectors = Dict([(id,Set()) for id in keys(get(data_model, "bus", Dict()))])
+    for comp_type in edge_elements[edge_elements .!= "transformer"]
+        for (id,obj) in get(data_model, comp_type, Dict())
             f_bus = string(obj["f_bus"])
             t_bus = string(obj["t_bus"])
             push!(bus_connectors[f_bus], ("$comp_type.$id",t_bus))
@@ -65,10 +68,10 @@ function _find_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{String}}
     end
 
     zones = []
-    buses = Set(keys(data_model["bus"]))
+    buses = Set(keys(get(data_model, "bus", Dict())))
     while !isempty(buses)
         stack = [pop!(buses)]
-        zone = Set{String}()
+        zone = Set{Any}()
         while !isempty(stack)
             bus = pop!(stack)
             delete!(buses, bus)
@@ -82,16 +85,16 @@ function _find_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{String}}
         end
         append!(zones, [zone])
     end
-    zones = Dict{Int,Set{String}}(enumerate(zones))
+    zones = Dict{Int,Set{Any}}(enumerate(zones))
 
     return zones
 end
 
 
 "calculates voltage bases for each voltage zone"
-function _calc_vbase(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict}
+function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{<:Any,<:Real})::Tuple{Dict,Dict}
     # find zones of buses connected by lines
-    zones = _find_zones(data_model)
+    zones = discover_voltage_zones(data_model)
     bus_to_zone = Dict([(bus,zone) for (zone, buses) in zones for bus in buses])
 
     # assign specified vbase to corresponding zones
@@ -106,11 +109,32 @@ function _calc_vbase(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,
     # transformers form the edges between these zones
     zone_edges = Dict{Int,Vector{Tuple{Int,Real}}}([(zone,[]) for zone in keys(zones)])
     for (_,transformer) in get(data_model, "transformer", Dict{Any,Dict{String,Any}}())
-        f_zone = bus_to_zone["$(transformer["f_bus"])"]
-        t_zone = bus_to_zone["$(transformer["t_bus"])"]
-        tm_nom = transformer["configuration"]==DELTA ? transformer["tm_nom"]/sqrt(3) : transformer["tm_nom"]
-        push!(zone_edges[f_zone], (t_zone, 1/tm_nom))
-        push!(zone_edges[t_zone], (f_zone,   tm_nom))
+        if data_model["data_model"] == MATHEMATICAL
+            f_zone = bus_to_zone["$(transformer["f_bus"])"]
+            t_zone = bus_to_zone["$(transformer["t_bus"])"]
+            tm_nom = transformer["configuration"]==DELTA ? transformer["tm_nom"]/sqrt(3) : transformer["tm_nom"]
+            push!(zone_edges[f_zone], (t_zone, 1/tm_nom))
+            push!(zone_edges[t_zone], (f_zone,   tm_nom))
+        else
+            if haskey(transformer, "f_bus")
+                f_zone = bus_to_zone["$(transformer["f_bus"])"]
+                t_zone = bus_to_zone["$(transformer["f_bus"])"]
+                tm_nom = transformer["configuration"] == DELTA ? transformer["tm_nom"]/sqrt(3) : transformer["tm_nom"]
+                push!(zone_edges[f_zone], (t_zone, 1/tm_nom))
+                push!(zone_edges[t_zone], (f_zone,   tm_nom))
+            else
+                nrw = length(transformer["bus"])
+                f_zone = bus_to_zone[transformer["bus"][1]]
+                f_vnom = transformer["configuration"][1] == DELTA ? transformer["vm_nom"][1]/sqrt(3) : transformer["vm_nom"][1]
+                for w in 2:nrw
+                    t_zone = bus_to_zone[transformer["bus"][w]]
+                    t_vnom = transformer["configuration"][1] == DELTA ? transformer["vm_nom"][w]/sqrt(3) : transformer["vm_nom"][w]
+                    tm_nom = f_vnom / t_vnom
+                    push!(zone_edges[f_zone], (t_zone, 1/tm_nom))
+                    push!(zone_edges[t_zone], (f_zone,   tm_nom))
+                end
+            end
+        end
     end
 
     # initialize the stack with all specified zones
@@ -125,9 +149,11 @@ function _calc_vbase(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,
         end
     end
 
+    edge_elements = data_model["data_model"] == MATHEMATICAL ? _math_edge_elements : _eng_edge_elements
+
     bus_vbase = Dict([(bus,zone_vbase[zone]) for (bus,zone) in bus_to_zone])
-    line_vbase = Dict([(id, bus_vbase[string(line["f_bus"])]) for (id,line) in data_model["branch"]])
-    return (bus_vbase, line_vbase)
+    edge_vbase = Dict([("$edge_type.$id", bus_vbase["$(obj["f_bus"])"]) for edge_type in edge_elements[edge_elements .!= "transformer"] for (id,obj) in data_model[edge_type]])
+    return (bus_vbase, edge_vbase)
 end
 
 
@@ -161,7 +187,7 @@ function _make_math_per_unit!(data_model::Dict{String,<:Any}, data_math::Dict{St
             end
         end
 
-    bus_vbase, line_vbase = _calc_vbase(data_model, vbases)
+    bus_vbase, line_vbase = calc_voltage_bases(data_model, vbases)
     voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
 
     for (id, bus) in data_model["bus"]
@@ -169,8 +195,8 @@ function _make_math_per_unit!(data_model::Dict{String,<:Any}, data_math::Dict{St
     end
 
     for (id, line) in data_model["branch"]
-        vbase = line_vbase[id]
-        _rebase_pu_branch!(line, line_vbase[id], sbase, sbase_old, voltage_scale_factor)
+        vbase = line_vbase["branch.$id"]
+        _rebase_pu_branch!(line, vbase, sbase, sbase_old, voltage_scale_factor)
     end
 
     for (id, shunt) in data_model["shunt"]
@@ -214,16 +240,16 @@ function _rebase_pu_bus!(bus::Dict{String,<:Any}, vbase::Real, sbase::Real, sbas
 
     if !haskey(bus, "vbase")
 
-        # if haskey(bus, "vnom")
-        #     vnom = bus["vnom"]
-        #     _scale_props!(bus, ["vnom"], 1/vbase)
+        # if haskey(bus, "vm_nom")
+        #     vnom = bus["vm_nom"]
+        #     _scale_props!(bus, ["vm_nom"], 1/vbase)
         # end
         _scale_props!(bus, prop_vnom, 1/vbase)
 
         z_old = 1.0
     else
         vbase_old = bus["vbase"]
-        _scale_props!(bus, [prop_vnom..., "vnom"], vbase_old/vbase)
+        _scale_props!(bus, [prop_vnom..., "vm_nom"], vbase_old/vbase)
 
         z_old = vbase_old^2*sbase_old*voltage_scale_factor
     end
