@@ -522,7 +522,7 @@ function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             "vm_nom" => Vector{Float64}(defaults["kvs"]),
             "sm_nom" => Vector{Float64}(defaults["kvas"]),
             "configuration" => Vector{ConnConfig}(defaults["conns"]),
-            "rs" => Vector{Float64}(defaults["%rs"] ./ 100),
+            "rw" => Vector{Float64}(defaults["%rs"] ./ 100),
             "noloadloss" => defaults["%noloadloss"] / 100,
             "imag" => defaults["%imag"] / 100,
             "xsc" => nrw == 2 ? [defaults["xhl"] / 100] : [defaults["xhl"], defaults["xht"], defaults["xlt"]] ./ 100,
@@ -627,14 +627,14 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
 
         # %rs
         if isempty(defaults["xfmrcode"]) || (haskey(dss_obj, "%rs") && _is_after_xfmrcode(dss_obj["prop_order"], "%rs")) || all(haskey(dss_obj, k) && _is_after_xfmrcode(dss_obj["prop_order"], k) for k in ["%r", "%r_2", "%r_3"])
-            eng_obj["rs"] = defaults["%rs"] / 100
+            eng_obj["rw"] = defaults["%rs"] / 100
         else
             for (w, key_suffix) in enumerate(["", "_2", "_3"])
                 if haskey(dss_obj, "%r$(key_suffix)") && _is_after_xfmrcode(dss_obj["prop_order"], "%r$(key_suffix)")
-                    if !haskey(eng_obj, "rs")
-                        eng_obj["rs"] = Vector{Any}(missing, nrw)
+                    if !haskey(eng_obj, "rw")
+                        eng_obj["rw"] = Vector{Any}(missing, nrw)
                     end
-                    eng_obj["rs"][w] = defaults["%rs"][defaults["wdg$(key_suffix)"]] / 100
+                    eng_obj["rw"][w] = defaults["%rs"][defaults["wdg$(key_suffix)"]] / 100
                 end
             end
         end

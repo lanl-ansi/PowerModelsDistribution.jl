@@ -510,7 +510,7 @@ function _check_transformer(data_eng::Dict{String,<:Any}, name::Any)
     transformer = data_eng["transformer"][name]
 
     nrw = length(transformer["bus"])
-    _check_has_size(transformer, ["bus", "connections", "vm_nom", "sm_nom", "configuration", "polarity", "rs", "tm_fix", "tm_set", "tm_lb", "tm_ub", "tm_step"], nrw, context="trans $name")
+    _check_has_size(transformer, ["bus", "connections", "vm_nom", "sm_nom", "configuration", "polarity", "rw", "tm_fix", "tm_set", "tm_lb", "tm_ub", "tm_step"], nrw, context="trans $name")
 
     @assert length(transformer["xsc"])==(nrw^2-nrw)/2
 

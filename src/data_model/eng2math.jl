@@ -327,7 +327,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
             x_sc = eng_obj["xsc"] .* zbase[1]
 
             # rs is specified with respect to each winding
-            r_s = eng_obj["rs"] .* zbase
+            r_s = eng_obj["rw"] .* zbase
 
             g_sh =  (eng_obj["noloadloss"]*snom[1])/vnom[1]^2
             b_sh = -(eng_obj["imag"]*snom[1])/vnom[1]^2

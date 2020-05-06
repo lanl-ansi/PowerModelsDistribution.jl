@@ -235,7 +235,7 @@ function create_switch(f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},
     linecode::Any=missing,
     rs::Union{Matrix{<:Real},Missing}=missing,
     xs::Union{Matrix{<:Real},Missing}=missing,
-    dipatchable::Dispatchable=NO,
+    dispatchable::Dispatchable=NO,
     state::SwitchState=CLOSED,
     status::Status=ENABLED,
     kwargs...

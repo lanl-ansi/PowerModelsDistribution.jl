@@ -3,7 +3,7 @@
 const _loss_model_objects = Dict{String,Vector{String}}(
     "switch" => Vector{String}(["linecode", "rs", "xs"]),
     "voltage_source" => Vector{String}(["rs", "xs"]),
-    "transformer" => Vector{String}(["rs", "xsc", "imag", "noloadloss"])
+    "transformer" => Vector{String}(["rw", "xsc", "imag", "noloadloss"])
 )
 
 
@@ -34,14 +34,16 @@ function apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,M
     @assert data_eng["data_model"] == ENGINEERING "incorrect data model type"
 
     (bus_vbases, edge_vbases) = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
-    for (id,bus) in get(data_eng, "bus", Dict{Any,Dict{String,Any}}())
-        vbase = bus_vbases[id]
-        if !ismissing(vm_lb) && !haskey(bus, "vm_lb")
-            bus["vm_lb"] = vbase .* fill(vm_lb, length(bus["terminals"]))
-        end
+    if haskey(data_eng, "bus")
+        for (id,bus) in data_eng["bus"]
+            vbase = bus_vbases[id]
+            if !ismissing(vm_lb) && !haskey(bus, "vm_lb")
+                bus["vm_lb"] = vbase .* fill(vm_lb, length(bus["terminals"]))
+            end
 
-        if !ismissing(vm_ub) && !haskey(bus, "vm_ub")
-            bus["vm_ub"] = vbase .* fill(vm_ub, length(bus["terminals"]))
+            if !ismissing(vm_ub) && !haskey(bus, "vm_ub")
+                bus["vm_ub"] = vbase .* fill(vm_ub, length(bus["terminals"]))
+            end
         end
     end
 end
