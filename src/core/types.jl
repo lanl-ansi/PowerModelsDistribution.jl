@@ -64,7 +64,11 @@ SOCUBFModels = Union{SOCNLPUBFModel, SOCConicUBFModel}
 abstract type AbstractLPUBFModel <: AbstractNLPUBFModel end
 
 
-"LinDist3Flow per Sankur et al 2016, using vector variables for power, voltage and current"
+"""
+LinDist3Flow per Arnold et al. (2016), using vector variables for power, voltage and current
+
+D. B. Arnold, M. Sankur, R. Dobbe, K. Brady, D. S. Callaway and A. Von Meier, "Optimal dispatch of reactive power for voltage regulation and balancing in unbalanced distribution systems," 2016 IEEE Power and Energy Society General Meeting (PESGM), Boston, MA, 2016, pp. 1-5, doi: 10.1109/PESGM.2016.7741261.
+"""
 abstract type LPUBFDiagModel <: AbstractLPUBFModel end
 const LinDist3FlowModel = LPUBFDiagModel # more popular name for it
 
