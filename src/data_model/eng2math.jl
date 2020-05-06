@@ -273,77 +273,120 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
 
         _apply_xfmrcode!(eng_obj, data_eng)
 
-        vnom = eng_obj["vm_nom"] * data_eng["settings"]["voltage_scale_factor"]
-        snom = eng_obj["sm_nom"] * data_eng["settings"]["power_scale_factor"]
+        if haskey(eng_obj, "f_bus") && haskey(eng_obj, "t_bus")
+            @assert all(haskey(eng_obj, k) for k in ["f_bus", "t_bus", "f_connections", "t_connections"])
 
-        nrw = length(eng_obj["bus"])
+            nphases = length(eng_obj["f_connections"])
 
-        # calculate zbase in which the data is specified, and convert to SI
-        zbase = (vnom.^2) ./ snom
-
-        # x_sc is specified with respect to first winding
-        x_sc = eng_obj["xsc"] .* zbase[1]
-
-        # rs is specified with respect to each winding
-        r_s = eng_obj["rs"] .* zbase
-
-        g_sh =  (eng_obj["noloadloss"]*snom[1])/vnom[1]^2
-        b_sh = -(eng_obj["imag"]*snom[1])/vnom[1]^2
-
-        # data is measured externally, but we now refer it to the internal side
-        ratios = vnom/data_eng["settings"]["voltage_scale_factor"]
-        x_sc = x_sc./ratios[1]^2
-        r_s = r_s./ratios.^2
-        g_sh = g_sh*ratios[1]^2
-        b_sh = b_sh*ratios[1]^2
-
-        # convert x_sc from list of upper triangle elements to an explicit dict
-        y_sh = g_sh + im*b_sh
-        z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
-
-        #TODO remove once moving out kron-reduction
-        dims = kron_reduced ? 3 : length(eng_obj["tm_set"][1])
-        transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh, nphases=dims)
-
-        for w in 1:nrw
-            # 2-WINDING TRANSFORMER
-            # make virtual bus and mark it for reduction
-            tm_nom = eng_obj["configuration"][w]==DELTA ? eng_obj["vm_nom"][w]*sqrt(3) : eng_obj["vm_nom"][w]
-            transformer_2wa_obj = Dict{String,Any}(
-                "name"          => "_virtual_transformer.$name.$w",
-                "source_id"     => "_virtual_transformer.$(eng_obj["source_id"]).$w",
-                "f_bus"         => data_math["bus_lookup"][eng_obj["bus"][w]],
-                "t_bus"         => transformer_t_bus_w[w],
-                "tm_nom"        => tm_nom,
-                "f_connections" => eng_obj["connections"][w],
-                "t_connections" => collect(1:dims+1),
-                "configuration" => eng_obj["configuration"][w],
-                "polarity"      => eng_obj["polarity"][w],
-                "tm_set"        => eng_obj["tm_set"][w],
-                "tm_fix"        => eng_obj["tm_fix"][w],
-                "index"         => length(data_math["transformer"])+1
+            math_obj = Dict{String,Any}(
+                "name" => name,
+                "source_id" => eng_obj["source_id"],
+                "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
+                "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
+                "f_connections" => eng_obj["f_connections"],
+                "t_connections" => eng_obj["t_connections"],
+                "configuration" => get(eng_obj, "configuration", WYE),
+                "tm_nom" => get(eng_obj, "tm_nom", 1.0),
+                "tm_set" => get(eng_obj, "tm_set", fill(1.0, nphases)),
+                "tm_fix" => get(eng_obj, "tm_fix", fill(true, nphases)),
+                "status" => Int(get(eng_obj, "status", ENABLED)),
+                "index" => length(data_math["transformer"])+1
             )
 
-            for prop in ["tm_lb", "tm_ub", "tm_step"]
-                if haskey(eng_obj, prop)
-                    transformer_2wa_obj[prop] = eng_obj[prop][w]
+            for k in ["tm_lb", "tm_ub"]
+                if haskey(eng_obj, k)
+                    math_obj[k] = eng_obj[k]
                 end
             end
 
             if kron_reduced
                 # TODO fix how padding works, this is a workaround to get bank working
-                if all(conf==WYE for conf in eng_obj["configuration"])
-                    f_connections = transformer_2wa_obj["f_connections"]
-                    _pad_properties!(transformer_2wa_obj, ["tm_lb", "tm_ub", "tm_set"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=1.0)
-                    _pad_properties!(transformer_2wa_obj, ["tm_fix"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=false)
+                if eng_obj["configuration"] == WYE
+                    f_connections = math_obj["f_connections"]
+                    _pad_properties!(math_obj, ["tm_lb", "tm_ub", "tm_set"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=1.0)
+                    _pad_properties!(math_obj, ["tm_fix"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=false)
 
-                    transformer_2wa_obj["f_connections"] = transformer_2wa_obj["t_connections"]
+                    math_obj["f_connections"] = math_obj["t_connections"]
                 end
             end
 
-            data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
+            data_math["transformer"]["$(math_obj["index"])"] = math_obj
 
-            push!(to_map, "transformer.$(transformer_2wa_obj["index"])")
+            push!(to_map, "transformer.$(math_obj["index"])")
+        else
+            vnom = eng_obj["vm_nom"] * data_eng["settings"]["voltage_scale_factor"]
+            snom = eng_obj["sm_nom"] * data_eng["settings"]["power_scale_factor"]
+
+            nrw = length(eng_obj["bus"])
+
+            # calculate zbase in which the data is specified, and convert to SI
+            zbase = (vnom.^2) ./ snom
+
+            # x_sc is specified with respect to first winding
+            x_sc = eng_obj["xsc"] .* zbase[1]
+
+            # rs is specified with respect to each winding
+            r_s = eng_obj["rs"] .* zbase
+
+            g_sh =  (eng_obj["noloadloss"]*snom[1])/vnom[1]^2
+            b_sh = -(eng_obj["imag"]*snom[1])/vnom[1]^2
+
+            # data is measured externally, but we now refer it to the internal side
+            ratios = vnom/data_eng["settings"]["voltage_scale_factor"]
+            x_sc = x_sc./ratios[1]^2
+            r_s = r_s./ratios.^2
+            g_sh = g_sh*ratios[1]^2
+            b_sh = b_sh*ratios[1]^2
+
+            # convert x_sc from list of upper triangle elements to an explicit dict
+            y_sh = g_sh + im*b_sh
+            z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
+
+            #TODO remove once moving out kron-reduction
+            dims = kron_reduced ? 3 : length(eng_obj["tm_set"][1])
+            transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh, nphases=dims)
+
+            for w in 1:nrw
+                # 2-WINDING TRANSFORMER
+                # make virtual bus and mark it for reduction
+                tm_nom = eng_obj["configuration"][w]==DELTA ? eng_obj["vm_nom"][w]*sqrt(3) : eng_obj["vm_nom"][w]
+                transformer_2wa_obj = Dict{String,Any}(
+                    "name"          => "_virtual_transformer.$name.$w",
+                    "source_id"     => "_virtual_transformer.$(eng_obj["source_id"]).$w",
+                    "f_bus"         => data_math["bus_lookup"][eng_obj["bus"][w]],
+                    "t_bus"         => transformer_t_bus_w[w],
+                    "tm_nom"        => tm_nom,
+                    "f_connections" => eng_obj["connections"][w],
+                    "t_connections" => collect(1:dims+1),
+                    "configuration" => eng_obj["configuration"][w],
+                    "polarity"      => eng_obj["polarity"][w],
+                    "tm_set"        => eng_obj["tm_set"][w],
+                    "tm_fix"        => eng_obj["tm_fix"][w],
+                    "status"        => Int(get(eng_obj, "status", ENABLED)),
+                    "index"         => length(data_math["transformer"])+1
+                )
+
+                for prop in ["tm_lb", "tm_ub", "tm_step"]
+                    if haskey(eng_obj, prop)
+                        transformer_2wa_obj[prop] = eng_obj[prop][w]
+                    end
+                end
+
+                if kron_reduced
+                    # TODO fix how padding works, this is a workaround to get bank working
+                    if all(conf==WYE for conf in eng_obj["configuration"])
+                        f_connections = transformer_2wa_obj["f_connections"]
+                        _pad_properties!(transformer_2wa_obj, ["tm_lb", "tm_ub", "tm_set"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=1.0)
+                        _pad_properties!(transformer_2wa_obj, ["tm_fix"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=false)
+
+                        transformer_2wa_obj["f_connections"] = transformer_2wa_obj["t_connections"]
+                    end
+                end
+
+                data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
+
+                push!(to_map, "transformer.$(transformer_2wa_obj["index"])")
+            end
         end
     end
 end
