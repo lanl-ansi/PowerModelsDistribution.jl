@@ -274,7 +274,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
         _apply_xfmrcode!(eng_obj, data_eng)
 
         if haskey(eng_obj, "f_bus") && haskey(eng_obj, "t_bus")
-            @assert all(haskey(eng_obj, k) for k in ["f_bus", "t_bus", "f_connections", "t_connections"])
+            @assert all(haskey(eng_obj, k) for k in ["f_bus", "t_bus", "f_connections", "t_connections"]) "Incomplete definition of AL2W tranformer $name, aborting eng2math conversion"
 
             nphases = length(eng_obj["f_connections"])
 
@@ -289,6 +289,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 "tm_nom" => get(eng_obj, "tm_nom", 1.0),
                 "tm_set" => get(eng_obj, "tm_set", fill(1.0, nphases)),
                 "tm_fix" => get(eng_obj, "tm_fix", fill(true, nphases)),
+                "polarity" => fill(1, nphases),
                 "status" => Int(get(eng_obj, "status", ENABLED)),
                 "index" => length(data_math["transformer"])+1
             )
@@ -586,8 +587,9 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["gen_status"] = Int(eng_obj["status"])
         math_obj["control_mode"] = get(eng_obj, "control_mode", DROOP)
+        math_obj["pmax"] = get(eng_obj, "pg_ub", fill(Inf, nconductors))
 
-        for (f_key, t_key) in [("qg_lb", "qmin"), ("qg_ub", "qmax"), ("pg_lb", "pmin"), ("pg_ub", "pmax")]
+        for (f_key, t_key) in [("qg_lb", "qmin"), ("qg_ub", "qmax"), ("pg_lb", "pmin")]
             if haskey(eng_obj, f_key)
                 math_obj[t_key] = eng_obj[f_key]
             end

@@ -36,9 +36,19 @@ function add_object!(data_eng::Dict{String,<:Any}, obj_type::String, obj_id::Any
             end
 
             if obj_type == "transformer"
-                for (wdg, bus_id) in enumerate(object["bus"])
-                    if !haskey(data_eng["bus"], bus_id)
-                        data_eng["bus"][bus_id] = create_bus(; terminals=object["connections"][wdg])
+                if haskey(object, "f_bus") && haskey(object, "t_bus")
+                    if !haskey(data_eng["bus"], object["f_bus"])
+                        data_eng["bus"][object["f_bus"]] = create_bus(; terminals=object["f_connections"])
+                    end
+
+                    if !haskey(data_eng["bus"], object["t_bus"])
+                        data_eng["bus"][object["t_bus"]] = create_bus(; terminals=object["t_connections"])
+                    end
+                else
+                    for (wdg, bus_id) in enumerate(object["bus"])
+                        if !haskey(data_eng["bus"], bus_id)
+                            data_eng["bus"][bus_id] = create_bus(; terminals=object["connections"][wdg])
+                        end
                     end
                 end
             else
@@ -54,9 +64,7 @@ end
 
 
 "Instantiates a PowerModelsDistribution data model"
-function Model(model_type::String=ENGINEERING; kwargs...)::Dict{String,Any}
-    kwargs = Dict{Symbol,Any}(kwargs)
-
+function Model(model_type::DataModel=ENGINEERING; kwargs...)::Dict{String,Any}
     if model_type == ENGINEERING
         data_model = Dict{String,Any}(
             "data_model" => model_type,
@@ -64,7 +72,7 @@ function Model(model_type::String=ENGINEERING; kwargs...)::Dict{String,Any}
             "settings" => Dict{String,Any}(
                 "voltage_scale_factor" => get(kwargs, :voltage_scale_factor, 1e3),
                 "power_scale_factor" => get(kwargs, :power_scale_factor, 1e3),
-                "vbases_default" => get(kwargs, :vbases_default, Dict{<:Any,<:Real}()),
+                "vbases_default" => get(kwargs, :vbases_default, Dict{Any,Real}()),
                 "sbase_default" => get(kwargs, :sbase_default, 1.0),
                 "base_frequency" => get(kwargs, :basefreq, 60.0),
             )
@@ -265,12 +273,14 @@ function create_bus(;
     kwargs...
         )::Dict{String,Any}
 
+    # grounded = Vector{Bool}([terminal in grounded for terminal in terminals])
+
     bus = Dict{String,Any}(
         "status" => status,
         "terminals" => terminals,
         "grounded" => grounded,
-        "rg" => rg,
-        "xg" => xg,
+        "rg" => isempty(rg) ? fill(0.0, length(grounded)) : rg,
+        "xg" => isempty(xg) ? fill(0.0, length(grounded)) : xg,
     )
 
     _add_unused_kwargs!(bus, kwargs)
@@ -342,7 +352,7 @@ function create_generator(bus::Any, connections::Union{Vector{Int},Vector{String
         "status" => status,
     )
 
-    for v in [("pg", pg), ("qg", qg), ("vg", vg), ("pg_lb", pg_lb), ("pg_ub", pg_ub), ("qg_lb", qg_lb), ("qg_ub", qg_ub)]
+    for (k,v) in [("pg", pg), ("qg", qg), ("vg", vg), ("pg_lb", pg_lb), ("pg_ub", pg_ub), ("qg_lb", qg_lb), ("qg_ub", qg_ub)]
         if !ismissing(v)
             @assert length(v) == n_conductors
             generator[k] = v
@@ -368,8 +378,33 @@ function create_xfmrcode(;
     kwargs...
 )::Dict{String,Any}
 
+    n_windings = 0
+    for v in [configurations, rw, tm_nom, tm_lb, tm_ub, tm_set, tm_fix]
+        if !ismissing(v)
+            n_windings = length(v)
+            break
+        end
+    end
+
+    @assert n_windings >= 2 "Cannot determine valid number of windings"
+    @assert all(length(v) == n_windings for v in [configurations, rw, tm_nom, tm_lb, tm_ub, tm_set, tm_fix]) "Number of windings inconsistent between parameters"
+
+    n_phases = 0
+    for v in [tm_lb, tm_ub, tm_set, tm_fix]
+        if !ismissing(v)
+            n_windings = length(v[1])
+            break
+        end
+    end
+
+    @assert n_phases >= 1 "Cannot determine valid number of phases"
+
     eng_obj = Dict{String,Any}(
-        # TODO
+        "configurations" => !ismissing(configurations) ? configurations : fill(WYE, n_windings),
+        "xsc" => !ismissing(xsc) ? xsc : zeros(Int(n_windings * (n_windings-1)//2)),
+        "rw" => !ismissing(rw) ? rw : zeros(n_windings),
+        "tm_nom" => !ismissing(tm_nom) ? tm_nom : ones(n_windings),
+        "tm_set" => !ismissing(tm_set) ? tm_set : fill(fill(1.0, ))
     )
 
     return eng_obj
@@ -415,6 +450,45 @@ function create_transformer(buses::Vector{Any}, connections::Vector{Union{Vector
     )
 
     for (k,v) in [("tm_lb", tm_lb), ("tm_ub", tm_ub), ("vm_nom", vm_nom), ("sm_nom", sm_nom)]
+        if !ismissing(v)
+            transformer[k] = v
+        end
+    end
+
+    _add_unused_kwargs!(transformer, kwargs)
+
+    return transformer
+end
+
+
+"creates a aysmmetric lossless 2-winding transformer object with some defaults"
+function create_al2w_transformer(f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}};
+    configuration::ConnConfig=WYE,
+    tm_nom::Real=1.0,
+    tm_lb::Union{Vector{<:Real},Missing}=missing,
+    tm_ub::Union{Vector{<:Real},Missing}=missing,
+    tm_set::Union{Vector{<:Real},Missing}=missing,
+    tm_fix::Union{Vector{Bool},Missing}=missing,
+    status::Status=ENABLED,
+    kwargs...
+        )::Dict{String,Any}
+
+    n_conductors = length(f_connections)
+    n_conductors = configuration == WYE ? n_conductors-1 : n_conductors
+
+    transformer = Dict{String,Any}(
+        "f_bus" => f_bus,
+        "t_bus" => t_bus,
+        "f_connections" => f_connections,
+        "t_connections" => t_connections,
+        "configuration" => configuration,
+        "tm_nom" => tm_nom,
+        "tm_set" => !ismissing(tm_set) ? tm_set : fill(1.0, n_conductors),
+        "tm_fix" => !ismissing(tm_fix) ? tm_fix : fill(true, n_conductors),
+        "status" => status,
+    )
+
+    for (k,v) in [("tm_lb", tm_lb), ("tm_ub", tm_ub)]
         if !ismissing(v)
             transformer[k] = v
         end
@@ -566,6 +640,21 @@ function delete_component!(data_eng::Dict{String,<:Any}, component_type::String,
     end
 end
 
+
+"Function to add default vbase for a bus"
+function add_vbase_default!(data_eng::Dict{String,<:Any}, bus::Any, vbase::Real)
+    if !haskey(data_eng, "settings")
+        data_eng["settings"] = Dict{String,Any}()
+    end
+
+    if !haskey(data_eng["settings"], "vbases_default")
+        data_eng["settings"]["vbases_default"] = Dict{Any,Real}()
+    end
+
+    data_eng["settings"]["vbases_default"][bus] = vbase
+end
+
+
 # Data objects
 add_bus!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "bus", id, create_bus(; kwargs...))
 add_linecode!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "linecode", id, create_linecode(; kwargs...))
@@ -575,6 +664,7 @@ add_xfmrcode!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(da
 # Edge objects
 add_line!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "line", id, create_line(f_bus, t_bus, f_connections, t_connections; kwargs...))
 add_transformer!(data_eng::Dict{String,<:Any}, id::Any, buses::Vector{<:Any}, connections::Vector{Union{Vector{Int},Vector{String}}}; kwargs...) = add_object!(data_eng, "transformer", id, create_transformer(buses, connections; kwargs...))
+add_transformer!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "transformer", id, create_al2w_transformer(f_bus, t_bus, f_connections, t_connections; kwargs...))
 add_switch!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "switch", id, create_switch(f_bus, t_bus, f_connections, t_connections; kwargs...))
 
 # Node objects
