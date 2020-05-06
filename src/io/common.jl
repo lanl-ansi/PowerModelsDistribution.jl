@@ -8,7 +8,7 @@ function parse_file(
     data_model::DataModel=ENGINEERING,
     import_all::Bool=false,
     bank_transformers::Bool=true,
-    transformations::Union{Vector{<:Function},Vector{<:Tuple{<:Function, Vararg{Pair{String,<:Any}}}}}=Vector{Tuple{Function,Pair{String,Any}}}([]),
+    transformations::Vector{Any}=[],
     build_multinetwork::Bool=false,
     kron_reduced::Bool=true,
     time_series::String="daily"
@@ -22,6 +22,8 @@ function parse_file(
         )
 
         for transform in transformations
+            @assert isa(transform, Function) || isa(transform, Tuple{<:Function,Vararg{Pair{String,<:Any}}})
+
             if isa(transform, Tuple)
                 transform[1](data_eng; [Symbol(k)=>v for (k,v) in transform[2:end]]...)
             else
