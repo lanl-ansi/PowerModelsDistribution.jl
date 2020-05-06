@@ -65,3 +65,7 @@ pm = instantiate_model(math, ACPPowerModel, build_mc_opf; ref_extensions=[ref_ad
 print(pm.model)
 optimize_model!(pm, optimizer=with_optimizer(Ipopt.Optimizer))
 ```
+
+## Examples
+
+More examples of working with the engineering data model can be found in the `/examples` folder of the PowerModelsDistribution.jl repository.

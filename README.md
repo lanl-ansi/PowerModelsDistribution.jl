@@ -22,6 +22,7 @@ This enables the definition of a wide variety of power network formulations and 
 - Continuous load shed, minimum load delta (mld)
   - ACP, LinDist3Flow, NFA
 - Optimal Power Flow with on-load tap-changer (opf_oltc)
+  - ACP
 
 **Note: The documentation is somewhat lagging behind development and the parings of network features with problem specifications with formulations has not been enumerated. We are working to correct this for you.**
 
@@ -42,6 +43,10 @@ This enables the definition of a wide variety of power network formulations and 
 ## Network Data Formats
 
 - OpenDSS ".dss" files
+
+## Examples
+
+Examples of how to use PowerModelsDistribution can be found in the main documentation and in Jupyter Notebooks inside the `/examples` directory
 
 ## Development
 
