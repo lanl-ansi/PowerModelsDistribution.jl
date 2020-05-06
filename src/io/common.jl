@@ -8,7 +8,7 @@ function parse_file(
     data_model::DataModel=ENGINEERING,
     import_all::Bool=false,
     bank_transformers::Bool=true,
-    transformations::Vector{<:Function}=Vector{Function}([]),
+    transforms::Union{Vector{<:Function},Vector{<:Tuple{<:Function, Vararg{Pair{String,<:Any}}}}}=Vector{Tuple{Function,Pair{String,Any}}}([]),
     build_multinetwork::Bool=false,
     kron_reduced::Bool=true,
     time_series::String="daily"
@@ -21,8 +21,12 @@ function parse_file(
             time_series=time_series
         )
 
-        for transformation in transformations
-            transformation(data_eng)
+        for transform in transforms
+            if isa(transform, Tuple)
+                transform[1](data_eng; [Symbol(k)=>v for (k,v) in transform[2:end]]...)
+            else
+                transform(data_eng)
+            end
         end
 
         if data_model == MATHEMATICAL
