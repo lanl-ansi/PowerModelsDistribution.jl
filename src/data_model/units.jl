@@ -152,7 +152,7 @@ function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{
     edge_elements = data_model["data_model"] == MATHEMATICAL ? _math_edge_elements : _eng_edge_elements
 
     bus_vbase = Dict([(bus,zone_vbase[zone]) for (bus,zone) in bus_to_zone])
-    edge_vbase = Dict([("$edge_type.$id", bus_vbase["$(obj["f_bus"])"]) for edge_type in edge_elements[edge_elements .!= "transformer"] for (id,obj) in data_model[edge_type]])
+    edge_vbase = Dict([("$edge_type.$id", bus_vbase["$(obj["f_bus"])"]) for edge_type in edge_elements[edge_elements .!= "transformer"] if haskey(data_model, edge_type) for (id,obj) in data_model[edge_type]])
     return (bus_vbase, edge_vbase)
 end
 
