@@ -221,7 +221,7 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         t_bus = data_eng["bus"][eng_obj["t_bus"]]
 
         if kron_reduced
-            @assert(all(eng_obj["f_connections"].==eng_obj["t_connections"]), "Kron reduction is only supported if f_connections is the same as t_connections.")
+            @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
             filter = _kron_reduce_branch!(math_obj,
                 ["br_r", "br_x"], ["g_fr", "b_fr", "g_to", "b_to"],
                 eng_obj["f_connections"], kr_neutral
@@ -475,7 +475,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
             merge!(branch_obj, _branch_obj)
 
             if kron_reduced
-                @assert(all(eng_obj["f_connections"].==eng_obj["t_connections"]), "Kron reduction is only supported if f_connections is the same as t_connections.")
+                @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
                 filter = _kron_reduce_branch!(branch_obj,
                     ["br_r", "br_x"], ["g_fr", "b_fr", "g_to", "b_to"],
                     eng_obj["f_connections"], kr_neutral
@@ -554,7 +554,7 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
 
         if kron_reduced
             if math_obj["configuration"]==WYE
-                @assert(connections[end]==kr_neutral)
+                @assert connections[end]==kr_neutral "for wye-connected loads, if kron_reduced the connections list should end with a neutral"
                 _pad_properties!(math_obj, ["pd", "qd"], connections[connections.!=kr_neutral], kr_phases)
             else
                 _pad_properties_delta!(math_obj, ["pd", "qd"], connections, kr_phases)
@@ -601,7 +601,7 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
 
         if kron_reduced
             if math_obj["configuration"]==WYE
-                @assert(connections[end]==kr_neutral)
+                @assert connections[end]==kr_neutral "For WYE connected generators, if kron_reduced the connections list should end with a neutral conductor"
                 _pad_properties!(math_obj, ["pg", "qg", "vg", "pmin", "pmax", "qmin", "qmax"], connections[1:end-1], kr_phases)
             else
                 _pad_properties_delta!(math_obj, ["pg", "qg", "vg", "pmin", "pmax", "qmin", "qmax"], connections, kr_phases)
