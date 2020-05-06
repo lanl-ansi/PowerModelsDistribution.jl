@@ -1,4 +1,4 @@
-# Data model
+# Engineering Data Model
 
 This document describes the `ENGINEERING` data model type in PowerModelsDistribution, which is transformed at runtime, or at the user's direction into a `MATHEMATICAL` data model for optimization.
 
