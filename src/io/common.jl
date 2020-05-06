@@ -8,7 +8,7 @@ function parse_file(
     data_model::DataModel=ENGINEERING,
     import_all::Bool=false,
     bank_transformers::Bool=true,
-    transformations::Vector{Any}=[],
+    transformations::Vector{<:Any}=[],
     build_multinetwork::Bool=false,
     kron_reduced::Bool=true,
     time_series::String="daily"
