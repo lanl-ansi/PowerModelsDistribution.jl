@@ -11,6 +11,7 @@ makedocs(
             "Getting Started" => "quickguide.md",
             "Mathematical Model" => "math-model.md",
             "Engineering Data Model" => "eng-data-model.md",
+            "Enums in Engineering Model" => "enums.md",
             "Conversion to Mathematical Model" => "eng2math.md",
             "External Data Formats" => "external-data-formats.md",
         ],
