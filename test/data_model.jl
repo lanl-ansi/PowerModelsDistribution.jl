@@ -38,14 +38,14 @@
 
         add_shunt!(eng2, "cap", "loadbus2", [1,2,3,4]; bs=diagm(0=>fill(1, 3)))
 
-        result2 = run_mc_opf(eng, ACPPowerModel, ipopt_solver)
+        result2 = run_mc_opf(eng2, ACPPowerModel, ipopt_solver)
 
-        @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], -83.3003; atol=1e-4)
+        @test result2["termination_status"] == LOCALLY_SOLVED
+        @test isapprox(result2["objective"], -83.3003; atol=1e-4)
     end
 
     @testset "engineering model transformations" begin
-        eng = parse_file("../test/data/opendss/case3_balanced.dss"; transfomations=[(apply_voltage_bounds!, "vm_ub"=>Inf)])
+        eng = parse_file("../test/data/opendss/case3_balanced.dss"; transformations=[(apply_voltage_bounds!, "vm_ub"=>Inf)])
 
         @test all(all(isapprox.(bus["vm_lb"], 0.4 / sqrt(3) * 0.9)) && all(isinf.(bus["vm_ub"])) for (id,bus) in eng["bus"] if id != "sourcebus")
 
