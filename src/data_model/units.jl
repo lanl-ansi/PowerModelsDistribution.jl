@@ -24,7 +24,9 @@ const _dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
 
 
 "converts data model between per-unit and SI units"
-function make_per_unit!(data::Dict{String,<:Any}; vbases::Union{Dict{<:Any,<:Real},Missing}=missing, sbase::Union{Real,Missing}=missing, data_model_type::DataModel=get(data, "data_model", MATHEMATICAL))
+function make_per_unit!(data::Dict{String,<:Any}; vbases::Union{Dict{<:Any,<:Real},Missing}=missing, sbase::Union{Real,Missing}=missing)
+    data_model_type = get(data, "data_model", MATHEMATICAL)
+
     if data_model_type == MATHEMATICAL
         if !get(data, "per_unit", false)
             if ismissing(vbases)
@@ -160,7 +162,7 @@ end
 
 
 "converts to per unit from SI"
-function _make_math_per_unit!(data_model::Dict{String,<:Any}, data_math::Dict{String,<:Any}; sbase::Union{Real,Missing}=missing, vbases::Union{Dict{String,<:Real},Missing}=missing)
+function _make_math_per_unit!(nw::Dict{String,<:Any}, data_math::Dict{String,<:Any}; sbase::Union{Real,Missing}=missing, vbases::Union{Dict{String,<:Real},Missing}=missing)
     if ismissing(sbase)
         if haskey(data_math["settings"], "sbase_default")
             sbase = data_math["settings"]["sbase_default"]
@@ -180,7 +182,7 @@ function _make_math_per_unit!(data_model::Dict{String,<:Any}, data_math::Dict{St
         if haskey(data_math["settings"], "vbases_default")
             vbases = Dict{String,Real}("$(data_math["bus_lookup"][id])" => vbase for (id, vbase) in data_math["settings"]["vbases_default"])
         else
-            buses_type_3 = [(id, sum(bus["vm"])/length(bus["vm"])) for (id,bus) in data_model["bus"] if haskey(bus, "bus_type") && bus["bus_type"]==3]
+            buses_type_3 = [(id, sum(bus["vm"])/length(bus["vm"])) for (id,bus) in nw["bus"] if haskey(bus, "bus_type") && bus["bus_type"]==3]
                 if !isempty(buses_type_3)
                     vbases = Dict([buses_type_3[1]])
                 else
@@ -189,40 +191,41 @@ function _make_math_per_unit!(data_model::Dict{String,<:Any}, data_math::Dict{St
             end
         end
 
-    bus_vbase, line_vbase = calc_voltage_bases(data_model, vbases)
+    bus_vbase, line_vbase = calc_voltage_bases(nw, vbases)
     voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
 
-    for (id, bus) in data_model["bus"]
+    for (id, bus) in nw["bus"]
         _rebase_pu_bus!(bus, bus_vbase[id], sbase, sbase_old, voltage_scale_factor)
     end
 
-    for (id, line) in data_model["branch"]
+    for (id, line) in nw["branch"]
         vbase = line_vbase["branch.$id"]
         _rebase_pu_branch!(line, vbase, sbase, sbase_old, voltage_scale_factor)
     end
 
-    for (id, shunt) in data_model["shunt"]
+    for (id, shunt) in nw["shunt"]
         _rebase_pu_shunt!(shunt, bus_vbase[string(shunt["shunt_bus"])], sbase, sbase_old, voltage_scale_factor)
     end
 
-    for (id, load) in data_model["load"]
+    for (id, load) in nw["load"]
         _rebase_pu_load!(load, bus_vbase[string(load["load_bus"])], sbase, sbase_old, voltage_scale_factor)
     end
 
-    for (id, gen) in data_model["gen"]
+    for (id, gen) in nw["gen"]
         _rebase_pu_generator!(gen, bus_vbase[string(gen["gen_bus"])], sbase, sbase_old, data_math)
     end
 
-    for (id, storage) in data_model["storage"]
-        # TODO
+    for (id, storage) in nw["storage"]
+        _rebase_pu_storage!(storage, bus_vbase[string(storage["storage_bus"])], sbase, sbase_old)
     end
 
-    for (id, switch) in data_model["switch"]
-        # TODO
+    for (id, switch) in nw["switch"]
+        vbase = line_vbase["switch.$id"]
+        _rebase_pu_switch!(switch, vbase, sbase, sbase_old)
     end
 
-    if haskey(data_model, "transformer") # transformers are not required by PowerModels
-        for (id, trans) in data_model["transformer"]
+    if haskey(nw, "transformer")
+        for (id, trans) in nw["transformer"]
             # voltage base across transformer does not have to be consistent with the ratio!
             f_vbase = bus_vbase[string(trans["f_bus"])]
             t_vbase = bus_vbase[string(trans["t_bus"])]
@@ -295,6 +298,14 @@ function _rebase_pu_branch!(branch::Dict{String,<:Any}, vbase::Real, sbase::Real
 end
 
 
+"per-unit conversion for switches"
+function _rebase_pu_switch!(switch::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
+    sbase_scale = sbase / sbase_old
+
+    _scale_props!(switch, ["psw", "qsw", "thermal_rating", "current_rating"], sbase_scale)
+end
+
+
 "per-unit conversion for shunts"
 function _rebase_pu_shunt!(shunt::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
     if !haskey(shunt, "vbase")
@@ -339,8 +350,8 @@ end
 
 
 "per-unit conversion for generators"
-function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, data_model::Dict{String,<:Any})
-    vbase_old = get(gen, "vbase", 1.0/data_model["settings"]["voltage_scale_factor"])
+function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, data_math::Dict{String,<:Any})
+    vbase_old = get(gen, "vbase", 1.0/data_math["settings"]["voltage_scale_factor"])
     vbase_scale = vbase_old/vbase
     sbase_scale = sbase_old/sbase
 
@@ -348,9 +359,13 @@ function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real
         _scale(gen, key, sbase_scale)
     end
 
+    for key in ["vg"]
+        _scale(gen, key, vbase_scale)
+    end
+
     # if not in per unit yet, the cost has is in $/MWh
-    if !haskey(data_model["settings"], "sbase")
-        sbase_old_cost = 1E6/data_model["settings"]["power_scale_factor"]
+    if !haskey(data_math["settings"], "sbase")
+        sbase_old_cost = 1E6/data_math["settings"]["power_scale_factor"]
         sbase_scale_cost = sbase_old_cost/sbase
     else
         sbase_scale_cost = sbase_scale
@@ -360,6 +375,16 @@ function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real
 
     # save new vbase
     gen["vbase"] = vbase
+end
+
+
+"per-unit conversion for storage"
+function _rebase_pu_storage!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real)
+    sbase_scale = sbase_old/sbase
+
+    for key in ["energy", "energy_rating", "charge_rating", "discharge_rating", "thermal_rating", "current_rating", "qmin", "qmax", "p_loss", "q_loss"]
+        _scale(gen, key, sbase_scale)
+    end
 end
 
 

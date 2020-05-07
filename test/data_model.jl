@@ -41,7 +41,7 @@
         result2 = run_mc_opf(eng2, ACPPowerModel, ipopt_solver)
 
         @test result2["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result2["objective"], -83.3003; atol=1e-4)
+        @test isapprox(result2["objective"], -83.3003; atol=0.2)
     end
 
     @testset "engineering model transformations" begin
