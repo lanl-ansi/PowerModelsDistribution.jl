@@ -495,8 +495,8 @@ end
 
 "creates a generic shunt with some defaults"
 function create_shunt(bus, connections;
-    gs::Union{Vector{<:Real},Missing}=missing,
-    bs::Union{Vector{<:Real},Missing}=missing,
+    gs::Union{Matrix{<:Real},Missing}=missing,
+    bs::Union{Matrix{<:Real},Missing}=missing,
     model::ShuntModel=GENERIC,
     dispatchable::Dispatchable=NO,
     status::Status=ENABLED,
@@ -508,8 +508,8 @@ function create_shunt(bus, connections;
     shunt = Dict{String,Any}(
         "bus" => bus,
         "connections" => connections,
-        "gs" => !ismissing(gs) ? gs : fill(0.0, n_conductors),
-        "bs" => !ismissing(bs) ? bs : fill(0.0, n_conductors),
+        "gs" => !ismissing(gs) ? gs : fill(0.0, n_conductors, n_conductors),
+        "bs" => !ismissing(bs) ? bs : fill(0.0, n_conductors, n_conductors),
         "model" => model,
         "dispatchable" => dispatchable,
         "status" => status,
