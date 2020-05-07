@@ -54,6 +54,8 @@ function _map_math2eng_voltage_source!(data_eng::Dict{<:Any,<:Any}, data_math::D
 
     eng_obj = _init_unmap_eng_obj!(data_eng, "voltage_source", map)
 
+    map["to"] = isa(map["to"], Vector) ? map["to"] : [map["to"]]
+
     for to_id in map["to"]
         math_obj = _get_math_obj(data_math, to_id)
         if startswith(to_id, "gen")

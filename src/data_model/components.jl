@@ -168,22 +168,15 @@ function create_line(f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Ve
     kwargs...
         )::Dict{String,Any}
 
-    n_conductors = length(f_connections)
+    n_conductors = size(f_connections)[1]
     shape = (n_conductors, n_conductors)
 
     for v in [rs, xs, g_fr, b_fr, g_to, b_to, cm_ub, sm_ub, vad_lb, vad_ub]
-        if isa(v, Matrix)
-            @assert size(v) == shape
-        else
-            @assert length(v) == n_conductors
-        end
-    end
-
-    # if no linecode, then populate loss parameters with zero
-    if !haskey(kwargs, :linecode)
-        for key in [:rs, :xs, :g_fr, :g_to, :b_fr, :b_to]
-            if haskey(kwargs, key)
-                n_conductors = size(kwargs[key])[1]
+        if !ismissing(v)
+            if isa(v, Matrix)
+                @assert size(v) == shape
+            else
+                @assert size(v)[1] == n_conductors
             end
         end
     end
@@ -199,7 +192,7 @@ function create_line(f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Ve
         "length" => length,
     )
 
-    if !ismissing(linecode)
+    if ismissing(linecode)
         line["rs"] = !ismissing(rs) ? rs : fill(0.01, shape...)
         line["rs"] => !ismissing(rs) ? rs : fill(0.01, shape...)
         line["xs"] = !ismissing(xs) ? xs : fill(0.2, shape...)
@@ -216,7 +209,7 @@ function create_line(f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Ve
         end
     end
 
-    for (k,v) in [("cm_ub", "sm_ub")]
+    for (k,v) in [("cm_ub", cm_ub),  ("sm_ub", sm_ub)]
         if !ismissing(v)
             line[k] = v
         end
@@ -301,7 +294,7 @@ function create_load(bus::Any, connections::Union{Vector{Int},Vector{String}};
     kwargs...
         )::Dict{String,Any}
 
-    n_conductors = length(connections)
+    n_conductors = configuration == WYE ? length(connections)-1 : length(connections)
 
     for v in [pd_nom, qd_nom]
         if !ismissing(v)
