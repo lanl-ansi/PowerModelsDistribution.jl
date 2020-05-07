@@ -37,7 +37,9 @@ function make_per_unit!(data::Dict{String,<:Any}; vbases::Union{Dict{<:Any,<:Rea
 
             if ismultinetwork(data)
                 for (n, nw) in data["nw"]
+                    nw["data_model"] = data["data_model"]
                     _make_math_per_unit!(nw, data; sbase=sbase, vbases=vbases)
+                    delete!(nw, "data_model")
                 end
             else
                 _make_math_per_unit!(data, data; sbase=sbase, vbases=vbases)
@@ -395,47 +397,94 @@ function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true
 
     sbase = math_model["settings"]["sbase"]
 
-    for (comp_type, comp_dict) in [(x,y) for (x,y) in solution_si if isa(y, Dict)]
-        dimensionalize_math_comp = get(_dimensionalize_math, comp_type, Dict())
-        vbase_props   = mult_vbase      ? get(dimensionalize_math_comp, "vbase", [])   : []
-        sbase_props   = mult_sbase      ? get(dimensionalize_math_comp, "sbase", [])   : []
-        ibase_props   = mult_ibase      ? get(dimensionalize_math_comp, "ibase", [])   : []
-        rad2deg_props = convert_rad2deg ? get(dimensionalize_math_comp, "rad2deg", []) : []
+    if ismultinetwork(math_model)
+        for (n,nw) in solution_si["nw"]
+            for (comp_type, comp_dict) in [(x,y) for (x,y) in nw if isa(y, Dict)]
+                dimensionalize_math_comp = get(_dimensionalize_math, comp_type, Dict())
+                vbase_props   = mult_vbase      ? get(dimensionalize_math_comp, "vbase", [])   : []
+                sbase_props   = mult_sbase      ? get(dimensionalize_math_comp, "sbase", [])   : []
+                ibase_props   = mult_ibase      ? get(dimensionalize_math_comp, "ibase", [])   : []
+                rad2deg_props = convert_rad2deg ? get(dimensionalize_math_comp, "rad2deg", []) : []
 
+                for (id, comp) in comp_dict
+                    if !isempty(vbase_props) || !isempty(ibase_props)
+                        vbase = math_model["nw"][n][comp_type][id]["vbase"]
+                        ibase = sbase/vbase
+                    end
 
+                    for (prop, val) in comp
+                        if prop in vbase_props
+                            comp[prop] = _apply_func_vals(comp[prop], x->x*vbase)
+                        elseif prop in sbase_props
+                            comp[prop] = _apply_func_vals(comp[prop], x->x*sbase)
+                        elseif prop in ibase_props
+                            comp[prop] = _apply_func_vals(comp[prop], x->x*ibase)
+                        elseif prop in rad2deg_props
+                            comp[prop] = _apply_func_vals(comp[prop], x->_wrap_to_180(rad2deg(x)))
+                        end
+                    end
 
-        for (id, comp) in comp_dict
-            if !isempty(vbase_props) || !isempty(ibase_props)
-                vbase = math_model[comp_type][id]["vbase"]
-                ibase = sbase/vbase
-            end
+                    if comp_type=="transformer"
+                        # transformers have different vbase/ibase on each side
+                        f_bus = math_model["nw"][n]["transformer"][id]["f_bus"]
+                        f_vbase = math_model["nw"][n]["bus"]["$f_bus"]["vbase"]
+                        t_bus = math_model["nw"][n]["transformer"][id]["t_bus"]
+                        t_vbase = math_model["nw"][n]["bus"]["$t_bus"]["vbase"]
+                        f_ibase = sbase/f_vbase
+                        t_ibase = sbase/t_vbase
 
-            for (prop, val) in comp
-                if prop in vbase_props
-                    comp[prop] = _apply_func_vals(comp[prop], x->x*vbase)
-                elseif prop in sbase_props
-                    comp[prop] = _apply_func_vals(comp[prop], x->x*sbase)
-                elseif prop in ibase_props
-                    comp[prop] = _apply_func_vals(comp[prop], x->x*ibase)
-                elseif prop in rad2deg_props
-                    comp[prop] = _apply_func_vals(comp[prop], x->_wrap_to_180(rad2deg(x)))
+                        for (prop, val) in comp
+                            if prop in dimensionalize_math_comp["ibase_fr"]
+                                comp[prop] = _apply_func_vals(comp[prop], x->x*f_ibase)
+                            elseif prop in dimensionalize_math_comp["ibase_to"]
+                                comp[prop] = _apply_func_vals(comp[prop], x->x*t_ibase)
+                            end
+                        end
+                    end
                 end
             end
+        end
+    else
+        for (comp_type, comp_dict) in [(x,y) for (x,y) in solution_si if isa(y, Dict)]
+            dimensionalize_math_comp = get(_dimensionalize_math, comp_type, Dict())
+            vbase_props   = mult_vbase      ? get(dimensionalize_math_comp, "vbase", [])   : []
+            sbase_props   = mult_sbase      ? get(dimensionalize_math_comp, "sbase", [])   : []
+            ibase_props   = mult_ibase      ? get(dimensionalize_math_comp, "ibase", [])   : []
+            rad2deg_props = convert_rad2deg ? get(dimensionalize_math_comp, "rad2deg", []) : []
 
-            if comp_type=="transformer"
-                # transformers have different vbase/ibase on each side
-                f_bus = math_model["transformer"][id]["f_bus"]
-                f_vbase = math_model["bus"]["$f_bus"]["vbase"]
-                t_bus = math_model["transformer"][id]["t_bus"]
-                t_vbase = math_model["bus"]["$t_bus"]["vbase"]
-                f_ibase = sbase/f_vbase
-                t_ibase = sbase/t_vbase
+            for (id, comp) in comp_dict
+                if !isempty(vbase_props) || !isempty(ibase_props)
+                    vbase = math_model[comp_type][id]["vbase"]
+                    ibase = sbase/vbase
+                end
 
                 for (prop, val) in comp
-                    if prop in dimensionalize_math_comp["ibase_fr"]
-                        comp[prop] = _apply_func_vals(comp[prop], x->x*f_ibase)
-                    elseif prop in dimensionalize_math_comp["ibase_to"]
-                        comp[prop] = _apply_func_vals(comp[prop], x->x*t_ibase)
+                    if prop in vbase_props
+                        comp[prop] = _apply_func_vals(comp[prop], x->x*vbase)
+                    elseif prop in sbase_props
+                        comp[prop] = _apply_func_vals(comp[prop], x->x*sbase)
+                    elseif prop in ibase_props
+                        comp[prop] = _apply_func_vals(comp[prop], x->x*ibase)
+                    elseif prop in rad2deg_props
+                        comp[prop] = _apply_func_vals(comp[prop], x->_wrap_to_180(rad2deg(x)))
+                    end
+                end
+
+                if comp_type=="transformer"
+                    # transformers have different vbase/ibase on each side
+                    f_bus = math_model["transformer"][id]["f_bus"]
+                    f_vbase = math_model["bus"]["$f_bus"]["vbase"]
+                    t_bus = math_model["transformer"][id]["t_bus"]
+                    t_vbase = math_model["bus"]["$t_bus"]["vbase"]
+                    f_ibase = sbase/f_vbase
+                    t_ibase = sbase/t_vbase
+
+                    for (prop, val) in comp
+                        if prop in dimensionalize_math_comp["ibase_fr"]
+                            comp[prop] = _apply_func_vals(comp[prop], x->x*f_ibase)
+                        elseif prop in dimensionalize_math_comp["ibase_to"]
+                            comp[prop] = _apply_func_vals(comp[prop], x->x*t_ibase)
+                        end
                     end
                 end
             end

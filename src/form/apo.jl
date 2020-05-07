@@ -137,6 +137,17 @@ function variable_mc_transformer_power_real(pm::_PM.AbstractAPLossLessModels; nw
 end
 
 
+""
+function constraint_mc_network_power_balance(pm::_PM.AbstractAPLossLessModels, n::Int, i, comp_gen_ids, comp_pd, comp_qd, comp_gs, comp_bs, comp_branch_g, comp_branch_b)
+    pg = var(pm, n, :pg)
+
+    for c in conductor_ids(pm)
+        JuMP.@constraint(pm.model, sum(pg[g][c] for g in comp_gen_ids) == sum(pd[c] for (i,pd) in values(comp_pd)) + sum(gs[c]*1.0^2 for (i,gs) in values(comp_gs)))
+        # omit reactive constraint
+    end
+end
+
+
 "Do nothing, this model is symmetric"
 function constraint_mc_ohms_yt_to(pm::_PM.AbstractAPLossLessModels, n::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
 end

@@ -5,7 +5,7 @@ end
 
 
 "Optimal Power Flow"
-function run_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::DataType, solver; kwargs...)
+function run_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
     return run_mc_model(data, model_type, solver, build_mc_opf; kwargs...)
 end
 

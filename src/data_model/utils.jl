@@ -445,7 +445,7 @@ end
 
 
 "initialization actions for unmapping"
-function _init_unmap_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, map::Dict{String,<:Any})::Dict{String,Any}
+function _init_unmap_eng_obj!(data_eng::Dict{<:Any,<:Any}, eng_obj_type::String, map::Dict{String,<:Any})::Dict{String,Any}
     if !haskey(data_eng, eng_obj_type)
         data_eng[eng_obj_type] = Dict{Any,Any}()
     end

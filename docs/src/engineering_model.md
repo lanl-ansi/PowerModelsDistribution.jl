@@ -291,6 +291,74 @@ eng_all["line"]
 
 You will note the presence of `"dss"` dictionaries under components, and `"dss_options"` at the root level
 
+### Time Series Parsing Example
+
+In the `ENGINEERING` model, we have included the `time_series` data type, which holds all time series data and can be referred to similar to `"linecode"` as demonstrated above.
+
+Below we can see an example of a parse that includes some time_series components
+
+
+```julia
+eng_ts = parse_file("../test/data/opendss/case3_balanced.dss"; time_series="daily")
+```
+
+    [32m[info | PowerModels]: Circuit has been reset with the "clear" on line 1 in "case3_balanced.dss"[39m
+    [35m[warn | PowerModels]: Command "calcvoltagebases" on line 36 in "case3_balanced.dss" is not supported, skipping.[39m
+    [35m[warn | PowerModels]: Command "solve" on line 38 in "case3_balanced.dss" is not supported, skipping.[39m
+
+
+
+
+
+    Dict{String,Any} with 10 entries:
+      "voltage_source" => Dict{Any,Any}("source"=>Dict{String,Any}("source_id"=>"vs…
+      "name"           => "3bus_example"
+      "line"           => Dict{Any,Any}("quad"=>Dict{String,Any}("cm_ub"=>[400.0, 4…
+      "settings"       => Dict{String,Any}("sbase_default"=>100000.0,"vbases_defaul…
+      "files"          => ["case3_balanced.dss"]
+      "load"           => Dict{Any,Any}("l2"=>Dict{String,Any}("model"=>POWER,"conn…
+      "bus"            => Dict{Any,Any}("primary"=>Dict{String,Any}("rg"=>Float64[]…
+      "linecode"       => Dict{Any,Any}("556mcm"=>Dict{String,Any}("b_fr"=>[25.4648…
+      "time_series"    => Dict{Any,Any}("ls1"=>Dict{String,Any}("source_id"=>"loads…
+      "data_model"     => ENGINEERING
+
+
+
+
+```julia
+eng_ts["load"]["l1"]["time_series"]
+```
+
+
+
+
+    Dict{String,Any} with 2 entries:
+      "qd_nom" => "ls1"
+      "pd_nom" => "ls1"
+
+
+
+You can see that under the actual component, in this case a `"load"`, that there is a `"time_series"` dictionary that contains `ENGINEERING` model variable names and references to the identifiers of a root-level `time_series` object, 
+
+
+```julia
+eng_ts["time_series"]["ls1"]
+```
+
+
+
+
+    Dict{String,Any} with 5 entries:
+      "source_id" => "loadshape.ls1"
+      "time"      => [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+      "replace"   => true
+      "values"    => [0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.…
+      "offset"    => 0.0
+
+
+
+This feature is useful for building multinetwork data structures, which will be described below in the section on the `MATHEMATICAL` model
+
 ## Running Optimal Power Flow
 
 In this section we introduce how to run an optimal power flow (opf) in PowerModelsDistribution on an engineering data model
@@ -322,7 +390,7 @@ result = run_mc_opf(eng, ACPPowerModel, ipopt_solver)
 
 
     Dict{String,Any} with 8 entries:
-      "solve_time"         => 3.9884
+      "solve_time"         => 4.97333
       "optimizer"          => "Ipopt"
       "termination_status" => LOCALLY_SOLVED
       "dual_status"        => FEASIBLE_POINT
@@ -406,13 +474,39 @@ result_bf = run_mc_opf(eng, SOCNLPUBFPowerModel, ipopt_solver)
 
 
     Dict{String,Any} with 8 entries:
-      "solve_time"         => 0.190441
+      "solve_time"         => 0.246656
       "optimizer"          => "Ipopt"
       "termination_status" => LOCALLY_SOLVED
       "dual_status"        => FEASIBLE_POINT
       "primal_status"      => FEASIBLE_POINT
       "objective"          => 0.0211303
       "solution"           => Dict{String,Any}("voltage_source"=>Dict{Any,Any}("sou…
+      "objective_lb"       => -Inf
+
+
+
+### Running Time Series Models
+
+By default, `time_series` object will be ignored when running a model. To use the time series information you will need to have a multinetwork problem specification
+
+In the example below we use a test case, which is not exported by default, and therefore requires the specification of the PowerModelsDistribution namespace
+
+
+```julia
+result_mn = PowerModelsDistribution._run_mc_mn_opb(eng_ts, NFAPowerModel, ipopt_solver)
+```
+
+
+
+
+    Dict{String,Any} with 8 entries:
+      "solve_time"         => 0.334904
+      "optimizer"          => "Ipopt"
+      "termination_status" => LOCALLY_SOLVED
+      "dual_status"        => FEASIBLE_POINT
+      "primal_status"      => FEASIBLE_POINT
+      "objective"          => 0.0
+      "solution"           => Dict{String,Any}("nw"=>Dict{String,Any}("8"=>Dict{Any…
       "objective_lb"       => -Inf
 
 
@@ -578,6 +672,10 @@ eng_ut["bus"]["2"]
 
 
 
+### Transformations on Multinetworks
+
+Transformations on Multinetworks should happen __before__ the network is converted into a `MATHEMATICAL` data model, so that they can generally follow the same pattern as shown above and can be seen in the `make_lossless!` and `apply_voltage_bounds!` functions already in PowerModelsDistribution
+
 ## Mathematical Model
 
 In this section we introduce the mathematical model, which was the previous user-facing model in PowerModelsDistribution, explain how conversions between the model happen in practice, and give an example of how to do this conversion manually
@@ -678,6 +776,73 @@ math = parse_file("../test/data/opendss/case3_unbalanced.dss"; data_model=MATHEM
 
 
 
+### Multinetworks
+
+In this subsection we cover parsing into a multinetwork data structure, which is a structure that only exists in the `MATHEMATICAL` model
+
+For those unfamiliar, the InfrastructureModels family of packages has a feature called multinetworks, which is useful for, among other things, running optimization problems on time series type problems. 
+
+Multinetwork data structures are formatted like so
+mn = Dict{String,Any}(
+    "multinetwork" => true,
+    "nw" => Dict{String,Any}(
+        "1" => Dict{String,Any}(
+            "bus" => Dict{String,Any}(),
+            ...
+        ),
+        ...
+    ),
+    ...
+)
+To automatically create a multinetwork structure from an engineering model that contains `time_series` elements, we can use the `build_multinetwork` keyword argument in `transform_data_model`
+
+
+```julia
+math_mn = transform_data_model(eng_ts; build_multinetwork=true)
+```
+
+
+
+
+    Dict{String,Any} with 8 entries:
+      "name"         => "10 replicates of 3bus_example"
+      "map"          => Dict{String,Any}[Dict("unmap_function"=>"_map_math2eng_root…
+      "settings"     => Dict{String,Any}("sbase_default"=>100000.0,"vbases_default"…
+      "bus_lookup"   => Dict{Any,Int64}("primary"=>1,"sourcebus"=>2,"loadbus"=>3)
+      "multinetwork" => true
+      "nw"           => Dict{String,Any}("3"=>Dict{String,Any}("bus"=>Dict{String,A…
+      "per_unit"     => true
+      "data_model"   => MATHEMATICAL
+
+
+
+Alternatively, we can use `parse_file` with the `build_multinetwork` keyword argument combined with `data_model=MATHEMATICAL`
+
+
+```julia
+math_mn = parse_file("../test/data/opendss/case3_balanced.dss"; build_multinetwork=true, data_model=MATHEMATICAL)
+```
+
+    [32m[info | PowerModels]: Circuit has been reset with the "clear" on line 1 in "case3_balanced.dss"[39m
+    [35m[warn | PowerModels]: Command "calcvoltagebases" on line 36 in "case3_balanced.dss" is not supported, skipping.[39m
+    [35m[warn | PowerModels]: Command "solve" on line 38 in "case3_balanced.dss" is not supported, skipping.[39m
+
+
+
+
+
+    Dict{String,Any} with 8 entries:
+      "name"         => "10 replicates of 3bus_example"
+      "map"          => Dict{String,Any}[Dict("unmap_function"=>"_map_math2eng_root…
+      "settings"     => Dict{String,Any}("sbase_default"=>100000.0,"vbases_default"…
+      "bus_lookup"   => Dict{Any,Int64}("primary"=>1,"sourcebus"=>2,"loadbus"=>3)
+      "multinetwork" => true
+      "nw"           => Dict{String,Any}("3"=>Dict{String,Any}("bus"=>Dict{String,A…
+      "per_unit"     => true
+      "data_model"   => MATHEMATICAL
+
+
+
 ### Running `MATHEMATICAL` models
 
 There is very little difference from the user point-of-view in running `MATHEMATICAL` models other than the results will not be automatically converted back to the the format of the `ENGINEERING` model
@@ -707,7 +872,7 @@ It is also possible to manually convert the solution back to the `ENGINEERING` f
 
 
 ```julia
-result_eng = transform_solution(result_math["solution"], math)
+sol_eng = transform_solution(result_math["solution"], math)
 ```
 
 
@@ -720,6 +885,43 @@ result_eng = transform_solution(result_math["solution"], math)
       "load"           => Dict{Any,Any}("l2"=>Dict{String,Any}("qd_bus"=>[0.0, 3.0,…
       "bus"            => Dict{Any,Any}("primary"=>Dict{String,Any}("va"=>[-0.22425…
       "per_unit"       => false
+
+
+
+#### Running `MATHEMATICAL` Multinetworks
+
+As with the `ENGINEERING` example of running a multinetwork problem, you will need a multinetwork problem specification, and as with the previous single `MATHEMATICAL` network example above, we only obtain the `MATHEMATICAL` solution, and can transform the solution in the same manner as before
+
+
+```julia
+result_math_mn = PowerModelsDistribution._run_mc_mn_opb(math_mn, NFAPowerModel, ipopt_solver)
+
+result_math_mn["solution"]["nw"]["1"]
+```
+
+
+
+
+    Dict{String,Any} with 3 entries:
+      "baseMVA"    => 100.0
+      "gen"        => Dict{String,Any}("1"=>Dict{String,Any}("pg"=>[0.0, 0.0, 0.0]))
+      "conductors" => 3
+
+
+
+
+```julia
+sol_eng_mn = transform_solution(result_math_mn["solution"], math_mn)
+
+sol_eng_mn["nw"]["1"]
+```
+
+
+
+
+    Dict{Any,Any} with 2 entries:
+      "voltage_source" => Dict{Any,Any}("source"=>Dict{String,Any}("pg"=>[0.0, 0.0,…
+      "settings"       => Dict{String,Any}("sbase"=>100.0)
 
 
 

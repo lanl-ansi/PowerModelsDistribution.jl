@@ -568,3 +568,42 @@ function constraint_mc_bus_voltage_drop(pm::_PM.AbstractPowerModel, i::Int; nw::
 
     constraint_mc_bus_voltage_drop(pm, nw, i, f_bus, t_bus, f_idx, r, x, tr, ti, tm)
 end
+
+
+"ensures that power generation and demand are balanced"
+function constraint_mc_network_power_balance(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    comp_bus_ids = ref(pm, nw, :components, i)
+
+    comp_gen_ids = Set{Int64}()
+    for bus_id in comp_bus_ids, gen_id in PowerModels.ref(pm, nw, :bus_gens, bus_id)
+        push!(comp_gen_ids, gen_id)
+    end
+
+    comp_loads = Set()
+    for bus_id in comp_bus_ids, load_id in PowerModels.ref(pm, nw, :bus_loads, bus_id)
+        push!(comp_loads, PowerModels.ref(pm, nw, :load, load_id))
+    end
+
+    comp_shunts = Set()
+    for bus_id in comp_bus_ids, shunt_id in PowerModels.ref(pm, nw, :bus_shunts, bus_id)
+        push!(comp_shunts, PowerModels.ref(pm, nw, :shunt, shunt_id))
+    end
+
+    comp_branches = Set()
+    for (branch_id, branch) in PowerModels.ref(pm, nw, :branch)
+        if in(branch["f_bus"], comp_bus_ids) && in(branch["t_bus"], comp_bus_ids)
+            push!(comp_branches, branch)
+        end
+    end
+
+    comp_pd = Dict(load["index"] => (load["load_bus"], load["pd"]) for load in comp_loads)
+    comp_qd = Dict(load["index"] => (load["load_bus"], load["qd"]) for load in comp_loads)
+
+    comp_gs = Dict(shunt["index"] => (shunt["shunt_bus"], shunt["gs"]) for shunt in comp_shunts)
+    comp_bs = Dict(shunt["index"] => (shunt["shunt_bus"], shunt["bs"]) for shunt in comp_shunts)
+
+    comp_branch_g = Dict(branch["index"] => (branch["f_bus"], branch["t_bus"], branch["br_r"], branch["br_x"], branch["tap"], branch["g_fr"], branch["g_to"]) for branch in comp_branches)
+    comp_branch_b = Dict(branch["index"] => (branch["f_bus"], branch["t_bus"], branch["br_r"], branch["br_x"], branch["tap"], branch["b_fr"], branch["b_to"]) for branch in comp_branches)
+
+    constraint_mc_network_power_balance(pm, nw, i, comp_gen_ids, comp_pd, comp_qd, comp_gs, comp_bs, comp_branch_g, comp_branch_b)
+end

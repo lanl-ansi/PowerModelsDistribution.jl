@@ -1,7 +1,15 @@
 ""
 function transform_solution(solution_math::Dict{String,<:Any}, data_math::Dict{String,<:Any}; map::Union{Vector{Dict{String,<:Any}},Missing}=missing, make_si::Bool=true)::Dict{String,Any}
-    @assert get(data_math, "data_model", MATHEMATICAL) == MATHEMATICAL "provided solution cannot be converted to an engineering model: data_model not recognized"
-    solution_eng = Dict{String, Any}()
+    @assert get(data_math, "data_model", MATHEMATICAL) == MATHEMATICAL "provided solution cannot be converted to an engineering model"
+    if ismultinetwork(data_math)
+        solution_eng = Dict{String,Any}(
+            "nw" => Dict{String,Any}(
+                k => Dict{Any,Any}() for k in keys(data_math["nw"])
+            )
+        )
+    else
+        solution_eng = Dict{String,Any}()
+    end
 
     solution_math = solution_make_si(solution_math, data_math; mult_vbase=make_si, mult_sbase=make_si, convert_rad2deg=true)
 
@@ -9,12 +17,28 @@ function transform_solution(solution_math::Dict{String,<:Any}, data_math::Dict{S
     @assert !isempty(map) "Map is empty, cannot map solution up to engineering model"
 
     for map_item in reverse(map)
-        getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(solution_eng, solution_math, map_item)
+        if ismultinetwork(data_math) && map_item["unmap_function"] != "_map_math2eng_root!"
+            for (n, nw) in solution_math["nw"]
+                getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(solution_eng["nw"][n], nw, map_item)
+            end
+        else
+            getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(solution_eng, solution_math, map_item)
+        end
     end
 
-    for (k,v) in solution_eng
-        if isempty(v)
-            delete!(solution_eng, k)
+    if ismultinetwork(data_math)
+        for (n,nw) in solution_eng["nw"]
+            for (k,v) in nw
+                if isempty(v)
+                    delete!(nw, k)
+                end
+            end
+        end
+    else
+        for (k,v) in solution_eng
+            if isempty(v)
+                delete!(solution_eng, k)
+            end
         end
     end
 
@@ -23,7 +47,7 @@ end
 
 
 ""
-function _map_math2eng_voltage_source!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_voltage_source!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     if !haskey(data_eng, "voltage_source")
         data_eng["voltage_source"] = Dict{Any,Any}()
     end
@@ -48,7 +72,7 @@ end
 
 
 ""
-function _map_math2eng_bus!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_bus!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "bus", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -61,7 +85,7 @@ end
 
 
 ""
-function _map_math2eng_load!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_load!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "load", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -73,19 +97,7 @@ function _map_math2eng_load!(data_eng::Dict{String,<:Any}, data_math::Dict{Strin
 end
 
 
-function _map_math2eng_shunt_capacitor!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
-    eng_obj = _init_unmap_eng_obj!(data_eng, "shunt_capacitor", map)
-    math_obj = _get_math_obj(data_math, map["to"])
-
-    merge!(eng_obj, math_obj)
-
-    if !isempty(eng_obj)
-        data_eng["shunt_capacitor"][map["from"]] = eng_obj
-    end
-end
-
-
-function _map_math2eng_shunt!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_shunt!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "shunt", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -97,7 +109,7 @@ end
 end
 
 
-function _map_math2eng_generator!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_generator!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "generator", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -109,7 +121,7 @@ function _map_math2eng_generator!(data_eng::Dict{String,<:Any}, data_math::Dict{
 end
 
 
-function _map_math2eng_solar!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_solar!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "solar", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -121,7 +133,7 @@ function _map_math2eng_solar!(data_eng::Dict{String,<:Any}, data_math::Dict{Stri
 end
 
 
-function _map_math2eng_storage!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_storage!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "storage", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -133,7 +145,7 @@ function _map_math2eng_storage!(data_eng::Dict{String,<:Any}, data_math::Dict{St
 end
 
 
-function _map_math2eng_line!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_line!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "line", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -145,19 +157,7 @@ function _map_math2eng_line!(data_eng::Dict{String,<:Any}, data_math::Dict{Strin
 end
 
 
-function _map_math2eng_line_reactor!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
-    eng_obj = _init_unmap_eng_obj!(data_eng, "line_reactor", map)
-    math_obj = _get_math_obj(data_math, map["to"])
-
-    merge!(eng_obj, math_obj)
-
-    if !isempty(eng_obj)
-        data_eng["line_reactor"][map["from"]] = eng_obj
-    end
-end
-
-
-function _map_math2eng_switch!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_switch!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "switch", map)
 
 
@@ -174,7 +174,7 @@ function _map_math2eng_switch!(data_eng::Dict{String,<:Any}, data_math::Dict{Str
 end
 
 
-function _map_math2eng_transformer!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_transformer!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "transformer", map)
 
     trans_2wa_ids = [index for (comp_type, index) in split.(map["to"], ".", limit=2) if comp_type=="transformer"]
@@ -197,5 +197,11 @@ end
 function _map_math2eng_root!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     data_eng["per_unit"] = data_math["per_unit"]
 
-    data_eng["settings"] = Dict{String,Any}("sbase" => data_math["baseMVA"])
+    if !ismultinetwork(data_math)
+        data_eng["settings"] = Dict{String,Any}("sbase" => data_math["baseMVA"])
+    else
+        for (n,nw) in data_eng["nw"]
+            nw["settings"] = Dict{String,Any}("sbase" => data_math["nw"][n]["baseMVA"])
+        end
+    end
 end

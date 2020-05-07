@@ -36,7 +36,7 @@ const _math_edge_elements = Vector{String}([
 
 "list of multinetwork keys that belong at the root level"
 const _pmd_math_global_keys = Set{String}([
-    "conductors", "data_model", "per_unit", "name", "settings", "map", "bus_lookup"
+    "data_model", "per_unit", "name", "settings", "map", "bus_lookup"
 ])
 
 
