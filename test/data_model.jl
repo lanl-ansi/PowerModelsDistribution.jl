@@ -10,8 +10,10 @@
 
         add_voltage_source!(eng, "source", "sourcebus", [1,2,3,4]; vm=[1, 1, 1])
 
-        add_line!(eng, "trunk", "sourcebus", "primary", [1,2,3], [1,2,3])
-        add_line!(eng, "primary", "primary", "loadbus", [1,2,3], [1,2,3])
+        add_linecode!(eng, "default", diagm(0=>fill(0.01, 3)), diagm(0=>fill(0.2, 3)))
+
+        add_line!(eng, "trunk", "sourcebus", "primary", [1,2,3], [1,2,3]; linecode="default")
+        add_line!(eng, "primary", "primary", "loadbus", [1,2,3], [1,2,3]; linecode="default")
 
         add_load!(eng, "balanced", "loadbus", [1,2,3,4]; pd_nom=[5, 5, 5], qd_nom=[1, 1, 1])
 

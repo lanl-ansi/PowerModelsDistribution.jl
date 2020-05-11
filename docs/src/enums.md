@@ -67,5 +67,5 @@ Some components can be dispatchable, _e.g._ if a switch is dispatchable that mea
 For generator objects, the `"control_mode"` field expects a `ControlMode` type to specify whether the generator is operating in an isochronous mode (_i.e._ is frequency forming) or droop mode (_i.e._ is frequency following):
 
 ```julia
-@enum ControlMode DROOP ISOCHRONOUS
+@enum ControlMode FREQUENCYDROOP ISOCHRONOUS
 ```

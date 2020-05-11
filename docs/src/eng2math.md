@@ -16,7 +16,7 @@ Switches are parsed into `switch`. If there are loss parameters provided (_i.e._
 
 ## `transformer`
 
-Transformers are parsed into ayssmetric lossless 2-winding transformers. When parsing n-winding transformers with n>2 additionally virtual branches and buses are created to connect the new 2-winding transformers. Furthermore, if the loss parameters are non-zero, additional virtual buses and branches to model the transformer impedances
+Transformers are parsed into asymmetric lossless 2-winding transformers. When parsing n-winding transformers with n>2 additionally virtual branches and buses are created to connect the new 2-winding transformers. Furthermore, if the loss parameters are non-zero, additional virtual buses and branches to model the transformer impedances
 
 ## `shunt`
 

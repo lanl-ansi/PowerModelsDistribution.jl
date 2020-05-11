@@ -11,7 +11,7 @@
 @enum SwitchState OPEN CLOSED
 
 "Generator, Solar, Storage, Wind Control Modes"
-@enum ControlMode DROOP ISOCHRONOUS
+@enum ControlMode FREQUENCYDROOP ISOCHRONOUS
 
 "Configurations"
 @enum ConnConfig WYE DELTA

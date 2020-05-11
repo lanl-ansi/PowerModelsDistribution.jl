@@ -1,8 +1,3 @@
-#TODO
-# Can buses in a voltage zone have different terminals?
-# Add current/power bounds to data model
-
-
 "adds kwargs that were specified but unused by the required defaults to the component"
 function _add_unused_kwargs!(object::Dict{String,<:Any}, kwargs)
     for (property, value) in kwargs
@@ -106,9 +101,7 @@ end
 
 
 "creates a linecode with some defaults"
-function create_linecode(;
-    rs::Union{Matrix{<:Real},Missing}=missing,
-    xs::Union{Matrix{<:Real},Missing}=missing,
+function create_linecode(rs::Matrix{<:Real}, xs::Matrix{<:Real};
     g_fr::Union{Matrix{<:Real},Missing}=missing,
     b_fr::Union{Matrix{<:Real},Missing}=missing,
     g_to::Union{Matrix{<:Real},Missing}=missing,
@@ -117,13 +110,7 @@ function create_linecode(;
     kwargs...
         )::Dict{String,Any}
 
-    shape = ()
-    for v in [rs, xs, g_fr, g_to, b_fr, b_to]
-        if !ismissing(v)
-            shape = size(v)
-            break
-        end
-    end
+    shape = size(rs)
 
     for v in [rs, xs, g_fr, g_to, b_fr, b_to]
         if !ismissing(v)
@@ -132,8 +119,8 @@ function create_linecode(;
     end
 
     linecode = Dict{String,Any}(
-        "rs" => !ismissing(rs) ? rs : fill(0.01, shape...),
-        "xs" => !ismissing(xs) ? xs : fill(0.2, shape...),
+        "rs" => rs,
+        "xs" => xs,
         "g_fr" => !ismissing(g_fr) ? g_fr : fill(0.0, shape...),
         "b_fr" => !ismissing(b_fr) ? b_fr : fill(0.0, shape...),
         "g_to" => !ismissing(g_to) ? g_to : fill(0.0, shape...),
@@ -193,9 +180,14 @@ function create_line(f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Ve
     )
 
     if ismissing(linecode)
-        line["rs"] = !ismissing(rs) ? rs : fill(0.01, shape...)
-        line["rs"] => !ismissing(rs) ? rs : fill(0.01, shape...)
-        line["xs"] = !ismissing(xs) ? xs : fill(0.2, shape...)
+        if !ismissing(rs) && !ismissing(xs)
+            line["rs"] = rs
+            line["xs"] = xs
+
+        else
+            Memento.error(_LOGGER, "A linecode or rs & xs must be specified to create a valid line object")
+        end
+
         line["g_fr"] = !ismissing(g_fr) ? g_fr : fill(0.0, shape...)
         line["b_fr"] = !ismissing(b_fr) ? b_fr : fill(0.0, shape...)
         line["g_to"] = !ismissing(g_to) ? g_to : fill(0.0, shape...)
@@ -330,7 +322,7 @@ function create_generator(bus::Any, connections::Union{Vector{Int},Vector{String
     pg_ub::Union{Vector{<:Real},Missing}=missing,
     qg_lb::Union{Vector{<:Real},Missing}=missing,
     qg_ub::Union{Vector{<:Real},Missing}=missing,
-    control_mode::ControlMode=DROOP,
+    control_mode::ControlMode=FREQUENCYDROOP,
     status::Status=ENABLED,
     kwargs...
         )::Dict{String,Any}
@@ -650,7 +642,7 @@ end
 
 # Data objects
 add_bus!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "bus", id, create_bus(; kwargs...))
-add_linecode!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "linecode", id, create_linecode(; kwargs...))
+add_linecode!(data_eng::Dict{String,<:Any}, id::Any, rs::Matrix{<:Real}, xs::Matrix{<:Real}; kwargs...) = add_object!(data_eng, "linecode", id, create_linecode(rs, xs; kwargs...))
 add_xfmrcode!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "xfmrcode", id, create_xfmrcode(; kwargs...))
 # add_time_series!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "time_series", id, create_timeseries(; kwargs...))
 

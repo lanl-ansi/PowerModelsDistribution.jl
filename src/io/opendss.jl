@@ -331,7 +331,7 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             "qg_ub" => fill(defaults["maxkvar"] / nphases, nphases),
             "pg_lb" => fill(0.0, nphases),
             "pg_ub" => fill(defaults["kw"] / nphases, nphases),
-            "control_mode" => DROOP,
+            "control_mode" => FREQUENCYDROOP,
             "configuration" => WYE,
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
             "source_id" => "generator.$id"

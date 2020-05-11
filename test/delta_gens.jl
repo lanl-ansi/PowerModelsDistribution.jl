@@ -24,7 +24,7 @@
                 "bus" => load["bus"],
                 "connections" => load["connections"],
                 "cost_pg_parameters" => [0, 0, 0],
-                "control_mode" => DROOP,
+                "control_mode" => FREQUENCYDROOP,
                 "pg_lb" => -load["pd_nom"],
                 "pg_ub" => -load["pd_nom"],
                 "qg_lb" => -load["qd_nom"],

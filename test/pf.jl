@@ -114,7 +114,7 @@
         @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"]), 0.01854; atol=1e-4)
     end
 
-    @testset "3-bus unbalanced w/ assymetric linecode & phase order swap acp pf" begin
+    @testset "3-bus unbalanced w/ asymmetric linecode & phase order swap acp pf" begin
         pmd = parse_file("../test/data/opendss/case3_unbalanced_assym_swap.dss")
         sol = run_ac_mc_pf(pmd, ipopt_solver; make_si=false)
 

@@ -1,5 +1,5 @@
 ""
-function transform_solution(solution_math::Dict{String,<:Any}, data_math::Dict{String,<:Any}; map::Union{Vector{Dict{String,<:Any}},Missing}=missing, make_si::Bool=true)::Dict{String,Any}
+function transform_solution(solution_math::Dict{String,<:Any}, data_math::Dict{String,<:Any}; map::Union{Vector{Dict{String,<:Any}},Missing}=missing, make_si::Bool=true, convert_rad2deg::Bool=true)::Dict{String,Any}
     @assert get(data_math, "data_model", MATHEMATICAL) == MATHEMATICAL "provided solution cannot be converted to an engineering model"
     if ismultinetwork(data_math)
         solution_eng = Dict{String,Any}(
@@ -11,7 +11,7 @@ function transform_solution(solution_math::Dict{String,<:Any}, data_math::Dict{S
         solution_eng = Dict{String,Any}()
     end
 
-    solution_math = solution_make_si(solution_math, data_math; mult_vbase=make_si, mult_sbase=make_si, convert_rad2deg=true)
+    solution_math = solution_make_si(solution_math, data_math; mult_vbase=make_si, mult_sbase=make_si, convert_rad2deg=convert_rad2deg)
 
     map = ismissing(map) ? get(data_math, "map", Vector{Dict{String,Any}}()) : map
     @assert !isempty(map) "Map is empty, cannot map solution up to engineering model"

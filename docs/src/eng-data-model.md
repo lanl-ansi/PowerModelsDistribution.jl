@@ -26,11 +26,11 @@ Dict{String,Any}(
 
 Valid component types are those that are documented in the sectios below. Each component object is identified by an `id`, which can be any immutable value (`id <: Any`), but `id` does not appear inside of the component dictionary, and only appears as keys to the component dictionaries under each component type. Note that by default, if using one of the parsers, component `id` will be of type `String`, and if a model is created that uses `id` which is not type `String`, it will not be JSON serializable (_i.e._ the `id` will be converted to its `String` representation on export to JSON).
 
-Each edge or node component (_i.e._ all those that are not data objects or buses), are expected to have `status` fields to specify whether the component is active or disabled, `bus` or `f_bus` and `t_bus`, to specify the buses that are connected to the component, and `connections` or `f_connections` and `t_connections`, to specify the terminals of the buses that are actively connected in an ordered list. Terminals/connections can be any immutable value, as can bus ids. __NOTE__: `terminals`, `connections`, `f_connections`, and `t_connections`, can either be type `Vector{Int}` _or_ `Vector{String}`, as long as they are consistant across the whole model.
+Each edge or node component (_i.e._ all those that are not data objects or buses), is expected to have `status` fields to specify whether the component is active or disabled, `bus` or `f_bus` and `t_bus`, to specify the buses that are connected to the component, and `connections` or `f_connections` and `t_connections`, to specify the terminals of the buses that are actively connected in an ordered list. Terminals/connections can be any immutable value, as can bus ids. __NOTE__: `terminals`, `connections`, `f_connections`, and `t_connections`, can either be type `Vector{Int}` _or_ `Vector{String}`, as long as they are consistent across the whole model.
 
 Parameter values on components are expected to be specified in SI units by default (where applicable) in the engineering data model. Relevant expected units are noted in the sections below. It is possible for the user to select universal scalar factors for power and voltages. For example, if `power_scalar_factor` and `voltage_scalar_factor` are their default values given below, where units is listed as watt or var, real units will be kW and kvar. Where units are listed as volt, real units will be kV (multiplied by `vm_nom`, where that value exists).
 
-The Used column describes the situtations where certain parameters are used. "always" indicates those values are used in all contexts, `opf`, `mld`, or any other problem name abbreviation indicate they are used in particular for those problems. "solution" indicates that those parameters are outputs from the solvers. "multinetwork" indictes these values are only used to build multinetwork problems.
+The Used column describes the situtations where certain parameters are used. "always" indicates those values are used in all contexts, `opf`, `mld`, or any other problem name abbreviation indicate they are used in particular for those problems. "solution" indicates that those parameters are outputs from the solvers. "multinetwork" indicates these values are only used to build multinetwork problems.
 
 Those parameters that have a default may be omitted by the user from the data model, they will be populated by the specified default values.
 
@@ -185,9 +185,9 @@ These are n-winding (`nwinding`), n-phase (`nphase`), lossy transformers. Note t
 | `sm_nom`         |                                      | `Vector{Real}`                        | watt        | always |                                                                                                                                                                |
 | `status`         | `ENABLED`                            | `Status`                              |             | always | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively                                                                           |
 
-#### Assymetric, Lossless, Two-Winding (AL2W) Transformers (`transformer`)
+#### Asymmetric, Lossless, Two-Winding (AL2W) Transformers (`transformer`)
 
-Special case of the Generic transformer, which is still a `transformer` object, but has a simplified method for its definition. These are transformers are assymetric (A), lossless (L) and two-winding (2W). Assymetric refers to the fact that the secondary is always has a `WYE` configuration, whilst the primary can be `DELTA`. The table below indicates alternate, more simple ways to specify the special case of an AL2W Transformer. `xsc` and `rw` cannot be specified for an AL2W transformer, because it is lossless. To use this definition format, all of `f_bus`, `t_bus`, `f_connections`, `t_connections`, and `configuration` must be used, and none of `buses`, `connections`, `configurations` may be used. `xfmrcode` is ignored for this component.
+Special case of the Generic transformer, which is still a `transformer` object, but has a simplified method for its definition. These are transformers are asymmetric (A), lossless (L) and two-winding (2W). Asymmetric refers to the fact that the secondary is always has a `WYE` configuration, whilst the primary can be `DELTA`. The table below indicates alternate, more simple ways to specify the special case of an AL2W Transformer. `xsc` and `rw` cannot be specified for an AL2W transformer, because it is lossless. To use this definition format, all of `f_bus`, `t_bus`, `f_connections`, `t_connections`, and `configuration` must be used, and none of `buses`, `connections`, `configurations` may be used. `xfmrcode` is ignored for this component.
 
 | Name            | Default              | Type                          | Units | Used   | Description                                                                                                 |
 | --------------- | -------------------- | ----------------------------- | ----- | ------ | ----------------------------------------------------------------------------------------------------------- |
@@ -298,7 +298,7 @@ Two more model types are supported, which need additional fields and are defined
 | `qd_ci`  |         | `Real` |       | `model==ZIP` |                              |
 | `qd_cp`  |         | `Real` |       | `model==ZIP` |                              |
 
-### Generators `generator` (or Synchronous Machines `synchronous_machine`?)
+### Generators (`generator`)
 
 | Name            | Default              | Type                          | Units | Used                        | Description                                                                          |
 | --------------- | -------------------- | ----------------------------- | ----- | --------------------------- | ------------------------------------------------------------------------------------ |
@@ -312,7 +312,7 @@ Two more model types are supported, which need additional fields and are defined
 | `qg_ub`         | `pg_ub`              | `Vector{Real}`                | var   | opf                         | Upper bound on reactive power generation per phase, `size=nphases`                   |
 | `pg`            |                      | `Vector{Real}`                | watt  | solution                    | Present active power generation per phase, `size=nphases`                            |
 | `qg`            |                      | `Vector{Real}`                | var   | solution                    | Present reactive power generation per phase, `size=nphases`                          |
-| `control_mode`  | `DROOP`              | `ControlMode`                 |       |                             | `DROOP` or `ISOCHRONOUS`                                                             |
+| `control_mode`  | `FREQUENCYDROOP`     | `ControlMode`                 |       |                             | `FREQUENCYDROOP` or `ISOCHRONOUS`                                                    |
 | `status`        | `ENABLED`            | `Status`                      |       | always                      | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively |
 | `time_series`   |                      | `Dict{String,Any}`            |       | multinetwork                | Dictionary containing time series parameters.                                        |
 
@@ -326,8 +326,6 @@ The generator cost model is currently specified by the following fields.
 | `cost_pg_parameters` | `[0.0, 1.0, 0.0]` | `Vector{Real}` | $/MVA | opf  | Cost model polynomial                                     |
 
 ### Photovoltaic Systems (`solar`)
-
-TODO Loss model, Inverter settings, Irradiance Model
 
 | Name            | Default   | Type                          | Units | Used         | Description                                                                          |
 | --------------- | --------- | ----------------------------- | ----- | ------------ | ------------------------------------------------------------------------------------ |
@@ -354,7 +352,7 @@ The cost model for a photovoltaic system currently matches that of generators.
 
 ### Wind Turbine Systems (`wind`)
 
-Wind turbine systems are most closely approximated by induction machines, also known as asynchornous machines. These are not currently supported, but there is plans to support them in the future.
+Wind turbine systems are most closely approximated by induction machines, also known as asynchronous machines. These are not currently supported, but there is plans to support them in the future.
 
 ### Storage (`storage`)
 
