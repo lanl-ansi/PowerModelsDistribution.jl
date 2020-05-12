@@ -24,7 +24,7 @@ The general, exponential load model is defined as
 $$P^d_i = P^{d,0}_i \left(\frac{V^d_i}{V^{d,0}_i}\right)^{\alpha_i} = a_i \left(V^d_i\right)^{\alpha_i}$$
 $$Q^d_i = Q^{d,0}_i \left(\frac{V^d_i}{V^{d,0}_i}\right)^{\beta_i} = b_i \left(V^d_i\right)^{\beta_i}.$$
 
-This might seem overly complicated, but occurs in distribution network data due to experimental model fitting of loads. There are a few cases which get a special name: constant power ($\alpha=\beta=0$), constant current ($\alpha=\beta=1$), and constant impedance ($\alpha=\beta=2$).
+There are a few cases which get a special name: constant power ($\alpha=\beta=0$), constant current ($\alpha=\beta=1$), and constant impedance ($\alpha=\beta=2$).
 
 ## Wye-connected Loads
 A wye-connected load connects between a set of phases $\mathcal{P}$ and a neutral conductor $n$. The voltage as seen by each individual load is then

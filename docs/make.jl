@@ -9,6 +9,7 @@ makedocs(
         "Home" => "index.md",
         "Manual" => [
             "Getting Started" => "quickguide.md",
+            "Connecting Components" => "connections.md",
             "Mathematical Model" => "math-model.md",
             "Engineering Data Model" => "eng-data-model.md",
             "Enums in Engineering Model" => "enums.md",
