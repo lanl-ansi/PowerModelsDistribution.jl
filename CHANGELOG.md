@@ -6,6 +6,7 @@
 
 ## v0.9.0
 
+- Add `instantiate_mc_model` to aid in building JuMP model from ENGINEERING data model
 - SDP and SOC relaxations were broken but are fixed again (unit tests added)
 - Remove `run_mc_opf_iv`, `run_mc_opf_bf`, `run_mc_opf_bf_lm`, `run_mc_pf_bf`, `run_mc_pf_iv`, these can be accessed by using the correct formulation with `run_mc_opf` and `run_mc_pf`
 - Add support for Memento 1.1
@@ -14,7 +15,7 @@
 - Updates JSON parser to handle enum (`"data_model"` values)
 - Adds some commonly used InfrastructureModels and PowerModels functions as exports
 - Adds model building functions `add_{component}!` to aid in building simple models for testing (experimental)
-- Add run_mc_model (adds `ref_add_arcs_transformer!` to ref_extensions, and sets `multiconductor=true` by default) (breaking)
+- Add `run_mc_model` (adds `ref_add_arcs_transformer!` to ref_extensions, and sets `multiconductor=true` by default) (breaking)
 - Rename `ref_add_arcs_trans` -> `ref_add_arcs_transformer` (breaking)
 - Update `count_nodes`, now counts source nodes as well, excludes \_virtual objects
 - Change \_PMs and \_IMs to \_PM, \_IM, respectively

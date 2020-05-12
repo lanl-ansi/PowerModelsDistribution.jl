@@ -64,4 +64,16 @@
         @test length(math["bus"]) == 5
         @test all(all(isapprox.(bus["vmin"], 0.95)) && all(isapprox.(bus["vmax"], 1.05)) for (_,bus) in math["bus"] if bus["name"] != "sourcebus" && !startswith(bus["name"], "_virtual"))
     end
+
+    @testset "jump model from engineering data model" begin
+        eng = parse_file("../test/data/opendss/case3_balanced.dss")
+
+        pm_eng = instantiate_mc_model(eng, ACPPowerModel, build_mc_opf)
+
+        math = transform_data_model(eng)
+
+        pm_math = PowerModels.instantiate_model(math, ACPPowerModel, build_mc_opf; ref_extensions=[ref_add_arcs_transformer!])
+
+        @test sprint(print, pm_eng) == sprint(print, pm_math)
+    end
 end

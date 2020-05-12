@@ -12,10 +12,6 @@ All commands in this document with no package namespace specified are directly e
 using PowerModelsDistribution
 ```
 
-    ┌ Info: Precompiling PowerModelsDistribution [d7431456-977f-11e9-2de3-97ff7677985e]
-    └ @ Base loading.jl:1260
-
-
 In these examples we will use the following optimization solvers, specified using `optimizer_with_attributes` from JuMP v0.21
 
 
@@ -110,11 +106,11 @@ eng["bus"]
 
 
 
-We can see there are three buses in this system, identified by ids `"primary"`, `"sourcebus"`, and `"loadbus"`.
+We can see there are three buses in this system, identified by ids `"primary"`, `"sourcebus"`, and `"loadbus"`. 
 
-__NOTE__: In Julia, order of Dictionary keys is not fixed, nor does it retain the order in which it was parsed like _e.g._ `Vectors`.
+__NOTE__: In Julia, order of Dictionary keys is not fixed, nor does it retain the order in which it was parsed like _e.g._ `Vectors`. 
 
-Identifying components by non-integer names is a new feature of the `ENGINEERING` model, and makes network debugging more straightforward.
+Identifying components by non-integer names is a new feature of the `ENGINEERING` model, and makes network debugging more straightforward. 
 
 __NOTE__: all names are converted to lowercase on parse from the originating dss file.
 
@@ -338,7 +334,7 @@ eng_ts["load"]["l1"]["time_series"]
 
 
 
-You can see that under the actual component, in this case a `"load"`, that there is a `"time_series"` dictionary that contains `ENGINEERING` model variable names and references to the identifiers of a root-level `time_series` object,
+You can see that under the actual component, in this case a `"load"`, that there is a `"time_series"` dictionary that contains `ENGINEERING` model variable names and references to the identifiers of a root-level `time_series` object, 
 
 
 ```julia
@@ -377,20 +373,20 @@ result = run_mc_opf(eng, ACPPowerModel, ipopt_solver)
 ```
 
     [35m[warn | PowerModels]: Updated generator 1 cost function with order 3 to a function of order 2: [0.5, 0.0][39m
-
+    
     ******************************************************************************
     This program contains Ipopt, a library for large-scale nonlinear optimization.
      Ipopt is released as open source code under the Eclipse Public License (EPL).
              For more information visit http://projects.coin-or.org/Ipopt
     ******************************************************************************
-
+    
 
 
 
 
 
     Dict{String,Any} with 8 entries:
-      "solve_time"         => 4.97333
+      "solve_time"         => 3.23448
       "optimizer"          => "Ipopt"
       "termination_status" => LOCALLY_SOLVED
       "dual_status"        => FEASIBLE_POINT
@@ -474,7 +470,7 @@ result_bf = run_mc_opf(eng, SOCNLPUBFPowerModel, ipopt_solver)
 
 
     Dict{String,Any} with 8 entries:
-      "solve_time"         => 0.246656
+      "solve_time"         => 0.172447
       "optimizer"          => "Ipopt"
       "termination_status" => LOCALLY_SOLVED
       "dual_status"        => FEASIBLE_POINT
@@ -500,7 +496,7 @@ result_mn = PowerModelsDistribution._run_mc_mn_opb(eng_ts, NFAPowerModel, ipopt_
 
 
     Dict{String,Any} with 8 entries:
-      "solve_time"         => 0.334904
+      "solve_time"         => 0.262751
       "optimizer"          => "Ipopt"
       "termination_status" => LOCALLY_SOLVED
       "dual_status"        => FEASIBLE_POINT
@@ -780,7 +776,7 @@ math = parse_file("../test/data/opendss/case3_unbalanced.dss"; data_model=MATHEM
 
 In this subsection we cover parsing into a multinetwork data structure, which is a structure that only exists in the `MATHEMATICAL` model
 
-For those unfamiliar, the InfrastructureModels family of packages has a feature called multinetworks, which is useful for, among other things, running optimization problems on time series type problems.
+For those unfamiliar, the InfrastructureModels family of packages has a feature called multinetworks, which is useful for, among other things, running optimization problems on time series type problems. 
 
 Multinetwork data structures are formatted like so
 mn = Dict{String,Any}(
@@ -923,6 +919,62 @@ sol_eng_mn["nw"]["1"]
       "voltage_source" => Dict{Any,Any}("source"=>Dict{String,Any}("pg"=>[0.0, 0.0,…
       "settings"       => Dict{String,Any}("sbase"=>100.0)
 
+
+
+## Building the JuMP Model
+
+In some cases the user will want to directly build the JuMP model, which would traditionally be done with `instantiate_model` from PowerModels. In order to facilitate using the `ENGINEERING` model we have introduced `instantiate_mc_model` to aid in the generation of the JuMP model. `instantiate_mc_model` will automatically convert the data model to MATHEMATICAL if necessary (notifying the user of the conversion), and pass the MATHEMATICAL model off to PowerModels' `instantiate_model` with `ref_add_arcs_transformer!` in `ref_extensions`, which is a required ref extension for PowerModelsDistribution.
+
+
+```julia
+pm_eng = instantiate_mc_model(eng, NFAPowerModel, build_mc_opf)
+
+print(pm_eng.model)
+```
+
+    [32m[info | PowerModels]: Converting ENGINEERING data model to MATHEMATICAL first to build JuMP model[39m
+    [35m[warn | PowerModels]: Updated generator 1 cost function with order 3 to a function of order 2: [0.5, 0.0][39m
+    Min 0.5 0_pg_1[1] + 0.5 0_pg_1[2] + 0.5 0_pg_1[3]
+    Subject to
+     0_(3,4,2)_p[1] - 0_pg_1[1] = 0.0
+     0_(3,4,2)_p[2] - 0_pg_1[2] = 0.0
+     0_(3,4,2)_p[3] - 0_pg_1[3] = 0.0
+     0_(2,2,1)_p[1] - 0_(3,4,2)_p[1] = 0.0
+     0_(2,2,1)_p[2] - 0_(3,4,2)_p[2] = 0.0
+     0_(2,2,1)_p[3] - 0_(3,4,2)_p[3] = 0.0
+     -0_(1,1,3)_p[1] = -0.018000000000000002
+     -0_(1,1,3)_p[2] = -0.012
+     -0_(1,1,3)_p[3] = -0.012
+     0_(1,1,3)_p[1] - 0_(2,2,1)_p[1] = 0.0
+     0_(1,1,3)_p[2] - 0_(2,2,1)_p[2] = 0.0
+     0_(1,1,3)_p[3] - 0_(2,2,1)_p[3] = 0.0
+
+
+This is equivalent to
+
+
+```julia
+import PowerModels
+
+pm_math = PowerModels.instantiate_model(math, NFAPowerModel, build_mc_opf; ref_extensions=[ref_add_arcs_transformer!])
+
+print(pm_math.model)
+```
+
+    Min 0.5 0_pg_1[1] + 0.5 0_pg_1[2] + 0.5 0_pg_1[3]
+    Subject to
+     0_(3,4,2)_p[1] - 0_pg_1[1] = 0.0
+     0_(3,4,2)_p[2] - 0_pg_1[2] = 0.0
+     0_(3,4,2)_p[3] - 0_pg_1[3] = 0.0
+     0_(2,2,1)_p[1] - 0_(3,4,2)_p[1] = 0.0
+     0_(2,2,1)_p[2] - 0_(3,4,2)_p[2] = 0.0
+     0_(2,2,1)_p[3] - 0_(3,4,2)_p[3] = 0.0
+     -0_(1,1,3)_p[1] = -0.018000000000000002
+     -0_(1,1,3)_p[2] = -0.012
+     -0_(1,1,3)_p[3] = -0.012
+     0_(1,1,3)_p[1] - 0_(2,2,1)_p[1] = 0.0
+     0_(1,1,3)_p[2] - 0_(2,2,1)_p[2] = 0.0
+     0_(1,1,3)_p[3] - 0_(2,2,1)_p[3] = 0.0
 
 
 ## Conclusion

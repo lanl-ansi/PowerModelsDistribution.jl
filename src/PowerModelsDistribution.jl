@@ -20,6 +20,7 @@ module PowerModelsDistribution
     end
 
     include("core/types.jl")
+    include("core/base.jl")
     include("core/data.jl")
     include("core/ref.jl")
     include("core/variable.jl")
