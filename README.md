@@ -1,6 +1,6 @@
 # PowerModelsDistribution.jl
 
-![PowerModelsDistribution logo](docs/src/assets/logo.svg)
+<img src="https://lanl-ansi.github.io/PowerModelsDistribution.jl/dev/assets/logo.svg" align="left" width="200" alt="PowerModelsDistribution logo">
 
 Release:
 [![docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://lanl-ansi.github.io/PowerModelsDistribution.jl/stable/)
