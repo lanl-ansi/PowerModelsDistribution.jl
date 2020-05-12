@@ -31,6 +31,7 @@ Switches are parsed into `switch`. If there are loss parameters provided (_i.e._
 A transformer can have N windings, each with its own configuration (`delta` or `wye` are supported). This is decomposed to a network of N lossless, two-winding transformers which connect to an internal loss model. The to-winding is always wye-connected, hence we refer to these transformers as 'asymmetric'.
 
 The internal loss model is a function of
+
 - the winding resistance `rw`,
 - the short-circuit reactance `xsc`,
 - the no-load loss properties `noloadloss` (resistive) and magnetizing current `imag` (reactive).

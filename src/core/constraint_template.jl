@@ -358,7 +358,7 @@ function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::_PM.AbstractPowerMod
 end
 
 
-"This is duplicated at PMD level to correctly handle the indexing of the shunts."
+"This is duplicated at PowerModelsDistribution level to correctly handle the indexing of the shunts."
 function constraint_mc_voltage_angle_difference(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]

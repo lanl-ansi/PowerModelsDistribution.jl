@@ -1,4 +1,4 @@
-"This is duplicated at PMD level to correctly handle the indexing of the shunts."
+"This is duplicated at PowerModelsDistribution level to correctly handle the indexing of the shunts."
 function constraint_mc_voltage_angle_difference(pm::_PM.AbstractBFModel, n::Int, f_idx, angmin, angmax)
     i, f_bus, t_bus = f_idx
     t_idx = (i, t_bus, f_bus)

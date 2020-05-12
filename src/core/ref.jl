@@ -41,7 +41,7 @@ function _find_ref_buses(pm::_PM.AbstractPowerModel, nw)
 end
 
 
-"Adds arcs for PMD transformers; for dclines and branches this is done in PMs"
+"Adds arcs for PowerModelsDistribution transformers; for dclines and branches this is done in PowerModels"
 function ref_add_arcs_transformer!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
     if _IM.ismultinetwork(data)
         nws_data = data["nw"]

@@ -70,3 +70,60 @@ function objective_mc_max_load_setpoint(pm::_PM.AbstractPowerModel)
         for (n, nw_ref) in nws(pm))
     )
 end
+
+
+"Multiconductor adaptation of min fuel cost polynomial linquad objective"
+function _PM._objective_min_fuel_cost_polynomial_linquad(pm::_PM.AbstractIVRModel; report::Bool=true)
+    gen_cost = Dict()
+    dcline_cost = Dict()
+
+    for (n, nw_ref) in nws(pm)
+        for (i,gen) in nw_ref[:gen]
+            bus = gen["gen_bus"]
+
+            #to avoid function calls inside of @NLconstraint:
+            pg = var(pm, n, :pg, i)
+            nc = length(conductor_ids(pm, n))
+            if length(gen["cost"]) == 1
+                gen_cost[(n,i)] = gen["cost"][1]
+            elseif length(gen["cost"]) == 2
+                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, gen["cost"][1]*sum(pg[c] for c in 1:nc) + gen["cost"][2])
+            elseif length(gen["cost"]) == 3
+                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, gen["cost"][1]*sum(pg[c] for c in 1:nc)^2 + gen["cost"][2]*sum(pg[c] for c in 1:nc) + gen["cost"][3])
+            else
+                gen_cost[(n,i)] = 0.0
+            end
+        end
+    end
+
+    return JuMP.@NLobjective(pm.model, Min,
+        sum(
+            sum(    gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] )
+            + sum( dcline_cost[(n,i)] for (i,dcline) in nw_ref[:dcline] )
+        for (n, nw_ref) in nws(pm))
+    )
+end
+
+
+"adds pg_cost variables and constraints"
+function objective_variable_pg_cost(pm::_PM.AbstractIVRModel; report::Bool=true)
+    for (n, nw_ref) in nws(pm)
+        gen_lines = calc_cost_pwl_lines(nw_ref[:gen])
+
+        #to avoid function calls inside of @NLconstraint
+        pg_cost = var(pm, n)[:pg_cost] = JuMP.@variable(pm.model,
+            [i in ids(pm, n, :gen)], base_name="$(n)_pg_cost",
+        )
+        report && _IM.sol_component_value(pm, n, :gen, :pg_cost, ids(pm, n, :gen), pg_cost)
+
+        nc = length(conductor_ids(pm, n))
+
+        # gen pwl cost
+        for (i, gen) in nw_ref[:gen]
+            pg = var(pm, n, :pg, i)
+            for line in gen_lines[i]
+                JuMP.@NLconstraint(pm.model, pg_cost[i] >= line.slope*sum(pg[c] for c in 1:nc) + line.intercept)
+            end
+        end
+    end
+end

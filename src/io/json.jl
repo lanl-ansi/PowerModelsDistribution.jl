@@ -100,7 +100,7 @@ function _parse_enums!(data::Dict{String,<:Any})
 end
 
 
-"Parses a JSON file into a PMD data structure"
+"Parses a JSON file into a PowerModelsDistribution data structure"
 function parse_json(file::String; validate::Bool=false)
     data = open(file) do io
         parse_json(io; filetype=split(lowercase(file), '.')[end], validate=validate)
@@ -109,7 +109,7 @@ function parse_json(file::String; validate::Bool=false)
 end
 
 
-"Parses a JSON file into a PMD data structure"
+"Parses a JSON file into a PowerModelsDistribution data structure"
 function parse_json(io::IO; validate::Bool=false)::Dict{String,Any}
     data = JSON.parse(io)
 
@@ -127,7 +127,7 @@ function parse_json(io::IO; validate::Bool=false)::Dict{String,Any}
 end
 
 
-"prints a PMD data structure into a JSON file"
+"prints a PowerModelsDistribution data structure into a JSON file"
 function print_file(path::String, data::Dict{String,<:Any}; indent::Int=2)
     open(path, "w") do io
         print_file(io, data; indent=indent)
@@ -135,7 +135,7 @@ function print_file(path::String, data::Dict{String,<:Any}; indent::Int=2)
 end
 
 
-"prints a PMD data structure into a JSON file"
+"prints a PowerModelsDistribution data structure into a JSON file"
 function print_file(io::IO, data::Dict{String,<:Any}; indent::Int=2)
     if indent == 0
         JSON.print(io, JSON.parse(sprint(show_json, PMDSerialization(), data)))

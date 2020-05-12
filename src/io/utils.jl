@@ -847,7 +847,7 @@ function _guess_dtype(value::AbstractString)::Type
 end
 
 
-"converts dss load model to supported PMD LoadModel enum"
+"converts dss load model to supported PowerModelsDistribution LoadModel enum"
 function _parse_dss_load_model!(eng_obj::Dict{String,<:Any}, id::Any)
     model = eng_obj["model"]
 

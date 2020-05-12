@@ -77,12 +77,12 @@
     #         gen["model"] = 2
     #     end
     #
-    #     pm_ivr  = PMs.instantiate_model(pmd, PMs.IVRPowerModel, PMD.build_mc_opf, ref_extensions=[PMD.ref_add_arcs_transformer!])
-    #     sol_ivr = PMs.optimize_model!(pm_ivr, optimizer=ipopt_solver)
+    #     pm_ivr  = PowerModels.instantiate_model(pmd, PowerModels.IVRPowerModel, PMD.build_mc_opf, ref_extensions=[PMD.ref_add_arcs_transformer!])
+    #     sol_ivr = PowerModels.optimize_model!(pm_ivr, optimizer=ipopt_solver)
     #     @assert(sol_1["termination_status"]==LOCALLY_SOLVED)
     #
-    #     pm_acr  = PMs.instantiate_model(pmd, PMs.ACRPowerModel, PMD.build_mc_opf, ref_extensions=[PMD.ref_add_arcs_transformer!])
-    #     sol_acr = PMs.optimize_model!(pm_acr, optimizer=ipopt_solver)
+    #     pm_acr  = PowerModels.instantiate_model(pmd, PowerModels.ACRPowerModel, PMD.build_mc_opf, ref_extensions=[PMD.ref_add_arcs_transformer!])
+    #     sol_acr = PowerModels.optimize_model!(pm_acr, optimizer=ipopt_solver)
     #     @assert(sol_2["termination_status"]==LOCALLY_SOLVED)
     #
     # end

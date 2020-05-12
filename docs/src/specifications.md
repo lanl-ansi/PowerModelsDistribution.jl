@@ -18,9 +18,9 @@ objective_min_fuel_cost(pm)
 variable_mc_voltage(pm)
 variable_mc_branch_flow(pm)
 
-for c in PMs.conductor_ids(pm)
-    PMs.variable_generation(pm, cnd=c)
-    PMs.variable_dcline_flow(pm, cnd=c)
+for c in conductor_ids(pm)
+    PowerModels.variable_generation(pm, cnd=c)
+    PowerModels.variable_dcline_flow(pm, cnd=c)
 end
 variable_mc_transformer_flow(pm)
 variable_mc_oltc_tap(pm)
@@ -31,31 +31,31 @@ variable_mc_oltc_tap(pm)
 ```julia
 constraint_mc_model_voltage(pm)
 
-for i in PMs.ids(pm, :ref_buses)
+for i in ids(pm, :ref_buses)
     constraint_mc_theta_ref(pm, i)
 end
 
-for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
+for i in ids(pm, :bus), c in conductor_ids(pm)
     constraint_mc_power_balance(pm, i, cnd=c)
 end
 
-for i in PMs.ids(pm, :branch)
+for i in ids(pm, :branch)
     constraint_mc_ohms_yt_from(pm, i)
     constraint_mc_ohms_yt_to(pm, i)
 
-    for c in PMs.conductor_ids(pm)
-        PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
+    for c in conductor_ids(pm)
+        PowerModels.constraint_voltage_angle_difference(pm, i, cnd=c)
 
-        PMs.constraint_thermal_limit_from(pm, i, cnd=c)
-        PMs.constraint_thermal_limit_to(pm, i, cnd=c)
+        PowerModels.constraint_thermal_limit_from(pm, i, cnd=c)
+        PowerModels.constraint_thermal_limit_to(pm, i, cnd=c)
     end
 end
 
-for i in PMs.ids(pm, :dcline), c in PMs.conductor_ids(pm)
-    PMs.constraint_dcline(pm, i, cnd=c)
+for i in ids(pm, :dcline), c in conductor_ids(pm)
+    PowerModels.constraint_dcline(pm, i, cnd=c)
 end
 
-for i in PMs.ids(pm, :transformer)
+for i in ids(pm, :transformer)
     constraint_mc_oltc(pm, i)
 end
 ```

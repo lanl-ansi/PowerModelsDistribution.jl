@@ -19,7 +19,7 @@
 - Rename `ref_add_arcs_trans` -> `ref_add_arcs_transformer` (breaking)
 - Update `count_nodes`, now counts source nodes as well, excludes \_virtual objects
 - Change \_PMs and \_IMs to \_PM, \_IM, respectively
-- Add example for PMD usage (see Jupyter notebooks in `/examples`)
+- Add example for PowerModelsDistribution usage (see Jupyter notebooks in `/examples`)
 - Update transformer mathematical model
 - Introduce new data models: ENGINEERING, MATHEMATICAL (see data model documentation) (breaking)
 - Update DSS parser to be more robust, and parse into new format (breaking)
@@ -35,7 +35,7 @@
 - Update to support JuMP v0.21
 - Makes bounds optional, turned on by default (#250)
 - Updated transformer data model in the mathematical model (#250)
-- Add automatic parsing of lon,lat from buscoords file into PMD data structure (#245, #249)
+- Add automatic parsing of lon,lat from buscoords file into PowerModelsDistribution data structure (#245, #249)
 - Updates virtual_sourcebus, which is intended to represent a voltage source, to have a fixed voltage magnitude (#246,#248)
 - Add parsing of series data files into array fields in OpenDSS parser
 - Add LoadShape parsing to OpenDSS parser (#247)
@@ -48,9 +48,9 @@
 
 ## v0.8.0
 
-- Update solution building infrastructure (PMs #77) (breaking). The reported solution is now consistent with the variable space of the formulation.
+- Update solution building infrastructure (PowerModels #77) (breaking). The reported solution is now consistent with the variable space of the formulation.
 - Moved multi-conductor support from PowerModels into PowerModelsDistribution. (breaking)
-- PMs.var no longer takes conductor as an argument
+- PowerModels.var no longer takes conductor as an argument
 - Constraints have been (partially) re-written to use vectorized JuMP syntax where possible.
 - Bugfixes: generator on-off and storage on-off constraints were incorrect
 - Removal of SOCWRPowerModel
