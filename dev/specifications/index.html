@@ -1,167 +1,48 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Problem Specifications · PowerModelsDistribution</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../"><img src="../assets/logo.svg" alt="PowerModelsDistribution logo"/></a><div class="docs-package-name"><span class="docs-autofit">PowerModelsDistribution</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../quickguide/">Getting Started</a></li><li><a class="tocitem" href="../math-model/">Mathematical Model</a></li><li><a class="tocitem" href="../data-formats/">Data Formats</a></li></ul></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../formulations/">Network Formulations</a></li><li class="is-active"><a class="tocitem" href>Problem Specifications</a><ul class="internal"><li><a class="tocitem" href="#Optimal-Power-Flow-(OPF)-with-On-Load-Tap-Changers-(OLTC)-1"><span>Optimal Power Flow (OPF) with On-Load Tap Changers (OLTC)</span></a></li><li><a class="tocitem" href="#Optimal-Power-Flow-(OPF)-with-Load-Models-(LM)-1"><span>Optimal Power Flow (OPF) with Load Models (LM)</span></a></li><li><a class="tocitem" href="#Power-Flow-(PF)-with-Load-Models-(LM)-1"><span>Power Flow (PF) with Load Models (LM)</span></a></li><li><a class="tocitem" href="#Minimal-Load-Delta-(MLD)-Problem-Specification-1"><span>Minimal Load Delta (MLD) Problem Specification</span></a></li></ul></li><li><a class="tocitem" href="../library/">Modeling Components</a></li></ul></li><li><span class="tocitem">Basics</span><ul><li><a class="tocitem" href="../load-model/">Load Models</a></li></ul></li><li><span class="tocitem">Developer</span><ul><li><a class="tocitem" href="../developer/">Developer</a></li><li><a class="tocitem" href="../formulation-details/">Formulation Details</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Library</a></li><li class="is-active"><a href>Problem Specifications</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Problem Specifications</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/lanl-ansi/PowerModelsDistribution.jl/blob/master/docs/src/specifications.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Problem-Specifications-1"><a class="docs-heading-anchor" href="#Problem-Specifications-1">Problem Specifications</a><a class="docs-heading-anchor-permalink" href="#Problem-Specifications-1" title="Permalink"></a></h1><h2 id="Optimal-Power-Flow-(OPF)-with-On-Load-Tap-Changers-(OLTC)-1"><a class="docs-heading-anchor" href="#Optimal-Power-Flow-(OPF)-with-On-Load-Tap-Changers-(OLTC)-1">Optimal Power Flow (OPF) with On-Load Tap Changers (OLTC)</a><a class="docs-heading-anchor-permalink" href="#Optimal-Power-Flow-(OPF)-with-On-Load-Tap-Changers-(OLTC)-1" title="Permalink"></a></h2><p>This problem is identical to <code>mc_opf</code>, except that all transformers are now modelled as on-load tap changers (OLTCs). Each phase has an individual tap ratio, which can be either variable or fixed, as specified in the data model.</p><h3 id="Objective-1"><a class="docs-heading-anchor" href="#Objective-1">Objective</a><a class="docs-heading-anchor-permalink" href="#Objective-1" title="Permalink"></a></h3><pre><code class="language-julia">objective_min_fuel_cost(pm)</code></pre><h3 id="Variables-1"><a class="docs-heading-anchor" href="#Variables-1">Variables</a><a class="docs-heading-anchor-permalink" href="#Variables-1" title="Permalink"></a></h3><pre><code class="language-julia">variable_mc_voltage(pm)
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Problem Specifications · PowerModelsDistribution</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../"><img src="../assets/logo.svg" alt="PowerModelsDistribution logo"/></a><div class="docs-package-name"><span class="docs-autofit">PowerModelsDistribution</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../quickguide/">Getting Started</a></li><li><a class="tocitem" href="../connections/">Connecting Components</a></li><li><a class="tocitem" href="../math-model/">Mathematical Model</a></li><li><a class="tocitem" href="../eng-data-model/">Engineering Data Model</a></li><li><a class="tocitem" href="../enums/">Enums in Engineering Model</a></li><li><a class="tocitem" href="../eng2math/">Conversion to Mathematical Model</a></li><li><a class="tocitem" href="../external-data-formats/">External Data Formats</a></li><li><a class="tocitem" href="../engineering_model/">Examples</a></li></ul></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../formulations/">Network Formulations</a></li><li class="is-active"><a class="tocitem" href>Problem Specifications</a><ul class="internal"><li><a class="tocitem" href="#Optimal-Power-Flow-(OPF)-with-On-Load-Tap-Changers-(OLTC)-1"><span>Optimal Power Flow (OPF) with On-Load Tap Changers (OLTC)</span></a></li><li><a class="tocitem" href="#Minimal-Load-Delta-(MLD)-Problem-Specification-1"><span>Minimal Load Delta (MLD) Problem Specification</span></a></li></ul></li><li><a class="tocitem" href="../library/">Modeling Components</a></li></ul></li><li><span class="tocitem">Basics</span><ul><li><a class="tocitem" href="../load-model/">Load Models</a></li></ul></li><li><span class="tocitem">Developer</span><ul><li><a class="tocitem" href="../developer/">Developer</a></li><li><a class="tocitem" href="../formulation-details/">Formulation Details</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Library</a></li><li class="is-active"><a href>Problem Specifications</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Problem Specifications</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/lanl-ansi/PowerModelsDistribution.jl/blob/master/docs/src/specifications.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Problem-Specifications-1"><a class="docs-heading-anchor" href="#Problem-Specifications-1">Problem Specifications</a><a class="docs-heading-anchor-permalink" href="#Problem-Specifications-1" title="Permalink"></a></h1><p>In addition to the standard power flow <code>run_mc_pf</code>, and optimal power flow <code>run_mc_opf</code>, there are several notable problem specifications included in PowerModelsDistribution</p><h2 id="Optimal-Power-Flow-(OPF)-with-On-Load-Tap-Changers-(OLTC)-1"><a class="docs-heading-anchor" href="#Optimal-Power-Flow-(OPF)-with-On-Load-Tap-Changers-(OLTC)-1">Optimal Power Flow (OPF) with On-Load Tap Changers (OLTC)</a><a class="docs-heading-anchor-permalink" href="#Optimal-Power-Flow-(OPF)-with-On-Load-Tap-Changers-(OLTC)-1" title="Permalink"></a></h2><p>This problem is identical to <code>mc_opf</code>, except that all transformers are now modelled as on-load tap changers (OLTCs). Each phase has an individual tap ratio, which can be either variable or fixed, as specified in the data model.</p><h3 id="OLTC-Objective-1"><a class="docs-heading-anchor" href="#OLTC-Objective-1">OLTC Objective</a><a class="docs-heading-anchor-permalink" href="#OLTC-Objective-1" title="Permalink"></a></h3><pre><code class="language-julia">objective_min_fuel_cost(pm)</code></pre><h3 id="OLTC-Variables-1"><a class="docs-heading-anchor" href="#OLTC-Variables-1">OLTC Variables</a><a class="docs-heading-anchor-permalink" href="#OLTC-Variables-1" title="Permalink"></a></h3><pre><code class="language-julia">variable_mc_voltage(pm)
 variable_mc_branch_flow(pm)
 
-for c in PMs.conductor_ids(pm)
-    PMs.variable_generation(pm, cnd=c)
-    PMs.variable_dcline_flow(pm, cnd=c)
+for c in conductor_ids(pm)
+    PowerModels.variable_generation(pm, cnd=c)
+    PowerModels.variable_dcline_flow(pm, cnd=c)
 end
 variable_mc_transformer_flow(pm)
-variable_mc_oltc_tap(pm)</code></pre><h3 id="Constraints-1"><a class="docs-heading-anchor" href="#Constraints-1">Constraints</a><a class="docs-heading-anchor-permalink" href="#Constraints-1" title="Permalink"></a></h3><pre><code class="language-julia">constraint_mc_model_voltage(pm)
+variable_mc_oltc_tap(pm)</code></pre><h3 id="OLTC-Constraints-1"><a class="docs-heading-anchor" href="#OLTC-Constraints-1">OLTC Constraints</a><a class="docs-heading-anchor-permalink" href="#OLTC-Constraints-1" title="Permalink"></a></h3><pre><code class="language-julia">constraint_mc_model_voltage(pm)
 
-for i in PMs.ids(pm, :ref_buses)
+for i in ids(pm, :ref_buses)
     constraint_mc_theta_ref(pm, i)
 end
 
-for i in PMs.ids(pm, :bus), c in PMs.conductor_ids(pm)
+for i in ids(pm, :bus), c in conductor_ids(pm)
     constraint_mc_power_balance(pm, i, cnd=c)
 end
 
-for i in PMs.ids(pm, :branch)
+for i in ids(pm, :branch)
     constraint_mc_ohms_yt_from(pm, i)
     constraint_mc_ohms_yt_to(pm, i)
 
-    for c in PMs.conductor_ids(pm)
-        PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
+    for c in conductor_ids(pm)
+        PowerModels.constraint_voltage_angle_difference(pm, i, cnd=c)
 
-        PMs.constraint_thermal_limit_from(pm, i, cnd=c)
-        PMs.constraint_thermal_limit_to(pm, i, cnd=c)
+        PowerModels.constraint_thermal_limit_from(pm, i, cnd=c)
+        PowerModels.constraint_thermal_limit_to(pm, i, cnd=c)
     end
 end
 
-for i in PMs.ids(pm, :dcline), c in PMs.conductor_ids(pm)
-    PMs.constraint_dcline(pm, i, cnd=c)
+for i in ids(pm, :dcline), c in conductor_ids(pm)
+    PowerModels.constraint_dcline(pm, i, cnd=c)
 end
 
-for i in PMs.ids(pm, :transformer)
+for i in ids(pm, :transformer)
     constraint_mc_oltc(pm, i)
-end</code></pre><h2 id="Optimal-Power-Flow-(OPF)-with-Load-Models-(LM)-1"><a class="docs-heading-anchor" href="#Optimal-Power-Flow-(OPF)-with-Load-Models-(LM)-1">Optimal Power Flow (OPF) with Load Models (LM)</a><a class="docs-heading-anchor-permalink" href="#Optimal-Power-Flow-(OPF)-with-Load-Models-(LM)-1" title="Permalink"></a></h2><p>Unlike <code>mc_opf</code>, which models all loads as constant power loads, this problem specification additionally supports loads proportional to the voltage magnitude (a.k.a. constant current) and the square of the voltage magnitude (a.k.a. constant impedance). Each load now has associated active and reactive power variables. In <code>mc_opf</code>, loads are directly added as parameters in KCL.</p><h3 id="Objective-2"><a class="docs-heading-anchor" href="#Objective-2">Objective</a><a class="docs-heading-anchor-permalink" href="#Objective-2" title="Permalink"></a></h3><pre><code class="language-julia">objective_min_fuel_cost(pm)</code></pre><h3 id="Variables-2"><a class="docs-heading-anchor" href="#Variables-2">Variables</a><a class="docs-heading-anchor-permalink" href="#Variables-2" title="Permalink"></a></h3><pre><code class="language-julia">variable_mc_voltage(pm)
-variable_mc_branch_flow(pm)
-
-for c in PMs.conductor_ids(pm)
-    PMs.variable_generation(pm, cnd=c)
-    PMs.variable_dcline_flow(pm, cnd=c)
-end
-variable_mc_transformer_flow(pm)
-variable_mc_oltc_tap(pm)</code></pre><h3 id="Constraints-2"><a class="docs-heading-anchor" href="#Constraints-2">Constraints</a><a class="docs-heading-anchor-permalink" href="#Constraints-2" title="Permalink"></a></h3><pre><code class="language-julia">constraint_mc_model_voltage(pm)
-
-for i in PMs.ids(pm, :ref_buses)
-    constraint_mc_theta_ref(pm, i)
-end
-
-for i in PMs.ids(pm, :bus)
-    constraint_mc_power_balance_load(pm, i)
-end
-
-for id in PMs.ids(pm, :load)
-    model = PMs.ref(pm, pm.cnw, :load, id, &quot;model&quot;)
-    if model==&quot;constant_power&quot;
-        constraint_mc_load_power_setpoint(pm, id)
-    elseif model==&quot;proportional_vm&quot;
-        constraint_mc_load_power_prop_vm(pm, id)
-    elseif model==&quot;proportional_vmsqr&quot;
-        constraint_mc_load_power_prop_vmsqr(pm, id)
-    else
-        Memento.@error(LOGGER, &quot;Unknown model $model for load $id.&quot;)
-    end
-end
-
-for i in PMs.ids(pm, :branch)
-    constraint_mc_ohms_yt_from(pm, i)
-    constraint_mc_ohms_yt_to(pm, i)
-
-    for c in PMs.conductor_ids(pm)
-        PMs.constraint_voltage_angle_difference(pm, i, cnd=c)
-
-        PMs.constraint_thermal_limit_from(pm, i, cnd=c)
-        PMs.constraint_thermal_limit_to(pm, i, cnd=c)
-    end
-end
-
-for i in PMs.ids(pm, :dcline), c in PMs.conductor_ids(pm)
-    PMs.constraint_dcline(pm, i, cnd=c)
-end
-
-for i in PMs.ids(pm, :transformer)
-    constraint_mc_transformer(pm, i)
-end</code></pre><h2 id="Power-Flow-(PF)-with-Load-Models-(LM)-1"><a class="docs-heading-anchor" href="#Power-Flow-(PF)-with-Load-Models-(LM)-1">Power Flow (PF) with Load Models (LM)</a><a class="docs-heading-anchor-permalink" href="#Power-Flow-(PF)-with-Load-Models-(LM)-1" title="Permalink"></a></h2><p>Unlike <code>mc_pf</code>, which models all loads as constant power loads, this problem specification additionally supports loads proportional to the voltage magnitude (a.k.a. constant current) and the square of the voltage magnitude (a.k.a. constant impedance). Each load now has associated active and reactive power variables. In <code>mc_pf</code>, loads are directly added as parameters in KCL.</p><h3 id="Variables-3"><a class="docs-heading-anchor" href="#Variables-3">Variables</a><a class="docs-heading-anchor-permalink" href="#Variables-3" title="Permalink"></a></h3><pre><code class="language-julia">variable_mc_voltage(pm, bounded=false)
-variable_mc_branch_flow(pm, bounded=false)
-variable_mc_transformer_flow(pm, bounded=false)
-variable_mc_load(pm)
-
-for c in PMs.conductor_ids(pm)
-    PMs.variable_generation(pm, bounded=false, cnd=c)
-    PMs.variable_dcline_flow(pm, bounded=false, cnd=c)
-end</code></pre><h3 id="Constraints-3"><a class="docs-heading-anchor" href="#Constraints-3">Constraints</a><a class="docs-heading-anchor-permalink" href="#Constraints-3" title="Permalink"></a></h3><pre><code class="language-julia">constraint_mc_model_voltage(pm, bounded=false)
-
-for (i,bus) in PMs.ref(pm, :ref_buses)
-    constraint_mc_theta_ref(pm, i)
-
-    for c in PMs.conductor_ids(pm)
-        @assert bus[&quot;bus_type&quot;] == 3
-        PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
-    end
-end
-
-for (i,bus) in PMs.ref(pm, :bus)
-    constraint_mc_power_balance_load(pm, i)
-
-    for c in PM.conductor_ids(pm)
-        # PV Bus Constraints
-        if length(PMs.ref(pm, :bus_gens, i)) &gt; 0 &amp;&amp; !(i in PMs.ids(pm,:ref_buses))
-            # this assumes inactive generators are filtered out of bus_gens
-            @assert bus[&quot;bus_type&quot;] == 2
-
-            PMs.constraint_voltage_magnitude_setpoint(pm, i, cnd=c)
-            for j in PMs.ref(pm, :bus_gens, i)
-                PMs.constraint_active_gen_setpoint(pm, j, cnd=c)
-            end
-        end
-    end
-end
-
-for id in PMs.ids(pm, :load)
-    model = PMs.ref(pm, pm.cnw, :load, id, &quot;model&quot;)
-    if model==&quot;constant_power&quot;
-        constraint_mc_load_power_setpoint(pm, id)
-    elseif model==&quot;proportional_vm&quot;
-        constraint_mc_load_power_prop_vm(pm, id)
-    elseif model==&quot;proportional_vmsqr&quot;
-        constraint_mc_load_power_prop_vmsqr(pm, id)
-    else
-        Memento.@error(LOGGER, &quot;Unknown model $model for load $id.&quot;)
-    end
-end
-
-for i in PMs.ids(pm, :branch)
-    constraint_mc_ohms_yt_from(pm, i)
-    constraint_mc_ohms_yt_to(pm, i)
-end
-
-for (i,dcline) in PMs.ref(pm, :dcline), c in PMs.conductor_ids(pm)
-    PMs.constraint_active_dcline_setpoint(pm, i, cnd=c)
-
-    f_bus = PMs.ref(pm, :bus)[dcline[&quot;f_bus&quot;]]
-    if f_bus[&quot;bus_type&quot;] == 1
-        PMs.constraint_voltage_magnitude_setpoint(pm, f_bus[&quot;index&quot;], cnd=c)
-    end
-
-    t_bus = PMs.ref(pm, :bus)[dcline[&quot;t_bus&quot;]]
-    if t_bus[&quot;bus_type&quot;] == 1
-        PMs.constraint_voltage_magnitude_setpoint(pm, t_bus[&quot;index&quot;], cnd=c)
-    end
-end
-
-for i in PMs.ids(pm, :transformer)
-    constraint_mc_transformer(pm, i)
-end</code></pre><h2 id="Minimal-Load-Delta-(MLD)-Problem-Specification-1"><a class="docs-heading-anchor" href="#Minimal-Load-Delta-(MLD)-Problem-Specification-1">Minimal Load Delta (MLD) Problem Specification</a><a class="docs-heading-anchor-permalink" href="#Minimal-Load-Delta-(MLD)-Problem-Specification-1" title="Permalink"></a></h2><p>Load shed (continuous) problem. See &quot;Relaxations of AC Maximal Load Delivery for Severe Contingency Analysis&quot; by C. Coffrin <em>et al.</em> (DOI: <a href="https://ieeexplore.ieee.org/document/8494809">10.1109/TPWRS.2018.2876507</a>) for single-phase case.</p><h3 id="Variables-4"><a class="docs-heading-anchor" href="#Variables-4">Variables</a><a class="docs-heading-anchor-permalink" href="#Variables-4" title="Permalink"></a></h3><div>\[\begin{align}
+end</code></pre><h2 id="Minimal-Load-Delta-(MLD)-Problem-Specification-1"><a class="docs-heading-anchor" href="#Minimal-Load-Delta-(MLD)-Problem-Specification-1">Minimal Load Delta (MLD) Problem Specification</a><a class="docs-heading-anchor-permalink" href="#Minimal-Load-Delta-(MLD)-Problem-Specification-1" title="Permalink"></a></h2><p>Load shed (continuous) problem. See &quot;Relaxations of AC Maximal Load Delivery for Severe Contingency Analysis&quot; by C. Coffrin <em>et al.</em> (DOI: <a href="https://ieeexplore.ieee.org/document/8494809">10.1109/TPWRS.2018.2876507</a>) for single-phase case.</p><h3 id="MLD-Variables-1"><a class="docs-heading-anchor" href="#MLD-Variables-1">MLD Variables</a><a class="docs-heading-anchor-permalink" href="#MLD-Variables-1" title="Permalink"></a></h3><div>\[\begin{align}
 \mbox{variables: } &amp; \nonumber \\
 &amp; z^v_i \in \{0,1\}\ \ \forall i \in N \mbox{ - bus voltage on/off variable} \\
 &amp; z^g_i \in \{0,1\}\ \ \forall i \in G \mbox{ - generator on/off variable} \\
 &amp; z^{b}_i \in \{0,1\}\ \ \forall i \in B\mbox{ - storage on/off variable} \\
 &amp; z^d_i \in (0,1)\ \ \forall i \in L \mbox{ - continuous load shedding variable} \\
 &amp; z^s_i \in (0,1)\ \ \forall i \in H \mbox{ - continuous shunt shedding variable}
-\end{align}\]</div><h3 id="Objective-3"><a class="docs-heading-anchor" href="#Objective-3">Objective</a><a class="docs-heading-anchor-permalink" href="#Objective-3" title="Permalink"></a></h3><div>\[\begin{align}
+\end{align}\]</div><h3 id="MLD-Objective-1"><a class="docs-heading-anchor" href="#MLD-Objective-1">MLD Objective</a><a class="docs-heading-anchor-permalink" href="#MLD-Objective-1" title="Permalink"></a></h3><div>\[\begin{align}
 \mbox{minimize: }\left (
 \sum_{\substack{i\in N,c\in C}}{10 \left (1-z^v_i \right )} + \sum_{\substack{i\in L,c\in C}}{10 \omega_{i,c}\left |\Re{\left (S^d_i\right )}\right |\left ( 1-z^d_i \right ) } + \sum_{\substack{i\in H,c\in C}}{\left | \Re{\left (S^s_i \right )}\right | \left (1-z^s_i \right ) } + \sum_{\substack{i\in G,c\in C}}{\Delta^g_i } + \sum_{\substack{i\in B,c\in C}}{\Delta^b_i} \right )
 \end{align}\]</div><p>where</p><div>\[\begin{align}
@@ -169,10 +50,10 @@ end</code></pre><h2 id="Minimal-Load-Delta-(MLD)-Problem-Specification-1"><a cla
 \Delta^g_i &amp;&gt;= -\left [\Re{\left (S^g_{i}(0) \right )} - \Re{\left (S^g_i \right )} \right ] \\
 \Delta^b_i &amp;&gt;= \left [\Re{\left (S^b_{i}(0) \right )} - \Re{\left (S^b_i \right )} \right ] \\
 \Delta^b_i &amp;&gt;= -\left [\Re{\left (S^b_{i}(0) \right )} - \Re{\left (S^b_i \right )} \right ]
-\end{align}\]</div><h3 id="Constraints-4"><a class="docs-heading-anchor" href="#Constraints-4">Constraints</a><a class="docs-heading-anchor-permalink" href="#Constraints-4" title="Permalink"></a></h3><div>\[\begin{align}
+\end{align}\]</div><h3 id="MLD-Constraints-1"><a class="docs-heading-anchor" href="#MLD-Constraints-1">MLD Constraints</a><a class="docs-heading-anchor-permalink" href="#MLD-Constraints-1" title="Permalink"></a></h3><div>\[\begin{align}
 \mbox{subject to: } &amp; \nonumber \\
 &amp; z^v_i v^l_{i,c} \leq \left | V_{i,c} \right | \leq z_i^v v^u_{i,c}\ \ \forall i \in N,\forall c \in C \\
 &amp; z^g_i S^{gl}_{i,c} \leq S^g_{i,c} \leq z^g_i S^{gu}_{i,c}\ \ \forall i \in G,\forall c \in C \\
 &amp; \sum_{\substack{k\in G_i,c\in C}} S^g_{k,c} - \sum_{\substack{k\in L_i,c\in C}} z^d_k S^d_{k,c}- \sum_{\substack{k\in H_i,c\in C}} z^s_k Y^s_{k,c}\left | V_{i,c} \right |^2 \nonumber \\
 &amp; = \sum_{\substack{(i,j)\in E_i\cup E_i^R,c\in C}} S_{ij,c}\ \forall i \in N
-\end{align}\]</div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../formulations/">« Network Formulations</a><a class="docs-footer-nextpage" href="../library/">Modeling Components »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 30 March 2020 20:37">Monday 30 March 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+\end{align}\]</div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../formulations/">« Network Formulations</a><a class="docs-footer-nextpage" href="../library/">Modeling Components »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 13 May 2020 14:48">Wednesday 13 May 2020</span>. Using Julia version 1.4.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
