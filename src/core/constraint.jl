@@ -1,39 +1,40 @@
 "do nothing by default"
-function constraint_mc_model_voltage(pm::_PMs.AbstractPowerModel, n::Int)
+function constraint_mc_model_voltage(pm::_PM.AbstractPowerModel, n::Int)
 end
 
-# Generic thermal limit constraint
-""
-function constraint_mc_thermal_limit_from(pm::_PMs.AbstractPowerModel, n::Int, f_idx, rate_a)
-    p_fr = _PMs.var(pm, n, :p, f_idx)
-    q_fr = _PMs.var(pm, n, :q, f_idx)
+
+"Generic thermal limit constraint from-side"
+function constraint_mc_thermal_limit_from(pm::_PM.AbstractPowerModel, n::Int, f_idx, rate_a)
+    p_fr = var(pm, n, :p, f_idx)
+    q_fr = var(pm, n, :q, f_idx)
 
     mu_sm_fr = JuMP.@constraint(pm.model, p_fr.^2 + q_fr.^2 .<= rate_a.^2)
 
-    if _PMs.report_duals(pm)
-        _PMs.sol(pm, n, :branch, f_idx[1])[:mu_sm_fr] = mu_sm_fr
+    if _IM.report_duals(pm)
+        sol(pm, n, :branch, f_idx[1])[:mu_sm_fr] = mu_sm_fr
     end
 end
 
-""
-function constraint_mc_thermal_limit_to(pm::_PMs.AbstractPowerModel, n::Int, t_idx, rate_a)
-    p_to = _PMs.var(pm, n, :p, t_idx)
-    q_to = _PMs.var(pm, n, :q, t_idx)
+
+"Generic thermal limit constraint to-side"
+function constraint_mc_thermal_limit_to(pm::_PM.AbstractPowerModel, n::Int, t_idx, rate_a)
+    p_to = var(pm, n, :p, t_idx)
+    q_to = var(pm, n, :q, t_idx)
 
     mu_sm_to = JuMP.@constraint(pm.model, p_to.^2 + q_to.^2 .<= rate_a.^2)
 
-    if _PMs.report_duals(pm)
-        _PMs.sol(pm, n, :branch, t_idx[1])[:mu_sm_to] = mu_sm_to
+    if _IM.report_duals(pm)
+        sol(pm, n, :branch, t_idx[1])[:mu_sm_to] = mu_sm_to
     end
 end
 
 
 "on/off bus voltage magnitude constraint"
-function constraint_mc_voltage_magnitude_on_off(pm::_PMs.AbstractPowerModel, n::Int, i::Int, vmin, vmax)
-    vm = _PMs.var(pm, n, :vm, i)
-    z_voltage = _PMs.var(pm, n, :z_voltage, i)
+function constraint_mc_bus_voltage_magnitude_on_off(pm::_PM.AbstractPowerModel, n::Int, i::Int, vmin, vmax)
+    vm = var(pm, n, :vm, i)
+    z_voltage = var(pm, n, :z_voltage, i)
 
-    for c in _PMs.conductor_ids(pm, n)
+    for c in conductor_ids(pm, n)
         if isfinite(vmax[c])
             JuMP.@constraint(pm.model, vm[c] <= vmax[c]*z_voltage)
         end
@@ -46,11 +47,11 @@ end
 
 
 "on/off bus voltage magnitude squared constraint for relaxed formulations"
-function constraint_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel, n::Int, i::Int, vmin, vmax)
-    w = _PMs.var(pm, n, :w, i)
-    z_voltage = _PMs.var(pm, n, :z_voltage, i)
+function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::_PM.AbstractPowerModel, n::Int, i::Int, vmin, vmax)
+    w = var(pm, n, :w, i)
+    z_voltage = var(pm, n, :z_voltage, i)
 
-    for c in _PMs.conductor_ids(pm, n)
+    for c in conductor_ids(pm, n)
         if isfinite(vmax[c])
             JuMP.@constraint(pm.model, w[c] <= vmax[c]^2*z_voltage)
         end
@@ -62,28 +63,42 @@ function constraint_mc_voltage_magnitude_sqr_on_off(pm::_PMs.AbstractPowerModel,
 end
 
 
-function constraint_mc_active_gen_setpoint(pm::_PMs.AbstractPowerModel, n::Int, i, pg)
-    pg_var = _PMs.var(pm, n, :pg, i)
+function constraint_mc_gen_power_setpoint_real(pm::_PM.AbstractPowerModel, n::Int, i, pg)
+    pg_var = var(pm, n, :pg, i)
     JuMP.@constraint(pm.model, pg_var .== pg)
 end
 
 
 "on/off constraint for generators"
-function constraint_mc_generation_on_off(pm::_PMs.AbstractPowerModel, n::Int, i::Int, pmin, pmax, qmin, qmax)
-    pg = _PMs.var(pm, n, :pg, i)
-    qg = _PMs.var(pm, n, :qg, i)
-    z = _PMs.var(pm, n, :z_gen, i)
+function constraint_mc_gen_power_on_off(pm::_PM.AbstractPowerModel, n::Int, i::Int, pmin, pmax, qmin, qmax)
+    pg = var(pm, n, :pg, i)
+    qg = var(pm, n, :qg, i)
+    z = var(pm, n, :z_gen, i)
 
-    JuMP.@constraint(pm.model, pg .<= pmax.*z)
-    JuMP.@constraint(pm.model, pg .>= pmin.*z)
-    JuMP.@constraint(pm.model, qg .<= qmax.*z)
-    JuMP.@constraint(pm.model, qg .>= qmin.*z)
+    for c in conductor_ids(pm, n)
+        if isfinite(pmax[c])
+            JuMP.@constraint(pm.model, pg[c] .<= pmax[c].*z)
+        end
+
+        if isfinite(pmin[c])
+            JuMP.@constraint(pm.model, pg[c] .>= pmin[c].*z)
+        end
+
+        if isfinite(qmax[c])
+            JuMP.@constraint(pm.model, qg[c] .<= qmax[c].*z)
+        end
+
+        if isfinite(qmin[c])
+            JuMP.@constraint(pm.model, qg[c] .>= qmin[c].*z)
+        end
+    end
 end
 
+
 ""
-function constraint_mc_storage_thermal_limit(pm::_PMs.AbstractPowerModel, n::Int, i, rating)
-    ps = _PMs.var(pm, n, :ps, i)
-    qs = _PMs.var(pm, n, :qs, i)
+function constraint_mc_storage_thermal_limit(pm::_PM.AbstractPowerModel, n::Int, i, rating)
+    ps = var(pm, n, :ps, i)
+    qs = var(pm, n, :qs, i)
 
     JuMP.@constraint(pm.model, ps.^2 + qs.^2 .<= rating.^2)
 end

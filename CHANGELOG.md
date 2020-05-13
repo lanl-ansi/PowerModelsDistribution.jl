@@ -2,6 +2,32 @@
 
 ## staged
 
+- none
+
+## v0.9.0
+
+- Add `instantiate_mc_model` to aid in building JuMP model from ENGINEERING data model
+- SDP and SOC relaxations were broken but are fixed again (unit tests added)
+- Remove `run_mc_opf_iv`, `run_mc_opf_bf`, `run_mc_opf_bf_lm`, `run_mc_pf_bf`, `run_mc_pf_iv`, these can be accessed by using the correct formulation with `run_mc_opf` and `run_mc_pf`
+- Add support for Memento 1.1
+- Add support for PowerModels v0.17 (breaking)
+- Add support for InfrastructureModels v0.5
+- Updates JSON parser to handle enum (`"data_model"` values)
+- Adds some commonly used InfrastructureModels and PowerModels functions as exports
+- Adds model building functions `add_{component}!` to aid in building simple models for testing (experimental)
+- Add `run_mc_model` (adds `ref_add_arcs_transformer!` to ref_extensions, and sets `multiconductor=true` by default) (breaking)
+- Rename `ref_add_arcs_trans` -> `ref_add_arcs_transformer` (breaking)
+- Update `count_nodes`, now counts source nodes as well, excludes \_virtual objects
+- Change \_PMs and \_IMs to \_PM, \_IM, respectively
+- Add example for PowerModelsDistribution usage (see Jupyter notebooks in `/examples`)
+- Update transformer mathematical model
+- Introduce new data models: ENGINEERING, MATHEMATICAL (see data model documentation) (breaking)
+- Update DSS parser to be more robust, and parse into new format (breaking)
+- Updates DSS paser to parse more options/commands, moves these into `"options"` dict (breaking)
+- Updates how dss `like` is applied to better match opendss (almost all properties are copied with like) (breaking)
+- Add support for new OpenDSS components (loadshape, xfmrcode, xycurve)
+- Add support for JuMP v0.22 (exports `optimizer_with_attributtes` by default)
+- Add support for PowerModels v0.16 (breaking)
 - Add support for Memento v0.13, v1.0
 
 ## v0.8.1
@@ -9,7 +35,7 @@
 - Update to support JuMP v0.21
 - Makes bounds optional, turned on by default (#250)
 - Updated transformer data model in the mathematical model (#250)
-- Add automatic parsing of lon,lat from buscoords file into PMD data structure (#245, #249)
+- Add automatic parsing of lon,lat from buscoords file into PowerModelsDistribution data structure (#245, #249)
 - Updates virtual_sourcebus, which is intended to represent a voltage source, to have a fixed voltage magnitude (#246,#248)
 - Add parsing of series data files into array fields in OpenDSS parser
 - Add LoadShape parsing to OpenDSS parser (#247)
@@ -22,9 +48,9 @@
 
 ## v0.8.0
 
-- Update solution building infrastructure (PMs #77) (breaking). The reported solution is now consistent with the variable space of the formulation.
+- Update solution building infrastructure (PowerModels #77) (breaking). The reported solution is now consistent with the variable space of the formulation.
 - Moved multi-conductor support from PowerModels into PowerModelsDistribution. (breaking)
-- PMs.var no longer takes conductor as an argument
+- PowerModels.var no longer takes conductor as an argument
 - Constraints have been (partially) re-written to use vectorized JuMP syntax where possible.
 - Bugfixes: generator on-off and storage on-off constraints were incorrect
 - Removal of SOCWRPowerModel

@@ -16,22 +16,37 @@ This enables the definition of a wide variety of power network formulations and 
 ## Core Problem Specifications
 
 - Power Flow (pf)
-- Optimal Power Flow (opf), for the Bus Injection Model (BIM) as well as the Branch Flow Model (BFM)
-- Continuous load shed, minimum load delta (mld), for the Branch Flow Model (LPLinUBFPowerModel), AC Polar (ACPPowerModel), and Network Flow Approximation (NFAPowerModel)
+  - ACP, ACR, IVR, LinDist3Flow, NFA, DCP
+- Optimal Power Flow (opf)
+  - ACP, ACR, IVR, LinDist3Flow, NFA, DCP
+- Continuous load shed, minimum load delta (mld)
+  - ACP, LinDist3Flow, NFA
+- Optimal Power Flow with on-load tap-changer (opf_oltc)
+  - ACP
+
+**Note: The documentation is somewhat lagging behind development and the parings of network features with problem specifications with formulations has not been enumerated. We are working to correct this for you.**
 
 ## Core Network Formulations
 
-- AC (polar and rectangular coordinates)
-- SDP BFM relaxation
-- SOC BFM and BIM relaxation (W-space)
-- Linear approximation (LinDist3Flow and simplified unbalanced DistFlow)
+- Nonlinear
+  - ACP
+  - ACR
+  - IVR
+- Relaxations
+  - SDP BFM
+  - SOC BFM and BIM relaxation (W-space)
+- Linear Approximations
+  - LinDist3Flow
+  - NFA
+  - DCP
 
 ## Network Data Formats
 
-- Matlab ".m" files (extended for three-phase)
 - OpenDSS ".dss" files
 
-**Warning:** This package is under active development and may change drastically without warning.
+## Examples
+
+Examples of how to use PowerModelsDistribution can be found in the main documentation and in Jupyter Notebooks inside the `/examples` directory
 
 ## Development
 
@@ -43,6 +58,21 @@ This code has been developed as part of the Advanced Network Science Initiative 
 
 - Sander Claeys (@sanderclaeys) KU Leuven, transformer models and ACR formulation
 - Frederik Geth (@frederikgeth) CSIRO, Distribution modeling advise
+
+## Citing PowerModelsDistribution
+
+If you find PowerModelsDistribution useful for your work, we kindly request that you cite the following [https://arxiv.org/abs/2004.10081](publication):
+
+```bibtex
+@misc{fobes2020powermodelsdistributionjl,
+    title={PowerModelsDistribution.jl: An Open-Source Framework for Exploring Distribution Power Flow Formulations},
+    author={David M Fobes and Sander Claeys and Frederik Geth and Carleton Coffrin},
+    year={2020},
+    eprint={2004.10081},
+    archivePrefix={arXiv},
+    primaryClass={cs.CE}
+}
+```
 
 ## License
 

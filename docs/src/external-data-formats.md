@@ -1,4 +1,4 @@
-# Data Formats
+# External Data Formats
 
 ## OpenDSS
 
@@ -7,38 +7,46 @@ PowerModelsDistribution supports parsing OpenDSS format files. In particular, we
 - Line
 - Load
 - Generator
-- Capactior
+- Capactior (shunt capacitors only)
 - Reactor
 - Transformer
 - Linecode
+- Xfmrcode
+- Loadshape
+- XYCurve
 - Circuit
 - VSource
 - PVSystem
 - Storage
 
-Of those, a subset of configurations are converted into a PowerModelsDistribution internal data model, namely
+Of those, a subset of configurations are converted into a PowerModelsDistribution internal data model, namely:
 
-- Branch (from Lines (incl. Linecodes), Reactors)
-- Transformer (arbitrary winding, all connections except zig-zag)
-- Generator (from Generators, PVSystems)
-- Load (incl. support for Const. Power, Const. Impedance, Const. Current models)
-- Shunt (from Capacitors and Reactors)
-- Storage
+### Edge Elements
 
-Except for a small subset, in general, commands are not support, e.g. `solve` or `calcvoltagebases` (this is done automatically on parse in PowerModelsDistribution). We support the following commands
+- line (from lines and line reactors)
+- transformer (arbitrary winding, all connections except zig-zag)
+- switch (from lines w/ switch=y)
 
-- `clear`
-- `redirect`
-- `compile`
-- `set`
-- `buscoords`
-- `new`
+### Node Elements
+
+- generator
+- voltage_source
+- solar (from PVSystem)
+- load (incl. support for constant POWER, constant IMPEDANCE, constant CURRENT, and EXPONENTIAL models)
+- shunt (from shunt capacitors and shunt reactors)
+- storage
+
+### Data Elements
+
+- linecode
+- xfmrcode
+- time_series (from loadshapes)
 
 Several notes about the specific design choices w.r.t. OpenDSS are explained below.
 
 ### Circuit
 
-The default connection to the transmission system is modeled as an ideal voltage source in OpenDSS; we chosen to model the trunk connection as a loosely bounded generator at a reference bus which is connected to the distribution network via a branch in order to model the inherent impedance of the voltage source.
+The default connection to the transmission system is modeled as an ideal voltage source named "source" in OpenDSS, which is connected by default to a node named "sourcebus", but this can be changed.
 
 ### Lines
 
@@ -52,6 +60,6 @@ Unfortunately, in the OpenDSS format, multi-phase transformers with different ta
 
 Capacitors and reactors are supported as shunts, although shunts to ground via delta connections are not yet supported. Furthermore, generic reactors are not supported, only those whose second terminal is wye connected to ground (default for unspecified second terminal). Reactors are also supported as a resistanceless line if their second terminal is connected, but only for topological continuity of the network.
 
-## Matlab
+## PowerModelsDistribution JSON
 
-We also include a matlab-base format similar in conception to Matpower. This format is in development and details will come later.
+You can export a PowerModelsDistribution data structure to a JSON file using the `print_file` command and parse one in using the `parse_file` command

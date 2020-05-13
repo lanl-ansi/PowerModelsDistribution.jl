@@ -1,51 +1,45 @@
-""
-function run_ac_mc_opf_oltc(file, solver; kwargs...)
-    return run_mc_opf_oltc(file, _PMs.ACPPowerModel, solver; kwargs...)
+"on-load tap-changer OPF with ACPPowerModel"
+function run_ac_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
+    return run_mc_opf_oltc(data, ACPPowerModel, solver; kwargs...)
 end
 
 
-""
-function run_mc_opf_oltc(data::Dict{String,Any}, model_type, solver; kwargs...)
-    return _PMs.run_model(data, model_type, solver, build_mc_opf_oltc; multiconductor=true, ref_extensions=[ref_add_arcs_trans!], kwargs...)
+"on-load tap-changer OPF"
+function run_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    return run_mc_model(data, model_type, solver, build_mc_opf_oltc; kwargs...)
 end
 
 
-""
-function run_mc_opf_oltc(file::String, model_type, solver; kwargs...)
-    return run_mc_opf_oltc(PowerModelsDistribution.parse_file(file), model_type, solver; kwargs...)
-end
-
-
-""
-function build_mc_opf_oltc(pm::_PMs.AbstractPowerModel)
-    variable_mc_voltage(pm)
-    variable_mc_branch_flow(pm)
-    variable_mc_generation(pm)
-    variable_mc_load(pm)
-    variable_mc_transformer_flow(pm)
-    variable_mc_oltc_tap(pm)
+"constructor for on-load tap-changer OPF"
+function build_mc_opf_oltc(pm::_PM.AbstractPowerModel)
+    variable_mc_bus_voltage(pm)
+    variable_mc_branch_power(pm)
+    variable_mc_gen_power_setpoint(pm)
+    variable_mc_load_setpoint(pm)
+    variable_mc_transformer_power(pm)
+    variable_mc_oltc_transformer_tap(pm)
 
     constraint_mc_model_voltage(pm)
 
-    for i in _PMs.ids(pm, :ref_buses)
+    for i in ids(pm, :ref_buses)
         constraint_mc_theta_ref(pm, i)
     end
 
     # generators should be constrained before KCL, or Pd/Qd undefined
-    for id in _PMs.ids(pm, :gen)
-        constraint_mc_generation(pm, id)
+    for id in ids(pm, :gen)
+        constraint_mc_gen_setpoint(pm, id)
     end
 
     # loads should be constrained before KCL, or Pd/Qd undefined
-    for id in _PMs.ids(pm, :load)
-        constraint_mc_load(pm, id)
+    for id in ids(pm, :load)
+        constraint_mc_load_setpoint(pm, id)
     end
 
-    for i in _PMs.ids(pm, :bus)
-        constraint_mc_power_balance_load(pm, i)
+    for i in ids(pm, :bus)
+        constraint_mc_load_power_balance(pm, i)
     end
 
-    for i in _PMs.ids(pm, :branch)
+    for i in ids(pm, :branch)
         constraint_mc_ohms_yt_from(pm, i)
         constraint_mc_ohms_yt_to(pm, i)
 
@@ -55,9 +49,9 @@ function build_mc_opf_oltc(pm::_PMs.AbstractPowerModel)
         constraint_mc_thermal_limit_to(pm, i)
     end
 
-    for i in _PMs.ids(pm, :transformer)
-        constraint_mc_trans(pm, i, fix_taps=false)
+    for i in ids(pm, :transformer)
+        constraint_mc_transformer_power(pm, i, fix_taps=false)
     end
 
-    _PMs.objective_min_fuel_cost(pm)
+    _PM.objective_min_fuel_cost(pm)
 end

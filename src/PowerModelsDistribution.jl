@@ -9,13 +9,18 @@ module PowerModelsDistribution
 
     import LinearAlgebra
 
-    const _PMs = PowerModels
+    const _PM = PowerModels
+    const _IM = InfrastructureModels
+
+    import PowerModels: ACPPowerModel, ACRPowerModel, DCPPowerModel, IVRPowerModel, NFAPowerModel, conductor_ids, ismulticonductor
+    import InfrastructureModels: ids, ref, var, con, sol, nw_ids, nws, ismultinetwork
 
     function __init__()
         global _LOGGER = Memento.getlogger(PowerModels)
     end
 
     include("core/types.jl")
+    include("core/base.jl")
     include("core/data.jl")
     include("core/ref.jl")
     include("core/variable.jl")
@@ -39,21 +44,26 @@ module PowerModelsDistribution
     include("core/constraint_template.jl")
     include("core/relaxation_scheme.jl")
 
-    include("io/common.jl")
-    include("io/json.jl")
+    include("io/utils.jl")
     include("io/dss_parse.jl")
     include("io/dss_structs.jl")
     include("io/opendss.jl")
+    include("io/json.jl")
+    include("io/common.jl")
 
+    include("data_model/utils.jl")
+    include("data_model/checks.jl")
+    include("data_model/components.jl")
+    include("data_model/eng2math.jl")
+    include("data_model/math2eng.jl")
+    include("data_model/transformations.jl")
+    include("data_model/units.jl")
+
+    include("prob/common.jl")
     include("prob/mld.jl")
     include("prob/opf.jl")
-    include("prob/opf_iv.jl")
     include("prob/opf_oltc.jl")
-    include("prob/opf_bf.jl")
-    include("prob/opf_bf_lm.jl")
     include("prob/pf.jl")
-    include("prob/pf_bf.jl")
-    include("prob/pf_iv.jl")
     include("prob/debug.jl")
     include("prob/test.jl")
 

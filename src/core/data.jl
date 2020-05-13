@@ -1,3 +1,9 @@
+import LinearAlgebra: Adjoint
+
+const _excluded_count_busname_patterns = Vector{Regex}([
+    r"^_virtual.*",
+])
+
 "wraps angles in degrees to 180"
 function _wrap_to_180(degrees)
     return degrees - 360*floor.((degrees .+ 180)/360)
@@ -39,72 +45,77 @@ end
 _replace_nan(v) = map(x -> isnan(x) ? zero(x) : x, v)
 
 
+
 "Counts number of nodes in network"
-function count_nodes(dss_data::Dict{String,Array})::Int
-    sourcebus = get(dss_data["circuit"][1], "bus1", "sourcebus")
-    all_nodes = Dict()
-    for comp_type in values(dss_data)
-        for comp in values(comp_type)
-            if isa(comp, Dict) && haskey(comp, "buses")
-                for busname in values(_parse_array(String, comp["buses"]))
-                    name, nodes = _parse_busname(busname)
+function count_nodes(data::Dict{String,<:Any})::Int
+    n_nodes = 0
 
-                    if !haskey(all_nodes, name)
-                        all_nodes[name] = Set([])
-                    end
+    if get(data, "data_model", missing) == DSS
+        all_nodes = Dict()
+        for obj_type in values(data)
+            if isa(obj_type, Dict)
+                for object in values(obj_type)
+                    if isa(object, Dict)
+                        if haskey(object, "buses")
+                            for busname in values(object["buses"])
+                                name, nodes = _parse_bus_id(busname)
 
-                    for (n, node) in enumerate(nodes[1:3])
-                        if node
-                            push!(all_nodes[name], n)
-                        end
-                    end
-                end
-            elseif isa(comp, Dict)
-                for (prop, val) in comp
-                    if startswith(prop, "bus") && prop != "buses"
-                        name, nodes = _parse_busname(val)
+                                if !haskey(all_nodes, name)
+                                    all_nodes[name] = Set([])
+                                end
 
-                        if !haskey(all_nodes, name)
-                            all_nodes[name] = Set([])
-                        end
+                                for (n, node) in enumerate(nodes[1:3])
+                                    if node
+                                        push!(all_nodes[name], n)
+                                    end
+                                end
+                            end
+                        else
+                            for (prop, val) in object
+                                if startswith(prop, "bus") && prop != "buses"
+                                    name, nodes = _parse_bus_id(val)
 
-                        for (n, node) in enumerate(nodes[1:3])
-                            if node
-                                push!(all_nodes[name], n)
+                                    if !haskey(all_nodes, name)
+                                        all_nodes[name] = Set([])
+                                    end
+
+                                    for (n, node) in enumerate(nodes[1:3])
+                                        if node
+                                            push!(all_nodes[name], n)
+                                        end
+                                    end
+                                end
                             end
                         end
                     end
                 end
             end
         end
-    end
 
-    n_nodes = 0
-    for (name, phases) in all_nodes
-        if name != sourcebus
+        for (name, phases) in all_nodes
             n_nodes += length(phases)
         end
-    end
-
-    return n_nodes
-end
-
-
-"Counts number of nodes in network"
-function count_nodes(pmd_data::Dict{String,Any})::Int
-    if pmd_data["source_type"] == "dss"
-        Memento.info(_LOGGER, "counting nodes from PowerModelsDistribution structure may not be as accurate as directly from `parse_dss` data due to virtual buses, etc.")
-    end
-
-    n_nodes = 0
-    for bus in values(pmd_data["bus"])
-        if pmd_data["source_type"] == "matlab"
-            n_nodes += sum(bus["vm"] .> 0.0)
-        elseif pmd_data["source_type"] == "dss"
-            if !(pmd_data["source_type"] == "dss" && bus["name"] in ["virtual_sourcebus", pmd_data["sourcebus"]]) && !(pmd_data["source_type"] == "dss" && startswith(bus["name"], "tr") && endswith(bus["name"], r"_b\d"))
+    elseif get(data, "data_model", missing) in [MATHEMATICAL, ENGINEERING] || (haskey(data, "source_type") && data["source_type"] == "matlab")
+        n_nodes = 0
+        for (name, bus) in data["bus"]
+            if get(data, "data_model", missing) == MATPOWER || (haskey(data, "source_type") && data["source_type"] == "matlab")
                 n_nodes += sum(bus["vm"] .> 0.0)
+            else
+                if data["data_model"] == MATHEMATICAL
+                    name = bus["name"]
+                end
+
+                if all(!occursin(pattern, name) for pattern in [_excluded_count_busname_patterns...])
+                    if data["data_model"] == MATHEMATICAL
+                        n_nodes += length(bus["terminals"][.!get(bus, "grounded", zeros(length(bus["terminals"])))])
+                    else
+                        n_nodes += length([n for n in bus["terminals"] if !(n in get(bus, "grounded", []))])
+                    end
+                end
             end
         end
+    else
+        Memento.error(_LOGGER, "Origin of data structure not recognized, cannot count nodes reliably")
     end
 
     return n_nodes
@@ -120,7 +131,7 @@ function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, b
     config = trans["configuration"]
 
     tm_scale = tm_nom*(t_vbase/f_vbase)
-    if config == "delta"
+    if config == DELTA
         #TODO is this still needed?
         tm_scale *= sqrt(3)
     elseif config == "zig-zag"
@@ -143,19 +154,18 @@ function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps=0.1)
     vmax = bus["vmax"]
     vmin = bus["vmin"]
     if haskey(bus, "vm_ll_max")
-        vdmax = bus["vm_ll_max"]*sqrt(3)
+        vdmax = bus["vm_ll_max"]
     else
         # implied valid upper bound
-        vdmax = [1 1 0; 0 1 1; 1 0 1]*vmax
+        vdmax = _mat_mult_rm_nan([1 1 0; 0 1 1; 1 0 1], vmax)
         id = bus["index"]
     end
     if haskey(bus, "vm_ll_min")
-        vdmin = bus["vm_ll_min"]*sqrt(3)
+        vdmin = bus["vm_ll_min"]
     else
-        vdmin = ones(3)*vdmin_eps*sqrt(3)
-        id = bus["index"]
-        Memento.info(_LOGGER, "Bus $id has no phase-to-phase vm upper bound; instead, $vdmin_eps was used as a valid upper bound.")
+        vdmin = fill(0.0, length(vmin))
     end
+
     return (vdmin, vdmax)
 end
 
@@ -168,10 +178,10 @@ function _calc_load_pq_bounds(load::Dict, bus::Dict)
     a, alpha, b, beta = _load_expmodel_params(load, bus)
     vmin, vmax = _calc_load_vbounds(load, bus)
     # get bounds
-    pmin = min.(a.*vmin.^alpha, a.*vmax.^alpha)
-    pmax = max.(a.*vmin.^alpha, a.*vmax.^alpha)
-    qmin = min.(b.*vmin.^beta, b.*vmax.^beta)
-    qmax = max.(b.*vmin.^beta, b.*vmax.^beta)
+    pmin = _nan2zero(min.(a.*vmin.^alpha, a.*vmax.^alpha), a)
+    pmax = _nan2zero(max.(a.*vmin.^alpha, a.*vmax.^alpha), a)
+    qmin = _nan2zero(min.(b.*vmin.^beta, b.*vmax.^beta), b)
+    qmax = _nan2zero(max.(b.*vmin.^beta, b.*vmax.^beta), b)
     return (pmin, pmax, qmin, qmax)
 end
 
@@ -195,8 +205,8 @@ Returns magnitude bounds for the current going through the load.
 function _calc_load_current_magnitude_bounds(load::Dict, bus::Dict)
     a, alpha, b, beta = _load_expmodel_params(load, bus)
     vmin, vmax = _calc_load_vbounds(load, bus)
-    cb1 = sqrt.(a.^(2).*vmin.^(2*alpha.-2) + b.^(2).*vmin.^(2*beta.-2))
-    cb2 = sqrt.(a.^(2).*vmax.^(2*alpha.-2) + b.^(2).*vmax.^(2*beta.-2))
+    cb1 = sqrt.(_nan2zero(a.^(2).*vmin.^(2*alpha.-2), a) + _nan2zero(b.^(2).*vmin.^(2*beta.-2), b))
+    cb2 = sqrt.(_nan2zero(a.^(2).*vmax.^(2*alpha.-2), a) + _nan2zero(b.^(2).*vmax.^(2*beta.-2), b))
     cmin = min.(cb1, cb2)
     cmax = max.(cb1, cb2)
     return cmin, cmax
@@ -213,24 +223,24 @@ function _load_expmodel_params(load::Dict, bus::Dict)
     pd = load["pd"]
     qd = load["qd"]
     ncnds = length(pd)
-    if load["model"]=="constant_power"
+    if load["model"]==POWER
         return (pd, zeros(ncnds), qd, zeros(ncnds))
     else
         # get exponents
-        if load["model"]=="constant_current"
+        if load["model"]==CURRENT
             alpha = ones(ncnds)
             beta  =ones(ncnds)
-        elseif load["model"]=="constant_impedance"
+        elseif load["model"]==IMPEDANCE
             alpha = ones(ncnds)*2
             beta  =ones(ncnds)*2
-        elseif load["model"]=="exponential"
+        elseif load["model"]==EXPONENTIAL
             alpha = load["alpha"]
             @assert(all(alpha.>=0))
             beta = load["beta"]
             @assert(all(beta.>=0))
         end
         # calculate proportionality constants
-        v0 = load["vnom_kv"]/(bus["base_kv"]/sqrt(3))
+        v0 = load["vnom_kv"]
         a = pd./v0.^alpha
         b = qd./v0.^beta
         # get bounds
@@ -245,10 +255,10 @@ multiphase load. These are inferred from vmin/vmax for wye loads and from
 _calc_bus_vm_ll_bounds for delta loads.
 """
 function _calc_load_vbounds(load::Dict, bus::Dict)
-    if load["conn"]=="wye"
+    if load["configuration"]==WYE
         vmin = bus["vmin"]
         vmax = bus["vmax"]
-    elseif load["conn"]=="delta"
+    elseif load["configuration"]==DELTA
         vmin, vmax = _calc_bus_vm_ll_bounds(bus)
     end
     return vmin, vmax
@@ -259,9 +269,9 @@ Returns a Bool, indicating whether the convex hull of the voltage-dependent
 relationship needs a cone inclusion constraint.
 """
 function _check_load_needs_cone(load::Dict)
-    if load["model"]=="constant_current"
+    if load["model"]==CURRENT
         return true
-    elseif load["model"]=="exponential"
+    elseif load["model"]==EXPONENTIAL
         return true
     else
         return false
@@ -400,6 +410,16 @@ end
 
 
 """
+Returns a total (shunt+series) power magnitude bound for the from and to side
+of a branch. The total current rating also implies a current bound through the
+upper bound on the voltage magnitude of the connected buses.
+"""
+function _calc_branch_power_max_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
+    return _calc_branch_power_max(branch, bus_fr), _calc_branch_power_max(branch, bus_to)
+end
+
+
+"""
 Returns a valid series current magnitude bound for a branch.
 """
 function _calc_branch_series_current_max(branch::Dict, bus_fr::Dict, bus_to::Dict)
@@ -416,15 +436,12 @@ function _calc_branch_series_current_max(branch::Dict, bus_fr::Dict, bus_to::Dic
     # get valid bounds on total current
     c_max_fr_tot = _calc_branch_current_max(branch, bus_fr)
     c_max_to_tot = _calc_branch_current_max(branch, bus_to)
-    if ismissing(c_max_fr_tot) || ismissing(c_max_to_tot)
-        return missing
-    end
 
     # get valid bounds on shunt current
     y_fr = branch["g_fr"] + im* branch["b_fr"]
     y_to = branch["g_to"] + im* branch["b_to"]
-    c_max_fr_sh = abs.(y_fr)*vmax_fr
-    c_max_to_sh = abs.(y_to)*vmax_to
+    c_max_fr_sh = _mat_mult_rm_nan(abs.(y_fr), vmax_fr)
+    c_max_to_sh = _mat_mult_rm_nan(abs.(y_to), vmax_to)
 
     # now select element-wise lowest valid bound between fr and to
     N = 3 #TODO update for 4-wire
@@ -490,12 +507,12 @@ function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
     end
 
     for (_, load) in data["load"]
-        load["model"] = "constant_power"
-        load["conn"] = "wye"
+        load["model"] = POWER
+        load["configuration"] = WYE
     end
 
     for (_, load) in data["gen"]
-        load["conn"] = "wye"
+        load["configuration"] = WYE
     end
 end
 
@@ -648,16 +665,76 @@ end
 
 
 "Local wrapper method for JuMP.set_lower_bound, which skips NaN and infinite (-Inf only)"
-function set_lower_bound(x::JuMP.VariableRef, bound)
+function set_lower_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category=:default)
     if !(isnan(bound) || bound==-Inf)
         JuMP.set_lower_bound(x, bound)
+    elseif loose_bounds
+        lbs = pm.ext[:loose_bounds]
+        JuMP.set_lower_bound(x, -lbs.bound_values[category])
+        push!(lbs.loose_lb_vars, x)
     end
 end
 
 
 "Local wrapper method for JuMP.set_upper_bound, which skips NaN and infinite (+Inf only)"
-function set_upper_bound(x::JuMP.VariableRef, bound)
+function set_upper_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category=:default)
     if !(isnan(bound) || bound==Inf)
         JuMP.set_upper_bound(x, bound)
+    elseif loose_bounds
+        lbs = pm.ext[:loose_bounds]
+        JuMP.set_upper_bound(x, lbs.bound_values[category])
+        push!(lbs.loose_ub_vars, x)
     end
+end
+
+
+""
+function sol_polar_voltage!(pm::_PM.AbstractPowerModel, solution::Dict)
+    if haskey(solution, "nw")
+        nws_data = solution["nw"]
+    else
+        nws_data = Dict("0" => solution)
+    end
+
+    for (n, nw_data) in nws_data
+        if haskey(nw_data, "bus")
+            for (i,bus) in nw_data["bus"]
+                if haskey(bus, "vr") && haskey(bus, "vi")
+                    vr = bus["vr"]
+                    vi = bus["vi"]
+                    if isa(vr, Dict)
+                        bus["vm"] = Dict(t=>abs(vr[t]+im*vi[t]) for t in keys(vr))
+                        bus["va"] = Dict(t=>_wrap_to_pi(atan(vi[t], vr[t])) for t in keys(vr))
+                    else
+                        bus["vm"] = abs.(vr .+ im*vi)
+                        bus["va"] = _wrap_to_pi(atan.(vi, vr))
+                    end
+                end
+            end
+        end
+    end
+end
+
+# BOUND manipulation methods (0*Inf->0 is often desired)
+_sum_rm_nan(X::Vector) = sum([X[(!).(isnan.(X))]..., 0.0])
+
+
+""
+function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, Adjoint}) where T
+    N, A_ncols = size(A)
+    B_nrows, M = size(B)
+    @assert(A_ncols==B_nrows)
+    return [_sum_rm_nan(A[n,:].*B[:,m]) for n in 1:N, m in 1:M]
+end
+
+
+_mat_mult_rm_nan(A::Union{Matrix, Adjoint}, b::Vector) = dropdims(_mat_mult_rm_nan(A, reshape(b, length(b), 1)), dims=2)
+_mat_mult_rm_nan(a::Vector, B::Union{Matrix, Adjoint}) = _mat_mult_rm_nan(reshape(a, length(a), 1), B)
+
+
+""
+function _nan2zero(b, a; val=0)
+    and(x, y) = x && y
+    b[and.(isnan.(b), a.==val)] .= 0.0
+    return b
 end

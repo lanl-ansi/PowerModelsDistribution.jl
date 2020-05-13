@@ -4,7 +4,7 @@
     branch = Dict{String, Any}()
     branch["br_r"] = [1 2;3 4]
     branch["br_x"] = [1 2;3 4]
-    g,b  = PMs.calc_branch_y(branch)
+    g,b  = PM.calc_branch_y(branch)
 
     @test typeof(g) <: Matrix
     @test isapprox(g, [-1.0 0.5; 0.75 -0.25])
@@ -12,7 +12,7 @@
 
     branch["br_r"] = [1 2 0;3 4 0; 0 0 0]
     branch["br_x"] = [1 2 0;3 4 0; 0 0 0]
-    g,b  = PMs.calc_branch_y(branch)
+    g,b  = PM.calc_branch_y(branch)
 
     @test typeof(g) <: Matrix
     @test isapprox(g, [-1.0 0.5 0; 0.75 -0.25 0; 0 0 0])
@@ -70,13 +70,15 @@ end
     end
 
     @testset "node counting functions" begin
-        dss = PMD.parse_dss("../test/data/opendss/case5_phase_drop.dss")
-        pmd = PMD.parse_file("../test/data/opendss/case5_phase_drop.dss")
+        dss  = parse_dss("../test/data/opendss/case5_phase_drop.dss")
+        eng  = parse_file("../test/data/opendss/case5_phase_drop.dss")
+        math = parse_file("../test/data/opendss/case5_phase_drop.dss"; data_model=MATHEMATICAL)
 
-        @test count_nodes(dss) == 7
-        @test count_nodes(dss) == count_nodes(pmd)
+        @test count_nodes(dss) == 10 # stopped excluding source from node count
+        @test count_nodes(dss) == count_nodes(eng)
+        @test count_nodes(eng) == count_nodes(math)
 
-        dss = PMD.parse_dss("../test/data/opendss/ut_trans_2w_yy.dss")
-        @test count_nodes(dss) == 9
+        dss = parse_dss("../test/data/opendss/ut_trans_2w_yy.dss")
+        @test count_nodes(dss) == 12  # stopped excluding source from node count
     end
 end

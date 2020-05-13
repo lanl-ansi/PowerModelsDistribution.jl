@@ -6,7 +6,7 @@ import Memento
 import InfrastructureModels
 
 import PowerModels
-const PMs = PowerModels
+const PM = PowerModels
 
 # Suppress warnings during testing.
 const TESTLOG = Memento.getlogger(PowerModels)
@@ -31,37 +31,39 @@ cbc_solver = with_optimizer(Cbc.Optimizer, logLevel=0)
 scs_solver = with_optimizer(SCS.Optimizer, max_iters=20000, eps=1e-5, alpha=0.4, verbose=0)
 juniper_solver = with_optimizer(Juniper.Optimizer, nl_solver=with_optimizer(Ipopt.Optimizer, tol=1e-4, print_level=0), mip_solver=cbc_solver, log_levels=[])
 
-include("common.jl") # all passing
+include("common.jl")
 
 @testset "PowerModelsDistribution" begin
 
-    include("opendss.jl") # all passing
+    include("opendss.jl")
 
-    include("data.jl") # all passing
+    include("data.jl")
 
-    include("pf.jl") # all passing
+    include("pf.jl")
 
-    include("pf_iv.jl") # all passing
+    include("pf_bf.jl")
 
-    include("opf.jl") # all passing
+    include("opf.jl")
 
-    include("opf_bf.jl") # all passing
+    include("opf_bf.jl")
 
-    include("opf_iv.jl") # all passing
+    include("opf_iv.jl")
 
-    include("storage.jl") # all passing
+    include("storage.jl")
 
-    include("debug.jl") # all passing
+    include("debug.jl")
 
-    include("multinetwork.jl") # all passing
+    include("multinetwork.jl")
 
-    include("transformer.jl") # all passing
+    include("transformer.jl")
 
-    include("loadmodels.jl") # all passing
+    include("loadmodels.jl")
 
-    include("delta_gens.jl") # all passing
+    include("delta_gens.jl")
 
-    include("shunt.jl") # all passing
+    include("shunt.jl")
 
-    include("mld.jl") # all passing
+    include("mld.jl")
+
+    include("data_model.jl")
 end

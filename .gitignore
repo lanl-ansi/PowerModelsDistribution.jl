@@ -7,3 +7,5 @@ deps/deps.jl
 docs/build
 
 Manifest.toml
+
+.ipynb_checkpoints/
