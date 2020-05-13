@@ -425,7 +425,7 @@ function create_transformer(buses::Vector{Any}, connections::Vector{Union{Vector
         "configurations" => !ismissing(configurations) ? configurations : fill(WYE, n_windings),
         "xsc" => !ismissing(xsc) ? xsc : zeros(Int(n_windings * (n_windings-1)//2)),
         "rw" => !ismissing(rw) ? rw : zeros(n_windings),
-        "imag" => imag,
+        "cmag" => imag,
         "noloadloss" => noloadloss,
         "tm_nom" => !ismissing(tm_nom) ? tm_nom : ones(n_windings),
         "tm_set" => !ismissing(tm_set) ? tm_set : fill(fill(1.0, n_conductors), n_windings),

@@ -57,7 +57,7 @@
 
         eng = parse_file("../test/data/opendss/ut_trans_2w_yy.dss"; transformations=[make_lossless!, (apply_voltage_bounds!, "vm_lb"=>0.95, "vm_ub"=>1.05)])
 
-        @test all(all(eng["transformer"]["tx1"][k] .== 0) for k in ["rw", "xsc", "noloadloss", "imag"])
+        @test all(all(eng["transformer"]["tx1"][k] .== 0) for k in ["rw", "xsc", "noloadloss", "cmag"])
 
         math = transform_data_model(eng)
 

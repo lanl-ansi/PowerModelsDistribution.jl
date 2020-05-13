@@ -524,7 +524,7 @@ function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             "configuration" => Vector{ConnConfig}(defaults["conns"]),
             "rw" => Vector{Float64}(defaults["%rs"] ./ 100),
             "noloadloss" => defaults["%noloadloss"] / 100,
-            "imag" => defaults["%imag"] / 100,
+            "cmag" => defaults["%imag"] / 100,
             "xsc" => nrw == 2 ? [defaults["xhl"] / 100] : [defaults["xhl"], defaults["xht"], defaults["xlt"]] ./ 100,
             "source_id" => "xfmrcode.$id",
         )
@@ -619,7 +619,7 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
         end
 
         # %noloadloss, %imag
-        for (fr_key, to_key) in zip(["%noloadloss", "%imag"], ["noloadloss", "imag"])
+        for (fr_key, to_key) in zip(["%noloadloss", "%imag"], ["noloadloss", "cmag"])
             if isempty(defaults["xfmrcode"]) || (haskey(dss_obj, fr_key) && _is_after_xfmrcode(dss_obj["prop_order"], fr_key))
                 eng_obj[to_key] = defaults[fr_key] / 100
             end

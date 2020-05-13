@@ -330,7 +330,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
             r_s = eng_obj["rw"] .* zbase
 
             g_sh =  (eng_obj["noloadloss"]*snom[1])/vnom[1]^2
-            b_sh = -(eng_obj["imag"]*snom[1])/vnom[1]^2
+            b_sh = -(eng_obj["cmag"]*snom[1])/vnom[1]^2
 
             # data is measured externally, but we now refer it to the internal side
             ratios = vnom/data_eng["settings"]["voltage_scale_factor"]

@@ -106,11 +106,11 @@ eng["bus"]
 
 
 
-We can see there are three buses in this system, identified by ids `"primary"`, `"sourcebus"`, and `"loadbus"`. 
+We can see there are three buses in this system, identified by ids `"primary"`, `"sourcebus"`, and `"loadbus"`.
 
-__NOTE__: In Julia, order of Dictionary keys is not fixed, nor does it retain the order in which it was parsed like _e.g._ `Vectors`. 
+__NOTE__: In Julia, order of Dictionary keys is not fixed, nor does it retain the order in which it was parsed like _e.g._ `Vectors`.
 
-Identifying components by non-integer names is a new feature of the `ENGINEERING` model, and makes network debugging more straightforward. 
+Identifying components by non-integer names is a new feature of the `ENGINEERING` model, and makes network debugging more straightforward.
 
 __NOTE__: all names are converted to lowercase on parse from the originating dss file.
 
@@ -334,7 +334,7 @@ eng_ts["load"]["l1"]["time_series"]
 
 
 
-You can see that under the actual component, in this case a `"load"`, that there is a `"time_series"` dictionary that contains `ENGINEERING` model variable names and references to the identifiers of a root-level `time_series` object, 
+You can see that under the actual component, in this case a `"load"`, that there is a `"time_series"` dictionary that contains `ENGINEERING` model variable names and references to the identifiers of a root-level `time_series` object,
 
 
 ```julia
@@ -373,13 +373,13 @@ result = run_mc_opf(eng, ACPPowerModel, ipopt_solver)
 ```
 
     [35m[warn | PowerModels]: Updated generator 1 cost function with order 3 to a function of order 2: [0.5, 0.0][39m
-    
+
     ******************************************************************************
     This program contains Ipopt, a library for large-scale nonlinear optimization.
      Ipopt is released as open source code under the Eclipse Public License (EPL).
              For more information visit http://projects.coin-or.org/Ipopt
     ******************************************************************************
-    
+
 
 
 
@@ -544,11 +544,11 @@ eng_ut["transformer"]["tx1"]
       "tm_fix"        => Array{Bool,1}[[1, 1, 1], [1, 1, 1]]
       "vm_nom"        => [11.0, 4.0]
       "tm_ub"         => [[1.1, 1.1, 1.1], [1.1, 1.1, 1.1]]
-      "imag"          => 0.11
+      "cmag"          => 0.11
 
 
 
-We can see that `"noloadloss"`, `"rw"`, and `"imag"` are non-zero, but if we apply the `make_lossless!` function we can see these parameters are set to zero, effectively eliminating the losses
+We can see that `"noloadloss"`, `"rw"`, and `"cmag"` are non-zero, but if we apply the `make_lossless!` function we can see these parameters are set to zero, effectively eliminating the losses
 
 
 ```julia
@@ -576,7 +576,7 @@ eng_ut["transformer"]["tx1"]
       "tm_fix"        => Array{Bool,1}[[1, 1, 1], [1, 1, 1]]
       "vm_nom"        => [11.0, 4.0]
       "tm_ub"         => [[1.1, 1.1, 1.1], [1.1, 1.1, 1.1]]
-      "imag"          => 0.0
+      "cmag"          => 0.0
 
 
 
@@ -613,7 +613,7 @@ eng_ut["transformer"]["tx1"]
       "tm_fix"        => Array{Bool,1}[[1, 1, 1], [1, 1, 1]]
       "vm_nom"        => [11.0, 4.0]
       "tm_ub"         => [[1.1, 1.1, 1.1], [1.1, 1.1, 1.1]]
-      "imag"          => 0.0
+      "cmag"          => 0.0
 
 
 
@@ -776,7 +776,7 @@ math = parse_file("../test/data/opendss/case3_unbalanced.dss"; data_model=MATHEM
 
 In this subsection we cover parsing into a multinetwork data structure, which is a structure that only exists in the `MATHEMATICAL` model
 
-For those unfamiliar, the InfrastructureModels family of packages has a feature called multinetworks, which is useful for, among other things, running optimization problems on time series type problems. 
+For those unfamiliar, the InfrastructureModels family of packages has a feature called multinetworks, which is useful for, among other things, running optimization problems on time series type problems.
 
 Multinetwork data structures are formatted like so
 mn = Dict{String,Any}(

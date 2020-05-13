@@ -322,7 +322,7 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
                 _apply_xfmrcode!(tr, data_eng)
             end
             # across-phase properties should be the same to be eligible for banking
-            props = ["bus", "noloadloss", "xsc", "rw", "imag", "vm_nom", "sm_nom", "polarity", "configuration"]
+            props = ["bus", "noloadloss", "xsc", "rw", "cmag", "vm_nom", "sm_nom", "polarity", "configuration"]
             btrans = Dict{String, Any}(prop=>trs[1][prop] for prop in props)
             if !all(tr[prop]==btrans[prop] for tr in trs, prop in props)
                 Memento.warn(_LOGGER, "Not all across-phase properties match among transfomers identified by bank='$bank', aborting attempt to bank")

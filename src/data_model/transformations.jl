@@ -3,7 +3,7 @@
 const _loss_model_objects = Dict{String,Vector{String}}(
     "switch" => Vector{String}(["linecode", "rs", "xs"]),
     "voltage_source" => Vector{String}(["rs", "xs"]),
-    "transformer" => Vector{String}(["rw", "xsc", "imag", "noloadloss"])
+    "transformer" => Vector{String}(["rw", "xsc", "cmag", "noloadloss"])
 )
 
 
