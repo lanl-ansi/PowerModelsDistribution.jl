@@ -278,9 +278,9 @@ function constraint_mc_load_setpoint(pm::_PM.AbstractPowerModel, id::Int; nw::In
     a, alpha, b, beta = _load_expmodel_params(load, bus)
 
     if conn==WYE
-        constraint_mc_load_setpoint_wye(pm, nw, id, load["load_bus"], a, alpha, b, beta)
+        constraint_mc_load_setpoint_wye(pm, nw, id, load["load_bus"], a, alpha, b, beta; report=report)
     else
-        constraint_mc_load_setpoint_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta)
+        constraint_mc_load_setpoint_delta(pm, nw, id, load["load_bus"], a, alpha, b, beta; report=report)
     end
 end
 

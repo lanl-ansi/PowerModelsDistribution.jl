@@ -705,7 +705,7 @@ end
 Creates the constraints modelling the (relaxed) voltage-dependent loads for
 the matrix KCL formulation.
 """
-function constraint_mc_load_setpoint(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int=pm.cnw)
+function constraint_mc_load_setpoint(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int=pm.cnw, report::Bool=true)
     # shared variables and parameters
     load = ref(pm, nw, :load, load_id)
     pd0 = load["pd"]
