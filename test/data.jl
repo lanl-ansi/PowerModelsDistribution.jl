@@ -82,3 +82,18 @@ end
         @test count_nodes(dss) == 12  # stopped excluding source from node count
     end
 end
+
+@testset "test active conductor counting functions" begin
+    eng = parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
+    math = transform_data_model(eng)
+
+    eng_term_count = count_active_terminals(eng)
+    eng_conn_count = count_active_connections(eng)
+
+    @test eng_term_count == 12 && eng_conn_count == 9
+
+    math_term_count = count_active_terminals(math)
+    math_conn_count = count_active_connections(math)
+
+    @test math_term_count - math_conn_count == eng_term_count - eng_conn_count
+end
