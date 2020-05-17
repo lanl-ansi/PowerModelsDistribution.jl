@@ -2,7 +2,7 @@ import LinearAlgebra: diagm
 
 "items that are mapped one-to-one from engineering to math models"
 const _1to1_maps = Dict{String,Vector{String}}(
-    "bus" => ["vm", "va", "terminals", "phases", "neutral", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub", "dss"],
+    "bus" => ["vm", "va", "terminals", "phases", "neutral", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub", "dss", "vuf_ub", "vm_pair_lb", "vm_pair_ub"],
     "line" => ["f_connections", "t_connections", "source_id", "dss"],
     "transformer" => ["f_connections", "t_connections", "source_id", "dss"],
     "switch" => ["status", "f_connections", "t_connections", "source_id", "dss"],
