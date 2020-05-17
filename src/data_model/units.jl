@@ -183,13 +183,13 @@ function _make_math_per_unit!(nw::Dict{String,<:Any}, data_math::Dict{String,<:A
             vbases = Dict{String,Real}("$(data_math["bus_lookup"][id])" => vbase for (id, vbase) in data_math["settings"]["vbases_default"])
         else
             buses_type_3 = [(id, sum(bus["vm"])/length(bus["vm"])) for (id,bus) in nw["bus"] if haskey(bus, "bus_type") && bus["bus_type"]==3]
-                if !isempty(buses_type_3)
-                    vbases = Dict([buses_type_3[1]])
-                else
-                    Memento.error("Please specify vbases manually; cannot make an educated guess for this data model.")
-                end
+            if !isempty(buses_type_3)
+                vbases = Dict([buses_type_3[1]])
+            else
+                Memento.error("Please specify vbases manually; cannot make an educated guess for this data model.")
             end
         end
+    end
 
     bus_vbase, line_vbase = calc_voltage_bases(nw, vbases)
     voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
