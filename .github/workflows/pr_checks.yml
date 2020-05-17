@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - run: .github/scripts/file-changed-check "${{ github.head_ref }}" "${{ github.base_ref }}" "docs/[A-Za-z0-9_]+\.md"
+      - run: .github/scripts/file-changed-check "${{ github.head_ref }}" "${{ github.base_ref }}" "docs/[A-Za-z0-9_/]+\.md"
   dependencies-unchanged:
     name: Dependencies unchanged
     runs-on: ubuntu-latest
