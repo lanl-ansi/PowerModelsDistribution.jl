@@ -721,6 +721,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
 
         math_obj["name"] = "_virtual_gen.voltage_source.$name"
         math_obj["gen_bus"] = gen_bus = data_math["bus_lookup"][eng_obj["bus"]]
+        math_obj["connections"] = collect(1:nconductors+1)
         math_obj["gen_status"] = Int(eng_obj["status"])
         math_obj["pg"] = fill(0.0, nconductors)
         math_obj["qg"] = fill(0.0, nconductors)
