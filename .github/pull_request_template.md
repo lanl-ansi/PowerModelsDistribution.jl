@@ -1,5 +1,7 @@
 # Pull Request (PR) Template
 
+Pull requests should be single-issue to the extent possible; by focusing a PR on a single issue/topic, code reviews are more manageable, new features are easier to track, code quality is easier to maintain, and technical debt is easier manage.
+
 Every PR to PowerModelsDistribution should strive to meet the following guidelines.
 
 ## Title
@@ -23,6 +25,7 @@ Every PR to PowerModelsDistribution should strive to meet the following guidelin
 
 ## Code
 
+- Code changes should be relevant to the issue being addressed by the PR to the extent possible. Unrelated code changes are discouraged, and should be submitted in a separate PR
 - An entry should be added to CHANGELOG.md for every PR
 - Documentation should be updated (See CONTRIBUTING.md for guidelines)
 - Unit tests should be added. In the case where existing unit tests were altered, an explanation for the change must be included
