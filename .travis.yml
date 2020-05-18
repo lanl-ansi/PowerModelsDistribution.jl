@@ -1,12 +1,8 @@
 language: julia
 os:
   - linux
-  - osx
-  - windows
 julia:
-  - 1.0
   - 1.4
-  - nightly
 codecov: true
 jobs:
   allow_failures:
