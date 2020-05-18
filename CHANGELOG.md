@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Store references for power balance constraints.
 
 ## v0.9.0
 
