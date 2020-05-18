@@ -114,6 +114,9 @@ function constraint_mc_slack_power_balance(pm::_PM.AbstractACPModel, nw::Int, i:
 
     end
 
+    con(pm, nw, :lam_kcl_r)[i] = cstr_p
+    con(pm, nw, :lam_kcl_i)[i] = cstr_q
+
     if _IM.report_duals(pm)
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
         sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
@@ -186,6 +189,9 @@ function constraint_mc_shed_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::
 
     end
 
+    con(pm, nw, :lam_kcl_r)[i] = cstr_p
+    con(pm, nw, :lam_kcl_i)[i] = cstr_q
+
     if _IM.report_duals(pm)
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
         sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
@@ -253,6 +259,9 @@ function constraint_mc_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, 
         )
         push!(cstr_q, cq)
     end
+
+    con(pm, nw, :lam_kcl_r)[i] = cstr_p
+    con(pm, nw, :lam_kcl_i)[i] = cstr_q
 
     if _IM.report_duals(pm)
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
@@ -322,6 +331,9 @@ function constraint_mc_load_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::
         )
         push!(cstr_q, cq)
     end
+
+    con(pm, nw, :lam_kcl_r)[i] = cstr_p
+    con(pm, nw, :lam_kcl_i)[i] = cstr_q
 
     if _IM.report_duals(pm)
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p

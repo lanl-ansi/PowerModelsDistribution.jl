@@ -117,6 +117,9 @@ function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_ar
         + sum(bs.*w for bs in values(bus_bs))
     )
 
+    con(pm, nw, :lam_kcl_r)[i] = cstr_p
+    con(pm, nw, :lam_kcl_i)[i] = cstr_q
+
     if _IM.report_duals(pm)
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
         sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q

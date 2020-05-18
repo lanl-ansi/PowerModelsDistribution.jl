@@ -827,18 +827,18 @@ S = U.I' = U.(Y.U)' = U.U'.Y' = W.Y'
 P =  Wr.G'+Wi.B'
 Q = -Wr.B'+Wi.G'
 """
-function constraint_mc_load_power_balance(pm::KCLMXModels, n::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
-    Wr = var(pm, n, :Wr, i)
-    Wi = var(pm, n, :Wi, i)
+function constraint_mc_load_power_balance(pm::KCLMXModels, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+    Wr = var(pm, nw, :Wr, i)
+    Wi = var(pm, nw, :Wi, i)
 
-    P = get(var(pm, n), :P, Dict()); _PM._check_var_keys(P, bus_arcs, "active power", "branch")
-    Q = get(var(pm, n), :Q, Dict()); _PM._check_var_keys(Q, bus_arcs, "reactive power", "branch")
-    Pg = get(var(pm, n), :Pg_bus, Dict()); _PM._check_var_keys(Pg, bus_gens, "active power", "generator")
-    Qg = get(var(pm, n), :Qg_bus, Dict()); _PM._check_var_keys(Qg, bus_gens, "reactive power", "generator")
-    Pd = get(var(pm, n), :Pd_bus, Dict()); _PM._check_var_keys(Pd, bus_loads, "active power", "load")
-    Qd = get(var(pm, n), :Qd_bus, Dict()); _PM._check_var_keys(Qd, bus_loads, "reactive power", "load")
+    P = get(var(pm, nw), :P, Dict()); _PM._check_var_keys(P, bus_arcs, "active power", "branch")
+    Q = get(var(pm, nw), :Q, Dict()); _PM._check_var_keys(Q, bus_arcs, "reactive power", "branch")
+    Pg = get(var(pm, nw), :Pg_bus, Dict()); _PM._check_var_keys(Pg, bus_gens, "active power", "generator")
+    Qg = get(var(pm, nw), :Qg_bus, Dict()); _PM._check_var_keys(Qg, bus_gens, "reactive power", "generator")
+    Pd = get(var(pm, nw), :Pd_bus, Dict()); _PM._check_var_keys(Pd, bus_loads, "active power", "load")
+    Qd = get(var(pm, nw), :Qd_bus, Dict()); _PM._check_var_keys(Qd, bus_loads, "reactive power", "load")
 
-    cnds = conductor_ids(pm; nw=n)
+    cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
     Gt = isempty(bus_gs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_gs))
@@ -866,8 +866,11 @@ function constraint_mc_load_power_balance(pm::KCLMXModels, n::Int, i::Int, bus_a
         - diag(-Wr*Bt'+Wi*Gt')
     )
 
+    con(pm, nw, :lam_kcl_r)[i] = cstr_p
+    con(pm, nw, :lam_kcl_i)[i] = cstr_q
+
     if _IM.report_duals(pm)
-        sol(pm, n, :bus, i)[:lam_kcl_r] = cstr_p
-        sol(pm, n, :bus, i)[:lam_kcl_i] = cstr_q
+        sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
 end

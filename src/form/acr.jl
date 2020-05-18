@@ -145,6 +145,9 @@ function constraint_mc_slack_power_balance(pm::_PM.AbstractACRModel, nw::Int, i:
         push!(cstr_q, cq)
     end
 
+    con(pm, nw, :lam_kcl_r)[i] = cstr_p
+    con(pm, nw, :lam_kcl_i)[i] = cstr_q
+
     if _IM.report_duals(pm)
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
         sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
@@ -196,6 +199,9 @@ function constraint_mc_power_balance(pm::_PM.AbstractACRModel, nw::Int, i::Int, 
         # shunt
         - (-vr.*(Gt*vi+Bt*vr) + vi.*(Gt*vr-Bt*vi))
     )
+
+    con(pm, nw, :lam_kcl_r)[i] = cstr_p
+    con(pm, nw, :lam_kcl_i)[i] = cstr_q
 
     if _IM.report_duals(pm)
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
@@ -262,6 +268,9 @@ function constraint_mc_load_power_balance(pm::_PM.AbstractACRModel, nw::Int, i::
         )
         push!(cstr_q, cq)
     end
+
+    con(pm, nw, :lam_kcl_r)[i] = cstr_p
+    con(pm, nw, :lam_kcl_i)[i] = cstr_q
 
     if _IM.report_duals(pm)
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
