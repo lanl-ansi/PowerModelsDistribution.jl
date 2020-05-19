@@ -716,10 +716,6 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
             end
         end
 
-        if !haskey(data_eng, "transformer")
-            data_eng["transformer"] = Dict{String,Any}()
-        end
-
         if import_all
             _import_all!(eng_obj, dss_obj)
         end

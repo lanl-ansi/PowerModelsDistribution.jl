@@ -2,7 +2,7 @@
 
 @testset "test opendss parser" begin
     @testset "bus discovery parsing" begin
-        eng = parse_file("../test/data/opendss/test_bus_discovery.dss")
+        eng = parse_file("../test/data/opendss/test_bus_discovery.dss"; transformations=[])
 
         @test length(eng["bus"]) == 24
         @test all(k in keys(eng["bus"]) for k in [["$i" for i in 1:23]..., "sourcebus"])
@@ -227,7 +227,7 @@
 end
 
 @testset "test json parser" begin
-    eng = parse_file("../test/data/opendss/case3_balanced.dss")
+    eng = parse_file("../test/data/opendss/case3_balanced.dss"; transformations=[])
 
     io = PipeBuffer()
     print_file(io, eng)

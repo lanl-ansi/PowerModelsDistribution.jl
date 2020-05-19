@@ -41,7 +41,7 @@ const _pmd_math_global_keys = Set{String}([
 
 
 "converts a engineering multinetwork to a math multinetwork"
-function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced::Bool=kron_reduced)::Dict{String,Any}
+function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced::Bool=true)::Dict{String,Any}
     data_math_mn = Dict{String,Any}(
         "nw" => Dict{String,Any}(),
         "multinetwork" => true
@@ -155,15 +155,6 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
         math_obj["vmin"] = get(eng_obj, "vm_lb", fill(0.0, length(terminals)))
         math_obj["vmax"] = get(eng_obj, "vm_ub", fill(Inf, length(terminals)))
 
-        if kron_reduced
-            filter = terminals.!=kr_neutral
-            terminals_kr = terminals[filter]
-            @assert all(t in kr_phases for t in terminals_kr) "bus $name has terminals $(terminals), outside of $kr_phases, cannot be kron reduced"
-
-            _apply_filter!(math_obj, ["vm", "va", "vmin", "vmax"], filter)
-            _pad_properties!(math_obj, ["vm", "va", "vmin", "vmax"], terminals_kr, kr_phases)
-        end
-
         data_math["bus"]["$(math_obj["index"])"] = math_obj
 
         if !haskey(data_math, "bus_lookup")
@@ -217,29 +208,8 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         math_obj["shift"] = zeros(nphases)
         math_obj["tap"] = ones(nphases)
 
-        if kron_reduced
-            @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
-            filter = _kron_reduce_branch!(math_obj,
-                ["br_r", "br_x"], ["g_fr", "b_fr", "g_to", "b_to"],
-                eng_obj["f_connections"], kr_neutral
-            )
-            _apply_filter!(math_obj, ["angmin", "angmax", "tap", "shift"], filter)
-            connections = eng_obj["f_connections"][filter]
-            _pad_properties!(math_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "shift"], connections, kr_phases)
-            _pad_properties!(math_obj, ["angmin"], connections, kr_phases; pad_value=-60.0)
-            _pad_properties!(math_obj, ["angmax"], connections, kr_phases; pad_value=60.0)
-            _pad_properties!(math_obj, ["tap"], connections, kr_phases; pad_value=1.0)
-
-            for key in ["c_rating_a", "c_rating_b", "c_rating_c", "rate_a", "rate_b", "rate_c"]
-                if haskey(math_obj, key)
-                    _apply_filter!(math_obj, [key], filter)
-                    _pad_properties!(math_obj, [key], connections, kr_phases)
-                end
-            end
-        else
-            math_obj["f_connections"] = eng_obj["f_connections"]
-            math_obj["t_connections"] = eng_obj["t_connections"]
-        end
+        f_bus = data_eng["bus"][eng_obj["f_bus"]]
+        t_bus = data_eng["bus"][eng_obj["t_bus"]]
 
         math_obj["switch"] = false
 
@@ -297,17 +267,6 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 end
             end
 
-            if kron_reduced
-                # TODO fix how padding works, this is a workaround to get bank working
-                if eng_obj["configuration"] == WYE
-                    f_connections = math_obj["f_connections"]
-                    _pad_properties!(math_obj, ["tm_lb", "tm_ub", "tm_set"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=1.0)
-                    _pad_properties!(math_obj, ["tm_fix"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=false)
-
-                    math_obj["f_connections"] = math_obj["t_connections"]
-                end
-            end
-
             data_math["transformer"]["$(math_obj["index"])"] = math_obj
 
             push!(to_map, "transformer.$(math_obj["index"])")
@@ -340,8 +299,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
             y_sh = g_sh + im*b_sh
             z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
 
-            #TODO remove once moving out kron-reduction
-            dims = kron_reduced ? 3 : length(eng_obj["tm_set"][1])
+            dims = length(eng_obj["tm_set"][1])
             transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh, nphases=dims)
 
             for w in 1:nrw
@@ -367,17 +325,6 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 for prop in ["tm_lb", "tm_ub", "tm_step"]
                     if haskey(eng_obj, prop)
                         transformer_2wa_obj[prop] = eng_obj[prop][w]
-                    end
-                end
-
-                if kron_reduced
-                    # TODO fix how padding works, this is a workaround to get bank working
-                    if all(conf==WYE for conf in eng_obj["configuration"])
-                        f_connections = transformer_2wa_obj["f_connections"]
-                        _pad_properties!(transformer_2wa_obj, ["tm_lb", "tm_ub", "tm_set"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=1.0)
-                        _pad_properties!(transformer_2wa_obj, ["tm_fix"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=false)
-
-                        transformer_2wa_obj["f_connections"] = transformer_2wa_obj["t_connections"]
                     end
                 end
 
@@ -476,23 +423,6 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
 
             merge!(branch_obj, _branch_obj)
 
-            if kron_reduced
-                @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
-                filter = _kron_reduce_branch!(branch_obj,
-                    ["br_r", "br_x"], ["g_fr", "b_fr", "g_to", "b_to"],
-                    eng_obj["f_connections"], kr_neutral
-                )
-                _apply_filter!(branch_obj, ["angmin", "angmax", "tap", "shift"], filter)
-                connections = eng_obj["f_connections"][filter]
-                _pad_properties!(branch_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "shift"], connections, kr_phases)
-                _pad_properties!(branch_obj, ["angmin"], connections, kr_phases; pad_value=-60.0)
-                _pad_properties!(branch_obj, ["angmax"], connections, kr_phases; pad_value=60.0)
-                _pad_properties!(branch_obj, ["tap"], connections, kr_phases; pad_value=1.0)
-            else
-                branch_obj["f_connections"] = eng_obj["f_connections"]
-                branch_obj["f_connections"] = eng_obj["t_connections"]
-            end
-
             data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 
             map_to = ["branch.$(branch_obj["index"])"]
@@ -520,17 +450,6 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
 
         math_obj["gs"] = get(eng_obj, "gs", zeros(size(eng_obj["bs"])))
 
-        if kron_reduced
-            filter = _kron_reduce_branch!(math_obj,
-                Vector{String}([]), ["gs", "bs"],
-                eng_obj["connections"], kr_neutral
-            )
-            connections = eng_obj["connections"][filter]
-            _pad_properties!(math_obj, ["gs", "bs"], connections, kr_phases)
-        else
-            math_obj["connections"] = eng_obj["connections"]
-        end
-
         data_math["shunt"]["$(math_obj["index"])"] = math_obj
 
         push!(data_math["map"], Dict{String,Any}(
@@ -553,17 +472,6 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
 
         math_obj["pd"] = eng_obj["pd_nom"]
         math_obj["qd"] = eng_obj["qd_nom"]
-
-        if kron_reduced
-            if math_obj["configuration"]==WYE
-                @assert connections[end]==kr_neutral "for wye-connected loads, if kron_reduced the connections list should end with a neutral"
-                _pad_properties!(math_obj, ["pd", "qd"], connections[connections.!=kr_neutral], kr_phases)
-            else
-                _pad_properties_delta!(math_obj, ["pd", "qd"], connections, kr_phases)
-            end
-        else
-            math_obj["connections"] = connections
-        end
 
         math_obj["vnom_kv"] = eng_obj["vm_nom"]
 
@@ -601,17 +509,6 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
 
         math_obj["configuration"] = get(eng_obj, "configuration", WYE)
 
-        if kron_reduced
-            if math_obj["configuration"]==WYE
-                @assert connections[end]==kr_neutral "For WYE connected generators, if kron_reduced the connections list should end with a neutral conductor"
-                _pad_properties!(math_obj, ["pg", "qg", "vg", "pmin", "pmax", "qmin", "qmax"], connections[1:end-1], kr_phases)
-            else
-                _pad_properties_delta!(math_obj, ["pg", "qg", "vg", "pmin", "pmax", "qmin", "qmax"], connections, kr_phases)
-            end
-        else
-            math_obj["connections"] = connections
-        end
-
         # if PV generator mode convert attached bus to PV bus
         if math_obj["control_mode"] == ISOCHRONOUS
             data_math["bus"]["$(data_math["bus_lookup"][eng_obj["bus"]])"]["bus_type"] = 2
@@ -646,17 +543,6 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
         end
 
         _add_gen_cost_model!(math_obj, eng_obj)
-
-        if kron_reduced
-            if math_obj["configuration"]==WYE
-                @assert(connections[end]==kr_neutral)
-                _pad_properties!(math_obj, ["pg", "qg", "vg", "pmin", "pmax", "qmin", "qmax"], connections[1:end-1], kr_phases)
-            else
-                _pad_properties_delta!(math_obj, ["pg", "qg", "vg", "pmin", "pmax", "qmin", "qmax"], connections, kr_phases)
-            end
-        else
-            math_obj["connections"] = connections
-        end
 
         data_math["gen"]["$(math_obj["index"])"] = math_obj
 
@@ -698,10 +584,6 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
 
         math_obj["ps"] = get(eng_obj, "ps", zeros(size(eng_obj["cm_ub"])))
         math_obj["qs"] = get(eng_obj, "qs", zeros(size(eng_obj["cm_ub"])))
-
-        if kron_reduced
-            _pad_properties!(math_obj, ["thermal_rating", "qmin", "qmax", "r", "x", "ps", "qs"], connections, kr_phases)
-        end
 
         data_math["storage"]["$(math_obj["index"])"] = math_obj
 
