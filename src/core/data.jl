@@ -749,39 +749,37 @@ function count_active_connections(data::Dict{String,<:Any})
 
     for edge_type in edge_elements
         for (_, component) in get(data, edge_type, Dict())
-            if (data_model == MATHEMATICAL && !startswith(component["name"], "_virtual")) || data_model == ENGINEERING
-                counted_connections = Set([])
-                if edge_type == "transformer" && !haskey(component, "f_connections") && data_model == ENGINEERING
-                    for (wdg, connections) in enumerate(component["connections"])
-                        for terminal in connections
-                            if !(terminal in counted_connections)
-                                if !(terminal in data["bus"][component["bus"][wdg]]["grounded"])
-                                    push!(counted_connections, terminal)
-                                    active_connections += 1
-                                end
+            counted_connections = Set([])
+            if edge_type == "transformer" && !haskey(component, "f_connections") && data_model == ENGINEERING
+                for (wdg, connections) in enumerate(component["connections"])
+                    for terminal in connections
+                        if !(terminal in counted_connections)
+                            if !(terminal in data["bus"][component["bus"][wdg]]["grounded"])
+                                push!(counted_connections, terminal)
+                                active_connections += 1
                             end
                         end
                     end
-                else
-                    for (bus, connections) in [(component["f_bus"], component["f_connections"]), (component["t_bus"], component["t_connections"])]
-                        for (i, terminal) in enumerate(connections)
-                            if !(terminal in counted_connections)
-                                if data_model == ENGINEERING
-                                    if edge_type == "transformer" && component["configuration"] == WYE && terminal != connections[end]
-                                        push!(counted_connections, terminal)
-                                        active_connections += 1
-                                    elseif !(terminal in data["bus"][bus]["grounded"])
-                                        push!(counted_connections, terminal)
-                                        active_connections += 1
-                                    end
-                                else
-                                    if edge_type == "transformer" && component["configuration"] == WYE && terminal != connections[end]
-                                        push!(counted_connections, terminal)
-                                        active_connections += 1
-                                    elseif !data["bus"]["$bus"]["grounded"][i]
-                                        push!(counted_connections, terminal)
-                                        active_connections += 1
-                                    end
+                end
+            else
+                for (bus, connections) in [(component["f_bus"], component["f_connections"]), (component["t_bus"], component["t_connections"])]
+                    for (i, terminal) in enumerate(connections)
+                        if !(terminal in counted_connections)
+                            if data_model == ENGINEERING
+                                if edge_type == "transformer" && component["configuration"] == WYE && terminal != connections[end]
+                                    push!(counted_connections, terminal)
+                                    active_connections += 1
+                                elseif !(terminal in data["bus"][bus]["grounded"])
+                                    push!(counted_connections, terminal)
+                                    active_connections += 1
+                                end
+                            else
+                                if edge_type == "transformer" && component["configuration"] == WYE && terminal != connections[end]
+                                    push!(counted_connections, terminal)
+                                    active_connections += 1
+                                elseif !data["bus"]["$bus"]["grounded"][i]
+                                    push!(counted_connections, terminal)
+                                    active_connections += 1
                                 end
                             end
                         end
