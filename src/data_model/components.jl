@@ -594,14 +594,14 @@ function create_voltage_source(bus, connections;
     kwargs...
         )::Dict{String,Any}
 
-    n_conductors = length(connections)
+    nphases = configuration == WYE ? length(connections) - 1 : length(connections)
 
     voltage_source = Dict{String,Any}(
         "bus" => bus,
         "connections" => connections,
         "configuration" => configuration,
-        "vm" => !ismissing(vm) ? vm : ones(n_conductors),
-        "va" => !ismissing(va) ? va : zeros(n_conductors),
+        "vm" => !ismissing(vm) ? vm : ones(nphases),
+        "va" => !ismissing(va) ? va : zeros(nphases),
         "status" => get(kwargs, :status, ENABLED),
     )
 
