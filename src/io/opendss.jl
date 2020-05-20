@@ -322,7 +322,7 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
 
         eng_obj = Dict{String,Any}(
             "phases" => nphases,
-            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=collect(1:defaults["phases"]+1)),
+            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=[collect(1:defaults["phases"])..., 0]),
             "bus" => _parse_bus_id(defaults["bus1"])[1],
             "pg" => fill(defaults["kw"] / nphases, nphases),
             "qg" => fill(defaults["kvar"] / nphases, nphases),
@@ -359,7 +359,6 @@ function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         _apply_like!(dss_obj, data_dss, "vsource")
         defaults = _create_vsource(id; _to_kwargs(dss_obj)...)
 
-
         ph1_ang = defaults["angle"]
         vm_pu = defaults["pu"]
 
@@ -371,7 +370,7 @@ function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
 
         eng_obj = Dict{String,Any}(
             "bus" => _parse_bus_id(defaults["bus1"])[1],
-            "connections" => collect(1:phases),
+            "connections" => _get_conductors_ordered(defaults["bus1"]; default=[collect(1:phases)..., 0], pad_ground=true),
             "vm" => vm,
             "va" => va,
             "rs" => defaults["rmatrix"],
