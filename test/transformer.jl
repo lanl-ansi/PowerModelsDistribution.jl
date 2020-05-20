@@ -17,7 +17,6 @@
         end
 
         @testset "2w transformer acp pf dy_lag" begin
-            file =
             eng = parse_file("../test/data/opendss/ut_trans_2w_dy_lag.dss")
             sol = run_ac_mc_pf(eng, ipopt_solver; make_si=false)
             @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.92092, 0.91012, 0.90059], Inf) <= 1.5E-5
