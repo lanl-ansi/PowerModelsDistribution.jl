@@ -8,7 +8,7 @@ function parse_file(
     data_model::DataModel=ENGINEERING,
     import_all::Bool=false,
     bank_transformers::Bool=true,
-    transformations::Vector{<:Any}=[apply_kron_reduction!, pad_mc_properties!],
+    transformations::Vector{<:Any}=[],
     build_multinetwork::Bool=false,
     kron_reduced::Bool=true,
     time_series::String="daily"
@@ -21,6 +21,7 @@ function parse_file(
             time_series=time_series
         )
 
+        transformations = [transformations..., apply_kron_reduction!, pad_mc_properties!]  # TODO Remove in v0.10 (breaking)
         for transform in transformations
             @assert isa(transform, Function) || isa(transform, Tuple{<:Function,Vararg{Pair{String,<:Any}}})
 
