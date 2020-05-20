@@ -144,7 +144,7 @@ end
 
 
 "loss model builder for transformer decomposition"
-function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Any, to_map::Vector{String}, r_s::Vector{Float64}, zsc::Dict{Tuple{Int,Int},Complex{Float64}}, ysh::Complex{Float64}; nphases::Int=3, kron_reduced=false)::Vector{Int}
+function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Any, to_map::Vector{String}, r_s::Vector{Float64}, zsc::Dict{Tuple{Int,Int},Complex{Float64}}, ysh::Complex{Float64}; nphases::Int=3)::Vector{Int}
     # precompute the minimal set of buses and lines
     N = length(r_s)
     tr_t_bus = collect(1:N)
@@ -227,7 +227,7 @@ function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Any
             "index" => length(data_math["bus"])+1,
         )
 
-        if !kron_reduced
+        if !get(data_math, "is_kron_reduced", false)
             if bus in tr_t_bus
                 bus_obj["terminals"] = collect(1:nphases+1)
                 bus_obj["vmin"] = fill(0.0, nphases+1)
@@ -743,4 +743,24 @@ function _check_equal(data1::Dict{String,<:Any}, data2::Dict{String,<:Any}; cont
     end
 
     return lines
+end
+
+
+"adds conductors to connections during padding process"
+function _pad_connections!(eng_obj::Dict{String,<:Any}, connection_key::String, conductors::Union{Vector{Int},Vector{String}})
+    for cond in conductors
+        if !(cond in eng_obj[connection_key])
+            push!(eng_obj[connection_key], cond)
+        end
+    end
+end
+
+
+"adds conductors to connections during padding process, transformer winding variant"
+function _pad_connections!(eng_obj::Dict{String,<:Any}, connection_key::String, wdg::Int, conductors::Union{Vector{Int},Vector{String}})
+    for cond in conductors
+        if !(cond in eng_obj[connection_key][wdg])
+            push!(eng_obj[connection_key][wdg], cond)
+        end
+    end
 end
