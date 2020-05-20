@@ -21,7 +21,6 @@ function parse_file(
             time_series=time_series
         )
 
-        transformations = [transformations..., apply_kron_reduction!, pad_mc_properties!]  # TODO Remove in v0.10 (breaking)
         for transform in transformations
             @assert isa(transform, Function) || isa(transform, Tuple{<:Function,Vararg{Pair{String,<:Any}}})
 
@@ -116,7 +115,7 @@ function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true)
                     nw["basekv"]  = maximum(maximum(bus["vbase"] for (_, bus) in nw["bus"]) for nw in values(data["nw"]))
                     nw["baseMVA"] = data["settings"]["sbase"]*data["settings"]["power_scale_factor"]/1E6
                 end
-            else ismultinetwork(data)
+            else
                 data["baseMVA"] = data["settings"]["sbase"]*data["settings"]["power_scale_factor"]/1E6
                 data["basekv"]  = maximum(bus["vbase"] for (_, bus) in data["bus"])
                 _PM.check_connectivity(data)
