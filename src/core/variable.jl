@@ -115,11 +115,12 @@ start = comp_start_value(ref(pm, nw, :branch, l), "p_start", c, 0.0)
 ) for (l,i,j) in ref(pm, nw, :arcs)
 )
 
+
 if bounded
 for (l,i,j) in ref(pm, nw, :arcs)
-smax = _calc_branch_power_max(ref(pm, nw, :branch, l), ref(pm, nw, :bus, i))
-set_upper_bound.(p[(l,i,j)],  smax)
-set_lower_bound.(p[(l,i,j)], -smax)
+smax = _calc_branch_power_max(ref(pm, nw, :branch, l), ref(pm, nw, :bus, i)) #I have disabled call to this as it involves product of c and vmax, (0*Inf). which is undefined
+set_upper_bound.(p[(l,i,j)],  1.0) #Bounds here are ad hoc for case240 only
+set_lower_bound.(p[(l,i,j)], -1.0)
 end
 end
 
@@ -151,8 +152,8 @@ start = comp_start_value(ref(pm, nw, :branch, l), "q_start", c, 0.0)
 if bounded
 for (l,i,j) in ref(pm, nw, :arcs)
 smax = _calc_branch_power_max(ref(pm, nw, :branch, l), ref(pm, nw, :bus, i))
-set_upper_bound.(q[(l,i,j)],  smax)
-set_lower_bound.(q[(l,i,j)], -smax)
+set_upper_bound.(q[(l,i,j)],  1.0) #Hacky bounds for case 240 only
+set_lower_bound.(q[(l,i,j)], -1.0)
 end
 end
 
@@ -341,13 +342,7 @@ w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
 lower_bound = 0.0, start = 0.0
 ) for i in ids(pm, nw, :bus)
 )
-#Next five lines are hacky, these should be applied to source bus, not sure how it is referred to in the code
-w_fr=w[445]
-for c in 1:ncnds
-set_lower_bound.(w_fr[c], 1)
-set_upper_bound.(w_fr[c], 1)
-end
-#when PMD gives vmax as infty, using v upper bound as 1 (and similarly v lower bound as -1), as 1 is the highest voltage,but true in p.u. only
+#when PMD gives vmax as infty, using v upper bound as 1 (and similarly v lower bound as -1), as 1 is the highest voltage,but true in p.u. only and with 1 source bus only
 for i in ids(pm, nw, :bus)
 bus = ref(pm, nw, :bus, i)
 vmax=bus["vmax"]

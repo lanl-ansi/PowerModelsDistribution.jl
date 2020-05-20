@@ -50,7 +50,7 @@ function constraint_mc_power_losses(pm::LPUBFDiagModel, n::Int, i, f_bus, t_bus,
        JuMP.@constraint(pm.model, (p_fr[c] + p_to[c])*1000.0 == (g_sh_fr[c,c]*w_fr[c] +  g_sh_to[c,c]*w_to[c])*1000.0)
        JuMP.@constraint(pm.model, (q_fr[c] + q_to[c])*1000.0 == (-b_sh_fr[c,c]*w_fr[c] + -b_sh_to[c,c]*w_to[c])*1000.0)
     else
-      b=JuMP.@constraint(pm.model, (p_fr[c] + p_to[c])*1000.0 == 0)
+       b=JuMP.@constraint(pm.model, (p_fr[c] + p_to[c])*1000.0 == 0)
        JuMP.@constraint(pm.model, (q_fr[c] + q_to[c])*1000.0 == 0)
      end
      end
@@ -87,8 +87,8 @@ function constraint_mc_model_voltage_magnitude_difference(pm::LPUBFDiagModel, n:
     if((vmax1[c]!=0) && (vmax2[c]!=0))
       a=JuMP.@constraint(pm.model, w_to[c]*1000.0 == 1000.0*(w_fr[c] - (MP[c,1]*p_s_fr[1]+MP[c,2]*p_s_fr[2]+MP[c,3]*p_s_fr[3]) - (MQ[c,1]*q_s_fr[1]+MQ[c,2]*q_s_fr[2]+MQ[c,3]*q_s_fr[3])))
     else
-     #JuMP.@constraint(pm.model, p_s_fr[c]*1000.0==0)
-     #JuMP.@constraint(pm.model, q_s_fr[c]*1000.0==0)
+      JuMP.@constraint(pm.model, p_s_fr[c]*1000.0==0)
+      JuMP.@constraint(pm.model, q_s_fr[c]*1000.0==0)
     end
    end
 
@@ -143,7 +143,7 @@ function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_ar
         sum((pg[g])[c]*1000.0 for g in bus_gens)
         - sum((ps[s])[c]*1000.0 for s in bus_storage)
         - sum((pd[d])[c]*1000.0 for d in bus_loads) 
-	- sum(gs[c]*w[c] for gs in values(bus_gs)))
+	- sum(gs[c]*w[c]*1000.0 for gs in values(bus_gs)))
     end
     end
 
@@ -158,7 +158,7 @@ function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_ar
         sum((qg[g])[c]*1000.0 for g in bus_gens)
         - sum((qs[s])[c]*1000.0 for s in bus_storage)
         - sum((qd[d])[c]*1000.0 for d in bus_loads)
-        + sum(bs[c]*w[c] for bs in values(bus_bs)))
+        + sum(bs[c]*w[c]*1000.0 for bs in values(bus_bs)))
    end
    end
 
