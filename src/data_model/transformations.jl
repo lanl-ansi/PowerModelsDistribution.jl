@@ -188,7 +188,7 @@ end
 
 
 "pad matrices to max number of conductors"
-function pad_mc_properties!(data_eng::Dict{String,<:Any})
+function apply_property_padding!(data_eng::Dict{String,<:Any})
     all_conductors = _get_complete_conductor_set(data_eng)
 
     if haskey(data_eng, "bus")
