@@ -738,19 +738,17 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
         map_to = "gen.$(math_obj["index"])"
 
         if !all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && !all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0))
-            t_bus = deepcopy(data_math["bus"]["$(math_obj["gen_bus"])"])
-
             bus_obj = Dict{String,Any}(
                 "bus_i" => length(data_math["bus"])+1,
                 "index" => length(data_math["bus"])+1,
-                "terminals" => t_bus["terminals"],
-                "grounded" => t_bus["grounded"],
+                "terminals" => collect(1:nconductors+1),
+                "grounded" => [fill(false, nconductors)..., true],
                 "name" => "_virtual_bus.voltage_source.$name",
                 "bus_type" => 3,
-                "vm" => eng_obj["vm"],
-                "va" => eng_obj["va"],
-                "vmin" => eng_obj["vm"],
-                "vmax" => eng_obj["vm"],
+                "vm" => [eng_obj["vm"]..., 0.0],
+                "va" => [eng_obj["va"]..., 0.0],
+                "vmin" => [eng_obj["vm"]..., 0.0],
+                "vmax" => [eng_obj["vm"]..., 0.0]
             )
 
             math_obj["gen_bus"] = gen_bus = bus_obj["bus_i"]
