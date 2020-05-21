@@ -457,7 +457,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 # "f_bus" => bus_obj["bus_i"],  # TODO enable real switches
                 "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
                 "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
-                "f_connections" => eng_obj["t_connections"],  # the virtual branch connects to the switch on the to-side
+                "f_connections" => eng_obj["f_connections"],  # TODO, change to t_connections, the virtual branch connects to the switch on the to-side
                 "t_connections" => eng_obj["t_connections"],  # should be identical to the switch's to-side connections
                 "br_r" => _impedance_conversion(data_eng, eng_obj, "rs"),
                 "br_x" => _impedance_conversion(data_eng, eng_obj, "xs"),
