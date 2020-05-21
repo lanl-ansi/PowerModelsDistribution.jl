@@ -50,7 +50,7 @@ end
 
 
 "removes all fields ending in '_ub' or '_lb'"
-function rm_bounds!(data_eng)
+function rm_all_bounds!(data_eng)
     for (k,v) in data_eng
         if isa(v, Dict) && k!="settings"
             for (id, comp) in v
