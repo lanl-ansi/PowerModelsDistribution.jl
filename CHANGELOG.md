@@ -2,6 +2,7 @@
 
 ## staged
 
+- Depreciate run_mc_mld_bf in favor of run_mc_mld (to be removed in v0.10)
 - Add CONTRIBUTING.md
 - Add pull request template
 - Add Pull Request Checks (Github Actions), to inform developers of potentially missing aspects of their PR
