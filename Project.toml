@@ -5,6 +5,7 @@ repo = "https://github.com/lanl-ansi/PowerModelsDistribution.jl.git"
 version = "0.9.0"
 
 [deps]
+CPLEX = "a076750e-1247-5638-91d2-ce28b192dca0"
 InfrastructureModels = "2030c09a-7f63-5d83-885d-db604e0e9cc0"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"

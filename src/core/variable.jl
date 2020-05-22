@@ -343,6 +343,7 @@ lower_bound = 0.0, start = 0.0
 ) for i in ids(pm, nw, :bus)
 )
 #when PMD gives vmax as infty, using v upper bound as 1 (and similarly v lower bound as -1), as 1 is the highest voltage,but true in p.u. only and with 1 source bus only
+#Alternatively can set vmax to max voltage of all PV buses and source bus, maybe more general?
 for i in ids(pm, nw, :bus)
 bus = ref(pm, nw, :bus, i)
 vmax=bus["vmax"]
