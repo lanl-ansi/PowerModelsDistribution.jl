@@ -101,23 +101,23 @@ end
 
 
 "Parses a JSON file into a PowerModelsDistribution data structure"
-function parse_json(file::String; validate::Bool=false)
+function parse_json(file::String; kwargs...)
     data = open(file) do io
-        parse_json(io; filetype=split(lowercase(file), '.')[end], validate=validate)
+        parse_json(io; kwargs...)
     end
     return data
 end
 
 
 "Parses a JSON file into a PowerModelsDistribution data structure"
-function parse_json(io::IO; validate::Bool=false)::Dict{String,Any}
+function parse_json(io::IO; validate::Bool=false, parse_enums::Bool=true)::Dict{String,Any}
     data = JSON.parse(io)
 
     _jsonver2juliaver!(data)
 
     _parse_mats!(data)
 
-    _parse_enums!(data)
+    parse_enums && _parse_enums!(data)
 
     if validate
         correct_network_data!(data)
