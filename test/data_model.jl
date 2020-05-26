@@ -64,7 +64,7 @@
         @test length(math["bus"]) == 5
         @test all(all(isapprox.(bus["vmin"], 0.95)) && all(isapprox.(bus["vmax"], 1.05)) for (_,bus) in math["bus"] if bus["name"] != "sourcebus" && !startswith(bus["name"], "_virtual"))
 
-        eng = parse_file("../test/data/opendss/case3_balanced.dss"; transformations=[rm_bounds!])
+        eng = parse_file("../test/data/opendss/case3_balanced.dss"; transformations=[remove_all_bounds!])
         @test !all(haskey(line, "cm_ub") for line in values(eng["line"]))
     end
 
