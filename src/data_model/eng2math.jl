@@ -760,7 +760,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "source_id" => "_virtual_branch.$(eng_obj["source_id"])",
                 "f_bus" => bus_obj["bus_i"],
                 "t_bus" => data_math["bus_lookup"][eng_obj["bus"]],
-                "f_connections" => eng_obj["connections"],
+                "f_connections" => collect(1:nconductors),
                 "t_connections" => eng_obj["connections"],
                 "angmin" => fill(-60.0, nconductors),
                 "angmax" => fill( 60.0, nconductors),
