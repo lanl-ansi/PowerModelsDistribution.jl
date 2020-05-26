@@ -2,7 +2,7 @@
 
 @testset "test opendss parser" begin
     @testset "bus discovery parsing" begin
-        eng = parse_file("../test/data/opendss/test_bus_discovery.dss"; transformations=[])
+        eng = parse_file("../test/data/opendss/test_bus_discovery.dss")
 
         @test length(eng["bus"]) == 24
         @test all(k in keys(eng["bus"]) for k in [["$i" for i in 1:23]..., "sourcebus"])
