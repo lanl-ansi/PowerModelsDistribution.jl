@@ -90,7 +90,7 @@
 
         @test isapprox(result["solution"]["load"]["1"]["status"], 1.000; atol = 1e-3)
 
-        @test_throws(TESTLOG, MethodError, run_mc_mld(case5, NFAPowerModel, ipopt_solver))
+        @test_throws(TESTLOG, MethodError, run_mc_mld_bf(case5, NFAPowerModel, ipopt_solver))
     end
 
     @testset "3-bus lpubfdiag mld" begin
