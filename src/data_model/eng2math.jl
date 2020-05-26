@@ -217,9 +217,6 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         math_obj["shift"] = zeros(nphases)
         math_obj["tap"] = ones(nphases)
 
-        f_bus = data_eng["bus"][eng_obj["f_bus"]]
-        t_bus = data_eng["bus"][eng_obj["t_bus"]]
-
         if kron_reduced
             @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
             filter = _kron_reduce_branch!(math_obj,
@@ -424,12 +421,15 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
         # if !all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && !all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0)) # TODO enable real switches
             # build virtual bus
 
-            f_bus = data_math["bus"]["$(math_obj["f_bus"])"]
+            f_bus = deepcopy(data_math["bus"]["$(math_obj["f_bus"])"])
+            t_bus = deepcopy(data_math["bus"]["$(math_obj["t_bus"])"])
 
             bus_obj = Dict{String,Any}(
                 "name" => "_virtual_bus.switch.$name",
                 "bus_i" => length(data_math["bus"])+1,
                 "bus_type" => get(eng_obj, "state", CLOSED) == OPEN ? 4 : 1,
+                "terminals" => t_bus["terminals"],  # connected to the switch on the to-side
+                "grounded" => t_bus["grounded"],  # connected to the switch on the to-side
                 "vmin" => f_bus["vmin"],
                 "vmax" => f_bus["vmax"],
                 "index" => length(data_math["bus"])+1,
@@ -457,6 +457,8 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 # "f_bus" => bus_obj["bus_i"],  # TODO enable real switches
                 "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
                 "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
+                "f_connections" => eng_obj["f_connections"],  # TODO, change to t_connections, the virtual branch connects to the switch on the to-side
+                "t_connections" => eng_obj["t_connections"],  # should be identical to the switch's to-side connections
                 "br_r" => _impedance_conversion(data_eng, eng_obj, "rs"),
                 "br_x" => _impedance_conversion(data_eng, eng_obj, "xs"),
                 "g_fr" => zeros(nphases, nphases),
@@ -749,15 +751,6 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "vmin" => [eng_obj["vm"]..., 0.0],
                 "vmax" => [eng_obj["vm"]..., 0.0]
             )
-
-            if kron_reduced
-                bus_obj["terminals"] = bus_obj["terminals"][1:end-1]
-                bus_obj["grounded"] = bus_obj["grounded"][1:end-1]
-                bus_obj["vm"] = bus_obj["vm"][1:end-1]
-                bus_obj["va"] = bus_obj["va"][1:end-1]
-                bus_obj["vmin"] = bus_obj["vmin"][1:end-1]
-                bus_obj["vmax"] = bus_obj["vmax"][1:end-1]
-            end
 
             math_obj["gen_bus"] = gen_bus = bus_obj["bus_i"]
 

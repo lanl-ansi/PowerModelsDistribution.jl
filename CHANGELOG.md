@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixes inconsistency of connections on MATHEMATICAL components, in particular, virtual objects (#280)
 - Add CONTRIBUTING.md
 - Add pull request template
 - Add Pull Request Checks (Github Actions), to inform developers of potentially missing aspects of their PR
