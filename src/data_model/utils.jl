@@ -220,6 +220,7 @@ function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Any
             "bus_i" => length(data_math["bus"])+1,
             "vmin" => fill(0.0, nphases),
             "vmax" => fill(Inf, nphases),
+            "terminals" => collect(1:nphases),
             "grounded" => fill(false, nphases),
             "base_kv" => 1.0,
             "bus_type" => 1,

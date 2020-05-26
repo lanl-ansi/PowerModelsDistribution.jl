@@ -781,9 +781,14 @@ function count_active_connections(data::Dict{String,<:Any})
                                 if edge_type == "transformer" && component["configuration"] == WYE && terminal != connections[end]
                                     push!(counted_connections, terminal)
                                     active_connections += 1
-                                elseif !data["bus"]["$bus"]["grounded"][i]
-                                    push!(counted_connections, terminal)
-                                    active_connections += 1
+                                elseif !get(data["bus"]["$bus"]["grounded"], i, false)
+                                    if get(data, "is_padded", false) && bus["vmax"][i] > 0
+                                        push!(counted_connections, terminal)
+                                        active_connections += 1
+                                    else
+                                        push!(counted_connections, terminal)
+                                        active_connections += 1
+                                    end
                                 end
                             end
                         end
@@ -814,7 +819,7 @@ function count_active_terminals(data::Dict{String,<:Any}; count_grounded::Bool=f
                             active_terminal_count += 1
                         end
                     else
-                        if !bus["grounded"][i]
+                        if !get(bus["grounded"], i, false)
                             push!(counted_terminals, terminal)
                             active_terminal_count += 1
                         end
