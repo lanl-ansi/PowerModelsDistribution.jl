@@ -782,7 +782,7 @@ function count_active_connections(data::Dict{String,<:Any})
                                     push!(counted_connections, terminal)
                                     active_connections += 1
                                 elseif !get(data["bus"]["$bus"]["grounded"], i, false)
-                                    if get(data, "is_padded", false) && bus["vmax"][i] > 0
+                                    if get(data, "is_padded", false) && data["bus"]["$bus"]["vmax"][i] > 0
                                         push!(counted_connections, terminal)
                                         active_connections += 1
                                     else
