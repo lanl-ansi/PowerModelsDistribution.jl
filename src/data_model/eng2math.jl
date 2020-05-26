@@ -217,9 +217,6 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         math_obj["shift"] = zeros(nphases)
         math_obj["tap"] = ones(nphases)
 
-        f_bus = data_eng["bus"][eng_obj["f_bus"]]
-        t_bus = data_eng["bus"][eng_obj["t_bus"]]
-
         math_obj["switch"] = false
 
         math_obj["br_status"] = Int(eng_obj["status"])
