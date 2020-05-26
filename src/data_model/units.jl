@@ -183,13 +183,13 @@ function _make_math_per_unit!(nw::Dict{String,<:Any}, data_math::Dict{String,<:A
             vbases = Dict{String,Real}("$(data_math["bus_lookup"][id])" => vbase for (id, vbase) in data_math["settings"]["vbases_default"])
         else
             buses_type_3 = [(id, sum(bus["vm"])/length(bus["vm"])) for (id,bus) in nw["bus"] if haskey(bus, "bus_type") && bus["bus_type"]==3]
-                if !isempty(buses_type_3)
-                    vbases = Dict([buses_type_3[1]])
-                else
-                    Memento.error("Please specify vbases manually; cannot make an educated guess for this data model.")
-                end
+            if !isempty(buses_type_3)
+                vbases = Dict([buses_type_3[1]])
+            else
+                Memento.error("Please specify vbases manually; cannot make an educated guess for this data model.")
             end
         end
+    end
 
     bus_vbase, line_vbase = calc_voltage_bases(nw, vbases)
     voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
@@ -241,7 +241,7 @@ end
 "per-unit conversion for buses"
 function _rebase_pu_bus!(bus::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
     # if not in p.u., these are normalized with respect to vnom
-    prop_vnom = ["vm", "vmax", "vmin", "vm_set", "vm_ln_min", "vm_ln_max", "vm_lg_min", "vm_lg_max", "vm_ng_min", "vm_ng_max", "vm_ll_min", "vm_ll_max"]
+    prop_vnom = ["vm", "vmax", "vmin", "vm_set", "vm_ln_min", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub"]
 
     if !haskey(bus, "vbase")
 
@@ -250,11 +250,23 @@ function _rebase_pu_bus!(bus::Dict{String,<:Any}, vbase::Real, sbase::Real, sbas
         #     _scale_props!(bus, ["vm_nom"], 1/vbase)
         # end
         _scale_props!(bus, prop_vnom, 1/vbase)
+        # tupples need special treatment
+        for field in ["vm_pair_ub", "vm_pair_lb"]
+            if haskey(bus, field)
+                bus[field] = [(c,d,b*1/vbase) for (c,d,b) in bus[field]]
+            end
+        end
 
         z_old = 1.0
     else
         vbase_old = bus["vbase"]
         _scale_props!(bus, [prop_vnom..., "vm_nom"], vbase_old/vbase)
+        # tupples need special treatment
+        for field in ["vm_pair_ub", "vm_pair_lb"]
+            if haskey(bus, field)
+                bus[field] = [(c,d,b*vbase_old/vbase) for (c,d,b) in bus[field]]
+            end
+        end
 
         z_old = vbase_old^2*sbase_old*voltage_scale_factor
     end

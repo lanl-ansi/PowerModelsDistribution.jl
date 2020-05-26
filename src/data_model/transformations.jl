@@ -47,3 +47,19 @@ function apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,M
         end
     end
 end
+
+
+"removes all fields ending in '_ub' or '_lb'"
+function remove_all_bounds!(data_eng)
+    for (k,v) in data_eng
+        if isa(v, Dict) && k!="settings"
+            for (id, comp) in v
+                for field in keys(comp)
+                    if endswith(field, "_lb") || endswith(field, "_ub")
+                        delete!(comp, field)
+                    end
+                end
+            end
+        end
+    end
+end

@@ -2,7 +2,7 @@ import LinearAlgebra: diagm
 
 "items that are mapped one-to-one from engineering to math models"
 const _1to1_maps = Dict{String,Vector{String}}(
-    "bus" => ["vm", "va", "terminals", "phases", "neutral", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub", "dss"],
+    "bus" => ["vm", "va", "terminals", "phases", "neutral", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub", "dss", "vuf_ub", "vm_pair_lb", "vm_pair_ub"],
     "line" => ["f_connections", "t_connections", "source_id", "dss"],
     "transformer" => ["f_connections", "t_connections", "source_id", "dss"],
     "switch" => ["status", "f_connections", "t_connections", "source_id", "dss"],
@@ -721,6 +721,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
 
         math_obj["name"] = "_virtual_gen.voltage_source.$name"
         math_obj["gen_bus"] = gen_bus = data_math["bus_lookup"][eng_obj["bus"]]
+        math_obj["connections"] = collect(1:nconductors+1)
         math_obj["gen_status"] = Int(eng_obj["status"])
         math_obj["pg"] = fill(0.0, nconductors)
         math_obj["qg"] = fill(0.0, nconductors)
