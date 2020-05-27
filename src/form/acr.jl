@@ -529,9 +529,6 @@ function constraint_mc_transformer_power_dy(pm::_PM.AbstractACRModel, nw::Int, t
     vrd = M*vr_p_fr
     vid = M*vi_p_fr
 
-    @show pol
-    @show f_cnd
-
     JuMP.@constraint(pm.model, vrd .== (pol*tm_scale)*tm.*vr_p_to)
     JuMP.@constraint(pm.model, vid .== (pol*tm_scale)*tm.*vi_p_to)
 
