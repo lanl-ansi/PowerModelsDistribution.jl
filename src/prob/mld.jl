@@ -6,6 +6,7 @@ end
 
 "Run Branch Flow Model Load Shedding Problem"
 function run_mc_mld_bf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    Memento.info(_LOGGER, "We recommend using run_mc_mld, which will attempt to select appropriate variables and constraints based on the specified formulation, instead of run_mc_mld_bf")
     return run_mc_model(data, model_type, solver, build_mc_mld_bf; kwargs...)
 end
 
@@ -58,6 +59,55 @@ function build_mc_mld(pm::_PM.AbstractPowerModel)
     for i in ids(pm, :branch)
         constraint_mc_ohms_yt_from(pm, i)
         constraint_mc_ohms_yt_to(pm, i)
+
+        constraint_mc_voltage_angle_difference(pm, i)
+
+        constraint_mc_thermal_limit_from(pm, i)
+        constraint_mc_thermal_limit_to(pm, i)
+    end
+
+    for i in ids(pm, :transformer)
+        constraint_mc_transformer_power(pm, i)
+    end
+
+    objective_mc_min_load_setpoint_delta(pm)
+end
+
+
+"Load shedding problem for Branch Flow model"
+function build_mc_mld(pm::AbstractUBFModels)
+    variable_mc_bus_voltage_indicator(pm; relax=true)
+    variable_mc_bus_voltage_on_off(pm)
+
+    variable_mc_branch_current(pm)
+    variable_mc_branch_power(pm)
+    variable_mc_transformer_power(pm)
+
+    variable_mc_gen_indicator(pm; relax=true)
+    variable_mc_gen_power_setpoint_on_off(pm)
+
+    variable_mc_load_indicator(pm; relax=true)
+    variable_mc_shunt_indicator(pm; relax=true)
+
+    constraint_mc_model_current(pm)
+
+    for i in ids(pm, :ref_buses)
+        constraint_mc_theta_ref(pm, i)
+    end
+
+    constraint_mc_bus_voltage_on_off(pm)
+
+    for i in ids(pm, :gen)
+        constraint_mc_gen_power_on_off(pm, i)
+    end
+
+    for i in ids(pm, :bus)
+        constraint_mc_shed_power_balance(pm, i)
+    end
+
+    for i in ids(pm, :branch)
+        constraint_mc_power_losses(pm, i)
+        constraint_mc_model_voltage_magnitude_difference(pm, i)
 
         constraint_mc_voltage_angle_difference(pm, i)
 
