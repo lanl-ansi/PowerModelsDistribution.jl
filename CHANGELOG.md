@@ -10,6 +10,7 @@
 
 ## v0.9.0
 
+- Add missing ACR transformer constraint functions
 - Add a transformation rm_bounds! that removes all fields ending in _ub and _lb
 - Add missing connections for virtual generator at voltage source
 - Fix pu conversion bus voltage bounds and add parsing for vm_pair_lb and vm_pair_ub
