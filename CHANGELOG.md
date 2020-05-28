@@ -2,7 +2,7 @@
 
 ## staged
 
-- Depreciate run_mc_mld_bf in favor of run_mc_mld (to be removed in v0.10)
+- Add functionality of run_mc_mld_bf to run_mc_mld via multiple dispatch
 - Fixes inconsistency of connections on MATHEMATICAL components, in particular, virtual objects (#280)
 - Add CONTRIBUTING.md
 - Add pull request template

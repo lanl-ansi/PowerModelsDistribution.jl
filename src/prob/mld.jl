@@ -6,7 +6,7 @@ end
 
 "Run Branch Flow Model Load Shedding Problem"
 function run_mc_mld_bf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    Memento.warn(_LOGGER, "DEPRECIATED: run_mc_mld_bf is depreciated in favor of run_mc_mld, and will be removed in v0.10")
+    Memento.info(_LOGGER, "We recommend using run_mc_mld, which will attempt to select appropriate variables and constraints based on the specified formulation, instead of run_mc_mld_bf")
     return run_mc_model(data, model_type, solver, build_mc_mld_bf; kwargs...)
 end
 
@@ -125,7 +125,6 @@ end
 
 "Load shedding problem for Branch Flow model"
 function build_mc_mld_bf(pm::_PM.AbstractPowerModel)
-    # TODO remove for v0.10 (depreciated)
     variable_mc_bus_voltage_indicator(pm; relax=true)
     variable_mc_bus_voltage_on_off(pm)
 
