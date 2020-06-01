@@ -107,7 +107,7 @@ function count_nodes(data::Dict{String,<:Any})::Int
 
                 if all(!occursin(pattern, name) for pattern in [_excluded_count_busname_patterns...])
                     if data["data_model"] == MATHEMATICAL
-                        if get(data, "is_padded", false)
+                        if get(data, "is_projected", false)
                             n_nodes += count(i->i>0, get(bus, "vmax", []))
                         else
                             n_nodes += length(bus["terminals"][.!get(bus, "grounded", zeros(length(bus["terminals"])))])
@@ -780,8 +780,8 @@ function count_active_connections(data::Dict{String,<:Any})
                             else
                                 if edge_type == "transformer"
                                     if component["configuration"] == DELTA || (component["configuration"] == WYE && terminal != connections[end])
-                                    push!(counted_connections, terminal)
-                                    active_connections += 1
+                                        push!(counted_connections, terminal)
+                                        active_connections += 1
                                     end
                                 elseif !get(data["bus"]["$bus"]["grounded"], i, false)
                                     if get(data, "is_projected", false) && get(data["bus"]["$bus"]["vmax"], i, Inf) > 0

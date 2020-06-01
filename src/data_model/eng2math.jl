@@ -41,7 +41,7 @@ const _pmd_math_global_keys = Set{String}([
 
 
 "converts a engineering multinetwork to a math multinetwork"
-function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced::Bool=true)::Dict{String,Any}
+function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced::Bool=true, project_phases::Bool=true)::Dict{String,Any}
     data_math_mn = Dict{String,Any}(
         "nw" => Dict{String,Any}(),
         "multinetwork" => true
@@ -51,7 +51,7 @@ function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced:
             nw[k] = data_eng_mn[k]
         end
 
-        data_math_mn["nw"][n] = _map_eng2math(nw; kron_reduced=kron_reduced)
+        data_math_mn["nw"][n] = _map_eng2math(nw; kron_reduced=kron_reduced, project_phases=project_phases)
 
         for k in _pmd_math_global_keys
             data_math_mn[k] = data_math_mn["nw"][n][k]
@@ -64,7 +64,7 @@ end
 
 
 "base function for converting engineering model to mathematical model"
-function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true)
+function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true, project_phases::Bool=true)
     @assert get(data_eng, "data_model", MATHEMATICAL) == ENGINEERING
 
     # TODO remove kron reduction from eng2math in v0.10 (breaking)
@@ -74,15 +74,15 @@ function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true)
     end
 
     # TODO remove padding from eng2math in v0.10 (breaking)
-    if !get(data_eng, "is_padded", false)
-        apply_property_padding!(_data_eng)
+    if project_phases && !get(data_eng, "is_projected", false)
+        apply_phase_projection!(_data_eng)
     end
 
     data_math = Dict{String,Any}(
         "name" => get(_data_eng, "name", ""),
         "per_unit" => get(_data_eng, "per_unit", false),
         "data_model" => MATHEMATICAL,
-        "is_padded" => get(_data_eng, "is_padded", false),
+        "is_projected" => get(_data_eng, "is_projected", false),
         "is_kron_reduced" => get(_data_eng, "is_kron_reduced", false),
         "settings" => deepcopy(_data_eng["settings"]),
     )
@@ -671,9 +671,6 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "index" => length(data_math["branch"])+1
             )
 
-            # # finally, we have to set a neutral for the virtual generator
-            # neutral = _get_ground_math!(data_math["bus"]["$gen_bus"], exclude_terminals=[1:nconductors...])
-            # math_obj["connections"] = [collect(1:nconductors)..., neutral]
 
             data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 

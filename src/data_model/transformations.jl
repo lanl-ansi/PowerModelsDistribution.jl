@@ -188,7 +188,7 @@ end
 
 
 "pad matrices to max number of conductors"
-function apply_property_padding!(data_eng::Dict{String,<:Any})
+function apply_phase_projection!(data_eng::Dict{String,<:Any})
     all_conductors = _get_complete_conductor_set(data_eng)
 
     if haskey(data_eng, "bus")
@@ -324,5 +324,5 @@ function apply_property_padding!(data_eng::Dict{String,<:Any})
         end
     end
 
-    data_eng["is_padded"] = true
+    data_eng["is_projected"] = true
 end

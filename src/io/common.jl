@@ -11,6 +11,7 @@ function parse_file(
     transformations::Vector{<:Any}=[],
     build_multinetwork::Bool=false,
     kron_reduced::Bool=true,
+    project_phases::Bool=true,
     time_series::String="daily"
         )::Dict{String,Any}
 
@@ -35,6 +36,7 @@ function parse_file(
             return transform_data_model(data_eng;
                 make_pu=true,
                 kron_reduced=kron_reduced,
+                project_phases=project_phases,
                 build_multinetwork=build_multinetwork
             )
         else
@@ -46,6 +48,7 @@ function parse_file(
         if pmd_data["data_model"] != data_model && data_model == ENGINEERING
             return transform_data_model(pmd_data;
                 kron_reduced=kron_reduced,
+                project_phases=project_phases,
                 build_multinetwork=build_multinetwork
             )
         else
@@ -70,6 +73,7 @@ end
 "transforms model between engineering (high-level) and mathematical (low-level) models"
 function transform_data_model(data::Dict{String,<:Any};
         kron_reduced::Bool=true,
+        project_phases::Bool=true,
         make_pu::Bool=true,
         build_multinetwork::Bool=false
             )::Dict{String,Any}
@@ -80,12 +84,12 @@ function transform_data_model(data::Dict{String,<:Any};
         if build_multinetwork && haskey(data, "time_series")
             mn_data = _build_eng_multinetwork(data)
             if ismultinetwork(mn_data)
-                data_math = _map_eng2math_multinetwork(mn_data; kron_reduced=kron_reduced)
+                data_math = _map_eng2math_multinetwork(mn_data; kron_reduced=kron_reduced, project_phases=project_phases)
             else
-                data_math = _map_eng2math(mn_data; kron_reduced=kron_reduced)
+                data_math = _map_eng2math(mn_data; kron_reduced=kron_reduced, project_phases=project_phases)
             end
         else
-            data_math = _map_eng2math(data; kron_reduced=kron_reduced)
+            data_math = _map_eng2math(data; kron_reduced=kron_reduced, project_phases=project_phases)
         end
 
         correct_network_data!(data_math; make_pu=make_pu)
