@@ -371,13 +371,23 @@ function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         eng_obj = Dict{String,Any}(
             "bus" => _parse_bus_id(defaults["bus1"])[1],
             "connections" => _get_conductors_ordered(defaults["bus1"]; default=[collect(1:phases)..., 0], pad_ground=true),
-            "vm" => vm,
-            "va" => va,
-            "rs" => defaults["rmatrix"],
-            "xs" => defaults["xmatrix"],
             "source_id" => "vsource.$id",
             "status" => defaults["enabled"] ? ENABLED : DISABLED
         )
+
+        # some values require addition of neutral by default
+        n_conductors = length(eng_obj["connections"])
+        eng_obj["rs"] = zeros(n_conductors, n_conductors)
+        eng_obj["rs"][1:phases, 1:phases] = defaults["rmatrix"]
+
+        eng_obj["xs"] = zeros(n_conductors, n_conductors)
+        eng_obj["xs"][1:phases, 1:phases] = defaults["xmatrix"]
+
+        eng_obj["vm"] = zeros(n_conductors)
+        eng_obj["vm"][1:phases] = vm
+
+        eng_obj["va"] = zeros(n_conductors)
+        eng_obj["va"][1:phases] = va
 
         # if the ground is used directly, register load
         if 0 in eng_obj["connections"]

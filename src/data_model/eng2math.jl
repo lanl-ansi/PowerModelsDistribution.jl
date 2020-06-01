@@ -606,20 +606,20 @@ end
 function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
     for (name, eng_obj) in get(data_eng, "voltage_source", Dict{Any,Any}())
         nconductors = length(eng_obj["connections"])
-        nphases = length(eng_obj["vm"])
+        nphases = get(eng_obj, "configuration", WYE) == WYE && !get(data_eng, "is_kron_reduced", false) ? nconductors - 1 : nconductors
 
         math_obj = _init_math_obj("voltage_source", name, eng_obj, length(data_math["gen"])+1)
 
         math_obj["name"] = "_virtual_gen.voltage_source.$name"
         math_obj["gen_bus"] = gen_bus = data_math["bus_lookup"][eng_obj["bus"]]
-        math_obj["connections"] = collect(1:nconductors+1)
+        math_obj["connections"] = eng_obj["connections"]
         math_obj["gen_status"] = Int(eng_obj["status"])
-        math_obj["pg"] = fill(0.0, nconductors)
-        math_obj["qg"] = fill(0.0, nconductors)
-        math_obj["pmin"] = get(eng_obj, "pg_lb", fill(-Inf, nconductors))
-        math_obj["pmax"] = get(eng_obj, "pg_ub", fill( Inf, nconductors))
-        math_obj["qmin"] = get(eng_obj, "qg_lb", fill(-Inf, nconductors))
-        math_obj["qmax"] = get(eng_obj, "qg_ub", fill( Inf, nconductors))
+        math_obj["pg"] = fill(0.0, nphases)
+        math_obj["qg"] = fill(0.0, nphases)
+        math_obj["pmin"] = get(eng_obj, "pg_lb", fill(-Inf, nphases))
+        math_obj["pmax"] = get(eng_obj, "pg_ub", fill( Inf, nphases))
+        math_obj["qmin"] = get(eng_obj, "qg_lb", fill(-Inf, nphases))
+        math_obj["qmax"] = get(eng_obj, "qg_ub", fill( Inf, nphases))
         math_obj["connections"] = eng_obj["connections"]
         math_obj["configuration"] = get(eng_obj, "configuration", WYE)
         math_obj["source_id"] = "_virtual_gen.$(eng_obj["source_id"])"
@@ -638,11 +638,16 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "grounded" => f_bus["grounded"],
                 "name" => "_virtual_bus.voltage_source.$name",
                 "bus_type" => 3,
-                "vm" => [eng_obj["vm"]..., [0.0 for n in 1:(nconductors-nphases)]...],
-                "va" => [eng_obj["va"]..., [0.0 for n in 1:(nconductors-nphases)]...],
-                "vmin" => [eng_obj["vm"]..., [0.0 for n in 1:(nconductors-nphases)]...],
-                "vmax" => [eng_obj["vm"]..., [Inf for n in 1:(nconductors-nphases)]...]
+                "vm" => eng_obj["vm"],
+                "va" => eng_obj["va"],
+                "vmin" => get(eng_obj, "vm_lb", eng_obj["vm"]),
+                "vmax" => get(eng_obj, "vm_ub", eng_obj["vm"]),
             )
+            for t in eng_obj["connections"]
+                if t in data_eng["bus"][eng_obj["bus"]]["grounded"]
+                    bus_obj["vmax"] = Inf
+                end
+            end
 
             math_obj["gen_bus"] = gen_bus = bus_obj["bus_i"]
 

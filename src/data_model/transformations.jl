@@ -176,7 +176,7 @@ function apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Ve
     if haskey(data_eng, "voltage_source")
         for (_,eng_obj) in data_eng["voltage_source"]
             filter = eng_obj["connections"] .!= kr_neutral
-            _apply_filter!(eng_obj, ["connections"], filter)
+            _apply_filter!(eng_obj, ["vm", "va", "vm_lb", "vm_ub", "rs", "xs", "connections"], filter)
         end
     end
 
