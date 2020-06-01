@@ -638,14 +638,16 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "grounded" => f_bus["grounded"],
                 "name" => "_virtual_bus.voltage_source.$name",
                 "bus_type" => 3,
-                "vm" => eng_obj["vm"],
-                "va" => eng_obj["va"],
-                "vmin" => get(eng_obj, "vm_lb", eng_obj["vm"]),
-                "vmax" => get(eng_obj, "vm_ub", eng_obj["vm"]),
+                "vm" => deepcopy(eng_obj["vm"]),
+                "va" => deepcopy(eng_obj["va"]),
+                "vmin" => deepcopy(get(eng_obj, "vm_lb", eng_obj["vm"])),
+                "vmax" => deepcopy(get(eng_obj, "vm_ub", eng_obj["vm"])),
             )
-            for t in eng_obj["connections"]
-                if t in data_eng["bus"][eng_obj["bus"]]["grounded"]
-                    bus_obj["vmax"] = Inf
+            for (i,t) in enumerate(eng_obj["connections"])
+                if data_math["bus"]["$(data_math["bus_lookup"][eng_obj["bus"]])"]["grounded"][i]
+                    bus_obj["vm"][i] = 0
+                    bus_obj["vmin"][i] = 0
+                    bus_obj["vmax"][i] = Inf
                 end
             end
 
