@@ -107,7 +107,11 @@ function count_nodes(data::Dict{String,<:Any})::Int
 
                 if all(!occursin(pattern, name) for pattern in [_excluded_count_busname_patterns...])
                     if data["data_model"] == MATHEMATICAL
-                        n_nodes += length(bus["terminals"][.!get(bus, "grounded", zeros(length(bus["terminals"])))])
+                        if get(data, "is_projected", false)
+                            n_nodes += count(i->i>0, get(bus, "vmax", []))
+                        else
+                            n_nodes += length(bus["terminals"][.!get(bus, "grounded", zeros(length(bus["terminals"])))])
+                        end
                     else
                         n_nodes += length([n for n in bus["terminals"] if !(n in get(bus, "grounded", []))])
                     end
@@ -774,12 +778,19 @@ function count_active_connections(data::Dict{String,<:Any})
                                     active_connections += 1
                                 end
                             else
-                                if edge_type == "transformer" && component["configuration"] == WYE && terminal != connections[end]
-                                    push!(counted_connections, terminal)
-                                    active_connections += 1
-                                elseif !data["bus"]["$bus"]["grounded"][i]
-                                    push!(counted_connections, terminal)
-                                    active_connections += 1
+                                if edge_type == "transformer"
+                                    if component["configuration"] == DELTA || (component["configuration"] == WYE && terminal != connections[end])
+                                        push!(counted_connections, terminal)
+                                        active_connections += 1
+                                    end
+                                elseif !get(data["bus"]["$bus"]["grounded"], i, false)
+                                    if get(data, "is_projected", false) && get(data["bus"]["$bus"]["vmax"], i, Inf) > 0
+                                        push!(counted_connections, terminal)
+                                        active_connections += 1
+                                    else
+                                        push!(counted_connections, terminal)
+                                        active_connections += 1
+                                    end
                                 end
                             end
                         end
@@ -810,7 +821,7 @@ function count_active_terminals(data::Dict{String,<:Any}; count_grounded::Bool=f
                             active_terminal_count += 1
                         end
                     else
-                        if !bus["grounded"][i]
+                        if !get(bus["grounded"], i, false)
                             push!(counted_terminals, terminal)
                             active_terminal_count += 1
                         end

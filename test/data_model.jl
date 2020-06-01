@@ -8,7 +8,7 @@
         add_bus!(eng, "primary"; terminals=[1,2,3])
         add_bus!(eng, "loadbus"; terminals=[1,2,3,4], grounded=[4])
 
-        add_voltage_source!(eng, "source", "sourcebus", [1,2,3,4]; vm=[1, 1, 1])
+        add_voltage_source!(eng, "source", "sourcebus", [1,2,3,4]; vm=[1, 1, 1, 0])
 
         add_linecode!(eng, "default", diagm(0=>fill(0.01, 3)), diagm(0=>fill(0.2, 3)))
 

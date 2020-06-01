@@ -2,8 +2,12 @@
 
 ## staged
 
+- Refactors Kron reduction and padding transformations out of eng2math into their own transformation functions (#287)
 - Add functionality of run_mc_mld_bf to run_mc_mld via multiple dispatch
 - Fixes inconsistency of connections on MATHEMATICAL components, in particular, virtual objects (#280)
+- Add a transformation remove_all_bounds! that removes all fields ending in _ub and _lb (#278)
+- Add missing connections for virtual generator at voltage source
+- Fix pu conversion bus voltage bounds and add parsing for vm_pair_lb and vm_pair_ub
 - Add CONTRIBUTING.md
 - Add pull request template
 - Add Pull Request Checks (Github Actions), to inform developers of potentially missing aspects of their PR
@@ -11,10 +15,6 @@
 
 ## v0.9.0
 
-- Add missing ACR transformer constraint functions
-- Add a transformation rm_bounds! that removes all fields ending in _ub and _lb
-- Add missing connections for virtual generator at voltage source
-- Fix pu conversion bus voltage bounds and add parsing for vm_pair_lb and vm_pair_ub
 - Add `instantiate_mc_model` to aid in building JuMP model from ENGINEERING data model
 - SDP and SOC relaxations were broken but are fixed again (unit tests added)
 - Remove `run_mc_opf_iv`, `run_mc_opf_bf`, `run_mc_opf_bf_lm`, `run_mc_pf_bf`, `run_mc_pf_iv`, these can be accessed by using the correct formulation with `run_mc_opf` and `run_mc_pf`
