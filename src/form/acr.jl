@@ -478,3 +478,87 @@ function constraint_mc_gen_setpoint_delta(pm::_PM.AbstractACRModel, nw::Int, id:
         sol(pm, nw, :gen, id)[:qg_bus] = qg_bus
     end
 end
+
+
+"This function adds all constraints required to model a two-winding, wye-wye connected transformer."
+function constraint_mc_transformer_power_yy(pm::_PM.AbstractACRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+    vr_fr = [var(pm, nw, :vr, f_bus)[p] for p in f_cnd]
+    vr_to = [var(pm, nw, :vr, t_bus)[p] for p in t_cnd]
+    vi_fr = [var(pm, nw, :vi, f_bus)[p] for p in f_cnd]
+    vi_to = [var(pm, nw, :vi, t_bus)[p] for p in t_cnd]
+
+    # construct tm as a parameter or scaled variable depending on whether it is fixed or not
+    tm = [tm_fixed[p] ? tm_set[p] : var(pm, nw, :tap, trans_id)[p] for p in conductor_ids(pm)]
+
+
+    for p in conductor_ids(pm)
+        if tm_fixed[p]
+            JuMP.@constraint(pm.model, vr_fr[p] == pol*tm_scale*tm[p]*vr_to[p])
+            JuMP.@constraint(pm.model, vi_fr[p] == pol*tm_scale*tm[p]*vi_to[p])
+        else
+            JuMP.@constraint(pm.model, vr_fr[p] == pol*tm_scale*tm[p]*vr_to[p])
+            JuMP.@constraint(pm.model, vi_fr[p] == pol*tm_scale*tm[p]*vi_to[p])
+        end
+    end
+
+    p_fr = var(pm, nw, :pt, f_idx)[f_cnd]
+    p_to = var(pm, nw, :pt, t_idx)[t_cnd]
+    q_fr = var(pm, nw, :qt, f_idx)[f_cnd]
+    q_to = var(pm, nw, :qt, t_idx)[t_cnd]
+
+    JuMP.@constraint(pm.model, p_fr + p_to .== 0)
+    JuMP.@constraint(pm.model, q_fr + q_to .== 0)
+end
+
+
+"This function adds all constraints required to model a two-winding, delta-wye connected transformer."
+function constraint_mc_transformer_power_dy(pm::_PM.AbstractACRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
+    vr_p_fr = [var(pm, nw, :vr, f_bus)[p] for p in f_cnd]
+    vr_p_to = [var(pm, nw, :vr, t_bus)[p] for p in t_cnd]
+    vi_p_fr = [var(pm, nw, :vi, f_bus)[p] for p in f_cnd]
+    vi_p_to = [var(pm, nw, :vi, t_bus)[p] for p in t_cnd]
+
+    @assert length(f_cnd)==3 && length(t_cnd)==3
+
+    M = _get_delta_transformation_matrix(3)
+
+    # construct tm as a parameter or scaled variable depending on whether it is fixed or not
+    tm = [tm_fixed[p] ? tm_set[p] : var(pm, nw, p, :tap, trans_id) for p in conductor_ids(pm)]
+
+    # introduce auxialiary variable vd = Md*v_fr
+    vrd = M*vr_p_fr
+    vid = M*vi_p_fr
+
+    JuMP.@constraint(pm.model, vrd .== (pol*tm_scale)*tm.*vr_p_to)
+    JuMP.@constraint(pm.model, vid .== (pol*tm_scale)*tm.*vi_p_to)
+
+    p_fr = [var(pm, nw, :pt, f_idx)[p] for p in f_cnd]
+    p_to = [var(pm, nw, :pt, t_idx)[p] for p in t_cnd]
+    q_fr = [var(pm, nw, :qt, f_idx)[p] for p in f_cnd]
+    q_to = [var(pm, nw, :qt, t_idx)[p] for p in t_cnd]
+
+    id_re = Array{Any,1}(undef, 3)
+    id_im = Array{Any,1}(undef, 3)
+    # s/v      = (p+jq)/|v|^2*conj(v)
+    #          = (p+jq)/|v|*(cos(va)-j*sin(va))
+    # Re(s/v)  = (p*cos(va)+q*sin(va))/|v|
+    # -Im(s/v) = -(q*cos(va)-p*sin(va))/|v|
+    for p in conductor_ids(pm)
+        # id = conj(s_to/v_to)./tm
+        id_re[p] = JuMP.@NLexpression(pm.model, (p_to[p]*vr_p_to[p]+q_to[p]*vi_p_to[p])/(tm_scale*tm[p]*pol)/(vr_p_to[p]^2+vi_p_to[p]^2))
+        id_im[p] = JuMP.@NLexpression(pm.model, (p_to[p]*vi_p_to[p]-q_to[p]*vr_p_to[p])/(tm_scale*tm[p]*pol)/(vr_p_to[p]^2+vi_p_to[p]^2))
+    end
+    for (p,q) in zip([1:3...], [3,1,2])
+        # s_fr  = v_fr*conj(i_fr)
+        #       = v_fr*conj(id[q]-id[p])
+        #       = v_fr*(id_re[q]-j*id_im[q]-id_re[p]+j*id_im[p])
+        JuMP.@NLconstraint(pm.model, p_fr[p] ==
+             vr_p_fr[p]*(id_re[q]-id_re[p])
+            -vi_p_fr[p]*(-id_im[q]+id_im[p])
+        )
+        JuMP.@NLconstraint(pm.model, q_fr[p] ==
+             vr_p_fr[p]*(-id_im[q]+id_im[p])
+            +vi_p_fr[p]*(id_re[q]-id_re[p])
+        )
+    end
+end
