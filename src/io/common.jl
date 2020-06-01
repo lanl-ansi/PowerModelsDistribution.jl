@@ -16,7 +16,7 @@ function parse_file(
         )::Dict{String,Any}
 
     if filetype == "dss"
-        data_eng = PowerModelsDistribution.parse_opendss(io;
+        data_eng = parse_opendss(io;
             import_all=import_all,
             bank_transformers=bank_transformers,
             time_series=time_series
