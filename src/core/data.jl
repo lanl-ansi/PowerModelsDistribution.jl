@@ -778,11 +778,13 @@ function count_active_connections(data::Dict{String,<:Any})
                                     active_connections += 1
                                 end
                             else
-                                if edge_type == "transformer" && component["configuration"] == WYE && terminal != connections[end]
+                                if edge_type == "transformer"
+                                    if component["configuration"] == DELTA || (component["configuration"] == WYE && terminal != connections[end])
                                     push!(counted_connections, terminal)
                                     active_connections += 1
+                                    end
                                 elseif !get(data["bus"]["$bus"]["grounded"], i, false)
-                                    if get(data, "is_padded", false) && data["bus"]["$bus"]["vmax"][i] > 0
+                                    if get(data, "is_projected", false) && get(data["bus"]["$bus"]["vmax"], i, Inf) > 0
                                         push!(counted_connections, terminal)
                                         active_connections += 1
                                     else
