@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fix connections-determining-code on solar and storage objects to generator object syntax (#291)
 - Refactors Kron reduction and padding transformations out of eng2math into their own transformation functions (#287)
 - Add functionality of run_mc_mld_bf to run_mc_mld via multiple dispatch
 - Fixes inconsistency of connections on MATHEMATICAL components, in particular, virtual objects (#280)

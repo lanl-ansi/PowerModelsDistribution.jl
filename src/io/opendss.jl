@@ -747,7 +747,7 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
         eng_obj = Dict{String,Any}(
             "bus" => _parse_bus_id(defaults["bus1"])[1],
             "configuration" => defaults["conn"],
-            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=collect(1:defaults["phases"]+1)),
+            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=[collect(1:defaults["phases"])..., 0]),
             "pg" => fill(defaults["kva"] / nphases, nphases),
             "qg" => fill(defaults["kvar"] / nphases, nphases),
             "vg" => fill(defaults["kv"] / nphases, nphases),
@@ -792,7 +792,7 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
 
         eng_obj = Dict{String,Any}(
             "bus" => _parse_bus_id(defaults["bus1"])[1],
-            "connections" => _get_conductors_ordered(defaults["bus1"], check_length=false),
+            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=[collect(1:defaults["phases"])..., 0]),
             "configuration" => WYE,
             "energy" => defaults["kwhstored"],
             "energy_ub" => defaults["kwrated"],
