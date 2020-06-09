@@ -80,3 +80,6 @@ new xfmrcode.t1 phases=1 windings=2 conns=[wye,wye] kvs=[15, 15] kvas=[50000 500
 
 new loadshape.ld3_yearly pmult=(sngfile=load_profile.sng)
 new loadshape.ld2_daily pmult=(file=load_profile.csv)
+
+new storage.s1 bus1=b1
+new pvsystem.solar1 bus1=b1

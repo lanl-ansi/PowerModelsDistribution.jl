@@ -92,6 +92,13 @@
     eng = parse_file("../test/data/opendss/test2_master.dss", import_all=true)
     math = parse_file("../test/data/opendss/test2_master.dss"; data_model=MATHEMATICAL, import_all=true)
 
+    @testset "multiple generation objects on same bus" begin
+        @test all(eng["storage"]["s1"]["connections"] .== collect(1:4))
+        @test all(eng["solar"]["solar1"]["connections"] .== collect(1:4))
+        @test all(eng["bus"]["b1"]["terminals"] .== collect(1:4))
+        @test eng["bus"]["b1"]["grounded"] == [4]
+    end
+
     @testset "buscoords automatic parsing" begin
         @test all(haskey(bus, "lon") && haskey(bus, "lat") for bus in values(math["bus"]) if "bus_i" in 1:10)
     end
@@ -109,9 +116,9 @@
         @test math["name"] == "test2"
 
         @test length(math) == 20
-        @test length(dss) == 16
+        @test length(dss) == 18
 
-        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "transformer"], [33, 4, 5, 27, 4, 0, 10])
+        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "transformer", "storage"], [33, 4, 5, 27, 5, 0, 10, 1])
             @test haskey(math, key)
             @test length(math[key]) == len
         end
