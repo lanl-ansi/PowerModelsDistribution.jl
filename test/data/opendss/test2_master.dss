@@ -81,5 +81,12 @@ new xfmrcode.t1 phases=1 windings=2 conns=[wye,wye] kvs=[15, 15] kvas=[50000 500
 new loadshape.ld3_yearly pmult=(sngfile=load_profile.sng)
 new loadshape.ld2_daily pmult=(file=load_profile.csv)
 
+new linespacing.test_spacing
+
+new wiredata.wire1
+new wiredata.wire2
+
+new line.l9 bus1=b10 bus2=b11 spacing=test_spacing wires=['wire1', 'wire2'] length=10
+
 new storage.s1 bus1=b1
 new pvsystem.solar1 bus1=b1

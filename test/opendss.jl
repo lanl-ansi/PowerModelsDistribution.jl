@@ -116,9 +116,9 @@
         @test math["name"] == "test2"
 
         @test length(math) == 20
-        @test length(dss) == 18
+        @test length(dss) == 20
 
-        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "transformer", "storage"], [33, 4, 5, 27, 5, 0, 10, 1])
+        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "transformer", "storage"], [33, 4, 5, 28, 5, 0, 10, 1])
             @test haskey(math, key)
             @test length(math[key]) == len
         end
@@ -167,6 +167,15 @@
 
         eng_data = parse_file("../test/data/opendss/test_transformer_formatting.dss")
         @test all(all(eng_data["transformer"]["$n"]["tm_set"] .==  tm) for (n, tm) in zip(["transformer_test", "reg4"], [[fill(1.075, 3), fill(1.5, 3), fill(0.9, 3)], [ones(3), ones(3)]]))
+    end
+
+    @testset "opendss parse line parsing wires - spacing properties" begin
+        dss_data = parse_dss("../test/data/opendss/test2_master.dss")
+
+        @test isa(dss_data["line"]["l9"]["wires"], Vector{String}) && all(dss_data["line"]["l9"]["wires"] .== ["wire1", "wire2"])
+        @test dss_data["line"]["l9"]["spacing"] == "test_spacing"
+        @test haskey(dss_data, "wiredata") && (haskey(dss_data["wiredata"], "wire1") && haskey(dss_data["wiredata"], "wire2"))
+        @test haskey(dss_data, "linespacing") && haskey(dss_data["linespacing"], "test_spacing")
     end
 
     @testset "opendss parse storage" begin

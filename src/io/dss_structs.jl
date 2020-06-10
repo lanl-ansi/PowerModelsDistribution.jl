@@ -217,10 +217,10 @@ function _create_line(name::String=""; kwargs...)::Dict{String,Any}
         "geometry" => get(kwargs, :geometry, ""),
         "units" => "m",
         "spacing" => get(kwargs, :spacing, ""),
-        "wires" => get(kwargs, :wires, ""),
+        "wires" => get(kwargs, :wires, Vector{String}([])),
         "earthmodel" => get(kwargs, :earthmodel, ""),
-        "cncables" => get(kwargs, :cncables, ""),
-        "tscables" => get(kwargs, :tscables, ""),
+        "cncables" => get(kwargs, :cncables, Vector{String}([])),
+        "tscables" => get(kwargs, :tscables, Vector{String}([])),
         "b1" => b1 / _convert_to_meters[units],
         "b0" => b0 / _convert_to_meters[units],
         # Inherited Properties
