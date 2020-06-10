@@ -89,7 +89,7 @@ This program contains Ipopt, a library for large-scale nonlinear optimization.
 ******************************************************************************
 
 Dict{String,Any} with 8 entries:
-  &quot;solve_time&quot;         =&gt; 3.77146
+  &quot;solve_time&quot;         =&gt; 3.93899
   &quot;optimizer&quot;          =&gt; &quot;Ipopt&quot;
   &quot;termination_status&quot; =&gt; LOCALLY_SOLVED
   &quot;dual_status&quot;        =&gt; FEASIBLE_POINT
@@ -109,7 +109,7 @@ Dict{String,Any} with 8 entries:
 result_pu[&quot;solution&quot;][&quot;bus&quot;][&quot;loadbus&quot;]</code></pre><pre><code class="language-none">Dict{String,Any} with 2 entries:
   &quot;va&quot; =&gt; [-0.484238, -120.243, 120.274]
   &quot;vm&quot; =&gt; [0.963546, 0.981757, 0.976779]</code></pre><h3 id="Branch-Flow-formulations-1"><a class="docs-heading-anchor" href="#Branch-Flow-formulations-1">Branch Flow formulations</a><a class="docs-heading-anchor-permalink" href="#Branch-Flow-formulations-1" title="Permalink"></a></h3><p>Previously, to use a branch flow formulation, such as <code>SOCNLPUBFPowerModel</code>, it was required to use a different <code>run_</code> command, but now, by using multiple dispatch we have simplified this for the user</p><pre><code class="language-julia">result_bf = run_mc_opf(eng, SOCNLPUBFPowerModel, ipopt_solver)</code></pre><pre><code class="language-none">Dict{String,Any} with 8 entries:
-  &quot;solve_time&quot;         =&gt; 0.219783
+  &quot;solve_time&quot;         =&gt; 0.220219
   &quot;optimizer&quot;          =&gt; &quot;Ipopt&quot;
   &quot;termination_status&quot; =&gt; LOCALLY_SOLVED
   &quot;dual_status&quot;        =&gt; FEASIBLE_POINT
@@ -117,7 +117,7 @@ result_pu[&quot;solution&quot;][&quot;bus&quot;][&quot;loadbus&quot;]</code></pr
   &quot;objective&quot;          =&gt; 0.0211297
   &quot;solution&quot;           =&gt; Dict{String,Any}(&quot;voltage_source&quot;=&gt;Dict{Any,Any}(&quot;sou…
   &quot;objective_lb&quot;       =&gt; -Inf</code></pre><h3 id="Running-Time-Series-Models-1"><a class="docs-heading-anchor" href="#Running-Time-Series-Models-1">Running Time Series Models</a><a class="docs-heading-anchor-permalink" href="#Running-Time-Series-Models-1" title="Permalink"></a></h3><p>By default, <code>time_series</code> object will be ignored when running a model. To use the time series information you will need to have a multinetwork problem specification</p><p>In the example below we use a test case, which is not exported by default, and therefore requires the specification of the PowerModelsDistribution namespace</p><pre><code class="language-julia">result_mn = PowerModelsDistribution._run_mc_mn_opb(eng_ts, NFAPowerModel, ipopt_solver)</code></pre><pre><code class="language-none">Dict{String,Any} with 8 entries:
-  &quot;solve_time&quot;         =&gt; 0.350918
+  &quot;solve_time&quot;         =&gt; 0.325528
   &quot;optimizer&quot;          =&gt; &quot;Ipopt&quot;
   &quot;termination_status&quot; =&gt; LOCALLY_SOLVED
   &quot;dual_status&quot;        =&gt; FEASIBLE_POINT
@@ -311,4 +311,4 @@ Subject to
  -0_(1,1,3)_p[3] = -0.012
  0_(1,1,3)_p[1] - 0_(2,2,1)_p[1] = 0.0
  0_(1,1,3)_p[2] - 0_(2,2,1)_p[2] = 0.0
- 0_(1,1,3)_p[3] - 0_(2,2,1)_p[3] = 0.0</code></pre><h2 id="Conclusion-1"><a class="docs-heading-anchor" href="#Conclusion-1">Conclusion</a><a class="docs-heading-anchor-permalink" href="#Conclusion-1" title="Permalink"></a></h2><p>This concludes the introduction to the <code>ENGINEERING</code> data model and conversion to the <code>MATHEMATICAL</code> model. We hope that you will find this new data model abstraction easy to use and simple to understand</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../external-data-formats/">« External Data Formats</a><a class="docs-footer-nextpage" href="../engineering_model_helper_functions/">Engineering Model Helper Functions »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 9 June 2020 23:26">Tuesday 9 June 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ 0_(1,1,3)_p[3] - 0_(2,2,1)_p[3] = 0.0</code></pre><h2 id="Conclusion-1"><a class="docs-heading-anchor" href="#Conclusion-1">Conclusion</a><a class="docs-heading-anchor-permalink" href="#Conclusion-1" title="Permalink"></a></h2><p>This concludes the introduction to the <code>ENGINEERING</code> data model and conversion to the <code>MATHEMATICAL</code> model. We hope that you will find this new data model abstraction easy to use and simple to understand</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../external-data-formats/">« External Data Formats</a><a class="docs-footer-nextpage" href="../engineering_model_helper_functions/">Engineering Model Helper Functions »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 10 June 2020 13:53">Wednesday 10 June 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
