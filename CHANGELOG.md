@@ -2,12 +2,7 @@
 
 ## LPUBF
 
-- Add constraint_mc_transformer_power_yy(pm::LPUBFDiagModel,..)
-- Add constraint_mc_transformer_power_dy(pm::LPUBFDiagModel,..)
-- Edited constraint_mc_power_losses(pm::LPUBFDiagModel..)
-- Edited constraint_constraint_mc_model_voltage_magnitude_difference(pm::LPUBFD..) to handle buses with not all 4 terminals active
-- Edited variable bounds in variable.jl to fix inconsistencies
-- Added unit tests
+- Add wye-wye and delta-wye constraints to LPUBFDiagModel formulation 
 
 ## staged
 

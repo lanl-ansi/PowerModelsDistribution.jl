@@ -119,8 +119,8 @@ function variable_mc_branch_power_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cn
     if bounded
         for (l,i,j) in ref(pm, nw, :arcs)
             smax = _calc_branch_power_max(ref(pm, nw, :branch, l), ref(pm, nw, :bus, i))
-            set_upper_bound.(p[(l,i,j)],  1000000) #hacked bounds as _calc_branch_power_max involves multiplication of 0 with inf which is undf
-            set_lower_bound.(p[(l,i,j)], -1000000)
+            set_upper_bound.(p[(l,i,j)],  smax)
+            set_lower_bound.(p[(l,i,j)], -smax)
         end
     end
 
@@ -152,8 +152,8 @@ function variable_mc_branch_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int=
     if bounded
         for (l,i,j) in ref(pm, nw, :arcs)
             smax = _calc_branch_power_max(ref(pm, nw, :branch, l), ref(pm, nw, :bus, i))
-            set_upper_bound.(q[(l,i,j)],  1000000) #hacked bounds as _calc_branch_power_max involves multiplication of 0 with inf which is undf
-            set_lower_bound.(q[(l,i,j)], -1000000)
+            set_upper_bound.(q[(l,i,j)],  smax)
+            set_lower_bound.(q[(l,i,j)], -smax)
         end
     end
 
@@ -331,7 +331,7 @@ function variable_mc_transformer_current_imaginary(pm::_PM.AbstractPowerModel; n
     report && _IM.sol_component_value_edge(pm, nw, :transformer, :ci_fr, :ci_to, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), ci)
 end
 
-#Hack bound on vmax, should it be a heuristic using max voltage of all PV buses and source bus, maybe more general?
+
 "variable: `w[i] >= 0` for `i` in `buses"
 function variable_mc_bus_voltage_magnitude_sqr(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
@@ -350,20 +350,11 @@ function variable_mc_bus_voltage_magnitude_sqr(pm::_PM.AbstractPowerModel; nw::I
             vmax=bus["vmax"]
             vmin=bus["vmin"]
             for c in 1:ncnds
-                if(vmin[c]==-Inf)
-                    a=-10000
-                else
-                    a=vmin[c]
-                end
-                if(vmax[c]==Inf)
-                    set_upper_bound.((w[i])[c], 10000.0)
-                else
-                    set_upper_bound.((w[i])[c], max(a^2, vmax[c]^2)) #this upper bound was wrong in the code
-                end
+                set_upper_bound.((w[i])[c], max(vmin[c]^2, vmax[c]^2)) #this upper bound was wrong in the code
                 if(vmin[c]>0)
                     set_lower_bound.((w[i])[c], vmin[c]^2)
                 end
-                end
+            end
         end
     end
 

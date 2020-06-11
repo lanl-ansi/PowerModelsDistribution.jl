@@ -1,4 +1,4 @@
-"This is duplicated at PMD level to correctly handle the indexing of the shunts."
+"This is duplicated at PowerModelsDistribution level to correctly handle the indexing of the shunts."
 function constraint_mc_voltage_angle_difference(pm::_PM.AbstractBFModel, n::Int, f_idx, angmin, angmax)
     i, f_bus, t_bus = f_idx
     t_idx = (i, t_bus, f_bus)
@@ -44,11 +44,9 @@ function variable_mc_bus_voltage_on_off(pm::LPUBFDiagModel; kwargs...)
 end
 
 
-"nothing to do, this model is symmetric"
+"Links to and from power and voltages in a wye-wye transformer, assumes tm_fixed is true"
 function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
     tm = [tm_fixed[p] ? tm_set[p] : var(pm, nw, p, :tap, trans_id) for p in conductor_ids(pm)]
-
-
     nph = length(conductor_ids(pm))
 
     p_fr = [var(pm, nw, :pt, f_idx)[p] for p in f_cnd]
@@ -60,20 +58,18 @@ function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_i
     w_to = var(pm, nw, :w)[t_bus]
 
     for p in 1:nph
-        JuMP.@constraint(pm.model, 1000.0*w_fr[p] == 1000.0*(pol*tm_scale*tm[p])^2*w_to[p])
+        JuMP.@constraint(pm.model, w_fr[p] == (pol*tm_scale*tm[p])^2*w_to[p])
     end
 
-    JuMP.@constraint(pm.model, (p_fr + p_to)*1000.0 .== 0)
-    JuMP.@constraint(pm.model, (q_fr + q_to)*1000.0 .== 0)
+    JuMP.@constraint(pm.model, p_fr + p_to .== 0)
+    JuMP.@constraint(pm.model, q_fr + q_to .== 0)
 end
 
 
-"TODO"
+"Links to and from power and voltages in a delta-wye transformer, assumes tm_fixed is true"
 function constraint_mc_transformer_power_dy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
 
     tm = [tm_fixed[p] ? tm_set[p] : var(pm, nw, p, :tap, trans_id) for p in conductor_ids(pm)]
-
-  
     nph = length(conductor_ids(pm))
 
     p_fr = [var(pm, nw, :pt, f_idx)[p] for p in f_cnd]
@@ -88,14 +84,14 @@ function constraint_mc_transformer_power_dy(pm::LPUBFDiagModel, nw::Int, trans_i
         # rotate by 1 to get 'previous' phase
         # e.g., for nph=3: 1->3, 2->1, 3->2
         q = (p-1+1)%nph+1
-	    JuMP.@constraint(pm.model, 3.0*1000.0*(w_fr[p] + w_fr[q]) == 2.0*1000.0*(pol*tm_scale*tm[p])^2*w_to[p])
+	    JuMP.@constraint(pm.model, 3.0*(w_fr[p] + w_fr[q]) == 2.0*(pol*tm_scale*tm[p])^2*w_to[p])
     end
 
     for p in 1:nph
-            # rotate by nph-1 to get 'previous' phase
-            # e.g., for nph=3: 1->3, 2->1, 3->2
+        # rotate by nph-1 to get 'previous' phase
+        # e.g., for nph=3: 1->3, 2->1, 3->2
         q = (p-1+nph-1)%nph+1
-	    JuMP.@constraint(pm.model, 2*p_fr[p]*1000.0 == 1000.0*(-(p_to[p]+p_to[q])+(q_to[q]-q_to[p])/sqrt(3.0)))
-        JuMP.@constraint(pm.model, 2*q_fr[p]*1000.0 == 1000.0*((p_to[p]-p_to[q])/sqrt(3.0)-(q_to[q]+q_to[p])))
+	    JuMP.@constraint(pm.model, 2*p_fr[p] == -(p_to[p]+p_to[q])+(q_to[q]-q_to[p])/sqrt(3.0))
+        JuMP.@constraint(pm.model, 2*q_fr[p] == (p_to[p]-p_to[q])/sqrt(3.0)-(q_to[q]+q_to[p]))
     end
 end
