@@ -4,8 +4,8 @@
     case5 = PM.parse_file("$(pms_path)/test/data/matpower/case5.m"); make_multiconductor!(case5, 3)
     case5_strg = PM.parse_file("$(pms_path)/test/data/matpower/case5_strg.m"); make_multiconductor!(case5_strg, 3)
     case3_ml = PM.parse_file("../test/data/matpower/case3_ml.m"); make_multiconductor!(case3_ml, 3)
-
     ut_trans_2w_yy = PowerModelsDistribution.parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
+
     @testset "5-bus acp mld" begin
         result = run_mc_mld(case5, ACPPowerModel, ipopt_solver)
 
@@ -42,6 +42,44 @@
         @test isapprox(result["objective"], 0.1557; atol=1e-4)
 
         @test isapprox(result["solution"]["load"]["1"]["status"], 1.000; atol=1e-3)
+    end
+
+    @testset "5-bus mn acp mld" begin
+        case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
+        result = run_mn_mc_mld(case5_mn, ACPPowerModel, ipopt_solver, multinetwork=true)
+
+        @test result["termination_status"] == LOCALLY_SOLVED
+        @test isapprox(result["objective"], 3*0.3377; atol=2.0e-4)
+        @test all(isapprox(result["solution"]["nw"]["1"]["load"]["1"]["pd"], [3.0, 3.0, 3.0]; atol=1.0e-4))
+        @test all(isapprox(result["solution"]["nw"]["2"]["load"]["1"]["qd"], [0.9861, 0.9861, 0.9861]; atol=1.0e-4))
+        @test isapprox(result["solution"]["nw"]["3"]["load"]["1"]["status"], 1.0; atol=1.0e-3)
+    end
+
+    @testset "5-bus mn storage acp mld" begin
+        case5_strg_mn = InfrastructureModels.replicate(case5_strg, 3, Set(["per_unit"]))
+        result = run_mn_mc_mld(case5_strg_mn, ACPPowerModel, ipopt_solver, multinetwork=true)
+
+        @test result["termination_status"] == LOCALLY_SOLVED
+        @test result["objective"] >= 3.0*0.3432
+        @test isapprox(result["solution"]["nw"]["1"]["load"]["1"]["status"], 1.0; atol=1.0e-3)
+    end
+
+    @testset "5-bus mn nfa mld" begin
+        case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
+        result = run_mn_mc_mld(case5_mn, NFAPowerModel, ipopt_solver, multinetwork=true)
+
+        @test result["termination_status"] == LOCALLY_SOLVED
+        @test isapprox(result["objective"], 3.0*0.1557; atol=2.0e-4)
+        @test isapprox(result["solution"]["nw"]["1"]["load"]["1"]["status"], 1.0; atol=1.0e-3)
+    end
+
+    @testset "5-bus mn storage nfa mld" begin
+        case5_strg_mn = InfrastructureModels.replicate(case5_strg, 3, Set(["per_unit"]))
+        result = run_mn_mc_mld(case5_strg_mn, NFAPowerModel, ipopt_solver, multinetwork=true)
+
+        @test result["termination_status"] == LOCALLY_SOLVED
+        @test result["objective"] >= 3.0*0.1557
+        @test isapprox(result["solution"]["nw"]["1"]["load"]["1"]["status"], 1.0; atol=1.0e-3)
     end
 
     @testset "3-bus nfa mld" begin
