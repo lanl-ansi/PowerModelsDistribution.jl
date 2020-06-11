@@ -545,7 +545,7 @@ function constraint_mc_gen_setpoint_wye(pm::_PM.IVRPowerModel, nw::Int, id::Int,
 
     if report
         sol(pm, nw, :gen, id)[:crg_bus] = var(pm, nw, :crg_bus, id)
-        sol(pm, nw, :gen, id)[:cig_bus] = var(pm, nw, :crg_bus, id)
+        sol(pm, nw, :gen, id)[:cig_bus] = var(pm, nw, :cig_bus, id)
 
         sol(pm, nw, :gen, id)[:pg] = pg
         sol(pm, nw, :gen, id)[:qg] = qg
