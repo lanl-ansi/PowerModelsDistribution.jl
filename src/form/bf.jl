@@ -46,57 +46,56 @@ end
 
 "nothing to do, this model is symmetric"
 function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-tm = [tm_fixed[p] ? tm_set[p] : var(pm, nw, p, :tap, trans_id) for p in conductor_ids(pm)]
+    tm = [tm_fixed[p] ? tm_set[p] : var(pm, nw, p, :tap, trans_id) for p in conductor_ids(pm)]
 
 
-      nph = length(conductor_ids(pm))
+    nph = length(conductor_ids(pm))
 
-      p_fr = [var(pm, nw, :pt, f_idx)[p] for p in f_cnd]
-      p_to = [var(pm, nw, :pt, t_idx)[p] for p in t_cnd]
-      q_fr = [var(pm, nw, :qt, f_idx)[p] for p in f_cnd]
-      q_to = [var(pm, nw, :qt, t_idx)[p] for p in t_cnd]
+    p_fr = [var(pm, nw, :pt, f_idx)[p] for p in f_cnd]
+    p_to = [var(pm, nw, :pt, t_idx)[p] for p in t_cnd]
+    q_fr = [var(pm, nw, :qt, f_idx)[p] for p in f_cnd]
+    q_to = [var(pm, nw, :qt, t_idx)[p] for p in t_cnd]
 
-      w_fr = var(pm, nw, :w)[f_bus]
-      w_to = var(pm, nw, :w)[t_bus]
+    w_fr = var(pm, nw, :w)[f_bus]
+    w_to = var(pm, nw, :w)[t_bus]
 
-       for p in 1:nph
-       a=JuMP.@constraint(pm.model, 1000.0*w_fr[p] == 1000.0*(pol*tm_scale*tm[p])^2*w_to[p])
-       end
+    for p in 1:nph
+        JuMP.@constraint(pm.model, 1000.0*w_fr[p] == 1000.0*(pol*tm_scale*tm[p])^2*w_to[p])
+    end
 
-       JuMP.@constraint(pm.model, (p_fr + p_to)*1000.0 .== 0)
-       JuMP.@constraint(pm.model, (q_fr + q_to)*1000.0 .== 0)
+    JuMP.@constraint(pm.model, (p_fr + p_to)*1000.0 .== 0)
+    JuMP.@constraint(pm.model, (q_fr + q_to)*1000.0 .== 0)
 end
 
 
 "TODO"
 function constraint_mc_transformer_power_dy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
 
-      tm = [tm_fixed[p] ? tm_set[p] : var(pm, nw, p, :tap, trans_id) for p in conductor_ids(pm)]
+    tm = [tm_fixed[p] ? tm_set[p] : var(pm, nw, p, :tap, trans_id) for p in conductor_ids(pm)]
 
   
-      nph = length(conductor_ids(pm))
+    nph = length(conductor_ids(pm))
 
-      p_fr = [var(pm, nw, :pt, f_idx)[p] for p in f_cnd]
-      p_to = [var(pm, nw, :pt, t_idx)[p] for p in t_cnd]
-      q_fr = [var(pm, nw, :qt, f_idx)[p] for p in f_cnd]
-      q_to = [var(pm, nw, :qt, t_idx)[p] for p in t_cnd]
+    p_fr = [var(pm, nw, :pt, f_idx)[p] for p in f_cnd]
+    p_to = [var(pm, nw, :pt, t_idx)[p] for p in t_cnd]
+    q_fr = [var(pm, nw, :qt, f_idx)[p] for p in f_cnd]
+    q_to = [var(pm, nw, :qt, t_idx)[p] for p in t_cnd]
 
-      w_fr = var(pm, nw, :w)[f_bus]
-      w_to = var(pm, nw, :w)[t_bus]
+    w_fr = var(pm, nw, :w)[f_bus]
+    w_to = var(pm, nw, :w)[t_bus]
 
-       for p in 1:nph
+    for p in 1:nph
         # rotate by 1 to get 'previous' phase
         # e.g., for nph=3: 1->3, 2->1, 3->2
         q = (p-1+1)%nph+1
-	a=JuMP.@constraint(pm.model, 3.0*1000.0*(w_fr[p] + w_fr[q]) == 2.0*1000.0*(pol*tm_scale*tm[p])^2*w_to[p])
-      end
+	    JuMP.@constraint(pm.model, 3.0*1000.0*(w_fr[p] + w_fr[q]) == 2.0*1000.0*(pol*tm_scale*tm[p])^2*w_to[p])
+    end
 
-        for p in 1:nph
-        # rotate by nph-1 to get 'previous' phase
-        # e.g., for nph=3: 1->3, 2->1, 3->2
+    for p in 1:nph
+            # rotate by nph-1 to get 'previous' phase
+            # e.g., for nph=3: 1->3, 2->1, 3->2
         q = (p-1+nph-1)%nph+1
-	
-        b=JuMP.@constraint(pm.model, 2*p_fr[p]*1000.0 == 1000.0*(-(p_to[p]+p_to[q])+(q_to[q]-q_to[p])/sqrt(3.0)))
-        c=JuMP.@constraint(pm.model, 2*q_fr[p]*1000.0 == 1000.0*((p_to[p]-p_to[q])/sqrt(3.0)-(q_to[q]+q_to[p])))
-        end
+	    JuMP.@constraint(pm.model, 2*p_fr[p]*1000.0 == 1000.0*(-(p_to[p]+p_to[q])+(q_to[q]-q_to[p])/sqrt(3.0)))
+        JuMP.@constraint(pm.model, 2*q_fr[p]*1000.0 == 1000.0*((p_to[p]-p_to[q])/sqrt(3.0)-(q_to[q]+q_to[p])))
+    end
 end

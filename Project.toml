@@ -5,7 +5,6 @@ repo = "https://github.com/lanl-ansi/PowerModelsDistribution.jl.git"
 version = "0.9.0"
 
 [deps]
-CPLEX = "a076750e-1247-5638-91d2-ce28b192dca0"
 InfrastructureModels = "2030c09a-7f63-5d83-885d-db604e0e9cc0"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
@@ -13,7 +12,6 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 Memento = "f28f55f0-a522-5efc-85c2-fe41dfb9b2d9"
 PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
@@ -37,6 +35,3 @@ JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 Juniper = "2ddba703-00a4-53a7-87a5-e8b9971dde84"
 SCS = "c946c3f1-0d1f-5ce8-9dea-7daa1f7e2d13"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[targets]
-test = ["Cbc", "Ipopt", "Juniper", "SCS", "Test"]
