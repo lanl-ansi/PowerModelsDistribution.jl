@@ -1,11 +1,8 @@
 # PowerModelsDistribution.jl Change Log
 
-## LPUBF
-
-- Add wye-wye and delta-wye constraints to LPUBFDiagModel formulation 
-
 ## staged
 
+- Add wye-wye and delta-wye constraints to LPUBFDiagModel formulation 
 - Add CONTRIBUTING.md
 - Add pull request template
 - Add Pull Request Checks (Github Actions), to inform developers of potentially missing aspects of their PR

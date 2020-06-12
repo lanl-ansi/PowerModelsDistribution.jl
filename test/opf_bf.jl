@@ -34,11 +34,11 @@
             @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * sol["solution"]["settings"]["sbase"]), 0.00927263; atol=2e-3)
         end
         @testset "3-bus unbalanced lpubfdiag opf_bf with only two terminals on load bus" begin
-        pmd = parse_file("../test/data/opendss/case3_unbalanced_missingedge.dss")
-        sol = run_mc_opf(pmd, LPUBFDiagPowerModel, ipopt_solver)
-        @test sol["termination_status"] == LOCALLY_SOLVED
-        @test norm(solution["bus"]["loadbus"]["w"]-[0.92234, 0.95778, 0.0], Inf) <= 1E-4
-    end
+            pmd = parse_file("../test/data/opendss/case3_unbalanced_missingedge.dss")
+            sol = run_mc_opf(pmd, LPUBFDiagPowerModel, ipopt_solver)
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            @test norm(sol["solution"]["bus"]["loadbus"]["w"]-[0.92234, 0.95778, 0.0], Inf) <= 1E-4
+        end
     end
 
     @testset "test linearised distflow opf_bf in diagonal matrix form" begin
