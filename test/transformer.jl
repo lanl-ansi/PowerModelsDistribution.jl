@@ -134,5 +134,12 @@
             sol = run_mc_opf(eng, LPUBFDiagPowerModel, ipopt_solver)
             @test norm(sol["solution"]["bus"]["3"]["w"]-[0.87086, 0.83270, 0.83208], Inf) <= 1E-4
         end
+        @testset "2w_dy_lead_small_series_impedance" begin
+            eng = parse_file("../test/data/opendss/ut_trans_2w_dy_lead_small_series_impedance.dss", data_model=MATHEMATICAL)
+            sola = run_mc_opf(eng, LPUBFDiagPowerModel, ipopt_solver)
+            solb = run_mc_opf(eng, ACPPowerModel, ipopt_solver)
+            @test norm(sola["solution"]["bus"]["1"]["w"]-solb["solution"]["bus"]["1"]["vm"].^2, Inf) <= 1.2E-3
+            @test norm(sola["solution"]["branch"]["1"]["pf"]-solb["solution"]["branch"]["1"]["pf"], Inf) <= 1E-3
+        end
     end
 end
