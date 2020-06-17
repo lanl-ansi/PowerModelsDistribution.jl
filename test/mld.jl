@@ -82,6 +82,15 @@
         @test isapprox(result["solution"]["nw"]["1"]["load"]["1"]["status"], 1.0; atol=1.0e-3)
     end
 
+    @testset "5-bus mn lpubfdiag mld" begin
+        case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
+        result = run_mn_mc_mld(case5_mn, LPUBFDiagPowerModel, ipopt_solver, multinetwork=true)
+
+        @test result["termination_status"] == LOCALLY_SOLVED
+        @test isapprox(result["objective"], 3.0*0.1557; atol=2.0e-4)
+        @test isapprox(result["solution"]["nw"]["1"]["load"]["1"]["status"], 1.0; atol=1.0e-3)
+    end
+
     @testset "3-bus nfa mld" begin
         mp_data = PM.parse_file("../test/data/matpower/case3_ml.m"); make_multiconductor!(mp_data, 3)
         result = run_mc_mld(mp_data, NFAPowerModel, ipopt_solver)
