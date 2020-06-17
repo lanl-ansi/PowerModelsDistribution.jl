@@ -133,7 +133,7 @@ function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_ar
 
     for c in 1:ncnds
      if(vmax[c]!=0)
-        cstr_p = JuMP.@constraint(pm.model,
+        cp = JuMP.@constraint(pm.model,
         sum((p[a])[c] for a in bus_arcs)
         + sum((psw[a_sw])[c] for a_sw in bus_arcs_sw)
         + sum((pt[a_trans])[c] for a_trans in bus_arcs_trans)
@@ -141,14 +141,15 @@ function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_ar
         sum((pg[g])[c] for g in bus_gens)
         - sum((ps[s])[c] for s in bus_storage)
         - sum((pd[d])[c] for d in bus_loads) 
-	      - sum(gs[c]*w[c] for gs in values(bus_gs)))
+        - sum(gs[c]*w[c] for gs in values(bus_gs)))
+        push!(cstr_p, cp)
      end
     end
 
 
     for c in 1:ncnds
       if(vmax[c]!=0)
-        cstr_q = JuMP.@constraint(pm.model,
+        cq = JuMP.@constraint(pm.model,
         sum((q[a])[c] for a in bus_arcs)
         + sum((qsw[a_sw])[c] for a_sw in bus_arcs_sw)
         + sum((qt[a_trans])[c] for a_trans in bus_arcs_trans)
@@ -157,6 +158,7 @@ function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_ar
         - sum((qs[s])[c] for s in bus_storage)
         - sum((qd[d])[c] for d in bus_loads)
         + sum(bs[c]*w[c] for bs in values(bus_bs)))
+        push!(cstr_q, cq)
      end
    end
 
@@ -165,4 +167,3 @@ function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_ar
         sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
 end
-
