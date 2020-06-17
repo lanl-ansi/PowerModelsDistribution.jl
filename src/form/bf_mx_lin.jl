@@ -100,7 +100,7 @@ function constraint_mc_theta_ref(pm::LPUBFDiagModel, n::Int, i::Int, va_ref)
     ncnds = length(conductor_ids(pm))
     @assert(ncnds >= 2)
     w = var(pm, n, :w)[i]
-    #JuMP.@constraint(pm.model, w[2:ncnds]   .== w[1])
+    JuMP.@constraint(pm.model, w[2:ncnds]   .== w[1])
 end
 
 

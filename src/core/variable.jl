@@ -350,7 +350,7 @@ function variable_mc_bus_voltage_magnitude_sqr(pm::_PM.AbstractPowerModel; nw::I
             vmax=bus["vmax"]
             vmin=bus["vmin"]
             for c in 1:ncnds
-                set_upper_bound.((w[i])[c], max(vmin[c]^2, vmax[c]^2)) #this upper bound was wrong in the code
+                set_upper_bound.((w[i])[c], max(vmin[c]^2, vmax[c]^2)) 
                 if(vmin[c]>0)
                     set_lower_bound.((w[i])[c], vmin[c]^2)
                 end
