@@ -15,7 +15,7 @@
 - Add pull request template
 - Add Pull Request Checks (Github Actions), to inform developers of potentially missing aspects of their PR
 - Store references for power balance constraints
-- Add multinetwork MLD problem specifications
+- Add multinetwork MLD and OPF problem specifications
 
 ## v0.9.0
 
