@@ -719,6 +719,8 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
             end
         end
 
+        eng_obj["status"] = defaults["enabled"] ? ENABLED : DISABLED
+
         for key in ["bank", "xfmrcode"]
             if !isempty(defaults[key])
                 eng_obj[key] = defaults[key]
