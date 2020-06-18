@@ -44,7 +44,7 @@ function constraint_mc_power_losses(pm::LPUBFDiagModel, n::Int, i, f_bus, t_bus,
 
   cnds = conductor_ids(pm; nw=n)
   ncnds = length(cnds)
-	
+
   for c in 1:ncnds
     if((vmax1[c]!=0) && (vmax2[c]!=0))
       JuMP.@constraint(pm.model, p_fr[c] + p_to[c] == g_sh_fr[c,c]*w_fr[c] +  g_sh_to[c,c]*w_to[c])
@@ -70,10 +70,10 @@ function constraint_mc_model_voltage_magnitude_difference(pm::LPUBFDiagModel, n:
 
     fb = ref(pm, n, :bus, f_bus)
     tb = ref(pm, n, :bus, t_bus)
-    
+
     vmax1=fb["vmax"]
     vmax2=tb["vmax"]
-    
+
     cnds = conductor_ids(pm; nw=n)
     ncnds = length(cnds)
 
@@ -106,10 +106,10 @@ end
 ""
 function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
     w = var(pm, nw, :w, i)
-    bus = ref(pm, nw, :bus, i) 
+    bus = ref(pm, nw, :bus, i)
     vmax=bus["vmax"]
 
-	  p = get(var(pm, nw), :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
+    p = get(var(pm, nw), :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
     q = get(var(pm, nw), :q, Dict()); _PM._check_var_keys(q, bus_arcs, "reactive power", "branch")
 
     psw  = get(var(pm, nw),  :psw, Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
@@ -131,34 +131,33 @@ function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_ar
     ncnds = length(cnds)
 
     for c in 1:ncnds
-     if(vmax[c]!=0)
-        cp = JuMP.@constraint(pm.model,
-        sum((p[a])[c] for a in bus_arcs)
-        + sum((psw[a_sw])[c] for a_sw in bus_arcs_sw)
-        + sum((pt[a_trans])[c] for a_trans in bus_arcs_trans)
-        == 
-        sum((pg[g])[c] for g in bus_gens)
-        - sum((ps[s])[c] for s in bus_storage)
-        - sum((pd[d])[c] for d in bus_loads) 
-        - sum(gs[c]*w[c] for gs in values(bus_gs)))
-        push!(cstr_p, cp)
-     end
+        if(vmax[c]!=0)
+            cp = JuMP.@constraint(pm.model,
+            sum((p[a])[c] for a in bus_arcs)
+            + sum((psw[a_sw])[c] for a_sw in bus_arcs_sw)
+            + sum((pt[a_trans])[c] for a_trans in bus_arcs_trans)
+            ==
+            sum((pg[g])[c] for g in bus_gens)
+            - sum((ps[s])[c] for s in bus_storage)
+            - sum((pd[d])[c] for d in bus_loads)
+            - sum(gs[c]*w[c] for gs in values(bus_gs)))
+            push!(cstr_p, cp)
+        end
     end
 
-
     for c in 1:ncnds
-      if(vmax[c]!=0)
-        cq = JuMP.@constraint(pm.model,
-        sum((q[a])[c] for a in bus_arcs)
-        + sum((qsw[a_sw])[c] for a_sw in bus_arcs_sw)
-        + sum((qt[a_trans])[c] for a_trans in bus_arcs_trans)
-        ==
-        sum((qg[g])[c] for g in bus_gens)
-        - sum((qs[s])[c] for s in bus_storage)
-        - sum((qd[d])[c] for d in bus_loads)
-        + sum(bs[c]*w[c] for bs in values(bus_bs)))
-        push!(cstr_q, cq)
-     end
+        if(vmax[c]!=0)
+            cq = JuMP.@constraint(pm.model,
+            sum((q[a])[c] for a in bus_arcs)
+            + sum((qsw[a_sw])[c] for a_sw in bus_arcs_sw)
+            + sum((qt[a_trans])[c] for a_trans in bus_arcs_trans)
+            ==
+            sum((qg[g])[c] for g in bus_gens)
+            - sum((qs[s])[c] for s in bus_storage)
+            - sum((qd[d])[c] for d in bus_loads)
+            + sum(bs[c]*w[c] for bs in values(bus_bs)))
+            push!(cstr_q, cq)
+        end
    end
 
     con(pm, nw, :lam_kcl_r)[i] = cstr_p
