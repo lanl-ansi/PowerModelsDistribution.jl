@@ -59,16 +59,8 @@ function variable_mc_bus_voltage_on_off(pm::_PM.AbstractACRModel; kwargs...)
 end
 
 
-"bus voltage on/off constraint for load shed problem"
-function constraint_mc_bus_voltage_on_off(pm::_PM.AbstractACRModel; nw::Int=pm.cnw, kwargs...)
-    for (i,bus) in ref(pm, nw, :bus)
-        constraint_mc_bus_voltage_magnitude_on_off(pm, i; nw=nw)
-    end
-end
-
-
 ""
-function variable_mc_bus_voltage_real_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_bus_voltage_real_on_off(pm::_PM.AbstractACRModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -92,7 +84,7 @@ end
 
 
 ""
-function variable_mc_bus_voltage_imaginary_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_bus_voltage_imaginary_on_off(pm::_PM.AbstractACRModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -131,7 +123,7 @@ end
 
 
 "on/off bus voltage magnitude constraint"
-function constraint_mc_bus_voltage_magnitude_on_off(pm::_PM.AbstractPowerModel, n::Int, i::Int, vmin, vmax)
+function constraint_mc_bus_voltage_magnitude_on_off(pm::_PM.AbstractACRModel, n::Int, i::Int, vmin, vmax)
     vr = var(pm, n, :vr, i)
     vi = var(pm, n, :vi, i)
     z_voltage = var(pm, n, :z_voltage, i)
