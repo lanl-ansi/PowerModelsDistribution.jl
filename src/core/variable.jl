@@ -383,6 +383,19 @@ function variable_mc_storage_power_mi(pm::_PM.AbstractPowerModel; relax::Bool=fa
 end
 
 
+""
+function variable_mc_storage_power_mi_on_off(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
+    variable_mc_storage_power_real_on_off(pm; kwargs...)
+    variable_mc_storage_power_imaginary_on_off(pm; kwargs...)
+    variable_mc_storage_power_control_imaginary_on_off(pm; kwargs...)
+    variable_mc_storage_current(pm; kwargs...)
+    _PM.variable_storage_energy(pm; kwargs...)
+    _PM.variable_storage_charge(pm; kwargs...)
+    _PM.variable_storage_discharge(pm; kwargs...)
+    _PM.variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
+end
+
+
 "do nothing by default but some formulations require this"
 function variable_mc_storage_current(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
 end
@@ -417,6 +430,40 @@ function variable_mc_storage_power_control_imaginary(pm::_PM.AbstractPowerModel;
 
     report && _IM.sol_component_value(pm, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
 end
+
+
+"""
+a reactive power slack variable that enables the storage device to inject or
+consume reactive power at its connecting bus, subject to the injection limits
+of the device.
+"""
+function variable_mc_storage_power_control_imaginary_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    # TODO properly adapt this new control variable to multiconductor
+    cnds = conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    qsc = var(pm, nw)[:qsc] = JuMP.@variable(pm.model,
+        [i in ids(pm, nw, :storage)], base_name="$(nw)_qsc_$(i)",
+        start = _PM.comp_start_value(ref(pm, nw, :storage, i), "qsc_start")
+    )
+
+    if bounded
+        inj_lb, inj_ub = _PM.ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus))
+        for (i,storage) in ref(pm, nw, :storage)
+            if !isinf(sum(inj_lb[i])) || haskey(storage, "qmin")
+                lb = max(sum(inj_lb[i]), sum(get(storage, "qmin", -Inf)))
+                set_lower_bound(qsc[i], min(lb, 0.0))
+            end
+            if !isinf(sum(inj_ub[i])) || haskey(storage, "qmax")
+                ub = min(sum(inj_ub[i]), sum(get(storage, "qmax", Inf)))
+                set_upper_bound(qsc[i], max(ub, 0.0))
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
+end
+
 
 
 ""
