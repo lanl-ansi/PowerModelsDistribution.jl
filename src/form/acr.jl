@@ -11,7 +11,7 @@ function variable_mc_bus_voltage(pm::_PM.AbstractACRModel; nw=pm.cnw, bounded::B
     # updating the starting point to a balanced phasor does the job
     ncnd = length(conductor_ids(pm))
     theta = [_wrap_to_pi(2 * pi / ncnd * (1-c)) for c in 1:ncnd]
-    vm = 1
+    vm = haskey(ref(pm, nw, :bus, id), "vm_start") ? busref["vm_start"] : 1.0
     for id in ids(pm, nw, :bus)
         busref = ref(pm, nw, :bus, id)
         if !haskey(busref, "va_start")
