@@ -94,7 +94,6 @@ function constraint_mc_model_voltage_magnitude_difference(pm::LPUBFDiagModel, n:
 end
 
 
-
 "balanced three-phase phasor"
 function constraint_mc_theta_ref(pm::LPUBFDiagModel, n::Int, i::Int, va_ref)
     ncnds = length(conductor_ids(pm))
