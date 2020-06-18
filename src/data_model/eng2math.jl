@@ -428,7 +428,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "shift" => zeros(nphases),
                 "tap" => ones(nphases),
                 "switch" => false,
-                "br_status" => get(eng_obj, "state", CLOSED) == OPEN ? 0 : 1,
+                "br_status" => get(eng_obj, "state", CLOSED) == OPEN || eng_obj["status"] == DISABLED ? 0 : 1,
             )
 
             merge!(branch_obj, _branch_obj)
