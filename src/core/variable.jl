@@ -773,8 +773,8 @@ function variable_mc_storage_power_real_on_off(pm::_PM.AbstractPowerModel; nw::I
             inj_lb, inj_ub = _PM.ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus), cnd)
 
             for (i, strg) in ref(pm, nw, :storage)
-                set_lower_bound.(ps[i], inj_lb[i])
-                set_upper_bound.(ps[i], inj_ub[i])
+                set_lower_bound.(ps[i][cnd], inj_lb[i])
+                set_upper_bound.(ps[i][cnd], inj_ub[i])
             end
         end
     end
