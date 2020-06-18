@@ -217,10 +217,10 @@ function _create_line(name::String=""; kwargs...)::Dict{String,Any}
         "geometry" => get(kwargs, :geometry, ""),
         "units" => "m",
         "spacing" => get(kwargs, :spacing, ""),
-        "wires" => get(kwargs, :wires, ""),
+        "wires" => get(kwargs, :wires, Vector{String}([])),
         "earthmodel" => get(kwargs, :earthmodel, ""),
-        "cncables" => get(kwargs, :cncables, ""),
-        "tscables" => get(kwargs, :tscables, ""),
+        "cncables" => get(kwargs, :cncables, Vector{String}([])),
+        "tscables" => get(kwargs, :tscables, Vector{String}([])),
         "b1" => b1 / _convert_to_meters[units],
         "b0" => b0 / _convert_to_meters[units],
         # Inherited Properties
@@ -580,8 +580,10 @@ OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
 function _create_vsource(name::String=""; kwargs...)::Dict{String,Any}
-    bus1 = get(kwargs, :bus1, "sourcebus")
-    bus2 = get(kwargs, :bus2, "")
+    phases = get(kwargs, :phases, 3)
+
+    bus1 = get(kwargs, :bus1, "sourcebus.$(join(1:phases, "."))")
+    bus2 = get(kwargs, :bus2, replace(bus1, r"\.\d" => ".0"))
 
     x1r1 = get(kwargs, :x1r1, 4.0)
     x0r0 = get(kwargs, :x0r0, 3.0)
@@ -593,7 +595,6 @@ function _create_vsource(name::String=""; kwargs...)::Dict{String,Any}
     xs = 0.1
     xm = 0.0
 
-    phases = get(kwargs, :phases, 3)
     factor = phases == 1 ? 1.0 : sqrt(3.0)
 
     mvasc3 = get(kwargs, :mvasc3, 2000.0)

@@ -8,7 +8,7 @@
         add_bus!(eng, "primary"; terminals=[1,2,3])
         add_bus!(eng, "loadbus"; terminals=[1,2,3,4], grounded=[4])
 
-        add_voltage_source!(eng, "source", "sourcebus", [1,2,3,4]; vm=[1, 1, 1])
+        add_voltage_source!(eng, "source", "sourcebus", [1,2,3,4]; vm=[1, 1, 1, 0])
 
         add_linecode!(eng, "default", diagm(0=>fill(0.01, 3)), diagm(0=>fill(0.2, 3)))
 
@@ -63,6 +63,9 @@
 
         @test length(math["bus"]) == 5
         @test all(all(isapprox.(bus["vmin"], 0.95)) && all(isapprox.(bus["vmax"], 1.05)) for (_,bus) in math["bus"] if bus["name"] != "sourcebus" && !startswith(bus["name"], "_virtual"))
+
+        eng = parse_file("../test/data/opendss/case3_balanced.dss"; transformations=[remove_all_bounds!])
+        @test !all(haskey(line, "cm_ub") for line in values(eng["line"]))
     end
 
     @testset "jump model from engineering data model" begin

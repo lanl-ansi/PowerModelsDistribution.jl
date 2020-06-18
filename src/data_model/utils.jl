@@ -144,7 +144,7 @@ end
 
 
 "loss model builder for transformer decomposition"
-function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::String, to_map::Vector{String}, r_s::Vector{Float64}, zsc::Dict{Tuple{Int,Int},Complex{Float64}}, ysh::Complex{Float64}; nphases::Int=3, kron_reduced=false)::Vector{Int}
+function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Any, to_map::Vector{String}, r_s::Vector{Float64}, zsc::Dict{Tuple{Int,Int},Complex{Float64}}, ysh::Complex{Float64}; nphases::Int=3)::Vector{Int}
     # precompute the minimal set of buses and lines
     N = length(r_s)
     tr_t_bus = collect(1:N)
@@ -220,6 +220,7 @@ function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Str
             "bus_i" => length(data_math["bus"])+1,
             "vmin" => fill(0.0, nphases),
             "vmax" => fill(Inf, nphases),
+            "terminals" => collect(1:nphases),
             "grounded" => fill(false, nphases),
             "base_kv" => 1.0,
             "bus_type" => 1,
@@ -227,7 +228,7 @@ function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Str
             "index" => length(data_math["bus"])+1,
         )
 
-        if !kron_reduced
+        if !get(data_math, "is_kron_reduced", false)
             if bus in tr_t_bus
                 bus_obj["terminals"] = collect(1:nphases+1)
                 bus_obj["vmin"] = fill(0.0, nphases+1)
@@ -364,6 +365,27 @@ function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String},
 end
 
 
+"pads properties to have the total number of conductors for the whole system (transformer winding variant)"
+function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String}, wdg::Int, connections::Vector{Int}, phases::Vector{Int}; pad_value::Real=0.0)
+    @assert(all(c in phases for c in connections))
+    inds = _get_idxs(phases, connections)
+
+    for property in properties
+        if haskey(object, property)
+            if isa(object[property][wdg], Vector)
+                tmp = fill(pad_value, length(phases))
+                tmp[inds] = object[property][wdg]
+                object[property][wdg] = tmp
+            elseif isa(object[property][wdg], Matrix)
+                tmp = fill(pad_value, length(phases), length(phases))
+                tmp[inds, inds] = object[property][wdg]
+                object[property][wdg] = tmp
+            end
+        end
+    end
+end
+
+
 "pads properties to have the total number of conductors for the whole system - delta connection variant"
 function _pad_properties_delta!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; invert::Bool=false)
     @assert(all(c in phases for c in connections))
@@ -404,6 +426,22 @@ function _apply_filter!(obj::Dict{String,<:Any}, properties::Vector{String}, fil
                 obj[property] = obj[property][filter]
             elseif isa(obj[property], Matrix)
                 obj[property] = obj[property][filter, filter]
+            else
+                Memento.error(_LOGGER, "The property $property is not a Vector or a Matrix!")
+            end
+        end
+    end
+end
+
+
+"Filters out values of a vector or matrix for certain properties (transformer winding variant)"
+function _apply_filter!(obj::Dict{String,<:Any}, properties::Vector{String}, wdg::Int, filter::Union{Array,BitArray})
+    for property in properties
+        if haskey(obj, property)
+            if isa(obj[property], Vector)
+                obj[property][wdg] = obj[property][wdg][filter]
+            elseif isa(obj[property], Matrix)
+                obj[property][wdg] = obj[property][wdg][filter, filter]
             else
                 Memento.error(_LOGGER, "The property $property is not a Vector or a Matrix!")
             end
@@ -480,11 +518,11 @@ function _apply_xfmrcode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:A
 
         for (k, v) in xfmrcode
             if !haskey(eng_obj, k)
-                eng_obj[k] = v
+                eng_obj[k] = deepcopy(v)
             elseif haskey(eng_obj, k) && k in ["vm_nom", "sm_nom", "tm_set", "rw"]
                 for (w, vw) in enumerate(eng_obj[k])
                     if ismissing(vw)
-                        eng_obj[k][w] = v[w]
+                        eng_obj[k][w] = deepcopy(v[w])
                     end
                 end
             end
@@ -500,7 +538,7 @@ function _apply_linecode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:A
 
         for property in ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
             if !haskey(eng_obj, property) && haskey(linecode, property)
-                eng_obj[property] = linecode[property]
+                eng_obj[property] = deepcopy(linecode[property])
             end
         end
     end
@@ -672,3 +710,58 @@ function _build_eng_multinetwork(data_eng::Dict{String,<:Any})::Dict{String,Any}
     end
 end
 
+
+"finds maximal set of ungrounded phases"
+function _get_complete_conductor_set(data::Dict{String,<:Any})
+    conductors = Set([])
+    for (_, obj) in data["bus"]
+        for t in obj["terminals"]
+            push!(conductors, t)
+        end
+    end
+
+    return sort([c for c in conductors])
+end
+
+
+"checks if data structures are equivalent, and if not, will enumerate the differences"
+function _check_equal(data1::Dict{String,<:Any}, data2::Dict{String,<:Any}; context::String="", ignore::Vector{String}=Vector{String}(["connections", "f_connections", "t_connections", "terminals"]))
+    lines = []
+    for (i, obj) in data1
+        if !haskey(data2, i)
+            push!(lines, "  $i missing in $data2")
+        else
+            if obj != data2[i]
+                if isa(obj, Dict)
+                    push!(lines, _check_equal(obj, data2[i]; context="  $context $i"))
+                else
+                    if !(i in ignore)
+                        push!(lines, "  $context $i: $obj != $(data2[i])")
+                    end
+                end
+            end
+        end
+    end
+
+    return lines
+end
+
+
+"adds conductors to connections during padding process"
+function _pad_connections!(eng_obj::Dict{String,<:Any}, connection_key::String, conductors::Union{Vector{Int},Vector{String}})
+    for cond in conductors
+        if !(cond in eng_obj[connection_key])
+            push!(eng_obj[connection_key], cond)
+        end
+    end
+end
+
+
+"adds conductors to connections during padding process, transformer winding variant"
+function _pad_connections!(eng_obj::Dict{String,<:Any}, connection_key::String, wdg::Int, conductors::Union{Vector{Int},Vector{String}})
+    for cond in conductors
+        if !(cond in eng_obj[connection_key][wdg])
+            push!(eng_obj[connection_key][wdg], cond)
+        end
+    end
+end

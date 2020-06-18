@@ -399,7 +399,7 @@ function _discover_terminals!(data_eng::Dict{String,<:Any})
         end
     end
 
-    for comp_type in [x for x in ["voltage_source", "load", "gen"] if haskey(data_eng, x)]
+    for comp_type in [x for x in ["voltage_source", "load", "generator", "solar"] if haskey(data_eng, x)]
         for comp in values(data_eng[comp_type])
             push!(terminals[comp["bus"]], setdiff(comp["connections"], [0])...)
         end

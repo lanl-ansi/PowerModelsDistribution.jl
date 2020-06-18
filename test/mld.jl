@@ -83,7 +83,7 @@
     end
 
     @testset "5-bus lpubfdiag mld" begin
-        result = run_mc_mld_bf(case5, LPUBFDiagPowerModel, ipopt_solver)
+        result = run_mc_mld(case5, LPUBFDiagPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 0.1557; atol = 1e-4)
@@ -95,7 +95,7 @@
 
     @testset "3-bus lpubfdiag mld" begin
 
-        result = run_mc_mld_bf(case3_ml, LPUBFDiagPowerModel, ipopt_solver)
+        result = run_mc_mld(case3_ml, LPUBFDiagPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 24.98; atol = 1e-1)
@@ -104,7 +104,7 @@
     end
 
     @testset "transformer case" begin
-        result = run_mc_mld_bf(ut_trans_2w_yy, LPUBFDiagPowerModel, ipopt_solver)
+        result = run_mc_mld(ut_trans_2w_yy, LPUBFDiagPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 0.0; atol=1e-3)

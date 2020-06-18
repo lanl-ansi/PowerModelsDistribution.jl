@@ -2,7 +2,7 @@ import LinearAlgebra: diagm
 
 "items that are mapped one-to-one from engineering to math models"
 const _1to1_maps = Dict{String,Vector{String}}(
-    "bus" => ["vm", "va", "terminals", "phases", "neutral", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub", "dss"],
+    "bus" => ["vm", "va", "terminals", "phases", "neutral", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub", "dss", "vuf_ub", "vm_pair_lb", "vm_pair_ub"],
     "line" => ["f_connections", "t_connections", "source_id", "dss"],
     "transformer" => ["f_connections", "t_connections", "source_id", "dss"],
     "switch" => ["status", "f_connections", "t_connections", "source_id", "dss"],
@@ -41,7 +41,7 @@ const _pmd_math_global_keys = Set{String}([
 
 
 "converts a engineering multinetwork to a math multinetwork"
-function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced::Bool=kron_reduced)::Dict{String,Any}
+function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced::Bool=true, project_phases::Bool=true)::Dict{String,Any}
     data_math_mn = Dict{String,Any}(
         "nw" => Dict{String,Any}(),
         "multinetwork" => true
@@ -51,7 +51,7 @@ function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced:
             nw[k] = data_eng_mn[k]
         end
 
-        data_math_mn["nw"][n] = _map_eng2math(nw; kron_reduced=kron_reduced)
+        data_math_mn["nw"][n] = _map_eng2math(nw; kron_reduced=kron_reduced, project_phases=project_phases)
 
         for k in _pmd_math_global_keys
             data_math_mn[k] = data_math_mn["nw"][n][k]
@@ -64,14 +64,27 @@ end
 
 
 "base function for converting engineering model to mathematical model"
-function _map_eng2math(data_eng; kron_reduced::Bool=true)
+function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true, project_phases::Bool=true)
     @assert get(data_eng, "data_model", MATHEMATICAL) == ENGINEERING
 
+    # TODO remove kron reduction from eng2math in v0.10 (breaking)
+    _data_eng = deepcopy(data_eng)
+    if kron_reduced && !get(data_eng, "is_kron_reduced", false)
+        apply_kron_reduction!(_data_eng)
+    end
+
+    # TODO remove padding from eng2math in v0.10 (breaking)
+    if project_phases && !get(data_eng, "is_projected", false)
+        apply_phase_projection!(_data_eng)
+    end
+
     data_math = Dict{String,Any}(
-        "name" => get(data_eng, "name", ""),
-        "per_unit" => get(data_eng, "per_unit", false),
+        "name" => get(_data_eng, "name", ""),
+        "per_unit" => get(_data_eng, "per_unit", false),
         "data_model" => MATHEMATICAL,
-        "settings" => deepcopy(data_eng["settings"]),
+        "is_projected" => get(_data_eng, "is_projected", false),
+        "is_kron_reduced" => get(_data_eng, "is_kron_reduced", false),
+        "settings" => deepcopy(_data_eng["settings"]),
     )
 
     #TODO the PM tests break for branches which are not of the size indicated by conductors;
@@ -85,28 +98,25 @@ function _map_eng2math(data_eng; kron_reduced::Bool=true)
     _init_base_components!(data_math)
 
     # convert buses
-    _map_eng2math_bus!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_bus!(data_math, _data_eng)
 
     # convert edges
-    _map_eng2math_line!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_switch!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_transformer!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_line!(data_math, _data_eng)
+    _map_eng2math_switch!(data_math, _data_eng)
+    _map_eng2math_transformer!(data_math, _data_eng)
 
     # convert nodes
-    _map_eng2math_load!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_load!(data_math, _data_eng)
 
-    _map_eng2math_shunt!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_shunt!(data_math, _data_eng)
 
-    _map_eng2math_generator!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_solar!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_storage!(data_math, data_eng; kron_reduced=kron_reduced)
-    _map_eng2math_voltage_source!(data_math, data_eng; kron_reduced=kron_reduced)
+    _map_eng2math_generator!(data_math, _data_eng)
+    _map_eng2math_solar!(data_math, _data_eng)
+    _map_eng2math_storage!(data_math, _data_eng)
+    _map_eng2math_voltage_source!(data_math, _data_eng)
 
     # post fix
-    if kron_reduced
-        #TODO move this out when kron-reducing becomes a transformation
-        _kron_reduce_buses!(data_math)
-    else
+    if !get(data_math, "is_kron_reduced", false)
         #TODO fix this in place / throw error instead? IEEE8500 leads to switches
         # with 3x3 R matrices but only 1 phase
         #NOTE: Don't do this when kron-reducing, it will undo the padding
@@ -118,7 +128,7 @@ end
 
 
 "converts engineering bus components into mathematical bus components"
-function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
     for (name, eng_obj) in get(data_eng, "bus", Dict{String,Any}())
         terminals = eng_obj["terminals"]
         nconductors = data_math["conductors"]
@@ -155,15 +165,6 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
         math_obj["vmin"] = get(eng_obj, "vm_lb", fill(0.0, length(terminals)))
         math_obj["vmax"] = get(eng_obj, "vm_ub", fill(Inf, length(terminals)))
 
-        if kron_reduced
-            filter = terminals.!=kr_neutral
-            terminals_kr = terminals[filter]
-            @assert all(t in kr_phases for t in terminals_kr) "bus $name has terminals $(terminals), outside of $kr_phases, cannot be kron reduced"
-
-            _apply_filter!(math_obj, ["vm", "va", "vmin", "vmax"], filter)
-            _pad_properties!(math_obj, ["vm", "va", "vmin", "vmax"], terminals_kr, kr_phases)
-        end
-
         data_math["bus"]["$(math_obj["index"])"] = math_obj
 
         if !haskey(data_math, "bus_lookup")
@@ -182,14 +183,13 @@ end
 
 
 "converts engineering lines into mathematical branches"
-function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
     for (name, eng_obj) in get(data_eng, "line", Dict{Any,Dict{String,Any}}())
         _apply_linecode!(eng_obj, data_eng)
 
         math_obj = _init_math_obj("line", name, eng_obj, length(data_math["branch"])+1)
 
-        nphases = length(eng_obj["f_connections"])
-        nconductors = data_math["conductors"]
+        nphases = size(eng_obj["rs"])[1]
 
         math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
         math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
@@ -217,33 +217,6 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
         math_obj["shift"] = zeros(nphases)
         math_obj["tap"] = ones(nphases)
 
-        f_bus = data_eng["bus"][eng_obj["f_bus"]]
-        t_bus = data_eng["bus"][eng_obj["t_bus"]]
-
-        if kron_reduced
-            @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
-            filter = _kron_reduce_branch!(math_obj,
-                ["br_r", "br_x"], ["g_fr", "b_fr", "g_to", "b_to"],
-                eng_obj["f_connections"], kr_neutral
-            )
-            _apply_filter!(math_obj, ["angmin", "angmax", "tap", "shift"], filter)
-            connections = eng_obj["f_connections"][filter]
-            _pad_properties!(math_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "shift"], connections, kr_phases)
-            _pad_properties!(math_obj, ["angmin"], connections, kr_phases; pad_value=-60.0)
-            _pad_properties!(math_obj, ["angmax"], connections, kr_phases; pad_value=60.0)
-            _pad_properties!(math_obj, ["tap"], connections, kr_phases; pad_value=1.0)
-
-            for key in ["c_rating_a", "c_rating_b", "c_rating_c", "rate_a", "rate_b", "rate_c"]
-                if haskey(math_obj, key)
-                    _apply_filter!(math_obj, [key], filter)
-                    _pad_properties!(math_obj, [key], connections, kr_phases)
-                end
-            end
-        else
-            math_obj["f_connections"] = eng_obj["f_connections"]
-            math_obj["t_connections"] = eng_obj["t_connections"]
-        end
-
         math_obj["switch"] = false
 
         math_obj["br_status"] = Int(eng_obj["status"])
@@ -260,7 +233,7 @@ end
 
 
 "converts engineering n-winding transformers into mathematical ideal 2-winding lossless transformer branches and impedance branches to represent the loss model"
-function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
     for (name, eng_obj) in get(data_eng, "transformer", Dict{Any,Dict{String,Any}}())
         # Build map first, so we can update it as we decompose the transformer
         push!(data_math["map"], Dict{String,Any}(
@@ -300,17 +273,6 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 end
             end
 
-            if kron_reduced
-                # TODO fix how padding works, this is a workaround to get bank working
-                if eng_obj["configuration"] == WYE
-                    f_connections = math_obj["f_connections"]
-                    _pad_properties!(math_obj, ["tm_lb", "tm_ub", "tm_set"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=1.0)
-                    _pad_properties!(math_obj, ["tm_fix"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=false)
-
-                    math_obj["f_connections"] = math_obj["t_connections"]
-                end
-            end
-
             data_math["transformer"]["$(math_obj["index"])"] = math_obj
 
             push!(to_map, "transformer.$(math_obj["index"])")
@@ -343,9 +305,8 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
             y_sh = g_sh + im*b_sh
             z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
 
-            #TODO remove once moving out kron-reduction
-            dims = kron_reduced ? 3 : length(eng_obj["tm_set"][1])
-            transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh, nphases=dims)
+            dims = length(eng_obj["tm_set"][1])
+            transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh; nphases=dims)
 
             for w in 1:nrw
                 # 2-WINDING TRANSFORMER
@@ -373,17 +334,6 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                     end
                 end
 
-                if kron_reduced
-                    # TODO fix how padding works, this is a workaround to get bank working
-                    if all(conf==WYE for conf in eng_obj["configuration"])
-                        f_connections = transformer_2wa_obj["f_connections"]
-                        _pad_properties!(transformer_2wa_obj, ["tm_lb", "tm_ub", "tm_set"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=1.0)
-                        _pad_properties!(transformer_2wa_obj, ["tm_fix"], f_connections[f_connections.!=kr_neutral], kr_phases; pad_value=false)
-
-                        transformer_2wa_obj["f_connections"] = transformer_2wa_obj["t_connections"]
-                    end
-                end
-
                 data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
 
                 push!(to_map, "transformer.$(transformer_2wa_obj["index"])")
@@ -394,7 +344,7 @@ end
 
 
 "converts engineering switches into mathematical switches and (if neeed) impedance branches to represent loss model"
-function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
     # TODO enable real switches (right now only using vitual lines)
     for (name, eng_obj) in get(data_eng, "switch", Dict{Any,Dict{String,Any}}())
         nphases = length(eng_obj["f_connections"])
@@ -424,12 +374,15 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
         # if !all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && !all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0)) # TODO enable real switches
             # build virtual bus
 
-            f_bus = data_math["bus"]["$(math_obj["f_bus"])"]
+            f_bus = deepcopy(data_math["bus"]["$(math_obj["f_bus"])"])
+            t_bus = deepcopy(data_math["bus"]["$(math_obj["t_bus"])"])
 
             bus_obj = Dict{String,Any}(
                 "name" => "_virtual_bus.switch.$name",
                 "bus_i" => length(data_math["bus"])+1,
                 "bus_type" => get(eng_obj, "state", CLOSED) == OPEN ? 4 : 1,
+                "terminals" => t_bus["terminals"],  # connected to the switch on the to-side
+                "grounded" => t_bus["grounded"],  # connected to the switch on the to-side
                 "vmin" => f_bus["vmin"],
                 "vmax" => f_bus["vmax"],
                 "index" => length(data_math["bus"])+1,
@@ -457,6 +410,8 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 # "f_bus" => bus_obj["bus_i"],  # TODO enable real switches
                 "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
                 "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
+                "f_connections" => eng_obj["f_connections"],  # TODO, change to t_connections, the virtual branch connects to the switch on the to-side
+                "t_connections" => eng_obj["t_connections"],  # should be identical to the switch's to-side connections
                 "br_r" => _impedance_conversion(data_eng, eng_obj, "rs"),
                 "br_x" => _impedance_conversion(data_eng, eng_obj, "xs"),
                 "g_fr" => zeros(nphases, nphases),
@@ -473,23 +428,6 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
             )
 
             merge!(branch_obj, _branch_obj)
-
-            if kron_reduced
-                @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
-                filter = _kron_reduce_branch!(branch_obj,
-                    ["br_r", "br_x"], ["g_fr", "b_fr", "g_to", "b_to"],
-                    eng_obj["f_connections"], kr_neutral
-                )
-                _apply_filter!(branch_obj, ["angmin", "angmax", "tap", "shift"], filter)
-                connections = eng_obj["f_connections"][filter]
-                _pad_properties!(branch_obj, ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to", "shift"], connections, kr_phases)
-                _pad_properties!(branch_obj, ["angmin"], connections, kr_phases; pad_value=-60.0)
-                _pad_properties!(branch_obj, ["angmax"], connections, kr_phases; pad_value=60.0)
-                _pad_properties!(branch_obj, ["tap"], connections, kr_phases; pad_value=1.0)
-            else
-                branch_obj["f_connections"] = eng_obj["f_connections"]
-                branch_obj["f_connections"] = eng_obj["t_connections"]
-            end
 
             data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 
@@ -509,7 +447,7 @@ end
 
 
 "converts engineering generic shunt components into mathematical shunt components"
-function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
     for (name, eng_obj) in get(data_eng, "shunt", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("shunt", name, eng_obj, length(data_math["shunt"])+1)
 
@@ -517,17 +455,6 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
         math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
         math_obj["gs"] = get(eng_obj, "gs", zeros(size(eng_obj["bs"])))
-
-        if kron_reduced
-            filter = _kron_reduce_branch!(math_obj,
-                Vector{String}([]), ["gs", "bs"],
-                eng_obj["connections"], kr_neutral
-            )
-            connections = eng_obj["connections"][filter]
-            _pad_properties!(math_obj, ["gs", "bs"], connections, kr_phases)
-        else
-            math_obj["connections"] = eng_obj["connections"]
-        end
 
         data_math["shunt"]["$(math_obj["index"])"] = math_obj
 
@@ -541,7 +468,7 @@ end
 
 
 "converts engineering load components into mathematical load components"
-function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
     for (name, eng_obj) in get(data_eng, "load", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("load", name, eng_obj, length(data_math["load"])+1)
 
@@ -551,17 +478,6 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
 
         math_obj["pd"] = eng_obj["pd_nom"]
         math_obj["qd"] = eng_obj["qd_nom"]
-
-        if kron_reduced
-            if math_obj["configuration"]==WYE
-                @assert connections[end]==kr_neutral "for wye-connected loads, if kron_reduced the connections list should end with a neutral"
-                _pad_properties!(math_obj, ["pd", "qd"], connections[connections.!=kr_neutral], kr_phases)
-            else
-                _pad_properties_delta!(math_obj, ["pd", "qd"], connections, kr_phases)
-            end
-        else
-            math_obj["connections"] = connections
-        end
 
         math_obj["vnom_kv"] = eng_obj["vm_nom"]
 
@@ -577,7 +493,7 @@ end
 
 
 "converts engineering generators into mathematical generators"
-function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
     for (name, eng_obj) in get(data_eng, "generator", Dict{String,Any}())
         math_obj = _init_math_obj("generator", name, eng_obj, length(data_math["gen"])+1)
 
@@ -599,17 +515,6 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
 
         math_obj["configuration"] = get(eng_obj, "configuration", WYE)
 
-        if kron_reduced
-            if math_obj["configuration"]==WYE
-                @assert connections[end]==kr_neutral "For WYE connected generators, if kron_reduced the connections list should end with a neutral conductor"
-                _pad_properties!(math_obj, ["pg", "qg", "vg", "pmin", "pmax", "qmin", "qmax"], connections[1:end-1], kr_phases)
-            else
-                _pad_properties_delta!(math_obj, ["pg", "qg", "vg", "pmin", "pmax", "qmin", "qmax"], connections, kr_phases)
-            end
-        else
-            math_obj["connections"] = connections
-        end
-
         # if PV generator mode convert attached bus to PV bus
         if math_obj["control_mode"] == ISOCHRONOUS
             data_math["bus"]["$(data_math["bus_lookup"][eng_obj["bus"]])"]["bus_type"] = 2
@@ -627,7 +532,7 @@ end
 
 
 "converts engineering solar components into mathematical generators"
-function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
     for (name, eng_obj) in get(data_eng, "solar", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("solar", name, eng_obj, length(data_math["gen"])+1)
 
@@ -645,17 +550,6 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
 
         _add_gen_cost_model!(math_obj, eng_obj)
 
-        if kron_reduced
-            if math_obj["configuration"]==WYE
-                @assert(connections[end]==kr_neutral)
-                _pad_properties!(math_obj, ["pg", "qg", "vg", "pmin", "pmax", "qmin", "qmax"], connections[1:end-1], kr_phases)
-            else
-                _pad_properties_delta!(math_obj, ["pg", "qg", "vg", "pmin", "pmax", "qmin", "qmax"], connections, kr_phases)
-            end
-        else
-            math_obj["connections"] = connections
-        end
-
         data_math["gen"]["$(math_obj["index"])"] = math_obj
 
         push!(data_math["map"], Dict{String,Any}(
@@ -668,7 +562,7 @@ end
 
 
 "converts engineering storage into mathematical storage"
-function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1, 2, 3], kr_neutral::Int=4)
+function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
     for (name, eng_obj) in get(data_eng, "storage", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("storage", name, eng_obj, length(data_math["storage"])+1)
 
@@ -697,10 +591,6 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
         math_obj["ps"] = get(eng_obj, "ps", zeros(size(eng_obj["cm_ub"])))
         math_obj["qs"] = get(eng_obj, "qs", zeros(size(eng_obj["cm_ub"])))
 
-        if kron_reduced
-            _pad_properties!(math_obj, ["thermal_rating", "qmin", "qmax", "r", "x", "ps", "qs"], connections, kr_phases)
-        end
-
         data_math["storage"]["$(math_obj["index"])"] = math_obj
 
         push!(data_math["map"], Dict{String,Any}(
@@ -713,22 +603,25 @@ end
 
 
 "converts engineering voltage sources into mathematical generators and (if needed) impedance branches to represent the loss model"
-function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any}; kron_reduced::Bool=true, kr_phases::Vector{Int}=[1,2,3], kr_neutral::Int=4)
+function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
     for (name, eng_obj) in get(data_eng, "voltage_source", Dict{Any,Any}())
-        nconductors = length(eng_obj["vm"])
+        nconductors = length(eng_obj["connections"])
+        nphases = get(eng_obj, "configuration", WYE) == WYE && !get(data_eng, "is_kron_reduced", false) ? nconductors - 1 : nconductors
 
         math_obj = _init_math_obj("voltage_source", name, eng_obj, length(data_math["gen"])+1)
 
         math_obj["name"] = "_virtual_gen.voltage_source.$name"
         math_obj["gen_bus"] = gen_bus = data_math["bus_lookup"][eng_obj["bus"]]
+        math_obj["connections"] = eng_obj["connections"]
         math_obj["gen_status"] = Int(eng_obj["status"])
-        math_obj["pg"] = fill(0.0, nconductors)
-        math_obj["qg"] = fill(0.0, nconductors)
-        math_obj["pmin"] = get(eng_obj, "pg_lb", fill(-Inf, nconductors))
-        math_obj["pmax"] = get(eng_obj, "pg_ub", fill( Inf, nconductors))
-        math_obj["qmin"] = get(eng_obj, "qg_lb", fill(-Inf, nconductors))
-        math_obj["qmax"] = get(eng_obj, "qg_ub", fill( Inf, nconductors))
-        math_obj["configuration"] = WYE
+        math_obj["pg"] = fill(0.0, nphases)
+        math_obj["qg"] = fill(0.0, nphases)
+        math_obj["pmin"] = get(eng_obj, "pg_lb", fill(-Inf, nphases))
+        math_obj["pmax"] = get(eng_obj, "pg_ub", fill( Inf, nphases))
+        math_obj["qmin"] = get(eng_obj, "qg_lb", fill(-Inf, nphases))
+        math_obj["qmax"] = get(eng_obj, "qg_ub", fill( Inf, nphases))
+        math_obj["connections"] = eng_obj["connections"]
+        math_obj["configuration"] = get(eng_obj, "configuration", WYE)
         math_obj["source_id"] = "_virtual_gen.$(eng_obj["source_id"])"
 
         _add_gen_cost_model!(math_obj, eng_obj)
@@ -736,26 +629,26 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
         map_to = "gen.$(math_obj["index"])"
 
         if !all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && !all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0))
+            f_bus = deepcopy(data_math["bus"]["$(math_obj["gen_bus"])"])
+
             bus_obj = Dict{String,Any}(
                 "bus_i" => length(data_math["bus"])+1,
                 "index" => length(data_math["bus"])+1,
-                "terminals" => collect(1:nconductors+1),
-                "grounded" => [fill(false, nconductors)..., true],
+                "terminals" => f_bus["terminals"],
+                "grounded" => f_bus["grounded"],
                 "name" => "_virtual_bus.voltage_source.$name",
                 "bus_type" => 3,
-                "vm" => [eng_obj["vm"]..., 0.0],
-                "va" => [eng_obj["va"]..., 0.0],
-                "vmin" => [eng_obj["vm"]..., 0.0],
-                "vmax" => [eng_obj["vm"]..., 0.0]
+                "vm" => deepcopy(eng_obj["vm"]),
+                "va" => deepcopy(eng_obj["va"]),
+                "vmin" => deepcopy(get(eng_obj, "vm_lb", eng_obj["vm"])),
+                "vmax" => deepcopy(get(eng_obj, "vm_ub", eng_obj["vm"])),
             )
-
-            if kron_reduced
-                bus_obj["terminals"] = bus_obj["terminals"][1:end-1]
-                bus_obj["grounded"] = bus_obj["grounded"][1:end-1]
-                bus_obj["vm"] = bus_obj["vm"][1:end-1]
-                bus_obj["va"] = bus_obj["va"][1:end-1]
-                bus_obj["vmin"] = bus_obj["vmin"][1:end-1]
-                bus_obj["vmax"] = bus_obj["vmax"][1:end-1]
+            for (i,t) in enumerate(eng_obj["connections"])
+                if data_math["bus"]["$(data_math["bus_lookup"][eng_obj["bus"]])"]["grounded"][i]
+                    bus_obj["vm"][i] = 0
+                    bus_obj["vmin"][i] = 0
+                    bus_obj["vmax"][i] = Inf
+                end
             end
 
             math_obj["gen_bus"] = gen_bus = bus_obj["bus_i"]
@@ -767,7 +660,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "source_id" => "_virtual_branch.$(eng_obj["source_id"])",
                 "f_bus" => bus_obj["bus_i"],
                 "t_bus" => data_math["bus_lookup"][eng_obj["bus"]],
-                "f_connections" => collect(1:nconductors),
+                "f_connections" => eng_obj["connections"],
                 "t_connections" => eng_obj["connections"],
                 "angmin" => fill(-60.0, nconductors),
                 "angmax" => fill( 60.0, nconductors),
@@ -785,18 +678,15 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "index" => length(data_math["branch"])+1
             )
 
-            # finally, we have to set a neutral for the virtual generator
-            neutral = _get_ground_math!(data_math["bus"]["$gen_bus"], exclude_terminals=[1:nconductors...])
-            math_obj["connections"] = [collect(1:nconductors)..., neutral]
 
             data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 
             map_to = [map_to, "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"]
         else
-            data_math["bus"]["$gen_bus"]["vmin"] = [eng_obj["vm"]..., 0.0]
-            data_math["bus"]["$gen_bus"]["vmax"] = [eng_obj["vm"]..., 0.0]
-            data_math["bus"]["$gen_bus"]["vm"] = [eng_obj["vm"]..., 0.0]
-            data_math["bus"]["$gen_bus"]["va"] = [eng_obj["va"]..., 0.0]
+            data_math["bus"]["$gen_bus"]["vmin"] = [eng_obj["vm"]..., [0.0 for n in 1:(nconductors-nphases)]...]
+            data_math["bus"]["$gen_bus"]["vmax"] = [eng_obj["vm"]..., [Inf for n in 1:(nconductors-nphases)]...]
+            data_math["bus"]["$gen_bus"]["vm"] = [eng_obj["vm"]..., [0.0 for n in 1:(nconductors-nphases)]...]
+            data_math["bus"]["$gen_bus"]["va"] = [eng_obj["va"]..., [0.0 for n in 1:(nconductors-nphases)]...]
             data_math["bus"]["$gen_bus"]["bus_type"] = 3
         end
 

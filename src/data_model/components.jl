@@ -588,6 +588,8 @@ function create_voltage_source(bus, connections;
     configuration::ConnConfig=WYE,
     vm::Union{Vector{<:Real},Missing}=missing,
     va::Union{Vector{<:Real},Missing}=missing,
+    vm_lb::Union{Vector{<:Real},Missing}=missing,
+    vm_ub::Union{Vector{<:Real},Missing}=missing,
     rs::Union{Vector{<:Real},Missing}=missing,
     xs::Union{Vector{<:Real},Missing}=missing,
     status::Status=ENABLED,
@@ -595,6 +597,7 @@ function create_voltage_source(bus, connections;
         )::Dict{String,Any}
 
     n_conductors = length(connections)
+    nphases = configuration == WYE ? n_conductors - 1 : n_conductors
 
     voltage_source = Dict{String,Any}(
         "bus" => bus,
@@ -605,8 +608,13 @@ function create_voltage_source(bus, connections;
         "status" => get(kwargs, :status, ENABLED),
     )
 
-    for (k,v) in [("rs", rs), ("xs", xs)]
+    for (k,v) in [("rs", rs), ("xs", xs), ("vm_lb", vm_lb), ("vm_ub", vm_ub)]
         if !ismissing(v)
+            if isa(v, Vector)
+                @assert length(v) == n_conductors "$k is the wrong length, expected $n_conductors but got $(length(v))"
+            elseif isa(v, Matrix)
+                @assert size(v) == (n_conductors, n_conductors) "$k is the wrong size, expected ($n_conductors, $n_conductors) but got $(size(v))"
+            end
             voltage_source[k] = v
         end
     end
