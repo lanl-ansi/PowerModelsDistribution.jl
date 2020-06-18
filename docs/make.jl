@@ -1,7 +1,7 @@
 using Documenter, PowerModelsDistribution
 import Weave
 
-Weave.set_chunk_defaults(Dict{Symbol, Any}(:line_width => 120))
+Weave.set_chunk_defaults!(Dict{Symbol, Any}(:line_width => 120))
 
 examples = []
 cd("examples")

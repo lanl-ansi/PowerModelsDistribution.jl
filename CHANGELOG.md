@@ -2,7 +2,17 @@
 
 ## staged
 
+
 - Add wye-wye and delta-wye constraints to LPUBFDiagModel formulation 
+- Fix typo in ivr formulation line 548, was var(pm, nw, :crg_bus, id) now is var(pm, nw, :cig_bus, id)
+- Fix missing / incorrect type of some properties on lines in opendss parser (#290)
+- Fix connections-determining-code on solar and storage objects to generator object syntax (#291)
+- Refactors Kron reduction and padding transformations out of eng2math into their own transformation functions (#287)
+- Add functionality of run_mc_mld_bf to run_mc_mld via multiple dispatch
+- Fixes inconsistency of connections on MATHEMATICAL components, in particular, virtual objects (#280)
+- Add a transformation remove_all_bounds! that removes all fields ending in _ub and _lb (#278)
+- Add missing connections for virtual generator at voltage source
+- Fix pu conversion bus voltage bounds and add parsing for vm_pair_lb and vm_pair_ub
 - Add CONTRIBUTING.md
 - Add pull request template
 - Add Pull Request Checks (Github Actions), to inform developers of potentially missing aspects of their PR

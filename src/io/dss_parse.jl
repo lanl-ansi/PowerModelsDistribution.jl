@@ -104,9 +104,10 @@ const _capacitor_properties = Vector{String}([
 
 const _line_properties = Vector{String}([
     "bus1", "bus2", "linecode", "length", "phases", "r1", "x1", "r0", "x0",
-    "c1", "c0", "b1", "b0", "normamps", "emergamps", "faultrate", "pctperm",
+    "c1", "c0", "normamps", "emergamps", "faultrate", "pctperm",
     "repair", "basefreq", "rmatrix", "xmatrix", "cmatrix", "switch", "rg",
-    "xg", "rho", "geometry", "earthmodel", "units", "enabled", "like"
+    "xg", "rho", "geometry", "units", "spacing", "wires", "earthmodel",
+    "cncables", "tscables", "b1", "b0", "seasons", "ratings", "enabled", "like"
 ])
 
 const _reactor_properties = Vector{String}([
