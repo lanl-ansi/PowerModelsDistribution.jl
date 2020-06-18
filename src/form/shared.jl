@@ -107,6 +107,12 @@ function constraint_mc_shed_power_balance(pm::_PM.AbstractWModels, nw::Int, i, b
     z_demand = var(pm, nw, :z_demand)
     z_shunt  = var(pm, nw, :z_shunt)
 
+    cnds = conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    Gt = isempty(bus_gs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_gs))
+    Bt = isempty(bus_bs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_bs))
+
     bus_GsBs = [(n,bus_gs[n], bus_bs[n]) for n in keys(bus_gs)]
 
     cstr_p = JuMP.@constraint(pm.model,
