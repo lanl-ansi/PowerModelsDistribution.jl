@@ -43,12 +43,12 @@ function variable_mc_bus_voltage_on_off(pm::LPUBFDiagModel; kwargs...)
     variable_mc_bus_voltage_magnitude_sqr_on_off(pm; kwargs...)
 end
 
-# TODO: Throw error that function is not defined for branch flow models other than LPUBF
+
 # TODO: Throw error if tm_fixed is false
-#=
+"""
 Links to and from power and voltages in a wye-wye transformer, assumes tm_fixed is true
 w_fr_i=(pol_i*tm_scale*tm_i)^2w_to_i
-=#
+"""
 function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
     tm = [tm_fixed[p] ? tm_set[p] : var(pm, nw, p, :tap, trans_id) for p in conductor_ids(pm)]
     nph = length(conductor_ids(pm))
@@ -69,15 +69,15 @@ function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_i
     JuMP.@constraint(pm.model, q_fr + q_to .== 0)
 end
 
-# TODO: Throw error that function is not defined for branch flow models other than LPUBF
+
 # TODO: Throw error if tm_fixed is false
-#=
+raw"""
 Links to and from power and voltages in a delta-wye transformer, assumes tm_fixed is true
 3(w_fr_i+w_fr_j)=2(pol_i*tm_scale*tm_i)^2w_to_i \quad \forall (i,j) \in \{(1,2),(2,3),(3,1)\}
 
 2P_fr_i=-(P_to_i+P_to_j)+(Q_to_j-Q_to_i)/\sqrt{3} \quad \forall (i,j) \in \{(1,3),(2,1),(3,2)\}
 2Q_fr_i=(P_to_i-P_to_j)/\sqrt{3}-(Q_to_j+Q_to_i)  \quad \forall (i,j) \in \{(1,3),(2,1),(3,2)\}
-=#
+"""
 function constraint_mc_transformer_power_dy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
 
     tm = [tm_fixed[p] ? tm_set[p] : var(pm, nw, p, :tap, trans_id) for p in conductor_ids(pm)]
