@@ -50,7 +50,7 @@ Links to and from power and voltages in a wye-wye transformer, assumes tm_fixed 
 w_fr_i=(pol_i*tm_scale*tm_i)^2w_to_i
 """
 function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-    tm = [tm_fixed[p] ? tm_set[p] : var(pm, nw, p, :tap, trans_id) for p in conductor_ids(pm)]
+    tm = [tm_fixed[c] ? tm_set[c] : var(pm, nw, :tap, trans_id)[c] for c in conductor_ids(pm)]
     nph = length(conductor_ids(pm))
 
     p_fr = [var(pm, nw, :pt, f_idx)[p] for p in f_cnd]
@@ -79,8 +79,7 @@ Links to and from power and voltages in a delta-wye transformer, assumes tm_fixe
 2Q_fr_i=(P_to_i-P_to_j)/\sqrt{3}-(Q_to_j+Q_to_i)  \quad \forall (i,j) \in \{(1,3),(2,1),(3,2)\}
 """
 function constraint_mc_transformer_power_dy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-
-    tm = [tm_fixed[p] ? tm_set[p] : var(pm, nw, p, :tap, trans_id) for p in conductor_ids(pm)]
+    tm = [tm_fixed[c] ? tm_set[c] : var(pm, nw, :tap, trans_id)[c] for c in conductor_ids(pm)]
     nph = length(conductor_ids(pm))
 
     p_fr = [var(pm, nw, :pt, f_idx)[p] for p in f_cnd]
