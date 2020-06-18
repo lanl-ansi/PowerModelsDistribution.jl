@@ -28,6 +28,11 @@ function constraint_mc_gen_power_on_off(pm::_PM.AbstractActivePowerModel, n::Int
 end
 
 
+"nothing to do"
+function constraint_mc_voltage_magnitude_only(pm::_PM.AbstractActivePowerModel, n::Int, i::Int, vmref)
+end
+
+
 "apo models ignore reactive power flows"
 function variable_mc_storage_power_imaginary(pm::_PM.AbstractActivePowerModel; kwargs...)
 end
@@ -301,8 +306,8 @@ function constraint_mc_storage_thermal_limit(pm::_PM.AbstractActivePowerModel, n
     ncnds = length(cnds)
 
     for c in 1:ncnds
-        JuMP.lower_bound(ps[c]) < -rating[c] && set_lower_bound(ps[c], -rating[c])
-        JuMP.upper_bound(ps[c]) >  rating[c] && set_upper_bound(ps[c],  rating[c])
+        JuMP.has_lower_bound(ps[c]) && JuMP.lower_bound(ps[c]) < -rating[c] && set_lower_bound(ps[c], -rating[c])
+        JuMP.has_upper_bound(ps[c]) && JuMP.upper_bound(ps[c]) >  rating[c] && set_upper_bound(ps[c],  rating[c])
     end
 end
 
