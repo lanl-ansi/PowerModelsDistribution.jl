@@ -121,6 +121,13 @@ function constraint_mc_voltage_magnitude_bounds(pm::_PM.AbstractACRModel, n::Int
     end
 end
 
+"bus voltage on/off constraint for load shed problem"
+function constraint_mc_bus_voltage_on_off(pm::_PM.AbstractACRModel; nw::Int=pm.cnw, kwargs...)
+    for (i,bus) in ref(pm, nw, :bus)
+        constraint_mc_bus_voltage_magnitude_on_off(pm, i; nw=nw)
+    end
+end
+
 
 "on/off bus voltage magnitude constraint"
 function constraint_mc_bus_voltage_magnitude_on_off(pm::_PM.AbstractACRModel, n::Int, i::Int, vmin, vmax)
