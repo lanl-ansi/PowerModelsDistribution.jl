@@ -118,7 +118,7 @@ function build_mc_opf(pm::AbstractUBFModels)
     # Variables
     variable_mc_bus_voltage(pm)
     variable_mc_branch_current(pm)
-    variable_mc_branch_power(pm; bounded=false)
+    variable_mc_branch_power(pm)
     # TODO: revert to bounded in v0.10
     variable_mc_transformer_power(pm)
     variable_mc_gen_power_setpoint(pm)
