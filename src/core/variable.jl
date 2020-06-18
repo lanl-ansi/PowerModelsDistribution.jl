@@ -364,7 +364,7 @@ function variable_mc_storage_power(pm::_PM.AbstractPowerModel; kwargs...)
     variable_mc_storage_power_real(pm; kwargs...)
     variable_mc_storage_power_imaginary(pm; kwargs...)
     variable_mc_storage_power_control_imaginary(pm; kwargs...)
-    _PM.variable_storage_current(pm; kwargs...) # TODO storage current variable for multiconductor
+    variable_mc_storage_current(pm; kwargs...)
     _PM.variable_storage_energy(pm; kwargs...)
     _PM.variable_storage_charge(pm; kwargs...)
     _PM.variable_storage_discharge(pm; kwargs...)
@@ -373,13 +373,18 @@ end
 
 ""
 function variable_mc_storage_power_mi(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
-    _PM.variable_storage_current(pm; kwargs...) # TODO storage current variable for multiconductor
+    variable_mc_storage_current(pm; kwargs...)
     _PM.variable_storage_energy(pm; kwargs...)
     _PM.variable_storage_charge(pm; kwargs...)
     _PM.variable_storage_discharge(pm; kwargs...)
     variable_mc_storage_indicator(pm; relax=relax, kwargs...)
     variable_mc_storage_power_on_off(pm; kwargs...)
     variable_mc_storage_power_control_imaginary(pm; kwargs...)
+end
+
+
+"do nothing by default but some formulations require this"
+function variable_mc_storage_current(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
 end
 
 
