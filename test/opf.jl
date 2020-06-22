@@ -219,6 +219,20 @@
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.616; atol=1e-3)
+
+        end
+
+        @testset "vm and va start with ivr and acr opf" begin
+            pmd_eng = parse_file("../test/data/opendss/case3_unbalanced.dss")
+            pmd_math = transform_data_model(pmd_eng)
+            pmd_math["bus"]["4"]["vm_start"] = pmd_math["bus"]["4"]["vm"]
+            pmd_math["bus"]["4"]["va_start"] = pmd_math["bus"]["4"]["va"]
+            pmd_math["bus"]["2"]["vm_start"] = [0.9959, 0.9959, 0.9959]
+            pmd_math["bus"]["2"]["va_start"] = [0.00, -1.2900, 1.2900]
+            sol_ivr = run_mc_opf(pmd_math, IVRPowerModel, ipopt_solver)
+            sol_acr = run_mc_opf(pmd_math, ACRPowerModel, ipopt_solver)
+            @test sol_ivr["termination_status"] == LOCALLY_SOLVED
+            @test sol_acr["termination_status"] == LOCALLY_SOLVED
         end
     end
 end

@@ -112,13 +112,14 @@ function variable_mc_bus_voltage(pm::_PM.AbstractIVRModel; nw=pm.cnw, bounded::B
 
     ncnd = length(conductor_ids(pm))
     theta = [_wrap_to_pi(2 * pi / ncnd * (1-c)) for c in 1:ncnd]
-    vm = haskey(ref(pm, nw, :bus, id), "vm_start") ? busref["vm_start"] : fill(1.0, ncnd)
+
     for id in ids(pm, nw, :bus)
         busref = ref(pm, nw, :bus, id)
+        vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(1.0, ncnd)
         if !haskey(busref, "va_start")
             for c in 1:ncnd
-                vr = vm.*cos(theta[c])
-                vi = vm.*sin(theta[c])
+                vr = vm[c]*cos(theta[c])
+                vi = vm[c]*sin(theta[c])
                 JuMP.set_start_value(var(pm, nw, :vr, id)[c], vr)
                 JuMP.set_start_value(var(pm, nw, :vi, id)[c], vi)
             end
