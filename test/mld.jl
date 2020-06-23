@@ -107,7 +107,7 @@
         result = run_mc_mld(ut_trans_2w_yy, LPUBFDiagPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 0.0; atol=1e-3)
+        @test isapprox(result["objective"], 0.431; atol=1e-3)
         @test isapprox(result["solution"]["load"]["load1"]["status"], 1.0; atol=1e-3)
     end
 
