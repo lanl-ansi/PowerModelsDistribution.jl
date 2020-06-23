@@ -345,12 +345,15 @@ function variable_mc_bus_voltage_magnitude_sqr(pm::_PM.AbstractPowerModel; nw::I
     )
 
     if bounded
-        for (i,bus) in ref(pm, nw, :bus)
-            if haskey(bus, "vmin")
-                set_lower_bound.(w[i], bus["vmin"].^2)
-            end
-            if haskey(bus, "vmax")
-                set_upper_bound.(w[i], bus["vmax"].^2)
+        for i in ids(pm, nw, :bus)
+            bus = ref(pm, nw, :bus, i)
+            vmax=bus["vmax"]
+            vmin=bus["vmin"]
+            for c in 1:ncnds
+                set_upper_bound.((w[i])[c], max(vmin[c]^2, vmax[c]^2)) 
+                if(vmin[c]>0)
+                    set_lower_bound.((w[i])[c], vmin[c]^2)
+                end
             end
         end
     end
@@ -534,8 +537,8 @@ function variable_mc_transformer_power_real(pm::_PM.AbstractPowerModel; nw::Int=
             rate_a_fr, rate_a_to = _calc_transformer_power_ub_frto(ref(pm, nw, :transformer, t), ref(pm, nw, :bus, i), ref(pm, nw, :bus, j))
             set_lower_bound.(pt[(t,i,j)], -rate_a_fr)
             set_upper_bound.(pt[(t,i,j)],  rate_a_fr)
-            set_lower_bound.(pt[(t,j,i)], -rate_a_fr)
-            set_upper_bound.(pt[(t,j,i)],  rate_a_fr)
+            set_lower_bound.(pt[(t,j,i)], -rate_a_to)
+            set_upper_bound.(pt[(t,j,i)],  rate_a_to)
         end
     end
 
@@ -572,8 +575,8 @@ function variable_mc_transformer_power_imaginary(pm::_PM.AbstractPowerModel; nw:
 
             set_lower_bound.(qt[(t,i,j)], -rate_a_fr)
             set_upper_bound.(qt[(t,i,j)],  rate_a_fr)
-            set_lower_bound.(qt[(t,j,i)], -rate_a_fr)
-            set_upper_bound.(qt[(t,j,i)],  rate_a_fr)
+            set_lower_bound.(qt[(t,j,i)], -rate_a_to)
+            set_upper_bound.(qt[(t,j,i)],  rate_a_to)
         end
     end
 

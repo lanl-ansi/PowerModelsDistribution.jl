@@ -2,6 +2,8 @@
 
 ## staged
 
+
+- Add wye-wye and delta-wye constraints to LPUBFDiagModel formulation 
 - Fix typo in ivr formulation line 548, was var(pm, nw, :crg_bus, id) now is var(pm, nw, :cig_bus, id)
 - Fix missing / incorrect type of some properties on lines in opendss parser (#290)
 - Fix connections-determining-code on solar and storage objects to generator object syntax (#291)
