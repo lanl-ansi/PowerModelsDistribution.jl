@@ -90,7 +90,7 @@ end
         result = run_mc_pf(eng, LPUBFDiagPowerModel, ipopt_solver; make_si=false)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test all(isapprox.(result["solution"]["bus"]["primary"]["w"], 0.99656; atol=1e-3))
+        @test all(isapprox.(result["solution"]["bus"]["primary"]["w"], 0.99767; atol=1e-3))
     end
 end
 
