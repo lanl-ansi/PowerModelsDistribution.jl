@@ -36,11 +36,11 @@
             @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * sol["solution"]["settings"]["sbase"]), 0.00927263; atol=1e-5)
         end
 
-        @testset "5-bus storage matpower mn ivr mld" begin
+        @testset "5-bus storage matpower mn ivr opf" begin
             case5 = PM.parse_file("../test/data/matpower/case5.m")
             make_multiconductor!(case5, 3)
             case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
-            result = run_mn_mc_opf(case5_mn, IVRPowerModel, ipopt_solver, multinetwork=true)
+            result = run_mn_mc_opf(case5_mn, IVRPowerModel, ipopt_solver)
             @test result["termination_status"] == LOCALLY_SOLVED
         end
     end

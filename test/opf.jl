@@ -33,7 +33,7 @@
 
         @testset "5-bus matpower mn acp mld" begin
             case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
-            result = run_mn_mc_opf(case5_mn, ACPPowerModel, ipopt_solver, multinetwork=true)
+            result = run_mn_mc_opf(case5_mn, ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 45522.096*3; atol=1e-1)
@@ -44,7 +44,7 @@
 
         @testset "5-bus matpower mn acr mld" begin
             case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
-            result = run_mn_mc_opf(case5_mn, ACRPowerModel, ipopt_solver, multinetwork=true)
+            result = run_mn_mc_opf(case5_mn, ACRPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 45522.096*3; atol=1e-1)
@@ -56,7 +56,7 @@
 
         @testset "5-bus storage matpower mn acp mld" begin
             case5_strg_mn = InfrastructureModels.replicate(case5_strg, 3, Set(["per_unit"]))
-            result = run_mn_mc_opf(case5_strg_mn, ACPPowerModel, ipopt_solver, multinetwork=true)
+            result = run_mn_mc_opf(case5_strg_mn, ACPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test result["objective"] >= 45522.096*3

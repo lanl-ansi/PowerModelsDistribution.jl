@@ -12,7 +12,7 @@ end
 
 "Run multinetwork optimal power flow problem"
 function run_mn_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    return run_mc_model(data, model_type, solver, build_mn_mc_opf; kwargs...)
+    return run_mc_model(data, model_type, solver, build_mn_mc_opf; multinetwork=true, kwargs...)
 end
 
 

@@ -6,7 +6,7 @@ end
 
 "Run multinetwork load shedding problem with storage"
 function run_mn_mc_mld(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    return run_mc_model(data, model_type, solver, build_mn_mc_mld; kwargs...)
+    return run_mc_model(data, model_type, solver, build_mn_mc_mld; multinetwork=true, kwargs...)
 end
 
 

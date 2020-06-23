@@ -46,7 +46,7 @@
 
     @testset "5-bus mn acp mld" begin
         case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
-        result = run_mn_mc_mld(case5_mn, ACPPowerModel, ipopt_solver, multinetwork=true)
+        result = run_mn_mc_mld(case5_mn, ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 3*0.3377; atol=2.0e-4)
@@ -57,7 +57,7 @@
 
     @testset "5-bus mn storage acp mld" begin
         case5_strg_mn = InfrastructureModels.replicate(case5_strg, 3, Set(["per_unit"]))
-        result = run_mn_mc_mld(case5_strg_mn, ACPPowerModel, ipopt_solver, multinetwork=true)
+        result = run_mn_mc_mld(case5_strg_mn, ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test result["objective"] >= 3.0*0.3432
@@ -66,7 +66,7 @@
 
     @testset "5-bus mn nfa mld" begin
         case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
-        result = run_mn_mc_mld(case5_mn, NFAPowerModel, ipopt_solver, multinetwork=true)
+        result = run_mn_mc_mld(case5_mn, NFAPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 3.0*0.1557; atol=2.0e-4)
@@ -75,7 +75,7 @@
 
     @testset "5-bus mn storage nfa mld" begin
         case5_strg_mn = InfrastructureModels.replicate(case5_strg, 3, Set(["per_unit"]))
-        result = run_mn_mc_mld(case5_strg_mn, NFAPowerModel, ipopt_solver, multinetwork=true)
+        result = run_mn_mc_mld(case5_strg_mn, NFAPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test result["objective"] >= 3.0*0.1557
@@ -84,7 +84,7 @@
 
     @testset "5-bus mn lpubfdiag mld" begin
         case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
-        result = run_mn_mc_mld(case5_mn, LPUBFDiagPowerModel, ipopt_solver, multinetwork=true)
+        result = run_mn_mc_mld(case5_mn, LPUBFDiagPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 3.0*0.1557; atol=2.0e-4)
