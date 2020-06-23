@@ -230,7 +230,7 @@
             pmd_math["bus"]["4"]["vm_start"] = pmd_math["bus"]["4"]["vm"]
             pmd_math["bus"]["4"]["va_start"] = pmd_math["bus"]["4"]["va"]
             pmd_math["bus"]["2"]["vm_start"] = [0.9959, 0.9959, 0.9959]
-            pmd_math["bus"]["2"]["va_start"] = [0.00, -1.2900, 1.2900]
+            pmd_math["bus"]["2"]["va_start"] = [0.00, -2.0944, 2.0944]
 
             sol_ivr = run_mc_opf(pmd_math, IVRPowerModel, optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-5, "print_level"=>2))
             sol_acr = run_mc_opf(pmd_math, ACRPowerModel, optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-5, "print_level"=>2))
