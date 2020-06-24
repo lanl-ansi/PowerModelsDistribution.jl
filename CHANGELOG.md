@@ -3,11 +3,7 @@
 ## staged
 
 - Add possibility to give vm_start in variable_mc_voltage for ivr and acr formulations
-<<<<<<< HEAD
 - Add wye-wye and delta-wye constraints to LPUBFDiagModel formulation
-=======
-- Add wye-wye and delta-wye constraints to LPUBFDiagModel formulation 
->>>>>>> ef1ba4bee7ee29658f4219a8453965e49eee08b9
 - Fix typo in ivr formulation line 548, was var(pm, nw, :crg_bus, id) now is var(pm, nw, :cig_bus, id)
 - Fix missing / incorrect type of some properties on lines in opendss parser (#290)
 - Fix connections-determining-code on solar and storage objects to generator object syntax (#291)
