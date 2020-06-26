@@ -350,7 +350,7 @@ function variable_mc_bus_voltage_magnitude_sqr(pm::_PM.AbstractPowerModel; nw::I
             vmax=bus["vmax"]
             vmin=bus["vmin"]
             for c in 1:ncnds
-                set_upper_bound.((w[i])[c], max(vmin[c]^2, vmax[c]^2)) 
+                set_upper_bound.((w[i])[c], max(vmin[c]^2, vmax[c]^2))
                 if(vmin[c]>0)
                     set_lower_bound.((w[i])[c], vmin[c]^2)
                 end
@@ -410,7 +410,6 @@ consume reactive power at its connecting bus, subject to the injection limits
 of the device.
 """
 function variable_mc_storage_power_control_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
-    # TODO properly adapt this new control variable to multiconductor
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -441,7 +440,6 @@ consume reactive power at its connecting bus, subject to the injection limits
 of the device.
 """
 function variable_mc_storage_power_control_imaginary_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
-    # TODO properly adapt this new control variable to multiconductor
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 

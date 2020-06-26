@@ -88,7 +88,7 @@ function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true, pr
     )
 
     if haskey(data_eng, "time_elapsed")
-        data_math["time_elapsed"] = deepcopy(data_eng["time_elapsed"])
+        data_math["time_elapsed"] = data_eng["time_elapsed"]
     end
 
     #TODO the PM tests break for branches which are not of the size indicated by conductors;

@@ -135,6 +135,12 @@ function constraint_mc_bus_voltage_magnitude_on_off(pm::_PM.AbstractACRModel, n:
     vi = var(pm, n, :vi, i)
     z_voltage = var(pm, n, :z_voltage, i)
 
+    vr_ub + vi_ub = sqrt(vmax.^2)
+    vr_lb + vi_lb = sqrt(vmin.^2)
+
+    # TODO: non-convex constraints, look into ways to avoid in the future
+    # z_voltage*vr_lb[c] <= vr[c] <= z_voltage*vr_ub[c]
+    # z_voltage*vi_lb[c] <= vi[c] <= z_voltage*vi_ub[c]
     for c in conductor_ids(pm, n)
         if isfinite(vmax[c])
             JuMP.@constraint(pm.model, vr[c]^2 + vi[c]^2 <= vmax[c]^2*z_voltage)
