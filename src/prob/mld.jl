@@ -88,13 +88,12 @@ function build_mn_mc_mld_simple(pm::_PM.AbstractPowerModel)
         variable_mc_branch_power(pm; nw=n)
         variable_mc_transformer_power(pm; nw=n)
         variable_mc_gen_power_setpoint(pm; nw=n)
-
         variable_mc_bus_voltage(pm; nw=n)
-        variable_mc_bus_voltage_indicator(pm; nw=n, relax=true)
 
         variable_mc_load_indicator(pm; nw=n, relax=true)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
         variable_mc_storage_power_mi(pm; nw=n, relax=true)
+        _PM.variable_storage_complementary_indicator(pm; nw=n, relax=true)
 
         constraint_mc_model_voltage(pm; nw=n)
 
@@ -145,7 +144,7 @@ function build_mn_mc_mld_simple(pm::_PM.AbstractPowerModel)
         n_1 = n_2
     end
 
-    objective_mc_min_load_setpoint_delta(pm)
+    objective_mc_min_load_setpoint_delta_simple(pm)
 end
 
 
@@ -216,13 +215,12 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
         variable_mc_branch_power(pm; nw=n)
         variable_mc_transformer_power(pm; nw=n)
         variable_mc_gen_power_setpoint(pm; nw=n)
-
         variable_mc_bus_voltage(pm; nw=n)
-        variable_mc_bus_voltage_indicator(pm; nw=n, relax=true)
 
         variable_mc_load_indicator(pm; nw=n, relax=true)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
         variable_mc_storage_power_mi(pm; nw=n, relax=true)
+        _PM.variable_storage_complementary_indicator(pm; nw=n, relax=true)
 
         constraint_mc_model_current(pm; nw=n)
 
@@ -273,7 +271,7 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
         n_1 = n_2
     end
 
-    objective_mc_min_load_setpoint_delta(pm)
+    objective_mc_min_load_setpoint_delta_simple(pm)
 end
 
 
