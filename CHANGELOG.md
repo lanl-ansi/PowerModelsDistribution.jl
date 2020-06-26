@@ -4,6 +4,10 @@
 
 - none
 
+## v0.9.2
+
+- Remove leftover code that was causing a warning on import, but was not breaking the implementation
+
 ## v0.9.1
 
 - Add support for storage components and mld problem in ACR formulation
