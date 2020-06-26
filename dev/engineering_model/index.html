@@ -89,7 +89,7 @@ This program contains Ipopt, a library for large-scale nonlinear optimization.
 ******************************************************************************
 
 Dict{String,Any} with 8 entries:
-  &quot;solve_time&quot;         =&gt; 4.2083
+  &quot;solve_time&quot;         =&gt; 4.03781
   &quot;optimizer&quot;          =&gt; &quot;Ipopt&quot;
   &quot;termination_status&quot; =&gt; LOCALLY_SOLVED
   &quot;dual_status&quot;        =&gt; FEASIBLE_POINT
@@ -109,7 +109,7 @@ Dict{String,Any} with 8 entries:
 result_pu[&quot;solution&quot;][&quot;bus&quot;][&quot;loadbus&quot;]</code></pre><pre><code class="language-none">Dict{String,Any} with 2 entries:
   &quot;va&quot; =&gt; [-0.484238, -120.243, 120.274]
   &quot;vm&quot; =&gt; [0.963546, 0.981757, 0.976779]</code></pre><h3 id="Branch-Flow-formulations-1"><a class="docs-heading-anchor" href="#Branch-Flow-formulations-1">Branch Flow formulations</a><a class="docs-heading-anchor-permalink" href="#Branch-Flow-formulations-1" title="Permalink"></a></h3><p>Previously, to use a branch flow formulation, such as <code>SOCNLPUBFPowerModel</code>, it was required to use a different <code>run_</code> command, but now, by using multiple dispatch we have simplified this for the user</p><pre><code class="language-julia">result_bf = run_mc_opf(eng, SOCNLPUBFPowerModel, ipopt_solver)</code></pre><pre><code class="language-none">Dict{String,Any} with 8 entries:
-  &quot;solve_time&quot;         =&gt; 0.228147
+  &quot;solve_time&quot;         =&gt; 0.227379
   &quot;optimizer&quot;          =&gt; &quot;Ipopt&quot;
   &quot;termination_status&quot; =&gt; LOCALLY_SOLVED
   &quot;dual_status&quot;        =&gt; FEASIBLE_POINT
@@ -117,7 +117,7 @@ result_pu[&quot;solution&quot;][&quot;bus&quot;][&quot;loadbus&quot;]</code></pr
   &quot;objective&quot;          =&gt; 0.0211297
   &quot;solution&quot;           =&gt; Dict{String,Any}(&quot;voltage_source&quot;=&gt;Dict{Any,Any}(&quot;sou…
   &quot;objective_lb&quot;       =&gt; -Inf</code></pre><h3 id="Running-Time-Series-Models-1"><a class="docs-heading-anchor" href="#Running-Time-Series-Models-1">Running Time Series Models</a><a class="docs-heading-anchor-permalink" href="#Running-Time-Series-Models-1" title="Permalink"></a></h3><p>By default, <code>time_series</code> object will be ignored when running a model. To use the time series information you will need to have a multinetwork problem specification</p><p>In the example below we use a test case, which is not exported by default, and therefore requires the specification of the PowerModelsDistribution namespace</p><pre><code class="language-julia">result_mn = PowerModelsDistribution._run_mc_mn_opb(eng_ts, NFAPowerModel, ipopt_solver)</code></pre><pre><code class="language-none">Dict{String,Any} with 8 entries:
-  &quot;solve_time&quot;         =&gt; 0.441574
+  &quot;solve_time&quot;         =&gt; 0.400666
   &quot;optimizer&quot;          =&gt; &quot;Ipopt&quot;
   &quot;termination_status&quot; =&gt; LOCALLY_SOLVED
   &quot;dual_status&quot;        =&gt; FEASIBLE_POINT
@@ -126,7 +126,7 @@ result_pu[&quot;solution&quot;][&quot;bus&quot;][&quot;loadbus&quot;]</code></pr
   &quot;solution&quot;           =&gt; Dict{String,Any}(&quot;nw&quot;=&gt;Dict{String,Any}(&quot;8&quot;=&gt;Dict{Any…
   &quot;objective_lb&quot;       =&gt; -Inf</code></pre><h2 id="Engineering-Model-Transformations-1"><a class="docs-heading-anchor" href="#Engineering-Model-Transformations-1">Engineering Model Transformations</a><a class="docs-heading-anchor-permalink" href="#Engineering-Model-Transformations-1" title="Permalink"></a></h2><p>One of the power things about the engineering model is that data transformations are much more simple. Here we illustrate two examples that are currently included in PowerModelsDistribution, but writing your own data transformation functions will be trivial, as we will show.</p><p><strong>Note</strong>: In v0.9, <code>apply_kron_reduction!</code> and <code>apply_phase_projection!</code> are applied by default, but can be disabled with the keyword arguments <code>kron_reduced=false</code> and <code>project_phases=false</code>, respectively in <code>parse_file</code> or <code>transform_data_model</code>.</p><p>First, there are several objects that have loss models by default when parsing from dss files, such as voltage sources, transformers, and switches. To remove these loss models, therefore making these components lossless, we can use the included <code>make_lossess!</code> function. Here we use a basic 2-winding wye-wye connected transformer case from <code>test</code> to illustrate this</p><pre><code class="language-julia">eng_ut = parse_file(&quot;../test/data/opendss/ut_trans_2w_yy.dss&quot;)
 
-eng_ut[&quot;transformer&quot;][&quot;tx1&quot;]</code></pre><pre><code class="language-none">Dict{String,Any} with 16 entries:
+eng_ut[&quot;transformer&quot;][&quot;tx1&quot;]</code></pre><pre><code class="language-none">Dict{String,Any} with 17 entries:
   &quot;polarity&quot;      =&gt; [1, 1]
   &quot;sm_nom&quot;        =&gt; [500.0, 500.0]
   &quot;tm_lb&quot;         =&gt; [[0.9, 0.9, 0.9], [0.9, 0.9, 0.9]]
@@ -135,6 +135,7 @@ eng_ut[&quot;transformer&quot;][&quot;tx1&quot;]</code></pre><pre><code class="l
   &quot;tm_step&quot;       =&gt; [[0.03125, 0.03125, 0.03125], [0.03125, 0.03125, 0.03125]]
   &quot;bus&quot;           =&gt; [&quot;1&quot;, &quot;2&quot;]
   &quot;configuration&quot; =&gt; ConnConfig[WYE, WYE]
+  &quot;status&quot;        =&gt; ENABLED
   &quot;noloadloss&quot;    =&gt; 0.05
   &quot;cmag&quot;          =&gt; 0.11
   &quot;xsc&quot;           =&gt; [0.05]
@@ -144,7 +145,7 @@ eng_ut[&quot;transformer&quot;][&quot;tx1&quot;]</code></pre><pre><code class="l
   &quot;vm_nom&quot;        =&gt; [11.0, 4.0]
   &quot;tm_ub&quot;         =&gt; [[1.1, 1.1, 1.1], [1.1, 1.1, 1.1]]</code></pre><p>We can see that <code>&quot;noloadloss&quot;</code>, <code>&quot;rw&quot;</code>, and <code>&quot;imag&quot;</code> are non-zero, but if we apply the <code>make_lossless!</code> function we can see these parameters are set to zero, effectively eliminating the losses</p><pre><code class="language-julia">make_lossless!(eng_ut)
 
-eng_ut[&quot;transformer&quot;][&quot;tx1&quot;]</code></pre><pre><code class="language-none">Dict{String,Any} with 16 entries:
+eng_ut[&quot;transformer&quot;][&quot;tx1&quot;]</code></pre><pre><code class="language-none">Dict{String,Any} with 17 entries:
   &quot;polarity&quot;      =&gt; [1, 1]
   &quot;sm_nom&quot;        =&gt; [500.0, 500.0]
   &quot;tm_lb&quot;         =&gt; [[0.9, 0.9, 0.9], [0.9, 0.9, 0.9]]
@@ -153,6 +154,7 @@ eng_ut[&quot;transformer&quot;][&quot;tx1&quot;]</code></pre><pre><code class="l
   &quot;tm_step&quot;       =&gt; [[0.03125, 0.03125, 0.03125], [0.03125, 0.03125, 0.03125]]
   &quot;bus&quot;           =&gt; [&quot;1&quot;, &quot;2&quot;]
   &quot;configuration&quot; =&gt; ConnConfig[WYE, WYE]
+  &quot;status&quot;        =&gt; ENABLED
   &quot;noloadloss&quot;    =&gt; 0.0
   &quot;cmag&quot;          =&gt; 0.0
   &quot;xsc&quot;           =&gt; [0.0]
@@ -162,7 +164,7 @@ eng_ut[&quot;transformer&quot;][&quot;tx1&quot;]</code></pre><pre><code class="l
   &quot;vm_nom&quot;        =&gt; [11.0, 4.0]
   &quot;tm_ub&quot;         =&gt; [[1.1, 1.1, 1.1], [1.1, 1.1, 1.1]]</code></pre><p>Alternatively, we can apply this function at parse</p><pre><code class="language-julia">eng_ut = parse_file(&quot;../test/data/opendss/ut_trans_2w_yy.dss&quot;; transformations=[make_lossless!])
 
-eng_ut[&quot;transformer&quot;][&quot;tx1&quot;]</code></pre><pre><code class="language-none">Dict{String,Any} with 16 entries:
+eng_ut[&quot;transformer&quot;][&quot;tx1&quot;]</code></pre><pre><code class="language-none">Dict{String,Any} with 17 entries:
   &quot;polarity&quot;      =&gt; [1, 1]
   &quot;sm_nom&quot;        =&gt; [500.0, 500.0]
   &quot;tm_lb&quot;         =&gt; [[0.9, 0.9, 0.9], [0.9, 0.9, 0.9]]
@@ -171,6 +173,7 @@ eng_ut[&quot;transformer&quot;][&quot;tx1&quot;]</code></pre><pre><code class="l
   &quot;tm_step&quot;       =&gt; [[0.03125, 0.03125, 0.03125], [0.03125, 0.03125, 0.03125]]
   &quot;bus&quot;           =&gt; [&quot;1&quot;, &quot;2&quot;]
   &quot;configuration&quot; =&gt; ConnConfig[WYE, WYE]
+  &quot;status&quot;        =&gt; ENABLED
   &quot;noloadloss&quot;    =&gt; 0.0
   &quot;cmag&quot;          =&gt; 0.0
   &quot;xsc&quot;           =&gt; [0.0]
@@ -311,4 +314,4 @@ Subject to
  -0_(1,1,3)_p[3] = -0.012
  0_(1,1,3)_p[1] - 0_(2,2,1)_p[1] = 0.0
  0_(1,1,3)_p[2] - 0_(2,2,1)_p[2] = 0.0
- 0_(1,1,3)_p[3] - 0_(2,2,1)_p[3] = 0.0</code></pre><h2 id="Conclusion-1"><a class="docs-heading-anchor" href="#Conclusion-1">Conclusion</a><a class="docs-heading-anchor-permalink" href="#Conclusion-1" title="Permalink"></a></h2><p>This concludes the introduction to the <code>ENGINEERING</code> data model and conversion to the <code>MATHEMATICAL</code> model. We hope that you will find this new data model abstraction easy to use and simple to understand</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../external-data-formats/">« External Data Formats</a><a class="docs-footer-nextpage" href="../engineering_model_helper_functions/">Engineering Model Helper Functions »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 23 June 2020 15:31">Tuesday 23 June 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ 0_(1,1,3)_p[3] - 0_(2,2,1)_p[3] = 0.0</code></pre><h2 id="Conclusion-1"><a class="docs-heading-anchor" href="#Conclusion-1">Conclusion</a><a class="docs-heading-anchor-permalink" href="#Conclusion-1" title="Permalink"></a></h2><p>This concludes the introduction to the <code>ENGINEERING</code> data model and conversion to the <code>MATHEMATICAL</code> model. We hope that you will find this new data model abstraction easy to use and simple to understand</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../external-data-formats/">« External Data Formats</a><a class="docs-footer-nextpage" href="../engineering_model_helper_functions/">Engineering Model Helper Functions »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 26 June 2020 14:07">Friday 26 June 2020</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
