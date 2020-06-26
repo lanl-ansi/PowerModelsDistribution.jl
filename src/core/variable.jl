@@ -383,6 +383,7 @@ function variable_mc_storage_power_mi(pm::_PM.AbstractPowerModel; relax::Bool=fa
     variable_mc_storage_indicator(pm; relax=relax, kwargs...)
     variable_mc_storage_power_on_off(pm; kwargs...)
     variable_mc_storage_power_control_imaginary(pm; kwargs...)
+    _PM.variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
 end
 
 

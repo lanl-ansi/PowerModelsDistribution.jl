@@ -252,6 +252,7 @@ function build_mn_mc_opf(pm::_PM.AbstractIVRModel)
         variable_mc_transformer_current(pm; nw=n)
         variable_mc_gen_power_setpoint(pm; nw=n)
         variable_mc_load_setpoint(pm; nw=n)
+        variable_mc_storage_power(pm; nw=n)
 
         for i in ids(pm, n, :ref_buses)
             constraint_mc_theta_ref(pm, i; nw=n)
@@ -269,6 +270,12 @@ function build_mn_mc_opf(pm::_PM.AbstractIVRModel)
             constraint_mc_load_current_balance(pm, i; nw=n)
         end
 
+        for i in ids(pm, n, :storage)
+            _PM.constraint_storage_complementarity_nl(pm, i; nw=n)
+            constraint_mc_storage_losses(pm, i; nw=n)
+            constraint_mc_storage_thermal_limit(pm, i; nw=n)
+        end
+
         for i in ids(pm, n, :branch)
             constraint_mc_current_from(pm, i; nw=n)
             constraint_mc_current_to(pm, i; nw=n)
@@ -283,6 +290,22 @@ function build_mn_mc_opf(pm::_PM.AbstractIVRModel)
         end
     end
 
+    network_ids = sort(collect(_PM.nw_ids(pm)))
+
+    n_1 = network_ids[1]
+
+    for i in _PM.ids(pm, :storage; nw=n_1)
+        _PM.constraint_storage_state(pm, i; nw=n_1)
+    end
+
+    for n_2 in network_ids[2:end]
+        for i in _PM.ids(pm, :storage; nw=n_2)
+            _PM.constraint_storage_state(pm, i, n_1, n_2)
+        end
+
+        n_1 = n_2
+    end
+
     _PM.objective_min_fuel_cost(pm)
 end
 
@@ -295,6 +318,7 @@ function build_mn_mc_opf(pm::AbstractUBFModels)
         variable_mc_transformer_power(pm; nw=n)
         variable_mc_gen_power_setpoint(pm; nw=n)
         variable_mc_load_setpoint(pm; nw=n)
+        variable_mc_storage_power(pm; nw=n)
 
         constraint_mc_model_current(pm; nw=n)
 
@@ -314,6 +338,12 @@ function build_mn_mc_opf(pm::AbstractUBFModels)
             constraint_mc_load_power_balance(pm, i; nw=n)
         end
 
+        for i in ids(pm, n, :storage)
+            _PM.constraint_storage_complementarity_nl(pm, i; nw=n)
+            constraint_mc_storage_losses(pm, i; nw=n)
+            constraint_mc_storage_thermal_limit(pm, i; nw=n)
+        end
+
         for i in ids(pm, n, :branch)
             constraint_mc_power_losses(pm, i; nw=n)
             constraint_mc_model_voltage_magnitude_difference(pm, i; nw=n)
@@ -325,6 +355,22 @@ function build_mn_mc_opf(pm::AbstractUBFModels)
         for i in ids(pm, n, :transformer)
             constraint_mc_transformer_power(pm, i; nw=n)
         end
+    end
+
+    network_ids = sort(collect(_PM.nw_ids(pm)))
+
+    n_1 = network_ids[1]
+
+    for i in _PM.ids(pm, :storage; nw=n_1)
+        _PM.constraint_storage_state(pm, i; nw=n_1)
+    end
+
+    for n_2 in network_ids[2:end]
+        for i in _PM.ids(pm, :storage; nw=n_2)
+            _PM.constraint_storage_state(pm, i, n_1, n_2)
+        end
+
+        n_1 = n_2
     end
 
     _PM.objective_min_fuel_cost(pm)

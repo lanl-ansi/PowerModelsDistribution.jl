@@ -7,6 +7,7 @@
 ## v0.9.2
 
 - Remove leftover code that was causing a warning on import, but was not breaking the implementation
+- Add multinetwork MLD and OPF problem specifications
 
 ## v0.9.1
 
@@ -33,7 +34,6 @@
 - Add pull request template
 - Add Pull Request Checks (Github Actions), to inform developers of potentially missing aspects of their PR
 - Store references for power balance constraints
-- Add multinetwork MLD and OPF problem specifications
 
 ## v0.9.0
 
