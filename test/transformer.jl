@@ -140,4 +140,28 @@
             @test norm(solution["bus"]["3"]["va"]-[-0.1, -120.4, 119.8], Inf) <= 0.1
         end
     end
+    @testset "linearized transformers" begin
+        @testset "2w_dy_lead" begin
+            eng = parse_file("../test/data/opendss/ut_trans_2w_dy_lead.dss")
+            sol = run_mc_opf(eng, LPUBFDiagPowerModel, ipopt_solver)
+            @test norm(sol["solution"]["bus"]["3"]["w"]-[0.76674, 0.74840, 0.73846], Inf) <= 1E-4
+        end
+        @testset "3w_dyy_1" begin
+            eng = parse_file("../test/data/opendss/ut_trans_3w_dyy_1.dss")
+            sol = run_mc_opf(eng, LPUBFDiagPowerModel, ipopt_solver)
+            @test norm(sol["solution"]["bus"]["3"]["w"]-[0.86095, 0.81344, 0.80480], Inf) <= 1E-4
+        end
+        @testset "3w_dyy_2" begin
+            eng = parse_file("../test/data/opendss/ut_trans_3w_dyy_2.dss")
+            sol = run_mc_opf(eng, LPUBFDiagPowerModel, ipopt_solver)
+            @test norm(sol["solution"]["bus"]["3"]["w"]-[0.87086, 0.83270, 0.83208], Inf) <= 1E-4
+        end
+        @testset "2w_dy_lead_small_series_impedance" begin
+            eng = parse_file("../test/data/opendss/ut_trans_2w_dy_lead_small_series_impedance.dss", data_model=MATHEMATICAL)
+            sola = run_mc_opf(eng, LPUBFDiagPowerModel, ipopt_solver)
+            solb = run_mc_opf(eng, ACPPowerModel, ipopt_solver)
+            @test norm(sola["solution"]["bus"]["1"]["w"]-solb["solution"]["bus"]["1"]["vm"].^2, Inf) <= 1.2E-3
+            @test norm(sola["solution"]["branch"]["1"]["pf"]-solb["solution"]["branch"]["1"]["pf"], Inf) <= 1E-3
+        end
+    end
 end

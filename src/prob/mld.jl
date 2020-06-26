@@ -34,7 +34,8 @@ function build_mc_mld(pm::_PM.AbstractPowerModel)
     variable_mc_gen_indicator(pm; relax=true)
     variable_mc_gen_power_setpoint_on_off(pm)
 
-    variable_mc_storage_power_mi(pm; relax=true)
+    variable_mc_storage_indicator(pm, relax=true)
+    variable_mc_storage_power_mi_on_off(pm, relax=true)
 
     variable_mc_load_indicator(pm; relax=true)
     variable_mc_shunt_indicator(pm; relax=true)
@@ -57,7 +58,8 @@ function build_mc_mld(pm::_PM.AbstractPowerModel)
 
     for i in ids(pm, :storage)
         _PM.constraint_storage_state(pm, i)
-        _PM.constraint_storage_complementarity_nl(pm, i)
+        _PM.constraint_storage_complementarity_mi(pm, i)
+        constraint_mc_storage_on_off(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end
@@ -166,6 +168,9 @@ function build_mc_mld(pm::AbstractUBFModels)
     variable_mc_gen_indicator(pm; relax=true)
     variable_mc_gen_power_setpoint_on_off(pm)
 
+    variable_mc_storage_indicator(pm, relax=true)
+    variable_mc_storage_power_mi_on_off(pm, relax=true)
+
     variable_mc_load_indicator(pm; relax=true)
     variable_mc_shunt_indicator(pm; relax=true)
 
@@ -183,6 +188,14 @@ function build_mc_mld(pm::AbstractUBFModels)
 
     for i in ids(pm, :bus)
         constraint_mc_shed_power_balance(pm, i)
+    end
+
+    for i in ids(pm, :storage)
+        _PM.constraint_storage_state(pm, i)
+        _PM.constraint_storage_complementarity_mi(pm, i)
+        constraint_mc_storage_on_off(pm, i)
+        constraint_mc_storage_losses(pm, i)
+        constraint_mc_storage_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :branch)

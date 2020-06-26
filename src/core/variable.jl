@@ -345,12 +345,15 @@ function variable_mc_bus_voltage_magnitude_sqr(pm::_PM.AbstractPowerModel; nw::I
     )
 
     if bounded
-        for (i,bus) in ref(pm, nw, :bus)
-            if haskey(bus, "vmin")
-                set_lower_bound.(w[i], bus["vmin"].^2)
-            end
-            if haskey(bus, "vmax")
-                set_upper_bound.(w[i], bus["vmax"].^2)
+        for i in ids(pm, nw, :bus)
+            bus = ref(pm, nw, :bus, i)
+            vmax=bus["vmax"]
+            vmin=bus["vmin"]
+            for c in 1:ncnds
+                set_upper_bound.((w[i])[c], max(vmin[c]^2, vmax[c]^2))
+                if(vmin[c]>0)
+                    set_lower_bound.((w[i])[c], vmin[c]^2)
+                end
             end
         end
     end
@@ -364,7 +367,7 @@ function variable_mc_storage_power(pm::_PM.AbstractPowerModel; kwargs...)
     variable_mc_storage_power_real(pm; kwargs...)
     variable_mc_storage_power_imaginary(pm; kwargs...)
     variable_mc_storage_power_control_imaginary(pm; kwargs...)
-    _PM.variable_storage_current(pm; kwargs...) # TODO storage current variable for multiconductor
+    variable_mc_storage_current(pm; kwargs...)
     _PM.variable_storage_energy(pm; kwargs...)
     _PM.variable_storage_charge(pm; kwargs...)
     _PM.variable_storage_discharge(pm; kwargs...)
@@ -373,7 +376,7 @@ end
 
 ""
 function variable_mc_storage_power_mi(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
-    _PM.variable_storage_current(pm; kwargs...) # TODO storage current variable for multiconductor
+    variable_mc_storage_current(pm; kwargs...)
     _PM.variable_storage_energy(pm; kwargs...)
     _PM.variable_storage_charge(pm; kwargs...)
     _PM.variable_storage_discharge(pm; kwargs...)
@@ -383,13 +386,30 @@ function variable_mc_storage_power_mi(pm::_PM.AbstractPowerModel; relax::Bool=fa
 end
 
 
+""
+function variable_mc_storage_power_mi_on_off(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
+    variable_mc_storage_power_real_on_off(pm; kwargs...)
+    variable_mc_storage_power_imaginary_on_off(pm; kwargs...)
+    variable_mc_storage_power_control_imaginary_on_off(pm; kwargs...)
+    variable_mc_storage_current(pm; kwargs...)
+    _PM.variable_storage_energy(pm; kwargs...)
+    _PM.variable_storage_charge(pm; kwargs...)
+    _PM.variable_storage_discharge(pm; kwargs...)
+    _PM.variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
+end
+
+
+"do nothing by default but some formulations require this"
+function variable_mc_storage_current(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+end
+
+
 """
 a reactive power slack variable that enables the storage device to inject or
 consume reactive power at its connecting bus, subject to the injection limits
 of the device.
 """
 function variable_mc_storage_power_control_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
-    # TODO properly adapt this new control variable to multiconductor
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -412,6 +432,39 @@ function variable_mc_storage_power_control_imaginary(pm::_PM.AbstractPowerModel;
 
     report && _IM.sol_component_value(pm, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
 end
+
+
+"""
+a reactive power slack variable that enables the storage device to inject or
+consume reactive power at its connecting bus, subject to the injection limits
+of the device.
+"""
+function variable_mc_storage_power_control_imaginary_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    cnds = conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    qsc = var(pm, nw)[:qsc] = JuMP.@variable(pm.model,
+        [i in ids(pm, nw, :storage)], base_name="$(nw)_qsc_$(i)",
+        start = _PM.comp_start_value(ref(pm, nw, :storage, i), "qsc_start")
+    )
+
+    if bounded
+        inj_lb, inj_ub = _PM.ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus))
+        for (i,storage) in ref(pm, nw, :storage)
+            if !isinf(sum(inj_lb[i])) || haskey(storage, "qmin")
+                lb = max(sum(inj_lb[i]), sum(get(storage, "qmin", -Inf)))
+                set_lower_bound(qsc[i], min(lb, 0.0))
+            end
+            if !isinf(sum(inj_ub[i])) || haskey(storage, "qmax")
+                ub = min(sum(inj_ub[i]), sum(get(storage, "qmax", Inf)))
+                set_upper_bound(qsc[i], max(ub, 0.0))
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
+end
+
 
 
 ""
@@ -534,8 +587,8 @@ function variable_mc_transformer_power_real(pm::_PM.AbstractPowerModel; nw::Int=
             rate_a_fr, rate_a_to = _calc_transformer_power_ub_frto(ref(pm, nw, :transformer, t), ref(pm, nw, :bus, i), ref(pm, nw, :bus, j))
             set_lower_bound.(pt[(t,i,j)], -rate_a_fr)
             set_upper_bound.(pt[(t,i,j)],  rate_a_fr)
-            set_lower_bound.(pt[(t,j,i)], -rate_a_fr)
-            set_upper_bound.(pt[(t,j,i)],  rate_a_fr)
+            set_lower_bound.(pt[(t,j,i)], -rate_a_to)
+            set_upper_bound.(pt[(t,j,i)],  rate_a_to)
         end
     end
 
@@ -572,8 +625,8 @@ function variable_mc_transformer_power_imaginary(pm::_PM.AbstractPowerModel; nw:
 
             set_lower_bound.(qt[(t,i,j)], -rate_a_fr)
             set_upper_bound.(qt[(t,i,j)],  rate_a_fr)
-            set_lower_bound.(qt[(t,j,i)], -rate_a_fr)
-            set_upper_bound.(qt[(t,j,i)],  rate_a_fr)
+            set_lower_bound.(qt[(t,j,i)], -rate_a_to)
+            set_upper_bound.(qt[(t,j,i)],  rate_a_to)
         end
     end
 
@@ -768,8 +821,8 @@ function variable_mc_storage_power_real_on_off(pm::_PM.AbstractPowerModel; nw::I
             inj_lb, inj_ub = _PM.ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus), cnd)
 
             for (i, strg) in ref(pm, nw, :storage)
-                set_lower_bound.(ps[i], inj_lb[i])
-                set_upper_bound.(ps[i], inj_ub[i])
+                set_lower_bound.(ps[i][cnd], inj_lb[i])
+                set_upper_bound.(ps[i][cnd], inj_ub[i])
             end
         end
     end

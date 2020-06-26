@@ -719,6 +719,8 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
             end
         end
 
+        eng_obj["status"] = defaults["enabled"] ? ENABLED : DISABLED
+
         for key in ["bank", "xfmrcode"]
             if !isempty(defaults[key])
                 eng_obj[key] = defaults[key]
@@ -795,7 +797,7 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=[collect(1:defaults["phases"])..., 0]),
             "configuration" => WYE,
             "energy" => defaults["kwhstored"],
-            "energy_ub" => defaults["kwrated"],
+            "energy_ub" => defaults["kwhrated"],
             "charge_ub" => defaults["%charge"] / 100.0 * defaults["kwrated"],
             "discharge_ub" => defaults["%discharge"] / 100.0 * defaults["kwrated"],
             "cm_ub" => fill(defaults["kva"] / nphases, nphases),

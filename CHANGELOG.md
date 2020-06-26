@@ -2,6 +2,24 @@
 
 ## staged
 
+- none
+
+## v0.9.2
+
+- Remove leftover code that was causing a warning on import, but was not breaking the implementation
+
+## v0.9.1
+
+- Add support for storage components and mld problem in ACR formulation
+- Add storage variables and constraints to OPF, PF, and MLD problems
+- Fix bug in `con` mapping in power balance constraints where an array was expected
+- Fix bug in `constraint_mc_shed_power_balance` where Gt, Bt were not defined
+- Fix bug in the status of virtual branches created from switches where the status of the switch was not taken into account, only the state
+- Fix bug in transformer parsing where `status` wasn't being included
+- Fix constraint for PV buses, which were attempting to be applied in places where `vm` was not specified
+- Fix bug in type enforcement of `map` argument in `transform_solution`
+- Fix storage parsing including unit conversion and inclusion of time_elapsed from the root level
+- Add wye-wye and delta-wye constraints to LPUBFDiagModel formulation
 - Fix typo in ivr formulation line 548, was var(pm, nw, :crg_bus, id) now is var(pm, nw, :cig_bus, id)
 - Fix missing / incorrect type of some properties on lines in opendss parser (#290)
 - Fix connections-determining-code on solar and storage objects to generator object syntax (#291)
