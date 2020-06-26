@@ -51,8 +51,8 @@ function constraint_mc_slack_power_balance(pm::_PM.AbstractWModels, nw::Int, i, 
         + q_slack
     )
 
-    con(pm, nw, :lam_kcl_r)[i] = cstr_p
-    con(pm, nw, :lam_kcl_i)[i] = cstr_q
+    con(pm, nw, :lam_kcl_r)[i] = isa(cstr_p, Array) ? cstr_p : [cstr_p]
+    con(pm, nw, :lam_kcl_i)[i] = isa(cstr_q, Array) ? cstr_q : [cstr_q]
 
     if _IM.report_duals(pm)
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
@@ -107,6 +107,12 @@ function constraint_mc_shed_power_balance(pm::_PM.AbstractWModels, nw::Int, i, b
     z_demand = var(pm, nw, :z_demand)
     z_shunt  = var(pm, nw, :z_shunt)
 
+    cnds = conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    Gt = isempty(bus_gs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_gs))
+    Bt = isempty(bus_bs) ? fill(0.0, ncnds, ncnds) : sum(values(bus_bs))
+
     bus_GsBs = [(n,bus_gs[n], bus_bs[n]) for n in keys(bus_gs)]
 
     cstr_p = JuMP.@constraint(pm.model,
@@ -130,8 +136,8 @@ function constraint_mc_shed_power_balance(pm::_PM.AbstractWModels, nw::Int, i, b
         - sum(z_shunt[n].*(-w.*diag(Bt')) for (n,Gs,Bs) in bus_GsBs)
     )
 
-    con(pm, nw, :lam_kcl_r)[i] = cstr_p
-    con(pm, nw, :lam_kcl_i)[i] = cstr_q
+    con(pm, nw, :lam_kcl_r)[i] = isa(cstr_p, Array) ? cstr_p : [cstr_p]
+    con(pm, nw, :lam_kcl_i)[i] = isa(cstr_q, Array) ? cstr_q : [cstr_q]
 
     if _IM.report_duals(pm)
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
@@ -186,8 +192,8 @@ function constraint_mc_load_power_balance(pm::_PM.AbstractWModels, nw::Int, i, b
         - diag(-Wr*Bt'+Wi*Gt')
     )
 
-    con(pm, nw, :lam_kcl_r)[i] = cstr_p
-    con(pm, nw, :lam_kcl_i)[i] = cstr_q
+    con(pm, nw, :lam_kcl_r)[i] = isa(cstr_p, Array) ? cstr_p : [cstr_p]
+    con(pm, nw, :lam_kcl_i)[i] = isa(cstr_q, Array) ? cstr_q : [cstr_q]
 
     if _IM.report_duals(pm)
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
@@ -273,4 +279,37 @@ function constraint_mc_gen_setpoint_wye(pm::_PM.AbstractPowerModel, nw::Int, id:
         sol(pm, nw, :gen, id)[:pg_bus] = var(pm, nw, :pg_bus, id)
         sol(pm, nw, :gen, id)[:qg_bus] = var(pm, nw, :qg_bus, id)
     end
+end
+
+
+"do nothing by default but some formulations require this"
+function variable_mc_storage_current(pm::_PM.AbstractWConvexModels; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    cnds = conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    ccms = var(pm, nw)[:ccms] = Dict(i => JuMP.@variable(pm.model,
+            [c in 1:ncnds], base_name="$(nw)_ccms_$(i)",
+            start = comp_start_value(ref(pm, nw, :storage, i), "ccms_start", c, 0.0)
+        ) for i in ids(pm, nw, :storage)
+    )
+
+    if bounded
+        bus = ref(pm, nw, :bus)
+        for (i, storage) in ref(pm, nw, :storage)
+            for c in conductor_ids(pm)
+                ub = Inf
+                if haskey(storage, "thermal_rating")
+                    sb = bus[storage["storage_bus"]]
+                    ub = (storage["thermal_rating"][c]/sb["vmin"][c])^2
+                end
+
+                set_lower_bound(ccms[i][c], 0.0)
+                if !isinf(ub)
+                    set_upper_bound(ccms[i][c], ub)
+                end
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, nw, :storage, :ccms, ids(pm, nw, :storage), ccms)
 end
