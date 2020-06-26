@@ -441,8 +441,9 @@ end
 "voltage magnitude setpoint constraint"
 function constraint_mc_voltage_magnitude_only(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
     bus = ref(pm, nw, :bus, i)
-    vmref = bus["vm"] #Not sure why this is needed
-    constraint_mc_voltage_magnitude_only(pm, nw, i, vmref)
+    if haskey(bus, "vm")
+        constraint_mc_voltage_magnitude_only(pm, nw, i, bus["vm"])
+    end
 end
 
 

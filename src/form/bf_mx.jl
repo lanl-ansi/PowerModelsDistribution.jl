@@ -866,8 +866,8 @@ function constraint_mc_load_power_balance(pm::KCLMXModels, nw::Int, i::Int, bus_
         - diag(-Wr*Bt'+Wi*Gt')
     )
 
-    con(pm, nw, :lam_kcl_r)[i] = cstr_p
-    con(pm, nw, :lam_kcl_i)[i] = cstr_q
+    con(pm, nw, :lam_kcl_r)[i] = isa(cstr_p, Array) ? cstr_p : [cstr_p]
+    con(pm, nw, :lam_kcl_i)[i] = isa(cstr_q, Array) ? cstr_q : [cstr_q]
 
     if _IM.report_duals(pm)
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
