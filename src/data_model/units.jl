@@ -38,8 +38,10 @@ function make_per_unit!(data::Dict{String,<:Any}; vbases::Union{Dict{<:Any,<:Rea
             end
 
             if ismultinetwork(data)
+                orig_settings = deepcopy(data["settings"])
                 for (n, nw) in data["nw"]
                     nw["data_model"] = data["data_model"]
+                    data["settings"] = deepcopy(orig_settings)
                     _make_math_per_unit!(nw, data; sbase=sbase, vbases=vbases)
                     delete!(nw, "data_model")
                 end
@@ -394,7 +396,7 @@ end
 function _rebase_pu_storage!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real)
     sbase_scale = sbase_old/sbase
 
-    for key in ["energy", "energy_rating", "charge_rating", "discharge_rating", "thermal_rating", "current_rating", "qmin", "qmax", "p_loss", "q_loss"]
+    for key in ["energy", "energy_rating", "charge_rating", "discharge_rating", "thermal_rating", "current_rating", "qmin", "qmax", "p_loss", "q_loss", "ps", "qs"]
         _scale(gen, key, sbase_scale)
     end
 end
