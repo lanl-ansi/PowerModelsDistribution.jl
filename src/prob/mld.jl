@@ -93,7 +93,6 @@ function build_mn_mc_mld_simple(pm::_PM.AbstractPowerModel)
         variable_mc_load_indicator(pm; nw=n, relax=true)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
         variable_mc_storage_power_mi(pm; nw=n, relax=true)
-        _PM.variable_storage_complementary_indicator(pm; nw=n, relax=true)
 
         constraint_mc_model_voltage(pm; nw=n)
 
@@ -220,7 +219,6 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
         variable_mc_load_indicator(pm; nw=n, relax=true)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
         variable_mc_storage_power_mi(pm; nw=n, relax=true)
-        _PM.variable_storage_complementary_indicator(pm; nw=n, relax=true)
 
         constraint_mc_model_current(pm; nw=n)
 

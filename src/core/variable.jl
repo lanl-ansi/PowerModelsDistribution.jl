@@ -376,13 +376,14 @@ end
 
 ""
 function variable_mc_storage_power_mi(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
+    variable_mc_storage_power_on_off(pm; kwargs...)
+    variable_mc_storage_power_control_imaginary(pm; kwargs...)
     variable_mc_storage_current(pm; kwargs...)
+    variable_mc_storage_indicator(pm; relax=relax, kwargs...)
     _PM.variable_storage_energy(pm; kwargs...)
     _PM.variable_storage_charge(pm; kwargs...)
     _PM.variable_storage_discharge(pm; kwargs...)
-    variable_mc_storage_indicator(pm; relax=relax, kwargs...)
-    variable_mc_storage_power_on_off(pm; kwargs...)
-    variable_mc_storage_power_control_imaginary(pm; kwargs...)
+    _PM.variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
 end
 
 
@@ -390,8 +391,8 @@ end
 function variable_mc_storage_power_mi_on_off(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
     variable_mc_storage_power_real_on_off(pm; kwargs...)
     variable_mc_storage_power_imaginary_on_off(pm; kwargs...)
-    variable_mc_storage_power_control_imaginary_on_off(pm; kwargs...)
     variable_mc_storage_current(pm; kwargs...)
+    variable_mc_storage_power_control_imaginary_on_off(pm; kwargs...)
     _PM.variable_storage_energy(pm; kwargs...)
     _PM.variable_storage_charge(pm; kwargs...)
     _PM.variable_storage_discharge(pm; kwargs...)
