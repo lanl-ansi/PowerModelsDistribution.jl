@@ -49,7 +49,7 @@
         result = run_mn_mc_mld_simple(case5_mn, ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 3*0.3377; atol=2.0e-4)
+        @test isapprox(result["objective"], 0.0; atol=1.0e-4)
         @test all(isapprox(result["solution"]["nw"]["1"]["load"]["1"]["pd"], [3.0, 3.0, 3.0]; atol=1.0e-4))
         @test all(isapprox(result["solution"]["nw"]["2"]["load"]["1"]["qd"], [0.9861, 0.9861, 0.9861]; atol=1.0e-4))
         @test isapprox(result["solution"]["nw"]["3"]["load"]["1"]["status"], 1.0; atol=1.0e-3)
@@ -60,7 +60,7 @@
         result = run_mn_mc_mld_simple(case5_strg_mn, ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test result["objective"] >= 3.0*0.3432
+        @test isapprox(result["objective"], 0.0; atol=1.0e-4)
         @test isapprox(result["solution"]["nw"]["1"]["load"]["1"]["status"], 1.0; atol=1.0e-3)
     end
 
@@ -69,7 +69,7 @@
         result = run_mn_mc_mld_simple(case5_mn, NFAPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 3.0*0.1557; atol=2.0e-4)
+        @test isapprox(result["objective"], 0.0; atol=1.0e-4)
         @test isapprox(result["solution"]["nw"]["1"]["load"]["1"]["status"], 1.0; atol=1.0e-3)
     end
 
@@ -78,7 +78,7 @@
         result = run_mn_mc_mld_simple(case5_strg_mn, NFAPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test result["objective"] >= 3.0*0.1557
+        @test isapprox(result["objective"], 0.0; atol=1.0e-4)
         @test isapprox(result["solution"]["nw"]["1"]["load"]["1"]["status"], 1.0; atol=1.0e-3)
     end
 
@@ -87,7 +87,7 @@
         result = run_mn_mc_mld_simple(case5_mn, LPUBFDiagPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 3.0*0.1557; atol=2.0e-4)
+        @test isapprox(result["objective"], 0.0; atol=1.0e-4)
         @test isapprox(result["solution"]["nw"]["1"]["load"]["1"]["status"], 1.0; atol=1.0e-3)
     end
 
