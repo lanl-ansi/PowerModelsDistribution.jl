@@ -16,6 +16,14 @@
 
         end
 
+        @testset "5-bus mn lpubfdiag opf_bf" begin
+            case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
+            result = run_mn_mc_opf(case5_mn, LPUBFDiagPowerModel, ipopt_solver)
+
+            @test result["termination_status"] == LOCALLY_SOLVED
+            @test isapprox(result["objective"], 44880.0*3; atol = 1e0)
+        end
+
         @testset "3-bus balanced lpubfdiag opf_bf" begin
             pmd = parse_file("../test/data/opendss/case3_balanced.dss")
             sol = run_mc_opf(pmd, LPUBFDiagPowerModel, ipopt_solver; make_si=false)

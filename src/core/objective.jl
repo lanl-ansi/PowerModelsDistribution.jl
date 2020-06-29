@@ -52,6 +52,18 @@ function objective_mc_min_load_setpoint_delta(pm::_PM.AbstractPowerModel)
 end
 
 
+"simplified minimum load delta objective (continuous load shed)"
+function objective_mc_min_load_setpoint_delta_simple(pm::_PM.AbstractPowerModel)
+    JuMP.@objective(pm.model, Min,
+        sum(
+            sum(
+                sum( ((1 - var(pm, n, :z_demand, i))) for i in keys(nw_ref[:load])) +
+                sum( ((1 - var(pm, n, :z_shunt, i))) for (i,shunt) in nw_ref[:shunt])
+            for c in conductor_ids(pm, n))
+        for (n, nw_ref) in nws(pm))
+    )
+end
+
 
 "maximum loadability objective (continuous load shed) with storage"
 function objective_mc_max_load_setpoint(pm::_PM.AbstractPowerModel)

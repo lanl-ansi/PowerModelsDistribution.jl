@@ -3,9 +3,11 @@
 @testset "test opf" begin
     @testset "test matpower opf" begin
         case5 = PM.parse_file("../test/data/matpower/case5.m")
+        case5_strg = PM.parse_file("$(pms_path)/test/data/matpower/case5_strg.m")
         case30 = PM.parse_file("../test/data/matpower/case30.m")
 
         make_multiconductor!(case5, 3)
+        make_multiconductor!(case5_strg, 3)
         make_multiconductor!(case30, 3)
 
         @testset "5-bus matpower acp opf" begin
@@ -27,6 +29,37 @@
             calc_va(id) = atan.(result["solution"]["bus"][id]["vi"], result["solution"]["bus"][id]["vr"])
             @test all(isapprox(result["solution"]["gen"]["1"]["pg"][c],  0.3999999; atol=1e-3) for c in 1:case5["conductors"])
             @test all(isapprox(calc_va("2")[c], -0.0538204; atol=1e-5) for c in 1:case5["conductors"])
+        end
+
+        @testset "5-bus matpower mn acp mld" begin
+            case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
+            result = run_mn_mc_opf(case5_mn, ACPPowerModel, ipopt_solver)
+
+            @test result["termination_status"] == LOCALLY_SOLVED
+            @test isapprox(result["objective"], 45522.096*3; atol=1e-1)
+
+            @test all(isapprox(result["solution"]["nw"]["1"]["gen"]["1"]["pg"][c],  0.3999999; atol=1e-3) for c in 1:case5["conductors"])
+            @test all(isapprox(result["solution"]["nw"]["3"]["bus"]["2"]["va"][c], -0.0538204; atol=1e-5) for c in 1:case5["conductors"])
+        end
+
+        @testset "5-bus matpower mn acr mld" begin
+            case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
+            result = run_mn_mc_opf(case5_mn, ACRPowerModel, ipopt_solver)
+
+            @test result["termination_status"] == LOCALLY_SOLVED
+            @test isapprox(result["objective"], 45522.096*3; atol=1e-1)
+
+            calc_va(id) = atan.(result["solution"]["nw"]["2"]["bus"][id]["vi"], result["solution"]["nw"]["2"]["bus"][id]["vr"])
+            @test all(isapprox(result["solution"]["nw"]["3"]["gen"]["1"]["pg"][c], 0.3999999; atol=1e-3) for c in 1:case5["conductors"])
+            @test all(isapprox(calc_va("2")[c], -0.0538204; atol=1e-5) for c in 1:case5["conductors"])
+        end
+
+        @testset "5-bus storage matpower mn acp mld" begin
+            case5_strg_mn = InfrastructureModels.replicate(case5_strg, 3, Set(["per_unit"]))
+            result = run_mn_mc_opf(case5_strg_mn, ACPPowerModel, ipopt_solver)
+
+            @test result["termination_status"] == LOCALLY_SOLVED
+            @test result["objective"] >= 45522.096*3
         end
 
         @testset "30-bus matpower acp opf" begin
