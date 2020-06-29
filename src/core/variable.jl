@@ -20,7 +20,7 @@ function variable_mc_bus_voltage_angle(pm::_PM.AbstractPowerModel; nw::Int=pm.cn
 
     va = var(pm, nw)[:va] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:ncnds], base_name="$(nw)_va_$(i)",
-            start = comp_start_value(ref(pm, nw, :bus, i), "va_start", 0.0)
+            start = comp_start_value(ref(pm, nw, :bus, i), "va_start", c, 0.0)
         ) for i in ids(pm, nw, :bus)
     )
 

@@ -66,6 +66,25 @@ print(pm.model)
 optimize_model!(pm, optimizer=with_optimizer(Ipopt.Optimizer))
 ```
 
+## Providing a Warm Start
+
+To reduce the number of solver iterations, it might be useful to provide a (good) initial value to some or all optimization variables. To do so, it is sufficient to assign a value or vector (depending on the dimensions of the variable) in the data dictionary, under the key `variablename_start`. The example below shows how to do it for the `vm` and `va` variables.
+```julia
+math = parse_file("case3_unbalanced.dss"; data_model=MATHEMATICAL)
+math["bus"]["2"]["vm_start"] = [0.9959, 0.9959, 0.9959]
+math["bus"]["2"]["va_start"] = [0.00, -2.0944, 2.0944]
+```
+Providing a bad initial value might result in the opposite effect: longer calculation times or convergence issues, so the start value assignment should be done attentively.
+If no initial value is provided, a flat start is assigned by default. The default initial value of each variable is indicated in the function where the variable is defined, as the last argument of the `comp_start_value` function. In the case of `vm`, this is 1.0, as shown below:
+```julia
+vm = var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
+        [c in 1:ncnds], base_name="$(nw)_vm_$(i)",
+        start = comp_start_value(ref(pm, nw, :bus, i), "vm_start", c, 1.0)
+    ) for i in ids(pm, nw, :bus)
+)
+```
+Finally, it should be noted that if `va_start` and `vm_start` are present in a data dictionary which is passed to the ACR or IVR formulation, these are converted to their rectangular equivalents and used as `vr_start` and `vi_start`.
+
 ## Examples
 
 More examples of working with the engineering data model can be found in the `/examples` folder of the PowerModelsDistribution.jl repository.

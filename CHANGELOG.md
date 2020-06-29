@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Add possibility to give vm_start in variable_mc_voltage for ivr and acr formulations
 
 ## v0.9.2
 
