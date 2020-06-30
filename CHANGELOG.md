@@ -2,10 +2,11 @@
 
 ## staged
 
-- Add possibility to give vm_start in variable_mc_voltage for ivr and acr formulations
+- none
 
 ## v0.9.2
 
+- Add possibility to give vm_start in variable_mc_voltage for ivr and acr formulations
 - Remove leftover code that was causing a warning on import, but was not breaking the implementation
 - Add multinetwork MLD and OPF problem specifications
 
