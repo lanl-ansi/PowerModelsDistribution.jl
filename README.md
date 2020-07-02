@@ -61,7 +61,7 @@ This code has been developed as part of the Advanced Network Science Initiative 
 
 ## Citing PowerModelsDistribution
 
-If you find PowerModelsDistribution useful for your work, we kindly request that you cite the following [https://arxiv.org/abs/2004.10081](publication):
+If you find PowerModelsDistribution useful for your work, we kindly request that you cite the following [publication](https://arxiv.org/abs/2004.10081):
 
 ```bibtex
 @misc{fobes2020powermodelsdistributionjl,
