@@ -74,6 +74,8 @@ If you find PowerModelsDistribution useful for your work, we kindly request that
 }
 ```
 
+The associated Power Systems Computation Conference talk can be found on [YouTube](https://youtu.be/S7ouz2OP0tE)
+
 ## License
 
 This code is provided under a BSD license as part of the Multi-Infrastructure Control and Optimization Toolkit (MICOT) project, LA-CC-13-108.
