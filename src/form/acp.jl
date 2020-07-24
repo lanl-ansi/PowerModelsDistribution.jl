@@ -861,3 +861,29 @@ function constraint_mc_gen_setpoint_delta(pm::_PM.AbstractACPModel, nw::Int, id:
         sol(pm, nw, :gen, id)[:qg_bus] = qg_bus
     end
 end
+
+""
+function constraint_mc_converter_losses(pm::_PM.AbstractACPModel, n::Int, i, bus, r, x, p_loss, q_loss, conductors)
+    vm = var(pm, n, :vm, bus)
+    ps = var(pm, n, :ps, i)
+    qs = var(pm, n, :qs, i)
+    pdc = var(pm, n, :pdc, i)
+    ccms = var(pm, n, :ccms, i)
+    qsc = var(pm, n, :qsc, i)
+
+    JuMP.@constraint(pm.model,
+        sum(ps[c] for c in conductors) + pdc
+        ==
+        p_loss + sum(r[c]*ccms[c] for c in conductors)
+    )
+
+    JuMP.@constraint(pm.model,
+        sum(qs[c] for c in conductors)
+        ==
+        qsc + q_loss + sum(x[c]*ccms[c] for c in conductors)
+    )
+
+    JuMP.@NLconstraint(pm.model, [c in conductors],
+        ccms[c]* vm[c]^2 == ps[c]^2 + qs[c]^2
+    )
+end

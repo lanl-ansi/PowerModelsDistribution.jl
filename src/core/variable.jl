@@ -364,21 +364,27 @@ end
 
 "variables for modeling storage units, includes grid injection and internal variables"
 function variable_mc_storage_power(pm::_PM.AbstractPowerModel; kwargs...)
-    variable_mc_storage_power_real(pm; kwargs...)
-    variable_mc_storage_power_imaginary(pm; kwargs...)
-    variable_mc_storage_power_control_imaginary(pm; kwargs...)
-    variable_mc_storage_current(pm; kwargs...)
     _PM.variable_storage_energy(pm; kwargs...)
     _PM.variable_storage_charge(pm; kwargs...)
     _PM.variable_storage_discharge(pm; kwargs...)
 end
 
 
+"variables for modeling storage units, includes grid injection and internal variables"
+function variable_mc_converter_power(pm::_PM.AbstractPowerModel; kwargs...)
+    variable_mc_converter_power_real(pm; kwargs...)
+    variable_mc_converter_power_imaginary(pm; kwargs...)
+    variable_mc_converter_power_control_imaginary(pm; kwargs...)
+    variable_mc_converter_current(pm; kwargs...)
+    variable_converter_device_power(pm; kwargs...)
+end
+
+#TODO adapt for converter
 ""
 function variable_mc_storage_power_mi(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
     variable_mc_storage_power_on_off(pm; kwargs...)
-    variable_mc_storage_power_control_imaginary(pm; kwargs...)
-    variable_mc_storage_current(pm; kwargs...)
+    variable_mc_converter_power_control_imaginary(pm; kwargs...)
+    variable_mc_converter_current(pm; kwargs...)
     variable_mc_storage_indicator(pm; relax=relax, kwargs...)
     _PM.variable_storage_energy(pm; kwargs...)
     _PM.variable_storage_charge(pm; kwargs...)
@@ -386,13 +392,13 @@ function variable_mc_storage_power_mi(pm::_PM.AbstractPowerModel; relax::Bool=fa
     _PM.variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
 end
 
-
+#TODO adapt for converter
 ""
 function variable_mc_storage_power_mi_on_off(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
-    variable_mc_storage_power_real_on_off(pm; kwargs...)
-    variable_mc_storage_power_imaginary_on_off(pm; kwargs...)
-    variable_mc_storage_current(pm; kwargs...)
-    variable_mc_storage_power_control_imaginary_on_off(pm; kwargs...)
+    variable_mc_converter_power_real_on_off(pm; kwargs...)
+    variable_mc_converter_power_imaginary_on_off(pm; kwargs...)
+    variable_mc_converter_current(pm; kwargs...)
+    variable_mc_converter_power_control_imaginary_on_off(pm; kwargs...)
     _PM.variable_storage_energy(pm; kwargs...)
     _PM.variable_storage_charge(pm; kwargs...)
     _PM.variable_storage_discharge(pm; kwargs...)
@@ -400,39 +406,45 @@ function variable_mc_storage_power_mi_on_off(pm::_PM.AbstractPowerModel; relax::
 end
 
 
-"do nothing by default but some formulations require this"
-function variable_mc_storage_current(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+"make empty dictionary to store power balance expressions w.r.t. connected devices later"
+function variable_converter_device_power(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    var(pm, nw)[:pdc] = Dict()
 end
 
 
-"""
-a reactive power slack variable that enables the storage device to inject or
-consume reactive power at its connecting bus, subject to the injection limits
-of the device.
-"""
-function variable_mc_storage_power_control_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+""
+function variable_mc_converter_current(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
-    qsc = var(pm, nw)[:qsc] = JuMP.@variable(pm.model,
-        [i in ids(pm, nw, :storage)], base_name="$(nw)_qsc_$(i)",
-        start = _PM.comp_start_value(ref(pm, nw, :storage, i), "qsc_start")
+    ccms = var(pm, nw)[:ccms] = Dict(i => JuMP.@variable(pm.model,
+            [c in 1:ncnds], base_name="$(nw)_ccms_$(i)",
+            start = comp_start_value(ref(pm, nw, :converter, i), "ccms_start", c, 0.0)
+        ) for i in ids(pm, nw, :converter)
     )
 
     if bounded
-        inj_lb, inj_ub = _PM.ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus))
-        for (i,storage) in ref(pm, nw, :storage)
-            if !isinf(sum(inj_lb[i])) || haskey(storage, "qmin")
-                set_lower_bound(qsc[i], max(sum(inj_lb[i]), sum(get(storage, "qmin", -Inf))))
-            end
-            if !isinf(sum(inj_ub[i])) || haskey(storage, "qmax")
-                set_upper_bound(qsc[i], min(sum(inj_ub[i]), sum(get(storage, "qmax",  Inf))))
+        bus = ref(pm, nw, :bus)
+        for (i, converter) in ref(pm, nw, :converter)
+            for c in conductor_ids(pm)
+                ub = Inf
+                if haskey(converter, "thermal_rating")
+                    sb = bus[converter["storage_bus"]]
+                    ub = (converter["thermal_rating"][c]/sb["vmin"][c])^2
+                end
+
+                set_lower_bound(ccms[i][c], 0.0)
+                if !isinf(ub)
+                    set_upper_bound(ccms[i][c], ub)
+                end
             end
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
+    report && _IM.sol_component_value(pm, nw, :converter, :ccms, ids(pm, nw, :converter), ccms)
 end
+
+
 
 
 """
@@ -440,7 +452,37 @@ a reactive power slack variable that enables the storage device to inject or
 consume reactive power at its connecting bus, subject to the injection limits
 of the device.
 """
-function variable_mc_storage_power_control_imaginary_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_converter_power_control_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    cnds = conductor_ids(pm; nw=nw)
+    ncnds = length(cnds)
+
+    qsc = var(pm, nw)[:qsc] = JuMP.@variable(pm.model,
+        [i in ids(pm, nw, :converter)], base_name="$(nw)_qsc_$(i)",
+        start = _PM.comp_start_value(ref(pm, nw, :converter, i), "qsc_start")
+    )
+
+    if bounded
+        inj_lb, inj_ub = _PM.ref_calc_storage_injection_bounds(ref(pm, nw, :converter), ref(pm, nw, :bus))
+        for (i,converter) in ref(pm, nw, :converter)
+            if !isinf(sum(inj_lb[i])) || haskey(converter, "qmin")
+                set_lower_bound(qsc[i], max(sum(inj_lb[i]), sum(get(converter, "qmin", -Inf))))
+            end
+            if !isinf(sum(inj_ub[i])) || haskey(converter, "qmax")
+                set_upper_bound(qsc[i], min(sum(inj_ub[i]), sum(get(converter, "qmax",  Inf))))
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, nw, :converter, :qsc, ids(pm, nw, :converter), qsc)
+end
+
+#TODO edit for converter
+"""
+a reactive power slack variable that enables the storage device to inject or
+consume reactive power at its connecting bus, subject to the injection limits
+of the device.
+"""
+function variable_mc_converter_power_control_imaginary_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -469,21 +511,22 @@ end
 
 
 ""
-function variable_mc_storage_power_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_converter_power_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
     ps = var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:ncnds], base_name="$(nw)_ps_$(i)",
-            start = comp_start_value(ref(pm, nw, :storage, i), "ps_start", c, 0.0)
-        ) for i in ids(pm, nw, :storage)
+            start = comp_start_value(ref(pm, nw, :converter, i), "ps_start", c, 0.0)
+        ) for i in ids(pm, nw, :converter)
     )
 
     if bounded
         for c in cnds
-            flow_lb, flow_ub = _PM.ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus), c)
+            #TODO rename ref_calc_storage_injection_bounds to converter
+            flow_lb, flow_ub = _PM.ref_calc_storage_injection_bounds(ref(pm, nw, :converter), ref(pm, nw, :bus), c)
 
-            for i in ids(pm, nw, :storage)
+            for i in ids(pm, nw, :converter)
                 if !isinf(flow_lb[i])
                     set_lower_bound(ps[i][c], flow_lb[i])
                 end
@@ -494,26 +537,26 @@ function variable_mc_storage_power_real(pm::_PM.AbstractPowerModel; nw::Int=pm.c
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :storage, :ps, ids(pm, nw, :storage), ps)
+    report && _IM.sol_component_value(pm, nw, :converter, :ps, ids(pm, nw, :converter), ps)
 end
 
 
 ""
-function variable_mc_storage_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_converter_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
     qs = var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:ncnds], base_name="$(nw)_qs_$(i)",
-            start = comp_start_value(ref(pm, nw, :storage, i), "qs_start", c, 0.0)
-        ) for i in ids(pm, nw, :storage)
+            start = comp_start_value(ref(pm, nw, :converter, i), "qs_start", c, 0.0)
+        ) for i in ids(pm, nw, :converter)
     )
 
     if bounded
         for c in cnds
-            flow_lb, flow_ub = _PM.ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus), c)
+            flow_lb, flow_ub = _PM.ref_calc_storage_injection_bounds(ref(pm, nw, :converter), ref(pm, nw, :bus), c)
 
-            for i in ids(pm, nw, :storage)
+            for i in ids(pm, nw, :converter)
                 if !isinf(flow_lb[i])
                     set_lower_bound(qs[i][c], flow_lb[i])
                 end
@@ -524,7 +567,7 @@ function variable_mc_storage_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :storage, :qs, ids(pm, nw, :storage), qs)
+    report && _IM.sol_component_value(pm, nw, :converter, :qs, ids(pm, nw, :converter), qs)
 end
 
 
@@ -779,6 +822,7 @@ function variable_mc_gen_indicator(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, r
 end
 
 
+#TODO should be adapted to converter
 "Create variables for storage status"
 function variable_mc_storage_indicator(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, relax::Bool=false, report::Bool=true)
     if !relax
@@ -799,16 +843,16 @@ function variable_mc_storage_indicator(pm::_PM.AbstractPowerModel; nw::Int=pm.cn
     report && _IM.sol_component_value(pm, nw, :storage, :status, ids(pm, nw, :storage), z_storage)
 end
 
-
+#TODO
 "Create variables for `active` and `reactive` storage injection"
 function variable_mc_storage_power_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
-    variable_mc_storage_power_real_on_off(pm; nw=nw, kwargs...)
-    variable_mc_storage_power_imaginary_on_off(pm; nw=nw, kwargs...)
+    variable_mc_converter_power_real_on_off(pm; nw=nw, kwargs...)
+    variable_mc_converter_power_imaginary_on_off(pm; nw=nw, kwargs...)
 end
 
 
 "Create variables for `active` storage injection"
-function variable_mc_storage_power_real_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_converter_power_real_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 
@@ -833,7 +877,7 @@ end
 
 
 "Create variables for `reactive` storage injection"
-function variable_mc_storage_power_imaginary_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_converter_power_imaginary_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
 

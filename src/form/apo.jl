@@ -34,12 +34,12 @@ end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_storage_power_imaginary(pm::_PM.AbstractActivePowerModel; kwargs...)
+function variable_mc_converter_power_imaginary(pm::_PM.AbstractActivePowerModel; kwargs...)
 end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_storage_power_imaginary_on_off(pm::_PM.AbstractActivePowerModel; kwargs...)
+function variable_mc_converter_power_imaginary_on_off(pm::_PM.AbstractActivePowerModel; kwargs...)
 end
 
 
@@ -299,7 +299,7 @@ end
 
 
 ""
-function constraint_mc_storage_thermal_limit(pm::_PM.AbstractActivePowerModel, n::Int, i, rating)
+function constraint_mc_converter_thermal_limit(pm::_PM.AbstractActivePowerModel, n::Int, i, rating)
     ps =var(pm, n, :ps, i)
 
     cnds = conductor_ids(pm, n)
@@ -327,7 +327,7 @@ end
 
 
 ""
-function constraint_mc_storage_losses(pm::_PM.AbstractActivePowerModel, n::Int, i, bus, conductors, r, x, p_loss, q_loss)
+function constraint_mc_converter_losses(pm::_PM.AbstractActivePowerModel, n::Int, i, bus, conductors, r, x, p_loss, q_loss)
     ps = var(pm, n, :ps, i)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)

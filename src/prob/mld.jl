@@ -60,8 +60,8 @@ function build_mc_mld(pm::_PM.AbstractPowerModel)
         _PM.constraint_storage_state(pm, i)
         _PM.constraint_storage_complementarity_mi(pm, i)
         constraint_mc_storage_on_off(pm, i)
-        constraint_mc_storage_losses(pm, i)
-        constraint_mc_storage_thermal_limit(pm, i)
+        constraint_mc_converter_losses(pm, i)
+        constraint_mc_converter_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :branch)
@@ -109,8 +109,8 @@ function build_mn_mc_mld_simple(pm::_PM.AbstractPowerModel)
         end
 
         for i in ids(pm, n, :storage)
-            constraint_mc_storage_losses(pm, i; nw=n)
-            constraint_mc_storage_thermal_limit(pm, i; nw=n)
+            constraint_mc_converter_losses(pm, i; nw=n)
+            constraint_mc_converter_thermal_limit(pm, i; nw=n)
             _PM.constraint_storage_complementarity_mi(pm, i; nw=n)
         end
 
@@ -185,8 +185,8 @@ function build_mc_mld(pm::AbstractUBFModels)
         _PM.constraint_storage_state(pm, i)
         _PM.constraint_storage_complementarity_mi(pm, i)
         constraint_mc_storage_on_off(pm, i)
-        constraint_mc_storage_losses(pm, i)
-        constraint_mc_storage_thermal_limit(pm, i)
+        constraint_mc_converter_losses(pm, i)
+        constraint_mc_converter_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :branch)
@@ -235,8 +235,8 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
         end
 
         for i in ids(pm, n, :storage)
-            constraint_mc_storage_losses(pm, i; nw=n)
-            constraint_mc_storage_thermal_limit(pm, i; nw=n)
+            constraint_mc_converter_losses(pm, i; nw=n)
+            constraint_mc_converter_thermal_limit(pm, i; nw=n)
             _PM.constraint_storage_complementarity_mi(pm, i; nw=n)
         end
 
@@ -359,8 +359,8 @@ function build_mc_mld_uc(pm::_PM.AbstractPowerModel)
     for i in ids(pm, :storage)
         _PM.constraint_storage_state(pm, i)
         _PM.constraint_storage_complementarity_nl(pm, i)
-        constraint_mc_storage_losses(pm, i)
-        constraint_mc_storage_thermal_limit(pm, i)
+        constraint_mc_converter_losses(pm, i)
+        constraint_mc_converter_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :branch)

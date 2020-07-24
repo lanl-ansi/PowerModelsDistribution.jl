@@ -144,7 +144,18 @@ function _map_math2eng_storage!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{Str
     if !isempty(eng_obj)
         data_eng["storage"][map["from"]] = eng_obj
     end
+
 end
+
+function _map_math2eng_converter!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+    eng_obj = _init_unmap_eng_obj!(data_eng, "storage", map)
+    math_obj = _get_math_obj(data_math, map["to"])
+
+    merge!(eng_obj, math_obj)
+
+    _safely_store_data_eng!(data_eng, eng_obj, "storage", map["from"])
+end
+
 
 
 function _map_math2eng_line!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})

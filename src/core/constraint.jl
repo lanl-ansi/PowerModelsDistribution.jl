@@ -96,9 +96,43 @@ end
 
 
 ""
-function constraint_mc_storage_thermal_limit(pm::_PM.AbstractPowerModel, n::Int, i, rating)
+function constraint_mc_converter_thermal_limit(pm::_PM.AbstractPowerModel, n::Int, i, rating)
     ps = var(pm, n, :ps, i)
     qs = var(pm, n, :qs, i)
 
     JuMP.@constraint(pm.model, ps.^2 + qs.^2 .<= rating.^2)
+end
+
+function constraint_storage_state(pm::_PM.AbstractPowerModel, n_1::Int, n_2::Int, i::Int, charge_eff, discharge_eff, time_elapsed)
+    sc_2 = var(pm, n_2, :sc, i)
+    sd_2 = var(pm, n_2, :sd, i)
+    se_2 = var(pm, n_2, :se, i)
+    se_1 = var(pm, n_1, :se, i)
+
+    JuMP.@constraint(pm.model, se_2 - se_1 == time_elapsed*(charge_eff*sc_2 - sd_2/discharge_eff))
+end
+
+""
+function constraint_storage_complementarity_nl(pm::_PM.AbstractPowerModel, n::Int, i)
+    sc = var(pm, n, :sc, i)
+    sd = var(pm, n, :sd, i)
+
+    JuMP.@constraint(pm.model, sc*sd == 0.0)
+end
+
+""
+function constraint_storage_state_initial(pm::_PM.AbstractPowerModel, n::Int, i::Int, energy, charge_eff, discharge_eff, time_elapsed)
+    sc = var(pm, n, :sc, i)
+    sd = var(pm, n, :sd, i)
+    se = var(pm, n, :se, i)
+
+    JuMP.@constraint(pm.model, se - energy == time_elapsed*(charge_eff*sc - sd/discharge_eff))
+end
+
+"define balance between converter and storage subsystem, store as expression in variable dict"
+function constraint_converter_storage_balance(pm::_PM.AbstractPowerModel, n::Int, i::Int, converter_storage)
+    sc = [var(pm, n, :sc, c) for c in converter_storage]
+    sd = [var(pm, n, :sd, c) for c in converter_storage]
+    #store expression to inject into the converter model
+    var(pm, n, :pdc)[i] = sum(sd) - sum(sc)
 end

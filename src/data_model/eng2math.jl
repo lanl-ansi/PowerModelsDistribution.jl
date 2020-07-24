@@ -1,5 +1,6 @@
 import LinearAlgebra: diagm
 
+#TODO remove unnecessary fields from storage and converter
 "items that are mapped one-to-one from engineering to math models"
 const _1to1_maps = Dict{String,Vector{String}}(
     "bus" => ["vm", "va", "terminals", "phases", "neutral", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub", "dss", "vuf_ub", "vm_pair_lb", "vm_pair_ub"],
@@ -12,7 +13,9 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "solar" => ["pg", "qg", "configuration", "connections", "source_id", "dss"],
     "storage" => ["status", "energy", "ps", "qs", "connections", "source_id", "dss"],
     "voltage_source" => ["source_id", "dss"],
+    "converter" => ["status", "energy", "ps", "qs", "connections", "source_id", "dss"],
 )
+
 
 "list of nodal type elements in the engineering model"
 const _eng_node_elements = Vector{String}([
@@ -570,17 +573,14 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
     for (name, eng_obj) in get(data_eng, "storage", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("storage", name, eng_obj, length(data_math["storage"])+1)
 
-        connections = eng_obj["connections"]
-        nconductors = data_math["conductors"]
+        # connections = eng_obj["connections"]
+        # nconductors = data_math["conductors"]
 
-        math_obj["storage_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
+        #store converter object first
+        math_obj = _init_math_obj("converter", name, eng_obj, length(data_math["converter"])+1)
 
-        math_obj["energy"] = eng_obj["energy"]
-        math_obj["energy_rating"] = eng_obj["energy_ub"]
-        math_obj["charge_rating"] = eng_obj["charge_ub"]
-        math_obj["discharge_rating"] = eng_obj["discharge_ub"]
-        math_obj["charge_efficiency"] = eng_obj["charge_efficiency"] / 100.0
-        math_obj["discharge_efficiency"] = eng_obj["discharge_efficiency"] / 100.0
+        math_obj["converter_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
+
         math_obj["thermal_rating"] = eng_obj["cm_ub"]
         math_obj["qmin"] = eng_obj["qs_lb"]
         math_obj["qmax"] =  eng_obj["qs_ub"]
@@ -591,6 +591,27 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
 
         math_obj["ps"] = get(eng_obj, "ps", zeros(size(eng_obj["cm_ub"])))
         math_obj["qs"] = get(eng_obj, "qs", zeros(size(eng_obj["cm_ub"])))
+
+        data_math["converter"]["$(math_obj["index"])"] = math_obj
+        converter_id = math_obj["index"]
+
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "converter.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_converter!",
+        ))
+
+        # add storage subsystem next
+        math_obj["storage_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
+        math_obj["converter"] = converter_id
+        #TODO this needs to become converter_id
+
+        math_obj["energy"] = eng_obj["energy"]
+        math_obj["energy_rating"] = eng_obj["energy_ub"]
+        math_obj["charge_rating"] = eng_obj["charge_ub"]
+        math_obj["discharge_rating"] = eng_obj["discharge_ub"]
+        math_obj["charge_efficiency"] = eng_obj["charge_efficiency"] / 100.0
+        math_obj["discharge_efficiency"] = eng_obj["discharge_efficiency"] / 100.0
 
         data_math["storage"]["$(math_obj["index"])"] = math_obj
 

@@ -46,10 +46,13 @@ function build_mc_opf(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :storage)
-        _PM.constraint_storage_state(pm, i)
-        _PM.constraint_storage_complementarity_nl(pm, i)
-        constraint_mc_storage_losses(pm, i)
-        constraint_mc_storage_thermal_limit(pm, i)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_nl(pm, i)
+    end
+
+    for i in ids(pm, :storage) #this should iterate over converter eventually
+        constraint_mc_converter_losses(pm, i)
+        constraint_mc_converter_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :branch)
@@ -155,8 +158,8 @@ function build_mc_opf(pm::AbstractUBFModels)
     for i in ids(pm, :storage)
         _PM.constraint_storage_state(pm, i)
         _PM.constraint_storage_complementarity_nl(pm, i)
-        constraint_mc_storage_losses(pm, i)
-        constraint_mc_storage_thermal_limit(pm, i)
+        constraint_mc_converter_losses(pm, i)
+        constraint_mc_converter_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :branch)
@@ -208,8 +211,8 @@ function build_mn_mc_opf(pm::_PM.AbstractPowerModel)
 
         for i in ids(pm, n, :storage)
             _PM.constraint_storage_complementarity_nl(pm, i; nw=n)
-            constraint_mc_storage_losses(pm, i; nw=n)
-            constraint_mc_storage_thermal_limit(pm, i; nw=n)
+            constraint_mc_converter_losses(pm, i; nw=n)
+            constraint_mc_converter_thermal_limit(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :branch)
@@ -272,8 +275,8 @@ function build_mn_mc_opf(pm::_PM.AbstractIVRModel)
 
         for i in ids(pm, n, :storage)
             _PM.constraint_storage_complementarity_nl(pm, i; nw=n)
-            constraint_mc_storage_losses(pm, i; nw=n)
-            constraint_mc_storage_thermal_limit(pm, i; nw=n)
+            constraint_mc_converter_losses(pm, i; nw=n)
+            constraint_mc_converter_thermal_limit(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :branch)
@@ -340,8 +343,8 @@ function build_mn_mc_opf(pm::AbstractUBFModels)
 
         for i in ids(pm, n, :storage)
             _PM.constraint_storage_complementarity_nl(pm, i; nw=n)
-            constraint_mc_storage_losses(pm, i; nw=n)
-            constraint_mc_storage_thermal_limit(pm, i; nw=n)
+            constraint_mc_converter_losses(pm, i; nw=n)
+            constraint_mc_converter_thermal_limit(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :branch)

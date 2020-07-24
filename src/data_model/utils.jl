@@ -27,7 +27,7 @@ end
 
 "initializes the base components that are expected by powermodelsdistribution in the mathematical model"
 function _init_base_components!(data_math::Dict{String,<:Any})
-    for key in ["bus", "load", "shunt", "gen", "branch", "switch", "transformer", "storage", "dcline"]
+    for key in ["bus", "load", "shunt", "gen", "branch", "switch", "transformer", "storage", "dcline", "converter"]
         if !haskey(data_math, key)
             data_math[key] = Dict{String,Any}()
         end
@@ -492,6 +492,17 @@ function _init_unmap_eng_obj!(data_eng::Dict{<:Any,<:Any}, eng_obj_type::String,
 
     return eng_obj
 end
+
+"avoid overwriting engineering objects if they already exist"
+function _safely_store_data_eng!(data_eng, eng_obj, eng_obj_type, map_from)
+    if !isempty(data_eng[eng_obj_type][map_from])
+        merge!(eng_obj, data_eng[eng_obj_type][map_from])
+    end
+    if !isempty(eng_obj)
+        data_eng[eng_obj_type][map_from] = eng_obj
+    end
+end
+
 
 
 "returns component from the mathematical data model"

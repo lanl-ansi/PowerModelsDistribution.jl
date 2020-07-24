@@ -402,14 +402,22 @@ function constraint_mc_voltage_angle_difference(pm::_PM.AbstractPowerModel, i::I
 end
 
 
-"storage loss constraints, delegate to PowerModels"
-function constraint_mc_storage_losses(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
-    storage = ref(pm, nw, :storage, i)
+"converter loss constraints"
+function constraint_mc_converter_losses(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
+    converter = ref(pm, nw, :converter, i)
 
-    _PM.constraint_storage_losses(pm, nw, i, storage["storage_bus"], storage["r"], storage["x"], storage["p_loss"], storage["q_loss"];
-        conductors = conductor_ids(pm, nw)
+    constraint_mc_converter_losses(pm, nw, i, converter["converter_bus"], converter["r"], converter["x"], converter["p_loss"], converter["q_loss"], conductor_ids(pm, nw)
     )
 end
+
+
+"converter balance constraint"
+function constraint_converter_storage_balance(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
+    converter = ref(pm, nw, :converter, i)
+    converter_storage =  ref(pm, nw, :converter_storage, i)
+    constraint_converter_storage_balance(pm, nw, i, converter_storage)
+end
+
 
 
 "branch thermal constraints from"
@@ -482,9 +490,9 @@ end
 
 
 ""
-function constraint_mc_storage_thermal_limit(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
-    storage = ref(pm, nw, :storage, i)
-    constraint_mc_storage_thermal_limit(pm, nw, i, storage["thermal_rating"])
+function constraint_mc_converter_thermal_limit(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    converter = ref(pm, nw, :converter, i)
+    constraint_mc_converter_thermal_limit(pm, nw, i, converter["thermal_rating"])
 end
 
 
@@ -639,4 +647,43 @@ function constraint_mc_network_power_balance(pm::_PM.AbstractPowerModel, i::Int;
     comp_branch_b = Dict(branch["index"] => (branch["f_bus"], branch["t_bus"], branch["br_r"], branch["br_x"], branch["tap"], branch["b_fr"], branch["b_to"]) for branch in comp_branches)
 
     constraint_mc_network_power_balance(pm, nw, i, comp_gen_ids, comp_pd, comp_qd, comp_gs, comp_bs, comp_branch_g, comp_branch_b)
+end
+
+""
+function constraint_storage_state(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    storage = ref(pm, nw, :storage, i)
+
+    if haskey(ref(pm, nw), :time_elapsed)
+        time_elapsed = ref(pm, nw, :time_elapsed)
+    else
+        Memento.warn(_LOGGER, "network data should specify time_elapsed, using 1.0 as a default")
+        time_elapsed = 1.0
+    end
+
+    constraint_storage_state_initial(pm, nw, i, storage["energy"], storage["charge_efficiency"], storage["discharge_efficiency"], time_elapsed)
+end
+
+""
+function constraint_storage_state(pm::_PM.AbstractPowerModel, i::Int, nw_1::Int, nw_2::Int)
+    storage = ref(pm, nw_2, :storage, i)
+
+    if haskey(ref(pm, nw_2), :time_elapsed)
+        time_elapsed = ref(pm, nw_2, :time_elapsed)
+    else
+        Memento.warn(_LOGGER, "network $(nw_2) should specify time_elapsed, using 1.0 as a default")
+        time_elapsed = 1.0
+    end
+
+    if haskey(ref(pm, nw_1, :storage), i)
+        constraint_storage_state(pm, nw_1, nw_2, i, storage["charge_efficiency"], storage["discharge_efficiency"], time_elapsed)
+    else
+        # if the storage device has status=0 in nw_1, then the stored energy variable will not exist. Initialize storage from data model instead.
+        Memento.warn(_LOGGER, "storage component $(i) was not found in network $(nw_1) while building constraint_storage_state between networks $(nw_1) and $(nw_2). Using the energy value from the storage component in network $(nw_2) instead")
+        constraint_storage_state_initial(pm, nw_2, i, storage["energy"], storage["charge_efficiency"], storage["discharge_efficiency"], time_elapsed)
+    end
+end
+
+""
+function constraint_storage_complementarity_nl(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    constraint_storage_complementarity_nl(pm, nw, i)
 end

@@ -734,8 +734,9 @@ function constraint_mc_transformer_power_dy(pm::_PM.AbstractACRModel, nw::Int, t
 end
 
 
+#TODO adapt to use constraint template
 ""
-function constraint_mc_storage_losses(pm::_PM.AbstractACRModel, i::Int; nw::Int=pm.cnw, kwargs...)
+function constraint_mc_converter_losses(pm::_PM.AbstractACRModel, i::Int; nw::Int=pm.cnw, kwargs...)
     storage = ref(pm, nw, :storage, i)
 
     vr = var(pm, nw, :vr, storage["storage_bus"])
