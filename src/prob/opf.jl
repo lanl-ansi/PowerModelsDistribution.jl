@@ -24,6 +24,7 @@ function build_mc_opf(pm::_PM.AbstractPowerModel)
     variable_mc_gen_power_setpoint(pm)
     variable_mc_load_setpoint(pm)
     variable_mc_storage_power(pm)
+    variable_mc_converter_power(pm)
 
     constraint_mc_model_voltage(pm)
 
@@ -46,11 +47,12 @@ function build_mc_opf(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :storage)
-        constraint_storage_state(pm, i)
-        constraint_storage_complementarity_nl(pm, i)
+        _PM.constraint_storage_state(pm, i)
+        _PM.constraint_storage_complementarity_nl(pm, i)
     end
 
-    for i in ids(pm, :storage) #this should iterate over converter eventually
+    for i in ids(pm, :converter)
+        constraint_converter_storage_balance(pm, i) #needs to be called before constraint_mc_converter_losses
         constraint_mc_converter_losses(pm, i)
         constraint_mc_converter_thermal_limit(pm, i)
     end
@@ -133,6 +135,7 @@ function build_mc_opf(pm::AbstractUBFModels)
     variable_mc_gen_power_setpoint(pm)
     variable_mc_load_setpoint(pm)
     variable_mc_storage_power(pm)
+    variable_mc_converter_power(pm)
 
     # Constraints
     constraint_mc_model_current(pm)
@@ -158,6 +161,10 @@ function build_mc_opf(pm::AbstractUBFModels)
     for i in ids(pm, :storage)
         _PM.constraint_storage_state(pm, i)
         _PM.constraint_storage_complementarity_nl(pm, i)
+    end
+
+    for i in ids(pm, :converter)
+        constraint_converter_storage_balance(pm, i) #needs to be called before constraint_mc_converter_losses
         constraint_mc_converter_losses(pm, i)
         constraint_mc_converter_thermal_limit(pm, i)
     end
@@ -190,6 +197,7 @@ function build_mn_mc_opf(pm::_PM.AbstractPowerModel)
         variable_mc_gen_power_setpoint(pm; nw=n)
         variable_mc_load_setpoint(pm; nw=n)
         variable_mc_storage_power(pm; nw=n)
+        variable_mc_converter_power(pm; nw=n)
 
         constraint_mc_model_voltage(pm; nw=n)
 
@@ -209,10 +217,14 @@ function build_mn_mc_opf(pm::_PM.AbstractPowerModel)
             constraint_mc_load_power_balance(pm, i; nw=n)
         end
 
-        for i in ids(pm, n, :storage)
-            _PM.constraint_storage_complementarity_nl(pm, i; nw=n)
-            constraint_mc_converter_losses(pm, i; nw=n)
-            constraint_mc_converter_thermal_limit(pm, i; nw=n)
+        for i in ids(pm, :storage)
+            _PM.constraint_storage_complementarity_nl(pm, i)
+        end
+
+        for i in ids(pm, :converter)
+            constraint_converter_storage_balance(pm, i) #needs to be called before constraint_mc_converter_losses
+            constraint_mc_converter_losses(pm, i)
+            constraint_mc_converter_thermal_limit(pm, i)
         end
 
         for i in ids(pm, n, :branch)
@@ -256,6 +268,7 @@ function build_mn_mc_opf(pm::_PM.AbstractIVRModel)
         variable_mc_gen_power_setpoint(pm; nw=n)
         variable_mc_load_setpoint(pm; nw=n)
         variable_mc_storage_power(pm; nw=n)
+        variable_mc_converter_power(pm; nw=n)
 
         for i in ids(pm, n, :ref_buses)
             constraint_mc_theta_ref(pm, i; nw=n)
@@ -273,10 +286,14 @@ function build_mn_mc_opf(pm::_PM.AbstractIVRModel)
             constraint_mc_load_current_balance(pm, i; nw=n)
         end
 
-        for i in ids(pm, n, :storage)
-            _PM.constraint_storage_complementarity_nl(pm, i; nw=n)
-            constraint_mc_converter_losses(pm, i; nw=n)
-            constraint_mc_converter_thermal_limit(pm, i; nw=n)
+        for i in ids(pm, :storage)
+            _PM.constraint_storage_complementarity_nl(pm, i)
+        end
+
+        for i in ids(pm, :converter)
+            constraint_converter_storage_balance(pm, i) #needs to be called before constraint_mc_converter_losses
+            constraint_mc_converter_losses(pm, i)
+            constraint_mc_converter_thermal_limit(pm, i)
         end
 
         for i in ids(pm, n, :branch)
@@ -322,6 +339,7 @@ function build_mn_mc_opf(pm::AbstractUBFModels)
         variable_mc_gen_power_setpoint(pm; nw=n)
         variable_mc_load_setpoint(pm; nw=n)
         variable_mc_storage_power(pm; nw=n)
+        variable_mc_converter_power(pm; nw=n)
 
         constraint_mc_model_current(pm; nw=n)
 
@@ -341,10 +359,14 @@ function build_mn_mc_opf(pm::AbstractUBFModels)
             constraint_mc_load_power_balance(pm, i; nw=n)
         end
 
-        for i in ids(pm, n, :storage)
-            _PM.constraint_storage_complementarity_nl(pm, i; nw=n)
-            constraint_mc_converter_losses(pm, i; nw=n)
-            constraint_mc_converter_thermal_limit(pm, i; nw=n)
+        for i in ids(pm, :storage)
+            _PM.constraint_storage_complementarity_nl(pm, i)
+        end
+
+        for i in ids(pm, :converter)
+            constraint_converter_storage_balance(pm, i) #needs to be called before constraint_mc_converter_losses
+            constraint_mc_converter_losses(pm, i)
+            constraint_mc_converter_thermal_limit(pm, i)
         end
 
         for i in ids(pm, n, :branch)

@@ -55,12 +55,12 @@ function build_mc_pf(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :storage)
-        constraint_storage_state(pm, i)
-        constraint_storage_complementarity_nl(pm, i)
+        _PM.constraint_storage_state(pm, i)
+        _PM.constraint_storage_complementarity_nl(pm, i)
     end
 
     for i in ids(pm, :converter)
-        constraint_converter_storage_balance(pm, i) #needs to be defined before constraint_mc_converter_losses
+        constraint_converter_storage_balance(pm, i) #needs to be called before constraint_mc_converter_losses
         constraint_mc_converter_losses(pm, i)
         constraint_mc_converter_thermal_limit(pm, i)
     end
@@ -139,6 +139,7 @@ function build_mc_pf(pm::AbstractUBFModels)
     variable_mc_gen_power_setpoint(pm; bounded=false)
     variable_mc_load_setpoint(pm)
     variable_mc_storage_power(pm; bounded=false)
+    variable_mc_converter_power(pm; bounded=false)
 
     # Constraints
     constraint_mc_model_current(pm)
@@ -178,6 +179,10 @@ function build_mc_pf(pm::AbstractUBFModels)
     for i in ids(pm, :storage)
         _PM.constraint_storage_state(pm, i)
         _PM.constraint_storage_complementarity_nl(pm, i)
+    end
+
+    for i in ids(pm, :converter)
+        constraint_converter_storage_balance(pm, i) #needs to be called before constraint_mc_converter_losses
         constraint_mc_converter_losses(pm, i)
         constraint_mc_converter_thermal_limit(pm, i)
     end
