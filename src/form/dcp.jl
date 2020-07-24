@@ -38,10 +38,10 @@ end
 
 
 "power balance constraint with line shunts and transformers for load shed problem, DCP formulation"
-function constraint_mc_shed_power_balance(pm::_PM.AbstractDCPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_shed_power_balance(pm::_PM.AbstractDCPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_pd, bus_qd, bus_gs, bus_bs)
     p        = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
     pg       = get(var(pm, nw),   :pg, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
-    ps       = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
+    ps       = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_converter, "active power", "converter")
     psw      = get(var(pm, nw),  :psw, Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
     pt       = get(var(pm, nw),   :pt, Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
     z_demand = var(pm, nw, :z_demand)
@@ -53,7 +53,7 @@ function constraint_mc_shed_power_balance(pm::_PM.AbstractDCPModel, nw::Int, i::
         + sum(pt[a_trans] for a_trans in bus_arcs_trans)
         .==
         sum(pg[g] for g in bus_gens)
-        - sum(ps[s] for s in bus_storage)
+        - sum(ps[s] for s in bus_converter)
         - sum(pd.*z_demand[n] for (n,pd) in bus_pd)
         - sum(diag(gs)*1.0^2 .*z_shunt[n] for (n,gs) in bus_gs)
     )

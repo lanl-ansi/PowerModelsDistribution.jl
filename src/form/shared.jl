@@ -9,14 +9,14 @@ end
 
 
 ""
-function constraint_mc_slack_power_balance(pm::_PM.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_slack_power_balance(pm::_PM.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_pd, bus_qd, bus_gs, bus_bs)
     w    = var(pm, nw, :w, i)
     p    = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
     q    = get(var(pm, nw),    :q, Dict()); _PM._check_var_keys(q, bus_arcs, "reactive power", "branch")
     pg   = get(var(pm, nw),   :pg, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
     qg   = get(var(pm, nw),   :qg, Dict()); _PM._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs   = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_converter, "active power", "converter")
+    qs   = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_converter, "reactive power", "converter")
     psw  = get(var(pm, nw),  :psw, Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
     qsw  = get(var(pm, nw),  :qsw, Dict()); _PM._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
     pt   = get(var(pm, nw),   :pt, Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
@@ -33,7 +33,7 @@ function constraint_mc_slack_power_balance(pm::_PM.AbstractWModels, nw::Int, i, 
         + sum(diag(Pt[a_trans]) for a_trans in bus_arcs_trans)
         .==
         sum(pg[g] for g in bus_gens)
-        - sum(ps[s] for s in bus_storage)
+        - sum(ps[s] for s in bus_converter)
         - sum(pd for pd in values(bus_pd))
         - diag(Wr*G'+Wi*B')
         + p_slack
@@ -45,7 +45,7 @@ function constraint_mc_slack_power_balance(pm::_PM.AbstractWModels, nw::Int, i, 
         + sum(diag(Qt[a_trans]) for a_trans in bus_arcs_trans)
         .==
         sum(qg[g] for g in bus_gens)
-        - sum(qs[s] for s in bus_storage)
+        - sum(qs[s] for s in bus_converter)
         - sum(qd for qd in values(bus_qd))
         - diag(-Wr*B'+Wi*G')
         + q_slack
@@ -92,14 +92,14 @@ end
 
 
 "KCL for load shed problem with transformers (AbstractWForms)"
-function constraint_mc_shed_power_balance(pm::_PM.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_shed_power_balance(pm::_PM.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_pd, bus_qd, bus_gs, bus_bs)
     w        = var(pm, nw, :w, i)
     p        = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
     q        = get(var(pm, nw),    :q, Dict()); _PM._check_var_keys(q, bus_arcs, "reactive power", "branch")
     pg       = get(var(pm, nw),   :pg, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
     qg       = get(var(pm, nw),   :qg, Dict()); _PM._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps       = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs       = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    ps       = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_converter, "active power", "converter")
+    qs       = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_converter, "reactive power", "converter")
     psw      = get(var(pm, nw),  :psw, Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
     qsw      = get(var(pm, nw),  :qsw, Dict()); _PM._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
     pt       = get(var(pm, nw),   :pt, Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
@@ -121,7 +121,7 @@ function constraint_mc_shed_power_balance(pm::_PM.AbstractWModels, nw::Int, i, b
         + sum(pt[a_trans] for a_trans in bus_arcs_trans)
         .==
         sum(pg[g] for g in bus_gens)
-        - sum(ps[s] for s in bus_storage)
+        - sum(ps[s] for s in bus_converter)
         - sum(pd .*z_demand[n] for (n,pd) in bus_pd)
         - sum(z_shunt[n].*(w.*diag(Gt')) for (n,Gs,Bs) in bus_GsBs)
     )
@@ -131,7 +131,7 @@ function constraint_mc_shed_power_balance(pm::_PM.AbstractWModels, nw::Int, i, b
         + sum(qt[a_trans] for a_trans in bus_arcs_trans)
         .==
         sum(qg[g] for g in bus_gens)
-        - sum(qs[s] for s in bus_storage)
+        - sum(qs[s] for s in bus_converter)
         - sum(qd.*z_demand[n] for (n,qd) in bus_qd)
         - sum(z_shunt[n].*(-w.*diag(Bt')) for (n,Gs,Bs) in bus_GsBs)
     )
@@ -147,7 +147,7 @@ end
 
 
 ""
-function constraint_mc_load_power_balance(pm::_PM.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+function constraint_mc_load_power_balance(pm::_PM.AbstractWModels, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_loads, bus_gs, bus_bs)
     Wr = var(pm, nw, :Wr, i)
     Wi = var(pm, nw, :Wi, i)
     P = get(var(pm, nw), :P, Dict()); _PM._check_var_keys(P, bus_arcs, "active power", "branch")
@@ -161,8 +161,8 @@ function constraint_mc_load_power_balance(pm::_PM.AbstractWModels, nw::Int, i, b
     qd = get(var(pm, nw), :qd_bus, Dict()); _PM._check_var_keys(qd, bus_loads, "reactive power", "load")
     pg = get(var(pm, nw), :pg_bus, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
     qg = get(var(pm, nw), :qg_bus, Dict()); _PM._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs   = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_converter, "active power", "converter")
+    qs   = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_converter, "reactive power", "converter")
 
     cnds = conductor_ids(pm; nw=nw)
     ncnds = length(cnds)
@@ -176,7 +176,7 @@ function constraint_mc_load_power_balance(pm::_PM.AbstractWModels, nw::Int, i, b
         + sum(diag(Pt[a_trans]) for a_trans in bus_arcs_trans)
         .==
         sum(pg[g] for g in bus_gens)
-        - sum(ps[s] for s in bus_storage)
+        - sum(ps[s] for s in bus_converter)
         - sum(pd[d] for d in bus_loads)
         - diag(Wr*Gt'+Wi*Bt')
     )
@@ -187,7 +187,7 @@ function constraint_mc_load_power_balance(pm::_PM.AbstractWModels, nw::Int, i, b
         + sum(diag(Qt[a_trans]) for a_trans in bus_arcs_trans)
         .==
         sum(qg[g] for g in bus_gens)
-        - sum(qs[s] for s in bus_storage)
+        - sum(qs[s] for s in bus_converter)
         - sum(qd[d] for d in bus_loads)
         - diag(-Wr*Bt'+Wi*Gt')
     )

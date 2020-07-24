@@ -214,7 +214,7 @@ end
 Kirchhoff's current law applied to buses
 `sum(cr + im*ci) = 0`
 """
-function constraint_mc_load_current_balance(pm::_PM.AbstractIVRModel, n::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+function constraint_mc_load_current_balance(pm::_PM.AbstractIVRModel, n::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_loads, bus_gs, bus_bs)
     vr = var(pm, n, :vr, i)
     vi = var(pm, n, :vi, i)
 
@@ -224,8 +224,8 @@ function constraint_mc_load_current_balance(pm::_PM.AbstractIVRModel, n::Int, i,
     cid   = get(var(pm, n),   :cid_bus, Dict()); _PM._check_var_keys(cid, bus_loads, "imaginary current", "load")
     crg   = get(var(pm, n),   :crg_bus, Dict()); _PM._check_var_keys(crg, bus_gens, "real current", "generator")
     cig   = get(var(pm, n),   :cig_bus, Dict()); _PM._check_var_keys(cig, bus_gens, "imaginary current", "generator")
-    crs   = get(var(pm, n),   :crs, Dict()); _PM._check_var_keys(crs, bus_storage, "real currentr", "storage")
-    cis   = get(var(pm, n),   :cis, Dict()); _PM._check_var_keys(cis, bus_storage, "imaginary current", "storage")
+    crs   = get(var(pm, n),   :crs, Dict()); _PM._check_var_keys(crs, bus_converter, "real current", "converter")
+    cis   = get(var(pm, n),   :cis, Dict()); _PM._check_var_keys(cis, bus_converter, "imaginary current", "converter")
     crsw  = get(var(pm, n),  :crsw, Dict()); _PM._check_var_keys(crsw, bus_arcs_sw, "real current", "switch")
     cisw  = get(var(pm, n),  :cisw, Dict()); _PM._check_var_keys(cisw, bus_arcs_sw, "imaginary current", "switch")
     crt   = get(var(pm, n),   :crt, Dict()); _PM._check_var_keys(crt, bus_arcs_trans, "real current", "transformer")
@@ -243,7 +243,7 @@ function constraint_mc_load_current_balance(pm::_PM.AbstractIVRModel, n::Int, i,
                                     + sum(crt[a_trans][c] for a_trans in bus_arcs_trans)
                                     ==
                                       sum(crg[g][c]         for g in bus_gens)
-                                    - sum(crs[s][c]         for s in bus_storage)
+                                    - sum(crs[s][c]         for s in bus_converter)
                                     - sum(crd[d][c]         for d in bus_loads)
                                     - sum( Gt[c,d]*vr[d] -Bt[c,d]*vi[d] for d in cnds) # shunts
                                     )
@@ -252,7 +252,7 @@ function constraint_mc_load_current_balance(pm::_PM.AbstractIVRModel, n::Int, i,
                                     + sum(cit[a_trans][c] for a_trans in bus_arcs_trans)
                                     ==
                                       sum(cig[g][c]         for g in bus_gens)
-                                    - sum(cis[s][c]         for s in bus_storage)
+                                    - sum(cis[s][c]         for s in bus_converter)
                                     - sum(cid[d][c]         for d in bus_loads)
                                     - sum( Gt[c,d]*vi[d] +Bt[c,d]*vr[d] for d in cnds) # shunts
                                     )

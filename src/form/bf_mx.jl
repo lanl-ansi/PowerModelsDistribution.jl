@@ -827,7 +827,7 @@ S = U.I' = U.(Y.U)' = U.U'.Y' = W.Y'
 P =  Wr.G'+Wi.B'
 Q = -Wr.B'+Wi.G'
 """
-function constraint_mc_load_power_balance(pm::KCLMXModels, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+function constraint_mc_load_power_balance(pm::KCLMXModels, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_loads, bus_gs, bus_bs)
     Wr = var(pm, nw, :Wr, i)
     Wi = var(pm, nw, :Wi, i)
 
@@ -850,7 +850,7 @@ function constraint_mc_load_power_balance(pm::KCLMXModels, nw::Int, i::Int, bus_
         # + sum(Pt[a_trans] for a_trans in bus_arcs_trans)
         .==
           sum(Pg[g] for g in bus_gens)
-        # - sum(ps[s] for s in bus_storage)
+        # - sum(ps[s] for s in bus_converter)
         - sum(Pd[d] for d in bus_loads)
         - diag(Wr*Gt'+Wi*Bt')
     )
@@ -861,7 +861,7 @@ function constraint_mc_load_power_balance(pm::KCLMXModels, nw::Int, i::Int, bus_
         # + sum(diag(Qt[a_trans]) for a_trans in bus_arcs_trans)
         .==
           sum(Qg[g] for g in bus_gens)
-        # - sum(qs[s] for s in bus_storage)
+        # - sum(qs[s] for s in bus_converter)
         - sum(Qd[d] for d in bus_loads)
         - diag(-Wr*Bt'+Wi*Gt')
     )

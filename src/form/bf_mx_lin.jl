@@ -104,7 +104,7 @@ end
 
 
 ""
-function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_loads, bus_gs, bus_bs)
     w = var(pm, nw, :w, i)
     bus = ref(pm, nw, :bus, i)
     vmax=bus["vmax"]
@@ -121,8 +121,8 @@ function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_ar
     qd = get(var(pm, nw), :qd, Dict()); _PM._check_var_keys(qd, bus_loads, "reactive power", "load")
     pg = get(var(pm, nw), :pg, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
     qg = get(var(pm, nw), :qg, Dict()); _PM._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs   = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_converter, "active power", "converter")
+    qs   = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_converter, "reactive power", "converter")
 
     cstr_p = []
     cstr_q = []
@@ -138,7 +138,7 @@ function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_ar
             + sum((pt[a_trans])[c] for a_trans in bus_arcs_trans)
             ==
             sum((pg[g])[c] for g in bus_gens)
-            - sum((ps[s])[c] for s in bus_storage)
+            - sum((ps[s])[c] for s in bus_converter)
             - sum((pd[d])[c] for d in bus_loads)
             - sum(gs[c]*w[c] for gs in values(bus_gs)))
             push!(cstr_p, cp)
@@ -153,7 +153,7 @@ function constraint_mc_load_power_balance(pm::LPUBFDiagModel, nw::Int, i, bus_ar
             + sum((qt[a_trans])[c] for a_trans in bus_arcs_trans)
             ==
             sum((qg[g])[c] for g in bus_gens)
-            - sum((qs[s])[c] for s in bus_storage)
+            - sum((qs[s])[c] for s in bus_converter)
             - sum((qd[d])[c] for d in bus_loads)
             + sum(bs[c]*w[c] for bs in values(bus_bs)))
             push!(cstr_q, cq)
