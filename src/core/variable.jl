@@ -363,7 +363,7 @@ end
 
 
 "variables for modeling storage units, includes grid injection and internal variables"
-function variable_mc_storage_power(pm::_PM.AbstractPowerModel; kwargs...)
+function variable_storage_power(pm::_PM.AbstractPowerModel; kwargs...)
     _PM.variable_storage_energy(pm; kwargs...)
     _PM.variable_storage_charge(pm; kwargs...)
     _PM.variable_storage_discharge(pm; kwargs...)
@@ -381,8 +381,8 @@ end
 
 #TODO adapt for converter
 ""
-function variable_mc_storage_power_mi(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
-    variable_mc_storage_power_on_off(pm; kwargs...)
+function variable_storage_power_mi(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
+    variable_storage_power_on_off(pm; kwargs...)
     variable_mc_converter_power_control_imaginary(pm; kwargs...)
     variable_mc_converter_current(pm; kwargs...)
     variable_mc_storage_indicator(pm; relax=relax, kwargs...)
@@ -394,7 +394,7 @@ end
 
 #TODO adapt for converter
 ""
-function variable_mc_storage_power_mi_on_off(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
+function variable_storage_power_mi_on_off(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
     variable_mc_converter_power_real_on_off(pm; kwargs...)
     variable_mc_converter_power_imaginary_on_off(pm; kwargs...)
     variable_mc_converter_current(pm; kwargs...)
@@ -845,7 +845,7 @@ end
 
 #TODO
 "Create variables for `active` and `reactive` storage injection"
-function variable_mc_storage_power_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
+function variable_storage_power_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
     variable_mc_converter_power_real_on_off(pm; nw=nw, kwargs...)
     variable_mc_converter_power_imaginary_on_off(pm; nw=nw, kwargs...)
 end

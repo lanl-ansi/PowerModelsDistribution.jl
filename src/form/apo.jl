@@ -68,10 +68,10 @@ end
 
 
 "power balanace constraint with line shunts and transformers, active power only"
-function constraint_mc_load_power_balance(pm::_PM.AbstractActivePowerModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+function constraint_mc_load_power_balance(pm::_PM.AbstractActivePowerModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_loads, bus_gs, bus_bs)
     p    = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
     pg   = get(var(pm, nw),   :pg_bus, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
-    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
+    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_converter, "active power", "converter")
     psw  = get(var(pm, nw),  :psw, Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
     pt   = get(var(pm, nw),   :pt, Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
     pd   = get(var(pm, nw),   :pd_bus, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
@@ -85,7 +85,7 @@ function constraint_mc_load_power_balance(pm::_PM.AbstractActivePowerModel, nw::
             + sum(pt[a_trans][c] for a_trans in bus_arcs_trans)
             ==
             sum(pg[g][c] for g in bus_gens)
-            - sum(ps[s][c] for s in bus_storage)
+            - sum(ps[s][c] for s in bus_converter)
             - sum(pd[d][c] for d in bus_loads)
             - sum(diag(gs)[c] for gs in values(bus_gs))*1.0^2
         )
@@ -327,13 +327,12 @@ end
 
 
 ""
-function constraint_mc_converter_losses(pm::_PM.AbstractActivePowerModel, n::Int, i, bus, conductors, r, x, p_loss, q_loss)
-    ps = var(pm, n, :ps, i)
-    sc = var(pm, n, :sc, i)
-    sd = var(pm, n, :sd, i)
+function constraint_mc_converter_losses(pm::_PM.AbstractActivePowerModel, n::Int, i, bus, r, x, p_loss, q_loss, conductors)
+    ps  = var(pm, n, :ps, i)
+    pdc = var(pm, n, :pdc, i)
 
     JuMP.@constraint(pm.model,
-        sum(ps[c] for c in conductors) + (sd - sc)
+        sum(ps[c] for c in conductors) + pdc
         ==
         p_loss + sum(r[c]*ps[c]^2 for c in conductors)
     )
@@ -342,7 +341,6 @@ end
 
 ""
 function constraint_mc_storage_on_off(pm::_PM.AbstractActivePowerModel, n::Int, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
-
     z_storage =var(pm, n, :z_storage, i)
     ps =var(pm, n, :ps, i)
 

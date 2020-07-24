@@ -12,7 +12,7 @@ function constraint_mc_slack_power_balance(pm::_PM.AbstractPowerModel, i::Int; n
     bus_arcs_sw = ref(pm, nw, :bus_arcs_sw, i)
     bus_arcs_trans = ref(pm, nw, :bus_arcs_trans, i)
     bus_gens = ref(pm, nw, :bus_gens, i)
-    bus_storage = ref(pm, nw, :bus_storage, i)
+    bus_converter = ref(pm, nw, :bus_converter, i)
     bus_loads = ref(pm, nw, :bus_loads, i)
     bus_shunts = ref(pm, nw, :bus_shunts, i)
 
@@ -30,7 +30,7 @@ function constraint_mc_slack_power_balance(pm::_PM.AbstractPowerModel, i::Int; n
         con(pm, nw)[:lam_kcl_i] = Dict{Int,Array{JuMP.ConstraintRef}}()
     end
 
-    constraint_mc_slack_power_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    constraint_mc_slack_power_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_pd, bus_qd, bus_gs, bus_bs)
 end
 
 
@@ -170,7 +170,7 @@ function constraint_mc_power_balance(pm::_PM.AbstractPowerModel, i::Int; nw::Int
     bus_arcs_sw = ref(pm, nw, :bus_arcs_sw, i)
     bus_arcs_trans = ref(pm, nw, :bus_arcs_trans, i)
     bus_gens = ref(pm, nw, :bus_gens, i)
-    bus_storage = ref(pm, nw, :bus_storage, i)
+    bus_converter = ref(pm, nw, :bus_converter, i)
     bus_loads = ref(pm, nw, :bus_loads, i)
     bus_shunts = ref(pm, nw, :bus_shunts, i)
 
@@ -188,7 +188,7 @@ function constraint_mc_power_balance(pm::_PM.AbstractPowerModel, i::Int; nw::Int
         con(pm, nw)[:lam_kcl_i] = Dict{Int,Array{JuMP.ConstraintRef}}()
     end
 
-    constraint_mc_power_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+    constraint_mc_power_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_loads, bus_gs, bus_bs)
 end
 
 
@@ -240,7 +240,7 @@ function constraint_mc_load_power_balance(pm::_PM.AbstractPowerModel, i::Int; nw
     bus_arcs_sw = ref(pm, nw, :bus_arcs_sw, i)
     bus_arcs_trans = ref(pm, nw, :bus_arcs_trans, i)
     bus_gens = ref(pm, nw, :bus_gens, i)
-    bus_storage = ref(pm, nw, :bus_storage, i)
+    bus_converter = ref(pm, nw, :bus_converter, i)
     bus_loads = ref(pm, nw, :bus_loads, i)
     bus_shunts = ref(pm, nw, :bus_shunts, i)
 
@@ -255,7 +255,7 @@ function constraint_mc_load_power_balance(pm::_PM.AbstractPowerModel, i::Int; nw
         con(pm, nw)[:lam_kcl_i] = Dict{Int,Array{JuMP.ConstraintRef}}()
     end
 
-    constraint_mc_load_power_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+    constraint_mc_load_power_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_loads, bus_gs, bus_bs)
 end
 
 
@@ -346,7 +346,7 @@ function constraint_mc_shed_power_balance(pm::_PM.AbstractPowerModel, i::Int; nw
     bus_arcs_sw = ref(pm, nw, :bus_arcs_sw, i)
     bus_arcs_trans = ref(pm, nw, :bus_arcs_trans, i)
     bus_gens = ref(pm, nw, :bus_gens, i)
-    bus_storage = ref(pm, nw, :bus_storage, i)
+    bus_converter = ref(pm, nw, :bus_converter, i)
     bus_loads = ref(pm, nw, :bus_loads, i)
     bus_shunts = ref(pm, nw, :bus_shunts, i)
 
@@ -364,7 +364,7 @@ function constraint_mc_shed_power_balance(pm::_PM.AbstractPowerModel, i::Int; nw
         con(pm, nw)[:lam_kcl_i] = Dict{Int,Array{JuMP.ConstraintRef}}()
     end
 
-    constraint_mc_shed_power_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+    constraint_mc_shed_power_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_pd, bus_qd, bus_gs, bus_bs)
 end
 
 
@@ -551,14 +551,14 @@ function constraint_mc_load_current_balance(pm::_PM.AbstractPowerModel, i::Int; 
     bus_arcs_sw = ref(pm, nw, :bus_arcs_sw, i)
     bus_arcs_trans = ref(pm, nw, :bus_arcs_trans, i)
     bus_gens = ref(pm, nw, :bus_gens, i)
-    bus_storage = ref(pm, nw, :bus_storage, i)
+    bus_converter = ref(pm, nw, :bus_converter, i)
     bus_loads = ref(pm, nw, :bus_loads, i)
     bus_shunts = ref(pm, nw, :bus_shunts, i)
 
     bus_gs = Dict(k => ref(pm, nw, :shunt, k, "gs") for k in bus_shunts)
     bus_bs = Dict(k => ref(pm, nw, :shunt, k, "bs") for k in bus_shunts)
 
-    constraint_mc_load_current_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+    constraint_mc_load_current_balance(pm, nw, i, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_loads, bus_gs, bus_bs)
 end
 
 

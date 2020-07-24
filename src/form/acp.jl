@@ -50,15 +50,15 @@ end
 
 
 ""
-function constraint_mc_slack_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_slack_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_pd, bus_qd, bus_gs, bus_bs)
     vm   = var(pm, nw, :vm, i)
     va   = var(pm, nw, :va, i)
     p    = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
     q    = get(var(pm, nw),    :q, Dict()); _PM._check_var_keys(q, bus_arcs, "reactive power", "branch")
     pg   = get(var(pm, nw),   :pg, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
     qg   = get(var(pm, nw),   :qg, Dict()); _PM._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs   = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_converter, "active power", "converter")
+    qs   = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_converter, "reactive power", "converter")
     psw  = get(var(pm, nw),  :psw, Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
     qsw  = get(var(pm, nw),  :qsw, Dict()); _PM._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
     pt   = get(var(pm, nw),   :pt, Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
@@ -82,7 +82,7 @@ function constraint_mc_slack_power_balance(pm::_PM.AbstractACPModel, nw::Int, i:
             + sum(pt[a_trans][c] for a_trans in bus_arcs_trans)
             ==
             sum(pg[g][c] for g in bus_gens)
-            - sum(ps[s][c] for s in bus_storage)
+            - sum(ps[s][c] for s in bus_converter)
             - sum(pd[c] for pd in values(bus_pd))
             - ( # shunt
                 Gt[c,c] * vm[c]^2
@@ -100,7 +100,7 @@ function constraint_mc_slack_power_balance(pm::_PM.AbstractACPModel, nw::Int, i:
             + sum(qt[a_trans][c] for a_trans in bus_arcs_trans)
             ==
             sum(qg[g][c] for g in bus_gens)
-            - sum(qs[s][c] for s in bus_storage)
+            - sum(qs[s][c] for s in bus_converter)
             - sum(qd[c] for qd in values(bus_qd))
             - ( # shunt
                 -Bt[c,c] * vm[c]^2
@@ -125,15 +125,15 @@ end
 
 
 ""
-function constraint_mc_shed_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_shed_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_pd, bus_qd, bus_gs, bus_bs)
     vm       = var(pm, nw, :vm, i)
     va       = var(pm, nw, :va, i)
     p        = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
     q        = get(var(pm, nw),    :q, Dict()); _PM._check_var_keys(q, bus_arcs, "reactive power", "branch")
     pg       = get(var(pm, nw),   :pg, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
     qg       = get(var(pm, nw),   :qg, Dict()); _PM._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps       = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs       = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    ps       = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_converter, "active power", "converter")
+    qs       = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_converter, "reactive power", "converter")
     psw      = get(var(pm, nw),  :psw, Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
     qsw      = get(var(pm, nw),  :qsw, Dict()); _PM._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
     pt       = get(var(pm, nw),   :pt, Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
@@ -159,7 +159,7 @@ function constraint_mc_shed_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::
             + sum(pt[a_trans][c] for a_trans in bus_arcs_trans)
             ==
             sum(pg[g][c] for g in bus_gens)
-            - sum(ps[s][c] for s in bus_storage)
+            - sum(ps[s][c] for s in bus_converter)
             - sum(pd[c]*z_demand[n] for (n,pd) in bus_pd)
             - sum( # shunt
                 Gt[c,c] * vm[c]^2
@@ -176,7 +176,7 @@ function constraint_mc_shed_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::
             + sum(qt[a_trans][c] for a_trans in bus_arcs_trans)
             ==
             sum(qg[g][c] for g in bus_gens)
-            - sum(qs[s][c] for s in bus_storage)
+            - sum(qs[s][c] for s in bus_converter)
             - sum(qd[c]*z_demand[n] for (n,qd) in bus_qd)
             - sum( # shunt
                 -Bt[c,c] * vm[c]^2
@@ -200,15 +200,15 @@ end
 
 
 ""
-function constraint_mc_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_mc_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_pd, bus_qd, bus_gs, bus_bs)
     vm   = var(pm, nw, :vm, i)
     va   = var(pm, nw, :va, i)
     p    = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
     q    = get(var(pm, nw),    :q, Dict()); _PM._check_var_keys(q, bus_arcs, "reactive power", "branch")
     pg   = get(var(pm, nw),   :pg, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
     qg   = get(var(pm, nw),   :qg, Dict()); _PM._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs   = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_converter, "active power", "converter")
+    qs   = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_converter, "reactive power", "converter")
     psw  = get(var(pm, nw),  :psw, Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
     qsw  = get(var(pm, nw),  :qsw, Dict()); _PM._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
     pt   = get(var(pm, nw),   :pt, Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
@@ -231,7 +231,7 @@ function constraint_mc_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, 
             + sum(pt[a_trans][c] for a_trans in bus_arcs_trans)
             ==
             sum(pg[g][c] for g in bus_gens)
-            - sum(ps[s][c] for s in bus_storage)
+            - sum(ps[s][c] for s in bus_converter)
             - sum(pd[c] for pd in values(bus_pd))
             - ( # shunt
                 Gt[c,c] * vm[c]^2
@@ -248,7 +248,7 @@ function constraint_mc_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, 
             + sum(qt[a_trans][c] for a_trans in bus_arcs_trans)
             ==
             sum(qg[g][c] for g in bus_gens)
-            - sum(qs[s][c] for s in bus_storage)
+            - sum(qs[s][c] for s in bus_converter)
             - sum(qd[c] for qd in values(bus_qd))
             - ( # shunt
                 -Bt[c,c] * vm[c]^2
@@ -271,15 +271,15 @@ end
 
 
 ""
-function constraint_mc_load_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_gs, bus_bs)
+function constraint_mc_load_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_converter, bus_loads, bus_gs, bus_bs)
     vm   = var(pm, nw, :vm, i)
     va   = var(pm, nw, :va, i)
     p    = get(var(pm, nw),   :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
     q    = get(var(pm, nw),   :q, Dict()); _PM._check_var_keys(q, bus_arcs, "reactive power", "branch")
     pg   = get(var(pm, nw),  :pg_bus, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
     qg   = get(var(pm, nw),  :qg_bus, Dict()); _PM._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps   = get(var(pm, nw),  :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs   = get(var(pm, nw),  :qs, Dict()); _PM._check_var_keys(qs, bus_storage, "reactive power", "storage")
+    ps   = get(var(pm, nw),  :ps, Dict()); _PM._check_var_keys(ps, bus_converter, "active power", "converter")
+    qs   = get(var(pm, nw),  :qs, Dict()); _PM._check_var_keys(qs, bus_converter, "reactive power", "converter")
     psw  = get(var(pm, nw), :psw, Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
     qsw  = get(var(pm, nw), :qsw, Dict()); _PM._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
     pt   = get(var(pm, nw),  :pt, Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
@@ -303,7 +303,7 @@ function constraint_mc_load_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::
             + sum(pt[a_trans][c] for a_trans in bus_arcs_trans)
             ==
             sum(pg[g][c] for g in bus_gens)
-            - sum(ps[s][c] for s in bus_storage)
+            - sum(ps[s][c] for s in bus_converter)
             - sum(pd[l][c] for l in bus_loads)
             - ( # shunt
                 Gt[c,c] * vm[c]^2
@@ -320,7 +320,7 @@ function constraint_mc_load_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::
             + sum(qt[a_trans][c] for a_trans in bus_arcs_trans)
             ==
             sum(qg[g][c] for g in bus_gens)
-            - sum(qs[s][c] for s in bus_storage)
+            - sum(qs[s][c] for s in bus_converter)
             - sum(qd[l][c] for l in bus_loads)
             - ( # shunt
                 -Bt[c,c] * vm[c]^2

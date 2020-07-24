@@ -149,7 +149,7 @@ function _calc_mc_transformer_Tvi(pm::_PM.AbstractPowerModel, i::Int; nw=pm.cnw)
     return (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to)
 end
 
-"Adds connectivity for converters"
+"Adds connectivity for storage subsystems to converters"
 function ref_add_converter_storage!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
     if _IM.ismultinetwork(data)
         nws_data = data["nw"]
@@ -172,5 +172,31 @@ function ref_add_converter_storage!(ref::Dict{Symbol,<:Any}, data::Dict{String,<
             push!(converter_storage[storage["converter"]], i)
         end
         nw_ref[:converter_storage] = converter_storage
+    end
+end
+
+"Adds connectivity for converters to buses"
+function ref_add_bus_converter!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
+    if _IM.ismultinetwork(data)
+        nws_data = data["nw"]
+    else
+        nws_data = Dict("0" => data)
+    end
+
+    for (n, nw_data) in nws_data
+        nw_id = parse(Int, n)
+        nw_ref = ref[:nw][nw_id]
+
+        if !haskey(nw_ref, :converter)
+            # this might happen when parsing data from matlab format
+            # the OpenDSS parser always inserts a trans dict
+            nw_ref[:converter] = Dict{Int, Any}()
+        end
+
+        bus_converter = Dict((i, Int[]) for (i,bus) in nw_ref[:bus])
+        for (i,converter) in nw_ref[:converter]
+            push!(bus_converter[converter["converter_bus"]], i)
+        end
+        nw_ref[:bus_converter] = bus_converter
     end
 end

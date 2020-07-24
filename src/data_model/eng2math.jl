@@ -1,6 +1,5 @@
 import LinearAlgebra: diagm
 
-#TODO remove unnecessary fields from storage and converter
 "items that are mapped one-to-one from engineering to math models"
 const _1to1_maps = Dict{String,Vector{String}}(
     "bus" => ["vm", "va", "terminals", "phases", "neutral", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub", "dss", "vuf_ub", "vm_pair_lb", "vm_pair_ub"],
@@ -11,9 +10,9 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "load" => ["model", "configuration", "connections", "dispatchable", "status", "source_id", "dss"],
     "generator" => ["pg", "qg", "vg", "configuration", "connections", "source_id", "dss"],
     "solar" => ["pg", "qg", "configuration", "connections", "source_id", "dss"],
-    "storage" => ["status", "energy", "ps", "qs", "connections", "source_id", "dss"],
+    "storage" => ["status", "energy", "source_id", "dss"],
     "voltage_source" => ["source_id", "dss"],
-    "converter" => ["status", "energy", "ps", "qs", "connections", "source_id", "dss"],
+    "converter" => ["status", "ps", "qs", "configuration", "connections", "source_id", "dss"],
 )
 
 
