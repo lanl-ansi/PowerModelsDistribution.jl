@@ -111,3 +111,10 @@ function constraint_converter_storage_balance(pm::_PM.AbstractPowerModel, n::Int
     #store expression to inject into the converter model
     var(pm, n, :pdc)[i] = sum(sd) - sum(sc)
 end
+
+# "define balance between converter and pv subsystem, store as expression in variable dict"
+# function constraint_converter_solar_balance(pm::_PM.AbstractPowerModel, n::Int, i::Int, converterid, converter_solar, pref)
+#     pcurt = [var(pm, n, :pcurt, c) for c in converter_solar]
+#     #store expression to inject into the converter model
+#     var(pm, n, :pdc)[i] = pv_setpoint - sum(pcurt)
+# end

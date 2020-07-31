@@ -379,32 +379,21 @@ function variable_mc_converter_power(pm::_PM.AbstractPowerModel; kwargs...)
     variable_converter_device_power(pm; kwargs...)
 end
 
-#TODO adapt for converter
 ""
 function variable_storage_power_mi(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
-    variable_storage_power_on_off(pm; kwargs...)
+    _PM.variable_storage_energy(pm; kwargs...)
+    _PM.variable_storage_charge(pm; kwargs...)
+    _PM.variable_storage_discharge(pm; kwargs...)
+    _PM.variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
+end
+
+function variable_mc_converter_power_on_off(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
+    variable_converter_power_on_off(pm; kwargs...)
     variable_mc_converter_power_control_imaginary(pm; kwargs...)
     variable_mc_converter_current(pm; kwargs...)
-    variable_mc_storage_indicator(pm; relax=relax, kwargs...)
-    _PM.variable_storage_energy(pm; kwargs...)
-    _PM.variable_storage_charge(pm; kwargs...)
-    _PM.variable_storage_discharge(pm; kwargs...)
-    _PM.variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
+    variable_converter_device_power(pm; kwargs...)
+    variable_mc_converter_indicator(pm; relax=relax, kwargs...)
 end
-
-#TODO adapt for converter
-""
-function variable_storage_power_mi_on_off(pm::_PM.AbstractPowerModel; relax::Bool=false, kwargs...)
-    variable_mc_converter_power_real_on_off(pm; kwargs...)
-    variable_mc_converter_power_imaginary_on_off(pm; kwargs...)
-    variable_mc_converter_current(pm; kwargs...)
-    variable_mc_converter_power_control_imaginary_on_off(pm; kwargs...)
-    _PM.variable_storage_energy(pm; kwargs...)
-    _PM.variable_storage_charge(pm; kwargs...)
-    _PM.variable_storage_discharge(pm; kwargs...)
-    _PM.variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
-end
-
 
 "make empty dictionary to store power balance expressions w.r.t. connected devices later"
 function variable_converter_device_power(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
@@ -822,30 +811,29 @@ function variable_mc_gen_indicator(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, r
 end
 
 
-#TODO should be adapted to converter
-"Create variables for storage status"
-function variable_mc_storage_indicator(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, relax::Bool=false, report::Bool=true)
+#TODO done should be adapted to converter
+"Create variables for converter status"
+function variable_mc_converter_indicator(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, relax::Bool=false, report::Bool=true)
     if !relax
-        z_storage = var(pm, nw)[:z_storage] = JuMP.@variable(pm.model,
-            [i in ids(pm, nw, :storage)], base_name="$(nw)-z_storage",
+        z_converter = var(pm, nw)[:z_converter] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :converter)], base_name="$(nw)-z_converter",
             binary = true,
-            start = comp_start_value(ref(pm, nw, :storage, i), "z_storage_start", 1.0)
+            start = comp_start_value(ref(pm, nw, :converter, i), "z_converter_start", 1.0)
         )
     else
-        z_storage = var(pm, nw)[:z_storage] = JuMP.@variable(pm.model,
-            [i in ids(pm, nw, :storage)], base_name="$(nw)_z_storage",
+        z_converter = var(pm, nw)[:z_converter] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :converter)], base_name="$(nw)z_converter",
             lower_bound = 0,
             upper_bound = 1,
-            start = comp_start_value(ref(pm, nw, :storage, i), "z_storage_start", 1.0)
+            start = comp_start_value(ref(pm, nw, :converter, i), "z_converter_start", 1.0)
         )
     end
 
-    report && _IM.sol_component_value(pm, nw, :storage, :status, ids(pm, nw, :storage), z_storage)
+    report && _IM.sol_component_value(pm, nw, :converter, :status, ids(pm, nw, :converter), z_converter)
 end
 
-#TODO
 "Create variables for `active` and `reactive` storage injection"
-function variable_storage_power_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
+function variable_converter_power_on_off(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, kwargs...)
     variable_mc_converter_power_real_on_off(pm; nw=nw, kwargs...)
     variable_mc_converter_power_imaginary_on_off(pm; nw=nw, kwargs...)
 end

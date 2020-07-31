@@ -257,7 +257,7 @@ end
 
 
 ""
-function constraint_mc_storage_on_off(pm::_PM.AbstractPowerModel, n::Int, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
+function constraint_mc_converter_on_off(pm::_PM.AbstractPowerModel, n::Int, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
     z_storage =var(pm, n, :z_storage, i)
     ps =var(pm, n, :ps, i)
     qs =var(pm, n, :qs, i)

@@ -34,8 +34,8 @@ function build_mc_mld(pm::_PM.AbstractPowerModel)
     variable_mc_gen_indicator(pm; relax=true)
     variable_mc_gen_power_setpoint_on_off(pm)
 
-    variable_mc_storage_indicator(pm, relax=true)
-    variable_storage_power_mi_on_off(pm, relax=true)
+    variable_mc_converter_power_on_off(pm, relax=true)
+    variable_storage_power_mi(pm, relax=true)
 
     variable_mc_load_indicator(pm; relax=true)
     variable_mc_shunt_indicator(pm; relax=true)
@@ -59,7 +59,11 @@ function build_mc_mld(pm::_PM.AbstractPowerModel)
     for i in ids(pm, :storage)
         _PM.constraint_storage_state(pm, i)
         _PM.constraint_storage_complementarity_mi(pm, i)
-        constraint_mc_storage_on_off(pm, i)
+    end
+
+    for i in ids(pm, :converter)
+        constraint_converter_storage_balance(pm, i) #needs to be called before constraint_mc_converter_losses
+        constraint_mc_converter_on_off(pm, i)
         constraint_mc_converter_losses(pm, i)
         constraint_mc_converter_thermal_limit(pm, i)
     end
@@ -92,6 +96,8 @@ function build_mn_mc_mld_simple(pm::_PM.AbstractPowerModel)
 
         variable_mc_load_indicator(pm; nw=n, relax=true)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
+
+        variable_mc_converter_power_on_off(pm; nw=n, relax=true)
         variable_storage_power_mi(pm; nw=n, relax=true)
 
         constraint_mc_model_voltage(pm; nw=n)
@@ -109,9 +115,13 @@ function build_mn_mc_mld_simple(pm::_PM.AbstractPowerModel)
         end
 
         for i in ids(pm, n, :storage)
+            _PM.constraint_storage_complementarity_mi(pm, i; nw=n)
+        end
+
+        for i in ids(pm, :converter)
+            constraint_converter_storage_balance(pm, i; nw=n) #needs to be called before constraint_mc_converter_losses
             constraint_mc_converter_losses(pm, i; nw=n)
             constraint_mc_converter_thermal_limit(pm, i; nw=n)
-            _PM.constraint_storage_complementarity_mi(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :branch)
@@ -159,8 +169,8 @@ function build_mc_mld(pm::AbstractUBFModels)
     variable_mc_gen_indicator(pm; relax=true)
     variable_mc_gen_power_setpoint_on_off(pm)
 
-    variable_mc_storage_indicator(pm, relax=true)
-    variable_storage_power_mi_on_off(pm, relax=true)
+    variable_mc_converter_power_on_off(pm, relax=true)
+    variable_storage_power_mi(pm, relax=true)
 
     variable_mc_load_indicator(pm; relax=true)
     variable_mc_shunt_indicator(pm; relax=true)
@@ -184,7 +194,12 @@ function build_mc_mld(pm::AbstractUBFModels)
     for i in ids(pm, :storage)
         _PM.constraint_storage_state(pm, i)
         _PM.constraint_storage_complementarity_mi(pm, i)
-        constraint_mc_storage_on_off(pm, i)
+
+    end
+
+    for i in ids(pm, :converter)
+        constraint_converter_storage_balance(pm, i) #needs to be called before constraint_mc_converter_losses
+        constraint_mc_converter_on_off(pm, i)
         constraint_mc_converter_losses(pm, i)
         constraint_mc_converter_thermal_limit(pm, i)
     end
@@ -218,6 +233,8 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
 
         variable_mc_load_indicator(pm; nw=n, relax=true)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
+
+        variable_mc_converter_power_on_off(pm; nw=n, relax=true)
         variable_storage_power_mi(pm; nw=n, relax=true)
 
         constraint_mc_model_current(pm; nw=n)
@@ -235,9 +252,13 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
         end
 
         for i in ids(pm, n, :storage)
+            _PM.constraint_storage_complementarity_mi(pm, i; nw=n)
+        end
+
+        for i in ids(pm, :converter)
+            constraint_converter_storage_balance(pm, i; nw=n) #needs to be called before constraint_mc_converter_losses
             constraint_mc_converter_losses(pm, i; nw=n)
             constraint_mc_converter_thermal_limit(pm, i; nw=n)
-            _PM.constraint_storage_complementarity_mi(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :branch)
@@ -333,9 +354,8 @@ function build_mc_mld_uc(pm::_PM.AbstractPowerModel)
     variable_mc_gen_indicator(pm; relax=false)
     variable_mc_gen_power_setpoint_on_off(pm)
 
-    variable_storage_power(pm)
-    variable_mc_storage_indicator(pm; relax=false)
-    variable_storage_power_on_off(pm)
+    variable_mc_converter_power_on_off(pm; relax=false)
+    variable_storage_power_mi(pm; relax=false)
 
     variable_mc_load_indicator(pm; relax=false)
     variable_mc_shunt_indicator(pm; relax=false)
@@ -359,6 +379,10 @@ function build_mc_mld_uc(pm::_PM.AbstractPowerModel)
     for i in ids(pm, :storage)
         _PM.constraint_storage_state(pm, i)
         _PM.constraint_storage_complementarity_nl(pm, i)
+    end
+
+    for i in ids(pm, :converter)
+        constraint_converter_storage_balance(pm, i) #needs to be called before constraint_mc_converter_losses
         constraint_mc_converter_losses(pm, i)
         constraint_mc_converter_thermal_limit(pm, i)
     end

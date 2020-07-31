@@ -411,12 +411,21 @@ function constraint_mc_converter_losses(pm::_PM.AbstractPowerModel, i::Int; nw::
 end
 
 
-"converter balance constraint"
+"converter balance constraint for storage"
 function constraint_converter_storage_balance(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
-    converter = ref(pm, nw, :converter, i)
     converter_storage =  ref(pm, nw, :converter_storage, i)
     constraint_converter_storage_balance(pm, nw, i, converter_storage)
 end
+
+# "converter balance constraint for pv"
+# function constraint_converter_solar_balance(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
+#     converter_solar =  ref(pm, nw, :converter_solar, i)
+#     solar =  ref(pm, nw, :solar, i)
+#     pref = sum(solar["pref"])
+#
+#     constraint_converter_solar_balance(pm, nw, i, converter_solar, pref)
+# end
+
 
 
 
@@ -504,7 +513,7 @@ end
 
 
 ""
-function constraint_mc_storage_on_off(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_converter_on_off(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     storage = ref(pm, nw, :storage, i)
     charge_ub = storage["charge_rating"]
     discharge_ub = storage["discharge_rating"]
@@ -524,7 +533,7 @@ function constraint_mc_storage_on_off(pm::_PM.AbstractPowerModel, i::Int; nw::In
         qmax[c] = min(inj_ub[i], ref(pm, nw, :storage, i, "qmax")[c])
     end
 
-    constraint_mc_storage_on_off(pm, nw, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
+    constraint_mc_converter_on_off(pm, nw, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
 end
 
 

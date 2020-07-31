@@ -311,7 +311,7 @@ function constraint_mc_converter_thermal_limit(pm::_PM.AbstractActivePowerModel,
     end
 end
 
-
+# TODO ?
 ""
 function constraint_mc_storage_current_limit(pm::_PM.AbstractActivePowerModel, n::Int, i, bus, rating)
     ps =var(pm, n, :ps, i)
@@ -339,8 +339,9 @@ function constraint_mc_converter_losses(pm::_PM.AbstractActivePowerModel, n::Int
 end
 
 
+# TODO ?
 ""
-function constraint_mc_storage_on_off(pm::_PM.AbstractActivePowerModel, n::Int, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
+function constraint_mc_converter_on_off(pm::_PM.AbstractActivePowerModel, n::Int, i, pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
     z_storage =var(pm, n, :z_storage, i)
     ps =var(pm, n, :ps, i)
 
