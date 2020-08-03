@@ -57,10 +57,14 @@ function build_mc_pf(pm::_PM.AbstractPowerModel)
     for i in ids(pm, :storage)
         _PM.constraint_storage_state(pm, i)
         _PM.constraint_storage_complementarity_nl(pm, i)
+        constraint_converter_storage_balance(pm, i) #needs to be called before constraint_mc_converter_losses
+    end
+
+    for i in ids(pm, :solar)
+        constraint_converter_solar_balance(pm, i) #needs to be called before constraint_mc_converter_losses
     end
 
     for i in ids(pm, :converter)
-        constraint_converter_storage_balance(pm, i) #needs to be called before constraint_mc_converter_losses
         constraint_mc_converter_losses(pm, i)
         constraint_mc_converter_thermal_limit(pm, i)
     end

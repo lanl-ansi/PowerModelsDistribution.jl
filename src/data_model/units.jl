@@ -218,7 +218,9 @@ function _make_math_per_unit!(nw::Dict{String,<:Any}, data_math::Dict{String,<:A
     end
 
     for (id, storage) in nw["storage"]
-        _rebase_pu_storage!(storage, bus_vbase[string(storage["storage_bus"])], sbase, sbase_old)
+        converter_id = storage["converter"]
+        bus = nw["converter"][string(converter_id)]["converter_bus"]
+        _rebase_pu_storage!(storage, bus_vbase[string(bus)], sbase, sbase_old)
     end
 
     for (id, switch) in nw["switch"]

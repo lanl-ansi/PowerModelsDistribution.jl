@@ -418,7 +418,7 @@ function variable_mc_converter_current(pm::_PM.AbstractPowerModel; nw::Int=pm.cn
             for c in conductor_ids(pm)
                 ub = Inf
                 if haskey(converter, "thermal_rating")
-                    sb = bus[converter["storage_bus"]]
+                    sb = bus[converter["converter_bus"]]
                     ub = (converter["thermal_rating"][c]/sb["vmin"][c])^2
                 end
 

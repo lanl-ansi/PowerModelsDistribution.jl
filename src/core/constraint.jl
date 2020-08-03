@@ -105,16 +105,17 @@ end
 
 
 "define balance between converter and storage subsystem, store as expression in variable dict"
-function constraint_converter_storage_balance(pm::_PM.AbstractPowerModel, n::Int, i::Int, converter_storage)
-    sc = [var(pm, n, :sc, c) for c in converter_storage]
-    sd = [var(pm, n, :sd, c) for c in converter_storage]
+function constraint_converter_storage_balance(pm::_PM.AbstractPowerModel, n::Int, i::Int, converter)
+    sc = var(pm, n, :sc, i)
+    sd = var(pm, n, :sd, i)
     #store expression to inject into the converter model
-    var(pm, n, :pdc)[i] = sum(sd) - sum(sc)
+    var(pm, n, :pdc)[converter] = sd - sc
 end
 
-# "define balance between converter and pv subsystem, store as expression in variable dict"
-# function constraint_converter_solar_balance(pm::_PM.AbstractPowerModel, n::Int, i::Int, converterid, converter_solar, pref)
-#     pcurt = [var(pm, n, :pcurt, c) for c in converter_solar]
-#     #store expression to inject into the converter model
-#     var(pm, n, :pdc)[i] = pv_setpoint - sum(pcurt)
-# end
+"define balance between converter and pv subsystem, store as expression in variable dict"
+function constraint_converter_solar_balance(pm::_PM.AbstractPowerModel, n::Int, i::Int, converter, pref)
+    # pcurt = var(pm, n, :pcurt, i) #TODO make variable
+    pcurt = 0
+    #store expression to inject into the converter model
+    var(pm, n, :pdc)[converter] = pref - pcurt
+end

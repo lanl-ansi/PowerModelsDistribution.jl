@@ -175,6 +175,33 @@ function ref_add_converter_storage!(ref::Dict{Symbol,<:Any}, data::Dict{String,<
     end
 end
 
+
+"Adds connectivity for solar subsystems to converters"
+function ref_add_converter_solar!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
+    if _IM.ismultinetwork(data)
+        nws_data = data["nw"]
+    else
+        nws_data = Dict("0" => data)
+    end
+
+    for (n, nw_data) in nws_data
+        nw_id = parse(Int, n)
+        nw_ref = ref[:nw][nw_id]
+
+        if !haskey(nw_ref, :converter)
+            # this might happen when parsing data from matlab format
+            # the OpenDSS parser always inserts a trans dict
+            nw_ref[:converter] = Dict{Int, Any}()
+        end
+
+        converter_solar = Dict((i, Int[]) for (i,converter) in nw_ref[:converter])
+        for (i,solar) in nw_ref[:solar]
+            push!(converter_solar[solar["converter"]], i)
+        end
+        nw_ref[:converter_solar] = converter_solar
+    end
+end
+
 "Adds connectivity for converters to buses"
 function ref_add_bus_converter!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
     if _IM.ismultinetwork(data)

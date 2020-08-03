@@ -413,20 +413,22 @@ end
 
 "converter balance constraint for storage"
 function constraint_converter_storage_balance(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
-    converter_storage =  ref(pm, nw, :converter_storage, i)
-    constraint_converter_storage_balance(pm, nw, i, converter_storage)
+    # converter_storage =  ref(pm, nw, :converter_storage, i)
+    @show ref(pm, nw, :storage)
+    storage =  ref(pm, nw, :storage, i)
+    converter = storage["converter"]
+    constraint_converter_storage_balance(pm, nw, i, converter)
 end
 
-# "converter balance constraint for pv"
-# function constraint_converter_solar_balance(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
-#     converter_solar =  ref(pm, nw, :converter_solar, i)
-#     solar =  ref(pm, nw, :solar, i)
-#     pref = sum(solar["pref"])
-#
-#     constraint_converter_solar_balance(pm, nw, i, converter_solar, pref)
-# end
 
-
+"converter balance constraint for pv"
+function constraint_converter_solar_balance(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, kwargs...)
+    # converter_solar =  ref(pm, nw, :converter_solar, i)
+    solar =  ref(pm, nw, :solar, i)
+    converter = solar["converter"]
+    pref = sum(solar["pref"])
+    constraint_converter_solar_balance(pm, nw, i, converter, pref)
+end
 
 
 "branch thermal constraints from"
