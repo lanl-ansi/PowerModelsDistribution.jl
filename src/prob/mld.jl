@@ -34,8 +34,10 @@ function build_mc_mld(pm::_PM.AbstractPowerModel)
     variable_mc_gen_indicator(pm; relax=true)
     variable_mc_gen_power_setpoint_on_off(pm)
 
-    variable_mc_converter_power_on_off(pm, relax=true)
     variable_storage_power_mi(pm, relax=true)
+    variable_solar_power(pm)
+    variable_mc_converter_power_on_off(pm, relax=true)
+
 
     variable_mc_load_indicator(pm; relax=true)
     variable_mc_shunt_indicator(pm; relax=true)
@@ -97,8 +99,10 @@ function build_mn_mc_mld_simple(pm::_PM.AbstractPowerModel)
         variable_mc_load_indicator(pm; nw=n, relax=true)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
 
-        variable_mc_converter_power_on_off(pm; nw=n, relax=true)
         variable_storage_power_mi(pm; nw=n, relax=true)
+        variable_solar_power(pm; nw=n)
+        variable_mc_converter_power_on_off(pm; nw=n, relax=true)
+
 
         constraint_mc_model_voltage(pm; nw=n)
 
@@ -169,8 +173,10 @@ function build_mc_mld(pm::AbstractUBFModels)
     variable_mc_gen_indicator(pm; relax=true)
     variable_mc_gen_power_setpoint_on_off(pm)
 
-    variable_mc_converter_power_on_off(pm, relax=true)
     variable_storage_power_mi(pm, relax=true)
+    variable_solar_power(pm)
+    variable_mc_converter_power_on_off(pm, relax=true)
+
 
     variable_mc_load_indicator(pm; relax=true)
     variable_mc_shunt_indicator(pm; relax=true)
@@ -234,8 +240,9 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
         variable_mc_load_indicator(pm; nw=n, relax=true)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
 
-        variable_mc_converter_power_on_off(pm; nw=n, relax=true)
         variable_storage_power_mi(pm; nw=n, relax=true)
+        variable_solar_power(pm; nw=n)
+        variable_mc_converter_power_on_off(pm; nw=n, relax=true)
 
         constraint_mc_model_current(pm; nw=n)
 

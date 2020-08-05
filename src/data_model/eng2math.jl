@@ -540,60 +540,49 @@ end
 "converts engineering solar components into converters and pv subsystems"
 function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
     for (name, eng_obj) in get(data_eng, "solar", Dict{Any,Dict{String,Any}}())
-        math_obj = _init_math_obj("converter", name, eng_obj, length(data_math["converter"])+1)
-        math_obj["converter_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
-        math_obj["pg"] = get(eng_obj, "pg", zeros(3))
-        math_obj["qg"] = get(eng_obj, "qg", zeros(3))
-
-        math_obj["thermal_rating"] = abs(eng_obj["pref"] + im*eng_obj["qref"])*ones(length(math_obj["pg"]))
-        math_obj["qmin"] = eng_obj["qg_lb"]
-        math_obj["qmax"] =  eng_obj["qg_ub"]
-        math_obj["r"] = eng_obj["rs"]
-        math_obj["x"] = eng_obj["xs"]
-        math_obj["p_loss"] = 0 # eng_obj["pex"]
-        math_obj["q_loss"] = 0 # eng_obj["qex"]
+        math_converter = _init_math_obj("converter", name, eng_obj, length(data_math["converter"])+1)
+        math_solar = _init_math_obj("solar", name, eng_obj, length(data_math["solar"])+1)
 
 
+        math_converter["converter_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
+        math_converter["pg"] = get(eng_obj, "pg", zeros(3))
+        math_converter["qg"] = get(eng_obj, "qg", zeros(3))
 
-        data_math["converter"]["$(math_obj["index"])"] = math_obj
-        converter_id = math_obj["index"]
+        math_converter["thermal_rating"] = abs(eng_obj["pref"] + im*eng_obj["qref"])*ones(length(math_converter["pg"]))
+        math_converter["qmin"] = eng_obj["qg_lb"]
+        math_converter["qmax"] =  eng_obj["qg_ub"]
+        math_converter["r"] = eng_obj["rs"]
+        math_converter["x"] = eng_obj["xs"]
+        math_converter["p_loss"] = 0 # eng_obj["pex"]
+        math_converter["q_loss"] = 0 # eng_obj["qex"]
+        math_converter["connected_device"] = "solar"
+        math_converter["connected_device_id"] = math_solar["index"]
 
-        # push!(data_math["map"], Dict{String,Any}(
-        #     "from" => name,
-        #     "to" => "converter.$(math_obj["index"])",
-        #     "unmap_function" => "_map_math2eng_converter!",
-        # ))
+        data_math["converter"]["$(math_converter["index"])"] = math_converter
+        converter_id = math_converter["index"]
+
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "converter.$(math_converter["index"])",
+            "unmap_function" => "_map_math2eng_converter!",
+        ))
 
         connections = eng_obj["connections"]
         nconductors = data_math["conductors"]
 
-        math_obj = _init_math_obj("solar", name, eng_obj, length(data_math["solar"])+1)
         # add storage subsystem next
-        # math_obj["solar_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
-        math_obj["converter"] = converter_id
-        math_obj["pref"] = eng_obj["pref"]
-        math_obj["qref"] = eng_obj["qref"]
-        math_obj["status"] = eng_obj["status"]
+        math_solar["converter"] = converter_id
+        math_solar["pref"] = eng_obj["pref"]
+        math_solar["qref"] = eng_obj["qref"]
+        math_solar["status"] = eng_obj["status"]
 
-        data_math["solar"]["$(math_obj["index"])"] = math_obj
+        data_math["solar"]["$(math_solar["index"])"] = math_solar
 
         push!(data_math["map"], Dict{String,Any}(
             "from" => name,
-            "to" => "solar.$(math_obj["index"])",
+            "to" => "solar.$(math_solar["index"])",
             "unmap_function" => "_map_math2eng_solar!",
         ))
-
-
-        # math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
-        # math_obj["gen_status"] = Int(eng_obj["status"])
-        #
-        # for (fr_k, to_k) in [("vg", "vg"), ("pg_lb", "pmin"), ("pg_ub", "pmax"), ("qg_lb", "qmin"), ("qg_ub", "qmax")]
-        #     if haskey(eng_obj, fr_k)
-        #         math_obj[to_k] = eng_obj[fr_k]
-        #     end
-        # end
-
-        # _add_gen_cost_model!(math_obj, eng_obj)
     end
 end
 
@@ -605,46 +594,49 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
         # nconductors = data_math["conductors"]
 
         #store converter object first
-        math_obj = _init_math_obj("converter", name, eng_obj, length(data_math["converter"])+1)
+        math_converter = _init_math_obj("converter", name, eng_obj, length(data_math["converter"])+1)
+        math_storage = _init_math_obj("storage", name, eng_obj, length(data_math["storage"])+1)
 
-        math_obj["converter_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
+        math_converter["converter_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
-        math_obj["thermal_rating"] = eng_obj["cm_ub"]
-        math_obj["qmin"] = eng_obj["qs_lb"]
-        math_obj["qmax"] =  eng_obj["qs_ub"]
-        math_obj["r"] = eng_obj["rs"]
-        math_obj["x"] = eng_obj["xs"]
-        math_obj["p_loss"] = eng_obj["pex"]
-        math_obj["q_loss"] = eng_obj["qex"]
+        math_converter["thermal_rating"] = eng_obj["cm_ub"]
+        math_converter["qmin"] = eng_obj["qs_lb"]
+        math_converter["qmax"] =  eng_obj["qs_ub"]
+        math_converter["r"] = eng_obj["rs"]
+        math_converter["x"] = eng_obj["xs"]
+        math_converter["p_loss"] = eng_obj["pex"]
+        math_converter["q_loss"] = eng_obj["qex"]
 
-        math_obj["ps"] = get(eng_obj, "ps", zeros(size(eng_obj["cm_ub"])))
-        math_obj["qs"] = get(eng_obj, "qs", zeros(size(eng_obj["cm_ub"])))
+        math_converter["ps"] = get(eng_obj, "ps", zeros(size(eng_obj["cm_ub"])))
+        math_converter["qs"] = get(eng_obj, "qs", zeros(size(eng_obj["cm_ub"])))
 
-        data_math["converter"]["$(math_obj["index"])"] = math_obj
-        converter_id = math_obj["index"]
+        math_converter["connected_device"] = "storage"
+        math_converter["connected_device_id"] = math_storage["index"]
+
+        data_math["converter"]["$(math_converter["index"])"] = math_converter
+        converter_id = math_converter["index"]
 
         push!(data_math["map"], Dict{String,Any}(
             "from" => name,
-            "to" => "converter.$(math_obj["index"])",
+            "to" => "converter.$(math_converter["index"])",
             "unmap_function" => "_map_math2eng_converter!",
         ))
 
-        math_obj = _init_math_obj("storage", name, eng_obj, length(data_math["storage"])+1)
         # add storage subsystem next
-        math_obj["storage_bus"] = data_math["bus_lookup"][eng_obj["bus"]] #should not be stored anymore, but would otherwise lead to error in PMs
-        math_obj["converter"] = converter_id
-        math_obj["energy"] = eng_obj["energy"]
-        math_obj["energy_rating"] = eng_obj["energy_ub"]
-        math_obj["charge_rating"] = eng_obj["charge_ub"]
-        math_obj["discharge_rating"] = eng_obj["discharge_ub"]
-        math_obj["charge_efficiency"] = eng_obj["charge_efficiency"] / 100.0
-        math_obj["discharge_efficiency"] = eng_obj["discharge_efficiency"] / 100.0
+        math_storage["storage_bus"] = data_math["bus_lookup"][eng_obj["bus"]] #should not be stored anymore, but would otherwise lead to error in PMs
+        math_storage["converter"] = converter_id
+        math_storage["energy"] = eng_obj["energy"]
+        math_storage["energy_rating"] = eng_obj["energy_ub"]
+        math_storage["charge_rating"] = eng_obj["charge_ub"]
+        math_storage["discharge_rating"] = eng_obj["discharge_ub"]
+        math_storage["charge_efficiency"] = eng_obj["charge_efficiency"] / 100.0
+        math_storage["discharge_efficiency"] = eng_obj["discharge_efficiency"] / 100.0
 
-        data_math["storage"]["$(math_obj["index"])"] = math_obj
+        data_math["storage"]["$(math_storage["index"])"] = math_storage
 
         push!(data_math["map"], Dict{String,Any}(
             "from" => name,
-            "to" => "storage.$(math_obj["index"])",
+            "to" => "storage.$(math_storage["index"])",
             "unmap_function" => "_map_math2eng_storage!",
         ))
     end

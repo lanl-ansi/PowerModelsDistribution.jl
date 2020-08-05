@@ -18,6 +18,7 @@ function build_mc_pf(pm::_PM.AbstractPowerModel)
     variable_mc_gen_power_setpoint(pm; bounded=false)
     variable_mc_load_setpoint(pm; bounded=false)
     variable_storage_power(pm; bounded=false)
+    variable_solar_power(pm; bounded=false)
     variable_mc_converter_power(pm; bounded=false)
 
     constraint_mc_model_voltage(pm)
@@ -143,6 +144,7 @@ function build_mc_pf(pm::AbstractUBFModels)
     variable_mc_gen_power_setpoint(pm; bounded=false)
     variable_mc_load_setpoint(pm)
     variable_storage_power(pm; bounded=false)
+    variable_solar_power(pm; bounded=false)
     variable_mc_converter_power(pm; bounded=false)
 
     # Constraints

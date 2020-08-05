@@ -114,8 +114,7 @@ end
 
 "define balance between converter and pv subsystem, store as expression in variable dict"
 function constraint_converter_solar_balance(pm::_PM.AbstractPowerModel, n::Int, i::Int, converter, pref)
-    # pcurt = var(pm, n, :pcurt, i) #TODO make variable
-    pcurt = 0
+    pcurt = var(pm, n, :pcurt, i)
     #store expression to inject into the converter model
     var(pm, n, :pdc)[converter] = pref - pcurt
 end

@@ -495,7 +495,12 @@ end
 
 "avoid overwriting engineering objects if they already exist"
 function _safely_store_data_eng!(data_eng, eng_obj, eng_obj_type, map_from)
-    if !isempty(data_eng[eng_obj_type][map_from])
+    @show map_from
+    @show eng_obj_type
+    @show data_eng[eng_obj_type]
+    # @show data_eng[eng_obj_type][map_from]
+
+    if haskey(data_eng[eng_obj_type], map_from)
         merge!(eng_obj, data_eng[eng_obj_type][map_from])
     end
     if !isempty(eng_obj)

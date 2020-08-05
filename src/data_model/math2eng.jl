@@ -42,6 +42,9 @@ function transform_solution(solution_math::Dict{String,<:Any}, data_math::Dict{S
         end
     end
 
+    # remove converter objects, add info to storage/pv     
+    _map_converter_to_devices!(solution_eng)
+
     return solution_eng
 end
 
@@ -125,7 +128,9 @@ end
 
 function _map_math2eng_solar!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "solar", map)
+    @show eng_obj
     math_obj = _get_math_obj(data_math, map["to"])
+    @show math_obj
 
     merge!(eng_obj, math_obj)
 
@@ -148,14 +153,22 @@ function _map_math2eng_storage!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{Str
 end
 
 function _map_math2eng_converter!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
-    eng_obj = _init_unmap_eng_obj!(data_eng, "storage", map)
+    eng_obj = _init_unmap_eng_obj!(data_eng, "converter", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
     merge!(eng_obj, math_obj)
-
-    _safely_store_data_eng!(data_eng, eng_obj, "storage", map["from"])
+    _safely_store_data_eng!(data_eng, eng_obj, "converter", map["from"])
 end
 
+
+# function _map_math2eng_converter!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+#     eng_obj = _init_unmap_eng_obj!(data_eng, "storage", map)
+#     math_obj = _get_math_obj(data_math, map["to"])
+
+#     merge!(eng_obj, math_obj)
+
+#     _safely_store_data_eng!(data_eng, eng_obj, "storage", map["from"])
+# end
 
 
 function _map_math2eng_line!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
@@ -217,4 +230,15 @@ function _map_math2eng_root!(data_eng::Dict{String,<:Any}, data_math::Dict{Strin
             nw["settings"] = Dict{String,Any}("sbase" => data_math["nw"][n]["baseMVA"])
         end
     end
+end
+
+function _map_converter_to_devices!(solution_eng::Dict{String,<:Any})
+    for (i, converter) in solution_eng["converter"]
+        if haskey(solution_eng, "storage") && haskey(solution_eng["storage"], i)
+            merge!(solution_eng["storage"][i], converter)
+        elseif haskey(solution_eng, "solar") && haskey(solution_eng["solar"], i)
+            merge!(solution_eng["solar"][i], converter)
+        end
+    end
+    delete!(solution_eng, "converter")
 end

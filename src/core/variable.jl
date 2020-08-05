@@ -362,15 +362,19 @@ function variable_mc_bus_voltage_magnitude_sqr(pm::_PM.AbstractPowerModel; nw::I
 end
 
 
-"variables for modeling storage units, includes grid injection and internal variables"
+"variables for modeling storage subsystems"
 function variable_storage_power(pm::_PM.AbstractPowerModel; kwargs...)
     _PM.variable_storage_energy(pm; kwargs...)
     _PM.variable_storage_charge(pm; kwargs...)
     _PM.variable_storage_discharge(pm; kwargs...)
 end
 
+"variables for modeling pv subsystems"
+function variable_solar_power(pm::_PM.AbstractPowerModel; kwargs...)
+    variable_solar_curtailment_power_real(pm; kwargs...)
+end
 
-"variables for modeling storage units, includes grid injection and internal variables"
+"variables for modeling converters"
 function variable_mc_converter_power(pm::_PM.AbstractPowerModel; kwargs...)
     variable_mc_converter_power_real(pm; kwargs...)
     variable_mc_converter_power_imaginary(pm; kwargs...)
@@ -465,7 +469,6 @@ function variable_mc_converter_power_control_imaginary(pm::_PM.AbstractPowerMode
     report && _IM.sol_component_value(pm, nw, :converter, :qsc, ids(pm, nw, :converter), qsc)
 end
 
-#TODO edit for converter
 """
 a reactive power slack variable that enables the storage device to inject or
 consume reactive power at its connecting bus, subject to the injection limits
@@ -476,25 +479,25 @@ function variable_mc_converter_power_control_imaginary_on_off(pm::_PM.AbstractPo
     ncnds = length(cnds)
 
     qsc = var(pm, nw)[:qsc] = JuMP.@variable(pm.model,
-        [i in ids(pm, nw, :storage)], base_name="$(nw)_qsc_$(i)",
-        start = _PM.comp_start_value(ref(pm, nw, :storage, i), "qsc_start")
+        [i in ids(pm, nw, :converter)], base_name="$(nw)_qsc_$(i)",
+        start = _PM.comp_start_value(ref(pm, nw, :converter, i), "qsc_start")
     )
 
     if bounded
-        inj_lb, inj_ub = _PM.ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus))
-        for (i,storage) in ref(pm, nw, :storage)
-            if !isinf(sum(inj_lb[i])) || haskey(storage, "qmin")
-                lb = max(sum(inj_lb[i]), sum(get(storage, "qmin", -Inf)))
+        inj_lb, inj_ub = _PM.ref_calc_storage_injection_bounds(ref(pm, nw, :converter), ref(pm, nw, :bus))
+        for (i,converter) in ref(pm, nw, :converter)
+            if !isinf(sum(inj_lb[i])) || haskey(converter, "qmin")
+                lb = max(sum(inj_lb[i]), sum(get(converter, "qmin", -Inf)))
                 set_lower_bound(qsc[i], min(lb, 0.0))
             end
-            if !isinf(sum(inj_ub[i])) || haskey(storage, "qmax")
-                ub = min(sum(inj_ub[i]), sum(get(storage, "qmax", Inf)))
+            if !isinf(sum(inj_ub[i])) || haskey(converter, "qmax")
+                ub = min(sum(inj_ub[i]), sum(get(converter, "qmax", Inf)))
                 set_upper_bound(qsc[i], max(ub, 0.0))
             end
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
+    report && _IM.sol_component_value(pm, nw, :converter, :qsc, ids(pm, nw, :converter), qsc)
 end
 
 
@@ -811,7 +814,6 @@ function variable_mc_gen_indicator(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, r
 end
 
 
-#TODO done should be adapted to converter
 "Create variables for converter status"
 function variable_mc_converter_indicator(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, relax::Bool=false, report::Bool=true)
     if !relax
@@ -1100,4 +1102,28 @@ function variable_mc_gen_power_setpoint_imaginary_on_off(pm::_PM.AbstractPowerMo
     end
 
     report && _IM.sol_component_value(pm, nw, :gen, :qg, ids(pm, nw, :gen), qg)
+end
+
+
+
+""
+function variable_solar_curtailment_power_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+    # cnds = conductor_ids(pm; nw=nw)
+    # ncnds = length(cnds)
+
+    pcurt = var(pm, nw)[:pcurt] = JuMP.@variable(pm.model,
+        [i in ids(pm, nw, :solar)], base_name="$(nw)_pcurt_$(i)",
+        start = _PM.comp_start_value(ref(pm, nw, :solar, i), "pcurt_start")
+    )
+
+
+    if bounded
+        for (i,solar) in ref(pm, nw, :solar)
+            set_lower_bound(pcurt[i], 0)
+            if !isinf(solar["pref"])
+                set_upper_bound(pcurt[i], solar["pref"])
+            end
+        end
+    end
+    report && _IM.sol_component_value(pm, nw, :solar, :pcurt, ids(pm, nw, :solar), pcurt)
 end
