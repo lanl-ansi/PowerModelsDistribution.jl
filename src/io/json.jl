@@ -103,7 +103,7 @@ end
 "Parses a JSON file into a PowerModelsDistribution data structure"
 function parse_json(file::String; validate::Bool=false)
     data = open(file) do io
-        parse_json(io; filetype=split(lowercase(file), '.')[end], validate=validate)
+        parse_json(io; validate=validate)
     end
     return data
 end
