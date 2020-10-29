@@ -2,7 +2,8 @@
 
 ## staged
 
-- none
+- Fix bug in buscoords parser to support more valid buscoords files
+- Fix bug in parse_json(::String) which passed additional unused argument to parse_json(::IO)
 
 ## v0.9.2
 

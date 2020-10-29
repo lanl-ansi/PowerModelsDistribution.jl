@@ -471,10 +471,7 @@ to contain "bus,x,y" on each line.
 """
 function _parse_buscoords_file(file::AbstractString)::Dict{String,Any}
     file_str = read(open(file), String)
-    regex = r",\s*"
-    if endswith(lowercase(file), "csv") || endswith(lowercase(file), "dss")
-        regex = r","
-    end
+    regex = r"[\s,\t]+"
 
     lines = _strip_lines(split(file_str, '\n'))
 
