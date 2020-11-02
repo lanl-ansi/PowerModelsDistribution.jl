@@ -115,7 +115,7 @@
 
         @test math["name"] == "test2"
 
-        @test length(math) == 20
+        @test length(math) == 21
         @test length(dss) == 20
 
         for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "transformer", "storage"], [33, 4, 5, 28, 5, 0, 10, 1])

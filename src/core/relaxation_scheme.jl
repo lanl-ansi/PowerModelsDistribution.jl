@@ -116,7 +116,7 @@ volume = {6},
 year = {2001}
 }
 """
-function relaxation_psd_to_soc(m, mxreal, mximag; complex=true)
+function relaxation_psd_to_soc(m::JuMP.Model, mxreal, mximag; complex::Bool=true)
     if complex==false
         @assert size(mxreal) == size(mximag)
         mx =

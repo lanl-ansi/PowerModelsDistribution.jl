@@ -806,11 +806,11 @@ function parse_dss(io::IOStream)::Dict{String,Any}
                 continue
 
             elseif cmd in ["redirect", "compile"]
-                file = split(strip(line_elements[2], ['(',')']), '\\')[end]
+                file_path = split(strip(line_elements[2], ['(',')']), r"[\\|\/]")
 
-                if !(file in data_dss["filename"])
-                    full_path = path == "" ? file : join([path, file], '/')
-                    Memento.info(_LOGGER, "Redirecting to \"$file\" on line $real_line_num in \"$current_file\"")
+                if !(joinpath(file_path...) in data_dss["filename"])
+                    full_path = joinpath(path, file_path...)
+                    Memento.info(_LOGGER, "Redirecting to \"$(joinpath(file_path...))\" on line $real_line_num in \"$current_file\"")
                     _merge_dss!(data_dss, parse_dss(full_path))
                 end
 

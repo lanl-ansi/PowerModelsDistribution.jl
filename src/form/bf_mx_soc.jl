@@ -1,13 +1,19 @@
 "Defines relationship between branch (series) power flow, branch (series) current and node voltage magnitude"
-function constraint_mc_model_current(pm::SOCUBFModels, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
-    p_fr = var(pm, n, :P)[f_idx]
-    q_fr = var(pm, n, :Q)[f_idx]
+function constraint_mc_model_current(pm::SOCUBFModels, nw::Int, i::Int, f_bus::Int, f_idx::Tuple{Int,Int,Int}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real})
+    branch = ref(pm, nw, :branch, f_idx[1])
+    f_connections = branch["f_connections"]
+    t_connections = branch["t_connections"]
+    bus = ref(pm, nw, :bus, f_bus)
+    terminals = bus["terminals"]
 
-    w_fr_re = var(pm, n, :Wr)[f_bus]
-    w_fr_im = var(pm, n, :Wi)[f_bus]
+    p_fr = var(pm, nw, :P)[f_idx]
+    q_fr = var(pm, nw, :Q)[f_idx]
 
-    ccm_re =  var(pm, n, :CCr)[i]
-    ccm_im =  var(pm, n, :CCi)[i]
+    w_fr_re = var(pm, nw, :Wr, f_bus)[[findfirst(isequal(fc), terminals) for fc in f_connections],[findfirst(isequal(tc), terminals) for tc in t_connections]]
+    w_fr_im = var(pm, nw, :Wi, f_bus)[[findfirst(isequal(fc), terminals) for fc in f_connections],[findfirst(isequal(tc), terminals) for tc in t_connections]]
+
+    ccm_re =  var(pm, nw, :CCr)[i]
+    ccm_im =  var(pm, nw, :CCi)[i]
 
     p_s_fr = p_fr - g_sh_fr*w_fr_re
     q_s_fr = q_fr + b_sh_fr*w_fr_re
@@ -35,24 +41,30 @@ end
 
 
 "Add explicit PSD-ness of W for nodes where it is not implied"
-function constraint_mc_voltage_psd(pm::SOCUBFModels, n::Int, i)
-    Wr = var(pm, n, :Wr)[i]
-    Wi = var(pm, n, :Wi)[i]
+function constraint_mc_voltage_psd(pm::SOCUBFModels, nw::Int, i::Int)
+    Wr = var(pm, nw, :Wr)[i]
+    Wi = var(pm, nw, :Wi)[i]
 
     relaxation_psd_to_soc(pm.model, Wr, Wi)
 end
 
 
 "Defines relationship between branch (series) power flow, branch (series) current and node voltage magnitude"
-function constraint_mc_model_current(pm::SOCConicUBFModel, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
-    p_fr = var(pm, n, :P)[f_idx]
-    q_fr = var(pm, n, :Q)[f_idx]
+function constraint_mc_model_current(pm::SOCConicUBFModel, nw::Int, i::Int, f_bus::Int, f_idx::Tuple{Int,Int,Int}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real})
+    branch = ref(pm, nw, :branch, f_idx[1])
+    f_connections = branch["f_connections"]
+    t_connections = branch["t_connections"]
+    bus = ref(pm, nw, :bus, f_bus)
+    terminals = bus["terminals"]
 
-    w_fr_re = var(pm, n, :Wr)[f_bus]
-    w_fr_im = var(pm, n, :Wi)[f_bus]
+    p_fr = var(pm, nw, :P)[f_idx]
+    q_fr = var(pm, nw, :Q)[f_idx]
 
-    ccm_re =  var(pm, n, :CCr)[i]
-    ccm_im =  var(pm, n, :CCi)[i]
+    w_fr_re = var(pm, nw, :Wr, f_bus)[[findfirst(isequal(fc), terminals) for fc in f_connections],[findfirst(isequal(tc), terminals) for tc in t_connections]]
+    w_fr_im = var(pm, nw, :Wi, f_bus)[[findfirst(isequal(fc), terminals) for fc in f_connections],[findfirst(isequal(tc), terminals) for tc in t_connections]]
+
+    ccm_re =  var(pm, nw, :CCr)[i]
+    ccm_im =  var(pm, nw, :CCi)[i]
 
     p_s_fr = p_fr - g_sh_fr*w_fr_re
     q_s_fr = q_fr + b_sh_fr*w_fr_re
@@ -72,9 +84,9 @@ end
 
 
 "Add explicit PSD-ness of W for nodes where it is not implied"
-function constraint_mc_voltage_psd(pm::SOCConicUBFModel, n::Int, i)
-    Wr = var(pm, n, :Wr)[i]
-    Wi = var(pm, n, :Wi)[i]
+function constraint_mc_voltage_psd(pm::SOCConicUBFModel, nw::Int, i::Int)
+    Wr = var(pm, nw, :Wr)[i]
+    Wi = var(pm, nw, :Wi)[i]
 
     relaxation_psd_to_soc_conic(pm.model, Wr, Wi)
 end

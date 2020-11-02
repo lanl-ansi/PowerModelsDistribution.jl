@@ -10,7 +10,7 @@
         result = run_mc_mld(case5, ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 0.3377; atol = 1e-4)
+        @test isapprox(result["objective"], 0.1705; atol = 1e-4)
         @test all(isapprox(result["solution"]["load"]["1"]["pd"], [3.0, 3.0, 3.0]; atol=1e-4))
         @test all(isapprox(result["solution"]["load"]["1"]["qd"], [0.9861, 0.9861, 0.9861]; atol=1e-4))
 
@@ -21,7 +21,7 @@
         result = run_mc_mld(case5_strg, ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 0.3432; atol=1e-2)
+        @test isapprox(result["objective"], 0.1775; atol=1e-2)
 
         @test isapprox(result["solution"]["load"]["1"]["status"], 1.000; atol=1e-3)
     end
@@ -30,7 +30,7 @@
         result = run_mc_mld(case5, NFAPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 0.1557; atol = 1e-4)
+        @test isapprox(result["objective"], 0.0; atol = 1e-4)
 
         @test isapprox(result["solution"]["load"]["1"]["status"], 1.000; atol = 1e-3)
     end
@@ -39,7 +39,7 @@
         result = run_mc_mld(case5_strg, NFAPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 0.1557; atol=1e-4)
+        @test isapprox(result["objective"], 0.0; atol=1e-4)
 
         @test isapprox(result["solution"]["load"]["1"]["status"], 1.000; atol=1e-3)
     end
@@ -98,7 +98,7 @@
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 24.9; atol = 1e-1)
 
-        @test isapprox(result["solution"]["load"]["1"]["status"], 0.689; atol = 1e-3)
+        @test isapprox(result["solution"]["load"]["1"]["status"], 0.6924; atol = 1e-3)
     end
 
     @testset "3-bus shunt nfa mld" begin
@@ -118,7 +118,7 @@
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 43.8; atol = 1e-1)
 
-        @test isapprox(result["solution"]["load"]["1"]["status"], 0.544; atol = 1e-3)
+        @test isapprox(result["solution"]["load"]["1"]["status"], 0.555; atol = 1e-3)
     end
 
     @testset "transformer nfa mld" begin

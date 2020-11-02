@@ -1,38 +1,31 @@
 "This is duplicated at PowerModelsDistribution level to correctly handle the indexing of the shunts."
-function constraint_mc_voltage_angle_difference(pm::_PM.AbstractBFModel, n::Int, f_idx, angmin, angmax)
+function constraint_mc_voltage_angle_difference(pm::_PM.AbstractBFModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, angmin::Vector{<:Real}, angmax::Vector{<:Real})
     i, f_bus, t_bus = f_idx
     t_idx = (i, t_bus, f_bus)
 
-    branch = ref(pm, n, :branch, i)
+    branch = ref(pm, nw, :branch, i)
 
-    for c in conductor_ids(pm; nw=n)
-        tm = branch["tap"][c]
-        g_fr = branch["g_fr"][c,c]
-        g_to = branch["g_to"][c,c]
-        b_fr = branch["b_fr"][c,c]
-        b_to = branch["b_to"][c,c]
+    for (idx, (fc, tc)) in enumerate(zip(branch["f_connections"], branch["t_connections"]))
+        g_fr = branch["g_fr"][idx,idx]
+        g_to = branch["g_to"][idx,idx]
+        b_fr = branch["b_fr"][idx,idx]
+        b_to = branch["b_to"][idx,idx]
 
-        tr, ti = _PM.calc_branch_t(branch)
-        tr, ti = tr[c], ti[c]
-
-        r = branch["br_r"][c,c]
-        x = branch["br_x"][c,c]
+        r = branch["br_r"][idx,idx]
+        x = branch["br_x"][idx,idx]
 
         # getting the variables
-        w_fr = var(pm, n, :w, f_bus)[c]
-        p_fr = var(pm, n, :p, f_idx)[c]
-        q_fr = var(pm, n, :q, f_idx)[c]
-
-        tzr = r*tr + x*ti
-        tzi = r*ti - x*tr
+        w_fr = var(pm, nw, :w, f_bus)[fc]
+        p_fr = var(pm, nw, :p, f_idx)[fc]
+        q_fr = var(pm, nw, :q, f_idx)[fc]
 
         JuMP.@constraint(pm.model,
-            tan(angmin[c])*((tr + tzr*g_fr + tzi*b_fr)*(w_fr/tm^2) - tzr*p_fr + tzi*q_fr)
-                     <= ((ti + tzi*g_fr - tzr*b_fr)*(w_fr/tm^2) - tzi*p_fr - tzr*q_fr)
+            tan(angmin[idx])*((1 + r*g_fr - x*b_fr)*(w_fr) - r*p_fr - x*q_fr)
+                     <= ((-x*g_fr - r*b_fr)*(w_fr) + x*p_fr - r*q_fr)
             )
         JuMP.@constraint(pm.model,
-            tan(angmax[c])*((tr + tzr*g_fr + tzi*b_fr)*(w_fr/tm^2) - tzr*p_fr + tzi*q_fr)
-                     >= ((ti + tzi*g_fr - tzr*b_fr)*(w_fr/tm^2) - tzi*p_fr - tzr*q_fr)
+            tan(angmax[idx])*((1 + r*g_fr - x*b_fr)*(w_fr) - r*p_fr - x*q_fr)
+                     >= ((-x*g_fr - r*b_fr)*(w_fr) + x*p_fr - r*q_fr)
             )
     end
 end
@@ -49,20 +42,21 @@ end
 Links to and from power and voltages in a wye-wye transformer, assumes tm_fixed is true
 w_fr_i=(pol_i*tm_scale*tm_i)^2w_to_i
 """
-function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-    tm = [tm_fixed[c] ? tm_set[c] : var(pm, nw, :tap, trans_id)[c] for c in conductor_ids(pm)]
-    nph = length(conductor_ids(pm))
+function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[fc] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
 
-    p_fr = [var(pm, nw, :pt, f_idx)[p] for p in f_cnd]
-    p_to = [var(pm, nw, :pt, t_idx)[p] for p in t_cnd]
-    q_fr = [var(pm, nw, :qt, f_idx)[p] for p in f_cnd]
-    q_to = [var(pm, nw, :qt, t_idx)[p] for p in t_cnd]
+    nph = length(tm_set)
+
+    p_fr = [var(pm, nw, :pt, f_idx)[p] for p in f_connections]
+    p_to = [var(pm, nw, :pt, t_idx)[p] for p in t_connections]
+    q_fr = [var(pm, nw, :qt, f_idx)[p] for p in f_connections]
+    q_to = [var(pm, nw, :qt, t_idx)[p] for p in t_connections]
 
     w_fr = var(pm, nw, :w)[f_bus]
     w_to = var(pm, nw, :w)[t_bus]
 
-    for p in 1:nph
-        JuMP.@constraint(pm.model, w_fr[p] == (pol*tm_scale*tm[p])^2*w_to[p])
+    for (idx, (fc, tc)) in enumerate(zip(f_connections, t_connections))
+        JuMP.@constraint(pm.model, w_fr[fc] == (pol*tm_scale*tm[idx])^2*w_to[tc])
     end
 
     JuMP.@constraint(pm.model, p_fr + p_to .== 0)
@@ -78,30 +72,33 @@ Links to and from power and voltages in a delta-wye transformer, assumes tm_fixe
 2P_fr_i=-(P_to_i+P_to_j)+(Q_to_j-Q_to_i)/\sqrt{3} \quad \forall (i,j) \in \{(1,3),(2,1),(3,2)\}
 2Q_fr_i=(P_to_i-P_to_j)/\sqrt{3}-(Q_to_j+Q_to_i)  \quad \forall (i,j) \in \{(1,3),(2,1),(3,2)\}
 """
-function constraint_mc_transformer_power_dy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx, t_idx, f_cnd, t_cnd, pol, tm_set, tm_fixed, tm_scale)
-    tm = [tm_fixed[c] ? tm_set[c] : var(pm, nw, :tap, trans_id)[c] for c in conductor_ids(pm)]
-    nph = length(conductor_ids(pm))
+function constraint_mc_transformer_power_dy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[fc] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
+    nph = length(tm_set)
 
-    p_fr = [var(pm, nw, :pt, f_idx)[p] for p in f_cnd]
-    p_to = [var(pm, nw, :pt, t_idx)[p] for p in t_cnd]
-    q_fr = [var(pm, nw, :qt, f_idx)[p] for p in f_cnd]
-    q_to = [var(pm, nw, :qt, t_idx)[p] for p in t_cnd]
+    p_fr = [var(pm, nw, :pt, f_idx)[c] for c in f_connections]
+    p_to = [var(pm, nw, :pt, t_idx)[c] for c in t_connections]
+    q_fr = [var(pm, nw, :qt, f_idx)[c] for c in f_connections]
+    q_to = [var(pm, nw, :qt, t_idx)[c] for c in t_connections]
 
     w_fr = var(pm, nw, :w)[f_bus]
     w_to = var(pm, nw, :w)[t_bus]
 
-    for p in 1:nph
+    for (idx,(fc, tc)) in enumerate(zip(f_connections,t_connections))
         # rotate by 1 to get 'previous' phase
         # e.g., for nph=3: 1->3, 2->1, 3->2
-        q = (p-1+1)%nph+1
-	    JuMP.@constraint(pm.model, 3.0*(w_fr[p] + w_fr[q]) == 2.0*(pol*tm_scale*tm[p])^2*w_to[p])
+        jdx = (idx-1+1)%nph+1
+        fd = f_connections[jdx]
+	    JuMP.@constraint(pm.model, 3.0*(w_fr[fc] + w_fr[fd]) == 2.0*(pol*tm_scale*tm[idx])^2*w_to[tc])
     end
 
-    for p in 1:nph
+    for (idx,(fc, tc)) in enumerate(zip(f_connections,t_connections))
         # rotate by nph-1 to get 'previous' phase
         # e.g., for nph=3: 1->3, 2->1, 3->2
-        q = (p-1+nph-1)%nph+1
-	    JuMP.@constraint(pm.model, 2*p_fr[p] == -(p_to[p]+p_to[q])+(q_to[q]-q_to[p])/sqrt(3.0))
-        JuMP.@constraint(pm.model, 2*q_fr[p] == (p_to[p]-p_to[q])/sqrt(3.0)-(q_to[q]+q_to[p]))
+        jdx = (idx-1+nph-1)%nph+1
+        fd = f_connections[jdx]
+        td = t_connections[jdx]
+	    JuMP.@constraint(pm.model, 2*p_fr[fc] == -(p_to[tc]+p_to[td])+(q_to[td]-q_to[tc])/sqrt(3.0))
+        JuMP.@constraint(pm.model, 2*q_fr[fc] == (p_to[tc]-p_to[td])/sqrt(3.0)-(q_to[td]+q_to[tc]))
     end
 end

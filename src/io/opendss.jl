@@ -322,7 +322,7 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
 
         eng_obj = Dict{String,Any}(
             "phases" => nphases,
-            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=[collect(1:defaults["phases"])..., 0]),
+            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=defaults["conn"] == WYE, default=defaults["conn"] == WYE ? [collect(1:defaults["phases"])..., 0] : nphases == 1 ? [1,0] : collect(1:nphases)),
             "bus" => _parse_bus_id(defaults["bus1"])[1],
             "pg" => fill(defaults["kw"] / nphases, nphases),
             "qg" => fill(defaults["kvar"] / nphases, nphases),
@@ -749,7 +749,7 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
         eng_obj = Dict{String,Any}(
             "bus" => _parse_bus_id(defaults["bus1"])[1],
             "configuration" => defaults["conn"],
-            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=[collect(1:defaults["phases"])..., 0]),
+            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=defaults["conn"] == WYE, default=defaults["conn"] == WYE ? [collect(1:defaults["phases"])..., 0] : nphases == 1 ? [1,0] : collect(1:nphases)),
             "pg" => fill(defaults["kva"] / nphases, nphases),
             "qg" => fill(defaults["kvar"] / nphases, nphases),
             "vg" => fill(defaults["kv"] / nphases, nphases),

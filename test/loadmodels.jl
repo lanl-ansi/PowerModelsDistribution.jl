@@ -7,11 +7,11 @@
         # voltage magnitude at load bus
         @test isapprox(vm(sol, "loadbus"), [0.999993, 0.999992, 0.999993], atol=1E-5)
         # single-phase delta loads
-        @test isapprox(pd(sol, "d1ph23"), [0, 0.2866, 0.1134], atol=1E-4)
-        @test isapprox(qd(sol, "d1ph23"), [0, 0.0345, 0.2655], atol=1E-4)
+        @test isapprox(pd(sol, "d1ph23"), [0.0, 0.2866, 0.1134], atol=1E-4)
+        @test isapprox(qd(sol, "d1ph23"), [0.0, 0.0345, 0.2655], atol=1E-4)
         # single-phase wye loads
-        @test isapprox(pd(sol, "y1ph2"), [0, 0.4000, 0], atol=1E-4)
-        @test isapprox(qd(sol, "y1ph2"), [0, 0.3000, 0], atol=1E-4)
+        @test isapprox(pd(sol, "y1ph2"), [0.4000], atol=1E-4)
+        @test isapprox(qd(sol, "y1ph2"), [0.3000], atol=1E-4)
         # three-phase loads
         @test isapprox(pd(sol, "d3ph"), [0.1333, 0.1333, 0.1333], atol=1E-4)
         @test isapprox(qd(sol, "d3ph"), [0.100, 0.100, 0.100], atol=1E-4)
@@ -26,12 +26,12 @@
         # voltage magnitude at load bus
         @test isapprox(vm(sol, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)
         # delta and wye single-phase load models
-        @test isapprox(pd(sol, "y1phm1"), [0.4000, 0, 0], atol=1E-4)
-        @test isapprox(qd(sol, "y1phm1"), [0.3000, 0, 0], atol=1E-4)
-        @test isapprox(pd(sol, "y1phm2"), [0.2783, 0, 0], atol=1E-4)
-        @test isapprox(qd(sol, "y1phm2"), [0.2087, 0, 0], atol=1E-4)
-        @test isapprox(pd(sol, "y1phm5"), [0.3336, 0, 0], atol=1E-4)
-        @test isapprox(qd(sol, "y1phm5"), [0.2502, 0, 0], atol=1E-4)
+        @test isapprox(pd(sol, "y1phm1"), [0.4000], atol=1E-4)
+        @test isapprox(qd(sol, "y1phm1"), [0.3000], atol=1E-4)
+        @test isapprox(pd(sol, "y1phm2"), [0.2783], atol=1E-4)
+        @test isapprox(qd(sol, "y1phm2"), [0.2087], atol=1E-4)
+        @test isapprox(pd(sol, "y1phm5"), [0.3336], atol=1E-4)
+        @test isapprox(qd(sol, "y1phm5"), [0.2502], atol=1E-4)
         # delta three-phase loads
         @test isapprox(pd(sol, "d3phm1"), [0.1160, 0.1465, 0.1375], atol=1E-4)
         @test isapprox(qd(sol, "d3phm1"), [0.0896, 0.0977, 0.1127], atol=1E-4)
@@ -53,12 +53,12 @@
         # voltage magnitude at load bus
         @test isapprox(calc_vm_acr(sol, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)
         # delta and wye single-phase load models
-        @test isapprox(pd(sol, "y1phm1"), [0.4000, 0, 0], atol=1E-4)
-        @test isapprox(qd(sol, "y1phm1"), [0.3000, 0, 0], atol=1E-4)
-        @test isapprox(pd(sol, "y1phm2"), [0.2783, 0, 0], atol=1E-4)
-        @test isapprox(qd(sol, "y1phm2"), [0.2087, 0, 0], atol=1E-4)
-        @test isapprox(pd(sol, "y1phm5"), [0.3336, 0, 0], atol=1E-4)
-        @test isapprox(qd(sol, "y1phm5"), [0.2502, 0, 0], atol=1E-4)
+        @test isapprox(pd(sol, "y1phm1"), [0.4000], atol=1E-4)
+        @test isapprox(qd(sol, "y1phm1"), [0.3000], atol=1E-4)
+        @test isapprox(pd(sol, "y1phm2"), [0.2783], atol=1E-4)
+        @test isapprox(qd(sol, "y1phm2"), [0.2087], atol=1E-4)
+        @test isapprox(pd(sol, "y1phm5"), [0.3336], atol=1E-4)
+        @test isapprox(qd(sol, "y1phm5"), [0.2502], atol=1E-4)
         # delta three-phase loads
         @test isapprox(pd(sol, "d3phm1"), [0.1160, 0.1465, 0.1375], atol=1E-4)
         @test isapprox(qd(sol, "d3phm1"), [0.0896, 0.0977, 0.1127], atol=1E-4)
@@ -80,12 +80,12 @@
         # voltage magnitude at load bus
         @test isapprox(calc_vm_acr(sol, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)
         # delta and wye single-phase load models
-        @test isapprox(pd(sol, "y1phm1"), [0.4000, 0, 0], atol=1E-4)
-        @test isapprox(qd(sol, "y1phm1"), [0.3000, 0, 0], atol=1E-4)
-        @test isapprox(pd(sol, "y1phm2"), [0.2783, 0, 0], atol=1E-4)
-        @test isapprox(qd(sol, "y1phm2"), [0.2087, 0, 0], atol=1E-4)
-        @test isapprox(pd(sol, "y1phm5"), [0.3336, 0, 0], atol=1E-4)
-        @test isapprox(qd(sol, "y1phm5"), [0.2502, 0, 0], atol=1E-4)
+        @test isapprox(pd(sol, "y1phm1"), [0.4000], atol=1E-4)
+        @test isapprox(qd(sol, "y1phm1"), [0.3000], atol=1E-4)
+        @test isapprox(pd(sol, "y1phm2"), [0.2783], atol=1E-4)
+        @test isapprox(qd(sol, "y1phm2"), [0.2087], atol=1E-4)
+        @test isapprox(pd(sol, "y1phm5"), [0.3336], atol=1E-4)
+        @test isapprox(qd(sol, "y1phm5"), [0.2502], atol=1E-4)
         # delta three-phase loads
         @test isapprox(pd(sol, "d3phm1"), [0.1160, 0.1465, 0.1375], atol=1E-4)
         @test isapprox(qd(sol, "d3phm1"), [0.0896, 0.0977, 0.1127], atol=1E-4)

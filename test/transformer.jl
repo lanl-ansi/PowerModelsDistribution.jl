@@ -124,7 +124,7 @@
             eng["transformer"]["tx1"]["tm_fix"] = fill(zeros(Bool, 3), 2)
 
             math = transform_data_model(eng)
-            pm = PM.instantiate_model(math, ACPPowerModel, build_mc_opf_oltc, ref_extensions=[ref_add_arcs_transformer!])
+            pm = instantiate_mc_model(math, ACPPowerModel, build_mc_opf_oltc)
             sol = PM.optimize_model!(pm, optimizer=ipopt_solver)
 
             # check that taps are set as to boost the voltage in the branches as much as possible;
