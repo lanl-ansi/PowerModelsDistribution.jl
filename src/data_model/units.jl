@@ -20,6 +20,9 @@ const _dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
         "ibase_fr"=>Vector{String}(["crt_fr", "cit_fr"]),
         "ibase_to"=>Vector{String}(["crt_to", "cit_to"])
     ),
+    "storage" => Dict{String,Vector{String}}(
+        "sbase"=>Vector{String}(["ps", "qs", "energy"]),
+    )
 )
 
 
