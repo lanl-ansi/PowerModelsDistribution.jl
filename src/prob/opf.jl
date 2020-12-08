@@ -66,7 +66,7 @@ function build_mc_opf(pm::_PM.AbstractPowerModel)
         constraint_mc_transformer_power(pm, i)
     end
 
-    _PM.objective_min_fuel_cost(pm)
+    objective_mc_min_fuel_cost(pm)
 end
 
 
@@ -115,7 +115,7 @@ function build_mc_opf(pm::_PM.AbstractIVRModel)
     end
 
     # Objective
-    _PM.objective_min_fuel_cost(pm)
+    objective_mc_min_fuel_cost(pm)
 end
 
 
@@ -174,7 +174,7 @@ function build_mc_opf(pm::AbstractUBFModels)
     end
 
     # Objective
-    _PM.objective_min_fuel_cost(pm)
+    objective_mc_min_fuel_cost(pm)
 end
 
 
@@ -241,7 +241,7 @@ function build_mn_mc_opf(pm::_PM.AbstractPowerModel)
         n_1 = n_2
     end
 
-    _PM.objective_min_fuel_cost(pm)
+    objective_mc_min_fuel_cost(pm)
 end
 
 "Multinetwork current-voltage optimal power flow problem"
@@ -306,7 +306,7 @@ function build_mn_mc_opf(pm::_PM.AbstractIVRModel)
         n_1 = n_2
     end
 
-    _PM.objective_min_fuel_cost(pm)
+    objective_mc_min_fuel_cost(pm)
 end
 
 "Multinetwork branch flow optimal power flow problem"
@@ -373,5 +373,5 @@ function build_mn_mc_opf(pm::AbstractUBFModels)
         n_1 = n_2
     end
 
-    _PM.objective_min_fuel_cost(pm)
+    objective_mc_min_fuel_cost(pm)
 end

@@ -23,6 +23,8 @@
 - Adds `apply_phase_projection_delta!` to project phases of delta connected components
 - Fixes grounding logic for generator and solar objects
 - Fixes bug in parsing of file paths on windows in redirect/compile dss commands
+- Adds multiconductor version of the OPF objective function `objective_mc_min_fuel_cost`
+
 
 ## v0.9.3
 

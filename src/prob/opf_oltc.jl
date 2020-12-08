@@ -53,5 +53,5 @@ function build_mc_opf_oltc(pm::_PM.AbstractPowerModel)
         constraint_mc_transformer_power(pm, i, fix_taps=false)
     end
 
-    _PM.objective_min_fuel_cost(pm)
+    objective_mc_min_fuel_cost(pm)
 end

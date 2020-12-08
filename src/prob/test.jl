@@ -14,5 +14,5 @@ function _build_mc_mn_opb(pm::_PM.AbstractPowerModel)
         end
     end
 
-    _PM.objective_min_fuel_cost(pm)
+    objective_mc_min_fuel_cost(pm)
 end
