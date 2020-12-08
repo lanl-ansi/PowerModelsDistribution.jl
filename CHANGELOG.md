@@ -25,6 +25,8 @@
 - Fixes bug in parsing of file paths on windows in redirect/compile dss commands
 - Adds multiconductor version of the OPF objective function `objective_mc_min_fuel_cost`
 - Update publication in README
+- Fixes bug in json parser (typo)
+- Fixes bug in dss parser that skips some files with same names as previously parsed files
 
 ## v0.9.3
 
