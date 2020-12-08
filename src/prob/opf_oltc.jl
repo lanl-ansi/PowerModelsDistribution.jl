@@ -14,8 +14,8 @@ end
 function build_mc_opf_oltc(pm::_PM.AbstractPowerModel)
     variable_mc_bus_voltage(pm)
     variable_mc_branch_power(pm)
-    variable_mc_gen_power_setpoint(pm)
-    variable_mc_load_setpoint(pm)
+    variable_mc_generator_power(pm)
+    variable_mc_load_power(pm)
     variable_mc_transformer_power(pm)
     variable_mc_oltc_transformer_tap(pm)
 
@@ -27,16 +27,16 @@ function build_mc_opf_oltc(pm::_PM.AbstractPowerModel)
 
     # generators should be constrained before KCL, or Pd/Qd undefined
     for id in ids(pm, :gen)
-        constraint_mc_gen_setpoint(pm, id)
+        constraint_mc_generator_power(pm, id)
     end
 
     # loads should be constrained before KCL, or Pd/Qd undefined
     for id in ids(pm, :load)
-        constraint_mc_load_setpoint(pm, id)
+        constraint_mc_load_power(pm, id)
     end
 
     for i in ids(pm, :bus)
-        constraint_mc_load_power_balance(pm, i)
+        constraint_mc_power_balance(pm, i)
     end
 
     for i in ids(pm, :branch)
@@ -53,5 +53,5 @@ function build_mc_opf_oltc(pm::_PM.AbstractPowerModel)
         constraint_mc_transformer_power(pm, i, fix_taps=false)
     end
 
-    _PM.objective_min_fuel_cost(pm)
+    objective_mc_min_fuel_cost(pm)
 end

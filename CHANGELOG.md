@@ -1,6 +1,34 @@
 # PowerModelsDistribution.jl Change Log
 
-## staged
+## v0.10.0
+
+- Refactor variables, constraints, objectives to support iterating over arbitrary connections/terminals (breaking)
+- Add `ref_add_connections!` that adds lists of connections to ref for each component (breaking)
+- Rename constraint and variable functions to better match PowerModels conventions (breaking)
+  - variable_mc_gen_power_setpoint -> variable_mc_generator_power
+  - variable_mc_gen_power_setpoint_on_off -> variable_mc_generator_power_on_off
+  - constraint_mc_gen_setpoint -> constraint_mc_generator_power
+  - constraint_mc_slack_power_balance -> constraint_mc_power_balance_slack
+  - constraint_mc_shed_power_balance -> constraint_mc_power_balance_shed
+  - constraint_mc_load_power_balance -> constraint_mc_power_balance
+  - variable_mc_load_setpoint -> variable_mc_load_power
+  - constraint_mc_load_setpoint -> constraint_mc_load_power
+- Updates objective function for MLD problem (breaking)
+- Add `correct_mc_voltage_angle_differences`, `correct_mc_thermal_limits`
+- Removed support for JuMP \< v0.21 (breaking)
+- Overrides `_objective_min_fuel_cost_polynomial_linquad` from PowerModels to support arbitrary connections on generators
+- Updated solution building functions to automatically parse arbitrarily-sized vectors of variables into solutions
+- Changed `Array{...,1}` to `Vector{...}` and `Array{...,2}` to `Matrix{...}`
+- Removes phase projection by default, but keeps phase projection for delta connected components for now (breaking)
+- Adds `apply_phase_projection_delta!` to project phases of delta connected components
+- Fixes grounding logic for generator and solar objects
+- Fixes bug in parsing of file paths on windows in redirect/compile dss commands
+- Adds multiconductor version of the OPF objective function `objective_mc_min_fuel_cost`
+- Update publication in README
+- Fixes bug in json parser (typo)
+- Fixes bug in dss parser that skips some files with same names as previously parsed files
+
+## v0.9.3
 
 - Fix bug in buscoords parser to support more valid buscoords files
 - Fix bug in parse_json(::String) which passed additional unused argument to parse_json(::IO)

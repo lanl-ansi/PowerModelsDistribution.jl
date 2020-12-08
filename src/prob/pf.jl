@@ -15,8 +15,8 @@ function build_mc_pf(pm::_PM.AbstractPowerModel)
     variable_mc_bus_voltage(pm; bounded=false)
     variable_mc_branch_power(pm; bounded=false)
     variable_mc_transformer_power(pm; bounded=false)
-    variable_mc_gen_power_setpoint(pm; bounded=false)
-    variable_mc_load_setpoint(pm; bounded=false)
+    variable_mc_generator_power(pm; bounded=false)
+    variable_mc_load_power(pm; bounded=false)
     variable_mc_storage_power(pm; bounded=false)
 
     constraint_mc_model_voltage(pm)
@@ -30,16 +30,16 @@ function build_mc_pf(pm::_PM.AbstractPowerModel)
 
     # gens should be constrained before KCL, or Pd/Qd undefined
     for id in ids(pm, :gen)
-        constraint_mc_gen_setpoint(pm, id)
+        constraint_mc_generator_power(pm, id)
     end
 
     # loads should be constrained before KCL, or Pd/Qd undefined
     for id in ids(pm, :load)
-        constraint_mc_load_setpoint(pm, id)
+        constraint_mc_load_power(pm, id)
     end
 
     for (i,bus) in ref(pm, :bus)
-        constraint_mc_load_power_balance(pm, i)
+        constraint_mc_power_balance(pm, i)
 
         # PV Bus Constraints
         if length(ref(pm, :bus_gens, i)) > 0 && !(i in ids(pm,:ref_buses))
@@ -77,8 +77,8 @@ function build_mc_pf(pm::_PM.AbstractIVRModel)
     variable_mc_bus_voltage(pm, bounded = false)
     variable_mc_branch_current(pm, bounded = false)
     variable_mc_transformer_current(pm, bounded = false)
-    variable_mc_gen_power_setpoint(pm, bounded = false)
-    variable_mc_load_setpoint(pm, bounded = false)
+    variable_mc_generator_current(pm, bounded = false)
+    variable_mc_load_current(pm, bounded = false)
 
     # Constraints
     for (i,bus) in ref(pm, :ref_buses)
@@ -89,16 +89,16 @@ function build_mc_pf(pm::_PM.AbstractIVRModel)
 
     # gens should be constrained before KCL, or Pd/Qd undefined
     for id in ids(pm, :gen)
-        constraint_mc_gen_setpoint(pm, id)
+        constraint_mc_generator_power(pm, id)
     end
 
     # loads should be constrained before KCL, or Pd/Qd undefined
     for id in ids(pm, :load)
-        constraint_mc_load_setpoint(pm, id)
+        constraint_mc_load_power(pm, id)
     end
 
     for (i,bus) in ref(pm, :bus)
-        constraint_mc_load_current_balance(pm, i)
+        constraint_mc_current_balance(pm, i)
 
         # PV Bus Constraints
         if length(ref(pm, :bus_gens, i)) > 0 && !(i in ids(pm,:ref_buses))
@@ -131,8 +131,8 @@ function build_mc_pf(pm::AbstractUBFModels)
     variable_mc_branch_current(pm)
     variable_mc_branch_power(pm)
     variable_mc_transformer_power(pm; bounded=false)
-    variable_mc_gen_power_setpoint(pm; bounded=false)
-    variable_mc_load_setpoint(pm)
+    variable_mc_generator_power(pm; bounded=false)
+    variable_mc_load_power(pm)
     variable_mc_storage_power(pm; bounded=false)
 
     # Constraints
@@ -148,15 +148,15 @@ function build_mc_pf(pm::AbstractUBFModels)
     end
 
     for id in ids(pm, :gen)
-        constraint_mc_gen_setpoint(pm, id)
+        constraint_mc_generator_power(pm, id)
     end
 
     for id in ids(pm, :load)
-        constraint_mc_load_setpoint(pm, id)
+        constraint_mc_load_power(pm, id)
     end
 
     for (i,bus) in ref(pm, :bus)
-        constraint_mc_load_power_balance(pm, i)
+        constraint_mc_power_balance(pm, i)
 
         # PV Bus Constraints
         if length(ref(pm, :bus_gens, i)) > 0 && !(i in ids(pm,:ref_buses))

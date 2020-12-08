@@ -51,7 +51,7 @@ function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced:
             nw[k] = data_eng_mn[k]
         end
 
-        data_math_mn["nw"][n] = _map_eng2math(nw; kron_reduced=kron_reduced, project_phases=project_phases)
+        data_math_mn["nw"][n] = _map_eng2math(nw; kron_reduced=kron_reduced)
 
         for k in _pmd_math_global_keys
             data_math_mn[k] = data_math_mn["nw"][n][k]
@@ -64,7 +64,7 @@ end
 
 
 "base function for converting engineering model to mathematical model"
-function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true, project_phases::Bool=true)
+function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true)
     @assert get(data_eng, "data_model", MATHEMATICAL) == ENGINEERING
 
     # TODO remove kron reduction from eng2math in v0.10 (breaking)
@@ -73,9 +73,8 @@ function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true, pr
         apply_kron_reduction!(_data_eng)
     end
 
-    # TODO remove padding from eng2math in v0.10 (breaking)
-    if project_phases && !get(data_eng, "is_projected", false)
-        apply_phase_projection!(_data_eng)
+    if !get(data_eng, "is_projected", false)
+        apply_phase_projection_delta!(_data_eng)
     end
 
     data_math = Dict{String,Any}(
@@ -85,6 +84,8 @@ function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true, pr
         "is_projected" => get(_data_eng, "is_projected", false),
         "is_kron_reduced" => get(_data_eng, "is_kron_reduced", false),
         "settings" => deepcopy(_data_eng["settings"]),
+        "conductors" => get(_data_eng, "conductors", kron_reduced ? 3 : 4),
+        "conductor_ids" => get(_data_eng, "conductor_ids", kron_reduced ? collect(1:3) : collect(1:4))
     )
 
     if haskey(data_eng, "time_elapsed")
@@ -93,7 +94,6 @@ function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true, pr
 
     #TODO the PM tests break for branches which are not of the size indicated by conductors;
     # for now, set to 1 to prevent this from breaking when not kron-reduced
-    data_math["conductors"] = kron_reduced ? 3 : 1
 
     data_math["map"] = Vector{Dict{String,Any}}([
         Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
@@ -127,6 +127,9 @@ function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true, pr
         _slice_branches!(data_math)
     end
 
+    find_conductor_ids!(data_math)
+    _map_conductor_ids!(data_math)
+
     return data_math
 end
 
@@ -135,7 +138,6 @@ end
 function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
     for (name, eng_obj) in get(data_eng, "bus", Dict{String,Any}())
         terminals = eng_obj["terminals"]
-        nconductors = data_math["conductors"]
 
         math_obj = _init_math_obj("bus", name, eng_obj, length(data_math["bus"])+1)
 
@@ -217,12 +219,6 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any
             end
         end
 
-        math_obj["transformer"] = false
-        math_obj["shift"] = zeros(nphases)
-        math_obj["tap"] = ones(nphases)
-
-        math_obj["switch"] = false
-
         math_obj["br_status"] = Int(eng_obj["status"])
 
         data_math["branch"]["$(math_obj["index"])"] = math_obj
@@ -266,7 +262,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 "tm_nom" => get(eng_obj, "tm_nom", 1.0),
                 "tm_set" => get(eng_obj, "tm_set", fill(1.0, nphases)),
                 "tm_fix" => get(eng_obj, "tm_fix", fill(true, nphases)),
-                "polarity" => fill(1, nphases),
+                "polarity" => get(eng_obj, "polarity", -1),
                 "status" => Int(get(eng_obj, "status", ENABLED)),
                 "index" => length(data_math["transformer"])+1
             )
@@ -323,7 +319,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                     "t_bus"         => transformer_t_bus_w[w],
                     "tm_nom"        => tm_nom,
                     "f_connections" => eng_obj["connections"][w],
-                    "t_connections" => collect(1:dims+1),
+                    "t_connections" => get(data_math, "is_kron_reduced", false) ? collect(1:dims) : collect(1:dims+1),
                     "configuration" => eng_obj["configuration"][w],
                     "polarity"      => eng_obj["polarity"][w],
                     "tm_set"        => eng_obj["tm_set"][w],
@@ -352,7 +348,6 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
     # TODO enable real switches (right now only using vitual lines)
     for (name, eng_obj) in get(data_eng, "switch", Dict{Any,Dict{String,Any}}())
         nphases = length(eng_obj["f_connections"])
-        nconductors = data_math["conductors"]
 
         math_obj = _init_math_obj("switch", name, eng_obj, length(data_math["switch"])+1)
 
@@ -424,10 +419,6 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "b_to" => zeros(nphases, nphases),
                 "angmin" => fill(-60.0, nphases),
                 "angmax" => fill( 60.0, nphases),
-                "transformer" => false,
-                "shift" => zeros(nphases),
-                "tap" => ones(nphases),
-                "switch" => false,
                 "br_status" => get(eng_obj, "state", CLOSED) == OPEN || eng_obj["status"] == DISABLED ? 0 : 1,
             )
 
@@ -502,12 +493,11 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         math_obj = _init_math_obj("generator", name, eng_obj, length(data_math["gen"])+1)
 
         connections = eng_obj["connections"]
-        nconductors = data_math["conductors"]
 
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["gen_status"] = Int(eng_obj["status"])
         math_obj["control_mode"] = get(eng_obj, "control_mode", FREQUENCYDROOP)
-        math_obj["pmax"] = get(eng_obj, "pg_ub", fill(Inf, nconductors))
+        math_obj["pmax"] = get(eng_obj, "pg_ub", fill(Inf, length(connections)))
 
         for (f_key, t_key) in [("qg_lb", "qmin"), ("qg_ub", "qmax"), ("pg_lb", "pmin")]
             if haskey(eng_obj, f_key)
@@ -541,7 +531,6 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:An
         math_obj = _init_math_obj("solar", name, eng_obj, length(data_math["gen"])+1)
 
         connections = eng_obj["connections"]
-        nconductors = data_math["conductors"]
 
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["gen_status"] = Int(eng_obj["status"])
@@ -571,7 +560,6 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:
         math_obj = _init_math_obj("storage", name, eng_obj, length(data_math["storage"])+1)
 
         connections = eng_obj["connections"]
-        nconductors = data_math["conductors"]
 
         math_obj["storage_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 

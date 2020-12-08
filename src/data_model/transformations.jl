@@ -189,6 +189,8 @@ end
 
 "pad matrices to max number of conductors"
 function apply_phase_projection!(data_eng::Dict{String,<:Any})
+    @assert get(data_eng, "is_kron_reduced", false)
+
     all_conductors = _get_complete_conductor_set(data_eng)
 
     if haskey(data_eng, "bus")
@@ -231,14 +233,14 @@ function apply_phase_projection!(data_eng::Dict{String,<:Any})
 
             if haskey(eng_obj, "f_connections")
                 _pad_properties!(eng_obj, ["tm_lb", "tm_ub", "tm_set"], eng_obj["f_connections"], all_conductors; pad_value=1.0)
-                _pad_properties!(eng_obj, ["tm_fix"], eng_obj["f_connections"], all_conductors; pad_value=false)
+                _pad_properties!(eng_obj, ["tm_fix"], eng_obj["f_connections"], all_conductors; pad_value=true)
 
                 _pad_connections!(eng_obj, "f_connections", all_conductors)
                 _pad_connections!(eng_obj, "t_connections", all_conductors)
             else
                 for (w, connections) in enumerate(eng_obj["connections"])
                     _pad_properties!(eng_obj, ["tm_lb", "tm_ub", "tm_set"], w, connections, all_conductors; pad_value=1.0)
-                    _pad_properties!(eng_obj, ["tm_fix"], w, connections, all_conductors; pad_value=false)
+                    _pad_properties!(eng_obj, ["tm_fix"], w, connections, all_conductors; pad_value=true)
 
                     _pad_connections!(eng_obj, "connections", w, all_conductors)
                 end
@@ -325,4 +327,100 @@ function apply_phase_projection!(data_eng::Dict{String,<:Any})
     end
 
     data_eng["is_projected"] = true
+end
+
+
+"phase projection for components where unprojected states are not yet supported"
+function apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
+    @assert get(data_eng, "is_kron_reduced", false)
+
+    bus_terminals = Dict{Any,Vector{Int}}()
+
+    all_conductors = _get_complete_conductor_set(data_eng)
+
+    if haskey(data_eng, "transformer")
+        for (_,eng_obj) in data_eng["transformer"]
+            _apply_xfmrcode!(eng_obj, data_eng)
+
+            if haskey(eng_obj, "f_connections")
+                _pad_properties!(eng_obj, ["tm_lb", "tm_ub", "tm_set"], eng_obj["f_connections"], all_conductors; pad_value=1.0)
+                _pad_properties!(eng_obj, ["tm_fix"], eng_obj["f_connections"], all_conductors; pad_value=true)
+
+                _pad_connections!(eng_obj, "f_connections", all_conductors)
+                _pad_connections!(eng_obj, "t_connections", all_conductors)
+
+                bus_terminals[eng_obj["f_bus"]] = haskey(bus_terminals, eng_obj["f_bus"]) ? unique([bus_terminals[eng_obj["f_bus"]]..., all_conductors...]) : all_conductors
+                bus_terminals[eng_obj["t_bus"]] = haskey(bus_terminals, eng_obj["t_bus"]) ? unique([bus_terminals[eng_obj["t_bus"]]..., all_conductors...]) : all_conductors
+            else
+                for (w, connections) in enumerate(eng_obj["connections"])
+                    if eng_obj["configuration"][w] == DELTA && length(eng_obj["tm_set"][w]) == 1
+                        _pad_properties_delta!(eng_obj, ["tm_lb", "tm_ub", "tm_set"], connections, w, all_conductors)
+                        _pad_properties_delta!(eng_obj, ["tm_fix"], connections, w, all_conductors)
+                        for i in 1:length(eng_obj["tm_set"][w])
+                            eng_obj["tm_set"][w][i] = eng_obj["tm_set"][w][i] == 0 ? 1 : eng_obj["tm_set"][w][i]
+                            eng_obj["tm_fix"][w][i] = eng_obj["tm_fix"][w][i] == 0 ? true : eng_obj["tm_fix"][w][i]
+                        end
+                    else
+                        _pad_properties!(eng_obj, ["tm_lb", "tm_ub", "tm_set"], w, connections, all_conductors; pad_value=1.0)
+                        _pad_properties!(eng_obj, ["tm_fix"], w, connections, all_conductors; pad_value=true)
+                    end
+                    _pad_connections!(eng_obj, "connections", w, all_conductors)
+                    bus_terminals[eng_obj["bus"][w]] = haskey(bus_terminals, eng_obj["bus"][w]) ? unique([bus_terminals[eng_obj["bus"][w]]..., all_conductors...]) : all_conductors
+                end
+            end
+        end
+    end
+
+    if haskey(data_eng, "load")
+        for (_,eng_obj) in data_eng["load"]
+            if eng_obj["configuration"] == DELTA
+                _pad_properties_delta!(eng_obj, ["pd_nom", "qd_nom"], eng_obj["connections"], all_conductors)
+                _pad_connections!(eng_obj, "connections", all_conductors)
+                bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? unique([bus_terminals[eng_obj["bus"]]..., all_conductors...]) : all_conductors
+            end
+        end
+    end
+
+    if haskey(data_eng, "generator")
+        for (_,eng_obj) in data_eng["generator"]
+            if eng_obj["configuration"]==DELTA
+                _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
+                _pad_connections!(eng_obj, "connections", all_conductors)
+                bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? unique([bus_terminals[eng_obj["bus"]]..., all_conductors...]) : all_conductors
+            end
+        end
+    end
+
+    if haskey(data_eng, "solar")
+        for (_,eng_obj) in data_eng["solar"]
+            if eng_obj["configuration"]==DELTA
+                _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
+                _pad_connections!(eng_obj, "connections", all_conductors)
+                bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? unique([bus_terminals[eng_obj["bus"]]..., all_conductors...]) : all_conductors
+            end
+        end
+    end
+
+    _update_bus_terminal_projections!(data_eng, bus_terminals)
+
+    data_eng["is_projected"] = true
+end
+
+
+function _update_bus_terminal_projections!(data_eng::Dict{String,<:Any}, bus_terminals::Dict{Any,<:Vector{Int}})
+    for (id,terminals) in bus_terminals
+        eng_obj = data_eng["bus"][id]
+
+        if !haskey(eng_obj, "vm_lb")
+            eng_obj["vm_lb"] = fill(0.0, length(eng_obj["terminals"]))
+        end
+
+        if !haskey(eng_obj, "vm_ub")
+            eng_obj["vm_ub"] = fill(Inf, length(eng_obj["terminals"]))
+        end
+
+        _pad_properties!(eng_obj, ["vm", "va", "vm_lb", "vm_ub"], eng_obj["terminals"], terminals)
+
+        _pad_connections!(eng_obj, "terminals", terminals)
+    end
 end

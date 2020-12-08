@@ -162,7 +162,6 @@ function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps=0.1)
     else
         # implied valid upper bound
         vdmax = _mat_mult_rm_nan([1 1 0; 0 1 1; 1 0 1], vmax)
-        id = bus["index"]
     end
     if haskey(bus, "vm_ll_min")
         vdmin = bus["vm_ll_min"]
@@ -178,7 +177,7 @@ end
 Calculates lower and upper bounds for the loads themselves (not the power
 withdrawn at the bus).
 """
-function _calc_load_pq_bounds(load::Dict, bus::Dict)
+function _calc_load_pq_bounds(load::Dict{String,<:Any}, bus::Dict{String,<:Any})
     a, alpha, b, beta = _load_expmodel_params(load, bus)
     vmin, vmax = _calc_load_vbounds(load, bus)
     # get bounds
@@ -258,14 +257,17 @@ Returns the voltage magnitude bounds for the individual load elements in a
 multiphase load. These are inferred from vmin/vmax for wye loads and from
 _calc_bus_vm_ll_bounds for delta loads.
 """
-function _calc_load_vbounds(load::Dict, bus::Dict)
+function _calc_load_vbounds(load::Dict{String,<:Any}, bus::Dict{String,<:Any})
+    terminals = bus["terminals"]
+    connections = [findfirst(isequal(c), terminals) for c in load["connections"]]
+
     if load["configuration"]==WYE
         vmin = bus["vmin"]
         vmax = bus["vmax"]
     elseif load["configuration"]==DELTA
         vmin, vmax = _calc_bus_vm_ll_bounds(bus)
     end
-    return vmin, vmax
+    return vmin[connections], vmax[connections]
 end
 
 """
@@ -286,18 +288,17 @@ end
 """
 Returns a current magnitude bound for the generators.
 """
-function _calc_gen_current_max(gen::Dict, bus::Dict)
+function _calc_gen_current_max(gen::Dict{String,<:Any}, bus::Dict{String,<:Any})
     if all([haskey(gen, prop) for prop in ["pmax", "pmin", "qmax", "qmin"]]) && haskey(bus, "vmin")
         pabsmax = max.(abs.(gen["pmin"]), abs.(gen["pmax"]))
         qabsmax = max.(abs.(gen["qmin"]), abs.(gen["qmax"]))
         smax = sqrt.(pabsmax.^2 + qabsmax.^2)
 
-        vmin = bus["vmin"]
+        vmin = bus["vmin"][[findfirst(isequal(c), bus["terminals"]) for c in gen["connections"]]]
 
         return smax./vmin
     else
-        N = 3 #TODO update for 4-wire
-        return fill(Inf, N)
+        return fill(Inf, length(gen["connections"]))
     end
 end
 
@@ -307,18 +308,17 @@ Returns a total (shunt+series) current magnitude bound for the from and to side
 of a branch. The total power rating also implies a current bound through the
 lower bound on the voltage magnitude of the connected buses.
 """
-function _calc_branch_current_max(branch::Dict, bus::Dict)
+function _calc_branch_current_max(branch::Dict{String,<:Any}, bus::Dict{String,<:Any})
     bounds = []
 
     if haskey(branch, "c_rating_a")
         push!(bounds, branch["c_rating_a"])
     end
     if haskey(branch, "rate_a") && haskey(bus, "vmin")
-        push!(bounds, branch["rate_a"]./bus["vmin"])
+        push!(bounds, branch["rate_a"]./bus["vmin"][[findfirst(isequal(c), bus["terminals"]) for c in branch["f_connections"]]])
     end
 
-    N = 3 #TODO update for 4-wire
-    return min.(fill(Inf, N), bounds...)
+    return min.(fill(Inf, length(branch["f_connections"])), bounds...)
 end
 
 
@@ -327,7 +327,7 @@ Returns a total (shunt+series) current magnitude bound for the from and to side
 of a branch. The total power rating also implies a current bound through the
 lower bound on the voltage magnitude of the connected buses.
 """
-function _calc_branch_current_max_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
+function _calc_branch_current_max_frto(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
     bounds_fr = []
     bounds_to = []
 
@@ -336,12 +336,11 @@ function _calc_branch_current_max_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
         push!(bounds_to, branch["c_rating_a"])
     end
     if haskey(branch, "rate_a")
-        push!(bounds_fr, branch["rate_a"]./bus_fr["vmin"])
-        push!(bounds_to, branch["rate_a"]./bus_to["vmin"])
+        push!(bounds_fr, branch["rate_a"]./bus_fr["vmin"][[findfirst(isequal(c), bus_fr["terminals"]) for c in branch["f_connections"]]])
+        push!(bounds_to, branch["rate_a"]./bus_to["vmin"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]])
     end
 
-    N = 3 #TODO update for 4-wire
-    return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
+    return min.(fill(Inf, length(branch["f_connections"])), bounds_fr...), min.(fill(Inf, length(branch["t_connections"])), bounds_to...)
 end
 
 
@@ -350,7 +349,7 @@ Returns a power magnitude bound for the from and to side of a transformer.
 The total current rating also implies a current bound through the
 upper bound on the voltage magnitude of the connected buses.
 """
-function _calc_transformer_power_ub_frto(trans::Dict, bus_fr::Dict, bus_to::Dict)
+function _calc_transformer_power_ub_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
     bounds_fr = []
     bounds_to = []
     #TODO redefine transformer bounds
@@ -364,7 +363,7 @@ function _calc_transformer_power_ub_frto(trans::Dict, bus_fr::Dict, bus_to::Dict
     # end
 
 
-    N = 3 #TODO update for 4-wire
+    N = length(trans["f_connections"])
     return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
 end
 
@@ -374,7 +373,7 @@ Returns a current magnitude bound for the from and to side of a transformer.
 The total power rating also implies a current bound through the lower bound on
 the voltage magnitude of the connected buses.
 """
-function _calc_transformer_current_max_frto(trans::Dict, bus_fr::Dict, bus_to::Dict)
+function _calc_transformer_current_max_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
     bounds_fr = []
     bounds_to = []
     #TODO redefine transformer bounds
@@ -387,8 +386,7 @@ function _calc_transformer_current_max_frto(trans::Dict, bus_fr::Dict, bus_to::D
     #     push!(bounds_to, trans["rate_a"])
     # end
 
-
-    N = 3 #TODO update for 4-wire
+    N = length(trans["f_connections"])
     return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
 end
 
@@ -398,17 +396,21 @@ Returns a total (shunt+series) power magnitude bound for the from and to side
 of a branch. The total current rating also implies a current bound through the
 upper bound on the voltage magnitude of the connected buses.
 """
-function _calc_branch_power_max(branch::Dict, bus::Dict)
+function _calc_branch_power_max(branch::Dict{String,<:Any}, bus::Dict{String,<:Any})
     bounds = []
 
+    terminals = bus["terminals"]
+    connections = bus["bus_i"] == branch["f_bus"] ? branch["f_connections"] : branch["t_connections"]
+    connections = [findfirst(isequal(cnd), terminals) for cnd in connections]
+
     if haskey(branch, "c_rating_a") && haskey(bus, "vmax")
-        push!(bounds, branch["c_rating_a"].*bus["vmax"])
+        push!(bounds, branch["c_rating_a"] .* bus["vmax"][connections])
     end
     if haskey(branch, "rate_a")
         push!(bounds, branch["rate_a"])
     end
 
-    N = 3 #TODO update for 4-wire
+    N = length(connections)
     return min.(fill(Inf, N), bounds...)
 end
 
@@ -418,7 +420,7 @@ Returns a total (shunt+series) power magnitude bound for the from and to side
 of a branch. The total current rating also implies a current bound through the
 upper bound on the voltage magnitude of the connected buses.
 """
-function _calc_branch_power_max_frto(branch::Dict, bus_fr::Dict, bus_to::Dict)
+function _calc_branch_power_max_frto(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
     return _calc_branch_power_max(branch, bus_fr), _calc_branch_power_max(branch, bus_to)
 end
 
@@ -426,13 +428,13 @@ end
 """
 Returns a valid series current magnitude bound for a branch.
 """
-function _calc_branch_series_current_max(branch::Dict, bus_fr::Dict, bus_to::Dict)
-    ncnds = 3 #TODO update for four-wire
-    vmin_fr = get(bus_fr, "vmin", fill(0.0, ncnds))
-    vmin_to = get(bus_to, "vmin", fill(0.0, ncnds))
+function _calc_branch_series_current_max(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
+    ncnds = length(branch["f_connections"])
+    vmin_fr = haskey(bus_fr, "vmin") ? bus_fr["vmin"][[findfirst(isequal(c), bus_fr["terminals"]) for c in branch["f_connections"]]] : fill(0.0, ncnds)
+    vmin_to = haskey(bus_to, "vmin") ? bus_fr["vmin"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]] : fill(0.0, ncnds)
 
-    vmax_fr = get(bus_fr, "vmax", fill(Inf, ncnds))
-    vmax_to = get(bus_to, "vmax", fill(Inf, ncnds))
+    vmax_fr = haskey(bus_fr, "vmax") ? bus_fr["vmax"][[findfirst(isequal(c), bus_fr["terminals"]) for c in branch["f_connections"]]] : fill(Inf, ncnds)
+    vmax_to = haskey(bus_to, "vmax") ? bus_to["vmax"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]] : fill(Inf, ncnds)
 
     # assumed to be matrices already
     # temportary fix by shunts_diag2mat!
@@ -448,7 +450,7 @@ function _calc_branch_series_current_max(branch::Dict, bus_fr::Dict, bus_to::Dic
     c_max_to_sh = _mat_mult_rm_nan(abs.(y_to), vmax_to)
 
     # now select element-wise lowest valid bound between fr and to
-    N = 3 #TODO update for 4-wire
+    N = length(branch["f_connections"])
     return min.(fill(Inf, N), c_max_fr_sh.+c_max_fr_tot, c_max_to_sh.+c_max_to_tot)
 end
 
@@ -517,6 +519,28 @@ function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
 
     for (_, load) in data["gen"]
         load["configuration"] = WYE
+    end
+
+    for type in ["load", "gen", "storage", "shunt"]
+        if haskey(data, type)
+            for (_,obj) in data[type]
+                obj["connections"] = collect(1:conductors)
+            end
+        end
+    end
+
+    for type in ["branch", "transformer", "switch"]
+        if haskey(data, type)
+            for (_,obj) in data[type]
+                obj["f_connections"] = collect(1:conductors)
+                obj["t_connections"] = collect(1:conductors)
+            end
+        end
+    end
+
+    for (_,bus) in data["bus"]
+        bus["terminals"] = collect(1:conductors)
+        bus["grounded"] = fill(false, conductors)
     end
 end
 
@@ -652,6 +676,12 @@ function _has_nl_expression(x)::Bool
                 return true
             end
         end
+    elseif isa(x, JuMP.Containers.DenseAxisArray)
+        for i in values(x.data)
+            if _has_nl_expression(i)
+                return true
+            end
+        end
     end
     return false
 end
@@ -669,7 +699,7 @@ end
 
 
 "Local wrapper method for JuMP.set_lower_bound, which skips NaN and infinite (-Inf only)"
-function set_lower_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category=:default)
+function set_lower_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category::Symbol=:default)
     if !(isnan(bound) || bound==-Inf)
         JuMP.set_lower_bound(x, bound)
     elseif loose_bounds
@@ -681,7 +711,7 @@ end
 
 
 "Local wrapper method for JuMP.set_upper_bound, which skips NaN and infinite (+Inf only)"
-function set_upper_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category=:default)
+function set_upper_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category::Symbol=:default)
     if !(isnan(bound) || bound==Inf)
         JuMP.set_upper_bound(x, bound)
     elseif loose_bounds
@@ -693,7 +723,7 @@ end
 
 
 ""
-function sol_polar_voltage!(pm::_PM.AbstractPowerModel, solution::Dict)
+function sol_polar_voltage!(pm::_PM.AbstractPowerModel, solution::Dict{String,<:Any})
     if haskey(solution, "nw")
         nws_data = solution["nw"]
     else
@@ -770,7 +800,7 @@ function count_active_connections(data::Dict{String,<:Any})
                     for (i, terminal) in enumerate(connections)
                         if !(terminal in counted_connections)
                             if data_model == ENGINEERING
-                                if edge_type == "transformer" && component["configuration"] == WYE && terminal != connections[end]
+                                if edge_type == "transformer" && (get(data, "is_kron_reduced", false) || (component["configuration"] == WYE && terminal != connections[end]))
                                     push!(counted_connections, terminal)
                                     active_connections += 1
                                 elseif !(terminal in data["bus"][bus]["grounded"])
@@ -779,7 +809,7 @@ function count_active_connections(data::Dict{String,<:Any})
                                 end
                             else
                                 if edge_type == "transformer"
-                                    if component["configuration"] == DELTA || (component["configuration"] == WYE && terminal != connections[end])
+                                    if get(data, "is_kron_reduced", false) || component["configuration"] == DELTA || (component["configuration"] == WYE && terminal != connections[end])
                                         push!(counted_connections, terminal)
                                         active_connections += 1
                                     end
@@ -831,4 +861,100 @@ function count_active_terminals(data::Dict{String,<:Any}; count_grounded::Bool=f
         end
     end
     return active_terminal_count
+end
+
+
+"checks that voltage angle differences are within 90 deg., if not tightens"
+function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=1.0472)
+    if _IM.ismultinetwork(data)
+        Memento.error(_LOGGER, "correct_voltage_angle_differences! does not yet support multinetwork data")
+    end
+
+    @assert("per_unit" in keys(data) && data["per_unit"])
+    default_pad_deg = round(rad2deg(default_pad), digits=2)
+
+    modified = Set{Int}()
+
+    for (i, branch) in data["branch"]
+        angmin = branch["angmin"]
+        angmax = branch["angmax"]
+
+        if any(angmin .<= -pi/2)
+            Memento.warn(_LOGGER, "this code only supports angmin values in -90 deg. to 90 deg., tightening the value on branch $i from $(rad2deg(angmin)) to -$(default_pad_deg) deg.")
+            branch["angmin"][angmin .<= -pi/2] .= -default_pad
+
+            push!(modified, branch["index"])
+        end
+
+        if any(angmax .>= pi/2)
+            Memento.warn(_LOGGER, "this code only supports angmax values in -90 deg. to 90 deg., tightening the value on branch $i from $(rad2deg(angmax)) to $(default_pad_deg) deg.")
+            branch["angmax"][angmax .>= pi/2] .= default_pad
+
+            push!(modified, branch["index"])
+        end
+
+        if any((angmin .== 0.0) .& (angmax .== 0.0))
+            Memento.warn(_LOGGER, "angmin and angmax values are 0, widening these values on branch $i to +/- $(default_pad_deg) deg.")
+            branch["angmin"][(angmin .== 0.0) .& (angmax .== 0.0)] .= -default_pad
+            branch["angmax"][(angmin .== 0.0) .& (angmax .== 0.0)] .=  default_pad
+
+            push!(modified, branch["index"])
+        end
+    end
+
+    return modified
+end
+
+
+"checks that each branch has non-negative thermal ratings and removes zero thermal ratings"
+function correct_mc_thermal_limits!(data::Dict{String,<:Any})
+    if _IM.ismultinetwork(data)
+        Memento.error(_LOGGER, "correct_thermal_limits! does not yet support multinetwork data")
+    end
+
+    modified = Set{Int}()
+
+    branches = [branch for branch in values(data["branch"])]
+    if haskey(data, "ne_branch")
+        append!(branches, values(data["ne_branch"]))
+    end
+
+    for branch in branches
+        for rate_key in ["rate_a", "rate_b", "rate_c"]
+            if haskey(branch, rate_key)
+                rate_value = branch[rate_key]
+
+                if any(rate_value .< 0.0)
+                    Memento.error(_LOGGER, "negative $(rate_key) value on branch $(branch["index"]), this code only supports non-negative $(rate_key) values")
+                end
+
+                if all(isapprox.(rate_value, 0.0))
+                    delete!(branch, rate_key)
+                    Memento.warn(_LOGGER, "removing zero $(rate_key) limit on branch $(branch["index"])")
+
+                    push!(modified, branch["index"])
+                end
+            end
+        end
+    end
+
+    return modified
+end
+
+
+function _build_bus_shunt_matrices(pm::_PM.AbstractPowerModel, nw::Int, terminals::Vector{Int}, bus_shunts::Vector{<:Tuple{Int,Vector{Int}}})::Tuple{Matrix{<:Real},Matrix{<:Real}}
+    ncnds = length(terminals)
+    Gs = fill(0.0, ncnds, ncnds)
+    Bs = fill(0.0, ncnds, ncnds)
+    for (i, connections) in bus_shunts
+        shunt = ref(pm,nw,:shunt,i)
+        for (idx,c) in enumerate(connections)
+            for (jdx,d) in enumerate(connections)
+                Gs[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] += shunt["gs"][idx,jdx]
+                Bs[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] += shunt["bs"][idx,jdx]
+            end
+        end
+    end
+
+    return (Gs, Bs)
 end

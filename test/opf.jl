@@ -16,8 +16,8 @@
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 45522.096; atol=1e-1)
 
-            @test all(isapprox(result["solution"]["gen"]["1"]["pg"][c],  0.3999999; atol=1e-3) for c in 1:case5["conductors"])
-            @test all(isapprox(result["solution"]["bus"]["2"]["va"][c], -0.0538204; atol=1e-5) for c in 1:case5["conductors"])
+            @test all(isapprox.(result["solution"]["gen"]["1"]["pg"],  0.3999999; atol=1e-3))
+            @test all(isapprox.(result["solution"]["bus"]["2"]["va"], -0.0538204; atol=1e-5))
         end
 
         @testset "5-bus matpower acr opf" begin
@@ -27,8 +27,8 @@
             @test isapprox(result["objective"], 45522.096; atol=1e-1)
 
             calc_va(id) = atan.(result["solution"]["bus"][id]["vi"], result["solution"]["bus"][id]["vr"])
-            @test all(isapprox(result["solution"]["gen"]["1"]["pg"][c],  0.3999999; atol=1e-3) for c in 1:case5["conductors"])
-            @test all(isapprox(calc_va("2")[c], -0.0538204; atol=1e-5) for c in 1:case5["conductors"])
+            @test all(isapprox.(result["solution"]["gen"]["1"]["pg"],  0.3999999; atol=1e-3))
+            @test all(isapprox.(calc_va("2"), -0.0538204; atol=1e-5))
         end
 
         @testset "5-bus matpower mn acp mld" begin
@@ -38,8 +38,8 @@
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 45522.096*3; atol=1e-1)
 
-            @test all(isapprox(result["solution"]["nw"]["1"]["gen"]["1"]["pg"][c],  0.3999999; atol=1e-3) for c in 1:case5["conductors"])
-            @test all(isapprox(result["solution"]["nw"]["3"]["bus"]["2"]["va"][c], -0.0538204; atol=1e-5) for c in 1:case5["conductors"])
+            @test all(isapprox.(result["solution"]["nw"]["1"]["gen"]["1"]["pg"],  0.3999999; atol=1e-3))
+            @test all(isapprox.(result["solution"]["nw"]["3"]["bus"]["2"]["va"], -0.0538204; atol=1e-5))
         end
 
         @testset "5-bus matpower mn acr mld" begin
@@ -50,8 +50,8 @@
             @test isapprox(result["objective"], 45522.096*3; atol=1e-1)
 
             calc_va(id) = atan.(result["solution"]["nw"]["2"]["bus"][id]["vi"], result["solution"]["nw"]["2"]["bus"][id]["vr"])
-            @test all(isapprox(result["solution"]["nw"]["3"]["gen"]["1"]["pg"][c], 0.3999999; atol=1e-3) for c in 1:case5["conductors"])
-            @test all(isapprox(calc_va("2")[c], -0.0538204; atol=1e-5) for c in 1:case5["conductors"])
+            @test all(isapprox.(result["solution"]["nw"]["3"]["gen"]["1"]["pg"], 0.3999999; atol=1e-3))
+            @test all(isapprox.(calc_va("2"), -0.0538204; atol=1e-5))
         end
 
         @testset "5-bus storage matpower mn acp mld" begin
@@ -68,8 +68,8 @@
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 614.007; atol=1e-1)
 
-            @test all(isapprox(result["solution"]["gen"]["1"]["pg"][c],  2.192189; atol=1e-3) for c in 1:case30["conductors"])
-            @test all(isapprox(result["solution"]["bus"]["2"]["va"][c], -0.071853; atol=1e-4) for c in 1:case30["conductors"])
+            @test all(isapprox.(result["solution"]["gen"]["1"]["pg"],  2.192189; atol=1e-3))
+            @test all(isapprox.(result["solution"]["bus"]["2"]["va"], -0.071853; atol=1e-4))
         end
 
         @testset "30-bus matpower acr opf" begin
@@ -79,8 +79,8 @@
             @test isapprox(result["objective"], 614.007; atol=1e-1)
 
             calc_va(id) = atan.(result["solution"]["bus"][id]["vi"], result["solution"]["bus"][id]["vr"])
-            @test all(isapprox(result["solution"]["gen"]["1"]["pg"][c],  2.192189; atol=1e-3) for c in 1:case30["conductors"])
-            @test all(isapprox(calc_va("2")[c], -0.071853; atol=1e-4) for c in 1:case30["conductors"])
+            @test all(isapprox.(result["solution"]["gen"]["1"]["pg"],  2.192189; atol=1e-3))
+            @test all(isapprox.(calc_va("2"), -0.071853; atol=1e-4))
         end
 
         @testset "30-bus matpower dcp opf" begin
@@ -128,7 +128,7 @@
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.0599389; atol=1e-4)
 
-            @test all(isapprox.(result["solution"]["voltage_source"]["source"]["pg"], [0.00015236280779412599, 0.00019836795302238667, 0.0002486642034746673]; atol=1e-7))
+            @test all(isapprox.(result["solution"]["voltage_source"]["source"]["pg"], [0.000152, 0.000198, 0.000248]; atol=1e-6))
             @test all(isapprox.(result["solution"]["bus"]["midbus"]["vm"], [0.97351, 0.96490, 0.95646]; atol=1e-4))
         end
 
@@ -146,7 +146,7 @@
             result = run_mc_opf(case5_phase_drop, DCPPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(result["objective"], 0.0544220; atol=1e-4)
+            @test isapprox(result["objective"], 0.054; atol=1e-4)
         end
 
         @testset "5-bus phase drop nfa opf" begin
@@ -225,15 +225,15 @@
 
         @testset "3-bus unbalanced single-phase pv acp opf" begin
             pmd = parse_file("../test/data/opendss/case3_unbalanced_1phase-pv.dss")
-            sol = run_mc_opf(pmd, ACPPowerModel, ipopt_solver; make_si=false)
+            sol = run_mc_opf(pmd, ACPPowerModel, ipopt_solver)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
 
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * sol["solution"]["settings"]["sbase"]), 0.01838728; atol=1e-3)
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * sol["solution"]["settings"]["sbase"]), 0.00756634; atol=1e-3)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"]), 18.38728; atol=1e-3)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"]),  7.28903; atol=1e-3)
 
-            @test all(sol["solution"]["solar"]["pv1"]["pg"][2:3] .== 0.0)
-            @test all(sol["solution"]["solar"]["pv1"]["qg"][2:3] .== 0.0)
+            @test all(isapprox.(sol["solution"]["solar"]["pv1"]["pg"], 1.9947; atol=1e-3))
+            @test all(isapprox.(sol["solution"]["solar"]["pv1"]["qg"], 1.9259; atol=1e-3))
         end
 
         @testset "3-bus balanced capacitor acp opf" begin
@@ -242,8 +242,8 @@
 
             @test sol["termination_status"] == LOCALLY_SOLVED
 
-            @test all(abs(sol["solution"]["bus"]["loadbus"]["vm"][c]-0.98588)<=1E-4 for c in 1:3)
-            @test all(abs(sol["solution"]["bus"]["primary"]["vm"][c]-0.99127)<=1E-4 for c in 1:3)
+            @test all(abs.(sol["solution"]["bus"]["loadbus"]["vm"].-0.98588).<=1E-4)
+            @test all(abs.(sol["solution"]["bus"]["primary"]["vm"].-0.99127).<=1E-4)
         end
 
         @testset "3w transformer nfa opf" begin

@@ -83,7 +83,7 @@ function _parse_enums!(data::Dict{String,<:Any})
                     end
 
                     if root_type == "generator" && haskey(component, "control_mode")
-                        component["generator"] = ControlMode(component["control_model"])
+                        component["generator"] = ControlMode(component["control_mode"])
                     end
 
                     if root_type == "load" && haskey(component, "model")

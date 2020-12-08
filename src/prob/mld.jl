@@ -32,7 +32,7 @@ function build_mc_mld(pm::_PM.AbstractPowerModel)
     variable_mc_transformer_power(pm)
 
     variable_mc_gen_indicator(pm; relax=true)
-    variable_mc_gen_power_setpoint_on_off(pm)
+    variable_mc_generator_power_on_off(pm)
 
     variable_mc_storage_indicator(pm, relax=true)
     variable_mc_storage_power_mi_on_off(pm, relax=true)
@@ -53,7 +53,7 @@ function build_mc_mld(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :bus)
-        constraint_mc_shed_power_balance(pm, i)
+        constraint_mc_power_balance_shed(pm, i)
     end
 
     for i in ids(pm, :storage)
@@ -87,7 +87,7 @@ function build_mn_mc_mld_simple(pm::_PM.AbstractPowerModel)
     for (n, network) in _PM.nws(pm)
         variable_mc_branch_power(pm; nw=n)
         variable_mc_transformer_power(pm; nw=n)
-        variable_mc_gen_power_setpoint(pm; nw=n)
+        variable_mc_generator_power(pm; nw=n)
         variable_mc_bus_voltage(pm; nw=n)
 
         variable_mc_load_indicator(pm; nw=n, relax=true)
@@ -101,11 +101,11 @@ function build_mn_mc_mld_simple(pm::_PM.AbstractPowerModel)
         end
 
         for i in ids(pm, n, :gen)
-            constraint_mc_gen_setpoint(pm, i; nw=n)
+            constraint_mc_generator_power(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :bus)
-            constraint_mc_shed_power_balance(pm, i; nw=n)
+            constraint_mc_power_balance_shed(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :storage)
@@ -157,7 +157,7 @@ function build_mc_mld(pm::AbstractUBFModels)
     variable_mc_transformer_power(pm)
 
     variable_mc_gen_indicator(pm; relax=true)
-    variable_mc_gen_power_setpoint_on_off(pm)
+    variable_mc_generator_power_on_off(pm)
 
     variable_mc_storage_indicator(pm, relax=true)
     variable_mc_storage_power_mi_on_off(pm, relax=true)
@@ -178,7 +178,7 @@ function build_mc_mld(pm::AbstractUBFModels)
     end
 
     for i in ids(pm, :bus)
-        constraint_mc_shed_power_balance(pm, i)
+        constraint_mc_power_balance_shed(pm, i)
     end
 
     for i in ids(pm, :storage)
@@ -213,7 +213,7 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
         variable_mc_branch_current(pm; nw=n)
         variable_mc_branch_power(pm; nw=n)
         variable_mc_transformer_power(pm; nw=n)
-        variable_mc_gen_power_setpoint(pm; nw=n)
+        variable_mc_generator_power(pm; nw=n)
         variable_mc_bus_voltage(pm; nw=n)
 
         variable_mc_load_indicator(pm; nw=n, relax=true)
@@ -227,11 +227,11 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
         end
 
         for i in ids(pm, n, :gen)
-            constraint_mc_gen_setpoint(pm, i; nw=n)
+            constraint_mc_generator_power(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :bus)
-            constraint_mc_shed_power_balance(pm, i; nw=n)
+            constraint_mc_power_balance_shed(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :storage)
@@ -283,7 +283,7 @@ function build_mc_mld_bf(pm::_PM.AbstractPowerModel)
     variable_mc_transformer_power(pm)
 
     variable_mc_gen_indicator(pm; relax=true)
-    variable_mc_gen_power_setpoint_on_off(pm)
+    variable_mc_generator_power_on_off(pm)
 
     variable_mc_load_indicator(pm; relax=true)
     variable_mc_shunt_indicator(pm; relax=true)
@@ -301,7 +301,7 @@ function build_mc_mld_bf(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :bus)
-        constraint_mc_shed_power_balance(pm, i)
+        constraint_mc_power_balance_shed(pm, i)
     end
 
     for i in ids(pm, :branch)
@@ -331,7 +331,7 @@ function build_mc_mld_uc(pm::_PM.AbstractPowerModel)
     variable_mc_transformer_power(pm)
 
     variable_mc_gen_indicator(pm; relax=false)
-    variable_mc_gen_power_setpoint_on_off(pm)
+    variable_mc_generator_power_on_off(pm)
 
     variable_mc_storage_power(pm)
     variable_mc_storage_indicator(pm; relax=false)
@@ -353,7 +353,7 @@ function build_mc_mld_uc(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :bus)
-        constraint_mc_shed_power_balance(pm, i)
+        constraint_mc_power_balance_shed(pm, i)
     end
 
     for i in ids(pm, :storage)
