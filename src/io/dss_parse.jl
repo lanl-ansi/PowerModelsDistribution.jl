@@ -766,7 +766,7 @@ function parse_dss(io::IOStream)::Dict{String,Any}
     path = join(split(filename, '/')[1:end-1], '/')
     data_dss = Dict{String,Any}()
 
-    data_dss["filename"] = Set{String}([string(current_file)])
+    data_dss["filename"] = Set{String}([string(filename)])
 
     current_obj = Dict{String,Any}()
     current_obj_type = ""

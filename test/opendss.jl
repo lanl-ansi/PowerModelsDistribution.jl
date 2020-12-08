@@ -62,10 +62,10 @@
         @test_throws(TESTLOG, ErrorException,
                    parse_file("../test/data/opendss/test_simple2.dss"; data_model=MATHEMATICAL))
 
-        @test_warn(TESTLOG, "Command \"solve\" on line 69 in \"test2_master.dss\" is not supported, skipping.",
+        @test_warn(TESTLOG, "Command \"solve\" on line 70 in \"test2_master.dss\" is not supported, skipping.",
                    parse_file("../test/data/opendss/test2_master.dss"))
 
-        @test_warn(TESTLOG, "Command \"show\" on line 71 in \"test2_master.dss\" is not supported, skipping.",
+        @test_warn(TESTLOG, "Command \"show\" on line 72 in \"test2_master.dss\" is not supported, skipping.",
                    parse_file("../test/data/opendss/test2_master.dss"))
 
         @test_warn(TESTLOG, "reactors as constant impedance elements is not yet supported, treating reactor.reactor1 like line",
@@ -80,10 +80,10 @@
         Memento.TestUtils.@test_log(TESTLOG, "info", "Circuit has been reset with the \"clear\" on line 2 in \"test2_master.dss\"",
                                parse_file("../test/data/opendss/test2_master.dss"))
 
-        Memento.TestUtils.@test_log(TESTLOG, "info", "Redirecting to \"test2_Linecodes.dss\" on line 9 in \"test2_master.dss\"",
+        Memento.TestUtils.@test_log(TESTLOG, "info", "Redirecting to \"test2_Linecodes.dss\" on line 10 in \"test2_master.dss\"",
                                parse_file("../test/data/opendss/test2_master.dss"))
 
-        Memento.TestUtils.@test_log(TESTLOG, "info", "Redirecting to \"test2_Loadshape.dss\" on line 10 in \"test2_master.dss\"",
+        Memento.TestUtils.@test_log(TESTLOG, "info", "Redirecting to \"test2_Loadshape.dss\" on line 11 in \"test2_master.dss\"",
                                parse_file("../test/data/opendss/test2_master.dss"))
 
         Memento.setlevel!(TESTLOG, "error")
@@ -91,6 +91,10 @@
 
     eng = parse_file("../test/data/opendss/test2_master.dss", import_all=true)
     math = parse_file("../test/data/opendss/test2_master.dss"; data_model=MATHEMATICAL, import_all=true)
+
+    @testset "subdirectory parsing" begin
+        @test haskey(eng["linecode"], "lc7")
+    end
 
     @testset "multiple generation objects on same bus" begin
         @test all(eng["storage"]["s1"]["connections"] .== collect(1:4))
