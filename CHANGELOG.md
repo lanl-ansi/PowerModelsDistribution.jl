@@ -1,5 +1,7 @@
 # PowerModelsDistribution.jl Change Log
 
+- Fixes bug in assignment of variables' start values over active conductors/connections
+
 ## v0.10.0
 
 - Refactor variables, constraints, objectives to support iterating over arbitrary connections/terminals (breaking)
