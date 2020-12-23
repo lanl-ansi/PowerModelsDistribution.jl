@@ -1,5 +1,9 @@
 # PowerModelsDistribution.jl Change Log
 
+## staged
+
+- Fix bug in handling of dss edit command
+
 ## v0.10.0
 
 - Refactor variables, constraints, objectives to support iterating over arbitrary connections/terminals (breaking)

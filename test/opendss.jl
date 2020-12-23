@@ -92,6 +92,11 @@
     eng = parse_file("../test/data/opendss/test2_master.dss", import_all=true)
     math = parse_file("../test/data/opendss/test2_master.dss"; data_model=MATHEMATICAL, import_all=true)
 
+    @testset "dss edit command" begin
+        @test all(eng["transformer"]["t5"][k] == v for (k,v) in eng["transformer"]["t4"] if !(k in ["bus", "source_id", "rw", "tm_set", "dss"]))
+        @test all(eng["transformer"]["t5"]["rw"] .== [0.0076, 0.0075])
+    end
+
     @testset "subdirectory parsing" begin
         @test haskey(eng["linecode"], "lc7")
     end

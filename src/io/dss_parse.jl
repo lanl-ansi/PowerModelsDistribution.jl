@@ -578,6 +578,8 @@ function _add_component_edits!(data_dss::Dict{String,<:Any}, obj_type_name::SubS
         if !haskey(data_dss[obj_type], object["name"])
             data_dss[obj_type][object["name"]] = object
         else
+            filtered_prop_order = filter(x->x!="name", object["prop_order"])
+            object["prop_order"] = vcat(filter(x->!(x in filtered_prop_order), data_dss[obj_type][object["name"]]["prop_order"]), filtered_prop_order)
             merge!(data_dss[obj_type][object["name"]], object)
         end
     end
