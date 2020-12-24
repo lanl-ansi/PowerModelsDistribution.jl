@@ -92,4 +92,4 @@ new line.l9 bus1=b10 bus2=b11 spacing=test_spacing wires=['wire1', 'wire2'] leng
 new storage.s1 bus1=b1
 new pvsystem.solar1 bus1=b1
 
-edit transformer.t5 wdg=1 %r=0.76
+redirect test2_edit.dss

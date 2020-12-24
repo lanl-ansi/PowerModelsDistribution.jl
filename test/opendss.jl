@@ -94,7 +94,7 @@
 
     @testset "dss edit command" begin
         @test all(eng["transformer"]["t5"][k] == v for (k,v) in eng["transformer"]["t4"] if !(k in ["bus", "source_id", "rw", "tm_set", "dss"]))
-        @test all(eng["transformer"]["t5"]["rw"] .== [0.0076, 0.0075])
+        @test all(eng["transformer"]["t5"]["rw"] .== [0.0074, 0.0076])
     end
 
     @testset "subdirectory parsing" begin

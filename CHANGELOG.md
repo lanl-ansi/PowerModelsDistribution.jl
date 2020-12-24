@@ -3,6 +3,7 @@
 ## staged
 
 - Fix bug in handling of dss edit command
+- Fix bug in correctly tracking current transformer winding
 
 ## v0.10.0
 
