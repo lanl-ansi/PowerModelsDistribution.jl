@@ -1,5 +1,5 @@
 
-function _get_conductor_indicator(comp::Dict{String,<:Any})
+function _get_conductor_indicator(comp::Dict{String,<:Any})::String
     if haskey(comp, "terminals")
         return "terminals"
     elseif haskey(comp, "connections")
