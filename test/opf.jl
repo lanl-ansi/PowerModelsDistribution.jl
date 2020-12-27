@@ -274,5 +274,32 @@
             @test isapprox(sol_ivr["objective"], sol_ivr_with_start["objective"]; atol=1e-5)
             @test isapprox(sol_acr["objective"], sol_acr_with_start["objective"]; atol=1e-5)
         end
+
+        @testset "assign start value per connection iteration" begin
+            data = parse_file("../test/data/opendss/case3_unbalanced.dss"; data_model = MATHEMATICAL)
+            #add a single-phase generator and assign a single-phase start value to it
+            data["gen"]["2"] = Dict{String, Any}(
+                                "pg_start"      => [-0.012],
+                                "qg_start"      => [-0.006],
+                                "model"         => 2,
+                                "connections"   => [2],
+                                "shutdown"      => 0.0,
+                                "startup"       => 0.0,
+                                "configuration" => WYE,
+                                "name"          => "single_ph_generator",
+                                "gen_bus"       => 3,
+                                "pmax"          => [Inf],
+                                "vbase"         => 0.23094,
+                                "index"         => 2,
+                                "cost"          => [0.5, 0.0],
+                                "gen_status"    => 1,
+                                "qmax"          => [Inf],
+                                "qmin"          => [-Inf],
+                                "pmin"          => [-Inf],
+                                "ncost"         => 2
+                                )
+            sol = run_mc_opf(data, ACPPowerModel, ipopt_solver)
+            @test sol["termination_status"] == LOCALLY_SOLVED
+        end
     end
 end
