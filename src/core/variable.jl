@@ -1,7 +1,21 @@
 
+function _get_conductor_indicator(comp::Dict{String,<:Any})::String
+    if haskey(comp, "terminals")
+        return "terminals"
+    elseif haskey(comp, "connections")
+        return "connections"
+    elseif haskey(comp, "f_connections")
+        return "f_connections"
+    else
+        return ""
+    end
+end
+
+
 function comp_start_value(comp::Dict{String,<:Any}, key::String, conductor::Int, default)
-    if haskey(comp, key)
-        return comp[key][conductor]
+    cond_ind = _get_conductor_indicator(comp)
+    if haskey(comp, key) && !isempty(cond_ind)
+        return comp[key][findfirst(isequal(conductor), comp[cond_ind])]
     else
         return default
     end
