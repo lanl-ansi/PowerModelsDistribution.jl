@@ -578,6 +578,8 @@ function _add_component_edits!(data_dss::Dict{String,<:Any}, obj_type_name::SubS
         if !haskey(data_dss[obj_type], object["name"])
             data_dss[obj_type][object["name"]] = object
         else
+            filtered_prop_order = filter(x->x!="name", object["prop_order"])
+            object["prop_order"] = vcat(filter(x->!(x in filtered_prop_order), data_dss[obj_type][object["name"]]["prop_order"]), filtered_prop_order)
             merge!(data_dss[obj_type][object["name"]], object)
         end
     end
@@ -595,8 +597,7 @@ function _add_property(object::Dict{String,<:Any}, key::SubString{String}, value
         object["prop_order"] = Vector{String}(["name"])
     end
 
-    current_wdg = "wdg" in object["prop_order"] ? string(filter(p->occursin("wdg", p), object["prop_order"])[end][end]) : ""
-    current_wdg = current_wdg == "g" ? "" : current_wdg
+    current_wdg = key == "wdg" ? value == "1" ? "" : "$value" : any(occursin("wdg", prop) for prop in object["prop_order"]) ? replace(split(filter(x->occursin("wdg", x), object["prop_order"])[end], "_")[end], "wdg"=>"") : ""
 
     if key in ["wdg", "bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
         key = join(filter(p->!isempty(p), [key, current_wdg]), "_")
@@ -692,7 +693,10 @@ function _merge_dss!(dss_prime::Dict{String,<:Any}, dss_to_add::Dict{String,<:An
     for (k, v) in dss_to_add
         if k in keys(dss_prime) && (isa(v, Dict) || isa(v, Set))
             if isa(v, Dict)
-                merge!(dss_prime[k], v)
+                if haskey(v, "prop_order")
+                    v["prop_order"] = vcat(get(dss_prime[k], "prop_order", []), filter(x->x!="name", v["prop_order"]))
+                end
+                _merge_dss!(dss_prime[k], v)
             elseif isa(v, Set)
                 union!(dss_prime[k], v)
             end
