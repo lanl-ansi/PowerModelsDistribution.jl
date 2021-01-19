@@ -14,6 +14,7 @@ end
 function build_mc_pf(pm::_PM.AbstractPowerModel)
     variable_mc_bus_voltage(pm; bounded=false)
     variable_mc_branch_power(pm; bounded=false)
+    variable_mc_switch_power(pm; bounded=false)
     variable_mc_transformer_power(pm; bounded=false)
     variable_mc_generator_power(pm; bounded=false)
     variable_mc_load_power(pm; bounded=false)
@@ -65,6 +66,10 @@ function build_mc_pf(pm::_PM.AbstractPowerModel)
         constraint_mc_ohms_yt_to(pm, i)
     end
 
+    for i in ids(pm, :switch)
+        constraint_mc_switch_state(pm, i)
+    end
+
     for i in ids(pm, :transformer)
         constraint_mc_transformer_power(pm, i)
     end
@@ -76,6 +81,7 @@ function build_mc_pf(pm::_PM.AbstractIVRModel)
     # Variables
     variable_mc_bus_voltage(pm, bounded = false)
     variable_mc_branch_current(pm, bounded = false)
+    variable_mc_switch_current(pm, bounded=false)
     variable_mc_transformer_current(pm, bounded = false)
     variable_mc_generator_current(pm, bounded = false)
     variable_mc_load_current(pm, bounded = false)
@@ -118,6 +124,10 @@ function build_mc_pf(pm::_PM.AbstractIVRModel)
         constraint_mc_bus_voltage_drop(pm, i)
     end
 
+    for i in ids(pm, :switch)
+        constraint_mc_switch_state(pm, i)
+    end
+
     for i in ids(pm, :transformer)
         constraint_mc_transformer_power(pm, i)
     end
@@ -130,6 +140,7 @@ function build_mc_pf(pm::AbstractUBFModels)
     variable_mc_bus_voltage(pm; bounded=true) # TODO should be false
     variable_mc_branch_current(pm)
     variable_mc_branch_power(pm)
+    variable_mc_switch_power(pm)
     variable_mc_transformer_power(pm; bounded=false)
     variable_mc_generator_power(pm; bounded=false)
     variable_mc_load_power(pm)
@@ -184,6 +195,10 @@ function build_mc_pf(pm::AbstractUBFModels)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+    end
+
+    for i in ids(pm, :switch)
+        constraint_mc_switch_state(pm, i)
     end
 
     for i in _PM.ids(pm, :transformer)
