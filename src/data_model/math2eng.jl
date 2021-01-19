@@ -164,10 +164,11 @@ function _map_math2eng_switch!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{Stri
 
 
     for to_id in map["to"]
-        if startswith(to_id, "branch")  # TODO update math2eng switch for when switches are fully supported
+        if startswith(to_id, "switch")
             math_obj = _get_math_obj(data_math, to_id)
             merge!(eng_obj, math_obj)
         end
+        # TODO update merge to include power, current on virtual branches
     end
 
     if !isempty(eng_obj)
