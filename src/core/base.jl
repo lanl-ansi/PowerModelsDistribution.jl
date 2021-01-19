@@ -5,5 +5,5 @@ function instantiate_mc_model(data::Dict{String,<:Any}, model_type::Type, build_
         data = transform_data_model(data)
     end
 
-    return _PM.instantiate_model(data, model_type, build_method; ref_extensions=[ref_extensions..., ref_add_arcs_transformer!, ref_add_connections!], kwargs...)
+    return _PM.instantiate_model(data, model_type, build_method; ref_extensions=[ref_extensions..., ref_add_arcs_transformer!, ref_add_connections!, ref_add_arcs_switch!], kwargs...)
 end
