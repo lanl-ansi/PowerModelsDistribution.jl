@@ -156,3 +156,14 @@ function variable_mc_branch_power_real(pm::_PM.AbstractAPLossLessModels; nw::Int
     p_expr = merge(p_expr, Dict( ((l,j,i), -1.0*p[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_from)))
     var(pm, nw)[:p] = p_expr
 end
+
+
+""
+function constraint_mc_switch_state_closed(pm::_PM.AbstractDCPModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
+    va_fr = var(pm, nw, :va, f_bus)
+    va_to = var(pm, nw, :va, t_bus)
+
+    for (idx,(fc,tc)) in enumerate(zip(f_connections, t_connections))
+        JuMP.@constraint(pm.model, va_fr[fc] == va_to[fc])
+    end
+end

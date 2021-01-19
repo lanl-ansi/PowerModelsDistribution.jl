@@ -118,7 +118,7 @@ function variable_mc_bus_voltage(pm::_PM.AbstractIVRModel; nw=pm.cnw, bounded::B
 
         ncnd = length(terminals)
         vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
-        vm[.!grounded] .= 1.0
+vm[.!grounded] .= 1.0
 
         # TODO how to do this more generally
         nph = 3
@@ -233,7 +233,8 @@ function constraint_mc_current_balance(pm::_PM.AbstractIVRModel, nw::Int, i::Int
     ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
 
     for (idx, t) in ungrounded_terminals
-        JuMP.@NLconstraint(pm.model,  sum(cr[a][t] for (a, conns) in bus_arcs if t in conns)
+        @smart_constraint(pm.model,  [cr, crd, crg, crs, crsw, crt, vr],
+                                      sum(cr[a][t] for (a, conns) in bus_arcs if t in conns)
                                     + sum(crsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
                                     + sum(crt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
                                     ==
@@ -242,7 +243,8 @@ function constraint_mc_current_balance(pm::_PM.AbstractIVRModel, nw::Int, i::Int
                                     - sum(crd[d][t]         for (d, conns) in bus_loads if t in conns)
                                     - sum( Gt[idx,jdx]*vr[u] -Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals) # shunts
                                     )
-        JuMP.@NLconstraint(pm.model, sum(ci[a][t] for (a, conns) in bus_arcs if t in conns)
+        @smart_constraint(pm.model, [ci, cid, cig, cis, cisw, cit, vi],
+                                      sum(ci[a][t] for (a, conns) in bus_arcs if t in conns)
                                     + sum(cisw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
                                     + sum(cit[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
                                     ==
@@ -609,4 +611,13 @@ function constraint_mc_generator_power_delta(pm::_PM.IVRPowerModel, nw::Int, id:
         sol(pm, nw, :gen, id)[:pg] = JuMP.Containers.DenseAxisArray(pg, connections)
         sol(pm, nw, :gen, id)[:qg] = JuMP.Containers.DenseAxisArray(qg, connections)
     end
+end
+
+""
+function constraint_mc_switch_state_open(pm::_PM.AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int})
+    crsw = var(pm, nw, :crsw, f_idx)
+    cisw = var(pm, nw, :cisw, f_idx)
+
+    JuMP.@constraint(pm.model, crsw .== 0.0)
+    JuMP.@constraint(pm.model, cisw .== 0.0)
 end

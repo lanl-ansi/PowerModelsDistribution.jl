@@ -58,6 +58,11 @@ function variable_mc_bus_voltage(pm::_PM.AbstractNFAModel; nw::Int=pm.cnw, kwarg
 end
 
 
+"nothing to do"
+function constraint_mc_switch_state_closed(pm::_PM.AbstractNFAModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
+end
+
+
 "nothing to do, these models do not have angle difference constraints"
 function constraint_mc_voltage_angle_difference(pm::_PM.AbstractNFAModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, angmin::Vector{<:Real}, angmax::Vector{<:Real})
 end

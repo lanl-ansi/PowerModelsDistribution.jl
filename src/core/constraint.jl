@@ -108,3 +108,13 @@ function constraint_mc_storage_thermal_limit(pm::_PM.AbstractPowerModel, nw::Int
 
     JuMP.@constraint(pm.model, ps.^2 + qs.^2 .<= rating.^2)
 end
+
+
+""
+function constraint_mc_switch_state_open(pm::_PM.AbstractPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int})
+    psw = var(pm, nw, :psw, f_idx)
+    qsw = var(pm, nw, :qsw, f_idx)
+
+    JuMP.@constraint(pm.model, psw .== 0.0)
+    JuMP.@constraint(pm.model, qsw .== 0.0)
+end

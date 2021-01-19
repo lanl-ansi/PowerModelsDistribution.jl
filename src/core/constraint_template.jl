@@ -6,6 +6,22 @@ end
 
 
 ""
+function constraint_mc_switch_state(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    switch = ref(pm, nw, :switch, i)
+    f_bus = switch["f_bus"]
+    t_bus = switch["t_bus"]
+
+    f_idx = (i, f_bus, t_bus)
+
+    if switch["state"] == CLOSED
+        constraint_mc_switch_state_closed(pm, nw, f_bus, t_bus, switch["f_connections"], switch["t_connections"])
+    else
+        constraint_mc_switch_state_open(pm, nw, f_idx)
+    end
+end
+
+
+""
 function constraint_mc_power_balance_slack(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     bus = ref(pm, nw, :bus, i)
     bus_arcs = ref(pm, nw, :bus_arcs_conns_branch, i)

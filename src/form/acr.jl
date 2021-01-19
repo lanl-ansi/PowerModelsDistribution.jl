@@ -76,6 +76,21 @@ end
 
 
 ""
+function constraint_mc_switch_state_closed(pm::_PM.AbstractACRModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
+    vr_fr = var(pm, nw, :vr, f_bus)
+    vr_to = var(pm, nw, :vr, t_bus)
+
+    vi_fr = var(pm, nw, :vi, f_bus)
+    vi_to = var(pm, nw, :vi, t_bus)
+
+    for (idx,(fc,tc)) in enumerate(zip(f_connections, t_connections))
+        JuMP.@constraint(pm.model, vr_fr[fc] == vr_to[tc])
+        JuMP.@constraint(pm.model, vi_fr[fc] == vi_to[fc])
+    end
+end
+
+
+""
 function variable_mc_bus_voltage_real_on_off(pm::_PM.AbstractACRModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
     vr = var(pm, nw)[:vr] = Dict(i => JuMP.@variable(pm.model,
