@@ -226,7 +226,7 @@ function _make_math_per_unit!(nw::Dict{String,<:Any}, data_math::Dict{String,<:A
 
     for (id, switch) in nw["switch"]
         vbase = line_vbase["switch.$id"]
-        _rebase_pu_switch!(switch, vbase, sbase, sbase_old)
+        _rebase_pu_switch!(switch, vbase, sbase, sbase_old, voltage_scale_factor)
     end
 
     if haskey(nw, "transformer")
