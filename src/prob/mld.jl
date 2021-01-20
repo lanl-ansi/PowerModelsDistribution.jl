@@ -77,6 +77,7 @@ function build_mc_mld(pm::_PM.AbstractPowerModel)
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
+        constraint_mc_switch_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -84,6 +85,13 @@ function build_mc_mld(pm::_PM.AbstractPowerModel)
     end
 
     objective_mc_min_load_setpoint_delta(pm)
+end
+
+
+""
+function build_mc_mld(pm::_PM.AbstractIVRModel)
+    Memento.error(_LOGGER, "IVRPowerModel is not yet supported in the MLD problem space")
+    # TODO
 end
 
 
@@ -129,7 +137,8 @@ function build_mn_mc_mld_simple(pm::_PM.AbstractPowerModel)
         end
 
         for i in ids(pm, n, :switch)
-            constraint_mc_switch_state(pm, i, nw=n)
+            constraint_mc_switch_state(pm, i; nw=n)
+            constraint_mc_switch_thermal_limit(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :transformer)
@@ -164,7 +173,6 @@ function build_mc_mld(pm::AbstractUBFModels)
 
     variable_mc_branch_current(pm)
     variable_mc_branch_power(pm)
-    variable_mc_switch_current(pm)
     variable_mc_switch_power(pm)
     variable_mc_transformer_power(pm)
 
@@ -213,6 +221,7 @@ function build_mc_mld(pm::AbstractUBFModels)
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
+        constraint_mc_switch_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -228,7 +237,6 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
     for (n, network) in _PM.nws(pm)
         variable_mc_branch_current(pm; nw=n)
         variable_mc_branch_power(pm; nw=n)
-        variable_mc_switch_current(pm; nw=n)
         variable_mc_switch_power(pm; nw=n)
         variable_mc_transformer_power(pm; nw=n)
         variable_mc_generator_power(pm; nw=n)
@@ -268,6 +276,7 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
 
         for i in ids(pm, n, :switch)
             constraint_mc_switch_state(pm, i; nw=n)
+            constraint_mc_switch_thermal_limit(pm, i)
         end
 
         for i in ids(pm, n, :transformer)
@@ -302,7 +311,6 @@ function build_mc_mld_bf(pm::_PM.AbstractPowerModel)
 
     variable_mc_branch_current(pm)
     variable_mc_branch_power(pm)
-    variable_mc_switch_current(pm)
     variable_mc_switch_power(pm)
     variable_mc_transformer_power(pm)
 
@@ -340,6 +348,7 @@ function build_mc_mld_bf(pm::_PM.AbstractPowerModel)
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
+        constraint_mc_switch_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -404,6 +413,7 @@ function build_mc_mld_uc(pm::_PM.AbstractPowerModel)
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
+        constraint_mc_switch_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :transformer)

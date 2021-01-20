@@ -21,6 +21,26 @@ function constraint_mc_switch_state(pm::_PM.AbstractPowerModel, i::Int; nw::Int=
 end
 
 
+function constraint_mc_switch_thermal_limit(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    switch = ref(pm, nw, :switch, i)
+
+    if haskey(switch, "thermal_rating")
+        f_idx = (i, switch["f_bus"], switch["t_bus"])
+        constraint_mc_switch_thermal_limit(pm, nw, f_idx, switch["fr_connections"], switch["thermal_rating"])
+    end
+end
+
+
+function constraint_mc_switch_current_limit(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    switch = ref(pm, nw, :switch, i)
+
+    if haskey(switch, "current_rating")
+        f_idx = (i, switch["f_bus"], switch["t_bus"])
+        constraint_mc_switch_current_limit(pm, nw, f_idx, switch["fr_connections"], switch["current_rating"])
+    end
+end
+
+
 ""
 function constraint_mc_power_balance_slack(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     bus = ref(pm, nw, :bus, i)

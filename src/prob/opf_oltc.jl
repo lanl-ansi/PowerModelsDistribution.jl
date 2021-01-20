@@ -13,11 +13,15 @@ end
 "constructor for on-load tap-changer OPF"
 function build_mc_opf_oltc(pm::_PM.AbstractPowerModel)
     variable_mc_bus_voltage(pm)
+
     variable_mc_branch_power(pm)
+    variable_mc_switch_power(pm)
+    variable_mc_transformer_power(pm)
+
+    variable_mc_oltc_transformer_tap(pm)
+
     variable_mc_generator_power(pm)
     variable_mc_load_power(pm)
-    variable_mc_transformer_power(pm)
-    variable_mc_oltc_transformer_tap(pm)
 
     constraint_mc_model_voltage(pm)
 
@@ -47,6 +51,11 @@ function build_mc_opf_oltc(pm::_PM.AbstractPowerModel)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+    end
+
+    for i in ids(pm, :switch)
+        constraint_mc_switch_state(pm, i)
+        constraint_mc_switch_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :transformer)

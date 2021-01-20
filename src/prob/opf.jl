@@ -65,6 +65,7 @@ function build_mc_opf(pm::_PM.AbstractPowerModel)
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
+        constraint_mc_switch_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -118,6 +119,7 @@ function build_mc_opf(pm::_PM.AbstractIVRModel)
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
+        constraint_mc_switch_current_limit(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -136,7 +138,6 @@ function build_mc_opf(pm::AbstractUBFModels)
     variable_mc_branch_current(pm)
     variable_mc_branch_power(pm)
     variable_mc_switch_power(pm)
-    variable_mc_switch_current(pm)
     # TODO: revert to bounded in v0.10
     variable_mc_transformer_power(pm)
     variable_mc_generator_power(pm)
@@ -183,6 +184,7 @@ function build_mc_opf(pm::AbstractUBFModels)
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
+        constraint_mc_switch_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -239,6 +241,7 @@ function build_mn_mc_opf(pm::_PM.AbstractPowerModel)
 
         for i in ids(pm, n, :switch)
             constraint_mc_switch_state(pm, i; nw=n)
+            constraint_mc_switch_thermal_limit(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :transformer)
@@ -309,6 +312,7 @@ function build_mn_mc_opf(pm::_PM.AbstractIVRModel)
 
         for i in ids(pm, n, :switch)
             constraint_mc_switch_state(pm, i; nw=n)
+            constraint_mc_switch_current_limit(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :transformer)
@@ -342,7 +346,6 @@ function build_mn_mc_opf(pm::AbstractUBFModels)
         variable_mc_branch_current(pm; nw=n)
         variable_mc_branch_power(pm; nw=n)
         variable_mc_switch_power(pm; nw=n)
-        variable_mc_switch_current(pm; nw=n)
         variable_mc_transformer_power(pm; nw=n)
         variable_mc_generator_power(pm; nw=n)
         variable_mc_load_power(pm; nw=n)
@@ -382,6 +385,7 @@ function build_mn_mc_opf(pm::AbstractUBFModels)
 
         for i in ids(pm, n, :switch)
             constraint_mc_switch_state(pm, i; nw=n)
+            constraint_mc_switch_thermal_limit(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :transformer)

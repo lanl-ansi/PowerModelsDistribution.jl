@@ -118,7 +118,7 @@ function variable_mc_bus_voltage(pm::_PM.AbstractIVRModel; nw=pm.cnw, bounded::B
 
         ncnd = length(terminals)
         vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
-vm[.!grounded] .= 1.0
+        vm[.!grounded] .= 1.0
 
         # TODO how to do this more generally
         nph = 3
@@ -620,4 +620,30 @@ function constraint_mc_switch_state_open(pm::_PM.AbstractIVRModel, nw::Int, f_id
 
     JuMP.@constraint(pm.model, crsw .== 0.0)
     JuMP.@constraint(pm.model, cisw .== 0.0)
+end
+
+
+""
+function constraint_mc_switch_state_closed(pm::_PM.AbstractIVRModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
+    vr_fr = var(pm, nw, :vr, f_bus)
+    vr_to = var(pm, nw, :vr, t_bus)
+
+    vi_fr = var(pm, nw, :vi, f_bus)
+    vi_to = var(pm, nw, :vi, t_bus)
+
+    for (idx,(fc,tc)) in enumerate(zip(f_connections, t_connections))
+        JuMP.@constraint(pm.model, vr_fr[fc] == vr_to[tc])
+        JuMP.@constraint(pm.model, vi_fr[fc] == vi_to[tc])
+    end
+end
+
+
+""
+function constraint_mc_switch_current_limit(pm::_PM.AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
+    crsw = var(pm, nw, :crsw, f_idx)
+    cisw = var(pm, nw, :cisw, f_idx)
+
+    for (idx, c) in enumerate(connections)
+        JuMP.@constraint(pm.model, crsw[c]^2 + cisw[c]^2 <= rating[idx]^2)
+    end
 end

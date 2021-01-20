@@ -118,3 +118,14 @@ function constraint_mc_switch_state_open(pm::_PM.AbstractPowerModel, nw::Int, f_
     JuMP.@constraint(pm.model, psw .== 0.0)
     JuMP.@constraint(pm.model, qsw .== 0.0)
 end
+
+
+""
+function constraint_switch_thermal_limit(pm::_PM.AbstractPowerModel, n::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
+    psw = var(pm, n, :psw, f_idx)
+    qsw = var(pm, n, :qsw, f_idx)
+
+    for (idx, c) in enumerate(connections)
+        JuMP.@constraint(pm.model, psw[c]^2 + qsw[c]^2 <= rating[idx]^2)
+    end
+end
