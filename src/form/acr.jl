@@ -85,7 +85,7 @@ function constraint_mc_switch_state_closed(pm::_PM.AbstractACRModel, nw::Int, f_
 
     for (idx,(fc,tc)) in enumerate(zip(f_connections, t_connections))
         JuMP.@constraint(pm.model, vr_fr[fc] == vr_to[tc])
-        JuMP.@constraint(pm.model, vi_fr[fc] == vi_to[fc])
+        JuMP.@constraint(pm.model, vi_fr[fc] == vi_to[tc])
     end
 end
 
