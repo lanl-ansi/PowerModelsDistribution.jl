@@ -356,7 +356,13 @@ function variable_mc_switch_power_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cn
     )
 
     if bounded
-        # TODO
+        for (l,i,j) in ref(pm, nw, :arcs_sw)
+            smax = _calc_branch_power_max(ref(pm, nw, :switch, l), ref(pm, nw, :bus, i))
+            for (idx, c) in enumerate(connections[(l,i,j)])
+                set_upper_bound(psw[(l,i,j)][c],  smax[idx])
+                set_lower_bound(psw[(l,i,j)][c], -smax[idx])
+            end
+        end
     end
 
     # this explicit type erasure is necessary
@@ -364,7 +370,12 @@ function variable_mc_switch_power_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cn
     psw_expr = merge(psw_expr, Dict( (l,j,i) => -1.0.*psw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_from_sw)))
 
     # This is needed to get around error: "unexpected affine expression in nlconstraint"
-    psw_auxes = Dict{Any,Any}( (l,i,j) => JuMP.@variable(pm.model, [c in connections[(l,i,j)]], base_name="$(nw)_psw_aux_$((l,i,j))") for (l,i,j) in keys(psw_expr))
+    psw_auxes = Dict{Any,Any}(
+        (l,i,j) => JuMP.@variable(
+            pm.model, [c in connections[(l,i,j)]],
+            base_name="$(nw)_psw_aux_$((l,i,j))"
+        ) for (l,i,j) in ref(pm, nw, :arcs_sw)
+    )
     for ((l,i,j), psw_aux) in psw_auxes
         for (idx, c) in enumerate(connections[(l,i,j)])
             JuMP.@constraint(pm.model, psw_expr[(l,i,j)][c] == psw_aux[c])
@@ -387,7 +398,13 @@ function variable_mc_switch_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int=
     )
 
     if bounded
-        # TODO
+        for (l,i,j) in ref(pm, nw, :arcs_sw)
+            smax = _calc_branch_power_max(ref(pm, nw, :switch, l), ref(pm, nw, :bus, i))
+            for (idx, c) in enumerate(connections[(l,i,j)])
+                set_upper_bound(qsw[(l,i,j)][c],  smax[idx])
+                set_lower_bound(qsw[(l,i,j)][c], -smax[idx])
+            end
+        end
     end
 
     # this explicit type erasure is necessary
@@ -395,7 +412,12 @@ function variable_mc_switch_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int=
     qsw_expr = merge(qsw_expr, Dict( (l,j,i) => -1.0*qsw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_from_sw)))
 
     # This is needed to get around error: "unexpected affine expression in nlconstraint"
-    qsw_auxes = Dict{Any,Any}( (l,i,j) => JuMP.@variable(pm.model, [c in connections[(l,i,j)]], base_name="$(nw)_qsw_aux_$((l,i,j))") for (l,i,j) in keys(qsw_expr))
+    qsw_auxes = Dict{Any,Any}(
+        (l,i,j) => JuMP.@variable(
+            pm.model, [c in connections[(l,i,j)]],
+            base_name="$(nw)_qsw_aux_$((l,i,j))"
+        ) for (l,i,j) in ref(pm, nw, :arcs_sw)
+    )
     for ((l,i,j), qsw_aux) in qsw_auxes
         for (idx, c) in enumerate(connections[(l,i,j)])
             JuMP.@constraint(pm.model, qsw_expr[(l,i,j)][c] == qsw_aux[c])
@@ -404,7 +426,7 @@ function variable_mc_switch_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int=
 
     var(pm, nw)[:qsw] = qsw_auxes
 
-    report && _IM.sol_component_value_edge(pm, nw, :switch, :qsw_fr, :qsw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), qsw)
+    report && _IM.sol_component_value_edge(pm, nw, :switch, :qsw_fr, :qsw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), qsw_expr)
 end
 
 
@@ -425,6 +447,13 @@ function variable_mc_switch_current_real(pm::_PM.AbstractPowerModel; nw::Int=pm.
     )
 
     if bounded
+        for (l,i,j) in ref(pm, nw, :arcs_sw)
+            cmax = _calc_branch_current_max(ref(pm, nw, :switch, l), ref(pm, nw, :bus, i))
+            for (idx,c) in enumerate(connections[(l,i,j)])
+                set_upper_bound(crsw[(l,i,j)][c],  cmax[idx])
+                set_lower_bound(crsw[(l,i,j)][c], -cmax[idx])
+            end
+        end
     end
 
     # this explicit type erasure is necessary
@@ -432,7 +461,12 @@ function variable_mc_switch_current_real(pm::_PM.AbstractPowerModel; nw::Int=pm.
     crsw_expr = merge(crsw_expr, Dict( (l,j,i) => -crsw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_from_sw)))
 
     # This is needed to get around error: "unexpected affine expression in nlconstraint"
-    crsw_auxes = Dict{Any,Any}( (l,i,j) => JuMP.@variable(pm.model, [c in connections[(l,i,j)]], base_name="$(nw)_crsw_aux_$((l,i,j))") for (l,i,j) in keys(crsw_expr))
+    crsw_auxes = Dict{Any,Any}(
+        (l,i,j) => JuMP.@variable(
+            pm.model, [c in connections[(l,i,j)]],
+            base_name="$(nw)_crsw_aux_$((l,i,j))"
+        ) for (l,i,j) in ref(pm, nw, :arcs_sw)
+    )
     for ((l,i,j), crsw_aux) in crsw_auxes
         for (idx, c) in enumerate(connections[(l,i,j)])
             JuMP.@constraint(pm.model, crsw_expr[(l,i,j)][c] == crsw_aux[c])
@@ -440,8 +474,6 @@ function variable_mc_switch_current_real(pm::_PM.AbstractPowerModel; nw::Int=pm.
     end
 
     var(pm, nw)[:crsw] = crsw_auxes
-
-
 
     report && _IM.sol_component_value_edge(pm, nw, :switch, :crsw_fr, :crsw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), crsw_expr)
 end
@@ -457,6 +489,13 @@ function variable_mc_switch_current_imaginary(pm::_PM.AbstractPowerModel; nw::In
     )
 
     if bounded
+        for (l,i,j) in ref(pm, nw, :arcs_sw)
+            cmax = _calc_branch_current_max(ref(pm, nw, :switch, l), ref(pm, nw, :bus, i))
+            for (idx,c) in enumerate(connections[(l,i,j)])
+                set_upper_bound(cisw[(l,i,j)][c],  cmax[idx])
+                set_lower_bound(cisw[(l,i,j)][c], -cmax[idx])
+            end
+        end
     end
 
     # this explicit type erasure is necessary
@@ -464,7 +503,12 @@ function variable_mc_switch_current_imaginary(pm::_PM.AbstractPowerModel; nw::In
     cisw_expr = merge(cisw_expr, Dict( (l,j,i) => -cisw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_from_sw)))
 
     # This is needed to get around error: "unexpected affine expression in nlconstraint"
-    cisw_auxes = Dict{Any,Any}( (l,i,j) => JuMP.@variable(pm.model, [c in connections[(l,i,j)]], base_name="$(nw)_cisw_aux_$((l,i,j))") for (l,i,j) in keys(cisw_expr))
+    cisw_auxes = Dict{Any,Any}(
+        (l,i,j) => JuMP.@variable(
+            pm.model, [c in connections[(l,i,j)]],
+            base_name="$(nw)_cisw_aux_$((l,i,j))"
+        ) for (l,i,j) in ref(pm, nw, :arcs_sw)
+    )
     for ((l,i,j), cisw_aux) in cisw_auxes
         for (idx, c) in enumerate(connections[(l,i,j)])
             JuMP.@constraint(pm.model, cisw_expr[(l,i,j)][c] == cisw_aux[c])
