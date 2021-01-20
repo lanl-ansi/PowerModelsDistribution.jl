@@ -162,13 +162,30 @@ end
 function _map_math2eng_switch!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "switch", map)
 
+    prop_map = Dict{String,String}(
+        "pf" => "psw_fr",
+        "qf" => "qsw_fr",
+        "cr_fr" => "crsw_fr",
+        "ci_fr" => "cisw_fr"
+    )
 
-    for to_id in map["to"]
-        if startswith(to_id, "switch")
-            math_obj = _get_math_obj(data_math, to_id)
-            merge!(eng_obj, math_obj)
+    if isa(map["to"], String)
+        math_obj = _get_math_obj(data_math, map["to"])
+        merge!(eng_obj, math_obj)
+    else
+        for to_id in map["to"]
+            if startswith(to_id, "switch")
+                math_obj = _get_math_obj(data_math, to_id)
+                merge!(eng_obj, math_obj)
+            elseif startswith(to_id, "branch")
+                math_obj = _get_math_obj(data_math, to_id)
+                for k in ["pf", "qf", "cr_fr", "ci_fr"]
+                    if haskey(eng_obj, prop_map[k]) && haskey(math_obj, k)
+                        eng_obj[prop_map[k]] = math_obj[k]
+                    end
+                end
+            end
         end
-        # TODO update merge to include power, current on virtual branches
     end
 
     if !isempty(eng_obj)
