@@ -8,6 +8,16 @@ function constraint_mc_voltage_magnitude_only(pm::_PM.AbstractWModels, nw::Int, 
 end
 
 
+function constraint_mc_switch_state_closed(pm::_PM.AbstractWModels, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
+    w_fr = var(pm, nw, :w, f_bus)
+    w_to = var(pm, nw, :w, t_bus)
+
+    for (idx, (fc, tc)) in enumerate(zip(f_connections, t_connections))
+        JuMP.@constraint(pm.model, w_fr[fc] == w_to[tc])
+    end
+end
+
+
 ""
 function constraint_mc_power_balance_slack(pm::_PM.AbstractWModels, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{<:Tuple{Tuple{Int,Int,Int},Vector{Union{String,Int}}}}, bus_arcs_sw::Vector{<:Tuple{Tuple{Int,Int,Int},Vector{Union{String,Int}}}}, bus_arcs_trans::Vector{<:Tuple{Tuple{Int,Int,Int},Vector{Union{String,Int}}}}, bus_gens::Vector{<:Tuple{Int,Vector{Union{String,Int}}}}, bus_storage::Vector{<:Tuple{Int,Vector{Union{String,Int}}}}, bus_loads::Vector{<:Tuple{Int,Vector{Union{String,Int}}}}, bus_shunts::Vector{<:Tuple{Int,Vector{Union{String,Int}}}})
     w    = var(pm, nw, :w, i)
