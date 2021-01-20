@@ -14,11 +14,15 @@ const _dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
     ),
     "branch" => Dict{String,Vector{String}}(
         "sbase"=>Vector{String}(["pf", "qf", "pt", "qt"]),
-        "ibase"=>Vector{String}(["cr_fr", "ci_fr", "cr_to", "cr_to"])
+        "ibase"=>Vector{String}(["cr_fr", "ci_fr", "cr_to", "ci_to"])
     ),
     "transformer" => Dict{String,Vector{String}}(
         "ibase_fr"=>Vector{String}(["crt_fr", "cit_fr"]),
         "ibase_to"=>Vector{String}(["crt_to", "cit_to"])
+    ),
+    "switch" => Dict{String,Vector{String}}(
+        "sbase" => Vector{String}(["psw_fr", "psw_to", "qsw_fr", "qsw_to"]),
+        "ibase" => Vector{String}(["crsw_fr", "cisw_fr", "crsw_to", "cisw_to"])
     ),
     "storage" => Dict{String,Vector{String}}(
         "sbase"=>Vector{String}(["ps", "qs", "energy"]),
@@ -295,6 +299,7 @@ function _rebase_pu_branch!(branch::Dict{String,<:Any}, vbase::Real, sbase::Real
     if !haskey(branch, "vbase")
         z_old = 1
     else
+        vbase_old = branch["vbase"]
         z_old = vbase_old^2/sbase_old*voltage_scale_factor
     end
 
@@ -317,9 +322,11 @@ end
 
 "per-unit conversion for switches"
 function _rebase_pu_switch!(switch::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
-    sbase_scale = sbase / sbase_old
+    sbase_scale = sbase_old / sbase
 
-    _scale_props!(switch, ["psw", "qsw", "thermal_rating", "current_rating"], sbase_scale)
+    _scale_props!(switch, ["c_rating_a", "c_rating_b", "c_rating_c", "rate_a", "rate_b", "rate_c"], sbase_scale)
+
+    switch["vbase"] = vbase
 end
 
 
