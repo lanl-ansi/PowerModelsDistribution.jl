@@ -358,9 +358,10 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
         math_obj["dispatchable"] = get(eng_obj, "dispatchable", YES)
 
         # OPF bounds
-        for (fr_key, to_key) in [("cm_ub", "c_rating")]
-            if haskey(eng_obj, fr_key)
-                math_obj[to_key] = eng_obj[fr_key]
+        for (f_key, t_key) in [("cm_ub", "c_rating_a"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
+            ("sm_ub", "rate_a"), ("sm_ub_b", "rate_b"), ("sm_ub_c", "rate_c")]
+            if haskey(eng_obj, f_key)
+                math_obj[t_key] = eng_obj[f_key]
             end
         end
 
@@ -379,7 +380,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
             bus_obj = Dict{String,Any}(
                 "name" => "_virtual_bus.switch.$name",
                 "bus_i" => length(data_math["bus"])+1,
-                "bus_type" => get(eng_obj, "state", CLOSED) == OPEN ? 4 : 1,
+                "bus_type" => get(eng_obj, "status", ENABLED) == DISABLED ? 4 : 1,
                 "terminals" => t_bus["terminals"],  # connected to the switch on the to-side
                 "grounded" => t_bus["grounded"],  # connected to the switch on the to-side
                 "vmin" => f_bus["vmin"],
@@ -407,7 +408,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "b_to" => zeros(nphases, nphases),
                 "angmin" => fill(-60.0, nphases),
                 "angmax" => fill( 60.0, nphases),
-                "br_status" => get(eng_obj, "state", CLOSED) == OPEN || eng_obj["status"] == DISABLED ? 0 : 1,
+                "br_status" => eng_obj["status"] == DISABLED ? 0 : 1,
             )
 
             merge!(branch_obj, _branch_obj)
