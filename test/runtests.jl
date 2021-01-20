@@ -26,7 +26,8 @@ using LinearAlgebra
 pms_path = joinpath(dirname(pathof(PowerModels)), "..")
 pmd_path = joinpath(dirname(pathof(PowerModelsDistribution)), "..")
 
-ipopt_solver = optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-6, "print_level"=>0, "mu_strategy"=>"adaptive")
+ipopt_solver = optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-6, "print_level"=>0)
+ipopt_solver_adaptive = optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-6, "print_level"=>0, "mu_strategy"=>"adaptive")
 cbc_solver = optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0)
 scs_solver = optimizer_with_attributes(SCS.Optimizer, "max_iters"=>20000, "eps"=>1e-5, "alpha"=>0.4, "verbose"=>0)
 juniper_solver = optimizer_with_attributes(Juniper.Optimizer, "nl_solver"=>optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-4, "print_level"=>0), "mip_solver"=>cbc_solver, "log_levels"=>[])
