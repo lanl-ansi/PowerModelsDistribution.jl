@@ -85,7 +85,7 @@ function ref_add_arcs_switch!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
 
         if !haskey(nw_ref, :switch)
             # this might happen when parsing data from matlab format
-            # the OpenDSS parser always inserts a trans dict
+            # the OpenDSS parser always inserts a switch dict
             nw_ref[:switch] = Dict{Int, Any}()
         end
 
@@ -93,6 +93,7 @@ function ref_add_arcs_switch!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
         nw_ref[:arcs_to_sw] = [(i, switch["t_bus"], switch["f_bus"]) for (i,switch) in nw_ref[:switch]]
         nw_ref[:arcs_sw] = [nw_ref[:arcs_from_sw]..., nw_ref[:arcs_to_sw]...]
         nw_ref[:bus_arcs_sw] = Dict{Int64, Array{Any, 1}}()
+        nw_ref[:switch_dispatchable] = Dict(x for x in nw_ref[:switch] if (x.second["status"] != 0 && x.second["dispatchable"] == YES && x.second["f_bus"] in keys(nw_ref[:bus]) && x.second["t_bus"] in keys(nw_ref[:bus])))
 
         for (i,bus) in nw_ref[:bus]
             nw_ref[:bus_arcs_sw][i] = [e for e in nw_ref[:arcs_sw] if e[2]==i]
