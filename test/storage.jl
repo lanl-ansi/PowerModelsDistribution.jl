@@ -47,13 +47,13 @@
         result = run_mc_opf(mp_data, LPUBFDiagPowerModel, ipopt_solver; make_si=false)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 43177.3; atol = 1e0)
+        @test isapprox(result["objective"], 43170.0; atol = 1e0)
 
         @test isapprox(result["solution"]["storage"]["1"]["se"],  0.0; atol = 1e0)
         @test isapprox(result["solution"]["storage"]["2"]["se"],  0.0; atol = 1e0)
 
-        @test all(isapprox.(result["solution"]["storage"]["1"]["ps"], -0.059; atol=1e-3))
-        @test all(isapprox.(result["solution"]["storage"]["2"]["ps"], -0.079; atol=1e-3))
+        @test all(isapprox.(result["solution"]["storage"]["1"]["ps"], -0.06; atol=1e-2))
+        @test all(isapprox.(result["solution"]["storage"]["2"]["ps"], -0.08; atol=1e-2))
     end
 
     @testset "5-bus storage nfa opf" begin
