@@ -188,6 +188,10 @@ function _map_math2eng_switch!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{Stri
         end
     end
 
+    if haskey(eng_obj, "state")
+        eng_obj["state"] = SwitchState(Int(round(eng_obj["state"])))
+    end
+
     if !isempty(eng_obj)
         data_eng["switch"][map["from"]] = eng_obj
     end
