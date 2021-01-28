@@ -5,7 +5,7 @@
         @testset "5-bus lpubfdiag opf_bf" begin
             mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
             make_multiconductor!(mp_data, 3)
-            result = run_mc_pf(mp_data, LPUBFDiagPowerModel, ipopt_solver)
+            result = solve_mc_pf(mp_data, LPUBFDiagPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 0; atol = 1e0)
@@ -17,7 +17,7 @@
 
         @testset "3-bus balanced lpubfdiag pf_bf" begin
             pmd = parse_file("../test/data/opendss/case3_balanced.dss"; data_model=MATHEMATICAL)
-            sol = run_mc_pf(pmd, LPUBFDiagPowerModel, ipopt_solver)
+            sol = solve_mc_pf(pmd, LPUBFDiagPowerModel, ipopt_solver)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
             @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183456; atol=2e-3)
@@ -26,7 +26,7 @@
 
         @testset "3-bus unbalanced lpubfdiag pf_bf" begin
             pmd = parse_file("../test/data/opendss/case3_unbalanced.dss"; data_model=MATHEMATICAL)
-            sol = run_mc_pf(pmd, LPUBFDiagPowerModel, ipopt_solver)
+            sol = solve_mc_pf(pmd, LPUBFDiagPowerModel, ipopt_solver)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
             @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214812; atol=2e-3)
@@ -38,7 +38,7 @@
         @testset "5-bus lpdiagubf pf_bf" begin
             mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
             make_multiconductor!(mp_data, 3)
-            result = run_mc_pf(mp_data, LPUBFDiagPowerModel, ipopt_solver)
+            result = solve_mc_pf(mp_data, LPUBFDiagPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 0; atol = 1e0)
@@ -49,7 +49,7 @@
         @testset "5-bus lpfullubf pf_bf" begin
             mp_data = PowerModels.parse_file("../test/data/matpower/case5.m")
             make_multiconductor!(mp_data, 3)
-            result = run_mc_pf(mp_data, LPUBFDiagPowerModel, ipopt_solver)
+            result = solve_mc_pf(mp_data, LPUBFDiagPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 0; atol = 1e0)
@@ -82,7 +82,7 @@
 
     @testset "test sdp distflow pf_bf" begin
         @testset "3-bus SDPUBF pf_bf" begin
-            result = run_mc_pf(data, SDPUBFPowerModel, scs_solver)
+            result = solve_mc_pf(data, SDPUBFPowerModel, scs_solver)
 
             @test result["termination_status"] == OPTIMAL
             @test isapprox(result["objective"], 0; atol = 1e-2)
@@ -91,7 +91,7 @@
 
     # @testset "test sdp distflow pf_bf in full matrix form" begin
     #     @testset "3-bus SDPUBFKCLMX pf_bf" begin
-    #         result = run_mc_pf(data, SDPUBFKCLMXPowerModel, scs_solver)
+    #         result = solve_mc_pf(data, SDPUBFKCLMXPowerModel, scs_solver)
     #
     #         @test result["termination_status"] == OPTIMAL
     #         @test isapprox(result["objective"], 0; atol = 1e-2)
@@ -101,13 +101,13 @@
 
     @testset "test soc distflow pf_bf" begin
         @testset "3-bus SOCNLPUBF pf_bf" begin
-            result = run_mc_pf(data, SOCNLPUBFPowerModel, ipopt_solver)
+            result = solve_mc_pf(data, SOCNLPUBFPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 0; atol = 1e-1)
         end
         @testset "3-bus SOCConicUBF pf_bf" begin
-            result = run_mc_pf(data, SOCConicUBFPowerModel, scs_solver)
+            result = solve_mc_pf(data, SOCConicUBFPowerModel, scs_solver)
 
             @test result["termination_status"] == OPTIMAL
             @test isapprox(result["objective"], 0; atol = 1e-2)

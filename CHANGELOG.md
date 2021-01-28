@@ -2,6 +2,9 @@
 
 ## staged
 
+- depreciate run_ functions in favor of solve_
+- add support for `relax_integrality` (InfrastructureModels ~0.5.4)
+
 ## v0.10.1
 
 - Fix buspairs ref not getting built

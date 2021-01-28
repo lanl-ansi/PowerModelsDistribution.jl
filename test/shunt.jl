@@ -10,10 +10,10 @@
     data_diag_shunt = deepcopy(data)
     data_diag_shunt["shunt"]["1"]["bs"] = shunt["bs"].*[c==d for c in 1:3, d in 1:3]
 
-    sol_acp_diag = run_mc_pf(data_diag_shunt, ACPPowerModel, ipopt_solver)
-    sol_acp = run_mc_pf(data, ACPPowerModel, ipopt_solver)
-    sol_acr = run_mc_pf(data, ACRPowerModel, ipopt_solver)
-    sol_iv = run_mc_pf(data, IVRPowerModel, ipopt_solver)
+    sol_acp_diag = solve_mc_pf(data_diag_shunt, ACPPowerModel, ipopt_solver)
+    sol_acp = solve_mc_pf(data, ACPPowerModel, ipopt_solver)
+    sol_acr = solve_mc_pf(data, ACRPowerModel, ipopt_solver)
+    sol_iv = solve_mc_pf(data, IVRPowerModel, ipopt_solver)
 
     # check the results are different with only diagonal elements
     @test(!isapprox(sol_acp["solution"]["bus"]["2"]["vm"], sol_acp_diag["solution"]["bus"]["2"]["vm"]))

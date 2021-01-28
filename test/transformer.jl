@@ -4,21 +4,21 @@
     @testset "test transformer acp pf" begin
         @testset "2w transformer acp pf yy" begin
             eng = parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
-            sol = run_ac_mc_pf(eng, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
+            sol = solve_mc_pf(eng, ACPPowerModel, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
             @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.87451, 0.8613, 0.85348], Inf) <= 1.5E-5
             @test norm(sol["solution"]["bus"]["3"]["va"]-[-0.1, -120.4, 119.8], Inf) <= 0.1
         end
 
         @testset "2w transformer acp pf dy_lead" begin
             eng = parse_file("../test/data/opendss/ut_trans_2w_dy_lead.dss")
-            sol = run_ac_mc_pf(eng, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
+            sol = solve_mc_pf(eng, ACPPowerModel, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
             @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.87391, 0.86055, 0.85486], Inf) <= 1.5E-5
             @test norm(sol["solution"]["bus"]["3"]["va"]-[29.8, -90.4, 149.8], Inf) <= 0.1
         end
 
         @testset "2w transformer acp pf dy_lag" begin
             eng = parse_file("../test/data/opendss/ut_trans_2w_dy_lag.dss")
-            sol = run_ac_mc_pf(eng, ipopt_solver; make_si=false)
+            sol = solve_mc_pf(eng, ACPPowerModel, ipopt_solver; make_si=false)
             @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.92092, 0.91012, 0.90059], Inf) <= 1.5E-5
             @test norm(sol["solution"]["bus"]["3"]["va"]-[-30.0, -150.4, 89.8], Inf) <= 0.1
         end
@@ -27,21 +27,21 @@
     @testset "test transformer ivr pf" begin
         @testset "2w transformer ivr pf yy" begin
             eng = parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
-            sol = run_mc_pf(eng, IVRPowerModel, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
+            sol = solve_mc_pf(eng, IVRPowerModel, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
             @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.87451, 0.8613, 0.85348], Inf) <= 1.5E-5
             @test norm(sol["solution"]["bus"]["3"]["va"]-[-0.1, -120.4, 119.8], Inf) <= 0.1
         end
 
         @testset "2w transformer ivr pf dy_lead" begin
             eng = parse_file("../test/data/opendss/ut_trans_2w_dy_lead.dss")
-            sol = run_mc_pf(eng, IVRPowerModel, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
+            sol = solve_mc_pf(eng, IVRPowerModel, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
             @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.87391, 0.86055, 0.85486], Inf) <= 1.5E-5
             @test norm(sol["solution"]["bus"]["3"]["va"]-[29.8, -90.4, 149.8], Inf) <= 0.1
         end
 
         @testset "2w transformer ivr pf dy_lag" begin
             eng = parse_file("../test/data/opendss/ut_trans_2w_dy_lag.dss")
-            sol = run_mc_pf(eng, IVRPowerModel, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
+            sol = solve_mc_pf(eng, IVRPowerModel, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
             @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.92092, 0.91012, 0.90059], Inf) <= 1.5E-5
             @test norm(sol["solution"]["bus"]["3"]["va"]-[-30.0, -150.4, 89.8], Inf) <= 0.1
         end
@@ -50,21 +50,21 @@
     @testset "test transformer acr pf" begin
         @testset "2w transformer acr pf yy" begin
             eng = parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
-            sol = run_mc_pf(eng, ACRPowerModel, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
+            sol = solve_mc_pf(eng, ACRPowerModel, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
             @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.87451, 0.8613, 0.85348], Inf) <= 1.5E-5
             @test norm(sol["solution"]["bus"]["3"]["va"]-[-0.1, -120.4, 119.8], Inf) <= 0.1
         end
 
         @testset "2w transformer acr pf dy_lead" begin
             eng = parse_file("../test/data/opendss/ut_trans_2w_dy_lead.dss")
-            sol = run_mc_pf(eng, ACRPowerModel, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
+            sol = solve_mc_pf(eng, ACRPowerModel, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
             @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.87391, 0.86055, 0.85486], Inf) <= 1.5E-5
             @test norm(sol["solution"]["bus"]["3"]["va"]-[29.8, -90.4, 149.8], Inf) <= 0.1
         end
 
         @testset "2w transformer acr pf dy_lag" begin
             eng = parse_file("../test/data/opendss/ut_trans_2w_dy_lag.dss")
-            sol = run_mc_pf(eng, ACRPowerModel, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
+            sol = solve_mc_pf(eng, ACRPowerModel, ipopt_solver; solution_processors=[sol_polar_voltage!], make_si=false)
             @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.92092, 0.91012, 0.90059], Inf) <= 1.5E-5
             @test norm(sol["solution"]["bus"]["3"]["va"]-[-30.0, -150.4, 89.8], Inf) <= 0.1
         end
@@ -73,8 +73,8 @@
     @testset "2w transformer ac pf yy - banked transformers" begin
         eng1 = parse_file("../test/data/opendss/ut_trans_2w_yy_bank.dss")
         eng2 = parse_file("../test/data/opendss/ut_trans_2w_yy_bank.dss"; bank_transformers=false)
-        result1 = run_ac_mc_pf(eng1, ipopt_solver)
-        result2 = run_ac_mc_pf(eng2, ipopt_solver)
+        result1 = solve_mc_pf(eng1, ACPPowerModel, ipopt_solver)
+        result2 = solve_mc_pf(eng2, ACPPowerModel, ipopt_solver)
 
         @test result1["termination_status"] == LOCALLY_SOLVED
         @test result2["termination_status"] == LOCALLY_SOLVED
@@ -87,7 +87,7 @@
         @testset "3w transformer ac pf dyy - all non-zero"  begin
             file =
             eng = parse_file("../test/data/opendss/ut_trans_3w_dyy_1.dss")
-            sol = run_ac_mc_pf(eng, ipopt_solver; make_si=false)
+            sol = solve_mc_pf(eng, ACPPowerModel, ipopt_solver; make_si=false)
             @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.9318, 0.88828, 0.88581], Inf) <= 1.5E-5
             @test norm(sol["solution"]["bus"]["3"]["va"]-[30.1, -90.7, 151.2], Inf) <= 0.1
         end
@@ -95,7 +95,7 @@
         @testset "3w transformer ac pf dyy - some non-zero" begin
             file =
             eng = parse_file("../test/data/opendss/ut_trans_3w_dyy_2.dss")
-            sol = run_ac_mc_pf(eng, ipopt_solver; make_si=false)
+            sol = solve_mc_pf(eng, ACPPowerModel, ipopt_solver; make_si=false)
             #@test isapprox(vm(sol, eng, "3"), [0.93876, 0.90227, 0.90454], atol=1E-4)
             @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.93876, 0.90227, 0.90454], Inf) <= 1.5E-5
             @test norm(sol["solution"]["bus"]["3"]["va"]-[31.6, -88.8, 153.3], Inf) <= 0.1
@@ -103,14 +103,14 @@
 
         @testset "3w transformer ac pf dyy - all zero" begin
             eng = parse_file("../test/data/opendss/ut_trans_3w_dyy_3.dss")
-            sol = run_ac_mc_pf(eng, ipopt_solver; make_si=false)
+            sol = solve_mc_pf(eng, ACPPowerModel, ipopt_solver; make_si=false)
             @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.97047, 0.93949, 0.946], Inf) <= 1.5E-5
             @test norm(sol["solution"]["bus"]["3"]["va"]-[30.6, -90.0, 151.9], Inf) <= 0.1
         end
 
         @testset "3w transformer ac pf dyy - %loadloss=0" begin
             eng = parse_file("../test/data/opendss/ut_trans_3w_dyy_3_loadloss.dss")
-            sol = run_ac_mc_pf(eng, ipopt_solver; make_si=false)
+            sol = solve_mc_pf(eng, ACPPowerModel, ipopt_solver; make_si=false)
             @test norm(sol["solution"]["bus"]["3"]["vm"]-[0.969531, 0.938369, 0.944748], Inf) <= 1.5E-5
             @test norm(sol["solution"]["bus"]["3"]["va"]-[30.7, -90.0, 152.0], Inf) <= 0.1
         end
@@ -143,23 +143,23 @@
     @testset "linearized transformers" begin
         @testset "2w_dy_lead" begin
             eng = parse_file("../test/data/opendss/ut_trans_2w_dy_lead.dss")
-            sol = run_mc_opf(eng, LPUBFDiagPowerModel, ipopt_solver)
+            sol = solve_mc_opf(eng, LPUBFDiagPowerModel, ipopt_solver)
             @test norm(sol["solution"]["bus"]["3"]["w"]-[0.76674, 0.74840, 0.73846], Inf) <= 1E-4
         end
         @testset "3w_dyy_1" begin
             eng = parse_file("../test/data/opendss/ut_trans_3w_dyy_1.dss")
-            sol = run_mc_opf(eng, LPUBFDiagPowerModel, ipopt_solver)
+            sol = solve_mc_opf(eng, LPUBFDiagPowerModel, ipopt_solver)
             @test norm(sol["solution"]["bus"]["3"]["w"]-[0.86095, 0.81344, 0.80480], Inf) <= 1E-4
         end
         @testset "3w_dyy_2" begin
             eng = parse_file("../test/data/opendss/ut_trans_3w_dyy_2.dss")
-            sol = run_mc_opf(eng, LPUBFDiagPowerModel, ipopt_solver)
+            sol = solve_mc_opf(eng, LPUBFDiagPowerModel, ipopt_solver)
             @test norm(sol["solution"]["bus"]["3"]["w"]-[0.87086, 0.83270, 0.83208], Inf) <= 1E-4
         end
         @testset "2w_dy_lead_small_series_impedance" begin
             eng = parse_file("../test/data/opendss/ut_trans_2w_dy_lead_small_series_impedance.dss", data_model=MATHEMATICAL)
-            sola = run_mc_opf(eng, LPUBFDiagPowerModel, ipopt_solver)
-            solb = run_mc_opf(eng, ACPPowerModel, ipopt_solver)
+            sola = solve_mc_opf(eng, LPUBFDiagPowerModel, ipopt_solver)
+            solb = solve_mc_opf(eng, ACPPowerModel, ipopt_solver)
             @test norm(sola["solution"]["bus"]["1"]["w"]-solb["solution"]["bus"]["1"]["vm"].^2, Inf) <= 1.2E-3
             @test norm(sola["solution"]["branch"]["1"]["pf"]-solb["solution"]["branch"]["1"]["pf"], Inf) <= 1E-3
         end
