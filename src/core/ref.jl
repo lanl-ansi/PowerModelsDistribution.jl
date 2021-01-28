@@ -328,7 +328,7 @@ function _PM.calc_buspair_parameters(buses, branches, conductor_ids, is_multicon
             end
         end
     end
-
+    return buspairs
 end
 
 
