@@ -8,12 +8,32 @@ function constraint_mc_voltage_magnitude_only(pm::_PM.AbstractWModels, nw::Int, 
 end
 
 
+""
 function constraint_mc_switch_state_closed(pm::_PM.AbstractWModels, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
     w_fr = var(pm, nw, :w, f_bus)
     w_to = var(pm, nw, :w, t_bus)
 
     for (idx, (fc, tc)) in enumerate(zip(f_connections, t_connections))
         JuMP.@constraint(pm.model, w_fr[fc] == w_to[tc])
+    end
+end
+
+
+""
+function constraint_mc_switch_state_on_off(pm::_PM.AbstractWModels, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int}; relax::Bool=false)
+    w_fr = var(pm, nw, :w, f_bus)
+    w_to = var(pm, nw, :w, t_bus)
+
+    z = var(pm, nw, :switch_state, i)
+
+    for (fc, tc) in zip(f_connections, t_connections)
+        if relax
+            M = 1e20
+            JuMP.@constraint(pm.model, w_fr[fc] - w_to[tc] <=  M * (1-z))
+            JuMP.@constraint(pm.model, w_fr[fc] - w_to[tc] >= -M * (1-z))
+        else
+            JuMP.@constraint(pm.model, z => {w_fr[fc] == w_to[tc]})
+        end
     end
 end
 
