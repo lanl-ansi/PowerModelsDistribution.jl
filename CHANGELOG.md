@@ -2,6 +2,8 @@
 
 ## staged
 
+## v0.10.1
+
 - Fix buspairs ref not getting built
 - Fix bug in storage linear constraints and mixed integer variable instantiation
 - Add support for ideal (lossless) switches
