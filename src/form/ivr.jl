@@ -647,3 +647,56 @@ function constraint_mc_switch_current_limit(pm::_PM.AbstractIVRModel, nw::Int, f
         JuMP.@constraint(pm.model, crsw[c]^2 + cisw[c]^2 <= rating[idx]^2)
     end
 end
+
+
+""
+function constraint_mc_switch_state_on_off(pm::_PM.AbstractIVRModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int}; relax::Bool=false)
+    vr_fr = var(pm, nw, :vr, f_bus)
+    vr_to = var(pm, nw, :vr, t_bus)
+
+    vi_fr = var(pm, nw, :vi, f_bus)
+    vi_to = var(pm, nw, :vi, t_bus)
+
+    z = var(pm, nw, :switch_state, i)
+
+    for (idx,(fc,tc)) in enumerate(zip(f_connections, t_connections))
+        if relax
+            M = 1e20
+            JuMP.@constraint(pm.model, vr_fr[fc] - vr_to[tc] <=  M * (1-z))
+            JuMP.@constraint(pm.model, vr_fr[fc] - vr_to[tc] >= -M * (1-z))
+
+            JuMP.@constraint(pm.model, vi_fr[fc] - vi_to[tc] <=  M * (1-z))
+            JuMP.@constraint(pm.model, vi_fr[fc] - vi_to[tc] >= -M * (1-z))
+        else
+            JuMP.@constraint(pm.model, z => {vr_fr[fc] == vr_to[tc]})
+            JuMP.@constraint(pm.model, z => {vi_fr[fc] == vi_to[tc]})
+        end
+    end
+end
+
+
+""
+function constraint_mc_switch_power_on_off(pm::_PM.AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}; relax::Bool=false)
+    i, f_bus, t_bus = f_idx
+
+    crsw = var(pm, nw, :crsw, f_idx)
+    cisw = var(pm, nw, :cisw, f_idx)
+
+    z = var(pm, nw, :switch_state, i)
+
+    connections = ref(pm, nw, :switch, i)["f_connections"]
+
+    rating = get(ref(pm, nw, :switch, i), "c_rating_a", fill(1e20, length(connections)))
+
+    for (idx, c) in enumerate(connections)
+        if relax
+            JuMP.@constraint(pm.model, crsw[c] <=  rating[idx] * z)
+            JuMP.@constraint(pm.model, crsw[c] >= -rating[idx] * z)
+            JuMP.@constraint(pm.model, cisw[c] <=  rating[idx] * z)
+            JuMP.@constraint(pm.model, cisw[c] >= -rating[idx] * z)
+        else
+            JuMP.@constraint(pm.model, !z => {crsw[c] == 0.0})
+            JuMP.@constraint(pm.model, !z => {cisw[c] == 0.0})
+        end
+    end
+end

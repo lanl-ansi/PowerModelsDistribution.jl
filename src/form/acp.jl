@@ -72,6 +72,36 @@ end
 
 
 ""
+function constraint_mc_switch_state_on_off(pm::_PM.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int}; relax::Bool=false)
+    vm_fr = var(pm, nw, :vm, f_bus)
+    vm_to = var(pm, nw, :vm, t_bus)
+
+    va_fr = var(pm, nw, :va, f_bus)
+    va_to = var(pm, nw, :va, t_bus)
+
+    z = var(pm, nw, :switch_state, i)
+
+    for (idx,(fc,tc)) in enumerate(zip(f_connections, t_connections))
+        if relax
+            vm_fr_ub = JuMP.has_upper_bound(vm_fr[fc]) ? JuMP.upper_bound(vm_fr[fc]) :  1e20
+            vm_to_lb = JuMP.has_lower_bound(vm_to[tc]) ? JuMP.lower_bound(vm_to[tc]) : -1e20
+            va_fr_ub = JuMP.has_upper_bound(va_fr[tc]) ? JuMP.upper_bound(va_fr[fc]) :  1e20
+            va_to_lb = JuMP.has_lower_bound(va_to[tc]) ? JuMP.lower_bound(va_to[tc]) : -1e20
+
+            M = 1e20
+            JuMP.@constraint(pm.model, vm_fr[fc] - vm_to[tc] <=  M * (1-z))
+            JuMP.@constraint(pm.model, vm_fr[fc] - vm_to[tc] >= -M * (1-z))
+            JuMP.@constraint(pm.model, va_fr[fc] - va_to[tc] <=  M * (1-z))
+            JuMP.@constraint(pm.model, va_fr[fc] - va_to[tc] >= -M * (1-z))
+        else
+            JuMP.@constraint(pm.model, z => {vm_fr[fc] == vm_to[tc]})
+            JuMP.@constraint(pm.model, z => {va_fr[fc] == va_to[tc]})
+        end
+    end
+end
+
+
+""
 function constraint_mc_power_balance_slack(pm::_PM.AbstractACPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
     vm   = var(pm, nw, :vm, i)
     va   = var(pm, nw, :va, i)

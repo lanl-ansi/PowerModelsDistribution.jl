@@ -91,6 +91,32 @@ end
 
 
 ""
+function constraint_mc_switch_state_on_off(pm::_PM.AbstractACRModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int}; relax::Bool=false)
+    vr_fr = var(pm, nw, :vr, f_bus)
+    vr_to = var(pm, nw, :vr, t_bus)
+
+    vi_fr = var(pm, nw, :vi, f_bus)
+    vi_to = var(pm, nw, :vi, t_bus)
+
+    z = var(pm, nw, :switch_state, i)
+
+    for (idx,(fc,tc)) in enumerate(zip(f_connections, t_connections))
+        if relax
+            M = 1e20
+            JuMP.@constraint(pm.model, vr_fr[fc] - vr_to[tc] <=  M * (1-z))
+            JuMP.@constraint(pm.model, vr_fr[fc] - vr_to[tc] >= -M * (1-z))
+
+            JuMP.@constraint(pm.model, vi_fr[fc] - vi_to[tc] <=  M * (1-z))
+            JuMP.@constraint(pm.model, vi_fr[fc] - vi_to[tc] >= -M * (1-z))
+        else
+            JuMP.@constraint(pm.model, z => {vr_fr[fc] == vr_to[tc]})
+            JuMP.@constraint(pm.model, z => {vi_fr[fc] == vi_to[tc]})
+        end
+    end
+end
+
+
+""
 function variable_mc_bus_voltage_real_on_off(pm::_PM.AbstractACRModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
     vr = var(pm, nw)[:vr] = Dict(i => JuMP.@variable(pm.model,
