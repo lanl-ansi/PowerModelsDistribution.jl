@@ -61,6 +61,18 @@ function objective_mc_min_load_setpoint_delta_simple(pm::_PM.AbstractPowerModel)
 end
 
 
+"simplified minimum load delta objective (continuous load shed)"
+function objective_mc_min_load_setpoint_delta_simple_switch(pm::_PM.AbstractPowerModel)
+    JuMP.@objective(pm.model, Min,
+        sum(
+            sum( ((1 - var(pm, n, :z_demand, i))) for i in keys(nw_ref[:load])) +
+            sum( ((1 - var(pm, n, :z_shunt, i))) for (i,shunt) in nw_ref[:shunt]) +
+            sum( var(pm, n, :switch_state, l) for l in ids(pm, n, :switch_dispatchable))
+        for (n, nw_ref) in nws(pm))
+    )
+end
+
+
 "maximum loadability objective (continuous load shed) with storage"
 function objective_mc_max_load_setpoint(pm::_PM.AbstractPowerModel)
     load_weight = Dict(n => Dict(i => get(load, "weight", 1.0) for (i,load) in ref(pm, n, :load)) for n in nw_ids(pm))
@@ -95,12 +107,41 @@ end
 
 
 ""
+function objective_mc_min_fuel_cost_switch(pm::_PM.AbstractPowerModel; kwargs...)
+    model = _PM.check_gen_cost_models(pm)
+
+    if model == 1
+        return objective_mc_min_fuel_cost_pwl_switch(pm; kwargs...)
+    elseif model == 2
+        return objective_mc_min_fuel_cost_polynomial_switch(pm; kwargs...)
+    else
+        Memento.error(_LOGGER, "Only cost models of types 1 and 2 are supported at this time, given cost model type of $(model)")
+    end
+
+end
+
+
+
+""
 function objective_mc_min_fuel_cost_pwl(pm::_PM.AbstractPowerModel; kwargs...)
     objective_mc_variable_pg_cost(pm; kwargs...)
 
     return JuMP.@objective(pm.model, Min,
         sum(
             sum( var(pm, n, :pg_cost, i) for (i,gen) in nw_ref[:gen])
+        for (n, nw_ref) in nws(pm))
+    )
+end
+
+
+""
+function objective_mc_min_fuel_cost_pwl_switch(pm::_PM.AbstractPowerModel; kwargs...)
+    objective_mc_variable_pg_cost(pm; kwargs...)
+
+    return JuMP.@objective(pm.model, Min,
+        sum(
+            sum( var(pm, n, :pg_cost, i) for (i,gen) in nw_ref[:gen]) +
+            sum( var(pm, n, :switch_state, l) for l in ids(pm, n, :switch_dispatchable))
         for (n, nw_ref) in nws(pm))
     )
 end
@@ -148,6 +189,18 @@ function objective_mc_min_fuel_cost_polynomial(pm::_PM.AbstractPowerModel; kwarg
 end
 
 
+""
+function objective_mc_min_fuel_cost_polynomial_switch(pm::_PM.AbstractPowerModel; kwargs...)
+    order = _PM.calc_max_cost_index(pm.data)-1
+
+    if order <= 2
+        return _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm; kwargs...)
+    else
+        return _objective_mc_min_fuel_cost_polynomial_nl_switch(pm; kwargs...)
+    end
+end
+
+
 "gen connections adaptation of min fuel cost polynomial linquad objective"
 function _objective_mc_min_fuel_cost_polynomial_linquad(pm::_PM.AbstractPowerModel; report::Bool=true)
     gen_cost = Dict()
@@ -170,6 +223,34 @@ function _objective_mc_min_fuel_cost_polynomial_linquad(pm::_PM.AbstractPowerMod
     return JuMP.@objective(pm.model, Min,
         sum(
             sum( gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] )
+        for (n, nw_ref) in nws(pm))
+    )
+end
+
+
+"gen connections adaptation of min fuel cost polynomial linquad objective"
+function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::_PM.AbstractPowerModel; report::Bool=true)
+    gen_cost = Dict()
+    for (n, nw_ref) in nws(pm)
+        for (i,gen) in nw_ref[:gen]
+            pg = sum( var(pm, n, :pg, i)[c] for c in gen["connections"] )
+
+            if length(gen["cost"]) == 1
+                gen_cost[(n,i)] = gen["cost"][1]
+            elseif length(gen["cost"]) == 2
+                gen_cost[(n,i)] = gen["cost"][1]*pg + gen["cost"][2]
+            elseif length(gen["cost"]) == 3
+                gen_cost[(n,i)] = gen["cost"][1]*pg^2 + gen["cost"][2]*pg + gen["cost"][3]
+            else
+                gen_cost[(n,i)] = 0.0
+            end
+        end
+    end
+
+    return JuMP.@objective(pm.model, Min,
+        sum(
+            sum( gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] ) +
+            sum( var(pm, n, :switch_state, l) for l in ids(pm, n, :switch_dispatchable))
         for (n, nw_ref) in nws(pm))
     )
 end
@@ -207,6 +288,43 @@ function _objective_mc_min_fuel_cost_polynomial_linquad(pm::_PM.AbstractIVRModel
 end
 
 
+"Multiconductor adaptation of min fuel cost polynomial linquad objective"
+function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::_PM.AbstractIVRModel; report::Bool=true)
+    gen_cost = Dict()
+    dcline_cost = Dict()
+    switch_state = Dict()
+
+    for (n, nw_ref) in nws(pm)
+        for (i,gen) in nw_ref[:gen]
+            bus = gen["gen_bus"]
+
+            #to avoid function calls inside of @NLconstraint:
+            pg = var(pm, n, :pg, i)
+            if length(gen["cost"]) == 1
+                gen_cost[(n,i)] = gen["cost"][1]
+            elseif length(gen["cost"]) == 2
+                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, gen["cost"][1]*sum(pg[c] for c in gen["connections"]) + gen["cost"][2])
+            elseif length(gen["cost"]) == 3
+                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, gen["cost"][1]*sum(pg[c] for c in gen["connections"])^2 + gen["cost"][2]*sum(pg[c] for c in gen["connections"]) + gen["cost"][3])
+            else
+                gen_cost[(n,i)] = 0.0
+            end
+        end
+        for i in ids(pm, n, :switch_dispatchable)
+            switch_state[(n,i)] = var(pm, n, :switch_state, i)
+        end
+    end
+
+    return JuMP.@NLobjective(pm.model, Min,
+        sum(
+            sum(    gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] )
+            + sum( dcline_cost[(n,i)] for (i,dcline) in nw_ref[:dcline] )
+            + sum( switch_state[(n,i)] for i in ids(pm, n, :switch_dispatchable))
+        for (n, nw_ref) in nws(pm))
+    )
+end
+
+
 ""
 function _objective_mc_min_fuel_cost_polynomial_nl(pm::_PM.AbstractPowerModel; report::Bool=true)
     gen_cost = Dict()
@@ -233,6 +351,38 @@ function _objective_mc_min_fuel_cost_polynomial_nl(pm::_PM.AbstractPowerModel; r
     return JuMP.@NLobjective(pm.model, Min,
         sum(
             sum( gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] )
+        for (n, nw_ref) in nws(pm))
+    )
+end
+
+
+""
+function _objective_mc_min_fuel_cost_polynomial_nl_switch(pm::_PM.AbstractPowerModel; report::Bool=true)
+    gen_cost = Dict()
+    for (n, nw_ref) in nws(pm)
+        for (i,gen) in nw_ref[:gen]
+            pg = sum( var(pm, n, :pg, i)[c] for c in gen["connections"] )
+
+            cost_rev = reverse(gen["cost"])
+            if length(cost_rev) == 1
+                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, cost_rev[1])
+            elseif length(cost_rev) == 2
+                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, cost_rev[1] + cost_rev[2]*pg)
+            elseif length(cost_rev) == 3
+                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, cost_rev[1] + cost_rev[2]*pg + cost_rev[3]*pg^2)
+            elseif length(cost_rev) >= 4
+                cost_rev_nl = cost_rev[4:end]
+                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, cost_rev[1] + cost_rev[2]*pg + cost_rev[3]*pg^2 + sum( v*pg^(d+3) for (d,v) in enumerate(cost_rev_nl)) )
+            else
+                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, 0.0)
+            end
+        end
+    end
+
+    return JuMP.@NLobjective(pm.model, Min,
+        sum(
+            sum( gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] ) +
+            sum( var(pm, n, :switch_state, l) for l in ids(pm, n, :switch_dispatchable))
         for (n, nw_ref) in nws(pm))
     )
 end

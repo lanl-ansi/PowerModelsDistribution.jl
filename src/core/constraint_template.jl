@@ -6,6 +6,63 @@ end
 
 
 ""
+function constraint_mc_switch_state(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    switch = ref(pm, nw, :switch, i)
+    f_bus = switch["f_bus"]
+    t_bus = switch["t_bus"]
+
+    f_idx = (i, f_bus, t_bus)
+
+    if switch["state"] == CLOSED
+        constraint_mc_switch_state_closed(pm, nw, f_bus, t_bus, switch["f_connections"], switch["t_connections"])
+    else
+        constraint_mc_switch_state_open(pm, nw, f_idx)
+    end
+end
+
+
+""
+function constraint_mc_switch_state_on_off(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw, relax::Bool=false)
+    switch = ref(pm, nw, :switch, i)
+    f_bus = switch["f_bus"]
+    t_bus = switch["t_bus"]
+
+    f_idx = (i, f_bus, t_bus)
+
+    if switch["dispatchable"] == YES
+        constraint_mc_switch_state_on_off(pm, nw, i, f_bus, t_bus, switch["f_connections"], switch["t_connections"]; relax=relax)
+        constraint_mc_switch_power_on_off(pm, nw, f_idx; relax=relax)
+    else
+        if switch["state"] == CLOSED
+            constraint_mc_switch_state_closed(pm, nw, f_bus, t_bus, switch["f_connections"], switch["t_connections"])
+        else
+            constraint_mc_switch_state_open(pm, nw, f_idx)
+        end
+    end
+end
+
+
+function constraint_mc_switch_thermal_limit(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    switch = ref(pm, nw, :switch, i)
+
+    if haskey(switch, "thermal_rating")
+        f_idx = (i, switch["f_bus"], switch["t_bus"])
+        constraint_mc_switch_thermal_limit(pm, nw, f_idx, switch["fr_connections"], switch["thermal_rating"])
+    end
+end
+
+
+function constraint_mc_switch_current_limit(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
+    switch = ref(pm, nw, :switch, i)
+
+    if haskey(switch, "current_rating")
+        f_idx = (i, switch["f_bus"], switch["t_bus"])
+        constraint_mc_switch_current_limit(pm, nw, f_idx, switch["fr_connections"], switch["current_rating"])
+    end
+end
+
+
+""
 function constraint_mc_power_balance_slack(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm.cnw)
     bus = ref(pm, nw, :bus, i)
     bus_arcs = ref(pm, nw, :bus_arcs_conns_branch, i)

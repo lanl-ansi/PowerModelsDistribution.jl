@@ -355,11 +355,13 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
         math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
 
         math_obj["state"] = get(eng_obj, "state", CLOSED)
+        math_obj["dispatchable"] = get(eng_obj, "dispatchable", YES)
 
         # OPF bounds
-        for (fr_key, to_key) in [("cm_ub", "c_rating")]
-            if haskey(eng_obj, fr_key)
-                math_obj[to_key] = eng_obj[fr_key]
+        for (f_key, t_key) in [("cm_ub", "c_rating_a"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
+            ("sm_ub", "rate_a"), ("sm_ub_b", "rate_b"), ("sm_ub_c", "rate_c")]
+            if haskey(eng_obj, f_key)
+                math_obj[t_key] = eng_obj[f_key]
             end
         end
 
@@ -369,8 +371,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
             _apply_linecode!(eng_obj, data_eng)
         end
 
-        if true
-        # if !all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && !all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0)) # TODO enable real switches
+        if !all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && !all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0))
             # build virtual bus
 
             f_bus = deepcopy(data_math["bus"]["$(math_obj["f_bus"])"])
@@ -379,7 +380,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
             bus_obj = Dict{String,Any}(
                 "name" => "_virtual_bus.switch.$name",
                 "bus_i" => length(data_math["bus"])+1,
-                "bus_type" => get(eng_obj, "state", CLOSED) == OPEN ? 4 : 1,
+                "bus_type" => get(eng_obj, "status", ENABLED) == DISABLED ? 4 : 1,
                 "terminals" => t_bus["terminals"],  # connected to the switch on the to-side
                 "grounded" => t_bus["grounded"],  # connected to the switch on the to-side
                 "vmin" => f_bus["vmin"],
@@ -387,29 +388,17 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "index" => length(data_math["bus"])+1,
             )
 
-            #= TODO enable real switches
-            # math_obj["t_bus"] = bus_obj["bus_i"]
-            # data_math["bus"]["$(bus_obj["index"])"] = bus_obj
-            =#
-
-            # TODO remove after enabling real switches
-            if all(isapprox.(get(eng_obj, "rs", zeros(nphases, nphases)), 0))
-                eng_obj["rs"] = fill(1e-4, nphases, nphases)
-            end
-
-            if all(isapprox.(get(eng_obj, "xs", zeros(nphases, nphases)), 0))
-                eng_obj["xs"] = fill(1e-3, nphases, nphases)
-            end
+            math_obj["t_bus"] = bus_obj["bus_i"]
+            data_math["bus"]["$(bus_obj["index"])"] = bus_obj
 
             branch_obj = _init_math_obj("line", name, eng_obj, length(data_math["branch"])+1)
 
             _branch_obj = Dict{String,Any}(
                 "name" => "_virtual_branch.switch.$name",
                 "source_id" => "_virtual_branch.switch.$name",
-                # "f_bus" => bus_obj["bus_i"],  # TODO enable real switches
-                "f_bus" => data_math["bus_lookup"][eng_obj["f_bus"]],
+                "f_bus" => bus_obj["bus_i"],
                 "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
-                "f_connections" => eng_obj["f_connections"],  # TODO, change to t_connections, the virtual branch connects to the switch on the to-side
+                "f_connections" => eng_obj["t_connections"],  # the virtual branch connects to the switch on the to-side
                 "t_connections" => eng_obj["t_connections"],  # should be identical to the switch's to-side connections
                 "br_r" => _impedance_conversion(data_eng, eng_obj, "rs"),
                 "br_x" => _impedance_conversion(data_eng, eng_obj, "xs"),
@@ -419,18 +408,17 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "b_to" => zeros(nphases, nphases),
                 "angmin" => fill(-60.0, nphases),
                 "angmax" => fill( 60.0, nphases),
-                "br_status" => get(eng_obj, "state", CLOSED) == OPEN || eng_obj["status"] == DISABLED ? 0 : 1,
+                "br_status" => eng_obj["status"] == DISABLED ? 0 : 1,
             )
 
             merge!(branch_obj, _branch_obj)
 
             data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 
-            map_to = ["branch.$(branch_obj["index"])"]
-            # map_to = [map_to, "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"]  # TODO enable real switches
+            map_to = [map_to, "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"]
         end
 
-        # data_math["switch"]["$(math_obj["index"])"] = math_obj  # TODO enable real switches
+        data_math["switch"]["$(math_obj["index"])"] = math_obj
 
         push!(data_math["map"], Dict{String,Any}(
             "from" => name,

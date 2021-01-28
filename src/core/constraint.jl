@@ -108,3 +108,51 @@ function constraint_mc_storage_thermal_limit(pm::_PM.AbstractPowerModel, nw::Int
 
     JuMP.@constraint(pm.model, ps.^2 + qs.^2 .<= rating.^2)
 end
+
+
+""
+function constraint_mc_switch_state_open(pm::_PM.AbstractPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int})
+    psw = var(pm, nw, :psw, f_idx)
+    qsw = var(pm, nw, :qsw, f_idx)
+
+    JuMP.@constraint(pm.model, psw .== 0.0)
+    JuMP.@constraint(pm.model, qsw .== 0.0)
+end
+
+
+""
+function constraint_mc_switch_power_on_off(pm::_PM.AbstractPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}; relax::Bool=false)
+    i, f_bus, t_bus = f_idx
+
+    psw = var(pm, nw, :psw, f_idx)
+    qsw = var(pm, nw, :qsw, f_idx)
+
+    z = var(pm, nw, :switch_state, i)
+
+    connections = ref(pm, nw, :switch, i)["f_connections"]
+
+    rating = get(ref(pm, nw, :switch, i), "rate_a", fill(1e20, length(connections)))
+
+    for (idx, c) in enumerate(connections)
+        if relax
+            JuMP.@constraint(pm.model, psw[c] <=  rating[idx] * z)
+            JuMP.@constraint(pm.model, psw[c] >= -rating[idx] * z)
+            JuMP.@constraint(pm.model, qsw[c] <=  rating[idx] * z)
+            JuMP.@constraint(pm.model, qsw[c] >= -rating[idx] * z)
+        else
+            JuMP.@constraint(pm.model, !z => {psw[c] == 0.0})
+            JuMP.@constraint(pm.model, !z => {qsw[c] == 0.0})
+        end
+    end
+end
+
+
+""
+function constraint_switch_thermal_limit(pm::_PM.AbstractPowerModel, n::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
+    psw = var(pm, n, :psw, f_idx)
+    qsw = var(pm, n, :qsw, f_idx)
+
+    for (idx, c) in enumerate(connections)
+        JuMP.@constraint(pm.model, psw[c]^2 + qsw[c]^2 <= rating[idx]^2)
+    end
+end

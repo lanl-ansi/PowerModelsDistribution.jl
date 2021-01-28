@@ -233,7 +233,8 @@ function constraint_mc_current_balance(pm::_PM.AbstractIVRModel, nw::Int, i::Int
     ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
 
     for (idx, t) in ungrounded_terminals
-        JuMP.@NLconstraint(pm.model,  sum(cr[a][t] for (a, conns) in bus_arcs if t in conns)
+        @smart_constraint(pm.model,  [cr, crd, crg, crs, crsw, crt, vr],
+                                      sum(cr[a][t] for (a, conns) in bus_arcs if t in conns)
                                     + sum(crsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
                                     + sum(crt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
                                     ==
@@ -242,7 +243,8 @@ function constraint_mc_current_balance(pm::_PM.AbstractIVRModel, nw::Int, i::Int
                                     - sum(crd[d][t]         for (d, conns) in bus_loads if t in conns)
                                     - sum( Gt[idx,jdx]*vr[u] -Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals) # shunts
                                     )
-        JuMP.@NLconstraint(pm.model, sum(ci[a][t] for (a, conns) in bus_arcs if t in conns)
+        @smart_constraint(pm.model, [ci, cid, cig, cis, cisw, cit, vi],
+                                      sum(ci[a][t] for (a, conns) in bus_arcs if t in conns)
                                     + sum(cisw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
                                     + sum(cit[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
                                     ==
@@ -608,5 +610,93 @@ function constraint_mc_generator_power_delta(pm::_PM.IVRPowerModel, nw::Int, id:
         sol(pm, nw, :gen, id)[:cig_bus] = JuMP.Containers.DenseAxisArray(cig_bus, connections)
         sol(pm, nw, :gen, id)[:pg] = JuMP.Containers.DenseAxisArray(pg, connections)
         sol(pm, nw, :gen, id)[:qg] = JuMP.Containers.DenseAxisArray(qg, connections)
+    end
+end
+
+""
+function constraint_mc_switch_state_open(pm::_PM.AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int})
+    crsw = var(pm, nw, :crsw, f_idx)
+    cisw = var(pm, nw, :cisw, f_idx)
+
+    JuMP.@constraint(pm.model, crsw .== 0.0)
+    JuMP.@constraint(pm.model, cisw .== 0.0)
+end
+
+
+""
+function constraint_mc_switch_state_closed(pm::_PM.AbstractIVRModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
+    vr_fr = var(pm, nw, :vr, f_bus)
+    vr_to = var(pm, nw, :vr, t_bus)
+
+    vi_fr = var(pm, nw, :vi, f_bus)
+    vi_to = var(pm, nw, :vi, t_bus)
+
+    for (idx,(fc,tc)) in enumerate(zip(f_connections, t_connections))
+        JuMP.@constraint(pm.model, vr_fr[fc] == vr_to[tc])
+        JuMP.@constraint(pm.model, vi_fr[fc] == vi_to[tc])
+    end
+end
+
+
+""
+function constraint_mc_switch_current_limit(pm::_PM.AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
+    crsw = var(pm, nw, :crsw, f_idx)
+    cisw = var(pm, nw, :cisw, f_idx)
+
+    for (idx, c) in enumerate(connections)
+        JuMP.@constraint(pm.model, crsw[c]^2 + cisw[c]^2 <= rating[idx]^2)
+    end
+end
+
+
+""
+function constraint_mc_switch_state_on_off(pm::_PM.AbstractIVRModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int}; relax::Bool=false)
+    vr_fr = var(pm, nw, :vr, f_bus)
+    vr_to = var(pm, nw, :vr, t_bus)
+
+    vi_fr = var(pm, nw, :vi, f_bus)
+    vi_to = var(pm, nw, :vi, t_bus)
+
+    z = var(pm, nw, :switch_state, i)
+
+    for (idx,(fc,tc)) in enumerate(zip(f_connections, t_connections))
+        if relax
+            M = 1e20
+            JuMP.@constraint(pm.model, vr_fr[fc] - vr_to[tc] <=  M * (1-z))
+            JuMP.@constraint(pm.model, vr_fr[fc] - vr_to[tc] >= -M * (1-z))
+
+            JuMP.@constraint(pm.model, vi_fr[fc] - vi_to[tc] <=  M * (1-z))
+            JuMP.@constraint(pm.model, vi_fr[fc] - vi_to[tc] >= -M * (1-z))
+        else
+            JuMP.@constraint(pm.model, z => {vr_fr[fc] == vr_to[tc]})
+            JuMP.@constraint(pm.model, z => {vi_fr[fc] == vi_to[tc]})
+        end
+    end
+end
+
+
+""
+function constraint_mc_switch_power_on_off(pm::_PM.AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}; relax::Bool=false)
+    i, f_bus, t_bus = f_idx
+
+    crsw = var(pm, nw, :crsw, f_idx)
+    cisw = var(pm, nw, :cisw, f_idx)
+
+    z = var(pm, nw, :switch_state, i)
+
+    connections = ref(pm, nw, :switch, i)["f_connections"]
+
+    rating = get(ref(pm, nw, :switch, i), "c_rating_a", fill(1e20, length(connections)))
+
+    for (idx, c) in enumerate(connections)
+        if relax
+            JuMP.@constraint(pm.model, crsw[c] <=  rating[idx] * z)
+            JuMP.@constraint(pm.model, crsw[c] >= -rating[idx] * z)
+            JuMP.@constraint(pm.model, cisw[c] <=  rating[idx] * z)
+            JuMP.@constraint(pm.model, cisw[c] >= -rating[idx] * z)
+        else
+            JuMP.@constraint(pm.model, !z => {crsw[c] == 0.0})
+            JuMP.@constraint(pm.model, !z => {cisw[c] == 0.0})
+        end
     end
 end

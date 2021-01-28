@@ -499,7 +499,7 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
 
         if defaults["switch"]
             eng_obj["state"] = CLOSED
-            eng_obj["dispatchable"] = NO
+            eng_obj["dispatchable"] = YES
 
             for key in ["g_fr", "b_fr", "g_to", "b_to"]
                 delete!(eng_obj, key)

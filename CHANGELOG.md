@@ -2,6 +2,7 @@
 
 ## staged
 
+- Add support for ideal (lossless) switches
 - Fix bug in handling of dss edit command
 - Fix bug in correctly tracking current transformer winding
 - Fixes bug in assignment of variables' start values over active conductors/connections

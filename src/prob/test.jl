@@ -4,7 +4,7 @@ function _run_mc_mn_opb(data::Union{Dict{String,<:Any},String}, model_type::Type
 end
 
 
-"Constructor for Optimal Power Flow"
+"Constructor for Optimal Power Balance"
 function _build_mc_mn_opb(pm::_PM.AbstractPowerModel)
     for (n, network) in nws(pm)
         variable_mc_generator_power(pm; nw=n)

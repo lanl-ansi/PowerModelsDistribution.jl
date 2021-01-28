@@ -70,18 +70,6 @@
         @test all(isapprox(sum(sol["solution"]["voltage_source"]["source"][field]), sum(sol2["solution"]["voltage_source"]["source"][field]); atol=1e-8) for field in ["pg", "qg"])
     end
 
-    @testset "3-bus balanced w/ switch acp pf" begin
-        pmd = parse_file("../test/data/opendss/case3_balanced_switch.dss")
-        sol = run_mc_pf(pmd, ACPPowerModel, ipopt_solver; make_si=false)
-
-        @test sol["termination_status"] == LOCALLY_SOLVED
-
-        for (bus, va, vm) in zip(["sourcebus", "primary", "loadbus"], [0.0, 0.0, -0.04], [0.9959, 0.995729, 0.985454])
-            @test all(isapprox.(sol["solution"]["bus"][bus]["va"], [0, -120, 120] .+ va; atol=0.2))
-            @test all(isapprox.(sol["solution"]["bus"][bus]["vm"], vm; atol=1e-3))
-        end
-    end
-
     @testset "3-bus unbalanced acp pf" begin
         sol = run_mc_pf(case3_unbalanced, ACPPowerModel, ipopt_solver; make_si=false)
 
