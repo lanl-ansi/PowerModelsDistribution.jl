@@ -144,3 +144,31 @@ function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i::Int, termin
         sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
 end
+
+
+"Neglects the active and reactive loss terms associated with the squared current magnitude."
+function constraint_mc_storage_losses(pm::AbstractUBFModels, i::Int; nw::Int=pm.cnw, kwargs...)
+    storage = ref(pm, nw, :storage, i)
+
+    p_loss, q_loss = storage["p_loss"], storage["q_loss"]
+    conductors = storage["connections"]
+
+    ps = var(pm, nw, :ps, i)
+    qs = var(pm, nw, :qs, i)
+    sc = var(pm, nw, :sc, i)
+    sd = var(pm, nw, :sd, i)
+    qsc = var(pm, nw, :qsc, i)
+
+
+    JuMP.@constraint(pm.model,
+        sum(ps[c] for c in conductors) + (sd - sc)
+        ==
+        p_loss
+    )
+
+    JuMP.@constraint(pm.model,
+        sum(qs[c] for c in conductors)
+        ==
+        qsc + q_loss
+    )
+end
