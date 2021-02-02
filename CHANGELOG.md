@@ -2,6 +2,8 @@
 
 ## staged
 
+- fix bug in `variable_mx_real` constructor where it was indexing over terminals instead of enumerates
+
 ## v0.10.1
 
 - Fix buspairs ref not getting built
