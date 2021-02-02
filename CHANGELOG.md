@@ -3,6 +3,7 @@
 ## staged
 
 - fix bug in `variable_mx_real` constructor where it was indexing over terminals instead of enumerates
+- added storage variables to automatic unit conversion to si units on math2eng transformation
 
 ## v0.10.1
 
