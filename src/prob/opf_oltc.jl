@@ -1,12 +1,6 @@
-"on-load tap-changer OPF with ACPPowerModel"
-function run_ac_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
-    return run_mc_opf_oltc(data, ACPPowerModel, solver; kwargs...)
-end
-
-
-"on-load tap-changer OPF"
-function run_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    return run_mc_model(data, model_type, solver, build_mc_opf_oltc; kwargs...)
+"Solve on-load tap-changer OPF"
+function solve_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    return solve_mc_model(data, model_type, solver, build_mc_opf_oltc; kwargs...)
 end
 
 
@@ -63,4 +57,19 @@ function build_mc_opf_oltc(pm::_PM.AbstractPowerModel)
     end
 
     objective_mc_min_fuel_cost(pm)
+end
+
+# Depreciated run_ functions (remove after ~4-6 months)
+
+"depreciation warning for run_ac_mc_opf_oltc"
+function run_ac_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
+    @warn "run_ac_mc_opf_oltc is being depreciated in favor of solve_mc_opf_oltc(data, ACPPowerModel, solver; kwargs...), please update your code accordingly"
+    return solve_mc_opf_oltc(data, ACPPowerModel, solver; kwargs...)
+end
+
+
+"depreciation warning for run_mc_opf_oltc"
+function run_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    @warn "run_mc_opf_oltc is being depreciated in favor of solve_mc_opf_oltc, please update your code accordingly"
+    return solve_mc_opf_oltc(data, model_type, solver; kwargs...)
 end

@@ -19,7 +19,7 @@
 
         add_vbase_default!(eng, "sourcebus", 1)
 
-        result = run_mc_opf(eng, ACPPowerModel, ipopt_solver)
+        result = solve_mc_opf(eng, ACPPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 0.0150; atol=1e-4)
@@ -41,7 +41,7 @@
         add_shunt!(eng2, "cap", "loadbus2", [1,2,3,4]; bs=diagm(0=>fill(1, 3)))
 
         # TODO this test is unstable with Julia 1.5, need to change the data model to fix it
-        # result2 = run_mc_opf(eng2, ACRPowerModel, ipopt_solver)
+        # result2 = solve_mc_opf(eng2, ACRPowerModel, ipopt_solver)
 
         # @test result2["termination_status"] == LOCALLY_SOLVED
         # @test isapprox(result2["objective"], -83.3003; atol=0.2)

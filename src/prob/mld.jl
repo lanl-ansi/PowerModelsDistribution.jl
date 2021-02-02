@@ -1,25 +1,18 @@
-"Run load shedding problem with storage"
-function run_mc_mld(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    return run_mc_model(data, model_type, solver, build_mc_mld; kwargs...)
+"Solve load shedding problem with storage"
+function solve_mc_mld(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    return solve_mc_model(data, model_type, solver, build_mc_mld; kwargs...)
 end
 
 
-"Run multinetwork load shedding problem with storage"
-function run_mn_mc_mld_simple(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    return run_mc_model(data, model_type, solver, build_mn_mc_mld_simple; multinetwork=true, kwargs...)
+"Solve multinetwork load shedding problem with storage"
+function solve_mn_mc_mld_simple(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    return solve_mc_model(data, model_type, solver, build_mn_mc_mld_simple; multinetwork=true, kwargs...)
 end
 
 
-"Run Branch Flow Model Load Shedding Problem"
-function run_mc_mld_bf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    Memento.info(_LOGGER, "We recommend using run_mc_mld, which will attempt to select appropriate variables and constraints based on the specified formulation, instead of run_mc_mld_bf")
-    return run_mc_model(data, model_type, solver, build_mc_mld_bf; kwargs...)
-end
-
-
-"Run unit commitment load shedding problem (!relaxed)"
-function run_mc_mld_uc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    return run_mc_model(data, model_type, solver, build_mc_mld_uc; kwargs...)
+"Solve unit commitment load shedding problem (!relaxed)"
+function solve_mc_mld_uc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    return solve_mc_model(data, model_type, solver, build_mc_mld_uc; kwargs...)
 end
 
 
@@ -95,7 +88,7 @@ function build_mc_mld(pm::_PM.AbstractIVRModel)
 end
 
 
-"Multinetwork load shedding problem including storage (snap-shot)"
+"Multinetwork load shedding problem including storage"
 function build_mn_mc_mld_simple(pm::_PM.AbstractPowerModel)
     for (n, network) in _PM.nws(pm)
         variable_mc_branch_power(pm; nw=n)
@@ -306,6 +299,8 @@ end
 
 "Load shedding problem for Branch Flow model"
 function build_mc_mld_bf(pm::_PM.AbstractPowerModel)
+    build_mc_mld(pm)
+
     variable_mc_bus_voltage_indicator(pm; relax=true)
     variable_mc_bus_voltage_on_off(pm)
 
@@ -421,4 +416,33 @@ function build_mc_mld_uc(pm::_PM.AbstractPowerModel)
     end
 
     objective_mc_min_load_setpoint_delta(pm)
+end
+
+# Depreciated run_ functions (remove after ~4-6 months)
+
+"depreciation warning for run_mc_mld"
+function run_mc_mld(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    @warn "run_mc_mld is being depreciated in favor of solve_mc_mld, please update your code accordingly"
+    return solve_mc_mld(data, model_type, solver; kwargs...)
+end
+
+
+"depreciation warning for run_mn_mc_mld_simple"
+function run_mn_mc_mld_simple(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    @warn "run_mn_mc_mld_simple is being depreciated in favor of solve_mn_mc_mld_simple, please update your code accordingly"
+    return solve_mn_mc_mld_simple(data, model_type, solver; kwargs...)
+end
+
+
+"depreciation warning for run_mc_mld_bf"
+function run_mc_mld_bf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    @warn "run_mc_mld_bf is being depreciated in favor of solve_mc_mld, please update your code accordingly"
+    return solve_mc_mld(data, model_type, solver; kwargs...)
+end
+
+
+"depreciation warning for run_mc_mld_uc"
+function run_mc_mld_uc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    @warn "run_mc_mld_uc is being depreciated in favor of solve_mc_mld_uc, please update your code accordingly"
+    return solve_mc_mld_uc(data, model_type, solver; kwargs...)
 end

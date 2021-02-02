@@ -1,6 +1,12 @@
-""
-function _run_mc_osw(data::Union{Dict{String,<:Any}, String}, model_type::Type, solver; kwargs...)
-    return run_mc_model(data, model_type, solver, _build_mc_osw; kwargs...)
+"Solve optimal switching problem"
+function _solve_mc_osw(data::Union{Dict{String,<:Any}, String}, model_type::Type, solver; kwargs...)
+    return solve_mc_model(data, model_type, solver, _build_mc_osw; kwargs...)
+end
+
+
+"Solve mixed-integer optimal switching problem"
+function _solve_mc_osw_mi(data::Union{Dict{String,<:Any}, String}, model_type::Type, solver; kwargs...)
+    return solve_mc_model(data, model_type, solver, _build_mc_osw_mi; kwargs...)
 end
 
 
@@ -190,12 +196,6 @@ function _build_mc_osw(pm::_PM.AbstractIVRModel)
 end
 
 
-""
-function _run_mc_osw_mi(data::Union{Dict{String,<:Any}, String}, model_type::Type, solver; kwargs...)
-    return run_mc_model(data, model_type, solver, _build_mc_osw_mi; kwargs...)
-end
-
-
 "Constructor for Optimal Switching"
 function _build_mc_osw_mi(pm::_PM.AbstractPowerModel)
     variable_mc_bus_voltage(pm)
@@ -325,3 +325,17 @@ function _build_mc_osw_mi(pm::AbstractUBFModels)
     objective_mc_min_fuel_cost_switch(pm)
 end
 
+# Depreciated run_ functions (remove after ~4-6 months)
+
+"depreciation warning for _run_mc_osw"
+function _run_mc_osw(data::Union{Dict{String,<:Any}, String}, model_type::Type, solver; kwargs...)
+    @warn "_run_mc_osw is being depreciated in favor of _solve_mc_osw, please update your code accordingly"
+    return _solve_mc_osw(data, model_type, solver; kwargs...)
+end
+
+
+"depreciation warning for _run_mc_osw_mi"
+function _run_mc_osw_mi(data::Union{Dict{String,<:Any}, String}, model_type::Type, solver; kwargs...)
+    @warn "_run_mc_osw_mi is being depreciated in favor of _solve_mc_osw_mi, please update your code accordingly"
+    return _solve_mc_osw_mi(data, model_type, solver; kwargs...)
+end

@@ -1,14 +1,14 @@
 # These problem formulations are used to debug Distribution datasets
 # that do not converge using the standard formulations
-"OPF problem with slack power at every bus"
-function run_mc_opf_pbs(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    return run_mc_model(data, model_type, solver, build_mc_opf_pbs; kwargs...)
+"Solve OPF problem with slack power at every bus"
+function solve_mc_opf_pbs(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    return solve_mc_model(data, model_type, solver, build_mc_opf_pbs; kwargs...)
 end
 
 
-"PF problem with slack power at every bus"
-function run_mc_pf_pbs(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    return run_mc_model(data, model_type, solver, build_mc_pf_pbs; kwargs...)
+"Solve PF problem with slack power at every bus"
+function solve_mc_pf_pbs(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    return solve_mc_model(data, model_type, solver, build_mc_pf_pbs; kwargs...)
 end
 
 
@@ -90,4 +90,19 @@ function build_mc_pf_pbs(pm::_PM.AbstractPowerModel)
     end
 
     objective_mc_min_slack_bus_power(pm)
+end
+
+# Depreciated run_ functions (remove after ~4-6 months)
+
+"depreciation message for run_mc_opf_pbs"
+function run_mc_opf_pbs(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    @warn "run_mc_opf_pbs is being depreciated in favor of solve_mc_opf_pbs, please update your code accordingly"
+    return solve_mc_opf_pbs(data, model_type, solver; kwargs...)
+end
+
+
+"depreciation message for run_mc_opf_pbs"
+function run_mc_pf_pbs(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    @warn "run_mc_pf_pbs is being depreciated in favor of solve_mc_pf_pbs, please update your code accordingly"
+    return solve_mc_pf_pbs(data, model_type, solver; kwargs...)
 end

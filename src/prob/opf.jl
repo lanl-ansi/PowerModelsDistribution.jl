@@ -1,18 +1,12 @@
-"OPF with ACPPowerModel"
-function run_ac_mc_opf(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
-    return run_mc_opf(data, ACPPowerModel, solver; kwargs...)
+"Solve Optimal Power Flow"
+function solve_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    return solve_mc_model(data, model_type, solver, build_mc_opf; kwargs...)
 end
 
 
-"Optimal Power Flow"
-function run_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    return run_mc_model(data, model_type, solver, build_mc_opf; kwargs...)
-end
-
-
-"Run multinetwork optimal power flow problem"
-function run_mn_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    return run_mc_model(data, model_type, solver, build_mn_mc_opf; multinetwork=true, kwargs...)
+"Solve multinetwork optimal power flow problem"
+function solve_mn_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    return solve_mc_model(data, model_type, solver, build_mn_mc_opf; multinetwork=true, kwargs...)
 end
 
 
@@ -410,4 +404,26 @@ function build_mn_mc_opf(pm::AbstractUBFModels)
     end
 
     objective_mc_min_fuel_cost(pm)
+end
+
+# Depreciated run_ functions (remove after ~4-6 months)
+
+"depreciation warning for run_ac_mc_opf"
+function run_ac_mc_opf(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
+    @warn "run_ac_mc_opf is being depreciated in favor of solve_mc_opf(data, ACPPowerModel, solver; kwargs...), please update your code accordingly"
+    return solve_mc_opf(data, ACPPowerModel, solver; kwargs...)
+end
+
+
+"depreciation warning for run_mc_opf"
+function run_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    @warn "run_mc_opf is being depreciated in favor of solve_mc_opf, please update your code accordingly"
+    return solve_mc_opf(data, model_type, solver; kwargs...)
+end
+
+
+"depreciation warning for run_mn_mc_opf"
+function run_mn_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    @warn "run_mn_mc_opf is being depreciated in favor of solve_mn_mc_opf, please update your code accordingly"
+    return solve_mn_mc_opf(data, model_type, solver; kwargs...)
 end

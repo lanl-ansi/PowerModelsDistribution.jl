@@ -37,10 +37,10 @@
 
         # check ACP and ACR
         for form in [ACPPowerModel, ACRPowerModel, IVRPowerModel]
-            sol_1 = run_mc_opf(eng_1, form, ipopt_solver)
+            sol_1 = solve_mc_opf(eng_1, form, ipopt_solver)
             @test sol_1["termination_status"] == LOCALLY_SOLVED
 
-            sol_2 = run_mc_opf(eng_2, form, ipopt_solver)
+            sol_2 = solve_mc_opf(eng_2, form, ipopt_solver)
             @test sol_2["termination_status"] == LOCALLY_SOLVED
 
             # check that gens are equivalent to the loads
