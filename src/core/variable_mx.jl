@@ -76,7 +76,7 @@ function variable_mx_real(model::JuMP.Model, indices::Array{T,1}, N::Dict{T,Vect
                 mat_nm = _make_matrix_variable_element(model, [index], n, m;
                     upper_bound=upper_bound, lower_bound=lower_bound, varname=varname)
                 # unpack element (n,m) to the correct place in the ouput dict
-                dict_mat_vars_temp[index][t,u] = mat_nm[index]
+                dict_mat_vars_temp[index][n,m] = mat_nm[index]
             end
         end
     end
