@@ -552,7 +552,7 @@ function variable_mc_bus_voltage_magnitude_sqr(pm::_PM.AbstractPowerModel; nw::I
     w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_w_$(i)",
             lower_bound = 0.0,
-            start = comp_start_value(ref(pm, nw, :bus, i), "w_start", 1.0)
+            start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, 1.0)
         ) for i in ids(pm, nw, :bus)
     )
 
@@ -833,11 +833,15 @@ function variable_mc_transformer_power_imaginary(pm::_PM.AbstractPowerModel; nw:
     for (l,transformer) in ref(pm, nw, :transformer)
         if haskey(transformer, "qf_start")
             f_idx = (l, transformer["f_bus"], transformer["t_bus"])
-            JuMP.set_start_value(qt[f_idx], transformer["qf_start"])
+            for (idx, fc) in enumerate(connections[f_idx])
+                JuMP.set_start_value(qt[f_idx][fc], transformer["qf_start"][idx])
+            end
         end
         if haskey(transformer, "qt_start")
             t_idx = (l, transformer["t_bus"], transformer["f_bus"])
-            JuMP.set_start_value(qt[t_idx], transformer["qt_start"])
+            for (idx, tc) in enumerate(connections[t_idx])
+                JuMP.set_start_value(qt[t_idx][tc], transformer["qt_start"][idx])
+            end
         end
     end
 
