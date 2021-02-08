@@ -1,5 +1,5 @@
 const _pmd_eng_global_keys = Set{String}([
-    "settings", "files", "name", "data_model"
+    "settings", "files", "name", "data_model", "dss_options"
 ])
 
 
