@@ -13,7 +13,7 @@ function constraint_mc_switch_state(pm::_PM.AbstractPowerModel, i::Int; nw::Int=
 
     f_idx = (i, f_bus, t_bus)
 
-    if switch["state"] == CLOSED
+    if switch["state"] != 0
         constraint_mc_switch_state_closed(pm, nw, f_bus, t_bus, switch["f_connections"], switch["t_connections"])
     else
         constraint_mc_switch_state_open(pm, nw, f_idx)
@@ -29,11 +29,11 @@ function constraint_mc_switch_state_on_off(pm::_PM.AbstractPowerModel, i::Int; n
 
     f_idx = (i, f_bus, t_bus)
 
-    if switch["dispatchable"] == YES
+    if switch["dispatchable"] != 0
         constraint_mc_switch_state_on_off(pm, nw, i, f_bus, t_bus, switch["f_connections"], switch["t_connections"]; relax=relax)
         constraint_mc_switch_power_on_off(pm, nw, f_idx; relax=relax)
     else
-        if switch["state"] == CLOSED
+        if switch["state"] != 0
             constraint_mc_switch_state_closed(pm, nw, f_bus, t_bus, switch["f_connections"], switch["t_connections"])
         else
             constraint_mc_switch_state_open(pm, nw, f_idx)

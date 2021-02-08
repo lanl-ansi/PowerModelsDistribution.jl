@@ -348,7 +348,7 @@ function variable_mc_switch_state(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, re
             base_name="$(nw)_switch_state_$(l)",
             lower_bound = 0,
             upper_bound = 1,
-            start = comp_start_value(ref(pm, nw, :switch, l), "switch_state_start", 0.5)
+            start = comp_start_value(ref(pm, nw, :switch, l), "state_start", 0.5)
         )
     else
         state = var(pm, nw)[:switch_state] = JuMP.@variable(
@@ -356,7 +356,7 @@ function variable_mc_switch_state(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, re
             [l in ids(pm, nw, :switch_dispatchable)],
             base_name="$(nw)_switch_state_$(l)",
             binary = true,
-            start = comp_start_value(ref(pm, nw, :switch, l), "switch_state_start", 0)
+            start = comp_start_value(ref(pm, nw, :switch, l), "state_start", 1)
         )
     end
 

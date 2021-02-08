@@ -2,6 +2,7 @@
 
 ## staged
 
+- change enums (SwitchState and Dispatchable) for switches to Reals, was causing problems in loops of OSW problems
 - fix bug in `variable_mc_bus_voltage_magnitude_sqr` and `variable_mc_transformer_power_imaginary` where `_start` values were not being iterated over per connection
 - depreciate run_ functions in favor of solve_
 - add support for `relax_integrality` (InfrastructureModels ~0.5.4)

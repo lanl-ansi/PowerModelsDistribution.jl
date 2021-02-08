@@ -354,8 +354,8 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
         math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
         math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
 
-        math_obj["state"] = get(eng_obj, "state", CLOSED)
-        math_obj["dispatchable"] = get(eng_obj, "dispatchable", YES)
+        math_obj["state"] = Int(get(eng_obj, "state", CLOSED))
+        math_obj["dispatchable"] = Int(get(eng_obj, "dispatchable", YES))
 
         # OPF bounds
         for (f_key, t_key) in [("cm_ub", "c_rating_a"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
