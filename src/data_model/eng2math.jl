@@ -48,7 +48,9 @@ function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced:
     )
     for (n, nw) in data_eng_mn["nw"]
         for k in _pmd_eng_global_keys
-            nw[k] = data_eng_mn[k]
+            if haskey(data_eng_mn, k)
+                nw[k] = data_eng_mn[k]
+            end
         end
 
         data_math_mn["nw"][n] = _map_eng2math(nw; kron_reduced=kron_reduced)
