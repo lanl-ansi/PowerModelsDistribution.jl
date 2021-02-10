@@ -2,6 +2,7 @@
 
 ## staged
 
+- fix bug in `_map_eng2math_switch!` where vmin/vmax were taken from f_bus instead of t_bus
 - fix bug in `_build_eng_multinetwork`, where "dss_options" was missing from const `_pmd_eng_global_keys`
 - change enums (SwitchState and Dispatchable) for switches to Reals, was causing problems in loops of OSW problems
 - fix bug in `variable_mc_bus_voltage_magnitude_sqr` and `variable_mc_transformer_power_imaginary` where `_start` values were not being iterated over per connection

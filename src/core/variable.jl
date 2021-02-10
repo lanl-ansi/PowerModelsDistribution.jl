@@ -356,7 +356,7 @@ function variable_mc_switch_state(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, re
             [l in ids(pm, nw, :switch_dispatchable)],
             base_name="$(nw)_switch_state_$(l)",
             binary = true,
-            start = comp_start_value(ref(pm, nw, :switch, l), "state_start", 1)
+            start = comp_start_value(ref(pm, nw, :switch, l), "state_start", get(ref(pm, nw, :switch, l), "state", 0))
         )
     end
 

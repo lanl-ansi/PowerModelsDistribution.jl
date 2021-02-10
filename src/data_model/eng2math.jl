@@ -385,8 +385,8 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "bus_type" => get(eng_obj, "status", ENABLED) == DISABLED ? 4 : 1,
                 "terminals" => t_bus["terminals"],  # connected to the switch on the to-side
                 "grounded" => t_bus["grounded"],  # connected to the switch on the to-side
-                "vmin" => f_bus["vmin"],
-                "vmax" => f_bus["vmax"],
+                "vmin" => t_bus["vmin"],
+                "vmax" => t_bus["vmax"],
                 "index" => length(data_math["bus"])+1,
             )
 
