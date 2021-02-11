@@ -2,6 +2,7 @@
 
 ## staged
 
+- fix typo in `variable_mc_switch_current_imaginary` that overwrote real variables (crsw)
 - fix bug in `_map_eng2math_switch!` where vmin/vmax were taken from f_bus instead of t_bus
 - fix bug in `_build_eng_multinetwork`, where "dss_options" was missing from const `_pmd_eng_global_keys`
 - change enums (SwitchState and Dispatchable) for switches to Reals, was causing problems in loops of OSW problems

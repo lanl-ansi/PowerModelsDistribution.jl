@@ -540,7 +540,7 @@ function variable_mc_switch_current_imaginary(pm::_PM.AbstractPowerModel; nw::In
         end
     end
 
-    var(pm, nw)[:crsw] = cisw_auxes
+    var(pm, nw)[:cisw] = cisw_auxes
 
     report && _IM.sol_component_value_edge(pm, nw, :switch, :cisw_fr, :cisw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), cisw_expr)
 end
