@@ -1,6 +1,12 @@
 import LinearAlgebra: diagm
 
 
+"PowerModelsDistribution wrapper for the InfrastructureModels `apply!` function."
+function apply_pmd!(func!::Function, ref::Dict{Symbol, <:Any}, data::Dict{String, <:Any}; apply_to_subnetworks::Bool = true)
+    _IM.apply!(func!, ref, data, pmd_it_sym; apply_to_subnetworks = apply_to_subnetworks)
+end
+
+
 ""
 function _calc_mc_voltage_product_bounds(pm::_PM.AbstractPowerModel, buspairs; nw::Int=pm.cnw)
     wr_min = Dict([(bp, -Inf) for bp in buspairs])
@@ -43,64 +49,53 @@ end
 
 "Adds arcs for PowerModelsDistribution transformers; for dclines and branches this is done in PowerModels"
 function ref_add_arcs_transformer!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
-    if _IM.ismultinetwork(data)
-        nws_data = data["nw"]
-    else
-        nws_data = Dict("0" => data)
+    apply_pmd!(_ref_add_arcs_transformer!, ref, data; apply_to_subnetworks = true)
+end
+
+
+"Adds arcs for PowerModelsDistribution transformers; for dclines and branches this is done in PowerModels"
+function _ref_add_arcs_transformer!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
+    if !haskey(ref, :transformer)
+        # this might happen when parsing data from matlab format
+        # the OpenDSS parser always inserts a trans dict
+        ref[:transformer] = Dict{Int, Any}()
     end
 
-    for (n, nw_data) in nws_data
-        nw_id = parse(Int, n)
-        nw_ref = ref[:nw][nw_id]
+    ref[:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in ref[:transformer]]
+    ref[:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in ref[:transformer]]
+    ref[:arcs_trans] = [ref[:arcs_from_trans]..., ref[:arcs_to_trans]...]
+    ref[:bus_arcs_trans] = Dict{Int64, Array{Any, 1}}()
 
-        if !haskey(nw_ref, :transformer)
-            # this might happen when parsing data from matlab format
-            # the OpenDSS parser always inserts a trans dict
-            nw_ref[:transformer] = Dict{Int, Any}()
-        end
-
-        nw_ref[:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in nw_ref[:transformer]]
-        nw_ref[:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in nw_ref[:transformer]]
-        nw_ref[:arcs_trans] = [nw_ref[:arcs_from_trans]..., nw_ref[:arcs_to_trans]...]
-        nw_ref[:bus_arcs_trans] = Dict{Int64, Array{Any, 1}}()
-
-        for (i,bus) in nw_ref[:bus]
-            nw_ref[:bus_arcs_trans][i] = [e for e in nw_ref[:arcs_trans] if e[2]==i]
-        end
+    for (i, bus) in ref[:bus]
+        ref[:bus_arcs_trans][i] = [e for e in ref[:arcs_trans] if e[2] == i]
     end
 end
 
 
 "Adds arcs for PowerModelsDistribution transformers; for dclines and branches this is done in PowerModels"
 function ref_add_arcs_switch!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
-    if _IM.ismultinetwork(data)
-        nws_data = data["nw"]
-    else
-        nws_data = Dict("0" => data)
-    end
-
-    for (n, nw_data) in nws_data
-        nw_id = parse(Int, n)
-        nw_ref = ref[:nw][nw_id]
-
-        if !haskey(nw_ref, :switch)
-            # this might happen when parsing data from matlab format
-            # the OpenDSS parser always inserts a switch dict
-            nw_ref[:switch] = Dict{Int, Any}()
-        end
-
-        nw_ref[:arcs_from_sw] = [(i, switch["f_bus"], switch["t_bus"]) for (i,switch) in nw_ref[:switch]]
-        nw_ref[:arcs_to_sw] = [(i, switch["t_bus"], switch["f_bus"]) for (i,switch) in nw_ref[:switch]]
-        nw_ref[:arcs_sw] = [nw_ref[:arcs_from_sw]..., nw_ref[:arcs_to_sw]...]
-        nw_ref[:bus_arcs_sw] = Dict{Int64, Array{Any, 1}}()
-        nw_ref[:switch_dispatchable] = Dict(x for x in nw_ref[:switch] if (x.second["status"] != 0 && x.second["dispatchable"] == YES && x.second["f_bus"] in keys(nw_ref[:bus]) && x.second["t_bus"] in keys(nw_ref[:bus])))
-
-        for (i,bus) in nw_ref[:bus]
-            nw_ref[:bus_arcs_sw][i] = [e for e in nw_ref[:arcs_sw] if e[2]==i]
-        end
-    end
+    apply_pmd!(_ref_add_arcs_switch!, ref, data; apply_to_subnetworks = true)
 end
 
+
+"Adds arcs for PowerModelsDistribution transformers; for dclines and branches this is done in PowerModels"
+function _ref_add_arcs_switch!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
+    if !haskey(ref, :switch)
+        # this might happen when parsing data from matlab format
+        # the OpenDSS parser always inserts a switch dict
+        ref[:switch] = Dict{Int, Any}()
+    end
+
+    ref[:arcs_from_sw] = [(i, switch["f_bus"], switch["t_bus"]) for (i, switch) in ref[:switch]]
+    ref[:arcs_to_sw] = [(i, switch["t_bus"], switch["f_bus"]) for (i, switch) in ref[:switch]]
+    ref[:arcs_sw] = [ref[:arcs_from_sw]..., ref[:arcs_to_sw]...]
+    ref[:bus_arcs_sw] = Dict{Int64, Array{Any, 1}}()
+    ref[:switch_dispatchable] = Dict(x for x in ref[:switch] if (x.second["status"] != 0 && x.second["dispatchable"] == YES && x.second["f_bus"] in keys(ref[:bus]) && x.second["t_bus"] in keys(ref[:bus])))
+
+    for (i, bus) in ref[:bus]
+        ref[:bus_arcs_sw][i] = [e for e in ref[:arcs_sw] if e[2] == i]
+    end
+end
 
 
 ""
@@ -184,32 +179,27 @@ end
 
 ""
 function ref_add_connections!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
-    if ismultinetwork(data)
-        nws_data = data["nw"]
-    else
-        nws_data = Dict("0" => data)
-    end
+    apply_pmd!(_ref_add_connections!, ref, data; apply_to_subnetworks = true)
+end
 
-    for (n, nw) in nws_data
-        n = parse(Int, n)
-        nw_ref = ref[:nw][n]
 
-        for (type, status) in [("gen", "gen_status"), ("load", "status"), ("shunt", "status"), ("storage", "status")]
-            nw_ref[Symbol("bus_conns_$(type)")] = Dict{Int,Vector{Tuple{Int,Vector{Int}}}}([(bus["index"], []) for (_,bus) in nw["bus"]])
-            for (_,obj) in get(nw, type, Dict())
-                if obj[status] != 0
-                    push!(nw_ref[Symbol("bus_conns_$(type)")][obj["$(type)_bus"]], (obj["index"], obj["connections"]))
-                end
+""
+function _ref_add_connections!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
+    for (type, status) in [("gen", "gen_status"), ("load", "status"), ("shunt", "status"), ("storage", "status")]
+        ref[Symbol("bus_conns_$(type)")] = Dict{Int,Vector{Tuple{Int,Vector{Int}}}}([(bus["index"], []) for (_, bus) in data["bus"]])
+        for (_, obj) in get(data, type, Dict())
+            if obj[status] != 0
+                push!(ref[Symbol("bus_conns_$(type)")][obj["$(type)_bus"]], (obj["index"], obj["connections"]))
             end
         end
+    end
 
-        for (type, status) in [("transformer", "status"), ("branch", "br_status"), ("switch", "status")]
-            nw_ref[Symbol("bus_arcs_conns_$(type)")] = Dict{Int,Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}}([(bus["index"], []) for (_,bus) in nw["bus"]])
-            for (_,obj) in get(nw, type, Dict())
-                if obj[status] != 0
-                    push!(nw_ref[Symbol("bus_arcs_conns_$(type)")][obj["f_bus"]], ((obj["index"], obj["f_bus"], obj["t_bus"]), obj["f_connections"]))
-                    push!(nw_ref[Symbol("bus_arcs_conns_$(type)")][obj["t_bus"]], ((obj["index"], obj["t_bus"], obj["f_bus"]), obj["t_connections"]))
-                end
+    for (type, status) in [("transformer", "status"), ("branch", "br_status"), ("switch", "status")]
+        ref[Symbol("bus_arcs_conns_$(type)")] = Dict{Int,Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}}([(bus["index"], []) for (_, bus) in data["bus"]])
+        for (_, obj) in get(data, type, Dict())
+            if obj[status] != 0
+                push!(ref[Symbol("bus_arcs_conns_$(type)")][obj["f_bus"]], ((obj["index"], obj["f_bus"], obj["t_bus"]), obj["f_connections"]))
+                push!(ref[Symbol("bus_arcs_conns_$(type)")][obj["t_bus"]], ((obj["index"], obj["t_bus"], obj["f_bus"]), obj["t_connections"]))
             end
         end
     end

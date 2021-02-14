@@ -13,11 +13,14 @@ module PowerModelsDistribution
     const _IM = InfrastructureModels
 
     import PowerModels: ACPPowerModel, ACRPowerModel, DCPPowerModel, IVRPowerModel, NFAPowerModel, conductor_ids, ismulticonductor
-    import InfrastructureModels: ids, ref, var, con, sol, nw_ids, nws, ismultinetwork
+    import InfrastructureModels: optimize_model!, @im_fields
 
     function __init__()
         global _LOGGER = Memento.getlogger(PowerModels)
     end
+
+    const pmd_it_name = "pm"
+    const pmd_it_sym = Symbol(pmd_it_name)
 
     include("core/types.jl")
     include("core/base.jl")

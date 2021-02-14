@@ -67,7 +67,8 @@ end
 
 ""
 function variable_mc_bus_voltage_real(pm::_PM.AbstractPowerModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
-    terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
+    terminals = Dict(i => bus["terminals"] for (i, bus) in ref(pm, nw, :bus))
+
     vr = var(pm, nw)[:vr] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_vr_$(i)",
             start = comp_start_value(ref(pm, nw, :bus, i), "vr_start", t, 0.0)
