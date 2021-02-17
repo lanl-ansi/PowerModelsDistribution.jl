@@ -2,6 +2,7 @@
 
 ## staged
 
+- fix bug in objective function for opf_pbs debugging problem, wrong iteration over bus terminals
 - fix typo in `variable_mc_switch_current_imaginary` that overwrote real variables (crsw)
 - fix bug in `_map_eng2math_switch!` where vmin/vmax were taken from f_bus instead of t_bus
 - fix bug in `_build_eng_multinetwork`, where "dss_options" was missing from const `_pmd_eng_global_keys`
