@@ -302,10 +302,12 @@ function variable_mc_transformer_current_real(pm::_PM.AbstractPowerModel; nw::In
             f_bus = ref(pm, nw, :bus, i)
             t_bus = ref(pm, nw, :bus, j)
             cmax_fr, cmax_to = _calc_transformer_current_max_frto(trans, f_bus, t_bus)
-            set_lower_bound(cr[(l,i,j)], -cmax_fr)
-            set_upper_bound(cr[(l,i,j)],  cmax_fr)
-            set_lower_bound(cr[(l,j,i)], -cmax_to)
-            set_upper_bound(cr[(l,j,i)],  cmax_to)
+            for (idx, (fc,tc)) in enumerate(zip(trans["f_connections"], trans["t_connections"]))
+                set_lower_bound(cr[(l,i,j)][fc], -cmax_fr[idx])
+                set_upper_bound(cr[(l,i,j)][fc],  cmax_fr[idx])
+                set_lower_bound(cr[(l,j,i)][tc], -cmax_to[idx])
+                set_upper_bound(cr[(l,j,i)][tc],  cmax_to[idx])
+            end
         end
     end
 
@@ -328,10 +330,12 @@ function variable_mc_transformer_current_imaginary(pm::_PM.AbstractPowerModel; n
             f_bus = ref(pm, nw, :bus, i)
             t_bus = ref(pm, nw, :bus, j)
             cmax_fr, cmax_to = _calc_transformer_current_max_frto(trans, f_bus, t_bus)
-            set_lower_bound(ci[(l,i,j)], -cmax_fr)
-            set_upper_bound(ci[(l,i,j)],  cmax_fr)
-            set_lower_bound(ci[(l,j,i)], -cmax_to)
-            set_upper_bound(ci[(l,j,i)],  cmax_to)
+            for (idx, (fc,tc)) in enumerate(zip(trans["f_connections"], trans["t_connections"]))
+                set_lower_bound(ci[(l,i,j)][fc], -cmax_fr[idx])
+                set_upper_bound(ci[(l,i,j)][fc],  cmax_fr[idx])
+                set_lower_bound(ci[(l,j,i)][tc], -cmax_to[idx])
+                set_upper_bound(ci[(l,j,i)][tc],  cmax_to[idx])
+            end
         end
     end
 
