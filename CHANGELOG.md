@@ -2,6 +2,7 @@
 
 ## staged
 
+- add `exclude` kwarg to `remove_all_bounds!` transformation, to selectively exclude certain asset types
 - fix bug in IVR transformer current variables where bounds needed to be iterated over their connections to be applied
 - fix bug in objective function for opf_pbs debugging problem, wrong iteration over bus terminals
 - fix typo in `variable_mc_switch_current_imaginary` that overwrote real variables (crsw)

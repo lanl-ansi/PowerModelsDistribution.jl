@@ -50,9 +50,9 @@ end
 
 
 "removes all fields ending in '_ub' or '_lb'"
-function remove_all_bounds!(data_eng)
+function remove_all_bounds!(data_eng; exclude::Vector{<:String}=Vector{String}([]))
     for (k,v) in data_eng
-        if isa(v, Dict) && k!="settings"
+        if isa(v, Dict) && k!="settings" && !(k in exclude)
             for (id, comp) in v
                 for field in keys(comp)
                     if endswith(field, "_lb") || endswith(field, "_ub")
