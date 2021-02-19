@@ -1,5 +1,5 @@
 ""
-function variable_mc_bus_voltage(pm::_PM.AbstractDCPModel; nw=pm.cnw, kwargs...)
+function variable_mc_bus_voltage(pm::_PM.AbstractDCPModel; nw=nw_id_default, kwargs...)
     variable_mc_bus_voltage_angle(pm; nw=nw, kwargs...)
 end
 
@@ -120,12 +120,12 @@ end
 
 
 "on/off bus voltage constraint for DCP formulation, nothing to do"
-function constraint_mc_bus_voltage_on_off(pm::_PM.AbstractDCPModel; nw::Int=pm.cnw, kwargs...)
+function constraint_mc_bus_voltage_on_off(pm::_PM.AbstractDCPModel; nw::Int=nw_id_default, kwargs...)
 end
 
 
 ""
-function variable_mc_branch_power_real(pm::_PM.AbstractAPLossLessModels; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_power_real(pm::_PM.AbstractAPLossLessModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_branch) for ((l,i,j), connections) in entry)
     p = Dict((l,i,j) => JuMP.@variable(pm.model,
         [c in connections[(l,i,j)]], base_name="$(nw)_($l,$i,$j)_p",

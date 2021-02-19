@@ -11,7 +11,7 @@ end
 function variable_mc_bus_voltage(pm::AbstractUBFModels; kwargs...)
     variable_mc_bus_voltage_prod_hermitian(pm; kwargs...)
 
-    nw = get(kwargs, :nw, pm.cnw)
+    nw = get(kwargs, :nw, nw_id_default)
     allbuses = Set(ids(pm, nw, :bus))
     startingbuses = Set(i for (l,i,j)  in ref(pm, nw, :arcs_from))
     leafnodes = setdiff(allbuses, startingbuses)
@@ -22,7 +22,7 @@ end
 
 
 ""
-function variable_mc_bus_voltage_prod_hermitian(pm::AbstractUBFModels; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_bus_voltage_prod_hermitian(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     bus_ids = collect(ids(pm, nw, :bus))
     terminals = Dict{Int,Vector{Int}}(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
 
@@ -62,7 +62,7 @@ end
 
 
 ""
-function constraint_mc_branch_current_series_product_hermitian(pm::AbstractUBFModels; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function constraint_mc_branch_current_series_product_hermitian(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     branches = ref(pm, nw, :branch)
     buses = ref(pm, nw, :bus)
 
@@ -98,7 +98,7 @@ end
 
 
 ""
-function variable_mc_branch_power(pm::AbstractUBFModels; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_power(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     # calculate S bound
     branch_arcs = ref(pm, nw, :arcs)
     connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_branch) for ((l,i,j), connections) in entry)
@@ -231,7 +231,7 @@ end
 For the matrix KCL formulation, the generator needs an explicit power
 variable.
 """
-function variable_mc_generator_power_mx(pm::SDPUBFKCLMXModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_generator_power_mx(pm::SDPUBFKCLMXModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     @assert(bounded)
 
     gen_ids = collect(ids(pm, nw, :gen))
@@ -285,7 +285,7 @@ end
 For the matrix KCL formulation, the generator needs an explicit current
 variable.
 """
-function variable_mc_generator_current(pm::AbstractUBFModels; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_generator_current(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     @assert(bounded)
 
     gen_ids = collect(ids(pm, nw, :gen))
@@ -318,7 +318,7 @@ Wye loads however, don't need any variables when the load is modelled as
 constant power or constant impedance. In all other cases (e.g. when a cone is
 used to constrain the power), variables need to be created.
 """
-function variable_mc_load_power(pm::AbstractUBFModels; nw=pm.cnw)
+function variable_mc_load_power(pm::AbstractUBFModels; nw=nw_id_default)
     load_wye_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]==WYE]
     load_del_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]==DELTA]
     load_cone_ids = [id for (id, load) in ref(pm, nw, :load) if _check_load_needs_cone(load)]
@@ -349,7 +349,7 @@ Delta loads only need a current variable and auxilary power variable (X), and
 all other load model variables are then linear transformations of these
 (linear Expressions).
 """
-function variable_mc_load_power(pm::SDPUBFKCLMXModel; nw::Int=pm.cnw)
+function variable_mc_load_power(pm::SDPUBFKCLMXModel; nw::Int=nw_id_default)
     load_wye_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]==WYE]
     load_del_ids = [id for (id, load) in ref(pm, nw, :load) if load["configuration"]==DELTA]
     load_cone_ids = [id for (id, load) in ref(pm, nw, :load) if _check_load_needs_cone(load)]
@@ -373,7 +373,7 @@ These variables reflect the power consumed by the load, NOT the power injected
 into the bus nodes; these variables only coincide for wye-connected loads
 with a grounded neutral.
 """
-function variable_mc_load_power(pm::AbstractUBFModels, load_ids::Vector{Int}; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_load_power(pm::AbstractUBFModels, load_ids::Vector{Int}; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     @assert(bounded)
     # calculate bounds for all loads
     pmin = Dict()
@@ -429,7 +429,7 @@ grounded wye-connected loads, this is the same as the power consumed by the
 multi-phase load. The off-diagonals only need to be created for the matrix KCL
 formulation.
 """
-function variable_mc_load_power_bus(pm::SDPUBFKCLMXModel, load_ids::Vector{Int}; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_load_power_bus(pm::SDPUBFKCLMXModel, load_ids::Vector{Int}; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     @assert(bounded)
     connections = Dict{Int,Vector{Int}}(i => load["connections"] for (i,load) in ref(pm, nw, :load))
     # calculate bounds
@@ -470,7 +470,7 @@ See the paper by Zhao et al. for the first convex relaxation of delta transforma
 
 See upcoming paper for discussion of bounds. [reference added when accepted]
 """
-function variable_mc_load_power_delta_aux(pm::AbstractUBFModels, load_ids::Vector{Int}; nw::Int=pm.cnw, eps::Real=0.1, bounded::Bool=true, report::Bool=true)
+function variable_mc_load_power_delta_aux(pm::AbstractUBFModels, load_ids::Vector{Int}; nw::Int=nw_id_default, eps::Real=0.1, bounded::Bool=true, report::Bool=true)
     @assert(bounded)
     connections = Dict{Int,Vector{Int}}(id => load["connections"] for (id,load) in ref(pm, nw, :load))
     # calculate bounds
@@ -498,7 +498,7 @@ All loads need a current variable; for wye loads, this variable will be in the
 wye reference frame whilst for delta currents it will be in the delta reference
 frame.
 """
-function variable_mc_load_current(pm::AbstractUBFModels, load_ids::Vector{Int}; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_load_current(pm::AbstractUBFModels, load_ids::Vector{Int}; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     @assert(bounded)
 
     connections = Dict{Int,Vector{Int}}(i => load["connections"] for (i,load) in ref(pm, nw, :load))
@@ -526,7 +526,7 @@ end
 Link the current and power withdrawn by a generator at the bus through a PSD
 constraint. The rank-1 constraint is dropped in this formulation.
 """
-function constraint_mc_generator_power(pm::SDPUBFKCLMXModel, gen_id::Int; nw::Int=pm.cnw)
+function constraint_mc_generator_power(pm::SDPUBFKCLMXModel, gen_id::Int; nw::Int=nw_id_default)
     bus_id = ref(pm, nw, :gen, gen_id, "gen_bus")
     connections = ref(pm, nw, :gen, gen_id, "connections")
     terminals = ref(pm, nw, :bus, bus_id, "terminals")
@@ -606,7 +606,7 @@ end
 """
 Creates the constraints modelling the (relaxed) voltage-dependent loads.
 """
-function constraint_mc_load_power(pm::AbstractUBFModels, load_id::Int; nw::Int=pm.cnw, report::Bool=true)
+function constraint_mc_load_power(pm::AbstractUBFModels, load_id::Int; nw::Int=nw_id_default, report::Bool=true)
     # shared variables and parameters
     load = ref(pm, nw, :load, load_id)
     connections = load["connections"]
@@ -708,7 +708,7 @@ end
 Creates the constraints modelling the (relaxed) voltage-dependent loads for
 the matrix KCL formulation.
 """
-function constraint_mc_load_power(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int=pm.cnw, report::Bool=true)
+function constraint_mc_load_power(pm::SDPUBFKCLMXModel, load_id::Int; nw::Int=nw_id_default, report::Bool=true)
     # shared variables and parameters
     load = ref(pm, nw, :load, load_id)
     connections = load["connections"]

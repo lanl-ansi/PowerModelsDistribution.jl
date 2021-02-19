@@ -54,7 +54,7 @@ end
 
 
 "nothing to do, these models do not have complex voltage variables"
-function variable_mc_bus_voltage(pm::_PM.AbstractNFAModel; nw::Int=pm.cnw, kwargs...)
+function variable_mc_bus_voltage(pm::_PM.AbstractNFAModel; nw::Int=nw_id_default, kwargs...)
 end
 
 
@@ -69,7 +69,7 @@ end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_transformer_power_imaginary(pm::_PM.AbstractActivePowerModel; nw::Int=pm.cnw, bounded=true)
+function variable_mc_transformer_power_imaginary(pm::_PM.AbstractActivePowerModel; nw::Int=nw_id_default, bounded=true)
 end
 
 
@@ -116,7 +116,7 @@ end
 ######## Lossless Models ########
 
 "Create variables for the active power flowing into all transformer windings"
-function variable_mc_transformer_power_real(pm::_PM.AbstractAPLossLessModels; nw::Int=pm.cnw, bounded::Bool=true)
+function variable_mc_transformer_power_real(pm::_PM.AbstractAPLossLessModels; nw::Int=nw_id_default, bounded::Bool=true)
     connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_transformer) for ((l,i,j), connections) in entry)
     pt = var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_pt_$((l,i,j))", start=0
@@ -175,7 +175,7 @@ end
 ### Network Flow Approximation ###
 
 "nothing to do, no voltage angle variables"
-function constraint_mc_theta_ref(pm::_PM.NFAPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_theta_ref(pm::_PM.NFAPowerModel, i::Int; nw::Int=nw_id_default)
 end
 
 
@@ -190,7 +190,7 @@ end
 
 
 "nothing to do, this model is symmetric"
-function constraint_mc_transformer_power(pm::_PM.NFAPowerModel, i::Int; nw::Int=pm.cnw)
+function constraint_mc_transformer_power(pm::_PM.NFAPowerModel, i::Int; nw::Int=nw_id_default)
 end
 
 
@@ -348,13 +348,13 @@ end
 
 
 "Only support wye-connected generators."
-function constraint_mc_generator_power(pm::_PM.AbstractActivePowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
+function constraint_mc_generator_power(pm::_PM.AbstractActivePowerModel, id::Int; nw::Int=nw_id_default, report::Bool=true)
     var(pm, nw, :pg_bus)[id] = var(pm, nw, :pg, id)
 end
 
 
 "Only support wye-connected, constant-power loads."
-function constraint_mc_load_power(pm::_PM.AbstractActivePowerModel, id::Int; nw::Int=pm.cnw, report::Bool=true)
+function constraint_mc_load_power(pm::_PM.AbstractActivePowerModel, id::Int; nw::Int=nw_id_default, report::Bool=true)
     load = ref(pm, nw, :load, id)
     connections = load["connections"]
 

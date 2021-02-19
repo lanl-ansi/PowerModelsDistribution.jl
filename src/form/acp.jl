@@ -1,5 +1,5 @@
 ""
-function variable_mc_bus_voltage(pm::_PM.AbstractACPModel; nw=pm.cnw, kwargs...)
+function variable_mc_bus_voltage(pm::_PM.AbstractACPModel; nw=nw_id_default, kwargs...)
     variable_mc_bus_voltage_angle(pm; nw=nw, kwargs...)
     variable_mc_bus_voltage_magnitude_only(pm; nw=nw, kwargs...)
 
@@ -30,7 +30,7 @@ end
 
 
 ""
-function variable_mc_bus_voltage_on_off(pm::_PM.AbstractACPModel; nw::Int=pm.cnw, kwargs...)
+function variable_mc_bus_voltage_on_off(pm::_PM.AbstractACPModel; nw::Int=nw_id_default, kwargs...)
     variable_mc_bus_voltage_angle(pm; nw=nw, kwargs...)
     variable_mc_bus_voltage_magnitude_on_off(pm; nw=nw, kwargs...)
 
@@ -603,9 +603,9 @@ vuf = |U-|/|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
 function constraint_mc_bus_voltage_magnitude_vuf(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vufmax::Float64)
-    if !haskey(var(pm, pm.cnw), :vmpossqr)
-        var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
-        var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+    if !haskey(var(pm, nw_id_default), :vmpossqr)
+        var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
+        var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
     end
     (vm_a, vm_b, vm_c) = [var(pm, nw, :vm, bus_id)[i] for i in 1:3]
     (va_a, va_b, va_c) = [var(pm, nw, :va, bus_id)[i] for i in 1:3]
@@ -636,8 +636,8 @@ function constraint_mc_bus_voltage_magnitude_vuf(pm::_PM.AbstractACPModel, nw::I
     # finally, apply constraint
     JuMP.@NLconstraint(pm.model, vmnegsqr <= vufmax^2*vmpossqr)
     # DEBUGGING: save references for post check
-    #var(pm, pm.cnw, :vmpossqr)[bus_id] = vmpossqr
-    #var(pm, pm.cnw, :vmnegsqr)[bus_id] = vmnegsqr
+    #var(pm, nw_id_default, :vmpossqr)[bus_id] = vmpossqr
+    #var(pm, nw_id_default, :vmnegsqr)[bus_id] = vmnegsqr
 end
 
 
@@ -650,9 +650,9 @@ vuf = |U-|/|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
 function constraint_mc_bus_voltage_magnitude_negative_sequence(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vmnegmax::Float64)
-    if !haskey(var(pm, pm.cnw), :vmpossqr)
-        var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
-        var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+    if !haskey(var(pm, nw_id_default), :vmpossqr)
+        var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
+        var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
     end
     (vm_a, vm_b, vm_c) = [var(pm, nw, :vm, bus_id)[i] for i in 1:3]
     (va_a, va_b, va_c) = [var(pm, nw, :va, bus_id)[i] for i in 1:3]
@@ -685,9 +685,9 @@ vuf = |U-|/|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
 function constraint_mc_bus_voltage_magnitude_positive_sequence(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vmposmax::Float64)
-    if !haskey(var(pm, pm.cnw), :vmpossqr)
-        var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
-        var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+    if !haskey(var(pm, nw_id_default), :vmpossqr)
+        var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
+        var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
     end
     (vm_a, vm_b, vm_c) = [var(pm, nw, :vm, bus_id)[i] for i in 1:3]
     (va_a, va_b, va_c) = [var(pm, nw, :va, bus_id)[i] for i in 1:3]
@@ -720,9 +720,9 @@ vuf = |U-|/|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
 function constraint_mc_bus_voltage_magnitude_zero_sequence(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vmzeromax::Float64)
-    if !haskey(var(pm, pm.cnw), :vmpossqr)
-        var(pm, pm.cnw)[:vmpossqr] = Dict{Int, Any}()
-        var(pm, pm.cnw)[:vmnegsqr] = Dict{Int, Any}()
+    if !haskey(var(pm, nw_id_default), :vmpossqr)
+        var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
+        var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
     end
     (vm_a, vm_b, vm_c) = [var(pm, nw, :vm, bus_id)[i] for i in 1:3]
     (va_a, va_b, va_c) = [var(pm, nw, :va, bus_id)[i] for i in 1:3]
@@ -814,7 +814,7 @@ end
 
 
 "bus voltage on/off constraint for load shed problem"
-function constraint_mc_bus_voltage_on_off(pm::_PM.AbstractACPModel; nw::Int=pm.cnw, kwargs...)
+function constraint_mc_bus_voltage_on_off(pm::_PM.AbstractACPModel; nw::Int=nw_id_default, kwargs...)
     for (i,bus) in ref(pm, nw, :bus)
         constraint_mc_bus_voltage_magnitude_on_off(pm, i; nw=nw)
     end

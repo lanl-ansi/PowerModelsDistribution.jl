@@ -118,7 +118,7 @@ For a variable tap transformer, fix the tap variables which are fixed. For
 example, an OLTC where the third phase is fixed, will have tap variables for
 all phases, but the third tap variable should be fixed.
 """
-function constraint_mc_oltc_tap_fix(pm::_PM.AbstractPowerModel, i::Int, fixed::Vector, tm::Vector; nw=pm.cnw)
+function constraint_mc_oltc_tap_fix(pm::_PM.AbstractPowerModel, i::Int, fixed::Vector, tm::Vector; nw=nw_id_default)
     for (c,fixed) in enumerate(fixed)
         if fixed
             JuMP.@constraint(pm.model, var(pm, nw, c, :tap)[i]==tm[c])
@@ -323,7 +323,7 @@ end
 
 
 "do nothing by default but some formulations require this"
-function variable_mc_storage_current(pm::_PM.AbstractWConvexModels; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_storage_current(pm::_PM.AbstractWConvexModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     connections = Dict(i => strg["connections"] for (i, strg) in ref(pm, nw, :storage))
     ccms = var(pm, nw)[:ccms] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_ccms_$(i)",

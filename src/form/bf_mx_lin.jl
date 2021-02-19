@@ -12,13 +12,13 @@ end
 
 
 ""
-function variable_mc_bus_voltage(pm::LPUBFDiagModel; nw::Int=pm.cnw, bounded::Bool=true)
+function variable_mc_bus_voltage(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true)
     variable_mc_bus_voltage_magnitude_sqr(pm, nw=nw)
 end
 
 
 ""
-function variable_mc_branch_power(pm::LPUBFDiagModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_power(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     variable_mc_branch_power_real(pm, nw=nw, bounded=bounded)
     variable_mc_branch_power_imaginary(pm, nw=nw, bounded=bounded)
 end
@@ -147,7 +147,7 @@ end
 
 
 "Neglects the active and reactive loss terms associated with the squared current magnitude."
-function constraint_mc_storage_losses(pm::AbstractUBFModels, i::Int; nw::Int=pm.cnw, kwargs...)
+function constraint_mc_storage_losses(pm::AbstractUBFModels, i::Int; nw::Int=nw_id_default, kwargs...)
     storage = ref(pm, nw, :storage, i)
 
     p_loss, q_loss = storage["p_loss"], storage["q_loss"]

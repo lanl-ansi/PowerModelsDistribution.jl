@@ -8,7 +8,7 @@ end
 
 
 ""
-function _calc_mc_voltage_product_bounds(pm::_PM.AbstractPowerModel, buspairs; nw::Int=pm.cnw)
+function _calc_mc_voltage_product_bounds(pm::_PM.AbstractPowerModel, buspairs; nw::Int=nw_id_default)
     wr_min = Dict([(bp, -Inf) for bp in buspairs])
     wr_max = Dict([(bp,  Inf) for bp in buspairs])
     wi_min = Dict([(bp, -Inf) for bp in buspairs])
@@ -99,7 +99,7 @@ end
 
 
 ""
-function _calc_mc_transformer_Tvi(pm::_PM.AbstractPowerModel, i::Int; nw=pm.cnw)
+function _calc_mc_transformer_Tvi(pm::_PM.AbstractPowerModel, i::Int; nw=nw_id_default)
     trans = ref(pm, nw, :transformer,  i)
     # transformation matrices
     # Tv and Ti will be compositions of these

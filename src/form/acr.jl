@@ -1,5 +1,5 @@
 ""
-function variable_mc_bus_voltage(pm::_PM.AbstractACRModel; nw::Int=pm.cnw, bounded::Bool=true, kwargs...)
+function variable_mc_bus_voltage(pm::_PM.AbstractACRModel; nw::Int=nw_id_default, bounded::Bool=true, kwargs...)
     variable_mc_bus_voltage_real(pm; nw=nw, bounded=bounded, kwargs...)
     variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, kwargs...)
 
@@ -41,7 +41,7 @@ end
 
 
 ""
-function variable_mc_bus_voltage_on_off(pm::_PM.AbstractACRModel; nw::Int=pm.cnw, bounded::Bool=true, kwargs...)
+function variable_mc_bus_voltage_on_off(pm::_PM.AbstractACRModel; nw::Int=nw_id_default, bounded::Bool=true, kwargs...)
     variable_mc_bus_voltage_real_on_off(pm; nw=nw, bounded=bounded, kwargs...)
     variable_mc_bus_voltage_imaginary_on_off(pm; nw=nw, bounded=bounded, kwargs...)
 
@@ -117,7 +117,7 @@ end
 
 
 ""
-function variable_mc_bus_voltage_real_on_off(pm::_PM.AbstractACRModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_bus_voltage_real_on_off(pm::_PM.AbstractACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
     vr = var(pm, nw)[:vr] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_vr_$(i)",
@@ -141,7 +141,7 @@ end
 
 
 ""
-function variable_mc_bus_voltage_imaginary_on_off(pm::_PM.AbstractACRModel; nw::Int=pm.cnw, bounded::Bool=true, report::Bool=true)
+function variable_mc_bus_voltage_imaginary_on_off(pm::_PM.AbstractACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
     vi = var(pm, nw)[:vi] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_vi_$(i)",
@@ -180,7 +180,7 @@ end
 
 
 "bus voltage on/off constraint for load shed problem"
-function constraint_mc_bus_voltage_on_off(pm::_PM.AbstractACRModel; nw::Int=pm.cnw, kwargs...)
+function constraint_mc_bus_voltage_on_off(pm::_PM.AbstractACRModel; nw::Int=nw_id_default, kwargs...)
     for (i,bus) in ref(pm, nw, :bus)
         constraint_mc_bus_voltage_magnitude_on_off(pm, i; nw=nw)
     end
@@ -837,7 +837,7 @@ end
 
 
 ""
-function constraint_mc_storage_losses(pm::_PM.AbstractACRModel, i::Int; nw::Int=pm.cnw, kwargs...)
+function constraint_mc_storage_losses(pm::_PM.AbstractACRModel, i::Int; nw::Int=nw_id_default, kwargs...)
     storage = ref(pm, nw, :storage, i)
 
     vr  = var(pm, nw,  :vr, storage["storage_bus"])

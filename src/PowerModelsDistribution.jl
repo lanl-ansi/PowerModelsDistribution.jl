@@ -13,7 +13,7 @@ module PowerModelsDistribution
     const _IM = InfrastructureModels
 
     import PowerModels: ACPPowerModel, ACRPowerModel, DCPPowerModel, IVRPowerModel, NFAPowerModel, conductor_ids, ismulticonductor
-    import InfrastructureModels: optimize_model!, @im_fields
+    import InfrastructureModels: optimize_model!, @im_fields, nw_id_default
 
     function __init__()
         global _LOGGER = Memento.getlogger(PowerModels)
