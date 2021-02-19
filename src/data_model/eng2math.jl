@@ -48,7 +48,9 @@ function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced:
     )
     for (n, nw) in data_eng_mn["nw"]
         for k in _pmd_eng_global_keys
-            nw[k] = data_eng_mn[k]
+            if haskey(data_eng_mn, k)
+                nw[k] = data_eng_mn[k]
+            end
         end
 
         data_math_mn["nw"][n] = _map_eng2math(nw; kron_reduced=kron_reduced)
@@ -354,8 +356,8 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
         math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
         math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
 
-        math_obj["state"] = get(eng_obj, "state", CLOSED)
-        math_obj["dispatchable"] = get(eng_obj, "dispatchable", YES)
+        math_obj["state"] = Int(get(eng_obj, "state", CLOSED))
+        math_obj["dispatchable"] = Int(get(eng_obj, "dispatchable", YES))
 
         # OPF bounds
         for (f_key, t_key) in [("cm_ub", "c_rating_a"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
@@ -383,8 +385,8 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "bus_type" => get(eng_obj, "status", ENABLED) == DISABLED ? 4 : 1,
                 "terminals" => t_bus["terminals"],  # connected to the switch on the to-side
                 "grounded" => t_bus["grounded"],  # connected to the switch on the to-side
-                "vmin" => f_bus["vmin"],
-                "vmax" => f_bus["vmax"],
+                "vmin" => t_bus["vmin"],
+                "vmax" => t_bus["vmax"],
                 "index" => length(data_math["bus"])+1,
             )
 

@@ -303,10 +303,12 @@ function variable_mc_transformer_current_real(pm::_PM.AbstractPowerModel; nw::In
             f_bus = ref(pm, nw, :bus, i)
             t_bus = ref(pm, nw, :bus, j)
             cmax_fr, cmax_to = _calc_transformer_current_max_frto(trans, f_bus, t_bus)
-            set_lower_bound(cr[(l,i,j)], -cmax_fr)
-            set_upper_bound(cr[(l,i,j)],  cmax_fr)
-            set_lower_bound(cr[(l,j,i)], -cmax_to)
-            set_upper_bound(cr[(l,j,i)],  cmax_to)
+            for (idx, (fc,tc)) in enumerate(zip(trans["f_connections"], trans["t_connections"]))
+                set_lower_bound(cr[(l,i,j)][fc], -cmax_fr[idx])
+                set_upper_bound(cr[(l,i,j)][fc],  cmax_fr[idx])
+                set_lower_bound(cr[(l,j,i)][tc], -cmax_to[idx])
+                set_upper_bound(cr[(l,j,i)][tc],  cmax_to[idx])
+            end
         end
     end
 
@@ -329,10 +331,12 @@ function variable_mc_transformer_current_imaginary(pm::_PM.AbstractPowerModel; n
             f_bus = ref(pm, nw, :bus, i)
             t_bus = ref(pm, nw, :bus, j)
             cmax_fr, cmax_to = _calc_transformer_current_max_frto(trans, f_bus, t_bus)
-            set_lower_bound(ci[(l,i,j)], -cmax_fr)
-            set_upper_bound(ci[(l,i,j)],  cmax_fr)
-            set_lower_bound(ci[(l,j,i)], -cmax_to)
-            set_upper_bound(ci[(l,j,i)],  cmax_to)
+            for (idx, (fc,tc)) in enumerate(zip(trans["f_connections"], trans["t_connections"]))
+                set_lower_bound(ci[(l,i,j)][fc], -cmax_fr[idx])
+                set_upper_bound(ci[(l,i,j)][fc],  cmax_fr[idx])
+                set_lower_bound(ci[(l,j,i)][tc], -cmax_to[idx])
+                set_upper_bound(ci[(l,j,i)][tc],  cmax_to[idx])
+            end
         end
     end
 
@@ -349,7 +353,7 @@ function variable_mc_switch_state(pm::_PM.AbstractPowerModel; nw::Int=nw_id_defa
             base_name="$(nw)_switch_state_$(l)",
             lower_bound = 0,
             upper_bound = 1,
-            start = comp_start_value(ref(pm, nw, :switch, l), "switch_state_start", 0.5)
+            start = comp_start_value(ref(pm, nw, :switch, l), "state_start", 0.5)
         )
     else
         state = var(pm, nw)[:switch_state] = JuMP.@variable(
@@ -357,7 +361,7 @@ function variable_mc_switch_state(pm::_PM.AbstractPowerModel; nw::Int=nw_id_defa
             [l in ids(pm, nw, :switch_dispatchable)],
             base_name="$(nw)_switch_state_$(l)",
             binary = true,
-            start = comp_start_value(ref(pm, nw, :switch, l), "switch_state_start", 0)
+            start = comp_start_value(ref(pm, nw, :switch, l), "state_start", get(ref(pm, nw, :switch, l), "state", 0))
         )
     end
 
@@ -541,7 +545,7 @@ function variable_mc_switch_current_imaginary(pm::_PM.AbstractPowerModel; nw::In
         end
     end
 
-    var(pm, nw)[:crsw] = cisw_auxes
+    var(pm, nw)[:cisw] = cisw_auxes
 
     report && _IM.sol_component_value_edge(pm, nw, :switch, :cisw_fr, :cisw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), cisw_expr)
 end
@@ -553,7 +557,7 @@ function variable_mc_bus_voltage_magnitude_sqr(pm::_PM.AbstractPowerModel; nw::I
     w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_w_$(i)",
             lower_bound = 0.0,
-            start = comp_start_value(ref(pm, nw, :bus, i), "w_start", 1.0)
+            start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, 1.0)
         ) for i in ids(pm, nw, :bus)
     )
 
@@ -834,11 +838,15 @@ function variable_mc_transformer_power_imaginary(pm::_PM.AbstractPowerModel; nw:
     for (l,transformer) in ref(pm, nw, :transformer)
         if haskey(transformer, "qf_start")
             f_idx = (l, transformer["f_bus"], transformer["t_bus"])
-            JuMP.set_start_value(qt[f_idx], transformer["qf_start"])
+            for (idx, fc) in enumerate(connections[f_idx])
+                JuMP.set_start_value(qt[f_idx][fc], transformer["qf_start"][idx])
+            end
         end
         if haskey(transformer, "qt_start")
             t_idx = (l, transformer["t_bus"], transformer["f_bus"])
-            JuMP.set_start_value(qt[t_idx], transformer["qt_start"])
+            for (idx, tc) in enumerate(connections[t_idx])
+                JuMP.set_start_value(qt[t_idx][tc], transformer["qt_start"][idx])
+            end
         end
     end
 

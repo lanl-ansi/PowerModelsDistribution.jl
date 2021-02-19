@@ -3,10 +3,10 @@ function objective_mc_min_slack_bus_power(pm::_PM.AbstractPowerModel)
     return JuMP.@objective(pm.model, Min,
         sum(
             sum(
-                sum( var(pm, n, :p_slack, i)[c]^2 + var(pm, n, :q_slack, i)[c]^2 for (i,bus) in nw_ref[:bus])
-            for c in conductor_ids(pm, n))
-        for (n, nw_ref) in nws(pm))
-    )
+                sum( var(pm, n, :p_slack, i)[t]^2 + var(pm, n, :q_slack, i)[t]^2 for t in ref(pm, n, :bus, i, "terminals")
+                ) for (i,bus) in nw_ref[:bus]
+            ) for (n, nw_ref) in nws(pm))
+        )
 end
 
 

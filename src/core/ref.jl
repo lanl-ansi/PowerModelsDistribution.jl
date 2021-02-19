@@ -86,11 +86,11 @@ function _ref_add_arcs_switch!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any}
         ref[:switch] = Dict{Int, Any}()
     end
 
-    ref[:arcs_from_sw] = [(i, switch["f_bus"], switch["t_bus"]) for (i, switch) in ref[:switch]]
-    ref[:arcs_to_sw] = [(i, switch["t_bus"], switch["f_bus"]) for (i, switch) in ref[:switch]]
+    ref[:arcs_from_sw] = [(i, switch["f_bus"], switch["t_bus"]) for (i,switch) in ref[:switch]]
+    ref[:arcs_to_sw] = [(i, switch["t_bus"], switch["f_bus"]) for (i,switch) in ref[:switch]]
     ref[:arcs_sw] = [ref[:arcs_from_sw]..., ref[:arcs_to_sw]...]
     ref[:bus_arcs_sw] = Dict{Int64, Array{Any, 1}}()
-    ref[:switch_dispatchable] = Dict(x for x in ref[:switch] if (x.second["status"] != 0 && x.second["dispatchable"] == YES && x.second["f_bus"] in keys(ref[:bus]) && x.second["t_bus"] in keys(ref[:bus])))
+    ref[:switch_dispatchable] = Dict(x for x in ref[:switch] if (x.second["status"] != 0 && x.second["dispatchable"] != 0 && x.second["f_bus"] in keys(ref[:bus]) && x.second["t_bus"] in keys(ref[:bus])))
 
     for (i, bus) in ref[:bus]
         ref[:bus_arcs_sw][i] = [e for e in ref[:arcs_sw] if e[2] == i]
