@@ -2,6 +2,10 @@
 
 ## staged
 
+- none
+
+## v0.10.2
+
 - add `exclude` kwarg to `remove_all_bounds!` transformation, to selectively exclude certain asset types
 - fix bug in IVR transformer current variables where bounds needed to be iterated over their connections to be applied
 - fix bug in objective function for opf_pbs debugging problem, wrong iteration over bus terminals
