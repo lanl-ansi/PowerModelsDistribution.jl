@@ -19,7 +19,7 @@ module PowerModelsDistribution
         global _LOGGER = Memento.getlogger(PowerModels)
     end
 
-    const pmd_it_name = "pm"
+    const pmd_it_name = "pmd"
     const pmd_it_sym = Symbol(pmd_it_name)
 
     include("core/types.jl")
