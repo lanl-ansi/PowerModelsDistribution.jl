@@ -458,7 +458,7 @@ end
 # from PowerModels
 "Transforms single-conductor network data into multi-conductor data"
 function make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
-    if InfrastructureModels.ismultinetwork(data)
+    if _IM.ismultinetwork(data)
         for (i,nw_data) in data["nw"]
             _make_multiconductor!(nw_data, conductors)
         end

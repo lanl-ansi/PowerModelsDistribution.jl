@@ -44,7 +44,7 @@ function make_per_unit!(data::Dict{String,<:Any}; vbases::Union{Dict{<:Any,<:Rea
                 sbase = data["settings"]["sbase_default"]
             end
 
-            if _IM.ismultinetwork(data, pmd_it_name)
+            if _IM.ismultinetwork(data)
                 orig_settings = deepcopy(data["settings"])
                 for (n, nw) in data["nw"]
                     nw["data_model"] = data["data_model"]

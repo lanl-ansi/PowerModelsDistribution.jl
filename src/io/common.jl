@@ -114,7 +114,7 @@ function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true)
             make_per_unit!(data)
             #TODO system-wide vbase does not make sense anymore...
             #take highest vbase just so it does not break anything for now
-            if ismultinetwork(data)
+            if _IM.ismultinetwork(data)
                 for (n,nw) in data["nw"]
                     nw["basekv"]  = maximum(maximum(bus["vbase"] for (_, bus) in nw["bus"]) for nw in values(data["nw"]))
                     nw["baseMVA"] = data["settings"]["sbase"]*data["settings"]["power_scale_factor"]/1E6
