@@ -172,7 +172,7 @@ function objective_mc_variable_pg_cost(pm::_PM.AbstractPowerModel, report::Bool=
             pg_cost[i] = pg_cost_expr
         end
 
-        report && _IM.sol_component_value(pm, n, :gen, :pg_cost, ids(pm, n, :gen), pg_cost)
+        report && _IM.sol_component_value(pm, pmd_it_sym, n, :gen, :pg_cost, ids(pm, n, :gen), pg_cost)
     end
 end
 
@@ -397,7 +397,7 @@ function objective_variable_pg_cost(pm::_PM.AbstractIVRModel; report::Bool=true)
         pg_cost = var(pm, n)[:pg_cost] = JuMP.@variable(pm.model,
             [i in ids(pm, n, :gen)], base_name="$(n)_pg_cost",
         )
-        report && _IM.sol_component_value(pm, n, :gen, :pg_cost, ids(pm, n, :gen), pg_cost)
+        report && _IM.sol_component_value(pm, pmd_it_sym, n, :gen, :pg_cost, ids(pm, n, :gen), pg_cost)
 
         # gen pwl cost
         for (i, gen) in nw_ref[:gen]

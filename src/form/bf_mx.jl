@@ -56,8 +56,8 @@ function variable_mc_bus_voltage_prod_hermitian(pm::AbstractUBFModels; nw::Int=n
     # maintain compatibility
     var(pm, nw)[:w] = Dict{Int, Any}([(id, diag(Wr[id])) for id in bus_ids])
 
-    report && _IM.sol_component_value(pm, nw, :bus, :Wr, ids(pm, nw, :bus), Wr)
-    report && _IM.sol_component_value(pm, nw, :bus, :Wi, ids(pm, nw, :bus), Wi)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :Wr, ids(pm, nw, :bus), Wr)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :Wi, ids(pm, nw, :bus), Wi)
 end
 
 
@@ -92,8 +92,8 @@ function constraint_mc_branch_current_series_product_hermitian(pm::AbstractUBFMo
     var(pm, nw)[:CCi] = Li
     var(pm, nw)[:cm] = Dict([(id, diag(Lr[id])) for id in branch_ids])
 
-    report && _IM.sol_component_value(pm, nw, :branch, :CCr, ids(pm, nw, :branch), Lr)
-    report && _IM.sol_component_value(pm, nw, :branch, :CCi, ids(pm, nw, :branch), Li)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :branch, :CCr, ids(pm, nw, :branch), Lr)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :branch, :CCi, ids(pm, nw, :branch), Li)
 end
 
 
@@ -136,8 +136,8 @@ function variable_mc_branch_power(pm::AbstractUBFModels; nw::Int=nw_id_default, 
     var(pm, nw)[:p] = Dict([(id,diag(P[id])) for id in branch_arcs])
     var(pm, nw)[:q] = Dict([(id,diag(Q[id])) for id in branch_arcs])
 
-    report && _IM.sol_component_value_edge(pm, nw, :branch, :Pf, :Pt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), P)
-    report && _IM.sol_component_value_edge(pm, nw, :branch, :Qf, :Qt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), Q)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :Pf, :Pt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), P)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :Qf, :Qt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), Q)
 end
 
 
@@ -276,8 +276,8 @@ function variable_mc_generator_power_mx(pm::SDPUBFKCLMXModel; nw::Int=nw_id_defa
     var(pm, nw)[:pg] = Dict{Int, Any}([(id, diag(Pg[id])) for id in gen_ids])
     var(pm, nw)[:qg] = Dict{Int, Any}([(id, diag(Qg[id])) for id in gen_ids])
 
-    report && _IM.sol_component_value(pm, nw, :gen, :Pg_bus, ids(pm, nw, :gen), Pg)
-    report && _IM.sol_component_value(pm, nw, :gen, :Qg_bus, ids(pm, nw, :gen), Qg)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :Pg_bus, ids(pm, nw, :gen), Pg)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :Qg_bus, ids(pm, nw, :gen), Qg)
 end
 
 
@@ -303,8 +303,8 @@ function variable_mc_generator_current(pm::AbstractUBFModels; nw::Int=nw_id_defa
     var(pm, nw)[:CCgr] = CCgr
     var(pm, nw)[:CCgi] = CCgi
 
-    report && _IM.sol_component_value(pm, nw, :gen, :CCgr, ids(pm, nw, :gen), CCgr)
-    report && _IM.sol_component_value(pm, nw, :gen, :CCgi, ids(pm, nw, :gen), CCgi)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :CCgr, ids(pm, nw, :gen), CCgr)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :CCgi, ids(pm, nw, :gen), CCgi)
 end
 
 
@@ -418,8 +418,8 @@ function variable_mc_load_power(pm::AbstractUBFModels, load_ids::Vector{Int}; nw
         var(pm, nw)[:qd][i] = qd[i]
     end
 
-    report && _IM.sol_component_value(pm, nw, :load, :pd, load_ids, pd)
-    report && _IM.sol_component_value(pm, nw, :load, :qd, load_ids, qd)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :pd, load_ids, pd)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :qd, load_ids, qd)
 end
 
 
@@ -448,8 +448,8 @@ function variable_mc_load_power_bus(pm::SDPUBFKCLMXModel, load_ids::Vector{Int};
         var(pm, nw, :Qd_bus)[id] = Qd_bus[id]
     end
 
-    report && _IM.sol_component_value(pm, nw, :load, :Pd_bus, load_ids, Pd_bus)
-    report && _IM.sol_component_value(pm, nw, :load, :Qd_bus, load_ids, Qd_bus)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :Pd_bus, load_ids, Pd_bus)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :Qd_bus, load_ids, Qd_bus)
 end
 
 
@@ -488,8 +488,8 @@ function variable_mc_load_power_delta_aux(pm::AbstractUBFModels, load_ids::Vecto
     var(pm, nw)[:Xdr] = Xdr
     var(pm, nw)[:Xdi] = Xdi
 
-    report && _IM.sol_component_value(pm, nw, :load, :Xdr, load_ids, Xdr)
-    report && _IM.sol_component_value(pm, nw, :load, :Xdi, load_ids, Xdi)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :Xdr, load_ids, Xdr)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :Xdi, load_ids, Xdi)
 end
 
 
@@ -517,8 +517,8 @@ function variable_mc_load_current(pm::AbstractUBFModels, load_ids::Vector{Int}; 
     var(pm, nw)[:CCdr] = CCdr
     var(pm, nw)[:CCdi] = CCdi
 
-    report && _IM.sol_component_value(pm, nw, :load, :CCdr, load_ids, CCdr)
-    report && _IM.sol_component_value(pm, nw, :load, :CCdi, load_ids, CCdi)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :CCdr, load_ids, CCdr)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :CCdi, load_ids, CCdi)
 end
 
 

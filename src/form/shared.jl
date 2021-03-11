@@ -349,5 +349,5 @@ function variable_mc_storage_current(pm::_PM.AbstractWConvexModels; nw::Int=nw_i
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :storage, :ccms, ids(pm, nw, :storage), ccms)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :ccms, ids(pm, nw, :storage), ccms)
 end

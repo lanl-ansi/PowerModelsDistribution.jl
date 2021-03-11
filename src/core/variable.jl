@@ -36,7 +36,7 @@ function variable_mc_bus_voltage_angle(pm::_PM.AbstractPowerModel; nw::Int=nw_id
         ) for i in ids(pm, nw, :bus)
     )
 
-    report && _IM.sol_component_value(pm, nw, :bus, :va, ids(pm, nw, :bus), va)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :va, ids(pm, nw, :bus), va)
 end
 
 
@@ -62,7 +62,7 @@ function variable_mc_bus_voltage_magnitude_only(pm::_PM.AbstractPowerModel; nw::
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :bus, :vm, ids(pm, nw, :bus), vm)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :vm, ids(pm, nw, :bus), vm)
 end
 
 ""
@@ -86,7 +86,7 @@ function variable_mc_bus_voltage_real(pm::_PM.AbstractPowerModel; nw::Int=nw_id_
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :bus, :vr, ids(pm, nw, :bus), vr)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :vr, ids(pm, nw, :bus), vr)
 end
 
 ""
@@ -109,7 +109,7 @@ function variable_mc_bus_voltage_imaginary(pm::_PM.AbstractPowerModel; nw::Int=n
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :bus, :vi, ids(pm, nw, :bus), vi)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :vi, ids(pm, nw, :bus), vi)
 end
 
 
@@ -154,7 +154,7 @@ function variable_mc_branch_power_real(pm::_PM.AbstractPowerModel; nw::Int=nw_id
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, nw, :branch, :pf, :pt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), p)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :pf, :pt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), p)
 end
 
 
@@ -192,7 +192,7 @@ function variable_mc_branch_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int=
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, nw, :branch, :qf, :qt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), q)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :qf, :qt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), q)
 end
 
 
@@ -215,7 +215,7 @@ function variable_mc_branch_current_real(pm::_PM.AbstractPowerModel; nw::Int=nw_
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, nw, :branch, :cr_fr, :cr_to, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), cr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :cr_fr, :cr_to, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), cr)
 end
 
 
@@ -238,7 +238,7 @@ function variable_mc_branch_current_imaginary(pm::_PM.AbstractPowerModel; nw::In
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, nw, :branch, :ci_fr, :ci_to, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), ci)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :ci_fr, :ci_to, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), ci)
 end
 
 
@@ -261,7 +261,7 @@ function variable_mc_branch_current_series_real(pm::_PM.AbstractPowerModel; nw::
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :branch, :csr_fr, ids(pm, nw, :branch), csr)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :branch, :csr_fr, ids(pm, nw, :branch), csr)
 end
 
 
@@ -284,7 +284,7 @@ function variable_mc_branch_current_series_imaginary(pm::_PM.AbstractPowerModel;
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :branch, :csi_fr, ids(pm, nw, :branch), csi)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :branch, :csi_fr, ids(pm, nw, :branch), csi)
 end
 
 
@@ -312,7 +312,7 @@ function variable_mc_transformer_current_real(pm::_PM.AbstractPowerModel; nw::In
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, nw, :transformer, :cr_fr, :cr_to, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), cr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :cr_fr, :cr_to, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), cr)
 end
 
 
@@ -340,7 +340,7 @@ function variable_mc_transformer_current_imaginary(pm::_PM.AbstractPowerModel; n
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, nw, :transformer, :ci_fr, :ci_to, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), ci)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :ci_fr, :ci_to, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), ci)
 end
 
 
@@ -365,7 +365,7 @@ function variable_mc_switch_state(pm::_PM.AbstractPowerModel; nw::Int=nw_id_defa
         )
     end
 
-    report && _IM.sol_component_value(pm, nw, :switch, :state, ids(pm, nw, :switch_dispatchable), state)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :switch, :state, ids(pm, nw, :switch_dispatchable), state)
 end
 
 
@@ -414,7 +414,7 @@ function variable_mc_switch_power_real(pm::_PM.AbstractPowerModel; nw::Int=nw_id
 
     var(pm, nw)[:psw] = psw_auxes
 
-    report && _IM.sol_component_value_edge(pm, nw, :switch, :psw_fr, :psw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), psw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :psw_fr, :psw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), psw_expr)
 end
 
 
@@ -456,7 +456,7 @@ function variable_mc_switch_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int=
 
     var(pm, nw)[:qsw] = qsw_auxes
 
-    report && _IM.sol_component_value_edge(pm, nw, :switch, :qsw_fr, :qsw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), qsw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qsw_fr, :qsw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), qsw_expr)
 end
 
 
@@ -505,7 +505,7 @@ function variable_mc_switch_current_real(pm::_PM.AbstractPowerModel; nw::Int=nw_
 
     var(pm, nw)[:crsw] = crsw_auxes
 
-    report && _IM.sol_component_value_edge(pm, nw, :switch, :crsw_fr, :crsw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), crsw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :crsw_fr, :crsw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), crsw_expr)
 end
 
 
@@ -547,7 +547,7 @@ function variable_mc_switch_current_imaginary(pm::_PM.AbstractPowerModel; nw::In
 
     var(pm, nw)[:cisw] = cisw_auxes
 
-    report && _IM.sol_component_value_edge(pm, nw, :switch, :cisw_fr, :cisw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), cisw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :cisw_fr, :cisw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), cisw_expr)
 end
 
 
@@ -573,7 +573,7 @@ function variable_mc_bus_voltage_magnitude_sqr(pm::_PM.AbstractPowerModel; nw::I
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :bus, :w, ids(pm, nw, :bus), w)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :w, ids(pm, nw, :bus), w)
 end
 
 
@@ -644,7 +644,7 @@ function variable_mc_storage_power_control_imaginary(pm::_PM.AbstractPowerModel;
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
 end
 
 
@@ -673,7 +673,7 @@ function variable_mc_storage_power_control_imaginary_on_off(pm::_PM.AbstractPowe
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
 end
 
 
@@ -701,7 +701,7 @@ function variable_mc_storage_power_real(pm::_PM.AbstractPowerModel; nw::Int=nw_i
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :storage, :ps, ids(pm, nw, :storage), ps)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :ps, ids(pm, nw, :storage), ps)
 end
 
 
@@ -728,7 +728,7 @@ function variable_mc_storage_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :storage, :qs, ids(pm, nw, :storage), qs)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :qs, ids(pm, nw, :storage), qs)
 end
 
 
@@ -748,7 +748,7 @@ function variable_mc_slack_bus_power_real(pm::_PM.AbstractPowerModel; nw::Int=nw
         ) for i in ids(pm, nw, :bus)
     )
 
-    report && _IM.sol_component_value(pm, nw, :bus, :p_slack, ids(pm, nw, :bus), p_slack)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :p_slack, ids(pm, nw, :bus), p_slack)
 end
 
 
@@ -761,7 +761,7 @@ function variable_mc_slack_bus_power_imaginary(pm::_PM.AbstractPowerModel; nw::I
         ) for i in ids(pm, nw, :bus)
     )
 
-    report && _IM.sol_component_value(pm, nw, :bus, :q_slack, ids(pm, nw, :bus), q_slack)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :q_slack, ids(pm, nw, :bus), q_slack)
 end
 
 
@@ -808,7 +808,7 @@ function variable_mc_transformer_power_real(pm::_PM.AbstractPowerModel; nw::Int=
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, nw, :transformer, :pf, :pt, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), pt)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :pf, :pt, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), pt)
 end
 
 
@@ -850,7 +850,7 @@ function variable_mc_transformer_power_imaginary(pm::_PM.AbstractPowerModel; nw:
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, nw, :transformer, :qf, :qt, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), qt)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :qf, :qt, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), qt)
 end
 
 
@@ -870,7 +870,7 @@ function variable_mc_oltc_transformer_tap(pm::_PM.AbstractPowerModel; nw::Int=nw
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :transformer, :tap, ids(pm, nw, :transformer), tap)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :transformer, :tap, ids(pm, nw, :transformer), tap)
 end
 
 
@@ -908,9 +908,9 @@ function variable_mc_load_indicator(pm::_PM.AbstractPowerModel; nw::Int=nw_id_de
     pd = var(pm, nw)[:pd] = Dict(i => var(pm, nw)[:z_demand][i].*ref(pm, nw, :load, i)["pd"] for i in ids(pm, nw, :load))
     qd = var(pm, nw)[:qd] = Dict(i => var(pm, nw)[:z_demand][i].*ref(pm, nw, :load, i)["qd"] for i in ids(pm, nw, :load))
 
-    report && _IM.sol_component_value(pm, nw, :load, :status, ids(pm, nw, :load), z_demand)
-    report && _IM.sol_component_value(pm, nw, :load, :pd, ids(pm, nw, :load), pd)
-    report && _IM.sol_component_value(pm, nw, :load, :qd, ids(pm, nw, :load), qd)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :status, ids(pm, nw, :load), z_demand)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :pd, ids(pm, nw, :load), pd)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :qd, ids(pm, nw, :load), qd)
 end
 
 
@@ -931,7 +931,7 @@ function variable_mc_shunt_indicator(pm::_PM.AbstractPowerModel; nw::Int=nw_id_d
         )
     end
 
-    report && _IM.sol_component_value(pm, nw, :shunt, :status, ids(pm, nw, :shunt), z_shunt)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :shunt, :status, ids(pm, nw, :shunt), z_shunt)
 end
 
 
@@ -952,7 +952,7 @@ function variable_mc_bus_voltage_indicator(pm::_PM.AbstractPowerModel; nw::Int=n
         )
     end
 
-    report && _IM.sol_component_value(pm, nw, :bus, :status, ids(pm, nw, :bus), z_voltage)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :status, ids(pm, nw, :bus), z_voltage)
 end
 
 
@@ -973,7 +973,7 @@ function variable_mc_gen_indicator(pm::_PM.AbstractPowerModel; nw::Int=nw_id_def
         )
     end
 
-    report && _IM.sol_component_value(pm, nw, :gen, :gen_status, ids(pm, nw, :gen), z_gen)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :gen_status, ids(pm, nw, :gen), z_gen)
 end
 
 
@@ -994,7 +994,7 @@ function variable_mc_storage_indicator(pm::_PM.AbstractPowerModel; nw::Int=nw_id
         )
     end
 
-    report && _IM.sol_component_value(pm, nw, :storage, :status, ids(pm, nw, :storage), z_storage)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :status, ids(pm, nw, :storage), z_storage)
 end
 
 
@@ -1024,7 +1024,7 @@ function variable_mc_storage_power_real_on_off(pm::_PM.AbstractPowerModel; nw::I
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :storage, :ps, ids(pm, nw, :storage), ps)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :ps, ids(pm, nw, :storage), ps)
 end
 
 
@@ -1052,7 +1052,7 @@ function variable_mc_storage_power_imaginary_on_off(pm::_PM.AbstractPowerModel; 
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :storage, :qs, ids(pm, nw, :storage), qs)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :qs, ids(pm, nw, :storage), qs)
 end
 
 
@@ -1076,7 +1076,7 @@ function variable_mc_bus_voltage_magnitude_sqr_on_off(pm::_PM.AbstractPowerModel
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :bus, :w, ids(pm, nw, :bus), w)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :w, ids(pm, nw, :bus), w)
 end
 
 
@@ -1100,7 +1100,7 @@ function variable_mc_bus_voltage_magnitude_on_off(pm::_PM.AbstractPowerModel; nw
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :bus, :vm, ids(pm, nw, :bus), vm)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :vm, ids(pm, nw, :bus), vm)
 
 end
 
@@ -1138,7 +1138,7 @@ function variable_mc_generator_power_real(pm::_PM.AbstractPowerModel; nw::Int=nw
 
     var(pm, nw)[:pg_bus] = Dict{Int, Any}()
 
-    report && _IM.sol_component_value(pm, nw, :gen, :pg, ids(pm, nw, :gen), pg)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :pg, ids(pm, nw, :gen), pg)
 end
 
 
@@ -1168,7 +1168,7 @@ function variable_mc_generator_power_imaginary(pm::_PM.AbstractPowerModel; nw::I
 
     var(pm, nw)[:qg_bus] = Dict{Int, Any}()
 
-    report && _IM.sol_component_value(pm, nw, :gen, :qg, ids(pm, nw, :gen), qg)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :qg, ids(pm, nw, :gen), qg)
 end
 
 
@@ -1190,7 +1190,7 @@ function variable_mc_generator_current_real(pm::_PM.AbstractPowerModel; nw::Int=
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :gen, :crg, ids(pm, nw, :gen), crg)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :crg, ids(pm, nw, :gen), crg)
 end
 
 "variable: `cig[j]` for `j` in `gen`"
@@ -1211,7 +1211,7 @@ function variable_mc_generator_current_imaginary(pm::_PM.AbstractPowerModel; nw:
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :gen, :cig, ids(pm, nw, :gen), cig)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :cig, ids(pm, nw, :gen), cig)
 end
 
 
@@ -1246,7 +1246,7 @@ function variable_mc_generator_power_real_on_off(pm::_PM.AbstractPowerModel; nw:
 
     var(pm, nw)[:pg_bus] = Dict{Int, Any}()
 
-    report && _IM.sol_component_value(pm, nw, :gen, :pg, ids(pm, nw, :gen), pg)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :pg, ids(pm, nw, :gen), pg)
 end
 
 
@@ -1275,5 +1275,5 @@ function variable_mc_generator_power_imaginary_on_off(pm::_PM.AbstractPowerModel
 
     var(pm, nw)[:qg_bus] = Dict{Int, Any}()
 
-    report && _IM.sol_component_value(pm, nw, :gen, :qg, ids(pm, nw, :gen), qg)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :qg, ids(pm, nw, :gen), qg)
 end

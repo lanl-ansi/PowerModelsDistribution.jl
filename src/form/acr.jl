@@ -136,7 +136,7 @@ function variable_mc_bus_voltage_real_on_off(pm::_PM.AbstractACRModel; nw::Int=n
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :bus, :vr, ids(pm, nw, :bus), vr)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :vr, ids(pm, nw, :bus), vr)
 end
 
 
@@ -160,7 +160,7 @@ function variable_mc_bus_voltage_imaginary_on_off(pm::_PM.AbstractACRModel; nw::
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :bus, :vi, ids(pm, nw, :bus), vi)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :vi, ids(pm, nw, :bus), vi)
 end
 
 
