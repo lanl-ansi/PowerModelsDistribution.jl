@@ -6,7 +6,7 @@ function instantiate_mc_model(data::Dict{String,<:Any}, model_type::Type, build_
     end
 
     return _IM.instantiate_model(
-        data, model_type, build_method, _PM.ref_add_core!, _PM._pm_global_keys,
+        data, model_type, build_method, ref_add_core!, _PM._pm_global_keys,
         pmd_it_sym; ref_extensions = [ref_extensions..., ref_add_arcs_switch!,
         ref_add_arcs_transformer!, ref_add_connections!], kwargs...)
 end
