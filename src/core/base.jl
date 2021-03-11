@@ -1,3 +1,32 @@
+""
+function run_model(data::Dict{String,<:Any}, model_type::Type, optimizer, build_method;
+        ref_extensions=[], solution_processors=[], relax_integrality=false,
+        multinetwork=false, multiconductor=false, kwargs...)
+
+    if multinetwork != _IM.ismultinetwork(data)
+        model_requirement = multinetwork ? "multi-network" : "single-network"
+        data_type = _IM.ismultinetwork(data) ? "multi-network" : "single-network"
+        Memento.error(_LOGGER, "attempted to build a $(model_requirement) model with $(data_type) data")
+    end
+
+    if multiconductor != ismulticonductor(data)
+        model_requirement = multiconductor ? "multi-conductor" : "single-conductor"
+        data_type = ismulticonductor(data) ? "multi-conductor" : "single-conductor"
+        Memento.error(_LOGGER, "attempted to build a $(model_requirement) model with $(data_type) data")
+    end
+
+    start_time = time()
+    pm = instantiate_mc_model(data, model_type, build_method; ref_extensions=ref_extensions, kwargs...)
+    Memento.debug(_LOGGER, "pm model build time: $(time() - start_time)")
+
+    start_time = time()
+    result = optimize_model!(pm, relax_integrality=relax_integrality, optimizer=optimizer, solution_processors=solution_processors)
+    Memento.debug(_LOGGER, "pm model solve and solution time: $(time() - start_time)")
+
+    return result
+end
+
+
 "multiconductor version of instantiate model from PowerModels"
 function instantiate_mc_model(data::Dict{String,<:Any}, model_type::Type, build_method::Function; ref_extensions::Vector{<:Function}=Vector{Function}([]), kwargs...)
     if get(data, "data_model", MATHEMATICAL) == ENGINEERING

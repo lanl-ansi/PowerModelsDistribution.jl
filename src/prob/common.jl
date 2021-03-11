@@ -3,11 +3,11 @@ function solve_mc_model(data::Dict{String,<:Any}, model_type::Type, solver, buil
     if get(data, "data_model", MATHEMATICAL) == ENGINEERING
         data_math = transform_data_model(data; build_multinetwork=multinetwork)
 
-        result = _PM.run_model(data_math, model_type, solver, build_mc; ref_extensions=[ref_add_arcs_transformer!, ref_add_arcs_switch!, ref_add_connections!, ref_extensions...], multiconductor=true, multinetwork=multinetwork, kwargs...)
+        result = run_model(data_math, model_type, solver, build_mc; ref_extensions=[ref_add_arcs_transformer!, ref_add_arcs_switch!, ref_add_connections!, ref_extensions...], multiconductor=true, multinetwork=multinetwork, kwargs...)
 
         result["solution"] = transform_solution(result["solution"], data_math; make_si=make_si)
     elseif get(data, "data_model", MATHEMATICAL) == MATHEMATICAL
-        result = _PM.run_model(data, model_type, solver, build_mc; ref_extensions=[ref_add_arcs_transformer!, ref_add_arcs_switch!, ref_add_connections!, ref_extensions...], multiconductor=true, multinetwork=multinetwork, kwargs...)
+        result = run_model(data, model_type, solver, build_mc; ref_extensions=[ref_add_arcs_transformer!, ref_add_arcs_switch!, ref_add_connections!, ref_extensions...], multiconductor=true, multinetwork=multinetwork, kwargs...)
     end
 
     return result
