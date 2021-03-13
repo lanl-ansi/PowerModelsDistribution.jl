@@ -93,7 +93,7 @@ end
 
 ""
 function objective_mc_min_fuel_cost(pm::_PM.AbstractPowerModel; kwargs...)
-    model = _PM.check_gen_cost_models(pm)
+    model = check_gen_cost_models(pm)
 
     if model == 1
         return objective_mc_min_fuel_cost_pwl(pm; kwargs...)
@@ -108,7 +108,7 @@ end
 
 ""
 function objective_mc_min_fuel_cost_switch(pm::_PM.AbstractPowerModel; kwargs...)
-    model = _PM.check_gen_cost_models(pm)
+    model = check_gen_cost_models(pm)
 
     if model == 1
         return objective_mc_min_fuel_cost_pwl_switch(pm; kwargs...)
@@ -407,4 +407,38 @@ function objective_variable_pg_cost(pm::_PM.AbstractIVRModel; report::Bool=true)
             end
         end
     end
+end
+
+
+"""
+Checks that all cost models are of the same type
+"""
+function check_cost_models(pm::_PM.AbstractPowerModel)
+    return check_gen_cost_models(pm)
+end
+
+
+"""
+Checks that all generator cost models are of the same type
+"""
+function check_gen_cost_models(pm::_PM.AbstractPowerModel)
+    model = nothing
+
+    for (n, nw_ref) in nws(pm)
+        for (i,gen) in nw_ref[:gen]
+            if haskey(gen, "cost")
+                if model === nothing
+                    model = gen["model"]
+                else
+                    if gen["model"] != model
+                        Memento.error(_LOGGER, "cost models are inconsistent, the typical model is $(model) however model $(gen["model"]) is given on generator $(i)")
+                    end
+                end
+            else
+                Memento.error(_LOGGER, "no cost given for generator $(i)")
+            end
+        end
+    end
+
+    return model
 end
