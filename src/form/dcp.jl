@@ -1,5 +1,5 @@
 ""
-function variable_mc_bus_voltage(pm::_PM.AbstractDCPModel; nw=nw_id_default, kwargs...)
+function variable_mc_bus_voltage(pm::AbstractDCPModel; nw=nw_id_default, kwargs...)
     variable_mc_bus_voltage_angle(pm; nw=nw, kwargs...)
 end
 
@@ -7,12 +7,12 @@ end
 ######## AbstractDCPForm Models (has va but assumes vm is 1.0) ########
 
 "nothing to do, these models do not have complex voltage constraints"
-function constraint_mc_model_voltage(pm::_PM.AbstractDCPModel, n::Int, c::Int)
+function constraint_mc_model_voltage(pm::AbstractDCPModel, n::Int, c::Int)
 end
 
 
 ""
-function variable_mc_bus_voltage_on_off(pm::_PM.AbstractDCPModel; kwargs...)
+function variable_mc_bus_voltage_on_off(pm::AbstractDCPModel; kwargs...)
     variable_mc_bus_voltage_angle(pm; kwargs...)
 end
 
@@ -26,7 +26,7 @@ Creates Ohms constraints (yt post fix indicates that Y and T values are in recta
 p[f_idx] == -b*(t[f_bus] - t[t_bus])
 ```
 """
-function constraint_mc_ohms_yt_from(pm::_PM.AbstractDCPModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
+function constraint_mc_ohms_yt_from(pm::AbstractDCPModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
     p_fr  = var(pm, nw,  :p, f_idx)
     va_fr = var(pm, nw, :va, f_bus)
     va_to = var(pm, nw, :va, t_bus)
@@ -38,12 +38,12 @@ end
 
 
 "power balance constraint with line shunts and transformers for load shed problem, DCP formulation"
-function constraint_mc_power_balance_shed(pm::_PM.AbstractDCPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
-    p    = get(var(pm, nw), :p,      Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
-    pg   = get(var(pm, nw), :pg_bus, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
-    ps   = get(var(pm, nw), :ps,     Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
-    psw  = get(var(pm, nw), :psw,    Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    pt   = get(var(pm, nw), :pt,     Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+function constraint_mc_power_balance_shed(pm::AbstractDCPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+    p    = get(var(pm, nw), :p,      Dict()); _check_var_keys(p, bus_arcs, "active power", "branch")
+    pg   = get(var(pm, nw), :pg_bus, Dict()); _check_var_keys(pg, bus_gens, "active power", "generator")
+    ps   = get(var(pm, nw), :ps,     Dict()); _check_var_keys(ps, bus_storage, "active power", "storage")
+    psw  = get(var(pm, nw), :psw,    Dict()); _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    pt   = get(var(pm, nw), :pt,     Dict()); _check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
 
     z_demand = var(pm, nw, :z_demand)
     z_gen = haskey(var(pm, nw), :z_gen) ? var(pm, nw, :z_gen) : Dict(i => 1.0 for i in ids(pm, nw, :gen))
@@ -80,12 +80,12 @@ end
 
 
 "power balance constraint with line shunts and transformers for load shed problem, DCP formulation"
-function constraint_mc_power_balance_shed_simple(pm::_PM.AbstractDCPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
-    p    = get(var(pm, nw), :p,      Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
-    pg   = get(var(pm, nw), :pg_bus, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
-    ps   = get(var(pm, nw), :ps,     Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
-    psw  = get(var(pm, nw), :psw,    Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    pt   = get(var(pm, nw), :pt,     Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+function constraint_mc_power_balance_shed_simple(pm::AbstractDCPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+    p    = get(var(pm, nw), :p,      Dict()); _check_var_keys(p, bus_arcs, "active power", "branch")
+    pg   = get(var(pm, nw), :pg_bus, Dict()); _check_var_keys(pg, bus_gens, "active power", "generator")
+    ps   = get(var(pm, nw), :ps,     Dict()); _check_var_keys(ps, bus_storage, "active power", "storage")
+    psw  = get(var(pm, nw), :psw,    Dict()); _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    pt   = get(var(pm, nw), :pt,     Dict()); _check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
 
     z_demand = var(pm, nw, :z_demand)
 
@@ -120,12 +120,12 @@ end
 
 
 "on/off bus voltage constraint for DCP formulation, nothing to do"
-function constraint_mc_bus_voltage_on_off(pm::_PM.AbstractDCPModel; nw::Int=nw_id_default, kwargs...)
+function constraint_mc_bus_voltage_on_off(pm::AbstractDCPModel; nw::Int=nw_id_default, kwargs...)
 end
 
 
 ""
-function variable_mc_branch_power_real(pm::_PM.AbstractAPLossLessModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_power_real(pm::AbstractAPLossLessModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_branch) for ((l,i,j), connections) in entry)
     p = Dict((l,i,j) => JuMP.@variable(pm.model,
         [c in connections[(l,i,j)]], base_name="$(nw)_($l,$i,$j)_p",
@@ -159,7 +159,7 @@ end
 
 
 ""
-function constraint_mc_switch_state_closed(pm::_PM.AbstractDCPModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
+function constraint_mc_switch_state_closed(pm::AbstractDCPModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
     va_fr = var(pm, nw, :va, f_bus)
     va_to = var(pm, nw, :va, t_bus)
 
@@ -170,7 +170,7 @@ end
 
 
 ""
-function constraint_storage_losses(pm::_PM.AbstractAPLossLessModels, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
+function constraint_storage_losses(pm::AbstractAPLossLessModels, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
     ps = var(pm, n, :ps, i)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)

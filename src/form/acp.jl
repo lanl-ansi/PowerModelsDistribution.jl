@@ -1,5 +1,5 @@
 ""
-function variable_mc_bus_voltage(pm::_PM.AbstractACPModel; nw=nw_id_default, kwargs...)
+function variable_mc_bus_voltage(pm::AbstractACPModel; nw=nw_id_default, kwargs...)
     variable_mc_bus_voltage_angle(pm; nw=nw, kwargs...)
     variable_mc_bus_voltage_magnitude_only(pm; nw=nw, kwargs...)
 
@@ -30,7 +30,7 @@ end
 
 
 ""
-function variable_mc_bus_voltage_on_off(pm::_PM.AbstractACPModel; nw::Int=nw_id_default, kwargs...)
+function variable_mc_bus_voltage_on_off(pm::AbstractACPModel; nw::Int=nw_id_default, kwargs...)
     variable_mc_bus_voltage_angle(pm; nw=nw, kwargs...)
     variable_mc_bus_voltage_magnitude_on_off(pm; nw=nw, kwargs...)
 
@@ -57,7 +57,7 @@ end
 
 
 ""
-function constraint_mc_switch_state_closed(pm::_PM.AbstractACPModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
+function constraint_mc_switch_state_closed(pm::AbstractACPModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
     vm_fr = var(pm, nw, :vm, f_bus)
     vm_to = var(pm, nw, :vm, t_bus)
 
@@ -72,7 +72,7 @@ end
 
 
 ""
-function constraint_mc_switch_state_on_off(pm::_PM.AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int}; relax::Bool=false)
+function constraint_mc_switch_state_on_off(pm::AbstractACPModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int}; relax::Bool=false)
     vm_fr = var(pm, nw, :vm, f_bus)
     vm_to = var(pm, nw, :vm, t_bus)
 
@@ -102,19 +102,19 @@ end
 
 
 ""
-function constraint_mc_power_balance_slack(pm::_PM.AbstractACPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+function constraint_mc_power_balance_slack(pm::AbstractACPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
     vm   = var(pm, nw, :vm, i)
     va   = var(pm, nw, :va, i)
-    p    = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
-    q    = get(var(pm, nw),    :q, Dict()); _PM._check_var_keys(q, bus_arcs, "reactive power", "branch")
-    pg   = get(var(pm, nw),   :pg, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
-    qg   = get(var(pm, nw),   :qg, Dict()); _PM._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs   = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_storage, "reactive power", "storage")
-    psw  = get(var(pm, nw),  :psw, Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    qsw  = get(var(pm, nw),  :qsw, Dict()); _PM._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
-    pt   = get(var(pm, nw),   :pt, Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
-    qt   = get(var(pm, nw),   :qt, Dict()); _PM._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+    p    = get(var(pm, nw),    :p, Dict()); _check_var_keys(p, bus_arcs, "active power", "branch")
+    q    = get(var(pm, nw),    :q, Dict()); _check_var_keys(q, bus_arcs, "reactive power", "branch")
+    pg   = get(var(pm, nw),   :pg, Dict()); _check_var_keys(pg, bus_gens, "active power", "generator")
+    qg   = get(var(pm, nw),   :qg, Dict()); _check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps   = get(var(pm, nw),   :ps, Dict()); _check_var_keys(ps, bus_storage, "active power", "storage")
+    qs   = get(var(pm, nw),   :qs, Dict()); _check_var_keys(qs, bus_storage, "reactive power", "storage")
+    psw  = get(var(pm, nw),  :psw, Dict()); _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(var(pm, nw),  :qsw, Dict()); _check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(var(pm, nw),   :pt, Dict()); _check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(var(pm, nw),   :qt, Dict()); _check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
     p_slack = var(pm, nw, :p_slack, i)
     q_slack = var(pm, nw, :q_slack, i)
 
@@ -186,19 +186,19 @@ end
 
 
 ""
-function constraint_mc_power_balance_shed(pm::_PM.AbstractACPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+function constraint_mc_power_balance_shed(pm::AbstractACPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
     vm       = var(pm, nw, :vm, i)
     va       = var(pm, nw, :va, i)
-    p        = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
-    q        = get(var(pm, nw),    :q, Dict()); _PM._check_var_keys(q, bus_arcs, "reactive power", "branch")
-    pg       = get(var(pm, nw),   :pg, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
-    qg       = get(var(pm, nw),   :qg, Dict()); _PM._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps       = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs       = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_storage, "reactive power", "storage")
-    psw      = get(var(pm, nw),  :psw, Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    qsw      = get(var(pm, nw),  :qsw, Dict()); _PM._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
-    pt       = get(var(pm, nw),   :pt, Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
-    qt       = get(var(pm, nw),   :qt, Dict()); _PM._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+    p        = get(var(pm, nw),    :p, Dict()); _check_var_keys(p, bus_arcs, "active power", "branch")
+    q        = get(var(pm, nw),    :q, Dict()); _check_var_keys(q, bus_arcs, "reactive power", "branch")
+    pg       = get(var(pm, nw),   :pg, Dict()); _check_var_keys(pg, bus_gens, "active power", "generator")
+    qg       = get(var(pm, nw),   :qg, Dict()); _check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps       = get(var(pm, nw),   :ps, Dict()); _check_var_keys(ps, bus_storage, "active power", "storage")
+    qs       = get(var(pm, nw),   :qs, Dict()); _check_var_keys(qs, bus_storage, "reactive power", "storage")
+    psw      = get(var(pm, nw),  :psw, Dict()); _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw      = get(var(pm, nw),  :qsw, Dict()); _check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt       = get(var(pm, nw),   :pt, Dict()); _check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt       = get(var(pm, nw),   :qt, Dict()); _check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
 
     z_demand = var(pm, nw, :z_demand)
     z_gen = haskey(var(pm, nw), :z_gen) ? var(pm, nw, :z_gen) : Dict(i => 1.0 for i in ids(pm, nw, :gen))
@@ -259,19 +259,19 @@ end
 
 
 ""
-function constraint_mc_power_balance_simple(pm::_PM.AbstractACPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+function constraint_mc_power_balance_simple(pm::AbstractACPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
     vm   = var(pm, nw, :vm, i)
     va   = var(pm, nw, :va, i)
-    p    = get(var(pm, nw),    :p, Dict()); _PM._check_var_keys(p, bus_arcs, "active power", "branch")
-    q    = get(var(pm, nw),    :q, Dict()); _PM._check_var_keys(q, bus_arcs, "reactive power", "branch")
-    pg   = get(var(pm, nw),   :pg, Dict()); _PM._check_var_keys(pg, bus_gens, "active power", "generator")
-    qg   = get(var(pm, nw),   :qg, Dict()); _PM._check_var_keys(qg, bus_gens, "reactive power", "generator")
-    ps   = get(var(pm, nw),   :ps, Dict()); _PM._check_var_keys(ps, bus_storage, "active power", "storage")
-    qs   = get(var(pm, nw),   :qs, Dict()); _PM._check_var_keys(qs, bus_storage, "reactive power", "storage")
-    psw  = get(var(pm, nw),  :psw, Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    qsw  = get(var(pm, nw),  :qsw, Dict()); _PM._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
-    pt   = get(var(pm, nw),   :pt, Dict()); _PM._check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
-    qt   = get(var(pm, nw),   :qt, Dict()); _PM._check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+    p    = get(var(pm, nw),    :p, Dict()); _check_var_keys(p, bus_arcs, "active power", "branch")
+    q    = get(var(pm, nw),    :q, Dict()); _check_var_keys(q, bus_arcs, "reactive power", "branch")
+    pg   = get(var(pm, nw),   :pg, Dict()); _check_var_keys(pg, bus_gens, "active power", "generator")
+    qg   = get(var(pm, nw),   :qg, Dict()); _check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps   = get(var(pm, nw),   :ps, Dict()); _check_var_keys(ps, bus_storage, "active power", "storage")
+    qs   = get(var(pm, nw),   :qs, Dict()); _check_var_keys(qs, bus_storage, "reactive power", "storage")
+    psw  = get(var(pm, nw),  :psw, Dict()); _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(var(pm, nw),  :qsw, Dict()); _check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(var(pm, nw),   :pt, Dict()); _check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(var(pm, nw),   :qt, Dict()); _check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
 
     Gt, Bt = _build_bus_shunt_matrices(pm, nw, terminals, bus_shunts)
 
@@ -338,21 +338,21 @@ end
 
 
 ""
-function constraint_mc_power_balance(pm::_PM.AbstractACPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+function constraint_mc_power_balance(pm::AbstractACPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
     vm   = var(pm, nw, :vm, i)
     va   = var(pm, nw, :va, i)
-    p    = get(var(pm, nw),      :p, Dict()); _PM._check_var_keys(  p, bus_arcs, "active power", "branch")
-    q    = get(var(pm, nw),      :q, Dict()); _PM._check_var_keys(  q, bus_arcs, "reactive power", "branch")
-    pg   = get(var(pm, nw), :pg_bus, Dict()); _PM._check_var_keys( pg, bus_gens, "active power", "generator")
-    qg   = get(var(pm, nw), :qg_bus, Dict()); _PM._check_var_keys( qg, bus_gens, "reactive power", "generator")
-    ps   = get(var(pm, nw),     :ps, Dict()); _PM._check_var_keys( ps, bus_storage, "active power", "storage")
-    qs   = get(var(pm, nw),     :qs, Dict()); _PM._check_var_keys( qs, bus_storage, "reactive power", "storage")
-    psw  = get(var(pm, nw),    :psw, Dict()); _PM._check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    qsw  = get(var(pm, nw),    :qsw, Dict()); _PM._check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
-    pt   = get(var(pm, nw),     :pt, Dict()); _PM._check_var_keys( pt, bus_arcs_trans, "active power", "transformer")
-    qt   = get(var(pm, nw),     :qt, Dict()); _PM._check_var_keys( qt, bus_arcs_trans, "reactive power", "transformer")
-    pd   = get(var(pm, nw), :pd_bus, Dict()); _PM._check_var_keys( pd, bus_loads, "active power", "load")
-    qd   = get(var(pm, nw), :qd_bus, Dict()); _PM._check_var_keys( pd, bus_loads, "reactive power", "load")
+    p    = get(var(pm, nw),      :p, Dict()); _check_var_keys(  p, bus_arcs, "active power", "branch")
+    q    = get(var(pm, nw),      :q, Dict()); _check_var_keys(  q, bus_arcs, "reactive power", "branch")
+    pg   = get(var(pm, nw), :pg_bus, Dict()); _check_var_keys( pg, bus_gens, "active power", "generator")
+    qg   = get(var(pm, nw), :qg_bus, Dict()); _check_var_keys( qg, bus_gens, "reactive power", "generator")
+    ps   = get(var(pm, nw),     :ps, Dict()); _check_var_keys( ps, bus_storage, "active power", "storage")
+    qs   = get(var(pm, nw),     :qs, Dict()); _check_var_keys( qs, bus_storage, "reactive power", "storage")
+    psw  = get(var(pm, nw),    :psw, Dict()); _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(var(pm, nw),    :qsw, Dict()); _check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(var(pm, nw),     :pt, Dict()); _check_var_keys( pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(var(pm, nw),     :qt, Dict()); _check_var_keys( qt, bus_arcs_trans, "reactive power", "transformer")
+    pd   = get(var(pm, nw), :pd_bus, Dict()); _check_var_keys( pd, bus_loads, "active power", "load")
+    qd   = get(var(pm, nw), :qd_bus, Dict()); _check_var_keys( pd, bus_loads, "reactive power", "load")
 
     Gs, Bs = _build_bus_shunt_matrices(pm, nw, terminals, bus_shunts)
 
@@ -460,7 +460,7 @@ q_fr == -b[c,c] *vm_fr[c]^2 -
             )
 ```
 """
-function constraint_mc_ohms_yt_from(pm::_PM.AbstractACPModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
+function constraint_mc_ohms_yt_from(pm::AbstractACPModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
     p_fr  = var(pm, nw,  :p, f_idx)
     q_fr  = var(pm, nw,  :q, f_idx)
     vm_fr = var(pm, nw, :vm, f_bus)
@@ -498,13 +498,13 @@ p[t_idx] ==  (g+g_to)*v[t_bus]^2 + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[t_bu
 q[t_idx] == -(b+b_to)*v[t_bus]^2 - (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[f_bus]-t[t_bus])) + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus]))
 ```
 """
-function constraint_mc_ohms_yt_to(pm::_PM.AbstractACPModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_to::Matrix{<:Real}, B_to::Matrix{<:Real})
+function constraint_mc_ohms_yt_to(pm::AbstractACPModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_to::Matrix{<:Real}, B_to::Matrix{<:Real})
     constraint_mc_ohms_yt_from(pm, nw, t_bus, f_bus, t_idx, f_idx, t_connections, f_connections, G, B, G_to, B_to)
 end
 
 
 ""
-function constraint_mc_transformer_power_yy(pm::_PM.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+function constraint_mc_transformer_power_yy(pm::AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     vm_fr = var(pm, nw, :vm, f_bus)
     vm_to = var(pm, nw, :vm, t_bus)
     va_fr = var(pm, nw, :va, f_bus)
@@ -534,7 +534,7 @@ end
 
 
 ""
-function constraint_mc_transformer_power_dy(pm::_PM.AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+function constraint_mc_transformer_power_dy(pm::AbstractACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     vm_fr = var(pm, nw, :vm, f_bus)
     vm_to = var(pm, nw, :vm, t_bus)
     va_fr = var(pm, nw, :va, f_bus)
@@ -602,7 +602,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_bus_voltage_magnitude_vuf(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vufmax::Float64)
+function constraint_mc_bus_voltage_magnitude_vuf(pm::AbstractACPModel, nw::Int, bus_id::Int, vufmax::Float64)
     if !haskey(var(pm, nw_id_default), :vmpossqr)
         var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
         var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
@@ -649,7 +649,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_bus_voltage_magnitude_negative_sequence(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vmnegmax::Float64)
+function constraint_mc_bus_voltage_magnitude_negative_sequence(pm::AbstractACPModel, nw::Int, bus_id::Int, vmnegmax::Float64)
     if !haskey(var(pm, nw_id_default), :vmpossqr)
         var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
         var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
@@ -684,7 +684,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_bus_voltage_magnitude_positive_sequence(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vmposmax::Float64)
+function constraint_mc_bus_voltage_magnitude_positive_sequence(pm::AbstractACPModel, nw::Int, bus_id::Int, vmposmax::Float64)
     if !haskey(var(pm, nw_id_default), :vmpossqr)
         var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
         var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
@@ -719,7 +719,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_bus_voltage_magnitude_zero_sequence(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vmzeromax::Float64)
+function constraint_mc_bus_voltage_magnitude_zero_sequence(pm::AbstractACPModel, nw::Int, bus_id::Int, vmzeromax::Float64)
     if !haskey(var(pm, nw_id_default), :vmpossqr)
         var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
         var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
@@ -749,7 +749,7 @@ And then
 s_a = v_a.conj(i_a) = v_a.conj(i_ab-i_ca)
 idem for s_b and s_c
 """
-function constraint_mc_load_current_delta(pm::_PM.AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Vector, cq::Vector)
+function constraint_mc_load_current_delta(pm::AbstractACPModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Vector, cq::Vector)
     cp_ab, cp_bc, cp_ca = cp
     cq_ab, cq_bc, cq_ca = cq
     vm_a, vm_b, vm_c = var(pm, nw, :vm, load_bus_id)
@@ -790,7 +790,7 @@ end
 
 
 ""
-function constraint_mc_bus_voltage_magnitude_ll(pm::_PM.AbstractACPModel, nw::Int, bus_id::Int, vm_ll_min::Vector, vm_ll_max::Vector)
+function constraint_mc_bus_voltage_magnitude_ll(pm::AbstractACPModel, nw::Int, bus_id::Int, vm_ll_min::Vector, vm_ll_max::Vector)
     # 3 conductors asserted in template already
     vm_ln = [var(pm, nw, :vm, bus_id)[i] for i in 1:3]
     va_ln = [var(pm, nw, :va, bus_id)[i] for i in 1:3]
@@ -814,7 +814,7 @@ end
 
 
 "bus voltage on/off constraint for load shed problem"
-function constraint_mc_bus_voltage_on_off(pm::_PM.AbstractACPModel; nw::Int=nw_id_default, kwargs...)
+function constraint_mc_bus_voltage_on_off(pm::AbstractACPModel; nw::Int=nw_id_default, kwargs...)
     for (i,bus) in ref(pm, nw, :bus)
         constraint_mc_bus_voltage_magnitude_on_off(pm, i; nw=nw)
     end
@@ -822,7 +822,7 @@ end
 
 
 "`vm[i] == vmref`"
-function constraint_mc_voltage_magnitude_only(pm::_PM.AbstractACPModel, nw::Int, i::Int, vm_ref::Vector{<:Real})
+function constraint_mc_voltage_magnitude_only(pm::AbstractACPModel, nw::Int, i::Int, vm_ref::Vector{<:Real})
     bus = ref(pm, nw, :bus, i)
     terminals = bus["terminals"]
     grounded = bus["grounded"]
@@ -835,7 +835,7 @@ end
 
 
 ""
-function constraint_mc_storage_current_limit(pm::_PM.AbstractACPModel, nw::Int, i::Int, bus_id::Int, connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_mc_storage_current_limit(pm::AbstractACPModel, nw::Int, i::Int, bus_id::Int, connections::Vector{Int}, rating::Vector{<:Real})
     vm = [var(pm, nw, :vm, bus_id)[c] for c in connections]
     ps = [var(pm, nw, :ps, i)[c] for c in connections]
     qs = [var(pm, nw, :qs, i)[c] for c in connections]
@@ -845,7 +845,7 @@ end
 
 
 ""
-function constraint_mc_load_power_wye(pm::_PM.AbstractACPModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+function constraint_mc_load_power_wye(pm::AbstractACPModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
     vm = var(pm, nw, :vm, bus_id)
     va = var(pm, nw, :va, bus_id)
 
@@ -896,7 +896,7 @@ end
 
 
 ""
-function constraint_mc_load_power_delta(pm::_PM.AbstractACPModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+function constraint_mc_load_power_delta(pm::AbstractACPModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
     vm = var(pm, nw, :vm, bus_id)
     va = var(pm, nw, :va, bus_id)
 
@@ -962,7 +962,7 @@ end
 
 
 ""
-function constraint_mc_generator_power_delta(pm::_PM.AbstractACPModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+function constraint_mc_generator_power_delta(pm::AbstractACPModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
     vm = var(pm, nw, :vm, bus_id)
     va = var(pm, nw, :va, bus_id)
     pg = var(pm, nw, :pg, id)
@@ -1013,7 +1013,7 @@ end
 
 
 ""
-function constraint_storage_losses(pm::_PM.AbstractACPModel, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
+function constraint_storage_losses(pm::AbstractACPModel, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
     vm = var(pm, n, :vm, bus)
     ps = var(pm, n, :ps, i)
     qs = var(pm, n, :qs, i)

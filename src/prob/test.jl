@@ -5,7 +5,7 @@ end
 
 
 "Constructor for Optimal Power Balance"
-function _build_mc_mn_opb(pm::_PM.AbstractPowerModel)
+function _build_mc_mn_opb(pm::AbstractMCPowerModel)
     for (n, network) in nws(pm)
         variable_mc_generator_power(pm; nw=n)
 
@@ -28,5 +28,12 @@ end
 
 ""
 function ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
-    apply_pmd!(_PM._ref_add_connected_components!, ref, data)
+    apply_pmd!(_ref_add_connected_components!, ref, data)
+end
+
+
+""
+function _ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
+    component_sets = calc_connected_components(data)
+    ref[:components] = Dict(i => c for (i,c) in enumerate(sort(collect(component_sets); by = length)))
 end

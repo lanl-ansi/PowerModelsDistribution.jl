@@ -3,7 +3,7 @@
 # in the context of constant-power loads or generators
 
 ""
-function variable_mc_branch_current(pm::_PM.AbstractIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function variable_mc_branch_current(pm::AbstractIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     variable_mc_branch_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_branch_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
 
@@ -41,7 +41,7 @@ end
 
 
 ""
-function variable_mc_transformer_current(pm::_PM.AbstractIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function variable_mc_transformer_current(pm::AbstractIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     variable_mc_transformer_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_transformer_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
 
@@ -77,7 +77,7 @@ end
 
 
 ""
-function variable_mc_load_current(pm::_PM.AbstractIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function variable_mc_load_current(pm::AbstractIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     var(pm, nw)[:crd] = Dict{Int, Any}()
     var(pm, nw)[:cid] = Dict{Int, Any}()
     var(pm, nw)[:crd_bus] = Dict{Int, Any}()
@@ -86,7 +86,7 @@ end
 
 
 ""
-function variable_mc_generator_current(pm::_PM.AbstractIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function variable_mc_generator_current(pm::AbstractIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     variable_mc_generator_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_generator_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
 
@@ -100,7 +100,7 @@ end
 
 
 ""
-function variable_mc_bus_voltage(pm::_PM.AbstractIVRModel; nw=nw_id_default, bounded::Bool=true, kwargs...)
+function variable_mc_bus_voltage(pm::AbstractIVRModel; nw=nw_id_default, bounded::Bool=true, kwargs...)
     variable_mc_bus_voltage_real(pm; nw=nw, bounded=bounded, kwargs...)
     variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, kwargs...)
 
@@ -141,7 +141,7 @@ end
 
 
 "Defines how current distributes over series and shunt impedances of a pi-model branch"
-function constraint_mc_current_from(pm::_PM.AbstractIVRModel, nw::Int, f_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real})
+function constraint_mc_current_from(pm::AbstractIVRModel, nw::Int, f_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real})
     vr_fr = [var(pm, nw, :vr, f_bus)[c] for c in f_connections]
     vi_fr = [var(pm, nw, :vi, f_bus)[c] for c in f_connections]
 
@@ -157,7 +157,7 @@ end
 
 
 "Defines how current distributes over series and shunt impedances of a pi-model branch"
-function constraint_mc_current_to(pm::_PM.AbstractIVRModel, n::Int, t_bus, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, g_sh_to::Matrix{<:Real}, b_sh_to::Matrix{<:Real})
+function constraint_mc_current_to(pm::AbstractIVRModel, n::Int, t_bus, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, g_sh_to::Matrix{<:Real}, b_sh_to::Matrix{<:Real})
     vr_to = [var(pm, n, :vr, t_bus)[c] for c in t_connections]
     vi_to = [var(pm, n, :vi, t_bus)[c] for c in t_connections]
 
@@ -173,7 +173,7 @@ end
 
 
 "Defines voltage drop over a branch, linking from and to side complex voltage"
-function constraint_mc_bus_voltage_drop(pm::_PM.AbstractIVRModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, r::Matrix{<:Real}, x::Matrix{<:Real})
+function constraint_mc_bus_voltage_drop(pm::AbstractIVRModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, r::Matrix{<:Real}, x::Matrix{<:Real})
     vr_fr = [var(pm, nw, :vr, f_bus)[c] for c in f_connections]
     vi_fr = [var(pm, nw, :vi, f_bus)[c] for c in f_connections]
 
@@ -192,7 +192,7 @@ end
 
 
 "Bounds the voltage angle difference between bus pairs"
-function constraint_mc_voltage_angle_difference(pm::_PM.AbstractIVRModel, n::Int, f_idx, angmin, angmax)
+function constraint_mc_voltage_angle_difference(pm::AbstractIVRModel, n::Int, f_idx, angmin, angmax)
     i, f_bus, t_bus = f_idx
 
     vr_fr = var(pm, n, :vr, f_bus)
@@ -211,22 +211,22 @@ end
 Kirchhoff's current law applied to buses
 `sum(cr + im*ci) = 0`
 """
-function constraint_mc_current_balance(pm::_PM.AbstractIVRModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+function constraint_mc_current_balance(pm::AbstractIVRModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
     vr = var(pm, nw, :vr, i)
     vi = var(pm, nw, :vi, i)
 
-    cr    = get(var(pm, nw),    :cr, Dict()); _PM._check_var_keys(cr, bus_arcs, "real current", "branch")
-    ci    = get(var(pm, nw),    :ci, Dict()); _PM._check_var_keys(ci, bus_arcs, "imaginary current", "branch")
-    crd   = get(var(pm, nw),   :crd_bus, Dict()); _PM._check_var_keys(crd, bus_loads, "real current", "load")
-    cid   = get(var(pm, nw),   :cid_bus, Dict()); _PM._check_var_keys(cid, bus_loads, "imaginary current", "load")
-    crg   = get(var(pm, nw),   :crg_bus, Dict()); _PM._check_var_keys(crg, bus_gens, "real current", "generator")
-    cig   = get(var(pm, nw),   :cig_bus, Dict()); _PM._check_var_keys(cig, bus_gens, "imaginary current", "generator")
-    crs   = get(var(pm, nw),   :crs, Dict()); _PM._check_var_keys(crs, bus_storage, "real currentr", "storage")
-    cis   = get(var(pm, nw),   :cis, Dict()); _PM._check_var_keys(cis, bus_storage, "imaginary current", "storage")
-    crsw  = get(var(pm, nw),  :crsw, Dict()); _PM._check_var_keys(crsw, bus_arcs_sw, "real current", "switch")
-    cisw  = get(var(pm, nw),  :cisw, Dict()); _PM._check_var_keys(cisw, bus_arcs_sw, "imaginary current", "switch")
-    crt   = get(var(pm, nw),   :crt, Dict()); _PM._check_var_keys(crt, bus_arcs_trans, "real current", "transformer")
-    cit   = get(var(pm, nw),   :cit, Dict()); _PM._check_var_keys(cit, bus_arcs_trans, "imaginary current", "transformer")
+    cr    = get(var(pm, nw),    :cr, Dict()); _check_var_keys(cr, bus_arcs, "real current", "branch")
+    ci    = get(var(pm, nw),    :ci, Dict()); _check_var_keys(ci, bus_arcs, "imaginary current", "branch")
+    crd   = get(var(pm, nw),   :crd_bus, Dict()); _check_var_keys(crd, bus_loads, "real current", "load")
+    cid   = get(var(pm, nw),   :cid_bus, Dict()); _check_var_keys(cid, bus_loads, "imaginary current", "load")
+    crg   = get(var(pm, nw),   :crg_bus, Dict()); _check_var_keys(crg, bus_gens, "real current", "generator")
+    cig   = get(var(pm, nw),   :cig_bus, Dict()); _check_var_keys(cig, bus_gens, "imaginary current", "generator")
+    crs   = get(var(pm, nw),   :crs, Dict()); _check_var_keys(crs, bus_storage, "real currentr", "storage")
+    cis   = get(var(pm, nw),   :cis, Dict()); _check_var_keys(cis, bus_storage, "imaginary current", "storage")
+    crsw  = get(var(pm, nw),  :crsw, Dict()); _check_var_keys(crsw, bus_arcs_sw, "real current", "switch")
+    cisw  = get(var(pm, nw),  :cisw, Dict()); _check_var_keys(cisw, bus_arcs_sw, "imaginary current", "switch")
+    crt   = get(var(pm, nw),   :crt, Dict()); _check_var_keys(crt, bus_arcs_trans, "real current", "transformer")
+    cit   = get(var(pm, nw),   :cit, Dict()); _check_var_keys(cit, bus_arcs_trans, "imaginary current", "transformer")
 
     Gt, Bt = _build_bus_shunt_matrices(pm, nw, terminals, bus_shunts)
 
@@ -258,7 +258,7 @@ end
 
 
 "`p[f_idx]^2 + q[f_idx]^2 <= rate_a^2`"
-function constraint_mc_thermal_limit_from(pm::_PM.AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
+function constraint_mc_thermal_limit_from(pm::AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
     (l, f_bus, t_bus) = f_idx
 
     vr = var(pm, nw, :vr, f_bus)
@@ -273,7 +273,7 @@ end
 
 
 "`p[t_idx]^2 + q[t_idx]^2 <= rate_a^2`"
-function constraint_mc_thermal_limit_to(pm::_PM.AbstractIVRModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
+function constraint_mc_thermal_limit_to(pm::AbstractIVRModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
     (l, t_bus, f_bus) = t_idx
 
     vr = var(pm, nw, :vr, t_bus)
@@ -292,7 +292,7 @@ Bounds the current magnitude at both from and to side of a branch
 `cr[f_idx]^2 + ci[f_idx]^2 <= c_rating_a^2`
 `cr[t_idx]^2 + ci[t_idx]^2 <= c_rating_a^2`
 """
-function constraint_mc_current_limit(pm::_PM.AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, c_rating_a::Vector{<:Real})
+function constraint_mc_current_limit(pm::AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, c_rating_a::Vector{<:Real})
     (l, f_bus, t_bus) = f_idx
     t_idx = (l, t_bus, f_bus)
 
@@ -310,7 +310,7 @@ end
 """
 `pmin <= Re(v*cg') <= pmax`
 """
-function constraint_mc_gen_active_bounds(pm::_PM.AbstractIVRModel, nw::Int, i::Int, bus::Int, connections::Vector{Int}, pmax::Vector{<:Real}, pmin::Vector{<:Real})
+function constraint_mc_gen_active_bounds(pm::AbstractIVRModel, nw::Int, i::Int, bus::Int, connections::Vector{Int}, pmax::Vector{<:Real}, pmin::Vector{<:Real})
     @assert all(pmin .<= pmax)
 
     vr = [var(pm, nw, :vr, bus)[c] for c in connections]
@@ -326,7 +326,7 @@ end
 """
 `qmin <= Im(v*cg') <= qmax`
 """
-function constraint_mc_gen_reactive_bounds(pm::_PM.AbstractIVRModel, nw::Int, i::Int, bus::Int, connections::Vector{Int}, qmax::Vector{<:Real}, qmin::Vector{<:Real})
+function constraint_mc_gen_reactive_bounds(pm::AbstractIVRModel, nw::Int, i::Int, bus::Int, connections::Vector{Int}, qmax::Vector{<:Real}, qmin::Vector{<:Real})
     @assert all(qmin .<= qmax)
 
     vr = [var(pm, nw, :vr, bus)[c] for c in connections]
@@ -340,7 +340,7 @@ end
 
 
 "`pg[i] == pg`"
-function constraint_mc_gen_power_setpoint_real(pm::_PM.AbstractIVRModel, nw::Int, i::Int, pg_ref::Vector{<:Real})
+function constraint_mc_gen_power_setpoint_real(pm::AbstractIVRModel, nw::Int, i::Int, pg_ref::Vector{<:Real})
     gen = ref(pm, nw, :gen, i)
     bus = gen["gen_bus"]
     connections = gen["connections"]
@@ -354,7 +354,7 @@ end
 
 
 "`qq[i] == qq`"
-function constraint_mc_regen_setpoint_active(pm::_PM.AbstractIVRModel, n::Int, i, qg_ref)
+function constraint_mc_regen_setpoint_active(pm::AbstractIVRModel, n::Int, i, qg_ref)
     gen = ref(pm, n, :gen, i)
     bus = gen["gen_bus"]
     connections = gen["connections"]
@@ -368,7 +368,7 @@ end
 
 
 "wye-wye transformer power constraint for IVR formulation"
-function constraint_mc_transformer_power_yy(pm::_PM.AbstractIVRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+function constraint_mc_transformer_power_yy(pm::AbstractIVRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     vr_fr_P = [var(pm, nw, :vr, f_bus)[c] for c in f_connections]
     vi_fr_P = [var(pm, nw, :vi, f_bus)[c] for c in f_connections]
     vr_fr_n = 0
@@ -395,7 +395,7 @@ end
 
 
 "delta-wye transformer power constraint for IVR formulation"
-function constraint_mc_transformer_power_dy(pm::_PM.AbstractIVRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+function constraint_mc_transformer_power_dy(pm::AbstractIVRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     vr_fr_P = [var(pm, nw, :vr, f_bus)[c] for c in f_connections]
     vi_fr_P = [var(pm, nw, :vi, f_bus)[c] for c in f_connections]
     vr_to_P = [var(pm, nw, :vr, t_bus)[c] for c in t_connections]
@@ -424,7 +424,7 @@ end
 
 
 "wye connected load setpoint constraint for IVR formulation"
-function constraint_mc_load_power_wye(pm::_PM.IVRPowerModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+function constraint_mc_load_power_wye(pm::IVRPowerModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
 
@@ -472,7 +472,7 @@ end
 
 
 "delta connected load setpoint constraint for IVR formulation"
-function constraint_mc_load_power_delta(pm::_PM.IVRPowerModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+function constraint_mc_load_power_delta(pm::IVRPowerModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
 
@@ -514,7 +514,7 @@ end
 
 
 "wye connected generator setpoint constraint for IVR formulation"
-function constraint_mc_generator_power_wye(pm::_PM.IVRPowerModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+function constraint_mc_generator_power_wye(pm::IVRPowerModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
     crg = var(pm, nw, :crg, id)
@@ -561,7 +561,7 @@ end
 
 
 "delta connected generator setpoint constraint for IVR formulation"
-function constraint_mc_generator_power_delta(pm::_PM.IVRPowerModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+function constraint_mc_generator_power_delta(pm::IVRPowerModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
     crg = var(pm, nw, :crg, id)
@@ -614,7 +614,7 @@ function constraint_mc_generator_power_delta(pm::_PM.IVRPowerModel, nw::Int, id:
 end
 
 ""
-function constraint_mc_switch_state_open(pm::_PM.AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int})
+function constraint_mc_switch_state_open(pm::AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int})
     crsw = var(pm, nw, :crsw, f_idx)
     cisw = var(pm, nw, :cisw, f_idx)
 
@@ -624,7 +624,7 @@ end
 
 
 ""
-function constraint_mc_switch_state_closed(pm::_PM.AbstractIVRModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
+function constraint_mc_switch_state_closed(pm::AbstractIVRModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
     vr_fr = var(pm, nw, :vr, f_bus)
     vr_to = var(pm, nw, :vr, t_bus)
 
@@ -639,7 +639,7 @@ end
 
 
 ""
-function constraint_mc_switch_current_limit(pm::_PM.AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_mc_switch_current_limit(pm::AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
     crsw = var(pm, nw, :crsw, f_idx)
     cisw = var(pm, nw, :cisw, f_idx)
 
@@ -650,7 +650,7 @@ end
 
 
 ""
-function constraint_mc_switch_state_on_off(pm::_PM.AbstractIVRModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int}; relax::Bool=false)
+function constraint_mc_switch_state_on_off(pm::AbstractIVRModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int}; relax::Bool=false)
     vr_fr = var(pm, nw, :vr, f_bus)
     vr_to = var(pm, nw, :vr, t_bus)
 
@@ -676,7 +676,7 @@ end
 
 
 ""
-function constraint_mc_switch_power_on_off(pm::_PM.AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}; relax::Bool=false)
+function constraint_mc_switch_power_on_off(pm::AbstractIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}; relax::Bool=false)
     i, f_bus, t_bus = f_idx
 
     crsw = var(pm, nw, :crsw, f_idx)

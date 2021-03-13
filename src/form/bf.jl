@@ -1,5 +1,5 @@
 "This is duplicated at PowerModelsDistribution level to correctly handle the indexing of the shunts."
-function constraint_mc_voltage_angle_difference(pm::_PM.AbstractBFModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, angmin::Vector{<:Real}, angmax::Vector{<:Real})
+function constraint_mc_voltage_angle_difference(pm::AbstractBFModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, angmin::Vector{<:Real}, angmax::Vector{<:Real})
     i, f_bus, t_bus = f_idx
     t_idx = (i, t_bus, f_bus)
 
@@ -105,7 +105,7 @@ end
 
 
 "Neglects the active and reactive loss terms associated with the squared current magnitude."
-function constraint_storage_losses(pm::_PM.AbstractBFAModel, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
+function constraint_storage_losses(pm::AbstractBFAModel, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
     ps = var(pm, n, :ps, i)
     qs = var(pm, n, :qs, i)
     sc = var(pm, n, :sc, i)

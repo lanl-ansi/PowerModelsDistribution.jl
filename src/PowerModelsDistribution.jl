@@ -3,27 +3,25 @@ module PowerModelsDistribution
     import JSON
     import JuMP
     import MathOptInterface
-    import PowerModels
     import InfrastructureModels
     import Memento
 
     import LinearAlgebra
 
-    const _PM = PowerModels
     const _IM = InfrastructureModels
 
-    import PowerModels: ACPPowerModel, ACRPowerModel, DCPPowerModel, IVRPowerModel, NFAPowerModel, conductor_ids
     import InfrastructureModels: optimize_model!, @im_fields, nw_id_default
 
     function __init__()
-        global _LOGGER = Memento.getlogger(PowerModels)
+        global _LOGGER = Memento.getlogger(@__MODULE__)
     end
 
+    const _pmd_global_keys = Set(["time_series", "per_unit"])
     const pmd_it_name = "pmd"
     const pmd_it_sym = Symbol(pmd_it_name)
 
-    include("core/types.jl")
     include("core/base.jl")
+    include("core/types.jl")
     include("core/data.jl")
     include("core/ref.jl")
     include("core/variable.jl")

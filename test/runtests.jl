@@ -9,8 +9,9 @@ import PowerModels
 const PM = PowerModels
 
 # Suppress warnings during testing.
-const TESTLOG = Memento.getlogger(PowerModels)
+const TESTLOG = Memento.getlogger(PowerModelsDistribution)
 Memento.setlevel!(TESTLOG, "error")
+Memento.setlevel!(Memento.getlogger(PowerModels), "error")
 
 import JuMP
 import Ipopt

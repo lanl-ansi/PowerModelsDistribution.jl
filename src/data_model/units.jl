@@ -395,7 +395,7 @@ function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real
         sbase_scale_cost = sbase_scale
     end
 
-    _PM._rescale_cost_model!(gen, 1/sbase_scale_cost)
+    _rescale_cost_model!(gen, 1/sbase_scale_cost)
 
     # save new vbase
     gen["vbase"] = vbase

@@ -122,14 +122,14 @@ function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true)
             else
                 data["baseMVA"] = data["settings"]["sbase"]*data["settings"]["power_scale_factor"]/1E6
                 data["basekv"]  = maximum(bus["vbase"] for (_, bus) in data["bus"])
-                _PM.check_connectivity(data)
+                check_connectivity(data)
                 correct_mc_voltage_angle_differences!(data)
                 correct_mc_thermal_limits!(data)
-                _PM.correct_branch_directions!(data)
-                _PM.check_branch_loops(data)
-                _PM.correct_bus_types!(data)
-                _PM.correct_cost_functions!(data)
-                _PM.standardize_cost_terms!(data)
+                correct_branch_directions!(data)
+                check_branch_loops(data)
+                correct_bus_types!(data)
+                correct_cost_functions!(data)
+                standardize_cost_terms!(data)
             end
         end
     end

@@ -17,7 +17,7 @@ end
 
 
 "Load shedding problem including storage (snap-shot)"
-function build_mc_mld(pm::_PM.AbstractPowerModel)
+function build_mc_mld(pm::AbstractMCPowerModel)
     variable_mc_bus_voltage_indicator(pm; relax=true)
     variable_mc_bus_voltage_on_off(pm)
 
@@ -82,14 +82,14 @@ end
 
 
 ""
-function build_mc_mld(pm::_PM.AbstractIVRModel)
+function build_mc_mld(pm::AbstractIVRModel)
     Memento.error(_LOGGER, "IVRPowerModel is not yet supported in the MLD problem space")
     # TODO
 end
 
 
 "Multinetwork load shedding problem including storage"
-function build_mn_mc_mld_simple(pm::_PM.AbstractPowerModel)
+function build_mn_mc_mld_simple(pm::AbstractMCPowerModel)
     for (n, network) in nws(pm)
         variable_mc_branch_power(pm; nw=n)
         variable_mc_switch_power(pm; nw=n)
@@ -298,7 +298,7 @@ end
 
 
 "Load shedding problem for Branch Flow model"
-function build_mc_mld_bf(pm::_PM.AbstractPowerModel)
+function build_mc_mld_bf(pm::AbstractMCPowerModel)
     build_mc_mld(pm)
 
     variable_mc_bus_voltage_indicator(pm; relax=true)
@@ -355,7 +355,7 @@ end
 
 
 "Standard unit commitment (!relaxed) load shedding problem"
-function build_mc_mld_uc(pm::_PM.AbstractPowerModel)
+function build_mc_mld_uc(pm::AbstractMCPowerModel)
     variable_mc_bus_voltage_indicator(pm; relax=false)
     variable_mc_bus_voltage_on_off(pm)
 

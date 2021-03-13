@@ -1,4 +1,4 @@
-function _IM.solution_preprocessor(pm::_PM.AbstractPowerModel, solution::Dict)
+function _IM.solution_preprocessor(pm::AbstractMCPowerModel, solution::Dict)
     per_unit = _IM.get_data(x -> x["per_unit"], pm.data, pmd_it_name; apply_to_subnetworks = false)
     solution["it"][pmd_it_name]["per_unit"] = per_unit
 
@@ -53,7 +53,7 @@ function _sol_data_model_w!(solution::Dict{String,<:Any})
 end
 
 
-function sol_data_model!(pm::_PM.AbstractWModels, solution::Dict{String,<:Any})
+function sol_data_model!(pm::AbstractWModels, solution::Dict{String,<:Any})
     apply_pmd!(_sol_data_model_w!, solution)
 end
 
@@ -82,12 +82,12 @@ function _sol_data_model_acr!(solution::Dict{String,<:Any})
 end
 
 
-function sol_data_model!(pm::_PM.AbstractACRModel, solution::Dict{String,<:Any})
+function sol_data_model!(pm::AbstractACRModel, solution::Dict{String,<:Any})
     apply_pmd!(_sol_data_model_acr!, solution)
 end
 
 
 "converts the solution data into the data model's standard space, polar voltages and rectangular power"
-function sol_data_model!(pm::_PM.AbstractPowerModel, solution::Dict{String,<:Any})
+function sol_data_model!(pm::AbstractMCPowerModel, solution::Dict{String,<:Any})
     Memento.warn(_LOGGER, "sol_data_model! not defined for power model of type $(typeof(pm))")
 end

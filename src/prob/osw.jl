@@ -11,7 +11,7 @@ end
 
 
 "Constructor for Optimal Switching"
-function _build_mc_osw(pm::_PM.AbstractPowerModel)
+function _build_mc_osw(pm::AbstractMCPowerModel)
     variable_mc_bus_voltage(pm)
     variable_mc_branch_power(pm)
     variable_mc_transformer_power(pm)
@@ -141,7 +141,7 @@ end
 
 
 "constructor for OSW in current-voltage variable space"
-function _build_mc_osw(pm::_PM.AbstractIVRModel)
+function _build_mc_osw(pm::AbstractIVRModel)
     # Variables
     variable_mc_bus_voltage(pm)
     variable_mc_branch_current(pm)
@@ -197,7 +197,7 @@ end
 
 
 "Constructor for Optimal Switching"
-function _build_mc_osw_mi(pm::_PM.AbstractPowerModel)
+function _build_mc_osw_mi(pm::AbstractMCPowerModel)
     variable_mc_bus_voltage(pm)
     variable_mc_branch_power(pm)
     variable_mc_transformer_power(pm)

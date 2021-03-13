@@ -11,7 +11,7 @@ end
 
 
 "Constructor for Optimal Power Flow"
-function build_mc_opf(pm::_PM.AbstractPowerModel)
+function build_mc_opf(pm::AbstractMCPowerModel)
     variable_mc_bus_voltage(pm)
     variable_mc_branch_power(pm)
     variable_mc_transformer_power(pm)
@@ -71,7 +71,7 @@ end
 
 
 "constructor for OPF in current-voltage variable space"
-function build_mc_opf(pm::_PM.AbstractIVRModel)
+function build_mc_opf(pm::AbstractIVRModel)
     # Variables
     variable_mc_bus_voltage(pm)
     variable_mc_branch_current(pm)
@@ -191,7 +191,7 @@ end
 
 
 "Multinetwork optimal power flow problem"
-function build_mn_mc_opf(pm::_PM.AbstractPowerModel)
+function build_mn_mc_opf(pm::AbstractMCPowerModel)
     for (n, network) in nws(pm)
         variable_mc_bus_voltage(pm; nw=n)
         variable_mc_branch_power(pm; nw=n)
@@ -263,7 +263,7 @@ function build_mn_mc_opf(pm::_PM.AbstractPowerModel)
 end
 
 "Multinetwork current-voltage optimal power flow problem"
-function build_mn_mc_opf(pm::_PM.AbstractIVRModel)
+function build_mn_mc_opf(pm::AbstractIVRModel)
     for (n, network) in nws(pm)
         variable_mc_bus_voltage(pm; nw=n)
         variable_mc_branch_current(pm; nw=n)

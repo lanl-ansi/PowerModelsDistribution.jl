@@ -1,9 +1,34 @@
-import LinearAlgebra: Adjoint
+import LinearAlgebra: Adjoint, pinv
 
 const _excluded_count_busname_patterns = Vector{Regex}([
     r"^_virtual.*",
 ])
 
+const _pm_component_status_parameters = Set(["status", "gen_status", "br_status"])
+
+"maps component types to status parameters"
+const pm_component_status = Dict(
+    "bus" => "bus_type",
+    "load" => "status",
+    "shunt" => "status",
+    "gen" => "gen_status",
+    "storage" => "status",
+    "switch" => "status",
+    "branch" => "br_status",
+    "dcline" => "br_status",
+)
+
+"maps component types to inactive status values"
+const pm_component_status_inactive = Dict(
+    "bus" => 4,
+    "load" => 0,
+    "shunt" => 0,
+    "gen" => 0,
+    "storage" => 0,
+    "switch" => 0,
+    "branch" => 0,
+    "dcline" => 0,
+)
 
 "PowerModels wrapper for the InfrastructureModels `apply!` function."
 function apply_pmd!(func!::Function, data::Dict{String, <:Any}; apply_to_subnetworks::Bool = true)
@@ -729,7 +754,7 @@ function set_upper_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, p
 end
 
 
-function sol_polar_voltage!(pm::_PM.AbstractPowerModel, solution::Dict{String,<:Any})
+function sol_polar_voltage!(pm::AbstractMCPowerModel, solution::Dict{String,<:Any})
     apply_pmd!(_sol_polar_voltage!, solution)
 end
 
@@ -954,7 +979,7 @@ function correct_mc_thermal_limits!(data::Dict{String,<:Any})
 end
 
 
-function _build_bus_shunt_matrices(pm::_PM.AbstractPowerModel, nw::Int, terminals::Vector{Int}, bus_shunts::Vector{<:Tuple{Int,Vector{Int}}})::Tuple{Matrix{<:Real},Matrix{<:Real}}
+function _build_bus_shunt_matrices(pm::AbstractMCPowerModel, nw::Int, terminals::Vector{Int}, bus_shunts::Vector{<:Tuple{Int,Vector{Int}}})::Tuple{Matrix{<:Real},Matrix{<:Real}}
     ncnds = length(terminals)
     Gs = fill(0.0, ncnds, ncnds)
     Bs = fill(0.0, ncnds, ncnds)
@@ -993,3 +1018,559 @@ end
 function get_pm_data(data::Dict{String, <:Any})
     return _IM.ismultiinfrastructure(data) ? data["it"][pmd_it_name] : data
 end
+
+
+""
+function calc_branch_y(branch::Dict{String,<:Any})
+    y = pinv(branch["br_r"] + im * branch["br_x"])
+    g, b = real(y), imag(y)
+    return g, b
+end
+
+
+"""
+computes the connected components of the network graph
+returns a set of sets of bus ids, each set is a connected component
+"""
+function calc_connected_components(data::Dict{String,<:Any}; edges=["branch", "dcline", "switch"])
+    pm_data = get_pm_data(data)
+
+    if _IM.ismultinetwork(pm_data)
+        Memento.error(_LOGGER, "connected_components does not yet support multinetwork data")
+    end
+
+    active_bus = Dict(x for x in pm_data["bus"] if x.second["bus_type"] != 4)
+    active_bus_ids = Set{Int64}([bus["bus_i"] for (i,bus) in active_bus])
+
+    neighbors = Dict(i => Int[] for i in active_bus_ids)
+    for comp_type in edges
+        status_key = get(pm_component_status, comp_type, "status")
+        status_inactive = get(pm_component_status_inactive, comp_type, 0)
+        for edge in values(get(pm_data, comp_type, Dict()))
+            if get(edge, status_key, 1) != status_inactive && edge["f_bus"] in active_bus_ids && edge["t_bus"] in active_bus_ids
+                push!(neighbors[edge["f_bus"]], edge["t_bus"])
+                push!(neighbors[edge["t_bus"]], edge["f_bus"])
+            end
+        end
+    end
+
+    component_lookup = Dict(i => Set{Int}([i]) for i in active_bus_ids)
+    touched = Set{Int64}()
+
+    for i in active_bus_ids
+        if !(i in touched)
+            _cc_dfs(i, neighbors, component_lookup, touched)
+        end
+    end
+
+    ccs = (Set(values(component_lookup)))
+
+    return ccs
+end
+
+
+"""
+DFS on a graph
+"""
+function _cc_dfs(i, neighbors, component_lookup, touched)
+    push!(touched, i)
+    for j in neighbors[i]
+        if !(j in touched)
+            for k in  component_lookup[j]
+                push!(component_lookup[i], k)
+            end
+            for k in component_lookup[j]
+                component_lookup[k] = component_lookup[i]
+            end
+            _cc_dfs(j, neighbors, component_lookup, touched)
+        end
+    end
+end
+
+
+""
+function _rescale_cost_model!(comp::Dict{String,<:Any}, scale::Real)
+    if "model" in keys(comp) && "cost" in keys(comp)
+        if comp["model"] == 1
+            for i in 1:2:length(comp["cost"])
+                comp["cost"][i] = comp["cost"][i]/scale
+            end
+        elseif comp["model"] == 2
+            degree = length(comp["cost"])
+            for (i, item) in enumerate(comp["cost"])
+                comp["cost"][i] = item*(scale^(degree-i))
+            end
+        else
+            Memento.warn(_LOGGER, "Skipping cost model of type $(comp["model"]) in per unit transformation")
+        end
+    end
+end
+
+
+"checks that all parallel branches have the same orientation"
+function correct_branch_directions!(data::Dict{String,<:Any})
+    apply_pmd!(_correct_branch_directions!, data)
+end
+
+""
+function _correct_branch_directions!(pm_data::Dict{String,<:Any})
+
+    orientations = Set()
+    for (i, branch) in pm_data["branch"]
+        orientation = (branch["f_bus"], branch["t_bus"])
+        orientation_rev = (branch["t_bus"], branch["f_bus"])
+
+        if in(orientation_rev, orientations)
+            Memento.warn(_LOGGER, "reversing the orientation of branch $(i) $(orientation) to be consistent with other parallel branches")
+            branch_orginal = copy(branch)
+            branch["f_bus"] = branch_orginal["t_bus"]
+            branch["t_bus"] = branch_orginal["f_bus"]
+            branch["g_to"] = branch_orginal["g_fr"] .* branch_orginal["tap"]'.^2
+            branch["b_to"] = branch_orginal["b_fr"] .* branch_orginal["tap"]'.^2
+            branch["g_fr"] = branch_orginal["g_to"] ./ branch_orginal["tap"]'.^2
+            branch["b_fr"] = branch_orginal["b_to"] ./ branch_orginal["tap"]'.^2
+            branch["tap"] = 1 ./ branch_orginal["tap"]
+            branch["br_r"] = branch_orginal["br_r"] .* branch_orginal["tap"]'.^2
+            branch["br_x"] = branch_orginal["br_x"] .* branch_orginal["tap"]'.^2
+            branch["shift"] = -branch_orginal["shift"]
+            branch["angmin"] = -branch_orginal["angmax"]
+            branch["angmax"] = -branch_orginal["angmin"]
+
+        else
+            push!(orientations, orientation)
+        end
+
+    end
+
+end
+
+
+"checks that all branches connect two distinct buses"
+function check_branch_loops(data::Dict{String,<:Any})
+    apply_pmd!(_check_branch_loops, data)
+end
+
+""
+function _check_branch_loops(pm_data::Dict{String, <:Any})
+    for (i, branch) in pm_data["branch"]
+        if branch["f_bus"] == branch["t_bus"]
+            Memento.error(_LOGGER, "both sides of branch $(i) connect to bus $(branch["f_bus"])")
+        end
+    end
+end
+
+
+"checks that all buses are unique and other components link to valid buses"
+function check_connectivity(data::Dict{String,<:Any})
+    apply_pmd!(_check_connectivity, data)
+end
+
+""
+function _check_connectivity(data::Dict{String,<:Any})
+    bus_ids = Set(bus["index"] for (i,bus) in data["bus"])
+    @assert(length(bus_ids) == length(data["bus"])) # if this is not true something very bad is going on
+
+    for (i, load) in data["load"]
+        if !(load["load_bus"] in bus_ids)
+            Memento.error(_LOGGER, "bus $(load["load_bus"]) in load $(i) is not defined")
+        end
+    end
+
+    for (i, shunt) in data["shunt"]
+        if !(shunt["shunt_bus"] in bus_ids)
+            Memento.error(_LOGGER, "bus $(shunt["shunt_bus"]) in shunt $(i) is not defined")
+        end
+    end
+
+    for (i, gen) in data["gen"]
+        if !(gen["gen_bus"] in bus_ids)
+            Memento.error(_LOGGER, "bus $(gen["gen_bus"]) in generator $(i) is not defined")
+        end
+    end
+
+    for (i, strg) in data["storage"]
+        if !(strg["storage_bus"] in bus_ids)
+            Memento.error(_LOGGER, "bus $(strg["storage_bus"]) in storage unit $(i) is not defined")
+        end
+    end
+
+    for (i, switch) in data["switch"]
+        if !(switch["f_bus"] in bus_ids)
+            Memento.error(_LOGGER, "from bus $(switch["f_bus"]) in switch $(i) is not defined")
+        end
+
+        if !(switch["t_bus"] in bus_ids)
+            Memento.error(_LOGGER, "to bus $(switch["t_bus"]) in switch $(i) is not defined")
+        end
+    end
+
+    for (i, branch) in data["branch"]
+        if !(branch["f_bus"] in bus_ids)
+            Memento.error(_LOGGER, "from bus $(branch["f_bus"]) in branch $(i) is not defined")
+        end
+
+        if !(branch["t_bus"] in bus_ids)
+            Memento.error(_LOGGER, "to bus $(branch["t_bus"]) in branch $(i) is not defined")
+        end
+    end
+
+    for (i, dcline) in data["dcline"]
+        if !(dcline["f_bus"] in bus_ids)
+            Memento.error(_LOGGER, "from bus $(dcline["f_bus"]) in dcline $(i) is not defined")
+        end
+
+        if !(dcline["t_bus"] in bus_ids)
+            Memento.error(_LOGGER, "to bus $(dcline["t_bus"]) in dcline $(i) is not defined")
+        end
+    end
+end
+
+
+"""
+checks bus types are suitable for a power flow study, if not, fixes them.
+the primary checks are that all type 2 buses (i.e., PV) have a connected and
+active generator and there is a single type 3 bus (i.e., slack bus) with an
+active connected generator.
+assumes that the network is a single connected component
+"""
+function correct_bus_types!(data::Dict{String,<:Any})
+    apply_pmd!(_correct_bus_types!, data)
+end
+
+""
+function _correct_bus_types!(pm_data::Dict{String,<:Any})
+    bus_gens = Dict(bus["index"] => [] for (i,bus) in pm_data["bus"])
+
+    for (i,gen) in pm_data["gen"]
+        if gen["gen_status"] != 0
+            push!(bus_gens[gen["gen_bus"]], i)
+        end
+    end
+
+    slack_found = false
+    for (i, bus) in pm_data["bus"]
+        idx = bus["index"]
+        if bus["bus_type"] == 1
+            if length(bus_gens[idx]) != 0 # PQ
+                Memento.warn(_LOGGER, "active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 2")
+                bus["bus_type"] = 2
+            end
+        elseif bus["bus_type"] == 2 # PV
+            if length(bus_gens[idx]) == 0
+                Memento.warn(_LOGGER, "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1")
+                bus["bus_type"] = 1
+            end
+        elseif bus["bus_type"] == 3 # Slack
+            if length(bus_gens[idx]) != 0
+                slack_found = true
+            else
+                Memento.warn(_LOGGER, "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1")
+                bus["bus_type"] = 1
+            end
+        elseif bus["bus_type"] == 4 # inactive bus
+            # do nothing
+        else  # unknown bus type
+            new_bus_type = 1
+            if length(bus_gens[idx]) != 0
+                new_bus_type = 2
+            end
+            Memento.warn(_LOGGER, "bus $(bus["bus_i"]) has an unrecongized bus_type $(bus["bus_type"]), updating to bus_type $(new_bus_type)")
+            bus["bus_type"] = new_bus_type
+        end
+    end
+
+    if !slack_found
+        gen = _biggest_generator(pm_data["gen"])
+        if length(gen) > 0
+            gen_bus = gen["gen_bus"]
+            ref_bus = pm_data["bus"]["$(gen_bus)"]
+            ref_bus["bus_type"] = 3
+            Memento.warn(_LOGGER, "no reference bus found, setting bus $(gen_bus) as reference based on generator $(gen["index"])")
+        else
+            Memento.error(_LOGGER, "no generators found in the given network data, correct_bus_types! requires at least one generator at the reference bus")
+        end
+    end
+
+end
+
+
+"find the largest active generator in a collection of generators"
+function _biggest_generator(gens::Dict)::Dict
+    if length(gens) == 0
+        Memento.error(_LOGGER, "generator list passed to _biggest_generator was empty.  please report this bug.")
+    end
+
+    biggest_gen = Dict{String,Any}()
+    biggest_value = -Inf
+
+    for (k,gen) in gens
+        if gen["gen_status"] != 0
+            pmax = maximum(gen["pmax"])
+            if pmax > biggest_value
+                biggest_gen = gen
+                biggest_value = pmax
+            end
+        end
+    end
+
+    return biggest_gen
+end
+
+"throws warnings if cost functions are malformed"
+function correct_cost_functions!(data::Dict{String,<:Any})
+    apply_pmd!(_correct_cost_functions!, data)
+end
+
+""
+function _correct_cost_functions!(pm_data::Dict{String,<:Any})
+    for (i,gen) in pm_data["gen"]
+        _correct_cost_function!(i, gen, "generator", "pmin", "pmax")
+    end
+
+    for (i, dcline) in pm_data["dcline"]
+        _correct_cost_function!(i, dcline, "dcline", "pminf", "pmaxf")
+    end
+end
+
+
+""
+function _correct_cost_function!(id, comp, type_name, pmin_key, pmax_key)
+
+    if "model" in keys(comp) && "cost" in keys(comp)
+        if comp["model"] == 1
+            if length(comp["cost"]) != 2*comp["ncost"]
+                Memento.error(_LOGGER, "ncost of $(comp["ncost"]) not consistent with $(length(comp["cost"])) cost values on $(type_name) $(id)")
+            end
+            if length(comp["cost"]) < 4
+                Memento.error(_LOGGER, "cost includes $(comp["ncost"]) points, but at least two points are required on $(type_name) $(id)")
+            end
+
+            _remove_pwl_cost_duplicates!(id, comp, type_name)
+
+            for i in 3:2:length(comp["cost"])
+                if comp["cost"][i-2] >= comp["cost"][i]
+                    Memento.error(_LOGGER, "non-increasing x values in pwl cost model on $(type_name) $(id)")
+                end
+            end
+
+            _simplify_pwl_cost!(id, comp, type_name)
+        elseif comp["model"] == 2
+            if length(comp["cost"]) != comp["ncost"]
+                Memento.error(_LOGGER, "ncost of $(comp["ncost"]) not consistent with $(length(comp["cost"])) cost values on $(type_name) $(id)")
+            end
+        else
+            Memento.warn(_LOGGER, "Unknown cost model of type $(comp["model"]) on $(type_name) $(id)")
+        end
+    end
+
+end
+
+
+"checks that each point in the a pwl function is unqiue, simplifies the function if duplicates appear"
+function _remove_pwl_cost_duplicates!(id, comp, type_name; tolerance=1e-2)
+    @assert comp["model"] == 1
+
+    unique_costs = Float64[comp["cost"][1], comp["cost"][2]]
+    for i in 3:2:length(comp["cost"])
+        x1 = unique_costs[end-1]
+        y1 = unique_costs[end]
+        x2 = comp["cost"][i+0]
+        y2 = comp["cost"][i+1]
+        if !(isapprox(x1, x2) && isapprox(y1, y2))
+            push!(unique_costs, x2)
+            push!(unique_costs, y2)
+        end
+    end
+
+    if length(unique_costs) < length(comp["cost"])
+        Memento.warn(_LOGGER, "removing duplicate points from pwl cost on $(type_name) $(id), $(comp["cost"]) -> $(unique_costs)")
+        comp["cost"] = unique_costs
+        comp["ncost"] = div(length(unique_costs), 2)
+        return true
+    end
+    return false
+end
+
+
+"checks the slope of each segment in a pwl function, simplifies the function if the slope changes is below a tolerance"
+function _simplify_pwl_cost!(id, comp, type_name; tolerance=1e-2)
+    @assert comp["model"] == 1
+
+    slopes = Float64[]
+    smpl_cost = Float64[]
+    prev_slope = nothing
+
+    x2, y2 = 0.0, 0.0
+
+    for i in 3:2:length(comp["cost"])
+        x1 = comp["cost"][i-2]
+        y1 = comp["cost"][i-1]
+        x2 = comp["cost"][i-0]
+        y2 = comp["cost"][i+1]
+
+        m = (y2 - y1)/(x2 - x1)
+
+        if prev_slope == nothing || (abs(prev_slope - m) > tolerance)
+            push!(smpl_cost, x1)
+            push!(smpl_cost, y1)
+            prev_slope = m
+        end
+
+        push!(slopes, m)
+    end
+
+    push!(smpl_cost, x2)
+    push!(smpl_cost, y2)
+
+    if length(smpl_cost) < length(comp["cost"])
+        Memento.warn(_LOGGER, "simplifying pwl cost on $(type_name) $(id), $(comp["cost"]) -> $(smpl_cost)")
+        comp["cost"] = smpl_cost
+        comp["ncost"] = div(length(smpl_cost), 2)
+        return true
+    end
+    return false
+end
+
+
+"trims zeros from higher order cost terms"
+function simplify_cost_terms!(data::Dict{String,<:Any})
+    apply_pmd!(_simplify_cost_terms!, data)
+end
+
+""
+function _simplify_cost_terms!(pm_data::Dict{String,<:Any})
+
+    if haskey(pm_data, "gen")
+        for (i, gen) in pm_data["gen"]
+            if haskey(gen, "model") && gen["model"] == 2
+                ncost = length(gen["cost"])
+                for j in 1:ncost
+                    if gen["cost"][1] == 0.0
+                        gen["cost"] = gen["cost"][2:end]
+                    else
+                        break
+                    end
+                end
+                if length(gen["cost"]) != ncost
+                    gen["ncost"] = length(gen["cost"])
+                    Memento.info(_LOGGER, "removing $(ncost - gen["ncost"]) cost terms from generator $(i): $(gen["cost"])")
+                end
+            end
+        end
+    end
+
+    if haskey(pm_data, "dcline")
+        for (i, dcline) in pm_data["dcline"]
+            if haskey(dcline, "model") && dcline["model"] == 2
+                ncost = length(dcline["cost"])
+                for j in 1:ncost
+                    if dcline["cost"][1] == 0.0
+                        dcline["cost"] = dcline["cost"][2:end]
+                    else
+                        break
+                    end
+                end
+                if length(dcline["cost"]) != ncost
+                    dcline["ncost"] = length(dcline["cost"])
+                    Memento.info(_LOGGER, "removing $(ncost - dcline["ncost"]) cost terms from dcline $(i): $(dcline["cost"])")
+                end
+            end
+        end
+    end
+
+end
+
+
+"ensures all polynomial costs functions have the same number of terms"
+function standardize_cost_terms!(data::Dict{String,<:Any}; order=-1)
+    pm_data = get_pm_data(data)
+
+    comp_max_order = 1
+
+    if _IM.ismultinetwork(pm_data)
+        networks = pm_data["nw"]
+    else
+        networks = [("0", pm_data)]
+    end
+
+    for (i, network) in networks
+        if haskey(network, "gen")
+            for (i, gen) in network["gen"]
+                if haskey(gen, "model") && gen["model"] == 2
+                    max_nonzero_index = 1
+                    for i in 1:length(gen["cost"])
+                        max_nonzero_index = i
+                        if gen["cost"][i] != 0.0
+                            break
+                        end
+                    end
+
+                    max_oder = length(gen["cost"]) - max_nonzero_index + 1
+
+                    comp_max_order = max(comp_max_order, max_oder)
+                end
+            end
+        end
+
+        if haskey(network, "dcline")
+            for (i, dcline) in network["dcline"]
+                if haskey(dcline, "model") && dcline["model"] == 2
+                    max_nonzero_index = 1
+                    for i in 1:length(dcline["cost"])
+                        max_nonzero_index = i
+                        if dcline["cost"][i] != 0.0
+                            break
+                        end
+                    end
+
+                    max_oder = length(dcline["cost"]) - max_nonzero_index + 1
+
+                    comp_max_order = max(comp_max_order, max_oder)
+                end
+            end
+        end
+
+    end
+
+    if comp_max_order <= order+1
+        comp_max_order = order+1
+    else
+        if order != -1 # if not the default
+            Memento.warn(_LOGGER, "a standard cost order of $(order) was requested but the given data requires an order of at least $(comp_max_order-1)")
+        end
+    end
+
+    for (i, network) in networks
+        if haskey(network, "gen")
+            _standardize_cost_terms!(network["gen"], comp_max_order, "generator")
+        end
+        if haskey(network, "dcline")
+            _standardize_cost_terms!(network["dcline"], comp_max_order, "dcline")
+        end
+    end
+
+end
+
+
+"ensures all polynomial costs functions have at exactly comp_order terms"
+function _standardize_cost_terms!(components::Dict{String,<:Any}, comp_order::Int, cost_comp_name::String)
+    modified = Set{Int}()
+    for (i, comp) in components
+        if haskey(comp, "model") && comp["model"] == 2 && length(comp["cost"]) != comp_order
+            std_cost = [0.0 for i in 1:comp_order]
+            current_cost = reverse(comp["cost"])
+            #println("gen cost: $(comp["cost"])")
+            for i in 1:min(comp_order, length(current_cost))
+                std_cost[i] = current_cost[i]
+            end
+            comp["cost"] = reverse(std_cost)
+            comp["ncost"] = comp_order
+            #println("std gen cost: $(comp["cost"])")
+
+            Memento.info(_LOGGER, "updated $(cost_comp_name) $(comp["index"]) cost function with order $(length(current_cost)) to a function of order $(comp_order): $(comp["cost"])")
+            push!(modified, comp["index"])
+        end
+    end
+    return modified
+end
+

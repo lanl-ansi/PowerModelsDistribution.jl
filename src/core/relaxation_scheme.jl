@@ -176,3 +176,39 @@ function relaxation_psd_to_psd_real(m, mxreal, mximag; ndim=3)
         JuMP.@constraint(m, [mr -mi; mi mr] in JuMP.PSDCone())
     end
 end
+
+
+"""
+A valid inequality for the product of two complex variables with magnitude and
+angle difference bounds.
+In the literature this constraints are called the Lifted Nonlinear Cuts (LNCs).
+@misc{1512.04644,
+    Author = {Carleton Coffrin and Hassan Hijazi and Pascal Van Hentenryck},
+    Title = {Strengthening the SDP Relaxation of AC Power Flows with Convex
+        Envelopes, Bound Tightening, and Lifted Nonlinear Cuts},
+    Year = {2015},
+    Eprint = {arXiv:1512.04644},
+}
+"""
+function cut_complex_product_and_angle_difference(m, wf, wt, wr, wi, angmin, angmax)
+    @assert angmin >= -pi/2 && angmin <= pi/2
+    @assert angmax >= -pi/2 && angmax <= pi/2
+    @assert angmin < angmax
+
+    wf_lb, wf_ub = _IM.variable_domain(wf)
+    wt_lb, wt_ub = _IM.variable_domain(wt)
+
+    vf_lb, vf_ub = sqrt(wf_lb), sqrt(wf_ub)
+    vt_lb, vt_ub = sqrt(wt_lb), sqrt(wt_ub)
+    td_ub = angmax
+    td_lb = angmin
+
+    phi = (td_ub + td_lb)/2
+    d   = (td_ub - td_lb)/2
+
+    sf = vf_lb + vf_ub
+    st = vt_lb + vt_ub
+
+    JuMP.@constraint(m, sf*st*(cos(phi)*wr + sin(phi)*wi) - vt_ub*cos(d)*st*wf - vf_ub*cos(d)*sf*wt >=  vf_ub*vt_ub*cos(d)*(vf_lb*vt_lb - vf_ub*vt_ub))
+    JuMP.@constraint(m, sf*st*(cos(phi)*wr + sin(phi)*wi) - vt_lb*cos(d)*st*wf - vf_lb*cos(d)*sf*wt >= -vf_lb*vt_lb*cos(d)*(vf_lb*vt_lb - vf_ub*vt_ub))
+end

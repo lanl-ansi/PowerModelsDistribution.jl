@@ -5,7 +5,7 @@ end
 
 
 "Constructor for Power Flow Problem"
-function build_mc_pf(pm::_PM.AbstractPowerModel)
+function build_mc_pf(pm::AbstractMCPowerModel)
     variable_mc_bus_voltage(pm; bounded=false)
     variable_mc_branch_power(pm; bounded=false)
     variable_mc_switch_power(pm; bounded=false)
@@ -72,7 +72,7 @@ end
 
 
 "Constructor for Power Flow in current-voltage variable space"
-function build_mc_pf(pm::_PM.AbstractIVRModel)
+function build_mc_pf(pm::AbstractIVRModel)
     # Variables
     variable_mc_bus_voltage(pm, bounded = false)
     variable_mc_branch_current(pm, bounded = false)

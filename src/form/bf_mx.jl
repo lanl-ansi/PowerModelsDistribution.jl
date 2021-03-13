@@ -832,12 +832,12 @@ function constraint_mc_power_balance(pm::KCLMXModels, nw::Int, i::Int, terminals
     Wr = var(pm, nw, :Wr, i)
     Wi = var(pm, nw, :Wi, i)
 
-    P = get(var(pm, nw), :P, Dict()); _PM._check_var_keys(P, bus_arcs, "active power", "branch")
-    Q = get(var(pm, nw), :Q, Dict()); _PM._check_var_keys(Q, bus_arcs, "reactive power", "branch")
-    Pg = get(var(pm, nw), :Pg_bus, Dict()); _PM._check_var_keys(Pg, bus_gens, "active power", "generator")
-    Qg = get(var(pm, nw), :Qg_bus, Dict()); _PM._check_var_keys(Qg, bus_gens, "reactive power", "generator")
-    Pd = get(var(pm, nw), :Pd_bus, Dict()); _PM._check_var_keys(Pd, bus_loads, "active power", "load")
-    Qd = get(var(pm, nw), :Qd_bus, Dict()); _PM._check_var_keys(Qd, bus_loads, "reactive power", "load")
+    P = get(var(pm, nw), :P, Dict()); _check_var_keys(P, bus_arcs, "active power", "branch")
+    Q = get(var(pm, nw), :Q, Dict()); _check_var_keys(Q, bus_arcs, "reactive power", "branch")
+    Pg = get(var(pm, nw), :Pg_bus, Dict()); _check_var_keys(Pg, bus_gens, "active power", "generator")
+    Qg = get(var(pm, nw), :Qg_bus, Dict()); _check_var_keys(Qg, bus_gens, "reactive power", "generator")
+    Pd = get(var(pm, nw), :Pd_bus, Dict()); _check_var_keys(Pd, bus_loads, "active power", "load")
+    Qd = get(var(pm, nw), :Qd_bus, Dict()); _check_var_keys(Qd, bus_loads, "reactive power", "load")
 
     Gt, Bt = _build_bus_shunt_matrices(pm, nw, terminals, bus_shunts)
 

@@ -1,10 +1,18 @@
+"checks if a sufficient number of variables exist for the given keys collection"
+function _check_var_keys(vars, keys, var_name, comp_name)
+    if length(vars) < length(keys)
+        error(_LOGGER, "$(var_name) decision variables appear to be missing for $(comp_name) components")
+    end
+end
+
+
 "do nothing by default"
-function constraint_mc_model_voltage(pm::_PM.AbstractPowerModel, nw::Int)
+function constraint_mc_model_voltage(pm::AbstractMCPowerModel, nw::Int)
 end
 
 
 "Generic thermal limit constraint from-side"
-function constraint_mc_thermal_limit_from(pm::_PM.AbstractPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
+function constraint_mc_thermal_limit_from(pm::AbstractMCPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
     p_fr = [var(pm, nw, :p, f_idx)[c] for c in f_connections]
     q_fr = [var(pm, nw, :q, f_idx)[c] for c in f_connections]
 
@@ -17,7 +25,7 @@ end
 
 
 "Generic thermal limit constraint to-side"
-function constraint_mc_thermal_limit_to(pm::_PM.AbstractPowerModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
+function constraint_mc_thermal_limit_to(pm::AbstractMCPowerModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
     p_to = [var(pm, nw, :p, t_idx)[c] for c in t_connections]
     q_to = [var(pm, nw, :q, t_idx)[c] for c in t_connections]
 
@@ -30,7 +38,7 @@ end
 
 
 "on/off bus voltage magnitude constraint"
-function constraint_mc_bus_voltage_magnitude_on_off(pm::_PM.AbstractPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
+function constraint_mc_bus_voltage_magnitude_on_off(pm::AbstractMCPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
     vm = var(pm, nw, :vm, i)
     z_voltage = var(pm, nw, :z_voltage, i)
 
@@ -50,7 +58,7 @@ end
 
 
 "on/off bus voltage magnitude squared constraint for relaxed formulations"
-function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::_PM.AbstractPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
+function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::AbstractMCPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
     w = var(pm, nw, :w, i)
     z_voltage = var(pm, nw, :z_voltage, i)
 
@@ -69,14 +77,14 @@ function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::_PM.AbstractPowerMod
 end
 
 
-function constraint_mc_gen_power_setpoint_real(pm::_PM.AbstractPowerModel, nw::Int, i::Int, pg::Vector{<:Real})
+function constraint_mc_gen_power_setpoint_real(pm::AbstractMCPowerModel, nw::Int, i::Int, pg::Vector{<:Real})
     pg_var = [var(pm, nw, :pg, i)[c] for c in ref(pm, nw, :gen, i)["connections"]]
     JuMP.@constraint(pm.model, pg_var .== pg)
 end
 
 
 "on/off constraint for generators"
-function constraint_mc_gen_power_on_off(pm::_PM.AbstractPowerModel, nw::Int, i::Int, connections::Vector{<:Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real})
+function constraint_mc_gen_power_on_off(pm::AbstractMCPowerModel, nw::Int, i::Int, connections::Vector{<:Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real})
     pg = var(pm, nw, :pg, i)
     qg = var(pm, nw, :qg, i)
     z = var(pm, nw, :z_gen, i)
@@ -102,7 +110,7 @@ end
 
 
 ""
-function constraint_mc_storage_thermal_limit(pm::_PM.AbstractPowerModel, nw::Int, i::Int, connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_mc_storage_thermal_limit(pm::AbstractMCPowerModel, nw::Int, i::Int, connections::Vector{Int}, rating::Vector{<:Real})
     ps = [var(pm, nw, :ps, i)[c] for c in connections]
     qs = [var(pm, nw, :qs, i)[c] for c in connections]
 
@@ -111,7 +119,7 @@ end
 
 
 ""
-function constraint_mc_switch_state_open(pm::_PM.AbstractPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int})
+function constraint_mc_switch_state_open(pm::AbstractMCPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int})
     psw = var(pm, nw, :psw, f_idx)
     qsw = var(pm, nw, :qsw, f_idx)
 
@@ -121,7 +129,7 @@ end
 
 
 ""
-function constraint_mc_switch_power_on_off(pm::_PM.AbstractPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}; relax::Bool=false)
+function constraint_mc_switch_power_on_off(pm::AbstractMCPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}; relax::Bool=false)
     i, f_bus, t_bus = f_idx
 
     psw = var(pm, nw, :psw, f_idx)
@@ -148,7 +156,7 @@ end
 
 
 ""
-function constraint_switch_thermal_limit(pm::_PM.AbstractPowerModel, n::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_switch_thermal_limit(pm::AbstractMCPowerModel, n::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
     psw = var(pm, n, :psw, f_idx)
     qsw = var(pm, n, :qsw, f_idx)
 
@@ -159,7 +167,7 @@ end
 
 
 ""
-function constraint_storage_state_initial(pm::_PM.AbstractPowerModel, n::Int, i::Int, energy, charge_eff, discharge_eff, time_elapsed)
+function constraint_storage_state_initial(pm::AbstractMCPowerModel, n::Int, i::Int, energy, charge_eff, discharge_eff, time_elapsed)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)
     se = var(pm, n, :se, i)
@@ -169,7 +177,7 @@ end
 
 
 ""
-function constraint_storage_state(pm::_PM.AbstractPowerModel, n_1::Int, n_2::Int, i::Int, charge_eff, discharge_eff, time_elapsed)
+function constraint_storage_state(pm::AbstractMCPowerModel, n_1::Int, n_2::Int, i::Int, charge_eff, discharge_eff, time_elapsed)
     sc_2 = var(pm, n_2, :sc, i)
     sd_2 = var(pm, n_2, :sd, i)
     se_2 = var(pm, n_2, :se, i)
@@ -180,7 +188,7 @@ end
 
 
 ""
-function constraint_storage_complementarity_nl(pm::_PM.AbstractPowerModel, n::Int, i)
+function constraint_storage_complementarity_nl(pm::AbstractMCPowerModel, n::Int, i)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)
 
@@ -189,7 +197,7 @@ end
 
 
 ""
-function constraint_storage_complementarity_mi(pm::_PM.AbstractPowerModel, n::Int, i, charge_ub, discharge_ub)
+function constraint_storage_complementarity_mi(pm::AbstractMCPowerModel, n::Int, i, charge_ub, discharge_ub)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)
     sc_on = var(pm, n, :sc_on, i)
@@ -202,13 +210,13 @@ end
 
 
 ""
-function constraint_storage_complementarity_nl(pm::_PM.AbstractPowerModel, i::Int; nw::Int=nw_id_default)
+function constraint_storage_complementarity_nl(pm::AbstractMCPowerModel, i::Int; nw::Int=nw_id_default)
     constraint_storage_complementarity_nl(pm, nw, i)
 end
 
 
 ""
-function constraint_storage_complementarity_mi(pm::_PM.AbstractPowerModel, i::Int; nw::Int=nw_id_default)
+function constraint_storage_complementarity_mi(pm::AbstractMCPowerModel, i::Int; nw::Int=nw_id_default)
     storage = ref(pm, nw, :storage, i)
     charge_ub = storage["charge_rating"]
     discharge_ub = storage["discharge_rating"]

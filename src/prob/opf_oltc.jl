@@ -5,7 +5,7 @@ end
 
 
 "constructor for on-load tap-changer OPF"
-function build_mc_opf_oltc(pm::_PM.AbstractPowerModel)
+function build_mc_opf_oltc(pm::AbstractMCPowerModel)
     variable_mc_bus_voltage(pm)
 
     variable_mc_branch_power(pm)
