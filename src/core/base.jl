@@ -41,6 +41,11 @@ function instantiate_mc_model(data::Dict{String,<:Any}, model_type::Type, build_
 end
 
 
+""
+ismulticonductor(pm::_PM.AbstractPowerModel, nw::Int) = haskey(pm.ref[:it][pmd_it_sym][:nw][nw], :conductors)
+ismulticonductor(pm::_PM.AbstractPowerModel; nw::Int=nw_id_default) = haskey(pm.ref[:it][pmd_it_sym][:nw][nw], :conductors)
+
+
 # Helper functions for multinetwork AbstractPowerModel objects.
 ismultinetwork(pm::_PM.AbstractPowerModel) = _IM.ismultinetwork(pm, pmd_it_sym)
 nw_ids(pm::_PM.AbstractPowerModel) = _IM.nw_ids(pm, pmd_it_sym)

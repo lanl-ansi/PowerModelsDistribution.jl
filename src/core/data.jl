@@ -958,3 +958,26 @@ function _build_bus_shunt_matrices(pm::_PM.AbstractPowerModel, nw::Int, terminal
 
     return (Gs, Bs)
 end
+
+
+""
+function ismulticonductor(data::Dict{String,<:Any})
+    pm_data = get_pm_data(data)
+
+    if _IM.ismultinetwork(pm_data)
+        return all(_ismulticonductor(pm_nw_data) for (i, pm_nw_data) in pm_data["nw"])
+    else
+        return _ismulticonductor(pm_data)
+    end
+end
+
+
+function _ismulticonductor(data::Dict{String,<:Any})
+    return haskey(data, "conductors")
+end
+
+
+"Convenience function for retrieving the power-only portion of network data."
+function get_pm_data(data::Dict{String, <:Any})
+    return _IM.ismultiinfrastructure(data) ? data["it"][pmd_it_name] : data
+end

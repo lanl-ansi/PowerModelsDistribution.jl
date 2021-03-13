@@ -12,7 +12,7 @@ module PowerModelsDistribution
     const _PM = PowerModels
     const _IM = InfrastructureModels
 
-    import PowerModels: ACPPowerModel, ACRPowerModel, DCPPowerModel, IVRPowerModel, NFAPowerModel, conductor_ids, ismulticonductor
+    import PowerModels: ACPPowerModel, ACRPowerModel, DCPPowerModel, IVRPowerModel, NFAPowerModel, conductor_ids
     import InfrastructureModels: optimize_model!, @im_fields, nw_id_default
 
     function __init__()
