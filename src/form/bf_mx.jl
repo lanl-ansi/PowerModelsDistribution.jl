@@ -328,11 +328,11 @@ function variable_mc_load_power(pm::AbstractUBFModels; nw=nw_id_default)
     var(pm, nw)[:pd] = Dict()
     var(pm, nw)[:qd] = Dict()
     # now, create auxilary power variable X for delta loads
-    variable_mc_load_power_delta_aux(pm, load_del_ids)
+    variable_mc_load_power_delta_aux(pm, load_del_ids; nw=nw)
     # only delta loads need a current variable
-    variable_mc_load_current(pm, load_del_ids)
+    variable_mc_load_current(pm, load_del_ids; nw=nw)
     # for wye loads with a cone inclusion constraint, we need to create a variable
-    variable_mc_load_power(pm, intersect(load_wye_ids, load_cone_ids))
+    variable_mc_load_power(pm, intersect(load_wye_ids, load_cone_ids); nw=nw)
 
 end
 
