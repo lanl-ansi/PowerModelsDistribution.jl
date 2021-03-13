@@ -35,9 +35,9 @@ qd(sol, name) = sol["solution"]["load"][name]["qd_bus"]
 
 # Helper functions for load models tests
 load_name2id(pmd_data, name) = [load["index"] for (_,load) in pmd_data["load"] if haskey(load, "name") && load["name"]==name][1]
-pdvar(pm, pmd_data, name) = [PM.var(pm, nw_id_default, c, :pd, load_name2id(pmd_data, name)) for c in 1:3]
+pdvar(pm, pmd_data, name) = [PMD.var(pm, nw_id_default, c, :pd, load_name2id(pmd_data, name)) for c in 1:3]
 pd(sol, pmd_data, name) = sol["solution"]["load"][string(load_name2id(pmd_data, name))]["pd_bus"]
-qdvar(pm, pmd_data, name) = [PM.var(pm, nw_id_default, c, :qd, load_name2id(pmd_data, name)) for c in 1:3]
+qdvar(pm, pmd_data, name) = [PMD.var(pm, nw_id_default, c, :qd, load_name2id(pmd_data, name)) for c in 1:3]
 qd(sol, pmd_data, name) = sol["solution"]["load"][string(load_name2id(pmd_data, name))]["qd_bus"]
 sd(pm, pmd_data, name) = pd(sol, pmd_data, name)+im*qd(sol, pmd_data, name)
 
