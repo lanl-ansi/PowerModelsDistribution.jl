@@ -1,7 +1,7 @@
 ""
 function transform_solution(solution_math::Dict{String,<:Any}, data_math::Dict{String,<:Any}; map::Union{Vector{<:Dict{String,<:Any}},Missing}=missing, make_si::Bool=true, convert_rad2deg::Bool=true)::Dict{String,Any}
     @assert get(data_math, "data_model", MATHEMATICAL) == MATHEMATICAL "provided solution cannot be converted to an engineering model"
-    if ismultinetwork(data_math)
+    if _IM.ismultinetwork(data_math)
         solution_eng = Dict{String,Any}(
             "nw" => Dict{String,Any}(
                 k => Dict{Any,Any}() for k in keys(data_math["nw"])
@@ -17,7 +17,7 @@ function transform_solution(solution_math::Dict{String,<:Any}, data_math::Dict{S
     @assert !isempty(map) "Map is empty, cannot map solution up to engineering model"
 
     for map_item in reverse(map)
-        if ismultinetwork(data_math) && map_item["unmap_function"] != "_map_math2eng_root!"
+        if _IM.ismultinetwork(data_math) && map_item["unmap_function"] != "_map_math2eng_root!"
             for (n, nw) in solution_math["nw"]
                 getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(solution_eng["nw"][n], nw, map_item)
             end
@@ -26,7 +26,7 @@ function transform_solution(solution_math::Dict{String,<:Any}, data_math::Dict{S
         end
     end
 
-    if ismultinetwork(data_math)
+    if _IM.ismultinetwork(data_math)
         for (n,nw) in solution_eng["nw"]
             for (k,v) in nw
                 if isempty(v)
@@ -221,7 +221,7 @@ end
 function _map_math2eng_root!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     data_eng["per_unit"] = data_math["per_unit"]
 
-    if !ismultinetwork(data_math)
+    if !_IM.ismultinetwork(data_math)
         data_eng["settings"] = Dict{String,Any}("sbase" => data_math["baseMVA"])
     else
         for (n,nw) in data_eng["nw"]

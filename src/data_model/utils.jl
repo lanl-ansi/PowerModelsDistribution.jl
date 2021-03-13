@@ -738,7 +738,7 @@ function _build_eng_multinetwork(data_eng::Dict{String,<:Any})::Dict{String,Any}
         return _pre_mn_data
     else
         delete!(_data_eng["time_series"], "step_mismatch")
-        return _IM.make_multinetwork(_pre_mn_data, _pmd_eng_global_keys)
+        return _IM.make_multinetwork(_pre_mn_data, pmd_it_name, _pmd_eng_global_keys)
     end
 end
 

@@ -446,7 +446,7 @@ function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true
 
     sbase = math_model["settings"]["sbase"]
 
-    if ismultinetwork(math_model)
+    if _IM.ismultinetwork(math_model)
         for (n,nw) in solution_si["nw"]
             for (comp_type, comp_dict) in [(x,y) for (x,y) in nw if isa(y, Dict)]
                 dimensionalize_math_comp = get(_dimensionalize_math, comp_type, Dict())
