@@ -44,8 +44,8 @@ function _build_mc_osw(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :storage)
-        _PM.constraint_storage_state(pm, i)
-        _PM.constraint_storage_complementarity_nl(pm, i)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end
@@ -110,8 +110,8 @@ function _build_mc_osw(pm::AbstractUBFModels)
     end
 
     for i in ids(pm, :storage)
-        _PM.constraint_storage_state(pm, i)
-        _PM.constraint_storage_complementarity_nl(pm, i)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end
@@ -230,8 +230,8 @@ function _build_mc_osw_mi(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :storage)
-        _PM.constraint_storage_state(pm, i)
-        _PM.constraint_storage_complementarity_mi(pm, i)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_mi(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end
@@ -296,8 +296,8 @@ function _build_mc_osw_mi(pm::AbstractUBFModels)
     end
 
     for i in ids(pm, :storage)
-        _PM.constraint_storage_state(pm, i)
-        _PM.constraint_storage_complementarity_mi(pm, i)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_mi(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end

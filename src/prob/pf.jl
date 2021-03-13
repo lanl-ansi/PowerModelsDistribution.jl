@@ -49,8 +49,8 @@ function build_mc_pf(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :storage)
-        _PM.constraint_storage_state(pm, i)
-        _PM.constraint_storage_complementarity_nl(pm, i)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end
@@ -178,8 +178,8 @@ function build_mc_pf(pm::AbstractUBFModels)
     end
 
     for i in ids(pm, :storage)
-        _PM.constraint_storage_state(pm, i)
-        _PM.constraint_storage_complementarity_nl(pm, i)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end
@@ -198,7 +198,7 @@ function build_mc_pf(pm::AbstractUBFModels)
         constraint_mc_switch_thermal_limit(pm, i)
     end
 
-    for i in _PM.ids(pm, :transformer)
+    for i in ids(pm, :transformer)
         constraint_mc_transformer_power(pm, i)
     end
 end

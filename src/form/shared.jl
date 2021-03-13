@@ -246,15 +246,29 @@ function constraint_mc_power_balance(pm::_PM.AbstractWModels, nw::Int, i::Int, t
 end
 
 
-"delegate back to PowerModels"
+"Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)"
 function constraint_mc_ohms_yt_from(pm::_PM.AbstractWModels, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
-    _PM.constraint_ohms_yt_from(pm, n, c, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
+    p_fr = var(pm, n, :p, f_idx)
+    q_fr = var(pm, n, :q, f_idx)
+    w_fr = var(pm, n, :w, f_bus)
+    wr   = var(pm, n, :wr, (f_bus, t_bus))
+    wi   = var(pm, n, :wi, (f_bus, t_bus))
+
+    JuMP.@constraint(pm.model, p_fr ==  (g+g_fr)/tm^2*w_fr + (-g*tr+b*ti)/tm^2*wr + (-b*tr-g*ti)/tm^2*wi )
+    JuMP.@constraint(pm.model, q_fr == -(b+b_fr)/tm^2*w_fr - (-b*tr-g*ti)/tm^2*wr + (-g*tr+b*ti)/tm^2*wi )
 end
 
 
-"delegate back to PowerModels"
+"Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)"
 function constraint_mc_ohms_yt_to(pm::_PM.AbstractWModels, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
-    _PM.constraint_ohms_yt_to(pm, n, c, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
+    q_to = var(pm, n, :q, t_idx)
+    p_to = var(pm, n, :p, t_idx)
+    w_to = var(pm, n, :w, t_bus)
+    wr   = var(pm, n, :wr, (f_bus, t_bus))
+    wi   = var(pm, n, :wi, (f_bus, t_bus))
+
+    JuMP.@constraint(pm.model, p_to ==  (g+g_to)*w_to + (-g*tr-b*ti)/tm^2*wr + (-b*tr+g*ti)/tm^2*-wi )
+    JuMP.@constraint(pm.model, q_to == -(b+b_to)*w_to - (-b*tr+g*ti)/tm^2*wr + (-g*tr-b*ti)/tm^2*-wi )
 end
 
 
@@ -350,4 +364,32 @@ function variable_mc_storage_current(pm::_PM.AbstractWConvexModels; nw::Int=nw_i
     end
 
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :ccms, ids(pm, nw, :storage), ccms)
+end
+
+
+""
+function constraint_storage_losses(pm::_PM.AbstractWConvexModels, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
+    w = var(pm, n, :w, bus)
+    ccms = var(pm, n, :ccms, i)
+    ps = var(pm, n, :ps, i)
+    qs = var(pm, n, :qs, i)
+    sc = var(pm, n, :sc, i)
+    sd = var(pm, n, :sd, i)
+    qsc = var(pm, n, :qsc, i)
+
+    for c in conductors
+        JuMP.@constraint(pm.model, ps[c]^2 + qs[c]^2 <= w[c]*ccms[c])
+    end
+
+    JuMP.@constraint(pm.model,
+        sum(ps[c] for c in conductors) + (sd - sc)
+        ==
+        p_loss + sum(r[c]*ccms[c] for c in conductors)
+    )
+
+    JuMP.@constraint(pm.model,
+        sum(qs[c] for c in conductors)
+        ==
+        qsc + q_loss + sum(x[c]*ccms[c] for c in conductors)
+    )
 end

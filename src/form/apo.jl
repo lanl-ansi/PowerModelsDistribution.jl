@@ -369,3 +369,17 @@ function constraint_mc_load_power(pm::_PM.AbstractActivePowerModel, id::Int; nw:
         sol(pm, nw, :load, id)[:pd_bus] = var(pm, nw, :pd_bus, id)
     end
 end
+
+
+""
+function constraint_storage_losses(pm::_PM.AbstractActivePowerModel, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
+    ps = var(pm, n, :ps, i)
+    sc = var(pm, n, :sc, i)
+    sd = var(pm, n, :sd, i)
+
+    JuMP.@constraint(pm.model,
+        sum(ps[c] for c in conductors) + (sd - sc)
+        ==
+        p_loss + sum(r[c]*ps[c]^2 for c in conductors)
+    )
+end

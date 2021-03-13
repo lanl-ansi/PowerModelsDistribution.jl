@@ -167,3 +167,13 @@ function constraint_mc_switch_state_closed(pm::_PM.AbstractDCPModel, nw::Int, f_
         JuMP.@constraint(pm.model, va_fr[fc] == va_to[fc])
     end
 end
+
+
+""
+function constraint_storage_losses(pm::_PM.AbstractAPLossLessModels, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
+    ps = var(pm, n, :ps, i)
+    sc = var(pm, n, :sc, i)
+    sd = var(pm, n, :sd, i)
+
+    JuMP.@constraint(pm.model, sum(ps[c] for c in conductors) + (sd - sc) == p_loss)
+end

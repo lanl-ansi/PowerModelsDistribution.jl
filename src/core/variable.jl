@@ -583,9 +583,9 @@ function variable_mc_storage_power(pm::_PM.AbstractPowerModel; kwargs...)
     variable_mc_storage_power_imaginary(pm; kwargs...)
     variable_mc_storage_power_control_imaginary(pm; kwargs...)
     variable_mc_storage_current(pm; kwargs...)
-    _PM.variable_storage_energy(pm; kwargs...)
-    _PM.variable_storage_charge(pm; kwargs...)
-    _PM.variable_storage_discharge(pm; kwargs...)
+    variable_storage_energy(pm; kwargs...)
+    variable_storage_charge(pm; kwargs...)
+    variable_storage_discharge(pm; kwargs...)
 end
 
 
@@ -596,10 +596,10 @@ function variable_mc_storage_power_mi(pm::_PM.AbstractPowerModel; relax::Bool=fa
     variable_mc_storage_power_control_imaginary(pm; kwargs...)
     variable_mc_storage_current(pm; kwargs...)
     variable_mc_storage_indicator(pm; relax=relax, kwargs...)
-    _PM.variable_storage_energy(pm; kwargs...)
-    _PM.variable_storage_charge(pm; kwargs...)
-    _PM.variable_storage_discharge(pm; kwargs...)
-    _PM.variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
+    variable_storage_energy(pm; kwargs...)
+    variable_storage_charge(pm; kwargs...)
+    variable_storage_discharge(pm; kwargs...)
+    variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
 end
 
 
@@ -609,10 +609,10 @@ function variable_mc_storage_power_mi_on_off(pm::_PM.AbstractPowerModel; relax::
     variable_mc_storage_power_imaginary_on_off(pm; kwargs...)
     variable_mc_storage_current(pm; kwargs...)
     variable_mc_storage_power_control_imaginary_on_off(pm; kwargs...)
-    _PM.variable_storage_energy(pm; kwargs...)
-    _PM.variable_storage_charge(pm; kwargs...)
-    _PM.variable_storage_discharge(pm; kwargs...)
-    _PM.variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
+    variable_storage_energy(pm; kwargs...)
+    variable_storage_charge(pm; kwargs...)
+    variable_storage_discharge(pm; kwargs...)
+    variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
 end
 
 
@@ -1276,4 +1276,91 @@ function variable_mc_generator_power_imaginary_on_off(pm::_PM.AbstractPowerModel
     var(pm, nw)[:qg_bus] = Dict{Int, Any}()
 
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :qg, ids(pm, nw, :gen), qg)
+end
+
+
+""
+function variable_storage_energy(pm::_PM.AbstractPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    se = var(pm, nw)[:se] = JuMP.@variable(pm.model,
+        [i in ids(pm, nw, :storage)], base_name="$(nw)_se",
+        start = comp_start_value(ref(pm, nw, :storage, i), "se_start", 1)
+    )
+
+    if bounded
+        for (i, storage) in ref(pm, nw, :storage)
+            JuMP.set_lower_bound(se[i], 0)
+            JuMP.set_upper_bound(se[i], storage["energy_rating"])
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :se, ids(pm, nw, :storage), se)
+end
+
+
+""
+function variable_storage_charge(pm::_PM.AbstractPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    sc = var(pm, nw)[:sc] = JuMP.@variable(pm.model,
+        [i in ids(pm, nw, :storage)], base_name="$(nw)_sc",
+        start = comp_start_value(ref(pm, nw, :storage, i), "sc_start", 1)
+    )
+
+    if bounded
+        for (i, storage) in ref(pm, nw, :storage)
+            JuMP.set_lower_bound(sc[i], 0)
+            JuMP.set_upper_bound(sc[i], storage["charge_rating"])
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :sc, ids(pm, nw, :storage), sc)
+end
+
+
+""
+function variable_storage_discharge(pm::_PM.AbstractPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    sd = var(pm, nw)[:sd] = JuMP.@variable(pm.model,
+        [i in ids(pm, nw, :storage)], base_name="$(nw)_sd",
+        start = comp_start_value(ref(pm, nw, :storage, i), "sd_start", 1)
+    )
+
+    if bounded
+        for (i, storage) in ref(pm, nw, :storage)
+            JuMP.set_lower_bound(sd[i], 0)
+            JuMP.set_upper_bound(sd[i], storage["discharge_rating"])
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :sd, ids(pm, nw, :storage), sd)
+end
+
+
+""
+function variable_storage_complementary_indicator(pm::_PM.AbstractPowerModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
+    if !relax
+        sc_on = var(pm, nw)[:sc_on] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :storage)], base_name="$(nw)_sc_on",
+            binary = true,
+            start = comp_start_value(ref(pm, nw, :storage, i), "sc_on_start", 0)
+        )
+        sd_on = var(pm, nw)[:sd_on] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :storage)], base_name="$(nw)_sd_on",
+            binary = true,
+            start = comp_start_value(ref(pm, nw, :storage, i), "sd_on_start", 0)
+        )
+    else
+        sc_on = var(pm, nw)[:sc_on] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :storage)], base_name="$(nw)_sc_on",
+            lower_bound = 0,
+            upper_bound = 1,
+            start = comp_start_value(ref(pm, nw, :storage, i), "sc_on_start", 0)
+        )
+        sd_on = var(pm, nw)[:sd_on] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :storage)], base_name="$(nw)_sd_on",
+            lower_bound = 0,
+            upper_bound = 1,
+            start = comp_start_value(ref(pm, nw, :storage, i), "sd_on_start", 0)
+        )
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :sc_on, ids(pm, nw, :storage), sc_on)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :sd_on, ids(pm, nw, :storage), sd_on)
 end
