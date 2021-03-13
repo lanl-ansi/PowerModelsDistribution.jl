@@ -60,32 +60,32 @@ ids(pm::_PM.AbstractPowerModel, key::Symbol; nw::Int=nw_id_default) = _IM.ids(pm
 # Helper functions for AbstractPowerModel `ref` access.
 ref(pm::_PM.AbstractPowerModel, nw::Int = nw_id_default) = _IM.ref(pm, pmd_it_sym, nw)
 ref(pm::_PM.AbstractPowerModel, nw::Int, key::Symbol) = _IM.ref(pm, pmd_it_sym, nw, key)
-ref(pm::_PM.AbstractPowerModel, nw::Int, key::Symbol, idx::Int) = _IM.ref(pm, pmd_it_sym, nw, key, idx)
-ref(pm::_PM.AbstractPowerModel, nw::Int, key::Symbol, idx::Int, param::String) = _IM.ref(pm, pmd_it_sym, nw, key, idx, param)
+ref(pm::_PM.AbstractPowerModel, nw::Int, key::Symbol, idx::Any) = _IM.ref(pm, pmd_it_sym, nw, key, idx)
+ref(pm::_PM.AbstractPowerModel, nw::Int, key::Symbol, idx::Any, param::String) = _IM.ref(pm, pmd_it_sym, nw, key, idx, param)
 ref(pm::_PM.AbstractPowerModel, key::Symbol; nw::Int = nw_id_default) = _IM.ref(pm, pmd_it_sym, key; nw = nw)
-ref(pm::_PM.AbstractPowerModel, key::Symbol, idx::Int; nw::Int = nw_id_default) = _IM.ref(pm, pmd_it_sym, key, idx; nw = nw)
-ref(pm::_PM.AbstractPowerModel, key::Symbol, idx::Int, param::String; nw::Int = nw_id_default) = _IM.ref(pm, pmd_it_sym, key, idx, param; nw = nw)
+ref(pm::_PM.AbstractPowerModel, key::Symbol, idx::Any; nw::Int = nw_id_default) = _IM.ref(pm, pmd_it_sym, key, idx; nw = nw)
+ref(pm::_PM.AbstractPowerModel, key::Symbol, idx::Any, param::String; nw::Int = nw_id_default) = _IM.ref(pm, pmd_it_sym, key, idx, param; nw = nw)
 
 
 # Helper functions for AbstractPowerModel `var` access.
 var(pm::_PM.AbstractPowerModel, nw::Int = nw_id_default) = _IM.var(pm, pmd_it_sym, nw)
 var(pm::_PM.AbstractPowerModel, nw::Int, key::Symbol) = _IM.var(pm, pmd_it_sym, nw, key)
-var(pm::_PM.AbstractPowerModel, nw::Int, key::Symbol, idx::Int) = _IM.var(pm, pmd_it_sym, nw, key, idx)
+var(pm::_PM.AbstractPowerModel, nw::Int, key::Symbol, idx::Any) = _IM.var(pm, pmd_it_sym, nw, key, idx)
 var(pm::_PM.AbstractPowerModel, key::Symbol; nw::Int = nw_id_default) = _IM.var(pm, pmd_it_sym, key; nw = nw)
-var(pm::_PM.AbstractPowerModel, key::Symbol, idx::Int; nw::Int = nw_id_default) = _IM.var(pm, pmd_it_sym, key, idx; nw = nw)
+var(pm::_PM.AbstractPowerModel, key::Symbol, idx::Any; nw::Int = nw_id_default) = _IM.var(pm, pmd_it_sym, key, idx; nw = nw)
 
 
 # Helper functions for AbstractPowerModel `con` access.
 con(pm::_PM.AbstractPowerModel, nw::Int = nw_id_default) = _IM.con(pm, pmd_it_sym; nw = nw)
 con(pm::_PM.AbstractPowerModel, nw::Int, key::Symbol) = _IM.con(pm, pmd_it_sym, nw, key)
-con(pm::_PM.AbstractPowerModel, nw::Int, key::Symbol, idx) = _IM.con(pm, pmd_it_sym, nw, key, idx)
+con(pm::_PM.AbstractPowerModel, nw::Int, key::Symbol, idx::Any) = _IM.con(pm, pmd_it_sym, nw, key, idx)
 con(pm::_PM.AbstractPowerModel, key::Symbol; nw::Int = nw_id_default) = _IM.con(pm, pmd_it_sym, key; nw = nw)
-con(pm::_PM.AbstractPowerModel, key::Symbol, idx; nw::Int = nw_id_default) = _IM.con(pm, pmd_it_sym, key, idx; nw = nw)
+con(pm::_PM.AbstractPowerModel, key::Symbol, idx::Any; nw::Int = nw_id_default) = _IM.con(pm, pmd_it_sym, key, idx; nw = nw)
 
 
 # Helper functions for AbstractPowerModel `sol` access.
 sol(pm::_PM.AbstractPowerModel, nw::Int = nw_id_default) = _IM.sol(pm, pmd_it_sym; nw = nw)
 sol(pm::_PM.AbstractPowerModel, nw::Int, key::Symbol) = _IM.sol(pm, pmd_it_sym, nw, key)
-sol(pm::_PM.AbstractPowerModel, nw::Int, key::Symbol, idx) = _IM.sol(pm, pmd_it_sym, nw, key, idx)
+sol(pm::_PM.AbstractPowerModel, nw::Int, key::Symbol, idx::Any) = _IM.sol(pm, pmd_it_sym, nw, key, idx)
 sol(pm::_PM.AbstractPowerModel, key::Symbol; nw::Int = nw_id_default) = _IM.sol(pm, pmd_it_sym, key; nw = nw)
-sol(pm::_PM.AbstractPowerModel, key::Symbol, idx; nw::Int = nw_id_default) = _IM.sol(pm, pmd_it_sym, key, idx; nw = nw)
+sol(pm::_PM.AbstractPowerModel, key::Symbol, idx::Any; nw::Int = nw_id_default) = _IM.sol(pm, pmd_it_sym, key, idx; nw = nw)
