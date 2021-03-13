@@ -33,7 +33,7 @@ end
 
 
 ""
-function sol_data_model!(pm::_PM.AbstractWModels, solution::Dict{String,<:Any})
+function _sol_data_model_w!(solution::Dict{String,<:Any})
     if haskey(solution, "nw")
         nws_data = solution["nw"]
     else
@@ -53,8 +53,13 @@ function sol_data_model!(pm::_PM.AbstractWModels, solution::Dict{String,<:Any})
 end
 
 
+function sol_data_model!(pm::_PM.AbstractWModels, solution::Dict{String,<:Any})
+    apply_pmd!(_sol_data_model_w!, solution)
+end
+
+
 ""
-function sol_data_model!(pm::_PM.AbstractACRModel, solution::Dict{String,<:Any})
+function _sol_data_model_acr!(solution::Dict{String,<:Any})
     if haskey(solution, "nw")
         nws_data = solution["nw"]
     else
@@ -74,6 +79,11 @@ function sol_data_model!(pm::_PM.AbstractACRModel, solution::Dict{String,<:Any})
             end
         end
     end
+end
+
+
+function sol_data_model!(pm::_PM.AbstractACRModel, solution::Dict{String,<:Any})
+    apply_pmd!(_sol_data_model_acr!, solution)
 end
 
 
