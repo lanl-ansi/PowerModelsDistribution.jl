@@ -4,6 +4,13 @@ const _excluded_count_busname_patterns = Vector{Regex}([
     r"^_virtual.*",
 ])
 
+
+"PowerModels wrapper for the InfrastructureModels `apply!` function."
+function apply_pmd!(func!::Function, data::Dict{String, <:Any}; apply_to_subnetworks::Bool = true)
+    _IM.apply!(func!, data, pmd_it_name; apply_to_subnetworks = apply_to_subnetworks)
+end
+
+
 "wraps angles in degrees to 180"
 function _wrap_to_180(degrees)
     return degrees - 360*floor.((degrees .+ 180)/360)
@@ -722,8 +729,13 @@ function set_upper_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, p
 end
 
 
-""
 function sol_polar_voltage!(pm::_PM.AbstractPowerModel, solution::Dict{String,<:Any})
+    apply_pmd!(_sol_polar_voltage!, solution)
+end
+
+
+""
+function _sol_polar_voltage!(solution::Dict{String,<:Any})
     if haskey(solution, "nw")
         nws_data = solution["nw"]
     else
