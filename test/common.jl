@@ -16,7 +16,7 @@ end
 bus_name2id(pmd_data, name) = [bus["index"] for (_,bus) in pmd_data["bus"] if haskey(bus, "name") && bus["name"]==name][1]
 va(sol, pmd_data, name) = PMD._wrap_to_pi(sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["va"][:])*180/pi
 vm(sol, pmd_data, name) = sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["vm"]
-tap(i, pm) = JuMP.value.(PM.var(pm, InfrastructureModels.nw_id_default, :tap)[i])
+tap(i, pm) = JuMP.value.(PMD.var(pm, InfrastructureModels.nw_id_default, :tap)[i])
 vi(sol, pmd_data, name) = sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["vi"]
 vr(sol, pmd_data, name) = sol["solution"]["bus"][string(bus_name2id(pmd_data, name))]["vr"]
 calc_vm_acr(sol, pmd_data, name) = sqrt.(vi(sol, pmd_data, name).^2 .+ vr(sol, pmd_data, name).^2)
@@ -26,7 +26,7 @@ calc_va_acr(sol, pmd_data, name) = rad2deg.(PMD._wrap_to_pi(atan.(vi(sol, pmd_da
 vi(sol, name) = sol["solution"]["bus"][name]["vi"]
 vr(sol, name) = sol["solution"]["bus"][name]["vr"]
 calc_vm_acr(sol, name) = sqrt.(vi(sol, name).^2 .+ vr(sol, name).^2)
-calc_va_acr(sol, name) = rad2deg.(PowerModelsDistribution._wrap_to_pi(atan.(vi(sol, name), vr(sol, name))))
+calc_va_acr(sol, name) = rad2deg.(PMD._wrap_to_pi(atan.(vi(sol, name), vr(sol, name))))
 va(sol, name) = PMD._wrap_to_pi(sol["solution"]["bus"][name]["va"][:])*180/pi
 vm(sol, name) = sol["solution"]["bus"][name]["vm"]
 pd(sol, name) = sol["solution"]["load"][name]["pd_bus"]
