@@ -622,22 +622,22 @@ function constraint_mc_network_power_balance(pm::_PM.AbstractPowerModel, i::Int;
     comp_bus_ids = ref(pm, nw, :components, i)
 
     comp_gen_ids = Set{Tuple{Int,Vector{Int}}}()
-    for bus_id in comp_bus_ids, gen_id in PowerModels.ref(pm, nw, :bus_gens, bus_id)
+    for bus_id in comp_bus_ids, gen_id in ref(pm, nw, :bus_gens, bus_id)
         push!(comp_gen_ids, (gen_id, ref(pm, nw, :gen, gen_id, "connections")))
     end
 
     comp_loads = Set()
-    for bus_id in comp_bus_ids, load_id in PowerModels.ref(pm, nw, :bus_loads, bus_id)
-        push!(comp_loads, PowerModels.ref(pm, nw, :load, load_id))
+    for bus_id in comp_bus_ids, load_id in ref(pm, nw, :bus_loads, bus_id)
+        push!(comp_loads, ref(pm, nw, :load, load_id))
     end
 
     comp_shunts = Set()
-    for bus_id in comp_bus_ids, shunt_id in PowerModels.ref(pm, nw, :bus_shunts, bus_id)
-        push!(comp_shunts, PowerModels.ref(pm, nw, :shunt, shunt_id))
+    for bus_id in comp_bus_ids, shunt_id in ref(pm, nw, :bus_shunts, bus_id)
+        push!(comp_shunts, ref(pm, nw, :shunt, shunt_id))
     end
 
     comp_branches = Set()
-    for (branch_id, branch) in PowerModels.ref(pm, nw, :branch)
+    for (branch_id, branch) in ref(pm, nw, :branch)
         if in(branch["f_bus"], comp_bus_ids) && in(branch["t_bus"], comp_bus_ids)
             push!(comp_branches, branch)
         end
