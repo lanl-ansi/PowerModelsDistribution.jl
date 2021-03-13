@@ -546,12 +546,26 @@ s_fr = (vr_fr+im*vi_fr).*(G-im*B)*([vr_fr-vr_to]-im*[vi_fr-vi_to])
 s_fr = (vr_fr+im*vi_fr).*([G*vr_fr-G*vr_to-B*vi_fr+B*vi_to]-im*[G*vi_fr-G*vi_to+B*vr_fr-B*vr_to])
 """
 function constraint_mc_ohms_yt_from(pm::_PM.AbstractACRModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
-    p_fr  = [var(pm, nw, :p, f_idx)[t] for t in f_connections]
-    q_fr  = [var(pm, nw, :q, f_idx)[t] for t in f_connections]
-    vr_fr = [var(pm, nw, :vr, f_bus)[t] for t in f_connections]
-    vr_to = [var(pm, nw, :vr, t_bus)[t] for t in t_connections]
-    vi_fr = [var(pm, nw, :vi, f_bus)[t] for t in f_connections]
-    vi_to = [var(pm, nw, :vi, t_bus)[t] for t in t_connections]
+    display("connections are")
+    display(f_connections)
+    display(t_connections)
+    f_conn = intersect(Set(f_connections), Set(t_connections))
+    t_conn = intersect(Set(f_connections), Set(t_connections))
+    p_fr  = [var(pm, nw, :p, f_idx)[t] for t in f_conn]
+    q_fr  = [var(pm, nw, :q, f_idx)[t] for t in f_conn]
+    vr_fr = [var(pm, nw, :vr, f_bus)[t] for t in f_conn]
+    vr_to = [var(pm, nw, :vr, t_bus)[t] for t in t_conn]
+    vi_fr = [var(pm, nw, :vi, f_bus)[t] for t in f_conn]
+    vi_to = [var(pm, nw, :vi, t_bus)[t] for t in t_conn]
+
+    display("p_fr is $p_fr")
+    display("q_fr is $q_fr")
+    display("vr_fr is $vr_fr")
+    display("vr_to is $vr_to")
+    display("vi_fr is $vi_fr")
+    display("vi_to is $vi_to")
+    display("G is $G")
+    display("B is $B")
 
     JuMP.@constraint(pm.model,
             p_fr .==  vr_fr.*(G*vr_fr-G*vr_to-B*vi_fr+B*vi_to)

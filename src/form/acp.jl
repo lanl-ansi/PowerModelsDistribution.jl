@@ -460,7 +460,7 @@ q_fr == -b[c,c] *vm_fr[c]^2 -
             )
 ```
 """
-function constraint_mc_ohms_yt_from(pm::_PM.AbstractACPModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
+function constraint_mc_ohms_yt_from(pm::_PM.AbstractACPModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Array{<:Real}, B::Array{<:Real}, G_fr::Array{<:Real}, B_fr::Array{<:Real})
     p_fr  = var(pm, nw,  :p, f_idx)
     q_fr  = var(pm, nw,  :q, f_idx)
     vm_fr = var(pm, nw, :vm, f_bus)
@@ -498,7 +498,7 @@ p[t_idx] ==  (g+g_to)*v[t_bus]^2 + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[t_bu
 q[t_idx] == -(b+b_to)*v[t_bus]^2 - (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[f_bus]-t[t_bus])) + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus]))
 ```
 """
-function constraint_mc_ohms_yt_to(pm::_PM.AbstractACPModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_to::Matrix{<:Real}, B_to::Matrix{<:Real})
+function constraint_mc_ohms_yt_to(pm::_PM.AbstractACPModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Array{<:Real}, B::Array{<:Real}, G_to::Array{<:Real}, B_to::Array{<:Real})
     constraint_mc_ohms_yt_from(pm, nw, t_bus, f_bus, t_idx, f_idx, t_connections, f_connections, G, B, G_to, B_to)
 end
 

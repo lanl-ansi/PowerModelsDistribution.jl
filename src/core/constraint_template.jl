@@ -100,6 +100,8 @@ function constraint_mc_ohms_yt_from(pm::_PM.AbstractPowerModel, i::Int; nw::Int=
     t_idx = (i, t_bus, f_bus)
 
     G, B = _PM.calc_branch_y(branch)
+    if isa(G, Float64) G = [G] end
+    if isa(B, Float64) B = [B] end
 
     constraint_mc_ohms_yt_from(pm, nw, f_bus, t_bus, f_idx, t_idx, branch["f_connections"], branch["t_connections"], G, B, branch["g_fr"], branch["b_fr"])
 end
@@ -114,6 +116,8 @@ function constraint_mc_ohms_yt_to(pm::_PM.AbstractPowerModel, i::Int; nw::Int=pm
     t_idx = (i, t_bus, f_bus)
 
     G, B = _PM.calc_branch_y(branch)
+    if isa(G, Float64) G = [G] end
+    if isa(B, Float64) B = [B] end
 
     constraint_mc_ohms_yt_to(pm, nw, f_bus, t_bus, f_idx, t_idx, branch["f_connections"], branch["t_connections"], G, B, branch["g_to"], branch["b_to"])
 end
