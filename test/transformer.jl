@@ -125,7 +125,7 @@
 
             math = transform_data_model(eng)
             pm = instantiate_mc_model(math, ACPPowerModel, build_mc_opf_oltc)
-            sol = PM.optimize_model!(pm, optimizer=ipopt_solver)
+            sol = PMD.optimize_model!(pm, optimizer=ipopt_solver)
 
             # check that taps are set as to boost the voltage in the branches as much as possible;
             # this is trivially optimal if the voltage bounds are not binding
