@@ -1,3 +1,17 @@
+function _IM.solution_preprocessor(pm::_PM.AbstractPowerModel, solution::Dict)
+    per_unit = _IM.get_data(x -> x["per_unit"], pm.data, pmd_it_name; apply_to_subnetworks = false)
+    solution["it"][pmd_it_name]["per_unit"] = per_unit
+
+    for (nw_id, nw_ref) in nws(pm)
+        solution["it"][pmd_it_name]["nw"]["$(nw_id)"]["baseMVA"] = nw_ref[:baseMVA]
+
+        if ismulticonductor(pm, nw_id)
+            solution["it"][pmd_it_name]["nw"]["$(nw_id)"]["conductors"] = nw_ref[:conductors]
+        end
+    end
+end
+
+
 function _IM.build_solution_values(var::JuMP.Containers.DenseAxisArray{<:JuMP.VariableRef,1})
     return JuMP.value.(var.data)
 end
