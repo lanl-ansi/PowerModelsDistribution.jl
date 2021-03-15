@@ -59,7 +59,7 @@ ismulticonductor(pm::AbstractMCPowerModel; nw::Int=nw_id_default) = haskey(pm.re
 
 
 # Helper functions for multinetwork AbstractPowerModel objects.
-ismultinetwork(pm::AbstractMCPowerModel) = _IM.ismultinetwork(pm, pmd_it_sym)
+ismultinetwork(pm::AbstractMCPowerModel) = ismultinetwork(pm, pmd_it_sym)
 nw_ids(pm::AbstractMCPowerModel) = _IM.nw_ids(pm, pmd_it_sym)
 nws(pm::AbstractMCPowerModel) = _IM.nws(pm, pmd_it_sym)
 

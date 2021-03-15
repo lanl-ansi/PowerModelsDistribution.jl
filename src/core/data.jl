@@ -490,7 +490,7 @@ end
 # from PowerModels
 "Transforms single-conductor network data into multi-conductor data"
 function make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
-    if _IM.ismultinetwork(data)
+    if ismultinetwork(data)
         for (i,nw_data) in data["nw"]
             _make_multiconductor!(nw_data, conductors)
         end
@@ -903,7 +903,7 @@ end
 
 "checks that voltage angle differences are within 90 deg., if not tightens"
 function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=1.0472)
-    if _IM.ismultinetwork(data)
+    if ismultinetwork(data)
         Memento.error(_LOGGER, "correct_voltage_angle_differences! does not yet support multinetwork data")
     end
 
@@ -945,7 +945,7 @@ end
 
 "checks that each branch has non-negative thermal ratings and removes zero thermal ratings"
 function correct_mc_thermal_limits!(data::Dict{String,<:Any})
-    if _IM.ismultinetwork(data)
+    if ismultinetwork(data)
         Memento.error(_LOGGER, "correct_thermal_limits! does not yet support multinetwork data")
     end
 
@@ -1017,7 +1017,7 @@ returns a set of sets of bus ids, each set is a connected component
 function calc_connected_components(data::Dict{String,<:Any}; edges=["branch", "dcline", "switch"])
     pm_data = get_pm_data(data)
 
-    if _IM.ismultinetwork(pm_data)
+    if ismultinetwork(pm_data)
         Memento.error(_LOGGER, "connected_components does not yet support multinetwork data")
     end
 
@@ -1469,7 +1469,7 @@ function standardize_cost_terms!(data::Dict{String,<:Any}; order=-1)
 
     comp_max_order = 1
 
-    if _IM.ismultinetwork(pm_data)
+    if ismultinetwork(pm_data)
         networks = pm_data["nw"]
     else
         networks = [("0", pm_data)]

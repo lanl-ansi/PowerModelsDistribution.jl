@@ -10,7 +10,7 @@ module PowerModelsDistribution
 
     const _IM = InfrastructureModels
 
-    import InfrastructureModels: optimize_model!, @im_fields, nw_id_default
+    import InfrastructureModels: optimize_model!, @im_fields, nw_id_default, ismultinetwork
 
     function __init__()
         global _LOGGER = Memento.getlogger(@__MODULE__)

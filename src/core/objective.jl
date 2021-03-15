@@ -533,7 +533,7 @@ end
 
 ""
 function calc_max_cost_index(data::Dict{String,<:Any})
-    if _IM.ismultinetwork(data)
+    if ismultinetwork(data)
         max_index = 0
         for (i,nw_data) in data["nw"]
             nw_max_index = _calc_max_cost_index(nw_data)

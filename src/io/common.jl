@@ -81,7 +81,7 @@ function transform_data_model(data::Dict{String,<:Any};
     if current_data_model == ENGINEERING
         if build_multinetwork && haskey(data, "time_series")
             mn_data = _build_eng_multinetwork(data)
-            if _IM.ismultinetwork(mn_data)
+            if ismultinetwork(mn_data)
                 data_math = _map_eng2math_multinetwork(mn_data; kron_reduced=kron_reduced)
             else
                 data_math = _map_eng2math(mn_data; kron_reduced=kron_reduced)
@@ -114,7 +114,7 @@ function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true)
             make_per_unit!(data)
             #TODO system-wide vbase does not make sense anymore...
             #take highest vbase just so it does not break anything for now
-            if _IM.ismultinetwork(data)
+            if ismultinetwork(data)
                 for (n,nw) in data["nw"]
                     nw["basekv"]  = maximum(maximum(bus["vbase"] for (_, bus) in nw["bus"]) for nw in values(data["nw"]))
                     nw["baseMVA"] = data["settings"]["sbase"]*data["settings"]["power_scale_factor"]/1E6

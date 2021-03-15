@@ -44,7 +44,7 @@ function make_per_unit!(data::Dict{String,<:Any}; vbases::Union{Dict{<:Any,<:Rea
                 sbase = data["settings"]["sbase_default"]
             end
 
-            if _IM.ismultinetwork(data)
+            if ismultinetwork(data)
                 orig_settings = deepcopy(data["settings"])
                 for (n, nw) in data["nw"]
                     nw["data_model"] = data["data_model"]
@@ -446,7 +446,7 @@ function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true
 
     sbase = math_model["settings"]["sbase"]
 
-    if _IM.ismultinetwork(math_model)
+    if ismultinetwork(math_model)
         for (n,nw) in solution_si["nw"]
             for (comp_type, comp_dict) in [(x,y) for (x,y) in nw if isa(y, Dict)]
                 dimensionalize_math_comp = get(_dimensionalize_math, comp_type, Dict())
