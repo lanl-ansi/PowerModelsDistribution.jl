@@ -73,6 +73,7 @@ function objective_mc_min_load_setpoint_delta_simple_switch(pm::AbstractMCPowerM
 end
 
 
+# TODO correct for connections
 "maximum loadability objective (continuous load shed) with storage"
 function objective_mc_max_load_setpoint(pm::AbstractMCPowerModel)
     load_weight = Dict(n => Dict(i => get(load, "weight", 1.0) for (i,load) in ref(pm, n, :load)) for n in nw_ids(pm))
@@ -558,18 +559,6 @@ function _calc_max_cost_index(data::Dict{String,<:Any})
                 end
             else
                 Memento.warn(_LOGGER, "skipping cost generator $(i) cost model in calc_cost_order, only model 2 is supported.")
-            end
-        end
-    end
-
-    for (i,dcline) in data["dcline"]
-        if haskey(dcline, "model")
-            if dcline["model"] == 2
-                if haskey(dcline, "cost")
-                    max_index = max(max_index, length(dcline["cost"]))
-                end
-            else
-                Memento.warn(_LOGGER, "skipping cost dcline $(i) cost model in calc_cost_order, only model 2 is supported.")
             end
         end
     end
