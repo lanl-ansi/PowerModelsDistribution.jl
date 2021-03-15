@@ -1,11 +1,3 @@
-"checks if a sufficient number of variables exist for the given keys collection"
-function _check_var_keys(vars, keys, var_name, comp_name)
-    if length(vars) < length(keys)
-        error(_LOGGER, "$(var_name) decision variables appear to be missing for $(comp_name) components")
-    end
-end
-
-
 "do nothing by default"
 function constraint_mc_model_voltage(pm::AbstractMCPowerModel, nw::Int)
 end
@@ -77,6 +69,7 @@ function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::AbstractMCPowerModel
 end
 
 
+""
 function constraint_mc_gen_power_setpoint_real(pm::AbstractMCPowerModel, nw::Int, i::Int, pg::Vector{<:Real})
     pg_var = [var(pm, nw, :pg, i)[c] for c in ref(pm, nw, :gen, i)["connections"]]
     JuMP.@constraint(pm.model, pg_var .== pg)

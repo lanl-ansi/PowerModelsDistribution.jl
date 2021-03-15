@@ -1,31 +1,4 @@
-
-function _get_conductor_indicator(comp::Dict{String,<:Any})::String
-    if haskey(comp, "terminals")
-        return "terminals"
-    elseif haskey(comp, "connections")
-        return "connections"
-    elseif haskey(comp, "f_connections")
-        return "f_connections"
-    else
-        return ""
-    end
-end
-
-
-function comp_start_value(comp::Dict{String,<:Any}, key::String, conductor::Int, default)
-    cond_ind = _get_conductor_indicator(comp)
-    if haskey(comp, key) && !isempty(cond_ind)
-        return comp[key][findfirst(isequal(conductor), comp[cond_ind])]
-    else
-        return default
-    end
-end
-
-
-function comp_start_value(comp::Dict{String,<:Any}, key::String, default=0.0)
-    return get(comp, key, default)
-end
-
+# voltage variables
 
 ""
 function variable_mc_bus_voltage_angle(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
@@ -113,6 +86,86 @@ function variable_mc_bus_voltage_imaginary(pm::AbstractMCPowerModel; nw::Int=nw_
 end
 
 
+"variable: `w[i] >= 0` for `i` in `buses"
+function variable_mc_bus_voltage_magnitude_sqr(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
+    w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
+            [t in terminals[i]], base_name="$(nw)_w_$(i)",
+            lower_bound = 0.0,
+            start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, 1.0)
+        ) for i in ids(pm, nw, :bus)
+    )
+
+    if bounded
+        for i in ids(pm, nw, :bus)
+            bus = ref(pm, nw, :bus, i)
+            for (idx, t) in enumerate(terminals[i])
+                set_upper_bound(w[i][t], max(bus["vmin"][idx]^2, bus["vmax"][idx]^2))
+                if bus["vmin"][idx] > 0
+                    set_lower_bound(w[i][t], bus["vmin"][idx]^2)
+                end
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :w, ids(pm, nw, :bus), w)
+end
+
+## voltage on/off variables
+
+"on/off voltage magnitude variable"
+function variable_mc_bus_voltage_magnitude_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
+    vm = var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
+        [t in terminals[i]], base_name="$(nw)_vm_$(i)",
+        start = comp_start_value(ref(pm, nw, :bus, i), "vm_start", t, 1.0)
+    ) for i in ids(pm, nw, :bus))
+
+    if bounded
+        for (i, bus) in ref(pm, nw, :bus)
+            for (idx,t) in enumerate(terminals[i])
+                set_lower_bound(vm[i][t], 0.0)
+
+                if haskey(bus, "vmax")
+                    set_upper_bound(vm[i][t], bus["vmax"][idx])
+                end
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :vm, ids(pm, nw, :bus), vm)
+
+end
+
+
+"voltage variable magnitude squared (relaxed form)"
+function variable_mc_bus_voltage_magnitude_sqr_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
+    w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
+        [t in terminals[i]], base_name="$(nw)_w_$(i)",
+        start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, 1.001)
+    ) for i in ids(pm, nw, :bus))
+
+    if bounded
+        for (i, bus) in ref(pm, nw, :bus)
+            for (idx, t) in enumerate(terminals[i])
+                set_lower_bound(w[i][t], 0.0)
+
+                if haskey(bus, "vmax")
+                    set_upper_bound(w[i][t], bus["vmax"][idx]^2)
+                end
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :w, ids(pm, nw, :bus), w)
+end
+
+
+# branch variables
+
+## branch power variables
+
 "branch flow variables, delegated back to PowerModels"
 function variable_mc_branch_power(pm::AbstractMCPowerModel; kwargs...)
     variable_mc_branch_power_real(pm; kwargs...)
@@ -195,6 +248,7 @@ function variable_mc_branch_power_imaginary(pm::AbstractMCPowerModel; nw::Int=nw
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :qf, :qt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), q)
 end
 
+## branch current variables
 
 "variable: `cr[l,i,j]` for `(l,i,j)` in `arcs`"
 function variable_mc_branch_current_real(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
@@ -288,6 +342,100 @@ function variable_mc_branch_current_series_imaginary(pm::AbstractMCPowerModel; n
 end
 
 
+# transformer variables
+
+## transformer power variables
+
+"Creates variables for both `active` and `reactive` power flow at each transformer."
+function variable_mc_transformer_power(pm::AbstractMCPowerModel; kwargs...)
+    variable_mc_transformer_power_real(pm; kwargs...)
+    variable_mc_transformer_power_imaginary(pm; kwargs...)
+end
+
+
+"Create variables for the active power flowing into all transformer windings."
+function variable_mc_transformer_power_real(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_transformer) for ((l,i,j), connections) in entry)
+    pt = var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in connections[(l,i,j)]], base_name="$(nw)_pt_$((l,i,j))",
+        ) for (l,i,j) in ref(pm, nw, :arcs_trans)
+    )
+
+    if bounded
+        for arc in ref(pm, nw, :arcs_from_trans)
+            (l,i,j) = arc
+            rate_a_fr, rate_a_to = _calc_transformer_power_ub_frto(ref(pm, nw, :transformer, l), ref(pm, nw, :bus, i), ref(pm, nw, :bus, j))
+            for (idx, (fc, tc)) in enumerate(zip(connections[(l,i,j)], connections[(l,j,i)]))
+                set_lower_bound(pt[(l,i,j)][fc], -rate_a_fr[idx])
+                set_upper_bound(pt[(l,i,j)][fc],  rate_a_fr[idx])
+                set_lower_bound(pt[(l,j,i)][tc], -rate_a_to[idx])
+                set_upper_bound(pt[(l,j,i)][tc],  rate_a_to[idx])
+            end
+        end
+    end
+
+    for (l,transformer) in ref(pm, nw, :transformer)
+        if haskey(transformer, "pf_start")
+            f_idx = (l, transformer["f_bus"], transformer["t_bus"])
+            for (idx, c) in enumerate(connections[f_idx])
+                JuMP.set_start_value(pt[f_idx][c], transformer["pf_start"][idx])
+            end
+        end
+        if haskey(transformer, "pt_start")
+            t_idx = (l, transformer["t_bus"], transformer["f_bus"])
+            for (idx, c) in enumerate(connections[t_idx])
+                JuMP.set_start_value(pt[t_idx][c], transformer["pt_start"][idx])
+            end
+        end
+    end
+
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :pf, :pt, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), pt)
+end
+
+
+"Create variables for the reactive power flowing into all transformer windings."
+function variable_mc_transformer_power_imaginary(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_transformer) for ((l,i,j), connections) in entry)
+    qt = var(pm, nw)[:qt] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in connections[(l,i,j)]], base_name="$(nw)_qt_$((l,i,j))",
+            start = 0.0
+        ) for (l,i,j) in ref(pm, nw, :arcs_trans)
+    )
+
+    if bounded
+        for arc in ref(pm, nw, :arcs_from_trans)
+            (l,i,j) = arc
+            rate_a_fr, rate_a_to = _calc_transformer_power_ub_frto(ref(pm, nw, :transformer, l), ref(pm, nw, :bus, i), ref(pm, nw, :bus, j))
+
+            for (idx, (fc,tc)) in enumerate(zip(connections[(l,i,j)], connections[(l,j,i)]))
+                set_lower_bound(qt[(l,i,j)][fc], -rate_a_fr[idx])
+                set_upper_bound(qt[(l,i,j)][fc],  rate_a_fr[idx])
+                set_lower_bound(qt[(l,j,i)][tc], -rate_a_to[idx])
+                set_upper_bound(qt[(l,j,i)][tc],  rate_a_to[idx])
+            end
+        end
+    end
+
+    for (l,transformer) in ref(pm, nw, :transformer)
+        if haskey(transformer, "qf_start")
+            f_idx = (l, transformer["f_bus"], transformer["t_bus"])
+            for (idx, fc) in enumerate(connections[f_idx])
+                JuMP.set_start_value(qt[f_idx][fc], transformer["qf_start"][idx])
+            end
+        end
+        if haskey(transformer, "qt_start")
+            t_idx = (l, transformer["t_bus"], transformer["f_bus"])
+            for (idx, tc) in enumerate(connections[t_idx])
+                JuMP.set_start_value(qt[t_idx][tc], transformer["qt_start"][idx])
+            end
+        end
+    end
+
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :qf, :qt, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), qt)
+end
+
+## transformer current variables
+
 "variable: `cr[l,i,j]` for `(l,i,j)` in `arcs`"
 function variable_mc_transformer_current_real(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_transformer) for ((l,i,j), connections) in entry)
@@ -343,31 +491,31 @@ function variable_mc_transformer_current_imaginary(pm::AbstractMCPowerModel; nw:
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :ci_fr, :ci_to, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), ci)
 end
 
+## transformer tap variables
 
-""
-function variable_mc_switch_state(pm::AbstractMCPowerModel; nw::Int=nw_id_default, report::Bool=true, relax::Bool=false)
-    if relax
-        state = var(pm, nw)[:switch_state] = JuMP.@variable(
-            pm.model,
-            [l in ids(pm, nw, :switch_dispatchable)],
-            base_name="$(nw)_switch_state_$(l)",
-            lower_bound = 0,
-            upper_bound = 1,
-            start = comp_start_value(ref(pm, nw, :switch, l), "state_start", 0.5)
-        )
-    else
-        state = var(pm, nw)[:switch_state] = JuMP.@variable(
-            pm.model,
-            [l in ids(pm, nw, :switch_dispatchable)],
-            base_name="$(nw)_switch_state_$(l)",
-            binary = true,
-            start = comp_start_value(ref(pm, nw, :switch, l), "state_start", get(ref(pm, nw, :switch, l), "state", 0))
-        )
+"Create tap variables."
+function variable_mc_oltc_transformer_tap(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    # when extending to 4-wire, this should iterate only over the phase conductors
+    p_oltc_ids = [id for (id,trans) in ref(pm, nw, :transformer) if !all(trans["tm_fix"])]
+    tap = var(pm, nw)[:tap] = Dict(i => JuMP.@variable(pm.model,
+        [p in 1:length(ref(pm,nw,:transformer,i,"f_connections"))],
+        base_name="$(nw)_tm_$(i)",
+        start=ref(pm, nw, :transformer, i, "tm_set")[p]
+    ) for i in p_oltc_ids)
+    if bounded
+        for tr_id in p_oltc_ids, p in 1:length(ref(pm,nw,:transformer,tr_id,"f_connections"))
+            set_lower_bound(var(pm, nw)[:tap][tr_id][p], ref(pm, nw, :transformer, tr_id, "tm_lb")[p])
+            set_upper_bound(var(pm, nw)[:tap][tr_id][p], ref(pm, nw, :transformer, tr_id, "tm_ub")[p])
+        end
     end
 
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :switch, :state, ids(pm, nw, :switch_dispatchable), state)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :transformer, :tap, ids(pm, nw, :transformer), tap)
 end
 
+
+# switch variables
+
+## switch power variables
 
 ""
 function variable_mc_switch_power(pm::AbstractMCPowerModel; kwargs...)
@@ -459,6 +607,7 @@ function variable_mc_switch_power_imaginary(pm::AbstractMCPowerModel; nw::Int=nw
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qsw_fr, :qsw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), qsw_expr)
 end
 
+## switch current variables
 
 ""
 function variable_mc_switch_current(pm::AbstractMCPowerModel; kwargs...)
@@ -550,32 +699,307 @@ function variable_mc_switch_current_imaginary(pm::AbstractMCPowerModel; nw::Int=
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :cisw_fr, :cisw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), cisw_expr)
 end
 
+# switch state variables
 
-"variable: `w[i] >= 0` for `i` in `buses"
-function variable_mc_bus_voltage_magnitude_sqr(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
-    w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
-            [t in terminals[i]], base_name="$(nw)_w_$(i)",
-            lower_bound = 0.0,
-            start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, 1.0)
-        ) for i in ids(pm, nw, :bus)
+"switch state (open/close) variables"
+function variable_mc_switch_state(pm::AbstractMCPowerModel; nw::Int=nw_id_default, report::Bool=true, relax::Bool=false)
+    if relax
+        state = var(pm, nw)[:switch_state] = JuMP.@variable(
+            pm.model,
+            [l in ids(pm, nw, :switch_dispatchable)],
+            base_name="$(nw)_switch_state_$(l)",
+            lower_bound = 0,
+            upper_bound = 1,
+            start = comp_start_value(ref(pm, nw, :switch, l), "state_start", 0.5)
+        )
+    else
+        state = var(pm, nw)[:switch_state] = JuMP.@variable(
+            pm.model,
+            [l in ids(pm, nw, :switch_dispatchable)],
+            base_name="$(nw)_switch_state_$(l)",
+            binary = true,
+            start = comp_start_value(ref(pm, nw, :switch, l), "state_start", get(ref(pm, nw, :switch, l), "state", 0))
+        )
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :switch, :state, ids(pm, nw, :switch_dispatchable), state)
+end
+
+
+# generator variables
+
+## generator power variables
+
+"create variables for generators, delegate to PowerModels"
+function variable_mc_generator_power(pm::AbstractMCPowerModel; kwargs...)
+    variable_mc_generator_power_real(pm; kwargs...)
+    variable_mc_generator_power_imaginary(pm; kwargs...)
+end
+
+
+""
+function variable_mc_generator_power_real(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
+    pg = var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
+            [c in connections[i]], base_name="$(nw)_pg_$(i)",
+            start = comp_start_value(ref(pm, nw, :gen, i), "pg_start", c, 0.0)
+        ) for i in ids(pm, nw, :gen)
     )
 
     if bounded
-        for i in ids(pm, nw, :bus)
-            bus = ref(pm, nw, :bus, i)
-            for (idx, t) in enumerate(terminals[i])
-                set_upper_bound(w[i][t], max(bus["vmin"][idx]^2, bus["vmax"][idx]^2))
-                if bus["vmin"][idx] > 0
-                    set_lower_bound(w[i][t], bus["vmin"][idx]^2)
+        for (i,gen) in ref(pm, nw, :gen)
+            if haskey(gen, "pmin")
+                for (idx,c) in enumerate(connections[i])
+                    set_lower_bound(pg[i][c], gen["pmin"][idx])
+                end
+            end
+            if haskey(gen, "pmax")
+                for (idx,c) in enumerate(connections[i])
+                    set_upper_bound(pg[i][c], gen["pmax"][idx])
                 end
             end
         end
     end
 
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :w, ids(pm, nw, :bus), w)
+    var(pm, nw)[:pg_bus] = Dict{Int, Any}()
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :pg, ids(pm, nw, :gen), pg)
 end
 
+
+""
+function variable_mc_generator_power_imaginary(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
+    qg = var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
+            [c in connections[i]], base_name="$(nw)_qg_$(i)",
+            start = comp_start_value(ref(pm, nw, :gen, i), "qg_start", c, 0.0)
+        ) for i in ids(pm, nw, :gen)
+    )
+
+    if bounded
+        for (i,gen) in ref(pm, nw, :gen)
+            if haskey(gen, "qmin")
+                for (idx,c) in enumerate(connections[i])
+                    set_lower_bound(qg[i][c], gen["qmin"][idx])
+                end
+            end
+            if haskey(gen, "qmax")
+                for (idx,c) in enumerate(connections[i])
+                    set_upper_bound(qg[i][c], gen["qmax"][idx])
+                end
+            end
+        end
+    end
+
+    var(pm, nw)[:qg_bus] = Dict{Int, Any}()
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :qg, ids(pm, nw, :gen), qg)
+end
+
+### generator power on/off variables
+
+""
+function variable_mc_generator_power_on_off(pm::AbstractMCPowerModel; kwargs...)
+    variable_mc_generator_power_real_on_off(pm; kwargs...)
+    variable_mc_generator_power_imaginary_on_off(pm; kwargs...)
+end
+
+
+""
+function variable_mc_generator_power_real_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
+    pg = var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
+        [c in connections[i]], base_name="$(nw)_pg_$(i)",
+        start = comp_start_value(ref(pm, nw, :gen, i), "pg_start", c, 0.0)
+    ) for i in ids(pm, nw, :gen))
+
+    if bounded
+        for (i, gen) in ref(pm, nw, :gen)
+            if haskey(gen, "pmin")
+                for (idx, c) in enumerate(connections[i])
+                    set_lower_bound(pg[i][c], gen["pmin"][idx])
+                end
+            end
+
+            if haskey(gen, "pmax")
+                for (idx, c) in enumerate(connections[i])
+                    set_upper_bound(pg[i][c], gen["pmax"][idx])
+                end
+            end
+        end
+    end
+
+    var(pm, nw)[:pg_bus] = Dict{Int, Any}()
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :pg, ids(pm, nw, :gen), pg)
+end
+
+
+""
+function variable_mc_generator_power_imaginary_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
+    qg = var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
+        [c in connections[i]], base_name="$(nw)_qg_$(i)",
+        start = comp_start_value(ref(pm, nw, :gen, i), "qg_start", c, 0.0)
+    ) for i in ids(pm, nw, :gen))
+
+    if bounded
+        for (i, gen) in ref(pm, nw, :gen)
+            if haskey(gen, "qmin")
+                for (idx, c) in enumerate(connections[i])
+                    set_lower_bound(qg[i][c], gen["qmin"][idx])
+                end
+            end
+
+            if haskey(gen, "qmax")
+                for (idx, c) in enumerate(connections[i])
+                    set_upper_bound(qg[i][c], gen["qmax"][idx])
+                end
+            end
+        end
+    end
+
+    var(pm, nw)[:qg_bus] = Dict{Int, Any}()
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :qg, ids(pm, nw, :gen), qg)
+end
+
+## generator current variables
+
+"variable: `crg[j]` for `j` in `gen`"
+function variable_mc_generator_current_real(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
+    crg = var(pm, nw)[:crg] = Dict(i => JuMP.@variable(pm.model,
+            [c in connections[i]], base_name="$(nw)_crg_$(i)",
+            start = comp_start_value(ref(pm, nw, :gen, i), "crg_start", c, 0.0)
+        ) for i in ids(pm, nw, :gen)
+    )
+    if bounded
+        for (i, g) in ref(pm, nw, :gen)
+            cmax = _calc_gen_current_max(g, ref(pm, nw, :bus, g["gen_bus"]))
+            for (idx,c) in enumerate(connections[i])
+                set_lower_bound(crg[i][c], -cmax[idx])
+                set_upper_bound(crg[i][c],  cmax[idx])
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :crg, ids(pm, nw, :gen), crg)
+end
+
+
+"variable: `cig[j]` for `j` in `gen`"
+function variable_mc_generator_current_imaginary(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
+    cig = var(pm, nw)[:cig] = Dict(i => JuMP.@variable(pm.model,
+            [c in connections[i]], base_name="$(nw)_cig_$(i)",
+            start = comp_start_value(ref(pm, nw, :gen, i), "cig_start", c, 0.0)
+        ) for i in ids(pm, nw, :gen)
+    )
+    if bounded
+        for (i, g) in ref(pm, nw, :gen)
+            cmax = _calc_gen_current_max(g, ref(pm, nw, :bus, g["gen_bus"]))
+            for (idx,c) in enumerate(connections[i])
+                set_lower_bound(cig[i][c], -cmax[idx])
+                set_upper_bound(cig[i][c],  cmax[idx])
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :cig, ids(pm, nw, :gen), cig)
+end
+
+
+# storage variables
+
+## storage state variables
+""
+function variable_storage_energy(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    se = var(pm, nw)[:se] = JuMP.@variable(pm.model,
+        [i in ids(pm, nw, :storage)], base_name="$(nw)_se",
+        start = comp_start_value(ref(pm, nw, :storage, i), "se_start", 1)
+    )
+
+    if bounded
+        for (i, storage) in ref(pm, nw, :storage)
+            JuMP.set_lower_bound(se[i], 0)
+            JuMP.set_upper_bound(se[i], storage["energy_rating"])
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :se, ids(pm, nw, :storage), se)
+end
+
+
+""
+function variable_storage_charge(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    sc = var(pm, nw)[:sc] = JuMP.@variable(pm.model,
+        [i in ids(pm, nw, :storage)], base_name="$(nw)_sc",
+        start = comp_start_value(ref(pm, nw, :storage, i), "sc_start", 1)
+    )
+
+    if bounded
+        for (i, storage) in ref(pm, nw, :storage)
+            JuMP.set_lower_bound(sc[i], 0)
+            JuMP.set_upper_bound(sc[i], storage["charge_rating"])
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :sc, ids(pm, nw, :storage), sc)
+end
+
+
+""
+function variable_storage_discharge(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    sd = var(pm, nw)[:sd] = JuMP.@variable(pm.model,
+        [i in ids(pm, nw, :storage)], base_name="$(nw)_sd",
+        start = comp_start_value(ref(pm, nw, :storage, i), "sd_start", 1)
+    )
+
+    if bounded
+        for (i, storage) in ref(pm, nw, :storage)
+            JuMP.set_lower_bound(sd[i], 0)
+            JuMP.set_upper_bound(sd[i], storage["discharge_rating"])
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :sd, ids(pm, nw, :storage), sd)
+end
+
+
+""
+function variable_storage_complementary_indicator(pm::AbstractMCPowerModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
+    if !relax
+        sc_on = var(pm, nw)[:sc_on] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :storage)], base_name="$(nw)_sc_on",
+            binary = true,
+            start = comp_start_value(ref(pm, nw, :storage, i), "sc_on_start", 0)
+        )
+        sd_on = var(pm, nw)[:sd_on] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :storage)], base_name="$(nw)_sd_on",
+            binary = true,
+            start = comp_start_value(ref(pm, nw, :storage, i), "sd_on_start", 0)
+        )
+    else
+        sc_on = var(pm, nw)[:sc_on] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :storage)], base_name="$(nw)_sc_on",
+            lower_bound = 0,
+            upper_bound = 1,
+            start = comp_start_value(ref(pm, nw, :storage, i), "sc_on_start", 0)
+        )
+        sd_on = var(pm, nw)[:sd_on] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :storage)], base_name="$(nw)_sd_on",
+            lower_bound = 0,
+            upper_bound = 1,
+            start = comp_start_value(ref(pm, nw, :storage, i), "sd_on_start", 0)
+        )
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :sc_on, ids(pm, nw, :storage), sc_on)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :sd_on, ids(pm, nw, :storage), sd_on)
+end
+
+## storage power variables
 
 "variables for modeling storage units, includes grid injection and internal variables"
 function variable_mc_storage_power(pm::AbstractMCPowerModel; kwargs...)
@@ -587,95 +1011,6 @@ function variable_mc_storage_power(pm::AbstractMCPowerModel; kwargs...)
     variable_storage_charge(pm; kwargs...)
     variable_storage_discharge(pm; kwargs...)
 end
-
-
-""
-function variable_mc_storage_power_mi(pm::AbstractMCPowerModel; relax::Bool=false, kwargs...)
-    variable_mc_storage_power_real(pm; kwargs...)
-    variable_mc_storage_power_imaginary(pm; kwargs...)
-    variable_mc_storage_power_control_imaginary(pm; kwargs...)
-    variable_mc_storage_current(pm; kwargs...)
-    variable_mc_storage_indicator(pm; relax=relax, kwargs...)
-    variable_storage_energy(pm; kwargs...)
-    variable_storage_charge(pm; kwargs...)
-    variable_storage_discharge(pm; kwargs...)
-    variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
-end
-
-
-""
-function variable_mc_storage_power_mi_on_off(pm::AbstractMCPowerModel; relax::Bool=false, kwargs...)
-    variable_mc_storage_power_real_on_off(pm; kwargs...)
-    variable_mc_storage_power_imaginary_on_off(pm; kwargs...)
-    variable_mc_storage_current(pm; kwargs...)
-    variable_mc_storage_power_control_imaginary_on_off(pm; kwargs...)
-    variable_storage_energy(pm; kwargs...)
-    variable_storage_charge(pm; kwargs...)
-    variable_storage_discharge(pm; kwargs...)
-    variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
-end
-
-
-"do nothing by default but some formulations require this"
-function variable_mc_storage_current(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-end
-
-
-"""
-a reactive power slack variable that enables the storage device to inject or
-consume reactive power at its connecting bus, subject to the injection limits
-of the device.
-"""
-function variable_mc_storage_power_control_imaginary(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    qsc = var(pm, nw)[:qsc] = JuMP.@variable(pm.model,
-        [i in ids(pm, nw, :storage)], base_name="$(nw)_qsc_$(i)",
-        start = comp_start_value(ref(pm, nw, :storage, i), "qsc_start")
-    )
-
-    if bounded
-        inj_lb, inj_ub = ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus))
-        for (i,storage) in ref(pm, nw, :storage)
-            if !isinf(sum(inj_lb[i])) || haskey(storage, "qmin")
-                set_lower_bound(qsc[i], max(sum(inj_lb[i]), sum(get(storage, "qmin", -Inf))))
-            end
-            if !isinf(sum(inj_ub[i])) || haskey(storage, "qmax")
-                set_upper_bound(qsc[i], min(sum(inj_ub[i]), sum(get(storage, "qmax",  Inf))))
-            end
-        end
-    end
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
-end
-
-
-"""
-a reactive power slack variable that enables the storage device to inject or
-consume reactive power at its connecting bus, subject to the injection limits
-of the device.
-"""
-function variable_mc_storage_power_control_imaginary_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    qsc = var(pm, nw)[:qsc] = JuMP.@variable(pm.model,
-        [i in ids(pm, nw, :storage)], base_name="$(nw)_qsc_$(i)",
-        start = comp_start_value(ref(pm, nw, :storage, i), "qsc_start")
-    )
-
-    if bounded
-        inj_lb, inj_ub = ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus))
-        for (i,storage) in ref(pm, nw, :storage)
-            if !isinf(sum(inj_lb[i])) || haskey(storage, "qmin")
-                lb = max(sum(inj_lb[i]), sum(get(storage, "qmin", -Inf)))
-                set_lower_bound(qsc[i], min(lb, 0.0))
-            end
-            if !isinf(sum(inj_ub[i])) || haskey(storage, "qmax")
-                ub = min(sum(inj_ub[i]), sum(get(storage, "qmax", Inf)))
-                set_upper_bound(qsc[i], max(ub, 0.0))
-            end
-        end
-    end
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
-end
-
 
 
 ""
@@ -732,147 +1067,156 @@ function variable_mc_storage_power_imaginary(pm::AbstractMCPowerModel; nw::Int=n
 end
 
 
-"generates variables for both `active` and `reactive` slack at each bus"
-function variable_mc_slack_bus_power(pm::AbstractMCPowerModel; nw::Int=nw_id_default, kwargs...)
-    variable_mc_slack_bus_power_real(pm; nw=nw, kwargs...)
-    variable_mc_slack_bus_power_imaginary(pm; nw=nw, kwargs...)
+"""
+a reactive power slack variable that enables the storage device to inject or
+consume reactive power at its connecting bus, subject to the injection limits
+of the device.
+"""
+function variable_mc_storage_power_control_imaginary(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    qsc = var(pm, nw)[:qsc] = JuMP.@variable(pm.model,
+        [i in ids(pm, nw, :storage)], base_name="$(nw)_qsc_$(i)",
+        start = comp_start_value(ref(pm, nw, :storage, i), "qsc_start")
+    )
+
+    if bounded
+        inj_lb, inj_ub = ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus))
+        for (i,storage) in ref(pm, nw, :storage)
+            if !isinf(sum(inj_lb[i])) || haskey(storage, "qmin")
+                set_lower_bound(qsc[i], max(sum(inj_lb[i]), sum(get(storage, "qmin", -Inf))))
+            end
+            if !isinf(sum(inj_ub[i])) || haskey(storage, "qmax")
+                set_upper_bound(qsc[i], min(sum(inj_ub[i]), sum(get(storage, "qmax",  Inf))))
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
 end
 
 
 ""
-function variable_mc_slack_bus_power_real(pm::AbstractMCPowerModel; nw::Int=nw_id_default, report::Bool=true)
-    terminals = Dict(i => ref(pm, nw, :bus, i)["terminals"] for i in ids(pm, nw, :bus))
-    p_slack = var(pm, nw)[:p_slack] = Dict(i => JuMP.@variable(pm.model,
-            [t in terminals[i]], base_name="$(nw)_p_slack_$(i)",
-            start = comp_start_value(ref(pm, nw, :bus, i), "p_slack_start", t, 0.0)
-        ) for i in ids(pm, nw, :bus)
+function variable_mc_storage_power_mi(pm::AbstractMCPowerModel; relax::Bool=false, kwargs...)
+    variable_mc_storage_power_real(pm; kwargs...)
+    variable_mc_storage_power_imaginary(pm; kwargs...)
+    variable_mc_storage_power_control_imaginary(pm; kwargs...)
+    variable_mc_storage_current(pm; kwargs...)
+    variable_mc_storage_indicator(pm; relax=relax, kwargs...)
+    variable_storage_energy(pm; kwargs...)
+    variable_storage_charge(pm; kwargs...)
+    variable_storage_discharge(pm; kwargs...)
+    variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
+end
+
+### storage power on/off variables
+
+
+"Create variables for `active` and `reactive` storage injection"
+function variable_mc_storage_power_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, kwargs...)
+    variable_mc_storage_power_real_on_off(pm; nw=nw, kwargs...)
+    variable_mc_storage_power_imaginary_on_off(pm; nw=nw, kwargs...)
+end
+
+
+"Create variables for `active` storage injection"
+function variable_mc_storage_power_real_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
+    ps = var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
+        [c in connections[i]], base_name="$(nw)_ps_$(i)",
+        start = comp_start_value(ref(pm, nw, :storage, i), "ps_start", c, 0.0)
+    ) for i in ids(pm, nw, :storage))
+
+    if bounded
+        inj_lb, inj_ub = ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus))
+        for (i, strg) in ref(pm, nw, :storage)
+            for (idx, c) in enumerate(connections[i])
+                set_lower_bound(ps[i][c], inj_lb[i][idx])
+                set_upper_bound(ps[i][c], inj_ub[i][idx])
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :ps, ids(pm, nw, :storage), ps)
+end
+
+
+"Create variables for `reactive` storage injection"
+function variable_mc_storage_power_imaginary_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
+    qs = var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
+        [c in connections[i]], base_name="$(nw)_qs_$(i)",
+        start = comp_start_value(ref(pm, nw, :storage, i), "qs_start", c, 0.0)
+    ) for i in ids(pm, nw, :storage))
+
+    if bounded
+        for (i, strg) in ref(pm, nw, :storage)
+            if haskey(strg, "qmin")
+                for (idx, c) in enumerate(connections[i])
+                    set_lower_bound(qs[i][c], strg["qmin"][idx])
+                end
+            end
+
+            if haskey(strg, "qmax")
+                for (idx, c) in enumerate(connections[i])
+                    set_upper_bound(qs[i][c], strg["qmax"][idx])
+                end
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :qs, ids(pm, nw, :storage), qs)
+end
+
+
+"""
+a reactive power slack variable that enables the storage device to inject or
+consume reactive power at its connecting bus, subject to the injection limits
+of the device.
+"""
+function variable_mc_storage_power_control_imaginary_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    qsc = var(pm, nw)[:qsc] = JuMP.@variable(pm.model,
+        [i in ids(pm, nw, :storage)], base_name="$(nw)_qsc_$(i)",
+        start = comp_start_value(ref(pm, nw, :storage, i), "qsc_start")
     )
 
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :p_slack, ids(pm, nw, :bus), p_slack)
+    if bounded
+        inj_lb, inj_ub = ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus))
+        for (i,storage) in ref(pm, nw, :storage)
+            if !isinf(sum(inj_lb[i])) || haskey(storage, "qmin")
+                lb = max(sum(inj_lb[i]), sum(get(storage, "qmin", -Inf)))
+                set_lower_bound(qsc[i], min(lb, 0.0))
+            end
+            if !isinf(sum(inj_ub[i])) || haskey(storage, "qmax")
+                ub = min(sum(inj_ub[i]), sum(get(storage, "qmax", Inf)))
+                set_upper_bound(qsc[i], max(ub, 0.0))
+            end
+        end
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :qsc, ids(pm, nw, :storage), qsc)
 end
 
 
 ""
-function variable_mc_slack_bus_power_imaginary(pm::AbstractMCPowerModel; nw::Int=nw_id_default, report::Bool=true)
-    terminals = Dict(i => ref(pm, nw, :bus, i)["terminals"] for i in ids(pm, nw, :bus))
-    q_slack = var(pm, nw)[:q_slack] = Dict(i => JuMP.@variable(pm.model,
-            [t in terminals[i]], base_name="$(nw)_q_slack_$(i)",
-            start = comp_start_value(ref(pm, nw, :bus, i), "q_slack_start", t, 0.0)
-        ) for i in ids(pm, nw, :bus)
-    )
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :q_slack, ids(pm, nw, :bus), q_slack)
+function variable_mc_storage_power_mi_on_off(pm::AbstractMCPowerModel; relax::Bool=false, kwargs...)
+    variable_mc_storage_power_real_on_off(pm; kwargs...)
+    variable_mc_storage_power_imaginary_on_off(pm; kwargs...)
+    variable_mc_storage_current(pm; kwargs...)
+    variable_mc_storage_power_control_imaginary_on_off(pm; kwargs...)
+    variable_storage_energy(pm; kwargs...)
+    variable_storage_charge(pm; kwargs...)
+    variable_storage_discharge(pm; kwargs...)
+    variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
 end
 
 
-"Creates variables for both `active` and `reactive` power flow at each transformer."
-function variable_mc_transformer_power(pm::AbstractMCPowerModel; kwargs...)
-    variable_mc_transformer_power_real(pm; kwargs...)
-    variable_mc_transformer_power_imaginary(pm; kwargs...)
+## storage current variables
+
+"do nothing by default but some formulations require this"
+function variable_mc_storage_current(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 end
 
 
-"Create variables for the active power flowing into all transformer windings."
-function variable_mc_transformer_power_real(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_transformer) for ((l,i,j), connections) in entry)
-    pt = var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
-            [c in connections[(l,i,j)]], base_name="$(nw)_pt_$((l,i,j))",
-        ) for (l,i,j) in ref(pm, nw, :arcs_trans)
-    )
-
-    if bounded
-        for arc in ref(pm, nw, :arcs_from_trans)
-            (l,i,j) = arc
-            rate_a_fr, rate_a_to = _calc_transformer_power_ub_frto(ref(pm, nw, :transformer, l), ref(pm, nw, :bus, i), ref(pm, nw, :bus, j))
-            for (idx, (fc, tc)) in enumerate(zip(connections[(l,i,j)], connections[(l,j,i)]))
-                set_lower_bound(pt[(l,i,j)][fc], -rate_a_fr[idx])
-                set_upper_bound(pt[(l,i,j)][fc],  rate_a_fr[idx])
-                set_lower_bound(pt[(l,j,i)][tc], -rate_a_to[idx])
-                set_upper_bound(pt[(l,j,i)][tc],  rate_a_to[idx])
-            end
-        end
-    end
-
-    for (l,transformer) in ref(pm, nw, :transformer)
-        if haskey(transformer, "pf_start")
-            f_idx = (l, transformer["f_bus"], transformer["t_bus"])
-            for (idx, c) in enumerate(connections[f_idx])
-                JuMP.set_start_value(pt[f_idx][c], transformer["pf_start"][idx])
-            end
-        end
-        if haskey(transformer, "pt_start")
-            t_idx = (l, transformer["t_bus"], transformer["f_bus"])
-            for (idx, c) in enumerate(connections[t_idx])
-                JuMP.set_start_value(pt[t_idx][c], transformer["pt_start"][idx])
-            end
-        end
-    end
-
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :pf, :pt, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), pt)
-end
-
-
-"Create variables for the reactive power flowing into all transformer windings."
-function variable_mc_transformer_power_imaginary(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_transformer) for ((l,i,j), connections) in entry)
-    qt = var(pm, nw)[:qt] = Dict((l,i,j) => JuMP.@variable(pm.model,
-            [c in connections[(l,i,j)]], base_name="$(nw)_qt_$((l,i,j))",
-            start = 0.0
-        ) for (l,i,j) in ref(pm, nw, :arcs_trans)
-    )
-
-    if bounded
-        for arc in ref(pm, nw, :arcs_from_trans)
-            (l,i,j) = arc
-            rate_a_fr, rate_a_to = _calc_transformer_power_ub_frto(ref(pm, nw, :transformer, l), ref(pm, nw, :bus, i), ref(pm, nw, :bus, j))
-
-            for (idx, (fc,tc)) in enumerate(zip(connections[(l,i,j)], connections[(l,j,i)]))
-                set_lower_bound(qt[(l,i,j)][fc], -rate_a_fr[idx])
-                set_upper_bound(qt[(l,i,j)][fc],  rate_a_fr[idx])
-                set_lower_bound(qt[(l,j,i)][tc], -rate_a_to[idx])
-                set_upper_bound(qt[(l,j,i)][tc],  rate_a_to[idx])
-            end
-        end
-    end
-
-    for (l,transformer) in ref(pm, nw, :transformer)
-        if haskey(transformer, "qf_start")
-            f_idx = (l, transformer["f_bus"], transformer["t_bus"])
-            for (idx, fc) in enumerate(connections[f_idx])
-                JuMP.set_start_value(qt[f_idx][fc], transformer["qf_start"][idx])
-            end
-        end
-        if haskey(transformer, "qt_start")
-            t_idx = (l, transformer["t_bus"], transformer["f_bus"])
-            for (idx, tc) in enumerate(connections[t_idx])
-                JuMP.set_start_value(qt[t_idx][tc], transformer["qt_start"][idx])
-            end
-        end
-    end
-
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :qf, :qt, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), qt)
-end
-
-
-"Create tap variables."
-function variable_mc_oltc_transformer_tap(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    # when extending to 4-wire, this should iterate only over the phase conductors
-    p_oltc_ids = [id for (id,trans) in ref(pm, nw, :transformer) if !all(trans["tm_fix"])]
-    tap = var(pm, nw)[:tap] = Dict(i => JuMP.@variable(pm.model,
-        [p in 1:length(ref(pm,nw,:transformer,i,"f_connections"))],
-        base_name="$(nw)_tm_$(i)",
-        start=ref(pm, nw, :transformer, i, "tm_set")[p]
-    ) for i in p_oltc_ids)
-    if bounded
-        for tr_id in p_oltc_ids, p in 1:length(ref(pm,nw,:transformer,tr_id,"f_connections"))
-            set_lower_bound(var(pm, nw)[:tap][tr_id][p], ref(pm, nw, :transformer, tr_id, "tm_lb")[p])
-            set_upper_bound(var(pm, nw)[:tap][tr_id][p], ref(pm, nw, :transformer, tr_id, "tm_ub")[p])
-        end
-    end
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :transformer, :tap, ids(pm, nw, :transformer), tap)
-end
-
+# load variables
 
 """
 Create a dictionary with values of type Any for the load.
@@ -886,6 +1230,8 @@ function variable_mc_load_power(pm::AbstractMCPowerModel; nw=nw_id_default, boun
     var(pm, nw)[:qd_bus] = Dict{Int, Any}()
 end
 
+
+# indicator variables (mld)
 
 "Create variables for demand status"
 function variable_mc_load_indicator(pm::AbstractMCPowerModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
@@ -998,369 +1344,36 @@ function variable_mc_storage_indicator(pm::AbstractMCPowerModel; nw::Int=nw_id_d
 end
 
 
-"Create variables for `active` and `reactive` storage injection"
-function variable_mc_storage_power_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, kwargs...)
-    variable_mc_storage_power_real_on_off(pm; nw=nw, kwargs...)
-    variable_mc_storage_power_imaginary_on_off(pm; nw=nw, kwargs...)
-end
+# slack power variables
 
-
-"Create variables for `active` storage injection"
-function variable_mc_storage_power_real_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
-    ps = var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
-        [c in connections[i]], base_name="$(nw)_ps_$(i)",
-        start = comp_start_value(ref(pm, nw, :storage, i), "ps_start", c, 0.0)
-    ) for i in ids(pm, nw, :storage))
-
-    if bounded
-        for (i, strg) in ref(pm, nw, :storage)
-            for (idx, c) in enumerate(connections[i])
-                inj_lb, inj_ub = ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus), idx)
-
-                set_lower_bound(ps[i][c], inj_lb[i])
-                set_upper_bound(ps[i][c], inj_ub[i])
-            end
-        end
-    end
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :ps, ids(pm, nw, :storage), ps)
-end
-
-
-"Create variables for `reactive` storage injection"
-function variable_mc_storage_power_imaginary_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
-    qs = var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
-        [c in connections[i]], base_name="$(nw)_qs_$(i)",
-        start = comp_start_value(ref(pm, nw, :storage, i), "qs_start", c, 0.0)
-    ) for i in ids(pm, nw, :storage))
-
-    if bounded
-        for (i, strg) in ref(pm, nw, :storage)
-            if haskey(strg, "qmin")
-                for (idx, c) in enumerate(connections[i])
-                    set_lower_bound(qs[i][c], strg["qmin"][idx])
-                end
-            end
-
-            if haskey(strg, "qmax")
-                for (idx, c) in enumerate(connections[i])
-                    set_upper_bound(qs[i][c], strg["qmax"][idx])
-                end
-            end
-        end
-    end
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :qs, ids(pm, nw, :storage), qs)
-end
-
-
-"voltage variable magnitude squared (relaxed form)"
-function variable_mc_bus_voltage_magnitude_sqr_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
-    w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
-        [t in terminals[i]], base_name="$(nw)_w_$(i)",
-        start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, 1.001)
-    ) for i in ids(pm, nw, :bus))
-
-    if bounded
-        for (i, bus) in ref(pm, nw, :bus)
-            for (idx, t) in enumerate(terminals[i])
-                set_lower_bound(w[i][t], 0.0)
-
-                if haskey(bus, "vmax")
-                    set_upper_bound(w[i][t], bus["vmax"][idx]^2)
-                end
-            end
-        end
-    end
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :w, ids(pm, nw, :bus), w)
-end
-
-
-"on/off voltage magnitude variable"
-function variable_mc_bus_voltage_magnitude_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
-    vm = var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
-        [t in terminals[i]], base_name="$(nw)_vm_$(i)",
-        start = comp_start_value(ref(pm, nw, :bus, i), "vm_start", t, 1.0)
-    ) for i in ids(pm, nw, :bus))
-
-    if bounded
-        for (i, bus) in ref(pm, nw, :bus)
-            for (idx,t) in enumerate(terminals[i])
-                set_lower_bound(vm[i][t], 0.0)
-
-                if haskey(bus, "vmax")
-                    set_upper_bound(vm[i][t], bus["vmax"][idx])
-                end
-            end
-        end
-    end
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :vm, ids(pm, nw, :bus), vm)
-
-end
-
-
-"create variables for generators, delegate to PowerModels"
-function variable_mc_generator_power(pm::AbstractMCPowerModel; kwargs...)
-    variable_mc_generator_power_real(pm; kwargs...)
-    variable_mc_generator_power_imaginary(pm; kwargs...)
+"generates variables for both `active` and `reactive` slack at each bus"
+function variable_mc_slack_bus_power(pm::AbstractMCPowerModel; nw::Int=nw_id_default, kwargs...)
+    variable_mc_slack_bus_power_real(pm; nw=nw, kwargs...)
+    variable_mc_slack_bus_power_imaginary(pm; nw=nw, kwargs...)
 end
 
 
 ""
-function variable_mc_generator_power_real(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
-    pg = var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
-            [c in connections[i]], base_name="$(nw)_pg_$(i)",
-            start = comp_start_value(ref(pm, nw, :gen, i), "pg_start", c, 0.0)
-        ) for i in ids(pm, nw, :gen)
+function variable_mc_slack_bus_power_real(pm::AbstractMCPowerModel; nw::Int=nw_id_default, report::Bool=true)
+    terminals = Dict(i => ref(pm, nw, :bus, i)["terminals"] for i in ids(pm, nw, :bus))
+    p_slack = var(pm, nw)[:p_slack] = Dict(i => JuMP.@variable(pm.model,
+            [t in terminals[i]], base_name="$(nw)_p_slack_$(i)",
+            start = comp_start_value(ref(pm, nw, :bus, i), "p_slack_start", t, 0.0)
+        ) for i in ids(pm, nw, :bus)
     )
 
-    if bounded
-        for (i,gen) in ref(pm, nw, :gen)
-            if haskey(gen, "pmin")
-                for (idx,c) in enumerate(connections[i])
-                    set_lower_bound(pg[i][c], gen["pmin"][idx])
-                end
-            end
-            if haskey(gen, "pmax")
-                for (idx,c) in enumerate(connections[i])
-                    set_upper_bound(pg[i][c], gen["pmax"][idx])
-                end
-            end
-        end
-    end
-
-    var(pm, nw)[:pg_bus] = Dict{Int, Any}()
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :pg, ids(pm, nw, :gen), pg)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :p_slack, ids(pm, nw, :bus), p_slack)
 end
 
 
 ""
-function variable_mc_generator_power_imaginary(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
-    qg = var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
-            [c in connections[i]], base_name="$(nw)_qg_$(i)",
-            start = comp_start_value(ref(pm, nw, :gen, i), "qg_start", c, 0.0)
-        ) for i in ids(pm, nw, :gen)
+function variable_mc_slack_bus_power_imaginary(pm::AbstractMCPowerModel; nw::Int=nw_id_default, report::Bool=true)
+    terminals = Dict(i => ref(pm, nw, :bus, i)["terminals"] for i in ids(pm, nw, :bus))
+    q_slack = var(pm, nw)[:q_slack] = Dict(i => JuMP.@variable(pm.model,
+            [t in terminals[i]], base_name="$(nw)_q_slack_$(i)",
+            start = comp_start_value(ref(pm, nw, :bus, i), "q_slack_start", t, 0.0)
+        ) for i in ids(pm, nw, :bus)
     )
 
-    if bounded
-        for (i,gen) in ref(pm, nw, :gen)
-            if haskey(gen, "qmin")
-                for (idx,c) in enumerate(connections[i])
-                    set_lower_bound(qg[i][c], gen["qmin"][idx])
-                end
-            end
-            if haskey(gen, "qmax")
-                for (idx,c) in enumerate(connections[i])
-                    set_upper_bound(qg[i][c], gen["qmax"][idx])
-                end
-            end
-        end
-    end
-
-    var(pm, nw)[:qg_bus] = Dict{Int, Any}()
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :qg, ids(pm, nw, :gen), qg)
-end
-
-
-"variable: `crg[j]` for `j` in `gen`"
-function variable_mc_generator_current_real(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
-    crg = var(pm, nw)[:crg] = Dict(i => JuMP.@variable(pm.model,
-            [c in connections[i]], base_name="$(nw)_crg_$(i)",
-            start = comp_start_value(ref(pm, nw, :gen, i), "crg_start", c, 0.0)
-        ) for i in ids(pm, nw, :gen)
-    )
-    if bounded
-        for (i, g) in ref(pm, nw, :gen)
-            cmax = _calc_gen_current_max(g, ref(pm, nw, :bus, g["gen_bus"]))
-            for (idx,c) in enumerate(connections[i])
-                set_lower_bound(crg[i][c], -cmax[idx])
-                set_upper_bound(crg[i][c],  cmax[idx])
-            end
-        end
-    end
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :crg, ids(pm, nw, :gen), crg)
-end
-
-"variable: `cig[j]` for `j` in `gen`"
-function variable_mc_generator_current_imaginary(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
-    cig = var(pm, nw)[:cig] = Dict(i => JuMP.@variable(pm.model,
-            [c in connections[i]], base_name="$(nw)_cig_$(i)",
-            start = comp_start_value(ref(pm, nw, :gen, i), "cig_start", c, 0.0)
-        ) for i in ids(pm, nw, :gen)
-    )
-    if bounded
-        for (i, g) in ref(pm, nw, :gen)
-            cmax = _calc_gen_current_max(g, ref(pm, nw, :bus, g["gen_bus"]))
-            for (idx,c) in enumerate(connections[i])
-                set_lower_bound(cig[i][c], -cmax[idx])
-                set_upper_bound(cig[i][c],  cmax[idx])
-            end
-        end
-    end
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :cig, ids(pm, nw, :gen), cig)
-end
-
-
-function variable_mc_generator_power_on_off(pm::AbstractMCPowerModel; kwargs...)
-    variable_mc_generator_power_real_on_off(pm; kwargs...)
-    variable_mc_generator_power_imaginary_on_off(pm; kwargs...)
-end
-
-
-function variable_mc_generator_power_real_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
-    pg = var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
-        [c in connections[i]], base_name="$(nw)_pg_$(i)",
-        start = comp_start_value(ref(pm, nw, :gen, i), "pg_start", c, 0.0)
-    ) for i in ids(pm, nw, :gen))
-
-    if bounded
-        for (i, gen) in ref(pm, nw, :gen)
-            if haskey(gen, "pmin")
-                for (idx, c) in enumerate(connections[i])
-                    set_lower_bound(pg[i][c], gen["pmin"][idx])
-                end
-            end
-
-            if haskey(gen, "pmax")
-                for (idx, c) in enumerate(connections[i])
-                    set_upper_bound(pg[i][c], gen["pmax"][idx])
-                end
-            end
-        end
-    end
-
-    var(pm, nw)[:pg_bus] = Dict{Int, Any}()
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :pg, ids(pm, nw, :gen), pg)
-end
-
-
-function variable_mc_generator_power_imaginary_on_off(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
-    qg = var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
-        [c in connections[i]], base_name="$(nw)_qg_$(i)",
-        start = comp_start_value(ref(pm, nw, :gen, i), "qg_start", c, 0.0)
-    ) for i in ids(pm, nw, :gen))
-
-    if bounded
-        for (i, gen) in ref(pm, nw, :gen)
-            if haskey(gen, "qmin")
-                for (idx, c) in enumerate(connections[i])
-                    set_lower_bound(qg[i][c], gen["qmin"][idx])
-                end
-            end
-
-            if haskey(gen, "qmax")
-                for (idx, c) in enumerate(connections[i])
-                    set_upper_bound(qg[i][c], gen["qmax"][idx])
-                end
-            end
-        end
-    end
-
-    var(pm, nw)[:qg_bus] = Dict{Int, Any}()
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :qg, ids(pm, nw, :gen), qg)
-end
-
-
-""
-function variable_storage_energy(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    se = var(pm, nw)[:se] = JuMP.@variable(pm.model,
-        [i in ids(pm, nw, :storage)], base_name="$(nw)_se",
-        start = comp_start_value(ref(pm, nw, :storage, i), "se_start", 1)
-    )
-
-    if bounded
-        for (i, storage) in ref(pm, nw, :storage)
-            JuMP.set_lower_bound(se[i], 0)
-            JuMP.set_upper_bound(se[i], storage["energy_rating"])
-        end
-    end
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :se, ids(pm, nw, :storage), se)
-end
-
-
-""
-function variable_storage_charge(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    sc = var(pm, nw)[:sc] = JuMP.@variable(pm.model,
-        [i in ids(pm, nw, :storage)], base_name="$(nw)_sc",
-        start = comp_start_value(ref(pm, nw, :storage, i), "sc_start", 1)
-    )
-
-    if bounded
-        for (i, storage) in ref(pm, nw, :storage)
-            JuMP.set_lower_bound(sc[i], 0)
-            JuMP.set_upper_bound(sc[i], storage["charge_rating"])
-        end
-    end
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :sc, ids(pm, nw, :storage), sc)
-end
-
-
-""
-function variable_storage_discharge(pm::AbstractMCPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    sd = var(pm, nw)[:sd] = JuMP.@variable(pm.model,
-        [i in ids(pm, nw, :storage)], base_name="$(nw)_sd",
-        start = comp_start_value(ref(pm, nw, :storage, i), "sd_start", 1)
-    )
-
-    if bounded
-        for (i, storage) in ref(pm, nw, :storage)
-            JuMP.set_lower_bound(sd[i], 0)
-            JuMP.set_upper_bound(sd[i], storage["discharge_rating"])
-        end
-    end
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :sd, ids(pm, nw, :storage), sd)
-end
-
-
-""
-function variable_storage_complementary_indicator(pm::AbstractMCPowerModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
-    if !relax
-        sc_on = var(pm, nw)[:sc_on] = JuMP.@variable(pm.model,
-            [i in ids(pm, nw, :storage)], base_name="$(nw)_sc_on",
-            binary = true,
-            start = comp_start_value(ref(pm, nw, :storage, i), "sc_on_start", 0)
-        )
-        sd_on = var(pm, nw)[:sd_on] = JuMP.@variable(pm.model,
-            [i in ids(pm, nw, :storage)], base_name="$(nw)_sd_on",
-            binary = true,
-            start = comp_start_value(ref(pm, nw, :storage, i), "sd_on_start", 0)
-        )
-    else
-        sc_on = var(pm, nw)[:sc_on] = JuMP.@variable(pm.model,
-            [i in ids(pm, nw, :storage)], base_name="$(nw)_sc_on",
-            lower_bound = 0,
-            upper_bound = 1,
-            start = comp_start_value(ref(pm, nw, :storage, i), "sc_on_start", 0)
-        )
-        sd_on = var(pm, nw)[:sd_on] = JuMP.@variable(pm.model,
-            [i in ids(pm, nw, :storage)], base_name="$(nw)_sd_on",
-            lower_bound = 0,
-            upper_bound = 1,
-            start = comp_start_value(ref(pm, nw, :storage, i), "sd_on_start", 0)
-        )
-    end
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :sc_on, ids(pm, nw, :storage), sc_on)
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :sd_on, ids(pm, nw, :storage), sd_on)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :q_slack, ids(pm, nw, :bus), q_slack)
 end
