@@ -80,7 +80,7 @@ function transform_data_model(data::Dict{String,<:Any};
 
     if current_data_model == ENGINEERING
         if build_multinetwork && haskey(data, "time_series")
-            mn_data = _build_eng_multinetwork(data)
+            mn_data = make_multinetwork(data)
             if ismultinetwork(mn_data)
                 data_math = _map_eng2math_multinetwork(mn_data; kron_reduced=kron_reduced)
             else
