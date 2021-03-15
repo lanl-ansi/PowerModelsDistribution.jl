@@ -1,5 +1,16 @@
 import LinearAlgebra: Adjoint, pinv
 
+
+"field names that should not be multi-conductor values"
+const _conductorless = Set(["index", "bus_i", "bus_type", "status", "gen_status",
+    "br_status", "gen_bus", "load_bus", "shunt_bus", "storage_bus", "f_bus", "t_bus",
+    "transformer", "area", "zone", "base_kv", "energy", "energy_rating", "charge_rating",
+    "discharge_rating", "charge_efficiency", "discharge_efficiency", "p_loss", "q_loss",
+    "model", "ncost", "cost", "startup", "shutdown", "name", "source_id", "active_phases"])
+
+"field names that should become multi-conductor matrix not arrays"
+const _conductor_matrix = Set(["br_r", "br_x", "b_fr", "b_to", "g_fr", "g_to", "gs", "bs"])
+
 const _excluded_count_busname_patterns = Vector{Regex}([
     r"^_virtual.*",
 ])
@@ -35,6 +46,41 @@ function apply_pmd!(func!::Function, data::Dict{String, <:Any}; apply_to_subnetw
 end
 
 
+"Convenience function for retrieving the power-only portion of network data."
+function get_pm_data(data::Dict{String, <:Any})
+    return _IM.ismultiinfrastructure(data) ? data["it"][pmd_it_name] : data
+end
+
+
+# BOUND manipulation methods (0*Inf->0 is often desired)
+_sum_rm_nan(X::Vector) = sum([X[(!).(isnan.(X))]..., 0.0])
+
+
+""
+function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, Adjoint}) where T
+    N, A_ncols = size(A)
+    B_nrows, M = size(B)
+    @assert(A_ncols==B_nrows)
+    return [_sum_rm_nan(A[n,:].*B[:,m]) for n in 1:N, m in 1:M]
+end
+
+
+_mat_mult_rm_nan(A::Union{Matrix, Adjoint}, b::Vector) = dropdims(_mat_mult_rm_nan(A, reshape(b, length(b), 1)), dims=2)
+_mat_mult_rm_nan(a::Vector, B::Union{Matrix, Adjoint}) = _mat_mult_rm_nan(reshape(a, length(a), 1), B)
+
+
+""
+function _nan2zero(b, a; val=0)
+    and(x, y) = x && y
+    b[and.(isnan.(b), a.==val)] .= 0.0
+    return b
+end
+
+
+"Replaces NaN values with zeros"
+_replace_nan(v) = map(x -> isnan(x) ? zero(x) : x, v)
+
+
 "wraps angles in degrees to 180"
 function _wrap_to_180(degrees)
     return degrees - 360*floor.((degrees .+ 180)/360)
@@ -44,15 +90,6 @@ end
 "wraps angles in radians to pi"
 function _wrap_to_pi(radians)
     return radians - 2*pi*floor.((radians .+ pi)/(2*pi))
-end
-
-
-"creates a delta transformation matrix"
-function _get_delta_transformation_matrix(n_phases::Int)
-    @assert(n_phases>2, "We only define delta transforms for three and more conductors.")
-    Md = LinearAlgebra.diagm(0=>fill(1, n_phases), 1=>fill(-1, n_phases-1))
-    Md[end,1] = -1
-    return Md
 end
 
 
@@ -71,10 +108,6 @@ function _roll(array::Array{T, 1}, idx::Int; right=true) where T <: Number
 
     return out
 end
-
-"Replaces NaN values with zeros"
-_replace_nan(v) = map(x -> isnan(x) ? zero(x) : x, v)
-
 
 
 "Counts number of nodes in network"
@@ -157,6 +190,119 @@ function count_nodes(data::Dict{String,<:Any})::Int
 end
 
 
+"Counts active ungrounded connections on edge components"
+function count_active_connections(data::Dict{String,<:Any})
+    data_model = get(data, "data_model", MATHEMATICAL)
+    edge_elements = data_model == MATHEMATICAL ? PowerModelsDistribution._math_edge_elements : PowerModelsDistribution._eng_edge_elements
+    # bus_connections = Dict(id => [] for (id, _) in data["bus"])
+    active_connections = 0
+
+    for edge_type in edge_elements
+        for (_, component) in get(data, edge_type, Dict())
+            counted_connections = Set([])
+            if edge_type == "transformer" && !haskey(component, "f_connections") && data_model == ENGINEERING
+                for (wdg, connections) in enumerate(component["connections"])
+                    for terminal in connections
+                        if !(terminal in counted_connections)
+                            if !(terminal in data["bus"][component["bus"][wdg]]["grounded"])
+                                push!(counted_connections, terminal)
+                                active_connections += 1
+                            end
+                        end
+                    end
+                end
+            else
+                for (bus, connections) in [(component["f_bus"], component["f_connections"]), (component["t_bus"], component["t_connections"])]
+                    for (i, terminal) in enumerate(connections)
+                        if !(terminal in counted_connections)
+                            if data_model == ENGINEERING
+                                if edge_type == "transformer" && (get(data, "is_kron_reduced", false) || (component["configuration"] == WYE && terminal != connections[end]))
+                                    push!(counted_connections, terminal)
+                                    active_connections += 1
+                                elseif !(terminal in data["bus"][bus]["grounded"])
+                                    push!(counted_connections, terminal)
+                                    active_connections += 1
+                                end
+                            else
+                                if edge_type == "transformer"
+                                    if get(data, "is_kron_reduced", false) || component["configuration"] == DELTA || (component["configuration"] == WYE && terminal != connections[end])
+                                        push!(counted_connections, terminal)
+                                        active_connections += 1
+                                    end
+                                elseif !get(data["bus"]["$bus"]["grounded"], i, false)
+                                    if get(data, "is_projected", false) && get(data["bus"]["$bus"]["vmax"], i, Inf) > 0
+                                        push!(counted_connections, terminal)
+                                        active_connections += 1
+                                    else
+                                        push!(counted_connections, terminal)
+                                        active_connections += 1
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return active_connections
+end
+
+
+"Counts active ungrounded terminals on buses"
+function count_active_terminals(data::Dict{String,<:Any}; count_grounded::Bool=false)
+    data_model = get(data, "data_model", MATHEMATICAL)
+    active_terminal_count = 0
+    for (_,bus) in data["bus"]
+        counted_terminals = []
+        for (i, terminal) in enumerate(bus["terminals"])
+            if !(terminal in counted_terminals)
+                if count_grounded
+                    push!(counted_terminals, terminal)
+                    active_terminal_count += 1
+                else
+                    if data_model == ENGINEERING
+                        if !(terminal in bus["grounded"])
+                            push!(counted_terminals, terminal)
+                            active_terminal_count += 1
+                        end
+                    else
+                        if !get(bus["grounded"], i, false)
+                            push!(counted_terminals, terminal)
+                            active_terminal_count += 1
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return active_terminal_count
+end
+
+
+""
+function _get_conductor_indicator(comp::Dict{String,<:Any})::String
+    if haskey(comp, "terminals")
+        return "terminals"
+    elseif haskey(comp, "connections")
+        return "connections"
+    elseif haskey(comp, "f_connections")
+        return "f_connections"
+    else
+        return ""
+    end
+end
+
+
+"creates a delta transformation matrix"
+function _get_delta_transformation_matrix(n_phases::Int)
+    @assert(n_phases>2, "We only define delta transforms for three and more conductors.")
+    Md = LinearAlgebra.diagm(0=>fill(1, n_phases), 1=>fill(-1, n_phases-1))
+    Md[end,1] = -1
+    return Md
+end
+
+
 "Calculates the tap scale factor for the non-dimensionalized equations."
 function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, bus_to::Dict{String,Any})
     tm_nom = trans["tm_nom"]
@@ -174,6 +320,53 @@ function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, b
     end
 
     return tm_nom
+end
+
+
+"""
+Returns a power magnitude bound for the from and to side of a transformer.
+The total current rating also implies a current bound through the
+upper bound on the voltage magnitude of the connected buses.
+"""
+function _calc_transformer_power_ub_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
+    bounds_fr = []
+    bounds_to = []
+    #TODO redefine transformer bounds
+    # if haskey(trans, "c_rating_a")
+    #     push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
+    #     push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
+    # end
+    # if haskey(trans, "rate_a")
+    #     push!(bounds_fr, trans["rate_a"])
+    #     push!(bounds_to, trans["rate_a"])
+    # end
+
+
+    N = length(trans["f_connections"])
+    return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
+end
+
+
+"""
+Returns a current magnitude bound for the from and to side of a transformer.
+The total power rating also implies a current bound through the lower bound on
+the voltage magnitude of the connected buses.
+"""
+function _calc_transformer_current_max_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
+    bounds_fr = []
+    bounds_to = []
+    #TODO redefine transformer bounds
+    # if haskey(trans, "c_rating_a")
+    #     push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
+    #     push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
+    # end
+    # if haskey(trans, "rate_a")
+    #     push!(bounds_fr, trans["rate_a"])
+    #     push!(bounds_to, trans["rate_a"])
+    # end
+
+    N = length(trans["f_connections"])
+    return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
 end
 
 
@@ -301,6 +494,7 @@ function _calc_load_vbounds(load::Dict{String,<:Any}, bus::Dict{String,<:Any})
     return vmin[connections], vmax[connections]
 end
 
+
 """
 Returns a Bool, indicating whether the convex hull of the voltage-dependent
 relationship needs a cone inclusion constraint.
@@ -376,53 +570,6 @@ end
 
 
 """
-Returns a power magnitude bound for the from and to side of a transformer.
-The total current rating also implies a current bound through the
-upper bound on the voltage magnitude of the connected buses.
-"""
-function _calc_transformer_power_ub_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
-    bounds_fr = []
-    bounds_to = []
-    #TODO redefine transformer bounds
-    # if haskey(trans, "c_rating_a")
-    #     push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
-    #     push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
-    # end
-    # if haskey(trans, "rate_a")
-    #     push!(bounds_fr, trans["rate_a"])
-    #     push!(bounds_to, trans["rate_a"])
-    # end
-
-
-    N = length(trans["f_connections"])
-    return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
-end
-
-
-"""
-Returns a current magnitude bound for the from and to side of a transformer.
-The total power rating also implies a current bound through the lower bound on
-the voltage magnitude of the connected buses.
-"""
-function _calc_transformer_current_max_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
-    bounds_fr = []
-    bounds_to = []
-    #TODO redefine transformer bounds
-    # if haskey(trans, "c_rating_a")
-    #     push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
-    #     push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
-    # end
-    # if haskey(trans, "rate_a")
-    #     push!(bounds_fr, trans["rate_a"])
-    #     push!(bounds_to, trans["rate_a"])
-    # end
-
-    N = length(trans["f_connections"])
-    return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
-end
-
-
-"""
 Returns a total (shunt+series) power magnitude bound for the from and to side
 of a branch. The total current rating also implies a current bound through the
 upper bound on the voltage magnitude of the connected buses.
@@ -483,96 +630,6 @@ function _calc_branch_series_current_max(branch::Dict{String,<:Any}, bus_fr::Dic
     # now select element-wise lowest valid bound between fr and to
     N = length(branch["f_connections"])
     return min.(fill(Inf, N), c_max_fr_sh.+c_max_fr_tot, c_max_to_sh.+c_max_to_tot)
-end
-
-
-# from PowerModels
-"Transforms single-conductor network data into multi-conductor data"
-function make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
-    if ismultinetwork(data)
-        for (i,nw_data) in data["nw"]
-            _make_multiconductor!(nw_data, conductors)
-        end
-    else
-         _make_multiconductor!(data, conductors)
-    end
-end
-
-
-"field names that should not be multi-conductor values"
-const _conductorless = Set(["index", "bus_i", "bus_type", "status", "gen_status",
-    "br_status", "gen_bus", "load_bus", "shunt_bus", "storage_bus", "f_bus", "t_bus",
-    "transformer", "area", "zone", "base_kv", "energy", "energy_rating", "charge_rating",
-    "discharge_rating", "charge_efficiency", "discharge_efficiency", "p_loss", "q_loss",
-    "model", "ncost", "cost", "startup", "shutdown", "name", "source_id", "active_phases"])
-
-"field names that should become multi-conductor matrix not arrays"
-const _conductor_matrix = Set(["br_r", "br_x", "b_fr", "b_to", "g_fr", "g_to", "gs", "bs"])
-
-
-""
-function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
-    if haskey(data, "conductors")
-        Memento.warn(_LOGGER, "skipping network that is already multiconductor")
-        return
-    end
-
-    data["conductors"] = conductors
-
-    for (key, item) in data
-        if isa(item, Dict{String,Any})
-            for (item_id, item_data) in item
-                if isa(item_data, Dict{String,Any})
-                    item_ref_data = Dict{String,Any}()
-                    for (param, value) in item_data
-                        if param in _conductorless
-                            item_ref_data[param] = value
-                        else
-                            if param in _conductor_matrix
-                                item_ref_data[param] = LinearAlgebra.diagm(0=>fill(value, conductors))
-                            else
-                                item_ref_data[param] = fill(value, conductors)
-                            end
-                        end
-                    end
-                    item[item_id] = item_ref_data
-                end
-            end
-        else
-            #root non-dict items
-        end
-    end
-
-    for (_, load) in data["load"]
-        load["model"] = POWER
-        load["configuration"] = WYE
-    end
-
-    for (_, load) in data["gen"]
-        load["configuration"] = WYE
-    end
-
-    for type in ["load", "gen", "storage", "shunt"]
-        if haskey(data, type)
-            for (_,obj) in data[type]
-                obj["connections"] = collect(1:conductors)
-            end
-        end
-    end
-
-    for type in ["branch", "transformer", "switch"]
-        if haskey(data, type)
-            for (_,obj) in data[type]
-                obj["f_connections"] = collect(1:conductors)
-                obj["t_connections"] = collect(1:conductors)
-            end
-        end
-    end
-
-    for (_,bus) in data["bus"]
-        bus["terminals"] = collect(1:conductors)
-        bus["grounded"] = fill(false, conductors)
-    end
 end
 
 
@@ -718,188 +775,6 @@ function _has_nl_expression(x)::Bool
 end
 
 
-macro smart_constraint(model, vars, expr)
-    esc(quote
-        if _has_nl_expression($vars)
-            JuMP.@NLconstraint($model, $expr)
-        else
-            JuMP.@constraint($model, $expr)
-        end
-    end)
-end
-
-
-"Local wrapper method for JuMP.set_lower_bound, which skips NaN and infinite (-Inf only)"
-function set_lower_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category::Symbol=:default)
-    if !(isnan(bound) || bound==-Inf)
-        JuMP.set_lower_bound(x, bound)
-    elseif loose_bounds
-        lbs = pm.ext[:loose_bounds]
-        JuMP.set_lower_bound(x, -lbs.bound_values[category])
-        push!(lbs.loose_lb_vars, x)
-    end
-end
-
-
-"Local wrapper method for JuMP.set_upper_bound, which skips NaN and infinite (+Inf only)"
-function set_upper_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category::Symbol=:default)
-    if !(isnan(bound) || bound==Inf)
-        JuMP.set_upper_bound(x, bound)
-    elseif loose_bounds
-        lbs = pm.ext[:loose_bounds]
-        JuMP.set_upper_bound(x, lbs.bound_values[category])
-        push!(lbs.loose_ub_vars, x)
-    end
-end
-
-
-function sol_polar_voltage!(pm::AbstractMCPowerModel, solution::Dict{String,<:Any})
-    apply_pmd!(_sol_polar_voltage!, solution)
-end
-
-
-""
-function _sol_polar_voltage!(solution::Dict{String,<:Any})
-    if haskey(solution, "nw")
-        nws_data = solution["nw"]
-    else
-        nws_data = Dict("0" => solution)
-    end
-
-    for (n, nw_data) in nws_data
-        if haskey(nw_data, "bus")
-            for (i,bus) in nw_data["bus"]
-                if haskey(bus, "vr") && haskey(bus, "vi")
-                    vr = bus["vr"]
-                    vi = bus["vi"]
-                    if isa(vr, Dict)
-                        bus["vm"] = Dict(t=>abs(vr[t]+im*vi[t]) for t in keys(vr))
-                        bus["va"] = Dict(t=>_wrap_to_pi(atan(vi[t], vr[t])) for t in keys(vr))
-                    else
-                        bus["vm"] = abs.(vr .+ im*vi)
-                        bus["va"] = _wrap_to_pi(atan.(vi, vr))
-                    end
-                end
-            end
-        end
-    end
-end
-
-# BOUND manipulation methods (0*Inf->0 is often desired)
-_sum_rm_nan(X::Vector) = sum([X[(!).(isnan.(X))]..., 0.0])
-
-
-""
-function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, Adjoint}) where T
-    N, A_ncols = size(A)
-    B_nrows, M = size(B)
-    @assert(A_ncols==B_nrows)
-    return [_sum_rm_nan(A[n,:].*B[:,m]) for n in 1:N, m in 1:M]
-end
-
-
-_mat_mult_rm_nan(A::Union{Matrix, Adjoint}, b::Vector) = dropdims(_mat_mult_rm_nan(A, reshape(b, length(b), 1)), dims=2)
-_mat_mult_rm_nan(a::Vector, B::Union{Matrix, Adjoint}) = _mat_mult_rm_nan(reshape(a, length(a), 1), B)
-
-
-""
-function _nan2zero(b, a; val=0)
-    and(x, y) = x && y
-    b[and.(isnan.(b), a.==val)] .= 0.0
-    return b
-end
-
-
-"Counts active ungrounded connections on edge components"
-function count_active_connections(data::Dict{String,<:Any})
-    data_model = get(data, "data_model", MATHEMATICAL)
-    edge_elements = data_model == MATHEMATICAL ? PowerModelsDistribution._math_edge_elements : PowerModelsDistribution._eng_edge_elements
-    # bus_connections = Dict(id => [] for (id, _) in data["bus"])
-    active_connections = 0
-
-    for edge_type in edge_elements
-        for (_, component) in get(data, edge_type, Dict())
-            counted_connections = Set([])
-            if edge_type == "transformer" && !haskey(component, "f_connections") && data_model == ENGINEERING
-                for (wdg, connections) in enumerate(component["connections"])
-                    for terminal in connections
-                        if !(terminal in counted_connections)
-                            if !(terminal in data["bus"][component["bus"][wdg]]["grounded"])
-                                push!(counted_connections, terminal)
-                                active_connections += 1
-                            end
-                        end
-                    end
-                end
-            else
-                for (bus, connections) in [(component["f_bus"], component["f_connections"]), (component["t_bus"], component["t_connections"])]
-                    for (i, terminal) in enumerate(connections)
-                        if !(terminal in counted_connections)
-                            if data_model == ENGINEERING
-                                if edge_type == "transformer" && (get(data, "is_kron_reduced", false) || (component["configuration"] == WYE && terminal != connections[end]))
-                                    push!(counted_connections, terminal)
-                                    active_connections += 1
-                                elseif !(terminal in data["bus"][bus]["grounded"])
-                                    push!(counted_connections, terminal)
-                                    active_connections += 1
-                                end
-                            else
-                                if edge_type == "transformer"
-                                    if get(data, "is_kron_reduced", false) || component["configuration"] == DELTA || (component["configuration"] == WYE && terminal != connections[end])
-                                        push!(counted_connections, terminal)
-                                        active_connections += 1
-                                    end
-                                elseif !get(data["bus"]["$bus"]["grounded"], i, false)
-                                    if get(data, "is_projected", false) && get(data["bus"]["$bus"]["vmax"], i, Inf) > 0
-                                        push!(counted_connections, terminal)
-                                        active_connections += 1
-                                    else
-                                        push!(counted_connections, terminal)
-                                        active_connections += 1
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return active_connections
-end
-
-
-"Counts active ungrounded terminals on buses"
-function count_active_terminals(data::Dict{String,<:Any}; count_grounded::Bool=false)
-    data_model = get(data, "data_model", MATHEMATICAL)
-    active_terminal_count = 0
-    for (_,bus) in data["bus"]
-        counted_terminals = []
-        for (i, terminal) in enumerate(bus["terminals"])
-            if !(terminal in counted_terminals)
-                if count_grounded
-                    push!(counted_terminals, terminal)
-                    active_terminal_count += 1
-                else
-                    if data_model == ENGINEERING
-                        if !(terminal in bus["grounded"])
-                            push!(counted_terminals, terminal)
-                            active_terminal_count += 1
-                        end
-                    else
-                        if !get(bus["grounded"], i, false)
-                            push!(counted_terminals, terminal)
-                            active_terminal_count += 1
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return active_terminal_count
-end
-
-
 "checks that voltage angle differences are within 90 deg., if not tightens"
 function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=1.0472)
     if ismultinetwork(data)
@@ -995,11 +870,6 @@ function _build_bus_shunt_matrices(pm::AbstractMCPowerModel, nw::Int, terminals:
     return (Gs, Bs)
 end
 
-"Convenience function for retrieving the power-only portion of network data."
-function get_pm_data(data::Dict{String, <:Any})
-    return _IM.ismultiinfrastructure(data) ? data["it"][pmd_it_name] : data
-end
-
 
 ""
 function calc_branch_y(branch::Dict{String,<:Any})
@@ -1025,8 +895,8 @@ function calc_connected_components(data::Dict{String,<:Any}; edges=["branch", "d
 
     neighbors = Dict(i => Int[] for i in active_bus_ids)
     for comp_type in edges
-        status_key = get(pm_component_status, comp_type, "status")
-        status_inactive = get(pm_component_status_inactive, comp_type, 0)
+        status_key = get(pmd_component_status, comp_type, "status")
+        status_inactive = get(pmd_component_status_inactive, comp_type, 0)
         for edge in values(get(pm_data, comp_type, Dict()))
             if get(edge, status_key, 1) != status_inactive && edge["f_bus"] in active_bus_ids && edge["t_bus"] in active_bus_ids
                 push!(neighbors[edge["f_bus"]], edge["t_bus"])
@@ -1093,6 +963,7 @@ function correct_branch_directions!(data::Dict{String,<:Any})
     apply_pmd!(_correct_branch_directions!, data)
 end
 
+
 ""
 function _correct_branch_directions!(pm_data::Dict{String,<:Any})
 
@@ -1131,6 +1002,7 @@ function check_branch_loops(data::Dict{String,<:Any})
     apply_pmd!(_check_branch_loops, data)
 end
 
+
 ""
 function _check_branch_loops(pm_data::Dict{String, <:Any})
     for (i, branch) in pm_data["branch"]
@@ -1145,6 +1017,7 @@ end
 function check_connectivity(data::Dict{String,<:Any})
     apply_pmd!(_check_connectivity, data)
 end
+
 
 ""
 function _check_connectivity(data::Dict{String,<:Any})
@@ -1194,16 +1067,6 @@ function _check_connectivity(data::Dict{String,<:Any})
             Memento.error(_LOGGER, "to bus $(branch["t_bus"]) in branch $(i) is not defined")
         end
     end
-
-    for (i, dcline) in data["dcline"]
-        if !(dcline["f_bus"] in bus_ids)
-            Memento.error(_LOGGER, "from bus $(dcline["f_bus"]) in dcline $(i) is not defined")
-        end
-
-        if !(dcline["t_bus"] in bus_ids)
-            Memento.error(_LOGGER, "to bus $(dcline["t_bus"]) in dcline $(i) is not defined")
-        end
-    end
 end
 
 
@@ -1217,6 +1080,7 @@ assumes that the network is a single connected component
 function correct_bus_types!(data::Dict{String,<:Any})
     apply_pmd!(_correct_bus_types!, data)
 end
+
 
 ""
 function _correct_bus_types!(pm_data::Dict{String,<:Any})
@@ -1297,19 +1161,17 @@ function _biggest_generator(gens::Dict)::Dict
     return biggest_gen
 end
 
+
 "throws warnings if cost functions are malformed"
 function correct_cost_functions!(data::Dict{String,<:Any})
     apply_pmd!(_correct_cost_functions!, data)
 end
 
+
 ""
 function _correct_cost_functions!(pm_data::Dict{String,<:Any})
     for (i,gen) in pm_data["gen"]
         _correct_cost_function!(i, gen, "generator", "pmin", "pmax")
-    end
-
-    for (i, dcline) in pm_data["dcline"]
-        _correct_cost_function!(i, dcline, "dcline", "pminf", "pmaxf")
     end
 end
 
@@ -1418,6 +1280,7 @@ function simplify_cost_terms!(data::Dict{String,<:Any})
     apply_pmd!(_simplify_cost_terms!, data)
 end
 
+
 ""
 function _simplify_cost_terms!(pm_data::Dict{String,<:Any})
 
@@ -1439,26 +1302,6 @@ function _simplify_cost_terms!(pm_data::Dict{String,<:Any})
             end
         end
     end
-
-    if haskey(pm_data, "dcline")
-        for (i, dcline) in pm_data["dcline"]
-            if haskey(dcline, "model") && dcline["model"] == 2
-                ncost = length(dcline["cost"])
-                for j in 1:ncost
-                    if dcline["cost"][1] == 0.0
-                        dcline["cost"] = dcline["cost"][2:end]
-                    else
-                        break
-                    end
-                end
-                if length(dcline["cost"]) != ncost
-                    dcline["ncost"] = length(dcline["cost"])
-                    Memento.info(_LOGGER, "removing $(ncost - dcline["ncost"]) cost terms from dcline $(i): $(dcline["cost"])")
-                end
-            end
-        end
-    end
-
 end
 
 
@@ -1492,25 +1335,6 @@ function standardize_cost_terms!(data::Dict{String,<:Any}; order=-1)
                 end
             end
         end
-
-        if haskey(network, "dcline")
-            for (i, dcline) in network["dcline"]
-                if haskey(dcline, "model") && dcline["model"] == 2
-                    max_nonzero_index = 1
-                    for i in 1:length(dcline["cost"])
-                        max_nonzero_index = i
-                        if dcline["cost"][i] != 0.0
-                            break
-                        end
-                    end
-
-                    max_oder = length(dcline["cost"]) - max_nonzero_index + 1
-
-                    comp_max_order = max(comp_max_order, max_oder)
-                end
-            end
-        end
-
     end
 
     if comp_max_order <= order+1
@@ -1524,9 +1348,6 @@ function standardize_cost_terms!(data::Dict{String,<:Any}; order=-1)
     for (i, network) in networks
         if haskey(network, "gen")
             _standardize_cost_terms!(network["gen"], comp_max_order, "generator")
-        end
-        if haskey(network, "dcline")
-            _standardize_cost_terms!(network["dcline"], comp_max_order, "dcline")
         end
     end
 
@@ -1554,4 +1375,3 @@ function _standardize_cost_terms!(components::Dict{String,<:Any}, comp_order::In
     end
     return modified
 end
-

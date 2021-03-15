@@ -53,3 +53,64 @@ sol(pm::AbstractMCPowerModel, nw::Int, key::Symbol) = _IM.sol(pm, pmd_it_sym, nw
 sol(pm::AbstractMCPowerModel, nw::Int, key::Symbol, idx::Any) = _IM.sol(pm, pmd_it_sym, nw, key, idx)
 sol(pm::AbstractMCPowerModel, key::Symbol; nw::Int = nw_id_default) = _IM.sol(pm, pmd_it_sym, key; nw = nw)
 sol(pm::AbstractMCPowerModel, key::Symbol, idx::Any; nw::Int = nw_id_default) = _IM.sol(pm, pmd_it_sym, key, idx; nw = nw)
+
+
+"checks if a sufficient number of variables exist for the given keys collection"
+function _check_var_keys(vars, keys, var_name, comp_name)
+    if length(vars) < length(keys)
+        error(_LOGGER, "$(var_name) decision variables appear to be missing for $(comp_name) components")
+    end
+end
+
+
+"detection of whether a constraint should be NL or not"
+macro smart_constraint(model, vars, expr)
+    esc(quote
+        if _has_nl_expression($vars)
+            JuMP.@NLconstraint($model, $expr)
+        else
+            JuMP.@constraint($model, $expr)
+        end
+    end)
+end
+
+
+"Local wrapper method for JuMP.set_lower_bound, which skips NaN and infinite (-Inf only)"
+function set_lower_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category::Symbol=:default)
+    if !(isnan(bound) || bound==-Inf)
+        JuMP.set_lower_bound(x, bound)
+    elseif loose_bounds
+        lbs = pm.ext[:loose_bounds]
+        JuMP.set_lower_bound(x, -lbs.bound_values[category])
+        push!(lbs.loose_lb_vars, x)
+    end
+end
+
+
+"Local wrapper method for JuMP.set_upper_bound, which skips NaN and infinite (+Inf only)"
+function set_upper_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category::Symbol=:default)
+    if !(isnan(bound) || bound==Inf)
+        JuMP.set_upper_bound(x, bound)
+    elseif loose_bounds
+        lbs = pm.ext[:loose_bounds]
+        JuMP.set_upper_bound(x, lbs.bound_values[category])
+        push!(lbs.loose_ub_vars, x)
+    end
+end
+
+
+""
+function comp_start_value(comp::Dict{String,<:Any}, key::String, conductor::Int, default)
+    cond_ind = _get_conductor_indicator(comp)
+    if haskey(comp, key) && !isempty(cond_ind)
+        return comp[key][findfirst(isequal(conductor), comp[cond_ind])]
+    else
+        return default
+    end
+end
+
+
+""
+function comp_start_value(comp::Dict{String,<:Any}, key::String, default=0.0)
+    return get(comp, key, default)
+end
