@@ -22,7 +22,7 @@ end
 # the follow items are also exported for user-friendlyness when calling
 # `using PowerModelsDistribution`
 
-# so that users do not need to import JuMP to use a solver with PowerModels
+# so that users do not need to import JuMP to use a solver with PowerModelsDistribution
 import JuMP: optimizer_with_attributes
 export optimizer_with_attributes
 

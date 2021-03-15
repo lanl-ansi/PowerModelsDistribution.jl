@@ -4,10 +4,10 @@ const _excluded_count_busname_patterns = Vector{Regex}([
     r"^_virtual.*",
 ])
 
-const _pm_component_status_parameters = Set(["status", "gen_status", "br_status"])
+const _pmd_component_status_parameters = Set(["status", "gen_status", "br_status"])
 
 "maps component types to status parameters"
-const pm_component_status = Dict(
+const pmd_component_status = Dict(
     "bus" => "bus_type",
     "load" => "status",
     "shunt" => "status",
@@ -15,11 +15,10 @@ const pm_component_status = Dict(
     "storage" => "status",
     "switch" => "status",
     "branch" => "br_status",
-    "dcline" => "br_status",
 )
 
 "maps component types to inactive status values"
-const pm_component_status_inactive = Dict(
+const pmd_component_status_inactive = Dict(
     "bus" => 4,
     "load" => 0,
     "shunt" => 0,
@@ -30,7 +29,7 @@ const pm_component_status_inactive = Dict(
     "dcline" => 0,
 )
 
-"PowerModels wrapper for the InfrastructureModels `apply!` function."
+"PowerModelsDistribution wrapper for the InfrastructureModels `apply!` function."
 function apply_pmd!(func!::Function, data::Dict{String, <:Any}; apply_to_subnetworks::Bool = true)
     _IM.apply!(func!, data, pmd_it_name; apply_to_subnetworks = apply_to_subnetworks)
 end
