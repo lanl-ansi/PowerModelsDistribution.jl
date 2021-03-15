@@ -69,7 +69,7 @@
 
     data = parse_file("../test/data/opendss/case3_unbalanced.dss"; transformations=[make_lossless!])
     data["settings"]["sbase_default"] = 0.001 * 1e3
-    data["generator"] = Dict{Any,Any}(
+    data["generator"] = Dict{String,Any}(
         "1" => Dict{String,Any}(
             "bus" => "primary",
             "connections" => [1, 2, 3, 4],

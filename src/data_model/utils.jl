@@ -345,7 +345,7 @@ end
 
 
 "pads properties to have the total number of conductors for the whole system"
-function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; pad_value::Real=0.0)
+function _pad_properties!(object::Dict{String,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; pad_value::Real=0.0)
     @assert(all(c in phases for c in connections))
     inds = _get_idxs(phases, connections)
 
@@ -366,7 +366,7 @@ end
 
 
 "pads properties to have the total number of conductors for the whole system (transformer winding variant)"
-function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String}, wdg::Int, connections::Vector{Int}, phases::Vector{Int}; pad_value::Real=0.0)
+function _pad_properties!(object::Dict{String,<:Any}, properties::Vector{String}, wdg::Int, connections::Vector{Int}, phases::Vector{Int}; pad_value::Real=0.0)
     @assert(all(c in phases for c in connections))
     inds = _get_idxs(phases, connections)
 
@@ -387,7 +387,7 @@ end
 
 
 "pads properties to have the total number of conductors for the whole system - delta connection variant"
-function _pad_properties_delta!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; invert::Bool=false)
+function _pad_properties_delta!(object::Dict{String,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; invert::Bool=false)
     @assert(all(c in phases for c in connections))
     @assert(length(connections) in [2, 3], "A delta configuration has to have at least 2 or 3 connections!")
     @assert(length(phases)==3, "Padding only possible to a |phases|==3!")
@@ -419,7 +419,7 @@ end
 
 
 "pads properties to have the total number of conductors for the whole system - delta connection variant"
-function _pad_properties_delta!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, wdg::Int, phases::Vector{Int}; invert::Bool=false)
+function _pad_properties_delta!(object::Dict{String,<:Any}, properties::Vector{String}, connections::Vector{Int}, wdg::Int, phases::Vector{Int}; invert::Bool=false)
     @assert(all(c in phases for c in connections))
     @assert(length(connections) in [2, 3], "A delta configuration has to have at least 2 or 3 connections!")
     @assert(length(phases)==3, "Padding only possible to a |phases|==3!")
@@ -515,9 +515,9 @@ end
 
 
 "initialization actions for unmapping"
-function _init_unmap_eng_obj!(data_eng::Dict{<:Any,<:Any}, eng_obj_type::String, map::Dict{String,<:Any})::Dict{String,Any}
+function _init_unmap_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, map::Dict{String,<:Any})::Dict{String,Any}
     if !haskey(data_eng, eng_obj_type)
-        data_eng[eng_obj_type] = Dict{Any,Any}()
+        data_eng[eng_obj_type] = Dict{String,Any}()
     end
 
     eng_obj = Dict{String,Any}()
@@ -677,7 +677,7 @@ end
 
 
 "Builds a Multinetwork"
-function _build_eng_multinetwork(data_eng::Dict{String,<:Any})::Dict{String,Any}
+function make_multinetwork(data_eng::Dict{String,<:Any})::Dict{String,Any}
     _data_eng = Dict{String,Any}(
         "time_series" => Dict{String,Any}(
             "step_mismatch" => false
@@ -685,7 +685,7 @@ function _build_eng_multinetwork(data_eng::Dict{String,<:Any})::Dict{String,Any}
     )
 
     for (eng_obj_type, eng_objs) in data_eng
-        if !(eng_obj_type in _pmd_eng_global_keys) && isa(eng_objs, Dict{<:Any,<:Any})
+        if !(eng_obj_type in _pmd_eng_global_keys) && isa(eng_objs, Dict{String,<:Any})
             for (id, eng_obj) in eng_objs
                 if haskey(eng_obj, "time_series")
                     _init_time_series!(_data_eng, eng_obj_type, id)
@@ -716,7 +716,7 @@ function _build_eng_multinetwork(data_eng::Dict{String,<:Any})::Dict{String,Any}
     data_eng_new = Dict{String,Any}()
     ### HACK to get make_multinetwork working
     for (eng_obj_type, eng_objs) in data_eng
-        if isa(eng_objs, Dict{Any,Any})
+        if isa(eng_objs, Dict{String,Any})
             eng_objs_new = Dict{String,Any}()
             for (k, v) in eng_objs
                 key_new = "$k"

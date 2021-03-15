@@ -4,7 +4,7 @@ function transform_solution(solution_math::Dict{String,<:Any}, data_math::Dict{S
     if ismultinetwork(data_math)
         solution_eng = Dict{String,Any}(
             "nw" => Dict{String,Any}(
-                k => Dict{Any,Any}() for k in keys(data_math["nw"])
+                k => Dict{String,Any}() for k in keys(data_math["nw"])
             )
         )
     else
@@ -47,9 +47,9 @@ end
 
 
 ""
-function _map_math2eng_voltage_source!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_voltage_source!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     if !haskey(data_eng, "voltage_source")
-        data_eng["voltage_source"] = Dict{Any,Any}()
+        data_eng["voltage_source"] = Dict{String,Any}()
     end
 
     eng_obj = _init_unmap_eng_obj!(data_eng, "voltage_source", map)
@@ -74,7 +74,7 @@ end
 
 
 ""
-function _map_math2eng_bus!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_bus!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "bus", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -87,7 +87,7 @@ end
 
 
 ""
-function _map_math2eng_load!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_load!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "load", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -99,7 +99,7 @@ function _map_math2eng_load!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String
 end
 
 
-function _map_math2eng_shunt!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_shunt!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "shunt", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -111,7 +111,7 @@ end
 end
 
 
-function _map_math2eng_generator!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_generator!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "generator", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -123,7 +123,7 @@ function _map_math2eng_generator!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{S
 end
 
 
-function _map_math2eng_solar!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_solar!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "solar", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -135,7 +135,7 @@ function _map_math2eng_solar!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{Strin
 end
 
 
-function _map_math2eng_storage!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_storage!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "storage", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -147,7 +147,7 @@ function _map_math2eng_storage!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{Str
 end
 
 
-function _map_math2eng_line!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_line!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "line", map)
     math_obj = _get_math_obj(data_math, map["to"])
 
@@ -159,7 +159,7 @@ function _map_math2eng_line!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String
 end
 
 
-function _map_math2eng_switch!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_switch!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "switch", map)
 
     prop_map = Dict{String,String}(
@@ -198,7 +198,7 @@ function _map_math2eng_switch!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{Stri
 end
 
 
-function _map_math2eng_transformer!(data_eng::Dict{<:Any,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+function _map_math2eng_transformer!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "transformer", map)
 
     trans_2wa_ids = [index for (comp_type, index) in split.(map["to"], ".", limit=2) if comp_type=="transformer"]

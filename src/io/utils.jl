@@ -805,7 +805,7 @@ end
 "add engineering data object to engineering data model"
 function _add_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, eng_obj_id::Any, eng_obj::Dict{String,<:Any})
     if !haskey(data_eng, eng_obj_type)
-        data_eng[eng_obj_type] = Dict{Any,Any}()
+        data_eng[eng_obj_type] = Dict{String,Any}()
     end
 
     if haskey(data_eng[eng_obj_type], eng_obj_id)

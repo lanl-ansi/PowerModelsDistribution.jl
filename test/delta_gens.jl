@@ -15,8 +15,8 @@
         end
 
         eng_2 = deepcopy(eng_1)
-        eng_2["load"] = Dict{Any,Any}()
-        eng_2["generator"] = Dict{Any,Any}()
+        eng_2["load"] = Dict{String,Any}()
+        eng_2["generator"] = Dict{String,Any}()
         for (id,load) in eng_1["load"]
             gen = Dict{String,Any}(
                 "source_id" => load["source_id"],

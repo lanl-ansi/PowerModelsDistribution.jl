@@ -355,7 +355,7 @@ end
 
 "Adds vsources to `data_eng` from `data_dss`"
 function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool, time_series::String="daily")
-    for (id, dss_obj) in get(data_dss, "vsource", Dict{<:Any,<:Any}())
+    for (id, dss_obj) in get(data_dss, "vsource", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "vsource")
         defaults = _create_vsource(id; _to_kwargs(dss_obj)...)
 

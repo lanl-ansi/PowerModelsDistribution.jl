@@ -137,7 +137,7 @@ end
 
 
 "converts engineering bus components into mathematical bus components"
-function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "bus", Dict{String,Any}())
         terminals = eng_obj["terminals"]
 
@@ -191,7 +191,7 @@ end
 
 
 "converts engineering lines into mathematical branches"
-function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "line", Dict{Any,Dict{String,Any}}())
         _apply_linecode!(eng_obj, data_eng)
 
@@ -235,7 +235,7 @@ end
 
 
 "converts engineering n-winding transformers into mathematical ideal 2-winding lossless transformer branches and impedance branches to represent the loss model"
-function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "transformer", Dict{Any,Dict{String,Any}}())
         # Build map first, so we can update it as we decompose the transformer
         push!(data_math["map"], Dict{String,Any}(
@@ -346,7 +346,7 @@ end
 
 
 "converts engineering switches into mathematical switches and (if neeed) impedance branches to represent loss model"
-function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     # TODO enable real switches (right now only using vitual lines)
     for (name, eng_obj) in get(data_eng, "switch", Dict{Any,Dict{String,Any}}())
         nphases = length(eng_obj["f_connections"])
@@ -432,7 +432,7 @@ end
 
 
 "converts engineering generic shunt components into mathematical shunt components"
-function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "shunt", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("shunt", name, eng_obj, length(data_math["shunt"])+1)
 
@@ -453,7 +453,7 @@ end
 
 
 "converts engineering load components into mathematical load components"
-function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "load", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("load", name, eng_obj, length(data_math["load"])+1)
 
@@ -478,7 +478,7 @@ end
 
 
 "converts engineering generators into mathematical generators"
-function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "generator", Dict{String,Any}())
         math_obj = _init_math_obj("generator", name, eng_obj, length(data_math["gen"])+1)
 
@@ -516,7 +516,7 @@ end
 
 
 "converts engineering solar components into mathematical generators"
-function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "solar", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("solar", name, eng_obj, length(data_math["gen"])+1)
 
@@ -545,7 +545,7 @@ end
 
 
 "converts engineering storage into mathematical storage"
-function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "storage", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("storage", name, eng_obj, length(data_math["storage"])+1)
 
@@ -582,8 +582,8 @@ end
 
 
 "converts engineering voltage sources into mathematical generators and (if needed) impedance branches to represent the loss model"
-function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
-    for (name, eng_obj) in get(data_eng, "voltage_source", Dict{Any,Any}())
+function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+    for (name, eng_obj) in get(data_eng, "voltage_source", Dict{String,Any}())
         nconductors = length(eng_obj["connections"])
         nphases = get(eng_obj, "configuration", WYE) == WYE && !get(data_eng, "is_kron_reduced", false) ? nconductors - 1 : nconductors
 
