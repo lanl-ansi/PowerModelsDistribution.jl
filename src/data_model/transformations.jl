@@ -424,3 +424,14 @@ function _update_bus_terminal_projections!(data_eng::Dict{String,<:Any}, bus_ter
         _pad_connections!(eng_obj, "terminals", terminals)
     end
 end
+
+
+"voltage angle bounds"
+function apply_voltage_angle_bounds!(eng::Dict{String,<:Any}, vad::Real)
+    if haskey(eng, "line")
+        for (_,line) in eng["line"]
+            line["vad_lb"] = fill(-vad, length(line["f_connections"]))
+            line["vad_ub"] = fill( vad, length(line["f_connections"]))
+        end
+    end
+end
