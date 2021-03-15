@@ -375,14 +375,14 @@ function ref_add_core!(ref::Dict{Symbol,Any})
         end
 
         ### filter out inactive components ###
-        nw_ref[:bus] = Dict(x for x in nw_ref[:bus] if (x.second["bus_type"] != pm_component_status_inactive["bus"]))
-        nw_ref[:load] = Dict(x for x in nw_ref[:load] if (x.second["status"] != pm_component_status_inactive["load"] && x.second["load_bus"] in keys(nw_ref[:bus])))
-        nw_ref[:shunt] = Dict(x for x in nw_ref[:shunt] if (x.second["status"] != pm_component_status_inactive["shunt"] && x.second["shunt_bus"] in keys(nw_ref[:bus])))
-        nw_ref[:gen] = Dict(x for x in nw_ref[:gen] if (x.second["gen_status"] != pm_component_status_inactive["gen"] && x.second["gen_bus"] in keys(nw_ref[:bus])))
-        nw_ref[:storage] = Dict(x for x in nw_ref[:storage] if (x.second["status"] != pm_component_status_inactive["storage"] && x.second["storage_bus"] in keys(nw_ref[:bus])))
-        nw_ref[:switch] = Dict(x for x in nw_ref[:switch] if (x.second["status"] != pm_component_status_inactive["switch"] && x.second["f_bus"] in keys(nw_ref[:bus]) && x.second["t_bus"] in keys(nw_ref[:bus])))
-        nw_ref[:branch] = Dict(x for x in nw_ref[:branch] if (x.second["br_status"] != pm_component_status_inactive["branch"] && x.second["f_bus"] in keys(nw_ref[:bus]) && x.second["t_bus"] in keys(nw_ref[:bus])))
-        nw_ref[:dcline] = Dict(x for x in nw_ref[:dcline] if (x.second["br_status"] != pm_component_status_inactive["dcline"] && x.second["f_bus"] in keys(nw_ref[:bus]) && x.second["t_bus"] in keys(nw_ref[:bus])))
+        nw_ref[:bus] = Dict(x for x in nw_ref[:bus] if (x.second["bus_type"] != pmd_component_status_inactive["bus"]))
+        nw_ref[:load] = Dict(x for x in nw_ref[:load] if (x.second["status"] != pmd_component_status_inactive["load"] && x.second["load_bus"] in keys(nw_ref[:bus])))
+        nw_ref[:shunt] = Dict(x for x in nw_ref[:shunt] if (x.second["status"] != pmd_component_status_inactive["shunt"] && x.second["shunt_bus"] in keys(nw_ref[:bus])))
+        nw_ref[:gen] = Dict(x for x in nw_ref[:gen] if (x.second["gen_status"] != pmd_component_status_inactive["gen"] && x.second["gen_bus"] in keys(nw_ref[:bus])))
+        nw_ref[:storage] = Dict(x for x in nw_ref[:storage] if (x.second["status"] != pmd_component_status_inactive["storage"] && x.second["storage_bus"] in keys(nw_ref[:bus])))
+        nw_ref[:switch] = Dict(x for x in nw_ref[:switch] if (x.second["status"] != pmd_component_status_inactive["switch"] && x.second["f_bus"] in keys(nw_ref[:bus]) && x.second["t_bus"] in keys(nw_ref[:bus])))
+        nw_ref[:branch] = Dict(x for x in nw_ref[:branch] if (x.second["br_status"] != pmd_component_status_inactive["branch"] && x.second["f_bus"] in keys(nw_ref[:bus]) && x.second["t_bus"] in keys(nw_ref[:bus])))
+        nw_ref[:dcline] = Dict(x for x in nw_ref[:dcline] if (x.second["br_status"] != pmd_component_status_inactive["dcline"] && x.second["f_bus"] in keys(nw_ref[:bus]) && x.second["t_bus"] in keys(nw_ref[:bus])))
 
 
         ### setup arcs from edges ###
@@ -463,30 +463,4 @@ function ref_add_core!(ref::Dict{Symbol,Any})
             nw_ref[:buspairs] = calc_buspair_parameters(nw_ref[:bus], nw_ref[:branch], nw_ref[:conductor_ids], haskey(nw_ref, :conductors))
         end
     end
-end
-
-
-"computes storage bounds"
-function ref_calc_storage_injection_bounds(storage, buses, conductor::Int)
-    injection_lb = Dict()
-    injection_ub = Dict()
-
-    for (i, strg) in storage
-        injection_lb[i] = -Inf
-        injection_ub[i] = Inf
-
-        if haskey(strg, "thermal_rating")
-            injection_lb[i] = max(injection_lb[i], -strg["thermal_rating"][conductor])
-            injection_ub[i] = min(injection_ub[i],  strg["thermal_rating"][conductor])
-        end
-
-        if haskey(strg, "current_rating")
-            vmax = buses[strg["storage_bus"]]["vmax"][conductor]
-
-            injection_lb[i] = max(injection_lb[i], -strg["current_rating"][conductor]*vmax)
-            injection_ub[i] = min(injection_ub[i],  strg["current_rating"][conductor]*vmax)
-        end
-    end
-
-    return injection_lb, injection_ub
 end
