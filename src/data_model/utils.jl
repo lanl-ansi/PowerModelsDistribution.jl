@@ -3,6 +3,87 @@ const _pmd_eng_global_keys = Set{String}([
 ])
 
 
+"Transforms single-conductor network data into multi-conductor data"
+function make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
+    if ismultinetwork(data)
+        for (i,nw_data) in data["nw"]
+            _make_multiconductor!(nw_data, conductors)
+        end
+    else
+         _make_multiconductor!(data, conductors)
+    end
+end
+
+
+""
+function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
+    if haskey(data, "conductors")
+        Memento.warn(_LOGGER, "skipping network that is already multiconductor")
+        return
+    end
+
+    data["conductors"] = conductors
+    data["data_model"] = MATHEMATICAL
+
+    for (key, item) in data
+        if isa(item, Dict{String,Any})
+            for (item_id, item_data) in item
+                if isa(item_data, Dict{String,Any})
+                    item_ref_data = Dict{String,Any}()
+                    for (param, value) in item_data
+                        if param in _conductorless
+                            item_ref_data[param] = value
+                        else
+                            if param in _conductor_matrix
+                                item_ref_data[param] = LinearAlgebra.diagm(0=>fill(value, conductors))
+                            else
+                                item_ref_data[param] = fill(value, conductors)
+                            end
+                        end
+                    end
+                    item[item_id] = item_ref_data
+                end
+            end
+        else
+            #root non-dict items
+        end
+    end
+
+    for (_, load) in data["load"]
+        load["model"] = POWER
+        load["configuration"] = WYE
+    end
+
+    for (_, gen) in data["gen"]
+        gen["configuration"] = WYE
+    end
+
+    for type in ["load", "gen", "storage", "shunt"]
+        if haskey(data, type)
+            for (_,obj) in data[type]
+                obj["connections"] = collect(1:conductors)
+            end
+        end
+    end
+
+    for type in ["branch", "transformer", "switch"]
+        if haskey(data, type)
+            for (_,obj) in data[type]
+                obj["f_connections"] = collect(1:conductors)
+                obj["t_connections"] = collect(1:conductors)
+            end
+        end
+    end
+
+    for (_,bus) in data["bus"]
+        bus["terminals"] = collect(1:conductors)
+        bus["grounded"] = fill(false, conductors)
+    end
+end
+
+
+
+
 "initializes the base math object of any type, and copies any one-to-one mappings"
 function _init_math_obj(obj_type::String, eng_id::Any, eng_obj::Dict{String,<:Any}, index::Int)::Dict{String,Any}
     math_obj = Dict{String,Any}(
