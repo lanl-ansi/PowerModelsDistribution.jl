@@ -26,6 +26,7 @@ const pmd_component_status = Dict(
     "storage" => "status",
     "switch" => "status",
     "branch" => "br_status",
+    "transformer" => "status",
 )
 
 "maps component types to inactive status values"
@@ -37,7 +38,7 @@ const pmd_component_status_inactive = Dict(
     "storage" => 0,
     "switch" => 0,
     "branch" => 0,
-    "dcline" => 0,
+    "transformer" => 0,
 )
 
 "PowerModelsDistribution wrapper for the InfrastructureModels `apply!` function."
