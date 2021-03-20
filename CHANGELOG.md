@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- fix bug for acr, ivr, acp and lindist3flow forms, allowing elements with single phase terminals/connections
 
 ## v0.10.2
 
