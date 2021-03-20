@@ -28,44 +28,41 @@
         sol = solve_mc_pf(case3_unbalanced, ACPPowerModel, ipopt_solver)
         sol_reduced = solve_mc_pf(case3_reduced, ACPPowerModel, ipopt_solver)
         for b in ["1", "2"]
-            @test isapprox.(sol["solution"]["bus"][b]["vm"], sol_reduced["solution"]["bus"][b]["vm"])
-            @test isapprox.(sol["solution"]["bus"][b]["va"], sol_reduced["solution"]["bus"][b]["va"])
+            @test all(isapprox.(sol["solution"]["bus"][b]["vm"], sol_reduced["solution"]["bus"][b]["vm"]))
+            @test all(isapprox.(sol["solution"]["bus"][b]["va"], sol_reduced["solution"]["bus"][b]["va"]))
         end
-        @test isapprox.(sol["solution"]["bus"]["3"]["vm"][2], sol_reduced["solution"]["bus"]["3"]["vm"])
-        @test isapprox.(sol["solution"]["bus"]["3"]["va"][2], sol_reduced["solution"]["bus"]["3"]["va"])
+        @test isapprox(sol["solution"]["bus"]["3"]["vm"][2], sol_reduced["solution"]["bus"]["3"]["vm"][1])
+        @test isapprox(sol["solution"]["bus"]["3"]["va"][2], sol_reduced["solution"]["bus"]["3"]["va"][1])
     end
 
     @testset "sc acr pf" begin
         sol = solve_mc_pf(case3_unbalanced, ACRPowerModel, ipopt_solver)
         sol_reduced = solve_mc_pf(case3_reduced, ACRPowerModel, ipopt_solver)
         for b in ["1", "2"]
-            @test isapprox.(sol["solution"]["bus"][b]["vr"], sol_reduced["solution"]["bus"][b]["vr"])
-            @test isapprox.(sol["solution"]["bus"][b]["vi"], sol_reduced["solution"]["bus"][b]["vi"])
+            @test all(isapprox.(sol["solution"]["bus"][b]["vr"], sol_reduced["solution"]["bus"][b]["vr"]))
+            @test all(isapprox.(sol["solution"]["bus"][b]["vi"], sol_reduced["solution"]["bus"][b]["vi"]))
         end
-        @test isapprox.(sol["solution"]["bus"]["3"]["vr"][2], sol_reduced["solution"]["bus"]["3"]["vr"])
-        @test isapprox.(sol["solution"]["bus"]["3"]["vi"][2], sol_reduced["solution"]["bus"]["3"]["vi"])
+        @test isapprox(sol["solution"]["bus"]["3"]["vr"][2], sol_reduced["solution"]["bus"]["3"]["vr"][1])
+        @test isapprox(sol["solution"]["bus"]["3"]["vi"][2], sol_reduced["solution"]["bus"]["3"]["vi"][1])
     end
 
     @testset "sc ivr pf" begin
         sol = solve_mc_pf(case3_unbalanced, IVRPowerModel, ipopt_solver)
         sol_reduced = solve_mc_pf(case3_reduced, IVRPowerModel, ipopt_solver)
+        for b in ["1", "2"]
+            @test all(isapprox.(sol["solution"]["bus"][b]["vr"], sol_reduced["solution"]["bus"][b]["vr"]))
+            @test all(isapprox.(sol["solution"]["bus"][b]["vi"], sol_reduced["solution"]["bus"][b]["vi"]))
+        end
+        @test isapprox(sol["solution"]["bus"]["3"]["vr"][2], sol_reduced["solution"]["bus"]["3"]["vr"][1])
+        @test isapprox(sol["solution"]["bus"]["3"]["vi"][2], sol_reduced["solution"]["bus"]["3"]["vi"][1])
     end
 
     @testset "sc LinDist3Flow pf" begin
         sol = solve_mc_pf(case3_unbalanced, LPUBFDiagPowerModel, ipopt_solver)
         sol_reduced = solve_mc_pf(case3_reduced, LPUBFDiagPowerModel, ipopt_solver)
+        for b in ["1", "2"]
+            @test all(isapprox.(sol["solution"]["bus"][b]["w"], sol_reduced["solution"]["bus"][b]["w"]))
+        end
+        @test isapprox(sol["solution"]["bus"]["3"]["w"][2], sol_reduced["solution"]["bus"]["3"]["w"][1])
     end
-    # @testset "sc SOCNLPUBF pf" begin
-    #     sol = solve_mc_pf(case3_unbalanced, SOCNLPUBFPowerModel, ipopt_solver)
-    #     sol_reduced = solve_mc_pf(case3_reduced, SOCNLPUBFPowerModel, ipopt_solver)
-    # end
-    # @testset "sc SDPUBF pf" begin
-    #     sol = solve_mc_pf(case3_unbalanced, SDPUBFPowerModel, scs_solver)
-    #     sol_reduced = solve_mc_pf(case3_reduced, SDPUBFPowerModel, scs_solver)
-    # end
-    # @testset "sc SOCConicUBF pf" begin
-    #     sol = solve_mc_pf(case3_unbalanced, SOCConicUBFPowerModel, scs_solver)
-    #     sol_reduced = solve_mc_pf(case3_reduced, SOCConicUBFPowerModel, scs_solver)
-    # end
-
 end

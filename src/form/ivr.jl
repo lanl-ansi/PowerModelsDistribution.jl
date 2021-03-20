@@ -141,7 +141,7 @@ end
 
 
 "Defines how current distributes over series and shunt impedances of a pi-model branch"
-function constraint_mc_current_from(pm::_PM.AbstractIVRModel, nw::Int, f_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real})
+function constraint_mc_current_from(pm::_PM.AbstractIVRModel, nw::Int, f_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, g_sh_fr::Array{<:Real}, b_sh_fr::Array{<:Real})
     vr_fr = [var(pm, nw, :vr, f_bus)[c] for c in f_connections]
     vi_fr = [var(pm, nw, :vi, f_bus)[c] for c in f_connections]
 
@@ -151,13 +151,18 @@ function constraint_mc_current_from(pm::_PM.AbstractIVRModel, nw::Int, f_bus::In
     cr_fr =  [var(pm, nw, :cr, f_idx)[c] for c in f_connections]
     ci_fr =  [var(pm, nw, :ci, f_idx)[c] for c in f_connections]
 
-    JuMP.@constraint(pm.model, cr_fr .== (csr_fr + g_sh_fr*vr_fr - b_sh_fr*vi_fr))
-    JuMP.@constraint(pm.model, ci_fr .== (csi_fr + g_sh_fr*vi_fr + b_sh_fr*vr_fr))
+    if size(b_sh_fr)[1] == 1
+        JuMP.@constraint(pm.model, cr_fr .== (csr_fr + g_sh_fr*transpose(vr_fr) - b_sh_fr*transpose(vi_fr)))
+        JuMP.@constraint(pm.model, ci_fr .== (csi_fr + g_sh_fr*transpose(vi_fr) + b_sh_fr*transpose(vr_fr)))
+    else
+        JuMP.@constraint(pm.model, cr_fr .== (csr_fr + g_sh_fr*vr_fr - b_sh_fr*vi_fr))
+        JuMP.@constraint(pm.model, ci_fr .== (csi_fr + g_sh_fr*vi_fr + b_sh_fr*vr_fr))
+    end
 end
 
 
 "Defines how current distributes over series and shunt impedances of a pi-model branch"
-function constraint_mc_current_to(pm::_PM.AbstractIVRModel, n::Int, t_bus, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, g_sh_to::Matrix{<:Real}, b_sh_to::Matrix{<:Real})
+function constraint_mc_current_to(pm::_PM.AbstractIVRModel, n::Int, t_bus, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, g_sh_to::Array{<:Real}, b_sh_to::Array{<:Real})
     vr_to = [var(pm, n, :vr, t_bus)[c] for c in t_connections]
     vi_to = [var(pm, n, :vi, t_bus)[c] for c in t_connections]
 
@@ -167,13 +172,18 @@ function constraint_mc_current_to(pm::_PM.AbstractIVRModel, n::Int, t_bus, f_idx
     cr_to = [var(pm, n, :cr, t_idx)[c] for c in t_connections]
     ci_to = [var(pm, n, :ci, t_idx)[c] for c in t_connections]
 
-    JuMP.@constraint(pm.model, cr_to .== csr_to + g_sh_to*vr_to - b_sh_to*vi_to)
-    JuMP.@constraint(pm.model, ci_to .== csi_to + g_sh_to*vi_to + b_sh_to*vr_to)
+    if size(b_sh_to)[1] == 1
+        JuMP.@constraint(pm.model, cr_to .== csr_to + g_sh_to*transpose(vr_to) - b_sh_to*transpose(vi_to))
+        JuMP.@constraint(pm.model, ci_to .== csi_to + g_sh_to*transpose(vi_to) + b_sh_to*transpose(vr_to))
+    else
+        JuMP.@constraint(pm.model, cr_to .== csr_to + g_sh_to*vr_to - b_sh_to*vi_to)
+        JuMP.@constraint(pm.model, ci_to .== csi_to + g_sh_to*vi_to + b_sh_to*vr_to)
+    end
 end
 
 
 "Defines voltage drop over a branch, linking from and to side complex voltage"
-function constraint_mc_bus_voltage_drop(pm::_PM.AbstractIVRModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, r::Matrix{<:Real}, x::Matrix{<:Real})
+function constraint_mc_bus_voltage_drop(pm::_PM.AbstractIVRModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, r::Array{<:Real}, x::Array{<:Real})
     vr_fr = [var(pm, nw, :vr, f_bus)[c] for c in f_connections]
     vi_fr = [var(pm, nw, :vi, f_bus)[c] for c in f_connections]
 
@@ -186,8 +196,13 @@ function constraint_mc_bus_voltage_drop(pm::_PM.AbstractIVRModel, nw::Int, i::In
     r = r
     x = x
 
-    JuMP.@constraint(pm.model, vr_to .== vr_fr - r*csr_fr + x*csi_fr)
-    JuMP.@constraint(pm.model, vi_to .== vi_fr - r*csi_fr - x*csr_fr)
+    if size(r)[1] == 1 
+        JuMP.@constraint(pm.model, vr_to .== vr_fr - r*transpose(csr_fr) + x*transpose(csi_fr))
+        JuMP.@constraint(pm.model, vi_to .== vi_fr - r*transpose(csi_fr) - x*transpose(csr_fr))
+    else
+        JuMP.@constraint(pm.model, vr_to .== vr_fr - r*csr_fr + x*csi_fr)
+        JuMP.@constraint(pm.model, vi_to .== vi_fr - r*csi_fr - x*csr_fr)
+    end
 end
 
 

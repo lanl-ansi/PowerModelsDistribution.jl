@@ -25,7 +25,7 @@ end
 
 
 "Defines branch flow model power flow equations"
-function constraint_mc_power_losses(pm::LPUBFDiagModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, r::Matrix{<:Real}, x::Matrix{<:Real}, g_sh_fr::Matrix{<:Real}, g_sh_to::Matrix{<:Real}, b_sh_fr::Matrix{<:Real}, b_sh_to::Matrix{<:Real})
+function constraint_mc_power_losses(pm::LPUBFDiagModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, r::Array{<:Real}, x::Array{<:Real}, g_sh_fr::Array{<:Real}, g_sh_to::Array{<:Real}, b_sh_fr::Array{<:Real}, b_sh_to::Array{<:Real})
     p_fr = var(pm, nw, :p)[f_idx]
     q_fr = var(pm, nw, :q)[f_idx]
 
@@ -51,7 +51,7 @@ end
 
 
 "Defines voltage drop over a branch, linking from and to side voltage"
-function constraint_mc_model_voltage_magnitude_difference(pm::LPUBFDiagModel, n::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, r::Matrix{<:Real}, x::Matrix{<:Real}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real})
+function constraint_mc_model_voltage_magnitude_difference(pm::LPUBFDiagModel, n::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, r::Array{<:Real}, x::Array{<:Real}, g_sh_fr::Array{<:Real}, b_sh_fr::Array{<:Real})
     f_connections = ref(pm, n, :branch, i)["f_connections"]
     t_connections = ref(pm, n, :branch, i)["t_connections"]
 
@@ -61,9 +61,14 @@ function constraint_mc_model_voltage_magnitude_difference(pm::LPUBFDiagModel, n:
     p_fr = var(pm, n, :p)[f_idx]
     q_fr = var(pm, n, :q)[f_idx]
 
-    p_s_fr = [p_fr[fc]- diag(g_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]
-    q_s_fr = [q_fr[fc]+ diag(b_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]
-
+    if size(f_connections)[1] == 1 
+        p_s_fr = [p_fr[fc]- diagm(g_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]
+        q_s_fr = [q_fr[fc]+ diagm(b_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]
+    else
+        p_s_fr = [p_fr[fc]- diag(g_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]
+        q_s_fr = [q_fr[fc]+ diag(b_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]    
+    end
+    
     alpha = exp(-im*2*pi/3)
     Gamma = [1 alpha^2 alpha; alpha 1 alpha^2; alpha^2 alpha 1][f_connections,t_connections]
 
@@ -75,6 +80,7 @@ function constraint_mc_model_voltage_magnitude_difference(pm::LPUBFDiagModel, n:
     for (idx, (fc, tc)) in enumerate(zip(f_connections, t_connections))
         JuMP.@constraint(pm.model, w_to[tc]== w_fr[fc] - sum(MP[idx,j]*p_s_fr[j] for j in 1:N) - sum(MQ[idx,j]*q_s_fr[j] for j in 1:N))
     end
+
 end
 
 

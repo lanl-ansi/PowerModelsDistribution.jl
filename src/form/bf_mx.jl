@@ -142,7 +142,7 @@ end
 
 
 "Defines branch flow model power flow equations"
-function constraint_mc_power_losses(pm::AbstractUBFModels, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, r::Matrix{<:Real}, x::Matrix{<:Real}, g_sh_fr::Matrix{<:Real}, g_sh_to::Matrix{<:Real}, b_sh_fr::Matrix{<:Real}, b_sh_to::Matrix{<:Real})
+function constraint_mc_power_losses(pm::AbstractUBFModels, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, r::Array{<:Real}, x::Array{<:Real}, g_sh_fr::Array{<:Real}, g_sh_to::Array{<:Real}, b_sh_fr::Array{<:Real}, b_sh_to::Array{<:Real})
     fr_bus_terminals = ref(pm, nw, :bus, f_bus, "terminals")
     to_bus_terminals = ref(pm, nw, :bus, t_bus, "terminals")
 
@@ -188,7 +188,7 @@ end
 
 
 "Defines voltage drop over a branch, linking from and to side voltage"
-function constraint_mc_model_voltage_magnitude_difference(pm::AbstractUBFModels, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, r::Matrix{<:Real}, x::Matrix{<:Real}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real})
+function constraint_mc_model_voltage_magnitude_difference(pm::AbstractUBFModels, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, r::Array{<:Real}, x::Array{<:Real}, g_sh_fr::Array{<:Real}, b_sh_fr::Array{<:Real})
     fr_bus_terminals = ref(pm, nw, :bus, f_bus, "terminals")
     to_bus_terminals = ref(pm, nw, :bus, t_bus, "terminals")
 

@@ -547,29 +547,44 @@ s_fr = (vr_fr+im*vi_fr).*([G*vr_fr-G*vr_to-B*vi_fr+B*vi_to]-im*[G*vi_fr-G*vi_to+
 """
 function constraint_mc_ohms_yt_from(pm::_PM.AbstractACRModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Array{<:Real}, B::Array{<:Real}, G_fr::Array{<:Real}, B_fr::Array{<:Real})
 
-    f_conn = intersect(Set(f_connections), Set(t_connections))
-    t_conn = intersect(Set(f_connections), Set(t_connections))
-    p_fr  = [var(pm, nw, :p, f_idx)[t] for t in f_conn]
-    q_fr  = [var(pm, nw, :q, f_idx)[t] for t in f_conn]
-    vr_fr = [var(pm, nw, :vr, f_bus)[t] for t in f_conn]
-    vr_to = [var(pm, nw, :vr, t_bus)[t] for t in t_conn]
-    vi_fr = [var(pm, nw, :vi, f_bus)[t] for t in f_conn]
-    vi_to = [var(pm, nw, :vi, t_bus)[t] for t in t_conn]
+    p_fr  = [var(pm, nw, :p, f_idx)[t] for t in f_connections]
+    q_fr  = [var(pm, nw, :q, f_idx)[t] for t in f_connections]
+    vr_fr = [var(pm, nw, :vr, f_bus)[t] for t in f_connections]
+    vr_to = [var(pm, nw, :vr, t_bus)[t] for t in t_connections]
+    vi_fr = [var(pm, nw, :vi, f_bus)[t] for t in f_connections]
+    vi_to = [var(pm, nw, :vi, t_bus)[t] for t in t_connections]
 
-    JuMP.@constraint(pm.model,
-    p_fr .==  vr_fr.*(G.*vr_fr.-G.*vr_to-B.*vi_fr+B.*vi_to)
-            +vi_fr.*(G.*vi_fr-G.*vi_to+B.*vr_fr-B.*vr_to)
-            # shunt
-            +vr_fr.*(G_fr.*vr_fr-B_fr.*vi_fr)
-            +vi_fr.*(G_fr.*vi_fr+B_fr.*vr_fr)
+    if size(B)[1] == 1 
+        JuMP.@constraint(pm.model,
+        p_fr .==  vr_fr.*(G*transpose(vr_fr)-G*transpose(vr_to)-B*transpose(vi_fr)+B*transpose(vi_to))
+                +vi_fr.*(G*transpose(vi_fr)-G*transpose(vi_to)+B*transpose(vr_fr)-B*transpose(vr_to))
+                # shunt
+                +vr_fr.*(G_fr*transpose(vr_fr)-B_fr*transpose(vi_fr))
+                +vi_fr.*(G_fr*transpose(vi_fr)+B_fr*transpose(vr_fr))
         )
-    JuMP.@constraint(pm.model,
-            q_fr .== -vr_fr.*(G.*vi_fr-G.*vi_to+B.*vr_fr-B.*vr_to)
-                    +vi_fr.*(G.*vr_fr-G.*vr_to-B.*vi_fr+B.*vi_to)
-                    # shunt
-                    -vr_fr.*(G_fr.*vi_fr+B_fr.*vr_fr)
-                    +vi_fr.*(G_fr.*vr_fr-B_fr.*vi_fr)
-    )    
+        JuMP.@constraint(pm.model,
+                q_fr .== -vr_fr.*(G*transpose(vi_fr)-G*transpose(vi_to)+B*transpose(vr_fr)-B*transpose(vr_to))
+                        +vi_fr.*(G*transpose(vr_fr)-G*transpose(vr_to)-B*transpose(vi_fr)+B*transpose(vi_to))
+                        # shunt
+                        -vr_fr.*(G_fr*transpose(vi_fr)+B_fr*transpose(vr_fr))
+                        +vi_fr.*(G_fr*transpose(vr_fr)-B_fr*transpose(vi_fr))
+        )
+    else
+        JuMP.@constraint(pm.model,
+        p_fr .==  vr_fr.*(G*vr_fr-G*vr_to-B*vi_fr+B*vi_to)
+                +vi_fr.*(G*vi_fr-G*vi_to+B*vr_fr-B*vr_to)
+                # shunt
+                +vr_fr.*(G_fr*vr_fr-B_fr*vi_fr)
+                +vi_fr.*(G_fr*vi_fr+B_fr*vr_fr)
+        )
+        JuMP.@constraint(pm.model,
+                q_fr .== -vr_fr.*(G*vi_fr-G*vi_to+B*vr_fr-B*vr_to)
+                        +vi_fr.*(G*vr_fr-G*vr_to-B*vi_fr+B*vi_to)
+                        # shunt
+                        -vr_fr.*(G_fr*vi_fr+B_fr*vr_fr)
+                        +vi_fr.*(G_fr*vr_fr-B_fr*vi_fr)
+        )
+    end
 
 end
 
