@@ -61,13 +61,9 @@ function constraint_mc_model_voltage_magnitude_difference(pm::LPUBFDiagModel, n:
     p_fr = var(pm, n, :p)[f_idx]
     q_fr = var(pm, n, :q)[f_idx]
 
-    if size(f_connections)[1] == 1 
-        p_s_fr = [p_fr[fc]- diagm(g_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]
-        q_s_fr = [q_fr[fc]+ diagm(b_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]
-    else
-        p_s_fr = [p_fr[fc]- diag(g_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]
-        q_s_fr = [q_fr[fc]+ diag(b_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]    
-    end
+    dg = size(f_connections)[1] == 1 ? :diagm : :diag 
+    p_s_fr = [p_fr[fc]- eval.(dg)(g_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]
+    q_s_fr = [q_fr[fc]+ eval.(dg)(b_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]
     
     alpha = exp(-im*2*pi/3)
     Gamma = [1 alpha^2 alpha; alpha 1 alpha^2; alpha^2 alpha 1][f_connections,t_connections]
