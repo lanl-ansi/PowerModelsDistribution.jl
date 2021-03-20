@@ -17,8 +17,8 @@
     case3_reduced["bus"]["3"]["vmin"] = [0.0]
     case3_reduced["bus"]["3"]["vmax"] = [Inf]
     case3_reduced["branch"]["1"]["t_connections"], case3_reduced["branch"]["1"]["f_connections"] = [2], [2]
-    case3_reduced["branch"]["1"]["br_r"] = case3_reduced["branch"]["1"]["br_r"][2,2]
-    case3_reduced["branch"]["1"]["br_x"] = case3_reduced["branch"]["1"]["br_x"][2,2]
+    case3_reduced["branch"]["1"]["br_r"] = [case3_reduced["branch"]["1"]["br_r"][2,2]]
+    case3_reduced["branch"]["1"]["br_x"] = [case3_reduced["branch"]["1"]["br_x"][2,2]]
     case3_reduced["branch"]["1"]["g_to"] = [case3_reduced["branch"]["1"]["g_to"][1]]
     case3_reduced["branch"]["1"]["g_fr"] = [case3_reduced["branch"]["1"]["g_fr"][1]]
     case3_reduced["branch"]["1"]["b_to"] = [case3_reduced["branch"]["1"]["b_to"][1]]
@@ -34,14 +34,23 @@
         @test isapprox.(sol["solution"]["bus"]["3"]["vm"][2], sol_reduced["solution"]["bus"]["3"]["vm"])
         @test isapprox.(sol["solution"]["bus"]["3"]["va"][2], sol_reduced["solution"]["bus"]["3"]["va"])
     end
+
     @testset "sc acr pf" begin
         sol = solve_mc_pf(case3_unbalanced, ACRPowerModel, ipopt_solver)
         sol_reduced = solve_mc_pf(case3_reduced, ACRPowerModel, ipopt_solver)
+        for b in ["1", "2"]
+            @test isapprox.(sol["solution"]["bus"][b]["vr"], sol_reduced["solution"]["bus"][b]["vr"])
+            @test isapprox.(sol["solution"]["bus"][b]["vi"], sol_reduced["solution"]["bus"][b]["vi"])
+        end
+        @test isapprox.(sol["solution"]["bus"]["3"]["vr"][2], sol_reduced["solution"]["bus"]["3"]["vr"])
+        @test isapprox.(sol["solution"]["bus"]["3"]["vi"][2], sol_reduced["solution"]["bus"]["3"]["vi"])
     end
+
     @testset "sc ivr pf" begin
         sol = solve_mc_pf(case3_unbalanced, IVRPowerModel, ipopt_solver)
         sol_reduced = solve_mc_pf(case3_reduced, IVRPowerModel, ipopt_solver)
     end
+
     @testset "sc LinDist3Flow pf" begin
         sol = solve_mc_pf(case3_unbalanced, LPUBFDiagPowerModel, ipopt_solver)
         sol_reduced = solve_mc_pf(case3_reduced, LPUBFDiagPowerModel, ipopt_solver)

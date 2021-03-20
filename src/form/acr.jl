@@ -545,10 +545,8 @@ s_fr = v_fr.*conj(Y*(v_fr-v_to))
 s_fr = (vr_fr+im*vi_fr).*(G-im*B)*([vr_fr-vr_to]-im*[vi_fr-vi_to])
 s_fr = (vr_fr+im*vi_fr).*([G*vr_fr-G*vr_to-B*vi_fr+B*vi_to]-im*[G*vi_fr-G*vi_to+B*vr_fr-B*vr_to])
 """
-function constraint_mc_ohms_yt_from(pm::_PM.AbstractACRModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
-    display("connections are")
-    display(f_connections)
-    display(t_connections)
+function constraint_mc_ohms_yt_from(pm::_PM.AbstractACRModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Array{<:Real}, B::Array{<:Real}, G_fr::Array{<:Real}, B_fr::Array{<:Real})
+
     f_conn = intersect(Set(f_connections), Set(t_connections))
     t_conn = intersect(Set(f_connections), Set(t_connections))
     p_fr  = [var(pm, nw, :p, f_idx)[t] for t in f_conn]
@@ -558,29 +556,21 @@ function constraint_mc_ohms_yt_from(pm::_PM.AbstractACRModel, nw::Int, f_bus::In
     vi_fr = [var(pm, nw, :vi, f_bus)[t] for t in f_conn]
     vi_to = [var(pm, nw, :vi, t_bus)[t] for t in t_conn]
 
-    display("p_fr is $p_fr")
-    display("q_fr is $q_fr")
-    display("vr_fr is $vr_fr")
-    display("vr_to is $vr_to")
-    display("vi_fr is $vi_fr")
-    display("vi_to is $vi_to")
-    display("G is $G")
-    display("B is $B")
+    JuMP.@constraint(pm.model,
+    p_fr .==  vr_fr.*(G.*vr_fr.-G.*vr_to-B.*vi_fr+B.*vi_to)
+            +vi_fr.*(G.*vi_fr-G.*vi_to+B.*vr_fr-B.*vr_to)
+            # shunt
+            +vr_fr.*(G_fr.*vr_fr-B_fr.*vi_fr)
+            +vi_fr.*(G_fr.*vi_fr+B_fr.*vr_fr)
+        )
+    JuMP.@constraint(pm.model,
+            q_fr .== -vr_fr.*(G.*vi_fr-G.*vi_to+B.*vr_fr-B.*vr_to)
+                    +vi_fr.*(G.*vr_fr-G.*vr_to-B.*vi_fr+B.*vi_to)
+                    # shunt
+                    -vr_fr.*(G_fr.*vi_fr+B_fr.*vr_fr)
+                    +vi_fr.*(G_fr.*vr_fr-B_fr.*vi_fr)
+    )    
 
-    JuMP.@constraint(pm.model,
-            p_fr .==  vr_fr.*(G*vr_fr-G*vr_to-B*vi_fr+B*vi_to)
-                     +vi_fr.*(G*vi_fr-G*vi_to+B*vr_fr-B*vr_to)
-                     # shunt
-                     +vr_fr.*(G_fr*vr_fr-B_fr*vi_fr)
-                     +vi_fr.*(G_fr*vi_fr+B_fr*vr_fr)
-    )
-    JuMP.@constraint(pm.model,
-            q_fr .== -vr_fr.*(G*vi_fr-G*vi_to+B*vr_fr-B*vr_to)
-                     +vi_fr.*(G*vr_fr-G*vr_to-B*vi_fr+B*vi_to)
-                     # shunt
-                     -vr_fr.*(G_fr*vi_fr+B_fr*vr_fr)
-                     +vi_fr.*(G_fr*vr_fr-B_fr*vi_fr)
-    )
 end
 
 
@@ -592,7 +582,7 @@ p[t_idx] ==  (g+g_to)*v[t_bus]^2 + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[t_bu
 q[t_idx] == -(b+b_to)*v[t_bus]^2 - (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[f_bus]-t[t_bus])) + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus]))
 ```
 """
-function constraint_mc_ohms_yt_to(pm::_PM.AbstractACRModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix, B::Matrix, G_to::Matrix, B_to::Matrix)
+function constraint_mc_ohms_yt_to(pm::_PM.AbstractACRModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Array, B::Array, G_to::Array, B_to::Array)
     constraint_mc_ohms_yt_from(pm, nw, t_bus, f_bus, t_idx, f_idx, t_connections, f_connections, G, B, G_to, B_to)
 end
 
