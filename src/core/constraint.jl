@@ -200,19 +200,3 @@ function constraint_storage_complementarity_mi(pm::AbstractMCPowerModel, n::Int,
     JuMP.@constraint(pm.model, sc_on*charge_ub >= sc)
     JuMP.@constraint(pm.model, sd_on*discharge_ub >= sd)
 end
-
-
-""
-function constraint_storage_complementarity_nl(pm::AbstractMCPowerModel, i::Int; nw::Int=nw_id_default)
-    constraint_storage_complementarity_nl(pm, nw, i)
-end
-
-
-""
-function constraint_storage_complementarity_mi(pm::AbstractMCPowerModel, i::Int; nw::Int=nw_id_default)
-    storage = ref(pm, nw, :storage, i)
-    charge_ub = storage["charge_rating"]
-    discharge_ub = storage["discharge_rating"]
-
-    constraint_storage_complementarity_mi(pm, nw, i, charge_ub, discharge_ub)
-end
