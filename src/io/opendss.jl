@@ -807,8 +807,8 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             "qs_ub" =>  fill(defaults["kvar"] / nphases, nphases),
             "rs" => fill(defaults["%r"] / nphases / 100.0, nphases),
             "xs" => fill(defaults["%x"] / nphases / 100.0, nphases),
-            "pex" => defaults["%idlingkw"] .* defaults["kwrated"],
-            "qex" => defaults["%idlingkvar"] .* defaults["kvar"],
+            "pex" => defaults["%idlingkw"] ./ 100.0 .* defaults["kwrated"],
+            "qex" => defaults["%idlingkvar"] ./ 100.0 .* defaults["kvar"],
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
             "source_id" => "storage.$id",
         )

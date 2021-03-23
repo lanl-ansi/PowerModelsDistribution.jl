@@ -477,6 +477,8 @@ function _parse_buscoords_file(file::AbstractString)::Dict{String,Any}
 
     buscoords = Dict{String,Dict{String,Any}}()
     for line in lines
+        line = _strip_comments(line)
+
         bus, x, y = split(line, regex; limit=3)
         buscoords[lowercase(strip(bus, [',']))] = Dict{String,Any}("x"=>parse(Float64, strip(x, [','])), "y"=>parse(Float64, strip(y, [',', '\r'])))
     end
