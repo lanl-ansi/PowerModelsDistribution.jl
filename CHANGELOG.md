@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fix bug in parsing of storage power loss parameters, which were derived from values specified in percent, not decimal
 - Add support for %stored to be used to derive kwhstored if not specified explicitly
 - Fix bug in buscoords parser where comments at the end of the line were not stripped
 
