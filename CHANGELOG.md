@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Fix bug in buscoords parser where comments at the end of the line were not stripped
 
 ## v0.10.2
 
