@@ -2,6 +2,7 @@
 
 ## staged
 
+- Add support for %stored to be used to derive kwhstored if not specified explicitly
 - Fix bug in buscoords parser where comments at the end of the line were not stripped
 
 ## v0.10.2
