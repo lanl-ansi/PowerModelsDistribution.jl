@@ -766,7 +766,7 @@ supports components and options, but not commands, e.g. "plot" or "solve".
 Will also parse files defined inside of the originating DSS file via the
 "compile", "redirect" or "buscoords" commands.
 """
-function parse_dss(io::IOStream)::Dict{String,Any}
+function parse_dss(io::IO)::Dict{String,Any}
     filename = match(r"^<file\s(.+)>$", io.name).captures[1]
     current_file = split(filename, "/")[end]
     path = join(split(filename, '/')[1:end-1], '/')

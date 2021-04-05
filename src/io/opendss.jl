@@ -830,7 +830,7 @@ end
 
 
 "Parses a DSS file into a PowerModels usable format"
-function parse_opendss(io::IOStream;
+function parse_opendss(io::IO;
     import_all::Bool=false,
     bank_transformers::Bool=true,
     time_series::String="daily"
