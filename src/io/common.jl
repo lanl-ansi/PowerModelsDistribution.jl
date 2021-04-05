@@ -4,7 +4,7 @@
 Parses the IOStream of a file into a PowerModelsDistribution data structure.
 """
 function parse_file(
-    io::IO, filetype::AbstractString="json";
+    io::IO, filetype::Union{AbstractString,Missing}=missing;
     data_model::DataModel=ENGINEERING,
     import_all::Bool=false,
     bank_transformers::Bool=true,
@@ -13,6 +13,15 @@ function parse_file(
     kron_reduced::Bool=true,
     time_series::String="daily"
         )::Dict{String,Any}
+
+    if ismissing(filetype)
+        try
+            raw_json = JSON.parse(io)
+            filetype = "json"
+        catch err
+            filetype = "dss"
+        end
+    end
 
     if filetype == "dss"
         data_eng = parse_opendss(io;

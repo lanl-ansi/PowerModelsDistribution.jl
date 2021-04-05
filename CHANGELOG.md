@@ -2,6 +2,8 @@
 
 ## staged
 
+- Add support for filetype autodetection, will be slower for large files, and filetype is better to explicitly specify in those cases
+- Fix overly restrictive type enforcement in parse_dss and parse_opendss from IOStream to IO
 - Fix bug in parsing of properties starting with % on pvsystem and storage objects
 - Fix bug in parsing of storage kva, kvar, and pf on storage objects
 
