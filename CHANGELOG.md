@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fix bug in parsing of properties starting with % on pvsystem and storage objects
 - Fix bug in parsing of storage kva, kvar, and pf on storage objects
 
 ## v0.10.3
