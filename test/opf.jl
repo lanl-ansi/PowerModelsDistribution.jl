@@ -54,9 +54,9 @@
             @test all(isapprox.(calc_va("2"), -0.0538204; atol=1e-5))
         end
 
-        @testset "5-bus storage matpower mn acp mld" begin
+        @testset "5-bus storage matpower mn acr mld" begin
             case5_strg_mn = InfrastructureModels.replicate(case5_strg, 3, Set(["per_unit"]))
-            result = solve_mn_mc_opf(case5_strg_mn, ACPPowerModel, ipopt_solver)
+            result = solve_mn_mc_opf(case5_strg_mn, ACRPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test result["objective"] >= 45522.096*3
