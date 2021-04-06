@@ -14,9 +14,10 @@ function parse_file(
     time_series::String="daily"
         )::Dict{String,Any}
 
+    pmd_data = Dict{String,Any}()
     if ismissing(filetype)
         try
-            raw_json = JSON.parse(io)
+            pmd_data = parse_json(io; validate=false)
             filetype = "json"
         catch err
             filetype = "dss"
@@ -52,8 +53,6 @@ function parse_file(
             return data_eng
         end
     elseif filetype == "json"
-        pmd_data = parse_json(io; validate=false)
-
         if pmd_data["data_model"] != data_model && data_model == ENGINEERING
             return transform_data_model(pmd_data;
                 kron_reduced=kron_reduced,
