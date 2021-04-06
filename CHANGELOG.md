@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Add support for parsing of spectrum dss objects
 
 ## v0.10.4
 

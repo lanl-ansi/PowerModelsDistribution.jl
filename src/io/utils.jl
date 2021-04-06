@@ -30,7 +30,7 @@ const _dss_monitor_objects = Vector{String}([
 const _dss_supported_components = Vector{String}([
     "line", "linecode", "load", "generator", "capacitor", "reactor",
     "transformer", "pvsystem", "storage", "loadshape", "options",
-    "xfmrcode", "vsource", "xycurve"
+    "xfmrcode", "vsource", "xycurve", "spectrum"
 ])
 
 "two number operators for reverse polish notation"
