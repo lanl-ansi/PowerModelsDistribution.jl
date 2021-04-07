@@ -820,11 +820,11 @@ function _guess_dtype(value::AbstractString)::Type
         _dtypes = unique([_guess_dtype(v) for v in split(value)])
         if length(_dtypes) == 1
             return _dtypes[1]
-        elseif all(isa(v, Int) for v in _dtypes)
+        elseif all(v <: Int for v in _dtypes)
             return Int
-        elseif any(isa(v, Complex) for v in _dtypes)
+        elseif any(v <: Complex for v in _dtypes)
             return ComplexF64
-        elseif any(isa(v, Float64) for v in _dtypes)
+        elseif any(v <: Float64 for v in _dtypes)
             return Float64
         else
             return String
