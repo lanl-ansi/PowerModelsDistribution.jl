@@ -99,3 +99,5 @@ new spectrum.test_csvfile numharm=8 csvfile=spectrum.csv
 
 new linecode.test_matrix_syntax phases=3 rmatrix=[0.1 0.0 0.0 |0.0 0.1 ,0.0 |0.0 0.0 0.1 ]
 new xycurve.test_delimiters points=[  1,2  3  ,4]
+
+setbusxy bus=testsource x=0.1 y=0.2

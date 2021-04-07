@@ -505,6 +505,29 @@ function _parse_buscoords_file(file::AbstractString)::Dict{String,Any}
 end
 
 
+"parses the setbusxy command"
+function _parse_setbusxy!(data_dss::Dict{String,<:Any}, properties_str::AbstractString)
+    properties = _parse_properties(properties_str)
+    object = Dict{String,Any}()
+    for (prop_name, prop) in zip(["bus", "x", "y"], properties)
+        if occursin("=", prop)
+            prop_name, prop = split(prop, "=")
+        end
+        object[prop_name] = prop
+    end
+    bus = pop!(object, "bus")
+    for (k,v) in object
+        object[k] = parse(Float64, v)
+    end
+
+    if !haskey(data_dss, "buscoords")
+        data_dss["buscoords"] = Dict{String,Any}(bus => object)
+    else
+        data_dss["buscoords"][bus] = object
+    end
+end
+
+
 """
 Parses a string of `properties` of a component type, character by character
 into an array with each element containing (if present) the property name, "=",
@@ -823,6 +846,7 @@ function parse_dss(io::IO)::Dict{String,Any}
 
             if cmd in _dss_unsupported_commands
                 Memento.warn(_LOGGER, "Command \"$cmd\" on line $real_line_num in \"$current_file\" is not supported, skipping.")
+                continue
 
             elseif cmd == "clear"
                 Memento.info(_LOGGER, "Circuit has been reset with the \"clear\" on line $real_line_num in \"$current_file\"")
@@ -874,6 +898,10 @@ function parse_dss(io::IO)::Dict{String,Any}
                 full_path = path == "" ? file : join([path, file], '/')
                 Memento.info(_LOGGER, "Reading Buscoords in \"$file\" on line $real_line_num in \"$current_file\"")
                 data_dss["buscoords"] = _parse_buscoords_file(full_path)
+
+            elseif cmd == "setbusxy"
+                _parse_setbusxy!(data_dss, join(line_elements[2:end], " "))
+                continue
 
             elseif cmd == "new"
                 current_obj_type, current_obj = _parse_line([lowercase(line_element) for line_element in line_elements]; path=path)

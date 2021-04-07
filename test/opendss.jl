@@ -148,6 +148,11 @@
         @test all(dss["linecode"]["test_matrix_syntax"]["rmatrix"] .== [0.1 0 0; 0 0.1 0; 0 0 0.1])
     end
 
+    @testset "dss setbusxy command" begin
+        @test dss["buscoords"]["testsource"]["x"] == 0.1
+        @test dss["buscoords"]["testsource"]["y"] == 0.2
+    end
+
     @testset "opendss parse like" begin
         for k in ["pd_nom", "qd_nom"]
             @test all(isapprox.(eng["load"]["ld2"][k], eng["load"]["ld4"][k]; atol=1e-12))
