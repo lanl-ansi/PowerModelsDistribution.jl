@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fix bug in dss parser to better support `object=` syntax
 - Add support for parsing of spectrum dss objects
 
 ## v0.10.4

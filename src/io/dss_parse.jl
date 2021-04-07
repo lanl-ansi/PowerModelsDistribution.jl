@@ -736,15 +736,15 @@ function _parse_line(elements::Vector{String}; current_obj::Dict{String,<:Any}=D
     if startswith(current_obj_type, "object")
         current_obj_type = split(current_obj_type, '=')[2]
         current_obj["name"] = split(current_obj_type, '.')[2]
-    else
-        if length(elements) != 3
-            properties = ""
-        else
-            properties = elements[3]
-        end
-
-        current_obj = _parse_component(current_obj_type, properties; path=path)
     end
+
+    if length(elements) != 3
+        properties = ""
+    else
+        properties = elements[3]
+    end
+
+    current_obj = _parse_component(current_obj_type, properties; path=path)
 
     return current_obj_type, current_obj
 end

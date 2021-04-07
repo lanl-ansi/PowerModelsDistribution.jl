@@ -4,7 +4,7 @@ Clear
 new object=Circuit.TEST2
 
 ! Test circuit properties
-~ pu=1.1  r1=0.001  x1=0.01  r0=0.001  x0=0.01  basekv=115  angle=30 bus1=testsource
+edit object=vsource.source pu=1.1  r1=0.001  x1=0.01  r0=0.001  x0=0.01  basekv=115  angle=30 bus1=testsource
 
 Redirect subdir/test2_Linecodes.dss
 Redirect test2_Linecodes.dss
@@ -72,15 +72,15 @@ Solve
 show taps
 new Line.l8 bus1=b10 bus2=b11 linecode=lc/2 units=mi length=(0.013516796 1 1.6093 / *)
 
-new xycurve.test_curve1 xarray=(file=load_profile.csv) yarray=(sngfile=load_profile.sng)
-new xycurve.test_curve2 points=[1 1 2 2 3 3]
-new xycurve.test_curve3 csvfile=load_profile_pq.csv
-new xycurve.test_curve4 dblfile=load_profile_interval.dbl
+new object=xycurve.test_curve1 xarray=(file=load_profile.csv) yarray=(sngfile=load_profile.sng)
+new object=xycurve.test_curve2 points=[1 1 2 2 3 3]
+new object=xycurve.test_curve3 csvfile=load_profile_pq.csv
+new object=xycurve.test_curve4 dblfile=load_profile_interval.dbl
 
 new xfmrcode.t1 phases=1 windings=2 conns=[wye,wye] kvs=[15, 15] kvas=[50000 50000]
 
-new loadshape.ld3_yearly pmult=(sngfile=load_profile.sng)
-new loadshape.ld2_daily pmult=(file=load_profile.csv)
+new object=loadshape.ld3_yearly pmult=(sngfile=load_profile.sng)
+new object=loadshape.ld2_daily pmult=(file=load_profile.csv)
 
 new linespacing.test_spacing
 
