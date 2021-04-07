@@ -1262,6 +1262,24 @@ function _create_xycurve(name::String=""; kwargs...)
 end
 
 
+"""
+Creates a Dict{String,Any} containing all expected properties for a Spectrum
+object. See OpenDSS documentation for valid fields and ways to specify
+different properties.
+"""
+function _create_spectrum(name::String=""; kwargs...)
+    Dict{String,Any}(
+        "name" => name,
+        "numharm" => get(kwargs, :numharm, 0),
+        "harmonic" => get(kwargs, :harmonic, Vector{Float64}([])),
+        "%mag" => get(kwargs, Symbol("%mag"), Vector{Float64}([])),
+        "angle" => get(kwargs, :angle, Vector{Float64}([])),
+        "csvfile" => get(kwargs, :csvfile, ""),
+        "like" => get(kwargs, :like, ""),
+    )
+end
+
+
 ""
 function _create_options(; kwargs...)
     Dict{String,Any}(

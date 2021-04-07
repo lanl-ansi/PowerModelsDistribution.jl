@@ -78,6 +78,10 @@ const _xfmrcode_properties = Vector{String}([
     "faultrate", "basefreq", "enabled", "like"
 ])
 
+const _spectrum_properties = Vector{String}([
+    "numharm", "harmonic", "%mag", "angle", "csvfile"
+])
+
 const _vsource_properties = Vector{String}([
     "bus1", "bus2", "basekv", "pu", "angle", "frequency", "phases", "mvasc3",
     "mvasc1", "x1r1", "x0r0", "isc3", "isc1", "r1", "x1", "r0", "x0",
@@ -245,6 +249,7 @@ const _dss_object_properties = Dict{String,Vector{String}}(
     "tsdata" => _tsdata_properties,
     "wiredata" => _wiredata_properties,
     "xfmrcode" => _xfmrcode_properties,
+    "spectrum" => _spectrum_properties,
     "vsource" => _vsource_properties,
     "circuit" => _vsource_properties,  # alias circuit to vsource
     "isource" => _isource_properties,
@@ -418,13 +423,7 @@ function _parse_loadshape!(current_obj::Dict{String,<:Any}; path::AbstractString
         end
     end
 
-    for prop in ["pmult", "qmult", "hour"]
-        if haskey(current_obj, prop) && isa(current_obj[prop], Array)
-            current_obj[prop] = "($(join(current_obj[prop], ",")))"
-        elseif haskey(current_obj, prop) && isa(current_obj[prop], String) && !_isa_array(current_obj[prop])
-            current_obj[prop] = "($(current_obj[prop]))"
-        end
-    end
+    _clean_arrays!(current_obj, ["pmult", "qmult", "hour"])
 end
 
 
@@ -439,7 +438,27 @@ function _parse_xycurve!(current_obj::Dict{String,<:Any}; path::AbstractString="
 
     end
 
-    for prop in ["xarray", "yarray", "points"]
+    _clean_arrays!(current_obj, ["xarray", "yarray", "points"])
+end
+
+
+"parse spectrum component"
+function _parse_spectrum!(current_obj::Dict{String,<:Any}; path::AbstractString="")
+    for prop in current_obj["prop_order"]
+        if prop == "csvfile"
+            full_path = isempty(path) ? current_obj[prop] : join([path, current_obj[prop]], '/')
+            current_obj["harmonic"], current_obj["%mag"], current_obj["angle"] = _parse_csv_file(full_path, "pqcsvfile"; header=false, interval=true)
+        end
+    end
+
+    _clean_arrays!(current_obj, ["harmonic", "%mag", "angle"])
+
+end
+
+
+"cleans up array properties back into strings for later conversion"
+function _clean_arrays!(current_obj::Dict{String,<:Any}, properties::Vector{String})
+    for prop in properties
         if haskey(current_obj, prop) && isa(current_obj[prop], Array)
             current_obj[prop] = "($(join(current_obj[prop], ",")))"
         elseif haskey(current_obj, prop) && isa(current_obj[prop], String) && !_isa_array(current_obj[prop])
@@ -447,7 +466,6 @@ function _parse_xycurve!(current_obj::Dict{String,<:Any}; path::AbstractString="
         end
     end
 end
-
 
 "strips lines that are either commented (block or single) or empty"
 function _strip_lines(lines::Vector{<:AbstractString})::Vector{String}
@@ -864,6 +882,8 @@ function parse_dss(io::IO)::Dict{String,Any}
                     _parse_loadshape!(current_obj; path=path)
                 elseif startswith(current_obj_type, "xycurve")
                     _parse_xycurve!(current_obj; path=path)
+                elseif startswith(current_obj_type, "spectrum")
+                    _parse_spectrum!(current_obj; path=path)
                 end
 
                 if startswith(current_obj_type, "circuit")

@@ -55,6 +55,15 @@
         end
     end
 
+    @testset "opendss parse spectrum objects" begin
+        dss = parse_dss("../test/data/opendss/test2_master.dss")
+
+        for (_, spectrum) in dss["spectrum"]
+            @test all(spectrum["harmonic"] .== [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0])
+            @test all(spectrum["%mag"] .== [25.0, 0, 50, 0, 75, 0, 100, 0])
+            @test all(spectrum["angle"] .== fill(15.0, 8))
+        end
+    end
 
     @testset "opendss parse generic warnings and errors" begin
         Memento.setlevel!(TESTLOG, "info")
@@ -125,7 +134,7 @@
         @test math["name"] == "test2"
 
         @test length(math) == 21
-        @test length(dss) == 20
+        @test length(dss) == 21
 
         for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "transformer", "storage", "switch"], [34, 4, 5, 28, 5, 0, 10, 1, 1])
             @test haskey(math, key)
