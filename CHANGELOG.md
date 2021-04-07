@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fix bug in opendss2pmd line parser, which would error on reshape of rmatrix, xmatrix, cmatrix when explicitly grounded and those matrices defined on line and not linecode
 - Fix bug in datatype guesser `_guess_dtype`
 - Add support for setbusxy dss command
 - Fix parsing of dss matrices and arrays with mixed delimiters (i.e., mixing commas and spaces)

@@ -472,18 +472,18 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         end
 
         if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["r0", "r1", "rg", "rmatrix"]) || !haskey(dss_obj, "linecode")
-            eng_obj["rs"] = reshape(defaults["rmatrix"], ncond, ncond)
+            eng_obj["rs"] = reshape(defaults["rmatrix"], nphases, nphases)
         end
 
         if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["x0", "x1", "xg", "xmatrix"]) || !haskey(dss_obj, "linecode")
-            eng_obj["xs"] = reshape(defaults["xmatrix"], ncond, ncond)
+            eng_obj["xs"] = reshape(defaults["xmatrix"], nphases, nphases)
         end
 
         if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["b0", "b1", "c0", "c1", "cmatrix"]) || !haskey(dss_obj, "linecode")
-            eng_obj["b_fr"] = reshape(defaults["cmatrix"], ncond, ncond) ./ 2.0
-            eng_obj["b_to"] = reshape(defaults["cmatrix"], ncond, ncond) ./ 2.0
-            eng_obj["g_fr"] = fill(0.0, ncond, ncond)
-            eng_obj["g_to"] = fill(0.0, ncond, ncond)
+            eng_obj["b_fr"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
+            eng_obj["b_to"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
+            eng_obj["g_fr"] = fill(0.0, nphases, nphases)
+            eng_obj["g_to"] = fill(0.0, nphases, nphases)
         end
 
         # if the ground is used directly, register
