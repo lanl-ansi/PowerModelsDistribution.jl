@@ -145,7 +145,7 @@
 
     @testset "opendss parse matrix and array with mixed delimiters" begin
         @test all(dss["xycurve"]["test_delimiters"]["points"] .== [1.0, 2.0, 3.0, 4.0])
-        @test all(dss["linecode"]["test_matrix_syntax"]["rmatrix"] .== [0 0 0.1; 0 0.1 0; 0.1 0 0])
+        @test all(dss["linecode"]["test_matrix_syntax"]["rmatrix"] .== [0.1 0 0; 0 0.1 0; 0 0 0.1])
     end
 
     @testset "opendss parse like" begin
