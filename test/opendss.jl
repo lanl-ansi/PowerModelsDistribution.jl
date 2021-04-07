@@ -98,6 +98,7 @@
         Memento.setlevel!(TESTLOG, "error")
     end
 
+    dss = parse_dss("../test/data/opendss/test2_master.dss")
     eng = parse_file("../test/data/opendss/test2_master.dss", import_all=true)
     math = parse_file("../test/data/opendss/test2_master.dss"; data_model=MATHEMATICAL, import_all=true)
 
@@ -127,8 +128,6 @@
     end
 
     @testset "opendss parse generic parser verification" begin
-        dss = parse_dss("../test/data/opendss/test2_master.dss")
-
         @test dss["line"]["l7"]["test_param"] == 100.0
 
         @test math["name"] == "test2"
@@ -142,6 +141,11 @@
         end
 
         @test all(haskey(dss, key) for key in ["loadshape", "linecode", "buscoords", "options", "filename"])
+    end
+
+    @testset "opendss parse matrix and array with mixed delimiters" begin
+        @test all(dss["xycurve"]["test_delimiters"]["points"] .== [1.0, 2.0, 3.0, 4.0])
+        @test all(dss["linecode"]["test_matrix_syntax"]["rmatrix"] .== [0 0 0.1; 0 0.1 0; 0.1 0 0])
     end
 
     @testset "opendss parse like" begin

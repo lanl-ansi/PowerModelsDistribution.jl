@@ -96,3 +96,6 @@ redirect test2_edit.dss
 
 new spectrum.test_basic numharm=8 harmonic=(2.0 4.0 6.0 8.0 10.0 12.0 14.0 16.0) %mag=(25 0 50 0 75 0 100 0) angle=(15 15 15 15 15 15 15 15)
 new spectrum.test_csvfile numharm=8 csvfile=spectrum.csv
+
+new linecode.test_matrix_syntax phases=3 rmatrix=[0.1 0.0 0.0 |0.0 0.1 ,0.0 |0.0 0.0 0.1 ]
+new xycurve.test_delimiters points=[  1,2  3  ,4]
