@@ -75,7 +75,7 @@ const _xfmrcode_properties = Vector{String}([
     "xscarray", "thermal", "n", "m", "flrise", "hsrise", "%loadloss",
     "%noloadloss", "%imag", "ppm_antifloat", "normhkva", "emerghkva", "sub",
     "maxtap", "mintap", "numtaps", "subname", "xrconst", "leadlag",
-    "faultrate", "basefreq", "enabled", "like"
+    "wdgcurrents", "core", "rdcohms", "faultrate", "basefreq", "enabled", "like"
 ])
 
 const _spectrum_properties = Vector{String}([
@@ -127,8 +127,8 @@ const _transformer_properties = Vector{String}([
     "xlt", "xht", "xscarray", "thermal", "n", "m", "flrise", "hsrise",
     "%loadloss", "%noloadloss", "%imag", "ppm_antifloat", "normhkva",
     "emerghkva", "sub", "maxtap", "mintap", "numtaps", "subname", "bank",
-    "xfmrcode", "xrconst", "leadlag", "faultrate", "basefreq", "enabled",
-    "like"
+    "xfmrcode", "xrconst", "leadlag", "wdgcurrents", "core", "rdcohms",
+    "faultrate", "basefreq", "enabled", "like"
 ])
 
 const _gictransformer_properties = Vector{String}([

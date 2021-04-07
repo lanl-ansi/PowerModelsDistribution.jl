@@ -2,6 +2,8 @@
 
 ## staged
 
+- Add wdgcurrents, core, rdcohms support on dss transformers
+- Fix bug in definition of xcsarra datatype on dss transformers
 - Fix bug in opendss2pmd line parser, which would error on reshape of rmatrix, xmatrix, cmatrix when explicitly grounded and those matrices defined on line and not linecode
 - Fix bug in datatype guesser `_guess_dtype`
 - Add support for setbusxy dss command
