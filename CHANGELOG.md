@@ -10,6 +10,7 @@
 - Fix parsing of dss matrices and arrays with mixed delimiters (i.e., mixing commas and spaces)
 - Fix bug in dss parser to better support `object=` syntax
 - Add support for parsing of spectrum dss objects
+- Docs updates
 
 ## v0.10.4
 
