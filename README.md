@@ -40,7 +40,7 @@ This enables the definition of a wide variety of power network formulations and 
 
 ## Documentation
 
-Please see our [online documentation](https://lanl-ansi.github.io/PowerModels.jl/stable/) for information about how to install and use PowerModelsDistribution.
+Please see our [online documentation](https://lanl-ansi.github.io/PowerModelsDistribution.jl/stable/) for information about how to install and use PowerModelsDistribution.
 
 ## Examples
 
