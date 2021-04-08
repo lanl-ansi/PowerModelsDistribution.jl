@@ -38,6 +38,10 @@ This enables the definition of a wide variety of power network formulations and 
 
 - OpenDSS ".dss" files
 
+## Documentation
+
+Please see our [online documentation](https://lanl-ansi.github.io/PowerModels.jl/stable/) for information about how to install and use PowerModelsDistribution.
+
 ## Examples
 
 Examples of how to use PowerModelsDistribution can be found in the main documentation and in Jupyter Notebooks inside the `/examples` directory
