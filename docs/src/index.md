@@ -16,10 +16,10 @@ The latest stable release of PowerModels can be installed using the Julia packag
 Pkg.add("PowerModelsDistribution")
 ```
 
-For the current development version, "checkout" this package with
+For the current development version, add the package with a reference to the master branch of our git repository
 
 ```julia
-Pkg.checkout("PowerModelsDistribution")
+Pkg.add(name="PowerModelsDistribution", rev="master")
 ```
 
 At least one solver is required for running PowerModelsDistribution.  The open-source solver Ipopt is recommended, as it is extremely fast, and can be used to solve a wide variety of the problems and network formulations provided in PowerModelsDistribution.  The Ipopt solver can be installed via the package manager with
