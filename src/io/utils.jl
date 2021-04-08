@@ -30,7 +30,7 @@ const _dss_monitor_objects = Vector{String}([
 const _dss_supported_components = Vector{String}([
     "line", "linecode", "load", "generator", "capacitor", "reactor",
     "transformer", "pvsystem", "storage", "loadshape", "options",
-    "xfmrcode", "vsource", "xycurve"
+    "xfmrcode", "vsource", "xycurve", "spectrum"
 ])
 
 "two number operators for reverse polish notation"
@@ -184,9 +184,9 @@ brackets, rows are separated by "|", and columns are separated by spaces.
 """
 function _parse_matrix(dtype::Type, data::AbstractString)::Matrix{dtype}
     rows = []
-    for line in split(strip(data, _array_delimiters), '|')
+    for line in split(strip(strip(data, _array_delimiters)), '|')
         cols = []
-        for item in split(line)
+        for item in split(strip(line), r"\s*,\s*|\s+")
             push!(cols, parse(dtype, item))
         end
         push!(rows, cols)
@@ -250,12 +250,6 @@ Parses a OpenDSS style array string `data` into a one dimensional array of type
 quotes, and elements are separated by spaces.
 """
 function _parse_array(dtype::Type, data::AbstractString)::Vector{dtype}
-    if occursin(",", data)
-        split_char = ','
-    else
-        split_char = ' '
-    end
-
     if _isa_rpn(data)
         matches = collect((m.match for m = eachmatch(Regex(string("[",join(_array_delimiters, '\\'),"]")), data, overlap=false)))
         if length(matches) == 2
@@ -272,7 +266,7 @@ function _parse_array(dtype::Type, data::AbstractString)::Vector{dtype}
         for delim in _array_delimiters
             data = replace(data, delim => "")
         end
-        elements = split(data, split_char)
+        elements = split(strip(data), r"\s*,\s*|\s+")
         elements = [strip(el) for el in elements if strip(el) != ""]
     end
 
@@ -826,11 +820,11 @@ function _guess_dtype(value::AbstractString)::Type
         _dtypes = unique([_guess_dtype(v) for v in split(value)])
         if length(_dtypes) == 1
             return _dtypes[1]
-        elseif all(isa(v, Int) for v in _dtypes)
+        elseif all(v <: Int for v in _dtypes)
             return Int
-        elseif any(isa(v, Complex) for v in _dtypes)
+        elseif any(v <: Complex for v in _dtypes)
             return ComplexF64
-        elseif any(isa(v, Float64) for v in _dtypes)
+        elseif any(v <: Float64 for v in _dtypes)
             return Float64
         else
             return String

@@ -55,6 +55,15 @@
         end
     end
 
+    @testset "opendss parse spectrum objects" begin
+        dss = parse_dss("../test/data/opendss/test2_master.dss")
+
+        for (_, spectrum) in dss["spectrum"]
+            @test all(spectrum["harmonic"] .== [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0])
+            @test all(spectrum["%mag"] .== [25.0, 0, 50, 0, 75, 0, 100, 0])
+            @test all(spectrum["angle"] .== fill(15.0, 8))
+        end
+    end
 
     @testset "opendss parse generic warnings and errors" begin
         Memento.setlevel!(TESTLOG, "info")
@@ -89,6 +98,7 @@
         Memento.setlevel!(TESTLOG, "error")
     end
 
+    dss = parse_dss("../test/data/opendss/test2_master.dss")
     eng = parse_file("../test/data/opendss/test2_master.dss", import_all=true)
     math = parse_file("../test/data/opendss/test2_master.dss"; data_model=MATHEMATICAL, import_all=true)
 
@@ -118,14 +128,12 @@
     end
 
     @testset "opendss parse generic parser verification" begin
-        dss = parse_dss("../test/data/opendss/test2_master.dss")
-
         @test dss["line"]["l7"]["test_param"] == 100.0
 
         @test math["name"] == "test2"
 
         @test length(math) == 21
-        @test length(dss) == 20
+        @test length(dss) == 21
 
         for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "transformer", "storage", "switch"], [34, 4, 5, 28, 5, 0, 10, 1, 1])
             @test haskey(math, key)
@@ -133,6 +141,16 @@
         end
 
         @test all(haskey(dss, key) for key in ["loadshape", "linecode", "buscoords", "options", "filename"])
+    end
+
+    @testset "opendss parse matrix and array with mixed delimiters" begin
+        @test all(dss["xycurve"]["test_delimiters"]["points"] .== [1.0, 2.0, 3.0, 4.0])
+        @test all(dss["linecode"]["test_matrix_syntax"]["rmatrix"] .== [0.1 0 0; 0 0.1 0; 0 0 0.1])
+    end
+
+    @testset "dss setbusxy command" begin
+        @test dss["buscoords"]["testsource"]["x"] == 0.1
+        @test dss["buscoords"]["testsource"]["y"] == 0.2
     end
 
     @testset "opendss parse like" begin

@@ -75,7 +75,11 @@ const _xfmrcode_properties = Vector{String}([
     "xscarray", "thermal", "n", "m", "flrise", "hsrise", "%loadloss",
     "%noloadloss", "%imag", "ppm_antifloat", "normhkva", "emerghkva", "sub",
     "maxtap", "mintap", "numtaps", "subname", "xrconst", "leadlag",
-    "faultrate", "basefreq", "enabled", "like"
+    "wdgcurrents", "core", "rdcohms", "faultrate", "basefreq", "enabled", "like"
+])
+
+const _spectrum_properties = Vector{String}([
+    "numharm", "harmonic", "%mag", "angle", "csvfile"
 ])
 
 const _vsource_properties = Vector{String}([
@@ -123,8 +127,8 @@ const _transformer_properties = Vector{String}([
     "xlt", "xht", "xscarray", "thermal", "n", "m", "flrise", "hsrise",
     "%loadloss", "%noloadloss", "%imag", "ppm_antifloat", "normhkva",
     "emerghkva", "sub", "maxtap", "mintap", "numtaps", "subname", "bank",
-    "xfmrcode", "xrconst", "leadlag", "faultrate", "basefreq", "enabled",
-    "like"
+    "xfmrcode", "xrconst", "leadlag", "wdgcurrents", "core", "rdcohms",
+    "faultrate", "basefreq", "enabled", "like"
 ])
 
 const _gictransformer_properties = Vector{String}([
@@ -245,6 +249,7 @@ const _dss_object_properties = Dict{String,Vector{String}}(
     "tsdata" => _tsdata_properties,
     "wiredata" => _wiredata_properties,
     "xfmrcode" => _xfmrcode_properties,
+    "spectrum" => _spectrum_properties,
     "vsource" => _vsource_properties,
     "circuit" => _vsource_properties,  # alias circuit to vsource
     "isource" => _isource_properties,
@@ -418,13 +423,7 @@ function _parse_loadshape!(current_obj::Dict{String,<:Any}; path::AbstractString
         end
     end
 
-    for prop in ["pmult", "qmult", "hour"]
-        if haskey(current_obj, prop) && isa(current_obj[prop], Array)
-            current_obj[prop] = "($(join(current_obj[prop], ",")))"
-        elseif haskey(current_obj, prop) && isa(current_obj[prop], String) && !_isa_array(current_obj[prop])
-            current_obj[prop] = "($(current_obj[prop]))"
-        end
-    end
+    _clean_arrays!(current_obj, ["pmult", "qmult", "hour"])
 end
 
 
@@ -439,7 +438,27 @@ function _parse_xycurve!(current_obj::Dict{String,<:Any}; path::AbstractString="
 
     end
 
-    for prop in ["xarray", "yarray", "points"]
+    _clean_arrays!(current_obj, ["xarray", "yarray", "points"])
+end
+
+
+"parse spectrum component"
+function _parse_spectrum!(current_obj::Dict{String,<:Any}; path::AbstractString="")
+    for prop in current_obj["prop_order"]
+        if prop == "csvfile"
+            full_path = isempty(path) ? current_obj[prop] : join([path, current_obj[prop]], '/')
+            current_obj["harmonic"], current_obj["%mag"], current_obj["angle"] = _parse_csv_file(full_path, "pqcsvfile"; header=false, interval=true)
+        end
+    end
+
+    _clean_arrays!(current_obj, ["harmonic", "%mag", "angle"])
+
+end
+
+
+"cleans up array properties back into strings for later conversion"
+function _clean_arrays!(current_obj::Dict{String,<:Any}, properties::Vector{String})
+    for prop in properties
         if haskey(current_obj, prop) && isa(current_obj[prop], Array)
             current_obj[prop] = "($(join(current_obj[prop], ",")))"
         elseif haskey(current_obj, prop) && isa(current_obj[prop], String) && !_isa_array(current_obj[prop])
@@ -447,7 +466,6 @@ function _parse_xycurve!(current_obj::Dict{String,<:Any}; path::AbstractString="
         end
     end
 end
-
 
 "strips lines that are either commented (block or single) or empty"
 function _strip_lines(lines::Vector{<:AbstractString})::Vector{String}
@@ -484,6 +502,29 @@ function _parse_buscoords_file(file::AbstractString)::Dict{String,Any}
     end
 
     return buscoords
+end
+
+
+"parses the setbusxy command"
+function _parse_setbusxy!(data_dss::Dict{String,<:Any}, properties_str::AbstractString)
+    properties = _parse_properties(properties_str)
+    object = Dict{String,Any}()
+    for (prop_name, prop) in zip(["bus", "x", "y"], properties)
+        if occursin("=", prop)
+            prop_name, prop = split(prop, "=")
+        end
+        object[prop_name] = prop
+    end
+    bus = pop!(object, "bus")
+    for (k,v) in object
+        object[k] = parse(Float64, v)
+    end
+
+    if !haskey(data_dss, "buscoords")
+        data_dss["buscoords"] = Dict{String,Any}(bus => object)
+    else
+        data_dss["buscoords"][bus] = object
+    end
 end
 
 
@@ -718,15 +759,15 @@ function _parse_line(elements::Vector{String}; current_obj::Dict{String,<:Any}=D
     if startswith(current_obj_type, "object")
         current_obj_type = split(current_obj_type, '=')[2]
         current_obj["name"] = split(current_obj_type, '.')[2]
-    else
-        if length(elements) != 3
-            properties = ""
-        else
-            properties = elements[3]
-        end
-
-        current_obj = _parse_component(current_obj_type, properties; path=path)
     end
+
+    if length(elements) != 3
+        properties = ""
+    else
+        properties = elements[3]
+    end
+
+    current_obj = _parse_component(current_obj_type, properties; path=path)
 
     return current_obj_type, current_obj
 end
@@ -805,6 +846,7 @@ function parse_dss(io::IO)::Dict{String,Any}
 
             if cmd in _dss_unsupported_commands
                 Memento.warn(_LOGGER, "Command \"$cmd\" on line $real_line_num in \"$current_file\" is not supported, skipping.")
+                continue
 
             elseif cmd == "clear"
                 Memento.info(_LOGGER, "Circuit has been reset with the \"clear\" on line $real_line_num in \"$current_file\"")
@@ -857,6 +899,10 @@ function parse_dss(io::IO)::Dict{String,Any}
                 Memento.info(_LOGGER, "Reading Buscoords in \"$file\" on line $real_line_num in \"$current_file\"")
                 data_dss["buscoords"] = _parse_buscoords_file(full_path)
 
+            elseif cmd == "setbusxy"
+                _parse_setbusxy!(data_dss, join(line_elements[2:end], " "))
+                continue
+
             elseif cmd == "new"
                 current_obj_type, current_obj = _parse_line([lowercase(line_element) for line_element in line_elements]; path=path)
 
@@ -864,6 +910,8 @@ function parse_dss(io::IO)::Dict{String,Any}
                     _parse_loadshape!(current_obj; path=path)
                 elseif startswith(current_obj_type, "xycurve")
                     _parse_xycurve!(current_obj; path=path)
+                elseif startswith(current_obj_type, "spectrum")
+                    _parse_spectrum!(current_obj; path=path)
                 end
 
                 if startswith(current_obj_type, "circuit")

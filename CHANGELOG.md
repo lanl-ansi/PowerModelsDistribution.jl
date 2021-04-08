@@ -2,6 +2,17 @@
 
 ## staged
 
+- Add wdgcurrents, core, rdcohms support on dss transformers
+- Fix bug in definition of xcsarra datatype on dss transformers
+- Fix bug in opendss2pmd line parser, which would error on reshape of rmatrix, xmatrix, cmatrix when explicitly grounded and those matrices defined on line and not linecode
+- Fix bug in datatype guesser `_guess_dtype`
+- Add support for setbusxy dss command
+- Fix parsing of dss matrices and arrays with mixed delimiters (i.e., mixing commas and spaces)
+- Fix bug in dss parser to better support `object=` syntax
+- Add support for parsing of spectrum dss objects
+
+## v0.10.4
+
 - Add support for filetype autodetection, will be slower for large files, and filetype is better to explicitly specify in those cases
 - Fix overly restrictive type enforcement in parse_dss and parse_opendss from IOStream to IO
 - Fix bug in parsing of properties starting with % on pvsystem and storage objects

@@ -862,7 +862,7 @@ function _create_transformer(name::String=""; kwargs...)
         "xhl" => get(kwargs, :xhl, 7.0),
         "xht" => get(kwargs, :xht, 35.0),
         "xlt" => get(kwargs, :xlt, 30.0),
-        "xscarray" => get(kwargs, :xscarry, ""),
+        "xscarray" => get(kwargs, :xscarry, Vector{Float64}([])),
         "thermal" => get(kwargs, :thermal, 2.0),
         "n" => get(kwargs, :n, 0.8),
         "m" => get(kwargs, :m, 0.8),
@@ -887,6 +887,9 @@ function _create_transformer(name::String=""; kwargs...)
         "x13" => get(kwargs, :xht, 35.0),
         "x23" => get(kwargs, :xlt, 30.0),
         "leadlag" => get(kwargs, :leadlag, "lag"),
+        "wdgcurrents" => get(kwargs, :wdgcurrents, Vector{String}([])),
+        "core" => get(kwargs, :core, ""),
+        "rdcohms" => get(kwargs, :rdcohms, 0.85 * temp["%rs"]),
         # Inherited Properties
         "faultrate" => get(kwargs, :faultrate, 0.1),
         "basefreq" => get(kwargs, :basefreq, 60.0),
@@ -979,7 +982,7 @@ function _create_xfmrcode(name::String=""; kwargs...)
         "xhl" => get(kwargs, :xhl, 7.0),
         "xht" => get(kwargs, :xht, 35.0),
         "xlt" => get(kwargs, :xlt, 30.0),
-        "xscarray" => get(kwargs, :xscarry, ""),
+        "xscarray" => get(kwargs, :xscarry, Vector{Float64}([])),
         "thermal" => get(kwargs, :thermal, 2.0),
         "n" => get(kwargs, :n, 0.8),
         "m" => get(kwargs, :m, 0.8),
@@ -1002,6 +1005,9 @@ function _create_xfmrcode(name::String=""; kwargs...)
         "x13" => get(kwargs, :xht, 35.0),
         "x23" => get(kwargs, :xlt, 30.0),
         "leadlag" => get(kwargs, :leadlag, "lag"),
+        "wdgcurrents" => get(kwargs, :wdgcurrents, Vector{String}([])),
+        "core" => get(kwargs, :core, ""),
+        "rdcohms" => get(kwargs, :rdcohms, 0.85 * temp["%rs"]),
         # Inherited Properties
         "faultrate" => get(kwargs, :faultrate, 0.1),
         "basefreq" => get(kwargs, :basefreq, 60.0),
@@ -1257,6 +1263,24 @@ function _create_xycurve(name::String=""; kwargs...)
         "yshift" => get(kwargs, :yshift, 0),
         "xscale" => get(kwargs, :xscale, 1.0),
         "yscale" => get(kwargs, :yscale, 1.0),
+        "like" => get(kwargs, :like, ""),
+    )
+end
+
+
+"""
+Creates a Dict{String,Any} containing all expected properties for a Spectrum
+object. See OpenDSS documentation for valid fields and ways to specify
+different properties.
+"""
+function _create_spectrum(name::String=""; kwargs...)
+    Dict{String,Any}(
+        "name" => name,
+        "numharm" => get(kwargs, :numharm, 0),
+        "harmonic" => get(kwargs, :harmonic, Vector{Float64}([])),
+        "%mag" => get(kwargs, Symbol("%mag"), Vector{Float64}([])),
+        "angle" => get(kwargs, :angle, Vector{Float64}([])),
+        "csvfile" => get(kwargs, :csvfile, ""),
         "like" => get(kwargs, :like, ""),
     )
 end
