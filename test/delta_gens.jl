@@ -77,11 +77,11 @@
     #         gen["model"] = 2
     #     end
     #
-    #     pm_ivr  = instantiate_mc_model(pmd, IVRPowerModel, PMD.build_mc_opf, ref_extensions=[PMD.ref_add_arcs_transformer!])
+    #     pm_ivr  = instantiate_mc_model(pmd, IVRPowerModel, PMD.build_mc_opf)
     #     sol_ivr = optimize_model!(pm_ivr, optimizer=ipopt_solver)
     #     @assert(sol_1["termination_status"]==LOCALLY_SOLVED)
     #
-    #     pm_acr  = instantiate_mc_model(pmd, ACRPowerModel, PMD.build_mc_opf, ref_extensions=[PMD.ref_add_arcs_transformer!])
+    #     pm_acr  = instantiate_mc_model(pmd, ACRPowerModel, PMD.build_mc_opf)
     #     sol_acr = optimize_model!(pm_acr, optimizer=ipopt_solver)
     #     @assert(sol_2["termination_status"]==LOCALLY_SOLVED)
     #

@@ -1,7 +1,7 @@
 ""
-function _solve_mc_model(data::Dict{String,<:Any}, model_type::Type, optimizer, build_method;
-        ref_extensions=[], solution_processors=[], relax_integrality=false,
-        multinetwork=false, kwargs...)
+function _solve_mc_model(data::Dict{String,<:Any}, model_type::Type, optimizer, build_method::Function;
+        ref_extensions::Vector{<:Function}=Vector{Function}([]), solution_processors::Vector{<:Function}=Vector{Function}([]), relax_integrality::Bool=false,
+        multinetwork::Bool=false, kwargs...)
 
     if multinetwork != ismultinetwork(data)
         model_requirement = multinetwork ? "multi-network" : "single-network"
@@ -22,7 +22,7 @@ end
 
 
 ""
-function instantiate_mc_model(data::Dict{String,<:Any}, model_type::Type, build_method::Function; ref_extensions::Vector{<:Function}=Vector{Function}([]), kwargs...)
+function instantiate_mc_model(data::Dict{String,<:Any}, model_type::Type, build_method::Function; ref_extensions::Vector{<:Function}=Vector{Function}([]), multinetwork::Bool=false, kwargs...)
     if get(data, "data_model", MATHEMATICAL) == ENGINEERING
         Memento.info(_LOGGER, "Converting ENGINEERING data model to MATHEMATICAL first to build JuMP model")
         data = transform_data_model(data)
@@ -30,21 +30,20 @@ function instantiate_mc_model(data::Dict{String,<:Any}, model_type::Type, build_
 
     return _IM.instantiate_model(
         data, model_type, build_method, ref_add_core!, _pmd_global_keys,
-        pmd_it_sym; ref_extensions = [ref_extensions..., ref_add_arcs_switch!,
-        ref_add_arcs_transformer!, ref_add_connections!], kwargs...)
+        pmd_it_sym; ref_extensions = ref_extensions, kwargs...)
 end
 
 
 ""
-function solve_mc_model(data::Dict{String,<:Any}, model_type::Type, solver, build_mc::Function; ref_extensions::Vector{<:Function}=Vector{Function}([]), make_si=!get(data, "per_unit", false), multinetwork::Bool=false, kwargs...)::Dict{String,Any}
+function solve_mc_model(data::Dict{String,<:Any}, model_type::Type, solver, build_mc::Function; ref_extensions::Vector{<:Function}=Vector{Function}([]), make_si::Bool=!get(data, "per_unit", false), multinetwork::Bool=false, kwargs...)::Dict{String,Any}
     if get(data, "data_model", MATHEMATICAL) == ENGINEERING
         data_math = transform_data_model(data; build_multinetwork=multinetwork)
 
-        result = _solve_mc_model(data_math, model_type, solver, build_mc; ref_extensions=[ref_add_arcs_transformer!, ref_add_arcs_switch!, ref_add_connections!, ref_extensions...], multinetwork=multinetwork, kwargs...)
+        result = _solve_mc_model(data_math, model_type, solver, build_mc; ref_extensions=ref_extensions, multinetwork=multinetwork, kwargs...)
 
         result["solution"] = transform_solution(result["solution"], data_math; make_si=make_si)
     elseif get(data, "data_model", MATHEMATICAL) == MATHEMATICAL
-        result = _solve_mc_model(data, model_type, solver, build_mc; ref_extensions=[ref_add_arcs_transformer!, ref_add_arcs_switch!, ref_add_connections!, ref_extensions...], multinetwork=multinetwork, kwargs...)
+        result = _solve_mc_model(data, model_type, solver, build_mc; ref_extensions=ref_extensions, multinetwork=multinetwork, kwargs...)
     end
 
     return result
