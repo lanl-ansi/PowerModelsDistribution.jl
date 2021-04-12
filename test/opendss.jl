@@ -135,7 +135,7 @@
         @test length(math) == 21
         @test length(dss) == 21
 
-        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "transformer", "storage", "switch"], [34, 4, 5, 28, 5, 0, 10, 1, 1])
+        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "transformer", "storage", "switch"], [34, 4, 5, 28, 5, 10, 1, 1])
             @test haskey(math, key)
             @test length(math[key]) == len
         end
