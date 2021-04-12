@@ -80,4 +80,26 @@
 
         @test sprint(print, pm_eng) == sprint(print, pm_math)
     end
+
+    @testset "test manual 1-phase model creation" begin
+        data = parse_file("../test/data/opendss/case3_unbalanced.dss"; data_model = MATHEMATICAL)
+        delete!(data["load"], "2")
+        delete!(data["load"], "3")
+        data["bus"]["3"]["terminals"] = Vector{Int}([2])
+        data["bus"]["3"]["grounded"] = Vector{Bool}([0])
+
+        for (k,v) in data["branch"]["1"]
+            if isa(v, Matrix)
+                data["branch"]["1"][k] = reshape([v[2,2]], 1, 1)
+            elseif isa(v, Vector)
+                data["branch"]["1"][k] = [v[2]]
+            end
+        end
+
+        result_pf = solve_mc_pf(data, ACRPowerModel, ipopt_solver)
+        @test result_pf["objective"] == 0.0
+
+        result_opf = solve_mc_opf(data, ACRPowerModel, ipopt_solver)
+        @test isapprox(result_opf["objective"], 0.006197; atol=1e-3)
+    end
 end
