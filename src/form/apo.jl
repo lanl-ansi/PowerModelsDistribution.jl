@@ -120,11 +120,11 @@ function variable_mc_transformer_power_real(pm::AbstractAPLossLessModels; nw::In
     connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_transformer) for ((l,i,j), connections) in entry)
     pt = var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_pt_$((l,i,j))", start=0
-        ) for (l,i,j) in ref(pm, nw, :arcs_from_trans)
+        ) for (l,i,j) in ref(pm, nw, :arcs_transformer_from)
     )
 
     if bounded
-        for arc in ref(pm, nw, :arcs_from_trans)
+        for arc in ref(pm, nw, :arcs_transformer_from)
             (t,i,j) = arc
             rate_a_fr, rate_a_to = _calc_transformer_power_ub_frto(ref(pm, nw, :transformer, t), ref(pm, nw, :bus, i), ref(pm, nw, :bus, j))
 
@@ -151,8 +151,8 @@ function variable_mc_transformer_power_real(pm::AbstractAPLossLessModels; nw::In
     end
 
     # this explicit type erasure is necessary
-    p_expr = Dict{Any,Any}( ((l,i,j), pt[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_from_trans) )
-    p_expr = merge(p_expr, Dict( ((l,j,i), -1.0*pt[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_from_trans)))
+    p_expr = Dict{Any,Any}( ((l,i,j), pt[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_transformer_from) )
+    p_expr = merge(p_expr, Dict( ((l,j,i), -1.0*pt[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_transformer_from)))
     var(pm, nw)[:pt] = p_expr
 end
 

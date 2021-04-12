@@ -11,7 +11,7 @@ function variable_mc_branch_current(pm::AbstractIVRModel; nw::Int=nw_id_default,
     p = Dict()
     q = Dict()
 
-    for (l,i,j) in ref(pm, nw, :arcs_from)
+    for (l,i,j) in ref(pm, nw, :arcs_branch_from)
         f_connections = ref(pm, nw, :branch, l, "f_connections")
         t_connections = ref(pm, nw, :branch, l, "t_connections")
 
@@ -32,8 +32,8 @@ function variable_mc_branch_current(pm::AbstractIVRModel; nw::Int=nw_id_default,
 
     var(pm, nw)[:p] = p
     var(pm, nw)[:q] = q
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :pf, :pt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), p)
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :qf, :qt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), q)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :pf, :pt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), p)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :qf, :qt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), q)
 
     variable_mc_branch_current_series_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_branch_current_series_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
@@ -49,7 +49,7 @@ function variable_mc_transformer_current(pm::AbstractIVRModel; nw::Int=nw_id_def
     p = Dict()
     q = Dict()
 
-    for (l,i,j) in ref(pm, nw, :arcs_from_trans)
+    for (l,i,j) in ref(pm, nw, :arcs_transformer_from)
         f_connections = ref(pm, nw, :transformer, l, "f_connections")
         t_connections = ref(pm, nw, :transformer, l, "t_connections")
 
@@ -71,8 +71,8 @@ function variable_mc_transformer_current(pm::AbstractIVRModel; nw::Int=nw_id_def
 
     var(pm, nw)[:p] = p
     var(pm, nw)[:q] = q
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :pf, :pt, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), p)
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :qf, :qt, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), q)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :pf, :pt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), p)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :qf, :qt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), q)
 end
 
 

@@ -13,7 +13,7 @@ function variable_mc_bus_voltage(pm::AbstractUBFModels; kwargs...)
 
     nw = get(kwargs, :nw, nw_id_default)
     allbuses = Set(ids(pm, nw, :bus))
-    startingbuses = Set(i for (l,i,j)  in ref(pm, nw, :arcs_from))
+    startingbuses = Set(i for (l,i,j)  in ref(pm, nw, :arcs_branch_from))
     leafnodes = setdiff(allbuses, startingbuses)
     for i in leafnodes
         constraint_mc_voltage_psd(pm, nw, i)
@@ -100,7 +100,7 @@ end
 ""
 function variable_mc_branch_power(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     # calculate S bound
-    branch_arcs = ref(pm, nw, :arcs)
+    branch_arcs = ref(pm, nw, :arcs_branch)
     connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_branch) for ((l,i,j), connections) in entry)
 
     if bounded
@@ -136,8 +136,8 @@ function variable_mc_branch_power(pm::AbstractUBFModels; nw::Int=nw_id_default, 
     var(pm, nw)[:p] = Dict([(id,diag(P[id])) for id in branch_arcs])
     var(pm, nw)[:q] = Dict([(id,diag(Q[id])) for id in branch_arcs])
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :Pf, :Pt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), P)
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :Qf, :Qt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), Q)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :Pf, :Pt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), P)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :Qf, :Qt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), Q)
 end
 
 

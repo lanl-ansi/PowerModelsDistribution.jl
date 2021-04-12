@@ -179,11 +179,11 @@ function variable_mc_branch_power_real(pm::AbstractMCPowerModel; nw::Int=nw_id_d
     p = var(pm, nw)[:p] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_p_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :branch, l), "p_start", c, 0.0)
-        ) for (l,i,j) in ref(pm, nw, :arcs)
+        ) for (l,i,j) in ref(pm, nw, :arcs_branch)
     )
 
     if bounded
-        for (l,i,j) in ref(pm, nw, :arcs)
+        for (l,i,j) in ref(pm, nw, :arcs_branch)
             smax = _calc_branch_power_max(ref(pm, nw, :branch, l), ref(pm, nw, :bus, i))
             for (idx, c) in enumerate(connections[(l,i,j)])
                 set_upper_bound(p[(l,i,j)][c],  smax[idx])
@@ -207,7 +207,7 @@ function variable_mc_branch_power_real(pm::AbstractMCPowerModel; nw::Int=nw_id_d
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :pf, :pt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), p)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :pf, :pt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), p)
 end
 
 
@@ -217,11 +217,11 @@ function variable_mc_branch_power_imaginary(pm::AbstractMCPowerModel; nw::Int=nw
     q = var(pm, nw)[:q] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_q_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :branch, l), "q_start", c, 0.0)
-        ) for (l,i,j) in ref(pm, nw, :arcs)
+        ) for (l,i,j) in ref(pm, nw, :arcs_branch)
     )
 
     if bounded
-        for (l,i,j) in ref(pm, nw, :arcs)
+        for (l,i,j) in ref(pm, nw, :arcs_branch)
             smax = _calc_branch_power_max(ref(pm, nw, :branch, l), ref(pm, nw, :bus, i))
             for (idx, c) in enumerate(connections[(l,i,j)])
                 set_upper_bound(q[(l,i,j)][c],  smax[idx])
@@ -245,7 +245,7 @@ function variable_mc_branch_power_imaginary(pm::AbstractMCPowerModel; nw::Int=nw
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :qf, :qt, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), q)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :qf, :qt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), q)
 end
 
 ## branch current variables
@@ -256,11 +256,11 @@ function variable_mc_branch_current_real(pm::AbstractMCPowerModel; nw::Int=nw_id
     cr = var(pm, nw)[:cr] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_cr_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :branch, l), "cr_start", c, 0.0)
-        ) for (l,i,j) in ref(pm, nw, :arcs)
+        ) for (l,i,j) in ref(pm, nw, :arcs_branch)
     )
 
     if bounded
-        for (l,i,j) in ref(pm, nw, :arcs)
+        for (l,i,j) in ref(pm, nw, :arcs_branch)
             cmax = _calc_branch_current_max(ref(pm, nw, :branch, l), ref(pm, nw, :bus, i))
             for (idx,c) in enumerate(connections[(l,i,j)])
                 set_upper_bound(cr[(l,i,j)][c],  cmax[idx])
@@ -269,7 +269,7 @@ function variable_mc_branch_current_real(pm::AbstractMCPowerModel; nw::Int=nw_id
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :cr_fr, :cr_to, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), cr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :cr_fr, :cr_to, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), cr)
 end
 
 
@@ -279,11 +279,11 @@ function variable_mc_branch_current_imaginary(pm::AbstractMCPowerModel; nw::Int=
     ci = var(pm, nw)[:ci] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_ci_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :branch, l), "ci_start", c, 0.0)
-        ) for (l,i,j) in ref(pm, nw, :arcs)
+        ) for (l,i,j) in ref(pm, nw, :arcs_branch)
     )
 
     if bounded
-        for (l,i,j) in ref(pm, nw, :arcs)
+        for (l,i,j) in ref(pm, nw, :arcs_branch)
             cmax = _calc_branch_current_max(ref(pm, nw, :branch, l), ref(pm, nw, :bus, i))
             for (idx,c) in enumerate(connections[(l,i,j)])
                 set_upper_bound(ci[(l,i,j)][c],  cmax[idx])
@@ -292,7 +292,7 @@ function variable_mc_branch_current_imaginary(pm::AbstractMCPowerModel; nw::Int=
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :ci_fr, :ci_to, ref(pm, nw, :arcs_from), ref(pm, nw, :arcs_to), ci)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :ci_fr, :ci_to, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), ci)
 end
 
 
@@ -302,11 +302,11 @@ function variable_mc_branch_current_series_real(pm::AbstractMCPowerModel; nw::In
     csr = var(pm, nw)[:csr] = Dict(l => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_csr_$(l)",
             start = comp_start_value(ref(pm, nw, :branch, l), "csr_start", c, 0.0)
-        ) for (l,i,j) in ref(pm, nw, :arcs)
+        ) for (l,i,j) in ref(pm, nw, :arcs_branch)
     )
 
     if bounded
-        for (l,i,j) in ref(pm, nw, :arcs_from)
+        for (l,i,j) in ref(pm, nw, :arcs_branch_from)
             cmax = _calc_branch_series_current_max(ref(pm, nw, :branch, l), ref(pm, nw, :bus, i), ref(pm, nw, :bus, j))
             for (idx,c) in enumerate(connections[(l,i,j)])
                 set_upper_bound(csr[l][c],  cmax[idx])
@@ -325,11 +325,11 @@ function variable_mc_branch_current_series_imaginary(pm::AbstractMCPowerModel; n
     csi = var(pm, nw)[:csi] = Dict(l => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_csi_$(l)",
             start = comp_start_value(ref(pm, nw, :branch, l), "csi_start", c, 0.0)
-        ) for (l,i,j) in ref(pm, nw, :arcs)
+        ) for (l,i,j) in ref(pm, nw, :arcs_branch)
     )
 
     if bounded
-        for (l,i,j) in ref(pm, nw, :arcs_from)
+        for (l,i,j) in ref(pm, nw, :arcs_branch_from)
             cmax = _calc_branch_series_current_max(ref(pm, nw, :branch, l), ref(pm, nw, :bus, i), ref(pm, nw, :bus, j))
             for (idx,c) in enumerate(connections[(l,i,j)])
                 set_upper_bound(csi[l][c],  cmax[idx])
@@ -358,11 +358,11 @@ function variable_mc_transformer_power_real(pm::AbstractMCPowerModel; nw::Int=nw
     connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_transformer) for ((l,i,j), connections) in entry)
     pt = var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_pt_$((l,i,j))",
-        ) for (l,i,j) in ref(pm, nw, :arcs_trans)
+        ) for (l,i,j) in ref(pm, nw, :arcs_transformer)
     )
 
     if bounded
-        for arc in ref(pm, nw, :arcs_from_trans)
+        for arc in ref(pm, nw, :arcs_transformer_from)
             (l,i,j) = arc
             rate_a_fr, rate_a_to = _calc_transformer_power_ub_frto(ref(pm, nw, :transformer, l), ref(pm, nw, :bus, i), ref(pm, nw, :bus, j))
             for (idx, (fc, tc)) in enumerate(zip(connections[(l,i,j)], connections[(l,j,i)]))
@@ -389,7 +389,7 @@ function variable_mc_transformer_power_real(pm::AbstractMCPowerModel; nw::Int=nw
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :pf, :pt, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), pt)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :pf, :pt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), pt)
 end
 
 
@@ -399,11 +399,11 @@ function variable_mc_transformer_power_imaginary(pm::AbstractMCPowerModel; nw::I
     qt = var(pm, nw)[:qt] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_qt_$((l,i,j))",
             start = 0.0
-        ) for (l,i,j) in ref(pm, nw, :arcs_trans)
+        ) for (l,i,j) in ref(pm, nw, :arcs_transformer)
     )
 
     if bounded
-        for arc in ref(pm, nw, :arcs_from_trans)
+        for arc in ref(pm, nw, :arcs_transformer_from)
             (l,i,j) = arc
             rate_a_fr, rate_a_to = _calc_transformer_power_ub_frto(ref(pm, nw, :transformer, l), ref(pm, nw, :bus, i), ref(pm, nw, :bus, j))
 
@@ -431,7 +431,7 @@ function variable_mc_transformer_power_imaginary(pm::AbstractMCPowerModel; nw::I
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :qf, :qt, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), qt)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :qf, :qt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), qt)
 end
 
 ## transformer current variables
@@ -442,11 +442,11 @@ function variable_mc_transformer_current_real(pm::AbstractMCPowerModel; nw::Int=
     cr = var(pm, nw)[:crt] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_crt_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :transformer, l), "cr_start", c, 0.0)
-        ) for (l,i,j) in ref(pm, nw, :arcs_trans)
+        ) for (l,i,j) in ref(pm, nw, :arcs_transformer)
     )
 
     if bounded
-        for (l,i,j) in ref(pm, nw, :arcs_from_trans)
+        for (l,i,j) in ref(pm, nw, :arcs_transformer_from)
             trans = ref(pm, nw, :transformer, l)
             f_bus = ref(pm, nw, :bus, i)
             t_bus = ref(pm, nw, :bus, j)
@@ -460,7 +460,7 @@ function variable_mc_transformer_current_real(pm::AbstractMCPowerModel; nw::Int=
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :cr_fr, :cr_to, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), cr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :cr_fr, :cr_to, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), cr)
 end
 
 
@@ -470,11 +470,11 @@ function variable_mc_transformer_current_imaginary(pm::AbstractMCPowerModel; nw:
     ci = var(pm, nw)[:cit] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_cit_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :transformer, l), "ci_start", c, 0.0)
-        ) for (l,i,j) in ref(pm, nw, :arcs_trans)
+        ) for (l,i,j) in ref(pm, nw, :arcs_transformer)
     )
 
     if bounded
-        for (l,i,j) in ref(pm, nw, :arcs_from_trans)
+        for (l,i,j) in ref(pm, nw, :arcs_transformer_from)
             trans = ref(pm, nw, :transformer, l)
             f_bus = ref(pm, nw, :bus, i)
             t_bus = ref(pm, nw, :bus, j)
@@ -488,7 +488,7 @@ function variable_mc_transformer_current_imaginary(pm::AbstractMCPowerModel; nw:
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :ci_fr, :ci_to, ref(pm, nw, :arcs_from_trans), ref(pm, nw, :arcs_to_trans), ci)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :ci_fr, :ci_to, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), ci)
 end
 
 ## transformer tap variables
@@ -530,11 +530,11 @@ function variable_mc_switch_power_real(pm::AbstractMCPowerModel; nw::Int=nw_id_d
     psw = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_psw_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :switch, l), "psw_start", c, 0.0)
-        ) for (l,i,j) in ref(pm, nw, :arcs_sw)
+        ) for (l,i,j) in ref(pm, nw, :arcs_switch)
     )
 
     if bounded
-        for (l,i,j) in ref(pm, nw, :arcs_sw)
+        for (l,i,j) in ref(pm, nw, :arcs_switch)
             smax = _calc_branch_power_max(ref(pm, nw, :switch, l), ref(pm, nw, :bus, i))
             for (idx, c) in enumerate(connections[(l,i,j)])
                 set_upper_bound(psw[(l,i,j)][c],  smax[idx])
@@ -544,15 +544,15 @@ function variable_mc_switch_power_real(pm::AbstractMCPowerModel; nw::Int=nw_id_d
     end
 
     # this explicit type erasure is necessary
-    psw_expr = Dict{Any,Any}( (l,i,j) => psw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_from_sw) )
-    psw_expr = merge(psw_expr, Dict( (l,j,i) => -1.0.*psw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_from_sw)))
+    psw_expr = Dict{Any,Any}( (l,i,j) => psw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from) )
+    psw_expr = merge(psw_expr, Dict( (l,j,i) => -1.0.*psw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from)))
 
     # This is needed to get around error: "unexpected affine expression in nlconstraint"
     psw_auxes = Dict{Any,Any}(
         (l,i,j) => JuMP.@variable(
             pm.model, [c in connections[(l,i,j)]],
             base_name="$(nw)_psw_aux_$((l,i,j))"
-        ) for (l,i,j) in ref(pm, nw, :arcs_sw)
+        ) for (l,i,j) in ref(pm, nw, :arcs_switch)
     )
     for ((l,i,j), psw_aux) in psw_auxes
         for (idx, c) in enumerate(connections[(l,i,j)])
@@ -562,7 +562,7 @@ function variable_mc_switch_power_real(pm::AbstractMCPowerModel; nw::Int=nw_id_d
 
     var(pm, nw)[:psw] = psw_auxes
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :psw_fr, :psw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), psw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :psw_fr, :psw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), psw_expr)
 end
 
 
@@ -572,11 +572,11 @@ function variable_mc_switch_power_imaginary(pm::AbstractMCPowerModel; nw::Int=nw
     qsw = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_qsw_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :switch, l), "qsw_start", c, 0.0)
-        ) for (l,i,j) in ref(pm, nw, :arcs_sw)
+        ) for (l,i,j) in ref(pm, nw, :arcs_switch)
     )
 
     if bounded
-        for (l,i,j) in ref(pm, nw, :arcs_sw)
+        for (l,i,j) in ref(pm, nw, :arcs_switch)
             smax = _calc_branch_power_max(ref(pm, nw, :switch, l), ref(pm, nw, :bus, i))
             for (idx, c) in enumerate(connections[(l,i,j)])
                 set_upper_bound(qsw[(l,i,j)][c],  smax[idx])
@@ -586,15 +586,15 @@ function variable_mc_switch_power_imaginary(pm::AbstractMCPowerModel; nw::Int=nw
     end
 
     # this explicit type erasure is necessary
-    qsw_expr = Dict{Any,Any}( (l,i,j) => qsw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_from_sw) )
-    qsw_expr = merge(qsw_expr, Dict( (l,j,i) => -1.0*qsw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_from_sw)))
+    qsw_expr = Dict{Any,Any}( (l,i,j) => qsw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from) )
+    qsw_expr = merge(qsw_expr, Dict( (l,j,i) => -1.0*qsw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from)))
 
     # This is needed to get around error: "unexpected affine expression in nlconstraint"
     qsw_auxes = Dict{Any,Any}(
         (l,i,j) => JuMP.@variable(
             pm.model, [c in connections[(l,i,j)]],
             base_name="$(nw)_qsw_aux_$((l,i,j))"
-        ) for (l,i,j) in ref(pm, nw, :arcs_sw)
+        ) for (l,i,j) in ref(pm, nw, :arcs_switch)
     )
     for ((l,i,j), qsw_aux) in qsw_auxes
         for (idx, c) in enumerate(connections[(l,i,j)])
@@ -604,7 +604,7 @@ function variable_mc_switch_power_imaginary(pm::AbstractMCPowerModel; nw::Int=nw
 
     var(pm, nw)[:qsw] = qsw_auxes
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qsw_fr, :qsw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), qsw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qsw_fr, :qsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), qsw_expr)
 end
 
 ## switch current variables
@@ -622,11 +622,11 @@ function variable_mc_switch_current_real(pm::AbstractMCPowerModel; nw::Int=nw_id
     crsw = var(pm, nw)[:crsw] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_crsw_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :switch, l), "crsw_start", c, 0.0)
-        ) for (l,i,j) in ref(pm, nw, :arcs_sw)
+        ) for (l,i,j) in ref(pm, nw, :arcs_switch)
     )
 
     if bounded
-        for (l,i,j) in ref(pm, nw, :arcs_sw)
+        for (l,i,j) in ref(pm, nw, :arcs_switch)
             cmax = _calc_branch_current_max(ref(pm, nw, :switch, l), ref(pm, nw, :bus, i))
             for (idx,c) in enumerate(connections[(l,i,j)])
                 set_upper_bound(crsw[(l,i,j)][c],  cmax[idx])
@@ -636,15 +636,15 @@ function variable_mc_switch_current_real(pm::AbstractMCPowerModel; nw::Int=nw_id
     end
 
     # this explicit type erasure is necessary
-    crsw_expr = Dict{Any,Any}( (l,i,j) => crsw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_from_sw) )
-    crsw_expr = merge(crsw_expr, Dict( (l,j,i) => -crsw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_from_sw)))
+    crsw_expr = Dict{Any,Any}( (l,i,j) => crsw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from) )
+    crsw_expr = merge(crsw_expr, Dict( (l,j,i) => -crsw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from)))
 
     # This is needed to get around error: "unexpected affine expression in nlconstraint"
     crsw_auxes = Dict{Any,Any}(
         (l,i,j) => JuMP.@variable(
             pm.model, [c in connections[(l,i,j)]],
             base_name="$(nw)_crsw_aux_$((l,i,j))"
-        ) for (l,i,j) in ref(pm, nw, :arcs_sw)
+        ) for (l,i,j) in ref(pm, nw, :arcs_switch)
     )
     for ((l,i,j), crsw_aux) in crsw_auxes
         for (idx, c) in enumerate(connections[(l,i,j)])
@@ -654,7 +654,7 @@ function variable_mc_switch_current_real(pm::AbstractMCPowerModel; nw::Int=nw_id
 
     var(pm, nw)[:crsw] = crsw_auxes
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :crsw_fr, :crsw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), crsw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :crsw_fr, :crsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), crsw_expr)
 end
 
 
@@ -664,11 +664,11 @@ function variable_mc_switch_current_imaginary(pm::AbstractMCPowerModel; nw::Int=
     cisw = var(pm, nw)[:cisw] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in connections[(l,i,j)]], base_name="$(nw)_cisw_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :switch, l), "cisw_start", c, 0.0)
-        ) for (l,i,j) in ref(pm, nw, :arcs_sw)
+        ) for (l,i,j) in ref(pm, nw, :arcs_switch)
     )
 
     if bounded
-        for (l,i,j) in ref(pm, nw, :arcs_sw)
+        for (l,i,j) in ref(pm, nw, :arcs_switch)
             cmax = _calc_branch_current_max(ref(pm, nw, :switch, l), ref(pm, nw, :bus, i))
             for (idx,c) in enumerate(connections[(l,i,j)])
                 set_upper_bound(cisw[(l,i,j)][c],  cmax[idx])
@@ -678,15 +678,15 @@ function variable_mc_switch_current_imaginary(pm::AbstractMCPowerModel; nw::Int=
     end
 
     # this explicit type erasure is necessary
-    cisw_expr = Dict{Any,Any}( (l,i,j) => cisw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_from_sw) )
-    cisw_expr = merge(cisw_expr, Dict( (l,j,i) => -cisw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_from_sw)))
+    cisw_expr = Dict{Any,Any}( (l,i,j) => cisw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from) )
+    cisw_expr = merge(cisw_expr, Dict( (l,j,i) => -cisw[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from)))
 
     # This is needed to get around error: "unexpected affine expression in nlconstraint"
     cisw_auxes = Dict{Any,Any}(
         (l,i,j) => JuMP.@variable(
             pm.model, [c in connections[(l,i,j)]],
             base_name="$(nw)_cisw_aux_$((l,i,j))"
-        ) for (l,i,j) in ref(pm, nw, :arcs_sw)
+        ) for (l,i,j) in ref(pm, nw, :arcs_switch)
     )
     for ((l,i,j), cisw_aux) in cisw_auxes
         for (idx, c) in enumerate(connections[(l,i,j)])
@@ -696,7 +696,7 @@ function variable_mc_switch_current_imaginary(pm::AbstractMCPowerModel; nw::Int=
 
     var(pm, nw)[:cisw] = cisw_auxes
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :cisw_fr, :cisw_to, ref(pm, nw, :arcs_from_sw), ref(pm, nw, :arcs_to_sw), cisw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :cisw_fr, :cisw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), cisw_expr)
 end
 
 # switch state variables

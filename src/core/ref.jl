@@ -47,57 +47,6 @@ function _find_ref_buses(pm::AbstractMCPowerModel, nw)
 end
 
 
-"Adds arcs for PowerModelsDistribution transformers; for dclines and branches this is done in PowerModels"
-function ref_add_arcs_transformer!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
-    apply_pmd!(_ref_add_arcs_transformer!, ref, data; apply_to_subnetworks = true)
-end
-
-
-"Adds arcs for PowerModelsDistribution transformers; for dclines and branches this is done in PowerModels"
-function _ref_add_arcs_transformer!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
-    if !haskey(ref, :transformer)
-        # this might happen when parsing data from matlab format
-        # the OpenDSS parser always inserts a trans dict
-        ref[:transformer] = Dict{Int, Any}()
-    end
-
-    ref[:arcs_from_trans] = [(i, trans["f_bus"], trans["t_bus"]) for (i,trans) in ref[:transformer]]
-    ref[:arcs_to_trans] = [(i, trans["t_bus"], trans["f_bus"]) for (i,trans) in ref[:transformer]]
-    ref[:arcs_trans] = [ref[:arcs_from_trans]..., ref[:arcs_to_trans]...]
-    ref[:bus_arcs_trans] = Dict{Int64, Array{Any, 1}}()
-
-    for (i, bus) in ref[:bus]
-        ref[:bus_arcs_trans][i] = [e for e in ref[:arcs_trans] if e[2] == i]
-    end
-end
-
-
-"Adds arcs for PowerModelsDistribution transformers; for dclines and branches this is done in PowerModels"
-function ref_add_arcs_switch!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
-    apply_pmd!(_ref_add_arcs_switch!, ref, data; apply_to_subnetworks = true)
-end
-
-
-"Adds arcs for PowerModelsDistribution transformers; for dclines and branches this is done in PowerModels"
-function _ref_add_arcs_switch!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
-    if !haskey(ref, :switch)
-        # this might happen when parsing data from matlab format
-        # the OpenDSS parser always inserts a switch dict
-        ref[:switch] = Dict{Int, Any}()
-    end
-
-    ref[:arcs_from_sw] = [(i, switch["f_bus"], switch["t_bus"]) for (i,switch) in ref[:switch]]
-    ref[:arcs_to_sw] = [(i, switch["t_bus"], switch["f_bus"]) for (i,switch) in ref[:switch]]
-    ref[:arcs_sw] = [ref[:arcs_from_sw]..., ref[:arcs_to_sw]...]
-    ref[:bus_arcs_sw] = Dict{Int64, Array{Any, 1}}()
-    ref[:switch_dispatchable] = Dict(x for x in ref[:switch] if (x.second["status"] != 0 && x.second["dispatchable"] != 0 && x.second["f_bus"] in keys(ref[:bus]) && x.second["t_bus"] in keys(ref[:bus])))
-
-    for (i, bus) in ref[:bus]
-        ref[:bus_arcs_sw][i] = [e for e in ref[:arcs_sw] if e[2] == i]
-    end
-end
-
-
 ""
 function _calc_mc_transformer_Tvi(pm::AbstractMCPowerModel, i::Int; nw=nw_id_default)
     trans = ref(pm, nw, :transformer,  i)
@@ -174,35 +123,6 @@ function _calc_mc_transformer_Tvi(pm::AbstractMCPowerModel, i::Int; nw=nw_id_def
     # compensate for change of LN voltage of a delta winding
     Cv_to *= vmult
     return (Tv_fr,Tv_im,Ti_fr,Ti_im,Cv_to)
-end
-
-
-""
-function ref_add_connections!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
-    apply_pmd!(_ref_add_connections!, ref, data; apply_to_subnetworks = true)
-end
-
-
-""
-function _ref_add_connections!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
-    for (type, status) in [("gen", "gen_status"), ("load", "status"), ("shunt", "status"), ("storage", "status")]
-        ref[Symbol("bus_conns_$(type)")] = Dict{Int,Vector{Tuple{Int,Vector{Int}}}}([(bus["index"], []) for (_, bus) in data["bus"]])
-        for (_, obj) in get(data, type, Dict())
-            if obj[status] != 0
-                push!(ref[Symbol("bus_conns_$(type)")][obj["$(type)_bus"]], (obj["index"], obj["connections"]))
-            end
-        end
-    end
-
-    for (type, status) in [("transformer", "status"), ("branch", "br_status"), ("switch", "status")]
-        ref[Symbol("bus_arcs_conns_$(type)")] = Dict{Int,Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}}([(bus["index"], []) for (_, bus) in data["bus"]])
-        for (_, obj) in get(data, type, Dict())
-            if obj[status] != 0
-                push!(ref[Symbol("bus_arcs_conns_$(type)")][obj["f_bus"]], ((obj["index"], obj["f_bus"], obj["t_bus"]), obj["f_connections"]))
-                push!(ref[Symbol("bus_arcs_conns_$(type)")][obj["t_bus"]], ((obj["index"], obj["t_bus"], obj["f_bus"]), obj["t_connections"]))
-            end
-        end
-    end
 end
 
 
@@ -348,101 +268,93 @@ Some of the common keys include:
 * `:bus` -- the set `{(i, bus) in ref[:bus] : bus["bus_type"] != 4}`,
 * `:gen` -- the set `{(i, gen) in ref[:gen] : gen["gen_status"] == 1 && gen["gen_bus"] in keys(ref[:bus])}`,
 * `:branch` -- the set of branches that are active in the network (based on the component status values),
-* `:arcs_from` -- the set `[(i,b["f_bus"],b["t_bus"]) for (i,b) in ref[:branch]]`,
-* `:arcs_to` -- the set `[(i,b["t_bus"],b["f_bus"]) for (i,b) in ref[:branch]]`,
-* `:arcs` -- the set of arcs from both `arcs_from` and `arcs_to`,
-* `:bus_arcs` -- the mapping `Dict(i => [(l,i,j) for (l,i,j) in ref[:arcs]])`,
-* `:buspairs` -- (see `buspair_parameters(ref[:arcs_from], ref[:branch], ref[:bus])`),
+* `:arcs_branch_from` -- the set `[(i,b["f_bus"],b["t_bus"]) for (i,b) in ref[:branch]]`,
+* `:arcs_branch_to` -- the set `[(i,b["t_bus"],b["f_bus"]) for (i,b) in ref[:branch]]`,
+* `:arcs_branch` -- the set of arcs from both `arcs_from` and `arcs_to`,
+* `:arcs_switch_from` -- the set `[(i,b["f_bus"],b["t_bus"]) for (i,b) in ref[:switch]]`,
+* `:arcs_switch_to` -- the set `[(i,b["t_bus"],b["f_bus"]) for (i,b) in ref[:switch]]`,
+* `:arcs_switch` -- the set of arcs from both `arcs_switch_from` and `arcs_switch_to`,
+* `:arcs_transformer_from` -- the set `[(i,b["f_bus"],b["t_bus"]) for (i,b) in ref[:transformer]]`,
+* `:arcs_transformer_to` -- the set `[(i,b["t_bus"],b["f_bus"]) for (i,b) in ref[:transformer]]`,
+* `:arcs_transformer` -- the set of arcs from both `arcs_transformer_from` and `arcs_transformer_to`,
+* `:bus_arcs_branch` -- the mapping `Dict(i => [(l,i,j) for (l,i,j) in ref[:arcs_branch]])`,
+* `:bus_arcs_transformer` -- the mapping `Dict(i => [(l,i,j) for (l,i,j) in ref[:arcs_transformer]])`,
+* `:bus_arcs_switch` -- the mapping `Dict(i => [(l,i,j) for (l,i,j) in ref[:arcs_switch]])`,
+* `:buspairs` -- (see `buspair_parameters(ref[:arcs_branch_from], ref[:branch], ref[:bus])`),
 * `:bus_gens` -- the mapping `Dict(i => [gen["gen_bus"] for (i,gen) in ref[:gen]])`.
 * `:bus_loads` -- the mapping `Dict(i => [load["load_bus"] for (i,load) in ref[:load]])`.
 * `:bus_shunts` -- the mapping `Dict(i => [shunt["shunt_bus"] for (i,shunt) in ref[:shunt]])`.
-* `:arcs_from_dc` -- the set `[(i,b["f_bus"],b["t_bus"]) for (i,b) in ref[:dcline]]`,
-* `:arcs_to_dc` -- the set `[(i,b["t_bus"],b["f_bus"]) for (i,b) in ref[:dcline]]`,
-* `:arcs_dc` -- the set of arcs from both `arcs_from_dc` and `arcs_to_dc`,
-* `:bus_arcs_dc` -- the mapping `Dict(i => [(l,i,j) for (l,i,j) in ref[:arcs_dc]])`, and
-* `:buspairs_dc` -- (see `buspair_parameters(ref[:arcs_from_dc], ref[:dcline], ref[:bus])`),
-If `:ne_branch` exists, then the following keys are also available with similar semantics:
-* `:ne_branch`, `:ne_arcs_from`, `:ne_arcs_to`, `:ne_arcs`, `:ne_bus_arcs`, `:ne_buspairs`.
 """
 function ref_add_core!(ref::Dict{Symbol,Any})
     for (nw, nw_ref) in ref[:it][pmd_it_sym][:nw]
-        if !haskey(nw_ref, :conductor_ids)
-            if !haskey(nw_ref, :conductors)
-                nw_ref[:conductor_ids] = 1:1
-            else
-                nw_ref[:conductor_ids] = 1:nw_ref[:conductors]
+        ### filter out inactive components ###
+
+        nw_ref[:bus] = Dict(x for x in nw_ref[:bus] if (x.second["bus_type"] != pmd_math_component_status_inactive["bus"]))
+
+        for (type, status) in pmd_math_component_status
+            if type in _math_node_elements
+                nw_ref[Symbol(type)] = Dict(x for x in get(nw_ref, Symbol(type), Dict()) if (x.second[status] != pmd_math_component_status_inactive[type] && x.second["$(type)_bus"] in keys(nw_ref[:bus])))
+            elseif type in _math_edge_elements
+                nw_ref[Symbol(type)] = Dict(x for x in get(nw_ref, Symbol(type), Dict()) if (x.second[status] != pmd_math_component_status_inactive[type] && x.second["f_bus"] in keys(nw_ref[:bus]) && x.second["t_bus"] in keys(nw_ref[:bus])))
             end
         end
 
-        ### filter out inactive components ###
-        nw_ref[:bus] = Dict(x for x in nw_ref[:bus] if (x.second["bus_type"] != pmd_component_status_inactive["bus"]))
-        nw_ref[:load] = Dict(x for x in nw_ref[:load] if (x.second["status"] != pmd_component_status_inactive["load"] && x.second["load_bus"] in keys(nw_ref[:bus])))
-        nw_ref[:shunt] = Dict(x for x in nw_ref[:shunt] if (x.second["status"] != pmd_component_status_inactive["shunt"] && x.second["shunt_bus"] in keys(nw_ref[:bus])))
-        nw_ref[:gen] = Dict(x for x in nw_ref[:gen] if (x.second["gen_status"] != pmd_component_status_inactive["gen"] && x.second["gen_bus"] in keys(nw_ref[:bus])))
-        nw_ref[:storage] = Dict(x for x in nw_ref[:storage] if (x.second["status"] != pmd_component_status_inactive["storage"] && x.second["storage_bus"] in keys(nw_ref[:bus])))
-        nw_ref[:switch] = Dict(x for x in nw_ref[:switch] if (x.second["status"] != pmd_component_status_inactive["switch"] && x.second["f_bus"] in keys(nw_ref[:bus]) && x.second["t_bus"] in keys(nw_ref[:bus])))
-        nw_ref[:branch] = Dict(x for x in nw_ref[:branch] if (x.second["br_status"] != pmd_component_status_inactive["branch"] && x.second["f_bus"] in keys(nw_ref[:bus]) && x.second["t_bus"] in keys(nw_ref[:bus])))
-        nw_ref[:dcline] = Dict(x for x in nw_ref[:dcline] if (x.second["br_status"] != pmd_component_status_inactive["dcline"] && x.second["f_bus"] in keys(nw_ref[:bus]) && x.second["t_bus"] in keys(nw_ref[:bus])))
-
+        # dispatchable types ref
+        for type in _math_dispatchable_elements
+            nw_ref[Symbol("$(type)_dispatchable")] = filter(x->get(x.second, "dispatchable", 0) == 1, nw_ref[Symbol(type)])
+        end
 
         ### setup arcs from edges ###
-        nw_ref[:arcs_from] = [(i,branch["f_bus"],branch["t_bus"]) for (i,branch) in nw_ref[:branch]]
-        nw_ref[:arcs_to]   = [(i,branch["t_bus"],branch["f_bus"]) for (i,branch) in nw_ref[:branch]]
-        nw_ref[:arcs] = [nw_ref[:arcs_from]; nw_ref[:arcs_to]]
+        nw_ref[:arcs_branch_from] = [(i,branch["f_bus"],branch["t_bus"]) for (i,branch) in nw_ref[:branch]]
+        nw_ref[:arcs_branch_to]   = [(i,branch["t_bus"],branch["f_bus"]) for (i,branch) in nw_ref[:branch]]
+        nw_ref[:arcs_branch] = [nw_ref[:arcs_branch_from]; nw_ref[:arcs_branch_to]]
 
-        nw_ref[:arcs_from_dc] = [(i,dcline["f_bus"],dcline["t_bus"]) for (i,dcline) in nw_ref[:dcline]]
-        nw_ref[:arcs_to_dc]   = [(i,dcline["t_bus"],dcline["f_bus"]) for (i,dcline) in nw_ref[:dcline]]
-        nw_ref[:arcs_dc]      = [nw_ref[:arcs_from_dc]; nw_ref[:arcs_to_dc]]
+        nw_ref[:arcs_switch_from] = [(i,switch["f_bus"],switch["t_bus"]) for (i,switch) in nw_ref[:switch]]
+        nw_ref[:arcs_switch_to]   = [(i,switch["t_bus"],switch["f_bus"]) for (i,switch) in nw_ref[:switch]]
+        nw_ref[:arcs_switch] = [nw_ref[:arcs_switch_from]; nw_ref[:arcs_switch_to]]
 
-        nw_ref[:arcs_from_sw] = [(i,switch["f_bus"],switch["t_bus"]) for (i,switch) in nw_ref[:switch]]
-        nw_ref[:arcs_to_sw]   = [(i,switch["t_bus"],switch["f_bus"]) for (i,switch) in nw_ref[:switch]]
-        nw_ref[:arcs_sw] = [nw_ref[:arcs_from_sw]; nw_ref[:arcs_to_sw]]
-
+        nw_ref[:arcs_transformer_from] = [(i, transformer["f_bus"], transformer["t_bus"]) for (i,transformer) in nw_ref[:transformer]]
+        nw_ref[:arcs_transformer_to] = [(i, transformer["t_bus"], transformer["f_bus"]) for (i,transformer) in nw_ref[:transformer]]
+        nw_ref[:arcs_transformer] = [nw_ref[:arcs_transformer_from]; nw_ref[:arcs_transformer_to]]
 
         ### bus connected component lookups ###
-        bus_loads = Dict((i, Int[]) for (i,bus) in nw_ref[:bus])
-        for (i, load) in nw_ref[:load]
-            push!(bus_loads[load["load_bus"]], i)
+        for type in _math_node_elements
+            bus_objs = Dict((i, Int[]) for (i,bus) in nw_ref[:bus])
+            for (i, obj) in nw_ref[Symbol(type)]
+                push!(bus_objs[obj["$(type)_bus"]], i)
+            end
+            nw_ref[Symbol("bus_$(type)s")] = bus_objs
         end
-        nw_ref[:bus_loads] = bus_loads
 
-        bus_shunts = Dict((i, Int[]) for (i,bus) in nw_ref[:bus])
-        for (i,shunt) in nw_ref[:shunt]
-            push!(bus_shunts[shunt["shunt_bus"]], i)
+        for type in _math_edge_elements
+            bus_arcs = Dict((i, Tuple{Int,Int,Int}[]) for (i,bus) in nw_ref[:bus])
+            for (l,i,j) in nw_ref[Symbol("arcs_$type")]
+                push!(bus_arcs[i], (l,i,j))
+            end
+            nw_ref[Symbol("bus_arcs_$(type)")] = bus_arcs
         end
-        nw_ref[:bus_shunts] = bus_shunts
 
-        bus_gens = Dict((i, Int[]) for (i,bus) in nw_ref[:bus])
-        for (i,gen) in nw_ref[:gen]
-            push!(bus_gens[gen["gen_bus"]], i)
+        ### connections
+        for (type, status) in pmd_math_component_status
+            if type in _math_node_elements
+                conns = Dict{Int,Vector{Tuple{Int,Vector{Int}}}}([(i, []) for (i, bus) in nw_ref[:bus]])
+                for (i, obj) in nw_ref[Symbol(type)]
+                    if obj[status] != pmd_math_component_status_inactive[type]
+                        push!(conns[obj["$(type)_bus"]], (i, obj["connections"]))
+                    end
+                end
+                nw_ref[Symbol("bus_conns_$(type)")] = conns
+            elseif type in _math_edge_elements
+                conns = Dict{Int,Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}}([(i, []) for (i, bus) in nw_ref[:bus]])
+                for (i, obj) in nw_ref[Symbol(type)]
+                    if obj[status] != pmd_math_component_status_inactive[type]
+                        push!(conns[obj["f_bus"]], ((obj["index"], obj["f_bus"], obj["t_bus"]), obj["f_connections"]))
+                        push!(conns[obj["t_bus"]], ((obj["index"], obj["t_bus"], obj["f_bus"]), obj["t_connections"]))
+                    end
+                end
+                nw_ref[Symbol("bus_arcs_conns_$(type)")] = conns
+            end
         end
-        nw_ref[:bus_gens] = bus_gens
-
-        bus_storage = Dict((i, Int[]) for (i,bus) in nw_ref[:bus])
-        for (i,strg) in nw_ref[:storage]
-            push!(bus_storage[strg["storage_bus"]], i)
-        end
-        nw_ref[:bus_storage] = bus_storage
-
-        bus_arcs = Dict((i, Tuple{Int,Int,Int}[]) for (i,bus) in nw_ref[:bus])
-        for (l,i,j) in nw_ref[:arcs]
-            push!(bus_arcs[i], (l,i,j))
-        end
-        nw_ref[:bus_arcs] = bus_arcs
-
-        bus_arcs_dc = Dict((i, Tuple{Int,Int,Int}[]) for (i,bus) in nw_ref[:bus])
-        for (l,i,j) in nw_ref[:arcs_dc]
-            push!(bus_arcs_dc[i], (l,i,j))
-        end
-        nw_ref[:bus_arcs_dc] = bus_arcs_dc
-
-        bus_arcs_sw = Dict((i, Tuple{Int,Int,Int}[]) for (i,bus) in nw_ref[:bus])
-        for (l,i,j) in nw_ref[:arcs_sw]
-            push!(bus_arcs_sw[i], (l,i,j))
-        end
-        nw_ref[:bus_arcs_sw] = bus_arcs_sw
-
-
 
         ### reference bus lookup (a set to support multiple connected components) ###
         ref_buses = Dict{Int,Any}()

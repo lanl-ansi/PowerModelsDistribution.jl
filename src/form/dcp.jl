@@ -130,10 +130,10 @@ function variable_mc_branch_power_real(pm::AbstractAPLossLessModels; nw::Int=nw_
     p = Dict((l,i,j) => JuMP.@variable(pm.model,
         [c in connections[(l,i,j)]], base_name="$(nw)_($l,$i,$j)_p",
         start = comp_start_value(ref(pm, nw, :branch, l), "p_start", c, 0.0)
-    ) for (l,i,j) in ref(pm, nw, :arcs_from))
+    ) for (l,i,j) in ref(pm, nw, :arcs_branch_from))
 
     if bounded
-        for (l,i,j) in ref(pm, nw, :arcs_from)
+        for (l,i,j) in ref(pm, nw, :arcs_branch_from)
             smax = _calc_branch_power_max(ref(pm, nw, :branch, l), ref(pm, nw, :bus, i))
             for (k,t) in enumerate(connections[(l,i,j)])
                 if !ismissing(smax)
@@ -152,8 +152,8 @@ function variable_mc_branch_power_real(pm::AbstractAPLossLessModels; nw::Int=nw_
     end
 
     # this explicit type erasure is necessary
-    p_expr = Dict{Any,Any}( ((l,i,j), p[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_from) )
-    p_expr = merge(p_expr, Dict( ((l,j,i), -1.0*p[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_from)))
+    p_expr = Dict{Any,Any}( ((l,i,j), p[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_branch_from) )
+    p_expr = merge(p_expr, Dict( ((l,j,i), -1.0*p[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_branch_from)))
     var(pm, nw)[:p] = p_expr
 end
 
