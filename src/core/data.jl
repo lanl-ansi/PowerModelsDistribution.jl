@@ -15,10 +15,10 @@ const _excluded_count_busname_patterns = Vector{Regex}([
     r"^_virtual.*",
 ])
 
-const _pmd_component_status_parameters = Set(["status", "gen_status", "br_status"])
+const _pmd_math_component_status_parameters = Set(["status", "gen_status", "br_status"])
 
 "maps component types to status parameters"
-const pmd_component_status = Dict(
+const pmd_math_component_status = Dict(
     "bus" => "bus_type",
     "load" => "status",
     "shunt" => "status",
@@ -30,7 +30,7 @@ const pmd_component_status = Dict(
 )
 
 "maps component types to inactive status values"
-const pmd_component_status_inactive = Dict(
+const pmd_math_component_status_inactive = Dict(
     "bus" => 4,
     "load" => 0,
     "shunt" => 0,
@@ -896,8 +896,8 @@ function calc_connected_components(data::Dict{String,<:Any}; edges=["branch", "t
 
     neighbors = Dict(i => Int[] for i in active_bus_ids)
     for comp_type in edges
-        status_key = get(pmd_component_status, comp_type, "status")
-        status_inactive = get(pmd_component_status_inactive, comp_type, 0)
+        status_key = get(pmd_math_component_status, comp_type, "status")
+        status_inactive = get(pmd_math_component_status_inactive, comp_type, 0)
         for edge in values(get(pm_data, comp_type, Dict()))
             if get(edge, status_key, 1) != status_inactive && edge["f_bus"] in active_bus_ids && edge["t_bus"] in active_bus_ids
                 push!(neighbors[edge["f_bus"]], edge["t_bus"])
