@@ -9,7 +9,7 @@ function parse_file(
     import_all::Bool=false,
     bank_transformers::Bool=true,
     transformations::Vector{<:Any}=[],
-    build_multinetwork::Bool=false,
+    multinetwork::Bool=false,
     kron_reduced::Bool=true,
     time_series::String="daily"
         )::Dict{String,Any}
@@ -47,7 +47,7 @@ function parse_file(
             return transform_data_model(data_eng;
                 make_pu=true,
                 kron_reduced=kron_reduced,
-                build_multinetwork=build_multinetwork
+                multinetwork=multinetwork
             )
         else
             return data_eng
@@ -56,7 +56,7 @@ function parse_file(
         if pmd_data["data_model"] != data_model && data_model == ENGINEERING
             return transform_data_model(pmd_data;
                 kron_reduced=kron_reduced,
-                build_multinetwork=build_multinetwork
+                multinetwork=multinetwork
             )
         else
             return pmd_data
@@ -81,19 +81,21 @@ end
 function transform_data_model(data::Dict{String,<:Any};
         kron_reduced::Bool=true,
         make_pu::Bool=true,
-        build_multinetwork::Bool=false
+        multinetwork::Bool=false
             )::Dict{String,Any}
 
     current_data_model = get(data, "data_model", MATHEMATICAL)
 
     if current_data_model == ENGINEERING
-        if build_multinetwork && haskey(data, "time_series")
+        if multinetwork && haskey(data, "time_series")
             mn_data = make_multinetwork(data)
             if ismultinetwork(mn_data)
                 data_math = _map_eng2math_multinetwork(mn_data; kron_reduced=kron_reduced)
             else
                 data_math = _map_eng2math(mn_data; kron_reduced=kron_reduced)
             end
+        elseif ismultinetwork(data)
+            data_math = _map_eng2math_multinetwork(data; kron_reduced=kron_reduced)
         else
             data_math = _map_eng2math(data; kron_reduced=kron_reduced)
         end

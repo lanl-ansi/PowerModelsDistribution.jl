@@ -61,8 +61,9 @@ function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced:
         data_math_mn["nw"][n] = _map_eng2math(nw; kron_reduced=kron_reduced)
 
         for k in _pmd_math_global_keys
-            data_math_mn[k] = data_math_mn["nw"][n][k]
-            delete!(data_math_mn["nw"][n], k)
+            if haskey(data_math_mn["nw"][n], k)
+                data_math_mn[k] = pop!(data_math_mn["nw"][n], k)
+            end
         end
     end
 
@@ -74,7 +75,7 @@ end
 function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true)
     @assert get(data_eng, "data_model", MATHEMATICAL) == ENGINEERING
 
-    # TODO remove kron reduction from eng2math in v0.10 (breaking)
+    # TODO remove kron reduction from eng2math (breaking)
     _data_eng = deepcopy(data_eng)
     if kron_reduced && !get(data_eng, "is_kron_reduced", false)
         apply_kron_reduction!(_data_eng)
