@@ -884,7 +884,7 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function calc_connected_components(data::Dict{String,<:Any}; edges=["branch", "dcline", "switch"])
+function calc_connected_components(data::Dict{String,<:Any}; edges=["branch", "transformer", "switch"])
     pm_data = get_pm_data(data)
 
     if ismultinetwork(pm_data)

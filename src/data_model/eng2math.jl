@@ -31,7 +31,12 @@ const _math_node_elements = Vector{String}([
 
 "list of edge type elements in the engineering model"
 const _math_edge_elements = Vector{String}([
-    "branch", "switch", "transformer", "dcline"
+    "branch", "switch", "transformer"
+])
+
+"list of all math asset types"
+const pmd_math_asset_types = Vector{String}([
+    "bus", _math_node_elements..., _math_edge_elements...
 ])
 
 "list of multinetwork keys that belong at the root level"

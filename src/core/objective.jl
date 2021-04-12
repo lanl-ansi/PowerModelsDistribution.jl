@@ -260,7 +260,6 @@ end
 "Multiconductor adaptation of min fuel cost polynomial linquad objective"
 function _objective_mc_min_fuel_cost_polynomial_linquad(pm::AbstractIVRModel; report::Bool=true)
     gen_cost = Dict()
-    dcline_cost = Dict()
 
     for (n, nw_ref) in nws(pm)
         for (i,gen) in nw_ref[:gen]
@@ -283,7 +282,6 @@ function _objective_mc_min_fuel_cost_polynomial_linquad(pm::AbstractIVRModel; re
     return JuMP.@NLobjective(pm.model, Min,
         sum(
             sum(    gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] )
-            + sum( dcline_cost[(n,i)] for (i,dcline) in nw_ref[:dcline] )
         for (n, nw_ref) in nws(pm))
     )
 end
@@ -292,7 +290,6 @@ end
 "Multiconductor adaptation of min fuel cost polynomial linquad objective"
 function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::AbstractIVRModel; report::Bool=true)
     gen_cost = Dict()
-    dcline_cost = Dict()
     switch_state = Dict()
 
     for (n, nw_ref) in nws(pm)
@@ -319,7 +316,6 @@ function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::AbstractIVRMo
     return JuMP.@NLobjective(pm.model, Min,
         sum(
             sum(    gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] )
-            + sum( dcline_cost[(n,i)] for (i,dcline) in nw_ref[:dcline] )
             + sum( switch_state[(n,i)] for i in ids(pm, n, :switch_dispatchable))
         for (n, nw_ref) in nws(pm))
     )

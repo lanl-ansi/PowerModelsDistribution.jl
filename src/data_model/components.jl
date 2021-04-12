@@ -84,7 +84,6 @@ function Model(model_type::DataModel=ENGINEERING; kwargs...)::Dict{String,Any}
             "storage" => Dict{String,Any}(),
             "branch" => Dict{String,Any}(),
             "switch" => Dict{String,Any}(),
-            "dcline" => Dict{String,Any}(),
             "per_unit" => false,
             "baseMVA" => 100.0,
             "basekv" => 1.0,

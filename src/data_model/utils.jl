@@ -108,7 +108,7 @@ end
 
 "initializes the base components that are expected by powermodelsdistribution in the mathematical model"
 function _init_base_components!(data_math::Dict{String,<:Any})
-    for key in ["bus", "load", "shunt", "gen", "branch", "switch", "transformer", "storage", "dcline"]
+    for key in pmd_math_asset_types
         if !haskey(data_math, key)
             data_math[key] = Dict{String,Any}()
         end
