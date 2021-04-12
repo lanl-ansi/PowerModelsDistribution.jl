@@ -91,7 +91,6 @@ function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true)
         "is_projected" => get(_data_eng, "is_projected", false),
         "is_kron_reduced" => get(_data_eng, "is_kron_reduced", false),
         "settings" => deepcopy(_data_eng["settings"]),
-        "conductors" => get(_data_eng, "conductors", kron_reduced ? 3 : 4),
         "conductor_ids" => get(_data_eng, "conductor_ids", kron_reduced ? collect(1:3) : collect(1:4))
     )
 

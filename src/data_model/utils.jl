@@ -17,12 +17,12 @@ end
 
 ""
 function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
-    if haskey(data, "conductors")
+    if haskey(data, "conductor_ids")
         Memento.warn(_LOGGER, "skipping network that is already multiconductor")
         return
     end
 
-    data["conductors"] = conductors
+    data["conductor_ids"] = collect(1:conductors)
     data["data_model"] = MATHEMATICAL
     data["settings"] = get(data, "settings", Dict{String,Any}(
         "sbase_default" => get(data, "baseMVA", 1e6)

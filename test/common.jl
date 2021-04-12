@@ -55,7 +55,6 @@ function build_mn_mc_data!(base_data; replicates::Int=3, conductors::Int=3)
     mp_data = PowerModels.parse_file(base_data)
     make_multiconductor!(mp_data, conductors)
     mn_mc_data = PowerModels.replicate(mp_data, replicates)
-    mn_mc_data["conductors"] = mn_mc_data["nw"]["1"]["conductors"]
     return mn_mc_data
 end
 
