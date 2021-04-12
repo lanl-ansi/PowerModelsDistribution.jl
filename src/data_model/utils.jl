@@ -24,6 +24,9 @@ function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
 
     data["conductors"] = conductors
     data["data_model"] = MATHEMATICAL
+    data["settings"] = get(data, "settings", Dict{String,Any}(
+        "sbase_default" => get(data, "baseMVA", 1e6)
+    ))
 
     for (key, item) in data
         if isa(item, Dict{String,Any})

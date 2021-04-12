@@ -167,5 +167,4 @@
         @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"]), 18.34498; atol=1e-5)
         @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"]),  9.19404; atol=1e-4)
     end
-
 end

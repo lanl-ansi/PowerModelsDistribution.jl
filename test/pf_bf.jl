@@ -20,8 +20,9 @@
             sol = solve_mc_pf(pmd, LPUBFDiagPowerModel, ipopt_solver)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0183456; atol=2e-3)
-            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00923328; atol=2e-3)
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * baseMVA), 0.0183456; atol=2e-3)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * baseMVA), 0.00923328; atol=2e-3)
         end
 
         @testset "3-bus unbalanced lpubfdiag pf_bf" begin
@@ -29,8 +30,9 @@
             sol = solve_mc_pf(pmd, LPUBFDiagPowerModel, ipopt_solver)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * sol["solution"]["baseMVA"]), 0.0214812; atol=2e-3)
-            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * sol["solution"]["baseMVA"]), 0.00927263; atol=2e-3)
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"] * baseMVA), 0.0214812; atol=2e-3)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"] * baseMVA), 0.00927263; atol=2e-3)
         end
     end
 

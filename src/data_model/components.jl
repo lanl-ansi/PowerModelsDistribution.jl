@@ -85,8 +85,6 @@ function Model(model_type::DataModel=ENGINEERING; kwargs...)::Dict{String,Any}
             "branch" => Dict{String,Any}(),
             "switch" => Dict{String,Any}(),
             "per_unit" => false,
-            "baseMVA" => 100.0,
-            "basekv" => 1.0,
             "data_model" => model_type
         )
 

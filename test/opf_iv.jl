@@ -9,8 +9,9 @@
             @test sol["termination_status"] == LOCALLY_SOLVED
             @test isapprox(sol["objective"], 0.018208969542066918; atol = 1e-4)
 
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * sol["solution"]["settings"]["sbase"]), 0.018209; atol=1e-5)
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * sol["solution"]["settings"]["sbase"]), 0.000208979; atol=1e-5)
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.018209; atol=1e-5)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.000208979; atol=1e-5)
         end
 
         @testset "3-bus balanced acp opf" begin
@@ -20,8 +21,9 @@
             @test sol["termination_status"] == LOCALLY_SOLVED
             @test isapprox(sol["objective"], 0.018345004773175046; atol = 1e-4)
 
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * sol["solution"]["settings"]["sbase"]), 0.018345; atol=1e-6)
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * sol["solution"]["settings"]["sbase"]), 0.00919404; atol=1.2e-5)
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.018345; atol=1e-6)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.00919404; atol=1.2e-5)
         end
 
         @testset "3-bus unbalanced acp opf" begin
@@ -31,9 +33,9 @@
             @test sol["termination_status"] == LOCALLY_SOLVED
             @test isapprox(sol["objective"], 0.021481176584287; atol = 1e-4)
 
-
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * sol["solution"]["settings"]["sbase"]), 0.0214812; atol=1e-6)
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * sol["solution"]["settings"]["sbase"]), 0.00927263; atol=1e-5)
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.0214812; atol=1e-6)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.00927263; atol=1e-5)
         end
 
         @testset "5-bus storage matpower mn ivr opf" begin

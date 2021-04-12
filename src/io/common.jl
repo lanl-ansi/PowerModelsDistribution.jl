@@ -120,16 +120,8 @@ function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true)
     elseif get(data, "data_model", MATHEMATICAL) == MATHEMATICAL
         if make_pu
             make_per_unit!(data)
-            #TODO system-wide vbase does not make sense anymore...
-            #take highest vbase just so it does not break anything for now
             if ismultinetwork(data)
-                for (n,nw) in data["nw"]
-                    nw["basekv"]  = maximum(maximum(bus["vbase"] for (_, bus) in nw["bus"]) for nw in values(data["nw"]))
-                    nw["baseMVA"] = data["settings"]["sbase"]*data["settings"]["power_scale_factor"]/1E6
-                end
             else
-                data["baseMVA"] = data["settings"]["sbase"]*data["settings"]["power_scale_factor"]/1E6
-                data["basekv"]  = maximum(bus["vbase"] for (_, bus) in data["bus"])
                 check_connectivity(data)
                 correct_mc_voltage_angle_differences!(data)
                 correct_mc_thermal_limits!(data)

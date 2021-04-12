@@ -222,10 +222,10 @@ function _map_math2eng_root!(data_eng::Dict{String,<:Any}, data_math::Dict{Strin
     data_eng["per_unit"] = data_math["per_unit"]
 
     if !ismultinetwork(data_math)
-        data_eng["settings"] = Dict{String,Any}("sbase" => data_math["baseMVA"])
+        data_eng["settings"] = data_math["settings"]
     else
         for (n,nw) in data_eng["nw"]
-            nw["settings"] = Dict{String,Any}("sbase" => data_math["nw"][n]["baseMVA"])
+            nw["settings"] = Dict{String,Any}("sbase" => data_math["nw"][n]["settings"]["sbase"])
         end
     end
 end

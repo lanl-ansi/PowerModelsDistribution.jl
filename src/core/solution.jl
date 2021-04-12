@@ -3,8 +3,7 @@ function _IM.solution_preprocessor(pm::AbstractMCPowerModel, solution::Dict)
     solution["it"][pmd_it_name]["per_unit"] = per_unit
 
     for (nw_id, nw_ref) in nws(pm)
-        solution["it"][pmd_it_name]["nw"]["$(nw_id)"]["baseMVA"] = nw_ref[:baseMVA]
-        solution["it"][pmd_it_name]["nw"]["$(nw_id)"]["conductors"] = nw_ref[:conductors]
+        solution["it"][pmd_it_name]["nw"]["$(nw_id)"]["settings"] = nw_ref[:settings]
     end
 end
 
