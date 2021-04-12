@@ -157,15 +157,11 @@ end
 
 
 "overwrites PowerModels buspairs ref by conductor"
-function calc_buspair_parameters(buses, branches, conductor_ids, is_multiconductor::Bool)
+function calc_buspair_parameters(buses, branches)
     bus_lookup = Dict(bus["index"] => bus for (i,bus) in buses if bus["bus_type"] != 4)
     branch_lookup = Dict(branch["index"] => branch for (i,branch) in branches if branch["br_status"] == 1 && haskey(bus_lookup, branch["f_bus"]) && haskey(bus_lookup, branch["t_bus"]))
 
-    if is_multiconductor
-        buspair_indexes = Set((branch["f_bus"], branch["t_bus"], fc, tc) for (i,branch) in branch_lookup for (fc, tc) in zip(branch["f_connections"], branch["t_connections"]))
-    else
-        buspair_indexes = Set((branch["f_bus"], branch["t_bus"]) for (i,branch) in branch_lookup)
-    end
+    buspair_indexes = Set((branch["f_bus"], branch["t_bus"], fc, tc) for (i,branch) in branch_lookup for (fc, tc) in zip(branch["f_connections"], branch["t_connections"]))
 
     bp_branch = Dict((bp, typemax(Int64)) for bp in buspair_indexes)
 
@@ -176,66 +172,37 @@ function calc_buspair_parameters(buses, branches, conductor_ids, is_multiconduct
         i = branch["f_bus"]
         j = branch["t_bus"]
 
-        if is_multiconductor
-            f_connections = branch["f_connections"]
-            t_connections = branch["t_connections"]
+        f_connections = branch["f_connections"]
+        t_connections = branch["t_connections"]
 
-            for (idx, (fc, tc)) in enumerate(zip(f_connections, t_connections))
-                bp_angmin[(i,j,fc,tc)] = max(bp_angmin[(i,j,fc,tc)], branch["angmin"][idx])
-                bp_angmax[(i,j,fc,tc)] = min(bp_angmax[(i,j,fc,tc)], branch["angmax"][idx])
+        for (idx, (fc, tc)) in enumerate(zip(f_connections, t_connections))
+            bp_angmin[(i,j,fc,tc)] = max(bp_angmin[(i,j,fc,tc)], branch["angmin"][idx])
+            bp_angmax[(i,j,fc,tc)] = min(bp_angmax[(i,j,fc,tc)], branch["angmax"][idx])
 
-                bp_branch[(i,j,fc,tc)] = min(bp_branch[i,j,fc,tc], l)
-            end
-        else
-            bp_angmin[(i,j)] = max(bp_angmin[(i,j)], branch["angmin"])
-            bp_angmax[(i,j)] = min(bp_angmax[(i,j)], branch["angmax"])
-
-            bp_branch[(i,j)] = min(bp_branch[(i,j)], l)
+            bp_branch[(i,j,fc,tc)] = min(bp_branch[i,j,fc,tc], l)
         end
     end
 
-    if is_multiconductor
-        buspairs = Dict(
-            (i,j,fc,tc) => Dict(
-                "branch" => bp_branch[(i,j,fc,tc)],
-                "angmin" => bp_angmin[(i,j,fc,tc)],
-                "angmax" => bp_angmax[(i,j,fc,tc)],
-                "vm_fr_min" => bus_lookup[i]["vmin"][findfirst(isequal(fc), bus_lookup[i]["terminals"])],
-                "vm_fr_max" => bus_lookup[i]["vmax"][findfirst(isequal(fc), bus_lookup[i]["terminals"])],
-                "vm_to_min" => bus_lookup[j]["vmax"][findfirst(isequal(tc), bus_lookup[j]["terminals"])],
-                "vm_to_max" => bus_lookup[j]["vmax"][findfirst(isequal(tc), bus_lookup[j]["terminals"])]
-            ) for (i, j, fc, tc) in buspair_indexes
-        )
-    else
-        buspairs = Dict((i,j) => Dict(
-            "branch"=>bp_branch[(i,j)],
-            "angmin"=>bp_angmin[(i,j)],
-            "angmax"=>bp_angmax[(i,j)],
-            "tap"=>get(branch_lookup[bp_branch[(i,j)]], "tap", 1.0),
-            "vm_fr_min"=>bus_lookup[i]["vmin"],
-            "vm_fr_max"=>bus_lookup[i]["vmax"],
-            "vm_to_min"=>bus_lookup[j]["vmin"],
-            "vm_to_max"=>bus_lookup[j]["vmax"]
-            ) for (i,j) in buspair_indexes
-        )
-    end
+    buspairs = Dict(
+        (i,j,fc,tc) => Dict(
+            "branch" => bp_branch[(i,j,fc,tc)],
+            "angmin" => bp_angmin[(i,j,fc,tc)],
+            "angmax" => bp_angmax[(i,j,fc,tc)],
+            "vm_fr_min" => bus_lookup[i]["vmin"][findfirst(isequal(fc), bus_lookup[i]["terminals"])],
+            "vm_fr_max" => bus_lookup[i]["vmax"][findfirst(isequal(fc), bus_lookup[i]["terminals"])],
+            "vm_to_min" => bus_lookup[j]["vmax"][findfirst(isequal(tc), bus_lookup[j]["terminals"])],
+            "vm_to_max" => bus_lookup[j]["vmax"][findfirst(isequal(tc), bus_lookup[j]["terminals"])]
+        ) for (i, j, fc, tc) in buspair_indexes
+    )
 
     # add optional parameters
     for bp in buspair_indexes
         branch = branch_lookup[bp_branch[bp]]
         if haskey(branch, "rate_a")
-            if is_multiconductor
-                buspairs[bp]["rate_a"] = branch["rate_a"][findfirst(isequal(bp[end]), branch["t_connections"])]
-            else
-                buspairs[bp]["rate_a"] = branch["rate_a"]
-            end
+            buspairs[bp]["rate_a"] = branch["rate_a"][findfirst(isequal(bp[end]), branch["t_connections"])]
         end
         if haskey(branch, "c_rating_a")
-            if is_multiconductor
-                buspairs[bp]["c_rating_a"] = branch["c_rating_a"][findfirst(isequal(bp[end]), branch["t_connections"])]
-            else
-                buspairs[bp]["c_rating_a"] = branch["c_rating_a"]
-            end
+            buspairs[bp]["c_rating_a"] = branch["c_rating_a"][findfirst(isequal(bp[end]), branch["t_connections"])]
         end
     end
     return buspairs
@@ -254,7 +221,6 @@ function find_conductor_ids!(data::Dict{String,<:Any})
         end
     end
 
-    data["conductors"] = length(conductor_ids)
     data["conductor_ids"] = [c for c in conductor_ids]
 end
 
@@ -372,7 +338,7 @@ function ref_add_core!(ref::Dict{Symbol,Any})
 
         ### aggregate info for pairs of connected buses ###
         if !haskey(nw_ref, :buspairs)
-            nw_ref[:buspairs] = calc_buspair_parameters(nw_ref[:bus], nw_ref[:branch], nw_ref[:conductor_ids], haskey(nw_ref, :conductors))
+            nw_ref[:buspairs] = calc_buspair_parameters(nw_ref[:bus], nw_ref[:branch])
         end
     end
 end
