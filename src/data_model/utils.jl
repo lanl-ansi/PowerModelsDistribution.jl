@@ -1,5 +1,5 @@
 const _pmd_eng_global_keys = Set{String}([
-    "settings", "files", "name", "data_model", "dss_options"
+    "files", "name", "data_model", "dss_options"
 ])
 
 
@@ -91,6 +91,7 @@ end
 function _init_math_obj(obj_type::String, eng_id::Any, eng_obj::Dict{String,<:Any}, index::Int)::Dict{String,Any}
     math_obj = Dict{String,Any}(
         "name" => "$eng_id",
+        "source_id" => "$obj_type.$eng_id"
     )
 
     for key in _1to1_maps[obj_type]
@@ -309,6 +310,7 @@ function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Any
             "base_kv" => 1.0,
             "bus_type" => 1,
             "status" => 1,
+            "source_id" => "transformer.$(transformer_name)",
             "index" => length(data_math["bus"])+1,
         )
 
@@ -769,7 +771,7 @@ function make_multinetwork(data_eng::Dict{String,<:Any})::Dict{String,Any}
     )
 
     for (eng_obj_type, eng_objs) in data_eng
-        if !(eng_obj_type in _pmd_eng_global_keys) && isa(eng_objs, Dict{String,<:Any})
+        if !(eng_obj_type in _pmd_eng_global_keys) && isa(eng_objs, Dict{String,<:Any}) && eng_obj_type != "settings"
             for (id, eng_obj) in eng_objs
                 if haskey(eng_obj, "time_series")
                     _init_time_series!(_data_eng, eng_obj_type, id)
@@ -797,25 +799,7 @@ function make_multinetwork(data_eng::Dict{String,<:Any})::Dict{String,Any}
         end
     end
 
-    data_eng_new = Dict{String,Any}()
-    ### HACK to get make_multinetwork working
-    for (eng_obj_type, eng_objs) in data_eng
-        if isa(eng_objs, Dict{String,Any})
-            eng_objs_new = Dict{String,Any}()
-            for (k, v) in eng_objs
-                key_new = "$k"
-                if key_new != k
-                    Memento.warn(_LOGGER, "$eng_obj_type id $k converted to String")
-                end
-                eng_objs_new[key_new] = v
-            end
-            data_eng_new[eng_obj_type] = eng_objs_new
-        else
-            data_eng_new[eng_obj_type] = eng_objs
-        end
-    end
-
-    _pre_mn_data = merge(data_eng_new, _data_eng)
+    _pre_mn_data = merge(data_eng, _data_eng)
 
     if _pre_mn_data["time_series"]["step_mismatch"]
         Memento.warn(_LOGGER, "There is a mismatch between the num_steps of different time_series, cannot automatically build multinetwork structure")

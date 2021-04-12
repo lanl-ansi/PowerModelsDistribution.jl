@@ -3,15 +3,15 @@ import LinearAlgebra: diagm
 "items that are mapped one-to-one from engineering to math models"
 const _1to1_maps = Dict{String,Vector{String}}(
     "bus" => ["vm", "va", "terminals", "phases", "neutral", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub", "dss", "vuf_ub", "vm_pair_lb", "vm_pair_ub"],
-    "line" => ["f_connections", "t_connections", "source_id", "dss"],
-    "transformer" => ["f_connections", "t_connections", "source_id", "dss"],
-    "switch" => ["status", "f_connections", "t_connections", "source_id", "dss"],
-    "shunt" => ["status", "dispatchable", "gs", "bs", "connections", "source_id", "dss"],
-    "load" => ["model", "configuration", "connections", "dispatchable", "status", "source_id", "dss"],
-    "generator" => ["pg", "qg", "vg", "configuration", "connections", "source_id", "dss"],
-    "solar" => ["pg", "qg", "configuration", "connections", "source_id", "dss"],
-    "storage" => ["status", "energy", "ps", "qs", "connections", "source_id", "dss"],
-    "voltage_source" => ["source_id", "dss"],
+    "line" => ["f_connections", "t_connections", "dss"],
+    "transformer" => ["f_connections", "t_connections", "dss"],
+    "switch" => ["status", "f_connections", "t_connections", "dss"],
+    "shunt" => ["status", "dispatchable", "gs", "bs", "connections", "dss"],
+    "load" => ["model", "configuration", "connections", "dispatchable", "status", "dss"],
+    "generator" => ["pg", "qg", "vg", "configuration", "connections", "dss"],
+    "solar" => ["pg", "qg", "configuration", "connections", "dss"],
+    "storage" => ["status", "energy", "ps", "qs", "connections", "dss"],
+    "voltage_source" => ["dss"],
 )
 
 "list of nodal type elements in the engineering model"
@@ -24,6 +24,11 @@ const _eng_edge_elements = Vector{String}([
     "line", "switch", "transformer"
 ])
 
+"list of all eng asset types"
+const pmd_eng_asset_types = Vector{String}([
+    "bus", _eng_edge_elements..., _eng_node_elements...
+])
+
 "list of nodal type elements in the engineering model"
 const _math_node_elements = Vector{String}([
     "load", "shunt", "gen", "storage"
@@ -34,6 +39,11 @@ const _math_edge_elements = Vector{String}([
     "branch", "switch", "transformer"
 ])
 
+"list of math asset types that are dispatchable"
+const _math_dispatchable_elements = Vector{String}([
+    "load", "shunt", "switch"
+])
+
 "list of all math asset types"
 const pmd_math_asset_types = Vector{String}([
     "bus", _math_node_elements..., _math_edge_elements...
@@ -41,7 +51,7 @@ const pmd_math_asset_types = Vector{String}([
 
 "list of multinetwork keys that belong at the root level"
 const _pmd_math_global_keys = Set{String}([
-    "data_model", "per_unit", "name", "settings", "map", "bus_lookup"
+    "data_model", "per_unit", "name", "map", "bus_lookup", "dss_options"
 ])
 
 
@@ -108,23 +118,9 @@ function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true)
 
     _init_base_components!(data_math)
 
-    # convert buses
-    _map_eng2math_bus!(data_math, _data_eng)
-
-    # convert edges
-    _map_eng2math_line!(data_math, _data_eng)
-    _map_eng2math_switch!(data_math, _data_eng)
-    _map_eng2math_transformer!(data_math, _data_eng)
-
-    # convert nodes
-    _map_eng2math_load!(data_math, _data_eng)
-
-    _map_eng2math_shunt!(data_math, _data_eng)
-
-    _map_eng2math_generator!(data_math, _data_eng)
-    _map_eng2math_solar!(data_math, _data_eng)
-    _map_eng2math_storage!(data_math, _data_eng)
-    _map_eng2math_voltage_source!(data_math, _data_eng)
+    for type in pmd_eng_asset_types
+        getfield(PowerModelsDistribution, Symbol("_map_eng2math_$(type)!"))(data_math, _data_eng)
+    end
 
     # post fix
     if !get(data_math, "is_kron_reduced", false)
@@ -150,6 +146,7 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{String
 
         math_obj["bus_i"] = math_obj["index"]
         math_obj["bus_type"] = _bus_type_conversion(data_eng, eng_obj, "status")
+        math_obj["source_id"] = "bus.$name"
 
         # take care of grounding; convert to shunt if lossy
         grounded_perfect, shunts = _convert_grounding(eng_obj["terminals"], eng_obj["grounded"], eng_obj["rg"], eng_obj["xg"])
@@ -392,6 +389,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
                 "grounded" => t_bus["grounded"],  # connected to the switch on the to-side
                 "vmin" => t_bus["vmin"],
                 "vmax" => t_bus["vmax"],
+                "source_id" => "switch.$name",
                 "index" => length(data_math["bus"])+1,
             )
 
@@ -402,7 +400,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
 
             _branch_obj = Dict{String,Any}(
                 "name" => "_virtual_branch.switch.$name",
-                "source_id" => "_virtual_branch.switch.$name",
+                "source_id" => "switch.$name",
                 "f_bus" => bus_obj["bus_i"],
                 "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
                 "f_connections" => eng_obj["t_connections"],  # the virtual branch connects to the switch on the to-side
@@ -606,7 +604,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
         math_obj["qmax"] = get(eng_obj, "qg_ub", fill( Inf, nphases))
         math_obj["connections"] = eng_obj["connections"]
         math_obj["configuration"] = get(eng_obj, "configuration", WYE)
-        math_obj["source_id"] = "_virtual_gen.$(eng_obj["source_id"])"
+        math_obj["source_id"] = "voltage_source.$name"
 
         _add_gen_cost_model!(math_obj, eng_obj)
 
@@ -626,6 +624,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "va" => deepcopy(eng_obj["va"]),
                 "vmin" => deepcopy(get(eng_obj, "vm_lb", eng_obj["vm"])),
                 "vmax" => deepcopy(get(eng_obj, "vm_ub", eng_obj["vm"])),
+                "source_id" => "voltage_source.$name",
             )
             for (i,t) in enumerate(eng_obj["connections"])
                 if data_math["bus"]["$(data_math["bus_lookup"][eng_obj["bus"]])"]["grounded"][i]
@@ -641,7 +640,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
 
             branch_obj = Dict{String,Any}(
                 "name" => "_virtual_branch.voltage_source.$name",
-                "source_id" => "_virtual_branch.$(eng_obj["source_id"])",
+                "source_id" => "voltage_source.$name",
                 "f_bus" => bus_obj["bus_i"],
                 "t_bus" => data_math["bus_lookup"][eng_obj["bus"]],
                 "f_connections" => eng_obj["connections"],
