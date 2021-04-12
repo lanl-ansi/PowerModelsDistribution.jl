@@ -92,8 +92,7 @@
     end
 
     @testset "3-bus nfa mld" begin
-        mp_data = PM.parse_file("../test/data/matpower/case3_ml.m"); make_multiconductor!(mp_data, 3)
-        result = solve_mc_mld(mp_data, NFAPowerModel, ipopt_solver)
+        result = solve_mc_mld(case3_ml, NFAPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 24.9; atol = 1e-1)
