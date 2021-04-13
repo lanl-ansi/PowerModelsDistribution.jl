@@ -779,7 +779,9 @@ end
 "checks that voltage angle differences are within 90 deg., if not tightens"
 function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=1.0472)
     if ismultinetwork(data)
-        Memento.error(_LOGGER, "correct_voltage_angle_differences! does not yet support multinetwork data")
+        nw_data = data["nw"]
+    else
+        nw_data = Dict("0" => data)
     end
 
     @assert("per_unit" in keys(data) && data["per_unit"])
@@ -787,30 +789,38 @@ function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default
 
     modified = Set{Int}()
 
-    for (i, branch) in data["branch"]
-        angmin = branch["angmin"]
-        angmax = branch["angmax"]
-
-        if any(angmin .<= -pi/2)
-            Memento.warn(_LOGGER, "this code only supports angmin values in -90 deg. to 90 deg., tightening the value on branch $i from $(rad2deg(angmin)) to -$(default_pad_deg) deg.")
-            branch["angmin"][angmin .<= -pi/2] .= -default_pad
-
-            push!(modified, branch["index"])
+    for (n,nw) in nw_data
+        if ismultinetwork(data)
+            subnet = ", subnetwork $n"
+        else
+            subnet = ""
         end
 
-        if any(angmax .>= pi/2)
-            Memento.warn(_LOGGER, "this code only supports angmax values in -90 deg. to 90 deg., tightening the value on branch $i from $(rad2deg(angmax)) to $(default_pad_deg) deg.")
-            branch["angmax"][angmax .>= pi/2] .= default_pad
+        for (i, branch) in nw["branch"]
+            angmin = branch["angmin"]
+            angmax = branch["angmax"]
 
-            push!(modified, branch["index"])
-        end
+            if any(angmin .<= -pi/2)
+                @warn "this code only supports angmin values in -90 deg. to 90 deg., tightening the value on branch $(i)$(subnet) from $(rad2deg(angmin)) to -$(default_pad_deg) deg."
+                branch["angmin"][angmin .<= -pi/2] .= -default_pad
 
-        if any((angmin .== 0.0) .& (angmax .== 0.0))
-            Memento.warn(_LOGGER, "angmin and angmax values are 0, widening these values on branch $i to +/- $(default_pad_deg) deg.")
-            branch["angmin"][(angmin .== 0.0) .& (angmax .== 0.0)] .= -default_pad
-            branch["angmax"][(angmin .== 0.0) .& (angmax .== 0.0)] .=  default_pad
+                push!(modified, branch["index"])
+            end
 
-            push!(modified, branch["index"])
+            if any(angmax .>= pi/2)
+                @warn "this code only supports angmax values in -90 deg. to 90 deg., tightening the value on branch $(i)$(subnet) from $(rad2deg(angmax)) to $(default_pad_deg) deg."
+                branch["angmax"][angmax .>= pi/2] .= default_pad
+
+                push!(modified, branch["index"])
+            end
+
+            if any((angmin .== 0.0) .& (angmax .== 0.0))
+                @warn "angmin and angmax values are 0, widening these values on branch $(i)$(subnet) to +/- $(default_pad_deg) deg."
+                branch["angmin"][(angmin .== 0.0) .& (angmax .== 0.0)] .= -default_pad
+                branch["angmax"][(angmin .== 0.0) .& (angmax .== 0.0)] .=  default_pad
+
+                push!(modified, branch["index"])
+            end
         end
     end
 
@@ -821,30 +831,40 @@ end
 "checks that each branch has non-negative thermal ratings and removes zero thermal ratings"
 function correct_mc_thermal_limits!(data::Dict{String,<:Any})
     if ismultinetwork(data)
-        Memento.error(_LOGGER, "correct_thermal_limits! does not yet support multinetwork data")
+        nw_data = data["nw"]
+    else
+        nw_data = Dict("0" => data)
     end
 
     modified = Set{Int}()
 
-    branches = [branch for branch in values(data["branch"])]
-    if haskey(data, "ne_branch")
-        append!(branches, values(data["ne_branch"]))
-    end
+    for (n,nw) in nw_data
+        if ismultinetwork(data)
+            subnet = ", subnetwork $n"
+        else
+            subnet = ""
+        end
 
-    for branch in branches
-        for rate_key in ["rate_a", "rate_b", "rate_c"]
-            if haskey(branch, rate_key)
-                rate_value = branch[rate_key]
+        branches = [branch for branch in values(nw["branch"])]
+        if haskey(data, "ne_branch")
+            append!(branches, values(data["ne_branch"]))
+        end
 
-                if any(rate_value .< 0.0)
-                    Memento.error(_LOGGER, "negative $(rate_key) value on branch $(branch["index"]), this code only supports non-negative $(rate_key) values")
-                end
+        for branch in branches
+            for rate_key in ["rate_a", "rate_b", "rate_c"]
+                if haskey(branch, rate_key)
+                    rate_value = branch[rate_key]
 
-                if all(isapprox.(rate_value, 0.0))
-                    delete!(branch, rate_key)
-                    Memento.warn(_LOGGER, "removing zero $(rate_key) limit on branch $(branch["index"])")
+                    if any(rate_value .< 0.0)
+                        error("negative $(rate_key) value on branch $(branch["index"])$(subnet), this code only supports non-negative $(rate_key) values")
+                    end
 
-                    push!(modified, branch["index"])
+                    if all(isapprox.(rate_value, 0.0))
+                        delete!(branch, rate_key)
+                        @warn "removing zero $(rate_key) limit on branch $(branch["index"])$(subnet)"
+
+                        push!(modified, branch["index"])
+                    end
                 end
             end
         end
@@ -1341,13 +1361,13 @@ function standardize_cost_terms!(data::Dict{String,<:Any}; order=-1)
         comp_max_order = order+1
     else
         if order != -1 # if not the default
-            Memento.warn(_LOGGER, "a standard cost order of $(order) was requested but the given data requires an order of at least $(comp_max_order-1)")
+            @warn "a standard cost order of $(order) was requested but the given data requires an order of at least $(comp_max_order-1)"
         end
     end
 
     for (i, network) in networks
         if haskey(network, "gen")
-            _standardize_cost_terms!(network["gen"], comp_max_order, "generator")
+            _standardize_cost_terms!(network["gen"], comp_max_order, "generator"; nw=ismultinetwork(data) ? i : "")
         end
     end
 
@@ -1355,7 +1375,7 @@ end
 
 
 "ensures all polynomial costs functions have at exactly comp_order terms"
-function _standardize_cost_terms!(components::Dict{String,<:Any}, comp_order::Int, cost_comp_name::String)
+function _standardize_cost_terms!(components::Dict{String,<:Any}, comp_order::Int, cost_comp_name::String; nw::String="")
     modified = Set{Int}()
     for (i, comp) in components
         if haskey(comp, "model") && comp["model"] == 2 && length(comp["cost"]) != comp_order
@@ -1369,7 +1389,8 @@ function _standardize_cost_terms!(components::Dict{String,<:Any}, comp_order::In
             comp["ncost"] = comp_order
             #println("std gen cost: $(comp["cost"])")
 
-            Memento.info(_LOGGER, "updated $(cost_comp_name) $(comp["index"]) cost function with order $(length(current_cost)) to a function of order $(comp_order): $(comp["cost"])")
+            subnet = !isempty(nw) ? " on subnetwork $nw" : ""
+            @info "updated $(cost_comp_name) $(comp["index"])$(subnet) cost function with order $(length(current_cost)) to a function of order $(comp_order): $(comp["cost"])"
             push!(modified, comp["index"])
         end
     end

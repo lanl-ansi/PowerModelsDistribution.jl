@@ -87,21 +87,11 @@ function transform_data_model(data::Dict{String,<:Any};
     current_data_model = get(data, "data_model", MATHEMATICAL)
 
     if current_data_model == ENGINEERING
-        if multinetwork && haskey(data, "time_series")
-            mn_data = make_multinetwork(data)
-            if ismultinetwork(mn_data)
-                data_math = _map_eng2math_multinetwork(mn_data; kron_reduced=kron_reduced)
-            else
-                data_math = _map_eng2math(mn_data; kron_reduced=kron_reduced)
-            end
-        elseif ismultinetwork(data)
-            data_math = _map_eng2math_multinetwork(data; kron_reduced=kron_reduced)
-        else
-            data_math = _map_eng2math(data; kron_reduced=kron_reduced)
+        if multinetwork && !ismultinetwork(data)
+            data = make_multinetwork(data)
         end
 
-        find_conductor_ids!(data_math)
-
+        data_math = _map_eng2math(data; kron_reduced=kron_reduced)
         correct_network_data!(data_math; make_pu=make_pu)
 
         return data_math
@@ -120,19 +110,21 @@ function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true)
     if get(data, "data_model", MATHEMATICAL) == ENGINEERING
         check_eng_data_model(data)
     elseif get(data, "data_model", MATHEMATICAL) == MATHEMATICAL
+        check_connectivity(data)
+
+        correct_branch_directions!(data)
+        check_branch_loops(data)
+
+        correct_bus_types!(data)
+
         if make_pu
             make_per_unit!(data)
-            if ismultinetwork(data)
-            else
-                check_connectivity(data)
-                correct_mc_voltage_angle_differences!(data)
-                correct_mc_thermal_limits!(data)
-                correct_branch_directions!(data)
-                check_branch_loops(data)
-                correct_bus_types!(data)
-                correct_cost_functions!(data)
-                standardize_cost_terms!(data)
-            end
+
+            correct_mc_voltage_angle_differences!(data)
+            correct_mc_thermal_limits!(data)
+
+            correct_cost_functions!(data)
+            standardize_cost_terms!(data)
         end
     end
 end

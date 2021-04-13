@@ -8,6 +8,7 @@ module PowerModelsDistribution
     import Logging
     import LoggingExtras
 
+    import Dates
     import LinearAlgebra
 
     const _IM = InfrastructureModels
@@ -65,6 +66,7 @@ module PowerModelsDistribution
     include("data_model/components.jl")
     include("data_model/eng2math.jl")
     include("data_model/math2eng.jl")
+    include("data_model/multinetwork.jl")
     include("data_model/transformations.jl")
     include("data_model/units.jl")
 

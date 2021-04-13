@@ -55,83 +55,87 @@ const _pmd_math_global_keys = Set{String}([
 ])
 
 
-"converts a engineering multinetwork to a math multinetwork"
-function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced::Bool=true, project_phases::Bool=true)::Dict{String,Any}
-    data_math_mn = Dict{String,Any}(
-        "nw" => Dict{String,Any}(),
-        "multinetwork" => true
-    )
-    for (n, nw) in data_eng_mn["nw"]
-        for k in _pmd_eng_global_keys
-            if haskey(data_eng_mn, k)
-                nw[k] = data_eng_mn[k]
-            end
-        end
-
-        data_math_mn["nw"][n] = _map_eng2math(nw; kron_reduced=kron_reduced)
-
-        for k in _pmd_math_global_keys
-            if haskey(data_math_mn["nw"][n], k)
-                data_math_mn[k] = pop!(data_math_mn["nw"][n], k)
-            end
-        end
-    end
-
-    return data_math_mn
-end
-
-
 "base function for converting engineering model to mathematical model"
 function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true)
     @assert get(data_eng, "data_model", MATHEMATICAL) == ENGINEERING
 
-    # TODO remove kron reduction from eng2math (breaking)
     _data_eng = deepcopy(data_eng)
-    if kron_reduced && !get(data_eng, "is_kron_reduced", false)
-        apply_kron_reduction!(_data_eng)
-    end
-
-    if !get(data_eng, "is_projected", false)
-        apply_phase_projection_delta!(_data_eng)
-    end
 
     data_math = Dict{String,Any}(
         "name" => get(_data_eng, "name", ""),
         "per_unit" => get(_data_eng, "per_unit", false),
         "data_model" => MATHEMATICAL,
-        "is_projected" => get(_data_eng, "is_projected", false),
-        "is_kron_reduced" => get(_data_eng, "is_kron_reduced", false),
-        "settings" => deepcopy(_data_eng["settings"]),
-        "conductor_ids" => get(_data_eng, "conductor_ids", kron_reduced ? collect(1:3) : collect(1:4))
+        "nw" => Dict{String,Any}(),
+        "multinetwork" => ismultinetwork(data_eng)
     )
 
-    if haskey(data_eng, "time_elapsed")
-        data_math["time_elapsed"] = data_eng["time_elapsed"]
+    if ismultinetwork(data_eng)
+        nw_data_eng = _data_eng["nw"]
+    else
+        nw_data_eng = Dict("0" => _data_eng)
     end
 
-    #TODO the PM tests break for branches which are not of the size indicated by conductors;
-    # for now, set to 1 to prevent this from breaking when not kron-reduced
+    for (n, nw_eng) in nw_data_eng
+        # TODO remove kron reduction from eng2math (breaking)
+        if kron_reduced && !get(data_eng, "is_kron_reduced", false)
+            apply_kron_reduction!(nw_eng)
+        end
 
-    data_math["map"] = Vector{Dict{String,Any}}([
-        Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
-    ])
+        if !get(data_eng, "is_projected", false)
+            apply_phase_projection_delta!(nw_eng)
+        end
 
-    _init_base_components!(data_math)
+        nw_math = Dict{String,Any}(
+            "is_projected" => get(nw_eng, "is_projected", false),
+            "is_kron_reduced" => get(nw_eng, "is_kron_reduced", false),
+            "settings" => deepcopy(nw_eng["settings"]),
+        )
 
-    for type in pmd_eng_asset_types
-        getfield(PowerModelsDistribution, Symbol("_map_eng2math_$(type)!"))(data_math, _data_eng)
+        if haskey(nw_eng, "time_elapsed")
+            nw_math["time_elapsed"] = nw_eng["time_elapsed"]
+        end
+
+        #TODO the PM tests break for branches which are not of the size indicated by conductors;
+        # for now, set to 1 to prevent this from breaking when not kron-reduced
+
+        nw_math["map"] = Vector{Dict{String,Any}}([
+            Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
+        ])
+
+        _init_base_components!(nw_math)
+
+        for type in pmd_eng_asset_types
+            getfield(PowerModelsDistribution, Symbol("_map_eng2math_$(type)!"))(nw_math, nw_eng)
+        end
+
+        # post fix
+        if !get(nw_math, "is_kron_reduced", false)
+            #TODO fix this in place / throw error instead? IEEE8500 leads to switches
+            # with 3x3 R matrices but only 1 phase
+            #NOTE: Don't do this when kron-reducing, it will undo the padding
+            _slice_branches!(nw_math)
+        end
+
+        find_conductor_ids!(nw_math)
+        _map_conductor_ids!(nw_math)
+
+        data_math["nw"][n] = nw_math
     end
 
-    # post fix
-    if !get(data_math, "is_kron_reduced", false)
-        #TODO fix this in place / throw error instead? IEEE8500 leads to switches
-        # with 3x3 R matrices but only 1 phase
-        #NOTE: Don't do this when kron-reducing, it will undo the padding
-        _slice_branches!(data_math)
+    for k in _pmd_math_global_keys
+
+        for (n,nw) in data_math["nw"]
+            if haskey(nw, k)
+                data_math[k] = pop!(nw, k)
+            end
+        end
     end
 
-    find_conductor_ids!(data_math)
-    _map_conductor_ids!(data_math)
+    if !ismultinetwork(data_eng)
+        merge!(data_math, pop!(data_math["nw"], "0"))
+        delete!(data_math, "nw")
+        delete!(data_math, "multinetwork")
+    end
 
     return data_math
 end

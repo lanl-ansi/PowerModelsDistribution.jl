@@ -221,7 +221,7 @@ function find_conductor_ids!(data::Dict{String,<:Any})
         end
     end
 
-    data["conductor_ids"] = [c for c in conductor_ids]
+    data["conductor_ids"] = [c for c in sort(conductor_ids)]
 end
 
 
