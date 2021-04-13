@@ -15,9 +15,9 @@ function parse_file(
         )::Dict{String,Any}
 
     pmd_data = Dict{String,Any}()
-    if ismissing(filetype)
+    if ismissing(filetype) || filetype == "json"
         try
-            pmd_data = parse_json(io; validate=false)
+            pmd_data = parse_json(io)
             filetype = "json"
         catch err
             filetype = "dss"

@@ -1,129 +1,92 @@
-# Parse PowerModels data from JSON exports of PowerModels data structures.
-# Customize JSON printing of matrices
-
-import JSON.Serializations: CommonSerialization, StandardSerialization
-import JSON.Writer: StructuralContext, show_json
-struct PMDSerialization <: CommonSerialization end
-
-
-"converts julia Version into serializable structure"
-function _jsonver2juliaver!(data::Dict{String,<:Any})
-    if haskey(data, "source_version") && isa(data["source_version"], Dict)
-        data["source_version"] = "$(data["source_version"]["major"]).$(data["source_version"]["minor"]).$(data["source_version"]["patch"])"
+"parses json files that were dumped via JSON.print"
+function parse_json(file::String)
+    open(file, "r") do io
+        parse_json(io)
     end
 end
 
 
-"recursive helper function for parsing serialized matrices"
-function _parse_mats_recursive!(data::Dict{String,<:Any})::Dict{String,Any}
-    parse =  haskey(data, "type") && data["type"]=="Matrix" && haskey(data, "eltype") && haskey(data, "value")
-    if parse
-        return _parse_matrix_value(data["value"], data["eltype"])
-    else
-        for (k,v) in data
-            if isa(v, Dict)
-                data[k] = _parse_mats!(v)
-            elseif isa(v, Vector) && Dict <: eltype(v)
-                data[k] = [isa(x, Dict) ? _parse_mats!(x) : x for x in v]
-            end
-        end
-
-        return data
-    end
-end
-
-
-"parser function for serialized matrices"
-function _parse_mats!(data::Dict{String,<:Any})
-    stack = Array{Tuple{Any, Any, Any}}([(data, k, v) for (k, v) in data])
-    while !isempty(stack)
-        (store, k, v) = pop!(stack)
-
-        parse =  isa(v, Dict) && haskey(v, "type") && v["type"]=="Matrix" && haskey(v, "eltype") && haskey(v, "value")
-        if parse
-            store[k] = _parse_matrix_value(v["value"], v["eltype"])
-        elseif isa(v, Dict)
-            append!(stack, [(v, xk, xv) for (xk, xv) in v])
-        elseif isa(v, Vector)
-            store[k] = [x for x in v]
-            if Dict <: eltype(v)
-                append!(stack, [(v, i, xv) for (i, xv) in enumerate(v) if isa(xv, Dict)])
-            end
-        end
-    end
-end
-
-
-"parses enums from json"
-function _parse_enums!(data::Dict{String,<:Any})
-    data["data_model"] = DataModel(get(data, "data_model", 1))
-
-    for (root_type, root_value) in data
-        if isa(root_value, Dict)
-            for (component_id, component) in root_value
-                if isa(component, Dict)
-                    if haskey(component, "status")
-                        component["status"] = Status(component["status"])
-                    end
-
-                    if haskey(component, "dispatchable")
-                        component["dispatchable"] = Dispatchable(component["dispatchable"])
-                    end
-
-                    if haskey(component, "configuration")
-                        if isa(component["configuration"], Vector)
-                            component["configuration"] = Vector{ConnConfig}([ConnConfig(el) for el in component["configuration"]])
-                        else
-                            component["configuration"] = ConnConfig(component["configuration"])
-                        end
-                    end
-
-                    if root_type == "switch" && haskey(component, "state")
-                        component["state"] = SwitchState(component["state"])
-                    end
-
-                    if root_type == "generator" && haskey(component, "control_mode")
-                        component["generator"] = ControlMode(component["control_mode"])
-                    end
-
-                    if root_type == "load" && haskey(component, "model")
-                        component["model"] = LoadModel(component["model"])
-                    end
-
-                    if root_type == "shunt" && haskey(component, "model")
-                        component["model"] = ShuntModel(component["model"])
-                    end
-                end
-            end
-        end
-    end
-end
-
-
-"Parses a JSON file into a PowerModelsDistribution data structure"
-function parse_json(file::String; validate::Bool=false)
-    data = open(file) do io
-        parse_json(io; validate=validate)
-    end
-    return data
-end
-
-
-"Parses a JSON file into a PowerModelsDistribution data structure"
-function parse_json(io::IO; validate::Bool=false)::Dict{String,Any}
+"parses json files that were dumped via JSON.print (or PMD.print_file)"
+function parse_json(io::IO)
     data = JSON.parse(io)
-
-    _jsonver2juliaver!(data)
-
-    _parse_mats!(data)
-
-    _parse_enums!(data)
-
-    if validate
-        correct_network_data!(data)
-    end
+    correct_json_import!(data)
 
     return data
+end
+
+
+"helper function to correct data imported from json"
+function correct_json_import!(data::Dict{String,<:Any})
+    _fix_dtypes!(data)
+end
+
+
+"recursive function to fix data types from data imported from json"
+function _fix_dtypes!(data::Dict)
+    for (k, v) in data
+        if isa(v, Dict)
+            _fix_dtypes!(v)
+        else
+            _fix_enums!(data, k, data[k])
+            _fix_arrays!(data, k, data[k])
+            _fix_nulls!(data, k, data[k])
+        end
+    end
+end
+
+
+"helper function to fix matrices (from vector of vectors) and vector dtypes"
+function _fix_arrays!(obj, prop, val)
+    if isa(val, Vector)
+        dtypes = unique(Vector{Any}([typeof(v) for v in val]))
+        if isempty(val)
+        elseif all([isa(v, Vector) for v in val])
+            obj[prop] = hcat(obj[prop]...)
+        else
+            if length(dtypes) == 1
+                dtype = dtypes[1]
+                obj[prop] = Vector{dtype}(val)
+            end
+        end
+    end
+end
+
+
+"helper function to convert stringified enums"
+function _fix_enums!(obj, prop, val)
+    if isa(val, String) && uppercase(val) == val && Symbol(val) in names(PowerModelsDistribution)
+        obj[prop] = getfield(PowerModelsDistribution, Symbol(val))
+    end
+end
+
+
+"helper function to fix null values from json (usually Inf or NaN)"
+function _fix_nulls!(obj, prop, val)
+    if endswith(prop, "_ub") || endswith(prop, "max")
+        fill_val = Inf
+    elseif endswith(prop, "_lb") || endswith(prop, "min")
+        fill_val = -Inf
+    else
+        fill_val = NaN
+    end
+
+    if isa(val, Matrix) && any(val .=== nothing)
+        @warn "a 'null' was encountered in the json import, making an assumption that null values in $prop = $fill_val"
+        valdtype = valtype(val)
+        if isa(valdtype, Union)
+            dtype = [getproperty(valdtype, n) for n in propertynames(valdtype) if getproperty(valdtype, n) != Nothing][end]
+        else
+            dtype = valdtype
+        end
+        val[val .=== nothing] .= fill_val
+        obj[prop] = Matrix{dtype}(val)
+    elseif isa(val, Vector) && any(v === nothing for v in val)
+        @warn "a 'null' was encountered in the json import, making an assumption that null values in $prop = $fill_val"
+        obj[prop] = [v === nothing ? fill_val : v for v in val]
+    elseif val === nothing
+        @warn "a 'null' was encountered in the json import, making an assumption that null values in $prop = $fill_val"
+        obj[prop] = fill_val
+    end
 end
 
 
@@ -137,43 +100,5 @@ end
 
 "prints a PowerModelsDistribution data structure into a JSON file"
 function print_file(io::IO, data::Dict{String,<:Any}; indent::Int=2)
-    if indent == 0
-        JSON.print(io, JSON.parse(sprint(show_json, PMDSerialization(), data)))
-    else
-        JSON.print(io, JSON.parse(sprint(show_json, PMDSerialization(), data)), indent)
-    end
-end
-
-
-"turns a matrix into a serializable structure"
-function show_json(io::StructuralContext, ::PMDSerialization, f::Matrix{<:Any})
-    N, M = size(f)
-    value = string("[", join([join([f[i,j] for j in 1:M], " ") for i in 1:N], "; "), "]")
-    eltyp = isempty(f) ? eltype(f) : typeof(f[1,1])
-    out = Dict(:type=>:Matrix, :eltype=>eltyp, :value=>value)
-    return show_json(io, StandardSerialization(), out)
-end
-
-
-"custom handling for enums output to json"
-function show_json(io::StructuralContext, ::CommonSerialization, f::PowerModelsDistributionEnums)
-    return show_json(io, StandardSerialization(), Int(f))
-end
-
-
-"custom handling for enums output to json"
-JSON.lower(p::PowerModelsDistributionEnums) = Int(p)
-
-
-"parses in a serialized matrix"
-function _parse_matrix_value(value::String, eltyp::String)
-    if value=="[]"
-        eltyp =
-        return Array{eval(Symbol(eltyp)), 2}(undef, 0, 0)
-    else
-        tmp = [split(strip(row_str), " ") for row_str in split(value[2:end-1], ";")]
-        tmp = [tmp[i][j] for i in 1:length(tmp), j in 1:length(tmp[1])]
-        M = parse.(eval(Symbol(eltyp)), string.(tmp))
-        return M
-    end
+    JSON.print(io, data, indent)
 end
