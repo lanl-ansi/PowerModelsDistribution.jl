@@ -19,7 +19,7 @@
 
         add_vbase_default!(eng, "sourcebus", 1)
 
-        result = solve_mc_opf(eng, ACPPowerModel, ipopt_solver)
+        result = solve_mc_opf(eng, ACPUPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 0.0150; atol=1e-4)
@@ -41,7 +41,7 @@
         add_shunt!(eng2, "cap", "loadbus2", [1,2,3,4]; bs=diagm(0=>fill(1, 3)))
 
         # TODO this test is unstable with Julia 1.5, need to change the data model to fix it
-        # result2 = solve_mc_opf(eng2, ACRPowerModel, ipopt_solver)
+        # result2 = solve_mc_opf(eng2, ACRUPowerModel, ipopt_solver)
 
         # @test result2["termination_status"] == LOCALLY_SOLVED
         # @test isapprox(result2["objective"], -83.3003; atol=0.2)
@@ -72,11 +72,11 @@
     @testset "jump model from engineering data model" begin
         eng = parse_file("../test/data/opendss/case3_balanced.dss")
 
-        pm_eng = instantiate_mc_model(eng, ACPPowerModel, build_mc_opf)
+        pm_eng = instantiate_mc_model(eng, ACPUPowerModel, build_mc_opf)
 
         math = transform_data_model(eng)
 
-        pm_math = instantiate_mc_model(math, ACPPowerModel, build_mc_opf)
+        pm_math = instantiate_mc_model(math, ACPUPowerModel, build_mc_opf)
 
         @test sprint(print, pm_eng) == sprint(print, pm_math)
     end
@@ -96,10 +96,10 @@
             end
         end
 
-        result_pf = solve_mc_pf(data, ACRPowerModel, ipopt_solver)
+        result_pf = solve_mc_pf(data, ACRUPowerModel, ipopt_solver)
         @test result_pf["objective"] == 0.0
 
-        result_opf = solve_mc_opf(data, ACRPowerModel, ipopt_solver)
+        result_opf = solve_mc_opf(data, ACRUPowerModel, ipopt_solver)
         @test isapprox(result_opf["objective"], 0.006197; atol=1e-3)
     end
 end

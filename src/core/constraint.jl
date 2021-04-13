@@ -1,10 +1,10 @@
 "do nothing by default"
-function constraint_mc_model_voltage(pm::AbstractMCPowerModel, nw::Int)
+function constraint_mc_model_voltage(pm::AbstractUnbalancedPowerModel, nw::Int)
 end
 
 
 "Generic thermal limit constraint from-side"
-function constraint_mc_thermal_limit_from(pm::AbstractMCPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
+function constraint_mc_thermal_limit_from(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
     p_fr = [var(pm, nw, :p, f_idx)[c] for c in f_connections]
     q_fr = [var(pm, nw, :q, f_idx)[c] for c in f_connections]
 
@@ -17,7 +17,7 @@ end
 
 
 "Generic thermal limit constraint to-side"
-function constraint_mc_thermal_limit_to(pm::AbstractMCPowerModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
+function constraint_mc_thermal_limit_to(pm::AbstractUnbalancedPowerModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
     p_to = [var(pm, nw, :p, t_idx)[c] for c in t_connections]
     q_to = [var(pm, nw, :q, t_idx)[c] for c in t_connections]
 
@@ -30,7 +30,7 @@ end
 
 
 "on/off bus voltage magnitude constraint"
-function constraint_mc_bus_voltage_magnitude_on_off(pm::AbstractMCPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
+function constraint_mc_bus_voltage_magnitude_on_off(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
     vm = var(pm, nw, :vm, i)
     z_voltage = var(pm, nw, :z_voltage, i)
 
@@ -50,7 +50,7 @@ end
 
 
 "on/off bus voltage magnitude squared constraint for relaxed formulations"
-function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::AbstractMCPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
+function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
     w = var(pm, nw, :w, i)
     z_voltage = var(pm, nw, :z_voltage, i)
 
@@ -70,14 +70,14 @@ end
 
 
 ""
-function constraint_mc_gen_power_setpoint_real(pm::AbstractMCPowerModel, nw::Int, i::Int, pg::Vector{<:Real})
+function constraint_mc_gen_power_setpoint_real(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, pg::Vector{<:Real})
     pg_var = [var(pm, nw, :pg, i)[c] for c in ref(pm, nw, :gen, i)["connections"]]
     JuMP.@constraint(pm.model, pg_var .== pg)
 end
 
 
 "on/off constraint for generators"
-function constraint_mc_gen_power_on_off(pm::AbstractMCPowerModel, nw::Int, i::Int, connections::Vector{<:Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real})
+function constraint_mc_gen_power_on_off(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, connections::Vector{<:Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real})
     pg = var(pm, nw, :pg, i)
     qg = var(pm, nw, :qg, i)
     z = var(pm, nw, :z_gen, i)
@@ -103,7 +103,7 @@ end
 
 
 ""
-function constraint_mc_storage_thermal_limit(pm::AbstractMCPowerModel, nw::Int, i::Int, connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, connections::Vector{Int}, rating::Vector{<:Real})
     ps = [var(pm, nw, :ps, i)[c] for c in connections]
     qs = [var(pm, nw, :qs, i)[c] for c in connections]
 
@@ -112,7 +112,7 @@ end
 
 
 ""
-function constraint_mc_switch_state_open(pm::AbstractMCPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int})
+function constraint_mc_switch_state_open(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int})
     psw = var(pm, nw, :psw, f_idx)
     qsw = var(pm, nw, :qsw, f_idx)
 
@@ -122,7 +122,7 @@ end
 
 
 ""
-function constraint_mc_switch_power_on_off(pm::AbstractMCPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}; relax::Bool=false)
+function constraint_mc_switch_power_on_off(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}; relax::Bool=false)
     i, f_bus, t_bus = f_idx
 
     psw = var(pm, nw, :psw, f_idx)
@@ -149,7 +149,7 @@ end
 
 
 ""
-function constraint_switch_thermal_limit(pm::AbstractMCPowerModel, n::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_switch_thermal_limit(pm::AbstractUnbalancedPowerModel, n::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
     psw = var(pm, n, :psw, f_idx)
     qsw = var(pm, n, :qsw, f_idx)
 
@@ -160,7 +160,7 @@ end
 
 
 ""
-function constraint_storage_state_initial(pm::AbstractMCPowerModel, n::Int, i::Int, energy, charge_eff, discharge_eff, time_elapsed)
+function constraint_storage_state_initial(pm::AbstractUnbalancedPowerModel, n::Int, i::Int, energy, charge_eff, discharge_eff, time_elapsed)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)
     se = var(pm, n, :se, i)
@@ -170,7 +170,7 @@ end
 
 
 ""
-function constraint_storage_state(pm::AbstractMCPowerModel, n_1::Int, n_2::Int, i::Int, charge_eff, discharge_eff, time_elapsed)
+function constraint_storage_state(pm::AbstractUnbalancedPowerModel, n_1::Int, n_2::Int, i::Int, charge_eff, discharge_eff, time_elapsed)
     sc_2 = var(pm, n_2, :sc, i)
     sd_2 = var(pm, n_2, :sd, i)
     se_2 = var(pm, n_2, :se, i)
@@ -181,7 +181,7 @@ end
 
 
 ""
-function constraint_storage_complementarity_nl(pm::AbstractMCPowerModel, n::Int, i)
+function constraint_storage_complementarity_nl(pm::AbstractUnbalancedPowerModel, n::Int, i)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)
 
@@ -190,7 +190,7 @@ end
 
 
 ""
-function constraint_storage_complementarity_mi(pm::AbstractMCPowerModel, n::Int, i, charge_ub, discharge_ub)
+function constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel, n::Int, i, charge_ub, discharge_ub)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)
     sc_on = var(pm, n, :sc_on, i)

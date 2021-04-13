@@ -1,4 +1,4 @@
-function _IM.solution_preprocessor(pm::AbstractMCPowerModel, solution::Dict)
+function _IM.solution_preprocessor(pm::AbstractUnbalancedPowerModel, solution::Dict)
     per_unit = _IM.get_data(x -> x["per_unit"], pm.data, pmd_it_name; apply_to_subnetworks = false)
     solution["it"][pmd_it_name]["per_unit"] = per_unit
 
@@ -50,7 +50,7 @@ end
 
 
  ""
-function sol_data_model!(pm::AbstractWModels, solution::Dict{String,<:Any})
+function sol_data_model!(pm::AbstractUnbalancedWModels, solution::Dict{String,<:Any})
     apply_pmd!(_sol_data_model_w!, solution)
 end
 
@@ -80,19 +80,19 @@ end
 
 
 ""
-function sol_data_model!(pm::AbstractACRModel, solution::Dict{String,<:Any})
+function sol_data_model!(pm::AbstractUnbalancedACRModel, solution::Dict{String,<:Any})
     apply_pmd!(_sol_data_model_acr!, solution)
 end
 
 
 "converts the solution data into the data model's standard space, polar voltages and rectangular power"
-function sol_data_model!(pm::AbstractMCPowerModel, solution::Dict{String,<:Any})
+function sol_data_model!(pm::AbstractUnbalancedPowerModel, solution::Dict{String,<:Any})
     @warn "sol_data_model! not defined for power model of type $(typeof(pm))"
 end
 
 
 ""
-function sol_polar_voltage!(pm::AbstractMCPowerModel, solution::Dict{String,<:Any})
+function sol_polar_voltage!(pm::AbstractUnbalancedPowerModel, solution::Dict{String,<:Any})
     apply_pmd!(_sol_polar_voltage!, solution)
 end
 

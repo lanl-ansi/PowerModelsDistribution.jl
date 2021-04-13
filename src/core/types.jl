@@ -26,9 +26,9 @@ PowerModelsDistributionEnums = Union{DataModel,LoadModel,ShuntModel,SwitchState,
 
 #================================================
     # exact non-convex models
-    ACPPowerModel, ACRPowerModel, IVRPowerModel
+    ACPUPowerModel, ACRUPowerModel, IVRUPowerModel
     # linear approximations
-    DCPPowerModel, DCMPPowerModel, BFAPowerModel, NFAPowerModel
+    DCPUPowerModel, DCMPPowerModel, BFAPowerModel, NFAUPowerModel
     # quadratic approximations
     DCPLLPowerModel, LPACCPowerModel
     # quadratic relaxations
@@ -42,26 +42,26 @@ PowerModelsDistributionEnums = Union{DataModel,LoadModel,ShuntModel,SwitchState,
 ##### Top Level Abstract Types #####
 
 "active power only models"
-abstract type AbstractActivePowerModel <: AbstractMCPowerModel end
+abstract type AbstractUnbalancedActivePowerModel <: AbstractUnbalancedPowerModel end
 
 "variants that target conic solvers"
-abstract type AbstractConicModel <: AbstractMCPowerModel end
+abstract type AbstractUnbalancedConicModel <: AbstractUnbalancedPowerModel end
 
 "for branch flow models"
-abstract type AbstractBFModel <: AbstractMCPowerModel end
+abstract type AbstractUBFModel <: AbstractUnbalancedPowerModel end
 
 
 "for variants of branch flow models that target LP solvers"
-abstract type AbstractBFAModel <: AbstractBFModel end
+abstract type AbstractUBFAModel <: AbstractUBFModel end
 
 "for variants of branch flow models that target QP or NLP solvers"
-abstract type AbstractBFQPModel <: AbstractBFModel end
+abstract type AbstractUBFQPModel <: AbstractUBFModel end
 
 "for variants of branch flow models that target conic solvers"
-abstract type AbstractBFConicModel <: AbstractBFModel end
+abstract type AbstractUBFConicModel <: AbstractUBFModel end
 
 ""
-abstract type AbstractACPModel <: AbstractMCPowerModel end
+abstract type AbstractUnbalancedACPModel <: AbstractUnbalancedPowerModel end
 
 """
 AC power flow Model with polar bus voltage variables.
@@ -88,10 +88,10 @@ History and discussion:
 }
 ```
 """
-mutable struct ACPPowerModel <: AbstractACPModel @pmd_fields end
+mutable struct ACPUPowerModel <: AbstractUnbalancedACPModel @pmd_fields end
 
 ""
-abstract type AbstractACRModel <: AbstractMCPowerModel end
+abstract type AbstractUnbalancedACRModel <: AbstractUnbalancedPowerModel end
 
 
 """
@@ -106,10 +106,10 @@ AC power flow Model with rectangular bus voltage variables.
 }
 ```
 """
-mutable struct ACRPowerModel <: AbstractACRModel @pmd_fields end
+mutable struct ACRUPowerModel <: AbstractUnbalancedACRModel @pmd_fields end
 
 ""
-abstract type AbstractIVRModel <: AbstractACRModel end
+abstract type AbstractUnbalancedIVRModel <: AbstractUnbalancedACRModel end
 
 """
 Current voltage formulation of AC OPF. The formulation uses rectangular
@@ -126,14 +126,14 @@ due to constants power loads/generators and apparent power limits.
 ```
 Applicable to problem formulations with `_iv` in the name.
 """
-mutable struct IVRPowerModel <: AbstractIVRModel @pmd_fields end
+mutable struct IVRUPowerModel <: AbstractUnbalancedIVRModel @pmd_fields end
 
 
 ##### Linear Approximations #####
 
 
 
-abstract type AbstractDCPModel <: AbstractActivePowerModel end
+abstract type AbstractUnbalancedDCPModel <: AbstractUnbalancedActivePowerModel end
 
 
 """
@@ -159,25 +159,25 @@ in solutions should be expected when comparing active-power-only approximations 
 }
 ```
 """
-mutable struct DCPPowerModel <: AbstractDCPModel @pmd_fields end
+mutable struct DCPUPowerModel <: AbstractUnbalancedDCPModel @pmd_fields end
 
 
-abstract type AbstractNFAModel <: AbstractDCPModel end
+abstract type AbstractUnbalancedNFAModel <: AbstractUnbalancedDCPModel end
 
 """
 The an active power only network flow approximation, also known as the transportation model.
 """
-mutable struct NFAPowerModel <: AbstractNFAModel @pmd_fields end
+mutable struct NFAUPowerModel <: AbstractUnbalancedNFAModel @pmd_fields end
 
 
 
 
 "Base Abstract NLP Unbalanced Branch Flow Model"
-abstract type AbstractNLPUBFModel <: AbstractBFQPModel end
+abstract type AbstractNLPUBFModel <: AbstractUBFQPModel end
 
 
 "Base Abstract Conic Unbalanced Branch Flow Model"
-abstract type AbstractConicUBFModel <: AbstractBFConicModel end
+abstract type AbstractConicUBFModel <: AbstractUBFConicModel end
 
 
 "Collection of Unbalanced Branch Flow Models"
@@ -242,7 +242,7 @@ mutable struct LPUBFDiagPowerModel <: LPUBFDiagModel @pmd_fields end
 const LinDist3FlowPowerModel = LPUBFDiagPowerModel # more popular name
 
 
-AbstractWModels = Union{AbstractBFModel}
-AbstractAPLossLessModels = Union{DCPPowerModel, AbstractNFAModel}
-AbstractPolarModels = Union{AbstractACPModel, AbstractDCPModel}
-AbstractWConvexModels = Union{AbstractBFModel}
+AbstractUnbalancedWModels = Union{AbstractUBFModel}
+AbstractUnbalancedAPLossLessModels = Union{DCPUPowerModel, AbstractUnbalancedNFAModel}
+AbstractUnbalancedPolarModels = Union{AbstractUnbalancedACPModel, AbstractUnbalancedDCPModel}
+AbstractUnbalancedWConvexModels = Union{AbstractUBFModel}

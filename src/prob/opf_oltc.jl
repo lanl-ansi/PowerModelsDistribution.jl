@@ -5,7 +5,7 @@ end
 
 
 "constructor for on-load tap-changer OPF"
-function build_mc_opf_oltc(pm::AbstractMCPowerModel)
+function build_mc_opf_oltc(pm::AbstractUnbalancedPowerModel)
     variable_mc_bus_voltage(pm)
 
     variable_mc_branch_power(pm)
@@ -63,8 +63,8 @@ end
 
 "depreciation warning for run_ac_mc_opf_oltc"
 function run_ac_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
-    @warn "run_ac_mc_opf_oltc is being depreciated in favor of solve_mc_opf_oltc(data, ACPPowerModel, solver; kwargs...), please update your code accordingly"
-    return solve_mc_opf_oltc(data, ACPPowerModel, solver; kwargs...)
+    @warn "run_ac_mc_opf_oltc is being depreciated in favor of solve_mc_opf_oltc(data, ACPUPowerModel, solver; kwargs...), please update your code accordingly"
+    return solve_mc_opf_oltc(data, ACPUPowerModel, solver; kwargs...)
 end
 
 

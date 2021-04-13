@@ -11,7 +11,7 @@
         make_multiconductor!(case30, 3)
 
         @testset "5-bus matpower acp opf" begin
-            result = solve_mc_opf(case5, ACPPowerModel, ipopt_solver)
+            result = solve_mc_opf(case5, ACPUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 45522.096; atol=1e-1)
@@ -21,7 +21,7 @@
         end
 
         @testset "5-bus matpower acr opf" begin
-            result = solve_mc_opf(case5, ACRPowerModel, ipopt_solver)
+            result = solve_mc_opf(case5, ACRUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 45522.096; atol=1e-1)
@@ -33,7 +33,7 @@
 
         @testset "5-bus matpower mn acp mld" begin
             case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
-            result = solve_mn_mc_opf(case5_mn, ACPPowerModel, ipopt_solver)
+            result = solve_mn_mc_opf(case5_mn, ACPUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 45522.096*3; atol=1e-1)
@@ -44,7 +44,7 @@
 
         @testset "5-bus matpower mn acr mld" begin
             case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
-            result = solve_mn_mc_opf(case5_mn, ACRPowerModel, ipopt_solver)
+            result = solve_mn_mc_opf(case5_mn, ACRUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 45522.096*3; atol=1e-1)
@@ -56,14 +56,14 @@
 
         @testset "5-bus storage matpower mn acr mld" begin
             case5_strg_mn = InfrastructureModels.replicate(case5_strg, 3, Set(["per_unit"]))
-            result = solve_mn_mc_opf(case5_strg_mn, ACRPowerModel, ipopt_solver)
+            result = solve_mn_mc_opf(case5_strg_mn, ACRUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test result["objective"] >= 45522.096*3
         end
 
         @testset "30-bus matpower acp opf" begin
-            result = solve_mc_opf(case30, ACPPowerModel, ipopt_solver)
+            result = solve_mc_opf(case30, ACPUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 614.007; atol=1e-1)
@@ -73,7 +73,7 @@
         end
 
         @testset "30-bus matpower acr opf" begin
-            result = solve_mc_opf(case30, ACRPowerModel, ipopt_solver)
+            result = solve_mc_opf(case30, ACRUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 614.007; atol=1e-1)
@@ -84,14 +84,14 @@
         end
 
         @testset "30-bus matpower dcp opf" begin
-            result = solve_mc_opf(case30, DCPPowerModel, ipopt_solver)
+            result = solve_mc_opf(case30, DCPUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 566.112; atol=1e-1)
         end
 
         @testset "30-bus matpower nfa opf" begin
-            result = solve_mc_opf(case30, NFAPowerModel, ipopt_solver)
+            result = solve_mc_opf(case30, NFAUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 458.006; atol=1e-1)
@@ -103,7 +103,7 @@
         case5_phase_drop = parse_file("../test/data/opendss/case5_phase_drop.dss")
 
         @testset "4-bus phase drop acp opf" begin
-            result = solve_mc_opf(case4_phase_drop, ACPPowerModel, ipopt_solver, make_si=false)
+            result = solve_mc_opf(case4_phase_drop, ACPUPowerModel, ipopt_solver, make_si=false)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.0182595; atol=1e-4)
@@ -113,7 +113,7 @@
         end
 
         @testset "4-bus phase drop acr opf" begin
-            result = solve_mc_opf(case4_phase_drop, ACRPowerModel, ipopt_solver; make_si=false)
+            result = solve_mc_opf(case4_phase_drop, ACRUPowerModel, ipopt_solver; make_si=false)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.0182595; atol=1e-4)
@@ -123,7 +123,7 @@
         end
 
         @testset "5-bus phase drop acp opf" begin
-            result = solve_mc_opf(case5_phase_drop, ACPPowerModel, ipopt_solver; make_si=false)
+            result = solve_mc_opf(case5_phase_drop, ACPUPowerModel, ipopt_solver; make_si=false)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.0599389; atol=1e-4)
@@ -133,7 +133,7 @@
         end
 
         @testset "5-bus phase drop acr opf" begin
-            result = solve_mc_opf(case5_phase_drop, ACRPowerModel, ipopt_solver; make_si=false)
+            result = solve_mc_opf(case5_phase_drop, ACRUPowerModel, ipopt_solver; make_si=false)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.0599400; atol = 1e-4)
@@ -143,14 +143,14 @@
         end
 
         @testset "5-bus phase drop dcp opf" begin
-            result = solve_mc_opf(case5_phase_drop, DCPPowerModel, ipopt_solver)
+            result = solve_mc_opf(case5_phase_drop, DCPUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.054; atol=1e-4)
         end
 
         @testset "5-bus phase drop nfa opf" begin
-            result = solve_mc_opf(case5_phase_drop, NFAPowerModel, ipopt_solver)
+            result = solve_mc_opf(case5_phase_drop, NFAUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.054; atol=1e-4)
@@ -160,7 +160,7 @@
     @testset "test opendss opf" begin
         @testset "2-bus diagonal acp opf" begin
             pmd = parse_file("../test/data/opendss/case2_diag.dss")
-            sol = solve_mc_opf(pmd, ACPPowerModel, ipopt_solver; make_si=false)
+            sol = solve_mc_opf(pmd, ACPUPowerModel, ipopt_solver; make_si=false)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -174,7 +174,7 @@
 
         @testset "3-bus balanced acp opf" begin
             pmd = parse_file("../test/data/opendss/case3_balanced.dss")
-            sol = solve_mc_opf(pmd, ACPPowerModel, ipopt_solver; make_si=false)
+            sol = solve_mc_opf(pmd, ACPUPowerModel, ipopt_solver; make_si=false)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -190,7 +190,7 @@
 
         @testset "3-bus unbalanced acp opf" begin
             pmd = parse_file("../test/data/opendss/case3_unbalanced.dss")
-            sol = solve_mc_opf(pmd, ACPPowerModel, ipopt_solver; make_si=false)
+            sol = solve_mc_opf(pmd, ACPUPowerModel, ipopt_solver; make_si=false)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -208,7 +208,7 @@
 
         @testset "3-bus unbalanced isc acp opf" begin
             pmd = parse_file("../test/data/opendss/case3_balanced_isc.dss")
-            sol = solve_mc_opf(pmd, ACPPowerModel, ipopt_solver)
+            sol = solve_mc_opf(pmd, ACPUPowerModel, ipopt_solver)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
             @test isapprox(sol["objective"], 0.0185; atol=1e-4)
@@ -217,7 +217,7 @@
         @testset "3-bus balanced pv acp opf" begin
             pmd = parse_file("../test/data/opendss/case3_balanced_pv.dss")
 
-            sol = solve_mc_opf(pmd, ACPPowerModel, ipopt_solver; make_si=false)
+            sol = solve_mc_opf(pmd, ACPUPowerModel, ipopt_solver; make_si=false)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
             baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
@@ -229,7 +229,7 @@
 
         @testset "3-bus unbalanced single-phase pv acp opf" begin
             pmd = parse_file("../test/data/opendss/case3_unbalanced_1phase-pv.dss")
-            sol = solve_mc_opf(pmd, ACPPowerModel, ipopt_solver)
+            sol = solve_mc_opf(pmd, ACPUPowerModel, ipopt_solver)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -242,7 +242,7 @@
 
         @testset "3-bus balanced capacitor acp opf" begin
             pmd = parse_file("../test/data/opendss/case3_balanced_cap.dss")
-            sol = solve_mc_pf(pmd, ACPPowerModel, ipopt_solver; make_si=false)
+            sol = solve_mc_pf(pmd, ACPUPowerModel, ipopt_solver; make_si=false)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -252,7 +252,7 @@
 
         @testset "3w transformer nfa opf" begin
             mp_data = parse_file("../test/data/opendss/ut_trans_3w_dyy_1.dss")
-            result = solve_mc_opf(mp_data, NFAPowerModel, ipopt_solver)
+            result = solve_mc_opf(mp_data, NFAUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.616; atol=1e-3)
@@ -264,16 +264,16 @@
             pmd_eng = parse_file("../test/data/opendss/case3_unbalanced.dss")
             pmd_math = transform_data_model(pmd_eng)
 
-            sol_ivr = solve_mc_opf(pmd_math, IVRPowerModel, ipopt_solver)
-            sol_acr = solve_mc_opf(pmd_math, ACRPowerModel, ipopt_solver)
+            sol_ivr = solve_mc_opf(pmd_math, IVRUPowerModel, ipopt_solver)
+            sol_acr = solve_mc_opf(pmd_math, ACRUPowerModel, ipopt_solver)
 
             pmd_math["bus"]["4"]["vm_start"] = pmd_math["bus"]["4"]["vm"]
             pmd_math["bus"]["4"]["va_start"] = pmd_math["bus"]["4"]["va"]
             pmd_math["bus"]["2"]["vm_start"] = [0.9959, 0.9959, 0.9959]
             pmd_math["bus"]["2"]["va_start"] = [0.00, -2.0944, 2.0944]
 
-            sol_ivr_with_start = solve_mc_opf(pmd_math, IVRPowerModel, ipopt_solver)
-            sol_acr_with_start = solve_mc_opf(pmd_math, ACRPowerModel, ipopt_solver)
+            sol_ivr_with_start = solve_mc_opf(pmd_math, IVRUPowerModel, ipopt_solver)
+            sol_acr_with_start = solve_mc_opf(pmd_math, ACRUPowerModel, ipopt_solver)
 
             @test isapprox(sol_ivr["objective"], sol_ivr_with_start["objective"]; atol=1e-5)
             @test isapprox(sol_acr["objective"], sol_acr_with_start["objective"]; atol=1e-5)
@@ -302,7 +302,7 @@
                                 "pmin"          => [-Inf],
                                 "ncost"         => 2
                                 )
-            sol = solve_mc_opf(data, ACPPowerModel, ipopt_solver)
+            sol = solve_mc_opf(data, ACPUPowerModel, ipopt_solver)
             @test sol["termination_status"] == LOCALLY_SOLVED
         end
     end

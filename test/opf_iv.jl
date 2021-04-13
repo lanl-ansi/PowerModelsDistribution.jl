@@ -4,7 +4,7 @@
     @testset "test IVR opf_iv" begin
         @testset "2-bus diagonal acp opf" begin
             pmd = parse_file("../test/data/opendss/case2_diag.dss")
-            sol = solve_mc_opf(pmd, IVRPowerModel, ipopt_solver; make_si=false)
+            sol = solve_mc_opf(pmd, IVRUPowerModel, ipopt_solver; make_si=false)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
             @test isapprox(sol["objective"], 0.018208969542066918; atol = 1e-4)
@@ -16,7 +16,7 @@
 
         @testset "3-bus balanced acp opf" begin
             pmd = parse_file("../test/data/opendss/case3_balanced.dss")
-            sol = solve_mc_opf(pmd, IVRPowerModel, ipopt_solver; make_si=false)
+            sol = solve_mc_opf(pmd, IVRUPowerModel, ipopt_solver; make_si=false)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
             @test isapprox(sol["objective"], 0.018345004773175046; atol = 1e-4)
@@ -28,7 +28,7 @@
 
         @testset "3-bus unbalanced acp opf" begin
             pmd = parse_file("../test/data/opendss/case3_unbalanced.dss")
-            sol = solve_mc_opf(pmd, IVRPowerModel, ipopt_solver; make_si=false)
+            sol = solve_mc_opf(pmd, IVRUPowerModel, ipopt_solver; make_si=false)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
             @test isapprox(sol["objective"], 0.021481176584287; atol = 1e-4)
@@ -42,7 +42,7 @@
             case5 = PM.parse_file("../test/data/matpower/case5.m")
             make_multiconductor!(case5, 3)
             case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
-            result = solve_mn_mc_opf(case5_mn, IVRPowerModel, ipopt_solver)
+            result = solve_mn_mc_opf(case5_mn, IVRUPowerModel, ipopt_solver)
             @test result["termination_status"] == LOCALLY_SOLVED
         end
     end

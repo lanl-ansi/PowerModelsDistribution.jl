@@ -5,7 +5,7 @@ end
 
 
 "Constructor for Optimal Power Balance"
-function _build_mc_mn_opb(pm::AbstractMCPowerModel)
+function _build_mc_mn_opb(pm::AbstractUnbalancedPowerModel)
     for (n, network) in nws(pm)
         variable_mc_generator_power(pm; nw=n)
 

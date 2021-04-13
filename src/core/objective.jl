@@ -1,5 +1,5 @@
 "a quadratic penalty for bus power slack variables"
-function objective_mc_min_slack_bus_power(pm::AbstractMCPowerModel)
+function objective_mc_min_slack_bus_power(pm::AbstractUnbalancedPowerModel)
     return JuMP.@objective(pm.model, Min,
         sum(
             sum(
@@ -11,7 +11,7 @@ end
 
 
 "minimum load delta objective (continuous load shed) with storage"
-function objective_mc_min_load_setpoint_delta(pm::AbstractMCPowerModel)
+function objective_mc_min_load_setpoint_delta(pm::AbstractUnbalancedPowerModel)
     for (n, nw_ref) in nws(pm)
         var(pm, n)[:delta_pg] = Dict(i => JuMP.@variable(pm.model,
                 [c in ref(pm, n, :gen, i)["connections"]], base_name="$(n)_$(i)_delta_pg",
@@ -51,7 +51,7 @@ end
 
 
 "simplified minimum load delta objective (continuous load shed)"
-function objective_mc_min_load_setpoint_delta_simple(pm::AbstractMCPowerModel)
+function objective_mc_min_load_setpoint_delta_simple(pm::AbstractUnbalancedPowerModel)
     JuMP.@objective(pm.model, Min,
         sum(
             sum( ((1 - var(pm, n, :z_demand, i))) for i in keys(nw_ref[:load])) +
@@ -62,7 +62,7 @@ end
 
 
 "simplified minimum load delta objective (continuous load shed)"
-function objective_mc_min_load_setpoint_delta_simple_switch(pm::AbstractMCPowerModel)
+function objective_mc_min_load_setpoint_delta_simple_switch(pm::AbstractUnbalancedPowerModel)
     JuMP.@objective(pm.model, Min,
         sum(
             sum( ((1 - var(pm, n, :z_demand, i))) for i in keys(nw_ref[:load])) +
@@ -75,7 +75,7 @@ end
 
 # TODO correct for connections
 "maximum loadability objective (continuous load shed) with storage"
-function objective_mc_max_load_setpoint(pm::AbstractMCPowerModel)
+function objective_mc_max_load_setpoint(pm::AbstractUnbalancedPowerModel)
     load_weight = Dict(n => Dict(i => get(load, "weight", 1.0) for (i,load) in ref(pm, n, :load)) for n in nw_ids(pm))
 
     JuMP.@objective(pm.model, Max,
@@ -93,7 +93,7 @@ end
 
 
 ""
-function objective_mc_min_fuel_cost(pm::AbstractMCPowerModel; kwargs...)
+function objective_mc_min_fuel_cost(pm::AbstractUnbalancedPowerModel; kwargs...)
     model = check_gen_cost_models(pm)
 
     if model == 1
@@ -108,7 +108,7 @@ end
 
 
 ""
-function objective_mc_min_fuel_cost_switch(pm::AbstractMCPowerModel; kwargs...)
+function objective_mc_min_fuel_cost_switch(pm::AbstractUnbalancedPowerModel; kwargs...)
     model = check_gen_cost_models(pm)
 
     if model == 1
@@ -124,7 +124,7 @@ end
 
 
 ""
-function objective_mc_min_fuel_cost_pwl(pm::AbstractMCPowerModel; kwargs...)
+function objective_mc_min_fuel_cost_pwl(pm::AbstractUnbalancedPowerModel; kwargs...)
     objective_mc_variable_pg_cost(pm; kwargs...)
 
     return JuMP.@objective(pm.model, Min,
@@ -136,7 +136,7 @@ end
 
 
 ""
-function objective_mc_min_fuel_cost_pwl_switch(pm::AbstractMCPowerModel; kwargs...)
+function objective_mc_min_fuel_cost_pwl_switch(pm::AbstractUnbalancedPowerModel; kwargs...)
     objective_mc_variable_pg_cost(pm; kwargs...)
 
     return JuMP.@objective(pm.model, Min,
@@ -149,7 +149,7 @@ end
 
 
 "adds pg_cost variables and constraints"
-function objective_mc_variable_pg_cost(pm::AbstractMCPowerModel, report::Bool=true)
+function objective_mc_variable_pg_cost(pm::AbstractUnbalancedPowerModel, report::Bool=true)
     for (n, nw_ref) in nws(pm)
         pg_cost = var(pm, n)[:pg_cost] = Dict{Int,Any}()
 
@@ -179,7 +179,7 @@ end
 
 
 ""
-function objective_mc_min_fuel_cost_polynomial(pm::AbstractMCPowerModel; kwargs...)
+function objective_mc_min_fuel_cost_polynomial(pm::AbstractUnbalancedPowerModel; kwargs...)
     order = calc_max_cost_index(pm.data)-1
 
     if order <= 2
@@ -191,7 +191,7 @@ end
 
 
 ""
-function objective_mc_min_fuel_cost_polynomial_switch(pm::AbstractMCPowerModel; kwargs...)
+function objective_mc_min_fuel_cost_polynomial_switch(pm::AbstractUnbalancedPowerModel; kwargs...)
     order = calc_max_cost_index(pm.data)-1
 
     if order <= 2
@@ -203,7 +203,7 @@ end
 
 
 "gen connections adaptation of min fuel cost polynomial linquad objective"
-function _objective_mc_min_fuel_cost_polynomial_linquad(pm::AbstractMCPowerModel; report::Bool=true)
+function _objective_mc_min_fuel_cost_polynomial_linquad(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     gen_cost = Dict()
     for (n, nw_ref) in nws(pm)
         for (i,gen) in nw_ref[:gen]
@@ -230,7 +230,7 @@ end
 
 
 "gen connections adaptation of min fuel cost polynomial linquad objective"
-function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::AbstractMCPowerModel; report::Bool=true)
+function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     gen_cost = Dict()
     for (n, nw_ref) in nws(pm)
         for (i,gen) in nw_ref[:gen]
@@ -258,7 +258,7 @@ end
 
 
 "Multiconductor adaptation of min fuel cost polynomial linquad objective"
-function _objective_mc_min_fuel_cost_polynomial_linquad(pm::AbstractIVRModel; report::Bool=true)
+function _objective_mc_min_fuel_cost_polynomial_linquad(pm::AbstractUnbalancedIVRModel; report::Bool=true)
     gen_cost = Dict()
 
     for (n, nw_ref) in nws(pm)
@@ -288,7 +288,7 @@ end
 
 
 "Multiconductor adaptation of min fuel cost polynomial linquad objective"
-function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::AbstractIVRModel; report::Bool=true)
+function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::AbstractUnbalancedIVRModel; report::Bool=true)
     gen_cost = Dict()
     switch_state = Dict()
 
@@ -323,7 +323,7 @@ end
 
 
 ""
-function _objective_mc_min_fuel_cost_polynomial_nl(pm::AbstractMCPowerModel; report::Bool=true)
+function _objective_mc_min_fuel_cost_polynomial_nl(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     gen_cost = Dict()
     for (n, nw_ref) in nws(pm)
         for (i,gen) in nw_ref[:gen]
@@ -354,7 +354,7 @@ end
 
 
 ""
-function _objective_mc_min_fuel_cost_polynomial_nl_switch(pm::AbstractMCPowerModel; report::Bool=true)
+function _objective_mc_min_fuel_cost_polynomial_nl_switch(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     gen_cost = Dict()
     for (n, nw_ref) in nws(pm)
         for (i,gen) in nw_ref[:gen]
@@ -386,7 +386,7 @@ end
 
 
 "adds pg_cost variables and constraints"
-function objective_variable_pg_cost(pm::AbstractIVRModel; report::Bool=true)
+function objective_variable_pg_cost(pm::AbstractUnbalancedIVRModel; report::Bool=true)
     for (n, nw_ref) in nws(pm)
         gen_lines = calc_cost_pwl_lines(nw_ref[:gen])
 
@@ -410,7 +410,7 @@ end
 """
 Checks that all cost models are of the same type
 """
-function check_cost_models(pm::AbstractMCPowerModel)
+function check_cost_models(pm::AbstractUnbalancedPowerModel)
     return check_gen_cost_models(pm)
 end
 
@@ -418,7 +418,7 @@ end
 """
 Checks that all generator cost models are of the same type
 """
-function check_gen_cost_models(pm::AbstractMCPowerModel)
+function check_gen_cost_models(pm::AbstractUnbalancedPowerModel)
     model = nothing
 
     for (n, nw_ref) in nws(pm)

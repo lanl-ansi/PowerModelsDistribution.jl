@@ -43,10 +43,10 @@ The function "run_ac_mc_opf" is a short-hand for a more general formulation-inde
 For example, `run_ac_mc_opf` is equivalent to,
 
 ```julia
-run_mc_opf(eng, ACPPowerModel, with_optimizer(Ipopt.Optimizer))
+run_mc_opf(eng, ACPUPowerModel, with_optimizer(Ipopt.Optimizer))
 ```
 
-`ACPPowerModel` indicates an AC formulation in polar coordinates.  This more generic `run_mc_opf()` allows one to solve an OPF problem with any power network formulation implemented in PowerModels or PowerModelsDistribution.  For example, the SDPUBFPowerModel relaxation of unbalanced Optimal Power Flow (branch flow model) can be run with,
+`ACPUPowerModel` indicates an unbalanced (i.e., multiconductor) AC formulation in polar coordinates.  This more generic `run_mc_opf()` allows one to solve an OPF problem with any power network formulation in PowerModelsDistribution.  For example, the SDPUBFPowerModel relaxation of unbalanced Optimal Power Flow (branch flow model) can be run with,
 
 ```julia
 using SCS
@@ -61,7 +61,7 @@ The following example demonstrates how to break a `run_mc_opf` call into seperat
 
 ```julia
 math = parse_file("case3_unbalanced.dss"; data_model=MATHEMATICAL)
-pm = instantiate_model(math, ACPPowerModel, build_mc_opf; ref_extensions=[ref_add_arcs_trans!])
+pm = instantiate_model(math, ACPUPowerModel, build_mc_opf; ref_extensions=[ref_add_arcs_trans!])
 print(pm.model)
 optimize_model!(pm, optimizer=with_optimizer(Ipopt.Optimizer))
 ```

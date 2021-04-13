@@ -36,7 +36,7 @@
         end
 
         # check ACP and ACR
-        for form in [ACPPowerModel, ACRPowerModel, IVRPowerModel]
+        for form in [ACPUPowerModel, ACRUPowerModel, IVRUPowerModel]
             sol_1 = solve_mc_opf(eng_1, form, ipopt_solver)
             @test sol_1["termination_status"] == LOCALLY_SOLVED
 
@@ -77,11 +77,11 @@
     #         gen["model"] = 2
     #     end
     #
-    #     pm_ivr  = instantiate_mc_model(pmd, IVRPowerModel, PMD.build_mc_opf)
+    #     pm_ivr  = instantiate_mc_model(pmd, IVRUPowerModel, PMD.build_mc_opf)
     #     sol_ivr = optimize_model!(pm_ivr, optimizer=ipopt_solver)
     #     @assert(sol_1["termination_status"]==LOCALLY_SOLVED)
     #
-    #     pm_acr  = instantiate_mc_model(pmd, ACRPowerModel, PMD.build_mc_opf)
+    #     pm_acr  = instantiate_mc_model(pmd, ACRUPowerModel, PMD.build_mc_opf)
     #     sol_acr = optimize_model!(pm_acr, optimizer=ipopt_solver)
     #     @assert(sol_2["termination_status"]==LOCALLY_SOLVED)
     #

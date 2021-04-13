@@ -1,18 +1,18 @@
 # Three-phase formulation details
 
-## `AbstractACPModel`
+## `AbstractUnbalancedACPModel`
 
 Real-valued formulation from:
 
 - Formulation without shunts: Mahdad, B., Bouktir, T., & Srairi, K. (2006). A three-phase power flow modelization: a tool for optimal location and control of FACTS devices in unbalanced power systems. In IEEE Industrial Electronics IECON (pp. 2238–2243).
 
-## `AbstractDCPModel`
+## `AbstractUnbalancedDCPModel`
 
-Applying all of the standard DC linearization tricks to the `AbstractACPModel`
+Applying all of the standard DC linearization tricks to the `AbstractUnbalancedACPModel`
 
 ## `SOCWRModel`
 
-Applying the standard BIM voltage cross-product (sine and cosine) substitution tricks to `AbstractACPModel` results immediately in a SOC formulation.
+Applying the standard BIM voltage cross-product (sine and cosine) substitution tricks to `AbstractUnbalancedACPModel` results immediately in a SOC formulation.
 
 ## `SDPUBFModel`
 

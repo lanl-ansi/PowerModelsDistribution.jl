@@ -8,7 +8,7 @@ end
 
 
 ""
-function _calc_mc_voltage_product_bounds(pm::AbstractMCPowerModel, buspairs; nw::Int=nw_id_default)
+function _calc_mc_voltage_product_bounds(pm::AbstractUnbalancedPowerModel, buspairs; nw::Int=nw_id_default)
     wr_min = Dict([(bp, -Inf) for bp in buspairs])
     wr_max = Dict([(bp,  Inf) for bp in buspairs])
     wi_min = Dict([(bp, -Inf) for bp in buspairs])
@@ -40,7 +40,7 @@ end
 
 
 ""
-function _find_ref_buses(pm::AbstractMCPowerModel, nw)
+function _find_ref_buses(pm::AbstractUnbalancedPowerModel, nw)
     buses = ref(pm, nw, :bus)
     return [b for (b,bus) in buses if bus["bus_type"]==3]
     # return [bus for (b,bus) in buses ]
@@ -48,7 +48,7 @@ end
 
 
 ""
-function _calc_mc_transformer_Tvi(pm::AbstractMCPowerModel, i::Int; nw=nw_id_default)
+function _calc_mc_transformer_Tvi(pm::AbstractUnbalancedPowerModel, i::Int; nw=nw_id_default)
     trans = ref(pm, nw, :transformer,  i)
     # transformation matrices
     # Tv and Ti will be compositions of these
