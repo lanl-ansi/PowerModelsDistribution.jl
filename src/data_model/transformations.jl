@@ -214,8 +214,8 @@ function apply_phase_projection!(data_eng::Dict{String,<:Any})
             _apply_linecode!(eng_obj, data_eng)
 
             _pad_properties!(eng_obj, ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"], eng_obj["f_connections"], all_conductors)
-            _pad_properties!(eng_obj, ["vad_lb"], eng_obj["f_connections"], all_conductors; pad_value=-60.0)
-            _pad_properties!(eng_obj, ["vad_ub"], eng_obj["f_connections"], all_conductors; pad_value=60.0)
+            _pad_properties!(eng_obj, ["vad_lb"], eng_obj["f_connections"], all_conductors; pad_value=-10.0)
+            _pad_properties!(eng_obj, ["vad_ub"], eng_obj["f_connections"], all_conductors; pad_value=10.0)
             for key in ["cm_ub", "cm_ub_b", "cm_ub_c", "sm_ub", "sm_ub_b", "sm_ub_c"]
                 if haskey(eng_obj, key)
                     _pad_properties!(eng_obj, [key], eng_obj["f_connections"], all_conductors)
@@ -253,8 +253,8 @@ function apply_phase_projection!(data_eng::Dict{String,<:Any})
             _apply_linecode!(eng_obj, data_eng)
 
             _pad_properties!(eng_obj, ["rs", "xs"], eng_obj["f_connections"], all_conductors)
-            _pad_properties!(eng_obj, ["vad_lb"], eng_obj["f_connections"], all_conductors; pad_value=-60.0)
-            _pad_properties!(eng_obj, ["vad_ub"], eng_obj["f_connections"], all_conductors; pad_value=60.0)
+            _pad_properties!(eng_obj, ["vad_lb"], eng_obj["f_connections"], all_conductors; pad_value=-10.0)
+            _pad_properties!(eng_obj, ["vad_ub"], eng_obj["f_connections"], all_conductors; pad_value=10.0)
             for key in ["cm_ub", "cm_ub_b", "cm_ub_c", "sm_ub", "sm_ub_b", "sm_ub_c"]
                 if haskey(eng_obj, key)
                     _pad_properties!(eng_obj, [key], eng_obj["f_connections"], all_conductors)

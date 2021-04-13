@@ -777,7 +777,7 @@ end
 
 
 "checks that voltage angle differences are within 90 deg., if not tightens"
-function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=1.0472)
+function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))
     if ismultinetwork(data)
         nw_data = data["nw"]
     else
