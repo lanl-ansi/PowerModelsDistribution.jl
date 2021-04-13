@@ -184,7 +184,7 @@ function count_nodes(data::Dict{String,<:Any})::Int
             end
         end
     else
-        Memento.error(_LOGGER, "Origin of data structure not recognized, cannot count nodes reliably")
+        error("Origin of data structure not recognized, cannot count nodes reliably")
     end
 
     return n_nodes
@@ -317,7 +317,7 @@ function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, b
         #TODO is this still needed?
         tm_scale *= sqrt(3)
     elseif config == "zig-zag"
-        Memento.error(_LOGGER, "Zig-zag not yet supported.")
+        error("Zig-zag not yet supported.")
     end
 
     return tm_nom
@@ -888,7 +888,7 @@ function calc_connected_components(data::Dict{String,<:Any}; edges=["branch", "t
     pm_data = get_pm_data(data)
 
     if ismultinetwork(pm_data)
-        Memento.error(_LOGGER, "connected_components does not yet support multinetwork data")
+        error("connected_components does not yet support multinetwork data")
     end
 
     active_bus = Dict(x for x in pm_data["bus"] if x.second["bus_type"] != 4)
@@ -953,7 +953,7 @@ function _rescale_cost_model!(comp::Dict{String,<:Any}, scale::Real)
                 comp["cost"][i] = item*(scale^(degree-i))
             end
         else
-            Memento.warn(_LOGGER, "Skipping cost model of type $(comp["model"]) in per unit transformation")
+            @warn "Skipping cost model of type $(comp["model"]) in per unit transformation"
         end
     end
 end
@@ -967,14 +967,13 @@ end
 
 ""
 function _correct_branch_directions!(pm_data::Dict{String,<:Any})
-
     orientations = Set()
     for (i, branch) in pm_data["branch"]
         orientation = (branch["f_bus"], branch["t_bus"])
         orientation_rev = (branch["t_bus"], branch["f_bus"])
 
         if in(orientation_rev, orientations)
-            Memento.warn(_LOGGER, "reversing the orientation of branch $(i) $(orientation) to be consistent with other parallel branches")
+            @warn "reversing the orientation of branch $(i) $(orientation) to be consistent with other parallel branches"
             branch_orginal = copy(branch)
             branch["f_bus"] = branch_orginal["t_bus"]
             branch["t_bus"] = branch_orginal["f_bus"]
@@ -1008,7 +1007,7 @@ end
 function _check_branch_loops(pm_data::Dict{String, <:Any})
     for (i, branch) in pm_data["branch"]
         if branch["f_bus"] == branch["t_bus"]
-            Memento.error(_LOGGER, "both sides of branch $(i) connect to bus $(branch["f_bus"])")
+            error("both sides of branch $(i) connect to bus $(branch["f_bus"])")
         end
     end
 end
@@ -1027,45 +1026,45 @@ function _check_connectivity(data::Dict{String,<:Any})
 
     for (i, load) in data["load"]
         if !(load["load_bus"] in bus_ids)
-            Memento.error(_LOGGER, "bus $(load["load_bus"]) in load $(i) is not defined")
+            error("bus $(load["load_bus"]) in load $(i) is not defined")
         end
     end
 
     for (i, shunt) in data["shunt"]
         if !(shunt["shunt_bus"] in bus_ids)
-            Memento.error(_LOGGER, "bus $(shunt["shunt_bus"]) in shunt $(i) is not defined")
+            error("bus $(shunt["shunt_bus"]) in shunt $(i) is not defined")
         end
     end
 
     for (i, gen) in data["gen"]
         if !(gen["gen_bus"] in bus_ids)
-            Memento.error(_LOGGER, "bus $(gen["gen_bus"]) in generator $(i) is not defined")
+            error("bus $(gen["gen_bus"]) in generator $(i) is not defined")
         end
     end
 
     for (i, strg) in data["storage"]
         if !(strg["storage_bus"] in bus_ids)
-            Memento.error(_LOGGER, "bus $(strg["storage_bus"]) in storage unit $(i) is not defined")
+            error("bus $(strg["storage_bus"]) in storage unit $(i) is not defined")
         end
     end
 
     for (i, switch) in data["switch"]
         if !(switch["f_bus"] in bus_ids)
-            Memento.error(_LOGGER, "from bus $(switch["f_bus"]) in switch $(i) is not defined")
+            error("from bus $(switch["f_bus"]) in switch $(i) is not defined")
         end
 
         if !(switch["t_bus"] in bus_ids)
-            Memento.error(_LOGGER, "to bus $(switch["t_bus"]) in switch $(i) is not defined")
+            error("to bus $(switch["t_bus"]) in switch $(i) is not defined")
         end
     end
 
     for (i, branch) in data["branch"]
         if !(branch["f_bus"] in bus_ids)
-            Memento.error(_LOGGER, "from bus $(branch["f_bus"]) in branch $(i) is not defined")
+            error("from bus $(branch["f_bus"]) in branch $(i) is not defined")
         end
 
         if !(branch["t_bus"] in bus_ids)
-            Memento.error(_LOGGER, "to bus $(branch["t_bus"]) in branch $(i) is not defined")
+            error("to bus $(branch["t_bus"]) in branch $(i) is not defined")
         end
     end
 end
@@ -1098,19 +1097,19 @@ function _correct_bus_types!(pm_data::Dict{String,<:Any})
         idx = bus["index"]
         if bus["bus_type"] == 1
             if length(bus_gens[idx]) != 0 # PQ
-                Memento.warn(_LOGGER, "active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 2")
+                @warn "active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 2"
                 bus["bus_type"] = 2
             end
         elseif bus["bus_type"] == 2 # PV
             if length(bus_gens[idx]) == 0
-                Memento.warn(_LOGGER, "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1")
+                @warn "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
                 bus["bus_type"] = 1
             end
         elseif bus["bus_type"] == 3 # Slack
             if length(bus_gens[idx]) != 0
                 slack_found = true
             else
-                Memento.warn(_LOGGER, "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1")
+                @warn "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
                 bus["bus_type"] = 1
             end
         elseif bus["bus_type"] == 4 # inactive bus
@@ -1120,7 +1119,7 @@ function _correct_bus_types!(pm_data::Dict{String,<:Any})
             if length(bus_gens[idx]) != 0
                 new_bus_type = 2
             end
-            Memento.warn(_LOGGER, "bus $(bus["bus_i"]) has an unrecongized bus_type $(bus["bus_type"]), updating to bus_type $(new_bus_type)")
+            @warn "bus $(bus["bus_i"]) has an unrecongized bus_type $(bus["bus_type"]), updating to bus_type $(new_bus_type)"
             bus["bus_type"] = new_bus_type
         end
     end
@@ -1131,9 +1130,9 @@ function _correct_bus_types!(pm_data::Dict{String,<:Any})
             gen_bus = gen["gen_bus"]
             ref_bus = pm_data["bus"]["$(gen_bus)"]
             ref_bus["bus_type"] = 3
-            Memento.warn(_LOGGER, "no reference bus found, setting bus $(gen_bus) as reference based on generator $(gen["index"])")
+            @warn "no reference bus found, setting bus $(gen_bus) as reference based on generator $(gen["index"])"
         else
-            Memento.error(_LOGGER, "no generators found in the given network data, correct_bus_types! requires at least one generator at the reference bus")
+            error("no generators found in the given network data, correct_bus_types! requires at least one generator at the reference bus")
         end
     end
 
@@ -1143,7 +1142,7 @@ end
 "find the largest active generator in a collection of generators"
 function _biggest_generator(gens::Dict)::Dict
     if length(gens) == 0
-        Memento.error(_LOGGER, "generator list passed to _biggest_generator was empty.  please report this bug.")
+        error("generator list passed to _biggest_generator was empty.  please report this bug.")
     end
 
     biggest_gen = Dict{String,Any}()
@@ -1183,27 +1182,27 @@ function _correct_cost_function!(id, comp, type_name, pmin_key, pmax_key)
     if "model" in keys(comp) && "cost" in keys(comp)
         if comp["model"] == 1
             if length(comp["cost"]) != 2*comp["ncost"]
-                Memento.error(_LOGGER, "ncost of $(comp["ncost"]) not consistent with $(length(comp["cost"])) cost values on $(type_name) $(id)")
+                error("ncost of $(comp["ncost"]) not consistent with $(length(comp["cost"])) cost values on $(type_name) $(id)")
             end
             if length(comp["cost"]) < 4
-                Memento.error(_LOGGER, "cost includes $(comp["ncost"]) points, but at least two points are required on $(type_name) $(id)")
+                error("cost includes $(comp["ncost"]) points, but at least two points are required on $(type_name) $(id)")
             end
 
             _remove_pwl_cost_duplicates!(id, comp, type_name)
 
             for i in 3:2:length(comp["cost"])
                 if comp["cost"][i-2] >= comp["cost"][i]
-                    Memento.error(_LOGGER, "non-increasing x values in pwl cost model on $(type_name) $(id)")
+                    error("non-increasing x values in pwl cost model on $(type_name) $(id)")
                 end
             end
 
             _simplify_pwl_cost!(id, comp, type_name)
         elseif comp["model"] == 2
             if length(comp["cost"]) != comp["ncost"]
-                Memento.error(_LOGGER, "ncost of $(comp["ncost"]) not consistent with $(length(comp["cost"])) cost values on $(type_name) $(id)")
+                error("ncost of $(comp["ncost"]) not consistent with $(length(comp["cost"])) cost values on $(type_name) $(id)")
             end
         else
-            Memento.warn(_LOGGER, "Unknown cost model of type $(comp["model"]) on $(type_name) $(id)")
+            @warn "Unknown cost model of type $(comp["model"]) on $(type_name) $(id)"
         end
     end
 
@@ -1227,7 +1226,7 @@ function _remove_pwl_cost_duplicates!(id, comp, type_name; tolerance=1e-2)
     end
 
     if length(unique_costs) < length(comp["cost"])
-        Memento.warn(_LOGGER, "removing duplicate points from pwl cost on $(type_name) $(id), $(comp["cost"]) -> $(unique_costs)")
+        @warn "removing duplicate points from pwl cost on $(type_name) $(id), $(comp["cost"]) -> $(unique_costs)"
         comp["cost"] = unique_costs
         comp["ncost"] = div(length(unique_costs), 2)
         return true
@@ -1267,7 +1266,7 @@ function _simplify_pwl_cost!(id, comp, type_name; tolerance=1e-2)
     push!(smpl_cost, y2)
 
     if length(smpl_cost) < length(comp["cost"])
-        Memento.warn(_LOGGER, "simplifying pwl cost on $(type_name) $(id), $(comp["cost"]) -> $(smpl_cost)")
+        @warn "simplifying pwl cost on $(type_name) $(id), $(comp["cost"]) -> $(smpl_cost)"
         comp["cost"] = smpl_cost
         comp["ncost"] = div(length(smpl_cost), 2)
         return true
@@ -1298,7 +1297,7 @@ function _simplify_cost_terms!(pm_data::Dict{String,<:Any})
                 end
                 if length(gen["cost"]) != ncost
                     gen["ncost"] = length(gen["cost"])
-                    Memento.info(_LOGGER, "removing $(ncost - gen["ncost"]) cost terms from generator $(i): $(gen["cost"])")
+                    @info "removing $(ncost - gen["ncost"]) cost terms from generator $(i): $(gen["cost"])"
                 end
             end
         end

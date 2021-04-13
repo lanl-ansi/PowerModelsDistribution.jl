@@ -47,7 +47,7 @@ function _dss2eng_loadshape!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
         end
 
         if _is_loadshape_split(dss_obj)
-            Memento.warn(_LOGGER, "Loadshape '$id' contains mismatched pmult and qmult, splitting into `time_series` ids '$(id)_p' and '$(id)_q'")
+            @warn "Loadshape '$id' contains mismatched pmult and qmult, splitting into `time_series` ids '$(id)_p' and '$(id)_q'"
             _add_eng_obj!(data_eng, "time_series", "$(id)_p", eng_obj)
 
             eng_obj["values"] = defaults["qmult"]
@@ -197,7 +197,7 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
 
             _add_eng_obj!(data_eng, "shunt", id, eng_obj)
         else
-            Memento.warn(_LOGGER, "capacitors as constant impedance elements is not yet supported, treating reactor.$id like line")
+            @warn "capacitors as constant impedance elements is not yet supported, treating reactor.$id like line"
             _eng_obj = Dict{String,Any}(
                 "f_bus" => _parse_bus_id(defaults["bus1"])[1],
                 "t_bus" => _parse_bus_id(defaults["bus2"])[1],
@@ -272,7 +272,7 @@ function _dss2eng_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
 
             _add_eng_obj!(data_eng, "shunt", id, eng_obj)
         else
-            Memento.warn(_LOGGER, "reactors as constant impedance elements is not yet supported, treating reactor.$id like line")
+            @warn "reactors as constant impedance elements is not yet supported, treating reactor.$id like line"
             _apply_like!(dss_obj, data_dss, "reactor")
             defaults = _apply_ordered_properties(_create_reactor(id; _to_kwargs(dss_obj)...), dss_obj)
 
@@ -441,7 +441,7 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         _apply_like!(dss_obj, data_dss, "line")
 
         if haskey(dss_obj, "basefreq") && dss_obj["basefreq"] != data_eng["settings"]["base_frequency"]
-            Memento.warn(_LOGGER, "basefreq=$(dss_obj["basefreq"]) on line.$id does not match circuit basefreq=$(data_eng["settings"]["base_frequency"])")
+            @warn "basefreq=$(dss_obj["basefreq"]) on line.$id does not match circuit basefreq=$(data_eng["settings"]["base_frequency"])"
         end
 
         defaults = _apply_ordered_properties(_create_line(id; _to_kwargs(dss_obj)...), dss_obj)
@@ -682,12 +682,12 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
 
         # test if this transformer conforms with limitations
         if nphases<3 && DELTA in confs
-            # Memento.error(_LOGGER, "Transformers with delta windings should have at least 3 phases to be well-defined: $id.")
+            # error("Transformers with delta windings should have at least 3 phases to be well-defined: $id.")
         end
         if nrw>3
             # All of the code is compatible with any number of windings,
             # except for the parsing of the loss model (the pair-wise reactance)
-            Memento.error(_LOGGER, "For now parsing of xscarray is not supported. At most 3 windings are allowed, not $nrw.")
+            error("For now parsing of xscarray is not supported. At most 3 windings are allowed, not $nrw.")
         end
 
         for w in 1:nrw
@@ -877,7 +877,7 @@ function parse_opendss(data_dss::Dict{String,<:Any};
         # collect turns the Set into Array, making it serializable
         data_eng["files"] = collect(data_dss["filename"])
     else
-        Memento.error(_LOGGER, "Circuit not defined, not a valid circuit!")
+        error("Circuit not defined, not a valid circuit!")
     end
 
     _dss2eng_bus!(data_eng, data_dss, import_all)

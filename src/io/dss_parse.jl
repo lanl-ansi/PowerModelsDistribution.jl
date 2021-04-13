@@ -599,7 +599,7 @@ function _add_component!(data_dss::Dict{String,<:Any}, obj_type_name::AbstractSt
     obj_type = split(obj_type_name, '.'; limit=2)[1]
     if obj_type == "circuit"
         if haskey(data_dss, "circuit")
-            Memento.error(_LOGGER, "Cannot have two circuits, invalid dss")
+            error("Cannot have two circuits, invalid dss")
         else
             data_dss[obj_type] = object
         end
@@ -773,7 +773,7 @@ function _parse_line(elements::Vector{String}; current_obj::Dict{String,<:Any}=D
 end
 
 
-"Strips comments, defined by \"!\" from the ends of lines"
+"Strips comments, defined by '!' from the ends of lines"
 function _strip_comments(line::AbstractString)::String
     return strip(split(line, r"\s*!")[1], ['\r', '\n'])
 end
@@ -787,7 +787,7 @@ function _assign_property!(data_dss::Dict{String,<:Any}, obj_type::AbstractStrin
     if haskey(data_dss, obj_type) && haskey(data_dss[obj_type], obj_name)
         data_dss[obj_type][obj_name][property_name] = property_value
     else
-        Memento.warn(_LOGGER, "Cannot find $obj_type object $obj_name.")
+        @warn "Cannot find $obj_type object $obj_name."
     end
 end
 
@@ -845,11 +845,11 @@ function parse_dss(io::IO)::Dict{String,Any}
             cmd = lowercase(line_elements[1])
 
             if cmd in _dss_unsupported_commands
-                Memento.warn(_LOGGER, "Command \"$cmd\" on line $real_line_num in \"$current_file\" is not supported, skipping.")
+                @info "Command '$cmd' on line $real_line_num in '$current_file' is not supported, skipping."
                 continue
 
             elseif cmd == "clear"
-                Memento.info(_LOGGER, "Circuit has been reset with the \"clear\" on line $real_line_num in \"$current_file\"")
+                @info "Circuit has been reset with the 'clear' on line $real_line_num in '$current_file'"
                 data_dss = Dict{String,Any}("filename"=>data_dss["filename"])
                 continue
 
@@ -858,7 +858,7 @@ function parse_dss(io::IO)::Dict{String,Any}
 
                 if !(joinpath(file_path...) in data_dss["filename"])
                     full_path = joinpath(path, file_path...)
-                    Memento.info(_LOGGER, "Redirecting to \"$(joinpath(file_path...))\" on line $real_line_num in \"$current_file\"")
+                    @info "Redirecting to '$(joinpath(file_path...))' on line $real_line_num in '$current_file'"
                     _merge_dss!(data_dss, parse_dss(full_path))
                 end
 
@@ -896,7 +896,7 @@ function parse_dss(io::IO)::Dict{String,Any}
             elseif cmd in ["buscoords", "latloncoords"]
                 file = line_elements[2]
                 full_path = path == "" ? file : join([path, file], '/')
-                Memento.info(_LOGGER, "Reading Buscoords in \"$file\" on line $real_line_num in \"$current_file\"")
+                @info "Reading Buscoords in '$file' on line $real_line_num in '$current_file'"
                 data_dss["buscoords"] = _parse_buscoords_file(full_path)
 
             elseif cmd == "setbusxy"
@@ -940,7 +940,7 @@ function parse_dss(io::IO)::Dict{String,Any}
                     end
                 end
             else
-                Memento.warn(_LOGGER, "Command \"$cmd\" on line $real_line_num in \"$current_file\" is not recognized, skipping.")
+                @warn "Command '$cmd' on line $real_line_num in '$current_file' is not recognized, skipping."
             end
 
             if n < nlines && startswith(strip(stripped_lines[n + 1]), '~')

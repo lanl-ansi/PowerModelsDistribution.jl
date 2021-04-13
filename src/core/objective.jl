@@ -101,7 +101,7 @@ function objective_mc_min_fuel_cost(pm::AbstractMCPowerModel; kwargs...)
     elseif model == 2
         return objective_mc_min_fuel_cost_polynomial(pm; kwargs...)
     else
-        Memento.error(_LOGGER, "Only cost models of types 1 and 2 are supported at this time, given cost model type of $(model)")
+        error("Only cost models of types 1 and 2 are supported at this time, given cost model type of $(model)")
     end
 
 end
@@ -116,7 +116,7 @@ function objective_mc_min_fuel_cost_switch(pm::AbstractMCPowerModel; kwargs...)
     elseif model == 2
         return objective_mc_min_fuel_cost_polynomial_switch(pm; kwargs...)
     else
-        Memento.error(_LOGGER, "Only cost models of types 1 and 2 are supported at this time, given cost model type of $(model)")
+        error("Only cost models of types 1 and 2 are supported at this time, given cost model type of $(model)")
     end
 
 end
@@ -428,11 +428,11 @@ function check_gen_cost_models(pm::AbstractMCPowerModel)
                     model = gen["model"]
                 else
                     if gen["model"] != model
-                        Memento.error(_LOGGER, "cost models are inconsistent, the typical model is $(model) however model $(gen["model"]) is given on generator $(i)")
+                        error("cost models are inconsistent, the typical model is $(model) however model $(gen["model"]) is given on generator $(i)")
                     end
                 end
             else
-                Memento.error(_LOGGER, "no cost given for generator $(i)")
+                error("no cost given for generator $(i)")
             end
         end
     end
@@ -453,7 +453,7 @@ function calc_pwl_points(ncost::Int, cost::Vector{<:Real}, pmin::Real, pmax::Rea
     @assert pmin <= pmax
 
     if isinf(pmin) || isinf(pmax)
-        Memento.error(_LOGGER, "a bounded operating range is required for modeling pwl costs.  Given active power range in $(pmin) - $(pmax)")
+        error("a bounded operating range is required for modeling pwl costs.  Given active power range in $(pmin) - $(pmax)")
     end
 
     points = []
@@ -554,7 +554,7 @@ function _calc_max_cost_index(data::Dict{String,<:Any})
                     max_index = max(max_index, length(gen["cost"]))
                 end
             else
-                Memento.warn(_LOGGER, "skipping cost generator $(i) cost model in calc_cost_order, only model 2 is supported.")
+                @warn "skipping cost generator $(i) cost model in calc_cost_order, only model 2 is supported."
             end
         end
     end
@@ -598,7 +598,7 @@ function _calc_comp_lines(component::Dict{String,<:Any})
 
     for i in 2:length(line_data)
         if line_data[i-1].slope > line_data[i].slope
-            Memento.error(_LOGGER, "non-convex pwl function found in points $(component["cost"])\nlines: $(line_data)")
+            error("non-convex pwl function found in points $(component["cost"])\nlines: $(line_data)")
         end
     end
 

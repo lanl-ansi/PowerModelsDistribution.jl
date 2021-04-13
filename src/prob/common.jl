@@ -6,16 +6,16 @@ function _solve_mc_model(data::Dict{String,<:Any}, model_type::Type, optimizer, 
     if multinetwork != ismultinetwork(data)
         model_requirement = multinetwork ? "multi-network" : "single-network"
         data_type = ismultinetwork(data) ? "multi-network" : "single-network"
-        Memento.error(_LOGGER, "attempted to build a $(model_requirement) model with $(data_type) data")
+        error("attempted to build a $(model_requirement) model with $(data_type) data")
     end
 
     start_time = time()
     pm = instantiate_mc_model(data, model_type, build_method; ref_extensions=ref_extensions, kwargs...)
-    Memento.debug(_LOGGER, "pm model build time: $(time() - start_time)")
+    @debug "pm model build time: $(time() - start_time)"
 
     start_time = time()
     result = optimize_model!(pm, relax_integrality=relax_integrality, optimizer=optimizer, solution_processors=solution_processors)
-    Memento.debug(_LOGGER, "pm model solve and solution time: $(time() - start_time)")
+    @debug "pm model solve and solution time: $(time() - start_time)"
 
     return result
 end
@@ -24,7 +24,7 @@ end
 ""
 function instantiate_mc_model(data::Dict{String,<:Any}, model_type::Type, build_method::Function; ref_extensions::Vector{<:Function}=Vector{Function}([]), multinetwork::Bool=false, kwargs...)
     if get(data, "data_model", MATHEMATICAL) == ENGINEERING
-        Memento.info(_LOGGER, "Converting ENGINEERING data model to MATHEMATICAL first to build JuMP model")
+        @info "Converting ENGINEERING data model to MATHEMATICAL first to build JuMP model"
         data = transform_data_model(data; multinetwork=multinetwork)
     end
 

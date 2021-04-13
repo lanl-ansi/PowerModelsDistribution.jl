@@ -62,7 +62,7 @@ function parse_file(
             return pmd_data
         end
     else
-        Memento.error(_LOGGER, "only .dss and .json files are supported")
+        error("only .dss and .json files are supported")
     end
 end
 
@@ -106,10 +106,10 @@ function transform_data_model(data::Dict{String,<:Any};
 
         return data_math
     elseif current_data_model == MATHEMATICAL
-        Memento.warn(_LOGGER, "A MATHEMATICAL data model cannot be converted back to an ENGINEERING data model, irreversible transformations have been made")
+        @info "A MATHEMATICAL data model cannot be converted back to an ENGINEERING data model, irreversible transformations have already been made"
         return data
     else
-        Memento.warn(_LOGGER, "Data model '$current_data_model' is not recognized, no model type transformation performed")
+        @info "Data model '$current_data_model' is not recognized, no model type transformation performed"
         return data
     end
 end

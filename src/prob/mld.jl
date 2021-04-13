@@ -83,7 +83,7 @@ end
 
 ""
 function build_mc_mld(pm::AbstractIVRModel)
-    Memento.error(_LOGGER, "IVRPowerModel is not yet supported in the MLD problem space")
+    error("IVRPowerModel is not yet supported in the MLD problem space")
     # TODO
 end
 

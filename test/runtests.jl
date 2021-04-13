@@ -1,17 +1,13 @@
 using PowerModelsDistribution
 const PMD = PowerModelsDistribution
 
-import Memento
-
 import InfrastructureModels
 
 import PowerModels
 const PM = PowerModels
 
-# Suppress warnings during testing.
-const TESTLOG = Memento.getlogger(PowerModelsDistribution)
-Memento.setlevel!(TESTLOG, "error")
-Memento.setlevel!(Memento.getlogger(PowerModels), "error")
+PowerModels.silence()
+PowerModelsDistribution.silence!()
 
 import JuMP
 import Ipopt

@@ -473,7 +473,7 @@ end
 "Transformer constraints, considering winding type, conductor order, polarity and tap settings."
 function constraint_mc_transformer_power(pm::AbstractMCPowerModel, i::Int; nw::Int=nw_id_default, fix_taps::Bool=true)
     # if ref(pm, nw_id_default, :conductors)!=3
-    #     Memento.error(_LOGGER, "Transformers only work with networks with three conductors.")
+    #     error("Transformers only work with networks with three conductors.")
     # end
 
     transformer = ref(pm, :transformer, i)
@@ -498,7 +498,7 @@ function constraint_mc_transformer_power(pm::AbstractMCPowerModel, i::Int; nw::I
     elseif configuration == DELTA
         constraint_mc_transformer_power_dy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_connections, t_connections, pol, tm_set, tm_fixed, tm_scale)
     elseif configuration == "zig-zag"
-        Memento.error(_LOGGER, "Zig-zag not yet supported.")
+        error("Zig-zag not yet supported.")
     end
 end
 
@@ -681,7 +681,7 @@ function constraint_storage_state(pm::AbstractMCPowerModel, i::Int; nw::Int=nw_i
     if haskey(ref(pm, nw), :time_elapsed)
         time_elapsed = ref(pm, nw, :time_elapsed)
     else
-        Memento.warn(_LOGGER, "network data should specify time_elapsed, using 1.0 as a default")
+        @warn "network data should specify time_elapsed in hours, using 1.0 as a default"
         time_elapsed = 1.0
     end
 
@@ -696,7 +696,7 @@ function constraint_storage_state(pm::AbstractMCPowerModel, i::Int, nw_1::Int, n
     if haskey(ref(pm, nw_2), :time_elapsed)
         time_elapsed = ref(pm, nw_2, :time_elapsed)
     else
-        Memento.warn(_LOGGER, "network $(nw_2) should specify time_elapsed, using 1.0 as a default")
+        @warn "network $(nw_2) should specify time_elapsed in hours, using 1.0 as a default"
         time_elapsed = 1.0
     end
 
@@ -704,7 +704,7 @@ function constraint_storage_state(pm::AbstractMCPowerModel, i::Int, nw_1::Int, n
         constraint_storage_state(pm, nw_1, nw_2, i, storage["charge_efficiency"], storage["discharge_efficiency"], time_elapsed)
     else
         # if the storage device has status=0 in nw_1, then the stored energy variable will not exist. Initialize storage from data model instead.
-        Memento.warn(_LOGGER, "storage component $(i) was not found in network $(nw_1) while building constraint_storage_state between networks $(nw_1) and $(nw_2). Using the energy value from the storage component in network $(nw_2) instead")
+        @warn "storage component $(i) was not found in network $(nw_1) while building constraint_storage_state between networks $(nw_1) and $(nw_2). Using the energy value from the storage component in network $(nw_2) instead"
         constraint_storage_state_initial(pm, nw_2, i, storage["energy"], storage["charge_efficiency"], storage["discharge_efficiency"], time_elapsed)
     end
 end

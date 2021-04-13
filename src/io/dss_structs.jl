@@ -186,7 +186,7 @@ function _create_line(name::String=""; kwargs...)::Dict{String,Any}
     len = get(kwargs, :switch, false) ? 0.001 : get(kwargs, :length, 1.0) * _convert_to_meters[units]
 
     if haskey(kwargs, :rg)
-        Memento.warn(_LOGGER, "Rg,Xg are not fully supported")
+        @warn "Rg,Xg are not fully supported"
     end
 
     rmatrix .+= rg * (basefreq / circuit_basefreq - 1.0)
@@ -1070,7 +1070,7 @@ function _create_pvsystem(name::String=""; kwargs...)
     end
 
     if haskey(kwargs, :like)
-        Memento.warn(_LOGGER, "\"like\" keyword on pvsystem $name is not supported.")
+        @warn "'like' keyword on pvsystem $name is not supported."
     end
 
     Dict{String,Any}(

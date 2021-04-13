@@ -3,7 +3,7 @@ const _pmd_eng_global_keys = Set{String}([
 ])
 
 
-"Transforms single-conductor network data into multi-conductor data"
+"Hacky helper function to transform single-conductor network data, from, e.g., matpower/psse, into multi-conductor data"
 function make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
     if ismultinetwork(data)
         for (i,nw_data) in data["nw"]
@@ -15,10 +15,10 @@ function make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
 end
 
 
-""
+"Hacky helper function to transform single-conductor network data, from, e.g., matpower/psse, into multi-conductor data"
 function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
     if haskey(data, "conductor_ids")
-        Memento.warn(_LOGGER, "skipping network that is already multiconductor")
+        @warn "skipping network that is already multiconductor"
         return
     end
 
@@ -193,7 +193,7 @@ function _sc2br_impedance(Zsc::Dict{Tuple{Int,Int},Complex{Float64}})::Dict{Tupl
                     # Zsc is symmetric; use value of lower triangle if defined
                     Zsc[(i,j)] =  Zsc[(j,i)]
                 else
-                    Memento.error(_LOGGER, "Short-circuit impedance between winding $i and $j is missing.")
+                    error("Short-circuit impedance between winding $i and $j is missing.")
                 end
             end
         end
@@ -545,7 +545,7 @@ function _apply_filter!(obj::Dict{String,<:Any}, properties::Vector{String}, fil
             elseif isa(obj[property], Matrix)
                 obj[property] = obj[property][filter, filter]
             else
-                Memento.error(_LOGGER, "The property $property is not a Vector or a Matrix!")
+                error("The property $property is not a Vector or a Matrix!")
             end
         end
     end
@@ -561,7 +561,7 @@ function _apply_filter!(obj::Dict{String,<:Any}, properties::Vector{String}, wdg
             elseif isa(obj[property], Matrix)
                 obj[property][wdg] = obj[property][wdg][filter, filter]
             else
-                Memento.error(_LOGGER, "The property $property is not a Vector or a Matrix!")
+                error("The property $property is not a Vector or a Matrix!")
             end
         end
     end
@@ -580,7 +580,6 @@ function _calc_shunt(f_cnds::Vector{Int}, t_cnds::Vector{Int}, y)::Tuple{Vector{
     Y = sum([e(f_cnds[i], t_cnds[i])*y[i]*e(f_cnds[i], t_cnds[i])' for i in 1:length(y)])
     return (cnds, Y)
 end
-
 
 
 """

@@ -75,7 +75,7 @@ function Model(model_type::DataModel=ENGINEERING; kwargs...)::Dict{String,Any}
 
         _add_unused_kwargs!(data_model["settings"], kwargs)
     elseif model_type == MATHEMATICAL
-        Memento.warn(_LOGGER, "There are not currently any helper functions to help build a mathematical model, this will only instantiate required fields.")
+        @warn "There are not currently any helper functions to help build a mathematical model, this will only instantiate required fields."
         data_model = Dict{String,Any}(
             "bus" => Dict{String,Any}(),
             "load" => Dict{String,Any}(),
@@ -90,7 +90,7 @@ function Model(model_type::DataModel=ENGINEERING; kwargs...)::Dict{String,Any}
 
         _add_unused_kwargs!(data_model, kwargs)
     else
-        Memento.error(_LOGGER, "Model type '$model_type' not recognized")
+        error("Model type '$model_type' not recognized")
     end
 
     return data_model
@@ -182,7 +182,7 @@ function create_line(f_bus::String, t_bus::String, f_connections::Union{Vector{I
             line["xs"] = xs
 
         else
-            Memento.error(_LOGGER, "A linecode or rs & xs must be specified to create a valid line object")
+            error("A linecode or rs & xs must be specified to create a valid line object")
         end
 
         line["g_fr"] = !ismissing(g_fr) ? g_fr : fill(0.0, shape...)

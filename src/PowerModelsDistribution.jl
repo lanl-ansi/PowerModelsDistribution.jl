@@ -4,7 +4,9 @@ module PowerModelsDistribution
     import JuMP
     import MathOptInterface
     import InfrastructureModels
-    import Memento
+
+    import Logging
+    import LoggingExtras
 
     import LinearAlgebra
 
@@ -12,13 +14,18 @@ module PowerModelsDistribution
 
     import InfrastructureModels: optimize_model!, @im_fields, nw_id_default, ismultinetwork
 
-    function __init__()
-        global _LOGGER = Memento.getlogger(@__MODULE__)
-    end
-
     const _pmd_global_keys = Set(["time_series", "per_unit"])
     const pmd_it_name = "pmd"
     const pmd_it_sym = Symbol(pmd_it_name)
+
+    include("core/logging.jl")
+
+    function __init__()
+        global _DEFAULT_LOGGER = Logging.current_logger()
+        global _LOGGER = Logging.ConsoleLogger(; meta_formatter=_pmd_metafmt)
+
+        Logging.global_logger(_LOGGER)
+    end
 
     include("core/base.jl")
     include("core/types.jl")

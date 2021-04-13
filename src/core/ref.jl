@@ -57,31 +57,31 @@ function _calc_mc_transformer_Tvi(pm::AbstractMCPowerModel, i::Int; nw=nw_id_def
     # grounding disregarded
     for config in [trans["config_to"], trans["config_fr"]]
         if haskey(config, "grounded") && config["grounded"]==false
-            Memento.warning(_LOGGER, "The wye winding is considered to be grounded instead of ungrounded.")
+            @warn "The wye winding is considered to be grounded instead of ungrounded."
         end
     end
     # make sure the secondary is y+123
     if trans["config_to"]["type"]!=WYE
-        Memento.error(_LOGGER, "Secondary should always be of wye type.")
+        error("Secondary should always be of wye type.")
     end
     if trans["config_to"]["cnd"]!=[1,2,3]
-        Memento.error(_LOGGER, "Secondary should always be connected in 123.")
+        error("Secondary should always be connected in 123.")
     end
     if trans["config_to"]["polarity"]!='+'
-        Memento.error(_LOGGER, "Secondary should always be of positive polarity.")
+        error("Secondary should always be of positive polarity.")
     end
     # connection transformers
     perm = trans["config_fr"]["cnd"]
     if !(perm in [[1,2,3], [3,1,2], [2,3,1]])
-        Memento.error(_LOGGER, "Only the permutations \"123\", \"312\" and \"231\" are supported, but got \"$perm\".")
+        error("Only the permutations '123', '312' and '231' are supported, but got '$perm'.")
     end
     polarity = trans["config_fr"]["polarity"]
     if !(polarity in ['+', '-'])
-        Memento.error(_LOGGER, "The polarity should be either \'+\' or \'-\', but got \'$polarity\'.")
+        error("The polarity should be either '+' or '-', but got '$polarity'.")
     end
     dyz = trans["config_fr"]["type"]
     if !(dyz in [DELTA, WYE])
-        Memento.error(_LOGGER, "The winding type should be either delta or wye, but got \'$dyz\'.")
+        error("The winding type should be either delta or wye, but got '$dyz'.")
     end
     # for now, grounded by default
     #grounded = length(trans["configuration"])>5 && trans["configuration"][6]=='n'
@@ -333,7 +333,7 @@ function ref_add_core!(ref::Dict{Symbol,Any})
         nw_ref[:ref_buses] = ref_buses
 
         if length(ref_buses) > 1
-            Memento.warn(_LOGGER, "multiple reference buses found, $(keys(ref_buses)), this can cause infeasibility if they are in the same connected component")
+            @warn "multiple reference buses found, $(keys(ref_buses)), this can cause infeasibility if they are in the same connected component"
         end
 
         ### aggregate info for pairs of connected buses ###

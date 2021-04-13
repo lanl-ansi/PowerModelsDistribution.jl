@@ -353,7 +353,7 @@ function _check_eng_component_dtypes(data_eng::Dict{String,<:Any}, component_typ
             end
         end
     else
-        Memento.warn(_LOGGER, "$component_type $component_name does not exist")
+        @warn "$component_type $component_name does not exist"
     end
 end
 

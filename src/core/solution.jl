@@ -87,7 +87,7 @@ end
 
 "converts the solution data into the data model's standard space, polar voltages and rectangular power"
 function sol_data_model!(pm::AbstractMCPowerModel, solution::Dict{String,<:Any})
-    Memento.warn(_LOGGER, "sol_data_model! not defined for power model of type $(typeof(pm))")
+    @warn "sol_data_model! not defined for power model of type $(typeof(pm))"
 end
 
 
