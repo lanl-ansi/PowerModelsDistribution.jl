@@ -1,5 +1,9 @@
 # PowerModelsDistribution.jl Change Log
 
+## staged
+
+- none
+
 ## v0.11.0
 
 - Removed PowerModels.jl as a dependency, porting over any remaining dependencies (breaking) [see PR #336 for complete list of functions]
@@ -20,7 +24,7 @@
 - Remove references to `dcline`
 - Fix `source_id` in `MATHEMATICAL` model to originate from `ENGINEERING` model, rather that be passed from dss
 
-## staged
+## v0.10.5
 
 - Add wdgcurrents, core, rdcohms support on dss transformers
 - Fix bug in definition of xcsarra datatype on dss transformers
@@ -30,6 +34,7 @@
 - Fix parsing of dss matrices and arrays with mixed delimiters (i.e., mixing commas and spaces)
 - Fix bug in dss parser to better support `object=` syntax
 - Add support for parsing of spectrum dss objects
+- Docs updates
 
 ## v0.10.4
 
