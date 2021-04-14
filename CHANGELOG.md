@@ -1,6 +1,6 @@
 # PowerModelsDistribution.jl Change Log
 
-## staged
+## v0.10.5
 
 - Add wdgcurrents, core, rdcohms support on dss transformers
 - Fix bug in definition of xcsarra datatype on dss transformers
