@@ -23,7 +23,7 @@ module PowerModelsDistribution
 
     function __init__()
         global _DEFAULT_LOGGER = Logging.current_logger()
-        global _LOGGER = Logging.ConsoleLogger(; meta_formatter=_pmd_metafmt)
+        global _LOGGER = Logging.ConsoleLogger(; meta_formatter=PowerModelsDistribution._pmd_metafmt)
 
         Logging.global_logger(_LOGGER)
     end
