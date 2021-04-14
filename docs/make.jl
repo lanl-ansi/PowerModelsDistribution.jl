@@ -1,25 +1,34 @@
 using Documenter, PowerModelsDistribution
-import Weave
+import Pluto
+import Literate
 
-Weave.set_chunk_defaults!(Dict{Symbol, Any}(:line_width => 120))
+# TODO convert Pluto to Markdown
+# ss = Pluto.ServerSession()
+# client = Pluto.ClientSession(Symbol("client", rand(UInt16)), nothing)
+# ss.connected_clients[client.id] = client
 
 examples = []
-cd("examples")
-for file in readdir(".")
-    if endswith(file, "ipynb")
-        doc_filepath = Weave.weave("$file"; out_path="../docs/src", fig_path="../docs/src/assets", doctype="github", mod=Main)
-        doc_file = basename(doc_filepath)
+for file in readdir("examples", join=true)
+    if endswith(file, ".jl")
+        # nb = Pluto.load_notebook_nobackup("examples/$file")
+        # client.connected_notebook = nb
+        # Pluto.update_run!(ss, nb, nb.cells)
+        # html = Pluto.generate_html(nb)
 
-        push!(examples, doc_file)
+        Literate.markdown(file, "docs/src"; documenter=true)
+        push!(examples, replace(basename(file), ".jl" => ".md"))
+        # fileout = "docs/src/$file"
+        # open(fileout, "w") do io
+        #     write(io, html)
+        # end
     end
 end
-cd("..")
 
 makedocs(
     modules = [PowerModelsDistribution],
     format = Documenter.HTML(analytics = "", mathengine = Documenter.MathJax()),
     sitename = "PowerModelsDistribution",
-    authors = "David Fobes, Carleton Coffrin, Frederik Geth, Sander Claeys, and contributors.",
+    authors = "David M Fobes, Carleton Coffrin, Frederik Geth, Sander Claeys, and contributors.",
     pages = [
         "Home" => "index.md",
         "Manual" => [
