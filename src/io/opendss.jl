@@ -47,7 +47,7 @@ function _dss2eng_loadshape!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
         end
 
         if _is_loadshape_split(dss_obj)
-            @warn "Loadshape '$id' contains mismatched pmult and qmult, splitting into `time_series` ids '$(id)_p' and '$(id)_q'"
+            @info "Loadshape '$id' contains mismatched pmult and qmult, splitting into `time_series` ids '$(id)_p' and '$(id)_q'"
             _add_eng_obj!(data_eng, "time_series", "$(id)_p", eng_obj)
 
             eng_obj["values"] = defaults["qmult"]
