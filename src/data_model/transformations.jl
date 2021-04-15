@@ -427,7 +427,7 @@ end
 
 
 "voltage angle bounds"
-function apply_voltage_angle_bounds!(eng::Dict{String,<:Any}, vad::Real)
+function apply_voltage_angle_difference_bounds!(eng::Dict{String,<:Any}, vad::Real)
     if haskey(eng, "line")
         for (_,line) in eng["line"]
             line["vad_lb"] = fill(-vad, length(line["f_connections"]))
