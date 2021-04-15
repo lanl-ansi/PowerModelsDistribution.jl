@@ -923,12 +923,12 @@ function calc_connected_components(data::Dict{String,<:Any}; edges::Union{Missin
         error("multinetwork data is not yet supported, recommend to use on each subnetwork independently")
     end
 
-    if pmd_data["data_model"] == ENGINEERING
+    if get(pmd_data, "data_model", MATHEMATICAL) == ENGINEERING
         return _calc_connected_components_eng(pmd_data; edges=ismissing(edges) ? _eng_edge_elements : edges, type=type)
-    elseif pmd_data["data_model"] == MATHEMATICAL
+    elseif get(pmd_data, "data_model", MATHEMATICAL) == MATHEMATICAL
         return _calc_connected_components_math(pmd_data; edges=ismissing(edges) ? _math_edge_elements : edges, type=type)
     else
-        error("data_model `$(pmd_data["data_model"])` is unrecongized")
+        error("data_model `$(get(pmd_data, "data_model", MATHEMATICAL))` is unrecongized")
     end
 end
 
@@ -937,16 +937,16 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_elements, type::Union{Missing,String}=missing)::Set{String}
-    @assert data["data_model"] == ENGINEERING
+function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_elements, type::Union{Missing,String}=missing)::Set
+    @assert get(data, "data_model", MATHEMATICAL) == ENGINEERING
 
-    active_bus = Dict{Any,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] != ENABLED)
-    active_bus_ids = Set{Any}([parse(Int,i) for (i,bus) in active_bus])
+    active_bus = Dict{Any,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] == ENABLED)
+    active_bus_ids = Set{Any}([i for (i,bus) in active_bus])
 
     neighbors = Dict{Any,Vector{Any}}(i => [] for i in active_bus_ids)
     for edge_type in edges
         for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
-            if edge_obj["status"] != ENABLED
+            if edge_obj["status"] == ENABLED
                 if edge_type == "transformer" && haskey(edge_obj, "buses")
                     for f_bus in edge_obj["buses"]
                         for t_bus in edge_obj["buses"]
@@ -997,8 +997,8 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector{<:String}=_math_edge_elements, type::Union{Missing,String}=missing)::Set{Int}
-    @assert data["data_model"] == MATHEMATICAL
+function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector{<:String}=_math_edge_elements, type::Union{Missing,String}=missing)::Set
+    @assert get(data, "data_model", MATHEMATICAL) == MATHEMATICAL
 
     active_bus = Dict{Any,Dict{String,Any}}(x for x in data["bus"] if x.second[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"])
     active_bus_ids = Set{Any}([parse(Int,i) for (i,bus) in active_bus])
