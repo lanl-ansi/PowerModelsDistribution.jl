@@ -13,7 +13,7 @@ module PowerModelsDistribution
 
     const _IM = InfrastructureModels
 
-    import InfrastructureModels: optimize_model!, @im_fields, nw_id_default, ismultinetwork
+    import InfrastructureModels: optimize_model!, @im_fields, nw_id_default, ismultinetwork, update_data!
 
     const _pmd_global_keys = Set(["time_series", "per_unit"])
     const pmd_it_name = "pmd"
