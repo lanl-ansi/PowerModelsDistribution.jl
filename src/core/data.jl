@@ -904,8 +904,8 @@ end
 identify_load_blocks(data::Dict{String,<:Any}) = calc_connected_components(data; type="load_blocks")
 
 
-"computes current load blocks based on switch states"
-identify_current_blocks(data::Dict{String,<:Any}) = calc_connected_components(data; type="current_blocks")
+"computes connected blocks currently in the model based on switch states"
+identify_blocks(data::Dict{String,<:Any}) = calc_connected_components(data; type="blocks")
 
 
 "computes component islands base only on edge and bus status"
@@ -963,7 +963,7 @@ function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_
                                 push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
                                 push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
                             end
-                        elseif type == "current_state"
+                        elseif type == "blocks"
                             if edge_obj["state"] == CLOSED
                                 push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
                                 push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
@@ -1013,7 +1013,7 @@ function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector
                             push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
                             push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
                         end
-                    elseif type == "current_state"
+                    elseif type == "blocks"
                         if edge_type["state"] != 0
                             push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
                             push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
