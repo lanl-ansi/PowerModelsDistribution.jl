@@ -98,7 +98,7 @@ function _make_multinetwork_eng(data_eng::Dict{String,<:Any}; sparse::Bool=false
                             if time in ts["time"]
                                 idx = findfirst(x->x==time, ts["time"])
                                 if ts["replace"]
-                                    _nw[type][obj_name][property_name] = ts["values"][idx]
+                                    _nw[type][obj_name][property_name] = zeros(size(_nw[type][obj_name][property_name])) .+ ts["values"][idx]
                                 else
                                     _nw[type][obj_name][property_name] = deepcopy(data_eng[type][obj_name][property_name]) .* ts["values"][idx]
                                 end
