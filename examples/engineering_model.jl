@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.1
+# v0.14.2
 
 using Markdown
 using InteractiveUtils
@@ -8,6 +8,8 @@ using InteractiveUtils
 begin
 	using PowerModelsDistribution
 	using Ipopt
+	
+	pmd_path = joinpath(dirname(pathof(PowerModelsDistribution)), "..")
 end
 
 # ╔═╡ c55b2c42-9d27-11eb-24ca-e90a5472ffbb
@@ -37,7 +39,7 @@ We start with a 3 bus unbalanced load case provided as a dss file in the `test` 
 """
 
 # ╔═╡ 5fe2d186-40c6-46c2-823e-9401cb3b6d6c
-eng = parse_file("../test/data/opendss/case3_unbalanced.dss")
+eng = parse_file("$pmd_path/test/data/opendss/case3_unbalanced.dss")
 
 # ╔═╡ c884fd5b-4ecb-402b-b228-01b9a61db8bf
 md"""
@@ -490,5 +492,5 @@ This concludes the introduction to the `ENGINEERING` data model and conversion t
 # ╠═867d8d1d-042a-42ec-843e-56b8ba2db96a
 # ╟─db4d9eb9-e120-4489-a3c2-48c43f2a3c3b
 # ╠═4603bc56-c402-48af-9715-0722e42d90f7
-# ╠═12ba02ff-91dd-4355-ad2b-f3ca3b61e318
+# ╟─12ba02ff-91dd-4355-ad2b-f3ca3b61e318
 # ╟─07fc5a1b-4a9e-4a10-bf7a-d2682769ac97

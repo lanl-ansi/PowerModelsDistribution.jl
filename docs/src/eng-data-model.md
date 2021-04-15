@@ -55,7 +55,7 @@ At the root-level of the data model a `settings` dictionary object is expected, 
 | `voltage_scale_factor` | `1e3`   | `Real`             |       | always | Scalar multiplier for voltage values                                         |
 | `power_scale_factor`   | `1e3`   | `Real`             |       | always | Scalar multiplier for power values                                           |
 | `vbases_default`       |         | `Dict{<:Any,Real}` |       | always | Instruction to set the vbase at a number of buses for non-dimensionalization |
-| `sbase_default`        |         | `Real`             |       | always | Instruction to set the power base for non-dimensionalization       |
+| `sbase_default`        |         | `Real`             |       | always | Instruction to set the power base for non-dimensionalization                 |
 | `base_frequency`       | `60.0`  | `Real`             | Hz    | always | Frequency base, _i.e._ the base frequency of the whole circuit               |
 
 The parameters `voltage_scale_factor` and `power_scale_factor`determine the base
@@ -439,12 +439,12 @@ Time series objects are used to specify time series for _e.g._ load or generatio
 
 Some parameters for components specified in this document can support a time series by inserting a referece to a `time_series` object into the `time_series` dictionary inside a component under the relevant parameter name. For example, for a `load`, if `pd_nom` is supposed to be a time series, the user would specify `"time_series" => Dict("pd_nom" => time_series_id)` where `time_series_id` is the `id` of an object in `time_series`, and has type `Any`.
 
-| Name      | Default | Type           | Units | Used   | Description                                                                           |
-|-----------|---------|----------------|-------|--------|---------------------------------------------------------------------------------------|
-| `time`    |         | `Vector{Real}` | hour  | always | Time points at which values are specified                                             |
-| `values`  |         | `Vector{Real}` |       | always | Multipers at each time step given in `time`                                           |
-| `offset`  | `0`     | `Real`         | hour  | always | Start time offset                                                                     |
-| `replace` | `true`  | `Bool`         |       | always | Indicates to replace with data, instead of multiply. Will only work on non-Array data |
+| Name      | Default | Type                         | Units | Used   | Description                                                                                                   |
+|-----------|---------|------------------------------|-------|--------|---------------------------------------------------------------------------------------------------------------|
+| `time`    |         | `Vector{Union{Real,String}}` | hour  | always | Time points at which values are specified. If time is specified in String, units not required to be in hours. |
+| `values`  |         | `Vector{Real}`               |       | always | Multipers at each time step given in `time`                                                                   |
+| `offset`  | `0`     | `Real`                       | hour  | always | Start time offset                                                                                             |
+| `replace` | `true`  | `Bool`                       |       | always | Indicates to replace with data, instead of multiply. Will only work on non-Array data                         |
 
 ### Fuses (`fuse`)
 
