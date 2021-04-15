@@ -900,29 +900,129 @@ function calc_branch_y(branch::Dict{String,<:Any})
 end
 
 
+"computes load blocks based on switch locations"
+identify_load_blocks(data::Dict{String,<:Any}) = calc_connected_components(data; type="load_blocks")
+
+
+"computes current load blocks based on switch states"
+identify_current_blocks(data::Dict{String,<:Any}) = calc_connected_components(data; type="current_blocks")
+
+
+"computes component islands base only on edge and bus status"
+identify_islands(data::Dict{String,<:Any}) = calc_connected_components(data)
+
+
 """
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
+function calc_connected_components(data::Dict{String,<:Any}; edges::Union{Missing, Vector{<:String}}=missing, type::Union{Missing,String}=missing)::Set
     pmd_data = get_pmd_data(data)
 
     if ismultinetwork(pmd_data)
         error("multinetwork data is not yet supported, recommend to use on each subnetwork independently")
     end
 
+    if pmd_data["data_model"] == ENGINEERING
+        return _calc_connected_components_eng(pmd_data; edges=ismissing(edges) ? _eng_edge_elements : edges, type=type)
+    elseif pmd_data["data_model"] == MATHEMATICAL
+        return _calc_connected_components_math(pmd_data; edges=ismissing(edges) ? _math_edge_elements : edges, type=type)
+    else
+        error("data_model `$(pmd_data["data_model"])` is unrecongized")
+    end
+end
+
+
+"""
+computes the connected components of the network graph
+returns a set of sets of bus ids, each set is a connected component
+"""
+function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_elements, type::Union{Missing,String}=missing)::Set{String}
+    @assert data["data_model"] == ENGINEERING
+
+    active_bus = Dict{Any,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] != ENABLED)
+    active_bus_ids = Set{Any}([parse(Int,i) for (i,bus) in active_bus])
+
+    neighbors = Dict{Any,Vector{Any}}(i => [] for i in active_bus_ids)
+    for edge_type in edges
+        for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
+            if edge_obj["status"] != ENABLED
+                if edge_type == "transformer" && haskey(edge_obj, "buses")
+                    for f_bus in edge_obj["buses"]
+                        for t_bus in edge_obj["buses"]
+                            if f_bus != t_bus
+                                push!(neighbors[f_bus], t_bus)
+                                push!(neighbors[t_bus], f_bus)
+                            end
+                        end
+                    end
+                else
+                    if edge_type == "switch" && !ismissing(type)
+                        if type == "load_blocks"
+                            if edge_obj["dispatchable"] == NO
+                                push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
+                                push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                            end
+                        elseif type == "current_state"
+                            if edge_obj["state"] == CLOSED
+                                push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
+                                push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                            end
+                        end
+                    else
+                        push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
+                        push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                    end
+                end
+            end
+        end
     end
 
-    active_bus = Dict(x for x in pm_data["bus"] if x.second["bus_type"] != 4)
-    active_bus_ids = Set{Int64}([bus["bus_i"] for (i,bus) in active_bus])
+    component_lookup = Dict(i => Set{String}([i]) for i in active_bus_ids)
+    touched = Set{String}()
 
-    neighbors = Dict(i => Int[] for i in active_bus_ids)
-    for comp_type in edges
-        status_key = get(pmd_math_component_status, comp_type, "status")
-        status_inactive = get(pmd_math_component_status_inactive, comp_type, 0)
-        for edge in values(get(pm_data, comp_type, Dict()))
-            if get(edge, status_key, 1) != status_inactive && edge["f_bus"] in active_bus_ids && edge["t_bus"] in active_bus_ids
-                push!(neighbors[edge["f_bus"]], edge["t_bus"])
-                push!(neighbors[edge["t_bus"]], edge["f_bus"])
+    for i in active_bus_ids
+        if !(i in touched)
+            _cc_dfs(i, neighbors, component_lookup, touched)
+        end
+    end
+
+    ccs = (Set(values(component_lookup)))
+
+    return ccs
+end
+
+
+"""
+computes the connected components of the network graph
+returns a set of sets of bus ids, each set is a connected component
+"""
+function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector{<:String}=_math_edge_elements, type::Union{Missing,String}=missing)::Set{Int}
+    @assert data["data_model"] == MATHEMATICAL
+
+    active_bus = Dict{Any,Dict{String,Any}}(x for x in data["bus"] if x.second[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"])
+    active_bus_ids = Set{Any}([parse(Int,i) for (i,bus) in active_bus])
+
+    neighbors = Dict{Any,Vector{Any}}(i => [] for i in active_bus_ids)
+    for edge_type in edges
+        for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
+            if edge_obj[pmd_math_component_status[edge_type]] != pmd_math_component_status_inactive[edge_type]
+                if edge_type == "switch" && !ismissing(type)
+                    if type == "load_blocks"
+                        if edge_type["dispatchable"] != 1
+                            push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
+                            push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                        end
+                    elseif type == "current_state"
+                        if edge_type["state"] != 0
+                            push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
+                            push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                        end
+                    end
+                else
+                    push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
+                    push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
+                end
             end
         end
     end
@@ -1328,7 +1428,7 @@ end
 
 "ensures all polynomial costs functions have the same number of terms"
 function standardize_cost_terms!(data::Dict{String,<:Any}; order=-1)
-    pm_data = get_pm_data(data)
+    pm_data = get_pmd_data(data)
 
     comp_max_order = 1
 
