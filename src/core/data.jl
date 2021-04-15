@@ -47,8 +47,8 @@ function apply_pmd!(func!::Function, data::Dict{String, <:Any}; apply_to_subnetw
 end
 
 
-"Convenience function for retrieving the power-only portion of network data."
-function get_pm_data(data::Dict{String, <:Any})
+"Convenience function for retrieving the power-distribution-only portion of network data."
+function get_pmd_data(data::Dict{String, <:Any})
     return _IM.ismultiinfrastructure(data) ? data["it"][pmd_it_name] : data
 end
 
@@ -904,11 +904,12 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function calc_connected_components(data::Dict{String,<:Any}; edges=["branch", "transformer", "switch"])
-    pm_data = get_pm_data(data)
+    pmd_data = get_pmd_data(data)
 
-    if ismultinetwork(pm_data)
-        error("connected_components does not yet support multinetwork data")
+    if ismultinetwork(pmd_data)
+        error("multinetwork data is not yet supported, recommend to use on each subnetwork independently")
+    end
+
     end
 
     active_bus = Dict(x for x in pm_data["bus"] if x.second["bus_type"] != 4)
