@@ -1,10 +1,202 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Engineering Model Helper Functions · PowerModelsDistribution</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../"><img src="../assets/logo.svg" alt="PowerModelsDistribution logo"/></a><div class="docs-package-name"><span class="docs-autofit">PowerModelsDistribution</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../quickguide/">Getting Started</a></li><li><a class="tocitem" href="../connections/">Connecting Components</a></li><li><a class="tocitem" href="../math-model/">Mathematical Model</a></li><li><a class="tocitem" href="../eng-data-model/">Engineering Data Model</a></li><li><a class="tocitem" href="../enums/">Enums in Engineering Model</a></li><li><a class="tocitem" href="../eng2math/">Conversion to Mathematical Model</a></li><li><a class="tocitem" href="../external-data-formats/">External Data Formats</a></li><li><input class="collapse-toggle" id="menuitem-2-8" type="checkbox" checked/><label class="tocitem" for="menuitem-2-8"><span class="docs-label">Examples</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../beginners_guide/">Beginners Guide</a></li><li><a class="tocitem" href="../engineering_model/">Engineering Model</a></li><li class="is-active"><a class="tocitem" href>Engineering Model Helper Functions</a></li></ul></li></ul></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../formulations/">Network Formulations</a></li><li><a class="tocitem" href="../specifications/">Problem Specifications</a></li><li><a class="tocitem" href="../library/">Modeling Components</a></li></ul></li><li><span class="tocitem">Basics</span><ul><li><a class="tocitem" href="../load-model/">Load Models</a></li></ul></li><li><span class="tocitem">Developer</span><ul><li><a class="tocitem" href="../developer/">Developer</a></li><li><a class="tocitem" href="../formulation-details/">Formulation Details</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Manual</a></li><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Engineering Model Helper Functions</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Engineering Model Helper Functions</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/lanl-ansi/PowerModelsDistribution.jl/blob/master/examples/engineering_model_helper_functions.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><pre><code class="language-julia">### A Pluto.jl notebook ###</code></pre><p>v0.14.2</p><pre><code class="language-julia">using Markdown
-using InteractiveUtils</code></pre><p>╔═╡ 30417ccf-d0b4-43d5-9ceb-5b00ef9c8a17</p><pre><code class="language-julia">begin
+using InteractiveUtils</code></pre><p>╔═╡ 60e1113b-c662-46ee-b2ce-52114cda4b81</p><pre><code class="language-julia">begin
+	import Pkg
+	Pkg.activate(mktempdir())
+	Pkg.Registry.update()
+	Pkg.add([
+			Pkg.PackageSpec(;name=&quot;Revise&quot;),
+			Pkg.PackageSpec(;name=&quot;CodeTracking&quot;),
+			Pkg.PackageSpec(;name=&quot;PlutoUI&quot;),
+			Pkg.PackageSpec(;name=&quot;PowerModelsDistribution&quot;, version=&quot;0.11&quot;),
+			Pkg.PackageSpec(;name=&quot;PowerModelsAnalytics&quot;, version=&quot;0.4.1&quot;),
+			Pkg.PackageSpec(;name=&quot;InfrastructureModels&quot;, version=&quot;0.6&quot;),
+			Pkg.PackageSpec(;name=&quot;JuMP&quot;, version=&quot;0.21.7&quot;),
+			Pkg.PackageSpec(;name=&quot;Ipopt&quot;, version=&quot;0.6.5&quot;),
+			Pkg.PackageSpec(;name=&quot;JSON&quot;, version=&quot;0.21&quot;),
+			])
+end</code></pre><pre class="documenter-example-output">  Activating new environment at `/tmp/jl_oYCDEl/Project.toml`
+    Updating registry at `~/.julia/registries/General`
+   Resolving package versions...
+   Installed Preferences ─ v1.2.1
+   Installed JLLWrappers ─ v1.3.0
+    Updating `/tmp/jl_oYCDEl/Project.toml`
+  [da1fd8a2] + CodeTracking v1.0.5
+  [2030c09a] + InfrastructureModels v0.6.0
+  [b6b21f68] + Ipopt v0.6.5
+  [682c06a0] + JSON v0.21.1
+  [4076af6c] + JuMP v0.21.7
+  [7f904dfe] + PlutoUI v0.7.6
+  [7425d11c] + PowerModelsAnalytics v0.4.1
+  [d7431456] + PowerModelsDistribution v0.11.0
+  [295af30f] + Revise v3.1.15
+    Updating `/tmp/jl_oYCDEl/Manifest.toml`
+  [ec485272] + ArnoldiMethod v0.1.0
+  [6e4b80f9] + BenchmarkTools v0.5.0
+  [b99e7846] + BinaryProvider v0.5.10
+  [49dc2e85] + Calculus v0.5.1
+  [d360d2e6] + ChainRulesCore v0.9.37
+  [da1fd8a2] + CodeTracking v1.0.5
+  [523fee87] + CodecBzip2 v0.7.2
+  [944b1d66] + CodecZlib v0.7.0
+  [3da002f7] + ColorTypes v0.10.12
+  [c3611d14] + ColorVectorSpace v0.9.2
+  [5ae59095] + Colors v0.12.7
+  [bbf7d656] + CommonSubexpressions v0.3.0
+  [34da2185] + Compat v3.27.0
+  [8f4d0f93] + Conda v1.5.1
+  [187b0558] + ConstructionBase v1.1.0
+  [9a962f9c] + DataAPI v1.6.0
+  [864edb3b] + DataStructures v0.18.9
+  [e2d170a0] + DataValueInterfaces v1.0.0
+  [e7dc6d0d] + DataValues v0.4.13
+  [163ba53b] + DiffResults v1.0.3
+  [b552c78f] + DiffRules v1.0.2
+  [e2ba6199] + ExprTools v0.1.3
+  [8f5d6c58] + EzXML v1.1.0
+  [5789e2e9] + FileIO v1.6.5
+  [8fc22ac5] + FilePaths v0.8.2
+  [48062228] + FilePathsBase v0.9.10
+  [53c48c17] + FixedPointNumbers v0.8.4
+  [f6369f11] + ForwardDiff v0.10.18
+  [c27321d9] + Glob v1.3.0
+  [cd3eb016] + HTTP v0.9.5
+  [d25df0c9] + Inflate v0.1.2
+  [2030c09a] + InfrastructureModels v0.6.0
+  [83e8ac13] + IniFile v0.5.0
+  [b6b21f68] + Ipopt v0.6.5
+  [82899510] + IteratorInterfaceExtensions v1.0.0
+  [692b3bcd] + JLLWrappers v1.3.0
+  [682c06a0] + JSON v0.21.1
+  [7d188eb4] + JSONSchema v0.3.3
+  [4076af6c] + JuMP v0.21.7
+  [aa1ae85d] + JuliaInterpreter v0.8.13
+  [093fc24a] + LightGraphs v1.3.5
+  [e6f89c97] + LoggingExtras v0.4.6
+  [6f1432cf] + LoweredCodeUtils v2.0.0
+  [1914dd2f] + MacroTools v0.5.6
+  [b8f27783] + MathOptInterface v0.9.20
+  [fdba3010] + MathProgBase v0.7.8
+  [739be429] + MbedTLS v1.0.3
+  [f28f55f0] + Memento v1.1.2
+  [e1d29d7a] + Missings v0.4.5
+  [78c3b35d] + Mocking v0.7.1
+  [d8a4904e] + MutableArithmetics v0.2.17
+  [77ba4419] + NaNMath v0.3.5
+  [2bd173c7] + NodeJS v1.1.2
+  [bac558e1] + OrderedCollections v1.4.0
+  [69de0a69] + Parsers v1.1.0
+  [7f904dfe] + PlutoUI v0.7.6
+  [7425d11c] + PowerModelsAnalytics v0.4.1
+  [d7431456] + PowerModelsDistribution v0.11.0
+  [21216c6a] + Preferences v1.2.1
+  [438e738f] + PyCall v1.92.3
+  [3cdcf5f2] + RecipesBase v1.1.1
+  [189a3867] + Reexport v1.0.0
+  [ae029012] + Requires v1.1.3
+  [295af30f] + Revise v3.1.15
+  [efcf1570] + Setfield v0.7.0
+  [699a6c99] + SimpleTraits v0.9.3
+  [276daf66] + SpecialFunctions v1.3.0
+  [90137ffa] + StaticArrays v1.1.0
+  [fd094767] + Suppressor v0.2.0
+  [cea106d9] + Syslogs v0.3.0
+  [3783bdb8] + TableTraits v1.0.1
+  [382cd787] + TableTraitsUtils v1.0.1
+  [62fd8b95] + TensorCore v0.1.1
+  [f269a46b] + TimeZones v1.5.3
+  [3bb67fe8] + TranscodingStreams v0.9.5
+  [30578b45] + URIParser v0.4.1
+  [5c2747f8] + URIs v1.2.0
+  [239c3e63] + Vega v2.1.1
+  [81def892] + VersionParsing v1.2.0
+  [a5390f91] + ZipFile v0.9.3
+  [ae81ac8f] + ASL_jll v0.1.2+0
+  [6e34b625] + Bzip2_jll v1.0.6+5
+  [9cc047cb] + Ipopt_jll v3.13.4+2
+  [94ce4f54] + Libiconv_jll v1.16.0+7
+  [d00139f3] + METIS_jll v5.1.0+5
+  [d7ed1dd3] + MUMPS_seq_jll v5.2.1+4
+  [656ef2d0] + OpenBLAS32_jll v0.3.12+1
+  [efe28fd5] + OpenSpecFun_jll v0.5.3+4
+  [02c8fc9c] + XML2_jll v2.9.11+0
+  [0dad84c5] + ArgTools
+  [56f22d72] + Artifacts
+  [2a0f44e3] + Base64
+  [ade2ca70] + Dates
+  [8bb1440f] + DelimitedFiles
+  [8ba89e20] + Distributed
+  [f43a241f] + Downloads
+  [7b1f6079] + FileWatching
+  [9fa8497b] + Future
+  [b77e0a4c] + InteractiveUtils
+  [b27032c2] + LibCURL
+  [76f85450] + LibGit2
+  [8f399da3] + Libdl
+  [37e2e46d] + LinearAlgebra
+  [56ddb016] + Logging
+  [d6f4376e] + Markdown
+  [a63ad114] + Mmap
+  [ca575930] + NetworkOptions
+  [44cfe95a] + Pkg
+  [de0858da] + Printf
+  [3fa0cd96] + REPL
+  [9a3f8284] + Random
+  [ea8e919c] + SHA
+  [9e88b42a] + Serialization
+  [1a1011a3] + SharedArrays
+  [6462fe0b] + Sockets
+  [2f01184e] + SparseArrays
+  [10745b16] + Statistics
+  [fa267f1f] + TOML
+  [a4e569a6] + Tar
+  [8dfed614] + Test
+  [cf7118a7] + UUIDs
+  [4ec0a83e] + Unicode
+  [e66e0078] + CompilerSupportLibraries_jll
+  [deac9b47] + LibCURL_jll
+  [29816b5a] + LibSSH2_jll
+  [c8ffd9c3] + MbedTLS_jll
+  [14a3606d] + MozillaCACerts_jll
+  [83775a58] + Zlib_jll
+  [8e850ede] + nghttp2_jll
+  [3f19e933] + p7zip_jll
+Precompiling project...
+[32m  ✓ [39m[90mPreferences[39m
+[32m  ✓ [39m[90mJLLWrappers[39m
+[32m  ✓ [39m[90mASL_jll[39m
+[32m  ✓ [39m[90mLibiconv_jll[39m
+[32m  ✓ [39m[90mOpenSpecFun_jll[39m
+[32m  ✓ [39m[90mMETIS_jll[39m
+[32m  ✓ [39m[90mBzip2_jll[39m
+[32m  ✓ [39m[90mOpenBLAS32_jll[39m
+[32m  ✓ [39m[90mCodecBzip2[39m
+[32m  ✓ [39m[90mXML2_jll[39m
+[32m  ✓ [39m[90mMUMPS_seq_jll[39m
+[32m  ✓ [39m[90mEzXML[39m
+[32m  ✓ [39m[90mIpopt_jll[39m
+[32m  ✓ [39m[90mSpecialFunctions[39m
+[32m  ✓ [39m[90mDiffRules[39m
+[32m  ✓ [39m[90mTimeZones[39m
+[32m  ✓ [39m[90mColorVectorSpace[39m
+[32m  ✓ [39m[90mMemento[39m
+[32m  ✓ [39m[90mForwardDiff[39m
+[32m  ✓ [39mPowerModelsAnalytics
+[32m  ✓ [39m[90mMathOptInterface[39m
+[32m  ✓ [39mIpopt
+[32m  ✓ [39mJuMP
+[32m  ✓ [39mInfrastructureModels
+[32m  ✓ [39mPowerModelsDistribution
+25 dependencies successfully precompiled in 64 seconds (68 already precompiled)</pre><p>╔═╡ 30417ccf-d0b4-43d5-9ceb-5b00ef9c8a17</p><pre><code class="language-julia">begin
 	using PowerModelsDistribution
 	using LinearAlgebra: diagm
 	using Ipopt
 end</code></pre><p>╔═╡ ff4b2ffa-9d25-11eb-07d0-29751e7b57c2</p><pre><code class="language-">md&quot;&quot;&quot;</code></pre><p>Building Engineering Data Models with Helper Functions</p><pre><code class="language-julia">In this notebook we will demonstrate an easy way to start building new distribution network models in the engineering format using new helper functions added in PowerModelsDistribution v0.9
+
+# Julia Environment Setup
+
+The following code block will setup a Julia environment for you with the correct versions of packages for this Pluto notebook.
+
 &quot;&quot;&quot;</code></pre><p>╔═╡ f2654d95-0c8b-4524-ad1f-f0f12a35c570</p><pre><code class="language-julia">md&quot;&quot;&quot;
 First, we need a optimizer. In this case we will use Ipopt and initialize it with JuMP&#39;s `optimizer_with_attributes`, which we have exported from PowerModelsDistribution by default for the user
 &quot;&quot;&quot;</code></pre><div class="markdown"><p>First, we need a optimizer. In this case we will use Ipopt and initialize it with JuMP&#39;s <code>optimizer_with_attributes</code>, which we have exported from PowerModelsDistribution by default for the user</p>
@@ -59,7 +251,7 @@ end</code></pre><pre class="documenter-example-output">Dict{String, Any} with 8 
   &quot;per_unit&quot;       =&gt; false
   &quot;data_model&quot;     =&gt; ENGINEERING</pre><p>╔═╡ 9010cccb-e174-4dff-b934-7e7be5a93a1d</p><pre><code class="language-julia">md&quot;Running this case with OPF gives the results below&quot;</code></pre><div class="markdown"><p>Running this case with OPF gives the results below</p>
 </div><p>╔═╡ 3ed441b8-2055-41b7-a4b5-29130d5880ed</p><pre><code class="language-julia">result = solve_mc_opf(eng, ACPUPowerModel, ipopt_solver)</code></pre><pre class="documenter-example-output">Dict{String, Any} with 8 entries:
-  &quot;solve_time&quot;         =&gt; 0.00482798
+  &quot;solve_time&quot;         =&gt; 0.00498915
   &quot;optimizer&quot;          =&gt; &quot;Ipopt&quot;
   &quot;termination_status&quot; =&gt; LOCALLY_SOLVED
   &quot;dual_status&quot;        =&gt; FEASIBLE_POINT
@@ -99,11 +291,11 @@ end</code></pre><pre class="documenter-example-output">Dict{String, Any} with 12
   &quot;shunt&quot;          =&gt; Dict{String, Any}(&quot;cap&quot;=&gt;Dict{String, Any}(&quot;source_id&quot;=&gt;&quot;…
   &quot;load&quot;           =&gt; Dict{String, Any}(&quot;tload&quot;=&gt;Dict{String, Any}(&quot;source_id&quot;=…
   &quot;linecode&quot;       =&gt; Dict{String, Any}(&quot;default&quot;=&gt;Dict{String, Any}(&quot;b_fr&quot;=&gt;[0…</pre><p>╔═╡ fdaed782-529b-4267-bf73-e26a6a3d4297</p><pre><code class="language-julia">result2 = solve_mc_opf(eng2, ACPUPowerModel, ipopt_solver)</code></pre><pre class="documenter-example-output">Dict{String, Any} with 8 entries:
-  &quot;solve_time&quot;         =&gt; 4.30466
+  &quot;solve_time&quot;         =&gt; 4.42618
   &quot;optimizer&quot;          =&gt; &quot;Ipopt&quot;
   &quot;termination_status&quot; =&gt; ITERATION_LIMIT
   &quot;dual_status&quot;        =&gt; UNKNOWN_RESULT_STATUS
   &quot;primal_status&quot;      =&gt; UNKNOWN_RESULT_STATUS
   &quot;objective&quot;          =&gt; -5.086e15
   &quot;solution&quot;           =&gt; Dict{String, Any}(&quot;voltage_source&quot;=&gt;Dict{String, Any}…
-  &quot;objective_lb&quot;       =&gt; -Inf</pre><p>╔═╡ Cell order: ╟─ff4b2ffa-9d25-11eb-07d0-29751e7b57c2 ╠═30417ccf-d0b4-43d5-9ceb-5b00ef9c8a17 ╠═f2654d95-0c8b-4524-ad1f-f0f12a35c570 ╠═1885ce0e-fe1a-4b9b-b652-72cbee21339d ╟─7683dabc-772f-4fdf-a784-549c05084958 ╠═20d3d95d-7817-45de-89e9-ffce0202d8cf ╟─d4ce49bd-f38e-44e0-aa3a-4ee3f0f70bf1 ╠═1ca9657b-85b4-4ea6-901c-d36e23e8440f ╟─9010cccb-e174-4dff-b934-7e7be5a93a1d ╠═3ed441b8-2055-41b7-a4b5-29130d5880ed ╟─650b6dee-e753-418c-af1e-a0ddda09df81 ╠═95ecd659-45d0-4bd0-9f32-9cafd78fb2c7 ╠═fdaed782-529b-4267-bf73-e26a6a3d4297</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../engineering_model/">« Engineering Model</a><a class="docs-footer-nextpage" href="../formulations/">Network Formulations »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 16 April 2021 13:03">Friday 16 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+  &quot;objective_lb&quot;       =&gt; -Inf</pre><p>╔═╡ Cell order: ╟─ff4b2ffa-9d25-11eb-07d0-29751e7b57c2 ╠═60e1113b-c662-46ee-b2ce-52114cda4b81 ╠═30417ccf-d0b4-43d5-9ceb-5b00ef9c8a17 ╟─f2654d95-0c8b-4524-ad1f-f0f12a35c570 ╠═1885ce0e-fe1a-4b9b-b652-72cbee21339d ╟─7683dabc-772f-4fdf-a784-549c05084958 ╠═20d3d95d-7817-45de-89e9-ffce0202d8cf ╟─d4ce49bd-f38e-44e0-aa3a-4ee3f0f70bf1 ╠═1ca9657b-85b4-4ea6-901c-d36e23e8440f ╟─9010cccb-e174-4dff-b934-7e7be5a93a1d ╠═3ed441b8-2055-41b7-a4b5-29130d5880ed ╟─650b6dee-e753-418c-af1e-a0ddda09df81 ╠═95ecd659-45d0-4bd0-9f32-9cafd78fb2c7 ╠═fdaed782-529b-4267-bf73-e26a6a3d4297</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../engineering_model/">« Engineering Model</a><a class="docs-footer-nextpage" href="../formulations/">Network Formulations »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 16 April 2021 21:04">Friday 16 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
