@@ -5,7 +5,7 @@
     make_multiconductor!(mp_data, 3)
 
     @testset "5-bus storage acp opf" begin
-        result = solve_mc_opf(mp_data, ACPPowerModel, ipopt_solver; make_si=false)
+        result = solve_mc_opf(mp_data, ACPUPowerModel, ipopt_solver; make_si=false)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 52299.2; atol = 1e0)
@@ -18,7 +18,7 @@
     end
 
     @testset "5-bus storage arc opf" begin
-        result = solve_mc_opf(mp_data, ACRPowerModel, ipopt_solver; make_si=false)
+        result = solve_mc_opf(mp_data, ACRUPowerModel, ipopt_solver; make_si=false)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 52299.2; atol = 1e0)
@@ -31,7 +31,7 @@
     end
 
     @testset "5-bus storage dcp opf" begin
-        result = solve_mc_opf(mp_data, DCPPowerModel, ipopt_solver; make_si=false)
+        result = solve_mc_opf(mp_data, DCPUPowerModel, ipopt_solver; make_si=false)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 52059.6; atol = 1e0)
@@ -57,7 +57,7 @@
     end
 
     @testset "5-bus storage nfa opf" begin
-        result = solve_mc_opf(mp_data, NFAPowerModel, ipopt_solver; make_si=false)
+        result = solve_mc_opf(mp_data, NFAUPowerModel, ipopt_solver; make_si=false)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 43169.9; atol = 1e0)
@@ -75,13 +75,13 @@ end
     eng = parse_file("../test/data/opendss/case3_balanced_battery.dss")
 
     @testset "3-bus balanced battery acp pf" begin
-        result = solve_mc_pf(eng, ACPPowerModel, ipopt_solver; make_si=false)
+        result = solve_mc_pf(eng, ACPUPowerModel, ipopt_solver; make_si=false)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test all(isapprox.(result["solution"]["bus"]["primary"]["vm"], 0.98697; atol=1e-5))
     end
     @testset "3-bus balanced battery acr pf" begin
-        result = solve_mc_pf(eng, ACRPowerModel, ipopt_solver; make_si=false)
+        result = solve_mc_pf(eng, ACRUPowerModel, ipopt_solver; make_si=false)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test all(isapprox.(calc_vm_acr(result, "primary"), 0.98697; atol=1e-5))
@@ -101,7 +101,7 @@ end
     make_multiconductor!(mp_data, 3)
 
     @testset "5-bus mld storage acp mld" begin
-        result = solve_mc_mld(mp_data, ACPPowerModel, ipopt_solver)
+        result = solve_mc_mld(mp_data, ACPUPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 137.17; atol = 1e-2)
@@ -111,7 +111,7 @@ end
     end
 
     @testset "5-bus mld storage acr mld" begin
-        result = solve_mc_mld(mp_data, ACRPowerModel, ipopt_solver)
+        result = solve_mc_mld(mp_data, ACRUPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 137.17; atol = 1e-2)
@@ -131,7 +131,7 @@ end
     end
 
     @testset "5-bus mld storage nfa mld" begin
-        result = solve_mc_mld(mp_data, NFAPowerModel, ipopt_solver)
+        result = solve_mc_mld(mp_data, NFAUPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
         @test isapprox(result["objective"], 131.7; atol = 1e-1)

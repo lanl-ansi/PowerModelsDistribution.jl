@@ -2,28 +2,29 @@ name = "PowerModelsDistribution"
 uuid = "d7431456-977f-11e9-2de3-97ff7677985e"
 authors = ["David M Fobes <dfobes@lanl.gov>", "Carleton Coffrin"]
 repo = "https://github.com/lanl-ansi/PowerModelsDistribution.jl.git"
-version = "0.10.5"
+version = "0.11.0"
 
 [deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 InfrastructureModels = "2030c09a-7f63-5d83-885d-db604e0e9cc0"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
+LoggingExtras = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
-Memento = "f28f55f0-a522-5efc-85c2-fe41dfb9b2d9"
-PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
 Cbc = ">= 0.4"
-InfrastructureModels = "~0.5.4"
+InfrastructureModels = "~0.6"
 Ipopt = ">= 0.4"
 JSON = "~0.18, ~0.19, ~0.20, ~0.21"
-JuMP = "~0.21"
+JuMP = "~0.21.4"
 Juniper = ">= 0.4"
+LoggingExtras = "~0.4.6"
 MathOptInterface = "~0.8, ~0.9"
-Memento = "~0.10, ~0.11, ~0.12, ~0.13, ~1.0, ~1.1"
-PowerModels = "~0.17"
+PowerModels = "~0.18"
 SCS = ">= 0.4"
 julia = "^1"
 
@@ -33,8 +34,9 @@ Cbc = "9961bab8-2fa3-5c5a-9d89-47fab24efd76"
 Ipopt = "b6b21f68-93f8-5de0-b562-5493be1d77c9"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 Juniper = "2ddba703-00a4-53a7-87a5-e8b9971dde84"
+PowerModels = "c36e90e8-916a-50a6-bd94-075b64ef4655"
 SCS = "c946c3f1-0d1f-5ce8-9dea-7daa1f7e2d13"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Cbc", "Ipopt", "Juniper", "SCS", "Test"]
+test = ["Cbc", "Ipopt", "Juniper", "PowerModels", "SCS", "Test"]

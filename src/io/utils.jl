@@ -104,7 +104,7 @@ function _parse_rpn(expr::AbstractString, dtype::Type=Float64)
     clean_expr = strip(expr, _array_delimiters)
 
     if occursin("rollup", clean_expr) || occursin("rolldn", clean_expr) || occursin("swap", clean_expr)
-        Memento.warn(_LOGGER, "_parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String")
+        @warn "_parse_rpn does not support 'rollup', 'rolldn', or 'swap', leaving as String"
         return expr
     end
 
@@ -128,7 +128,7 @@ function _parse_rpn(expr::AbstractString, dtype::Type=Float64)
             end
         catch error
             if isa(error, ArgumentError)
-                Memento.warn(_LOGGER, "\"$expr\" is not valid Reverse Polish Notation, leaving as String")
+                @warn "'$expr' is not valid Reverse Polish Notation, leaving as String"
                 return expr
             else
                 throw(error)
@@ -136,7 +136,7 @@ function _parse_rpn(expr::AbstractString, dtype::Type=Float64)
         end
     end
     if length(stack) > 1
-        Memento.warn(_LOGGER, "\"$expr\" is not valid Reverse Polish Notation, leaving as String")
+        @warn "'$expr' is not valid Reverse Polish Notation, leaving as String"
         return expr
     else
         return stack[1]
@@ -154,14 +154,14 @@ function _isa_conn(expr::AbstractString)::Bool
 end
 
 
-"parses connection \"conn\" specification reducing to wye or delta"
+"parses connection 'conn' specification reducing to wye or delta"
 function _parse_conn(conn::AbstractString)::ConnConfig
     if conn in ["wye", "y", "ln"]
         return WYE
     elseif conn in ["delta", "ll"]
         return DELTA
     else
-        Memento.warn(_LOGGER, "Unsupported connection $conn, defaulting to WYE")
+        @warn "Unsupported connection $conn, defaulting to WYE"
         return WYE
     end
 end
@@ -319,20 +319,20 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
             props = ["bus", "noloadloss", "xsc", "rw", "cmag", "vm_nom", "sm_nom", "polarity", "configuration"]
             btrans = Dict{String, Any}(prop=>trs[1][prop] for prop in props)
             if !all(tr[prop]==btrans[prop] for tr in trs, prop in props)
-                Memento.warn(_LOGGER, "Not all across-phase properties match among transfomers identified by bank='$bank', aborting attempt to bank")
+                @warn "Not all across-phase properties match among transfomers identified by bank='$bank', aborting attempt to bank"
                 continue
             end
             nrw = length(btrans["bus"])
 
             # only attempt to bank wye-connected transformers
             if !all(all(conf==WYE for conf in tr["configuration"]) for tr in trs)
-                Memento.warn(_LOGGER, "Not all configurations 'wye' on transformers identified by bank='$bank', aborting attempt to bank")
+                @warn "Not all configurations 'wye' on transformers identified by bank='$bank', aborting attempt to bank"
                 continue
             end
             neutrals = [conns[end] for conns in trs[1]["connections"]]
             # ensure all windings have the same neutral
             if !all(all(conns[end]==neutrals[w] for (w, conns) in enumerate(tr["connections"])) for tr in trs)
-                Memento.warn(_LOGGER, "Not all neutral phases match on transfomers identified by bank='$bank', aborting attempt to bank")
+                @warn "Not all neutral phases match on transfomers identified by bank='$bank', aborting attempt to bank"
                 continue
             end
 
@@ -491,7 +491,7 @@ function _get_conductors_ordered(busname::AbstractString; default::Vector{Int}=V
 
     if check_length && length(default)!=length(ret)
         # TODO
-        Memento.info(_LOGGER, "An inconsistent number of nodes was specified on $(parts[1]); |$(parts[2])|!=$(length(default)).")
+        @info "An inconsistent number of nodes was specified on $(parts[1]); |$(parts[2])|!=$(length(default))."
     end
     return ret
 end
@@ -520,7 +520,7 @@ function _get_idxs(vec::Vector{<:Any}, els::Vector{<:Any})::Vector{Int}
 end
 
 
-"Discovers all of the buses (not separately defined in OpenDSS), from \"lines\""
+"Discovers all of the buses (not separately defined in OpenDSS), from 'lines'"
 function _discover_buses(data_dss::Dict{String,<:Any})::Set
     buses = Set([])
     for obj_type in _dss_node_objects
@@ -576,7 +576,7 @@ function _barrel_roll(x::Vector{T}, shift::Int)::Vector{T} where T
 end
 
 
-"Parses busnames as defined in OpenDSS, e.g. \"primary.1.2.3.0\""
+"Parses busnames as defined in OpenDSS, e.g. 'primary.1.2.3.0'"
 function _parse_bus_id(busname::AbstractString)::Tuple{String,Vector{Bool}}
     parts = split(busname, '.'; limit=2)
     name = parts[1]
@@ -643,7 +643,7 @@ function _apply_like!(raw_dss::Dict{String,<:Any}, data_dss::Dict{String,<:Any},
             if prop in links
                 linked_dss = get(get(data_dss, comp_type, Dict{String,Any}()), raw_dss[prop], Dict{String,Any}())
                 if isempty(linked_dss)
-                    Memento.warn(_LOGGER, "$comp_type.$(raw_dss["name"]): $prop=$(raw_dss[prop]) cannot be found")
+                    @warn "$comp_type.$(raw_dss["name"]): $prop=$(raw_dss[prop]) cannot be found"
                 else
                     for linked_prop in linked_dss["prop_order"]
                         if linked_prop in get(_like_exclusions, comp_type, []) || linked_prop in _like_exclusions["all"]
@@ -721,7 +721,7 @@ function _parse_element_with_dtype(dtype::Type, element::AbstractString)
             try
                 out = parse(dtype, element)
             catch
-                Memento.warn(_LOGGER, "cannot parse $element as $dtype, leaving as String.")
+                @warn "cannot parse $element as $dtype, leaving as String."
                 out = element
             end
         end
@@ -799,11 +799,11 @@ end
 "add engineering data object to engineering data model"
 function _add_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, eng_obj_id::Any, eng_obj::Dict{String,<:Any})
     if !haskey(data_eng, eng_obj_type)
-        data_eng[eng_obj_type] = Dict{Any,Any}()
+        data_eng[eng_obj_type] = Dict{String,Any}()
     end
 
     if haskey(data_eng[eng_obj_type], eng_obj_id)
-        Memento.warn(_LOGGER, "id '$eng_obj_id' already exists in $eng_obj_type, renaming to '$(eng_obj["source_id"])'")
+        @warn "id '$eng_obj_id' already exists in $eng_obj_type, renaming to '$(eng_obj["source_id"])'"
         eng_obj_id = eng_obj["source_id"]
     end
 
@@ -846,10 +846,10 @@ function _parse_dss_load_model!(eng_obj::Dict{String,<:Any}, id::Any)
     model = eng_obj["model"]
 
     if model in [3, 4, 7, 8]
-        Memento.warn(_LOGGER, "$id: dss load model $model not supported. Treating as constant POWER model")
+        @warn "$id: dss load model $model not supported. Treating as constant POWER model"
         model = 1
     elseif model == 6
-        Memento.warn(_LOGGER, "$id: dss load model $model identical to model 1 in current feature set. Treating as constant POWER model")
+        @warn "$id: dss load model $model identical to model 1 in current feature set. Treating as constant POWER model"
         model = 1
     end
 

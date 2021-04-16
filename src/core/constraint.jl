@@ -1,10 +1,10 @@
 "do nothing by default"
-function constraint_mc_model_voltage(pm::_PM.AbstractPowerModel, nw::Int)
+function constraint_mc_model_voltage(pm::AbstractUnbalancedPowerModel, nw::Int)
 end
 
 
 "Generic thermal limit constraint from-side"
-function constraint_mc_thermal_limit_from(pm::_PM.AbstractPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
+function constraint_mc_thermal_limit_from(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
     p_fr = [var(pm, nw, :p, f_idx)[c] for c in f_connections]
     q_fr = [var(pm, nw, :q, f_idx)[c] for c in f_connections]
 
@@ -17,7 +17,7 @@ end
 
 
 "Generic thermal limit constraint to-side"
-function constraint_mc_thermal_limit_to(pm::_PM.AbstractPowerModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
+function constraint_mc_thermal_limit_to(pm::AbstractUnbalancedPowerModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
     p_to = [var(pm, nw, :p, t_idx)[c] for c in t_connections]
     q_to = [var(pm, nw, :q, t_idx)[c] for c in t_connections]
 
@@ -30,7 +30,7 @@ end
 
 
 "on/off bus voltage magnitude constraint"
-function constraint_mc_bus_voltage_magnitude_on_off(pm::_PM.AbstractPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
+function constraint_mc_bus_voltage_magnitude_on_off(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
     vm = var(pm, nw, :vm, i)
     z_voltage = var(pm, nw, :z_voltage, i)
 
@@ -50,7 +50,7 @@ end
 
 
 "on/off bus voltage magnitude squared constraint for relaxed formulations"
-function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::_PM.AbstractPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
+function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
     w = var(pm, nw, :w, i)
     z_voltage = var(pm, nw, :z_voltage, i)
 
@@ -69,14 +69,15 @@ function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::_PM.AbstractPowerMod
 end
 
 
-function constraint_mc_gen_power_setpoint_real(pm::_PM.AbstractPowerModel, nw::Int, i::Int, pg::Vector{<:Real})
+""
+function constraint_mc_gen_power_setpoint_real(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, pg::Vector{<:Real})
     pg_var = [var(pm, nw, :pg, i)[c] for c in ref(pm, nw, :gen, i)["connections"]]
     JuMP.@constraint(pm.model, pg_var .== pg)
 end
 
 
 "on/off constraint for generators"
-function constraint_mc_gen_power_on_off(pm::_PM.AbstractPowerModel, nw::Int, i::Int, connections::Vector{<:Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real})
+function constraint_mc_gen_power_on_off(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, connections::Vector{<:Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real})
     pg = var(pm, nw, :pg, i)
     qg = var(pm, nw, :qg, i)
     z = var(pm, nw, :z_gen, i)
@@ -102,7 +103,7 @@ end
 
 
 ""
-function constraint_mc_storage_thermal_limit(pm::_PM.AbstractPowerModel, nw::Int, i::Int, connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, connections::Vector{Int}, rating::Vector{<:Real})
     ps = [var(pm, nw, :ps, i)[c] for c in connections]
     qs = [var(pm, nw, :qs, i)[c] for c in connections]
 
@@ -111,7 +112,7 @@ end
 
 
 ""
-function constraint_mc_switch_state_open(pm::_PM.AbstractPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int})
+function constraint_mc_switch_state_open(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int})
     psw = var(pm, nw, :psw, f_idx)
     qsw = var(pm, nw, :qsw, f_idx)
 
@@ -121,7 +122,7 @@ end
 
 
 ""
-function constraint_mc_switch_power_on_off(pm::_PM.AbstractPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}; relax::Bool=false)
+function constraint_mc_switch_power_on_off(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}; relax::Bool=false)
     i, f_bus, t_bus = f_idx
 
     psw = var(pm, nw, :psw, f_idx)
@@ -148,11 +149,54 @@ end
 
 
 ""
-function constraint_switch_thermal_limit(pm::_PM.AbstractPowerModel, n::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_switch_thermal_limit(pm::AbstractUnbalancedPowerModel, n::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
     psw = var(pm, n, :psw, f_idx)
     qsw = var(pm, n, :qsw, f_idx)
 
     for (idx, c) in enumerate(connections)
         JuMP.@constraint(pm.model, psw[c]^2 + qsw[c]^2 <= rating[idx]^2)
     end
+end
+
+
+""
+function constraint_storage_state_initial(pm::AbstractUnbalancedPowerModel, n::Int, i::Int, energy, charge_eff, discharge_eff, time_elapsed)
+    sc = var(pm, n, :sc, i)
+    sd = var(pm, n, :sd, i)
+    se = var(pm, n, :se, i)
+
+    JuMP.@constraint(pm.model, se - energy == time_elapsed*(charge_eff*sc - sd/discharge_eff))
+end
+
+
+""
+function constraint_storage_state(pm::AbstractUnbalancedPowerModel, n_1::Int, n_2::Int, i::Int, charge_eff, discharge_eff, time_elapsed)
+    sc_2 = var(pm, n_2, :sc, i)
+    sd_2 = var(pm, n_2, :sd, i)
+    se_2 = var(pm, n_2, :se, i)
+    se_1 = var(pm, n_1, :se, i)
+
+    JuMP.@constraint(pm.model, se_2 - se_1 == time_elapsed*(charge_eff*sc_2 - sd_2/discharge_eff))
+end
+
+
+""
+function constraint_storage_complementarity_nl(pm::AbstractUnbalancedPowerModel, n::Int, i)
+    sc = var(pm, n, :sc, i)
+    sd = var(pm, n, :sd, i)
+
+    JuMP.@constraint(pm.model, sc*sd == 0.0)
+end
+
+
+""
+function constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel, n::Int, i, charge_ub, discharge_ub)
+    sc = var(pm, n, :sc, i)
+    sd = var(pm, n, :sd, i)
+    sc_on = var(pm, n, :sc_on, i)
+    sd_on = var(pm, n, :sd_on, i)
+
+    JuMP.@constraint(pm.model, sc_on + sd_on == 1)
+    JuMP.@constraint(pm.model, sc_on*charge_ub >= sc)
+    JuMP.@constraint(pm.model, sd_on*discharge_ub >= sd)
 end

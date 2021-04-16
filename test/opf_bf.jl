@@ -29,8 +29,9 @@
             sol = solve_mc_opf(pmd, LPUBFDiagPowerModel, ipopt_solver; make_si=false)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * sol["solution"]["settings"]["sbase"]), 0.0183456; atol=2e-3)
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * sol["solution"]["settings"]["sbase"]), 0.00923328; atol=2e-3)
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.0183456; atol=2e-3)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.00923328; atol=2e-3)
         end
 
         @testset "3-bus unbalanced lpubfdiag opf_bf" begin
@@ -38,8 +39,9 @@
             sol = solve_mc_opf(pmd, LPUBFDiagPowerModel, ipopt_solver; make_si=false)
 
             @test sol["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * sol["solution"]["settings"]["sbase"]), 0.0214812; atol=2e-3)
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * sol["solution"]["settings"]["sbase"]), 0.00927263; atol=2e-3)
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.0214812; atol=2e-3)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.00927263; atol=2e-3)
         end
         @testset "3-bus unbalanced lpubfdiag opf_bf with only two terminals on load bus" begin
             pmd = parse_file("../test/data/opendss/case3_unbalanced_missingedge.dss")
@@ -69,7 +71,7 @@
 
     data = parse_file("../test/data/opendss/case3_unbalanced.dss"; transformations=[make_lossless!])
     data["settings"]["sbase_default"] = 0.001 * 1e3
-    data["generator"] = Dict{Any,Any}(
+    data["generator"] = Dict{String,Any}(
         "1" => Dict{String,Any}(
             "bus" => "primary",
             "connections" => [1, 2, 3, 4],

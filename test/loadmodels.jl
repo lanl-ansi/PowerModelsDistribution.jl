@@ -3,7 +3,7 @@
 @testset "test loadmodels pf" begin
     @testset "loadmodels connection variations" begin
         pmd = parse_file("../test/data/opendss/case3_lm_1230.dss")
-        sol = solve_mc_pf(pmd, ACPPowerModel, ipopt_solver; make_si=false)
+        sol = solve_mc_pf(pmd, ACPUPowerModel, ipopt_solver; make_si=false)
         # voltage magnitude at load bus
         @test isapprox(vm(sol, "loadbus"), [0.999993, 0.999992, 0.999993], atol=1E-5)
         # single-phase delta loads
@@ -22,7 +22,7 @@
     end
     @testset "loadmodels 1/2/5 in acp pf" begin
         pmd = parse_file("../test/data/opendss/case3_lm_models.dss")
-        sol = solve_mc_pf(pmd, ACPPowerModel, ipopt_solver; make_si=false)
+        sol = solve_mc_pf(pmd, ACPUPowerModel, ipopt_solver; make_si=false)
         # voltage magnitude at load bus
         @test isapprox(vm(sol, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)
         # delta and wye single-phase load models
@@ -49,7 +49,7 @@
     end
     @testset "loadmodels 1/2/5 in acr pf" begin
         pmd = parse_file("../test/data/opendss/case3_lm_models.dss")
-        sol = solve_mc_pf(pmd, ACRPowerModel, ipopt_solver; make_si=false)
+        sol = solve_mc_pf(pmd, ACRUPowerModel, ipopt_solver; make_si=false)
         # voltage magnitude at load bus
         @test isapprox(calc_vm_acr(sol, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)
         # delta and wye single-phase load models
@@ -76,7 +76,7 @@
     end
     @testset "loadmodels 1/2/5 in ivr pf" begin
         pmd = parse_file("../test/data/opendss/case3_lm_models.dss")
-        sol = solve_mc_pf(pmd, IVRPowerModel, ipopt_solver; make_si=false)
+        sol = solve_mc_pf(pmd, IVRUPowerModel, ipopt_solver; make_si=false)
         # voltage magnitude at load bus
         @test isapprox(calc_vm_acr(sol, "loadbus"), [0.83072, 0.99653, 1.0059], atol=1.5E-4)
         # delta and wye single-phase load models

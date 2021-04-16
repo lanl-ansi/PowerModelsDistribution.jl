@@ -20,7 +20,6 @@ variable_mc_branch_flow(pm)
 
 for c in conductor_ids(pm)
     PowerModels.variable_generation(pm, cnd=c)
-    PowerModels.variable_dcline_flow(pm, cnd=c)
 end
 variable_mc_transformer_flow(pm)
 variable_mc_oltc_tap(pm)
@@ -49,10 +48,6 @@ for i in ids(pm, :branch)
         PowerModels.constraint_thermal_limit_from(pm, i, cnd=c)
         PowerModels.constraint_thermal_limit_to(pm, i, cnd=c)
     end
-end
-
-for i in ids(pm, :dcline), c in conductor_ids(pm)
-    PowerModels.constraint_dcline(pm, i, cnd=c)
 end
 
 for i in ids(pm, :transformer)

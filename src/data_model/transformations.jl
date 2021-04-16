@@ -214,8 +214,8 @@ function apply_phase_projection!(data_eng::Dict{String,<:Any})
             _apply_linecode!(eng_obj, data_eng)
 
             _pad_properties!(eng_obj, ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"], eng_obj["f_connections"], all_conductors)
-            _pad_properties!(eng_obj, ["vad_lb"], eng_obj["f_connections"], all_conductors; pad_value=-60.0)
-            _pad_properties!(eng_obj, ["vad_ub"], eng_obj["f_connections"], all_conductors; pad_value=60.0)
+            _pad_properties!(eng_obj, ["vad_lb"], eng_obj["f_connections"], all_conductors; pad_value=-10.0)
+            _pad_properties!(eng_obj, ["vad_ub"], eng_obj["f_connections"], all_conductors; pad_value=10.0)
             for key in ["cm_ub", "cm_ub_b", "cm_ub_c", "sm_ub", "sm_ub_b", "sm_ub_c"]
                 if haskey(eng_obj, key)
                     _pad_properties!(eng_obj, [key], eng_obj["f_connections"], all_conductors)
@@ -253,8 +253,8 @@ function apply_phase_projection!(data_eng::Dict{String,<:Any})
             _apply_linecode!(eng_obj, data_eng)
 
             _pad_properties!(eng_obj, ["rs", "xs"], eng_obj["f_connections"], all_conductors)
-            _pad_properties!(eng_obj, ["vad_lb"], eng_obj["f_connections"], all_conductors; pad_value=-60.0)
-            _pad_properties!(eng_obj, ["vad_ub"], eng_obj["f_connections"], all_conductors; pad_value=60.0)
+            _pad_properties!(eng_obj, ["vad_lb"], eng_obj["f_connections"], all_conductors; pad_value=-10.0)
+            _pad_properties!(eng_obj, ["vad_ub"], eng_obj["f_connections"], all_conductors; pad_value=10.0)
             for key in ["cm_ub", "cm_ub_b", "cm_ub_c", "sm_ub", "sm_ub_b", "sm_ub_c"]
                 if haskey(eng_obj, key)
                     _pad_properties!(eng_obj, [key], eng_obj["f_connections"], all_conductors)
@@ -422,5 +422,16 @@ function _update_bus_terminal_projections!(data_eng::Dict{String,<:Any}, bus_ter
         _pad_properties!(eng_obj, ["vm", "va", "vm_lb", "vm_ub"], eng_obj["terminals"], terminals)
 
         _pad_connections!(eng_obj, "terminals", terminals)
+    end
+end
+
+
+"voltage angle bounds"
+function apply_voltage_angle_difference_bounds!(eng::Dict{String,<:Any}, vad::Real)
+    if haskey(eng, "line")
+        for (_,line) in eng["line"]
+            line["vad_lb"] = fill(-vad, length(line["f_connections"]))
+            line["vad_ub"] = fill( vad, length(line["f_connections"]))
+        end
     end
 end

@@ -8,7 +8,7 @@
     case_mxshunt = parse_file("../test/data/opendss/case_mxshunt.dss")
 
     @testset "2-bus diagonal acp pf" begin
-        sol = solve_mc_pf(case2_diag, ACPPowerModel, ipopt_solver)
+        sol = solve_mc_pf(case2_diag, ACPUPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -20,7 +20,7 @@
     end
 
     @testset "2-bus diagonal acr pf" begin
-        sol = solve_mc_pf(case2_diag, ACRPowerModel, ipopt_solver)
+        sol = solve_mc_pf(case2_diag, ACRUPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -32,7 +32,7 @@
     end
 
     @testset "3-bus balanced acp pf" begin
-        sol = solve_mc_pf(case3_balanced, ACPPowerModel, ipopt_solver)
+        sol = solve_mc_pf(case3_balanced, ACPUPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -46,7 +46,7 @@
     end
 
     @testset "3-bus balanced acr pf" begin
-        sol = solve_mc_pf(case3_balanced, ACRPowerModel, ipopt_solver)
+        sol = solve_mc_pf(case3_balanced, ACRUPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -60,10 +60,10 @@
     end
 
     @testset "3-bus balanced no linecode basefreq defined acp pf" begin
-        sol = solve_mc_pf(case3_balanced, ACPPowerModel, ipopt_solver)
+        sol = solve_mc_pf(case3_balanced, ACPUPowerModel, ipopt_solver)
 
         pmd2 = parse_file("../test/data/opendss/case3_balanced_basefreq.dss")
-        sol2 = solve_mc_pf(pmd2, ACPPowerModel, ipopt_solver)
+        sol2 = solve_mc_pf(pmd2, ACPUPowerModel, ipopt_solver)
 
         @test all(all(isapprox.(bus["vm"], sol2["solution"]["bus"][i]["vm"]; atol=1e-8)) for (i, bus) in sol["solution"]["bus"])
         @test all(all(isapprox.(bus["va"], sol2["solution"]["bus"][i]["va"]; atol=1e-8)) for (i, bus) in sol["solution"]["bus"])
@@ -71,7 +71,7 @@
     end
 
     @testset "3-bus unbalanced acp pf" begin
-        sol = solve_mc_pf(case3_unbalanced, ACPPowerModel, ipopt_solver; make_si=false)
+        sol = solve_mc_pf(case3_unbalanced, ACPUPowerModel, ipopt_solver; make_si=false)
 
         @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -87,7 +87,7 @@
     end
 
     @testset "3-bus unbalanced acr pf" begin
-        sol = solve_mc_pf(case3_unbalanced, ACRPowerModel, ipopt_solver; make_si=false)
+        sol = solve_mc_pf(case3_unbalanced, ACRUPowerModel, ipopt_solver; make_si=false)
 
         @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -104,7 +104,7 @@
 
     @testset "3-bus unbalanced w/ asymmetric linecode & phase order swap acp pf" begin
         pmd = parse_file("../test/data/opendss/case3_unbalanced_assym_swap.dss")
-        sol = solve_mc_pf(pmd, ACPPowerModel, ipopt_solver; make_si=false)
+        sol = solve_mc_pf(pmd, ACPUPowerModel, ipopt_solver; make_si=false)
 
         @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -113,7 +113,7 @@
     end
 
     @testset "5-bus phase drop acp pf" begin
-        result = solve_mc_pf(case5_phase_drop, ACPPowerModel, ipopt_solver; make_si=false)
+        result = solve_mc_pf(case5_phase_drop, ACPUPowerModel, ipopt_solver; make_si=false)
 
         @test result["termination_status"] == LOCALLY_SOLVED
 
@@ -121,7 +121,7 @@
     end
 
     @testset "5-bus phase drop acr pf" begin
-        sol = solve_mc_pf(case5_phase_drop, ACRPowerModel, ipopt_solver; make_si=false)
+        sol = solve_mc_pf(case5_phase_drop, ACRUPowerModel, ipopt_solver; make_si=false)
 
         @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -129,20 +129,20 @@
     end
 
     @testset "matrix branch shunts acp pf" begin
-        sol = solve_mc_pf(case_mxshunt, ACPPowerModel, ipopt_solver; make_si=false)
+        sol = solve_mc_pf(case_mxshunt, ACPUPowerModel, ipopt_solver; make_si=false)
 
         @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["vm"], [0.987399, 0.981300, 1.003536]; atol=1E-6))
     end
 
     @testset "matrix branch shunts acr pf" begin
-        sol = solve_mc_pf(case_mxshunt, ACRPowerModel, ipopt_solver; make_si=false)
+        sol = solve_mc_pf(case_mxshunt, ACRUPowerModel, ipopt_solver; make_si=false)
 
         @test all(isapprox.(calc_vm_acr(sol, "loadbus"), [0.987399, 0.981299, 1.003537]; atol=1E-6))
     end
 
     @testset "virtual sourcebus creation acp pf" begin
         pmd = parse_file("../test/data/opendss/virtual_sourcebus.dss"; data_model=MATHEMATICAL)
-        result = solve_mc_pf(pmd, ACPPowerModel, ipopt_solver)
+        result = solve_mc_pf(pmd, ACPUPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
 
@@ -151,7 +151,7 @@
     end
 
     @testset "2-bus diagonal ivr pf" begin
-        sol = solve_mc_pf(case2_diag, IVRPowerModel, ipopt_solver)
+        sol = solve_mc_pf(case2_diag, IVRUPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == LOCALLY_SOLVED
 
@@ -160,12 +160,11 @@
     end
 
     @testset "3-bus balanced ivr pf" begin
-        sol = solve_mc_pf(case3_balanced, IVRPowerModel, ipopt_solver)
+        sol = solve_mc_pf(case3_balanced, IVRUPowerModel, ipopt_solver)
 
         @test sol["termination_status"] == LOCALLY_SOLVED
 
         @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"]), 18.34498; atol=1e-5)
         @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"]),  9.19404; atol=1e-4)
     end
-
 end

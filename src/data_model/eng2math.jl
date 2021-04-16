@@ -3,15 +3,15 @@ import LinearAlgebra: diagm
 "items that are mapped one-to-one from engineering to math models"
 const _1to1_maps = Dict{String,Vector{String}}(
     "bus" => ["vm", "va", "terminals", "phases", "neutral", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub", "dss", "vuf_ub", "vm_pair_lb", "vm_pair_ub"],
-    "line" => ["f_connections", "t_connections", "source_id", "dss"],
-    "transformer" => ["f_connections", "t_connections", "source_id", "dss"],
-    "switch" => ["status", "f_connections", "t_connections", "source_id", "dss"],
-    "shunt" => ["status", "dispatchable", "gs", "bs", "connections", "source_id", "dss"],
-    "load" => ["model", "configuration", "connections", "dispatchable", "status", "source_id", "dss"],
-    "generator" => ["pg", "qg", "vg", "configuration", "connections", "source_id", "dss"],
-    "solar" => ["pg", "qg", "configuration", "connections", "source_id", "dss"],
-    "storage" => ["status", "energy", "ps", "qs", "connections", "source_id", "dss"],
-    "voltage_source" => ["source_id", "dss"],
+    "line" => ["f_connections", "t_connections", "dss"],
+    "transformer" => ["f_connections", "t_connections", "dss"],
+    "switch" => ["status", "f_connections", "t_connections", "dss"],
+    "shunt" => ["status", "dispatchable", "gs", "bs", "connections", "dss"],
+    "load" => ["model", "configuration", "connections", "dispatchable", "status", "dss"],
+    "generator" => ["pg", "qg", "vg", "configuration", "connections", "dss"],
+    "solar" => ["pg", "qg", "configuration", "connections", "dss"],
+    "storage" => ["status", "energy", "ps", "qs", "connections", "dss"],
+    "voltage_source" => ["dss"],
 )
 
 "list of nodal type elements in the engineering model"
@@ -24,6 +24,11 @@ const _eng_edge_elements = Vector{String}([
     "line", "switch", "transformer"
 ])
 
+"list of all eng asset types"
+const pmd_eng_asset_types = Vector{String}([
+    "bus", _eng_edge_elements..., _eng_node_elements...
+])
+
 "list of nodal type elements in the engineering model"
 const _math_node_elements = Vector{String}([
     "load", "shunt", "gen", "storage"
@@ -31,113 +36,113 @@ const _math_node_elements = Vector{String}([
 
 "list of edge type elements in the engineering model"
 const _math_edge_elements = Vector{String}([
-    "branch", "switch", "transformer", "dcline"
+    "branch", "switch", "transformer"
+])
+
+"list of math asset types that are dispatchable"
+const _math_dispatchable_elements = Vector{String}([
+    "load", "shunt", "switch"
+])
+
+"list of all math asset types"
+const pmd_math_asset_types = Vector{String}([
+    "bus", _math_node_elements..., _math_edge_elements...
 ])
 
 "list of multinetwork keys that belong at the root level"
 const _pmd_math_global_keys = Set{String}([
-    "data_model", "per_unit", "name", "settings", "map", "bus_lookup"
+    "data_model", "per_unit", "name", "map", "bus_lookup", "dss_options"
 ])
-
-
-"converts a engineering multinetwork to a math multinetwork"
-function _map_eng2math_multinetwork(data_eng_mn::Dict{String,Any}; kron_reduced::Bool=true, project_phases::Bool=true)::Dict{String,Any}
-    data_math_mn = Dict{String,Any}(
-        "nw" => Dict{String,Any}(),
-        "multinetwork" => true
-    )
-    for (n, nw) in data_eng_mn["nw"]
-        for k in _pmd_eng_global_keys
-            if haskey(data_eng_mn, k)
-                nw[k] = data_eng_mn[k]
-            end
-        end
-
-        data_math_mn["nw"][n] = _map_eng2math(nw; kron_reduced=kron_reduced)
-
-        for k in _pmd_math_global_keys
-            data_math_mn[k] = data_math_mn["nw"][n][k]
-            delete!(data_math_mn["nw"][n], k)
-        end
-    end
-
-    return data_math_mn
-end
 
 
 "base function for converting engineering model to mathematical model"
 function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true)
     @assert get(data_eng, "data_model", MATHEMATICAL) == ENGINEERING
 
-    # TODO remove kron reduction from eng2math in v0.10 (breaking)
     _data_eng = deepcopy(data_eng)
-    if kron_reduced && !get(data_eng, "is_kron_reduced", false)
-        apply_kron_reduction!(_data_eng)
-    end
-
-    if !get(data_eng, "is_projected", false)
-        apply_phase_projection_delta!(_data_eng)
-    end
 
     data_math = Dict{String,Any}(
         "name" => get(_data_eng, "name", ""),
         "per_unit" => get(_data_eng, "per_unit", false),
         "data_model" => MATHEMATICAL,
-        "is_projected" => get(_data_eng, "is_projected", false),
-        "is_kron_reduced" => get(_data_eng, "is_kron_reduced", false),
-        "settings" => deepcopy(_data_eng["settings"]),
-        "conductors" => get(_data_eng, "conductors", kron_reduced ? 3 : 4),
-        "conductor_ids" => get(_data_eng, "conductor_ids", kron_reduced ? collect(1:3) : collect(1:4))
+        "nw" => Dict{String,Any}(),
+        "multinetwork" => ismultinetwork(data_eng)
     )
 
-    if haskey(data_eng, "time_elapsed")
-        data_math["time_elapsed"] = data_eng["time_elapsed"]
+    if ismultinetwork(data_eng)
+        nw_data_eng = _data_eng["nw"]
+    else
+        nw_data_eng = Dict("0" => _data_eng)
     end
 
-    #TODO the PM tests break for branches which are not of the size indicated by conductors;
-    # for now, set to 1 to prevent this from breaking when not kron-reduced
+    for (n, nw_eng) in nw_data_eng
+        # TODO remove kron reduction from eng2math (breaking)
+        if kron_reduced && !get(data_eng, "is_kron_reduced", false)
+            apply_kron_reduction!(nw_eng)
+        end
 
-    data_math["map"] = Vector{Dict{String,Any}}([
-        Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
-    ])
+        if !get(data_eng, "is_projected", false)
+            apply_phase_projection_delta!(nw_eng)
+        end
 
-    _init_base_components!(data_math)
+        nw_math = Dict{String,Any}(
+            "is_projected" => get(nw_eng, "is_projected", false),
+            "is_kron_reduced" => get(nw_eng, "is_kron_reduced", false),
+            "settings" => deepcopy(nw_eng["settings"]),
+        )
 
-    # convert buses
-    _map_eng2math_bus!(data_math, _data_eng)
+        if haskey(nw_eng, "time_elapsed")
+            nw_math["time_elapsed"] = nw_eng["time_elapsed"]
+        end
 
-    # convert edges
-    _map_eng2math_line!(data_math, _data_eng)
-    _map_eng2math_switch!(data_math, _data_eng)
-    _map_eng2math_transformer!(data_math, _data_eng)
+        #TODO the PM tests break for branches which are not of the size indicated by conductors;
+        # for now, set to 1 to prevent this from breaking when not kron-reduced
 
-    # convert nodes
-    _map_eng2math_load!(data_math, _data_eng)
+        nw_math["map"] = Vector{Dict{String,Any}}([
+            Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
+        ])
 
-    _map_eng2math_shunt!(data_math, _data_eng)
+        _init_base_components!(nw_math)
 
-    _map_eng2math_generator!(data_math, _data_eng)
-    _map_eng2math_solar!(data_math, _data_eng)
-    _map_eng2math_storage!(data_math, _data_eng)
-    _map_eng2math_voltage_source!(data_math, _data_eng)
+        for type in pmd_eng_asset_types
+            getfield(PowerModelsDistribution, Symbol("_map_eng2math_$(type)!"))(nw_math, nw_eng)
+        end
 
-    # post fix
-    if !get(data_math, "is_kron_reduced", false)
-        #TODO fix this in place / throw error instead? IEEE8500 leads to switches
-        # with 3x3 R matrices but only 1 phase
-        #NOTE: Don't do this when kron-reducing, it will undo the padding
-        _slice_branches!(data_math)
+        # post fix
+        if !get(nw_math, "is_kron_reduced", false)
+            #TODO fix this in place / throw error instead? IEEE8500 leads to switches
+            # with 3x3 R matrices but only 1 phase
+            #NOTE: Don't do this when kron-reducing, it will undo the padding
+            _slice_branches!(nw_math)
+        end
+
+        find_conductor_ids!(nw_math)
+        _map_conductor_ids!(nw_math)
+
+        data_math["nw"][n] = nw_math
     end
 
-    find_conductor_ids!(data_math)
-    _map_conductor_ids!(data_math)
+    for k in _pmd_math_global_keys
+
+        for (n,nw) in data_math["nw"]
+            if haskey(nw, k)
+                data_math[k] = pop!(nw, k)
+            end
+        end
+    end
+
+    if !ismultinetwork(data_eng)
+        merge!(data_math, pop!(data_math["nw"], "0"))
+        delete!(data_math, "nw")
+        delete!(data_math, "multinetwork")
+    end
 
     return data_math
 end
 
 
 "converts engineering bus components into mathematical bus components"
-function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "bus", Dict{String,Any}())
         terminals = eng_obj["terminals"]
 
@@ -145,6 +150,7 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,
 
         math_obj["bus_i"] = math_obj["index"]
         math_obj["bus_type"] = _bus_type_conversion(data_eng, eng_obj, "status")
+        math_obj["source_id"] = "bus.$name"
 
         # take care of grounding; convert to shunt if lossy
         grounded_perfect, shunts = _convert_grounding(eng_obj["terminals"], eng_obj["grounded"], eng_obj["rg"], eng_obj["xg"])
@@ -191,7 +197,7 @@ end
 
 
 "converts engineering lines into mathematical branches"
-function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "line", Dict{Any,Dict{String,Any}}())
         _apply_linecode!(eng_obj, data_eng)
 
@@ -235,7 +241,7 @@ end
 
 
 "converts engineering n-winding transformers into mathematical ideal 2-winding lossless transformer branches and impedance branches to represent the loss model"
-function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "transformer", Dict{Any,Dict{String,Any}}())
         # Build map first, so we can update it as we decompose the transformer
         push!(data_math["map"], Dict{String,Any}(
@@ -346,7 +352,7 @@ end
 
 
 "converts engineering switches into mathematical switches and (if neeed) impedance branches to represent loss model"
-function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     # TODO enable real switches (right now only using vitual lines)
     for (name, eng_obj) in get(data_eng, "switch", Dict{Any,Dict{String,Any}}())
         nphases = length(eng_obj["f_connections"])
@@ -387,6 +393,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
                 "grounded" => t_bus["grounded"],  # connected to the switch on the to-side
                 "vmin" => t_bus["vmin"],
                 "vmax" => t_bus["vmax"],
+                "source_id" => "switch.$name",
                 "index" => length(data_math["bus"])+1,
             )
 
@@ -397,7 +404,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{<:A
 
             _branch_obj = Dict{String,Any}(
                 "name" => "_virtual_branch.switch.$name",
-                "source_id" => "_virtual_branch.switch.$name",
+                "source_id" => "switch.$name",
                 "f_bus" => bus_obj["bus_i"],
                 "t_bus" => data_math["bus_lookup"][eng_obj["t_bus"]],
                 "f_connections" => eng_obj["t_connections"],  # the virtual branch connects to the switch on the to-side
@@ -432,7 +439,7 @@ end
 
 
 "converts engineering generic shunt components into mathematical shunt components"
-function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "shunt", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("shunt", name, eng_obj, length(data_math["shunt"])+1)
 
@@ -453,7 +460,7 @@ end
 
 
 "converts engineering load components into mathematical load components"
-function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "load", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("load", name, eng_obj, length(data_math["load"])+1)
 
@@ -478,7 +485,7 @@ end
 
 
 "converts engineering generators into mathematical generators"
-function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "generator", Dict{String,Any}())
         math_obj = _init_math_obj("generator", name, eng_obj, length(data_math["gen"])+1)
 
@@ -516,7 +523,7 @@ end
 
 
 "converts engineering solar components into mathematical generators"
-function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "solar", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("solar", name, eng_obj, length(data_math["gen"])+1)
 
@@ -545,7 +552,7 @@ end
 
 
 "converts engineering storage into mathematical storage"
-function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
+function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     for (name, eng_obj) in get(data_eng, "storage", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("storage", name, eng_obj, length(data_math["storage"])+1)
 
@@ -582,8 +589,8 @@ end
 
 
 "converts engineering voltage sources into mathematical generators and (if needed) impedance branches to represent the loss model"
-function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{<:Any,<:Any})
-    for (name, eng_obj) in get(data_eng, "voltage_source", Dict{Any,Any}())
+function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+    for (name, eng_obj) in get(data_eng, "voltage_source", Dict{String,Any}())
         nconductors = length(eng_obj["connections"])
         nphases = get(eng_obj, "configuration", WYE) == WYE && !get(data_eng, "is_kron_reduced", false) ? nconductors - 1 : nconductors
 
@@ -601,7 +608,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
         math_obj["qmax"] = get(eng_obj, "qg_ub", fill( Inf, nphases))
         math_obj["connections"] = eng_obj["connections"]
         math_obj["configuration"] = get(eng_obj, "configuration", WYE)
-        math_obj["source_id"] = "_virtual_gen.$(eng_obj["source_id"])"
+        math_obj["source_id"] = "voltage_source.$name"
 
         _add_gen_cost_model!(math_obj, eng_obj)
 
@@ -621,6 +628,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "va" => deepcopy(eng_obj["va"]),
                 "vmin" => deepcopy(get(eng_obj, "vm_lb", eng_obj["vm"])),
                 "vmax" => deepcopy(get(eng_obj, "vm_ub", eng_obj["vm"])),
+                "source_id" => "voltage_source.$name",
             )
             for (i,t) in enumerate(eng_obj["connections"])
                 if data_math["bus"]["$(data_math["bus_lookup"][eng_obj["bus"]])"]["grounded"][i]
@@ -636,7 +644,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
 
             branch_obj = Dict{String,Any}(
                 "name" => "_virtual_branch.voltage_source.$name",
-                "source_id" => "_virtual_branch.$(eng_obj["source_id"])",
+                "source_id" => "voltage_source.$name",
                 "f_bus" => bus_obj["bus_i"],
                 "t_bus" => data_math["bus_lookup"][eng_obj["bus"]],
                 "f_connections" => eng_obj["connections"],

@@ -9,15 +9,15 @@ function parse_file(
     import_all::Bool=false,
     bank_transformers::Bool=true,
     transformations::Vector{<:Any}=[],
-    build_multinetwork::Bool=false,
+    multinetwork::Bool=false,
     kron_reduced::Bool=true,
     time_series::String="daily"
         )::Dict{String,Any}
 
     pmd_data = Dict{String,Any}()
-    if ismissing(filetype)
+    if ismissing(filetype) || filetype == "json"
         try
-            pmd_data = parse_json(io; validate=false)
+            pmd_data = parse_json(io)
             filetype = "json"
         catch err
             filetype = "dss"
@@ -47,7 +47,7 @@ function parse_file(
             return transform_data_model(data_eng;
                 make_pu=true,
                 kron_reduced=kron_reduced,
-                build_multinetwork=build_multinetwork
+                multinetwork=multinetwork
             )
         else
             return data_eng
@@ -56,13 +56,13 @@ function parse_file(
         if pmd_data["data_model"] != data_model && data_model == ENGINEERING
             return transform_data_model(pmd_data;
                 kron_reduced=kron_reduced,
-                build_multinetwork=build_multinetwork
+                multinetwork=multinetwork
             )
         else
             return pmd_data
         end
     else
-        Memento.error(_LOGGER, "only .dss and .json files are supported")
+        error("only .dss and .json files are supported")
     end
 end
 
@@ -81,33 +81,25 @@ end
 function transform_data_model(data::Dict{String,<:Any};
         kron_reduced::Bool=true,
         make_pu::Bool=true,
-        build_multinetwork::Bool=false
+        multinetwork::Bool=false
             )::Dict{String,Any}
 
     current_data_model = get(data, "data_model", MATHEMATICAL)
 
     if current_data_model == ENGINEERING
-        if build_multinetwork && haskey(data, "time_series")
-            mn_data = _build_eng_multinetwork(data)
-            if ismultinetwork(mn_data)
-                data_math = _map_eng2math_multinetwork(mn_data; kron_reduced=kron_reduced)
-            else
-                data_math = _map_eng2math(mn_data; kron_reduced=kron_reduced)
-            end
-        else
-            data_math = _map_eng2math(data; kron_reduced=kron_reduced)
+        if multinetwork && !ismultinetwork(data)
+            data = make_multinetwork(data)
         end
 
-        find_conductor_ids!(data_math)
-
+        data_math = _map_eng2math(data; kron_reduced=kron_reduced)
         correct_network_data!(data_math; make_pu=make_pu)
 
         return data_math
     elseif current_data_model == MATHEMATICAL
-        Memento.warn(_LOGGER, "A MATHEMATICAL data model cannot be converted back to an ENGINEERING data model, irreversible transformations have been made")
+        @info "A MATHEMATICAL data model cannot be converted back to an ENGINEERING data model, irreversible transformations have already been made"
         return data
     else
-        Memento.warn(_LOGGER, "Data model '$current_data_model' is not recognized, no model type transformation performed")
+        @info "Data model '$current_data_model' is not recognized, no model type transformation performed"
         return data
     end
 end
@@ -118,27 +110,21 @@ function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true)
     if get(data, "data_model", MATHEMATICAL) == ENGINEERING
         check_eng_data_model(data)
     elseif get(data, "data_model", MATHEMATICAL) == MATHEMATICAL
+        check_connectivity(data)
+
+        correct_branch_directions!(data)
+        check_branch_loops(data)
+
+        correct_bus_types!(data)
+
         if make_pu
             make_per_unit!(data)
-            #TODO system-wide vbase does not make sense anymore...
-            #take highest vbase just so it does not break anything for now
-            if ismultinetwork(data)
-                for (n,nw) in data["nw"]
-                    nw["basekv"]  = maximum(maximum(bus["vbase"] for (_, bus) in nw["bus"]) for nw in values(data["nw"]))
-                    nw["baseMVA"] = data["settings"]["sbase"]*data["settings"]["power_scale_factor"]/1E6
-                end
-            else
-                data["baseMVA"] = data["settings"]["sbase"]*data["settings"]["power_scale_factor"]/1E6
-                data["basekv"]  = maximum(bus["vbase"] for (_, bus) in data["bus"])
-                _PM.check_connectivity(data)
-                correct_mc_voltage_angle_differences!(data)
-                correct_mc_thermal_limits!(data)
-                _PM.correct_branch_directions!(data)
-                _PM.check_branch_loops(data)
-                _PM.correct_bus_types!(data)
-                _PM.correct_cost_functions!(data)
-                _PM.standardize_cost_terms!(data)
-            end
+
+            correct_mc_voltage_angle_differences!(data)
+            correct_mc_thermal_limits!(data)
+
+            correct_cost_functions!(data)
+            standardize_cost_terms!(data)
         end
     end
 end

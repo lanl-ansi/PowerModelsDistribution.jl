@@ -3,24 +3,33 @@ module PowerModelsDistribution
     import JSON
     import JuMP
     import MathOptInterface
-    import PowerModels
     import InfrastructureModels
-    import Memento
 
+    import Logging
+    import LoggingExtras
+
+    import Dates
     import LinearAlgebra
 
-    const _PM = PowerModels
     const _IM = InfrastructureModels
 
-    import PowerModels: ACPPowerModel, ACRPowerModel, DCPPowerModel, IVRPowerModel, NFAPowerModel, conductor_ids, ismulticonductor
-    import InfrastructureModels: ids, ref, var, con, sol, nw_ids, nws, ismultinetwork
+    import InfrastructureModels: optimize_model!, @im_fields, nw_id_default, ismultinetwork, update_data!
+
+    const _pmd_global_keys = Set(["time_series", "per_unit"])
+    const pmd_it_name = "pmd"
+    const pmd_it_sym = Symbol(pmd_it_name)
+
+    include("core/logging.jl")
 
     function __init__()
-        global _LOGGER = Memento.getlogger(PowerModels)
+        global _DEFAULT_LOGGER = Logging.current_logger()
+        global _LOGGER = Logging.ConsoleLogger(; meta_formatter=PowerModelsDistribution._pmd_metafmt)
+
+        Logging.global_logger(_LOGGER)
     end
 
-    include("core/types.jl")
     include("core/base.jl")
+    include("core/types.jl")
     include("core/data.jl")
     include("core/ref.jl")
     include("core/variable.jl")
@@ -57,6 +66,7 @@ module PowerModelsDistribution
     include("data_model/components.jl")
     include("data_model/eng2math.jl")
     include("data_model/math2eng.jl")
+    include("data_model/multinetwork.jl")
     include("data_model/transformations.jl")
     include("data_model/units.jl")
 

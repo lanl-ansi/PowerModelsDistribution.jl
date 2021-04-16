@@ -1,12 +1,97 @@
 const _pmd_eng_global_keys = Set{String}([
-    "settings", "files", "name", "data_model", "dss_options"
+    "files", "name", "data_model", "dss_options"
 ])
+
+
+"Hacky helper function to transform single-conductor network data, from, e.g., matpower/psse, into multi-conductor data"
+function make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
+    if ismultinetwork(data)
+        for (i,nw_data) in data["nw"]
+            _make_multiconductor!(nw_data, conductors)
+        end
+    else
+         _make_multiconductor!(data, conductors)
+    end
+end
+
+
+"Hacky helper function to transform single-conductor network data, from, e.g., matpower/psse, into multi-conductor data"
+function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
+    if haskey(data, "conductor_ids")
+        @warn "skipping network that is already multiconductor"
+        return
+    end
+
+    data["conductor_ids"] = collect(1:conductors)
+    data["data_model"] = MATHEMATICAL
+    data["settings"] = get(data, "settings", Dict{String,Any}(
+        "sbase_default" => get(data, "baseMVA", 1e6)
+    ))
+
+    for (key, item) in data
+        if isa(item, Dict{String,Any})
+            for (item_id, item_data) in item
+                if isa(item_data, Dict{String,Any})
+                    item_ref_data = Dict{String,Any}()
+                    for (param, value) in item_data
+                        if param in _conductorless
+                            item_ref_data[param] = value
+                        else
+                            if param in _conductor_matrix
+                                item_ref_data[param] = LinearAlgebra.diagm(0=>fill(value, conductors))
+                            else
+                                item_ref_data[param] = fill(value, conductors)
+                            end
+                        end
+                    end
+                    item[item_id] = item_ref_data
+                end
+            end
+        else
+            #root non-dict items
+        end
+    end
+
+    for (_, load) in data["load"]
+        load["model"] = POWER
+        load["configuration"] = WYE
+    end
+
+    for (_, gen) in data["gen"]
+        gen["configuration"] = WYE
+    end
+
+    for type in ["load", "gen", "storage", "shunt"]
+        if haskey(data, type)
+            for (_,obj) in data[type]
+                obj["connections"] = collect(1:conductors)
+            end
+        end
+    end
+
+    for type in ["branch", "transformer", "switch"]
+        if haskey(data, type)
+            for (_,obj) in data[type]
+                obj["f_connections"] = collect(1:conductors)
+                obj["t_connections"] = collect(1:conductors)
+            end
+        end
+    end
+
+    for (_,bus) in data["bus"]
+        bus["terminals"] = collect(1:conductors)
+        bus["grounded"] = fill(false, conductors)
+    end
+end
+
+
 
 
 "initializes the base math object of any type, and copies any one-to-one mappings"
 function _init_math_obj(obj_type::String, eng_id::Any, eng_obj::Dict{String,<:Any}, index::Int)::Dict{String,Any}
     math_obj = Dict{String,Any}(
         "name" => "$eng_id",
+        "source_id" => "$obj_type.$eng_id"
     )
 
     for key in _1to1_maps[obj_type]
@@ -27,7 +112,7 @@ end
 
 "initializes the base components that are expected by powermodelsdistribution in the mathematical model"
 function _init_base_components!(data_math::Dict{String,<:Any})
-    for key in ["bus", "load", "shunt", "gen", "branch", "switch", "transformer", "storage", "dcline"]
+    for key in pmd_math_asset_types
         if !haskey(data_math, key)
             data_math[key] = Dict{String,Any}()
         end
@@ -108,7 +193,7 @@ function _sc2br_impedance(Zsc::Dict{Tuple{Int,Int},Complex{Float64}})::Dict{Tupl
                     # Zsc is symmetric; use value of lower triangle if defined
                     Zsc[(i,j)] =  Zsc[(j,i)]
                 else
-                    Memento.error(_LOGGER, "Short-circuit impedance between winding $i and $j is missing.")
+                    error("Short-circuit impedance between winding $i and $j is missing.")
                 end
             end
         end
@@ -225,6 +310,7 @@ function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Any
             "base_kv" => 1.0,
             "bus_type" => 1,
             "status" => 1,
+            "source_id" => "transformer.$(transformer_name)",
             "index" => length(data_math["bus"])+1,
         )
 
@@ -345,7 +431,7 @@ end
 
 
 "pads properties to have the total number of conductors for the whole system"
-function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; pad_value::Real=0.0)
+function _pad_properties!(object::Dict{String,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; pad_value::Real=0.0)
     @assert(all(c in phases for c in connections))
     inds = _get_idxs(phases, connections)
 
@@ -366,7 +452,7 @@ end
 
 
 "pads properties to have the total number of conductors for the whole system (transformer winding variant)"
-function _pad_properties!(object::Dict{<:Any,<:Any}, properties::Vector{String}, wdg::Int, connections::Vector{Int}, phases::Vector{Int}; pad_value::Real=0.0)
+function _pad_properties!(object::Dict{String,<:Any}, properties::Vector{String}, wdg::Int, connections::Vector{Int}, phases::Vector{Int}; pad_value::Real=0.0)
     @assert(all(c in phases for c in connections))
     inds = _get_idxs(phases, connections)
 
@@ -387,7 +473,7 @@ end
 
 
 "pads properties to have the total number of conductors for the whole system - delta connection variant"
-function _pad_properties_delta!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; invert::Bool=false)
+function _pad_properties_delta!(object::Dict{String,<:Any}, properties::Vector{String}, connections::Vector{Int}, phases::Vector{Int}; invert::Bool=false)
     @assert(all(c in phases for c in connections))
     @assert(length(connections) in [2, 3], "A delta configuration has to have at least 2 or 3 connections!")
     @assert(length(phases)==3, "Padding only possible to a |phases|==3!")
@@ -419,7 +505,7 @@ end
 
 
 "pads properties to have the total number of conductors for the whole system - delta connection variant"
-function _pad_properties_delta!(object::Dict{<:Any,<:Any}, properties::Vector{String}, connections::Vector{Int}, wdg::Int, phases::Vector{Int}; invert::Bool=false)
+function _pad_properties_delta!(object::Dict{String,<:Any}, properties::Vector{String}, connections::Vector{Int}, wdg::Int, phases::Vector{Int}; invert::Bool=false)
     @assert(all(c in phases for c in connections))
     @assert(length(connections) in [2, 3], "A delta configuration has to have at least 2 or 3 connections!")
     @assert(length(phases)==3, "Padding only possible to a |phases|==3!")
@@ -459,7 +545,7 @@ function _apply_filter!(obj::Dict{String,<:Any}, properties::Vector{String}, fil
             elseif isa(obj[property], Matrix)
                 obj[property] = obj[property][filter, filter]
             else
-                Memento.error(_LOGGER, "The property $property is not a Vector or a Matrix!")
+                error("The property $property is not a Vector or a Matrix!")
             end
         end
     end
@@ -475,7 +561,7 @@ function _apply_filter!(obj::Dict{String,<:Any}, properties::Vector{String}, wdg
             elseif isa(obj[property], Matrix)
                 obj[property][wdg] = obj[property][wdg][filter, filter]
             else
-                Memento.error(_LOGGER, "The property $property is not a Vector or a Matrix!")
+                error("The property $property is not a Vector or a Matrix!")
             end
         end
     end
@@ -496,7 +582,6 @@ function _calc_shunt(f_cnds::Vector{Int}, t_cnds::Vector{Int}, y)::Tuple{Vector{
 end
 
 
-
 """
 Given a set of terminals 'cnds' with associated shunt addmittance 'Y', this
 method will calculate the reduced addmittance matrix if terminal 'ground' is
@@ -515,9 +600,9 @@ end
 
 
 "initialization actions for unmapping"
-function _init_unmap_eng_obj!(data_eng::Dict{<:Any,<:Any}, eng_obj_type::String, map::Dict{String,<:Any})::Dict{String,Any}
+function _init_unmap_eng_obj!(data_eng::Dict{String,<:Any}, eng_obj_type::String, map::Dict{String,<:Any})::Dict{String,Any}
     if !haskey(data_eng, eng_obj_type)
-        data_eng[eng_obj_type] = Dict{Any,Any}()
+        data_eng[eng_obj_type] = Dict{String,Any}()
     end
 
     eng_obj = Dict{String,Any}()
@@ -656,89 +741,6 @@ function _get_ground_math!(bus; exclude_terminals=[])
         push!(bus["terminals"], n)
         push!(bus["grounded"], true)
         return n
-    end
-end
-
-
-"initializes a time_series data structure in the InfrastructureModels style"
-function _init_time_series!(data::Dict{String,<:Any}, component_type::String, component_id::Any)
-    if !haskey(data, "time_series")
-        data["time_series"] = Dict{String,Any}()
-    end
-
-    if !haskey(data["time_series"], component_type)
-        data["time_series"][component_type] = Dict{String,Any}()
-    end
-
-    if !haskey(data["time_series"][component_type], "$component_id")
-        data["time_series"][component_type]["$component_id"] = Dict{String,Any}()
-    end
-end
-
-
-"Builds a Multinetwork"
-function _build_eng_multinetwork(data_eng::Dict{String,<:Any})::Dict{String,Any}
-    _data_eng = Dict{String,Any}(
-        "time_series" => Dict{String,Any}(
-            "step_mismatch" => false
-        )
-    )
-
-    for (eng_obj_type, eng_objs) in data_eng
-        if !(eng_obj_type in _pmd_eng_global_keys) && isa(eng_objs, Dict{<:Any,<:Any})
-            for (id, eng_obj) in eng_objs
-                if haskey(eng_obj, "time_series")
-                    _init_time_series!(_data_eng, eng_obj_type, id)
-
-                    for (k, v) in eng_obj["time_series"]
-                        time_series = data_eng["time_series"][v]
-
-                        if !haskey(_data_eng["time_series"], "num_steps")
-                            _data_eng["time_series"]["time"] = time_series["time"]
-                            _data_eng["time_series"]["num_steps"] = length(time_series["time"])
-                        end
-
-                        if length(time_series["time"]) != _data_eng["time_series"]["num_steps"]
-                            _data_eng["time_series"]["step_mismatch"] = true
-                        end
-
-                        if time_series["replace"]
-                            _data_eng["time_series"][eng_obj_type][id][k] = [zeros(size(eng_obj[k])) .+ val for val in time_series["values"]]
-                        else
-                            _data_eng["time_series"][eng_obj_type][id][k] = [eng_obj[k] .* val for val in time_series["values"]]
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    data_eng_new = Dict{String,Any}()
-    ### HACK to get make_multinetwork working
-    for (eng_obj_type, eng_objs) in data_eng
-        if isa(eng_objs, Dict{Any,Any})
-            eng_objs_new = Dict{String,Any}()
-            for (k, v) in eng_objs
-                key_new = "$k"
-                if key_new != k
-                    Memento.warn(_LOGGER, "$eng_obj_type id $k converted to String")
-                end
-                eng_objs_new[key_new] = v
-            end
-            data_eng_new[eng_obj_type] = eng_objs_new
-        else
-            data_eng_new[eng_obj_type] = eng_objs
-        end
-    end
-
-    _pre_mn_data = merge(data_eng_new, _data_eng)
-
-    if _pre_mn_data["time_series"]["step_mismatch"]
-        Memento.warn(_LOGGER, "There is a mismatch between the num_steps of different time_series, cannot automatically build multinetwork structure")
-        return _pre_mn_data
-    else
-        delete!(_data_eng["time_series"], "step_mismatch")
-        return _IM.make_multinetwork(_pre_mn_data, _pmd_eng_global_keys)
     end
 end
 

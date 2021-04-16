@@ -1,5 +1,5 @@
 "a quadratic penalty for bus power slack variables"
-function objective_mc_min_slack_bus_power(pm::_PM.AbstractPowerModel)
+function objective_mc_min_slack_bus_power(pm::AbstractUnbalancedPowerModel)
     return JuMP.@objective(pm.model, Min,
         sum(
             sum(
@@ -11,7 +11,7 @@ end
 
 
 "minimum load delta objective (continuous load shed) with storage"
-function objective_mc_min_load_setpoint_delta(pm::_PM.AbstractPowerModel)
+function objective_mc_min_load_setpoint_delta(pm::AbstractUnbalancedPowerModel)
     for (n, nw_ref) in nws(pm)
         var(pm, n)[:delta_pg] = Dict(i => JuMP.@variable(pm.model,
                 [c in ref(pm, n, :gen, i)["connections"]], base_name="$(n)_$(i)_delta_pg",
@@ -51,7 +51,7 @@ end
 
 
 "simplified minimum load delta objective (continuous load shed)"
-function objective_mc_min_load_setpoint_delta_simple(pm::_PM.AbstractPowerModel)
+function objective_mc_min_load_setpoint_delta_simple(pm::AbstractUnbalancedPowerModel)
     JuMP.@objective(pm.model, Min,
         sum(
             sum( ((1 - var(pm, n, :z_demand, i))) for i in keys(nw_ref[:load])) +
@@ -62,7 +62,7 @@ end
 
 
 "simplified minimum load delta objective (continuous load shed)"
-function objective_mc_min_load_setpoint_delta_simple_switch(pm::_PM.AbstractPowerModel)
+function objective_mc_min_load_setpoint_delta_simple_switch(pm::AbstractUnbalancedPowerModel)
     JuMP.@objective(pm.model, Min,
         sum(
             sum( ((1 - var(pm, n, :z_demand, i))) for i in keys(nw_ref[:load])) +
@@ -73,8 +73,9 @@ function objective_mc_min_load_setpoint_delta_simple_switch(pm::_PM.AbstractPowe
 end
 
 
+# TODO correct for connections
 "maximum loadability objective (continuous load shed) with storage"
-function objective_mc_max_load_setpoint(pm::_PM.AbstractPowerModel)
+function objective_mc_max_load_setpoint(pm::AbstractUnbalancedPowerModel)
     load_weight = Dict(n => Dict(i => get(load, "weight", 1.0) for (i,load) in ref(pm, n, :load)) for n in nw_ids(pm))
 
     JuMP.@objective(pm.model, Max,
@@ -92,30 +93,30 @@ end
 
 
 ""
-function objective_mc_min_fuel_cost(pm::_PM.AbstractPowerModel; kwargs...)
-    model = _PM.check_gen_cost_models(pm)
+function objective_mc_min_fuel_cost(pm::AbstractUnbalancedPowerModel; kwargs...)
+    model = check_gen_cost_models(pm)
 
     if model == 1
         return objective_mc_min_fuel_cost_pwl(pm; kwargs...)
     elseif model == 2
         return objective_mc_min_fuel_cost_polynomial(pm; kwargs...)
     else
-        Memento.error(_LOGGER, "Only cost models of types 1 and 2 are supported at this time, given cost model type of $(model)")
+        error("Only cost models of types 1 and 2 are supported at this time, given cost model type of $(model)")
     end
 
 end
 
 
 ""
-function objective_mc_min_fuel_cost_switch(pm::_PM.AbstractPowerModel; kwargs...)
-    model = _PM.check_gen_cost_models(pm)
+function objective_mc_min_fuel_cost_switch(pm::AbstractUnbalancedPowerModel; kwargs...)
+    model = check_gen_cost_models(pm)
 
     if model == 1
         return objective_mc_min_fuel_cost_pwl_switch(pm; kwargs...)
     elseif model == 2
         return objective_mc_min_fuel_cost_polynomial_switch(pm; kwargs...)
     else
-        Memento.error(_LOGGER, "Only cost models of types 1 and 2 are supported at this time, given cost model type of $(model)")
+        error("Only cost models of types 1 and 2 are supported at this time, given cost model type of $(model)")
     end
 
 end
@@ -123,7 +124,7 @@ end
 
 
 ""
-function objective_mc_min_fuel_cost_pwl(pm::_PM.AbstractPowerModel; kwargs...)
+function objective_mc_min_fuel_cost_pwl(pm::AbstractUnbalancedPowerModel; kwargs...)
     objective_mc_variable_pg_cost(pm; kwargs...)
 
     return JuMP.@objective(pm.model, Min,
@@ -135,7 +136,7 @@ end
 
 
 ""
-function objective_mc_min_fuel_cost_pwl_switch(pm::_PM.AbstractPowerModel; kwargs...)
+function objective_mc_min_fuel_cost_pwl_switch(pm::AbstractUnbalancedPowerModel; kwargs...)
     objective_mc_variable_pg_cost(pm; kwargs...)
 
     return JuMP.@objective(pm.model, Min,
@@ -148,12 +149,12 @@ end
 
 
 "adds pg_cost variables and constraints"
-function objective_mc_variable_pg_cost(pm::_PM.AbstractPowerModel, report::Bool=true)
+function objective_mc_variable_pg_cost(pm::AbstractUnbalancedPowerModel, report::Bool=true)
     for (n, nw_ref) in nws(pm)
         pg_cost = var(pm, n)[:pg_cost] = Dict{Int,Any}()
 
         for (i,gen) in ref(pm, n, :gen)
-            points = _PM.calc_pwl_points(gen["ncost"], gen["cost"], gen["pmin"], gen["pmax"])
+            points = calc_pwl_points(gen["ncost"], gen["cost"], gen["pmin"], gen["pmax"])
 
             pg_cost_lambda = JuMP.@variable(pm.model,
                 [i in 1:length(points)], base_name="$(n)_pg_cost_lambda",
@@ -172,14 +173,14 @@ function objective_mc_variable_pg_cost(pm::_PM.AbstractPowerModel, report::Bool=
             pg_cost[i] = pg_cost_expr
         end
 
-        report && _IM.sol_component_value(pm, n, :gen, :pg_cost, ids(pm, n, :gen), pg_cost)
+        report && _IM.sol_component_value(pm, pmd_it_sym, n, :gen, :pg_cost, ids(pm, n, :gen), pg_cost)
     end
 end
 
 
 ""
-function objective_mc_min_fuel_cost_polynomial(pm::_PM.AbstractPowerModel; kwargs...)
-    order = _PM.calc_max_cost_index(pm.data)-1
+function objective_mc_min_fuel_cost_polynomial(pm::AbstractUnbalancedPowerModel; kwargs...)
+    order = calc_max_cost_index(pm.data)-1
 
     if order <= 2
         return _objective_mc_min_fuel_cost_polynomial_linquad(pm; kwargs...)
@@ -190,8 +191,8 @@ end
 
 
 ""
-function objective_mc_min_fuel_cost_polynomial_switch(pm::_PM.AbstractPowerModel; kwargs...)
-    order = _PM.calc_max_cost_index(pm.data)-1
+function objective_mc_min_fuel_cost_polynomial_switch(pm::AbstractUnbalancedPowerModel; kwargs...)
+    order = calc_max_cost_index(pm.data)-1
 
     if order <= 2
         return _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm; kwargs...)
@@ -202,7 +203,7 @@ end
 
 
 "gen connections adaptation of min fuel cost polynomial linquad objective"
-function _objective_mc_min_fuel_cost_polynomial_linquad(pm::_PM.AbstractPowerModel; report::Bool=true)
+function _objective_mc_min_fuel_cost_polynomial_linquad(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     gen_cost = Dict()
     for (n, nw_ref) in nws(pm)
         for (i,gen) in nw_ref[:gen]
@@ -229,7 +230,7 @@ end
 
 
 "gen connections adaptation of min fuel cost polynomial linquad objective"
-function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::_PM.AbstractPowerModel; report::Bool=true)
+function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     gen_cost = Dict()
     for (n, nw_ref) in nws(pm)
         for (i,gen) in nw_ref[:gen]
@@ -257,9 +258,8 @@ end
 
 
 "Multiconductor adaptation of min fuel cost polynomial linquad objective"
-function _objective_mc_min_fuel_cost_polynomial_linquad(pm::_PM.AbstractIVRModel; report::Bool=true)
+function _objective_mc_min_fuel_cost_polynomial_linquad(pm::AbstractUnbalancedIVRModel; report::Bool=true)
     gen_cost = Dict()
-    dcline_cost = Dict()
 
     for (n, nw_ref) in nws(pm)
         for (i,gen) in nw_ref[:gen]
@@ -282,16 +282,14 @@ function _objective_mc_min_fuel_cost_polynomial_linquad(pm::_PM.AbstractIVRModel
     return JuMP.@NLobjective(pm.model, Min,
         sum(
             sum(    gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] )
-            + sum( dcline_cost[(n,i)] for (i,dcline) in nw_ref[:dcline] )
         for (n, nw_ref) in nws(pm))
     )
 end
 
 
 "Multiconductor adaptation of min fuel cost polynomial linquad objective"
-function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::_PM.AbstractIVRModel; report::Bool=true)
+function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::AbstractUnbalancedIVRModel; report::Bool=true)
     gen_cost = Dict()
-    dcline_cost = Dict()
     switch_state = Dict()
 
     for (n, nw_ref) in nws(pm)
@@ -318,7 +316,6 @@ function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::_PM.AbstractI
     return JuMP.@NLobjective(pm.model, Min,
         sum(
             sum(    gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] )
-            + sum( dcline_cost[(n,i)] for (i,dcline) in nw_ref[:dcline] )
             + sum( switch_state[(n,i)] for i in ids(pm, n, :switch_dispatchable))
         for (n, nw_ref) in nws(pm))
     )
@@ -326,7 +323,7 @@ end
 
 
 ""
-function _objective_mc_min_fuel_cost_polynomial_nl(pm::_PM.AbstractPowerModel; report::Bool=true)
+function _objective_mc_min_fuel_cost_polynomial_nl(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     gen_cost = Dict()
     for (n, nw_ref) in nws(pm)
         for (i,gen) in nw_ref[:gen]
@@ -357,7 +354,7 @@ end
 
 
 ""
-function _objective_mc_min_fuel_cost_polynomial_nl_switch(pm::_PM.AbstractPowerModel; report::Bool=true)
+function _objective_mc_min_fuel_cost_polynomial_nl_switch(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     gen_cost = Dict()
     for (n, nw_ref) in nws(pm)
         for (i,gen) in nw_ref[:gen]
@@ -389,15 +386,15 @@ end
 
 
 "adds pg_cost variables and constraints"
-function objective_variable_pg_cost(pm::_PM.AbstractIVRModel; report::Bool=true)
+function objective_variable_pg_cost(pm::AbstractUnbalancedIVRModel; report::Bool=true)
     for (n, nw_ref) in nws(pm)
-        gen_lines = _PM.calc_cost_pwl_lines(nw_ref[:gen])
+        gen_lines = calc_cost_pwl_lines(nw_ref[:gen])
 
         #to avoid function calls inside of @NLconstraint
         pg_cost = var(pm, n)[:pg_cost] = JuMP.@variable(pm.model,
             [i in ids(pm, n, :gen)], base_name="$(n)_pg_cost",
         )
-        report && _IM.sol_component_value(pm, n, :gen, :pg_cost, ids(pm, n, :gen), pg_cost)
+        report && _IM.sol_component_value(pm, pmd_it_sym, n, :gen, :pg_cost, ids(pm, n, :gen), pg_cost)
 
         # gen pwl cost
         for (i, gen) in nw_ref[:gen]
@@ -407,4 +404,203 @@ function objective_variable_pg_cost(pm::_PM.AbstractIVRModel; report::Bool=true)
             end
         end
     end
+end
+
+
+"""
+Checks that all cost models are of the same type
+"""
+function check_cost_models(pm::AbstractUnbalancedPowerModel)
+    return check_gen_cost_models(pm)
+end
+
+
+"""
+Checks that all generator cost models are of the same type
+"""
+function check_gen_cost_models(pm::AbstractUnbalancedPowerModel)
+    model = nothing
+
+    for (n, nw_ref) in nws(pm)
+        for (i,gen) in nw_ref[:gen]
+            if haskey(gen, "cost")
+                if model === nothing
+                    model = gen["model"]
+                else
+                    if gen["model"] != model
+                        error("cost models are inconsistent, the typical model is $(model) however model $(gen["model"]) is given on generator $(i)")
+                    end
+                end
+            else
+                error("no cost given for generator $(i)")
+            end
+        end
+    end
+
+    return model
+end
+
+
+"""
+cleans up raw pwl cost points in preparation for building a mathamatical model.
+The key mathematical properties,
+- the first and last points are strickly outside of the pmin-to-pmax range
+- pmin and pmax occur in the first and last line segments.
+"""
+function calc_pwl_points(ncost::Int, cost::Vector{<:Real}, pmin::Real, pmax::Real; tolerance=1e-2)
+    @assert ncost >= 1 && length(cost) >= 2
+    @assert 2*ncost == length(cost)
+    @assert pmin <= pmax
+
+    if isinf(pmin) || isinf(pmax)
+        error("a bounded operating range is required for modeling pwl costs.  Given active power range in $(pmin) - $(pmax)")
+    end
+
+    points = []
+    for i in 1:ncost
+        push!(points, (mw=cost[2*i-1], cost=cost[2*i]))
+    end
+
+    first_active = 0
+    for i in 1:(ncost-1)
+        #mw_0 = points[i].mw
+        mw_1 = points[i+1].mw
+        first_active = i
+        if pmin <= mw_1
+            break
+        end
+    end
+
+    last_active = 0
+    for i in 1:(ncost-1)
+        mw_0 = points[end - i].mw
+        #mw_1 = points[end - i + 1].mw
+        last_active = ncost - i + 1
+        if pmax >= mw_0
+            break
+        end
+    end
+
+    points = points[first_active : last_active]
+
+
+    x1 = points[1].mw
+    y1 = points[1].cost
+    x2 = points[2].mw
+    y2 = points[2].cost
+
+    if x1 > pmin
+        x0 = pmin - tolerance
+
+        m = (y2 - y1)/(x2 - x1)
+
+        if !isnan(m)
+            y0 = y2 - m*(x2 - x0)
+            points[1] = (mw=x0, cost=y0)
+        else
+            points[1] = (mw=x0, cost=y1)
+        end
+
+        modified = true
+    end
+
+
+    x1 = points[end-1].mw
+    y1 = points[end-1].cost
+    x2 = points[end].mw
+    y2 = points[end].cost
+
+    if x2 < pmax
+        x3 = pmax + tolerance
+
+        m = (y2 - y1)/(x2 - x1)
+
+        if !isnan(m)
+            y3 = m*(x3 - x1) + y1
+
+            points[end] = (mw=x3, cost=y3)
+        else
+            points[end] = (mw=x3, cost=y2)
+        end
+    end
+
+    return points
+end
+
+
+""
+function calc_max_cost_index(data::Dict{String,<:Any})
+    if ismultinetwork(data)
+        max_index = 0
+        for (i,nw_data) in data["nw"]
+            nw_max_index = _calc_max_cost_index(nw_data)
+            max_index = max(max_index, nw_max_index)
+        end
+        return max_index
+    else
+        return _calc_max_cost_index(data)
+    end
+end
+
+
+""
+function _calc_max_cost_index(data::Dict{String,<:Any})
+    max_index = 0
+
+    for (i,gen) in data["gen"]
+        if haskey(gen, "model")
+            if gen["model"] == 2
+                if haskey(gen, "cost")
+                    max_index = max(max_index, length(gen["cost"]))
+                end
+            else
+                @warn "skipping cost generator $(i) cost model in calc_cost_order, only model 2 is supported."
+            end
+        end
+    end
+
+    return max_index
+end
+
+
+"""
+compute lines in m and b from from pwl cost models data is a list of components.
+Can be run on data or ref data structures
+"""
+function calc_cost_pwl_lines(comp_dict::Dict)
+    lines = Dict()
+    for (i,comp) in comp_dict
+        lines[i] = _calc_comp_lines(comp)
+    end
+    return lines
+end
+
+
+"""
+compute lines in m and b from from pwl cost models
+"""
+function _calc_comp_lines(component::Dict{String,<:Any})
+    @assert component["model"] == 1
+    points = component["cost"]
+
+    line_data = []
+    for i in 3:2:length(points)
+        x1 = points[i-2]
+        y1 = points[i-1]
+        x2 = points[i-0]
+        y2 = points[i+1]
+
+        m = (y2 - y1)/(x2 - x1)
+        b = y1 - m * x1
+
+        push!(line_data, (slope=m, intercept=b))
+    end
+
+    for i in 2:length(line_data)
+        if line_data[i-1].slope > line_data[i].slope
+            error("non-convex pwl function found in points $(component["cost"])\nlines: $(line_data)")
+        end
+    end
+
+    return line_data
 end

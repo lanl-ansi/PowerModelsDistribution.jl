@@ -1,5 +1,5 @@
 "This is duplicated at PowerModelsDistribution level to correctly handle the indexing of the shunts."
-function constraint_mc_voltage_angle_difference(pm::_PM.AbstractBFModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, angmin::Vector{<:Real}, angmax::Vector{<:Real})
+function constraint_mc_voltage_angle_difference(pm::AbstractUBFModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, angmin::Vector{<:Real}, angmax::Vector{<:Real})
     i, f_bus, t_bus = f_idx
     t_idx = (i, t_bus, f_bus)
 
@@ -101,4 +101,27 @@ function constraint_mc_transformer_power_dy(pm::LPUBFDiagModel, nw::Int, trans_i
 	    JuMP.@constraint(pm.model, 2*p_fr[fc] == -(p_to[tc]+p_to[td])+(q_to[td]-q_to[tc])/sqrt(3.0))
         JuMP.@constraint(pm.model, 2*q_fr[fc] == (p_to[tc]-p_to[td])/sqrt(3.0)-(q_to[td]+q_to[tc]))
     end
+end
+
+
+"Neglects the active and reactive loss terms associated with the squared current magnitude."
+function constraint_storage_losses(pm::AbstractUBFAModel, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
+    ps = var(pm, n, :ps, i)
+    qs = var(pm, n, :qs, i)
+    sc = var(pm, n, :sc, i)
+    sd = var(pm, n, :sd, i)
+    qsc = var(pm, n, :qsc, i)
+
+
+    JuMP.@constraint(pm.model,
+        sum(ps[c] for c in conductors) + (sd - sc)
+        ==
+        p_loss
+    )
+
+    JuMP.@constraint(pm.model,
+        sum(qs[c] for c in conductors)
+        ==
+        qsc + q_loss
+    )
 end

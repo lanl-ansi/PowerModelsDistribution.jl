@@ -9,9 +9,9 @@ end
 
 
 "Generic add function to add components to an engineering data model"
-function add_object!(data_eng::Dict{String,<:Any}, obj_type::String, obj_id::Any, object::Dict{String,<:Any})
+function add_object!(data_eng::Dict{String,<:Any}, obj_type::String, obj_id::String, object::Dict{String,<:Any})
     if !haskey(data_eng, obj_type)
-        data_eng[obj_type] = Dict{Any,Any}()
+        data_eng[obj_type] = Dict{String,Any}()
     end
 
     if !haskey(object, "source_id")
@@ -27,7 +27,7 @@ function add_object!(data_eng::Dict{String,<:Any}, obj_type::String, obj_id::Any
     for bus_key in ["f_", "t_", ""]
         if haskey(object, "$(bus_key)bus")
             if !haskey(data_eng, "bus")
-                data_eng["bus"] = Dict{Any,Any}()
+                data_eng["bus"] = Dict{String,Any}()
             end
 
             if obj_type == "transformer"
@@ -75,7 +75,7 @@ function Model(model_type::DataModel=ENGINEERING; kwargs...)::Dict{String,Any}
 
         _add_unused_kwargs!(data_model["settings"], kwargs)
     elseif model_type == MATHEMATICAL
-        Memento.warn(_LOGGER, "There are not currently any helper functions to help build a mathematical model, this will only instantiate required fields.")
+        @warn "There are not currently any helper functions to help build a mathematical model, this will only instantiate required fields."
         data_model = Dict{String,Any}(
             "bus" => Dict{String,Any}(),
             "load" => Dict{String,Any}(),
@@ -84,16 +84,13 @@ function Model(model_type::DataModel=ENGINEERING; kwargs...)::Dict{String,Any}
             "storage" => Dict{String,Any}(),
             "branch" => Dict{String,Any}(),
             "switch" => Dict{String,Any}(),
-            "dcline" => Dict{String,Any}(),
             "per_unit" => false,
-            "baseMVA" => 100.0,
-            "basekv" => 1.0,
             "data_model" => model_type
         )
 
         _add_unused_kwargs!(data_model, kwargs)
     else
-        Memento.error(_LOGGER, "Model type '$model_type' not recognized")
+        error("Model type '$model_type' not recognized")
     end
 
     return data_model
@@ -138,8 +135,8 @@ end
 
 
 "Create a line with some default values"
-function create_line(f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}};
-    linecode::Any=missing,
+function create_line(f_bus::String, t_bus::String, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}};
+    linecode::Union{String,Missing}=missing,
     rs::Union{Matrix{<:Real},Missing}=missing,
     xs::Union{Matrix{<:Real},Missing}=missing,
     g_fr::Union{Matrix{<:Real},Missing}=missing,
@@ -185,7 +182,7 @@ function create_line(f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Ve
             line["xs"] = xs
 
         else
-            Memento.error(_LOGGER, "A linecode or rs & xs must be specified to create a valid line object")
+            error("A linecode or rs & xs must be specified to create a valid line object")
         end
 
         line["g_fr"] = !ismissing(g_fr) ? g_fr : fill(0.0, shape...)
@@ -214,10 +211,10 @@ end
 
 
 "creates a switch object with some defaults"
-function create_switch(f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}};
+function create_switch(f_bus::String, t_bus::String, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}};
     cm_ub::Union{Vector{<:Real},Missing}=missing,
     sm_ub::Union{Vector{<:Real},Missing}=missing,
-    linecode::Any=missing,
+    linecode::Union{String,Missing}=missing,
     rs::Union{Matrix{<:Real},Missing}=missing,
     xs::Union{Matrix{<:Real},Missing}=missing,
     dispatchable::Dispatchable=NO,
@@ -275,7 +272,7 @@ end
 
 
 "creates a load object with some defaults"
-function create_load(bus::Any, connections::Union{Vector{Int},Vector{String}};
+function create_load(bus::String, connections::Union{Vector{Int},Vector{String}};
     configuration::ConnConfig=WYE,
     model::LoadModel=POWER,
     pd_nom::Union{Vector{<:Real},Missing}=missing,
@@ -313,7 +310,7 @@ end
 
 
 "creates a generator object with some defaults"
-function create_generator(bus::Any, connections::Union{Vector{Int},Vector{String}};
+function create_generator(bus::String, connections::Union{Vector{Int},Vector{String}};
     configuration::ConnConfig=WYE,
     pg::Union{Vector{<:Real},Missing}=missing,
     qg::Union{Vector{<:Real},Missing}=missing,
@@ -399,7 +396,7 @@ end
 "creates a n-winding transformer object with some defaults"
 function create_transformer(buses::Vector{Any}, connections::Vector{Union{Vector{Int},Vector{String}}};
     configurations::Union{Vector{ConnConfig},Missing}=missing,
-    xfmrcode::Any=missing,
+    xfmrcode::Union{String,Missing}=missing,
     xsc::Union{Vector{<:Real},Missing}=missing,
     rw::Union{Vector{<:Real},Missing}=missing,
     imag::Real=0.0,
@@ -447,7 +444,7 @@ end
 
 
 "creates a aysmmetric lossless 2-winding transformer object with some defaults"
-function create_al2w_transformer(f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}};
+function create_al2w_transformer(f_bus::String, t_bus::String, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}};
     configuration::ConnConfig=WYE,
     tm_nom::Real=1.0,
     tm_lb::Union{Vector{<:Real},Missing}=missing,
@@ -514,7 +511,7 @@ end
 
 
 "creates a solar generator with some defaults"
-function create_solar(bus::Any, connections::Union{Vector{Int},Vector{String}};
+function create_solar(bus::String, connections::Union{Vector{Int},Vector{String}};
     configuration::ConnConfig=WYE,
     pg_lb::Union{Vector{<:Real},Missing}=missing,
     pg_ub::Union{Vector{<:Real},Missing}=missing,
@@ -538,7 +535,7 @@ end
 
 
 "creates energy storage object with some defaults"
-function create_storage(bus::Any, connections::Union{Vector{Int},Vector{String}};
+function create_storage(bus::String, connections::Union{Vector{Int},Vector{String}};
     configuration::ConnConfig=WYE,
     energy::Real=0.0,
     energy_ub::Real=0.0,
@@ -626,7 +623,7 @@ end
 
 
 "deletes a component from the engineering data model"
-function delete_component!(data_eng::Dict{String,<:Any}, component_type::String, component_id::Any)
+function delete_component!(data_eng::Dict{String,<:Any}, component_type::String, component_id::String)
     delete!(data_eng[component_type], component_id)
     if isempty(data_eng[component_type])
         delete!(data_eng, component_type)
@@ -635,7 +632,7 @@ end
 
 
 "Function to add default vbase for a bus"
-function add_vbase_default!(data_eng::Dict{String,<:Any}, bus::Any, vbase::Real)
+function add_vbase_default!(data_eng::Dict{String,<:Any}, bus::String, vbase::Real)
     if !haskey(data_eng, "settings")
         data_eng["settings"] = Dict{String,Any}()
     end
@@ -649,21 +646,21 @@ end
 
 
 # Data objects
-add_bus!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "bus", id, create_bus(; kwargs...))
-add_linecode!(data_eng::Dict{String,<:Any}, id::Any, rs::Matrix{<:Real}, xs::Matrix{<:Real}; kwargs...) = add_object!(data_eng, "linecode", id, create_linecode(rs, xs; kwargs...))
-add_xfmrcode!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "xfmrcode", id, create_xfmrcode(; kwargs...))
-# add_time_series!(data_eng::Dict{String,<:Any}, id::Any; kwargs...) = add_object!(data_eng, "time_series", id, create_timeseries(; kwargs...))
+add_bus!(data_eng::Dict{String,<:Any}, id::String; kwargs...) = add_object!(data_eng, "bus", id, create_bus(; kwargs...))
+add_linecode!(data_eng::Dict{String,<:Any}, id::String, rs::Matrix{<:Real}, xs::Matrix{<:Real}; kwargs...) = add_object!(data_eng, "linecode", id, create_linecode(rs, xs; kwargs...))
+add_xfmrcode!(data_eng::Dict{String,<:Any}, id::String; kwargs...) = add_object!(data_eng, "xfmrcode", id, create_xfmrcode(; kwargs...))
+# add_time_series!(data_eng::Dict{String,<:Any}, id::String; kwargs...) = add_object!(data_eng, "time_series", id, create_timeseries(; kwargs...))
 
 # Edge objects
-add_line!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "line", id, create_line(f_bus, t_bus, f_connections, t_connections; kwargs...))
-add_transformer!(data_eng::Dict{String,<:Any}, id::Any, buses::Vector{<:Any}, connections::Vector{Union{Vector{Int},Vector{String}}}; kwargs...) = add_object!(data_eng, "transformer", id, create_transformer(buses, connections; kwargs...))
-add_transformer!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "transformer", id, create_al2w_transformer(f_bus, t_bus, f_connections, t_connections; kwargs...))
-add_switch!(data_eng::Dict{String,<:Any}, id::Any, f_bus::Any, t_bus::Any, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "switch", id, create_switch(f_bus, t_bus, f_connections, t_connections; kwargs...))
+add_line!(data_eng::Dict{String,<:Any}, id::String, f_bus::String, t_bus::String, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "line", id, create_line(f_bus, t_bus, f_connections, t_connections; kwargs...))
+add_transformer!(data_eng::Dict{String,<:Any}, id::String, buses::Vector{<:Any}, connections::Vector{Union{Vector{Int},Vector{String}}}; kwargs...) = add_object!(data_eng, "transformer", id, create_transformer(buses, connections; kwargs...))
+add_transformer!(data_eng::Dict{String,<:Any}, id::String, f_bus::String, t_bus::String, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "transformer", id, create_al2w_transformer(f_bus, t_bus, f_connections, t_connections; kwargs...))
+add_switch!(data_eng::Dict{String,<:Any}, id::String, f_bus::String, t_bus::String, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "switch", id, create_switch(f_bus, t_bus, f_connections, t_connections; kwargs...))
 
 # Node objects
-add_load!(data_eng::Dict{String,<:Any}, id::Any, bus::Any, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "load", id, create_load(bus, connections; kwargs...))
-add_shunt!(data_eng::Dict{String,<:Any}, id::Any, bus::Any, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "shunt", id, create_shunt(bus, connections; kwargs...))
-add_voltage_source!(data_eng::Dict{String,<:Any}, id::Any, bus::Any, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "voltage_source", id, create_voltage_source(bus, connections; kwargs...))
-add_generator!(data_eng::Dict{String,<:Any}, id::Any, bus::Any, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "generator", id, create_generator(bus, connections; kwargs...))
-add_storage!(data_eng::Dict{String,<:Any}, id::Any, bus::Any, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "storage", id, create_storage(bus, connections; kwargs...))
-add_solar!(data_eng::Dict{String,<:Any}, id::Any, bus::Any, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "solar", id, create_solar(bus, connections; kwargs...))
+add_load!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "load", id, create_load(bus, connections; kwargs...))
+add_shunt!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "shunt", id, create_shunt(bus, connections; kwargs...))
+add_voltage_source!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "voltage_source", id, create_voltage_source(bus, connections; kwargs...))
+add_generator!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "generator", id, create_generator(bus, connections; kwargs...))
+add_storage!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "storage", id, create_storage(bus, connections; kwargs...))
+add_solar!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "solar", id, create_solar(bus, connections; kwargs...))

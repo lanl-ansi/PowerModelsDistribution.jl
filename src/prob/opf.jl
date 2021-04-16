@@ -11,7 +11,7 @@ end
 
 
 "Constructor for Optimal Power Flow"
-function build_mc_opf(pm::_PM.AbstractPowerModel)
+function build_mc_opf(pm::AbstractUnbalancedPowerModel)
     variable_mc_bus_voltage(pm)
     variable_mc_branch_power(pm)
     variable_mc_transformer_power(pm)
@@ -41,8 +41,8 @@ function build_mc_opf(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :storage)
-        _PM.constraint_storage_state(pm, i)
-        _PM.constraint_storage_complementarity_nl(pm, i)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end
@@ -71,7 +71,7 @@ end
 
 
 "constructor for OPF in current-voltage variable space"
-function build_mc_opf(pm::_PM.AbstractIVRModel)
+function build_mc_opf(pm::AbstractUnbalancedIVRModel)
     # Variables
     variable_mc_bus_voltage(pm)
     variable_mc_branch_current(pm)
@@ -160,8 +160,8 @@ function build_mc_opf(pm::AbstractUBFModels)
     end
 
     for i in ids(pm, :storage)
-        _PM.constraint_storage_state(pm, i)
-        _PM.constraint_storage_complementarity_nl(pm, i)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end
@@ -191,8 +191,8 @@ end
 
 
 "Multinetwork optimal power flow problem"
-function build_mn_mc_opf(pm::_PM.AbstractPowerModel)
-    for (n, network) in _PM.nws(pm)
+function build_mn_mc_opf(pm::AbstractUnbalancedPowerModel)
+    for (n, network) in nws(pm)
         variable_mc_bus_voltage(pm; nw=n)
         variable_mc_branch_power(pm; nw=n)
         variable_mc_switch_power(pm; nw=n)
@@ -220,7 +220,7 @@ function build_mn_mc_opf(pm::_PM.AbstractPowerModel)
         end
 
         for i in ids(pm, n, :storage)
-            _PM.constraint_storage_complementarity_nl(pm, i; nw=n)
+            constraint_storage_complementarity_nl(pm, i; nw=n)
             constraint_mc_storage_losses(pm, i; nw=n)
             constraint_mc_storage_thermal_limit(pm, i; nw=n)
         end
@@ -243,17 +243,17 @@ function build_mn_mc_opf(pm::_PM.AbstractPowerModel)
         end
     end
 
-    network_ids = sort(collect(_PM.nw_ids(pm)))
+    network_ids = sort(collect(nw_ids(pm)))
 
     n_1 = network_ids[1]
 
-    for i in _PM.ids(pm, :storage; nw=n_1)
-        _PM.constraint_storage_state(pm, i; nw=n_1)
+    for i in ids(pm, :storage; nw=n_1)
+        constraint_storage_state(pm, i; nw=n_1)
     end
 
     for n_2 in network_ids[2:end]
-        for i in _PM.ids(pm, :storage; nw=n_2)
-            _PM.constraint_storage_state(pm, i, n_1, n_2)
+        for i in ids(pm, :storage; nw=n_2)
+            constraint_storage_state(pm, i, n_1, n_2)
         end
 
         n_1 = n_2
@@ -263,8 +263,8 @@ function build_mn_mc_opf(pm::_PM.AbstractPowerModel)
 end
 
 "Multinetwork current-voltage optimal power flow problem"
-function build_mn_mc_opf(pm::_PM.AbstractIVRModel)
-    for (n, network) in _PM.nws(pm)
+function build_mn_mc_opf(pm::AbstractUnbalancedIVRModel)
+    for (n, network) in nws(pm)
         variable_mc_bus_voltage(pm; nw=n)
         variable_mc_branch_current(pm; nw=n)
         variable_mc_switch_current(pm; nw=n)
@@ -290,7 +290,7 @@ function build_mn_mc_opf(pm::_PM.AbstractIVRModel)
         end
 
         for i in ids(pm, n, :storage)
-            _PM.constraint_storage_complementarity_nl(pm, i; nw=n)
+            constraint_storage_complementarity_nl(pm, i; nw=n)
             constraint_mc_storage_losses(pm, i; nw=n)
             constraint_mc_storage_thermal_limit(pm, i; nw=n)
         end
@@ -314,17 +314,17 @@ function build_mn_mc_opf(pm::_PM.AbstractIVRModel)
         end
     end
 
-    network_ids = sort(collect(_PM.nw_ids(pm)))
+    network_ids = sort(collect(nw_ids(pm)))
 
     n_1 = network_ids[1]
 
-    for i in _PM.ids(pm, :storage; nw=n_1)
-        _PM.constraint_storage_state(pm, i; nw=n_1)
+    for i in ids(pm, :storage; nw=n_1)
+        constraint_storage_state(pm, i; nw=n_1)
     end
 
     for n_2 in network_ids[2:end]
-        for i in _PM.ids(pm, :storage; nw=n_2)
-            _PM.constraint_storage_state(pm, i, n_1, n_2)
+        for i in ids(pm, :storage; nw=n_2)
+            constraint_storage_state(pm, i, n_1, n_2)
         end
 
         n_1 = n_2
@@ -335,7 +335,7 @@ end
 
 "Multinetwork branch flow optimal power flow problem"
 function build_mn_mc_opf(pm::AbstractUBFModels)
-    for (n, network) in _PM.nws(pm)
+    for (n, network) in nws(pm)
         variable_mc_bus_voltage(pm; nw=n)
         variable_mc_branch_current(pm; nw=n)
         variable_mc_branch_power(pm; nw=n)
@@ -364,7 +364,7 @@ function build_mn_mc_opf(pm::AbstractUBFModels)
         end
 
         for i in ids(pm, n, :storage)
-            _PM.constraint_storage_complementarity_nl(pm, i; nw=n)
+            constraint_storage_complementarity_nl(pm, i; nw=n)
             constraint_mc_storage_losses(pm, i; nw=n)
             constraint_mc_storage_thermal_limit(pm, i; nw=n)
         end
@@ -387,17 +387,17 @@ function build_mn_mc_opf(pm::AbstractUBFModels)
         end
     end
 
-    network_ids = sort(collect(_PM.nw_ids(pm)))
+    network_ids = sort(collect(nw_ids(pm)))
 
     n_1 = network_ids[1]
 
-    for i in _PM.ids(pm, :storage; nw=n_1)
-        _PM.constraint_storage_state(pm, i; nw=n_1)
+    for i in ids(pm, :storage; nw=n_1)
+        constraint_storage_state(pm, i; nw=n_1)
     end
 
     for n_2 in network_ids[2:end]
-        for i in _PM.ids(pm, :storage; nw=n_2)
-            _PM.constraint_storage_state(pm, i, n_1, n_2)
+        for i in ids(pm, :storage; nw=n_2)
+            constraint_storage_state(pm, i, n_1, n_2)
         end
 
         n_1 = n_2
@@ -410,8 +410,8 @@ end
 
 "depreciation warning for run_ac_mc_opf"
 function run_ac_mc_opf(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
-    @warn "run_ac_mc_opf is being depreciated in favor of solve_mc_opf(data, ACPPowerModel, solver; kwargs...), please update your code accordingly"
-    return solve_mc_opf(data, ACPPowerModel, solver; kwargs...)
+    @warn "run_ac_mc_opf is being depreciated in favor of solve_mc_opf(data, ACPUPowerModel, solver; kwargs...), please update your code accordingly"
+    return solve_mc_opf(data, ACPUPowerModel, solver; kwargs...)
 end
 
 

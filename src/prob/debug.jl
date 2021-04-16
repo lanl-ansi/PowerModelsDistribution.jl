@@ -13,7 +13,7 @@ end
 
 
 "OPF problem with slack power at every bus"
-function build_mc_opf_pbs(pm::_PM.AbstractPowerModel)
+function build_mc_opf_pbs(pm::AbstractUnbalancedPowerModel)
     variable_mc_bus_voltage(pm)
 
     variable_mc_branch_power(pm)
@@ -49,7 +49,7 @@ end
 
 
 "PF problem with slack power at every bus"
-function build_mc_pf_pbs(pm::_PM.AbstractPowerModel)
+function build_mc_pf_pbs(pm::AbstractUnbalancedPowerModel)
     variable_mc_bus_voltage(pm; bounded=false)
 
     variable_mc_branch_power(pm; bounded=false)

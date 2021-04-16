@@ -36,30 +36,27 @@ function make_per_unit!(data::Dict{String,<:Any}; vbases::Union{Dict{<:Any,<:Rea
 
     if data_model_type == MATHEMATICAL
         if !get(data, "per_unit", false)
-            if ismissing(vbases)
-                vbases = Dict{String,Real}("$(data["bus_lookup"][id])"=>vbase for (id, vbase) in data["settings"]["vbases_default"])
+            if !ismultinetwork(data)
+                nw_data = Dict("0" => data)
+            else
+                nw_data = data["nw"]
             end
 
-            if ismissing(sbase)
-                sbase = data["settings"]["sbase_default"]
-            end
+            for (n, nw) in nw_data
+                vbases = ismissing(vbases) ? Dict{String,Real}("$(data["bus_lookup"][id])"=>vbase for (id, vbase) in nw["settings"]["vbases_default"]) : vbases
+                sbase  = ismissing(sbase) ? nw["settings"]["sbase_default"] : sbase
 
-            if ismultinetwork(data)
-                orig_settings = deepcopy(data["settings"])
-                for (n, nw) in data["nw"]
-                    nw["data_model"] = data["data_model"]
-                    data["settings"] = deepcopy(orig_settings)
-                    _make_math_per_unit!(nw, data; sbase=sbase, vbases=vbases)
+                nw["data_model"] = data["data_model"]
+                _make_math_per_unit!(nw, data; sbase=sbase, vbases=vbases)
+                if ismultinetwork(data)
                     delete!(nw, "data_model")
                 end
-            else
-                _make_math_per_unit!(data, data; sbase=sbase, vbases=vbases)
             end
         else
             # TODO make math model si units
         end
     else
-        Memento.warn(_LOGGER, "Data model '$data_model_type' is not recognized, no per-unit transformation performed")
+        @warn "Data model '$data_model_type' is not recognized, no per-unit transformation performed"
     end
 end
 
@@ -114,7 +111,7 @@ function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{
     zone_vbase = Dict{Int, Union{Missing,Real}}([(zone,missing) for zone in keys(zones)])
     for (bus,vbase) in vbase_sources
         if !ismissing(zone_vbase[bus_to_zone[bus]])
-            Memento.warn(_LOGGER, "You supplied multiple voltage bases for the same zone; ignoring all but the last one.")
+            @warn "You supplied multiple voltage bases for the same zone; ignoring all but the last one."
         end
         zone_vbase[bus_to_zone[bus]] = vbase
     end
@@ -173,23 +170,23 @@ end
 "converts to per unit from SI"
 function _make_math_per_unit!(nw::Dict{String,<:Any}, data_math::Dict{String,<:Any}; sbase::Union{Real,Missing}=missing, vbases::Union{Dict{String,<:Real},Missing}=missing)
     if ismissing(sbase)
-        if haskey(data_math["settings"], "sbase_default")
-            sbase = data_math["settings"]["sbase_default"]
+        if haskey(nw["settings"], "sbase_default")
+            sbase = nw["settings"]["sbase_default"]
         else
             sbase = 1.0
         end
     end
 
-    if haskey(data_math["settings"], "sbase")
-        sbase_old = data_math["settings"]["sbase"]
+    if haskey(nw["settings"], "sbase")
+        sbase_old = nw["settings"]["sbase"]
     else
         sbase_old = 1.0
     end
 
     # automatically find a good vbase if not provided
     if ismissing(vbases)
-        if haskey(data_math["settings"], "vbases_default")
-            vbases = Dict{String,Real}("$(data_math["bus_lookup"][id])" => vbase for (id, vbase) in data_math["settings"]["vbases_default"])
+        if haskey(nw["settings"], "vbases_default")
+            vbases = Dict{String,Real}("$(data_math["bus_lookup"][id])" => vbase for (id, vbase) in nw["settings"]["vbases_default"])
         else
             buses_type_3 = [(id, sum(bus["vm"])/length(bus["vm"])) for (id,bus) in nw["bus"] if haskey(bus, "bus_type") && bus["bus_type"]==3]
             if !isempty(buses_type_3)
@@ -201,7 +198,7 @@ function _make_math_per_unit!(nw::Dict{String,<:Any}, data_math::Dict{String,<:A
     end
 
     bus_vbase, line_vbase = calc_voltage_bases(nw, vbases)
-    voltage_scale_factor = data_math["settings"]["voltage_scale_factor"]
+    voltage_scale_factor = nw["settings"]["voltage_scale_factor"]
 
     for (id, bus) in nw["bus"]
         _rebase_pu_bus!(bus, bus_vbase[id], sbase, sbase_old, voltage_scale_factor)
@@ -221,7 +218,7 @@ function _make_math_per_unit!(nw::Dict{String,<:Any}, data_math::Dict{String,<:A
     end
 
     for (id, gen) in nw["gen"]
-        _rebase_pu_generator!(gen, bus_vbase[string(gen["gen_bus"])], sbase, sbase_old, data_math)
+        _rebase_pu_generator!(gen, bus_vbase[string(gen["gen_bus"])], sbase, sbase_old, nw)
     end
 
     for (id, storage) in nw["storage"]
@@ -242,7 +239,7 @@ function _make_math_per_unit!(nw::Dict{String,<:Any}, data_math::Dict{String,<:A
         end
     end
 
-    data_math["settings"]["sbase"] = sbase
+    nw["settings"]["sbase"] = sbase
     data_math["per_unit"] = true
 end
 
@@ -374,8 +371,8 @@ end
 
 
 "per-unit conversion for generators"
-function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, data_math::Dict{String,<:Any})
-    vbase_old = get(gen, "vbase", 1.0/data_math["settings"]["voltage_scale_factor"])
+function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, nw::Dict{String,<:Any})
+    vbase_old = get(gen, "vbase", 1.0/nw["settings"]["voltage_scale_factor"])
     vbase_scale = vbase_old/vbase
     sbase_scale = sbase_old/sbase
 
@@ -388,14 +385,14 @@ function _rebase_pu_generator!(gen::Dict{String,<:Any}, vbase::Real, sbase::Real
     end
 
     # if not in per unit yet, the cost has is in $/MWh
-    if !haskey(data_math["settings"], "sbase")
-        sbase_old_cost = 1E6/data_math["settings"]["power_scale_factor"]
+    if !haskey(nw["settings"], "sbase")
+        sbase_old_cost = 1E6/nw["settings"]["power_scale_factor"]
         sbase_scale_cost = sbase_old_cost/sbase
     else
         sbase_scale_cost = sbase_scale
     end
 
-    _PM._rescale_cost_model!(gen, 1/sbase_scale_cost)
+    _rescale_cost_model!(gen, 1/sbase_scale_cost)
 
     # save new vbase
     gen["vbase"] = vbase
@@ -444,57 +441,17 @@ _apply_func_vals(x, f) = isa(x, Dict) ? Dict(k=>f(v) for (k,v) in x) : f.(x)
 function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true, mult_ibase=true, convert_rad2deg=true)
     solution_si = deepcopy(solution)
 
-    sbase = math_model["settings"]["sbase"]
-
     if ismultinetwork(math_model)
-        for (n,nw) in solution_si["nw"]
-            for (comp_type, comp_dict) in [(x,y) for (x,y) in nw if isa(y, Dict)]
-                dimensionalize_math_comp = get(_dimensionalize_math, comp_type, Dict())
-                vbase_props   = mult_vbase      ? get(dimensionalize_math_comp, "vbase", [])   : []
-                sbase_props   = mult_sbase      ? get(dimensionalize_math_comp, "sbase", [])   : []
-                ibase_props   = mult_ibase      ? get(dimensionalize_math_comp, "ibase", [])   : []
-                rad2deg_props = convert_rad2deg ? get(dimensionalize_math_comp, "rad2deg", []) : []
-
-                for (id, comp) in comp_dict
-                    if !isempty(vbase_props) || !isempty(ibase_props)
-                        vbase = math_model["nw"][n][comp_type][id]["vbase"]
-                        ibase = sbase/vbase
-                    end
-
-                    for (prop, val) in comp
-                        if prop in vbase_props
-                            comp[prop] = _apply_func_vals(comp[prop], x->x*vbase)
-                        elseif prop in sbase_props
-                            comp[prop] = _apply_func_vals(comp[prop], x->x*sbase)
-                        elseif prop in ibase_props
-                            comp[prop] = _apply_func_vals(comp[prop], x->x*ibase)
-                        elseif prop in rad2deg_props
-                            comp[prop] = _apply_func_vals(comp[prop], x->_wrap_to_180(rad2deg(x)))
-                        end
-                    end
-
-                    if comp_type=="transformer"
-                        # transformers have different vbase/ibase on each side
-                        f_bus = math_model["nw"][n]["transformer"][id]["f_bus"]
-                        f_vbase = math_model["nw"][n]["bus"]["$f_bus"]["vbase"]
-                        t_bus = math_model["nw"][n]["transformer"][id]["t_bus"]
-                        t_vbase = math_model["nw"][n]["bus"]["$t_bus"]["vbase"]
-                        f_ibase = sbase/f_vbase
-                        t_ibase = sbase/t_vbase
-
-                        for (prop, val) in comp
-                            if prop in dimensionalize_math_comp["ibase_fr"]
-                                comp[prop] = _apply_func_vals(comp[prop], x->x*f_ibase)
-                            elseif prop in dimensionalize_math_comp["ibase_to"]
-                                comp[prop] = _apply_func_vals(comp[prop], x->x*t_ibase)
-                            end
-                        end
-                    end
-                end
-            end
-        end
+        nw_data = math_model["nw"]
+        nw_sol = solution_si["nw"]
     else
-        for (comp_type, comp_dict) in [(x,y) for (x,y) in solution_si if isa(y, Dict)]
+        nw_data = Dict("0" => math_model)
+        nw_sol = Dict("0" => solution_si)
+    end
+
+    for (n,nw) in nw_sol
+        sbase = nw["settings"]["sbase"]
+        for (comp_type, comp_dict) in [(x,y) for (x,y) in nw if isa(y, Dict) && x != "settings"]
             dimensionalize_math_comp = get(_dimensionalize_math, comp_type, Dict())
             vbase_props   = mult_vbase      ? get(dimensionalize_math_comp, "vbase", [])   : []
             sbase_props   = mult_sbase      ? get(dimensionalize_math_comp, "sbase", [])   : []
@@ -503,7 +460,7 @@ function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true
 
             for (id, comp) in comp_dict
                 if !isempty(vbase_props) || !isempty(ibase_props)
-                    vbase = math_model[comp_type][id]["vbase"]
+                    vbase = nw_data[n][comp_type][id]["vbase"]
                     ibase = sbase/vbase
                 end
 
@@ -521,10 +478,10 @@ function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true
 
                 if comp_type=="transformer"
                     # transformers have different vbase/ibase on each side
-                    f_bus = math_model["transformer"][id]["f_bus"]
-                    f_vbase = math_model["bus"]["$f_bus"]["vbase"]
-                    t_bus = math_model["transformer"][id]["t_bus"]
-                    t_vbase = math_model["bus"]["$t_bus"]["vbase"]
+                    f_bus = nw_data[n]["transformer"][id]["f_bus"]
+                    f_vbase = nw_data[n]["bus"]["$f_bus"]["vbase"]
+                    t_bus = nw_data[n]["transformer"][id]["t_bus"]
+                    t_vbase = nw_data[n]["bus"]["$t_bus"]["vbase"]
                     f_ibase = sbase/f_vbase
                     t_ibase = sbase/t_vbase
 

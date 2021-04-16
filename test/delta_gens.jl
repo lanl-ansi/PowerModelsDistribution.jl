@@ -15,8 +15,8 @@
         end
 
         eng_2 = deepcopy(eng_1)
-        eng_2["load"] = Dict{Any,Any}()
-        eng_2["generator"] = Dict{Any,Any}()
+        eng_2["load"] = Dict{String,Any}()
+        eng_2["generator"] = Dict{String,Any}()
         for (id,load) in eng_1["load"]
             gen = Dict{String,Any}(
                 "source_id" => load["source_id"],
@@ -36,7 +36,7 @@
         end
 
         # check ACP and ACR
-        for form in [ACPPowerModel, ACRPowerModel, IVRPowerModel]
+        for form in [ACPUPowerModel, ACRUPowerModel, IVRUPowerModel]
             sol_1 = solve_mc_opf(eng_1, form, ipopt_solver)
             @test sol_1["termination_status"] == LOCALLY_SOLVED
 
@@ -77,12 +77,12 @@
     #         gen["model"] = 2
     #     end
     #
-    #     pm_ivr  = PowerModels.instantiate_model(pmd, PowerModels.IVRPowerModel, PMD.build_mc_opf, ref_extensions=[PMD.ref_add_arcs_transformer!])
-    #     sol_ivr = PowerModels.optimize_model!(pm_ivr, optimizer=ipopt_solver)
+    #     pm_ivr  = instantiate_mc_model(pmd, IVRUPowerModel, PMD.build_mc_opf)
+    #     sol_ivr = optimize_model!(pm_ivr, optimizer=ipopt_solver)
     #     @assert(sol_1["termination_status"]==LOCALLY_SOLVED)
     #
-    #     pm_acr  = PowerModels.instantiate_model(pmd, PowerModels.ACRPowerModel, PMD.build_mc_opf, ref_extensions=[PMD.ref_add_arcs_transformer!])
-    #     sol_acr = PowerModels.optimize_model!(pm_acr, optimizer=ipopt_solver)
+    #     pm_acr  = instantiate_mc_model(pmd, ACRUPowerModel, PMD.build_mc_opf)
+    #     sol_acr = optimize_model!(pm_acr, optimizer=ipopt_solver)
     #     @assert(sol_2["termination_status"]==LOCALLY_SOLVED)
     #
     # end

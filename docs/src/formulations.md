@@ -2,79 +2,79 @@
 
 ## Type Hierarchy
 
-PowerModelsDistribution shares a rich model type hierarchy with PowerModels. The relevant abstract models from PowerModels are documented here for context. At the top of the type hierarchy, starting in PowerModels, we can distinguish between conic, active power only, and branch flow models:
+PowerModelsDistribution has a rich model type hierarchy similiar to PowerModels. At the top of the type hierarchy we can distinguish between conic, active power only, and branch flow models:
 
 ```julia
-abstract type PowerModels.AbstractConicModel <: PowerModels.AbstractPowerModel end
-abstract type PowerModels.AbstractActivePowerModel <: PowerModels.AbstractPowerModel end
-abstract type PowerModels.AbstractBFModel <: PowerModels.AbstractPowerModel end
-abstract type PowerModels.AbstractBFQPModel <: PowerModels.AbstractBFModel end
-abstract type PowerModels.AbstractBFConicModel <: PowerModels.AbstractBFModel end
-const PowerModels.AbstractConicModels = Union{PowerModels.AbstractConicModel, PowerModels.AbstractBFConicModel}
+abstract type AbstractUnbalancedConicModel <: AbstractPowerModel end
+abstract type AbstractUnbalancedActivePowerModel <: AbstractPowerModel end
+abstract type AbstractUBFModel <: AbstractPowerModel end
+abstract type AbstractUBFQPModel <: AbstractUBFModel end
+abstract type AbstractUBFConicModel <: AbstractUBFModel end
+const AbstractUnbalancedConicModels = Union{AbstractUnbalancedConicModel, AbstractUBFConicModel}
 ```
 
 Several nonlinear (non-convex) models are available at the top level:
 
 ```julia
-abstract type PowerModels.AbstractACPModel <: PowerModels.AbstractPowerModel end
-abstract type PowerModels.AbstractACRModel <: PowerModels.AbstractPowerModel end
-abstract type PowerModels.AbstractIVRModel <: PowerModels.AbstractACRModel end
+abstract type AbstractUnbalancedACPModel <: AbstractPowerModel end
+abstract type AbstractUnbalancedACRModel <: AbstractPowerModel end
+abstract type AbstractUnbalancedIVRModel <: AbstractUnbalancedACRModel end
 ```
 
-In PowerModelsDistribution, the following relaxations are available under these hierarchies:
+The following relaxations are available under these hierarchies:
 
 ```julia
-abstract type PowerModelsDistribution.AbstractNLPUBFModel <: PowerModels.AbstractBFQPModel end
-abstract type PowerModelsDistribution.AbstractConicUBFModel <: PowerModels.AbstractBFConicModel end
-const PowerModelsDistribution.AbstractUBFModels = Union{PowerModelsDistribution.AbstractNLPUBFModel, PowerModelsDistribution.AbstractConicUBFModel}
+abstract type AbstractNLPUBFModel <: AbstractUBFQPModel end
+abstract type AbstractConicUBFModel <: AbstractUBFConicModel end
+const AbstractUBFModels = Union{AbstractNLPUBFModel, AbstractConicUBFModel}
 
-abstract type PowerModelsDistribution.SDPUBFModel <: PowerModelsDistribution.AbstractConicUBFModel end
-abstract type PowerModelsDistribution.SDPUBFKCLMXModel <: PowerModelsDistribution.SDPUBFModel end
-abstract type PowerModelsDistribution.SOCNLPUBFModel <: PowerModelsDistribution.AbstractNLPUBFModel end
-abstract type PowerModelsDistribution.SOCConicUBFModel <: PowerModelsDistribution.AbstractConicUBFModel end
-const PowerModelsDistribution.SOCUBFModels = Union{PowerModelsDistribution.SOCNLPUBFModel, PowerModelsDistribution.SOCConicUBFModel}
+abstract type SDPUBFModel <: AbstractConicUBFModel end
+abstract type SDPUBFKCLMXModel <: SDPUBFModel end
+abstract type SOCNLPUBFModel <: AbstractNLPUBFModel end
+abstract type SOCConicUBFModel <: AbstractConicUBFModel end
+const SOCUBFModels = Union{SOCNLPUBFModel, SOCConicUBFModel}
 ```
 
-where `UBF` is an unbalanced variant of the __Branch Flow__ models from PowerModels. Models which do not contain `UBF` in their name are __Bus Injection__ Models _e.g._ `AbstractACPModel`. Finally, some linear unbalanced power flow models are available under the following hierarchy:
+where `UBF` is an unbalanced variant of the __Branch Flow__ models from PowerModels. Models which do not contain `UBF` in their name are __Bus Injection__ Models _e.g._ `AbstractUnbalancedACPModel`. Finally, some linear unbalanced power flow models are available under the following hierarchy:
 
 ```julia
-abstract type PowerModels.AbstractDCPModel <: PowerModels.AbstractActivePowerModel end
-abstract type PowerModels.AbstractNFAModel <: PowerModels.AbstractDCPModel end
-abstract type PowerModelsDistribution.AbstractLPUBFModel <: PowerModelsDistribution.AbstractNLPUBFModel end
-abstract type PowerModelsDistribution.LPUBFDiagModel <: PowerModelsDistribution.AbstractLPUBFModel end
-const PowerModelsDistribution.LinDist3FlowModel = PowerModelsDistribution.LPUBFDiagModel
+abstract type AbstractUnbalancedDCPModel <: AbstractUnbalancedActivePowerModel end
+abstract type AbstractUnbalancedNFAModel <: AbstractUnbalancedDCPModel end
+abstract type AbstractLPUBFModel <: AbstractNLPUBFModel end
+abstract type LPUBFDiagModel <: AbstractLPUBFModel end
+const LinDist3FlowModel = LPUBFDiagModel
 ```
 
 ## Power Models
 
-Each of these Models can be used as the type parameter for a PowerModel:
+Each of these Models can be used as the type parameter for an UnbalancedPowerModel:
 
 ```julia
-mutable struct PowerModels.ACPPowerModel <: PowerModels.AbstractACPModel PowerModels.@pm_fields end
-mutable struct PowerModels.ACRPowerModel <: PowerModels.AbstractACRModel PowerModels.@pm_fields end
-mutable struct PowerModels.DCPPowerModel <: PowerModels.AbstractDCPModel PowerModels.@pm_fields end
-mutable struct PowerModels.NFAPowerModel <: PowerModels.AbstractNFAModel PowerModels.@pm_fields end
+mutable struct ACPUPowerModel <: AbstractUnbalancedACPModel @pmd_fields end
+mutable struct ACRUPowerModel <: AbstractUnbalancedACRModel @pmd_fields end
+mutable struct DCPUPowerModel <: AbstractUnbalancedDCPModel @pmd_fields end
+mutable struct NFAUPowerModel <: AbstractUnbalancedNFAModel @pmd_fields end
 
-mutable struct PowerModelsDistribution.SDPUBFPowerModel <: PowerModelsDistribution.SDPUBFModel PowerModels.@pm_fields end
-mutable struct PowerModelsDistribution.SDPUBFKCLMXPowerModel <: PowerModelsDistribution.SDPUBFKCLMXModel PowerModels.@pm_fields end
+mutable struct SDPUBFPowerModel <: SDPUBFModel @pmd_fields end
+mutable struct SDPUBFKCLMXPowerModel <: SDPUBFKCLMXModel @pmd_fields end
 
-mutable struct PowerModelsDistribution.SOCNLPUBFPowerModel <: PowerModelsDistribution.SOCNLPUBFModel PowerModels.@pm_fields end
-mutable struct PowerModelsDistribution.SOCConicUBFPowerModel <: PowerModelsDistribution.SOCConicUBFModel PowerModels.@pm_fields end
+mutable struct SOCNLPUBFPowerModel <: SOCNLPUBFModel @pmd_fields end
+mutable struct SOCConicUBFPowerModel <: SOCConicUBFModel @pmd_fields end
 
-mutable struct PowerModelsDistribution.LPUBFDiagPowerModel <: PowerModelsDistribution.LPUBFDiagModel PowerModels.@pm_fields end
-const PowerModelsDistribution.LinDist3FlowPowerModel = PowerModelsDistribution.LPUBFDiagPowerModel
+mutable struct LPUBFDiagPowerModel <: LPUBFDiagModel @pmd_fields end
+const LinDist3FlowPowerModel = LPUBFDiagPowerModel
 ```
 
 ## Optimization problem classes
 
-- NLP (nonconvex): ACPPowerModel, ACRPowerModel, IVRPowerModel
+- NLP (nonconvex): ACPUPowerModel, ACRUPowerModel, IVRUPowerModel
 - SDP: SDPUBFPowerModel, SDPUBFKCLMXPowerModel
 - SOC(-representable): SOCNLPUBFPowerModel, SOCConicUBFPowerModel
-- Linear: LPUBFDiagPowerModel (LinDist3FlowPowerModel), DCPPowerModel, NFAPowerModel
+- Linear: LPUBFDiagPowerModel (LinDist3FlowPowerModel), DCPUPowerModel, NFAUPowerModel
 
 ## Matrix equations versus scalar equations
 
 JuMP supports vectorized syntax, but not for nonlinear constraints. Therefore, certain formulations must be implemented in a scalar fashion. Other formulations can be written as matrix (in)equalities. The current implementations are categorized as follows:
 
-- Scalar: ACPPowerModel, ACRPowerModel, IVRPowerModel, DCPPowerModel, NFAPowerMoel
+- Scalar: ACPUPowerModel, ACRUPowerModel, IVRUPowerModel, DCPUPowerModel, NFAPowerMoel
 - Matrix: SDPUBFPowerModel, SDPUBFKCLMXPowerModel, SOCNLPUBFPowerModel, SOCConicUBFPowerModel, LPUBFDiagPowerModel

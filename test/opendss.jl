@@ -31,28 +31,13 @@
         @test PMD._isa_rpn("2 pi * 60 * .001 *")
         @test !PMD._isa_rpn("[ 2 10 ]")
 
-        Memento.setlevel!(TESTLOG, "warn")
-
-        @test_warn(TESTLOG, "_parse_rpn does not support \"rollup\", \"rolldn\", or \"swap\", leaving as String",
-                   PMD._parse_rpn("1 2 swap atan2"))
-
-        @test_warn(TESTLOG, "\" 1 2 + - \" is not valid Reverse Polish Notation, leaving as String",
-                   PMD._parse_rpn(" 1 2 + - "))
-
-        @test_warn(TESTLOG, "\"1 2 3 +\" is not valid Reverse Polish Notation, leaving as String",
-                   PMD._parse_rpn("1 2 3 +"))
-
-        Memento.setlevel!(TESTLOG, "error")
+        @test_logs (:warn, "_parse_rpn does not support 'rollup', 'rolldn', or 'swap', leaving as String") match_mode=:any PowerModelsDistribution._parse_rpn("1 2 swap atan2")
+        @test_logs (:warn, "' 1 2 + - ' is not valid Reverse Polish Notation, leaving as String") match_mode=:any PowerModelsDistribution._parse_rpn(" 1 2 + - ")
+        @test_logs (:warn, "'1 2 3 +' is not valid Reverse Polish Notation, leaving as String") match_mode=:any PowerModelsDistribution._parse_rpn("1 2 3 +")
     end
 
     @testset "opendss parse load model warnings" begin
-        for model in [3, 4, 7, 8]
-           dss = parse_dss("../test/data/opendss/loadparser_warn_model.dss")
-           dss["load"] = Dict{String,Any}((n,l) for (n,l) in dss["load"] if n=="d1phm$model")
-           Memento.setlevel!(TESTLOG, "info")
-           @test_warn(TESTLOG, ": dss load model $model not supported. Treating as constant POWER model", parse_opendss(dss))
-           Memento.setlevel!(TESTLOG, "error")
-        end
+        @test_logs (:warn, "d1phm3: dss load model 3 not supported. Treating as constant POWER model") (:warn, "d1phm6: dss load model 6 identical to model 1 in current feature set. Treating as constant POWER model") (:warn, "d1phm7: dss load model 7 not supported. Treating as constant POWER model") (:warn,"d1phm8: dss load model 8 not supported. Treating as constant POWER model") (:warn, "d1phm4: dss load model 4 not supported. Treating as constant POWER model") match_mode=:any parse_file("../test/data/opendss/loadparser_warn_model.dss")
     end
 
     @testset "opendss parse spectrum objects" begin
@@ -66,36 +51,8 @@
     end
 
     @testset "opendss parse generic warnings and errors" begin
-        Memento.setlevel!(TESTLOG, "info")
-
-        @test_throws(TESTLOG, ErrorException,
-                   parse_file("../test/data/opendss/test_simple2.dss"; data_model=MATHEMATICAL))
-
-        @test_warn(TESTLOG, "Command \"solve\" on line 70 in \"test2_master.dss\" is not supported, skipping.",
-                   parse_file("../test/data/opendss/test2_master.dss"))
-
-        @test_warn(TESTLOG, "Command \"show\" on line 72 in \"test2_master.dss\" is not supported, skipping.",
-                   parse_file("../test/data/opendss/test2_master.dss"))
-
-        @test_warn(TESTLOG, "reactors as constant impedance elements is not yet supported, treating reactor.reactor1 like line",
-                   parse_file("../test/data/opendss/test2_master.dss"))
-
-        @test_warn(TESTLOG, "line.l1: like=something cannot be found",
-                   parse_file("../test/data/opendss/test2_master.dss"))
-
-        @test_warn(TESTLOG, "Rg,Xg are not fully supported",
-                   parse_file("../test/data/opendss/test2_master.dss"))
-
-        Memento.TestUtils.@test_log(TESTLOG, "info", "Circuit has been reset with the \"clear\" on line 2 in \"test2_master.dss\"",
-                               parse_file("../test/data/opendss/test2_master.dss"))
-
-        Memento.TestUtils.@test_log(TESTLOG, "info", "Redirecting to \"test2_Linecodes.dss\" on line 10 in \"test2_master.dss\"",
-                               parse_file("../test/data/opendss/test2_master.dss"))
-
-        Memento.TestUtils.@test_log(TESTLOG, "info", "Redirecting to \"test2_Loadshape.dss\" on line 11 in \"test2_master.dss\"",
-                               parse_file("../test/data/opendss/test2_master.dss"))
-
-        Memento.setlevel!(TESTLOG, "error")
+        @test_throws ErrorException parse_file("../test/data/opendss/test_simple2.dss"; data_model=MATHEMATICAL)
+        @test_logs (:info, "Command 'solve' on line 70 in 'test2_master.dss' is not supported, skipping.") (:info, "Command 'show' on line 72 in 'test2_master.dss' is not supported, skipping.") (:warn, "reactors as constant impedance elements is not yet supported, treating reactor.reactor1 like line") (:warn, "line.l1: like=something cannot be found") (:warn, "Rg,Xg are not fully supported") (:info, "Circuit has been reset with the 'clear' on line 2 in 'test2_master.dss'") (:info, "Redirecting to 'test2_Linecodes.dss' on line 10 in 'test2_master.dss'") (:info, "Redirecting to 'test2_Loadshape.dss' on line 11 in 'test2_master.dss'") match_mode=:any parse_file("../test/data/opendss/test2_master.dss")
     end
 
     dss = parse_dss("../test/data/opendss/test2_master.dss")
@@ -132,10 +89,10 @@
 
         @test math["name"] == "test2"
 
-        @test length(math) == 21
+        @test length(math) == 17
         @test length(dss) == 21
 
-        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "dcline", "transformer", "storage", "switch"], [34, 4, 5, 28, 5, 0, 10, 1, 1])
+        for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "transformer", "storage", "switch"], [34, 4, 5, 28, 5, 10, 1, 1])
             @test haskey(math, key)
             @test length(math[key]) == len
         end

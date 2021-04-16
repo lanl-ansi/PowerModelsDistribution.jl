@@ -1,5 +1,29 @@
 # PowerModelsDistribution.jl Change Log
 
+## staged
+
+- none
+
+## v0.11.0
+
+- Removed PowerModels.jl as a dependency, porting over any remaining dependencies (breaking) [see PR #336 for complete list of functions]
+- Rename the formulation type heiracrhy to include Unbalanced, or U in the names (breaking) [see PR #336 for complete list]
+- Removed Memento.jl as a dependency, and added LoggingExtras, to assist in creating easy log filters for PMD via the Julia stdlib
+  - Added `silence!`, `set_logging_level!`, `reset_logging_level!`, and `restore_global_logger!` helper functions
+- Upgraded to InfrastructureModels v0.6 to support multi-infrastructure models (breaking)
+- Refactor multinetwork functionality, and added helper functions for better multinetwork data handling (breaking)
+  - Renames `build_multinetwork` kwarg to `multinetwork`
+  - Exports `make_multinetwork` function to users
+  - Adds `set_time_elapsed!`, `sort_multinetwork!` helper functions
+  - Updates `_pmd_eng_global_keys` and `_pmd_math_global_keys`
+- Refactor `ENGINEERING` data model to allow only dict types `Dict{String,<:Any}` (breaking)
+- Refactor conductor ids types to allow only Int (breaking)
+- Refactor JSON serialization to eliminate special serializers and create special data correction function for importing (breaking)
+- Convert IJulia notebooks in examples to Pluto.jl notebooks for better interactivity
+- Add `apply_voltage_angle_difference_bounds!` transformation function
+- Remove references to `dcline`
+- Fix `source_id` in `MATHEMATICAL` model to originate from `ENGINEERING` model, rather that be passed from dss
+
 ## v0.10.5
 
 - Add wdgcurrents, core, rdcohms support on dss transformers
@@ -281,7 +305,7 @@
 
 ## v0.1.2
 
-- Add support for network flow approximation formulation, NFAPowerModel
+- Add support for network flow approximation formulation, NFAUPowerModel
 - Updates to problem specifications
 - Update tests for SCS v0.4
 - Minor improvements to OpenDSS parser

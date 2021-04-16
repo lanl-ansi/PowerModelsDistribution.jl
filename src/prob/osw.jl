@@ -11,7 +11,7 @@ end
 
 
 "Constructor for Optimal Switching"
-function _build_mc_osw(pm::_PM.AbstractPowerModel)
+function _build_mc_osw(pm::AbstractUnbalancedPowerModel)
     variable_mc_bus_voltage(pm)
     variable_mc_branch_power(pm)
     variable_mc_transformer_power(pm)
@@ -44,8 +44,8 @@ function _build_mc_osw(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :storage)
-        _PM.constraint_storage_state(pm, i)
-        _PM.constraint_storage_complementarity_nl(pm, i)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end
@@ -110,8 +110,8 @@ function _build_mc_osw(pm::AbstractUBFModels)
     end
 
     for i in ids(pm, :storage)
-        _PM.constraint_storage_state(pm, i)
-        _PM.constraint_storage_complementarity_nl(pm, i)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end
@@ -141,7 +141,7 @@ end
 
 
 "constructor for OSW in current-voltage variable space"
-function _build_mc_osw(pm::_PM.AbstractIVRModel)
+function _build_mc_osw(pm::AbstractUnbalancedIVRModel)
     # Variables
     variable_mc_bus_voltage(pm)
     variable_mc_branch_current(pm)
@@ -197,7 +197,7 @@ end
 
 
 "Constructor for Optimal Switching"
-function _build_mc_osw_mi(pm::_PM.AbstractPowerModel)
+function _build_mc_osw_mi(pm::AbstractUnbalancedPowerModel)
     variable_mc_bus_voltage(pm)
     variable_mc_branch_power(pm)
     variable_mc_transformer_power(pm)
@@ -230,8 +230,8 @@ function _build_mc_osw_mi(pm::_PM.AbstractPowerModel)
     end
 
     for i in ids(pm, :storage)
-        _PM.constraint_storage_state(pm, i)
-        _PM.constraint_storage_complementarity_mi(pm, i)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_mi(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end
@@ -296,8 +296,8 @@ function _build_mc_osw_mi(pm::AbstractUBFModels)
     end
 
     for i in ids(pm, :storage)
-        _PM.constraint_storage_state(pm, i)
-        _PM.constraint_storage_complementarity_mi(pm, i)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_mi(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
     end
