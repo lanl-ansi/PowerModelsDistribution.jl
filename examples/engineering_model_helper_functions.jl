@@ -4,6 +4,24 @@
 using Markdown
 using InteractiveUtils
 
+# ╔═╡ 60e1113b-c662-46ee-b2ce-52114cda4b81
+begin
+	import Pkg
+	Pkg.activate(mktempdir())
+	Pkg.Registry.update()
+	Pkg.add([
+			Pkg.PackageSpec(;name="Revise"),
+			Pkg.PackageSpec(;name="CodeTracking"),
+			Pkg.PackageSpec(;name="PlutoUI"),
+			Pkg.PackageSpec(;name="PowerModelsDistribution", version="0.11"),
+			Pkg.PackageSpec(;name="PowerModelsAnalytics", version="0.4.1"),
+			Pkg.PackageSpec(;name="InfrastructureModels", version="0.6"),
+			Pkg.PackageSpec(;name="JuMP", version="0.21.7"),
+			Pkg.PackageSpec(;name="Ipopt", version="0.6.5"),
+			Pkg.PackageSpec(;name="JSON", version="0.21"),
+			])
+end
+
 # ╔═╡ 30417ccf-d0b4-43d5-9ceb-5b00ef9c8a17
 begin
 	using PowerModelsDistribution
@@ -16,6 +34,11 @@ md"""
 # Building Engineering Data Models with Helper Functions
 
 In this notebook we will demonstrate an easy way to start building new distribution network models in the engineering format using new helper functions added in PowerModelsDistribution v0.9
+
+## Julia Environment Setup
+
+The following code block will setup a Julia environment for you with the correct versions of packages for this Pluto notebook.
+
 """
 
 # ╔═╡ f2654d95-0c8b-4524-ad1f-f0f12a35c570
@@ -105,8 +128,9 @@ result2 = solve_mc_opf(eng2, ACPUPowerModel, ipopt_solver)
 
 # ╔═╡ Cell order:
 # ╟─ff4b2ffa-9d25-11eb-07d0-29751e7b57c2
+# ╠═60e1113b-c662-46ee-b2ce-52114cda4b81
 # ╠═30417ccf-d0b4-43d5-9ceb-5b00ef9c8a17
-# ╠═f2654d95-0c8b-4524-ad1f-f0f12a35c570
+# ╟─f2654d95-0c8b-4524-ad1f-f0f12a35c570
 # ╠═1885ce0e-fe1a-4b9b-b652-72cbee21339d
 # ╟─7683dabc-772f-4fdf-a784-549c05084958
 # ╠═20d3d95d-7817-45de-89e9-ffce0202d8cf

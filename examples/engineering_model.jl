@@ -4,12 +4,28 @@
 using Markdown
 using InteractiveUtils
 
+# ╔═╡ 2661286b-2d18-42e3-b309-7974fc2db425
+begin
+	import Pkg
+	Pkg.activate(mktempdir())
+	Pkg.Registry.update()
+	Pkg.add([
+			Pkg.PackageSpec(;name="Revise"),
+			Pkg.PackageSpec(;name="CodeTracking"),
+			Pkg.PackageSpec(;name="PlutoUI"),
+			Pkg.PackageSpec(;name="PowerModelsDistribution", version="0.11"),
+			Pkg.PackageSpec(;name="PowerModelsAnalytics", version="0.4.1"),
+			Pkg.PackageSpec(;name="InfrastructureModels", version="0.6"),
+			Pkg.PackageSpec(;name="JuMP", version="0.21.7"),
+			Pkg.PackageSpec(;name="Ipopt", version="0.6.5"),
+			Pkg.PackageSpec(;name="JSON", version="0.21"),
+			])
+end
+
 # ╔═╡ f30cd0d0-b0da-4f63-a245-568a763a93d8
 begin
 	using PowerModelsDistribution
 	using Ipopt
-	
-	pmd_path = joinpath(dirname(pathof(PowerModelsDistribution)), "..")
 end
 
 # ╔═╡ c55b2c42-9d27-11eb-24ca-e90a5472ffbb
@@ -18,10 +34,20 @@ md"""
 
 In this notebook we introduce the engineering data model added to PowerModelsDistribution in version v0.9.0. We will give several examples of how to use this new data model directly, including new transformations that have become easier with its introduction, how to convert it to the the lower-level mathematical model that was previously the only user interface we offered, and how to get various types of results using this new model.
 
+## Julia Environment Setup
+
+The following code block will setup a Julia environment for you with the correct versions of packages for this Pluto notebook.
+"""
+
+# ╔═╡ de92bc20-b125-4f3d-930a-b1da63d5cef5
+md"""
 ## Imports
 
 All commands in this document with no package namespace specified are directly exported by PowerModelsDistribution or already available in Julia base. Any commands that are only avaiable via an external package will be specified by including by using `import`, which will require specifying the originating package before the command, _e.g._ `Ipopt.Optimizer` as you will see below.
 """
+
+# ╔═╡ ac94e556-b544-4ca6-87bd-ff2d7a7414e7
+pmd_path = joinpath(dirname(pathof(PowerModelsDistribution)), "..")
 
 # ╔═╡ 1e791262-261d-4756-bec4-edebe4732700
 md"In these examples we will use the following optimization solvers, specified using `optimizer_with_attributes` from JuMP v0.21"
@@ -420,7 +446,10 @@ This concludes the introduction to the `ENGINEERING` data model and conversion t
 
 # ╔═╡ Cell order:
 # ╟─c55b2c42-9d27-11eb-24ca-e90a5472ffbb
+# ╠═2661286b-2d18-42e3-b309-7974fc2db425
+# ╟─de92bc20-b125-4f3d-930a-b1da63d5cef5
 # ╠═f30cd0d0-b0da-4f63-a245-568a763a93d8
+# ╠═ac94e556-b544-4ca6-87bd-ff2d7a7414e7
 # ╟─1e791262-261d-4756-bec4-edebe4732700
 # ╠═89de80df-1dd0-4f94-a27d-74693a978059
 # ╟─e22a7d3e-3f21-41b0-abf2-2c723e87c57e

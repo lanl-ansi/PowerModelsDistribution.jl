@@ -13,6 +13,24 @@ macro bind(def, element)
     end
 end
 
+# ╔═╡ 9e6f21ee-5caf-4bcc-aca5-4d9b55a4acc9
+begin
+	import Pkg
+	Pkg.activate(mktempdir())
+	Pkg.Registry.update()
+	Pkg.add([
+			Pkg.PackageSpec(;name="Revise"),
+			Pkg.PackageSpec(;name="CodeTracking"),
+			Pkg.PackageSpec(;name="PlutoUI"),
+			Pkg.PackageSpec(;name="PowerModelsDistribution", version="0.11"),
+			Pkg.PackageSpec(;name="PowerModelsAnalytics", version="0.4.1"),
+			Pkg.PackageSpec(;name="InfrastructureModels", version="0.6"),
+			Pkg.PackageSpec(;name="JuMP", version="0.21.7"),
+			Pkg.PackageSpec(;name="Ipopt", version="0.6.5"),
+			Pkg.PackageSpec(;name="JSON", version="0.21"),
+			])
+end
+
 # ╔═╡ 9787aa73-8ffc-4634-bf0f-b70eee0bf377
 using CodeTracking, Revise, PlutoUI
 
@@ -57,6 +75,10 @@ This notebook is a begginer's introduction to PowerModelsDistribution, an optimi
 - [WaterModels.jl](https://github.com/lanl-ansi/WaterModels.jl) : Water network steady-state optimization
 
 Details about PowerModelsDistribution.jl can be found in our [PSCC Conference Proceedings paper](https://doi.org/10.1016/j.epsr.2020.106664).
+
+## Julia Environment Setup
+
+The following code block will setup a Julia environment for you with the correct versions of packages for this Pluto notebook
 """
 
 # ╔═╡ 62c14531-357a-4669-90cd-2a186df123eb
@@ -98,7 +120,7 @@ begin
 
 PMD supports two input formats, __OpenDSS__ and __JSON__. We strongly recommend OpenDSS for new users, as JSON is intended primarily for data models and results portability between colleagues working on the same problem, and OpenDSS is appropriate for specifying new networks.
 
-Below is an example of an OpenDSS specification for a 3-phase, 3-bus balanced feeder:
+Below is an example of an OpenDSS specification for feeder $(case_file):
 
 ```dss
 $(dss)
@@ -1062,6 +1084,7 @@ We always welcome [Pull Requests](https://github.com/lanl-ansi/PowerModelsDistri
 # ╔═╡ Cell order:
 # ╟─c9a5c344-961b-11eb-0458-a746afcb280c
 # ╟─b5928052-9616-11eb-14b3-79770b9929df
+# ╠═9e6f21ee-5caf-4bcc-aca5-4d9b55a4acc9
 # ╟─62c14531-357a-4669-90cd-2a186df123eb
 # ╠═9787aa73-8ffc-4634-bf0f-b70eee0bf377
 # ╟─b953c65d-515f-4334-a4d4-b27af1b0e29a
