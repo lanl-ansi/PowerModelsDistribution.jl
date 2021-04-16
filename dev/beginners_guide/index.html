@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Beginners Guide · PowerModelsDistribution</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../"><img src="../assets/logo.svg" alt="PowerModelsDistribution logo"/></a><div class="docs-package-name"><span class="docs-autofit">PowerModelsDistribution</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../quickguide/">Getting Started</a></li><li><a class="tocitem" href="../connections/">Connecting Components</a></li><li><a class="tocitem" href="../math-model/">Mathematical Model</a></li><li><a class="tocitem" href="../eng-data-model/">Engineering Data Model</a></li><li><a class="tocitem" href="../enums/">Enums in Engineering Model</a></li><li><a class="tocitem" href="../eng2math/">Conversion to Mathematical Model</a></li><li><a class="tocitem" href="../external-data-formats/">External Data Formats</a></li><li><input class="collapse-toggle" id="menuitem-2-8" type="checkbox" checked/><label class="tocitem" for="menuitem-2-8"><span class="docs-label">Examples</span><i class="docs-chevron"></i></label><ul class="collapsed"><li class="is-active"><a class="tocitem" href>Beginners Guide</a></li><li><a class="tocitem" href="../engineering_model/">Engineering Model</a></li><li><a class="tocitem" href="../engineering_model_helper_functions/">Engineering Model Helper Functions</a></li></ul></li></ul></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../formulations/">Network Formulations</a></li><li><a class="tocitem" href="../specifications/">Problem Specifications</a></li><li><a class="tocitem" href="../library/">Modeling Components</a></li></ul></li><li><span class="tocitem">Basics</span><ul><li><a class="tocitem" href="../load-model/">Load Models</a></li></ul></li><li><span class="tocitem">Developer</span><ul><li><a class="tocitem" href="../developer/">Developer</a></li><li><a class="tocitem" href="../formulation-details/">Formulation Details</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Manual</a></li><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Beginners Guide</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Beginners Guide</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/lanl-ansi/PowerModelsDistribution.jl/blob/master/examples/beginners_guide.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><pre><code class="language-julia">### A Pluto.jl notebook ###</code></pre><p>v0.14.2</p><pre><code class="language-julia">using Markdown
+using InteractiveUtils</code></pre><p>This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following &#39;mock version&#39; of @bind gives bound variables a default value (instead of an error).</p><pre><code class="language-julia">macro bind(def, element)
+    quote
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
+        el
+    end
+end</code></pre><pre class="documenter-example-output">@bind (macro with 1 method)</pre><p>╔═╡ 9787aa73-8ffc-4634-bf0f-b70eee0bf377</p><pre><code class="language-">using CodeTracking, Revise, PlutoUI</code></pre><p>╔═╡ a1989876-9301-11eb-0783-83b3aa7abfbc</p><pre><code class="language-">begin
+	using PowerModelsDistribution
+	using PowerModelsAnalytics
+	import InfrastructureModels as IM
+	import JuMP
+	import Ipopt
+	import JSON
+end</code></pre><p>╔═╡ c9a5c344-961b-11eb-0458-a746afcb280c</p><pre><code class="language-julia">html&quot;&quot;&quot;
+
+&lt;style&gt;
+main {
+	max-width: 1000px;
+}
+body {
+	overflow-x: hidden;
+}
+&lt;/style&gt;
+&quot;&quot;&quot;</code></pre>
+<style>
+main {
+	max-width: 1000px;
+}
+body {
+	overflow-x: hidden;
+}
+</style>
+<p>╔═╡ b5928052-9616-11eb-14b3-79770b9929df</p><pre><code class="language-">md&quot;&quot;&quot;</code></pre><p>Introduction to PowerModelsDistribution</p><pre><code class="language-julia">This Notebook was designed for the following versions:
+
+- `julia = &quot;~1.6&quot;`
+- `PowerModelsDistribution = &quot;~0.11&quot;`
+- `PowerModelsAnalytics = &quot;~0.4.1&quot;`
+
+This notebook is a begginer&#39;s introduction to PowerModelsDistribution, an optimization-focused Julia library for quasi-steady state power distribution modeling, based on JuMP.jl, and part of the larger [InfrastructureModels.jl](https://github.com/lanl-ansi/InfrastructureModels.jl) ecosystem, which notably includes:
+
+- [PowerModels.jl](https://github.com/lanl-ansi/PowerModels.jl) : Transmission (single-phase positive sequence power networks) optimization
+- [GasModels.jl](https://github.com/lanl-ansi/GasModels.jl) : Natural Gas pipeline optimization (includes Steady-state and Transient optimization)
+- [WaterModels.jl](https://github.com/lanl-ansi/WaterModels.jl) : Water network steady-state optimization
+
+Details about PowerModelsDistribution.jl can be found in our [PSCC Conference Proceedings paper](https://doi.org/10.1016/j.epsr.2020.106664).
+&quot;&quot;&quot;</code></pre><p>╔═╡ 62c14531-357a-4669-90cd-2a186df123eb</p><pre><code class="language-julia">md&quot;The following packages are used for notebook features only and do not relate to tutorial content&quot;</code></pre><div class="markdown"><p>The following packages are used for notebook features only and do not relate to tutorial content</p>
+</div><p>╔═╡ b953c65d-515f-4334-a4d4-b27af1b0e29a</p><pre><code class="language-julia">md&quot;&quot;&quot;
+This notebook will make use of the following packages in various places
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>This notebook will make use of the following packages in various places</p>
+</div><p>╔═╡ 749d062d-72a1-4160-afcf-1cdc27d85c84</p><pre><code class="language-julia">md&quot;&quot;&quot;
+# Case Section
+
+This notebook can apply to different data sets, select a case for examples below from the cases included in the PMD unit testing suite:
+&quot;&quot;&quot;</code></pre><div class="markdown"><h1>Case Section</h1>
+<p>This notebook can apply to different data sets, select a case for examples below from the cases included in the PMD unit testing suite:</p>
+</div><p>╔═╡ 7e032130-c565-42d1-93ed-87955e1f2334</p><pre><code class="language-">begin
+	pmd_path = joinpath(dirname(pathof(PowerModelsDistribution)), &quot;..&quot;)
+	@bind case_file Select([
+			joinpath(pmd_path, &quot;test/data/opendss/case3_balanced.dss&quot;) =&gt; &quot;case3_balanced&quot;,
+			joinpath(pmd_path, &quot;test/data/opendss/case3_unbalanced.dss&quot;) =&gt; &quot;case3_unbalanced&quot;,
+			joinpath(pmd_path, &quot;test/data/opendss/case3_balanced_battery.dss&quot;) =&gt; &quot;case3_balanced_battery&quot;,
+			joinpath(pmd_path, &quot;test/data/opendss/case5_phase_drop.dss&quot;) =&gt; &quot;case5_phase_drop&quot;,
+			joinpath(pmd_path, &quot;test/data/opendss/ut_trans_2w_yy_oltc.dss&quot;) =&gt; &quot;ut_trans_2w_yy_oltc&quot;,
+			joinpath(pmd_path, &quot;test/data/opendss/case3_balanced_battery.dss&quot;) =&gt; &quot;case3_balanced_battery&quot;,
+		])
+end</code></pre><p>╔═╡ 67029534-961a-11eb-2b06-210f67607d20</p><pre><code class="language-">begin
+	dss = open(case_file, &quot;r&quot;) do f
+		join(readlines(f),&quot;\n&quot;)
+	end
+
+	importing_data_md = &quot;&quot;&quot;</code></pre><p>Importing Data</p><pre><code class="language-julia">PMD supports two input formats, __OpenDSS__ and __JSON__. We strongly recommend OpenDSS for new users, as JSON is intended primarily for data models and results portability between colleagues working on the same problem, and OpenDSS is appropriate for specifying new networks.
+
+Below is an example of an OpenDSS specification for a 3-phase, 3-bus balanced feeder:</code></pre><p>dss dss</p><pre><code class="language-none">
+Data is imported via the `parse_file` command, which we will use further down in the tutorial.
+&quot;&quot;&quot;
+
+	importing_data_md |&gt; Markdown.parse
+end</code></pre><p>╔═╡ 0b9598a8-9618-11eb-1947-4f98dac7129f</p><pre><code class="language-">md&quot;&quot;&quot;</code></pre><p>Data Models</p><pre><code class="language-julia">In PMD, there are two data models, an `ENGINEERING` data model, which is meant to be user facing, and to better reflect the engineering realities of the system, and a `MATHEMATICAL` data model, which reflect the mathematical representation of the system.
+
+Data models are identified by a key in the data dictionary, `&quot;data_model&quot;`, whose values are `ENUM`s:
+
+- $(ENGINEERING)
+- $(MATHEMATICAL)
+
+# ENGINEERING data model
+
+Full specification of the `ENGINEERING` data model can be found in our [documentation](https://lanl-ansi.github.io/PowerModelsDistribution.jl/stable/eng-data-model/).
+
+The engineering data model supports several broad categories of data:
+
+- metadata
+- node objects
+- edge objects
+- data objects
+
+&quot;&quot;&quot;</code></pre><p>╔═╡ 6d94d2cd-069b-4e48-84da-ba87c554297b</p><pre><code class="language-">eng = parse_file(case_file)</code></pre><p>╔═╡ 480f6685-56a0-4fdd-a975-33cdb3459ef5</p><pre><code class="language-julia">&quot;&quot;&quot;
+### Metadata
+
+Metadata is mostly straight-forward, containing meta information about the feeder, on the parse, and what type of data model is currently being represented.
+
+For `case3_balanced_eng` the following metadata fields are available:
+
+- `name`
+- `conductor_ids`
+- `settings`
+- `files`
+- `conductors`
+- `data_model`
+&quot;&quot;&quot; |&gt; Markdown.parse</code></pre><div class="markdown"><h3>Metadata</h3>
+<p>Metadata is mostly straight-forward, containing meta information about the feeder, on the parse, and what type of data model is currently being represented.</p>
+<p>For <code>case3_balanced_eng</code> the following metadata fields are available:</p>
+<ul>
+<li><p><code>name</code></p>
+</li>
+<li><p><code>conductor_ids</code></p>
+</li>
+<li><p><code>settings</code></p>
+</li>
+<li><p><code>files</code></p>
+</li>
+<li><p><code>conductors</code></p>
+</li>
+<li><p><code>data_model</code></p>
+</li>
+</ul>
+</div><p>╔═╡ b73eedaf-5809-43b9-90e0-69350d6ee2c4</p><pre><code class="language-">Dict{String,Any}(k =&gt; eng[k] for k in [&quot;settings&quot;, &quot;conductor_ids&quot;, &quot;files&quot;, &quot;name&quot;, &quot;data_model&quot;])</code></pre><p>╔═╡ 4243344a-9cdf-46db-96ee-633b0f5e8a71</p><pre><code class="language-julia">md&quot;&quot;&quot;
+`settings` and `data_model` are the most important metadata, required for solving any type of optimization problem.
+
+`data_model` is self-explanatory, but `settings` requires some explanation. First and foremost, `settings` contains the information needed to calculate the voltage bases for all of the buses in the network. When parsing from a DSS file, these are not explicitly stated, and must be extrapolated from the voltage at the source, and the network must be walked-through, and in a case with transformers the new voltage base is adjusted on the other side of the transformer.
+
+Inside `settings`, scalars can also be set, which might be valuable if, _e.g._, the power or voltage values are being scaled into inappropriate per-unit values.
+
+Finally, `settings` also contains `base_frequency`, which by default is 60 Hz, but can be specified in OpenDSS, and is valuable to know if, for example, you are working with data from Europe, which might have a base frequency of 50 Hz.
+&quot;&quot;&quot;</code></pre><div class="markdown"><p><code>settings</code> and <code>data_model</code> are the most important metadata, required for solving any type of optimization problem.</p>
+<p><code>data_model</code> is self-explanatory, but <code>settings</code> requires some explanation. First and foremost, <code>settings</code> contains the information needed to calculate the voltage bases for all of the buses in the network. When parsing from a DSS file, these are not explicitly stated, and must be extrapolated from the voltage at the source, and the network must be walked-through, and in a case with transformers the new voltage base is adjusted on the other side of the transformer.</p>
+<p>Inside <code>settings</code>, scalars can also be set, which might be valuable if, <em>e.g.</em>, the power or voltage values are being scaled into inappropriate per-unit values.</p>
+<p>Finally, <code>settings</code> also contains <code>base_frequency</code>, which by default is 60 Hz, but can be specified in OpenDSS, and is valuable to know if, for example, you are working with data from Europe, which might have a base frequency of 50 Hz.</p>
+</div><p>╔═╡ e95a9fba-b6ad-4339-8219-de4ca04536f4</p><pre><code class="language-julia">md&quot;&quot;&quot;
+### Distribution Assets
+
+These consist of the actual physical assests in the distribution feeder, including the buses, which are the connective nodes on the network graph, lines, which are the fundamental edges, and others. In `case3_balanced_eng` there is the following asset types:
+
+- `bus`
+- `line`
+- `load`
+- `voltage_source`
+&quot;&quot;&quot;</code></pre><div class="markdown"><h3>Distribution Assets</h3>
+<p>These consist of the actual physical assests in the distribution feeder, including the buses, which are the connective nodes on the network graph, lines, which are the fundamental edges, and others. In <code>case3_balanced_eng</code> there is the following asset types:</p>
+<ul>
+<li><p><code>bus</code></p>
+</li>
+<li><p><code>line</code></p>
+</li>
+<li><p><code>load</code></p>
+</li>
+<li><p><code>voltage_source</code></p>
+</li>
+</ul>
+</div><p>╔═╡ 23a3a107-2fc4-4af1-8eb6-e6a0dc29ddbe</p><pre><code class="language-">Dict{String,Any}(k =&gt; eng[k] for k in [&quot;bus&quot;, &quot;line&quot;, &quot;load&quot;, &quot;voltage_source&quot;])</code></pre><p>╔═╡ ba7c38a6-34f5-40d3-998e-7ea520001454</p><pre><code class="language-julia">md&quot;&quot;&quot;
+Voltage sources are representations of the substation at which the feeder is connected. By default in dss, there is a default voltage source called `&quot;source&quot;`, which has some default values.
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>Voltage sources are representations of the substation at which the feeder is connected. By default in dss, there is a default voltage source called <code>&quot;source&quot;</code>, which has some default values.</p>
+</div><p>╔═╡ 47fdba38-56ae-4a68-88a0-26af4e0a907a</p><pre><code class="language-julia">md&quot;&quot;&quot;
+### Data objects
+
+Data objects are things that affect and/or modify other objects, so linecodes, transformer codes (xfmrcode), or time series data.
+
+In `eng`, only the following data object exists:
+
+- `linecode`
+&quot;&quot;&quot;</code></pre><div class="markdown"><h3>Data objects</h3>
+<p>Data objects are things that affect and/or modify other objects, so linecodes, transformer codes &#40;xfmrcode&#41;, or time series data.</p>
+<p>In <code>eng</code>, only the following data object exists:</p>
+<ul>
+<li><p><code>linecode</code></p>
+</li>
+</ul>
+</div><p>╔═╡ 4628c72d-32a2-46bb-929e-153f3851f9c0</p><pre><code class="language-">Dict{String,Any}(k =&gt; eng[k] for k in [&quot;linecode&quot;])</code></pre><p>╔═╡ ca82db50-ff48-411c-bc97-44f5f33c4ddf</p><pre><code class="language-julia">md&quot;&quot;&quot;
+### Enums
+
+In the `ENGINEERING` data model we make heavy use of a Julia data structure called an `Enum`, or an Enumerated Type. This is a type whose values are enumerated, starting with 0. This has the benefit of being much more readable by the user.
+
+If you are familiar with JuMP, you probably are already used to Enums `TerminationStatusCode` and `ResultStatusCode`, which we import explicitly from MathOptInterface and export, for easy access by the user when using `using PowerModelsDistribution`.
+
+For example, instead of a switch `state` having the possible values 0 or 1, instead we created an enumerated type `SwitchState`, with values `OPEN` (0) and `CLOSED` (1).
+
+We follow the convention that Enum values are all uppercase.
+
+Enums can be cast into their integer values easily:
+&quot;&quot;&quot;</code></pre><div class="markdown"><h3>Enums</h3>
+<p>In the <code>ENGINEERING</code> data model we make heavy use of a Julia data structure called an <code>Enum</code>, or an Enumerated Type. This is a type whose values are enumerated, starting with 0. This has the benefit of being much more readable by the user.</p>
+<p>If you are familiar with JuMP, you probably are already used to Enums <code>TerminationStatusCode</code> and <code>ResultStatusCode</code>, which we import explicitly from MathOptInterface and export, for easy access by the user when using <code>using PowerModelsDistribution</code>.</p>
+<p>For example, instead of a switch <code>state</code> having the possible values 0 or 1, instead we created an enumerated type <code>SwitchState</code>, with values <code>OPEN</code> &#40;0&#41; and <code>CLOSED</code> &#40;1&#41;.</p>
+<p>We follow the convention that Enum values are all uppercase.</p>
+<p>Enums can be cast into their integer values easily:</p>
+</div><p>╔═╡ 4f45cac5-3b27-4771-994b-3a9d81ed61c9</p><pre><code class="language-julia">Int(OPEN)</code></pre><pre class="documenter-example-output">0</pre><p>╔═╡ fb08875c-1d9e-4744-bec2-7b7cad4320f6</p><pre><code class="language-julia">md&quot;Integers can be converted back to Enums just as easily...&quot;</code></pre><div class="markdown"><p>Integers can be converted back to Enums just as easily...</p>
+</div><p>╔═╡ 5cf93941-3f88-4bd1-98c4-77b924ddb385</p><pre><code class="language-julia">SwitchState(0)</code></pre><pre class="documenter-example-output">OPEN::SwitchState = 0</pre><p>╔═╡ 8a8222c3-ef01-4d18-97ff-fa43ad89cfcc</p><pre><code class="language-julia">md&quot;The following Enum types exist in PMD&quot;</code></pre><div class="markdown"><p>The following Enum types exist in PMD</p>
+</div><p>╔═╡ 38dfd21e-f156-45be-b9b3-f6eb5008723e</p><pre><code class="language-julia">PowerModelsDistributionEnums</code></pre><pre class="documenter-example-output">Union{ConnConfig, ControlMode, DataModel, Dispatchable, LoadModel, ShuntModel, Status, SwitchState}</pre><p>╔═╡ 0f73a5be-7ee3-4936-95ed-ebb1b913cf4e</p><pre><code class="language-julia">md&quot;and the following enum values exist currently in PMD (excluding those imported from MathOptInterface):&quot;</code></pre><div class="markdown"><p>and the following enum values exist currently in PMD &#40;excluding those imported from MathOptInterface&#41;:</p>
+</div><p>╔═╡ 254a4ed3-263b-4084-b9af-c97eac2d4ab7</p><pre><code class="language-julia">[n for n in names(PowerModelsDistribution) if isa(getproperty(PowerModelsDistribution, n), Enum) &amp;&amp; !isa(getproperty(PowerModelsDistribution, n),Union{TerminationStatusCode,ResultStatusCode})]</code></pre><pre class="documenter-example-output">22-element Vector{Symbol}:
+ :CAPACITOR
+ :CLOSED
+ :CURRENT
+ :DELTA
+ :DISABLED
+ :DSS
+ :ENABLED
+ :ENGINEERING
+ :EXPONENTIAL
+ :FREQUENCYDROOP
+ ⋮
+ :MATHEMATICAL
+ :MATPOWER
+ :NO
+ :OPEN
+ :POWER
+ :REACTOR
+ :WYE
+ :YES
+ :ZIP</pre><p>╔═╡ 03e27a4b-cf53-4e92-9e88-d07015937b3e</p><pre><code class="language-julia">md&quot;&quot;&quot;
+Some common examples when you will typically see Enums include:
+
+- `status`, on all components,
+- `data_model`, at the root level,
+- `dispatchable`, on things like switches, loads, and shunts, which indicate an ability to change their &quot;state&quot;, like shedding the load, or opening or closing the switch
+- `configuration`, which indicates the connection type, `WYE` or `DELTA`
+- `model`, e.g., on loads, which can indicate the type of load, like constant `POWER`, `CURRENT`, `IMPEDANCE`, etc.
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>Some common examples when you will typically see Enums include:</p>
+<ul>
+<li><p><code>status</code>, on all components,</p>
+</li>
+<li><p><code>data_model</code>, at the root level,</p>
+</li>
+<li><p><code>dispatchable</code>, on things like switches, loads, and shunts, which indicate an ability to change their &quot;state&quot;, like shedding the load, or opening or closing the switch</p>
+</li>
+<li><p><code>configuration</code>, which indicates the connection type, <code>WYE</code> or <code>DELTA</code></p>
+</li>
+<li><p><code>model</code>, e.g., on loads, which can indicate the type of load, like constant <code>POWER</code>, <code>CURRENT</code>, <code>IMPEDANCE</code>, etc.</p>
+</li>
+</ul>
+</div><p>╔═╡ 3e74097f-55ce-4143-938d-543a59581a72</p><pre><code class="language-julia">md&quot;&quot;&quot;
+### Transformations
+
+Transformations are one of the most powerfull aspects of using the engineering model, because items are more simple and self-contained rather than decomposed, editing before transformation into a mathematical model is significantly more straightforward.
+
+The best example of this is Kron reduction, which is still done by default, where it would be too complicated at the mathematical level, requiring significant changes to the transformer models, for example.
+
+Some simple examples that we commonly use involve settings better OPF bounds:
+&quot;&quot;&quot;</code></pre><div class="markdown"><h3>Transformations</h3>
+<p>Transformations are one of the most powerfull aspects of using the engineering model, because items are more simple and self-contained rather than decomposed, editing before transformation into a mathematical model is significantly more straightforward.</p>
+<p>The best example of this is Kron reduction, which is still done by default, where it would be too complicated at the mathematical level, requiring significant changes to the transformer models, for example.</p>
+<p>Some simple examples that we commonly use involve settings better OPF bounds:</p>
+</div><p>╔═╡ 2c11f944-ff4c-478b-9b6c-fba54bfc0afd</p><pre><code class="language-">begin
+	apply_voltage_bounds!(eng; vm_lb=0.9, vm_ub=1.1)
+	apply_voltage_angle_difference_bounds!(eng, 1)
+end</code></pre><p>╔═╡ 427bebe9-5a0d-41b0-ace6-6622400e136c</p><pre><code class="language-julia">md&quot;&quot;&quot;
+Some other valuable transformations built into PMD are:
+
+- `make_lossless` (will strip loss models on engineering assets that contain them, e.g., voltage sources or switches)
+- `remove_all_bounds` (will remove all bounds, e.g., those parsed in from the raw dss file)
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>Some other valuable transformations built into PMD are:</p>
+<ul>
+<li><p><code>make_lossless</code> &#40;will strip loss models on engineering assets that contain them, e.g., voltage sources or switches&#41;</p>
+</li>
+<li><p><code>remove_all_bounds</code> &#40;will remove all bounds, e.g., those parsed in from the raw dss file&#41;</p>
+</li>
+</ul>
+</div><p>╔═╡ 284a471c-5b97-4753-b5be-8896dc096657</p><pre><code class="language-">&quot;&quot;&quot;</code></pre><p>julia #= none:1 =# @code_string remove_all_bounds!(eng)</p><pre><code class="language-none">&quot;&quot;&quot; |&gt; Markdown.parse</code></pre><p>╔═╡ 20c563f0-9304-11eb-16b4-6720b073e911</p><pre><code class="language-julia">md&quot;&quot;&quot;
+# MATHEMATICAL data model
+
+The mathematical data model is a transformation of the engineering components into ones which we can more easily represent in the optimization model.
+&quot;&quot;&quot;</code></pre><div class="markdown"><h1>MATHEMATICAL data model</h1>
+<p>The mathematical data model is a transformation of the engineering components into ones which we can more easily represent in the optimization model.</p>
+</div><p>╔═╡ e70c3f4a-9302-11eb-1176-0925031bccc0</p><pre><code class="language-">math = transform_data_model(eng)</code></pre><p>╔═╡ 9a65d284-8558-4ddf-9139-e88e3a3625d9</p><pre><code class="language-">md&quot;&quot;&quot;
+The mathematical model can also be loaded directly via `parse_file`:
+</code></pre><p>julia parse<em>file(case</em>file; data_model=MATHEMATICAL)</p><pre><code class="language-none">
+In some cases, the transformations are straight-forward, 1-to-1 type of conversions, where we convert to more optimization-friendly fields and units, like with lines -&gt; branches, or loads -&gt; loads.
+
+But, some other components&#39; transformations are less obvious, like voltage sources.
+&quot;&quot;&quot;</code></pre><p>╔═╡ 7edf07c2-208d-47d4-914e-08c09bdfd7f6</p><pre><code class="language-">@bind source_id_select Select([&quot;$type.$name&quot; for type in pmd_eng_asset_types for name in keys(get(eng, type, Dict()))])</code></pre><p>╔═╡ 36f01f08-0c19-4a28-a2eb-11a11dec9897</p><pre><code class="language-">filter(
+	x-&gt;!isempty(x.second),
+	Dict(
+		type =&gt; Dict(
+				name =&gt; obj
+				for (name,obj) in get(math, type, Dict())
+					if source_id_select == obj[&quot;source_id&quot;]
+				) for type in pmd_math_asset_types
+		)
+)</code></pre><p>╔═╡ a3e10f7e-c193-4c02-9fef-e23bde112350</p><pre><code class="language-julia">md&quot;&quot;&quot;
+Note: All objects have the field `source_id`, that is meant to indicate where a `MATHEMATICAL` object originated from with the `ENGINEERING` model.
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>Note: All objects have the field <code>source_id</code>, that is meant to indicate where a <code>MATHEMATICAL</code> object originated from with the <code>ENGINEERING</code> model.</p>
+</div><p>╔═╡ 1cf59273-3f50-41bd-b93c-c5cf5f3cd124</p><pre><code class="language-julia">md&quot;&quot;&quot;
+The reason for this is that some more complex objects can be decomposed into multiple mathematical objects. In the case of this voltage source, there is a non-zero source impedance, and rather than creating an entirely new mathematical object, we can decompose it into a generator with unlimited power bounds, and into an impedance branch, with a connecting bus.
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>The reason for this is that some more complex objects can be decomposed into multiple mathematical objects. In the case of this voltage source, there is a non-zero source impedance, and rather than creating an entirely new mathematical object, we can decompose it into a generator with unlimited power bounds, and into an impedance branch, with a connecting bus.</p>
+</div><p>╔═╡ 7e36b7b8-198c-4b9e-8b62-d1b481f09eeb</p><pre><code class="language-julia">&quot;&quot;&quot;
+### Componnent ID Format
+
+In the engineering model, all component ids can be arbitrary strings, making it easier to navigate a feeder, but in the mathematical model we use only integers (Strings for dict keys, to maintain JSON compatibility, and Ints for ids within the data properties). For example:
+&quot;&quot;&quot; |&gt; Markdown.parse</code></pre><div class="markdown"><h3>Componnent ID Format</h3>
+<p>In the engineering model, all component ids can be arbitrary strings, making it easier to navigate a feeder, but in the mathematical model we use only integers &#40;Strings for dict keys, to maintain JSON compatibility, and Ints for ids within the data properties&#41;. For example:</p>
+</div><p>╔═╡ b717dab6-30fd-4e4b-b6f8-29ffcff80131</p><pre><code class="language-">bus_keys = keys(math[&quot;bus&quot;])</code></pre><p>╔═╡ def53588-f511-4dda-8aa9-941d1aa994f7</p><pre><code class="language-">bus_ids = [bus[&quot;bus_i&quot;] for (i, bus) in math[&quot;bus&quot;]]</code></pre><p>╔═╡ f1866650-ca90-4f4b-81ef-1cc3202dc240</p><pre><code class="language-julia">md&quot;&quot;&quot;
+
+### Additional Metadata
+
+- `map`
+- `bus_lookup`
+- `basekv`
+- `baseMVA`
+- `is_projected`
+- `per_unit`
+- `is_kron_reduced`
+
+Two particular items classified as metadata that are key for understanding how the data model maps between the engineering and mathematical models are `bus_lookup`, which maps bus names into their new integer ids, and `map`, which is an ordered list of actions that were taken to map engineering to mathematical model, so that we can map the solutions back up to the correct components in the engineering model.
+
+&quot;&quot;&quot;</code></pre><div class="markdown"><h3>Additional Metadata</h3>
+<ul>
+<li><p><code>map</code></p>
+</li>
+<li><p><code>bus_lookup</code></p>
+</li>
+<li><p><code>basekv</code></p>
+</li>
+<li><p><code>baseMVA</code></p>
+</li>
+<li><p><code>is_projected</code></p>
+</li>
+<li><p><code>per_unit</code></p>
+</li>
+<li><p><code>is_kron_reduced</code></p>
+</li>
+</ul>
+<p>Two particular items classified as metadata that are key for understanding how the data model maps between the engineering and mathematical models are <code>bus_lookup</code>, which maps bus names into their new integer ids, and <code>map</code>, which is an ordered list of actions that were taken to map engineering to mathematical model, so that we can map the solutions back up to the correct components in the engineering model.</p>
+</div><p>╔═╡ 27ec55f0-77c2-4cec-b505-976fd86f1004</p><pre><code class="language-">math[&quot;bus_lookup&quot;]</code></pre><p>╔═╡ 0ef86c0a-6d65-44a3-9804-676d4cc904c3</p><pre><code class="language-">math[&quot;map&quot;]</code></pre><p>╔═╡ e45adf3e-5b84-4d14-9840-40ba2fbc1573</p><pre><code class="language-julia">&quot;&quot;&quot;
+### Asset Types
+
+For mathematical models we initially adopted the PowerModels data model, which was originally designed based on the Matpower package. We try to largely maintain this parity with PowerModels even though it is no longer a dependency, which is why there there remains some inconsistency in property names compared to the engineering model. The current components in the math model are:
+
+- `bus`
+- `load`
+- `shunt`
+- `gen`
+- `branch`
+- `transformer`
+- `switch`
+- `storage`
+
+The one notable divergence is the existance of `transformer`s. In distribution models, phase unbalanced transformers are much more complex than the typical two-winding Pi-branch model commonly utilized in transmission grids.
+
+In the PMD math model, transformers are two-winding lossless transformers that can be either wye-wye or wye-delta connected.
+&quot;&quot;&quot; |&gt; Markdown.parse</code></pre><div class="markdown"><h3>Asset Types</h3>
+<p>For mathematical models we initially adopted the PowerModels data model, which was originally designed based on the Matpower package. We try to largely maintain this parity with PowerModels even though it is no longer a dependency, which is why there there remains some inconsistency in property names compared to the engineering model. The current components in the math model are:</p>
+<ul>
+<li><p><code>bus</code></p>
+</li>
+<li><p><code>load</code></p>
+</li>
+<li><p><code>shunt</code></p>
+</li>
+<li><p><code>gen</code></p>
+</li>
+<li><p><code>branch</code></p>
+</li>
+<li><p><code>transformer</code></p>
+</li>
+<li><p><code>switch</code></p>
+</li>
+<li><p><code>storage</code></p>
+</li>
+</ul>
+<p>The one notable divergence is the existance of <code>transformer</code>s. In distribution models, phase unbalanced transformers are much more complex than the typical two-winding Pi-branch model commonly utilized in transmission grids.</p>
+<p>In the PMD math model, transformers are two-winding lossless transformers that can be either wye-wye or wye-delta connected.</p>
+</div><p>╔═╡ 905bfb0a-2fb5-4b0c-bc62-49bd2888ad30</p><pre><code class="language-">md&quot;&quot;&quot;</code></pre><p>Optimization in PMD</p><pre><code class="language-julia">Solving optimization problems in PowerModelsDistribution will feel very familiar to those who use PowerModels.jl for transmission grids (positive sequence representable networks).
+
+Full optimization problems consist of a data model, a mathematical formulation, and a problem specification in which the variables, constraints and objectives are defined.
+
+Additional details can be found in our documentation about the [mathematical problem specifications](https://lanl-ansi.github.io/PowerModelsDistribution.jl/stable/math-model/) and [formulations](https://lanl-ansi.github.io/PowerModelsDistribution.jl/stable/formulation-details/).
+&quot;&quot;&quot;</code></pre><p>╔═╡ 3d468a08-c62c-42cb-a096-8ba382bb91e5</p><pre><code class="language-julia">md&quot;&quot;&quot;
+# Formulations
+
+Formulations in PMD are represented by Julia Types, and have a clearly defined hierarchy, starting with our base abstact unbalanced (i.e., multiconductor) PowerModel: `AbstractUnbalancedPowerModel`.
+
+Some useful abbreviations / acronyms in PowerModel and function names:
+
+- `MC`/`_mc_` : multi-conductor, to differentiate from PowerModels.jl name, indicating applies to multiconductor / phase unbalanced / distribution problems.
+- `U` : unbalanced
+- `BF` : branch flow
+- `ACP` : AC polar
+- `ACR` : AC rectangular
+- `IVR` : IV reectangular
+- `LP` : linear program
+- `SDP` : semi-definite program
+- `SOC` : second-order cone
+- `KCL` : Kirchoff&#39;s Current Law
+- `MX` : matrix
+
+### Non-convex Formulations
+
+- `ACPUPowerModel` : Complex Power-Voltage space polar multiconductor form (bus injection model)
+- `ACRUPowerModel` : Complex Power-Voltage space rectangular multiconductor form (bus injection model)
+- `IVRUPowerModel` : Complex Current-Voltage space rectangular multiconductor form (bus injection model)
+
+### Linear/Quadratic Formulations
+
+- `LPUBFDiagPowerModel` / `LinDist3Flow` : Diagonal matrix formulation of DistFlow equations (unbalanced branch flow model)
+- `NFAUPowerModel &lt;: AbstractUnbalancedActivePowerModel` : Linear, Active-power-only multiconductor form (bus injection model)
+- `DCPUPowerModel` : DC polar multiconductor form (bus injection model)
+
+### Semi-definite formulations
+
+- `SDPUBFMCPowerModel` : SDP multiconductor form (unbalanced branch flow model)
+- `SDPUBFKCLMXMCPowerModel` : SDP with Matrix KCL constraint multiconductor form (unbalanced branch flow model)
+
+### Second-Order Cone formulations
+
+- `SOCUBFNLPMCPowerModel` : SOC-representable with non-linear ... multiconductor form (unbalanced branch flow model)
+- `SOCUBFConicMCPowerModel` : SOC-representable with conic multiconductor form (unbalanced branch flow model)
+
+A more detailed description of the type heirarchies can be found in our [documentation](https://lanl-ansi.github.io/PowerModelsDistribution.jl/stable/formulations/).
+&quot;&quot;&quot;</code></pre><div class="markdown"><h1>Formulations</h1>
+<p>Formulations in PMD are represented by Julia Types, and have a clearly defined hierarchy, starting with our base abstact unbalanced &#40;i.e., multiconductor&#41; PowerModel: <code>AbstractUnbalancedPowerModel</code>.</p>
+<p>Some useful abbreviations / acronyms in PowerModel and function names:</p>
+<ul>
+<li><p><code>MC</code>/<code>_mc_</code> : multi-conductor, to differentiate from PowerModels.jl name, indicating applies to multiconductor / phase unbalanced / distribution problems.</p>
+</li>
+<li><p><code>U</code> : unbalanced</p>
+</li>
+<li><p><code>BF</code> : branch flow</p>
+</li>
+<li><p><code>ACP</code> : AC polar</p>
+</li>
+<li><p><code>ACR</code> : AC rectangular</p>
+</li>
+<li><p><code>IVR</code> : IV reectangular</p>
+</li>
+<li><p><code>LP</code> : linear program</p>
+</li>
+<li><p><code>SDP</code> : semi-definite program</p>
+</li>
+<li><p><code>SOC</code> : second-order cone</p>
+</li>
+<li><p><code>KCL</code> : Kirchoff&#39;s Current Law</p>
+</li>
+<li><p><code>MX</code> : matrix</p>
+</li>
+</ul>
+<h3>Non-convex Formulations</h3>
+<ul>
+<li><p><code>ACPUPowerModel</code> : Complex Power-Voltage space polar multiconductor form &#40;bus injection model&#41;</p>
+</li>
+<li><p><code>ACRUPowerModel</code> : Complex Power-Voltage space rectangular multiconductor form &#40;bus injection model&#41;</p>
+</li>
+<li><p><code>IVRUPowerModel</code> : Complex Current-Voltage space rectangular multiconductor form &#40;bus injection model&#41;</p>
+</li>
+</ul>
+<h3>Linear/Quadratic Formulations</h3>
+<ul>
+<li><p><code>LPUBFDiagPowerModel</code> / <code>LinDist3Flow</code> : Diagonal matrix formulation of DistFlow equations &#40;unbalanced branch flow model&#41;</p>
+</li>
+<li><p><code>NFAUPowerModel &lt;: AbstractUnbalancedActivePowerModel</code> : Linear, Active-power-only multiconductor form &#40;bus injection model&#41;</p>
+</li>
+<li><p><code>DCPUPowerModel</code> : DC polar multiconductor form &#40;bus injection model&#41;</p>
+</li>
+</ul>
+<h3>Semi-definite formulations</h3>
+<ul>
+<li><p><code>SDPUBFMCPowerModel</code> : SDP multiconductor form &#40;unbalanced branch flow model&#41;</p>
+</li>
+<li><p><code>SDPUBFKCLMXMCPowerModel</code> : SDP with Matrix KCL constraint multiconductor form &#40;unbalanced branch flow model&#41;</p>
+</li>
+</ul>
+<h3>Second-Order Cone formulations</h3>
+<ul>
+<li><p><code>SOCUBFNLPMCPowerModel</code> : SOC-representable with non-linear ... multiconductor form &#40;unbalanced branch flow model&#41;</p>
+</li>
+<li><p><code>SOCUBFConicMCPowerModel</code> : SOC-representable with conic multiconductor form &#40;unbalanced branch flow model&#41;</p>
+</li>
+</ul>
+<p>A more detailed description of the type heirarchies can be found in our <a href="https://lanl-ansi.github.io/PowerModelsDistribution.jl/stable/formulations/">documentation</a>.</p>
+</div><p>╔═╡ 114f8b4c-3296-428a-bf72-f5efe6b21b47</p><pre><code class="language-julia">filter(x -&gt; endswith(String(x), &quot;PowerModel&quot;), names(PowerModelsDistribution))</code></pre><pre class="documenter-example-output">13-element Vector{Symbol}:
+ :ACPUPowerModel
+ :ACRUPowerModel
+ :AbstractUnbalancedActivePowerModel
+ :AbstractUnbalancedPowerModel
+ :DCPUPowerModel
+ :IVRUPowerModel
+ :LPUBFDiagPowerModel
+ :LinDist3FlowPowerModel
+ :NFAUPowerModel
+ :SDPUBFKCLMXPowerModel
+ :SDPUBFPowerModel
+ :SOCConicUBFPowerModel
+ :SOCNLPUBFPowerModel</pre><p>╔═╡ 0d510b81-6f58-4790-be85-82c9b215322d</p><pre><code class="language-">&quot;&quot;&quot;
+# Problem Specifications
+
+Some additional helpful abbreviations for problem specifications:
+
+- `mn` - Multinetwork, i.e., time series problem
+- `uc` - unit-commitment, i.e., full load shed only, no partial shed
+
+In PMD, there are two primary problem specifications,
+
+- Optimal Power Flow (OPF) `solve_mc_opf`
+  - There is a sub-problem for OPF called On-load Tap Changing (OLTC)
+- Maximal Load Delivery (MLD) `solve_mc_mld`
+  - There is also a &quot;simple&quot; version, but it will not work in conjunction with a switching optimization (`solve_mc_mld_simple`)
+  - There is a caveat that the currently included MLD problem features continuous shedding of individual loads, which is not realistic for real-world distribution operations. While in transmission problems, one may assume some continuous shedding of loads, in real distribution grids, most loads can only be shed by using switches to isolate load blocks.
+
+Recently, with the addition of idealized switches, we have also added a test version of a switching problem (OSW), which has variables for switch states of dispatchable switches, and an additional term in the objective to discourage state changes. This spec is experimental, but ongoing research in this area are expected to yield updates in this problem area.
+
+We also have a debugging problem spec, `solve_mc_opf_pbs`, which will install slacks at every bus, which can be helpful in determining where the issue is in the network.
+
+Power flow (`solve_mc_pf`) is also included, but if should be noted that this uses the same mechanism to solve as all of our optimization problems, and is therefore not efficient or quick, like a Newton-Raphson or Backwards/Forwards method for power flow solving might be.
+
+Below is the primary example for the OPF problem:
+</code></pre><p>julia #= none:1 =# @code_string build_mc_opf(instantiate_mc_model(eng, ACPUPowerModel, build_mc_opf))</p><pre><code class="language-none">&quot;&quot;&quot; |&gt; Markdown.parse</code></pre><p>╔═╡ cf3614bc-4c35-4b4d-9ec9-f43307a04c48</p><pre><code class="language-julia">filter(x-&gt;startswith(String(x), &quot;solve_&quot;), names(PowerModelsDistribution))</code></pre><pre class="documenter-example-output">10-element Vector{Symbol}:
+ :solve_mc_mld
+ :solve_mc_mld_uc
+ :solve_mc_model
+ :solve_mc_opf
+ :solve_mc_opf_oltc
+ :solve_mc_opf_pbs
+ :solve_mc_pf
+ :solve_mc_pf_pbs
+ :solve_mn_mc_mld_simple
+ :solve_mn_mc_opf</pre><p>╔═╡ 6335835e-2b5e-45a0-a5f6-4d97328694bd</p><pre><code class="language-">md&quot;&quot;&quot;</code></pre><p>Examples</p><pre><code class="language-julia">Let&#39;s start with the AC polar formulation, and solve the OPF problem using Ipopt:
+&quot;&quot;&quot;</code></pre><p>╔═╡ bea3a93e-a827-473a-9e19-348ad85dfa25</p><pre><code class="language-">eng_result = solve_mc_opf(eng, ACPUPowerModel, Ipopt.Optimizer)</code></pre><p>╔═╡ 86d66ed7-89b1-461e-9487-0e190e6fd02e</p><pre><code class="language-julia">md&quot;&quot;&quot;
+We have designed the `solution` dictionary to be as verbose as possible, including all variables contained in the problem automatically, in the same order and format as the input data.
+
+This means that if an engineering data model is provided, the results will return in the same units and format as that model, unless otherwise instructed...
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>We have designed the <code>solution</code> dictionary to be as verbose as possible, including all variables contained in the problem automatically, in the same order and format as the input data.</p>
+<p>This means that if an engineering data model is provided, the results will return in the same units and format as that model, unless otherwise instructed...</p>
+</div><p>╔═╡ ce39193d-833b-40aa-b532-f9db22f03652</p><pre><code class="language-">eng_result_pu = solve_mc_opf(eng, ACPUPowerModel, Ipopt.Optimizer; make_si=false)</code></pre><p>╔═╡ cb632c77-5c8b-4fbb-a867-127a22ce54ad</p><pre><code class="language-">eng_result_pu[&quot;solution&quot;][&quot;bus&quot;][&quot;sourcebus&quot;]</code></pre><p>╔═╡ b3bd6e16-28dc-44b7-b8ad-1478cdfefecc</p><pre><code class="language-">eng_result[&quot;solution&quot;][&quot;bus&quot;][&quot;sourcebus&quot;]</code></pre><p>╔═╡ a0e6612f-516e-4be4-b3ae-00c612b981e2</p><pre><code class="language-julia">md&quot;&quot;&quot;
+What if `vm` and `va` are desired, but those variables are not in the model, for example, in `ACRMCPowerModel`?
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>What if <code>vm</code> and <code>va</code> are desired, but those variables are not in the model, for example, in <code>ACRMCPowerModel</code>?</p>
+</div><p>╔═╡ 77899c35-2609-4aef-bcd0-178076237d1d</p><pre><code class="language-">eng_result_acr2acp = solve_mc_opf(eng, ACRUPowerModel, Ipopt.Optimizer; solution_processors=[sol_data_model!])</code></pre><p>╔═╡ eb3d6861-0d91-4ae1-9580-7b3182cefef1</p><pre><code class="language-">eng_result_acr2acp[&quot;solution&quot;][&quot;bus&quot;][&quot;sourcebus&quot;]</code></pre><p>╔═╡ 1b6fd52f-0cdf-4f4f-aa38-31cd8aa9ca7d</p><pre><code class="language-">&quot;&quot;&quot;</code></pre><p>julia #= none:1 =# @code_string PowerModelsDistribution._sol_data_model_acr!(eng_result)</p><pre><code class="language-none">&quot;&quot;&quot; |&gt; Markdown.parse</code></pre><p>╔═╡ e39e89d8-7b3d-4c2d-bbe3-8de202e91c5f</p><pre><code class="language-julia">md&quot;&quot;&quot;
+It is also possible to optimize using the `MATHEMATICAL` data model directly, but it will output results in the same format as the model it is provided:
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>It is also possible to optimize using the <code>MATHEMATICAL</code> data model directly, but it will output results in the same format as the model it is provided:</p>
+</div><p>╔═╡ 493d1dfd-719c-4f03-b660-6b0e9e50a222</p><pre><code class="language-">math_result = solve_mc_opf(math, ACPUPowerModel, Ipopt.Optimizer)</code></pre><p>╔═╡ b6700c39-8dff-4bcb-b6fa-c67b2ddf5163</p><pre><code class="language-julia">md&quot;&quot;&quot;
+However, if your `MATHEMATICAL` data model contains the `map`, it is possible to manually convert the solution back into the `ENGINEERING` structure...
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>However, if your <code>MATHEMATICAL</code> data model contains the <code>map</code>, it is possible to manually convert the solution back into the <code>ENGINEERING</code> structure...</p>
+</div><p>╔═╡ f0cb5faf-0471-4651-9d09-61fe6e5e0fb5</p><pre><code class="language-">transform_solution(math_result[&quot;solution&quot;], math)</code></pre><p>╔═╡ 89f6282d-9898-4547-a121-028fcdf4f876</p><pre><code class="language-">&quot;&quot;&quot;</code></pre><p>PMD Internals for Specification / Formulation Builders</p><pre><code class="language-julia">A problem is formally created using `instantiate_mc_model(data, form, prob)`, and outputs a Julia Struct:</code></pre><p>julia #= none:1 =# @code_string IM.InitializeInfrastructureModel(NFAUPowerModel, eng, PowerModelsDistribution._pmd_global_keys, pmd_it_sym)</p><pre><code class="language-none">
+The following helper functions are here to help you navigate through the mathematical model.
+
+- `ref`
+- `var`
+- `con`
+- `ids`
+
+&quot;&quot;&quot; |&gt; Markdown.parse</code></pre><p>╔═╡ 7303e40a-56f8-4035-8537-e2eed7c16b8b</p><pre><code class="language-">pm = instantiate_mc_model(eng, NFAUPowerModel, build_mc_opf)</code></pre><p>╔═╡ c3dcee8a-edf1-43bb-8733-f2798b29d57a</p><pre><code class="language-julia">md&quot;As you can see, the following property names exist on the PowerModel struct:&quot;</code></pre><div class="markdown"><p>As you can see, the following property names exist on the PowerModel struct:</p>
+</div><p>╔═╡ d7522533-43b9-4b3c-a8e5-1aa4f39700bb</p><pre><code class="language-">propertynames(pm)</code></pre><p>╔═╡ f4fb1464-8d33-4265-ab40-8fb72d533466</p><pre><code class="language-julia">md&quot;Using the `ref` helper function, for example, we could get all branches in the model...&quot;</code></pre><div class="markdown"><p>Using the <code>ref</code> helper function, for example, we could get all branches in the model...</p>
+</div><p>╔═╡ 213e9ea4-c800-47bc-a020-4eacc334e4fc</p><pre><code class="language-">math_branches = ref(pm,:branch)</code></pre><p>╔═╡ e32b7e5e-1d99-482f-b406-460a18cde912</p><pre><code class="language-julia">md&quot;Or, we could get only the branch ids by using `ids`...&quot;</code></pre><div class="markdown"><p>Or, we could get only the branch ids by using <code>ids</code>...</p>
+</div><p>╔═╡ 6b7e5199-61ed-40b0-a658-1a490298dc6d</p><pre><code class="language-">branch_ids = ids(pm,:branch)</code></pre><p>╔═╡ fb48ddde-128a-4a32-ab5f-084561108539</p><pre><code class="language-">md&quot;&quot;&quot;</code></pre><p>Example: Upgrading MLD to use Load Blocks</p><pre><code class="language-julia">As mentioned in the section above on Problem Specifications, the MLD problem bundled in PMD represents all loads as individually sheddable, which is not accurate to distribution feeders, where it is unlikely that loads would be sheddable by themselves. Instead, usually loads are only sheddable as a whole block, by opening switches to isolate them.
+
+In this example I am going to get us closer to that more realistic problem by creating indicator variables for loads that apply to the whole load block, instead of variables for each load individually.
+
+To achieve this, first we must be able to calculate the possible load blocks, which we can do with `identify_load_blocks`, which will return all sets of buses that can be isolated with switches...
+&quot;&quot;&quot;</code></pre><p>╔═╡ 92fd9826-17a4-44e2-ae8b-8d96d6f21130</p><pre><code class="language-">identify_load_blocks(math)</code></pre><p>╔═╡ a7037bcd-e65d-40d4-8070-7fd73811ffad</p><pre><code class="language-julia">md&quot;&quot;&quot;
+Then we should add the loads in each block to a `ref` for easy lookup when we are building our model...
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>Then we should add the loads in each block to a <code>ref</code> for easy lookup when we are building our model...</p>
+</div><p>╔═╡ 53e1237b-c380-4506-9924-8b7298d0b38a</p><pre><code class="language-julia">&quot;&quot;
+function _ref_add_load_blocks!(ref::Dict{Symbol,&lt;:Any}, data::Dict{String,&lt;:Any})
+	ref[:load_blocks] = Dict{Int,Set}(i =&gt; block for (i,block) in enumerate(identify_load_blocks(data)))
+
+	load_block_map = Dict{Int,Int}()
+	for (l,load) in get(data, &quot;load&quot;, Dict())
+		for (b,block) in ref[:load_blocks]
+			if load[&quot;load_bus&quot;] in block
+				load_block_map[parse(Int,l)] = b
+			end
+		end
+	end
+	ref[:load_block_map] = load_block_map
+
+	load_block_switches = Dict{Int,Vector{Int}}(b =&gt; Vector{Int}([]) for (b, block) in ref[:load_blocks])
+	for (b,block) in ref[:load_blocks]
+		for (s,switch) in get(data, &quot;switch&quot;, Dict())
+			if switch[&quot;f_bus&quot;] in block || switch[&quot;t_bus&quot;] in block
+				if switch[&quot;dispatchable&quot;] == 1 &amp;&amp; switch[&quot;status&quot;] == 1
+					push!(load_block_switches[b], parse(Int,s))
+				end
+			end
+		end
+	end
+	ref[:load_block_switches] = load_block_switches
+end</code></pre><pre class="documenter-example-output">Main.ex-beginners_guide._ref_add_load_blocks!</pre><p>╔═╡ 60485fa1-7b4d-4be1-a0c4-50b45a840a66</p><pre><code class="language-julia">md&quot;&quot;&quot;
+Because of a recent upgrade to support multi-infrasture models, we now want to use `apply_pmd!` to help us apply this ref, which will help us apply things to the correct data structure and to each subnetwork, if applicable.
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>Because of a recent upgrade to support multi-infrasture models, we now want to use <code>apply_pmd&#33;</code> to help us apply this ref, which will help us apply things to the correct data structure and to each subnetwork, if applicable.</p>
+</div><p>╔═╡ 8e2620f3-894f-43ff-9704-637225a6dda3</p><pre><code class="language-julia">&quot;&quot;
+function ref_add_load_blocks!(ref::Dict{Symbol,&lt;:Any}, data::Dict{String,&lt;:Any})
+    apply_pmd!(_ref_add_load_blocks!, ref, data; apply_to_subnetworks=true)
+end</code></pre><pre class="documenter-example-output">Main.ex-beginners_guide.ref_add_load_blocks!</pre><p>╔═╡ 516bc915-946d-4216-b5d0-b0bde5db6546</p><pre><code class="language-julia">md&quot;&quot;&quot;
+We will demonstrate how to apply this `add_ref_load_blocks!` later, but in the next steps we will assume we already have these added refs avaiable to us.
+
+Next we need to add the new indicator variables. An indicator variable is a variable z ∈ [0,1] that we can use to shed the loads. This variable gets applied to the real and reactive load power values, so that the load can be dynamically shed in the algorithm.
+
+Because we need to shed whole blocks at a time, there should only be one indicator variable for each block.
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>We will demonstrate how to apply this <code>add_ref_load_blocks&#33;</code> later, but in the next steps we will assume we already have these added refs avaiable to us.</p>
+<p>Next we need to add the new indicator variables. An indicator variable is a variable z ∈ &#91;0,1&#93; that we can use to shed the loads. This variable gets applied to the real and reactive load power values, so that the load can be dynamically shed in the algorithm.</p>
+<p>Because we need to shed whole blocks at a time, there should only be one indicator variable for each block.</p>
+</div><p>╔═╡ 87bf0ddd-5678-4aea-9024-26c0a2db7521</p><pre><code class="language-">&quot;create variables for demand status by load block&quot;
+function variable_mc_load_block_indicator(pm::AbstractUnbalancedPowerModel; nw::Int=IM.nw_id_default, relax::Bool=false, report::Bool=true)
+    if relax
+        z_demand = var(pm, nw)[:z_demand_blocks] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :load_blocks)], base_name=&quot;$(nw)_z_demand&quot;,
+            lower_bound = 0,
+            upper_bound = 1,
+            start = 1.0
+        )
+    else
+        z_demand = var(pm, nw)[:z_demand_blocks] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :load_blocks)], base_name=&quot;$(nw)_z_demand&quot;,
+            binary = true,
+            start = 1
+        )
+    end
+
+    load_block_map = ref(pm, nw, :load_block_map)
+
+    var(pm, nw)[:z_demand] = Dict(l =&gt; z_demand[load_block_map[l]] for l in ids(pm, nw, :load))</code></pre><p>expressions for pd and qd</p><pre><code class="language-">    pd = var(pm, nw)[:pd] = Dict(i =&gt; var(pm, nw)[:z_demand][i].*ref(pm, nw, :load, i)[&quot;pd&quot;] for i in ids(pm, nw, :load))
+    qd = var(pm, nw)[:qd] = Dict(i =&gt; var(pm, nw)[:z_demand][i].*ref(pm, nw, :load, i)[&quot;qd&quot;] for i in ids(pm, nw, :load))
+
+    report &amp;&amp; IM.sol_component_value(pm, pmd_it_sym, nw, :load, :status, ids(pm, nw, :load), var(pm, nw)[:z_demand])
+    report &amp;&amp; IM.sol_component_value(pm, pmd_it_sym, nw, :load, :pd, ids(pm, nw, :load), pd)
+    report &amp;&amp; IM.sol_component_value(pm, pmd_it_sym, nw, :load, :qd, ids(pm, nw, :load), qd)
+end</code></pre><p>╔═╡ f9fc4c70-f091-4ecd-ac70-c1dfcd8a6f93</p><pre><code class="language-julia">md&quot;&quot;&quot;
+The last three lines are how the pd and qd variables get added to the solution.
+
+Finally, we need to update the problem to use this new variable. Lets use the &quot;simple&quot; mld problem as a starting point.
+
+First we need the problem definition (the builder).
+
+Note that in this example I am using a Unbalanced Branch Flow formulation, which obviously has some different constraints in the branch section than would be used with, e.g., the NLP formulations.
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>The last three lines are how the pd and qd variables get added to the solution.</p>
+<p>Finally, we need to update the problem to use this new variable. Lets use the &quot;simple&quot; mld problem as a starting point.</p>
+<p>First we need the problem definition &#40;the builder&#41;.</p>
+<p>Note that in this example I am using a Unbalanced Branch Flow formulation, which obviously has some different constraints in the branch section than would be used with, e.g., the NLP formulations.</p>
+</div><p>╔═╡ 33dd7091-5576-4375-b5d9-d9a738656ddb</p><pre><code class="language-julia">&quot;Multinetwork load shedding problem for Branch Flow model&quot;
+function build_mc_mld_simple_loadblock(pm::AbstractUBFModels)
+	variable_mc_bus_voltage(pm)
+
+    variable_mc_branch_power(pm)
+	variable_mc_branch_current(pm)
+    variable_mc_switch_power(pm)
+    variable_mc_transformer_power(pm)
+
+    variable_mc_generator_power(pm)
+
+    variable_mc_load_block_indicator(pm; relax=true)
+    variable_mc_shunt_indicator(pm; relax=true)
+	variable_mc_storage_power_mi(pm; relax=true)
+
+   	constraint_mc_model_current(pm)
+
+    for i in ids(pm, :ref_buses)
+        constraint_mc_theta_ref(pm, i)
+    end
+
+    for i in ids(pm, :gen)
+        constraint_mc_generator_power(pm, i)
+    end
+
+    for i in ids(pm, :bus)
+        constraint_mc_power_balance_shed(pm, i)
+    end
+
+    for i in ids(pm, :storage)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_mi(pm, i)
+        constraint_mc_storage_losses(pm, i)
+        constraint_mc_storage_thermal_limit(pm, i)
+    end
+
+    for i in ids(pm, :branch)
+        constraint_mc_power_losses(pm, i)
+        constraint_mc_model_voltage_magnitude_difference(pm, i)
+
+        constraint_mc_voltage_angle_difference(pm, i)
+
+        constraint_mc_thermal_limit_from(pm, i)
+        constraint_mc_thermal_limit_to(pm, i)
+    end
+
+    for i in ids(pm, :switch)
+        constraint_mc_switch_state(pm, i)
+        constraint_mc_switch_thermal_limit(pm, i)
+    end
+
+    for i in ids(pm, :transformer)
+        constraint_mc_transformer_power(pm, i)
+    end
+
+    objective_mc_min_load_setpoint_delta_simple(pm)
+end</code></pre><pre class="documenter-example-output">Main.ex-beginners_guide.build_mc_mld_simple_loadblock</pre><p>╔═╡ 1b18e8ce-f403-4cb6-b833-083e8b9ef5bb</p><pre><code class="language-julia">md&quot;&quot;&quot;
+Next, we need a way to call this problem to solve it:
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>Next, we need a way to call this problem to solve it:</p>
+</div><p>╔═╡ 5369925c-3e0f-43ca-a4d8-c801a90653ff</p><pre><code class="language-julia">&quot;&quot;
+function solve_mc_mld_simple_loadblock(data::Dict{String,&lt;:Any}, model_type::Type, solver; kwargs...)
+    return solve_mc_model(data, model_type, solver, build_mc_mld_simple_loadblock; ref_extensions=[ref_add_load_blocks!], kwargs...)
+end</code></pre><pre class="documenter-example-output">Main.ex-beginners_guide.solve_mc_mld_simple_loadblock</pre><p>╔═╡ 51af76d7-2c62-422d-98d1-b199aba84263</p><pre><code class="language-julia">md&quot;&quot;&quot;
+Note in particular the addition of the `ref_extensions` keyword argument, which takes a vector of function references. This is how we add our custom ref extension `ref_add_load_blocks!`
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>Note in particular the addition of the <code>ref_extensions</code> keyword argument, which takes a vector of function references. This is how we add our custom ref extension <code>ref_add_load_blocks&#33;</code></p>
+</div><p>╔═╡ 12ed532a-164c-4a92-a7d1-fc4dd53c3c57</p><pre><code class="language-">mld_result = solve_mc_mld_simple_loadblock(eng, LPUBFDiagPowerModel, Ipopt.Optimizer)</code></pre><p>╔═╡ 3207f33b-00e5-4691-a9c9-9461c974b3b0</p><pre><code class="language-julia">md&quot;&quot;&quot;
+But we can see that no loads get shed in the case, because there is no contingency applied to this feeder
+
+What if we instead apply a contingency where power delivery is disabled on one phase, what happens?
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>But we can see that no loads get shed in the case, because there is no contingency applied to this feeder</p>
+<p>What if we instead apply a contingency where power delivery is disabled on one phase, what happens?</p>
+</div><p>╔═╡ 8eb99a9b-ee92-4aad-bbfc-c9242dc916cb</p><pre><code class="language-">begin
+	eng_vs_disabled = deepcopy(eng)
+	eng_vs_disabled[&quot;voltage_source&quot;][&quot;source&quot;][&quot;pg_ub&quot;] = [Inf, Inf, 0]
+	eng_vs_disabled[&quot;voltage_source&quot;][&quot;source&quot;][&quot;qg_ub&quot;] = [Inf, Inf, 0]
+end</code></pre><p>╔═╡ f70780ef-5ad1-4f69-bb2e-41de737b1bef</p><pre><code class="language-">mld_vs_disabled_result = solve_mc_mld_simple_loadblock(eng_vs_disabled, LPUBFDiagPowerModel, Ipopt.Optimizer)</code></pre><p>╔═╡ ab146273-0cf6-4815-b996-dc2e8fc185db</p><pre><code class="language-julia">md&quot;&quot;&quot;
+Because loads are tied together, we must shed all of the load in this block, even though only one phase could not deliver power.
+
+This is a very simplistic example, and therefore the results may not seem interesting in themselves.
+
+Finally, I want to note that in this example, status is not == 0, even though we might expect it to be. This is because we are using the &quot;relaxed&quot; version of the indicator constraints, which will often be not quite zero or one, even when we might expect them to be, especially in the case of the &quot;simple&quot; mld problem.
+
+To guarantee 0 or 1, which is the most realistic for distribution feeders, we should use the unrelaxed indicator variables, but this will require using a different solver that can support mixed-integer variables. In the case of the problem I created above, Juniper, using Cbc and Ipopt might be a good option, but e.g., Gurobi would be better.
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>Because loads are tied together, we must shed all of the load in this block, even though only one phase could not deliver power.</p>
+<p>This is a very simplistic example, and therefore the results may not seem interesting in themselves.</p>
+<p>Finally, I want to note that in this example, status is not &#61;&#61; 0, even though we might expect it to be. This is because we are using the &quot;relaxed&quot; version of the indicator constraints, which will often be not quite zero or one, even when we might expect them to be, especially in the case of the &quot;simple&quot; mld problem.</p>
+<p>To guarantee 0 or 1, which is the most realistic for distribution feeders, we should use the unrelaxed indicator variables, but this will require using a different solver that can support mixed-integer variables. In the case of the problem I created above, Juniper, using Cbc and Ipopt might be a good option, but e.g., Gurobi would be better.</p>
+</div><p>╔═╡ 3f03084d-f8cc-424e-99a6-78b39ece17ef</p><pre><code class="language-">md&quot;&quot;&quot;</code></pre><p>Multinetwork Data and Problems</p><pre><code class="language-julia">Next we will cover multinetwork problems, e.g. time series OPF.
+
+PMD has a lot of tools for multinetwork problems, but really only one constraint that is inherently multinetwork, storage state.
+
+Let&#39;s start with constructing a multinetwork data structure, and exploring it.
+
+First, for multinetwork data to be created automatically, we need `time_series` data. If we have chosen one of the data sets above that contains `time_series`, this should have entries...
+&quot;&quot;&quot;</code></pre><p>╔═╡ 19e88e22-44e1-4139-bb5b-1247a271e34a</p><pre><code class="language-">get(eng, &quot;time_series&quot;, Dict())</code></pre><p>╔═╡ 7af68b51-a1b3-4ed8-95bc-43b2523c298c</p><pre><code class="language-julia">md&quot;&quot;&quot;
+`time_series` is one of our &quot;data&quot; objects, in that it does not represent actual assets on the feeder, but represents information about one or more assets. `linecode`s are the most often encountered and most familiar data objects in feeder data.
+
+Each `time_series` object will have &quot;time&quot;, &quot;values&quot;, and &quot;replace&quot;, at a minimum, with optional &quot;source_id&quot;, to help find the orginating object, and &quot;offset&quot;, for which the intention if for it to add an offset to &quot;time&quot;. &quot;offset&quot; is not yet supported, but datetime strings or floats in units of hours in &quot;time&quot; are supported.
+
+&quot;replace&quot; indicates whether the values in &quot;values&quot; will replace the property they are assigned to, if `false`, values will be multiplied by the base value.
+
+To apply a `time_series` object to a property, it must be specified within an asset&#39;s specification:
+&quot;&quot;&quot;</code></pre><div class="markdown"><p><code>time_series</code> is one of our &quot;data&quot; objects, in that it does not represent actual assets on the feeder, but represents information about one or more assets. <code>linecode</code>s are the most often encountered and most familiar data objects in feeder data.</p>
+<p>Each <code>time_series</code> object will have &quot;time&quot;, &quot;values&quot;, and &quot;replace&quot;, at a minimum, with optional &quot;source_id&quot;, to help find the orginating object, and &quot;offset&quot;, for which the intention if for it to add an offset to &quot;time&quot;. &quot;offset&quot; is not yet supported, but datetime strings or floats in units of hours in &quot;time&quot; are supported.</p>
+<p>&quot;replace&quot; indicates whether the values in &quot;values&quot; will replace the property they are assigned to, if <code>false</code>, values will be multiplied by the base value.</p>
+<p>To apply a <code>time_series</code> object to a property, it must be specified within an asset&#39;s specification:</p>
+</div><p>╔═╡ 3d769b34-b327-4304-af0a-1b995a4d6e4c</p><pre><code class="language-">filter(x-&gt;!isempty(x.second), Dict(type =&gt; Dict(name =&gt; obj for (name, obj) in get(eng, type, Dict()) if haskey(obj, &quot;time_series&quot;)) for type in pmd_eng_asset_types))</code></pre><p>╔═╡ 9bb9cbf5-67ef-487b-88a9-830f15378537</p><pre><code class="language-">md&quot;&quot;&quot;
+If a input data set with timeseries data has been selected then one should find objects that have their own `&quot;time_series&quot;` dictionary, inside of which the keys are properties to be replaced, and values are references to root-level `time_series` objects.
+
+OpenDSS has multiple ways to specify time series data, most usually through `LoadShapes`, which are specified on `Load` objects via the `daily` or `yearly` properties most often.
+
+By default PMD will parse the `daily` time series data, but you can specify this at parse:
+</code></pre><p>julia parse<em>file(case</em>file; time_series=&quot;yearly&quot;)</p><pre><code class="language-none">
+If anything other than `&quot;daily&quot;` is chosen, it might be necessary to adjust `time_elapsed`, which will be discussed below.
+
+If you have `time_series` data specified correctly, building a multinetwork is straightforward:
+&quot;&quot;&quot;</code></pre><p>╔═╡ 4bbc5205-4a3e-4e3d-88d6-219195ad8a0f</p><pre><code class="language-">mn_eng = make_multinetwork(eng)</code></pre><p>╔═╡ ba8e830f-3c3b-45bc-be25-c440cc736a02</p><pre><code class="language-">md&quot;&quot;&quot;
+It is also possible to load from a file directly into a multinetwork data structure:
+</code></pre><p>julia parse<em>file(case</em>file; multinetwork=true)</p><pre><code class="language-none">
+This transformation changes the root-level of the data model pretty drastically.
+&quot;&quot;&quot;</code></pre><p>╔═╡ ea462d05-6325-44b3-84fc-bf34e032bb01</p><pre><code class="language-">keys(mn_eng)</code></pre><p>╔═╡ 565385e3-ccb4-4ac7-a0a5-12c2744ceed5</p><pre><code class="language-julia">md&quot;Compared to a non-multinetwork structure...&quot;</code></pre><div class="markdown"><p>Compared to a non-multinetwork structure...</p>
+</div><p>╔═╡ fb05c680-d4ba-46a6-a696-7536aaa0dd57</p><pre><code class="language-">keys(eng)</code></pre><p>╔═╡ 5cd2d702-f5fa-44f3-9739-8eb75b0b6472</p><pre><code class="language-julia">md&quot;&quot;&quot;
+However, what is really happening here is that only some information is needed at the root-level, and some information is paired directly with subnetworks (what we can a timestep in the multinetwork structure).
+
+At the top level, we really need `&quot;data_model&quot;`, `&quot;nw&quot;`, and `&quot;multinetwork&quot;`. Even `&quot;mn_lookup&quot;` is only useful for one of our helper functions for manually reorganizing subnetworks `sort_multinetwork!`
+
+The subnetworks live inside `&quot;nw&quot;`:
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>However, what is really happening here is that only some information is needed at the root-level, and some information is paired directly with subnetworks &#40;what we can a timestep in the multinetwork structure&#41;.</p>
+<p>At the top level, we really need <code>&quot;data_model&quot;</code>, <code>&quot;nw&quot;</code>, and <code>&quot;multinetwork&quot;</code>. Even <code>&quot;mn_lookup&quot;</code> is only useful for one of our helper functions for manually reorganizing subnetworks <code>sort_multinetwork&#33;</code></p>
+<p>The subnetworks live inside <code>&quot;nw&quot;</code>:</p>
+</div><p>╔═╡ 85d52ceb-2b4f-4c22-880a-290c1a5737a1</p><pre><code class="language-">mn_eng[&quot;nw&quot;]</code></pre><p>╔═╡ 20f6dfed-5d1a-481c-92f4-440de0f2abca</p><pre><code class="language-julia">md&quot;&quot;&quot;
+Inside `nw`, subnetworks are organized by string integers, corresponding to the &quot;time step&quot;. This makes iterating through them consistent...
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>Inside <code>nw</code>, subnetworks are organized by string integers, corresponding to the &quot;time step&quot;. This makes iterating through them consistent...</p>
+</div><p>╔═╡ ff6dfa9a-d55e-4bbe-bf41-357a417784a5</p><pre><code class="language-">sort([parse(Int, n) for n in keys(mn_eng[&quot;nw&quot;])])</code></pre><p>╔═╡ 74a403df-0f94-4a1a-af69-cd8dc5bef430</p><pre><code class="language-julia">md&quot;&quot;&quot;
+Each subnetwork contains all of the information we should need for variables, constraints, etc. at that time step:
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>Each subnetwork contains all of the information we should need for variables, constraints, etc. at that time step:</p>
+</div><p>╔═╡ 28f75060-d0be-47f2-bea9-377d5df89cf6</p><pre><code class="language-">first(mn_eng[&quot;nw&quot;]).second</code></pre><p>╔═╡ 663e32f5-4b2e-4255-9def-e1c7d383c36d</p><pre><code class="language-julia">md&quot;&quot;&quot;
+The reason for so much duplication of data is that the vision for multinetworks was never just for time series data, but that it could be used more generally in creative ways, like pairing two topologically different networks together with custom problem specifications.
+
+This use case means that things that you might expect to stay the same between time steps, like `conductor_ids`, `linecodes`, `settings`, and the overall topology, could be drastically different, and therefore should be replicated for each subnetwork.
+
+This also explains the origin of the name &quot;multinetwork&quot;, in case the standard use case made its name confusing.
+
+As an interesting note, `make_multinetwork` will always return a multinetwork structure, even if there is no `time_series` data, with a single subnetwork with key `&quot;0&quot;`.
+
+Transforming into the `MATHEMATICAL` data model from a multinetwork `ENGINEERING` data model is also the same as for single network data:
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>The reason for so much duplication of data is that the vision for multinetworks was never just for time series data, but that it could be used more generally in creative ways, like pairing two topologically different networks together with custom problem specifications.</p>
+<p>This use case means that things that you might expect to stay the same between time steps, like <code>conductor_ids</code>, <code>linecodes</code>, <code>settings</code>, and the overall topology, could be drastically different, and therefore should be replicated for each subnetwork.</p>
+<p>This also explains the origin of the name &quot;multinetwork&quot;, in case the standard use case made its name confusing.</p>
+<p>As an interesting note, <code>make_multinetwork</code> will always return a multinetwork structure, even if there is no <code>time_series</code> data, with a single subnetwork with key <code>&quot;0&quot;</code>.</p>
+<p>Transforming into the <code>MATHEMATICAL</code> data model from a multinetwork <code>ENGINEERING</code> data model is also the same as for single network data:</p>
+</div><p>╔═╡ d3e6486c-4133-404b-91c1-7ac18ec8388f</p><pre><code class="language-">mn_math = transform_data_model(mn_eng)</code></pre><p>╔═╡ 8c34cd7f-52c4-440f-a226-afc27bf24799</p><pre><code class="language-">md&quot;&quot;&quot;
+Some of the root-level keys will be slightly different, but otherwise you will see what you are already familiar with in the single network `MATHEMATICAL` data model.
+
+It is also possible to transform directly into a multinetwork `MATHEMATICAL` data model from a single network `ENGINEERING` data model:
+</code></pre><p>julia mn<em>math = transform</em>data_model(eng; multinetwork=true)</p><pre><code class="language-none">
+The one major caveat with these automatic generations of multinetwork data structures is that it **must** be performed before converting to the `MATHEMATICAL` data model. This is because, since we support replacing arbitrary fields with `time_series` data, it is impossible to work out the conversions within the `time_series` objects.
+
+If you have a `MATHEMATICAL` data model and want to convert it to a multinetwork, this is supported, but you must already have a special construction of the `time_series` object that matches the format expected by InfrastructureModels, which has its own, more general, `make_multinetwork` function.
+
+Multinetworks have two key helper functions:
+
+- `sort_multinetwork!`
+- `set_time_elapsed!`
+
+The first accepts a Vector of `time` values, which it will use to manually re-sort the subnetworks, and the second accepts either a vector of time deltas or a single time delta, and replaces the `time_elapsed` property within all the subnetworks.
+
+`time_elapsed` a value in hours that indicates how long each time step duration is, which is needed for calculating storage losses.
+&quot;&quot;&quot;</code></pre><p>╔═╡ 3562dcc2-b6d7-4bfa-bae7-7a5e992cb422</p><pre><code class="language-">set_time_elapsed!(mn_eng, 0.5)</code></pre><p>╔═╡ 805b06be-7ed9-4330-9f1e-a584c4508862</p><pre><code class="language-">first(mn_eng[&quot;nw&quot;]).second[&quot;time_elapsed&quot;]</code></pre><p>╔═╡ e56a2563-45c7-40fd-80ad-b86d7e1c1e44</p><pre><code class="language-">&quot;&quot;&quot;
+Solving multinetworks is not anymore difficult than single network cases, but a special problem specification must be used that is multinetwork-aware...
+</code></pre><p>julia #= none:1 =# @code_string build_mn_mc_opf(instantiate_mc_model(mn_eng, ACPUPowerModel, build_mn_mc_opf; multinetwork = true))</p><pre><code class="language-none">&quot;&quot;&quot; |&gt; Markdown.parse</code></pre><p>╔═╡ 49808060-ad86-491e-aed2-c69f203d4a0e</p><pre><code class="language-julia">md&quot;&quot;&quot;
+Note that the standard OPF problem loops over each subnetwork (not necessarily in order), with the keyword argument `nw=n`.
+
+Currently the only build-in asset that truly has multinetwork constraints is storage, where you can see the `constraint_storage_state` being called with two nw ids near the bottom of the above specification.
+
+Knowing this, solving a multinetwork OPF problem is straightforward:
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>Note that the standard OPF problem loops over each subnetwork &#40;not necessarily in order&#41;, with the keyword argument <code>nw&#61;n</code>.</p>
+<p>Currently the only build-in asset that truly has multinetwork constraints is storage, where you can see the <code>constraint_storage_state</code> being called with two nw ids near the bottom of the above specification.</p>
+<p>Knowing this, solving a multinetwork OPF problem is straightforward:</p>
+</div><p>╔═╡ 59abd602-30de-40af-bce5-7800d11a7108</p><pre><code class="language-">mn_result = solve_mn_mc_opf(mn_eng, ACRUPowerModel, Ipopt.Optimizer)</code></pre><p>╔═╡ f40614c0-5aac-491b-bf5b-8aa9d328f640</p><pre><code class="language-">md&quot;&quot;&quot;</code></pre><p>Merging Solution with Data</p><pre><code class="language-julia">It is possible to merge your solutions with your data structures, which will make transporting and/or visualizing data easier. This helper function from InfrastructureModels allows you to merge two *nested* dictionaries together:
+&quot;&quot;&quot;</code></pre><p>╔═╡ 40e60c21-76fe-44ce-9a33-988030e8d863</p><pre><code class="language-">begin
+	eng_copy = deepcopy(eng)
+	update_data!(eng_copy, eng_result[&quot;solution&quot;])
+end</code></pre><p>╔═╡ 09f7c681-9654-466d-a1cb-e09eebad62fd</p><pre><code class="language-">first(eng_copy[&quot;bus&quot;]).second</code></pre><p>╔═╡ 0362394c-9ac9-4978-9b41-bc325464c204</p><pre><code class="language-julia">md&quot;&quot;&quot;
+This will work on both data model types
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>This will work on both data model types</p>
+</div><p>╔═╡ 8361deb2-3baa-4031-927f-e3c034bd7eb9</p><pre><code class="language-">begin
+	math_copy = deepcopy(math)
+	update_data!(math_copy, math_result[&quot;solution&quot;])
+end</code></pre><p>╔═╡ ba259614-bead-40c4-927f-5f8ad3eb726a</p><pre><code class="language-">first(math_copy[&quot;bus&quot;]).second</code></pre><p>╔═╡ dee28964-882f-4bad-9368-762f7af99562</p><pre><code class="language-">md&quot;&quot;&quot;</code></pre><p>Exporting and Importing PMD Data Structures</p><pre><code class="language-julia">It is possible to export our data structures to JSON, but you may have noticed several items that are not strictly JSON compatible, like Matrix, Enum, Symbol, Inf and NaN. Because most users default to JSON.print to export data structures, we have chosen to create a data model correction helper function that will attempt to fix data structures. For straightforward cases this has shown to work well, but may be fragile in its implementation.
+&quot;&quot;&quot;</code></pre><p>╔═╡ 2f10d9b4-c237-4305-ac05-ffe569d70436</p><pre><code class="language-">begin
+	io = PipeBuffer()
+	JSON.print(io, eng, 2)
+end</code></pre><p>╔═╡ 26e7b26e-3619-40d0-aef8-0a070af98cbb</p><pre><code class="language-">raw_from_json = JSON.parse(io)</code></pre><p>╔═╡ 0c39a147-8587-457e-9a2b-ea38e2bf160a</p><pre><code class="language-">begin
+	parsed_from_json = deepcopy(raw_from_json)
+	correct_json_import!(parsed_from_json)
+	parsed_from_json
+end</code></pre><p>╔═╡ ec94eeb4-e425-452d-8e46-6ed7f876f463</p><pre><code class="language-">md&quot;&quot;&quot;
+This can be easily achieved via `parse_file`:
+</code></pre><p>julia parse<em>file(json</em>file)</p><pre><code class="language-none">&quot;&quot;&quot;</code></pre><p>╔═╡ 292e7528-cf57-4429-995a-571d567b8560</p><pre><code class="language-">md&quot;&quot;&quot;</code></pre><p>Experimental Network Plots with PowerModelsAnalytics</p><pre><code class="language-julia">It is possible to quickly create some plots of power networks using `PowerModelsAnalytics.plot_network!`.
+
+Originally we created the plotting functionality in PowerModelsAnalytics primarily for debugging purposes, to look for topological errors, check for errors with load shedding, etc., and had based it on Plots.jl, which is a very popular Julia plotting tool. Unfortunately, plotting graph networks with a lot of nodes is very slow, and we discovered Vega.jl, which is a interface to the Vega visualization grammar.
+
+For the most part, simple plots can be easily achieved with `plot_network!` (best used for Pluto notebooks to produce the plot in the notebook), or `plot_network`, which will return the LightGraphs-based graph representation of the network.
+&quot;&quot;&quot;</code></pre><p>╔═╡ 687863f6-1aed-4039-b54e-d9d3a683631b</p><pre><code class="language-">plot_network!(eng_copy)</code></pre><p>╔═╡ b448fae8-56d4-40a0-95fa-d502f8a37a40</p><pre><code class="language-julia">md&quot;&quot;&quot;
+While plots won&#39;t be publication ready, with some knowledge of Vega, and some tweaking of the plot specifications, it should be possible to produce some nice outputs.
+
+Under the hood, PMA uses Networkx to automatically layout the graph, but `use_coordinates=true` can be used to use any buscoords included in the data set.
+&quot;&quot;&quot;</code></pre><div class="markdown"><p>While plots won&#39;t be publication ready, with some knowledge of Vega, and some tweaking of the plot specifications, it should be possible to produce some nice outputs.</p>
+<p>Under the hood, PMA uses Networkx to automatically layout the graph, but <code>use_coordinates&#61;true</code> can be used to use any buscoords included in the data set.</p>
+</div><p>╔═╡ 53f3cd12-05a9-4495-937a-781ce3907174</p><pre><code class="language-julia">try
+	plot_network!(eng_copy; use_coordinates=true)
+catch
+	md&quot;**no buscoords exist for this case_file**&quot;
+end</code></pre><div class="markdown"><p><strong>no buscoords exist for this case_file</strong></p>
+</div><p>╔═╡ 232a4bde-3f85-46c4-9e57-ffc64ecafbb6</p><pre><code class="language-">md&quot;&quot;&quot;</code></pre><p>Development</p><pre><code class="language-julia">PowerModelsDistribution is subject to active, ongoing development, and is used internally by various high-profile projects, making its improvement and maintanence high priority.
+
+If you find bugs while using PMD, we encourage you to submit bug reports on our [GitHub Issues](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues).
+
+If you have questions about using PMD, [JuliaLang Discourse](https://discourse.julialang.org/) is a great place, which several of our developers regularly watch, particularly in the [Optimization Category](https://discourse.julialang.org/c/domain/opt/13).
+
+We always welcome [Pull Requests](https://github.com/lanl-ansi/PowerModelsDistribution.jl/pulls) for new features and bug fixes as well.
+&quot;&quot;&quot;</code></pre><p>╔═╡ Cell order: ╟─c9a5c344-961b-11eb-0458-a746afcb280c ╟─b5928052-9616-11eb-14b3-79770b9929df ╟─62c14531-357a-4669-90cd-2a186df123eb ╠═9787aa73-8ffc-4634-bf0f-b70eee0bf377 ╟─b953c65d-515f-4334-a4d4-b27af1b0e29a ╠═a1989876-9301-11eb-0783-83b3aa7abfbc ╟─749d062d-72a1-4160-afcf-1cdc27d85c84 ╟─7e032130-c565-42d1-93ed-87955e1f2334 ╟─67029534-961a-11eb-2b06-210f67607d20 ╟─0b9598a8-9618-11eb-1947-4f98dac7129f ╠═6d94d2cd-069b-4e48-84da-ba87c554297b ╟─480f6685-56a0-4fdd-a975-33cdb3459ef5 ╠═b73eedaf-5809-43b9-90e0-69350d6ee2c4 ╟─4243344a-9cdf-46db-96ee-633b0f5e8a71 ╟─e95a9fba-b6ad-4339-8219-de4ca04536f4 ╠═23a3a107-2fc4-4af1-8eb6-e6a0dc29ddbe ╟─ba7c38a6-34f5-40d3-998e-7ea520001454 ╟─47fdba38-56ae-4a68-88a0-26af4e0a907a ╟─4628c72d-32a2-46bb-929e-153f3851f9c0 ╟─ca82db50-ff48-411c-bc97-44f5f33c4ddf ╠═4f45cac5-3b27-4771-994b-3a9d81ed61c9 ╟─fb08875c-1d9e-4744-bec2-7b7cad4320f6 ╠═5cf93941-3f88-4bd1-98c4-77b924ddb385 ╟─8a8222c3-ef01-4d18-97ff-fa43ad89cfcc ╠═38dfd21e-f156-45be-b9b3-f6eb5008723e ╟─0f73a5be-7ee3-4936-95ed-ebb1b913cf4e ╠═254a4ed3-263b-4084-b9af-c97eac2d4ab7 ╟─03e27a4b-cf53-4e92-9e88-d07015937b3e ╟─3e74097f-55ce-4143-938d-543a59581a72 ╠═2c11f944-ff4c-478b-9b6c-fba54bfc0afd ╟─427bebe9-5a0d-41b0-ace6-6622400e136c ╟─284a471c-5b97-4753-b5be-8896dc096657 ╟─20c563f0-9304-11eb-16b4-6720b073e911 ╠═e70c3f4a-9302-11eb-1176-0925031bccc0 ╟─9a65d284-8558-4ddf-9139-e88e3a3625d9 ╟─7edf07c2-208d-47d4-914e-08c09bdfd7f6 ╟─36f01f08-0c19-4a28-a2eb-11a11dec9897 ╟─a3e10f7e-c193-4c02-9fef-e23bde112350 ╟─1cf59273-3f50-41bd-b93c-c5cf5f3cd124 ╟─7e36b7b8-198c-4b9e-8b62-d1b481f09eeb ╠═b717dab6-30fd-4e4b-b6f8-29ffcff80131 ╠═def53588-f511-4dda-8aa9-941d1aa994f7 ╟─f1866650-ca90-4f4b-81ef-1cc3202dc240 ╠═27ec55f0-77c2-4cec-b505-976fd86f1004 ╠═0ef86c0a-6d65-44a3-9804-676d4cc904c3 ╟─e45adf3e-5b84-4d14-9840-40ba2fbc1573 ╟─905bfb0a-2fb5-4b0c-bc62-49bd2888ad30 ╟─3d468a08-c62c-42cb-a096-8ba382bb91e5 ╠═114f8b4c-3296-428a-bf72-f5efe6b21b47 ╟─0d510b81-6f58-4790-be85-82c9b215322d ╠═cf3614bc-4c35-4b4d-9ec9-f43307a04c48 ╟─6335835e-2b5e-45a0-a5f6-4d97328694bd ╠═bea3a93e-a827-473a-9e19-348ad85dfa25 ╟─86d66ed7-89b1-461e-9487-0e190e6fd02e ╠═ce39193d-833b-40aa-b532-f9db22f03652 ╠═cb632c77-5c8b-4fbb-a867-127a22ce54ad ╠═b3bd6e16-28dc-44b7-b8ad-1478cdfefecc ╟─a0e6612f-516e-4be4-b3ae-00c612b981e2 ╠═77899c35-2609-4aef-bcd0-178076237d1d ╠═eb3d6861-0d91-4ae1-9580-7b3182cefef1 ╟─1b6fd52f-0cdf-4f4f-aa38-31cd8aa9ca7d ╟─e39e89d8-7b3d-4c2d-bbe3-8de202e91c5f ╠═493d1dfd-719c-4f03-b660-6b0e9e50a222 ╟─b6700c39-8dff-4bcb-b6fa-c67b2ddf5163 ╠═f0cb5faf-0471-4651-9d09-61fe6e5e0fb5 ╟─89f6282d-9898-4547-a121-028fcdf4f876 ╠═7303e40a-56f8-4035-8537-e2eed7c16b8b ╟─c3dcee8a-edf1-43bb-8733-f2798b29d57a ╠═d7522533-43b9-4b3c-a8e5-1aa4f39700bb ╟─f4fb1464-8d33-4265-ab40-8fb72d533466 ╠═213e9ea4-c800-47bc-a020-4eacc334e4fc ╟─e32b7e5e-1d99-482f-b406-460a18cde912 ╠═6b7e5199-61ed-40b0-a658-1a490298dc6d ╟─fb48ddde-128a-4a32-ab5f-084561108539 ╠═92fd9826-17a4-44e2-ae8b-8d96d6f21130 ╟─a7037bcd-e65d-40d4-8070-7fd73811ffad ╠═53e1237b-c380-4506-9924-8b7298d0b38a ╟─60485fa1-7b4d-4be1-a0c4-50b45a840a66 ╠═8e2620f3-894f-43ff-9704-637225a6dda3 ╟─516bc915-946d-4216-b5d0-b0bde5db6546 ╠═87bf0ddd-5678-4aea-9024-26c0a2db7521 ╟─f9fc4c70-f091-4ecd-ac70-c1dfcd8a6f93 ╠═33dd7091-5576-4375-b5d9-d9a738656ddb ╟─1b18e8ce-f403-4cb6-b833-083e8b9ef5bb ╠═5369925c-3e0f-43ca-a4d8-c801a90653ff ╟─51af76d7-2c62-422d-98d1-b199aba84263 ╠═12ed532a-164c-4a92-a7d1-fc4dd53c3c57 ╠═3207f33b-00e5-4691-a9c9-9461c974b3b0 ╠═8eb99a9b-ee92-4aad-bbfc-c9242dc916cb ╠═f70780ef-5ad1-4f69-bb2e-41de737b1bef ╟─ab146273-0cf6-4815-b996-dc2e8fc185db ╟─3f03084d-f8cc-424e-99a6-78b39ece17ef ╠═19e88e22-44e1-4139-bb5b-1247a271e34a ╟─7af68b51-a1b3-4ed8-95bc-43b2523c298c ╠═3d769b34-b327-4304-af0a-1b995a4d6e4c ╟─9bb9cbf5-67ef-487b-88a9-830f15378537 ╠═4bbc5205-4a3e-4e3d-88d6-219195ad8a0f ╟─ba8e830f-3c3b-45bc-be25-c440cc736a02 ╠═ea462d05-6325-44b3-84fc-bf34e032bb01 ╟─565385e3-ccb4-4ac7-a0a5-12c2744ceed5 ╠═fb05c680-d4ba-46a6-a696-7536aaa0dd57 ╟─5cd2d702-f5fa-44f3-9739-8eb75b0b6472 ╠═85d52ceb-2b4f-4c22-880a-290c1a5737a1 ╟─20f6dfed-5d1a-481c-92f4-440de0f2abca ╠═ff6dfa9a-d55e-4bbe-bf41-357a417784a5 ╟─74a403df-0f94-4a1a-af69-cd8dc5bef430 ╠═28f75060-d0be-47f2-bea9-377d5df89cf6 ╟─663e32f5-4b2e-4255-9def-e1c7d383c36d ╠═d3e6486c-4133-404b-91c1-7ac18ec8388f ╟─8c34cd7f-52c4-440f-a226-afc27bf24799 ╠═3562dcc2-b6d7-4bfa-bae7-7a5e992cb422 ╠═805b06be-7ed9-4330-9f1e-a584c4508862 ╟─e56a2563-45c7-40fd-80ad-b86d7e1c1e44 ╟─49808060-ad86-491e-aed2-c69f203d4a0e ╠═59abd602-30de-40af-bce5-7800d11a7108 ╟─f40614c0-5aac-491b-bf5b-8aa9d328f640 ╠═40e60c21-76fe-44ce-9a33-988030e8d863 ╠═09f7c681-9654-466d-a1cb-e09eebad62fd ╟─0362394c-9ac9-4978-9b41-bc325464c204 ╠═8361deb2-3baa-4031-927f-e3c034bd7eb9 ╠═ba259614-bead-40c4-927f-5f8ad3eb726a ╟─dee28964-882f-4bad-9368-762f7af99562 ╠═2f10d9b4-c237-4305-ac05-ffe569d70436 ╠═26e7b26e-3619-40d0-aef8-0a070af98cbb ╠═0c39a147-8587-457e-9a2b-ea38e2bf160a ╟─ec94eeb4-e425-452d-8e46-6ed7f876f463 ╟─292e7528-cf57-4429-995a-571d567b8560 ╠═687863f6-1aed-4039-b54e-d9d3a683631b ╟─b448fae8-56d4-40a0-95fa-d502f8a37a40 ╠═53f3cd12-05a9-4495-937a-781ce3907174 ╟─232a4bde-3f85-46c4-9e57-ffc64ecafbb6</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../external-data-formats/">« External Data Formats</a><a class="docs-footer-nextpage" href="../engineering_model/">Engineering Model »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 16 April 2021 13:03">Friday 16 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
