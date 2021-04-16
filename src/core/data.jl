@@ -946,10 +946,9 @@ function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_
     neighbors = Dict{Any,Vector{Any}}(i => [] for i in active_bus_ids)
     for edge_type in edges
         for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
-            if edge_obj["status"] == ENABLED
-                if edge_type == "transformer" && haskey(edge_obj, "buses")
-                    for f_bus in edge_obj["buses"]
-                        for t_bus in edge_obj["buses"]
+                if edge_type == "transformer" && haskey(edge_obj, "bus")
+                    for f_bus in edge_obj["bus"]
+                        for t_bus in edge_obj["bus"]
                             if f_bus != t_bus
                                 push!(neighbors[f_bus], t_bus)
                                 push!(neighbors[t_bus], f_bus)
