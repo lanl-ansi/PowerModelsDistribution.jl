@@ -916,7 +916,7 @@ identify_islands(data::Dict{String,<:Any}) = calc_connected_components(data)
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function calc_connected_components(data::Dict{String,<:Any}; edges::Union{Missing, Vector{<:String}}=missing, type::Union{Missing,String}=missing)::Set
+function calc_connected_components(data::Dict{String,<:Any}; edges::Union{Missing, Vector{<:String}}=missing, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set
     pmd_data = get_pmd_data(data)
 
     if ismultinetwork(pmd_data)
@@ -924,9 +924,9 @@ function calc_connected_components(data::Dict{String,<:Any}; edges::Union{Missin
     end
 
     if get(pmd_data, "data_model", MATHEMATICAL) == ENGINEERING
-        return _calc_connected_components_eng(pmd_data; edges=ismissing(edges) ? _eng_edge_elements : edges, type=type)
+        return _calc_connected_components_eng(pmd_data; edges=ismissing(edges) ? _eng_edge_elements : edges, type=type, check_enabled=check_enabled)
     elseif get(pmd_data, "data_model", MATHEMATICAL) == MATHEMATICAL
-        return _calc_connected_components_math(pmd_data; edges=ismissing(edges) ? _math_edge_elements : edges, type=type)
+        return _calc_connected_components_math(pmd_data; edges=ismissing(edges) ? _math_edge_elements : edges, type=type, check_enabled=check_enabled)
     else
         error("data_model `$(get(pmd_data, "data_model", MATHEMATICAL))` is unrecongized")
     end
@@ -937,15 +937,16 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_elements, type::Union{Missing,String}=missing)::Set
+function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set
     @assert get(data, "data_model", MATHEMATICAL) == ENGINEERING
 
-    active_bus = Dict{Any,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] == ENABLED)
+    active_bus = Dict{Any,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] == ENABLED || !check_enabled)
     active_bus_ids = Set{Any}([i for (i,bus) in active_bus])
 
     neighbors = Dict{Any,Vector{Any}}(i => [] for i in active_bus_ids)
     for edge_type in edges
         for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
+            if edge_obj["status"] == ENABLED || !check_enabled
                 if edge_type == "transformer" && haskey(edge_obj, "bus")
                     for f_bus in edge_obj["bus"]
                         for t_bus in edge_obj["bus"]
@@ -996,16 +997,16 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector{<:String}=_math_edge_elements, type::Union{Missing,String}=missing)::Set
+function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector{<:String}=_math_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set
     @assert get(data, "data_model", MATHEMATICAL) == MATHEMATICAL
 
-    active_bus = Dict{Any,Dict{String,Any}}(x for x in data["bus"] if x.second[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"])
+    active_bus = Dict{Any,Dict{String,Any}}(x for x in data["bus"] if x.second[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] || !check_enabled)
     active_bus_ids = Set{Any}([parse(Int,i) for (i,bus) in active_bus])
 
     neighbors = Dict{Any,Vector{Any}}(i => [] for i in active_bus_ids)
     for edge_type in edges
         for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
-            if edge_obj[pmd_math_component_status[edge_type]] != pmd_math_component_status_inactive[edge_type]
+            if edge_obj[pmd_math_component_status[edge_type]] != pmd_math_component_status_inactive[edge_type] || !check_enabled
                 if edge_type == "switch" && !ismissing(type)
                     if type == "load_blocks"
                         if edge_type["dispatchable"] != 1
