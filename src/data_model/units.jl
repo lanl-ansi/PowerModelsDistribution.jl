@@ -201,6 +201,9 @@ function _make_math_per_unit!(nw::Dict{String,<:Any}, data_math::Dict{String,<:A
     voltage_scale_factor = nw["settings"]["voltage_scale_factor"]
 
     for (id, bus) in nw["bus"]
+        if ismissing(bus_vbase[id])
+            error("calc_voltage_bases was unabled to discover the voltage base for bus $id (source_id: $(get(bus, "source_id", ""))), there may be islands in the network model")
+        end
         _rebase_pu_bus!(bus, bus_vbase[id], sbase, sbase_old, voltage_scale_factor)
     end
 

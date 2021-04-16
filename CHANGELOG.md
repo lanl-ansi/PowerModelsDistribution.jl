@@ -2,6 +2,7 @@
 
 ## staged
 
+- Add more descriptive error message for islanded models when attempting to calculate voltage bases
 - Add `check_enabled` toggle to calc_connected_components
 - Updated documentation to reflect correct definition of multiple buses in a vector on transformers using `bus` instead of `buses`
 - Fixed bug for eng transformers in `calc_connected_components`
