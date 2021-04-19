@@ -81,7 +81,7 @@ const _dss2pmd_load_model = Dict{Int,LoadModel}(
     1 => POWER,
     2 => IMPEDANCE,
     5 => CURRENT,
-    4 => EXPONENTIAL,  # TODO add official support for exponential load model
+    4 => EXPONENTIAL,
     8 => ZIP,  # TODO add official support for ZIP load model
 )
 
@@ -490,7 +490,7 @@ function _get_conductors_ordered(busname::AbstractString; default::Vector{Int}=V
     end
 
     if check_length && length(default)!=length(ret)
-        # TODO
+        # TODO Should we provide this warning?
         @info "An inconsistent number of nodes was specified on $(parts[1]); |$(parts[2])|!=$(length(default))."
     end
     return ret

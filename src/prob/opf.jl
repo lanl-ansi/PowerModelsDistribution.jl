@@ -132,7 +132,6 @@ function build_mc_opf(pm::AbstractUBFModels)
     variable_mc_branch_current(pm)
     variable_mc_branch_power(pm)
     variable_mc_switch_power(pm)
-    # TODO: revert to bounded in v0.10
     variable_mc_transformer_power(pm)
     variable_mc_generator_power(pm)
     variable_mc_load_power(pm)

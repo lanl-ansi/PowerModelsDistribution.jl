@@ -19,7 +19,7 @@ function variable_mc_bus_voltage(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_d
         vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
         vm[.!grounded] .= 1.0
 
-        # TODO how to support non-integer terminals?
+        # TODO how to do this more generally?
         nph = 3
         va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
 
@@ -55,7 +55,7 @@ function variable_mc_bus_voltage_on_off(pm::AbstractUnbalancedACRModel; nw::Int=
         vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
         vm[.!grounded] .= 1.0
 
-        # TODO how to support non-integer terminals?
+        # TODO how to do this more generally?
         nph = 3
         va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
 
@@ -485,7 +485,7 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedACRModel, nw::In
     qt   = get(var(pm, nw), :qt,     Dict()); _check_var_keys(qt,  bus_arcs_trans, "reactive power", "transformer")
 
     zd = var(pm, nw, :z_demand)
-    z_shunt  = var(pm, nw, :z_shunt)  # TODO
+    z_shunt  = var(pm, nw, :z_shunt)  # TODO add support for z_shunt in power balance shed
     zg = haskey(var(pm, nw), :z_gen) ? var(pm, nw, :z_gen) : Dict(i => 1.0 for i in ids(pm, nw, :gen))
     zs = haskey(var(pm, nw), :z_storage) ? var(pm, nw, :z_storage) : Dict(i => 1.0 for i in ids(pm, nw, :storage))
 

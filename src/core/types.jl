@@ -192,7 +192,7 @@ abstract type SDPUBFModel <: AbstractConicUBFModel end
 abstract type SDPUBFKCLMXModel <: SDPUBFModel end
 
 
-"Collection of Semidefinite Models"  # TODO Better documentation, name?
+"Collection of Semidefinite Models"
 KCLMXModels = Union{SDPUBFKCLMXModel}
 
 

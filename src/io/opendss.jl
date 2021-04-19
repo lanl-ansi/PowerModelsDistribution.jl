@@ -180,7 +180,6 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             # 'kvar' is specified for all phases at once; we want the per-phase one
             defaults["kvar"] = fill(defaults["kvar"] / nphases, nphases)
 
-            # TODO check unit conversion on qnom/b
             vnom_ln = defaults["kv"]
             qnom = defaults["kvar"] ./ 1e3
             b = qnom ./ vnom_ln.^2
