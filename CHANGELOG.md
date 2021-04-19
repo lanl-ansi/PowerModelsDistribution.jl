@@ -2,6 +2,7 @@
 
 ## staged
 
+- Add section on `import_all` to beginners guide
 - Update default %cutin and %cutout to be 20.0 on pvsystem objects
 - Fix `objective_mc_max_load_setpoint` to remove iteration over "conductor_ids"
 - Fix `constraint_mc_voltage_magnitude_bounds` to have default (0,Inf) bounds the length of "terminals", rather than 3 phases.

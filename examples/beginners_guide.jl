@@ -406,6 +406,47 @@ The one notable divergence is the existance of `transformer`s. In distribution m
 In the PMD math model, transformers are two-winding lossless transformers that can be either wye-wye or wye-delta connected.
 """ |> Markdown.parse
 
+# ╔═╡ 1b17a770-a465-4ba9-a21d-b3d4514ad696
+md"""
+## `import_all`: Keeping raw DSS properties
+
+The DSS parser included in PMD should parse all raw DSS objects and properties, but by default it will only keep around internal data fields when converting to the `ENGINEERING` or `MATHEMATICAL` data models. 
+
+To keep raw DSS properties, use the `import_all` keyword argument when parsing data:
+"""
+
+# ╔═╡ 29afef9d-29fe-46fe-9321-a33a488b2ba0
+eng_import_all = parse_file(case_file; import_all=true)
+
+# ╔═╡ 2aa3d0ca-115c-476a-be94-f33a2343ea57
+md"""
+You will notice a couple of extra data structures. 
+
+The first you may notice is "dss_options", which will list options that were set at the top-level of the DSS input
+"""
+
+# ╔═╡ 81930c47-7f02-4eca-a4bc-df6369691eec
+get(eng_import_all, "dss_options", Dict())
+
+# ╔═╡ 394b5c41-1fcc-497d-b598-356e0760da62
+md"""
+Also, within each asset dictionary will be a `dss` dictionary that will contain the raw dss input about the object from which the asset was derived.
+"""
+
+# ╔═╡ 3e2ebbfb-08dd-4099-9367-86c982017e9c
+first(eng_import_all["line"]).second["dss"]
+
+# ╔═╡ f090cadb-c87b-4e36-bc28-79736479933b
+md"""
+This information gets carried through to the `MATHEMATICAL` model as well...
+"""
+
+# ╔═╡ 06643acf-6f8e-4bda-a66b-aab42fe4690b
+math_import_all = transform_data_model(eng_import_all)
+
+# ╔═╡ 7658ea1b-12e7-475e-898f-d8b31a39665a
+first(math_import_all["branch"]).second["dss"]
+
 # ╔═╡ 905bfb0a-2fb5-4b0c-bc62-49bd2888ad30
 md"""
 # Optimization in PMD
@@ -1129,6 +1170,15 @@ We always welcome [Pull Requests](https://github.com/lanl-ansi/PowerModelsDistri
 # ╠═27ec55f0-77c2-4cec-b505-976fd86f1004
 # ╠═0ef86c0a-6d65-44a3-9804-676d4cc904c3
 # ╟─e45adf3e-5b84-4d14-9840-40ba2fbc1573
+# ╟─1b17a770-a465-4ba9-a21d-b3d4514ad696
+# ╠═29afef9d-29fe-46fe-9321-a33a488b2ba0
+# ╟─2aa3d0ca-115c-476a-be94-f33a2343ea57
+# ╠═81930c47-7f02-4eca-a4bc-df6369691eec
+# ╟─394b5c41-1fcc-497d-b598-356e0760da62
+# ╠═3e2ebbfb-08dd-4099-9367-86c982017e9c
+# ╟─f090cadb-c87b-4e36-bc28-79736479933b
+# ╠═06643acf-6f8e-4bda-a66b-aab42fe4690b
+# ╠═7658ea1b-12e7-475e-898f-d8b31a39665a
 # ╟─905bfb0a-2fb5-4b0c-bc62-49bd2888ad30
 # ╟─3d468a08-c62c-42cb-a096-8ba382bb91e5
 # ╠═114f8b4c-3296-428a-bf72-f5efe6b21b47
