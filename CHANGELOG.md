@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed constraint_mc_voltage_magnitude_bounds to have default (0,Inf) bounds the length of "terminals", rather than 3 phases.
 - Updated UBF version of power flow problem to re-enable bounded=false of bus voltage variables
 - Add more descriptive error message for islanded models when attempting to calculate voltage bases
 - Add `check_enabled` toggle to calc_connected_components

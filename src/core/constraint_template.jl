@@ -70,8 +70,8 @@ Notable examples include IVRUPowerModel and ACRUPowerModel
 """
 function constraint_mc_voltage_magnitude_bounds(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
     bus = ref(pm, nw, :bus, i)
-    vmin = get(bus, "vmin", fill(0.0, 3)) #TODO update for four-wire
-    vmax = get(bus, "vmax", fill(Inf, 3)) #TODO update for four-wire
+    vmin = get(bus, "vmin", fill(0.0, length(bus["terminals"])))
+    vmax = get(bus, "vmax", fill(Inf, length(bus["terminals"])))
     constraint_mc_voltage_magnitude_bounds(pm, nw, i, vmin, vmax)
 end
 
