@@ -73,20 +73,17 @@ function objective_mc_min_load_setpoint_delta_simple_switch(pm::AbstractUnbalanc
 end
 
 
-# TODO correct for connections
 "maximum loadability objective (continuous load shed) with storage"
 function objective_mc_max_load_setpoint(pm::AbstractUnbalancedPowerModel)
-    load_weight = Dict(n => Dict(i => get(load, "weight", 1.0) for (i,load) in ref(pm, n, :load)) for n in nw_ids(pm))
+    w = Dict(n => Dict(i => get(load, "weight", 1.0) for (i,load) in ref(pm, n, :load)) for n in nw_ids(pm))
 
     JuMP.@objective(pm.model, Max,
         sum(
-            sum(
-                sum( (              10*var(pm, n, :z_voltage, i) for (i, bus) in nw_ref[:bus])) +
-                sum( (         M[n][c]*var(pm, n, :z_demand, i)) for (i,load) in nw_ref[:load]) +
-                sum( (abs(shunt["gs"])*var(pm, n, :z_shunt, i)) for (i,shunt) in nw_ref[:shunt]) +
-                sum( (                 var(pm, n, :z_gen, i) for (i,gen) in nw_ref[:gen])) +
-                sum( (                 var(pm, n, :z_storage, i) for (i,storage) in nw_ref[:storage]))
-            for c in conductor_ids(pm, n))
+            sum( (              10*var(pm, n, :z_voltage, i) for (i, bus) in nw_ref[:bus])) +
+            sum( (         w[n][i]*var(pm, n, :z_demand, i)) for (i,load) in nw_ref[:load]) +
+            sum( (                 var(pm, n, :z_shunt, i)) for (i,shunt) in nw_ref[:shunt]) +
+            sum( (                 var(pm, n, :z_gen, i) for (i,gen) in nw_ref[:gen])) +
+            sum( (                 var(pm, n, :z_storage, i) for (i,storage) in nw_ref[:storage]))
         for (n, nw_ref) in nws(pm))
     )
 end
