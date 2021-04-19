@@ -573,11 +573,10 @@ Given a set of addmittances 'y' connected from the conductors 'f_cnds' to the
 conductors 't_cnds', this method will return a list of conductors 'cnd' and a
 matrix 'Y', which will satisfy I[cnds] = Y*V[cnds].
 """
-function _calc_shunt(f_cnds::Vector{Int}, t_cnds::Vector{Int}, y)::Tuple{Vector{Int}, Matrix{Real}}
-    #TODO fix y::Type
+function _calc_shunt(f_cnds::Vector{Int}, t_cnds::Vector{Int}, y::Vector{<:Union{Real,Vector{<:Real}}})::Tuple{Vector{Int}, Matrix{Real}}
     cnds = unique([f_cnds..., t_cnds...])
     e(f,t) = reshape([c==f ? 1 : c==t ? -1 : 0 for c in cnds], length(cnds), 1)
-    Y = sum([e(f_cnds[i], t_cnds[i])*y[i]*e(f_cnds[i], t_cnds[i])' for i in 1:length(y)])
+    Y = sum([e(f_cnds[i], t_cnds[i])*y[i]*e(f_cnds[i], t_cnds[i])' for (i,_y) in enumerate(y)])
     return (cnds, Y)
 end
 
