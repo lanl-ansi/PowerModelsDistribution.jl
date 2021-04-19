@@ -37,7 +37,6 @@ function variable_mc_bus_voltage_on_off(pm::LPUBFDiagModel; kwargs...)
 end
 
 
-# TODO: Throw error if tm_fixed is false
 """
 Links to and from power and voltages in a wye-wye transformer, assumes tm_fixed is true
 w_fr_i=(pol_i*tm_scale*tm_i)^2w_to_i
@@ -64,7 +63,6 @@ function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_i
 end
 
 
-# TODO: Throw error if tm_fixed is false
 raw"""
 Links to and from power and voltages in a delta-wye transformer, assumes tm_fixed is true
 3(w_fr_i+w_fr_j)=2(pol_i*tm_scale*tm_i)^2w_to_i \quad \forall (i,j) \in \{(1,2),(2,3),(3,1)\}
