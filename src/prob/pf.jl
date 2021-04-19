@@ -133,7 +133,7 @@ end
 "Constructor for Branch Flow Power Flow"
 function build_mc_pf(pm::AbstractUBFModels)
     # Variables
-    variable_mc_bus_voltage(pm; bounded=true) # TODO should be false
+    variable_mc_bus_voltage(pm; bounded=false)
     variable_mc_branch_current(pm)
     variable_mc_branch_power(pm)
     variable_mc_switch_power(pm)

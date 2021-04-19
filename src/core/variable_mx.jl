@@ -304,9 +304,11 @@ function variable_mx_hermitian(model::JuMP.Model, indices::Array{T,1}, N::Dict{T
     end
 
     if set_lower_bound_diag_to_zero
-        for (id, M) in lower_bound
-            for (idx,t) in enumerate(N[id])
-                M[idx, idx] = 0.0
+        if !ismissing(lower_bound)
+            for (id, M) in lower_bound
+                for (idx,t) in enumerate(N[id])
+                    M[idx, idx] = 0.0
+                end
             end
         end
     end
