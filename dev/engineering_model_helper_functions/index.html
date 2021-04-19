@@ -15,12 +15,10 @@ using InteractiveUtils</code></pre><p>╔═╡ 60e1113b-c662-46ee-b2ce-52114cda
 			Pkg.PackageSpec(;name=&quot;Ipopt&quot;, version=&quot;0.6.5&quot;),
 			Pkg.PackageSpec(;name=&quot;JSON&quot;, version=&quot;0.21&quot;),
 			])
-end</code></pre><pre class="documenter-example-output">  Activating new environment at `/tmp/jl_oYCDEl/Project.toml`
+end</code></pre><pre class="documenter-example-output">  Activating new environment at `/tmp/jl_Yq9XSf/Project.toml`
     Updating registry at `~/.julia/registries/General`
    Resolving package versions...
-   Installed Preferences ─ v1.2.1
-   Installed JLLWrappers ─ v1.3.0
-    Updating `/tmp/jl_oYCDEl/Project.toml`
+    Updating `/tmp/jl_Yq9XSf/Project.toml`
   [da1fd8a2] + CodeTracking v1.0.5
   [2030c09a] + InfrastructureModels v0.6.0
   [b6b21f68] + Ipopt v0.6.5
@@ -30,7 +28,7 @@ end</code></pre><pre class="documenter-example-output">  Activating new environm
   [7425d11c] + PowerModelsAnalytics v0.4.1
   [d7431456] + PowerModelsDistribution v0.11.0
   [295af30f] + Revise v3.1.15
-    Updating `/tmp/jl_oYCDEl/Manifest.toml`
+    Updating `/tmp/jl_Yq9XSf/Manifest.toml`
   [ec485272] + ArnoldiMethod v0.1.0
   [6e4b80f9] + BenchmarkTools v0.5.0
   [b99e7846] + BinaryProvider v0.5.10
@@ -44,7 +42,7 @@ end</code></pre><pre class="documenter-example-output">  Activating new environm
   [5ae59095] + Colors v0.12.7
   [bbf7d656] + CommonSubexpressions v0.3.0
   [34da2185] + Compat v3.27.0
-  [8f4d0f93] + Conda v1.5.1
+  [8f4d0f93] + Conda v1.5.2
   [187b0558] + ConstructionBase v1.1.0
   [9a962f9c] + DataAPI v1.6.0
   [864edb3b] + DataStructures v0.18.9
@@ -54,7 +52,7 @@ end</code></pre><pre class="documenter-example-output">  Activating new environm
   [b552c78f] + DiffRules v1.0.2
   [e2ba6199] + ExprTools v0.1.3
   [8f5d6c58] + EzXML v1.1.0
-  [5789e2e9] + FileIO v1.6.5
+  [5789e2e9] + FileIO v1.7.0
   [8fc22ac5] + FilePaths v0.8.2
   [48062228] + FilePathsBase v0.9.10
   [53c48c17] + FixedPointNumbers v0.8.4
@@ -81,7 +79,7 @@ end</code></pre><pre class="documenter-example-output">  Activating new environm
   [f28f55f0] + Memento v1.1.2
   [e1d29d7a] + Missings v0.4.5
   [78c3b35d] + Mocking v0.7.1
-  [d8a4904e] + MutableArithmetics v0.2.17
+  [d8a4904e] + MutableArithmetics v0.2.18
   [77ba4419] + NaNMath v0.3.5
   [2bd173c7] + NodeJS v1.1.2
   [bac558e1] + OrderedCollections v1.4.0
@@ -160,34 +158,7 @@ end</code></pre><pre class="documenter-example-output">  Activating new environm
   [14a3606d] + MozillaCACerts_jll
   [83775a58] + Zlib_jll
   [8e850ede] + nghttp2_jll
-  [3f19e933] + p7zip_jll
-Precompiling project...
-[32m  ✓ [39m[90mPreferences[39m
-[32m  ✓ [39m[90mJLLWrappers[39m
-[32m  ✓ [39m[90mASL_jll[39m
-[32m  ✓ [39m[90mLibiconv_jll[39m
-[32m  ✓ [39m[90mOpenSpecFun_jll[39m
-[32m  ✓ [39m[90mMETIS_jll[39m
-[32m  ✓ [39m[90mBzip2_jll[39m
-[32m  ✓ [39m[90mOpenBLAS32_jll[39m
-[32m  ✓ [39m[90mCodecBzip2[39m
-[32m  ✓ [39m[90mXML2_jll[39m
-[32m  ✓ [39m[90mMUMPS_seq_jll[39m
-[32m  ✓ [39m[90mEzXML[39m
-[32m  ✓ [39m[90mIpopt_jll[39m
-[32m  ✓ [39m[90mSpecialFunctions[39m
-[32m  ✓ [39m[90mDiffRules[39m
-[32m  ✓ [39m[90mTimeZones[39m
-[32m  ✓ [39m[90mColorVectorSpace[39m
-[32m  ✓ [39m[90mMemento[39m
-[32m  ✓ [39m[90mForwardDiff[39m
-[32m  ✓ [39mPowerModelsAnalytics
-[32m  ✓ [39m[90mMathOptInterface[39m
-[32m  ✓ [39mIpopt
-[32m  ✓ [39mJuMP
-[32m  ✓ [39mInfrastructureModels
-[32m  ✓ [39mPowerModelsDistribution
-25 dependencies successfully precompiled in 64 seconds (68 already precompiled)</pre><p>╔═╡ 30417ccf-d0b4-43d5-9ceb-5b00ef9c8a17</p><pre><code class="language-julia">begin
+  [3f19e933] + p7zip_jll</pre><p>╔═╡ 30417ccf-d0b4-43d5-9ceb-5b00ef9c8a17</p><pre><code class="language-julia">begin
 	using PowerModelsDistribution
 	using LinearAlgebra: diagm
 	using Ipopt
@@ -251,7 +222,7 @@ end</code></pre><pre class="documenter-example-output">Dict{String, Any} with 8 
   &quot;per_unit&quot;       =&gt; false
   &quot;data_model&quot;     =&gt; ENGINEERING</pre><p>╔═╡ 9010cccb-e174-4dff-b934-7e7be5a93a1d</p><pre><code class="language-julia">md&quot;Running this case with OPF gives the results below&quot;</code></pre><div class="markdown"><p>Running this case with OPF gives the results below</p>
 </div><p>╔═╡ 3ed441b8-2055-41b7-a4b5-29130d5880ed</p><pre><code class="language-julia">result = solve_mc_opf(eng, ACPUPowerModel, ipopt_solver)</code></pre><pre class="documenter-example-output">Dict{String, Any} with 8 entries:
-  &quot;solve_time&quot;         =&gt; 0.00498915
+  &quot;solve_time&quot;         =&gt; 0.00500107
   &quot;optimizer&quot;          =&gt; &quot;Ipopt&quot;
   &quot;termination_status&quot; =&gt; LOCALLY_SOLVED
   &quot;dual_status&quot;        =&gt; FEASIBLE_POINT
@@ -291,11 +262,11 @@ end</code></pre><pre class="documenter-example-output">Dict{String, Any} with 12
   &quot;shunt&quot;          =&gt; Dict{String, Any}(&quot;cap&quot;=&gt;Dict{String, Any}(&quot;source_id&quot;=&gt;&quot;…
   &quot;load&quot;           =&gt; Dict{String, Any}(&quot;tload&quot;=&gt;Dict{String, Any}(&quot;source_id&quot;=…
   &quot;linecode&quot;       =&gt; Dict{String, Any}(&quot;default&quot;=&gt;Dict{String, Any}(&quot;b_fr&quot;=&gt;[0…</pre><p>╔═╡ fdaed782-529b-4267-bf73-e26a6a3d4297</p><pre><code class="language-julia">result2 = solve_mc_opf(eng2, ACPUPowerModel, ipopt_solver)</code></pre><pre class="documenter-example-output">Dict{String, Any} with 8 entries:
-  &quot;solve_time&quot;         =&gt; 4.42618
+  &quot;solve_time&quot;         =&gt; 4.69643
   &quot;optimizer&quot;          =&gt; &quot;Ipopt&quot;
   &quot;termination_status&quot; =&gt; ITERATION_LIMIT
   &quot;dual_status&quot;        =&gt; UNKNOWN_RESULT_STATUS
   &quot;primal_status&quot;      =&gt; UNKNOWN_RESULT_STATUS
   &quot;objective&quot;          =&gt; -5.086e15
   &quot;solution&quot;           =&gt; Dict{String, Any}(&quot;voltage_source&quot;=&gt;Dict{String, Any}…
-  &quot;objective_lb&quot;       =&gt; -Inf</pre><p>╔═╡ Cell order: ╟─ff4b2ffa-9d25-11eb-07d0-29751e7b57c2 ╠═60e1113b-c662-46ee-b2ce-52114cda4b81 ╠═30417ccf-d0b4-43d5-9ceb-5b00ef9c8a17 ╟─f2654d95-0c8b-4524-ad1f-f0f12a35c570 ╠═1885ce0e-fe1a-4b9b-b652-72cbee21339d ╟─7683dabc-772f-4fdf-a784-549c05084958 ╠═20d3d95d-7817-45de-89e9-ffce0202d8cf ╟─d4ce49bd-f38e-44e0-aa3a-4ee3f0f70bf1 ╠═1ca9657b-85b4-4ea6-901c-d36e23e8440f ╟─9010cccb-e174-4dff-b934-7e7be5a93a1d ╠═3ed441b8-2055-41b7-a4b5-29130d5880ed ╟─650b6dee-e753-418c-af1e-a0ddda09df81 ╠═95ecd659-45d0-4bd0-9f32-9cafd78fb2c7 ╠═fdaed782-529b-4267-bf73-e26a6a3d4297</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../engineering_model/">« Engineering Model</a><a class="docs-footer-nextpage" href="../formulations/">Network Formulations »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 16 April 2021 21:04">Friday 16 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+  &quot;objective_lb&quot;       =&gt; -Inf</pre><p>╔═╡ Cell order: ╟─ff4b2ffa-9d25-11eb-07d0-29751e7b57c2 ╠═60e1113b-c662-46ee-b2ce-52114cda4b81 ╠═30417ccf-d0b4-43d5-9ceb-5b00ef9c8a17 ╟─f2654d95-0c8b-4524-ad1f-f0f12a35c570 ╠═1885ce0e-fe1a-4b9b-b652-72cbee21339d ╟─7683dabc-772f-4fdf-a784-549c05084958 ╠═20d3d95d-7817-45de-89e9-ffce0202d8cf ╟─d4ce49bd-f38e-44e0-aa3a-4ee3f0f70bf1 ╠═1ca9657b-85b4-4ea6-901c-d36e23e8440f ╟─9010cccb-e174-4dff-b934-7e7be5a93a1d ╠═3ed441b8-2055-41b7-a4b5-29130d5880ed ╟─650b6dee-e753-418c-af1e-a0ddda09df81 ╠═95ecd659-45d0-4bd0-9f32-9cafd78fb2c7 ╠═fdaed782-529b-4267-bf73-e26a6a3d4297</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../engineering_model/">« Engineering Model</a><a class="docs-footer-nextpage" href="../formulations/">Network Formulations »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 19 April 2021 22:27">Monday 19 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
