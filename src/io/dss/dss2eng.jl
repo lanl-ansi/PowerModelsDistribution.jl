@@ -467,15 +467,31 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             eng_obj["linecode"] = dss_obj["linecode"]
         end
 
-        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["r0", "r1", "rg", "rmatrix"]) || !haskey(dss_obj, "linecode")
+        from_geometry = haskey(dss_obj, "geometry") && _is_after_linecode(dss_obj["prop_order"], "geometry")
+        from_spacing = haskey(dss_obj, "wires") && _is_after_linecode(dss_obj["prop_order"], "wires")
+        if from_geometry || from_spacing
+            earth_model = haskey(dss_obj, "earthmodel") ? defaults["earthmodel"] : get(get(data_dss, "options", Dict()), "earthmodel", "deri")
+            freq = get(get(data_dss, "options", Dict()), "defaultbasefreq", 60.0)
+
+            rs, xs, g, b = from_geometry ? _calc_impedances_from_geometry(data_dss, dss_obj["geometry"], freq, earth_model) : _calc_impedances_from_wires_spacing(data_dss, dss_obj["wires"], dss_obj["spacing"], freq, earth_model, ncond)
+
+            eng_obj["rs"] = rs
+            eng_obj["xs"] = xs
+            eng_obj["b_fr"] = b ./ 2.0
+            eng_obj["b_to"] = b ./ 2.0
+            eng_obj["g_fr"] = fill(0.0, ncond, ncond)
+            eng_obj["g_to"] = fill(0.0, ncond, ncond)
+        end
+
+        if any(haskey(dss_obj, key) && (_is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], "geometry", key)) for key in ["r0", "r1", "rg", "rmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
             eng_obj["rs"] = reshape(defaults["rmatrix"], nphases, nphases)
         end
 
-        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["x0", "x1", "xg", "xmatrix"]) || !haskey(dss_obj, "linecode")
+        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], "geometry", key) for key in ["x0", "x1", "xg", "xmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
             eng_obj["xs"] = reshape(defaults["xmatrix"], nphases, nphases)
         end
 
-        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["b0", "b1", "c0", "c1", "cmatrix"]) || !haskey(dss_obj, "linecode")
+        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], "geometry", key) for key in ["b0", "b1", "c0", "c1", "cmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
             eng_obj["b_fr"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
             eng_obj["b_to"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
             eng_obj["g_fr"] = fill(0.0, nphases, nphases)

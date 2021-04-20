@@ -30,7 +30,8 @@ const _dss_monitor_objects = String[
 const _dss_supported_components = String[
     "line", "linecode", "load", "generator", "capacitor", "reactor",
     "transformer", "pvsystem", "storage", "loadshape", "options",
-    "xfmrcode", "vsource", "xycurve", "spectrum",
+    "xfmrcode", "vsource", "xycurve", "spectrum", "linegeometry",
+    "wiredata", "linespacing",
 ]
 
 "two number operators for reverse polish notation"
@@ -727,7 +728,7 @@ function _parse_element_with_dtype(dtype::Type, element::AbstractString)
     elseif _isa_rpn(element)
         out = _parse_rpn(element)
     elseif dtype == String
-        out = element
+        out = string(element)
     else
         if _isa_conn(element)
             out = _parse_conn(element)
@@ -903,4 +904,159 @@ function _build_time_series_reference!(eng_obj::Dict{String,<:Any}, dss_obj::Dic
             eng_obj["time_series"][reactive] = defaults[time_series]
         end
     end
+end
+
+
+"gets all the data required for line geometry calculation"
+function _get_geometry_data(data_dss::Dict{String,<:Any}, geometry_id::String)::Tuple{Dict{String,Any},Dict{String,Any}}
+    geom_obj = data_dss["linegeometry"][geometry_id]
+    _apply_like!(geom_obj, data_dss, "linegeometry")
+
+    geometry = _apply_ordered_properties(_create_linegeometry(geometry_id; _to_kwargs(geom_obj)...), geom_obj)
+
+    if !isempty(get(geometry, "spacing", "")) && !isempty(get(get(data_dss,"linespacing",Dict()), geometry["spacing"], Dict()))
+        spacing = _get_spacing_data(data_dss, geometry["spacing"])
+
+        @assert geometry["nconds"] == spacing["nconds"] "Nconds on linegeometry.$(geometry_id) doesn't match nconds on linespacing.$(geometry["spacing"])"
+
+        geometry["xs"] = spacing["xs"]
+        geometry["hs"] = spacing["hs"]
+    end
+
+    wiredata = _get_wire_data(data_dss, geometry["wires"])
+
+    return geometry, wiredata
+end
+
+
+function _get_spacing_data(data_dss::Dict{String,<:Any}, spacing_id::String)
+    spacing_obj = data_dss["linespacing"][spacing_id]
+    _apply_like!(spacing_obj, data_dss, "linespacing")
+
+    spacing = _apply_ordered_properties(_create_linespacing(spacing_id; _to_kwargs(spacing_obj)...), spacing_obj)
+end
+
+
+""
+function _get_wire_data(data_dss::Dict{String,<:Any}, wires::Vector{String})::Dict{String,Any}
+    wiredata = Dict{String,Any}(id => get(get(data_dss,"wiredata",Dict()), id, Dict{String,Any}()) for id in wires)
+    @assert !isempty(wiredata) && all(!isempty(wd) for (_,wd) in wiredata) "Some wiredata is missing, cannot continue"
+
+    Dict{String,Any}(
+        id => _apply_ordered_properties(_create_wiredata(id; _to_kwargs(wd)...), wd) for (id,wd) in wiredata
+    )
+end
+
+
+""
+function _calc_impedances_from_linegeometry(data_dss::Dict{String,<:Any}, geometry_id::String, frequency::Real, earth_model::String)
+    geometry, wiredata = _get_geometry_data(data_dss, geometry_id)
+
+    return _calc_impedances_from_geometry(geometry, wiredata, frequency, earth_model)
+end
+
+
+""
+function _calc_impedances_from_wires_spacing(data_dss::Dict{String,<:Any}, wires::Vector{String}, spacing::String, frequency::Real, earth_model::String, nconds::Real)
+    spacing = _get_spacing_data(data_dss, spacing)
+
+    spacing["wires"] = wires
+    spacing["reduce"] = nconds == spacing["nconds"] ? false : true
+
+    wiredata = _get_wire_data(data_dss, wires)
+
+    return _calc_impedances_from_geometry(spacing, wiredata, frequency, earth_model)
+end
+
+
+"""
+calculates impedance from line geometry [1]
+
+[1] Kersting, W. H., Distribution System Modeling and Analysis, Fourth Edition, CRC Press, pp. 77-85
+"""
+function _calc_impedances_from_geometry(geometry::Dict{String,<:Any}, wiredata::Dict{String,<:Any}, f::Real, earth_model::String)
+    nconds = geometry["nconds"]
+    z = zeros(ComplexF64, nconds, nconds)
+
+    wires = geometry["wires"]
+
+    G = 0.1609347e-3 / _convert_to_meters["mi"]  # const in Ω/m
+    ω = 2 * π * f  # system angular frequency in radians per second
+    ρ = 100  # resistivity of earth in Ω-m
+
+    r = zeros(nconds)  # resistance of conductor in Ω/m
+    GMR = zeros(nconds)  # geometric mean radius in m
+    RD = zeros(nconds)  # radius of conductor in m
+    X = zeros(nconds)  # variable in Ω/m
+
+    k = zeros(nconds, nconds) # const
+    D = zeros(nconds, nconds) # distance between conductors in m
+    S = zeros(nconds, nconds) # distance between conductor i and image j in m
+    θ = zeros(nconds, nconds) # angle between pair of lines drawn from conductor i to its own image and to the the image of conductor j
+    P = zeros(nconds, nconds) # variable
+    Q = zeros(nconds, nconds) # variable
+
+    P̂ = zeros(nconds, nconds)  # primitive potential coefficient matrix
+
+    for i in 1:nconds
+        r[i] = wiredata[wires[i]]["rac"]
+        GMR[i] = wiredata[wires[i]]["gmrac"]
+        RD[i] = wiredata[wires[i]]["capradius"]
+        X[i] = 2 * ω * G * log(RD[i] / GMR[i])
+
+        for j in 1:nconds
+            D[i,j] = sqrt((geometry["xs"][i] - geometry["xs"][j])^2 + (geometry["hs"][i]-geometry["hs"][j])^2)
+            S[i,j] = sqrt((geometry["xs"][i] - geometry["xs"][j])^2 + (geometry["hs"][i]+geometry["hs"][j])^2)
+            adj = S[i,j] > S[i,i] ? S[i,i] : S[i,j]
+            hyp = S[i,i] > S[i,j] ? S[i,i] : S[i,j]
+            θ[i,j] = acos(adj / hyp)
+
+            k[i,j] = 8.565e-4 * S[i,j] * sqrt(f / ρ)
+
+            if earth_model == "fullcarson" || earth_model == "deri"
+                P[i,j] = π / 8 - 1 / (3 * sqrt(2)) * k[i,j] * cos(θ[i,j]) + k[i,j]^2 / 16 * cos(2 * θ[i,j]) * (0.6728 * log(2 / k[i,j]))
+                Q[i,j] = -0.0386 + 1 / 2 * log(2 / k[i,j]) + 1 / (3 * sqrt(2)) * k[i,j] * cos(θ[i,j])
+            elseif earth_model == "carson"
+                P[i,j] = π / 8
+                Q[i,j] = -0.0386 + 1 / 2 * log(2 / k[i,j])
+            else
+                error("earth_model = '$(earth_model)' not recognized")
+            end
+        end
+    end
+
+    for i in 1:nconds
+        z[i,i] = r[i] + 4 * ω * P[i,i] * G + 1im * (X[i] + 2 * ω * G * log(S[i,i] / RD[i]) + 4 * ω * Q[i,i] * G)
+        P̂[i,i] = 11.17689 * log(S[i,i] / RD[i]) * _convert_to_meters["mi"]
+        for j in 1:nconds
+            if i != j
+                P̂[i,j] = 11.17689 * log(S[i,j] / D[i,j]) * _convert_to_meters["mi"]
+                z[i,j] = 4 * ω * P[i,j] * G + 1im * (2 * ω * G * log(S[i,j] / D[i,j]) + 4 * ω * Q[i,j] * G)
+            end
+        end
+    end
+
+    P̂ = _replace_nan.(P̂)
+    y = Complex.(zeros(nconds, nconds), ω * pinv(P̂))  # complex shunt admittance
+
+    temp = Dict{String,Any}(
+        "rs" => real(z),
+        "xs" => imag(z),
+        "b" => imag(y),
+        "g" => real(y),
+    )
+    if geometry["reduce"]
+        conductors = collect(1:nconds)
+        phases = collect(1:geometry["nphases"])
+        neutrals = [c for c in conductors if !(c in phases)]
+        for neutral in neutrals
+            conductors = _kron_reduce_branch!(temp, ["rs","xs"], String["g", "b"], conductors, neutral)
+        end
+        @assert conductors == phases "branch was not properly kron reduced"
+
+        z = Complex.(temp["rs"], temp["xs"])
+        y = Complex.(temp["g"], temp["b"])
+    end
+
+    return real(z), imag(z), real(y), imag(y)
 end
