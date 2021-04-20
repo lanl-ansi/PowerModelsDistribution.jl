@@ -2,6 +2,8 @@
 
 ## staged
 
+- Miscellaneous code comment corrections
+- Refactor to use Type[] instead of Vector{Type}([]) internally for easier reading of code
 - Add section on `import_all` to beginners guide
 - Update default %cutin and %cutout to be 20.0 on pvsystem objects
 - Fix `objective_mc_max_load_setpoint` to remove iteration over "conductor_ids"
