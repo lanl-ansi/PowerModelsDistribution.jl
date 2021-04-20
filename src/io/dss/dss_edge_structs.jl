@@ -66,25 +66,15 @@ function _create_line(name::String=""; kwargs...)::Dict{String,Any}
     xg = get(kwargs, :xg, 0.155081)
     rho = get(kwargs, :rho, 100.0)
 
-    # TODO: support length mismatch between line and linecode?
-    # Currently this does not change the values of rmatrix and xmatrix due to
-    # lenmult=1, code is only in place for future use.
-    lenmult = 1.0
-
     kxg = xg / log(658.5 * sqrt(rho / circuit_basefreq))
     xgmod = xg != 0.0 ?  0.5 * kxg * log(basefreq / circuit_basefreq) : 0.0
 
     units = get(kwargs, :units, "none")
     len = get(kwargs, :switch, false) ? 0.001 : get(kwargs, :length, 1.0) * _convert_to_meters[units]
 
-    if haskey(kwargs, :rg)
-        @warn "Rg,Xg are not fully supported"
-    end
-
     rmatrix .+= rg * (basefreq / circuit_basefreq - 1.0)
-    rmatrix .*= lenmult
     xmatrix .-= xgmod
-    xmatrix .*= lenmult * (basefreq / circuit_basefreq)
+    xmatrix .*= (basefreq / circuit_basefreq)
 
     Dict{String,Any}(
         "name" => name,

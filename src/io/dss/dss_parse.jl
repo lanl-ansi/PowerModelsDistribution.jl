@@ -275,6 +275,11 @@ const _dss_object_properties = Dict{String,Vector{String}}(
     "swtcontrol" => _swtcontrol_properties,
 )
 
+const _wdg_keys = Dict{String,Tuple{String,Vector{String}}}(
+    "transformer" => ("wdg", ["wdg", "bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]),
+    "linegeometry" => ("cond", ["cond", "wire", "cncable", "tscable", "x", "h", "units"])
+)
+
 
 "parses single column load profile files"
 function _parse_csv_file(path::AbstractString, type::AbstractString; header::Bool=false, column::Int=1, interval::Bool=false)::Union{Vector{String}, Tuple{Vector{String}, Vector{String}, Vector{String}}, Tuple{Vector{String}, Vector{String}}}
@@ -635,21 +640,25 @@ the `key` and `value` of the property. If a property of the same name already
 exists inside `object`, the original value is converted to an array, and the
 new value is appended to the end.
 """
-function _add_property(object::Dict{String,<:Any}, key::SubString{String}, value::Any)::Dict{String,Any}
+function _add_property(object::Dict{String,<:Any}, key::SubString{String}, value::Any; object_type::AbstractString="")::Dict{String,Any}
     if !haskey(object, "prop_order")
         object["prop_order"] = Vector{String}(["name"])
     end
 
-    current_wdg = key == "wdg" ? value == "1" ? "" : "$value" : any(occursin("wdg", prop) for prop in object["prop_order"]) ? replace(split(filter(x->occursin("wdg", x), object["prop_order"])[end], "_")[end], "wdg"=>"") : ""
-
-    if key in ["wdg", "bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
-        key = join(filter(p->!isempty(p), [key, current_wdg]), "_")
+    if haskey(_wdg_keys, object_type)
+        wdg_key, dup_keys = _wdg_keys[object_type]
+        current_wdg = key == wdg_key ? value == "1" ? "" : "$value" : any(occursin(wdg_key, prop) for prop in object["prop_order"]) ? replace(split(filter(x->occursin(wdg_key, x), object["prop_order"])[end], "_")[end], wdg_key=>"") : ""
+        if key in dup_keys
+            key = join(filter(p->!isempty(p), [key, current_wdg]), "_")
+        end
     end
 
     if haskey(object, lowercase(key))
-        rmatch = match(r"_(\d+)$", key)
-        if typeof(rmatch) != Nothing
-            end_num = parse(Int, rmatch.captures[1]) + 1
+        obj_keys = [k for k in keys(object) if startswith(k, key)]
+        rmatches = [match(r"_(\d+)$", k) for k in obj_keys]
+        ds = [parse(Int, rmatch.captures[1]) for rmatch in rmatches if typeof(rmatch) != Nothing]
+        if length(ds) > 0
+            end_num = maximum(ds) + 1
             key = replace(key, r"_(\d+)$" => "_$end_num")
         else
             key = string(key, "_2")
@@ -720,7 +729,7 @@ function _parse_component(component::AbstractString, properties::AbstractString,
             value = _parse_mult_parameter(value; path=path)
         end
 
-        _add_property(object, key, value)
+        _add_property(object, key, value; object_type=obj_type)
     end
 
     return object

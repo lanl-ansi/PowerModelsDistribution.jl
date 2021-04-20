@@ -52,7 +52,7 @@
 
     @testset "opendss parse generic warnings and errors" begin
         @test_throws ErrorException parse_file("../test/data/opendss/test_simple2.dss"; data_model=MATHEMATICAL)
-        @test_logs (:info, "Command 'solve' on line 70 in 'test2_master.dss' is not supported, skipping.") (:info, "Command 'show' on line 72 in 'test2_master.dss' is not supported, skipping.") (:warn, "reactors as constant impedance elements is not yet supported, treating reactor.reactor1 like line") (:warn, "line.l1: like=something cannot be found") (:warn, "Rg,Xg are not fully supported") (:info, "Circuit has been reset with the 'clear' on line 2 in 'test2_master.dss'") (:info, "Redirecting to 'test2_Linecodes.dss' on line 10 in 'test2_master.dss'") (:info, "Redirecting to 'test2_Loadshape.dss' on line 11 in 'test2_master.dss'") match_mode=:any parse_file("../test/data/opendss/test2_master.dss")
+        @test_logs (:info, "Command 'solve' on line 70 in 'test2_master.dss' is not supported, skipping.") (:info, "Command 'show' on line 72 in 'test2_master.dss' is not supported, skipping.") (:warn, "reactors as constant impedance elements is not yet supported, treating reactor.reactor1 like line") (:warn, "line.l1: like=something cannot be found") (:info, "Circuit has been reset with the 'clear' on line 2 in 'test2_master.dss'") (:info, "Redirecting to 'test2_Linecodes.dss' on line 10 in 'test2_master.dss'") (:info, "Redirecting to 'test2_Loadshape.dss' on line 11 in 'test2_master.dss'") match_mode=:any parse_file("../test/data/opendss/test2_master.dss")
     end
 
     dss = parse_dss("../test/data/opendss/test2_master.dss")
@@ -156,9 +156,9 @@
     @testset "opendss parse line parsing wires - spacing properties" begin
         dss_data = parse_dss("../test/data/opendss/test2_master.dss")
 
-        @test isa(dss_data["line"]["l9"]["wires"], Vector{String}) && all(dss_data["line"]["l9"]["wires"] .== ["wire1", "wire2"])
+        @test isa(dss_data["line"]["l9"]["wires"], Vector{String}) && all(dss_data["line"]["l9"]["wires"] .== ["wire1", "wire2", "wire3"])
         @test dss_data["line"]["l9"]["spacing"] == "test_spacing"
-        @test haskey(dss_data, "wiredata") && (haskey(dss_data["wiredata"], "wire1") && haskey(dss_data["wiredata"], "wire2"))
+        @test haskey(dss_data, "wiredata") && (haskey(dss_data["wiredata"], "wire1") && haskey(dss_data["wiredata"], "wire2") && haskey(dss_data["wiredata"], "wire3"))
         @test haskey(dss_data, "linespacing") && haskey(dss_data["linespacing"], "test_spacing")
     end
 

@@ -346,3 +346,135 @@ function _create_spectrum(name::String=""; kwargs...)
     )
 end
 
+
+"""
+Creates a Dict{String,Any} containing all of the properties of LineGeometry. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
+"""
+function _create_linegeometry(name::String=""; kwargs...)::Dict{String,Any}
+    nconds = get(kwargs, :nconds, 3)
+    conds = filter(x->startswith(string(x), "cond"), keys(kwargs))
+
+    temp = Dict{String,Any}(
+        "wires" => get(kwargs, :wires, fill("", nconds)),
+        "cncables" => get(kwargs, :cncables, fill("", nconds)),
+        "tscables" => get(kwargs, :tscables, fill("", nconds)),
+        "xs" => fill(0.0, nconds),
+        "hs" => fill(0.0, nconds),
+        "unitss" => fill("ft", nconds),
+    )
+
+    for cond in conds
+        suffix = kwargs[cond] == 1 ? "" : "_$(kwargs[cond])"
+        for key in [:wire, :x, :h, :units, :cncable, :tscable]
+            subkey = Symbol(string(key, suffix))
+            if haskey(kwargs, subkey)
+                temp[string(key, "s")][kwargs[cond]] = kwargs[subkey]
+            end
+        end
+    end
+
+    Dict{String,Any}(
+        "name" => name,
+        "nconds" => get(kwargs, :nconds, 3),
+        "nphases" => get(kwargs, :nphases, 3),
+        "cond" => get(kwargs, :cond, 1),
+        "wire" => get(kwargs, :wire, ""),
+        "x" => get(kwargs, :x, 0.0) * _convert_to_meters[get(kwargs, :units, "ft")],
+        "h" => get(kwargs, :h, 0.0) * _convert_to_meters[get(kwargs, :units, "ft")],
+        "units" => "m",
+        "normamps" => get(kwargs, :normamps, 400.0),
+        "emergamps" => get(kwargs, :emergamps, 600.0),
+        "reduce" => get(kwargs, :reduce, false),
+        "spacing" => get(kwargs, :spacing, ""),
+        "wires" => get(kwargs, :wires, temp["wires"]),
+        "cncable" => get(kwargs, :cncable, ""),
+        "tscable" => get(kwargs, :tscable, ""),
+        "cncables" => get(kwargs, :cncables, temp["cncables"]),
+        "tscables" => get(kwargs, :tscables, temp["tscables"]),
+        "seasons" => get(kwargs, :seasons, 1),
+        "ratings" => get(kwargs, :ratings, Float64[0]),
+        "like" => get(kwargs, :like, ""),
+        # internal properties
+        "xs" => temp["xs"] .* [_convert_to_meters[u] for u in temp["unitss"]],
+        "hs" => temp["hs"] .* [_convert_to_meters[u] for u in temp["unitss"]],
+        "unitss" => fill("m", nconds),
+    )
+end
+
+
+"""
+Creates a Dict{String,Any} containing all of the properties of WireData. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
+"""
+function _create_wiredata(name::String=""; kwargs...)::Dict{String,Any}
+    if haskey(kwargs, :diam) || haskey(kwargs, :radius)
+        radunits = get(kwargs, :radunits, "none")
+        if haskey(kwargs, :diam)
+            diam = kwargs[:diam]
+            radius = kwargs[:diam] / 2
+        elseif haskey(kwargs, :radius)
+            radius = kwargs[:radius]
+            diam = 2 * kwargs[:radius]
+        end
+
+        if !haskey(kwargs, :gmrac)
+            gmrac = 0.7788 * kwargs[:radius]
+            gmrunits = get(kwargs, :radunits, "none")
+        else
+            gmrac = kwargs[:gmrac]
+            gmrunits = get(kwargs, :gmrunits, "none")
+        end
+    elseif haskey(kwargs, :gmrac) && !haskey(kwargs, :diag) && !haskey(kwargs, :radius)
+        radius = kwargs[:gmrac] / 0.7788
+        diam = 2 * kwargs[:radius]
+        radunits = get(kwargs, :gmrunits, "none")
+        gmrac = kwargs[:gmrac]
+        gmrunits = radunits
+    else
+        radius = 1
+        diam = 2
+        gmrac = 0.7788
+        radunits = "none"
+        gmrunits = "none"
+    end
+
+    Dict{String,Any}(
+        "name" => name,
+        "rdc" => get(kwargs, :rdc, get(kwargs, :rac, 0.0)) / _convert_to_meters[get(kwargs, :runits, "none")],
+        "rac" => get(kwargs, :rac, get(kwargs, :rdc, 0.0)) / _convert_to_meters[get(kwargs, :runits, "none")],
+        "runits" => "m",
+        "gmrac" => gmrac * _convert_to_meters[gmrunits],
+        "gmrunits" => "m",
+        "radius" => radius * _convert_to_meters[radunits],
+        "capradius" => get(kwargs, :capradius, radius / 0.7788) * _convert_to_meters[radunits],
+        "radunits" => "m",
+        "normamps" => get(kwargs, :normamps, get(kwargs, :emergamps, 600.0) / 1.5),
+        "emergamps" => get(kwargs, :emergamps, get(kwargs, :normamps, 400.0) * 1.5),
+        "diam" => diam * _convert_to_meters[radunits],
+        "like" => get(kwargs, :like, ""),
+    )
+end
+
+
+"""
+Creates a Dict{String,Any} containing all of the properties of LineSpacing. See
+OpenDSS documentation for valid fields and ways to specify the different
+properties.
+"""
+function _create_linespacing(name::String=""; kwargs...)::Dict{String,Any}
+    Dict{String,Any}(
+        "name" => name,
+        "nconds" => get(kwargs, :nconds, 3),
+        "nphases" => get(kwargs, :nphases, get(kwargs, :nconds, 3)),
+        "x" => get(kwargs, :x, zeros(Float64, get(kwargs, :nconds, 3))) .* fill(_convert_to_meters[get(kwargs, :units, "ft")]),
+        "h" => get(kwargs, :h, zeros(Float64, get(kwargs, :nconds, 3))) .* fill(_convert_to_meters[get(kwargs, :units, "ft")]),
+        "units" => "m",
+        # internal properties
+        "xs" => get(kwargs, :x, zeros(Float64, get(kwargs, :nconds, 3))) .* fill(_convert_to_meters[get(kwargs, :units, "ft")]),
+        "hs" => get(kwargs, :h, zeros(Float64, get(kwargs, :nconds, 3))) .* fill(_convert_to_meters[get(kwargs, :units, "ft")]),
+        "unitss" => fill("m", get(kwargs, :nconds, 3))
+    )
+end
