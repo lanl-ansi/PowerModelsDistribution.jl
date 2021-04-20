@@ -483,15 +483,15 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             eng_obj["g_to"] = fill(0.0, ncond, ncond)
         end
 
-        if any(haskey(dss_obj, key) && (_is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], "geometry", key)) for key in ["r0", "r1", "rg", "rmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
+        if any(haskey(dss_obj, key) && (_is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], key, "geometry")) for key in ["r0", "r1", "rg", "rmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
             eng_obj["rs"] = reshape(defaults["rmatrix"], nphases, nphases)
         end
 
-        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], "geometry", key) for key in ["x0", "x1", "xg", "xmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
+        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], key, "geometry") for key in ["x0", "x1", "xg", "xmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
             eng_obj["xs"] = reshape(defaults["xmatrix"], nphases, nphases)
         end
 
-        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], "geometry", key) for key in ["b0", "b1", "c0", "c1", "cmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
+        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], key, "geometry") for key in ["b0", "b1", "c0", "c1", "cmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
             eng_obj["b_fr"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
             eng_obj["b_to"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
             eng_obj["g_fr"] = fill(0.0, nphases, nphases)
