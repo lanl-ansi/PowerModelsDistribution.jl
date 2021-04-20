@@ -259,6 +259,25 @@ end
 
 
 """
+Creates a Dict{String,Any} containing all expected properties for a GrowthShape
+element. See OpenDSS documentation for valid fields and ways to specify
+different properties.
+"""
+function _create_growthshape(name::String=""; kwargs...)
+    Dict{String,Any}(
+        "name" => name,
+        "npts" => get(kwargs, :npts, length(get(kwargs, :year, Float64[]))),
+        "year" => get(kwargs, :year, Float64[]),
+        "mult" => get(kwargs, :mult, Float64[]),
+        "csvfile" => get(kwargs, :csvfile, ""),
+        "sngfile" => get(kwargs, :sngfile, ""),
+        "dblfile" => get(kwargs, :dblfile, ""),
+        "like" => get(kwargs, :like, ""),
+    )
+end
+
+
+"""
 Creates a Dict{String,Any} containing all expected properties for a XYCurve
 object. See OpenDSS documentation for valid fields and ways to specify
 different properties.

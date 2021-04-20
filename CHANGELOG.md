@@ -2,6 +2,7 @@
 
 ## staged
 
+- Add support for parsing GrowthShape objects
 - Miscellaneous code comment corrections
 - Refactor to use Type[] instead of Vector{Type}([]) internally for easier reading of code
 - Add section on `import_all` to beginners guide
