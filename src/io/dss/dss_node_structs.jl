@@ -32,8 +32,6 @@ function _create_load(name::String=""; kwargs...)::Dict{String,Any}
             kva = abs(kw) + kvar^2
     end
 
-    # TODO: ZIPV (7 coefficient array, depends on model keyword)
-
     Dict{String,Any}(
         "name" => name,
         "phases" => get(kwargs, :phases, 3),
@@ -44,7 +42,7 @@ function _create_load(name::String=""; kwargs...)::Dict{String,Any}
         "model" => get(kwargs, :model, 1),
         "yearly" => get(kwargs, :yearly, ""),
         "daily" => get(kwargs, :daily, ""),
-        "duty" => get(kwargs, :duty, ""),
+        "duty" => get(kwargs, :duty, get(kwargs, :daily, "")),
         "growth" => get(kwargs, :growth, ""),
         "conn" => get(kwargs, :conn, WYE),
         "kvar" => kvar,
@@ -68,7 +66,7 @@ function _create_load(name::String=""; kwargs...)::Dict{String,Any}
         "cfactor" => get(kwargs, :cfactor, 4.0),
         "cvrcurve" => get(kwargs, :cvrcurve, ""),
         "numcust" => get(kwargs, :numcust, 1),
-        "zipv" => get(kwargs, :zipv, ""),
+        "zipv" => get(kwargs, :zipv, Float64[]),
         "%seriesrl" => get(kwargs, Symbol("%seriesrl"), 0.5),
         "relweight" => get(kwargs, :relweight, 1.0),
         "vlowpu" => get(kwargs, :vlowpu, 0.5),
