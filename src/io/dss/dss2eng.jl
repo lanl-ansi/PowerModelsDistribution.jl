@@ -1,7 +1,4 @@
 # OpenDSS parser
-import LinearAlgebra: diagm
-
-
 "Parses buscoords [lon,lat] (if present) into their respective buses"
 function _dss2eng_buscoords!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any})
     for (id, coords) in get(data_dss, "buscoords", Dict{String,Any}())

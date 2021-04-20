@@ -250,68 +250,68 @@ const _eng_model_dtypes = Dict{Symbol,Dict{Symbol,Type}}(
 
 "required fields in the engineering data model"
 const _eng_model_req_fields= Dict{Symbol,Vector{Symbol}}(
-    :bus => Vector{Symbol}([
+    :bus => Symbol[
         :status, :terminals, :grounded, :rg, :xg,
-    ]),
-    :line => Vector{Symbol}([
+    ],
+    :line => Symbol[
         :status, :f_bus, :t_bus, :f_connections, :t_connections, :length,
-    ]),
-    :transformer => Vector{Symbol}([
+    ],
+    :transformer => Symbol[
         :status, :configurations, :vnom, :snom, :polarity, :xsc, :rs,
         :noloadloss, :imag, :tm_fix, :tm_set, :tm_step,
-    ]),
-    :switch => Vector{Symbol}([
+    ],
+    :switch => Symbol[
         :status, :f_bus, :t_bus, :f_connections, :t_connections,
-    ]),
-    :fuse => Vector{Symbol}([
+    ],
+    :fuse => Symbol[
         :status, :f_bus, :t_bus, :f_connections, :t_connections,
-    ]),
-    :line_reactor => Vector{Symbol}([
+    ],
+    :line_reactor => Symbol[
         :status, :f_bus, :t_bus, :f_connections, :t_connections,
-    ]),
-    :series_capacitor => Vector{Symbol}([
+    ],
+    :series_capacitor => Symbol[
         :status, :f_bus, :t_bus, :f_connections, :t_connections,
-    ]),
-    :shunt => Vector{Symbol}([
+    ],
+    :shunt => Symbol[
         :status, :bus, :connections, :configuration, :gs, :gs, :vnom,
-    ]),
-    :shunt_capacitor => Vector{Symbol}([
+    ],
+    :shunt_capacitor => Symbol[
         :status, :bus, :connections, :configuration, :bs, :vnom,
-    ]),
-    :shunt_reactor => Vector{Symbol}([
+    ],
+    :shunt_reactor => Symbol[
         :status, :bus, :connections, :configuration, :bs, :vnom,
-    ]),
-    :load => Vector{Symbol}([
+    ],
+    :load => Symbol[
         :status, :bus, :connections, :configuration, :model, :pd_nom, :qd_nom,
         :vnom,
-    ]),
-    :generator => Vector{Symbol}([
+    ],
+    :generator => Symbol[
         :status, :bus, :connections, :configuration, :model,
-    ]),
-    :solar => Vector{Symbol}([
+    ],
+    :solar => Symbol[
         :status, :bus, :connections, :configuration,
-    ]),
-    :storage => Vector{Symbol}([
+    ],
+    :storage => Symbol[
         :status, :bus, :connections, :configuration, :energy,
         :charge_efficiency, :discharge_efficiency, :rs, :xs, :pex, :qex,
-    ]),
-    :voltage_source => Vector{Symbol}([
+    ],
+    :voltage_source => Symbol[
         :status, :bus, :connections, :configuration, :vm, :va,
-    ]),
-    :linecode => Vector{Symbol}([
+    ],
+    :linecode => Symbol[
         :rs, :xs, :g_fr, :g_to, :b_fr, :b_to, :cm_ub,
-     ]),
-    :xfmrcode => Vector{Symbol}([
+     ],
+    :xfmrcode => Symbol[
         :status, :vnom, :snom, :xsc, :rs, :noloadloss, :imag, :tm_fix, :tm,
         :tm_min, :tm_max, :tm_step,
-    ]),
-    :grounding => Vector{Symbol}([]),
+    ],
+    :grounding => Symbol[],
 
     # Future Components
-    # :ev => Vector{Symbol}([]),
-    # :wind => Vector{Symbol}([]),
-    # :autotransformer => Vector{Symbol}([]),
-    # :meter => Vector{Symbol}([])
+    # :ev => Symbol[],
+    # :wind => Symbol[],
+    # :autotransformer => Symbol[],
+    # :meter => Symbol[]
 )
 
 
@@ -322,7 +322,7 @@ function check_eng_data_model(data_eng::Dict{String,<:Any})
             for (name, component) in components
                 _check_eng_component_dtypes(data_eng, component_type, name)
 
-                for field in get(_eng_model_req_fields, Symbol(component_type), Vector{Symbol}([]))
+                for field in get(_eng_model_req_fields, Symbol(component_type), Symbol[])
                     @assert haskey(component, string(field)) "The property \'$field\' is missing on $component_type $name"
                 end
 

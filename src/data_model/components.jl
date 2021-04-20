@@ -248,10 +248,10 @@ end
 "creates a bus object with some defaults"
 function create_bus(;
     status::Status=ENABLED,
-    terminals::Union{Vector{Int},Vector{String}}=Vector{Int}([]),
-    grounded::Union{Vector{Int},Vector{String}}=Vector{Int}([]),
-    rg::Vector{<:Real}=Vector{Float64}([]),
-    xg::Vector{<:Real}=Vector{Float64}([]),
+    terminals::Union{Vector{Int},Vector{String}}=Int[],
+    grounded::Union{Vector{Int},Vector{String}}=Int[],
+    rg::Vector{<:Real}=Float64[],
+    xg::Vector{<:Real}=Float64[],
     kwargs...
         )::Dict{String,Any}
 

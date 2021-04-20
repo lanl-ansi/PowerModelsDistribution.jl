@@ -1,4 +1,4 @@
-const _dss_unsupported_commands = Vector{String}([
+const _dss_unsupported_commands = String[
     "cleanup", "connect", "disconnect", "_docontrolactions", "_initsnap",
     "_samplecontrols", "_showcontrolqueue", "_solvedirect", "solvenocontrol",
     "_solvepflow", "?", "about", "addbusmarker", "alignfile", "allocateloads",
@@ -14,114 +14,114 @@ const _dss_unsupported_commands = Vector{String}([
     "summary", "totals", "updatestorage", "var", "variable", "varnames",
     "vdiff", "visualize", "voltages", "yearlycurves", "ysc", "zsc", "zsc10",
     "zscrefresh"
-])
+]
 
-const _linecode_properties = Vector{String}([
+const _linecode_properties = String[
     "nphases", "r1", "x1", "r0","x0", "c1", "c0", "units", "rmatrix",
     "xmatrix", "cmatrix", "basefreq", "normamps", "emergamps", "faultrate",
     "pctperm", "repair", "kron", "rg", "xg", "rho", "neutral", "b1", "b0",
     "like"
-])
+]
 
-const _linegeometry_properties = Vector{String}([
+const _linegeometry_properties = String[
     "nconds", "nphases", "cond", "wire", "x", "h", "units", "normamps",
     "emergamps", "reduce", "spacing", "wires", "cncable", "tscable",
     "cncables", "tscables", "like"
-])
+]
 
-const _linespacing_properties = Vector{String}([
+const _linespacing_properties = String[
     "nconds", "nphases", "x", "h", "units", "like"
-])
+]
 
-const _loadshape_properties = Vector{String}([
+const _loadshape_properties = String[
     "npts", "interval", "minterval", "sinterval", "pmult", "qmult", "hour",
     "mean", "stddev", "csvfile", "sngfile", "pqcsvfile", "action", "useactual",
     "pmax", "qmax", "pbase", "like"
-])
+]
 
-const _xycurve_properties = Vector{String}([
+const _xycurve_properties = String[
     "npts", "points", "yarray", "xarray", "csvfile", "sngfile", "dblfile",
     "x", "y", "xshift", "yshift", "xscale", "yscale", "like"
-])
+]
 
-const _growthshape_properties = Vector{String}([
+const _growthshape_properties = String[
     "npts", "year", "mult", "csvfile", "sngfile", "dblfile", "like"
-])
+]
 
-const _tcc_curve_properties = Vector{String}([
+const _tcc_curve_properties = String[
     "npts", "c_array", "t_array", "like"
-])
+]
 
-const _cndata_properties = Vector{String}([
+const _cndata_properties = String[
     "diacable", "diains", "diam", "diastrand", "emergamps", "epsr", "gmrac",
     "gmrstrang", "gmrunits", "inslayer", "k", "like", "normamps", "rac",
     "radius", "radunits", "rdc", "rstrand", "runits"
-])
+]
 
-const _tsdata_properties = Vector{String}([
+const _tsdata_properties = String[
     "diacable", "diains", "diam", "diashield", "emergamps", "epsr", "gmrac",
     "gmrunits", "inslayer", "like", "normamps", "rac", "radius", "radunits",
     "rdc", "runits", "taplap", "taplayer"
-])
+]
 
-const _wiredata_properties = Vector{String}([
+const _wiredata_properties = String[
     "rdc", "rac", "runits", "gmrac", "gmrunits", "radius", "radunits",
     "normamps", "emergamps", "diam", "like"
-])
+]
 
-const _xfmrcode_properties = Vector{String}([
+const _xfmrcode_properties = String[
     "phases", "windings", "wdg", "conn", "kv", "kva", "tap", "%r", "rneut",
     "xneut", "conns", "kvs", "kvas", "taps", "%rs", "xhl", "xlt", "xht",
     "xscarray", "thermal", "n", "m", "flrise", "hsrise", "%loadloss",
     "%noloadloss", "%imag", "ppm_antifloat", "normhkva", "emerghkva", "sub",
     "maxtap", "mintap", "numtaps", "subname", "xrconst", "leadlag",
     "wdgcurrents", "core", "rdcohms", "faultrate", "basefreq", "enabled", "like"
-])
+]
 
-const _spectrum_properties = Vector{String}([
+const _spectrum_properties = String[
     "numharm", "harmonic", "%mag", "angle", "csvfile"
-])
+]
 
-const _vsource_properties = Vector{String}([
+const _vsource_properties = String[
     "bus1", "bus2", "basekv", "pu", "angle", "frequency", "phases", "mvasc3",
     "mvasc1", "x1r1", "x0r0", "isc3", "isc1", "r1", "x1", "r0", "x0",
     "scantype", "sequence", "spectrum", "z1", "z2", "z0", "puz1", "puz2",
     "puz0", "basemva", "basefreq", "like", "enabled"
-])
+]
 
-const _isource_properties = Vector{String}([
+const _isource_properties = String[
     "phases", "bus1", "amps", "angle", "frequency", "scantype", "sequence",
     "spectrum", "basefreq", "enabled", "like"
-])
+]
 
-const _fault_properties = Vector{String}([
+const _fault_properties = String[
     "phases", "bus1", "bus2", "r", "gmatrix", "minamps", "ontime", "pctperm",
     "temporary", "%stddev", "normamps", "emergamps", "basefreq", "faultrate",
     "repair", "enabled", "like"
-])
+]
 
-const _capacitor_properties = Vector{String}([
+const _capacitor_properties = String[
     "bus1", "bus2", "phases", "kvar", "kv", "conn", "cmatrix", "cuf", "r",
     "xl", "harm", "numsteps", "states", "normamps", "emergamps", "faultrate",
     "pctperm", "basefreq", "enabled", "like"
-])
+]
 
-const _line_properties = Vector{String}([
+const _line_properties = String[
     "bus1", "bus2", "linecode", "length", "phases", "r1", "x1", "r0", "x0",
     "c1", "c0", "normamps", "emergamps", "faultrate", "pctperm",
     "repair", "basefreq", "rmatrix", "xmatrix", "cmatrix", "switch", "rg",
     "xg", "rho", "geometry", "units", "spacing", "wires", "earthmodel",
     "cncables", "tscables", "b1", "b0", "seasons", "ratings", "enabled", "like"
-])
+]
 
-const _reactor_properties = Vector{String}([
+const _reactor_properties = String[
     "phases", "bus1", "bus2", "kv", "kvar", "conn", "parallel", "r", "rmatrix",
     "rp", "x", "xmatrix", "z", "z1", "z2", "z0", "rcurve", "lcurve", "lmh",
     "normamps", "emergamps", "repair", "faultrate", "pctperm", "basefreq",
     "enabled", "like"
-])
+]
 
-const _transformer_properties = Vector{String}([
+const _transformer_properties = String[
     "phases", "windings", "wdg", "bus", "conn", "kv", "kva", "tap", "%r",
     "rneut", "xneut", "buses", "conns", "kvs", "kvas", "taps", "%rs", "xhl",
     "xlt", "xht", "xscarray", "thermal", "n", "m", "flrise", "hsrise",
@@ -129,45 +129,45 @@ const _transformer_properties = Vector{String}([
     "emerghkva", "sub", "maxtap", "mintap", "numtaps", "subname", "bank",
     "xfmrcode", "xrconst", "leadlag", "wdgcurrents", "core", "rdcohms",
     "faultrate", "basefreq", "enabled", "like"
-])
+]
 
-const _gictransformer_properties = Vector{String}([
+const _gictransformer_properties = String[
     "basefreq", "bush", "busnh", "busnx", "busx", "emergamps", "enabled",
     "phases", "r1", "r2", "type", "mva", "kvll1", "kvll2", "%r1", "%r2", "k",
     "varcurve", "like", "normamps", "emergamps", "pctperm", "repair"
-])
+]
 
-const _gicline_properties = Vector{String}([
+const _gicline_properties = String[
     "angle", "bus1", "bus2", "c", "ee", "en", "frequency", "lat1", "lat2",
     "lon1", "lon2", "phases", "r", "volts", "x", "like", "basefreq",
     "enabled", "spectrum"
-])
+]
 
-const _load_properties = Vector{String}([
+const _load_properties = String[
     "phases", "bus1", "kv", "kw", "pf", "model", "yearly", "daily", "duty",
     "growth", "conn", "kvar", "rneut", "xneut", "status", "class", "vminpu",
     "vmaxpu", "vminnorm", "vminemerg", "xfkva", "allocationfactor", "kva",
     "%mean", "%stddev", "cvrwatts", "cvrvars", "kwh", "kwhdays", "cfactor",
     "cvrcurve", "numcust", "spectrum", "zipv", "%seriesrl", "relweight",
     "vlowpu", "puxharm", "xrharm", "spectrum", "basefreq", "enabled", "like"
-])
+]
 
-const _generator_properties = Vector{String}([
+const _generator_properties = String[
     "bus1", "phases", "kv", "kw", "pf", "model", "yearly", "daily", "duty",
     "dispvalue", "conn", "kvar", "rneut", "xneut", "status", "class", "vpu",
     "maxkvar", "minkvar", "pvfactor", "debugtrace", "vminpu", "vmaxpu",
     "forceon", "kva", "mva", "xd", "xdp", "xdpp", "h", "d", "usermodel",
     "userdata", "shaftmodel", "shaftdata", "dutystart", "balanced", "xrdp",
     "spectrum", "basefreq", "enabled", "like"
-])
+]
 
-const _indmach012_properties = Vector{String}([
+const _indmach012_properties = String[
     "phases", "bus1", "kv", "kw", "pf", "conn", "kva", "h", "d", "purs",
     "puxs", "purr", "puxr", "puxm", "slip", "maxslip", "slipoption",
     "spectrum", "enabled"
-])
+]
 
-const _storage_properties = Vector{String}([
+const _storage_properties = String[
     "phases", "bus1", "%charge", "%discharge", "%effcharge", "%idlingkvar",
     "idlingkw", "%r", "%reserve", "%stored", "%x", "basefreq", "chargetrigger",
     "class", "conn", "daily", "yearly", "debugtrace", "dischargetrigger",
@@ -175,32 +175,32 @@ const _storage_properties = Vector{String}([
     "kw", "kwhrated", "kwhstored", "kwrated", "like", "model", "pf",
     "spectrum", "state", "timechargetrig", "userdata", "usermodel", "vmaxpu",
     "vminpu", "yearly"
-])
+]
 
-const _capcontrol_properties = Vector{String}([
+const _capcontrol_properties = String[
     "element", "capacitor", "type", "ctphase", "ctratio", "deadtime", "delay",
     "delayoff", "eventlog", "offsetting", "onsetting", "ptphase", "ptratio",
     "terminal", "vbus", "vmax", "vmin", "voltoverride", "enabled"
-])
+]
 
-const _regcontrol_properties = Vector{String}([
+const _regcontrol_properties = String[
     "transformer", "winding", "vreg", "band", "delay", "ptratio", "ctprim",
     "r", "x", "pthase", "tapwinding", "bus", "remoteptratio", "debugtrace",
     "eventlog", "inversetime", "maxtapchange", "revband", "revdelay",
     "reversible", "revneutral", "revr", "revthreshold", "revvreg", "revx",
     "tapdelay", "tapnum", "vlimit", "ldc_z", "rev_z", "cogen", "enabled"
-])
+]
 
-const _energymeter_properties = Vector{String}([
+const _energymeter_properties = String[
     "element", "terminal", "action", "clear", "save", "take", "option",
     "kwnorm", "kwemerg", "peakcurrent", "zonelist", "zonelist", "zonelist",
     "localonly", "mask", "losses", "linelosses", "xfmrlosses", "seqlosses",
     "3phaselosses", "vbaselosses", "basefreq", "enabled", "like"
-])
+]
 
-const _monitor_properties = Vector{String}([
+const _monitor_properties = String[
     "element", "terminal", "mode", "action"
-])
+]
 
 const _pvsystem_properties = Vector{String}([
     "phases", "bus1", "kv", "irradiance", "pmpp", "temperature", "pf",
@@ -209,15 +209,15 @@ const _pvsystem_properties = Vector{String}([
     "tduty", "class", "usermodel", "userdata", "debugtrace", "spectrum"
 ])
 
-const _recloser_properties = Vector{String}([
+const _recloser_properties = String[
     "monitoredobj", "monitoredterm", "switchedobj", "switchedterm", "numfast",
     "phasefast", "phasedelayed", "groundfast", "grounddelayed", "phasetrip",
     "groundtrip", "phaseinst", "groundinst", "reset", "shots",
     "recloseintervals", "delay", "action", "tdphfast", "tdgrfast",
     "tdphdelayed", "tdgrdelayed", "basefreq", "enabled", "like"
-])
+]
 
-const _relay_properties = Vector{String}([
+const _relay_properties = String[
     "monitoredobj", "monitoredterm", "switchedobj", "switchedterm", "type",
     "phasecurve", "groundcurve", "phasetrip", "groundtrip", "tdphase",
     "tdground", "phaseinst", "groundinst", "reset", "shots",
@@ -225,17 +225,17 @@ const _relay_properties = Vector{String}([
     "kvbase", "47%pickup", "46baseamps", "46%pickup", "46isqt",
     "variable", "overtrip", "undertrip", "breakertime", "action", "basefreq",
     "enabled"
-])
+]
 
-const _fuse_properties = Vector{String}([
+const _fuse_properties = String[
     "monitoredobj", "monitoredterm", "switchedobj", "switchedterm",
     "fusecurve", "ratedcurrent", "delay", "action", "basefreq", "enabled"
-])
+]
 
-const _swtcontrol_properties = Vector{String}([
+const _swtcontrol_properties = String[
     "action", "basefreq", "delay", "enabled", "like", "lock", "normal",
     "reset", "state", "switchedobj", "switchedterm"
-])
+]
 
 const _dss_object_properties = Dict{String,Vector{String}}(
     "linecode" => _linecode_properties,
@@ -288,7 +288,7 @@ function _parse_csv_file(path::AbstractString, type::AbstractString; header::Boo
             return Vector{String}([split(line, ",")[column] for line in lines])
         elseif type == "csvfile"
             if interval
-                hour, mult = Vector{String}([]), Vector{String}([])
+                hour, mult = String[], String[]
                 for line in lines
                     d = split(line, ",")
                     push!(hour, string(d[1]))
@@ -300,7 +300,7 @@ function _parse_csv_file(path::AbstractString, type::AbstractString; header::Boo
             end
         elseif type == "pqcsvfile"
             if interval
-                hour, pmult, qmult = Vector{String}([]), Vector{String}([]), Vector{String}([])
+                hour, pmult, qmult = String[], String[], String[]
                 for line in lines
                     d = split(line, ",")
                     push!(hour, string(d[1]))
@@ -310,7 +310,7 @@ function _parse_csv_file(path::AbstractString, type::AbstractString; header::Boo
 
                 return hour, pmult, qmult
             else
-                pmult, qmult = Vector{String}([]), Vector{String}([])
+                pmult, qmult = String[], String[]
                 for line in lines
                     d = split(line, ",")
                     push!(pmult, string(d[1]))
@@ -470,7 +470,7 @@ end
 "strips lines that are either commented (block or single) or empty"
 function _strip_lines(lines::Vector{<:AbstractString})::Vector{String}
     blockComment = false
-    stripped_lines = Vector{String}([])
+    stripped_lines = String[]
     for line in lines
         if startswith(strip(line), "/*") || endswith(strip(line), "*/")
             blockComment = !blockComment
@@ -672,7 +672,7 @@ function _parse_component(component::AbstractString, properties::AbstractString,
     obj_type, name = split(component, '.'; limit=2)
 
     if !haskey(object, "prop_order")
-        object["prop_order"] = Vector{String}([])
+        object["prop_order"] = String[]
     end
 
     if !haskey(object, "name")

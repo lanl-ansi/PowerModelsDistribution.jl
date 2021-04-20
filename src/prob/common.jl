@@ -1,6 +1,6 @@
 ""
 function _solve_mc_model(data::Dict{String,<:Any}, model_type::Type, optimizer, build_method::Function;
-        ref_extensions::Vector{<:Function}=Vector{Function}([]), solution_processors::Vector{<:Function}=Vector{Function}([]), relax_integrality::Bool=false,
+        ref_extensions::Vector{<:Function}=Function[], solution_processors::Vector{<:Function}=Function[], relax_integrality::Bool=false,
         multinetwork::Bool=false, kwargs...)
 
     if multinetwork != ismultinetwork(data)
@@ -22,7 +22,7 @@ end
 
 
 ""
-function instantiate_mc_model(data::Dict{String,<:Any}, model_type::Type, build_method::Function; ref_extensions::Vector{<:Function}=Vector{Function}([]), multinetwork::Bool=false, kwargs...)
+function instantiate_mc_model(data::Dict{String,<:Any}, model_type::Type, build_method::Function; ref_extensions::Vector{<:Function}=Function[], multinetwork::Bool=false, kwargs...)
     if get(data, "data_model", MATHEMATICAL) == ENGINEERING
         @info "Converting ENGINEERING data model to MATHEMATICAL first to build JuMP model"
         data = transform_data_model(data; multinetwork=multinetwork)
@@ -35,7 +35,7 @@ end
 
 
 ""
-function solve_mc_model(data::Dict{String,<:Any}, model_type::Type, solver, build_mc::Function; ref_extensions::Vector{<:Function}=Vector{Function}([]), make_si::Bool=!get(data, "per_unit", false), multinetwork::Bool=false, kwargs...)::Dict{String,Any}
+function solve_mc_model(data::Dict{String,<:Any}, model_type::Type, solver, build_mc::Function; ref_extensions::Vector{<:Function}=Function[], make_si::Bool=!get(data, "per_unit", false), multinetwork::Bool=false, kwargs...)::Dict{String,Any}
     if get(data, "data_model", MATHEMATICAL) == ENGINEERING
         data_math = transform_data_model(data; multinetwork=multinetwork)
 
@@ -51,7 +51,7 @@ end
 
 
 ""
-function solve_mc_model(file::String, model_type::Type, solver, build_mc::Function; ref_extensions::Vector{<:Function}=Vector{Function}([]), kwargs...)::Dict{String,Any}
+function solve_mc_model(file::String, model_type::Type, solver, build_mc::Function; ref_extensions::Vector{<:Function}=Function[], kwargs...)::Dict{String,Any}
     return solve_mc_model(parse_file(file), model_type, solver, build_mc; ref_extensions=ref_extensions, kwargs...)
 end
 

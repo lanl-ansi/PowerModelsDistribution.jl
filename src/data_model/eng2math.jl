@@ -15,39 +15,39 @@ const _1to1_maps = Dict{String,Vector{String}}(
 )
 
 "list of nodal type elements in the engineering model"
-const _eng_node_elements = Vector{String}([
+const _eng_node_elements = String[
     "load", "shunt", "generator", "solar", "storage", "voltage_source"
-])
+]
 
 "list of edge type elements in the engineering model"
-const _eng_edge_elements = Vector{String}([
+const _eng_edge_elements = String[
     "line", "switch", "transformer"
-])
+]
 
 "list of all eng asset types"
-const pmd_eng_asset_types = Vector{String}([
+const pmd_eng_asset_types = String[
     "bus", _eng_edge_elements..., _eng_node_elements...
-])
+]
 
 "list of nodal type elements in the engineering model"
-const _math_node_elements = Vector{String}([
+const _math_node_elements = String[
     "load", "shunt", "gen", "storage"
-])
+]
 
 "list of edge type elements in the engineering model"
-const _math_edge_elements = Vector{String}([
+const _math_edge_elements = String[
     "branch", "switch", "transformer"
-])
+]
 
 "list of math asset types that are dispatchable"
-const _math_dispatchable_elements = Vector{String}([
+const _math_dispatchable_elements = String[
     "load", "shunt", "switch"
-])
+]
 
 "list of all math asset types"
-const pmd_math_asset_types = Vector{String}([
+const pmd_math_asset_types = String[
     "bus", _math_node_elements..., _math_edge_elements...
-])
+]
 
 "list of multinetwork keys that belong at the root level"
 const _pmd_math_global_keys = Set{String}([
@@ -246,7 +246,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
         # Build map first, so we can update it as we decompose the transformer
         push!(data_math["map"], Dict{String,Any}(
             "from" => name,
-            "to" => Vector{String}([]),
+            "to" => String[],
             "unmap_function" => "_map_math2eng_transformer!",
         ))
 

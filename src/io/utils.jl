@@ -1,37 +1,36 @@
 import Base.Iterators: flatten
 
 "all node types that can help define buses"
-const _dss_node_objects = Vector{String}([
+const _dss_node_objects = String[
     "isource", "load", "generator", "indmach012", "storage", "pvsystem"
-])
+]
 
 "all edge types that can help define buses"
-const _dss_edge_objects = Vector{String}([
+const _dss_edge_objects = String[
     "vsource", "fault", "capacitor", "line", "reactor", "transformer", "gictransformer", "gicline"
-])
+]
 
 "all data holding objects"
-const _dss_data_objects = Vector{String}([
+const _dss_data_objects = String[
     "options", "xfmrcode", "linecode", "loadshape", "xycurve", "linegeometry",
     "linespacing", "growthshape", "tcc_curve", "cndata", "tsdata", "wiredata"
-])
+]
 
 "all objects that define controls"
-const _dss_control_objects = Vector{String}([
+const _dss_control_objects = String[
     "capcontrol", "regcontrol", "swtcontrol", "relay", "recloser", "fuse"
-])
+]
 
 "all objects that provide montoring"
-const _dss_monitor_objects = Vector{String}([
+const _dss_monitor_objects = String[
     "energymeter", "monitor"
-])
+]
 
 "components currently supported for automatic data type parsing"
-const _dss_supported_components = Vector{String}([
+const _dss_supported_components = String[
     "line", "linecode", "load", "generator", "capacitor", "reactor",
     "transformer", "pvsystem", "storage", "loadshape", "options",
-    "xfmrcode", "vsource", "xycurve", "spectrum"
-])
+]
 
 "two number operators for reverse polish notation"
 const _double_operators = Dict{String,Any}(
@@ -285,13 +284,13 @@ function _parse_array(dtype::Type, data::AbstractString)::Vector{dtype}
     end
 
     if all(_isa_conn(el) for el in elements)
-        array = Vector{ConnConfig}([])
+        array = ConnConfig[]
         for el in elements
             a = _parse_conn(el)
             push!(array, a)
         end
     elseif dtype == String || dtype == AbstractString || dtype == Char
-        array = Vector{String}([])
+        array = String[]
         for el in elements
             push!(array, el)
         end
@@ -489,9 +488,9 @@ end
 
 
 "Returns an ordered list of defined conductors. If ground=false, will omit any `0`"
-function _get_conductors_ordered(busname::AbstractString; default::Vector{Int}=Vector{Int}([]), check_length::Bool=true, pad_ground::Bool=false)::Vector{Int}
+function _get_conductors_ordered(busname::AbstractString; default::Vector{Int}=Int[], check_length::Bool=true, pad_ground::Bool=false)::Vector{Int}
     parts = split(busname, '.'; limit=2)
-    ret = Vector{Int}([])
+    ret = Int[]
     if length(parts)==2
         conds_str = split(parts[2], '.')
         ret = [parse(Int, i) for i in conds_str]
@@ -644,7 +643,7 @@ end
 function _apply_like!(raw_dss::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, comp_type::String)
     links = ["like"]
     if any(link in raw_dss["prop_order"] for link in links)
-        new_prop_order = Vector{String}([])
+        new_prop_order = String[]
         raw_dss_copy = deepcopy(raw_dss)
 
         for prop in raw_dss["prop_order"]
@@ -677,7 +676,7 @@ function _apply_like!(raw_dss::Dict{String,<:Any}, data_dss::Dict{String,<:Any},
             end
         end
 
-        final_prop_order = Vector{String}([])
+        final_prop_order = String[]
         while !isempty(new_prop_order)
             prop = popfirst!(new_prop_order)
             if !(prop in new_prop_order)

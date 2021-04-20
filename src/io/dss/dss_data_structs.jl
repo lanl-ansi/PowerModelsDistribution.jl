@@ -156,7 +156,7 @@ function _create_xfmrcode(name::String=""; kwargs...)
         "xhl" => get(kwargs, :xhl, 7.0),
         "xht" => get(kwargs, :xht, 35.0),
         "xlt" => get(kwargs, :xlt, 30.0),
-        "xscarray" => get(kwargs, :xscarry, Vector{Float64}([])),
+        "xscarray" => get(kwargs, :xscarry, Float64[]),
         "thermal" => get(kwargs, :thermal, 2.0),
         "n" => get(kwargs, :n, 0.8),
         "m" => get(kwargs, :m, 0.8),
@@ -179,7 +179,7 @@ function _create_xfmrcode(name::String=""; kwargs...)
         "x13" => get(kwargs, :xht, 35.0),
         "x23" => get(kwargs, :xlt, 30.0),
         "leadlag" => get(kwargs, :leadlag, "lag"),
-        "wdgcurrents" => get(kwargs, :wdgcurrents, Vector{String}([])),
+        "wdgcurrents" => get(kwargs, :wdgcurrents, String[]),
         "core" => get(kwargs, :core, ""),
         "rdcohms" => get(kwargs, :rdcohms, 0.85 * temp["%rs"]),
         # Inherited Properties
@@ -223,7 +223,7 @@ function _create_loadshape(name::String=""; kwargs...)
         interval = get(kwargs, :interval, 1.0)
     end
 
-    pmult = get(kwargs, :pmult, Vector{Float64}([]))
+    pmult = get(kwargs, :pmult, Float64[])
     qmult = get(kwargs, :qmult, pmult)
 
     npts = get(kwargs, :npts, length(pmult) == 0 && length(qmult) == 0 ? 0 : minimum(Int[length(a) for a in [pmult, qmult] if length(a) > 0]))
@@ -265,8 +265,8 @@ different properties.
 """
 function _create_xycurve(name::String=""; kwargs...)
     if haskey(kwargs, :points)
-        xarray = Vector{Float64}([])
-        yarray = Vector{Float64}([])
+        xarray = Float64[]
+        yarray = Float64[]
 
         i = 1
         for point in kwargs[:points]
@@ -278,13 +278,13 @@ function _create_xycurve(name::String=""; kwargs...)
             i += 1
         end
     else
-        xarray = get(kwargs, :xarray, Vector{Float64}([]))
-        yarray = get(kwargs, :yarray, Vector{Float64}([]))
+        xarray = get(kwargs, :xarray, Float64[])
+        yarray = get(kwargs, :yarray, Float64[])
     end
 
     npts = min(length(xarray), length(yarray))
 
-    points = Vector{Float64}([])
+    points = Float64[]
     for (x, y) in zip(xarray, yarray)
         push!(points, x)
         push!(points, y)
@@ -319,9 +319,9 @@ function _create_spectrum(name::String=""; kwargs...)
     Dict{String,Any}(
         "name" => name,
         "numharm" => get(kwargs, :numharm, 0),
-        "harmonic" => get(kwargs, :harmonic, Vector{Float64}([])),
-        "%mag" => get(kwargs, Symbol("%mag"), Vector{Float64}([])),
-        "angle" => get(kwargs, :angle, Vector{Float64}([])),
+        "harmonic" => get(kwargs, :harmonic, Float64[]),
+        "%mag" => get(kwargs, Symbol("%mag"), Float64[]),
+        "angle" => get(kwargs, :angle, Float64[]),
         "csvfile" => get(kwargs, :csvfile, ""),
         "like" => get(kwargs, :like, ""),
     )

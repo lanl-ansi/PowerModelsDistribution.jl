@@ -50,7 +50,7 @@ end
 
 
 "removes all fields ending in '_ub' or '_lb'"
-function remove_all_bounds!(data_eng; exclude::Vector{<:String}=Vector{String}([]))
+function remove_all_bounds!(data_eng; exclude::Vector{<:String}=String[])
     for (k,v) in data_eng
         if isa(v, Dict) && k!="settings" && !(k in exclude)
             for (id, comp) in v
@@ -121,14 +121,14 @@ function apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Ve
 
             _apply_linecode!(eng_obj, data_eng)
 
-            filter = _kron_reduce_branch!(eng_obj, Vector{String}([k for k in ["rs", "xs"] if haskey(eng_obj, k)]), Vector{String}([]), eng_obj["f_connections"], kr_neutral)
+            filter = _kron_reduce_branch!(eng_obj, Vector{String}([k for k in ["rs", "xs"] if haskey(eng_obj, k)]), String[], eng_obj["f_connections"], kr_neutral)
             _apply_filter!(eng_obj, ["vad_lb", "vad_ub", "cm_ub", "cm_ub_b", "cm_ub_c", "sm_ub", "sm_ub_b", "sm_ub_c", "f_connections", "t_connections"], filter)
         end
     end
 
     if haskey(data_eng, "shunt")
         for (_,eng_obj) in data_eng["shunt"]
-            filter = _kron_reduce_branch!(eng_obj, Vector{String}([]), ["gs", "bs"], eng_obj["connections"], kr_neutral)
+            filter = _kron_reduce_branch!(eng_obj, String[], ["gs", "bs"], eng_obj["connections"], kr_neutral)
             _apply_filter!(eng_obj, ["connections"], filter)
         end
     end
