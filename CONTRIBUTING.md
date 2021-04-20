@@ -34,7 +34,7 @@ Function additions should meeting the following criteria:
 
 ```julia
 "this function demonstrates how an internal, in-place data altering function should be defined"
-function _concise_descriptive_name!(data::Dict{String,<:Any}, a::Real, b::Vector{<:Real}, c::Matrix{<:Complex}; d::Bool=false, e::Vector{<:Function}=Vector{Function}([]))
+function _concise_descriptive_name!(data::Dict{String,<:Any}, a::Real, b::Vector{<:Real}, c::Matrix{<:Complex}; d::Bool=false, e::Vector{<:Function}=Function[])
 end
 ```
 
