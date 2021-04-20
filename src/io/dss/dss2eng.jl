@@ -184,7 +184,7 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             # convert to a shunt matrix
             terminals, B = _calc_shunt(f_terminals, t_terminals, b)
 
-            # if one terminal is ground (0), reduce shunt addmittance matrix
+            # if one terminal is ground (0), reduce shunt admittance matrix
             terminals, B = _calc_ground_shunt_admittance_matrix(terminals, B, 0)
 
             eng_obj["gs"] = zeros(size(B))
