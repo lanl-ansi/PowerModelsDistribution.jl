@@ -34,7 +34,7 @@ const _dss_supported_components = Vector{String}([
 ])
 
 "two number operators for reverse polish notation"
-_double_operators = Dict{String,Any}(
+const _double_operators = Dict{String,Any}(
     "+" => +,
     "-" => -,
     "*" => *,
@@ -44,7 +44,7 @@ _double_operators = Dict{String,Any}(
 )
 
 "single number operators in reverse polish notation"
-_single_operators = Dict{String,Any}(
+const _single_operators = Dict{String,Any}(
     "sqr" => x -> x * x,
     "sqrt" => sqrt,
     "inv" => inv,
@@ -83,6 +83,20 @@ const _dss2pmd_load_model = Dict{Int,LoadModel}(
     5 => CURRENT,
     4 => EXPONENTIAL,
     8 => ZIP,  # TODO add official support for ZIP load model
+)
+
+
+"conversion factors for units to meters"
+const _convert_to_meters = Dict{String,Float64}(
+    "mi" => 1609.3,
+    "km" => 1000.0,
+    "kft" => 304.8,
+    "m" => 1.0,
+    "ft" => 0.3048,
+    "in" => 0.0254,
+    "cm" => 0.01,
+    "mm" => 0.001,
+    "none" => 1.0
 )
 
 

@@ -11,6 +11,9 @@ module PowerModelsDistribution
     import Dates
     import LinearAlgebra
 
+    import LinearAlgebra: diagm
+    import Statistics: mean, std
+
     const _IM = InfrastructureModels
 
     import InfrastructureModels: optimize_model!, @im_fields, nw_id_default, ismultinetwork, update_data!
@@ -55,10 +58,13 @@ module PowerModelsDistribution
     include("core/relaxation_scheme.jl")
 
     include("io/utils.jl")
-    include("io/dss_parse.jl")
-    include("io/dss_structs.jl")
-    include("io/opendss.jl")
-    include("io/json.jl")
+    include("io/dss/dss_parse.jl")
+    include("io/dss/dss_data_structs.jl")
+    include("io/dss/dss_node_structs.jl")
+    include("io/dss/dss_edge_structs.jl")
+    include("io/dss/dss_structs.jl")
+    include("io/dss/dss2eng.jl")
+    include("io/json/json.jl")
     include("io/common.jl")
 
     include("data_model/utils.jl")
