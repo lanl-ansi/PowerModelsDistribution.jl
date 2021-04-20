@@ -582,8 +582,8 @@ end
 
 
 """
-Given a set of terminals 'cnds' with associated shunt addmittance 'Y', this
-method will calculate the reduced addmittance matrix if terminal 'ground' is
+Given a set of terminals 'cnds' with associated shunt admittance 'Y', this
+method will calculate the reduced admittance matrix if terminal 'ground' is
 grounded.
 """
 function _calc_ground_shunt_admittance_matrix(cnds::Vector{Int}, Y::Matrix{T}, ground::Int)::Tuple{Vector{Int}, Matrix{T}} where T <: Number
