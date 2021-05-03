@@ -15,150 +15,7 @@ using InteractiveUtils</code></pre><p>╔═╡ 2661286b-2d18-42e3-b309-7974fc2d
 			Pkg.PackageSpec(;name=&quot;Ipopt&quot;, version=&quot;0.6.5&quot;),
 			Pkg.PackageSpec(;name=&quot;JSON&quot;, version=&quot;0.21&quot;),
 			])
-end</code></pre><pre class="documenter-example-output">  Activating new environment at `/tmp/jl_orskwS/Project.toml`
-    Updating registry at `~/.julia/registries/General`
-   Resolving package versions...
-    Updating `/tmp/jl_orskwS/Project.toml`
-  [da1fd8a2] + CodeTracking v1.0.5
-  [2030c09a] + InfrastructureModels v0.6.0
-  [b6b21f68] + Ipopt v0.6.5
-  [682c06a0] + JSON v0.21.1
-  [4076af6c] + JuMP v0.21.7
-  [7f904dfe] + PlutoUI v0.7.6
-  [7425d11c] + PowerModelsAnalytics v0.4.1
-  [d7431456] + PowerModelsDistribution v0.11.0
-  [295af30f] + Revise v3.1.15
-    Updating `/tmp/jl_orskwS/Manifest.toml`
-  [ec485272] + ArnoldiMethod v0.1.0
-  [6e4b80f9] + BenchmarkTools v0.5.0
-  [b99e7846] + BinaryProvider v0.5.10
-  [49dc2e85] + Calculus v0.5.1
-  [d360d2e6] + ChainRulesCore v0.9.38
-  [da1fd8a2] + CodeTracking v1.0.5
-  [523fee87] + CodecBzip2 v0.7.2
-  [944b1d66] + CodecZlib v0.7.0
-  [3da002f7] + ColorTypes v0.10.12
-  [c3611d14] + ColorVectorSpace v0.9.2
-  [5ae59095] + Colors v0.12.7
-  [bbf7d656] + CommonSubexpressions v0.3.0
-  [34da2185] + Compat v3.27.0
-  [8f4d0f93] + Conda v1.5.2
-  [187b0558] + ConstructionBase v1.1.0
-  [9a962f9c] + DataAPI v1.6.0
-  [864edb3b] + DataStructures v0.18.9
-  [e2d170a0] + DataValueInterfaces v1.0.0
-  [e7dc6d0d] + DataValues v0.4.13
-  [163ba53b] + DiffResults v1.0.3
-  [b552c78f] + DiffRules v1.0.2
-  [e2ba6199] + ExprTools v0.1.3
-  [8f5d6c58] + EzXML v1.1.0
-  [5789e2e9] + FileIO v1.7.0
-  [8fc22ac5] + FilePaths v0.8.2
-  [48062228] + FilePathsBase v0.9.10
-  [53c48c17] + FixedPointNumbers v0.8.4
-  [f6369f11] + ForwardDiff v0.10.18
-  [c27321d9] + Glob v1.3.0
-  [cd3eb016] + HTTP v0.9.5
-  [d25df0c9] + Inflate v0.1.2
-  [2030c09a] + InfrastructureModels v0.6.0
-  [83e8ac13] + IniFile v0.5.0
-  [b6b21f68] + Ipopt v0.6.5
-  [82899510] + IteratorInterfaceExtensions v1.0.0
-  [692b3bcd] + JLLWrappers v1.3.0
-  [682c06a0] + JSON v0.21.1
-  [7d188eb4] + JSONSchema v0.3.3
-  [4076af6c] + JuMP v0.21.7
-  [aa1ae85d] + JuliaInterpreter v0.8.13
-  [093fc24a] + LightGraphs v1.3.5
-  [e6f89c97] + LoggingExtras v0.4.6
-  [6f1432cf] + LoweredCodeUtils v2.0.0
-  [1914dd2f] + MacroTools v0.5.6
-  [b8f27783] + MathOptInterface v0.9.20
-  [fdba3010] + MathProgBase v0.7.8
-  [739be429] + MbedTLS v1.0.3
-  [f28f55f0] + Memento v1.1.2
-  [e1d29d7a] + Missings v0.4.5
-  [78c3b35d] + Mocking v0.7.1
-  [d8a4904e] + MutableArithmetics v0.2.18
-  [77ba4419] + NaNMath v0.3.5
-  [2bd173c7] + NodeJS v1.1.2
-  [bac558e1] + OrderedCollections v1.4.0
-  [69de0a69] + Parsers v1.1.0
-  [7f904dfe] + PlutoUI v0.7.6
-  [7425d11c] + PowerModelsAnalytics v0.4.1
-  [d7431456] + PowerModelsDistribution v0.11.0
-  [21216c6a] + Preferences v1.2.1
-  [438e738f] + PyCall v1.92.3
-  [3cdcf5f2] + RecipesBase v1.1.1
-  [189a3867] + Reexport v1.0.0
-  [ae029012] + Requires v1.1.3
-  [295af30f] + Revise v3.1.15
-  [efcf1570] + Setfield v0.7.0
-  [699a6c99] + SimpleTraits v0.9.3
-  [276daf66] + SpecialFunctions v1.3.0
-  [90137ffa] + StaticArrays v1.1.1
-  [fd094767] + Suppressor v0.2.0
-  [cea106d9] + Syslogs v0.3.0
-  [3783bdb8] + TableTraits v1.0.1
-  [382cd787] + TableTraitsUtils v1.0.1
-  [62fd8b95] + TensorCore v0.1.1
-  [f269a46b] + TimeZones v1.5.3
-  [3bb67fe8] + TranscodingStreams v0.9.5
-  [30578b45] + URIParser v0.4.1
-  [5c2747f8] + URIs v1.2.0
-  [239c3e63] + Vega v2.1.1
-  [81def892] + VersionParsing v1.2.0
-  [a5390f91] + ZipFile v0.9.3
-  [ae81ac8f] + ASL_jll v0.1.2+0
-  [6e34b625] + Bzip2_jll v1.0.6+5
-  [9cc047cb] + Ipopt_jll v3.13.4+2
-  [94ce4f54] + Libiconv_jll v1.16.0+7
-  [d00139f3] + METIS_jll v5.1.0+5
-  [d7ed1dd3] + MUMPS_seq_jll v5.2.1+4
-  [656ef2d0] + OpenBLAS32_jll v0.3.12+1
-  [efe28fd5] + OpenSpecFun_jll v0.5.3+4
-  [02c8fc9c] + XML2_jll v2.9.11+0
-  [0dad84c5] + ArgTools
-  [56f22d72] + Artifacts
-  [2a0f44e3] + Base64
-  [ade2ca70] + Dates
-  [8bb1440f] + DelimitedFiles
-  [8ba89e20] + Distributed
-  [f43a241f] + Downloads
-  [7b1f6079] + FileWatching
-  [9fa8497b] + Future
-  [b77e0a4c] + InteractiveUtils
-  [b27032c2] + LibCURL
-  [76f85450] + LibGit2
-  [8f399da3] + Libdl
-  [37e2e46d] + LinearAlgebra
-  [56ddb016] + Logging
-  [d6f4376e] + Markdown
-  [a63ad114] + Mmap
-  [ca575930] + NetworkOptions
-  [44cfe95a] + Pkg
-  [de0858da] + Printf
-  [3fa0cd96] + REPL
-  [9a3f8284] + Random
-  [ea8e919c] + SHA
-  [9e88b42a] + Serialization
-  [1a1011a3] + SharedArrays
-  [6462fe0b] + Sockets
-  [2f01184e] + SparseArrays
-  [10745b16] + Statistics
-  [fa267f1f] + TOML
-  [a4e569a6] + Tar
-  [8dfed614] + Test
-  [cf7118a7] + UUIDs
-  [4ec0a83e] + Unicode
-  [e66e0078] + CompilerSupportLibraries_jll
-  [deac9b47] + LibCURL_jll
-  [29816b5a] + LibSSH2_jll
-  [c8ffd9c3] + MbedTLS_jll
-  [14a3606d] + MozillaCACerts_jll
-  [83775a58] + Zlib_jll
-  [8e850ede] + nghttp2_jll
-  [3f19e933] + p7zip_jll</pre><p>╔═╡ f30cd0d0-b0da-4f63-a245-568a763a93d8</p><pre><code class="language-julia">begin
+end</code></pre><p>╔═╡ f30cd0d0-b0da-4f63-a245-568a763a93d8</p><pre><code class="language-julia">begin
 	using PowerModelsDistribution
 	using Ipopt
 end</code></pre><p>╔═╡ c55b2c42-9d27-11eb-24ca-e90a5472ffbb</p><pre><code class="language-">md&quot;&quot;&quot;</code></pre><p>Introduction to the PowerModelsDistribution Data Models</p><pre><code class="language-julia">In this notebook we introduce the engineering data model added to PowerModelsDistribution in version v0.9.0. We will give several examples of how to use this new data model directly, including new transformations that have become easier with its introduction, how to convert it to the the lower-level mathematical model that was previously the only user interface we offered, and how to get various types of results using this new model.
@@ -389,7 +246,7 @@ In these examples we will use the `eng` model we worked with above, the `ACPUPow
 </ol>
 <p>In these examples we will use the <code>eng</code> model we worked with above, the <code>ACPUPowerModel</code>, which is a AC power flow formulation in polar coordinates, and the <code>ipopt_solver</code> we already defined above</p>
 </div><p>╔═╡ 745f33bf-98d7-4b27-95fd-ec6bf5e3d5cf</p><pre><code class="language-julia">result = solve_mc_opf(eng, ACPUPowerModel, ipopt_solver)</code></pre><pre class="documenter-example-output">Dict{String, Any} with 8 entries:
-  &quot;solve_time&quot;         =&gt; 2.99112
+  &quot;solve_time&quot;         =&gt; 3.64557
   &quot;optimizer&quot;          =&gt; &quot;Ipopt&quot;
   &quot;termination_status&quot; =&gt; LOCALLY_SOLVED
   &quot;dual_status&quot;        =&gt; FEASIBLE_POINT
@@ -414,7 +271,7 @@ Here you can see that the solution comes back out by default into the same data 
 If for some reason you want to return the result in per-unit rather than SI, you can specify this in the `solve_` command by
 &quot;&quot;&quot;</code></pre><div class="markdown"><p>If for some reason you want to return the result in per-unit rather than SI, you can specify this in the <code>solve_</code> command by</p>
 </div><p>╔═╡ 763a1504-f927-4dfc-a042-ac66324708a9</p><pre><code class="language-julia">result_pu = solve_mc_opf(eng, ACPUPowerModel, ipopt_solver; make_si=false)</code></pre><pre class="documenter-example-output">Dict{String, Any} with 8 entries:
-  &quot;solve_time&quot;         =&gt; 0.00640297
+  &quot;solve_time&quot;         =&gt; 0.00803113
   &quot;optimizer&quot;          =&gt; &quot;Ipopt&quot;
   &quot;termination_status&quot; =&gt; LOCALLY_SOLVED
   &quot;dual_status&quot;        =&gt; FEASIBLE_POINT
@@ -430,7 +287,7 @@ Previously, to use a branch flow formulation, such as `SOCNLPUBFPowerModel`, it 
 &quot;&quot;&quot;</code></pre><div class="markdown"><h3>Branch Flow formulations</h3>
 <p>Previously, to use a branch flow formulation, such as <code>SOCNLPUBFPowerModel</code>, it was required to use a different <code>solve_</code> command, but now, by using multiple dispatch we have simplified this for the user</p>
 </div><p>╔═╡ f2fa779e-f62d-4053-b055-e9f0aee6c3f7</p><pre><code class="language-julia">result_bf = solve_mc_opf(eng, SOCNLPUBFPowerModel, ipopt_solver)</code></pre><pre class="documenter-example-output">Dict{String, Any} with 8 entries:
-  &quot;solve_time&quot;         =&gt; 0.295083
+  &quot;solve_time&quot;         =&gt; 0.296432
   &quot;optimizer&quot;          =&gt; &quot;Ipopt&quot;
   &quot;termination_status&quot; =&gt; LOCALLY_SOLVED
   &quot;dual_status&quot;        =&gt; FEASIBLE_POINT
@@ -533,7 +390,7 @@ There is very little difference from the user point-of-view in running `MATHEMAT
 &quot;&quot;&quot;</code></pre><div class="markdown"><h3>Running <code>MATHEMATICAL</code> models</h3>
 <p>There is very little difference from the user point-of-view in running <code>MATHEMATICAL</code> models other than the results will not be automatically converted back to the the format of the <code>ENGINEERING</code> model</p>
 </div><p>╔═╡ e3fe0a5e-9431-453d-b7e5-821de624a4ef</p><pre><code class="language-julia">result_math = solve_mc_opf(math, ACPUPowerModel, ipopt_solver)</code></pre><pre class="documenter-example-output">Dict{String, Any} with 8 entries:
-  &quot;solve_time&quot;         =&gt; 0.00632596
+  &quot;solve_time&quot;         =&gt; 0.00676417
   &quot;optimizer&quot;          =&gt; &quot;Ipopt&quot;
   &quot;termination_status&quot; =&gt; LOCALLY_SOLVED
   &quot;dual_status&quot;        =&gt; FEASIBLE_POINT
@@ -653,4 +510,4 @@ And data, a 1-element Vector{Float64}:
 This concludes the introduction to the `ENGINEERING` data model and conversion to the `MATHEMATICAL` model. We hope that you will find this new data model abstraction easy to use and simple to understand
 &quot;&quot;&quot;</code></pre><div class="markdown"><h1>Conclusion</h1>
 <p>This concludes the introduction to the <code>ENGINEERING</code> data model and conversion to the <code>MATHEMATICAL</code> model. We hope that you will find this new data model abstraction easy to use and simple to understand</p>
-</div><p>╔═╡ Cell order: ╟─c55b2c42-9d27-11eb-24ca-e90a5472ffbb ╠═2661286b-2d18-42e3-b309-7974fc2db425 ╟─de92bc20-b125-4f3d-930a-b1da63d5cef5 ╠═f30cd0d0-b0da-4f63-a245-568a763a93d8 ╠═ac94e556-b544-4ca6-87bd-ff2d7a7414e7 ╟─1e791262-261d-4756-bec4-edebe4732700 ╠═89de80df-1dd0-4f94-a27d-74693a978059 ╟─e22a7d3e-3f21-41b0-abf2-2c723e87c57e ╠═5fe2d186-40c6-46c2-823e-9401cb3b6d6c ╟─c884fd5b-4ecb-402b-b228-01b9a61db8bf ╠═a5b736f9-2776-4760-b073-d02027baef13 ╟─29a8a560-7d5e-4929-877a-2dab17309968 ╠═9ac6b0ed-58a8-4079-aa9f-d70024f4d4b4 ╟─89846878-ebfc-49a5-91ef-762f692ba5ea ╠═8ba081b4-8444-48e0-afce-20649f7fdd01 ╟─2a8c1536-ef5f-4e37-b30e-1bb73982d7b0 ╠═83ce434c-0f92-46a8-8648-322084044600 ╠═2f9c3f64-3e5d-423f-939e-8d96bd19e7fe ╟─f06b9592-0e16-4fd1-bf6e-624ec0cdb8fb ╠═b15593b9-f775-47af-aa9b-4980a4028faa ╟─2e4fe000-449c-4fc0-8707-4c51ac50ab03 ╠═36ca17bc-b560-48c9-988f-255780479d05 ╟─7e5811cf-86a2-43fb-8c94-44091f33c031 ╠═026088f7-b1df-4647-ad81-52c6c8ea7944 ╟─5f72ecec-bb3f-4231-93c1-719e38e17be4 ╠═f070dbbc-1a55-48f2-aa21-2119eb573b5b ╟─f3458a5c-70c6-4d0c-8253-4feb0c87ee76 ╠═542e592f-8f75-41f9-8f98-5373b431fcc6 ╟─d0e02ee5-f57c-4286-940d-b01097c840be ╠═e852712c-d09a-41e1-9785-308c219c7ad8 ╟─0eba403e-c2ba-4af3-8dcc-fe14a3c22bd7 ╟─8d5701d1-9e91-43b5-975b-fc8e0e306e99 ╠═745f33bf-98d7-4b27-95fd-ec6bf5e3d5cf ╟─fb81d3c1-a47b-46d9-b463-1766022be114 ╠═27d5a237-4c2e-4b14-a082-f4847153c8d5 ╟─564200e0-2080-44da-8dbf-37c5e3a38412 ╠═8b066039-ed65-4617-b404-86952d3fc78e ╟─a09de8ab-c1e1-4c9f-9d86-4268ce503cae ╠═763a1504-f927-4dfc-a042-ac66324708a9 ╠═e7b588e9-fb5f-4383-b5c6-bce9ed8f5a60 ╟─f882f070-74af-4f3b-9ad1-bd7ad453778f ╠═f2fa779e-f62d-4053-b055-e9f0aee6c3f7 ╟─544108d1-d1a7-4dc6-9a3c-6a10025cb8a3 ╠═ae8daf6c-4055-497e-905c-d6d5a6373ad3 ╟─3d86989a-a4db-4766-aec7-abc9a25ffde8 ╠═7a86e26d-fdf6-41b6-b1dd-dc0c4a8e9d50 ╠═82e9330b-2e94-42a1-b56d-430674b11241 ╟─2c358d7a-5d84-4f62-a147-577bb775ac7f ╠═5e5dd24c-95b5-4951-8547-13e20bb0feec ╠═45c320dd-e0b2-46ec-af09-d83e5652026d ╟─723f4e26-8065-4e22-8c5c-de32d2e42b47 ╠═58f80651-4a44-4781-a6c0-a056ec76b07e ╟─b1e55263-9c76-43b2-b91c-115b2f080182 ╠═2cdd682a-b97f-49dc-8829-47e7146497b9 ╠═74836b2c-db67-4435-a552-ba5c3e93e43f ╟─2bf802e2-f769-48db-adef-a5a066c565c2 ╠═4020d67a-4a9e-4030-b7cd-e5d60e78495c ╟─dde2da59-63fa-4549-8829-491e5f3c675e ╟─2c375878-f16b-4833-9aaa-b826fbe056a2 ╠═a7348fc8-b25e-4ecf-9fe6-314036b7df9c ╟─54280696-beec-47ee-8114-ea9311aca9eb ╠═1dc06007-b413-4cbb-b43b-2c7955ecb6d2 ╟─96a65bdc-7ee4-4e9f-94f5-8a83f7512fe9 ╠═545c9270-257a-46e8-970d-6a9fcf09dc17 ╟─fda420a1-e563-4a41-84d4-2a570bf163ae ╠═785a1c39-aa56-4244-b7b9-31d7a31b73c3 ╠═ad48b3ad-ede1-4109-9647-007c1d8d196c ╟─666223d5-802a-4164-882c-8ab1a1319d6d ╠═e3fe0a5e-9431-453d-b7e5-821de624a4ef ╟─5ab6cd16-3c24-4f60-bdf2-7f48b3e25085 ╠═05360163-4a6f-41da-8fae-070e327c2605 ╟─b8e01ce2-d7f7-4c73-8230-9fdeecab2c4e ╠═96757dde-52be-4930-9bdd-9303bb715e55 ╠═867d8d1d-042a-42ec-843e-56b8ba2db96a ╟─db4d9eb9-e120-4489-a3c2-48c43f2a3c3b ╠═4603bc56-c402-48af-9715-0722e42d90f7 ╟─12ba02ff-91dd-4355-ad2b-f3ca3b61e318 ╟─07fc5a1b-4a9e-4a10-bf7a-d2682769ac97</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../beginners_guide/">« Beginners Guide</a><a class="docs-footer-nextpage" href="../engineering_model_helper_functions/">Engineering Model Helper Functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 20 April 2021 21:47">Tuesday 20 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</div><p>╔═╡ Cell order: ╟─c55b2c42-9d27-11eb-24ca-e90a5472ffbb ╠═2661286b-2d18-42e3-b309-7974fc2db425 ╟─de92bc20-b125-4f3d-930a-b1da63d5cef5 ╠═f30cd0d0-b0da-4f63-a245-568a763a93d8 ╠═ac94e556-b544-4ca6-87bd-ff2d7a7414e7 ╟─1e791262-261d-4756-bec4-edebe4732700 ╠═89de80df-1dd0-4f94-a27d-74693a978059 ╟─e22a7d3e-3f21-41b0-abf2-2c723e87c57e ╠═5fe2d186-40c6-46c2-823e-9401cb3b6d6c ╟─c884fd5b-4ecb-402b-b228-01b9a61db8bf ╠═a5b736f9-2776-4760-b073-d02027baef13 ╟─29a8a560-7d5e-4929-877a-2dab17309968 ╠═9ac6b0ed-58a8-4079-aa9f-d70024f4d4b4 ╟─89846878-ebfc-49a5-91ef-762f692ba5ea ╠═8ba081b4-8444-48e0-afce-20649f7fdd01 ╟─2a8c1536-ef5f-4e37-b30e-1bb73982d7b0 ╠═83ce434c-0f92-46a8-8648-322084044600 ╠═2f9c3f64-3e5d-423f-939e-8d96bd19e7fe ╟─f06b9592-0e16-4fd1-bf6e-624ec0cdb8fb ╠═b15593b9-f775-47af-aa9b-4980a4028faa ╟─2e4fe000-449c-4fc0-8707-4c51ac50ab03 ╠═36ca17bc-b560-48c9-988f-255780479d05 ╟─7e5811cf-86a2-43fb-8c94-44091f33c031 ╠═026088f7-b1df-4647-ad81-52c6c8ea7944 ╟─5f72ecec-bb3f-4231-93c1-719e38e17be4 ╠═f070dbbc-1a55-48f2-aa21-2119eb573b5b ╟─f3458a5c-70c6-4d0c-8253-4feb0c87ee76 ╠═542e592f-8f75-41f9-8f98-5373b431fcc6 ╟─d0e02ee5-f57c-4286-940d-b01097c840be ╠═e852712c-d09a-41e1-9785-308c219c7ad8 ╟─0eba403e-c2ba-4af3-8dcc-fe14a3c22bd7 ╟─8d5701d1-9e91-43b5-975b-fc8e0e306e99 ╠═745f33bf-98d7-4b27-95fd-ec6bf5e3d5cf ╟─fb81d3c1-a47b-46d9-b463-1766022be114 ╠═27d5a237-4c2e-4b14-a082-f4847153c8d5 ╟─564200e0-2080-44da-8dbf-37c5e3a38412 ╠═8b066039-ed65-4617-b404-86952d3fc78e ╟─a09de8ab-c1e1-4c9f-9d86-4268ce503cae ╠═763a1504-f927-4dfc-a042-ac66324708a9 ╠═e7b588e9-fb5f-4383-b5c6-bce9ed8f5a60 ╟─f882f070-74af-4f3b-9ad1-bd7ad453778f ╠═f2fa779e-f62d-4053-b055-e9f0aee6c3f7 ╟─544108d1-d1a7-4dc6-9a3c-6a10025cb8a3 ╠═ae8daf6c-4055-497e-905c-d6d5a6373ad3 ╟─3d86989a-a4db-4766-aec7-abc9a25ffde8 ╠═7a86e26d-fdf6-41b6-b1dd-dc0c4a8e9d50 ╠═82e9330b-2e94-42a1-b56d-430674b11241 ╟─2c358d7a-5d84-4f62-a147-577bb775ac7f ╠═5e5dd24c-95b5-4951-8547-13e20bb0feec ╠═45c320dd-e0b2-46ec-af09-d83e5652026d ╟─723f4e26-8065-4e22-8c5c-de32d2e42b47 ╠═58f80651-4a44-4781-a6c0-a056ec76b07e ╟─b1e55263-9c76-43b2-b91c-115b2f080182 ╠═2cdd682a-b97f-49dc-8829-47e7146497b9 ╠═74836b2c-db67-4435-a552-ba5c3e93e43f ╟─2bf802e2-f769-48db-adef-a5a066c565c2 ╠═4020d67a-4a9e-4030-b7cd-e5d60e78495c ╟─dde2da59-63fa-4549-8829-491e5f3c675e ╟─2c375878-f16b-4833-9aaa-b826fbe056a2 ╠═a7348fc8-b25e-4ecf-9fe6-314036b7df9c ╟─54280696-beec-47ee-8114-ea9311aca9eb ╠═1dc06007-b413-4cbb-b43b-2c7955ecb6d2 ╟─96a65bdc-7ee4-4e9f-94f5-8a83f7512fe9 ╠═545c9270-257a-46e8-970d-6a9fcf09dc17 ╟─fda420a1-e563-4a41-84d4-2a570bf163ae ╠═785a1c39-aa56-4244-b7b9-31d7a31b73c3 ╠═ad48b3ad-ede1-4109-9647-007c1d8d196c ╟─666223d5-802a-4164-882c-8ab1a1319d6d ╠═e3fe0a5e-9431-453d-b7e5-821de624a4ef ╟─5ab6cd16-3c24-4f60-bdf2-7f48b3e25085 ╠═05360163-4a6f-41da-8fae-070e327c2605 ╟─b8e01ce2-d7f7-4c73-8230-9fdeecab2c4e ╠═96757dde-52be-4930-9bdd-9303bb715e55 ╠═867d8d1d-042a-42ec-843e-56b8ba2db96a ╟─db4d9eb9-e120-4489-a3c2-48c43f2a3c3b ╠═4603bc56-c402-48af-9715-0722e42d90f7 ╟─12ba02ff-91dd-4355-ad2b-f3ca3b61e318 ╟─07fc5a1b-4a9e-4a10-bf7a-d2682769ac97</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../beginners_guide/">« Beginners Guide</a><a class="docs-footer-nextpage" href="../engineering_model_helper_functions/">Engineering Model Helper Functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 3 May 2021 13:21">Monday 3 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
