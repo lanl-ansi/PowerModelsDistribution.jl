@@ -192,7 +192,7 @@ function _make_math_per_unit!(nw::Dict{String,<:Any}, data_math::Dict{String,<:A
             if !isempty(buses_type_3)
                 vbases = Dict([buses_type_3[1]])
             else
-                Memento.error("Please specify vbases manually; cannot make an educated guess for this data model.")
+                error("Please specify vbases manually; cannot make an educated guess for this data model.")
             end
         end
     end
