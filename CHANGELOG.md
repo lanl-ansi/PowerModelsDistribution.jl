@@ -2,6 +2,10 @@
 
 ## staged
 
+- none
+
+## v0.11.1
+
 - Added `iseng` and `ismath` helper functions
 - Added dss2eng_extensions, for custom user functions for dss2eng transformations
 - Added eng2math_extensions, for custom user functions for eng2math transformations
