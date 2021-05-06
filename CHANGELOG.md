@@ -2,6 +2,7 @@
 
 ## staged
 
+- Documentation overhaul, new organization, updated docstrings, Pluto notebook building
 - Improve parse of ZIPV into array, and update "duty" on loads to better default
 - Add support for parsing GrowthShape objects
 - Miscellaneous code comment corrections

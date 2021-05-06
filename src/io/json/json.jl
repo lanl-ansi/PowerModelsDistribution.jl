@@ -1,4 +1,8 @@
-"parses json files that were dumped via JSON.print"
+"""
+    parse_json(file::String)
+
+parses json files that were dumped via JSON.print (or PMD.print_file)
+"""
 function parse_json(file::String)
     open(file, "r") do io
         parse_json(io)
@@ -6,7 +10,11 @@ function parse_json(file::String)
 end
 
 
-"parses json files that were dumped via JSON.print (or PMD.print_file)"
+"""
+    parse_json(io::IO)
+
+parses json files that were dumped via JSON.print (or PMD.print_file)
+"""
 function parse_json(io::IO)
     data = JSON.parse(io)
     correct_json_import!(data)
@@ -15,7 +23,11 @@ function parse_json(io::IO)
 end
 
 
-"helper function to correct data imported from json"
+"""
+    correct_json_import!(data::Dict{String,<:Any})
+
+helper function to correct data imported from json
+"""
 function correct_json_import!(data::Dict{String,<:Any})
     _fix_dtypes!(data)
 end
@@ -90,7 +102,11 @@ function _fix_nulls!(obj, prop, val)
 end
 
 
-"prints a PowerModelsDistribution data structure into a JSON file"
+"""
+    print_file(path::String, data::Dict{String,<:Any}; indent::Int=2)
+
+prints a PowerModelsDistribution data structure into a JSON file
+"""
 function print_file(path::String, data::Dict{String,<:Any}; indent::Int=2)
     open(path, "w") do io
         print_file(io, data; indent=indent)
@@ -98,7 +114,11 @@ function print_file(path::String, data::Dict{String,<:Any}; indent::Int=2)
 end
 
 
-"prints a PowerModelsDistribution data structure into a JSON file"
+"""
+    print_file(io::IO, data::Dict{String,<:Any}; indent::Int=2)
+
+prints a PowerModelsDistribution data structure into a JSON file
+"""
 function print_file(io::IO, data::Dict{String,<:Any}; indent::Int=2)
     JSON.print(io, data, indent)
 end

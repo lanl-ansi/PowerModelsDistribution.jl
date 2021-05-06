@@ -14,13 +14,13 @@ A multi-phase load consists of several individual loads, the number of which is 
 
 | `connections` | `configuration==WYE`                            | `configuration==DELTA`                              |
 | ------------- | ----------------------------------------------- | --------------------------------------------------- |
-| 2             | ![2 connections, wye](assets/loads_wye_1ph.svg) | ![2 connections, delta](assets/loads_wye_1ph.svg)   |
-| 3             | ![3 connections, wye](assets/loads_wye_2ph.svg) | ![3 connections, delta](assets/loads_delta_3ph.svg) |
-| 4             | ![4 connections, wye](assets/loads_wye_3ph.svg) | undefined                                           |
+| 2             | ![2 connections, wye](../assets/loads_wye_1ph.svg) | ![2 connections, delta](../assets/loads_wye_1ph.svg)   |
+| 3             | ![3 connections, wye](../assets/loads_wye_2ph.svg) | ![3 connections, delta](../assets/loads_delta_3ph.svg) |
+| 4             | ![4 connections, wye](../assets/loads_wye_3ph.svg) | undefined                                           |
 
 For example, we wish to connect a wye-connected load consisting of 2 individual loads (`|connections|=3` and `configuration=WYE`) to our example bus with four available terminals. If we specify `connections=["a","c","n"]`, this leads to
 
-![loads connection example](assets/loads_connection_example.svg).
+![loads connection example](../assets/loads_connection_example.svg).
 
 ## Edge objects
 
@@ -33,7 +33,7 @@ Edge objects connect two buses (except for generic `transformers`, which can con
 
 A line can have a variable number of conductors, which is implied by the size of the fields `rs`, `xs`, `g_fr`, `b_fr`, `g_to` and `b_to`. The fields `f_connections` and `t_connections` should specify for each conductor, to which terminals it connects. The figure below illustrates this for a line with 2 conuctors,
 
-![line connection example](assets/line_connection_example.svg).
+![line connection example](../assets/line_connection_example.svg).
 
 ### Transformers
 

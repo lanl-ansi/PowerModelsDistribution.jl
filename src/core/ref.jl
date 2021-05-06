@@ -1,7 +1,11 @@
 import LinearAlgebra: diagm
 
 
-"PowerModelsDistribution wrapper for the InfrastructureModels `apply!` function."
+"""
+    apply_pmd!(func!::Function, ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true)
+
+PowerModelsDistribution wrapper for the InfrastructureModels `apply!` function
+"""
 function apply_pmd!(func!::Function, ref::Dict{Symbol, <:Any}, data::Dict{String, <:Any}; apply_to_subnetworks::Bool = true)
     _IM.apply!(func!, ref, data, pmd_it_sym; apply_to_subnetworks = apply_to_subnetworks)
 end
@@ -39,7 +43,7 @@ function _calc_mc_voltage_product_bounds(pm::AbstractUnbalancedPowerModel, buspa
 end
 
 
-""
+"returns all reference buses (bus_type==3)"
 function _find_ref_buses(pm::AbstractUnbalancedPowerModel, nw)
     buses = ref(pm, nw, :bus)
     return [b for (b,bus) in buses if bus["bus_type"]==3]
@@ -47,7 +51,7 @@ function _find_ref_buses(pm::AbstractUnbalancedPowerModel, nw)
 end
 
 
-""
+"calculates transformer Tvi"
 function _calc_mc_transformer_Tvi(pm::AbstractUnbalancedPowerModel, i::Int; nw=nw_id_default)
     trans = ref(pm, nw, :transformer,  i)
     # transformation matrices
@@ -126,7 +130,11 @@ function _calc_mc_transformer_Tvi(pm::AbstractUnbalancedPowerModel, i::Int; nw=n
 end
 
 
-"computes storage bounds"
+"""
+    ref_calc_storage_injection_bounds(storage, buses)
+
+Computes storage bounds
+"""
 function ref_calc_storage_injection_bounds(storage, buses)
     injection_lb = Dict()
     injection_ub = Dict()
@@ -156,7 +164,11 @@ function ref_calc_storage_injection_bounds(storage, buses)
 end
 
 
-"overwrites PowerModels buspairs ref by conductor"
+"""
+    calc_buspair_parameters(buses, branches)
+
+Computes the buspair parameters for the network
+"""
 function calc_buspair_parameters(buses, branches)
     bus_lookup = Dict(bus["index"] => bus for (i,bus) in buses if bus["bus_type"] != 4)
     branch_lookup = Dict(branch["index"] => branch for (i,branch) in branches if branch["br_status"] == 1 && haskey(bus_lookup, branch["f_bus"]) && haskey(bus_lookup, branch["t_bus"]))
@@ -209,7 +221,11 @@ function calc_buspair_parameters(buses, branches)
 end
 
 
-""
+"""
+    find_conductor_ids!(data::Dict{String,Any})
+
+Finds all conductor ids and puts a list of them under "conductor_ids" at the root level
+"""
 function find_conductor_ids!(data::Dict{String,<:Any})
     conductor_ids = []
 
@@ -226,6 +242,8 @@ end
 
 
 """
+    ref_add_core!(ref::Dict{Symbol,Any})
+
 Returns a dict that stores commonly used pre-computed data from of the data dictionary,
 primarily for converting data-types, filtering out deactivated components, and storing
 system-wide values that need to be computed globally.

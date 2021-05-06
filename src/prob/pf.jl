@@ -205,14 +205,14 @@ end
 
 # Deprecated run_ functions (remove in ~4-6 months)
 
-"Power Flow problem with ACPUPowerModel"
+"depreciation warning for `run_ac_mc_pf`"
 function run_ac_mc_pf(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
     @warn "run_ac_mc_pf is being depreciated in favor of solve_mc_pf(data, ACPUPowerModel, solver; kwargs...), please update your code accordingly"
     return solve_mc_pf(data, ACPUPowerModel, solver; kwargs...)
 end
 
 
-"Power Flow Problem"
+"depreciation warning for `run_mc_pf`"
 function run_mc_pf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
     @warn "run_mc_pf is being depreciated in favor of solve_mc_pf, please update your code accordingly"
     return solve_mc_pf(data, model_type, solver; kwargs...)

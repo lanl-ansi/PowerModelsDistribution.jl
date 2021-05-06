@@ -1,6 +1,43 @@
-# Network Formulations
+# Unbalanced Network Formulations
 
-## Type Hierarchy
+## [`AbstractUnbalancedACPModel`](@ref AbstractUnbalancedACPModel)
+
+Real-valued formulation from:
+
+- Formulation without shunts: Mahdad, B., Bouktir, T., & Srairi, K. (2006). A three-phase power flow modelization: a tool for optimal location and control of FACTS devices in unbalanced power systems. In IEEE Industrial Electronics IECON (pp. 2238–2243).
+
+## [`AbstractUnbalancedDCPModel`](@ref AbstractUnbalancedDCPModel)
+
+Applying all of the standard DC linearization tricks to the [`AbstractUnbalancedACPModel`](@ref AbstractUnbalancedACPModel)
+
+## [`SDPUBFModel`](@ref SDPUBFModel)
+
+The BFM SDP relaxation as described in:
+
+- Gan, L., & Low, S. H. (2014). Convex relaxations and linear approximation for optimal power flow in multiphase radial networks. In PSSC (pp. 1–9). Wroclaw, Poland. [doi:10.1109/PSCC.2014.7038399](https://doi.org/10.1109/PSCC.2014.7038399)
+
+Note that this formulation is complex-valued and additional steps are needed to implement this in JuMP.
+
+## [`SOCNLPUBFModel`](@ref SOCNLPUBFModel)
+
+The starting point is `SDPUBFModel`. The SDP constraint can be relaxed to a set of SOC constraints, starting from either the real or complex form of the matrix on which the PSD-ness constraint is applied.
+
+- Kim, S., Kojima, M., & Yamashita, M. (2003). Second order cone programming relaxation of a positive semidefinite constraint. Optimization Methods and Software, 18(5), 535–541. [doi:10.1080/1055678031000148696](https://doi.org/10.1080/1055678031000148696)
+- Andersen, M. S., Hansson, A., & Vandenberghe, L. (2014). Reduced-complexity semidefinite relaxations of optimal power flow problems. IEEE Trans. Power Syst., 29(4), 1855–1863.
+
+## [`SOCConicUBFModel`](@ref SOCConicUBFModel)
+
+See `SOCNLPUBFModel`
+
+## [`LPUBFDiagModel`](@ref LPUBFDiagModel)
+
+This formulation has originally been developed by Sankur et al.
+
+- Sankur, M. D., Dobbe, R., Stewart, E., Callaway, D. S., & Arnold, D. B. (2016). A linearized power flow model for optimization in unbalanced distribution systems. [arXiv:1606.04492v2](https://arxiv.org/abs/1606.04492v2)
+
+This formulation is here cast as only considering the diagonal elements defined in `LPUBFFullModel`, which furthermore leads to the imaginary part of the lifted node voltage variable W being redundant and substituted out.
+
+# Unbalanced Network Formulation Type Hierarchy
 
 PowerModelsDistribution has a rich model type hierarchy similiar to PowerModels. At the top of the type hierarchy we can distinguish between conic, active power only, and branch flow models:
 
@@ -35,7 +72,7 @@ abstract type SOCConicUBFModel <: AbstractConicUBFModel end
 const SOCUBFModels = Union{SOCNLPUBFModel, SOCConicUBFModel}
 ```
 
-where `UBF` is an unbalanced variant of the __Branch Flow__ models from PowerModels. Models which do not contain `UBF` in their name are __Bus Injection__ Models _e.g._ `AbstractUnbalancedACPModel`. Finally, some linear unbalanced power flow models are available under the following hierarchy:
+where `UBF` is an unbalanced variant of the __Branch Flow__ models from PowerModels. Models which do not contain `UBF` in their name are __Bus Injection__ Models _e.g._ [`AbstractUnbalancedACPModel`](@ref AbstractUnbalancedACPModel). Finally, some linear unbalanced power flow models are available under the following hierarchy:
 
 ```julia
 abstract type AbstractUnbalancedDCPModel <: AbstractUnbalancedActivePowerModel end
@@ -45,7 +82,7 @@ abstract type LPUBFDiagModel <: AbstractLPUBFModel end
 const LinDist3FlowModel = LPUBFDiagModel
 ```
 
-## Power Models
+## Unbalanced Power Models
 
 Each of these Models can be used as the type parameter for an UnbalancedPowerModel:
 

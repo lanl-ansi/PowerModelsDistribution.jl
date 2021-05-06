@@ -107,10 +107,11 @@ function _map_math2eng_shunt!(data_eng::Dict{String,<:Any}, data_math::Dict{Stri
 
     if !isempty(eng_obj)
         data_eng["shunt"][map["from"]] = eng_obj
-end
+    end
 end
 
 
+""
 function _map_math2eng_generator!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "generator", map)
     math_obj = _get_math_obj(data_math, map["to"])
@@ -123,6 +124,7 @@ function _map_math2eng_generator!(data_eng::Dict{String,<:Any}, data_math::Dict{
 end
 
 
+""
 function _map_math2eng_solar!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "solar", map)
     math_obj = _get_math_obj(data_math, map["to"])
@@ -135,6 +137,7 @@ function _map_math2eng_solar!(data_eng::Dict{String,<:Any}, data_math::Dict{Stri
 end
 
 
+""
 function _map_math2eng_storage!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "storage", map)
     math_obj = _get_math_obj(data_math, map["to"])
@@ -147,6 +150,7 @@ function _map_math2eng_storage!(data_eng::Dict{String,<:Any}, data_math::Dict{St
 end
 
 
+""
 function _map_math2eng_line!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "line", map)
     math_obj = _get_math_obj(data_math, map["to"])
@@ -159,6 +163,7 @@ function _map_math2eng_line!(data_eng::Dict{String,<:Any}, data_math::Dict{Strin
 end
 
 
+""
 function _map_math2eng_switch!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "switch", map)
 
@@ -198,6 +203,7 @@ function _map_math2eng_switch!(data_eng::Dict{String,<:Any}, data_math::Dict{Str
 end
 
 
+""
 function _map_math2eng_transformer!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "transformer", map)
 
@@ -218,6 +224,7 @@ function _map_math2eng_transformer!(data_eng::Dict{String,<:Any}, data_math::Dic
 end
 
 
+""
 function _map_math2eng_root!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     data_eng["per_unit"] = data_math["per_unit"]
 

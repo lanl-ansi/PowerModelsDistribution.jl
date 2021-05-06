@@ -1,4 +1,6 @@
 """
+    relaxation_psd_to_soc_real(m, mx)
+
 SDP to SOC relaxation of type 2, applied to real-value matrix,  as described in:
 ```
 @article{Kim2003,
@@ -25,6 +27,8 @@ end
 
 
 """
+    relaxation_psd_to_soc_complex(m, mxreal, mximag)
+
 SDP to SOC relaxation of type 2, applied to complex-value matrix,  as described in:
 ```
 @article{Kim2003,
@@ -51,6 +55,8 @@ end
 
 
 """
+    relaxation_psd_to_soc_real_conic(m, mx)
+
 SDP to SOC relaxation of type 2, applied to real-value matrix,  as described in:
 ```
 @article{Kim2003,
@@ -77,6 +83,8 @@ end
 
 
 """
+    relaxation_psd_to_soc_complex_conic(m, mxreal, mximag)
+
 SDP to SOC relaxation of type 2, applied to complex-value matrix,  as described in:
 ```
 @article{Kim2003,
@@ -103,6 +111,8 @@ end
 
 
 """
+    relaxation_psd_to_soc(m::JuMP.Model, mxreal, mximag; complex::Bool=true)
+
 See section 4.3 for complex to real PSD constraint transformation:
 @article{Fazel2001,
 author = {Fazel, M. and Hindi, H. and Boyd, S.P.},
@@ -133,6 +143,8 @@ end
 
 
 """
+    relaxation_psd_to_soc_conic(m, mxreal, mximag; complex=true)
+
 See section 4.3 for complex to real PSD constraint transformation:
 @article{Fazel2001,
 author = {Fazel, M. and Hindi, H. and Boyd, S.P.},
@@ -163,6 +175,8 @@ end
 
 
 """
+    relaxation_psd_to_psd_real(m, mxreal, mximag; ndim=3)
+
 For debugging / exploration: real-valued SDP to SDP relaxation based on PSDness of principal minors, default is 3x3 SDP relaxation
 """
 function relaxation_psd_to_psd_real(m, mxreal, mximag; ndim=3)
@@ -179,6 +193,8 @@ end
 
 
 """
+    cut_complex_product_and_angle_difference(m, wf, wt, wr, wi, angmin, angmax)
+
 A valid inequality for the product of two complex variables with magnitude and
 angle difference bounds.
 In the literature this constraints are called the Lifted Nonlinear Cuts (LNCs).

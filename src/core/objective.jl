@@ -1,4 +1,8 @@
-"a quadratic penalty for bus power slack variables"
+"""
+    objective_mc_min_slack_bus_power(pm::AbstractUnbalancedPowerModel)
+
+a quadratic penalty for bus power slack variables
+"""
 function objective_mc_min_slack_bus_power(pm::AbstractUnbalancedPowerModel)
     return JuMP.@objective(pm.model, Min,
         sum(
@@ -10,7 +14,11 @@ function objective_mc_min_slack_bus_power(pm::AbstractUnbalancedPowerModel)
 end
 
 
-"minimum load delta objective (continuous load shed) with storage"
+"""
+    objective_mc_min_load_setpoint_delta(pm::AbstractUnbalancedPowerModel)
+
+minimum load delta objective with storage
+"""
 function objective_mc_min_load_setpoint_delta(pm::AbstractUnbalancedPowerModel)
     for (n, nw_ref) in nws(pm)
         var(pm, n)[:delta_pg] = Dict(i => JuMP.@variable(pm.model,
@@ -50,7 +58,11 @@ function objective_mc_min_load_setpoint_delta(pm::AbstractUnbalancedPowerModel)
 end
 
 
-"simplified minimum load delta objective (continuous load shed)"
+"""
+    objective_mc_min_load_setpoint_delta_simple(pm::AbstractUnbalancedPowerModel)
+
+simplified minimum load delta objective (continuous load shed)
+"""
 function objective_mc_min_load_setpoint_delta_simple(pm::AbstractUnbalancedPowerModel)
     JuMP.@objective(pm.model, Min,
         sum(
@@ -61,7 +73,11 @@ function objective_mc_min_load_setpoint_delta_simple(pm::AbstractUnbalancedPower
 end
 
 
-"simplified minimum load delta objective (continuous load shed)"
+"""
+    objective_mc_min_load_setpoint_delta_simple_switch(pm::AbstractUnbalancedPowerModel)
+
+simplified minimum load delta objective (continuous load shed) including a switch state term
+"""
 function objective_mc_min_load_setpoint_delta_simple_switch(pm::AbstractUnbalancedPowerModel)
     JuMP.@objective(pm.model, Min,
         sum(
@@ -72,8 +88,11 @@ function objective_mc_min_load_setpoint_delta_simple_switch(pm::AbstractUnbalanc
     )
 end
 
+"""
+    objective_mc_max_load_setpoint(pm::AbstractUnbalancedPowerModel)
 
-"maximum loadability objective (continuous load shed) with storage"
+maximum loadability objective (continuous load shed) with storage
+"""
 function objective_mc_max_load_setpoint(pm::AbstractUnbalancedPowerModel)
     w = Dict(n => Dict(i => get(load, "weight", 1.0) for (i,load) in ref(pm, n, :load)) for n in nw_ids(pm))
 
@@ -89,7 +108,11 @@ function objective_mc_max_load_setpoint(pm::AbstractUnbalancedPowerModel)
 end
 
 
-""
+"""
+    objective_mc_min_fuel_cost(pm::AbstractUnbalancedPowerModel)
+
+Standard fuel cost minimization objective
+"""
 function objective_mc_min_fuel_cost(pm::AbstractUnbalancedPowerModel; kwargs...)
     model = check_gen_cost_models(pm)
 
@@ -104,7 +127,11 @@ function objective_mc_min_fuel_cost(pm::AbstractUnbalancedPowerModel; kwargs...)
 end
 
 
-""
+"""
+    objective_mc_min_fuel_cost_switch(pm::AbstractUnbalancedPowerModel)
+
+Standard fuel cost minimization objective including switches
+"""
 function objective_mc_min_fuel_cost_switch(pm::AbstractUnbalancedPowerModel; kwargs...)
     model = check_gen_cost_models(pm)
 
@@ -120,7 +147,11 @@ end
 
 
 
-""
+"""
+    objective_mc_min_fuel_cost_pwl(pm::AbstractUnbalancedPowerModel)
+
+Fuel cost minimization objective with piecewise linear terms
+"""
 function objective_mc_min_fuel_cost_pwl(pm::AbstractUnbalancedPowerModel; kwargs...)
     objective_mc_variable_pg_cost(pm; kwargs...)
 
@@ -132,7 +163,11 @@ function objective_mc_min_fuel_cost_pwl(pm::AbstractUnbalancedPowerModel; kwargs
 end
 
 
-""
+"""
+    objective_mc_min_fuel_cost_pwl_switch(pm::AbstractUnbalancedPowerModel)
+
+Fuel cost minimization objective with piecewise linear terms including switches
+"""
 function objective_mc_min_fuel_cost_pwl_switch(pm::AbstractUnbalancedPowerModel; kwargs...)
     objective_mc_variable_pg_cost(pm; kwargs...)
 
@@ -145,8 +180,12 @@ function objective_mc_min_fuel_cost_pwl_switch(pm::AbstractUnbalancedPowerModel;
 end
 
 
-"adds pg_cost variables and constraints"
-function objective_mc_variable_pg_cost(pm::AbstractUnbalancedPowerModel, report::Bool=true)
+"""
+    objective_mc_variable_pg_cost(pm::AbstractUnbalancedPowerModel)
+
+adds pg_cost variables and constraints
+"""
+function objective_mc_variable_pg_cost(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     for (n, nw_ref) in nws(pm)
         pg_cost = var(pm, n)[:pg_cost] = Dict{Int,Any}()
 
@@ -175,7 +214,11 @@ function objective_mc_variable_pg_cost(pm::AbstractUnbalancedPowerModel, report:
 end
 
 
-""
+"""
+    objective_mc_min_fuel_cost_polynomial(pm::AbstractUnbalancedPowerModel)
+
+Fuel cost minimization objective for polynomial terms
+"""
 function objective_mc_min_fuel_cost_polynomial(pm::AbstractUnbalancedPowerModel; kwargs...)
     order = calc_max_cost_index(pm.data)-1
 
@@ -187,7 +230,11 @@ function objective_mc_min_fuel_cost_polynomial(pm::AbstractUnbalancedPowerModel;
 end
 
 
-""
+"""
+    objective_mc_min_fuel_cost_polynomial_switch(pm::AbstractUnbalancedPowerModel)
+
+Fuel cost minimization objective for polynomial terms including switches
+"""
 function objective_mc_min_fuel_cost_polynomial_switch(pm::AbstractUnbalancedPowerModel; kwargs...)
     order = calc_max_cost_index(pm.data)-1
 
@@ -351,7 +398,7 @@ end
 
 
 ""
-function _objective_mc_min_fuel_cost_polynomial_nl_switch(pm::AbstractUnbalancedPowerModel; report::Bool=true)
+function _objective_mc_min_fuel_cost_polynomial_nl_switch(pm::AbstractUnbalancedPowerModel)
     gen_cost = Dict()
     for (n, nw_ref) in nws(pm)
         for (i,gen) in nw_ref[:gen]
@@ -382,8 +429,12 @@ function _objective_mc_min_fuel_cost_polynomial_nl_switch(pm::AbstractUnbalanced
 end
 
 
-"adds pg_cost variables and constraints"
-function objective_variable_pg_cost(pm::AbstractUnbalancedIVRModel; report::Bool=true)
+"""
+    objective_variable_pg_cost(pm::AbstractUnbalancedIVRModel)
+
+adds pg_cost variables and constraints for the IVR formulation
+"""
+function objective_variable_pg_cost(pm::AbstractUnbalancedIVRModel)
     for (n, nw_ref) in nws(pm)
         gen_lines = calc_cost_pwl_lines(nw_ref[:gen])
 
@@ -405,6 +456,8 @@ end
 
 
 """
+    check_cost_models(pm::AbstractUnbalancedPowerModel)
+
 Checks that all cost models are of the same type
 """
 function check_cost_models(pm::AbstractUnbalancedPowerModel)
@@ -413,6 +466,8 @@ end
 
 
 """
+    check_gen_cost_models(pm::AbstractUnbalancedPowerModel)
+
 Checks that all generator cost models are of the same type
 """
 function check_gen_cost_models(pm::AbstractUnbalancedPowerModel)
@@ -439,6 +494,8 @@ end
 
 
 """
+    calc_pwl_points(ncost::Int, cost::Vector{<:Real}, pmin::Real, pmax::Real; tolerance=1e-2)
+
 cleans up raw pwl cost points in preparation for building a mathamatical model.
 The key mathematical properties,
 - the first and last points are strickly outside of the pmin-to-pmax range
@@ -525,7 +582,11 @@ function calc_pwl_points(ncost::Int, cost::Vector{<:Real}, pmin::Real, pmax::Rea
 end
 
 
-""
+"""
+    calc_max_cost_index(data::Dict{String,<:Any})
+
+Computes maximum cost index
+"""
 function calc_max_cost_index(data::Dict{String,<:Any})
     if ismultinetwork(data)
         max_index = 0
@@ -540,7 +601,11 @@ function calc_max_cost_index(data::Dict{String,<:Any})
 end
 
 
-""
+"""
+    _calc_max_cost_index(data::Dict{String,<:Any})
+
+Computes maximum cost index of subnetworks
+"""
 function _calc_max_cost_index(data::Dict{String,<:Any})
     max_index = 0
 
@@ -561,6 +626,8 @@ end
 
 
 """
+    calc_cost_pwl_lines(comp_dict::Dict)
+
 compute lines in m and b from from pwl cost models data is a list of components.
 Can be run on data or ref data structures
 """
@@ -574,6 +641,8 @@ end
 
 
 """
+    _calc_comp_lines(component::Dict{String,<:Any})
+
 compute lines in m and b from from pwl cost models
 """
 function _calc_comp_lines(component::Dict{String,<:Any})

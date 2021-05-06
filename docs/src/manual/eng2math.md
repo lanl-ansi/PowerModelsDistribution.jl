@@ -2,7 +2,7 @@
 
 In this document we define the mapping from the engineering data model down to the mathematical data model for each physical component.
 
-## `bus`
+## `bus` objects
 
 Buses are parsed into `bus` and potentially `shunt` objects.
 
@@ -18,15 +18,15 @@ This is equivalent to a shunt `g+im*b = 1/(1.0+im*2.0)` connected to terminal `4
 
 This simplifies the mathematical model, as the modeller does no longer have to consider lossy groundings explicitly.
 
-## `line`
+## `line` objects
 
 Lines are parsed into `branch` objects with `transformer=false`
 
-## `switch`
+## `switch` objects
 
 Switches are parsed into `switch`. If there are loss parameters provided (_i.e._ `rs` and/or `xs`) then a virtual branch and virtual bus are created to model the impedance
 
-## `transformer`
+## `transformer` objects
 
 A transformer can have N windings, each with its own configuration (`delta` or `wye` are supported). This is decomposed to a network of N lossless, two-winding transformers which connect to an internal loss model. The to-winding is always wye-connected, hence we refer to these transformers as 'asymmetric'.
 
@@ -40,22 +40,22 @@ If all of these are non-zero, this leads to an internal loss model consisting of
 
 For more detail, please refer to [upcoming technical paper]. #TODO add link to paper
 
-## `shunt`
+## `shunt` objects
 
 Shunts are parsed directly into `shunt` objects.
 
-## `load`
+## `load` objects
 
 Loads are parsed into `load` objects. See the discussion under the Load Model documentation on the sidebar, for a detailed discussion of the various load models.
 
-## `generator`
+## `generator` objects
 
 Generators are parsed into `gen` objects.
 
-## `solar`
+## `solar` objects
 
 Solar objects (photovoltaic systems) are parsed into `gen` objects.
 
-## `voltage_source`
+## `voltage_source` objects
 
 Voltage sources are parsed into `gen` objects. If loss parameters are specified (_i.e._ `rs` and/or `xs`) then a virtual bus and branch are created to model the internal impedance.

@@ -41,19 +41,27 @@ const pmd_math_component_status_inactive = Dict(
     "transformer" => 0,
 )
 
-"PowerModelsDistribution wrapper for the InfrastructureModels `apply!` function."
+"""
+    apply_pmd!(func!::Function, data::Dict{String, <:Any}; apply_to_subnetworks::Bool = true)
+
+PowerModelsDistribution wrapper for the InfrastructureModels `apply!` function, working only on data
+"""
 function apply_pmd!(func!::Function, data::Dict{String, <:Any}; apply_to_subnetworks::Bool = true)
     _IM.apply!(func!, data, pmd_it_name; apply_to_subnetworks = apply_to_subnetworks)
 end
 
 
-"Convenience function for retrieving the power-distribution-only portion of network data."
+"""
+    get_pmd_data(data::Dict{String, <:Any})
+
+Convenience function for retrieving the power-distribution-only portion of network data
+"""
 function get_pmd_data(data::Dict{String, <:Any})
     return _IM.ismultiinfrastructure(data) ? data["it"][pmd_it_name] : data
 end
 
 
-# BOUND manipulation methods (0*Inf->0 is often desired)
+"BOUND manipulation methods (0*Inf->0 is often desired)"
 _sum_rm_nan(X::Vector) = sum([X[(!).(isnan.(X))]..., 0.0])
 
 
@@ -70,7 +78,7 @@ _mat_mult_rm_nan(A::Union{Matrix, Adjoint}, b::Vector) = dropdims(_mat_mult_rm_n
 _mat_mult_rm_nan(a::Vector, B::Union{Matrix, Adjoint}) = _mat_mult_rm_nan(reshape(a, length(a), 1), B)
 
 
-""
+"Replaces NaN values with zeros"
 function _nan2zero(b, a; val=0)
     and(x, y) = x && y
     b[and.(isnan.(b), a.==val)] .= 0.0
@@ -111,7 +119,11 @@ function _roll(array::Array{T, 1}, idx::Int; right=true) where T <: Number
 end
 
 
-"Counts number of nodes in network"
+"""
+    count_nodes(data::Dict{String,<:Any})::Int
+
+Counts number of nodes in network
+"""
 function count_nodes(data::Dict{String,<:Any})::Int
     n_nodes = 0
 
@@ -190,8 +202,11 @@ function count_nodes(data::Dict{String,<:Any})::Int
     return n_nodes
 end
 
+"""
+    count_active_connections(data::Dict{String,<:Any})
 
-"Counts active ungrounded connections on edge components"
+Counts active ungrounded connections on edge components
+"""
 function count_active_connections(data::Dict{String,<:Any})
     data_model = get(data, "data_model", MATHEMATICAL)
     edge_elements = data_model == MATHEMATICAL ? PowerModelsDistribution._math_edge_elements : PowerModelsDistribution._eng_edge_elements
@@ -250,7 +265,11 @@ function count_active_connections(data::Dict{String,<:Any})
 end
 
 
-"Counts active ungrounded terminals on buses"
+"""
+    count_active_terminals(data::Dict{String,<:Any}; count_grounded::Bool=false)
+
+Counts active ungrounded terminals on buses
+"""
 function count_active_terminals(data::Dict{String,<:Any}; count_grounded::Bool=false)
     data_model = get(data, "data_model", MATHEMATICAL)
     active_terminal_count = 0
@@ -281,7 +300,7 @@ function count_active_terminals(data::Dict{String,<:Any}; count_grounded::Bool=f
 end
 
 
-""
+"returns the conductor indicator for a ENGINEERING component"
 function _get_conductor_indicator(comp::Dict{String,<:Any})::String
     if haskey(comp, "terminals")
         return "terminals"
@@ -442,6 +461,8 @@ end
 
 
 """
+    _load_expmodel_params(load::Dict{String,<:Any}, bus::Dict{String,<:Any})
+
 Returns the exponential load model parameters for a load.
 For an exponential load it simply returns certain data model properties, whilst
 for constant_power, constant_current and constant_impedance it returns the
@@ -466,6 +487,8 @@ function _load_expmodel_params(load::Dict, bus::Dict)
             @assert(all(alpha.>=0))
             beta = load["beta"]
             @assert(all(beta.>=0))
+        else
+            error("load model '$(load["model"])' on 'load.$(load["name"])' unrecongized")
         end
         # calculate proportionality constants
         v0 = load["vnom_kv"]
@@ -643,13 +666,13 @@ function _vec2utri!(v::Vector{T}) where T
 end
 
 
-""
+"vector to lower triangular"
 function _vec2ltri!(v::Vector{T}) where T
     _vec2utri!(v)'
 end
 
 
-""
+"matrix to upper triangular vector"
 function _mat2utrivec!(m::Union{Matrix{T}, LinearAlgebra.Symmetric{T}}) where T
     @assert size(m,1) == size(m,2)
     n = size(m,1)
@@ -657,7 +680,7 @@ function _mat2utrivec!(m::Union{Matrix{T}, LinearAlgebra.Symmetric{T}}) where T
 end
 
 
-""
+"matrix to lower triangular vector"
 function _mat2ltrivec!(m::Union{Matrix{T}, LinearAlgebra.Symmetric{T}}) where T
     @assert size(m,1) == size(m,2)
     n = size(m,1)
@@ -665,7 +688,7 @@ function _mat2ltrivec!(m::Union{Matrix{T}, LinearAlgebra.Symmetric{T}}) where T
 end
 
 
-""
+"makes a hermitian matrix variable from diagonal, and lower and upper triangular vectors"
 function _make_hermitian_matrix_variable(diag, lowertrianglereal, lowertriangleimag)
     #TODO clean up
     matrixreal = []
@@ -719,7 +742,7 @@ function _make_hermitian_matrix_variable(diag, lowertrianglereal, lowertrianglei
 end
 
 
-""
+"makes a full matrix variable from a diagonal, and lower and upper triangular vectors"
 function _make_full_matrix_variable(diag, lowertriangle, uppertriangle)
     #TODO clean up
     matrix = []
@@ -750,6 +773,7 @@ function _make_full_matrix_variable(diag, lowertriangle, uppertriangle)
 end
 
 
+"helper to determine if expession has any Nonlinear terms"
 function _has_nl_expression(x)::Bool
     if isa(x, JuMP.NonlinearExpression)
         return true
@@ -776,7 +800,11 @@ function _has_nl_expression(x)::Bool
 end
 
 
-"checks that voltage angle differences are within 90 deg., if not tightens"
+"""
+    correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))
+
+checks that voltage angle differences are within 90 deg., if not tightens to a default of 10deg (adjustable)
+"""
 function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))
     if ismultinetwork(data)
         nw_data = data["nw"]
@@ -827,8 +855,11 @@ function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default
     return modified
 end
 
+"""
+    correct_mc_thermal_limits!(data::Dict{String,<:Any})
 
-"checks that each branch has non-negative thermal ratings and removes zero thermal ratings"
+checks that each branch has non-negative thermal ratings and removes zero thermal ratings
+"""
 function correct_mc_thermal_limits!(data::Dict{String,<:Any})
     if ismultinetwork(data)
         nw_data = data["nw"]
@@ -874,6 +905,7 @@ function correct_mc_thermal_limits!(data::Dict{String,<:Any})
 end
 
 
+"helper function to build bus shunt matrices for power balance constraints"
 function _build_bus_shunt_matrices(pm::AbstractUnbalancedPowerModel, nw::Int, terminals::Vector{Int}, bus_shunts::Vector{<:Tuple{Int,Vector{Int}}})::Tuple{Matrix{<:Real},Matrix{<:Real}}
     ncnds = length(terminals)
     Gs = fill(0.0, ncnds, ncnds)
@@ -892,7 +924,11 @@ function _build_bus_shunt_matrices(pm::AbstractUnbalancedPowerModel, nw::Int, te
 end
 
 
-""
+"""
+    calc_branch_y(branch::Dict{String,<:Any})
+
+computes branch admittance matrices
+"""
 function calc_branch_y(branch::Dict{String,<:Any})
     y = pinv(branch["br_r"] + im * branch["br_x"])
     g, b = real(y), imag(y)
@@ -900,19 +936,33 @@ function calc_branch_y(branch::Dict{String,<:Any})
 end
 
 
-"computes load blocks based on switch locations"
+"""
+    identify_load_blocks(data::Dict{String,<:Any})
+
+computes load blocks based on switch locations
+"""
 identify_load_blocks(data::Dict{String,<:Any}) = calc_connected_components(data; type="load_blocks")
 
 
-"computes connected blocks currently in the model based on switch states"
+"""
+    identify_blocks(data::Dict{String,<:Any})
+
+computes connected blocks currently in the model based on switch states
+"""
 identify_blocks(data::Dict{String,<:Any}) = calc_connected_components(data; type="blocks")
 
 
-"computes component islands base only on edge and bus status"
+"""
+    identify_islands(data::Dict{String,<:Any})
+
+computes component islands base only on edge and bus status
+"""
 identify_islands(data::Dict{String,<:Any}) = calc_connected_components(data)
 
 
 """
+    calc_connected_components(data::Dict{String,<:Any}; edges::Union{Missing, Vector{<:String}}=missing, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set
+
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
@@ -1042,9 +1092,7 @@ function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector
 end
 
 
-"""
-DFS on a graph
-"""
+"DFS on a graph"
 function _cc_dfs(i, neighbors, component_lookup, touched)
     push!(touched, i)
     for j in neighbors[i]
@@ -1061,7 +1109,7 @@ function _cc_dfs(i, neighbors, component_lookup, touched)
 end
 
 
-""
+"rescales the cost model terms"
 function _rescale_cost_model!(comp::Dict{String,<:Any}, scale::Real)
     if "model" in keys(comp) && "cost" in keys(comp)
         if comp["model"] == 1
@@ -1080,13 +1128,17 @@ function _rescale_cost_model!(comp::Dict{String,<:Any}, scale::Real)
 end
 
 
-"checks that all parallel branches have the same orientation"
+"""
+    correct_branch_directions!(data::Dict{String,<:Any})
+
+checks that all parallel branches have the same orientation
+"""
 function correct_branch_directions!(data::Dict{String,<:Any})
     apply_pmd!(_correct_branch_directions!, data)
 end
 
 
-""
+"checks that all parallel branches have the same orientation"
 function _correct_branch_directions!(pm_data::Dict{String,<:Any})
     orientations = Set()
     for (i, branch) in pm_data["branch"]
@@ -1118,13 +1170,17 @@ function _correct_branch_directions!(pm_data::Dict{String,<:Any})
 end
 
 
-"checks that all branches connect two distinct buses"
+"""
+    check_branch_loops(data::Dict{String,<:Any})
+
+checks that all branches connect two distinct buses
+"""
 function check_branch_loops(data::Dict{String,<:Any})
     apply_pmd!(_check_branch_loops, data)
 end
 
 
-""
+"checks that all branches connect two distinct buses"
 function _check_branch_loops(pm_data::Dict{String, <:Any})
     for (i, branch) in pm_data["branch"]
         if branch["f_bus"] == branch["t_bus"]
@@ -1134,13 +1190,17 @@ function _check_branch_loops(pm_data::Dict{String, <:Any})
 end
 
 
-"checks that all buses are unique and other components link to valid buses"
+"""
+    check_connectivity(data::Dict{String,<:Any})
+
+checks that all buses are unique and other components link to valid buses
+"""
 function check_connectivity(data::Dict{String,<:Any})
     apply_pmd!(_check_connectivity, data)
 end
 
 
-""
+"checks that all buses are unique and other components link to valid buses"
 function _check_connectivity(data::Dict{String,<:Any})
     bus_ids = Set(bus["index"] for (i,bus) in data["bus"])
     @assert(length(bus_ids) == length(data["bus"])) # if this is not true something very bad is going on
@@ -1203,7 +1263,12 @@ function correct_bus_types!(data::Dict{String,<:Any})
 end
 
 
-""
+"""
+checks bus types are suitable for a power flow study, if not, fixes them.
+the primary checks are that all type 2 buses (i.e., PV) have a connected and
+active generator and there is a single type 3 bus (i.e., slack bus) with an
+active connected generator. Assumes that the network is a single connected component
+"""
 function _correct_bus_types!(pm_data::Dict{String,<:Any})
     bus_gens = Dict(bus["index"] => [] for (i,bus) in pm_data["bus"])
 
@@ -1283,13 +1348,17 @@ function _biggest_generator(gens::Dict)::Dict
 end
 
 
-"throws warnings if cost functions are malformed"
+"""
+    correct_cost_functions!(data::Dict{String,<:Any})
+
+throws warnings if cost functions are malformed
+"""
 function correct_cost_functions!(data::Dict{String,<:Any})
     apply_pmd!(_correct_cost_functions!, data)
 end
 
 
-""
+"throws warnings if cost functions are malformed"
 function _correct_cost_functions!(pm_data::Dict{String,<:Any})
     for (i,gen) in pm_data["gen"]
         _correct_cost_function!(i, gen, "generator", "pmin", "pmax")
@@ -1297,9 +1366,8 @@ function _correct_cost_functions!(pm_data::Dict{String,<:Any})
 end
 
 
-""
+"throws warnings if cost functions are malformed"
 function _correct_cost_function!(id, comp, type_name, pmin_key, pmax_key)
-
     if "model" in keys(comp) && "cost" in keys(comp)
         if comp["model"] == 1
             if length(comp["cost"]) != 2*comp["ncost"]
@@ -1396,7 +1464,11 @@ function _simplify_pwl_cost!(id, comp, type_name; tolerance=1e-2)
 end
 
 
-"trims zeros from higher order cost terms"
+"""
+    simplify_cost_terms!(data::Dict{String,<:Any})
+
+trims zeros from higher order cost terms
+"""
 function simplify_cost_terms!(data::Dict{String,<:Any})
     apply_pmd!(_simplify_cost_terms!, data)
 end
@@ -1426,7 +1498,11 @@ function _simplify_cost_terms!(pm_data::Dict{String,<:Any})
 end
 
 
-"ensures all polynomial costs functions have the same number of terms"
+"""
+    standardize_cost_terms!(data::Dict{String,<:Any}; order=-1)
+
+ensures all polynomial costs functions have the same number of terms
+"""
 function standardize_cost_terms!(data::Dict{String,<:Any}; order=-1)
     pm_data = get_pmd_data(data)
 

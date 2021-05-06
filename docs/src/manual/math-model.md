@@ -4,7 +4,7 @@ As PowerModelsDistribution implements a variety of power network optimization pr
 
 ## Unbalanced AC Optimal Power Flow
 
-PowerModelsDistribution implements a generalized version of the AC Optimal Power Flow problem, from [Matpower](http://www.pserc.cornell.edu/matpower/) but extended to take into account phase unbalance [^1].  These generalizations make it possible for PowerModelsDistribution to more accurately capture real-world distribution network datasets.  The core generalizations are,
+PowerModelsDistribution implements a generalized version of the AC Optimal Power Flow problem, taking into account phase unbalance. [^1]  These generalizations make it possible for PowerModelsDistribution to more accurately capture real-world distribution network datasets.  The core generalizations are,
 
 - Support for multiple load and shunt components on each bus
 - Line charging (shunt) that supports a conductance and asymmetrical values
@@ -134,4 +134,4 @@ A complete mathematical model is as follows,
 \end{align}
 ```
 
-[^1] Gan, L., & Low, S. H. (2014). Convex relaxations and linear approximation for optimal power flow in multiphase radial networks. In PSSC (pp. 1–9). Wroclaw, Poland. https://doi.org/10.1109/PSCC.2014.7038399
+[^1]: Gan, L., & Low, S. H. (2014). Convex relaxations and linear approximation for optimal power flow in multiphase radial networks. In PSSC (pp. 1–9). Wroclaw, Poland. https://doi.org/10.1109/PSCC.2014.7038399

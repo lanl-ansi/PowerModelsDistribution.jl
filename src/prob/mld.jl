@@ -420,28 +420,28 @@ end
 
 # Depreciated run_ functions (remove after ~4-6 months)
 
-"depreciation warning for run_mc_mld"
+"depreciation warning for `run_mc_mld`"
 function run_mc_mld(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
     @warn "run_mc_mld is being depreciated in favor of solve_mc_mld, please update your code accordingly"
     return solve_mc_mld(data, model_type, solver; kwargs...)
 end
 
 
-"depreciation warning for run_mn_mc_mld_simple"
+"depreciation warning for `run_mn_mc_mld_simple`"
 function run_mn_mc_mld_simple(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
     @warn "run_mn_mc_mld_simple is being depreciated in favor of solve_mn_mc_mld_simple, please update your code accordingly"
     return solve_mn_mc_mld_simple(data, model_type, solver; kwargs...)
 end
 
 
-"depreciation warning for run_mc_mld_bf"
+"depreciation warning for `run_mc_mld_bf`"
 function run_mc_mld_bf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
     @warn "run_mc_mld_bf is being depreciated in favor of solve_mc_mld, please update your code accordingly"
     return solve_mc_mld(data, model_type, solver; kwargs...)
 end
 
 
-"depreciation warning for run_mc_mld_uc"
+"depreciation warning for `run_mc_mld_uc`"
 function run_mc_mld_uc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
     @warn "run_mc_mld_uc is being depreciated in favor of solve_mc_mld_uc, please update your code accordingly"
     return solve_mc_mld_uc(data, model_type, solver; kwargs...)

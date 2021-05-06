@@ -32,7 +32,7 @@
         end
 
         @testset "5-bus matpower mn acp mld" begin
-            case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
+            case5_mn = InfrastructureModels.replicate(case5, 3, PowerModelsDistribution._pmd_math_global_keys)
             result = solve_mn_mc_opf(case5_mn, ACPUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
@@ -43,7 +43,7 @@
         end
 
         @testset "5-bus matpower mn acr mld" begin
-            case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
+            case5_mn = InfrastructureModels.replicate(case5, 3, PowerModelsDistribution._pmd_math_global_keys)
             result = solve_mn_mc_opf(case5_mn, ACRUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
@@ -55,7 +55,7 @@
         end
 
         @testset "5-bus storage matpower mn acr mld" begin
-            case5_strg_mn = InfrastructureModels.replicate(case5_strg, 3, Set(["per_unit"]))
+            case5_strg_mn = InfrastructureModels.replicate(case5_strg, 3, PowerModelsDistribution._pmd_math_global_keys)
             result = solve_mn_mc_opf(case5_strg_mn, ACRUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED

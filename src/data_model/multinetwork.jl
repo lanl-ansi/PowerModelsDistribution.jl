@@ -1,3 +1,21 @@
+const _pmd_eng_global_keys = Set{String}([
+    "files", "name", "data_model", "dss_options"
+])
+
+
+"list of multinetwork keys that belong at the root level"
+const _pmd_math_global_keys = Set{String}([
+    "data_model", "per_unit", "name", "map", "bus_lookup", "dss_options"
+])
+
+
+"""
+    ismultinetwork(pm::AbstractUnbalancedPowerModel)
+
+Checks if power model struct is multinetwork
+"""
+ismultinetwork(pm::AbstractUnbalancedPowerModel) = ismultinetwork(pm, pmd_it_sym)
+
 
 "Expands a data structure into a multinetwork"
 function make_multinetwork(data::Dict{String,<:Any}; sparse::Bool=false, time_elapsed::Union{Missing,Real,Vector{<:Real}}=missing)
@@ -124,7 +142,11 @@ function _make_multinetwork_math(data_math::Dict{String,<:Any})::Dict{String,Any
 end
 
 
-"helper function to manually sort your multinetwork frames"
+"""
+    sort_multinetwork!(mn_data::Dict{String,<:Any}, times::Vector{<:Any})
+
+Helper function to manually sort your multinetwork frames, given some pre-sorted vector of time values `times`
+"""
 function sort_multinetwork!(mn_data::Dict{String,<:Any}, times::Vector{<:Any})
     @assert ismultinetwork(mn_data) "Data is not multinetwork, cannot sort"
     mn_lookup = Dict("$i" => time for (i,time) in enumerate(times))
@@ -139,7 +161,12 @@ function sort_multinetwork!(mn_data::Dict{String,<:Any}, times::Vector{<:Any})
 end
 
 
-"helper function to set time_elapsed in multinetwork data"
+"""
+    set_time_elapsed!(data::Dict{String,<:Any}, time_elapsed::Union{Real,Vector{<:Real}})
+
+Helper function to set time_elapsed in multinetwork data, given either some constant value of time elapsed
+or a Vector of time elapsed values of the same length as the number of subnetworks.
+"""
 function set_time_elapsed!(data::Dict{String,<:Any}, time_elapsed::Union{Real,Vector{<:Real}})
     if ismultinetwork(data)
         nw_data = data["nw"]

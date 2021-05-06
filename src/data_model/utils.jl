@@ -24,9 +24,13 @@ function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
 
     data["conductor_ids"] = collect(1:conductors)
     data["data_model"] = MATHEMATICAL
-    data["settings"] = get(data, "settings", Dict{String,Any}(
-        "sbase_default" => get(data, "baseMVA", 1e6)
-    ))
+    data["settings"] = get(
+        data,
+        "settings",
+        Dict{String,Any}(
+            "sbase_default" => get(data, "baseMVA", 1e6)
+        )
+    )
 
     for (key, item) in data
         if isa(item, Dict{String,Any})
@@ -229,7 +233,16 @@ end
 
 
 "loss model builder for transformer decomposition"
-function _build_loss_model!(data_math::Dict{String,<:Any}, transformer_name::Any, to_map::Vector{String}, r_s::Vector{Float64}, zsc::Dict{Tuple{Int,Int},Complex{Float64}}, ysh::Complex{Float64}; nphases::Int=3)::Vector{Int}
+function _build_loss_model!(
+    data_math::Dict{String,<:Any},
+    transformer_name::Any,
+    to_map::Vector{String},
+    r_s::Vector{Float64},
+    zsc::Dict{Tuple{Int,Int},Complex{Float64}},
+    ysh::Complex{Float64};
+    nphases::Int=3
+    )::Vector{Int}
+
     # precompute the minimal set of buses and lines
     N = length(r_s)
     tr_t_bus = collect(1:N)
@@ -661,19 +674,19 @@ function _apply_linecode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:A
 end
 
 
-""
+"converts impendance in Ohm/m by multiplying by length"
 function _impedance_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
     eng_obj[key] .* get(eng_obj, "length", 1.0)
 end
 
 
-""
+"converts admittance by multiplying by 2πωl"
 function _admittance_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
     2.0 .* pi .* data_eng["settings"]["base_frequency"] .* eng_obj[key] .* get(eng_obj, "length", 1.0) ./ 1e9
 end
 
 
-""
+"converts Int(Status) Enums into bus_type"
 function _bus_type_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
     eng_obj[key] == 0 ? 4 : 1
 end
@@ -727,7 +740,7 @@ end
 
 
 "generate a new, unique terminal"
-new_t(terms) = maximum([terms[isa.(terms, Int)]..., 3])+1
+_new_terminal(terms) = maximum([terms[isa.(terms, Int)]..., 3])+1
 
 
 "get a grounded terminal from a bus; if not present, create one"
@@ -736,7 +749,7 @@ function _get_ground_math!(bus; exclude_terminals=[])
     if !isempty(tgs)
         return tgs[1]
     else
-        n = new_t([bus["terminals"]])
+        n = _new_terminal([bus["terminals"]])
         push!(bus["terminals"], n)
         push!(bus["grounded"], true)
         return n
@@ -800,7 +813,7 @@ function _pad_connections!(eng_obj::Dict{String,<:Any}, connection_key::String, 
 end
 
 
-""
+"helper function to map non integer conductor ids into integers"
 function _map_conductor_ids!(data_math::Dict{String,<:Any})
     if all(typeof(c) <: Int for c in data_math["conductor_ids"])
         cnd_map = Dict{Any,Int}(c => c for c in data_math["conductor_ids"])

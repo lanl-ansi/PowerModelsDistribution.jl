@@ -32,7 +32,7 @@ Of those, a subset of configurations are converted into a PowerModelsDistributio
 - generator
 - voltage_source
 - solar (from PVSystem)
-- load (incl. support for constant POWER, constant IMPEDANCE, constant CURRENT, and EXPONENTIAL models)
+- load (incl. support for constant [`POWER`](@ref POWER), constant [`IMPEDANCE`](@ref IMPEDANCE), constant [`CURRENT`](@ref CURRENT), and [`EXPONENTIAL`](@ref EXPONENTIAL) models)
 - shunt (from shunt capacitors and shunt reactors)
 - storage
 
@@ -62,4 +62,4 @@ Capacitors and reactors are supported as shunts, although shunts to ground via d
 
 ## PowerModelsDistribution JSON
 
-You can export a PowerModelsDistribution data structure to a JSON file using the `print_file` command and parse one in using the `parse_file` command
+You can export a PowerModelsDistribution data structure to a JSON file using the [`print_file`](@ref print_file) command and parse one in using the [`parse_file`](@ref parse_file) command

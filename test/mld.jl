@@ -45,7 +45,7 @@
     end
 
     @testset "5-bus mn acp mld" begin
-        case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
+        case5_mn = InfrastructureModels.replicate(case5, 3, PowerModelsDistribution._pmd_math_global_keys)
         result = solve_mn_mc_mld_simple(case5_mn, ACPUPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
@@ -56,7 +56,7 @@
     end
 
     @testset "5-bus mn storage acp mld" begin
-        case5_strg_mn = InfrastructureModels.replicate(case5_strg, 3, Set(["per_unit"]))
+        case5_strg_mn = InfrastructureModels.replicate(case5_strg, 3, PowerModelsDistribution._pmd_math_global_keys)
         result = solve_mn_mc_mld_simple(case5_strg_mn, ACPUPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
@@ -65,7 +65,7 @@
     end
 
     @testset "5-bus mn nfa mld" begin
-        case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
+        case5_mn = InfrastructureModels.replicate(case5, 3, PowerModelsDistribution._pmd_math_global_keys)
         result = solve_mn_mc_mld_simple(case5_mn, NFAUPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
@@ -74,7 +74,7 @@
     end
 
     @testset "5-bus mn storage nfa mld" begin
-        case5_strg_mn = InfrastructureModels.replicate(case5_strg, 3, Set(["per_unit"]))
+        case5_strg_mn = InfrastructureModels.replicate(case5_strg, 3, PowerModelsDistribution._pmd_math_global_keys)
         result = solve_mn_mc_mld_simple(case5_strg_mn, NFAUPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
@@ -83,7 +83,7 @@
     end
 
     @testset "5-bus mn lpubfdiag mld" begin
-        case5_mn = InfrastructureModels.replicate(case5, 3, Set(["per_unit"]))
+        case5_mn = InfrastructureModels.replicate(case5, 3, PowerModelsDistribution._pmd_math_global_keys)
         result = solve_mn_mc_mld_simple(case5_mn, LPUBFDiagPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED

@@ -1,5 +1,6 @@
 # This file contains useful transformation functions for the engineering data model
 
+"collect of components and their properties that define loss models when transforming to the MATHEMATICAL model"
 const _loss_model_objects = Dict{String,Vector{String}}(
     "switch" => Vector{String}(["linecode", "rs", "xs"]),
     "voltage_source" => Vector{String}(["rs", "xs"]),
@@ -7,9 +8,14 @@ const _loss_model_objects = Dict{String,Vector{String}}(
 )
 
 
-"remove parameters from objects with loss models to make them lossless"
+"""
+    make_lossless!(data_eng::Dict{String,<:Any})
+
+Remove parameters from objects with loss models to make them lossless. This includes switches
+voltage sources and transformers, which all have loss model parameters that can be omitted.
+"""
 function make_lossless!(data_eng::Dict{String,<:Any})
-    @assert data_eng["data_model"] == ENGINEERING "incorrect data model type"
+    @assert iseng(data_eng) "incorrect data model type"
 
     for (object_type, parameters) in _loss_model_objects
         if haskey(data_eng, object_type)
@@ -29,9 +35,13 @@ function make_lossless!(data_eng::Dict{String,<:Any})
 end
 
 
-"add voltage bounds"
+"""
+    apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1)
+
+add voltage bounds to all buses based on per-unit upper (`vm_ub`) and lower (`vm_lb`), scaled by the bus's voltage based
+"""
 function apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1)
-    @assert data_eng["data_model"] == ENGINEERING "incorrect data model type"
+    @assert iseng(data_eng) "incorrect data model type"
 
     (bus_vbases, edge_vbases) = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
     if haskey(data_eng, "bus")
@@ -49,8 +59,15 @@ function apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,M
 end
 
 
-"removes all fields ending in '_ub' or '_lb'"
-function remove_all_bounds!(data_eng; exclude::Vector{<:String}=String[])
+"""
+    remove_all_bounds!(data_eng; exclude::Vector{<:String}=String["energy_ub"])
+
+Removes all fields ending in '_ub' or '_lb' that aren't required by the math model. Properties
+can be excluded from this removal with `exclude::Vector{String}`
+
+By default, `"energy_ub"` is excluded from this removal, since it is a required properly on storage.
+"""
+function remove_all_bounds!(data_eng; exclude::Vector{<:String}=String["energy_ub"])
     for (k,v) in data_eng
         if isa(v, Dict) && k!="settings" && !(k in exclude)
             for (id, comp) in v
@@ -65,7 +82,11 @@ function remove_all_bounds!(data_eng; exclude::Vector{<:String}=String[])
 end
 
 
-"kron reduction"
+"""
+apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
+
+Applies a Kron Reduction to the network, reducing out the `kr_neutral`, leaving only the `kr_phases`
+"""
 function apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
     if haskey(data_eng, "bus")
         for (id,eng_obj) in data_eng["bus"]
@@ -187,7 +208,11 @@ function apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Ve
 end
 
 
-"pad matrices to max number of conductors"
+"""
+    apply_phase_projection!(data_eng::Dict{String,<:Any})
+
+pad matrices and vectors to max number of conductors
+"""
 function apply_phase_projection!(data_eng::Dict{String,<:Any})
     @assert get(data_eng, "is_kron_reduced", false)
 
@@ -330,7 +355,13 @@ function apply_phase_projection!(data_eng::Dict{String,<:Any})
 end
 
 
-"phase projection for components where unprojected states are not yet supported"
+"""
+    apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
+
+phase projection for components where unprojected states are not yet supported (delta configurations).
+
+See [`apply_phase_projection!`](@ref apply_phase_projection!)
+"""
 function apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
     @assert get(data_eng, "is_kron_reduced", false)
 
@@ -407,6 +438,7 @@ function apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
 end
 
 
+"helper function to update the terminals on projected buses"
 function _update_bus_terminal_projections!(data_eng::Dict{String,<:Any}, bus_terminals::Dict{Any,<:Vector{Int}})
     for (id,terminals) in bus_terminals
         eng_obj = data_eng["bus"][id]
@@ -426,8 +458,13 @@ function _update_bus_terminal_projections!(data_eng::Dict{String,<:Any}, bus_ter
 end
 
 
-"voltage angle bounds"
-function apply_voltage_angle_difference_bounds!(eng::Dict{String,<:Any}, vad::Real)
+"""
+    apply_voltage_angle_difference_bounds!(eng::Dict{String,<:Any}, vad::Real=5.0)
+
+Applies voltage angle difference bound given by `vad::Real` in degrees (_i.e._, the allowed drift of angle from one end
+of a line to another) to all lines. By default, `vad=5.0`.
+"""
+function apply_voltage_angle_difference_bounds!(eng::Dict{String,<:Any}, vad::Real=5.0)
     if haskey(eng, "line")
         for (_,line) in eng["line"]
             line["vad_lb"] = fill(-vad, length(line["f_connections"]))

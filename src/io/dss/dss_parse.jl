@@ -792,7 +792,14 @@ function _assign_property!(data_dss::Dict{String,<:Any}, obj_type::AbstractStrin
 end
 
 
-""
+"""
+    parse_dss(filename::String)::Dict{String,Any}
+
+Parses a OpenDSS file given by `filename` into a Dict{Array{Dict}}. Only
+supports components and options, but not commands, e.g. "plot" or "solve".
+Will also parse files defined inside of the originating DSS file via the
+"compile", "redirect" or "buscoords" commands.
+"""
 function parse_dss(filename::AbstractString)::Dict{String,Any}
     data_dss = open(filename) do io
         parse_dss(io)
@@ -802,7 +809,9 @@ end
 
 
 """
-Parses a OpenDSS file given by `filename` into a Dict{Array{Dict}}. Only
+    parse_dss(io::IO)::Dict{String,Any}
+
+Parses a OpenDSS file aleady in IO into a Dict{Array{Dict}}. Only
 supports components and options, but not commands, e.g. "plot" or "solve".
 Will also parse files defined inside of the originating DSS file via the
 "compile", "redirect" or "buscoords" commands.

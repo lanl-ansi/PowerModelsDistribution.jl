@@ -1,6 +1,6 @@
 # Problem Specifications
 
-In addition to the standard power flow `run_mc_pf`, and optimal power flow `run_mc_opf`, there are several notable problem specifications included in PowerModelsDistribution
+In addition to the standard power flow [`solve_mc_pf`](@ref solve_mc_pf), and optimal power flow [`solve_mc_opf`](@ref solve_mc_opf), there are several notable problem specifications included in PowerModelsDistribution
 
 ## Optimal Power Flow (OPF) with On-Load Tap Changers (OLTC)
 
@@ -8,52 +8,15 @@ This problem is identical to `mc_opf`, except that all transformers are now mode
 
 ### OLTC Objective
 
-```julia
-objective_min_fuel_cost(pm)
-```
+[`objective_mc_min_fuel_cost`](@ref objective_mc_min_fuel_cost)
 
 ### OLTC Variables
 
-```julia
-variable_mc_voltage(pm)
-variable_mc_branch_flow(pm)
-
-for c in conductor_ids(pm)
-    PowerModels.variable_generation(pm, cnd=c)
-end
-variable_mc_transformer_flow(pm)
-variable_mc_oltc_tap(pm)
-```
+[`variable_mc_oltc_transformer_tap`](@ref variable_mc_oltc_transformer_tap)
 
 ### OLTC Constraints
 
-```julia
-constraint_mc_model_voltage(pm)
-
-for i in ids(pm, :ref_buses)
-    constraint_mc_theta_ref(pm, i)
-end
-
-for i in ids(pm, :bus), c in conductor_ids(pm)
-    constraint_mc_power_balance(pm, i, cnd=c)
-end
-
-for i in ids(pm, :branch)
-    constraint_mc_ohms_yt_from(pm, i)
-    constraint_mc_ohms_yt_to(pm, i)
-
-    for c in conductor_ids(pm)
-        PowerModels.constraint_voltage_angle_difference(pm, i, cnd=c)
-
-        PowerModels.constraint_thermal_limit_from(pm, i, cnd=c)
-        PowerModels.constraint_thermal_limit_to(pm, i, cnd=c)
-    end
-end
-
-for i in ids(pm, :transformer)
-    constraint_mc_oltc(pm, i)
-end
-```
+[`constraint_mc_transformer_power(pm, i, fix_taps=false)`](@ref constraint_mc_transformer_power)
 
 ## Minimal Load Delta (MLD) Problem Specification
 

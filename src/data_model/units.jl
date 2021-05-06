@@ -1,5 +1,5 @@
 "lists of scaling factors and what they apply to"
-const _dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
+const dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
     "bus"  => Dict{String,Vector{String}}(
         "rad2deg"=>Vector{String}(["va", "va_pp", "va_pn"]),
         "vbase"=>Vector{String}(["vm", "vr", "vi", "vm_pp", "vm_pn"])
@@ -61,7 +61,11 @@ function make_per_unit!(data::Dict{String,<:Any}; vbases::Union{Dict{<:Any,<:Rea
 end
 
 
-"finds voltage zones"
+"""
+    discover_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{Any}}
+
+finds voltage zones by walking through the network and analyzing the transformers
+"""
 function discover_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{Any}}
     @assert data_model["data_model"] in [MATHEMATICAL, ENGINEERING] "unsupported data model"
     edge_elements = data_model["data_model"] == MATHEMATICAL ? _math_edge_elements : _eng_edge_elements
@@ -101,7 +105,11 @@ function discover_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{An
 end
 
 
-"calculates voltage bases for each voltage zone"
+"""
+    calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{<:Any,<:Real})::Tuple{Dict,Dict}
+
+Calculates voltage bases for each voltage zone for buses and branches
+"""
 function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{<:Any,<:Real})::Tuple{Dict,Dict}
     # find zones of buses connected by lines
     zones = discover_voltage_zones(data_model)
@@ -167,8 +175,7 @@ function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{
 end
 
 
-"converts to per unit from SI"
-function _make_math_per_unit!(nw::Dict{String,<:Any}, data_math::Dict{String,<:Any}; sbase::Union{Real,Missing}=missing, vbases::Union{Dict{String,<:Real},Missing}=missing)
+"converts the MATHEMATICAL model to per unit from SI"
     if ismissing(sbase)
         if haskey(nw["settings"], "sbase_default")
             sbase = nw["settings"]["sbase_default"]
@@ -437,6 +444,7 @@ function _scale_props!(comp::Dict{String,<:Any}, prop_names::Vector{String}, sca
 end
 
 
+"helper to apply function values"
 _apply_func_vals(x, f) = isa(x, Dict) ? Dict(k=>f(v) for (k,v) in x) : f.(x)
 
 
@@ -455,11 +463,7 @@ function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true
     for (n,nw) in nw_sol
         sbase = nw["settings"]["sbase"]
         for (comp_type, comp_dict) in [(x,y) for (x,y) in nw if isa(y, Dict) && x != "settings"]
-            dimensionalize_math_comp = get(_dimensionalize_math, comp_type, Dict())
-            vbase_props   = mult_vbase      ? get(dimensionalize_math_comp, "vbase", [])   : []
-            sbase_props   = mult_sbase      ? get(dimensionalize_math_comp, "sbase", [])   : []
-            ibase_props   = mult_ibase      ? get(dimensionalize_math_comp, "ibase", [])   : []
-            rad2deg_props = convert_rad2deg ? get(dimensionalize_math_comp, "rad2deg", []) : []
+            dimensionalize_math_comp = get(dimensionalize_math, comp_type, Dict())
 
             for (id, comp) in comp_dict
                 if !isempty(vbase_props) || !isempty(ibase_props)

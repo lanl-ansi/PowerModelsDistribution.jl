@@ -1,6 +1,6 @@
 # Engineering Data Model
 
-This document describes the `ENGINEERING` data model type in PowerModelsDistribution, which is transformed at runtime, or at the user's direction into a `MATHEMATICAL` data model for optimization.
+This document describes the [`ENGINEERING`](@ref ENGINEERING) data model type in PowerModelsDistribution, which is transformed at runtime, or at the user's direction into a [`MATHEMATICAL`](@ref MATHEMATICAL) data model for optimization.
 
 In this document,
 
@@ -24,7 +24,7 @@ Dict{String,Any}(
 )
 ```
 
-Valid component types are those that are documented in the sectios below. Each component object is identified by an `id`, which must be a string (`id <: String`), but `id` does not appear inside of the component dictionary, and only appears as keys to the component dictionaries under each component type. Note that this requirement is so that data structures will be JSON serializable.
+Valid component types are those that are documented in the sections below. Each component object is identified by an `id`, which must be a string (`id <: String`), but `id` does not appear inside of the component dictionary, and only appears as keys to the component dictionaries under each component type. Note that this requirement is so that data structures will be JSON serializable.
 
 Each edge or node component (_i.e._ all those that are not data objects or buses), is expected to have `status` fields to specify whether the component is active or disabled, `bus` or `f_bus` and `t_bus`, to specify the buses that are connected to the component, and `connections` or `f_connections` and `t_connections`, to specify the terminals of the buses that are actively connected in an ordered list. __NOTE__: `terminals`, `connections`, `f_connections`, and `t_connections`, must be type `Vector{Int}`.
 

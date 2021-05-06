@@ -1,5 +1,6 @@
-# PowerModelsDistribution.jl Library
+# Internal Functions
 
 ```@autodocs
 Modules = [PowerModelsDistribution]
+Public = false
 ```

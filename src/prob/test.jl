@@ -26,13 +26,17 @@ function _run_mc_mn_opb(data::Union{Dict{String,<:Any},String}, model_type::Type
 end
 
 
-""
+"""
+    ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
+
+Ref-extension for opb problem type to add connected components ref
+"""
 function ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
     apply_pmd!(_ref_add_connected_components!, ref, data)
 end
 
 
-""
+"adds connected components for opb problem type"
 function _ref_add_connected_components!(ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any})
     component_sets = calc_connected_components(data)
     ref[:components] = Dict(i => c for (i,c) in enumerate(sort(collect(component_sets); by = length)))

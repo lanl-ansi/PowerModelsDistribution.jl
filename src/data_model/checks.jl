@@ -315,7 +315,11 @@ const _eng_model_req_fields= Dict{Symbol,Vector{Symbol}}(
 )
 
 
-"checks the engineering data model for correct data types, required fields and applies default checks"
+"""
+    check_eng_data_model(data_eng::Dict{String,<:Any})
+
+checks the engineering data model for correct data types, required fields and applies default checks
+"""
 function check_eng_data_model(data_eng::Dict{String,<:Any})
     for (component_type, components) in data_eng
         if isa(components, Dict)

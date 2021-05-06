@@ -1,7 +1,16 @@
 # UTILITY MATRIX VARIABLE FUNCTIONS
 
-
 """
+    _make_matrix_variable_element(
+        model::JuMP.Model,
+        indices::Array{T,1},
+        n::Int,
+        m::Int;
+        upper_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        lower_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        varname::String=""
+    ) where T
+
 Sometimes we want to bound only a subset of the elements of a matrix variable.
 For example, an unbounded Hermitian variable usually still has a lower bound
 of zero on the real diagonal elements. When there is a mix of bounded and unbounded elements,
@@ -42,12 +51,21 @@ function _make_matrix_variable_element(model::JuMP.Model, indices::Array{T,1}, n
     return mat_nm
 end
 
-
 # GENERAL MATRICES
 ##################
 
-
 """
+    variable_mx_real(
+        model::JuMP.Model,
+        indices::Array{T,1},
+        N::Dict{T,Vector{Int}},
+        M::Dict{T,Vector{Int}};
+        upper_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        lower_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        name::String="",
+        prefix::String=""
+    ) where T
+
 This function creates a set of real matrix variables of size NxM,
 indexed over the elements of the indices argument.
 The upper and lower bounds have to be specified,
@@ -87,7 +105,18 @@ end
 
 
 """
-Same as variable_mx_real, but has to be square and the diagonal of the matrix
+    variable_mx_real_with_diag(
+        model::JuMP.Model,
+        indices::Array{T,1},
+        N::Dict{T,Vector{Int}};
+        upper_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        lower_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        diag::Dict{T,<:Vector{<:Any}}=Dict([(i, fill(0, length(N[i]))) for i in indices]),
+        name::String="",
+        prefix::String=""
+    ) where T
+
+Same as [`variable_mx_real`](@ref variable_mx_real), but has to be square and the diagonal of the matrix
 variables consists of the elements passed as the diag argument.
 The diag argument is a dictionary of (index, 1d-array) pairs.
 Useful for power matrices with specified diagonals (constant power wye loads).
@@ -123,8 +152,21 @@ end
 
 
 """
+    variable_mx_complex(
+        model::JuMP.Model,
+        indices::Array{T,1},
+        N::Dict{T,Vector{Int}},
+        M::Dict{T,Vector{Int}};
+        upper_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        lower_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        symm_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        name::Union{String, Tuple{String,String}}="",
+        prefix::String=""
+    )::Tuple where T
+
 Shorthand to create two real matrix variables, where the first is the real part
 and the second the imaginary part.
+
 If the name argument is a String, it will be suffixed with 're' and  'im'.
 It is possible to  specify the names of the real and imaginary part directly
 as a Tuple as well (to achieve P and Q instead of Sre and Sim for example).
@@ -151,9 +193,23 @@ end
 
 
 """
-Same as variable_mx_complex, but square and the diagonal of the matrix variables
+    variable_mx_complex_with_diag(
+        model::JuMP.Model,
+        indices::Array{T,1},
+        N::Dict{T,Vector{Int}};
+        upper_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        lower_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        symm_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        diag_re::Dict{T,<:Vector{<:Any}}=Dict([(i, zeros(length(N[i]))) for i in indices]),
+        diag_im::Dict{T,<:Vector{<:Any}}=Dict([(i, zeros(length(N[i]))) for i in indices]),
+        name::Union{String, Tuple{String,String}}="",
+        prefix::String=""
+    )::Tuple where T
+
+Same as [`variable_mx_complex`](@ref variable_mx_complex), but square and the diagonal of the matrix variables
 consists of the constants passed as the diag_re and diag_im argument. The diag
 argument is a dictionary of (index, 1d-array) pairs.
+
 Useful for power matrices with specified diagonals (constant power wye loads).
 """
 function variable_mx_complex_with_diag(model::JuMP.Model, indices::Array{T,1}, N::Dict{T,Vector{Int}};
@@ -178,13 +234,21 @@ function variable_mx_complex_with_diag(model::JuMP.Model, indices::Array{T,1}, N
     return (Mre,Mim)
 end
 
-
 # HERMITIAN MATRICES
-#%##########################
-
+####################
 
 """
-Same as variable_mx_real, but adds symmetry structure
+    variable_mx_real_symmetric(
+        model::JuMP.Model,
+        indices::Array{T,1},
+        N::Dict{T,Vector{Int}};
+        upper_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        lower_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        name::String="",
+        prefix::String=""
+    )::Dict where T
+
+Same as [`variable_mx_real`](@ref variable_mx_real), but adds symmetry structure
 """
 function variable_mx_real_symmetric(model::JuMP.Model, indices::Array{T,1}, N::Dict{T,Vector{Int}};
         upper_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
@@ -225,7 +289,18 @@ end
 
 
 """
-Same as variable_mx_real, but adds skew-symmetry structure.
+    variable_mx_real_skewsymmetric(
+        model::JuMP.Model,
+        indices::Array{T,1},
+        N::Dict{T,Vector{Int}};
+        upper_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        lower_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        set_diag_to_zero::Bool=true,
+        name::String="",
+        prefix::String=""
+    )::Dict where T
+
+Same as [`variable_mx_real`](@ref variable_mx_real), but adds skew-symmetry structure.
 """
 function variable_mx_real_skewsymmetric(model::JuMP.Model, indices::Array{T,1}, N::Dict{T,Vector{Int}};
         upper_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
@@ -268,6 +343,21 @@ end
 
 
 """
+    variable_mx_hermitian(
+        model::JuMP.Model,
+        indices::Array{T,1},
+        N::Dict{T,Vector{Int}};
+        upper_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        lower_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        symm_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
+        sqrt_upper_bound::Union{Missing, Dict{T,<:Vector{<:Real}}}=missing,
+        sqrt_lower_bound::Union{Missing, Dict{T,<:Vector{<:Real}}}=missing,
+        set_lower_bound_diag_to_zero::Bool=false,
+        imag_set_diag_to_zero::Bool=true,
+        name::Union{String,Tuple{String,String}}="",
+        prefix::String=""
+    )::Tuple where T
+
 Returns a pair of symmetric and skew-symmetric matrix variables.
 """
 function variable_mx_hermitian(model::JuMP.Model, indices::Array{T,1}, N::Dict{T,Vector{Int}};

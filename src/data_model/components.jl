@@ -8,7 +8,11 @@ function _add_unused_kwargs!(object::Dict{String,<:Any}, kwargs)
 end
 
 
-"Generic add function to add components to an engineering data model"
+"""
+    add_object!(data_eng::Dict{String,<:Any}, obj_type::String, obj_id::String, object::Dict{String,<:Any})
+
+Generic add function to add components to an engineering data model
+"""
 function add_object!(data_eng::Dict{String,<:Any}, obj_type::String, obj_id::String, object::Dict{String,<:Any})
     if !haskey(data_eng, obj_type)
         data_eng[obj_type] = Dict{String,Any}()
@@ -58,7 +62,11 @@ function add_object!(data_eng::Dict{String,<:Any}, obj_type::String, obj_id::Str
 end
 
 
-"Instantiates a PowerModelsDistribution data model"
+"""
+    Model(model_type::DataModel)
+
+Instantiates a PowerModelsDistribution data model
+"""
 function Model(model_type::DataModel=ENGINEERING; kwargs...)::Dict{String,Any}
     if model_type == ENGINEERING
         data_model = Dict{String,Any}(
@@ -97,7 +105,20 @@ function Model(model_type::DataModel=ENGINEERING; kwargs...)::Dict{String,Any}
 end
 
 
-"creates a linecode with some defaults"
+"""
+    create_linecode(
+        rs::Matrix{<:Real},
+        xs::Matrix{<:Real};
+        g_fr::Union{Matrix{<:Real},Missing}=missing,
+        b_fr::Union{Matrix{<:Real},Missing}=missing,
+        g_to::Union{Matrix{<:Real},Missing}=missing,
+        b_to::Union{Matrix{<:Real},Missing}=missing,
+        cm_ub::Union{Vector{<:Real},Missing}=missing,
+        kwargs...
+    )::Dict{String,Any}
+
+creates a linecode with some defaults
+"""
 function create_linecode(rs::Matrix{<:Real}, xs::Matrix{<:Real};
     g_fr::Union{Matrix{<:Real},Missing}=missing,
     b_fr::Union{Matrix{<:Real},Missing}=missing,
@@ -134,8 +155,31 @@ function create_linecode(rs::Matrix{<:Real}, xs::Matrix{<:Real};
 end
 
 
-"Create a line with some default values"
-function create_line(f_bus::String, t_bus::String, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}};
+"""
+    create_line(
+        f_bus::String,
+        t_bus::String,
+        f_connections::Vector{Int},
+        t_connections::Vector{Int};
+        linecode::Union{String,Missing}=missing,
+        rs::Union{Matrix{<:Real},Missing}=missing,
+        xs::Union{Matrix{<:Real},Missing}=missing,
+        g_fr::Union{Matrix{<:Real},Missing}=missing,
+        b_fr::Union{Matrix{<:Real},Missing}=missing,
+        g_to::Union{Matrix{<:Real},Missing}=missing,
+        b_to::Union{Matrix{<:Real},Missing}=missing,
+        length::Real=1.0,
+        cm_ub::Union{Vector{<:Real},Missing}=missing,
+        sm_ub::Union{Vector{<:Real},Missing}=missing,
+        vad_lb::Union{Vector{<:Real},Missing}=missing,
+        vad_ub::Union{Vector{<:Real},Missing}=missing,
+        status::Status=ENABLED,
+        kwargs...
+    )::Dict{String,Any}
+
+Create a line with some default values
+"""
+function create_line(f_bus::String, t_bus::String, f_connections::Vector{Int}, t_connections::Vector{Int};
     linecode::Union{String,Missing}=missing,
     rs::Union{Matrix{<:Real},Missing}=missing,
     xs::Union{Matrix{<:Real},Missing}=missing,
@@ -210,8 +254,26 @@ function create_line(f_bus::String, t_bus::String, f_connections::Union{Vector{I
 end
 
 
-"creates a switch object with some defaults"
-function create_switch(f_bus::String, t_bus::String, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}};
+"""
+    create_switch(
+        f_bus::String,
+        t_bus::String,
+        f_connections::Vector{Int},
+        t_connections::Vector{Int};
+        cm_ub::Union{Vector{<:Real},Missing}=missing,
+        sm_ub::Union{Vector{<:Real},Missing}=missing,
+        linecode::Union{String,Missing}=missing,
+        rs::Union{Matrix{<:Real},Missing}=missing,
+        xs::Union{Matrix{<:Real},Missing}=missing,
+        dispatchable::Dispatchable=NO,
+        state::SwitchState=CLOSED,
+        status::Status=ENABLED,
+        kwargs...
+    )::Dict{String,Any}
+
+creates a switch object with some defaults
+"""
+function create_switch(f_bus::String, t_bus::String, f_connections::Vector{Int}, t_connections::Vector{Int};
     cm_ub::Union{Vector{<:Real},Missing}=missing,
     sm_ub::Union{Vector{<:Real},Missing}=missing,
     linecode::Union{String,Missing}=missing,
@@ -245,11 +307,22 @@ function create_switch(f_bus::String, t_bus::String, f_connections::Union{Vector
 end
 
 
-"creates a bus object with some defaults"
+"""
+    create_bus(;
+        status::Status=ENABLED,
+        terminals::Vector{Int}=Int[],
+        grounded::Vector{Int}=Int[],
+        rg::Vector{<:Real}=Float64[],
+        xg::Vector{<:Real}=Float64[],
+        kwargs...
+    )::Dict{String,Any}
+
+creates a bus object with some defaults
+"""
 function create_bus(;
     status::Status=ENABLED,
-    terminals::Union{Vector{Int},Vector{String}}=Int[],
-    grounded::Union{Vector{Int},Vector{String}}=Int[],
+    terminals::Vector{Int}=Int[],
+    grounded::Vector{Int}=Int[],
     rg::Vector{<:Real}=Float64[],
     xg::Vector{<:Real}=Float64[],
     kwargs...
@@ -271,8 +344,23 @@ function create_bus(;
 end
 
 
-"creates a load object with some defaults"
-function create_load(bus::String, connections::Union{Vector{Int},Vector{String}};
+"""
+    create_load(
+        bus::String,
+        connections::Vector{Int};
+        configuration::ConnConfig=WYE,
+        model::LoadModel=POWER,
+        pd_nom::Union{Vector{<:Real},Missing}=missing,
+        qd_nom::Union{Vector{<:Real},Missing}=missing,
+        vm_nom::Real=1.0,
+        dispatchable::Dispatchable=NO,
+        status::Status=ENABLED,
+        kwargs...
+    )::Dict{String,Any}
+
+creates a load object with some defaults
+"""
+function create_load(bus::String, connections::Vector{Int};
     configuration::ConnConfig=WYE,
     model::LoadModel=POWER,
     pd_nom::Union{Vector{<:Real},Missing}=missing,
@@ -309,8 +397,26 @@ function create_load(bus::String, connections::Union{Vector{Int},Vector{String}}
 end
 
 
-"creates a generator object with some defaults"
-function create_generator(bus::String, connections::Union{Vector{Int},Vector{String}};
+"""
+    create_generator(
+        bus::String,
+        connections::Vector{Int};
+        configuration::ConnConfig=WYE,
+        pg::Union{Vector{<:Real},Missing}=missing,
+        qg::Union{Vector{<:Real},Missing}=missing,
+        vg::Union{Vector{<:Real},Missing}=missing,
+        pg_lb::Union{Vector{<:Real},Missing}=missing,
+        pg_ub::Union{Vector{<:Real},Missing}=missing,
+        qg_lb::Union{Vector{<:Real},Missing}=missing,
+        qg_ub::Union{Vector{<:Real},Missing}=missing,
+        control_mode::ControlMode=FREQUENCYDROOP,
+        status::Status=ENABLED,
+        kwargs...
+    )::Dict{String,Any}
+
+creates a generator object with some defaults
+"""
+function create_generator(bus::String, connections::Vector{Int};
     configuration::ConnConfig=WYE,
     pg::Union{Vector{<:Real},Missing}=missing,
     qg::Union{Vector{<:Real},Missing}=missing,
@@ -347,7 +453,21 @@ function create_generator(bus::String, connections::Union{Vector{Int},Vector{Str
 end
 
 
-"creates transformer code with some defaults"
+"""
+    create_xfmrcode(;
+        configurations::Union{Vector{ConnConfig},Missing}=missing,
+        xsc::Union{Vector{<:Real},Missing}=missing,
+        rw::Union{Vector{<:Real},Missing}=missing,
+        tm_nom::Union{Vector{<:Real},Missing}=missing,
+        tm_lb::Union{Vector{Vector{<:Real}},Missing}=missing,
+        tm_ub::Union{Vector{Vector{<:Real}},Missing}=missing,
+        tm_set::Union{Vector{Vector{<:Real}},Missing}=missing,
+        tm_fix::Union{Vector{Vector{<:Real}},Missing}=missing,
+        kwargs...
+    )::Dict{String,Any}
+
+creates transformer code with some defaults
+"""
 function create_xfmrcode(;
     configurations::Union{Vector{ConnConfig},Missing}=missing,
     xsc::Union{Vector{<:Real},Missing}=missing,
@@ -393,8 +513,31 @@ function create_xfmrcode(;
 end
 
 
-"creates a n-winding transformer object with some defaults"
-function create_transformer(buses::Vector{Any}, connections::Vector{Union{Vector{Int},Vector{String}}};
+"""
+    create_transformer(
+        buses::Vector{String},
+        connections::Vector{Vector{Int}};
+        configurations::Union{Vector{ConnConfig},Missing}=missing,
+        xfmrcode::Union{String,Missing}=missing,
+        xsc::Union{Vector{<:Real},Missing}=missing,
+        rw::Union{Vector{<:Real},Missing}=missing,
+        imag::Real=0.0,
+        noloadloss::Real=0.0,
+        tm_nom::Union{Vector{<:Real},Missing}=missing,
+        tm_lb::Union{Vector{Vector{<:Real}},Missing}=missing,
+        tm_ub::Union{Vector{Vector{<:Real}},Missing}=missing,
+        tm_set::Union{Vector{Vector{<:Real}},Missing}=missing,
+        tm_fix::Union{Vector{Vector{Bool}},Missing}=missing,
+        polarity::Union{Vector{Int},Missing}=missing,
+        vm_nom::Union{Vector{<:Real},Missing}=missing,
+        sm_nom::Union{Vector{<:Real},Missing}=missing,
+        status::Status=ENABLED,
+        kwargs...
+    )::Dict{String,Any}
+
+creates a n-winding transformer object with some defaults
+"""
+function create_transformer(buses::Vector{String}, connections::Vector{Vector{Int}};
     configurations::Union{Vector{ConnConfig},Missing}=missing,
     xfmrcode::Union{String,Missing}=missing,
     xsc::Union{Vector{<:Real},Missing}=missing,
@@ -443,8 +586,25 @@ function create_transformer(buses::Vector{Any}, connections::Vector{Union{Vector
 end
 
 
-"creates a aysmmetric lossless 2-winding transformer object with some defaults"
-function create_al2w_transformer(f_bus::String, t_bus::String, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}};
+"""
+    create_al2w_transformer(
+        f_bus::String,
+        t_bus::String,
+        f_connections::Vector{Int},
+        t_connections::Vector{Int};
+        configuration::ConnConfig=WYE,
+        tm_nom::Real=1.0,
+        tm_lb::Union{Vector{<:Real},Missing}=missing,
+        tm_ub::Union{Vector{<:Real},Missing}=missing,
+        tm_set::Union{Vector{<:Real},Missing}=missing,
+        tm_fix::Union{Vector{Bool},Missing}=missing,
+        status::Status=ENABLED,
+        kwargs...
+    )::Dict{String,Any}
+
+creates a aysmmetric lossless 2-winding transformer object with some defaults
+"""
+function create_al2w_transformer(f_bus::String, t_bus::String, f_connections::Vector{Int}, t_connections::Vector{Int};
     configuration::ConnConfig=WYE,
     tm_nom::Real=1.0,
     tm_lb::Union{Vector{<:Real},Missing}=missing,
@@ -482,8 +642,21 @@ function create_al2w_transformer(f_bus::String, t_bus::String, f_connections::Un
 end
 
 
-"creates a generic shunt with some defaults"
-function create_shunt(bus, connections;
+"""
+    create_shunt(
+        bus::String,
+        connections::Vector{Int};
+        gs::Union{Matrix{<:Real},Missing}=missing,
+        bs::Union{Matrix{<:Real},Missing}=missing,
+        model::ShuntModel=GENERIC,
+        dispatchable::Dispatchable=NO,
+        status::Status=ENABLED,
+        kwargs...
+    )::Dict{String,Any}
+
+creates a generic shunt with some defaults
+"""
+function create_shunt(bus::String, connections::Vector{Int};
     gs::Union{Matrix{<:Real},Missing}=missing,
     bs::Union{Matrix{<:Real},Missing}=missing,
     model::ShuntModel=GENERIC,
@@ -510,8 +683,24 @@ function create_shunt(bus, connections;
 end
 
 
-"creates a solar generator with some defaults"
-function create_solar(bus::String, connections::Union{Vector{Int},Vector{String}};
+"""
+    create_solar(
+        bus::String,
+        connections::Vector{Int};
+        configuration::ConnConfig=WYE,
+        pg_lb::Union{Vector{<:Real},Missing}=missing,
+        pg_ub::Union{Vector{<:Real},Missing}=missing,
+        qg_lb::Union{Vector{<:Real},Missing}=missing,
+        qg_ub::Union{Vector{<:Real},Missing}=missing,
+        pg::Union{Vector{<:Real},Missing}=missing,
+        qg::Union{Vector{<:Real},Missing}=missing,
+        status::Status=ENABLED,
+        kwargs...
+    )::Dict{String,Any}
+
+creates a solar generator with some defaults
+"""
+function create_solar(bus::String, connections::Vector{Int};
     configuration::ConnConfig=WYE,
     pg_lb::Union{Vector{<:Real},Missing}=missing,
     pg_ub::Union{Vector{<:Real},Missing}=missing,
@@ -534,8 +723,34 @@ function create_solar(bus::String, connections::Union{Vector{Int},Vector{String}
 end
 
 
-"creates energy storage object with some defaults"
-function create_storage(bus::String, connections::Union{Vector{Int},Vector{String}};
+"""
+    create_storage(
+        bus::String,
+        connections::Vector{Int};
+        configuration::ConnConfig=WYE,
+        energy::Real=0.0,
+        energy_ub::Real=0.0,
+        charge_ub::Real=0.0,
+        discharge_ub::Real=0.0,
+        sm_ub::Union{Vector{<:Real},Missing}=missing,
+        cm_ub::Union{Vector{<:Real},Missing}=missing,
+        charge_efficiency::Real=0.9,
+        discharge_efficiency::Real=0.9,
+        qs_lb::Union{Vector{<:Real},Missing}=missing,
+        qs_ub::Union{Vector{<:Real},Missing}=missing,
+        rs::Union{Vector{<:Real},Missing}=missing,
+        xs::Union{Vector{<:Real},Missing}=missing,
+        pex::Real=0.0,
+        qex::Real=0.0,
+        ps::Union{Vector{<:Real},Missing}=missing,
+        qs::Union{Vector{<:Real},Missing}=missing,
+        status::Status=ENABLED,
+        kwargs...
+    )::Dict{String,Any}
+
+creates energy storage object with some defaults
+"""
+function create_storage(bus::String, connections::Vector{Int};
     configuration::ConnConfig=WYE,
     energy::Real=0.0,
     energy_ub::Real=0.0,
@@ -580,8 +795,24 @@ function create_storage(bus::String, connections::Union{Vector{Int},Vector{Strin
 end
 
 
-"creates a voltage source with some defaults"
-function create_voltage_source(bus, connections;
+"""
+    create_voltage_source(
+        bus::String,
+        connections::Vector{Int};
+        configuration::ConnConfig=WYE,
+        vm::Union{Vector{<:Real},Missing}=missing,
+        va::Union{Vector{<:Real},Missing}=missing,
+        vm_lb::Union{Vector{<:Real},Missing}=missing,
+        vm_ub::Union{Vector{<:Real},Missing}=missing,
+        rs::Union{Vector{<:Real},Missing}=missing,
+        xs::Union{Vector{<:Real},Missing}=missing,
+        status::Status=ENABLED,
+        kwargs...
+    )::Dict{String,Any}
+
+creates a voltage source with some defaults
+"""
+function create_voltage_source(bus::String, connections::Vector{Int};
     configuration::ConnConfig=WYE,
     vm::Union{Vector{<:Real},Missing}=missing,
     va::Union{Vector{<:Real},Missing}=missing,
@@ -622,7 +853,11 @@ function create_voltage_source(bus, connections;
 end
 
 
-"deletes a component from the engineering data model"
+"""
+    delete_component!(data_eng::Dict{String,<:Any}, component_type::String, component_id::String)
+
+deletes a component from the engineering data model
+"""
 function delete_component!(data_eng::Dict{String,<:Any}, component_type::String, component_id::String)
     delete!(data_eng[component_type], component_id)
     if isempty(data_eng[component_type])
@@ -631,7 +866,11 @@ function delete_component!(data_eng::Dict{String,<:Any}, component_type::String,
 end
 
 
-"Function to add default vbase for a bus"
+"""
+    add_vbase_default!(data_eng::Dict{String,<:Any}, bus::String, vbase::Real)
+
+Function to add default vbase for a bus
+"""
 function add_vbase_default!(data_eng::Dict{String,<:Any}, bus::String, vbase::Real)
     if !haskey(data_eng, "settings")
         data_eng["settings"] = Dict{String,Any}()
@@ -651,16 +890,32 @@ add_linecode!(data_eng::Dict{String,<:Any}, id::String, rs::Matrix{<:Real}, xs::
 add_xfmrcode!(data_eng::Dict{String,<:Any}, id::String; kwargs...) = add_object!(data_eng, "xfmrcode", id, create_xfmrcode(; kwargs...))
 # add_time_series!(data_eng::Dict{String,<:Any}, id::String; kwargs...) = add_object!(data_eng, "time_series", id, create_timeseries(; kwargs...))
 
+@doc "adds a bus to provided ENGINEERING model, see [`create_bus`](@ref create_bus)" add_bus!
+@doc "adds a linecode to provided ENGINEERING model, see [`create_linecode`](@ref create_linecode)" add_linecode!
+@doc "adds a transformer code (xmfrcode) to provided ENGINEERING model, see [`create_xfmrcode`](@ref create_xfmrcode)" add_xfmrcode!
+# @doc "adds a time series to provided ENGINEERING model, see [`create_timeseries`](@ref create_timeseries)" add_time_series!
+
 # Edge objects
-add_line!(data_eng::Dict{String,<:Any}, id::String, f_bus::String, t_bus::String, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "line", id, create_line(f_bus, t_bus, f_connections, t_connections; kwargs...))
-add_transformer!(data_eng::Dict{String,<:Any}, id::String, buses::Vector{<:Any}, connections::Vector{Union{Vector{Int},Vector{String}}}; kwargs...) = add_object!(data_eng, "transformer", id, create_transformer(buses, connections; kwargs...))
-add_transformer!(data_eng::Dict{String,<:Any}, id::String, f_bus::String, t_bus::String, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "transformer", id, create_al2w_transformer(f_bus, t_bus, f_connections, t_connections; kwargs...))
-add_switch!(data_eng::Dict{String,<:Any}, id::String, f_bus::String, t_bus::String, f_connections::Union{Vector{Int},Vector{String}}, t_connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "switch", id, create_switch(f_bus, t_bus, f_connections, t_connections; kwargs...))
+add_line!(data_eng::Dict{String,<:Any}, id::String, f_bus::String, t_bus::String, f_connections::Vector{Int}, t_connections::Vector{Int}; kwargs...) = add_object!(data_eng, "line", id, create_line(f_bus, t_bus, f_connections, t_connections; kwargs...))
+add_transformer!(data_eng::Dict{String,<:Any}, id::String, buses::Vector{<:String}, connections::Vector{Vector{Int}}; kwargs...) = add_object!(data_eng, "transformer", id, create_transformer(buses, connections; kwargs...))
+add_transformer!(data_eng::Dict{String,<:Any}, id::String, f_bus::String, t_bus::String, f_connections::Vector{Int}, t_connections::Vector{Int}; kwargs...) = add_object!(data_eng, "transformer", id, create_al2w_transformer(f_bus, t_bus, f_connections, t_connections; kwargs...))
+add_switch!(data_eng::Dict{String,<:Any}, id::String, f_bus::String, t_bus::String, f_connections::Vector{Int}, t_connections::Vector{Int}; kwargs...) = add_object!(data_eng, "switch", id, create_switch(f_bus, t_bus, f_connections, t_connections; kwargs...))
+
+@doc "adds a line to provided ENGINEERING model, see [`create_line`](@ref create_line)" add_line!
+@doc "adds a transformer to provided ENGINEERING model, see [`create_transformer`](@ref create_transformer) and [`create_al2w_transformer`](@ref create_al2w_transformer)" add_transformer!
+@doc "adds a switch to provided ENGINEERING model, see [`create_switch`](@ref create_switch)" add_switch!
 
 # Node objects
-add_load!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "load", id, create_load(bus, connections; kwargs...))
-add_shunt!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "shunt", id, create_shunt(bus, connections; kwargs...))
-add_voltage_source!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "voltage_source", id, create_voltage_source(bus, connections; kwargs...))
-add_generator!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "generator", id, create_generator(bus, connections; kwargs...))
-add_storage!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "storage", id, create_storage(bus, connections; kwargs...))
-add_solar!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Union{Vector{Int},Vector{String}}; kwargs...) = add_object!(data_eng, "solar", id, create_solar(bus, connections; kwargs...))
+add_load!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "load", id, create_load(bus, connections; kwargs...))
+add_shunt!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "shunt", id, create_shunt(bus, connections; kwargs...))
+add_voltage_source!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "voltage_source", id, create_voltage_source(bus, connections; kwargs...))
+add_generator!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "generator", id, create_generator(bus, connections; kwargs...))
+add_storage!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "storage", id, create_storage(bus, connections; kwargs...))
+add_solar!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "solar", id, create_solar(bus, connections; kwargs...))
+
+@doc "adds a load to provided ENGINEERING model, see [`create_load`](@ref create_load)" add_load!
+@doc "adds a shunt to provided ENGINEERING model, see [`create_shunt`](@ref create_shunt)" add_shunt!
+@doc "adds a voltage source to provided ENGINEERING model, see [`create_voltage_source`](@ref create_voltage_source)" add_voltage_source!
+@doc "adds a generator to provided ENGINEERING model, see [`create_generator`](@ref create_generator)" add_generator!
+@doc "adds a storage to provided ENGINEERING model, see [`create_storage`](@ref create_storage)" add_storage!
+@doc "adds a PV to provided ENGINEERING model, see [`create_solar`](@ref create_solar)" add_solar!

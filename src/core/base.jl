@@ -11,7 +11,6 @@ end
 
 
 # Helper functions for multinetwork AbstractPowerModel objects.
-ismultinetwork(pm::AbstractUnbalancedPowerModel) = ismultinetwork(pm, pmd_it_sym)
 nw_ids(pm::AbstractUnbalancedPowerModel) = _IM.nw_ids(pm, pmd_it_sym)
 nws(pm::AbstractUnbalancedPowerModel) = _IM.nws(pm, pmd_it_sym)
 
@@ -54,6 +53,13 @@ sol(pm::AbstractUnbalancedPowerModel, nw::Int, key::Symbol, idx::Any) = _IM.sol(
 sol(pm::AbstractUnbalancedPowerModel, key::Symbol; nw::Int = nw_id_default) = _IM.sol(pm, pmd_it_sym, key; nw = nw)
 sol(pm::AbstractUnbalancedPowerModel, key::Symbol, idx::Any; nw::Int = nw_id_default) = _IM.sol(pm, pmd_it_sym, key, idx; nw = nw)
 
+@doc "helper function to access the `ids` of multinetworks from AbstractUnbalancedPowerModel structs, returns ints" nw_ids
+@doc "helper function to access multinetwork data from AbstractUnbalancedPowerModel structs, returns (id,data) pairs" nws
+@doc "helper function to access the `ids` of AbstractUnbalancedPowerModel structs' `ref`, returns ints" ids
+@doc "helper function to access the AbstractUnbalancedPowerModel structs' `ref`, returns (id,data) pairs" ref
+@doc "helper function to access the AbstractUnbalancedPowerModel structs' `var`, returns JuMP VariableRef" var
+@doc "helper function to access the AbstractUnbalancedPowerModel structs' `con`, returns JuMP Constraint" con
+@doc "helper function to access the AbstractUnbalancedPowerModel structs' `sol`, returns Dict" sol
 
 "checks if a sufficient number of variables exist for the given keys collection"
 function _check_var_keys(vars, keys, var_name, comp_name)
@@ -63,7 +69,11 @@ function _check_var_keys(vars, keys, var_name, comp_name)
 end
 
 
-"detection of whether a constraint should be NL or not"
+"""
+    @smart_constraint model::JuMP.Model vars::Vector expr::JuMP.Expression
+
+Detection of whether a constraint should be NL or not"
+"""
 macro smart_constraint(model, vars, expr)
     esc(quote
         if _has_nl_expression($vars)
@@ -75,7 +85,11 @@ macro smart_constraint(model, vars, expr)
 end
 
 
-"Local wrapper method for JuMP.set_lower_bound, which skips NaN and infinite (-Inf only)"
+"""
+    set_lower_bound(x::JuMP.VariableRef, bound)
+
+Local wrapper method for JuMP.set_lower_bound, which skips NaN and infinite (-Inf only)
+"""
 function set_lower_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category::Symbol=:default)
     if !(isnan(bound) || bound==-Inf)
         JuMP.set_lower_bound(x, bound)
@@ -87,7 +101,11 @@ function set_lower_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, p
 end
 
 
-"Local wrapper method for JuMP.set_upper_bound, which skips NaN and infinite (+Inf only)"
+"""
+    set_upper_bound(x::JuMP.VariableRef, bound)
+
+Local wrapper method for JuMP.set_upper_bound, which skips NaN and infinite (+Inf only)
+"""
 function set_upper_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category::Symbol=:default)
     if !(isnan(bound) || bound==Inf)
         JuMP.set_upper_bound(x, bound)
@@ -99,7 +117,12 @@ function set_upper_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, p
 end
 
 
-""
+"""
+    comp_start_value(comp::Dict, key::String, conductor::Int, default::Any)
+
+Searches for start value for a variable `key` of a component `comp` for conductor `conductor`,
+and if one does not exist, uses `default`
+"""
 function comp_start_value(comp::Dict{String,<:Any}, key::String, conductor::Int, default)
     cond_ind = _get_conductor_indicator(comp)
     if haskey(comp, key) && !isempty(cond_ind)
@@ -110,7 +133,12 @@ function comp_start_value(comp::Dict{String,<:Any}, key::String, conductor::Int,
 end
 
 
-""
+"""
+    comp_start_value(comp::Dict, key::String, default::Any)
+
+Searches for start value for a variable `key` of a component `comp`, and if one does not exist,
+uses `default`. This is the conductor-agnostic version of `comp_start_value`.
+"""
 function comp_start_value(comp::Dict{String,<:Any}, key::String, default=0.0)
     return get(comp, key, default)
 end

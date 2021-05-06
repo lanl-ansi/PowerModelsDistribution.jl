@@ -1,4 +1,8 @@
-"MetaFormatter for ConsoleLogger for PMD"
+"""
+    _pmd_metafmt(level::Logging.LogLevel, _module, group, id, file, line)
+
+MetaFormatter for ConsoleLogger for PMD to adjust log message format
+"""
 function _pmd_metafmt(level::Logging.LogLevel, _module, group, id, file, line)
     @nospecialize
     color = Logging.default_logcolor(level)
@@ -19,13 +23,21 @@ function _pmd_metafmt(level::Logging.LogLevel, _module, group, id, file, line)
 end
 
 
-"Sets loglevel for PMD to :Error, silencing Info and Warn"
+"""
+    silence!()
+
+Sets loglevel for PMD to :Error, silencing Info and Warn
+"""
 function silence!()
     set_logging_level!(:Error)
 end
 
 
-"Resets the log level to Info"
+"""
+    reset_logging_level!()
+
+Resets the log level to Info
+"""
 function reset_logging_level!()
     Logging.global_logger(_LOGGER)
 
@@ -33,7 +45,11 @@ function reset_logging_level!()
 end
 
 
-"Restores the global logger to its default state (before PMD was loaded)"
+"""
+    restore_global_logger!()
+
+Restores the global logger to its default state (before PMD was loaded)
+"""
 function restore_global_logger!()
     Logging.global_logger(_DEFAULT_LOGGER)
 
@@ -41,7 +57,11 @@ function restore_global_logger!()
 end
 
 
-"Sets the logging level for PMD: :Info, :Warn, :Error"
+"""
+    set_logging_level!(level::Symbol)
+
+Sets the logging level for PMD: :Info, :Warn, :Error
+"""
 function set_logging_level!(level::Symbol)
     Logging.global_logger(_make_filtered_logger(getfield(Logging, level)))
 
@@ -49,7 +69,11 @@ function set_logging_level!(level::Symbol)
 end
 
 
-"Helper function to create the filtered logger for PMD"
+"""
+    _make_filtered_logger(level::Logging.LogLevel)
+
+Helper function to create the filtered logger for PMD
+"""
 function _make_filtered_logger(level)
     LoggingExtras.EarlyFilteredLogger(_LOGGER) do log
         if log._module == PowerModelsDistribution && log.level < level

@@ -407,21 +407,21 @@ end
 
 # Depreciated run_ functions (remove after ~4-6 months)
 
-"depreciation warning for run_ac_mc_opf"
+"depreciation warning for `run_ac_mc_opf`"
 function run_ac_mc_opf(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
     @warn "run_ac_mc_opf is being depreciated in favor of solve_mc_opf(data, ACPUPowerModel, solver; kwargs...), please update your code accordingly"
     return solve_mc_opf(data, ACPUPowerModel, solver; kwargs...)
 end
 
 
-"depreciation warning for run_mc_opf"
+"depreciation warning for `run_mc_opf`"
 function run_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
     @warn "run_mc_opf is being depreciated in favor of solve_mc_opf, please update your code accordingly"
     return solve_mc_opf(data, model_type, solver; kwargs...)
 end
 
 
-"depreciation warning for run_mn_mc_opf"
+"depreciation warning for `run_mn_mc_opf`"
 function run_mn_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
     @warn "run_mn_mc_opf is being depreciated in favor of solve_mn_mc_opf, please update your code accordingly"
     return solve_mn_mc_opf(data, model_type, solver; kwargs...)

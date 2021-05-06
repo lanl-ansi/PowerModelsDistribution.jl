@@ -38,6 +38,7 @@ function variable_mc_bus_voltage_magnitude_only(pm::AbstractUnbalancedPowerModel
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :vm, ids(pm, nw, :bus), vm)
 end
 
+
 ""
 function variable_mc_bus_voltage_real(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     terminals = Dict(i => bus["terminals"] for (i, bus) in ref(pm, nw, :bus))
@@ -61,6 +62,7 @@ function variable_mc_bus_voltage_real(pm::AbstractUnbalancedPowerModel; nw::Int=
 
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :vr, ids(pm, nw, :bus), vr)
 end
+
 
 ""
 function variable_mc_bus_voltage_imaginary(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
