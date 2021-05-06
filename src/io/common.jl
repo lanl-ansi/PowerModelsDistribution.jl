@@ -101,7 +101,7 @@ function parse_file(
         end
     elseif filetype == "json"
         if multinetwork && !ismultinetwork(pmd_data)
-            pmd_data = make_multinetwork(pmd_data; global_keys)
+            pmd_data = make_multinetwork(pmd_data; global_keys=global_keys)
         end
 
         if data_model == MATHEMATICAL && !ismath(pmd_data)
