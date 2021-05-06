@@ -49,15 +49,127 @@ const pmd_math_asset_types = String[
     "bus", _math_node_elements..., _math_edge_elements...
 ]
 
-"list of multinetwork keys that belong at the root level"
-const _pmd_math_global_keys = Set{String}([
-    "data_model", "per_unit", "name", "map", "bus_lookup", "dss_options"
-])
+
+"""
+    transform_data_model(
+        data::Dict{String,<:Any};
+        kron_reduced::Bool=true,
+        multinetwork::Bool=false,
+        global_keys::Set{String}=Set{String}(),
+        eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
+        eng2math_extensions::Vector{<:Function}=Function[],
+        make_pu::Bool=true,
+        make_pu_extensions::Vector{<:Function}=Function[],
+    )::Dict{String,Any}
+
+Transforms a data model model between ENGINEERING (high-level) and MATHEMATICAL (low-level)
+[`DataModel`](@ref DataModel).
+
+# Notes
+
+## Kron reduction
+
+If `kron_reduced==true`, [`apply_kron_reduction!`](@ref apply_kron_reduction!) will be
+applied to the network data.
+
+## Multinetwork transformations
+
+If `multinetwork==true`, the data model will be transformed into a multinetwork (e.g.,
+time series) data structure using [`make_multinetwork`](@ref make_multinetwork) before
+being transformed into a MATHEMATICAL [`DataModel`](@ref DataModel).
+
+`global_keys::Set{String}` can be used to add custom top-level items to the multinetwork
+data structure, and will only be used in the context where `multinetwork==true`, and
+ignored otherwise.
+
+## Custom eng2math transformations
+
+To add custom transformations between ENGINEERING and MATHEMATICAL data models,
+`eng2math_extensions::Vector{<:Function}` can be utilized to pass user-created functions,
+which are expected to have the signature
+
+    eng2math_func!(data_math::Dict{String,Any}, data_eng::Dict{String,Any})
+
+where data_math and data_eng equivalent to single subnetworks in a multinetwork data structure,
+or a non-multinetwork data structure.
+
+These functions are run after all built-in eng2math transformations have been performed.
+
+### Mapping back to ENGINEERING
+
+See [`transform_solution`](@ref transform_solution)
+
+### Passthrough properties
+
+To more simply pass through some properties in the built-in eng2math transformations,
+`eng2math_passthrough::Dict{String,Vector{String}}` can be used. For example, if in the
+ENGINEERING model, a property called `z` was added to `switch` objects, the user could
+pass the following dictionary to `eng2math_passthrough`:
+
+    Dict{String,Vector{String}}(
+        "switch" => String["z"],
+    )
+
+This will result in `z` showing up on the `switch` object in the MATHEMATICAL model.
+Passthrough properties will always land on the __primary__ conversion object in the
+MATHEMATICAL model if that object gets converted to multiple object types, e.g.,
+`voltage_source` with internal impedance will result in `gen`, `bus`, and `branch`
+objects in the MATHEMATICAL model, but passthrough properties will only land on `gen`.
+
+## Custom per-unit transformations
+
+To add additional per-unit transformations, a user can supply custom functions to
+`make_pu_extensions::Vector{<:Function}`, which will only be used if `make_pu==true`.
+
+See [`make_per_unit!`](@ref make_per_unit!) for further explanation.
+"""
+function transform_data_model(
+    data::Dict{String,<:Any};
+    kron_reduced::Bool=true,
+    multinetwork::Bool=false,
+    global_keys::Set{String}=Set{String}(),
+    eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
+    eng2math_extensions::Vector{<:Function}=Function[],
+    make_pu::Bool=true,
+    make_pu_extensions::Vector{<:Function}=Function[],
+    )::Dict{String,Any}
+
+    current_data_model = get(data, "data_model", MATHEMATICAL)
+
+    if iseng(data)
+        if multinetwork && !ismultinetwork(data)
+            data = make_multinetwork(data; global_keys=global_keys)
+        end
+
+        data_math = _map_eng2math(
+            data;
+            kron_reduced=kron_reduced,
+            eng2math_extensions=eng2math_extensions,
+            eng2math_passthrough=eng2math_passthrough
+        )
+        correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
+
+        return data_math
+    elseif ismath(data)
+        @info "A MATHEMATICAL data model cannot be converted back to an ENGINEERING data model, irreversible transformations have already been made"
+        return data
+    else
+        @info "Data model '$current_data_model' is not recognized, no model type transformation performed"
+        return data
+    end
+end
 
 
 "base function for converting engineering model to mathematical model"
-function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true)
-    @assert get(data_eng, "data_model", MATHEMATICAL) == ENGINEERING
+function _map_eng2math(
+    data_eng::Dict{String,<:Any};
+    kron_reduced::Bool=true,
+    eng2math_extensions::Vector{<:Function}=Function[],
+    eng2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(),
+    global_keys::Set{String}=Set{String}(),
+    )::Dict{String,Any}
+
+    @assert iseng(data_eng)
 
     _data_eng = deepcopy(data_eng)
 
@@ -105,7 +217,12 @@ function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true)
         _init_base_components!(nw_math)
 
         for type in pmd_eng_asset_types
-            getfield(PowerModelsDistribution, Symbol("_map_eng2math_$(type)!"))(nw_math, nw_eng)
+            getfield(PowerModelsDistribution, Symbol("_map_eng2math_$(type)!"))(nw_math, nw_eng; pass_props=get(eng2math_passthrough, type, String[]))
+        end
+
+        # Custom eng2math transformation functions
+        for eng2math_func! in eng2math_extensions
+            eng2math_func!(nw_math, nw_eng)
         end
 
         # post fix
@@ -122,8 +239,7 @@ function _map_eng2math(data_eng::Dict{String,<:Any}; kron_reduced::Bool=true)
         data_math["nw"][n] = nw_math
     end
 
-    for k in _pmd_math_global_keys
-
+    for k in union(_pmd_math_global_keys, global_keys)
         for (n,nw) in data_math["nw"]
             if haskey(nw, k)
                 data_math[k] = pop!(nw, k)
@@ -142,11 +258,11 @@ end
 
 
 "converts engineering bus components into mathematical bus components"
-function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "bus", Dict{String,Any}())
         terminals = eng_obj["terminals"]
 
-        math_obj = _init_math_obj("bus", name, eng_obj, length(data_math["bus"])+1)
+        math_obj = _init_math_obj("bus", name, eng_obj, length(data_math["bus"])+1; pass_props=pass_props)
 
         math_obj["bus_i"] = math_obj["index"]
         math_obj["bus_type"] = _bus_type_conversion(data_eng, eng_obj, "status")
@@ -197,11 +313,11 @@ end
 
 
 "converts engineering lines into mathematical branches"
-function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "line", Dict{Any,Dict{String,Any}}())
         _apply_linecode!(eng_obj, data_eng)
 
-        math_obj = _init_math_obj("line", name, eng_obj, length(data_math["branch"])+1)
+        math_obj = _init_math_obj("line", name, eng_obj, length(data_math["branch"])+1; pass_props=pass_props)
 
         nphases = size(eng_obj["rs"])[1]
 
@@ -241,7 +357,7 @@ end
 
 
 "converts engineering n-winding transformers into mathematical ideal 2-winding lossless transformer branches and impedance branches to represent the loss model"
-function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "transformer", Dict{Any,Dict{String,Any}}())
         # Build map first, so we can update it as we decompose the transformer
         push!(data_math["map"], Dict{String,Any}(
@@ -275,7 +391,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 "index" => length(data_math["transformer"])+1
             )
 
-            for k in ["tm_lb", "tm_ub"]
+            for k in [["tm_lb", "tm_ub"]; pass_props]
                 if haskey(eng_obj, k)
                     math_obj[k] = eng_obj[k]
                 end
@@ -336,7 +452,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                     "index"         => length(data_math["transformer"])+1
                 )
 
-                for prop in ["tm_lb", "tm_ub", "tm_step"]
+                for prop in [["tm_lb", "tm_ub", "tm_step"]; pass_props]
                     if haskey(eng_obj, prop)
                         transformer_2wa_obj[prop] = eng_obj[prop][w]
                     end
@@ -352,12 +468,12 @@ end
 
 
 "converts engineering switches into mathematical switches and (if neeed) impedance branches to represent loss model"
-function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
     # TODO enable real switches (right now only using vitual lines)
     for (name, eng_obj) in get(data_eng, "switch", Dict{Any,Dict{String,Any}}())
         nphases = length(eng_obj["f_connections"])
 
-        math_obj = _init_math_obj("switch", name, eng_obj, length(data_math["switch"])+1)
+        math_obj = _init_math_obj("switch", name, eng_obj, length(data_math["switch"])+1; pass_props=pass_props)
 
         math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
         math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
@@ -439,9 +555,9 @@ end
 
 
 "converts engineering generic shunt components into mathematical shunt components"
-function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "shunt", Dict{Any,Dict{String,Any}}())
-        math_obj = _init_math_obj("shunt", name, eng_obj, length(data_math["shunt"])+1)
+        math_obj = _init_math_obj("shunt", name, eng_obj, length(data_math["shunt"])+1; pass_props=pass_props)
 
         # TODO change to new capacitor shunt calc logic
         math_obj["shunt_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
@@ -460,9 +576,9 @@ end
 
 
 "converts engineering load components into mathematical load components"
-function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "load", Dict{Any,Dict{String,Any}}())
-        math_obj = _init_math_obj("load", name, eng_obj, length(data_math["load"])+1)
+        math_obj = _init_math_obj("load", name, eng_obj, length(data_math["load"])+1; pass_props=pass_props)
 
         connections = eng_obj["connections"]
 
@@ -485,9 +601,9 @@ end
 
 
 "converts engineering generators into mathematical generators"
-function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "generator", Dict{String,Any}())
-        math_obj = _init_math_obj("generator", name, eng_obj, length(data_math["gen"])+1)
+        math_obj = _init_math_obj("generator", name, eng_obj, length(data_math["gen"])+1; pass_props=pass_props)
 
         connections = eng_obj["connections"]
 
@@ -523,9 +639,9 @@ end
 
 
 "converts engineering solar components into mathematical generators"
-function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "solar", Dict{Any,Dict{String,Any}}())
-        math_obj = _init_math_obj("solar", name, eng_obj, length(data_math["gen"])+1)
+        math_obj = _init_math_obj("solar", name, eng_obj, length(data_math["gen"])+1; pass_props=pass_props)
 
         connections = eng_obj["connections"]
 
@@ -552,9 +668,9 @@ end
 
 
 "converts engineering storage into mathematical storage"
-function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "storage", Dict{Any,Dict{String,Any}}())
-        math_obj = _init_math_obj("storage", name, eng_obj, length(data_math["storage"])+1)
+        math_obj = _init_math_obj("storage", name, eng_obj, length(data_math["storage"])+1; pass_props=pass_props)
 
         connections = eng_obj["connections"]
 
@@ -589,12 +705,12 @@ end
 
 
 "converts engineering voltage sources into mathematical generators and (if needed) impedance branches to represent the loss model"
-function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
+function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "voltage_source", Dict{String,Any}())
         nconductors = length(eng_obj["connections"])
         nphases = get(eng_obj, "configuration", WYE) == WYE && !get(data_eng, "is_kron_reduced", false) ? nconductors - 1 : nconductors
 
-        math_obj = _init_math_obj("voltage_source", name, eng_obj, length(data_math["gen"])+1)
+        math_obj = _init_math_obj("voltage_source", name, eng_obj, length(data_math["gen"])+1; pass_props=pass_props)
 
         math_obj["name"] = "_virtual_gen.voltage_source.$name"
         math_obj["gen_bus"] = gen_bus = data_math["bus_lookup"][eng_obj["bus"]]

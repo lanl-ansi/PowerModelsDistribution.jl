@@ -1,18 +1,59 @@
 """
-    parse_file(io)
+    parse_file(
+        io::IO,
+        filetype::Union{AbstractString,Missing}=missing;
+        data_model::DataModel=ENGINEERING,
+        import_all::Bool=false,
+        bank_transformers::Bool=true,
+        transformations::Vector{<:Any}=[],
+        dss2eng_extensions::Vector{<:Function}=Function[],
+        eng2math_extensions::Vector{<:Function}=Function[],
+        eng2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(),
+        make_pu_extensions::Vector{<:Function}=Function[],
+        make_pu::Bool=true,
+        multinetwork::Bool=false,
+        global_keys::Set{String}=Set{String}(),
+        kron_reduced::Bool=true,
+        time_series::String="daily"
+    )::Dict{String,Any}
 
-Parses the IOStream of a file into a PowerModelsDistribution data structure.
+Parses the IOStream of a file into a PowerModelsDistribution data structure
+
+If `filetype` is missing, `parse_file` will attempt to detect the filetype, but this may fail, and it is
+advised to pass the filetype if it is known.
+
+If `data_model` is `MATHEMATICAL`, the data model type will be automatically transformed via
+[`transform_data_model`](@ref transform_data_model).
+
+For explanation of `import_all`, `bank_transformers`, and `time_series`, see [`parse_opendss`](@ref parse_opendss)
+
+For explanation of `dss2eng_extensions`, see [`parse_opendss`](@ref parse_opendss)
+
+For explanation of `kron_reduced`, see [`apply_kron_reduction!`](@ref apply_kron_reduction!)
+
+For explanation of `multinetwork` and `global_keys`, see [`make_multinetwork`](@ref make_multinetwork) and [`transform_data_model`](@ref transform_data_model)
+
+For explanation of `eng2math_extensions` and `eng2math_passthrough`, see [`transform_data_model`](@ref transform_data_model)
+
+For explanation of `make_pu` and `make_pu_extensions`, see [`make_per_unit!`](@ref make_per_unit!).
 """
 function parse_file(
-    io::IO, filetype::Union{AbstractString,Missing}=missing;
+    io::IO,
+    filetype::Union{AbstractString,Missing}=missing;
     data_model::DataModel=ENGINEERING,
     import_all::Bool=false,
     bank_transformers::Bool=true,
     transformations::Vector{<:Any}=[],
+    dss2eng_extensions::Vector{<:Function}=Function[],
+    eng2math_extensions::Vector{<:Function}=Function[],
+    eng2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(),
+    make_pu_extensions::Vector{<:Function}=Function[],
+    make_pu::Bool=true,
     multinetwork::Bool=false,
+    global_keys::Set{String}=Set{String}(),
     kron_reduced::Bool=true,
     time_series::String="daily"
-        )::Dict{String,Any}
+    )::Dict{String,Any}
 
     pmd_data = Dict{String,Any}()
     if ismissing(filetype) || filetype == "json"
@@ -25,49 +66,68 @@ function parse_file(
     end
 
     if filetype == "dss"
-        data_eng = parse_opendss(io;
+        pmd_data = parse_opendss(io;
             import_all=import_all,
             bank_transformers=bank_transformers,
-            time_series=time_series
+            time_series=time_series,
+            dss2eng_extensions=dss2eng_extensions,
         )
 
-        for transform in transformations
-            @assert isa(transform, Function) || isa(transform, Tuple{<:Function,Vararg{Pair{String,<:Any}}})
+        for transform! in transformations
+            @assert isa(transform!, Function) || isa(transform!, Tuple{<:Function,Vararg{Pair{String,<:Any}}})
 
-            if isa(transform, Tuple)
-                transform[1](data_eng; [Symbol(k)=>v for (k,v) in transform[2:end]]...)
+            if isa(transform!, Tuple)
+                transform![1](pmd_data; [Symbol(k)=>v for (k,v) in transform![2:end]]...)
             else
-                transform(data_eng)
+                transform!(pmd_data)
             end
         end
 
-        find_conductor_ids!(data_eng)
+        if multinetwork
+            pmd_data = make_multinetwork(pmd_data; global_keys=global_keys)
+        end
 
         if data_model == MATHEMATICAL
-            return transform_data_model(data_eng;
-                make_pu=true,
+            pmd_data = transform_data_model(
+                pmd_data;
+                make_pu=make_pu,
+                make_pu_extensions=make_pu_extensions,
                 kron_reduced=kron_reduced,
-                multinetwork=multinetwork
+                multinetwork=multinetwork,
+                global_keys=global_keys,
+                eng2math_extensions=eng2math_extensions,
+                eng2math_passthrough=eng2math_passthrough,
             )
-        else
-            return data_eng
         end
     elseif filetype == "json"
-        if pmd_data["data_model"] != data_model && data_model == ENGINEERING
-            return transform_data_model(pmd_data;
+        if multinetwork && !ismultinetwork(pmd_data)
+            pmd_data = make_multinetwork(pmd_data; global_keys)
+        end
+
+        if data_model == MATHEMATICAL && !ismath(pmd_data)
+            pmd_data = transform_data_model(pmd_data;
+                make_pu=make_pu,
+                make_pu_extensions=make_pu_extensions,
                 kron_reduced=kron_reduced,
-                multinetwork=multinetwork
+                multinetwork=multinetwork,
+                global_keys=global_keys,
+                eng2math_extensions=eng2math_extensions,
+                eng2math_passthrough=eng2math_passthrough,
             )
-        else
-            return pmd_data
         end
     else
         error("only .dss and .json files are supported")
     end
+
+    return pmd_data
 end
 
 
-""
+"""
+    parse_file(file::String; kwargs...)::Dict{String,Any}
+
+Loads file into IOStream and passes it onto [`parse_file`](@ref parse_file)
+"""
 function parse_file(file::String; kwargs...)::Dict{String,Any}
     data = open(file) do io
         parse_file(io, split(lowercase(file), '.')[end]; kwargs...)
@@ -77,39 +137,22 @@ function parse_file(file::String; kwargs...)::Dict{String,Any}
 end
 
 
-"transforms model between engineering (high-level) and mathematical (low-level) models"
-function transform_data_model(data::Dict{String,<:Any};
-        kron_reduced::Bool=true,
-        make_pu::Bool=true,
-        multinetwork::Bool=false
-            )::Dict{String,Any}
+"""
+    correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true, make_pu_extensions::Vector{<:Function}=Function[])
 
-    current_data_model = get(data, "data_model", MATHEMATICAL)
+Makes corrections and performs checks on network data structure in either ENGINEERING or MATHEMATICAL formats, and converts
+to per-unit if data a is MATHEMATICAL data model.
 
-    if current_data_model == ENGINEERING
-        if multinetwork && !ismultinetwork(data)
-            data = make_multinetwork(data)
-        end
+If `make_pu` is false, converting to per-unit will be skipped.
 
-        data_math = _map_eng2math(data; kron_reduced=kron_reduced)
-        correct_network_data!(data_math; make_pu=make_pu)
+# Custom per-unit transformations
 
-        return data_math
-    elseif current_data_model == MATHEMATICAL
-        @info "A MATHEMATICAL data model cannot be converted back to an ENGINEERING data model, irreversible transformations have already been made"
-        return data
-    else
-        @info "Data model '$current_data_model' is not recognized, no model type transformation performed"
-        return data
-    end
-end
-
-
-""
-function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true)
-    if get(data, "data_model", MATHEMATICAL) == ENGINEERING
+See [`make_per_unit!`](@ref make_per_unit!)
+"""
+function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true, make_pu_extensions::Vector{<:Function}=Function[])
+    if iseng(data)
         check_eng_data_model(data)
-    elseif get(data, "data_model", MATHEMATICAL) == MATHEMATICAL
+    elseif ismath(data)
         check_connectivity(data)
 
         correct_branch_directions!(data)
@@ -118,7 +161,7 @@ function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true)
         correct_bus_types!(data)
 
         if make_pu
-            make_per_unit!(data)
+            make_per_unit!(data; make_pu_extensions=make_pu_extensions)
 
             correct_mc_voltage_angle_differences!(data)
             correct_mc_thermal_limits!(data)

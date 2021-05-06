@@ -2,6 +2,15 @@
 
 ## staged
 
+- Added `iseng` and `ismath` helper functions
+- Added dss2eng_extensions, for custom user functions for dss2eng transformations
+- Added eng2math_extensions, for custom user functions for eng2math transformations
+- Added eng2math_passthrough, for easily passing through properties from eng2math
+- Added make_pu_extensions, for custom user functions to convert additional properties to per-unit
+- Added make_si_extensions, for custom user functions to convert additional variable results back to SI units
+- Added dimensionalize_math_extensions, for easily specifying multiplicative factors on additional variable results for converting back to SI units
+- Added global_keys, for users to easily add to global keys which making multinetworks
+- Added documentation on how to add math2eng custom functions for transforming solutions back to ENGINEERING model
 - Documentation overhaul, new organization, updated docstrings, Pluto notebook building
 - Improve parse of ZIPV into array, and update "duty" on loads to better default
 - Add support for parsing GrowthShape objects

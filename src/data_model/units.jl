@@ -30,11 +30,57 @@ const dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
 )
 
 
-"converts data model between per-unit and SI units"
-function make_per_unit!(data::Dict{String,<:Any}; vbases::Union{Dict{<:Any,<:Real},Missing}=missing, sbase::Union{Real,Missing}=missing)
+"""
+    make_per_unit!(
+        data::Dict{String,Any};
+        vbases::Union{Missing,Dict{String,Real}}=missing,
+        sbase::Union{Missing,Real}=missing,
+        make_pu_extensions::Vector{<:Function}=Function[],
+    )
+
+Converts units of properties to per-unit from SI units
+
+# `make_pu_extensions`
+
+To add additional per-unit transformations, a user can supply custom functions to
+`make_pu_extensions::Vector{<:Function}`, which will only be used if `make_pu==true`.
+
+For example, if custom properties are added to the MATHEMATICAL model via
+`eng2math_passthrough` or `eng2math_extensions`, those properties will not be converted
+to per-unit by default, and custom rules will need to be added with functions with the
+signature:
+
+    rebase_pu_func!(
+        nw::Dict{String,Any},
+        data_math::Dict{String,Any},
+        bus_vbase::Dict{String,Real},
+        line_vbase::Dict{String,Real},
+        sbase::Real,
+        sbase_old::Real,
+        voltage_scale_factor::Real
+    )
+
+where,
+
+- `nw` is equivalent to the a single subnetwork in a multinetwork data structure (which may be the same as `data_math`, in the case of a single network),
+- `data_math` is the complete data structure with the global keys,
+- `bus_vbase` is a dictionary of the voltage bases of each bus indexed by their MATHEMATICAL model indices,
+- `line_vbase` is a dictionary of the voltage bases of each branch indexed by their MATHEMATICAL model indices,
+- `sbase` is the new power base,
+- `sbase_old` is the power base the data structure started with, and
+- `voltage_scale_factor` is the scaling factor for voltage.
+
+"""
+function make_per_unit!(
+    data::Dict{String,<:Any};
+    vbases::Union{Dict{<:Any,<:Real},Missing}=missing,
+    sbase::Union{Real,Missing}=missing,
+    make_pu_extensions::Vector{<:Function}=Function[],
+    )
+
     data_model_type = get(data, "data_model", MATHEMATICAL)
 
-    if data_model_type == MATHEMATICAL
+    if ismath(data)
         if !get(data, "per_unit", false)
             if !ismultinetwork(data)
                 nw_data = Dict("0" => data)
@@ -47,7 +93,7 @@ function make_per_unit!(data::Dict{String,<:Any}; vbases::Union{Dict{<:Any,<:Rea
                 sbase  = ismissing(sbase) ? nw["settings"]["sbase_default"] : sbase
 
                 nw["data_model"] = data["data_model"]
-                _make_math_per_unit!(nw, data; sbase=sbase, vbases=vbases)
+                _make_math_per_unit!(nw, data; sbase=sbase, vbases=vbases, make_pu_extensions=make_pu_extensions)
                 if ismultinetwork(data)
                     delete!(nw, "data_model")
                 end
@@ -67,8 +113,8 @@ end
 finds voltage zones by walking through the network and analyzing the transformers
 """
 function discover_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{Any}}
-    @assert data_model["data_model"] in [MATHEMATICAL, ENGINEERING] "unsupported data model"
-    edge_elements = data_model["data_model"] == MATHEMATICAL ? _math_edge_elements : _eng_edge_elements
+    @assert iseng(data_model) || ismath(data_model) "unsupported data model"
+    edge_elements = ismath(data_model) ? _math_edge_elements : _eng_edge_elements
 
     unused_components = Set("$comp_type.$id" for comp_type in edge_elements[edge_elements .!= "transformer"] for id in keys(get(data_model, comp_type, Dict())))
     bus_connectors = Dict([(id,Set()) for id in keys(get(data_model, "bus", Dict()))])
@@ -127,7 +173,7 @@ function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{
     # transformers form the edges between these zones
     zone_edges = Dict{Int,Vector{Tuple{Int,Real}}}([(zone,[]) for zone in keys(zones)])
     for (_,transformer) in get(data_model, "transformer", Dict{Any,Dict{String,Any}}())
-        if data_model["data_model"] == MATHEMATICAL
+        if ismath(data_model)
             f_zone = bus_to_zone["$(transformer["f_bus"])"]
             t_zone = bus_to_zone["$(transformer["t_bus"])"]
             tm_nom = transformer["configuration"]==DELTA ? transformer["tm_nom"]/sqrt(3) : transformer["tm_nom"]
@@ -167,7 +213,7 @@ function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{
         end
     end
 
-    edge_elements = data_model["data_model"] == MATHEMATICAL ? _math_edge_elements : _eng_edge_elements
+    edge_elements = ismath(data_model) ? _math_edge_elements : _eng_edge_elements
 
     bus_vbase = Dict([(bus,zone_vbase[zone]) for (bus,zone) in bus_to_zone])
     edge_vbase = Dict([("$edge_type.$id", bus_vbase["$(obj["f_bus"])"]) for edge_type in edge_elements[edge_elements .!= "transformer"] if haskey(data_model, edge_type) for (id,obj) in data_model[edge_type]])
@@ -176,6 +222,13 @@ end
 
 
 "converts the MATHEMATICAL model to per unit from SI"
+function _make_math_per_unit!(
+    nw::Dict{String,<:Any},
+    data_math::Dict{String,<:Any};
+    sbase::Union{Real,Missing}=missing,
+    vbases::Union{Dict{String,<:Real},Missing}=missing,
+    make_pu_extensions::Vector{<:Function}=Function[],
+    )
     if ismissing(sbase)
         if haskey(nw["settings"], "sbase_default")
             sbase = nw["settings"]["sbase_default"]
@@ -247,6 +300,10 @@ end
             t_vbase = bus_vbase[string(trans["t_bus"])]
             _rebase_pu_transformer_2w_ideal!(trans, f_vbase, t_vbase, sbase_old, sbase, voltage_scale_factor)
         end
+    end
+
+    for rebase_pu_func! in make_pu_extensions
+        rebase_pu_func!(nw, data_math, bus_vbase, line_vbase, sbase, sbase_old, voltage_scale_factor)
     end
 
     nw["settings"]["sbase"] = sbase
@@ -448,8 +505,67 @@ end
 _apply_func_vals(x, f) = isa(x, Dict) ? Dict(k=>f(v) for (k,v) in x) : f.(x)
 
 
-""
-function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true, mult_ibase=true, convert_rad2deg=true)
+"""
+    solution_make_si(
+        solution::Dict{String,<:Any},
+        math_model::Dict{String,<:Any};
+        mult_sbase::Bool=true,
+        mult_vbase::Bool=true,
+        mult_ibase::Bool=true,
+        convert_rad2deg::Bool=true,
+        make_si_extensions::Vector{<:Function}=Function[],
+        dimensionalize_math_extensions::Dict{String,<:Dict{String,<:Vector{<:String}}}=Dict{String,Dict{String,Vector{String}}}()
+    )::Dict{String,Any}
+
+Transforms solution dictionaries `solution` from per-unit back to SI units, requiring the original MATHEMATICAL model `math_model`
+to perform the transformation.
+
+If `mult_sbase` is false, sbase variables will not be multiplied, thus remaining in per-unit
+
+If `mult_vbase` is false, vbase variables will not be multiplied, thus remaining in per-unit
+
+If `mult_ibase` is false, ibase variables will not be multiplied, thus remaining in per-unit
+
+If `convert_rad2deg` is false, angle variables will not be multiplied, thus remaining in radians
+
+# Custom SI unit conversions
+
+To convert custom properties not part of formulations already included within PowerModelsDistribution,
+users will need to either specify multiplicative factors via `dimensionalize_math_extensions`, or pass
+user functions via `make_si_extensions`.
+
+The latter case requires functions with the signature
+
+    make_si_func!(nw_solution, nw_data, solution, data)
+
+where `nw_solution` and `nw_data` are equivalent to a single subnetwork of a multinetwork structure of
+the solution and the data in the MATHEMATICAL format, respectively, and `solution` and `data` are the
+full data structures, which may be equivalent to `nw_solution` and `nw_data`, if the data is not
+multinetwork. Changes should be applied to `nw_solution` in the user functions.
+
+For `dimensionalize_math_extensions`, it is possible to easily extended the SI conversions if they are
+straightforward conversions using `vbase`, `sbase`, `ibase`, or `rad2deg`. For example, if a custom
+variable `cfr` is added to branches, and is scaled by `ibase`, the following dictionary would be passed:
+
+    Dict{String,Dict{String,Vector{String}}}(
+        "branch" => Dict{String,Vector{String}}(
+            "ibase" => String["cfr"]
+        )
+    )
+
+which would ensure that this variable gets converted back to SI units upon transformation.
+"""
+function solution_make_si(
+    solution::Dict{String,<:Any},
+    math_model::Dict{String,<:Any};
+    mult_sbase::Bool=true,
+    mult_vbase::Bool=true,
+    mult_ibase::Bool=true,
+    convert_rad2deg::Bool=true,
+    make_si_extensions::Vector{<:Function}=Function[],
+    dimensionalize_math_extensions::Dict{String,<:Dict{String,<:Vector{<:String}}}=Dict{String,Dict{String,Vector{String}}}()
+    )::Dict{String,Any}
+
     solution_si = deepcopy(solution)
 
     if ismultinetwork(math_model)
@@ -464,6 +580,12 @@ function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true
         sbase = nw["settings"]["sbase"]
         for (comp_type, comp_dict) in [(x,y) for (x,y) in nw if isa(y, Dict) && x != "settings"]
             dimensionalize_math_comp = get(dimensionalize_math, comp_type, Dict())
+            ext_comp = get(dimensionalize_math_extensions, comp_type, Dict())
+
+            vbase_props   = mult_vbase      ? [get(dimensionalize_math_comp, "vbase", []); get(ext_comp, "vbase", [])]   : []
+            sbase_props   = mult_sbase      ? [get(dimensionalize_math_comp, "sbase", []); get(ext_comp, "sbase", [])]   : []
+            ibase_props   = mult_ibase      ? [get(dimensionalize_math_comp, "ibase", []); get(ext_comp, "ibase", [])]   : []
+            rad2deg_props = convert_rad2deg ? [get(dimensionalize_math_comp, "rad2deg", []); get(ext_comp, "rad2deg", [])] : []
 
             for (id, comp) in comp_dict
                 if !isempty(vbase_props) || !isempty(ibase_props)
@@ -501,6 +623,10 @@ function solution_make_si(solution, math_model; mult_sbase=true, mult_vbase=true
                     end
                 end
             end
+        end
+
+        for make_si_func! in make_si_extensions
+            make_si_func!(nw, nw_data[n], solution, math_model)
         end
     end
 

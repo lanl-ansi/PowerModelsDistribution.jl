@@ -1,5 +1,5 @@
 # OpenDSS parser
-"Parses buscoords [lon,lat] (if present) into their respective buses"
+"Parses buscoords lon,lat (if present) into their respective buses"
 function _dss2eng_buscoords!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any})
     for (id, coords) in get(data_dss, "buscoords", Dict{String,Any}())
         if haskey(data_eng["bus"], id)
@@ -825,29 +825,76 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
 end
 
 
-"Parses a DSS file into a PowerModels usable format"
-function parse_opendss(io::IO;
+"""
+    parse_opendss(
+        io::IO;
+        import_all::Bool=false,
+        bank_transformers::Bool=true,
+        time_series::String="daily",
+        dss2eng_extensions::Vector{<:Function}=Function[],
+    )::Dict{String,Any}
+
+Parses an IO, into raw dss dictionary via [`parse_dss`](@ref parse_dss), into the `ENGINEERING` [`DataModel`](@ref DataModel)
+
+See [`parse_opendss`](@ref parse_opendss)
+"""
+function parse_opendss(
+    io::IO;
     import_all::Bool=false,
     bank_transformers::Bool=true,
-    time_series::String="daily"
-        )::Dict{String,Any}
+    time_series::String="daily",
+    dss2eng_extensions::Vector{<:Function}=Function[],
+    )::Dict{String,Any}
 
     data_dss = parse_dss(io)
 
     return parse_opendss(data_dss;
         import_all=import_all,
         bank_transformers=bank_transformers,
-        time_series=time_series
+        time_series=time_series,
+        dss2eng_extensions=dss2eng_extensions,
     )
 end
 
 
-"Parses a Dict resulting from the parsing of a DSS file into a PowerModels usable format"
-function parse_opendss(data_dss::Dict{String,<:Any};
+"""
+    parse_opendss(
+        data_dss::Dict{String,<:Any};
+        import_all::Bool=false,
+        bank_transformers::Bool=true,
+        time_series::String="daily",
+        dss2eng_extensions::Vector{<:Function}=Function[]
+    )::Dict{String,Any}
+
+Parses a raw dss data structure (dictionary), resulting from the parsing of a `DSS` file, into the `ENGINEERING` [`DataModel`](@ref DataModel)
+
+If `import_all` is true, all raw dss properties will be included in the final dictionary under `"dss"`.
+
+If `bank_transformers` is true (default), transformers that are indicated to be part of a bank in dss will be combined into a single multiphase
+transformer.
+
+`time_series` defines which property the time series will be taken from, `"daily"` or "yearly". More complex parsing of time series data
+should be performed with `dss2eng_extensions`.
+
+# `dss2eng_extensions`
+
+If a user wishes to parse additional components that are not yet natively supported by PowerModelsDistribution, `dss2eng_extensions` can
+be utilized. Custom user functions provided under `dss2eng_extensions` will be excuted __after__ all built-in dss2eng transformations
+have been performed and transformers have been banked together (if `bank_transformers==true`). dss2eng_extension functions should have the
+following function signature:
+
+    dss2eng_func!(data_eng, data_dss)
+
+where `data_eng` is a non-multinetwork ENGINEERING data model (_i.e._, time series data has not yet been expanded into a multinetwork
+structure), and `data_dss` is the raw dss data parsed by [`parse_dss`](@ref parse_dss).
+"""
+function parse_opendss(
+    data_dss::Dict{String,<:Any};
     import_all::Bool=false,
     bank_transformers::Bool=true,
-    time_series::String="daily"
-        )::Dict{String,Any}
+    time_series::String="daily",
+    dss2eng_extensions::Vector{<:Function}=Function[],
+    )::Dict{String,Any}
 
     data_eng = Dict{String,Any}(
         "data_model" => ENGINEERING,
@@ -901,6 +948,12 @@ function parse_opendss(data_dss::Dict{String,<:Any};
     if bank_transformers
         _bank_transformers!(data_eng)
     end
+
+    for dss2eng_func! in dss2eng_extensions
+        dss2eng_func!(data_eng, data_dss)
+    end
+
+    find_conductor_ids!(data_eng)
 
     return data_eng
 end

@@ -1,45 +1,118 @@
-""
-function transform_solution(solution_math::Dict{String,<:Any}, data_math::Dict{String,<:Any}; map::Union{Vector{<:Dict{String,<:Any}},Missing}=missing, make_si::Bool=true, convert_rad2deg::Bool=true)::Dict{String,Any}
-    @assert get(data_math, "data_model", MATHEMATICAL) == MATHEMATICAL "provided solution cannot be converted to an engineering model"
+"""
+    transform_solution(
+        solution_math::Dict{String,<:Any},
+        data_math::Dict{String,<:Any};
+        map::Union{Vector{<:Dict{String,<:Any}},Missing}=missing,
+        make_si::Bool=true,
+        convert_rad2deg::Bool=true,
+        make_si_extensions::Dict{String,<:Dict{String,<:Vector{<:String}}}=Dict{String,Dict{String,Vector{String}}}(),
+    )::Dict{String,Any}
+
+Transforms solutions from MATHEMATICAL data structures, back to an ENGINEERING data structure, given
+a `map::Vector{Dict{String,Any}}`, typically which was produced automatically by
+[`transform_data_model`](@ref transform_data_model).
+
+# Notes
+
+If `make_si==false`, the solution will remain in per-unit, rather than being converted back to SI
+units (default). Angles will still be converted to degrees unless `convert_rad2deg` is utilized.
+
+If `convert_rad2deg==false`, angles will remain in radians, instead of getting converted to
+degrees (default).
+
+## Custom SI unit conversions
+
+See [`solution_make_si`](@ref solution_make_si)
+
+## Custom math2eng transformations
+
+To enable automatically mapping back custom components solutions' to the ENGINEERING structure,
+`eng2math_extensions` added in [`transform_data_model`](@ref transform_data_model) should include
+a push of an item to the `map` dictionary in the `data_math` structure. These items should have
+the structure:
+
+    Dict{String,Any}(
+        "from" => String,
+        "to" => Union{String,Vector{String}},
+        "unmap_function" => PowerModelsDistribution.function!,
+        "apply_to_subnetworks" => Bool
+    )
+
+Important things to note are that
+
+1. `"unmap_function"` needs to be in the PowerModelsDistribution namespace, i.e., needs to
+    be defined with the following signature:
+
+    ```julia
+    PowerModelsDistribution.my_unmap_function!(data_eng, data_math, map_item)
+    end
+    ```
+
+1. `"apply_to_subnetworks"` is optional, and is true by default.
+1. `"from"` needs to be a single object
+1. `"to"` can be multiple objects or a single object
+"""
+function transform_solution(
+    solution_math::Dict{String,<:Any},
+    data_math::Dict{String,<:Any};
+    map::Union{Vector{<:Dict{String,<:Any}},Missing}=missing,
+    make_si::Bool=true,
+    convert_rad2deg::Bool=true,
+    make_si_extensions::Vector{<:Function}=Function[],
+    dimensionalize_math_extensions::Dict{String,<:Dict{String,<:Vector{<:String}}}=Dict{String,Dict{String,Vector{String}}}(),
+    )::Dict{String,Any}
+
+    @assert ismath(data_math) "cannot be converted to an engineering model"
+
+    # convert solution to si?
+    solution_math = solution_make_si(
+        solution_math,
+        data_math;
+        mult_vbase=make_si,
+        mult_sbase=make_si,
+        convert_rad2deg=convert_rad2deg,
+        make_si_extensions=make_si_extensions,
+        dimensionalize_math_extensions=dimensionalize_math_extensions,
+    )
+
     if ismultinetwork(data_math)
-        solution_eng = Dict{String,Any}(
-            "nw" => Dict{String,Any}(
-                k => Dict{String,Any}() for k in keys(data_math["nw"])
-            )
-        )
+        nws_math_sol = solution_math["nw"]
+        nws_math_data = data_math["nw"]
     else
-        solution_eng = Dict{String,Any}()
+        nws_math_sol = Dict("0" => solution_math)
+        nws_math_data = Dict("0" => data_math)
     end
 
-    solution_math = solution_make_si(solution_math, data_math; mult_vbase=make_si, mult_sbase=make_si, convert_rad2deg=convert_rad2deg)
+    nws_eng_sol = Dict(k => Dict{String,Any}() for k in keys(nws_math_sol))
+    solution_eng = Dict{String,Any}("nw" => nws_eng_sol)
 
     map = ismissing(map) ? get(data_math, "map", Vector{Dict{String,Any}}()) : map
     @assert !isempty(map) "Map is empty, cannot map solution up to engineering model"
 
+    # apply unmap functions
     for map_item in reverse(map)
-        if ismultinetwork(data_math) && map_item["unmap_function"] != "_map_math2eng_root!"
-            for (n, nw) in solution_math["nw"]
-                getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(solution_eng["nw"][n], nw, map_item)
+        if map_item["unmap_function"] != "_map_math2eng_root!" && get(map_item, "apply_to_subnetworks", true)
+            for (n, nw_math_sol) in nws_math_sol
+                getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(nws_eng_sol[n], nw_math_sol, map_item)
             end
         else
             getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(solution_eng, solution_math, map_item)
         end
     end
 
-    if ismultinetwork(data_math)
-        for (n,nw) in solution_eng["nw"]
-            for (k,v) in nw
-                if isempty(v)
-                    delete!(nw, k)
-                end
-            end
-        end
-    else
-        for (k,v) in solution_eng
+    # cleanup empty solution dicts
+    for (n,nw_eng_sol) in nws_eng_sol
+        for (k,v) in nw_eng_sol
             if isempty(v)
-                delete!(solution_eng, k)
+                delete!(nw_eng_sol, k)
             end
         end
+    end
+
+    # if !multinetwork, correct solution dict
+    if !ismultinetwork(data_math)
+        merge!(solution_eng, nws_eng_sol["0"])
+        delete!(solution_eng, "nw")
     end
 
     return solution_eng

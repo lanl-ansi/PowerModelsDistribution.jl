@@ -1,9 +1,27 @@
-const _pmd_eng_global_keys = Set{String}([
-    "files", "name", "data_model", "dss_options"
-])
+"Helper to convert "
+_missing2false(a::Union{Missing,Bool}) = ismissing(a) ? false : a
+
+"""
+    iseng(data::Dict{String,Any})
+
+Helper function to check is data is ENGINEERING model
+"""
+iseng(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == ENGINEERING)
 
 
-"Hacky helper function to transform single-conductor network data, from, e.g., matpower/psse, into multi-conductor data"
+"""
+    ismath(data::Dict{String,Any})
+
+Helper function to check if data is MATHEMATICAL model
+"""
+ismath(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == MATHEMATICAL)
+
+
+"""
+    make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
+
+Hacky helper function to transform single-conductor network data, from, e.g., matpower/psse, into multi-conductor data
+"""
 function make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
     if ismultinetwork(data)
         for (i,nw_data) in data["nw"]
@@ -92,13 +110,13 @@ end
 
 
 "initializes the base math object of any type, and copies any one-to-one mappings"
-function _init_math_obj(obj_type::String, eng_id::Any, eng_obj::Dict{String,<:Any}, index::Int)::Dict{String,Any}
+function _init_math_obj(obj_type::String, eng_id::Any, eng_obj::Dict{String,<:Any}, index::Int; pass_props::Vector{String}=String[])::Dict{String,Any}
     math_obj = Dict{String,Any}(
         "name" => "$eng_id",
         "source_id" => "$obj_type.$eng_id"
     )
 
-    for key in _1to1_maps[obj_type]
+    for key in [_1to1_maps[obj_type]; pass_props]
         if haskey(eng_obj, key)
             if key in ["status", "dispatchable"]
                 math_obj[key] = Int(eng_obj[key])

@@ -17,25 +17,62 @@ Checks if power model struct is multinetwork
 ismultinetwork(pm::AbstractUnbalancedPowerModel) = ismultinetwork(pm, pmd_it_sym)
 
 
-"Expands a data structure into a multinetwork"
-function make_multinetwork(data::Dict{String,<:Any}; sparse::Bool=false, time_elapsed::Union{Missing,Real,Vector{<:Real}}=missing)
+"""
+    make_multinetwork(
+        data::Dict{String,<:Any};
+        sparse::Bool=false,
+        time_elapsed::Union{Missing,Real,Vector{<:Real}}=missing,
+        global_keys::Set{String}=Set{String}(),
+    )::Dict{String,Any}
+
+Expands a data structure into a multinetwork assuming there are `time_series` objects defined and assigned
+to some components.
+
+If `global_keys::Set{String}` is defined, the global keys that will appear at the top-level of the data
+structure will include both the default global keys for that data model type, and additionally the keys
+defined in `global_keys`.
+
+`time_elapsed` defines the time elapsed between subnetworkin __hours__, and can either be a single Real value, and
+thus a constant time between each time step, or a Vector with the same length as the number of time steps,
+or can be left missing, in which case time elapsed will attempt to be discovered, with a fallback on 1 hour default.
+Time elapsed can be adjusted later using [`set_time_elapsed!`](@ref set_time_elapsed!)
+
+`make_multinetwork` assumes all `"time"` values in "time_series" objects to be in the same units, and will attempt
+to automatically sort multinetworks in the correct order. [`sort_multinetwork!`](@ref sort_multinetwork!) can be
+used after the fact to re-sort the subnetworks.
+
+`sparse` is currently unsupported, and is only included for future compatibility
+"""
+function make_multinetwork(
+    data::Dict{String,<:Any};
+    sparse::Bool=false,
+    time_elapsed::Union{Missing,Real,Vector{<:Real}}=missing,
+    global_keys::Set{String}=Set{String}(),
+    )::Dict{String,Any}
+
     if ismultinetwork(data)
         @info "data is already multinetwork, returning"
         return data
-    elseif data["data_model"] == ENGINEERING
-        return _make_multinetwork_eng(data; sparse=sparse, time_elapsed=time_elapsed)
-    elseif data["data_model"] == MATHEMATICAL
-        return _make_multinetwork_math(data)
+    elseif iseng(data)
+        return _make_multinetwork_eng(data; sparse=sparse, time_elapsed=time_elapsed, global_keys=global_keys)
+    elseif ismath(data)
+        return _make_multinetwork_math(data; global_keys=global_keys)
     end
 end
 
 
-"Expands an ENGINEERING data structure into a multinetwork"
-function _make_multinetwork_eng(data_eng::Dict{String,<:Any}; sparse::Bool=false, time_elapsed::Union{Missing,Real,Vector{<:Real}}=missing)
-    @assert data_eng["data_model"] == ENGINEERING "wrong data model for _make_multinetwork_eng"
+"Expands an ENGINEERING data structure into a multinetwork, see [`make_multinetwork`](@ref make_multinetwork)"
+function _make_multinetwork_eng(
+    data_eng::Dict{String,<:Any};
+    sparse::Bool=false,
+    time_elapsed::Union{Missing,Real,Vector{<:Real}}=missing,
+    global_keys::Set{String}=Set{String}(),
+    )::Dict{String,Any}
+
+    @assert iseng(data_eng) "wrong data model for _make_multinetwork_eng"
 
     mn_data = Dict{String,Any}(
-        k => data_eng[k] for k in _pmd_eng_global_keys if haskey(data_eng, k)
+        k => data_eng[k] for k in union(_pmd_eng_global_keys, global_keys) if haskey(data_eng, k)
     )
     mn_data["multinetwork"] = true
 
@@ -133,12 +170,16 @@ function _make_multinetwork_eng(data_eng::Dict{String,<:Any}; sparse::Bool=false
 end
 
 
-"Expands an MATHEMATICAL data structure into a multinetwork"
-function _make_multinetwork_math(data_math::Dict{String,<:Any})::Dict{String,Any}
-    @assert data_math["data_model"] == MATHEMATICAL "wrong data model for _make_multinetwork_math"
+"Expands an MATHEMATICAL data structure into a multinetwork, see [`make_multinetwork`](@ref make_multinetwork)"
+function _make_multinetwork_math(
+    data_math::Dict{String,<:Any};
+    global_keys::Set{String}=Set{String}(),
+    )::Dict{String,Any}
+
+    @assert ismath(data_math) "wrong data model for _make_multinetwork_math"
     @info "Converting a MATHEMATICAL data model into multinetwork assumes the InfrastructureModels data structure ( see https://github.com/lanl-ansi/InfrastructureModels.jl/blob/master/src/core/data.jl#L135 )"
 
-    return _IM.make_multinetwork(data_math, pmd_it_name, _pmd_math_global_keys)
+    return _IM.make_multinetwork(data_math, pmd_it_name, union(_pmd_math_global_keys, global_keys))
 end
 
 
