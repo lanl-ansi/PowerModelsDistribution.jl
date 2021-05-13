@@ -112,6 +112,7 @@ function instantiate_mc_model(
             global_keys=global_keys,
             eng2math_extensions=eng2math_extensions,
             eng2math_passthrough=eng2math_passthrough,
+            make_pu_extensions=make_pu_extensions,
         )
     end
 
@@ -159,7 +160,7 @@ For an explanation of `make_pu_extensions`, see [`make_per_unit!`](@ref make_per
 
 For an explanation of `ref_extensions`, see [`instantiate_mc_model`](@ref instantiate_mc_model)
 
-For an explanation of `make_si`, `make_si_extensions`, and `dimensionalize_math_extensions`, see [`solution_make_si`](@ref solution_make_si)
+For an explanation of `map_math2eng_extensions`, `make_si`, `make_si_extensions`, and `dimensionalize_math_extensions`, see [`solution_make_si`](@ref solution_make_si)
 """
 function solve_mc_model(
     data::Dict{String,<:Any},
@@ -171,6 +172,8 @@ function solve_mc_model(
     global_keys::Set{String}=Set{String}(),
     eng2math_extensions::Vector{<:Function}=Function[],
     eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
+    make_pu_extensions::Vector{<:Function}=Function[],
+    map_math2eng_extensions::Dict{String,<:Function}=Dict{String,Function}(),
     make_si::Bool=!get(data, "per_unit", false),
     make_si_extensions::Vector{<:Function}=Function[],
     dimensionalize_math_extensions::Dict{String,Dict{String,Vector{String}}}=Dict{String,Dict{String,Vector{String}}}(),
@@ -184,6 +187,7 @@ function solve_mc_model(
             multinetwork=multinetwork,
             eng2math_extensions=eng2math_extensions,
             eng2math_passthrough=eng2math_passthrough,
+            make_pu_extensions=make_pu_extensions,
             global_keys=global_keys,
         )
 
@@ -194,8 +198,6 @@ function solve_mc_model(
             build_mc;
             ref_extensions=ref_extensions,
             multinetwork=multinetwork,
-            eng2math_extensions=eng2math_extensions,
-            eng2math_passthrough=eng2math_passthrough,
             global_keys=global_keys,
             kwargs...
         )
@@ -203,6 +205,7 @@ function solve_mc_model(
         result["solution"] = transform_solution(
             result["solution"],
             data_math;
+            map_math2eng_extensions=map_math2eng_extensions,
             make_si=make_si,
             make_si_extensions=make_si_extensions,
             dimensionalize_math_extensions=dimensionalize_math_extensions

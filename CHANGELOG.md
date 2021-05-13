@@ -6,6 +6,7 @@
 
 ## v0.11.2
 
+- Fixed `solve_` functions; they were missing make_pu_extensions kwargs
 - Fixed `_init_math_obj`, if an object is not defined in the built-in 1to1 map const, it would error
 - Fixed method for user-defining custom math2eng functions
 - Fixed documentation for `transform_solution`
