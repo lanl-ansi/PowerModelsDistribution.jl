@@ -5,8 +5,10 @@
         map::Union{Vector{<:Dict{String,<:Any}},Missing}=missing,
         make_si::Bool=true,
         convert_rad2deg::Bool=true,
-        make_si_extensions::Dict{String,<:Dict{String,<:Vector{<:String}}}=Dict{String,Dict{String,Vector{String}}}(),
-    )::Dict{String,Any}
+        map_math2eng_extensions::Dict{String,<:Function}=Dict{String,Function}(),
+        make_si_extensions::Vector{<:Function}=Function[],
+        dimensionalize_math_extensions::Dict{String,<:Dict{String,<:Vector{<:String}}}=Dict{String,Dict{String,Vector{String}}}(),
+        )::Dict{String,Any}
 
 Transforms solutions from MATHEMATICAL data structures, back to an ENGINEERING data structure, given
 a `map::Vector{Dict{String,Any}}`, typically which was produced automatically by
@@ -40,12 +42,12 @@ the structure:
 
 Important things to note are that
 
-1. `"unmap_function"` needs to be in the PowerModelsDistribution namespace, i.e., needs to
-    be defined with the following signature:
+1. The function must be included in `map_math2eng_extensions`, which has the form:
 
     ```julia
-    PowerModelsDistribution.my_unmap_function!(data_eng, data_math, map_item)
-    end
+    Dict{String,Function}(
+        "_map_math2eng_func!" => _map_math2eng_func!,
+    )
     ```
 
 1. `"apply_to_subnetworks"` is optional, and is true by default.
@@ -58,6 +60,7 @@ function transform_solution(
     map::Union{Vector{<:Dict{String,<:Any}},Missing}=missing,
     make_si::Bool=true,
     convert_rad2deg::Bool=true,
+    map_math2eng_extensions::Dict{String,<:Function}=Dict{String,Function}(),
     make_si_extensions::Vector{<:Function}=Function[],
     dimensionalize_math_extensions::Dict{String,<:Dict{String,<:Vector{<:String}}}=Dict{String,Dict{String,Vector{String}}}(),
     )::Dict{String,Any}
@@ -93,10 +96,18 @@ function transform_solution(
     for map_item in reverse(map)
         if map_item["unmap_function"] != "_map_math2eng_root!" && get(map_item, "apply_to_subnetworks", true)
             for (n, nw_math_sol) in nws_math_sol
-                getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(nws_eng_sol[n], nw_math_sol, map_item)
+                if haskey(map_math2eng_extensions, map_item["unmap_function"])
+                    map_math2eng_extensions[map_item["unmap_function"]](nws_eng_sol[n], nw_math_sol, map_item)
+                else
+                    getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(nws_eng_sol[n], nw_math_sol, map_item)
+                end
             end
         else
-            getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(solution_eng, solution_math, map_item)
+            if haskey(map_math2eng_extensions, map_item["unmap_function"])
+                map_math2eng_extensions[map_item["unmap_function"]](solution_eng, solution_math, map_item)
+            else
+                getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(solution_eng, solution_math, map_item)
+            end
         end
     end
 
@@ -172,6 +183,7 @@ function _map_math2eng_load!(data_eng::Dict{String,<:Any}, data_math::Dict{Strin
 end
 
 
+""
 function _map_math2eng_shunt!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "shunt", map)
     math_obj = _get_math_obj(data_math, map["to"])

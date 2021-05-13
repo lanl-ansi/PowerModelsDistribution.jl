@@ -4,6 +4,11 @@
 
 - none
 
+## v0.11.2
+
+- Fixed method for user-defining custom math2eng functions
+- Fixed documentation for `transform_solution`
+
 ## v0.11.1
 
 - Added `iseng` and `ismath` helper functions
