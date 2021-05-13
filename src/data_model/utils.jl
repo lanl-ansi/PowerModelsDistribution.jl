@@ -116,7 +116,7 @@ function _init_math_obj(obj_type::String, eng_id::Any, eng_obj::Dict{String,<:An
         "source_id" => "$obj_type.$eng_id"
     )
 
-    for key in [_1to1_maps[obj_type]; pass_props]
+    for key in [get(_1to1_maps, obj_type, String[]); pass_props]
         if haskey(eng_obj, key)
             if key in ["status", "dispatchable"]
                 math_obj[key] = Int(eng_obj[key])
