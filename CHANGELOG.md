@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Fixed bug in `constraint_mc_transformer_power` constraint template, where `nw` was missing from call to `ref`
 
 ## v0.11.2
 

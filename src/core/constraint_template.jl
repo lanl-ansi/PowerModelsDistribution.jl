@@ -476,7 +476,7 @@ function constraint_mc_transformer_power(pm::AbstractUnbalancedPowerModel, i::In
     #     error("Transformers only work with networks with three conductors.")
     # end
 
-    transformer = ref(pm, :transformer, i)
+    transformer = ref(pm, nw, :transformer, i)
     f_bus = transformer["f_bus"]
     t_bus = transformer["t_bus"]
     f_idx = (i, f_bus, t_bus)
