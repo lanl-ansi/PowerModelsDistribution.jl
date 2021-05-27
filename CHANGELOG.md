@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed typo in `_calc_connected_components_math`, where edge_type::String was used instead of edge_obj::Dict to check properties
 - Fixed bug in `constraint_mc_transformer_power` constraint template, where `nw` was missing from call to `ref`
 
 ## v0.11.2

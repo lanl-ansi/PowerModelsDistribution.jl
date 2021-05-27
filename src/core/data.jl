@@ -1059,12 +1059,12 @@ function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector
             if edge_obj[pmd_math_component_status[edge_type]] != pmd_math_component_status_inactive[edge_type] || !check_enabled
                 if edge_type == "switch" && !ismissing(type)
                     if type == "load_blocks"
-                        if edge_type["dispatchable"] != 1
+                        if edge_obj["dispatchable"] != 1
                             push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
                             push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
                         end
                     elseif type == "blocks"
-                        if edge_type["state"] != 0
+                        if edge_obj["state"] != 0
                             push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
                             push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
                         end
