@@ -818,6 +818,7 @@ function _pad_connections!(eng_obj::Dict{String,<:Any}, connection_key::String, 
             push!(eng_obj[connection_key], cond)
         end
     end
+    return eng_obj[connection_key]
 end
 
 

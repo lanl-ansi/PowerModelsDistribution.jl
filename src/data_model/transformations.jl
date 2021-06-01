@@ -365,7 +365,7 @@ See [`apply_phase_projection!`](@ref apply_phase_projection!)
 function apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
     @assert get(data_eng, "is_kron_reduced", false)
 
-    bus_terminals = Dict{Any,Vector{Int}}()
+    bus_terminals = Dict{String,Vector{Int}}()
 
     all_conductors = _get_complete_conductor_set(data_eng)
 
@@ -380,8 +380,8 @@ function apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
                 _pad_connections!(eng_obj, "f_connections", all_conductors)
                 _pad_connections!(eng_obj, "t_connections", all_conductors)
 
-                bus_terminals[eng_obj["f_bus"]] = haskey(bus_terminals, eng_obj["f_bus"]) ? unique([bus_terminals[eng_obj["f_bus"]]..., all_conductors...]) : all_conductors
-                bus_terminals[eng_obj["t_bus"]] = haskey(bus_terminals, eng_obj["t_bus"]) ? unique([bus_terminals[eng_obj["t_bus"]]..., all_conductors...]) : all_conductors
+                bus_terminals[eng_obj["f_bus"]] = haskey(bus_terminals, eng_obj["f_bus"]) ? _pad_connections!(bus_terminals, eng_obj["f_bus"], eng_obj["f_connections"]) : eng_obj["f_connections"]
+                bus_terminals[eng_obj["t_bus"]] = haskey(bus_terminals, eng_obj["t_bus"]) ? _pad_connections!(bus_terminals, eng_obj["t_bus"], eng_obj["t_connections"]) : eng_obj["t_connections"]
             else
                 for (w, connections) in enumerate(eng_obj["connections"])
                     if eng_obj["configuration"][w] == DELTA && length(eng_obj["tm_set"][w]) == 1
@@ -396,7 +396,7 @@ function apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
                         _pad_properties!(eng_obj, ["tm_fix"], w, connections, all_conductors; pad_value=true)
                     end
                     _pad_connections!(eng_obj, "connections", w, all_conductors)
-                    bus_terminals[eng_obj["bus"][w]] = haskey(bus_terminals, eng_obj["bus"][w]) ? unique([bus_terminals[eng_obj["bus"][w]]..., all_conductors...]) : all_conductors
+                    bus_terminals[eng_obj["bus"][w]] = haskey(bus_terminals, eng_obj["bus"][w]) ? _pad_connections!(bus_terminals, eng_obj["bus"][w], eng_obj["connections"][w]) : eng_obj["connections"][w]
                 end
             end
         end
@@ -407,7 +407,7 @@ function apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
             if eng_obj["configuration"] == DELTA
                 _pad_properties_delta!(eng_obj, ["pd_nom", "qd_nom"], eng_obj["connections"], all_conductors)
                 _pad_connections!(eng_obj, "connections", all_conductors)
-                bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? unique([bus_terminals[eng_obj["bus"]]..., all_conductors...]) : all_conductors
+                bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? _pad_connections!(bus_terminals, eng_obj["bus"], eng_obj["connections"]) : eng_obj["connections"]
             end
         end
     end
@@ -417,7 +417,7 @@ function apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
             if eng_obj["configuration"]==DELTA
                 _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
                 _pad_connections!(eng_obj, "connections", all_conductors)
-                bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? unique([bus_terminals[eng_obj["bus"]]..., all_conductors...]) : all_conductors
+                bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? _pad_connections!(bus_terminals, eng_obj["bus"], eng_obj["connections"]) : eng_obj["connections"]
             end
         end
     end
@@ -427,7 +427,7 @@ function apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
             if eng_obj["configuration"]==DELTA
                 _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
                 _pad_connections!(eng_obj, "connections", all_conductors)
-                bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? unique([bus_terminals[eng_obj["bus"]]..., all_conductors...]) : all_conductors
+                bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? _pad_connections!(bus_terminals, eng_obj["bus"], eng_obj["connections"]) : eng_obj["connections"]
             end
         end
     end
@@ -439,7 +439,7 @@ end
 
 
 "helper function to update the terminals on projected buses"
-function _update_bus_terminal_projections!(data_eng::Dict{String,<:Any}, bus_terminals::Dict{Any,<:Vector{Int}})
+function _update_bus_terminal_projections!(data_eng::Dict{String,<:Any}, bus_terminals::Dict{String,<:Vector{Int}})
     for (id,terminals) in bus_terminals
         eng_obj = data_eng["bus"][id]
 
@@ -451,9 +451,9 @@ function _update_bus_terminal_projections!(data_eng::Dict{String,<:Any}, bus_ter
             eng_obj["vm_ub"] = fill(Inf, length(eng_obj["terminals"]))
         end
 
-        _pad_properties!(eng_obj, ["vm", "va", "vm_lb", "vm_ub"], eng_obj["terminals"], terminals)
-
-        _pad_connections!(eng_obj, "terminals", terminals)
+        old_terms = deepcopy(eng_obj["terminals"])
+        new_terms = _pad_connections!(eng_obj, "terminals", terminals)
+        _pad_properties!(eng_obj, ["vm", "va", "vm_lb", "vm_ub"], old_terms, new_terms)
     end
 end
 

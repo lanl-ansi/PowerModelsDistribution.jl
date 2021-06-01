@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in `apply_phase_projection_delta!` where some padding was out of order, which could pose a problem when `apply_voltage_bounds!` was used
 - Changed default angmin/angmax on virtual branches to +-10deg
 - Fixed missing factor sqrt(nphases) from vg definition on generator and solar objects
 - Fixed bug in voltage source vnom determination, and now uses basekv from vsources to populate vbases_default
