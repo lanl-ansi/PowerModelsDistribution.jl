@@ -359,7 +359,9 @@ function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         vm_pu = defaults["pu"]
 
         phases = defaults["phases"]
-        vnom = first(data_eng["settings"]["vbases_default"])[2]
+        vnom = defaults["basekv"] / sqrt(phases)
+
+        data_eng["settings"]["vbases_default"][id] = vnom
 
         vm = fill(vm_pu, phases)*vnom
         va = rad2deg.(_wrap_to_pi.([-2*pi/phases*(i-1)+deg2rad(ph1_ang) for i in 1:phases]))
@@ -913,7 +915,7 @@ function parse_opendss(
 
         data_eng["settings"]["voltage_scale_factor"] = 1e3
         data_eng["settings"]["power_scale_factor"] = 1e3
-        data_eng["settings"]["vbases_default"] = Dict(source_bus=>defaults["basekv"] / sqrt(3))
+        data_eng["settings"]["vbases_default"] = Dict{String,Any}()
         data_eng["settings"]["sbase_default"] = defaults["basemva"] * 1e3
         data_eng["settings"]["base_frequency"] = get(get(data_dss, "options", Dict{String,Any}()), "defaultbasefreq", 60.0)
 

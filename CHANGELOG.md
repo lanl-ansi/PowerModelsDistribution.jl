@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in voltage source vnom determination, and now uses basekv from vsources to populate vbases_default
 - Fixed unit conversion bug in calculating the power rating of branches from current ratings, and uses emergamps first, if it exists
 - Fixed typo in `_calc_connected_components_math`, where edge_type::String was used instead of edge_obj::Dict to check properties
 - Fixed bug in `constraint_mc_transformer_power` constraint template, where `nw` was missing from call to `ref`
