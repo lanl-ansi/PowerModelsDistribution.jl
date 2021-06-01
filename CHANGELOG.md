@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added control_mode and vg to gen object in vsource eng2math conversion
 - Fixed bug in `apply_phase_projection_delta!` where some padding was out of order, which could pose a problem when `apply_voltage_bounds!` was used
 - Changed default angmin/angmax on virtual branches to +-10deg
 - Fixed missing factor sqrt(nphases) from vg definition on generator and solar objects

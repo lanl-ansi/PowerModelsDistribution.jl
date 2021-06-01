@@ -714,12 +714,14 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
         math_obj["gen_status"] = Int(eng_obj["status"])
         math_obj["pg"] = fill(0.0, nphases)
         math_obj["qg"] = fill(0.0, nphases)
+        math_obj["vg"] = eng_obj["vm"]
         math_obj["pmin"] = get(eng_obj, "pg_lb", fill(-Inf, nphases))
         math_obj["pmax"] = get(eng_obj, "pg_ub", fill( Inf, nphases))
         math_obj["qmin"] = get(eng_obj, "qg_lb", fill(-Inf, nphases))
         math_obj["qmax"] = get(eng_obj, "qg_ub", fill( Inf, nphases))
         math_obj["connections"] = eng_obj["connections"]
         math_obj["configuration"] = get(eng_obj, "configuration", WYE)
+        math_obj["control_mode"] = get(eng_obj, "control_mode", ISOCHRONOUS)
         math_obj["source_id"] = "voltage_source.$name"
 
         _add_gen_cost_model!(math_obj, eng_obj)
