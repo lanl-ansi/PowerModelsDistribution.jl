@@ -181,8 +181,8 @@ function _create_pvsystem(name::String=""; kwargs...)
         kw = kva * abs(pf)
         kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
     elseif haskey(kwargs, :pf) && kwargs[:pf] != 0.88
-            kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
-            kva = abs(kw) + kvar^2
+        kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
+        kva = abs(kw) + kvar^2
     end
 
     if haskey(kwargs, :like)
