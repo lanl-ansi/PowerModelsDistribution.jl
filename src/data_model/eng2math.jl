@@ -531,8 +531,8 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
                 "g_to" => zeros(nphases, nphases),
                 "b_fr" => zeros(nphases, nphases),
                 "b_to" => zeros(nphases, nphases),
-                "angmin" => fill(-60.0, nphases),
-                "angmax" => fill( 60.0, nphases),
+                "angmin" => fill(-10.0, nphases),
+                "angmax" => fill( 10.0, nphases),
                 "br_status" => eng_obj["status"] == DISABLED ? 0 : 1,
             )
 
@@ -643,8 +643,6 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
     for (name, eng_obj) in get(data_eng, "solar", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("solar", name, eng_obj, length(data_math["gen"])+1; pass_props=pass_props)
 
-        connections = eng_obj["connections"]
-
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["gen_status"] = Int(eng_obj["status"])
 
@@ -671,8 +669,6 @@ end
 function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "storage", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("storage", name, eng_obj, length(data_math["storage"])+1; pass_props=pass_props)
-
-        connections = eng_obj["connections"]
 
         math_obj["storage_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
@@ -765,12 +761,8 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "t_bus" => data_math["bus_lookup"][eng_obj["bus"]],
                 "f_connections" => eng_obj["connections"],
                 "t_connections" => eng_obj["connections"],
-                "angmin" => fill(-60.0, nconductors),
-                "angmax" => fill( 60.0, nconductors),
-                "shift" => fill(0.0, nconductors),
-                "tap" => fill(1.0, nconductors),
-                "tranformer" => false,
-                "switch" => false,
+                "angmin" => fill(-10.0, nconductors),
+                "angmax" => fill( 10.0, nconductors),
                 "br_status" => 1,
                 "br_r" => _impedance_conversion(data_eng, eng_obj, "rs"),
                 "br_x" => _impedance_conversion(data_eng, eng_obj, "xs"),

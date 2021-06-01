@@ -2,6 +2,7 @@
 
 ## staged
 
+- Changed default angmin/angmax on virtual branches to +-10deg
 - Fixed missing factor sqrt(nphases) from vg definition on generator and solar objects
 - Fixed bug in voltage source vnom determination, and now uses basekv from vsources to populate vbases_default
 - Fixed unit conversion bug in calculating the power rating of branches from current ratings, and uses emergamps first, if it exists
