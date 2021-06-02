@@ -152,11 +152,11 @@ end
 
 
 """
-    calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{<:Any,<:Real})::Tuple{Dict,Dict}
+    calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict}
 
 Calculates voltage bases for each voltage zone for buses and branches
 """
-function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{<:Any,<:Real})::Tuple{Dict,Dict}
+function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict}
     # find zones of buses connected by lines
     zones = discover_voltage_zones(data_model)
     bus_to_zone = Dict([(bus,zone) for (zone, buses) in zones for bus in buses])

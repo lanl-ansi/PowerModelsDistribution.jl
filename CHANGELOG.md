@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fix bug in function signature of `calc_voltage_bases`
 - Fix bug introduced when changing construction of vbases_default in settings
 - Changed Gcap calculation in reactor object parsing to use own kv value, instead of system basekv
 - Added control_mode and vg to gen object in vsource eng2math conversion
