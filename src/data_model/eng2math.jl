@@ -201,7 +201,6 @@ function _map_eng2math(
             apply_kron_reduction!(nw_eng)
         end
 
-        if !get(data_eng, "is_projected", false)
         if phase_projected && !get(data_eng, "is_projected", false)
             apply_phase_projection_delta!(nw_eng)
         end
@@ -767,8 +766,8 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
             bus_obj = Dict{String,Any}(
                 "bus_i" => length(data_math["bus"])+1,
                 "index" => length(data_math["bus"])+1,
-                "terminals" => f_bus["terminals"],
-                "grounded" => f_bus["grounded"],
+                "terminals" => eng_obj["connections"],
+                "grounded" => [f_bus["grounded"][findfirst(f_bus["terminals"].==t)] for t in eng_obj["connections"]],
                 "name" => "_virtual_bus.voltage_source.$name",
                 "bus_type" => math_obj["control_mode"] == ISOCHRONOUS ? 3 : 2,
                 "vm" => deepcopy(eng_obj["vm"]),
