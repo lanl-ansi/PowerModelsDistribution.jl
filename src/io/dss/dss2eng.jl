@@ -361,7 +361,7 @@ function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         phases = defaults["phases"]
         vnom = defaults["basekv"] / sqrt(phases)
 
-        data_eng["settings"]["vbases_default"][id] = vnom
+        data_eng["settings"]["vbases_default"][_parse_bus_id(defaults["bus1"])[1]] = vnom
 
         vm = fill(vm_pu, phases)*vnom
         va = rad2deg.(_wrap_to_pi.([-2*pi/phases*(i-1)+deg2rad(ph1_ang) for i in 1:phases]))
