@@ -257,7 +257,7 @@ function _dss2eng_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             end
 
             # TODO Check unit conversion on Gcap
-            Gcap = sum(defaults["kvar"]) / (nphases * 1e3 * (first(data_eng["settings"]["vbases_default"])[2])^2)
+            Gcap = sum(defaults["kvar"]) / (nphases * 1e3 * (defaults["kv"] / sqrt(nphases))^2)
 
             eng_obj["bs"] = diagm(0=>fill(Gcap, nphases))
             eng_obj["gs"] = zeros(size(eng_obj["bs"]))
