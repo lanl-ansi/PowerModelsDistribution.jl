@@ -472,6 +472,191 @@ function apply_voltage_angle_difference_bounds!(eng::Dict{String,<:Any}, vad::Re
         end
     end
 end
+
+
+"Indicates whether the passed component has a oneport structure (e.g. loads and generators)."
+_is_oneport_component(comp::Dict{String,Any})::Bool = haskey(comp, "bus") && isa(comp["bus"], AbstractString)
+
+
+"Indicates whether the passed component has a twoport structure (e.g. lines and switches)."
+_is_twoport_component(comp::Dict{String,Any})::Bool = haskey(comp, "f_bus") && haskey(comp, "t_bus")
+
+
+"Indicates whether the passed component has a multiport structure (e.g. transformers)."
+_is_multiport_component(comp::Dict{String,Any})::Bool = haskey(comp, "bus") && isa(comp["bus"], Vector{<:AbstractString})
+
+
+"Obtain impedance parameters, directly or from linecode."
+function _get_line_impedance_parameters(data_eng::Dict{String,Any}, line::Dict{String,Any})
+    @assert data_eng["data_model"]==ENGINEERING
+
+    if haskey(line, "rs")
+        z_s = line["rs"].+im*line["xs"]
+        y_fr = line["g_fr"].+im*line["b_fr"]
+        y_to = line["g_to"].+im*line["b_to"]
+    else
+        lc = data_eng["linecode"][line["linecode"]]
+        z_s = (lc["rs"].+im*lc["xs"])*line["length"]
+        y_fr = (lc["g_fr"].+im*lc["b_fr"])*line["length"]
+        y_to = (lc["g_to"].+im*lc["b_to"])*line["length"]
+    end
+
+    return z_s, y_fr, y_to
+end
+
+"Create an equivalent shunt for a line which connects to a single bus."
+function _loop_line_to_shunt(data_eng::Dict{String,Any}, line_id::AbstractString)
+    @assert data_eng["data_model"]==ENGINEERING
+
+    # only possible when the line is a 'loop' with respect to its bus
+    line = data_eng["line"][line_id]
+    @assert line["f_bus"]==line["t_bus"]
+
+    # obtain impedance parameters, directly or from linecode
+    z_s, y_fr, y_to = _get_line_impedance_parameters(data_eng, line)
+
+    # build shunt addmittance
+    Yb = [y_s+y_fr -y_s; -y_s y_s+y_to]
+    conns = [line["f_connections"]..., line["t_connections"]...]
+
+    # simplify to a unique set of of connections and equivalent addmittance
+    conns_unique = unique(conns)
+    M = [conns[i]==conns_unique[j] ? 1 : 0 for i in 1:length(conns), j in 1:length(conns_unique)]
+    Yb_unique = M'*Yb*M
+
+    # build shunt dict
+    shunt =  Dict{String, Any}(
+        "status" => line["status"],
+        "dispatchable" => NO,
+        "bus" => line["f_bus"],
+        "connections" => conns_unique,
+        "gs" => real.(Yb_unique),    
+        "bs" => imag.(Yb_unique),
+    )
+    if haskey(line, "source_id")
+        shunt["source_id"] = line["source_id"]
+    end
+
+    return shunt
+end
+
+
+"Merge a terminal into another for a specified bus, i.e. as if they are short-ciruited."
+function _merge_terminals!(data_eng::Dict{String,Any}, bus_id::String, t_fr, t_to)
+    @assert data_eng["data_model"]==ENGINEERING
+
+    bus = data_eng["bus"][bus_id]
+    old_terminals = bus["terminals"]
+    # exclude t_fr from the bus terminals
+    merged_terminals = bus["terminals"] = [x for x in old_terminals if x!=t_fr]
+    # find position of merged terminals in old terminal vector
+    old_idxs = Dict(t=>findall(t.==old_terminals) for t in merged_terminals)
+    # assign idxs of t_fr to idxs of t_to
+    append!(old_idxs[t_to], findall(t_fr.==old_terminals))
+
+
+    # resolve 'vmin' and 'vmax' properties
+    if haskey(bus, "vmin")
+        bus["vmin"] = [maximum(bus["vmin"][old_idxs[t]]) for t in merged_terminals]
+    end
+    if haskey(bus, "vmax")
+        bus["vmax"] = [minimum(bus["vmax"][old_idxs[t]]) for t in merged_terminals]
+    end
+
+    # resolve properties which should be the same for the merged terminals
+    for prop in ["vm", "va", "vr_start", "vi_start", "vm_start", "va_start"]
+        if haskey(bus, prop)
+            vals = bus[prop][old_idx[t_to]]
+            @assert vals.==vals[1] "Cannot merge bus property $prop because the merged terminals differ."
+            bus[prop] = [bus[prop][findfirst(old_terminals.==t)] for t in merged_terminals]
+        end
+    end
+
+    # merge grounding properties (i.e. equivalent impedance of parallel impedances to ground if multiple groundings)
+    if haskey(bus, "grounded")
+        grounded = bus["grounded"]
+        if t_fr in grounded
+            idxs_fr = findall(grounded.==t_fr)
+            idxs_to = findall(grounded.==t_to)
+            idxs = [idxs_fr..., idxs_to...]
+            zgs = [bus["rg"][i]+im*bus["xg"][i] for i in idxs]
+            zg = any(iszero.(zgs)) ? im*0.0 : 1/sum(1/x for x in zgs)
+
+            idxs_other = setdiff(1:length(grounded), idxs)
+            bus["grounded"] = [grounded[idxs_other]..., t_to]
+            bus["rg"] = [bus["rg"][idxs_other]..., real.(zg)]
+            bus["xg"] = [bus["xg"][idxs_other]..., imag.(zg)]
+        end
+    end
+
+    #TODO take care of other bounds in the bus data model
+
+    # update connection properties to reflect the merge
+    for type in setdiff(intersect(pmd_eng_asset_types, keys(data_eng)), ["bus"])
+        for (_,comp) in data_eng[type]
+            # one-port components
+            if _is_oneport_component(comp) && comp["bus"]==bus_id
+                comp["connections"] = [t==t_fr ? t_to : t for t in comp["connections"]]
+            # two-port components
+            elseif _is_twoport_component(comp)
+                if comp["f_bus"]==bus_id
+                    comp["f_connections"] = [t==t_fr ? t_to : t for t in comp["f_connections"]]
+                end
+                if comp["t_bus"]==bus_id
+                    comp["t_connections"] = [t==t_fr ? t_to : t for t in comp["t_connections"]]
+                end
+            # multi-port components
+            elseif _is_multiport_component(comp)
+                for (w,bus_w) in enumerate(comp_bus)
+                    if bus_w==bus_id
+                        comp["connections"][w] = [t==t_fr ? t_to : t for t in comp["connections"][w]]
+                    end
+                end
+            end
+        end
+    end
+end
+
+
+""""
+Transform line loops (connected to a single bus), which are not allowed in the mathematical model.
+Lossy line loops are converted to equivalent shunts, and lossless ones (i.e. short-circuits) are represented by merging the short-circuited terminals. 
+The argument 'zero_series_impedance_threshold' controls the threshold below which the series impedance is considered to be a short-ciruit.
+This is useful because OpenDSS modelers have to insert tiny impedances to represent short-circuit reactors. 
+The addmittance to ground should be zero to trigger the short-circuit handling. 
+"""
+function transform_loops!(data_eng::Dict{String,Any}; zero_series_impedance_threshold::Real=1E-8, shunt_id_prefix::AbstractString="line_loop")
+    @assert data_eng["data_model"]==ENGINEERING
+
+    for (id,line) in data_eng["line"]
+        if line["f_bus"]==line["t_bus"]
+            # obtain impedance parameters, directly or from linecode
+            z_s, y_fr, y_to = _get_line_impedance_parameters(data_eng, line)
+
+            # remove short-circuit line and merge terminals
+            if all(iszero.(y_fr)) && all(iszero.(y_to)) && all(abs.(z_s).<=zero_series_impedance_threshold)
+                for (t_fr, t_to) in zip(line["f_connections"], line["t_connections"])
+                    _merge_terminals!(data_eng, line["f_bus"], sort([t_fr, t_to], rev=true)...)
+                end
+            # convert line to a shunt
+            else
+                shunt = _loop_line_to_shunt(data_eng, id)
+                if !haskey(data_eng, "shunt")
+                    data_eng["shunt"] = Dict{String, Any}()
+                end
+                data_eng["shunt"]["$shunt_id_prefix.$id"] = shunt
+            end
+            # delete the line now that it has been handled
+            delete!(data_eng["line"], id)
+        end
+    end
+
+    # update the 'conductor_ids' property
+    find_conductor_ids!(data_eng)
+
+    return data_eng
+end
+
 "Reduces line models, by removing trailing lines and merging lines in series with the same linecode."
 function reduce_lines!(data_eng::Dict{String,Any})
     delete_trailing_lines!(data_eng)
