@@ -126,6 +126,7 @@ See [`make_per_unit!`](@ref make_per_unit!) for further explanation.
 function transform_data_model(
     data::Dict{String,<:Any};
     kron_reduced::Bool=true,
+    phase_projected::Bool=true,
     multinetwork::Bool=false,
     global_keys::Set{String}=Set{String}(),
     eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
@@ -144,6 +145,7 @@ function transform_data_model(
         data_math = _map_eng2math(
             data;
             kron_reduced=kron_reduced,
+            phase_projected=phase_projected,
             eng2math_extensions=eng2math_extensions,
             eng2math_passthrough=eng2math_passthrough
         )
@@ -164,6 +166,7 @@ end
 function _map_eng2math(
     data_eng::Dict{String,<:Any};
     kron_reduced::Bool=true,
+    phase_projected::Bool=true,
     eng2math_extensions::Vector{<:Function}=Function[],
     eng2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(),
     global_keys::Set{String}=Set{String}(),
@@ -194,6 +197,7 @@ function _map_eng2math(
         end
 
         if !get(data_eng, "is_projected", false)
+        if phase_projected && !get(data_eng, "is_projected", false)
             apply_phase_projection_delta!(nw_eng)
         end
 
