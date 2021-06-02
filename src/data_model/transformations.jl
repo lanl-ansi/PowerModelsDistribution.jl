@@ -657,6 +657,246 @@ function transform_loops!(data_eng::Dict{String,Any}; zero_series_impedance_thre
     return data_eng
 end
 
+
+"Return the Kron-reduction of the specified neutral conductors of a series impedance matrix."
+function _kron_reduce_series_impedance(Z::Matrix, neutral_conductors::Vector{Int})
+    # neutral conductor idxs
+    N = neutral_conductors
+    # phase conductor idxs (complement)
+    P = setdiff(1:size(Z)[1], N)
+
+    Zkr = Z[P,P] - Z[P,N]*inv(Z[N,N])*Z[N,P]
+
+    return Zkr
+end
+
+
+"Return the Kron-reduction of the specified neutral conductors of a shunt addmittance matrix."
+function _kron_reduce_shunt_addmittance(Y::Matrix, neutral_conductors::Vector{Int})
+    # phase conductor idxs (complement)
+    P = setdiff(1:size(Y)[1], neutral_conductors)
+
+    Ykr = Y[P,P]
+
+    return Ykr
+end
+
+
+"Kron-reduce specified neutral conductors of a linecode."
+function _kron_reduce_linecode!(l, neutral_conductors::Vector{Int})
+    z_s = _kron_reduce_series_impedance(l["rs"].+im*l["xs"], neutral_conductors)
+    y_fr = _kron_reduce_shunt_addmittance(l["g_fr"].+im*l["b_fr"], neutral_conductors)
+    y_to = _kron_reduce_shunt_addmittance(l["g_to"].+im*l["b_to"], neutral_conductors)
+    l["rs"] = real.(z_s)
+    l["xs"] = imag.(z_s)
+    l["g_fr"] = real.(y_fr)
+    l["b_fr"] = imag.(y_fr)
+    l["g_to"] = real.(y_to)
+    l["b_to"] = imag.(y_to)
+end
+
+
+"Return the Kron-reduction of the specified neutral conductors of a linecode."
+_kron_reduce_linecode(l, neutral_conductors::Vector{Int}) = _kron_reduce_linecode!(deepcopy(l), neutral_conductors)
+
+
+"""
+Kron-reduce all (implied) neutral conductors of lines, switches and shunts, and remove any terminals which become unconnected. 
+A line or switch conductor is considered as a neutral conductor if it is connected between two neutral terminals. 
+A terminal is a neutral terminals if it is galvanically connected (i.e. through a line or switch) 
+to a grounded terminal, or the neutral conductor of a wye-connected component.
+"""
+function kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})
+    @assert data_eng["data_model"]==ENGINEERING
+
+    # store the original linecode ids to detect naming clashes
+    orig_lc_ids = [keys(data_eng["linecode"])...]
+
+    # obtain all (implicit) neutral terminals
+    nbts = _infer_neutral_terminals(data_eng)
+
+    # Kron-reduce each line if eligible
+    for (id,line) in data_eng["line"]
+        doubly_grounded = [(line["f_bus"],t_fr) in nbts && (line["t_bus"],t_to) in nbts for (t_fr, t_to) in zip(line["f_connections"], line["t_connections"])]
+        if any(doubly_grounded)
+            keep = (!).(doubly_grounded)
+            neutral_conductors = findall(doubly_grounded)
+            _apply_filter!(line, ["f_connections", "t_connections", "cm_ub", "cm_ub_b", "cm_ub_c"], keep)
+            if haskey(line, "linecode")
+                suffix = "_kr_"*join(findall(doubly_grounded), ".")
+                lc_orig_id = line["linecode"]
+                lc_kr_id = lc_orig_id*suffix
+                @assert !(lc_kr_id in orig_lc_ids) "Kron-reduced linecode naming clashes with original linecode names."
+                line["linecode"] = lc_kr_id
+                if !haskey(data_eng["linecode"], lc_kr_id)
+                    data_eng["linecode"][lc_kr_id] = _kron_reduce_linecode(data_eng["linecode"][lc_orig_id], neutral_conductors)
+                end
+            end
+            if haskey(line, "rs")
+                _kron_reduce_linecode!(line, neutral_conductors)
+            end
+        end
+    end
+
+    # Kron-reduce each shunt if eligible
+    for (id,shunt) in data_eng["shunt"]
+        cond_is_neutral = [(shunt["bus"],t) in nbts for t in shunt["connections"]]
+        cond_keep = (!).(cond_is_neutral)
+        _apply_filter!(shunt, ["connections"], cond_keep)
+        Ys = _kron_reduce_shunt_addmittance(shunt["gs"].+im*shunt["bs"], findall(cond_is_neutral))
+        shunt["gs"] = real.(Ys)
+        shunt["bs"] = imag.(Ys)
+    end
+
+    # Kron-reduce each switch if eligible
+    for (id,switch) in data_eng["switch"]
+        doubly_grounded = [(switch["f_bus"],t_fr) in nbts && (switch["t_bus"],t_to) in nbts for (t_fr, t_to) in zip(switch["f_connections"], switch["t_connections"])]
+        if any(doubly_grounded)
+            keep = (!).(doubly_grounded)
+            neutral_conductors = findall(doubly_grounded)
+            _apply_filter!(switch, ["f_connections", "t_connections", "cm_ub", "cm_ub_b", "cm_ub_c"], keep)
+            if haskey(switch, "linecode")
+                suffix = "_kr_"*join(findall(doubly_grounded), ".")
+                lc_orig_id = switch["linecode"]
+                lc_kr_id = lc_orig_id*suffix
+                @assert !(lc_kr_id in orig_lc_ids) "Kron-reduced linecode naming clashes with original linecode names."
+                line["linecode"] = lc_kr_id
+                if !haskey(data_eng["linecode"], lc_kr_id)
+                    data_eng["linecode"][lc_kr_id] = _kron_reduce_linecode(data_eng["linecode"][lc_orig_id], neutral_conductors)
+                end
+            end
+            if haskey(switch, "rs")
+                Zs = _kron_reduce_series_impedance(switch["rs"].+im*switch["xs"], findall(doubly_grounded))
+                switch["rs"] = real.(Zs)
+                switch["xs"] = imag.(Zs)
+            end
+        end
+    end
+
+    # remove unconnected terminals (likely to be caused by earlier Kron-reductions)
+    remove_unconnected_terminals!(data_eng)
+
+    # ground remaining neutral terminals
+    remaining_bts = [(b, t) for (b,bus) in data_eng["bus"] for t in bus["terminals"]]
+    for (b,t) in intersect(nbts, remaining_bts)
+        bus = data_eng["bus"][b]
+        perfectly_grounded = bus["grounded"][iszero.(bus["rg"].+im*bus["xg"])]
+        if !(t in perfectly_grounded)
+            push!(bus["grounded"], t)
+            push!(bus["rg"], 0.0)
+            push!(bus["xg"], 0.0)
+        end
+    end
+
+    # update 'conductor_ids' property
+    find_conductor_ids!(data_eng)
+
+    return data_eng
+end
+
+
+"Remove all terminals which are unconnected (not considering a grounding as a connection)."
+function remove_unconnected_terminals!(data_eng::Dict{String,Any})
+    @assert data_eng["data_model"]==ENGINEERING
+
+    # find all connected bts (a 'bt' is a bus-terminal pair)
+    connected_bts = []
+    for type in setdiff(intersect(pmd_eng_asset_types, keys(data_eng)), ["bus"])
+        for (id,comp) in data_eng[type]
+            if _is_oneport_component(comp)
+                connected_bts = append!(connected_bts, [(comp["bus"],t) for t in comp["connections"]])
+            elseif _is_twoport_component(comp)
+                connected_bts = append!(connected_bts, [(comp["f_bus"],t) for t in comp["f_connections"]])
+                connected_bts = append!(connected_bts, [(comp["t_bus"],t) for t in comp["t_connections"]])
+            elseif _is_multiport_component(comp)
+                for (b_w,conns_w) in zip(comp["bus"], comp["connections"])
+                    connected_bts = append!(connected_bts, [(b_w,t) for t in conns_w])
+                end
+            end
+        end
+    end
+    connected_bts = unique(connected_bts)
+
+    # remove all unconnected bts
+    bts = [(b,t) for (b,bus) in data_eng["bus"] for t in bus["terminals"]]
+    for (b,t) in setdiff(bts, connected_bts)
+        bus = data_eng["bus"][b]
+        keep_ts_order = (!).(bus["terminals"].==t)
+        _apply_filter!(bus, ["terminals", "vm", "va", "vmin", "vmax"], keep_ts_order)
+        if t in bus["grounded"]
+            keep_gr_order = (!).(bus["grounded"].==t)
+            _apply_filter!(bus, ["grounded", "rg", "xg"], keep_gr_order)
+        end
+        #TODO other bounds
+    end
+end
+
+
+"""
+Return a list of all implicit neutrals as a list of bus-terminal pairs. 
+This is done by starting from a list of all terminals which are either
+    a.connected to the neutral of wye-connected components;
+    b. or are grounded.
+This initial list is then expanded to all terminals which are 
+galvanically connected to terminals in the initial list.
+"""
+function _infer_neutral_terminals(data_eng::Dict{String,Any})
+    @assert data_eng["data_model"]==ENGINEERING
+
+    # find all galvanic edges through lines and switches
+    bts = [(b,t) for (b,bus) in data_eng["bus"] for t in bus["terminals"]]
+    bt_neighbours = Dict(bt=>[] for bt in bts)
+    for type in intersect(["line", "switch"], keys(data_eng))
+        for (_,comp) in data_eng[type]
+            f_bus = comp["f_bus"]
+            t_bus = comp["t_bus"]
+            for (t_fr, t_to) in zip(comp["f_connections"], comp["t_connections"])
+                push!(bt_neighbours[(f_bus, t_fr)], (t_bus, t_to))
+                push!(bt_neighbours[(t_bus, t_to)], (f_bus, t_fr))
+            end
+        end
+    end
+
+    # find starpoints of wye-connected devices
+    starpoints = []
+    for type in setdiff(intersect(pmd_eng_asset_types, keys(data_eng)), ["bus", "line", "switch"])
+        for (_,comp) in data_eng[type]
+            if haskey(comp, "configuration")
+                conf = comp["configuration"]
+                if isa(conf, Vector)
+                    for w in 1:length(conf)
+                        if conf[w]==WYE
+                            push!(starpoints, (comp["bus"][w], comp["connections"][w][end]))
+                        end
+                    end
+                else
+                    if conf==WYE
+                        push!(starpoints, (comp["bus"], comp["connections"][end]))
+                    end
+                end
+            end
+        end
+    end
+
+    # find grounded terminals
+    grounded_terminals = [(b,t) for (b,bus) in data_eng["bus"] for t in bus["grounded"]]
+
+    # assign initial neutral terminals
+    nbts = [starpoints..., grounded_terminals...]
+
+    # propagate neutral terminals through galvanic connections
+    stack = deepcopy(nbts)
+    while !isempty(stack)
+        bt = pop!(stack)
+        new_nbts = setdiff(bt_neighbours[bt], nbts)
+        append!(stack, new_nbts)
+        append!(nbts, new_nbts)
+    end
+
+    return nbts
+end
+
+
 "Reduces line models, by removing trailing lines and merging lines in series with the same linecode."
 function reduce_lines!(data_eng::Dict{String,Any})
     delete_trailing_lines!(data_eng)
