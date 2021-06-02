@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fix solar pg/qg bounds calculation in dss2eng parsing (needed to be `/ nphases`)
 - Add ability for `control_mode` on generation objects to get bus_type on connecting buses
 - Fix bug in function signature of `calc_voltage_bases`
 - Fix bug introduced when changing construction of vbases_default in settings

@@ -224,7 +224,7 @@
             @test sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA) < 0.0
             @test sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA) < 0.005
             @test isapprox(sum(sol["solution"]["solar"]["pv1"]["pg"] * baseMVA), 0.0183685; atol=1e-4)
-            @test isapprox(sum(sol["solution"]["solar"]["pv1"]["qg"] * baseMVA), 0.0091449; atol=1e-4)
+            @test isapprox(sum(sol["solution"]["solar"]["pv1"]["qg"] * baseMVA), 0.0048248; atol=1e-4)
         end
 
         @testset "3-bus unbalanced single-phase pv acp opf" begin
