@@ -472,3 +472,168 @@ function apply_voltage_angle_difference_bounds!(eng::Dict{String,<:Any}, vad::Re
         end
     end
 end
+"Reduces line models, by removing trailing lines and merging lines in series with the same linecode."
+function reduce_lines!(data_eng::Dict{String,Any})
+    delete_trailing_lines!(data_eng)
+    join_lines!(data_eng)
+end
+
+
+"Returns a reduced data model, by removing trailing lines and merging lines in series with the same linecode."
+reduce_lines(data_eng::Dict{String,Any}) = reduce_lines!(deepcopy(data_eng))
+
+
+"Reverse the direction of a line."
+function _line_reverse!(line::Dict{String,Any})
+    prop_pairs = [("f_bus", "t_bus"), ("g_fr", "g_to"), ("b_fr","b_to")]
+
+    for (x,y) in prop_pairs
+        if haskey(line, x)
+            tmp = line[x]
+            line[x] = line[y]
+            line[y] = tmp
+        end
+    end
+end
+
+
+"""
+Returns a unique list of all buses specified in the data model.
+The argument 'comp_types' specifies which component types are searched to build the list.
+"""
+function get_defined_buses(data_eng::Dict{String,Any}; comp_types=pmd_eng_asset_types)
+    @assert data_eng["data_model"]==ENGINEERING
+
+    buses_exclude = []
+    for comp_type in intersect(comp_types, keys(data_eng))
+        for (id,comp) in data_eng[comp_type]
+            if haskey(comp, "f_bus")
+                buses = [comp["f_bus"], comp["t_bus"]]
+            elseif haskey(comp, "bus")
+                # works for a vector of buses and a single bus as a string
+                buses = isa(comp["bus"], String) ? [comp["bus"]] : comp["bus"]
+            else
+                buses = []
+            end
+            append!(buses_exclude, buses)
+        end
+    end
+    
+    return unique(buses_exclude)
+end
+
+
+"""
+Deletes trailing lines, 
+i.e. lines connected to a bus with no other connected components and which is not grounded.
+"""
+function delete_trailing_lines!(data_eng::Dict{String,Any})
+    @assert data_eng["data_model"]==ENGINEERING
+    
+    # exclude buses that appear in components other than lines
+    comp_types_exclude = setdiff(pmd_eng_asset_types, ["lines"])
+    buses_exclude = get_defined_buses(data_eng, comp_types=comp_types_exclude)
+
+    # build auxiliary variables
+    line_has_shunt = Dict()
+    bus_lines = Dict(k=>[] for k in keys(data_eng["bus"]))
+    for (id,line) in data_eng["line"]
+        lc = data_eng["linecode"][line["linecode"]]
+        zs, y_fr, y_to = _get_line_impedance_parameters(data_eng, line)
+        line_has_shunt[id] = !iszero(y_fr) || !iszero(y_to)
+        push!(bus_lines[line["f_bus"]], id)
+        push!(bus_lines[line["t_bus"]], id)
+    end
+
+    # eligible buses connect to a single line, and that line should have zero addmittance to ground
+    eligible_buses = [bus_id for (bus_id,line_ids) in bus_lines if length(line_ids)==1 && !line_has_shunt[line_ids[1]]]
+    # exclude buses that connect to a component other than lines
+    eligible_buses = setdiff(eligible_buses, buses_exclude)
+    # exclude buses that are grounded
+    grounded_buses = [bus_id for (bus_id,bus) in data_eng["bus"] if !isempty(bus["grounded"])]
+    eligible_buses = setdiff(eligible_buses, grounded_buses)
+
+    # remove trailing lines and buses
+    while !isempty(eligible_buses)
+        for bus_id in eligible_buses
+            # this trailing bus has one associated line
+            line_id = bus_lines[bus_id][1]
+            line = data_eng["line"][line_id]
+
+            delete!(data_eng["line"], line_id)
+            delete!(data_eng["bus"],  bus_id)
+
+            other_end_bus = line["f_bus"]==bus_id ? line["t_bus"] : line["f_bus"]
+            bus_lines[other_end_bus] = setdiff(bus_lines[other_end_bus], [line_id])
+            delete!(bus_lines,  bus_id)
+        end
+
+        eligible_buses = [bus_id for (bus_id, line_ids) in bus_lines if length(line_ids)==1 && !(bus_id in buses_exclude) && !line_has_shunt[line_ids[1]]]
+    end
+
+    return data_eng
+end
+
+
+"Join lines which are connected in series, and of which the intermediate bus is ungrounded and does not connect to any other components."
+function join_lines!(data_eng::Dict{String,Any})
+    @assert data_eng["data_model"]==ENGINEERING
+
+    # a bus is eligible for reduction if it only appears in exactly two lines
+    buses_all = collect(keys(data_eng["bus"]))
+
+    # exclude buses that appear in components other than lines
+    comp_types_exclude = setdiff(pmd_eng_asset_types, ["lines"])
+    buses_exclude = get_defined_buses(data_eng, comp_types=comp_types_exclude)
+    # exclude buses that are grounded
+    grounded_buses = [bus_id for (bus_id,bus) in data_eng["bus"] if !isempty(bus["grounded"])]
+    buses_exclude = union(buses_exclude, grounded_buses)
+
+    # per bus, list all inbound or outbound lines
+    bus_lines = Dict(bus=>[] for bus in buses_all)
+    for (id,line) in data_eng["line"]
+        push!(bus_lines[line["f_bus"]], id)
+        push!(bus_lines[line["t_bus"]], id)
+    end
+
+    # exclude all buses that do not have exactly two lines connected to it
+    buses_exclude = union(buses_exclude, [bus for (bus,lines) in bus_lines if length(lines)!=2])
+
+    # now loop over remaining buses
+    candidates = setdiff(buses_all, buses_exclude)
+    for bus in candidates
+        line1_id, line2_id = bus_lines[bus]
+        line1 = data_eng["line"][line1_id]
+        line2 = data_eng["line"][line2_id]
+
+        # reverse lines if needed to get the order
+        # (x)--fr-line1-to--(bus)--to-line2-fr--(x)
+        if line1["f_bus"]==bus
+            _line_reverse!(line1)
+        end
+        if line2["f_bus"]==bus
+            _line_reverse!(line2)
+        end
+
+        reducable = true
+        reducable = reducable && line1["linecode"]==line2["linecode"]
+        reducable = reducable && all(line1["t_connections"].==line2["t_connections"])
+        if reducable
+
+            line1["length"] += line2["length"]
+            line1["t_bus"] = line2["f_bus"]
+            line1["t_connections"] = line2["f_connections"]
+
+            delete!(data_eng["line"], line2_id)
+            delete!(data_eng["bus"], bus)
+            for x in candidates
+                if line2_id in bus_lines[x]
+                    bus_lines[x] = [setdiff(bus_lines[x], [line2_id])..., line1_id]
+                end
+            end
+        end
+    end
+
+    return data_eng
+end
+
