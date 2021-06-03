@@ -956,7 +956,7 @@ function delete_trailing_lines!(data_eng::Dict{String,Any})
     @assert data_eng["data_model"]==ENGINEERING
     
     # exclude buses that appear in components other than lines
-    comp_types_exclude = setdiff(pmd_eng_asset_types, ["lines"])
+    comp_types_exclude = setdiff(pmd_eng_asset_types, ["line"])
     buses_exclude = get_defined_buses(data_eng, comp_types=comp_types_exclude)
 
     # build auxiliary variables
@@ -1008,7 +1008,7 @@ function join_lines!(data_eng::Dict{String,Any})
     buses_all = collect(keys(data_eng["bus"]))
 
     # exclude buses that appear in components other than lines
-    comp_types_exclude = setdiff(pmd_eng_asset_types, ["lines"])
+    comp_types_exclude = setdiff(pmd_eng_asset_types, ["line"])
     buses_exclude = get_defined_buses(data_eng, comp_types=comp_types_exclude)
     # exclude buses that are grounded
     grounded_buses = [bus_id for (bus_id,bus) in data_eng["bus"] if !isempty(bus["grounded"])]
