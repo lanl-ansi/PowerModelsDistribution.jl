@@ -1238,12 +1238,8 @@ function add_start_voltage!(data_math::Dict{String,Any}; coordinates=:rectangula
     
     is_mn = haskey(data_math, "multinetwork")
 
-    if ismissing(v_start)
-        v_start = calc_start_voltage(is_mn ? first(data_math["nw"])[2] : data_math, verbose=verbose, epsilon=epsilon)
-    end
-
     for (nw,dm) in (is_mn ? data_math["nw"] : [("", data_math)])
-        if ismissing(v_start)
+        if ismissing(uniform_v_start)
             v_start = calc_start_voltage(dm, verbose=verbose, epsilon=epsilon)
         else
             v_start = uniform_v_start
@@ -1256,7 +1252,7 @@ function add_start_voltage!(data_math::Dict{String,Any}; coordinates=:rectangula
             elseif coordinates==:polar
                 bus["vm_start"] = [ismissing(v_start[(index, t)]) ? vm_default : abs(v_start[(index, t)]) for t in bus["terminals"]]
                 bus["va_start"] = [ismissing(v_start[(index, t)]) ? va_default : angle(v_start[(index, t)]) for t in bus["terminals"]]
-
+            end
         end
     end
 
