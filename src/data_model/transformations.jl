@@ -1083,7 +1083,7 @@ function calc_start_voltage(data_math::Dict{String,Any}; max_iter=Inf, verbose=f
     end
 
     # initialize v_start for all bts to missing
-    v_start = Dict((bus["index"],t)=>missing for (_, bus) in data_math["bus"] for t in bus["terminals"])
+    v_start = Dict{Tuple{Int,Any},Union{Complex,Missing}}((bus["index"],t)=>missing for (_, bus) in data_math["bus"] for t in bus["terminals"])
 
     for (_, bus) in data_math["bus"]
         # set fixed nodes
@@ -1256,7 +1256,7 @@ function add_start_voltage!(data_math::Dict{String,Any}; coordinates=:rectangula
         end
     end
 
-    return v_start
+    return data_math
 end
 
 
