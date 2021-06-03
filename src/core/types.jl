@@ -184,6 +184,24 @@ Applicable to problem formulations with `_iv` in the name.
 """
 mutable struct IVRUPowerModel <: AbstractUnbalancedIVRModel @pmd_fields end
 
+"Abstract Multi-Conductor Current-Voltage (Rectangular) formulation"
+abstract type AbstractMultiConductorIVRModel <: AbstractUnbalancedIVRModel end
+
+"Abstract Non-Linear Multi-Conductor Current-Voltage (Rectangular) formulation"
+abstract type AbstractNLMultiConductorIVRModel <: AbstractMultiConductorIVRModel end
+
+""
+mutable struct IVRMCPowerModel <: AbstractNLMultiConductorIVRModel @pmd_fields end
+
+"Abstract Quadratic Multi-Conductor Current-Voltage (Rectangular) formulation"
+abstract type AbstractQuadraticMultiConductorIVRModel <: AbstractMultiConductorIVRModel end
+
+""
+mutable struct IVRQuadMCPowerModel <: AbstractQuadraticMultiConductorIVRModel @pmd_fields end
+
+""
+mutable struct IVRReducedQuadMCPowerModel <: AbstractQuadraticMultiConductorIVRModel @pmd_fields end
+
 ##### Linear Approximations #####
 
 ""
@@ -289,3 +307,6 @@ const AbstractUnbalancedPolarModels = Union{AbstractUnbalancedACPModel, Abstract
 
 "Collection of convex AbstractUnbalancedPowerModels that include W relaxations"
 const AbstractUnbalancedWConvexModels = Union{AbstractUBFModel}
+
+"Collection of MultiConductor models"
+const MultiConductorModels = Union{AbstractMultiConductorIVRModel}
