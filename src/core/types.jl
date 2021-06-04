@@ -193,14 +193,17 @@ abstract type AbstractNLMultiConductorIVRModel <: AbstractMultiConductorIVRModel
 ""
 mutable struct IVRMCPowerModel <: AbstractNLMultiConductorIVRModel @pmd_fields end
 
+""
+mutable struct IVRReducedMCPowerModel <: AbstractNLMultiConductorIVRModel @pmd_fields end
+
 "Abstract Quadratic Multi-Conductor Current-Voltage (Rectangular) formulation"
 abstract type AbstractQuadraticMultiConductorIVRModel <: AbstractMultiConductorIVRModel end
 
 ""
-mutable struct IVRQuadMCPowerModel <: AbstractQuadraticMultiConductorIVRModel @pmd_fields end
+mutable struct IVRQuadraticMCPowerModel <: AbstractQuadraticMultiConductorIVRModel @pmd_fields end
 
 ""
-mutable struct IVRReducedQuadMCPowerModel <: AbstractQuadraticMultiConductorIVRModel @pmd_fields end
+mutable struct IVRReducedQuadraticMCPowerModel <: AbstractQuadraticMultiConductorIVRModel @pmd_fields end
 
 ##### Linear Approximations #####
 
@@ -310,3 +313,9 @@ const AbstractUnbalancedWConvexModels = Union{AbstractUBFModel}
 
 "Collection of MultiConductor models"
 const MultiConductorModels = Union{AbstractMultiConductorIVRModel}
+
+"Collection of Reduced MultiConductor models, i.e. with no explicit total branch current variables."
+const ReducedMultiConductorIVRModels = Union{IVRReducedQuadraticMCPowerModel,IVRReducedMCPowerModel}
+
+""
+const RectangularMultiConductorModels = Union{AbstractMultiConductorIVRModel}
