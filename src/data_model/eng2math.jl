@@ -2,7 +2,7 @@ import LinearAlgebra: diagm
 
 "items that are mapped one-to-one from engineering to math models"
 const _1to1_maps = Dict{String,Vector{String}}(
-    "bus" => ["vm", "va", "terminals", "phases", "neutral", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub", "dss", "vuf_ub", "vm_pair_lb", "vm_pair_ub"],
+    "bus" => ["vm", "va", "terminals", "phases", "neutral", "vm_ng_ub", "dss", "vuf_ub"],
     "line" => ["f_connections", "t_connections", "dss"],
     "transformer" => ["f_connections", "t_connections", "dss"],
     "switch" => ["status", "f_connections", "t_connections", "dss"],
@@ -300,8 +300,9 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{String
             math_obj["va"] = eng_obj["va"]
         end
 
-        math_obj["vmin"] = get(eng_obj, "vm_lb", fill(0.0, length(terminals)))
-        math_obj["vmax"] = get(eng_obj, "vm_ub", fill(Inf, length(terminals)))
+        math_obj["vmin"], math_obj["vmax"] = _get_tight_absolute_voltage_magnitude_bounds(eng_obj)
+        math_obj["vm_pair_lb"], math_obj["vm_pair_ub"] = _get_tight_pairwise_voltage_magnitude_bounds(eng_obj)
+        _add_implicit_absolute_bounds!(math_obj, terminals)
 
         data_math["bus"]["$(math_obj["index"])"] = math_obj
 
