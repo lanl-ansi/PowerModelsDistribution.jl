@@ -1137,6 +1137,52 @@ function add_unit_vbounds!(data_eng::Dict{String,Any}; lb_pu::Real=0.9, ub_pu::R
 end
 
 
+"""
+Adds symmetric phase-to-neutral and phase-to-phase voltage bounds when possible
+for each bus through the three-phase bus syntax.
+"""
+function add_bus_pn_pp_ng_vbounds!(data_eng::Dict{String,Any}, phase_terminals::Vector, neutral_terminal;
+    pn_lb_pu::Union{Real,Missing}=missing, 
+    pn_ub_pu::Union{Real,Missing}=missing, 
+    pp_lb_pu::Union{Real,Missing}=missing, 
+    pp_ub_pu::Union{Real,Missing}=missing, 
+    ng_ub_pu::Union{Real,Missing}=missing,  
+)
+    bus_vbase, _ = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
+
+    for (id,bus) in data_eng["bus"]
+        vbase = bus_vbase[id]
+        terminals = bus["terminals"]
+
+        has_neutral = neutral_terminal in terminals
+        if has_neutral
+            bus["neutral"] = neutral_terminal
+        end
+        bus_phases = intersect(phase_terminals, terminals)
+        has_phases = !isempty(bus_phases)
+        if has_phases
+            bus["phases"] = bus_phases
+        end
+
+        if has_neutral && !ismissing(ng_ub_pu)
+            bus["vm_ng_ub"] = ng_ub_pu*vbase
+        end
+        if has_phases && has_neutral && !ismissing(pn_lb_pu)
+            bus["vm_pn_lb"] = pn_lb_pu*vbase
+        end
+        if has_phases && has_neutral && !ismissing(pn_ub_pu)
+            bus["vm_pn_ub"] = pn_ub_pu*vbase
+        end
+        if has_phases && length(bus_phases)>1 && !ismissing(pp_lb_pu)
+            bus["vm_pp_lb"] = pp_lb_pu*vbase
+        end
+        if has_phases && length(bus_phases)>1 && !ismissing(pp_ub_pu)
+            bus["vm_pp_ub"] = pp_ub_pu*vbase
+        end
+    end
+end
+
+
 "Calculate no-load starting values for all bus-terminals pairs."
 function calc_start_voltage(data_math::Dict{String,Any}; max_iter=Inf, verbose=false, epsilon::Number=1E-3)
     @assert data_math["data_model"]==MATHEMATICAL
