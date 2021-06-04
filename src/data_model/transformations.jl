@@ -1064,7 +1064,7 @@ end
 
 
 """
-Adds absolute (i.e. indivdially, not between a pair of terminals) voltage bounds through the 'vmin' and 'vmax' property.
+Adds absolute (i.e. indivdially, not between a pair of terminals) voltage bounds through the 'vm_lb' and 'vm_ub' property.
 Bounds are specified in per unit, and automatically converted to SI units by calculating the voltage base. 
 If you change data_eng["settings"]["vbases_default"], the data model transformation will however produce inconsistent bounds in per unit.
 Neutral terminals are automatically detected, and set to [0,phase_ub_pu*vbase]. 
@@ -1074,8 +1074,8 @@ function add_bus_absolute_vbounds!(data_eng::Dict{String,Any}; phase_lb_pu::Real
     bus_vbase, _ = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
     for (id, bus) in data_eng["bus"]
         vbase = bus_vbase[id]
-        bus["vmin"] = [(id,t) in nbts ? 0.0 : phase_lb_pu*vbase for t in bus["terminals"]]
-        bus["vmax"] = [(id,t) in nbts ? neutral_ub_pu*vbase : phase_ub_pu*vbase for t in bus["terminals"]]
+        bus["vm_lb"] = [(id,t) in nbts ? 0.0 : phase_lb_pu*vbase for t in bus["terminals"]]
+        bus["vm_ub"] = [(id,t) in nbts ? neutral_ub_pu*vbase : phase_ub_pu*vbase for t in bus["terminals"]]
     end
     
 end
