@@ -1572,3 +1572,35 @@ function _standardize_cost_terms!(components::Dict{String,<:Any}, comp_order::In
     end
     return modified
 end
+
+
+""
+function _infer_int_dim(connections::Vector, configuration::ConnConfig, kron_reduced)
+    if configuration==WYE
+        if kron_reduced
+            return length(connections)
+        else
+            return length(connections)-1
+        end
+    else # DELTA
+        if length(connections)==2
+            return 1
+        elseif length(connections)==3
+            return 3
+        else
+            error("Only 1 and 3 phase delta-connections are supported.")
+        end
+    end
+end
+
+
+""
+function _infer_int_dim_unit(unit::Dict{String,<:Any}, kron_reduced)
+    return _infer_int_dim(unit["connections"], unit["configuration"], kron_reduced)
+end
+
+
+""
+function _infer_int_dim_transformer(trans::Dict{String,<:Any}, kron_reduced)
+    return _infer_int_dim(trans["f_connections"], trans["configuration"], kron_reduced)
+end
