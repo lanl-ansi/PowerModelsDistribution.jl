@@ -46,6 +46,7 @@ module PowerModelsDistribution
     include("form/apo.jl")
     include("form/dcp.jl")
     include("form/ivr.jl")
+    include("form/ivr_mc.jl")
     include("form/bf.jl")
     include("form/bf_mx.jl")
     include("form/bf_mx_lin.jl")
