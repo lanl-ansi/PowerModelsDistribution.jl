@@ -1063,6 +1063,80 @@ function join_lines!(data_eng::Dict{String,Any})
 end
 
 
+"""
+Adds absolute (i.e. indivdially, not between a pair of terminals) voltage bounds through the 'vmin' and 'vmax' property.
+Bounds are specified in per unit, and automatically converted to SI units by calculating the voltage base. 
+If you change data_eng["settings"]["vbases_default"], the data model transformation will however produce inconsistent bounds in per unit.
+Neutral terminals are automatically detected, and set to [0,phase_ub_pu*vbase]. 
+"""
+function add_bus_absolute_vbounds!(data_eng::Dict{String,Any}; phase_lb_pu::Real=0.9, phase_ub_pu::Real=1.1, neutral_ub_pu::Real=0.3)
+    nbts = _infer_neutral_terminals(data_eng)
+    bus_vbase, _ = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
+    for (id, bus) in data_eng["bus"]
+        vbase = bus_vbase[id]
+        bus["vmin"] = [(id,t) in nbts ? 0.0 : phase_lb_pu*vbase for t in bus["terminals"]]
+        bus["vmax"] = [(id,t) in nbts ? neutral_ub_pu*vbase : phase_ub_pu*vbase for t in bus["terminals"]]
+    end
+    
+end
+
+
+"Generates pairwise bounds for oneport components."
+function _generate_vm_pairs(connections::Vector, model::ConnConfig, lb::Real, ub::Real; delta_multiplier::Real=sqrt(3))
+    vm_pair_ub = []
+    vm_pair_lb = []
+
+    if model==WYE
+        n = connections[end]
+        for p in connections[1:end-1]
+            push!(vm_pair_lb, (p,n,lb))
+            push!(vm_pair_ub, (p,n,ub))
+        end
+    elseif model==DELTA 
+        nphases = length(connections)
+        if nphases==2
+            push!(vm_pair_lb, (connections[1],connections[2],lb*delta_multiplier))
+            push!(vm_pair_ub, (connections[1],connections[2],ub*delta_multiplier))
+        elseif nphases==3
+            for (p,q) in zip(connections, [connections[end], connections[1:end-1]...])
+                push!(vm_pair_lb, (p,q,lb*delta_multiplier))
+                push!(vm_pair_ub, (p,q,ub*delta_multiplier))
+            end
+        else
+            error("Only 2-phase and 3-phase delta-connections components are supported.")
+        end
+    else
+        error("The configuration $model is not supported.")
+    end
+
+    return vm_pair_lb, vm_pair_ub
+end
+
+
+"""
+Adds voltage bounds to the bus terminals to which units are connected. 
+'Units' in this context are all oneport component types specified by the argument 'unit_comp_types'.
+Bounds are specified in per unit, and automatically converted to SI units by calculating the voltage base. 
+If you change data_eng["settings"]["vbases_default"], the data model transformation will however produce inconsistent bounds in per unit.
+The delta multiplier controls the scaling of bounds of delta-connected units.
+"""
+function add_unit_vbounds!(data_eng::Dict{String,Any}; lb_pu::Real=0.9, ub_pu::Real=1.1, delta_multiplier::Real=sqrt(3), unit_comp_types::Vector{<:AbstractString}=["load", "generator", "storage", "pv"])
+    bus_vbase, line_vbase = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
+    for comp_type in intersect(unit_comp_types, keys(data_eng))
+        for (id, unit) in data_eng[comp_type]
+            @assert _is_oneport_component(unit) "The $comp_type $id is not a oneport component."
+            bus_id = unit["bus"]
+            bus = data_eng["bus"][bus_id]
+            unit_vm_pair_lb, unit_vm_pair_ub = _generate_vm_pairs(unit["connections"], unit["configuration"], lb_pu*bus_vbase[bus_id], ub_pu*bus_vbase[bus_id], delta_multiplier=delta_multiplier)
+            bus_vm_pair_lb = haskey(bus, "vm_pair_lb") ? bus["vm_pair_lb"] : []
+            bus_vm_pair_ub = haskey(bus, "vm_pair_ub") ? bus["vm_pair_ub"] : []
+            bus["vm_pair_lb"] = unique(vcat(bus_vm_pair_lb, unit_vm_pair_lb))
+            bus["vm_pair_ub"] = unique(vcat(bus_vm_pair_ub, unit_vm_pair_ub))
+        end
+    end
+end
+
+
 "Calculate no-load starting values for all bus-terminals pairs."
 function calc_start_voltage(data_math::Dict{String,Any}; max_iter=Inf, verbose=false, epsilon::Number=1E-3)
     @assert data_math["data_model"]==MATHEMATICAL
