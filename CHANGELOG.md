@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fix bug in eng2math conversion where "is_kron_reduced" was being looked for in the wrong place
 - Fix solar pg/qg bounds calculation in dss2eng parsing (needed to be `/ nphases`)
 - Add ability for `control_mode` on generation objects to get bus_type on connecting buses
 - Fix bug in function signature of `calc_voltage_bases`

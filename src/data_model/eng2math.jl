@@ -189,7 +189,7 @@ function _map_eng2math(
 
     for (n, nw_eng) in nw_data_eng
         # TODO remove kron reduction from eng2math (breaking)
-        if kron_reduced && !get(data_eng, "is_kron_reduced", false)
+        if kron_reduced && !get(nw_eng, "is_kron_reduced", false)
             apply_kron_reduction!(nw_eng)
         end
 
