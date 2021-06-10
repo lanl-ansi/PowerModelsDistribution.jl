@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fix bug in transformer tap variable creation, where report variable was over all transformers instead of just ones with unfixed taps
 - Fix bug in current bounds calc for branches, where if c_rating_a was missing, calc would fail
 - Fix bug in eng2math conversion where "is_kron_reduced" was being looked for in the wrong place
 - Fix solar pg/qg bounds calculation in dss2eng parsing (needed to be `/ nphases`)

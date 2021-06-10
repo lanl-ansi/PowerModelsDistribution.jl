@@ -511,7 +511,7 @@ function variable_mc_oltc_transformer_tap(pm::AbstractUnbalancedPowerModel; nw::
         end
     end
 
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :transformer, :tap, ids(pm, nw, :transformer), tap)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :transformer, :tap, p_oltc_ids, tap)
 end
 
 
