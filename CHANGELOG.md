@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fix which variables from switch impedance branches get pulled into eng solution (add series current)
 - Add power variables to solution for IVRUPowerModel to switches, similar to how they're implemented for branches
 - Fix missing branch variables `csr_fr` and `csi_fr` from ibase unit conversions
 - Fix `apply_kron_reduction!` to recalculate the `conductor_ids` after the reduction
