@@ -94,7 +94,7 @@ function _fix_nulls!(obj, prop, val)
         obj[prop] = Matrix{dtype}(val)
     elseif isa(val, Vector) && any(v === nothing for v in val)
         @warn "a 'null' was encountered in the json import, making an assumption that null values in $prop = $fill_val"
-        obj[prop] = [v === nothing ? fill_val : v for v in val]
+        obj[prop] = Vector{valtype(val)}[v === nothing ? fill_val : v for v in val]
     elseif val === nothing
         @warn "a 'null' was encountered in the json import, making an assumption that null values in $prop = $fill_val"
         obj[prop] = fill_val
