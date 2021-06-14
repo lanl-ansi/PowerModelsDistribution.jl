@@ -2,6 +2,7 @@
 
 ## staged
 
+- Add power variables to solution for IVRUPowerModel to switches, similar to how they're implemented for branches
 - Fix missing branch variables `csr_fr` and `csi_fr` from ibase unit conversions
 - Fix `apply_kron_reduction!` to recalculate the `conductor_ids` after the reduction
 - Fix bug in transformer tap variable creation, where report variable was over all transformers instead of just ones with unfixed taps

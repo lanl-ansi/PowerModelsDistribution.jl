@@ -77,6 +77,42 @@ end
 
 
 ""
+function variable_mc_switch_current(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+    variable_mc_switch_current_real(pm; nw=nw, bounded=bounded, report=report, kwargs...)
+    variable_mc_switch_current_imaginary(pm; nw=nw, bounded=bounded, report=report, kwargs...)
+
+    # store expressions in rectangular power variable space
+    p = Dict()
+    q = Dict()
+
+    for (l,i,j) in ref(pm, nw, :arcs_switch_from)
+        f_connections = ref(pm, nw, :switch, l, "f_connections")
+        t_connections = ref(pm, nw, :switch, l, "t_connections")
+
+        vr_fr = [var(pm, nw, :vr, i)[c] for c in f_connections]
+        vi_fr = [var(pm, nw, :vi, i)[c] for c in f_connections]
+        cr_fr = [var(pm, nw, :crsw, (l,i,j))[c] for c in f_connections]
+        ci_fr = [var(pm, nw, :cisw, (l,i,j))[c] for c in f_connections]
+
+        vr_to = [var(pm, nw, :vr, j)[c] for c in t_connections]
+        vi_to = [var(pm, nw, :vi, j)[c] for c in t_connections]
+        cr_to = [var(pm, nw, :crsw, (l,j,i))[c] for c in t_connections]
+        ci_to = [var(pm, nw, :cisw, (l,j,i))[c] for c in t_connections]
+        p[(l,i,j)] = vr_fr.*cr_fr  + vi_fr.*ci_fr
+        q[(l,i,j)] = vi_fr.*cr_fr  - vr_fr.*ci_fr
+        p[(l,j,i)] = vr_to.*cr_to  + vi_to.*ci_to
+        q[(l,j,i)] = vi_to.*cr_to  - vr_to.*ci_to
+    end
+
+    var(pm, nw)[:p] = p
+    var(pm, nw)[:q] = q
+
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :psw_fr, :psw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), p)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qsw_fr, :qsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), q)
+end
+
+
+""
 function variable_mc_load_current(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     var(pm, nw)[:crd] = Dict{Int, Any}()
     var(pm, nw)[:cid] = Dict{Int, Any}()
