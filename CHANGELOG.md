@@ -2,6 +2,10 @@
 
 ## staged
 
+- none
+
+## v0.11.3
+
 - Fix `_fix_nulls` data type conversion for vectors from JSON inputs
 - Fix which variables from switch impedance branches get pulled into eng solution (add series current)
 - Add power variables to solution for IVRUPowerModel to switches, similar to how they're implemented for branches
