@@ -495,7 +495,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
             _apply_linecode!(eng_obj, data_eng)
         end
 
-        if !all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && !all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0))
+        if !(all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0)))
             # build virtual bus
 
             f_bus = deepcopy(data_math["bus"]["$(math_obj["f_bus"])"])

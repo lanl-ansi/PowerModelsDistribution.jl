@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Fix eng2math conversion of switches, check for whether to create impedance branches was malformed
 
 ## v0.11.3
 
