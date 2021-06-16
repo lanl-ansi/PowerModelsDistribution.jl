@@ -336,6 +336,8 @@ function _build_loss_model!(
             "bus_i" => length(data_math["bus"])+1,
             "vmin" => fill(0.0, nphases),
             "vmax" => fill(Inf, nphases),
+            "vm_pair_lb" => [],
+            "vm_pair_ub" => [],
             "terminals" => collect(1:nphases),
             "grounded" => fill(false, nphases),
             "base_kv" => 1.0,
@@ -400,6 +402,7 @@ function _build_loss_model!(
             "b_to" => diagm(0=>fill(b_to, nphases)),
             "angmin" => fill(-10.0, nphases),
             "angmax" => fill( 10.0, nphases),
+            "c_rating_a" => fill(Inf, nphases),
             "shift" => zeros(nphases),
             "tap" => ones(nphases),
             "switch" => false,
@@ -957,14 +960,6 @@ function _add_implicit_absolute_bounds!(bus_math, terminals::Vector)
 
     bus_math["vmin"] = vmin
     bus_math["vmax"] = vmax
-    if isempty(lb_keep_idx)
-        delete!(bus_math, "vm_pair_lb")
-    else
-        bus_math["vm_pair_lb"] = vm_pair_lb[lb_keep_idx]
-    end
-    if isempty(ub_keep_idx)
-        delete!(bus_math, "vm_pair_ub")
-    else
-        bus_math["vm_pair_ub"] = vm_pair_ub[ub_keep_idx]
-    end
+    bus_math["vm_pair_lb"] = vm_pair_lb[lb_keep_idx]
+    bus_math["vm_pair_ub"] = vm_pair_ub[ub_keep_idx]
 end
