@@ -619,14 +619,25 @@ function _merge_terminals!(data_eng::Dict{String,Any}, bus_id::String, t_fr, t_t
 end
 
 
-""""
+"""
+    transform_loops!(
+        data_eng::Dict{String,Any}; 
+        zero_series_impedance_threshold::Real=1E-8, 
+        shunt_id_prefix::AbstractString="line_loop"
+    )::Dict{String,Any}
+
 Transform line loops (connected to a single bus), which are not allowed in the mathematical model.
 Lossy line loops are converted to equivalent shunts, and lossless ones (i.e. short-circuits) are represented by merging the short-circuited terminals. 
 The argument 'zero_series_impedance_threshold' controls the threshold below which the series impedance is considered to be a short-ciruit.
 This is useful because OpenDSS modelers have to insert tiny impedances to represent short-circuit reactors. 
 The addmittance to ground should be zero to trigger the short-circuit handling. 
 """
-function transform_loops!(data_eng::Dict{String,Any}; zero_series_impedance_threshold::Real=1E-8, shunt_id_prefix::AbstractString="line_loop")
+function transform_loops!(
+    data_eng::Dict{String,Any}; 
+    zero_series_impedance_threshold::Real=1E-8, 
+    shunt_id_prefix::AbstractString="line_loop"
+    )::Dict{String,Any}
+
     @assert data_eng["data_model"]==ENGINEERING
 
     for (id,line) in data_eng["line"]
@@ -698,12 +709,14 @@ end
 
 
 """
+    kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})::Dict{String,Any}
+
 Kron-reduce all (implied) neutral conductors of lines, switches and shunts, and remove any terminals which become unconnected. 
 A line or switch conductor is considered as a neutral conductor if it is connected between two neutral terminals. 
 A terminal is a neutral terminals if it is galvanically connected (i.e. through a line or switch) 
 to a grounded terminal, or the neutral conductor of a wye-connected component.
 """
-function kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})
+function kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})::Dict{String,Any}
     @assert data_eng["data_model"]==ENGINEERING
 
     # store the original linecode ids to detect naming clashes
@@ -734,6 +747,8 @@ function kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})
                 _kron_reduce_linecode!(line, neutral_conductors)
             end
         end
+
+        return data_eng
     end
 
     # Kron-reduce each shunt if eligible
@@ -793,8 +808,12 @@ function kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})
 end
 
 
-"Remove all terminals which are unconnected (not considering a grounding as a connection)."
-function remove_unconnected_terminals!(data_eng::Dict{String,Any})
+"""
+    remove_unconnected_terminals!(data_eng::Dict{String,Any})::Dict{String,Any}
+
+Remove all terminals which are unconnected (not considering a grounding as a connection).
+"""
+function remove_unconnected_terminals!(data_eng::Dict{String,Any})::Dict{String,Any}
     @assert data_eng["data_model"]==ENGINEERING
 
     # find all connected bts (a 'bt' is a bus-terminal pair)
@@ -827,6 +846,8 @@ function remove_unconnected_terminals!(data_eng::Dict{String,Any})
         end
         #TODO other bounds
     end
+
+    return data_eng
 end
 
 
@@ -895,10 +916,16 @@ function _infer_neutral_terminals(data_eng::Dict{String,Any})
 end
 
 
-"Reduces line models, by removing trailing lines and merging lines in series with the same linecode."
-function reduce_lines!(data_eng::Dict{String,Any})
+"""
+    reduce_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
+
+Reduces line models, by removing trailing lines and merging lines in series with the same linecode.
+"""
+function reduce_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
     delete_trailing_lines!(data_eng)
     join_lines!(data_eng)
+
+    return data_eng
 end
 
 
@@ -921,13 +948,15 @@ end
 
 
 """
+    get_defined_buses(data_eng::Dict{String,Any}; comp_types=pmd_eng_asset_types)::Vector{String}
+
 Returns a unique list of all buses specified in the data model.
 The argument 'comp_types' specifies which component types are searched to build the list.
 """
-function get_defined_buses(data_eng::Dict{String,Any}; comp_types=pmd_eng_asset_types)
+function get_defined_buses(data_eng::Dict{String,Any}; comp_types=pmd_eng_asset_types)::Vector{String}
     @assert data_eng["data_model"]==ENGINEERING
 
-    buses_exclude = []
+    buses_exclude = Vector{String}()
     for comp_type in intersect(comp_types, keys(data_eng))
         for (id,comp) in data_eng[comp_type]
             if haskey(comp, "f_bus")
@@ -947,10 +976,12 @@ end
 
 
 """
+    delete_trailing_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
+
 Deletes trailing lines, 
 i.e. lines connected to a bus with no other connected components and which is not grounded.
 """
-function delete_trailing_lines!(data_eng::Dict{String,Any})
+function delete_trailing_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
     @assert data_eng["data_model"]==ENGINEERING
     
     # exclude buses that appear in components other than lines
@@ -1062,12 +1093,25 @@ end
 
 
 """
+    add_bus_absolute_vbounds!(
+        data_eng::Dict{String,Any}; 
+        phase_lb_pu::Real=0.9, 
+        phase_ub_pu::Real=1.1, 
+        neutral_ub_pu::Real=0.3
+    )::Dict{String,Any}
+
 Adds absolute (i.e. indivdially, not between a pair of terminals) voltage bounds through the 'vm_lb' and 'vm_ub' property.
 Bounds are specified in per unit, and automatically converted to SI units by calculating the voltage base. 
 If you change data_eng["settings"]["vbases_default"], the data model transformation will however produce inconsistent bounds in per unit.
 Neutral terminals are automatically detected, and set to [0,phase_ub_pu*vbase]. 
 """
-function add_bus_absolute_vbounds!(data_eng::Dict{String,Any}; phase_lb_pu::Real=0.9, phase_ub_pu::Real=1.1, neutral_ub_pu::Real=0.3)
+function add_bus_absolute_vbounds!(
+    data_eng::Dict{String,Any}; 
+    phase_lb_pu::Real=0.9, 
+    phase_ub_pu::Real=1.1, 
+    neutral_ub_pu::Real=0.3
+    )::Dict{String,Any}
+
     nbts = _infer_neutral_terminals(data_eng)
     bus_vbase, _ = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
     for (id, bus) in data_eng["bus"]
@@ -1076,6 +1120,7 @@ function add_bus_absolute_vbounds!(data_eng::Dict{String,Any}; phase_lb_pu::Real
         bus["vm_ub"] = [(id,t) in nbts ? neutral_ub_pu*vbase : phase_ub_pu*vbase for t in bus["terminals"]]
     end
     
+    return data_eng
 end
 
 
@@ -1112,13 +1157,28 @@ end
 
 
 """
+    add_unit_vbounds!(
+        data_eng::Dict{String,Any}; 
+        lb_pu::Real=0.9, 
+        ub_pu::Real=1.1, 
+        delta_multiplier::Real=sqrt(3), 
+        unit_comp_types::Vector{<:AbstractString}=["load", "generator", "storage", "pv"],
+    )::Dict{String,Any}
+
 Adds voltage bounds to the bus terminals to which units are connected. 
 'Units' in this context are all oneport component types specified by the argument 'unit_comp_types'.
 Bounds are specified in per unit, and automatically converted to SI units by calculating the voltage base. 
 If you change data_eng["settings"]["vbases_default"], the data model transformation will however produce inconsistent bounds in per unit.
 The delta multiplier controls the scaling of bounds of delta-connected units.
 """
-function add_unit_vbounds!(data_eng::Dict{String,Any}; lb_pu::Real=0.9, ub_pu::Real=1.1, delta_multiplier::Real=sqrt(3), unit_comp_types::Vector{<:AbstractString}=["load", "generator", "storage", "pv"])
+function add_unit_vbounds!(
+    data_eng::Dict{String,Any}; 
+    lb_pu::Real=0.9, 
+    ub_pu::Real=1.1, 
+    delta_multiplier::Real=sqrt(3), 
+    unit_comp_types::Vector{<:AbstractString}=["load", "generator", "storage", "pv"],
+    )::Dict{String,Any}
+
     bus_vbase, line_vbase = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
     for comp_type in intersect(unit_comp_types, keys(data_eng))
         for (id, unit) in data_eng[comp_type]
@@ -1132,10 +1192,20 @@ function add_unit_vbounds!(data_eng::Dict{String,Any}; lb_pu::Real=0.9, ub_pu::R
             bus["vm_pair_ub"] = unique(vcat(bus_vm_pair_ub, unit_vm_pair_ub))
         end
     end
+
+    return data_eng
 end
 
 
 """
+    add_bus_pn_pp_ng_vbounds!(data_eng::Dict{String,Any}, phase_terminals::Vector, neutral_terminal;
+        pn_lb_pu::Union{Real,Missing}=missing, 
+        pn_ub_pu::Union{Real,Missing}=missing, 
+        pp_lb_pu::Union{Real,Missing}=missing, 
+        pp_ub_pu::Union{Real,Missing}=missing, 
+        ng_ub_pu::Union{Real,Missing}=missing,  
+    )::Dict{String,Any}
+
 Adds symmetric phase-to-neutral and phase-to-phase voltage bounds when possible
 for each bus through the three-phase bus syntax.
 """
@@ -1145,7 +1215,8 @@ function add_bus_pn_pp_ng_vbounds!(data_eng::Dict{String,Any}, phase_terminals::
     pp_lb_pu::Union{Real,Missing}=missing, 
     pp_ub_pu::Union{Real,Missing}=missing, 
     ng_ub_pu::Union{Real,Missing}=missing,  
-)
+    )::Dict{String,Any}
+
     bus_vbase, _ = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
 
     for (id,bus) in data_eng["bus"]
@@ -1178,11 +1249,26 @@ function add_bus_pn_pp_ng_vbounds!(data_eng::Dict{String,Any}, phase_terminals::
             bus["vm_pp_ub"] = pp_ub_pu*vbase
         end
     end
+
+    return data_eng
 end
 
 
-"Calculate no-load starting values for all bus-terminals pairs."
-function calc_start_voltage(data_math::Dict{String,Any}; max_iter=Inf, epsilon::Number=1E-3)
+"""
+    calc_start_voltage(
+        data_math::Dict{String,Any}; 
+        max_iter=Inf, 
+        epsilon::Number=1E-3
+    )::Dict{Tuple{Int,Any},Union{Complex,Missing}}
+
+Calculate no-load starting values for all bus-terminals pairs.
+"""
+function calc_start_voltage(
+    data_math::Dict{String,Any}; 
+    max_iter=Inf, 
+    epsilon::Number=1E-3
+    )::Dict{Tuple{Int,Any},Union{Complex,Missing}}
+
     if haskey(data_math, "multinetwork")
         @assert !data_math["multinetwork"] "This method should be called on individual networks."
     end
@@ -1346,12 +1432,33 @@ end
 
 
 """
+    add_start_voltage!(
+        data_math::Dict{String,Any}; 
+        coordinates=:rectangular, 
+        uniform_v_start=missing, 
+        vr_default=0.0, 
+        vi_default=0.0, 
+        vm_default=0.0, 
+        va_default=0.0, 
+        epsilon::Number=1E-3,
+    )::Dict{String,Any}
+
 Adds start values for the voltage to the buses.
 For a multinetwork data model, you can calculate the start voltages for a representative network through 'calc_start_voltage',
 and pass the result as 'uniform_v_start' to use the same values for all networks and avoid recalculating it for each network. 
 The argument 'epsilon' controls the offset added to ungrounded terminals which would otherwise be set to zero.
 """
-function add_start_voltage!(data_math::Dict{String,Any}; coordinates=:rectangular, uniform_v_start=missing, vr_default=0.0, vi_default=0.0, vm_default=0.0, va_default=0.0, epsilon::Number=1E-3)
+function add_start_voltage!(
+    data_math::Dict{String,Any}; 
+    coordinates=:rectangular, 
+    uniform_v_start=missing, 
+    vr_default=0.0, 
+    vi_default=0.0, 
+    vm_default=0.0, 
+    va_default=0.0, 
+    epsilon::Number=1E-3,
+    )::Dict{String,Any}
+
     @assert data_math["data_model"]==MATHEMATICAL
     @assert coordinates in [:polar, :rectangular] "Legal values for the 'coordinates' argument are [:polar,:rectangular], not :$coordinates."
     
@@ -1379,9 +1486,17 @@ function add_start_voltage!(data_math::Dict{String,Any}; coordinates=:rectangula
 end
 
 
-"Short-hand for add_start_voltage! with rectangular coordinates."
+"""
+    add_start_vrvi!(data_math::Dict{String,Any}; kwargs...)
+
+    Short-hand for [`add_start_voltage`](@ref add_start_voltage) with rectangular coordinates (coordinates=:rectangular).
+"""
 add_start_vrvi!(data_math::Dict{String,Any}; kwargs...) = add_start_voltage!(data_math, coordinates=:rectangular, kwargs...)
 
 
-"Short-hand for add_start_voltage! with polar coordinates."
+"""
+    add_start_vmva!(data_math::Dict{String,Any}; kwargs...)
+
+Short-hand for [`add_start_voltage`](@ref add_start_voltage) with polar coordinates (coordinates=:polar).
+"""
 add_start_vmva!(data_math::Dict{String,Any}; kwargs...) = add_start_voltage!(data_math, coordinates=:polar, kwargs...)
