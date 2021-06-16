@@ -514,6 +514,7 @@ function _loop_line_to_shunt(data_eng::Dict{String,Any}, line_id::AbstractString
 
     # obtain impedance parameters, directly or from linecode
     z_s, y_fr, y_to = _get_line_impedance_parameters(data_eng, line)
+    y_s = inv(z_s)
 
     # build shunt addmittance
     Yb = [y_s+y_fr -y_s; -y_s y_s+y_to]
@@ -696,10 +697,6 @@ function _kron_reduce_linecode!(l, neutral_conductors::Vector{Int})
 end
 
 
-"Return the Kron-reduction of the specified neutral conductors of a linecode."
-_kron_reduce_linecode(l, neutral_conductors::Vector{Int}) = _kron_reduce_linecode!(deepcopy(l), neutral_conductors)
-
-
 """
 Kron-reduce all (implied) neutral conductors of lines, switches and shunts, and remove any terminals which become unconnected. 
 A line or switch conductor is considered as a neutral conductor if it is connected between two neutral terminals. 
@@ -716,7 +713,7 @@ function kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})
     nbts = _infer_neutral_terminals(data_eng)
 
     # Kron-reduce each line if eligible
-    for (id,line) in data_eng["line"]
+    for (id,line) in get(data_eng, "line", Dict())
         doubly_grounded = [(line["f_bus"],t_fr) in nbts && (line["t_bus"],t_to) in nbts for (t_fr, t_to) in zip(line["f_connections"], line["t_connections"])]
         if any(doubly_grounded)
             keep = (!).(doubly_grounded)
@@ -729,7 +726,8 @@ function kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})
                 @assert !(lc_kr_id in orig_lc_ids) "Kron-reduced linecode naming clashes with original linecode names."
                 line["linecode"] = lc_kr_id
                 if !haskey(data_eng["linecode"], lc_kr_id)
-                    data_eng["linecode"][lc_kr_id] = _kron_reduce_linecode(data_eng["linecode"][lc_orig_id], neutral_conductors)
+                    data_eng["linecode"][lc_kr_id] = lc = deepcopy(data_eng["linecode"][lc_orig_id])
+                    _kron_reduce_linecode!(lc, neutral_conductors)
                 end
             end
             if haskey(line, "rs")
@@ -739,7 +737,7 @@ function kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})
     end
 
     # Kron-reduce each shunt if eligible
-    for (id,shunt) in data_eng["shunt"]
+    for (id,shunt) in get(data_eng, "shunt", Dict())
         cond_is_neutral = [(shunt["bus"],t) in nbts for t in shunt["connections"]]
         cond_keep = (!).(cond_is_neutral)
         _apply_filter!(shunt, ["connections"], cond_keep)
@@ -749,7 +747,7 @@ function kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})
     end
 
     # Kron-reduce each switch if eligible
-    for (id,switch) in data_eng["switch"]
+    for (id,switch) in get(data_eng, "switch", Dict())
         doubly_grounded = [(switch["f_bus"],t_fr) in nbts && (switch["t_bus"],t_to) in nbts for (t_fr, t_to) in zip(switch["f_connections"], switch["t_connections"])]
         if any(doubly_grounded)
             keep = (!).(doubly_grounded)
@@ -1185,7 +1183,12 @@ end
 
 "Calculate no-load starting values for all bus-terminals pairs."
 function calc_start_voltage(data_math::Dict{String,Any}; max_iter=Inf, verbose=false, epsilon::Number=1E-3)
-    @assert data_math["data_model"]==MATHEMATICAL
+    if haskey(data_math, "multinetwork")
+        @assert !data_math["multinetwork"] "This method should be called on individual networks."
+    end
+    if haskey(data_math, "data_model")
+        @assert data_math["data_model"]==MATHEMATICAL
+    end
 
     node_links = Dict(vcat([[((bus["index"],t), []) for t in bus["terminals"]] for (_, bus) in data_math["bus"]]...))
     for (id, comp) in [data_math["branch"]..., data_math["switch"]...]
