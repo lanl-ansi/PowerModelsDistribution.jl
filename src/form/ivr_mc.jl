@@ -1,10 +1,7 @@
 # TODO 
 # - reorganize load constraints across power and current
-# - add switches according to same pattern
-# - make total current variables and reduced version
-# - add branch current constraints
-# - adds bounds for load power variables
-# - current loads bounds in variable instead of constraint
+# - add switch current constraints
+# - rating to limit rename
 
 # BUS
 
@@ -29,11 +26,9 @@ function variable_mc_bus_voltage_real(pm::AbstractMultiConductorIVRModel; nw::In
 
     if bounded
         for (i,bus) in ref(pm, nw, :bus)
-            if haskey(bus, "vmax")
-                for (idx,t) in enumerate(terminals[i])
-                    set_lower_bound(vr[i][t], -bus["vmax"][idx])
-                    set_upper_bound(vr[i][t],  bus["vmax"][idx])
-                end
+            for (idx,t) in enumerate(terminals[i])
+                set_lower_bound(vr[i][t], -bus["vmax"][idx])
+                set_upper_bound(vr[i][t],  bus["vmax"][idx])
             end
         end
     end
@@ -57,11 +52,9 @@ function variable_mc_bus_voltage_imaginary(pm::AbstractMultiConductorIVRModel; n
 
     if bounded
         for (i,bus) in ref(pm, nw, :bus)
-            if haskey(bus, "vmax")
-                for (idx,t) in enumerate(terminals[i])
-                    set_lower_bound(vi[i][t], -bus["vmax"][idx])
-                    set_upper_bound(vi[i][t],  bus["vmax"][idx])
-                end
+            for (idx,t) in enumerate(terminals[i])
+                set_lower_bound(vi[i][t], -bus["vmax"][idx])
+                set_upper_bound(vi[i][t],  bus["vmax"][idx])
             end
         end
     end
@@ -91,10 +84,10 @@ function constraint_mc_current_balance(pm::AbstractMultiConductorIVRModel, nw::I
     cid   = get(var(pm, nw),   :cid_bus, Dict()); _check_var_keys(cid, bus_loads, "imaginary current", "load")
     crg   = get(var(pm, nw),   :crg_bus, Dict()); _check_var_keys(crg, bus_gens, "real current", "generator")
     cig   = get(var(pm, nw),   :cig_bus, Dict()); _check_var_keys(cig, bus_gens, "imaginary current", "generator")
-    # crs   = get(var(pm, nw),   :crs, Dict()); _check_var_keys(crs, bus_storage, "real currentr", "storage")
-    # cis   = get(var(pm, nw),   :cis, Dict()); _check_var_keys(cis, bus_storage, "imaginary current", "storage")
-    # crsw  = get(var(pm, nw),  :crsw, Dict()); _check_var_keys(crsw, bus_arcs_sw, "real current", "switch")
-    # cisw  = get(var(pm, nw),  :cisw, Dict()); _check_var_keys(cisw, bus_arcs_sw, "imaginary current", "switch")
+    crs   = get(var(pm, nw),   :crs_bus, Dict()); _check_var_keys(crs, bus_storage, "real currentr", "storage")
+    cis   = get(var(pm, nw),   :cis_bus, Dict()); _check_var_keys(cis, bus_storage, "imaginary current", "storage")
+    crsw  = get(var(pm, nw),  :crsw, Dict()); _check_var_keys(crsw, bus_arcs_sw, "real current", "switch")
+    cisw  = get(var(pm, nw),  :cisw, Dict()); _check_var_keys(cisw, bus_arcs_sw, "imaginary current", "switch")
     crt   = get(var(pm, nw),   :crt_bus, Dict()); _check_var_keys(crt, bus_arcs_trans, "real current", "transformer")
     cit   = get(var(pm, nw),   :cit_bus, Dict()); _check_var_keys(cit, bus_arcs_trans, "imaginary current", "transformer")
 
@@ -106,28 +99,71 @@ function constraint_mc_current_balance(pm::AbstractMultiConductorIVRModel, nw::I
         # @smart_constraint(pm.model,  [cr, crd, crg, crs, crsw, crt, vr],
         @smart_constraint(pm.model,  [cr, crd, crg, crt, vr],
                                       sum(cr[a][t] for (a, conns) in bus_arcs if t in conns)
-                                    # + sum(crsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
+                                    + sum(crsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
                                     + sum(crt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
                                     ==
                                       sum(crg[g][t]         for (g, conns) in bus_gens if t in conns)
-                                    # - sum(crs[s][t]         for (s, conns) in bus_storage if t in conns)
+                                    - sum(crs[s][t]         for (s, conns) in bus_storage if t in conns)
                                     - sum(crd[d][t]         for (d, conns) in bus_loads if t in conns)
                                     - sum( Gt[idx,jdx]*vr[u] -Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals) # shunts
                                     )
         # @smart_constraint(pm.model, [ci, cid, cig, cis, cisw, cit, vi],
         @smart_constraint(pm.model, [ci, cid, cig, cit, vi],
                                       sum(ci[a][t] for (a, conns) in bus_arcs if t in conns)
-                                    # + sum(cisw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
+                                    + sum(cisw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
                                     + sum(cit[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
                                     ==
                                       sum(cig[g][t]         for (g, conns) in bus_gens if t in conns)
-                                    # - sum(cis[s][t]         for (s, conns) in bus_storage if t in conns)
+                                    - sum(cis[s][t]         for (s, conns) in bus_storage if t in conns)
                                     - sum(cid[d][t]         for (d, conns) in bus_loads if t in conns)
                                     - sum( Gt[idx,jdx]*vi[u] +Bt[idx,jdx]*vr[u] for (jdx,u) in ungrounded_terminals) # shunts
                                     )
     end
 end
 
+
+""
+function constraint_mc_voltage_absolute(pm::AbstractMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+    bus = ref(pm, nw, :bus, id)
+
+    constraint_mc_voltage_absolute(pm, nw, id, bus["terminals"], bus["grounded"], bus["vmin"], bus["vmax"])
+end
+
+
+""
+function constraint_mc_voltage_absolute(pm::AbstractMultiConductorIVRModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, vmin::Vector{<:Real}, vmax::Vector{<:Real}; report::Bool=true)
+    vr = var(pm, nw, :vr, i)
+    vi = var(pm, nw, :vi, i)
+
+    ungrounded_terminals = terminals[(!).(grounded)]
+    JuMP.@constraint(pm.model, [t in ungrounded_terminals], vmin[t]^2 <= vr[t]^2+vi[t]^2 <= vmax[t]^2)
+end
+
+
+""
+function constraint_mc_voltage_pairwise(pm::AbstractMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+    bus = ref(pm, nw, :bus, id)
+
+    vm_pair_lb = bus["vm_pair_lb"]
+    vm_pair_ub = bus["vm_pair_ub"]
+
+    constraint_mc_voltage_pairwise(pm, nw, id, bus["terminals"], bus["grounded"], vm_pair_lb, vm_pair_ub)
+end
+
+
+""
+function constraint_mc_voltage_pairwise(pm::AbstractMultiConductorIVRModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, vm_pair_lb::Vector, vm_pair_ub::Vector; report::Bool=true)
+    vr = var(pm, nw, :vr, i)
+    vi = var(pm, nw, :vi, i)
+
+    for (a,b,lb) in vm_pair_lb
+        JuMP.@constraint(pm.model, (vr[a]-vr[b])^2 + (vi[a]-vi[b])^2 <= lb^2)
+    end
+
+    for (a,b,ub) in vm_pair_ub
+        JuMP.@constraint(pm.model, (vr[a]-vr[b])^2 + (vi[a]-vi[b])^2 <= ub^2)
+    end
+end
 
 # GENERATOR
 
@@ -184,12 +220,8 @@ function variable_mc_generator_power_real(pm::AbstractMultiConductorIVRModel; nw
 
     if bounded
         for (i,gen) in ref(pm, nw, :gen)
-            if haskey(gen, "pmin")
-                set_lower_bound.(pg[i], gen["pmin"])
-            end
-            if haskey(gen, "pmax")
-                set_upper_bound.(pg[i], gen["pmax"])
-            end
+            set_lower_bound.(pg[i], gen["pmin"])
+            set_upper_bound.(pg[i], gen["pmax"])
         end
     end
 
@@ -208,12 +240,8 @@ function variable_mc_generator_power_imaginary(pm::AbstractMultiConductorIVRMode
 
     if bounded
         for (i,gen) in ref(pm, nw, :gen)
-            if haskey(gen, "qmin")
-                set_lower_bound.(qg[i], gen["qmin"])
-            end
-            if haskey(gen, "qmax")
-                set_upper_bound.(qg[i], gen["qmax"])
-            end
+            set_lower_bound.(qg[i], gen["qmin"])
+            set_upper_bound.(qg[i], gen["qmax"])
         end
     end
 
@@ -402,8 +430,8 @@ function constraint_mc_generator_power_delta(pm::AbstractQuadraticMultiConductor
     pg = var(pm, nw, :pg, id)
     qg = var(pm, nw, :qg, id)
 
-    JuMP.@constraint(pm.model, pg[p] .==  vrg.*crg .+ vig.*cig)
-    JuMP.@constraint(pm.model, qg[p] .== -vrg.*cig .+ vig.*crg)
+    JuMP.@constraint(pm.model, pg .==  vrg.*crg .+ vig.*cig)
+    JuMP.@constraint(pm.model, qg .== -vrg.*cig .+ vig.*crg)
 end
 
 
@@ -516,18 +544,7 @@ function variable_mc_load_power_real(pm::AbstractQuadraticMultiConductorIVRModel
         ) for i in load_ids_current
     )
 
-    # if bounded
-    #     for (i,load) in ref(pm, nw, :gen)
-    #         if haskey(gen, "pmin")
-    #             set_lower_bound.(pg[i], gen["pmin"])
-    #         end
-    #         if haskey(gen, "pmax")
-    #             set_upper_bound.(pg[i], gen["pmax"])
-    #         end
-    #     end
-    # end
-
-    # report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :pd, ids(pm, nw, :load), pd)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :pd, load_ids_current, pd)
 end
 
 
@@ -542,18 +559,7 @@ function variable_mc_load_power_imaginary(pm::AbstractQuadraticMultiConductorIVR
         ) for i in load_ids_current
     )
 
-    # if bounded
-    #     for (i,gen) in ref(pm, nw, :gen)
-    #         if haskey(gen, "qmin")
-    #             set_lower_bound.(qg[i], gen["qmin"])
-    #         end
-    #         if haskey(gen, "qmax")
-    #             set_upper_bound.(qg[i], gen["qmax"])
-    #         end
-    #     end
-    # end
-
-    # report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :qd, ids(pm, nw, :load), qd)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :qd, load_ids_current, qd)
 end
 
 
@@ -736,6 +742,12 @@ function constraint_mc_load_power_wye(pm::AbstractQuadraticMultiConductorIVRMode
 
     JuMP.@constraint(pm.model, pd .==  vr_pn.*crd .+ vi_pn.*cid)
     JuMP.@constraint(pm.model, qd .== -vr_pn.*cid .+ vi_pn.*crd)
+
+    # constant current loads are already reported through variable function
+    if report && model!=CURRENT
+        sol(pm, nw, :load, id)[:pd] = pd
+        sol(pm, nw, :load, id)[:qd] = qd
+    end
 end
 
 
@@ -773,6 +785,12 @@ function constraint_mc_load_power_delta(pm::AbstractQuadraticMultiConductorIVRMo
 
     JuMP.@constraint(pm.model, pd .==  vrd.*crd .+ vid.*cid)
     JuMP.@constraint(pm.model, qd .== -vrd.*cid .+ vid.*crd)
+
+    # constant current loads are already reported through variable function
+    if report && model!=CURRENT
+        sol(pm, nw, :load, id)[:pd] = pd
+        sol(pm, nw, :load, id)[:qd] = qd
+    end
 end
 
 
@@ -824,63 +842,100 @@ end
 "variable: `cr[l,i,j]` for `(l,i,j)` in `arcs`"
 function variable_mc_transformer_current_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
-    cr = var(pm, nw)[:crt] = Dict((l,i,j) => JuMP.@variable(pm.model,
+    crt = var(pm, nw)[:crt] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:int_dim[l]], base_name="$(nw)_crt_$((l,i,j))",
-            start = comp_start_value(ref(pm, nw, :transformer, l), "cr_start", c, 0.0)
+            start = comp_start_value(ref(pm, nw, :transformer, l), "crt_start", c, 0.0)
         ) for (l,i,j) in ref(pm, nw, :arcs_transformer)
     )
-    
 
-    # if bounded
-    #     for (l,i,j) in ref(pm, nw, :arcs_transformer_from)
-    #         trans = ref(pm, nw, :transformer, l)
-    #         f_bus = ref(pm, nw, :bus, i)
-    #         t_bus = ref(pm, nw, :bus, j)
-    #         cmax_fr, cmax_to = _calc_transformer_current_max_frto(trans, f_bus, t_bus)
-    #         for (idx, (fc,tc)) in enumerate(zip(trans["f_connections"], trans["t_connections"]))
-    #             set_lower_bound(cr[(l,i,j)][fc], -cmax_fr[idx])
-    #             set_upper_bound(cr[(l,i,j)][fc],  cmax_fr[idx])
-    #             set_lower_bound(cr[(l,j,i)][tc], -cmax_to[idx])
-    #             set_upper_bound(cr[(l,j,i)][tc],  cmax_to[idx])
-    #         end
-    #     end
-    # end
-
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :cr_fr, :cr_to, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), cr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :crt_fr, :crt_to, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), crt)
 end
 
 
 "variable: `ci[l,i,j] ` for `(l,i,j)` in `arcs`"
 function variable_mc_transformer_current_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
-    ci = var(pm, nw)[:cit] = Dict((l,i,j) => JuMP.@variable(pm.model,
+    cit = var(pm, nw)[:cit] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:int_dim[l]], base_name="$(nw)_cit_$((l,i,j))",
-            start = comp_start_value(ref(pm, nw, :transformer, l), "ci_start", c, 0.0)
+            start = comp_start_value(ref(pm, nw, :transformer, l), "cit_start", c, 0.0)
         ) for (l,i,j) in ref(pm, nw, :arcs_transformer)
     )
 
-    # if bounded
-    #     for (l,i,j) in ref(pm, nw, :arcs_transformer_from)
-    #         trans = ref(pm, nw, :transformer, l)
-    #         f_bus = ref(pm, nw, :bus, i)
-    #         t_bus = ref(pm, nw, :bus, j)
-    #         cmax_fr, cmax_to = _calc_transformer_current_max_frto(trans, f_bus, t_bus)
-    #         for (idx, (fc,tc)) in enumerate(zip(trans["f_connections"], trans["t_connections"]))
-    #             set_lower_bound(ci[(l,i,j)][fc], -cmax_fr[idx])
-    #             set_upper_bound(ci[(l,i,j)][fc],  cmax_fr[idx])
-    #             set_lower_bound(ci[(l,j,i)][tc], -cmax_to[idx])
-    #             set_upper_bound(ci[(l,j,i)][tc],  cmax_to[idx])
-    #         end
-    #     end
-    # end
-
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :ci_fr, :ci_to, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), ci)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :cit_fr, :cit_to, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), cit)
 end
 
 
+""
+function variable_mc_transformer_power_active(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
+    pt = var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in 1:int_dim[l]], base_name="$(nw)_pt_$((l,i,j))",
+            start = comp_start_value(ref(pm, nw, :transformer, l), "pt_start", c, 0.0)
+        ) for (l,i,j) in ref(pm, nw, :arcs_transformer)
+    )
+    
+    if bounded
+        for (l,i,j) in ref(pm, nw, :arcs_transformer_from)
+            trans = ref(pm, nw, :transformer, l)
+            f_bus = ref(pm, nw, :bus, i)
+            t_bus = ref(pm, nw, :bus, j)
+            sm_ub = trans["sm_ub"]
+            set_lower_bound(pt[(l,i,j)], -sm_ub)
+            set_upper_bound(pt[(l,i,j)],  sm_ub)
+            set_lower_bound(pt[(l,j,i)], -sm_ub)
+            set_upper_bound(pt[(l,j,i)],  sm_ub)
+        end
+    end
+
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :pt_fr, :pt_to, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), pt)
+end
+
+
+""
+function variable_mc_transformer_power_reactive(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
+    qt = var(pm, nw)[:qt] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in 1:int_dim[l]], base_name="$(nw)_qt_$((l,i,j))",
+            start = comp_start_value(ref(pm, nw, :transformer, l), "qt_start", c, 0.0)
+        ) for (l,i,j) in ref(pm, nw, :arcs_transformer)
+    )
+    
+    if bounded
+        for (l,i,j) in ref(pm, nw, :arcs_transformer_from)
+            trans = ref(pm, nw, :transformer, l)
+            f_bus = ref(pm, nw, :bus, i)
+            t_bus = ref(pm, nw, :bus, j)
+            sm_ub = trans["sm_ub"]
+            set_lower_bound(qt[(l,i,j)], -sm_ub)
+            set_upper_bound(qt[(l,i,j)],  sm_ub)
+            set_lower_bound(qt[(l,j,i)], -sm_ub)
+            set_upper_bound(qt[(l,j,i)],  sm_ub)
+        end
+    end
+
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :qt_fr, :qt_to, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), qt)
+end
+
+
+# TRANSFORMER -  Variable - Non-linear
+
+""
+function variable_mc_transformer_power(pm::AbstractNLMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+    # do nothing    
+end
+
+
+# TRANSFORMER - Variable - Quadratic
+
+""
+function variable_mc_transformer_power(pm::AbstractQuadraticMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+    variable_mc_transformer_power_active(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    variable_mc_transformer_power_reactive(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+end
+
 # Constraints
 
-"Transformer constraints, considering winding type, conductor order, polarity and tap settings."
+""
 function constraint_mc_transformer_voltage(pm::AbstractMultiConductorIVRModel, i::Int; nw::Int=nw_id_default, fix_taps::Bool=true)
     # if ref(pm, nw_id_default, :conductors)!=3
     #     error("Transformers only work with networks with three conductors.")
@@ -1032,6 +1087,128 @@ function constraint_mc_transformer_current_dy(pm::AbstractMultiConductorIVRModel
 end
 
 
+""
+function constraint_mc_transformer_power_rating(pm::AbstractMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+    trans = ref(pm, nw, :transformer, id)
+    f_bus = trans["f_bus"]
+    t_bus = trans["t_bus"]
+    f_idx = (id,f_bus,t_bus)
+    t_idx = (id,t_bus,f_bus)
+    f_conns = trans["f_connections"]
+    t_conns = trans["t_connections"]
+    config = trans["configuration"]
+    sm_ub = trans["sm_ub"]
+
+    constraint_mc_transformer_power_rating(pm, nw, id, f_idx, t_idx, f_bus, t_bus, f_conns, t_conns, config, sm_ub)
+end
+
+
+""
+function constraint_mc_transformer_power_rating(pm::AbstractMultiConductorIVRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
+    vr_fr = var(pm, nw, :vr, f_bus)
+    vi_fr = var(pm, nw, :vi, f_bus)
+    vr_to = var(pm, nw, :vr, t_bus)
+    vi_to = var(pm, nw, :vi, t_bus)
+
+    crt_fr = var(pm, nw, :crt, f_idx)
+    cit_fr = var(pm, nw, :cit, f_idx)
+    crt_to = var(pm, nw, :crt, t_idx)
+    cit_to = var(pm, nw, :cit, t_idx)
+
+    if config==WYE || length(crt_fr)==1
+        P_fr = f_connections[1:end-1]
+        n_fr = f_connections[end]
+        vrt_fr = [vr_fr[p]-vr_fr[n_fr] for p in P_fr]
+        vit_fr = [vi_fr[p]-vi_fr[n_fr] for p in P_fr]
+    elseif config==DELTA && length(crt_fr)==3
+        M = _get_delta_transformation_matrix(3)
+        vrt_fr = M*[vr_to[p] for p in f_connections]
+        vit_fr = M*[vi_to[p] for p in f_connections]
+    else
+        error("The configuration $config of dimension $(length(crt)) is not supported.")
+    end
+
+    P_to = t_connections[1:end-1]
+    n_to = t_connections[end]
+    vrt_to = [vr_to[p]-vr_to[n_to] for p in P_to]
+    vit_to = [vi_to[p]-vi_to[n_to] for p in P_to]
+
+    idxs = [1:length(vrt_fr)...]
+    pt_fr = JuMP.@NLexpression(pm.model, [i in idxs],  vrt_fr[i]*crt_fr[i] + vit_fr[i]*cit_fr[i])
+    qt_fr = JuMP.@NLexpression(pm.model, [i in idxs], -vrt_fr[i]*cit_fr[i] + vit_fr[i]*crt_fr[i])
+    pt_to = JuMP.@NLexpression(pm.model, [i in idxs],  vrt_to[i]*crt_to[i] + vit_to[i]*cit_to[i])
+    qt_to = JuMP.@NLexpression(pm.model, [i in idxs], -vrt_to[i]*cit_to[i] + vit_to[i]*crt_to[i])
+
+    if sm_ub<Inf
+        JuMP.@NLconstraint(pm.model, sum(pt_fr[i] for i in idxs)^2 + sum(qt_fr[i] for i in idxs)^2 <= sm_ub^2)
+        JuMP.@NLconstraint(pm.model, sum(pt_to[i] for i in idxs)^2 + sum(qt_to[i] for i in idxs)^2 <= sm_ub^2)
+    end
+
+    if report
+        sol(pm, nw, :transformer, id)[:pt_fr] = pt_fr
+        sol(pm, nw, :transformer, id)[:qt_fr] = qt_fr
+        sol(pm, nw, :transformer, id)[:pt_to] = pt_to
+        sol(pm, nw, :transformer, id)[:qt_to] = qt_to
+        sol(pm, nw, :transformer, id)[:smtot_fr] = JuMP.@NLexpression(pm.model, sqrt(sum(pt_fr[i] for i in idxs)^2 + sum(qt_fr[i] for i in idxs)^2))
+        sol(pm, nw, :transformer, id)[:smtot_to] = JuMP.@NLexpression(pm.model, sqrt(sum(pt_to[i] for i in idxs)^2 + sum(qt_to[i] for i in idxs)^2))
+    end
+end
+
+
+# TRANSFORMER - Constraint - Quadratic
+
+""
+function constraint_mc_transformer_power_rating(pm::AbstractQuadraticMultiConductorIVRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
+    vr_fr = var(pm, nw, :vr, f_bus)
+    vi_fr = var(pm, nw, :vi, f_bus)
+    vr_to = var(pm, nw, :vr, t_bus)
+    vi_to = var(pm, nw, :vi, t_bus)
+
+    crt_fr = var(pm, nw, :crt, f_idx)
+    cit_fr = var(pm, nw, :cit, f_idx)
+    crt_to = var(pm, nw, :crt, t_idx)
+    cit_to = var(pm, nw, :cit, t_idx)
+
+    if config==WYE || length(crt_fr)==1
+        P_fr = f_connections[1:end-1]
+        n_fr = f_connections[end]
+        vrt_fr = [vr_fr[p]-vr_fr[n_fr] for p in P_fr]
+        vit_fr = [vi_fr[p]-vi_fr[n_fr] for p in P_fr]
+    elseif config==DELTA && length(crt_fr)==3
+        M = _get_delta_transformation_matrix(3)
+        vrt_fr = M*[vr_to[p] for p in f_connections]
+        vit_fr = M*[vi_to[p] for p in f_connections]
+    else
+        error("The configuration $config of dimension $(length(crt)) is not supported.")
+    end
+
+    P_to = t_connections[1:end-1]
+    n_to = t_connections[end]
+    vrt_to = [vr_to[p]-vr_to[n_to] for p in P_to]
+    vit_to = [vi_to[p]-vi_to[n_to] for p in P_to]
+
+    pt_fr = var(pm, nw, :pt, f_idx)
+    qt_fr = var(pm, nw, :qt, f_idx)
+    pt_to = var(pm, nw, :pt, t_idx)
+    qt_to = var(pm, nw, :qt, t_idx)
+
+    JuMP.@constraint(pm.model, pt_fr .==  vrt_fr.*crt_fr .+ vit_fr.*cit_fr)
+    JuMP.@constraint(pm.model, qt_fr .== -vrt_fr.*cit_fr .+ vit_fr.*crt_fr)
+    JuMP.@constraint(pm.model, pt_to .==  vrt_to.*crt_to .+ vit_to.*cit_to)
+    JuMP.@constraint(pm.model, qt_to .== -vrt_to.*cit_to .+ vit_to.*crt_to)
+
+    if sm_ub<Inf
+        JuMP.@constraint(pm.model, sum(pt_fr)^2+sum(qt_fr)^2 <= sm_ub^2)
+        JuMP.@constraint(pm.model, sum(pt_to)^2+sum(qt_to)^2 <= sm_ub^2)
+    end
+    
+    # if report
+    #     sol(pm, nw, :transformer, id)[:sm_fr] = JuMP.@NLexpression(pm.model, sqrt(pt_fr^2+qt_fr^2))
+    #     sol(pm, nw, :transformer, id)[:sm_to] = JuMP.@NLexpression(pm.model, sqrt(pt_to^2+qt_to^2))
+    # end
+end
+
+
 # BRANCH
 
 # BRANCH - Variables
@@ -1148,6 +1325,8 @@ function variable_mc_branch_current(pm::ReducedMultiConductorIVRModels; nw::Int=
     variable_mc_branch_current_series_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_branch_current_series_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     
+    var(pm, nw)[:cr] = Dict{Tuple{Int,Int,Int}, Any}()
+    var(pm, nw)[:ci] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:cr_bus] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:ci_bus] = Dict{Tuple{Int,Int,Int}, Any}()
 end
@@ -1156,10 +1335,9 @@ end
 # BRANCH - Constraints
 
 "Defines how current distributes over series and shunt impedances of a pi-model branch"
-function constraint_mc_current_from(pm::AbstractMultiConductorIVRModel, nw::Int, f_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real})
+function constraint_mc_current_from(pm::AbstractMultiConductorIVRModel, nw::Int, f_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real}; report::Bool=true)
     vr_fr = [var(pm, nw, :vr, f_bus)[c] for c in f_connections]
     vi_fr = [var(pm, nw, :vi, f_bus)[c] for c in f_connections]
-
 
     cr_fr =  var(pm, nw, :cr, f_idx)
     ci_fr =  var(pm, nw, :ci, f_idx)
@@ -1170,27 +1348,40 @@ function constraint_mc_current_from(pm::AbstractMultiConductorIVRModel, nw::Int,
     JuMP.@constraint(pm.model, cr_fr .== csr_fr + g_sh_fr*vr_fr - b_sh_fr*vi_fr)
     JuMP.@constraint(pm.model, ci_fr .== csi_fr + g_sh_fr*vi_fr + b_sh_fr*vr_fr)
 
-    var(pm, nw, :cr_bus)[f_idx] = _merge_bus_flows(pm, cr_fr, f_connections)
-    var(pm, nw, :ci_bus)[f_idx] = _merge_bus_flows(pm, ci_fr, f_connections)
+    var(pm, nw, :cr_bus)[f_idx] = cr_bus_fr = _merge_bus_flows(pm, cr_fr, f_connections)
+    var(pm, nw, :ci_bus)[f_idx] = ci_bus_fr = _merge_bus_flows(pm, ci_fr, f_connections)
+
+    if report
+        sol(pm, nw, :branch, f_idx[1])[:cr_fr] = cr_fr
+        sol(pm, nw, :branch, f_idx[1])[:ci_fr] = ci_fr
+    end
+    
 end
 
 
 "Defines how current distributes over series and shunt impedances of a pi-model branch"
-function constraint_mc_current_to(pm::AbstractMultiConductorIVRModel, n::Int, t_bus, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, g_sh_to::Matrix{<:Real}, b_sh_to::Matrix{<:Real})
-    vr_to = [var(pm, n, :vr, t_bus)[c] for c in t_connections]
-    vi_to = [var(pm, n, :vi, t_bus)[c] for c in t_connections]
+function constraint_mc_current_to(pm::AbstractMultiConductorIVRModel, nw::Int, t_bus, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, g_sh_to::Matrix{<:Real}, b_sh_to::Matrix{<:Real}; report::Bool=true)
+    vr_to = [var(pm, nw, :vr, t_bus)[c] for c in t_connections]
+    vi_to = [var(pm, nw, :vi, t_bus)[c] for c in t_connections]
 
-    cr_to = var(pm, n, :cr, t_idx)
-    ci_to = var(pm, n, :ci, t_idx)
+    cr_to = var(pm, nw, :cr, t_idx)
+    ci_to = var(pm, nw, :ci, t_idx)
 
-    csr_to = -var(pm, n, :csr, f_idx[1])
-    csi_to = -var(pm, n, :csi, f_idx[1])
+    csr_to = -var(pm, nw, :csr, f_idx[1])
+    csi_to = -var(pm, nw, :csi, f_idx[1])
 
     JuMP.@constraint(pm.model, cr_to .== csr_to + g_sh_to*vr_to - b_sh_to*vi_to)
     JuMP.@constraint(pm.model, ci_to .== csi_to + g_sh_to*vi_to + b_sh_to*vr_to)
 
-    var(pm, n, :cr_bus)[t_idx] = _merge_bus_flows(pm, cr_to, t_connections)
-    var(pm, n, :ci_bus)[t_idx] = _merge_bus_flows(pm, ci_to, t_connections)
+    var(pm, nw, :cr_bus)[t_idx] = cr_bus_to = _merge_bus_flows(pm, cr_to, t_connections)
+    var(pm, nw, :ci_bus)[t_idx] = ci_bus_to = _merge_bus_flows(pm, ci_to, t_connections)
+
+    if report
+        sol(pm, nw, :branch, f_idx[1])[:cr_to] = cr_to
+        sol(pm, nw, :branch, f_idx[1])[:ci_to] = ci_to
+        sol(pm, nw, :branch, f_idx[1])[:cr_bus_to] = cr_bus_to
+        sol(pm, nw, :branch, f_idx[1])[:ci_bus_to] = ci_bus_to
+    end
 end
 
 
@@ -1210,10 +1401,32 @@ function constraint_mc_bus_voltage_drop(pm::AbstractMultiConductorIVRModel, nw::
 end
 
 
+function constraint_mc_branch_current_rating(pm::AbstractMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+    branch = ref(pm, nw, :branch, id)
+    f_idx = (id,branch["f_bus"],branch["t_bus"])
+    t_idx = (id,branch["t_bus"],branch["f_bus"])
+
+    constraint_mc_branch_current_rating(pm, nw, f_idx, t_idx, branch["c_rating_a"])
+end
+
+
+""
+function constraint_mc_branch_current_rating(pm::AbstractMultiConductorIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, c_rating::Vector{<:Real}; report::Bool=true)
+    cr_fr = var(pm, nw, :cr, f_idx)
+    ci_fr = var(pm, nw, :ci, f_idx)
+    cr_to = var(pm, nw, :cr, t_idx)
+    ci_to = var(pm, nw, :ci, t_idx)
+
+    cnds_finite_rating = [c for (c,r) in enumerate(c_rating) if r<Inf]
+    JuMP.@constraint(pm.model, [c in cnds_finite_rating], cr_fr[c]^2+ci_fr[c]^2 <= c_rating[c]^2)
+    JuMP.@constraint(pm.model, [c in cnds_finite_rating], cr_to[c]^2+ci_to[c]^2 <= c_rating[c]^2)
+end
+
+
 # BRANCH - Constraints - Reduced
 
 "Defines how current distributes over series and shunt impedances of a pi-model branch"
-function constraint_mc_current_from(pm::ReducedMultiConductorIVRModels, nw::Int, f_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real})
+function constraint_mc_current_from(pm::ReducedMultiConductorIVRModels, nw::Int, f_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real}; report::Bool=true)
     vr_fr = [var(pm, nw, :vr, f_bus)[c] for c in f_connections]
     vi_fr = [var(pm, nw, :vi, f_bus)[c] for c in f_connections]
 
@@ -1223,24 +1436,40 @@ function constraint_mc_current_from(pm::ReducedMultiConductorIVRModels, nw::Int,
     cr_fr = csr_fr + g_sh_fr*vr_fr - b_sh_fr*vi_fr
     ci_fr = csi_fr + g_sh_fr*vi_fr + b_sh_fr*vr_fr
 
-    var(pm, nw, :cr_bus)[f_idx] = _merge_bus_flows(pm, cr_fr, f_connections)
-    var(pm, nw, :ci_bus)[f_idx] = _merge_bus_flows(pm, ci_fr, f_connections)
+    var(pm, nw, :cr)[f_idx] = cr_fr
+    var(pm, nw, :ci)[f_idx] = ci_fr
+
+    var(pm, nw, :cr_bus)[f_idx] = cr_bus_fr = _merge_bus_flows(pm, cr_fr, f_connections)
+    var(pm, nw, :ci_bus)[f_idx] = ci_bus_fr = _merge_bus_flows(pm, ci_fr, f_connections)
+
+    if report
+        sol(pm, nw, :branch, f_idx[1])[:cr_fr] = cr_fr
+        sol(pm, nw, :branch, f_idx[1])[:ci_fr] = ci_fr
+    end
 end
 
 
 "Defines how current distributes over series and shunt impedances of a pi-model branch"
-function constraint_mc_current_to(pm::ReducedMultiConductorIVRModels, n::Int, t_bus, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, g_sh_to::Matrix{<:Real}, b_sh_to::Matrix{<:Real})
-    vr_to = [var(pm, n, :vr, t_bus)[c] for c in t_connections]
-    vi_to = [var(pm, n, :vi, t_bus)[c] for c in t_connections]
+function constraint_mc_current_to(pm::ReducedMultiConductorIVRModels, nw::Int, t_bus, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, g_sh_to::Matrix{<:Real}, b_sh_to::Matrix{<:Real}; report::Bool=true)
+    vr_to = [var(pm, nw, :vr, t_bus)[c] for c in t_connections]
+    vi_to = [var(pm, nw, :vi, t_bus)[c] for c in t_connections]
 
-    csr_to = -var(pm, n, :csr, f_idx[1])
-    csi_to = -var(pm, n, :csi, f_idx[1])
+    csr_to = -var(pm, nw, :csr, f_idx[1])
+    csi_to = -var(pm, nw, :csi, f_idx[1])
 
     cr_to = csr_to + g_sh_to*vr_to - b_sh_to*vi_to
     ci_to = csi_to + g_sh_to*vi_to + b_sh_to*vr_to
 
-    var(pm, n, :cr_bus)[t_idx] = _merge_bus_flows(pm, cr_to, t_connections)
-    var(pm, n, :ci_bus)[t_idx] = _merge_bus_flows(pm, ci_to, t_connections)
+    var(pm, nw, :cr)[t_idx] = cr_to
+    var(pm, nw, :ci)[t_idx] = ci_to
+
+    var(pm, nw, :cr_bus)[t_idx] = cr_bus_to = _merge_bus_flows(pm, cr_to, t_connections)
+    var(pm, nw, :ci_bus)[t_idx] = ci_bus_to = _merge_bus_flows(pm, ci_to, t_connections)
+
+    if report
+        sol(pm, nw, :branch, f_idx[1])[:cr_to] = cr_to
+        sol(pm, nw, :branch, f_idx[1])[:ci_to] = ci_to
+    end
 end
 
 
@@ -1264,3 +1493,210 @@ function _merge_bus_flows(pm::AbstractMultiConductorIVRModel, flows::Vector, con
     end
     JuMP.Containers.DenseAxisArray(flows_merged, conns_unique)
 end
+
+
+# STORAGE
+
+# STORAGE - Variable
+
+"variables for modeling storage units, includes grid injection and internal variables"
+function variable_mc_storage(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, kwargs...)
+    variable_mc_storage_power_real(pm; bounded=bounded, kwargs...)
+    variable_mc_storage_power_imaginary(pm; bounded=bounded, kwargs...)
+    variable_mc_storage_power_control_imaginary(pm; bounded=false, kwargs...)
+    var(pm, nw)[:crs_bus] = Dict{Int,Any}()
+    var(pm, nw)[:cis_bus] = Dict{Int,Any}()
+    variable_mc_storage_current_real(pm; bounded=bounded, kwargs...)
+    variable_mc_storage_current_imaginary(pm; bounded=bounded, kwargs...)
+    variable_storage_energy(pm; bounded=bounded, kwargs...)
+    variable_storage_charge(pm; bounded=bounded, kwargs...)
+    variable_storage_discharge(pm; bounded=bounded, kwargs...)
+end
+
+
+""
+function variable_mc_storage_power_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    int_dim = Dict(i =>_infer_int_dim_unit(strg, false) for (i,strg) in ref(pm, nw, :storage))
+    ps = var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
+            [c in 1:int_dim[i]], base_name="$(nw)_ps_$(i)",
+            start = comp_start_value(ref(pm, nw, :storage, i), "ps_start", c, 0.0)
+        ) for i in ids(pm, nw, :storage)
+    )
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :ps, ids(pm, nw, :storage), ps)
+end
+
+
+""
+function variable_mc_storage_power_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    int_dim = Dict(i =>_infer_int_dim_unit(strg, false) for (i,strg) in ref(pm, nw, :storage))
+    qs = var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
+            [c in int_dim[i]], base_name="$(nw)_qs_$(i)",
+            start = comp_start_value(ref(pm, nw, :storage, i), "qs_start", c, 0.0)
+        ) for i in ids(pm, nw, :storage)
+    )
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :qs, ids(pm, nw, :storage), qs)
+end
+
+
+""
+function variable_mc_storage_current_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    int_dim = Dict(i =>_infer_int_dim_unit(strg, false) for (i,strg) in ref(pm, nw, :storage))
+    crs = var(pm, nw)[:crs] = Dict(i => JuMP.@variable(pm.model,
+            [c in 1:int_dim[i]], base_name="$(nw)_crs_$(i)",
+            start = comp_start_value(ref(pm, nw, :storage, i), "crs_start", c, 0.0)
+        ) for i in ids(pm, nw, :storage)
+    )
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :crs, ids(pm, nw, :storage), crs)
+end
+
+
+""
+function variable_mc_storage_current_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    int_dim = Dict(i =>_infer_int_dim_unit(strg, false) for (i,strg) in ref(pm, nw, :storage))
+    cis = var(pm, nw)[:cis] = Dict(i => JuMP.@variable(pm.model,
+            [c in 1:int_dim[i]], base_name="$(nw)_cis_$(i)",
+            start = comp_start_value(ref(pm, nw, :storage, i), "cis_start", c, 0.0)
+        ) for i in ids(pm, nw, :storage)
+    )
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :cis, ids(pm, nw, :storage), cis)
+end
+
+
+# STORAGE - Constraints
+
+function constraint_mc_storage_current(pm::AbstractMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, report::Bool=true, bounded::Bool=true)
+    strg = ref(pm, nw, :storage, id)
+
+    nphases = _infer_int_dim_unit(strg, false)
+    if get(strg, "configuration", WYE) == WYE || nphases==1
+        constraint_mc_storage_current_wye(pm, nw, id, strg["connections"]; report=report, bounded=bounded)
+    else
+        constraint_mc_storage_current_delta(pm, nw, id, strg["connections"]; report=report, bounded=bounded)
+    end
+end
+
+
+""
+function constraint_mc_storage_current_wye(pm::AbstractMultiConductorIVRModel, nw::Int, id::Int, connections::Vector{Int}; report::Bool=true, bounded::Bool=true)
+    crs = var(pm, nw, :crs, id)
+    cis = var(pm, nw, :cis, id)
+
+    var(pm, nw, :crs_bus)[id] = _merge_bus_flows(pm, [crs..., -sum(crs)], connections)
+    var(pm, nw, :cis_bus)[id] = _merge_bus_flows(pm, [cis..., -sum(cis)], connections)
+end
+
+
+""
+function constraint_mc_storage_current_delta(pm::AbstractMultiConductorIVRModel, nw::Int, id::Int, connections::Vector{Int}; report::Bool=true, bounded::Bool=true)
+    crs = var(pm, nw, :crs, id)
+    cis = var(pm, nw, :cis, id)
+    Md = _get_delta_transformation_matrix(length(connections))
+    var(pm, nw, :crs_bus)[id] = _merge_bus_flows(pm, Md'*crs, connections)
+    var(pm, nw, :cis_bus)[id] = _merge_bus_flows(pm, Md'*cis, connections)
+end
+
+
+""
+function constraint_mc_storage_losses(pm::AbstractMultiConductorIVRModel, i::Int; nw::Int=nw_id_default, kwargs...)
+    strg = ref(pm, nw, :storage, i)
+
+    vr  = var(pm, nw,  :vr, strg["storage_bus"])
+    vi  = var(pm, nw,  :vi, strg["storage_bus"])
+    ps  = var(pm, nw,  :ps, i)
+    qs  = var(pm, nw,  :qs, i)
+    crs = var(pm, nw,  :crs, i)
+    cis = var(pm, nw,  :cis, i)
+    sc  = var(pm, nw,  :sc, i)
+    sd  = var(pm, nw,  :sd, i)
+    qsc = var(pm, nw, :qsc, i)
+
+    p_loss = strg["p_loss"]
+    q_loss = strg["q_loss"]
+    r = strg["r"]
+    x = strg["x"]
+
+    JuMP.@constraint(pm.model,
+        sum(ps) + (sd - sc)
+        ==
+        p_loss + sum(r .* (crs.^2 .+ cis.^2))
+    )
+
+    JuMP.@constraint(pm.model,
+        sum(qs)
+        ==
+        qsc + q_loss + sum(x .* (crs.^2 .+ cis.^2))
+    )
+end
+
+
+""
+function constraint_mc_storage_thermal_limit(pm::AbstractMultiConductorIVRModel, nw::Int, i::Int, connections::Vector{Int}, rating::Vector{<:Real})
+    crs = var(pm, nw, :crs, i)
+    cis = var(pm, nw, :cis, i)
+
+    
+    #TODO is this a current or power bound?
+    JuMP.@constraint(pm.model, crs.^2 + cis.^2 .<= rating.^2)
+end
+
+
+""
+function constraint_mc_storage_power(pm::AbstractUnbalancedPowerModel, id::Int; nw::Int=nw_id_default, report::Bool=true, bounded::Bool=true)
+    strg = ref(pm, nw, :gen, id)
+    bus = ref(pm, nw, :bus, strg["storage_bus"])
+
+    if get(strg, "configuration", WYE) == WYE
+        constraint_mc_storage_power_wye(pm, nw, id, bus["index"], strg["connections"]; report=report, bounded=bounded)
+    else
+        constraint_mc_storage_power_delta(pm, nw, id, bus["index"], strg["connections"]; report=report, bounded=bounded)
+    end
+end
+
+
+""
+function constraint_mc_storage_power_wye(pm::AbstractQuadraticMultiConductorIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+    vr = var(pm, nw, :vr, bus_id)
+    vi = var(pm, nw, :vi, bus_id)
+    crs = var(pm, nw, :crs, id)
+    cis = var(pm, nw, :cis, id)
+
+    phases = connections[1:end-1]
+    n      = connections[end]
+
+    vr_pn = [vr[p]-vr[n] for p in phases]
+    vi_pn = [vi[p]-vi[n] for p in phases]
+
+    ps = var(pm, nw, :ps, id)
+    qs = var(pm, nw, :qs, id)
+
+    JuMP.@constraint(pm.model, ps .==  vr_pn.*crs .+ vi_pn.*cis)
+    JuMP.@constraint(pm.model, qs .== -vr_pn.*cis .+ vi_pn.*crs)
+end
+
+
+""
+function constraint_mc_storage_power_delta(pm::AbstractQuadraticMultiConductorIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+    vr = var(pm, nw, :vr, bus_id)
+    vi = var(pm, nw, :vi, bus_id)
+    crs = var(pm, nw, :crs, id)
+    cis = var(pm, nw, :cis, id)
+
+    nph = length(pmin)
+
+    prev = Dict(c=>connections[(idx+nph-2)%nph+1] for (idx,c) in enumerate(connections))
+    next = Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
+
+    vrs = [vr[c]-vr[next[c]] for p in connections]
+    vis = [vi[c]-vi[next[c]] for p in connections]
+
+    ps = var(pm, nw, :ps, id)
+    qs = var(pm, nw, :qs, id)
+
+    JuMP.@constraint(pm.model, ps .==  vrs.*crs .+ vis.*cis)
+    JuMP.@constraint(pm.model, qs .== -vrs.*cis .+ vis.*crs)
+end
+
