@@ -1182,7 +1182,7 @@ end
 
 
 "Calculate no-load starting values for all bus-terminals pairs."
-function calc_start_voltage(data_math::Dict{String,Any}; max_iter=Inf, verbose=false, epsilon::Number=1E-3)
+function calc_start_voltage(data_math::Dict{String,Any}; max_iter=Inf, epsilon::Number=1E-3)
     if haskey(data_math, "multinetwork")
         @assert !data_math["multinetwork"] "This method should be called on individual networks."
     end
@@ -1222,10 +1222,8 @@ function calc_start_voltage(data_math::Dict{String,Any}; max_iter=Inf, verbose=f
         end
     end
 
-    if verbose
-        progress = round(sum(ismissing.(values(v_start)))/length(v_start)*100, digits=2)
-        println("it. 0:\t$(100-progress)% specified at start")
-    end
+    progress = round(sum(ismissing.(values(v_start)))/length(v_start)*100, digits=2)
+    @debug "it. 0:\t$(100-progress)% specified at start"
 
     # propogate within zones and then between them across transformers as long as progress is made
     # a 'zone' in this context is a collection of buses which are galvanically connected
@@ -1329,10 +1327,8 @@ function calc_start_voltage(data_math::Dict{String,Any}; max_iter=Inf, verbose=f
                 end
             end
         end
-        if verbose
-            progress = round(sum(ismissing.(values(v_start)))/length(v_start)*100, digits=2)
-            println("it. $count:\t$progress% left to initialize at end")
-        end
+        progress = round(sum(ismissing.(values(v_start)))/length(v_start)*100, digits=2)
+        @debug "it. $count:\t$progress% left to initialize at end"
     end
 
     # increment non-grounded zero values with epsilon
@@ -1355,7 +1351,7 @@ For a multinetwork data model, you can calculate the start voltages for a repres
 and pass the result as 'uniform_v_start' to use the same values for all networks and avoid recalculating it for each network. 
 The argument 'epsilon' controls the offset added to ungrounded terminals which would otherwise be set to zero.
 """
-function add_start_voltage!(data_math::Dict{String,Any}; coordinates=:rectangular, uniform_v_start=missing, vr_default=0.0, vi_default=0.0, vm_default=0.0, va_default=0.0, verbose=false, epsilon::Number=1E-3)
+function add_start_voltage!(data_math::Dict{String,Any}; coordinates=:rectangular, uniform_v_start=missing, vr_default=0.0, vi_default=0.0, vm_default=0.0, va_default=0.0, epsilon::Number=1E-3)
     @assert data_math["data_model"]==MATHEMATICAL
     @assert coordinates in [:polar, :rectangular] "Legal values for the 'coordinates' argument are [:polar,:rectangular], not :$coordinates."
     
@@ -1363,7 +1359,7 @@ function add_start_voltage!(data_math::Dict{String,Any}; coordinates=:rectangula
 
     for (nw,dm) in (is_mn ? data_math["nw"] : [("", data_math)])
         if ismissing(uniform_v_start)
-            v_start = calc_start_voltage(dm, verbose=verbose, epsilon=epsilon)
+            v_start = calc_start_voltage(dm, epsilon=epsilon)
         else
             v_start = uniform_v_start
         end
