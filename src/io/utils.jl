@@ -385,16 +385,16 @@ function _discover_terminals!(data_eng::Dict{String,<:Any})
     if haskey(data_eng, "line")
         for (_,eng_obj) in data_eng["line"]
             # ignore 0 terminal
-            eng_obj["f_connections"]!=[0] && push!(terminals[eng_obj["f_bus"]], setdiff(eng_obj["f_connections"], [0])...)
-            eng_obj["t_connections"]!=[0] && push!(terminals[eng_obj["t_bus"]], setdiff(eng_obj["t_connections"], [0])...)
+            !all(eng_obj["f_connections"] .== 0) && push!(terminals[eng_obj["f_bus"]], setdiff(eng_obj["f_connections"], [0])...)
+            !all(eng_obj["t_connections"] .== 0) && push!(terminals[eng_obj["t_bus"]], setdiff(eng_obj["t_connections"], [0])...)
         end
     end
 
     if haskey(data_eng, "switch")
         for (_,eng_obj) in data_eng["switch"]
             # ignore 0 terminal
-            eng_obj["f_connections"]!=[0] && push!(terminals[eng_obj["f_bus"]], setdiff(eng_obj["f_connections"], [0])...)
-            eng_obj["t_connections"]!=[0] && push!(terminals[eng_obj["t_bus"]], setdiff(eng_obj["t_connections"], [0])...)
+            !all(eng_obj["f_connections"] .== 0) && push!(terminals[eng_obj["f_bus"]], setdiff(eng_obj["f_connections"], [0])...)
+            !all(eng_obj["t_connections"] .== 0) && push!(terminals[eng_obj["t_bus"]], setdiff(eng_obj["t_connections"], [0])...)
         end
     end
 
@@ -409,7 +409,7 @@ function _discover_terminals!(data_eng::Dict{String,<:Any})
 
     for comp_type in [x for x in ["voltage_source", "load", "generator", "solar"] if haskey(data_eng, x)]
         for comp in values(data_eng[comp_type])
-            comp["connections"]!=[0] && push!(terminals[comp["bus"]], setdiff(comp["connections"], [0])...)
+            !all(comp["connections"] .== 0) && push!(terminals[comp["bus"]], setdiff(comp["connections"], [0])...)
         end
     end
 
