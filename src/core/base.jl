@@ -90,13 +90,17 @@ end
 
 Local wrapper method for JuMP.set_lower_bound, which skips NaN and infinite (-Inf only)
 """
-function set_lower_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category::Symbol=:default)
+function set_lower_bound(x::JuMP.VariableRef, bound::Real)
     if !(isnan(bound) || bound==-Inf)
         JuMP.set_lower_bound(x, bound)
-    elseif loose_bounds
-        lbs = pm.ext[:loose_bounds]
-        JuMP.set_lower_bound(x, -lbs.bound_values[category])
-        push!(lbs.loose_lb_vars, x)
+    end
+end
+
+
+""
+function set_lower_bound(xs::Vector{JuMP.VariableRef}, bound::Real)
+    for x in xs
+        set_lower_bound(x, bound)
     end
 end
 
@@ -113,6 +117,14 @@ function set_upper_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, p
         lbs = pm.ext[:loose_bounds]
         JuMP.set_upper_bound(x, lbs.bound_values[category])
         push!(lbs.loose_ub_vars, x)
+    end
+end
+
+
+""
+function set_upper_bound(xs::Vector{JuMP.VariableRef}, bound::Real)
+    for x in xs
+        set_upper_bound(x, bound)
     end
 end
 
