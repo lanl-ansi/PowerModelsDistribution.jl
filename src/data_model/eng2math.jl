@@ -72,6 +72,11 @@ Transforms a data model model between ENGINEERING (high-level) and MATHEMATICAL 
 If `kron_reduced==true`, [`apply_kron_reduction!`](@ref apply_kron_reduction!) will be
 applied to the network data.
 
+## Phase projection
+
+If `phase_projected==true`, [`apply_phase_projection_delta!`](@ref apply_phase_projection_delta!) will be
+applied to the network data.
+
 ## Multinetwork transformations
 
 If `multinetwork==true`, the data model will be transformed into a multinetwork (e.g.,
