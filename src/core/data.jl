@@ -1151,14 +1151,12 @@ function _correct_branch_directions!(pm_data::Dict{String,<:Any})
             branch_orginal = copy(branch)
             branch["f_bus"] = branch_orginal["t_bus"]
             branch["t_bus"] = branch_orginal["f_bus"]
-            branch["g_to"] = branch_orginal["g_fr"] .* branch_orginal["tap"]'.^2
-            branch["b_to"] = branch_orginal["b_fr"] .* branch_orginal["tap"]'.^2
-            branch["g_fr"] = branch_orginal["g_to"] ./ branch_orginal["tap"]'.^2
-            branch["b_fr"] = branch_orginal["b_to"] ./ branch_orginal["tap"]'.^2
-            branch["tap"] = 1 ./ branch_orginal["tap"]
-            branch["br_r"] = branch_orginal["br_r"] .* branch_orginal["tap"]'.^2
-            branch["br_x"] = branch_orginal["br_x"] .* branch_orginal["tap"]'.^2
-            branch["shift"] = -branch_orginal["shift"]
+            branch["g_to"] = branch_orginal["g_fr"]
+            branch["b_to"] = branch_orginal["b_fr"]
+            branch["g_fr"] = branch_orginal["g_to"]
+            branch["b_fr"] = branch_orginal["b_to"]
+            branch["br_r"] = branch_orginal["br_r"]
+            branch["br_x"] = branch_orginal["br_x"]
             branch["angmin"] = -branch_orginal["angmax"]
             branch["angmax"] = -branch_orginal["angmin"]
 

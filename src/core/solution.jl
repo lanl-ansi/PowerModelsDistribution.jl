@@ -35,6 +35,12 @@ function _IM.build_solution_values(var::JuMP.Containers.DenseAxisArray{<:Number,
 end
 
 
+"custom `build_solution_values` for generic dense axis arrays"
+function _IM.build_solution_values(var::JuMP.Containers.DenseAxisArray{<:Any,1})
+    return [_IM.build_solution_values(x) for x in var.data]
+end
+
+
 "converts w models voltages to standard voltage magnitude (sqrt)"
 function _sol_data_model_w!(solution::Dict{String,<:Any})
     if haskey(solution, "nw")

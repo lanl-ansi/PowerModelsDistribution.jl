@@ -2,7 +2,7 @@ import LinearAlgebra: diagm
 
 "items that are mapped one-to-one from engineering to math models"
 const _1to1_maps = Dict{String,Vector{String}}(
-    "bus" => ["vm", "va", "terminals", "phases", "neutral", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub", "dss", "vuf_ub", "vm_pair_lb", "vm_pair_ub"],
+    "bus" => ["vm", "va", "terminals", "phases", "neutral", "vm_ng_ub", "dss", "vuf_ub"],
     "line" => ["f_connections", "t_connections", "dss"],
     "transformer" => ["f_connections", "t_connections", "dss"],
     "switch" => ["status", "f_connections", "t_connections", "dss"],
@@ -72,6 +72,11 @@ Transforms a data model model between ENGINEERING (high-level) and MATHEMATICAL 
 If `kron_reduced==true`, [`apply_kron_reduction!`](@ref apply_kron_reduction!) will be
 applied to the network data.
 
+## Phase projection
+
+If `phase_projected==true`, [`apply_phase_projection_delta!`](@ref apply_phase_projection_delta!) will be
+applied to the network data.
+
 ## Multinetwork transformations
 
 If `multinetwork==true`, the data model will be transformed into a multinetwork (e.g.,
@@ -126,6 +131,7 @@ See [`make_per_unit!`](@ref make_per_unit!) for further explanation.
 function transform_data_model(
     data::Dict{String,<:Any};
     kron_reduced::Bool=true,
+    phase_projected::Bool=true,
     multinetwork::Bool=false,
     global_keys::Set{String}=Set{String}(),
     eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
@@ -144,6 +150,7 @@ function transform_data_model(
         data_math = _map_eng2math(
             data;
             kron_reduced=kron_reduced,
+            phase_projected=phase_projected,
             eng2math_extensions=eng2math_extensions,
             eng2math_passthrough=eng2math_passthrough
         )
@@ -164,6 +171,7 @@ end
 function _map_eng2math(
     data_eng::Dict{String,<:Any};
     kron_reduced::Bool=true,
+    phase_projected::Bool=true,
     eng2math_extensions::Vector{<:Function}=Function[],
     eng2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(),
     global_keys::Set{String}=Set{String}(),
@@ -193,7 +201,7 @@ function _map_eng2math(
             apply_kron_reduction!(nw_eng)
         end
 
-        if !get(data_eng, "is_projected", false)
+        if phase_projected && !get(data_eng, "is_projected", false)
             apply_phase_projection_delta!(nw_eng)
         end
 
@@ -292,8 +300,9 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{String
             math_obj["va"] = eng_obj["va"]
         end
 
-        math_obj["vmin"] = get(eng_obj, "vm_lb", fill(0.0, length(terminals)))
-        math_obj["vmax"] = get(eng_obj, "vm_ub", fill(Inf, length(terminals)))
+        math_obj["vmin"], math_obj["vmax"] = _get_tight_absolute_voltage_magnitude_bounds(eng_obj)
+        math_obj["vm_pair_lb"], math_obj["vm_pair_ub"] = _get_tight_pairwise_voltage_magnitude_bounds(eng_obj)
+        _add_implicit_absolute_bounds!(math_obj, terminals)
 
         data_math["bus"]["$(math_obj["index"])"] = math_obj
 
@@ -758,8 +767,8 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
             bus_obj = Dict{String,Any}(
                 "bus_i" => length(data_math["bus"])+1,
                 "index" => length(data_math["bus"])+1,
-                "terminals" => f_bus["terminals"],
-                "grounded" => f_bus["grounded"],
+                "terminals" => eng_obj["connections"],
+                "grounded" => [f_bus["grounded"][findfirst(f_bus["terminals"].==t)] for t in eng_obj["connections"]],
                 "name" => "_virtual_bus.voltage_source.$name",
                 "bus_type" => math_obj["control_mode"] == ISOCHRONOUS ? 3 : 2,
                 "vm" => deepcopy(eng_obj["vm"]),

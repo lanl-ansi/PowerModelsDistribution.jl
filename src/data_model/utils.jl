@@ -863,3 +863,108 @@ function _map_conductor_ids!(data_math::Dict{String,<:Any})
         bus["terminals"] = Vector{Int}([cnd_map[t] for t in bus["terminals"]])
     end
 end
+
+
+"""
+Returns the tightest set of pairwise voltage magnitude bounds, 
+removing looser bounds which are implied by the tighter ones.
+"""
+function _get_tight_pairwise_voltage_magnitude_bounds(bus::Dict)
+    lb_pairs = []
+    ub_pairs = []
+    
+    haskey(bus, "vm_pair_lb") && append!(lb_pairs, bus["vm_pair_lb"])
+    haskey(bus, "vm_pair_ub") && append!(ub_pairs, bus["vm_pair_ub"])
+
+    haskey(bus, "vm_pn_lb") && append!(lb_pairs, [(p, bus["neutral"], bus["vm_pn_lb"]) for p in bus["phases"]])
+    haskey(bus, "vm_pn_ub") && append!(ub_pairs, [(p, bus["neutral"], bus["vm_pn_ub"]) for p in bus["phases"]])
+
+    haskey(bus, "vm_pp_lb") && append!(ub_pairs, [(bus["phases"][i], bus["phases"][j], bus["vm_pp_lb"]) for i in 1:length(bus["phases"]) for j in i+1:length(bus["phases"])])
+    haskey(bus, "vm_pp_ub") && append!(ub_pairs, [(bus["phases"][i], bus["phases"][j], bus["vm_pp_ub"]) for i in 1:length(bus["phases"]) for j in i+1:length(bus["phases"])])
+
+    lb_pairs_tight = []
+    for (c,d) in unique([(min(n,m), max(n,m)) for (n,m,bound) in lb_pairs])
+        bound = maximum([bound for (n,m,bound) in lb_pairs if (n==c&&m==d) || (n==d&&m==c)])
+        push!(lb_pairs_tight, (c, d, bound))
+    end
+
+    ub_pairs_tight = []
+    for (c,d) in unique([(min(n,m), max(n,m)) for (n,m,b) in ub_pairs])
+        bound = minimum([bound for (n,m,bound) in ub_pairs if (n==c&&m==d) || (n==d&&m==c)])
+        push!(ub_pairs_tight, (c, d, bound))
+    end
+
+    return lb_pairs_tight, ub_pairs_tight
+end
+
+
+"""
+Returns the tightest set of absolute voltage magnitude bounds, 
+removing looser bounds which are implied by the tighter ones.
+"""
+function _get_tight_absolute_voltage_magnitude_bounds(bus::Dict)
+    N = length(bus["terminals"])
+    vmin = haskey(bus, "vm_lb") ? bus["vm_lb"] : fill(0.0, N)
+    vmax = haskey(bus, "vm_ub") ? bus["vm_ub"] : fill(Inf, N)
+
+    if haskey(bus, "vm_ng_ub")
+        idx = findfirst(bus["terminal"].==bus["neutral"])
+        vmax[idx] = minimum(vmax[idx], bus["vm_ng_ub"])
+    end
+
+    return vmin, vmax
+end
+
+
+"""
+When a terminal is grounded, any pairwise bounds it occurs in 
+imply an absolute bound for the other terminal in the pair. 
+This method converts such pairwise bounds to absolute ones.
+"""
+function _add_implicit_absolute_bounds!(bus_math, terminals::Vector)
+    grounded_terminals = terminals[bus_math["grounded"]]
+
+    vm_pair_lb = bus_math["vm_pair_lb"]
+    vm_pair_ub = bus_math["vm_pair_ub"]
+    vmin = bus_math["vmin"]
+    vmax = bus_math["vmax"]
+
+    lb_keep_idx = []
+    for (i,(a,b,lb)) in enumerate(vm_pair_lb)
+        if a in grounded_terminals
+            b_idx = findfirst(terminals.==b)
+            vmin[b_idx] = max(vmin[b_idx],lb)
+        elseif b in grounded_terminals
+            a_idx = findfirst(terminals.==a)
+            vmin[a_idx] = max(vmin[a_idx],lb)
+        else
+            push!(lb_keep_idx, i)
+        end
+    end
+
+    ub_keep_idx = []
+    for (i,(a,b,ub)) in enumerate(vm_pair_ub)
+        if a in grounded_terminals
+            b_idx = findfirst(terminals.==b)
+            vmax[b_idx] = min(vmax[b_idx],ub)
+        elseif b in grounded_terminals
+            a_idx = findfirst(terminals.==a)
+            vmax[a_idx] = min(vmax[a_idx],ub)
+        else
+            push!(ub_keep_idx, i)
+        end
+    end
+
+    bus_math["vmin"] = vmin
+    bus_math["vmax"] = vmax
+    if isempty(lb_keep_idx)
+        delete!(bus_math, "vm_pair_lb")
+    else
+        bus_math["vm_pair_lb"] = vm_pair_lb[lb_keep_idx]
+    end
+    if isempty(ub_keep_idx)
+        delete!(bus_math, "vm_pair_ub")
+    else
+        bus_math["vm_pair_ub"] = vm_pair_ub[ub_keep_idx]
+    end
+end
