@@ -197,7 +197,7 @@ function _map_eng2math(
 
     for (n, nw_eng) in nw_data_eng
         # TODO remove kron reduction from eng2math (breaking)
-        if kron_reduced && !get(data_eng, "is_kron_reduced", false)
+        if kron_reduced && !get(nw_eng, "is_kron_reduced", false)
             apply_kron_reduction!(nw_eng)
         end
 
@@ -504,7 +504,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
             _apply_linecode!(eng_obj, data_eng)
         end
 
-        if !all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && !all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0))
+        if !(all(isapprox.(get(eng_obj, "rs", zeros(1, 1)), 0)) && all(isapprox.(get(eng_obj, "xs", zeros(1, 1)), 0)))
             # build virtual bus
 
             f_bus = deepcopy(data_math["bus"]["$(math_obj["f_bus"])"])

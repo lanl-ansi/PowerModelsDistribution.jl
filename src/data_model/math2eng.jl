@@ -253,10 +253,12 @@ function _map_math2eng_switch!(data_eng::Dict{String,<:Any}, data_math::Dict{Str
     eng_obj = _init_unmap_eng_obj!(data_eng, "switch", map)
 
     prop_map = Dict{String,String}(
-        "pf" => "psw_fr",
-        "qf" => "qsw_fr",
-        "cr_fr" => "crsw_fr",
-        "ci_fr" => "cisw_fr"
+        "pt" => "psw_to",
+        "qt" => "qsw_to",
+        "cr_to" => "crsw_to",
+        "ci_to" => "cisw_to",
+        "csr_fr" => "csrsw_fr",
+        "csi_fr" => "csisw_fr",
     )
 
     if isa(map["to"], String)
@@ -269,8 +271,8 @@ function _map_math2eng_switch!(data_eng::Dict{String,<:Any}, data_math::Dict{Str
                 merge!(eng_obj, math_obj)
             elseif startswith(to_id, "branch")
                 math_obj = _get_math_obj(data_math, to_id)
-                for k in ["pf", "qf", "cr_fr", "ci_fr"]
-                    if haskey(eng_obj, prop_map[k]) && haskey(math_obj, k)
+                for k in keys(prop_map)
+                    if haskey(math_obj, k)
                         eng_obj[prop_map[k]] = math_obj[k]
                     end
                 end

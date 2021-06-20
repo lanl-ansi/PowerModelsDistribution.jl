@@ -2,6 +2,18 @@
 
 ## staged
 
+- Fix eng2math conversion of switches, check for whether to create impedance branches was malformed
+
+## v0.11.3
+
+- Fix `_fix_nulls` data type conversion for vectors from JSON inputs
+- Fix which variables from switch impedance branches get pulled into eng solution (add series current)
+- Add power variables to solution for IVRUPowerModel to switches, similar to how they're implemented for branches
+- Fix missing branch variables `csr_fr` and `csi_fr` from ibase unit conversions
+- Fix `apply_kron_reduction!` to recalculate the `conductor_ids` after the reduction
+- Fix bug in transformer tap variable creation, where report variable was over all transformers instead of just ones with unfixed taps
+- Fix bug in current bounds calc for branches, where if c_rating_a was missing, calc would fail
+- Fix bug in eng2math conversion where "is_kron_reduced" was being looked for in the wrong place
 - Fix solar pg/qg bounds calculation in dss2eng parsing (needed to be `/ nphases`)
 - Add ability for `control_mode` on generation objects to get bus_type on connecting buses
 - Fix bug in function signature of `calc_voltage_bases`

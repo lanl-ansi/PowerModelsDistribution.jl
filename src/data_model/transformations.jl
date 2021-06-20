@@ -204,6 +204,7 @@ function apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Ve
     delete!(data_eng, "linecode")  # kron reduction moves linecode properties directly to lines
     delete!(data_eng, "xfmrcode")  # kron reduction moves xfmrcode properties directly to transformers
 
+    find_conductor_ids!(data_eng)
     data_eng["is_kron_reduced"] = true
 end
 
