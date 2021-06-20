@@ -8,14 +8,14 @@
 # Variables
 
 ""
-function variable_mc_bus_voltage(pm::AbstractMultiConductorIVRModel; nw=nw_id_default, bounded::Bool=true, kwargs...)
+function variable_mc_bus_voltage(pm::RectangularVoltageMultiConductorModels; nw=nw_id_default, bounded::Bool=true, kwargs...)
     variable_mc_bus_voltage_real(pm; nw=nw, bounded=bounded, kwargs...)
     variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, kwargs...)
 end
 
 
 ""
-function variable_mc_bus_voltage_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_bus_voltage_real(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     terminals = Dict(i => bus["terminals"][(!).(bus["grounded"])] for (i, bus) in ref(pm, nw, :bus))
 
     vr = Dict(i => JuMP.@variable(pm.model,
@@ -42,7 +42,7 @@ end
 
 
 ""
-function variable_mc_bus_voltage_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_bus_voltage_imaginary(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     terminals = Dict(i => bus["terminals"][(!).(bus["grounded"])] for (i,bus) in ref(pm, nw, :bus))
     vi = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_vi_$(i)",
@@ -123,7 +123,7 @@ end
 
 
 ""
-function constraint_mc_voltage_absolute(pm::AbstractMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function constraint_mc_voltage_absolute(pm::RectangularVoltageMultiConductorModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     bus = ref(pm, nw, :bus, id)
 
     constraint_mc_voltage_absolute(pm, nw, id, bus["terminals"], bus["grounded"], bus["vmin"], bus["vmax"])
@@ -131,7 +131,7 @@ end
 
 
 ""
-function constraint_mc_voltage_absolute(pm::AbstractMultiConductorIVRModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, vmin::Vector{<:Real}, vmax::Vector{<:Real}; report::Bool=true)
+function constraint_mc_voltage_absolute(pm::RectangularVoltageMultiConductorModels, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, vmin::Vector{<:Real}, vmax::Vector{<:Real}; report::Bool=true)
     vr = var(pm, nw, :vr, i)
     vi = var(pm, nw, :vi, i)
 
@@ -141,7 +141,7 @@ end
 
 
 ""
-function constraint_mc_voltage_pairwise(pm::AbstractMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function constraint_mc_voltage_pairwise(pm::RectangularVoltageMultiConductorModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     bus = ref(pm, nw, :bus, id)
 
     vm_pair_lb = bus["vm_pair_lb"]
@@ -152,7 +152,7 @@ end
 
 
 ""
-function constraint_mc_voltage_pairwise(pm::AbstractMultiConductorIVRModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, vm_pair_lb::Vector, vm_pair_ub::Vector; report::Bool=true)
+function constraint_mc_voltage_pairwise(pm::RectangularVoltageMultiConductorModels, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, vm_pair_lb::Vector, vm_pair_ub::Vector; report::Bool=true)
     vr = var(pm, nw, :vr, i)
     vi = var(pm, nw, :vi, i)
 
@@ -165,12 +165,74 @@ function constraint_mc_voltage_pairwise(pm::AbstractMultiConductorIVRModel, nw::
     end
 end
 
+
+""
+function constraint_mc_voltage_reference(pm::RectangularVoltageMultiConductorModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+    bus = ref(pm, nw, :bus, id)
+    terminals = bus["terminals"]
+    grounded = bus["grounded"]
+
+    if haskey(bus, "va") && !haskey(bus, "vm")
+        constraint_mc_theta_ref(pm, id, nw=mw, bounded=bounded, report=report, kwargs...)
+    elseif haskey(bus, "vm") && !haskey(bus, "va")
+        error("Reference buses with magnitude-only (vm) setpoints are not supported. The same can be achieved by setting vmin=vmax=vm.")
+    elseif haskey(bus, "vm") && haskey(bus, "va")
+        constraint_mc_voltage_fixed(pm, nw, id, bus["vm"], bus["va"], terminals, grounded)
+    end
+end
+
+
+""
+function constraint_mc_voltage_fixed(pm::RectangularVoltageMultiConductorModels, nw::Int, i::Int, vm::Vector{<:Real}, va::Vector{<:Real}, terminals::Vector{Int}, grounded::Vector{Bool})
+    vr = var(pm, nw, :vr, i)
+    vi = var(pm, nw, :vi, i)
+
+    idxs = findall((!).(grounded))
+
+    JuMP.@constraint(pm.model, [i in idxs], vr[terminals[i]]==vm[i]*cos(va[i]))
+    JuMP.@constraint(pm.model, [i in idxs], vi[terminals[i]]==vm[i]*sin(va[i]))
+end
+
+
+
+"Creates phase angle constraints at reference buses"
+function constraint_mc_theta_ref(pm::RectangularVoltageMultiConductorModels, nw::Int, i::Int, va::Vector{<:Real}, terminals::Vector{Int}, grounded::Vector{Bool})
+    vr = var(pm, nw, :vr, i)
+    vi = var(pm, nw, :vi, i)
+
+    # deal with cases first where tan(theta)==Inf or tan(theta)==0
+    for idx in findall[(!).(grounded)]
+        t = terminals[idx]
+        if va[t] == pi/2
+            JuMP.@constraint(pm.model, vr[t] == 0)
+            JuMP.@constraint(pm.model, vi[t] >= 0)
+        elseif va[t] == -pi/2
+            JuMP.@constraint(pm.model, vr[t] == 0)
+            JuMP.@constraint(pm.model, vi[t] <= 0)
+        elseif va[t] == 0
+            JuMP.@constraint(pm.model, vr[t] >= 0)
+            JuMP.@constraint(pm.model, vi[t] == 0)
+        elseif va[t] == pi
+            JuMP.@constraint(pm.model, vr[t] >= 0)
+            JuMP.@constraint(pm.model, vi[t] == 0)
+        else
+            JuMP.@constraint(pm.model, vi[t] == tan(va[t])*vr[t])
+            # va_ref also implies a sign for vr, vi
+            if 0<=va[t] && va[t] <= pi
+                JuMP.@constraint(pm.model, vi[t] >= 0)
+            else
+                JuMP.@constraint(pm.model, vi[t] <= 0)
+            end
+        end
+    end
+end
+
 # GENERATOR
 
 # GENERATOR - Variables
 
 ""
-function variable_mc_generator_current_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_generator_current_real(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(i => _infer_int_dim_unit(gen, false) for (i,gen) in ref(pm, nw, :gen))
     crg = var(pm, nw)[:crg] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:int_dim[i]], base_name="$(nw)_crg_$(i)",
@@ -190,7 +252,7 @@ end
 
 
 ""
-function variable_mc_generator_current_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_generator_current_imaginary(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(i => _infer_int_dim_unit(gen, false) for (i,gen) in ref(pm, nw, :gen))
     cig = var(pm, nw)[:cig] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:int_dim[i]], base_name="$(nw)_cig_$(i)",
@@ -210,7 +272,7 @@ end
 
 
 ""
-function variable_mc_generator_power_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_generator_power_real(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(i => _infer_int_dim_unit(gen, false) for (i,gen) in ref(pm, :gen))
     pg = var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:int_dim[i]], base_name="$(nw)_pg_$(i)",
@@ -230,7 +292,7 @@ end
 
 
 ""
-function variable_mc_generator_power_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_generator_power_imaginary(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(i => _infer_int_dim_unit(gen, false) for (i,gen) in ref(pm, :gen))
     qg = var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:int_dim[i]], base_name="$(nw)_qg_$(i)",
@@ -471,7 +533,7 @@ end
 
 
 ""
-function variable_mc_load_current_real(pm::AbstractQuadraticMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_load_current_real(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, :load))
 
     crd = var(pm, nw)[:crd] = Dict{Int,Any}(i => JuMP.@variable(pm.model,
@@ -496,7 +558,7 @@ end
 
 
 ""
-function variable_mc_load_current_imaginary(pm::AbstractQuadraticMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_load_current_imaginary(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, :load))
     load_ids_current = [id for (id,load) in ref(pm, nw, :load) if load["model"]==CURRENT]
     
@@ -840,7 +902,7 @@ end
 
 
 "variable: `cr[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_mc_transformer_current_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_transformer_current_real(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
     crt = var(pm, nw)[:crt] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:int_dim[l]], base_name="$(nw)_crt_$((l,i,j))",
@@ -853,7 +915,7 @@ end
 
 
 "variable: `ci[l,i,j] ` for `(l,i,j)` in `arcs`"
-function variable_mc_transformer_current_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_transformer_current_imaginary(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
     cit = var(pm, nw)[:cit] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:int_dim[l]], base_name="$(nw)_cit_$((l,i,j))",
@@ -866,7 +928,7 @@ end
 
 
 ""
-function variable_mc_transformer_power_active(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_transformer_power_active(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
     pt = var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:int_dim[l]], base_name="$(nw)_pt_$((l,i,j))",
@@ -892,7 +954,7 @@ end
 
 
 ""
-function variable_mc_transformer_power_reactive(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_transformer_power_reactive(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
     qt = var(pm, nw)[:qt] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:int_dim[l]], base_name="$(nw)_qt_$((l,i,j))",
@@ -936,7 +998,7 @@ end
 # Constraints
 
 ""
-function constraint_mc_transformer_voltage(pm::AbstractMultiConductorIVRModel, i::Int; nw::Int=nw_id_default, fix_taps::Bool=true)
+function constraint_mc_transformer_voltage(pm::MultiConductorModels, i::Int; nw::Int=nw_id_default, fix_taps::Bool=true)
     # if ref(pm, nw_id_default, :conductors)!=3
     #     error("Transformers only work with networks with three conductors.")
     # end
@@ -969,7 +1031,7 @@ end
 
 
 ""
-function constraint_mc_transformer_voltage_yy(pm::AbstractMultiConductorIVRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+function constraint_mc_transformer_voltage_yy(pm::MultiConductorModels, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     vr_fr_P = [var(pm, nw, :vr, f_bus)[c] for c in f_connections[1:end-1]]
     vi_fr_P = [var(pm, nw, :vi, f_bus)[c] for c in f_connections[1:end-1]]
     vr_fr_n = var(pm, nw, :vr, f_bus)[f_connections[end]]
@@ -989,7 +1051,7 @@ end
 
 
 ""
-function constraint_mc_transformer_voltage_dy(pm::AbstractMultiConductorIVRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+function constraint_mc_transformer_voltage_dy(pm::MultiConductorModels, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     vr_fr_P = [var(pm, nw, :vr, f_bus)[c] for c in f_connections]
     vi_fr_P = [var(pm, nw, :vi, f_bus)[c] for c in f_connections]
     vr_to_P = [var(pm, nw, :vr, t_bus)[c] for c in t_connections[1:end-1]]
@@ -1088,7 +1150,7 @@ end
 
 
 ""
-function constraint_mc_transformer_power_rating(pm::AbstractMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function constraint_mc_transformer_power_rating(pm::MultiConductorModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     trans = ref(pm, nw, :transformer, id)
     f_bus = trans["f_bus"]
     t_bus = trans["t_bus"]
@@ -1227,7 +1289,7 @@ end
 
 
 "variable: `cr[l,i,j]` for `(l,i,j)` in `arcs`"
-function variable_mc_branch_current_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_current_real(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     nconds = Dict(l => length(branch["f_connections"]) for (l,branch) in ref(pm, nw, :branch))
     cr = var(pm, nw)[:cr] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:nconds[l]], base_name="$(nw)_cr_$((l,i,j))",
@@ -1250,7 +1312,7 @@ end
 
 
 "variable: `ci[l,i,j] ` for `(l,i,j)` in `arcs`"
-function variable_mc_branch_current_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_current_imaginary(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     nconds = Dict(l => length(branch["f_connections"]) for (l,branch) in ref(pm, nw, :branch))
     ci = var(pm, nw)[:ci] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:nconds[l]], base_name="$(nw)_ci_$((l,i,j))",
@@ -1273,7 +1335,7 @@ end
 
 
 "variable: `csr[l]` for `l` in `branch`"
-function variable_mc_branch_current_series_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_current_series_real(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     nconds = Dict(l => length(branch["f_connections"]) for (l,branch) in ref(pm, nw, :branch))
     csr = var(pm, nw)[:csr] = Dict(l => JuMP.@variable(pm.model,
             [c in 1:nconds[l]], base_name="$(nw)_csr_$(l)",
@@ -1296,7 +1358,7 @@ end
 
 
 "variable: `csi[l]` for `l` in `branch`"
-function variable_mc_branch_current_series_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_current_series_imaginary(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     nconds = Dict(l => length(branch["f_connections"]) for (l,branch) in ref(pm, nw, :branch))
     csi = var(pm, nw)[:csi] = Dict(l => JuMP.@variable(pm.model,
             [c in 1:nconds[l]], base_name="$(nw)_csi_$(l)",
@@ -1401,17 +1463,17 @@ function constraint_mc_bus_voltage_drop(pm::AbstractMultiConductorIVRModel, nw::
 end
 
 
-function constraint_mc_branch_current_rating(pm::AbstractMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function constraint_mc_branch_current_rating(pm::MultiConductorModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     branch = ref(pm, nw, :branch, id)
     f_idx = (id,branch["f_bus"],branch["t_bus"])
     t_idx = (id,branch["t_bus"],branch["f_bus"])
 
-    constraint_mc_branch_current_rating(pm, nw, f_idx, t_idx, branch["c_rating_a"])
+    constraint_mc_branch_current_rating(pm, nw, f_idx, t_idx, branch["f_connections"], branch["t_connections"], branch["c_rating_a"])
 end
 
 
 ""
-function constraint_mc_branch_current_rating(pm::AbstractMultiConductorIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, c_rating::Vector{<:Real}; report::Bool=true)
+function constraint_mc_branch_current_rating(pm::AbstractMultiConductorIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector, t_connections::Vector, c_rating::Vector{<:Real}; report::Bool=true)
     cr_fr = var(pm, nw, :cr, f_idx)
     ci_fr = var(pm, nw, :ci, f_idx)
     cr_to = var(pm, nw, :cr, t_idx)
@@ -1476,7 +1538,7 @@ end
 ## SHARED 
 
 ""
-function _merge_bus_flows(pm::AbstractMultiConductorIVRModel, flows::Vector, connections::Vector)::JuMP.Containers.DenseAxisArray
+function _merge_bus_flows(pm::MultiConductorModels, flows::Vector, connections::Vector)::JuMP.Containers.DenseAxisArray
     flows_merged = []
     conns_unique = unique(connections)
     for t in conns_unique
@@ -1515,7 +1577,7 @@ end
 
 
 ""
-function variable_mc_storage_power_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_storage_power_real(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(i =>_infer_int_dim_unit(strg, false) for (i,strg) in ref(pm, nw, :storage))
     ps = var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:int_dim[i]], base_name="$(nw)_ps_$(i)",
@@ -1528,7 +1590,7 @@ end
 
 
 ""
-function variable_mc_storage_power_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_storage_power_imaginary(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(i =>_infer_int_dim_unit(strg, false) for (i,strg) in ref(pm, nw, :storage))
     qs = var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
             [c in int_dim[i]], base_name="$(nw)_qs_$(i)",
@@ -1541,7 +1603,7 @@ end
 
 
 ""
-function variable_mc_storage_current_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_storage_current_real(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(i =>_infer_int_dim_unit(strg, false) for (i,strg) in ref(pm, nw, :storage))
     crs = var(pm, nw)[:crs] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:int_dim[i]], base_name="$(nw)_crs_$(i)",
@@ -1554,7 +1616,7 @@ end
 
 
 ""
-function variable_mc_storage_current_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_storage_current_imaginary(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(i =>_infer_int_dim_unit(strg, false) for (i,strg) in ref(pm, nw, :storage))
     cis = var(pm, nw)[:cis] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:int_dim[i]], base_name="$(nw)_cis_$(i)",

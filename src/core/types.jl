@@ -164,6 +164,12 @@ AC power flow Model with rectangular bus voltage variables.
 """
 mutable struct ACRUPowerModel <: AbstractUnbalancedACRModel @pmd_fields end
 
+"Abstract Multi-Conductor Current-Voltage (Rectangular) formulation"
+abstract type AbstractMultiConductorACRModel <: AbstractUnbalancedACRModel end
+
+""
+mutable struct ACRMCPowerModel <: AbstractMultiConductorACRModel @pmd_fields end
+
 "Abstract Current-Voltage (Rectangular) formulation"
 abstract type AbstractUnbalancedIVRModel <: AbstractUnbalancedACRModel end
 
@@ -312,10 +318,10 @@ const AbstractUnbalancedPolarModels = Union{AbstractUnbalancedACPModel, Abstract
 const AbstractUnbalancedWConvexModels = Union{AbstractUBFModel}
 
 "Collection of MultiConductor models"
-const MultiConductorModels = Union{AbstractMultiConductorIVRModel}
+const MultiConductorModels = Union{AbstractMultiConductorIVRModel,AbstractMultiConductorACRModel}
 
 "Collection of Reduced MultiConductor models, i.e. with no explicit total branch current variables."
 const ReducedMultiConductorIVRModels = Union{IVRReducedQuadraticMCPowerModel,IVRReducedMCPowerModel}
 
 ""
-const RectangularMultiConductorModels = Union{AbstractMultiConductorIVRModel}
+const RectangularVoltageMultiConductorModels = Union{AbstractMultiConductorIVRModel,AbstractMultiConductorACRModel}

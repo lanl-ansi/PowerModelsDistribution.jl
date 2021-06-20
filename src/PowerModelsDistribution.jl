@@ -43,10 +43,11 @@ module PowerModelsDistribution
 
     include("form/acp.jl")
     include("form/acr.jl")
+    include("form/mc_acr.jl")
     include("form/apo.jl")
     include("form/dcp.jl")
     include("form/ivr.jl")
-    include("form/ivr_mc.jl")
+    include("form/mc_ivr.jl")
     include("form/bf.jl")
     include("form/bf_mx.jl")
     include("form/bf_mx_lin.jl")
