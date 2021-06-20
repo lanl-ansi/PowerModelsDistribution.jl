@@ -138,7 +138,6 @@ function transform_data_model(
     eng2math_extensions::Vector{<:Function}=Function[],
     make_pu::Bool=true,
     make_pu_extensions::Vector{<:Function}=Function[],
-    transformations::Vector{<:Function}=Function[],
     )::Dict{String,Any}
 
     current_data_model = get(data, "data_model", MATHEMATICAL)
@@ -156,10 +155,6 @@ function transform_data_model(
             eng2math_passthrough=eng2math_passthrough
         )
         correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
-
-        for transformation in transformations
-            transformation(data_math)
-        end
 
         return data_math
     elseif ismath(data)

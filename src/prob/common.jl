@@ -177,7 +177,6 @@ function solve_mc_model(
     make_si::Bool=!get(data, "per_unit", false),
     make_si_extensions::Vector{<:Function}=Function[],
     dimensionalize_math_extensions::Dict{String,Dict{String,Vector{String}}}=Dict{String,Dict{String,Vector{String}}}(),
-    transformations::Vector{<:Function}=Function[],
     kwargs...
     )::Dict{String,Any}
 
@@ -190,7 +189,6 @@ function solve_mc_model(
             eng2math_passthrough=eng2math_passthrough,
             make_pu_extensions=make_pu_extensions,
             global_keys=global_keys,
-            transformations=transformations,
         )
 
         result = _solve_mc_model(
