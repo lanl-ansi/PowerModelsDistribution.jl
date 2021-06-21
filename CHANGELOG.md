@@ -2,6 +2,10 @@
 
 ## staged
 
+- none
+
+## v0.11.4
+
 - Fix bug in `_bank_transformers!` where "status" field was not being added to banked transformers
 - Fix bug in `identify_load_blocks` where even fixed OPEN switches were being included in a block
 - Fix eng2math conversion of switches, check for whether to create impedance branches was malformed
