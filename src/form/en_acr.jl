@@ -3,7 +3,7 @@
 # # Constraints
 
 ""
-function constraint_mc_power_balance(pm::AbstractMultiConductorACRModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+function constraint_mc_power_balance(pm::AbstractExplicitNeutralACRModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
     vr = var(pm, nw, :vr, i)
     vi = var(pm, nw, :vi, i)
     p    = get(var(pm, nw), :p_bus,   Dict()); _check_var_keys(p,   bus_arcs,       "active power",   "branch")
@@ -74,7 +74,7 @@ end
 # # GENERATOR - Variables
 
 # ""
-# function variable_mc_generator_current_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_generator_current_real(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(i => _infer_int_dim_unit(gen, false) for (i,gen) in ref(pm, nw, :gen))
 #     crg = var(pm, nw)[:crg] = Dict(i => JuMP.@variable(pm.model,
 #             [c in 1:int_dim[i]], base_name="$(nw)_crg_$(i)",
@@ -94,7 +94,7 @@ end
 
 
 # ""
-# function variable_mc_generator_current_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_generator_current_imaginary(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(i => _infer_int_dim_unit(gen, false) for (i,gen) in ref(pm, nw, :gen))
 #     cig = var(pm, nw)[:cig] = Dict(i => JuMP.@variable(pm.model,
 #             [c in 1:int_dim[i]], base_name="$(nw)_cig_$(i)",
@@ -114,7 +114,7 @@ end
 
 
 ""
-function variable_mc_generator_power(pm::AbstractMultiConductorACRModel; nw::Int=nw_id_default, kwargs...)
+function variable_mc_generator_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, kwargs...)
     variable_mc_generator_power_real(pm; nw=nw, kwargs...)
     variable_mc_generator_power_imaginary(pm; nw=nw, kwargs...)
     var(pm, nw)[:pg_bus] = Dict{Int, Any}()
@@ -123,7 +123,7 @@ end
 
 
 # ""
-# function variable_mc_generator_power_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_generator_power_real(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(i => _infer_int_dim_unit(gen, false) for (i,gen) in ref(pm, :gen))
 #     pg = var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
 #             [c in 1:int_dim[i]], base_name="$(nw)_pg_$(i)",
@@ -143,7 +143,7 @@ end
 
 
 # ""
-# function variable_mc_generator_power_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_generator_power_imaginary(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(i => _infer_int_dim_unit(gen, false) for (i,gen) in ref(pm, :gen))
 #     qg = var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
 #             [c in 1:int_dim[i]], base_name="$(nw)_qg_$(i)",
@@ -165,14 +165,14 @@ end
 # # GENERATOR - Variables - Non-linear
 
 # ""
-# function variable_mc_generator_power(pm::AbstractNLMultiConductorIVRModel; kwargs...)
+# function variable_mc_generator_power(pm::AbstractNLExplicitNeutralIVRModel; kwargs...)
 #     #TODO docs
 # end
 
 # # GENERATOR - Variables - Quadratic
 
 # ""
-# function variable_mc_generator_power(pm::AbstractQuadraticMultiConductorIVRModel; kwargs...)
+# function variable_mc_generator_power(pm::AbstractQuadraticExplicitNeutralIVRModel; kwargs...)
 #     variable_mc_generator_power_real(pm; kwargs...)
 #     variable_mc_generator_power_imaginary(pm; kwargs...)
 # end
@@ -181,7 +181,7 @@ end
 # # GENERATOR - Constraints
 
 
-# function constraint_mc_generator_current(pm::AbstractMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, report::Bool=true, bounded::Bool=true)
+# function constraint_mc_generator_current(pm::AbstractExplicitNeutralIVRModel, id::Int; nw::Int=nw_id_default, report::Bool=true, bounded::Bool=true)
 #     generator = ref(pm, nw, :gen, id)
 
 #     nphases = _infer_int_dim_unit(generator, false)
@@ -194,7 +194,7 @@ end
 
 
 # ""
-# function constraint_mc_generator_current_wye(pm::AbstractMultiConductorIVRModel, nw::Int, id::Int, connections::Vector{Int}; report::Bool=true, bounded::Bool=true)
+# function constraint_mc_generator_current_wye(pm::AbstractExplicitNeutralIVRModel, nw::Int, id::Int, connections::Vector{Int}; report::Bool=true, bounded::Bool=true)
 #     crg = var(pm, nw, :crg, id)
 #     cig = var(pm, nw, :cig, id)
 #     var(pm, nw, :crg_bus)[id] = _merge_bus_flows(pm, [crg..., -sum(crg)], connections)
@@ -203,7 +203,7 @@ end
 
 
 # ""
-# function constraint_mc_generator_current_delta(pm::AbstractMultiConductorIVRModel, nw::Int, id::Int, connections::Vector{Int}; report::Bool=true, bounded::Bool=true)
+# function constraint_mc_generator_current_delta(pm::AbstractExplicitNeutralIVRModel, nw::Int, id::Int, connections::Vector{Int}; report::Bool=true, bounded::Bool=true)
 #     crg = var(pm, nw, :crg, id)
 #     cig = var(pm, nw, :cig, id)
 #     Md = _get_delta_transformation_matrix(length(connections))
@@ -215,7 +215,7 @@ end
 # # GENERATOR - Constraints - Non-linear
 
 ""
-function constraint_mc_generator_power_wye(pm::AbstractMultiConductorACRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+function constraint_mc_generator_power_wye(pm::AbstractExplicitNeutralACRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
     pg = var(pm, nw, :pg, id)
@@ -255,7 +255,7 @@ end
 
 
 # ""
-# function constraint_mc_generator_power_delta(pm::AbstractNLMultiConductorIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+# function constraint_mc_generator_power_delta(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
 #     vr = var(pm, nw, :vr, bus_id)
 #     vi = var(pm, nw, :vi, bus_id)
 #     crg = var(pm, nw, :crg, id)
@@ -300,7 +300,7 @@ end
 # # GENERATOR - Constraints - Quadratic
 
 # ""
-# function constraint_mc_generator_power_wye(pm::AbstractQuadraticMultiConductorIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+# function constraint_mc_generator_power_wye(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
 #     vr = var(pm, nw, :vr, bus_id)
 #     vi = var(pm, nw, :vi, bus_id)
 #     crg = var(pm, nw, :crg, id)
@@ -321,7 +321,7 @@ end
 
 
 # ""
-# function constraint_mc_generator_power_delta(pm::AbstractQuadraticMultiConductorIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+# function constraint_mc_generator_power_delta(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
 #     vr = var(pm, nw, :vr, bus_id)
 #     vi = var(pm, nw, :vi, bus_id)
 #     crg = var(pm, nw, :crg, id)
@@ -348,7 +348,7 @@ end
 # # LOAD - Variables
 
 # ""
-# function variable_mc_load_current(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+# function variable_mc_load_current(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
 #     var(pm, nw)[:crd] = Dict{Int, Any}()
 #     var(pm, nw)[:cid] = Dict{Int, Any}()
 #     var(pm, nw)[:crd_bus] = Dict{Int, Any}()
@@ -357,7 +357,7 @@ end
 
 
 ""
-function variable_mc_load_power(pm::AbstractMultiConductorACRModel; nw=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_load_power(pm::AbstractExplicitNeutralACRModel; nw=nw_id_default, bounded::Bool=true, report::Bool=true)
     var(pm, nw)[:pd] = Dict{Int, Any}()
     var(pm, nw)[:qd] = Dict{Int, Any}()
     var(pm, nw)[:pd_bus] = Dict{Int, Any}()
@@ -366,7 +366,7 @@ end
 
 
 # ""
-# function variable_mc_load_current(pm::AbstractQuadraticMultiConductorIVRModel; nw::Int=nw_id_default, kwargs...)
+# function variable_mc_load_current(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, kwargs...)
 #     load_ids_exponential = [id for (id,load) in ref(pm, nw, :load) if load["model"]==EXPONENTIAL]
 #     @assert isempty(load_ids_exponential) "Exponential loads cannot be represented quadratically."
 
@@ -379,7 +379,7 @@ end
 
 
 # ""
-# function variable_mc_load_current_real(pm::AbstractQuadraticMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_load_current_real(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, :load))
 
 #     crd = var(pm, nw)[:crd] = Dict{Int,Any}(i => JuMP.@variable(pm.model,
@@ -404,7 +404,7 @@ end
 
 
 # ""
-# function variable_mc_load_current_imaginary(pm::AbstractQuadraticMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_load_current_imaginary(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, :load))
 #     load_ids_current = [id for (id,load) in ref(pm, nw, :load) if load["model"]==CURRENT]
     
@@ -432,7 +432,7 @@ end
 # # LOAD - Variables - Quadratic
 
 # ""
-# function variable_mc_load_power(pm::AbstractQuadraticMultiConductorIVRModel; nw::Int=nw_id_default, kwargs...)
+# function variable_mc_load_power(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, kwargs...)
 #     load_ids_exponential = [id for (id,load) in ref(pm, nw, :load) if load["model"]==EXPONENTIAL]
 #     @assert isempty(load_ids_exponential) "Exponential loads cannot be represented quadratically."
 
@@ -442,7 +442,7 @@ end
 
 
 # ""
-# function variable_mc_load_power_real(pm::AbstractQuadraticMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_load_power_real(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, :load))
 #     load_ids_current = [id for (id,load) in ref(pm, nw, :load) if load["model"]==CURRENT]
     
@@ -457,7 +457,7 @@ end
 
 
 # ""
-# function variable_mc_load_power_imaginary(pm::AbstractQuadraticMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_load_power_imaginary(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, :load))
 #     load_ids_current = [id for (id,load) in ref(pm, nw, :load) if load["model"]==CURRENT]
     
@@ -473,7 +473,7 @@ end
 
 # # LOAD - Constraints
 
-function constraint_mc_load_power(pm::MultiConductorModels, id::Int; nw::Int=nw_id_default, report::Bool=true)
+function constraint_mc_load_power(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, report::Bool=true)
     load = ref(pm, nw, :load, id)
     bus = ref(pm, nw,:bus, load["load_bus"])
 
@@ -489,7 +489,7 @@ function constraint_mc_load_power(pm::MultiConductorModels, id::Int; nw::Int=nw_
 end
 
 
-function constraint_mc_load_power_wye(pm::AbstractMultiConductorACRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+function constraint_mc_load_power_wye(pm::AbstractExplicitNeutralACRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
 
@@ -581,7 +581,7 @@ end
 
 
 # ""
-# function constraint_mc_load_current(pm::AbstractMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, report::Bool=true)
+# function constraint_mc_load_current(pm::AbstractExplicitNeutralIVRModel, id::Int; nw::Int=nw_id_default, report::Bool=true)
 #     load = ref(pm, nw, :load, id)
 #     bus = ref(pm, nw,:bus, load["load_bus"])
 
@@ -599,7 +599,7 @@ end
 
 
 # ""
-# function constraint_mc_load_current_wye(pm::AbstractMultiConductorIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+# function constraint_mc_load_current_wye(pm::AbstractExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
 #     vr = var(pm, nw, :vr, bus_id)
 #     vi = var(pm, nw, :vi, bus_id)
 
@@ -659,7 +659,7 @@ end
 
 
 # ""
-# function constraint_mc_load_current_delta(pm::AbstractMultiConductorIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
+# function constraint_mc_load_current_delta(pm::AbstractExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
 #     vr = var(pm, nw, :vr, bus_id)
 #     vi = var(pm, nw, :vi, bus_id)
 
@@ -703,7 +703,7 @@ end
 # # LOAD - Constraints - Quadratic
 
 # ""
-# function constraint_mc_load_power(pm::AbstractQuadraticMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, report::Bool=true)
+# function constraint_mc_load_power(pm::AbstractQuadraticExplicitNeutralIVRModel, id::Int; nw::Int=nw_id_default, report::Bool=true)
 #     load = ref(pm, nw, :load, id)
 #     bus = ref(pm, nw,:bus, load["load_bus"])
 
@@ -720,7 +720,7 @@ end
 
 
 # ""
-# function constraint_mc_load_power_wye(pm::AbstractQuadraticMultiConductorIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, model::LoadModel, a::Vector{<:Real}, b::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+# function constraint_mc_load_power_wye(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, model::LoadModel, a::Vector{<:Real}, b::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
 #     vr = var(pm, nw, :vr, bus_id)
 #     vi = var(pm, nw, :vi, bus_id)
 
@@ -762,7 +762,7 @@ end
 
 
 # ""
-# function constraint_mc_load_power_delta(pm::AbstractQuadraticMultiConductorIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, model::LoadModel, a::Vector{<:Real}, b::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+# function constraint_mc_load_power_delta(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, model::LoadModel, a::Vector{<:Real}, b::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
 #     vr = var(pm, nw, :vr, bus_id)
 #     vi = var(pm, nw, :vi, bus_id)
 
@@ -804,7 +804,7 @@ end
 # end
 
 
-# function constraint_mc_load_current(pm::AbstractQuadraticMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, report::Bool=true, bounded::Bool=true)
+# function constraint_mc_load_current(pm::AbstractQuadraticExplicitNeutralIVRModel, id::Int; nw::Int=nw_id_default, report::Bool=true, bounded::Bool=true)
 #     load = ref(pm, nw, :load, id)
 
 #     int_dim = _infer_int_dim_unit(load, false)
@@ -817,7 +817,7 @@ end
 
 
 # ""
-# function constraint_mc_load_current_wye(pm::AbstractQuadraticMultiConductorIVRModel, nw::Int, id::Int, connections::Vector{Int}; report::Bool=true, bounded::Bool=true)
+# function constraint_mc_load_current_wye(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, connections::Vector{Int}; report::Bool=true, bounded::Bool=true)
 #     crd = var(pm, nw, :crd, id)
 #     cid = var(pm, nw, :cid, id)
 #     var(pm, nw, :crd_bus)[id] = _merge_bus_flows(pm, [crd..., -sum(crd)], connections)
@@ -826,7 +826,7 @@ end
 
 
 # ""
-# function constraint_mc_load_current_delta(pm::AbstractQuadraticMultiConductorIVRModel, nw::Int, id::Int, connections::Vector{Int}; report::Bool=true, bounded::Bool=true)
+# function constraint_mc_load_current_delta(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, connections::Vector{Int}; report::Bool=true, bounded::Bool=true)
 #     crd = var(pm, nw, :crd, id)
 #     cid = var(pm, nw, :cid, id)
 #     Md = _get_delta_transformation_matrix(length(connections))
@@ -840,7 +840,7 @@ end
 # # Variables
 
 # ""
-# function variable_mc_transformer_current(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+# function variable_mc_transformer_current(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
 #     variable_mc_transformer_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
 #     variable_mc_transformer_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
 
@@ -850,7 +850,7 @@ end
 
 
 # "variable: `cr[l,i,j]` for `(l,i,j)` in `arcs`"
-# function variable_mc_transformer_current_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_transformer_current_real(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
 #     crt = var(pm, nw)[:crt] = Dict((l,i,j) => JuMP.@variable(pm.model,
 #             [c in 1:int_dim[l]], base_name="$(nw)_crt_$((l,i,j))",
@@ -863,7 +863,7 @@ end
 
 
 # "variable: `ci[l,i,j] ` for `(l,i,j)` in `arcs`"
-# function variable_mc_transformer_current_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_transformer_current_imaginary(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
 #     cit = var(pm, nw)[:cit] = Dict((l,i,j) => JuMP.@variable(pm.model,
 #             [c in 1:int_dim[l]], base_name="$(nw)_cit_$((l,i,j))",
@@ -876,7 +876,7 @@ end
 
 
 # ""
-# function variable_mc_transformer_power_active(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_transformer_power_active(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
 #     pt = var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
 #             [c in 1:int_dim[l]], base_name="$(nw)_pt_$((l,i,j))",
@@ -902,7 +902,7 @@ end
 
 
 # ""
-# function variable_mc_transformer_power_reactive(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_transformer_power_reactive(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
 #     qt = var(pm, nw)[:qt] = Dict((l,i,j) => JuMP.@variable(pm.model,
 #             [c in 1:int_dim[l]], base_name="$(nw)_qt_$((l,i,j))",
@@ -930,7 +930,7 @@ end
 # # TRANSFORMER -  Variable - Non-linear
 
 # ""
-# function variable_mc_transformer_power(pm::AbstractNLMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+# function variable_mc_transformer_power(pm::AbstractNLExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
 #     # do nothing    
 # end
 
@@ -938,7 +938,7 @@ end
 # # TRANSFORMER - Variable - Quadratic
 
 ""
-function variable_mc_transformer_power(pm::AbstractMultiConductorACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function variable_mc_transformer_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     variable_mc_transformer_power_active(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_transformer_power_reactive(pm, nw=nw, bounded=bounded, report=report; kwargs...)
 
@@ -949,7 +949,7 @@ end
 # # Constraints
 
 "This function adds all constraints required to model a two-winding, wye-wye connected transformer."
-function constraint_mc_transformer_power_yy(pm::AbstractMultiConductorACRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+function constraint_mc_transformer_power_yy(pm::AbstractExplicitNeutralACRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     pt_fr = var(pm, nw, :pt, f_idx)
     pt_to = var(pm, nw, :pt, t_idx)
     qt_fr = var(pm, nw, :qt, f_idx)
@@ -1018,7 +1018,7 @@ function constraint_mc_transformer_power_yy(pm::AbstractMultiConductorACRModel, 
 end
 
 "This function adds all constraints required to model a two-winding, wye-wye connected transformer."
-function constraint_mc_transformer_power_dy(pm::AbstractMultiConductorACRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+function constraint_mc_transformer_power_dy(pm::AbstractExplicitNeutralACRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     pt_fr = var(pm, nw, :pt, f_idx)
     pt_to = var(pm, nw, :pt, t_idx)
     qt_fr = var(pm, nw, :qt, f_idx)
@@ -1079,7 +1079,7 @@ end
 
 
 ""
-function constraint_mc_transformer_power_rating(pm::AbstractMultiConductorACRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
+function constraint_mc_transformer_power_rating(pm::AbstractExplicitNeutralACRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
     pt_fr = var(pm, nw, :pt, f_idx)
     qt_fr = var(pm, nw, :qt, f_idx)
     pt_to = var(pm, nw, :pt, t_idx)
@@ -1093,7 +1093,7 @@ end
 
 
 # ""
-# function constraint_mc_transformer_power_rating(pm::AbstractMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+# function constraint_mc_transformer_power_rating(pm::AbstractExplicitNeutralIVRModel, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
 #     trans = ref(pm, nw, :transformer, id)
 #     f_bus = trans["f_bus"]
 #     t_bus = trans["t_bus"]
@@ -1109,7 +1109,7 @@ end
 
 
 # ""
-# function constraint_mc_transformer_power_rating(pm::AbstractMultiConductorIVRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
+# function constraint_mc_transformer_power_rating(pm::AbstractExplicitNeutralIVRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
 #     vr_fr = var(pm, nw, :vr, f_bus)
 #     vi_fr = var(pm, nw, :vi, f_bus)
 #     vr_to = var(pm, nw, :vr, t_bus)
@@ -1163,7 +1163,7 @@ end
 # # TRANSFORMER - Constraint - Quadratic
 
 # ""
-# function constraint_mc_transformer_power_rating(pm::AbstractQuadraticMultiConductorIVRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
+# function constraint_mc_transformer_power_rating(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
 #     vr_fr = var(pm, nw, :vr, f_bus)
 #     vi_fr = var(pm, nw, :vi, f_bus)
 #     vr_to = var(pm, nw, :vr, t_bus)
@@ -1219,7 +1219,7 @@ end
 # # BRANCH - Variables
 
 ""
-function variable_mc_branch_power(pm::AbstractMultiConductorACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function variable_mc_branch_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     variable_mc_branch_power_active(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_branch_power_reactive(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     
@@ -1229,7 +1229,7 @@ end
 
 
 ""
-function variable_mc_branch_power_active(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_power_active(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     nconds = Dict(l => length(branch["f_connections"]) for (l,branch) in ref(pm, nw, :branch))
     p = var(pm, nw)[:p] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:nconds[l]], base_name="$(nw)_p_$((l,i,j))",
@@ -1242,7 +1242,7 @@ end
 
 
 ""
-function variable_mc_branch_power_reactive(pm::MultiConductorModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_power_reactive(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     nconds = Dict(l => length(branch["f_connections"]) for (l,branch) in ref(pm, nw, :branch))
     q = var(pm, nw)[:q] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:nconds[l]], base_name="$(nw)_q_$((l,i,j))",
@@ -1255,7 +1255,7 @@ end
 
 
 # "variable: `csr[l]` for `l` in `branch`"
-# function variable_mc_branch_current_series_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_branch_current_series_real(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     nconds = Dict(l => length(branch["f_connections"]) for (l,branch) in ref(pm, nw, :branch))
 #     csr = var(pm, nw)[:csr] = Dict(l => JuMP.@variable(pm.model,
 #             [c in 1:nconds[l]], base_name="$(nw)_csr_$(l)",
@@ -1278,7 +1278,7 @@ end
 
 
 # "variable: `csi[l]` for `l` in `branch`"
-# function variable_mc_branch_current_series_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_branch_current_series_imaginary(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     nconds = Dict(l => length(branch["f_connections"]) for (l,branch) in ref(pm, nw, :branch))
 #     csi = var(pm, nw)[:csi] = Dict(l => JuMP.@variable(pm.model,
 #             [c in 1:nconds[l]], base_name="$(nw)_csi_$(l)",
@@ -1303,7 +1303,7 @@ end
 # # BRANCH - Variables - Reduced
 
 # ""
-# function variable_mc_branch_current(pm::ReducedMultiConductorIVRModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+# function variable_mc_branch_current(pm::ReducedExplicitNeutralIVRModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
 #     variable_mc_branch_current_series_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
 #     variable_mc_branch_current_series_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     
@@ -1323,7 +1323,7 @@ s_fr = v_fr.*conj(Y*(v_fr-v_to))
 s_fr = (vr_fr+im*vi_fr).*(G-im*B)*([vr_fr-vr_to]-im*[vi_fr-vi_to])
 s_fr = (vr_fr+im*vi_fr).*([G*vr_fr-G*vr_to-B*vi_fr+B*vi_to]-im*[G*vi_fr-G*vi_to+B*vr_fr-B*vr_to])
 """
-function constraint_mc_ohms_yt_from(pm::AbstractMultiConductorACRModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
+function constraint_mc_ohms_yt_from(pm::AbstractExplicitNeutralACRModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
     p_fr  = var(pm, nw, :p, f_idx)
     q_fr  = var(pm, nw, :q, f_idx)
     vr_fr = [var(pm, nw, :vr, f_bus)[t] for t in f_connections]
@@ -1359,13 +1359,13 @@ p[t_idx] ==  (g+g_to)*v[t_bus]^2 + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[t_bu
 q[t_idx] == -(b+b_to)*v[t_bus]^2 - (-b*tr+g*ti)/tm*(v[t_bus]*v[f_bus]*cos(t[f_bus]-t[t_bus])) + (-g*tr-b*ti)/tm*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus]))
 ```
 """
-function constraint_mc_ohms_yt_to(pm::AbstractMultiConductorACRModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix, B::Matrix, G_to::Matrix, B_to::Matrix)
+function constraint_mc_ohms_yt_to(pm::AbstractExplicitNeutralACRModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix, B::Matrix, G_to::Matrix, B_to::Matrix)
     constraint_mc_ohms_yt_from(pm, nw, t_bus, f_bus, t_idx, f_idx, t_connections, f_connections, G, B, G_to, B_to)
 end
 
 
 ""
-function constraint_mc_branch_current_rating(pm::AbstractMultiConductorACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int},  f_connections::Vector, t_connections::Vector, c_rating::Vector{<:Real}; report::Bool=true)
+function constraint_mc_branch_current_rating(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int},  f_connections::Vector, t_connections::Vector, c_rating::Vector{<:Real}; report::Bool=true)
     p_fr = var(pm, nw, :p, f_idx)
     q_fr = var(pm, nw, :q, f_idx)
     p_to = var(pm, nw, :p, t_idx)
@@ -1387,7 +1387,7 @@ end
 # # BRANCH - Constraints - Reduced
 
 # "Defines how current distributes over series and shunt impedances of a pi-model branch"
-# function constraint_mc_current_from(pm::ReducedMultiConductorIVRModels, nw::Int, f_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real}; report::Bool=true)
+# function constraint_mc_current_from(pm::ReducedExplicitNeutralIVRModels, nw::Int, f_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real}; report::Bool=true)
 #     vr_fr = [var(pm, nw, :vr, f_bus)[c] for c in f_connections]
 #     vi_fr = [var(pm, nw, :vi, f_bus)[c] for c in f_connections]
 
@@ -1411,7 +1411,7 @@ end
 
 
 # "Defines how current distributes over series and shunt impedances of a pi-model branch"
-# function constraint_mc_current_to(pm::ReducedMultiConductorIVRModels, nw::Int, t_bus, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, g_sh_to::Matrix{<:Real}, b_sh_to::Matrix{<:Real}; report::Bool=true)
+# function constraint_mc_current_to(pm::ReducedExplicitNeutralIVRModels, nw::Int, t_bus, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, g_sh_to::Matrix{<:Real}, b_sh_to::Matrix{<:Real}; report::Bool=true)
 #     vr_to = [var(pm, nw, :vr, t_bus)[c] for c in t_connections]
 #     vi_to = [var(pm, nw, :vi, t_bus)[c] for c in t_connections]
 
@@ -1437,7 +1437,7 @@ end
 # ## SHARED 
 
 # ""
-# function _merge_bus_flows(pm::AbstractMultiConductorIVRModel, flows::Vector, connections::Vector)::JuMP.Containers.DenseAxisArray
+# function _merge_bus_flows(pm::AbstractExplicitNeutralIVRModel, flows::Vector, connections::Vector)::JuMP.Containers.DenseAxisArray
 #     flows_merged = []
 #     conns_unique = unique(connections)
 #     for t in conns_unique
@@ -1461,7 +1461,7 @@ end
 # # STORAGE - Variable
 
 # "variables for modeling storage units, includes grid injection and internal variables"
-# function variable_mc_storage(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, kwargs...)
+# function variable_mc_storage(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, kwargs...)
 #     variable_mc_storage_power_real(pm; bounded=bounded, kwargs...)
 #     variable_mc_storage_power_imaginary(pm; bounded=bounded, kwargs...)
 #     variable_mc_storage_power_control_imaginary(pm; bounded=false, kwargs...)
@@ -1476,7 +1476,7 @@ end
 
 
 # ""
-# function variable_mc_storage_power_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_storage_power_real(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(i =>_infer_int_dim_unit(strg, false) for (i,strg) in ref(pm, nw, :storage))
 #     ps = var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
 #             [c in 1:int_dim[i]], base_name="$(nw)_ps_$(i)",
@@ -1489,7 +1489,7 @@ end
 
 
 # ""
-# function variable_mc_storage_power_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_storage_power_imaginary(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(i =>_infer_int_dim_unit(strg, false) for (i,strg) in ref(pm, nw, :storage))
 #     qs = var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
 #             [c in int_dim[i]], base_name="$(nw)_qs_$(i)",
@@ -1502,7 +1502,7 @@ end
 
 
 # ""
-# function variable_mc_storage_current_real(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_storage_current_real(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(i =>_infer_int_dim_unit(strg, false) for (i,strg) in ref(pm, nw, :storage))
 #     crs = var(pm, nw)[:crs] = Dict(i => JuMP.@variable(pm.model,
 #             [c in 1:int_dim[i]], base_name="$(nw)_crs_$(i)",
@@ -1515,7 +1515,7 @@ end
 
 
 # ""
-# function variable_mc_storage_current_imaginary(pm::AbstractMultiConductorIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+# function variable_mc_storage_current_imaginary(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 #     int_dim = Dict(i =>_infer_int_dim_unit(strg, false) for (i,strg) in ref(pm, nw, :storage))
 #     cis = var(pm, nw)[:cis] = Dict(i => JuMP.@variable(pm.model,
 #             [c in 1:int_dim[i]], base_name="$(nw)_cis_$(i)",
@@ -1529,7 +1529,7 @@ end
 
 # # STORAGE - Constraints
 
-# function constraint_mc_storage_current(pm::AbstractMultiConductorIVRModel, id::Int; nw::Int=nw_id_default, report::Bool=true, bounded::Bool=true)
+# function constraint_mc_storage_current(pm::AbstractExplicitNeutralIVRModel, id::Int; nw::Int=nw_id_default, report::Bool=true, bounded::Bool=true)
 #     strg = ref(pm, nw, :storage, id)
 
 #     nphases = _infer_int_dim_unit(strg, false)
@@ -1542,7 +1542,7 @@ end
 
 
 # ""
-# function constraint_mc_storage_current_wye(pm::AbstractMultiConductorIVRModel, nw::Int, id::Int, connections::Vector{Int}; report::Bool=true, bounded::Bool=true)
+# function constraint_mc_storage_current_wye(pm::AbstractExplicitNeutralIVRModel, nw::Int, id::Int, connections::Vector{Int}; report::Bool=true, bounded::Bool=true)
 #     crs = var(pm, nw, :crs, id)
 #     cis = var(pm, nw, :cis, id)
 
@@ -1552,7 +1552,7 @@ end
 
 
 # ""
-# function constraint_mc_storage_current_delta(pm::AbstractMultiConductorIVRModel, nw::Int, id::Int, connections::Vector{Int}; report::Bool=true, bounded::Bool=true)
+# function constraint_mc_storage_current_delta(pm::AbstractExplicitNeutralIVRModel, nw::Int, id::Int, connections::Vector{Int}; report::Bool=true, bounded::Bool=true)
 #     crs = var(pm, nw, :crs, id)
 #     cis = var(pm, nw, :cis, id)
 #     Md = _get_delta_transformation_matrix(length(connections))
@@ -1562,7 +1562,7 @@ end
 
 
 # ""
-# function constraint_mc_storage_losses(pm::AbstractMultiConductorIVRModel, i::Int; nw::Int=nw_id_default, kwargs...)
+# function constraint_mc_storage_losses(pm::AbstractExplicitNeutralIVRModel, i::Int; nw::Int=nw_id_default, kwargs...)
 #     strg = ref(pm, nw, :storage, i)
 
 #     vr  = var(pm, nw,  :vr, strg["storage_bus"])
@@ -1595,7 +1595,7 @@ end
 
 
 # ""
-# function constraint_mc_storage_thermal_limit(pm::AbstractMultiConductorIVRModel, nw::Int, i::Int, connections::Vector{Int}, rating::Vector{<:Real})
+# function constraint_mc_storage_thermal_limit(pm::AbstractExplicitNeutralIVRModel, nw::Int, i::Int, connections::Vector{Int}, rating::Vector{<:Real})
 #     crs = var(pm, nw, :crs, i)
 #     cis = var(pm, nw, :cis, i)
 
@@ -1619,7 +1619,7 @@ end
 
 
 # ""
-# function constraint_mc_storage_power_wye(pm::AbstractQuadraticMultiConductorIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+# function constraint_mc_storage_power_wye(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
 #     vr = var(pm, nw, :vr, bus_id)
 #     vi = var(pm, nw, :vi, bus_id)
 #     crs = var(pm, nw, :crs, id)
@@ -1640,7 +1640,7 @@ end
 
 
 # ""
-# function constraint_mc_storage_power_delta(pm::AbstractQuadraticMultiConductorIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+# function constraint_mc_storage_power_delta(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
 #     vr = var(pm, nw, :vr, bus_id)
 #     vi = var(pm, nw, :vi, bus_id)
 #     crs = var(pm, nw, :crs, id)

@@ -165,10 +165,10 @@ AC power flow Model with rectangular bus voltage variables.
 mutable struct ACRUPowerModel <: AbstractUnbalancedACRModel @pmd_fields end
 
 "Abstract Multi-Conductor Current-Voltage (Rectangular) formulation"
-abstract type AbstractMultiConductorACRModel <: AbstractUnbalancedACRModel end
+abstract type AbstractExplicitNeutralACRModel <: AbstractUnbalancedACRModel end
 
 ""
-mutable struct ACRMCPowerModel <: AbstractMultiConductorACRModel @pmd_fields end
+mutable struct ACRENPowerModel <: AbstractExplicitNeutralACRModel @pmd_fields end
 
 "Abstract Current-Voltage (Rectangular) formulation"
 abstract type AbstractUnbalancedIVRModel <: AbstractUnbalancedACRModel end
@@ -191,25 +191,25 @@ Applicable to problem formulations with `_iv` in the name.
 mutable struct IVRUPowerModel <: AbstractUnbalancedIVRModel @pmd_fields end
 
 "Abstract Multi-Conductor Current-Voltage (Rectangular) formulation"
-abstract type AbstractMultiConductorIVRModel <: AbstractUnbalancedIVRModel end
+abstract type AbstractExplicitNeutralIVRModel <: AbstractUnbalancedIVRModel end
 
 "Abstract Non-Linear Multi-Conductor Current-Voltage (Rectangular) formulation"
-abstract type AbstractNLMultiConductorIVRModel <: AbstractMultiConductorIVRModel end
+abstract type AbstractNLExplicitNeutralIVRModel <: AbstractExplicitNeutralIVRModel end
 
 ""
-mutable struct IVRMCPowerModel <: AbstractNLMultiConductorIVRModel @pmd_fields end
+mutable struct IVRENPowerModel <: AbstractNLExplicitNeutralIVRModel @pmd_fields end
 
 ""
-mutable struct IVRReducedMCPowerModel <: AbstractNLMultiConductorIVRModel @pmd_fields end
+mutable struct IVRReducedENPowerModel <: AbstractNLExplicitNeutralIVRModel @pmd_fields end
 
 "Abstract Quadratic Multi-Conductor Current-Voltage (Rectangular) formulation"
-abstract type AbstractQuadraticMultiConductorIVRModel <: AbstractMultiConductorIVRModel end
+abstract type AbstractQuadraticExplicitNeutralIVRModel <: AbstractExplicitNeutralIVRModel end
 
 ""
-mutable struct IVRQuadraticMCPowerModel <: AbstractQuadraticMultiConductorIVRModel @pmd_fields end
+mutable struct IVRQuadraticENPowerModel <: AbstractQuadraticExplicitNeutralIVRModel @pmd_fields end
 
 ""
-mutable struct IVRReducedQuadraticMCPowerModel <: AbstractQuadraticMultiConductorIVRModel @pmd_fields end
+mutable struct IVRReducedQuadraticENPowerModel <: AbstractQuadraticExplicitNeutralIVRModel @pmd_fields end
 
 ##### Linear Approximations #####
 
@@ -317,11 +317,11 @@ const AbstractUnbalancedPolarModels = Union{AbstractUnbalancedACPModel, Abstract
 "Collection of convex AbstractUnbalancedPowerModels that include W relaxations"
 const AbstractUnbalancedWConvexModels = Union{AbstractUBFModel}
 
-"Collection of MultiConductor models"
-const MultiConductorModels = Union{AbstractMultiConductorIVRModel,AbstractMultiConductorACRModel}
+"Collection of ExplicitNeutral models"
+const MultiConductorModels = Union{AbstractExplicitNeutralIVRModel,AbstractExplicitNeutralACRModel}
 
-"Collection of Reduced MultiConductor models, i.e. with no explicit total branch current variables."
-const ReducedMultiConductorIVRModels = Union{IVRReducedQuadraticMCPowerModel,IVRReducedMCPowerModel}
+"Collection of Reduced ExplicitNeutral models, i.e. with no explicit total branch current variables."
+const ReducedExplicitNeutralIVRModels = Union{IVRReducedQuadraticENPowerModel,IVRReducedENPowerModel}
 
 ""
-const RectangularVoltageMultiConductorModels = Union{AbstractMultiConductorIVRModel,AbstractMultiConductorACRModel}
+const RectangularVoltageExplicitNeutralModels = Union{AbstractExplicitNeutralIVRModel,AbstractExplicitNeutralACRModel}
