@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fix bug in `identify_load_blocks` where even fixed OPEN switches were being included in a block
 - Fix eng2math conversion of switches, check for whether to create impedance branches was malformed
 
 ## v0.11.3
