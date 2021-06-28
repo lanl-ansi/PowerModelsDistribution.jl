@@ -570,7 +570,7 @@ end
 
 
 """
-	function constraint_mc_branch_current_rating(
+	function constraint_mc_branch_current_limit(
 		pm::AbstractExplicitNeutralACRModel,
 		nw::Int,
 		f_idx::Tuple{Int,Int,Int},
@@ -589,7 +589,7 @@ p_fr^2 + q_fr^2 <= r^2 * (vr_fr^2 + vi_fr^2)
 p_to^2 + q_to^2 <= r^2 * (vr_to^2 + vi_to^2)
 ```
 """
-function constraint_mc_branch_current_rating(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int},  f_connections::Vector, t_connections::Vector, c_rating::Vector{<:Real}; report::Bool=true)
+function constraint_mc_branch_current_limit(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int},  f_connections::Vector, t_connections::Vector, c_rating::Vector{<:Real}; report::Bool=true)
     p_fr = var(pm, nw, :p, f_idx)
     q_fr = var(pm, nw, :q, f_idx)
     p_to = var(pm, nw, :p, t_idx)
@@ -603,6 +603,172 @@ function constraint_mc_branch_current_rating(pm::AbstractExplicitNeutralACRModel
         if r<Inf
             JuMP.@constraint(pm.model, p_fr[idx]^2+q_fr[idx]^2 <= r^2*(vr_fr[f_terminal]^2+vi_fr[f_terminal]^2))
             JuMP.@constraint(pm.model, p_to[idx]^2+q_to[idx]^2 <= r^2*(vr_to[t_terminal]^2+vi_to[t_terminal]^2))
+        end
+    end
+end
+
+
+"""
+	function constraint_mc_thermal_limit_from(
+		pm::AbstractExplicitNeutralIVRModel,
+		nw::Int,
+		f_idx::Tuple{Int,Int,Int},
+		f_connections::Vector{Int},
+		rate_a::Vector{<:Real}
+	)
+
+For ACR models with explicit neutrals,
+imposes a bound on the from-side line power magnitude.
+"""
+function constraint_mc_thermal_limit_from(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
+    p_fr = var(pm. nw, :p, f_idx)
+    q_fr = var(pm. nw, :q, f_idx)
+
+    for idx in 1:length(rating)
+        if rate_a[idx]<Inf
+            # for branch-reduced models, p_fr and q_fr can be a sum of several terms
+            # therefore, use a NLconstraint to handle these cases as well
+            JuMP.@NLconstraint(pm.model, p_fr[idx]^2 + q_fr[idx]^2 <= rate_a[idx]^2)
+        end
+    end
+end
+
+
+"""
+	function constraint_mc_thermal_limit_to(
+		pm::AbstractExplicitNeutralIVRModel,
+		nw::Int,
+		t_idx::Tuple{Int,Int,Int},
+		t_connections::Vector{Int},
+		rate_a::Vector{<:Real}
+	)
+
+    For ACR models with explicit neutrals,
+    imposes a bound on the to-side line power magnitude.
+"""
+function constraint_mc_thermal_limit_to(pm::AbstractExplicitNeutralACRModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
+    p_to = var(pm. nw, :p, t_idx)
+    q_to = var(pm. nw, :q, t_idx)
+
+    for idx in 1:length(rating)
+        if rate_a[idx]<Inf
+            # for branch-reduced models, p_fr and q_fr can be a sum of several terms
+            # therefore, use a NLconstraint to handle these cases as well
+            JuMP.@NLconstraint(pm.model, p_to[idx]^2 + q_to[idx]^2 <= rate_a[idx]^2)
+        end
+    end
+end
+
+
+# SWITCH
+
+# SWITCH - Variables
+
+"""
+	function variable_mc_switch_power(
+		pm::AbstractExplicitNeutralACRModel;
+		nw::Int=nw_id_default,
+		bounded::Bool=true,
+		report::Bool=true,
+		kwargs...
+	)
+
+For ACR models with explicit neutrals,
+creates switch power variables `:p` and `:q` and placeholder dictionaries for the terminal power flows `:ps_bus` and `:qs_bus`.
+"""
+function variable_mc_switch_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+    variable_mc_switch_power_active(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    variable_mc_switch_power_reactive(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    
+    var(pm, nw)[:ps_bus] = Dict{Tuple{Int,Int,Int}, Any}()
+    var(pm, nw)[:qs_bus] = Dict{Tuple{Int,Int,Int}, Any}()
+end
+
+
+# SWITCH - Constraints
+
+"""
+constraint_mc_switch_power(
+    pm::ReducedExplicitNeutralIVRModels, 
+    nw::Int, 
+    id::Int, 
+    f_idx::Tuple{Int,Int,Int}, 
+    t_idx::Tuple{Int,Int,Int}, 
+    f_connections::Vector{Int}, 
+    t_connections::Vector{Int}; 
+    report::Bool=true
+)
+
+For IVR models with explicit neutrals,
+create expressions for the terminal power flows `:psw_bus` and `qsw_bus`,
+and link the from-side to the to-side switch power
+"""
+function constraint_mc_switch_power(pm::AbstractExplicitNeutralACRModel, nw::Int, id::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}; report::Bool=true)
+psw_fr = var(pm, nw, :psw, f_idx)
+qsw_fr = var(pm, nw, :qsw, f_idx)
+psw_to = var(pm, nw, :psw, t_idx)
+qsw_to = var(pm, nw, :qsw, t_idx)
+
+JuMP.@constraint(pm.model, psw_fr .+ psw_to == 0)
+JuMP.@constraint(pm.model, qsw_fr .+ qsw_to == 0)
+
+var(pm, nw, :psw_bus)[f_idx] = _merge_bus_flows(pm, psw_fr, f_connections)
+var(pm, nw, :qsw_bus)[f_idx] = _merge_bus_flows(pm, qsw_fr, f_connections)
+var(pm, nw, :psw_bus)[t_idx] = _merge_bus_flows(pm, psw_to, t_connections)
+var(pm, nw, :qsw_bus)[t_idx] = _merge_bus_flows(pm, qsw_to, t_connections)
+end
+
+
+"""
+    constraint_mc_switch_current_limit(
+        pm::AbstractExplicitNeutralACRModel, 
+        nw::Int, 
+        f_idx::Tuple{Int,Int,Int}, 
+        connections::Vector{Int}, 
+        rating::Vector{<:Real}
+    )
+
+For ACR models with explicit neutrals, 
+imposes a bound on the switch current magnitude per conductor.
+Note that a bound on the from-side implies the same bound on the to-side current, 
+so it suffices to apply this only explicitly at the from-side.
+"""
+function constraint_mc_switch_current_limit(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
+    vr_fr = [var(pm, nw, :vr, f_idx[1])[t] for t in f_connections]
+    vi_fr = [var(pm, nw, :vi, f_idx[1])[t] for t in f_connections]
+    psw = var(pm, nw, :psw, f_idx)
+    qsw = var(pm, nw, :qsw, f_idx)
+
+    for idx in 1:length(rating)
+        if rating[idx] <= Inf
+            JuMP.@constraint(pm.model, psw[idx]^2 + qsw[idx]^2 <= rating[idx]^2 * (vr_fr[idx]^2 + vi_fr[idx]^2))
+        end
+    end
+end
+
+
+"""
+    constraint_mc_switch_thermal_limit(
+        pm::AbstractExplicitNeutralACRModel, 
+        nw::Int, 
+        f_idx::Tuple{Int,Int,Int}, 
+        f_connections::Vector{Int}, 
+        rating::Vector{<:Real}
+    )
+
+For ACR models with explicit neutrals, 
+imposes a bound on the switch power magnitude per conductor.
+Note that a bound on the from-side implies the same bound on the to-side power 
+when the switch is closed (equal voltages), and also when it is open since the 
+power then equals zero on both ends.
+"""
+function constraint_mc_switch_thermal_limit(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
+    psw_fr = var(pm. nw, :psw, f_idx)
+    qsw_fr = var(pm. nw, :qsw, f_idx)
+
+    for idx in 1:length(rating)
+        if rating[idx]<Inf
+            JuMP.@constraint(pm.model, psw_fr[idx]^2 + qsw_fr[idx]^2 <= rating[idx]^2)
         end
     end
 end

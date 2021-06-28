@@ -95,7 +95,7 @@ end
 
 """
 	function constraint_mc_current_balance(
-		pm::AbstractExplicitNeutralIVRModel,
+		pm::RectangularVoltageExplicitNeutralModels,
 		nw::Int,
 		i::Int,
 		terminals::Vector{Int},
@@ -162,7 +162,7 @@ end
 
 """
 	function constraint_mc_power_balance(
-		pm::AbstractExplicitNeutralACRModel,
+		pm::RectangularVoltageExplicitNeutralModels,
 		nw::Int,
 		i::Int,
 		terminals::Vector{Int},
@@ -844,7 +844,7 @@ end
 
 """
 	function constraint_mc_transformer_voltage_yy(
-		pm::ExplicitNeutralModels,
+		pm::RectangularVoltageExplicitNeutralModels,
 		nw::Int,
 		trans_id::Int,
 		f_bus::Int,
@@ -889,7 +889,7 @@ end
 
 """
 	function constraint_mc_transformer_voltage_dy(
-		pm::ExplicitNeutralModels,
+		pm::RectangularVoltageExplicitNeutralModels,
 		nw::Int,
 		trans_id::Int,
 		f_bus::Int,
@@ -1115,25 +1115,185 @@ end
 # BRANCH - Constraints
 
 """
-    function constraint_mc_branch_current_rating(
-        pm::ExplicitNeutralModels,
-        id::Int;
-        nw::Int=nw_id_default,
-        bounded::Bool=true,
-        report::Bool=true,
-        kwargs...
-    )
+	function constraint_mc_branch_current_limit(
+		pm::ExplicitNeutralModels,
+		id::Int;
+		nw::Int=nw_id_default,
+		bounded::Bool=true,
+		report::Bool=true,
+		kwargs...
+	)
 
 For models with explicit neutrals,
 imposes a bound on the current magnitude per conductor 
 at both ends of the branch (total current, i.e. including shunt contributions)
 """
-function constraint_mc_branch_current_rating(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function constraint_mc_branch_current_limit(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
 branch = ref(pm, nw, :branch, id)
 f_idx = (id,branch["f_bus"],branch["t_bus"])
 t_idx = (id,branch["t_bus"],branch["f_bus"])
 
-constraint_mc_branch_current_rating(pm, nw, f_idx, t_idx, branch["f_connections"], branch["t_connections"], branch["c_rating_a"])
+constraint_mc_branch_current_limit(pm, nw, f_idx, t_idx, branch["f_connections"], branch["t_connections"], branch["c_rating_a"])
+end
+
+
+# SWITCH
+
+# SWITCH - Variables
+
+"""
+	function variable_mc_switch_current_real(
+		pm::ExplicitNeutralModels;
+		nw::Int=nw_id_default,
+		bounded::Bool=true,
+		report::Bool=true
+	)
+
+For models with explicit neutrals,
+creates switch real current variables `:crsw` for models with explicit neutrals. 
+"""
+function variable_mc_switch_current_real(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    nconds = Dict(l => length(branch["f_connections"]) for (l,switch) in ref(pm, nw, :switch))
+    crsw = var(pm, nw)[:crsw] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in 1:nconds[l]], base_name="$(nw)_crs_$((l,i,j))",
+            start = comp_start_value(ref(pm, nw, :branch, l), "crs_start", c, 0.0)
+        ) for (l,i,j) in ref(pm, nw, :arcs_switch)
+    )
+
+    if bounded
+        for (l,i,j) in ref(pm, nw, :arcs_switch)
+            cmax = ref(pm, nw, :switch, l)["c_rating"]
+            set_upper_bound(crsw[(l,i,j)],  cmax)
+            set_lower_bound(crsw[(l,i,j)], -cmax)
+        end
+    end
+
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :crsw_fr, :crsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), crsw)
+end
+
+
+"""
+	function variable_mc_switch_current_imaginary(
+		pm::ExplicitNeutralModels;
+		nw::Int=nw_id_default,
+		bounded::Bool=true,
+		report::Bool=true
+	)
+
+For models with explicit neutrals,
+creates switch imaginary current variables `:cisw` for models with explicit neutrals.
+"""
+function variable_mc_switch_current_imaginary(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    nconds = Dict(l => length(branch["f_connections"]) for (l,switch) in ref(pm, nw, :switch))
+    cisw = var(pm, nw)[:cisw] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in 1:nconds[l]], base_name="$(nw)_cis_$((l,i,j))",
+            start = comp_start_value(ref(pm, nw, :branch, l), "cis_start", c, 0.0)
+        ) for (l,i,j) in ref(pm, nw, :arcs_switch)
+    )
+
+    if bounded
+        for (l,i,j) in ref(pm, nw, :arcs_switch)
+            cmax = ref(pm, nw, :switch, l)["c_rating"]
+            set_upper_bound(cisw[(l,i,j)],  cmax)
+            set_lower_bound(cisw[(l,i,j)], -cmax)
+        end
+    end
+
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :cisw_fr, :cisw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), cisw)
+end
+
+
+"""
+	function variable_mc_switch_power_active(
+		pm::ExplicitNeutralModels;
+		nw::Int=nw_id_default,
+		bounded::Bool=true,
+		report::Bool=true
+	)
+
+For models with explicit neutrals,
+creates switch active power variables `:psw` for models with explicit neutrals.
+This is defined per arc, i.e. with a variable for the from-side and to-side power.
+"""
+function variable_mc_switch_power_active(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    nconds = Dict(l => length(switch["f_connections"]) for (l,switch) in ref(pm, nw, :switch))
+    ps = var(pm, nw)[:psw] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in 1:nconds[l]], base_name="$(nw)_psw_$((l,i,j))",
+            start = comp_start_value(ref(pm, nw, :switch, l), "psw_start", c, 0.0)
+        ) for (l,i,j) in ref(pm, nw, :arcs_switch)
+    )
+
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :psw_fr, :psw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), psw)
+end
+
+
+"""
+	function variable_mc_switch_power_reactive(
+		pm::ExplicitNeutralModels;
+		nw::Int=nw_id_default,
+		bounded::Bool=true,
+		report::Bool=true
+	)
+
+For models with explicit neutrals,
+creates switch reactive power variables `:qsw` for models with explicit neutrals.
+This is defined per arc, i.e. with a variable for the from-side and to-side power.
+"""
+function variable_mc_switch_power_reactive(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    nconds = Dict(l => length(switch["f_connections"]) for (l,switch) in ref(pm, nw, :switch))
+    qs = var(pm, nw)[:qsw] = Dict((l,i,j) => JuMP.@variable(pm.model,
+            [c in 1:nconds[l]], base_name="$(nw)_qsw_$((l,i,j))",
+            start = comp_start_value(ref(pm, nw, :switch, l), "qsw_start", c, 0.0)
+        ) for (l,i,j) in ref(pm, nw, :arcs_switch)
+    )
+
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qsw_fr, :qsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), qsw)
+end
+
+
+# SWITCH - Constraints
+
+"""
+	function constraint_mc_switch_current(
+		pm::ExplicitNeutralModels,
+		id::Int;
+		nw::Int=nw_id_default,
+		report::Bool=true
+	)
+
+For models with explicit neutrals,
+link the switch currents or create appropiate expressions for them.
+"""
+function constraint_mc_switch_current(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, report::Bool=true)
+    switch = ref(pm, nw, :switch, id)
+    f_bus = switch["f_bus"]
+    t_bus = switch["t_bus"]
+    f_idx = (id, f_bus, t_bus)
+    t_idx = (id, t_bus, f_bus)
+
+    constraint_mc_switch_current(pm, nw, id, f_idx, t_idx, switch["f_connections"], switch["t_connections"])
+end
+
+
+"""
+	function constraint_mc_switch_power(
+		pm::ExplicitNeutralModels,
+		id::Int;
+		nw::Int=nw_id_default,
+		report::Bool=true
+	)
+
+For IVR models with explicit neutrals,
+link the switch power or create appropiate expressions for them
+"""
+function constraint_mc_switch_power(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, report::Bool=true)
+    switch = ref(pm, nw, :switch, id)
+    f_bus = switch["f_bus"]
+    t_bus = switch["t_bus"]
+    f_idx = (id, f_bus, t_bus)
+    t_idx = (id, t_bus, f_bus)
+
+    constraint_mc_switch_power(pm, nw, id, f_idx, t_idx, switch["f_connections"], switch["t_connections"])
 end
 
 

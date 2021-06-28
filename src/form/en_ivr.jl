@@ -24,7 +24,6 @@ end
 		kwargs...
 	)
 
-
 For quadratic IVR models with explicit neutrals,
 creates generator power variables `:pg` and `:qg`
 """
@@ -412,7 +411,7 @@ end
 		nw::Int=nw_id_default,
 		report::Bool=true
 	)
-    
+
 For IVR models with explicit neutrals,
 the load power does not require any constraints.
 """
@@ -1020,7 +1019,7 @@ end
 
 """
 	function constraint_mc_transformer_power_rating(
-		pm::AbstractExplicitNeutralIVRModel,
+		pm::AbstractNLExplicitNeutralIVRModel,
 		nw::Int,
 		id::Int,
 		f_idx::Tuple,
@@ -1391,6 +1390,110 @@ function constraint_mc_branch_current_rating(pm::AbstractExplicitNeutralIVRModel
 end
 
 
+"""
+	function constraint_mc_thermal_limit_from(
+		pm::AbstractExplicitNeutralIVRModel,
+		nw::Int,
+		f_idx::Tuple{Int,Int,Int},
+		f_connections::Vector{Int},
+		rate_a::Vector{<:Real}
+	)
+
+For IVR models with explicit neutrals,
+imposes a bound on the from-side line power magnitude.
+"""
+function constraint_mc_thermal_limit_from(pm::AbstractExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
+    vr_fr = [var(pm, nw, :vr, f_idx[1])[t] for t in f_connections]
+    vi_fr = [var(pm, nw, :vi, f_idx[1])[t] for t in f_connections]
+    cr_fr = var(pm. nw, :cr, f_idx)
+    ci_fr = var(pm. nw, :ci, f_idx)
+
+    for idx in 1:length(rate_a)
+        if rate_a[idx]<Inf
+            psw_fr_idx = JuMP.@NLexpression(pm.model,  vr_fr[idx]*cr_fr[idx] + vi_fr[idx]*ci_fr[idx])
+            qsw_fr_idx = JuMP.@NLexpression(pm.model, -vr_fr[idx]*ci_fr[idx] + vi_fr[idx]*cr_fr[idx])
+
+            JuMP.@NLconstraint(pm.model, psw_fr_idx^2 + qsw_fr_idx^2 <= rate_a[idx]^2)
+        end
+    end
+end
+
+
+"""
+	function constraint_mc_thermal_limit_to(
+		pm::AbstractExplicitNeutralIVRModel,
+		nw::Int,
+		t_idx::Tuple{Int,Int,Int},
+		t_connections::Vector{Int},
+		rate_a::Vector{<:Real}
+	)
+
+For IVR models with explicit neutrals,
+imposes a bound on the to-side line power magnitude.
+"""
+function constraint_mc_thermal_limit_to(pm::AbstractExplicitNeutralIVRModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
+    vr_to = [var(pm, nw, :vr, t_idx[1])[t] for t in t_connections]
+    vi_to = [var(pm, nw, :vi, t_idx[1])[t] for t in t_connections]
+    cr_to = var(pm. nw, :cr, t_idx)
+    ci_to = var(pm. nw, :ci, t_idx)
+
+    for idx in 1:length(rate_a)
+        if rate_a[idx]<Inf
+            psw_to_idx = JuMP.@NLexpression(pm.model,  vr_to[idx]*cr_to[idx] + vi_to[idx]*ci_to[idx])
+            qsw_to_idx = JuMP.@NLexpression(pm.model, -vr_to[idx]*ci_to[idx] + vi_to[idx]*cr_to[idx])
+
+            JuMP.@NLconstraint(pm.model, psw_to_idx^2 + qsw_to_idx^2 <= rate_a[idx]^2)
+        end
+    end
+end
+
+
+# BRANCH - Constraints - Quadratic
+
+"""
+	function constraint_mc_thermal_limit_from(
+		pm::AbstractQuadraticExplicitNeutralIVRModel,
+		nw::Int,
+		f_idx::Tuple{Int,Int,Int},
+		f_connections::Vector{Int},
+		rate_a::Vector{<:Real}
+	)
+
+For quadratic IVR models with explicit neutrals, 
+throw an error because this cannot be represented quadratically 
+without introducing explicit power variables.
+"""
+function constraint_mc_thermal_limit_from(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
+    if any(rate_a.<Inf)
+        error("""
+            A branch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
+            Either extend this quadratic formulation by including explicit branch power variables, or use AbstractNLExplicitNeutralIVRModel instead.""")
+    end
+end
+
+
+"""
+	function constraint_mc_thermal_limit_to(
+		pm::AbstractQuadraticExplicitNeutralIVRModel,
+		nw::Int,
+		t_idx::Tuple{Int,Int,Int},
+		t_connections::Vector{Int},
+		rate_a::Vector{<:Real}
+	)
+
+For quadratic IVR models with explicit neutrals, 
+throw an error because this cannot be represented quadratically 
+without introducing explicit power variables.
+"""
+function constraint_mc_thermal_limit_to(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
+    if any(rate_a.<Inf)
+        error("""
+            A branch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
+            Either extend this quadratic formulation by including explicit branch power variables, or use AbstractNLExplicitNeutralIVRModel instead.""")
+    end
+end
+
+
 # BRANCH - Constraints - Reduced
 
 """
@@ -1477,5 +1580,143 @@ function constraint_mc_current_to(pm::ReducedExplicitNeutralIVRModels, nw::Int, 
     if report
         sol(pm, nw, :branch, f_idx[1])[:cr_to] = cr_to
         sol(pm, nw, :branch, f_idx[1])[:ci_to] = ci_to
+    end
+end
+
+
+# SWITCH
+
+# SWITCH - Variables
+
+"""
+	function variable_mc_switch_current(
+		pm::AbstractExplicitNeutralIVRModel;
+		nw::Int=nw_id_default,
+		bounded::Bool=true,
+		report::Bool=true,
+		kwargs...
+	)
+
+For IVR models with explicit neutrals,
+creates switch current variables `:crs` and `:cis`,
+and placeholder dictionaries for the terminal current flows `:crsw_bus` and `:cisw_bus`
+"""
+function variable_mc_switch_current(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+    variable_mc_switch_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    variable_mc_switch_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    
+    var(pm, nw)[:crsw_bus] = Dict{Tuple{Int,Int,Int}, Any}()
+    var(pm, nw)[:cisw_bus] = Dict{Tuple{Int,Int,Int}, Any}()
+end
+
+
+"""
+	function constraint_mc_switch_current(
+		pm::AbstractExplicitNeutralIVRModel,
+		nw::Int,
+		id::Int,
+		f_idx::Tuple{Int,Int,Int},
+		t_idx::Tuple{Int,Int,Int},
+		f_connections::Vector{Int},
+		t_connections::Vector{Int};
+		report::Bool=true
+	)
+
+For IVR models with explicit neutrals,
+create expressions for the terminal current flows `:crsw_bus` and `cisw_bus`,
+and link the from-side to the to-side switch current
+"""
+function constraint_mc_switch_current(pm::AbstractExplicitNeutralIVRModel, nw::Int, id::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}; report::Bool=true)
+    crsw_fr = var(pm, nw, :crsw, f_idx)
+    cisw_fr = var(pm, nw, :cisw, f_idx)
+    crsw_to = var(pm, nw, :crsw, t_idx)
+    cisw_to = var(pm, nw, :cisw, t_idx)
+
+    JuMP.@constraint(pm.model, crsw_fr .+ crsw_to == 0)
+    JuMP.@constraint(pm.model, cisw_fr .+ cisw_to == 0)
+
+    var(pm, nw, :crsw_bus)[f_idx] = _merge_bus_flows(pm, crsw_fr, f_connections)
+    var(pm, nw, :cisw_bus)[f_idx] = _merge_bus_flows(pm, cisw_fr, f_connections)
+    var(pm, nw, :crsw_bus)[t_idx] = _merge_bus_flows(pm, crsw_to, t_connections)
+    var(pm, nw, :cisw_bus)[t_idx] = _merge_bus_flows(pm, cisw_to, t_connections)
+end
+
+
+"""
+	function constraint_mc_switch_current_limit(
+		pm::AbstractExplicitNeutralIVRModel,
+		nw::Int,
+		f_idx::Tuple{Int,Int,Int},
+		connections::Vector{Int},
+		rating::Vector{<:Real}
+	)
+
+For IVR models with explicit neutrals, 
+imposes a bound on the switch current magnitude per conductor.
+Note that a bound on the from-side implies the same bound on the to-side current, 
+so it suffices to apply this only explicitly at the from-side.
+"""
+function constraint_mc_switch_current_limit(pm::AbstractExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
+    crsw = var(pm, nw, :crsw, f_idx)
+    cisw = var(pm, nw, :cisw, f_idx)
+
+    for idx in 1:length(rating)
+        if rating[idx] <= Inf
+            JuMP.@constraint(pm.model, crsw[idx]^2 + cisw[idx]^2 <= rating[idx]^2)
+        end
+    end
+end
+
+
+"""
+	function constraint_mc_switch_thermal_limit(
+		pm::AbstractNLExplicitNeutralIVRModel,
+		nw::Int,
+		f_idx::Tuple{Int,Int,Int},
+		f_connections::Vector{Int},
+		rating::Vector{<:Real}
+	)
+
+For IVR models with explicit neutrals, 
+imposes a bound on the switch power magnitude per conductor.
+Note that a bound on the from-side implies the same bound on the to-side power 
+when the switch is closed (equal voltages), and also when it is open since the 
+power then equals zero on both ends.
+"""
+function constraint_mc_switch_thermal_limit(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
+    vr_fr = [var(pm, nw, :vr, f_idx[1])[t] for t in f_connections]
+    vi_fr = [var(pm, nw, :vi, f_idx[1])[t] for t in f_connections]
+    crsw_fr = var(pm. nw, :crsw, f_idx)
+    cisw_fr = var(pm. nw, :cisw, f_idx)
+
+    for idx in 1:length(rating)
+        if rating[idx]<Inf
+            psw_fr_idx = JuMP.@NLexpression(pm.model,  vr_fr[idx]*crsw_fr[idx] + vi_fr[idx]*cisw_fr[idx])
+            qsw_fr_idx = JuMP.@NLexpression(pm.model, -vr_fr[idx]*cisw_fr[idx] + vi_fr[idx]*crsw_fr[idx])
+
+            JuMP.@NLconstraint(pm.model, psw_fr_idx^2 + qsw_fr_idx^2 <= rating[idx]^2)
+        end
+    end
+end
+
+
+"""
+	function constraint_mc_switch_thermal_limit(
+		pm::AbstractQuadraticExplicitNeutralIVRModel,
+		nw::Int,
+		f_idx::Tuple{Int,Int,Int},
+		f_connections::Vector{Int},
+		rating::Vector{<:Real}
+	)
+
+For quadratic IVR models with explicit neutrals, 
+throw an error because this cannot be represented quadratically 
+without introducing explicit power variables.
+"""
+function constraint_mc_switch_thermal_limit(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
+    if any(rating.<Inf)
+        error("""
+            A switch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
+            Either extend this quadratic formulation by including explicit switch power variables, or use AbstractNLExplicitNeutralIVRModel instead.""")
     end
 end
