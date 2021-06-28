@@ -1010,7 +1010,7 @@ function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_
                 else
                     if edge_type == "switch" && !ismissing(type)
                         if type == "load_blocks"
-                            if edge_obj["dispatchable"] == NO
+                            if edge_obj["dispatchable"] == NO && edge_obj["state"] == CLOSED
                                 push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
                                 push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
                             end
@@ -1060,7 +1060,7 @@ function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector
             if edge_obj[pmd_math_component_status[edge_type]] != pmd_math_component_status_inactive[edge_type] || !check_enabled
                 if edge_type == "switch" && !ismissing(type)
                     if type == "load_blocks"
-                        if edge_obj["dispatchable"] != 1
+                        if edge_obj["dispatchable"] != 1 && edge_obj["state"] == 1
                             push!(neighbors[edge_obj["f_bus"]], edge_obj["t_bus"])
                             push!(neighbors[edge_obj["t_bus"]], edge_obj["f_bus"])
                         end

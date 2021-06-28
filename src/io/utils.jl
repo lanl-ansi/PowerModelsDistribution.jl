@@ -366,6 +366,7 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
                 end
             end
 
+            btrans["status"] = all(tr["status"] == ENABLED for tr in trs)
             btrans["source_id"] = "transformer.$bank"
 
             # edit the transformer dict
