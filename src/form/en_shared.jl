@@ -40,8 +40,8 @@ function variable_mc_bus_voltage_real(pm::ExplicitNeutralModels; nw::Int=nw_id_d
     if bounded
         for (i,bus) in ref(pm, nw, :bus)
             for (idx,t) in enumerate(terminals[i])
-                set_lower_bound(vr[i][t], -bus["vmax"][idx])
-                set_upper_bound(vr[i][t],  bus["vmax"][idx])
+                set_lower_bound.(vr[i][t], -bus["vmax"][idx])
+                set_upper_bound.(vr[i][t],  bus["vmax"][idx])
             end
         end
     end
@@ -76,8 +76,8 @@ function variable_mc_bus_voltage_imaginary(pm::ExplicitNeutralModels; nw::Int=nw
     if bounded
         for (i,bus) in ref(pm, nw, :bus)
             for (idx,t) in enumerate(terminals[i])
-                set_lower_bound(vi[i][t], -bus["vmax"][idx])
-                set_upper_bound(vi[i][t],  bus["vmax"][idx])
+                set_lower_bound.(vi[i][t], -bus["vmax"][idx])
+                set_upper_bound.(vi[i][t],  bus["vmax"][idx])
             end
         end
     end
@@ -452,14 +452,6 @@ function variable_mc_generator_current_real(pm::ExplicitNeutralModels; nw::Int=n
         ) for i in ids(pm, nw, :gen)
     )
 
-    if bounded
-        for (i, g) in ref(pm, nw, :gen)
-            cmax = c["c_rating"]
-            set_lower_bound.(crg[i], -cmax)
-            set_upper_bound.(crg[i],  cmax)
-        end
-    end
-
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :crg, ids(pm, nw, :gen), crg)
 end
 
@@ -481,14 +473,6 @@ function variable_mc_generator_current_imaginary(pm::ExplicitNeutralModels; nw::
             start = comp_start_value(ref(pm, nw, :gen, i), "cig_start", c, 0.0)
         ) for i in ids(pm, nw, :gen)
     )
-
-    if bounded
-        for (i, g) in ref(pm, nw, :gen)
-            cmax = c["c_rating"]
-            set_lower_bound.(cig[i], -cmax)
-            set_upper_bound.(cig[i],  cmax)
-        end
-    end
 
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :cig, ids(pm, nw, :gen), cig)
 end
@@ -984,9 +968,9 @@ function variable_mc_branch_current_real(pm::ExplicitNeutralModels; nw::Int=nw_i
 
     if bounded
         for (l,i,j) in ref(pm, nw, :arcs_branch)
-            cmax = ref(pm, nw, :branch, l)["c_rating"]
-            set_upper_bound(cr[(l,i,j)],  cmax)
-            set_lower_bound(cr[(l,i,j)], -cmax)
+            cmax = ref(pm, nw, :branch, l)["c_rating_a"]
+            set_upper_bound.(cr[(l,i,j)],  cmax)
+            set_lower_bound.(cr[(l,i,j)], -cmax)
         end
     end
 
@@ -1014,9 +998,9 @@ function variable_mc_branch_current_imaginary(pm::ExplicitNeutralModels; nw::Int
 
     if bounded
         for (l,i,j) in ref(pm, nw, :arcs_branch)
-            cmax = ref(pm, nw, :branch, l)["c_rating"]
-            set_upper_bound(ci[(l,i,j)],  cmax)
-            set_lower_bound(ci[(l,i,j)], -cmax)
+            cmax = ref(pm, nw, :branch, l)["c_rating_a"]
+            set_upper_bound.(ci[(l,i,j)],  cmax)
+            set_lower_bound.(ci[(l,i,j)], -cmax)
         end
     end
 
@@ -1162,9 +1146,9 @@ function variable_mc_switch_current_real(pm::ExplicitNeutralModels; nw::Int=nw_i
 
     if bounded
         for (l,i,j) in ref(pm, nw, :arcs_switch)
-            cmax = ref(pm, nw, :switch, l)["c_rating"]
-            set_upper_bound(crsw[(l,i,j)],  cmax)
-            set_lower_bound(crsw[(l,i,j)], -cmax)
+            cmax = ref(pm, nw, :switch, l)["c_rating_a"]
+            set_upper_bound.(crsw[(l,i,j)],  cmax)
+            set_lower_bound.(crsw[(l,i,j)], -cmax)
         end
     end
 
@@ -1193,9 +1177,9 @@ function variable_mc_switch_current_imaginary(pm::ExplicitNeutralModels; nw::Int
 
     if bounded
         for (l,i,j) in ref(pm, nw, :arcs_switch)
-            cmax = ref(pm, nw, :switch, l)["c_rating"]
-            set_upper_bound(cisw[(l,i,j)],  cmax)
-            set_lower_bound(cisw[(l,i,j)], -cmax)
+            cmax = ref(pm, nw, :switch, l)["c_rating_a"]
+            set_upper_bound.(cisw[(l,i,j)],  cmax)
+            set_lower_bound.(cisw[(l,i,j)], -cmax)
         end
     end
 

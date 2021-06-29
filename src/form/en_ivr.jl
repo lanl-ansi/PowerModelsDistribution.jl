@@ -1358,7 +1358,7 @@ end
 
 
 """
-	function constraint_mc_branch_current_rating(
+	function constraint_mc_branch_current_limit(
 		pm::AbstractExplicitNeutralIVRModel,
 		nw::Int,
 		f_idx::Tuple{Int,Int,Int},
@@ -1378,7 +1378,7 @@ cr_fr^2 + ci_fr^2 <= c_rating^2
 cr_to^2 + ci_to^2 <= c_rating^2
 ```
 """
-function constraint_mc_branch_current_rating(pm::AbstractExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector, t_connections::Vector, c_rating::Vector{<:Real}; report::Bool=true)
+function constraint_mc_branch_current_limit(pm::AbstractExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector, t_connections::Vector, c_rating::Vector{<:Real}; report::Bool=true)
     cr_fr = var(pm, nw, :cr, f_idx)
     ci_fr = var(pm, nw, :ci, f_idx)
     cr_to = var(pm, nw, :cr, t_idx)
