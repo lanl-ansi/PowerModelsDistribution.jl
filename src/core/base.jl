@@ -86,7 +86,10 @@ end
 
 
 """
-    set_lower_bound(x::JuMP.VariableRef, bound)
+	function set_lower_bound(
+		x::JuMP.VariableRef,
+		bound::Real
+	)
 
 Local wrapper method for JuMP.set_lower_bound, which skips NaN and infinite (-Inf only)
 """
@@ -97,7 +100,15 @@ function set_lower_bound(x::JuMP.VariableRef, bound::Real)
 end
 
 
-""
+"""
+	function set_lower_bound(
+		xs::Vector{JuMP.VariableRef},
+		bound::Real
+	)
+
+Local wrapper method for JuMP.set_lower_bound, which skips NaN and infinite (-Inf only).
+Note that with this signature, the bound is applied to every variable in the vector.
+"""
 function set_lower_bound(xs::Vector{JuMP.VariableRef}, bound::Real)
     for x in xs
         set_lower_bound(x, bound)
@@ -106,7 +117,13 @@ end
 
 
 """
-    set_upper_bound(x::JuMP.VariableRef, bound)
+	function set_upper_bound(
+		x::JuMP.VariableRef,
+		bound;
+		loose_bounds::Bool=false,
+		pm=missing,
+		category::Symbol=:default
+	)
 
 Local wrapper method for JuMP.set_upper_bound, which skips NaN and infinite (+Inf only)
 """
@@ -121,7 +138,15 @@ function set_upper_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, p
 end
 
 
-""
+"""
+	function set_upper_bound(
+		xs::Vector{JuMP.VariableRef},
+		bound::Real
+	)
+
+Local wrapper method for JuMP.set_upper_bound, which skips NaN and infinite (+Inf only).
+Note that with this signature, the bound is applied to every variable in the vector.
+"""
 function set_upper_bound(xs::Vector{JuMP.VariableRef}, bound::Real)
     for x in xs
         set_upper_bound(x, bound)
@@ -130,7 +155,12 @@ end
 
 
 """
-    comp_start_value(comp::Dict, key::String, conductor::Int, default::Any)
+	function comp_start_value(
+		comp::Dict{String,<:Any},
+		key::String,
+		conductor::Int,
+		default
+	)
 
 Searches for start value for a variable `key` of a component `comp` for conductor `conductor`,
 and if one does not exist, uses `default`
@@ -146,7 +176,11 @@ end
 
 
 """
-    comp_start_value(comp::Dict, key::String, default::Any)
+	function comp_start_value(
+		comp::Dict{String,<:Any},
+		key::String,
+		default=0.0
+	)
 
 Searches for start value for a variable `key` of a component `comp`, and if one does not exist,
 uses `default`. This is the conductor-agnostic version of `comp_start_value`.
