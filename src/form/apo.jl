@@ -207,7 +207,9 @@ function constraint_mc_thermal_limit_from(pm::AbstractUnbalancedActivePowerModel
                 JuMP.upper_bound(p_fr) > rate_a[idx] && set_upper_bound(p_fr, rate_a[idx])
             end
         else
-           push!(mu_sm_fr, JuMP.@constraint(pm.model, p_fr <= rate_a[c]))
+            if rate_a[idx] < Inf
+                push!(mu_sm_fr, JuMP.@constraint(pm.model, p_fr <= rate_a[idx]))
+            end
         end
     end
 
@@ -230,7 +232,9 @@ function constraint_mc_thermal_limit_to(pm::AbstractUnbalancedActivePowerModel, 
                 JuMP.upper_bound(p_to) >  rate_a[idx] && set_upper_bound(p_to,  rate_a[idx])
             end
         else
-           push!(mu_sm_to, JuMP.@constraint(pm.model, p_to <= rate_a[idx]))
+            if rate_a[idx] < Inf
+                push!(mu_sm_to, JuMP.@constraint(pm.model, p_to <= rate_a[idx]))
+            end
         end
     end
 

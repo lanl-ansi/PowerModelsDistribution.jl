@@ -8,7 +8,8 @@ function constraint_mc_thermal_limit_from(pm::AbstractUnbalancedPowerModel, nw::
     p_fr = [var(pm, nw, :p, f_idx)[c] for c in f_connections]
     q_fr = [var(pm, nw, :q, f_idx)[c] for c in f_connections]
 
-    mu_sm_fr = JuMP.@constraint(pm.model, p_fr.^2 + q_fr.^2 .<= rate_a.^2)
+    idxs = findall(rate_a .< Inf)
+    mu_sm_fr = [JuMP.@constraint(pm.model, p_fr[idx]^2 + q_fr[idx]^2 <= rate_a[idx]^2) for idx in idxs]
 
     if _IM.report_duals(pm)
         sol(pm, nw, :branch, f_idx[1])[:mu_sm_fr] = mu_sm_fr
@@ -21,7 +22,8 @@ function constraint_mc_thermal_limit_to(pm::AbstractUnbalancedPowerModel, nw::In
     p_to = [var(pm, nw, :p, t_idx)[c] for c in t_connections]
     q_to = [var(pm, nw, :q, t_idx)[c] for c in t_connections]
 
-    mu_sm_to = JuMP.@constraint(pm.model, p_to.^2 + q_to.^2 .<= rate_a.^2)
+    idxs = findall(rate_a .< Inf)
+    mu_sm_to = [JuMP.@constraint(pm.model, p_to[idx]^2 + q_to[idx]^2 <= rate_a[idx]^2) for idx in idxs]
 
     if _IM.report_duals(pm)
         sol(pm, nw, :branch, t_idx[1])[:mu_sm_to] = mu_sm_to
