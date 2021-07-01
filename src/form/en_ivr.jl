@@ -1122,10 +1122,10 @@ function constraint_mc_transformer_power_rating(pm::AbstractNLExplicitNeutralIVR
     end
 
     if report
-        sol(pm, nw, :transformer, id)[:pt_fr] = pt_fr
-        sol(pm, nw, :transformer, id)[:qt_fr] = qt_fr
-        sol(pm, nw, :transformer, id)[:pt_to] = pt_to
-        sol(pm, nw, :transformer, id)[:qt_to] = qt_to
+        sol(pm, nw, :transformer, id)[:pf] = pt_fr
+        sol(pm, nw, :transformer, id)[:qf] = qt_fr
+        sol(pm, nw, :transformer, id)[:pt] = pt_to
+        sol(pm, nw, :transformer, id)[:qt] = qt_to
         sol(pm, nw, :transformer, id)[:smtot_fr] = JuMP.@NLexpression(pm.model, sqrt(sum(pt_fr[i] for i in idxs)^2 + sum(qt_fr[i] for i in idxs)^2))
         sol(pm, nw, :transformer, id)[:smtot_to] = JuMP.@NLexpression(pm.model, sqrt(sum(pt_to[i] for i in idxs)^2 + sum(qt_to[i] for i in idxs)^2))
     end
@@ -1305,8 +1305,8 @@ function constraint_mc_current_from(pm::AbstractExplicitNeutralIVRModel, nw::Int
     var(pm, nw, :ci_bus)[f_idx] = ci_bus_fr = _merge_bus_flows(pm, ci_fr, f_connections)
 
     if report
-        sol(pm, nw, :branch, f_idx[1])[:p_fr] =  cr_fr.*vr_fr .+ ci_fr.*vi_fr
-        sol(pm, nw, :branch, f_idx[1])[:q_fr] = -cr_fr.*vi_fr .+ ci_fr.*vr_fr
+        sol(pm, nw, :branch, f_idx[1])[:pf] =  cr_fr.*vr_fr .+ ci_fr.*vi_fr
+        sol(pm, nw, :branch, f_idx[1])[:qf] = -cr_fr.*vi_fr .+ ci_fr.*vr_fr
     end
     
 end
@@ -1351,8 +1351,8 @@ function constraint_mc_current_to(pm::AbstractExplicitNeutralIVRModel, nw::Int, 
     var(pm, nw, :ci_bus)[t_idx] = ci_bus_to = _merge_bus_flows(pm, ci_to, t_connections)
 
     if report
-        sol(pm, nw, :branch, t_idx[1])[:p_to] =  cr_to.*vr_to .+ ci_to.*vi_to
-        sol(pm, nw, :branch, t_idx[1])[:q_to] = -cr_to.*vi_to .+ ci_to.*vr_to
+        sol(pm, nw, :branch, t_idx[1])[:pt] =  cr_to.*vr_to .+ ci_to.*vi_to
+        sol(pm, nw, :branch, t_idx[1])[:qt] = -cr_to.*vi_to .+ ci_to.*vr_to
     end
 end
 
@@ -1572,8 +1572,8 @@ function constraint_mc_current_from(pm::ReducedExplicitNeutralIVRModels, nw::Int
     if report
         sol(pm, nw, :branch, f_idx[1])[:cr_fr] = cr_fr
         sol(pm, nw, :branch, f_idx[1])[:ci_fr] = ci_fr
-        sol(pm, nw, :branch, f_idx[1])[:p_fr] =  cr_fr.*vr_fr .+ ci_fr.*vi_fr
-        sol(pm, nw, :branch, f_idx[1])[:q_fr] = -cr_fr.*vi_fr .+ ci_fr.*vr_fr
+        sol(pm, nw, :branch, f_idx[1])[:pf] =  cr_fr.*vr_fr .+ ci_fr.*vi_fr
+        sol(pm, nw, :branch, f_idx[1])[:qf] = -cr_fr.*vi_fr .+ ci_fr.*vr_fr
     end
 end
 
@@ -1619,8 +1619,8 @@ function constraint_mc_current_to(pm::ReducedExplicitNeutralIVRModels, nw::Int, 
     if report
         sol(pm, nw, :branch, f_idx[1])[:cr_to] = cr_to
         sol(pm, nw, :branch, f_idx[1])[:ci_to] = ci_to
-        sol(pm, nw, :branch, t_idx[1])[:p_to] =  cr_to.*vr_to .+ ci_to.*vi_to
-        sol(pm, nw, :branch, t_idx[1])[:q_to] = -cr_to.*vi_to .+ ci_to.*vr_to
+        sol(pm, nw, :branch, t_idx[1])[:pt] =  cr_to.*vr_to .+ ci_to.*vi_to
+        sol(pm, nw, :branch, t_idx[1])[:qt] = -cr_to.*vi_to .+ ci_to.*vr_to
     end
 end
 

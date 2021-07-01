@@ -13,17 +13,17 @@ const dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
         "ibase"=>Vector{String}(["crd", "cid", "crd_bus", "cid_bus"])
     ),
     "branch" => Dict{String,Vector{String}}(
-        "sbase"=>Vector{String}(["pf", "qf", "pt", "qt", "p_fr", "q_fr", "p_to", "q_to"]),
+        "sbase"=>Vector{String}(["pf", "qf", "pt", "qt"]),
         "ibase"=>Vector{String}(["cr_fr", "ci_fr", "cr_to", "ci_to", "csr_fr", "csi_fr"])
     ),
     "transformer" => Dict{String,Vector{String}}(
-        "sbase"=>Vector{String}(["pt_fr", "qt_fr", "pt_to", "qt_to"]),
-        "ibase_fr"=>Vector{String}(["crt_fr", "cit_fr"]),
-        "ibase_to"=>Vector{String}(["crt_to", "cit_to"])
+        "sbase"=>Vector{String}(["pf", "qf", "pt", "qt"]),
+        "ibase_fr"=>Vector{String}(["cr_fr", "ci_fr"]),
+        "ibase_to"=>Vector{String}(["cr_to", "ci_to"])
     ),
     "switch" => Dict{String,Vector{String}}(
-        "sbase" => Vector{String}(["psw_fr", "psw_to", "qsw_fr", "qsw_to"]),
-        "ibase" => Vector{String}(["crsw_fr", "cisw_fr", "crsw_to", "cisw_to"])
+        "sbase" => Vector{String}(["pf", "pt", "qf", "qt"]),
+        "ibase" => Vector{String}(["cr_fr", "ci_fr", "cr_to", "ci_to"])
     ),
     "storage" => Dict{String,Vector{String}}(
         "sbase"=>Vector{String}(["ps", "qs", "energy", "se", "sd", "sc_on", "sd_on", "sc"]),
@@ -490,8 +490,10 @@ function _rebase_pu_transformer_2w_ideal!(transformer::Dict{String,<:Any}, f_vba
     t_vbase_old = get(transformer, "t_vbase", 1.0)
     f_vbase_scale = f_vbase_old/f_vbase_new
     t_vbase_scale = t_vbase_old/t_vbase_new
+    sbase_scale = sbase_old/sbase_new
 
     _scale(transformer, "tm_nom", f_vbase_scale/t_vbase_scale)
+    _scale(transformer, "sm_ub", sbase_scale)
 
     # save new vbase
     transformer["f_vbase"] = f_vbase_new

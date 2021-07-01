@@ -680,7 +680,7 @@ function variable_mc_transformer_current_real(pm::ExplicitNeutralModels; nw::Int
         ) for (l,i,j) in ref(pm, nw, :arcs_transformer)
     )
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :crt_fr, :crt_to, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), crt)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :cr_fr, :cr_to, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), crt)
 end
 
 
@@ -702,7 +702,7 @@ function variable_mc_transformer_current_imaginary(pm::ExplicitNeutralModels; nw
         ) for (l,i,j) in ref(pm, nw, :arcs_transformer)
     )
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :cit_fr, :cit_to, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), cit)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :ci_fr, :ci_to, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), cit)
 end
 
 
@@ -737,7 +737,7 @@ function variable_mc_transformer_power_active(pm::ExplicitNeutralModels; nw::Int
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :pt_fr, :pt_to, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), pt)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :pf, :pt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), pt)
 end
 
 
@@ -772,7 +772,7 @@ function variable_mc_transformer_power_reactive(pm::ExplicitNeutralModels; nw::I
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :qt_fr, :qt_to, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), qt)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :qf, :qt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), qt)
 end
 
 
@@ -1065,7 +1065,7 @@ function variable_mc_branch_power_active(pm::ExplicitNeutralModels; nw::Int=nw_i
         ) for (l,i,j) in ref(pm, nw, :arcs_branch)
     )
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :p_fr, :p_to, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), p)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :pf, :pt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), p)
 end
 
 
@@ -1087,7 +1087,7 @@ function variable_mc_branch_power_reactive(pm::ExplicitNeutralModels; nw::Int=nw
         ) for (l,i,j) in ref(pm, nw, :arcs_branch)
     )
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :q_fr, :q_to, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), q)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :qf, :qt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), q)
 end
 
 
@@ -1147,7 +1147,7 @@ function variable_mc_switch_current_real(pm::ExplicitNeutralModels; nw::Int=nw_i
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :crsw_fr, :crsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), crsw)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :cr_fr, :cr_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), crsw)
 end
 
 
@@ -1178,7 +1178,7 @@ function variable_mc_switch_current_imaginary(pm::ExplicitNeutralModels; nw::Int
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :cisw_fr, :cisw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), cisw)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :ci_fr, :ci_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), cisw)
 end
 
 
@@ -1210,7 +1210,7 @@ function variable_mc_switch_power_active(pm::ExplicitNeutralModels; nw::Int=nw_i
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :psw_fr, :psw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), psw)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :pf, :pt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), psw)
 end
 
 
@@ -1242,7 +1242,7 @@ function variable_mc_switch_power_reactive(pm::ExplicitNeutralModels; nw::Int=nw
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qsw_fr, :qsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), qsw)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qf, :qt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), qsw)
 end
 
 
