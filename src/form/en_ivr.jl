@@ -1197,7 +1197,7 @@ function constraint_mc_transformer_power_rating(pm::AbstractQuadraticExplicitNeu
     JuMP.@constraint(pm.model, pt_to .==  vrt_to.*crt_to .+ vit_to.*cit_to)
     JuMP.@constraint(pm.model, qt_to .== -vrt_to.*cit_to .+ vit_to.*crt_to)
 
-    if sm_ub<Inf
+    if sm_ub < Inf
         JuMP.@constraint(pm.model, sum(pt_fr)^2+sum(qt_fr)^2 <= sm_ub^2)
         JuMP.@constraint(pm.model, sum(pt_to)^2+sum(qt_to)^2 <= sm_ub^2)
     end

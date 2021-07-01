@@ -509,9 +509,9 @@ function constraint_mc_transformer_power_rating(pm::AbstractExplicitNeutralACRMo
     pt_to = var(pm, nw, :pt, t_idx)
     qt_to = var(pm, nw, :qt, t_idx)
 
-    if sm_ub<Inf
-        JuMP.@NLconstraint(pm.model, sum(pt_fr[i] for i in idxs)^2 + sum(qt_fr[i] for i in idxs)^2 <= sm_ub^2)
-        JuMP.@NLconstraint(pm.model, sum(pt_to[i] for i in idxs)^2 + sum(qt_to[i] for i in idxs)^2 <= sm_ub^2)
+    if sm_ub < Inf
+        JuMP.@constraint(pm.model, sum(pt_fr)^2 + sum(qt_fr)^2 <= sm_ub^2)
+        JuMP.@constraint(pm.model, sum(pt_to)^2 + sum(qt_to)^2 <= sm_ub^2)
     end
 end
 
