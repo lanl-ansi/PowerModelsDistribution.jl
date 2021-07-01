@@ -116,18 +116,18 @@ function constraint_mc_current_balance(pm::RectangularVoltageExplicitNeutralMode
     vr = var(pm, nw, :vr, i)
     vi = var(pm, nw, :vi, i)
 
-    cr    = get(var(pm, nw),    :cr_bus, Dict()); _check_var_keys(cr, bus_arcs, "real current", "branch")
-    ci    = get(var(pm, nw),    :ci_bus, Dict()); _check_var_keys(ci, bus_arcs, "imaginary current", "branch")
-    crd   = get(var(pm, nw),   :crd_bus, Dict()); _check_var_keys(crd, bus_loads, "real current", "load")
-    cid   = get(var(pm, nw),   :cid_bus, Dict()); _check_var_keys(cid, bus_loads, "imaginary current", "load")
-    crg   = get(var(pm, nw),   :crg_bus, Dict()); _check_var_keys(crg, bus_gens, "real current", "generator")
-    cig   = get(var(pm, nw),   :cig_bus, Dict()); _check_var_keys(cig, bus_gens, "imaginary current", "generator")
-    crs   = get(var(pm, nw),   :crs_bus, Dict()); _check_var_keys(crs, bus_storage, "real currentr", "storage")
-    cis   = get(var(pm, nw),   :cis_bus, Dict()); _check_var_keys(cis, bus_storage, "imaginary current", "storage")
-    crsw  = get(var(pm, nw),  :crsw, Dict()); _check_var_keys(crsw, bus_arcs_sw, "real current", "switch")
-    cisw  = get(var(pm, nw),  :cisw, Dict()); _check_var_keys(cisw, bus_arcs_sw, "imaginary current", "switch")
-    crt   = get(var(pm, nw),   :crt_bus, Dict()); _check_var_keys(crt, bus_arcs_trans, "real current", "transformer")
-    cit   = get(var(pm, nw),   :cit_bus, Dict()); _check_var_keys(cit, bus_arcs_trans, "imaginary current", "transformer")
+    cr    = get(var(pm, nw), :cr_bus,   Dict()); _check_var_keys(cr, bus_arcs, "real current", "branch")
+    ci    = get(var(pm, nw), :ci_bus,   Dict()); _check_var_keys(ci, bus_arcs, "imaginary current", "branch")
+    crd   = get(var(pm, nw), :crd_bus,  Dict()); _check_var_keys(crd, bus_loads, "real current", "load")
+    cid   = get(var(pm, nw), :cid_bus,  Dict()); _check_var_keys(cid, bus_loads, "imaginary current", "load")
+    crg   = get(var(pm, nw), :crg_bus,  Dict()); _check_var_keys(crg, bus_gens, "real current", "generator")
+    cig   = get(var(pm, nw), :cig_bus,  Dict()); _check_var_keys(cig, bus_gens, "imaginary current", "generator")
+    crs   = get(var(pm, nw), :crs_bus,  Dict()); _check_var_keys(crs, bus_storage, "real currentr", "storage")
+    cis   = get(var(pm, nw), :cis_bus,  Dict()); _check_var_keys(cis, bus_storage, "imaginary current", "storage")
+    crsw  = get(var(pm, nw), :crsw_bus, Dict()); _check_var_keys(crsw, bus_arcs_sw, "real current", "switch")
+    cisw  = get(var(pm, nw), :cisw_bus, Dict()); _check_var_keys(cisw, bus_arcs_sw, "imaginary current", "switch")
+    crt   = get(var(pm, nw), :crt_bus,  Dict()); _check_var_keys(crt, bus_arcs_trans, "real current", "transformer")
+    cit   = get(var(pm, nw), :cit_bus,  Dict()); _check_var_keys(cit, bus_arcs_trans, "imaginary current", "transformer")
 
     Gt, Bt = _build_bus_shunt_matrices(pm, nw, terminals, bus_shunts)
 
@@ -281,7 +281,16 @@ function constraint_mc_voltage_absolute(pm::RectangularVoltageExplicitNeutralMod
     vi = var(pm, nw, :vi, i)
 
     ungrounded_terminals = terminals[(!).(grounded)]
-    JuMP.@constraint(pm.model, [t in ungrounded_terminals], vmin[t]^2 <= vr[t]^2+vi[t]^2 <= vmax[t]^2)
+    for (idx,t) in enumerate(terminals)
+        if !grounded[idx]
+            if vmax[idx] < Inf
+                JuMP.@constraint(pm.model, vr[t]^2+vi[t]^2 <= vmax[idx]^2)
+            end
+            if vmin[idx] > 0.0
+                JuMP.@constraint(pm.model, vr[t]^2+vi[t]^2 >= vmin[idx]^2)
+            end
+        end
+    end
 end
 
 
@@ -326,11 +335,15 @@ function constraint_mc_voltage_pairwise(pm::RectangularVoltageExplicitNeutralMod
     vi = var(pm, nw, :vi, i)
 
     for (a,b,lb) in vm_pair_lb
-        JuMP.@constraint(pm.model, (vr[a]-vr[b])^2 + (vi[a]-vi[b])^2 <= lb^2)
+        if lb > 0.0
+            JuMP.@constraint(pm.model, (vr[a]-vr[b])^2 + (vi[a]-vi[b])^2 <= lb^2)
+        end
     end
 
     for (a,b,ub) in vm_pair_ub
-        JuMP.@constraint(pm.model, (vr[a]-vr[b])^2 + (vi[a]-vi[b])^2 <= ub^2)
+        if ub < Inf
+            JuMP.@constraint(pm.model, (vr[a]-vr[b])^2 + (vi[a]-vi[b])^2 <= ub^2)
+        end
     end
 end
 
@@ -431,6 +444,36 @@ end
 
 
 # GENERATOR
+
+"""
+	function constraint_mc_generator_power(
+		pm::ExplicitNeutralModels,
+		id::Int;
+		nw::Int=nw_id_default,
+		report::Bool=true
+	)
+
+Constrains generator power variables for models with explicit neutrals.
+"""
+function constraint_mc_generator_power(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, report::Bool=true)
+    generator = ref(pm, nw, :gen, id)
+    bus = ref(pm, nw,:bus, generator["gen_bus"])
+
+    configuration = generator["configuration"]
+
+    N = length(generator["connections"])
+    pmin = get(generator, "pmin", fill(-Inf, N))
+    pmax = get(generator, "pmax", fill( Inf, N))
+    qmin = get(generator, "qmin", fill(-Inf, N))
+    qmax = get(generator, "qmax", fill( Inf, N))
+
+    if configuration==WYE || length(pmin)==1
+        constraint_mc_generator_power_wye(pm, nw, id, bus["index"], generator["connections"], pmin, pmax, qmin, qmax; report=report)
+    else
+        constraint_mc_generator_power_delta(pm, nw, id, bus["index"], generator["connections"], pmin, pmax, qmin, qmax; report=report)
+    end
+end
+
 
 # GENERATOR - Variables
 
@@ -584,54 +627,6 @@ function variable_mc_load_current_imaginary(pm::ExplicitNeutralModels; nw::Int=n
     )
 
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :cid, ids(pm, nw, :load), cid)
-end
-
-
-"""
-	function variable_mc_load_power_real(
-		pm::ExplicitNeutralModels;
-		nw::Int=nw_id_default,
-		bounded::Bool=true,
-		report::Bool=true
-	)
-
-Creates load active power variables `:pd` for models with explicit neutrals
-"""
-function variable_mc_load_power_real(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, :load))
-    load_ids_current = [id for (id,load) in ref(pm, nw, :load) if load["model"]==CURRENT]
-    
-    pd = var(pm, nw)[:pd] = Dict{Int,Any}(i => JuMP.@variable(pm.model,
-            [c in 1:int_dim[i]], base_name="$(nw)_pd_$(i)",
-            start = comp_start_value(ref(pm, nw, :load, i), "pd_start", c, 0.0)
-        ) for i in load_ids_current
-    )
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :pd, load_ids_current, pd)
-end
-
-
-"""
-	function variable_mc_load_power_imaginary(
-		pm::ExplicitNeutralModels;
-		nw::Int=nw_id_default,
-		bounded::Bool=true,
-		report::Bool=true
-	)
-
-Creates load reactive power variables `:qd` for models with explicit neutrals
-"""
-function variable_mc_load_power_imaginary(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, :load))
-    load_ids_current = [id for (id,load) in ref(pm, nw, :load) if load["model"]==CURRENT]
-    
-    qd = var(pm, nw)[:qd] = Dict{Int,Any}(i => JuMP.@variable(pm.model,
-            [c in 1:int_dim[i]], base_name="$(nw)_qd_$(i)",
-            start = comp_start_value(ref(pm, nw, :load, i), "qd_start", c, 0.0)
-        ) for i in load_ids_current
-    )
-
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :qd, load_ids_current, qd)
 end
 
 
@@ -1137,22 +1132,22 @@ For models with explicit neutrals,
 creates switch real current variables `:crsw` for models with explicit neutrals. 
 """
 function variable_mc_switch_current_real(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    nconds = Dict(l => length(branch["f_connections"]) for (l,switch) in ref(pm, nw, :switch))
+    nconds = Dict(l => length(switch["f_connections"]) for (l,switch) in ref(pm, nw, :switch))
     crsw = var(pm, nw)[:crsw] = Dict((l,i,j) => JuMP.@variable(pm.model,
-            [c in 1:nconds[l]], base_name="$(nw)_crs_$((l,i,j))",
-            start = comp_start_value(ref(pm, nw, :branch, l), "crs_start", c, 0.0)
+            [c in 1:nconds[l]], base_name="$(nw)_crsw_$((l,i,j))",
+            start = comp_start_value(ref(pm, nw, :switch, l), "crsw_start", c, 0.0)
         ) for (l,i,j) in ref(pm, nw, :arcs_switch)
     )
 
     if bounded
         for (l,i,j) in ref(pm, nw, :arcs_switch)
-            cmax = ref(pm, nw, :switch, l)["c_rating_a"]
+            cmax = ref(pm, nw, :switch, l)["current_rating"]
             set_upper_bound.(crsw[(l,i,j)],  cmax)
             set_lower_bound.(crsw[(l,i,j)], -cmax)
         end
     end
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :crsw_fr, :crsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), crsw)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :crsw_fr, :crsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), crsw)
 end
 
 
@@ -1168,16 +1163,16 @@ For models with explicit neutrals,
 creates switch imaginary current variables `:cisw` for models with explicit neutrals.
 """
 function variable_mc_switch_current_imaginary(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    nconds = Dict(l => length(branch["f_connections"]) for (l,switch) in ref(pm, nw, :switch))
+    nconds = Dict(l => length(switch["f_connections"]) for (l,switch) in ref(pm, nw, :switch))
     cisw = var(pm, nw)[:cisw] = Dict((l,i,j) => JuMP.@variable(pm.model,
-            [c in 1:nconds[l]], base_name="$(nw)_cis_$((l,i,j))",
-            start = comp_start_value(ref(pm, nw, :branch, l), "cis_start", c, 0.0)
+            [c in 1:nconds[l]], base_name="$(nw)_cisw_$((l,i,j))",
+            start = comp_start_value(ref(pm, nw, :switch, l), "cisw_start", c, 0.0)
         ) for (l,i,j) in ref(pm, nw, :arcs_switch)
     )
 
     if bounded
         for (l,i,j) in ref(pm, nw, :arcs_switch)
-            cmax = ref(pm, nw, :switch, l)["c_rating_a"]
+            cmax = ref(pm, nw, :switch, l)["current_rating"]
             set_upper_bound.(cisw[(l,i,j)],  cmax)
             set_lower_bound.(cisw[(l,i,j)], -cmax)
         end
@@ -1201,11 +1196,19 @@ This is defined per arc, i.e. with a variable for the from-side and to-side powe
 """
 function variable_mc_switch_power_active(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     nconds = Dict(l => length(switch["f_connections"]) for (l,switch) in ref(pm, nw, :switch))
-    ps = var(pm, nw)[:psw] = Dict((l,i,j) => JuMP.@variable(pm.model,
+    psw = var(pm, nw)[:psw] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:nconds[l]], base_name="$(nw)_psw_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :switch, l), "psw_start", c, 0.0)
         ) for (l,i,j) in ref(pm, nw, :arcs_switch)
     )
+
+    if bounded
+        for (l,i,j) in ref(pm, nw, :arcs_switch)
+            smax = ref(pm, nw, :switch, l)["thermal_rating"]
+            set_upper_bound.(psw[(l,i,j)],  smax)
+            set_lower_bound.(psw[(l,i,j)], -smax)
+        end
+    end
 
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :psw_fr, :psw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), psw)
 end
@@ -1225,11 +1228,19 @@ This is defined per arc, i.e. with a variable for the from-side and to-side powe
 """
 function variable_mc_switch_power_reactive(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     nconds = Dict(l => length(switch["f_connections"]) for (l,switch) in ref(pm, nw, :switch))
-    qs = var(pm, nw)[:qsw] = Dict((l,i,j) => JuMP.@variable(pm.model,
+    qsw = var(pm, nw)[:qsw] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:nconds[l]], base_name="$(nw)_qsw_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :switch, l), "qsw_start", c, 0.0)
         ) for (l,i,j) in ref(pm, nw, :arcs_switch)
     )
+
+    if bounded
+        for (l,i,j) in ref(pm, nw, :arcs_switch)
+            smax = ref(pm, nw, :switch, l)["thermal_rating"]
+            set_upper_bound.(qsw[(l,i,j)],  smax)
+            set_lower_bound.(qsw[(l,i,j)], -smax)
+        end
+    end
 
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qsw_fr, :qsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), qsw)
 end

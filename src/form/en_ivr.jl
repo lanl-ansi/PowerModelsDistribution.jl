@@ -118,15 +118,14 @@ end
 		pmax::Vector{<:Real},
 		qmin::Vector{<:Real},
 		qmax::Vector{<:Real};
-		report::Bool=true,
-		bounded::Bool=true
+		report::Bool=true
 	)
 
 For IVR models with explicit neutrals,
 creates non-linear expressions for the generator power `:pd` and `:qd` 
 of wye-connected generators as a function of voltage and current
 """
-function constraint_mc_generator_power_wye(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+function constraint_mc_generator_power_wye(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true)
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
     crg = var(pm, nw, :crg, id)
@@ -143,20 +142,18 @@ function constraint_mc_generator_power_wye(pm::AbstractNLExplicitNeutralIVRModel
         push!(qg, JuMP.@NLexpression(pm.model, -(vr[p]-vr[n])*cig[idx]+(vi[p]-vi[n])*crg[idx]))
     end
 
-    if bounded
-        for (idx, p) in enumerate(phases)
-            if pmin[idx]>-Inf
-                JuMP.@constraint(pm.model, pmin[idx] .<= (vr[p]-vr[n])*crg[idx]  + (vi[p]-vi[n])*cig[idx])
-            end
-            if pmax[idx]< Inf
-                JuMP.@constraint(pm.model, pmax[idx] .>= (vr[p]-vr[n])*crg[idx]  + (vi[p]-vi[n])*cig[idx])
-            end
-            if qmin[idx]>-Inf
-                JuMP.@constraint(pm.model, qmin[idx] .<= (vi[p]-vi[n])*crg[idx]  - (vr[p]-vr[n])*cig[idx])
-            end
-            if qmax[idx]< Inf
-                JuMP.@constraint(pm.model, qmax[idx] .>= (vi[p]-vi[n])*crg[idx]  - (vr[p]-vr[n])*cig[idx])
-            end
+    for (idx, p) in enumerate(phases)
+        if pmin[idx]>-Inf
+            JuMP.@constraint(pm.model, pmin[idx] .<= (vr[p]-vr[n])*crg[idx]  + (vi[p]-vi[n])*cig[idx])
+        end
+        if pmax[idx]< Inf
+            JuMP.@constraint(pm.model, pmax[idx] .>= (vr[p]-vr[n])*crg[idx]  + (vi[p]-vi[n])*cig[idx])
+        end
+        if qmin[idx]>-Inf
+            JuMP.@constraint(pm.model, qmin[idx] .<= (vi[p]-vi[n])*crg[idx]  - (vr[p]-vr[n])*cig[idx])
+        end
+        if qmax[idx]< Inf
+            JuMP.@constraint(pm.model, qmax[idx] .>= (vi[p]-vi[n])*crg[idx]  - (vr[p]-vr[n])*cig[idx])
         end
     end
 
@@ -181,15 +178,14 @@ end
 		pmax::Vector{<:Real},
 		qmin::Vector{<:Real},
 		qmax::Vector{<:Real};
-		report::Bool=true,
-		bounded::Bool=true
+		report::Bool=true
 	)
 
 For IVR models with explicit neutrals,
 creates non-linear expressions for the generator power `:pd` and `:qd` 
 of delta-connected generators as a function of voltage and current
 """
-function constraint_mc_generator_power_delta(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+function constraint_mc_generator_power_delta(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true)
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
     crg = var(pm, nw, :crg, id)
@@ -197,29 +193,24 @@ function constraint_mc_generator_power_delta(pm::AbstractNLExplicitNeutralIVRMod
 
     nph = length(pmin)
 
-    prev = Dict(c=>connections[(idx+nph-2)%nph+1] for (idx,c) in enumerate(connections))
-    next = Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
-
     vrg = Dict()
     vig = Dict()
-    for c in connections
-        vrg[c] = JuMP.@NLexpression(pm.model, vr[c]-vr[next[c]])
-        vig[c] = JuMP.@NLexpression(pm.model, vi[c]-vi[next[c]])
+    for (idx,c,d) in zip(1:nph, connections, [connections[2:end]..., connections[1]])
+        vrg[idx] = JuMP.@NLexpression(pm.model, vr[c]-vr[d])
+        vig[idx] = JuMP.@NLexpression(pm.model, vi[c]-vi[d])
     end
 
     pg = Vector{JuMP.NonlinearExpression}([])
     qg = Vector{JuMP.NonlinearExpression}([])
-    for (idx,c) in enumerate(connections)
-        push!(pg, JuMP.@NLexpression(pm.model,  vrg[c]*crg[idx]+vig[c]*cig[idx]))
-        push!(qg, JuMP.@NLexpression(pm.model, -vrg[c]*cig[idx]+vig[c]*crg[idx]))
+    for idx in 1:nph
+        push!(pg, JuMP.@NLexpression(pm.model,  vrg[idx]*crg[idx]+vig[idx]*cig[idx]))
+        push!(qg, JuMP.@NLexpression(pm.model, -vrg[idx]*cig[idx]+vig[idx]*crg[idx]))
     end
 
-    if bounded
-        JuMP.@NLconstraint(pm.model, [i in 1:nph], pmin[i] <= pg[i])
-        JuMP.@NLconstraint(pm.model, [i in 1:nph], pmax[i] >= pg[i])
-        JuMP.@NLconstraint(pm.model, [i in 1:nph], qmin[i] <= qg[i])
-        JuMP.@NLconstraint(pm.model, [i in 1:nph], qmax[i] >= qg[i])
-    end
+    JuMP.@NLconstraint(pm.model, [i in 1:nph], pmin[i] <= pg[i])
+    JuMP.@NLconstraint(pm.model, [i in 1:nph], pmax[i] >= pg[i])
+    JuMP.@NLconstraint(pm.model, [i in 1:nph], qmin[i] <= qg[i])
+    JuMP.@NLconstraint(pm.model, [i in 1:nph], qmax[i] >= qg[i])
 
     var(pm, nw, :pg)[id] = JuMP.Containers.DenseAxisArray(pg, connections)
     var(pm, nw, :qg)[id] = JuMP.Containers.DenseAxisArray(qg, connections)
@@ -297,13 +288,11 @@ function constraint_mc_generator_power_delta(pm::AbstractQuadraticExplicitNeutra
     crg = var(pm, nw, :crg, id)
     cig = var(pm, nw, :cig, id)
 
-    nph = length(pmin)
+    ph = connections
+    ph_next = [connections[2:end]..., connections[1]]
 
-    prev = Dict(c=>connections[(idx+nph-2)%nph+1] for (idx,c) in enumerate(connections))
-    next = Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
-
-    vrg = [vr[c]-vr[next[c]] for p in connections]
-    vig = [vi[c]-vi[next[c]] for p in connections]
+    vrg = [vr[c]-vr[d] for (c,d) in zip(ph,ph_next)]
+    vig = [vi[c]-vi[d] for (c,d) in zip(ph,ph_next)]
 
     pg = var(pm, nw, :pg, id)
     qg = var(pm, nw, :qg, id)
@@ -397,8 +386,56 @@ function variable_mc_load_power(pm::AbstractQuadraticExplicitNeutralIVRModel; nw
     load_ids_exponential = [id for (id,load) in ref(pm, nw, :load) if load["model"]==EXPONENTIAL]
     @assert isempty(load_ids_exponential) "Exponential loads cannot be represented quadratically."
 
-    variable_mc_load_power_real(pm; nw=nw, kwargs...)
-    variable_mc_load_power_imaginary(pm; nw=nw, kwargs...)
+    variable_mc_load_power_active(pm; nw=nw, kwargs...)
+    variable_mc_load_power_reactive(pm; nw=nw, kwargs...)
+end
+
+
+"""
+	function variable_mc_load_power_active(
+		pm::AbstractQuadraticExplicitNeutralIVRModel;
+		nw::Int=nw_id_default,
+		bounded::Bool=true,
+		report::Bool=true
+	)
+
+Creates load active power variables `:pd` for models with explicit neutrals
+"""
+function variable_mc_load_power_active(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, :load))
+    load_ids_current = [id for (id,load) in ref(pm, nw, :load) if load["model"]==CURRENT]
+    
+    pd = var(pm, nw)[:pd] = Dict{Int,Any}(i => JuMP.@variable(pm.model,
+            [c in 1:int_dim[i]], base_name="$(nw)_pd_$(i)",
+            start = comp_start_value(ref(pm, nw, :load, i), "pd_start", c, 0.0)
+        ) for i in load_ids_current
+    )
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :pd, load_ids_current, pd)
+end
+
+
+"""
+	function variable_mc_load_power_reactive(
+		pm::AbstractQuadraticExplicitNeutralIVRModel;
+		nw::Int=nw_id_default,
+		bounded::Bool=true,
+		report::Bool=true
+	)
+
+Creates load reactive power variables `:qd` for models with explicit neutrals
+"""
+function variable_mc_load_power_reactive(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, :load))
+    load_ids_current = [id for (id,load) in ref(pm, nw, :load) if load["model"]==CURRENT]
+    
+    qd = var(pm, nw)[:qd] = Dict{Int,Any}(i => JuMP.@variable(pm.model,
+            [c in 1:int_dim[i]], base_name="$(nw)_qd_$(i)",
+            start = comp_start_value(ref(pm, nw, :load, i), "qd_start", c, 0.0)
+        ) for i in load_ids_current
+    )
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :load, :qd, load_ids_current, qd)
 end
 
 
@@ -546,37 +583,40 @@ function constraint_mc_load_current_delta(pm::AbstractExplicitNeutralIVRModel, n
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
 
-    nph = length(connections)
-    prev = Dict(i=>(i+nph-2)%nph+1 for i in 1:nph)
-    next = Dict(i=>i%nph+1 for i in 1:nph)
 
-    vrd = JuMP.@NLexpression(pm.model, [i in 1:nph], vr[i]-vr[next[i]])
-    vid = JuMP.@NLexpression(pm.model, [i in 1:nph], vi[i]-vi[next[i]])
+    ph = connections
+    ph_next = [connections[2:end]..., connections[1]]
+    P = length(ph)
+    idxs = 1:P
+    idxs_prev = [idxs[end], idxs[1:end-1]...]
 
-    crd = JuMP.@NLexpression(pm.model, [i in 1:nph],
+    vrd = [vr[c]-vr[d] for (c,d) in zip(ph,ph_next)]
+    vid = [vi[c]-vi[d] for (c,d) in zip(ph,ph_next)]
+
+    crd = JuMP.@NLexpression(pm.model, [i in 1:P],
         a[i]*vrd[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2-1)
        +b[i]*vid[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2 -1)
     )
-    cid = JuMP.@NLexpression(pm.model, [i in 1:nph],
+    cid = JuMP.@NLexpression(pm.model, [i in 1:P],
         a[i]*vid[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2-1)
        -b[i]*vrd[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2 -1)
     )
 
-    crd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], crd[i]-crd[prev[i]])
-    cid_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], cid[i]-cid[prev[i]])
+    crd_bus = JuMP.@NLexpression(pm.model, [i in 1:P], crd[i]-crd[idxs_prev[i]])
+    cid_bus = JuMP.@NLexpression(pm.model, [i in 1:P], cid[i]-cid[idxs_prev[i]])
 
     var(pm, nw, :crd_bus)[id] = _merge_bus_flows(pm, crd_bus, connections)
     var(pm, nw, :cid_bus)[id] = _merge_bus_flows(pm, cid_bus, connections)
 
     if report
-        pd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph],  vr[i]*crd_bus[i]+vi[i]*cid_bus[i])
-        qd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], -vr[i]*cid_bus[i]+vi[i]*crd_bus[i])
+        pd_bus = JuMP.@NLexpression(pm.model, [i in 1:P],  vr[i]*crd_bus[i]+vi[i]*cid_bus[i])
+        qd_bus = JuMP.@NLexpression(pm.model, [i in 1:P], -vr[i]*cid_bus[i]+vi[i]*crd_bus[i])
 
         sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         sol(pm, nw, :load, id)[:qd_bus] = qd_bus
 
-        pd = JuMP.@NLexpression(pm.model, [i in 1:nph], a[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2) )
-        qd = JuMP.@NLexpression(pm.model, [i in 1:nph], b[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2)  )
+        pd = JuMP.@NLexpression(pm.model, [i in 1:P], a[i]*(vrd[i]^2+vid[i]^2)^(alpha[i]/2) )
+        qd = JuMP.@NLexpression(pm.model, [i in 1:P], b[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2)  )
         sol(pm, nw, :load, id)[:pd] = pd
         sol(pm, nw, :load, id)[:qd] = qd
     end
@@ -658,9 +698,9 @@ function constraint_mc_load_power_wye(pm::AbstractQuadraticExplicitNeutralIVRMod
         pd = var(pm, nw, :pd, id)
         qd = var(pm, nw, :qd, id)
         JuMP.@constraint(pm.model, pd.^2 .== a.^2 .* (vr_pn.^2 .+ vi_pn.^2))
-        JuMP.@constraint(pm.model, sign.(a).*pd .>= 0) #TODO handle in bounds instead
+        JuMP.@constraint(pm.model, sign.(a).*pd .>= 0)
         JuMP.@constraint(pm.model, qd.^2 .== b.^2 .* (vr_pn.^2 .+ vi_pn.^2))
-        JuMP.@constraint(pm.model, sign.(b).*qd .>= 0) #TODO handle in bounds instead
+        JuMP.@constraint(pm.model, sign.(b).*qd .>= 0)
     else
         error("Load model $model for load $id is not supported by this formulation.")
     end
@@ -702,8 +742,7 @@ function constraint_mc_load_power_delta(pm::AbstractQuadraticExplicitNeutralIVRM
     crd = var(pm, nw, :crd, id)
     cid = var(pm, nw, :cid, id)
 
-    phases = connections[1:end-1]
-    n      = connections[end]
+    phases = connections
 
     Md = _get_delta_transformation_matrix(length(connections))
     vrd = Md*[vr[p] for p in phases]
@@ -719,9 +758,9 @@ function constraint_mc_load_power_delta(pm::AbstractQuadraticExplicitNeutralIVRM
         pd = var(pm, nw, :pd, id)
         qd = var(pm, nw, :qd, id)
         JuMP.@constraint(pm.model, pd.^2 .== a.^2 .* (vrd.^2 .+ vid.^2))
-        JuMP.@constraint(pm.model, sign.(a).*pd .>= 0) #TODO handle in bounds instead
+        JuMP.@constraint(pm.model, sign.(a).*pd .>= 0)
         JuMP.@constraint(pm.model, qd.^2 .== b.^2 .* (vrd.^2 .+ vid.^2))
-        JuMP.@constraint(pm.model, sign.(b).*qd .>= 0) #TODO handle in bounds instead
+        JuMP.@constraint(pm.model, sign.(b).*qd .>= 0)
     else
         error("Load model $model for load $id is not supported by this formulation.")
     end
@@ -1266,8 +1305,8 @@ function constraint_mc_current_from(pm::AbstractExplicitNeutralIVRModel, nw::Int
     var(pm, nw, :ci_bus)[f_idx] = ci_bus_fr = _merge_bus_flows(pm, ci_fr, f_connections)
 
     if report
-        sol(pm, nw, :branch, f_idx[1])[:cr_fr] = cr_fr
-        sol(pm, nw, :branch, f_idx[1])[:ci_fr] = ci_fr
+        sol(pm, nw, :branch, f_idx[1])[:p_fr] =  cr_fr.*vr_fr .+ ci_fr.*vi_fr
+        sol(pm, nw, :branch, f_idx[1])[:q_fr] = -cr_fr.*vi_fr .+ ci_fr.*vr_fr
     end
     
 end
@@ -1312,10 +1351,8 @@ function constraint_mc_current_to(pm::AbstractExplicitNeutralIVRModel, nw::Int, 
     var(pm, nw, :ci_bus)[t_idx] = ci_bus_to = _merge_bus_flows(pm, ci_to, t_connections)
 
     if report
-        sol(pm, nw, :branch, f_idx[1])[:cr_to] = cr_to
-        sol(pm, nw, :branch, f_idx[1])[:ci_to] = ci_to
-        sol(pm, nw, :branch, f_idx[1])[:cr_bus_to] = cr_bus_to
-        sol(pm, nw, :branch, f_idx[1])[:ci_bus_to] = ci_bus_to
+        sol(pm, nw, :branch, t_idx[1])[:p_to] =  cr_to.*vr_to .+ ci_to.*vi_to
+        sol(pm, nw, :branch, t_idx[1])[:q_to] = -cr_to.*vi_to .+ ci_to.*vr_to
     end
 end
 
@@ -1405,8 +1442,8 @@ imposes a bound on the from-side line power magnitude.
 function constraint_mc_thermal_limit_from(pm::AbstractExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
     vr_fr = [var(pm, nw, :vr, f_idx[1])[t] for t in f_connections]
     vi_fr = [var(pm, nw, :vi, f_idx[1])[t] for t in f_connections]
-    cr_fr = var(pm. nw, :cr, f_idx)
-    ci_fr = var(pm. nw, :ci, f_idx)
+    cr_fr = var(pm, nw, :cr, f_idx)
+    ci_fr = var(pm, nw, :ci, f_idx)
 
     for idx in 1:length(rate_a)
         if rate_a[idx]<Inf
@@ -1434,8 +1471,8 @@ imposes a bound on the to-side line power magnitude.
 function constraint_mc_thermal_limit_to(pm::AbstractExplicitNeutralIVRModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
     vr_to = [var(pm, nw, :vr, t_idx[1])[t] for t in t_connections]
     vi_to = [var(pm, nw, :vi, t_idx[1])[t] for t in t_connections]
-    cr_to = var(pm. nw, :cr, t_idx)
-    ci_to = var(pm. nw, :ci, t_idx)
+    cr_to = var(pm, nw, :cr, t_idx)
+    ci_to = var(pm, nw, :ci, t_idx)
 
     for idx in 1:length(rate_a)
         if rate_a[idx]<Inf
@@ -1535,6 +1572,8 @@ function constraint_mc_current_from(pm::ReducedExplicitNeutralIVRModels, nw::Int
     if report
         sol(pm, nw, :branch, f_idx[1])[:cr_fr] = cr_fr
         sol(pm, nw, :branch, f_idx[1])[:ci_fr] = ci_fr
+        sol(pm, nw, :branch, f_idx[1])[:p_fr] =  cr_fr.*vr_fr .+ ci_fr.*vi_fr
+        sol(pm, nw, :branch, f_idx[1])[:q_fr] = -cr_fr.*vi_fr .+ ci_fr.*vr_fr
     end
 end
 
@@ -1580,6 +1619,8 @@ function constraint_mc_current_to(pm::ReducedExplicitNeutralIVRModels, nw::Int, 
     if report
         sol(pm, nw, :branch, f_idx[1])[:cr_to] = cr_to
         sol(pm, nw, :branch, f_idx[1])[:ci_to] = ci_to
+        sol(pm, nw, :branch, t_idx[1])[:p_to] =  cr_to.*vr_to .+ ci_to.*vi_to
+        sol(pm, nw, :branch, t_idx[1])[:q_to] = -cr_to.*vi_to .+ ci_to.*vr_to
     end
 end
 
@@ -1632,8 +1673,8 @@ function constraint_mc_switch_current(pm::AbstractExplicitNeutralIVRModel, nw::I
     crsw_to = var(pm, nw, :crsw, t_idx)
     cisw_to = var(pm, nw, :cisw, t_idx)
 
-    JuMP.@constraint(pm.model, crsw_fr .+ crsw_to == 0)
-    JuMP.@constraint(pm.model, cisw_fr .+ cisw_to == 0)
+    JuMP.@constraint(pm.model, crsw_fr .+ crsw_to .== 0)
+    JuMP.@constraint(pm.model, cisw_fr .+ cisw_to .== 0)
 
     var(pm, nw, :crsw_bus)[f_idx] = _merge_bus_flows(pm, crsw_fr, f_connections)
     var(pm, nw, :cisw_bus)[f_idx] = _merge_bus_flows(pm, cisw_fr, f_connections)
@@ -1661,7 +1702,7 @@ function constraint_mc_switch_current_limit(pm::AbstractExplicitNeutralIVRModel,
     cisw = var(pm, nw, :cisw, f_idx)
 
     for idx in 1:length(rating)
-        if rating[idx] <= Inf
+        if rating[idx] < Inf
             JuMP.@constraint(pm.model, crsw[idx]^2 + cisw[idx]^2 <= rating[idx]^2)
         end
     end
@@ -1686,11 +1727,11 @@ power then equals zero on both ends.
 function constraint_mc_switch_thermal_limit(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
     vr_fr = [var(pm, nw, :vr, f_idx[1])[t] for t in f_connections]
     vi_fr = [var(pm, nw, :vi, f_idx[1])[t] for t in f_connections]
-    crsw_fr = var(pm. nw, :crsw, f_idx)
-    cisw_fr = var(pm. nw, :cisw, f_idx)
+    crsw_fr = var(pm, nw, :crsw, f_idx)
+    cisw_fr = var(pm, nw, :cisw, f_idx)
 
     for idx in 1:length(rating)
-        if rating[idx]<Inf
+        if rating[idx] < Inf
             psw_fr_idx = JuMP.@NLexpression(pm.model,  vr_fr[idx]*crsw_fr[idx] + vi_fr[idx]*cisw_fr[idx])
             qsw_fr_idx = JuMP.@NLexpression(pm.model, -vr_fr[idx]*cisw_fr[idx] + vi_fr[idx]*crsw_fr[idx])
 

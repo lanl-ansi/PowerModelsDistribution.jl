@@ -289,7 +289,7 @@ function build_mc_opf(pm::AbstractExplicitNeutralIVRModel)
         constraint_mc_switch_state(pm, i)
 
         constraint_mc_switch_current_limit(pm, i)
-        constraint_mc_switch_thermal_rating(pm, i)
+        constraint_mc_switch_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :bus)
@@ -360,7 +360,7 @@ function build_mc_opf(pm::AbstractExplicitNeutralACRModel)
         constraint_mc_switch_state(pm, i)
         
         constraint_mc_switch_current_limit(pm, i)
-        constraint_mc_switch_thermal_rating(pm, i)
+        constraint_mc_switch_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :bus)
