@@ -1151,6 +1151,8 @@ function _correct_branch_directions!(pm_data::Dict{String,<:Any})
             branch_orginal = copy(branch)
             branch["f_bus"] = branch_orginal["t_bus"]
             branch["t_bus"] = branch_orginal["f_bus"]
+            branch["f_connections"] = branch_orginal["t_connections"]
+            branch["t_connections"] = branch_orginal["f_connections"]
             branch["g_to"] = branch_orginal["g_fr"]
             branch["b_to"] = branch_orginal["b_fr"]
             branch["g_fr"] = branch_orginal["g_to"]
