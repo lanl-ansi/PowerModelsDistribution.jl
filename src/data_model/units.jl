@@ -13,7 +13,7 @@ const dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
         "ibase"=>Vector{String}(["crd", "cid", "crd_bus", "cid_bus"])
     ),
     "branch" => Dict{String,Vector{String}}(
-        "sbase"=>Vector{String}(["pf", "qf", "pt", "qt"]),
+        "sbase"=>Vector{String}(["pf", "qf", "pt", "qt", "p_fr", "q_fr", "p_to", "q_to"]),
         "ibase"=>Vector{String}(["cr_fr", "ci_fr", "cr_to", "ci_to", "csr_fr", "csi_fr"])
     ),
     "transformer" => Dict{String,Vector{String}}(

@@ -344,13 +344,10 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{Strin
 
         math_obj["angmin"] = get(eng_obj, "vad_lb", fill(-60.0, nphases))
         math_obj["angmax"] = get(eng_obj, "vad_ub", fill( 60.0, nphases))
-        math_obj["c_rating_a"]  = get(eng_obj, "cm_ub",  fill( Inf, nphases))
 
         for (f_key, t_key) in [("cm_ub", "c_rating_a"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
             ("sm_ub", "rate_a"), ("sm_ub_b", "rate_b"), ("sm_ub_c", "rate_c")]
-            if haskey(eng_obj, f_key)
-                math_obj[t_key] = eng_obj[f_key]
-            end
+                math_obj[t_key] = haskey(eng_obj, f_key) ? eng_obj[f_key] : fill(Inf, nphases)
         end
 
         math_obj["br_status"] = Int(eng_obj["status"])
@@ -494,8 +491,8 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
         math_obj["dispatchable"] = Int(get(eng_obj, "dispatchable", YES))
 
         # OPF bounds
-        for (f_key, t_key) in [("cm_ub", "c_rating_a"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
-            ("sm_ub", "rate_a"), ("sm_ub_b", "rate_b"), ("sm_ub_c", "rate_c")]
+        for (f_key, t_key) in [("cm_ub", "current_rating"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
+            ("sm_ub", "thermal_rating"), ("sm_ub_b", "rate_b"), ("sm_ub_c", "rate_c")]
             math_obj[t_key] = haskey(eng_obj, f_key) ? eng_obj[f_key] : fill(Inf, nphases)
         end
 
@@ -511,16 +508,17 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
             f_bus = deepcopy(data_math["bus"]["$(math_obj["f_bus"])"])
             t_bus = deepcopy(data_math["bus"]["$(math_obj["t_bus"])"])
 
+            N = length(eng_obj["t_connections"])
             bus_obj = Dict{String,Any}(
                 "name" => "_virtual_bus.switch.$name",
                 "bus_i" => length(data_math["bus"])+1,
                 "bus_type" => get(eng_obj, "status", ENABLED) == DISABLED ? 4 : 1,
-                "terminals" => t_bus["terminals"],  # connected to the switch on the to-side
-                "grounded" => t_bus["grounded"],  # connected to the switch on the to-side
-                "vmin" => t_bus["vmin"],
-                "vmax" => t_bus["vmax"],
-                "vm_pair_lb" => get(t_bus, "vm_pair_lb", []),
-                "vm_pair_ub" => get(t_bus, "vm_pair_ub", []),
+                "terminals" => eng_obj["t_connections"],  # connected to the switch on the to-side
+                "grounded" => fill(false, N),  # connected to the switch on the to-side
+                "vmin" => fill(0.0, N),
+                "vmax" => fill(Inf, N),
+                "vm_pair_lb" => [],
+                "vm_pair_ub" => [],
                 "source_id" => "switch.$name",
                 "index" => length(data_math["bus"])+1,
             )
@@ -677,10 +675,15 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
             data_math["bus"]["$(math_obj["gen_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...]
         end
 
-        for (fr_k, to_k) in [("vg", "vg"), ("pg_lb", "pmin"), ("pg_ub", "pmax"), ("qg_lb", "qmin"), ("qg_ub", "qmax")]
+        for (fr_k, to_k) in [("vg", "vg")]
             if haskey(eng_obj, fr_k)
                 math_obj[to_k] = eng_obj[fr_k]
             end
+        end
+
+        N = _infer_int_dim_unit(eng_obj, false)
+        for (fr_k, to_k, def) in [("pg_lb", "pmin", -Inf), ("pg_ub", "pmax", Inf), ("qg_lb", "qmin", -Inf), ("qg_ub", "qmax", Inf)]
+            math_obj[to_k] = haskey(eng_obj, fr_k) ? eng_obj[fr_k] : fill(def, N)
         end
 
         _add_gen_cost_model!(math_obj, eng_obj)
