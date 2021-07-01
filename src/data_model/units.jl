@@ -363,6 +363,7 @@ end
 function _rebase_pu_branch!(branch::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
     if !haskey(branch, "vbase")
         z_old = 1
+        vbase_old = 1.0
     else
         vbase_old = branch["vbase"]
         z_old = vbase_old^2/sbase_old*voltage_scale_factor
@@ -372,10 +373,12 @@ function _rebase_pu_branch!(branch::Dict{String,<:Any}, vbase::Real, sbase::Real
     z_scale = z_old/z_new
     y_scale = 1/z_scale
     sbase_scale = sbase_old/sbase
+    ibase_scale = sbase_scale/(vbase_old/vbase)
 
     _scale_props!(branch, ["br_r", "br_x"], z_scale)
     _scale_props!(branch, ["b_fr", "g_fr", "b_to", "g_to"], y_scale)
-    _scale_props!(branch, ["c_rating_a", "c_rating_b", "c_rating_c", "rate_a", "rate_b", "rate_c"], sbase_scale)
+    _scale_props!(branch, ["c_rating_a", "c_rating_b", "c_rating_c"], ibase_scale)
+    _scale_props!(branch, ["rate_a", "rate_b", "rate_c"], sbase_scale)
 
     branch["angmin"] = deg2rad.(branch["angmin"])
     branch["angmax"] = deg2rad.(branch["angmax"])
@@ -387,9 +390,13 @@ end
 
 "per-unit conversion for switches"
 function _rebase_pu_switch!(switch::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
+    vbase_old = !haskey(switch, "vbase") ? 1.0 : switch["vbase"]
+    
     sbase_scale = sbase_old / sbase
+    ibase_scale = sbase_scale/(vbase_old/vbase)
 
-    _scale_props!(switch, ["c_rating_a", "c_rating_b", "c_rating_c", "rate_a", "rate_b", "rate_c"], sbase_scale)
+    _scale_props!(switch, ["current_rating", "c_rating_b", "c_rating_c"], ibase_scale)
+    _scale_props!(switch, ["thermal_rating", "rate_b", "rate_c"], sbase_scale)
 
     switch["vbase"] = vbase
 end
