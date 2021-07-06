@@ -38,10 +38,10 @@ Currently, because `Major==0`, `minor` indicates breaking changes and `patch` in
 
 # Branch Management
 
-The `master` branch is a [protected](https://help.github.com/en/github/administering-a-repository/about-protected-branches) branch, meaning that its history will always be contiguous and can never be overwritten.
+The `main` branch is a [protected](https://help.github.com/en/github/administering-a-repository/about-protected-branches) branch, meaning that its history will always be contiguous and can never be overwritten.
 
-Release candidate branches of the format `vM.m.0-rc` are also protected branches. These branches will contain only breaking changes and will not be merged into master until a new version is ready to be tagged. Pull requests including breaking changes should be directed into the next release candidate branch available, _e.g._ if the current version of the package is `v0.9.0`, the next release candidate branch will be `v0.10.0-rc`.
+Release candidate branches of the format `vM.m.0-rc` are also protected branches. These branches will contain only breaking changes and will not be merged into main until a new version is ready to be tagged. Pull requests including breaking changes should be directed into the next release candidate branch available, _e.g._ if the current version of the package is `v0.9.0`, the next release candidate branch will be `v0.10.0-rc`.
 
-Pull requests that include only non-breaking changes can be merged directly into `master` once approved, and in the case of merge conflicts arising for release candidate branches, the `-rc` branch will need to be updated to include the latest `master`.
+Pull requests that include only non-breaking changes can be merged directly into `main` once approved, and in the case of merge conflicts arising for release candidate branches, the `-rc` branch will need to be updated to include the latest `main`.
 
-Pull requests will generally be merged using [squash and merge](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges#squash-and-merge-your-pull-request-commits) into the branch they are aimed at, with the exception of release candidate branches, which generally be merged using [rebase and merge](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges#rebase-and-merge-your-pull-request-commits) into master.
+Pull requests will generally be merged using [squash and merge](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges#squash-and-merge-your-pull-request-commits) into the branch they are aimed at, with the exception of release candidate branches, which generally be merged using [rebase and merge](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges#rebase-and-merge-your-pull-request-commits) into main.
