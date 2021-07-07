@@ -243,10 +243,11 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
         qd_bus = LinearAlgebra.diag(Xdi*Td)
         pd = LinearAlgebra.diag(Td*Xdr)
         qd = LinearAlgebra.diag(Td*Xdi)
+        # Equate missing edge parameters to zero
         for (idx, c) in enumerate(connections)
-            if abs(pd0[idx]+im*qd0[idx]) <= 1e-5
-                JuMP.@constraint(pm.model, pd_bus[idx]==0)
-                JuMP.@constraint(pm.model, qd_bus[idx]==0)
+            if abs(pd0[idx]+im*qd0[idx]) == 0.0
+                JuMP.@constraint(pm.model, Xdr[:,idx] .== 0)
+                JuMP.@constraint(pm.model, Xdi[:,idx] .== 0)
             end
         end
 

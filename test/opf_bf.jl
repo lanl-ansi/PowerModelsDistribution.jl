@@ -43,6 +43,15 @@
             @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.0214812; atol=2e-3)
             @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.00927263; atol=2e-3)
         end
+        @testset "3-bus unbalanced lpubfdiag opf_bf with delta loads" begin
+            pmd = parse_file("../test/data/opendss/case3_unbalanced_test_delta_loads.dss")
+            sol = solve_mc_opf(pmd, LPUBFDiagPowerModel, ipopt_solver)
+
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.020999974; atol=2e-3)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.008999997; atol=2e-3)
+        end
         @testset "3-bus unbalanced lpubfdiag opf_bf with only two terminals on load bus" begin
             pmd = parse_file("../test/data/opendss/case3_unbalanced_missingedge.dss")
             sol = solve_mc_opf(pmd, LPUBFDiagPowerModel, ipopt_solver)
