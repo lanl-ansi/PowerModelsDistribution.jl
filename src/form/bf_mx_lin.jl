@@ -172,3 +172,101 @@ function constraint_mc_storage_losses(pm::AbstractUBFModels, i::Int; nw::Int=nw_
         qsc + q_loss
     )
 end
+
+## KIG modifications
+function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_id_default, report::Bool=true)
+    # shared variables and parameters
+    load = ref(pm, nw, :load, load_id)
+    connections = load["connections"]
+    pd0 = load["pd"]
+    qd0 = load["qd"]
+    bus_id = load["load_bus"]
+    bus = ref(pm, nw, :bus, bus_id)
+    terminals = bus["terminals"]
+
+    # calculate load params
+    a, alpha, b, beta = _load_expmodel_params(load, bus)
+    vmin, vmax = _calc_load_vbounds(load, bus)
+    wmin = vmin.^2
+    wmax = vmax.^2
+    pmin, pmax, qmin, qmax = _calc_load_pq_bounds(load, bus)
+    
+    # take care of connections
+    if load["configuration"]==WYE
+        if load["model"]==POWER
+            var(pm, nw, :pd)[load_id] = JuMP.Containers.DenseAxisArray(pd0, connections)
+            var(pm, nw, :qd)[load_id] = JuMP.Containers.DenseAxisArray(qd0, connections)
+        elseif load["model"]==IMPEDANCE
+            w = var(pm, nw, :w)[bus_id][[c for c in connections]]
+            var(pm, nw, :pd)[load_id] = a.*w
+            var(pm, nw, :qd)[load_id] = b.*w
+        # in this case, :pd has a JuMP variable
+        else
+            w = var(pm, nw, :w)[bus_id][[c for c in connections]] 
+            pd = var(pm, nw, :pd)[load_id]
+            qd = var(pm, nw, :qd)[load_id]
+            for (idx,c) in enumerate(connections)
+                JuMP.@constraint(pm.model, pd[c]==1/2*a[idx]*(w[c]+1))
+                JuMP.@constraint(pm.model, qd[c]==1/2*b[idx]*(w[c]+1))
+            end
+        end
+        # :pd_bus is identical to :pd now
+        var(pm, nw, :pd_bus)[load_id] = var(pm, nw, :pd)[load_id]
+        var(pm, nw, :qd_bus)[load_id] = var(pm, nw, :qd)[load_id]
+
+        ## reporting
+        if report
+            sol(pm, nw, :load, load_id)[:pd] = var(pm, nw, :pd)[load_id]
+            sol(pm, nw, :load, load_id)[:qd] = var(pm, nw, :qd)[load_id]
+            sol(pm, nw, :load, load_id)[:pd_bus] = var(pm, nw, :pd_bus)[load_id]
+            sol(pm, nw, :load, load_id)[:qd_bus] = var(pm, nw, :qd_bus)[load_id]
+        end
+    elseif load["configuration"]==DELTA
+        Xdr = var(pm, nw, :Xdr, load_id)
+        Xdi = var(pm, nw, :Xdi, load_id)
+        Td = [1 -1 0; 0 1 -1; -1 0 1]  # TODO
+        # define pd/qd and pd_bus/qd_bus as affine transformations of X
+        pd_bus = LinearAlgebra.diag(Xdr*Td)
+        qd_bus = LinearAlgebra.diag(Xdi*Td)
+        pd = LinearAlgebra.diag(Td*Xdr)
+        qd = LinearAlgebra.diag(Td*Xdi)
+        # Equate missing edge parameters to zero
+        for (idx, c) in enumerate(connections)
+            if abs(pd0[idx]+im*qd0[idx]) == 0.0
+                JuMP.@constraint(pm.model, Xdr[:,idx] .== 0)
+                JuMP.@constraint(pm.model, Xdi[:,idx] .== 0)
+            end
+        end
+
+        var(pm, nw, :pd_bus)[load_id] = pd_bus
+        var(pm, nw, :qd_bus)[load_id] = qd_bus
+        var(pm, nw, :pd)[load_id] = pd
+        var(pm, nw, :qd)[load_id] = qd
+        if load["model"]==POWER
+            for (idx, c) in enumerate(connections)
+                JuMP.@constraint(pm.model, pd[idx]==pd0[idx])
+                JuMP.@constraint(pm.model, qd[idx]==qd0[idx])
+            end
+        elseif load["model"]==IMPEDANCE
+            w = var(pm, nw, :w)[bus_id][[c for c in connections]]     
+            for (idx,c) in enumerate(connections)
+                JuMP.@constraint(pm.model, pd[idx]==3*a[idx]*w[idx])
+                JuMP.@constraint(pm.model, qd[idx]==3*b[idx]*w[idx])
+            end
+        else
+            w = var(pm, nw, :w)[bus_id][[c for c in connections]] 
+            for (idx,c) in enumerate(connections)
+                JuMP.@constraint(pm.model, pd[idx]==sqrt(3)/2*a[idx]*(w[idx]+1))
+                JuMP.@constraint(pm.model, qd[idx]==sqrt(3)/2*b[idx]*(w[idx]+1))
+            end
+        end
+
+        ## reporting; for delta these are not available as saved variables!
+        if report
+            sol(pm, nw, :load, load_id)[:pd] = pd
+            sol(pm, nw, :load, load_id)[:qd] = qd
+            sol(pm, nw, :load, load_id)[:pd_bus] = pd_bus
+            sol(pm, nw, :load, load_id)[:qd_bus] = qd_bus
+        end
+    end
+end

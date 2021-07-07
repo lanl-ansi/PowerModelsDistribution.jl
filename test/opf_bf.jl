@@ -49,6 +49,15 @@
             @test sol["termination_status"] == LOCALLY_SOLVED
             @test norm(sol["solution"]["bus"]["loadbus"]["w"]-[0.92234, 0.95778], Inf) <= 1E-4
         end
+        @testset "3-bus unbalanced lpubfdiag opf_bf with delta loads" begin
+            pmd = parse_file("../test/data/opendss/case3_unbalanced_delta_loads.dss")
+            apply_voltage_bounds!(pmd; vm_lb=0.9, vm_ub=1.1);
+            sol = solve_mc_opf(pmd, LPUBFDiagPowerModel, ipopt_solver; make_si=false)
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.04026874; atol=2e-3)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.0171721; atol=2e-3)
+        end
     end
 
     @testset "test linearised distflow opf_bf in diagonal matrix form" begin
