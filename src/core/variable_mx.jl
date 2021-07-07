@@ -23,8 +23,10 @@ function _make_matrix_variable_element(model::JuMP.Model, indices::Array{T,1}, n
     upper_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
     lower_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
     varname::String="") where T
-    nm_has_lb = !(ismissing(lower_bound) || all([lower_bound[index][n,m]==-Inf for index in indices]))
-    nm_has_ub = !(ismissing(upper_bound) || all([upper_bound[index][n,m]== Inf for index in indices]))
+    # nm_has_lb = !(ismissing(lower_bound) || all([lower_bound[index][n,m]==-Inf for index in indices]))
+    # nm_has_ub = !(ismissing(upper_bound) || all([upper_bound[index][n,m]== Inf for index in indices]))
+    nm_has_lb = !(ismissing(lower_bound) || all([lower_bound[index][n,m]==-Inf || isnan(lower_bound[index][n,m]) for index in indices]))
+    nm_has_ub = !(ismissing(upper_bound) || all([upper_bound[index][n,m]== Inf || isnan(upper_bound[index][n,m]) for index in indices]))
 
     if !nm_has_ub && !nm_has_lb
         mat_nm = JuMP.@variable(model, [index in indices],
