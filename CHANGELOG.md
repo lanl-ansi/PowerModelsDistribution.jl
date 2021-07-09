@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Added delta/voltage-dependent loads to LinDist3Flow formulation
 
 ## v0.11.4
 
