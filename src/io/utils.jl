@@ -31,6 +31,7 @@ const _dss_supported_components = String[
     "line", "linecode", "load", "generator", "capacitor", "reactor",
     "transformer", "pvsystem", "storage", "loadshape", "options",
     "xfmrcode", "vsource", "xycurve", "spectrum", "capcontrol",
+    "regcontrol",
 ]
 
 "two number operators for reverse polish notation"
