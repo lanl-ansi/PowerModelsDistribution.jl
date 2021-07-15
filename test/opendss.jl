@@ -254,6 +254,48 @@
             "like" => "",
         )
     end
+
+    @testset "opendss regcontrol parse" begin
+        raw_obj = dss["regcontrol"]["t1"]
+
+        defaults = PMD._create_regcontrol(raw_obj["name"], PMD._to_kwargs(raw_obj)...)
+
+        @test defaults == Dict{String,Any}(
+            "transformer" => "t1",
+            "winding" => 2,
+            "vreg" => 122,
+            "band" => 2.0,
+            "delay" => 15.0,
+            "ptratio" => 20.0,
+            "ctprim" => 700.0,
+            "r" => 3.0,
+            "x" => 9.0,
+            "ptphase" => 1,
+            "tapwinding" => 2,
+            "bus" => "",
+            "debugtrace" => false,
+            "eventlog" => true,
+            "inversetime" => false,
+            "maxtapchange" => 16,
+            "revband" => 3.0,
+            "revdelay" => 60.0,
+            "reversible" => false,
+            "revneutral" => false,
+            "revr" => 0.0,
+            "revthreshold" => 100.0,
+            "revvreg" => 120.0,
+            "revx" => 0.0,
+            "tapdelay" => 2.0,
+            "tapnum" => 0,
+            "vlimit" => 0.0,
+            "rev_z" => 0.0,
+            "ldc_z" => 0.0,
+            "cogen" => false,
+            "remoteptratio" => 60.0,
+            "enabled" => true,
+            "like" => "",
+        )
+    end
 end
 
 @testset "test json parser" begin
