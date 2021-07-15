@@ -90,7 +90,7 @@
         @test math["name"] == "test2"
 
         @test length(math) == 17
-        @test length(dss) == 21
+        @test length(dss) == 23
 
         for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "transformer", "storage", "switch"], [34, 4, 5, 28, 5, 10, 1, 1])
             @test haskey(math, key)
