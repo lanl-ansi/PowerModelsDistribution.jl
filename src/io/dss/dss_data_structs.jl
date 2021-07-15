@@ -372,7 +372,7 @@ function _create_capcontrol(name::String=""; kwargs...)::Dict{String,Any}
         "vmax" => get(kwargs, :vmax, 126.0),
         "vmin" => get(kwargs, :vmin, 115.0),
         "voltoverride" => get(kwargs, :voltoverride, false),
-        "pctminkvar" => get(kwargs, :50.0),
+        "pctminkvar" => get(kwargs, :pctminkvar, 50.0),
         "enabled" => get(kwargs, :enabled, true),
         "like" => get(kwargs, :like, ""),
     )
