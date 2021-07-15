@@ -231,6 +231,7 @@
         defaults = PMD._create_capcontrol(raw_obj["name"], PMD._to_kwargs(raw_obj)...)
 
         @test defaults == Dict{String,Any}(
+            "name" => "c1_ctrl",
             "element" => "line.l2",
             "capacitor" => "c1",
             "type" => "kvar",
@@ -261,6 +262,7 @@
         defaults = PMD._create_regcontrol(raw_obj["name"], PMD._to_kwargs(raw_obj)...)
 
         @test defaults == Dict{String,Any}(
+            "name" => "t1",
             "transformer" => "t1",
             "winding" => 2,
             "vreg" => 122,

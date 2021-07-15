@@ -354,6 +354,7 @@ different properties.
 """
 function _create_capcontrol(name::String=""; kwargs...)::Dict{String,Any}
     Dict{String,Any}(
+        "name" => name,
         "element" => get(kwargs, :element, ""),
         "capacitor" => get(kwargs, :capacitor, ""),
         "type" => get(kwargs, :type, "current"),
@@ -386,6 +387,7 @@ different properties.
 """
 function _create_regcontrol(name::String=""; kwargs...)::Dict{String,Any}
     Dict{String,Any}(
+        "name" => name,
         "transformer" => get(kwargs, :transformer, ""),
         "winding" => get(kwargs, :winding, 1),
         "vreg" => get(kwargs, :vreg, 120.0),
