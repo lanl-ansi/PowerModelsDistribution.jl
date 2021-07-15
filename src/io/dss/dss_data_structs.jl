@@ -386,7 +386,7 @@ different properties.
 """
 function _create_regcontrol(name::String=""; kwargs...)::Dict{String,Any}
     Dict{String,Any}(
-        "transformer" => get(kwargs, :tranformer, ""),
+        "transformer" => get(kwargs, :transformer, ""),
         "winding" => get(kwargs, :winding, 1),
         "vreg" => get(kwargs, :vreg, 120.0),
         "band" => get(kwargs, :band, 3.0),
