@@ -224,6 +224,36 @@
         @test circuit["isc3"] == 10041.0
         @test circuit["isc1"] == 10500.0
     end
+
+    @testset "opendss capcontrol parse" begin
+        raw_obj = dss["capcontrol"]["c1_ctrl"]
+
+        defaults = PMD._create_capcontrol(raw_obj["name"], PMD._to_kwargs(raw_obj)...)
+
+        @test defaults == Dict{String,Any}(
+            "element" => "line.l2",
+            "capacitor" => "c1",
+            "type" => "kvar",
+            "ctphase" => 1,
+            "ctratio" => 1.0,
+            "deadtime" => get(kwargs, :deadtime, 300.0),
+            "delay" => 100.0,
+            "delayoff" => 100.0,
+            "eventlog" => true,
+            "offsetting" => -225.0,
+            "onsetting" => 150.0,
+            "ptphase" => 1,
+            "ptratio" => 1.0,
+            "terminal" => 1,
+            "vbus" => "",
+            "vmax" => 7740.0,
+            "vmin" => 7110.0,
+            "voltoverride" => true,
+            "pctminkvar" => 50.0,
+            "enabled" => true,
+            "like" => "",
+        )
+    end
 end
 
 @testset "test json parser" begin
