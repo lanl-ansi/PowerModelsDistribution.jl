@@ -228,7 +228,7 @@
     @testset "opendss capcontrol parse" begin
         raw_obj = dss["capcontrol"]["c1_ctrl"]
 
-        defaults = PMD._create_capcontrol(raw_obj["name"], PMD._to_kwargs(raw_obj)...)
+        defaults = PMD._create_capcontrol(raw_obj["name"]; PMD._to_kwargs(raw_obj)...)
 
         @test defaults == Dict{String,Any}(
             "name" => "c1_ctrl",
@@ -237,7 +237,7 @@
             "type" => "kvar",
             "ctphase" => 1,
             "ctratio" => 1.0,
-            "deadtime" => get(kwargs, :deadtime, 300.0),
+            "deadtime" => 300.0,
             "delay" => 100.0,
             "delayoff" => 100.0,
             "eventlog" => true,
@@ -259,13 +259,13 @@
     @testset "opendss regcontrol parse" begin
         raw_obj = dss["regcontrol"]["t1"]
 
-        defaults = PMD._create_regcontrol(raw_obj["name"], PMD._to_kwargs(raw_obj)...)
+        defaults = PMD._create_regcontrol(raw_obj["name"]; PMD._to_kwargs(raw_obj)...)
 
         @test defaults == Dict{String,Any}(
             "name" => "t1",
             "transformer" => "t1",
             "winding" => 2,
-            "vreg" => 122,
+            "vreg" => 122.0,
             "band" => 2.0,
             "delay" => 15.0,
             "ptratio" => 20.0,
