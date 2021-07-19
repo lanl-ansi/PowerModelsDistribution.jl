@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added support for raw parsing of RegControl and CapControl objects from dss
 - Added delta/voltage-dependent loads to LinDist3Flow formulation
 
 ## v0.11.4

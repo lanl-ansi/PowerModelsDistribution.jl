@@ -90,7 +90,7 @@
         @test math["name"] == "test2"
 
         @test length(math) == 17
-        @test length(dss) == 21
+        @test length(dss) == 23
 
         for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "transformer", "storage", "switch"], [34, 4, 5, 28, 5, 10, 1, 1])
             @test haskey(math, key)
@@ -200,29 +200,103 @@
     end
 
     @testset "opendss parse verify mvasc3/mvasc1 circuit parse" begin
-        dss = parse_dss("../test/data/opendss/test_simple.dss")
-        circuit = PMD._create_vsource("source"; PMD._to_kwargs(dss["vsource"]["source"])...)
+        dss_data = parse_dss("../test/data/opendss/test_simple.dss")
+        circuit = PMD._create_vsource("source"; PMD._to_kwargs(dss_data["vsource"]["source"])...)
 
         @test circuit["mvasc1"] == 2100.0
         @test circuit["mvasc3"] == 1900.0
         @test isapprox(circuit["isc3"], 9538.8; atol=1e-1)
         @test isapprox(circuit["isc1"], 10543.0; atol=1e-1)
 
-        dss = parse_dss("../test/data/opendss/test_simple3.dss")
-        circuit = PMD._create_vsource("source"; PMD._to_kwargs(dss["vsource"]["source"])...)
+        dss_data = parse_dss("../test/data/opendss/test_simple3.dss")
+        circuit = PMD._create_vsource("source"; PMD._to_kwargs(dss_data["vsource"]["source"])...)
 
         @test circuit["mvasc1"] == 2100.0
         @test isapprox(circuit["mvasc3"], 1900.0; atol=1e-1)
         @test circuit["isc3"] == 9538.8
         @test isapprox(circuit["isc1"], 10543.0; atol=1e-1)
 
-        dss = parse_dss("../test/data/opendss/test_simple4.dss")
-        circuit = PMD._create_vsource("source"; PMD._to_kwargs(dss["vsource"]["source"])...)
+        dss_data = parse_dss("../test/data/opendss/test_simple4.dss")
+        circuit = PMD._create_vsource("source"; PMD._to_kwargs(dss_data["vsource"]["source"])...)
 
         @test isapprox(circuit["mvasc1"], 2091.5; atol=1e-1)
         @test circuit["mvasc3"] == 2000.0
         @test circuit["isc3"] == 10041.0
         @test circuit["isc1"] == 10500.0
+    end
+
+    @testset "opendss capcontrol parse" begin
+        raw_obj = dss["capcontrol"]["c1_ctrl"]
+
+        defaults = PMD._create_capcontrol(raw_obj["name"]; PMD._to_kwargs(raw_obj)...)
+
+        @test defaults == Dict{String,Any}(
+            "name" => "c1_ctrl",
+            "element" => "line.l2",
+            "capacitor" => "c1",
+            "type" => "kvar",
+            "ctphase" => 1,
+            "ctratio" => 1.0,
+            "deadtime" => 300.0,
+            "delay" => 100.0,
+            "delayoff" => 100.0,
+            "eventlog" => true,
+            "offsetting" => -225.0,
+            "onsetting" => 150.0,
+            "ptphase" => 1,
+            "ptratio" => 1.0,
+            "terminal" => 1,
+            "vbus" => "",
+            "vmax" => 7740.0,
+            "vmin" => 7110.0,
+            "voltoverride" => true,
+            "pctminkvar" => 50.0,
+            "enabled" => true,
+            "like" => "",
+        )
+    end
+
+    @testset "opendss regcontrol parse" begin
+        raw_obj = dss["regcontrol"]["t1"]
+
+        defaults = PMD._create_regcontrol(raw_obj["name"]; PMD._to_kwargs(raw_obj)...)
+
+        @test defaults == Dict{String,Any}(
+            "name" => "t1",
+            "transformer" => "t1",
+            "winding" => 2,
+            "vreg" => 122.0,
+            "band" => 2.0,
+            "delay" => 15.0,
+            "ptratio" => 20.0,
+            "ctprim" => 700.0,
+            "r" => 3.0,
+            "x" => 9.0,
+            "ptphase" => 1,
+            "tapwinding" => 2,
+            "bus" => "",
+            "debugtrace" => false,
+            "eventlog" => true,
+            "inversetime" => false,
+            "maxtapchange" => 16,
+            "revband" => 3.0,
+            "revdelay" => 60.0,
+            "reversible" => false,
+            "revneutral" => false,
+            "revr" => 0.0,
+            "revthreshold" => 100.0,
+            "revvreg" => 120.0,
+            "revx" => 0.0,
+            "tapdelay" => 2.0,
+            "tapnum" => 0,
+            "vlimit" => 0.0,
+            "rev_z" => 0.0,
+            "ldc_z" => 0.0,
+            "cogen" => false,
+            "remoteptratio" => 60.0,
+            "enabled" => true,
+            "like" => "",
+        )
     end
 end
 
