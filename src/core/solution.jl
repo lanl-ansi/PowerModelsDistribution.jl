@@ -107,6 +107,10 @@ function sol_data_model!(pm::AbstractUnbalancedACRModel, solution::Dict{String,<
 end
 
 
+function sol_data_model!(pm::FBSUBFPowerModel, solution::Dict{String,<:Any})
+    apply_pmd!(_sol_data_model_acr!, solution)
+end
+
 """
     sol_data_model!(pm::AbstractUnbalancedPowerModel, solution::Dict{String,<:Any})
 
