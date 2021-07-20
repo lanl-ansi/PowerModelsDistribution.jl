@@ -95,7 +95,7 @@ function apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Ve
 
             @assert all(t in kr_phases for t in terminals_kr) "bus $id has terminals $(eng_obj["terminals"]), outside of $kr_phases, cannot be kron reduced"
 
-            _apply_filter!(eng_obj, ["vm", "va", "vm_lb", "vm_ub"], filter)
+            _apply_filter!(eng_obj, ["vm", "va", "vm_lb", "vm_ub", "vm_start", "va_start"], filter)
             eng_obj["terminals"] = terminals_kr
 
             gr_filter = eng_obj["grounded"] .!= kr_neutral
