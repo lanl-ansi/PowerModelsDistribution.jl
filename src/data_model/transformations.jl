@@ -229,7 +229,7 @@ function apply_phase_projection!(data_eng::Dict{String,<:Any})
                 eng_obj["vm_ub"] = fill(Inf, length(eng_obj["terminals"]))
             end
 
-            _pad_properties!(eng_obj, ["vm", "va", "vm_lb", "vm_ub"], eng_obj["terminals"], all_conductors)
+            _pad_properties!(eng_obj, ["vm", "va", "vm_lb", "vm_ub", "vm_start", "va_start"], eng_obj["terminals"], all_conductors)
 
             _pad_connections!(eng_obj, "terminals", all_conductors)
         end
@@ -454,7 +454,7 @@ function _update_bus_terminal_projections!(data_eng::Dict{String,<:Any}, bus_ter
 
         old_terms = deepcopy(eng_obj["terminals"])
         new_terms = _pad_connections!(eng_obj, "terminals", terminals)
-        _pad_properties!(eng_obj, ["vm", "va", "vm_lb", "vm_ub"], old_terms, new_terms)
+        _pad_properties!(eng_obj, ["vm", "va", "vm_lb", "vm_ub", "vm_start", "va_start"], old_terms, new_terms)
     end
 end
 
