@@ -266,6 +266,24 @@ mutable struct LPUBFDiagPowerModel <: LPUBFDiagModel @pmd_fields end
 "More popular name for the [`LPUBFDiagPowerModel`](@ref LPUBFDiagPowerModel)"
 const LinDist3FlowPowerModel = LPUBFDiagPowerModel # more popular name
 
+"""
+Forward-backward sweep (FBS) linear branch flow formulation uses rectangular
+coordinates for voltage. The powers are calculated using the initial operating voltage solution.
+```
+    @INPROCEEDINGS{girigoudar_roald-2021,
+	author={K. Girigoudar and L. A. Roald},
+	booktitle={submitted},
+	title={{Linearized  Three-Phase  Optimal  Power  Flow  Models for  Distribution  Grids  with  Voltage  Unbalance}},
+	year={2021},
+	month={},
+}
+```
+"""
+abstract type FBSUBFModel <: AbstractLPUBFModel end
+
+"default LP unbalanced FBS constructor"
+mutable struct FBSUBFPowerModel <: FBSUBFModel @pmd_fields end
+
 "default SDP unbalanced DistFlow constructor"
 mutable struct SDPUBFPowerModel <: SDPUBFModel @pmd_fields end
 

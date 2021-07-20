@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added simplified linear UBF formulation using a single iteration of forward-backward sweep (FBS)
 - Added support for raw parsing of RegControl and CapControl objects from dss
 - Added delta/voltage-dependent loads to LinDist3Flow formulation
 
