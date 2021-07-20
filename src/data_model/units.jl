@@ -314,7 +314,7 @@ end
 "per-unit conversion for buses"
 function _rebase_pu_bus!(bus::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
     # if not in p.u., these are normalized with respect to vnom
-    prop_vnom = ["vm", "vmax", "vmin", "vm_set", "vm_ln_min", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub"]
+    prop_vnom = ["vm", "vm_start", "vmax", "vmin", "vm_set", "vm_ln_min", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub", "vr_start", "vi_start"]
 
     if !haskey(bus, "vbase")
 
@@ -349,8 +349,10 @@ function _rebase_pu_bus!(bus::Dict{String,<:Any}, vbase::Real, sbase::Real, sbas
     z_scale = z_old/z_new
     _scale_props!(bus, ["rg", "xg"], z_scale)
 
-    if haskey(bus ,"va")
-        bus["va"] = deg2rad.(bus["va"])
+    for prop in ["va", "va_start"]
+        if haskey(bus, prop)
+            bus[prop] = deg2rad.(bus[prop])
+        end
     end
 
     # save new vbase
