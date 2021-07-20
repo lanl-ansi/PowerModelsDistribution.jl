@@ -992,22 +992,19 @@ Units of `vm` are volts, and units of `va` are degrees.
 function parse_dss_voltages_export(io::IO)::Dict{String,Any}
     data = Dict{String,Any}()
     for row in CSV.File(IOBuffer(lowercase(read(io, String))); normalizenames=true)
-        bus = row.bus
-        vbase = row.basekv
-        data[bus] = Dict{String,Any}(
-            "vbase" => vbase,
+        data[row.bus] = Dict{String,Any}(
+            "vbase" => row.basekv * 1e3,  # convert to volts, same units as vm
             "terminals" => Int[],
             "vm" => Real[],
             "va" => Real[],
         )
         nodes = [parse(Int, match(r"(\d+)", string(n)).captures[1]) for n in propertynames(row) if startswith(string(n), "node")]
         for i in nodes
-            node = getproperty(row, Symbol("node$i"))
-
-            if node != 0
-                push!(data[bus]["terminals"], node)
-                push!(data[bus]["vm"], getproperty(row, Symbol("magnitude$i")))
-                push!(data[bus]["va"], getproperty(row, Symbol("angle$i")))
+            terminal = getproperty(row, Symbol("node$i"))
+            if terminal != 0
+                push!(data[row.bus]["terminals"], terminal)
+                push!(data[row.bus]["vm"], getproperty(row, Symbol("magnitude$i")))
+                push!(data[row.bus]["va"], getproperty(row, Symbol("angle$i")))
             end
         end
     end
