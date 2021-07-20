@@ -95,7 +95,7 @@ function apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Ve
 
             @assert all(t in kr_phases for t in terminals_kr) "bus $id has terminals $(eng_obj["terminals"]), outside of $kr_phases, cannot be kron reduced"
 
-            _apply_filter!(eng_obj, ["vm", "va", "vm_lb", "vm_ub"], filter)
+            _apply_filter!(eng_obj, ["vm", "va", "vm_lb", "vm_ub", "vm_start", "va_start"], filter)
             eng_obj["terminals"] = terminals_kr
 
             gr_filter = eng_obj["grounded"] .!= kr_neutral
@@ -229,7 +229,7 @@ function apply_phase_projection!(data_eng::Dict{String,<:Any})
                 eng_obj["vm_ub"] = fill(Inf, length(eng_obj["terminals"]))
             end
 
-            _pad_properties!(eng_obj, ["vm", "va", "vm_lb", "vm_ub"], eng_obj["terminals"], all_conductors)
+            _pad_properties!(eng_obj, ["vm", "va", "vm_lb", "vm_ub", "vm_start", "va_start"], eng_obj["terminals"], all_conductors)
 
             _pad_connections!(eng_obj, "terminals", all_conductors)
         end
@@ -454,7 +454,7 @@ function _update_bus_terminal_projections!(data_eng::Dict{String,<:Any}, bus_ter
 
         old_terms = deepcopy(eng_obj["terminals"])
         new_terms = _pad_connections!(eng_obj, "terminals", terminals)
-        _pad_properties!(eng_obj, ["vm", "va", "vm_lb", "vm_ub"], old_terms, new_terms)
+        _pad_properties!(eng_obj, ["vm", "va", "vm_lb", "vm_ub", "vm_start", "va_start"], old_terms, new_terms)
     end
 end
 
