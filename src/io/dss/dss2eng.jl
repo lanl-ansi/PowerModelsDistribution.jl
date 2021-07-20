@@ -959,3 +959,44 @@ function parse_opendss(
 
     return data_eng
 end
+
+
+"""
+    add_voltage_starts!(eng::Dict{String,<:Any}, voltages::Dict{String,<:Any})
+
+Function to add vm_start and va_start properties to buses from a voltages dictionary with the formats
+
+```julia
+    Dict{String,Any}(
+        "bus" => Dict{String,Any}(
+            "terminals" => Int[],
+            "vm" => Real[],
+            "va" => Real[]
+        )
+    )
+```
+
+`vm_start` and `va_start` are expected to be in SI units
+"""
+function add_voltage_starts!(eng::Dict{String,<:Any}, voltages::Dict{String,<:Any})
+    for (bus_id, obj) in voltages
+        eng_obj = eng["bus"][bus_id]
+
+        eng_obj["vm_start"] = Real[t in obj["terminals"] ? obj["vm"][findfirst(isequal(t), obj["terminals"])] : 0.0 for t in eng_obj["terminals"]] ./ eng["settings"]["voltage_scale_factor"]
+        eng_obj["va_start"] = Real[t in obj["terminals"] ? obj["va"][findfirst(isequal(t), obj["terminals"])] : 0.0 for t in eng_obj["terminals"]]
+        if haskey(obj, "vbase")
+            eng_obj["vbase"] = obj["vbase"]
+        end
+    end
+end
+
+
+"""
+    add_voltage_starts!(eng::Dict{String,<:Any}, voltages_file::String)
+
+Function to add `vm_start` and `va_start` properties to buses from a voltages csv file exported from OpenDSS,
+using [`parse_dss_voltages_export`](@ref parse_dss_voltages_export)
+"""
+function add_voltage_starts!(eng::Dict{String,<:Any}, voltages_file::String)
+    add_voltage_starts!(eng, parse_dss_voltages_export(voltages_file))
+end
