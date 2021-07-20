@@ -107,9 +107,16 @@ function sol_data_model!(pm::AbstractUnbalancedACRModel, solution::Dict{String,<
 end
 
 
+"""
+    sol_data_model!(pm::FBSUBFPowerModel, solution::Dict{String,<:Any})
+
+solution_processor, to convert FBS variables
+back into polar representation (default data model voltage form)
+"""
 function sol_data_model!(pm::FBSUBFPowerModel, solution::Dict{String,<:Any})
     apply_pmd!(_sol_data_model_acr!, solution)
 end
+
 
 """
     sol_data_model!(pm::AbstractUnbalancedPowerModel, solution::Dict{String,<:Any})

@@ -1,20 +1,44 @@
-# The branch flow model is linearized around initial operating point using single iteration of 
-# Forward-Backward Sweep (FBS) method
+# The branch flow model is linearized around an initial operating point using a single iteration 
+# of  the forward-backward sweep (FBS) method
 
+
+"""
+    variable_mc_load_power_delta_aux(pm::FBSUBFPowerModel, load_ids::Vector{Int}; nw::Int=nw_id_default, eps::Real=0.1, bounded::Bool=true, report::Bool=true)
+
+Auxiliary variables are not required since delta loads are zero-order approximations
+calculated using the initial operating point.
+"""
 function variable_mc_load_power_delta_aux(pm::FBSUBFPowerModel, load_ids::Vector{Int}; nw::Int=nw_id_default, eps::Real=0.1, bounded::Bool=true, report::Bool=true)
 end
 
 
+"""
+    variable_mc_load_current(pm::FBSUBFPowerModel, load_ids::Vector{Int}; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+
+No loads require a current variable. Delta loads are zero-order approximations and 
+wye loads are first-order approximations around the initial operating point.
+"""
 function variable_mc_load_current(pm::FBSUBFPowerModel, load_ids::Vector{Int}; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 end
 
 
+"""
+    variable_mc_branch_power(pm::FBSUBFPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+
+Branch flow variables similar to LPUBFDiagModel
+"""
 function variable_mc_branch_power(pm::FBSUBFPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     variable_mc_branch_power_real(pm, nw=nw, bounded=bounded)
     variable_mc_branch_power_imaginary(pm, nw=nw, bounded=bounded)
 end
 
 
+"""
+    variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw=nw_id_default, bounded::Bool=true, kwargs...)
+
+Voltage variables are defined in rectangular coordinates similar to ACRUPowerModel.
+An initial operating point is specified for linearization.
+"""
 function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw=nw_id_default, bounded::Bool=true, kwargs...)
     variable_mc_bus_voltage_real(pm; nw=nw, bounded=bounded, kwargs...)
     variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, kwargs...)
@@ -35,7 +59,7 @@ function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw=nw_id_default, bounded
         # TODO how to do this more generally
         nph = 3
         va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
-
+        
         for (idx,t) in enumerate(terminals)
             vr = vm[idx]*cos(va[idx]) 
             vi = vm[idx]*sin(va[idx]) 
@@ -55,7 +79,23 @@ function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw=nw_id_default, bounded
 end
 
 
-"Linearized voltage magnitude limits"
+@doc raw"""
+    constraint_mc_voltage_magnitude_bounds(pm::FBSUBFPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
+
+Upper voltage magnitude limits are linearized using outer approximation.
+Lower voltage magnitude limits are linearized around initial operating point.
+
+```math
+\begin{align}
+&\text{Initial operating point: } ⇒ v_{r}^0 + j ⋅ v_{i}^0~\text{where}~{(v_m^0)}^2 = {(v_{r}^0)}^2 + {(v_{i}^0)}^2\\
+&\text{Lower limits: }  2 ⋅ v_{r} ⋅ v_{r}^0 + 2 ⋅ v_{i} ⋅ v_{i}^0 - {(v_{m}^0)}^2 ≥ v_{min}^2,\\
+&\text{Upper limits: } -v_{max} ≤  v_{r} ≤ v_{max},\\
+& -v_{max} ≤  v_{i} ≤ v_{max},\\
+&-\sqrt{2} ⋅ v_{max} ≤  v_{r} + v_{i} ≤ \sqrt{2} ⋅ v_{max},\\
+& -\sqrt{2} ⋅ v_{max} ≤  v_{i} - v_{i} ≤ \sqrt{2} ⋅ v_{max}.
+\end{align}
+```
+"""
 function constraint_mc_voltage_magnitude_bounds(pm::FBSUBFPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
     @assert all(vmin .<= vmax)
     vr = var(pm, nw, :vr, i)
@@ -64,26 +104,51 @@ function constraint_mc_voltage_magnitude_bounds(pm::FBSUBFPowerModel, nw::Int, i
     vi0 = var(pm, nw, :vi0, i)
 
     for (idx,t) in enumerate(ref(pm, nw, :bus, i)["terminals"]) 
-        # TODO: first-order approximation might work with OpenDSS power-flow as initial operating point )
-        JuMP.@constraint(pm.model, vr[t]^2 + vi[t]^2 >= vmin[idx]^2)   
-       
+        JuMP.@constraint(pm.model, vr[t]^2 + vi[t]^2 >= vmin[idx]^2)
+        # TODO: first-order approximation might work with OpenDSS power-flow as initial operating point 
+        # JuMP.@constraint(pm.model, 2*vr[t]*vr0[t] + 2*vi[t]*vi0[t] - vr0[t]^2 - vi0[t]^2 >= vmin[idx]^2)      
+
         # Outer approximation of upper voltage magnitude limits
         if vmax[idx] < Inf  
-            JuMP.@constraint(pm.model, -vmax[idx] <= vr[t] <= vmax[idx])    
-            JuMP.@constraint(pm.model, -vmax[idx] <= vi[t] <= vmax[idx])
-            JuMP.@constraint(pm.model, -sqrt(2)*vmax[idx] <= vr[t] + vi[t] <= sqrt(2)*vmax[idx])
-            JuMP.@constraint(pm.model, -sqrt(2)*vmax[idx] <= vr[t] - vi[t] <= sqrt(2)*vmax[idx])
+            JuMP.@constraint(pm.model, -vmax[idx] <= vr[t])
+            JuMP.@constraint(pm.model,  vmax[idx] >= vr[t])    
+            JuMP.@constraint(pm.model, -vmax[idx] <= vi[t])
+            JuMP.@constraint(pm.model,  vmax[idx] >= vi[t]) 
+            JuMP.@constraint(pm.model, -sqrt(2)*vmax[idx] <= vr[t] + vi[t])
+            JuMP.@constraint(pm.model,  sqrt(2)*vmax[idx] >= vr[t] + vi[t])
+            JuMP.@constraint(pm.model, -sqrt(2)*vmax[idx] <= vr[t] - vi[t])
+            JuMP.@constraint(pm.model,  sqrt(2)*vmax[idx] >= vr[t] - vi[t])
         end
     end
 end
 
 
+"""
+    constraint_mc_voltage_angle_difference(pm::FBSUBFPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, angmin::Vector{<:Real}, angmax::Vector{<:Real})
+
+Nothing to do, this model ignores angle difference constraints"
+"""
 function constraint_mc_voltage_angle_difference(pm::FBSUBFPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, angmin::Vector{<:Real}, angmax::Vector{<:Real})
     i, f_bus, t_bus = f_idx
 end
 
 
-"The branch flow model power flow equation linearized around initial operating point (backward sweep)"
+@doc raw"""
+    constraint_mc_power_losses(pm::FBSUBFPowerModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, r::Matrix{<:Real}, x::Matrix{<:Real}, g_sh_fr::Matrix{<:Real}, g_sh_to::Matrix{<:Real}, b_sh_fr::Matrix{<:Real}, b_sh_to::Matrix{<:Real})
+
+Branch flow model power flow equation linearized around initial operating point (backward sweep)
+
+```math
+\begin{align}
+&\text{Initial operating points: }  (v_{r0}^{fr} + j ⋅ v_{i0}^{fr}),~ (v_{r0}^{to} + j ⋅ v_{i0}^{to})\\
+&\text{Voltage drop: }  v_{drop} = (v_{r0}^{fr} + j ⋅ v_{i0}^{fr}) - (v_{r0}^{to} + j ⋅ v_{i0}^{to}),\\
+&\text{Line series admittance: } y = (r+j ⋅ x)^{-1},\\
+&\text{Power loss: }  s_{loss} = v_{drop} ⋅ (y ⋅ v_{drop})^*,\\
+&\text{Active power flow: }  p^{fr} + p^{to} = g_{sh}^{fr} ⋅ {(v_{m0}^{fr})}^2 +  g_{sh}^{to} ⋅ {(v_{m0}^{to})}^2 + \Re(s_{loss}),\\
+&\text{Reactive power flow: }  q^{fr} + q^{to} = -b_{sh}^{fr} ⋅ {(v_{m0}^{fr})}^2 -  b_{sh}^{to} ⋅ {(v_{m0}^{to})}^2 + \Im(s_{loss}).
+\end{align}
+```
+"""
 function constraint_mc_power_losses(pm::FBSUBFPowerModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, r::Matrix{<:Real}, x::Matrix{<:Real}, g_sh_fr::Matrix{<:Real}, g_sh_to::Matrix{<:Real}, b_sh_fr::Matrix{<:Real}, b_sh_to::Matrix{<:Real})
     p_fr = var(pm, nw, :p)[f_idx]
     q_fr = var(pm, nw, :q)[f_idx]
@@ -103,21 +168,38 @@ function constraint_mc_power_losses(pm::FBSUBFPowerModel, nw::Int, i::Int, f_bus
     f_connections = branch["f_connections"]
     t_connections = branch["t_connections"]
 
-    # linearized line voltage drop phasor: v0_line = v0_fr  - v0_to 
-    v_line = vr_fr + im*vi_fr - vr_to - im*vi_to
+    # linearized line voltage drop phasor: v_drop = v0_fr  - v0_to 
+    v_drop = vr_fr + im*vi_fr - vr_to - im*vi_to
     y = pinv(r+im*x)
     N = length(f_connections)
 
     for (idx, (fc,tc)) in enumerate(zip(f_connections, t_connections))
-        # linearized line power loss phasor: s0_line = v0_line*conj(y*v0_line)
-        s_line = v_line[idx]*conj(sum(y[idx,j]*v_line[j] for j=1:N))
-        JuMP.@constraint(pm.model, p_fr[fc] + p_to[tc] ==  g_sh_fr[idx,idx]*(vr_fr[fc]^2+vi_fr[fc]^2) +  g_sh_to[idx,idx]*(vr_to[tc]^2+vi_to[tc]^2) + real(s_line))
-        JuMP.@constraint(pm.model, q_fr[fc] + q_to[tc] == -b_sh_fr[idx,idx]*(vr_fr[fc]^2+vi_fr[fc]^2) + -b_sh_to[idx,idx]*(vr_to[tc]^2+vi_to[tc]^2) + imag(s_line))
+        # linearized line power loss phasor: s_loss = v_drop*conj(y*v_drop)
+        s_loss = v_drop[idx]*conj(sum(y[idx,j]*v_drop[j] for j=1:N))
+        JuMP.@constraint(pm.model, p_fr[fc] + p_to[tc] ==  g_sh_fr[idx,idx]*(vr_fr[fc]^2+vi_fr[fc]^2) +  g_sh_to[idx,idx]*(vr_to[tc]^2+vi_to[tc]^2) + real(s_loss))
+        JuMP.@constraint(pm.model, q_fr[fc] + q_to[tc] == -b_sh_fr[idx,idx]*(vr_fr[fc]^2+vi_fr[fc]^2) + -b_sh_to[idx,idx]*(vr_to[tc]^2+vi_to[tc]^2) + imag(s_loss))
     end
 end
 
 
-"Voltage drop over a branch linearized around initial operating point (forward sweep)"
+@doc raw"""
+    constraint_mc_model_voltage_magnitude_difference(pm::FBSUBFPowerModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, r::Matrix{<:Real}, x::Matrix{<:Real}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real})
+
+Voltage drop over a branch linearized around initial operating point (forward sweep)
+
+```math
+\begin{align}
+&\text{Initial operating points: }  (v_{r0}^{fr} + j ⋅ v_{i0}^{fr}),~ (v_{r0}^{to} + j ⋅ v_{i0}^{to})\\
+&\text{Voltage drop: }  v_{drop} = (v_{r0}^{fr} + j ⋅ v_{i0}^{fr}) - (v_{r0}^{to} + j ⋅ v_{i0}^{to}),\\
+&\text{Series active power flow: }  p_s^{fr} =  p^{fr} -  g_{sh}^{fr} ⋅ {(v_{m0}^{fr})}^2,\\
+&\text{Series reactive power flow: }  q_s^{fr} =  q^{fr} +  b_{sh}^{fr} ⋅ {(v_{m0}^{fr})}^2,\\
+&\text{Series real current flow: }  cr_s^{fr} =  \frac{(p_s^{fr} ⋅ v_{r0}^{fr} + q_s^{fr} ⋅ v_{i0}^{fr})}{{(v_{m0}^{fr})}^2},\\
+&\text{Series imaginary current flow: }  ci_s^{fr} =  \frac{(-q_s^{fr} ⋅ v_{r0}^{fr} + p_s^{fr} ⋅ v_{i0}^{fr})}{{(v_{m0}^{fr})}^2},\\
+&\text{Series real voltage drop: } v_{r}^{to} = v_{r}^{fr} - r ⋅ cr_s^{fr} + x ⋅ ci_s^{fr} ,\\
+&\text{Series imaginary voltage drop: } v_{i}^{to} = v_{i}^{fr} - x ⋅ cr_s^{fr} - r ⋅ ci_s^{fr}.
+\end{align}
+```
+"""
 function constraint_mc_model_voltage_magnitude_difference(pm::FBSUBFPowerModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, r::Matrix{<:Real}, x::Matrix{<:Real}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real})
     f_connections = ref(pm, nw, :branch, i)["f_connections"]
     t_connections = ref(pm, nw, :branch, i)["t_connections"]
@@ -149,7 +231,11 @@ function constraint_mc_model_voltage_magnitude_difference(pm::FBSUBFPowerModel, 
 end
 
 
-"Creates phase angle constraints at reference buses"
+"""
+    constraint_mc_theta_ref(pm::FBSUBFPowerModel, nw::Int, i::Int, va_ref::Vector{<:Real})
+
+Creates phase angle constraints at reference buses similar to ACRUPowerModel.
+"""
 function constraint_mc_theta_ref(pm::FBSUBFPowerModel, nw::Int, i::Int, va_ref::Vector{<:Real})
     vr = var(pm, nw, :vr, i)
     vi = var(pm, nw, :vi, i)
@@ -181,7 +267,11 @@ function constraint_mc_theta_ref(pm::FBSUBFPowerModel, nw::Int, i::Int, va_ref::
 end
 
 
-"Power balance linearized around initial operating point"
+"""
+    constraint_mc_power_balance(pm::FBSUBFPowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+
+Power balance constraints similar to ACRUPowerModel with shunt current calculated using initial operating point.
+"""
 function constraint_mc_power_balance(pm::FBSUBFPowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
     vr = var(pm, nw, :vr0, i)
     vi = var(pm, nw, :vi0, i)
@@ -248,16 +338,17 @@ end
 @doc raw"""
 constraint_mc_load_power(pm::FBSUBFPowerModel, load_id::Int; nw::Int=nw_id_default, report::Bool=true)
 
-Load model is linearized around initial operating point. Wye loads are first-order and delta loads are zero-order approximations.
+Load model is linearized around initial operating point. 
+Wye loads are first-order and delta loads are zero-order approximations.
 
 ```math
 \begin{align}
-&\text{initial operating point: } \Rightarrow v_{rd}^0 + j \cdot v_{id}^0~\text{where}~{(v_m^0)}^2 = {(v_{rd}^0)}^2 + {(v_{id}^0)}^2\\
-&\text{Constant power:} \Rightarrow P^d = P^{d0},~Q^d = Q^{d0} \\
-&\text{Constant impedance :} \Rightarrow P^d = a \cdot \left(2\cdot v_{rd} \cdot v_{rd}^0+2 \cdot v_{id}*v_{id}^0-{(v_{m}^0)}^2\right),\\
-& \hspace{12em}  Q^d = b \cdot \left(2\cdot v_{rd} \cdot v_{rd}^0+2 \cdot v_{id}*v_{id}^0-{(v_{m}^0)}^2\right),  \\
-&\text{Constant current :} \Rightarrow P^d = a \cdot \left(v_{m}^0 + \frac{v_{rd} \cdot v_{rd}^0+ v_{id}*v_{id}^0-{(v_{m}^0)}^2}{v_{m}^0} \right),\\
-& \hspace{10em} Q^d = b \cdot \left(v_{m}^0 + \frac{v_{rd} \cdot v_{rd}^0+ v_{id}*v_{id}^0-{(v_{m}^0)}^2}{v_{m}^0} \right). 
+&\text{Initial operating point: }  v_{rd}^0 + j ⋅ v_{id}^0~\text{where}~{(v_m^0)}^2 = {(v_{rd}^0)}^2 + {(v_{id}^0)}^2\\
+&\text{Constant power: }  P^d = P^{d0},~Q^d = Q^{d0} \\
+&\text{Constant impedance: }  P^d = a ⋅ \left(2\cdot v_{rd} ⋅ v_{rd}^0+2 ⋅ v_{id}*v_{id}^0-{(v_{m}^0)}^2\right),\\
+&  Q^d = b ⋅ \left(2\cdot v_{rd} ⋅ v_{rd}^0+2 ⋅ v_{id}*v_{id}^0-{(v_{m}^0)}^2\right),  \\
+&\text{Constant current: }  P^d = a ⋅ \left(v_{m}^0 + \frac{v_{rd} ⋅ v_{rd}^0+ v_{id}*v_{id}^0-{(v_{m}^0)}^2}{v_{m}^0} \right),\\
+& Q^d = b ⋅ \left(v_{m}^0 + \frac{v_{rd} ⋅ v_{rd}^0+ v_{id}*v_{id}^0-{(v_{m}^0)}^2}{v_{m}^0} \right). 
 \end{align}
 ```
 """
@@ -357,6 +448,11 @@ function constraint_mc_load_power(pm::FBSUBFPowerModel, load_id::Int; nw::Int=nw
 end
 
 
+"""
+    constraint_mc_switch_state_closed(pm::FBSUBFPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
+
+Voltage constraints for closed switches similar to ACRUPowerModel.
+"""
 function constraint_mc_switch_state_closed(pm::FBSUBFPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
     vr_fr = var(pm, nw, :vr, f_bus)
     vr_to = var(pm, nw, :vr, t_bus)
@@ -371,6 +467,11 @@ function constraint_mc_switch_state_closed(pm::FBSUBFPowerModel, nw::Int, f_bus:
 end
 
 
+"""
+    constraint_mc_transformer_power_yy(pm::FBSUBFPowerModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+
+Add all constraints required to model a two-winding, wye-wye connected transformer similar to ACRUPowerModel.
+"""
 function constraint_mc_transformer_power_yy(pm::FBSUBFPowerModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     vr_fr = var(pm, nw, :vr, f_bus)
     vr_to = var(pm, nw, :vr, t_bus)
@@ -400,15 +501,17 @@ function constraint_mc_transformer_power_yy(pm::FBSUBFPowerModel, nw::Int, trans
 end
 
 
+"""
+    constraint_mc_transformer_power_dy(pm::FBSUBFPowerModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+
+Add all constraints required to model a two-winding, delta-wye connected transformer similar to ACRUPowerModel
+with power constraints using initial operating point voltage instead of actual voltage variables.
+"""
 function constraint_mc_transformer_power_dy(pm::FBSUBFPowerModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     vr_p_fr = [var(pm, nw, :vr, f_bus)[c] for c in f_connections]
     vr_p_to = [var(pm, nw, :vr, t_bus)[c] for c in t_connections]
     vi_p_fr = [var(pm, nw, :vi, f_bus)[c] for c in f_connections]
     vi_p_to = [var(pm, nw, :vi, t_bus)[c] for c in t_connections]
-    vr0_p_fr = [var(pm, nw, :vr0, f_bus)[c] for c in f_connections]
-    vr0_p_to = [var(pm, nw, :vr0, t_bus)[c] for c in t_connections]
-    vi0_p_fr = [var(pm, nw, :vi0, f_bus)[c] for c in f_connections]
-    vi0_p_to = [var(pm, nw, :vi0, t_bus)[c] for c in t_connections]
 
     nph = length(tm_set)
     @assert length(f_connections) == length(t_connections) && nph == 3 "only phases == 3 dy transformers are currently supported"
@@ -428,6 +531,10 @@ function constraint_mc_transformer_power_dy(pm::FBSUBFPowerModel, nw::Int, trans
     p_to = var(pm, nw, :pt, t_idx)
     q_fr = var(pm, nw, :qt, f_idx)
     q_to = var(pm, nw, :qt, t_idx)
+    vr0_p_fr = [var(pm, nw, :vr0, f_bus)[c] for c in f_connections]
+    vr0_p_to = [var(pm, nw, :vr0, t_bus)[c] for c in t_connections]
+    vi0_p_fr = [var(pm, nw, :vi0, f_bus)[c] for c in f_connections]
+    vi0_p_to = [var(pm, nw, :vi0, t_bus)[c] for c in t_connections]
 
     id_re = Array{Any,1}(undef, nph)
     id_im = Array{Any,1}(undef, nph)
