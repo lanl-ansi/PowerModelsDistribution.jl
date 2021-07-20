@@ -967,16 +967,17 @@ end
 Function to add vm_start and va_start properties to buses from a voltages dictionary with the formats
 
 ```julia
-    Dict{String,Any}(
-        "bus" => Dict{String,Any}(
-            "terminals" => Int[],
-            "vm" => Real[],
-            "va" => Real[]
-        )
+Dict{String,Any}(
+    "bus" => Dict{String,Any}(
+        "terminals" => Int[],
+        "vm" => Real[],
+        "va" => Real[],
+        "vbase" => Real,
     )
+)
 ```
 
-`vm_start` and `va_start` are expected to be in SI units
+`"vm_start"`, `"va_start"`, and `"vbase"` are expected to be in SI units. `"vbase"` is optional.
 """
 function add_voltage_starts!(eng::Dict{String,<:Any}, voltages::Dict{String,<:Any})
     for (bus_id, obj) in voltages
@@ -985,7 +986,7 @@ function add_voltage_starts!(eng::Dict{String,<:Any}, voltages::Dict{String,<:An
         eng_obj["vm_start"] = Real[t in obj["terminals"] ? obj["vm"][findfirst(isequal(t), obj["terminals"])] : 0.0 for t in eng_obj["terminals"]] ./ eng["settings"]["voltage_scale_factor"]
         eng_obj["va_start"] = Real[t in obj["terminals"] ? obj["va"][findfirst(isequal(t), obj["terminals"])] : 0.0 for t in eng_obj["terminals"]]
         if haskey(obj, "vbase")
-            eng_obj["vbase"] = obj["vbase"]
+            eng_obj["vbase"] = obj["vbase"] ./ eng["settings"]["voltage_scale_factor"]
         end
     end
 end
