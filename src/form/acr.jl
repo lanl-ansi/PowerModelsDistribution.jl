@@ -16,15 +16,21 @@ function variable_mc_bus_voltage(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_d
 
         ncnd = length(terminals)
 
-        vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
-        vm[.!grounded] .= 1.0
+        if haskey(busref, "vr_start") && haskey(busref, "vm_start")
+            vr = busref["vr_start"]
+            vi = busref["vi_start"]
+        else
+            vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
+            vm[.!grounded] .= 1.0
 
-        # TODO how to do this more generally?
-        nph = 3
-        va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
+            # TODO how to do this more generally?
+            nph = 3
+            va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
 
-        vr = vm .* cos.(va)
-        vi = vm .* sin.(va)
+            vr = vm .* cos.(va)
+            vi = vm .* sin.(va)
+        end
+
         for (idx,t) in enumerate(terminals)
             JuMP.set_start_value(var(pm, nw, :vr, id)[t], vr[idx])
             JuMP.set_start_value(var(pm, nw, :vi, id)[t], vi[idx])
@@ -52,15 +58,21 @@ function variable_mc_bus_voltage_on_off(pm::AbstractUnbalancedACRModel; nw::Int=
 
         ncnd = length(terminals)
 
-        vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
-        vm[.!grounded] .= 1.0
+        if haskey(busref, "vr_start") && haskey(busref, "vm_start")
+            vr = busref["vr_start"]
+            vi = busref["vi_start"]
+        else
+            vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
+            vm[.!grounded] .= 1.0
 
-        # TODO how to do this more generally?
-        nph = 3
-        va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
+            # TODO how to do this more generally?
+            nph = 3
+            va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
 
-        vr = vm .* cos.(va)
-        vi = vm .* sin.(va)
+            vr = vm .* cos.(va)
+            vi = vm .* sin.(va)
+        end
+
         for (idx,t) in enumerate(terminals)
             JuMP.set_start_value(var(pm, nw, :vr, id)[t], vr[idx])
             JuMP.set_start_value(var(pm, nw, :vi, id)[t], vi[idx])
