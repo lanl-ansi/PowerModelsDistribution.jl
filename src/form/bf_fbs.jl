@@ -59,7 +59,7 @@ function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw=nw_id_default, bounded
         # TODO how to do this more generally
         nph = 3
         va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
-        
+
         for (idx,t) in enumerate(terminals)
             vr = vm[idx]*cos(va[idx]) 
             vi = vm[idx]*sin(va[idx]) 
@@ -190,7 +190,6 @@ Voltage drop over a branch linearized around initial operating point (forward sw
 ```math
 \begin{align}
 &\text{Initial operating points: }  (v_{r0}^{fr} + j ⋅ v_{i0}^{fr}),~ (v_{r0}^{to} + j ⋅ v_{i0}^{to})\\
-&\text{Voltage drop: }  v_{drop} = (v_{r0}^{fr} + j ⋅ v_{i0}^{fr}) - (v_{r0}^{to} + j ⋅ v_{i0}^{to}),\\
 &\text{Series active power flow: }  p_s^{fr} =  p^{fr} -  g_{sh}^{fr} ⋅ {(v_{m0}^{fr})}^2,\\
 &\text{Series reactive power flow: }  q_s^{fr} =  q^{fr} +  b_{sh}^{fr} ⋅ {(v_{m0}^{fr})}^2,\\
 &\text{Series real current flow: }  cr_s^{fr} =  \frac{(p_s^{fr} ⋅ v_{r0}^{fr} + q_s^{fr} ⋅ v_{i0}^{fr})}{{(v_{m0}^{fr})}^2},\\
@@ -336,7 +335,7 @@ end
 
 
 @doc raw"""
-constraint_mc_load_power(pm::FBSUBFPowerModel, load_id::Int; nw::Int=nw_id_default, report::Bool=true)
+    constraint_mc_load_power(pm::FBSUBFPowerModel, load_id::Int; nw::Int=nw_id_default, report::Bool=true)
 
 Load model is linearized around initial operating point. 
 Wye loads are first-order and delta loads are zero-order approximations.

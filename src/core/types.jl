@@ -268,7 +268,7 @@ const LinDist3FlowPowerModel = LPUBFDiagPowerModel # more popular name
 
 """
 Forward-backward sweep (FBS) linear branch flow formulation uses rectangular
-coordinates for voltage. The powers are calculated using the initial operating voltage solution.
+coordinates for voltage. The branch flows are calculated using the initial operating voltage solution.
 ```
     @INPROCEEDINGS{girigoudar_roald-2021,
 	author={K. Girigoudar and L. A. Roald},
