@@ -145,7 +145,8 @@ function transform_data_model(
             data;
             kron_reduced=kron_reduced,
             eng2math_extensions=eng2math_extensions,
-            eng2math_passthrough=eng2math_passthrough
+            eng2math_passthrough=eng2math_passthrough,
+            global_keys,
         )
         correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
 
