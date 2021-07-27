@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added "root-level" eng2math_passthrough option
 - Fixed bug where global keys were not getting passed to `_map_eng2math` function
 - Added support for parsing the results of dss command `export voltages` into `vm_start` and `va_start` values for warm starting bus voltages
 - Added simplified linear UBF formulation using a single iteration of forward-backward sweep (FBS)

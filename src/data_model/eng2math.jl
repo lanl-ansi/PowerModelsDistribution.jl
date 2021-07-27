@@ -103,11 +103,13 @@ See [`transform_solution`](@ref transform_solution)
 
 To more simply pass through some properties in the built-in eng2math transformations,
 `eng2math_passthrough::Dict{String,Vector{String}}` can be used. For example, if in the
-ENGINEERING model, a property called `z` was added to `switch` objects, the user could
+ENGINEERING model, a property called `z` was added to `switch` objects, and a property at
+the root level of the dictionary was added called `max_switch_actions`, the user could
 pass the following dictionary to `eng2math_passthrough`:
 
     Dict{String,Vector{String}}(
         "switch" => String["z"],
+        "root" => String["max_switch_actions"],
     )
 
 This will result in `z` showing up on the `switch` object in the MATHEMATICAL model.
@@ -216,6 +218,12 @@ function _map_eng2math(
         ])
 
         _init_base_components!(nw_math)
+
+        for property in get(eng2math_passthrough, "root", String[])
+            if haskey(nw_eng, property)
+                nw_math[property] = deepcopy(nw_eng[property])
+            end
+        end
 
         for type in pmd_eng_asset_types
             getfield(PowerModelsDistribution, Symbol("_map_eng2math_$(type)!"))(nw_math, nw_eng; pass_props=get(eng2math_passthrough, type, String[]))
