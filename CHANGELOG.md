@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in eng2math functions where there was no check on generator or storage objects when assigning bus_type on their bus to see if the gen obj was enabled or disabled
 - Fixed bug in `sol_data_model` for W-space models where if the optimizer allowed some small infeasibility, it was possible to have a negative `w` value, which would crash when attempting to take the square-root
 - Added `build_solution_values` for data of type `LinearAlgebra.Symmetric{JuMP.VariableRef, Matrix{JuMP.VariableRef}}`
 - Fixed bug in solution builder where building a result dict would fail if there was no solution
