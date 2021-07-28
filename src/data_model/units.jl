@@ -572,7 +572,7 @@ function solution_make_si(
 
     if ismultinetwork(math_model)
         nw_data = math_model["nw"]
-        nw_sol = solution_si["nw"]
+        nw_sol = get(solution_si, "nw", Dict{String,Any}())  # in case solution is not found
     else
         nw_data = Dict("0" => math_model)
         nw_sol = Dict("0" => solution_si)
