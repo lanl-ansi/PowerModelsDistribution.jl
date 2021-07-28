@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added wye-connected RegControl for ACP, ACR, LinDist3Flow and FBS formulations
 - Added support for parsing the results of dss command `export voltages` into `vm_start` and `va_start` values for warm starting bus voltages
 - Added simplified linear UBF formulation using a single iteration of forward-backward sweep (FBS)
 - Added support for raw parsing of RegControl and CapControl objects from dss

@@ -92,7 +92,7 @@ Lower voltage magnitude limits are linearized around initial operating point.
 &\text{Upper limits: } -v_{max} ≤  v_{r} ≤ v_{max},\\
 & -v_{max} ≤  v_{i} ≤ v_{max},\\
 &-\sqrt{2} ⋅ v_{max} ≤  v_{r} + v_{i} ≤ \sqrt{2} ⋅ v_{max},\\
-& -\sqrt{2} ⋅ v_{max} ≤  v_{i} - v_{i} ≤ \sqrt{2} ⋅ v_{max}.
+& -\sqrt{2} ⋅ v_{max} ≤  v_{r} - v_{i} ≤ \sqrt{2} ⋅ v_{max}.
 \end{align}
 ```
 """
@@ -472,28 +472,78 @@ end
 Add all constraints required to model a two-winding, wye-wye connected transformer similar to ACRUPowerModel.
 """
 function constraint_mc_transformer_power_yy(pm::FBSUBFPowerModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+    transformer = ref(pm, nw, :transformer, trans_id)
+    
     vr_fr = var(pm, nw, :vr, f_bus)
     vr_to = var(pm, nw, :vr, t_bus)
     vi_fr = var(pm, nw, :vi, f_bus)
     vi_to = var(pm, nw, :vi, t_bus)
 
-    # construct tm as a parameter or scaled variable depending on whether it is fixed or not
-    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
-
-    for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))
-        if tm_fixed[idx]
-            JuMP.@constraint(pm.model, vr_fr[fc] == pol*tm_scale*tm[idx]*vr_to[tc])
-            JuMP.@constraint(pm.model, vi_fr[fc] == pol*tm_scale*tm[idx]*vi_to[tc])
-        else
-            JuMP.@constraint(pm.model, vr_fr[fc] == pol*tm_scale*tm[idx]*vr_to[tc])
-            JuMP.@constraint(pm.model, vi_fr[fc] == pol*tm_scale*tm[idx]*vi_to[tc])
-        end
-    end
+    vr0_fr = var(pm, nw, :vr0, f_bus)
+    vr0_to = var(pm, nw, :vr0, t_bus)
+    vi0_fr = var(pm, nw, :vi0, f_bus)
+    vi0_to = var(pm, nw, :vi0, t_bus)
 
     p_fr = [var(pm, nw, :pt, f_idx)[c] for c in f_connections]
     p_to = [var(pm, nw, :pt, t_idx)[c] for c in t_connections]
     q_fr = [var(pm, nw, :qt, f_idx)[c] for c in f_connections]
     q_to = [var(pm, nw, :qt, t_idx)[c] for c in t_connections]
+
+    # construct tm as a parameter or scaled variable depending on whether it is fixed or not
+    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
+
+    # check if regcontrol exists
+    reg_ctrl = Dict()
+    if haskey(transformer,"regcontrol")
+        reg_ctrl = transformer["regcontrol"]
+    end
+    for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))
+        if tm_fixed[idx]
+            JuMP.@constraint(pm.model, vr_fr[fc] == pol*tm_scale*tm[idx]*vr_to[tc])
+            JuMP.@constraint(pm.model, vi_fr[fc] == pol*tm_scale*tm[idx]*vi_to[tc])
+        else
+            # transformer taps without regcontrol, tap variable not required in regcontrol formulation
+            JuMP.@constraint(pm.model, vr_fr[fc] == pol*tm_scale*tm[idx]*vr_to[tc])
+            JuMP.@constraint(pm.model, vi_fr[fc] == pol*tm_scale*tm[idx]*vi_to[tc])
+
+            # with regcontrol
+            if !isempty(reg_ctrl)
+                # convert reference voltage and band to pu
+                v_ref = reg_ctrl["vreg"]*reg_ctrl["ptratio"]*1e-3/reg_ctrl["basekV"]
+                δ = reg_ctrl["band"]*reg_ctrl["ptratio"]*1e-3/reg_ctrl["basekV"]
+                
+                # (cr+jci) = (p-jq)/(vr0-j⋅vi0)
+                cr = JuMP.@expression(pm.model, ( p_to[idx]*vr0_to[tc] + q_to[idx]*vi0_to[tc])/(vr0_to[tc]^2+vi0_to[tc]^2)) 
+                ci = JuMP.@expression(pm.model, (-q_to[idx]*vr0_to[tc] + p_to[idx]*vi0_to[tc])/(vr0_to[tc]^2+vi0_to[tc]^2))
+                # convert regulator impedance (in volts) to equivalent pu line impedance
+                baseZ = (reg_ctrl["basekV"]*1e3)^2/(reg_ctrl["baseMVA"]*1e6)
+                r = reg_ctrl["r"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
+                x = reg_ctrl["x"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
+                # linearized v_drop = (cr+jci)⋅(r+jx)
+                vr_drop = JuMP.@expression(pm.model, r*cr-x*ci)
+                vi_drop = JuMP.@expression(pm.model, r*ci+x*cr)
+
+                # linearized voltage magnitude squared v_lin_sq = 2⋅vr⋅vr0 + 2⋅vi⋅vi0 - (vr0^2+vi0^2)
+                # outer approximation of upper limits: -(v_ref+δ) ≤ (vr_fr-vr_drop) ≤ (v_ref+δ)
+                #                                      -(v_ref+δ) ≤ (vi_fr-vi_drop) ≤ (v_ref+δ)
+                #                              -\sqrt(2)(v_ref+δ) ≤ (vr_fr-vr_drop) + (vi_fr-vi_drop) ≤ \sqrt(2)(v_ref+δ)
+                #                              -\sqrt(2)(v_ref+δ) ≤ (vr_fr-vr_drop) - (vi_fr-vi_drop) ≤ \sqrt(2)(v_ref+δ)
+                JuMP.@constraint(pm.model, (vr_fr[fc]-vr_drop) ≤  (v_ref + δ))
+                JuMP.@constraint(pm.model, (vr_fr[fc]-vr_drop) ≥ -(v_ref + δ))
+                JuMP.@constraint(pm.model, (vi_fr[fc]-vi_drop) ≤  (v_ref + δ))
+                JuMP.@constraint(pm.model, (vi_fr[fc]-vi_drop) ≥ -(v_ref + δ))
+                JuMP.@constraint(pm.model, (vr_fr[fc]-vr_drop) + (vi_fr[fc]-vi_drop) ≤  sqrt(2)*(v_ref + δ)^2)
+                JuMP.@constraint(pm.model, (vr_fr[fc]-vr_drop) + (vi_fr[fc]-vi_drop) ≥ -sqrt(2)*(v_ref + δ)^2)
+                JuMP.@constraint(pm.model, (vr_fr[fc]-vr_drop) - (vi_fr[fc]-vi_drop) ≥ -sqrt(2)*(v_ref + δ)^2)
+                JuMP.@constraint(pm.model, (vr_fr[fc]-vr_drop) - (vi_fr[fc]-vi_drop) ≤  sqrt(2)*(v_ref + δ)^2)
+                JuMP.@constraint(pm.model, (vr_fr[fc]-vr_drop)^2 + (vi_fr[fc]-vi_drop)^2 ≥ (v_ref - δ)^2)
+                # TODO: linearized lower limits: (v_ref-δ)^2 ≤ v_lin_sq 
+                # JuMP.@constraint(pm.model, 2*vr0_fr[fc]*(vr_fr[fc]-vr_drop) + 2*vi0_fr[fc]*(vi_fr[fc]-vi_drop) - vr_fr[fc]^2 - vi_fr[fc]^2 ≥ (v_ref - δ)^2)
+                JuMP.@constraint(pm.model, (2*vr_fr[fc]*vr0_fr[fc] + 2*vi_fr[fc]*vi0_fr[fc] - vr_fr[fc]^2 - vi_fr[fc]^2)/1.1^2 ≤ 2*vr_to[tc]*vr0_to[tc] + 2*vi_to[tc]*vi0_to[tc] - vr_to[tc]^2 - vi_to[tc]^2)
+                JuMP.@constraint(pm.model, (2*vr_fr[fc]*vr0_fr[fc] + 2*vi_fr[fc]*vi0_fr[fc] - vr_fr[fc]^2 - vi_fr[fc]^2)/0.9^2 ≥ 2*vr_to[tc]*vr0_to[tc] + 2*vi_to[tc]*vi0_to[tc] - vr_to[tc]^2 - vi_to[tc]^2)    
+            end
+        end
+    end
 
     JuMP.@constraint(pm.model, p_fr + p_to .== 0)
     JuMP.@constraint(pm.model, q_fr + q_to .== 0)
@@ -555,4 +605,3 @@ function constraint_mc_transformer_power_dy(pm::FBSUBFPowerModel, nw::Int, trans
         )
     end
 end
-

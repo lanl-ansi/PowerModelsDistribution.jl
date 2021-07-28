@@ -358,6 +358,12 @@ end
 
 "converts engineering n-winding transformers into mathematical ideal 2-winding lossless transformer branches and impedance branches to represent the loss model"
 function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+    # check if regcontrol items are present
+    reg_obj = Dict()
+    if haskey(data_eng, "regcontrol")
+        reg_obj = get(data_eng, "regcontrol", Dict{Any,Dict{String,Any}}())
+    end
+
     for (name, eng_obj) in get(data_eng, "transformer", Dict{Any,Dict{String,Any}}())
         # Build map first, so we can update it as we decompose the transformer
         push!(data_math["map"], Dict{String,Any}(
@@ -403,7 +409,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
         else
             vnom = eng_obj["vm_nom"] * data_eng["settings"]["voltage_scale_factor"]
             snom = eng_obj["sm_nom"] * data_eng["settings"]["power_scale_factor"]
-
+            
             nrw = length(eng_obj["bus"])
 
             # calculate zbase in which the data is specified, and convert to SI
@@ -460,6 +466,13 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
 
                 data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
 
+                # add regcontrol items to math model
+                if !isempty(reg_obj) && haskey(reg_obj,"$name") && eng_obj["bus"][2]==eng_obj["bus"][w]
+                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["regcontrol"] = reg_obj["$name"]
+                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["tm_fix"] = fill(false,length(transformer_2wa_obj["f_connections"]))
+                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["regcontrol"]["basekV"] = eng_obj["vm_nom"][1]
+                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["regcontrol"]["baseMVA"] = data_eng["settings"]["sbase_default"]/data_eng["settings"]["power_scale_factor"]
+                end
                 push!(to_map, "transformer.$(transformer_2wa_obj["index"])")
             end
         end

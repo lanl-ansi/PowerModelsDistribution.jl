@@ -827,6 +827,57 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
 end
 
 
+"Adds regcontrol to `data_eng` from `data_dss`"
+function _dss2eng_regcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
+    for (id, dss_obj) in get(data_dss, "regcontrol", Dict{String,Any}())
+        _apply_like!(dss_obj, data_dss, "regcontrol")
+        defaults = _apply_ordered_properties(_create_regcontrol(id; _to_kwargs(dss_obj)...), dss_obj)
+
+        eng_obj = Dict{String,Any}(
+                "name" => defaults["name"],
+                "vreg" => defaults["vreg"],
+                "band" => defaults["band"],
+                "ptratio" => defaults["ptratio"],
+                "ctprim" => defaults["ctprim"],
+                "r" => defaults["r"],
+                "x" => defaults["x"],
+            )
+
+        if import_all
+            _import_all!(eng_obj, dss_obj)
+        end
+
+        _add_eng_obj!(data_eng, "regcontrol", defaults["transformer"], eng_obj)
+    end
+end
+
+
+"Adds capcontrol to `data_eng` from `data_dss`"
+function _dss2eng_capcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
+    for (id, dss_obj) in get(data_dss, "capcontrol", Dict{String,Any}())
+        _apply_like!(dss_obj, data_dss, "capcontrol")
+        defaults = _apply_ordered_properties(_create_capcontrol(id; _to_kwargs(dss_obj)...), dss_obj)
+
+        eng_obj = Dict{String,Any}(
+                "element" => defaults["element"],
+                "name" => defaults["name"],
+                "type" => defaults["type"],
+                "ptratio" => defaults["ptratio"], "ctratio" => defaults["ctratio"],
+                "ptphase" => defaults["ptphase"], "ctphase" => defaults["ctphase"],
+                "vmin" => defaults["vmin"], "vmax" => defaults["vmax"],
+                "onsetting" => defaults["onsetting"], "offsetting" => defaults["offsetting"],
+                "terminal" => defaults["terminal"]
+            )
+
+        if import_all
+            _import_all!(eng_obj, dss_obj)
+        end
+
+        _add_eng_obj!(data_eng, "capcontrol", id, eng_obj)
+    end
+end
+
+
 """
     parse_opendss(
         io::IO;
@@ -944,6 +995,9 @@ function parse_opendss(
     _dss2eng_generator!(data_eng, data_dss, import_all, time_series)
     _dss2eng_pvsystem!(data_eng, data_dss, import_all, time_series)
     _dss2eng_storage!(data_eng, data_dss, import_all, time_series)
+
+    _dss2eng_regcontrol!(data_eng, data_dss, import_all)
+    _dss2eng_capcontrol!(data_eng, data_dss, import_all)
 
     _discover_terminals!(data_eng)
 

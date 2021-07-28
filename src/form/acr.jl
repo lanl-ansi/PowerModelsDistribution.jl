@@ -765,28 +765,62 @@ end
 
 "This function adds all constraints required to model a two-winding, wye-wye connected transformer."
 function constraint_mc_transformer_power_yy(pm::AbstractUnbalancedACRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+    transformer = ref(pm, nw, :transformer, trans_id)
+
     vr_fr = var(pm, nw, :vr, f_bus)
     vr_to = var(pm, nw, :vr, t_bus)
     vi_fr = var(pm, nw, :vi, f_bus)
     vi_to = var(pm, nw, :vi, t_bus)
 
+    p_fr = [var(pm, nw, :pt, f_idx)[c] for c in f_connections]
+    p_to = [var(pm, nw, :pt, t_idx)[c] for c in t_connections]
+    q_fr = [var(pm, nw, :qt, f_idx)[c] for c in f_connections]
+    q_to = [var(pm, nw, :qt, t_idx)[c] for c in t_connections]
+
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
     tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
 
+    # check if regcontrol exists
+    reg_ctrl = Dict()
+    if haskey(transformer,"regcontrol")
+        reg_ctrl = transformer["regcontrol"]
+    end
     for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))
         if tm_fixed[idx]
             JuMP.@constraint(pm.model, vr_fr[fc] == pol*tm_scale*tm[idx]*vr_to[tc])
             JuMP.@constraint(pm.model, vi_fr[fc] == pol*tm_scale*tm[idx]*vi_to[tc])
         else
+            # transformer taps without regcontrol, tap variable not required in regcontrol formulation
             JuMP.@constraint(pm.model, vr_fr[fc] == pol*tm_scale*tm[idx]*vr_to[tc])
             JuMP.@constraint(pm.model, vi_fr[fc] == pol*tm_scale*tm[idx]*vi_to[tc])
+
+            # with regcontrol
+            if !isempty(reg_ctrl)
+                # convert reference voltage and band to pu
+                v_ref = reg_ctrl["vreg"]*reg_ctrl["ptratio"]*1e-3/reg_ctrl["basekV"]
+                δ = reg_ctrl["band"]*reg_ctrl["ptratio"]*1e-3/reg_ctrl["basekV"]
+                
+                # (cr+jci) = (p-jq)/(vr-j⋅vi)
+                cr = JuMP.@NLexpression(pm.model, ( p_to[idx]*vr_to[tc] + q_to[idx]*vi_to[tc])/(vr_to[tc]^2+vi_to[tc]^2)) 
+                ci = JuMP.@NLexpression(pm.model, (-q_to[idx]*vr_to[tc] + p_to[idx]*vi_to[tc])/(vr_to[tc]^2+vi_to[tc]^2))
+
+                # convert regulator impedance (in volts) to equivalent pu line impedance
+                baseZ = (reg_ctrl["basekV"]*1e3)^2/(reg_ctrl["baseMVA"]*1e6)
+                r = reg_ctrl["r"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
+                x = reg_ctrl["x"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
+                # v_drop = (cr+jci)⋅(r+jx)
+                vr_drop = JuMP.@NLexpression(pm.model, r*cr-x*ci)
+                vi_drop = JuMP.@NLexpression(pm.model, r*ci+x*cr)
+
+                # (v_ref-δ)^2 ≤ (vr_fr-vr_drop)^2 + (vi_fr-vi_drop)^2 ≤ (v_ref+δ)^2
+                # (vr_fr^2 + vi_fr^2)/1.1^2 ≤ (vr_to^2 + vi_to^2) ≤ (vr_fr^2 + vi_fr^2)/0.9^2
+                JuMP.@NLconstraint(pm.model, (vr_fr[fc]-vr_drop)^2 + (vi_fr[fc]-vi_drop)^2 ≥ (v_ref - δ)^2)
+                JuMP.@NLconstraint(pm.model, (vr_fr[fc]-vr_drop)^2 + (vi_fr[fc]-vi_drop)^2 ≤ (v_ref + δ)^2)
+                JuMP.@constraint(pm.model, (vr_fr[fc]^2 + vi_fr[fc]^2)/1.1^2 ≤ vr_to[tc]^2 + vi_to[tc]^2)
+                JuMP.@constraint(pm.model, (vr_fr[fc]^2 + vi_fr[fc]^2)/0.9^2 ≥ vr_to[tc]^2 + vi_to[tc]^2)   
+            end
         end
     end
-
-    p_fr = [var(pm, nw, :pt, f_idx)[c] for c in f_connections]
-    p_to = [var(pm, nw, :pt, t_idx)[c] for c in t_connections]
-    q_fr = [var(pm, nw, :qt, f_idx)[c] for c in f_connections]
-    q_to = [var(pm, nw, :qt, t_idx)[c] for c in t_connections]
 
     JuMP.@constraint(pm.model, p_fr + p_to .== 0)
     JuMP.@constraint(pm.model, q_fr + q_to .== 0)

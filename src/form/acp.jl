@@ -505,28 +505,61 @@ end
 
 ""
 function constraint_mc_transformer_power_yy(pm::AbstractUnbalancedACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+    transformer = ref(pm, nw, :transformer, trans_id)
+
     vm_fr = var(pm, nw, :vm, f_bus)
     vm_to = var(pm, nw, :vm, t_bus)
     va_fr = var(pm, nw, :va, f_bus)
     va_to = var(pm, nw, :va, t_bus)
 
-    # construct tm as a parameter or scaled variable depending on whether it is fixed or not
-    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
-
-    for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))
-        if tm_fixed[idx]
-            JuMP.@constraint(pm.model, vm_fr[fc] == tm_scale*tm[idx]*vm_to[tc])
-        else
-            JuMP.@NLconstraint(pm.model, vm_fr[fc] == tm_scale*tm[idx]*vm_to[tc])
-        end
-        pol_angle = pol == 1 ? 0 : pi
-        JuMP.@constraint(pm.model, va_fr[fc] == va_to[tc] + pol_angle)
-    end
-
     p_fr = [var(pm, nw, :pt, f_idx)[c] for c in f_connections]
     p_to = [var(pm, nw, :pt, t_idx)[c] for c in t_connections]
     q_fr = [var(pm, nw, :qt, f_idx)[c] for c in f_connections]
     q_to = [var(pm, nw, :qt, t_idx)[c] for c in t_connections]
+
+    # construct tm as a parameter or scaled variable depending on whether it is fixed or not
+    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
+
+    # check if regcontrol exists
+    reg_ctrl = Dict()
+    if haskey(transformer,"regcontrol")
+        reg_ctrl = transformer["regcontrol"]
+    end
+    for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))
+        if tm_fixed[idx]
+            JuMP.@constraint(pm.model, vm_fr[fc] == tm_scale*tm[idx]*vm_to[tc])
+        else
+            # transformer taps without regcontrol, tap variable not required in regcontrol formulation
+            JuMP.@constraint(pm.model, vm_fr[fc] == tm_scale*tm[idx]*vm_to[tc])
+
+            # with regcontrol
+            if !isempty(reg_ctrl)
+                # convert reference voltage and band to pu
+                v_ref = reg_ctrl["vreg"]*reg_ctrl["ptratio"]*1e-3/reg_ctrl["basekV"]
+                δ = reg_ctrl["band"]*reg_ctrl["ptratio"]*1e-3/reg_ctrl["basekV"]
+
+                # (cr+jci) = (p-jq)/(vm⋅cos(va)-jvm⋅sin(va))
+                cr = JuMP.@NLexpression(pm.model, ( p_to[idx]*vm_to[tc]*cos(va_to[tc]) + q_to[idx]*vm_to[tc]*sin(va_to[tc]))/vm_to[tc]^2) 
+                ci = JuMP.@NLexpression(pm.model, (-q_to[idx]*vm_to[tc]*cos(va_to[tc]) + p_to[idx]*vm_to[tc]*sin(va_to[tc]))/vm_to[tc]^2)
+                # convert regulator impedance (in volts) to equivalent pu line impedance
+                baseZ = (reg_ctrl["basekV"]*1e3)^2/(reg_ctrl["baseMVA"]*1e6)
+                r = reg_ctrl["r"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
+                x = reg_ctrl["x"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
+                # v_drop = (cr+jci)⋅(r+jx)
+                vr_drop = JuMP.@NLexpression(pm.model, r*cr-x*ci)
+                vi_drop = JuMP.@NLexpression(pm.model, r*ci+x*cr)
+
+                # v_ref-δ ≤ vm_fr-(cr+jci)⋅(r+jx)≤ v_ref+δ
+                # vm_fr/1.1 ≤ vm_to ≤ vm_fr/0.9
+                JuMP.@NLconstraint(pm.model, (vm_fr[fc]*cos(va_fr[fc])-vr_drop)^2 + (vm_fr[fc]*sin(va_fr[fc])-vi_drop)^2 ≥ (v_ref - δ)^2)
+                JuMP.@NLconstraint(pm.model, (vm_fr[fc]*cos(va_fr[fc])-vr_drop)^2 + (vm_fr[fc]*sin(va_fr[fc])-vi_drop)^2 ≤ (v_ref + δ)^2)
+                JuMP.@constraint(pm.model, vm_fr[fc]/1.1 ≤ vm_to[tc])
+                JuMP.@constraint(pm.model, vm_fr[fc]/0.9 ≥ vm_to[tc])
+            end
+        end
+        pol_angle = pol == 1 ? 0 : pi
+        JuMP.@constraint(pm.model, va_fr[fc] == va_to[tc] + pol_angle)
+    end
 
     JuMP.@constraint(pm.model, p_fr + p_to .== 0)
     JuMP.@constraint(pm.model, q_fr + q_to .== 0)

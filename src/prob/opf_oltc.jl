@@ -59,6 +59,63 @@ function build_mc_opf_oltc(pm::AbstractUnbalancedPowerModel)
     objective_mc_min_fuel_cost(pm)
 end
 
+"constructor for branch flow on-load tap-changer OPF"
+function build_mc_opf_oltc(pm::AbstractUBFModels)
+    # Variables
+    variable_mc_bus_voltage(pm)
+    variable_mc_branch_current(pm)
+    variable_mc_branch_power(pm)
+    variable_mc_switch_power(pm)
+    variable_mc_transformer_power(pm)
+    variable_mc_generator_power(pm)
+    variable_mc_load_power(pm)
+
+    variable_mc_oltc_transformer_tap(pm)
+
+    # Constraints
+    constraint_mc_model_current(pm)
+
+    for i in ids(pm, :ref_buses)
+        constraint_mc_theta_ref(pm, i)
+    end
+
+    # gens should be constrained before KCL, or Pd/Qd undefined
+    for id in ids(pm, :gen)
+        constraint_mc_generator_power(pm, id)
+    end
+
+    # loads should be constrained before KCL, or Pd/Qd undefined
+    for id in ids(pm, :load)
+        constraint_mc_load_power(pm, id)
+    end
+
+    for i in ids(pm, :bus)
+        constraint_mc_power_balance(pm, i)
+    end
+
+    for i in ids(pm, :branch)
+        constraint_mc_power_losses(pm, i)
+        constraint_mc_model_voltage_magnitude_difference(pm, i)
+
+        constraint_mc_voltage_angle_difference(pm, i)
+
+        constraint_mc_thermal_limit_from(pm, i)
+        constraint_mc_thermal_limit_to(pm, i)
+    end
+
+    for i in ids(pm, :switch)
+        constraint_mc_switch_state(pm, i)
+        constraint_mc_switch_thermal_limit(pm, i)
+    end
+
+    for i in ids(pm, :transformer)
+        constraint_mc_transformer_power(pm, i, fix_taps=false)
+    end
+
+    # Objective
+    objective_mc_min_fuel_cost(pm)
+end
+
 # Depreciated run_ functions (remove after ~4-6 months)
 
 "depreciation warning for `run_ac_mc_opf_oltc`"

@@ -42,9 +42,8 @@ Links to and from power and voltages in a wye-wye transformer, assumes tm_fixed 
 w_fr_i=(pol_i*tm_scale*tm_i)^2w_to_i
 """
 function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
-    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[fc] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
-
-    nph = length(tm_set)
+    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
+    transformer = ref(pm, nw, :transformer, trans_id)
 
     p_fr = [var(pm, nw, :pt, f_idx)[p] for p in f_connections]
     p_to = [var(pm, nw, :pt, t_idx)[p] for p in t_connections]
@@ -54,8 +53,39 @@ function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_i
     w_fr = var(pm, nw, :w)[f_bus]
     w_to = var(pm, nw, :w)[t_bus]
 
+    # check if regcontrol exists
+    reg_ctrl = Dict()
+    if haskey(transformer,"regcontrol")
+        reg_ctrl = transformer["regcontrol"]
+    end
     for (idx, (fc, tc)) in enumerate(zip(f_connections, t_connections))
-        JuMP.@constraint(pm.model, w_fr[fc] == (pol*tm_scale*tm[idx])^2*w_to[tc])
+        if tm_fixed[idx]
+            JuMP.@constraint(pm.model, w_fr[fc] == (pol*tm_scale*tm[idx])^2*w_to[tc])
+        else
+            # TODO: linearize constraints for transformer taps without regcontrol, tap variable not required in regcontrol formulation
+            JuMP.@NLconstraint(pm.model, w_fr[fc] == (pol*tm_scale*tm[idx])^2*w_to[tc])
+
+            # with regcontrol
+            if !isempty(reg_ctrl)
+                # convert reference voltage and band to pu
+                v_ref = reg_ctrl["vreg"]*reg_ctrl["ptratio"]*1e-3/reg_ctrl["basekV"]
+                δ = reg_ctrl["band"]*reg_ctrl["ptratio"]*1e-3/reg_ctrl["basekV"]
+
+                # convert regulator impedance (in volts) to equivalent pu line impedance
+                baseZ = (reg_ctrl["basekV"]*1e3)^2/(reg_ctrl["baseMVA"]*1e6)
+                r = reg_ctrl["r"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
+                x = reg_ctrl["x"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
+                # linearized voltage squared: w_drop = (2⋅r⋅p+2⋅x⋅q)
+                w_drop = JuMP.@expression(pm.model, 2*r*p_to[idx] + 2*x*q_to[idx])
+
+                # (v_ref-δ)^2 ≤ w_fr-w_drop ≤ (v_ref+δ)^2
+                # w_fr/1.1^2 ≤ w_to ≤ w_fr/0.9^2
+                JuMP.@constraint(pm.model, w_fr[fc] - w_drop ≥ (v_ref - δ)^2)
+                JuMP.@constraint(pm.model, w_fr[fc] - w_drop ≤ (v_ref + δ)^2)
+                JuMP.@constraint(pm.model, w_fr[fc]/1.1^2 ≤ w_to[tc])
+                JuMP.@constraint(pm.model, w_fr[fc]/0.9^2 ≥ w_to[tc])
+            end
+        end
     end
 
     JuMP.@constraint(pm.model, p_fr + p_to .== 0)
