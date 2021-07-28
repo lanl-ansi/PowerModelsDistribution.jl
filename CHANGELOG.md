@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added power variables `Pt` and `Qt` for transformers to `AbstractUBFModels`
 - Updated `_add_gen_cost_model!` to have a default `cost` vector that is `[1.0, 0.0]` instead of including a redundant first `0.0`
 - Fixed bug in eng2math functions where there was no check on generator or storage objects when assigning bus_type on their bus to see if the gen obj was enabled or disabled
 - Fixed bug in `sol_data_model` for W-space models where if the optimizer allowed some small infeasibility, it was possible to have a negative `w` value, which would crash when attempting to take the square-root
