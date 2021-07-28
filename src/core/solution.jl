@@ -35,6 +35,12 @@ function _IM.build_solution_values(var::JuMP.Containers.DenseAxisArray{<:Number,
 end
 
 
+"custom `build_solution_values` for multiconductor (vector) constants"
+function _IM.build_solution_values(var::LinearAlgebra.Symmetric{JuMP.VariableRef, Matrix{JuMP.VariableRef}})
+    return JuMP.value.(var.data)
+end
+
+
 "converts w models voltages to standard voltage magnitude (sqrt)"
 function _sol_data_model_w!(solution::Dict{String,<:Any})
     if haskey(solution, "nw")

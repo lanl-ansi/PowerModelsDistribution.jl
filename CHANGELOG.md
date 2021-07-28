@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added `build_solution_values` for data of type `LinearAlgebra.Symmetric{JuMP.VariableRef, Matrix{JuMP.VariableRef}}`
 - Fixed bug in solution builder where building a result dict would fail if there was no solution
 - Added "root-level" eng2math_passthrough option
 - Fixed bug where global keys were not getting passed to `_map_eng2math` function
