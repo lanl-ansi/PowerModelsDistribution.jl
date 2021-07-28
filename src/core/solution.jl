@@ -53,7 +53,12 @@ function _sol_data_model_w!(solution::Dict{String,<:Any})
         if haskey(nw_data, "bus")
             for (i,bus) in nw_data["bus"]
                 if haskey(bus, "w")
-                    bus["vm"] = sqrt.(bus["w"])
+                    if any(bus["w"] .< 0) # e.g., as allowed by constraint violation settings
+                        bus["vm"] = zeros(length(bus["w"]))
+                        bus["vm"][bus["w"] .>= 0.0] .= sqrt.(bus["w"][bus["w"] .>= 0.0])
+                    else
+                        bus["vm"] = sqrt.(bus["w"])
+                    end
                     delete!(bus, "w")
                 end
             end
