@@ -851,31 +851,6 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
 end
 
 
-"Adds regcontrol to `data_eng` from `data_dss`"
-function _dss2eng_regcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
-    for (id, dss_obj) in get(data_dss, "regcontrol", Dict{String,Any}())
-        _apply_like!(dss_obj, data_dss, "regcontrol")
-        defaults = _apply_ordered_properties(_create_regcontrol(id; _to_kwargs(dss_obj)...), dss_obj)
-
-        eng_obj = Dict{String,Any}(
-                "name" => defaults["name"],
-                "vreg" => defaults["vreg"],
-                "band" => defaults["band"],
-                "ptratio" => defaults["ptratio"],
-                "ctprim" => defaults["ctprim"],
-                "r" => defaults["r"],
-                "x" => defaults["x"],
-            )
-
-        if import_all
-            _import_all!(eng_obj, dss_obj)
-        end
-
-        _add_eng_obj!(data_eng, "regcontrol", defaults["transformer"], eng_obj)
-    end
-end
-
-
 """
     parse_opendss(
         io::IO;
