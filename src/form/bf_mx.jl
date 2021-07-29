@@ -100,8 +100,8 @@ end
 ""
 function variable_mc_branch_power(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     # calculate S bound
-    branch_arcs = ref(pm, nw, :arcs_branch)
-    connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_branch) for ((l,i,j), connections) in entry)
+    branch_arcs = Vector{Tuple{Int,Int,Int}}(ref(pm, nw, :arcs_branch))
+    connections = Dict{Tuple{Int,Int,Int},Vector{Int}}((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_branch) for ((l,i,j), connections) in entry)
 
     if bounded
         bound = Dict{eltype(branch_arcs), Matrix{Real}}()
@@ -138,6 +138,52 @@ function variable_mc_branch_power(pm::AbstractUBFModels; nw::Int=nw_id_default, 
 
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :Pf, :Pt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), P)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :Qf, :Qt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), Q)
+end
+
+
+"defines matrix transformer power variables for the unbalanced branch flow models"
+function variable_mc_transformer_power(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    transformer_arcs = Vector{Tuple{Int,Int,Int}}(ref(pm, nw, :arcs_transformer))
+    connections = Dict{Tuple{Int,Int,Int},Vector{Int}}((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_transformer) for ((l,i,j), connections) in entry)
+
+    if bounded
+        bound = Dict{eltype(transformer_arcs), Matrix{Real}}()
+        for (tr, transformer) in ref(pm, nw, :transformer)
+            bus_fr = ref(pm, nw, :bus, transformer["f_bus"])
+            bus_to = ref(pm, nw, :bus, transformer["t_bus"])
+
+            # calculate S,I bounds
+            smax_fr, smax_to = _calc_transformer_power_ub_frto(transformer, bus_fr, bus_to)
+            cmax_fr, cmax_to = _calc_transformer_current_max_frto(transformer, bus_fr, bus_to)
+
+            tuple_fr = (tr, bus_fr["index"], bus_to["index"])
+            tuple_to = (tr, bus_to["index"], bus_fr["index"])
+
+            bound[tuple_fr] = bus_fr["vmax"][[findfirst(isequal(c), bus_fr["terminals"]) for c in transformer["f_connections"]]].*cmax_fr'
+            bound[tuple_to] = bus_to["vmax"][[findfirst(isequal(c), bus_to["terminals"]) for c in transformer["t_connections"]]].*cmax_to'
+
+            for (idx, (fc,tc)) in enumerate(zip(transformer["f_connections"], transformer["t_connections"]))
+                bound[tuple_fr][idx,idx] = smax_fr[idx]
+                bound[tuple_to][idx,idx] = smax_to[idx]
+            end
+        end
+        # create matrix variables
+        (Pt,Qt) = variable_mx_complex(pm.model, transformer_arcs, connections, connections; symm_bound=bound, name=("Pt", "Qt"), prefix="$nw")
+    else
+        (Pt,Qt) = variable_mx_complex(pm.model, transformer_arcs, connections, connections; name=("Pt", "Qt"), prefix="$nw")
+    end
+
+    # save reference
+    var(pm, nw)[:Pt] = Pt
+    var(pm, nw)[:Qt] = Qt
+
+    var(pm, nw)[:pt] = pt = Dict([(id,diag(Pt[id])) for id in transformer_arcs])
+    var(pm, nw)[:qt] = qt = Dict([(id,diag(Qt[id])) for id in transformer_arcs])
+
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :Pf, :Pt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), Pt)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :Qf, :Qt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), Qt)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :pf, :pt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), pt)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :qf, :qt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), qt)
 end
 
 

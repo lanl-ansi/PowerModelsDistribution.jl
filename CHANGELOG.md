@@ -3,6 +3,18 @@
 ## staged
 
 - Added wye-connected RegControl for ACP, ACR, LinDist3Flow and FBS formulations
+
+## v0.11.5
+
+- Fixed typo in `transform_data_model` where `global_keys` should have been `global_keys=global_keys`
+- Added power variables `Pt` and `Qt` for transformers to `AbstractUBFModels`
+- Updated `_add_gen_cost_model!` to have a default `cost` vector that is `[1.0, 0.0]` instead of including a redundant first `0.0`
+- Fixed bug in eng2math functions where there was no check on generator or storage objects when assigning bus_type on their bus to see if the gen obj was enabled or disabled
+- Fixed bug in `sol_data_model` for W-space models where if the optimizer allowed some small infeasibility, it was possible to have a negative `w` value, which would crash when attempting to take the square-root
+- Added `build_solution_values` for data of type `LinearAlgebra.Symmetric{JuMP.VariableRef, Matrix{JuMP.VariableRef}}`
+- Fixed bug in solution builder where building a result dict would fail if there was no solution
+- Added "root-level" eng2math_passthrough option
+- Fixed bug where global keys were not getting passed to `_map_eng2math` function
 - Added support for parsing the results of dss command `export voltages` into `vm_start` and `va_start` values for warm starting bus voltages
 - Added simplified linear UBF formulation using a single iteration of forward-backward sweep (FBS)
 - Added support for raw parsing of RegControl and CapControl objects from dss

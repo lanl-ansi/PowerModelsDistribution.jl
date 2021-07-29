@@ -103,11 +103,13 @@ See [`transform_solution`](@ref transform_solution)
 
 To more simply pass through some properties in the built-in eng2math transformations,
 `eng2math_passthrough::Dict{String,Vector{String}}` can be used. For example, if in the
-ENGINEERING model, a property called `z` was added to `switch` objects, the user could
+ENGINEERING model, a property called `z` was added to `switch` objects, and a property at
+the root level of the dictionary was added called `max_switch_actions`, the user could
 pass the following dictionary to `eng2math_passthrough`:
 
     Dict{String,Vector{String}}(
         "switch" => String["z"],
+        "root" => String["max_switch_actions"],
     )
 
 This will result in `z` showing up on the `switch` object in the MATHEMATICAL model.
@@ -145,7 +147,8 @@ function transform_data_model(
             data;
             kron_reduced=kron_reduced,
             eng2math_extensions=eng2math_extensions,
-            eng2math_passthrough=eng2math_passthrough
+            eng2math_passthrough=eng2math_passthrough,
+            global_keys=global_keys,
         )
         correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
 
@@ -215,6 +218,12 @@ function _map_eng2math(
         ])
 
         _init_base_components!(nw_math)
+
+        for property in get(eng2math_passthrough, "root", String[])
+            if haskey(nw_eng, property)
+                nw_math[property] = deepcopy(nw_eng[property])
+            end
+        end
 
         for type in pmd_eng_asset_types
             getfield(PowerModelsDistribution, Symbol("_map_eng2math_$(type)!"))(nw_math, nw_eng; pass_props=get(eng2math_passthrough, type, String[]))
@@ -621,13 +630,13 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         connections = eng_obj["connections"]
 
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
-        math_obj["gen_status"] = Int(eng_obj["status"])
+        math_obj["gen_status"] = status = Int(eng_obj["status"])
         math_obj["control_mode"] = get(eng_obj, "control_mode", FREQUENCYDROOP)
         math_obj["pmax"] = get(eng_obj, "pg_ub", fill(Inf, length(connections)))
 
         math_obj["control_mode"] = control_mode = get(eng_obj, "control_mode", FREQUENCYDROOP)
-        data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = control_mode == ISOCHRONOUS ? 3 : 2
-        if control_mode == ISOCHRONOUS
+        data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = status == 0 ? 1 : control_mode == ISOCHRONOUS ? 3 : 2
+        if control_mode == ISOCHRONOUS && status == 1
             data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = eng_obj["vg"]
@@ -643,11 +652,6 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         _add_gen_cost_model!(math_obj, eng_obj)
 
         math_obj["configuration"] = get(eng_obj, "configuration", WYE)
-
-        # if PV generator mode convert attached bus to PV bus
-        if math_obj["control_mode"] == ISOCHRONOUS
-            data_math["bus"]["$(data_math["bus_lookup"][eng_obj["bus"]])"]["bus_type"] = 2
-        end
 
         data_math["gen"]["$(math_obj["index"])"] = math_obj
 
@@ -666,11 +670,11 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
         math_obj = _init_math_obj("solar", name, eng_obj, length(data_math["gen"])+1; pass_props=pass_props)
 
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
-        math_obj["gen_status"] = Int(eng_obj["status"])
+        math_obj["gen_status"] = status = Int(eng_obj["status"])
 
         math_obj["control_mode"] = control_mode = get(eng_obj, "control_mode", FREQUENCYDROOP)
-        data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = control_mode == ISOCHRONOUS ? 3 : 2
-        if control_mode == ISOCHRONOUS
+        data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = status == 0 ? 1 : control_mode == ISOCHRONOUS ? 3 : 2
+        if control_mode == ISOCHRONOUS && status == 1
             data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = eng_obj["vg"]
@@ -721,8 +725,8 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{St
         math_obj["qs"] = get(eng_obj, "qs", zeros(size(eng_obj["cm_ub"])))
 
         math_obj["control_mode"] = control_mode = get(eng_obj, "control_mode", FREQUENCYDROOP)
-        data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"] = control_mode == ISOCHRONOUS ? 3 : 2
-        if control_mode == ISOCHRONOUS
+        data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"] = math_obj["status"] == 0 ? 1 : control_mode == ISOCHRONOUS ? 3 : 2
+        if control_mode == ISOCHRONOUS && math_obj["status"] == 1
             data_math["bus"]["$(math_obj["storage_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...]
         end
 
@@ -748,7 +752,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
         math_obj["name"] = "_virtual_gen.voltage_source.$name"
         math_obj["gen_bus"] = gen_bus = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["connections"] = eng_obj["connections"]
-        math_obj["gen_status"] = Int(eng_obj["status"])
+        math_obj["gen_status"] = status = Int(eng_obj["status"])
         math_obj["pg"] = fill(0.0, nphases)
         math_obj["qg"] = fill(0.0, nphases)
         math_obj["vg"] = eng_obj["vm"]
@@ -774,7 +778,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "terminals" => f_bus["terminals"],
                 "grounded" => f_bus["grounded"],
                 "name" => "_virtual_bus.voltage_source.$name",
-                "bus_type" => math_obj["control_mode"] == ISOCHRONOUS ? 3 : 2,
+                "bus_type" => status == 0 ? 1 : math_obj["control_mode"] == ISOCHRONOUS ? 3 : 2,
                 "vm" => deepcopy(eng_obj["vm"]),
                 "va" => deepcopy(eng_obj["va"]),
                 "vmin" => deepcopy(get(eng_obj, "vm_lb", math_obj["control_mode"] == ISOCHRONOUS ? eng_obj["vm"] : fill(0.0, nphases))),
@@ -812,7 +816,6 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "index" => length(data_math["branch"])+1
             )
 
-
             data_math["branch"]["$(branch_obj["index"])"] = branch_obj
 
             map_to = [map_to, "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"]
@@ -824,7 +827,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
             data_math["bus"]["$gen_bus"]["vmax"] = [vm_ub..., [Inf for n in 1:(nconductors-nphases)]...]
             data_math["bus"]["$gen_bus"]["vm"] = [eng_obj["vm"]..., [0.0 for n in 1:(nconductors-nphases)]...]
             data_math["bus"]["$gen_bus"]["va"] = [eng_obj["va"]..., [0.0 for n in 1:(nconductors-nphases)]...]
-            data_math["bus"]["$gen_bus"]["bus_type"] = math_obj["control_mode"] == ISOCHRONOUS ? 3 : 2
+            data_math["bus"]["$gen_bus"]["bus_type"] = status == 0 ? 1 : math_obj["control_mode"] == ISOCHRONOUS ? 3 : 2
         end
 
         data_math["gen"]["$(math_obj["index"])"] = math_obj

@@ -79,7 +79,7 @@ function transform_solution(
     )
 
     if ismultinetwork(data_math)
-        nws_math_sol = solution_math["nw"]
+        nws_math_sol = get(solution_math, "nw", Dict{String,Any}())
         nws_math_data = data_math["nw"]
     else
         nws_math_sol = Dict("0" => solution_math)
@@ -316,9 +316,9 @@ function _map_math2eng_root!(data_eng::Dict{String,<:Any}, data_math::Dict{Strin
     data_eng["per_unit"] = data_math["per_unit"]
 
     if !ismultinetwork(data_math)
-        data_eng["settings"] = data_math["settings"]
+        data_eng["settings"] = get(data_math, "settings", Dict{String,Any}())  # in case of no solution
     else
-        for (n,nw) in data_eng["nw"]
+        for (n,nw) in get(data_eng, "nw", Dict{String,Any}())
             nw["settings"] = Dict{String,Any}("sbase" => data_math["nw"][n]["settings"]["sbase"])
         end
     end

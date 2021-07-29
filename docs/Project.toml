@@ -6,4 +6,4 @@ Pluto = "c3e4b0f8-55cb-11ea-2926-15256bba5781"
 [compat]
 Documenter = "~0.26.1"
 Gumbo = "~0.8.0"
-Pluto = "~0.14.1"
+Pluto = "~0.15.1"
