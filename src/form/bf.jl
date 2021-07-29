@@ -67,14 +67,11 @@ function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_i
 
             # with regcontrol
             if !isempty(reg_ctrl)
-                # convert reference voltage and band to pu
-                v_ref = reg_ctrl["vreg"]*reg_ctrl["ptratio"]*1e-3/reg_ctrl["basekV"]
-                δ = reg_ctrl["band"]*reg_ctrl["ptratio"]*1e-3/reg_ctrl["basekV"]
-
-                # convert regulator impedance (in volts) to equivalent pu line impedance
-                baseZ = (reg_ctrl["basekV"]*1e3)^2/(reg_ctrl["baseMVA"]*1e6)
-                r = reg_ctrl["r"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
-                x = reg_ctrl["x"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
+                v_ref = reg_ctrl["vreg"]  
+                δ = reg_ctrl["band"]       
+                r = reg_ctrl["r"]          
+                x = reg_ctrl["x"]
+                
                 # linearized voltage squared: w_drop = (2⋅r⋅p+2⋅x⋅q)
                 w_drop = JuMP.@expression(pm.model, 2*r*p_to[idx] + 2*x*q_to[idx])
 

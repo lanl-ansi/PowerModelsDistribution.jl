@@ -367,12 +367,6 @@ end
 
 "converts engineering n-winding transformers into mathematical ideal 2-winding lossless transformer branches and impedance branches to represent the loss model"
 function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
-    # check if regcontrol items are present
-    reg_obj = Dict()
-    if haskey(data_eng, "regcontrol")
-        reg_obj = get(data_eng, "regcontrol", Dict{Any,Dict{String,Any}}())
-    end
-
     for (name, eng_obj) in get(data_eng, "transformer", Dict{Any,Dict{String,Any}}())
         # Build map first, so we can update it as we decompose the transformer
         push!(data_math["map"], Dict{String,Any}(
@@ -476,11 +470,18 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
 
                 # add regcontrol items to math model
-                if !isempty(reg_obj) && haskey(reg_obj,"$name") && eng_obj["bus"][2]==eng_obj["bus"][w]
-                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["regcontrol"] = reg_obj["$name"]
+                if haskey(eng_obj,"regcontrol") && eng_obj["bus"][2]==eng_obj["bus"][w]
+                    reg_ctrl = eng_obj["regcontrol"]
+                    # convert reference voltage and band from volts to pu
+                    reg_ctrl["vreg"] = reg_ctrl["vreg"]*reg_ctrl["ptratio"]*1e-3/eng_obj["vm_nom"][1]
+                    reg_ctrl["band"]  = reg_ctrl["band"]*reg_ctrl["ptratio"]*1e-3/eng_obj["vm_nom"][1]
+                    # convert regulator impedance from volts to pu 
+                    baseZ = (eng_obj["vm_nom"][1]*1e3)^2/(data_eng["settings"]["sbase_default"]/data_eng["settings"]["power_scale_factor"]*1e6)
+                    reg_ctrl["r"] = reg_ctrl["r"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
+                    reg_ctrl["x"] = reg_ctrl["x"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
+                    
+                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["regcontrol"] = reg_ctrl
                     data_math["transformer"]["$(transformer_2wa_obj["index"])"]["tm_fix"] = fill(false,length(transformer_2wa_obj["f_connections"]))
-                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["regcontrol"]["basekV"] = eng_obj["vm_nom"][1]
-                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["regcontrol"]["baseMVA"] = data_eng["settings"]["sbase_default"]/data_eng["settings"]["power_scale_factor"]
                 end
                 push!(to_map, "transformer.$(transformer_2wa_obj["index"])")
             end

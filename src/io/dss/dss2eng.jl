@@ -547,6 +547,15 @@ end
 
 "Adds transformers to `data_eng` from `data_dss`"
 function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
+    # check if regcontrol items are present
+    reg_obj = Dict()
+    if haskey(data_dss, "regcontrol")
+        for (id, dss_obj) in get(data_dss, "regcontrol", Dict{String,Any}())
+            reg_obj["$(dss_obj["transformer"])"] = dss_obj
+            reg_obj["$(dss_obj["transformer"])"]["name"] = id
+        end
+    end
+
     for (id, dss_obj) in get(data_dss, "transformer", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "transformer")
         defaults = _apply_ordered_properties(_create_transformer(id; _to_kwargs(dss_obj)...), dss_obj)
@@ -725,6 +734,21 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
             end
         end
 
+        # Adds regcontrol to transformer if present
+        if !isempty(reg_obj) && (haskey(reg_obj,"$id") || (haskey(dss_obj,"bank") && haskey(reg_obj,"$(dss_obj["bank"])")))
+            _apply_like!(dss_obj, data_dss, "regcontrol")
+            defaults = _apply_ordered_properties(_create_regcontrol(id; _to_kwargs(dss_obj)...), dss_obj)
+            reg_ctrl = haskey(reg_obj,"$id") ? reg_obj["$id"] : reg_obj["$(dss_obj["bank"])"]
+            eng_obj["regcontrol"] = Dict{String,Any}(
+                "name" => reg_ctrl["name"],
+                "vreg" => haskey(reg_ctrl,"vreg") ? reg_ctrl["vreg"] : defaults["vreg"],
+                "band" => haskey(reg_ctrl,"band") ? reg_ctrl["band"] : defaults["band"],
+                "ptratio" => haskey(reg_ctrl,"ptratio") ? reg_ctrl["ptratio"] : defaults["ptratio"],
+                "ctprim" => haskey(reg_ctrl,"ctprim") ? reg_ctrl["ctprim"] : defaults["ctprim"],
+                "r" => haskey(reg_ctrl,"r") ? reg_ctrl["r"] : defaults["r"],
+                "x" => haskey(reg_ctrl,"x") ? reg_ctrl["x"] : defaults["x"]
+            ) 
+        end
         if import_all
             _import_all!(eng_obj, dss_obj)
         end
@@ -852,32 +876,6 @@ function _dss2eng_regcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{Strin
 end
 
 
-"Adds capcontrol to `data_eng` from `data_dss`"
-function _dss2eng_capcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
-    for (id, dss_obj) in get(data_dss, "capcontrol", Dict{String,Any}())
-        _apply_like!(dss_obj, data_dss, "capcontrol")
-        defaults = _apply_ordered_properties(_create_capcontrol(id; _to_kwargs(dss_obj)...), dss_obj)
-
-        eng_obj = Dict{String,Any}(
-                "element" => defaults["element"],
-                "name" => defaults["name"],
-                "type" => defaults["type"],
-                "ptratio" => defaults["ptratio"], "ctratio" => defaults["ctratio"],
-                "ptphase" => defaults["ptphase"], "ctphase" => defaults["ctphase"],
-                "vmin" => defaults["vmin"], "vmax" => defaults["vmax"],
-                "onsetting" => defaults["onsetting"], "offsetting" => defaults["offsetting"],
-                "terminal" => defaults["terminal"]
-            )
-
-        if import_all
-            _import_all!(eng_obj, dss_obj)
-        end
-
-        _add_eng_obj!(data_eng, "capcontrol", id, eng_obj)
-    end
-end
-
-
 """
     parse_opendss(
         io::IO;
@@ -995,9 +993,6 @@ function parse_opendss(
     _dss2eng_generator!(data_eng, data_dss, import_all, time_series)
     _dss2eng_pvsystem!(data_eng, data_dss, import_all, time_series)
     _dss2eng_storage!(data_eng, data_dss, import_all, time_series)
-
-    _dss2eng_regcontrol!(data_eng, data_dss, import_all)
-    _dss2eng_capcontrol!(data_eng, data_dss, import_all)
 
     _discover_terminals!(data_eng)
 
