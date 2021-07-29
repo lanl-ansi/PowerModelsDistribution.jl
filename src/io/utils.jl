@@ -370,11 +370,6 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
             btrans["status"] = all(tr["status"] == ENABLED for tr in trs)
             btrans["source_id"] = "transformer.$bank"
 
-            # add regulator objects if present
-            if haskey(trs[1],"regcontrol")
-                btrans["regcontrol"] = trs[1]["regcontrol"]
-            end
-
             # edit the transformer dict
             for id in ids
                 delete!(data_eng["transformer"], id)

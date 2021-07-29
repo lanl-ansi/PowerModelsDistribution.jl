@@ -202,19 +202,6 @@ Special case of the Generic transformer, which is still a `transformer` object, 
 | `tm_set`        | `fill(1.0,nphases)`  | `Vector{Real}` |       | always | Set tap ratio for each phase (base=`tm_nom`), `size=nphases`                                                |
 | `tm_fix`        | `fill(true,nphases)` | `Vector{Bool}` |       | oltc   | Indicates for each phase whether the tap ratio is fixed, `size=nphases`                                     |
 
-#### Transformers with voltage regulator control (`regcontrol`)
-
-Special case of the Generic transformer, which is part of the `transformer` object, and emulates a standard utility voltage regulator. The taps of these transformers can be controlled by modelling a line drop compensator. 
-
-| Name            | Default              | Type           | Units | Used   | Description                                                                                                 |
-|-----------------|----------------------|----------------|-------|--------|-------------------------------------------------------------------------------------------------------------|
-| `vreg`          | `120.0`              | `Real`         | volt  |  oltc  | Voltage regulator reference for the winding being controlled                                                |
-| `band`          | `3.0`                | `Real`         | volt  |  oltc  | Voltage bandwidth for the winding being controlled                                                          |
-| `ptratio`       | `60.0`               | `Real`         |       |  oltc  | Ratio of the potential transformer that converts controlled winding voltage to regulator voltage            |
-| `ctprim`        | `300.0`              | `Real`         | amp   |  oltc  | The current transformer rating on primary side                                                              |
-| `r`             | `0.0`                | `Real`         | volt  |  oltc  | Resistance setting on the line drop compensator in the regulator                                            |
-| `x`             | `0.0`                | `Real`         | volt  |  oltc  | Reactance setting on the line drop compensator in the regulator                                             |
-
 ### Switches (`switch`)
 
 Switches without `rs`, `xs` or a linecode (conductance/susceptance not considered), defined the switch will be treated as lossless. If lossy parameters are defined, `switch` objects will be decomposed into virtual `branch` & `bus`, and an ideal `switch`.

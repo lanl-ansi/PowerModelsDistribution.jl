@@ -534,14 +534,17 @@ function constraint_mc_transformer_power_yy(pm::AbstractUnbalancedACPModel, nw::
 
             # with regcontrol
             if !isempty(reg_ctrl)
-                v_ref = reg_ctrl["vreg"]  
-                δ = reg_ctrl["band"]       
-                r = reg_ctrl["r"]          
-                x = reg_ctrl["x"]          
+                # convert reference voltage and band to pu
+                v_ref = reg_ctrl["vreg"]*reg_ctrl["ptratio"]*1e-3/reg_ctrl["basekV"]
+                δ = reg_ctrl["band"]*reg_ctrl["ptratio"]*1e-3/reg_ctrl["basekV"]
 
                 # (cr+jci) = (p-jq)/(vm⋅cos(va)-jvm⋅sin(va))
                 cr = JuMP.@NLexpression(pm.model, ( p_to[idx]*vm_to[tc]*cos(va_to[tc]) + q_to[idx]*vm_to[tc]*sin(va_to[tc]))/vm_to[tc]^2) 
                 ci = JuMP.@NLexpression(pm.model, (-q_to[idx]*vm_to[tc]*cos(va_to[tc]) + p_to[idx]*vm_to[tc]*sin(va_to[tc]))/vm_to[tc]^2)
+                # convert regulator impedance (in volts) to equivalent pu line impedance
+                baseZ = (reg_ctrl["basekV"]*1e3)^2/(reg_ctrl["baseMVA"]*1e6)
+                r = reg_ctrl["r"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
+                x = reg_ctrl["x"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
                 # v_drop = (cr+jci)⋅(r+jx)
                 vr_drop = JuMP.@NLexpression(pm.model, r*cr-x*ci)
                 vi_drop = JuMP.@NLexpression(pm.model, r*ci+x*cr)

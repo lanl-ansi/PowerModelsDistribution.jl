@@ -37,8 +37,7 @@ New Transformer.Reg3 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666]
 ~ %rs=[0 0] ! correct default here
 
 ! POINT REGULATOR CONTROLS TO REGULATOR TRANSFORMER AND SET PARAMETERS
-new regcontrol.creg  transformer=reg1  vreg=122 band=2  ptratio=20 ctprim=700 R=3   X=9 
- 
+new regcontrol.creg1  transformer=Reg1  vreg=122 band=2  ptratio=20 ctprim=140 R=3   X=9  
 
 !LINE CODES
 
@@ -86,9 +85,9 @@ New Line.645646    Phases=2 Bus1=645.3.2      Bus2=646.3.2    LineCode=mtx603 Le
 Set Voltagebases=[115, 4.16, .48]
 calcv
 
-Transformer.Reg1.Taps=[1.0 1.1]
-Transformer.Reg2.Taps=[1.0 1.04375]
-Transformer.Reg3.Taps=[1.0 1.04375]
+Transformer.Reg1.Taps=[1.0 1.0625]
+Transformer.Reg2.Taps=[1.0 1.0500]
+Transformer.Reg3.Taps=[1.0 1.06875]
 
 Set tolerance=0.001
 
