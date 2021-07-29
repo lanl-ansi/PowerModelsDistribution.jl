@@ -508,17 +508,14 @@ function constraint_mc_transformer_power_yy(pm::FBSUBFPowerModel, nw::Int, trans
 
             # with regcontrol
             if !isempty(reg_ctrl)
-                # convert reference voltage and band to pu
-                v_ref = reg_ctrl["vreg"]*reg_ctrl["ptratio"]*1e-3/reg_ctrl["basekV"]
-                δ = reg_ctrl["band"]*reg_ctrl["ptratio"]*1e-3/reg_ctrl["basekV"]
+                v_ref = reg_ctrl["vreg"]  
+                δ = reg_ctrl["band"]       
+                r = reg_ctrl["r"]          
+                x = reg_ctrl["x"]
                 
                 # (cr+jci) = (p-jq)/(vr0-j⋅vi0)
                 cr = JuMP.@expression(pm.model, ( p_to[idx]*vr0_to[tc] + q_to[idx]*vi0_to[tc])/(vr0_to[tc]^2+vi0_to[tc]^2)) 
                 ci = JuMP.@expression(pm.model, (-q_to[idx]*vr0_to[tc] + p_to[idx]*vi0_to[tc])/(vr0_to[tc]^2+vi0_to[tc]^2))
-                # convert regulator impedance (in volts) to equivalent pu line impedance
-                baseZ = (reg_ctrl["basekV"]*1e3)^2/(reg_ctrl["baseMVA"]*1e6)
-                r = reg_ctrl["r"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
-                x = reg_ctrl["x"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
                 # linearized v_drop = (cr+jci)⋅(r+jx)
                 vr_drop = JuMP.@expression(pm.model, r*cr-x*ci)
                 vi_drop = JuMP.@expression(pm.model, r*ci+x*cr)
