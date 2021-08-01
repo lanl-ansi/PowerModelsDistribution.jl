@@ -330,6 +330,30 @@ end
 
 
 """
+	function constraint_mc_voltage_magnitude_fixed(
+		pm::RectangularVoltageExplicitNeutralModels,
+		nw::Int,
+		i::Int,
+		vm::Vector{<:Real},
+		va::Vector{<:Real},
+		terminals::Vector{Int},
+		grounded::Vector{Bool}
+	)
+
+Fixes the voltage variables at bus `i` to `vm.*exp.(im*va)`
+"""
+function constraint_mc_voltage_magnitude_fixed(pm::RectangularVoltageExplicitNeutralModels, nw::Int, i::Int, vm::Vector{<:Real}, terminals::Vector{Int}, grounded::Vector{Bool})
+    vr = var(pm, nw, :vr, i)
+    vi = var(pm, nw, :vi, i)
+    
+    @assert iszero(vm[grounded]) "Infeasible model; the voltage magnitude of a grounded terminal is fixed to a non-zero value."
+    idxs = findall((!).(grounded))
+    
+    JuMP.@constraint(pm.model, [i in idxs], vr[terminals[i]].^2 + vi[terminals[i]].^2 == vm[i].^2)
+end
+
+
+"""
 	function constraint_mc_theta_ref(
 		pm::RectangularVoltageExplicitNeutralModels,
 		nw::Int,

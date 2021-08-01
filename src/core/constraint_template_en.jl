@@ -59,7 +59,7 @@ function constraint_mc_voltage_reference(pm::ExplicitNeutralModels, id::Int; nw:
     if haskey(bus, "va") && !haskey(bus, "vm")
         constraint_mc_theta_ref(pm, id, nw=mw, bounded=bounded, report=report, kwargs...)
     elseif haskey(bus, "vm") && !haskey(bus, "va")
-        error("Reference buses with magnitude-only (vm) setpoints are not supported. The same can be achieved by setting vmin=vmax=vm.")
+        constraint_mc_voltage_magnitude_fixed(pm, nw, id, bus["vm"], terminals, grounded)
     elseif haskey(bus, "vm") && haskey(bus, "va")
         constraint_mc_voltage_fixed(pm, nw, id, bus["vm"], bus["va"], terminals, grounded)
     end
