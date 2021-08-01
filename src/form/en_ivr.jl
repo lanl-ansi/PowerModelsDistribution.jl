@@ -908,8 +908,8 @@ For quadratic IVR models with explicit neutrals,
 creates transformer power variables `:pt` and `:qt`
 """
 function variable_mc_transformer_power(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_transformer_power_active(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_transformer_power_reactive(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    variable_mc_transformer_power_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    variable_mc_transformer_power_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
 end
 
 
@@ -1057,7 +1057,7 @@ end
 
 
 """
-	function constraint_mc_transformer_thermal_rating(
+	function constraint_mc_transformer_thermal_limit(
 		pm::AbstractNLExplicitNeutralIVRModel,
 		nw::Int,
 		id::Int,
@@ -1081,7 +1081,7 @@ sum(pt_fr)^2 + sum(qt_fr)^2 <= sm_ub^2
 sum(pt_to)^2 + sum(qt_to)^2 <= sm_ub^2
 ```
 """
-function constraint_mc_transformer_thermal_rating(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
+function constraint_mc_transformer_thermal_limit(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
     vr_fr = var(pm, nw, :vr, f_bus)
     vi_fr = var(pm, nw, :vi, f_bus)
     vr_to = var(pm, nw, :vr, t_bus)
@@ -1135,7 +1135,7 @@ end
 # TRANSFORMER - Constraint - Quadratic
 
 """
-	function constraint_mc_transformer_thermal_rating(
+	function constraint_mc_transformer_thermal_limit(
 		pm::AbstractQuadraticExplicitNeutralIVRModel,
 		nw::Int,
 		id::Int,
@@ -1158,7 +1158,7 @@ sum(pt_fr)^2 + sum(qt_fr)^2 <= sm_ub^2
 sum(pt_to)^2 + sum(qt_to)^2 <= sm_ub^2
 ```
 """
-function constraint_mc_transformer_thermal_rating(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
+function constraint_mc_transformer_thermal_limit(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
     vr_fr = var(pm, nw, :vr, f_bus)
     vi_fr = var(pm, nw, :vi, f_bus)
     vr_to = var(pm, nw, :vr, t_bus)
@@ -1201,11 +1201,6 @@ function constraint_mc_transformer_thermal_rating(pm::AbstractQuadraticExplicitN
         JuMP.@constraint(pm.model, sum(pt_fr)^2+sum(qt_fr)^2 <= sm_ub^2)
         JuMP.@constraint(pm.model, sum(pt_to)^2+sum(qt_to)^2 <= sm_ub^2)
     end
-    
-    # if report
-    #     sol(pm, nw, :transformer, id)[:sm_fr] = JuMP.@NLexpression(pm.model, sqrt(pt_fr^2+qt_fr^2))
-    #     sol(pm, nw, :transformer, id)[:sm_to] = JuMP.@NLexpression(pm.model, sqrt(pt_to^2+qt_to^2))
-    # end
 end
 
 
@@ -1447,10 +1442,10 @@ function constraint_mc_thermal_limit_from(pm::AbstractExplicitNeutralIVRModel, n
 
     for idx in 1:length(rate_a)
         if rate_a[idx]<Inf
-            psw_fr_idx = JuMP.@NLexpression(pm.model,  vr_fr[idx]*cr_fr[idx] + vi_fr[idx]*ci_fr[idx])
-            qsw_fr_idx = JuMP.@NLexpression(pm.model, -vr_fr[idx]*ci_fr[idx] + vi_fr[idx]*cr_fr[idx])
+            pf_idx = JuMP.@NLexpression(pm.model,  vr_fr[idx]*cr_fr[idx] + vi_fr[idx]*ci_fr[idx])
+            qf_idx = JuMP.@NLexpression(pm.model, -vr_fr[idx]*ci_fr[idx] + vi_fr[idx]*cr_fr[idx])
 
-            JuMP.@NLconstraint(pm.model, psw_fr_idx^2 + qsw_fr_idx^2 <= rate_a[idx]^2)
+            JuMP.@NLconstraint(pm.model, pf_idx^2 + qf_idx^2 <= rate_a[idx]^2)
         end
     end
 end
@@ -1476,10 +1471,10 @@ function constraint_mc_thermal_limit_to(pm::AbstractExplicitNeutralIVRModel, nw:
 
     for idx in 1:length(rate_a)
         if rate_a[idx]<Inf
-            psw_to_idx = JuMP.@NLexpression(pm.model,  vr_to[idx]*cr_to[idx] + vi_to[idx]*ci_to[idx])
-            qsw_to_idx = JuMP.@NLexpression(pm.model, -vr_to[idx]*ci_to[idx] + vi_to[idx]*cr_to[idx])
+            pt_idx = JuMP.@NLexpression(pm.model,  vr_to[idx]*cr_to[idx] + vi_to[idx]*ci_to[idx])
+            qt_idx = JuMP.@NLexpression(pm.model, -vr_to[idx]*ci_to[idx] + vi_to[idx]*cr_to[idx])
 
-            JuMP.@NLconstraint(pm.model, psw_to_idx^2 + qsw_to_idx^2 <= rate_a[idx]^2)
+            JuMP.@NLconstraint(pm.model, pt_idx^2 + qt_idx^2 <= rate_a[idx]^2)
         end
     end
 end
@@ -1502,7 +1497,7 @@ without introducing explicit power variables.
 """
 function constraint_mc_thermal_limit_from(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
     if any(rate_a.<Inf)
-        error("""
+        warning("""
             A branch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
             Either extend this quadratic formulation by including explicit branch power variables, or use AbstractNLExplicitNeutralIVRModel instead.""")
     end
@@ -1524,7 +1519,7 @@ without introducing explicit power variables.
 """
 function constraint_mc_thermal_limit_to(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
     if any(rate_a.<Inf)
-        error("""
+        warning("""
             A branch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
             Either extend this quadratic formulation by including explicit branch power variables, or use AbstractNLExplicitNeutralIVRModel instead.""")
     end
@@ -1756,7 +1751,7 @@ without introducing explicit power variables.
 """
 function constraint_mc_switch_thermal_limit(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
     if any(rating.<Inf)
-        error("""
+        warning("""
             A switch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
             Either extend this quadratic formulation by including explicit switch power variables, or use AbstractNLExplicitNeutralIVRModel instead.""")
     end

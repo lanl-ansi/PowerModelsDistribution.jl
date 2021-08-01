@@ -134,8 +134,7 @@ function constraint_mc_current_balance(pm::RectangularVoltageExplicitNeutralMode
     ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
 
     for (idx, t) in ungrounded_terminals
-        # @smart_constraint(pm.model,  [cr, crd, crg, crs, crsw, crt, vr],
-        @smart_constraint(pm.model,  [cr, crd, crg, crt, vr],
+        @smart_constraint(pm.model,  [cr, crd, crg, crs, crsw, crt, vr],
                                       sum(cr[a][t] for (a, conns) in bus_arcs if t in conns)
                                     + sum(crsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
                                     + sum(crt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
@@ -145,8 +144,7 @@ function constraint_mc_current_balance(pm::RectangularVoltageExplicitNeutralMode
                                     - sum(crd[d][t]         for (d, conns) in bus_loads if t in conns)
                                     - sum( Gt[idx,jdx]*vr[u] -Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals) # shunts
                                     )
-        # @smart_constraint(pm.model, [ci, cid, cig, cis, cisw, cit, vi],
-        @smart_constraint(pm.model, [ci, cid, cig, cit, vi],
+        @smart_constraint(pm.model, [ci, cid, cig, cis, cisw, cit, vi],
                                       sum(ci[a][t] for (a, conns) in bus_arcs if t in conns)
                                     + sum(cisw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
                                     + sum(cit[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
@@ -246,25 +244,6 @@ end
 """
 	function constraint_mc_voltage_absolute(
 		pm::RectangularVoltageExplicitNeutralModels,
-		id::Int;
-		nw::Int=nw_id_default,
-		bounded::Bool=true,
-		report::Bool=true,
-		kwargs...
-	)
-
-Imposes absolute voltage magnitude bounds for models with explicit neutrals
-"""
-function constraint_mc_voltage_absolute(pm::RectangularVoltageExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    bus = ref(pm, nw, :bus, id)
-
-    constraint_mc_voltage_absolute(pm, nw, id, bus["terminals"], bus["grounded"], bus["vmin"], bus["vmax"])
-end
-
-
-"""
-	function constraint_mc_voltage_absolute(
-		pm::RectangularVoltageExplicitNeutralModels,
 		nw::Int,
 		i::Int,
 		terminals::Vector{Int},
@@ -297,28 +276,6 @@ end
 """
 	function constraint_mc_voltage_pairwise(
 		pm::RectangularVoltageExplicitNeutralModels,
-		id::Int;
-		nw::Int=nw_id_default,
-		bounded::Bool=true,
-		report::Bool=true,
-		kwargs...
-	)
-
-Imposes pairwise voltage magnitude bounds, i.e. magnitude bounds on the voltage between to terminals, for models with explicit neutrals
-"""
-function constraint_mc_voltage_pairwise(pm::RectangularVoltageExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    bus = ref(pm, nw, :bus, id)
-
-    vm_pair_lb = bus["vm_pair_lb"]
-    vm_pair_ub = bus["vm_pair_ub"]
-
-    constraint_mc_voltage_pairwise(pm, nw, id, bus["terminals"], bus["grounded"], vm_pair_lb, vm_pair_ub)
-end
-
-
-"""
-	function constraint_mc_voltage_pairwise(
-		pm::RectangularVoltageExplicitNeutralModels,
 		nw::Int,
 		i::Int,
 		terminals::Vector{Int},
@@ -330,7 +287,7 @@ end
 
 Imposes pairwise voltage magnitude bounds, i.e. magnitude bounds on the voltage between to terminals, for models with explicit neutrals
 """
-function constraint_mc_voltage_pairwise(pm::RectangularVoltageExplicitNeutralModels, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, vm_pair_lb::Vector, vm_pair_ub::Vector; report::Bool=true)
+function constraint_mc_voltage_pairwise(pm::RectangularVoltageExplicitNeutralModels, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, vm_pair_lb::Vector{<:Tuple{Any,Any,Real}}, vm_pair_ub::Vector{<:Tuple{Any,Any,Real}}; report::Bool=true)
     vr = var(pm, nw, :vr, i)
     vi = var(pm, nw, :vi, i)
 
@@ -344,33 +301,6 @@ function constraint_mc_voltage_pairwise(pm::RectangularVoltageExplicitNeutralMod
         if ub < Inf
             JuMP.@constraint(pm.model, (vr[a]-vr[b])^2 + (vi[a]-vi[b])^2 <= ub^2)
         end
-    end
-end
-
-
-"""
-	function constraint_mc_voltage_reference(
-		pm::ExplicitNeutralModels,
-		id::Int;
-		nw::Int=nw_id_default,
-		bounded::Bool=true,
-		report::Bool=true,
-		kwargs...
-	)
-
-Imposes suitable constraints for the voltage at the reference bus
-"""
-function constraint_mc_voltage_reference(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    bus = ref(pm, nw, :bus, id)
-    terminals = bus["terminals"]
-    grounded = bus["grounded"]
-
-    if haskey(bus, "va") && !haskey(bus, "vm")
-        constraint_mc_theta_ref(pm, id, nw=mw, bounded=bounded, report=report, kwargs...)
-    elseif haskey(bus, "vm") && !haskey(bus, "va")
-        error("Reference buses with magnitude-only (vm) setpoints are not supported. The same can be achieved by setting vmin=vmax=vm.")
-    elseif haskey(bus, "vm") && haskey(bus, "va")
-        constraint_mc_voltage_fixed(pm, nw, id, bus["vm"], bus["va"], terminals, grounded)
     end
 end
 
@@ -444,36 +374,6 @@ end
 
 
 # GENERATOR
-
-"""
-	function constraint_mc_generator_power(
-		pm::ExplicitNeutralModels,
-		id::Int;
-		nw::Int=nw_id_default,
-		report::Bool=true
-	)
-
-Constrains generator power variables for models with explicit neutrals.
-"""
-function constraint_mc_generator_power(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, report::Bool=true)
-    generator = ref(pm, nw, :gen, id)
-    bus = ref(pm, nw,:bus, generator["gen_bus"])
-
-    configuration = generator["configuration"]
-
-    N = length(generator["connections"])
-    pmin = get(generator, "pmin", fill(-Inf, N))
-    pmax = get(generator, "pmax", fill( Inf, N))
-    qmin = get(generator, "qmin", fill(-Inf, N))
-    qmax = get(generator, "qmax", fill( Inf, N))
-
-    if configuration==WYE || length(pmin)==1
-        constraint_mc_generator_power_wye(pm, nw, id, bus["index"], generator["connections"], pmin, pmax, qmin, qmax; report=report)
-    else
-        constraint_mc_generator_power_delta(pm, nw, id, bus["index"], generator["connections"], pmin, pmax, qmin, qmax; report=report)
-    end
-end
-
 
 # GENERATOR - Variables
 
@@ -630,34 +530,6 @@ function variable_mc_load_current_imaginary(pm::ExplicitNeutralModels; nw::Int=n
 end
 
 
-# LOAD - Constraints
-
-"""
-	function constraint_mc_load_power(
-		pm::ExplicitNeutralModels,
-		id::Int;
-		nw::Int=nw_id_default,
-		report::Bool=true
-	)
-
-Constrains load power variables for models with explicit neutrals.
-"""
-function constraint_mc_load_power(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, report::Bool=true)
-    load = ref(pm, nw, :load, id)
-    bus = ref(pm, nw,:bus, load["load_bus"])
-
-    configuration = load["configuration"]
-
-    a, alpha, b, beta = _load_expmodel_params(load, bus)
-
-    if configuration==WYE || length(a)==1
-        constraint_mc_load_power_wye(pm, nw, id, load["load_bus"], load["connections"], a, alpha, b, beta; report=report)
-    else
-        constraint_mc_load_power_delta(pm, nw, id, load["load_bus"], load["connections"], a, alpha, b, beta; report=report)
-    end
-end
-
-
 # TRANSFORMER
 
 # TRANSFORMER - Variables
@@ -707,7 +579,7 @@ end
 
 
 """
-	function variable_mc_transformer_power_active(
+	function variable_mc_transformer_power_real(
 		pm::ExplicitNeutralModels;
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
@@ -716,7 +588,7 @@ end
 
 Creates transformer active power variables `:pt` for models with explicit neutrals
 """
-function variable_mc_transformer_power_active(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_transformer_power_real(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
     pt = var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:int_dim[l]], base_name="$(nw)_pt_$((l,i,j))",
@@ -742,7 +614,7 @@ end
 
 
 """
-	function variable_mc_transformer_power_reactive(
+	function variable_mc_transformer_power_imaginary(
 		pm::ExplicitNeutralModels;
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
@@ -751,7 +623,7 @@ end
 
 Creates transformer reactive power variables `:qt` for models with explicit neutrals
 """
-function variable_mc_transformer_power_reactive(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_transformer_power_imaginary(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
     qt = var(pm, nw)[:qt] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:int_dim[l]], base_name="$(nw)_qt_$((l,i,j))",
@@ -777,48 +649,6 @@ end
 
 
 # TRANSFORMER - Constraints
-
-"""
-	function constraint_mc_transformer_voltage(
-		pm::ExplicitNeutralModels,
-		i::Int;
-		nw::Int=nw_id_default,
-		fix_taps::Bool=true
-	)
-
-For models with explicit neutrals,
-links the voltage of the from-side and to-side transformer windings
-"""
-function constraint_mc_transformer_voltage(pm::ExplicitNeutralModels, i::Int; nw::Int=nw_id_default, fix_taps::Bool=true)
-    # if ref(pm, nw_id_default, :conductors)!=3
-    #     error("Transformers only work with networks with three conductors.")
-    # end
-
-    transformer = ref(pm, nw, :transformer, i)
-    f_bus = transformer["f_bus"]
-    t_bus = transformer["t_bus"]
-    f_idx = (i, f_bus, t_bus)
-    t_idx = (i, t_bus, f_bus)
-    configuration = transformer["configuration"]
-    f_connections = transformer["f_connections"]
-    t_connections = transformer["t_connections"]
-    tm_set = transformer["tm_set"]
-    tm_fixed = fix_taps ? ones(Bool, length(tm_set)) : transformer["tm_fix"]
-    tm_scale = calculate_tm_scale(transformer, ref(pm, nw, :bus, f_bus), ref(pm, nw, :bus, t_bus))
-
-    #TODO change data model
-    # there is redundancy in specifying polarity seperately on from and to side
-    #TODO change this once migrated to new data model
-    pol = transformer["polarity"]
-
-    if configuration == WYE
-        constraint_mc_transformer_voltage_yy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_connections, t_connections, pol, tm_set, tm_fixed, tm_scale)
-    elseif configuration == DELTA
-        constraint_mc_transformer_voltage_dy(pm, nw, i, f_bus, t_bus, f_idx, t_idx, f_connections, t_connections, pol, tm_set, tm_fixed, tm_scale)
-    elseif configuration == "zig-zag"
-        error("Zig-zag not yet supported.")
-    end
-end
 
 
 """
@@ -909,33 +739,6 @@ function constraint_mc_transformer_voltage_dy(pm::RectangularVoltageExplicitNeut
 
     JuMP.@constraint(pm.model, Md*vr_fr_P .== scale.*(vr_to_P .- vr_to_n))
     JuMP.@constraint(pm.model, Md*vi_fr_P .== scale.*(vi_to_P .- vi_to_n))
-end
-
-
-"""
-	function constraint_mc_transformer_thermal_rating(
-		pm::ExplicitNeutralModels,
-		id::Int;
-		nw::Int=nw_id_default,
-		bounded::Bool=true,
-		report::Bool=true,
-		kwargs...
-	)
-
-Imposes a bound on the total apparent at each transformer winding
-"""
-function constraint_mc_transformer_thermal_rating(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    trans = ref(pm, nw, :transformer, id)
-    f_bus = trans["f_bus"]
-    t_bus = trans["t_bus"]
-    f_idx = (id,f_bus,t_bus)
-    t_idx = (id,t_bus,f_bus)
-    f_conns = trans["f_connections"]
-    t_conns = trans["t_connections"]
-    config = trans["configuration"]
-    sm_ub = trans["sm_ub"]
-
-    constraint_mc_transformer_thermal_rating(pm, nw, id, f_idx, t_idx, f_bus, t_bus, f_conns, t_conns, config, sm_ub)
 end
 
 
@@ -1183,7 +986,7 @@ end
 
 
 """
-	function variable_mc_switch_power_active(
+	function variable_mc_switch_power_real(
 		pm::ExplicitNeutralModels;
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
@@ -1194,7 +997,7 @@ For models with explicit neutrals,
 creates switch active power variables `:psw` for models with explicit neutrals.
 This is defined per arc, i.e. with a variable for the from-side and to-side power.
 """
-function variable_mc_switch_power_active(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_switch_power_real(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     nconds = Dict(l => length(switch["f_connections"]) for (l,switch) in ref(pm, nw, :switch))
     psw = var(pm, nw)[:psw] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:nconds[l]], base_name="$(nw)_psw_$((l,i,j))",
@@ -1215,7 +1018,7 @@ end
 
 
 """
-	function variable_mc_switch_power_reactive(
+	function variable_mc_switch_power_imaginary(
 		pm::ExplicitNeutralModels;
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
@@ -1226,7 +1029,7 @@ For models with explicit neutrals,
 creates switch reactive power variables `:qsw` for models with explicit neutrals.
 This is defined per arc, i.e. with a variable for the from-side and to-side power.
 """
-function variable_mc_switch_power_reactive(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_switch_power_imaginary(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     nconds = Dict(l => length(switch["f_connections"]) for (l,switch) in ref(pm, nw, :switch))
     qsw = var(pm, nw)[:qsw] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:nconds[l]], base_name="$(nw)_qsw_$((l,i,j))",
@@ -1246,69 +1049,3 @@ function variable_mc_switch_power_reactive(pm::ExplicitNeutralModels; nw::Int=nw
 end
 
 
-# SWITCH - Constraints
-
-"""
-	function constraint_mc_switch_current(
-		pm::ExplicitNeutralModels,
-		id::Int;
-		nw::Int=nw_id_default,
-		report::Bool=true
-	)
-
-For models with explicit neutrals,
-link the switch currents or create appropiate expressions for them.
-"""
-function constraint_mc_switch_current(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, report::Bool=true)
-    switch = ref(pm, nw, :switch, id)
-    f_bus = switch["f_bus"]
-    t_bus = switch["t_bus"]
-    f_idx = (id, f_bus, t_bus)
-    t_idx = (id, t_bus, f_bus)
-
-    constraint_mc_switch_current(pm, nw, id, f_idx, t_idx, switch["f_connections"], switch["t_connections"])
-end
-
-
-"""
-	function constraint_mc_switch_power(
-		pm::ExplicitNeutralModels,
-		id::Int;
-		nw::Int=nw_id_default,
-		report::Bool=true
-	)
-
-For IVR models with explicit neutrals,
-link the switch power or create appropiate expressions for them
-"""
-function constraint_mc_switch_power(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, report::Bool=true)
-    switch = ref(pm, nw, :switch, id)
-    f_bus = switch["f_bus"]
-    t_bus = switch["t_bus"]
-    f_idx = (id, f_bus, t_bus)
-    t_idx = (id, t_bus, f_bus)
-
-    constraint_mc_switch_power(pm, nw, id, f_idx, t_idx, switch["f_connections"], switch["t_connections"])
-end
-
-
-# UTILS
-
-"Merges flow variables that enter the same terminals, i.e. multiple neutrals of an underground cable connected to same neutral terminal"
-function _merge_bus_flows(pm::ExplicitNeutralModels, flows::Vector, connections::Vector)::JuMP.Containers.DenseAxisArray
-    flows_merged = []
-    conns_unique = unique(connections)
-    for t in conns_unique
-        idxs = findall(connections.==t)
-        flows_t = flows[idxs]
-        if length(flows_t)==1
-            flows_merged_t = flows_t[1]
-        elseif any(isa(a, JuMP.NonlinearExpression) for a in flows_t)
-            flows_merged_t = JuMP.@NLexpression(pm.model, sum(flows_t[i] for i in 1:length(flows_t)))
-        else
-            flows_merged_t = sum(flows_t)
-        end
-        push!(flows_merged, flows_merged_t)
-    end
-    JuMP.Containers.DenseAxisArray(flows_merged, conns_unique)
-end

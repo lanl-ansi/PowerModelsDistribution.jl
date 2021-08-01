@@ -1127,8 +1127,8 @@ end
 
 "Generates pairwise bounds for oneport components."
 function _generate_vm_pairs(connections::Vector, model::ConnConfig, lb::Real, ub::Real; delta_multiplier::Real=sqrt(3))
-    vm_pair_ub = []
-    vm_pair_lb = []
+    vm_pair_ub = Tuple{Any,Any,Real}[]
+    vm_pair_lb = Tuple{Any,Any,Real}[]
 
     if model==WYE
         n = connections[end]

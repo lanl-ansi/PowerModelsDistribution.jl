@@ -271,7 +271,7 @@ function build_mc_opf(pm::AbstractExplicitNeutralIVRModel)
         constraint_mc_transformer_voltage(pm, i)
         constraint_mc_transformer_current(pm, i)
 
-        constraint_mc_transformer_thermal_rating(pm, i)
+        constraint_mc_transformer_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :branch)
@@ -343,7 +343,7 @@ function build_mc_opf(pm::AbstractExplicitNeutralACRModel)
         constraint_mc_transformer_voltage(pm, i)
         constraint_mc_transformer_power(pm, i)
 
-        constraint_mc_transformer_thermal_rating(pm, i)
+        constraint_mc_transformer_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :branch)

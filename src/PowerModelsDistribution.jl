@@ -56,8 +56,10 @@ module PowerModelsDistribution
     include("form/shared.jl")
     include("form/en_shared.jl")
     include("form/wr.jl")
+    include("form/utils.jl")
 
     include("core/constraint_template.jl")
+    include("core/constraint_template_en.jl")
     include("core/relaxation_scheme.jl")
 
     include("io/utils.jl")

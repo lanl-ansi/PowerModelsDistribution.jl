@@ -302,8 +302,8 @@ For ACR models with explicit neutrals,
 creates transfomer power variables `:pt` and `:qt`, and placeholder dictionaries for transformer terminal power flows `:pt_bus` and `:qt_bus`
 """
 function variable_mc_transformer_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_transformer_power_active(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_transformer_power_reactive(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    variable_mc_transformer_power_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    variable_mc_transformer_power_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
 
     var(pm, nw)[:pt_bus] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:qt_bus] = Dict{Tuple{Int,Int,Int}, Any}()
@@ -480,7 +480,7 @@ end
 
 
 """
-	function constraint_mc_transformer_thermal_rating(
+	function constraint_mc_transformer_thermal_limit(
 		pm::AbstractExplicitNeutralACRModel,
 		nw::Int,
 		id::Int,
@@ -503,7 +503,7 @@ sum(pt_fr)^2 + sum(qt_fr)^2 <= sm_ub^2
 sum(pt_to)^2 + sum(qt_to)^2 <= sm_ub^2
 ```
 """
-function constraint_mc_transformer_thermal_rating(pm::AbstractExplicitNeutralACRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
+function constraint_mc_transformer_thermal_limit(pm::AbstractExplicitNeutralACRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
     pt_fr = var(pm, nw, :pt, f_idx)
     qt_fr = var(pm, nw, :qt, f_idx)
     pt_to = var(pm, nw, :pt, t_idx)
@@ -698,7 +698,8 @@ end
 		rate_a::Vector{<:Real}
 	)
 
-
+For ACR models with explicit neutrals,
+imposes a bound on the from-side line power magnitude.
 """
 function constraint_mc_thermal_limit_to(pm::AbstractExplicitNeutralACRModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
     p_to = var(pm, nw, :p, t_idx)
@@ -731,8 +732,8 @@ For ACR models with explicit neutrals,
 creates switch power variables `:p` and `:q` and placeholder dictionaries for the terminal power flows `:ps_bus` and `:qs_bus`.
 """
 function variable_mc_switch_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_switch_power_active(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_switch_power_reactive(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    variable_mc_switch_power_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    variable_mc_switch_power_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     
     var(pm, nw)[:psw_bus] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:qsw_bus] = Dict{Tuple{Int,Int,Int}, Any}()
