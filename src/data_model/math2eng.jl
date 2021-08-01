@@ -256,19 +256,24 @@ function _map_math2eng_switch!(data_eng::Dict{String,<:Any}, data_math::Dict{Str
         math_obj = _get_math_obj(data_math, map["to"])
         merge!(eng_obj, math_obj)
     else
-        for to_id in map["to"]
-            if startswith(to_id, "switch")
-                math_obj = _get_math_obj(data_math, to_id)
-                # skip to-side power and current; these come from branch
-                for k in setdiff(keys(math_obj), ["pt","qt","cr_to","ci_to"])
-                    eng_obj[k] = math_obj[k]
-                end
-            elseif startswith(to_id, "branch")
-                math_obj = _get_math_obj(data_math, to_id)
-                # add to-side power and current here
-                for k in intersect(keys(math_obj), ["pt","qt","cr_to","ci_to"])
-                    eng_obj[k] = math_obj[k]
-                end
+        switch_idx = findfirst([startswith(x, "switch") for x in map["to"]])
+        if !isnothing(switch_idx)
+            to_id = map["to"][switch_idx]
+            math_obj = _get_math_obj(data_math, to_id)
+            # skip to-side power and current; these come from branch
+            for k in keys(math_obj)
+                eng_obj[k] = math_obj[k]
+            end
+        end
+
+        branch_idx = findfirst([startswith(x, "branch") for x in map["to"]])
+        if !isnothing(branch_idx)
+            to_id = map["to"][branch_idx]
+            math_obj = _get_math_obj(data_math, to_id)
+            # add to-side power and current here
+            # these will overwrite the switch ones if a branch is present
+            for k in intersect(keys(math_obj), ["pt","qt","cr_to","ci_to"])
+                eng_obj[k] = math_obj[k]
             end
         end
     end
