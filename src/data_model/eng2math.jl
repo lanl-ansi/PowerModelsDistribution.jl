@@ -706,7 +706,6 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{St
 
         math_obj["storage_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["configuration"] = get(eng_obj, "configuration", WYE)
-        
 
         math_obj["energy"] = eng_obj["energy"]
         math_obj["energy_rating"] = eng_obj["energy_ub"]
