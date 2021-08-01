@@ -913,7 +913,7 @@ end
 
 
 """
-	function constraint_mc_transformer_power_rating(
+	function constraint_mc_transformer_thermal_rating(
 		pm::ExplicitNeutralModels,
 		id::Int;
 		nw::Int=nw_id_default,
@@ -924,7 +924,7 @@ end
 
 Imposes a bound on the total apparent at each transformer winding
 """
-function constraint_mc_transformer_power_rating(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function constraint_mc_transformer_thermal_rating(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     trans = ref(pm, nw, :transformer, id)
     f_bus = trans["f_bus"]
     t_bus = trans["t_bus"]
@@ -935,7 +935,7 @@ function constraint_mc_transformer_power_rating(pm::ExplicitNeutralModels, id::I
     config = trans["configuration"]
     sm_ub = trans["sm_ub"]
 
-    constraint_mc_transformer_power_rating(pm, nw, id, f_idx, t_idx, f_bus, t_bus, f_conns, t_conns, config, sm_ub)
+    constraint_mc_transformer_thermal_rating(pm, nw, id, f_idx, t_idx, f_bus, t_bus, f_conns, t_conns, config, sm_ub)
 end
 
 
@@ -1048,7 +1048,7 @@ end
 
 
 """
-	function variable_mc_branch_power_active(
+	function variable_mc_branch_power_real(
 		pm::ExplicitNeutralModels;
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
@@ -1057,7 +1057,7 @@ end
 
 Creates branch active power variables `:p` for models with explicit neutrals
 """
-function variable_mc_branch_power_active(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_power_real(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     nconds = Dict(l => length(branch["f_connections"]) for (l,branch) in ref(pm, nw, :branch))
     p = var(pm, nw)[:p] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:nconds[l]], base_name="$(nw)_p_$((l,i,j))",
@@ -1070,7 +1070,7 @@ end
 
 
 """
-	function variable_mc_branch_power_reactive(
+	function variable_mc_branch_power_imaginary(
 		pm::ExplicitNeutralModels;
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
@@ -1079,7 +1079,7 @@ end
 
 Creates branch reactive power variables `:q` for models with explicit neutrals
 """
-function variable_mc_branch_power_reactive(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_branch_power_imaginary(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     nconds = Dict(l => length(branch["f_connections"]) for (l,branch) in ref(pm, nw, :branch))
     q = var(pm, nw)[:q] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:nconds[l]], base_name="$(nw)_q_$((l,i,j))",

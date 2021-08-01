@@ -480,7 +480,7 @@ end
 
 
 """
-	function constraint_mc_transformer_power_rating(
+	function constraint_mc_transformer_thermal_rating(
 		pm::AbstractExplicitNeutralACRModel,
 		nw::Int,
 		id::Int,
@@ -503,7 +503,7 @@ sum(pt_fr)^2 + sum(qt_fr)^2 <= sm_ub^2
 sum(pt_to)^2 + sum(qt_to)^2 <= sm_ub^2
 ```
 """
-function constraint_mc_transformer_power_rating(pm::AbstractExplicitNeutralACRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
+function constraint_mc_transformer_thermal_rating(pm::AbstractExplicitNeutralACRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
     pt_fr = var(pm, nw, :pt, f_idx)
     qt_fr = var(pm, nw, :qt, f_idx)
     pt_to = var(pm, nw, :pt, t_idx)
@@ -533,8 +533,8 @@ For ACR models with explicit neutrals,
 creates branch power variables `:p` and `:q` and placeholder dictionaries for the terminal power flows `:p_bus` and `:q_bus`.
 """
 function variable_mc_branch_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_branch_power_active(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_branch_power_reactive(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    variable_mc_branch_power_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    variable_mc_branch_power_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     
     var(pm, nw)[:p_bus] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:q_bus] = Dict{Tuple{Int,Int,Int}, Any}()
@@ -654,10 +654,10 @@ function constraint_mc_branch_current_limit(pm::AbstractExplicitNeutralACRModel,
     vr_to   = var(pm, nw, :vr, t_idx[2])
     vi_to   = var(pm, nw, :vi, t_idx[2])
 
-    for (idx, f_terminal, t_terminal, r) in zip(1:length(f_connections), f_connections, t_connections, c_rating)
-        if r<Inf
-            JuMP.@constraint(pm.model, p_fr[idx]^2+q_fr[idx]^2 <= r^2*(vr_fr[f_terminal]^2+vi_fr[f_terminal]^2))
-            JuMP.@constraint(pm.model, p_to[idx]^2+q_to[idx]^2 <= r^2*(vr_to[t_terminal]^2+vi_to[t_terminal]^2))
+    for (idx, f_terminal, t_terminal, rating) in zip(1:length(f_connections), f_connections, t_connections, c_rating)
+        if rating<Inf
+            JuMP.@constraint(pm.model, p_fr[idx]^2+q_fr[idx]^2 <= rating^2*(vr_fr[f_terminal]^2+vi_fr[f_terminal]^2))
+            JuMP.@constraint(pm.model, p_to[idx]^2+q_to[idx]^2 <= rating^2*(vr_to[t_terminal]^2+vi_to[t_terminal]^2))
         end
     end
 end

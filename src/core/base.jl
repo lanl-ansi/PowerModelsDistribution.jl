@@ -119,21 +119,14 @@ end
 """
 	function set_upper_bound(
 		x::JuMP.VariableRef,
-		bound;
-		loose_bounds::Bool=false,
-		pm=missing,
-		category::Symbol=:default
+		bound
 	)
 
 Local wrapper method for JuMP.set_upper_bound, which skips NaN and infinite (+Inf only)
 """
-function set_upper_bound(x::JuMP.VariableRef, bound; loose_bounds::Bool=false, pm=missing, category::Symbol=:default)
+function set_upper_bound(x::JuMP.VariableRef, bound)
     if !(isnan(bound) || bound==Inf)
         JuMP.set_upper_bound(x, bound)
-    elseif loose_bounds
-        lbs = pm.ext[:loose_bounds]
-        JuMP.set_upper_bound(x, lbs.bound_values[category])
-        push!(lbs.loose_ub_vars, x)
     end
 end
 

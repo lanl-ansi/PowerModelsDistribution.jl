@@ -1057,7 +1057,7 @@ end
 
 
 """
-	function constraint_mc_transformer_power_rating(
+	function constraint_mc_transformer_thermal_rating(
 		pm::AbstractNLExplicitNeutralIVRModel,
 		nw::Int,
 		id::Int,
@@ -1081,7 +1081,7 @@ sum(pt_fr)^2 + sum(qt_fr)^2 <= sm_ub^2
 sum(pt_to)^2 + sum(qt_to)^2 <= sm_ub^2
 ```
 """
-function constraint_mc_transformer_power_rating(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
+function constraint_mc_transformer_thermal_rating(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
     vr_fr = var(pm, nw, :vr, f_bus)
     vi_fr = var(pm, nw, :vi, f_bus)
     vr_to = var(pm, nw, :vr, t_bus)
@@ -1135,7 +1135,7 @@ end
 # TRANSFORMER - Constraint - Quadratic
 
 """
-	function constraint_mc_transformer_power_rating(
+	function constraint_mc_transformer_thermal_rating(
 		pm::AbstractQuadraticExplicitNeutralIVRModel,
 		nw::Int,
 		id::Int,
@@ -1158,7 +1158,7 @@ sum(pt_fr)^2 + sum(qt_fr)^2 <= sm_ub^2
 sum(pt_to)^2 + sum(qt_to)^2 <= sm_ub^2
 ```
 """
-function constraint_mc_transformer_power_rating(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
+function constraint_mc_transformer_thermal_rating(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, f_idx::Tuple, t_idx::Tuple, f_bus::Int, t_bus::Int, f_connections::Vector, t_connections::Vector, config::ConnConfig, sm_ub::Real; report::Bool=true)
     vr_fr = var(pm, nw, :vr, f_bus)
     vi_fr = var(pm, nw, :vi, f_bus)
     vr_to = var(pm, nw, :vr, t_bus)

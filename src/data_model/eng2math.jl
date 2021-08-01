@@ -517,8 +517,8 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
                 "grounded" => fill(false, N),  # connected to the switch on the to-side
                 "vmin" => fill(0.0, N),
                 "vmax" => fill(Inf, N),
-                "vm_pair_lb" => [],
-                "vm_pair_ub" => [],
+                "vm_pair_lb" => Tuple{Any,Any,Real}[],
+                "vm_pair_ub" => Tuple{Any,Any,Real}[],
                 "source_id" => "switch.$name",
                 "index" => length(data_math["bus"])+1,
             )
@@ -784,8 +784,8 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "va" => deepcopy(eng_obj["va"]),
                 "vmin" => deepcopy(get(eng_obj, "vm_lb", math_obj["control_mode"] == ISOCHRONOUS ? eng_obj["vm"] : fill(0.0, nphases))),
                 "vmax" => deepcopy(get(eng_obj, "vm_ub", math_obj["control_mode"] == ISOCHRONOUS ? eng_obj["vm"] : fill(Inf, nphases))),
-                "vm_pair_lb" => deepcopy(get(eng_obj, "vm_pair_lb", [])),
-                "vm_pair_ub" => deepcopy(get(eng_obj, "vm_pair_ub", [])),
+                "vm_pair_lb" => deepcopy(get(eng_obj, "vm_pair_lb", Tuple{Any,Any,Real}[])),
+                "vm_pair_ub" => deepcopy(get(eng_obj, "vm_pair_ub", Tuple{Any,Any,Real}[])),
                 "source_id" => "voltage_source.$name",
             )
             for (i,t) in enumerate(eng_obj["connections"])
