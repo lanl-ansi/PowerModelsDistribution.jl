@@ -494,8 +494,8 @@ function constraint_mc_transformer_power_yy(pm::FBSUBFPowerModel, nw::Int, trans
 
     # check if regcontrol exists
     reg_ctrl = Dict()
-    if haskey(transformer,"regcontrol")
-        reg_ctrl = transformer["regcontrol"]
+    if haskey(transformer,"controls")
+        reg_ctrl = transformer["controls"]
     end
     for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))
         if tm_fixed[idx]

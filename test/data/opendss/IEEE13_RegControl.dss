@@ -87,9 +87,9 @@ Set Voltagebases=[115, 4.16, .48]
 Set MaxControlIter=20
 calcv
 
-Transformer.Reg1.Tap=(0.00625  0 * 1 +)   ! Tap
-Transformer.Reg2.Tap=(0.00625  0 * 1 +)   ! Tap
-Transformer.Reg3.Tap=(0.00625  0 * 1 +)   ! Tap
+Transformer.Reg1.Tap=(0.00625  16 * 1 +)   ! Tap
+Transformer.Reg2.Tap=(0.00625  7 * 1 +)   ! Tap
+Transformer.Reg3.Tap=(0.00625  7 * 1 +)   ! Tap
 
 Set tolerance=0.001
 
