@@ -470,17 +470,8 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
 
                 # add regcontrol items to math model
-                if haskey(eng_obj,"regcontrol") && eng_obj["bus"][2]==eng_obj["bus"][w]
-                    reg_ctrl = eng_obj["regcontrol"]
-                    # convert reference voltage and band from volts to pu
-                    reg_ctrl["vreg"] = reg_ctrl["vreg"]*reg_ctrl["ptratio"]*1e-3/eng_obj["vm_nom"][1]
-                    reg_ctrl["band"]  = reg_ctrl["band"]*reg_ctrl["ptratio"]*1e-3/eng_obj["vm_nom"][1]
-                    # convert regulator impedance from volts to pu 
-                    baseZ = (eng_obj["vm_nom"][1]*1e3)^2/(data_eng["settings"]["sbase_default"]/data_eng["settings"]["power_scale_factor"]*1e6)
-                    reg_ctrl["r"] = reg_ctrl["r"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
-                    reg_ctrl["x"] = reg_ctrl["x"]*reg_ctrl["ptratio"]/reg_ctrl["ctprim"]/baseZ
-                    
-                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["regcontrol"] = reg_ctrl
+                if haskey(eng_obj,"controls") && eng_obj["bus"][2]==eng_obj["bus"][w]
+                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["controls"] = eng_obj["controls"]
                     data_math["transformer"]["$(transformer_2wa_obj["index"])"]["tm_fix"] = fill(false,length(transformer_2wa_obj["f_connections"]))
                 end
                 push!(to_map, "transformer.$(transformer_2wa_obj["index"])")

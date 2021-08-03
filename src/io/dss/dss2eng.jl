@@ -736,17 +736,17 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
 
         # Adds regcontrol to transformer if present
         if !isempty(reg_obj) && (haskey(reg_obj,"$id") || (haskey(dss_obj,"bank") && haskey(reg_obj,"$(dss_obj["bank"])")))
-            _apply_like!(dss_obj, data_dss, "regcontrol")
-            defaults = _apply_ordered_properties(_create_regcontrol(id; _to_kwargs(dss_obj)...), dss_obj)
             reg_ctrl = haskey(reg_obj,"$id") ? reg_obj["$id"] : reg_obj["$(dss_obj["bank"])"]
-            eng_obj["regcontrol"] = Dict{String,Any}(
+            defaults = _apply_ordered_properties(_create_regcontrol(id; _to_kwargs(reg_ctrl)...), reg_ctrl)
+            
+            eng_obj["controls"] = Dict{String,Any}(
                 "name" => reg_ctrl["name"],
-                "vreg" => haskey(reg_ctrl,"vreg") ? reg_ctrl["vreg"] : defaults["vreg"],
-                "band" => haskey(reg_ctrl,"band") ? reg_ctrl["band"] : defaults["band"],
-                "ptratio" => haskey(reg_ctrl,"ptratio") ? reg_ctrl["ptratio"] : defaults["ptratio"],
-                "ctprim" => haskey(reg_ctrl,"ctprim") ? reg_ctrl["ctprim"] : defaults["ctprim"],
-                "r" => haskey(reg_ctrl,"r") ? reg_ctrl["r"] : defaults["r"],
-                "x" => haskey(reg_ctrl,"x") ? reg_ctrl["x"] : defaults["x"]
+                "vreg" => defaults["vreg"],
+                "band" => defaults["band"],
+                "ptratio" => defaults["ptratio"],
+                "ctprim" => defaults["ctprim"],
+                "r" => defaults["r"],
+                "x" => defaults["x"]
             ) 
         end
         if import_all

@@ -202,18 +202,18 @@ Special case of the Generic transformer, which is still a `transformer` object, 
 | `tm_set`        | `fill(1.0,nphases)`  | `Vector{Real}` |       | always | Set tap ratio for each phase (base=`tm_nom`), `size=nphases`                                                |
 | `tm_fix`        | `fill(true,nphases)` | `Vector{Bool}` |       | oltc   | Indicates for each phase whether the tap ratio is fixed, `size=nphases`                                     |
 
-#### Transformers with voltage regulator control (`regcontrol`)
+#### Transformers with voltage regulator control (`controls`)
 
 Special case of the Generic transformer, which is part of the `transformer` object, and emulates a standard utility voltage regulator. The taps of these transformers can be controlled by modelling a line drop compensator. 
 
-| Name            | Default              | Type           | Units | Used   | Description                                                                                                 |
-|-----------------|----------------------|----------------|-------|--------|-------------------------------------------------------------------------------------------------------------|
-| `vreg`          | `120.0`              | `Real`         | volt  |  oltc  | Voltage regulator reference for the winding being controlled                                                |
-| `band`          | `3.0`                | `Real`         | volt  |  oltc  | Voltage bandwidth for the winding being controlled                                                          |
-| `ptratio`       | `60.0`               | `Real`         |       |  oltc  | Ratio of the potential transformer that converts controlled winding voltage to regulator voltage            |
-| `ctprim`        | `300.0`              | `Real`         | amp   |  oltc  | The current transformer rating on primary side                                                              |
-| `r`             | `0.0`                | `Real`         | volt  |  oltc  | Resistance setting on the line drop compensator in the regulator                                            |
-| `x`             | `0.0`                | `Real`         | volt  |  oltc  | Reactance setting on the line drop compensator in the regulator                                             |
+| Name            | Default              | Type           | Units | Used   | Description                                                                                                                                      |
+|-----------------|----------------------|----------------|-------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| `vreg`          | `[120.0 0.0]`        | `Vector{Real}` | volt  |  oltc  | Voltage regulator reference, default value is `120.0` for the controlled winding, `0.0` for winding without regulator control                    |
+| `band`          | `[3.0 0.0]`          | `Vector{Real}` | volt  |  oltc  | Voltage bandwidth, default value is `3.0` for the controlled winding, `0.0` for winding without regulator control                                |
+| `ptratio`       | `[60.0 0.0]`         | `Vector{Real}` |       |  oltc  | Voltage ratio of the potential transformer, default value is `60.0` for the controlled winding, `0.0` for winding without regulator control      |
+| `ctprim`        | `[300.0 0.0]`        | `Vector{Real}` | amp   |  oltc  | The current transformer rating on primary side, default value is `300.0` for the controlled winding, `0.0` for winding without regulator control |
+| `r`             | `[0.0 0.0]`          | `Vector{Real}` | volt  |  oltc  | Resistance setting on line drop compensator, default value is `0.0` for both controlled winding and winding without regulator control            |
+| `x`             | `[0.0 0.0]`          | `Vector{Real}` | volt  |  oltc  | Reactance setting on line drop compensator, default value is `0.0` for both controlled winding and winding without regulator control             |
 
 ### Switches (`switch`)
 

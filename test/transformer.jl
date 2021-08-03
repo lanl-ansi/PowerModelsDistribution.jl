@@ -167,42 +167,46 @@
     @testset "voltage regulator control" begin
         @testset "regcontrol_acp" begin
             eng = parse_file("../test/data/opendss/IEEE13_RegControl.dss")
-            sol = solve_mc_opf_oltc(eng, ACPUPowerModel, ipopt_solver; make_si=false)
+            math = transform_data_model(eng)
+            sol = solve_mc_opf_oltc(math, ACPUPowerModel, ipopt_solver; make_si=false)
             @test sol["termination_status"] == LOCALLY_SOLVED
-            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.405041; atol=1e-4)
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.266104; atol=3e-4)
-            @test all(isapprox.(sol["solution"]["bus"]["rg60"]["vm"], [1.0001, 1.0438, 1.0438]; atol=3e-2))
-            @test all(isapprox.(sol["solution"]["bus"]["rg60"]["va"], [30, -90, 150]; atol=5e-3))
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.40558; atol=1e-3)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.267232; atol=9e-2)
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.0001, 1.1000, 1.1000]; atol=1e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["va"]*180/pi, [30, -90, 150]; atol=3e-3))
+            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.0, 1.1, 1.1]; atol=1e-2))
         end
         @testset "regcontrol_acr" begin
             eng = parse_file("../test/data/opendss/IEEE13_RegControl.dss")
-            sol = solve_mc_opf_oltc(eng, ACRUPowerModel, ipopt_solver; make_si=false,solution_processors=[sol_data_model!])
+            math = transform_data_model(eng)
+            sol = solve_mc_opf_oltc(math, ACRUPowerModel, ipopt_solver; make_si=false, solution_processors=[sol_data_model!])
             @test sol["termination_status"] == LOCALLY_SOLVED
-            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.405124; atol=1e-5)
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.266395; atol=1e-5)
-            @test all(isapprox.(sol["solution"]["bus"]["rg60"]["vm"], [1.01616, 1.04155, 1.04294]; atol=9e-4))
-            @test all(isapprox.(sol["solution"]["bus"]["rg60"]["va"], [29.999, -90.002, 149.997]; atol=9e-4))
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.40558; atol=1e-3)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.267232; atol=9e-2)
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.0001, 1.1000, 1.1000]; atol=4e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["va"]*180/pi, [30, -90, 150]; atol=3e-3))
+            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.0, 1.1, 1.1]; atol=4e-2))
         end
         @testset "regcontrol_lpubfdiag" begin
             eng = parse_file("../test/data/opendss/IEEE13_RegControl.dss")
-            sol = solve_mc_opf_oltc(eng, LPUBFDiagPowerModel, ipopt_solver; make_si=false,solution_processors=[sol_data_model!])
+            math = transform_data_model(eng)
+            sol = solve_mc_opf_oltc(math, LPUBFDiagPowerModel, ipopt_solver; make_si=false, solution_processors=[sol_data_model!])
             @test sol["termination_status"] == LOCALLY_SOLVED
-            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.405124; atol=7e-3)
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.266395; atol=1e-2)
-            @test all(isapprox.(sol["solution"]["bus"]["rg60"]["vm"], [1.01616, 1.04155, 1.04294]; atol=3e-2))
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.404586; atol=7e-3)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.265410; atol=9e-3)
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.00986, 1.10000, 1.10000]; atol=7e-2))
+            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.0098, 1.0999, 1.0999]; atol=7e-2))
         end
         @testset "regcontrol_fbs" begin
             eng = parse_file("../test/data/opendss/IEEE13_RegControl.dss")
-            sol = solve_mc_opf_oltc(eng, FBSUBFPowerModel, ipopt_solver; make_si=false,solution_processors=[sol_data_model!])
+            math = transform_data_model(eng)
+            sol = solve_mc_opf_oltc(math, FBSUBFPowerModel, ipopt_solver; make_si=false,solution_processors=[sol_data_model!])
             @test sol["termination_status"] == LOCALLY_SOLVED
-            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.405124; atol=7e-3)
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.266395; atol=1e-2)
-            @test all(isapprox.(sol["solution"]["bus"]["rg60"]["vm"], [1.01616, 1.04155, 1.04294]; atol=3e-2))
-            @test all(isapprox.(sol["solution"]["bus"]["rg60"]["va"], [29.999, -90.002, 149.997]; atol=5e-3))
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.404586; atol=5e-3)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.265410; atol=9e-3)
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.00986, 1.10000, 1.10000]; atol=7e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["va"]*180/pi, [29.9998, -90.0022, 149.9971]; atol=5e-3))
+            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.0098, 1.0999, 1.0999]; atol=7e-2))
         end
     end
 end

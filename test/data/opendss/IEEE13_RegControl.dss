@@ -84,13 +84,16 @@ New Line.632645    Phases=2 Bus1=632.3.2      Bus2=645.3.2    LineCode=mtx603 Le
 New Line.645646    Phases=2 Bus1=645.3.2      Bus2=646.3.2    LineCode=mtx603 Length=300  units=ft  normamps=8000 emergamps=8000
 
 Set Voltagebases=[115, 4.16, .48]
+Set MaxControlIter=20
 calcv
 
-Transformer.Reg1.Taps=[1.0 1.1]
-Transformer.Reg2.Taps=[1.0 1.04375]
-Transformer.Reg3.Taps=[1.0 1.04375]
+Transformer.Reg1.Tap=(0.00625  0 * 1 +)   ! Tap
+Transformer.Reg2.Tap=(0.00625  0 * 1 +)   ! Tap
+Transformer.Reg3.Tap=(0.00625  0 * 1 +)   ! Tap
 
 Set tolerance=0.001
 
 Solve
+
+show taps
 
