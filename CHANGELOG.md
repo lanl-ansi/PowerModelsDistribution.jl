@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added simplified linear formulation using first-order Taylor (FOT) approximation 
 - Added wye-connected RegControl for ACP, ACR, LinDist3Flow and FBS formulations
 
 ## v0.11.5
