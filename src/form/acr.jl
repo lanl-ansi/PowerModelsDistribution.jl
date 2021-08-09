@@ -779,12 +779,7 @@ function constraint_mc_transformer_power_yy(pm::AbstractUnbalancedACRModel, nw::
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
     tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
-
-    # check if regcontrol exists
-    reg_ctrl = Dict()
-    if haskey(transformer,"controls")
-        reg_ctrl = transformer["controls"]
-    end
+    
     for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))
         if tm_fixed[idx]
             JuMP.@constraint(pm.model, vr_fr[fc] == pol*tm_scale*tm[idx]*vr_to[tc])
@@ -795,11 +790,11 @@ function constraint_mc_transformer_power_yy(pm::AbstractUnbalancedACRModel, nw::
             JuMP.@constraint(pm.model, vi_fr[fc] == pol*tm_scale*tm[idx]*vi_to[tc])
 
             # with regcontrol
-            if !isempty(reg_ctrl)
-                v_ref = reg_ctrl["vreg"]
-                δ = reg_ctrl["band"]
-                r = reg_ctrl["r"]
-                x = reg_ctrl["x"]
+            if haskey(transformer,"controls")
+                v_ref = transformer["controls"]["vreg"][idx] 
+                δ = transformer["controls"]["band"][idx]     
+                r = transformer["controls"]["r"][idx]           
+                x = transformer["controls"]["x"][idx]  
                 
                 # (cr+jci) = (p-jq)/(vr-j⋅vi)
                 cr = JuMP.@NLexpression(pm.model, ( p_to[idx]*vr_to[tc] + q_to[idx]*vi_to[tc])/(vr_to[tc]^2+vi_to[tc]^2)) 

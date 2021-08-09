@@ -24,21 +24,22 @@ New Transformer.Sub Phases=3 Windings=2   XHL=(8 1000 /)
 ! FEEDER 1-PHASE VOLTAGE REGULATORS
 ! Define low-impedance 2-wdg transformer
 
-New Transformer.Reg1 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666]
+New Transformer.reg1a phases=1 Windings=2 bank=reg1 XHL=0.01 kVAs=[1666 1666]
 ~ Buses=[650.1 RG60.1] kVs=[2.4  2.4] %LoadLoss=0.01
 ~ %rs=[0 0] ! correct default here
 
-New Transformer.Reg2 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666]
+New Transformer.reg1b phases=1 Windings=2 bank=reg1 XHL=0.01 kVAs=[1666 1666]
 ~ Buses=[650.2 RG60.2] kVs=[2.4  2.4] %LoadLoss=0.01
 ~ %rs=[0 0] ! correct default here
 
-New Transformer.Reg3 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666]
+New Transformer.reg1c phases=1 Windings=2 bank=reg1 XHL=0.01 kVAs=[1666 1666]
 ~ Buses=[650.3 RG60.3] kVs=[2.4  2.4] %LoadLoss=0.01
 ~ %rs=[0 0] ! correct default here
 
 ! POINT REGULATOR CONTROLS TO REGULATOR TRANSFORMER AND SET PARAMETERS
-new regcontrol.creg  transformer=reg1  vreg=122 band=2  ptratio=20 ctprim=700 R=3   X=9 
- 
+new regcontrol.creg1a  transformer=reg1a winding=2 vreg=122  band=2  ptratio=20  ctprim=700  R=3   X=9 
+new regcontrol.creg1b like=creg1a   transformer=reg1b 
+new regcontrol.creg1c like=creg1a   transformer=reg1c 
 
 !LINE CODES
 
@@ -87,9 +88,9 @@ Set Voltagebases=[115, 4.16, .48]
 Set MaxControlIter=20
 calcv
 
-Transformer.Reg1.Tap=(0.00625  16 * 1 +)   ! Tap
-Transformer.Reg2.Tap=(0.00625  7 * 1 +)   ! Tap
-Transformer.Reg3.Tap=(0.00625  7 * 1 +)   ! Tap
+Transformer.reg1a.Tap=(0.00625  16 * 1 +)   ! Tap
+Transformer.reg1b.Tap=(0.00625  7 * 1 +)   ! Tap
+Transformer.reg1c.Tap=(0.00625  7 * 1 +)   ! Tap
 
 Set tolerance=0.001
 

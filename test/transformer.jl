@@ -170,22 +170,22 @@
             math = transform_data_model(eng)
             sol = solve_mc_opf_oltc(math, ACPUPowerModel, ipopt_solver; make_si=false)
             @test sol["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.405106; atol=5e-4)
-            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.266364; atol=9e-4)
-            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.0001, 1.0438, 1.0438]; atol=2e-2))
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.405235; atol=5e-4)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.2666; atol=9e-4)
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.0189, 1.0313, 1.0313]; atol=2e-2))
             @test all(isapprox.(sol["solution"]["bus"]["1"]["va"]*180/pi, [30, -90, 150]; atol=3e-3))
-            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.0, 1.04375, 1.04375]; atol=2e-2))
+            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.01875, 1.03125, 1.03125]; atol=2e-2))
         end
         @testset "regcontrol_acr" begin
             eng = parse_file("../test/data/opendss/IEEE13_RegControl.dss")
             math = transform_data_model(eng)
             sol = solve_mc_opf_oltc(math, ACRUPowerModel, ipopt_solver; make_si=false, solution_processors=[sol_data_model!])
             @test sol["termination_status"] == LOCALLY_SOLVED
-            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.405106; atol=5e-4)
-            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.266364; atol=9e-4)
-            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.0001, 1.0438, 1.0438]; atol=2e-2))
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.405235; atol=5e-4)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.2666; atol=9e-4)
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.0189, 1.0313, 1.0313]; atol=2e-2))
             @test all(isapprox.(sol["solution"]["bus"]["1"]["va"]*180/pi, [30, -90, 150]; atol=3e-3))
-            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.0, 1.04375, 1.04375]; atol=2e-2))
+            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.01875, 1.03125, 1.03125]; atol=2e-2))
         end
         @testset "regcontrol_lpubfdiag" begin
             eng = parse_file("../test/data/opendss/IEEE13_RegControl.dss")

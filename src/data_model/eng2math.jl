@@ -412,7 +412,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
         else
             vnom = eng_obj["vm_nom"] * data_eng["settings"]["voltage_scale_factor"]
             snom = eng_obj["sm_nom"] * data_eng["settings"]["power_scale_factor"]
-            
+
             nrw = length(eng_obj["bus"])
 
             # calculate zbase in which the data is specified, and convert to SI
@@ -470,11 +470,20 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 data_math["transformer"]["$(transformer_2wa_obj["index"])"] = transformer_2wa_obj
 
                 # add regcontrol items to math model
-                if haskey(eng_obj,"controls") && eng_obj["bus"][2]==eng_obj["bus"][w]
-                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["controls"] = eng_obj["controls"]
-                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["tm_fix"] = fill(false,length(transformer_2wa_obj["f_connections"]))
+                if haskey(eng_obj,"controls") && !all(data_math["transformer"]["$(transformer_2wa_obj["index"])"]["tm_fix"])
+                    reg_obj = Dict{String,Any}(
+                        "vreg" => eng_obj["controls"]["vreg"][w],
+                        "band" => eng_obj["controls"]["band"][w],
+                        "ptratio" => eng_obj["controls"]["ptratio"][w],
+                        "ctprim" => eng_obj["controls"]["ctprim"][w],
+                        "r" => eng_obj["controls"]["r"][w],
+                        "x" => eng_obj["controls"]["x"][w],
+                    ) 
+                    data_math["transformer"]["$(transformer_2wa_obj["index"])"]["controls"] = reg_obj
                 end
+
                 push!(to_map, "transformer.$(transformer_2wa_obj["index"])")
+
             end
         end
     end
