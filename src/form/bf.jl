@@ -53,11 +53,6 @@ function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_i
     w_fr = var(pm, nw, :w)[f_bus]
     w_to = var(pm, nw, :w)[t_bus]
 
-    # check if regcontrol exists
-    reg_ctrl = Dict()
-    if haskey(transformer,"controls")
-        reg_ctrl = transformer["controls"]
-    end
     for (idx, (fc, tc)) in enumerate(zip(f_connections, t_connections))
         if tm_fixed[idx]
             JuMP.@constraint(pm.model, w_fr[fc] == (pol*tm_scale*tm[idx])^2*w_to[tc])
@@ -66,11 +61,11 @@ function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_i
             JuMP.@NLconstraint(pm.model, w_fr[fc] == (pol*tm_scale*tm[idx])^2*w_to[tc])
 
             # with regcontrol
-            if !isempty(reg_ctrl)
-                v_ref = reg_ctrl["vreg"]  
-                δ = reg_ctrl["band"]       
-                r = reg_ctrl["r"]          
-                x = reg_ctrl["x"]
+            if haskey(transformer,"controls")
+                v_ref = transformer["controls"]["vreg"][idx] 
+                δ = transformer["controls"]["band"][idx]     
+                r = transformer["controls"]["r"][idx]           
+                x = transformer["controls"]["x"][idx]   
                 
                 # linearized voltage squared: w_drop = (2⋅r⋅p+2⋅x⋅q)
                 w_drop = JuMP.@expression(pm.model, 2*r*p_to[idx] + 2*x*q_to[idx])

@@ -372,7 +372,15 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
 
             # add regulator objects if present
             if haskey(trs[1],"controls")
-                btrans["controls"] = trs[1]["controls"]
+                btrans["controls"]  = Dict{String,Any}(
+                    "winding" => [trs[i]["controls"]["winding"] for (i,p) in locs],
+                    "vreg" => [[trs[i]["controls"]["vreg"][w][p] for (i,p) in locs] for w in 1:nrw],
+                    "band" => [[trs[i]["controls"]["band"][w][p] for (i,p) in locs] for w in 1:nrw],
+                    "ptratio" => [[trs[i]["controls"]["ptratio"][w][p] for (i,p) in locs] for w in 1:nrw],
+                    "ctprim" => [[trs[i]["controls"]["ctprim"][w][p] for (i,p) in locs] for w in 1:nrw],
+                    "r" => [[trs[i]["controls"]["r"][w][p] for (i,p) in locs] for w in 1:nrw],
+                    "x" => [[trs[i]["controls"]["x"][w][p] for (i,p) in locs] for w in 1:nrw]
+                )  
             end
 
             # edit the transformer dict
