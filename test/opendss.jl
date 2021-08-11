@@ -300,6 +300,17 @@
     end
 end
 
+@testset "test different regcontrol configurations" begin
+    eng = parse_file("../test/data/opendss/IEEE13_test_controls.dss")
+
+    @test all(isequal(eng["transformer"]["reg1"]["controls"]["vreg"][2], [0.0, 118.0, 0.0]))
+    @test all(isequal(eng["transformer"]["reg1"]["controls"]["ptratio"][2], [0.0, 22.0, 0.0]))
+    @test all(isequal(eng["transformer"]["reg1"]["controls"]["band"][1], [0.0, 0.0, 4.0]))
+    @test all(isequal(eng["transformer"]["reg1"]["controls"]["ctprim"][1], [0.0, 0.0, 695.0]))
+    @test all(isequal(eng["transformer"]["sub"]["controls"]["r"][1], [0.0, 0.0, 3.0]))
+    @test all(isequal(eng["transformer"]["sub"]["controls"]["x"][1], [0.0, 0.0, 9.0]))        
+end
+
 @testset "test json parser" begin
     eng = parse_file("../test/data/opendss/case3_balanced.dss")
 
