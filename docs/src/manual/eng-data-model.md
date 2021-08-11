@@ -206,15 +206,14 @@ Special case of the Generic transformer, which is still a `transformer` object, 
 
 Special case of the Generic transformer, which is part of the `transformer` object, and emulates a standard utility voltage regulator. The taps of these transformers can be controlled by modelling a line drop compensator. 
 
-| Name            | Default                                    | Type           | Units | Used   | Description                                                                                                                                      |
-|-----------------|--------------------------------------------|----------------|-------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------|
-| `winding`       | `fill(1,nphases)`                          | `Vector{Int}`  |       |  oltc  | Winding number of transformer that is controlled by regulator                                                                                    |
-| `vreg`          | `[fill(120.0,nphases), fill(0.0,nphases)]` | `Vector{Real}` | volt  |  oltc  | Voltage regulator reference, default value is `120.0` for the controlled winding, `0.0` for winding without regulator control                    |
-| `band`          | `[fill(30.0,nphases),  fill(0.0,nphases)]` | `Vector{Real}` | volt  |  oltc  | Voltage bandwidth, default value is `3.0` for the controlled winding, `0.0` for winding without regulator control                                |
-| `ptratio`       | `[fill(60.0,nphases),  fill(0.0,nphases)]` | `Vector{Real}` |       |  oltc  | Voltage ratio of the potential transformer, default value is `60.0` for the controlled winding, `0.0` for winding without regulator control      |
-| `ctprim`        | `[fill(300.0,nphases), fill(0.0,nphases)]` | `Vector{Real}` | amp   |  oltc  | The current transformer rating on primary side, default value is `300.0` for the controlled winding, `0.0` for winding without regulator control |
-| `r`             | `[fill(0.0,nphases),   fill(0.0,nphases)]` | `Vector{Real}` | volt  |  oltc  | Resistance setting on line drop compensator, default value is `0.0` for both controlled winding and winding without regulator control            |
-| `x`             | `[fill(0.0,nphases),   fill(0.0,nphases)]` | `Vector{Real}` | volt  |  oltc  | Reactance setting on line drop compensator, default value is `0.0` for both controlled winding and winding without regulator control             |
+| Name            | Default | Type                   | Units | Used   | Description                                                                                               																 	 |
+|-----------------|---------|------------------------|-------|--------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `vreg`          |  		 | `Vector{Vector{Real}}` | volt  |  oltc  | Voltage regulator reference, default value is `120.0` for the controlled winding, `0.0` for winding without regulator control, `size=((nphases),nwindings)`                 |
+| `band`          |  		 | `Vector{Vector{Real}}` | volt  |  oltc  | Voltage bandwidth, default value is `3.0` for the controlled winding, `0.0` for winding without regulator control, `size=((nphases),nwindings)`                             |
+| `ptratio`       |  		 | `Vector{Vector{Real}}` |       |  oltc  | Voltage ratio of the potential transformer, default value is `60.0` for the controlled winding, `0.0` for winding without regulator control, `size=((nphases),nwindings)`   |
+| `ctprim`        |  		 | `Vector{Vector{Real}}` | amp   |  oltc  | Current transformer rating on primary side, default value is `300.0` for the controlled winding, `0.0` for winding without regulator control, `size=((nphases),nwindings)`  |
+| `r`             |  		 | `Vector{Vector{Real}}` | volt  |  oltc  | Resistance setting on line drop compensator, default value is `0.0` for both controlled winding and winding without regulator control, `size=((nphases),nwindings)`         |
+| `x`             |  		 | `Vector{Vector{Real}}` | volt  |  oltc  | Reactance setting on line drop compensator, default value is `0.0` for both controlled winding and winding without regulator control, `size=((nphases),nwindings)`          |
 
 ### Switches (`switch`)
 

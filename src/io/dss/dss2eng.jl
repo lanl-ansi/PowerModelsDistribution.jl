@@ -834,17 +834,16 @@ function _dss2eng_regcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{Strin
          defaults = _apply_ordered_properties(_create_regcontrol(id; _to_kwargs(dss_obj)...), dss_obj)
 
         nrw = get(data_dss["transformer"]["$(dss_obj["transformer"])"],"windings",2)
+        nphases = data_dss["transformer"]["$(dss_obj["transformer"])"]["phases"]
 
         eng_obj = Dict{String,Any}(
-            "name" => defaults["name"],
-            "winding" => defaults["winding"],
-            "vreg" => [w == defaults["winding"] ? defaults["vreg"] : 0.0 for w in 1:nrw],
-            "band" => [w == defaults["winding"] ? defaults["band"] : 0.0 for w in 1:nrw],
-            "ptratio" => [w == defaults["winding"] ? defaults["ptratio"] : 0.0 for w in 1:nrw],
-            "ctprim" => [w == defaults["winding"] ? defaults["ctprim"] : 0.0 for w in 1:nrw],
-            "r" => [w == defaults["winding"] ? defaults["r"] : 0.0 for w in 1:nrw],
-            "x" => [w == defaults["winding"] ? defaults["x"] : 0.0 for w in 1:nrw],
-        ) 
+            "vreg" => [[w == defaults["winding"] && p == defaults["ptphase"] ? defaults["vreg"] : 0.0 for p in 1:nphases] for w in 1:nrw],
+            "band" => [[w == defaults["winding"] && p == defaults["ptphase"] ? defaults["band"] : 0.0 for p in 1:nphases] for w in 1:nrw],
+            "ptratio" => [[w == defaults["winding"] && p == defaults["ptphase"] ? defaults["ptratio"] : 0.0 for p in 1:nphases] for w in 1:nrw],
+            "ctprim" => [[w == defaults["winding"] && p == defaults["ptphase"] ? defaults["ctprim"] : 0.0 for p in 1:nphases] for w in 1:nrw],
+            "r" => [[w == defaults["winding"] && p == defaults["ptphase"] ? defaults["r"] : 0.0 for p in 1:nphases] for w in 1:nrw],
+            "x" => [[w == defaults["winding"] && p == defaults["ptphase"] ? defaults["x"] : 0.0 for p in 1:nphases] for w in 1:nrw]
+            ) 
 
         if import_all
             _import_all!(eng_obj, dss_obj)
@@ -853,7 +852,7 @@ function _dss2eng_regcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{Strin
         # add regcontrol items to transformer if present
         data_eng["transformer"]["$(dss_obj["transformer"])"]["controls"] = eng_obj
         if haskey(data_eng["transformer"]["$(dss_obj["transformer"])"],"tm_fix")
-            data_eng["transformer"]["$(dss_obj["transformer"])"]["tm_fix"][defaults["winding"]] = [false]
+            data_eng["transformer"]["$(dss_obj["transformer"])"]["tm_fix"] = [[w == defaults["winding"] && p == defaults["ptphase"] ? false : true for p in 1:nphases] for w in 1:nrw]
         end
     end
 end
