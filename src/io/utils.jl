@@ -371,18 +371,30 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
             btrans["source_id"] = "transformer.$bank"
 
             # add regulator objects if present
-            if haskey(trs[1],"controls")
+            if any([!isempty(get(tr,"controls", Dict{String,Any}())) for tr in trs])
                 btrans["controls"]  = Dict{String,Any}(
-                    "winding" => [trs[i]["controls"]["winding"] for (i,p) in locs],
-                    "vreg" => [[trs[i]["controls"]["vreg"][w][p] for (i,p) in locs] for w in 1:nrw],
-                    "band" => [[trs[i]["controls"]["band"][w][p] for (i,p) in locs] for w in 1:nrw],
-                    "ptratio" => [[trs[i]["controls"]["ptratio"][w][p] for (i,p) in locs] for w in 1:nrw],
-                    "ctprim" => [[trs[i]["controls"]["ctprim"][w][p] for (i,p) in locs] for w in 1:nrw],
-                    "r" => [[trs[i]["controls"]["r"][w][p] for (i,p) in locs] for w in 1:nrw],
-                    "x" => [[trs[i]["controls"]["x"][w][p] for (i,p) in locs] for w in 1:nrw]
-                )  
+                    "vreg" => [[0.0 for (i,p) in locs] for w in 1:nrw],
+                    "band" => [[0.0 for (i,p) in locs] for w in 1:nrw],
+                    "ptratio" => [[0.0 for (i,p) in locs] for w in 1:nrw],
+                    "ctprim" => [[0.0 for (i,p) in locs] for w in 1:nrw],
+                    "r" => [[0.0 for (i,p) in locs] for w in 1:nrw],
+                    "x" => [[0.0 for (i,p) in locs] for w in 1:nrw]
+                ) 
             end
-
+            for (i,p) in locs
+                if haskey(trs[i],"controls")
+                    for w in 1:nrw
+                        c = f_phases_loc[i][1]
+                        btrans["controls"]["vreg"][w][c] = trs[i]["controls"]["vreg"][w][p] 
+                        btrans["controls"]["band"][w][c] = trs[i]["controls"]["band"][w][p]
+                        btrans["controls"]["ptratio"][w][c] = trs[i]["controls"]["ptratio"][w][p]
+                        btrans["controls"]["ctprim"][w][c] = trs[i]["controls"]["ctprim"][w][p]
+                        btrans["controls"]["r"][w][c] = trs[i]["controls"]["r"][w][p]
+                        btrans["controls"]["x"][w][c] = trs[i]["controls"]["x"][w][p]
+                    end
+                end
+            end
+ 
             # edit the transformer dict
             for id in ids
                 delete!(data_eng["transformer"], id)

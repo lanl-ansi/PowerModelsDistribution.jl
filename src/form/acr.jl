@@ -779,7 +779,7 @@ function constraint_mc_transformer_power_yy(pm::AbstractUnbalancedACRModel, nw::
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
     tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
-    
+
     for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))
         if tm_fixed[idx]
             JuMP.@constraint(pm.model, vr_fr[fc] == pol*tm_scale*tm[idx]*vr_to[tc])
