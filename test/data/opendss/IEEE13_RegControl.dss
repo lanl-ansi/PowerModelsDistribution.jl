@@ -1,0 +1,100 @@
+Clear
+Set DefaultBaseFrequency=60
+
+!
+! This script is based on a script developed by Tennessee Tech Univ students
+! Tyler Patton, Jon Wood, and David Woods, April 2009
+!
+
+new circuit.IEEE13Nodeckt
+~ basekv=115 pu=1.0001 phases=3 bus1=SourceBus
+~ Angle=30                                                         ! advance angle 30 deg so result agree with published angle
+~ MVAsc3=20000 MVASC1=21000    ! stiffen the source to approximate inf source
+~ baseMVA=1
+
+
+!SUB TRANSFORMER DEFINITION
+! Although this data was given, it does not appear to be used in the test case results
+! The published test case starts at 1.0 per unit at Bus 650. To make this happen, we will change the impedance
+! on the transformer to something tiny by dividing by 1000 using the DSS in-line RPN math
+New Transformer.Sub Phases=3 Windings=2   XHL=(8 1000 /)
+~ wdg=1 bus=SourceBus   conn=wye  kv=115  kva=5000   %r=(.5 1000 /)
+~ wdg=2 bus=650             conn=wye    kv=4.16  kva=5000   %r=(.5 1000 /)
+
+! FEEDER 1-PHASE VOLTAGE REGULATORS
+! Define low-impedance 2-wdg transformer
+
+New Transformer.reg1a phases=1 Windings=2 bank=reg1 XHL=0.01 kVAs=[1666 1666]
+~ Buses=[650.1 RG60.1] kVs=[2.4  2.4] %LoadLoss=0.01
+~ %rs=[0 0] ! correct default here
+
+New Transformer.reg1b phases=1 Windings=2 bank=reg1 XHL=0.01 kVAs=[1666 1666]
+~ Buses=[650.2 RG60.2] kVs=[2.4  2.4] %LoadLoss=0.01
+~ %rs=[0 0] ! correct default here
+
+New Transformer.reg1c phases=1 Windings=2 bank=reg1 XHL=0.01 kVAs=[1666 1666]
+~ Buses=[650.3 RG60.3] kVs=[2.4  2.4] %LoadLoss=0.01
+~ %rs=[0 0] ! correct default here
+
+! POINT REGULATOR CONTROLS TO REGULATOR TRANSFORMER AND SET PARAMETERS
+new regcontrol.creg1a  transformer=reg1a winding=2 vreg=122  band=2  ptratio=20  ctprim=700  R=3   X=9 
+new regcontrol.creg1b like=creg1a   transformer=reg1b 
+new regcontrol.creg1c like=creg1a   transformer=reg1c 
+
+!LINE CODES
+
+// these are local matrix line codes
+// corrected 9-14-2011
+New linecode.mtx601 nphases=3 BaseFreq=60
+~ rmatrix = (0.3465 | 0.1560 0.3375 | 0.1580 0.1535 0.3414 )
+~ xmatrix = (1.0179 | 0.5017 1.0478 | 0.4236 0.3849 1.0348 )
+~ units=mi
+New linecode.mtx602 nphases=3 BaseFreq=60
+~ rmatrix = (0.7526 | 0.1580 0.7475 | 0.1560 0.1535 0.7436 )
+~ xmatrix = (1.1814 | 0.4236 1.1983 | 0.5017 0.3849 1.2112 )
+~ units=mi
+New linecode.mtx603 nphases=2 BaseFreq=60
+~ rmatrix = (1.3238 | 0.2066 1.3294 )
+~ xmatrix = (1.3569 | 0.4591 1.3471 )
+~ units=mi
+New linecode.mtx604 nphases=2 BaseFreq=60
+~ rmatrix = (1.3238 | 0.2066 1.3294 )
+~ xmatrix = (1.3569 | 0.4591 1.3471 )
+~ units=mi
+New linecode.mtx605 nphases=1 BaseFreq=60
+~ rmatrix = (1.3292 )
+~ xmatrix = (1.3475 )
+~ units=mi
+New Linecode.mtx606 nphases=3  Units=mi
+~ Rmatrix=[0.791721  |0.318476  0.781649  |0.28345  0.318476  0.791721  ]
+~ Xmatrix=[0.438352  |0.0276838  0.396697  |-0.0184204  0.0276838  0.438352  ]
+~ Cmatrix=[383.948  |0  383.948  |0  0  383.948  ]
+New linecode.mtx607 nphases=1 BaseFreq=60
+~ rmatrix = (1.3425 )
+~ xmatrix = (0.5124 )
+~ cmatrix = [236]
+~ units=mi
+
+!LOAD DEFINITIONS
+New Load.645 Bus1=645.2   Phases=1 Conn=Wye  Model=1 kV=2.4  kW=170  kvar=125 
+New Load.646 Bus1=646.3   Phases=1 Conn=Wye  Model=1 kV=2.4  kW=230  kvar=132 
+
+!LINE DEFINITIONS
+New Line.650632    Phases=3 Bus1=RG60.1.2.3   Bus2=632.1.2.3  LineCode=mtx601 Length=2000 units=ft  normamps=8000 emergamps=8000
+New Line.632645    Phases=2 Bus1=632.3.2      Bus2=645.3.2    LineCode=mtx603 Length=500  units=ft  normamps=8000 emergamps=8000
+New Line.645646    Phases=2 Bus1=645.3.2      Bus2=646.3.2    LineCode=mtx603 Length=300  units=ft  normamps=8000 emergamps=8000
+
+Set Voltagebases=[115, 4.16, .48]
+Set MaxControlIter=20
+calcv
+
+Transformer.reg1a.Tap=(0.00625  16 * 1 +)   ! Tap
+Transformer.reg1b.Tap=(0.00625  7 * 1 +)   ! Tap
+Transformer.reg1c.Tap=(0.00625  7 * 1 +)   ! Tap
+
+Set tolerance=0.001
+
+Solve
+
+show taps
+

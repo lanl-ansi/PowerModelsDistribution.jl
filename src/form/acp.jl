@@ -505,10 +505,17 @@ end
 
 ""
 function constraint_mc_transformer_power_yy(pm::AbstractUnbalancedACPModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+    transformer = ref(pm, nw, :transformer, trans_id)
+
     vm_fr = var(pm, nw, :vm, f_bus)
     vm_to = var(pm, nw, :vm, t_bus)
     va_fr = var(pm, nw, :va, f_bus)
     va_to = var(pm, nw, :va, t_bus)
+
+    p_fr = [var(pm, nw, :pt, f_idx)[c] for c in f_connections]
+    p_to = [var(pm, nw, :pt, t_idx)[c] for c in t_connections]
+    q_fr = [var(pm, nw, :qt, f_idx)[c] for c in f_connections]
+    q_to = [var(pm, nw, :qt, t_idx)[c] for c in t_connections]
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
     tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
@@ -517,16 +524,34 @@ function constraint_mc_transformer_power_yy(pm::AbstractUnbalancedACPModel, nw::
         if tm_fixed[idx]
             JuMP.@constraint(pm.model, vm_fr[fc] == tm_scale*tm[idx]*vm_to[tc])
         else
-            JuMP.@NLconstraint(pm.model, vm_fr[fc] == tm_scale*tm[idx]*vm_to[tc])
+            # transformer taps without regcontrol, tap variable not required in regcontrol formulation
+            JuMP.@constraint(pm.model, vm_fr[fc] == tm_scale*tm[idx]*vm_to[tc])
+
+            # with regcontrol
+            if haskey(transformer,"controls")
+                v_ref = transformer["controls"]["vreg"][idx] 
+                δ = transformer["controls"]["band"][idx]     
+                r = transformer["controls"]["r"][idx]           
+                x = transformer["controls"]["x"][idx]           
+
+                # (cr+jci) = (p-jq)/(vm⋅cos(va)-jvm⋅sin(va))
+                cr = JuMP.@NLexpression(pm.model, ( p_to[idx]*vm_to[tc]*cos(va_to[tc]) + q_to[idx]*vm_to[tc]*sin(va_to[tc]))/vm_to[tc]^2) 
+                ci = JuMP.@NLexpression(pm.model, (-q_to[idx]*vm_to[tc]*cos(va_to[tc]) + p_to[idx]*vm_to[tc]*sin(va_to[tc]))/vm_to[tc]^2)
+                # v_drop = (cr+jci)⋅(r+jx)
+                vr_drop = JuMP.@NLexpression(pm.model, r*cr-x*ci)
+                vi_drop = JuMP.@NLexpression(pm.model, r*ci+x*cr)
+
+                # v_ref-δ ≤ vm_fr-(cr+jci)⋅(r+jx)≤ v_ref+δ
+                # vm_fr/1.1 ≤ vm_to ≤ vm_fr/0.9
+                JuMP.@NLconstraint(pm.model, (vm_fr[fc]*cos(va_fr[fc])-vr_drop)^2 + (vm_fr[fc]*sin(va_fr[fc])-vi_drop)^2 ≥ (v_ref - δ)^2)
+                JuMP.@NLconstraint(pm.model, (vm_fr[fc]*cos(va_fr[fc])-vr_drop)^2 + (vm_fr[fc]*sin(va_fr[fc])-vi_drop)^2 ≤ (v_ref + δ)^2)
+                JuMP.@constraint(pm.model, vm_fr[fc]/1.1 ≤ vm_to[tc])
+                JuMP.@constraint(pm.model, vm_fr[fc]/0.9 ≥ vm_to[tc])
+            end
         end
         pol_angle = pol == 1 ? 0 : pi
         JuMP.@constraint(pm.model, va_fr[fc] == va_to[tc] + pol_angle)
     end
-
-    p_fr = [var(pm, nw, :pt, f_idx)[c] for c in f_connections]
-    p_to = [var(pm, nw, :pt, t_idx)[c] for c in t_connections]
-    q_fr = [var(pm, nw, :qt, f_idx)[c] for c in f_connections]
-    q_to = [var(pm, nw, :qt, t_idx)[c] for c in t_connections]
 
     JuMP.@constraint(pm.model, p_fr + p_to .== 0)
     JuMP.@constraint(pm.model, q_fr + q_to .== 0)

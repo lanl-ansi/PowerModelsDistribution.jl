@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Added wye-connected RegControl for ACP, ACR, LinDist3Flow and FBS formulations
 
 ## v0.11.5
 

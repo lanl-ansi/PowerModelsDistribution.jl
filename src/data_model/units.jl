@@ -490,6 +490,17 @@ function _rebase_pu_transformer_2w_ideal!(transformer::Dict{String,<:Any}, f_vba
     # save new vbase
     transformer["f_vbase"] = f_vbase_new
     transformer["t_vbase"] = t_vbase_new
+
+    # convert regcontrol items to per unit
+    if haskey(transformer,"controls")
+        # convert reference voltage and band from volts to per unit
+        transformer["controls"]["vreg"] = transformer["controls"]["vreg"].*transformer["controls"]["ptratio"]/(f_vbase_new*voltage_scale_factor)
+        transformer["controls"]["band"] = transformer["controls"]["band"].*transformer["controls"]["ptratio"]/(f_vbase_new*voltage_scale_factor)
+        # convert regulator impedance from volts to per unit 
+        baseZ = (f_vbase_new*voltage_scale_factor)^2/(sbase_new*1e3)
+        transformer["controls"]["r"] = transformer["controls"]["r"].*transformer["controls"]["ptratio"]./transformer["controls"]["ctprim"]/baseZ
+        transformer["controls"]["x"] = transformer["controls"]["x"].*transformer["controls"]["ptratio"]./transformer["controls"]["ctprim"]/baseZ
+    end
 end
 
 
