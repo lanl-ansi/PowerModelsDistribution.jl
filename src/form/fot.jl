@@ -310,11 +310,6 @@ function constraint_mc_transformer_power_yy(pm::FOTUPowerModel, nw::Int, trans_i
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
     tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
 
-    # check if regcontrol exists
-    reg_ctrl = Dict()
-    if haskey(transformer,"controls")
-        reg_ctrl = transformer["controls"]
-    end
     for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))
         if tm_fixed[idx]
             JuMP.@constraint(pm.model, vm_fr[fc] == tm_scale*tm[idx]*vm_to[tc])
@@ -323,11 +318,11 @@ function constraint_mc_transformer_power_yy(pm::FOTUPowerModel, nw::Int, trans_i
             JuMP.@constraint(pm.model, vm_fr[fc] == tm_scale*tm[idx]*vm_to[tc])
             
             # with regcontrol
-            if !isempty(reg_ctrl)
-                v_ref = reg_ctrl["vreg"]
-                δ = reg_ctrl["band"]
-                r = reg_ctrl["r"]
-                x = reg_ctrl["x"]
+            if haskey(transformer,"controls")
+                v_ref = transformer["controls"]["vreg"][idx]
+                δ = transformer["controls"]["band"][idx]
+                r = transformer["controls"]["r"][idx]
+                x = transformer["controls"]["x"][idx]
                 
                 # linearized voltage: vm_drop = (r⋅p+x⋅q)/vm0 
                 vm_drop = JuMP.@expression(pm.model, (r*p_to[idx] + x*q_to[idx])/vm0_fr[fc])

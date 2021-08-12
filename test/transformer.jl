@@ -211,7 +211,7 @@
         @testset "regcontrol_fot" begin
             eng = parse_file("../test/data/opendss/IEEE13_RegControl.dss")
             math = transform_data_model(eng)
-            sol = solve_mc_opf_oltc(math, FOTUPowerModel, ipopt_solver; make_si=false,solution_processors=[sol_data_model!])
+            sol = solve_mc_opf_oltc(math, FOTUPowerModel, ipopt_solver; make_si=false)
             @test sol["termination_status"] == LOCALLY_SOLVED
             @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.405132; atol=7e-3)
             @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.266410; atol=1e-2)
