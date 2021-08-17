@@ -2,6 +2,10 @@
 
 ## staged
 
+- none
+
+## v0.11.6
+
 - Fix voltage magnitude start values, by looking for `_start` values, then `vm`, then `vmin`, to ensure start values are feasible
 - Fix bug in `_biggest_generator` where if generator upper bound is missing, `correct_bus_types!` would fail
 - Adds simple transformer bounds calculations in `_calc_transformer_power_ub_frto` and `_calc_transformer_current_max_frto`
