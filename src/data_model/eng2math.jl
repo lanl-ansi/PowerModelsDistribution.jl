@@ -478,7 +478,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                         "ctprim" => eng_obj["controls"]["ctprim"][w],
                         "r" => eng_obj["controls"]["r"][w],
                         "x" => eng_obj["controls"]["x"][w],
-                    ) 
+                    )
                     data_math["transformer"]["$(transformer_2wa_obj["index"])"]["controls"] = reg_obj
                 end
 
@@ -632,12 +632,11 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
 
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["gen_status"] = status = Int(eng_obj["status"])
-        math_obj["control_mode"] = get(eng_obj, "control_mode", FREQUENCYDROOP)
+        math_obj["control_mode"] = control_mode = Int(get(eng_obj, "control_mode", FREQUENCYDROOP))
         math_obj["pmax"] = get(eng_obj, "pg_ub", fill(Inf, length(connections)))
 
-        math_obj["control_mode"] = control_mode = get(eng_obj, "control_mode", FREQUENCYDROOP)
-        data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = status == 0 ? 1 : control_mode == ISOCHRONOUS ? 3 : 2
-        if control_mode == ISOCHRONOUS && status == 1
+        data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = status == 0 ? 1 : control_mode == Int(ISOCHRONOUS) ? 3 : 2
+        if control_mode == Int(ISOCHRONOUS) && status == 1
             data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = eng_obj["vg"]
@@ -673,9 +672,9 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["gen_status"] = status = Int(eng_obj["status"])
 
-        math_obj["control_mode"] = control_mode = get(eng_obj, "control_mode", FREQUENCYDROOP)
-        data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = status == 0 ? 1 : control_mode == ISOCHRONOUS ? 3 : 2
-        if control_mode == ISOCHRONOUS && status == 1
+        math_obj["control_mode"] = control_mode = Int(get(eng_obj, "control_mode", FREQUENCYDROOP))
+        data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = status == 0 ? 1 : control_mode == Int(ISOCHRONOUS) ? 3 : 2
+        if control_mode == Int(ISOCHRONOUS) && status == 1
             data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = eng_obj["vg"]
@@ -725,9 +724,9 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{St
         math_obj["ps"] = get(eng_obj, "ps", zeros(size(eng_obj["cm_ub"])))
         math_obj["qs"] = get(eng_obj, "qs", zeros(size(eng_obj["cm_ub"])))
 
-        math_obj["control_mode"] = control_mode = get(eng_obj, "control_mode", FREQUENCYDROOP)
-        data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"] = math_obj["status"] == 0 ? 1 : control_mode == ISOCHRONOUS ? 3 : 2
-        if control_mode == ISOCHRONOUS && math_obj["status"] == 1
+        math_obj["control_mode"] = control_mode = Int(get(eng_obj, "control_mode", FREQUENCYDROOP))
+        data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"] = math_obj["status"] == 0 ? 1 : control_mode == Int(ISOCHRONOUS) ? 3 : 2
+        if control_mode == Int(ISOCHRONOUS) && math_obj["status"] == 1
             data_math["bus"]["$(math_obj["storage_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...]
         end
 
@@ -763,7 +762,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
         math_obj["qmax"] = get(eng_obj, "qg_ub", fill( Inf, nphases))
         math_obj["connections"] = eng_obj["connections"]
         math_obj["configuration"] = get(eng_obj, "configuration", WYE)
-        math_obj["control_mode"] = get(eng_obj, "control_mode", ISOCHRONOUS)
+        math_obj["control_mode"] = control_mode = Int(get(eng_obj, "control_mode", ISOCHRONOUS))
         math_obj["source_id"] = "voltage_source.$name"
 
         _add_gen_cost_model!(math_obj, eng_obj)
@@ -779,11 +778,11 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "terminals" => f_bus["terminals"],
                 "grounded" => f_bus["grounded"],
                 "name" => "_virtual_bus.voltage_source.$name",
-                "bus_type" => status == 0 ? 1 : math_obj["control_mode"] == ISOCHRONOUS ? 3 : 2,
+                "bus_type" => status == 0 ? 1 : control_mode == Int(ISOCHRONOUS) ? 3 : 2,
                 "vm" => deepcopy(eng_obj["vm"]),
                 "va" => deepcopy(eng_obj["va"]),
-                "vmin" => deepcopy(get(eng_obj, "vm_lb", math_obj["control_mode"] == ISOCHRONOUS ? eng_obj["vm"] : fill(0.0, nphases))),
-                "vmax" => deepcopy(get(eng_obj, "vm_ub", math_obj["control_mode"] == ISOCHRONOUS ? eng_obj["vm"] : fill(Inf, nphases))),
+                "vmin" => deepcopy(get(eng_obj, "vm_lb", control_mode == Int(ISOCHRONOUS) ? eng_obj["vm"] : fill(0.0, nphases))),
+                "vmax" => deepcopy(get(eng_obj, "vm_ub", control_mode == Int(ISOCHRONOUS) ? eng_obj["vm"] : fill(Inf, nphases))),
                 "source_id" => "voltage_source.$name",
             )
             for (i,t) in enumerate(eng_obj["connections"])
@@ -821,14 +820,14 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
 
             map_to = [map_to, "bus.$(bus_obj["index"])", "branch.$(branch_obj["index"])"]
         else
-            vm_lb = math_obj["control_mode"] == ISOCHRONOUS ? eng_obj["vm"] : get(eng_obj, "vm_lb", fill(0.0, nphases))
-            vm_ub = math_obj["control_mode"] == ISOCHRONOUS ? eng_obj["vm"] : get(eng_obj, "vm_ub", fill(Inf, nphases))
+            vm_lb = control_mode == Int(ISOCHRONOUS) ? eng_obj["vm"] : get(eng_obj, "vm_lb", fill(0.0, nphases))
+            vm_ub = control_mode == Int(ISOCHRONOUS) ? eng_obj["vm"] : get(eng_obj, "vm_ub", fill(Inf, nphases))
 
             data_math["bus"]["$gen_bus"]["vmin"] = [vm_lb..., [0.0 for n in 1:(nconductors-nphases)]...]
             data_math["bus"]["$gen_bus"]["vmax"] = [vm_ub..., [Inf for n in 1:(nconductors-nphases)]...]
             data_math["bus"]["$gen_bus"]["vm"] = [eng_obj["vm"]..., [0.0 for n in 1:(nconductors-nphases)]...]
             data_math["bus"]["$gen_bus"]["va"] = [eng_obj["va"]..., [0.0 for n in 1:(nconductors-nphases)]...]
-            data_math["bus"]["$gen_bus"]["bus_type"] = status == 0 ? 1 : math_obj["control_mode"] == ISOCHRONOUS ? 3 : 2
+            data_math["bus"]["$gen_bus"]["bus_type"] = status == 0 ? 1 : control_mode == Int(ISOCHRONOUS) ? 3 : 2
         end
 
         data_math["gen"]["$(math_obj["index"])"] = math_obj
