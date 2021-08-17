@@ -351,16 +351,14 @@ upper bound on the voltage magnitude of the connected buses.
 function _calc_transformer_power_ub_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
     bounds_fr = []
     bounds_to = []
-    #TODO redefine transformer bounds
-    # if haskey(trans, "c_rating_a")
-    #     push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
-    #     push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
-    # end
-    # if haskey(trans, "rate_a")
-    #     push!(bounds_fr, trans["rate_a"])
-    #     push!(bounds_to, trans["rate_a"])
-    # end
-
+    if haskey(trans, "c_rating_a")
+        push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"].*bus_fr["vbase"])
+        push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"].*bus_to["vbase"])
+    end
+    if haskey(trans, "rate_a")
+        push!(bounds_fr, trans["rate_a"])
+        push!(bounds_to, trans["rate_a"])
+    end
 
     N = length(trans["f_connections"])
     return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
@@ -375,15 +373,14 @@ the voltage magnitude of the connected buses.
 function _calc_transformer_current_max_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
     bounds_fr = []
     bounds_to = []
-    #TODO redefine transformer bounds
-    # if haskey(trans, "c_rating_a")
-    #     push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
-    #     push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
-    # end
-    # if haskey(trans, "rate_a")
-    #     push!(bounds_fr, trans["rate_a"])
-    #     push!(bounds_to, trans["rate_a"])
-    # end
+    if haskey(trans, "c_rating_a")
+        push!(bounds_fr, trans["c_rating_a"])
+        push!(bounds_to, trans["c_rating_a"])
+    end
+    if haskey(trans, "rate_a")
+        push!(bounds_fr, trans["rate_a"]./(bus_fr["vmax"].*bus_fr["vbase"]))
+        push!(bounds_to, trans["rate_a"]./(bus_to["vmax"].*bus_to["vbase"]))
+    end
 
     N = length(trans["f_connections"])
     return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
