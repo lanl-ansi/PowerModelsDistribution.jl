@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fix bug in `_biggest_generator` where if generator upper bound is missing, `correct_bus_types!` would fail
 - Adds simple transformer bounds calculations in `_calc_transformer_power_ub_frto` and `_calc_transformer_current_max_frto`
 - Updated usage of `control_mode` property on generation objects, such that `ISOCHRONOUS` leads to `bus_type=3`, `FREQUENCYDROOP` leads to `bus_type=2`, and status being `DISABLED` leads to `bus_type=1`
 - Fixed bug in `make_solution_si` where an error would occur if the solution was empty

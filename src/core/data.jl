@@ -1334,7 +1334,7 @@ function _biggest_generator(gens::Dict)::Dict
 
     for (k,gen) in gens
         if gen["gen_status"] != 0
-            pmax = maximum(gen["pmax"])
+            pmax = maximum(get(gen, "pmax", fill(Inf, length(gen["connections"]))))
             if pmax > biggest_value
                 biggest_gen = gen
                 biggest_value = pmax
