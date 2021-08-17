@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in `make_solution_si` where an error would occur if the solution was empty
 - Fixed bug in `build_mn_mc_mld_simple(pm::AbstractUBFModel)` where call to `constraint_mc_switch_thermal_limit` was missing keyword argument `nw=n`
 - Added simplified linear formulation using first-order Taylor (FOT) approximation
 - Added wye-connected RegControl for ACP, ACR, LinDist3Flow and FBS formulations
