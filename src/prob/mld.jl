@@ -269,7 +269,7 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
 
         for i in ids(pm, n, :switch)
             constraint_mc_switch_state(pm, i; nw=n)
-            constraint_mc_switch_thermal_limit(pm, i)
+            constraint_mc_switch_thermal_limit(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :transformer)
