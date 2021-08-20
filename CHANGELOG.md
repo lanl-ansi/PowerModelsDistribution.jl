@@ -7,6 +7,7 @@
 - Fix bug in `correct_branch_directions!` where `f_connections` and `t_connections` were not being swapped
 - Fix bug in `_rebase_pu_branch!` where current ratings were being non-dimensionalized with the power base instead of the current base, and added non-dimensionalization for power ratings
 - Fix bug in `_rebase_pu_switch!` where current ratings were being non-dimensionalized with the power base instead of the current base, and added non-dimensionalization for power ratings
+- The qualifier `t` was removed from the transformer solution properties, i.e. `crt`->`cr`, to be consistent with solution naming conventions where these qualifiers are omitted as they are contained in a transformer component dictionary, unlike the variables
 
 ## v0.11.4
 
