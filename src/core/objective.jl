@@ -248,7 +248,7 @@ end
 
 "gen connections adaptation of min fuel cost polynomial linquad objective"
 function _objective_mc_min_fuel_cost_polynomial_linquad(pm::AbstractUnbalancedPowerModel; report::Bool=true)
-    pg_contains_nl_exp = any(vcat([typeof.(isa(pg, JuMP.Containers.DenseAxisArray) ? pg.data : pg) for nw in nw_ids(pm) for (id,pg) in var(pm, nw, :pg)]...).<:JuMP.NonlinearExpression)
+    pg_contains_nl_exp = any(x<:JuMP.NonlinearExpression for x in vcat([typeof.(isa(pg, JuMP.Containers.DenseAxisArray) ? pg.data : pg) for nw in nw_ids(pm) for (id,pg) in var(pm, nw, :pg)]...))
     gen_cost = Dict()
 
     if !pg_contains_nl_exp
