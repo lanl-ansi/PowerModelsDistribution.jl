@@ -328,7 +328,7 @@ function _rebase_pu_bus!(bus::Dict{String,<:Any}, vbase::Real, sbase::Real, sbas
         for field in ["vm_pair_ub", "vm_pair_lb"]
             # the empty check is needed because otherwise type specialization is lost,
             # the type would then become Vector{Any,Any,Any}
-            if haskey(bus, field) && !isempty(bus[field])
+            if !isempty(get(bus, field, []))
                 bus[field] = [(c,d,b*1/vbase) for (c,d,b) in bus[field]]
             end
         end
