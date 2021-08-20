@@ -993,8 +993,7 @@ function delete_trailing_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
     line_has_shunt = Dict()
     bus_lines = Dict(k=>[] for k in keys(data_eng["bus"]))
     for (id,line) in data_eng["line"]
-        lc = data_eng["linecode"][line["linecode"]]
-        zs, y_fr, y_to = _get_line_impedance_parameters(data_eng, line)
+        _, y_fr, y_to = _get_line_impedance_parameters(data_eng, line)
         line_has_shunt[id] = !iszero(y_fr) || !iszero(y_to)
         push!(bus_lines[line["f_bus"]], id)
         push!(bus_lines[line["t_bus"]], id)
