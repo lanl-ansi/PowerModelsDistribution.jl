@@ -2,7 +2,11 @@
 
 ## staged
 
-- none
+- Fix bug in `constraint_mc_switch_thermal_limit` where switch property name contained a typo
+- Fix bug in `constraint_mc_thermal_limit_from` where `Inf` values in `rate_a` would lead to an error
+- Fix bug in `correct_branch_directions!` where `f_connections` and `t_connections` were not being swapped
+- Fix bug in `_rebase_pu_branch!` where current ratings were being non-dimensionalized with the power base instead of the current base, and added non-dimensionalization for power ratings
+- Fix bug in `_rebase_pu_switch!` where current ratings were being non-dimensionalized with the power base instead of the current base, and added non-dimensionalization for power ratings
 
 ## v0.11.4
 
