@@ -67,7 +67,7 @@
             baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
             @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.0212194; atol=2e-3)
             @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.00912439; atol=2e-3)
-            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["vm"], [0.98102, 0.98922, 0.98692]; atol=9e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["vm"], [0.98102, 0.98922, 0.98692]; atol=1e-1))
             @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["va"], [-0.2, -120.1, 120.1]; atol=5e-2))
         end
         @testset "3-bus unbalanced fbs opf_bf with yy transformer" begin
