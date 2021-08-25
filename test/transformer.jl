@@ -228,7 +228,7 @@
             @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.266410; atol=1e-2)
             @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.01545, 1.04077, 1.04216]; atol=3e-2))
             @test all(isapprox.(sol["solution"]["bus"]["1"]["va"]*180/pi, [29.9998, -90.0022, 149.9971]; atol=5e-3))
-            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.01535, 1.04071, 1.04210]; atol=3e-2))
+            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.01535, 1.04071, 1.04210]; atol=4e-2))
         end
     end
 end

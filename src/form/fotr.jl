@@ -1,4 +1,4 @@
-# The model in rectangular coordinates is linearized around an initial operating point using a 
+# The model in rectangular coordinates is linearized around an initial operating point using a
 # first order Taylor approximation (FOT) method
 
 
@@ -15,23 +15,23 @@ function variable_mc_bus_voltage(pm::FOTRUPowerModel; nw=nw_id_default, bounded:
     # initial operating point for linearization (using flat-start)
     vr0 = var(pm, nw)[:vr0] = Dict(i => [cosd(0) cosd(-120) cosd(120)] for i in ids(pm, nw, :bus))
     vi0 = var(pm, nw)[:vi0] = Dict(i => [sind(0) sind(-120) sind(120)] for i in ids(pm, nw, :bus))
-    
+
     for id in ids(pm, nw, :bus)
         busref = ref(pm, nw, :bus, id)
         terminals = busref["terminals"]
         grounded = busref["grounded"]
-       
+
         ncnd = length(terminals)
         vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(1.0, ncnd)
         vm[.!grounded] .= 1.0
-   
+
         # TODO how to do this more generally
         nph = 3
         va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
-  
+
         for (idx,t) in enumerate(terminals)
-            vr = vm[idx]*cos(va[idx]) 
-            vi = vm[idx]*sin(va[idx]) 
+            vr = vm[idx]*cos(va[idx])
+            vi = vm[idx]*sin(va[idx])
             JuMP.set_start_value(var(pm, nw, :vr, id)[t], vr)
             JuMP.set_start_value(var(pm, nw, :vi, id)[t], vi)
             # update initial operating point with warm-start
@@ -71,7 +71,7 @@ function constraint_mc_voltage_magnitude_bounds(pm::FOTRUPowerModel, nw::Int, i:
             JuMP.@constraint(pm.model, 2*vr[t]*vr0[t] + 2*vi[t]*vi0[t] - vr0[t]^2 - vi0[t]^2 >= vmin[idx]^2)
         end
         # Outer approximation of upper voltage magnitude limits
-        if vmax[idx] < Inf  
+        if vmax[idx] < Inf
             JuMP.@constraint(pm.model, -vmax[idx] <= vr[t])
             JuMP.@constraint(pm.model,  vmax[idx] >= vr[t])
             JuMP.@constraint(pm.model, -vmax[idx] <= vi[t])
@@ -207,7 +207,7 @@ function constraint_mc_ohms_yt_from(pm::FOTRUPowerModel, nw::Int, f_bus::Int, t_
         +vi0_fr.*(G_fr*vr0_fr-B_fr*vi0_fr)
 
     for (idx,fc) in enumerate(f_connections)
-        JuMP.@constraint(pm.model, 
+        JuMP.@constraint(pm.model,
                 p_fr[idx] ==  p0_fr[idx] + sum(G[idx,jdx]*(vr_fr[jdx]*vr0_fr[idx]+vr0_fr[jdx]*vr_fr[idx]-2*vr0_fr[jdx]*vr0_fr[idx]) - G[idx,jdx]*(vr_to[jdx]*vr0_fr[idx]+vr0_to[jdx]*vr_fr[idx]-2*vr0_to[jdx]*vr0_fr[idx])
                             -B[idx,jdx]*(vi_fr[jdx]*vr0_fr[idx]+vi0_fr[jdx]*vr_fr[idx]-2*vi0_fr[jdx]*vr0_fr[idx]) + B[idx,jdx]*(vi_to[jdx]*vr0_fr[idx]+vi0_to[jdx]*vr_fr[idx]-2*vi0_to[jdx]*vr0_fr[idx]) for (jdx,tc) in enumerate(t_connections))
                         +sum(G[idx,jdx]*(vi_fr[jdx]*vi0_fr[idx]+vi0_fr[jdx]*vi_fr[idx]-2*vi0_fr[jdx]*vi0_fr[idx]) - G[idx,jdx]*(vi_to[jdx]*vi0_fr[idx]+vi0_to[jdx]*vi_fr[idx]-2*vi0_to[jdx]*vi0_fr[idx])
@@ -293,13 +293,13 @@ function constraint_mc_load_power(pm::FOTRUPowerModel, load_id::Int; nw::Int=nw_
 
         if report
             sol(pm, nw, :load, load_id)[:pd_bus] = pd_bus
-            sol(pm, nw, :load, load_id)[:qd_bus] = qd_bus    
+            sol(pm, nw, :load, load_id)[:qd_bus] = qd_bus
             sol(pm, nw, :load, load_id)[:pd] = pd_bus
             sol(pm, nw, :load, load_id)[:qd] = qd_bus
         end
         pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, connections)
         qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, connections)
-    
+
         var(pm, nw, :pd_bus)[load_id] = pd_bus
         var(pm, nw, :qd_bus)[load_id] = qd_bus
 
@@ -321,17 +321,17 @@ function constraint_mc_load_power(pm::FOTRUPowerModel, load_id::Int; nw::Int=nw_
         cid0_bus = [cid0[i]-cid0[prev[i]] for i in 1:nph]
 
         pd_bus = [ vr0[i]*crd0_bus[i]+vi0[i]*cid0_bus[i] for i in 1:nph]
-        qd_bus = [-vr0[i]*cid0_bus[i]+vi0[i]*crd0_bus[i] for i in 1:nph] 
+        qd_bus = [-vr0[i]*cid0_bus[i]+vi0[i]*crd0_bus[i] for i in 1:nph]
         var(pm, nw, :pd_bus)[load_id] = pd_bus
         var(pm, nw, :qd_bus)[load_id] = qd_bus
-        
+
         if report
             sol(pm, nw, :load, load_id)[:pd_bus] = pd_bus
             sol(pm, nw, :load, load_id)[:qd_bus] = qd_bus
 
             pd = JuMP.@expression(pm.model, [i in 1:nph], a[i]*(vrd0[i]^2+vid0[i]^2)^(alpha[i]/2) )
             qd = JuMP.@expression(pm.model, [i in 1:nph], b[i]*(vrd0[i]^2+vid0[i]^2)^(beta[i]/2) )
-          
+
             sol(pm, nw, :load, load_id)[:pd] = pd
             sol(pm, nw, :load, load_id)[:qd] = qd
         end
@@ -346,7 +346,7 @@ Add all constraints required to model a two-winding, wye-wye connected transform
 """
 function constraint_mc_transformer_power_yy(pm::FOTRUPowerModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     transformer = ref(pm, nw, :transformer, trans_id)
-    
+
     vr_fr = var(pm, nw, :vr, f_bus)
     vr_to = var(pm, nw, :vr, t_bus)
     vi_fr = var(pm, nw, :vi, f_bus)
@@ -376,13 +376,13 @@ function constraint_mc_transformer_power_yy(pm::FOTRUPowerModel, nw::Int, trans_
 
             # with regcontrol
             if haskey(transformer,"controls")
-                v_ref = transformer["controls"]["vreg"][idx] 
-                δ = transformer["controls"]["band"][idx]     
-                r = transformer["controls"]["r"][idx]           
-                x = transformer["controls"]["x"][idx]   
-                
+                v_ref = transformer["controls"]["vreg"][idx]
+                δ = transformer["controls"]["band"][idx]
+                r = transformer["controls"]["r"][idx]
+                x = transformer["controls"]["x"][idx]
+
                 # (cr+jci) = (p-jq)/(vr0-j⋅vi0)
-                cr = JuMP.@expression(pm.model, ( p_to[idx]*vr0_to[tc] + q_to[idx]*vi0_to[tc])/(vr0_to[tc]^2+vi0_to[tc]^2)) 
+                cr = JuMP.@expression(pm.model, ( p_to[idx]*vr0_to[tc] + q_to[idx]*vi0_to[tc])/(vr0_to[tc]^2+vi0_to[tc]^2))
                 ci = JuMP.@expression(pm.model, (-q_to[idx]*vr0_to[tc] + p_to[idx]*vi0_to[tc])/(vr0_to[tc]^2+vi0_to[tc]^2))
                 # linearized v_drop = (cr+jci)⋅(r+jx)
                 vr_drop = JuMP.@expression(pm.model, r*cr-x*ci)
@@ -402,10 +402,10 @@ function constraint_mc_transformer_power_yy(pm::FOTRUPowerModel, nw::Int, trans_
                 JuMP.@constraint(pm.model, (vr_fr[fc]-vr_drop) - (vi_fr[fc]-vi_drop) ≥ -sqrt(2)*(v_ref + δ)^2)
                 JuMP.@constraint(pm.model, (vr_fr[fc]-vr_drop) - (vi_fr[fc]-vi_drop) ≤  sqrt(2)*(v_ref + δ)^2)
                 JuMP.@constraint(pm.model, (vr_fr[fc]-vr_drop)^2 + (vi_fr[fc]-vi_drop)^2 ≥ (v_ref - δ)^2)
-                # TODO: linearized lower limits: (v_ref-δ)^2 ≤ v_lin_sq 
+                # TODO: linearized lower limits: (v_ref-δ)^2 ≤ v_lin_sq
                 # JuMP.@constraint(pm.model, 2*vr0_fr[fc]*(vr_fr[fc]-vr_drop) + 2*vi0_fr[fc]*(vi_fr[fc]-vi_drop) - vr_fr[fc]^2 - vi_fr[fc]^2 ≥ (v_ref - δ)^2)
                 JuMP.@constraint(pm.model, (2*vr_fr[fc]*vr0_fr[fc] + 2*vi_fr[fc]*vi0_fr[fc] - vr_fr[fc]^2 - vi_fr[fc]^2)/1.1^2 ≤ 2*vr_to[tc]*vr0_to[tc] + 2*vi_to[tc]*vi0_to[tc] - vr_to[tc]^2 - vi_to[tc]^2)
-                JuMP.@constraint(pm.model, (2*vr_fr[fc]*vr0_fr[fc] + 2*vi_fr[fc]*vi0_fr[fc] - vr_fr[fc]^2 - vi_fr[fc]^2)/0.9^2 ≥ 2*vr_to[tc]*vr0_to[tc] + 2*vi_to[tc]*vi0_to[tc] - vr_to[tc]^2 - vi_to[tc]^2)    
+                JuMP.@constraint(pm.model, (2*vr_fr[fc]*vr0_fr[fc] + 2*vi_fr[fc]*vi0_fr[fc] - vr_fr[fc]^2 - vi_fr[fc]^2)/0.9^2 ≥ 2*vr_to[tc]*vr0_to[tc] + 2*vi_to[tc]*vi0_to[tc] - vr_to[tc]^2 - vi_to[tc]^2)
             end
         end
     end
@@ -470,4 +470,3 @@ function constraint_mc_transformer_power_dy(pm::FOTRUPowerModel, nw::Int, trans_
         )
     end
 end
-
