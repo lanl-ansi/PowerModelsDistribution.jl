@@ -104,20 +104,20 @@ function constraint_mc_voltage_magnitude_bounds(pm::FBSUBFPowerModel, nw::Int, i
     vi0 = var(pm, nw, :vi0, i)
 
     for (idx,t) in enumerate(ref(pm, nw, :bus, i)["terminals"]) 
-        if vmin[idx] ≠ vmax[idx] 
-            # linearized lower voltage magnitude limits
-            JuMP.@constraint(pm.model, 2*vr[t]*vr0[t] + 2*vi[t]*vi0[t] - vr0[t]^2 - vi0[t]^2 >= vmin[idx]^2)
-            # Outer approximation of upper voltage magnitude limits
-            if vmax[idx] < Inf  
-                JuMP.@constraint(pm.model, -vmax[idx] <= vr[t])
-                JuMP.@constraint(pm.model,  vmax[idx] >= vr[t])    
-                JuMP.@constraint(pm.model, -vmax[idx] <= vi[t])
-                JuMP.@constraint(pm.model,  vmax[idx] >= vi[t]) 
-                JuMP.@constraint(pm.model, -sqrt(2)*vmax[idx] <= vr[t] + vi[t])
-                JuMP.@constraint(pm.model,  sqrt(2)*vmax[idx] >= vr[t] + vi[t])
-                JuMP.@constraint(pm.model, -sqrt(2)*vmax[idx] <= vr[t] - vi[t])
-                JuMP.@constraint(pm.model,  sqrt(2)*vmax[idx] >= vr[t] - vi[t])
-            end
+        JuMP.@constraint(pm.model, vr[t]^2 + vi[t]^2 >= vmin[idx]^2)
+        # TODO: first-order approximation might work with OpenDSS power-flow as initial operating point 
+        # JuMP.@constraint(pm.model, 2*vr[t]*vr0[t] + 2*vi[t]*vi0[t] - vr0[t]^2 - vi0[t]^2 >= vmin[idx]^2)      
+
+        # Outer approximation of upper voltage magnitude limits
+        if vmax[idx] < Inf  
+            JuMP.@constraint(pm.model, -vmax[idx] <= vr[t])
+            JuMP.@constraint(pm.model,  vmax[idx] >= vr[t])    
+            JuMP.@constraint(pm.model, -vmax[idx] <= vi[t])
+            JuMP.@constraint(pm.model,  vmax[idx] >= vi[t]) 
+            JuMP.@constraint(pm.model, -sqrt(2)*vmax[idx] <= vr[t] + vi[t])
+            JuMP.@constraint(pm.model,  sqrt(2)*vmax[idx] >= vr[t] + vi[t])
+            JuMP.@constraint(pm.model, -sqrt(2)*vmax[idx] <= vr[t] - vi[t])
+            JuMP.@constraint(pm.model,  sqrt(2)*vmax[idx] >= vr[t] - vi[t])
         end
     end
 end
