@@ -48,10 +48,9 @@ function variable_mc_bus_voltage(pm::FOTRUPowerModel; nw=nw_id_default, bounded:
 end
 
 
-"Capacitor switching and relaxed current variables"
+"Capacitor switching variables"
 function variable_mc_capcontrol(pm::FOTRUPowerModel; kwargs...)
     variable_mc_capacitor_switch_state(pm; relax=true)
-    variable_mc_capacitor_reactive_power(pm)
 end
 
 
@@ -87,42 +86,6 @@ function constraint_mc_voltage_magnitude_bounds(pm::FOTRUPowerModel, nw::Int, i:
             JuMP.@constraint(pm.model,  sqrt(2)*vmax[idx] >= vr[t] + vi[t])
             JuMP.@constraint(pm.model, -sqrt(2)*vmax[idx] <= vr[t] - vi[t])
             JuMP.@constraint(pm.model,  sqrt(2)*vmax[idx] >= vr[t] - vi[t])
-        end
-    end
-end
-
-
-"""
-    constraint_mc_theta_ref(pm::FOTRUPowerModel, nw::Int, i::Int, va_ref::Vector{<:Real})
-
-Creates phase angle constraints at reference buses similar to ACRUPowerModel.
-"""
-function constraint_mc_theta_ref(pm::FOTRUPowerModel, nw::Int, i::Int, va_ref::Vector{<:Real})
-    vr = var(pm, nw, :vr, i)
-    vi = var(pm, nw, :vi, i)
-
-    # deal with cases first where tan(theta)==Inf or tan(theta)==0
-    for (idx, t) in enumerate(ref(pm, nw, :bus, i)["terminals"])
-        if va_ref[t] == pi/2
-            JuMP.@constraint(pm.model, vr[t] == 0)
-            JuMP.@constraint(pm.model, vi[t] >= 0)
-        elseif va_ref[t] == -pi/2
-            JuMP.@constraint(pm.model, vr[t] == 0)
-            JuMP.@constraint(pm.model, vi[t] <= 0)
-        elseif va_ref[t] == 0
-            JuMP.@constraint(pm.model, vr[t] >= 0)
-            JuMP.@constraint(pm.model, vi[t] == 0)
-        elseif va_ref[t] == pi
-            JuMP.@constraint(pm.model, vr[t] >= 0)
-            JuMP.@constraint(pm.model, vi[t] == 0)
-        else
-            JuMP.@constraint(pm.model, vi[t] == tan(va_ref[t])*vr[t])
-            # va_ref also implies a sign for vr, vi
-            if 0<=va_ref[t] && va_ref[t] <= pi
-                JuMP.@constraint(pm.model, vi[t] >= 0)
-            else
-                JuMP.@constraint(pm.model, vi[t] <= 0)
-            end
         end
     end
 end
@@ -277,7 +240,7 @@ function constraint_mc_power_balance_capc(pm::FOTRUPowerModel, nw::Int, i::Int, 
     ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
 
     # add constraints to model capacitor switching
-    if !isempty(bus_shunts) && haskey(ref(pm, nw, :shunt, bus_shunts[1][1]), "controls") 
+    if !isempty(bus_shunts) && haskey(ref(pm, nw, :shunt, bus_shunts[1][1]), "controls")
         constraint_capacitor_on_off(pm, i, bus_shunts)
 
         for (idx, t) in ungrounded_terminals
@@ -380,7 +343,7 @@ function constraint_capacitor_on_off(pm::FOTRUPowerModel, i::Int, bus_shunts::Ve
         JuMP.@constraint(pm.model, sum(q_fr) - shunt["controls"]["onsetting"] ≤ M_q*cap_state[shunt["connections"][1]] - ϵ*(1-cap_state[shunt["connections"][1]]))
         JuMP.@constraint(pm.model, sum(q_fr) - shunt["controls"]["offsetting"] ≥ -M_q*(1-cap_state[shunt["connections"][1]]) - ϵ*cap_state[shunt["connections"][1]])
         JuMP.@constraint(pm.model, cap_state .== cap_state[shunt["connections"][1]])
-        if shunt["controls"]["voltoverride"] 
+        if shunt["controls"]["voltoverride"]
             for (idx,val) in enumerate(shunt["connections"])
                 vr_cap = var(pm, nw, :vr, i)[val]
                 vi_cap = var(pm, nw, :vi, i)[val]
@@ -401,7 +364,7 @@ function constraint_capacitor_on_off(pm::FOTRUPowerModel, i::Int, bus_shunts::Ve
                 JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["onsetting"][idx]^2 ≤ M_v*cap_state[val] - ϵ*(1-cap_state[val]))
                 JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["offsetting"][idx]^2 ≥ -M_v*(1-cap_state[val]) - ϵ*cap_state[val])
             end
-            if shunt["controls"]["voltoverride"][idx] 
+            if shunt["controls"]["voltoverride"][idx]
                 vr_cap = var(pm, nw, :vr, i)[val]
                 vi_cap = var(pm, nw, :vi, i)[val]
                 vr0_cap = var(pm, nw, :vr0, i)[val]
@@ -409,11 +372,11 @@ function constraint_capacitor_on_off(pm::FOTRUPowerModel, i::Int, bus_shunts::Ve
                 JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["vmin"][idx]^2 ≥ -M_v*cap_state[val] + ϵ*(1-cap_state[val]))
                 JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["vmax"][idx]^2 ≤ M_v*(1-cap_state[val]) - ϵ*cap_state[val])
             end
-            if shunt["controls"]["type"][idx]  == "" 
+            if shunt["controls"]["type"][idx]  == ""
                 JuMP.@constraint(pm.model, cap_state[val] == 1 )
             end
-        end 
-    end  
+        end
+    end
 end
 
 
