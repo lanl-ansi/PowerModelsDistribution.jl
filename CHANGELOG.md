@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Fix `calc_max_cost_index` to support multi-infrastructure data
 
 ## v0.11.6
 
