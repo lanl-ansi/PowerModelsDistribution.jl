@@ -208,10 +208,21 @@
             @test all(isapprox.(sol["solution"]["bus"]["1"]["va"]*180/pi, [29.9998, -90.0022, 149.9971]; atol=5e-3))
             @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.01535, 1.04071, 1.04210]; atol=6e-2))
         end
-        @testset "regcontrol_fot" begin
+        @testset "regcontrol_fotp" begin
             eng = parse_file("../test/data/opendss/IEEE13_RegControl.dss")
             math = transform_data_model(eng)
-            sol = solve_mc_opf_oltc(math, FOTUPowerModel, ipopt_solver; make_si=false)
+            sol = solve_mc_opf_oltc(math, FOTPUPowerModel, ipopt_solver; make_si=false)
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.405132; atol=7e-3)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.266410; atol=1e-2)
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.01545, 1.04077, 1.04216]; atol=3e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["va"]*180/pi, [29.9998, -90.0022, 149.9971]; atol=5e-3))
+            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.01535, 1.04071, 1.04210]; atol=3e-2))
+        end
+        @testset "regcontrol_fotr" begin
+            eng = parse_file("../test/data/opendss/IEEE13_RegControl.dss")
+            math = transform_data_model(eng)
+            sol = solve_mc_opf_oltc(math, FOTRUPowerModel, ipopt_solver; make_si=false,solution_processors=[sol_data_model!])
             @test sol["termination_status"] == LOCALLY_SOLVED
             @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.405132; atol=7e-3)
             @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.266410; atol=1e-2)

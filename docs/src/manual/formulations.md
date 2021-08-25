@@ -37,7 +37,7 @@ This formulation has originally been developed by Sankur et al.
 
 This formulation is here cast as only considering the diagonal elements defined in `LPUBFFullModel`, which furthermore leads to the imaginary part of the lifted node voltage variable W being redundant and substituted out.
 
-## [`FBSUBFPowerModel`](@ref FBSUBFPowerModel), [`FOTUPowerModel`](@ref FOTUPowerModel)
+## [`FBSUBFPowerModel`](@ref FBSUBFPowerModel), [`FOTPUPowerModel`](@ref FOTPUPowerModel), [`FOTRUPowerModel`](@ref FOTRUPowerModel)
 
 The linear FBS and FOT formulations as described in:
 
@@ -87,7 +87,6 @@ abstract type AbstractLPUBFModel <: AbstractNLPUBFModel end
 abstract type LPUBFDiagModel <: AbstractLPUBFModel end
 const LinDist3FlowModel = LPUBFDiagModel
 abstract type FBSUBFModel <: AbstractLPUBFModel end
-abstract type AbstractLPUModel <: AbstractUnbalancedACPModel end
 ```
 
 ## Unbalanced Power Models
@@ -109,7 +108,8 @@ mutable struct SOCConicUBFPowerModel <: SOCConicUBFModel @pmd_fields end
 mutable struct LPUBFDiagPowerModel <: LPUBFDiagModel @pmd_fields end
 const LinDist3FlowPowerModel = LPUBFDiagPowerModel
 mutable struct FBSUBFPowerModel <: FBSUBFModel @pmd_fields end
-mutable struct FOTUPowerModel <: AbstractLPUModel @pmd_fields end
+mutable struct FOTPUPowerModel <: AbstractUnbalancedACPModel @pmd_fields end
+mutable struct FOTRUPowerModel <: AbstractUnbalancedACRModel @pmd_fields end
 ```
 
 ## Optimization problem classes
@@ -117,11 +117,11 @@ mutable struct FOTUPowerModel <: AbstractLPUModel @pmd_fields end
 - NLP (nonconvex): ACPUPowerModel, ACRUPowerModel, IVRUPowerModel
 - SDP: SDPUBFPowerModel, SDPUBFKCLMXPowerModel
 - SOC(-representable): SOCNLPUBFPowerModel, SOCConicUBFPowerModel
-- Linear: LPUBFDiagPowerModel (LinDist3FlowPowerModel), FBSUBFPowerModel, FOTUPowerModel, DCPUPowerModel, NFAUPowerModel 
+- Linear: LPUBFDiagPowerModel (LinDist3FlowPowerModel), FBSUBFPowerModel, FOTPUPowerModel, FOTRUPowerModel, DCPUPowerModel, NFAUPowerModel 
 
 ## Matrix equations versus scalar equations
 
 JuMP supports vectorized syntax, but not for nonlinear constraints. Therefore, certain formulations must be implemented in a scalar fashion. Other formulations can be written as matrix (in)equalities. The current implementations are categorized as follows:
 
-- Scalar: ACPUPowerModel, ACRUPowerModel, IVRUPowerModel, DCPUPowerModel, NFAPowerModel, FBSUBFPowerModel, FOTUPowerModel
+- Scalar: ACPUPowerModel, ACRUPowerModel, IVRUPowerModel, DCPUPowerModel, NFAPowerModel, FBSUBFPowerModel, FOTPUPowerModel, FOTRUPowerModel
 - Matrix: SDPUBFPowerModel, SDPUBFKCLMXPowerModel, SOCNLPUBFPowerModel, SOCConicUBFPowerModel, LPUBFDiagPowerModel
