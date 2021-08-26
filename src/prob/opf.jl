@@ -1,16 +1,40 @@
-"Solve Optimal Power Flow"
+"""
+	function solve_mc_opf(
+		data::Union{Dict{String,<:Any},String},
+		model_type::Type,
+		solver;
+		kwargs...
+	)
+
+Solve Optimal Power Flow
+"""
 function solve_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, build_mc_opf; kwargs...)
 end
 
 
-"Solve multinetwork optimal power flow problem"
+"""
+	function solve_mn_mc_opf(
+		data::Union{Dict{String,<:Any},String},
+		model_type::Type,
+		solver;
+		kwargs...
+	)
+
+Solve multinetwork optimal power flow problem
+"""
 function solve_mn_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, build_mn_mc_opf; multinetwork=true, kwargs...)
 end
 
 
-"Constructor for Optimal Power Flow"
+"""
+	function build_mc_opf(
+		pm::AbstractUnbalancedPowerModel
+	)
+
+Constructor for Optimal Power Flow
+"""
 function build_mc_opf(pm::AbstractUnbalancedPowerModel)
     variable_mc_bus_voltage(pm)
     variable_mc_branch_power(pm)
@@ -70,7 +94,13 @@ function build_mc_opf(pm::AbstractUnbalancedPowerModel)
 end
 
 
-"constructor for OPF in current-voltage variable space"
+"""
+	function build_mc_opf(
+		pm::AbstractUnbalancedIVRModel
+	)
+
+constructor for OPF in current-voltage variable space
+"""
 function build_mc_opf(pm::AbstractUnbalancedIVRModel)
     # Variables
     variable_mc_bus_voltage(pm)
@@ -125,7 +155,13 @@ function build_mc_opf(pm::AbstractUnbalancedIVRModel)
 end
 
 
-"constructor for branch flow opf"
+"""
+	function build_mc_opf(
+		pm::AbstractUBFModels
+	)
+
+constructor for branch flow opf
+"""
 function build_mc_opf(pm::AbstractUBFModels)
     # Variables
     variable_mc_bus_voltage(pm)
@@ -189,7 +225,160 @@ function build_mc_opf(pm::AbstractUBFModels)
 end
 
 
-"Multinetwork optimal power flow problem"
+"""
+	function build_mc_opf(
+		pm::AbstractExplicitNeutralIVRModel
+	)
+
+constructor for OPF in current-voltage variable space with explicit neutrals
+"""
+function build_mc_opf(pm::AbstractExplicitNeutralIVRModel)
+    # Variables
+    variable_mc_bus_voltage(pm)
+    variable_mc_branch_current(pm)
+    variable_mc_load_current(pm)
+    variable_mc_load_power(pm)
+    variable_mc_generator_current(pm)
+    variable_mc_generator_power(pm)
+    variable_mc_transformer_current(pm)
+    variable_mc_transformer_power(pm)
+    variable_mc_switch_current(pm)
+
+    # Constraints
+    for i in ids(pm, :bus)
+
+        if i in ids(pm, :ref_buses)
+            constraint_mc_voltage_reference(pm, i)
+        end
+
+        constraint_mc_voltage_absolute(pm, i)
+        constraint_mc_voltage_pairwise(pm, i)
+    end
+
+    # components should be constrained before KCL, or the bus current variables might be undefined
+
+    for id in ids(pm, :gen)
+        constraint_mc_generator_power(pm, id)
+        constraint_mc_generator_current(pm, id)
+    end
+
+    for id in ids(pm, :load)
+        constraint_mc_load_power(pm, id)
+        constraint_mc_load_current(pm, id)
+    end
+
+    for i in ids(pm, :transformer)
+        constraint_mc_transformer_voltage(pm, i)
+        constraint_mc_transformer_current(pm, i)
+
+        constraint_mc_transformer_thermal_limit(pm, i)
+    end
+
+    for i in ids(pm, :branch)
+        constraint_mc_current_from(pm, i)
+        constraint_mc_current_to(pm, i)
+        constraint_mc_bus_voltage_drop(pm, i)
+
+        constraint_mc_branch_current_limit(pm, i)
+        constraint_mc_thermal_limit_from(pm, i)
+        constraint_mc_thermal_limit_to(pm, i)
+    end
+
+    for i in ids(pm, :switch)
+        constraint_mc_switch_current(pm, i)
+        constraint_mc_switch_state(pm, i)
+
+        constraint_mc_switch_current_limit(pm, i)
+        constraint_mc_switch_thermal_limit(pm, i)
+    end
+
+    for i in ids(pm, :bus)
+        constraint_mc_current_balance(pm, i)
+    end
+
+    # Objective
+    objective_mc_min_fuel_cost(pm)
+end
+
+
+"""
+	function build_mc_opf(
+		pm::AbstractExplicitNeutralACRModel
+	)
+
+constructor for OPF in power-voltage variable space with explicit neutrals
+"""
+function build_mc_opf(pm::AbstractExplicitNeutralACRModel)
+    # Variables
+    variable_mc_bus_voltage(pm)
+    variable_mc_branch_power(pm)
+    variable_mc_load_power(pm)
+    variable_mc_generator_power(pm)
+    variable_mc_transformer_power(pm)
+    variable_mc_switch_power(pm)
+
+    # Constraints
+    for i in ids(pm, :bus)
+
+        if i in ids(pm, :ref_buses)
+            constraint_mc_voltage_reference(pm, i)
+        end
+
+        constraint_mc_voltage_absolute(pm, i)
+        constraint_mc_voltage_pairwise(pm, i)
+    end
+
+    # components should be constrained before KCL, or the bus current variables might be undefined
+
+    for id in ids(pm, :gen)
+        constraint_mc_generator_power(pm, id)
+        # constraint_mc_generator_current(pm, id)
+    end
+
+    for id in ids(pm, :load)
+        constraint_mc_load_power(pm, id)
+    end
+
+    for i in ids(pm, :transformer)
+        constraint_mc_transformer_voltage(pm, i)
+        constraint_mc_transformer_power(pm, i)
+
+        constraint_mc_transformer_thermal_limit(pm, i)
+    end
+
+    for i in ids(pm, :branch)
+        constraint_mc_ohms_yt_from(pm, i)
+        constraint_mc_ohms_yt_to(pm, i)
+
+        constraint_mc_branch_current_limit(pm, i)
+        constraint_mc_thermal_limit_from(pm, i)
+        constraint_mc_thermal_limit_to(pm, i)
+    end
+
+    for i in ids(pm, :switch)
+        constraint_mc_switch_power(pm, i)
+        constraint_mc_switch_state(pm, i)
+        
+        constraint_mc_switch_current_limit(pm, i)
+        constraint_mc_switch_thermal_limit(pm, i)
+    end
+
+    for i in ids(pm, :bus)
+        constraint_mc_power_balance(pm, i)
+    end
+
+    # Objective
+    objective_mc_min_fuel_cost(pm)
+end
+
+
+"""
+	function build_mn_mc_opf(
+		pm::AbstractUnbalancedPowerModel
+	)
+
+Multinetwork optimal power flow problem
+"""
 function build_mn_mc_opf(pm::AbstractUnbalancedPowerModel)
     for (n, network) in nws(pm)
         variable_mc_bus_voltage(pm; nw=n)
@@ -261,7 +450,13 @@ function build_mn_mc_opf(pm::AbstractUnbalancedPowerModel)
     objective_mc_min_fuel_cost(pm)
 end
 
-"Multinetwork current-voltage optimal power flow problem"
+"""
+	function build_mn_mc_opf(
+		pm::AbstractUnbalancedIVRModel
+	)
+
+Multinetwork current-voltage optimal power flow problem
+"""
 function build_mn_mc_opf(pm::AbstractUnbalancedIVRModel)
     for (n, network) in nws(pm)
         variable_mc_bus_voltage(pm; nw=n)
@@ -332,7 +527,13 @@ function build_mn_mc_opf(pm::AbstractUnbalancedIVRModel)
     objective_mc_min_fuel_cost(pm)
 end
 
-"Multinetwork branch flow optimal power flow problem"
+"""
+	function build_mn_mc_opf(
+		pm::AbstractUBFModels
+	)
+
+Multinetwork branch flow optimal power flow problem
+"""
 function build_mn_mc_opf(pm::AbstractUBFModels)
     for (n, network) in nws(pm)
         variable_mc_bus_voltage(pm; nw=n)
@@ -407,21 +608,47 @@ end
 
 # Depreciated run_ functions (remove after ~4-6 months)
 
-"depreciation warning for `run_ac_mc_opf`"
+"""
+	function run_ac_mc_opf(
+		data::Union{Dict{String,<:Any},String},
+		solver;
+		kwargs...
+	)
+
+depreciation warning for `run_ac_mc_opf`
+"""
 function run_ac_mc_opf(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
     @warn "run_ac_mc_opf is being depreciated in favor of solve_mc_opf(data, ACPUPowerModel, solver; kwargs...), please update your code accordingly"
     return solve_mc_opf(data, ACPUPowerModel, solver; kwargs...)
 end
 
 
-"depreciation warning for `run_mc_opf`"
+"""
+	function run_mc_opf(
+		data::Union{Dict{String,<:Any},String},
+		model_type::Type,
+		solver;
+		kwargs...
+	)
+
+depreciation warning for `run_mc_opf`
+"""
 function run_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
     @warn "run_mc_opf is being depreciated in favor of solve_mc_opf, please update your code accordingly"
     return solve_mc_opf(data, model_type, solver; kwargs...)
 end
 
 
-"depreciation warning for `run_mn_mc_opf`"
+"""
+	function run_mn_mc_opf(
+		data::Union{Dict{String,<:Any},String},
+		model_type::Type,
+		solver;
+		kwargs...
+	)
+
+depreciation warning for `run_mn_mc_opf`
+"""
 function run_mn_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
     @warn "run_mn_mc_opf is being depreciated in favor of solve_mn_mc_opf, please update your code accordingly"
     return solve_mn_mc_opf(data, model_type, solver; kwargs...)

@@ -347,9 +347,7 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{Strin
 
         for (f_key, t_key) in [("cm_ub", "c_rating_a"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
             ("sm_ub", "rate_a"), ("sm_ub_b", "rate_b"), ("sm_ub_c", "rate_c")]
-            if haskey(eng_obj, f_key)
-                math_obj[t_key] = eng_obj[f_key]
-            end
+                math_obj[t_key] = haskey(eng_obj, f_key) ? eng_obj[f_key] : fill(Inf, nphases)
         end
 
         math_obj["br_status"] = Int(eng_obj["status"])
@@ -396,6 +394,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 "tm_set" => get(eng_obj, "tm_set", fill(1.0, nphases)),
                 "tm_fix" => get(eng_obj, "tm_fix", fill(true, nphases)),
                 "polarity" => get(eng_obj, "polarity", -1),
+                "sm_ub" => get(eng_obj, "sm_ub", Inf),
                 "status" => Int(get(eng_obj, "status", ENABLED)),
                 "index" => length(data_math["transformer"])+1
             )
@@ -457,6 +456,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                     "polarity"      => eng_obj["polarity"][w],
                     "tm_set"        => eng_obj["tm_set"][w],
                     "tm_fix"        => eng_obj["tm_fix"][w],
+                    "sm_ub"         => get(eng_obj, "sm_ub", Inf),
                     "status"        => Int(get(eng_obj, "status", ENABLED)),
                     "index"         => length(data_math["transformer"])+1
                 )
@@ -491,11 +491,9 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
         math_obj["dispatchable"] = Int(get(eng_obj, "dispatchable", YES))
 
         # OPF bounds
-        for (f_key, t_key) in [("cm_ub", "c_rating_a"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
-            ("sm_ub", "rate_a"), ("sm_ub_b", "rate_b"), ("sm_ub_c", "rate_c")]
-            if haskey(eng_obj, f_key)
-                math_obj[t_key] = eng_obj[f_key]
-            end
+        for (f_key, t_key) in [("cm_ub", "current_rating"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
+            ("sm_ub", "thermal_rating"), ("sm_ub_b", "rate_b"), ("sm_ub_c", "rate_c")]
+            math_obj[t_key] = haskey(eng_obj, f_key) ? eng_obj[f_key] : fill(Inf, nphases)
         end
 
         map_to = "switch.$(math_obj["index"])"
@@ -510,14 +508,17 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
             f_bus = deepcopy(data_math["bus"]["$(math_obj["f_bus"])"])
             t_bus = deepcopy(data_math["bus"]["$(math_obj["t_bus"])"])
 
+            N = length(eng_obj["t_connections"])
             bus_obj = Dict{String,Any}(
                 "name" => "_virtual_bus.switch.$name",
                 "bus_i" => length(data_math["bus"])+1,
                 "bus_type" => get(eng_obj, "status", ENABLED) == DISABLED ? 4 : 1,
-                "terminals" => t_bus["terminals"],  # connected to the switch on the to-side
-                "grounded" => t_bus["grounded"],  # connected to the switch on the to-side
-                "vmin" => t_bus["vmin"],
-                "vmax" => t_bus["vmax"],
+                "terminals" => eng_obj["t_connections"],  # connected to the switch on the to-side
+                "grounded" => fill(false, N),  # connected to the switch on the to-side
+                "vmin" => fill(0.0, N),
+                "vmax" => fill(Inf, N),
+                "vm_pair_lb" => Tuple{Any,Any,Real}[],
+                "vm_pair_ub" => Tuple{Any,Any,Real}[],
                 "source_id" => "switch.$name",
                 "index" => length(data_math["bus"])+1,
             )
@@ -542,6 +543,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
                 "b_to" => zeros(nphases, nphases),
                 "angmin" => fill(-10.0, nphases),
                 "angmax" => fill( 10.0, nphases),
+                "c_rating_a" => fill(Inf, nphases),
                 "br_status" => eng_obj["status"] == DISABLED ? 0 : 1,
             )
 
@@ -673,10 +675,15 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
             data_math["bus"]["$(math_obj["gen_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...]
         end
 
-        for (fr_k, to_k) in [("vg", "vg"), ("pg_lb", "pmin"), ("pg_ub", "pmax"), ("qg_lb", "qmin"), ("qg_ub", "qmax")]
+        for (fr_k, to_k) in [("vg", "vg")]
             if haskey(eng_obj, fr_k)
                 math_obj[to_k] = eng_obj[fr_k]
             end
+        end
+
+        N = _infer_int_dim_unit(eng_obj, false)
+        for (fr_k, to_k, def) in [("pg_lb", "pmin", -Inf), ("pg_ub", "pmax", Inf), ("qg_lb", "qmin", -Inf), ("qg_ub", "qmax", Inf)]
+            math_obj[to_k] = haskey(eng_obj, fr_k) ? eng_obj[fr_k] : fill(def, N)
         end
 
         _add_gen_cost_model!(math_obj, eng_obj)
@@ -698,6 +705,7 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{St
         math_obj = _init_math_obj("storage", name, eng_obj, length(data_math["storage"])+1; pass_props=pass_props)
 
         math_obj["storage_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
+        math_obj["configuration"] = get(eng_obj, "configuration", WYE)
 
         math_obj["energy"] = eng_obj["energy"]
         math_obj["energy_rating"] = eng_obj["energy_ub"]
@@ -775,6 +783,8 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "va" => deepcopy(eng_obj["va"]),
                 "vmin" => deepcopy(get(eng_obj, "vm_lb", math_obj["control_mode"] == ISOCHRONOUS ? eng_obj["vm"] : fill(0.0, nphases))),
                 "vmax" => deepcopy(get(eng_obj, "vm_ub", math_obj["control_mode"] == ISOCHRONOUS ? eng_obj["vm"] : fill(Inf, nphases))),
+                "vm_pair_lb" => deepcopy(get(eng_obj, "vm_pair_lb", Tuple{Any,Any,Real}[])),
+                "vm_pair_ub" => deepcopy(get(eng_obj, "vm_pair_ub", Tuple{Any,Any,Real}[])),
                 "source_id" => "voltage_source.$name",
             )
             for (i,t) in enumerate(eng_obj["connections"])
@@ -798,6 +808,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "t_connections" => eng_obj["connections"],
                 "angmin" => fill(-10.0, nconductors),
                 "angmax" => fill( 10.0, nconductors),
+                "c_rating_a" => fill(Inf, nconductors),
                 "br_status" => 1,
                 "br_r" => _impedance_conversion(data_eng, eng_obj, "rs"),
                 "br_x" => _impedance_conversion(data_eng, eng_obj, "xs"),

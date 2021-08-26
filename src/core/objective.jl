@@ -248,28 +248,57 @@ end
 
 "gen connections adaptation of min fuel cost polynomial linquad objective"
 function _objective_mc_min_fuel_cost_polynomial_linquad(pm::AbstractUnbalancedPowerModel; report::Bool=true)
+    pg_contains_nl_exp = any(x<:JuMP.NonlinearExpression for x in vcat([typeof.(isa(pg, JuMP.Containers.DenseAxisArray) ? pg.data : pg) for nw in nw_ids(pm) for (id,pg) in var(pm, nw, :pg)]...))
     gen_cost = Dict()
-    for (n, nw_ref) in nws(pm)
-        for (i,gen) in nw_ref[:gen]
-            pg = sum( var(pm, n, :pg, i)[c] for c in gen["connections"] )
 
-            if length(gen["cost"]) == 1
-                gen_cost[(n,i)] = gen["cost"][1]
-            elseif length(gen["cost"]) == 2
-                gen_cost[(n,i)] = gen["cost"][1]*pg + gen["cost"][2]
-            elseif length(gen["cost"]) == 3
-                gen_cost[(n,i)] = gen["cost"][1]*pg^2 + gen["cost"][2]*pg + gen["cost"][3]
-            else
-                gen_cost[(n,i)] = 0.0
+    if !pg_contains_nl_exp
+        for (n, nw_ref) in nws(pm)
+            for (i,gen) in nw_ref[:gen]
+                pg = sum(var(pm, n, :pg, i))
+
+                if length(gen["cost"]) == 1
+                    gen_cost[(n,i)] = gen["cost"][1]
+                elseif length(gen["cost"]) == 2
+                    gen_cost[(n,i)] = gen["cost"][1]*pg + gen["cost"][2]
+                elseif length(gen["cost"]) == 3
+                    gen_cost[(n,i)] = gen["cost"][1]*pg^2 + gen["cost"][2]*pg + gen["cost"][3]
+                else
+                    gen_cost[(n,i)] = 0.0
+                end
             end
         end
-    end
 
-    return JuMP.@objective(pm.model, Min,
-        sum(
-            sum( gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] )
-        for (n, nw_ref) in nws(pm))
-    )
+        return JuMP.@objective(pm.model, Min,
+            sum(
+                sum( gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] )
+            for (n, nw_ref) in nws(pm))
+        )
+    else
+        for (n, nw_ref) in nws(pm)
+            for (i,gen) in nw_ref[:gen]
+                bus = gen["gen_bus"]
+
+                #to avoid function calls inside of @NLconstraint:
+                pg = var(pm, n, :pg, i)
+                int_dim = length(pg)
+                if length(gen["cost"]) == 1
+                    gen_cost[(n,i)] = gen["cost"][1]
+                elseif length(gen["cost"]) == 2
+                    gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, gen["cost"][1]*sum(pg[i] for i in 1:int_dim) + gen["cost"][2])
+                elseif length(gen["cost"]) == 3
+                    gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, gen["cost"][1]*sum(pg[i] for i in 1:int_dim)^2 + gen["cost"][2]*sum(pg[i] for i in 1:int_dim) + gen["cost"][3])
+                else
+                    gen_cost[(n,i)] = 0.0
+                end
+            end
+        end
+
+        return JuMP.@NLobjective(pm.model, Min,
+            sum(
+                sum(    gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] )
+            for (n, nw_ref) in nws(pm))
+        )
+    end
 end
 
 
@@ -302,36 +331,6 @@ end
 
 
 "Multiconductor adaptation of min fuel cost polynomial linquad objective"
-function _objective_mc_min_fuel_cost_polynomial_linquad(pm::AbstractUnbalancedIVRModel; report::Bool=true)
-    gen_cost = Dict()
-
-    for (n, nw_ref) in nws(pm)
-        for (i,gen) in nw_ref[:gen]
-            bus = gen["gen_bus"]
-
-            #to avoid function calls inside of @NLconstraint:
-            pg = var(pm, n, :pg, i)
-            if length(gen["cost"]) == 1
-                gen_cost[(n,i)] = gen["cost"][1]
-            elseif length(gen["cost"]) == 2
-                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, gen["cost"][1]*sum(pg[c] for c in gen["connections"]) + gen["cost"][2])
-            elseif length(gen["cost"]) == 3
-                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, gen["cost"][1]*sum(pg[c] for c in gen["connections"])^2 + gen["cost"][2]*sum(pg[c] for c in gen["connections"]) + gen["cost"][3])
-            else
-                gen_cost[(n,i)] = 0.0
-            end
-        end
-    end
-
-    return JuMP.@NLobjective(pm.model, Min,
-        sum(
-            sum(    gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] )
-        for (n, nw_ref) in nws(pm))
-    )
-end
-
-
-"Multiconductor adaptation of min fuel cost polynomial linquad objective"
 function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::AbstractUnbalancedIVRModel; report::Bool=true)
     gen_cost = Dict()
     switch_state = Dict()
@@ -341,13 +340,13 @@ function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::AbstractUnbal
             bus = gen["gen_bus"]
 
             #to avoid function calls inside of @NLconstraint:
-            pg = var(pm, n, :pg, i)
+            pg = sum(var(pm, n, :pg, i))
             if length(gen["cost"]) == 1
                 gen_cost[(n,i)] = gen["cost"][1]
             elseif length(gen["cost"]) == 2
-                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, gen["cost"][1]*sum(pg[c] for c in gen["connections"]) + gen["cost"][2])
+                gen_cost[(n,i)] = gen["cost"][1]*pg + gen["cost"][2]
             elseif length(gen["cost"]) == 3
-                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, gen["cost"][1]*sum(pg[c] for c in gen["connections"])^2 + gen["cost"][2]*sum(pg[c] for c in gen["connections"]) + gen["cost"][3])
+                gen_cost[(n,i)] = gen["cost"][1]*pg^2 + gen["cost"][2]*pg + gen["cost"][3]
             else
                 gen_cost[(n,i)] = 0.0
             end
@@ -357,7 +356,7 @@ function _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm::AbstractUnbal
         end
     end
 
-    return JuMP.@NLobjective(pm.model, Min,
+    return JuMP.@objective(pm.model, Min,
         sum(
             sum(    gen_cost[(n,i)] for (i,gen) in nw_ref[:gen] )
             + sum( switch_state[(n,i)] for i in ids(pm, n, :switch_dispatchable))

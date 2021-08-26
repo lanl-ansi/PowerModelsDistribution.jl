@@ -609,7 +609,7 @@ function _merge_terminals!(data_eng::Dict{String,Any}, bus_id::String, t_fr, t_t
                 end
             # multi-port components
             elseif _is_multiport_component(comp)
-                for (w,bus_w) in enumerate(comp_bus)
+                for (w,bus_w) in enumerate(comp["bus"])
                     if bus_w==bus_id
                         comp["connections"][w] = [t==t_fr ? t_to : t for t in comp["connections"][w]]
                     end
@@ -641,7 +641,7 @@ function transform_loops!(
 
     @assert data_eng["data_model"]==ENGINEERING
 
-    for (id,line) in data_eng["line"]
+    for (id,line) in get(data_eng, "line", Dict())
         if line["f_bus"]==line["t_bus"]
             # obtain impedance parameters, directly or from linecode
             z_s, y_fr, y_to = _get_line_impedance_parameters(data_eng, line)
@@ -936,7 +936,7 @@ reduce_lines(data_eng::Dict{String,Any}) = reduce_lines!(deepcopy(data_eng))
 
 "Reverse the direction of a line."
 function _line_reverse!(line::Dict{String,Any})
-    prop_pairs = [("f_bus", "t_bus"), ("g_fr", "g_to"), ("b_fr","b_to")]
+    prop_pairs = [("f_bus", "t_bus"), ("f_connections", "t_connections"), ("g_fr", "g_to"), ("b_fr","b_to")]
 
     for (x,y) in prop_pairs
         if haskey(line, x)
@@ -993,8 +993,7 @@ function delete_trailing_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
     line_has_shunt = Dict()
     bus_lines = Dict(k=>[] for k in keys(data_eng["bus"]))
     for (id,line) in data_eng["line"]
-        lc = data_eng["linecode"][line["linecode"]]
-        zs, y_fr, y_to = _get_line_impedance_parameters(data_eng, line)
+        _, y_fr, y_to = _get_line_impedance_parameters(data_eng, line)
         line_has_shunt[id] = !iszero(y_fr) || !iszero(y_to)
         push!(bus_lines[line["f_bus"]], id)
         push!(bus_lines[line["t_bus"]], id)
@@ -1127,8 +1126,8 @@ end
 
 "Generates pairwise bounds for oneport components."
 function _generate_vm_pairs(connections::Vector, model::ConnConfig, lb::Real, ub::Real; delta_multiplier::Real=sqrt(3))
-    vm_pair_ub = []
-    vm_pair_lb = []
+    vm_pair_ub = Tuple{Any,Any,Real}[]
+    vm_pair_lb = Tuple{Any,Any,Real}[]
 
     if model==WYE
         n = connections[end]

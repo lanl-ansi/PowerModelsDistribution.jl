@@ -1151,6 +1151,8 @@ function _correct_branch_directions!(pm_data::Dict{String,<:Any})
             branch_orginal = copy(branch)
             branch["f_bus"] = branch_orginal["t_bus"]
             branch["t_bus"] = branch_orginal["f_bus"]
+            branch["f_connections"] = branch_orginal["t_connections"]
+            branch["t_connections"] = branch_orginal["f_connections"]
             branch["g_to"] = branch_orginal["g_fr"]
             branch["b_to"] = branch_orginal["b_fr"]
             branch["g_fr"] = branch_orginal["g_to"]
@@ -1571,4 +1573,36 @@ function _standardize_cost_terms!(components::Dict{String,<:Any}, comp_order::In
         end
     end
     return modified
+end
+
+
+"infer the internal dimension of a winding, load or generator based on the connections and the configuration"
+function _infer_int_dim(connections::Vector, configuration::ConnConfig, kron_reduced)
+    if configuration==WYE
+        if kron_reduced
+            return length(connections)
+        else
+            return length(connections)-1
+        end
+    else # DELTA
+        if length(connections)==2
+            return 1
+        elseif length(connections)==3
+            return 3
+        else
+            error("Only 1 and 3 phase delta-connections are supported.")
+        end
+    end
+end
+
+
+"infer the internal dimension for a unit, i.e. any one-port component with `connections` and `configuration` properties"
+function _infer_int_dim_unit(unit::Dict{String,<:Any}, kron_reduced)
+    return _infer_int_dim(unit["connections"], unit["configuration"], kron_reduced)
+end
+
+
+"infer the internal dimension for a transformer (only in the MATHEMATICAL data model format)"
+function _infer_int_dim_transformer(trans::Dict{String,<:Any}, kron_reduced)
+    return _infer_int_dim(trans["f_connections"], trans["configuration"], kron_reduced)
 end

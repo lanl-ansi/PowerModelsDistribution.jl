@@ -336,6 +336,8 @@ function _build_loss_model!(
             "bus_i" => length(data_math["bus"])+1,
             "vmin" => fill(0.0, nphases),
             "vmax" => fill(Inf, nphases),
+            "vm_pair_lb" => Tuple{Any,Any,Real}[],
+            "vm_pair_ub" => Tuple{Any,Any,Real}[],
             "terminals" => collect(1:nphases),
             "grounded" => fill(false, nphases),
             "base_kv" => 1.0,
@@ -400,6 +402,7 @@ function _build_loss_model!(
             "b_to" => diagm(0=>fill(b_to, nphases)),
             "angmin" => fill(-10.0, nphases),
             "angmax" => fill( 10.0, nphases),
+            "c_rating_a" => fill(Inf, nphases),
             "shift" => zeros(nphases),
             "tap" => ones(nphases),
             "switch" => false,
@@ -870,8 +873,8 @@ Returns the tightest set of pairwise voltage magnitude bounds,
 removing looser bounds which are implied by the tighter ones.
 """
 function _get_tight_pairwise_voltage_magnitude_bounds(bus::Dict)
-    lb_pairs = []
-    ub_pairs = []
+    lb_pairs = Tuple{Any,Any,Real}[]
+    ub_pairs = Tuple{Any,Any,Real}[]
     
     haskey(bus, "vm_pair_lb") && append!(lb_pairs, bus["vm_pair_lb"])
     haskey(bus, "vm_pair_ub") && append!(ub_pairs, bus["vm_pair_ub"])
@@ -882,13 +885,13 @@ function _get_tight_pairwise_voltage_magnitude_bounds(bus::Dict)
     haskey(bus, "vm_pp_lb") && append!(ub_pairs, [(bus["phases"][i], bus["phases"][j], bus["vm_pp_lb"]) for i in 1:length(bus["phases"]) for j in i+1:length(bus["phases"])])
     haskey(bus, "vm_pp_ub") && append!(ub_pairs, [(bus["phases"][i], bus["phases"][j], bus["vm_pp_ub"]) for i in 1:length(bus["phases"]) for j in i+1:length(bus["phases"])])
 
-    lb_pairs_tight = []
+    lb_pairs_tight = Tuple{Any,Any,Real}[]
     for (c,d) in unique([(min(n,m), max(n,m)) for (n,m,bound) in lb_pairs])
         bound = maximum([bound for (n,m,bound) in lb_pairs if (n==c&&m==d) || (n==d&&m==c)])
         push!(lb_pairs_tight, (c, d, bound))
     end
 
-    ub_pairs_tight = []
+    ub_pairs_tight = Tuple{Any,Any,Real}[]
     for (c,d) in unique([(min(n,m), max(n,m)) for (n,m,b) in ub_pairs])
         bound = minimum([bound for (n,m,bound) in ub_pairs if (n==c&&m==d) || (n==d&&m==c)])
         push!(ub_pairs_tight, (c, d, bound))
@@ -957,14 +960,6 @@ function _add_implicit_absolute_bounds!(bus_math, terminals::Vector)
 
     bus_math["vmin"] = vmin
     bus_math["vmax"] = vmax
-    if isempty(lb_keep_idx)
-        delete!(bus_math, "vm_pair_lb")
-    else
-        bus_math["vm_pair_lb"] = vm_pair_lb[lb_keep_idx]
-    end
-    if isempty(ub_keep_idx)
-        delete!(bus_math, "vm_pair_ub")
-    else
-        bus_math["vm_pair_ub"] = vm_pair_ub[ub_keep_idx]
-    end
+    bus_math["vm_pair_lb"] = vm_pair_lb[lb_keep_idx]
+    bus_math["vm_pair_ub"] = vm_pair_ub[ub_keep_idx]
 end
