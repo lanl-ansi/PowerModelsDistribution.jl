@@ -375,13 +375,13 @@ function variable_mx_hermitian(model::JuMP.Model, indices::Array{T,1}, N::Dict{T
     if !ismissing(symm_bound)
         @assert(ismissing(upper_bound) && ismissing(lower_bound), "When a symmetric bound is specified, no lower or upper bound can be specified.")
         upper_bound = symm_bound
-        lower_bound = Dict([(k,-v) for (k,v) in symm_bound])
+        lower_bound = Dict{Int,Matrix{Real}}([(k,-v) for (k,v) in symm_bound])
     end
 
     if !ismissing(sqrt_upper_bound)
         @assert(ismissing(upper_bound) && ismissing(lower_bound) && ismissing(symm_bound), "When a square root bound is specified, no lower, upper or symmetric bound can be specified.")
-        upper_bound = Dict([(k,v*v') for (k,v) in sqrt_upper_bound])
-        lower_bound = Dict([(k,-w) for (k,w) in upper_bound])
+        upper_bound = Dict{Int,Matrix{Real}}([(k,v*v') for (k,v) in sqrt_upper_bound])
+        lower_bound = Dict{Int,Matrix{Real}}([(k,-w) for (k,w) in upper_bound])
 
         if !ismissing(sqrt_lower_bound)
             for (id, w) in lower_bound
