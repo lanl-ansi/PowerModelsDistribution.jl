@@ -635,7 +635,8 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         math_obj["control_mode"] = control_mode = Int(get(eng_obj, "control_mode", FREQUENCYDROOP))
         math_obj["pmax"] = get(eng_obj, "pg_ub", fill(Inf, length(connections)))
 
-        data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = status == 0 ? 1 : control_mode == Int(ISOCHRONOUS) ? 3 : 2
+        bus_type = data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"]
+        data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
         if control_mode == Int(ISOCHRONOUS) && status == 1
             data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = eng_obj["vg"]
@@ -673,12 +674,14 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
         math_obj["gen_status"] = status = Int(eng_obj["status"])
 
         math_obj["control_mode"] = control_mode = Int(get(eng_obj, "control_mode", FREQUENCYDROOP))
-        data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = status == 0 ? 1 : control_mode == Int(ISOCHRONOUS) ? 3 : 2
+        bus_type = data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"]
+        data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
         if control_mode == Int(ISOCHRONOUS) && status == 1
             data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...]
+            data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = 3
         end
 
         for (fr_k, to_k) in [("vg", "vg"), ("pg_lb", "pmin"), ("pg_ub", "pmax"), ("qg_lb", "qmin"), ("qg_ub", "qmax")]
@@ -706,7 +709,6 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{St
         math_obj = _init_math_obj("storage", name, eng_obj, length(data_math["storage"])+1; pass_props=pass_props)
 
         math_obj["storage_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
-
         math_obj["energy"] = eng_obj["energy"]
         math_obj["energy_rating"] = eng_obj["energy_ub"]
         math_obj["charge_rating"] = eng_obj["charge_ub"]
@@ -725,7 +727,8 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{St
         math_obj["qs"] = get(eng_obj, "qs", zeros(size(eng_obj["cm_ub"])))
 
         math_obj["control_mode"] = control_mode = Int(get(eng_obj, "control_mode", FREQUENCYDROOP))
-        data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"] = math_obj["status"] == 0 ? 1 : control_mode == Int(ISOCHRONOUS) ? 3 : 2
+        bus_type = data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"]
+        data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"] = _compute_bus_type(bus_type, math_obj["status"], control_mode)
         if control_mode == Int(ISOCHRONOUS) && math_obj["status"] == 1
             data_math["bus"]["$(math_obj["storage_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...]
         end
@@ -827,7 +830,9 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
             data_math["bus"]["$gen_bus"]["vmax"] = [vm_ub..., [Inf for n in 1:(nconductors-nphases)]...]
             data_math["bus"]["$gen_bus"]["vm"] = [eng_obj["vm"]..., [0.0 for n in 1:(nconductors-nphases)]...]
             data_math["bus"]["$gen_bus"]["va"] = [eng_obj["va"]..., [0.0 for n in 1:(nconductors-nphases)]...]
-            data_math["bus"]["$gen_bus"]["bus_type"] = status == 0 ? 1 : control_mode == Int(ISOCHRONOUS) ? 3 : 2
+
+            bus_type = data_math["bus"]["$gen_bus"]["bus_type"]
+            data_math["bus"]["$gen_bus"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
         end
 
         data_math["gen"]["$(math_obj["index"])"] = math_obj

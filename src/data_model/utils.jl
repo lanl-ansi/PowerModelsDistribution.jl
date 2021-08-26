@@ -863,3 +863,21 @@ function _map_conductor_ids!(data_math::Dict{String,<:Any})
         bus["terminals"] = Vector{Int}([cnd_map[t] for t in bus["terminals"]])
     end
 end
+
+
+"computes the bus type based on existing bus_type, the status of the generation object, and the control_mode"
+function _compute_bus_type(existing_bus_type::Int, gen_status::Int, control_mode::Int)::Int
+    bus_type = existing_bus_type
+
+    if gen_status == Int(ENABLED) && bus_type != pmd_math_component_status_inactive["bus"]
+        if control_mode == Int(ISOCHRONOUS)
+            bus_type = 3
+        else
+            if bus_type != 3
+                bus_type = 2
+            end
+        end
+    end
+
+    return bus_type
+end
