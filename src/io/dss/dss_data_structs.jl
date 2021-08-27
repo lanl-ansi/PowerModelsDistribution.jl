@@ -346,3 +346,80 @@ function _create_spectrum(name::String=""; kwargs...)
     )
 end
 
+
+"""
+Creates a Dict{String,Any} containing all expected properties for a CapControl
+object. See OpenDSS documentation for valid fields and ways to specify
+different properties.
+"""
+function _create_capcontrol(name::String=""; kwargs...)::Dict{String,Any}
+    Dict{String,Any}(
+        "name" => name,
+        "element" => get(kwargs, :element, ""),
+        "capacitor" => get(kwargs, :capacitor, ""),
+        "type" => get(kwargs, :type, "current"),
+        "ctphase" => get(kwargs, :ctphase, 1),
+        "ctratio" => get(kwargs, :ctratio, 60.0),
+        "deadtime" => get(kwargs, :deadtime, 300.0),
+        "delay" => get(kwargs, :delay, 15.0),
+        "delayoff" => get(kwargs, :delayoff, 15.0),
+        "eventlog" => get(kwargs, :eventlog, true),
+        "offsetting" => get(kwargs, :offsetting, 200.0),
+        "onsetting" => get(kwargs, :onsetting, 300.0),
+        "ptphase" => get(kwargs, :ptphase, 1),
+        "ptratio" => get(kwargs, :ptratio, 60.0),
+        "terminal" => get(kwargs, :terminal, 1),
+        "vbus" => get(kwargs, :vbus, ""),
+        "vmax" => get(kwargs, :vmax, 126.0),
+        "vmin" => get(kwargs, :vmin, 115.0),
+        "voltoverride" => get(kwargs, :voltoverride, false),
+        "pctminkvar" => get(kwargs, :pctminkvar, 50.0),
+        "enabled" => get(kwargs, :enabled, true),
+        "like" => get(kwargs, :like, ""),
+    )
+end
+
+
+"""
+Creates a Dict{String,Any} containing all expected properties for a RegControl
+object. See OpenDSS documentation for valid fields and ways to specify
+different properties.
+"""
+function _create_regcontrol(name::String=""; kwargs...)::Dict{String,Any}
+    Dict{String,Any}(
+        "name" => name,
+        "transformer" => get(kwargs, :transformer, ""),
+        "winding" => get(kwargs, :winding, 1),
+        "vreg" => get(kwargs, :vreg, 120.0),
+        "band" => get(kwargs, :band, 3.0),
+        "delay" => get(kwargs, :delay, 15.0),
+        "ptratio" => get(kwargs, :ptratio, 60.0),
+        "ctprim" => get(kwargs, :ctprim, 300.0),
+        "r" => get(kwargs, :r, 0.0),
+        "x" => get(kwargs, :x, 0.0),
+        "ptphase" => get(kwargs, :ptphase, 1),
+        "tapwinding" => get(kwargs, :tapwinding, get(kwargs, :winding, 1)),
+        "bus" => get(kwargs, :bus, ""),
+        "debugtrace" => get(kwargs, :debugtrace, false),
+        "eventlog" => get(kwargs, :eventlog, true),
+        "inversetime" => get(kwargs, :inversetime, false),
+        "maxtapchange" => get(kwargs, :maxtapchange, 16),
+        "revband" => get(kwargs, :revband, 3.0),
+        "revdelay" => get(kwargs, :revdelay, 60.0),
+        "reversible" => get(kwargs, :reversible, false),
+        "revneutral" => get(kwargs, :revneutral, false),
+        "revr" => get(kwargs, :revr, 0.0),
+        "revthreshold" => get(kwargs, :revthreshold, 100.0),
+        "revvreg" => get(kwargs, :revvreg, 120.0),
+        "revx" => get(kwargs, :revx, 0.0),
+        "tapdelay" => get(kwargs, :tapdelay, 2.0),
+        "tapnum" => get(kwargs, :tapnum, 0),
+        "vlimit" => get(kwargs, :vlimit, 0.0),
+        "rev_z" => get(kwargs, :rev_z, 0.0),
+        "ldc_z" => get(kwargs, :ldc_z, 0.0),
+        "cogen" => get(kwargs, :cogen, false),
+        "remoteptratio" => get(kwargs, :remoteptratio, 60.0),
+        "enabled" => get(kwargs, :enabled, true),
+        "like" => get(kwargs, :like, ""),
+    )
+end

@@ -827,6 +827,37 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
 end
 
 
+"Adds regcontrol to `data_eng` from `data_dss`"
+function _dss2eng_regcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, import_all::Bool)
+    for (id, dss_obj) in get(data_dss, "regcontrol", Dict{String,Any}())
+        _apply_like!(dss_obj, data_dss, "regcontrol")
+         defaults = _apply_ordered_properties(_create_regcontrol(id; _to_kwargs(dss_obj)...), dss_obj)
+
+        nrw = get(data_dss["transformer"]["$(dss_obj["transformer"])"],"windings",2)
+        nphases = data_dss["transformer"]["$(dss_obj["transformer"])"]["phases"]
+
+        eng_obj = Dict{String,Any}(
+            "vreg" => [[w == defaults["winding"] && p == defaults["ptphase"] ? defaults["vreg"] : 0.0 for p in 1:nphases] for w in 1:nrw],
+            "band" => [[w == defaults["winding"] && p == defaults["ptphase"] ? defaults["band"] : 0.0 for p in 1:nphases] for w in 1:nrw],
+            "ptratio" => [[w == defaults["winding"] && p == defaults["ptphase"] ? defaults["ptratio"] : 0.0 for p in 1:nphases] for w in 1:nrw],
+            "ctprim" => [[w == defaults["winding"] && p == defaults["ptphase"] ? defaults["ctprim"] : 0.0 for p in 1:nphases] for w in 1:nrw],
+            "r" => [[w == defaults["winding"] && p == defaults["ptphase"] ? defaults["r"] : 0.0 for p in 1:nphases] for w in 1:nrw],
+            "x" => [[w == defaults["winding"] && p == defaults["ptphase"] ? defaults["x"] : 0.0 for p in 1:nphases] for w in 1:nrw]
+            ) 
+
+        if import_all
+            _import_all!(eng_obj, dss_obj)
+        end
+
+        # add regcontrol items to transformer if present
+        data_eng["transformer"]["$(dss_obj["transformer"])"]["controls"] = eng_obj
+        if haskey(data_eng["transformer"]["$(dss_obj["transformer"])"],"tm_fix")
+            data_eng["transformer"]["$(dss_obj["transformer"])"]["tm_fix"] = [[w == defaults["winding"] && p == defaults["ptphase"] ? false : true for p in 1:nphases] for w in 1:nrw]
+        end
+    end
+end
+
+
 """
     parse_opendss(
         io::IO;
@@ -937,6 +968,8 @@ function parse_opendss(
     _dss2eng_capacitor!(data_eng, data_dss, import_all)
     _dss2eng_reactor!(data_eng, data_dss, import_all)
 
+    _dss2eng_regcontrol!(data_eng, data_dss, import_all)
+
     _dss2eng_loadshape!(data_eng, data_dss, import_all)
     _dss2eng_load!(data_eng, data_dss, import_all, time_series)
 
@@ -958,4 +991,46 @@ function parse_opendss(
     find_conductor_ids!(data_eng)
 
     return data_eng
+end
+
+
+"""
+    add_voltage_starts!(eng::Dict{String,<:Any}, voltages::Dict{String,<:Any})
+
+Function to add vm_start and va_start properties to buses from a voltages dictionary with the formats
+
+```julia
+Dict{String,Any}(
+    "bus" => Dict{String,Any}(
+        "terminals" => Int[],
+        "vm" => Real[],
+        "va" => Real[],
+        "vbase" => Real,
+    )
+)
+```
+
+`"vm_start"`, `"va_start"`, and `"vbase"` are expected to be in SI units. `"vbase"` is optional.
+"""
+function add_voltage_starts!(eng::Dict{String,<:Any}, voltages::Dict{String,<:Any})
+    for (bus_id, obj) in voltages
+        eng_obj = eng["bus"][bus_id]
+
+        eng_obj["vm_start"] = Real[t in obj["terminals"] ? obj["vm"][findfirst(isequal(t), obj["terminals"])] : 0.0 for t in eng_obj["terminals"]] ./ eng["settings"]["voltage_scale_factor"]
+        eng_obj["va_start"] = Real[t in obj["terminals"] ? obj["va"][findfirst(isequal(t), obj["terminals"])] : 0.0 for t in eng_obj["terminals"]]
+        if haskey(obj, "vbase")
+            eng_obj["vbase"] = obj["vbase"] ./ eng["settings"]["voltage_scale_factor"]
+        end
+    end
+end
+
+
+"""
+    add_voltage_starts!(eng::Dict{String,<:Any}, voltages_file::String)
+
+Function to add `vm_start` and `va_start` properties to buses from a voltages csv file exported from OpenDSS,
+using [`parse_dss_voltages_export`](@ref parse_dss_voltages_export)
+"""
+function add_voltage_starts!(eng::Dict{String,<:Any}, voltages_file::String)
+    add_voltage_starts!(eng, parse_dss_voltages_export(voltages_file))
 end

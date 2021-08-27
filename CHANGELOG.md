@@ -2,12 +2,43 @@
 
 ## staged
 
+- Added explicit neutral formulations
 - Fix bug in `constraint_mc_switch_thermal_limit` where switch property name contained a typo
 - Fix bug in `constraint_mc_thermal_limit_from` where `Inf` values in `rate_a` would lead to an error
 - Fix bug in `correct_branch_directions!` where `f_connections` and `t_connections` were not being swapped
 - Fix bug in `_rebase_pu_branch!` where current ratings were being non-dimensionalized with the power base instead of the current base, and added non-dimensionalization for power ratings
 - Fix bug in `_rebase_pu_switch!` where current ratings were being non-dimensionalized with the power base instead of the current base, and added non-dimensionalization for power ratings
 - The qualifier `t` was removed from the transformer solution properties, i.e. `crt`->`cr`, to be consistent with solution naming conventions where these qualifiers are omitted as they are contained in a transformer component dictionary, unlike the variables
+- Fix bug where the lower and upper bound variables created in `variable_mx_hermitian` can be the wrong type
+- Fix bug in correct_bus_types! and eng2math functions where reference bus was being overwritten depending on the order generation objects were parsed
+- Fix `calc_max_cost_index` to support multi-infrastructure data
+
+## v0.11.6
+
+- Fix voltage magnitude start values, by looking for `_start` values, then `vm`, then `vmin`, to ensure start values are feasible
+- Fix bug in `_biggest_generator` where if generator upper bound is missing, `correct_bus_types!` would fail
+- Adds simple transformer bounds calculations in `_calc_transformer_power_ub_frto` and `_calc_transformer_current_max_frto`
+- Updated usage of `control_mode` property on generation objects, such that `ISOCHRONOUS` leads to `bus_type=3`, `FREQUENCYDROOP` leads to `bus_type=2`, and status being `DISABLED` leads to `bus_type=1`
+- Fixed bug in `make_solution_si` where an error would occur if the solution was empty
+- Fixed bug in `build_mn_mc_mld_simple(pm::AbstractUBFModel)` where call to `constraint_mc_switch_thermal_limit` was missing keyword argument `nw=n`
+- Added simplified linear formulation using first-order Taylor (FOT) approximation
+- Added wye-connected RegControl for ACP, ACR, LinDist3Flow and FBS formulations
+
+## v0.11.5
+
+- Fixed typo in `transform_data_model` where `global_keys` should have been `global_keys=global_keys`
+- Added power variables `Pt` and `Qt` for transformers to `AbstractUBFModels`
+- Updated `_add_gen_cost_model!` to have a default `cost` vector that is `[1.0, 0.0]` instead of including a redundant first `0.0`
+- Fixed bug in eng2math functions where there was no check on generator or storage objects when assigning bus_type on their bus to see if the gen obj was enabled or disabled
+- Fixed bug in `sol_data_model` for W-space models where if the optimizer allowed some small infeasibility, it was possible to have a negative `w` value, which would crash when attempting to take the square-root
+- Added `build_solution_values` for data of type `LinearAlgebra.Symmetric{JuMP.VariableRef, Matrix{JuMP.VariableRef}}`
+- Fixed bug in solution builder where building a result dict would fail if there was no solution
+- Added "root-level" eng2math_passthrough option
+- Fixed bug where global keys were not getting passed to `_map_eng2math` function
+- Added support for parsing the results of dss command `export voltages` into `vm_start` and `va_start` values for warm starting bus voltages
+- Added simplified linear UBF formulation using a single iteration of forward-backward sweep (FBS)
+- Added support for raw parsing of RegControl and CapControl objects from dss
+- Added delta/voltage-dependent loads to LinDist3Flow formulation
 
 ## v0.11.4
 

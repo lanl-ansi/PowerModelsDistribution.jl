@@ -101,3 +101,6 @@ new linecode.test_matrix_syntax phases=3 rmatrix=[0.1 0.0 0.0 |0.0 0.1 ,0.0 |0.0
 new xycurve.test_delimiters points=[  1,2  3  ,4]
 
 setbusxy bus=testsource x=0.1 y=0.2
+
+new regcontrol.t1  transformer=t1 winding=2  vreg=122  band=2  ptratio=20 ctprim=700  R=3   X=9
+New CapControl.c1_Ctrl Capacitor=c1 element=Line.L2  terminal=1 type=kvar ptratio=1 ctratio=1 ONsetting=150 OFFsetting=-225 VoltOverride=Y Vmin=7110 Vmax=7740 Delay=100 Delayoff=100

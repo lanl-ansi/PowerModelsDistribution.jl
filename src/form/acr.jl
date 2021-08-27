@@ -16,15 +16,21 @@ function variable_mc_bus_voltage(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_d
 
         ncnd = length(terminals)
 
-        vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
-        vm[.!grounded] .= 1.0
+        if haskey(busref, "vr_start") && haskey(busref, "vm_start")
+            vr = busref["vr_start"]
+            vi = busref["vi_start"]
+        else
+            vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
+            vm[.!grounded] .= 1.0
 
-        # TODO how to do this more generally?
-        nph = 3
-        va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
+            # TODO how to do this more generally?
+            nph = 3
+            va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
 
-        vr = vm .* cos.(va)
-        vi = vm .* sin.(va)
+            vr = vm .* cos.(va)
+            vi = vm .* sin.(va)
+        end
+
         for (idx,t) in enumerate(terminals)
             JuMP.set_start_value(var(pm, nw, :vr, id)[t], vr[idx])
             JuMP.set_start_value(var(pm, nw, :vi, id)[t], vi[idx])
@@ -52,15 +58,21 @@ function variable_mc_bus_voltage_on_off(pm::AbstractUnbalancedACRModel; nw::Int=
 
         ncnd = length(terminals)
 
-        vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
-        vm[.!grounded] .= 1.0
+        if haskey(busref, "vr_start") && haskey(busref, "vm_start")
+            vr = busref["vr_start"]
+            vi = busref["vi_start"]
+        else
+            vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
+            vm[.!grounded] .= 1.0
 
-        # TODO how to do this more generally?
-        nph = 3
-        va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
+            # TODO how to do this more generally?
+            nph = 3
+            va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
 
-        vr = vm .* cos.(va)
-        vi = vm .* sin.(va)
+            vr = vm .* cos.(va)
+            vi = vm .* sin.(va)
+        end
+
         for (idx,t) in enumerate(terminals)
             JuMP.set_start_value(var(pm, nw, :vr, id)[t], vr[idx])
             JuMP.set_start_value(var(pm, nw, :vi, id)[t], vi[idx])
@@ -753,10 +765,17 @@ end
 
 "This function adds all constraints required to model a two-winding, wye-wye connected transformer."
 function constraint_mc_transformer_power_yy(pm::AbstractUnbalancedACRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+    transformer = ref(pm, nw, :transformer, trans_id)
+
     vr_fr = var(pm, nw, :vr, f_bus)
     vr_to = var(pm, nw, :vr, t_bus)
     vi_fr = var(pm, nw, :vi, f_bus)
     vi_to = var(pm, nw, :vi, t_bus)
+
+    p_fr = [var(pm, nw, :pt, f_idx)[c] for c in f_connections]
+    p_to = [var(pm, nw, :pt, t_idx)[c] for c in t_connections]
+    q_fr = [var(pm, nw, :qt, f_idx)[c] for c in f_connections]
+    q_to = [var(pm, nw, :qt, t_idx)[c] for c in t_connections]
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
     tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
@@ -766,15 +785,33 @@ function constraint_mc_transformer_power_yy(pm::AbstractUnbalancedACRModel, nw::
             JuMP.@constraint(pm.model, vr_fr[fc] == pol*tm_scale*tm[idx]*vr_to[tc])
             JuMP.@constraint(pm.model, vi_fr[fc] == pol*tm_scale*tm[idx]*vi_to[tc])
         else
+            # transformer taps without regcontrol, tap variable not required in regcontrol formulation
             JuMP.@constraint(pm.model, vr_fr[fc] == pol*tm_scale*tm[idx]*vr_to[tc])
             JuMP.@constraint(pm.model, vi_fr[fc] == pol*tm_scale*tm[idx]*vi_to[tc])
+
+            # with regcontrol
+            if haskey(transformer,"controls")
+                v_ref = transformer["controls"]["vreg"][idx] 
+                δ = transformer["controls"]["band"][idx]     
+                r = transformer["controls"]["r"][idx]           
+                x = transformer["controls"]["x"][idx]  
+                
+                # (cr+jci) = (p-jq)/(vr-j⋅vi)
+                cr = JuMP.@NLexpression(pm.model, ( p_to[idx]*vr_to[tc] + q_to[idx]*vi_to[tc])/(vr_to[tc]^2+vi_to[tc]^2)) 
+                ci = JuMP.@NLexpression(pm.model, (-q_to[idx]*vr_to[tc] + p_to[idx]*vi_to[tc])/(vr_to[tc]^2+vi_to[tc]^2))
+                # v_drop = (cr+jci)⋅(r+jx)
+                vr_drop = JuMP.@NLexpression(pm.model, r*cr-x*ci)
+                vi_drop = JuMP.@NLexpression(pm.model, r*ci+x*cr)
+
+                # (v_ref-δ)^2 ≤ (vr_fr-vr_drop)^2 + (vi_fr-vi_drop)^2 ≤ (v_ref+δ)^2
+                # (vr_fr^2 + vi_fr^2)/1.1^2 ≤ (vr_to^2 + vi_to^2) ≤ (vr_fr^2 + vi_fr^2)/0.9^2
+                JuMP.@NLconstraint(pm.model, (vr_fr[fc]-vr_drop)^2 + (vi_fr[fc]-vi_drop)^2 ≥ (v_ref - δ)^2)
+                JuMP.@NLconstraint(pm.model, (vr_fr[fc]-vr_drop)^2 + (vi_fr[fc]-vi_drop)^2 ≤ (v_ref + δ)^2)
+                JuMP.@constraint(pm.model, (vr_fr[fc]^2 + vi_fr[fc]^2)/1.1^2 ≤ vr_to[tc]^2 + vi_to[tc]^2)
+                JuMP.@constraint(pm.model, (vr_fr[fc]^2 + vi_fr[fc]^2)/0.9^2 ≥ vr_to[tc]^2 + vi_to[tc]^2)   
+            end
         end
     end
-
-    p_fr = [var(pm, nw, :pt, f_idx)[c] for c in f_connections]
-    p_to = [var(pm, nw, :pt, t_idx)[c] for c in t_connections]
-    q_fr = [var(pm, nw, :qt, f_idx)[c] for c in f_connections]
-    q_to = [var(pm, nw, :qt, t_idx)[c] for c in t_connections]
 
     JuMP.@constraint(pm.model, p_fr + p_to .== 0)
     JuMP.@constraint(pm.model, q_fr + q_to .== 0)

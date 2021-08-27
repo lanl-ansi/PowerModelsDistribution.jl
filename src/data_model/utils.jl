@@ -656,7 +656,7 @@ function _add_gen_cost_model!(math_obj::Dict{String,<:Any}, eng_obj::Dict{String
     math_obj["model"] = get(eng_obj, "cost_pg_model", 2)
     math_obj["startup"] = 0.0
     math_obj["shutdown"] = 0.0
-    math_obj["cost"] = get(eng_obj, "cost_pg_parameters", [0.0, 1.0, 0.0])
+    math_obj["cost"] = get(eng_obj, "cost_pg_parameters", [1.0, 0.0])
     math_obj["ncost"] = length(math_obj["cost"])
 end
 
@@ -962,4 +962,22 @@ function _add_implicit_absolute_bounds!(bus_math, terminals::Vector)
     bus_math["vmax"] = vmax
     bus_math["vm_pair_lb"] = vm_pair_lb[lb_keep_idx]
     bus_math["vm_pair_ub"] = vm_pair_ub[ub_keep_idx]
+end
+
+
+"computes the bus type based on existing bus_type, the status of the generation object, and the control_mode"
+function _compute_bus_type(existing_bus_type::Int, gen_status::Int, control_mode::Int)::Int
+    bus_type = existing_bus_type
+
+    if gen_status == Int(ENABLED) && bus_type != pmd_math_component_status_inactive["bus"]
+        if control_mode == Int(ISOCHRONOUS)
+            bus_type = 3
+        else
+            if bus_type != 3
+                bus_type = 2
+            end
+        end
+    end
+
+    return bus_type
 end

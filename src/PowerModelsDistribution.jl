@@ -1,8 +1,11 @@
 module PowerModelsDistribution
 
     import JSON
+    import CSV
+
     import JuMP
     import MathOptInterface
+
     import InfrastructureModels
 
     import Logging
@@ -51,6 +54,8 @@ module PowerModelsDistribution
     include("form/bf.jl")
     include("form/bf_mx.jl")
     include("form/bf_mx_lin.jl")
+    include("form/bf_fbs.jl")
+    include("form/fot.jl")
     include("form/bf_mx_soc.jl")
     include("form/bf_mx_sdp.jl")
     include("form/shared.jl")

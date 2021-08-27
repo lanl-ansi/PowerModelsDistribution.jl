@@ -36,6 +36,7 @@ makedocs(
             "Beginners Guide" => "tutorials/Beginners Guide.md",
             "The Engineering Data Model" => "tutorials/The Engineering Model.md",
             "Engineering Model: Helper Functions" => "tutorials/Engineering Model - Helper Functions.md",
+            "Basics" => "tutorials/basic.md",
         ],
         "API Reference" => [
             "Base" => "reference/base.md",
@@ -105,4 +106,5 @@ end
 deploydocs(
     repo = "github.com/lanl-ansi/PowerModelsDistribution.jl.git",
     push_preview = false,
+    devbranch = "main",
 )

@@ -48,7 +48,7 @@ Examples of how to use PowerModelsDistribution can be found in the main document
 
 ## Development
 
-Community-driven development and enhancement of PowerModelsDistribution are welcome and encouraged. Please fork this repository and share your contributions to the master with pull requests.
+Community-driven development and enhancement of PowerModelsDistribution are welcome and encouraged. Please fork this repository and share your contributions with pull requests to the main branch.
 
 ## Acknowledgments
 

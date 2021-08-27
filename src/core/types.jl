@@ -247,6 +247,24 @@ abstract type AbstractUnbalancedNFAModel <: AbstractUnbalancedDCPModel end
 "The an active power only network flow approximation, also known as the transportation model."
 mutable struct NFAUPowerModel <: AbstractUnbalancedNFAModel @pmd_fields end
 
+"""
+First-order Taylor (FOT) approxmiation formulation uses polar coordinates for voltage. 
+All nonlinear equations are approximated using the initial operating voltage solution.
+```
+    @INPROCEEDINGS{girigoudar_roald_cdc2021,
+	author={K. Girigoudar and L. A. Roald},
+	booktitle={2021 IEEE Conference on Decision and Control (CDC)},
+	title={{Linearized  Three-Phase  Optimal  Power  Flow  Models for  Distribution  Grids  with  Voltage  Unbalance}},
+	year={2021},
+	organization={IEEE}
+}
+```
+"""
+abstract type AbstractLPUModel <: AbstractUnbalancedACPModel end
+
+"default LP unbalanced FOT constructor"
+mutable struct FOTUPowerModel <: AbstractLPUModel @pmd_fields end
+
 "Base Abstract NLP Unbalanced Branch Flow Model"
 abstract type AbstractNLPUBFModel <: AbstractUBFQPModel end
 
@@ -292,6 +310,24 @@ mutable struct LPUBFDiagPowerModel <: LPUBFDiagModel @pmd_fields end
 
 "More popular name for the [`LPUBFDiagPowerModel`](@ref LPUBFDiagPowerModel)"
 const LinDist3FlowPowerModel = LPUBFDiagPowerModel # more popular name
+
+"""
+Forward-backward sweep (FBS) linear branch flow formulation uses rectangular coordinates for voltage. 
+The branch flows are calculated using the initial operating voltage solution.
+```
+    @INPROCEEDINGS{girigoudar_roald_cdc2021,
+    author={K. Girigoudar and L. A. Roald},
+    booktitle={2021 IEEE Conference on Decision and Control (CDC)},
+    title={{Linearized  Three-Phase  Optimal  Power  Flow  Models for  Distribution  Grids  with  Voltage  Unbalance}},
+    year={2021},
+    organization={IEEE}
+}
+```
+"""
+abstract type FBSUBFModel <: AbstractLPUBFModel end
+
+"default LP unbalanced FBS constructor"
+mutable struct FBSUBFPowerModel <: FBSUBFModel @pmd_fields end
 
 "default SDP unbalanced DistFlow constructor"
 mutable struct SDPUBFPowerModel <: SDPUBFModel @pmd_fields end

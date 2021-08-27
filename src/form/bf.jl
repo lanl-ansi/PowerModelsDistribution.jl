@@ -42,9 +42,8 @@ Links to and from power and voltages in a wye-wye transformer, assumes tm_fixed 
 w_fr_i=(pol_i*tm_scale*tm_i)^2w_to_i
 """
 function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
-    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[fc] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
-
-    nph = length(tm_set)
+    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
+    transformer = ref(pm, nw, :transformer, trans_id)
 
     p_fr = [var(pm, nw, :pt, f_idx)[p] for p in f_connections]
     p_to = [var(pm, nw, :pt, t_idx)[p] for p in t_connections]
@@ -55,7 +54,30 @@ function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_i
     w_to = var(pm, nw, :w)[t_bus]
 
     for (idx, (fc, tc)) in enumerate(zip(f_connections, t_connections))
-        JuMP.@constraint(pm.model, w_fr[fc] == (pol*tm_scale*tm[idx])^2*w_to[tc])
+        if tm_fixed[idx]
+            JuMP.@constraint(pm.model, w_fr[fc] == (pol*tm_scale*tm[idx])^2*w_to[tc])
+        else
+            # TODO: linearize constraints for transformer taps without regcontrol, tap variable not required in regcontrol formulation
+            JuMP.@NLconstraint(pm.model, w_fr[fc] == (pol*tm_scale*tm[idx])^2*w_to[tc])
+
+            # with regcontrol
+            if haskey(transformer,"controls")
+                v_ref = transformer["controls"]["vreg"][idx] 
+                δ = transformer["controls"]["band"][idx]     
+                r = transformer["controls"]["r"][idx]           
+                x = transformer["controls"]["x"][idx]   
+                
+                # linearized voltage squared: w_drop = (2⋅r⋅p+2⋅x⋅q)
+                w_drop = JuMP.@expression(pm.model, 2*r*p_to[idx] + 2*x*q_to[idx])
+
+                # (v_ref-δ)^2 ≤ w_fr-w_drop ≤ (v_ref+δ)^2
+                # w_fr/1.1^2 ≤ w_to ≤ w_fr/0.9^2
+                JuMP.@constraint(pm.model, w_fr[fc] - w_drop ≥ (v_ref - δ)^2)
+                JuMP.@constraint(pm.model, w_fr[fc] - w_drop ≤ (v_ref + δ)^2)
+                JuMP.@constraint(pm.model, w_fr[fc]/1.1^2 ≤ w_to[tc])
+                JuMP.@constraint(pm.model, w_fr[fc]/0.9^2 ≥ w_to[tc])
+            end
+        end
     end
 
     JuMP.@constraint(pm.model, p_fr + p_to .== 0)

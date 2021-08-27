@@ -23,8 +23,8 @@ function _make_matrix_variable_element(model::JuMP.Model, indices::Array{T,1}, n
     upper_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
     lower_bound::Union{Missing, Dict{T,<:Matrix{<:Real}}}=missing,
     varname::String="") where T
-    nm_has_lb = !(ismissing(lower_bound) || all([lower_bound[index][n,m]==-Inf for index in indices]))
-    nm_has_ub = !(ismissing(upper_bound) || all([upper_bound[index][n,m]== Inf for index in indices]))
+    nm_has_lb = !(ismissing(lower_bound) || all([lower_bound[index][n,m]==-Inf || isnan(lower_bound[index][n,m]) for index in indices]))
+    nm_has_ub = !(ismissing(upper_bound) || all([upper_bound[index][n,m]== Inf || isnan(upper_bound[index][n,m]) for index in indices]))
 
     if !nm_has_ub && !nm_has_lb
         mat_nm = JuMP.@variable(model, [index in indices],
@@ -375,13 +375,13 @@ function variable_mx_hermitian(model::JuMP.Model, indices::Array{T,1}, N::Dict{T
     if !ismissing(symm_bound)
         @assert(ismissing(upper_bound) && ismissing(lower_bound), "When a symmetric bound is specified, no lower or upper bound can be specified.")
         upper_bound = symm_bound
-        lower_bound = Dict([(k,-v) for (k,v) in symm_bound])
+        lower_bound = Dict{Int,Matrix{Real}}([(k,-v) for (k,v) in symm_bound])
     end
 
     if !ismissing(sqrt_upper_bound)
         @assert(ismissing(upper_bound) && ismissing(lower_bound) && ismissing(symm_bound), "When a square root bound is specified, no lower, upper or symmetric bound can be specified.")
-        upper_bound = Dict([(k,v*v') for (k,v) in sqrt_upper_bound])
-        lower_bound = Dict([(k,-w) for (k,w) in upper_bound])
+        upper_bound = Dict{Int,Matrix{Real}}([(k,v*v') for (k,v) in sqrt_upper_bound])
+        lower_bound = Dict{Int,Matrix{Real}}([(k,-w) for (k,w) in upper_bound])
 
         if !ismissing(sqrt_lower_bound)
             for (id, w) in lower_bound

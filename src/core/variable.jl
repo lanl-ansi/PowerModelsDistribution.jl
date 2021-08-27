@@ -94,7 +94,22 @@ function variable_mc_bus_voltage_magnitude_sqr(pm::AbstractUnbalancedPowerModel;
     w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_w_$(i)",
             lower_bound = 0.0,
-            start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, 1.0)
+            start = comp_start_value(
+                ref(pm, nw, :bus, i),
+                "w_start",
+                t,
+                comp_start_value(
+                    ref(pm, nw, :bus, i),
+                    "vm_start",
+                    t,
+                    comp_start_value(
+                        ref(pm, nw, :bus, i),
+                        "vm",
+                        t,
+                        1.0
+                    )
+                )^2
+            )
         ) for i in ids(pm, nw, :bus)
     )
 
@@ -120,7 +135,7 @@ function variable_mc_bus_voltage_magnitude_on_off(pm::AbstractUnbalancedPowerMod
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
     vm = var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
         [t in terminals[i]], base_name="$(nw)_vm_$(i)",
-        start = comp_start_value(ref(pm, nw, :bus, i), "vm_start", t, 1.0)
+        start = comp_start_value(ref(pm, nw, :bus, i), "vm_start", t, comp_start_value(ref(pm, nw, :bus, i), "vm", t, 1.0))
     ) for i in ids(pm, nw, :bus))
 
     if bounded
@@ -145,7 +160,27 @@ function variable_mc_bus_voltage_magnitude_sqr_on_off(pm::AbstractUnbalancedPowe
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
     w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
         [t in terminals[i]], base_name="$(nw)_w_$(i)",
-        start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, 1.001)
+        start = comp_start_value(
+            ref(pm, nw, :bus, i),
+            "w_start",
+            t,
+            comp_start_value(
+                ref(pm, nw, :bus, i),
+                "vm_start",
+                t,
+                comp_start_value(
+                    ref(pm, nw, :bus, i),
+                    "vm",
+                    t,
+                    comp_start_value(
+                        ref(pm, nw, :bus, i),
+                        "vmin",
+                        t,
+                        1.0
+                    )
+                )
+            )^2
+        )
     ) for i in ids(pm, nw, :bus))
 
     if bounded

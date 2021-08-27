@@ -155,6 +155,44 @@
             @test result["termination_status"] == LOCALLY_SOLVED
             @test isapprox(result["objective"], 0.054; atol=1e-4)
         end
+
+        @testset "test warm start from dss voltages export" begin
+            eng = deepcopy(case5_phase_drop)
+            add_voltage_starts!(eng, "../test/data/opendss/case5_voltage.csv")
+            apply_voltage_bounds!(eng)
+
+            for (_,bus) in eng["bus"]
+                nt = length(bus["terminals"])
+                @test haskey(bus, "vm_start") && length(bus["vm_start"]) == nt
+                @test haskey(bus, "va_start") && length(bus["va_start"]) == nt
+            end
+
+            math = transform_data_model(eng)
+
+            for (_,bus) in math["bus"]
+                if startswith(bus["source_id"], "bus")
+                    @test bus["vm_start"] <= bus["vmax"] && bus["vm_start"] >= bus["vmin"]
+                end
+            end
+
+            pm = instantiate_mc_model(math, ACPUPowerModel, build_mc_opf)
+            for (i,vm) in var(pm, nw_id_default, :vm)
+                if startswith(math["bus"]["$i"]["source_id"], "bus")
+                    @test all(JuMP.start_value(vm[t]) == math["bus"]["$i"]["vm_start"][idx] for (idx,t) in enumerate(math["bus"]["$i"]["terminals"]))
+                end
+            end
+
+            for (i,va) in var(pm, nw_id_default, :va)
+                if startswith(math["bus"]["$i"]["source_id"], "bus")
+                    @test all(JuMP.start_value(va[t]) == math["bus"]["$i"]["va_start"][idx] for (idx,t) in enumerate(math["bus"]["$i"]["terminals"]))
+                end
+            end
+
+            result = solve_mc_opf(eng, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+
+            @test all(isapprox.(result["solution"]["bus"]["midbus"]["vm"], [0.97352, 0.9649, 0.95646]; atol=1e-4))
+            @test all(isapprox.(result["solution"]["bus"]["midbus"]["va"], [-1.3, -121.3, 118.2]; atol=1e-1))
+        end
     end
 
     @testset "test opendss opf" begin
@@ -304,6 +342,35 @@
                                 )
             sol = solve_mc_opf(data, ACPUPowerModel, ipopt_solver)
             @test sol["termination_status"] == LOCALLY_SOLVED
+        end
+        @testset "3-bus unbalanced fot opf with yy transformer" begin
+            pmd = parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
+            sol = solve_mc_opf(pmd, FOTUPowerModel, ipopt_solver; make_si=false)
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.467547; atol=4e-2)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.484327; atol=3e-2)
+            @test all(isapprox.(sol["solution"]["bus"]["3"]["vm"], [0.87451, 0.8613, 0.85348]; atol=2e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["3"]["va"], [-0.1, -120.4, 119.8]; atol=2e-1))
+        end
+        @testset "3-bus unbalanced fot opf with dy transformer" begin
+            pmd = parse_file("../test/data/opendss/ut_trans_2w_dy_lag.dss")
+            sol = solve_mc_opf(pmd, FOTUPowerModel, ipopt_solver; make_si=false)
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.467699; atol=2e-1)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.485553; atol=6e-2)
+            @test all(isapprox.(sol["solution"]["bus"]["3"]["vm"], [0.92092, 0.91012, 0.90059]; atol=3e-1))
+        end
+        @testset "3-bus unbalanced fot opf with voltage-dependent loads" begin
+            pmd = parse_file("../test/data/opendss/case3_unbalanced_delta_loads.dss")
+            sol = solve_mc_opf(pmd, FOTUPowerModel, ipopt_solver; make_si=false)
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.0420464; atol=1e-3)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.0181928; atol=1e-3)
+            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["vm"], [0.94105, 0.95942, 0.95876]; atol=2e-3))
+            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["va"], [-0.9, -120.3, 120.2]; atol=2e-1))
         end
     end
 end

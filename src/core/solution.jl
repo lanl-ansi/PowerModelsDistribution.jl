@@ -41,6 +41,12 @@ function _IM.build_solution_values(var::JuMP.Containers.DenseAxisArray{<:Any,1})
 end
 
 
+"custom `build_solution_values` for multiconductor (vector) constants"
+function _IM.build_solution_values(var::LinearAlgebra.Symmetric{JuMP.VariableRef, Matrix{JuMP.VariableRef}})
+    return JuMP.value.(var.data)
+end
+
+
 "converts w models voltages to standard voltage magnitude (sqrt)"
 function _sol_data_model_w!(solution::Dict{String,<:Any})
     if haskey(solution, "nw")
@@ -53,7 +59,12 @@ function _sol_data_model_w!(solution::Dict{String,<:Any})
         if haskey(nw_data, "bus")
             for (i,bus) in nw_data["bus"]
                 if haskey(bus, "w")
-                    bus["vm"] = sqrt.(bus["w"])
+                    if any(bus["w"] .< 0) # e.g., as allowed by constraint violation settings
+                        bus["vm"] = zeros(length(bus["w"]))
+                        bus["vm"][bus["w"] .>= 0.0] .= sqrt.(bus["w"][bus["w"] .>= 0.0])
+                    else
+                        bus["vm"] = sqrt.(bus["w"])
+                    end
                     delete!(bus, "w")
                 end
             end
@@ -109,6 +120,17 @@ solution_processor, see [`solve_mc_model`](@ref solve_mc_model),  to convert ACR
 back into polar representation (default data model voltage form)
 """
 function sol_data_model!(pm::AbstractUnbalancedACRModel, solution::Dict{String,<:Any})
+    apply_pmd!(_sol_data_model_acr!, solution)
+end
+
+
+"""
+    sol_data_model!(pm::FBSUBFPowerModel, solution::Dict{String,<:Any})
+
+solution_processor, to convert FBS variables
+back into polar representation (default data model voltage form)
+"""
+function sol_data_model!(pm::FBSUBFPowerModel, solution::Dict{String,<:Any})
     apply_pmd!(_sol_data_model_acr!, solution)
 end
 

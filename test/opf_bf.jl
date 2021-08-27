@@ -49,6 +49,57 @@
             @test sol["termination_status"] == LOCALLY_SOLVED
             @test norm(sol["solution"]["bus"]["loadbus"]["w"]-[0.92234, 0.95778], Inf) <= 1E-4
         end
+        @testset "3-bus unbalanced lpubfdiag opf_bf with delta loads" begin
+            pmd = parse_file("../test/data/opendss/case3_unbalanced_delta_loads.dss")
+            apply_voltage_bounds!(pmd; vm_lb=0.94105, vm_ub=0.9959);
+            sol = solve_mc_opf(pmd, LPUBFDiagPowerModel, ipopt_solver; make_si=false)
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.04026874; atol=2e-3)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.0171721; atol=2e-3)
+            @test norm(sqrt.(sol["solution"]["bus"]["loadbus"]["w"])-[0.94105, 0.95942, 0.95876], Inf) <= 5E-2
+            @test norm(sqrt.(sol["solution"]["bus"]["primary"]["w"])-[0.97052, 0.97902, 0.97870], Inf) <= 2E-2
+        end
+        @testset "3-bus unbalanced fbs opf_bf with switch" begin
+            pmd = parse_file("../test/data/opendss/case3_unbalanced_switch.dss")
+            sol = solve_mc_opf(pmd, FBSUBFPowerModel, ipopt_solver; make_si=false,solution_processors=[sol_data_model!])
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.0212194; atol=2e-3)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.00912439; atol=2e-3)
+            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["vm"], [0.98102, 0.98922, 0.98692]; atol=9e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["va"], [-0.2, -120.1, 120.1]; atol=3e-2))
+        end
+        @testset "3-bus unbalanced fbs opf_bf with yy transformer" begin
+            pmd = parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
+            sol = solve_mc_opf(pmd, FBSUBFPowerModel, ipopt_solver; make_si=false,solution_processors=[sol_data_model!])
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.467547; atol=4e-2)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.484327; atol=2e-2)
+            @test all(isapprox.(sol["solution"]["bus"]["3"]["vm"], [0.87451, 0.8613, 0.85348]; atol=3e-1))
+            @test all(isapprox.(sol["solution"]["bus"]["3"]["va"], [-0.1, -120.4, 119.8]; atol=2e-1))
+        end
+        @testset "3-bus unbalanced fbs opf_bf with dy transformer" begin
+            pmd = parse_file("../test/data/opendss/ut_trans_2w_dy_lag.dss")
+            sol = solve_mc_opf(pmd, FBSUBFPowerModel, ipopt_solver; make_si=false,solution_processors=[sol_data_model!])
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.467699; atol=2e-1)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.485553; atol=1e-1)
+            @test all(isapprox.(sol["solution"]["bus"]["3"]["vm"], [0.92092, 0.91012, 0.90059]; atol=5e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["3"]["va"], [-30, -150.4, 89.8]; atol=2e0))
+        end
+        @testset "3-bus unbalanced fbs opf_bf with voltage-dependent loads" begin
+            pmd = parse_file("../test/data/opendss/case3_unbalanced_delta_loads.dss")
+            sol = solve_mc_opf(pmd, FBSUBFPowerModel, ipopt_solver; make_si=false,solution_processors=[sol_data_model!])
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.0420464; atol=9e-3)
+            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.0181928; atol=9e-3)
+            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["vm"], [0.94105, 0.95942, 0.95876]; atol=2e-3))
+            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["va"], [-0.9, -120.3, 120.2]; atol=6e-2))
+        end
     end
 
     @testset "test linearised distflow opf_bf in diagonal matrix form" begin

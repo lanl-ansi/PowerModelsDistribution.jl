@@ -204,6 +204,19 @@ Special case of the Generic transformer, which is still a `transformer` object, 
 | `tm_fix`        | `fill(true,nphases)` | `Vector{Bool}` |       | oltc   | Indicates for each phase whether the tap ratio is fixed, `size=nphases`                                     |
 | `sm_ub`        |                       | `Real`         |       | opf   | Rating for the total apparent power magnitude at each winding                                     |
 
+#### Transformers with voltage regulator control (`controls`)
+
+Special case of the Generic transformer, which is part of the `transformer` object, and emulates a standard utility voltage regulator. The taps of these transformers can be controlled by modelling a line drop compensator. 
+
+| Name            | Default | Type                   | Units | Used   | Description                                                                                               																 	 |
+|-----------------|---------|------------------------|-------|--------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `vreg`          |  		 | `Vector{Vector{Real}}` | volt  |  oltc  | Voltage regulator reference, default value is `120.0` for the controlled winding, `0.0` for winding without regulator control, `size=((nphases),nwindings)`                 |
+| `band`          |  		 | `Vector{Vector{Real}}` | volt  |  oltc  | Voltage bandwidth, default value is `3.0` for the controlled winding, `0.0` for winding without regulator control, `size=((nphases),nwindings)`                             |
+| `ptratio`       |  		 | `Vector{Vector{Real}}` |       |  oltc  | Voltage ratio of the potential transformer, default value is `60.0` for the controlled winding, `0.0` for winding without regulator control, `size=((nphases),nwindings)`   |
+| `ctprim`        |  		 | `Vector{Vector{Real}}` | amp   |  oltc  | Current transformer rating on primary side, default value is `300.0` for the controlled winding, `0.0` for winding without regulator control, `size=((nphases),nwindings)`  |
+| `r`             |  		 | `Vector{Vector{Real}}` | volt  |  oltc  | Resistance setting on line drop compensator, default value is `0.0` for both controlled winding and winding without regulator control, `size=((nphases),nwindings)`         |
+| `x`             |  		 | `Vector{Vector{Real}}` | volt  |  oltc  | Reactance setting on line drop compensator, default value is `0.0` for both controlled winding and winding without regulator control, `size=((nphases),nwindings)`          |
+
 ### Switches (`switch`)
 
 Switches without `rs`, `xs` or a linecode (conductance/susceptance not considered), defined the switch will be treated as lossless. If lossy parameters are defined, `switch` objects will be decomposed into virtual `branch` & `bus`, and an ideal `switch`.

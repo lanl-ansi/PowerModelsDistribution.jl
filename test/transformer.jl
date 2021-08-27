@@ -164,4 +164,60 @@
             @test norm(sola["solution"]["branch"]["1"]["pf"]-solb["solution"]["branch"]["1"]["pf"], Inf) <= 1E-3
         end
     end
+    @testset "voltage regulator control" begin
+        @testset "regcontrol_acp" begin
+            eng = parse_file("../test/data/opendss/IEEE13_RegControl.dss")
+            math = transform_data_model(eng)
+            sol = solve_mc_opf_oltc(math, ACPUPowerModel, ipopt_solver; make_si=false)
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.405235; atol=5e-4)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.2666; atol=9e-4)
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.0189, 1.0313, 1.0313]; atol=2e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["va"]*180/pi, [30, -90, 150]; atol=3e-3))
+            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.01875, 1.03125, 1.03125]; atol=2e-2))
+        end
+        @testset "regcontrol_acr" begin
+            eng = parse_file("../test/data/opendss/IEEE13_RegControl.dss")
+            math = transform_data_model(eng)
+            sol = solve_mc_opf_oltc(math, ACRUPowerModel, ipopt_solver; make_si=false, solution_processors=[sol_data_model!])
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.405235; atol=5e-4)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.2666; atol=9e-4)
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.0189, 1.0313, 1.0313]; atol=2e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["va"]*180/pi, [30, -90, 150]; atol=3e-3))
+            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.01875, 1.03125, 1.03125]; atol=2e-2))
+        end
+        @testset "regcontrol_lpubfdiag" begin
+            eng = parse_file("../test/data/opendss/IEEE13_RegControl.dss")
+            math = transform_data_model(eng)
+            sol = solve_mc_opf_oltc(math, LPUBFDiagPowerModel, ipopt_solver; make_si=false, solution_processors=[sol_data_model!])
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.405132; atol=7e-3)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.266410; atol=1e-2)
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.01545, 1.04077, 1.04216]; atol=3e-2))
+            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.01535, 1.04071, 1.04210]; atol=3e-2))
+        end
+        @testset "regcontrol_fbs" begin
+            eng = parse_file("../test/data/opendss/IEEE13_RegControl.dss")
+            math = transform_data_model(eng)
+            sol = solve_mc_opf_oltc(math, FBSUBFPowerModel, ipopt_solver; make_si=false,solution_processors=[sol_data_model!])
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.405132; atol=7e-3)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.266410; atol=1e-2)
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.01545, 1.04077, 1.04216]; atol=3e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["va"]*180/pi, [29.9998, -90.0022, 149.9971]; atol=5e-3))
+            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.01535, 1.04071, 1.04210]; atol=3e-2))
+        end
+        @testset "regcontrol_fot" begin
+            eng = parse_file("../test/data/opendss/IEEE13_RegControl.dss")
+            math = transform_data_model(eng)
+            sol = solve_mc_opf_oltc(math, FOTUPowerModel, ipopt_solver; make_si=false)
+            @test sol["termination_status"] == LOCALLY_SOLVED
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["pg"]), 0.405132; atol=7e-3)
+            @test isapprox(sum(sol["solution"]["gen"]["1"]["qg"]), 0.266410; atol=1e-2)
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["vm"], [1.01545, 1.04077, 1.04216]; atol=3e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["1"]["va"]*180/pi, [29.9998, -90.0022, 149.9971]; atol=5e-3))
+            @test all(isapprox.(sol["solution"]["transformer"]["2"]["tap"], [1.01535, 1.04071, 1.04210]; atol=3e-2))
+        end
+    end
 end
