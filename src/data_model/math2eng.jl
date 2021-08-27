@@ -257,7 +257,7 @@ function _map_math2eng_switch!(data_eng::Dict{String,<:Any}, data_math::Dict{Str
         merge!(eng_obj, math_obj)
     else
         switch_idx = findfirst([startswith(x, "switch") for x in map["to"]])
-        if !isnothing(switch_idx)
+        if !(switch_idx === nothing) # isnothing not allowed in Julia 1.0
             to_id = map["to"][switch_idx]
             math_obj = _get_math_obj(data_math, to_id)
             # skip to-side power and current; these come from branch
@@ -267,7 +267,7 @@ function _map_math2eng_switch!(data_eng::Dict{String,<:Any}, data_math::Dict{Str
         end
 
         branch_idx = findfirst([startswith(x, "branch") for x in map["to"]])
-        if !isnothing(branch_idx)
+        if !(switch_idx === nothing) # isnothing not allowed in Julia 1.0
             to_id = map["to"][branch_idx]
             math_obj = _get_math_obj(data_math, to_id)
             # add to-side power and current here
