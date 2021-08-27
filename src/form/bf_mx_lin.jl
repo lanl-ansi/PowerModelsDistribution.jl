@@ -285,3 +285,21 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
     end
 end
 
+
+"""
+	function constraint_mc_switch_thermal_limit(
+		pm::AbstractNLExplicitNeutralIVRModel,
+		nw::Int,
+		f_idx::Tuple{Int,Int,Int},
+		f_connections::Vector{Int},
+		rating::Vector{<:Real}
+	)
+
+This method is not yet implemented for AbstractLPUBFModel. 
+If the limit is finite, a warning is thrown.
+"""
+function constraint_mc_switch_thermal_limit(pm::AbstractLPUBFModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
+    if any(rating.<=Inf)
+        @warn "Encountered a finite switch thermal limit; these are not yet implemented for AbstractLPUBFModel."
+    end
+end
