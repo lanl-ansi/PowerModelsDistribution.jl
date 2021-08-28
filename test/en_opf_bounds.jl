@@ -13,7 +13,7 @@ data_dir = "data/en_validation_case_data"
 @testset "en opf bounds" begin
 
     @testset "branch current magnitude bound" begin
-        cm_ub = [100:-20:40...]
+        cm_ub = [6:-1:3...]
         data_eng = parse_file("$data_dir/test_gen_3ph_wye.dss", transformations=[remove_all_bounds!])
         data_eng["settings"]["sbase_default"] = 1.0
         data_eng["line"]["line1"]["cm_ub"] = cm_ub
@@ -23,6 +23,10 @@ data_dir = "data/en_validation_case_data"
         @assert gen_pv["name"]=="pv1"
         gen_pv["cost"] *= 0.5
         gen_pv["pmax"] = fill(Inf, 3)
+        # scale up objective to prevent feasibility issues
+        for (_,gen) in data_math["gen"]
+            gen["cost"] *= 1E3
+        end
 
         # IVRENPowerModel
         sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel)
@@ -44,10 +48,6 @@ data_dir = "data/en_validation_case_data"
         s_to = sol_pmd["line"]["line1"]["pt"]+im*sol_pmd["line"]["line1"]["qt"]
         v_to = sol_pmd["bus"]["b2"]["vr"]+im*sol_pmd["bus"]["b2"]["vi"]
         c_to = conj.(s_to./v_to)
-        a = abs.(c_to[1:3])
-        b = cm_ub[1:3]
-        @show abs.(c_to[1:3])
-        @show maximum(abs.((a.-b)./b))
         @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.01))
     end
 
