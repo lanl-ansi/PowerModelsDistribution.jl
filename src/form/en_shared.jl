@@ -712,7 +712,7 @@ function constraint_mc_transformer_voltage_yy(pm::RectangularVoltageExplicitNeut
     vi_to_n = var(pm, nw, :vi, t_bus)[t_connections[end]]
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
-    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for idx in 1:length(f_connections)-1]
+    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for idx in 1:length(tm_fixed)]
     scale = (tm_scale*pol).*tm_set
 
     JuMP.@constraint(pm.model, (vr_fr_P.-vr_fr_n) .== scale.*(vr_to_P.-vr_to_n))
@@ -755,7 +755,7 @@ function constraint_mc_transformer_voltage_dy(pm::RectangularVoltageExplicitNeut
     vi_to_n = var(pm, nw, :vi, t_bus)[t_connections[end]]
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
-    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx, (fc,tc)) in enumerate(zip(f_connections,t_connections))]
+    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for idx in 1:length(tm_fixed)]
     scale = (tm_scale*pol).*tm_set
 
     n_phases = length(tm)
