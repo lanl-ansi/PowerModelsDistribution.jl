@@ -1,8 +1,8 @@
 @info "running explicit neutral opf bound tests"
 
-function calc_sol_pmd(data_math, form)
+function calc_sol_pmd(data_math, form; optimizer=ipopt_solver)
     pm  = instantiate_mc_model(data_math, form, build_mc_opf)
-    res = optimize_model!(pm, optimizer=ipopt_solver)
+    res = optimize_model!(pm, optimizer=optimizer)
     @test res["termination_status"] == LOCALLY_SOLVED
     sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
     return sol_pmd
@@ -40,7 +40,7 @@ data_dir = "data/en_validation_case_data"
         @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.01))
 
         # ACRENPowerModel
-        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel)
+        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel, optimizer=ipopt_solver_adaptive)
         s_to = sol_pmd["line"]["line1"]["pt"]+im*sol_pmd["line"]["line1"]["qt"]
         v_to = sol_pmd["bus"]["b2"]["vr"]+im*sol_pmd["bus"]["b2"]["vi"]
         c_to = conj.(s_to./v_to)
