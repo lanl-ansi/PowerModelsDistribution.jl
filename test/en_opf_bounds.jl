@@ -3,6 +3,7 @@
 function calc_sol_pmd(data_math, form)
     pm  = instantiate_mc_model(data_math, form, build_mc_opf)
     res = optimize_model!(pm, optimizer=ipopt_solver)
+    @test res["termination_status"] == LOCALLY_SOLVED
     sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
     return sol_pmd
 end
