@@ -43,6 +43,10 @@ data_dir = "data/en_validation_case_data"
         s_to = sol_pmd["line"]["line1"]["pt"]+im*sol_pmd["line"]["line1"]["qt"]
         v_to = sol_pmd["bus"]["b2"]["vr"]+im*sol_pmd["bus"]["b2"]["vi"]
         c_to = conj.(s_to./v_to)
+        a = abs.(c_to[1:3])
+        b = cm_ub[1:3]
+        @show abs.(c_to[1:3])
+        @show maximum(abs.((a.-b)./b))
         @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.01))
     end
 
@@ -202,7 +206,7 @@ data_dir = "data/en_validation_case_data"
         sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel)
         v_b2 = sol_pmd["bus"]["b2"]["vr"]+im*sol_pmd["bus"]["b2"]["vi"]
         c, d, lb = vm_pair_ub[1]
-        @assert all(isapprox.(abs(v_b2[c]-v_b2[d]), lb, rtol=0.001))
+        @test all(isapprox.(abs(v_b2[c]-v_b2[d]), lb, rtol=0.001))
 
         # IVRQuadraticENPowerModel, IVRReducedQuadraticENPowerModel and ACRENPowerModel
         # share switch implementation with IVRQuadraticENPowerModel,
@@ -225,7 +229,7 @@ data_dir = "data/en_validation_case_data"
         sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel)
         v_b2 = sol_pmd["bus"]["b2"]["vr"]+im*sol_pmd["bus"]["b2"]["vi"]
         c, d, lb = vm_pair_lb[1]
-        @assert all(isapprox.(abs(v_b2[c]-v_b2[d]), lb, rtol=0.001))
+        @test all(isapprox.(abs(v_b2[c]-v_b2[d]), lb, rtol=0.001))
 
         # IVRQuadraticENPowerModel, IVRReducedQuadraticENPowerModel and ACRENPowerModel
         # share switch implementation with IVRQuadraticENPowerModel,
