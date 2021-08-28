@@ -993,7 +993,7 @@ function constraint_mc_transformer_current_yy(pm::AbstractExplicitNeutralIVRMode
     ci_to_P = var(pm, nw, :cit, t_idx)
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
-    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for idx in 1:length(f_connections)-1]
+    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for idx in 1:length(tm_fixed)]
     scale = (tm_scale*pol).*tm_set
 
     JuMP.@constraint(pm.model, scale.*cr_fr_P .+ cr_to_P .== 0)
@@ -1040,7 +1040,7 @@ function constraint_mc_transformer_current_dy(pm::AbstractExplicitNeutralIVRMode
     ci_to_P = var(pm, nw, :cit, t_idx)
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
-    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx, (fc,tc)) in enumerate(zip(f_connections,t_connections))]
+    tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for idx in 1:length(tm_fixed)]
     scale = (tm_scale*pol).*tm_set
 
     n_phases = length(tm)
