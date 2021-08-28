@@ -79,6 +79,12 @@ function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw=nw_id_default, bounded
 end
 
 
+"Capacitor switching variables"
+function variable_mc_capcontrol(pm::FBSUBFPowerModel; kwargs...)
+    variable_mc_capacitor_switch_state(pm; relax=true)
+end
+
+
 @doc raw"""
     constraint_mc_voltage_magnitude_bounds(pm::FBSUBFPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
 
@@ -336,6 +342,155 @@ function constraint_mc_power_balance(pm::FBSUBFPowerModel, nw::Int, i::Int, term
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
         sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
+end
+
+
+"""
+    constraint_mc_power_balance_capc(pm::FBSUBFPowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+
+Power balance constraints with capacitor control similar to ACRUPowerModel with shunt current calculated using initial operating point.
+"""
+function constraint_mc_power_balance_capc(pm::FBSUBFPowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+    vr = var(pm, nw, :vr0, i)
+    vi = var(pm, nw, :vi0, i)
+    p    = get(var(pm, nw), :p,      Dict()); _check_var_keys(p,   bus_arcs,       "active power",   "branch")
+    q    = get(var(pm, nw), :q,      Dict()); _check_var_keys(q,   bus_arcs,       "reactive power", "branch")
+    pg   = get(var(pm, nw), :pg_bus, Dict()); _check_var_keys(pg,  bus_gens,       "active power",   "generator")
+    qg   = get(var(pm, nw), :qg_bus, Dict()); _check_var_keys(qg,  bus_gens,       "reactive power", "generator")
+    ps   = get(var(pm, nw), :ps,     Dict()); _check_var_keys(ps,  bus_storage,    "active power",   "storage")
+    qs   = get(var(pm, nw), :qs,     Dict()); _check_var_keys(qs,  bus_storage,    "reactive power", "storage")
+    psw  = get(var(pm, nw), :psw,    Dict()); _check_var_keys(psw, bus_arcs_sw,    "active power",   "switch")
+    qsw  = get(var(pm, nw), :qsw,    Dict()); _check_var_keys(qsw, bus_arcs_sw,    "reactive power", "switch")
+    pt   = get(var(pm, nw), :pt,     Dict()); _check_var_keys(pt,  bus_arcs_trans, "active power",   "transformer")
+    qt   = get(var(pm, nw), :qt,     Dict()); _check_var_keys(qt,  bus_arcs_trans, "reactive power", "transformer")
+    pd   = get(var(pm, nw), :pd_bus, Dict()); _check_var_keys(pd,  bus_loads,      "active power",   "load")
+    qd   = get(var(pm, nw), :qd_bus, Dict()); _check_var_keys(pd,  bus_loads,      "reactive power", "load")
+
+    # add constraints to model capacitor switching
+    if !isempty(bus_shunts) && haskey(ref(pm, nw, :shunt, bus_shunts[1][1]), "controls") 
+        constraint_capacitor_on_off(pm, i, bus_shunts)
+    end
+
+    # calculate Gs, Bs
+    ncnds = length(terminals)
+    Gt = fill(0.0, ncnds, ncnds)
+    Bt = convert(Matrix{JuMP.AffExpr}, JuMP.@expression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
+    for (val, connections) in bus_shunts
+        shunt = ref(pm,nw,:shunt,val)
+        for (idx,c) in enumerate(connections)
+            cap_state = haskey(shunt,"controls") ? var(pm, nw, :capacitor_state, val)[c] : 1.0
+            for (jdx,d) in enumerate(connections)
+                Gt[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] += shunt["gs"][idx,jdx]
+                Bt[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] = JuMP.@expression(pm.model, Bt[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] + shunt["bs"][idx,jdx]*cap_state)
+            end
+        end
+    end
+
+    cstr_p = []
+    cstr_q = []
+
+    ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
+
+    for (idx, t) in ungrounded_terminals
+        cp = JuMP.@constraint(pm.model, 
+              sum(  p[arc][t] for (arc, conns) in bus_arcs if t in conns)
+            + sum(psw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
+            + sum( pt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)
+            ==
+              sum(pg[gen][t] for (gen, conns) in bus_gens if t in conns)
+            - sum(ps[strg][t] for (strg, conns) in bus_storage if t in conns)
+            - sum(pd[load][t] for (load, conns) in bus_loads if t in conns)
+            + ( -vr[t] * sum(Gt[idx,jdx]*vr[u]-Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals)
+                -vi[t] * sum(Gt[idx,jdx]*vi[u]+Bt[idx,jdx]*vr[u] for (jdx,u) in ungrounded_terminals)
+            )
+        )
+        push!(cstr_p, cp)
+
+        cq = JuMP.@constraint(pm.model, 
+              sum(  q[arc][t] for (arc, conns) in bus_arcs if t in conns)
+            + sum(qsw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
+            + sum( qt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)
+            ==
+              sum(qg[gen][t] for (gen, conns) in bus_gens if t in conns)
+            - sum(qd[load][t] for (load, conns) in bus_loads if t in conns)
+            - sum(qs[strg][t] for (strg, conns) in bus_storage if t in conns)
+            + ( vr[t] * sum(Gt[idx,jdx]*vi[u]+Bt[idx,jdx]*vr[u] for (jdx,u) in ungrounded_terminals)
+               -vi[t] * sum(Gt[idx,jdx]*vr[u]-Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals)
+            )
+        )
+        push!(cstr_q, cq)
+    end
+
+    con(pm, nw, :lam_kcl_r)[i] = cstr_p
+    con(pm, nw, :lam_kcl_i)[i] = cstr_q
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
+    end
+end
+
+
+@doc raw"""
+    constraint_capacitor_on_off(pm::FBSUBFPowerModel, i::Int; nw::Int=nw_id_default)
+
+Add constraints to model capacitor switching
+
+```math
+\begin{align}
+&\text{kvar control (ON): }  q-q_\text{on} ≤ M_q ⋅ z - ϵ ⋅ (1-z), \\
+&\text{kvar control (OFF): } q-q_\text{off} ≥ -M_q ⋅ (1-z) - ϵ ⋅ z, \\
+&\text{voltage control (ON): }  2 ⋅ v_{r0} ⋅ v_r + 2 ⋅ v_{i0} ⋅ v_i - v_{r0}^2 - v_{i0}^2 - v_\text{min}^2 ≥ -M_v ⋅ z + ϵ ⋅ (1-z), \\
+&\text{voltage control (OFF): } 2 ⋅ v_{r0} ⋅ v_r + 2 ⋅ v_{i0} ⋅ v_i - v_{r0}^2 - v_{i0}^2 - v_\text{max}^2 ≤ M_v ⋅ (1-z) - ϵ ⋅ z. 
+\end{align}
+```
+"""
+function constraint_capacitor_on_off(pm::FBSUBFPowerModel, i::Int, bus_shunts::Vector{Tuple{Int,Vector{Int}}}; nw::Int=nw_id_default)
+    cap_state = var(pm, nw, :capacitor_state, bus_shunts[1][1])
+    shunt = ref(pm, nw, :shunt, bus_shunts[1][1])
+    ϵ = 1e-5
+    M_q = 1e5
+    M_v = 2
+    if shunt["controls"]["type"]  == "kvar"
+        bus_idx = shunt["controls"]["terminal"] == 1 ? (shunt["controls"]["element"]["index"], shunt["controls"]["element"]["f_bus"], shunt["controls"]["element"]["t_bus"]) : (shunt["controls"]["element"]["index"], shunt["controls"]["element"]["t_bus"], shunt["controls"]["element"]["f_bus"])
+        q_fr =  shunt["controls"]["element"]["type"] == "branch" ? var(pm, nw, :q)[bus_idx] : var(pm, nw, :qt, bus_idx)
+        JuMP.@constraint(pm.model, sum(q_fr) - shunt["controls"]["onsetting"] ≤ M_q*cap_state[shunt["connections"][1]] - ϵ*(1-cap_state[shunt["connections"][1]]))
+        JuMP.@constraint(pm.model, sum(q_fr) - shunt["controls"]["offsetting"] ≥ -M_q*(1-cap_state[shunt["connections"][1]]) - ϵ*cap_state[shunt["connections"][1]])
+        JuMP.@constraint(pm.model, cap_state .== cap_state[shunt["connections"][1]])
+        if shunt["controls"]["voltoverride"] 
+            for (idx,val) in enumerate(shunt["connections"])
+                vr_cap = var(pm, nw, :vr, i)[val]
+                vi_cap = var(pm, nw, :vi, i)[val]
+                vr0_cap = var(pm, nw, :vr0, i)[val]
+                vi0_cap = var(pm, nw, :vi0, i)[val]
+                JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["vmin"]^2 ≥ -M_v*cap_state[val] + ϵ*(1-cap_state[val]))
+                JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["vmax"]^2 ≤ M_v*(1-cap_state[val]) - ϵ*cap_state[val])
+            end
+        end
+    else
+        for (idx,val) in enumerate(shunt["connections"])
+            if shunt["controls"]["type"][idx]  == "voltage"
+                bus_idx = shunt["controls"]["terminal"][idx] == 1 ? shunt["controls"]["element"]["f_bus"] : shunt["controls"]["element"]["t_bus"]
+                vr_cap = var(pm, nw, :vr, i)[val]
+                vi_cap = var(pm, nw, :vi, i)[val]
+                vr0_cap = var(pm, nw, :vr0, i)[val]
+                vi0_cap = var(pm, nw, :vi0, i)[val]
+                JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["onsetting"][idx]^2 ≤ M_v*cap_state[val] - ϵ*(1-cap_state[val]))
+                JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["offsetting"][idx]^2 ≥ -M_v*(1-cap_state[val]) - ϵ*cap_state[val])
+            end
+            if shunt["controls"]["voltoverride"][idx] 
+                vr_cap = var(pm, nw, :vr, i)[val]
+                vi_cap = var(pm, nw, :vi, i)[val]
+                vr0_cap = var(pm, nw, :vr0, i)[val]
+                vi0_cap = var(pm, nw, :vi0, i)[val]
+                JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["vmin"][idx]^2 ≥ -M_v*cap_state[val] + ϵ*(1-cap_state[val]))
+                JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["vmax"][idx]^2 ≤ M_v*(1-cap_state[val]) - ϵ*cap_state[val])
+            end
+            if shunt["controls"]["type"][idx]  == "" 
+                JuMP.@constraint(pm.model, cap_state[val] == 1 )
+            end
+        end 
+    end  
 end
 
 

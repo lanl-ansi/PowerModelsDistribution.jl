@@ -311,6 +311,17 @@ end
     @test all(isequal(eng["transformer"]["sub"]["controls"]["x"][1], [0.0, 0.0, 9.0]))        
 end
 
+@testset "test different capcontrol configurations" begin
+    eng = parse_file("../test/data/opendss/IEEE13_CapControl.dss")
+
+    @test all(isequal(eng["shunt"]["c1"]["controls"]["type"], "kvar"))
+    @test all(isequal(eng["shunt"]["c1"]["controls"]["ptratio"], 1.0))
+    @test all(isequal(eng["shunt"]["c2"]["controls"]["type"], ["", "voltage", "voltage"]))
+    @test all(isequal(eng["shunt"]["c2"]["controls"]["terminal"], [0, 1, 2]))
+    @test all(isequal(eng["shunt"]["c2"]["controls"]["element"], "line.650632"))
+    @test all(isequal(eng["shunt"]["c2"]["controls"]["voltoverride"], [false, false, false]))
+end
+
 @testset "test json parser" begin
     eng = parse_file("../test/data/opendss/case3_balanced.dss")
 

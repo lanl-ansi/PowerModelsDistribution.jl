@@ -2,6 +2,7 @@
 
 ## staged
 
+- Add wye-connected CapControl for ACP, ACR, LinDist3Flow, FBS and FOT formulations
 - Added FOT linear formulation in rectangular coordinate frame
 - Fixed lower voltage magnitude limits for FBS linear formulation
 - Fix bug where the lower and upper bound variables created in `variable_mx_hermitian` can be the wrong type
