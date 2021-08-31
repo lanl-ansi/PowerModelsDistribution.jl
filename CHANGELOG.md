@@ -3,6 +3,8 @@
 ## staged
 
 - Fixed lower voltage magnitude limits for FBS linear formulation
+- Fix bug where the lower and upper bound variables created in `variable_mx_hermitian` can be the wrong type
+- Fix bug in correct_bus_types! and eng2math functions where reference bus was being overwritten depending on the order generation objects were parsed
 - Fix `calc_max_cost_index` to support multi-infrastructure data
 
 ## v0.11.6
