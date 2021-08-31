@@ -67,7 +67,7 @@
             baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
             @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.0212194; atol=2e-3)
             @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.00912439; atol=2e-3)
-            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["vm"], [0.98102, 0.98922, 0.98692]; atol=1e-1))
+            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["vm"], [0.98102, 0.98922, 0.98692]; atol=9e-2))
             @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["va"], [-0.2, -120.1, 120.1]; atol=3e-2))
         end
         @testset "3-bus unbalanced fbs opf_bf with yy transformer" begin
@@ -92,7 +92,6 @@
         end
         @testset "3-bus unbalanced fbs opf_bf with voltage-dependent loads" begin
             pmd = parse_file("../test/data/opendss/case3_unbalanced_delta_loads.dss")
-            apply_voltage_bounds!(pmd; vm_lb=0.9, vm_ub=1.1)
             sol = solve_mc_opf(pmd, FBSUBFPowerModel, ipopt_solver; make_si=false,solution_processors=[sol_data_model!])
             @test sol["termination_status"] == LOCALLY_SOLVED
             baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
