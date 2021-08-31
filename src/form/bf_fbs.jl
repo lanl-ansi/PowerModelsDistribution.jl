@@ -105,7 +105,11 @@ function constraint_mc_voltage_magnitude_bounds(pm::FBSUBFPowerModel, nw::Int, i
 
     for (idx,t) in enumerate(ref(pm, nw, :bus, i)["terminals"])
         # linearized lower voltage magnitude limits at all buses except reference bus
-        if ref(pm, nw, :bus, i)["bus_type"] ≠ 3.0
+        if ref(pm, nw, :bus, i)["bus_type"] == 3.0 && vmax[idx] == vmin[idx]
+            vr_ref = ref(pm, nw, :bus, i)["vm"][idx]*cos(ref(pm, nw, :bus, i)["va"][idx])
+            vi_ref = ref(pm, nw, :bus, i)["vm"][idx]*sin(ref(pm, nw, :bus, i)["va"][idx])
+            JuMP.@constraint(pm.model, 2*vr[t]*vr_ref + 2*vi[t]*vi_ref - vr_ref^2 - vi_ref^2 >= vmin[idx]^2)
+        else
             JuMP.@constraint(pm.model, 2*vr[t]*vr0[t] + 2*vi[t]*vi0[t] - vr0[t]^2 - vi0[t]^2 >= vmin[idx]^2)
         end
         # Outer approximation of upper voltage magnitude limits

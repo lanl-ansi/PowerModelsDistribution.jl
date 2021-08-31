@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed lower voltage magnitude limits for FBS linear formulation
 - Fix `calc_max_cost_index` to support multi-infrastructure data
 
 ## v0.11.6

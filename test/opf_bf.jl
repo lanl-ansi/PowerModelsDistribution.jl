@@ -68,7 +68,7 @@
             @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.0212194; atol=2e-3)
             @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.00912439; atol=2e-3)
             @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["vm"], [0.98102, 0.98922, 0.98692]; atol=1e-1))
-            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["va"], [-0.2, -120.1, 120.1]; atol=5e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["va"], [-0.2, -120.1, 120.1]; atol=3e-2))
         end
         @testset "3-bus unbalanced fbs opf_bf with yy transformer" begin
             pmd = parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
@@ -87,8 +87,8 @@
             baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
             @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.467699; atol=2e-1)
             @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.485553; atol=1e-1)
-            @test all(isapprox.(sol["solution"]["bus"]["3"]["vm"], [0.92092, 0.91012, 0.90059]; atol=2e-1))
-            @test all(isapprox.(sol["solution"]["bus"]["3"]["va"], [-30, -150.4, 89.8]; atol=5e0))
+            @test all(isapprox.(sol["solution"]["bus"]["3"]["vm"], [0.92092, 0.91012, 0.90059]; atol=5e-2))
+            @test all(isapprox.(sol["solution"]["bus"]["3"]["va"], [-30, -150.4, 89.8]; atol=2e0))
         end
         @testset "3-bus unbalanced fbs opf_bf with voltage-dependent loads" begin
             pmd = parse_file("../test/data/opendss/case3_unbalanced_delta_loads.dss")
@@ -98,8 +98,8 @@
             baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
             @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.0420464; atol=9e-3)
             @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.0181928; atol=9e-3)
-            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["vm"], [0.94105, 0.95942, 0.95876]; atol=6e-2))
-            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["va"], [-0.9, -120.3, 120.2]; atol=2e-1))
+            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["vm"], [0.94105, 0.95942, 0.95876]; atol=2e-3))
+            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["va"], [-0.9, -120.3, 120.2]; atol=6e-2))
         end
     end
 
