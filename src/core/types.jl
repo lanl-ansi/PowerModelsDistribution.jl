@@ -221,7 +221,7 @@ abstract type AbstractUnbalancedNFAModel <: AbstractUnbalancedDCPModel end
 mutable struct NFAUPowerModel <: AbstractUnbalancedNFAModel @pmd_fields end
 
 """
-First-order Taylor (FOT) approxmiation formulation uses polar coordinates for voltage. 
+First-order Taylor (FOT) approximation formulation uses polar/rectangular coordinates for voltage. 
 All nonlinear equations are approximated using the initial operating voltage solution.
 ```
     @INPROCEEDINGS{girigoudar_roald_cdc2021,
@@ -233,10 +233,12 @@ All nonlinear equations are approximated using the initial operating voltage sol
 }
 ```
 """
-abstract type AbstractLPUModel <: AbstractUnbalancedACPModel end
 
-"default LP unbalanced FOT constructor"
-mutable struct FOTUPowerModel <: AbstractLPUModel @pmd_fields end
+"default LP unbalanced FOT (polar) constructor"
+mutable struct FOTPUPowerModel <: AbstractUnbalancedACPModel @pmd_fields end
+
+"default LP unbalanced FOT (rectangular) constructor"
+mutable struct FOTRUPowerModel <: AbstractUnbalancedACRModel @pmd_fields end
 
 "Base Abstract NLP Unbalanced Branch Flow Model"
 abstract type AbstractNLPUBFModel <: AbstractUBFQPModel end

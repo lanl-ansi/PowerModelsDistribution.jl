@@ -3,22 +3,22 @@
 
 
 """
-    constraint_mc_load_current_delta(pm::AbstractLPUModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Vector, cq::Vector)
+    constraint_mc_load_current_delta(pm::FOTPUPowerModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Vector, cq::Vector)
 
 No loads require a current variable. Delta loads are zero-order approximations and 
 wye loads are first-order approximations around the initial operating point.
 """
-function constraint_mc_load_current_delta(pm::AbstractLPUModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Vector, cq::Vector)
+function constraint_mc_load_current_delta(pm::FOTPUPowerModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Vector, cq::Vector)
 end
 
 
 """
-    variable_mc_bus_voltage(pm::AbstractLPUModel; nw=nw_id_default, kwargs...)
+    variable_mc_bus_voltage(pm::FOTPUPowerModel; nw=nw_id_default, kwargs...)
 
 Voltage variables are defined in polar coordinates similar to ACPUPowerModel.
 An initial operating point is specified for linearization.
 """
-function variable_mc_bus_voltage(pm::AbstractLPUModel; nw=nw_id_default, kwargs...)
+function variable_mc_bus_voltage(pm::FOTPUPowerModel; nw=nw_id_default, kwargs...)
     variable_mc_bus_voltage_angle(pm; nw=nw, kwargs...)
     variable_mc_bus_voltage_magnitude_only(pm; nw=nw, kwargs...)
 
@@ -52,7 +52,7 @@ end
 
 
 @doc raw"""
-    constraint_mc_power_balance(pm::FOTUPowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+    constraint_mc_power_balance(pm::FOTPUPowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
 
 Power balance equations similar to ACPUPowerModel. 
 The nonlinear functions are approximated around initial operating point.
@@ -90,7 +90,7 @@ v_a^u-v_{a0}^u
 \end{align}
 ```
 """
-function constraint_mc_power_balance(pm::FOTUPowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+function constraint_mc_power_balance(pm::FOTPUPowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
     vm   = var(pm, nw, :vm, i)
     va   = var(pm, nw, :va, i)
     vm0   = var(pm, nw, :vm0, i)
@@ -193,12 +193,12 @@ end
 
 
 """
-    constraint_mc_ohms_yt_from(pm::FOTUPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
+    constraint_mc_ohms_yt_from(pm::FOTPUPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
 
 Ohm constraints similar to ACPUPowerModel. 
 The nonlinear functions are approximated around initial operating points.
 """
-function constraint_mc_ohms_yt_from(pm::FOTUPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
+function constraint_mc_ohms_yt_from(pm::FOTPUPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
     p_fr  = var(pm, nw,  :p, f_idx)
     q_fr  = var(pm, nw,  :q, f_idx)
     vm_fr = var(pm, nw, :vm, f_bus)
@@ -275,22 +275,22 @@ end
 
 
 """
-    constraint_mc_ohms_yt_to(pm::FOTUPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_to::Matrix{<:Real}, B_to::Matrix{<:Real})
+    constraint_mc_ohms_yt_to(pm::FOTPUPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_to::Matrix{<:Real}, B_to::Matrix{<:Real})
 
 Ohm constraints similar to ACPUPowerModel. 
 The nonlinear functions are approximated around initial operating points.
 """
-function constraint_mc_ohms_yt_to(pm::FOTUPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_to::Matrix{<:Real}, B_to::Matrix{<:Real})
+function constraint_mc_ohms_yt_to(pm::FOTPUPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_to::Matrix{<:Real}, B_to::Matrix{<:Real})
     constraint_mc_ohms_yt_from(pm, nw, t_bus, f_bus, t_idx, f_idx, t_connections, f_connections, G, B, G_to, B_to)
 end
 
 
 """
-    constraint_mc_transformer_power_yy(pm::FOTUPowerModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+    constraint_mc_transformer_power_yy(pm::FOTPUPowerModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
 
 Add all constraints required to model a two-winding, wye-wye connected transformer similar to ACPUPowerModel.
 """
-function constraint_mc_transformer_power_yy(pm::FOTUPowerModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+function constraint_mc_transformer_power_yy(pm::FOTPUPowerModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     transformer = ref(pm, nw, :transformer, trans_id)
 
     vm_fr = var(pm, nw, :vm, f_bus)
@@ -344,31 +344,14 @@ function constraint_mc_transformer_power_yy(pm::FOTUPowerModel, nw::Int, trans_i
 end
 
 
-@doc raw"""
-    constraint_mc_transformer_power_dy(pm::FOTUPowerModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+"""
+    constraint_mc_transformer_power_dy(pm::FOTPUPowerModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
 
 Add all constraints required to model a two-winding, delta-wye connected transformer similar to ACPUPowerModel
 with voltage constraints linearized using first-order Taylor approximation and
 power constraints simplified using initial operating point voltage instead of actual voltage variables.
-
-```math
-\begin{align}
-&\text{Initial operating point: }  v_{m0} \angle v_{a0}\\
-& v_m \cdot \cos(v_a) \Rightarrow v_{m0} \cdot \cos(v_{a0}) + \cos(v_{a0}) \cdot(v_{m}-v_{m0}) -\sin(v_{a0}) \cdot(v_{a}-v_{a0})\\
-& v_m \cdot \sin(v_a) \Rightarrow v_{m0} \cdot \sin(v_{a0}) + \sin(v_{a0}) \cdot(v_{m}-v_{m0}) +\cos(v_{a0}) \cdot(v_{a}-v_{a0})
-\end{align}
-The load power is
-\begin{align}
-&\text{Initial operating point: }   v_{m0} \angle v_{a0}\\
-&\text{Constant power: }  P^d = P^{d0},~Q^d = Q^{d0} \\
-&\text{Constant impedance: }  P^d = a \cdot \left({v_{m0}}^2+2 \cdot v_{m0} \cdot (v_m-v_{m0})\right),\\
-&  Q^d = b \cdot \left({v_{m0}}^2+2 \cdot v_{m0} \cdot (v_m-v_{m0})\right),  \\
-&\text{Constant current: }  P^d = a \cdot v_m,\\
-& Q^d = b \cdot v_m. 
-\end{align}
-```
 """
-function constraint_mc_transformer_power_dy(pm::FOTUPowerModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
+function constraint_mc_transformer_power_dy(pm::FOTPUPowerModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     vm_fr = var(pm, nw, :vm, f_bus)
     vm_to = var(pm, nw, :vm, t_bus)
     va_fr = var(pm, nw, :va, f_bus)
@@ -432,7 +415,7 @@ end
 
 
 @doc raw"""
-    constraint_mc_load_power(pm::FOTUPowerModel, load_id::Int; nw::Int=nw_id_default, report::Bool=true)
+    constraint_mc_load_power(pm::FOTPUPowerModel, load_id::Int; nw::Int=nw_id_default, report::Bool=true)
 
 Load model is linearized around initial operating point. 
 Wye loads are first-order and delta loads are zero-order approximations.
@@ -448,7 +431,7 @@ Wye loads are first-order and delta loads are zero-order approximations.
 \end{align}
 ```
 """
-function constraint_mc_load_power(pm::FOTUPowerModel, load_id::Int; nw::Int=nw_id_default, report::Bool=true)
+function constraint_mc_load_power(pm::FOTPUPowerModel, load_id::Int; nw::Int=nw_id_default, report::Bool=true)
     # shared variables and parameters
     load = ref(pm, nw, :load, load_id)
     connections = load["connections"]
