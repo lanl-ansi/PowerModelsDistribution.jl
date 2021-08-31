@@ -1,4 +1,4 @@
-# The model in rectangular coordinates is linearized around an initial operating point using a
+# The model in rectangular coordinates is linearized around an initial operating point using a 
 # first order Taylor approximation (FOT) method
 
 

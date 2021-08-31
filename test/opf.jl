@@ -401,35 +401,5 @@
             @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["vm"], [0.94105, 0.95942, 0.95876]; atol=2e-3))
             @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["va"], [-0.9, -120.3, 120.2]; atol=2e-1))
         end
-        @testset "3-bus unbalanced fotr opf with yy transformer" begin
-            pmd = parse_file("../test/data/opendss/ut_trans_2w_yy.dss")
-            sol = solve_mc_opf(pmd, FOTRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
-            @test sol["termination_status"] == LOCALLY_SOLVED
-            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.467547; atol=9e-2)
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.484327; atol=2e-1)
-            @test all(isapprox.(sol["solution"]["bus"]["3"]["vm"], [0.87451, 0.8613, 0.85348]; atol=4e-1))
-            @test all(isapprox.(sol["solution"]["bus"]["3"]["va"], [-0.1, -120.4, 119.8]; atol=8e-1))
-        end
-        @testset "3-bus unbalanced fotr opf with dy transformer" begin
-            pmd = parse_file("../test/data/opendss/ut_trans_2w_dy_lag.dss")
-            sol = solve_mc_opf(pmd, FOTRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
-            @test sol["termination_status"] == LOCALLY_SOLVED
-            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.467699; atol=2e-1)
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.485553; atol=6e-2)
-            @test all(isapprox.(sol["solution"]["bus"]["3"]["vm"], [0.92092, 0.91012, 0.90059]; atol=3e-1))
-        end
-        @testset "3-bus unbalanced fotr opf with voltage-dependent loads" begin
-            pmd = parse_file("../test/data/opendss/case3_unbalanced_delta_loads.dss")
-            apply_voltage_bounds!(pmd; vm_lb=0.9, vm_ub=1.1)
-            sol = solve_mc_opf(pmd, FOTRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
-            @test sol["termination_status"] == LOCALLY_SOLVED
-            baseMVA = sol["solution"]["settings"]["sbase"] / sol["solution"]["settings"]["power_scale_factor"]
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["pg"] * baseMVA), 0.0420464; atol=9e-3)
-            @test isapprox(sum(sol["solution"]["voltage_source"]["source"]["qg"] * baseMVA), 0.0181928; atol=9e-3)
-            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["vm"], [0.94105, 0.95942, 0.95876]; atol=6e-2))
-            @test all(isapprox.(sol["solution"]["bus"]["loadbus"]["va"], [-0.9, -120.3, 120.2]; atol=2e-1))
-        end
     end
 end

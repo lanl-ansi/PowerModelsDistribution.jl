@@ -221,7 +221,7 @@ abstract type AbstractUnbalancedNFAModel <: AbstractUnbalancedDCPModel end
 mutable struct NFAUPowerModel <: AbstractUnbalancedNFAModel @pmd_fields end
 
 """
-First-order Taylor (FOT) approximation formulation uses polar/rectangular coordinates for voltage.
+First-order Taylor (FOT) approximation formulation uses polar/rectangular coordinates for voltage. 
 All nonlinear equations are approximated using the initial operating voltage solution.
 ```
     @INPROCEEDINGS{girigoudar_roald_cdc2021,
@@ -287,7 +287,7 @@ mutable struct LPUBFDiagPowerModel <: LPUBFDiagModel @pmd_fields end
 const LinDist3FlowPowerModel = LPUBFDiagPowerModel # more popular name
 
 """
-Forward-backward sweep (FBS) linear branch flow formulation uses rectangular coordinates for voltage.
+Forward-backward sweep (FBS) linear branch flow formulation uses rectangular coordinates for voltage. 
 The branch flows are calculated using the initial operating voltage solution.
 ```
     @INPROCEEDINGS{girigoudar_roald_cdc2021,
