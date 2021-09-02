@@ -2,6 +2,10 @@
 
 ## staged
 
+- none
+
+## v0.11.7
+
 - Added storage to `correct_bus_types!` check
 - Updated start values for some variables to improve performance on some solvers
 - Added ability for `comp_start_value` to sequentially check for a series of keys for a start value
