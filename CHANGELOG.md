@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added ability for `comp_start_value` to sequentially check for a series of keys for a start value
 - Added FOT linear formulation in rectangular coordinate frame
 - Fixed lower voltage magnitude limits for FBS linear formulation
 - Fix bug where the lower and upper bound variables created in `variable_mx_hermitian` can be the wrong type
