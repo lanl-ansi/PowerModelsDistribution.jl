@@ -2,6 +2,7 @@
 
 ## staged
 
+- Updated start values for some variables to improve performance on some solvers
 - Added ability for `comp_start_value` to sequentially check for a series of keys for a start value
 - Added FOT linear formulation in rectangular coordinate frame
 - Fixed lower voltage magnitude limits for FBS linear formulation
