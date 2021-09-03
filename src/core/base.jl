@@ -118,6 +118,23 @@ end
 
 
 """
+    comp_start_value(comp::Dict, keys::Vector{String}, conductor::Int, default::Any)
+
+Searches for start value for a variable `key` in order from a list of `keys` of a component `comp`
+for conductor `conductor`, and if one does not exist, uses `default`
+"""
+function comp_start_value(comp::Dict{String,<:Any}, keys::Vector{String}, conductor::Int, default)
+    cond_ind = _get_conductor_indicator(comp)
+    for key in keys
+        if haskey(comp, key) && !isempty(cond_ind)
+            return comp[key][findfirst(isequal(conductor), comp[cond_ind])]
+        end
+    end
+    return default
+end
+
+
+"""
     comp_start_value(comp::Dict, key::String, conductor::Int, default::Any)
 
 Searches for start value for a variable `key` of a component `comp` for conductor `conductor`,
@@ -130,6 +147,22 @@ function comp_start_value(comp::Dict{String,<:Any}, key::String, conductor::Int,
     else
         return default
     end
+end
+
+
+"""
+    comp_start_value(comp::Dict, keys::Vector{String}, default::Any)
+
+Searches for start value for a variable `key` in order from a list of `keys` of a component `comp`,
+and if one does not exist, uses `default`. This is the conductor-agnostic version of `comp_start_value`.
+"""
+function comp_start_value(comp::Dict{String,<:Any}, keys::Vector{String}, default=0.0)
+    for key in keys
+        if haskey(comp, key)
+            return comp[key]
+        end
+    end
+    return default
 end
 
 
