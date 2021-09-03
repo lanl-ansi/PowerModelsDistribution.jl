@@ -588,6 +588,28 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
         math_obj["gs"] = get(eng_obj, "gs", zeros(size(eng_obj["bs"])))
 
         data_math["shunt"]["$(math_obj["index"])"] = math_obj
+        
+        # add capcontrol items to math model
+        if haskey(eng_obj,"controls")
+            math_obj["controls"] = deepcopy(eng_obj["controls"])
+            elem_id = [id for (id, br_obj) in data_math["branch"] if br_obj["source_id"] == eng_obj["controls"]["element"]]
+            if !isempty(elem_id)
+                math_obj["controls"]["element"] = Dict{String,Any}(
+                                                    "type" => "branch",
+                                                    "index" => data_math["branch"][elem_id[1]]["index"],
+                                                    "f_bus" => data_math["branch"][elem_id[1]]["f_bus"],
+                                                    "t_bus" => data_math["branch"][elem_id[1]]["t_bus"]
+                                                    )
+            else
+                elem_id = [id for (id, br_obj) in data_math["transformer"] if br_obj["source_id"] == eng_obj["controls"]["element"]]
+                math_obj["controls"]["element"] = Dict{String,Any}(
+                                                    "type" => "transformer",
+                                                    "index" => data_math["transformer"][elem_id[1]]["index"],
+                                                    "f_bus" => data_math["transformer"][elem_id[1]]["f_bus"],
+                                                    "t_bus" => data_math["transformer"][elem_id[1]]["t_bus"]
+                                                    )
+            end
+        end
 
         push!(data_math["map"], Dict{String,Any}(
             "from" => name,

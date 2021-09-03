@@ -1,11 +1,11 @@
-# The model in polar coordinates is linearized around an initial operating point using a 
+# The model in polar coordinates is linearized around an initial operating point using a
 # first order Taylor approximation (FOT) method
 
 
 """
     constraint_mc_load_current_delta(pm::FOTPUPowerModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Vector, cq::Vector)
 
-No loads require a current variable. Delta loads are zero-order approximations and 
+No loads require a current variable. Delta loads are zero-order approximations and
 wye loads are first-order approximations around the initial operating point.
 """
 function constraint_mc_load_current_delta(pm::FOTPUPowerModel, nw::Int, load_id::Int, load_bus_id::Int, cp::Vector, cq::Vector)
@@ -54,39 +54,39 @@ end
 @doc raw"""
     constraint_mc_power_balance(pm::FOTPUPowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
 
-Power balance equations similar to ACPUPowerModel. 
+Power balance equations similar to ACPUPowerModel.
 The nonlinear functions are approximated around initial operating point.
 
 ```math
 \begin{align}
 &\text{Initial operating points: }  v_{m0}^{t} \angle v_{a0}^t,~v_{m0}^u \angle v_{a0}^u\\
 & {v_m^t}^2 \Rightarrow {v_{m0}^t}^2+2 \cdot v_{m0}^t \cdot (v_m^t-v_{m0}^t)\\
-& v_m^t \cdot v_m^u \cdot \cos(v_a^t-v_a^u) \Rightarrow v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) + 
-\begin{bmatrix} 
+& v_m^t \cdot v_m^u \cdot \cos(v_a^t-v_a^u) \Rightarrow v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) +
+\begin{bmatrix}
 v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) \\
 v_{m0}^t \cdot \cos(v_{a0}^t-v_{a0}^u) \\
 -v_{m0}^t \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u) \\
-v_{m0}^t \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u) 
-\end{bmatrix}^\top 
-\begin{bmatrix} 
+v_{m0}^t \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u)
+\end{bmatrix}^\top
+\begin{bmatrix}
 v_m^t-v_{m0}^t \\
 v_m^u-v_{m0}^u \\
 v_a^t-v_{a0}^t \\
-v_a^u-v_{a0}^u 
+v_a^u-v_{a0}^u
 \end{bmatrix} \\
-& v_m^t \cdot v_m^u \cdot \sin(v_a^t-v_a^u) \Rightarrow v_{m0}^t \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u) + 
-\begin{bmatrix} 
+& v_m^t \cdot v_m^u \cdot \sin(v_a^t-v_a^u) \Rightarrow v_{m0}^t \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u) +
+\begin{bmatrix}
 v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u) \\
 v_{m0}^t \cdot \sin(v_{a0}^t-v_{a0}^u) \\
 v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) \\
--v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) 
-\end{bmatrix}^\top 
-\begin{bmatrix} 
+-v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u)
+\end{bmatrix}^\top
+\begin{bmatrix}
 v_m^t-v_{m0}^t \\
 v_m^u-v_{m0}^u \\
 v_a^t-v_{a0}^t \\
-v_a^u-v_{a0}^u 
-\end{bmatrix} 
+v_a^u-v_{a0}^u
+\end{bmatrix}
 \end{align}
 ```
 """
@@ -154,7 +154,7 @@ function constraint_mc_power_balance(pm::FOTPUPowerModel, nw::Int, i::Int, termi
             )
             push!(cstr_q, cq)
         else
-            cp = JuMP.@constraint(pm.model, 
+            cp = JuMP.@constraint(pm.model,
                   sum(  p[a][t] for (a, conns) in bus_arcs if t in conns)
                 + sum(psw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
                 + sum( pt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
@@ -167,7 +167,7 @@ function constraint_mc_power_balance(pm::FOTPUPowerModel, nw::Int, i::Int, termi
             )
             push!(cstr_p, cp)
 
-            cq = JuMP.@constraint(pm.model, 
+            cq = JuMP.@constraint(pm.model,
                   sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
                 + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
                 + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
@@ -195,7 +195,7 @@ end
 """
     constraint_mc_ohms_yt_from(pm::FOTPUPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
 
-Ohm constraints similar to ACPUPowerModel. 
+Ohm constraints similar to ACPUPowerModel.
 The nonlinear functions are approximated around initial operating points.
 """
 function constraint_mc_ohms_yt_from(pm::FOTPUPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
@@ -215,51 +215,51 @@ function constraint_mc_ohms_yt_from(pm::FOTPUPowerModel, nw::Int, f_bus::Int, t_
         q_s_fr = []
         p_s_fr_dg = []
         q_s_fr_dg = []
-        for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections)) 
+        for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections))
             if idx != jdx
                 p0_s_fr = (G[idx,jdx]+G_fr[idx,jdx])*vm0_fr[fc]*vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]) + (B[idx,jdx]+B_fr[idx,jdx])*vm0_fr[fc]*vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd])
                 q0_s_fr = (B[idx,jdx]+B_fr[idx,jdx])*vm0_fr[fc]*vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]) - (G[idx,jdx]+G_fr[idx,jdx])*vm0_fr[fc]*vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd])
-                push!(p_s_fr, JuMP.@expression(pm.model, p0_s_fr + (G[idx,jdx]+G_fr[idx,jdx])*(  
-                 (vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fc]-vm0_fr[fc]) 
-                +(vm0_fr[fc]*cos(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fd]-vm0_fr[fd]) 
-                +(-vm0_fr[fc]*vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(va_fr[fc]-va0_fr[fc]) 
+                push!(p_s_fr, JuMP.@expression(pm.model, p0_s_fr + (G[idx,jdx]+G_fr[idx,jdx])*(
+                 (vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fc]-vm0_fr[fc])
+                +(vm0_fr[fc]*cos(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fd]-vm0_fr[fd])
+                +(-vm0_fr[fc]*vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(va_fr[fc]-va0_fr[fc])
                 +( vm0_fr[fc]*vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(va_fr[fd]-va0_fr[fd])) + (B[idx,jdx]+B_fr[idx,jdx])*(
-                 (vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fc]-vm0_fr[fc]) 
-                +(vm0_fr[fc]*sin(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fd]-vm0_fr[fd]) 
-                +( vm0_fr[fc]*vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(va_fr[fc]-va0_fr[fc]) 
+                 (vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fc]-vm0_fr[fc])
+                +(vm0_fr[fc]*sin(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fd]-vm0_fr[fd])
+                +( vm0_fr[fc]*vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(va_fr[fc]-va0_fr[fc])
                 +(-vm0_fr[fc]*vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(va_fr[fd]-va0_fr[fd])))
                 )
-                push!(q_s_fr, JuMP.@expression(pm.model, q0_s_fr + (B[idx,jdx]+B_fr[idx,jdx])*(  
-                    (vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fc]-vm0_fr[fc]) 
-                   +(vm0_fr[fc]*cos(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fd]-vm0_fr[fd]) 
-                   +(-vm0_fr[fc]*vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(va_fr[fc]-va0_fr[fc]) 
+                push!(q_s_fr, JuMP.@expression(pm.model, q0_s_fr + (B[idx,jdx]+B_fr[idx,jdx])*(
+                    (vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fc]-vm0_fr[fc])
+                   +(vm0_fr[fc]*cos(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fd]-vm0_fr[fd])
+                   +(-vm0_fr[fc]*vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(va_fr[fc]-va0_fr[fc])
                    +( vm0_fr[fc]*vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(va_fr[fd]-va0_fr[fd])) - (G[idx,jdx]+G_fr[idx,jdx])*(
-                    (vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fc]-vm0_fr[fc]) 
-                   +(vm0_fr[fc]*sin(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fd]-vm0_fr[fd]) 
-                   +( vm0_fr[fc]*vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(va_fr[fc]-va0_fr[fc]) 
+                    (vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fc]-vm0_fr[fc])
+                   +(vm0_fr[fc]*sin(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fd]-vm0_fr[fd])
+                   +( vm0_fr[fc]*vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(va_fr[fc]-va0_fr[fc])
                    +(-vm0_fr[fc]*vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(va_fr[fd]-va0_fr[fd])))
                    )
             end
             p0_s_fr_dg = -G[idx,jdx]*vm0_fr[fc]*vm0_to[td]*cos(va0_fr[fc]-va0_to[td])-B[idx,jdx]*vm0_fr[fc]*vm0_to[td]*sin(va0_fr[fc]-va0_to[td])
             q0_s_fr_dg = -B[idx,jdx]*vm0_fr[fc]*vm0_to[td]*cos(va0_fr[fc]-va0_to[td])+G[idx,jdx]*vm0_fr[fc]*vm0_to[td]*sin(va0_fr[fc]-va0_to[td])
-            push!(p_s_fr_dg, JuMP.@expression(pm.model, p0_s_fr_dg - G[idx,jdx]*(  
-                 (vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(vm_fr[fc]-vm0_fr[fc]) 
-                +(vm0_fr[fc]*cos(va0_fr[fc]-va0_to[td]))*(vm_to[td]-vm0_to[td]) 
-                +(-vm0_fr[fc]*vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(va_fr[fc]-va0_fr[fc]) 
+            push!(p_s_fr_dg, JuMP.@expression(pm.model, p0_s_fr_dg - G[idx,jdx]*(
+                 (vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(vm_fr[fc]-vm0_fr[fc])
+                +(vm0_fr[fc]*cos(va0_fr[fc]-va0_to[td]))*(vm_to[td]-vm0_to[td])
+                +(-vm0_fr[fc]*vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(va_fr[fc]-va0_fr[fc])
                 +( vm0_fr[fc]*vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(va_to[td]-va0_to[td])) - B[idx,jdx]*(
-                 (vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(vm_fr[fc]-vm0_fr[fc]) 
-                +(vm0_fr[fc]*sin(va0_fr[fc]-va0_to[td]))*(vm_to[td]-vm0_to[td]) 
-                +( vm0_fr[fc]*vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(va_fr[fc]-va0_fr[fc]) 
+                 (vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(vm_fr[fc]-vm0_fr[fc])
+                +(vm0_fr[fc]*sin(va0_fr[fc]-va0_to[td]))*(vm_to[td]-vm0_to[td])
+                +( vm0_fr[fc]*vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(va_fr[fc]-va0_fr[fc])
                 +(-vm0_fr[fc]*vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(va_to[td]-va0_to[td])))
                 )
-            push!(q_s_fr_dg, JuMP.@expression(pm.model, q0_s_fr_dg - B[idx,jdx]*(  
-                    (vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(vm_fr[fc]-vm0_fr[fc]) 
-                   +(vm0_fr[fc]*cos(va0_fr[fc]-va0_to[td]))*(vm_to[td]-vm0_to[td]) 
-                   +(-vm0_fr[fc]*vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(va_fr[fc]-va0_fr[fc]) 
+            push!(q_s_fr_dg, JuMP.@expression(pm.model, q0_s_fr_dg - B[idx,jdx]*(
+                    (vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(vm_fr[fc]-vm0_fr[fc])
+                   +(vm0_fr[fc]*cos(va0_fr[fc]-va0_to[td]))*(vm_to[td]-vm0_to[td])
+                   +(-vm0_fr[fc]*vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(va_fr[fc]-va0_fr[fc])
                    +(vm0_fr[fc]*vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(va_to[td]-va0_to[td])) + G[idx,jdx]*(
-                    (vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(vm_fr[fc]-vm0_fr[fc]) 
-                   +(vm0_fr[fc]*sin(va0_fr[fc]-va0_to[td]))*(vm_to[td]-vm0_to[td]) 
-                   +(vm0_fr[fc]*vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(va_fr[fc]-va0_fr[fc]) 
+                    (vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(vm_fr[fc]-vm0_fr[fc])
+                   +(vm0_fr[fc]*sin(va0_fr[fc]-va0_to[td]))*(vm_to[td]-vm0_to[td])
+                   +(vm0_fr[fc]*vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(va_fr[fc]-va0_fr[fc])
                    +(-vm0_fr[fc]*vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(va_to[td]-va0_to[td])))
                    )
         end
@@ -277,7 +277,7 @@ end
 """
     constraint_mc_ohms_yt_to(pm::FOTPUPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_to::Matrix{<:Real}, B_to::Matrix{<:Real})
 
-Ohm constraints similar to ACPUPowerModel. 
+Ohm constraints similar to ACPUPowerModel.
 The nonlinear functions are approximated around initial operating points.
 """
 function constraint_mc_ohms_yt_to(pm::FOTPUPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_to::Matrix{<:Real}, B_to::Matrix{<:Real})
@@ -316,15 +316,15 @@ function constraint_mc_transformer_power_yy(pm::FOTPUPowerModel, nw::Int, trans_
         else
             # transformer taps without regcontrol, tap variable not required in regcontrol formulation
             JuMP.@constraint(pm.model, vm_fr[fc] == tm_scale*tm[idx]*vm_to[tc])
-            
+
             # with regcontrol
             if haskey(transformer,"controls")
                 v_ref = transformer["controls"]["vreg"][idx]
                 δ = transformer["controls"]["band"][idx]
                 r = transformer["controls"]["r"][idx]
                 x = transformer["controls"]["x"][idx]
-                
-                # linearized voltage: vm_drop = (r⋅p+x⋅q)/vm0 
+
+                # linearized voltage: vm_drop = (r⋅p+x⋅q)/vm0
                 vm_drop = JuMP.@expression(pm.model, (r*p_to[idx] + x*q_to[idx])/vm0_fr[fc])
 
                 # v_ref-δ ≤ vm_fr-vm_drop ≤ v_ref+δ
@@ -374,17 +374,17 @@ function constraint_mc_transformer_power_dy(pm::FOTPUPowerModel, nw::Int, trans_
         # e.g., for nph=3: 1->3, 2->1, 3->2
         jdx = (idx-1+1)%nph+1
         fd = f_connections[jdx]
-        vd_re[idx] = JuMP.@expression(pm.model, vm0_fr[fc]*cos(va0_fr[fc])-vm0_fr[fd]*cos(va0_fr[fd]) 
+        vd_re[idx] = JuMP.@expression(pm.model, vm0_fr[fc]*cos(va0_fr[fc])-vm0_fr[fd]*cos(va0_fr[fd])
                                              + (vm_fr[fc]-vm0_fr[fc])*cos(va0_fr[fc]) - (va_fr[fc]-va0_fr[fc])*sin(va0_fr[fc])
                                              - (vm_fr[fd]-vm0_fr[fd])*cos(va0_fr[fd]) + (va_fr[fd]-va0_fr[fd])*sin(va0_fr[fd])
                                     )
-        vd_im[idx] = JuMP.@expression(pm.model, vm0_fr[fc]*sin(va0_fr[fc])-vm0_fr[fd]*sin(va0_fr[fd]) 
+        vd_im[idx] = JuMP.@expression(pm.model, vm0_fr[fc]*sin(va0_fr[fc])-vm0_fr[fd]*sin(va0_fr[fd])
                                              + (vm_fr[fc]-vm0_fr[fc])*sin(va0_fr[fc]) + (va_fr[fc]-va0_fr[fc])*cos(va0_fr[fc])
                                              - (vm_fr[fd]-vm0_fr[fd])*sin(va0_fr[fd]) - (va_fr[fd]-va0_fr[fd])*cos(va0_fr[fd])
                                     )
-        JuMP.@constraint(pm.model, vd_re[idx] == pol*tm_scale*tm[idx]*vm0_to[tc]*cos(va0_to[tc]) 
+        JuMP.@constraint(pm.model, vd_re[idx] == pol*tm_scale*tm[idx]*vm0_to[tc]*cos(va0_to[tc])
                                             + (vm_to[tc]-vm0_to[tc])*cos(va0_to[tc]) - (va_to[tc]-va0_to[tc])*sin(va0_to[tc]))
-        JuMP.@constraint(pm.model, vd_im[idx] == pol*tm_scale*tm[idx]*vm0_to[tc]*sin(va0_to[tc]) 
+        JuMP.@constraint(pm.model, vd_im[idx] == pol*tm_scale*tm[idx]*vm0_to[tc]*sin(va0_to[tc])
                                             + (vm_to[tc]-vm0_to[tc])*sin(va0_to[tc]) + (va_to[tc]-va0_to[tc])*cos(va0_to[tc]))
     end
 
@@ -417,7 +417,7 @@ end
 @doc raw"""
     constraint_mc_load_power(pm::FOTPUPowerModel, load_id::Int; nw::Int=nw_id_default, report::Bool=true)
 
-Load model is linearized around initial operating point. 
+Load model is linearized around initial operating point.
 Wye loads are first-order and delta loads are zero-order approximations.
 
 ```math
@@ -427,7 +427,7 @@ Wye loads are first-order and delta loads are zero-order approximations.
 &\text{Constant impedance: }  P^d = a \cdot \left({v_{m0}}^2+2 \cdot v_{m0} \cdot (v_m-v_{m0})\right),\\
 &  Q^d = b \cdot \left({v_{m0}}^2+2 \cdot v_{m0} \cdot (v_m-v_{m0})\right),  \\
 &\text{Constant current: }  P^d = a \cdot v_m,\\
-& Q^d = b \cdot v_m. 
+& Q^d = b \cdot v_m.
 \end{align}
 ```
 """
@@ -470,13 +470,13 @@ function constraint_mc_load_power(pm::FOTPUPowerModel, load_id::Int; nw::Int=nw_
 
         if report
             sol(pm, nw, :load, load_id)[:pd_bus] = pd_bus
-            sol(pm, nw, :load, load_id)[:qd_bus] = qd_bus    
+            sol(pm, nw, :load, load_id)[:qd_bus] = qd_bus
             sol(pm, nw, :load, load_id)[:pd] = pd_bus
             sol(pm, nw, :load, load_id)[:qd] = qd_bus
         end
         pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, connections)
         qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, connections)
-    
+
         var(pm, nw, :pd_bus)[load_id] = pd_bus
         var(pm, nw, :qd_bus)[load_id] = qd_bus
 
@@ -500,20 +500,19 @@ function constraint_mc_load_power(pm::FOTPUPowerModel, load_id::Int; nw::Int=nw_
         cid0_bus = [cid0[i]-cid0[prev[i]] for i in 1:nph]
 
         pd_bus = [ vr0[i]*crd0_bus[i]+vi0[i]*cid0_bus[i] for i in 1:nph]
-        qd_bus = [-vr0[i]*cid0_bus[i]+vi0[i]*crd0_bus[i] for i in 1:nph] 
+        qd_bus = [-vr0[i]*cid0_bus[i]+vi0[i]*crd0_bus[i] for i in 1:nph]
         var(pm, nw, :pd_bus)[load_id] = pd_bus
         var(pm, nw, :qd_bus)[load_id] = qd_bus
-        
+
         if report
             sol(pm, nw, :load, load_id)[:pd_bus] = pd_bus
             sol(pm, nw, :load, load_id)[:qd_bus] = qd_bus
 
             pd = JuMP.@expression(pm.model, [i in 1:nph], a[i]*(vrd0[i]^2+vid0[i]^2)^(alpha[i]/2) )
             qd = JuMP.@expression(pm.model, [i in 1:nph], b[i]*(vrd0[i]^2+vid0[i]^2)^(beta[i]/2) )
-          
+
             sol(pm, nw, :load, load_id)[:pd] = pd
             sol(pm, nw, :load, load_id)[:qd] = qd
         end
     end
 end
-
