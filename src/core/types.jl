@@ -79,8 +79,19 @@ An Enum to describe whether an object is enabled or disabled
 @doc "The object is disabled" DISABLED
 @doc "The object is enabled" ENABLED
 
+"""
+    CapControlType 
+
+An Enum to describe the type of capcontrol, e.g., kvar, voltage etc.
+"""
+@enum CapControlType CAP_CURRENT CAP_VOLTAGE CAP_REACTIVE_POWER CAP_DISABLED
+@doc "Capacitor control based on current" CAP_CURRENT
+@doc "Capacitor control based on voltage" CAP_VOLTAGE
+@doc "Capacitor control based on total reactive power (directional)" CAP_REACTIVE_POWER
+@doc "Capacitor control disabled" CAP_DISABLED
+
 "Collection of the built-in Enums for PowerModelsDistribution"
-const PowerModelsDistributionEnums = Union{DataModel,LoadModel,ShuntModel,SwitchState,ControlMode,ConnConfig,Dispatchable,Status}
+const PowerModelsDistributionEnums = Union{DataModel,LoadModel,ShuntModel,SwitchState,ControlMode,ConnConfig,Dispatchable,Status,CapControlType}
 
 #================================================
     # exact non-convex models

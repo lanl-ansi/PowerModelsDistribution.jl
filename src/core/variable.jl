@@ -732,6 +732,49 @@ function variable_mc_switch_state(pm::AbstractUnbalancedPowerModel; nw::Int=nw_i
 end
 
 
+"""
+    variable_mc_capacitor_switch_state(pm::AbstractUnbalancedPowerModel, relax::Bool; nw::Int=nw_id_default, report::Bool=true)
+
+Capacitor (with capcontrol) switch state (open/close) variables
+"""
+function variable_mc_capacitor_switch_state(pm::AbstractUnbalancedPowerModel, relax::Bool; nw::Int=nw_id_default, report::Bool=true)
+    cap_switch_ids = [id for (id,cap) in ref(pm, nw, :shunt) if haskey(cap,"controls")]
+    if relax
+        cap_state = var(pm, nw)[:capacitor_state] = Dict(i => JuMP.@variable(pm.model,
+        [p in ref(pm, nw, :shunt, i, "connections")],
+        base_name="$(nw)_cap_sw_$(i)",
+        lower_bound = 0,
+        upper_bound = 1,
+        start = 0.5
+        ) for i in cap_switch_ids)
+    else
+        cap_state = var(pm, nw)[:capacitor_state] = Dict(i => JuMP.@variable(pm.model,
+        [p in ref(pm, nw, :shunt, i, "connections")],
+        base_name="$(nw)_cap_sw_$(i)",
+        binary = true,
+        start = 1
+        ) for i in cap_switch_ids)
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :shunt, :cap_state, cap_switch_ids, cap_state)
+end
+
+
+"""
+    variable_mc_capacitor_reactive_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default)
+
+Capacitor (with capcontrol) relaxed power variables for AbstractLPUBFModel (using McCormick envelopes)
+"""
+function variable_mc_capacitor_reactive_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default)
+    cap_switch_ids = [id for (id,cap) in ref(pm, nw, :shunt) if haskey(cap,"controls")]
+    cap_reactive_power = var(pm, nw)[:capacitor_reactive_power] = Dict(i => JuMP.@variable(pm.model,
+    [p in ref(pm, nw, :shunt, i, "connections")],
+    base_name="$(nw)_cap_cur_$(i)"
+    ) for i in cap_switch_ids)
+
+end
+
+
 # generator variables
 
 ## generator power variables

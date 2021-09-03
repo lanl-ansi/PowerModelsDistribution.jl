@@ -87,6 +87,15 @@ const _dss2pmd_load_model = Dict{Int,LoadModel}(
 )
 
 
+"dss to pmd capcontrol type"
+const _dss2pmd_capcontrol_type = Dict{String,CapControlType}(
+    "kvar" => CAP_REACTIVE_POWER,
+    "current" => CAP_CURRENT,
+    "voltage" => CAP_VOLTAGE,
+    ""=> CAP_DISABLED,
+)
+
+
 "conversion factors for units to meters"
 const _convert_to_meters = Dict{String,Float64}(
     "mi" => 1609.3,
@@ -895,6 +904,22 @@ function _parse_dss_load_model!(eng_obj::Dict{String,<:Any}, id::Any)
     end
 
     eng_obj["model"] = _dss2pmd_load_model[model]
+end
+
+
+"""
+    _parse_dss_capcontrol_type!(type::SubString{String}, id::Any)
+    
+Converts dss capcontrol type to supported PowerModelsDistribution CapControlType enum.
+"""
+function _parse_dss_capcontrol_type!(type::SubString{String}, id::Any)
+        
+    if isempty([get(_dss2pmd_capcontrol_type, "$type", Dict{String,Any}())])
+        @warn "$id: dss capcontrol type $type not supported. Treating as voltage control"
+        type = "voltage"
+    end
+
+    return _dss2pmd_capcontrol_type[type]
 end
 
 
