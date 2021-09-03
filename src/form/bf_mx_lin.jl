@@ -24,9 +24,13 @@ function variable_mc_branch_power(pm::LPUBFDiagModel; nw::Int=nw_id_default, bou
 end
 
 
-"Capacitor switching and relaxed current variables"
-function variable_mc_capcontrol(pm::AbstractLPUBFModel; kwargs...)
-    variable_mc_capacitor_switch_state(pm; relax=true)
+"""
+    variable_mc_capcontrol(pm::AbstractLPUBFModel; relax::Bool=false)
+
+Capacitor switching and relaxed power variables.
+"""
+function variable_mc_capcontrol(pm::AbstractLPUBFModel; relax::Bool=false)
+    variable_mc_capacitor_switch_state(pm, relax)
     variable_mc_capacitor_reactive_power(pm)
 end
 
@@ -282,7 +286,7 @@ function constraint_capacitor_on_off(pm::LPUBFDiagModel, i::Int, bus_shunts::Vec
     ϵ = 1e-5
     M_q = 1e5
     M_v = 2
-    if shunt["controls"]["type"]  == "kvar"
+    if shunt["controls"]["type"] == CAP_REACTIVE_POWER
         bus_idx = shunt["controls"]["terminal"] == 1 ? (shunt["controls"]["element"]["index"], shunt["controls"]["element"]["f_bus"], shunt["controls"]["element"]["t_bus"]) : (shunt["controls"]["element"]["index"], shunt["controls"]["element"]["t_bus"], shunt["controls"]["element"]["f_bus"])
         q_fr =  shunt["controls"]["element"]["type"] == "branch" ? var(pm, nw, :q)[bus_idx] : var(pm, nw, :qt, bus_idx)
         JuMP.@constraint(pm.model, sum(q_fr) - shunt["controls"]["onsetting"] ≤ M_q*cap_state[shunt["connections"][1]] - ϵ*(1-cap_state[shunt["connections"][1]]))
@@ -297,7 +301,7 @@ function constraint_capacitor_on_off(pm::LPUBFDiagModel, i::Int, bus_shunts::Vec
         end
     else
         for (idx,val) in enumerate(shunt["connections"])
-            if shunt["controls"]["type"][idx]  == "voltage"
+            if shunt["controls"]["type"][idx] == CAP_VOLTAGE
                 bus_idx = shunt["controls"]["terminal"][idx] == 1 ? shunt["controls"]["element"]["f_bus"] : shunt["controls"]["element"]["t_bus"]
                 w = var(pm, nw, :w, i)[val]
                 JuMP.@constraint(pm.model, w - shunt["controls"]["onsetting"][idx]^2 ≤ M_v*cap_state[val] - ϵ*(1-cap_state[val]))
@@ -308,7 +312,7 @@ function constraint_capacitor_on_off(pm::LPUBFDiagModel, i::Int, bus_shunts::Vec
                 JuMP.@constraint(pm.model, w - shunt["controls"]["vmin"][idx]^2 ≥ -M_v*cap_state[val] + ϵ*(1-cap_state[val]))
                 JuMP.@constraint(pm.model, w - shunt["controls"]["vmax"][idx]^2 ≤ M_v*(1-cap_state[val]) - ϵ*cap_state[val])
             end
-            if shunt["controls"]["type"][idx]  == "" 
+            if shunt["controls"]["type"][idx] == CAP_DISABLED 
                 JuMP.@constraint(pm.model, cap_state[val] == 1 )
             end
         end 

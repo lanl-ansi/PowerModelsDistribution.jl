@@ -253,7 +253,11 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedPowerModel, i::I
 end
 
 
-"KCL with capacitor control variables."
+"""
+    constraint_mc_power_balance_capc(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+
+KCL with capacitor control variables.
+"""
 function constraint_mc_power_balance_capc(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
     bus = ref(pm, nw, :bus, i)
     bus_arcs = ref(pm, nw, :bus_arcs_conns_branch, i)

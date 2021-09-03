@@ -863,27 +863,27 @@ function _dss2eng_capcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{Strin
     for (id, dss_obj) in get(data_dss, "capcontrol", Dict{String,Any}())
         _apply_like!(dss_obj, data_dss, "capcontrol")
         defaults = _apply_ordered_properties(_create_capcontrol(id; _to_kwargs(dss_obj)...), dss_obj)
-
+        type = _parse_dss_capcontrol_type!(defaults["type"], id)
         nphases = data_dss["capacitor"]["$(dss_obj["capacitor"])"]["phases"]
         
         if !haskey(data_eng["shunt"]["$(dss_obj["capacitor"])"],"controls")
             eng_obj = Dict{String,Any}("element" => defaults["element"],
-                    "voltoverride" => defaults["type"] == "kvar" ? defaults["voltoverride"] : [p == defaults["ptphase"] ? defaults["voltoverride"] : false for p in 1:nphases]
+                    "voltoverride" => type == CAP_REACTIVE_POWER ? defaults["voltoverride"] : [p == defaults["ptphase"] ? defaults["voltoverride"] : false for p in 1:nphases]
                     ) 
-
-            if defaults["type"] == "kvar" 
-                eng_obj["type"] = defaults["type"]
+            
+            if type == CAP_REACTIVE_POWER
+                eng_obj["type"] = type
                 eng_obj["terminal"] =  defaults["terminal"] 
                 eng_obj["onsetting"] =  defaults["onsetting"]
                 eng_obj["offsetting"] =  defaults["offsetting"] 
-            elseif defaults["type"] == "voltage" 
-                eng_obj["type"] = [p == defaults["ptphase"] ? defaults["type"] : "" for p in 1:nphases]
+            elseif type == CAP_VOLTAGE
+                eng_obj["type"] = [p == defaults["ptphase"] ? type : _dss2pmd_capcontrol_type[""] for p in 1:nphases]
                 eng_obj["terminal"] = [p == defaults["ptphase"] ? defaults["terminal"] : 0 for p in 1:nphases]
                 eng_obj["onsetting"] = [p == defaults["ptphase"] ? defaults["onsetting"] : 0.0 for p in 1:nphases]
                 eng_obj["offsetting"] = [p == defaults["ptphase"] ? defaults["offsetting"] : 0.0 for p in 1:nphases]
                 eng_obj["ptratio"] = [p == defaults["ptphase"] ? defaults["ptratio"] : 0.0 for p in 1:nphases]
-            elseif defaults["type"] == "current" 
-                eng_obj["type"] = [p == defaults["ctphase"] ? defaults["type"] : "" for p in 1:nphases]
+            elseif type == CAP_CURRENT
+                eng_obj["type"] = [p == defaults["ctphase"] ? type : _dss2pmd_capcontrol_type[""] for p in 1:nphases]
                 eng_obj["terminal"] = [p == defaults["ctphase"] ? defaults["terminal"] : 0 for p in 1:nphases]
                 eng_obj["onsetting"] = [p == defaults["ctphase"] ? defaults["onsetting"] : 0.0 for p in 1:nphases]
                 eng_obj["offsetting"] = [p == defaults["ctphase"] ? defaults["offsetting"] : 0.0 for p in 1:nphases]
@@ -891,9 +891,9 @@ function _dss2eng_capcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{Strin
             end
     
             if defaults["voltoverride"] 
-                eng_obj["vmin"] = defaults["type"] == "kvar" ? defaults["vmin"] : [p == defaults["ptphase"] ? defaults["vmin"] : 0.0 for p in 1:nphases]
-                eng_obj["vmax"] = defaults["type"] == "kvar" ? defaults["vmax"] : [p == defaults["ptphase"] ? defaults["vmax"] : 0.0 for p in 1:nphases]
-                eng_obj["ptratio"] = defaults["type"] == "kvar" ? defaults["ptratio"] : [p == defaults["ptphase"] ? defaults["ptratio"] : 0.0 for p in 1:nphases]
+                eng_obj["vmin"] = type == CAP_REACTIVE_POWER ? defaults["vmin"] : [p == defaults["ptphase"] ? defaults["vmin"] : 0.0 for p in 1:nphases]
+                eng_obj["vmax"] = type == CAP_REACTIVE_POWER ? defaults["vmax"] : [p == defaults["ptphase"] ? defaults["vmax"] : 0.0 for p in 1:nphases]
+                eng_obj["ptratio"] = type == CAP_REACTIVE_POWER ? defaults["ptratio"] : [p == defaults["ptphase"] ? defaults["ptratio"] : 0.0 for p in 1:nphases]
             end
 
             if import_all
@@ -904,15 +904,15 @@ function _dss2eng_capcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{Strin
             data_eng["shunt"]["$(dss_obj["capacitor"])"]["controls"] = eng_obj
         else
             eng_obj = data_eng["shunt"]["$(dss_obj["capacitor"])"]["controls"]
-            if defaults["type"] == "voltage" 
-                eng_obj["type"][defaults["ptphase"]] = defaults["type"] 
+            if type == CAP_VOLTAGE 
+                eng_obj["type"][defaults["ptphase"]] = type 
                 eng_obj["terminal"][defaults["ptphase"]] = defaults["terminal"] 
                 eng_obj["onsetting"][defaults["ptphase"]] = defaults["onsetting"] 
                 eng_obj["offsetting"][defaults["ptphase"]] = defaults["offsetting"] 
                 eng_obj["ptratio"][defaults["ptphase"]] = defaults["ptratio"] 
             end
-            if defaults["type"] == "current" 
-                eng_obj["type"][defaults["ctphase"]] = defaults["type"]
+            if type == CAP_CURRENT
+                eng_obj["type"][defaults["ctphase"]] = type
                 eng_obj["terminal"][defaults["ctphase"]] = defaults["terminal"] 
                 eng_obj["onsetting"][defaults["ctphase"]] = defaults["onsetting"] 
                 eng_obj["offsetting"][defaults["ctphase"]] = defaults["offsetting"] 

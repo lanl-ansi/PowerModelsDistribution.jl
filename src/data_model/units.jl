@@ -417,7 +417,7 @@ function _rebase_pu_shunt!(shunt::Dict{String,<:Any}, vbase::Real, sbase::Real, 
 
     # convert capcontrol items to per unit
     if haskey(shunt,"controls")
-        if shunt["controls"]["type"] == "kvar"
+        if shunt["controls"]["type"] == CAP_REACTIVE_POWER
             power_scale = length(shunt["connections"]) == 1 ? 1 : 3
             shunt["controls"]["onsetting"] = shunt["controls"]["onsetting"] /(sbase*power_scale)
             shunt["controls"]["offsetting"] = shunt["controls"]["offsetting"]/(sbase*power_scale)
@@ -431,10 +431,10 @@ function _rebase_pu_shunt!(shunt::Dict{String,<:Any}, vbase::Real, sbase::Real, 
                     shunt["controls"]["vmin"][idx] = shunt["controls"]["vmin"][idx]*shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor)
                     shunt["controls"]["vmax"][idx] = shunt["controls"]["vmax"][idx]*shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor) 
                 end
-                if val == "voltage"
+                if val == CAP_VOLTAGE
                     shunt["controls"]["onsetting"][idx]  = shunt["controls"]["onsetting"][idx] *shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor)
                     shunt["controls"]["offsetting"][idx] = shunt["controls"]["offsetting"][idx]*shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor) 
-                elseif val == "current"
+                elseif val == CAP_CURRENT
                     shunt["controls"]["onsetting"][idx]  = shunt["controls"]["onsetting"][idx] *shunt["controls"]["ctratio"][idx]/(sbase*1e3)*(vbase*voltage_scale_factor)
                     shunt["controls"]["offsetting"][idx] = shunt["controls"]["offsetting"][idx]*shunt["controls"]["ctratio"][idx]/(sbase*1e3)*(vbase*voltage_scale_factor)
                 end

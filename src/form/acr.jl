@@ -87,9 +87,13 @@ function variable_mc_bus_voltage_on_off(pm::AbstractUnbalancedACRModel; nw::Int=
 end
 
 
-"Capacitor switching variables"
-function variable_mc_capcontrol(pm::AbstractUnbalancedACRModel; kwargs...)
-    variable_mc_capacitor_switch_state(pm; relax=true)
+"""
+    variable_mc_capcontrol(pm::AbstractUnbalancedACRModel; relax::Bool=false)
+
+Capacitor switching variables.
+"""
+function variable_mc_capcontrol(pm::AbstractUnbalancedACRModel; relax::Bool=false)
+    variable_mc_capacitor_switch_state(pm, relax)
 end
 
 
@@ -601,7 +605,7 @@ function constraint_capacitor_on_off(pm::AbstractUnbalancedACRModel, i::Int, bus
     ϵ = 1e-5
     M_q = 1e5
     M_v = 2
-    if shunt["controls"]["type"]  == "kvar"
+    if shunt["controls"]["type"] == CAP_REACTIVE_POWER
         bus_idx = shunt["controls"]["terminal"] == 1 ? (shunt["controls"]["element"]["index"], shunt["controls"]["element"]["f_bus"], shunt["controls"]["element"]["t_bus"]) : (shunt["controls"]["element"]["index"], shunt["controls"]["element"]["t_bus"], shunt["controls"]["element"]["f_bus"])
         q_fr =  shunt["controls"]["element"]["type"] == "branch" ? var(pm, nw, :q)[bus_idx] : var(pm, nw, :qt, bus_idx)
         JuMP.@constraint(pm.model, sum(q_fr) - shunt["controls"]["onsetting"] ≤ M_q*cap_state[shunt["connections"][1]] - ϵ*(1-cap_state[shunt["connections"][1]]))
@@ -617,7 +621,7 @@ function constraint_capacitor_on_off(pm::AbstractUnbalancedACRModel, i::Int, bus
         end
     else
         for (idx,val) in enumerate(shunt["connections"])
-            if shunt["controls"]["type"][idx]  == "voltage"
+            if shunt["controls"]["type"][idx] == CAP_VOLTAGE
                 bus_idx = shunt["controls"]["terminal"][idx] == 1 ? shunt["controls"]["element"]["f_bus"] : shunt["controls"]["element"]["t_bus"]
                 vr_cap = var(pm, nw, :vr, i)[val]
                 vi_cap = var(pm, nw, :vi, i)[val]
@@ -630,7 +634,7 @@ function constraint_capacitor_on_off(pm::AbstractUnbalancedACRModel, i::Int, bus
                 JuMP.@constraint(pm.model, vr_cap^2 + vi_cap^2 - shunt["controls"]["vmin"][idx]^2 ≥ -M_v*cap_state[val] + ϵ*(1-cap_state[val]))
                 JuMP.@constraint(pm.model, vr_cap^2 + vi_cap^2 - shunt["controls"]["vmax"][idx]^2 ≤ M_v*(1-cap_state[val]) - ϵ*cap_state[val])
             end
-            if shunt["controls"]["type"][idx]  == "" 
+            if shunt["controls"]["type"][idx] == CAP_DISABLED
                 JuMP.@constraint(pm.model, cap_state[val] == 1 )
             end
         end 

@@ -51,3 +51,4 @@
         @test all(isapprox.(sol["solution"]["shunt"]["c1"]["cap_state"], [1.0]; atol=6e-1))
     end
 end
+

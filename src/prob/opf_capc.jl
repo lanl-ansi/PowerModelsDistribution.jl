@@ -1,10 +1,18 @@
-"Solve OPF with capacitor control"
+"""
+    solve_mc_opf_capc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+
+Solve OPF with capacitor control
+"""
 function solve_mc_opf_capc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
     return solve_mc_model(data, model_type, solver, build_mc_opf_capc; kwargs...)
 end
 
 
-"Constructor for capcontrol OPF"
+"""
+    build_mc_opf_capc(pm::AbstractUnbalancedPowerModel)
+
+Constructor for capcontrol OPF
+"""
 function build_mc_opf_capc(pm::AbstractUnbalancedPowerModel)
     variable_mc_bus_voltage(pm)
     variable_mc_branch_power(pm)
@@ -13,7 +21,7 @@ function build_mc_opf_capc(pm::AbstractUnbalancedPowerModel)
     variable_mc_generator_power(pm)
     variable_mc_load_power(pm)
 
-    variable_mc_capcontrol(pm)
+    variable_mc_capcontrol(pm, relax=true)
 
     constraint_mc_model_voltage(pm)
  
@@ -69,7 +77,7 @@ function build_mc_opf_capc(pm::AbstractUBFModels)
     variable_mc_generator_power(pm)
     variable_mc_load_power(pm)
 
-    variable_mc_capcontrol(pm)
+    variable_mc_capcontrol(pm, relax=true)
 
     # Constraints
     constraint_mc_model_current(pm)
@@ -113,20 +121,5 @@ function build_mc_opf_capc(pm::AbstractUBFModels)
 
     # Objective
     objective_mc_min_fuel_cost(pm)
-end
-
-# Depreciated run_ functions (remove after ~4-6 months)
-
-"depreciation warning for `run_ac_mc_opf_capc`"
-function run_ac_mc_opf_capc(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
-    @warn "run_ac_mc_opf_capc is being depreciated in favor of solve_mc_opf_capc(data, ACPUPowerModel, solver; kwargs...), please update your code accordingly"
-    return solve_mc_opf_capc(data, ACPUPowerModel, solver; kwargs...)
-end
-
-
-"depreciation warning for `run_mc_opf_capc`"
-function run_mc_opf_capc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    @warn "run_mc_opf_capc is being depreciated in favor of solve_mc_opf_capc, please update your code accordingly"
-    return solve_mc_opf_capc(data, model_type, solver; kwargs...)
 end
 
