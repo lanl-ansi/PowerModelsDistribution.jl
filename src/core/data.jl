@@ -1270,9 +1270,13 @@ active connected generator. Assumes that the network is a single connected compo
 function _correct_bus_types!(pm_data::Dict{String,<:Any})
     bus_gens = Dict{String,Vector{String}}(i => String[] for (i,bus) in pm_data["bus"])
 
-    for (i,gen) in pm_data["gen"]
-        if gen[pmd_math_component_status["gen"]] != pmd_math_component_status_inactive["gen"]
-            push!(bus_gens["$(gen["gen_bus"])"], i)
+    for type in ["gen", "storage"]
+        if haskey(pm_data, type)
+            for (i,gen) in pm_data[type]
+                if gen[pmd_math_component_status[type]] != pmd_math_component_status_inactive[type]
+                    push!(bus_gens[string(gen["$(type)_bus"])], i)
+                end
+            end
         end
     end
 

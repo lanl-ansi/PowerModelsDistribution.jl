@@ -3,9 +3,10 @@
 ""
 function variable_mc_bus_voltage_angle(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
+    va_start_defaults = Dict(i => [0.0, -120.0, 120.0, fill(0.0, length(terms))...][terms] for (i, terms) in terminals)
     va = var(pm, nw)[:va] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_va_$(i)",
-            start = comp_start_value(ref(pm, nw, :bus, i), "va_start", t, 0.0)
+            start = comp_start_value(ref(pm, nw, :bus, i), ["va_start", "va"], t, va_start_defaults[i][findfirst(isequal(t), terminals[i])]),
         ) for i in ids(pm, nw, :bus)
     )
 
@@ -18,7 +19,7 @@ function variable_mc_bus_voltage_magnitude_only(pm::AbstractUnbalancedPowerModel
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
     vm = var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_vm_$(i)",
-            start = comp_start_value(ref(pm, nw, :bus, i), "vm_start", t, 1.0)
+            start = comp_start_value(ref(pm, nw, :bus, i), ["vm_start", "vm", "vmin"], t, 1.0)
         ) for i in ids(pm, nw, :bus)
     )
 
@@ -94,22 +95,7 @@ function variable_mc_bus_voltage_magnitude_sqr(pm::AbstractUnbalancedPowerModel;
     w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_w_$(i)",
             lower_bound = 0.0,
-            start = comp_start_value(
-                ref(pm, nw, :bus, i),
-                "w_start",
-                t,
-                comp_start_value(
-                    ref(pm, nw, :bus, i),
-                    "vm_start",
-                    t,
-                    comp_start_value(
-                        ref(pm, nw, :bus, i),
-                        "vm",
-                        t,
-                        1.0
-                    )
-                )^2
-            )
+            start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, comp_start_value(ref(pm, nw, :bus, i), ["vm_start", "vm", "vmin"], t, 1.0)^2)
         ) for i in ids(pm, nw, :bus)
     )
 
@@ -135,7 +121,7 @@ function variable_mc_bus_voltage_magnitude_on_off(pm::AbstractUnbalancedPowerMod
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
     vm = var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
         [t in terminals[i]], base_name="$(nw)_vm_$(i)",
-        start = comp_start_value(ref(pm, nw, :bus, i), "vm_start", t, comp_start_value(ref(pm, nw, :bus, i), "vm", t, 1.0))
+        start = comp_start_value(ref(pm, nw, :bus, i), ["vm_start", "vm", "vmin"], t, 1.0)
     ) for i in ids(pm, nw, :bus))
 
     if bounded
@@ -160,27 +146,7 @@ function variable_mc_bus_voltage_magnitude_sqr_on_off(pm::AbstractUnbalancedPowe
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
     w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
         [t in terminals[i]], base_name="$(nw)_w_$(i)",
-        start = comp_start_value(
-            ref(pm, nw, :bus, i),
-            "w_start",
-            t,
-            comp_start_value(
-                ref(pm, nw, :bus, i),
-                "vm_start",
-                t,
-                comp_start_value(
-                    ref(pm, nw, :bus, i),
-                    "vm",
-                    t,
-                    comp_start_value(
-                        ref(pm, nw, :bus, i),
-                        "vmin",
-                        t,
-                        1.0
-                    )
-                )
-            )^2
-        )
+        start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, comp_start_value(ref(pm, nw, :bus, i), ["vm_start", "vm", "vmin"], t, 1.0)^2)
     ) for i in ids(pm, nw, :bus))
 
     if bounded
@@ -394,7 +360,9 @@ end
 function variable_mc_transformer_power_real(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_transformer) for ((l,i,j), connections) in entry)
     pt = var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
-            [c in connections[(l,i,j)]], base_name="$(nw)_pt_$((l,i,j))",
+            [c in connections[(l,i,j)]],
+            base_name="$(nw)_pt_$((l,i,j))",
+            start = 0.0,
         ) for (l,i,j) in ref(pm, nw, :arcs_transformer)
     )
 
@@ -537,8 +505,9 @@ function variable_mc_oltc_transformer_tap(pm::AbstractUnbalancedPowerModel; nw::
     tap = var(pm, nw)[:tap] = Dict(i => JuMP.@variable(pm.model,
         [p in 1:length(ref(pm,nw,:transformer,i,"f_connections"))],
         base_name="$(nw)_tm_$(i)",
-        start=ref(pm, nw, :transformer, i, "tm_set")[p]
+        start=comp_start_value(ref(pm, nw, :transformer, i), "tm_set", p, 1.0),
     ) for i in p_oltc_ids)
+
     if bounded
         for tr_id in p_oltc_ids, p in 1:length(ref(pm,nw,:transformer,tr_id,"f_connections"))
             set_lower_bound(var(pm, nw)[:tap][tr_id][p], ref(pm, nw, :transformer, tr_id, "tm_lb")[p])
@@ -747,7 +716,7 @@ function variable_mc_switch_state(pm::AbstractUnbalancedPowerModel; nw::Int=nw_i
             base_name="$(nw)_switch_state_$(l)",
             lower_bound = 0,
             upper_bound = 1,
-            start = comp_start_value(ref(pm, nw, :switch, l), "state_start", 0.5)
+            start = comp_start_value(ref(pm, nw, :switch, l), ["state_start", "state"], 0)
         )
     else
         state = var(pm, nw)[:switch_state] = JuMP.@variable(
@@ -755,7 +724,7 @@ function variable_mc_switch_state(pm::AbstractUnbalancedPowerModel; nw::Int=nw_i
             [l in ids(pm, nw, :switch_dispatchable)],
             base_name="$(nw)_switch_state_$(l)",
             binary = true,
-            start = comp_start_value(ref(pm, nw, :switch, l), "state_start", get(ref(pm, nw, :switch, l), "state", 0))
+            start = comp_start_value(ref(pm, nw, :switch, l), ["state_start", "state"], 0)
         )
     end
 
@@ -779,7 +748,7 @@ function variable_mc_generator_power_real(pm::AbstractUnbalancedPowerModel; nw::
     connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
     pg = var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_pg_$(i)",
-            start = comp_start_value(ref(pm, nw, :gen, i), "pg_start", c, 0.0)
+            start = comp_start_value(ref(pm, nw, :gen, i), ["pg_start", "pg", "pmin"], c, 0.0)
         ) for i in ids(pm, nw, :gen)
     )
 
@@ -809,7 +778,7 @@ function variable_mc_generator_power_imaginary(pm::AbstractUnbalancedPowerModel;
     connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
     qg = var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_qg_$(i)",
-            start = comp_start_value(ref(pm, nw, :gen, i), "qg_start", c, 0.0)
+            start = comp_start_value(ref(pm, nw, :gen, i), ["qg_start", "qg", "qmin"], c, 0.0)
         ) for i in ids(pm, nw, :gen)
     )
 
@@ -847,7 +816,7 @@ function variable_mc_generator_power_real_on_off(pm::AbstractUnbalancedPowerMode
     connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
     pg = var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
         [c in connections[i]], base_name="$(nw)_pg_$(i)",
-        start = comp_start_value(ref(pm, nw, :gen, i), "pg_start", c, 0.0)
+        start = comp_start_value(ref(pm, nw, :gen, i), ["pg_start", "pg", "pmin"], c, 0.0)
     ) for i in ids(pm, nw, :gen))
 
     if bounded
@@ -877,7 +846,7 @@ function variable_mc_generator_power_imaginary_on_off(pm::AbstractUnbalancedPowe
     connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
     qg = var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
         [c in connections[i]], base_name="$(nw)_qg_$(i)",
-        start = comp_start_value(ref(pm, nw, :gen, i), "qg_start", c, 0.0)
+        start = comp_start_value(ref(pm, nw, :gen, i), ["qg_start", "qg", "qmin"], c, 0.0)
     ) for i in ids(pm, nw, :gen))
 
     if bounded
@@ -959,8 +928,8 @@ function variable_storage_energy(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id
 
     if bounded
         for (i, storage) in ref(pm, nw, :storage)
-            JuMP.set_lower_bound(se[i], 0)
-            JuMP.set_upper_bound(se[i], storage["energy_rating"])
+            set_lower_bound(se[i], 0)
+            set_upper_bound(se[i], storage["energy_rating"])
         end
     end
 
@@ -977,8 +946,8 @@ function variable_storage_charge(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id
 
     if bounded
         for (i, storage) in ref(pm, nw, :storage)
-            JuMP.set_lower_bound(sc[i], 0)
-            JuMP.set_upper_bound(sc[i], storage["charge_rating"])
+            set_lower_bound(sc[i], 0)
+            set_upper_bound(sc[i], storage["charge_rating"])
         end
     end
 
@@ -995,8 +964,8 @@ function variable_storage_discharge(pm::AbstractUnbalancedPowerModel; nw::Int=nw
 
     if bounded
         for (i, storage) in ref(pm, nw, :storage)
-            JuMP.set_lower_bound(sd[i], 0)
-            JuMP.set_upper_bound(sd[i], storage["discharge_rating"])
+            set_lower_bound(sd[i], 0)
+            set_upper_bound(sd[i], storage["discharge_rating"])
         end
     end
 
@@ -1055,7 +1024,7 @@ function variable_mc_storage_power_real(pm::AbstractUnbalancedPowerModel; nw::In
     connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
     ps = var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_ps_$(i)",
-            start = comp_start_value(ref(pm, nw, :storage, i), "ps_start", c, 0.0)
+            start = comp_start_value(ref(pm, nw, :storage, i), ["ps_start", "ps"], c, 0.0)
         ) for i in ids(pm, nw, :storage)
     )
 
@@ -1082,7 +1051,7 @@ function variable_mc_storage_power_imaginary(pm::AbstractUnbalancedPowerModel; n
     connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
     qs = var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_qs_$(i)",
-            start = comp_start_value(ref(pm, nw, :storage, i), "qs_start", c, 0.0)
+            start = comp_start_value(ref(pm, nw, :storage, i), ["qs_start", "qs"], c, 0.0)
         ) for i in ids(pm, nw, :storage)
     )
 
@@ -1159,7 +1128,7 @@ function variable_mc_storage_power_real_on_off(pm::AbstractUnbalancedPowerModel;
     connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
     ps = var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
         [c in connections[i]], base_name="$(nw)_ps_$(i)",
-        start = comp_start_value(ref(pm, nw, :storage, i), "ps_start", c, 0.0)
+        start = comp_start_value(ref(pm, nw, :storage, i), ["ps_start", "ps"], c, 0.0)
     ) for i in ids(pm, nw, :storage))
 
     if bounded
@@ -1181,7 +1150,7 @@ function variable_mc_storage_power_imaginary_on_off(pm::AbstractUnbalancedPowerM
     connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
     qs = var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
         [c in connections[i]], base_name="$(nw)_qs_$(i)",
-        start = comp_start_value(ref(pm, nw, :storage, i), "qs_start", c, 0.0)
+        start = comp_start_value(ref(pm, nw, :storage, i), ["qs_start", "qs"], c, 0.0)
     ) for i in ids(pm, nw, :storage))
 
     if bounded
