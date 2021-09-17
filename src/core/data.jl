@@ -602,9 +602,8 @@ function _calc_branch_power_max(branch::Dict{String,<:Any}, bus::Dict{String,<:A
     connections = bus["bus_i"] == branch["f_bus"] ? branch["f_connections"] : branch["t_connections"]
     connections = [findfirst(isequal(cnd), terminals) for cnd in connections]
 
-    if haskey(bus, "vmax") && (haskey(branch, "c_rating_b") || haskey(branch, "c_rating_a"))
-        c_rating = haskey(branch, "c_rating_b") ? branch["c_rating_b"] : branch["c_rating_a"]
-        push!(bounds, c_rating .* bus["vmax"][connections] .* bus["vbase"])
+    if haskey(bus, "vmax") && haskey(branch, "c_rating_a")
+        push!(bounds, branch["c_rating_a"] .* bus["vmax"][connections] .* bus["vbase"])
     end
     if haskey(branch, "rate_a")
         push!(bounds, branch["rate_a"])
