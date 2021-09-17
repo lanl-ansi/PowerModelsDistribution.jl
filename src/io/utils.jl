@@ -388,13 +388,13 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
                     "ctprim" => [[0.0 for (i,p) in locs] for w in 1:nrw],
                     "r" => [[0.0 for (i,p) in locs] for w in 1:nrw],
                     "x" => [[0.0 for (i,p) in locs] for w in 1:nrw]
-                ) 
+                )
             end
             for (i,p) in locs
                 if haskey(trs[i],"controls")
                     for w in 1:nrw
                         c = f_phases_loc[i][1]
-                        btrans["controls"]["vreg"][w][c] = trs[i]["controls"]["vreg"][w][p] 
+                        btrans["controls"]["vreg"][w][c] = trs[i]["controls"]["vreg"][w][p]
                         btrans["controls"]["band"][w][c] = trs[i]["controls"]["band"][w][p]
                         btrans["controls"]["ptratio"][w][c] = trs[i]["controls"]["ptratio"][w][p]
                         btrans["controls"]["ctprim"][w][c] = trs[i]["controls"]["ctprim"][w][p]
@@ -403,7 +403,7 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
                     end
                 end
             end
- 
+
             # edit the transformer dict
             for id in ids
                 delete!(data_eng["transformer"], id)
@@ -946,7 +946,7 @@ end
 "helper function to properly reference time series variables from opendss"
 function _build_time_series_reference!(eng_obj::Dict{String,<:Any}, dss_obj::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, defaults::Dict{String,<:Any}, time_series::String, active::String, reactive::String)
     if haskey(dss_obj, time_series) && haskey(data_dss, "loadshape") && haskey(data_dss["loadshape"], defaults[time_series])
-        eng_obj["time_series"] = Dict{String,Any}()
+        eng_obj["time_series"] = get(eng_obj, "time_series", Dict{String,Any}())
         if _is_loadshape_split(data_dss["loadshape"][defaults[time_series]])
             eng_obj["time_series"][active] = "$(defaults[time_series])_p"
             eng_obj["time_series"][reactive] = "$(defaults[time_series])_q"

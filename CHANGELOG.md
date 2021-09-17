@@ -2,6 +2,7 @@
 
 ## staged
 
+- Updated time_series to affect upper real and reactive power bounds on solar objects in dss2eng parse
 - Fixed bug in dss pvsystem struct where `temperature`, `pmpp`, and `irradiance` were the wrong type (`Int` instead of `Float64`)
 - Fixed bug in dss node structs, where daily was the wrong type (should be `String`, not `Vector{Float64}`)
 - Fixed bug in `_calc_branch_power_max` where `c_rating_b` was being used
