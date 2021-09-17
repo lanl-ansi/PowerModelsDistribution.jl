@@ -2,6 +2,10 @@
 
 ## staged
 
+- none
+
+## v0.11.8
+
 - Fixed bug in LPUBFDiagModel transformer variables
 - Removed phase projection of only wye-connected transformers (left over), phase projection of delta components remains for now
 - Updated time_series to affect upper real and reactive power bounds on solar objects in dss2eng parse
