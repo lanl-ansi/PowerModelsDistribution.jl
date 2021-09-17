@@ -2,6 +2,7 @@
 
 ## staged
 
+- Add support for storage to OPF_OLTC
 - Add wye-connected CapControl for ACP, ACR, LinDist3Flow, FBS and FOT formulations
 
 ## v0.11.7
