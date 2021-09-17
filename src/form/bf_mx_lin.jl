@@ -97,6 +97,13 @@ function constraint_mc_theta_ref(pm::LPUBFDiagModel, nw::Int, i::Int, va_ref::Ve
 end
 
 
+"Creates variables for both `active` and `reactive` power flow at each transformer."
+function variable_mc_transformer_power(pm::LPUBFDiagModel; kwargs...)
+    variable_mc_transformer_power_real(pm; kwargs...)
+    variable_mc_transformer_power_imaginary(pm; kwargs...)
+end
+
+
 ""
 function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
     w = var(pm, nw, :w, i)
@@ -112,7 +119,6 @@ function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i::Int, termin
     qs  = get(var(pm, nw),     :qs,  Dict()); _check_var_keys(qs,  bus_storage, "reactive power", "storage")
     pd  = get(var(pm, nw), :pd_bus,  Dict()); _check_var_keys(pd,  bus_loads, "active power", "load")
     qd  = get(var(pm, nw), :qd_bus,  Dict()); _check_var_keys(qd,  bus_loads, "reactive power", "load")
-
 
     cstr_p = []
     cstr_q = []
@@ -160,7 +166,7 @@ end
 @doc raw"""
     constraint_mc_power_balance_capc(pm::LPUBFDiagModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
 
-Power balance constraints with capacitor control linearized using McCormick envelopes 
+Power balance constraints with capacitor control linearized using McCormick envelopes
 
 ```math
 \begin{align}
@@ -206,7 +212,7 @@ function constraint_mc_power_balance_capc(pm::LPUBFDiagModel, nw::Int, i::Int, t
     end
 
     # add constraints to model capacitor switching
-    if !isempty(bus_shunts) && haskey(ref(pm, nw, :shunt, bus_shunts[1][1]), "controls") 
+    if !isempty(bus_shunts) && haskey(ref(pm, nw, :shunt, bus_shunts[1][1]), "controls")
         constraint_capacitor_on_off(pm, i, bus_shunts)
 
         ncnds = length(bus_shunts[1][2])
@@ -276,7 +282,7 @@ Add constraints to model capacitor switching
 &\text{kvar control (ON): }  q-q_\text{on} ≤ M_q ⋅ z - ϵ ⋅ (1-z), \\
 &\text{kvar control (OFF): } q-q_\text{off} ≥ -M_q ⋅ (1-z) - ϵ ⋅ z, \\
 &\text{voltage control (ON): }  w - v_\text{min}^2 ≥ -M_v ⋅ z + ϵ ⋅ (1-z), \\
-&\text{voltage control (OFF): } w - v_\text{max}^2 ≤ M_v ⋅ (1-z) - ϵ ⋅ z. 
+&\text{voltage control (OFF): } w - v_\text{max}^2 ≤ M_v ⋅ (1-z) - ϵ ⋅ z.
 \end{align}
 ```
 """
@@ -292,7 +298,7 @@ function constraint_capacitor_on_off(pm::LPUBFDiagModel, i::Int, bus_shunts::Vec
         JuMP.@constraint(pm.model, sum(q_fr) - shunt["controls"]["onsetting"] ≤ M_q*cap_state[shunt["connections"][1]] - ϵ*(1-cap_state[shunt["connections"][1]]))
         JuMP.@constraint(pm.model, sum(q_fr) - shunt["controls"]["offsetting"] ≥ -M_q*(1-cap_state[shunt["connections"][1]]) - ϵ*cap_state[shunt["connections"][1]])
         JuMP.@constraint(pm.model, cap_state .== cap_state[shunt["connections"][1]])
-        if shunt["controls"]["voltoverride"] 
+        if shunt["controls"]["voltoverride"]
             for (idx,val) in enumerate(shunt["connections"])
                 w = var(pm, nw, :w, i)[val]
                 JuMP.@constraint(pm.model, w - shunt["controls"]["vmin"]^2 ≥ -M_v*cap_state[val] + ϵ*(1-cap_state[val]))
@@ -307,16 +313,16 @@ function constraint_capacitor_on_off(pm::LPUBFDiagModel, i::Int, bus_shunts::Vec
                 JuMP.@constraint(pm.model, w - shunt["controls"]["onsetting"][idx]^2 ≤ M_v*cap_state[val] - ϵ*(1-cap_state[val]))
                 JuMP.@constraint(pm.model, w - shunt["controls"]["offsetting"][idx]^2 ≥ -M_v*(1-cap_state[val]) - ϵ*cap_state[val])
             end
-            if shunt["controls"]["voltoverride"][idx] 
+            if shunt["controls"]["voltoverride"][idx]
                 w = var(pm, nw, :w, i)[val]
                 JuMP.@constraint(pm.model, w - shunt["controls"]["vmin"][idx]^2 ≥ -M_v*cap_state[val] + ϵ*(1-cap_state[val]))
                 JuMP.@constraint(pm.model, w - shunt["controls"]["vmax"][idx]^2 ≤ M_v*(1-cap_state[val]) - ϵ*cap_state[val])
             end
-            if shunt["controls"]["type"][idx] == CAP_DISABLED 
+            if shunt["controls"]["type"][idx] == CAP_DISABLED
                 JuMP.@constraint(pm.model, cap_state[val] == 1 )
             end
-        end 
-    end  
+        end
+    end
 end
 
 
@@ -350,7 +356,7 @@ end
 @doc raw"""
     constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_id_default, report::Bool=true)
 
-Delta/voltage-dependent load models for LPUBFDiagModel. Delta loads use the auxilary power variable (X). The constant current load model is derived by linearizing around the flat-start voltage solution. 
+Delta/voltage-dependent load models for LPUBFDiagModel. Delta loads use the auxilary power variable (X). The constant current load model is derived by linearizing around the flat-start voltage solution.
 
 ```math
 \begin{align}
@@ -358,7 +364,7 @@ Delta/voltage-dependent load models for LPUBFDiagModel. Delta loads use the auxi
 &\text{Constant impedance (Wye):} \Rightarrow P_i^d = a_i \cdot w_i,~Q_i^d = b_i \cdot w_i ~\forall i \in L \\
 &\text{Constant impedance (Delta):} \Rightarrow P_i^d = 3\cdot a_i \cdot w_i,~Q_i^d = 3\cdot b_i \cdot w_i ~\forall i \in L \\
 &\text{Constant current (Wye):} \Rightarrow P_i^d = \frac{a_i}{2}\cdot \left( 1+w_i \right),~Q_i^d = \frac{b_i}{2}\cdot \left( 1+w_i \right) \forall i \in L \\
-&\text{Constant current (Delta):} \Rightarrow P_i^d = \frac{\sqrt{3} \cdot a_i}{2}\cdot \left( 1+w_i \right),~Q_i^d = \frac{\sqrt{3} \cdot b_i}{2}\cdot \left( 1+w_i \right) \forall i \in L 
+&\text{Constant current (Delta):} \Rightarrow P_i^d = \frac{\sqrt{3} \cdot a_i}{2}\cdot \left( 1+w_i \right),~Q_i^d = \frac{\sqrt{3} \cdot b_i}{2}\cdot \left( 1+w_i \right) \forall i \in L
 \end{align}
 ```
 """
@@ -378,7 +384,7 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
     wmin = vmin.^2
     wmax = vmax.^2
     pmin, pmax, qmin, qmax = _calc_load_pq_bounds(load, bus)
-    
+
     # take care of connections
     if load["configuration"]==WYE
         if load["model"]==POWER
@@ -390,7 +396,7 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
             var(pm, nw, :qd)[load_id] = b.*w
         # in this case, :pd has a JuMP variable
         else
-            w = var(pm, nw, :w)[bus_id][[c for c in connections]] 
+            w = var(pm, nw, :w)[bus_id][[c for c in connections]]
             pd = var(pm, nw, :pd)[load_id]
             qd = var(pm, nw, :qd)[load_id]
             for (idx,c) in enumerate(connections)
@@ -436,13 +442,13 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
                 JuMP.@constraint(pm.model, qd[idx]==qd0[idx])
             end
         elseif load["model"]==IMPEDANCE
-            w = var(pm, nw, :w)[bus_id][[c for c in connections]]     
+            w = var(pm, nw, :w)[bus_id][[c for c in connections]]
             for (idx,c) in enumerate(connections)
                 JuMP.@constraint(pm.model, pd[idx]==3*a[idx]*w[idx])
                 JuMP.@constraint(pm.model, qd[idx]==3*b[idx]*w[idx])
             end
         else
-            w = var(pm, nw, :w)[bus_id][[c for c in connections]] 
+            w = var(pm, nw, :w)[bus_id][[c for c in connections]]
             for (idx,c) in enumerate(connections)
                 JuMP.@constraint(pm.model, pd[idx]==sqrt(3)/2*a[idx]*(w[idx]+1))
                 JuMP.@constraint(pm.model, qd[idx]==sqrt(3)/2*b[idx]*(w[idx]+1))

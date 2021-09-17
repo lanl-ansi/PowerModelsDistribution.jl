@@ -2,6 +2,8 @@
 
 ## staged
 
+- Fixed bug in LPUBFDiagModel transformer variables
+- Removed phase projection of only wye-connected transformers (left over), phase projection of delta components remains for now
 - Updated time_series to affect upper real and reactive power bounds on solar objects in dss2eng parse
 - Fixed bug in dss pvsystem struct where `temperature`, `pmpp`, and `irradiance` were the wrong type (`Int` instead of `Float64`)
 - Fixed bug in dss node structs, where daily was the wrong type (should be `String`, not `Vector{Float64}`)
