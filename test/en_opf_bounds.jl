@@ -31,24 +31,24 @@ data_dir = "data/en_validation_case_data"
         # IVRENPowerModel
         sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel)
         c_to = sol_pmd["line"]["line1"]["cr_to"]+im*sol_pmd["line"]["line1"]["ci_to"]
-        @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.01))
+        @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.005))
 
         # IVRQuadraticENPowerModel
         sol_pmd = calc_sol_pmd(data_math, IVRQuadraticENPowerModel)
         c_to = sol_pmd["line"]["line1"]["cr_to"]+im*sol_pmd["line"]["line1"]["ci_to"]
-        @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.01))
+        @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.005))
 
         # IVRReducedQuadraticENPowerModel
         sol_pmd = calc_sol_pmd(data_math, IVRReducedQuadraticENPowerModel)
         c_to = sol_pmd["line"]["line1"]["cr_to"]+im*sol_pmd["line"]["line1"]["ci_to"]
-        @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.01))
+        @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.005))
 
         # ACRENPowerModel
         sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel, optimizer=ipopt_solver)
         s_to = sol_pmd["line"]["line1"]["pt"]+im*sol_pmd["line"]["line1"]["qt"]
         v_to = sol_pmd["bus"]["b2"]["vr"]+im*sol_pmd["bus"]["b2"]["vi"]
         c_to = conj.(s_to./v_to)
-        @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.01))
+        @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.005))
     end
 
     @testset "branch power magnitude bound" begin
@@ -62,11 +62,15 @@ data_dir = "data/en_validation_case_data"
         @assert gen_pv["name"]=="pv1"
         gen_pv["cost"] *= 0.5
         gen_pv["pmax"] = fill(Inf, 3)
+        # scale up objective to prevent feasibility issues
+        for (_,gen) in data_math["gen"]
+            gen["cost"] *= 1E3
+        end
 
         # IVRENPowerModel
         sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel)
         s_to = sol_pmd["line"]["line1"]["pt"]+im*sol_pmd["line"]["line1"]["qt"]
-        @test all(isapprox.(abs.(s_to[1:3]), sm_ub[1:3], rtol=0.001))
+        @test all(isapprox.(abs.(s_to[1:3]), sm_ub[1:3], rtol=0.005))
 
         # IVRQuadraticENPowerModel does not implement sm_ub
 
@@ -75,7 +79,7 @@ data_dir = "data/en_validation_case_data"
         # ACRENPowerModel
         sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel)
         s_to = sol_pmd["line"]["line1"]["pt"]+im*sol_pmd["line"]["line1"]["qt"]
-        @test all(isapprox.(abs.(s_to[1:3]), sm_ub[1:3], rtol=0.001))
+        @test all(isapprox.(abs.(s_to[1:3]), sm_ub[1:3], rtol=0.005))
     end
 
     @testset "switch current magnitude bound" begin
@@ -92,6 +96,10 @@ data_dir = "data/en_validation_case_data"
         @assert gen_pv["name"]=="pv1"
         gen_pv["cost"] *= 0.5
         gen_pv["pmax"] = fill(Inf, 3)
+        # scale up objective to prevent feasibility issues
+        for (_,gen) in data_math["gen"]
+            gen["cost"] *= 1E4
+        end
 
         # IVRENPowerModel
         sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel)
@@ -111,11 +119,11 @@ data_dir = "data/en_validation_case_data"
         s_to = sol_pmd["switch"]["switch"]["pt"]+im*sol_pmd["switch"]["switch"]["qt"]
         v_to = sol_pmd["bus"]["x2"]["vr"]+im*sol_pmd["bus"]["x2"]["vi"]
         c_to = conj.(s_to./v_to)
-        @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.01))
+        @test all(isapprox.(abs.(c_to[3]), cm_ub[3], rtol=0.005))
     end
 
     @testset "branch power magnitude bound" begin
-        sm_ub = [11:-2:5...]
+        sm_ub = [50:-10:20...]
         data_eng = parse_file("$data_dir/test_switch.dss", transformations=[remove_all_bounds!])
         add_bus_absolute_vbounds!(data_eng) # ACR needs this to prevent voltage collapse
         # copy in solar from test_gen_3ph_wye.dss
@@ -128,13 +136,17 @@ data_dir = "data/en_validation_case_data"
         @assert gen_pv["name"]=="pv1"
         gen_pv["cost"] *= 0.5
         gen_pv["pmax"] = fill(Inf, 3)
+        # scale up objective to prevent feasibility issues
+        for (_,gen) in data_math["gen"]
+            gen["cost"] *= 1E3
+        end
 
         # IVRENPowerModel
-        sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel)
+        sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel, optimizer=optimizer_with_attributes(Ipopt.Optimizer))
         c_to = sol_pmd["switch"]["switch"]["cr_to"]+im*sol_pmd["switch"]["switch"]["ci_to"]
         v_to = sol_pmd["bus"]["x2"]["vr"]+im*sol_pmd["bus"]["x2"]["vi"]
         s_to = v_to.*conj.(c_to)
-        @test all(isapprox.(abs.(s_to[1:3]), sm_ub[1:3], rtol=0.01))
+        @test all(isapprox.(abs.(s_to[3]), sm_ub[3], rtol=0.005))
 
         # IVRQuadraticENPowerModel does not implement sm_ub
 
@@ -143,6 +155,7 @@ data_dir = "data/en_validation_case_data"
         # ACRENPowerModel
         sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel)
         s_to = sol_pmd["switch"]["switch"]["pt"]+im*sol_pmd["switch"]["switch"]["qt"]
+        v_to = sol_pmd["bus"]["x2"]["vr"]+im*sol_pmd["bus"]["x2"]["vi"]
         @test all(isapprox.(abs.(s_to[1:3]), sm_ub[1:3], rtol=0.001))
     end
 
@@ -157,11 +170,15 @@ data_dir = "data/en_validation_case_data"
         @assert gen_pv["name"]=="pv1"
         gen_pv["cost"] *= 0.5
         gen_pv["pmax"] = fill(Inf, 3)
+        # scale up objective to prevent feasibility issues
+        for (_,gen) in data_math["gen"]
+            gen["cost"] *= 1E3
+        end
 
         # IVRENPowerModel
         sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel)
         v_b2 = sol_pmd["bus"]["b2"]["vr"]+im*sol_pmd["bus"]["b2"]["vi"]
-        @test all(isapprox.(abs.(v_b2[1:3]), vm_ub[1:3], rtol=0.001))
+        @test all(isapprox.(abs.(v_b2[1:3]), vm_ub[1:3], rtol=0.005))
 
         # IVRQuadraticENPowerModel, IVRReducedQuadraticENPowerModel and ACRENPowerModel
         # share switch implementation with IVRQuadraticENPowerModel,
@@ -181,10 +198,15 @@ data_dir = "data/en_validation_case_data"
         gen_pv["pmax"] = fill( Inf, 3)
         gen_pv["pmin"] = fill(-Inf, 3)
         gen_pv["qmin"] = gen_pv["qmax"] = fill(0.0, 3)
+        # scale up objective to prevent feasibility issues
+        for (_,gen) in data_math["gen"]
+            gen["cost"] *= 1E3
+        end
+
         # IVRENPowerModel
         sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel)
         v_b2 = sol_pmd["bus"]["b2"]["vr"]+im*sol_pmd["bus"]["b2"]["vi"]
-        @test any(isapprox.(abs.(v_b2[1:3]), vm_lb[1:3], rtol=0.001))
+        @test any(isapprox.(abs.(v_b2[1:3]), vm_lb[1:3], rtol=0.005))
 
         # IVRQuadraticENPowerModel, IVRReducedQuadraticENPowerModel and ACRENPowerModel
         # share switch implementation with IVRQuadraticENPowerModel,
@@ -202,12 +224,16 @@ data_dir = "data/en_validation_case_data"
         @assert gen_pv["name"]=="pv1"
         gen_pv["cost"] *= 0.5
         gen_pv["pmax"] = fill(Inf, 3)
+        # scale up objective to prevent feasibility issues
+        for (_,gen) in data_math["gen"]
+            gen["cost"] *= 1E3
+        end
 
         # IVRENPowerModel
         sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel)
         v_b2 = sol_pmd["bus"]["b2"]["vr"]+im*sol_pmd["bus"]["b2"]["vi"]
         c, d, lb = vm_pair_ub[1]
-        @test all(isapprox.(abs(v_b2[c]-v_b2[d]), lb, rtol=0.001))
+        @test all(isapprox.(abs(v_b2[c]-v_b2[d]), lb, rtol=0.005))
 
         # IVRQuadraticENPowerModel, IVRReducedQuadraticENPowerModel and ACRENPowerModel
         # share switch implementation with IVRQuadraticENPowerModel,
@@ -223,14 +249,19 @@ data_dir = "data/en_validation_case_data"
         add_start_vrvi!(data_math)
         gen_pv = data_math["gen"]["1"]
         @assert gen_pv["name"]=="pv1"
-        gen_pv["cost"] *= 2.0 # reverse power flow
-        gen_pv["pmax"] = fill(Inf, 3)
+        gen_pv["cost"] *= 10.0 # reverse power flow
+        gen_pv["pmax"] = [Inf]
+        gen_pv["qmax"] = [0.0]
+        # scale up objective to prevent feasibility issues
+        for (_,gen) in data_math["gen"]
+            gen["cost"] *= 1E3
+        end
 
         # IVRENPowerModel
         sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel)
         v_b2 = sol_pmd["bus"]["b2"]["vr"]+im*sol_pmd["bus"]["b2"]["vi"]
         c, d, lb = vm_pair_lb[1]
-        @test all(isapprox.(abs(v_b2[c]-v_b2[d]), lb, rtol=0.001))
+        @test all(isapprox.(abs(v_b2[c]-v_b2[d]), lb, rtol=0.005))
 
         # IVRQuadraticENPowerModel, IVRReducedQuadraticENPowerModel and ACRENPowerModel
         # share switch implementation with IVRQuadraticENPowerModel,
@@ -250,16 +281,20 @@ data_dir = "data/en_validation_case_data"
         @assert gen_pv["name"]=="pv1"
         gen_pv["cost"] *= 0.5
         gen_pv["pmax"] = fill(Inf, 3)
+        # scale up objective to prevent feasibility issues
+        for (_,gen) in data_math["gen"]
+            gen["cost"] *= 1E3
+        end
 
         # IVRENPowerModel
         sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel)
         s_to = sol_pmd["transformer"]["transformer1"]["p"][2]+im*sol_pmd["transformer"]["transformer1"]["q"][2]
-        @assert isapprox(abs(sum(s_to)), sm_ub, rtol=0.001)
+        @assert isapprox(abs(sum(s_to)), sm_ub, rtol=0.005)
 
         # IVRQuadraticENPowerModel
         sol_pmd = calc_sol_pmd(data_math, IVRQuadraticENPowerModel)
         s_to = sol_pmd["transformer"]["transformer1"]["p"][2]+im*sol_pmd["transformer"]["transformer1"]["q"][2]
-        @assert isapprox(abs(sum(s_to)), sm_ub, rtol=0.001)
+        @assert isapprox(abs(sum(s_to)), sm_ub, rtol=0.005)
 
         # IVRReducedQuadraticENPowerModel shares switch implementation with IVRQuadraticENPowerModel,
         # so no explicit test needed
@@ -267,6 +302,6 @@ data_dir = "data/en_validation_case_data"
         # ACRENPowerModel
         sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel)
         s_to = sol_pmd["transformer"]["transformer1"]["p"][2]+im*sol_pmd["transformer"]["transformer1"]["q"][2]
-        @assert isapprox(abs(sum(s_to)), sm_ub, rtol=0.001)
+        @assert isapprox(abs(sum(s_to)), sm_ub, rtol=0.005)
     end
 end
