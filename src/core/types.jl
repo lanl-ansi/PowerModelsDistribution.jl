@@ -164,7 +164,7 @@ AC power flow Model with rectangular bus voltage variables.
 """
 mutable struct ACRUPowerModel <: AbstractUnbalancedACRModel @pmd_fields end
 
-"Abstract Explicit Neutral Current-Voltage (Rectangular) formulation"
+"Abstract Explicit Neutral Power-Voltage (Rectangular) formulation"
 abstract type AbstractExplicitNeutralACRModel <: AbstractUnbalancedACRModel end
 
 "Concrete type for AbstractExplicitNeutralACRModel"
@@ -196,7 +196,7 @@ abstract type AbstractExplicitNeutralIVRModel <: AbstractUnbalancedIVRModel end
 "Abstract Non-Linear Explicit Neutral Current-Voltage (Rectangular) formulation"
 abstract type AbstractNLExplicitNeutralIVRModel <: AbstractExplicitNeutralIVRModel end
 
-"Concrete type for AbstractExplicitNeutralACRModel"
+"Concrete type for AbstractExplicitNeutralIVRModel"
 mutable struct IVRENPowerModel <: AbstractNLExplicitNeutralIVRModel @pmd_fields end
 
 "Concrete type for AbstractNLExplicitNeutralIVRModel which is branch-reduced (implemented through inclusion in ReducedExplicitNeutralIVRModels)"
