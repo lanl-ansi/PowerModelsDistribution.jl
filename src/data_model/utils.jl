@@ -882,7 +882,7 @@ function _get_tight_pairwise_voltage_magnitude_bounds(bus::Dict)
     haskey(bus, "vm_pn_lb") && append!(lb_pairs, [(p, bus["neutral"], bus["vm_pn_lb"]) for p in bus["phases"]])
     haskey(bus, "vm_pn_ub") && append!(ub_pairs, [(p, bus["neutral"], bus["vm_pn_ub"]) for p in bus["phases"]])
 
-    haskey(bus, "vm_pp_lb") && append!(ub_pairs, [(bus["phases"][i], bus["phases"][j], bus["vm_pp_lb"]) for i in 1:length(bus["phases"]) for j in i+1:length(bus["phases"])])
+    haskey(bus, "vm_pp_lb") && append!(lb_pairs, [(bus["phases"][i], bus["phases"][j], bus["vm_pp_lb"]) for i in 1:length(bus["phases"]) for j in i+1:length(bus["phases"])])
     haskey(bus, "vm_pp_ub") && append!(ub_pairs, [(bus["phases"][i], bus["phases"][j], bus["vm_pp_ub"]) for i in 1:length(bus["phases"]) for j in i+1:length(bus["phases"])])
 
     lb_pairs_tight = Tuple{Any,Any,Real}[]
@@ -911,8 +911,8 @@ function _get_tight_absolute_voltage_magnitude_bounds(bus::Dict)
     vmax = haskey(bus, "vm_ub") ? bus["vm_ub"] : fill(Inf, N)
 
     if haskey(bus, "vm_ng_ub")
-        idx = findfirst(bus["terminal"].==bus["neutral"])
-        vmax[idx] = minimum(vmax[idx], bus["vm_ng_ub"])
+        idx = findfirst(bus["terminals"].==bus["neutral"])
+        vmax[idx] = min(vmax[idx], bus["vm_ng_ub"])
     end
 
     return vmin, vmax

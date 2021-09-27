@@ -293,7 +293,7 @@ function constraint_mc_voltage_pairwise(pm::RectangularVoltageExplicitNeutralMod
 
     for (a,b,lb) in vm_pair_lb
         if lb > 0.0
-            JuMP.@constraint(pm.model, (vr[a]-vr[b])^2 + (vi[a]-vi[b])^2 <= lb^2)
+            JuMP.@constraint(pm.model, (vr[a]-vr[b])^2 + (vi[a]-vi[b])^2 >= lb^2)
         end
     end
 
