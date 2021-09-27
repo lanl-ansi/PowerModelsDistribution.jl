@@ -119,7 +119,7 @@ data_dir = "data/en_validation_case_data"
         s_to = sol_pmd["switch"]["switch"]["pt"]+im*sol_pmd["switch"]["switch"]["qt"]
         v_to = sol_pmd["bus"]["x2"]["vr"]+im*sol_pmd["bus"]["x2"]["vi"]
         c_to = conj.(s_to./v_to)
-        @test all(isapprox.(abs.(c_to[3]), cm_ub[3], rtol=0.005))
+        @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.01))
     end
 
     @testset "branch power magnitude bound" begin
@@ -146,7 +146,7 @@ data_dir = "data/en_validation_case_data"
         c_to = sol_pmd["switch"]["switch"]["cr_to"]+im*sol_pmd["switch"]["switch"]["ci_to"]
         v_to = sol_pmd["bus"]["x2"]["vr"]+im*sol_pmd["bus"]["x2"]["vi"]
         s_to = v_to.*conj.(c_to)
-        @test all(isapprox.(abs.(s_to[3]), sm_ub[3], rtol=0.005))
+        @test all(isapprox.(abs.(s_to[1:3]), sm_ub[1:3], rtol=0.01))
 
         # IVRQuadraticENPowerModel does not implement sm_ub
 
