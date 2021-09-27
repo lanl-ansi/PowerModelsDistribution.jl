@@ -125,3 +125,69 @@ JuMP supports vectorized syntax, but not for nonlinear constraints. Therefore, c
 
 - Scalar: ACPUPowerModel, ACRUPowerModel, IVRUPowerModel, DCPUPowerModel, NFAPowerModel, FBSUBFPowerModel, FOTUPowerModel
 - Matrix: SDPUBFPowerModel, SDPUBFKCLMXPowerModel, SOCNLPUBFPowerModel, SOCConicUBFPowerModel, LPUBFDiagPowerModel
+
+# Explicit Neutral Models
+
+Explicit neutral (EN) models represent the neutral currents explicitly; unlike all the previous models, which implicitly assume they are grounded immediately where they originate.
+
+There are two broad classes of formulations: IVR ones an ACR one.
+
+## IVR
+
+`AbstractExplicitNeutralIVRModel`
+
+This abstract type groups all EN IVR formulations, and is a subtype of `AbstractUnbalancedIVRModel`.
+
+`AbstractNLExplicitNeutralIVRModel`
+
+This abstract type groups non-linear EN IVR formulations, and is a subtype of `AbstractExplicitNeutralIVRModel`.
+
+`IVRENPowerModel`
+
+This concrete type is a non-linear EN IVR formulation.
+
+`IVRReducedENPowerModel`
+
+This concrete type is a non-linear EN IVR formulation, where the branches only have series current variables (instead of also total current variables).
+
+`AbstractQuadraticExplicitNeutralIVRModel`
+
+This abstract type groups quadratic EN IVR formulations, and is a subtype of `AbstractExplicitNeutralIVRModel`.
+
+`IVRQuadraticENPowerModel`
+
+This concrete type is a quadratic EN IVR formulation.
+
+`IVRReducedQuadraticENPowerModel`
+
+This concrete type is a quadratic EN IVR formulation, where the branches only have series current variables (instead of also total current variables).
+
+## ACR
+
+`AbstractExplicitNeutralACRModel`
+
+This abstract type is a subtype of `AbstractUnbalancedACRModel`, analogous to the IVR structure.
+
+`ACRENPowerModel`
+
+This is the only concrete ACR type amongst the EN formulations.
+
+## Overview of hierarchy
+
+```
+EN-IVR (AbstractExplicitNeutralIVRModel)
+|
+|-- NL (AbstractNLExplicitNeutralIVRModel)
+|   |
+|   |-- IVRENPowerModel
+|
+|-- Quadratic (AbstractQuadraticExplicitNeutralIVRModel)
+    |
+    |-- IVRENPowerModel
+    |
+    |-- IVRReducedENPowerModel
+
+EN-ACR (AbstractExplicitNeutralIVRModel)
+|
+|-- ACRENPowerModel
+```
