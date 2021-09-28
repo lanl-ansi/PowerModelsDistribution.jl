@@ -280,6 +280,8 @@ function _objective_mc_min_fuel_cost_polynomial_linquad(pm::AbstractUnbalancedPo
 
                 #to avoid function calls inside of @NLconstraint:
                 pg = var(pm, n, :pg, i)
+                pg = isa(pg, JuMP.Containers.DenseAxisArray) ? pg.data : pg
+                
                 int_dim = length(pg)
                 if length(gen["cost"]) == 1
                     gen_cost[(n,i)] = gen["cost"][1]
