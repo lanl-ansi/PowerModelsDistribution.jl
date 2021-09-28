@@ -46,7 +46,7 @@ Where:
 - SDP = Semidefinite programming
 - (MI)XXX = Mixed-integer equivalent of problem type `XXX`
 
-For a complete list of JuMP supported optimizers, see [JuMP Documentation](https://jump.dev/JuMP.jl/stable/installation/)
+For a complete list of JuMP supported optimizers, see [JuMP Documentation](https://jump.dev/JuMP.jl/stable/installation/).
 
 ## Unsatisfiable requirements detected
 
