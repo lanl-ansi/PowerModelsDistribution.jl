@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/lanl-ansi/PowerModelsDistribution.jl/workflows/CI/badge.svg)](https://github.com/lanl-ansi/PowerModelsDistribution.jl/actions?query=workflow%3ACI) [![Documentation](https://github.com/lanl-ansi/PowerModelsDistribution.jl/workflows/Documentation/badge.svg)](https://lanl-ansi.github.io/PowerModelsDistribution.jl/stable/)
 
-PowerModelsDistribution.jl is an extention package of PowerModels.jl for Steady-State Power Distribution Network Optimization.  It is designed to enable computational evaluation of emerging power network formulations and algorithms in a common platform.  The code is engineered to decouple problem specifications (e.g. Power Flow, Optimal Power Flow, ...) from the power network formulations (e.g. AC, linear-approximation, SOC-relaxation, ...).
+PowerModelsDistribution.jl is an extension package of PowerModels.jl for Steady-State Power Distribution Network Optimization.  It is designed to enable computational evaluation of emerging power network formulations and algorithms in a common platform.  The code is engineered to decouple problem specifications (e.g. Power Flow, Optimal Power Flow, ...) from the power network formulations (e.g. AC, linear-approximation, SOC-relaxation, ...).
 This enables the definition of a wide variety of power network formulations and their comparison on common problem specifications.
 
 ## Core Problem Specifications
