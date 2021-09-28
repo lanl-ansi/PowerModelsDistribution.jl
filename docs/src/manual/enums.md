@@ -1,12 +1,12 @@
 # PowerModelsDistribution Enum Types
 
-Within the PowerModelsDistribution Engineering Model we have included the use of Enums. Here we document the fields for which Enums are expected and the possible Enums available
+Within the PowerModelsDistribution Engineering Model we have included the use of Enums. Here we document the fields for which Enums are expected and the possible Enums available.
 
 ## Data Model
 
 Any place in PowerModelsDistribution that calls for specifying the `data_model`, either in function calls or the `"data_model"` field inside the data structure itself, will expect a [`DataModel`](@ref DataModel) type.
 
-The `DSS` data model is an output of `parse_dss`, and is an untranslated raw parse of a DSS file. This Enum exists for use by `count_nodes`, where the method to count the number of active nodes is different between all three models
+The `DSS` data model is an output of `parse_dss`, and is an untranslated raw parse of a DSS file. This Enum exists for use by `count_nodes`, where the method to count the number of active nodes is different between all three models.
 
 ## Component Status
 
@@ -14,7 +14,7 @@ All `"status"` fields in the [`ENGINEERING`](@ref ENGINEERING) model expect a [`
 
 ## Connection Configuration
 
-All `"configuration"` fields in the [`ENGINEERING`](@ref ENGINEERING) model expect a [`ConnConfig`](@ref ConnConfig) type:
+All `"configuration"` fields in the [`ENGINEERING`](@ref ENGINEERING) model expect a [`ConnConfig`](@ref ConnConfig) type.
 
 ## Load Model
 
