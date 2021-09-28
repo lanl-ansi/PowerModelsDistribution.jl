@@ -14,7 +14,6 @@ begin
 			Pkg.PackageSpec(;name="Ipopt", version="0.6.5"),
 			Pkg.PackageSpec(;name="DataFrames", version="1.1.1"),
 			])
-	Pkg.develop(;path="/Users/sclaeys/code/PowerModelsDistribution.jl")
 end
 
 
@@ -353,7 +352,7 @@ end
 
 # ╔═╡ 3f803a29-caf4-4d33-a25d-5f972377c778
 md"""
-This table illustrates that `ACRENPowerModel` is a relaxation  of the other ones. However, not that it is not guaranteed that the objective value will be lower, because all problems are only solved to local optimality.  And in fact, the `ACR` solution is very sensitive to changes in the initialization. The optional virtual groundings seem to introduce many potential local optima.
+This table illustrates that `ACRENPowerModel` is a relaxation  of the other ones. However, note that it is not guaranteed that the objective value will be lower, because all problems are only solved to local optimality.  And in fact, the `ACR` solution is very sensitive to changes in the initialization. The optional virtual groundings seem to introduce many potential local optima.
 """
 
 # ╔═╡ Cell order:
@@ -398,7 +397,7 @@ This table illustrates that `ACRENPowerModel` is a relaxation  of the other ones
 # ╠═79a57586-4b18-4722-9cbf-a47bf514ae62
 # ╟─b0764438-e6f7-43f8-9a5a-daaaa0d5d1b0
 # ╟─c8a9adc2-0f0d-473d-a339-bcc9b54088ad
-# ╠═353386cd-be39-4d27-ad3a-83e110d266ab
+# ╟─353386cd-be39-4d27-ad3a-83e110d266ab
 # ╠═b29de9b9-3346-4676-91fa-4f9147d4eb4d
 # ╟─d41a36ed-b8a5-4e3f-941b-8431e0b6a5cd
 # ╠═b99d3796-740c-4f8b-ba99-1dae4f774770
