@@ -11,17 +11,17 @@ CurrentModule = PowerModelsDistribution
 
 ## Resources for Getting Started
 
-Read the [Installation Guide](@ref Installation-Guide)
+Read the [Installation Guide](@ref Installation-Guide).
 
-Read the [Quickstart Guide](@ref Quick-Start-Guide)
+Read the [Quickstart Guide](@ref Quick-Start-Guide).
 
-Read the introductory tutorial [Introduction to PowerModelsDistribution](@ref Introduction-to-PowerModelsDistribution)
+Read the introductory tutorial [Introduction to PowerModelsDistribution](@ref Introduction-to-PowerModelsDistribution).
 
 ## How the documentation is structured
 
-The following is a high-level overview of how our documetation is structured. There are three primary sections:
+The following is a high-level overview of how our documentation is structured. There are three primary sections:
 
-- The __Manual__ contains detailed documentation for certain aspects of PowerModelsDistribution, such as the [data model specification](@ref Engineering-Data-Model), the [Unbalanced Network Formulations](@ref Unbalanced-Network-Formulations), or the [Optimization Problem Specifications](@ref Problem-Specifications)
+- The __Manual__ contains detailed documentation for certain aspects of PowerModelsDistribution, such as the [data model specification](@ref Engineering-Data-Model), the [Unbalanced Network Formulations](@ref Unbalanced-Network-Formulations), or the [Optimization Problem Specifications](@ref Problem-Specifications).
 
 - __Tutorials__ contains working examples of how to use PowerModelsDistribution. Start here if you are new to PowerModelsDistribution.
 
@@ -47,7 +47,7 @@ abstract = "In this work we introduce PowerModelsDistribution, a free, open-sour
 }
 ```
 
-The associated Power Systems Computation Conference talk can be found on [YouTube](https://youtu.be/S7ouz2OP0tE)
+The associated Power Systems Computation Conference talk can be found on [YouTube](https://youtu.be/S7ouz2OP0tE).
 
 ## License
 
