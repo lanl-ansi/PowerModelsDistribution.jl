@@ -50,7 +50,7 @@ Note that you have to use a SDP-capable solver, _e.g._, the open-source solver S
 
 ## Inspecting the Formulation
 
-The following example demonstrates how to break a [`solve_mc_opf`](@ref solve_mc_opf) call into seperate model building and solving steps.  This allows inspection of the JuMP model created by PowerModelsDistribution for the AC-OPF problem. Note that the [`MATHEMATICAL`](@ref MATHEMATICAL) model must be passed to [`instantiate_mc_model`](@ref instantiate_mc_model), so the data model must either be transformed with [`transform_data_model`](@ref transform_data_model) or parsed directly to a [`MATHEMATICAL`](@ref MATHEMATICAL) model using the `data_model` keyword argument:
+The following example demonstrates how to break a [`solve_mc_opf`](@ref solve_mc_opf) call into separate model building and solving steps.  This allows inspection of the JuMP model created by PowerModelsDistribution for the AC-OPF problem. Note that the [`MATHEMATICAL`](@ref MATHEMATICAL) model must be passed to [`instantiate_mc_model`](@ref instantiate_mc_model), so the data model must either be transformed with [`transform_data_model`](@ref transform_data_model) or parsed directly to a [`MATHEMATICAL`](@ref MATHEMATICAL) model using the `data_model` keyword argument:
 
 ```julia
 math = parse_file("case3_unbalanced.dss"; data_model=MATHEMATICAL)
@@ -84,4 +84,4 @@ Finally, it should be noted that if `va_start` and `vm_start` are present in a d
 
 ## Examples
 
-More examples of working with the engineering data model can be found in the `/examples` folder of the PowerModelsDistribution.jl repository. These are Pluto Notebooks; instructions for running them can be found in the [Pluto documentation](https://github.com/fonsp/Pluto.jl#readme)
+More examples of working with the engineering data model can be found in the `/examples` folder of the PowerModelsDistribution.jl repository. These are Pluto Notebooks; instructions for running them can be found in the [Pluto documentation](https://github.com/fonsp/Pluto.jl#readme).
