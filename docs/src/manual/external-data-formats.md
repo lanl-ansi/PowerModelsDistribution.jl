@@ -58,7 +58,7 @@ Unfortunately, in the OpenDSS format, multi-phase transformers with different ta
 
 ### Capacitors and Reactors
 
-Capacitors and reactors are supported as shunts, although shunts to ground via delta connections are not yet supported. Furthermore, generic reactors are not supported, only those whose second terminal is wye connected to ground (default for unspecified second terminal). Reactors are also supported as a resistanceless line if their second terminal is connected, but only for topological continuity of the network.
+Capacitors and reactors are supported as shunts, although shunts to ground via delta connections are not yet supported. Furthermore, generic reactors are not supported, only those whose second terminal is connected to ground (default for unspecified second terminal). Reactors are also supported as a resistanceless line if their second terminal is connected, but only for topological continuity of the network.
 
 ## PowerModelsDistribution JSON
 
