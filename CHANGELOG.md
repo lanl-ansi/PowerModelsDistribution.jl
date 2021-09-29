@@ -4,6 +4,10 @@
 
 - none
 
+## v0.11.10
+
+- Fixed bug in eng2math conversion of buses, where the status was not correctly parsed, so `DISABLED` buses were not getting set to `bus_type = 4`
+
 ## v0.11.9
 
 - Fixed bug in `apply_kron_reduction!` where not all transformers were getting kron reduced
