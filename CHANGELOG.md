@@ -4,6 +4,11 @@
 
 - none
 
+## v0.11.9
+
+- Fixed bug in `apply_kron_reduction!` where not all transformers were getting kron reduced
+- Fixed typos in documentation
+
 ## v0.11.8
 
 - Fixed bug in LPUBFDiagModel transformer variables
