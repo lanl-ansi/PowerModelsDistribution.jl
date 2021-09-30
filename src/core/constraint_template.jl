@@ -122,7 +122,7 @@ function constraint_mc_switch_thermal_limit(pm::AbstractUnbalancedPowerModel, i:
 
     if haskey(switch, "thermal_rating")
         f_idx = (i, switch["f_bus"], switch["t_bus"])
-        constraint_mc_switch_thermal_limit(pm, nw, f_idx, switch["fr_connections"], switch["thermal_rating"])
+        constraint_mc_switch_thermal_limit(pm, nw, f_idx, switch["f_connections"], switch["thermal_rating"])
     end
 end
 
@@ -132,7 +132,7 @@ function constraint_mc_switch_current_limit(pm::AbstractUnbalancedPowerModel, i:
 
     if haskey(switch, "current_rating")
         f_idx = (i, switch["f_bus"], switch["t_bus"])
-        constraint_mc_switch_current_limit(pm, nw, f_idx, switch["fr_connections"], switch["current_rating"])
+        constraint_mc_switch_current_limit(pm, nw, f_idx, switch["f_connections"], switch["current_rating"])
     end
 end
 

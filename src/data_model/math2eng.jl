@@ -252,30 +252,28 @@ end
 function _map_math2eng_switch!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "switch", map)
 
-    prop_map = Dict{String,String}(
-        "pt" => "psw_to",
-        "qt" => "qsw_to",
-        "cr_to" => "crsw_to",
-        "ci_to" => "cisw_to",
-        "csr_fr" => "csrsw_fr",
-        "csi_fr" => "csisw_fr",
-    )
-
     if isa(map["to"], String)
         math_obj = _get_math_obj(data_math, map["to"])
         merge!(eng_obj, math_obj)
     else
-        for to_id in map["to"]
-            if startswith(to_id, "switch")
-                math_obj = _get_math_obj(data_math, to_id)
-                merge!(eng_obj, math_obj)
-            elseif startswith(to_id, "branch")
-                math_obj = _get_math_obj(data_math, to_id)
-                for k in keys(prop_map)
-                    if haskey(math_obj, k)
-                        eng_obj[prop_map[k]] = math_obj[k]
-                    end
-                end
+        switch_idx = findfirst([startswith(x, "switch") for x in map["to"]])
+        if !(switch_idx === nothing) # isnothing not allowed in Julia 1.0
+            to_id = map["to"][switch_idx]
+            math_obj = _get_math_obj(data_math, to_id)
+            # skip to-side power and current; these come from branch
+            for k in keys(math_obj)
+                eng_obj[k] = math_obj[k]
+            end
+        end
+
+        branch_idx = findfirst([startswith(x, "branch") for x in map["to"]])
+        if !(switch_idx === nothing) # isnothing not allowed in Julia 1.0
+            to_id = map["to"][branch_idx]
+            math_obj = _get_math_obj(data_math, to_id)
+            # add to-side power and current here
+            # these will overwrite the switch ones if a branch is present
+            for k in intersect(keys(math_obj), ["pt","qt","cr_to","ci_to"])
+                eng_obj[k] = math_obj[k]
             end
         end
     end
@@ -296,7 +294,7 @@ function _map_math2eng_transformer!(data_eng::Dict{String,<:Any}, data_math::Dic
 
     trans_2wa_ids = [index for (comp_type, index) in split.(map["to"], ".", limit=2) if comp_type=="transformer"]
 
-    prop_map = Dict("pf"=>"p", "qf"=>"q", "crt_fr"=>"crt", "cit_fr"=>"cit")
+    prop_map = Dict("pf"=>"p", "qf"=>"q", "cr_fr"=>"cr", "ci_fr"=>"ci")
     for (prop_from, prop_to) in prop_map
         if haskey(data_math, "transformer")
             if any(haskey(data_math["transformer"][id], prop_from) for id in trans_2wa_ids)

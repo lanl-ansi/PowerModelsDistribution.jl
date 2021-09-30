@@ -175,6 +175,12 @@ AC power flow Model with rectangular bus voltage variables.
 """
 mutable struct ACRUPowerModel <: AbstractUnbalancedACRModel @pmd_fields end
 
+"Abstract Explicit Neutral Power-Voltage (Rectangular) formulation"
+abstract type AbstractExplicitNeutralACRModel <: AbstractUnbalancedACRModel end
+
+"Concrete type for AbstractExplicitNeutralACRModel"
+mutable struct ACRENPowerModel <: AbstractExplicitNeutralACRModel @pmd_fields end
+
 "Abstract Current-Voltage (Rectangular) formulation"
 abstract type AbstractUnbalancedIVRModel <: AbstractUnbalancedACRModel end
 
@@ -194,6 +200,27 @@ due to constants power loads/generators and apparent power limits.
 Applicable to problem formulations with `_iv` in the name.
 """
 mutable struct IVRUPowerModel <: AbstractUnbalancedIVRModel @pmd_fields end
+
+"Abstract Explicit Neutral Current-Voltage (Rectangular) formulation"
+abstract type AbstractExplicitNeutralIVRModel <: AbstractUnbalancedIVRModel end
+
+"Abstract Non-Linear Explicit Neutral Current-Voltage (Rectangular) formulation"
+abstract type AbstractNLExplicitNeutralIVRModel <: AbstractExplicitNeutralIVRModel end
+
+"Concrete type for AbstractExplicitNeutralIVRModel"
+mutable struct IVRENPowerModel <: AbstractNLExplicitNeutralIVRModel @pmd_fields end
+
+"Concrete type for AbstractNLExplicitNeutralIVRModel which is branch-reduced (implemented through inclusion in ReducedExplicitNeutralIVRModels)"
+mutable struct IVRReducedENPowerModel <: AbstractNLExplicitNeutralIVRModel @pmd_fields end
+
+"Abstract Quadratic Explicit Neutral Current-Voltage (Rectangular) formulation"
+abstract type AbstractQuadraticExplicitNeutralIVRModel <: AbstractExplicitNeutralIVRModel end
+
+"Concrete type for AbstractQuadraticExplicitNeutralIVRModel"
+mutable struct IVRQuadraticENPowerModel <: AbstractQuadraticExplicitNeutralIVRModel @pmd_fields end
+
+"Concrete type for AbstractQuadraticExplicitNeutralIVRModel which is branch-reduced (implemented through inclusion in ReducedExplicitNeutralIVRModels)"
+mutable struct IVRReducedQuadraticENPowerModel <: AbstractQuadraticExplicitNeutralIVRModel @pmd_fields end
 
 ##### Linear Approximations #####
 
@@ -338,3 +365,12 @@ const AbstractUnbalancedPolarModels = Union{AbstractUnbalancedACPModel, Abstract
 
 "Collection of convex AbstractUnbalancedPowerModels that include W relaxations"
 const AbstractUnbalancedWConvexModels = Union{AbstractUBFModel}
+
+"Collection of ExplicitNeutral models"
+const ExplicitNeutralModels = Union{AbstractExplicitNeutralIVRModel,AbstractExplicitNeutralACRModel}
+
+"Collection of reduced ExplicitNeutralModels, i.e. with no explicit total branch current variables"
+const ReducedExplicitNeutralIVRModels = Union{IVRReducedQuadraticENPowerModel,IVRReducedENPowerModel}
+
+"Collection of ExplicitNeutralModels with rectangular voltage variables"
+const RectangularVoltageExplicitNeutralModels = Union{AbstractExplicitNeutralIVRModel,AbstractExplicitNeutralACRModel}

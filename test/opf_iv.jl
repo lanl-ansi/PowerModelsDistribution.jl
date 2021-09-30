@@ -42,7 +42,9 @@
             case5 = PM.parse_file("../test/data/matpower/case5.m")
             make_multiconductor!(case5, 3)
             case5_mn = InfrastructureModels.replicate(case5, 3, PowerModelsDistribution._pmd_math_global_keys)
-            result = solve_mn_mc_opf(case5_mn, IVRUPowerModel, ipopt_solver)
+            # adaptive required to prevent error in Julia 1.0
+            # error: Restoration phase is called at point that is almost feasible, with constraint violation 1.212496e-13. Abort.
+            result = solve_mn_mc_opf(case5_mn, IVRUPowerModel, ipopt_solver_adaptive) 
             @test result["termination_status"] == LOCALLY_SOLVED
         end
     end
