@@ -66,13 +66,8 @@ $$U^d = M^\Delta U^\text{bus},\;\;\; I^\text{bus} = \left(M^\Delta\right)^T I^d.
 
 We can related $S^\text{bus}$ to $U^\text{bus}$ and $I^d$
 
-$$
-S^\text{bus} = U^\text{bus}\odot \left(I^\text{bus}\right)^*
-             = U^\text{bus}\odot \left(M^\Delta\right)^T\left(I^d\right)^*,
-$$
+$$S^\text{bus} = U^\text{bus}\odot \left(I^\text{bus}\right)^* = U^\text{bus}\odot \left(M^\Delta\right)^T\left(I^d\right)^*,$$
 
 and using the fact that $\left(I^d\right)^*=S^d \oslash U^d$, and the expression above for $U^d$,
 
-$$
-S^\text{bus} = U^\text{bus}\left(M^\Delta\right)^T S^d \oslash M^\Delta U^\text{bus}
-$$
+$$S^\text{bus} = U^\text{bus}\left(M^\Delta\right)^T S^d \oslash M^\Delta U^\text{bus}$$
