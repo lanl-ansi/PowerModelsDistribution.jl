@@ -10,7 +10,7 @@ begin
 	Pkg.activate(mktempdir())
 	Pkg.Registry.update()
 	Pkg.add([
-			Pkg.PackageSpec(;name="PowerModelsDistribution", version="0.12"),
+			Pkg.PackageSpec(;name="PowerModelsDistribution", version="0.12", rev="4w"),
 			Pkg.PackageSpec(;name="Ipopt", version="0.6.5"),
 			Pkg.PackageSpec(;name="DataFrames", version="1.1.1"),
 			])
@@ -55,7 +55,7 @@ md"""
 
 # ╔═╡ 40e870aa-ca5a-4d4d-a904-c79c419aab87
 md"""
-OpenDSS cases with explicit neutral conductors tend to use components in a way which is not supported directly by PMD. These cases model the grounding as a 'reactor', connected between different terminals of the same bus (i.e. from the 4th terminal to ground). 
+OpenDSS cases with explicit neutral conductors tend to use components in a way which is not supported directly by PMD. These cases model the grounding as a 'reactor', connected between different terminals of the same bus (i.e. from the 4th terminal to ground).
 
 In PMD, a reactor is mapped by default to a line, which will then be connected on both ends to the same bus, which is not allowed. This problem is solved by applying the data model transformation `transform_loops!`, which will map the reactor to a shunt instead, or merge terminals if the reactor is in fact a short-circuit.
 """
@@ -93,7 +93,7 @@ remove_all_bounds!(data_eng)
 md"""
 #### Voltage bounds
 
-Voltage bounds are naturally expressed *between* two terminals. 
+Voltage bounds are naturally expressed *between* two terminals.
 
 For example, if a wye-connected load is connected between phase `a` and the neutral `n`, we want to apply the bounds `lb <= |Ua-Un| <= ub`, in order to ensure the voltage across the load does not get too low or high. If the neutral is not modeled and assumed to be grounded everywhere, i.e. `Un=0`, then this can be done equivalently by bounding `Ua` directtly.
 
@@ -183,7 +183,7 @@ begin
 		"qg_lb" => [0.0],
 		"qg_ub" => [0.0],
 		"cost_pg_parameters" => fill(0.0, 3)
-	)	
+	)
 end
 
 # ╔═╡ fafe3980-f88b-4ad5-8297-2a97011f6eeb
@@ -201,7 +201,7 @@ data_math = transform_data_model(data_eng, kron_reduced=false, phase_projected=f
 
 # ╔═╡ c7bbb931-c01f-41cd-8d71-48b5c6d51b7b
 md"""
-Before solving the problem, it is important to add initialization values for the voltage variables. Failing to do so will almost always result in solver issues. 
+Before solving the problem, it is important to add initialization values for the voltage variables. Failing to do so will almost always result in solver issues.
 
 For a single-phase equivalent network, this is very easy to do; simply initialize each voltage variable to `1.0+im*0.0`, which usually corresponds to the voltage profile without any network load and ignoring all shunts and linecharging (refered to as 'no-load voltage').
 
@@ -332,9 +332,9 @@ results["ACRENPowerModel"] = solve_mc_opf(data_math, ACRENPowerModel, Ipopt.Opti
 
 # ╔═╡ 7fc51410-113b-45d7-b802-e90019ff522d
 md"""
-We mentioned before that the `IVR` formulations are preferred for `EN` models. 
-This is because in `EN` models, the voltage magnitude cannot be bounded below for some terminals (the ones belonging to the neutral conductor). 
-In a formulation with power flow variables, this means that KCL cannot be enforced for those terminals. 
+We mentioned before that the `IVR` formulations are preferred for `EN` models.
+This is because in `EN` models, the voltage magnitude cannot be bounded below for some terminals (the ones belonging to the neutral conductor).
+In a formulation with power flow variables, this means that KCL cannot be enforced for those terminals.
 
 In short, ACR allows non-physical groundings of the neutral conductor, and is therefore a relaxation of the original problem. To demonstrate this, let's create a summary of the obtained objective values and generator set points.
 """
