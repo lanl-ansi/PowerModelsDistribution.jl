@@ -121,16 +121,12 @@ function apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Ve
             if haskey(eng_obj, "f_connections")
                 @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
 
-                if eng_obj["configuration"] == WYE
-                    filter = eng_obj["f_connections"] .!= kr_neutral
-                    _apply_filter!(eng_obj, ["f_connections", "t_connections"], filter)
-                end
+                filter = eng_obj["f_connections"] .!= kr_neutral
+                _apply_filter!(eng_obj, ["f_connections", "t_connections"], filter)
             else
                 for (w, connections) in enumerate(eng_obj["connections"])
-                    if eng_obj["configuration"][w] == WYE
-                        filter = connections .!= kr_neutral
-                        _apply_filter!(eng_obj, ["connections"], w, filter)
-                    end
+                    filter = connections .!= kr_neutral
+                    _apply_filter!(eng_obj, ["connections"], w, filter)
                 end
             end
         end

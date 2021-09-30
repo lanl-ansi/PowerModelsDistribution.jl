@@ -274,7 +274,7 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{String
         math_obj = _init_math_obj("bus", name, eng_obj, length(data_math["bus"])+1; pass_props=pass_props)
 
         math_obj["bus_i"] = math_obj["index"]
-        math_obj["bus_type"] = _bus_type_conversion(data_eng, eng_obj, "status")
+        math_obj["bus_type"] = eng_obj["status"] == DISABLED ? 4 : 1
         math_obj["source_id"] = "bus.$name"
 
         # take care of grounding; convert to shunt if lossy
@@ -588,7 +588,7 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
         math_obj["gs"] = get(eng_obj, "gs", zeros(size(eng_obj["bs"])))
 
         data_math["shunt"]["$(math_obj["index"])"] = math_obj
-        
+
         # add capcontrol items to math model
         if haskey(eng_obj,"controls")
             math_obj["controls"] = deepcopy(eng_obj["controls"])
