@@ -159,7 +159,6 @@
         @testset "test warm start from dss voltages export" begin
             eng = deepcopy(case5_phase_drop)
             add_voltage_starts!(eng, "../test/data/opendss/case5_voltage.csv")
-            apply_voltage_bounds!(eng)
 
             for (_,bus) in eng["bus"]
                 nt = length(bus["terminals"])
