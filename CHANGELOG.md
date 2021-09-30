@@ -9,6 +9,34 @@
 - Fix bug in `_rebase_pu_branch!` where current ratings were being non-dimensionalized with the power base instead of the current base, and added non-dimensionalization for power ratings
 - Fix bug in `_rebase_pu_switch!` where current ratings were being non-dimensionalized with the power base instead of the current base, and added non-dimensionalization for power ratings
 - The qualifier `t` was removed from the transformer solution properties, i.e. `crt`->`cr`, to be consistent with solution naming conventions where these qualifiers are omitted as they are contained in a transformer component dictionary, unlike the variables
+
+## v0.11.10
+
+- Fixed bug in eng2math conversion of buses, where the status was not correctly parsed, so `DISABLED` buses were not getting set to `bus_type = 4`
+
+## v0.11.9
+
+- Fixed bug in `apply_kron_reduction!` where not all transformers were getting kron reduced
+- Fixed typos in documentation
+
+## v0.11.8
+
+- Fixed bug in LPUBFDiagModel transformer variables
+- Removed phase projection of only wye-connected transformers (left over), phase projection of delta components remains for now
+- Updated time_series to affect upper real and reactive power bounds on solar objects in dss2eng parse
+- Fixed bug in dss pvsystem struct where `temperature`, `pmpp`, and `irradiance` were the wrong type (`Int` instead of `Float64`)
+- Fixed bug in dss node structs, where daily was the wrong type (should be `String`, not `Vector{Float64}`)
+- Fixed bug in `_calc_branch_power_max` where `c_rating_b` was being used
+- Add support for storage to OPF_OLTC
+- Add wye-connected CapControl for ACP, ACR, LinDist3Flow, FBS and FOT formulations
+
+## v0.11.7
+
+- Added storage to `correct_bus_types!` check
+- Updated start values for some variables to improve performance on some solvers
+- Added ability for `comp_start_value` to sequentially check for a series of keys for a start value
+- Added FOT linear formulation in rectangular coordinate frame
+- Fixed lower voltage magnitude limits for FBS linear formulation
 - Fix bug where the lower and upper bound variables created in `variable_mx_hermitian` can be the wrong type
 - Fix bug in correct_bus_types! and eng2math functions where reference bus was being overwritten depending on the order generation objects were parsed
 - Fix `calc_max_cost_index` to support multi-infrastructure data

@@ -87,6 +87,15 @@ const _dss2pmd_load_model = Dict{Int,LoadModel}(
 )
 
 
+"dss to pmd capcontrol type"
+const _dss2pmd_capcontrol_type = Dict{String,CapControlType}(
+    "kvar" => CAP_REACTIVE_POWER,
+    "current" => CAP_CURRENT,
+    "voltage" => CAP_VOLTAGE,
+    ""=> CAP_DISABLED,
+)
+
+
 "conversion factors for units to meters"
 const _convert_to_meters = Dict{String,Float64}(
     "mi" => 1609.3,
@@ -379,13 +388,13 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
                     "ctprim" => [[0.0 for (i,p) in locs] for w in 1:nrw],
                     "r" => [[0.0 for (i,p) in locs] for w in 1:nrw],
                     "x" => [[0.0 for (i,p) in locs] for w in 1:nrw]
-                ) 
+                )
             end
             for (i,p) in locs
                 if haskey(trs[i],"controls")
                     for w in 1:nrw
                         c = f_phases_loc[i][1]
-                        btrans["controls"]["vreg"][w][c] = trs[i]["controls"]["vreg"][w][p] 
+                        btrans["controls"]["vreg"][w][c] = trs[i]["controls"]["vreg"][w][p]
                         btrans["controls"]["band"][w][c] = trs[i]["controls"]["band"][w][p]
                         btrans["controls"]["ptratio"][w][c] = trs[i]["controls"]["ptratio"][w][p]
                         btrans["controls"]["ctprim"][w][c] = trs[i]["controls"]["ctprim"][w][p]
@@ -394,7 +403,7 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
                     end
                 end
             end
- 
+
             # edit the transformer dict
             for id in ids
                 delete!(data_eng["transformer"], id)
@@ -898,6 +907,22 @@ function _parse_dss_load_model!(eng_obj::Dict{String,<:Any}, id::Any)
 end
 
 
+"""
+    _parse_dss_capcontrol_type!(type::SubString{String}, id::Any)
+    
+Converts dss capcontrol type to supported PowerModelsDistribution CapControlType enum.
+"""
+function _parse_dss_capcontrol_type!(type::SubString{String}, id::Any)
+        
+    if isempty([get(_dss2pmd_capcontrol_type, "$type", Dict{String,Any}())])
+        @warn "$id: dss capcontrol type $type not supported. Treating as voltage control"
+        type = "voltage"
+    end
+
+    return _dss2pmd_capcontrol_type[type]
+end
+
+
 "checks if loadshape has both pmult and qmult"
 function _is_loadshape_split(dss_obj::Dict{String,<:Any})
     haskey(dss_obj, "pmult") && haskey(dss_obj, "qmult") && all(dss_obj["pmult"] .!= dss_obj["qmult"])
@@ -921,7 +946,7 @@ end
 "helper function to properly reference time series variables from opendss"
 function _build_time_series_reference!(eng_obj::Dict{String,<:Any}, dss_obj::Dict{String,<:Any}, data_dss::Dict{String,<:Any}, defaults::Dict{String,<:Any}, time_series::String, active::String, reactive::String)
     if haskey(dss_obj, time_series) && haskey(data_dss, "loadshape") && haskey(data_dss["loadshape"], defaults[time_series])
-        eng_obj["time_series"] = Dict{String,Any}()
+        eng_obj["time_series"] = get(eng_obj, "time_series", Dict{String,Any}())
         if _is_loadshape_split(data_dss["loadshape"][defaults[time_series]])
             eng_obj["time_series"][active] = "$(defaults[time_series])_p"
             eng_obj["time_series"][reactive] = "$(defaults[time_series])_q"

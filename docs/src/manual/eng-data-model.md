@@ -253,6 +253,23 @@ These are objects that have single bus connections. Every object will have at le
 | `status`       | `ENABLED` | `Status`           |         | always       | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively                                      |
 | `time_series`  |           | `Dict{String,Any}` |         | multinetwork | Dictionary containing time series parameters.                                                                             |
 
+#### Shunts with capacitor control (`controls`)
+
+Special case of the shunt capacitors, which is part of the `shunt` object, and emulates a typical utility capacitor control (CapControl) by sending switching messages. 
+
+| Name            | Default   | Type               | Units | Used   | Description                                                                                               													                                     |
+|-----------------|-----------|--------------------|-------|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `type`          |  		  | `Vector{String}`   |       |  capc  | Control type, default is `current` for controlled phase, `` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)`                                                           |
+| `element`       |    ``     | `String`           |       |  capc  | `source_id` of element (typically line or transformer) to which CapControl is connected                                                                                                            |
+| `terminal`      |  		  | `Vector{Int}`      |       |  capc  | Number of the terminal of circuit element to which CapControl is connected, default is `1` for controlled phase, `0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)`  |
+| `onsetting`     |  		  | `Vector{Real}`     |       |  capc  | Value at which the CapControl switches the capacitor on, default is `300.0` for controlled phase, `0.0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)`               |
+| `offsetting`    |  		  | `Vector{Real}`     |       |  capc  | Value at which the CapControl switches the capacitor off, default is `200.0` for controlled phase, `0.0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)`              |
+| `voltoverride`  |  		  | `Vector{Bool}`     |       |  capc  | Indicate whether voltage over ride is enabled, default is `false` for both controlled and uncontrolled phases, `size=1` for `kvar` type, otherwise `size=(nphases)`                                |
+| `ptratio`       |  		  | `Vector{Real}`     |       |  capc  | Ratio of potential transformer, default is `60.0` for controlled phase, `0.0` for uncontrolled phase, `size=(nphases)`                                         |
+| `ctratio`       |  		  | `Vector{Real}`     |       |  capc  | Ratio of current transformer, default is `60.0` for controlled phase, `0.0` for uncontrolled phase, `size=(nphases)`                                           |
+| `vmin`          |  		  | `Vector{Real}`     | volt  |  capc  | Minimum voltage below which CapControl switches the capacitor on, default is `115.0` for controlled phase, `0.0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)`      |
+| `vmax`          |  		  | `Vector{Real}`     | volt  |  capc  | Maximum voltage above which CapControl switches the capacitor off, default is `126.0` for controlled phase, `0.0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)`     |
+
 ### Loads (`load`)
 
 | Name            | Default   | Type               | Units | Used           | Description                                                                                        |

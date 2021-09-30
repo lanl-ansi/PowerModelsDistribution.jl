@@ -253,6 +253,33 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedPowerModel, i::I
 end
 
 
+"""
+    constraint_mc_power_balance_capc(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+
+KCL with capacitor control variables.
+"""
+function constraint_mc_power_balance_capc(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+    bus = ref(pm, nw, :bus, i)
+    bus_arcs = ref(pm, nw, :bus_arcs_conns_branch, i)
+    bus_arcs_sw = ref(pm, nw, :bus_arcs_conns_switch, i)
+    bus_arcs_trans = ref(pm, nw, :bus_arcs_conns_transformer, i)
+    bus_gens = ref(pm, nw, :bus_conns_gen, i)
+    bus_storage = ref(pm, nw, :bus_conns_storage, i)
+    bus_loads = ref(pm, nw, :bus_conns_load, i)
+    bus_shunts = ref(pm, nw, :bus_conns_shunt, i)
+
+    if !haskey(con(pm, nw), :lam_kcl_r)
+        con(pm, nw)[:lam_kcl_r] = Dict{Int,Array{JuMP.ConstraintRef}}()
+    end
+
+    if !haskey(con(pm, nw), :lam_kcl_i)
+        con(pm, nw)[:lam_kcl_i] = Dict{Int,Array{JuMP.ConstraintRef}}()
+    end
+
+    constraint_mc_power_balance_capc(pm, nw, i, bus["terminals"], bus["grounded"], bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_shunts)
+end
+
+
 ""
 function constraint_mc_current_balance(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
     bus = ref(pm, nw, :bus, i)

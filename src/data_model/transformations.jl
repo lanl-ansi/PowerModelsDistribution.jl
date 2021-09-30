@@ -121,16 +121,12 @@ function apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Ve
             if haskey(eng_obj, "f_connections")
                 @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
 
-                if eng_obj["configuration"] == WYE
-                    filter = eng_obj["f_connections"] .!= kr_neutral
-                    _apply_filter!(eng_obj, ["f_connections", "t_connections"], filter)
-                end
+                filter = eng_obj["f_connections"] .!= kr_neutral
+                _apply_filter!(eng_obj, ["f_connections", "t_connections"], filter)
             else
                 for (w, connections) in enumerate(eng_obj["connections"])
-                    if eng_obj["configuration"][w] == WYE
-                        filter = connections .!= kr_neutral
-                        _apply_filter!(eng_obj, ["connections"], w, filter)
-                    end
+                    filter = connections .!= kr_neutral
+                    _apply_filter!(eng_obj, ["connections"], w, filter)
                 end
             end
         end
@@ -375,14 +371,16 @@ function apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
             _apply_xfmrcode!(eng_obj, data_eng)
 
             if haskey(eng_obj, "f_connections")
-                _pad_properties!(eng_obj, ["tm_lb", "tm_ub", "tm_set"], eng_obj["f_connections"], all_conductors; pad_value=1.0)
-                _pad_properties!(eng_obj, ["tm_fix"], eng_obj["f_connections"], all_conductors; pad_value=true)
+                if eng_obj["configuration"] == DELTA
+                    _pad_properties!(eng_obj, ["tm_lb", "tm_ub", "tm_set"], eng_obj["f_connections"], all_conductors; pad_value=1.0)
+                    _pad_properties!(eng_obj, ["tm_fix"], eng_obj["f_connections"], all_conductors; pad_value=true)
 
-                _pad_connections!(eng_obj, "f_connections", all_conductors)
-                _pad_connections!(eng_obj, "t_connections", all_conductors)
+                    _pad_connections!(eng_obj, "f_connections", all_conductors)
+                    _pad_connections!(eng_obj, "t_connections", all_conductors)
 
-                bus_terminals[eng_obj["f_bus"]] = haskey(bus_terminals, eng_obj["f_bus"]) ? _pad_connections!(bus_terminals, eng_obj["f_bus"], eng_obj["f_connections"]) : eng_obj["f_connections"]
-                bus_terminals[eng_obj["t_bus"]] = haskey(bus_terminals, eng_obj["t_bus"]) ? _pad_connections!(bus_terminals, eng_obj["t_bus"], eng_obj["t_connections"]) : eng_obj["t_connections"]
+                    bus_terminals[eng_obj["f_bus"]] = haskey(bus_terminals, eng_obj["f_bus"]) ? _pad_connections!(bus_terminals, eng_obj["f_bus"], eng_obj["f_connections"]) : eng_obj["f_connections"]
+                    bus_terminals[eng_obj["t_bus"]] = haskey(bus_terminals, eng_obj["t_bus"]) ? _pad_connections!(bus_terminals, eng_obj["t_bus"], eng_obj["t_connections"]) : eng_obj["t_connections"]
+                end
             else
                 for (w, connections) in enumerate(eng_obj["connections"])
                     if eng_obj["configuration"][w] == DELTA && length(eng_obj["tm_set"][w]) == 1
@@ -392,12 +390,9 @@ function apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
                             eng_obj["tm_set"][w][i] = eng_obj["tm_set"][w][i] == 0 ? 1 : eng_obj["tm_set"][w][i]
                             eng_obj["tm_fix"][w][i] = eng_obj["tm_fix"][w][i] == 0 ? true : eng_obj["tm_fix"][w][i]
                         end
-                    else
-                        _pad_properties!(eng_obj, ["tm_lb", "tm_ub", "tm_set"], w, connections, all_conductors; pad_value=1.0)
-                        _pad_properties!(eng_obj, ["tm_fix"], w, connections, all_conductors; pad_value=true)
+                        _pad_connections!(eng_obj, "connections", w, all_conductors)
+                        bus_terminals[eng_obj["bus"][w]] = haskey(bus_terminals, eng_obj["bus"][w]) ? _pad_connections!(bus_terminals, eng_obj["bus"][w], eng_obj["connections"][w]) : eng_obj["connections"][w]
                     end
-                    _pad_connections!(eng_obj, "connections", w, all_conductors)
-                    bus_terminals[eng_obj["bus"][w]] = haskey(bus_terminals, eng_obj["bus"][w]) ? _pad_connections!(bus_terminals, eng_obj["bus"][w], eng_obj["connections"][w]) : eng_obj["connections"][w]
                 end
             end
         end

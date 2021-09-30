@@ -707,12 +707,6 @@ function _admittance_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{Stri
 end
 
 
-"converts Int(Status) Enums into bus_type"
-function _bus_type_conversion(data_eng::Dict{String,<:Any}, eng_obj::Dict{String,<:Any}, key::String)
-    eng_obj[key] == 0 ? 4 : 1
-end
-
-
 "lossy grounding to perfect grounding and shunts"
 function _convert_grounding(terminals, grounded, rg, xg)
     grouped = Dict(t=>[] for t in unique(grounded))

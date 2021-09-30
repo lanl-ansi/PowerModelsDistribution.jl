@@ -39,7 +39,10 @@ end
 
 """
 Links to and from power and voltages in a wye-wye transformer, assumes tm_fixed is true
+
+```math
 w_fr_i=(pol_i*tm_scale*tm_i)^2w_to_i
+```
 """
 function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[idx] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
@@ -62,11 +65,11 @@ function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_i
 
             # with regcontrol
             if haskey(transformer,"controls")
-                v_ref = transformer["controls"]["vreg"][idx] 
-                δ = transformer["controls"]["band"][idx]     
-                r = transformer["controls"]["r"][idx]           
-                x = transformer["controls"]["x"][idx]   
-                
+                v_ref = transformer["controls"]["vreg"][idx]
+                δ = transformer["controls"]["band"][idx]
+                r = transformer["controls"]["r"][idx]
+                x = transformer["controls"]["x"][idx]
+
                 # linearized voltage squared: w_drop = (2⋅r⋅p+2⋅x⋅q)
                 w_drop = JuMP.@expression(pm.model, 2*r*p_to[idx] + 2*x*q_to[idx])
 
@@ -87,10 +90,14 @@ end
 
 raw"""
 Links to and from power and voltages in a delta-wye transformer, assumes tm_fixed is true
-3(w_fr_i+w_fr_j)=2(pol_i*tm_scale*tm_i)^2w_to_i \quad \forall (i,j) \in \{(1,2),(2,3),(3,1)\}
 
-2P_fr_i=-(P_to_i+P_to_j)+(Q_to_j-Q_to_i)/\sqrt{3} \quad \forall (i,j) \in \{(1,3),(2,1),(3,2)\}
-2Q_fr_i=(P_to_i-P_to_j)/\sqrt{3}-(Q_to_j+Q_to_i)  \quad \forall (i,j) \in \{(1,3),(2,1),(3,2)\}
+```math
+\begin{align}
+3(w_fr_i+w_fr_j)=2(pol_i*tm_scale*tm_i)^2w_to_i & \quad \forall (i,j) \in \{(1,2),(2,3),(3,1)\} \\
+2P_fr_i=-(P_to_i+P_to_j)+(Q_to_j-Q_to_i)/\sqrt{3} & \quad \forall (i,j) \in \{(1,3),(2,1),(3,2)\} \\
+2Q_fr_i=(P_to_i-P_to_j)/\sqrt{3}-(Q_to_j+Q_to_i)  & \quad \forall (i,j) \in \{(1,3),(2,1),(3,2)\}
+\end{align}
+````
 """
 function constraint_mc_transformer_power_dy(pm::LPUBFDiagModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
     tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[fc] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
@@ -131,7 +138,6 @@ function constraint_storage_losses(pm::AbstractUBFAModel, n::Int, i, bus, r, x, 
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)
     qsc = var(pm, n, :qsc, i)
-
 
     JuMP.@constraint(pm.model,
         sum(ps[c] for c in conductors) + (sd - sc)

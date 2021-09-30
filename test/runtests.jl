@@ -55,6 +55,8 @@ include("common.jl")
 
     include("transformer.jl")
 
+    include("capacitor.jl")
+
     include("loadmodels.jl")
 
     include("delta_gens.jl")

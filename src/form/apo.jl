@@ -119,7 +119,9 @@ end
 function variable_mc_transformer_power_real(pm::AbstractUnbalancedAPLossLessModels; nw::Int=nw_id_default, bounded::Bool=true)
     connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_transformer) for ((l,i,j), connections) in entry)
     pt = var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
-            [c in connections[(l,i,j)]], base_name="$(nw)_pt_$((l,i,j))", start=0
+            [c in connections[(l,i,j)]],
+            base_name="$(nw)_pt_$((l,i,j))",
+            start=0
         ) for (l,i,j) in ref(pm, nw, :arcs_transformer_from)
     )
 
