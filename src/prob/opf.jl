@@ -358,7 +358,7 @@ function build_mc_opf(pm::AbstractExplicitNeutralACRModel)
     for i in ids(pm, :switch)
         constraint_mc_switch_power(pm, i)
         constraint_mc_switch_state(pm, i)
-        
+
         constraint_mc_switch_current_limit(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
     end
