@@ -131,18 +131,3 @@ function build_mc_opf_oltc(pm::AbstractUBFModels)
     # Objective
     objective_mc_min_fuel_cost(pm)
 end
-
-# Depreciated run_ functions (remove after ~4-6 months)
-
-"depreciation warning for `run_ac_mc_opf_oltc`"
-function run_ac_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
-    @warn "run_ac_mc_opf_oltc is being depreciated in favor of solve_mc_opf_oltc(data, ACPUPowerModel, solver; kwargs...), please update your code accordingly"
-    return solve_mc_opf_oltc(data, ACPUPowerModel, solver; kwargs...)
-end
-
-
-"depreciation warning for `run_mc_opf_oltc`"
-function run_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    @warn "run_mc_opf_oltc is being depreciated in favor of solve_mc_opf_oltc, please update your code accordingly"
-    return solve_mc_opf_oltc(data, model_type, solver; kwargs...)
-end

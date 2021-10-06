@@ -324,18 +324,3 @@ function _build_mc_osw_mi(pm::AbstractUBFModels)
     # Objective
     objective_mc_min_fuel_cost_switch(pm)
 end
-
-# Depreciated run_ functions (remove after ~4-6 months)
-
-"depreciation warning for `_run_mc_osw`"
-function _run_mc_osw(data::Union{Dict{String,<:Any}, String}, model_type::Type, solver; kwargs...)
-    @warn "_run_mc_osw is being depreciated in favor of _solve_mc_osw, please update your code accordingly"
-    return _solve_mc_osw(data, model_type, solver; kwargs...)
-end
-
-
-"depreciation warning for `_run_mc_osw_mi`"
-function _run_mc_osw_mi(data::Union{Dict{String,<:Any}, String}, model_type::Type, solver; kwargs...)
-    @warn "_run_mc_osw_mi is being depreciated in favor of _solve_mc_osw_mi, please update your code accordingly"
-    return _solve_mc_osw_mi(data, model_type, solver; kwargs...)
-end

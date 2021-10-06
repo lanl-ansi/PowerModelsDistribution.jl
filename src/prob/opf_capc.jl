@@ -122,4 +122,3 @@ function build_mc_opf_capc(pm::AbstractUBFModels)
     # Objective
     objective_mc_min_fuel_cost(pm)
 end
-
