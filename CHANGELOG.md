@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed the function signature for `variable_mc_capacitor_switch_state` and `variable_mc_capcontrol` to match conventions
 - Removed depreciated `run_` functions, which were replaced in with `solve_` functions in v0.10.2
 - Fixed bug in `make_multinetwork!` where inferred time_elapsed was not being used
 - Fixed bug in `make_multinetwork!` for cases where `replace=false` was used where we needed a `deepcopy`

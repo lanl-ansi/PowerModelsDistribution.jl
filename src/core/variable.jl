@@ -737,7 +737,7 @@ end
 
 Capacitor (with capcontrol) switch state (open/close) variables
 """
-function variable_mc_capacitor_switch_state(pm::AbstractUnbalancedPowerModel, relax::Bool; nw::Int=nw_id_default, report::Bool=true)
+function variable_mc_capacitor_switch_state(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=true, report::Bool=true)
     cap_switch_ids = [id for (id,cap) in ref(pm, nw, :shunt) if haskey(cap,"controls")]
     if relax
         cap_state = var(pm, nw)[:capacitor_state] = Dict(i => JuMP.@variable(pm.model,
@@ -771,7 +771,6 @@ function variable_mc_capacitor_reactive_power(pm::AbstractUnbalancedPowerModel; 
     [p in ref(pm, nw, :shunt, i, "connections")],
     base_name="$(nw)_cap_cur_$(i)"
     ) for i in cap_switch_ids)
-
 end
 
 

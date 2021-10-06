@@ -25,13 +25,13 @@ end
 
 
 """
-    variable_mc_capcontrol(pm::AbstractLPUBFModel; relax::Bool=false)
+    variable_mc_capcontrol(pm::AbstractLPUBFModel; nw::Int=nw_id_default, relax::Bool=false)
 
 Capacitor switching and relaxed power variables.
 """
-function variable_mc_capcontrol(pm::AbstractLPUBFModel; relax::Bool=false)
-    variable_mc_capacitor_switch_state(pm, relax)
-    variable_mc_capacitor_reactive_power(pm)
+function variable_mc_capcontrol(pm::AbstractLPUBFModel; nw::Int=nw_id_default, relax::Bool=false)
+    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax)
+    variable_mc_capacitor_reactive_power(pm; nw=nw)
 end
 
 
@@ -475,7 +475,7 @@ end
 		rating::Vector{<:Real}
 	)
 
-This method is not yet implemented for AbstractLPUBFModel. 
+This method is not yet implemented for AbstractLPUBFModel.
 If the limit is finite, a warning is thrown.
 """
 function constraint_mc_switch_thermal_limit(pm::AbstractLPUBFModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
