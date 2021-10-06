@@ -2,6 +2,8 @@
 
 ## staged
 
+- Fixed bug in `make_multinetwork!` where inferred time_elapsed was not being used
+- Fixed bug in `make_multinetwork!` for cases where `replace=false` was used where we needed a `deepcopy`
 - Added explicit neutral formulations
 - Fix bug in `constraint_mc_switch_thermal_limit` where switch property name contained a typo
 - Fix bug in `constraint_mc_thermal_limit_from` where `Inf` values in `rate_a` would lead to an error
