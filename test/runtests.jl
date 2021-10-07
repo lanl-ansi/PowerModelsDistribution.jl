@@ -3,10 +3,6 @@ const PMD = PowerModelsDistribution
 
 import InfrastructureModels
 
-import PowerModels
-const PM = PowerModels
-
-PowerModels.silence()
 PowerModelsDistribution.silence!()
 
 import JuMP
