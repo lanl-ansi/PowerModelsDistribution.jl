@@ -355,16 +355,19 @@ mutable struct SOCNLPUBFPowerModel <: SOCNLPUBFModel @pmd_fields end
 mutable struct SOCConicUBFPowerModel <: SOCConicUBFModel @pmd_fields end
 
 "Collection of AbstractUnbalancedPowerModels that include W relaxations"
-const AbstractUnbalancedWModels = Union{AbstractUBFModel}
+const AbstractUnbalancedWModels = Union{SDPUBFModel, SDPUBFKCLMXModel, SOCNLPUBFModel, SOCConicUBFModel, LPUBFDiagModel}
 
 "Collection of AbstractUnbalancedPowerModels that are Active Power only and Lossless"
 const AbstractUnbalancedAPLossLessModels = Union{DCPUPowerModel, AbstractUnbalancedNFAModel}
 
-"Collection of AbstractUnbalancedPowerModels that have a Polar resprentation"
+"Collection of AbstractUnbalancedPowerModels that have a Polar representation"
 const AbstractUnbalancedPolarModels = Union{AbstractUnbalancedACPModel, AbstractUnbalancedDCPModel}
 
+"Collection of AbstractUnbalancedPowerModels that have a Rectangular representation"
+const AbstractUnbalancedRectangularModels = Union{AbstractUnbalancedACRModel, AbstractUnbalancedIVRModel, FBSUBFModel, FOTRUPowerModel}
+
 "Collection of convex AbstractUnbalancedPowerModels that include W relaxations"
-const AbstractUnbalancedWConvexModels = Union{AbstractUBFModel}
+const AbstractUnbalancedWConvexModels = Union{SDPUBFModel, SDPUBFKCLMXModel, SOCNLPUBFModel, SOCConicUBFModel}
 
 "Collection of ExplicitNeutral models"
 const ExplicitNeutralModels = Union{AbstractExplicitNeutralIVRModel,AbstractExplicitNeutralACRModel}

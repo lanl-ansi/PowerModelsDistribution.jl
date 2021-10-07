@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed Type collections; AbstractUBFModels do not necessarily have to have `w` variables, so these are explicity spelled out now
 - Added ampacity (current limit) constraints for branches and switches, which better reflect standard input data: `constraint_mc_ampacity_from` and `constraint_mc_ampacity_to` for branches, and `constraint_mc_switch_ampacity` for switches
 - Fixed bug in `bank_transformers!` function where `status` field was not being set correctly
 - Updated switch thermal constraints to store the constraints in `con(pm, nw, :mu_sm_switch, f_idx)`
