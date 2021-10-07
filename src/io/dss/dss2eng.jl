@@ -1021,7 +1021,7 @@ function parse_opendss(
         data_eng["settings"]["voltage_scale_factor"] = 1e3
         data_eng["settings"]["power_scale_factor"] = 1e3
         data_eng["settings"]["vbases_default"] = Dict{String,Real}()
-        data_eng["settings"]["sbase_default"] = defaults["basemva"] * 1e3
+        data_eng["settings"]["sbase_default"] = 1.0
         data_eng["settings"]["base_frequency"] = get(get(data_dss, "options", Dict{String,Any}()), "defaultbasefreq", 60.0)
 
         # collect turns the Set into Array, making it serializable

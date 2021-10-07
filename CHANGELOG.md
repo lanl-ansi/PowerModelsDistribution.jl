@@ -2,6 +2,7 @@
 
 ## staged
 
+- Changed `sbase_default` to `1.0` by default, because often with default solver settings, constraints were ignored for being far too small
 - Changed to use emergamps from dss for `cm_ub` on lines by default (higher limit)
 - Fixed bug in transformer math2eng conversion where `tap` was not carried to the solution
 - Fixed wrong index in `constraint_mc_theta_ref` for ACRUPowerModel
