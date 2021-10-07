@@ -2,6 +2,7 @@
 
 ## staged
 
+- Changed to use emergamps from dss for `cm_ub` on lines by default (higher limit)
 - Fixed bug in transformer math2eng conversion where `tap` was not carried to the solution
 - Fixed wrong index in `constraint_mc_theta_ref` for ACRUPowerModel
 - Fixed Type collections; AbstractUBFModels do not necessarily have to have `w` variables, so these are explicity spelled out now

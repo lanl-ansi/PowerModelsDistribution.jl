@@ -458,9 +458,7 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             "length" => defaults["switch"] || _like_is_switch ? 0.001 : defaults["length"],
             "f_connections" => f_connections,
             "t_connections" => t_connections,
-            "cm_ub" => fill(defaults["normamps"], ncond),
-            "cm_ub_b" => fill(defaults["emergamps"], ncond),
-            "cm_ub_c" => fill(defaults["emergamps"], ncond),
+            "cm_ub" => fill(defaults["emergamps"], ncond),
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
             "source_id" => "line.$id"
         )
