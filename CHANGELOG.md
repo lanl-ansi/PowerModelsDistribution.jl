@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in `bank_transformers!` function where `status` field was not being set correctly
 - Updated switch thermal constraints to store the constraints in `con(pm, nw, :mu_sm_switch, f_idx)`
 - Removed extraneous thermal limit constraints from power flow problem formulations
 - Fixed the function signature for `variable_mc_capacitor_switch_state` and `variable_mc_capcontrol` to match conventions
