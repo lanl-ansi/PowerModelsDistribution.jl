@@ -478,8 +478,6 @@ end
 This method is not yet implemented for AbstractLPUBFModel.
 If the limit is finite, a warning is thrown.
 """
-function constraint_mc_switch_thermal_limit(pm::AbstractLPUBFModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
-    if any(rating.<=Inf)
-        @warn "Encountered a finite switch thermal limit; these are not yet implemented for AbstractLPUBFModel."
-    end
+function constraint_mc_switch_thermal_limit(pm::AbstractLPUBFModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{Float64})
+    @warn "Encountered a finite switch thermal limit; these are not yet implemented for AbstractLPUBFModel."
 end

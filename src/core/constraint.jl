@@ -148,14 +148,26 @@ function constraint_mc_switch_power_on_off(pm::AbstractUnbalancedPowerModel, nw:
 end
 
 
-""
-function constraint_switch_thermal_limit(pm::AbstractUnbalancedPowerModel, n::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
-    psw = var(pm, n, :psw, f_idx)
-    qsw = var(pm, n, :qsw, f_idx)
+@doc raw"""
+    constraint_switch_thermal_limit(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})::Nothing
 
-    for (idx, c) in enumerate(connections)
-        JuMP.@constraint(pm.model, psw[c]^2 + qsw[c]^2 <= rating[idx]^2)
+Generic thermal limit constraint for switches (from-side)
+
+math```
+p_{fr}^2 + q_{fr}^2 \leq S_{max}^2
+```
+"""
+function constraint_switch_thermal_limit(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})::Nothing
+    psw_fr = [var(pm, nw, :psw, f_idx)[c] for c in f_connections]
+    qsw_fr = [var(pm, nw, :qsw, f_idx)[c] for c in f_connections]
+
+    con(pm, nw, :mu_sm_switch_fr)[f_idx] = mu_sm_fr = [JuMP.@constraint(pm.model, psw_fr[idx]^2 + qsw_fr[idx]^2 <= rating[idx]^2) for idx in findall(rating .< Inf)]
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :switch, f_idx[1])[:mu_sm_fr] = mu_sm_fr
     end
+
+    nothing
 end
 
 

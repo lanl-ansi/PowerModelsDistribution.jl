@@ -828,13 +828,19 @@ Note that a bound on the from-side implies the same bound on the to-side power
 when the switch is closed (equal voltages), and also when it is open since the
 power then equals zero on both ends.
 """
-function constraint_mc_switch_thermal_limit(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_mc_switch_thermal_limit(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})::Nothing
     psw_fr = var(pm, nw, :psw, f_idx)
     qsw_fr = var(pm, nw, :qsw, f_idx)
 
+    mu_sm_fr = JuMP.ConstraintRef[]
+
     for idx in 1:length(rating)
         if rating[idx] < Inf
-            JuMP.@constraint(pm.model, psw_fr[idx]^2 + qsw_fr[idx]^2 <= rating[idx]^2)
+            push!(mu_sm_fr, JuMP.@constraint(pm.model, psw_fr[idx]^2 + qsw_fr[idx]^2 <= rating[idx]^2))
         end
     end
+
+    con(pm, nw, :mu_sm_switch)[f_idx] = mu_sm_fr
+
+    nothing
 end

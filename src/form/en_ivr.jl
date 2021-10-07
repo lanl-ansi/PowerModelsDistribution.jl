@@ -1719,19 +1719,25 @@ Note that a bound on the from-side implies the same bound on the to-side power
 when the switch is closed (equal voltages), and also when it is open since the
 power then equals zero on both ends.
 """
+function constraint_mc_switch_thermal_limit(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})::Nothing
     vr_fr = [var(pm, nw, :vr, f_idx[2])[t] for t in f_connections]
     vi_fr = [var(pm, nw, :vi, f_idx[2])[t] for t in f_connections]
     crsw_fr = var(pm, nw, :crsw, f_idx)
     cisw_fr = var(pm, nw, :cisw, f_idx)
 
+    mu_sm_fr = JuMP.ConstraintRef[]
     for idx in 1:length(rating)
         if rating[idx] < Inf
             psw_fr_idx = JuMP.@NLexpression(pm.model,  vr_fr[idx]*crsw_fr[idx] + vi_fr[idx]*cisw_fr[idx])
             qsw_fr_idx = JuMP.@NLexpression(pm.model, -vr_fr[idx]*cisw_fr[idx] + vi_fr[idx]*crsw_fr[idx])
 
-            JuMP.@NLconstraint(pm.model, psw_fr_idx^2 + qsw_fr_idx^2 <= rating[idx]^2)
+            push!(mu_sm_fr, JuMP.@NLconstraint(pm.model, psw_fr_idx^2 + qsw_fr_idx^2 <= rating[idx]^2))
         end
     end
+
+    con(pm, nw, :mu_sm_switch)[f_idx] = mu_sm_fr
+
+    nothing
 end
 
 
@@ -1749,9 +1755,8 @@ throw an error because this cannot be represented quadratically
 without introducing explicit power variables.
 """
 function constraint_mc_switch_thermal_limit(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
-    if any(rating.<Inf)
-        warning("""
-            A switch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
-            Either extend this quadratic formulation by including explicit switch power variables, or use AbstractNLExplicitNeutralIVRModel instead.""")
-    end
+    @warn("""
+        A switch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
+        Either extend this quadratic formulation by including explicit switch power variables, or use AbstractNLExplicitNeutralIVRModel instead.
+        """)
 end

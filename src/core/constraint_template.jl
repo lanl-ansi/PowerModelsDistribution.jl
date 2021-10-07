@@ -117,11 +117,20 @@ function constraint_mc_switch_state(pm::AbstractUnbalancedPowerModel, i::Int; nw
 end
 
 
-function constraint_mc_switch_thermal_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
-    switch = ref(pm, nw, :switch, i)
+"""
+    constraint_mc_switch_thermal_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
 
-    if haskey(switch, "thermal_rating")
-        f_idx = (i, switch["f_bus"], switch["t_bus"])
+Template function for switch thermal limit constraint (from-side)
+"""
+function constraint_mc_switch_thermal_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    switch = ref(pm, nw, :switch, i)
+    f_idx = (i, switch["f_bus"], switch["t_bus"])
+
+    if !haskey(con(pm, nw), :mu_sm_switch)
+        con(pm, nw)[:mu_sm_switch] = Dict{Tuple{Int,Int,Int},Vector{JuMP.ConstraintRef}}()
+    end
+
+    if haskey(switch, "thermal_rating") && any(switch["thermal_rating"] .< Inf)
         constraint_mc_switch_thermal_limit(pm, nw, f_idx, switch["f_connections"], switch["thermal_rating"])
     end
 end
@@ -426,27 +435,39 @@ function constraint_mc_voltage_angle_difference(pm::AbstractUnbalancedPowerModel
 end
 
 
-"branch thermal constraints from"
-function constraint_mc_thermal_limit_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
-    branch = ref(pm, nw, :branch, i)
-    f_bus = branch["f_bus"]
-    t_bus = branch["t_bus"]
-    f_idx = (i, f_bus, t_bus)
+"""
+    constraint_mc_thermal_limit_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
 
-    if haskey(branch, "rate_a")
+Template function for branch thermal constraints (from-side)
+"""
+function constraint_mc_thermal_limit_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    branch = ref(pm, nw, :branch, i)
+    f_idx = (i, branch["f_bus"], branch["t_bus"])
+
+    if !haskey(con(pm, nw), :mu_sm_branch)
+        con(pm, nw)[:mu_sm_branch] = Dict{Tuple{Int,Int,Int}, Vector{JuMP.ConstraintRef}}()
+    end
+
+    if haskey(branch, "rate_a") && any(branch["rate_a"] .< Inf)
         constraint_mc_thermal_limit_from(pm, nw, f_idx, branch["f_connections"], branch["rate_a"])
     end
 end
 
 
-"branch thermal constraints to"
-function constraint_mc_thermal_limit_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
-    branch = ref(pm, nw, :branch, i)
-    f_bus = branch["f_bus"]
-    t_bus = branch["t_bus"]
-    t_idx = (i, t_bus, f_bus)
+"""
+    constraint_mc_thermal_limit_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
 
-    if haskey(branch, "rate_a")
+Template function for branch thermal constraints (to-side)
+"""
+function constraint_mc_thermal_limit_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    branch = ref(pm, nw, :branch, i)
+    t_idx = (i, branch["t_bus"], branch["f_bus"])
+
+    if !haskey(con(pm, nw), :mu_sm_branch)
+        con(pm, nw)[:mu_sm_branch] = Dict{Tuple{Int,Int,Int}, Vector{JuMP.ConstraintRef}}()
+    end
+
+    if haskey(branch, "rate_a") && any(branch["rate_a"] .< Inf)
         constraint_mc_thermal_limit_to(pm, nw, t_idx, branch["t_connections"], branch["rate_a"])
     end
 end
@@ -750,4 +771,61 @@ function constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel,
     discharge_ub = storage["discharge_rating"]
 
     constraint_storage_complementarity_mi(pm, nw, i, charge_ub, discharge_ub)
+end
+
+
+"""
+    constraint_mc_ampacity_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for branch current limit constraint from-side
+"""
+function constraint_mc_ampacity_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    branch = ref(pm, nw, :branch, i)
+    f_idx = (i, branch["f_bus"], branch["t_bus"])
+
+    if !haskey(con(pm, nw), :mu_cm_branch)
+        con(pm, nw)[:mu_cm_branch] = Dict{Tuple{Int,Int,Int}, Vector{JuMP.ConstraintRef}}()
+    end
+
+    if haskey(branch, "c_rating_a") && any(branch["c_rating_a"] .< Inf)
+        constraint_mc_ampacity_from(pm, nw, f_idx, branch["f_connections"], branch["c_rating_a"])
+    end
+end
+
+
+"""
+    constraint_mc_ampacity_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothin
+
+Template function for branch current limit constraint to-side
+"""
+function constraint_mc_ampacity_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    branch = ref(pm, nw, :branch, i)
+    t_idx = (i, branch["t_bus"], branch["f_bus"])
+
+    if !haskey(con(pm, nw), :mu_cm_branch)
+        con(pm, nw)[:mu_cm_branch] = Dict{Tuple{Int,Int,Int}, Vector{JuMP.ConstraintRef}}()
+    end
+
+    if haskey(branch, "c_rating_a") && any(branch["c_rating_a"] .< Inf)
+        constraint_mc_ampacity_to(pm, nw, t_idx, branch["t_connections"], branch["c_rating_a"])
+    end
+end
+
+
+"""
+    constraint_mc_switch_ampacity(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for switch current limit constraint from-side
+"""
+function constraint_mc_switch_ampacity(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    switch = ref(pm, nw, :switch, i)
+    f_idx = (i, switch["f_bus"], switch["t_bus"])
+
+    if !haskey(con(pm, nw), :mu_cm_switch)
+        con(pm, nw)[:mu_cm_switch] = Dict{Tuple{Int,Int,Int}, Vector{JuMP.ConstraintRef}}()
+    end
+
+    if haskey(switch, "current_rating") && any(switch["current_rating"] .< Inf)
+        constraint_mc_switch_ampacity(pm, nw, f_idx, switch["f_connections"], switch["current_rating"])
+    end
 end
