@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in transformer math2eng conversion where `tap` was not carried to the solution
 - Fixed wrong index in `constraint_mc_theta_ref` for ACRUPowerModel
 - Fixed Type collections; AbstractUBFModels do not necessarily have to have `w` variables, so these are explicity spelled out now
 - Added ampacity (current limit) constraints for branches and switches, which better reflect standard input data: `constraint_mc_ampacity_from` and `constraint_mc_ampacity_to` for branches, and `constraint_mc_switch_ampacity` for switches

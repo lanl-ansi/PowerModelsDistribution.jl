@@ -294,11 +294,11 @@ function _map_math2eng_transformer!(data_eng::Dict{String,<:Any}, data_math::Dic
 
     trans_2wa_ids = [index for (comp_type, index) in split.(map["to"], ".", limit=2) if comp_type=="transformer"]
 
-    prop_map = Dict("pf"=>"p", "qf"=>"q", "cr_fr"=>"cr", "ci_fr"=>"ci")
+    prop_map = Dict("pf"=>"p", "qf"=>"q", "cr_fr"=>"cr", "ci_fr"=>"ci", "tap"=>"tap")
     for (prop_from, prop_to) in prop_map
         if haskey(data_math, "transformer")
-            if any(haskey(data_math["transformer"][id], prop_from) for id in trans_2wa_ids)
-                eng_obj[prop_to] = [get(data_math["transformer"][id], prop_from, NaN) for id in trans_2wa_ids]
+            if any(haskey(data_math["transformer"], id) && haskey(data_math["transformer"][id], prop_from) for id in trans_2wa_ids)
+                eng_obj[prop_to] = [get(data_math["transformer"][id], prop_from, missing) for id in trans_2wa_ids]
             end
         end
     end
