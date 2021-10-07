@@ -4,14 +4,14 @@
     # This test checks the generators are connected properly by comparing them
     # to equivalent constant-power loads. This is achieved by fixing their bounds.
     @testset "ACP/ACR tests" begin
-        eng_1 = parse_file("../test/data/opendss/case3_delta_gens.dss")
+        eng_1 = deepcopy(case3_delta_gens)
+
+        for (_,line) in eng_1["line"]
+            delete!(line, "cm_ub")
+        end
 
         for (_,load) in eng_1["load"]
             load["model"] = POWER
-        end
-
-        for (_,line) in eng_1["line"]
-            line["cm_ub"] = fill(1e4, size(line["cm_ub"])...)
         end
 
         eng_2 = deepcopy(eng_1)

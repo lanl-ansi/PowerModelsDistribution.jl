@@ -28,7 +28,7 @@ New Load.L1 phases=1  loadbus.1.0   ( 0.4 3 sqrt / )   kW=6   kvar=3  model=1
 New Load.L2 phases=1  loadbus.2.0   ( 0.4 3 sqrt / )   kW=6   kvar=3  model=1
 New Load.L3 phases=1  loadbus.3.0   ( 0.4 3 sqrt / )   kW=6   kvar=3  model=1
 
-New Storage.S1 phases=3 bus1=primary.1.2.3 kv=( 0.4 3 sqrt / ) kwhstored=50 kwhrated=50 kva=100 kvar=100
+New Storage.S1 phases=3 bus1=primary.1.2.3 kv=( 0.4 3 sqrt / ) kwhstored=15 kwhrated=15 kva=50 kvar=50
 ~ %charge=100 %discharge=100 %effcharge=100 %effdischarge=100 %idlingkw=1 %r=0 %x=50
 
 Set voltagebases=[0.4]

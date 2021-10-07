@@ -16,7 +16,7 @@ new linecode.lc1_1ph nphases=1
 ~ xmatrix = [ 0.01 ]
 ~ cmatrix = [ 50 ]
 
-new line.line1 bus1=sourcebus.1.2.3 bus2=midbus.1.2.3 linecode=lc1_3ph normamps=425
+new line.line1 bus1=sourcebus.1.2.3 bus2=midbus.1.2.3 linecode=lc1_3ph
 new line.line2 bus1=midbus.1 bus2=l1.1 linecode=lc1_1ph
 new line.line3 bus1=midbus.2.3 bus2=l2.2.3 linecode=lc1_2ph
 new line.line4 bus1=midbus.3 bus2=cap1.3 linecode=lc1_1ph

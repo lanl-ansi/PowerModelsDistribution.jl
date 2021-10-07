@@ -8,13 +8,12 @@ function calc_sol_pmd(data_math, form; optimizer=ipopt_solver)
     return sol_pmd
 end
 
-data_dir = "data/en_validation_case_data"
+
 
 @testset "en opf bounds" begin
-
     @testset "branch current magnitude bound" begin
         cm_ub = [6:-1:3...]
-        data_eng = parse_file("$data_dir/test_gen_3ph_wye.dss", transformations=[remove_all_bounds!])
+        data_eng = deepcopy(test_gen_3ph_wye)
         data_eng["settings"]["sbase_default"] = 1.0
         data_eng["line"]["line1"]["cm_ub"] = cm_ub
         data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
@@ -53,7 +52,7 @@ data_dir = "data/en_validation_case_data"
 
     @testset "branch power magnitude bound" begin
         sm_ub = [90:-20:30...]
-        data_eng = parse_file("$data_dir/test_gen_3ph_wye.dss", transformations=[remove_all_bounds!])
+        data_eng = deepcopy(test_gen_3ph_wye)
         data_eng["settings"]["sbase_default"] = 1.0
         data_eng["line"]["line1"]["sm_ub"] = sm_ub
         data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
@@ -84,10 +83,10 @@ data_dir = "data/en_validation_case_data"
 
     @testset "switch current magnitude bound" begin
         cm_ub = [10:-2:4...]
-        data_eng = parse_file("$data_dir/test_switch.dss", transformations=[remove_all_bounds!])
+        data_eng = deepcopy(test_switch)
         add_bus_absolute_vbounds!(data_eng) # ACR needs this to prevent voltage collapse
         # copy in solar from test_gen_3ph_wye.dss
-        data_eng["solar"] = parse_file("$data_dir/test_gen_3ph_wye.dss", transformations=[remove_all_bounds!])["solar"]
+        data_eng["solar"] = deepcopy(test_gen_3ph_wye["solar"])
         data_eng["settings"]["sbase_default"] = 500.0
         data_eng["switch"]["switch"]["cm_ub"] = cm_ub
         data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
@@ -124,10 +123,10 @@ data_dir = "data/en_validation_case_data"
 
     @testset "branch power magnitude bound" begin
         sm_ub = [50:-10:20...]
-        data_eng = parse_file("$data_dir/test_switch.dss", transformations=[remove_all_bounds!])
+        data_eng = deepcopy(test_switch)
         add_bus_absolute_vbounds!(data_eng) # ACR needs this to prevent voltage collapse
         # copy in solar from test_gen_3ph_wye.dss
-        data_eng["solar"] = parse_file("$data_dir/test_gen_3ph_wye.dss", transformations=[remove_all_bounds!])["solar"]
+        data_eng["solar"] = deepcopy(test_gen_3ph_wye["solar"])
         data_eng["settings"]["sbase_default"] = 500.0
         data_eng["switch"]["switch"]["sm_ub"] = sm_ub
         data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
@@ -142,7 +141,7 @@ data_dir = "data/en_validation_case_data"
         end
 
         # IVRENPowerModel
-        sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel, optimizer=optimizer_with_attributes(Ipopt.Optimizer))
+        sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel, optimizer=optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0))
         c_to = sol_pmd["switch"]["switch"]["cr_to"]+im*sol_pmd["switch"]["switch"]["ci_to"]
         v_to = sol_pmd["bus"]["x2"]["vr"]+im*sol_pmd["bus"]["x2"]["vi"]
         s_to = v_to.*conj.(c_to)
@@ -161,7 +160,7 @@ data_dir = "data/en_validation_case_data"
 
     @testset "bus absolute voltage magnitude upper bound" begin
         vm_ub = [0.300, 0.310, 0.320, 0.010]
-        data_eng = parse_file("$data_dir/test_gen_3ph_wye.dss", transformations=[remove_all_bounds!])
+        data_eng = deepcopy(test_gen_3ph_wye)
         data_eng["settings"]["sbase_default"] = 500.0
         data_eng["bus"]["b2"]["vm_ub"] = vm_ub
         data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
@@ -187,7 +186,7 @@ data_dir = "data/en_validation_case_data"
 
     @testset "bus absolute voltage magnitude lower bound" begin
         vm_lb = [0.18, 0.190, 0.170, 0.0]
-        data_eng = parse_file("$data_dir/test_gen_3ph_wye.dss", transformations=[remove_all_bounds!])
+        data_eng = deepcopy(test_gen_3ph_wye)
         data_eng["settings"]["sbase_default"] = 500.0
         data_eng["bus"]["b2"]["vm_lb"] = vm_lb
         data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
@@ -215,7 +214,7 @@ data_dir = "data/en_validation_case_data"
 
     @testset "bus pairwise voltage magnitude upper bound" begin
         vm_pair_ub = [(1,4,0.250)]
-        data_eng = parse_file("$data_dir/test_gen_1ph_wye.dss", transformations=[remove_all_bounds!])
+        data_eng = deepcopy(test_gen_1ph_wye)
         data_eng["settings"]["sbase_default"] = 500.0
         data_eng["bus"]["b2"]["vm_pair_ub"] = vm_pair_ub
         data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
@@ -242,7 +241,7 @@ data_dir = "data/en_validation_case_data"
 
     @testset "bus pairwise voltage magnitude lower bound" begin
         vm_pair_lb = [(1,4,0.150)]
-        data_eng = parse_file("$data_dir/test_gen_1ph_wye.dss", transformations=[remove_all_bounds!])
+        data_eng = deepcopy(test_gen_1ph_wye)
         data_eng["settings"]["sbase_default"] = 500.0
         data_eng["bus"]["b2"]["vm_pair_lb"] = vm_pair_lb
         data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
@@ -270,9 +269,9 @@ data_dir = "data/en_validation_case_data"
 
     @testset "transformer total power magnitude upper bound" begin
         sm_ub = 100.0
-        data_eng = parse_file("$data_dir/test_trans_dy.dss", transformations=[remove_all_bounds!, transform_loops!])
+        data_eng = deepcopy(test_trans_dy)
         # copy in solar from test_gen_3ph_wye.dss
-        data_eng["solar"] = parse_file("$data_dir/test_gen_3ph_wye.dss", transformations=[remove_all_bounds!])["solar"]
+        data_eng["solar"] = deepcopy(test_gen_3ph_wye["solar"])
         data_eng["settings"]["sbase_default"] = 500.0
         data_eng["transformer"]["transformer1"]["sm_ub"] = sm_ub
         data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
