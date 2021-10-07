@@ -1518,11 +1518,10 @@ throw an error because this cannot be represented quadratically
 without introducing explicit power variables.
 """
 function constraint_mc_thermal_limit_to(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
-    if any(rate_a.<Inf)
-        warning("""
-            A branch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
-            Either extend this quadratic formulation by including explicit branch power variables, or use AbstractNLExplicitNeutralIVRModel instead.""")
-    end
+    @warn("""
+        A branch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
+        Either extend this quadratic formulation by including explicit branch power variables, or use AbstractNLExplicitNeutralIVRModel instead.
+        """)
 end
 
 
@@ -1692,15 +1691,20 @@ imposes a bound on the switch current magnitude per conductor.
 Note that a bound on the from-side implies the same bound on the to-side current,
 so it suffices to apply this only explicitly at the from-side.
 """
-function constraint_mc_switch_current_limit(pm::AbstractExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_mc_switch_current_limit(pm::AbstractExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})::Nothing
     crsw = var(pm, nw, :crsw, f_idx)
     cisw = var(pm, nw, :cisw, f_idx)
 
+    mu_cm_fr = JuMP.ConstraintRef[]
     for idx in 1:length(rating)
         if rating[idx] < Inf
-            JuMP.@constraint(pm.model, crsw[idx]^2 + cisw[idx]^2 <= rating[idx]^2)
+            push!(mu_cm_fr, JuMP.@constraint(pm.model, crsw[idx]^2 + cisw[idx]^2 <= rating[idx]^2))
         end
     end
+
+    con(pm, nw, :mu_cm_switch)[f_idx] = mu_cm_fr
+
+    nothing
 end
 
 

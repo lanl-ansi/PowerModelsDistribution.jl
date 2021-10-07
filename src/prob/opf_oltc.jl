@@ -58,6 +58,7 @@ function build_mc_opf_oltc(pm::AbstractUnbalancedPowerModel)
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -122,6 +123,7 @@ function build_mc_opf_oltc(pm::AbstractUBFModels)
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)

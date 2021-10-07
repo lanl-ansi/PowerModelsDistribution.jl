@@ -198,7 +198,7 @@ end
 
 "`-rate_a <= p[f_idx] <= rate_a`"
 function constraint_mc_thermal_limit_from(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
-    mu_sm_fr = []
+    mu_sm_fr = JuMP.ConstraintRef[]
 
     for (idx, c) in enumerate(f_connections)
         p_fr = var(pm, nw, :p, f_idx)[c]
@@ -215,15 +215,17 @@ function constraint_mc_thermal_limit_from(pm::AbstractUnbalancedActivePowerModel
         end
     end
 
+    con(pm, nw, :mu_sm_branch)[f_idx] = mu_sm_fr
+
     if _IM.report_duals(pm)
-        sol(pm, n, :branch, f_idx[1])[:mu_sm_fr] = mu_sm_fr
+        sol(pm, nw, :branch, f_idx[1])[:mu_sm_fr] = mu_sm_fr
     end
 end
 
 
 ""
 function constraint_mc_thermal_limit_to(pm::AbstractUnbalancedActivePowerModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
-    mu_sm_to = []
+    mu_sm_to = JuMP.ConstraintRef[]
 
     for (idx,c) in enumerate(t_connections)
         p_to = var(pm, nw, :p, t_idx)[c]
@@ -239,6 +241,8 @@ function constraint_mc_thermal_limit_to(pm::AbstractUnbalancedActivePowerModel, 
             end
         end
     end
+
+    con(pm, nw, :mu_sm_branch)[t_idx] = mu_sm_to
 
     if _IM.report_duals(pm)
         sol(pm, nw, :branch, t_idx[1])[:mu_sm_to] = mu_sm_to
@@ -353,4 +357,19 @@ function constraint_storage_losses(pm::AbstractUnbalancedActivePowerModel, n::In
         ==
         p_loss + sum(r[c]*ps[c]^2 for c in conductors)
     )
+end
+
+
+"nothing to do, no voltage variables"
+function constraint_mc_ampacity_from(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{Float64})::Nothing
+end
+
+
+"nothing to do, no voltage variables"
+function constraint_mc_ampacity_to(pm::AbstractUnbalancedActivePowerModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rating::Vector{Float64})::Nothing
+end
+
+
+"nothing to do, no voltage variables"
+function constraint_mc_switch_ampacity(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{Float64})::Nothing
 end

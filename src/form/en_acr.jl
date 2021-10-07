@@ -770,18 +770,18 @@ create expressions for the terminal power flows `:psw_bus` and `qsw_bus`,
 and link the from-side to the to-side switch power
 """
 function constraint_mc_switch_power(pm::AbstractExplicitNeutralACRModel, nw::Int, id::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}; report::Bool=true)
-psw_fr = var(pm, nw, :psw, f_idx)
-qsw_fr = var(pm, nw, :qsw, f_idx)
-psw_to = var(pm, nw, :psw, t_idx)
-qsw_to = var(pm, nw, :qsw, t_idx)
+    psw_fr = var(pm, nw, :psw, f_idx)
+    qsw_fr = var(pm, nw, :qsw, f_idx)
+    psw_to = var(pm, nw, :psw, t_idx)
+    qsw_to = var(pm, nw, :qsw, t_idx)
 
-JuMP.@constraint(pm.model, psw_fr .+ psw_to .== 0)
-JuMP.@constraint(pm.model, qsw_fr .+ qsw_to .== 0)
+    JuMP.@constraint(pm.model, psw_fr .+ psw_to .== 0)
+    JuMP.@constraint(pm.model, qsw_fr .+ qsw_to .== 0)
 
-var(pm, nw, :psw_bus)[f_idx] = _merge_bus_flows(pm, psw_fr, f_connections)
-var(pm, nw, :qsw_bus)[f_idx] = _merge_bus_flows(pm, qsw_fr, f_connections)
-var(pm, nw, :psw_bus)[t_idx] = _merge_bus_flows(pm, psw_to, t_connections)
-var(pm, nw, :qsw_bus)[t_idx] = _merge_bus_flows(pm, qsw_to, t_connections)
+    var(pm, nw, :psw_bus)[f_idx] = _merge_bus_flows(pm, psw_fr, f_connections)
+    var(pm, nw, :qsw_bus)[f_idx] = _merge_bus_flows(pm, qsw_fr, f_connections)
+    var(pm, nw, :psw_bus)[t_idx] = _merge_bus_flows(pm, psw_to, t_connections)
+    var(pm, nw, :qsw_bus)[t_idx] = _merge_bus_flows(pm, qsw_to, t_connections)
 end
 
 
@@ -799,17 +799,22 @@ imposes a bound on the switch current magnitude per conductor.
 Note that a bound on the from-side implies the same bound on the to-side current,
 so it suffices to apply this only explicitly at the from-side.
 """
-function constraint_mc_switch_current_limit(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_mc_switch_current_limit(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})::Nothing
     vr_fr = [var(pm, nw, :vr, f_idx[1])[t] for t in f_connections]
     vi_fr = [var(pm, nw, :vi, f_idx[1])[t] for t in f_connections]
     psw = var(pm, nw, :psw, f_idx)
     qsw = var(pm, nw, :qsw, f_idx)
 
+    mu_cm_fr = JuMP.ConstraintRef[]
     for idx in 1:length(rating)
         if rating[idx] < Inf
-            JuMP.@constraint(pm.model, psw[idx]^2 + qsw[idx]^2 <= rating[idx]^2 * (vr_fr[idx]^2 + vi_fr[idx]^2))
+            push!(mu_cm_fr, JuMP.@constraint(pm.model, psw[idx]^2 + qsw[idx]^2 <= rating[idx]^2 * (vr_fr[idx]^2 + vi_fr[idx]^2)))
         end
     end
+
+    con(pm, nw, :mu_cm_switch)[f_idx] = mu_cm_fr
+
+    nothing
 end
 
 

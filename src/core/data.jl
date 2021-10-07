@@ -352,8 +352,8 @@ function _calc_transformer_power_ub_frto(trans::Dict{String,<:Any}, bus_fr::Dict
     bounds_fr = []
     bounds_to = []
     if haskey(trans, "c_rating_a")
-        push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"].*bus_fr["vbase"])
-        push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"].*bus_to["vbase"])
+        push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
+        push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
     end
     if haskey(trans, "rate_a")
         push!(bounds_fr, trans["rate_a"])
@@ -378,8 +378,8 @@ function _calc_transformer_current_max_frto(trans::Dict{String,<:Any}, bus_fr::D
         push!(bounds_to, trans["c_rating_a"])
     end
     if haskey(trans, "rate_a")
-        push!(bounds_fr, trans["rate_a"]./(bus_fr["vmax"].*bus_fr["vbase"]))
-        push!(bounds_to, trans["rate_a"]./(bus_to["vmax"].*bus_to["vbase"]))
+        push!(bounds_fr, trans["rate_a"]./(bus_fr["vmax"]))
+        push!(bounds_to, trans["rate_a"]./(bus_to["vmax"]))
     end
 
     N = length(trans["f_connections"])
@@ -603,7 +603,7 @@ function _calc_branch_power_max(branch::Dict{String,<:Any}, bus::Dict{String,<:A
     connections = [findfirst(isequal(cnd), terminals) for cnd in connections]
 
     if haskey(bus, "vmax") && haskey(branch, "c_rating_a")
-        push!(bounds, branch["c_rating_a"] .* bus["vmax"][connections] .* bus["vbase"])
+        push!(bounds, branch["c_rating_a"] .* bus["vmax"][connections])
     end
     if haskey(branch, "rate_a")
         push!(bounds, branch["rate_a"])

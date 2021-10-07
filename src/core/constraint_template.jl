@@ -139,7 +139,11 @@ end
 function constraint_mc_switch_current_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
     switch = ref(pm, nw, :switch, i)
 
-    if haskey(switch, "current_rating")
+    if !haskey(con(pm, nw), :mu_cm_switch)
+        con(pm, nw)[:mu_cm_switch] = Dict{Tuple{Int,Int,Int},Vector{JuMP.ConstraintRef}}()
+    end
+
+    if haskey(switch, "current_rating") && any(switch["current_rating"] .< Inf)
         f_idx = (i, switch["f_bus"], switch["t_bus"])
         constraint_mc_switch_current_limit(pm, nw, f_idx, switch["f_connections"], switch["current_rating"])
     end

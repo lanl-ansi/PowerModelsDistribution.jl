@@ -21,10 +21,10 @@ function build_mc_opf_capc(pm::AbstractUnbalancedPowerModel)
     variable_mc_generator_power(pm)
     variable_mc_load_power(pm)
 
-    variable_mc_capcontrol(pm, relax=true)
+    variable_mc_capcontrol(pm; relax=true)
 
     constraint_mc_model_voltage(pm)
- 
+
     for i in ids(pm, :ref_buses)
         constraint_mc_theta_ref(pm, i)
     end
@@ -42,7 +42,7 @@ function build_mc_opf_capc(pm::AbstractUnbalancedPowerModel)
     for i in ids(pm, :bus)
         constraint_mc_power_balance_capc(pm, i)
     end
-  
+
     for i in ids(pm, :branch)
         constraint_mc_ohms_yt_from(pm, i)
         constraint_mc_ohms_yt_to(pm, i)
@@ -56,6 +56,7 @@ function build_mc_opf_capc(pm::AbstractUnbalancedPowerModel)
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -77,7 +78,7 @@ function build_mc_opf_capc(pm::AbstractUBFModels)
     variable_mc_generator_power(pm)
     variable_mc_load_power(pm)
 
-    variable_mc_capcontrol(pm, relax=true)
+    variable_mc_capcontrol(pm; relax=true)
 
     # Constraints
     constraint_mc_model_current(pm)
@@ -113,6 +114,7 @@ function build_mc_opf_capc(pm::AbstractUBFModels)
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)

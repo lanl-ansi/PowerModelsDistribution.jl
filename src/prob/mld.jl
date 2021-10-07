@@ -66,11 +66,14 @@ function build_mc_mld(pm::AbstractUnbalancedPowerModel)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -127,11 +130,14 @@ function build_mn_mc_mld_simple(pm::AbstractUnbalancedPowerModel)
             constraint_mc_voltage_angle_difference(pm, i; nw=n)
             constraint_mc_thermal_limit_from(pm, i; nw=n)
             constraint_mc_thermal_limit_to(pm, i; nw=n)
+            constraint_mc_ampacity_from(pm, i; nw=n)
+            constraint_mc_ampacity_to(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :switch)
             constraint_mc_switch_state(pm, i; nw=n)
             constraint_mc_switch_thermal_limit(pm, i; nw=n)
+            constraint_mc_switch_ampacity(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :transformer)
@@ -210,11 +216,14 @@ function build_mc_mld(pm::AbstractUBFModels)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -265,11 +274,14 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
             constraint_mc_voltage_angle_difference(pm, i; nw=n)
             constraint_mc_thermal_limit_from(pm, i; nw=n)
             constraint_mc_thermal_limit_to(pm, i; nw=n)
+            constraint_mc_ampacity_from(pm, i; nw=n)
+            constraint_mc_ampacity_to(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :switch)
             constraint_mc_switch_state(pm, i; nw=n)
             constraint_mc_switch_thermal_limit(pm, i; nw=n)
+            constraint_mc_switch_ampacity(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :transformer)
@@ -339,11 +351,14 @@ function build_mc_mld_bf(pm::AbstractUnbalancedPowerModel)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -404,11 +419,14 @@ function build_mc_mld_uc(pm::AbstractUnbalancedPowerModel)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
