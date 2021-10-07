@@ -232,11 +232,12 @@ end
 
 "Creates phase angle constraints at reference buses"
 function constraint_mc_theta_ref(pm::AbstractUnbalancedACRModel, nw::Int, i::Int, va_ref::Vector{<:Real})
+    terminals = ref(pm, nw, :bus, i, "terminals")
     vr = var(pm, nw, :vr, i)
     vi = var(pm, nw, :vi, i)
 
     # deal with cases first where tan(theta)==Inf or tan(theta)==0
-    for (idx, t) in enumerate(ref(pm, nw, :bus, i)["terminals"])
+    for (idx, t) in enumerate(terminals)
         if va_ref[t] == pi/2
             JuMP.@constraint(pm.model, vr[t] == 0)
             JuMP.@constraint(pm.model, vi[t] >= 0)
@@ -250,7 +251,7 @@ function constraint_mc_theta_ref(pm::AbstractUnbalancedACRModel, nw::Int, i::Int
             JuMP.@constraint(pm.model, vr[t] >= 0)
             JuMP.@constraint(pm.model, vi[t] == 0)
         else
-            JuMP.@constraint(pm.model, vi[t] == tan(va_ref[t])*vr[t])
+            JuMP.@constraint(pm.model, vi[t] == tan(va_ref[idx])*vr[t])
             # va_ref also implies a sign for vr, vi
             if 0<=va_ref[t] && va_ref[t] <= pi
                 JuMP.@constraint(pm.model, vi[t] >= 0)
