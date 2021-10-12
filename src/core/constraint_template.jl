@@ -1,19 +1,33 @@
 # Voltage constraints
 
-""
-function constraint_mc_model_voltage(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default)
+"""
+    constraint_mc_model_voltage(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default)::Nothing
+
+Template function for model voltage constraints.
+"""
+function constraint_mc_model_voltage(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default)::Nothing
     constraint_mc_model_voltage(pm, nw)
-end
-
-
-"reference angle constraints"
-function constraint_mc_theta_ref(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
-    va_ref = ref(pm, nw, :bus, i, "va")
-    constraint_mc_theta_ref(pm, nw, i, va_ref)
+    nothing
 end
 
 
 """
+    constraint_mc_theta_ref(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for reference angle constraints.
+"""
+function constraint_mc_theta_ref(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    va_ref = ref(pm, nw, :bus, i, "va")
+    constraint_mc_theta_ref(pm, nw, i, va_ref)
+    nothing
+end
+
+
+"""
+    constraint_mc_bus_voltage_balance(pm::AbstractUnbalancedPowerModel, bus_id::Int; nw=nw_id_default)::Nothing
+
+Template function for bus voltage balance constraints.
+
 Impose all balance related constraints for which key present in data model of bus.
 For a discussion of sequence components and voltage unbalance factor (VUF), see
 @INPROCEEDINGS{girigoudar_molzahn_roald-2019,
@@ -25,7 +39,7 @@ For a discussion of sequence components and voltage unbalance factor (VUF), see
     url={https://molzahn.github.io/pubs/girigoudar_molzahn_roald-2019.pdf}
 }
 """
-function constraint_mc_bus_voltage_balance(pm::AbstractUnbalancedPowerModel, bus_id::Int; nw=nw_id_default)
+function constraint_mc_bus_voltage_balance(pm::AbstractUnbalancedPowerModel, bus_id::Int; nw=nw_id_default)::Nothing
     @assert(ref(pm, nw, :conductors)==3)
 
     bus = ref(pm, nw, :bus, bus_id)
@@ -51,58 +65,90 @@ function constraint_mc_bus_voltage_balance(pm::AbstractUnbalancedPowerModel, bus
         vm_ll_max = haskey(bus, "vm_ll_max") ? bus["vm_ll_max"] : fill(Inf, 3)
         constraint_mc_bus_voltage_magnitude_ll(pm, nw, bus_id, vm_ll_min, vm_ll_max)
     end
+    nothing
 end
 
 
-"voltage magnitude setpoint constraint"
-function constraint_mc_voltage_magnitude_only(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default, kwargs...)
+"""
+    constraint_mc_voltage_magnitude_only(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for voltage magnitude setpoint constraint
+"""
+function constraint_mc_voltage_magnitude_only(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     bus = ref(pm, nw, :bus, i)
     if haskey(bus, "vm")
         constraint_mc_voltage_magnitude_only(pm, nw, i, bus["vm"])
     end
+
+    nothing
 end
 
 
 """
+    constraint_mc_voltage_magnitude_bounds(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for voltage magnitude bounds constraints.
+
 This constraint captures problem agnostic constraints that define limits for
-voltage magnitudes (where variable bounds cannot be used)
-Notable examples include IVRUPowerModel and ACRUPowerModel
+voltage magnitudes (where variable bounds cannot be used).
+Notable examples include IVRUPowerModel and ACRUPowerModel.
 """
-function constraint_mc_voltage_magnitude_bounds(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+function constraint_mc_voltage_magnitude_bounds(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     bus = ref(pm, nw, :bus, i)
     vmin = get(bus, "vmin", fill(0.0, length(bus["terminals"])))
     vmax = get(bus, "vmax", fill(Inf, length(bus["terminals"])))
     constraint_mc_voltage_magnitude_bounds(pm, nw, i, vmin, vmax)
+    nothing
 end
 
 ## Voltage on/off constraints
 
-"on/off constraint for bus voltages"
-function constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, kwargs...)
+# TODO fixed function kwargs
+"""
+    constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, kwargs...)::Nothing
+
+Template function for on/off constraint for bus voltages"
+"""
+function constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, kwargs...)::Nothing
     constraint_mc_bus_voltage_on_off(pm, nw; kwargs...)
+    nothing
 end
 
 
-"on/off voltage magnitude constraint"
-function constraint_mc_bus_voltage_magnitude_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_bus_voltage_magnitude_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for on/off voltage magnitude constraint
+"""
+function constraint_mc_bus_voltage_magnitude_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     bus = ref(pm, nw, :bus, i)
 
     constraint_mc_bus_voltage_magnitude_on_off(pm, nw, i, bus["vmin"], bus["vmax"])
+    nothing
 end
 
 
-"on/off voltage magnitude squared constraint for relaxed formulations"
-function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for on/off voltage magnitude squared constraint for relaxed formulations
+"""
+function constraint_mc_bus_voltage_magnitude_sqr_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     bus = ref(pm, nw, :bus, i)
 
     constraint_mc_bus_voltage_magnitude_sqr_on_off(pm, nw, i, bus["vmin"], bus["vmax"])
+    nothing
 end
 
 
 # Switch constraints
 
-""
-function constraint_mc_switch_state(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_switch_state(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for switch state constraints
+"""
+function constraint_mc_switch_state(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     switch = ref(pm, nw, :switch, i)
     f_bus = switch["f_bus"]
     t_bus = switch["t_bus"]
@@ -114,13 +160,14 @@ function constraint_mc_switch_state(pm::AbstractUnbalancedPowerModel, i::Int; nw
     else
         constraint_mc_switch_state_open(pm, nw, f_idx)
     end
+    nothing
 end
 
 
 """
     constraint_mc_switch_thermal_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
 
-Template function for switch thermal limit constraint (from-side)
+Template function for switch thermal limit constraint
 """
 function constraint_mc_switch_thermal_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     switch = ref(pm, nw, :switch, i)
@@ -133,10 +180,16 @@ function constraint_mc_switch_thermal_limit(pm::AbstractUnbalancedPowerModel, i:
     if haskey(switch, "thermal_rating") && any(switch["thermal_rating"] .< Inf)
         constraint_mc_switch_thermal_limit(pm, nw, f_idx, switch["f_connections"], switch["thermal_rating"])
     end
+    nothing
 end
 
 
-function constraint_mc_switch_current_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_switch_current_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for switch current limit constraints
+"""
+function constraint_mc_switch_current_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     switch = ref(pm, nw, :switch, i)
 
     if !haskey(con(pm, nw), :mu_cm_switch)
@@ -147,12 +200,17 @@ function constraint_mc_switch_current_limit(pm::AbstractUnbalancedPowerModel, i:
         f_idx = (i, switch["f_bus"], switch["t_bus"])
         constraint_mc_switch_current_limit(pm, nw, f_idx, switch["f_connections"], switch["current_rating"])
     end
+    nothing
 end
 
 ## switch on/off constraints
 
-""
-function constraint_mc_switch_state_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default, relax::Bool=false)
+"""
+    constraint_mc_switch_state_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default, relax::Bool=false)::Nothing
+
+Template function for switch state on/off constraints (MLD problems)
+"""
+function constraint_mc_switch_state_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default, relax::Bool=false)::Nothing
     switch = ref(pm, nw, :switch, i)
     f_bus = switch["f_bus"]
     t_bus = switch["t_bus"]
@@ -169,13 +227,18 @@ function constraint_mc_switch_state_on_off(pm::AbstractUnbalancedPowerModel, i::
             constraint_mc_switch_state_open(pm, nw, f_idx)
         end
     end
+    nothing
 end
 
 
 # Balance constraints
 
-"KCL including transformer arcs and load variables."
-function constraint_mc_power_balance(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_power_balance(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for KCL constraints.
+"""
+function constraint_mc_power_balance(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     bus = ref(pm, nw, :bus, i)
     bus_arcs = ref(pm, nw, :bus_arcs_conns_branch, i)
     bus_arcs_sw = ref(pm, nw, :bus_arcs_conns_switch, i)
@@ -194,11 +257,16 @@ function constraint_mc_power_balance(pm::AbstractUnbalancedPowerModel, i::Int; n
     end
 
     constraint_mc_power_balance(pm, nw, i, bus["terminals"], bus["grounded"], bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_shunts)
+    nothing
 end
 
 
-""
-function constraint_mc_power_balance_slack(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_power_balance_slack(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for KCL constraints which include a slack power at every bus
+"""
+function constraint_mc_power_balance_slack(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     bus = ref(pm, nw, :bus, i)
     bus_arcs = ref(pm, nw, :bus_arcs_conns_branch, i)
     bus_arcs_sw = ref(pm, nw, :bus_arcs_conns_switch, i)
@@ -217,11 +285,16 @@ function constraint_mc_power_balance_slack(pm::AbstractUnbalancedPowerModel, i::
     end
 
     constraint_mc_power_balance_slack(pm, nw, i, bus["terminals"], bus["grounded"], bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_shunts)
+    nothing
 end
 
 
-"KCL including transformer arcs"
-function constraint_mc_power_balance_simple(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_power_balance_simple(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for KCL constraints for simple load shedding
+"""
+function constraint_mc_power_balance_simple(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     bus = ref(pm, nw, :bus, i)
     bus_arcs = ref(pm, nw, :bus_arcs_conns_branch, i)
     bus_arcs_sw = ref(pm, nw, :bus_arcs_conns_switch, i)
@@ -240,11 +313,16 @@ function constraint_mc_power_balance_simple(pm::AbstractUnbalancedPowerModel, i:
     end
 
     constraint_mc_power_balance_simple(pm, nw, i, bus["terminals"], bus["grounded"], bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_shunts)
+    nothing
 end
 
 
-"KCL for load shed problem with transformers"
-function constraint_mc_power_balance_shed(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_power_balance_shed(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for KCL constraints for load shed problem
+"""
+function constraint_mc_power_balance_shed(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     bus = ref(pm, nw, :bus, i)
     bus_arcs = ref(pm, nw, :bus_arcs_conns_branch, i)
     bus_arcs_sw = ref(pm, nw, :bus_arcs_conns_switch, i)
@@ -263,15 +341,16 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedPowerModel, i::I
     end
 
     constraint_mc_power_balance_shed(pm, nw, i, bus["terminals"], bus["grounded"], bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_shunts)
+    nothing
 end
 
 
 """
     constraint_mc_power_balance_capc(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
 
-KCL with capacitor control variables.
+Template function for KCL constraints with capacitor control variables.
 """
-function constraint_mc_power_balance_capc(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+function constraint_mc_power_balance_capc(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     bus = ref(pm, nw, :bus, i)
     bus_arcs = ref(pm, nw, :bus_arcs_conns_branch, i)
     bus_arcs_sw = ref(pm, nw, :bus_arcs_conns_switch, i)
@@ -290,11 +369,16 @@ function constraint_mc_power_balance_capc(pm::AbstractUnbalancedPowerModel, i::I
     end
 
     constraint_mc_power_balance_capc(pm, nw, i, bus["terminals"], bus["grounded"], bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_shunts)
+    nothing
 end
 
 
-""
-function constraint_mc_current_balance(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_current_balance(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for KCL constraints in current-voltage variable space
+"""
+function constraint_mc_current_balance(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     bus = ref(pm, nw, :bus, i)
     bus_arcs = ref(pm, nw, :bus_arcs_conns_branch, i)
     bus_arcs_sw = ref(pm, nw, :bus_arcs_conns_switch, i)
@@ -305,11 +389,16 @@ function constraint_mc_current_balance(pm::AbstractUnbalancedPowerModel, i::Int;
     bus_shunts = ref(pm, nw, :bus_conns_shunt, i)
 
     constraint_mc_current_balance(pm, nw, i, bus["terminals"], bus["grounded"], bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_shunts)
+    nothing
 end
 
 
-"ensures that power generation and demand are balanced"
-function constraint_mc_network_power_balance(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_network_power_balance(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for constraints that ensures that power generation and demand are balanced in OBF problem
+"""
+function constraint_mc_network_power_balance(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     comp_bus_ids = ref(pm, nw, :components, i)
 
     comp_gen_ids = Set{Tuple{Int,Vector{Int}}}()
@@ -344,13 +433,18 @@ function constraint_mc_network_power_balance(pm::AbstractUnbalancedPowerModel, i
     comp_branch_b = Dict(branch["index"] => (branch["f_bus"], branch["t_bus"], branch["f_connections"], branch["t_connections"], branch["br_r"], branch["br_x"], fill(1.0, size(branch["br_r"])[1]), branch["b_fr"], branch["b_to"]) for branch in comp_branches)
 
     constraint_mc_network_power_balance(pm, nw, i, comp_gen_ids, comp_pd, comp_qd, comp_gs, comp_bs, comp_branch_g, comp_branch_b)
+    nothing
 end
 
 
 # Branch constraints
 
-"ohms constraint for branches on the from-side"
-function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for ohms constraint for branches on the from-side
+"""
+function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -360,11 +454,16 @@ function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw
     G, B = calc_branch_y(branch)
 
     constraint_mc_ohms_yt_from(pm, nw, f_bus, t_bus, f_idx, t_idx, branch["f_connections"], branch["t_connections"], G, B, branch["g_fr"], branch["b_fr"])
+    nothing
 end
 
 
-"ohms constraint for branches on the to-side"
-function constraint_mc_ohms_yt_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_ohms_yt_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for ohms constraint for branches on the to-side
+"""
+function constraint_mc_ohms_yt_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -374,11 +473,16 @@ function constraint_mc_ohms_yt_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::
     G, B = calc_branch_y(branch)
 
     constraint_mc_ohms_yt_to(pm, nw, f_bus, t_bus, f_idx, t_idx, branch["f_connections"], branch["t_connections"], G, B, branch["g_to"], branch["b_to"])
+    nothing
 end
 
 
-""
-function constraint_mc_model_voltage_magnitude_difference(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_model_voltage_magnitude_difference(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for constraints for modeling voltage magnitude difference across branches
+"""
+function constraint_mc_model_voltage_magnitude_difference(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -391,11 +495,16 @@ function constraint_mc_model_voltage_magnitude_difference(pm::AbstractUnbalanced
     b_sh_fr = branch["b_fr"]
 
     constraint_mc_model_voltage_magnitude_difference(pm, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, b_sh_fr)
+    nothing
 end
 
 
-""
-function constraint_mc_model_current(pm::AbstractUBFModels; nw::Int=nw_id_default)
+"""
+    constraint_mc_model_current(pm::AbstractUBFModels; nw::Int=nw_id_default)::Nothing
+
+Template function for constraints for model current
+"""
+function constraint_mc_model_current(pm::AbstractUBFModels; nw::Int=nw_id_default)::Nothing
     for (i,branch) in ref(pm, nw, :branch)
         f_bus = branch["f_bus"]
         t_bus = branch["t_bus"]
@@ -406,11 +515,16 @@ function constraint_mc_model_current(pm::AbstractUBFModels; nw::Int=nw_id_defaul
 
         constraint_mc_model_current(pm, nw, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
     end
+    nothing
 end
 
 
-""
-function constraint_mc_power_losses(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_power_losses(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for constraints for modeling power losses across branches
+"""
+function constraint_mc_power_losses(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -425,17 +539,23 @@ function constraint_mc_power_losses(pm::AbstractUnbalancedPowerModel, i::Int; nw
     b_sh_to = branch["b_to"]
 
     constraint_mc_power_losses(pm, nw, i, f_bus, t_bus, f_idx, t_idx, r, x, g_sh_fr, g_sh_to, b_sh_fr, b_sh_to)
+    nothing
 end
 
 
-"This is duplicated at PowerModelsDistribution level to correctly handle the indexing of the shunts."
-function constraint_mc_voltage_angle_difference(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_voltage_angle_difference(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for constraints of the voltage angle difference across branches
+"""
+function constraint_mc_voltage_angle_difference(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
 
     constraint_mc_voltage_angle_difference(pm, nw, f_idx, branch["f_connections"], branch["t_connections"], branch["angmin"], branch["angmax"])
+    nothing
 end
 
 
@@ -455,6 +575,7 @@ function constraint_mc_thermal_limit_from(pm::AbstractUnbalancedPowerModel, i::I
     if haskey(branch, "rate_a") && any(branch["rate_a"] .< Inf)
         constraint_mc_thermal_limit_from(pm, nw, f_idx, branch["f_connections"], branch["rate_a"])
     end
+    nothing
 end
 
 
@@ -474,11 +595,16 @@ function constraint_mc_thermal_limit_to(pm::AbstractUnbalancedPowerModel, i::Int
     if haskey(branch, "rate_a") && any(branch["rate_a"] .< Inf)
         constraint_mc_thermal_limit_to(pm, nw, t_idx, branch["t_connections"], branch["rate_a"])
     end
+    nothing
 end
 
 
-""
-function constraint_mc_current_from(pm::AbstractUnbalancedIVRModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_current_from(pm::AbstractUnbalancedIVRModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for current constraints on branches (from-side)
+"""
+function constraint_mc_current_from(pm::AbstractUnbalancedIVRModel, i::Int; nw::Int=nw_id_default)::Nothing
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -488,11 +614,16 @@ function constraint_mc_current_from(pm::AbstractUnbalancedIVRModel, i::Int; nw::
     b_fr = branch["b_fr"]
 
     constraint_mc_current_from(pm, nw, f_bus, f_idx, branch["f_connections"], g_fr, b_fr)
+    nothing
 end
 
 
-""
-function constraint_mc_current_to(pm::AbstractUnbalancedIVRModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_current_to(pm::AbstractUnbalancedIVRModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for current constraints on branches (to-side)
+"""
+function constraint_mc_current_to(pm::AbstractUnbalancedIVRModel, i::Int; nw::Int=nw_id_default)::Nothing
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -503,11 +634,16 @@ function constraint_mc_current_to(pm::AbstractUnbalancedIVRModel, i::Int; nw::In
     b_to = branch["b_to"]
 
     constraint_mc_current_to(pm, nw, t_bus, f_idx, t_idx, branch["f_connections"], branch["t_connections"], g_to, b_to)
+    nothing
 end
 
 
-""
-function constraint_mc_bus_voltage_drop(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_bus_voltage_drop(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for bus voltage drop constraints
+"""
+function constraint_mc_bus_voltage_drop(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
@@ -517,13 +653,18 @@ function constraint_mc_bus_voltage_drop(pm::AbstractUnbalancedPowerModel, i::Int
     x = branch["br_x"]
 
     constraint_mc_bus_voltage_drop(pm, nw, i, f_bus, t_bus, f_idx, branch["f_connections"], branch["t_connections"], r, x)
+    nothing
 end
 
 
 # Transformer constraints
 
-"Transformer constraints, considering winding type, conductor order, polarity and tap settings."
-function constraint_mc_transformer_power(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default, fix_taps::Bool=true)
+"""
+    constraint_mc_transformer_power(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default, fix_taps::Bool=true)::Nothing
+
+Template function for Transformer constraints in Power-voltage space, considering winding type, conductor order, polarity and tap settings.
+"""
+function constraint_mc_transformer_power(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default, fix_taps::Bool=true)::Nothing
     # if ref(pm, nw_id_default, :conductors)!=3
     #     error("Transformers only work with networks with three conductors.")
     # end
@@ -552,46 +693,76 @@ function constraint_mc_transformer_power(pm::AbstractUnbalancedPowerModel, i::In
     elseif configuration == "zig-zag"
         error("Zig-zag not yet supported.")
     end
+    nothing
 end
 
 
 # Load constraints
 
-"""
-CONSTANT POWER
+@doc raw"""
+    constraint_mc_load_power(pm::AbstractUnbalancedPowerModel, id::Int; nw::Int=nw_id_default, report::Bool=true)::Nothing
+
+Template function for load constraints.
+
+## CONSTANT POWER
+
 Fixes the load power sd.
+
+```math
 sd = [sd_1, sd_2, sd_3]
+```
+
 What is actually fixed, depends on whether the load is connected in delta or wye.
 When connected in wye, the load power equals the per-phase power sn drawn at the
 bus to which the load is connected.
-sd_1 = v_a.conj(i_a) = sn_a
 
-CONSTANT CURRENT
+```math
+sd_1 = v_a.conj(i_a) = sn_a
+```
+
+## CONSTANT CURRENT
+
 Sets the active and reactive load power sd to be proportional to
 the the voltage magnitude.
+
+```math
 pd = cp.|vm|
 qd = cq.|vm|
 sd = cp.|vm| + j.cq.|vm|
+```
 
-CONSTANT IMPEDANCE
+## CONSTANT IMPEDANCE
+
 Sets the active and reactive power drawn by the load to be proportional to
 the square of the voltage magnitude.
+
+```math
 pd = cp.|vm|^2
 qd = cq.|vm|^2
 sd = cp.|vm|^2 + j.cq.|vm|^2
+```
 
-DELTA
+## DELTA
+
 When connected in delta, the load power gives the reference in the delta reference
 frame. This means
+
+```math
 sd_1 = v_ab.conj(i_ab) = (v_a-v_b).conj(i_ab)
+```
+
 We can relate this to the per-phase power by
+
+```math
 sn_a = v_a.conj(i_a)
     = v_a.conj(i_ab-i_ca)
     = v_a.conj(conj(s_ab/v_ab) - conj(s_ca/v_ca))
     = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
+```
+
 So for delta, sn is constrained indirectly.
 """
-function constraint_mc_load_power(pm::AbstractUnbalancedPowerModel, id::Int; nw::Int=nw_id_default, report::Bool=true)
+function constraint_mc_load_power(pm::AbstractUnbalancedPowerModel, id::Int; nw::Int=nw_id_default, report::Bool=true)::Nothing
     load = ref(pm, nw, :load, id)
     bus = ref(pm, nw,:bus, load["load_bus"])
 
@@ -604,24 +775,38 @@ function constraint_mc_load_power(pm::AbstractUnbalancedPowerModel, id::Int; nw:
     else
         constraint_mc_load_power_delta(pm, nw, id, load["load_bus"], load["connections"], a, alpha, b, beta; report=report)
     end
+    nothing
 end
 
 
 # Gernerator constraints
 
-"""
-DELTA
+@doc raw"""
+    constraint_mc_generator_power(pm::AbstractUnbalancedPowerModel, id::Int; nw::Int=nw_id_default, report::Bool=true, bounded::Bool=true)::Nothing
+
+Template function for generator power constraints
+
+## DELTA
+
 When connected in delta, the load power gives the reference in the delta reference
 frame. This means
+
+```math
 sd_1 = v_ab.conj(i_ab) = (v_a-v_b).conj(i_ab)
+```
+
 We can relate this to the per-phase power by
+
+```math
 sn_a = v_a.conj(i_a)
     = v_a.conj(i_ab-i_ca)
     = v_a.conj(conj(s_ab/v_ab) - conj(s_ca/v_ca))
     = v_a.(s_ab/(v_a-v_b) - s_ca/(v_c-v_a))
+```
+
 So for delta, sn is constrained indirectly.
 """
-function constraint_mc_generator_power(pm::AbstractUnbalancedPowerModel, id::Int; nw::Int=nw_id_default, report::Bool=true, bounded::Bool=true)
+function constraint_mc_generator_power(pm::AbstractUnbalancedPowerModel, id::Int; nw::Int=nw_id_default, report::Bool=true, bounded::Bool=true)::Nothing
     generator = ref(pm, nw, :gen, id)
     bus = ref(pm, nw,:bus, generator["gen_bus"])
 
@@ -636,18 +821,28 @@ function constraint_mc_generator_power(pm::AbstractUnbalancedPowerModel, id::Int
     else
         constraint_mc_generator_power_delta(pm, nw, id, bus["index"], generator["connections"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
     end
+    nothing
 end
 
 
-"generator active power setpoint constraint"
-function constraint_mc_gen_power_setpoint_real(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default, kwargs...)
+"""
+    constraint_mc_gen_power_setpoint_real(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for generator active power setpoint constraint, for power flow problems
+"""
+function constraint_mc_gen_power_setpoint_real(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     pg_set = ref(pm, nw, :gen, i)["pg"]
     constraint_mc_gen_power_setpoint_real(pm, nw, i, pg_set)
+    nothing
 end
 
 
-""
-function constraint_mc_gen_power_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_gen_power_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for generator power on/off constraints (MLD problems)
+"""
+function constraint_mc_gen_power_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     gen = ref(pm, nw, :gen, i)
     ncnds = length(gen["connections"])
 
@@ -657,53 +852,81 @@ function constraint_mc_gen_power_on_off(pm::AbstractUnbalancedPowerModel, i::Int
     qmax = get(gen, "qmax", fill( Inf, ncnds))
 
     constraint_mc_gen_power_on_off(pm, nw, i, gen["connections"], pmin, pmax, qmin, qmax)
+    nothing
 end
 
 
-"defines limits on active power output of a generator where bounds can't be used"
-function constraint_mc_gen_active_bounds(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_gen_active_bounds(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for defining limits on active power output of a generator where bounds can't be used.
+"""
+function constraint_mc_gen_active_bounds(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     gen = ref(pm, nw, :gen, i)
     bus = gen["gen_bus"]
     constraint_mc_gen_active_bounds(pm, nw, i, bus, gen["connections"], gen["pmax"], gen["pmin"])
+    nothing
 end
 
 
-"defines limits on reactive power output of a generator where bounds can't be used"
-function constraint_mc_gen_reactive_bounds(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_gen_reactive_bounds(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for defines limits on reactive power output of a generator where bounds can't be used.
+"""
+function constraint_mc_gen_reactive_bounds(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     gen = ref(pm, nw, :gen, i)
     bus = gen["gen_bus"]
     constraint_mc_gen_reactive_bounds(pm, nw, i, bus, gen["connections"], gen["qmax"], gen["qmin"])
+    nothing
 end
 
 
 # Storage constraints
 
-"storage loss constraints, delegate to PowerModels"
-function constraint_mc_storage_losses(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default, kwargs...)
+"""
+    constraint_mc_storage_losses(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for storage loss constraints
+"""
+function constraint_mc_storage_losses(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     storage = ref(pm, nw, :storage, i)
 
-    constraint_storage_losses(pm, nw, i, storage["storage_bus"], storage["r"], storage["x"], storage["p_loss"], storage["q_loss"];
-        conductors = storage["connections"]
-    )
+    constraint_storage_losses(pm, nw, i, storage["storage_bus"], storage["r"], storage["x"], storage["p_loss"], storage["q_loss"]; conductors=storage["connections"])
+    nothing
 end
 
 
-""
-function constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for storage thermal limit constraints
+"""
+function constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     storage = ref(pm, nw, :storage, i)
     constraint_mc_storage_thermal_limit(pm, nw, i, storage["connections"], storage["thermal_rating"])
+    nothing
 end
 
 
-""
-function constraint_mc_storage_current_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_storage_current_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for storage current limit constraints
+"""
+function constraint_mc_storage_current_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     storage = ref(pm, nw, :storage, i)
     constraint_mc_storage_current_limit(pm, nw, i, storage["storage_bus"], storage["connections"], storage["current_rating"])
+    nothing
 end
 
 
-""
-function constraint_mc_storage_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_mc_storage_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Tempate function for storage on/off constraints for MLD problems
+"""
+function constraint_mc_storage_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     storage = ref(pm, nw, :storage, i)
     charge_ub = storage["charge_rating"]
     discharge_ub = storage["discharge_rating"]
@@ -723,11 +946,16 @@ function constraint_mc_storage_on_off(pm::AbstractUnbalancedPowerModel, i::Int; 
     end
 
     constraint_mc_storage_on_off(pm, nw, i, storage["connections"], pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
+    nothing
 end
 
 
-""
-function constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for storage state constraints (non multinetwork)
+"""
+function constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     storage = ref(pm, nw, :storage, i)
 
     if haskey(ref(pm, nw), :time_elapsed)
@@ -738,11 +966,16 @@ function constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int; nw::
     end
 
     constraint_storage_state_initial(pm, nw, i, storage["energy"], storage["charge_efficiency"], storage["discharge_efficiency"], time_elapsed)
+    nothing
 end
 
 
-""
-function constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int, nw_1::Int, nw_2::Int)
+"""
+    constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int, nw_1::Int, nw_2::Int)::Nothing
+
+Template function for storage state constraints for multinetwork problems
+"""
+function constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int, nw_1::Int, nw_2::Int)::Nothing
     storage = ref(pm, nw_2, :storage, i)
 
     if haskey(ref(pm, nw_2), :time_elapsed)
@@ -759,22 +992,33 @@ function constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int, nw_1
         @warn "storage component $(i) was not found in network $(nw_1) while building constraint_storage_state between networks $(nw_1) and $(nw_2). Using the energy value from the storage component in network $(nw_2) instead"
         constraint_storage_state_initial(pm, nw_2, i, storage["energy"], storage["charge_efficiency"], storage["discharge_efficiency"], time_elapsed)
     end
+    nothing
 end
 
 
-""
-function constraint_storage_complementarity_nl(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_storage_complementarity_nl(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+
+Template function for nonlinear storage complementarity constraints
+"""
+function constraint_storage_complementarity_nl(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     constraint_storage_complementarity_nl(pm, nw, i)
+    nothing
 end
 
 
-""
-function constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+"""
+    constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+
+Template function for mixed-integer storage complementarity constraints
+"""
+function constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     storage = ref(pm, nw, :storage, i)
     charge_ub = storage["charge_rating"]
     discharge_ub = storage["discharge_rating"]
 
     constraint_storage_complementarity_mi(pm, nw, i, charge_ub, discharge_ub)
+    nothing
 end
 
 
@@ -794,6 +1038,7 @@ function constraint_mc_ampacity_from(pm::AbstractUnbalancedPowerModel, i::Int; n
     if haskey(branch, "c_rating_a") && any(branch["c_rating_a"] .< Inf)
         constraint_mc_ampacity_from(pm, nw, f_idx, branch["f_connections"], branch["c_rating_a"])
     end
+    nothing
 end
 
 
@@ -813,6 +1058,7 @@ function constraint_mc_ampacity_to(pm::AbstractUnbalancedPowerModel, i::Int; nw:
     if haskey(branch, "c_rating_a") && any(branch["c_rating_a"] .< Inf)
         constraint_mc_ampacity_to(pm, nw, t_idx, branch["t_connections"], branch["c_rating_a"])
     end
+    nothing
 end
 
 
@@ -832,4 +1078,5 @@ function constraint_mc_switch_ampacity(pm::AbstractUnbalancedPowerModel, i::Int;
     if haskey(switch, "current_rating") && any(switch["current_rating"] .< Inf)
         constraint_mc_switch_ampacity(pm, nw, f_idx, switch["f_connections"], switch["current_rating"])
     end
+    nothing
 end
