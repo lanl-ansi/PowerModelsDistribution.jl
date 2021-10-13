@@ -101,12 +101,12 @@ end
         end
 
         # IVRENPowerModel
-        sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel)
+        sol_pmd = calc_sol_pmd(data_math, IVRENPowerModel; optimizer=optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-6, "print_level"=>0))
         c_to = sol_pmd["switch"]["switch"]["cr_to"]+im*sol_pmd["switch"]["switch"]["ci_to"]
         @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.005))
 
         # IVRQuadraticENPowerModel
-        sol_pmd = calc_sol_pmd(data_math, IVRQuadraticENPowerModel)
+        sol_pmd = calc_sol_pmd(data_math, IVRQuadraticENPowerModel; optimizer=optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-6, "print_level"=>0))
         c_to = sol_pmd["switch"]["switch"]["cr_to"]+im*sol_pmd["switch"]["switch"]["ci_to"]
         @test all(isapprox.(abs.(c_to[1:3]), cm_ub[1:3], rtol=0.005))
 
@@ -114,7 +114,7 @@ end
         # so no explicit test needed
 
         # ACRENPowerModel
-        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel)
+        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel; optimizer=optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-6, "print_level"=>0))
         s_to = sol_pmd["switch"]["switch"]["pt"]+im*sol_pmd["switch"]["switch"]["qt"]
         v_to = sol_pmd["bus"]["x2"]["vr"]+im*sol_pmd["bus"]["x2"]["vi"]
         c_to = conj.(s_to./v_to)
