@@ -606,6 +606,89 @@ function build_mn_mc_opf(pm::AbstractUBFModels)
     objective_mc_min_fuel_cost(pm)
 end
 
+
+"""
+function build_mc_opf(
+    pm::AbstractExplicitNeutralIVRModel
+)
+
+constructor for multinetwork OPF in current-voltage variable space with explicit neutrals
+"""
+function build_mn_mc_opf(pm::AbstractExplicitNeutralIVRModel)
+    for (n, network) in nws(pm)
+        # Variables
+        variable_mc_bus_voltage(pm; nw=n)
+        variable_mc_branch_current(pm; nw=n)
+        variable_mc_load_current(pm; nw=n)
+        variable_mc_load_power(pm; nw=n)
+        variable_mc_generator_current(pm; nw=n)
+        variable_mc_generator_power(pm; nw=n)
+        variable_mc_transformer_current(pm; nw=n)
+        variable_mc_transformer_power(pm; nw=n)
+        variable_mc_switch_current(pm; nw=n)
+
+        # Constraints
+        for i in ids(pm, n, :bus)
+
+            if i in ids(pm, n, :ref_buses)
+                constraint_mc_voltage_reference(pm, i; nw=n)
+            end
+
+            constraint_mc_voltage_absolute(pm, i; nw=n)
+            constraint_mc_voltage_pairwise(pm, i; nw=n)
+        end
+
+        # components should be constrained before KCL, or the bus current variables might be undefined
+
+        for id in ids(pm, n, :gen)
+            constraint_mc_generator_power(pm, id; nw=n)
+            constraint_mc_generator_current(pm, id; nw=n)
+        end
+
+        for id in ids(pm, n, :load)
+            constraint_mc_load_power(pm, id; nw=n)
+            constraint_mc_load_current(pm, id; nw=n)
+        end
+
+        for i in ids(pm, n, :transformer)
+            constraint_mc_transformer_voltage(pm, i; nw=n)
+            constraint_mc_transformer_current(pm, i; nw=n)
+
+            constraint_mc_transformer_thermal_limit(pm, i; nw=n)
+        end
+
+        for i in ids(pm, n, :branch)
+            constraint_mc_current_from(pm, i; nw=n)
+            constraint_mc_current_to(pm, i; nw=n)
+            constraint_mc_bus_voltage_drop(pm, i; nw=n)
+
+            constraint_mc_branch_current_limit(pm, i; nw=n)
+            constraint_mc_thermal_limit_from(pm, i; nw=n)
+            constraint_mc_thermal_limit_to(pm, i; nw=n)
+        end
+
+        for i in ids(pm, n, :switch)
+            constraint_mc_switch_current(pm, i; nw=n)
+            constraint_mc_switch_state(pm, i; nw=n)
+
+            constraint_mc_switch_current_limit(pm, i; nw=n)
+            constraint_mc_switch_thermal_limit(pm, i; nw=n)
+        end
+
+        if !isempty(ids(pm, n, :storage))
+            warning("This formulation lacks support for storage components.")
+        end
+
+        for i in ids(pm, n, :bus)
+            constraint_mc_current_balance(pm, i; nw=n)
+        end
+    end
+
+    # Objective
+    objective_mc_min_fuel_cost(pm)
+end
+
+
 # Depreciated run_ functions (remove after ~4-6 months)
 
 """

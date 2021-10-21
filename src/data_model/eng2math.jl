@@ -680,6 +680,10 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
         for (f_key, t_key) in [("qg_lb", "qmin"), ("qg_ub", "qmax"), ("pg_lb", "pmin")]
             if haskey(eng_obj, f_key)
                 math_obj[t_key] = eng_obj[f_key]
+            elseif f_key[end-1:end]=="ub"
+                math_obj[t_key] = fill(Inf, length(math_obj["pmax"]))
+            else
+                math_obj[t_key] = fill(-Inf, length(math_obj["pmax"]))
             end
         end
 

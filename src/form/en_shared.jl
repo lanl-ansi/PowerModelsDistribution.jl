@@ -456,7 +456,7 @@ end
 Creates generator active power variables `:pg` for models with explicit neutrals
 """
 function variable_mc_generator_power_real(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    int_dim = Dict(i => _infer_int_dim_unit(gen, false) for (i,gen) in ref(pm, :gen))
+    int_dim = Dict(i => _infer_int_dim_unit(gen, false) for (i,gen) in ref(pm, nw, :gen))
     pg = var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:int_dim[i]], base_name="$(nw)_pg_$(i)",
             start = comp_start_value(ref(pm, nw, :gen, i), "pg_start", c, 0.0)
@@ -485,7 +485,7 @@ end
 Creates generator reactive power variables `:qg` for models with explicit neutrals
 """
 function variable_mc_generator_power_imaginary(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    int_dim = Dict(i => _infer_int_dim_unit(gen, false) for (i,gen) in ref(pm, :gen))
+    int_dim = Dict(i => _infer_int_dim_unit(gen, false) for (i,gen) in ref(pm, nw, :gen))
     qg = var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
             [c in 1:int_dim[i]], base_name="$(nw)_qg_$(i)",
             start = comp_start_value(ref(pm, nw, :gen, i), "qg_start", c, 0.0)
@@ -518,7 +518,7 @@ end
 Creates load real current variables `:crd` for models with explicit neutrals
 """
 function variable_mc_load_current_real(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, :load))
+    int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, nw, :load))
 
     crd = var(pm, nw)[:crd] = Dict{Int,Any}(i => JuMP.@variable(pm.model,
             [c in 1:int_dim[i]], base_name="$(nw)_crd_$(i)",
@@ -541,7 +541,7 @@ end
 Creates load imaginary current variables `:cid` for models with explicit neutrals
 """
 function variable_mc_load_current_imaginary(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, :load))
+    int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, nw, :load))
     load_ids_current = [id for (id,load) in ref(pm, nw, :load) if load["model"]==CURRENT]
     
     cid = var(pm, nw)[:cid] = Dict{Int,Any}(i => JuMP.@variable(pm.model,
@@ -569,7 +569,7 @@ end
 Creates transformer real current variables `:crt` for models with explicit neutrals
 """
 function variable_mc_transformer_current_real(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
+    int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, nw, :transformer))
     crt = var(pm, nw)[:crt] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:int_dim[l]], base_name="$(nw)_crt_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :transformer, l), "crt_start", c, 0.0)
@@ -591,7 +591,7 @@ end
 Creates transformer imaginary current variables `:cit` for models with explicit neutrals
 """
 function variable_mc_transformer_current_imaginary(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
+    int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, nw, :transformer))
     cit = var(pm, nw)[:cit] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:int_dim[l]], base_name="$(nw)_cit_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :transformer, l), "cit_start", c, 0.0)
@@ -613,7 +613,7 @@ end
 Creates transformer active power variables `:pt` for models with explicit neutrals
 """
 function variable_mc_transformer_power_real(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
+    int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, nw, :transformer))
     pt = var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:int_dim[l]], base_name="$(nw)_pt_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :transformer, l), "pt_start", c, 0.0)
@@ -648,7 +648,7 @@ end
 Creates transformer reactive power variables `:qt` for models with explicit neutrals
 """
 function variable_mc_transformer_power_imaginary(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, :transformer))
+    int_dim = Dict(l => _infer_int_dim_transformer(trans, false) for (l,trans) in ref(pm, nw, :transformer))
     qt = var(pm, nw)[:qt] = Dict((l,i,j) => JuMP.@variable(pm.model,
             [c in 1:int_dim[l]], base_name="$(nw)_qt_$((l,i,j))",
             start = comp_start_value(ref(pm, nw, :transformer, l), "qt_start", c, 0.0)
