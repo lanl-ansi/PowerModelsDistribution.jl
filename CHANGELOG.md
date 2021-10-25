@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed issue of missing `va` on reference buses which have been selected automatically
 - Fixed PVSystem fields and defaults based on latest version
 - Added support for `action=normalize` on dss LoadShapes
 - Fixed bug in dss LoadShape where `useactual=yes` was the default, whereas `useactual=no` is the real default

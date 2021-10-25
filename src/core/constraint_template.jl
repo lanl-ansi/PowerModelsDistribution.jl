@@ -17,7 +17,8 @@ end
 Template function for reference angle constraints.
 """
 function constraint_mc_theta_ref(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
-    va_ref = ref(pm, nw, :bus, i, "va")
+    terminals = ref(pm, nw, :bus, i, "terminals")
+    va_ref = get(ref(pm, nw, :bus, i), "va", [[0.0, -120.0, 120.0]..., zeros(length(terminals))...][terminals])
     constraint_mc_theta_ref(pm, nw, i, va_ref)
     nothing
 end
