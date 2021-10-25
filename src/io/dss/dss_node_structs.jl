@@ -147,9 +147,6 @@ function _create_generator(name::String=""; kwargs...)::Dict{String,Any}
 end
 
 
-
-
-
 """
 Creates a Dict{String,Any} containing all of the expected properties for a
 PVSystem. See OpenDSS document
@@ -159,34 +156,22 @@ for valid fields and ways to specify the different properties.
 function _create_pvsystem(name::String=""; kwargs...)
     bus1 = get(kwargs, :bus1, "")
 
-    kv = get(kwargs, :kv, 12.47)
-    kw = get(kwargs, :kw, 10.0)
-    pf = get(kwargs, :pf, 0.88)
-    kvar = get(kwargs, :kvar, 5.0)
-    kva = get(kwargs, :kva, kw / pf)
-
-
-    if haskey(kwargs, :kw) && haskey(kwargs, :pf)
-        kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
-        kva = abs(kw) + kvar^2
-    elseif haskey(kwargs, :kw) && haskey(kwargs, :kvar)
-        kva = abs(kw) + kvar^2
-        if kva > 0.0
-            pf = kw / kva
-            if kvar != 0.0
-                pf *= sign(kw * kvar)
-            end
-        end
-    elseif haskey(kwargs, :kva) && haskey(kwargs, :pf)
-        kw = kva * abs(pf)
-        kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
-    elseif haskey(kwargs, :pf) && kwargs[:pf] != 0.88
-        kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
-        kva = abs(kw) + kvar^2
+    pmpp = get(kwargs, :pmpp, 500.0)
+    if haskey(kwargs, Symbol("%pmpp"))
+        pmpp *= kwargs[Symbol("%pmpp")] / 100.0
     end
 
-    if haskey(kwargs, :like)
-        @warn "'like' keyword on pvsystem $name is not supported."
+    kv = get(kwargs, :kv, 12.47)
+    pf = get(kwargs, :pf, 1.0)
+    kvar = get(kwargs, :kvar, 0.0)
+    kva = get(kwargs, :kva, 500.0)
+
+    if haskey(kwargs, :pf) && !haskey(kwargs, :kva) && haskey(kwargs, :kvar)
+        kva = kvar / sqrt(1 - pf^2) / sign(pf)
+    elseif haskey(kwargs, :pf) && !haskey(kwargs, :kvar) && haskey(kwargs, :kva)
+        kvar = kva * sqrt(1 - pf^2) * sign(pf)
+    elseif !haskey(kwargs, :pf) && haskey(kwargs, :kva) && haskey(kwargs, :kvar)
+        pf = sqrt(1 - (kvar / kva)^2) * sign(kvar)
     end
 
     Dict{String,Any}(
@@ -194,15 +179,10 @@ function _create_pvsystem(name::String=""; kwargs...)
         "phases" => get(kwargs, :phases, 3),
         "bus1" => bus1,
         "kv" => kv,
-        "kw" => kw,
+        "irradiance" => get(kwargs, :irradiance, 1.0),
+        "pmpp" => get(kwargs, :pmpp, 500.0),
+        "%pmpp" => get(kwargs, Symbol("%pmpp"), 100.0),
         "pf" => pf,
-        "model" => get(kwargs, :model, 1),
-        "yearly" => get(kwargs, :yearly, get(kwargs, :daily, "")),
-        "daily" => get(kwargs, :daily, ""),
-        "duty" => get(kwargs, :duty, ""),
-        "irradiance" => get(kwargs, :irradiance, 0.0),
-        "pmpp" => get(kwargs, :pmpp, 0.0),
-        "temperature" => get(kwargs, :temperature, 0.0),
         "conn" => get(kwargs, :conn, WYE),
         "kvar" => kvar,
         "kva" => kva,
@@ -212,19 +192,33 @@ function _create_pvsystem(name::String=""; kwargs...)
         "p-tcurve" => get(kwargs, :ptcurve, ""),
         "%r" => get(kwargs, Symbol("%r"), 0),
         "%x" => get(kwargs, Symbol("%x"), 0.50),
+        "model" => get(kwargs, :model, 1),
         "vminpu" => get(kwargs, :vminpu, 0.9),
         "vmaxpu" => get(kwargs, :vmaxpu, 1.1),
-        "tyearly" => get(kwargs, :tyearly, 0),
-        "tduty" => get(kwargs, :tduty, 0),
-        "class" => get(kwargs, :class, 0),
+        "balanced" => get(kwargs, :balanced, false),
+        "limitcurrent" => get(kwargs, :limitcurrent, false),
+        "yearly" => get(kwargs, :yearly, get(kwargs, :daily, "")),
+        "daily" => get(kwargs, :daily, ""),
+        "duty" => get(kwargs, :duty, ""),
+        "tyearly" => get(kwargs, :tyearly, ""),
+        "tdaily" => get(kwargs, :tdaily, ""),
+        "tduty" => get(kwargs, :tduty, ""),
+        "class" => get(kwargs, :class, 1),
         "usermodel" => get(kwargs, :usermodel, ""),
         "userdata" => get(kwargs, :userdata, ""),
-        "debugtrace" => get(kwargs, :debugtrace, "no"),
+        "debugtrace" => get(kwargs, :debugtrace, false),
+        "varfollowinverter" => get(kwargs, :varfollowinverter, false),
+        "dutystart" => get(kwargs, :dutystart, 0),
+        "wattpriority" => get(kwargs, :wattpriority, false),
+        "pfpriority" => get(kwargs, :pfpriority, false),
+        "%pminnovars" => get(kwargs, Symbol("%pminnovars"), -1.0),
+        "%pminkvarmax" => get(kwargs, Symbol("%pminkvarmax"), -1.0),
+        "kvarmax" => get(kwargs, :kvarmax, 500.0),
+        "kvarmaxabs" => get(kwargs, :kvarmaxabs, 500.0),
         "spectrum" => get(kwargs, :spectrum, "defaultpvsystem"),
-        # Inherited Properties
         "basefreq" => get(kwargs, :basefreq, 60.0),
         "enabled" => get(kwargs, :enabled, true),
-        "like" => get(kwargs, :like, "")
+        "like" => get(kwargs, :like, ""),
     )
 end
 

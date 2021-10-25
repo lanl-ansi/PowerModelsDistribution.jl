@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed PVSystem fields and defaults based on latest version
 - Added support for `action=normalize` on dss LoadShapes
 - Fixed bug in dss LoadShape where `useactual=yes` was the default, whereas `useactual=no` is the real default
 - Removed remaining PowerModels files / dependency from unit tests
