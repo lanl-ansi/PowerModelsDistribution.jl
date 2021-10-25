@@ -37,6 +37,7 @@ makedocs(
             "The Engineering Data Model" => "tutorials/The Engineering Model.md",
             "Engineering Model: Helper Functions" => "tutorials/Engineering Model - Helper Functions.md",
             "Basics" => "tutorials/basic.md",
+            "Extending PowerModelsDistribution" => "tutorials/Extension Tutorial.md",
         ],
         "API Reference" => [
             "Base" => "reference/base.md",
