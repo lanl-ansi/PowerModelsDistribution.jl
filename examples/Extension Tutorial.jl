@@ -10,7 +10,7 @@ begin
 	Pkg.activate(mktempdir())
 	Pkg.Registry.update()
 	Pkg.add([
-			Pkg.PackageSpec(;name="PowerModelsDistribution", version="0.12"),
+			Pkg.PackageSpec(;name="PowerModelsDistribution", version="0.12", rev="main"),
 			Pkg.PackageSpec(;name="Ipopt", version="0.6.5"),
 			])
 end
