@@ -402,7 +402,7 @@ end
 Creates load active power variables `:pd` for models with explicit neutrals
 """
 function variable_mc_load_power_active(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, :load))
+    int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, nw, :load))
     load_ids_current = [id for (id,load) in ref(pm, nw, :load) if load["model"]==CURRENT]
 
     pd = var(pm, nw)[:pd] = Dict{Int,Any}(i => JuMP.@variable(pm.model,
@@ -426,7 +426,7 @@ end
 Creates load reactive power variables `:qd` for models with explicit neutrals
 """
 function variable_mc_load_power_reactive(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, :load))
+    int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, nw, :load))
     load_ids_current = [id for (id,load) in ref(pm, nw, :load) if load["model"]==CURRENT]
 
     qd = var(pm, nw)[:qd] = Dict{Int,Any}(i => JuMP.@variable(pm.model,
@@ -869,8 +869,8 @@ function variable_mc_transformer_current(pm::AbstractExplicitNeutralIVRModel; nw
     variable_mc_transformer_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_transformer_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
 
-    var(pm)[:crt_bus] = Dict{Tuple{Int,Int,Int}, Any}()
-    var(pm)[:cit_bus] = Dict{Tuple{Int,Int,Int}, Any}()
+    var(pm, nw)[:crt_bus] = Dict{Tuple{Int,Int,Int}, Any}()
+    var(pm, nw)[:cit_bus] = Dict{Tuple{Int,Int,Int}, Any}()
 end
 
 
