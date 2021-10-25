@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added support for `action=normalize` on dss LoadShapes
 - Fixed bug in dss LoadShape where `useactual=yes` was the default, whereas `useactual=no` is the real default
 - Removed remaining PowerModels files / dependency from unit tests
 - Changed `sbase_default` to `1.0` by default, because often with default solver settings, constraints were ignored for being far too small
