@@ -52,7 +52,6 @@ function build_mc_pf(pm::AbstractUnbalancedPowerModel)
         constraint_storage_state(pm, i)
         constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_losses(pm, i)
-        constraint_mc_storage_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :branch)
@@ -62,7 +61,6 @@ function build_mc_pf(pm::AbstractUnbalancedPowerModel)
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
-        constraint_mc_switch_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -121,7 +119,6 @@ function build_mc_pf(pm::AbstractUnbalancedIVRModel)
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
-        constraint_mc_switch_current_limit(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -181,39 +178,19 @@ function build_mc_pf(pm::AbstractUBFModels)
         constraint_storage_state(pm, i)
         constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_losses(pm, i)
-        constraint_mc_storage_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :branch)
         constraint_mc_power_losses(pm, i)
         constraint_mc_model_voltage_magnitude_difference(pm, i)
         constraint_mc_voltage_angle_difference(pm, i)
-
-        constraint_mc_thermal_limit_from(pm, i)
-        constraint_mc_thermal_limit_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
-        constraint_mc_switch_thermal_limit(pm, i)
     end
 
     for i in ids(pm, :transformer)
         constraint_mc_transformer_power(pm, i)
     end
-end
-
-# Deprecated run_ functions (remove in ~4-6 months)
-
-"depreciation warning for `run_ac_mc_pf`"
-function run_ac_mc_pf(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
-    @warn "run_ac_mc_pf is being depreciated in favor of solve_mc_pf(data, ACPUPowerModel, solver; kwargs...), please update your code accordingly"
-    return solve_mc_pf(data, ACPUPowerModel, solver; kwargs...)
-end
-
-
-"depreciation warning for `run_mc_pf`"
-function run_mc_pf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    @warn "run_mc_pf is being depreciated in favor of solve_mc_pf, please update your code accordingly"
-    return solve_mc_pf(data, model_type, solver; kwargs...)
 end

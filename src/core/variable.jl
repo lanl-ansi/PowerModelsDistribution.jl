@@ -568,7 +568,7 @@ function variable_mc_switch_power_real(pm::AbstractUnbalancedPowerModel; nw::Int
 
     var(pm, nw)[:psw] = psw_auxes
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :psw_fr, :psw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), psw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :pf, :pt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), psw_expr)
 end
 
 
@@ -610,7 +610,7 @@ function variable_mc_switch_power_imaginary(pm::AbstractUnbalancedPowerModel; nw
 
     var(pm, nw)[:qsw] = qsw_auxes
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qsw_fr, :qsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), qsw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qf, :qt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), qsw_expr)
 end
 
 ## switch current variables
@@ -660,7 +660,7 @@ function variable_mc_switch_current_real(pm::AbstractUnbalancedPowerModel; nw::I
 
     var(pm, nw)[:crsw] = crsw_auxes
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :crsw_fr, :crsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), crsw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :cr_fr, :cr_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), crsw_expr)
 end
 
 
@@ -702,7 +702,7 @@ function variable_mc_switch_current_imaginary(pm::AbstractUnbalancedPowerModel; 
 
     var(pm, nw)[:cisw] = cisw_auxes
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :cisw_fr, :cisw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), cisw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :ci_fr, :ci_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), cisw_expr)
 end
 
 # switch state variables
@@ -737,7 +737,7 @@ end
 
 Capacitor (with capcontrol) switch state (open/close) variables
 """
-function variable_mc_capacitor_switch_state(pm::AbstractUnbalancedPowerModel, relax::Bool; nw::Int=nw_id_default, report::Bool=true)
+function variable_mc_capacitor_switch_state(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=true, report::Bool=true)
     cap_switch_ids = [id for (id,cap) in ref(pm, nw, :shunt) if haskey(cap,"controls")]
     if relax
         cap_state = var(pm, nw)[:capacitor_state] = Dict(i => JuMP.@variable(pm.model,
@@ -771,7 +771,6 @@ function variable_mc_capacitor_reactive_power(pm::AbstractUnbalancedPowerModel; 
     [p in ref(pm, nw, :shunt, i, "connections")],
     base_name="$(nw)_cap_cur_$(i)"
     ) for i in cap_switch_ids)
-
 end
 
 

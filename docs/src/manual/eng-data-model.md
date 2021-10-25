@@ -183,6 +183,7 @@ These are n-winding (`nwinding`), n-phase (`nphase`), lossy transformers. Note t
 | `polarity`       | `fill(1,nwindings)`                  | `Vector{Int}`          |             | always |                                                                                                                                                                |
 | `vm_nom`         |                                      | `Vector{Real}`         | volt        | always |                                                                                                                                                                |
 | `sm_nom`         |                                      | `Vector{Real}`         | watt        | always |                                                                                                                                                                |
+| `sm_ub`         |                                      | `Real`                  | watt        | opf | Rating for the total apparent power magnitude at each winding                                                                                                                                                        |
 | `status`         | `ENABLED`                            | `Status`               |             | always | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively                                                                           |
 
 #### Asymmetric, Lossless, Two-Winding (AL2W) Transformers (`transformer`)
@@ -201,6 +202,7 @@ Special case of the Generic transformer, which is still a `transformer` object, 
 | `tm_lb`         |                      | `Vector{Real}` |       | opf    | Minimum tap ratio for each phase (base=`tm_nom`), `size=nphases`                                            |
 | `tm_set`        | `fill(1.0,nphases)`  | `Vector{Real}` |       | always | Set tap ratio for each phase (base=`tm_nom`), `size=nphases`                                                |
 | `tm_fix`        | `fill(true,nphases)` | `Vector{Bool}` |       | oltc   | Indicates for each phase whether the tap ratio is fixed, `size=nphases`                                     |
+| `sm_ub`        |                       | `Real`         |       | opf   | Rating for the total apparent power magnitude at each winding                                     |
 
 #### Transformers with voltage regulator control (`controls`)
 

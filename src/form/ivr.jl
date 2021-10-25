@@ -303,7 +303,9 @@ function constraint_mc_thermal_limit_from(pm::AbstractUnbalancedIVRModel, nw::In
     cif = var(pm, nw, :ci, f_idx)
 
     for (idx, fc) in enumerate(f_connections)
-        JuMP.@NLconstraint(pm.model, (vr[fc]^2 + vi[fc]^2)*(crf[fc]^2 + cif[fc]^2) <= rate_a[idx]^2)
+        if rate_a[idx] < Inf
+            JuMP.@NLconstraint(pm.model, (vr[fc]^2 + vi[fc]^2)*(crf[fc]^2 + cif[fc]^2) <= rate_a[idx]^2)
+        end
     end
 end
 
@@ -318,7 +320,9 @@ function constraint_mc_thermal_limit_to(pm::AbstractUnbalancedIVRModel, nw::Int,
     cit = var(pm, nw, :ci, t_idx)
 
     for (idx, tc) in enumerate(t_connections)
-        JuMP.@NLconstraint(pm.model, (vr[tc]^2 + vi[tc]^2)*(crt[tc]^2 + cit[tc]^2) <= rate_a[idx]^2)
+        if rate_a[idx] < Inf
+            JuMP.@NLconstraint(pm.model, (vr[tc]^2 + vi[tc]^2)*(crt[tc]^2 + cit[tc]^2) <= rate_a[idx]^2)
+        end
     end
 end
 

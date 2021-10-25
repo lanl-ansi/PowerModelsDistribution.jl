@@ -226,6 +226,18 @@ function _create_loadshape(name::String=""; kwargs...)
     pmult = get(kwargs, :pmult, Float64[])
     qmult = get(kwargs, :qmult, pmult)
 
+    if get(kwargs, :action, "") == "normalize"
+        if !isempty(pmult)
+            max_p = maximum(pmult)
+            pmult ./= max_p == 0 ? 1 : max_p
+        end
+
+        if !isempty(qmult)
+            max_q = maximum(qmult)
+            qmult ./= max_q == 0 ? 1 : max_q
+        end
+    end
+
     npts = get(kwargs, :npts, length(pmult) == 0 && length(qmult) == 0 ? 0 : minimum(Int[length(a) for a in [pmult, qmult] if length(a) > 0]))
 
     pmult = pmult[1:npts]
@@ -249,7 +261,7 @@ function _create_loadshape(name::String=""; kwargs...)
         "dblfile" => get(kwargs, :dblfile, ""),
         "pqcsvfile" => get(kwargs, :pqcsvfile, ""),
         "action" => get(kwargs, :action, ""),
-        "useactual" => get(kwargs, :useactual, true),
+        "useactual" => get(kwargs, :useactual, false),
         "pmax" => get(kwargs, :pmax, 1.0),
         "qmax" => get(kwargs, :qmax, 1.0),
         "pbase" => get(kwargs, :pbase, 0.0),

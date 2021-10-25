@@ -203,10 +203,12 @@ const _monitor_properties = String[
 ]
 
 const _pvsystem_properties = Vector{String}([
-    "phases", "bus1", "kv", "irradiance", "pmpp", "temperature", "pf",
+    "phases", "bus1", "kv", "irradiance", "pmpp", "%pmpp", "temperature", "pf",
     "conn", "kvar", "kva", "%cutin", "%cutout", "effcurve", "p-tcurve", "%r",
     "%x", "model", "vminpu", "vmaxpu", "yearly", "daily", "duty", "tyearly",
-    "tduty", "class", "usermodel", "userdata", "debugtrace", "spectrum"
+    "tduty", "class", "usermodel", "userdata", "debugtrace", "varfollowinverter",
+    "dutystart", "wattpriority", "pfpriority", "%pminnovars", "%pminkvarmax",
+    "kvarmax", "kvarmaxabs", "spectrum", "basefreq", "enabled", "like"
 ])
 
 const _recloser_properties = String[

@@ -1,0 +1,21 @@
+! This case is designed to test a 6-wire line, incl. neutral bonding
+
+Clear
+
+New Circuit.Test phases=3 basekv=0.4 baseMVA=0.5 bus1=B1 MVASC1=1e8 MVASC3=1e8
+
+! taken from IEEE13
+New Linecode.mtx606 nphases=6  Units=mi
+~ Rmatrix=[ 0.505302   |  0.0953016  0.505302   | 0.0953016  0.0953016  0.505302   | 0.0953016  0.0953016  0.0953016  1.23932    | 0.0953016  0.0953016  0.0953016  0.0953016  1.23932   | 0.0953016  0.0953016  0.0953016  0.0953016  0.0953016  1.23932]
+~ Xmatrix=[ 1.45652 | 1.04682   1.45652 | 0.962713  1.04682  1.45652  | 1.32362   1.04682  0.962713  1.32956  | 1.04682   1.32362  1.04682   1.04682   1.32956 | 0.962713  1.04682  1.32362   0.962713  1.04682  1.32956]
+~ Cmatrix=[0  |0 0  |0  0  0|0 0 0 0| 0 0 0 0 0 |0 0 0 0 0 0]
+
+New Line.Line1    Phases=6 Bus1=B1.1.2.3.0.0.0   Bus2=X1.1.2.3.4.5.6  LineCode=mtx606 Length=500 units=ft 
+New Line.Line2    Phases=6 Bus1=X1.1.2.3.4.5.6   Bus2=B2.1.2.3.4.4.4  LineCode=mtx606 Length=500 units=ft 
+
+New Reactor.NeutralBonding_01 phases=1 bus1=X1.4 bus2=X1.5 R=0 X=1e-10
+New Reactor.NeutralBonding_02 phases=1 bus1=X1.4 bus2=X1.6 R=0 X=1e-10
+
+New Load.Load1  phases=1 bus1=B2.1.4  kv=0.23  model=1 conn=wye kVA=50  pf=0.9 vminpu=0.1 vmaxpu=2
+
+Solve

@@ -4,20 +4,22 @@
     # This test checks the generators are connected properly by comparing them
     # to equivalent constant-power loads. This is achieved by fixing their bounds.
     @testset "ACP/ACR tests" begin
-        eng_1 = parse_file("../test/data/opendss/case3_delta_gens.dss")
+        eng_1 = deepcopy(case3_delta_gens)
+
+        for (_,line) in eng_1["line"]
+            delete!(line, "cm_ub")
+        end
 
         for (_,load) in eng_1["load"]
             load["model"] = POWER
-        end
-
-        for (_,line) in eng_1["line"]
-            line["cm_ub"] = fill(1e4, size(line["cm_ub"])...)
         end
 
         eng_2 = deepcopy(eng_1)
         eng_2["load"] = Dict{String,Any}()
         eng_2["generator"] = Dict{String,Any}()
         for (id,load) in eng_1["load"]
+            pg_ub = -load["pd_nom"]
+            pg_ub = pg_ub.*(1 .+ 1E-9*sign.(pg_ub)) # add some slack to avoid numerical issues
             gen = Dict{String,Any}(
                 "source_id" => load["source_id"],
                 "configuration" => load["configuration"],
@@ -26,7 +28,7 @@
                 "cost_pg_parameters" => [0, 0, 0],
                 "control_mode" => FREQUENCYDROOP,
                 "pg_lb" => -load["pd_nom"],
-                "pg_ub" => -load["pd_nom"],
+                "pg_ub" => pg_ub,
                 "qg_lb" => -load["qd_nom"],
                 "qg_ub" => -load["qd_nom"],
                 "status" => ENABLED,
@@ -49,8 +51,8 @@
                 qd_bus = sol_1["solution"]["load"][id]["qd"]
                 pg_bus = sol_2["solution"]["generator"][id]["pg"]
                 qg_bus = sol_2["solution"]["generator"][id]["qg"]
-                @test isapprox(pd_bus, -pg_bus, atol=1E-5)
-                @test isapprox(qd_bus, -qg_bus, atol=1E-5)
+                @test isapprox(pd_bus, -pg_bus, atol=1E-4)
+                @test isapprox(qd_bus, -qg_bus, atol=1E-4)
             end
         end
     end

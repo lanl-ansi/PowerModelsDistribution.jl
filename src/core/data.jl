@@ -2,23 +2,23 @@ import LinearAlgebra: Adjoint, pinv
 
 
 "field names that should not be multi-conductor values"
-const _conductorless = Set(["index", "bus_i", "bus_type", "status", "gen_status",
+const _conductorless = Set{String}(["index", "bus_i", "bus_type", "status", "gen_status",
     "br_status", "gen_bus", "load_bus", "shunt_bus", "storage_bus", "f_bus", "t_bus",
     "transformer", "area", "zone", "base_kv", "energy", "energy_rating", "charge_rating",
     "discharge_rating", "charge_efficiency", "discharge_efficiency", "p_loss", "q_loss",
     "model", "ncost", "cost", "startup", "shutdown", "name", "source_id", "active_phases"])
 
 "field names that should become multi-conductor matrix not arrays"
-const _conductor_matrix = Set(["br_r", "br_x", "b_fr", "b_to", "g_fr", "g_to", "gs", "bs"])
+const _conductor_matrix = Set{String}(["br_r", "br_x", "b_fr", "b_to", "g_fr", "g_to", "gs", "bs"])
 
 const _excluded_count_busname_patterns = Vector{Regex}([
     r"^_virtual.*",
 ])
 
-const _pmd_math_component_status_parameters = Set(["status", "gen_status", "br_status"])
+const _pmd_math_component_status_parameters = Set{String}(["status", "gen_status", "br_status"])
 
 "maps component types to status parameters"
-const pmd_math_component_status = Dict(
+const pmd_math_component_status = Dict{String,String}(
     "bus" => "bus_type",
     "load" => "status",
     "shunt" => "status",
@@ -30,7 +30,7 @@ const pmd_math_component_status = Dict(
 )
 
 "maps component types to inactive status values"
-const pmd_math_component_status_inactive = Dict(
+const pmd_math_component_status_inactive = Dict{String,Int}(
     "bus" => 4,
     "load" => 0,
     "shunt" => 0,
@@ -103,7 +103,7 @@ end
 
 
 "rolls a 1d array left or right by idx"
-function _roll(array::Array{T, 1}, idx::Int; right=true) where T <: Number
+function _roll(array::Array{T, 1}, idx::Int; right::Bool=true) where T <: Number
     out = Array{T}(undef, size(array))
     pos = idx % length(out)
 
@@ -207,7 +207,7 @@ end
 
 Counts active ungrounded connections on edge components
 """
-function count_active_connections(data::Dict{String,<:Any})
+function count_active_connections(data::Dict{String,<:Any})::Int
     data_model = get(data, "data_model", MATHEMATICAL)
     edge_elements = data_model == MATHEMATICAL ? PowerModelsDistribution._math_edge_elements : PowerModelsDistribution._eng_edge_elements
     # bus_connections = Dict(id => [] for (id, _) in data["bus"])
@@ -270,7 +270,7 @@ end
 
 Counts active ungrounded terminals on buses
 """
-function count_active_terminals(data::Dict{String,<:Any}; count_grounded::Bool=false)
+function count_active_terminals(data::Dict{String,<:Any}; count_grounded::Bool=false)::Int
     data_model = get(data, "data_model", MATHEMATICAL)
     active_terminal_count = 0
     for (_,bus) in data["bus"]
@@ -315,7 +315,7 @@ end
 
 
 "creates a delta transformation matrix"
-function _get_delta_transformation_matrix(n_phases::Int)
+function _get_delta_transformation_matrix(n_phases::Int)::Matrix{Int}
     @assert(n_phases>2, "We only define delta transforms for three and more conductors.")
     Md = LinearAlgebra.diagm(0=>fill(1, n_phases), 1=>fill(-1, n_phases-1))
     Md[end,1] = -1
@@ -324,7 +324,7 @@ end
 
 
 "Calculates the tap scale factor for the non-dimensionalized equations."
-function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, bus_to::Dict{String,Any})
+function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, bus_to::Dict{String,Any})::Float64
     tm_nom = trans["tm_nom"]
 
     f_vbase = haskey(bus_fr, "vbase") ? bus_fr["vbase"] : bus_fr["base_kv"]
@@ -348,12 +348,12 @@ Returns a power magnitude bound for the from and to side of a transformer.
 The total current rating also implies a current bound through the
 upper bound on the voltage magnitude of the connected buses.
 """
-function _calc_transformer_power_ub_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
-    bounds_fr = []
-    bounds_to = []
+function _calc_transformer_power_ub_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})::Tuple{Vector{Float64},Vector{Float64}}
+    bounds_fr = Float64[]
+    bounds_to = Float64[]
     if haskey(trans, "c_rating_a")
-        push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"].*bus_fr["vbase"])
-        push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"].*bus_to["vbase"])
+        push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
+        push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
     end
     if haskey(trans, "rate_a")
         push!(bounds_fr, trans["rate_a"])
@@ -370,16 +370,16 @@ Returns a current magnitude bound for the from and to side of a transformer.
 The total power rating also implies a current bound through the lower bound on
 the voltage magnitude of the connected buses.
 """
-function _calc_transformer_current_max_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
-    bounds_fr = []
-    bounds_to = []
+function _calc_transformer_current_max_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})::Tuple{Vector{Float64},Vector{Float64}}
+    bounds_fr = Float64[]
+    bounds_to = Float64[]
     if haskey(trans, "c_rating_a")
         push!(bounds_fr, trans["c_rating_a"])
         push!(bounds_to, trans["c_rating_a"])
     end
     if haskey(trans, "rate_a")
-        push!(bounds_fr, trans["rate_a"]./(bus_fr["vmax"].*bus_fr["vbase"]))
-        push!(bounds_to, trans["rate_a"]./(bus_to["vmax"].*bus_to["vbase"]))
+        push!(bounds_fr, trans["rate_a"]./(bus_fr["vmax"]))
+        push!(bounds_to, trans["rate_a"]./(bus_to["vmax"]))
     end
 
     N = length(trans["f_connections"])
@@ -395,7 +395,7 @@ not. Therefore, a default lower bound is then used, specified by the keyword
 argument vdmin_eps.
 The returned bounds are for the pairs 1->2, 2->3, 3->1
 """
-function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps=0.1)
+function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps::Float64=0.1)::Tuple
     vmax = bus["vmax"]
     vmin = bus["vmin"]
     if haskey(bus, "vm_ll_max")
@@ -418,7 +418,7 @@ end
 Calculates lower and upper bounds for the loads themselves (not the power
 withdrawn at the bus).
 """
-function _calc_load_pq_bounds(load::Dict{String,<:Any}, bus::Dict{String,<:Any})
+function _calc_load_pq_bounds(load::Dict{String,<:Any}, bus::Dict{String,<:Any})::Tuple
     a, alpha, b, beta = _load_expmodel_params(load, bus)
     vmin, vmax = _calc_load_vbounds(load, bus)
     # get bounds
@@ -431,7 +431,7 @@ end
 
 
 "Returns a magnitude bound for the current going through the load."
-function _calc_load_current_max(load::Dict, bus::Dict)
+function _calc_load_current_max(load::Dict{String,<:Any}, bus::Dict{String,<:Any})::Vector{Float64}
     pmin, pmax, qmin, qmax = _calc_load_pq_bounds(load, bus)
     pabsmax = max.(abs.(pmin), abs.(pmax))
     qabsmax = max.(abs.(qmin), abs.(qmax))
@@ -446,7 +446,7 @@ end
 """
 Returns magnitude bounds for the current going through the load.
 """
-function _calc_load_current_magnitude_bounds(load::Dict, bus::Dict)
+function _calc_load_current_magnitude_bounds(load::Dict{String,<:Any}, bus::Dict{String,<:Any})::Tuple
     a, alpha, b, beta = _load_expmodel_params(load, bus)
     vmin, vmax = _calc_load_vbounds(load, bus)
     cb1 = sqrt.(_nan2zero(a.^(2).*vmin.^(2*alpha.-2), a) + _nan2zero(b.^(2).*vmin.^(2*beta.-2), b))
@@ -465,7 +465,7 @@ For an exponential load it simply returns certain data model properties, whilst
 for constant_power, constant_current and constant_impedance it returns the
 equivalent exponential model parameters.
 """
-function _load_expmodel_params(load::Dict, bus::Dict)
+function _load_expmodel_params(load::Dict{String,<:Any}, bus::Dict{String,<:Any})
     pd = load["pd"]
     qd = load["qd"]
     ncnds = length(pd)
@@ -502,7 +502,7 @@ Returns the voltage magnitude bounds for the individual load elements in a
 multiphase load. These are inferred from vmin/vmax for wye loads and from
 _calc_bus_vm_ll_bounds for delta loads.
 """
-function _calc_load_vbounds(load::Dict{String,<:Any}, bus::Dict{String,<:Any})
+function _calc_load_vbounds(load::Dict{String,<:Any}, bus::Dict{String,<:Any})::Tuple{Vector{Float64},Vector{Float64}}
     terminals = bus["terminals"]
     connections = [findfirst(isequal(c), terminals) for c in load["connections"]]
 
@@ -520,7 +520,7 @@ end
 Returns a Bool, indicating whether the convex hull of the voltage-dependent
 relationship needs a cone inclusion constraint.
 """
-function _check_load_needs_cone(load::Dict)
+function _check_load_needs_cone(load::Dict{String,<:Any})::Bool
     if load["model"]==CURRENT
         return true
     elseif load["model"]==EXPONENTIAL
@@ -534,7 +534,7 @@ end
 """
 Returns a current magnitude bound for the generators.
 """
-function _calc_gen_current_max(gen::Dict{String,<:Any}, bus::Dict{String,<:Any})
+function _calc_gen_current_max(gen::Dict{String,<:Any}, bus::Dict{String,<:Any})::Vector{Float64}
     if all([haskey(gen, prop) for prop in ["pmax", "pmin", "qmax", "qmin"]]) && haskey(bus, "vmin")
         pabsmax = max.(abs.(gen["pmin"]), abs.(gen["pmax"]))
         qabsmax = max.(abs.(gen["qmin"]), abs.(gen["qmax"]))
@@ -554,7 +554,7 @@ Returns a total (shunt+series) current magnitude bound for the from and to side
 of a branch. The total power rating also implies a current bound through the
 lower bound on the voltage magnitude of the connected buses.
 """
-function _calc_branch_current_max(branch::Dict{String,<:Any}, bus::Dict{String,<:Any})
+function _calc_branch_current_max(branch::Dict{String,<:Any}, bus::Dict{String,<:Any})::Vector{Float64}
     bounds = []
 
     if haskey(branch, "c_rating_a")
@@ -573,7 +573,7 @@ Returns a total (shunt+series) current magnitude bound for the from and to side
 of a branch. The total power rating also implies a current bound through the
 lower bound on the voltage magnitude of the connected buses.
 """
-function _calc_branch_current_max_frto(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
+function _calc_branch_current_max_frto(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})::Tuple{Vector{Float64},Vector{Float64}}
     bounds_fr = []
     bounds_to = []
 
@@ -595,7 +595,7 @@ Returns a total (shunt+series) power magnitude bound for the from and to side
 of a branch. The total current rating also implies a current bound through the
 upper bound on the voltage magnitude of the connected buses.
 """
-function _calc_branch_power_max(branch::Dict{String,<:Any}, bus::Dict{String,<:Any})
+function _calc_branch_power_max(branch::Dict{String,<:Any}, bus::Dict{String,<:Any})::Vector{Float64}
     bounds = []
 
     terminals = bus["terminals"]
@@ -603,7 +603,7 @@ function _calc_branch_power_max(branch::Dict{String,<:Any}, bus::Dict{String,<:A
     connections = [findfirst(isequal(cnd), terminals) for cnd in connections]
 
     if haskey(bus, "vmax") && haskey(branch, "c_rating_a")
-        push!(bounds, branch["c_rating_a"] .* bus["vmax"][connections] .* bus["vbase"])
+        push!(bounds, branch["c_rating_a"] .* bus["vmax"][connections])
     end
     if haskey(branch, "rate_a")
         push!(bounds, branch["rate_a"])
@@ -619,7 +619,7 @@ Returns a total (shunt+series) power magnitude bound for the from and to side
 of a branch. The total current rating also implies a current bound through the
 upper bound on the voltage magnitude of the connected buses.
 """
-function _calc_branch_power_max_frto(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
+function _calc_branch_power_max_frto(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})::Tuple{Vector{Float64},Vector{Float64}}
     return _calc_branch_power_max(branch, bus_fr), _calc_branch_power_max(branch, bus_to)
 end
 
@@ -627,7 +627,7 @@ end
 """
 Returns a valid series current magnitude bound for a branch.
 """
-function _calc_branch_series_current_max(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
+function _calc_branch_series_current_max(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})::Vector{Float64}
     ncnds = length(branch["f_connections"])
     vmin_fr = haskey(bus_fr, "vmin") ? bus_fr["vmin"][[findfirst(isequal(c), bus_fr["terminals"]) for c in branch["f_connections"]]] : fill(0.0, ncnds)
     vmin_to = haskey(bus_to, "vmin") ? bus_fr["vmin"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]] : fill(0.0, ncnds)
@@ -740,7 +740,7 @@ end
 
 
 "makes a full matrix variable from a diagonal, and lower and upper triangular vectors"
-function _make_full_matrix_variable(diag, lowertriangle, uppertriangle)
+function _make_full_matrix_variable(diag::Vector{T}, lowertriangle::Vector{T}, uppertriangle::Vector{T}) where T
     #TODO clean up
     matrix = []
     if length(diag) == 3
@@ -769,7 +769,7 @@ function _make_full_matrix_variable(diag, lowertriangle, uppertriangle)
     return matrix
 end
 
-
+# TODO refactor into several functions
 "helper to determine if expession has any Nonlinear terms"
 function _has_nl_expression(x)::Bool
     if isa(x, JuMP.NonlinearExpression)
@@ -802,7 +802,7 @@ end
 
 checks that voltage angle differences are within 90 deg., if not tightens to a default of 10deg (adjustable)
 """
-function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))
+function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))::Set{Int}
     if ismultinetwork(data)
         nw_data = data["nw"]
     else
@@ -857,7 +857,7 @@ end
 
 checks that each branch has non-negative thermal ratings and removes zero thermal ratings
 """
-function correct_mc_thermal_limits!(data::Dict{String,<:Any})
+function correct_mc_thermal_limits!(data::Dict{String,<:Any})::Set{Int}
     if ismultinetwork(data)
         nw_data = data["nw"]
     else
@@ -926,7 +926,7 @@ end
 
 computes branch admittance matrices
 """
-function calc_branch_y(branch::Dict{String,<:Any})
+function calc_branch_y(branch::Dict{String,<:Any})::Tuple
     y = pinv(branch["br_r"] + im * branch["br_x"])
     g, b = real(y), imag(y)
     return g, b
@@ -938,7 +938,7 @@ end
 
 computes load blocks based on switch locations
 """
-identify_load_blocks(data::Dict{String,<:Any}) = calc_connected_components(data; type="load_blocks")
+identify_load_blocks(data::Dict{String,<:Any})::Set = calc_connected_components(data; type="load_blocks")
 
 
 """
@@ -946,7 +946,7 @@ identify_load_blocks(data::Dict{String,<:Any}) = calc_connected_components(data;
 
 computes connected blocks currently in the model based on switch states
 """
-identify_blocks(data::Dict{String,<:Any}) = calc_connected_components(data; type="blocks")
+identify_blocks(data::Dict{String,<:Any})::Set = calc_connected_components(data; type="blocks")
 
 
 """
@@ -954,7 +954,7 @@ identify_blocks(data::Dict{String,<:Any}) = calc_connected_components(data; type
 
 computes component islands base only on edge and bus status
 """
-identify_islands(data::Dict{String,<:Any}) = calc_connected_components(data)
+identify_islands(data::Dict{String,<:Any})::Set = calc_connected_components(data)
 
 
 """
@@ -1090,7 +1090,7 @@ end
 
 
 "DFS on a graph"
-function _cc_dfs(i, neighbors, component_lookup, touched)
+function _cc_dfs(i::Any, neighbors::Dict{Any,Vector{Any}}, component_lookup::Dict{<:Any,Set{Int}}, touched::Set{Int})::Nothing
     push!(touched, i)
     for j in neighbors[i]
         if !(j in touched)
@@ -1103,6 +1103,8 @@ function _cc_dfs(i, neighbors, component_lookup, touched)
             _cc_dfs(j, neighbors, component_lookup, touched)
         end
     end
+
+    nothing
 end
 
 
@@ -1147,14 +1149,14 @@ function _correct_branch_directions!(pm_data::Dict{String,<:Any})
             branch_orginal = copy(branch)
             branch["f_bus"] = branch_orginal["t_bus"]
             branch["t_bus"] = branch_orginal["f_bus"]
-            branch["g_to"] = branch_orginal["g_fr"] .* branch_orginal["tap"]'.^2
-            branch["b_to"] = branch_orginal["b_fr"] .* branch_orginal["tap"]'.^2
-            branch["g_fr"] = branch_orginal["g_to"] ./ branch_orginal["tap"]'.^2
-            branch["b_fr"] = branch_orginal["b_to"] ./ branch_orginal["tap"]'.^2
-            branch["tap"] = 1 ./ branch_orginal["tap"]
-            branch["br_r"] = branch_orginal["br_r"] .* branch_orginal["tap"]'.^2
-            branch["br_x"] = branch_orginal["br_x"] .* branch_orginal["tap"]'.^2
-            branch["shift"] = -branch_orginal["shift"]
+            branch["f_connections"] = branch_orginal["t_connections"]
+            branch["t_connections"] = branch_orginal["f_connections"]
+            branch["g_to"] = branch_orginal["g_fr"]
+            branch["b_to"] = branch_orginal["b_fr"]
+            branch["g_fr"] = branch_orginal["g_to"]
+            branch["b_fr"] = branch_orginal["b_to"]
+            branch["br_r"] = branch_orginal["br_r"]
+            branch["br_x"] = branch_orginal["br_x"]
             branch["angmin"] = -branch_orginal["angmax"]
             branch["angmax"] = -branch_orginal["angmin"]
 
@@ -1572,4 +1574,36 @@ function _standardize_cost_terms!(components::Dict{String,<:Any}, comp_order::In
         end
     end
     return modified
+end
+
+
+"infer the internal dimension of a winding, load or generator based on the connections and the configuration"
+function _infer_int_dim(connections::Vector, configuration::ConnConfig, kron_reduced)
+    if configuration==WYE
+        if kron_reduced
+            return length(connections)
+        else
+            return length(connections)-1
+        end
+    else # DELTA
+        if length(connections)==2
+            return 1
+        elseif length(connections)==3
+            return 3
+        else
+            error("Only 1 and 3 phase delta-connections are supported.")
+        end
+    end
+end
+
+
+"infer the internal dimension for a unit, i.e. any one-port component with `connections` and `configuration` properties"
+function _infer_int_dim_unit(unit::Dict{String,<:Any}, kron_reduced)
+    return _infer_int_dim(unit["connections"], unit["configuration"], kron_reduced)
+end
+
+
+"infer the internal dimension for a transformer (only in the MATHEMATICAL data model format)"
+function _infer_int_dim_transformer(trans::Dict{String,<:Any}, kron_reduced)
+    return _infer_int_dim(trans["f_connections"], trans["configuration"], kron_reduced)
 end

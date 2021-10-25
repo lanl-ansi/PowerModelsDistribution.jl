@@ -38,6 +38,7 @@ makedocs(
             "Engineering Model: Helper Functions" => "tutorials/Engineering Model - Helper Functions.md",
             "Basics" => "tutorials/basic.md",
             "Extending PowerModelsDistribution" => "tutorials/Extension Tutorial.md",
+            "Explicit Neutral Models" => "tutorials/Explicit Neutral Models.md",
         ],
         "API Reference" => [
             "Base" => "reference/base.md",

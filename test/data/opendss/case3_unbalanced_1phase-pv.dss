@@ -26,7 +26,7 @@ New Load.L1 phases=1  loadbus.1.0   ( 0.4 3 sqrt / )   kW=8   kvar=3  model=1
 New Load.L2 phases=1  loadbus.2.0   ( 0.4 3 sqrt / )   kW=6   kvar=3  model=1
 New Load.L3 phases=1  loadbus.3.0   ( 0.4 3 sqrt / )   kW=6   kvar=3  model=1
 
-New PVSystem.PV1 phases=1 bus1=primary.1 kv=0.4 kva=2
+New PVSystem.PV1 phases=1 bus1=primary.1 kv=0.4 kva=2 kvar=2
 
 Set voltagebases=[0.4]
 Set tolerance=0.000001

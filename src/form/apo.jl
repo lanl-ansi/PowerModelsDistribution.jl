@@ -198,7 +198,7 @@ end
 
 "`-rate_a <= p[f_idx] <= rate_a`"
 function constraint_mc_thermal_limit_from(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
-    mu_sm_fr = []
+    mu_sm_fr = JuMP.ConstraintRef[]
 
     for (idx, c) in enumerate(f_connections)
         p_fr = var(pm, nw, :p, f_idx)[c]
@@ -209,19 +209,23 @@ function constraint_mc_thermal_limit_from(pm::AbstractUnbalancedActivePowerModel
                 JuMP.upper_bound(p_fr) > rate_a[idx] && set_upper_bound(p_fr, rate_a[idx])
             end
         else
-           push!(mu_sm_fr, JuMP.@constraint(pm.model, p_fr <= rate_a[c]))
+            if rate_a[idx] < Inf
+                push!(mu_sm_fr, JuMP.@constraint(pm.model, p_fr <= rate_a[idx]))
+            end
         end
     end
 
+    con(pm, nw, :mu_sm_branch)[f_idx] = mu_sm_fr
+
     if _IM.report_duals(pm)
-        sol(pm, n, :branch, f_idx[1])[:mu_sm_fr] = mu_sm_fr
+        sol(pm, nw, :branch, f_idx[1])[:mu_sm_fr] = mu_sm_fr
     end
 end
 
 
 ""
 function constraint_mc_thermal_limit_to(pm::AbstractUnbalancedActivePowerModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
-    mu_sm_to = []
+    mu_sm_to = JuMP.ConstraintRef[]
 
     for (idx,c) in enumerate(t_connections)
         p_to = var(pm, nw, :p, t_idx)[c]
@@ -232,73 +236,42 @@ function constraint_mc_thermal_limit_to(pm::AbstractUnbalancedActivePowerModel, 
                 JuMP.upper_bound(p_to) >  rate_a[idx] && set_upper_bound(p_to,  rate_a[idx])
             end
         else
-           push!(mu_sm_to, JuMP.@constraint(pm.model, p_to <= rate_a[idx]))
+            if rate_a[idx] < Inf
+                push!(mu_sm_to, JuMP.@constraint(pm.model, p_to <= rate_a[idx]))
+            end
         end
     end
+
+    con(pm, nw, :mu_sm_branch)[t_idx] = mu_sm_to
 
     if _IM.report_duals(pm)
         sol(pm, nw, :branch, t_idx[1])[:mu_sm_to] = mu_sm_to
     end
 end
 
-""
-function constraint_mc_current_limit(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, c_rating_a::Vector{<:Real})
-    p_fr = var(pm, nw, :p, f_idx)
+@doc raw"""
+    constraint_mc_switch_thermal_limit(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})::Nothing
 
-    for (idx,c) in enumerate(f_connections)
-        JuMP.lower_bound(p_fr[c]) < -c_rating_a[idx] && set_lower_bound(p_fr[c], -c_rating_a[idx])
-        JuMP.upper_bound(p_fr[c]) >  c_rating_a[idx] && set_upper_bound(p_fr[c],  c_rating_a[idx])
-    end
-end
+Active power only switch thermal limit constraint
 
-
-""
-function constraint_mc_thermal_limit_from_on_off(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
-    p_fr = [var(pm, nw, :p, f_idx)[c] for c in f_connections]
-    z = var(pm, nw, :z_branch, i)
-
-    JuMP.@constraint(pm.model, p_fr .<=  rate_a.*z)
-    JuMP.@constraint(pm.model, p_fr .>= -rate_a.*z)
-end
-
-""
-function constraint_mc_thermal_limit_to_on_off(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
-    p_to = [var(pm, nw, :p, t_idx)[c] for c in t_connections]
-    z = var(pm, nw, :z_branch, i)
-
-    JuMP.@constraint(pm.model, p_to .<=  rate_a.*z)
-    JuMP.@constraint(pm.model, p_to .>= -rate_a.*z)
-end
-
-
-""
-function constraint_mc_thermal_limit_from_ne(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
-    p_fr = [var(pm, nw, :p_ne, f_idx)[c] for c in f_connections]
-    z =var(pm, nw, :branch_ne, i)
-
-    JuMP.@constraint(pm.model, p_fr .<=  rate_a.*z)
-    JuMP.@constraint(pm.model, p_fr .>= -rate_a.*z)
-end
-
-
-""
-function constraint_mc_thermal_limit_to_ne(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
-    p_to = [var(pm, nw, :p_ne, t_idx)[c] for c in t_connections]
-    z =var(pm, nw, :branch_ne, i)
-
-    JuMP.@constraint(pm.model, p_to .<=  rate_a.*z)
-    JuMP.@constraint(pm.model, p_to .>= -rate_a.*z)
-end
-
-
-""
-function constraint_mc_switch_thermal_limit(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
+math```
+-S_{max} \leq p_{fr} \leq S_{max}
+```
+"""
+function constraint_mc_switch_thermal_limit(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})::Nothing
     psw = var(pm, nw, :psw, f_idx)
 
+    mu_sm_fr = JuMP.ConstraintRef[]
     for (idx, c) in enumerate(f_connections)
-        JuMP.lower_bound(psw[c]) < -rating[idx] && set_lower_bound(psw[c], -rating[idx])
-        JuMP.upper_bound(psw[c]) >  rating[idx] && set_upper_bound(psw[c],  rating[idx])
+        if rating[idx] < Inf
+            JuMP.lower_bound(psw[c]) < -rating[idx] && set_lower_bound(psw[c], -rating[idx])
+            JuMP.upper_bound(psw[c]) >  rating[idx] && set_upper_bound(psw[c],  rating[idx])
+        end
     end
+
+    con(pm, nw, :mu_sm_switch)[f_idx] = mu_sm_fr
+
+    nothing
 end
 
 
@@ -384,4 +357,19 @@ function constraint_storage_losses(pm::AbstractUnbalancedActivePowerModel, n::In
         ==
         p_loss + sum(r[c]*ps[c]^2 for c in conductors)
     )
+end
+
+
+"nothing to do, no voltage variables"
+function constraint_mc_ampacity_from(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{Float64})::Nothing
+end
+
+
+"nothing to do, no voltage variables"
+function constraint_mc_ampacity_to(pm::AbstractUnbalancedActivePowerModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rating::Vector{Float64})::Nothing
+end
+
+
+"nothing to do, no voltage variables"
+function constraint_mc_switch_ampacity(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{Float64})::Nothing
 end

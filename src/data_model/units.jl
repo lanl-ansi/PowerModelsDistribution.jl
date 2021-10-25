@@ -17,12 +17,13 @@ const dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
         "ibase"=>Vector{String}(["cr_fr", "ci_fr", "cr_to", "ci_to", "csr_fr", "csi_fr"])
     ),
     "transformer" => Dict{String,Vector{String}}(
-        "ibase_fr"=>Vector{String}(["crt_fr", "cit_fr"]),
-        "ibase_to"=>Vector{String}(["crt_to", "cit_to"])
+        "sbase"=>Vector{String}(["pf", "qf", "pt", "qt"]),
+        "ibase_fr"=>Vector{String}(["cr_fr", "ci_fr"]),
+        "ibase_to"=>Vector{String}(["cr_to", "ci_to"])
     ),
     "switch" => Dict{String,Vector{String}}(
-        "sbase" => Vector{String}(["psw_fr", "psw_to", "qsw_fr", "qsw_to"]),
-        "ibase" => Vector{String}(["crsw_fr", "cisw_fr", "crsw_to", "cisw_to"])
+        "sbase" => Vector{String}(["pf", "pt", "qf", "qt"]),
+        "ibase" => Vector{String}(["cr_fr", "ci_fr", "cr_to", "ci_to"])
     ),
     "storage" => Dict{String,Vector{String}}(
         "sbase"=>Vector{String}(["ps", "qs", "energy", "se", "sd", "sc_on", "sd_on", "sc"]),
@@ -325,7 +326,9 @@ function _rebase_pu_bus!(bus::Dict{String,<:Any}, vbase::Real, sbase::Real, sbas
         _scale_props!(bus, prop_vnom, 1/vbase)
         # tupples need special treatment
         for field in ["vm_pair_ub", "vm_pair_lb"]
-            if haskey(bus, field)
+            # the empty check is needed because otherwise type specialization is lost,
+            # the type would then become Vector{Any,Any,Any}
+            if !isempty(get(bus, field, []))
                 bus[field] = [(c,d,b*1/vbase) for (c,d,b) in bus[field]]
             end
         end
@@ -364,6 +367,7 @@ end
 function _rebase_pu_branch!(branch::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
     if !haskey(branch, "vbase")
         z_old = 1
+        vbase_old = 1.0
     else
         vbase_old = branch["vbase"]
         z_old = vbase_old^2/sbase_old*voltage_scale_factor
@@ -373,10 +377,12 @@ function _rebase_pu_branch!(branch::Dict{String,<:Any}, vbase::Real, sbase::Real
     z_scale = z_old/z_new
     y_scale = 1/z_scale
     sbase_scale = sbase_old/sbase
+    ibase_scale = sbase_scale/(vbase_old/vbase)
 
     _scale_props!(branch, ["br_r", "br_x"], z_scale)
     _scale_props!(branch, ["b_fr", "g_fr", "b_to", "g_to"], y_scale)
-    _scale_props!(branch, ["c_rating_a", "c_rating_b", "c_rating_c", "rate_a", "rate_b", "rate_c"], sbase_scale)
+    _scale_props!(branch, ["c_rating_a", "c_rating_b", "c_rating_c"], ibase_scale)
+    _scale_props!(branch, ["rate_a", "rate_b", "rate_c"], sbase_scale)
 
     branch["angmin"] = deg2rad.(branch["angmin"])
     branch["angmax"] = deg2rad.(branch["angmax"])
@@ -388,9 +394,13 @@ end
 
 "per-unit conversion for switches"
 function _rebase_pu_switch!(switch::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
+    vbase_old = !haskey(switch, "vbase") ? 1.0 : switch["vbase"]
+    
     sbase_scale = sbase_old / sbase
+    ibase_scale = sbase_scale/(vbase_old/vbase)
 
-    _scale_props!(switch, ["c_rating_a", "c_rating_b", "c_rating_c", "rate_a", "rate_b", "rate_c"], sbase_scale)
+    _scale_props!(switch, ["current_rating", "c_rating_b", "c_rating_c"], ibase_scale)
+    _scale_props!(switch, ["thermal_rating", "rate_b", "rate_c"], sbase_scale)
 
     switch["vbase"] = vbase
 end
@@ -511,8 +521,10 @@ function _rebase_pu_transformer_2w_ideal!(transformer::Dict{String,<:Any}, f_vba
     t_vbase_old = get(transformer, "t_vbase", 1.0)
     f_vbase_scale = f_vbase_old/f_vbase_new
     t_vbase_scale = t_vbase_old/t_vbase_new
+    sbase_scale = sbase_old/sbase_new
 
     _scale(transformer, "tm_nom", f_vbase_scale/t_vbase_scale)
+    _scale(transformer, "sm_ub", sbase_scale)
 
     # save new vbase
     transformer["f_vbase"] = f_vbase_new

@@ -216,7 +216,7 @@ end
 
 
 ""
-function constraint_mc_theta_ref(pm::AbstractUBFModels, nw::Int, i::Int, va_ref::Vector{<:Real})
+function constraint_mc_theta_ref(pm::AbstractUnbalancedWModels, nw::Int, i::Int, va_ref::Vector{<:Real})
     nconductors = length(va_ref)
 
     Wr = var(pm, nw, :Wr, i)
@@ -227,7 +227,7 @@ function constraint_mc_theta_ref(pm::AbstractUBFModels, nw::Int, i::Int, va_ref:
 
     Wr_ref = real(gamma).*Wr[1,1]
     Wi_ref = imag(gamma).*Wi[1,1]
-    JuMP.@constraint(pm.model, diag(Wr)[2:nconductors]        .== diag(Wr_ref)[2:nconductors]) # first equality is implied
+    JuMP.@constraint(pm.model, diag(Wr)[2:nconductors] .== diag(Wr_ref)[2:nconductors]) # first equality is implied
     JuMP.@constraint(pm.model, _mat2utrivec!(Wr) .== _mat2utrivec!(Wr_ref))
     JuMP.@constraint(pm.model, _mat2utrivec!(Wi) .== _mat2utrivec!(Wi_ref))
 end

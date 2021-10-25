@@ -88,12 +88,12 @@ end
 
 
 """
-    variable_mc_capcontrol(pm::AbstractUnbalancedACRModel; relax::Bool=false)
+    variable_mc_capcontrol(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_default, relax::Bool=false)
 
 Capacitor switching variables.
 """
-function variable_mc_capcontrol(pm::AbstractUnbalancedACRModel; relax::Bool=false)
-    variable_mc_capacitor_switch_state(pm, relax)
+function variable_mc_capcontrol(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_default, relax::Bool=false)
+    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax)
 end
 
 
@@ -232,11 +232,12 @@ end
 
 "Creates phase angle constraints at reference buses"
 function constraint_mc_theta_ref(pm::AbstractUnbalancedACRModel, nw::Int, i::Int, va_ref::Vector{<:Real})
+    terminals = ref(pm, nw, :bus, i, "terminals")
     vr = var(pm, nw, :vr, i)
     vi = var(pm, nw, :vi, i)
 
     # deal with cases first where tan(theta)==Inf or tan(theta)==0
-    for (idx, t) in enumerate(ref(pm, nw, :bus, i)["terminals"])
+    for (idx, t) in enumerate(terminals)
         if va_ref[t] == pi/2
             JuMP.@constraint(pm.model, vr[t] == 0)
             JuMP.@constraint(pm.model, vi[t] >= 0)
@@ -250,7 +251,7 @@ function constraint_mc_theta_ref(pm::AbstractUnbalancedACRModel, nw::Int, i::Int
             JuMP.@constraint(pm.model, vr[t] >= 0)
             JuMP.@constraint(pm.model, vi[t] == 0)
         else
-            JuMP.@constraint(pm.model, vi[t] == tan(va_ref[t])*vr[t])
+            JuMP.@constraint(pm.model, vi[t] == tan(va_ref[idx])*vr[t])
             # va_ref also implies a sign for vr, vi
             if 0<=va_ref[t] && va_ref[t] <= pi
                 JuMP.@constraint(pm.model, vi[t] >= 0)
@@ -520,7 +521,7 @@ function constraint_mc_power_balance_capc(pm::AbstractUnbalancedACRModel, nw::In
     qd   = get(var(pm, nw), :qd_bus, Dict()); _check_var_keys(pd,  bus_loads,      "reactive power", "load")
 
     # add constraints to model capacitor switching
-    if !isempty(bus_shunts) && haskey(ref(pm, nw, :shunt, bus_shunts[1][1]), "controls") 
+    if !isempty(bus_shunts) && haskey(ref(pm, nw, :shunt, bus_shunts[1][1]), "controls")
         constraint_capacitor_on_off(pm, i, bus_shunts)
     end
 
@@ -546,7 +547,7 @@ function constraint_mc_power_balance_capc(pm::AbstractUnbalancedACRModel, nw::In
 
     # pd/qd can be NLexpressions, so cannot be vectorized
     for (idx, t) in ungrounded_terminals
-        cp = JuMP.@NLconstraint(pm.model, 
+        cp = JuMP.@NLconstraint(pm.model,
               sum(  p[arc][t] for (arc, conns) in bus_arcs if t in conns)
             + sum(psw[arc][t] for (arc, conns) in bus_arcs_sw if t in conns)
             + sum( pt[arc][t] for (arc, conns) in bus_arcs_trans if t in conns)
@@ -595,7 +596,7 @@ Add constraints to model capacitor switching
 &\text{kvar control (ON): }  q-q_\text{on} ≤ M_q ⋅ z - ϵ ⋅ (1-z), \\
 &\text{kvar control (OFF): } q-q_\text{off} ≥ -M_q ⋅ (1-z) - ϵ ⋅ z, \\
 &\text{voltage control (ON): }  v_r^2 + v_i^2 - v_\text{min}^2 ≥ -M_v ⋅ z + ϵ ⋅ (1-z), \\
-&\text{voltage control (OFF): } v_r^2 + v_i^2 - v_\text{max}^2 ≤ M_v ⋅ (1-z) - ϵ ⋅ z. 
+&\text{voltage control (OFF): } v_r^2 + v_i^2 - v_\text{max}^2 ≤ M_v ⋅ (1-z) - ϵ ⋅ z.
 \end{align}
 ```
 """
@@ -611,7 +612,7 @@ function constraint_capacitor_on_off(pm::AbstractUnbalancedACRModel, i::Int, bus
         JuMP.@constraint(pm.model, sum(q_fr) - shunt["controls"]["onsetting"] ≤ M_q*cap_state[shunt["connections"][1]] - ϵ*(1-cap_state[shunt["connections"][1]]))
         JuMP.@constraint(pm.model, sum(q_fr) - shunt["controls"]["offsetting"] ≥ -M_q*(1-cap_state[shunt["connections"][1]]) - ϵ*cap_state[shunt["connections"][1]])
         JuMP.@constraint(pm.model, cap_state .== cap_state[shunt["connections"][1]])
-        if shunt["controls"]["voltoverride"] 
+        if shunt["controls"]["voltoverride"]
             for (idx,val) in enumerate(shunt["connections"])
                 vr_cap = var(pm, nw, :vr, i)[val]
                 vi_cap = var(pm, nw, :vi, i)[val]
@@ -628,7 +629,7 @@ function constraint_capacitor_on_off(pm::AbstractUnbalancedACRModel, i::Int, bus
                 JuMP.@constraint(pm.model, vr_cap^2 + vi_cap^2 - shunt["controls"]["onsetting"][idx]^2 ≤ M_v*cap_state[val] - ϵ*(1-cap_state[val]))
                 JuMP.@constraint(pm.model, vr_cap^2 + vi_cap^2 - shunt["controls"]["offsetting"][idx]^2 ≥ -M_v*(1-cap_state[val]) - ϵ*cap_state[val])
             end
-            if shunt["controls"]["voltoverride"][idx] 
+            if shunt["controls"]["voltoverride"][idx]
                 vr_cap = var(pm, nw, :vr, i)[val]
                 vi_cap = var(pm, nw, :vi, i)[val]
                 JuMP.@constraint(pm.model, vr_cap^2 + vi_cap^2 - shunt["controls"]["vmin"][idx]^2 ≥ -M_v*cap_state[val] + ϵ*(1-cap_state[val]))
@@ -637,8 +638,8 @@ function constraint_capacitor_on_off(pm::AbstractUnbalancedACRModel, i::Int, bus
             if shunt["controls"]["type"][idx] == CAP_DISABLED
                 JuMP.@constraint(pm.model, cap_state[val] == 1 )
             end
-        end 
-    end  
+        end
+    end
 end
 
 
@@ -1086,4 +1087,81 @@ function constraint_storage_losses(pm::AbstractUnbalancedACRModel, n::Int, i, bu
         ==
         qsc + q_loss + sum(x[c]*(ps[c]^2 + qs[c]^2)/(vr[c]^2 + vi[c]^2) for c in conductors)
     )
+end
+
+
+@doc raw"""
+    constraint_mc_ampacity_from(pm::AbstractUnbalancedRectangularModels, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})::Nothing
+
+ACP current limit constraint on branches from-side
+
+math```
+p_{fr}^2 + q_{fr}^2 \leq (vr_{fr}^2 + vi_{fr}^2) i_{max}^2
+```
+"""
+function constraint_mc_ampacity_from(pm::AbstractUnbalancedRectangularModels, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})::Nothing
+    p_fr = [var(pm, nw, :p, f_idx)[c] for c in f_connections]
+    q_fr = [var(pm, nw, :q, f_idx)[c] for c in f_connections]
+    vr_fr = [var(pm, nw, :vr, f_idx[2])[c] for c in f_connections]
+    vi_fr = [var(pm, nw, :vi, f_idx[2])[c] for c in f_connections]
+    @warn f_idx f_connections c_rating
+
+    con(pm, nw, :mu_cm_branch)[f_idx] = [JuMP.@constraint(pm.model, p_fr[idx]^2 + q_fr[idx]^2 .<= (vr_fr[idx]^2 + vi_fr[idx]^2) * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :branch, f_idx[1])[:mu_sm_fr] = con(pm, nw, :mu_cm_fr)
+    end
+
+    nothing
+end
+
+
+@doc raw"""
+    constraint_mc_ampacity_to(pm::AbstractUnbalancedRectangularModels, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, c_rating::Vector{<:Real})::Nothing
+
+ACP current limit constraint on branches to-side
+
+math```
+p_{to}^2 + q_{to}^2 \leq (vr_{to}^2 + vi_{to}^2) i_{max}^2
+```
+"""
+function constraint_mc_ampacity_to(pm::AbstractUnbalancedRectangularModels, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, c_rating::Vector{<:Real})::Nothing
+    p_to = [var(pm, nw, :p, t_idx)[c] for c in t_connections]
+    q_to = [var(pm, nw, :q, t_idx)[c] for c in t_connections]
+    vr_to = [var(pm, nw, :vr, t_idx[2])[c] for c in t_connections]
+    vi_to = [var(pm, nw, :vi, t_idx[2])[c] for c in t_connections]
+    @warn t_idx t_connections c_rating
+
+    con(pm, nw, :mu_cm_branch)[t_idx] = mu_cm_to = [JuMP.@constraint(pm.model, p_to[idx]^2 + q_to[idx]^2 .<= (vr_to[idx]^2 + vi_to[idx]^2) * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :branch, t_idx[1])[:mu_sm_to] = mu_cm_to
+    end
+
+    nothing
+end
+
+
+@doc raw"""
+    constraint_mc_switch_ampacity(pm::AbstractUnbalancedRectangularModels, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})::Nothing
+
+ACP current limit constraint on switches
+
+math```
+p_{fr}^2 + q_{fr}^2 \leq (vr_{fr}^2 + vi_{fr}^2) i_{max}^2
+```
+"""
+function constraint_mc_switch_ampacity(pm::AbstractUnbalancedRectangularModels, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})::Nothing
+    psw_fr = [var(pm, nw, :psw, f_idx)[c] for c in f_connections]
+    qsw_fr = [var(pm, nw, :qsw, f_idx)[c] for c in f_connections]
+    vr_fr = [var(pm, nw, :vr, f_idx[2])[c] for c in f_connections]
+    vi_fr = [var(pm, nw, :vi, f_idx[2])[c] for c in f_connections]
+
+    con(pm, nw, :mu_cm_switch)[f_idx] = mu_cm_fr = [JuMP.@constraint(pm.model, psw_fr[idx]^2 + qsw_fr[idx]^2 .<= (vr_fr[idx]^2 + vi_fr[idx]^2) * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :switch, f_idx[1])[:mu_cm_fr] = mu_cm_fr
+    end
+
+    nothing
 end
