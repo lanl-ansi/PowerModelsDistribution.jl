@@ -16,16 +16,29 @@ function variable_mc_bus_voltage(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_d
 
         ncnd = length(terminals)
 
-        if haskey(busref, "vr_start") && haskey(busref, "vm_start")
+        if haskey(busref, "vr_start") && haskey(busref, "vi_start")
             vr = busref["vr_start"]
             vi = busref["vi_start"]
         else
-            vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
-            vm[.!grounded] .= 1.0
+            vm_start = Vector{Float64}(undef, 3)
+            for t in 1:3
+                if t in terminals
+                    vmax = busref["vmax"][findfirst(isequal(t), terminals)]
+                    vmin = busref["vmin"][findfirst(isequal(t), terminals)]
+                    if vmax < Inf && vmin > 0
+                        vm_start[t] = mean([vmax, vmin])
+                    elseif !(vmax < Inf) && vmin > 0
+                        vm_start[t] = vmin
+                    elseif vmin == 0 && vmax < Inf
+                        vm_start[t] = vmax
+                    else
+                        vm_start[t] = 1.0
+                    end
+                end
+            end
 
-            # TODO how to do this more generally?
-            nph = 3
-            va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
+            vm = haskey(busref, "vm_start") ? busref["vm_start"] : [vm_start..., fill(0.0, ncnd)...][terminals]
+            va = haskey(busref, "va_start") ? busref["va_start"] : [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
 
             vr = vm .* cos.(va)
             vi = vm .* sin.(va)
@@ -58,16 +71,29 @@ function variable_mc_bus_voltage_on_off(pm::AbstractUnbalancedACRModel; nw::Int=
 
         ncnd = length(terminals)
 
-        if haskey(busref, "vr_start") && haskey(busref, "vm_start")
+        if haskey(busref, "vr_start") && haskey(busref, "vi_start")
             vr = busref["vr_start"]
             vi = busref["vi_start"]
         else
-            vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
-            vm[.!grounded] .= 1.0
+            vm_start = Vector{Float64}(undef, 3)
+            for t in 1:3
+                if t in terminals
+                    vmax = busref["vmax"][findfirst(isequal(t), terminals)]
+                    vmin = busref["vmin"][findfirst(isequal(t), terminals)]
+                    if vmax < Inf && vmin > 0
+                        vm_start[t] = mean([vmax, vmin])
+                    elseif !(vmax < Inf) && vmin > 0
+                        vm_start[t] = vmin
+                    elseif vmin == 0 && vmax < Inf
+                        vm_start[t] = vmax
+                    else
+                        vm_start[t] = 1.0
+                    end
+                end
+            end
 
-            # TODO how to do this more generally?
-            nph = 3
-            va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
+            vm = haskey(busref, "vm_start") ? busref["vm_start"] : [vm_start..., fill(0.0, ncnd)...][terminals]
+            va = haskey(busref, "va_start") ? busref["va_start"] : [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
 
             vr = vm .* cos.(va)
             vi = vm .* sin.(va)
