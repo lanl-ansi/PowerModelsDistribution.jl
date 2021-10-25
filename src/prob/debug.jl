@@ -91,18 +91,3 @@ function build_mc_pf_pbs(pm::AbstractUnbalancedPowerModel)
 
     objective_mc_min_slack_bus_power(pm)
 end
-
-# Depreciated run_ functions (remove after ~4-6 months)
-
-"depreciation message for `run_mc_opf_pbs`"
-function run_mc_opf_pbs(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    @warn "run_mc_opf_pbs is being depreciated in favor of solve_mc_opf_pbs, please update your code accordingly"
-    return solve_mc_opf_pbs(data, model_type, solver; kwargs...)
-end
-
-
-"depreciation message for `run_mc_pf_pbs`"
-function run_mc_pf_pbs(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    @warn "run_mc_pf_pbs is being depreciated in favor of solve_mc_pf_pbs, please update your code accordingly"
-    return solve_mc_pf_pbs(data, model_type, solver; kwargs...)
-end

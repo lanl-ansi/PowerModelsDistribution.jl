@@ -79,11 +79,14 @@ function build_mc_opf(pm::AbstractUnbalancedPowerModel)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -209,11 +212,14 @@ function build_mc_opf(pm::AbstractUBFModels)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -419,11 +425,14 @@ function build_mn_mc_opf(pm::AbstractUnbalancedPowerModel)
             constraint_mc_voltage_angle_difference(pm, i; nw=n)
             constraint_mc_thermal_limit_from(pm, i; nw=n)
             constraint_mc_thermal_limit_to(pm, i; nw=n)
+            constraint_mc_ampacity_from(pm, i; nw=n)
+            constraint_mc_ampacity_to(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :switch)
             constraint_mc_switch_state(pm, i; nw=n)
             constraint_mc_switch_thermal_limit(pm, i; nw=n)
+            constraint_mc_switch_ampacity(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :transformer)
@@ -575,11 +584,14 @@ function build_mn_mc_opf(pm::AbstractUBFModels)
             constraint_mc_voltage_angle_difference(pm, i; nw=n)
             constraint_mc_thermal_limit_from(pm, i; nw=n)
             constraint_mc_thermal_limit_to(pm, i; nw=n)
+            constraint_mc_ampacity_from(pm, i; nw=n)
+            constraint_mc_ampacity_to(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :switch)
             constraint_mc_switch_state(pm, i; nw=n)
             constraint_mc_switch_thermal_limit(pm, i; nw=n)
+            constraint_mc_switch_ampacity(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :transformer)
@@ -686,53 +698,4 @@ function build_mn_mc_opf(pm::AbstractExplicitNeutralIVRModel)
 
     # Objective
     objective_mc_min_fuel_cost(pm)
-end
-
-
-# Depreciated run_ functions (remove after ~4-6 months)
-
-"""
-	function run_ac_mc_opf(
-		data::Union{Dict{String,<:Any},String},
-		solver;
-		kwargs...
-	)
-
-depreciation warning for `run_ac_mc_opf`
-"""
-function run_ac_mc_opf(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
-    @warn "run_ac_mc_opf is being depreciated in favor of solve_mc_opf(data, ACPUPowerModel, solver; kwargs...), please update your code accordingly"
-    return solve_mc_opf(data, ACPUPowerModel, solver; kwargs...)
-end
-
-
-"""
-	function run_mc_opf(
-		data::Union{Dict{String,<:Any},String},
-		model_type::Type,
-		solver;
-		kwargs...
-	)
-
-depreciation warning for `run_mc_opf`
-"""
-function run_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    @warn "run_mc_opf is being depreciated in favor of solve_mc_opf, please update your code accordingly"
-    return solve_mc_opf(data, model_type, solver; kwargs...)
-end
-
-
-"""
-	function run_mn_mc_opf(
-		data::Union{Dict{String,<:Any},String},
-		model_type::Type,
-		solver;
-		kwargs...
-	)
-
-depreciation warning for `run_mn_mc_opf`
-"""
-function run_mn_mc_opf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    @warn "run_mn_mc_opf is being depreciated in favor of solve_mn_mc_opf, please update your code accordingly"
-    return solve_mn_mc_opf(data, model_type, solver; kwargs...)
 end

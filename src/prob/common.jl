@@ -268,17 +268,3 @@ function solve_mc_model(
         kwargs...
     )
 end
-
-
-"depreciation message for run_mc_model"
-function run_mc_model(
-    data::Union{String,Dict{String,<:Any}},
-    model_type::Type,
-    optimizer,
-    build_mc::Function;
-    kwargs...
-    )::Dict{String,Any}
-
-    @warn "run_mc_model is being depreciated in favor of solve_mc_model, please update your code accordingly"
-    return solve_mc_model(data, model_type, optimizer, build_mc; kwargs...)
-end

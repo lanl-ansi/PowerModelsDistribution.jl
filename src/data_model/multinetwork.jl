@@ -139,7 +139,7 @@ function _make_multinetwork_eng(
         mn_data["mn_lookup"] = mn_lookup
 
         _nw = Dict{String,Any}(
-            k => v for (k,v) in data_eng if !(k in _pmd_eng_global_keys)
+            k => deepcopy(v) for (k,v) in data_eng if !(k in _pmd_eng_global_keys)
         )
         for n in sort([n for n in keys(mn_data["nw"])])
             time = mn_lookup["$n"]
@@ -165,6 +165,8 @@ function _make_multinetwork_eng(
             merge!(mn_data["nw"]["$n"], deepcopy(_nw))
         end
     end
+
+    set_time_elapsed!(mn_data, time_elapsed)
 
     return mn_data
 end

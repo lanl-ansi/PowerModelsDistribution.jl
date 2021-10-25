@@ -2,6 +2,24 @@
 
 ## staged
 
+- Fixed issue of missing `va` on reference buses which have been selected automatically
+- Fixed PVSystem fields and defaults based on latest version
+- Added support for `action=normalize` on dss LoadShapes
+- Fixed bug in dss LoadShape where `useactual=yes` was the default, whereas `useactual=no` is the real default
+- Removed remaining PowerModels files / dependency from unit tests
+- Changed `sbase_default` to `1.0` by default, because often with default solver settings, constraints were ignored for being far too small
+- Changed to use emergamps from dss for `cm_ub` on lines by default (higher limit)
+- Fixed bug in transformer math2eng conversion where `tap` was not carried to the solution
+- Fixed wrong index in `constraint_mc_theta_ref` for ACRUPowerModel
+- Fixed Type collections; AbstractUBFModels do not necessarily have to have `w` variables, so these are explicity spelled out now
+- Added ampacity (current limit) constraints for branches and switches, which better reflect standard input data: `constraint_mc_ampacity_from` and `constraint_mc_ampacity_to` for branches, and `constraint_mc_switch_ampacity` for switches
+- Fixed bug in `bank_transformers!` function where `status` field was not being set correctly
+- Updated switch thermal constraints to store the constraints in `con(pm, nw, :mu_sm_switch, f_idx)`
+- Removed extraneous thermal limit constraints from power flow problem formulations
+- Fixed the function signature for `variable_mc_capacitor_switch_state` and `variable_mc_capcontrol` to match conventions
+- Removed depreciated `run_` functions, which were replaced in with `solve_` functions in v0.10.2
+- Fixed bug in `make_multinetwork!` where inferred time_elapsed was not being used
+- Fixed bug in `make_multinetwork!` for cases where `replace=false` was used where we needed a `deepcopy`
 - Added explicit neutral formulations
 - Fix bug in `constraint_mc_switch_thermal_limit` where switch property name contained a typo
 - Fix bug in `constraint_mc_thermal_limit_from` where `Inf` values in `rate_a` would lead to an error

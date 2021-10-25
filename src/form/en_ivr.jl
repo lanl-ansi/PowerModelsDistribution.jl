@@ -8,7 +8,7 @@
 		kwargs...
 	)
 
-For IVR models with explicit neutrals, 
+For IVR models with explicit neutrals,
 no power variables are required
 """
 function variable_mc_generator_power(pm::AbstractNLExplicitNeutralIVRModel; kwargs...)
@@ -51,8 +51,8 @@ function constraint_mc_generator_current(pm::AbstractExplicitNeutralIVRModel, id
     generator = ref(pm, nw, :gen, id)
 
     nphases = _infer_int_dim_unit(generator, false)
-    # Note that one-dimensional delta generators are handled as wye-connected generators. 
-    # The distinction between one-dimensional wye and delta generators is purely semantic 
+    # Note that one-dimensional delta generators are handled as wye-connected generators.
+    # The distinction between one-dimensional wye and delta generators is purely semantic
     # when neutrals are modeled explicitly.
     if get(generator, "configuration", WYE) == WYE || nphases==1
         constraint_mc_generator_current_wye(pm, nw, id, generator["connections"]; report=report, bounded=bounded)
@@ -122,7 +122,7 @@ end
 	)
 
 For IVR models with explicit neutrals,
-creates non-linear expressions for the generator power `:pd` and `:qd` 
+creates non-linear expressions for the generator power `:pd` and `:qd`
 of wye-connected generators as a function of voltage and current
 """
 function constraint_mc_generator_power_wye(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true)
@@ -182,7 +182,7 @@ end
 	)
 
 For IVR models with explicit neutrals,
-creates non-linear expressions for the generator power `:pd` and `:qd` 
+creates non-linear expressions for the generator power `:pd` and `:qd`
 of delta-connected generators as a function of voltage and current
 """
 function constraint_mc_generator_power_delta(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true)
@@ -240,7 +240,7 @@ end
 	)
 
 For quadratic IVR models with explicit neutrals,
-links the generator power variables `:pd` and `:qd` 
+links the generator power variables `:pd` and `:qd`
 of wye-connected generators to the voltage and current
 """
 function constraint_mc_generator_power_wye(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
@@ -279,7 +279,7 @@ end
 	)
 
 For quadratic IVR models with explicit neutrals,
-links the generator power variables `:pd` and `:qd` 
+links the generator power variables `:pd` and `:qd`
 of delta-connected generators to the voltage and current
 """
 function constraint_mc_generator_power_delta(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
@@ -404,7 +404,7 @@ Creates load active power variables `:pd` for models with explicit neutrals
 function variable_mc_load_power_active(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, nw, :load))
     load_ids_current = [id for (id,load) in ref(pm, nw, :load) if load["model"]==CURRENT]
-    
+
     pd = var(pm, nw)[:pd] = Dict{Int,Any}(i => JuMP.@variable(pm.model,
             [c in 1:int_dim[i]], base_name="$(nw)_pd_$(i)",
             start = comp_start_value(ref(pm, nw, :load, i), "pd_start", c, 0.0)
@@ -428,7 +428,7 @@ Creates load reactive power variables `:qd` for models with explicit neutrals
 function variable_mc_load_power_reactive(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, nw, :load))
     load_ids_current = [id for (id,load) in ref(pm, nw, :load) if load["model"]==CURRENT]
-    
+
     qd = var(pm, nw)[:qd] = Dict{Int,Any}(i => JuMP.@variable(pm.model,
             [c in 1:int_dim[i]], base_name="$(nw)_qd_$(i)",
             start = comp_start_value(ref(pm, nw, :load, i), "qd_start", c, 0.0)
@@ -499,7 +499,7 @@ end
 	)
 
 For IVR models with explicit neutrals,
-create non-linear expressions for the terminal current flows `:crd_bus` and `:cid_bus` 
+create non-linear expressions for the terminal current flows `:crd_bus` and `:cid_bus`
 of wye-connected loads
 """
 function constraint_mc_load_current_wye(pm::AbstractExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
@@ -576,7 +576,7 @@ end
 	)
 
 For IVR models with explicit neutrals,
-create non-linear expressions for the terminal current flows `:crd_bus` and `:cid_bus` 
+create non-linear expressions for the terminal current flows `:crd_bus` and `:cid_bus`
 of delta-connected loads
 """
 function constraint_mc_load_current_delta(pm::AbstractExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
@@ -634,7 +634,7 @@ end
 	)
 
 For quadratic IVR models with explicit neutrals,
-link the load power variables `:pd` and `:qd` to the voltage, 
+link the load power variables `:pd` and `:qd` to the voltage,
 and link together the power, voltage and current variables
 """
 function constraint_mc_load_power(pm::AbstractQuadraticExplicitNeutralIVRModel, id::Int; nw::Int=nw_id_default, report::Bool=true)
@@ -644,9 +644,9 @@ function constraint_mc_load_power(pm::AbstractQuadraticExplicitNeutralIVRModel, 
     configuration = load["configuration"]
     int_dim = _infer_int_dim_unit(load, false)
     a, alpha, b, beta = _load_expmodel_params(load, bus)
-    
-    # Note that one-dimensional delta loads are handled as wye-connected loads. 
-    # The distinction between one-dimensional wye and delta loads is purely semantic 
+
+    # Note that one-dimensional delta loads are handled as wye-connected loads.
+    # The distinction between one-dimensional wye and delta loads is purely semantic
     # when neutrals are modeled explicitly.
     if configuration==WYE || int_dim==1
         constraint_mc_load_power_wye(pm, nw, id, load["load_bus"], load["connections"], load["model"], a, b; report=report)
@@ -671,8 +671,8 @@ end
 	)
 
 For quadratic IVR models with explicit neutrals,
-link the load power variables `:pd` and `:qd` to the voltage, 
-and link together the power, voltage and current variables 
+link the load power variables `:pd` and `:qd` to the voltage,
+and link together the power, voltage and current variables
 for wye-connected loads
 """
 function constraint_mc_load_power_wye(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, model::LoadModel, a::Vector{<:Real}, b::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
@@ -731,8 +731,8 @@ end
 	)
 
 For quadratic IVR models with explicit neutrals,
-link the load power variables `:pd` and `:qd` to the voltage, 
-and link together the power, voltage and current variables 
+link the load power variables `:pd` and `:qd` to the voltage,
+and link together the power, voltage and current variables
 for delta-connected loads
 """
 function constraint_mc_load_power_delta(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, model::LoadModel, a::Vector{<:Real}, b::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
@@ -792,8 +792,8 @@ function constraint_mc_load_current(pm::AbstractQuadraticExplicitNeutralIVRModel
     load = ref(pm, nw, :load, id)
 
     int_dim = _infer_int_dim_unit(load, false)
-    # Note that one-dimensional delta loads are handled as wye-connected loads. 
-    # The distinction between one-dimensional wye and delta loads is purely semantic 
+    # Note that one-dimensional delta loads are handled as wye-connected loads.
+    # The distinction between one-dimensional wye and delta loads is purely semantic
     # when neutrals are modeled explicitly.
     if get(load, "configuration", WYE) == WYE || int_dim==1
         constraint_mc_load_current_wye(pm, nw, id, load["connections"]; report=report, bounded=bounded)
@@ -889,7 +889,7 @@ For non-linear IVR models with explicit neutrals,
 no power variables are required.
 """
 function variable_mc_transformer_power(pm::AbstractNLExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    # do nothing    
+    # do nothing
 end
 
 
@@ -978,7 +978,7 @@ end
 
 For IVR models with explicit neutrals,
 links the current variables of the from-side and to-side transformer windings,
-and creates expressions for the terminal current flows 
+and creates expressions for the terminal current flows
 for wye-wye connected transformers
 
 ```
@@ -1025,7 +1025,7 @@ end
 
 For IVR models with explicit neutrals,
 links the current variables of the from-side and to-side transformer windings,
-and creates expressions for the terminal current flows 
+and creates expressions for the terminal current flows
 for delta-wye connected transformers
 
 ```
@@ -1073,7 +1073,7 @@ end
 	)
 
 For non-linear IVR models with explicit neutrals,
-imposes a bound on the magnitude of the total apparent power at both windings. 
+imposes a bound on the magnitude of the total apparent power at both windings.
 Expressions are created for the transformer power variables.
 
 ```
@@ -1225,10 +1225,10 @@ and placeholder dictionaries for the terminal current flows `:cr_bus` and `:ci_b
 function variable_mc_branch_current(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     variable_mc_branch_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_branch_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    
+
     variable_mc_branch_current_series_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_branch_current_series_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    
+
     var(pm, nw)[:cr_bus] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:ci_bus] = Dict{Tuple{Int,Int,Int}, Any}()
 end
@@ -1253,7 +1253,7 @@ and placeholder dictionaries for the terminal current flows `:cr_bus` and `:ci_b
 function variable_mc_branch_current(pm::ReducedExplicitNeutralIVRModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     variable_mc_branch_current_series_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_branch_current_series_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    
+
     var(pm, nw)[:cr] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:ci] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:cr_bus] = Dict{Tuple{Int,Int,Int}, Any}()
@@ -1303,7 +1303,7 @@ function constraint_mc_current_from(pm::AbstractExplicitNeutralIVRModel, nw::Int
         sol(pm, nw, :branch, f_idx[1])[:pf] =  cr_fr.*vr_fr .+ ci_fr.*vi_fr
         sol(pm, nw, :branch, f_idx[1])[:qf] = -cr_fr.*vi_fr .+ ci_fr.*vr_fr
     end
-    
+
 end
 
 
@@ -1402,7 +1402,7 @@ end
 	)
 
 For IVR models with explicit neutrals,
-imposes a bound on the current magnitude per conductor 
+imposes a bound on the current magnitude per conductor
 at both ends of the branch (total current, i.e. including shunt contributions).
 
 ```
@@ -1491,8 +1491,8 @@ end
 		rate_a::Vector{<:Real}
 	)
 
-For quadratic IVR models with explicit neutrals, 
-throw an error because this cannot be represented quadratically 
+For quadratic IVR models with explicit neutrals,
+throw an error because this cannot be represented quadratically
 without introducing explicit power variables.
 """
 function constraint_mc_thermal_limit_from(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
@@ -1513,16 +1513,15 @@ end
 		rate_a::Vector{<:Real}
 	)
 
-For quadratic IVR models with explicit neutrals, 
-throw an error because this cannot be represented quadratically 
+For quadratic IVR models with explicit neutrals,
+throw an error because this cannot be represented quadratically
 without introducing explicit power variables.
 """
 function constraint_mc_thermal_limit_to(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, rate_a::Vector{<:Real})
-    if any(rate_a.<Inf)
-        warning("""
-            A branch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
-            Either extend this quadratic formulation by including explicit branch power variables, or use AbstractNLExplicitNeutralIVRModel instead.""")
-    end
+    @warn("""
+        A branch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
+        Either extend this quadratic formulation by including explicit branch power variables, or use AbstractNLExplicitNeutralIVRModel instead.
+        """)
 end
 
 
@@ -1640,7 +1639,7 @@ and placeholder dictionaries for the terminal current flows `:crsw_bus` and `:ci
 function variable_mc_switch_current(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     variable_mc_switch_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_switch_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    
+
     var(pm, nw)[:crsw_bus] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:cisw_bus] = Dict{Tuple{Int,Int,Int}, Any}()
 end
@@ -1687,20 +1686,25 @@ end
 		rating::Vector{<:Real}
 	)
 
-For IVR models with explicit neutrals, 
+For IVR models with explicit neutrals,
 imposes a bound on the switch current magnitude per conductor.
-Note that a bound on the from-side implies the same bound on the to-side current, 
+Note that a bound on the from-side implies the same bound on the to-side current,
 so it suffices to apply this only explicitly at the from-side.
 """
-function constraint_mc_switch_current_limit(pm::AbstractExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_mc_switch_current_limit(pm::AbstractExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, connections::Vector{Int}, rating::Vector{<:Real})::Nothing
     crsw = var(pm, nw, :crsw, f_idx)
     cisw = var(pm, nw, :cisw, f_idx)
 
+    mu_cm_fr = JuMP.ConstraintRef[]
     for idx in 1:length(rating)
         if rating[idx] < Inf
-            JuMP.@constraint(pm.model, crsw[idx]^2 + cisw[idx]^2 <= rating[idx]^2)
+            push!(mu_cm_fr, JuMP.@constraint(pm.model, crsw[idx]^2 + cisw[idx]^2 <= rating[idx]^2))
         end
     end
+
+    con(pm, nw, :mu_cm_switch)[f_idx] = mu_cm_fr
+
+    nothing
 end
 
 
@@ -1713,26 +1717,31 @@ end
 		rating::Vector{<:Real}
 	)
 
-For IVR models with explicit neutrals, 
+For IVR models with explicit neutrals,
 imposes a bound on the switch power magnitude per conductor.
-Note that a bound on the from-side implies the same bound on the to-side power 
-when the switch is closed (equal voltages), and also when it is open since the 
+Note that a bound on the from-side implies the same bound on the to-side power
+when the switch is closed (equal voltages), and also when it is open since the
 power then equals zero on both ends.
 """
-function constraint_mc_switch_thermal_limit(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
-    vr_fr = [var(pm, nw, :vr, f_idx[1])[t] for t in f_connections]
-    vi_fr = [var(pm, nw, :vi, f_idx[1])[t] for t in f_connections]
+function constraint_mc_switch_thermal_limit(pm::AbstractNLExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})::Nothing
+    vr_fr = [var(pm, nw, :vr, f_idx[2])[t] for t in f_connections]
+    vi_fr = [var(pm, nw, :vi, f_idx[2])[t] for t in f_connections]
     crsw_fr = var(pm, nw, :crsw, f_idx)
     cisw_fr = var(pm, nw, :cisw, f_idx)
 
+    mu_sm_fr = JuMP.ConstraintRef[]
     for idx in 1:length(rating)
         if rating[idx] < Inf
             psw_fr_idx = JuMP.@NLexpression(pm.model,  vr_fr[idx]*crsw_fr[idx] + vi_fr[idx]*cisw_fr[idx])
             qsw_fr_idx = JuMP.@NLexpression(pm.model, -vr_fr[idx]*cisw_fr[idx] + vi_fr[idx]*crsw_fr[idx])
 
-            JuMP.@NLconstraint(pm.model, psw_fr_idx^2 + qsw_fr_idx^2 <= rating[idx]^2)
+            push!(mu_sm_fr, JuMP.@NLconstraint(pm.model, psw_fr_idx^2 + qsw_fr_idx^2 <= rating[idx]^2))
         end
     end
+
+    con(pm, nw, :mu_sm_switch)[f_idx] = mu_sm_fr
+
+    nothing
 end
 
 
@@ -1745,14 +1754,13 @@ end
 		rating::Vector{<:Real}
 	)
 
-For quadratic IVR models with explicit neutrals, 
-throw an error because this cannot be represented quadratically 
+For quadratic IVR models with explicit neutrals,
+throw an error because this cannot be represented quadratically
 without introducing explicit power variables.
 """
 function constraint_mc_switch_thermal_limit(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
-    if any(rating.<Inf)
-        warning("""
-            A switch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
-            Either extend this quadratic formulation by including explicit switch power variables, or use AbstractNLExplicitNeutralIVRModel instead.""")
-    end
+    @warn("""
+        A switch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
+        Either extend this quadratic formulation by including explicit switch power variables, or use AbstractNLExplicitNeutralIVRModel instead.
+        """)
 end

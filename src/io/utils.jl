@@ -376,7 +376,7 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
                 end
             end
 
-            btrans["status"] = all(tr["status"] == ENABLED for tr in trs)
+            btrans["status"] = all(tr["status"] == ENABLED for tr in trs) ? ENABLED : DISABLED
             btrans["source_id"] = "transformer.$bank"
 
             # add regulator objects if present
@@ -909,11 +909,11 @@ end
 
 """
     _parse_dss_capcontrol_type!(type::SubString{String}, id::Any)
-    
+
 Converts dss capcontrol type to supported PowerModelsDistribution CapControlType enum.
 """
 function _parse_dss_capcontrol_type!(type::SubString{String}, id::Any)
-        
+
     if isempty([get(_dss2pmd_capcontrol_type, "$type", Dict{String,Any}())])
         @warn "$id: dss capcontrol type $type not supported. Treating as voltage control"
         type = "voltage"

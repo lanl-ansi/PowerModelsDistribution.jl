@@ -31,7 +31,7 @@ ref(pm::AbstractUnbalancedPowerModel, key::Symbol, idx::Any, param::String; nw::
 
 
 # Helper functions for AbstractPowerModel `var` access.
-var(pm::AbstractUnbalancedPowerModel, nw::Int = nw_id_default) = _IM.var(pm, pmd_it_sym, nw)
+var(pm::AbstractUnbalancedPowerModel, nw::Int=nw_id_default) = _IM.var(pm, pmd_it_sym, nw)
 var(pm::AbstractUnbalancedPowerModel, nw::Int, key::Symbol) = _IM.var(pm, pmd_it_sym, nw, key)
 var(pm::AbstractUnbalancedPowerModel, nw::Int, key::Symbol, idx::Any) = _IM.var(pm, pmd_it_sym, nw, key, idx)
 var(pm::AbstractUnbalancedPowerModel, key::Symbol; nw::Int = nw_id_default) = _IM.var(pm, pmd_it_sym, key; nw = nw)
@@ -39,7 +39,7 @@ var(pm::AbstractUnbalancedPowerModel, key::Symbol, idx::Any; nw::Int = nw_id_def
 
 
 # Helper functions for AbstractPowerModel `con` access.
-con(pm::AbstractUnbalancedPowerModel, nw::Int = nw_id_default) = _IM.con(pm, pmd_it_sym; nw = nw)
+con(pm::AbstractUnbalancedPowerModel, nw::Int=nw_id_default) = _IM.con(pm, pmd_it_sym; nw = nw)
 con(pm::AbstractUnbalancedPowerModel, nw::Int, key::Symbol) = _IM.con(pm, pmd_it_sym, nw, key)
 con(pm::AbstractUnbalancedPowerModel, nw::Int, key::Symbol, idx::Any) = _IM.con(pm, pmd_it_sym, nw, key, idx)
 con(pm::AbstractUnbalancedPowerModel, key::Symbol; nw::Int = nw_id_default) = _IM.con(pm, pmd_it_sym, key; nw = nw)
@@ -47,7 +47,7 @@ con(pm::AbstractUnbalancedPowerModel, key::Symbol, idx::Any; nw::Int = nw_id_def
 
 
 # Helper functions for AbstractPowerModel `sol` access.
-sol(pm::AbstractUnbalancedPowerModel, nw::Int = nw_id_default) = _IM.sol(pm, pmd_it_sym; nw = nw)
+sol(pm::AbstractUnbalancedPowerModel, nw::Int=nw_id_default) = _IM.sol(pm, pmd_it_sym; nw = nw)
 sol(pm::AbstractUnbalancedPowerModel, nw::Int, key::Symbol) = _IM.sol(pm, pmd_it_sym, nw, key)
 sol(pm::AbstractUnbalancedPowerModel, nw::Int, key::Symbol, idx::Any) = _IM.sol(pm, pmd_it_sym, nw, key, idx)
 sol(pm::AbstractUnbalancedPowerModel, key::Symbol; nw::Int = nw_id_default) = _IM.sol(pm, pmd_it_sym, key; nw = nw)
@@ -124,7 +124,7 @@ end
 
 Local wrapper method for JuMP.set_upper_bound, which skips NaN and infinite (+Inf only)
 """
-function set_upper_bound(x::JuMP.VariableRef, bound)
+function set_upper_bound(x::JuMP.VariableRef, bound::Real)
     if !(isnan(bound) || bound==Inf)
         JuMP.set_upper_bound(x, bound)
     end
@@ -149,16 +149,16 @@ end
 
 """
     comp_start_value(
-      comp::Dict, 
-      keys::Vector{String}, 
-      conductor::Int, 
+      comp::Dict,
+      keys::Vector{String},
+      conductor::Int,
       default::Any
     )
 
 Searches for start value for a variable `key` in order from a list of `keys` of a component `comp`
 for conductor `conductor`, and if one does not exist, uses `default`
 """
-function comp_start_value(comp::Dict{String,<:Any}, keys::Vector{String}, conductor::Int, default)
+function comp_start_value(comp::Dict{String,<:Any}, keys::Vector{String}, conductor::Int, default::Any)
     cond_ind = _get_conductor_indicator(comp)
     for key in keys
         if haskey(comp, key) && !isempty(cond_ind)
@@ -180,7 +180,7 @@ end
 Searches for start value for a variable `key` of a component `comp` for conductor `conductor`,
 and if one does not exist, uses `default`
 """
-function comp_start_value(comp::Dict{String,<:Any}, key::String, conductor::Int, default)
+function comp_start_value(comp::Dict{String,<:Any}, key::String, conductor::Int, default::Any)
     cond_ind = _get_conductor_indicator(comp)
     if haskey(comp, key) && !isempty(cond_ind)
         return comp[key][findfirst(isequal(conductor), comp[cond_ind])]
@@ -212,8 +212,8 @@ end
 
 """
     function comp_start_value(
-      comp::Dict, 
-      key::String, 
+      comp::Dict,
+      key::String,
       default::Any=0.0
     )
 

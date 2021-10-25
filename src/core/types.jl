@@ -80,7 +80,7 @@ An Enum to describe whether an object is enabled or disabled
 @doc "The object is enabled" ENABLED
 
 """
-    CapControlType 
+    CapControlType
 
 An Enum to describe the type of capcontrol, e.g., kvar, voltage etc.
 """
@@ -259,7 +259,7 @@ abstract type AbstractUnbalancedNFAModel <: AbstractUnbalancedDCPModel end
 mutable struct NFAUPowerModel <: AbstractUnbalancedNFAModel @pmd_fields end
 
 """
-First-order Taylor (FOT) approximation formulation uses polar/rectangular coordinates for voltage. 
+First-order Taylor (FOT) approximation formulation uses polar/rectangular coordinates for voltage.
 All nonlinear equations are approximated using the initial operating voltage solution.
 ```
     @INPROCEEDINGS{girigoudar_roald_cdc2021,
@@ -325,7 +325,7 @@ mutable struct LPUBFDiagPowerModel <: LPUBFDiagModel @pmd_fields end
 const LinDist3FlowPowerModel = LPUBFDiagPowerModel # more popular name
 
 """
-Forward-backward sweep (FBS) linear branch flow formulation uses rectangular coordinates for voltage. 
+Forward-backward sweep (FBS) linear branch flow formulation uses rectangular coordinates for voltage.
 The branch flows are calculated using the initial operating voltage solution.
 ```
     @INPROCEEDINGS{girigoudar_roald_cdc2021,
@@ -355,16 +355,19 @@ mutable struct SOCNLPUBFPowerModel <: SOCNLPUBFModel @pmd_fields end
 mutable struct SOCConicUBFPowerModel <: SOCConicUBFModel @pmd_fields end
 
 "Collection of AbstractUnbalancedPowerModels that include W relaxations"
-const AbstractUnbalancedWModels = Union{AbstractUBFModel}
+const AbstractUnbalancedWModels = Union{SDPUBFModel, SDPUBFKCLMXModel, SOCNLPUBFModel, SOCConicUBFModel, LPUBFDiagModel}
 
 "Collection of AbstractUnbalancedPowerModels that are Active Power only and Lossless"
 const AbstractUnbalancedAPLossLessModels = Union{DCPUPowerModel, AbstractUnbalancedNFAModel}
 
-"Collection of AbstractUnbalancedPowerModels that have a Polar resprentation"
+"Collection of AbstractUnbalancedPowerModels that have a Polar representation"
 const AbstractUnbalancedPolarModels = Union{AbstractUnbalancedACPModel, AbstractUnbalancedDCPModel}
 
+"Collection of AbstractUnbalancedPowerModels that have a Rectangular representation"
+const AbstractUnbalancedRectangularModels = Union{AbstractUnbalancedACRModel, AbstractUnbalancedIVRModel, FBSUBFModel, FOTRUPowerModel}
+
 "Collection of convex AbstractUnbalancedPowerModels that include W relaxations"
-const AbstractUnbalancedWConvexModels = Union{AbstractUBFModel}
+const AbstractUnbalancedWConvexModels = Union{SDPUBFModel, SDPUBFKCLMXModel, SOCNLPUBFModel, SOCConicUBFModel}
 
 "Collection of ExplicitNeutral models"
 const ExplicitNeutralModels = Union{AbstractExplicitNeutralIVRModel,AbstractExplicitNeutralACRModel}

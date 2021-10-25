@@ -1,4 +1,4 @@
-# The model in rectangular coordinates is linearized around an initial operating point using a 
+# The model in rectangular coordinates is linearized around an initial operating point using a
 # first order Taylor approximation (FOT) method
 
 
@@ -49,12 +49,12 @@ end
 
 
 """
-    variable_mc_capcontrol(pm::FOTRUPowerModel; relax::Bool=false)
+    variable_mc_capcontrol(pm::FOTRUPowerModel; nw::Int=nw_id_default, relax::Bool=false)
 
 Capacitor switching variables.
 """
-function variable_mc_capcontrol(pm::FOTRUPowerModel; relax::Bool=false)
-    variable_mc_capacitor_switch_state(pm, relax)
+function variable_mc_capcontrol(pm::FOTRUPowerModel; nw::Int=nw_id_default, relax::Bool=false)
+    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax)
 end
 
 

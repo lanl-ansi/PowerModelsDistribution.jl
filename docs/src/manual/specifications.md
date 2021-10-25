@@ -1,6 +1,6 @@
 # Problem Specifications
 
-In addition to the standard power flow [`solve_mc_pf`](@ref solve_mc_pf), and optimal power flow [`solve_mc_opf`](@ref solve_mc_opf), there are several notable problem specifications included in PowerModelsDistribution
+In addition to the standard power flow [`solve_mc_pf`](@ref solve_mc_pf), and optimal power flow [`solve_mc_opf`](@ref solve_mc_opf), there are several notable problem specifications included in PowerModelsDistribution.
 
 ## Optimal Power Flow (OPF) with On-Load Tap Changers (OLTC)
 

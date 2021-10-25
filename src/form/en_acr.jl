@@ -10,7 +10,7 @@
 	)
 
 For ACR models with explicit neutrals,
-creates generator power variables `:pg` and `:qg`, 
+creates generator power variables `:pg` and `:qg`,
 and placeholder dictionaries for terminal power flows `:pg_bus` and `:qg_bus`,
 """
 function variable_mc_generator_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, kwargs...)
@@ -50,7 +50,7 @@ function constraint_mc_generator_power_wye(pm::AbstractExplicitNeutralACRModel, 
     phases = connections[1:end-1]
     n      = connections[end]
     P      = length(phases)
-    
+
     if iszero(vr[n]) && iszero(vi[n])
         pg_bus_unmerged = [pg..., 0.0]
         qg_bus_unmerged = [qg..., 0.0]
@@ -106,7 +106,7 @@ function constraint_mc_generator_power_delta(pm::AbstractExplicitNeutralACRModel
     vi = var(pm, nw, :vi, bus_id)
     pg = var(pm, nw, :pg, id)
     qg = var(pm, nw, :qg, id)
-    
+
     ph = connections
     ph_next = [connections[2:end]..., connections[1]]
     P = length(ph)
@@ -127,7 +127,7 @@ function constraint_mc_generator_power_delta(pm::AbstractExplicitNeutralACRModel
 
     pg_bus_unmerged = [JuMP.@NLexpression(pm.model,  vr[p]*crg_bus[idx]+vi[p]*cig_bus[idx]) for (idx,p) in enumerate(ph)]
     qg_bus_unmerged = [JuMP.@NLexpression(pm.model, -vr[p]*cig_bus[idx]+vi[p]*crg_bus[idx]) for (idx,p) in enumerate(ph)]
-    
+
     var(pm, nw, :pg_bus)[id] = pg_bus = _merge_bus_flows(pm, pg_bus_unmerged, connections)
     var(pm, nw, :qg_bus)[id] = qg_bus = _merge_bus_flows(pm, qg_bus_unmerged, connections)
 
@@ -358,7 +358,7 @@ function constraint_mc_transformer_power_yy(pm::AbstractExplicitNeutralACRModel,
     else
         vr_fr_pn = [vr_fr[p]-vr_fr[f_n] for p in f_phases]
         vi_fr_pn = [vi_fr[p]-vi_fr[f_n] for p in f_phases]
-        
+
         crt_fr = [JuMP.@NLexpression(pm.model, ( pt_fr[idx]*vr_fr_pn[idx]+qt_fr[idx]*vi_fr_pn[idx])/(vr_fr_pn[idx]^2+vi_fr_pn[idx]^2)) for idx in 1:P]
         cit_fr = [JuMP.@NLexpression(pm.model, (-pt_fr[idx]*vi_fr_pn[idx]+qt_fr[idx]*vr_fr_pn[idx])/(vr_fr_pn[idx]^2+vi_fr_pn[idx]^2)) for idx in 1:P]
 
@@ -381,7 +381,7 @@ function constraint_mc_transformer_power_yy(pm::AbstractExplicitNeutralACRModel,
     else
         vr_to_pn = [vr_to[p]-vr_to[t_n] for p in t_phases]
         vi_to_pn = [vi_to[p]-vi_to[t_n] for p in t_phases]
-        
+
         crt_to = [JuMP.@NLexpression(pm.model, ( pt_to[idx]*vr_to_pn[idx]+qt_to[idx]*vi_to_pn[idx])/(vr_to_pn[idx]^2+vi_to_pn[idx]^2)) for idx in 1:P]
         cit_to = [JuMP.@NLexpression(pm.model, (-pt_to[idx]*vi_to_pn[idx]+qt_to[idx]*vr_to_pn[idx])/(vr_to_pn[idx]^2+vi_to_pn[idx]^2)) for idx in 1:P]
 
@@ -416,7 +416,7 @@ end
 	)
 
 For ACR models with explicit neutrals,
-links the from-side and to-side power variables of delta-wye connected transformers. 
+links the from-side and to-side power variables of delta-wye connected transformers.
 Expressions for the terminal power flow variables are also added.
 """
 function constraint_mc_transformer_power_dy(pm::AbstractExplicitNeutralACRModel, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
@@ -441,7 +441,7 @@ function constraint_mc_transformer_power_dy(pm::AbstractExplicitNeutralACRModel,
     # from-side
     vrg_fr = [vr_fr[p]-vr_fr[f_connections[next(idx)]] for (idx,p) in enumerate(f_connections)]
     vig_fr = [vi_fr[p]-vi_fr[f_connections[next(idx)]] for (idx,p) in enumerate(f_connections)]
-    
+
     crt_fr = JuMP.@NLexpression(pm.model, [idx in 1:P], (pt_fr[idx]*vrg_fr[idx]+qt_fr[idx]*vig_fr[idx])/(vrg_fr[idx]^2+vig_fr[idx]^2))
     cit_fr = JuMP.@NLexpression(pm.model, [idx in 1:P], (pt_fr[idx]*vig_fr[idx]-qt_fr[idx]*vrg_fr[idx])/(vrg_fr[idx]^2+vig_fr[idx]^2))
 
@@ -461,7 +461,7 @@ function constraint_mc_transformer_power_dy(pm::AbstractExplicitNeutralACRModel,
     else
         vr_to_pn = [vr_to[p]-vr_to[t_n] for p in t_phases]
         vi_to_pn = [vi_to[p]-vi_to[t_n] for p in t_phases]
-        
+
         crt_to = [JuMP.@NLexpression(pm.model, ( pt_to[idx]*vr_to_pn[idx]+qt_to[idx]*vi_to_pn[idx])/(vr_to_pn[idx]^2+vi_to_pn[idx]^2)) for idx in 1:P]
         cit_to = [JuMP.@NLexpression(pm.model, (-pt_to[idx]*vi_to_pn[idx]+qt_to[idx]*vr_to_pn[idx])/(vr_to_pn[idx]^2+vi_to_pn[idx]^2)) for idx in 1:P]
 
@@ -535,7 +535,7 @@ creates branch power variables `:p` and `:q` and placeholder dictionaries for th
 function variable_mc_branch_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     variable_mc_branch_power_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_branch_power_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    
+
     var(pm, nw)[:p_bus] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:q_bus] = Dict{Tuple{Int,Int,Int}, Any}()
 end
@@ -734,7 +734,7 @@ creates switch power variables `:p` and `:q` and placeholder dictionaries for th
 function variable_mc_switch_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
     variable_mc_switch_power_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
     variable_mc_switch_power_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    
+
     var(pm, nw)[:psw_bus] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:qsw_bus] = Dict{Tuple{Int,Int,Int}, Any}()
 end
@@ -755,13 +755,13 @@ end
 	)
 
 constraint_mc_switch_power(
-    pm::ReducedExplicitNeutralIVRModels, 
-    nw::Int, 
-    id::Int, 
-    f_idx::Tuple{Int,Int,Int}, 
-    t_idx::Tuple{Int,Int,Int}, 
-    f_connections::Vector{Int}, 
-    t_connections::Vector{Int}; 
+    pm::ReducedExplicitNeutralIVRModels,
+    nw::Int,
+    id::Int,
+    f_idx::Tuple{Int,Int,Int},
+    t_idx::Tuple{Int,Int,Int},
+    f_connections::Vector{Int},
+    t_connections::Vector{Int};
     report::Bool=true
 )
 
@@ -770,18 +770,18 @@ create expressions for the terminal power flows `:psw_bus` and `qsw_bus`,
 and link the from-side to the to-side switch power
 """
 function constraint_mc_switch_power(pm::AbstractExplicitNeutralACRModel, nw::Int, id::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}; report::Bool=true)
-psw_fr = var(pm, nw, :psw, f_idx)
-qsw_fr = var(pm, nw, :qsw, f_idx)
-psw_to = var(pm, nw, :psw, t_idx)
-qsw_to = var(pm, nw, :qsw, t_idx)
+    psw_fr = var(pm, nw, :psw, f_idx)
+    qsw_fr = var(pm, nw, :qsw, f_idx)
+    psw_to = var(pm, nw, :psw, t_idx)
+    qsw_to = var(pm, nw, :qsw, t_idx)
 
-JuMP.@constraint(pm.model, psw_fr .+ psw_to .== 0)
-JuMP.@constraint(pm.model, qsw_fr .+ qsw_to .== 0)
+    JuMP.@constraint(pm.model, psw_fr .+ psw_to .== 0)
+    JuMP.@constraint(pm.model, qsw_fr .+ qsw_to .== 0)
 
-var(pm, nw, :psw_bus)[f_idx] = _merge_bus_flows(pm, psw_fr, f_connections)
-var(pm, nw, :qsw_bus)[f_idx] = _merge_bus_flows(pm, qsw_fr, f_connections)
-var(pm, nw, :psw_bus)[t_idx] = _merge_bus_flows(pm, psw_to, t_connections)
-var(pm, nw, :qsw_bus)[t_idx] = _merge_bus_flows(pm, qsw_to, t_connections)
+    var(pm, nw, :psw_bus)[f_idx] = _merge_bus_flows(pm, psw_fr, f_connections)
+    var(pm, nw, :qsw_bus)[f_idx] = _merge_bus_flows(pm, qsw_fr, f_connections)
+    var(pm, nw, :psw_bus)[t_idx] = _merge_bus_flows(pm, psw_to, t_connections)
+    var(pm, nw, :qsw_bus)[t_idx] = _merge_bus_flows(pm, qsw_to, t_connections)
 end
 
 
@@ -794,22 +794,27 @@ end
 		rating::Vector{<:Real}
 	)
 
-For ACR models with explicit neutrals, 
+For ACR models with explicit neutrals,
 imposes a bound on the switch current magnitude per conductor.
-Note that a bound on the from-side implies the same bound on the to-side current, 
+Note that a bound on the from-side implies the same bound on the to-side current,
 so it suffices to apply this only explicitly at the from-side.
 """
-function constraint_mc_switch_current_limit(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_mc_switch_current_limit(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})::Nothing
     vr_fr = [var(pm, nw, :vr, f_idx[1])[t] for t in f_connections]
     vi_fr = [var(pm, nw, :vi, f_idx[1])[t] for t in f_connections]
     psw = var(pm, nw, :psw, f_idx)
     qsw = var(pm, nw, :qsw, f_idx)
 
+    mu_cm_fr = JuMP.ConstraintRef[]
     for idx in 1:length(rating)
         if rating[idx] < Inf
-            JuMP.@constraint(pm.model, psw[idx]^2 + qsw[idx]^2 <= rating[idx]^2 * (vr_fr[idx]^2 + vi_fr[idx]^2))
+            push!(mu_cm_fr, JuMP.@constraint(pm.model, psw[idx]^2 + qsw[idx]^2 <= rating[idx]^2 * (vr_fr[idx]^2 + vi_fr[idx]^2)))
         end
     end
+
+    con(pm, nw, :mu_cm_switch)[f_idx] = mu_cm_fr
+
+    nothing
 end
 
 
@@ -822,19 +827,25 @@ end
 		rating::Vector{<:Real}
 	)
 
-For ACR models with explicit neutrals, 
+For ACR models with explicit neutrals,
 imposes a bound on the switch power magnitude per conductor.
-Note that a bound on the from-side implies the same bound on the to-side power 
-when the switch is closed (equal voltages), and also when it is open since the 
+Note that a bound on the from-side implies the same bound on the to-side power
+when the switch is closed (equal voltages), and also when it is open since the
 power then equals zero on both ends.
 """
-function constraint_mc_switch_thermal_limit(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_mc_switch_thermal_limit(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})::Nothing
     psw_fr = var(pm, nw, :psw, f_idx)
     qsw_fr = var(pm, nw, :qsw, f_idx)
 
+    mu_sm_fr = JuMP.ConstraintRef[]
+
     for idx in 1:length(rating)
         if rating[idx] < Inf
-            JuMP.@constraint(pm.model, psw_fr[idx]^2 + qsw_fr[idx]^2 <= rating[idx]^2)
+            push!(mu_sm_fr, JuMP.@constraint(pm.model, psw_fr[idx]^2 + qsw_fr[idx]^2 <= rating[idx]^2))
         end
     end
+
+    con(pm, nw, :mu_sm_switch)[f_idx] = mu_sm_fr
+
+    nothing
 end
