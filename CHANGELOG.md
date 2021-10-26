@@ -2,6 +2,10 @@
 
 ## staged
 
+- none
+
+## v0.12.0
+
 - Fixed issue of missing `va` on reference buses which have been selected automatically
 - Fixed PVSystem fields and defaults based on latest version
 - Added support for `action=normalize` on dss LoadShapes
