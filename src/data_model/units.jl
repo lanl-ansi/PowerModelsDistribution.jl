@@ -181,6 +181,10 @@ function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{
             push!(zone_edges[f_zone], (t_zone, 1/tm_nom))
             push!(zone_edges[t_zone], (f_zone,   tm_nom))
         else
+            if !isempty(get(transformer, "xfmrcode", ""))
+                _apply_xfmrcode!(transformer, data_model)
+            end
+
             if haskey(transformer, "f_bus")
                 f_zone = bus_to_zone["$(transformer["f_bus"])"]
                 t_zone = bus_to_zone["$(transformer["f_bus"])"]
@@ -395,7 +399,7 @@ end
 "per-unit conversion for switches"
 function _rebase_pu_switch!(switch::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
     vbase_old = !haskey(switch, "vbase") ? 1.0 : switch["vbase"]
-    
+
     sbase_scale = sbase_old / sbase
     ibase_scale = sbase_scale/(vbase_old/vbase)
 
@@ -433,17 +437,17 @@ function _rebase_pu_shunt!(shunt::Dict{String,<:Any}, vbase::Real, sbase::Real, 
             shunt["controls"]["offsetting"] = shunt["controls"]["offsetting"]/(sbase*power_scale)
             if shunt["controls"]["voltoverride"]
                 shunt["controls"]["vmin"] = shunt["controls"]["vmin"]*shunt["controls"]["ptratio"]/(vbase*voltage_scale_factor)
-                shunt["controls"]["vmax"] = shunt["controls"]["vmax"]*shunt["controls"]["ptratio"]/(vbase*voltage_scale_factor)        
+                shunt["controls"]["vmax"] = shunt["controls"]["vmax"]*shunt["controls"]["ptratio"]/(vbase*voltage_scale_factor)
             end
         else
             for (idx,val) in enumerate(shunt["controls"]["type"])
                 if shunt["controls"]["voltoverride"][idx]
                     shunt["controls"]["vmin"][idx] = shunt["controls"]["vmin"][idx]*shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor)
-                    shunt["controls"]["vmax"][idx] = shunt["controls"]["vmax"][idx]*shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor) 
+                    shunt["controls"]["vmax"][idx] = shunt["controls"]["vmax"][idx]*shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor)
                 end
                 if val == CAP_VOLTAGE
                     shunt["controls"]["onsetting"][idx]  = shunt["controls"]["onsetting"][idx] *shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor)
-                    shunt["controls"]["offsetting"][idx] = shunt["controls"]["offsetting"][idx]*shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor) 
+                    shunt["controls"]["offsetting"][idx] = shunt["controls"]["offsetting"][idx]*shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor)
                 elseif val == CAP_CURRENT
                     shunt["controls"]["onsetting"][idx]  = shunt["controls"]["onsetting"][idx] *shunt["controls"]["ctratio"][idx]/(sbase*1e3)*(vbase*voltage_scale_factor)
                     shunt["controls"]["offsetting"][idx] = shunt["controls"]["offsetting"][idx]*shunt["controls"]["ctratio"][idx]/(sbase*1e3)*(vbase*voltage_scale_factor)
@@ -535,7 +539,7 @@ function _rebase_pu_transformer_2w_ideal!(transformer::Dict{String,<:Any}, f_vba
         # convert reference voltage and band from volts to per unit
         transformer["controls"]["vreg"] = transformer["controls"]["vreg"].*transformer["controls"]["ptratio"]/(f_vbase_new*voltage_scale_factor)
         transformer["controls"]["band"] = transformer["controls"]["band"].*transformer["controls"]["ptratio"]/(f_vbase_new*voltage_scale_factor)
-        # convert regulator impedance from volts to per unit 
+        # convert regulator impedance from volts to per unit
         baseZ = (f_vbase_new*voltage_scale_factor)^2/(sbase_new*1e3)
         transformer["controls"]["r"] = transformer["controls"]["r"].*transformer["controls"]["ptratio"]./transformer["controls"]["ctprim"]/baseZ
         transformer["controls"]["x"] = transformer["controls"]["x"].*transformer["controls"]["ptratio"]./transformer["controls"]["ctprim"]/baseZ

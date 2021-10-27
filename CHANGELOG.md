@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in `calc_voltage_bases` where if a transformer configuration was in xfmrcode, the function would error
 - Added data transformations `remove_line_limits!` and `remove_transformer_limits!`, to remove current/power bounds on lines, linecodes, switches, and transformers
 - Fixed bug in `linecode` objects where `cm_ub` or `sm_ub` were not being passed correctly to lines
 - Added capability to infer number of phases from supported dss objects
