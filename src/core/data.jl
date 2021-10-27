@@ -938,7 +938,7 @@ end
 
 computes load blocks based on switch locations
 """
-identify_load_blocks(data::Dict{String,<:Any})::Set = calc_connected_components(data; type="load_blocks")
+identify_load_blocks(data::Dict{String,<:Any})::Set{Set} = calc_connected_components(data; type="load_blocks")
 
 
 """
@@ -946,7 +946,7 @@ identify_load_blocks(data::Dict{String,<:Any})::Set = calc_connected_components(
 
 computes connected blocks currently in the model based on switch states
 """
-identify_blocks(data::Dict{String,<:Any})::Set = calc_connected_components(data; type="blocks")
+identify_blocks(data::Dict{String,<:Any})::Set{Set} = calc_connected_components(data; type="blocks")
 
 
 """
@@ -954,7 +954,7 @@ identify_blocks(data::Dict{String,<:Any})::Set = calc_connected_components(data;
 
 computes component islands base only on edge and bus status
 """
-identify_islands(data::Dict{String,<:Any})::Set = calc_connected_components(data)
+identify_islands(data::Dict{String,<:Any})::Set{Set} = calc_connected_components(data)
 
 
 """
@@ -963,7 +963,7 @@ identify_islands(data::Dict{String,<:Any})::Set = calc_connected_components(data
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function calc_connected_components(data::Dict{String,<:Any}; edges::Union{Missing, Vector{<:String}}=missing, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set
+function calc_connected_components(data::Dict{String,<:Any}; edges::Union{Missing, Vector{String}}=missing, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set}
     pmd_data = get_pmd_data(data)
 
     if ismultinetwork(pmd_data)
@@ -984,13 +984,13 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set
+function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set{String}}
     @assert get(data, "data_model", MATHEMATICAL) == ENGINEERING
 
-    active_bus = Dict{Any,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] == ENABLED || !check_enabled)
-    active_bus_ids = Set{Any}([i for (i,bus) in active_bus])
+    active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] == ENABLED || !check_enabled)
+    active_bus_ids = Set{String}([i for (i,bus) in active_bus])
 
-    neighbors = Dict{Any,Vector{Any}}(i => [] for i in active_bus_ids)
+    neighbors = Dict{String,Vector{String}}(i => [] for i in active_bus_ids)
     for edge_type in edges
         for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
             if edge_obj["status"] == ENABLED || !check_enabled
@@ -1034,9 +1034,7 @@ function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_
         end
     end
 
-    ccs = (Set(values(component_lookup)))
-
-    return ccs
+    return Set{Set{String}}(values(component_lookup))
 end
 
 
@@ -1044,13 +1042,13 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector{<:String}=_math_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set
+function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector{<:String}=_math_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set{Int}}
     @assert get(data, "data_model", MATHEMATICAL) == MATHEMATICAL
 
-    active_bus = Dict{Any,Dict{String,Any}}(x for x in data["bus"] if x.second[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] || !check_enabled)
-    active_bus_ids = Set{Any}([parse(Int,i) for (i,bus) in active_bus])
+    active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] || !check_enabled)
+    active_bus_ids = Set{Int}([parse(Int,i) for (i,bus) in active_bus])
 
-    neighbors = Dict{Any,Vector{Any}}(i => [] for i in active_bus_ids)
+    neighbors = Dict{Int,Vector{Int}}(i => [] for i in active_bus_ids)
     for edge_type in edges
         for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
             if edge_obj[pmd_math_component_status[edge_type]] != pmd_math_component_status_inactive[edge_type] || !check_enabled
@@ -1083,14 +1081,12 @@ function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector
         end
     end
 
-    ccs = (Set(values(component_lookup)))
-
-    return ccs
+    return Set{Set{Int}}(values(component_lookup))
 end
 
 
 "DFS on a graph"
-function _cc_dfs(i::Any, neighbors::Dict{Any,Vector{Any}}, component_lookup::Dict{<:Any,Set{Int}}, touched::Set{Int})::Nothing
+function _cc_dfs(i::T, neighbors::Dict{T,Vector{T}}, component_lookup::Dict{T,Set{T}}, touched::Set{T})::Nothing where T <: Union{String,Int}
     push!(touched, i)
     for j in neighbors[i]
         if !(j in touched)

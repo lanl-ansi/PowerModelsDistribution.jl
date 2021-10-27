@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Fixed bug in `calc_connected_components` where function signature was incorrect
 
 ## v0.12.0
 
