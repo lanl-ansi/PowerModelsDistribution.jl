@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added missing `constraint_mc_ampacity_from` and `constraint_mc_ampacity_to` constraints in `opf_oltc` problems
 - Fixed bug in `NFAUPowerModel` formulation, where `variable_mc_transformer_power_real` was incorrectly setting up transformer power variables
 - Fixed bug in `calc_voltage_bases` where if a transformer configuration was in xfmrcode, the function would error
 - Added data transformations `remove_line_limits!` and `remove_transformer_limits!`, to remove current/power bounds on lines, linecodes, switches, and transformers

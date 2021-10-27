@@ -6,9 +6,7 @@
     @testset "ACP/ACR tests" begin
         eng_1 = deepcopy(case3_delta_gens)
 
-        for (_,line) in eng_1["line"]
-            delete!(line, "cm_ub")
-        end
+        remove_line_limits!(eng_1)
 
         for (_,load) in eng_1["load"]
             load["model"] = POWER
