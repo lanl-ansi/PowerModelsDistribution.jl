@@ -116,7 +116,7 @@ function _create_xfmrcode(name::String=""; kwargs...)
     for wdg in [:wdg, :wdg_2, :wdg_3]
         if haskey(kwargs, wdg)
             suffix = kwargs[wdg] == 1 ? "" : "_$(kwargs[wdg])"
-            for key in [:bus, :tap, :conn, :kv, :kva, Symbol("%r"), :rneut, :xneut]
+            for key in [:tap, :conn, :kv, :kva, Symbol("%r"), :rneut, :xneut]
                 subkey = Symbol(string(key, suffix))
                 if haskey(kwargs, subkey)
                     temp[string(key, "s")][kwargs[wdg]] = kwargs[subkey]
