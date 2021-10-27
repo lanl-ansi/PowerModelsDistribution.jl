@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in `linecode` objects where `cm_ub` or `sm_ub` were not being passed correctly to lines
 - Added capability to infer number of phases from supported dss objects
 - Fixed bug in `calc_connected_components` where function signature was incorrect
 

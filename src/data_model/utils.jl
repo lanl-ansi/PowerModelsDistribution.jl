@@ -686,7 +686,7 @@ function _apply_linecode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:A
     if haskey(eng_obj, "linecode") && haskey(data_eng, "linecode") && haskey(data_eng["linecode"], eng_obj["linecode"])
         linecode = data_eng["linecode"][eng_obj["linecode"]]
 
-        for property in ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
+        for property in ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to", "cm_ub", "sm_ub"]
             if !haskey(eng_obj, property) && haskey(linecode, property)
                 eng_obj[property] = deepcopy(linecode[property])
             end

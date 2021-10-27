@@ -424,6 +424,8 @@ function _dss2eng_linecode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
         eng_obj["g_fr"] = fill(0.0, nphases, nphases)
         eng_obj["g_to"] = fill(0.0, nphases, nphases)
 
+        eng_obj["cm_ub"] = fill(defaults["emergamps"], nphases)
+
         if import_all
             _import_all!(eng_obj, dss_obj)
         end
@@ -458,13 +460,16 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             "length" => defaults["switch"] || _like_is_switch ? 0.001 : defaults["length"],
             "f_connections" => f_connections,
             "t_connections" => t_connections,
-            "cm_ub" => fill(defaults["emergamps"], ncond),
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
             "source_id" => "line.$id"
         )
 
         if haskey(dss_obj, "linecode")
             eng_obj["linecode"] = dss_obj["linecode"]
+        end
+
+        if haskey(dss_obj, "emergamps") && _is_after_linecode(dss_obj["prop_order"], "emergamps")
+            eng_obj["cm_ub"] = fill(defaults["emergamps"], ncond)
         end
 
         if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["r0", "r1", "rg", "rmatrix"]) || !haskey(dss_obj, "linecode")
