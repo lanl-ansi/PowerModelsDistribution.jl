@@ -34,7 +34,7 @@ function _create_load(name::String=""; kwargs...)::Dict{String,Any}
 
     Dict{String,Any}(
         "name" => name,
-        "phases" => get(kwargs, :phases, 3),
+        "phases" => get(kwargs, :phases, _get_implied_nphases(bus1; default=3)),
         "bus1" => bus1,
         "kv" => kv,
         "kw" => kw,
@@ -99,7 +99,7 @@ function _create_generator(name::String=""; kwargs...)::Dict{String,Any}
 
     Dict{String,Any}(
         "name" => name,
-        "phases" => get(kwargs, :phases, 3),
+        "phases" => get(kwargs, :phases, _get_implied_nphases(bus1; default=3)),
         "bus1" => bus1,
         "kv" => get(kwargs, :kv, 12.47),
         "kw" => kw,
@@ -176,7 +176,7 @@ function _create_pvsystem(name::String=""; kwargs...)
 
     Dict{String,Any}(
         "name" => name,
-        "phases" => get(kwargs, :phases, 3),
+        "phases" => get(kwargs, :phases, _get_implied_nphases(bus1; default=3)),
         "bus1" => bus1,
         "kv" => kv,
         "irradiance" => get(kwargs, :irradiance, 1.0),
@@ -263,7 +263,7 @@ function _create_storage(name::String=""; kwargs...)
         "kwrated" => get(kwargs, :kwrated, 50.0),
         "model" => get(kwargs, :model, 1),
         "pf" => get(kwargs, :pf, get(kwargs, :kw, 0.0) == 0 ? 1.0 : get(kwargs, :kvar, kwargs[:kw]) / kwargs[:kw]),
-        "phases" => get(kwargs, :phases, 3),
+        "phases" => get(kwargs, :phases, _get_implied_nphases(get(kwargs, :bus1, ""); default=3)),
         "spectrum" => get(kwargs, :spectrum, "default"),
         "state" => get(kwargs, :state, "idling"),
         "timechargetrig" => get(kwargs, :timechargetrig, 2.0),

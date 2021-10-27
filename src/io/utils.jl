@@ -540,9 +540,9 @@ function _get_conductors_ordered(busname::AbstractString; default::Vector{Int}=I
     end
 
     if check_length && length(default)!=length(ret)
-        # TODO Should we provide this warning?
         @info "An inconsistent number of nodes was specified on $(parts[1]); |$(parts[2])|!=$(length(default))."
     end
+
     return ret
 end
 
@@ -954,5 +954,48 @@ function _build_time_series_reference!(eng_obj::Dict{String,<:Any}, dss_obj::Dic
             eng_obj["time_series"][active] = defaults[time_series]
             eng_obj["time_series"][reactive] = defaults[time_series]
         end
+    end
+end
+
+
+"returns number of phases implied by a two-bus (edge) object"
+function _get_implied_nphases(bus1::AbstractString, bus2::AbstractString; default::Int=3)
+    f_conds = _get_conductors_ordered(bus1; default=collect(1:default), check_length=false)
+    t_conds = _get_conductors_ordered(bus2; default=collect(1:default), check_length=false)
+
+    if !isempty(f_conds) || !isempty(t_conds)
+        return maximum([length(f_conds), length(t_conds)])
+    else
+        return default
+    end
+end
+
+
+"returns number of phases implied by a transformer object"
+function _get_implied_nphases(buses::Vector{<:AbstractString}; default::Int=3)
+    nphases = Int[]
+    for bus in buses
+        conds = _get_conductors_ordered(bus; default=collect(1:default), check_length=false)
+        if !isempty(conds)
+            push!(nphases, length(conds))
+        end
+    end
+
+    if !isempty(nphases)
+        return maximum(nphases)
+    else
+        return default
+    end
+end
+
+
+"returns number of phases implied by a single-bus (node) object"
+function _get_implied_nphases(bus1::AbstractString; default::Int=3)
+    conds = _get_conductors_ordered(bus1; default=collect(1:default), check_length=false)
+
+    if !isempty(conds)
+        return length(conds)
+    else
+        return default
     end
 end
