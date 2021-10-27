@@ -73,14 +73,22 @@ function variable_mc_transformer_power_imaginary(pm::AbstractUnbalancedActivePow
 end
 
 
-"power balanace constraint with line shunts and transformers, active power only"
+@doc raw"""
+    constraint_mc_power_balance(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+
+power balanace constraint with line shunts and transformers, active power only
+
+```math
+p_{br} + p_{tr} + p_{sw} == p_{g} - p_{s} - p_{d} - G
+```
+"""
 function constraint_mc_power_balance(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
-    p    = get(var(pm, nw),    :p, Dict())#; _check_var_keys(p, bus_arcs, "active power", "branch")
-    pg   = get(var(pm, nw),   :pg_bus, Dict())#; _check_var_keys(pg, bus_gens, "active power", "generator")
-    ps   = get(var(pm, nw),   :ps, Dict())#; _check_var_keys(ps, bus_storage, "active power", "storage")
-    psw  = get(var(pm, nw),  :psw, Dict())#; _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    pt   = get(var(pm, nw),   :pt, Dict())#; _check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
-    pd   = get(var(pm, nw),   :pd_bus, Dict())#; _check_var_keys(pg, bus_gens, "active power", "generator")
+    p   = get(var(pm, nw),      :p,  Dict()); _check_var_keys(p,   bus_arcs, "active power", "branch")
+    psw = get(var(pm, nw),    :psw,  Dict()); _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    pt  = get(var(pm, nw),     :pt,  Dict()); _check_var_keys(pt,  bus_arcs_trans, "active power", "transformer")
+    pg  = get(var(pm, nw),     :pg,  Dict()); _check_var_keys(pg,  bus_gens, "active power", "generator")
+    ps  = get(var(pm, nw),     :ps,  Dict()); _check_var_keys(ps,  bus_storage, "active power", "storage")
+    pd  = get(var(pm, nw), :pd_bus,  Dict()); _check_var_keys(pd,  bus_loads, "active power", "load")
 
     Gt, Bt = _build_bus_shunt_matrices(pm, nw, terminals, bus_shunts)
 
@@ -115,50 +123,6 @@ end
 
 ######## Lossless Models ########
 
-"Create variables for the active power flowing into all transformer windings"
-function variable_mc_transformer_power_real(pm::AbstractUnbalancedAPLossLessModels; nw::Int=nw_id_default, bounded::Bool=true)
-    connections = Dict((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_transformer) for ((l,i,j), connections) in entry)
-    pt = var(pm, nw)[:pt] = Dict((l,i,j) => JuMP.@variable(pm.model,
-            [c in connections[(l,i,j)]],
-            base_name="$(nw)_pt_$((l,i,j))",
-            start=0
-        ) for (l,i,j) in ref(pm, nw, :arcs_transformer_from)
-    )
-
-    if bounded
-        for arc in ref(pm, nw, :arcs_transformer_from)
-            (t,i,j) = arc
-            rate_a_fr, rate_a_to = _calc_transformer_power_ub_frto(ref(pm, nw, :transformer, t), ref(pm, nw, :bus, i), ref(pm, nw, :bus, j))
-
-            for (idx, c) in enumerate(connections[arc])
-                set_lower_bound(pt[(t,i,j)][c], -min.(rate_a_fr, rate_a_to)[idx])
-                set_upper_bound(pt[(t,i,j)][c],  min.(rate_a_fr, rate_a_to)[idx])
-            end
-        end
-    end
-
-    for (l,transformer) in ref(pm, nw, :transformer)
-        if haskey(transformer, "pf_start")
-            f_idx = (l, transformer["f_bus"], transformer["t_bus"])
-            for (idx, c) in enumerate(connections[f_idx])
-                JuMP.set_value(pt[f_idx][c], transformer["pf_start"][idx])
-            end
-        end
-        if haskey(transformer, "pt_start")
-            t_idx = (l, transformer["t_bus"], transformer["f_bus"])
-            for (idx, c) in enumerate(connections[t_idx])
-                JuMP.set_start_value(pt[t_idx][c], transformer["pt_start"][idx])
-            end
-        end
-    end
-
-    # this explicit type erasure is necessary
-    p_expr = Dict{Any,Any}( ((l,i,j), pt[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_transformer_from) )
-    p_expr = merge(p_expr, Dict( ((l,j,i), -1.0*pt[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_transformer_from)))
-    var(pm, nw)[:pt] = p_expr
-end
-
-
 ""
 function constraint_mc_network_power_balance(pm::AbstractUnbalancedAPLossLessModels, nw::Int, i, comp_gen_ids, comp_pd, comp_qd, comp_gs, comp_bs, comp_branch_g, comp_branch_b)
     pg = var(pm, nw, :pg)
@@ -191,8 +155,24 @@ function constraint_mc_ohms_yt_to(pm::NFAUPowerModel, nw::Int, f_bus::Int, t_bus
 end
 
 
-"nothing to do, this model is symmetric"
+@doc raw"""
+    constraint_mc_transformer_power(pm::NFAUPowerModel, i::Int; nw::Int=nw_id_default)
+
+transformer active power only constraint pf=-pt
+
+```math
+p_f[fc] == -pt[tc]
+```
+"""
 function constraint_mc_transformer_power(pm::NFAUPowerModel, i::Int; nw::Int=nw_id_default)
+    transformer = ref(pm, nw, :transformer, i)
+
+    pf = var(pm, nw, :pt, (i, transformer["f_bus"], transformer["t_bus"]))
+    pt = var(pm, nw, :pt, (i, transformer["t_bus"], transformer["f_bus"]))
+
+    for (fc, tc) in zip(transformer["f_connections"],transformer["t_connections"])
+        JuMP.@constraint(pm.model, pf[fc] == -pt[tc])
+    end
 end
 
 
