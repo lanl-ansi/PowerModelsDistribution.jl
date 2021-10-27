@@ -863,13 +863,13 @@ end
 
 
 """
-Returns the tightest set of pairwise voltage magnitude bounds, 
+Returns the tightest set of pairwise voltage magnitude bounds,
 removing looser bounds which are implied by the tighter ones.
 """
 function _get_tight_pairwise_voltage_magnitude_bounds(bus::Dict)
     lb_pairs = Tuple{Any,Any,Real}[]
     ub_pairs = Tuple{Any,Any,Real}[]
-    
+
     haskey(bus, "vm_pair_lb") && append!(lb_pairs, bus["vm_pair_lb"])
     haskey(bus, "vm_pair_ub") && append!(ub_pairs, bus["vm_pair_ub"])
 
@@ -896,7 +896,7 @@ end
 
 
 """
-Returns the tightest set of absolute voltage magnitude bounds, 
+Returns the tightest set of absolute voltage magnitude bounds,
 removing looser bounds which are implied by the tighter ones.
 """
 function _get_tight_absolute_voltage_magnitude_bounds(bus::Dict)
@@ -914,8 +914,8 @@ end
 
 
 """
-When a terminal is grounded, any pairwise bounds it occurs in 
-imply an absolute bound for the other terminal in the pair. 
+When a terminal is grounded, any pairwise bounds it occurs in
+imply an absolute bound for the other terminal in the pair.
 This method converts such pairwise bounds to absolute ones.
 """
 function _add_implicit_absolute_bounds!(bus_math, terminals::Vector)

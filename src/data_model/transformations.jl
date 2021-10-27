@@ -60,22 +60,57 @@ end
 
 
 """
-    remove_all_bounds!(data_eng; exclude::Vector{<:String}=String["energy_ub"])
+    remove_all_bounds!(data_eng; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
 
 Removes all fields ending in '_ub' or '_lb' that aren't required by the math model. Properties
 can be excluded from this removal with `exclude::Vector{String}`
 
+Whole asset types (e.g., "line") can be excluded using the keyword argument `exclude_asset_type::Vector{String}`
+
 By default, `"energy_ub"` is excluded from this removal, since it is a required properly on storage.
 """
-function remove_all_bounds!(data_eng; exclude::Vector{<:String}=String["energy_ub"])
+function remove_all_bounds!(data_eng; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
     for (k,v) in data_eng
-        if isa(v, Dict) && k!="settings" && !(k in exclude)
-            for (id, comp) in v
+        if isa(v, Dict) && k!="settings" && !(k in exclude_asset_type)
+            for (_, comp) in v
                 for field in keys(comp)
-                    if endswith(field, "_lb") || endswith(field, "_ub")
+                    if !(field in exclude) && endswith(field, "_lb") || endswith(field, "_ub")
                         delete!(comp, field)
                     end
                 end
+            end
+        end
+    end
+end
+
+
+"""
+    remove_line_limits!(data_eng::Dict{String,<:Any})
+
+Removes fields `cm_ub` and `sm_ub` from lines, switches, and linecodes
+"""
+function remove_line_limits!(data_eng::Dict{String,<:Any})
+    for type in ["linecode", "line", "switch"]
+        if haskey(data_eng, type)
+            for (_,obj) in data_eng[type]
+                delete!(obj, "cm_ub")
+                delete!(obj, "sm_ub")
+            end
+        end
+    end
+end
+
+
+"""
+    remove_transformer_limits!(data_eng::Dict{String,<:Any})
+
+Removes field `sm_ub` from transformers, xfmrcodes
+"""
+function remove_transformer_limits!(data_eng::Dict{String,<:Any})
+    for type in ["xfmrcode", "transformer"]
+        if haskey(data_eng, type)
+            for (_,obj) in data_eng[type]
+                delete!(obj, "sm_ub")
             end
         end
     end
@@ -527,7 +562,7 @@ function _loop_line_to_shunt(data_eng::Dict{String,Any}, line_id::AbstractString
         "dispatchable" => NO,
         "bus" => line["f_bus"],
         "connections" => conns_unique,
-        "gs" => real.(Yb_unique),    
+        "gs" => real.(Yb_unique),
         "bs" => imag.(Yb_unique),
     )
     if haskey(line, "source_id")
@@ -617,20 +652,20 @@ end
 
 """
     transform_loops!(
-        data_eng::Dict{String,Any}; 
-        zero_series_impedance_threshold::Real=1E-8, 
+        data_eng::Dict{String,Any};
+        zero_series_impedance_threshold::Real=1E-8,
         shunt_id_prefix::AbstractString="line_loop"
     )::Dict{String,Any}
 
 Transform line loops (connected to a single bus), which are not allowed in the mathematical model.
-Lossy line loops are converted to equivalent shunts, and lossless ones (i.e. short-circuits) are represented by merging the short-circuited terminals. 
+Lossy line loops are converted to equivalent shunts, and lossless ones (i.e. short-circuits) are represented by merging the short-circuited terminals.
 The argument 'zero_series_impedance_threshold' controls the threshold below which the series impedance is considered to be a short-ciruit.
-This is useful because OpenDSS modelers have to insert tiny impedances to represent short-circuit reactors. 
-The addmittance to ground should be zero to trigger the short-circuit handling. 
+This is useful because OpenDSS modelers have to insert tiny impedances to represent short-circuit reactors.
+The addmittance to ground should be zero to trigger the short-circuit handling.
 """
 function transform_loops!(
-    data_eng::Dict{String,Any}; 
-    zero_series_impedance_threshold::Real=1E-8, 
+    data_eng::Dict{String,Any};
+    zero_series_impedance_threshold::Real=1E-8,
     shunt_id_prefix::AbstractString="line_loop"
     )::Dict{String,Any}
 
@@ -707,9 +742,9 @@ end
 """
     kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})::Dict{String,Any}
 
-Kron-reduce all (implied) neutral conductors of lines, switches and shunts, and remove any terminals which become unconnected. 
-A line or switch conductor is considered as a neutral conductor if it is connected between two neutral terminals. 
-A terminal is a neutral terminals if it is galvanically connected (i.e. through a line or switch) 
+Kron-reduce all (implied) neutral conductors of lines, switches and shunts, and remove any terminals which become unconnected.
+A line or switch conductor is considered as a neutral conductor if it is connected between two neutral terminals.
+A terminal is a neutral terminals if it is galvanically connected (i.e. through a line or switch)
 to a grounded terminal, or the neutral conductor of a wye-connected component.
 """
 function kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})::Dict{String,Any}
@@ -848,11 +883,11 @@ end
 
 
 """
-Return a list of all implicit neutrals as a list of bus-terminal pairs. 
+Return a list of all implicit neutrals as a list of bus-terminal pairs.
 This is done by starting from a list of all terminals which are either
     a.connected to the neutral of wye-connected components;
     b. or are grounded.
-This initial list is then expanded to all terminals which are 
+This initial list is then expanded to all terminals which are
 galvanically connected to terminals in the initial list.
 """
 function _infer_neutral_terminals(data_eng::Dict{String,Any})
@@ -966,7 +1001,7 @@ function get_defined_buses(data_eng::Dict{String,Any}; comp_types=pmd_eng_asset_
             append!(buses_exclude, buses)
         end
     end
-    
+
     return unique(buses_exclude)
 end
 
@@ -974,12 +1009,12 @@ end
 """
     delete_trailing_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
 
-Deletes trailing lines, 
+Deletes trailing lines,
 i.e. lines connected to a bus with no other connected components and which is not grounded.
 """
 function delete_trailing_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
     @assert data_eng["data_model"]==ENGINEERING
-    
+
     # exclude buses that appear in components other than lines
     comp_types_exclude = setdiff(pmd_eng_asset_types, ["line"])
     buses_exclude = get_defined_buses(data_eng, comp_types=comp_types_exclude)
@@ -1089,21 +1124,21 @@ end
 
 """
     add_bus_absolute_vbounds!(
-        data_eng::Dict{String,Any}; 
-        phase_lb_pu::Real=0.9, 
-        phase_ub_pu::Real=1.1, 
+        data_eng::Dict{String,Any};
+        phase_lb_pu::Real=0.9,
+        phase_ub_pu::Real=1.1,
         neutral_ub_pu::Real=0.3
     )::Dict{String,Any}
 
 Adds absolute (i.e. indivdially, not between a pair of terminals) voltage bounds through the 'vm_lb' and 'vm_ub' property.
-Bounds are specified in per unit, and automatically converted to SI units by calculating the voltage base. 
+Bounds are specified in per unit, and automatically converted to SI units by calculating the voltage base.
 If you change data_eng["settings"]["vbases_default"], the data model transformation will however produce inconsistent bounds in per unit.
-Neutral terminals are automatically detected, and set to [0,phase_ub_pu*vbase]. 
+Neutral terminals are automatically detected, and set to [0,phase_ub_pu*vbase].
 """
 function add_bus_absolute_vbounds!(
-    data_eng::Dict{String,Any}; 
-    phase_lb_pu::Real=0.9, 
-    phase_ub_pu::Real=1.1, 
+    data_eng::Dict{String,Any};
+    phase_lb_pu::Real=0.9,
+    phase_ub_pu::Real=1.1,
     neutral_ub_pu::Real=0.3
     )::Dict{String,Any}
 
@@ -1114,7 +1149,7 @@ function add_bus_absolute_vbounds!(
         bus["vm_lb"] = [(id,t) in nbts ? 0.0 : phase_lb_pu*vbase for t in bus["terminals"]]
         bus["vm_ub"] = [(id,t) in nbts ? neutral_ub_pu*vbase : phase_ub_pu*vbase for t in bus["terminals"]]
     end
-    
+
     return data_eng
 end
 
@@ -1130,7 +1165,7 @@ function _generate_vm_pairs(connections::Vector, model::ConnConfig, lb::Real, ub
             push!(vm_pair_lb, (p,n,lb))
             push!(vm_pair_ub, (p,n,ub))
         end
-    elseif model==DELTA 
+    elseif model==DELTA
         nphases = length(connections)
         if nphases==2
             push!(vm_pair_lb, (connections[1],connections[2],lb*delta_multiplier))
@@ -1153,24 +1188,24 @@ end
 
 """
     add_unit_vbounds!(
-        data_eng::Dict{String,Any}; 
-        lb_pu::Real=0.9, 
-        ub_pu::Real=1.1, 
-        delta_multiplier::Real=sqrt(3), 
+        data_eng::Dict{String,Any};
+        lb_pu::Real=0.9,
+        ub_pu::Real=1.1,
+        delta_multiplier::Real=sqrt(3),
         unit_comp_types::Vector{<:AbstractString}=["load", "generator", "storage", "pv"],
     )::Dict{String,Any}
 
-Adds voltage bounds to the bus terminals to which units are connected. 
+Adds voltage bounds to the bus terminals to which units are connected.
 'Units' in this context are all oneport component types specified by the argument 'unit_comp_types'.
-Bounds are specified in per unit, and automatically converted to SI units by calculating the voltage base. 
+Bounds are specified in per unit, and automatically converted to SI units by calculating the voltage base.
 If you change data_eng["settings"]["vbases_default"], the data model transformation will however produce inconsistent bounds in per unit.
 The delta multiplier controls the scaling of bounds of delta-connected units.
 """
 function add_unit_vbounds!(
-    data_eng::Dict{String,Any}; 
-    lb_pu::Real=0.9, 
-    ub_pu::Real=1.1, 
-    delta_multiplier::Real=sqrt(3), 
+    data_eng::Dict{String,Any};
+    lb_pu::Real=0.9,
+    ub_pu::Real=1.1,
+    delta_multiplier::Real=sqrt(3),
     unit_comp_types::Vector{<:AbstractString}=["load", "generator", "storage", "pv"],
     )::Dict{String,Any}
 
@@ -1194,22 +1229,22 @@ end
 
 """
     add_bus_pn_pp_ng_vbounds!(data_eng::Dict{String,Any}, phase_terminals::Vector, neutral_terminal;
-        pn_lb_pu::Union{Real,Missing}=missing, 
-        pn_ub_pu::Union{Real,Missing}=missing, 
-        pp_lb_pu::Union{Real,Missing}=missing, 
-        pp_ub_pu::Union{Real,Missing}=missing, 
-        ng_ub_pu::Union{Real,Missing}=missing,  
+        pn_lb_pu::Union{Real,Missing}=missing,
+        pn_ub_pu::Union{Real,Missing}=missing,
+        pp_lb_pu::Union{Real,Missing}=missing,
+        pp_ub_pu::Union{Real,Missing}=missing,
+        ng_ub_pu::Union{Real,Missing}=missing,
     )::Dict{String,Any}
 
 Adds symmetric phase-to-neutral and phase-to-phase voltage bounds when possible
 for each bus through the three-phase bus syntax.
 """
 function add_bus_pn_pp_ng_vbounds!(data_eng::Dict{String,Any}, phase_terminals::Vector, neutral_terminal;
-    pn_lb_pu::Union{Real,Missing}=missing, 
-    pn_ub_pu::Union{Real,Missing}=missing, 
-    pp_lb_pu::Union{Real,Missing}=missing, 
-    pp_ub_pu::Union{Real,Missing}=missing, 
-    ng_ub_pu::Union{Real,Missing}=missing,  
+    pn_lb_pu::Union{Real,Missing}=missing,
+    pn_ub_pu::Union{Real,Missing}=missing,
+    pp_lb_pu::Union{Real,Missing}=missing,
+    pp_ub_pu::Union{Real,Missing}=missing,
+    ng_ub_pu::Union{Real,Missing}=missing,
     )::Dict{String,Any}
 
     bus_vbase, _ = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
@@ -1251,16 +1286,16 @@ end
 
 """
     calc_start_voltage(
-        data_math::Dict{String,Any}; 
-        max_iter=Inf, 
+        data_math::Dict{String,Any};
+        max_iter=Inf,
         epsilon::Number=1E-3
     )::Dict{Tuple{Int,Any},Union{Complex,Missing}}
 
 Calculate no-load starting values for all bus-terminals pairs.
 """
 function calc_start_voltage(
-    data_math::Dict{String,Any}; 
-    max_iter=Inf, 
+    data_math::Dict{String,Any};
+    max_iter=Inf,
     epsilon::Number=1E-3
     )::Dict{Tuple{Int,Any},Union{Complex,Missing}}
 
@@ -1428,35 +1463,35 @@ end
 
 """
     add_start_voltage!(
-        data_math::Dict{String,Any}; 
-        coordinates=:rectangular, 
-        uniform_v_start=missing, 
-        vr_default=0.0, 
-        vi_default=0.0, 
-        vm_default=0.0, 
-        va_default=0.0, 
+        data_math::Dict{String,Any};
+        coordinates=:rectangular,
+        uniform_v_start=missing,
+        vr_default=0.0,
+        vi_default=0.0,
+        vm_default=0.0,
+        va_default=0.0,
         epsilon::Number=1E-3,
     )::Dict{String,Any}
 
 Adds start values for the voltage to the buses.
 For a multinetwork data model, you can calculate the start voltages for a representative network through 'calc_start_voltage',
-and pass the result as 'uniform_v_start' to use the same values for all networks and avoid recalculating it for each network. 
+and pass the result as 'uniform_v_start' to use the same values for all networks and avoid recalculating it for each network.
 The argument 'epsilon' controls the offset added to ungrounded terminals which would otherwise be set to zero.
 """
 function add_start_voltage!(
-    data_math::Dict{String,Any}; 
-    coordinates=:rectangular, 
-    uniform_v_start=missing, 
-    vr_default=0.0, 
-    vi_default=0.0, 
-    vm_default=0.0, 
-    va_default=0.0, 
+    data_math::Dict{String,Any};
+    coordinates=:rectangular,
+    uniform_v_start=missing,
+    vr_default=0.0,
+    vi_default=0.0,
+    vm_default=0.0,
+    va_default=0.0,
     epsilon::Number=1E-3,
     )::Dict{String,Any}
 
     @assert data_math["data_model"]==MATHEMATICAL
     @assert coordinates in [:polar, :rectangular] "Legal values for the 'coordinates' argument are [:polar,:rectangular], not :$coordinates."
-    
+
     is_mn = haskey(data_math, "multinetwork")
 
     for (nw,dm) in (is_mn ? data_math["nw"] : [("", data_math)])
