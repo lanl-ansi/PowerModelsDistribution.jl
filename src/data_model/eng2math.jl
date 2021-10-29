@@ -603,22 +603,35 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
         # add capcontrol items to math model
         if haskey(eng_obj,"controls")
             math_obj["controls"] = deepcopy(eng_obj["controls"])
-            elem_id = [id for (id, br_obj) in data_math["branch"] if br_obj["source_id"] == eng_obj["controls"]["element"]]
-            if !isempty(elem_id)
-                math_obj["controls"]["element"] = Dict{String,Any}(
-                                                    "type" => "branch",
-                                                    "index" => data_math["branch"][elem_id[1]]["index"],
-                                                    "f_bus" => data_math["branch"][elem_id[1]]["f_bus"],
-                                                    "t_bus" => data_math["branch"][elem_id[1]]["t_bus"]
-                                                    )
+            dss_obj_type = split(math_obj["controls"]["element"], "."; limit=2)[1]
+            if dss_obj_type == "line"
+                elem_id = filter(x->x.second["source_id"] == math_obj["controls"]["element"], data_math["branch"])
+                if !isempty(elem_id)
+                    elem_id = first(elem_id).first
+
+                    math_obj["controls"]["element"] = Dict{String,Any}(
+                        "type" => "branch",
+                        "index" => data_math["branch"][elem_id]["index"],
+                        "f_bus" => data_math["branch"][elem_id]["f_bus"],
+                        "t_bus" => data_math["branch"][elem_id]["t_bus"]
+                    )
+                else
+                    elem_id = first(filter(x->x.second["source_id"] == replace(math_obj["controls"]["element"], "line."=>"switch."), data_math["switch"])).first
+                    math_obj["controls"]["element"] = Dict{String,Any}(
+                        "type" => "switch",
+                        "index" => data_math["switch"][elem_id]["index"],
+                        "f_bus" => data_math["switch"][elem_id]["f_bus"],
+                        "t_bus" => data_math["switch"][elem_id]["t_bus"]
+                    )
+                end
             else
-                elem_id = [id for (id, br_obj) in data_math["transformer"] if br_obj["source_id"] == eng_obj["controls"]["element"]]
+                elem_id = first(filter(x->x.second["source_id"] == math_obj["controls"]["element"], data_math["transformer"])).first
                 math_obj["controls"]["element"] = Dict{String,Any}(
-                                                    "type" => "transformer",
-                                                    "index" => data_math["transformer"][elem_id[1]]["index"],
-                                                    "f_bus" => data_math["transformer"][elem_id[1]]["f_bus"],
-                                                    "t_bus" => data_math["transformer"][elem_id[1]]["t_bus"]
-                                                    )
+                    "type" => "transformer",
+                    "index" => data_math["transformer"][elem_id]["index"],
+                    "f_bus" => data_math["transformer"][elem_id]["f_bus"],
+                    "t_bus" => data_math["transformer"][elem_id]["t_bus"]
+                )
             end
         end
 
