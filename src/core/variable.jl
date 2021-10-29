@@ -505,7 +505,7 @@ function variable_mc_oltc_transformer_tap(pm::AbstractUnbalancedPowerModel; nw::
     tap = var(pm, nw)[:tap] = Dict(i => JuMP.@variable(pm.model,
         [p in 1:length(ref(pm,nw,:transformer,i,"f_connections"))],
         base_name="$(nw)_tm_$(i)",
-        start=comp_start_value(ref(pm, nw, :transformer, i), "tm_set", p, 1.0),
+        start=comp_start_value(ref(pm, nw, :transformer, i), "tm_set", ref(pm, nw, :transformer, i, "f_connections")[p], 1.0),
     ) for i in p_oltc_ids)
 
     if bounded
