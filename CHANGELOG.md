@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in parsing of dss generator objects, which didn't take into account `pf`
 - Fixed `oltc` in `LPUBFDiagPowerModel`, which was previously a `@NLconstraint` to now use `@constraint`
 - Fixed bug in `constraint_mc_power_balance_capc::AbstractUnbalancedACPModel`, where `@smart_constraint` was failing due to missing variable
 - Fixed bug in `start` values for tap variables

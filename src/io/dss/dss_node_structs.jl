@@ -28,8 +28,8 @@ function _create_load(name::String=""; kwargs...)::Dict{String,Any}
         kw = kva * abs(pf)
         kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
     elseif haskey(kwargs, :pf) && kwargs[:pf] != 0.88
-            kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
-            kva = abs(kw) + kvar^2
+        kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
+        kva = abs(kw) + kvar^2
     end
 
     Dict{String,Any}(
@@ -94,6 +94,27 @@ function _create_generator(name::String=""; kwargs...)::Dict{String,Any}
     kw = get(kwargs, :kw, 100.0)
     kva = get(kwargs, :kva, kw * 1.2)
     kvar = get(kwargs, :kvar, 60.0)
+    pf = get(kwargs, :pf, 0.80)
+
+    if haskey(kwargs, :kw) && haskey(kwargs, :pf)
+        kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
+        kva = abs(kw) + kvar^2
+    elseif haskey(kwargs, :kw) && haskey(kwargs, :kvar)
+        kva = abs(kw) + kvar^2
+        if kva > 0.0
+            pf = kw / kva
+            if kvar != 0.0
+                pf *= sign(kw * kvar)
+            end
+        end
+    elseif haskey(kwargs, :kva) && haskey(kwargs, :pf)
+        kw = kva * abs(pf)
+        kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
+    elseif haskey(kwargs, :pf) && kwargs[:pf] != 0.80
+        kvar = sign(pf) * kw * sqrt(1.0 / pf^2 - 1.0)
+        kva = abs(kw) + kvar^2
+    end
+
     kvarmax = get(kwargs, :maxkvar, kvar * 2.0)
     kvarmin = get(kwargs, :minkvar, -kvarmax)
 
@@ -103,7 +124,7 @@ function _create_generator(name::String=""; kwargs...)::Dict{String,Any}
         "bus1" => bus1,
         "kv" => get(kwargs, :kv, 12.47),
         "kw" => kw,
-        "pf" => get(kwargs, :pf, 0.80),
+        "pf" => pf,
         "model" => get(kwargs, :model, 1),
         "yearly" => get(kwargs, :yearly, get(kwargs, :daily, "")),
         "daily" => get(kwargs, :daily, ""),
@@ -275,4 +296,3 @@ function _create_storage(name::String=""; kwargs...)
         "like" => get(kwargs, :like, "")
     )
 end
-
