@@ -2,6 +2,7 @@
 
 ## staged
 
+- Refactored `_calc_branch_power_max` and `_calc_branch_current_max` to be more robust
 - Added `solve_mc_opf_oltc_capc` problem, which includes both `solve_mc_opf_oltc` and `solve_mc_opf_capc` features
 - Added kwarg to `apply_voltage_bounds!` to exclude some buses
 - Added `adjust_line_limits!` transformation function

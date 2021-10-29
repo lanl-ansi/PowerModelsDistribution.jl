@@ -565,12 +565,13 @@ function _calc_branch_current_max(branch::Dict{String,<:Any}, bus::Dict{String,<
 
     if haskey(branch, "c_rating_a")
         push!(bounds, branch["c_rating_a"])
-    end
-    if haskey(branch, "rate_a") && haskey(bus, "vmin")
-        push!(bounds, branch["rate_a"]./bus["vmin"][[findfirst(isequal(c), bus["terminals"]) for c in branch["f_connections"]]])
+    elseif haskey(branch, "rate_a")
+        connections = [findfirst(isequal(c), bus["terminals"]) for c in (branch["f_bus"] == bus["index"] ? branch["f_connections"] : branch["t_connections"])]
+        push!(bounds, branch["rate_a"]./bus["vmin"][connections])
     end
 
-    return min.(fill(Inf, length(branch["f_connections"])), bounds...)
+    N = length(branch["f_connections"])
+    return min.(fill(Inf, N), bounds...)
 end
 
 
@@ -586,13 +587,13 @@ function _calc_branch_current_max_frto(branch::Dict{String,<:Any}, bus_fr::Dict{
     if haskey(branch, "c_rating_a")
         push!(bounds_fr, branch["c_rating_a"])
         push!(bounds_to, branch["c_rating_a"])
-    end
-    if haskey(branch, "rate_a")
+    elseif haskey(branch, "rate_a")
         push!(bounds_fr, branch["rate_a"]./bus_fr["vmin"][[findfirst(isequal(c), bus_fr["terminals"]) for c in branch["f_connections"]]])
         push!(bounds_to, branch["rate_a"]./bus_to["vmin"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]])
     end
 
-    return min.(fill(Inf, length(branch["f_connections"])), bounds_fr...), min.(fill(Inf, length(branch["t_connections"])), bounds_to...)
+    N = length(branch["f_connections"])
+    return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
 end
 
 
@@ -604,18 +605,14 @@ upper bound on the voltage magnitude of the connected buses.
 function _calc_branch_power_max(branch::Dict{String,<:Any}, bus::Dict{String,<:Any})::Vector{Float64}
     bounds = []
 
-    terminals = bus["terminals"]
-    connections = bus["bus_i"] == branch["f_bus"] ? branch["f_connections"] : branch["t_connections"]
-    connections = [findfirst(isequal(cnd), terminals) for cnd in connections]
-
-    if haskey(bus, "vmax") && haskey(branch, "c_rating_a")
-        push!(bounds, branch["c_rating_a"] .* bus["vmax"][connections])
-    end
     if haskey(branch, "rate_a")
         push!(bounds, branch["rate_a"])
+    elseif haskey(branch, "c_rating_a")
+        connections = [findfirst(isequal(c), bus["terminals"]) for c in (branch["f_bus"] == bus["index"] ? branch["f_connections"] : branch["t_connections"])]
+        push!(bounds, branch["c_rating_a"] .* bus["vmax"][connections])
     end
 
-    N = length(connections)
+    N = length(branch["f_connections"])
     return min.(fill(Inf, N), bounds...)
 end
 
