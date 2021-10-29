@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in `constraint_mc_power_balance_capc::AbstractUnbalancedACPModel`, where `@smart_constraint` was failing due to missing variable
 - Fixed bug in `start` values for tap variables
 - Refactored `_calc_branch_power_max` and `_calc_branch_current_max` to be more robust
 - Added `solve_mc_opf_oltc_capc` problem, which includes both `solve_mc_opf_oltc` and `solve_mc_opf_capc` features
