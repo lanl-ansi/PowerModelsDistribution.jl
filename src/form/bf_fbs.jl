@@ -44,8 +44,8 @@ function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw=nw_id_default, bounded
     variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, kwargs...)
 
     # initial operating point for linearization (using flat-start)
-    vr0 = var(pm, nw)[:vr0] = Dict(i => [cosd(0) cosd(-120) cosd(120)] for i in ids(pm, nw, :bus))
-    vi0 = var(pm, nw)[:vi0] = Dict(i => [sind(0) sind(-120) sind(120)] for i in ids(pm, nw, :bus))
+    vr0 = var(pm, nw)[:vr0] = Dict(i => [cosd(0), cosd(-120), cosd(120)] for i in ids(pm, nw, :bus))
+    vi0 = var(pm, nw)[:vi0] = Dict(i => [sind(0), sind(-120), sind(120)] for i in ids(pm, nw, :bus))
 
     for id in ids(pm, nw, :bus)
         busref = ref(pm, nw, :bus, id)
@@ -53,22 +53,25 @@ function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw=nw_id_default, bounded
         grounded = busref["grounded"]
 
         ncnd = length(terminals)
-        vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
-        vm[.!grounded] .= 1.0
 
-        # TODO how to do this more generally
-        nph = 3
-        va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
-
-        for (idx,t) in enumerate(terminals)
-            vr = vm[idx]*cos(va[idx])
-            vi = vm[idx]*sin(va[idx])
-            JuMP.set_start_value(var(pm, nw, :vr, id)[t], vr)
-            JuMP.set_start_value(var(pm, nw, :vi, id)[t], vi)
-            # update initial operating point with warm-start
-            var(pm, nw, :vr0, id)[t] = vr
-            var(pm, nw, :vi0, id)[t] = vi
+        vm_start = fill(0.0, 3)
+        for t in 1:3
+            if t in terminals
+                vmax = busref["vmax"][findfirst(isequal(t), terminals)]
+                vm_start[t] = min(vmax, 1.0)
+            end
         end
+
+        vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
+        va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
+
+        vr = vm.*cos.(va)
+        vi = vm.*sin.(va)
+
+        JuMP.set_start_value.(var(pm, nw, :vr, id), vr)
+        JuMP.set_start_value.(var(pm, nw, :vi, id), vi)
+        # var(pm, nw, :vr0)[id] .= vr
+        # var(pm, nw, :vi0)[id] .= vi
     end
     # apply bounds if bounded
     if bounded
