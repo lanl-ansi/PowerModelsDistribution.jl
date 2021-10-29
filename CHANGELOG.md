@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added `solve_mc_opf_oltc_capc` problem, which includes both `solve_mc_opf_oltc` and `solve_mc_opf_capc` features
 - Added kwarg to `apply_voltage_bounds!` to exclude some buses
 - Added `adjust_line_limits!` transformation function
 - Added support for parsing `sm_ub` from dss to transformers (comes from `emerghkva`)
