@@ -92,6 +92,7 @@ module PowerModelsDistribution
     include("prob/opf.jl")
     include("prob/opf_oltc.jl")
     include("prob/opf_capc.jl")
+    include("prob/opf_oltc_capc.jl")
     include("prob/pf.jl")
     include("prob/debug.jl")
     include("prob/test.jl")
