@@ -481,13 +481,16 @@ function constraint_mc_power_balance_capc(pm::AbstractUnbalancedACPModel, nw::In
     end
 
     # calculate Gs, Bs
+    cap_state = 1.0
     ncnds = length(terminals)
     Gs = fill(0.0, ncnds, ncnds)
     Bs = convert(Matrix{JuMP.NonlinearExpression}, JuMP.@NLexpression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
     for (val, connections) in bus_shunts
         shunt = ref(pm,nw,:shunt,val)
         for (idx,c) in enumerate(connections)
-            cap_state = haskey(shunt,"controls") ? var(pm, nw, :capacitor_state, val)[c] : 1.0
+            if haskey(shunt, "controls")
+                cap_state = var(pm, nw, :capacitor_state, val)[c]
+            end
             for (jdx,d) in enumerate(connections)
                 Gs[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] += shunt["gs"][idx,jdx]
                 Bs[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] = JuMP.@NLexpression(pm.model, Bs[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] + shunt["bs"][idx,jdx]*cap_state)
@@ -550,7 +553,7 @@ function constraint_mc_power_balance_capc(pm::AbstractUnbalancedACPModel, nw::In
             )
             push!(cstr_p, cp)
 
-            cq = @smart_constraint(pm.model, [q, qg, qs, qsw, qt, qd, vm, cap_state],
+            cq = @smart_constraint(pm.model, [q, qg, qs, qsw, qt, qd, vm, Bs],
                   sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
                 + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
                 + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)

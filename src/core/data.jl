@@ -777,11 +777,9 @@ end
 function _has_nl_expression(x)::Bool
     if isa(x, JuMP.NonlinearExpression)
         return true
-    elseif isa(x, Vector)
-        for i in x
-            if _has_nl_expression(i)
-                return true
-            end
+    elseif isa(x, Array)
+        if any(_has_nl_expression.(x))
+            return true
         end
     elseif isa(x, Dict)
         for i in values(x)
