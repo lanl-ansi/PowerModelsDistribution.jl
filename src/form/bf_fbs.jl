@@ -89,6 +89,13 @@ function variable_mc_capcontrol(pm::FBSUBFPowerModel; nw::Int=nw_id_default, rel
 end
 
 
+"Creates variables for both `active` and `reactive` power flow at each transformer."
+function variable_mc_transformer_power(pm::FBSUBFPowerModel; kwargs...)
+    variable_mc_transformer_power_real(pm; kwargs...)
+    variable_mc_transformer_power_imaginary(pm; kwargs...)
+end
+
+
 @doc raw"""
     constraint_mc_voltage_magnitude_bounds(pm::FBSUBFPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
 
