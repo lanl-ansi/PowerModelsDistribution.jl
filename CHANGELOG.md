@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added functions necessary for `capc` and `oltc` in NFAUPowerModel
 - Fixed bug in `FBSUBFModel` formulation, where transformer variables were being created in their matrix form
 - Fixed bug in parsing of dss generator objects, which didn't take into account `pf`
 - Fixed `oltc` in `LPUBFDiagPowerModel`, which was previously a `@NLconstraint` to now use `@constraint`

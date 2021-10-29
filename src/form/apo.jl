@@ -58,6 +58,11 @@ function variable_mc_bus_voltage(pm::AbstractUnbalancedNFAModel; nw::Int=nw_id_d
 end
 
 
+"nothing to do, these models do not have complex voltage variables"
+function variable_mc_capcontrol(pm::AbstractUnbalancedNFAModel; nw::Int=nw_id_default, kwargs...)
+end
+
+
 "nothing to do"
 function constraint_mc_switch_state_closed(pm::AbstractUnbalancedNFAModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
 end
@@ -121,6 +126,10 @@ function constraint_mc_power_balance(pm::AbstractUnbalancedActivePowerModel, nw:
 end
 
 
+"nothing to do in capc, no complex voltage variables in these models"
+constraint_mc_power_balance_capc(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}}) = constraint_mc_power_balance(pm, nw, i, terminals, grounded, bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_shunts)
+
+
 ######## Lossless Models ########
 
 ""
@@ -164,7 +173,7 @@ transformer active power only constraint pf=-pt
 p_f[fc] == -pt[tc]
 ```
 """
-function constraint_mc_transformer_power(pm::NFAUPowerModel, i::Int; nw::Int=nw_id_default)
+function constraint_mc_transformer_power(pm::NFAUPowerModel, i::Int; nw::Int=nw_id_default, fix_taps::Bool=false)
     transformer = ref(pm, nw, :transformer, i)
 
     pf = var(pm, nw, :pt, (i, transformer["f_bus"], transformer["t_bus"]))
