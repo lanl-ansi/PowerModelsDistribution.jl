@@ -85,6 +85,27 @@ end
 
 
 """
+    adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+
+Multiplies limits (`sm_ub` and/or `cm_ub`) on line objects (`line`, `linecode`, `switch`) by a multiplier `mult`
+"""
+function adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+    for type in ["linecode", "line", "switch"]
+        if haskey(data_eng, type)
+            for (_,obj) in data_eng[type]
+                if haskey(obj, "cm_ub")
+                    obj["cm_ub"] .*= mult
+                end
+                if haskey(obj, "sm_ub")
+                    obj["sm_ub"] .*= mult
+                end
+            end
+        end
+    end
+end
+
+
+"""
     remove_line_limits!(data_eng::Dict{String,<:Any})
 
 Removes fields `cm_ub` and `sm_ub` from lines, switches, and linecodes

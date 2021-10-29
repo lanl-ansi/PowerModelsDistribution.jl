@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added `adjust_line_limits!` transformation function
 - Added support for parsing `sm_ub` from dss to transformers (comes from `emerghkva`)
 - Fixed bug in `capc` problems where switches were not considered as a control element for capacitors
 - Fixed bug in `_create_xfmrcode` where `:bus` was included in iteration
