@@ -50,7 +50,7 @@
     @testset "engineering model transformations" begin
         eng = parse_file("../test/data/opendss/case3_balanced.dss"; transformations=[(apply_voltage_bounds!, "vm_ub"=>Inf)])
 
-        @test all(all(isapprox.(bus["vm_lb"], 0.4 / sqrt(3) * 0.9)) && all(isinf.(bus["vm_ub"])) for (id,bus) in eng["bus"] if id != "sourcebus")
+        @test all(all(isapprox.(bus["vm_lb"][.!any.(bus["grounded"] .== t for t in bus["terminals"])], 0.4 / sqrt(3) * 0.9)) && all(isinf.(bus["vm_ub"])) for (id,bus) in eng["bus"] if id != "sourcebus")
 
         math = transform_data_model(eng)
 

@@ -40,20 +40,20 @@ end
 
 add voltage bounds to all buses based on per-unit upper (`vm_ub`) and lower (`vm_lb`), scaled by the bus's voltage based
 """
-function apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1)
+function apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data_eng, "voltage_source", Dict())) ? String[x.second["bus"] for x in data_eng["voltage_source"]] : String[])
     @assert iseng(data_eng) "incorrect data model type"
 
     (bus_vbases, edge_vbases) = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
-    if haskey(data_eng, "bus")
-        for (id,bus) in data_eng["bus"]
-            vbase = bus_vbases[id]
-            if !ismissing(vm_lb) && !haskey(bus, "vm_lb")
-                bus["vm_lb"] = vbase .* fill(vm_lb, length(bus["terminals"]))
-            end
+    for (id, bus) in filter(x->!(x.first in exclude), get(data_eng, "bus", Dict{String,Any}()))
+        vbase = bus_vbases[id]
+        if !ismissing(vm_lb)
+            data_eng["bus"][id]["vm_lb"] = vbase .* fill(vm_lb, length(bus["terminals"]))
+            data_eng["bus"][id]["vm_lb"][any.(bus["grounded"] .== t for t in bus["terminals"])] .= 0.0
+        end
 
-            if !ismissing(vm_ub) && !haskey(bus, "vm_ub")
-                bus["vm_ub"] = vbase .* fill(vm_ub, length(bus["terminals"]))
-            end
+        if !ismissing(vm_ub)
+            data_eng["bus"][id]["vm_ub"] = vbase .* fill(vm_ub, length(bus["terminals"]))
+            data_eng["bus"][id]["vm_ub"][any.(bus["grounded"] .== t for t in bus["terminals"])] .= Inf
         end
     end
 end
