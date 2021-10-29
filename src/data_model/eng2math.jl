@@ -404,6 +404,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                 "tm_fix" => get(eng_obj, "tm_fix", fill(true, nphases)),
                 "polarity" => get(eng_obj, "polarity", -1),
                 "sm_ub" => get(eng_obj, "sm_ub", Inf),
+                "cm_ub" => get(eng_obj, "cm_ub", Inf),
                 "status" => Int(get(eng_obj, "status", ENABLED)),
                 "index" => length(data_math["transformer"])+1
             )
@@ -466,6 +467,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                     "tm_set"        => eng_obj["tm_set"][w],
                     "tm_fix"        => eng_obj["tm_fix"][w],
                     "sm_ub"         => get(eng_obj, "sm_ub", Inf),
+                    "cm_ub"         => get(eng_obj, "cm_ub", Inf),
                     "status"        => Int(get(eng_obj, "status", ENABLED)),
                     "index"         => length(data_math["transformer"])+1
                 )

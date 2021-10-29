@@ -531,6 +531,7 @@ function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             "tm_step" => Vector{Vector{Float64}}(fill(fill(1/32, nphases), nrw)),
             "vm_nom" => Vector{Float64}(defaults["kvs"]),
             "sm_nom" => Vector{Float64}(defaults["kvas"]),
+            "sm_ub" => defaults["emerghkva"],
             "configuration" => Vector{ConnConfig}(defaults["conns"]),
             "rw" => Vector{Float64}(defaults["%rs"] ./ 100),
             "noloadloss" => defaults["%noloadloss"] / 100,
@@ -647,6 +648,11 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
                     eng_obj["rw"][w] = defaults["%rs"][defaults["wdg$(key_suffix)"]] / 100
                 end
             end
+        end
+
+        # emerghkva
+        if isempty(defaults["xfmrcode"]) || (haskey(dss_obj, "emerghkva") && _is_after_xfmrcode(dss_obj["prop_order"], "emerghkva"))
+            eng_obj["sm_ub"] = defaults["emerghkva"]
         end
 
         # loss model (converted to SI units, referred to secondary)

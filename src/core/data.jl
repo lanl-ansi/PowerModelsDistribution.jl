@@ -349,18 +349,21 @@ The total current rating also implies a current bound through the
 upper bound on the voltage magnitude of the connected buses.
 """
 function _calc_transformer_power_ub_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})::Tuple{Vector{Float64},Vector{Float64}}
-    bounds_fr = Float64[]
-    bounds_to = Float64[]
-    if haskey(trans, "c_rating_a")
-        push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"])
-        push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"])
-    end
-    if haskey(trans, "rate_a")
-        push!(bounds_fr, trans["rate_a"])
-        push!(bounds_to, trans["rate_a"])
-    end
+    bounds_fr = Vector{Float64}[]
+    bounds_to = Vector{Float64}[]
 
     N = length(trans["f_connections"])
+    if haskey(trans, "sm_ub") && trans["sm_ub"] < Inf
+        push!(bounds_fr, fill(trans["sm_ub"], N))
+        push!(bounds_to, fill(trans["sm_ub"], N))
+    elseif haskey(trans, "cm_ub") && trans["cm_ub"] < Inf
+        f_connections = [findfirst(isequal(c), bus_fr["terminals"]) for c in trans["f_connections"]]
+        t_connections = [findfirst(isequal(c), bus_to["terminals"]) for c in trans["t_connections"]]
+
+        push!(bounds_fr, trans["cm_ub"].*bus_fr["vmax"][f_connections])
+        push!(bounds_to, trans["cm_ub"].*bus_to["vmax"][t_connections])
+    end
+
     return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
 end
 
@@ -371,18 +374,21 @@ The total power rating also implies a current bound through the lower bound on
 the voltage magnitude of the connected buses.
 """
 function _calc_transformer_current_max_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})::Tuple{Vector{Float64},Vector{Float64}}
-    bounds_fr = Float64[]
-    bounds_to = Float64[]
-    if haskey(trans, "c_rating_a")
-        push!(bounds_fr, trans["c_rating_a"])
-        push!(bounds_to, trans["c_rating_a"])
-    end
-    if haskey(trans, "rate_a")
-        push!(bounds_fr, trans["rate_a"]./(bus_fr["vmax"]))
-        push!(bounds_to, trans["rate_a"]./(bus_to["vmax"]))
-    end
+    bounds_fr = Vector{Float64}[]
+    bounds_to = Vector{Float64}[]
 
     N = length(trans["f_connections"])
+    if haskey(trans, "cm_ub") && trans["cm_ub"] < Inf
+        push!(bounds_fr, fill(trans["cm_ub"], N))
+        push!(bounds_to, fill(trans["cm_ub"], N))
+    elseif haskey(trans, "sm_ub") && trans["sm_ub"] < Inf
+        f_connections = [findfirst(isequal(c), bus_fr["terminals"]) for c in trans["f_connections"]]
+        t_connections = [findfirst(isequal(c), bus_to["terminals"]) for c in trans["t_connections"]]
+
+        push!(bounds_fr, trans["sm_ub"]./bus_fr["vmax"][f_connections])
+        push!(bounds_to, trans["sm_ub"]./bus_to["vmax"][t_connections])
+    end
+
     return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
 end
 
