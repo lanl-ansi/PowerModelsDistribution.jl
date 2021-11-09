@@ -2,6 +2,7 @@
 
 ## staged
 
+- Updated `eng2math` functions to have consistent usage of `"status"` from eng model
 - Updated `variable_mc_storage_power_mi` to have explicit kwargs
 - Updated `on_off` variable functions to ensure zeros are included in variable bounds
 - Changed `"multiple reference buses found"` warning to `@info`
