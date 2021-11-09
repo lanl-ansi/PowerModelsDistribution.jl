@@ -24,7 +24,7 @@ all have (or will have in the future), loss model parameters that can be omitted
 function make_lossless!(data_eng::Dict{String,<:Any}; exclude::Vector{String}=String[])
     @assert iseng(data_eng) "incorrect data model type"
     for (object_type, parameters) in _loss_model_objects
-        if haskey(data_eng, object_type)
+        if haskey(data_eng, object_type) && !(object_type in exclude)
             for (id, eng_obj) in data_eng[object_type]
                 for parameter in parameters
                     if haskey(eng_obj, parameter)
