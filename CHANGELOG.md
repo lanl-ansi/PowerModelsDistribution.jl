@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed `set_time_elapsed!` multinetwork function to update `"time"` and `"mn_lookup"`
 - Added `"status"` to transformer decomposition functions
 - Updated `eng2math` functions to have consistent usage of `"status"` from eng model
 - Updated `variable_mc_storage_power_mi` to have explicit kwargs

@@ -221,11 +221,18 @@ function set_time_elapsed!(data::Dict{String,<:Any}, time_elapsed::Union{Real,Ve
         @assert length(time_elapsed) == length(nw_data) "provided time_elapsed length doesn't match number of multinetwork frames"
     end
 
-    for (n,nw) in nw_data
+    for (i,n) in enumerate(sort(parse.(Int, collect(keys(nw_data)))))
+        old_time_elapsed = get(nw_data["$n"], "time_elapsed", 1.0)
         if isa(time_elapsed, Vector)
-            nw["time_elapsed"] = popfirst!(time_elapsed)
+            nw_data["$n"]["time_elapsed"] = time_elapsed[i]
+            nw_data["$n"]["time"] = sum(time_elapsed[1:i])-time_elapsed[1] # start time of frame
         else
-            nw["time_elapsed"] = time_elapsed
+            nw_data["$n"]["time_elapsed"] = time_elapsed
+            nw_data["$n"]["time"] = time_elapsed*(i-1)
+        end
+
+        if ismultinetwork(data)
+            data["mn_lookup"]["$n"] = nw_data["$n"]["time"]
         end
     end
 end
