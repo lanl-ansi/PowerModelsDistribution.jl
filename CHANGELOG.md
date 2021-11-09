@@ -2,6 +2,7 @@
 
 ## staged
 
+- Removed `sm_ub_b`, `cm_ub_b`, `sm_ub_c`, `cm_ub_c` from kron reduction (fields no longer exist)
 - Updated `make_lossless!` to make the model truly lossless, by including all line parameters
 - Added `adjust_transformer_limits!` to multiple transformer variable bounds
 - Added transformations `adjust_small_line_impedances!`, `adjust_small_line_admittances!`, `adjust_small_line_lengths!`, to help prune bad eng-model data

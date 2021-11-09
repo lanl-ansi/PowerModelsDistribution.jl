@@ -245,7 +245,7 @@ function apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Ve
             _apply_linecode!(eng_obj, data_eng)
 
             filter = _kron_reduce_branch!(eng_obj, ["rs", "xs"], ["g_fr", "b_fr", "g_to", "b_to"], eng_obj["f_connections"], kr_neutral)
-            _apply_filter!(eng_obj, ["vad_lb", "vad_ub", "cm_ub", "cm_ub_b", "cm_ub_c", "sm_ub", "sm_ub_b", "sm_ub_c", "f_connections", "t_connections"], filter)
+            _apply_filter!(eng_obj, ["vad_lb", "vad_ub", "cm_ub", "sm_ub", "f_connections", "t_connections"], filter)
         end
     end
 
@@ -274,7 +274,7 @@ function apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Ve
             _apply_linecode!(eng_obj, data_eng)
 
             filter = _kron_reduce_branch!(eng_obj, Vector{String}([k for k in ["rs", "xs"] if haskey(eng_obj, k)]), String[], eng_obj["f_connections"], kr_neutral)
-            _apply_filter!(eng_obj, ["vad_lb", "vad_ub", "cm_ub", "cm_ub_b", "cm_ub_c", "sm_ub", "sm_ub_b", "sm_ub_c", "f_connections", "t_connections"], filter)
+            _apply_filter!(eng_obj, ["vad_lb", "vad_ub", "cm_ub", "sm_ub", "f_connections", "t_connections"], filter)
         end
     end
 
