@@ -7,6 +7,7 @@ module PowerModelsDistribution
     import MathOptInterface
 
     import InfrastructureModels
+    import PolyhedralRelaxations
 
     import Logging
     import LoggingExtras
