@@ -2,6 +2,7 @@
 
 ## staged
 
+- Changed `"multiple reference buses found"` warning to `@info`
 - Added LP version of `constraint_storage_complementarity_nl`
 - Added PolyhedralRelaxations.jl as a dependency for relaxing quadratic and bivariate constraints
 - Fixed voltage warm start in `FBSUBFModel` form
