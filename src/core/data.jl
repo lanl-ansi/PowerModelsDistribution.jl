@@ -1266,66 +1266,107 @@ active generator and there is a single type 3 bus (i.e., slack bus) with an
 active connected generator. Assumes that the network is a single connected component
 """
 function _correct_bus_types!(pm_data::Dict{String,<:Any})
-    bus_gens = Dict{String,Vector{String}}(i => String[] for (i,bus) in pm_data["bus"])
+    islands = identify_islands(pm_data)
 
-    for type in ["gen", "storage"]
-        if haskey(pm_data, type)
-            for (i,gen) in pm_data[type]
-                if gen[pmd_math_component_status[type]] != pmd_math_component_status_inactive[type]
-                    push!(bus_gens[string(gen["$(type)_bus"])], i)
+    for island in islands
+        if !all(bus[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] for (_,bus) in pm_data["bus"] if bus["bus_i"] in island)
+            continue
+        end
+        bus_gens = Dict{String,Vector{String}}(i => String[] for (i,bus) in pm_data["bus"] if bus["bus_i"] in island)
+
+        for type in ["gen", "storage"]
+            if haskey(pm_data, type)
+                for (i,gen) in pm_data[type]
+                    if gen[pmd_math_component_status[type]] != pmd_math_component_status_inactive[type] && gen["$(type)_bus"] in island
+                        push!(bus_gens[string(gen["$(type)_bus"])], i)
+                    end
+                end
+            end
+        end
+
+        slack_found = false
+        for (i, bus) in filter(x->x.second["bus_i"] in island, pm_data["bus"])
+            if bus["bus_type"] == 1
+                if !isempty(bus_gens[i]) # PQ
+                    @warn "active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 2"
+                    bus["bus_type"] = 2
+                end
+            elseif bus["bus_type"] == 2 # PV
+                if isempty(bus_gens[i])
+                    @warn "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
+                    bus["bus_type"] = 1
+                end
+            elseif bus["bus_type"] == 3 # Slack
+                if !isempty(bus_gens[i])
+                    slack_found = true
+                else
+                    @warn "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
+                    bus["bus_type"] = 1
+                end
+            elseif bus["bus_type"] == 4 # inactive bus
+                # do nothing
+            else  # unknown bus type
+                new_bus_type = 1
+                if length(bus_gens[i]) != 0
+                    new_bus_type = 2
+                end
+                @warn "bus $(bus["bus_i"]) has an unrecongized bus_type $(bus["bus_type"]), updating to bus_type $(new_bus_type)"
+                bus["bus_type"] = new_bus_type
+            end
+        end
+
+        if !slack_found
+            der = _biggest_der(pm_data; island=island)
+            if !isempty(der)
+                ref_bus = pm_data["bus"]["$(der["bus"])"]
+                ref_bus["bus_type"] = 3
+                @info "no reference bus found, setting bus $(der["bus"]) as reference based on $(der["type"]) $(der["id"])"
+            else
+                @info "no generators found in the given network data, disabling island"
+                for bus in island
+                    pm_data["bus"]["$bus"]["bus_type"] = 4
                 end
             end
         end
     end
+end
 
-    slack_found = false
-    for (i, bus) in pm_data["bus"]
-        if bus["bus_type"] == 1
-            if !isempty(bus_gens[i]) # PQ
-                @warn "active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 2"
-                bus["bus_type"] = 2
-            end
-        elseif bus["bus_type"] == 2 # PV
-            if isempty(bus_gens[i])
-                @warn "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
-                bus["bus_type"] = 1
-            end
-        elseif bus["bus_type"] == 3 # Slack
-            if !isempty(bus_gens[i])
-                slack_found = true
-            else
-                @warn "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
-                bus["bus_type"] = 1
-            end
-        elseif bus["bus_type"] == 4 # inactive bus
-            # do nothing
-        else  # unknown bus type
-            new_bus_type = 1
-            if length(bus_gens[i]) != 0
-                new_bus_type = 2
-            end
-            @warn "bus $(bus["bus_i"]) has an unrecongized bus_type $(bus["bus_type"]), updating to bus_type $(new_bus_type)"
-            bus["bus_type"] = new_bus_type
+
+"finds the largest active generation asset (gen, storage) in an island"
+function _biggest_der(pm_data::Dict{String,<:Any}; island::Set{Int}=Set{Int}([bus["bus_i"] for (_,bus) in get(pm_data, "bus", Dict())]))::Dict{String,Any}
+    if length(filter(x->x.second["gen_bus"] in island && x.second["gen_status"] == 1, get(pm_data, "gen", Dict()))) + length(filter(x->x.second["storage_bus"] in island && x.second["status"] == 1, get(pm_data, "storage", Dict()))) == 0
+        @warn "there are no active DERs in the island $island"
+    end
+
+    biggest_der = Dict{String,Any}()
+    biggest_value = -Inf
+
+    for (id,gen) in filter(x->x.second["gen_bus"] in island && x.second["gen_status"] == 1, get(pm_data, "gen", Dict()))
+        pmax = maximum(get(gen, "pmax", fill(Inf, length(gen["connections"]))))
+        if pmax > biggest_value
+            biggest_der["type"] = "gen"
+            biggest_der["id"] = id
+            biggest_der["bus"] = gen["gen_bus"]
+            biggest_value = pmax
         end
     end
 
-    if !slack_found
-        gen = _biggest_generator(pm_data["gen"])
-        if length(gen) > 0
-            gen_bus = gen["gen_bus"]
-            ref_bus = pm_data["bus"]["$(gen_bus)"]
-            ref_bus["bus_type"] = 3
-            @warn "no reference bus found, setting bus $(gen_bus) as reference based on generator $(gen["index"])"
-        else
-            error("no generators found in the given network data, correct_bus_types! requires at least one generator at the reference bus")
+    for (id,strg) in filter(x->x.second["storage_bus"] in island && x.second["status"] == 1, get(pm_data, "storage", Dict()))
+        pmax = maximum(get(strg, "thermal_rating", fill(Inf, length(strg["connections"]))))
+        if pmax > biggest_value
+            biggest_der["type"] = "gen"
+            biggest_der["id"] = id
+            biggest_der["bus"] = strg["storage_bus"]
+            biggest_value = pmax
         end
     end
 
+    return biggest_der
 end
 
 
 "find the largest active generator in a collection of generators"
-function _biggest_generator(gens::Dict)::Dict
+function _biggest_generator(gens::Dict{String,<:Any})::Dict{String,Any}
     if length(gens) == 0
         error("generator list passed to _biggest_generator was empty.  please report this bug.")
     end
