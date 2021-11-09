@@ -21,14 +21,14 @@ Remove parameters from objects with loss models to make them lossless. This incl
 lines, switches, xfmrcodes, transformers, voltage sources, generators, solar, and storage, which
 all have (or will have in the future), loss model parameters that can be omitted.
 """
-function make_lossless!(data_eng::Dict{String,<:Any})
+function make_lossless!(data_eng::Dict{String,<:Any}; exclude::Vector{String}=String[])
     @assert iseng(data_eng) "incorrect data model type"
     for (object_type, parameters) in _loss_model_objects
         if haskey(data_eng, object_type)
             for (id, eng_obj) in data_eng[object_type]
                 for parameter in parameters
                     if haskey(eng_obj, parameter)
-                        eng_obj[parameter] .*= 0
+                        eng_obj[parameter] = 0.0 .* eng_obj[parameter]
                     end
                 end
             end

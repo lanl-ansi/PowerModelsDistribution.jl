@@ -100,7 +100,6 @@
 
     @testset "UBF realaxations opf" begin
         data = deepcopy(case3_unbalanced)
-        make_lossless!(data)
         remove_line_limits!(data)
         apply_voltage_bounds!(data; vm_lb=0.9, vm_ub=1.1)
 
