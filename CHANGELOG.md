@@ -2,6 +2,7 @@
 
 ## staged
 
+- Updated `constraint_mc_transformer_power_yy(pm::LPUBFDiagModel)` to be truly LP
 - Updated `ACRUPowerModel` voltage start value computation
 - Fixed bug in `dimensionalize_math`, where `sc_on`, and `sd_on` were included under storage (non-dimensional values should not be scaled)
 - Removed `sm_ub_b`, `cm_ub_b`, `sm_ub_c`, `cm_ub_c` from kron reduction (fields no longer exist)

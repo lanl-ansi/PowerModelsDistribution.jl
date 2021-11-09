@@ -56,14 +56,18 @@ function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_i
     w_fr = var(pm, nw, :w)[f_bus]
     w_to = var(pm, nw, :w)[t_bus]
 
-    tmsqr = [tm_fixed[i] ? tm[i]^2 : JuMP.@variable(pm.model, base_name="$(nw)_tmsqr_$(trans_id)_$(f_connections[i])", start=JuMP.start_value(tm[i])^2, lower_bound=JuMP.lower_bound(tm[i])^2, upper_bound=JuMP.upper_bound(tm[i])^2) for i in 1:length(tm)]
+    tmsqr = [tm_fixed[i] ? tm[i]^2 : JuMP.@variable(pm.model, base_name="$(nw)_tmsqr_$(trans_id)_$(f_connections[i])", start=JuMP.start_value(tm[i])^2, lower_bound=JuMP.has_lower_bound(tm[i]) ? JuMP.lower_bound(tm[i])^2 : 0.0, upper_bound=JuMP.has_upper_bound(tm[i]) ? JuMP.upper_bound(tm[i])^2 : 10.0^2) for i in 1:length(tm)]
 
     for (idx, (fc, tc)) in enumerate(zip(f_connections, t_connections))
         if tm_fixed[idx]
             JuMP.@constraint(pm.model, w_fr[fc] == (pol*tm_scale*tm[idx])^2*w_to[tc])
         else
-            JuMP.@constraint(pm.model, tmsqr[idx] == tm[idx]^2)
-            JuMP.@constraint(pm.model, w_fr[fc] == (pol*tm_scale)^2*tmsqr[idx]*w_to[tc])
+            PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, tm[idx], tmsqr[idx], [JuMP.has_lower_bound(tm[idx]) ? JuMP.lower_bound(tm[idx]) : 0.0, JuMP.has_upper_bound(tm[idx]) ? JuMP.upper_bound(tm[idx]) : 10.0], false)
+
+            tmsqr_w_to = JuMP.@variable(pm.model, base_name="$(nw)_tmsqr_w_to_$(trans_id)_$(t_bus)_$(tc)")
+            PolyhedralRelaxations.construct_bilinear_relaxation!(pm.model, tmsqr[idx], w_to[tc], tmsqr_w_to, [JuMP.lower_bound(tmsqr[idx]), JuMP.upper_bound(tmsqr[idx])], [JuMP.has_lower_bound(w_to[tc]) ? JuMP.lower_bound(w_to[tc]) : 0.0^2, JuMP.has_upper_bound(w_to[tc]) ? JuMP.upper_bound(w_to[tc]) : 10.0^2])
+
+            JuMP.@constraint(pm.model, w_fr[fc] == (pol*tm_scale)^2*tmsqr_w_to)
 
             # with regcontrol
             if haskey(transformer,"controls")
