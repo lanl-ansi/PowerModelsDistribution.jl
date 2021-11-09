@@ -181,6 +181,25 @@ end
 
 
 """
+    adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+
+Multiplies limits (`sm_ub` and/or `cm_ub`) on transformer objects by a multiplier `mult`
+"""
+function adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+    if haskey(data_eng, "transformer")
+        for (_,obj) in data_eng["transformer"]
+            if haskey(obj, "cm_ub")
+                obj["cm_ub"] *= mult
+            end
+            if haskey(obj, "sm_ub")
+                obj["sm_ub"] *= mult
+            end
+        end
+    end
+end
+
+
+"""
     remove_transformer_limits!(data_eng::Dict{String,<:Any})
 
 Removes field `sm_ub` from transformers, xfmrcodes
