@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed boundless `LPUBFDiagModel` `constraint_mc_transformer_power_yy` with controls
 - Fixed `ACPUPowerModel` `vm`,`va` variable starts
 - Updated `FOTPU`, `FOTRU` and `FBS` models for consistency with other formulations
 - Fixed bug in `make_lossless!`
