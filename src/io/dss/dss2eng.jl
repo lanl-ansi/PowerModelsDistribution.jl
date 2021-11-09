@@ -468,7 +468,7 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             eng_obj["linecode"] = dss_obj["linecode"]
         end
 
-        if haskey(dss_obj, "emergamps") && _is_after_linecode(dss_obj["prop_order"], "emergamps")
+        if (haskey(dss_obj, "emergamps") && _is_after_linecode(dss_obj["prop_order"], "emergamps")) || !haskey(dss_obj, "linecode")
             eng_obj["cm_ub"] = fill(defaults["emergamps"], ncond)
         end
 
