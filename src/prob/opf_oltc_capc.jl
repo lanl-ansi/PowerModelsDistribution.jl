@@ -23,6 +23,7 @@ function build_mc_opf_oltc_capc(pm::AbstractUnbalancedPowerModel)
     variable_mc_oltc_transformer_tap(pm)
 
     variable_mc_generator_power(pm)
+    variable_mc_storage_power(pm)
     variable_mc_load_power(pm)
 
     variable_mc_capcontrol(pm; relax=true)
@@ -47,6 +48,13 @@ function build_mc_opf_oltc_capc(pm::AbstractUnbalancedPowerModel)
         constraint_mc_power_balance_capc(pm, i)
     end
 
+    for i in ids(pm, :storage)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_nl(pm, i)
+        constraint_mc_storage_losses(pm, i)
+        constraint_mc_storage_thermal_limit(pm, i)
+    end
+
     for i in ids(pm, :branch)
         constraint_mc_ohms_yt_from(pm, i)
         constraint_mc_ohms_yt_to(pm, i)
@@ -55,6 +63,9 @@ function build_mc_opf_oltc_capc(pm::AbstractUnbalancedPowerModel)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
@@ -84,6 +95,7 @@ function build_mc_opf_oltc_capc(pm::AbstractUBFModels)
     variable_mc_oltc_transformer_tap(pm)
 
     variable_mc_generator_power(pm)
+    variable_mc_storage_power(pm)
     variable_mc_load_power(pm)
 
     variable_mc_capcontrol(pm; relax=true)
@@ -109,6 +121,13 @@ function build_mc_opf_oltc_capc(pm::AbstractUBFModels)
         constraint_mc_power_balance_capc(pm, i)
     end
 
+    for i in ids(pm, :storage)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_nl(pm, i)
+        constraint_mc_storage_losses(pm, i)
+        constraint_mc_storage_thermal_limit(pm, i)
+    end
+
     for i in ids(pm, :branch)
         constraint_mc_power_losses(pm, i)
         constraint_mc_model_voltage_magnitude_difference(pm, i)
@@ -117,6 +136,9 @@ function build_mc_opf_oltc_capc(pm::AbstractUBFModels)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
