@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added PolyhedralRelaxations.jl as a dependency for relaxing quadratic and bivariate constraints
 - Fixed voltage warm start in `FBSUBFModel` form
 - Added functions necessary for `capc` and `oltc` in NFAUPowerModel
 - Fixed bug in `FBSUBFModel` formulation, where transformer variables were being created in their matrix form
