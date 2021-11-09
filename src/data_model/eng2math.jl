@@ -775,16 +775,16 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{St
         math_obj["discharge_rating"] = eng_obj["discharge_ub"]
         math_obj["charge_efficiency"] = eng_obj["charge_efficiency"] / 100.0
         math_obj["discharge_efficiency"] = eng_obj["discharge_efficiency"] / 100.0
-        math_obj["thermal_rating"] = eng_obj["cm_ub"]
+        math_obj["thermal_rating"] = get(eng_obj, "sm_ub", fill(Inf, length(eng_obj["connections"])))
         math_obj["qmin"] = eng_obj["qs_lb"]
-        math_obj["qmax"] =  eng_obj["qs_ub"]
+        math_obj["qmax"] = eng_obj["qs_ub"]
         math_obj["r"] = eng_obj["rs"]
         math_obj["x"] = eng_obj["xs"]
         math_obj["p_loss"] = eng_obj["pex"]
         math_obj["q_loss"] = eng_obj["qex"]
 
-        math_obj["ps"] = get(eng_obj, "ps", zeros(size(eng_obj["cm_ub"])))
-        math_obj["qs"] = get(eng_obj, "qs", zeros(size(eng_obj["cm_ub"])))
+        math_obj["ps"] = get(eng_obj, "ps", zeros(size(eng_obj["connections"])))
+        math_obj["qs"] = get(eng_obj, "qs", zeros(size(eng_obj["connections"])))
 
         math_obj["control_mode"] = control_mode = Int(get(eng_obj, "control_mode", FREQUENCYDROOP))
         bus_type = data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"]
