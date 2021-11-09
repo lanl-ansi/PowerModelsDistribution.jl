@@ -2,6 +2,7 @@
 
 ## staged
 
+- Updated `FOTPU`, `FOTRU` and `FBS` models for consistency with other formulations
 - Fixed bug in `make_lossless!`
 - Updated `correct_bus_types!` to be knowledgable about islands in the network data
 - Changed `warning` to `@warn`

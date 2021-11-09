@@ -44,8 +44,8 @@ function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw=nw_id_default, bounded
     variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, kwargs...)
 
     # initial operating point for linearization (using flat-start)
-    vr0 = var(pm, nw)[:vr0] = Dict(i => [cosd(0), cosd(-120), cosd(120)] for i in ids(pm, nw, :bus))
-    vi0 = var(pm, nw)[:vi0] = Dict(i => [sind(0), sind(-120), sind(120)] for i in ids(pm, nw, :bus))
+    var(pm, nw)[:vr0] = Dict{Int,Vector{Float64}}()  #(i => [cosd(0), cosd(-120), cosd(120)] for i in ids(pm, nw, :bus))
+    var(pm, nw)[:vi0] = Dict{Int,Vector{Float64}}()  #(i => [sind(0), sind(-120), sind(120)] for i in ids(pm, nw, :bus))
 
     for id in ids(pm, nw, :bus)
         busref = ref(pm, nw, :bus, id)
@@ -54,24 +54,31 @@ function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw=nw_id_default, bounded
 
         ncnd = length(terminals)
 
-        vm_start = fill(0.0, 3)
+        vm_start = fill(1.0, 3)
         for t in 1:3
             if t in terminals
                 vmax = busref["vmax"][findfirst(isequal(t), terminals)]
-                vm_start[t] = min(vmax, 1.0)
+                vm_start[t] = min(vm_start[t], vmax)
+
+                vmin = busref["vmin"][findfirst(isequal(t), terminals)]
+                vm_start[t] = max(vm_start[t], vmin)
             end
         end
 
+        default_va = [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
+
         vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
-        va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
+        va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : default_va
 
         vr = vm.*cos.(va)
         vi = vm.*sin.(va)
 
         JuMP.set_start_value.(var(pm, nw, :vr, id), vr)
         JuMP.set_start_value.(var(pm, nw, :vi, id), vi)
-        # var(pm, nw, :vr0)[id] .= vr
-        # var(pm, nw, :vi0)[id] .= vi
+
+        # update initial operating point with warm-start (causes infeasbility if not flat start)
+        var(pm, nw, :vr0)[id] = fill(1.0, ncnd) .* cos.(default_va) # vr
+        var(pm, nw, :vi0)[id] = fill(1.0, ncnd) .* sin.(default_va) # vi
     end
     # apply bounds if bounded
     if bounded
@@ -131,7 +138,7 @@ function constraint_mc_voltage_magnitude_bounds(pm::FBSUBFPowerModel, nw::Int, i
             JuMP.@constraint(pm.model, 2*vr[t]*vr_ref + 2*vi[t]*vi_ref - vr_ref^2 - vi_ref^2 >= vmin[idx]^2)
         # linearized lower voltage magnitude limits at at all other buses
         else
-            JuMP.@constraint(pm.model, 2*vr[t]*vr0[t] + 2*vi[t]*vi0[t] - vr0[t]^2 - vi0[t]^2 >= vmin[idx]^2)
+            JuMP.@constraint(pm.model, 2*(vr[t]*vr0[idx] + vi[t]*vi0[idx]) - (vr0[idx]^2 + vi0[idx]^2) >=  vmin[idx]^2)
         end
         # Outer approximation of upper voltage magnitude limits
         if vmax[idx] < Inf
@@ -154,7 +161,6 @@ end
 Nothing to do, this model ignores angle difference constraints"
 """
 function constraint_mc_voltage_angle_difference(pm::FBSUBFPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, angmin::Vector{<:Real}, angmax::Vector{<:Real})
-    i, f_bus, t_bus = f_idx
 end
 
 
@@ -175,34 +181,32 @@ Branch flow model power flow equation linearized around initial operating point 
 ```
 """
 function constraint_mc_power_losses(pm::FBSUBFPowerModel, nw::Int, i::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, r::Matrix{<:Real}, x::Matrix{<:Real}, g_sh_fr::Matrix{<:Real}, g_sh_to::Matrix{<:Real}, b_sh_fr::Matrix{<:Real}, b_sh_to::Matrix{<:Real})
+    branch = ref(pm, nw, :branch, i)
+    f_connections = branch["f_connections"]
+    t_connections = branch["t_connections"]
+
     p_fr = var(pm, nw, :p)[f_idx]
     q_fr = var(pm, nw, :q)[f_idx]
 
     p_to = var(pm, nw, :p)[t_idx]
     q_to = var(pm, nw, :q)[t_idx]
 
-    vr_fr = var(pm, nw, :vr0)[f_bus]
-    vi_fr = var(pm, nw, :vi0)[f_bus]
-    vr_to = var(pm, nw, :vr0)[t_bus]
-    vi_to = var(pm, nw, :vi0)[t_bus]
+    vr0_fr = [var(pm, nw, :vr0)[f_bus][findfirst(isequal(c), ref(pm, nw, :bus, f_bus, "terminals"))] for c in f_connections]
+    vi0_fr = [var(pm, nw, :vi0)[f_bus][findfirst(isequal(c), ref(pm, nw, :bus, f_bus, "terminals"))] for c in f_connections]
 
-    fb = ref(pm, nw, :bus, f_bus)
-    tb = ref(pm, nw, :bus, t_bus)
-
-    branch = ref(pm, nw, :branch, i)
-    f_connections = branch["f_connections"]
-    t_connections = branch["t_connections"]
+    vr0_to = [var(pm, nw, :vr0)[t_bus][findfirst(isequal(c), ref(pm, nw, :bus, t_bus, "terminals"))] for c in t_connections]
+    vi0_to = [var(pm, nw, :vi0)[t_bus][findfirst(isequal(c), ref(pm, nw, :bus, t_bus, "terminals"))] for c in t_connections]
 
     # linearized line voltage drop phasor: v_drop = v0_fr  - v0_to
-    v_drop = vr_fr + im*vi_fr - vr_to - im*vi_to
+    v_drop = vr0_fr .+ im.*vi0_fr .- vr0_to .- im.*vi0_to
     y = pinv(r+im*x)
     N = length(f_connections)
 
     for (idx, (fc,tc)) in enumerate(zip(f_connections, t_connections))
         # linearized line power loss phasor: s_loss = v_drop*conj(y*v_drop)
         s_loss = v_drop[idx]*conj(sum(y[idx,j]*v_drop[j] for j=1:N))
-        JuMP.@constraint(pm.model, p_fr[fc] + p_to[tc] ==  g_sh_fr[idx,idx]*(vr_fr[fc]^2+vi_fr[fc]^2) +  g_sh_to[idx,idx]*(vr_to[tc]^2+vi_to[tc]^2) + real(s_loss))
-        JuMP.@constraint(pm.model, q_fr[fc] + q_to[tc] == -b_sh_fr[idx,idx]*(vr_fr[fc]^2+vi_fr[fc]^2) + -b_sh_to[idx,idx]*(vr_to[tc]^2+vi_to[tc]^2) + imag(s_loss))
+        JuMP.@constraint(pm.model, p_fr[fc] + p_to[tc] ==  g_sh_fr[idx,idx]*(vr0_fr[idx]^2+vi0_fr[idx]^2) +  g_sh_to[idx,idx]*(vr0_to[idx]^2+vi0_to[idx]^2) + real(s_loss))
+        JuMP.@constraint(pm.model, q_fr[fc] + q_to[tc] == -b_sh_fr[idx,idx]*(vr0_fr[idx]^2+vi0_fr[idx]^2) + -b_sh_to[idx,idx]*(vr0_to[idx]^2+vi0_to[idx]^2) + imag(s_loss))
     end
 end
 
@@ -233,21 +237,20 @@ function constraint_mc_model_voltage_magnitude_difference(pm::FBSUBFPowerModel, 
     vr_to = var(pm, nw, :vr)[t_bus]
     vi_to = var(pm, nw, :vi)[t_bus]
 
-    vr0_fr = var(pm, nw, :vr0)[f_bus]
-    vi0_fr = var(pm, nw, :vi0)[f_bus]
+    vr0_fr = [var(pm, nw, :vr0)[f_bus][findfirst(isequal(c), ref(pm, nw, :bus, f_bus, "terminals"))] for c in f_connections]
+    vi0_fr = [var(pm, nw, :vi0)[f_bus][findfirst(isequal(c), ref(pm, nw, :bus, f_bus, "terminals"))] for c in f_connections]
 
     p_fr = var(pm, nw, :p)[f_idx]
     q_fr = var(pm, nw, :q)[f_idx]
 
-    p_s_fr = [p_fr[fc]- diag(g_sh_fr)[idx].*(vr0_fr[fc]^2+vi0_fr[fc]^2) for (idx,fc) in enumerate(f_connections)]
-    q_s_fr = [q_fr[fc]+ diag(b_sh_fr)[idx].*(vr0_fr[fc]^2+vi0_fr[fc]^2) for (idx,fc) in enumerate(f_connections)]
+    p_s_fr = [p_fr[fc]- diag(g_sh_fr)[idx].*(vr0_fr[idx]^2+vi0_fr[idx]^2) for (idx,fc) in enumerate(f_connections)]
+    q_s_fr = [q_fr[fc]+ diag(b_sh_fr)[idx].*(vr0_fr[idx]^2+vi0_fr[idx]^2) for (idx,fc) in enumerate(f_connections)]
 
     # linearized current injection at from node: c0_s_fr = (p_s_fr - j.q_s_fr)/conj(v0_fr)
-    cr_s_fr = [( p_s_fr[idx]*vr0_fr[fc] + q_s_fr[idx]*vi0_fr[fc])/(vr0_fr[fc]^2 + vi0_fr[fc]^2) for (idx,fc) in enumerate(f_connections)]
-    ci_s_fr = [(-q_s_fr[idx]*vr0_fr[fc] + p_s_fr[idx]*vi0_fr[fc])/(vr0_fr[fc]^2 + vi0_fr[fc]^2) for (idx,fc) in enumerate(f_connections)]
+    cr_s_fr = [( p_s_fr[idx]*vr0_fr[idx] + q_s_fr[idx]*vi0_fr[idx])/(vr0_fr[idx]^2 + vi0_fr[idx]^2) for (idx,fc) in enumerate(f_connections)]
+    ci_s_fr = [(-q_s_fr[idx]*vr0_fr[idx] + p_s_fr[idx]*vi0_fr[idx])/(vr0_fr[idx]^2 + vi0_fr[idx]^2) for (idx,fc) in enumerate(f_connections)]
 
     N = length(f_connections)
-
     for (idx, (fc, tc)) in enumerate(zip(f_connections, t_connections))
         JuMP.@constraint(pm.model, vr_to[tc] == vr_fr[fc] - sum(r[idx,j]*cr_s_fr[j] for j in 1:N) + sum(x[idx,j]*ci_s_fr[j] for j in 1:N))
         JuMP.@constraint(pm.model, vi_to[tc] == vi_fr[fc] - sum(x[idx,j]*cr_s_fr[j] for j in 1:N) - sum(r[idx,j]*ci_s_fr[j] for j in 1:N))
@@ -297,8 +300,8 @@ end
 Power balance constraints similar to ACRUPowerModel with shunt current calculated using initial operating point.
 """
 function constraint_mc_power_balance(pm::FBSUBFPowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
-    vr = var(pm, nw, :vr0, i)
-    vi = var(pm, nw, :vi0, i)
+    vr0 = var(pm, nw, :vr0, i)
+    vi0 = var(pm, nw, :vi0, i)
     p    = get(var(pm, nw), :p,      Dict()); _check_var_keys(p,   bus_arcs,       "active power",   "branch")
     q    = get(var(pm, nw), :q,      Dict()); _check_var_keys(q,   bus_arcs,       "reactive power", "branch")
     pg   = get(var(pm, nw), :pg_bus, Dict()); _check_var_keys(pg,  bus_gens,       "active power",   "generator")
@@ -328,8 +331,8 @@ function constraint_mc_power_balance(pm::FBSUBFPowerModel, nw::Int, i::Int, term
               sum(pg[gen][t] for (gen, conns) in bus_gens if t in conns)
             - sum(ps[strg][t] for (strg, conns) in bus_storage if t in conns)
             - sum(pd[load][t] for (load, conns) in bus_loads if t in conns)
-            + ( -vr[t] * sum(Gt[idx,jdx]*vr[u]-Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals)
-                -vi[t] * sum(Gt[idx,jdx]*vi[u]+Bt[idx,jdx]*vr[u] for (jdx,u) in ungrounded_terminals)
+            + ( -vr0[idx] * sum(Gt[idx,jdx]*vr0[jdx]-Bt[idx,jdx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
+                -vi0[idx] * sum(Gt[idx,jdx]*vi0[jdx]+Bt[idx,jdx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
             )
         )
         push!(cstr_p, cp)
@@ -342,8 +345,8 @@ function constraint_mc_power_balance(pm::FBSUBFPowerModel, nw::Int, i::Int, term
               sum(qg[gen][t] for (gen, conns) in bus_gens if t in conns)
             - sum(qd[load][t] for (load, conns) in bus_loads if t in conns)
             - sum(qs[strg][t] for (strg, conns) in bus_storage if t in conns)
-            + ( vr[t] * sum(Gt[idx,jdx]*vi[u]+Bt[idx,jdx]*vr[u] for (jdx,u) in ungrounded_terminals)
-               -vi[t] * sum(Gt[idx,jdx]*vr[u]-Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals)
+            + ( vr0[idx] * sum(Gt[idx,jdx]*vi0[jdx]+Bt[idx,jdx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
+               -vi0[idx] * sum(Gt[idx,jdx]*vr0[jdx]-Bt[idx,jdx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
             )
         )
         push!(cstr_q, cq)
@@ -365,8 +368,8 @@ end
 Power balance constraints with capacitor control similar to ACRUPowerModel with shunt current calculated using initial operating point.
 """
 function constraint_mc_power_balance_capc(pm::FBSUBFPowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
-    vr = var(pm, nw, :vr0, i)
-    vi = var(pm, nw, :vi0, i)
+    vr0 = var(pm, nw, :vr0, i)
+    vi0 = var(pm, nw, :vi0, i)
     p    = get(var(pm, nw), :p,      Dict()); _check_var_keys(p,   bus_arcs,       "active power",   "branch")
     q    = get(var(pm, nw), :q,      Dict()); _check_var_keys(q,   bus_arcs,       "reactive power", "branch")
     pg   = get(var(pm, nw), :pg_bus, Dict()); _check_var_keys(pg,  bus_gens,       "active power",   "generator")
@@ -414,8 +417,8 @@ function constraint_mc_power_balance_capc(pm::FBSUBFPowerModel, nw::Int, i::Int,
               sum(pg[gen][t] for (gen, conns) in bus_gens if t in conns)
             - sum(ps[strg][t] for (strg, conns) in bus_storage if t in conns)
             - sum(pd[load][t] for (load, conns) in bus_loads if t in conns)
-            + ( -vr[t] * sum(Gt[idx,jdx]*vr[u]-Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals)
-                -vi[t] * sum(Gt[idx,jdx]*vi[u]+Bt[idx,jdx]*vr[u] for (jdx,u) in ungrounded_terminals)
+            + ( -vr0[idx] * sum(Gt[idx,jdx]*vr0[jdx]-Bt[idx,jdx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
+                -vi0[idx] * sum(Gt[idx,jdx]*vi0[jdx]+Bt[idx,jdx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
             )
         )
         push!(cstr_p, cp)
@@ -428,8 +431,8 @@ function constraint_mc_power_balance_capc(pm::FBSUBFPowerModel, nw::Int, i::Int,
               sum(qg[gen][t] for (gen, conns) in bus_gens if t in conns)
             - sum(qd[load][t] for (load, conns) in bus_loads if t in conns)
             - sum(qs[strg][t] for (strg, conns) in bus_storage if t in conns)
-            + ( vr[t] * sum(Gt[idx,jdx]*vi[u]+Bt[idx,jdx]*vr[u] for (jdx,u) in ungrounded_terminals)
-               -vi[t] * sum(Gt[idx,jdx]*vr[u]-Bt[idx,jdx]*vi[u] for (jdx,u) in ungrounded_terminals)
+            + ( vr0[idx] * sum(Gt[idx,jdx]*vi0[jdx]+Bt[idx,jdx]*vr0[jdx] for (jdx,u) in ungrounded_terminals)
+               -vi0[idx] * sum(Gt[idx,jdx]*vr0[jdx]-Bt[idx,jdx]*vi0[jdx] for (jdx,u) in ungrounded_terminals)
             )
         )
         push!(cstr_q, cq)
@@ -476,8 +479,8 @@ function constraint_capacitor_on_off(pm::FBSUBFPowerModel, i::Int, bus_shunts::V
             for (idx,val) in enumerate(shunt["connections"])
                 vr_cap = var(pm, nw, :vr, i)[val]
                 vi_cap = var(pm, nw, :vi, i)[val]
-                vr0_cap = var(pm, nw, :vr0, i)[val]
-                vi0_cap = var(pm, nw, :vi0, i)[val]
+                vr0_cap = var(pm, nw, :vr0, i)[findfirst(isequal(val), ref(pm, nw, :bus, i, "terminals"))]
+                vi0_cap = var(pm, nw, :vi0, i)[findfirst(isequal(val), ref(pm, nw, :bus, i, "terminals"))]
                 JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["vmin"]^2 ≥ -M_v*cap_state[val] + ϵ*(1-cap_state[val]))
                 JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["vmax"]^2 ≤ M_v*(1-cap_state[val]) - ϵ*cap_state[val])
             end
@@ -488,16 +491,15 @@ function constraint_capacitor_on_off(pm::FBSUBFPowerModel, i::Int, bus_shunts::V
                 bus_idx = shunt["controls"]["terminal"][idx] == 1 ? shunt["controls"]["element"]["f_bus"] : shunt["controls"]["element"]["t_bus"]
                 vr_cap = var(pm, nw, :vr, i)[val]
                 vi_cap = var(pm, nw, :vi, i)[val]
-                vr0_cap = var(pm, nw, :vr0, i)[val]
-                vi0_cap = var(pm, nw, :vi0, i)[val]
+                vr0_cap = var(pm, nw, :vr0, i)[findfirst(isequal(val), ref(pm, nw, :bus, i, "terminals"))]
+                vi0_cap = var(pm, nw, :vi0, i)[findfirst(isequal(val), ref(pm, nw, :bus, i, "terminals"))]
                 JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["onsetting"][idx]^2 ≤ M_v*cap_state[val] - ϵ*(1-cap_state[val]))
                 JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["offsetting"][idx]^2 ≥ -M_v*(1-cap_state[val]) - ϵ*cap_state[val])
             end
             if shunt["controls"]["voltoverride"][idx]
                 vr_cap = var(pm, nw, :vr, i)[val]
                 vi_cap = var(pm, nw, :vi, i)[val]
-                vr0_cap = var(pm, nw, :vr0, i)[val]
-                vi0_cap = var(pm, nw, :vi0, i)[val]
+                vr0_cap = var(pm, nw, :vr0, i)[findfirst(isequal(val), ref(pm, nw, :bus, i, "terminals"))]
                 JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["vmin"][idx]^2 ≥ -M_v*cap_state[val] + ϵ*(1-cap_state[val]))
                 JuMP.@constraint(pm.model, 2*vr_cap*vr0_cap + 2*vi_cap*vi0_cap - vr0_cap^2 - vi0_cap^2 - shunt["controls"]["vmax"][idx]^2 ≤ M_v*(1-cap_state[val]) - ϵ*cap_state[val])
             end
@@ -547,30 +549,30 @@ function constraint_mc_load_power(pm::FBSUBFPowerModel, load_id::Int; nw::Int=nw
         elseif load["model"]==IMPEDANCE
             vr = var(pm, nw, :vr, bus_id)
             vi = var(pm, nw, :vi, bus_id)
-            vr0 = var(pm, nw, :vr0, bus_id)
-            vi0 = var(pm, nw, :vi0, bus_id)
+            vr0 = [var(pm, nw, :vr0, bus_id)[findfirst(isequal(c), terminals)] for c in connections]
+            vi0 = [var(pm, nw, :vi0, bus_id)[findfirst(isequal(c), terminals)] for c in connections]
 
             pd_bus = []
             qd_bus = []
 
             for (idx,c) in enumerate(connections)
-                vm0 = vr0[c]^2 + vi0[c]^2
-                push!(pd_bus, a[idx]*(-vm0 + 2*vr[c]*vr0[c] + 2*vi[c]*vi0[c]))
-                push!(qd_bus, b[idx]*(-vm0 + 2*vr[c]*vr0[c] + 2*vi[c]*vi0[c]))
+                vm0 = vr0[idx]^2 + vi0[idx]^2
+                push!(pd_bus, a[idx]*(-vm0 + 2*vr[c]*vr0[idx] + 2*vi[c]*vi0[idx]))
+                push!(qd_bus, b[idx]*(-vm0 + 2*vr[c]*vr0[idx] + 2*vi[c]*vi0[idx]))
             end
         else
             vr = var(pm, nw, :vr, bus_id)
             vi = var(pm, nw, :vi, bus_id)
-            vr0 = var(pm, nw, :vr0, bus_id)
-            vi0 = var(pm, nw, :vi0, bus_id)
+            vr0 = [var(pm, nw, :vr0, bus_id)[findfirst(isequal(c), terminals)] for c in connections]
+            vi0 = [var(pm, nw, :vi0, bus_id)[findfirst(isequal(c), terminals)] for c in connections]
 
             pd_bus = []
             qd_bus = []
 
             for (idx,c) in enumerate(connections)
-                vm0 = sqrt(vr0[c]^2 + vi0[c]^2)
-                push!(pd_bus, a[idx]*(vm0 + (vr[c]*vr0[c] + vi[c]*vi0[c]-vm0^2)/vm0))
-                push!(qd_bus, b[idx]*(vm0 + (vr[c]*vr0[c] + vi[c]*vi0[c]-vm0^2)/vm0))
+                vm0 = sqrt(vr0[idx]^2 + vi0[idx]^2)
+                push!(pd_bus, a[idx]*(vm0 + (vr[c]*vr0[idx] + vi[c]*vi0[idx]-vm0^2)/vm0))
+                push!(qd_bus, b[idx]*(vm0 + (vr[c]*vr0[idx] + vi[c]*vi0[idx]-vm0^2)/vm0))
             end
         end
 
@@ -588,8 +590,8 @@ function constraint_mc_load_power(pm::FBSUBFPowerModel, load_id::Int; nw::Int=nw
 
     # zero-order approximation
     elseif load["configuration"]==DELTA
-        vr0 = var(pm, nw, :vr0, bus_id)
-        vi0 = var(pm, nw, :vi0, bus_id)
+        vr0 = [var(pm, nw, :vr0, bus_id)[findfirst(isequal(c), terminals)] for c in connections]
+        vi0 = [var(pm, nw, :vi0, bus_id)[findfirst(isequal(c), terminals)] for c in connections]
 
         nph = length(connections)
         prev = Dict(i=>(i+nph-2)%nph+1 for i in 1:nph)
@@ -654,10 +656,10 @@ function constraint_mc_transformer_power_yy(pm::FBSUBFPowerModel, nw::Int, trans
     vi_fr = var(pm, nw, :vi, f_bus)
     vi_to = var(pm, nw, :vi, t_bus)
 
-    vr0_fr = var(pm, nw, :vr0, f_bus)
-    vr0_to = var(pm, nw, :vr0, t_bus)
-    vi0_fr = var(pm, nw, :vi0, f_bus)
-    vi0_to = var(pm, nw, :vi0, t_bus)
+    vr0_fr = [var(pm, nw, :vr0, f_bus)[findfirst(isequal(c), ref(pm, nw, :bus, f_bus, "terminals"))] for c in f_connections]
+    vr0_to = [var(pm, nw, :vr0, t_bus)[findfirst(isequal(c), ref(pm, nw, :bus, t_bus, "terminals"))] for c in t_connections]
+    vi0_fr = [var(pm, nw, :vi0, f_bus)[findfirst(isequal(c), ref(pm, nw, :bus, f_bus, "terminals"))] for c in f_connections]
+    vi0_to = [var(pm, nw, :vi0, t_bus)[findfirst(isequal(c), ref(pm, nw, :bus, t_bus, "terminals"))] for c in t_connections]
 
     p_fr = [var(pm, nw, :pt, f_idx)[c] for c in f_connections]
     p_to = [var(pm, nw, :pt, t_idx)[c] for c in t_connections]
@@ -684,8 +686,8 @@ function constraint_mc_transformer_power_yy(pm::FBSUBFPowerModel, nw::Int, trans
                 x = transformer["controls"]["x"][idx]
 
                 # (cr+jci) = (p-jq)/(vr0-j⋅vi0)
-                cr = JuMP.@expression(pm.model, ( p_to[idx]*vr0_to[tc] + q_to[idx]*vi0_to[tc])/(vr0_to[tc]^2+vi0_to[tc]^2))
-                ci = JuMP.@expression(pm.model, (-q_to[idx]*vr0_to[tc] + p_to[idx]*vi0_to[tc])/(vr0_to[tc]^2+vi0_to[tc]^2))
+                cr = JuMP.@expression(pm.model, ( p_to[idx]*vr0_to[idx] + q_to[idx]*vi0_to[idx])/(vr0_to[idx]^2+vi0_to[idx]^2))
+                ci = JuMP.@expression(pm.model, (-q_to[idx]*vr0_to[idx] + p_to[idx]*vi0_to[idx])/(vr0_to[idx]^2+vi0_to[idx]^2))
                 # linearized v_drop = (cr+jci)⋅(r+jx)
                 vr_drop = JuMP.@expression(pm.model, r*cr-x*ci)
                 vi_drop = JuMP.@expression(pm.model, r*ci+x*cr)
@@ -705,9 +707,9 @@ function constraint_mc_transformer_power_yy(pm::FBSUBFPowerModel, nw::Int, trans
                 JuMP.@constraint(pm.model, (vr_fr[fc]-vr_drop) - (vi_fr[fc]-vi_drop) ≤  sqrt(2)*(v_ref + δ)^2)
                 JuMP.@constraint(pm.model, (vr_fr[fc]-vr_drop)^2 + (vi_fr[fc]-vi_drop)^2 ≥ (v_ref - δ)^2)
                 # TODO: linearized lower limits: (v_ref-δ)^2 ≤ v_lin_sq
-                # JuMP.@constraint(pm.model, 2*vr0_fr[fc]*(vr_fr[fc]-vr_drop) + 2*vi0_fr[fc]*(vi_fr[fc]-vi_drop) - vr_fr[fc]^2 - vi_fr[fc]^2 ≥ (v_ref - δ)^2)
-                JuMP.@constraint(pm.model, (2*vr_fr[fc]*vr0_fr[fc] + 2*vi_fr[fc]*vi0_fr[fc] - vr_fr[fc]^2 - vi_fr[fc]^2)/1.1^2 ≤ 2*vr_to[tc]*vr0_to[tc] + 2*vi_to[tc]*vi0_to[tc] - vr_to[tc]^2 - vi_to[tc]^2)
-                JuMP.@constraint(pm.model, (2*vr_fr[fc]*vr0_fr[fc] + 2*vi_fr[fc]*vi0_fr[fc] - vr_fr[fc]^2 - vi_fr[fc]^2)/0.9^2 ≥ 2*vr_to[tc]*vr0_to[tc] + 2*vi_to[tc]*vi0_to[tc] - vr_to[tc]^2 - vi_to[tc]^2)
+                # JuMP.@constraint(pm.model, 2*vr0_fr[idx]*(vr_fr[fc]-vr_drop) + 2*vi0_fr[idx]*(vi_fr[fc]-vi_drop) - vr_fr[fc]^2 - vi_fr[fc]^2 ≥ (v_ref - δ)^2)
+                JuMP.@constraint(pm.model, (2*vr_fr[fc]*vr0_fr[idx] + 2*vi_fr[fc]*vi0_fr[idx] - vr_fr[fc]^2 - vi_fr[fc]^2)/1.1^2 ≤ 2*vr_to[tc]*vr0_to[idx] + 2*vi_to[tc]*vi0_to[idx] - vr_to[tc]^2 - vi_to[tc]^2)
+                JuMP.@constraint(pm.model, (2*vr_fr[fc]*vr0_fr[idx] + 2*vi_fr[fc]*vi0_fr[idx] - vr_fr[fc]^2 - vi_fr[fc]^2)/0.9^2 ≥ 2*vr_to[tc]*vr0_to[idx] + 2*vi_to[tc]*vi0_to[idx] - vr_to[tc]^2 - vi_to[tc]^2)
             end
         end
     end
@@ -747,10 +749,10 @@ function constraint_mc_transformer_power_dy(pm::FBSUBFPowerModel, nw::Int, trans
     p_to = var(pm, nw, :pt, t_idx)
     q_fr = var(pm, nw, :qt, f_idx)
     q_to = var(pm, nw, :qt, t_idx)
-    vr0_p_fr = [var(pm, nw, :vr0, f_bus)[c] for c in f_connections]
-    vr0_p_to = [var(pm, nw, :vr0, t_bus)[c] for c in t_connections]
-    vi0_p_fr = [var(pm, nw, :vi0, f_bus)[c] for c in f_connections]
-    vi0_p_to = [var(pm, nw, :vi0, t_bus)[c] for c in t_connections]
+    vr0_p_fr = [var(pm, nw, :vr0, f_bus)[findfirst(isequal(c), ref(pm, nw, :bus, f_bus, "terminals"))] for c in f_connections]
+    vr0_p_to = [var(pm, nw, :vr0, t_bus)[findfirst(isequal(c), ref(pm, nw, :bus, t_bus, "terminals"))] for c in t_connections]
+    vi0_p_fr = [var(pm, nw, :vi0, f_bus)[findfirst(isequal(c), ref(pm, nw, :bus, f_bus, "terminals"))] for c in f_connections]
+    vi0_p_to = [var(pm, nw, :vi0, t_bus)[findfirst(isequal(c), ref(pm, nw, :bus, t_bus, "terminals"))] for c in t_connections]
 
     id_re = Array{Any,1}(undef, nph)
     id_im = Array{Any,1}(undef, nph)
