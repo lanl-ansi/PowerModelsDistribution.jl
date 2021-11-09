@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in `dimensionalize_math`, where `sc_on`, and `sd_on` were included under storage (non-dimensional values should not be scaled)
 - Removed `sm_ub_b`, `cm_ub_b`, `sm_ub_c`, `cm_ub_c` from kron reduction (fields no longer exist)
 - Updated `make_lossless!` to make the model truly lossless, by including all line parameters
 - Added `adjust_transformer_limits!` to multiple transformer variable bounds
