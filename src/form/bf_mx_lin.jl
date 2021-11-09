@@ -482,3 +482,19 @@ If the limit is finite, a warning is thrown.
 function constraint_mc_switch_thermal_limit(pm::AbstractLPUBFModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{Float64})
     @warn "Encountered a finite switch thermal limit; these are not yet implemented for AbstractLPUBFModel."
 end
+
+
+"""
+    constraint_storage_complementarity_nl(pm::LPUBFDiagModel, n::Int, i::Int)
+
+Linear version of storage complementarity constraint
+"""
+function constraint_storage_complementarity_nl(pm::LPUBFDiagModel, n::Int, i::Int)
+    sc = var(pm, n, :sc, i)
+    sd = var(pm, n, :sd, i)
+
+    sc_sd = JuMP.@variable(pm.model, start=0.0)
+    PolyhedralRelaxations.construct_bilinear_relaxation!(pm.model, sc, sd, sc_sd, [0, JuMP.upper_bound(sc)], [0, JuMP.upper_bound(sd)])
+
+    JuMP.@constraint(pm.model, sc_sd == 0.0)
+end
