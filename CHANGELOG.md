@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added transformations `adjust_small_line_impedances!`, `adjust_small_line_admittances!`, `adjust_small_line_lengths!`, to help prune bad eng-model data
 - Fixed `set_time_elapsed!` multinetwork function to update `"time"` and `"mn_lookup"`
 - Added `"status"` to transformer decomposition functions
 - Updated `eng2math` functions to have consistent usage of `"status"` from eng model

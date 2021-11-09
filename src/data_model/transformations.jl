@@ -36,6 +36,64 @@ end
 
 
 """
+    adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
+
+Replaces impedances (rs, xs) on lines, linecodes, and switches lower than `min_impedance_val` with `replace_impedance_val`.
+"""
+function adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
+    for type in ["line", "linecode", "switch"]
+        if haskey(data_eng, type)
+            for (id,obj) in data_eng[type]
+                for k in ["rs", "xs"]
+                    if haskey(obj, k)
+                        obj[k][obj[k].<min_impedance_val] .= replace_impedance_val
+                    end
+                end
+            end
+        end
+    end
+end
+
+
+"""
+    adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
+
+Replaces admittances (g_fr, g_to, b_fr, b_to) on lines, linecodes, and switches lower than `min_admittance_val` with `replace_admittance_val`.
+"""
+function adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
+    for type in ["line", "linecode", "switch"]
+        if haskey(data_eng, type)
+            for (id,obj) in data_eng[type]
+                for k in ["g_fr", "b_fr", "g_to", "b_to"]
+                    if haskey(obj, k)
+                        obj[k][obj[k].<min_admittance_val] .= replace_admittance_val
+                    end
+                end
+            end
+        end
+    end
+end
+
+
+"""
+    adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
+
+Replaces length on lines, switches lower than `min_length_val` with `replace_length_val`.
+"""
+function adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
+    for type in ["line", "switch"]
+        if haskey(data_eng, type)
+            for (id,obj) in data_eng[type]
+                if haskey(obj, "length") &&  obj["length"] < min_length_val
+                    obj["length"] = replace_length_val
+                end
+            end
+        end
+    end
+end
+
+
+"""
     apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1)
 
 add voltage bounds to all buses based on per-unit upper (`vm_ub`) and lower (`vm_lb`), scaled by the bus's voltage based
