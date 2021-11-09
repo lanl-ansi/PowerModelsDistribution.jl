@@ -2,6 +2,7 @@
 
 ## staged
 
+- Updated `on_off` variable functions to ensure zeros are included in variable bounds
 - Changed `"multiple reference buses found"` warning to `@info`
 - Added LP version of `constraint_storage_complementarity_nl`
 - Added PolyhedralRelaxations.jl as a dependency for relaxing quadratic and bivariate constraints
