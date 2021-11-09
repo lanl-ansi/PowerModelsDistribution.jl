@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in `make_lossless!`
 - Updated `correct_bus_types!` to be knowledgable about islands in the network data
 - Changed `warning` to `@warn`
 - Added storage to `solve_mc_opf_oltc_capc` problems

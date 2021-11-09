@@ -22,7 +22,6 @@
 
     @testset "test UBF relaxations in pf" begin
         data = deepcopy(case3_unbalanced)
-        make_lossless!(data)
         apply_voltage_bounds!(data; vm_lb=0.9, vm_ub=1.1)
 
         data["settings"]["sbase_default"] = 1.0

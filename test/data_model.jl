@@ -56,7 +56,7 @@
 
         @test all(all(isapprox.(bus["vmin"], 0.9)) for (_,bus) in math["bus"] if bus["name"] != "sourcebus" && !startswith(bus["name"], "_virtual"))
 
-        eng = parse_file("../test/data/opendss/ut_trans_2w_yy.dss"; transformations=[make_lossless!, (apply_voltage_bounds!, "vm_lb"=>0.95, "vm_ub"=>1.05)])
+        eng = parse_file("../test/data/opendss/ut_trans_2w_yy.dss"; transformations=[(make_lossless!, "exclude"=>String["line", "linecode"]), (apply_voltage_bounds!, "vm_lb"=>0.95, "vm_ub"=>1.05)])
 
         @test all(all(eng["transformer"]["tx1"][k] .== 0) for k in ["rw", "xsc", "noloadloss", "cmag"])
 
