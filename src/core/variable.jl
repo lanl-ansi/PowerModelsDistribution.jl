@@ -865,13 +865,13 @@ function variable_mc_generator_power_real_on_off(pm::AbstractUnbalancedPowerMode
         for (i, gen) in ref(pm, nw, :gen)
             if haskey(gen, "pmin")
                 for (idx, c) in enumerate(connections[i])
-                    set_lower_bound(pg[i][c], gen["pmin"][idx])
+                    set_lower_bound(pg[i][c], min(gen["pmin"][idx], 0.0))
                 end
             end
 
             if haskey(gen, "pmax")
                 for (idx, c) in enumerate(connections[i])
-                    set_upper_bound(pg[i][c], gen["pmax"][idx])
+                    set_upper_bound(pg[i][c], max(gen["pmax"][idx], 0.0))
                 end
             end
         end
@@ -895,13 +895,13 @@ function variable_mc_generator_power_imaginary_on_off(pm::AbstractUnbalancedPowe
         for (i, gen) in ref(pm, nw, :gen)
             if haskey(gen, "qmin")
                 for (idx, c) in enumerate(connections[i])
-                    set_lower_bound(qg[i][c], gen["qmin"][idx])
+                    set_lower_bound(qg[i][c], min(gen["qmin"][idx], 0.0))
                 end
             end
 
             if haskey(gen, "qmax")
                 for (idx, c) in enumerate(connections[i])
-                    set_upper_bound(qg[i][c], gen["qmax"][idx])
+                    set_upper_bound(qg[i][c], max(gen["qmax"][idx], 0.0))
                 end
             end
         end
@@ -965,12 +965,12 @@ end
 function variable_storage_energy(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     se = var(pm, nw)[:se] = JuMP.@variable(pm.model,
         [i in ids(pm, nw, :storage)], base_name="$(nw)_se",
-        start = comp_start_value(ref(pm, nw, :storage, i), "se_start", 1)
+        lower_bound = 0.0,
+        start = comp_start_value(ref(pm, nw, :storage, i), ["se_start", "se", "energy"], 0.0)
     )
 
     if bounded
         for (i, storage) in ref(pm, nw, :storage)
-            set_lower_bound(se[i], 0)
             set_upper_bound(se[i], storage["energy_rating"])
         end
     end
@@ -983,12 +983,12 @@ end
 function variable_storage_charge(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     sc = var(pm, nw)[:sc] = JuMP.@variable(pm.model,
         [i in ids(pm, nw, :storage)], base_name="$(nw)_sc",
-        start = comp_start_value(ref(pm, nw, :storage, i), "sc_start", 1)
+        lower_bound = 0.0,
+        start = comp_start_value(ref(pm, nw, :storage, i), ["sc_start", "sc"], 1)
     )
 
     if bounded
         for (i, storage) in ref(pm, nw, :storage)
-            set_lower_bound(sc[i], 0)
             set_upper_bound(sc[i], storage["charge_rating"])
         end
     end
@@ -1001,12 +1001,12 @@ end
 function variable_storage_discharge(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     sd = var(pm, nw)[:sd] = JuMP.@variable(pm.model,
         [i in ids(pm, nw, :storage)], base_name="$(nw)_sd",
-        start = comp_start_value(ref(pm, nw, :storage, i), "sd_start", 1)
+        lower_bound = 0.0,
+        start = comp_start_value(ref(pm, nw, :storage, i), ["sd_start", "sd"], 0.0)
     )
 
     if bounded
         for (i, storage) in ref(pm, nw, :storage)
-            set_lower_bound(sd[i], 0)
             set_upper_bound(sd[i], storage["discharge_rating"])
         end
     end
@@ -1177,8 +1177,8 @@ function variable_mc_storage_power_real_on_off(pm::AbstractUnbalancedPowerModel;
         inj_lb, inj_ub = ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus))
         for (i, strg) in ref(pm, nw, :storage)
             for (idx, c) in enumerate(connections[i])
-                set_lower_bound(ps[i][c], inj_lb[i][idx])
-                set_upper_bound(ps[i][c], inj_ub[i][idx])
+                set_lower_bound(ps[i][c], min(inj_lb[i][idx], 0.0))
+                set_upper_bound(ps[i][c], max(inj_ub[i][idx], 0.0))
             end
         end
     end
@@ -1199,13 +1199,13 @@ function variable_mc_storage_power_imaginary_on_off(pm::AbstractUnbalancedPowerM
         for (i, strg) in ref(pm, nw, :storage)
             if haskey(strg, "qmin")
                 for (idx, c) in enumerate(connections[i])
-                    set_lower_bound(qs[i][c], strg["qmin"][idx])
+                    set_lower_bound(qs[i][c], min(strg["qmin"][idx], 0.0))
                 end
             end
 
             if haskey(strg, "qmax")
                 for (idx, c) in enumerate(connections[i])
-                    set_upper_bound(qs[i][c], strg["qmax"][idx])
+                    set_upper_bound(qs[i][c], max(strg["qmax"][idx], 0.0))
                 end
             end
         end
