@@ -1142,18 +1142,23 @@ function variable_mc_storage_power_control_imaginary(pm::AbstractUnbalancedPower
 end
 
 
-""
-function variable_mc_storage_power_mi(pm::AbstractUnbalancedPowerModel; relax::Bool=false, kwargs...)
-    variable_mc_storage_power_real(pm; kwargs...)
-    variable_mc_storage_power_imaginary(pm; kwargs...)
-    variable_mc_storage_power_control_imaginary(pm; kwargs...)
-    variable_mc_storage_current(pm; kwargs...)
-    variable_mc_storage_indicator(pm; relax=relax, kwargs...)
-    variable_storage_energy(pm; kwargs...)
-    variable_storage_charge(pm; kwargs...)
-    variable_storage_discharge(pm; kwargs...)
-    variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
+"""
+    variable_mc_storage_power_mi(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=false, bounded::Bool=true, report::Bool=true)
+
+Variables for storage power (mixed-integer if `relax==false`)
+"""
+function variable_mc_storage_power_mi(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=false, bounded::Bool=true, report::Bool=true)
+    variable_mc_storage_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_control_imaginary(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_current(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_indicator(pm; nw=nw, relax=relax, report=report)
+    variable_storage_energy(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_charge(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_discharge(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_complementary_indicator(pm; nw=nw, relax=relax, report=report)
 end
+
 
 ### storage power on/off variables
 
