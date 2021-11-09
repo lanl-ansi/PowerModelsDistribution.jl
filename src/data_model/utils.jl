@@ -253,12 +253,13 @@ end
 "loss model builder for transformer decomposition"
 function _build_loss_model!(
     data_math::Dict{String,<:Any},
-    transformer_name::Any,
+    transformer_name::String,
     to_map::Vector{String},
     r_s::Vector{Float64},
     zsc::Dict{Tuple{Int,Int},Complex{Float64}},
     ysh::Complex{Float64};
-    nphases::Int=3
+    nphases::Int=3,
+    status::Int=1,
     )::Vector{Int}
 
     # precompute the minimal set of buses and lines
@@ -341,8 +342,7 @@ function _build_loss_model!(
             "terminals" => collect(1:nphases),
             "grounded" => fill(false, nphases),
             "base_kv" => 1.0,
-            "bus_type" => 1,
-            "status" => 1,
+            "bus_type" => status == 0 ? 4 : 1,
             "source_id" => "transformer.$(transformer_name)",
             "index" => length(data_math["bus"])+1,
         )
@@ -389,7 +389,7 @@ function _build_loss_model!(
             "name" => "_virtual_branch.transformer.$(transformer_name)_$(l)",
             "source_id" => "_virtual_branch.transformer.$(transformer_name)_$(l)",
             "index" => length(data_math["branch"])+1,
-            "br_status"=>1,
+            "br_status"=>status,
             "f_bus"=>bus_ids[i],
             "t_bus"=>bus_ids[j],
             "f_connections"=>collect(1:nphases),
