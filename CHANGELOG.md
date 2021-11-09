@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added LP version of `constraint_storage_complementarity_nl`
 - Added PolyhedralRelaxations.jl as a dependency for relaxing quadratic and bivariate constraints
 - Fixed voltage warm start in `FBSUBFModel` form
 - Added functions necessary for `capc` and `oltc` in NFAUPowerModel
