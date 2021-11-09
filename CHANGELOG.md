@@ -2,6 +2,7 @@
 
 ## staged
 
+- Changed `warning` to `@warn`
 - Added storage to `solve_mc_opf_oltc_capc` problems
 - Fixed bug in parsing of `null` values from JSON
 - Changed `cm_ub` on storage parsing to `sm_ub` to be consistent with what the parsed value actually is
