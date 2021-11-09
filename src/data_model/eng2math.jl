@@ -359,7 +359,7 @@ function _map_eng2math_line!(data_math::Dict{String,<:Any}, data_eng::Dict{Strin
                 math_obj[t_key] = haskey(eng_obj, f_key) ? eng_obj[f_key] : fill(Inf, nphases)
         end
 
-        math_obj["br_status"] = Int(eng_obj["status"])
+        math_obj["br_status"] = eng_obj["status"] == DISABLED ? 0 : 1
 
         data_math["branch"]["$(math_obj["index"])"] = math_obj
 
@@ -468,7 +468,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                     "tm_fix"        => eng_obj["tm_fix"][w],
                     "sm_ub"         => get(eng_obj, "sm_ub", Inf),
                     "cm_ub"         => get(eng_obj, "cm_ub", Inf),
-                    "status"        => Int(get(eng_obj, "status", ENABLED)),
+                    "status"        => eng_obj["status"] == DISABLED ? 0 : 1,
                     "index"         => length(data_math["transformer"])+1
                 )
 
@@ -511,6 +511,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
 
         math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
         math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
+        math_obj["status"] = eng_obj["status"] == DISABLED ? 0 : 1
 
         math_obj["state"] = Int(get(eng_obj, "state", CLOSED))
         math_obj["dispatchable"] = Int(get(eng_obj, "dispatchable", YES))
@@ -537,7 +538,7 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
             bus_obj = Dict{String,Any}(
                 "name" => "_virtual_bus.switch.$name",
                 "bus_i" => length(data_math["bus"])+1,
-                "bus_type" => get(eng_obj, "status", ENABLED) == DISABLED ? 4 : 1,
+                "bus_type" => eng_obj["status"] == DISABLED ? 4 : 1,
                 "terminals" => eng_obj["t_connections"],  # connected to the switch on the to-side
                 "grounded" => fill(false, N),  # connected to the switch on the to-side
                 "vmin" => fill(0.0, N),
@@ -840,7 +841,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "terminals" => eng_obj["connections"],
                 "grounded" => [f_bus["grounded"][findfirst(f_bus["terminals"].==t)] for t in eng_obj["connections"]],
                 "name" => "_virtual_bus.voltage_source.$name",
-                "bus_type" => status == 0 ? 1 : control_mode == Int(ISOCHRONOUS) ? 3 : 2,
+                "bus_type" => status == 0 ? 4 : control_mode == Int(ISOCHRONOUS) ? 3 : 2,
                 "vm" => deepcopy(eng_obj["vm"]),
                 "va" => deepcopy(eng_obj["va"]),
                 "vmin" => deepcopy(get(eng_obj, "vm_lb", control_mode == Int(ISOCHRONOUS) ? eng_obj["vm"] : fill(0.0, nphases))),
@@ -871,7 +872,7 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
                 "angmin" => fill(-10.0, nconductors),
                 "angmax" => fill( 10.0, nconductors),
                 "c_rating_a" => fill(Inf, nconductors),
-                "br_status" => 1,
+                "br_status" => status,
                 "br_r" => _impedance_conversion(data_eng, eng_obj, "rs"),
                 "br_x" => _impedance_conversion(data_eng, eng_obj, "xs"),
                 "g_fr" => zeros(nconductors, nconductors),
