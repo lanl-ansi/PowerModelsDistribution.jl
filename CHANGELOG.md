@@ -2,6 +2,7 @@
 
 ## staged
 
+- Changed `cm_ub` on storage parsing to `sm_ub` to be consistent with what the parsed value actually is
 - Fixed bug in `cm_ub` parsing on lines
 - Updated `constraint_mc_transformer_power_yy(pm::LPUBFDiagModel)` to be truly LP
 - Updated `ACRUPowerModel` voltage start value computation

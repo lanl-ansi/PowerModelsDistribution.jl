@@ -808,7 +808,7 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             "energy_ub" => defaults["kwhrated"],
             "charge_ub" => defaults["%charge"] / 100.0 * defaults["kwrated"],
             "discharge_ub" => defaults["%discharge"] / 100.0 * defaults["kwrated"],
-            "cm_ub" => fill(defaults["kva"] / nphases, nphases),
+            "sm_ub" => fill(defaults["kva"] / nphases, nphases),
             "charge_efficiency" => defaults["%effcharge"],
             "discharge_efficiency" => defaults["%effdischarge"],
             "qs_lb" => -fill(defaults["kvar"] / nphases, nphases),
