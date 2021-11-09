@@ -2,31 +2,33 @@
 
 "collect of components and their properties that define loss models when transforming to the MATHEMATICAL model"
 const _loss_model_objects = Dict{String,Vector{String}}(
-    "switch" => Vector{String}(["linecode", "rs", "xs"]),
-    "voltage_source" => Vector{String}(["rs", "xs"]),
-    "transformer" => Vector{String}(["rw", "xsc", "cmag", "noloadloss"])
+    "linecode" => String["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"],
+    "line" => String["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"],
+    "switch" => String["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"],
+    "xfmrcode" => String["rw", "xsc", "cmag", "noloadloss"],
+    "transformer" => String["rw", "xsc", "cmag", "noloadloss"],
+    "voltage_source" => String["rs", "xs"],
+    "generator" => String["rs", "xs"],
+    "solar" => String["rs","xs"],
+    "storage" => String["rs", "xs", "pex", "qex"],
 )
 
 
 """
     make_lossless!(data_eng::Dict{String,<:Any})
 
-Remove parameters from objects with loss models to make them lossless. This includes switches
-voltage sources and transformers, which all have loss model parameters that can be omitted.
+Remove parameters from objects with loss models to make them lossless. This includes linecodes,
+lines, switches, xfmrcodes, transformers, voltage sources, generators, solar, and storage, which
+all have (or will have in the future), loss model parameters that can be omitted.
 """
 function make_lossless!(data_eng::Dict{String,<:Any})
     @assert iseng(data_eng) "incorrect data model type"
-
     for (object_type, parameters) in _loss_model_objects
         if haskey(data_eng, object_type)
             for (id, eng_obj) in data_eng[object_type]
                 for parameter in parameters
                     if haskey(eng_obj, parameter)
-                        if parameter == "linecode"
-                            delete!(eng_obj, parameter)
-                        else
-                            eng_obj[parameter] = 0 .* eng_obj[parameter]
-                        end
+                        eng_obj[parameter] .*= 0
                     end
                 end
             end
