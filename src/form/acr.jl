@@ -31,8 +31,8 @@ function variable_mc_bus_voltage(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_d
                 end
             end
 
-            vm = haskey(busref, "vm_start") ? busref["vm_start"] : [vm_start..., fill(0.0, ncnd)...][terminals]
-            va = haskey(busref, "va_start") ? busref["va_start"] : [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
+            vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
+            va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
 
             vr = vm .* cos.(va)
             vi = vm .* sin.(va)
@@ -86,8 +86,8 @@ function variable_mc_bus_voltage_on_off(pm::AbstractUnbalancedACRModel; nw::Int=
                 end
             end
 
-            vm = haskey(busref, "vm_start") ? busref["vm_start"] : [vm_start..., fill(0.0, ncnd)...][terminals]
-            va = haskey(busref, "va_start") ? busref["va_start"] : [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
+            vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
+            va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
 
             vr = vm .* cos.(va)
             vi = vm .* sin.(va)

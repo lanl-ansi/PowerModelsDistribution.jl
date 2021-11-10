@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed `vm`, `va` variable starts in `ACRU` and `ACPU` forms
 - Fixed boundless `LPUBFDiagModel` `constraint_mc_transformer_power_yy` with controls
 - Fixed `ACPUPowerModel` `vm`,`va` variable starts
 - Updated `FOTPU`, `FOTRU` and `FBS` models for consistency with other formulations
