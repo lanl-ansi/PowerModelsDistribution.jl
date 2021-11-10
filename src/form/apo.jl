@@ -265,29 +265,29 @@ end
 
 
 ""
-function constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, connections::Vector{Int}, rating::Real)
     ps =var(pm, nw, :ps, i)
 
     for (idx,c) in enumerate(connections)
-        JuMP.has_lower_bound(ps[c]) && JuMP.lower_bound(ps[c]) < -rating[idx] && set_lower_bound(ps[c], -rating[idx])
-        JuMP.has_upper_bound(ps[c]) && JuMP.upper_bound(ps[c]) >  rating[idx] && set_upper_bound(ps[c],  rating[idx])
+        JuMP.has_lower_bound(ps[c]) && JuMP.lower_bound(ps[c]) < -rating && set_lower_bound(ps[c], -rating)
+        JuMP.has_upper_bound(ps[c]) && JuMP.upper_bound(ps[c]) >  rating && set_upper_bound(ps[c],  rating)
     end
 end
 
 
 ""
-function constraint_mc_storage_current_limit(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, bus::Int, connections::Vector{Int}, rating::Vector{<:Real})
+function constraint_mc_storage_current_limit(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, bus::Int, connections::Vector{Int}, rating::Real)
     ps = var(pm, nw, :ps, i)
 
     for (idx,c) in enumerate(connections)
-        JuMP.lower_bound(ps[c]) < -rating[idx] && set_lower_bound(ps[c], -rating[idx])
-        JuMP.upper_bound(ps[c]) >  rating[idx] && set_upper_bound(ps[c],  rating[idx])
+        JuMP.lower_bound(ps[c]) < -rating && set_lower_bound(ps[c], -rating)
+        JuMP.upper_bound(ps[c]) >  rating && set_upper_bound(ps[c],  rating)
     end
 end
 
 
 ""
-function constraint_mc_storage_losses(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, bus, connections::Vector{Int}, r::Vector{<:Real}, x::Vector{<:Real}, p_loss::Real, q_loss::Real)
+function constraint_mc_storage_losses(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, bus, connections::Vector{Int}, r::Real, x::Real, p_loss::Real, q_loss::Real)
     ps = var(pm, nw, :ps, i)
     sc = var(pm, nw, :sc, i)
     sd = var(pm, nw, :sd, i)
@@ -295,7 +295,7 @@ function constraint_mc_storage_losses(pm::AbstractUnbalancedActivePowerModel, nw
     JuMP.@constraint(pm.model,
         sum(ps[c] for c in connections) + (sd - sc)
         ==
-        p_loss + sum(r[idx]*ps[c]^2 for (idx,c) in enumerate(connections))
+        p_loss + r * sum(ps[c]^2 for (idx,c) in enumerate(connections))
     )
 end
 
@@ -336,15 +336,15 @@ end
 
 
 ""
-function constraint_storage_losses(pm::AbstractUnbalancedActivePowerModel, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
+function constraint_mc_storage_losses(pm::AbstractUnbalancedActivePowerModel, n::Int, i::Int, bus::Int, connections::Vector{Int}, r::Real, x::Real, p_loss::Real, q_loss::Real)
     ps = var(pm, n, :ps, i)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)
 
     JuMP.@constraint(pm.model,
-        sum(ps[c] for c in conductors) + (sd - sc)
+        sum(ps[c] for c in connections) + (sd - sc)
         ==
-        p_loss + sum(r[c]*ps[c]^2 for c in conductors)
+        p_loss + r * sum(ps[c]^2 for c in connections)
     )
 end
 

@@ -1247,7 +1247,7 @@ end
 
 
 ""
-function constraint_storage_losses(pm::AbstractUnbalancedACPModel, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
+function constraint_mc_storage_losses(pm::AbstractUnbalancedACPModel, n::Int, i::Int, bus::Int, connections::Vector{Int}, r::Real, x::Real, p_loss::Real, q_loss::Real)
     vm = var(pm, n, :vm, bus)
     ps = var(pm, n, :ps, i)
     qs = var(pm, n, :qs, i)
@@ -1256,15 +1256,15 @@ function constraint_storage_losses(pm::AbstractUnbalancedACPModel, n::Int, i, bu
     qsc = var(pm, n, :qsc, i)
 
     JuMP.@NLconstraint(pm.model,
-        sum(ps[c] for c in conductors) + (sd - sc)
+        sum(ps[c] for c in connections) + (sd - sc)
         ==
-        p_loss + sum(r[c]*(ps[c]^2 + qs[c]^2)/vm[c]^2 for c in conductors)
+        p_loss + r * sum((ps[c]^2 + qs[c]^2)/vm[c]^2 for c in connections)
     )
 
     JuMP.@NLconstraint(pm.model,
-        sum(qs[c] for c in conductors)
+        sum(qs[c] for c in connections)
         ==
-        qsc + q_loss + sum(x[c]*(ps[c]^2 + qs[c]^2)/vm[c]^2 for c in conductors)
+        qsc + q_loss + x * sum((ps[c]^2 + qs[c]^2)/vm[c]^2 for c in connections)
     )
 end
 

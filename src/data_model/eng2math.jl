@@ -775,7 +775,7 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{St
         math_obj["discharge_rating"] = eng_obj["discharge_ub"]
         math_obj["charge_efficiency"] = eng_obj["charge_efficiency"] / 100.0
         math_obj["discharge_efficiency"] = eng_obj["discharge_efficiency"] / 100.0
-        math_obj["thermal_rating"] = get(eng_obj, "sm_ub", fill(Inf, length(eng_obj["connections"])))
+        math_obj["thermal_rating"] = get(eng_obj, "sm_ub", Inf)
         math_obj["qmin"] = eng_obj["qs_lb"]
         math_obj["qmax"] = eng_obj["qs_ub"]
         math_obj["r"] = eng_obj["rs"]

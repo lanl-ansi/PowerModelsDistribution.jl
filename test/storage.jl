@@ -39,10 +39,7 @@ end
 
 @testset "test storage pf" begin
     @testset "3-bus balanced battery acp pf" begin
-        data = deepcopy(case3_balanced_battery)
-        data["settings"]["sbase_default"] = 1e5
-
-        result = solve_mc_pf(case3_balanced_battery, ACPUPowerModel, ipopt_solver)
+        result = solve_mc_pf(case3_balanced_battery, ACPUPowerModel, ipopt_solver_adaptive)
 
         @test result["termination_status"] == LOCALLY_SOLVED
 

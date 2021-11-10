@@ -170,7 +170,7 @@ end
 
 
 ""
-function constraint_storage_losses(pm::AbstractUnbalancedAPLossLessModels, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
+function constraint_mc_storage_losses(pm::AbstractUnbalancedAPLossLessModels, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
     ps = var(pm, n, :ps, i)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)

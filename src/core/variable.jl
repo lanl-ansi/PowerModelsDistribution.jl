@@ -1204,13 +1204,13 @@ function variable_mc_storage_power_imaginary_on_off(pm::AbstractUnbalancedPowerM
         for (i, strg) in ref(pm, nw, :storage)
             if haskey(strg, "qmin")
                 for (idx, c) in enumerate(connections[i])
-                    set_lower_bound(qs[i][c], min(strg["qmin"][idx], 0.0))
+                    set_lower_bound(qs[i][c], min(strg["qmin"], 0.0))
                 end
             end
 
             if haskey(strg, "qmax")
                 for (idx, c) in enumerate(connections[i])
-                    set_upper_bound(qs[i][c], max(strg["qmax"][idx], 0.0))
+                    set_upper_bound(qs[i][c], max(strg["qmax"], 0.0))
                 end
             end
         end
@@ -1250,15 +1250,16 @@ end
 
 
 ""
-function variable_mc_storage_power_mi_on_off(pm::AbstractUnbalancedPowerModel; relax::Bool=false, kwargs...)
-    variable_mc_storage_power_real_on_off(pm; kwargs...)
-    variable_mc_storage_power_imaginary_on_off(pm; kwargs...)
-    variable_mc_storage_current(pm; kwargs...)
-    variable_mc_storage_power_control_imaginary_on_off(pm; kwargs...)
-    variable_storage_energy(pm; kwargs...)
-    variable_storage_charge(pm; kwargs...)
-    variable_storage_discharge(pm; kwargs...)
-    variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
+function variable_mc_storage_power_mi_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=false, bounded::Bool=true, report::Bool=true)
+    variable_mc_storage_power_real_on_off(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_imaginary_on_off(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_control_imaginary_on_off(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_current(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_indicator(pm; nw=nw, report=report)
+    variable_storage_energy(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_charge(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_discharge(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_complementary_indicator(pm; nw=nw, relax=relax, report=report)
 end
 
 

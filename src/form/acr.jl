@@ -1076,19 +1076,19 @@ function constraint_mc_storage_losses(pm::AbstractUnbalancedACRModel, i::Int; nw
     JuMP.@NLconstraint(pm.model,
         sum(ps[c] for c in storage["connections"]) + (sd - sc)
         ==
-        p_loss + sum(r[idx]*(ps[c]^2 + qs[c]^2)/(vr[c]^2 + vi[c]^2) for (idx,c) in enumerate(storage["connections"]))
+        p_loss + r * sum((ps[c]^2 + qs[c]^2)/(vr[c]^2 + vi[c]^2) for (idx,c) in enumerate(storage["connections"]))
     )
 
     JuMP.@NLconstraint(pm.model,
         sum(qs[c] for c in storage["connections"])
         ==
-        qsc + q_loss + sum(x[idx]*(ps[c]^2 + qs[c]^2)/(vr[c]^2 + vi[c]^2) for (idx,c) in enumerate(storage["connections"]))
+        qsc + q_loss + x * sum((ps[c]^2 + qs[c]^2)/(vr[c]^2 + vi[c]^2) for (idx,c) in enumerate(storage["connections"]))
     )
 end
 
 
 ""
-function constraint_storage_losses(pm::AbstractUnbalancedACRModel, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
+function constraint_mc_storage_losses(pm::AbstractUnbalancedACRModel, n::Int, i::Int, bus::Int, connections::Vector{Int}, r::Real, x::Real, p_loss::Real, q_loss::Real)
     vr = var(pm, n, :vr, bus)
     vi = var(pm, n, :vi, bus)
     ps = var(pm, n, :ps, i)
@@ -1098,15 +1098,15 @@ function constraint_storage_losses(pm::AbstractUnbalancedACRModel, n::Int, i, bu
     qsc = var(pm, n, :qsc, i)
 
     JuMP.@NLconstraint(pm.model,
-        sum(ps[c] for c in conductors) + (sd - sc)
+        sum(ps[c] for c in connections) + (sd - sc)
         ==
-        p_loss + sum(r[c]*(ps[c]^2 + qs[c]^2)/(vr[c]^2 + vi[c]^2) for c in conductors)
+        p_loss + r * sum((ps[c]^2 + qs[c]^2)/(vr[c]^2 + vi[c]^2) for c in connections)
     )
 
     JuMP.@NLconstraint(pm.model,
-        sum(qs[c] for c in conductors)
+        sum(qs[c] for c in connections)
         ==
-        qsc + q_loss + sum(x[c]*(ps[c]^2 + qs[c]^2)/(vr[c]^2 + vi[c]^2) for c in conductors)
+        qsc + q_loss + x * sum((ps[c]^2 + qs[c]^2)/(vr[c]^2 + vi[c]^2) for c in connections)
     )
 end
 
