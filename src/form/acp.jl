@@ -1286,7 +1286,7 @@ function constraint_mc_ampacity_from(pm::AbstractUnbalancedACPModel, nw::Int, f_
     con(pm, nw, :mu_cm_branch)[f_idx] = mu_cm_fr = [JuMP.@constraint(pm.model, p_fr[idx]^2 + q_fr[idx]^2 <= vm_fr[idx]^2 * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
 
     if _IM.report_duals(pm)
-        sol(pm, nw, :branch, f_idx[1])[:mu_sm_frß] = mu_cm_fr
+        sol(pm, nw, :branch, f_idx[1])[:mu_cm_fr] = mu_cm_fr
     end
 
     nothing
@@ -1310,7 +1310,7 @@ function constraint_mc_ampacity_to(pm::AbstractUnbalancedACPModel, nw::Int, t_id
     con(pm, nw, :mu_cm_branch)[t_idx] = mu_cm_to = [JuMP.@constraint(pm.model, p_to[idx]^2 + q_to[idx]^2 <= vm_to[idx]^2 * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
 
     if _IM.report_duals(pm)
-        sol(pm, nw, :branch, t_idx[1])[:mu_sm_to] = mu_cm_to
+        sol(pm, nw, :branch, t_idx[1])[:mu_cm_to] = mu_cm_to
     end
 
     nothing

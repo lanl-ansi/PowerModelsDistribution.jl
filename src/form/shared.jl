@@ -391,10 +391,10 @@ function constraint_mc_ampacity_from(pm::AbstractUnbalancedWModels, nw::Int, f_i
     q_fr = [var(pm, nw, :q, f_idx)[c] for c in f_connections]
     w_fr = [var(pm, nw, :w, f_idx[2])[c] for c in f_connections]
 
-    con(pm, nw, :mu_cm_branch)[f_idx] = [JuMP.@constraint(pm.model, p_fr[idx]^2 + q_fr[idx]^2 .<= w_fr[idx] * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
+    con(pm, nw, :mu_cm_branch)[f_idx] = mu_cm_fr = [JuMP.@constraint(pm.model, p_fr[idx]^2 + q_fr[idx]^2 .<= w_fr[idx] * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
 
     if _IM.report_duals(pm)
-        sol(pm, nw, :branch, f_idx[1])[:mu_sm_fr] = con(pm, nw, :mu_cm_fr)
+        sol(pm, nw, :branch, f_idx[1])[:mu_cm_fr] = mu_cm_fr
     end
 
     nothing
@@ -418,7 +418,7 @@ function constraint_mc_ampacity_to(pm::AbstractUnbalancedWModels, nw::Int, t_idx
     con(pm, nw, :mu_cm_branch)[t_idx] = mu_cm_to = [JuMP.@constraint(pm.model, p_to[idx]^2 + q_to[idx]^2 .<= w_to[idx] * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
 
     if _IM.report_duals(pm)
-        sol(pm, nw, :branch, t_idx[1])[:mu_sm_to] = mu_cm_to
+        sol(pm, nw, :branch, t_idx[1])[:mu_cm_to] = mu_cm_to
     end
 
     nothing
