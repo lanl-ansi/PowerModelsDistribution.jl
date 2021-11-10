@@ -893,7 +893,7 @@ Template function for storage loss constraints
 function constraint_mc_storage_losses(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     storage = ref(pm, nw, :storage, i)
 
-    constraint_storage_losses(pm, nw, i, storage["storage_bus"], storage["r"], storage["x"], storage["p_loss"], storage["q_loss"]; conductors=storage["connections"])
+    constraint_mc_storage_losses(pm, nw, i, storage["storage_bus"], storage["connections"], storage["r"], storage["x"], storage["p_loss"], storage["q_loss"])
     nothing
 end
 
@@ -942,11 +942,11 @@ function constraint_mc_storage_on_off(pm::AbstractUnbalancedPowerModel, i::Int; 
     for (idx,c) in enumerate(storage["connections"])
         pmin[idx] = inj_lb[i][idx]
         pmax[idx] = inj_ub[i][idx]
-        qmin[idx] = max(inj_lb[i][idx], ref(pm, nw, :storage, i, "qmin")[idx])
-        qmax[idx] = min(inj_ub[i][idx], ref(pm, nw, :storage, i, "qmax")[idx])
+        qmin[idx] = max(inj_lb[i][idx], ref(pm, nw, :storage, i, "qmin"))
+        qmax[idx] = min(inj_ub[i][idx], ref(pm, nw, :storage, i, "qmax"))
     end
 
-    constraint_mc_storage_on_off(pm, nw, i, storage["connections"], pmin, pmax, qmin, qmax, charge_ub, discharge_ub)
+    constraint_mc_storage_on_off(pm, nw, i, storage["connections"], maximum(pmin), minimum(pmax), maximum(qmin), minimum(qmax), charge_ub, discharge_ub)
     nothing
 end
 

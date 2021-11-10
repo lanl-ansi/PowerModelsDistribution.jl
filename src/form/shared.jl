@@ -350,7 +350,7 @@ end
 
 
 ""
-function constraint_storage_losses(pm::AbstractUnbalancedWConvexModels, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
+function constraint_mc_storage_losses(pm::AbstractUnbalancedWConvexModels, n::Int, i::Int, bus::Int, connections::Vector{Int}, r::Real, x::Real, p_loss::Real, q_loss::Real)
     w = var(pm, n, :w, bus)
     ccms = var(pm, n, :ccms, i)
     ps = var(pm, n, :ps, i)
@@ -359,20 +359,20 @@ function constraint_storage_losses(pm::AbstractUnbalancedWConvexModels, n::Int, 
     sd = var(pm, n, :sd, i)
     qsc = var(pm, n, :qsc, i)
 
-    for c in conductors
+    for c in connections
         JuMP.@constraint(pm.model, ps[c]^2 + qs[c]^2 <= w[c]*ccms[c])
     end
 
     JuMP.@constraint(pm.model,
-        sum(ps[c] for c in conductors) + (sd - sc)
+        sum(ps[c] for c in connections) + (sd - sc)
         ==
-        p_loss + sum(r[c]*ccms[c] for c in conductors)
+        p_loss + r * sum(ccms[c] for c in connections)
     )
 
     JuMP.@constraint(pm.model,
-        sum(qs[c] for c in conductors)
+        sum(qs[c] for c in connections)
         ==
-        qsc + q_loss + sum(x[c]*ccms[c] for c in conductors)
+        qsc + q_loss + x * sum(ccms[c] for c in connections)
     )
 end
 

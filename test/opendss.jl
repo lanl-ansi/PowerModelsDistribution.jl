@@ -169,9 +169,6 @@
                         "charge_efficiency", "discharge_efficiency", "thermal_rating", "qmin", "qmax",
                         "r", "x", "p_loss", "q_loss", "status", "source_id"]
                 @test haskey(bat, key)
-                if key in ["x", "r", "qmin", "qmax", "thermal_rating"]
-                    @test isa(bat[key], Vector)
-                end
             end
         end
 
@@ -308,7 +305,7 @@ end
     @test all(isequal(eng["transformer"]["reg1"]["controls"]["band"][1], [0.0, 0.0, 4.0]))
     @test all(isequal(eng["transformer"]["reg1"]["controls"]["ctprim"][1], [0.0, 0.0, 695.0]))
     @test all(isequal(eng["transformer"]["sub"]["controls"]["r"][1], [0.0, 0.0, 3.0]))
-    @test all(isequal(eng["transformer"]["sub"]["controls"]["x"][1], [0.0, 0.0, 9.0]))        
+    @test all(isequal(eng["transformer"]["sub"]["controls"]["x"][1], [0.0, 0.0, 9.0]))
 end
 
 @testset "test different capcontrol configurations" begin

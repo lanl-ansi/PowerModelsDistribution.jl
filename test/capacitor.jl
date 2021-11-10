@@ -19,7 +19,7 @@
     @testset "capcontrol_acr" begin
         result = solve_mc_opf_capc(IEEE13_CapControl, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
-        @test result["termination_status"] == ALMOST_LOCALLY_SOLVED
+        @test result["termination_status"] == ALMOST_LOCALLY_SOLVED || result["termination_status"] == LOCALLY_SOLVED
 
         @test isapprox(sum(result["solution"]["voltage_source"]["source"]["pg"]), 405.556; atol=5)
         @test isapprox(sum(result["solution"]["voltage_source"]["source"]["qg"]), -527.15; atol=300)
