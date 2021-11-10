@@ -84,7 +84,7 @@ function constraint_mc_model_voltage_magnitude_difference(pm::LPUBFDiagModel, n:
     N = length(f_connections)
 
     for (idx, (fc, tc)) in enumerate(zip(f_connections, t_connections))
-        JuMP.@constraint(pm.model, w_to[tc]== w_fr[fc] - sum(MP[idx,j]*p_s_fr[j] for j in 1:N) - sum(MQ[idx,j]*q_s_fr[j] for j in 1:N))
+        JuMP.@constraint(pm.model, w_to[tc] == w_fr[fc] - sum(MP[idx,j]*p_s_fr[j] for j in 1:N) - sum(MQ[idx,j]*q_s_fr[j] for j in 1:N))
     end
 end
 

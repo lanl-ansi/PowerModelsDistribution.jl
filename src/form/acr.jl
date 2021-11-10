@@ -1126,10 +1126,10 @@ function constraint_mc_ampacity_from(pm::AbstractUnbalancedRectangularModels, nw
     vr_fr = [var(pm, nw, :vr, f_idx[2])[c] for c in f_connections]
     vi_fr = [var(pm, nw, :vi, f_idx[2])[c] for c in f_connections]
 
-    con(pm, nw, :mu_cm_branch)[f_idx] = [JuMP.@constraint(pm.model, p_fr[idx]^2 + q_fr[idx]^2 .<= (vr_fr[idx]^2 + vi_fr[idx]^2) * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
+    con(pm, nw, :mu_cm_branch)[f_idx] = mu_cm_fr = [JuMP.@constraint(pm.model, p_fr[idx]^2 + q_fr[idx]^2 .<= (vr_fr[idx]^2 + vi_fr[idx]^2) * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
 
     if _IM.report_duals(pm)
-        sol(pm, nw, :branch, f_idx[1])[:mu_sm_fr] = con(pm, nw, :mu_cm_fr)
+        sol(pm, nw, :branch, f_idx[1])[:mu_cm_fr] = mu_cm_fr
     end
 
     nothing
@@ -1154,7 +1154,7 @@ function constraint_mc_ampacity_to(pm::AbstractUnbalancedRectangularModels, nw::
     con(pm, nw, :mu_cm_branch)[t_idx] = mu_cm_to = [JuMP.@constraint(pm.model, p_to[idx]^2 + q_to[idx]^2 .<= (vr_to[idx]^2 + vi_to[idx]^2) * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
 
     if _IM.report_duals(pm)
-        sol(pm, nw, :branch, t_idx[1])[:mu_sm_to] = mu_cm_to
+        sol(pm, nw, :branch, t_idx[1])[:mu_cm_to] = mu_cm_to
     end
 
     nothing
