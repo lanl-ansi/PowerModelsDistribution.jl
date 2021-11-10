@@ -132,12 +132,11 @@ end
 
 
 ""
-function constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, connections::Vector{Int}, rating::Real)::Nothing
+function constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, connections::Vector{Int}, rating::Real)
     ps = [var(pm, nw, :ps, i)[c] for c in connections]
     qs = [var(pm, nw, :qs, i)[c] for c in connections]
 
     JuMP.@constraint(pm.model, sum(ps.^2 .+ qs.^2) <= rating^2)
-    nothing
 end
 
 

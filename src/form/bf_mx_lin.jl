@@ -498,3 +498,27 @@ function constraint_storage_complementarity_nl(pm::LPUBFDiagModel, n::Int, i::In
 
     JuMP.@constraint(pm.model, sc_sd == 0.0)
 end
+
+
+"""
+constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, connections::Vector{Int}, rating::Real)
+
+Linear version of storage thermal limit constraint
+"""
+function constraint_mc_storage_thermal_limit(pm::LPUBFDiagModel, nw::Int, i::Int, connections::Vector{Int}, rating::Real)
+    ps = [var(pm, nw, :ps, i)[c] for c in connections]
+    qs = [var(pm, nw, :qs, i)[c] for c in connections]
+
+    ps_sqr = [JuMP.@variable(pm.model, base_name="$(nw)_ps_sqr_$(i)_$(c)") for c in connections]
+    qs_sqr = [JuMP.@variable(pm.model, base_name="$(nw)_qs_sqr_$(i)_$(c)") for c in connections]
+
+    for (idx,c) in enumerate(connections)
+        ps_lb, ps_ub = _IM.variable_domain(ps[idx])
+        PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, ps[idx], ps_sqr[idx], [ps_lb, ps_ub], false)
+
+        qs_lb, qs_ub = _IM.variable_domain(qs[idx])
+        PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, qs[idx], qs_sqr[idx], [qs_lb, qs_ub], false)
+    end
+
+    JuMP.@constraint(pm.model, sum(ps_sqr .+ qs_sqr) <= rating^2)
+end

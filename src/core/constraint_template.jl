@@ -903,10 +903,9 @@ end
 
 Template function for storage thermal limit constraints
 """
-function constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+function constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
     storage = ref(pm, nw, :storage, i)
     constraint_mc_storage_thermal_limit(pm, nw, i, storage["connections"], storage["thermal_rating"])
-    nothing
 end
 
 
