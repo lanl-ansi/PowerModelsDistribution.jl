@@ -146,17 +146,14 @@ function variable_mc_bus_voltage_magnitude_sqr_on_off(pm::AbstractUnbalancedPowe
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
     w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
         [t in terminals[i]], base_name="$(nw)_w_$(i)",
+        lower_bound = 0.0,
         start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, comp_start_value(ref(pm, nw, :bus, i), ["vm_start", "vm", "vmin"], t, 1.0)^2)
     ) for i in ids(pm, nw, :bus))
 
     if bounded
         for (i, bus) in ref(pm, nw, :bus)
             for (idx, t) in enumerate(terminals[i])
-                set_lower_bound(w[i][t], 0.0)
-
-                if haskey(bus, "vmax")
-                    set_upper_bound(w[i][t], bus["vmax"][idx]^2)
-                end
+                set_upper_bound(w[i][t], bus["vmax"][idx]^2)
             end
         end
     end
@@ -767,10 +764,13 @@ Capacitor (with capcontrol) relaxed power variables for AbstractLPUBFModel (usin
 """
 function variable_mc_capacitor_reactive_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default)
     cap_switch_ids = [id for (id,cap) in ref(pm, nw, :shunt) if haskey(cap,"controls")]
-    cap_reactive_power = var(pm, nw)[:capacitor_reactive_power] = Dict(i => JuMP.@variable(pm.model,
-    [p in ref(pm, nw, :shunt, i, "connections")],
-    base_name="$(nw)_cap_cur_$(i)"
-    ) for i in cap_switch_ids)
+    cap_reactive_power = var(pm, nw)[:capacitor_reactive_power] = Dict(
+        i => JuMP.@variable(
+            pm.model,
+            [p in ref(pm, nw, :shunt, i, "connections")],
+            base_name="$(nw)_cap_cur_$(i)",
+        ) for i in cap_switch_ids
+    )
 end
 
 
