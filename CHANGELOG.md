@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added multinetwork versions of data model transformation functions using `apply_pmd!`
 - Added `propagate_network_topology!`, a helper function to propagate the status of buses to connected components
 - Updated Documentation on Storage data model
 - Added LPUBFDiag version of `constraint_mc_storage_thermal_limit` using PolyhedralRelaxations to relax the quadradic constraints
