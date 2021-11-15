@@ -160,6 +160,8 @@ function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true, make_
 
         correct_bus_types!(data)
 
+        propagate_network_topology!(data)
+
         if make_pu
             make_per_unit!(data; make_pu_extensions=make_pu_extensions)
 

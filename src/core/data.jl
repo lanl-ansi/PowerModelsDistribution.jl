@@ -1389,6 +1389,45 @@ end
 
 
 """
+    propagate_network_topology!(data::Dict{String,Any})
+
+helper function to propagate bus status to any connected components
+"""
+function propagate_network_topology!(data::Dict{String,Any})
+    apply_pmd!(_propagate_network_topology!, data)
+end
+
+
+"""
+    _propagate_network_topology!(data::Dict{String,Any})
+
+helper function to propagate bus status to any connected components
+"""
+function _propagate_network_topology!(data::Dict{String,Any})
+    for type in ["branch", "transformer", "switch"]
+        if haskey(data, type)
+            for (_,obj) in data[type]
+                if data["bus"]["$(obj["f_bus"])"]["bus_type"] == 4 || data["bus"]["$(obj["t_bus"])"]["bus_type"] == 4
+                    obj[pmd_math_component_status[type]] = pmd_math_component_status_inactive[type]
+                end
+            end
+        end
+    end
+
+    for type in ["gen", "storage", "load", "shunt"]
+        if haskey(data, type)
+            for (_,obj) in data[type]
+                bus_id = obj["$(type)_bus"]
+                if data["bus"]["$(bus_id)"]["bus_type"] == pmd_math_component_status_inactive["bus"]
+                    obj[pmd_math_component_status[type]] = pmd_math_component_status_inactive[type]
+                end
+            end
+        end
+    end
+end
+
+
+"""
     correct_cost_functions!(data::Dict{String,<:Any})
 
 throws warnings if cost functions are malformed
