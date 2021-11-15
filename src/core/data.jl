@@ -41,13 +41,40 @@ const pmd_math_component_status_inactive = Dict{String,Int}(
     "transformer" => 0,
 )
 
-"""
-    apply_pmd!(func!::Function, data::Dict{String, <:Any}; apply_to_subnetworks::Bool = true)
 
-PowerModelsDistribution wrapper for the InfrastructureModels `apply!` function, working only on data
 """
-function apply_pmd!(func!::Function, data::Dict{String, <:Any}; apply_to_subnetworks::Bool = true)
-    _IM.apply!(func!, data, pmd_it_name; apply_to_subnetworks = apply_to_subnetworks)
+    apply_pmd!(func!::Function, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true, kwargs...)
+
+Version of `apply_pmd!` that supports kwargs
+"""
+function apply_pmd!(func!::Function, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true, kwargs...)
+    data_it = _IM.ismultiinfrastructure(data) ? data["it"][pmd_it_name] : data
+
+    if ismultinetwork(data_it) && apply_to_subnetworks
+        for (nw, nw_data) in data_it["nw"]
+            func!(nw_data; kwargs...)
+        end
+    else
+        func!(data_it; kwargs...)
+    end
+end
+
+
+"""
+    apply_pmd!(func!::Function, data::Dict{String,<:Any}, args...; apply_to_subnetworks::Bool=true, kwargs...)
+
+Version of `apply_pmd!` that supports args and kwargs
+"""
+function apply_pmd!(func!::Function, data::Dict{String,<:Any}, args...; apply_to_subnetworks::Bool=true, kwargs...)
+    data_it = _IM.ismultiinfrastructure(data) ? data["it"][pmd_it_name] : data
+
+    if ismultinetwork(data_it) && apply_to_subnetworks
+        for (nw, nw_data) in data_it["nw"]
+            func!(nw_data, args...; kwargs...)
+        end
+    else
+        func!(data_it, args...; kwargs...)
+    end
 end
 
 

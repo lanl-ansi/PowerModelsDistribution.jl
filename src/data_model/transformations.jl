@@ -21,13 +21,27 @@ Remove parameters from objects with loss models to make them lossless. This incl
 lines, switches, xfmrcodes, transformers, voltage sources, generators, solar, and storage, which
 all have (or will have in the future), loss model parameters that can be omitted.
 """
-function make_lossless!(data_eng::Dict{String,<:Any}; exclude::Vector{String}=String[])
-    @assert iseng(data_eng) "incorrect data model type"
+function make_lossless!(data::Dict{String,<:Any}; exclude::Vector{String}=String[])
+    @assert iseng(data) "wrong data model type"
+
+    apply_pmd!(_make_lossless!, data; apply_to_subnetworks=true, exclude=exclude)
+end
+
+
+"""
+    _make_lossless!(data_eng::Dict{String,<:Any})
+
+Remove parameters from objects with loss models to make them lossless. This includes linecodes,
+lines, switches, xfmrcodes, transformers, voltage sources, generators, solar, and storage, which
+all have (or will have in the future), loss model parameters that can be omitted.
+"""
+function _make_lossless!(data_eng::Dict{String,<:Any}; exclude::Vector{String}=String[])
     for (object_type, parameters) in _loss_model_objects
         if haskey(data_eng, object_type) && !(object_type in exclude)
             for (id, eng_obj) in data_eng[object_type]
                 for parameter in parameters
                     if haskey(eng_obj, parameter)
+                        @warn object_type id parameters
                         eng_obj[parameter] = 0.0 .* eng_obj[parameter]
                     end
                 end
@@ -38,11 +52,23 @@ end
 
 
 """
-    adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
+    adjust_small_line_impedances!(data::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
 
 Replaces impedances (rs, xs) on lines, linecodes, and switches lower than `min_impedance_val` with `replace_impedance_val`.
 """
-function adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
+function adjust_small_line_impedances!(data::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
+    @assert iseng(data) "wrong data model type"
+
+    apply_pmd!(_adjust_small_line_impedances!, data; apply_to_subnetworks=true, min_impedance_val=min_impedance_val, replace_impedance_val=replace_impedance_val)
+end
+
+
+"""
+    _adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
+
+Replaces impedances (rs, xs) on lines, linecodes, and switches lower than `min_impedance_val` with `replace_impedance_val`.
+"""
+function _adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
     for type in ["line", "linecode", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]
@@ -58,11 +84,23 @@ end
 
 
 """
-    adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
+    adjust_small_line_admittances!(data::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
 
 Replaces admittances (g_fr, g_to, b_fr, b_to) on lines, linecodes, and switches lower than `min_admittance_val` with `replace_admittance_val`.
 """
-function adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
+function adjust_small_line_admittances!(data::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
+    @assert iseng(data) "wrong data model type"
+
+    apply_pmd!(_adjust_small_line_admittances!, data; apply_to_subnetworks=true, min_admittance_val=min_admittance_val, replace_admittance_val=replace_admittance_val)
+end
+
+
+"""
+    _adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
+
+Replaces admittances (g_fr, g_to, b_fr, b_to) on lines, linecodes, and switches lower than `min_admittance_val` with `replace_admittance_val`.
+"""
+function _adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
     for type in ["line", "linecode", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]
@@ -78,11 +116,23 @@ end
 
 
 """
-    adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
+    adjust_small_line_lengths!(data::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
 
 Replaces length on lines, switches lower than `min_length_val` with `replace_length_val`.
 """
-function adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
+function adjust_small_line_lengths!(data::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
+    @assert iseng(data) "wrong data model type"
+
+    apply_pmd!(_adjust_small_line_lengths!, data; apply_to_subnetworks=true, min_length_val=min_length_val, replace_length_val=replace_length_val)
+end
+
+
+"""
+    _adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
+
+Replaces length on lines, switches lower than `min_length_val` with `replace_length_val`.
+"""
+function _adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
     for type in ["line", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]
@@ -100,9 +150,20 @@ end
 
 add voltage bounds to all buses based on per-unit upper (`vm_ub`) and lower (`vm_lb`), scaled by the bus's voltage based
 """
-function apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data_eng, "voltage_source", Dict())) ? String[x.second["bus"] for x in data_eng["voltage_source"]] : String[])
-    @assert iseng(data_eng) "incorrect data model type"
+function apply_voltage_bounds!(data::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data_eng, "voltage_source", Dict())) ? String[x.second["bus"] for x in data_eng["voltage_source"]] : String[])
+    @assert iseng(data) "wrong data model type"
 
+    apply_pmd!(_apply_voltage_bounds!, data; apply_to_subnetworks=true, vm_lb=vm_lb, vm_ub=vm_ub)
+end
+
+
+
+"""
+    _apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1)
+
+add voltage bounds to all buses based on per-unit upper (`vm_ub`) and lower (`vm_lb`), scaled by the bus's voltage based
+"""
+function _apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data_eng, "voltage_source", Dict())) ? String[x.second["bus"] for x in data_eng["voltage_source"]] : String[])
     (bus_vbases, edge_vbases) = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
     for (id, bus) in filter(x->!(x.first in exclude), get(data_eng, "bus", Dict{String,Any}()))
         vbase = bus_vbases[id]
@@ -120,7 +181,7 @@ end
 
 
 """
-    remove_all_bounds!(data_eng; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
+    remove_all_bounds!(data; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
 
 Removes all fields ending in '_ub' or '_lb' that aren't required by the math model. Properties
 can be excluded from this removal with `exclude::Vector{String}`
@@ -129,7 +190,24 @@ Whole asset types (e.g., "line") can be excluded using the keyword argument `exc
 
 By default, `"energy_ub"` is excluded from this removal, since it is a required properly on storage.
 """
-function remove_all_bounds!(data_eng; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
+function remove_all_bounds!(data; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
+    @assert iseng(data) "wrong data model type"
+
+    apply_pmd!(_remove_all_bounds!, data; apply_to_subnetworks=true, exclude=exclude, exclude_asset_type=exclude_asset_type)
+end
+
+
+"""
+    _remove_all_bounds!(data_eng; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
+
+Removes all fields ending in '_ub' or '_lb' that aren't required by the math model. Properties
+can be excluded from this removal with `exclude::Vector{String}`
+
+Whole asset types (e.g., "line") can be excluded using the keyword argument `exclude_asset_type::Vector{String}`
+
+By default, `"energy_ub"` is excluded from this removal, since it is a required properly on storage.
+"""
+function _remove_all_bounds!(data_eng; exclude::Vector{<:String}=String["energy_ub"], exclude_asset_type::Vector{String}=String[])
     for (k,v) in data_eng
         if isa(v, Dict) && k!="settings" && !(k in exclude_asset_type)
             for (_, comp) in v
@@ -145,11 +223,23 @@ end
 
 
 """
-    adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+    adjust_line_limits!(data::Dict{String,<:Any}, mult::Float64)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on line objects (`line`, `linecode`, `switch`) by a multiplier `mult`
 """
-function adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+function adjust_line_limits!(data::Dict{String,<:Any}, mult::Float64)
+    @assert iseng(data) "wrong data model type"
+
+    apply_pmd!(_adjust_line_limits!, data, mult; apply_to_subnetworks=true)
+end
+
+
+"""
+    _adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+
+Multiplies limits (`sm_ub` and/or `cm_ub`) on line objects (`line`, `linecode`, `switch`) by a multiplier `mult`
+"""
+function _adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
     for type in ["linecode", "line", "switch"]
         if haskey(data_eng, type)
             for (_,obj) in data_eng[type]
@@ -166,11 +256,23 @@ end
 
 
 """
-    remove_line_limits!(data_eng::Dict{String,<:Any})
+    remove_line_limits!(data::Dict{String,<:Any})
 
 Removes fields `cm_ub` and `sm_ub` from lines, switches, and linecodes
 """
-function remove_line_limits!(data_eng::Dict{String,<:Any})
+function remove_line_limits!(data::Dict{String,<:Any})
+    @assert iseng(data) "wrong data model type"
+
+    apply_pmd!(_remove_line_limits!, data; apply_to_subnetworks=true)
+end
+
+
+"""
+    _remove_line_limits!(data_eng::Dict{String,<:Any})
+
+Removes fields `cm_ub` and `sm_ub` from lines, switches, and linecodes
+"""
+function _remove_line_limits!(data_eng::Dict{String,<:Any})
     for type in ["linecode", "line", "switch"]
         if haskey(data_eng, type)
             for (_,obj) in data_eng[type]
@@ -183,11 +285,23 @@ end
 
 
 """
-    adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+    adjust_transformer_limits!(data::Dict{String,<:Any}, mult::Float64)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on transformer objects by a multiplier `mult`
 """
-function adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+function adjust_transformer_limits!(data::Dict{String,<:Any}, mult::Float64)
+    @assert iseng(data) "wrong data model type"
+
+    apply_pmd!(_adjust_transformer_limits!, data, mult; apply_to_subnetworks=true)
+end
+
+
+"""
+    _adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+
+Multiplies limits (`sm_ub` and/or `cm_ub`) on transformer objects by a multiplier `mult`
+"""
+function _adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
     if haskey(data_eng, "transformer")
         for (_,obj) in data_eng["transformer"]
             if haskey(obj, "cm_ub")
@@ -206,7 +320,19 @@ end
 
 Removes field `sm_ub` from transformers, xfmrcodes
 """
-function remove_transformer_limits!(data_eng::Dict{String,<:Any})
+function remove_transformer_limits!(data::Dict{String,<:Any})
+    @assert iseng(data) "wrong data model type"
+
+    apply_pmd!(_remove_transformer_limits!, data; apply_to_subnetworks=true)
+end
+
+
+"""
+    _remove_transformer_limits!(data_eng::Dict{String,<:Any})
+
+Removes field `sm_ub` from transformers, xfmrcodes
+"""
+function _remove_transformer_limits!(data_eng::Dict{String,<:Any})
     for type in ["xfmrcode", "transformer"]
         if haskey(data_eng, type)
             for (_,obj) in data_eng[type]
@@ -218,11 +344,23 @@ end
 
 
 """
-apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
+    apply_kron_reduction!(data::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
 
 Applies a Kron Reduction to the network, reducing out the `kr_neutral`, leaving only the `kr_phases`
 """
-function apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
+function apply_kron_reduction!(data::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
+    @assert iseng(data) "wrong data model type"
+
+    apply_pmd!(_apply_kron_reduction!, data; apply_to_subnetworks=true, kr_phases=kr_phases, kr_neutral=kr_neutral)
+end
+
+
+"""
+    _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
+
+Applies a Kron Reduction to the network, reducing out the `kr_neutral`, leaving only the `kr_phases`
+"""
+function _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
     if haskey(data_eng, "bus")
         for (id,eng_obj) in data_eng["bus"]
             filter = eng_obj["terminals"] .!= kr_neutral
@@ -341,11 +479,23 @@ end
 
 
 """
-    apply_phase_projection!(data_eng::Dict{String,<:Any})
+    apply_phase_projection!(data::Dict{String,<:Any})
 
 pad matrices and vectors to max number of conductors
 """
-function apply_phase_projection!(data_eng::Dict{String,<:Any})
+function apply_phase_projection!(data::Dict{String,<:Any})
+    @assert iseng(data) "wrong data model type"
+
+    apply_pmd!(_apply_phase_projection!, data; apply_to_subnetworks=true)
+end
+
+
+"""
+    _apply_phase_projection!(data_eng::Dict{String,<:Any})
+
+pad matrices and vectors to max number of conductors
+"""
+function _apply_phase_projection!(data_eng::Dict{String,<:Any})
     @assert get(data_eng, "is_kron_reduced", false)
 
     all_conductors = _get_complete_conductor_set(data_eng)
@@ -488,13 +638,27 @@ end
 
 
 """
-    apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
+    apply_phase_projection_delta!(data::Dict{String,<:Any})
 
 phase projection for components where unprojected states are not yet supported (delta configurations).
 
 See [`apply_phase_projection!`](@ref apply_phase_projection!)
 """
-function apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
+function apply_phase_projection_delta!(data::Dict{String,<:Any})
+    @assert iseng(data) "wrong data model type"
+
+    apply_pmd!(_apply_phase_projection_delta!, data; apply_to_subnetworks=true)
+end
+
+
+"""
+    _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
+
+phase projection for components where unprojected states are not yet supported (delta configurations).
+
+See [`apply_phase_projection!`](@ref apply_phase_projection!)
+"""
+function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
     @assert get(data_eng, "is_kron_reduced", false)
 
     bus_terminals = Dict{String,Vector{Int}}()
@@ -590,12 +754,25 @@ end
 
 
 """
-    apply_voltage_angle_difference_bounds!(eng::Dict{String,<:Any}, vad::Real=5.0)
+    apply_voltage_angle_difference_bounds!(data::Dict{String,<:Any}, vad::Real=5.0)
 
 Applies voltage angle difference bound given by `vad::Real` in degrees (_i.e._, the allowed drift of angle from one end
 of a line to another) to all lines. By default, `vad=5.0`.
 """
-function apply_voltage_angle_difference_bounds!(eng::Dict{String,<:Any}, vad::Real=5.0)
+function apply_voltage_angle_difference_bounds!(data::Dict{String,<:Any}, vad::Real=5.0)
+    @assert iseng(data) "wrong data model type"
+
+    apply_pmd!(_apply_voltage_angle_difference_bounds!, data, vad; apply_to_subnetworks=true)
+end
+
+
+"""
+    _apply_voltage_angle_difference_bounds!(eng::Dict{String,<:Any}, vad::Real=5.0)
+
+Applies voltage angle difference bound given by `vad::Real` in degrees (_i.e._, the allowed drift of angle from one end
+of a line to another) to all lines. By default, `vad=5.0`.
+"""
+function _apply_voltage_angle_difference_bounds!(eng::Dict{String,<:Any}, vad::Real=5.0)
     if haskey(eng, "line")
         for (_,line) in eng["line"]
             line["vad_lb"] = fill(-vad, length(line["f_connections"]))
@@ -634,6 +811,7 @@ function _get_line_impedance_parameters(data_eng::Dict{String,Any}, line::Dict{S
 
     return z_s, y_fr, y_to
 end
+
 
 "Create an equivalent shunt for a line which connects to a single bus."
 function _loop_line_to_shunt(data_eng::Dict{String,Any}, line_id::AbstractString)
@@ -752,7 +930,7 @@ end
 
 """
     transform_loops!(
-        data_eng::Dict{String,Any};
+        data::Dict{String,Any};
         zero_series_impedance_threshold::Real=1E-8,
         shunt_id_prefix::AbstractString="line_loop"
     )::Dict{String,Any}
@@ -764,12 +942,35 @@ This is useful because OpenDSS modelers have to insert tiny impedances to repres
 The addmittance to ground should be zero to trigger the short-circuit handling.
 """
 function transform_loops!(
-    data_eng::Dict{String,Any};
+    data::Dict{String,Any};
     zero_series_impedance_threshold::Real=1E-8,
     shunt_id_prefix::AbstractString="line_loop"
     )::Dict{String,Any}
 
-    @assert data_eng["data_model"]==ENGINEERING
+    @assert iseng(data) "wrong data model type"
+
+    apply_pmd!(_transform_loops!, data; apply_to_subnetworks=true, zero_series_impedance_threshold=zero_series_impedance_threshold, shunt_id_prefix=shunt_id_prefix)
+end
+
+
+"""
+    _transform_loops!(
+        data_eng::Dict{String,Any};
+        zero_series_impedance_threshold::Real=1E-8,
+        shunt_id_prefix::AbstractString="line_loop"
+    )::Dict{String,Any}
+
+Transform line loops (connected to a single bus), which are not allowed in the mathematical model.
+Lossy line loops are converted to equivalent shunts, and lossless ones (i.e. short-circuits) are represented by merging the short-circuited terminals.
+The argument 'zero_series_impedance_threshold' controls the threshold below which the series impedance is considered to be a short-ciruit.
+This is useful because OpenDSS modelers have to insert tiny impedances to represent short-circuit reactors.
+The addmittance to ground should be zero to trigger the short-circuit handling.
+"""
+function _transform_loops!(
+    data_eng::Dict{String,Any};
+    zero_series_impedance_threshold::Real=1E-8,
+    shunt_id_prefix::AbstractString="line_loop"
+    )::Dict{String,Any}
 
     for (id,line) in get(data_eng, "line", Dict())
         if line["f_bus"]==line["t_bus"]
@@ -840,16 +1041,29 @@ end
 
 
 """
-    kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})::Dict{String,Any}
+    kron_reduce_implicit_neutrals!(data::Dict{String,Any})::Dict{String,Any}
 
 Kron-reduce all (implied) neutral conductors of lines, switches and shunts, and remove any terminals which become unconnected.
 A line or switch conductor is considered as a neutral conductor if it is connected between two neutral terminals.
 A terminal is a neutral terminals if it is galvanically connected (i.e. through a line or switch)
 to a grounded terminal, or the neutral conductor of a wye-connected component.
 """
-function kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})::Dict{String,Any}
-    @assert data_eng["data_model"]==ENGINEERING
+function kron_reduce_implicit_neutrals!(data::Dict{String,Any})::Dict{String,Any}
+    @assert iseng(data) "wrong data model type"
 
+    apply_pmd!(_kron_reduce_implicit_neutrals!, data; apply_to_subnetworks=true)
+end
+
+
+"""
+    _kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})::Dict{String,Any}
+
+Kron-reduce all (implied) neutral conductors of lines, switches and shunts, and remove any terminals which become unconnected.
+A line or switch conductor is considered as a neutral conductor if it is connected between two neutral terminals.
+A terminal is a neutral terminals if it is galvanically connected (i.e. through a line or switch)
+to a grounded terminal, or the neutral conductor of a wye-connected component.
+"""
+function _kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})::Dict{String,Any}
     # store the original linecode ids to detect naming clashes
     orig_lc_ids = [keys(data_eng["linecode"])...]
 
@@ -939,14 +1153,25 @@ function kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})::Dict{String
 end
 
 
+
 """
-    remove_unconnected_terminals!(data_eng::Dict{String,Any})::Dict{String,Any}
+    remove_unconnected_terminals!(data::Dict{String,Any})::Dict{String,Any}
 
 Remove all terminals which are unconnected (not considering a grounding as a connection).
 """
-function remove_unconnected_terminals!(data_eng::Dict{String,Any})::Dict{String,Any}
-    @assert data_eng["data_model"]==ENGINEERING
+function remove_unconnected_terminals!(data::Dict{String,Any})::Dict{String,Any}
+    @assert iseng(data) "wrong data model type"
 
+    apply_pmd!(_remove_unconnected_terminals!, data; apply_to_subnetworks=true)
+end
+
+
+"""
+    _remove_unconnected_terminals!(data_eng::Dict{String,Any})::Dict{String,Any}
+
+Remove all terminals which are unconnected (not considering a grounding as a connection).
+"""
+function _remove_unconnected_terminals!(data_eng::Dict{String,Any})::Dict{String,Any}
     # find all connected bts (a 'bt' is a bus-terminal pair)
     connected_bts = []
     for type in setdiff(intersect(pmd_eng_asset_types, keys(data_eng)), ["bus"])
@@ -991,8 +1216,6 @@ This initial list is then expanded to all terminals which are
 galvanically connected to terminals in the initial list.
 """
 function _infer_neutral_terminals(data_eng::Dict{String,Any})
-    @assert data_eng["data_model"]==ENGINEERING
-
     # find all galvanic edges through lines and switches
     bts = [(b,t) for (b,bus) in data_eng["bus"] for t in bus["terminals"]]
     bt_neighbours = Dict(bt=>[] for bt in bts)
