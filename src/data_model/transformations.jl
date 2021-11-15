@@ -146,11 +146,11 @@ end
 
 
 """
-    apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1)
+    apply_voltage_bounds!(data::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1)
 
 add voltage bounds to all buses based on per-unit upper (`vm_ub`) and lower (`vm_lb`), scaled by the bus's voltage based
 """
-function apply_voltage_bounds!(data::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data_eng, "voltage_source", Dict())) ? String[x.second["bus"] for x in data_eng["voltage_source"]] : String[])
+function apply_voltage_bounds!(data::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data, "voltage_source", Dict())) ? String[x.second["bus"] for x in data["voltage_source"]] : String[])
     @assert iseng(data) "wrong data model type"
 
     apply_pmd!(_apply_voltage_bounds!, data; apply_to_subnetworks=true, vm_lb=vm_lb, vm_ub=vm_ub)
@@ -349,8 +349,6 @@ end
 Applies a Kron Reduction to the network, reducing out the `kr_neutral`, leaving only the `kr_phases`
 """
 function apply_kron_reduction!(data::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
-    @assert iseng(data) "wrong data model type"
-
     apply_pmd!(_apply_kron_reduction!, data; apply_to_subnetworks=true, kr_phases=kr_phases, kr_neutral=kr_neutral)
 end
 
