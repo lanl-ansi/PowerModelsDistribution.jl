@@ -50,7 +50,7 @@ ut_trans_3w_dyy_3_loadloss = parse_file("../test/data/opendss/ut_trans_3w_dyy_3_
 
 # IEEE13
 IEEE13_RegControl = parse_file("../test/data/opendss/IEEE13_RegControl.dss"; transformations=[remove_line_limits!, remove_transformer_limits!])
-IEEE13_CapControl = parse_file("../test/data/opendss/IEEE13_CapControl.dss")
+IEEE13_CapControl = parse_file("../test/data/opendss/IEEE13_CapControl.dss"; transformations=[remove_line_limits!, remove_transformer_limits!])
 
 # explicit neutral
 test_gen_3ph_wye = parse_file("../test/data/en_validation_case_data/test_gen_3ph_wye.dss", transformations=[remove_all_bounds!])
