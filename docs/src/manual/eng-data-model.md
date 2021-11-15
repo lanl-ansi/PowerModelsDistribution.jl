@@ -401,14 +401,14 @@ A storage object is a flexible component that can represent a variety of energy 
 | `energy_ub`            |           | `Real`             |         | opf          | maximum energy rating                                                                |
 | `charge_ub`            |           | `Real`             |         | opf          | maximum charge rating                                                                |
 | `discharge_ub`         |           | `Real`             |         | opf          | maximum discharge rating                                                             |
-| `sm_ub`                |           | `Vector{Real}`     | watt    | opf          | Power rating, `size=nphases`                                                         |
-| `cm_ub`                |           | `Vector{Real}`     | amp     | opf          | Current rating, `size=nphases`                                                       |
+| `sm_ub`                |           | `Real`             | watt    | opf          | Power rating,                                                                        |
+| `cm_ub`                |           | `Real`             | amp     | opf          | Current rating,                                                                      |
 | `charge_efficiency`    |           | `Real`             | percent | always       | charging efficiency (losses)                                                         |
 | `discharge_efficiency` |           | `Real`             | percent | always       | disharging efficiency (losses)                                                       |
-| `qs_ub`                |           | `Vector{Real}`     |         | opf          | Maximum reactive power injection, `size=nphases`                                     |
-| `qs_lb`                |           | `Vector{Real}`     |         | opf          | Minimum reactive power injection, `size=nphases`                                     |
-| `rs`                   |           | `Vector{Real}`     | ohm     | always       | converter resistance                                                                 |
-| `xs`                   |           | `Vector{Real}`     | ohm     | always       | converter reactance                                                                  |
+| `qs_ub`                |           | `Real`             |         | opf          | Maximum reactive power injection,                                                    |
+| `qs_lb`                |           | `Real`             |         | opf          | Minimum reactive power injection,                                                    |
+| `rs`                   |           | `Real`             | ohm     | always       | converter resistance                                                                 |
+| `xs`                   |           | `Real`             | ohm     | always       | converter reactance                                                                  |
 | `pex`                  |           | `Real`             |         | always       | Total active power standby exogenous flow (loss)                                     |
 | `qex`                  |           | `Real`             |         | always       | Total reactive power standby exogenous flow (loss)                                   |
 | `ps`                   |           | `Vector{Real}`     | watt    | solution     | Present active power injection                                                       |

@@ -2,6 +2,7 @@
 
 ## staged
 
+- Updated Documentation on Storage data model
 - Added LPUBFDiag version of `constraint_mc_storage_thermal_limit` using PolyhedralRelaxations to relax the quadradic constraints
 - Fixed bug in reporting duals (typo in ampacity constraint functions) (#367)
 - Changed multiconductor storage model parsing from opendss to be single values (instead of creating some multiconductor values, making assumptions about split between phases)
