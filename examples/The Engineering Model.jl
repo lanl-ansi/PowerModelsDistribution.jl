@@ -252,7 +252,7 @@ md"""
 
 One of the power things about the engineering model is that data transformations are much more simple. Here we illustrate two examples that are currently included in PowerModelsDistribution, but writing your own data transformation functions will be trivial, as we will show.
 
-__Note__: In v0.9, `apply_kron_reduction!` and `apply_phase_projection!` are applied by default, but can be disabled with the keyword arguments `kron_reduced=false` and `project_phases=false`, respectively in `parse_file` or `transform_data_model`.
+__Note__: In v0.9, `apply_kron_reduction!` and `apply_phase_projection!` are applied by default, but can be disabled with the keyword arguments `kron_reduce=false` and `phase_project=false`, respectively in `parse_file` or `transform_data_model`.
 
 First, there are several objects that have loss models by default when parsing from dss files, such as voltage sources, transformers, and switches. To remove these loss models, therefore making these components lossless, we can use the included `make_lossess!` function. Here we use a basic 2-winding wye-wye connected transformer case from `test` to illustrate this
 """
