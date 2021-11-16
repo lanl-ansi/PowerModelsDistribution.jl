@@ -253,7 +253,7 @@ function constraint_mc_power_balance_capc(pm::FOTRUPowerModel, nw::Int, i::Int, 
 
     # add constraints to model capacitor switching
     if !isempty(bus_shunts) && haskey(ref(pm, nw, :shunt, bus_shunts[1][1]), "controls")
-        constraint_capacitor_on_off(pm, i, bus_shunts)
+        constraint_capacitor_on_off(pm, nw, i, bus_shunts)
 
         for (idx, t) in ungrounded_terminals
             cp = JuMP.@constraint(pm.model,
@@ -343,7 +343,7 @@ end
 
 Add constraints to model capacitor switching similar to FBSUBFPowerModel
 """
-function constraint_capacitor_on_off(pm::FOTRUPowerModel, i::Int, bus_shunts::Vector{Tuple{Int,Vector{Int}}}; nw::Int=nw_id_default)
+function constraint_capacitor_on_off(pm::FOTRUPowerModel, nw::Int, i::Int, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
     cap_state = var(pm, nw, :capacitor_state, bus_shunts[1][1])
     shunt = ref(pm, nw, :shunt, bus_shunts[1][1])
     ϵ = 1e-5
