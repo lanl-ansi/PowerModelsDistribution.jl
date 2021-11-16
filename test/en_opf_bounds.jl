@@ -16,7 +16,7 @@ end
         data_eng = deepcopy(test_gen_3ph_wye)
         data_eng["settings"]["sbase_default"] = 1.0
         data_eng["line"]["line1"]["cm_ub"] = cm_ub
-        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
+        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduce=false, phase_project=false)
         add_start_vrvi!(data_math)
         gen_pv = data_math["gen"]["1"]
         @assert gen_pv["name"]=="pv1"
@@ -55,7 +55,7 @@ end
         data_eng = deepcopy(test_gen_3ph_wye)
         data_eng["settings"]["sbase_default"] = 1.0
         data_eng["line"]["line1"]["sm_ub"] = sm_ub
-        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
+        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduce=false, phase_project=false)
         add_start_vrvi!(data_math)
         gen_pv = data_math["gen"]["1"]
         @assert gen_pv["name"]=="pv1"
@@ -89,7 +89,7 @@ end
         data_eng["solar"] = deepcopy(test_gen_3ph_wye["solar"])
         data_eng["settings"]["sbase_default"] = 500.0
         data_eng["switch"]["switch"]["cm_ub"] = cm_ub
-        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
+        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduce=false, phase_project=false)
         add_start_vrvi!(data_math)
         gen_pv = data_math["gen"]["1"]
         @assert gen_pv["name"]=="pv1"
@@ -129,7 +129,7 @@ end
         data_eng["solar"] = deepcopy(test_gen_3ph_wye["solar"])
         data_eng["settings"]["sbase_default"] = 500.0
         data_eng["switch"]["switch"]["sm_ub"] = sm_ub
-        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
+        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduce=false, phase_project=false)
         add_start_vrvi!(data_math)
         gen_pv = data_math["gen"]["1"]
         @assert gen_pv["name"]=="pv1"
@@ -163,7 +163,7 @@ end
         data_eng = deepcopy(test_gen_3ph_wye)
         data_eng["settings"]["sbase_default"] = 500.0
         data_eng["bus"]["b2"]["vm_ub"] = vm_ub
-        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
+        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduce=false, phase_project=false)
         add_start_vrvi!(data_math)
         gen_pv = data_math["gen"]["1"]
         @assert gen_pv["name"]=="pv1"
@@ -189,7 +189,7 @@ end
         data_eng = deepcopy(test_gen_3ph_wye)
         data_eng["settings"]["sbase_default"] = 500.0
         data_eng["bus"]["b2"]["vm_lb"] = vm_lb
-        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
+        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduce=false, phase_project=false)
         add_start_vrvi!(data_math)
         gen_pv = data_math["gen"]["1"]
         @assert gen_pv["name"]=="pv1"
@@ -217,7 +217,7 @@ end
         data_eng = deepcopy(test_gen_1ph_wye)
         data_eng["settings"]["sbase_default"] = 500.0
         data_eng["bus"]["b2"]["vm_pair_ub"] = vm_pair_ub
-        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
+        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduce=false, phase_project=false)
         add_start_vrvi!(data_math)
         gen_pv = data_math["gen"]["1"]
         @assert gen_pv["name"]=="pv1"
@@ -244,7 +244,7 @@ end
         data_eng = deepcopy(test_gen_1ph_wye)
         data_eng["settings"]["sbase_default"] = 500.0
         data_eng["bus"]["b2"]["vm_pair_lb"] = vm_pair_lb
-        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
+        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduce=false, phase_project=false)
         add_start_vrvi!(data_math)
         gen_pv = data_math["gen"]["1"]
         @assert gen_pv["name"]=="pv1"
@@ -274,7 +274,7 @@ end
         data_eng["solar"] = deepcopy(test_gen_3ph_wye["solar"])
         data_eng["settings"]["sbase_default"] = 500.0
         data_eng["transformer"]["transformer1"]["sm_ub"] = sm_ub
-        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
+        data_math = transform_data_model(data_eng, multinetwork=false, kron_reduce=false, phase_project=false)
         add_start_vrvi!(data_math)
         gen_pv = data_math["gen"]["1"]
         @assert gen_pv["name"]=="pv1"

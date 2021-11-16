@@ -89,24 +89,40 @@ function transform_solution(
     nws_eng_sol = Dict(k => Dict{String,Any}() for k in keys(nws_math_sol))
     solution_eng = Dict{String,Any}("nw" => nws_eng_sol)
 
-    map = ismissing(map) ? get(data_math, "map", Vector{Dict{String,Any}}()) : map
-    @assert !isempty(map) "Map is empty, cannot map solution up to engineering model"
-
     # apply unmap functions
-    for map_item in reverse(map)
-        if map_item["unmap_function"] != "_map_math2eng_root!" && get(map_item, "apply_to_subnetworks", true)
-            for (n, nw_math_sol) in nws_math_sol
-                if haskey(map_math2eng_extensions, map_item["unmap_function"])
-                    map_math2eng_extensions[map_item["unmap_function"]](nws_eng_sol[n], nw_math_sol, map_item)
+    if ismultinetwork(data_math) && ismissing(map)
+        map = get(data_math, "map", Dict{String,Any}[])
+        @assert !isempty(map) "Map is empty, cannot map solution up to engineering model"
+
+        for (n, _map) in map
+            for map_item in reverse(_map)
+                unmap_function! = haskey(map_math2eng_extensions, map_item["unmap_function"]) ? map_math2eng_extensions[map_item["unmap_function"]] : getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))
+                if map_item["unmap_function"] != "_map_math2eng_root!" && get(map_item, "apply_to_subnetworks", true)
+                    unmap_function!(nws_eng_sol[n], nws_math_sol[n], map_item)
                 else
-                    getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(nws_eng_sol[n], nw_math_sol, map_item)
+                    unmap_function!(solution_eng, solution_math, map_item)
                 end
             end
-        else
-            if haskey(map_math2eng_extensions, map_item["unmap_function"])
-                map_math2eng_extensions[map_item["unmap_function"]](solution_eng, solution_math, map_item)
+        end
+    else
+        map = ismissing(map) ? get(data_math, "map", Vector{Dict{String,Any}}()) : map
+        @assert !isempty(map) "Map is empty, cannot map solution up to engineering model"
+
+        for map_item in reverse(map)
+            if map_item["unmap_function"] != "_map_math2eng_root!" && get(map_item, "apply_to_subnetworks", true)
+                for (n, nw_math_sol) in nws_math_sol
+                    if haskey(map_math2eng_extensions, map_item["unmap_function"])
+                        map_math2eng_extensions[map_item["unmap_function"]](nws_eng_sol[n], nw_math_sol, map_item)
+                    else
+                        getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(nws_eng_sol[n], nw_math_sol, map_item)
+                    end
+                end
             else
-                getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(solution_eng, solution_math, map_item)
+                if haskey(map_math2eng_extensions, map_item["unmap_function"])
+                    map_math2eng_extensions[map_item["unmap_function"]](solution_eng, solution_math, map_item)
+                else
+                    getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(solution_eng, solution_math, map_item)
+                end
             end
         end
     end
@@ -311,13 +327,13 @@ end
 
 ""
 function _map_math2eng_root!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
-    data_eng["per_unit"] = data_math["per_unit"]
-
     if !ismultinetwork(data_math)
-        data_eng["settings"] = get(data_math, "settings", Dict{String,Any}())  # in case of no solution
+        data_eng["settings"] = Dict{String,Any}("sbase" => get(get(data_math, "settings", Dict{String,Any}), "sbase", NaN))  # in case of no solution
+        data_eng["per_unit"] = data_math["per_unit"]
     else
         for (n,nw) in get(data_eng, "nw", Dict{String,Any}())
             nw["settings"] = Dict{String,Any}("sbase" => data_math["nw"][n]["settings"]["sbase"])
+            nw["per_unit"] = data_math["nw"][n]["per_unit"]
         end
     end
 end

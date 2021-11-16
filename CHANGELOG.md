@@ -2,6 +2,8 @@
 
 ## staged
 
+- Refactored kwargs `kron_reduced` and `phase_projected` to be `kron_reduce` and `phase_project`, respectively
+- Added more native support for multinetwork data structures
 - Changed `"multiple references buses found"` warning to `@debug`
 - Added multinetwork versions of data model transformation functions using `apply_pmd!`
 - Added `propagate_network_topology!`, a helper function to propagate the status of buses to connected components

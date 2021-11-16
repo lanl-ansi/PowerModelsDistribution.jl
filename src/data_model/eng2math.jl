@@ -53,7 +53,7 @@ const pmd_math_asset_types = String[
 """
     transform_data_model(
         data::Dict{String,<:Any};
-        kron_reduced::Bool=true,
+        kron_reduce::Bool=true,
         multinetwork::Bool=false,
         global_keys::Set{String}=Set{String}(),
         eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
@@ -69,12 +69,13 @@ Transforms a data model model between ENGINEERING (high-level) and MATHEMATICAL 
 
 ## Kron reduction
 
-If `kron_reduced==true`, [`apply_kron_reduction!`](@ref apply_kron_reduction!) will be
-applied to the network data.
+If `kron_reduce==true`, [`apply_kron_reduction!`](@ref apply_kron_reduction!) and
+[`apply_phase_projection_delta!`](@ref apply_phase_projection_delta!) will be applied to
+the network data.
 
 ## Phase projection
 
-If `phase_projected==true`, [`apply_phase_projection_delta!`](@ref apply_phase_projection_delta!) will be
+If `phase_project==true`,  [`apply_phase_projection!`](@ref apply_phase_projection!) will be
 applied to the network data.
 
 ## Multinetwork transformations
@@ -132,14 +133,15 @@ See [`make_per_unit!`](@ref make_per_unit!) for further explanation.
 """
 function transform_data_model(
     data::Dict{String,<:Any};
-    kron_reduced::Bool=true,
-    phase_projected::Bool=true,
+    kron_reduce::Bool=true,
+    phase_project::Bool=false,
     multinetwork::Bool=false,
     global_keys::Set{String}=Set{String}(),
     eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
     eng2math_extensions::Vector{<:Function}=Function[],
     make_pu::Bool=true,
     make_pu_extensions::Vector{<:Function}=Function[],
+    correct_network_data::Bool=true,
     )::Dict{String,Any}
 
     current_data_model = get(data, "data_model", MATHEMATICAL)
@@ -151,13 +153,13 @@ function transform_data_model(
 
         data_math = _map_eng2math(
             data;
-            kron_reduced=kron_reduced,
-            phase_projected=phase_projected,
+            kron_reduce=kron_reduce,
+            phase_project=phase_project,
             eng2math_extensions=eng2math_extensions,
             eng2math_passthrough=eng2math_passthrough,
             global_keys=global_keys,
         )
-        correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
+        correct_network_data && correct_network_data!(data_math; make_pu=make_pu, make_pu_extensions=make_pu_extensions)
 
         return data_math
     elseif ismath(data)
@@ -173,8 +175,8 @@ end
 "base function for converting engineering model to mathematical model"
 function _map_eng2math(
     data_eng::Dict{String,<:Any};
-    kron_reduced::Bool=true,
-    phase_projected::Bool=true,
+    kron_reduce::Bool=true,
+    phase_project::Bool=false,
     eng2math_extensions::Vector{<:Function}=Function[],
     eng2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(),
     global_keys::Set{String}=Set{String}(),
@@ -184,93 +186,125 @@ function _map_eng2math(
 
     _data_eng = deepcopy(data_eng)
 
-    data_math = Dict{String,Any}(
-        "name" => get(_data_eng, "name", ""),
-        "per_unit" => get(_data_eng, "per_unit", false),
-        "data_model" => MATHEMATICAL,
-        "nw" => Dict{String,Any}(),
-        "multinetwork" => ismultinetwork(data_eng)
-    )
+    if kron_reduce
+        apply_kron_reduction!(_data_eng)
+        apply_phase_projection_delta!(_data_eng)
+    end
+
+    if phase_project
+        apply_phase_projection!(_data_eng)
+    end
 
     if ismultinetwork(data_eng)
-        nw_data_eng = _data_eng["nw"]
-    else
-        nw_data_eng = Dict("0" => _data_eng)
-    end
-
-    for (n, nw_eng) in nw_data_eng
-        # TODO remove kron reduction from eng2math (breaking)
-        if kron_reduced && !get(nw_eng, "is_kron_reduced", false)
-            apply_kron_reduction!(nw_eng)
-        end
-
-        if phase_projected && !get(data_eng, "is_projected", false)
-            apply_phase_projection_delta!(nw_eng)
-        end
-
-        nw_math = Dict{String,Any}(
-            "is_projected" => get(nw_eng, "is_projected", false),
-            "is_kron_reduced" => get(nw_eng, "is_kron_reduced", false),
-            "settings" => deepcopy(nw_eng["settings"]),
+        data_math = Dict{String,Any}(
+            "name" => get(_data_eng, "name", ""),
+            "data_model" => MATHEMATICAL,
+            "nw" => Dict{String,Any}(
+                n => Dict{String,Any}(
+                    "per_unit" => get(_data_eng, "per_unit", false),
+                    "is_projected" => get(nw, "is_projected", false),
+                    "is_kron_reduced" => get(nw, "is_kron_reduced", false),
+                    "settings" => deepcopy(nw["settings"]),
+                    "time_elapsed" => get(nw, "time_elapsed", 1.0),
+                ) for (n,nw) in _data_eng["nw"]
+            ),
+            "multinetwork" => ismultinetwork(data_eng)
         )
-
-        if haskey(nw_eng, "time_elapsed")
-            nw_math["time_elapsed"] = nw_eng["time_elapsed"]
-        end
-
-        #TODO the PM tests break for branches which are not of the size indicated by conductors;
-        # for now, set to 1 to prevent this from breaking when not kron-reduced
-
-        nw_math["map"] = Vector{Dict{String,Any}}([
-            Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
-        ])
-
-        _init_base_components!(nw_math)
-
-        for property in get(eng2math_passthrough, "root", String[])
-            if haskey(nw_eng, property)
-                nw_math[property] = deepcopy(nw_eng[property])
-            end
-        end
-
-        for type in pmd_eng_asset_types
-            getfield(PowerModelsDistribution, Symbol("_map_eng2math_$(type)!"))(nw_math, nw_eng; pass_props=get(eng2math_passthrough, type, String[]))
-        end
-
-        # Custom eng2math transformation functions
-        for eng2math_func! in eng2math_extensions
-            eng2math_func!(nw_math, nw_eng)
-        end
-
-        # post fix
-        if !get(nw_math, "is_kron_reduced", false)
-            #TODO fix this in place / throw error instead? IEEE8500 leads to switches
-            # with 3x3 R matrices but only 1 phase
-            #NOTE: Don't do this when kron-reducing, it will undo the padding
-            _slice_branches!(nw_math)
-        end
-
-        find_conductor_ids!(nw_math)
-        _map_conductor_ids!(nw_math)
-
-        data_math["nw"][n] = nw_math
+    else
+        data_math = Dict{String,Any}(
+            "name" => get(_data_eng, "name", ""),
+            "per_unit" => get(_data_eng, "per_unit", false),
+            "data_model" => MATHEMATICAL,
+            "is_projected" => get(_data_eng, "is_projected", false),
+            "is_kron_reduced" => get(_data_eng, "is_kron_reduced", false),
+            "settings" => deepcopy(_data_eng["settings"]),
+            "time_elapsed" => get(_data_eng, "time_elapsed", 1.0),
+        )
     end
 
-    for k in union(_pmd_math_global_keys, global_keys)
-        for (n,nw) in data_math["nw"]
-            if haskey(nw, k)
-                data_math[k] = pop!(nw, k)
-            end
-        end
-    end
+    apply_pmd!(_map_eng2math_nw!, data_math, _data_eng; eng2math_passthrough=eng2math_passthrough, eng2math_extensions=eng2math_extensions)
 
-    if !ismultinetwork(data_eng)
-        merge!(data_math, pop!(data_math["nw"], "0"))
-        delete!(data_math, "nw")
-        delete!(data_math, "multinetwork")
+    if ismultinetwork(data_eng)
+        _collect_nw_maps!(data_math)
+        _collect_nw_bus_lookups!(data_math)
     end
 
     return data_math
+end
+
+
+"""
+"""
+function _collect_nw_maps!(data_math::Dict{String,<:Any})
+    @assert ismultinetwork(data_math)
+    @assert ismath(data_math)
+
+    data_math["map"] = Dict{String,Vector{Dict{String,Any}}}()
+    for (n,nw) in data_math["nw"]
+        data_math["map"][n] = pop!(nw, "map")
+    end
+end
+
+
+"""
+"""
+function _collect_nw_bus_lookups!(data_math::Dict{String,<:Any})
+    @assert ismultinetwork(data_math)
+    @assert ismath(data_math)
+
+    data_math["bus_lookup"] = Dict{String,Dict{String,Any}}()
+    for (n,nw) in data_math["nw"]
+        data_math["bus_lookup"][n] = pop!(nw, "bus_lookup")
+    end
+end
+
+
+"""
+"""
+function _map_eng2math_nw!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; eng2math_passthrough::Dict{String,Vector{String}}=Dict{String,Vector{String}}(), eng2math_extensions::Vector{<:Function}=Function[])
+    data_math["map"] = Vector{Dict{String,Any}}([
+        Dict{String,Any}("unmap_function" => "_map_math2eng_root!")
+    ])
+
+    _init_base_components!(data_math)
+
+    for property in get(eng2math_passthrough, "root", String[])
+        if haskey(data_eng, property)
+            data_math[property] = deepcopy(data_eng[property])
+        end
+    end
+
+    for type in pmd_eng_asset_types
+        getfield(PowerModelsDistribution, Symbol("_map_eng2math_$(type)!"))(data_math, data_eng; pass_props=get(eng2math_passthrough, type, String[]))
+    end
+
+    # Custom eng2math transformation functions
+    for eng2math_func! in eng2math_extensions
+        eng2math_func!(data_math, data_eng)
+    end
+
+    # post fix
+    if !get(data_math, "is_kron_reduced", false)
+        #TODO fix this in place / throw error instead? IEEE8500 leads to switches
+        # with 3x3 R matrices but only 1 phase
+        #NOTE: Don't do this when kron-reducing, it will undo the padding
+        _slice_branches!(data_math)
+    end
+
+    find_conductor_ids!(data_math)
+    _map_conductor_ids!(data_math)
+
+    _map_settings_vbases_default!(data_math)
+end
+
+
+function _map_settings_vbases_default!(data_math::Dict{String,<:Any})
+    vbases_default = Dict{String,Real}()
+    for (bus,vbase) in get(data_math["settings"], "vbases_default", Dict())
+        vbases_default["$(data_math["bus_lookup"][bus])"] = vbase
+    end
+
+    data_math["settings"]["vbases_default"] = vbases_default
 end
 
 

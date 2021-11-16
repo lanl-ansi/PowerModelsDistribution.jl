@@ -2,11 +2,11 @@
 Definition of the default solution preprocessor for PowerModelsDistribution
 """
 function _IM.solution_preprocessor(pm::AbstractUnbalancedPowerModel, solution::Dict)
-    per_unit = _IM.get_data(x -> x["per_unit"], pm.data, pmd_it_name; apply_to_subnetworks = false)
-    solution["it"][pmd_it_name]["per_unit"] = per_unit
+    per_unit = _IM.get_data(x -> x["per_unit"], pm.data, pmd_it_name; apply_to_subnetworks=true)
 
     for (nw_id, nw_ref) in nws(pm)
         solution["it"][pmd_it_name]["nw"]["$(nw_id)"]["settings"] = nw_ref[:settings]
+        solution["it"][pmd_it_name]["nw"]["$(nw_id)"]["per_unit"] = ismultinetwork(pm) ? per_unit["$(nw_id)"] : per_unit
     end
 end
 

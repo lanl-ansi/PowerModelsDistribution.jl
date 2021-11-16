@@ -82,25 +82,21 @@ function make_per_unit!(
     data_model_type = get(data, "data_model", MATHEMATICAL)
 
     if ismath(data)
-        if !get(data, "per_unit", false)
-            if !ismultinetwork(data)
-                nw_data = Dict("0" => data)
-            else
-                nw_data = data["nw"]
-            end
-
-            for (n, nw) in nw_data
-                vbases = ismissing(vbases) ? Dict{String,Real}("$(data["bus_lookup"][id])"=>vbase for (id, vbase) in nw["settings"]["vbases_default"]) : vbases
-                sbase  = ismissing(sbase) ? nw["settings"]["sbase_default"] : sbase
-
-                nw["data_model"] = data["data_model"]
-                _make_math_per_unit!(nw, data; sbase=sbase, vbases=vbases, make_pu_extensions=make_pu_extensions)
-                if ismultinetwork(data)
-                    delete!(nw, "data_model")
-                end
-            end
+        if !ismultinetwork(data)
+            nw_data = Dict("0" => data)
         else
-            # TODO make math model si units
+            nw_data = data["nw"]
+        end
+
+        for (n, nw) in nw_data
+            vbases = ismissing(vbases) ? nw["settings"]["vbases_default"] : vbases
+            sbase  = ismissing(sbase) ? nw["settings"]["sbase_default"] : sbase
+
+            nw["data_model"] = data["data_model"]
+            !get(nw, "per_unit", false) && _make_math_per_unit!(nw, data; sbase=sbase, vbases=vbases, make_pu_extensions=make_pu_extensions)
+            if ismultinetwork(data)
+                delete!(nw, "data_model")
+            end
         end
     else
         @warn "Data model '$data_model_type' is not recognized, no per-unit transformation performed"
@@ -312,7 +308,7 @@ function _make_math_per_unit!(
     end
 
     nw["settings"]["sbase"] = sbase
-    data_math["per_unit"] = true
+    nw["per_unit"] = true
 end
 
 
@@ -633,7 +629,7 @@ function solution_make_si(
     end
 
     for (n,nw) in nw_sol
-        if !isempty(nw)
+        if !isempty(nw) && nw["per_unit"]
             sbase = nw["settings"]["sbase"]
             for (comp_type, comp_dict) in [(x,y) for (x,y) in nw if isa(y, Dict) && x != "settings"]
                 dimensionalize_math_comp = get(dimensionalize_math, comp_type, Dict())
@@ -681,14 +677,13 @@ function solution_make_si(
                     end
                 end
             end
+            nw["per_unit"] = false
         end
 
         for make_si_func! in make_si_extensions
             make_si_func!(nw, nw_data[n], solution, math_model)
         end
     end
-
-    solution_si["per_unit"] = false
 
     return solution_si
 end

@@ -51,7 +51,8 @@ function parse_file(
     make_pu::Bool=true,
     multinetwork::Bool=false,
     global_keys::Set{String}=Set{String}(),
-    kron_reduced::Bool=true,
+    kron_reduce::Bool=true,
+    phase_project::Bool=false,
     time_series::String="daily"
     )::Dict{String,Any}
 
@@ -92,7 +93,8 @@ function parse_file(
                 pmd_data;
                 make_pu=make_pu,
                 make_pu_extensions=make_pu_extensions,
-                kron_reduced=kron_reduced,
+                kron_reduce=kron_reduce,
+                phase_project=phase_project,
                 multinetwork=multinetwork,
                 global_keys=global_keys,
                 eng2math_extensions=eng2math_extensions,
@@ -108,7 +110,8 @@ function parse_file(
             pmd_data = transform_data_model(pmd_data;
                 make_pu=make_pu,
                 make_pu_extensions=make_pu_extensions,
-                kron_reduced=kron_reduced,
+                kron_reduce=kron_reduce,
+                phase_project=phase_project,
                 multinetwork=multinetwork,
                 global_keys=global_keys,
                 eng2math_extensions=eng2math_extensions,
