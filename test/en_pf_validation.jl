@@ -28,7 +28,7 @@ end
 "Compares a PMD and OpenDSS solution, and returns the largest difference in voltage profile in per unit."
 function compare_sol_dss_pmd(sol_dss::Dict{String,Any}, sol_pmd::Dict{String,Any}, data_eng::Dict{String,Any}, data_math::Dict{String,Any}; verbose=true, floating_buses=[], skip_buses=[], v_err_print_tol=1E-6)
     max_v_err_pu = 0.0
-    
+
     # voltage base foe ENGINEERING buses in [V]
     vbase = Dict(id=>data_math["bus"]["$ind"]["vbase"]*data_math["settings"]["voltage_scale_factor"] for (id,ind) in data_math["bus_lookup"])
 
@@ -113,11 +113,11 @@ case_transformations = Dict(
 
             # add lb on neutrals to prevent issues with ACR formulations
             data_eng_lb = add_neutral_lb_from_soldss(data_eng, sol_dss)
-            
+
             # apply data model transformation and add voltage initialization
-            data_math    = transform_data_model(data_eng, multinetwork=false, kron_reduced=false, phase_projected=false)
+            data_math    = transform_data_model(data_eng, multinetwork=false, kron_reduce=false, phase_project=false)
             add_start_vrvi!(data_math)
-            data_math_lb = transform_data_model(data_eng_lb, multinetwork=false, kron_reduced=false, phase_projected=false)
+            data_math_lb = transform_data_model(data_eng_lb, multinetwork=false, kron_reduce=false, phase_project=false)
             add_start_vrvi!(data_math_lb)
 
             for form in forms
@@ -129,7 +129,7 @@ case_transformations = Dict(
                 res = optimize_model!(pm, optimizer=ipopt_solver)
                 sol_pmd = transform_solution(res["solution"], dm, make_si=true)
                 # @assert res["termination_status"]==LOCALLY_SOLVED
-                
+
                 v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, de, dm, verbose=false)
                 @test v_maxerr_pu <= 1E-6
             end

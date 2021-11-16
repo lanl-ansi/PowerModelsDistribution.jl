@@ -61,6 +61,26 @@ end
 
 
 """
+    apply_pmd!(func!::Function, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true, kwargs...)
+
+Version of `apply_pmd!` that supports kwargs
+"""
+function apply_pmd!(func!::Function, data1::Dict{String,<:Any}, data2::Dict{String,<:Any}; apply_to_subnetworks::Bool=true, kwargs...)
+    data1_it = _IM.ismultiinfrastructure(data1) ? data1["it"][pmd_it_name] : data1
+    data2_it = _IM.ismultiinfrastructure(data2) ? data2["it"][pmd_it_name] : data2
+
+    if ismultinetwork(data1_it) && apply_to_subnetworks
+        @assert ismultinetwork(data2_it)
+        for (nw, nw_data) in data1_it["nw"]
+            func!(nw_data, data2_it["nw"][nw]; kwargs...)
+        end
+    else
+        func!(data1_it, data2_it; kwargs...)
+    end
+end
+
+
+"""
     apply_pmd!(func!::Function, data::Dict{String,<:Any}, args...; apply_to_subnetworks::Bool=true, kwargs...)
 
 Version of `apply_pmd!` that supports args and kwargs
@@ -830,97 +850,94 @@ end
 
 checks that voltage angle differences are within 90 deg., if not tightens to a default of 10deg (adjustable)
 """
-function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))::Set{Int}
-    if ismultinetwork(data)
-        nw_data = data["nw"]
-    else
-        nw_data = Dict("0" => data)
-    end
+function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))
+    @assert ismath(data)
 
-    @assert("per_unit" in keys(data) && data["per_unit"])
+    apply_pmd!(_correct_mc_voltage_angle_differences!, data, default_pad)
+end
+
+
+"""
+    _correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))
+
+checks that voltage angle differences are within 90 deg., if not tightens to a default of 10deg (adjustable)
+"""
+function _correct_mc_voltage_angle_differences!(nw::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))::Set{Int}
+    @assert("per_unit" in keys(nw) && nw["per_unit"])
     default_pad_deg = round(rad2deg(default_pad), digits=2)
 
     modified = Set{Int}()
 
-    for (n,nw) in nw_data
-        if ismultinetwork(data)
-            subnet = ", subnetwork $n"
-        else
-            subnet = ""
+    for (i, branch) in nw["branch"]
+        angmin = branch["angmin"]
+        angmax = branch["angmax"]
+
+        if any(angmin .<= -pi/2)
+            @warn "this code only supports angmin values in -90 deg. to 90 deg., tightening the value on branch $(i) from $(rad2deg(angmin)) to -$(default_pad_deg) deg."
+            branch["angmin"][angmin .<= -pi/2] .= -default_pad
+
+            push!(modified, branch["index"])
         end
 
-        for (i, branch) in nw["branch"]
-            angmin = branch["angmin"]
-            angmax = branch["angmax"]
+        if any(angmax .>= pi/2)
+            @warn "this code only supports angmax values in -90 deg. to 90 deg., tightening the value on branch $(i) from $(rad2deg(angmax)) to $(default_pad_deg) deg."
+            branch["angmax"][angmax .>= pi/2] .= default_pad
 
-            if any(angmin .<= -pi/2)
-                @warn "this code only supports angmin values in -90 deg. to 90 deg., tightening the value on branch $(i)$(subnet) from $(rad2deg(angmin)) to -$(default_pad_deg) deg."
-                branch["angmin"][angmin .<= -pi/2] .= -default_pad
+            push!(modified, branch["index"])
+        end
 
-                push!(modified, branch["index"])
-            end
+        if any((angmin .== 0.0) .& (angmax .== 0.0))
+            @warn "angmin and angmax values are 0, widening these values on branch $(i) to +/- $(default_pad_deg) deg."
+            branch["angmin"][(angmin .== 0.0) .& (angmax .== 0.0)] .= -default_pad
+            branch["angmax"][(angmin .== 0.0) .& (angmax .== 0.0)] .=  default_pad
 
-            if any(angmax .>= pi/2)
-                @warn "this code only supports angmax values in -90 deg. to 90 deg., tightening the value on branch $(i)$(subnet) from $(rad2deg(angmax)) to $(default_pad_deg) deg."
-                branch["angmax"][angmax .>= pi/2] .= default_pad
-
-                push!(modified, branch["index"])
-            end
-
-            if any((angmin .== 0.0) .& (angmax .== 0.0))
-                @warn "angmin and angmax values are 0, widening these values on branch $(i)$(subnet) to +/- $(default_pad_deg) deg."
-                branch["angmin"][(angmin .== 0.0) .& (angmax .== 0.0)] .= -default_pad
-                branch["angmax"][(angmin .== 0.0) .& (angmax .== 0.0)] .=  default_pad
-
-                push!(modified, branch["index"])
-            end
+            push!(modified, branch["index"])
         end
     end
 
     return modified
 end
 
+
 """
     correct_mc_thermal_limits!(data::Dict{String,<:Any})
 
 checks that each branch has non-negative thermal ratings and removes zero thermal ratings
 """
-function correct_mc_thermal_limits!(data::Dict{String,<:Any})::Set{Int}
-    if ismultinetwork(data)
-        nw_data = data["nw"]
-    else
-        nw_data = Dict("0" => data)
-    end
+function correct_mc_thermal_limits!(data::Dict{String,<:Any})
+    @assert ismath(data)
 
+    apply_pmd!(_correct_mc_thermal_limits!, data)
+end
+
+
+"""
+    _correct_mc_thermal_limits!(data::Dict{String,<:Any})
+
+checks that each branch has non-negative thermal ratings and removes zero thermal ratings
+"""
+function _correct_mc_thermal_limits!(nw::Dict{String,<:Any})::Set{Int}
     modified = Set{Int}()
 
-    for (n,nw) in nw_data
-        if ismultinetwork(data)
-            subnet = ", subnetwork $n"
-        else
-            subnet = ""
-        end
+    branches = [branch for branch in values(nw["branch"])]
+    if haskey(nw, "ne_branch")
+        append!(branches, values(nw["ne_branch"]))
+    end
 
-        branches = [branch for branch in values(nw["branch"])]
-        if haskey(data, "ne_branch")
-            append!(branches, values(data["ne_branch"]))
-        end
+    for branch in branches
+        for rate_key in ["rate_a", "rate_b", "rate_c"]
+            if haskey(branch, rate_key)
+                rate_value = branch[rate_key]
 
-        for branch in branches
-            for rate_key in ["rate_a", "rate_b", "rate_c"]
-                if haskey(branch, rate_key)
-                    rate_value = branch[rate_key]
+                if any(rate_value .< 0.0)
+                    error("negative $(rate_key) value on branch $(branch["index"]), this code only supports non-negative $(rate_key) values")
+                end
 
-                    if any(rate_value .< 0.0)
-                        error("negative $(rate_key) value on branch $(branch["index"])$(subnet), this code only supports non-negative $(rate_key) values")
-                    end
+                if all(isapprox.(rate_value, 0.0))
+                    delete!(branch, rate_key)
+                    @warn "removing zero $(rate_key) limit on branch $(branch["index"])"
 
-                    if all(isapprox.(rate_value, 0.0))
-                        delete!(branch, rate_key)
-                        @warn "removing zero $(rate_key) limit on branch $(branch["index"])$(subnet)"
-
-                        push!(modified, branch["index"])
-                    end
+                    push!(modified, branch["index"])
                 end
             end
         end
@@ -1282,6 +1299,8 @@ active connected generator.
 assumes that the network is a single connected component
 """
 function correct_bus_types!(data::Dict{String,<:Any})
+    @assert ismath(data)
+
     apply_pmd!(_correct_bus_types!, data)
 end
 
@@ -1292,7 +1311,9 @@ the primary checks are that all type 2 buses (i.e., PV) have a connected and
 active generator and there is a single type 3 bus (i.e., slack bus) with an
 active connected generator. Assumes that the network is a single connected component
 """
-function _correct_bus_types!(pm_data::Dict{String,<:Any})
+function _correct_bus_types!(pm_data::Dict{String,<:Any})::Set{Int}
+    modified = Set{Int}()
+
     islands = identify_islands(pm_data)
 
     for island in islands
@@ -1315,20 +1336,23 @@ function _correct_bus_types!(pm_data::Dict{String,<:Any})
         for (i, bus) in filter(x->x.second["bus_i"] in island, pm_data["bus"])
             if bus["bus_type"] == 1
                 if !isempty(bus_gens[i]) # PQ
-                    @warn "active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 2"
+                    @info "active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 2"
                     bus["bus_type"] = 2
+                    push!(modified, bus["bus_i"])
                 end
             elseif bus["bus_type"] == 2 # PV
                 if isempty(bus_gens[i])
-                    @warn "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
+                    @info "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
                     bus["bus_type"] = 1
+                    push!(modified, bus["bus_i"])
                 end
             elseif bus["bus_type"] == 3 # Slack
                 if !isempty(bus_gens[i])
                     slack_found = true
                 else
-                    @warn "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
+                    @info "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
                     bus["bus_type"] = 1
+                    push!(modified, bus["bus_i"])
                 end
             elseif bus["bus_type"] == 4 # inactive bus
                 # do nothing
@@ -1337,8 +1361,9 @@ function _correct_bus_types!(pm_data::Dict{String,<:Any})
                 if length(bus_gens[i]) != 0
                     new_bus_type = 2
                 end
-                @warn "bus $(bus["bus_i"]) has an unrecongized bus_type $(bus["bus_type"]), updating to bus_type $(new_bus_type)"
+                @info "bus $(bus["bus_i"]) has an unrecongized bus_type $(bus["bus_type"]), updating to bus_type $(new_bus_type)"
                 bus["bus_type"] = new_bus_type
+                push!(modified, bus["bus_i"])
             end
         end
 
@@ -1347,22 +1372,26 @@ function _correct_bus_types!(pm_data::Dict{String,<:Any})
             if !isempty(der)
                 ref_bus = pm_data["bus"]["$(der["bus"])"]
                 ref_bus["bus_type"] = 3
+                push!(modified, der["bus"])
                 @info "no reference bus found, setting bus $(der["bus"]) as reference based on $(der["type"]) $(der["id"])"
             else
                 @info "no generators found in the given network data, disabling island"
                 for bus in island
                     pm_data["bus"]["$bus"]["bus_type"] = 4
+                    push!(modified, bus)
                 end
             end
         end
     end
+
+    return modified
 end
 
 
 "finds the largest active generation asset (gen, storage) in an island"
 function _biggest_der(pm_data::Dict{String,<:Any}; island::Set{Int}=Set{Int}([bus["bus_i"] for (_,bus) in get(pm_data, "bus", Dict())]))::Dict{String,Any}
     if length(filter(x->x.second["gen_bus"] in island && x.second["gen_status"] == 1, get(pm_data, "gen", Dict()))) + length(filter(x->x.second["storage_bus"] in island && x.second["status"] == 1, get(pm_data, "storage", Dict()))) == 0
-        @warn "there are no active DERs in the island $island"
+        @debug "there are no active DERs in the island $island"
     end
 
     biggest_der = Dict{String,Any}()

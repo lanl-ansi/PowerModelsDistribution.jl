@@ -5,7 +5,7 @@ const _pmd_eng_global_keys = Set{String}([
 
 "list of multinetwork keys that belong at the root level"
 const _pmd_math_global_keys = Set{String}([
-    "data_model", "per_unit", "name", "map", "bus_lookup", "dss_options"
+    "data_model", "name", "map", "bus_lookup", "dss_options"
 ])
 
 
