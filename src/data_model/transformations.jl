@@ -482,8 +482,6 @@ end
 pad matrices and vectors to max number of conductors
 """
 function apply_phase_projection!(data::Dict{String,<:Any})
-    @assert iseng(data) "wrong data model type"
-
     apply_pmd!(_apply_phase_projection!, data; apply_to_subnetworks=true)
 end
 
@@ -643,8 +641,6 @@ phase projection for components where unprojected states are not yet supported (
 See [`apply_phase_projection!`](@ref apply_phase_projection!)
 """
 function apply_phase_projection_delta!(data::Dict{String,<:Any})
-    @assert iseng(data) "wrong data model type"
-
     apply_pmd!(_apply_phase_projection_delta!, data; apply_to_subnetworks=true)
 end
 
