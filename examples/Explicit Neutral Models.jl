@@ -141,7 +141,7 @@ For example, let's inspect bus `b2`. This bus has a single-phase load between te
 
 # ╔═╡ 05faff5b-f590-4e9b-9959-3770469bbf96
 begin
-	data_math_tmp = transform_data_model(data_eng, kron_reduced=false, phase_projected=false)
+	data_math_tmp = transform_data_model(data_eng, kron_reduce=false, phase_project=false)
 	b2_index = data_math_tmp["bus_lookup"]["b2"]
 	b2_math = data_math_tmp["bus"]["$b2_index"]
 	b2_math["vm_pair_lb"]
@@ -177,11 +177,11 @@ md"""
 
 # ╔═╡ 54bb64b1-4544-416b-94fb-f7500d60dd9e
 md"""
-First of all, we apply the data model transformation to go from `ENGINEERING` to `MATHEMATICAL`. We need to pass the flags `kron_reduced=false` and `phase_projected=false`; these activate data model modifications which are required for some formulations, but not for the EN ones.
+First of all, we apply the data model transformation to go from `ENGINEERING` to `MATHEMATICAL`. We need to pass the flags `kron_reduce=false` and `phase_project=false`; these activate data model modifications which are required for some formulations, but not for the EN ones.
 """
 
 # ╔═╡ 3d31b6c8-63a3-466b-8ab0-03164b9ec43c
-data_math = transform_data_model(data_eng, kron_reduced=false, phase_projected=false)
+data_math = transform_data_model(data_eng, kron_reduce=false, phase_project=false)
 
 # ╔═╡ c7bbb931-c01f-41cd-8d71-48b5c6d51b7b
 md"""
