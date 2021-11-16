@@ -213,7 +213,7 @@ function constraint_mc_power_balance_capc(pm::LPUBFDiagModel, nw::Int, i::Int, t
 
     # add constraints to model capacitor switching
     if !isempty(bus_shunts) && haskey(ref(pm, nw, :shunt, bus_shunts[1][1]), "controls")
-        constraint_capacitor_on_off(pm, i, bus_shunts)
+        constraint_capacitor_on_off(pm, nw, i, bus_shunts)
 
         ncnds = length(bus_shunts[1][2])
         cq_sh = convert(Vector{JuMP.AffExpr}, JuMP.@expression(pm.model, [idx=1:ncnds], 0.0))
@@ -286,7 +286,7 @@ Add constraints to model capacitor switching
 \end{align}
 ```
 """
-function constraint_capacitor_on_off(pm::LPUBFDiagModel, i::Int, bus_shunts::Vector{Tuple{Int,Vector{Int}}}; nw::Int=nw_id_default)
+function constraint_capacitor_on_off(pm::LPUBFDiagModel, nw::Int, i::Int, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
     cap_state = var(pm, nw, :capacitor_state, bus_shunts[1][1])
     shunt = ref(pm, nw, :shunt, bus_shunts[1][1])
     ϵ = 1e-5

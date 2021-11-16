@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in call to `constraint_capacitor_on_off` where `nw` network id was not being passed
 - Refactored kwargs `kron_reduced` and `phase_projected` to be `kron_reduce` and `phase_project`, respectively
 - Added more native support for multinetwork data structures
 - Changed `"multiple references buses found"` warning to `@debug`
