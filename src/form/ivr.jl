@@ -153,20 +153,35 @@ function variable_mc_bus_voltage(pm::AbstractUnbalancedIVRModel; nw=nw_id_defaul
         grounded = busref["grounded"]
 
         ncnd = length(terminals)
-        vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
-        vm[.!grounded] .= 1.0
 
-        # TODO how to do this more generally
-        nph = 3
-        va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
+        if haskey(busref, "vr_start") && haskey(busref, "vi_start")
+            vr = busref["vr_start"]
+            vi = busref["vi_start"]
+        else
+            vm_start = fill(1.0, 3)
+            for t in 1:3
+                if t in terminals
+                    vmax = busref["vmax"][findfirst(isequal(t), terminals)]
+                    vm_start[t] = min(vm_start[t], vmax)
+
+                    vmin = busref["vmin"][findfirst(isequal(t), terminals)]
+                    vm_start[t] = max(vm_start[t], vmin)
+                end
+            end
+
+            vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
+            va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
+
+            vr = vm .* cos.(va)
+            vi = vm .* sin.(va)
+        end
 
         for (idx,t) in enumerate(terminals)
-            vr = vm[idx]*cos(va[idx])
-            vi = vm[idx]*sin(va[idx])
-            JuMP.set_start_value(var(pm, nw, :vr, id)[t], vr)
-            JuMP.set_start_value(var(pm, nw, :vi, id)[t], vi)
+            JuMP.set_start_value(var(pm, nw, :vr, id)[t], vr[idx])
+            JuMP.set_start_value(var(pm, nw, :vi, id)[t], vi[idx])
         end
     end
+
     # apply bounds if bounded
     if bounded
         for i in ids(pm, nw, :bus)
