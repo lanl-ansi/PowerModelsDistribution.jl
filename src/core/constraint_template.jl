@@ -17,9 +17,12 @@ end
 Template function for reference angle constraints.
 """
 function constraint_mc_theta_ref(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
-    terminals = ref(pm, nw, :bus, i, "terminals")
-    va_ref = get(ref(pm, nw, :bus, i), "va", [[0.0, -120.0, 120.0]..., zeros(length(terminals))...][terminals])
-    constraint_mc_theta_ref(pm, nw, i, va_ref)
+    bus = ref(pm, nw, :bus, i)
+    terminals = bus["terminals"]
+    if haskey(bus, "va")
+        va_ref = get(ref(pm, nw, :bus, i), "va", [deg2rad.([0.0, -120.0, 120.0])..., zeros(length(terminals))...][terminals])
+        constraint_mc_theta_ref(pm, nw, i, va_ref)
+    end
     nothing
 end
 
@@ -78,9 +81,9 @@ Template function for voltage magnitude setpoint constraint
 function constraint_mc_voltage_magnitude_only(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     bus = ref(pm, nw, :bus, i)
     if haskey(bus, "vm")
-        constraint_mc_voltage_magnitude_only(pm, nw, i, bus["vm"])
+        vm_ref = get(bus, "vm", ones(length(bus["terminals"])))
+        constraint_mc_voltage_magnitude_only(pm, nw, i, vm_ref)
     end
-
     nothing
 end
 
@@ -666,10 +669,6 @@ end
 Template function for Transformer constraints in Power-voltage space, considering winding type, conductor order, polarity and tap settings.
 """
 function constraint_mc_transformer_power(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default, fix_taps::Bool=true)::Nothing
-    # if ref(pm, nw_id_default, :conductors)!=3
-    #     error("Transformers only work with networks with three conductors.")
-    # end
-
     transformer = ref(pm, nw, :transformer, i)
     f_bus = transformer["f_bus"]
     t_bus = transformer["t_bus"]
