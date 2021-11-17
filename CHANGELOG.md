@@ -2,6 +2,10 @@
 
 ## staged
 
+- none
+
+## v0.13.0
+
 - Fixed bug in `constraint_mc_theta_ref` where default va_ref was in wrong units
 - Fixed bug in call to `constraint_capacitor_on_off` where `nw` network id was not being passed
 - Refactored kwargs `kron_reduced` and `phase_projected` to be `kron_reduce` and `phase_project`, respectively
