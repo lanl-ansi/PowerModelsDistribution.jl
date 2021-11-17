@@ -41,7 +41,6 @@ function _make_lossless!(data_eng::Dict{String,<:Any}; exclude::Vector{String}=S
             for (id, eng_obj) in data_eng[object_type]
                 for parameter in parameters
                     if haskey(eng_obj, parameter)
-                        @warn object_type id parameters
                         eng_obj[parameter] = 0.0 .* eng_obj[parameter]
                     end
                 end
