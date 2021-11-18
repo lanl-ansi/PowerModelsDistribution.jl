@@ -432,8 +432,8 @@ function _calc_transformer_current_max_frto(trans::Dict{String,<:Any}, bus_fr::D
         f_connections = [findfirst(isequal(c), bus_fr["terminals"]) for c in trans["f_connections"]]
         t_connections = [findfirst(isequal(c), bus_to["terminals"]) for c in trans["t_connections"]]
 
-        push!(bounds_fr, trans["sm_ub"]./bus_fr["vmax"][f_connections])
-        push!(bounds_to, trans["sm_ub"]./bus_to["vmax"][t_connections])
+        push!(bounds_fr, trans["sm_ub"]./bus_fr["vmin"][f_connections])
+        push!(bounds_to, trans["sm_ub"]./bus_to["vmin"][t_connections])
     end
 
     return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)

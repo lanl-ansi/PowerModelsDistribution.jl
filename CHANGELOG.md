@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in `_calc_transformer_current_max_frto` where `sm_ub` should have been divided by `vmin`, NOT `vmax`
 - Updates `LPUBFDiagModel` description in docs
 
 ## v0.13.0
