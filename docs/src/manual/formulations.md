@@ -35,7 +35,13 @@ This formulation has originally been developed by Sankur et al.
 
 - Sankur, M. D., Dobbe, R., Stewart, E., Callaway, D. S., & Arnold, D. B. (2016). A linearized power flow model for optimization in unbalanced distribution systems. [arXiv:1606.04492v2](https://arxiv.org/abs/1606.04492v2)
 
-This formulation is here cast as only considering the diagonal elements defined in `LPUBFFullModel`, which furthermore leads to the imaginary part of the lifted node voltage variable W being redundant and substituted out.
+and is here cast as only considering the diagonal elements defined in the linear formulation in Gan & Low:
+
+- Gan, L., & Low, S. H. (2014). Convex relaxations and linear approximation for optimal power flow in multiphase radial networks. In PSSC (pp. 1–9). Wroclaw, Poland. [doi:10.1109/PSCC.2014.7038399](https://doi.org/10.1109/PSCC.2014.7038399).
+
+This furthermore leads to the imaginary part of the lifted node voltage variable W being redundant and substituted out.
+
+The full formulation from Gan & Low was supported as `LPUBFFullModel` in PowerModelsDistribution up to version 0.7. 
 
 ## [`FBSUBFPowerModel`](@ref FBSUBFPowerModel), [`FOTPUPowerModel`](@ref FOTPUPowerModel), [`FOTRUPowerModel`](@ref FOTRUPowerModel)
 
