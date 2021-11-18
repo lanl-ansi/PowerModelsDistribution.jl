@@ -64,7 +64,7 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedDCPModel, nw::In
             + sum(ref(pm, nw, :load, d, "pd")[findfirst(isequal(t), conns)]*z_demand[d] for (d, conns) in bus_loads if t in conns)
             - sum(pg[g][t]*z_gen[g] for (g, conns) in bus_gens if t in conns)
             - sum(ps[s][t]*z_storage[s] for (s, conns) in bus_storage if t in conns)
-            + sum(diag(Gt)[idx]*z_shunt[sh] for (sh, conns) in bus_shunts if t in conns)
+            + sum(LinearAlgebra.diag(Gt)[idx]*z_shunt[sh] for (sh, conns) in bus_shunts if t in conns)
             == 0
         )
         push!(cstr_p, cp)
@@ -103,7 +103,7 @@ function constraint_mc_power_balance_shed_simple(pm::AbstractUnbalancedDCPModel,
             + sum(ref(pm, nw, :load, d, "pd")[findfirst(isequal(t), conns)]*z_demand[d] for (d, conns) in bus_loads if t in conns)
             - sum(pg[g][t]*z_gen[g] for (g, conns) in bus_gens if t in conns)
             - sum(ps[s][t]*z_storage[s] for (s, conns) in bus_storage if t in conns)
-            + sum(diag(Gt)[idx]*z_shunt[sh] for (sh, conns) in bus_shunts if t in conns)
+            + sum(LinearAlgebra.diag(Gt)[idx]*z_shunt[sh] for (sh, conns) in bus_shunts if t in conns)
             == 0
         )
         push!(cstr_p, cp)

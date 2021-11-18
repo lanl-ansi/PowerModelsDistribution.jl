@@ -42,4 +42,4 @@ qd(sol, pmd_data, name) = sol["solution"]["load"][string(load_name2id(pmd_data, 
 sd(pm, pmd_data, name) = pd(sol, pmd_data, name)+im*qd(sol, pmd_data, name)
 
 calc_vm_w(result, id) = sqrt.(      result["solution"]["bus"][id]["w"])
-calc_vm_W(result, id) = sqrt.(diag( result["solution"]["bus"][id]["Wr"]))
+calc_vm_W(result, id) = sqrt.(LinearAlgebra.diag( result["solution"]["bus"][id]["Wr"]))

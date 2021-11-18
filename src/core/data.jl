@@ -1,6 +1,3 @@
-import LinearAlgebra: Adjoint, pinv
-
-
 "field names that should not be multi-conductor values"
 const _conductorless = Set{String}(["index", "bus_i", "bus_type", "status", "gen_status",
     "br_status", "gen_bus", "load_bus", "shunt_bus", "storage_bus", "f_bus", "t_bus",
@@ -113,7 +110,7 @@ _sum_rm_nan(X::Vector) = sum([X[(!).(isnan.(X))]..., 0.0])
 
 
 ""
-function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, Adjoint}) where T
+function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, LinearAlgebra.Adjoint}) where T
     N, A_ncols = size(A)
     B_nrows, M = size(B)
     @assert(A_ncols==B_nrows)
@@ -121,8 +118,8 @@ function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, Adjoint}) where T
 end
 
 
-_mat_mult_rm_nan(A::Union{Matrix, Adjoint}, b::Vector) = dropdims(_mat_mult_rm_nan(A, reshape(b, length(b), 1)), dims=2)
-_mat_mult_rm_nan(a::Vector, B::Union{Matrix, Adjoint}) = _mat_mult_rm_nan(reshape(a, length(a), 1), B)
+_mat_mult_rm_nan(A::Union{Matrix, LinearAlgebra.Adjoint}, b::Vector) = dropdims(_mat_mult_rm_nan(A, reshape(b, length(b), 1)), dims=2)
+_mat_mult_rm_nan(a::Vector, B::Union{Matrix, LinearAlgebra.Adjoint}) = _mat_mult_rm_nan(reshape(a, length(a), 1), B)
 
 
 "Replaces NaN values with zeros"
@@ -815,7 +812,7 @@ function _make_full_matrix_variable(diag::Vector{T}, lowertriangle::Vector{T}, u
         lowertriangle[7]    lowertriangle[8]    lowertriangle[9]    lowertriangle[10]    diag[5]
         ]
     end
-    # matrix = diagm(0 => diag) + _vec2ltri!(lowertriangle) + _vec2utri!(uppertriangle)
+    # matrix = LinearAlgebra.diagm(0 => diag) + _vec2ltri!(lowertriangle) + _vec2utri!(uppertriangle)
     return matrix
 end
 
@@ -972,7 +969,7 @@ end
 computes branch admittance matrices
 """
 function calc_branch_y(branch::Dict{String,<:Any})::Tuple
-    y = pinv(branch["br_r"] + im * branch["br_x"])
+    y = LinearAlgebra.pinv(branch["br_r"] + im * branch["br_x"])
     g, b = real(y), imag(y)
     return g, b
 end

@@ -1,6 +1,3 @@
-import LinearAlgebra: diag, diagm
-
-
 ""
 function variable_mc_branch_current(pm::AbstractUBFModels; kwargs...)
     constraint_mc_branch_current_series_product_hermitian(pm; kwargs...)
@@ -54,7 +51,7 @@ function variable_mc_bus_voltage_prod_hermitian(pm::AbstractUBFModels; nw::Int=n
     var(pm, nw)[:Wr] = Wr
     var(pm, nw)[:Wi] = Wi
     # maintain compatibility
-    var(pm, nw)[:w] = Dict{Int, Any}([(id, diag(Wr[id])) for id in bus_ids])
+    var(pm, nw)[:w] = Dict{Int, Any}([(id, LinearAlgebra.diag(Wr[id])) for id in bus_ids])
 
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :Wr, ids(pm, nw, :bus), Wr)
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :Wi, ids(pm, nw, :bus), Wi)
@@ -90,7 +87,7 @@ function constraint_mc_branch_current_series_product_hermitian(pm::AbstractUBFMo
     # save reference
     var(pm, nw)[:CCr] = Lr
     var(pm, nw)[:CCi] = Li
-    var(pm, nw)[:cm] = Dict([(id, diag(Lr[id])) for id in branch_ids])
+    var(pm, nw)[:cm] = Dict([(id, LinearAlgebra.diag(Lr[id])) for id in branch_ids])
 
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :branch, :CCr, ids(pm, nw, :branch), Lr)
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :branch, :CCi, ids(pm, nw, :branch), Li)
@@ -133,8 +130,8 @@ function variable_mc_branch_power(pm::AbstractUBFModels; nw::Int=nw_id_default, 
     var(pm, nw)[:P] = P
     var(pm, nw)[:Q] = Q
 
-    var(pm, nw)[:p] = Dict([(id,diag(P[id])) for id in branch_arcs])
-    var(pm, nw)[:q] = Dict([(id,diag(Q[id])) for id in branch_arcs])
+    var(pm, nw)[:p] = Dict([(id,LinearAlgebra.diag(P[id])) for id in branch_arcs])
+    var(pm, nw)[:q] = Dict([(id,LinearAlgebra.diag(Q[id])) for id in branch_arcs])
 
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :Pf, :Pt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), P)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :Qf, :Qt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), Q)
@@ -177,8 +174,8 @@ function variable_mc_transformer_power(pm::AbstractUBFModels; nw::Int=nw_id_defa
     var(pm, nw)[:Pt] = Pt
     var(pm, nw)[:Qt] = Qt
 
-    var(pm, nw)[:pt] = pt = Dict([(id,diag(Pt[id])) for id in transformer_arcs])
-    var(pm, nw)[:qt] = qt = Dict([(id,diag(Qt[id])) for id in transformer_arcs])
+    var(pm, nw)[:pt] = pt = Dict([(id,LinearAlgebra.diag(Pt[id])) for id in transformer_arcs])
+    var(pm, nw)[:qt] = qt = Dict([(id,LinearAlgebra.diag(Qt[id])) for id in transformer_arcs])
 
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :Pf, :Pt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), Pt)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :Qf, :Qt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), Qt)
@@ -227,7 +224,7 @@ function constraint_mc_theta_ref(pm::AbstractUnbalancedWModels, nw::Int, i::Int,
 
     Wr_ref = real(gamma).*Wr[1,1]
     Wi_ref = imag(gamma).*Wi[1,1]
-    JuMP.@constraint(pm.model, diag(Wr)[2:nconductors] .== diag(Wr_ref)[2:nconductors]) # first equality is implied
+    JuMP.@constraint(pm.model, LinearAlgebra.diag(Wr)[2:nconductors] .== LinearAlgebra.diag(Wr_ref)[2:nconductors]) # first equality is implied
     JuMP.@constraint(pm.model, _mat2utrivec!(Wr) .== _mat2utrivec!(Wr_ref))
     JuMP.@constraint(pm.model, _mat2utrivec!(Wi) .== _mat2utrivec!(Wi_ref))
 end
@@ -257,9 +254,9 @@ function constraint_mc_model_voltage_magnitude_difference(pm::AbstractUBFModels,
     CCi =  var(pm, nw, :CCi)[i]
 
     #KVL over the line:
-    JuMP.@constraint(pm.model,          diag(Wr_to) .==          diag(Wr_fr - p_s_fr *r' - q_s_fr*x' - r*p_s_fr' - x*q_s_fr' + r*CCr*r' - x*CCi*r' + x*CCr*x' + r*CCi*x'))
-    JuMP.@constraint(pm.model, _mat2utrivec!(Wr_to) .== _mat2utrivec!(Wr_fr - p_s_fr *r' - q_s_fr*x' - r*p_s_fr' - x*q_s_fr' + r*CCr*r' - x*CCi*r' + x*CCr*x' + r*CCi*x'))
-    JuMP.@constraint(pm.model, _mat2utrivec!(Wi_to) .== _mat2utrivec!(Wi_fr - q_s_fr *r' + p_s_fr*x' - x*p_s_fr' + r*q_s_fr' + x*CCr*r' + r*CCi*r' - r*CCr*x' + x*CCi*x'))
+    JuMP.@constraint(pm.model, LinearAlgebra.diag(Wr_to) .== LinearAlgebra.diag(Wr_fr - p_s_fr *r' - q_s_fr*x' - r*p_s_fr' - x*q_s_fr' + r*CCr*r' - x*CCi*r' + x*CCr*x' + r*CCi*x'))
+    JuMP.@constraint(pm.model,      _mat2utrivec!(Wr_to) .==      _mat2utrivec!(Wr_fr - p_s_fr *r' - q_s_fr*x' - r*p_s_fr' - x*q_s_fr' + r*CCr*r' - x*CCi*r' + x*CCr*x' + r*CCi*x'))
+    JuMP.@constraint(pm.model,      _mat2utrivec!(Wi_to) .==      _mat2utrivec!(Wi_fr - q_s_fr *r' + p_s_fr*x' - x*p_s_fr' + r*q_s_fr' + x*CCr*r' + r*CCi*r' - r*CCr*x' + x*CCi*x'))
 end
 
 
@@ -319,8 +316,8 @@ function variable_mc_generator_power_mx(pm::SDPUBFKCLMXModel; nw::Int=nw_id_defa
     # save references
     var(pm, nw)[:Pg_bus] = Pg
     var(pm, nw)[:Qg_bus] = Qg
-    var(pm, nw)[:pg] = Dict{Int, Any}([(id, diag(Pg[id])) for id in gen_ids])
-    var(pm, nw)[:qg] = Dict{Int, Any}([(id, diag(Qg[id])) for id in gen_ids])
+    var(pm, nw)[:pg] = Dict{Int, Any}([(id, LinearAlgebra.diag(Pg[id])) for id in gen_ids])
+    var(pm, nw)[:qg] = Dict{Int, Any}([(id, LinearAlgebra.diag(Qg[id])) for id in gen_ids])
 
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :Pg_bus, ids(pm, nw, :gen), Pg)
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :Qg_bus, ids(pm, nw, :gen), Qg)
@@ -901,7 +898,7 @@ function constraint_mc_power_balance(pm::KCLMXModels, nw::Int, i::Int, terminals
                 ==
                   sum(      Pg[g][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (g, conns) in bus_gens if t in conns && u in conns)
                 - sum(      Pd[d][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (d, conns) in bus_loads if t in conns && u in conns)
-                - diag(Wr*Gt'+Wi*Bt')[idx]
+                - LinearAlgebra.diag(Wr*Gt'+Wi*Bt')[idx]
             )
             push!(cstr_p, cp)
 
@@ -912,7 +909,7 @@ function constraint_mc_power_balance(pm::KCLMXModels, nw::Int, i::Int, terminals
                 ==
                   sum(      Qg[g][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (g, conns) in bus_gens if t in conns && u in conns)
                 - sum(      Qd[d][findfirst(isequal(t), conns),findfirst(isequal(u), conns)] for (d, conns) in bus_loads if t in conns && u in conns)
-                - diag(-Wr*Bt'+Wi*Gt')[idx]
+                - LinearAlgebra.diag(-Wr*Bt'+Wi*Gt')[idx]
             )
             push!(cstr_q, cq)
         end

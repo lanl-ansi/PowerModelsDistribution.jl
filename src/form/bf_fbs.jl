@@ -199,7 +199,7 @@ function constraint_mc_power_losses(pm::FBSUBFPowerModel, nw::Int, i::Int, f_bus
 
     # linearized line voltage drop phasor: v_drop = v0_fr  - v0_to
     v_drop = vr0_fr .+ im.*vi0_fr .- vr0_to .- im.*vi0_to
-    y = pinv(r+im*x)
+    y = LinearAlgebra.pinv(r+im*x)
     N = length(f_connections)
 
     for (idx, (fc,tc)) in enumerate(zip(f_connections, t_connections))
@@ -243,8 +243,8 @@ function constraint_mc_model_voltage_magnitude_difference(pm::FBSUBFPowerModel, 
     p_fr = var(pm, nw, :p)[f_idx]
     q_fr = var(pm, nw, :q)[f_idx]
 
-    p_s_fr = [p_fr[fc]- diag(g_sh_fr)[idx].*(vr0_fr[idx]^2+vi0_fr[idx]^2) for (idx,fc) in enumerate(f_connections)]
-    q_s_fr = [q_fr[fc]+ diag(b_sh_fr)[idx].*(vr0_fr[idx]^2+vi0_fr[idx]^2) for (idx,fc) in enumerate(f_connections)]
+    p_s_fr = [p_fr[fc]- LinearAlgebra.diag(g_sh_fr)[idx].*(vr0_fr[idx]^2+vi0_fr[idx]^2) for (idx,fc) in enumerate(f_connections)]
+    q_s_fr = [q_fr[fc]+ LinearAlgebra.diag(b_sh_fr)[idx].*(vr0_fr[idx]^2+vi0_fr[idx]^2) for (idx,fc) in enumerate(f_connections)]
 
     # linearized current injection at from node: c0_s_fr = (p_s_fr - j.q_s_fr)/conj(v0_fr)
     cr_s_fr = [( p_s_fr[idx]*vr0_fr[idx] + q_s_fr[idx]*vi0_fr[idx])/(vr0_fr[idx]^2 + vi0_fr[idx]^2) for (idx,fc) in enumerate(f_connections)]

@@ -1694,7 +1694,7 @@ function calc_start_voltage(
                 # forward propagation
                 if all((!).(ismissing.(v_fr))) && any(ismissing.(v_to))
                     N = length(v_fr)-1
-                    Mpn = [diagm(0=>ones(N)) fill(-1.0, N, 1)]
+                    Mpn = [LinearAlgebra.diagm(0=>ones(N)) fill(-1.0, N, 1)]
                     v_fr_pn = Mpn*v_fr
                     if all(ismissing.(v_to))
                         anchor_ind = length(v_to)
@@ -1714,7 +1714,7 @@ function calc_start_voltage(
                 # backward propagation
                 if all((!).(ismissing.(v_to))) && any(ismissing.(v_fr))
                     N = length(v_fr)-1
-                    Mpn = [diagm(0=>ones(N)) fill(-1.0, N, 1)]
+                    Mpn = [LinearAlgebra.diagm(0=>ones(N)) fill(-1.0, N, 1)]
                     v_to_pn = Mpn*v_to
                     if all(ismissing.(v_fr))
                         anchor_ind = length(v_fr)

@@ -1,33 +1,40 @@
 module PowerModelsDistribution
 
+    # File parsing utilities
     import JSON
     import CSV
 
+    # Optimization Modeling Utilities
     import JuMP
     import MathOptInterface
-
-    import InfrastructureModels
     import PolyhedralRelaxations
 
+    import InfrastructureModels
+
+    # Logging Utilities
     import Logging
     import LoggingExtras
 
+    # Stdlib Imports
     import Dates
     import LinearAlgebra
+    import Statistics
 
     import LinearAlgebra: diagm
     import Statistics: mean, std
 
     const _IM = InfrastructureModels
 
+    # Explicit imports for later export
     import InfrastructureModels: optimize_model!, @im_fields, nw_id_default, ismultinetwork, update_data!
 
+    # Multi Infrastructure keys
     const _pmd_global_keys = Set(["time_series", "per_unit"])
     const pmd_it_name = "pmd"
     const pmd_it_sym = Symbol(pmd_it_name)
 
+    # Setup Logging
     include("core/logging.jl")
-
     function __init__()
         global _DEFAULT_LOGGER = Logging.current_logger()
         global _LOGGER = Logging.ConsoleLogger(; meta_formatter=PowerModelsDistribution._pmd_metafmt)
@@ -100,5 +107,4 @@ module PowerModelsDistribution
     include("prob/osw.jl")
 
     include("core/export.jl")
-
 end

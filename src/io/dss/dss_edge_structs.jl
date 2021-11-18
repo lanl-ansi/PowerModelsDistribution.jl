@@ -240,8 +240,8 @@ function _create_reactor(name::String=""; kwargs...)::Dict{String,Any}
             lmh = l * 1e3
         end
 
-        rmatrix = diagm(0 => fill(r, phases))
-        xmatrix = diagm(0 => fill(x, phases))
+        rmatrix = LinearAlgebra.diagm(0 => fill(r, phases))
+        xmatrix = LinearAlgebra.diagm(0 => fill(x, phases))
     elseif haskey(kwargs, :rmatrix) && haskey(kwargs, :xmatrix)
         rmatrix = kwargs[:rmatrix]
         xmatrix = kwargs[:xmatrix]
@@ -279,8 +279,8 @@ function _create_reactor(name::String=""; kwargs...)::Dict{String,Any}
         x = xmatrix[1,1]
         lmh = x / (2 * pi * basefreq) * 1e3
     else
-        rmatrix = diagm(0 => fill(r, phases))
-        xmatrix = diagm(0 => fill(x, phases))
+        rmatrix = LinearAlgebra.diagm(0 => fill(r, phases))
+        xmatrix = LinearAlgebra.diagm(0 => fill(x, phases))
     end
 
     Dict{String,Any}(

@@ -1,6 +1,3 @@
-import LinearAlgebra: diag
-
-
 "`vm[i] == vmref`"
 function constraint_mc_voltage_magnitude_only(pm::AbstractUnbalancedWModels, nw::Int, i::Int, vm_ref::Vector{<:Real})
     w = [var(pm, nw, :w, i)[t] for t in ref(pm, nw, :bus, i)["terminals"]]
@@ -70,7 +67,7 @@ function constraint_mc_power_balance_slack(pm::AbstractUnbalancedWModels, nw::In
             sum(pg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
             - sum(ref(pm, nw, :load, l, "pd")[findfirst(isequal(t), conns)] for (l, conns) in bus_loads if t in conns)
-            - sum(w[t] * diag(Gt')[idx] for (sh, conns) in bus_shunts if t in conns)
+            - sum(w[t] * LinearAlgebra.diag(Gt')[idx] for (sh, conns) in bus_shunts if t in conns)
             + p_slack[t]
         )
         push!(cstr_p, cp)
@@ -82,7 +79,7 @@ function constraint_mc_power_balance_slack(pm::AbstractUnbalancedWModels, nw::In
             sum(qg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(qs[s][t] for (s, conns) in bus_storage if t in conns)
             - sum(ref(pm, nw, :load, l, "qd")[findfirst(isequal(t), conns)] for (l, conns) in bus_loads if t in conns)
-            - sum(-w[t] * diag(Bt')[idx] for (sh, conns) in bus_shunts if t in conns)
+            - sum(-w[t] * LinearAlgebra.diag(Bt')[idx] for (sh, conns) in bus_shunts if t in conns)
             + q_slack[t]
         )
         push!(cstr_q, cq)
@@ -159,7 +156,7 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedWModels, nw::Int
             sum(pg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
             - sum(ref(pm, nw, :load, l, "pd")[findfirst(isequal(t), conns)] * z_demand[l] for (l, conns) in bus_loads if t in conns)
-            - sum(z_shunt[sh] *(w[t] * diag(Gt')[idx]) for (sh, conns) in bus_shunts if t in conns)
+            - sum(z_shunt[sh] *(w[t] * LinearAlgebra.diag(Gt')[idx]) for (sh, conns) in bus_shunts if t in conns)
         )
         push!(cstr_p, cp)
         cq = JuMP.@constraint(pm.model,
@@ -170,7 +167,7 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedWModels, nw::Int
             sum(qg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(qs[s][t] for (s, conns) in bus_storage if t in conns)
             - sum(ref(pm, nw, :load, l, "qd")[findfirst(isequal(t), conns)]*z_demand[l] for (l, conns) in bus_loads if t in conns)
-            - sum(z_shunt[sh] * (-w[t] * diag(Bt')[idx]) for (sh, conns) in bus_shunts if t in conns)
+            - sum(z_shunt[sh] * (-w[t] * LinearAlgebra.diag(Bt')[idx]) for (sh, conns) in bus_shunts if t in conns)
         )
         push!(cstr_q, cq)
     end
@@ -212,26 +209,26 @@ function constraint_mc_power_balance(pm::AbstractUnbalancedWModels, nw::Int, i::
 
     for (idx,t) in ungrounded_terminals
         cp = JuMP.@constraint(pm.model,
-            sum(diag(P[a])[findfirst(isequal(t), conns)] for (a, conns) in bus_arcs if t in conns)
-            + sum(diag(Psw[a_sw])[findfirst(isequal(t), conns)] for (a_sw, conns) in bus_arcs_sw if t in conns)
-            + sum(diag(Pt[a_trans])[findfirst(isequal(t), conns)] for (a_trans, conns) in bus_arcs_trans if t in conns)
+            sum(LinearAlgebra.diag(P[a])[findfirst(isequal(t), conns)] for (a, conns) in bus_arcs if t in conns)
+            + sum(LinearAlgebra.diag(Psw[a_sw])[findfirst(isequal(t), conns)] for (a_sw, conns) in bus_arcs_sw if t in conns)
+            + sum(LinearAlgebra.diag(Pt[a_trans])[findfirst(isequal(t), conns)] for (a_trans, conns) in bus_arcs_trans if t in conns)
             ==
             sum(pg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
             - sum(pd[d][t] for (d, conns) in bus_loads if t in conns)
-            - diag(Wr*Gt'+Wi*Bt')[idx]
+            - LinearAlgebra.diag(Wr*Gt'+Wi*Bt')[idx]
         )
         push!(cstr_p, cp)
 
         cq = JuMP.@constraint(pm.model,
-            sum(diag(Q[a])[findfirst(isequal(t), conns)] for (a, conns) in bus_arcs if t in conns)
-            + sum(diag(Qsw[a_sw])[findfirst(isequal(t), conns)] for (a_sw, conns) in bus_arcs_sw if t in conns)
-            + sum(diag(Qt[a_trans])[findfirst(isequal(t), conns)] for (a_trans, conns) in bus_arcs_trans if t in conns)
+            sum(LinearAlgebra.diag(Q[a])[findfirst(isequal(t), conns)] for (a, conns) in bus_arcs if t in conns)
+            + sum(LinearAlgebra.diag(Qsw[a_sw])[findfirst(isequal(t), conns)] for (a_sw, conns) in bus_arcs_sw if t in conns)
+            + sum(LinearAlgebra.diag(Qt[a_trans])[findfirst(isequal(t), conns)] for (a_trans, conns) in bus_arcs_trans if t in conns)
             ==
             sum(qg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(qs[s][t] for (s, conns) in bus_storage if t in conns)
             - sum(qd[d][t] for (d, conns) in bus_loads if t in conns)
-            - diag(-Wr*Bt'+Wi*Gt')[idx]
+            - LinearAlgebra.diag(-Wr*Bt'+Wi*Gt')[idx]
         )
         push!(cstr_q, cq)
     end

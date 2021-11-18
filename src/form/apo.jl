@@ -1,6 +1,3 @@
-import LinearAlgebra: diag
-
-
 "apo models ignore reactive power flows"
 function variable_mc_generator_power_imaginary(pm::AbstractUnbalancedActivePowerModel; kwargs...)
 end
@@ -110,7 +107,7 @@ function constraint_mc_power_balance(pm::AbstractUnbalancedActivePowerModel, nw:
               sum(pg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
             - sum(pd[d][t] for (d, conns) in bus_loads if t in conns)
-            - diag(Gt)[idx]
+            - LinearAlgebra.diag(Gt)[idx]
         )
         push!(cstr_p, cp)
     end

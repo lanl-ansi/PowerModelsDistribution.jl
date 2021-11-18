@@ -1,6 +1,3 @@
-import LinearAlgebra: diagm
-
-
 "Defines relationship between branch (series) power flow, branch (series) current and node voltage magnitude"
 function constraint_mc_model_current(pm::AbstractLPUBFModel, n::Int, i, f_bus, f_idx, g_sh_fr, b_sh_fr)
 end
@@ -72,8 +69,8 @@ function constraint_mc_model_voltage_magnitude_difference(pm::LPUBFDiagModel, n:
     p_fr = var(pm, n, :p)[f_idx]
     q_fr = var(pm, n, :q)[f_idx]
 
-    p_s_fr = [p_fr[fc]- diag(g_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]
-    q_s_fr = [q_fr[fc]+ diag(b_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]
+    p_s_fr = [p_fr[fc]- LinearAlgebra.diag(g_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]
+    q_s_fr = [q_fr[fc]+ LinearAlgebra.diag(b_sh_fr)[idx].*w_fr[fc] for (idx,fc) in enumerate(f_connections)]
 
     alpha = exp(-im*2*pi/3)
     Gamma = [1 alpha^2 alpha; alpha 1 alpha^2; alpha^2 alpha 1][f_connections,t_connections]
@@ -133,7 +130,7 @@ function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i::Int, termin
             - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
             + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
             + sum( pd[d][t] for (d, conns) in bus_loads if t in conns)
-            + sum(diag(ref(pm, nw, :shunt, sh, "gs"))[findfirst(isequal(t), conns)]*w[t] for (sh, conns) in bus_shunts if t in conns)
+            + sum(LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "gs"))[findfirst(isequal(t), conns)]*w[t] for (sh, conns) in bus_shunts if t in conns)
             ==
             0.0
         )
@@ -146,7 +143,7 @@ function constraint_mc_power_balance(pm::LPUBFDiagModel, nw::Int, i::Int, termin
             - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
             + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
             + sum( qd[d][t] for (d, conns) in bus_loads if t in conns)
-            - sum(diag(ref(pm, nw, :shunt, sh, "bs"))[findfirst(isequal(t), conns)]*w[t] for (sh, conns) in bus_shunts if t in conns)
+            - sum(LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "bs"))[findfirst(isequal(t), conns)]*w[t] for (sh, conns) in bus_shunts if t in conns)
             ==
             0.0
         )
@@ -204,7 +201,7 @@ function constraint_mc_power_balance_capc(pm::LPUBFDiagModel, nw::Int, i::Int, t
             - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
             + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
             + sum( pd[d][t] for (d, conns) in bus_loads if t in conns)
-            + sum(diag(ref(pm, nw, :shunt, sh, "gs"))[findfirst(isequal(t), conns)]*w[t] for (sh, conns) in bus_shunts if t in conns)
+            + sum(LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "gs"))[findfirst(isequal(t), conns)]*w[t] for (sh, conns) in bus_shunts if t in conns)
             ==
             0.0
         )
@@ -222,7 +219,7 @@ function constraint_mc_power_balance_capc(pm::LPUBFDiagModel, nw::Int, i::Int, t
                 if t in conns
                     cq_cap = var(pm, nw, :capacitor_reactive_power, sh)[t]
                     cap_state = var(pm, nw, :capacitor_state, sh)[t]
-                    bs = diag(ref(pm, nw, :shunt, sh, "bs"))[findfirst(isequal(t), conns)]
+                    bs = LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "bs"))[findfirst(isequal(t), conns)]
                     w_min = 0.9^2
                     w_max = 1.1^2
                     # McCormick envelope constraints
@@ -254,7 +251,7 @@ function constraint_mc_power_balance_capc(pm::LPUBFDiagModel, nw::Int, i::Int, t
                 - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
                 + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
                 + sum( qd[d][t] for (d, conns) in bus_loads if t in conns)
-                - sum(diag(ref(pm, nw, :shunt, sh, "bs"))[findfirst(isequal(t), conns)]*w[t] for (sh, conns) in bus_shunts if t in conns)
+                - sum(LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "bs"))[findfirst(isequal(t), conns)]*w[t] for (sh, conns) in bus_shunts if t in conns)
                 ==
                 0.0
             )

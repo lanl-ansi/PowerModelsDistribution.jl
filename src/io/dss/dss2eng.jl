@@ -200,7 +200,7 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
                 "f_connections" => _get_conductors_ordered(defaults["bus1"], default=collect(1:nphases)),
                 "t_connections" => _get_conductors_ordered(defaults["bus2"], default=collect(1:nphases)),
                 "length" => 1.0,
-                "rs" => diagm(0 => fill(0.2, nphases)),
+                "rs" => LinearAlgebra.diagm(0 => fill(0.2, nphases)),
                 "xs" => zeros(nphases, nphases),
                 "g_fr" => zeros(nphases, nphases),
                 "b_fr" => zeros(nphases, nphases),
@@ -259,7 +259,7 @@ function _dss2eng_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             # TODO Check unit conversion on Gcap
             Gcap = sum(defaults["kvar"]) / (nphases * 1e3 * (defaults["kv"] / sqrt(nphases))^2)
 
-            eng_obj["bs"] = diagm(0=>fill(Gcap, nphases))
+            eng_obj["bs"] = LinearAlgebra.diagm(0=>fill(Gcap, nphases))
             eng_obj["gs"] = zeros(size(eng_obj["bs"]))
 
             if import_all
@@ -769,8 +769,8 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             # "temperature" => defaults["temperature"],
             # "p-t_curve" => defaults["p-tcurve"],
             # "efficiency_curve" => defaults["effcurve"],
-            # "rs" => diagm(0 => fill(defaults["%r"] / 100., nphases)),
-            # "xs" => diagm(0 => fill(defaults["%x"] / 100., nphases)),
+            # "rs" => LinearAlgebra.diagm(0 => fill(defaults["%r"] / 100., nphases)),
+            # "xs" => LinearAlgebra.diagm(0 => fill(defaults["%x"] / 100., nphases)),
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
             "source_id" => "pvsystem.$id",
         )

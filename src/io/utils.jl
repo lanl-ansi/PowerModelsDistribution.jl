@@ -1,5 +1,3 @@
-import Base.Iterators: flatten
-
 "all node types that can help define buses"
 const _dss_node_objects = String[
     "isource", "load", "generator", "indmach012", "storage", "pvsystem"
@@ -792,7 +790,7 @@ function _parse_obj_dtypes!(obj_type::String, object::Dict{String,Any}, dtypes::
                 end
             end
         elseif isa(v, Matrix) && eltype(v) == Any || isa(eltype(v), AbstractString)
-            _dtype = get(dtypes, k, _guess_dtype("$(join(collect(flatten(v)), " "))"))
+            _dtype = get(dtypes, k, _guess_dtype("$(join(collect(Base.Iterators.flatten(v)), " "))"))
             for i in 1:size(v)[1]
                 for j in 1:size(v)[2]
                     if isa(v[i,j], AbstractString)

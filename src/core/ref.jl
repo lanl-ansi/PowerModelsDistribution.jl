@@ -1,6 +1,3 @@
-import LinearAlgebra: diagm
-
-
 """
     apply_pmd!(func!::Function, ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true)
 
@@ -91,19 +88,19 @@ function _calc_mc_transformer_Tvi(pm::AbstractUnbalancedPowerModel, i::Int; nw=n
     #grounded = length(trans["configuration"])>5 && trans["configuration"][6]=='n'
     # Tw will contain transformations related to permutation and polarity
     perm_to_trans = Dict(
-        [1,2,3]=>diagm(0=>ones(Float64, 3)),
+        [1,2,3]=>LinearAlgebra.diagm(0=>ones(Float64, 3)),
         [3,1,2]=>Tbr,
         [2,3,1]=>Tbr*Tbr
     )
     Tw = perm_to_trans[perm]
     Tw = (polarity=='+') ? Tw : -Tw
-    #Tw = diagm(0=>ones(Float64, 3))
+    #Tw = LinearAlgebra.diagm(0=>ones(Float64, 3))
     vmult = 1.0 # compensate for change in LN
     if dyz==WYE
         Tv_fr = Tw
-        Tv_im = diagm(0=>ones(Float64, 3))
+        Tv_im = LinearAlgebra.diagm(0=>ones(Float64, 3))
         Ti_fr = Tw
-        Ti_im = diagm(0=>ones(Float64, 3))
+        Ti_im = LinearAlgebra.diagm(0=>ones(Float64, 3))
         # if !grounded
         #     # if not grounded, phase currents should sum to zero
         #     Ti_fr = [Ti_fr; ones(1,3)]
@@ -111,7 +108,7 @@ function _calc_mc_transformer_Tvi(pm::AbstractUnbalancedPowerModel, i::Int; nw=n
         # end
     elseif dyz==DELTA
         Tv_fr = Tdelt*Tw
-        Tv_im = diagm(0=>ones(Float64, 3))
+        Tv_im = LinearAlgebra.diagm(0=>ones(Float64, 3))
         Ti_fr = Tw
         Ti_im = Tdelt'
         vmult = sqrt(3)

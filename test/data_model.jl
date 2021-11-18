@@ -10,7 +10,7 @@
 
         add_voltage_source!(eng, "source", "sourcebus", [1,2,3,4]; vm=[1, 1, 1, 0])
 
-        add_linecode!(eng, "default", diagm(0=>fill(0.01, 3)), diagm(0=>fill(0.2, 3)))
+        add_linecode!(eng, "default", LinearAlgebra.diagm(0=>fill(0.01, 3)), LinearAlgebra.diagm(0=>fill(0.2, 3)))
 
         add_line!(eng, "trunk", "sourcebus", "primary", [1,2,3], [1,2,3]; linecode="default")
         add_line!(eng, "primary", "primary", "loadbus", [1,2,3], [1,2,3]; linecode="default")
@@ -38,7 +38,7 @@
 
         add_generator!(eng2, "secondary", "loadbus2", [1,2,3,4]; cost_pg_parameters=[0.0, 1.2, 0])
 
-        add_shunt!(eng2, "cap", "loadbus2", [1,2,3,4]; bs=diagm(0=>fill(1, 3)))
+        add_shunt!(eng2, "cap", "loadbus2", [1,2,3,4]; bs=LinearAlgebra.diagm(0=>fill(1, 3)))
 
         # TODO this test is unstable with Julia 1.5, need to change the data model to fix it
         # result2 = solve_mc_opf(eng2, ACRUPowerModel, ipopt_solver)
