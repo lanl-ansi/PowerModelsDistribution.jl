@@ -800,8 +800,8 @@ Note that a bound on the from-side implies the same bound on the to-side current
 so it suffices to apply this only explicitly at the from-side.
 """
 function constraint_mc_switch_current_limit(pm::AbstractExplicitNeutralACRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{<:Real})::Nothing
-    vr_fr = [var(pm, nw, :vr, f_idx[1])[t] for t in f_connections]
-    vi_fr = [var(pm, nw, :vi, f_idx[1])[t] for t in f_connections]
+    vr_fr = [var(pm, nw, :vr, f_idx[2])[t] for t in f_connections]
+    vi_fr = [var(pm, nw, :vi, f_idx[2])[t] for t in f_connections]
     psw = var(pm, nw, :psw, f_idx)
     qsw = var(pm, nw, :qsw, f_idx)
 
