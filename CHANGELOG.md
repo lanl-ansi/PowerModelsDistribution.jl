@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug with case sensitve filenames by using `Glob.glob` with `Glob.FilenameMatch`
 - Fixed bug in `constraint_mc_switch_current_limit` where voltage variables being used were wrong
 - Moved all `import` statements to root `PowerModelsDistribution`
 - Fixed bug in `_calc_transformer_current_max_frto` where `sm_ub` should have been divided by `vmin`, NOT `vmax`

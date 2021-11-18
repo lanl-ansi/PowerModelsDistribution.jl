@@ -280,7 +280,7 @@ const _dss_object_properties = Dict{String,Vector{String}}(
 
 "parses single column load profile files"
 function _parse_csv_file(path::AbstractString, type::AbstractString; header::Bool=false, column::Int=1, interval::Bool=false)::Union{Vector{String}, Tuple{Vector{String}, Vector{String}, Vector{String}}, Tuple{Vector{String}, Vector{String}}}
-    open(path, "r") do f
+    open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path))), "r") do f
         lines = readlines(f)
         if header
             lines = lines[2:end]
@@ -328,7 +328,7 @@ end
 
 "parses sng and dbl precision loadshape binary files"
 function _parse_binary_file(path::AbstractString, precision::Type; npts::Union{Int,Nothing}=nothing, interval::Bool=false)::Union{Vector{precision}, Tuple{Vector{precision}, Vector{precision}}}
-    open(path, "r") do f
+    open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path))), "r") do f
         if npts === nothing
             data = precision[]
             while true
@@ -489,8 +489,8 @@ Parses a Bus Coordinate `file`, in either "dat" or "csv" formats, where in
 "dat", columns are separated by spaces, and in "csv" by commas. File expected
 to contain "bus,x,y" on each line.
 """
-function _parse_buscoords_file(file::AbstractString)::Dict{String,Any}
-    file_str = read(open(file), String)
+function _parse_buscoords_file(path::AbstractString)::Dict{String,Any}
+    file_str = read(open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path)))), String)
     regex = r"[\s,\t]+"
 
     lines = _strip_lines(split(file_str, '\n'))
@@ -802,8 +802,8 @@ supports components and options, but not commands, e.g. "plot" or "solve".
 Will also parse files defined inside of the originating DSS file via the
 "compile", "redirect" or "buscoords" commands.
 """
-function parse_dss(filename::AbstractString)::Dict{String,Any}
-    data_dss = open(filename) do io
+function parse_dss(path::AbstractString)::Dict{String,Any}
+    data_dss = open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path)))) do io
         parse_dss(io)
     end
     return data_dss
@@ -977,8 +977,8 @@ end
 
 Parses a voltages CSV file exported from OpenDSS with the command `Export Voltages [filename.csv]`
 """
-function parse_dss_voltages_export(file::String)::Dict{String,Any}
-    open(file, "r") do io
+function parse_dss_voltages_export(path::String)::Dict{String,Any}
+    open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path))), "r") do io
         parse_dss_voltages_export(io)
     end
 end

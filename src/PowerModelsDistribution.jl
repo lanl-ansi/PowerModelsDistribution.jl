@@ -1,4 +1,6 @@
 module PowerModelsDistribution
+    # File path utilities
+    import Glob
 
     # File parsing utilities
     import JSON
