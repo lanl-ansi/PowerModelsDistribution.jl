@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Updates `LPUBFDiagModel` description in docs
 
 ## v0.13.0
 
