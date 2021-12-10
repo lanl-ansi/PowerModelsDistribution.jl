@@ -832,7 +832,7 @@ function create_voltage_source(bus::String, connections::Vector{Int};
         "connections" => connections,
         "configuration" => configuration,
         "vm" => !ismissing(vm) ? vm : ones(n_conductors),
-        "va" => !ismissing(va) ? va : zeros(n_conductors),
+        "va" => !ismissing(va) ? va : [[0., -120., 120.]..., zeros(n_conductors)...][connections],
         "status" => get(kwargs, :status, ENABLED),
     )
 
