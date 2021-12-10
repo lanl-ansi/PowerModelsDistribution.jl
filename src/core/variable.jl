@@ -95,7 +95,7 @@ function variable_mc_bus_voltage_magnitude_sqr(pm::AbstractUnbalancedPowerModel;
     w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_w_$(i)",
             lower_bound = 0.0,
-            start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, comp_start_value(ref(pm, nw, :bus, i), ["vm_start", "vm", "vmin"], t, 1.0)^2)
+            start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, comp_start_value(ref(pm, nw, :bus, i), ["vm_start", "vm"], t, 1.0)^2)
         ) for i in ids(pm, nw, :bus)
     )
 
