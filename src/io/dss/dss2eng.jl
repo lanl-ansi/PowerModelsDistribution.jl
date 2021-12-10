@@ -369,6 +369,7 @@ function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         eng_obj = Dict{String,Any}(
             "bus" => _parse_bus_id(defaults["bus1"])[1],
             "connections" => _get_conductors_ordered(defaults["bus1"]; default=[collect(1:phases)..., 0], pad_ground=true),
+            "configuration" => WYE,
             "source_id" => "vsource.$id",
             "status" => defaults["enabled"] ? ENABLED : DISABLED
         )
