@@ -812,8 +812,8 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             "sm_ub" => defaults["kva"],
             "charge_efficiency" => defaults["%effcharge"],
             "discharge_efficiency" => defaults["%effdischarge"],
-            "qs_lb" => -defaults["kvar"],
-            "qs_ub" =>  defaults["kvar"],
+            "qs_lb" => -defaults["kva"],  # The storage element can also produce or absorb reactive power (vars) within the kVA rating of the inverter
+            "qs_ub" =>  defaults["kva"],  # The storage element can also produce or absorb reactive power (vars) within the kVA rating of the inverter
             "rs" => defaults["%r"] / 100.0,
             "xs" => defaults["%x"] / 100.0,
             "pex" => defaults["%idlingkw"] ./ 100.0 .* defaults["kwrated"],
@@ -826,8 +826,6 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         if 0 in eng_obj["connections"]
             _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
         end
-
-        _build_time_series_reference!(eng_obj, dss_obj, data_dss, defaults, time_series, "ps", "qs")
 
         if import_all
             _import_all!(eng_obj, dss_obj)
