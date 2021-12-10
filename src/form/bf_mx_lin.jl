@@ -9,15 +9,15 @@ end
 
 
 ""
-function variable_mc_bus_voltage(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true)
-    variable_mc_bus_voltage_magnitude_sqr(pm, nw=nw)
+function variable_mc_bus_voltage(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_magnitude_sqr(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
 ""
 function variable_mc_branch_power(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    variable_mc_branch_power_real(pm, nw=nw, bounded=bounded)
-    variable_mc_branch_power_imaginary(pm, nw=nw, bounded=bounded)
+    variable_mc_branch_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_branch_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 

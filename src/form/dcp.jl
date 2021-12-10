@@ -120,7 +120,7 @@ end
 
 
 "on/off bus voltage constraint for DCP formulation, nothing to do"
-function constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedDCPModel; nw::Int=nw_id_default, kwargs...)
+function constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedDCPModel; nw::Int=nw_id_default)
 end
 
 

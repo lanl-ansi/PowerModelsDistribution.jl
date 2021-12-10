@@ -106,15 +106,13 @@ function constraint_mc_voltage_magnitude_bounds(pm::AbstractUnbalancedPowerModel
 end
 
 ## Voltage on/off constraints
-
-# TODO fixed function kwargs
 """
-    constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, kwargs...)::Nothing
+    constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default)::Nothing
 
 Template function for on/off constraint for bus voltages"
 """
-function constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, kwargs...)::Nothing
-    constraint_mc_bus_voltage_on_off(pm, nw; kwargs...)
+function constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default)::Nothing
+    constraint_mc_bus_voltage_on_off(pm, nw)
     nothing
 end
 

@@ -5,12 +5,11 @@
         nw::Int=nw_id_default,
         bounded::Bool=true,
         report::Bool=true,
-        kwargs...
     )
 
 Imposes absolute voltage magnitude bounds for models with explicit neutrals
 """
-function constraint_mc_voltage_absolute(pm::RectangularVoltageExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function constraint_mc_voltage_absolute(pm::RectangularVoltageExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     bus = ref(pm, nw, :bus, id)
 
     constraint_mc_voltage_absolute(pm, nw, id, bus["terminals"], bus["grounded"], bus["vmin"], bus["vmax"])
@@ -24,12 +23,11 @@ end
         nw::Int=nw_id_default,
         bounded::Bool=true,
         report::Bool=true,
-        kwargs...
     )
 
 Imposes pairwise voltage magnitude bounds, i.e. magnitude bounds on the voltage between to terminals, for models with explicit neutrals
 """
-function constraint_mc_voltage_pairwise(pm::RectangularVoltageExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function constraint_mc_voltage_pairwise(pm::RectangularVoltageExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     bus = ref(pm, nw, :bus, id)
 
     vm_pair_lb = bus["vm_pair_lb"]
@@ -46,18 +44,17 @@ end
         nw::Int=nw_id_default,
         bounded::Bool=true,
         report::Bool=true,
-        kwargs...
     )
 
 Imposes suitable constraints for the voltage at the reference bus
 """
-function constraint_mc_voltage_reference(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function constraint_mc_voltage_reference(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     bus = ref(pm, nw, :bus, id)
     terminals = bus["terminals"]
     grounded = bus["grounded"]
 
     if haskey(bus, "va") && !haskey(bus, "vm")
-        constraint_mc_theta_ref(pm, id, nw=mw, bounded=bounded, report=report, kwargs...)
+        constraint_mc_theta_ref(pm, id; nw=nw)
     elseif haskey(bus, "vm") && !haskey(bus, "va")
         constraint_mc_voltage_magnitude_fixed(pm, nw, id, bus["vm"], terminals, grounded)
     elseif haskey(bus, "vm") && haskey(bus, "va")
@@ -142,12 +139,11 @@ end
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
 		report::Bool=true,
-		kwargs...
 	)
 
 Imposes a bound on the total apparent at each transformer winding
 """
-function constraint_mc_transformer_thermal_limit(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function constraint_mc_transformer_thermal_limit(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     trans = ref(pm, nw, :transformer, id)
     f_bus = trans["f_bus"]
     t_bus = trans["t_bus"]
