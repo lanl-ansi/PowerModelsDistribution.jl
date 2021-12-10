@@ -7,6 +7,7 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "shunt" => ["status", "dispatchable", "gs", "bs", "connections", "dss"],
     "load" => ["model", "configuration", "connections", "dispatchable", "status", "dss"],
     "generator" => ["configuration", "connections", "dss"],
+    "solar" => ["configuration", "connections", "dss"],
     "storage" => ["status", "energy", "configuration", "connections", "dss"],
     "voltage_source" => ["configuration", "connections", "dss"],
 )
