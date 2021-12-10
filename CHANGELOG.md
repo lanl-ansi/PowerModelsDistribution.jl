@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added missing `temperature` on pvsystem
 - Added `configuration=WYE` to voltage sources
 - Fixed bug in voltage angle variable start values
 - Fixed bug with case sensitve filenames by using `Glob.glob` with `Glob.FilenameMatch`

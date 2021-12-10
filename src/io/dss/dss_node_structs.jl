@@ -201,6 +201,7 @@ function _create_pvsystem(name::String=""; kwargs...)
         "bus1" => bus1,
         "kv" => kv,
         "irradiance" => get(kwargs, :irradiance, 1.0),
+        "temperature" => get(kwargs, :temperature, 25.0),
         "pmpp" => get(kwargs, :pmpp, 500.0),
         "%pmpp" => get(kwargs, Symbol("%pmpp"), 100.0),
         "pf" => pf,
