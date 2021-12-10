@@ -39,6 +39,9 @@ function _make_lossless!(data_eng::Dict{String,<:Any}; exclude::Vector{String}=S
     for (object_type, parameters) in _loss_model_objects
         if haskey(data_eng, object_type) && !(object_type in exclude)
             for (id, eng_obj) in data_eng[object_type]
+                if object_type == "switch"
+                    delete!(eng_obj, "linecode")
+                end
                 for parameter in parameters
                     if haskey(eng_obj, parameter)
                         eng_obj[parameter] = 0.0 .* eng_obj[parameter]

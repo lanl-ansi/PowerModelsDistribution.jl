@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed `make_lossless!` to adjust how switches are made lossless
 - Fixed voltage sqr variable start values
 - Fixed p/q variable start values
 - Added missing `temperature` on pvsystem
