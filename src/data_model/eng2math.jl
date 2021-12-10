@@ -6,10 +6,9 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "switch" => ["status", "f_connections", "t_connections", "dss"],
     "shunt" => ["status", "dispatchable", "gs", "bs", "connections", "dss"],
     "load" => ["model", "configuration", "connections", "dispatchable", "status", "dss"],
-    "generator" => ["pg", "qg", "vg", "configuration", "connections", "dss"],
-    "solar" => ["pg", "qg", "configuration", "connections", "dss"],
-    "storage" => ["status", "energy", "ps", "qs", "connections", "dss"],
-    "voltage_source" => ["dss"],
+    "generator" => ["configuration", "connections", "dss"],
+    "storage" => ["status", "energy", "configuration", "connections", "dss"],
+    "voltage_source" => ["configuration", "connections", "dss"],
 )
 
 "list of nodal type elements in the engineering model"
