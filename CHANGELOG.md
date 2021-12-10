@@ -2,6 +2,9 @@
 
 ## staged
 
+- Fixed broken `capcontrol` test
+- Fixed broken `storage` tests
+- Fixed `data model` unit tests
 - Updated to add InfrastructureModels v0.7
 - Fixed wrong `kvar` in `storage` dss struct
 - Updated default pg in solar object when parsing from dss to use pmpp and irradiance

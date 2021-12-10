@@ -47,7 +47,7 @@
     end
 
     @testset "capcontrol_lpubfdiag" begin
-        result = solve_mc_opf_capc(IEEE13_CapControl, LPUBFDiagPowerModel, ipopt_solver_adaptive; solution_processors=[sol_data_model!])
+        result = solve_mc_opf_capc(IEEE13_CapControl, LPUBFDiagPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
         @test result["termination_status"] == LOCALLY_SOLVED
 
