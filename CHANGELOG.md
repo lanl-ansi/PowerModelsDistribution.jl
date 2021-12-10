@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed default `vad_lb` and `vad_ub` in `create_line`
 - Fixed bug in `create_voltage_source` where the voltage angles `va` were all zero
 - Updated storage parsing to use kva instead of kvar for qs_lb and qs_ub (storage in dss is defined to be able to handle any reactive power up to the thermal limit of the inverter)
 - Fixed `make_lossless!` to adjust how switches are made lossless

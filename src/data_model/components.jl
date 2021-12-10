@@ -215,8 +215,8 @@ function create_line(f_bus::String, t_bus::String, f_connections::Vector{Int}, t
         "status" => status,
         "f_connections" => f_connections,
         "t_connections" => t_connections,
-        "vad_lb" => !ismissing(vad_lb) ? vad_lb : fill(-60.0, n_conductors),
-        "vad_ub" => !ismissing(vad_lb) ? vad_lb : fill( 60.0, n_conductors),
+        "vad_lb" => !ismissing(vad_lb) ? vad_lb : fill(-5.0, n_conductors),
+        "vad_ub" => !ismissing(vad_lb) ? vad_lb : fill( 5.0, n_conductors),
         "length" => length,
     )
 
