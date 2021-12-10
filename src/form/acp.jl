@@ -25,7 +25,7 @@ function variable_mc_bus_voltage(pm::AbstractUnbalancedACPModel; nw=nw_id_defaul
         end
 
         vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
-        va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
+        va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [deg2rad.([0, -120, 120])..., zeros(length(terminals))...][terminals]
 
         for (idx,t) in enumerate(terminals)
             JuMP.set_start_value(var(pm, nw, :vm, id)[t], vm[idx])
@@ -1084,7 +1084,7 @@ function constraint_mc_load_power_wye(pm::AbstractUnbalancedACPModel, nw::Int, i
     va = var(pm, nw, :va, bus_id)
 
     # if constant power load
-    if all(alpha.==0) && all(beta.==0)
+    if ref(pm, nw, :load, id, "model") == POWER
         pd_bus = a
         qd_bus = b
     else

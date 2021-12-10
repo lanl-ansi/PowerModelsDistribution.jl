@@ -3,7 +3,7 @@
 ""
 function variable_mc_bus_voltage_angle(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
-    va_start_defaults = Dict(i => [0.0, -120.0, 120.0, fill(0.0, length(terms))...][terms] for (i, terms) in terminals)
+    va_start_defaults = Dict(i => deg2rad.([0.0, -120.0, 120.0, fill(0.0, length(terms))...][terms]) for (i, terms) in terminals)
     va = var(pm, nw)[:va] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_va_$(i)",
             start = comp_start_value(ref(pm, nw, :bus, i), ["va_start", "va"], t, va_start_defaults[i][findfirst(isequal(t), terminals[i])]),
@@ -19,7 +19,7 @@ function variable_mc_bus_voltage_magnitude_only(pm::AbstractUnbalancedPowerModel
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
     vm = var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_vm_$(i)",
-            start = comp_start_value(ref(pm, nw, :bus, i), ["vm_start", "vm", "vmin"], t, 1.0)
+            start = comp_start_value(ref(pm, nw, :bus, i), ["vm_start", "vm"], t, 1.0)
         ) for i in ids(pm, nw, :bus)
     )
 
@@ -46,7 +46,7 @@ function variable_mc_bus_voltage_real(pm::AbstractUnbalancedPowerModel; nw::Int=
 
     vr = var(pm, nw)[:vr] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_vr_$(i)",
-            start = comp_start_value(ref(pm, nw, :bus, i), "vr_start", t, 0.0)
+            start = comp_start_value(ref(pm, nw, :bus, i), "vr_start", t, 1.0)
         ) for i in ids(pm, nw, :bus)
     )
 

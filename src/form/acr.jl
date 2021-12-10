@@ -32,7 +32,7 @@ function variable_mc_bus_voltage(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_d
             end
 
             vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
-            va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
+            va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [deg2rad.([0, -120, 120])..., zeros(length(terminals))...][terminals]
 
             vr = vm .* cos.(va)
             vi = vm .* sin.(va)
@@ -1057,7 +1057,7 @@ end
 
 
 ""
-function constraint_mc_storage_losses(pm::AbstractUnbalancedACRModel, i::Int; nw::Int=nw_id_default, kwargs...)
+function constraint_mc_storage_losses(pm::AbstractUnbalancedACRModel, i::Int; nw::Int=nw_id_default)
     storage = ref(pm, nw, :storage, i)
 
     vr  = var(pm, nw,  :vr, storage["storage_bus"])

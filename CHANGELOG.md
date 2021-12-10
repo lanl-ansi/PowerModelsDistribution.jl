@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in voltage angle variable start values
 - Fixed bug with case sensitve filenames by using `Glob.glob` with `Glob.FilenameMatch`
 - Fixed bug in `constraint_mc_switch_current_limit` where voltage variables being used were wrong
 - Moved all `import` statements to root `PowerModelsDistribution`
