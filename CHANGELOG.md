@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed wrong `kvar` in `storage` dss struct
 - Updated default pg in solar object when parsing from dss to use pmpp and irradiance
 - Fixed missing `solar` in 1-to-1 maps for eng2math
 - Fixed default `vad_lb` and `vad_ub` in `create_line`
