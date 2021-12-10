@@ -790,7 +790,7 @@ function variable_mc_generator_power_real(pm::AbstractUnbalancedPowerModel; nw::
     connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
     pg = var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_pg_$(i)",
-            start = comp_start_value(ref(pm, nw, :gen, i), ["pg_start", "pg", "pmin"], c, 0.0)
+            start = comp_start_value(ref(pm, nw, :gen, i), ["pg_start", "pg"], c, 0.0)
         ) for i in ids(pm, nw, :gen)
     )
 
@@ -820,7 +820,7 @@ function variable_mc_generator_power_imaginary(pm::AbstractUnbalancedPowerModel;
     connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
     qg = var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_qg_$(i)",
-            start = comp_start_value(ref(pm, nw, :gen, i), ["qg_start", "qg", "qmin"], c, 0.0)
+            start = comp_start_value(ref(pm, nw, :gen, i), ["qg_start", "qg"], c, 0.0)
         ) for i in ids(pm, nw, :gen)
     )
 

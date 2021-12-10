@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed p/q variable start values
 - Added missing `temperature` on pvsystem
 - Added `configuration=WYE` to voltage sources
 - Fixed bug in voltage angle variable start values
