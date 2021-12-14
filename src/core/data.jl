@@ -1220,7 +1220,7 @@ end
 "checks that all branches connect two distinct buses"
 function _check_branch_loops(pm_data::Dict{String, <:Any})
     for (i, branch) in pm_data["branch"]
-        if branch["f_bus"] == branch["t_bus"]
+        if branch["f_bus"] == branch["t_bus"] && branch["f_connections"] == branch["t_connections"]  # Rahmat: updated
             error("both sides of branch $(i) connect to bus $(branch["f_bus"])")
         end
     end

@@ -45,6 +45,7 @@ module PowerModelsDistribution
         Logging.global_logger(_LOGGER)
     end
 
+    include("core/calculate_pf.jl")
     include("core/base.jl")
     include("core/types.jl")
     include("core/data.jl")

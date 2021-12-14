@@ -7,16 +7,16 @@
 
 using Pkg
 Pkg.activate("./scripts")
-# Pkg.add("./")
+# Pkg.develop("./")
 using PowerModelsDistribution
 const _PMD=PowerModelsDistribution
 
 
 # case_file = joinpath(dirname(pathof(PowerModelsDistribution)), "../test/data/en_validation_case_data/test_gen_3ph_wye.dss")
-case_file = joinpath(dirname(pathof(PowerModelsDistribution)), "../test/data/en_validation_case_data/test_trans_dy.dss")
+case_file = "/Users/hei06j/Documents/repositories/remote/PowerModelsDistribution.jl/test/data/en_validation_case_data/test_trans_dy.dss"
 
 ##
-# I = [1 0 0 0; 0 1 0 0 ; 0 0 1 0; 0 0 0 1]
+I = [1 0 0 0; 0 1 0 0 ; 0 0 1 0; 0 0 0 1]
 # I = [1 0 0; 0 1 0 ; 0 0 1]
 
 eng =_PMD.parse_file(case_file)
@@ -24,6 +24,9 @@ math = transform_data_model(eng;kron_reduce=false)
 
 # math["branch"]["2"]["br_r"] = 1E-3.*I
 # math["branch"]["2"]["br_x"] = 1E-3.*I
+
+math["branch"]["6"]["br_r"] = 1E-6.*I
+math["branch"]["6"]["br_x"] = 1E-6.*I
 
 _PMD.add_start_vrvi!(math)
 v_start = _PMD._bts_to_start_voltage(math)
