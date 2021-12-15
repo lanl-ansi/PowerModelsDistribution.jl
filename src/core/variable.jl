@@ -1050,14 +1050,14 @@ end
 ## storage power variables
 
 "variables for modeling storage units, includes grid injection and internal variables"
-function variable_mc_storage_power(pm::AbstractUnbalancedPowerModel; kwargs...)
-    variable_mc_storage_power_real(pm; kwargs...)
-    variable_mc_storage_power_imaginary(pm; kwargs...)
-    variable_mc_storage_power_control_imaginary(pm; kwargs...)
-    variable_mc_storage_current(pm; kwargs...)
-    variable_storage_energy(pm; kwargs...)
-    variable_storage_charge(pm; kwargs...)
-    variable_storage_discharge(pm; kwargs...)
+function variable_mc_storage_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_storage_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_control_imaginary(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_current(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_energy(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_charge(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_discharge(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -1066,7 +1066,7 @@ function variable_mc_storage_power_real(pm::AbstractUnbalancedPowerModel; nw::In
     connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
     ps = var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_ps_$(i)",
-            start = comp_start_value(ref(pm, nw, :storage, i), ["ps_start", "ps"], c, 0.0)
+            start = comp_start_value(ref(pm, nw, :storage, i), "ps_start", c, 0.0)
         ) for i in ids(pm, nw, :storage)
     )
 
@@ -1093,7 +1093,7 @@ function variable_mc_storage_power_imaginary(pm::AbstractUnbalancedPowerModel; n
     connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
     qs = var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_qs_$(i)",
-            start = comp_start_value(ref(pm, nw, :storage, i), ["qs_start", "qs"], c, 0.0)
+            start = comp_start_value(ref(pm, nw, :storage, i), "qs_start", c, 0.0)
         ) for i in ids(pm, nw, :storage)
     )
 

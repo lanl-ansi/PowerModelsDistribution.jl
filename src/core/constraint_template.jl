@@ -854,6 +854,18 @@ end
 
 
 """
+    constraint_mc_storage_power_setpoint_real(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for storage active power setpoint constraint, for power flow problems
+"""
+function constraint_mc_storage_power_setpoint_real(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    ps_set = ref(pm, nw, :storage, i)["ps"]
+    constraint_mc_storage_power_setpoint_real(pm, nw, i, ps_set)
+    nothing
+end
+
+
+"""
     constraint_mc_gen_power_on_off(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
 
 Template function for generator power on/off constraints (MLD problems)

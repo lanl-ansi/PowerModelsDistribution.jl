@@ -817,7 +817,9 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             "rs" => defaults["%r"] / 100.0,
             "xs" => defaults["%x"] / 100.0,
             "pex" => defaults["%idlingkw"] ./ 100.0 .* defaults["kwrated"],
-            "qex" => defaults["%idlingkvar"] ./ 100.0 .* defaults["kvar"],
+            "qex" => defaults["%idlingkvar"] ./ 100.0 .* defaults["kwrated"], # percent of kwrated consumed as kvar
+            "ps" => -defaults["kw"],  # PMD convention is opposite from dss
+            "qs" => -defaults["kvar"],  # PMD convention is opposite from dss
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
             "source_id" => "storage.$id",
         )

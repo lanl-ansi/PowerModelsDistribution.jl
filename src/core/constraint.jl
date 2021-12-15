@@ -104,6 +104,22 @@ function constraint_mc_gen_power_setpoint_real(pm::AbstractUnbalancedPowerModel,
 end
 
 
+@doc raw"""
+    constraint_mc_storage_power_setpoint_real(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, ps::Real)::Nothing
+
+Generic storage real power setpoint constraint
+
+```math
+P_s == P_s^{setpoint}
+```
+"""
+function constraint_mc_storage_power_setpoint_real(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, ps::Real)
+    ps_var = [var(pm, nw, :ps, i)[c] for c in ref(pm, nw, :storage, i)["connections"]]
+
+    JuMP.@constraint(pm.model, sum(ps_var) == ps)
+end
+
+
 "on/off constraint for generators"
 function constraint_mc_gen_power_on_off(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, connections::Vector{<:Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real})
     pg = var(pm, nw, :pg, i)

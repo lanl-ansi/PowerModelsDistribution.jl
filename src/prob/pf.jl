@@ -53,6 +53,7 @@ function build_mc_pf(pm::AbstractUnbalancedPowerModel)
         constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
+        constraint_mc_storage_power_setpoint_real(pm, i)
     end
 
     for i in ids(pm, :branch)
@@ -180,6 +181,7 @@ function build_mc_pf(pm::AbstractUBFModels)
         constraint_storage_complementarity_nl(pm, i)
         constraint_mc_storage_losses(pm, i)
         constraint_mc_storage_thermal_limit(pm, i)
+        constraint_mc_storage_power_setpoint_real(pm, i)
     end
 
     for i in ids(pm, :branch)
