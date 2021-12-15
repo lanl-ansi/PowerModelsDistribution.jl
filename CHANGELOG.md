@@ -2,6 +2,7 @@
 
 ## staged
 
+- Adjusted `sbase_default`, and added `@info` if basemva from dss is the default value
 - Fixed storage model for powerflow validation (new test values are based directly on dss outputs)
 - Added `con(pm, nw, :ohms_yt, f_idx)` to store ohms constraints
 - Added `constraint_mc_branch_flow` for effective zero impedance branches in Bus Injection models, including `con(pm, nw, :branch_flow, i)` to store the constraints
