@@ -735,6 +735,9 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
             end
         end
 
+        math_obj["pg"] = get(eng_obj, "pg", fill(0.0, length(connections)))
+        math_obj["qg"] = get(eng_obj, "qg", fill(0.0, length(connections)))
+
         _add_gen_cost_model!(math_obj, eng_obj)
 
         math_obj["configuration"] = get(eng_obj, "configuration", WYE)
@@ -754,6 +757,8 @@ end
 function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "solar", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("solar", name, eng_obj, length(data_math["gen"])+1; pass_props=pass_props)
+
+        connections = eng_obj["connections"]
 
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["gen_status"] = status = Int(eng_obj["status"])
@@ -779,6 +784,9 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
         for (fr_k, to_k, def) in [("pg_lb", "pmin", -Inf), ("pg_ub", "pmax", Inf), ("qg_lb", "qmin", -Inf), ("qg_ub", "qmax", Inf)]
             math_obj[to_k] = haskey(eng_obj, fr_k) ? eng_obj[fr_k] : fill(def, N)
         end
+
+        math_obj["pg"] = get(eng_obj, "pg", fill(0.0, N))
+        math_obj["qg"] = get(eng_obj, "qg", fill(0.0, N))
 
         _add_gen_cost_model!(math_obj, eng_obj)
 
