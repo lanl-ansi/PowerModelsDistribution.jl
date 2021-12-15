@@ -2,6 +2,8 @@
 
 ## staged
 
+- Added `con(pm, nw, :ohms_yt, f_idx)` to store ohms constraints
+- Added `constraint_mc_branch_flow` for effective zero impedance branches in Bus Injection models, including `con(pm, nw, :branch_flow, i)` to store the constraints
 - Fixed broken `capcontrol` test
 - Fixed broken `storage` tests
 - Fixed `data model` unit tests

@@ -442,40 +442,58 @@ end
 # Branch constraints
 
 """
-    constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
 
 Template function for ohms constraint for branches on the from-side
 """
-function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
 
-    G, B = calc_branch_y(branch)
-
-    constraint_mc_ohms_yt_from(pm, nw, f_bus, t_bus, f_idx, t_idx, branch["f_connections"], branch["t_connections"], G, B, branch["g_fr"], branch["b_fr"])
-    nothing
+    if all(all(isapprox.(branch[k], 0.0)) for k in ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to"])
+        @info "branch $(branch["source_id"]) being treated as superconducting (effective zero impedance)"
+        if !haskey(con(pm, nw), :branch_flow)
+            con(pm, nw)[:branch_flow] = Dict{Int,Vector{Vector{<:JuMP.ConstraintRef}}}()
+        end
+        constraint_mc_branch_flow(pm, nw, f_idx, t_idx, branch["f_connections"], branch["t_connections"])
+    else
+        if !haskey(con(pm, nw), :ohms_yt_from)
+            con(pm, nw)[:ohms_yt] = Dict{Tuple{Int,Int,Int},Vector{Vector{<:JuMP.ConstraintRef}}}()
+        end
+        G, B = calc_branch_y(branch)
+        constraint_mc_ohms_yt_from(pm, nw, f_bus, t_bus, f_idx, t_idx, branch["f_connections"], branch["t_connections"], G, B, branch["g_fr"], branch["b_fr"])
+    end
 end
 
 
 """
-    constraint_mc_ohms_yt_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    constraint_mc_ohms_yt_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
 
 Template function for ohms constraint for branches on the to-side
 """
-function constraint_mc_ohms_yt_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+function constraint_mc_ohms_yt_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
 
-    G, B = calc_branch_y(branch)
-
-    constraint_mc_ohms_yt_to(pm, nw, f_bus, t_bus, f_idx, t_idx, branch["f_connections"], branch["t_connections"], G, B, branch["g_to"], branch["b_to"])
-    nothing
+    if all(all(isapprox.(branch[k], 0.0)) for k in ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to"])
+        @info "branch $(branch["source_id"]) being treated as superconducting (effective zero impedance)"
+        if !haskey(con(pm, nw), :branch_flow)
+            con(pm, nw)[:branch_flow] = Dict{Int,Vector{Vector{<:JuMP.ConstraintRef}}}()
+        end
+        constraint_mc_branch_flow(pm, nw, f_idx, t_idx, branch["f_connections"], branch["t_connections"])
+    else
+        if !haskey(con(pm, nw), :ohms_yt_to)
+            con(pm, nw)[:ohms_yt] = Dict{Tuple{Int,Int,Int},Vector{Vector{<:JuMP.ConstraintRef}}}()
+        end
+        G, B = calc_branch_y(branch)
+        constraint_mc_ohms_yt_to(pm, nw, f_bus, t_bus, f_idx, t_idx, branch["f_connections"], branch["t_connections"], G, B, branch["g_to"], branch["b_to"])
+    end
 end
 
 

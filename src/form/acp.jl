@@ -677,8 +677,10 @@ function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedACPModel, nw::Int, f_b
     va_fr = var(pm, nw, :va, f_bus)
     va_to = var(pm, nw, :va, t_bus)
 
+    ohms_yt_p = JuMP.ConstraintRef[]
+    ohms_yt_q = JuMP.ConstraintRef[]
     for (idx, (fc,tc)) in enumerate(zip(f_connections,t_connections))
-        JuMP.@NLconstraint(pm.model, p_fr[fc] == (G[idx,idx]+G_fr[idx,idx])*vm_fr[fc]^2
+        push!(ohms_yt_p, JuMP.@NLconstraint(pm.model, p_fr[fc] == (G[idx,idx]+G_fr[idx,idx])*vm_fr[fc]^2
             +sum( (G[idx,jdx]+G_fr[idx,jdx]) * vm_fr[fc]*vm_fr[fd]*cos(va_fr[fc]-va_fr[fd])
                  +(B[idx,jdx]+B_fr[idx,jdx]) * vm_fr[fc]*vm_fr[fd]*sin(va_fr[fc]-va_fr[fd])
                 for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections)) if idx != jdx)
@@ -686,16 +688,19 @@ function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedACPModel, nw::Int, f_b
                   -B[idx,jdx]*vm_fr[fc]*vm_to[td]*sin(va_fr[fc]-va_to[td])
                 for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections)))
             )
+        )
 
-        JuMP.@NLconstraint(pm.model, q_fr[fc] == -(B[idx,idx]+B_fr[idx,idx])*vm_fr[fc]^2
+        push!(ohms_yt_q, JuMP.@NLconstraint(pm.model, q_fr[fc] == -(B[idx,idx]+B_fr[idx,idx])*vm_fr[fc]^2
             -sum( (B[idx,jdx]+B_fr[idx,jdx])*vm_fr[fc]*vm_fr[fd]*cos(va_fr[fc]-va_fr[fd])
                  -(G[idx,jdx]+G_fr[idx,jdx])*vm_fr[fc]*vm_fr[fd]*sin(va_fr[fc]-va_fr[fd])
                 for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections)) if idx != jdx)
             -sum(-B[idx,jdx]*vm_fr[fc]*vm_to[td]*cos(va_fr[fc]-va_to[td])
                  +G[idx,jdx]*vm_fr[fc]*vm_to[td]*sin(va_fr[fc]-va_to[td])
                 for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections)))
+            )
         )
     end
+    con(pm, nw, :ohms_yt)[f_idx] = [ohms_yt_p, ohms_yt_q]
 end
 
 

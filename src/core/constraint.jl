@@ -247,3 +247,24 @@ function constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel,
     JuMP.@constraint(pm.model, sd_on*discharge_ub >= sd)
     nothing
 end
+
+
+"""
+    constraint_mc_branch_flow(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int})
+
+For superconducting branch flow (br_r and br_x all zeros)
+"""
+function constraint_mc_branch_flow(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int})
+    p_fr = [var(pm, nw, :p, f_idx)[c] for c in f_connections]
+    p_to = [var(pm, nw, :p, t_idx)[c] for c in t_connections]
+
+    q_fr = [var(pm, nw, :q, f_idx)[c] for c in f_connections]
+    q_to = [var(pm, nw, :q, t_idx)[c] for c in t_connections]
+
+    if !haskey(con(pm, nw, :branch_flow), f_idx[1])
+        con(pm, nw, :branch_flow)[f_idx[1]] = [
+            JuMP.@constraint(pm.model, p_fr .+ p_to .== 0),
+            JuMP.@constraint(pm.model, q_fr .+ q_to .== 0)
+        ]
+    end
+end

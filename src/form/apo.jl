@@ -359,3 +359,20 @@ end
 "nothing to do, no voltage variables"
 function constraint_mc_switch_ampacity(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{Float64})::Nothing
 end
+
+
+"""
+    constraint_mc_branch_flow(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int})
+
+For superconducting branch flow (br_r and br_x all zeros) in active power only models
+"""
+function constraint_mc_branch_flow(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int})
+    p_fr = [var(pm, nw, :p, f_idx)[c] for c in f_connections]
+    p_to = [var(pm, nw, :p, t_idx)[c] for c in t_connections]
+
+    if !haskey(con(pm, nw, :branch_flow), f_idx[1])
+        con(pm, nw, :branch_flow)[f_idx[1]] = [
+            JuMP.@constraint(pm.model, p_fr .+ p_to .== 0)
+        ]
+    end
+end

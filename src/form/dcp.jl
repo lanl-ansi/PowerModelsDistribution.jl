@@ -31,9 +31,11 @@ function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedDCPModel, nw::Int, f_b
     va_fr = var(pm, nw, :va, f_bus)
     va_to = var(pm, nw, :va, t_bus)
 
+    ohms_yt_p = JuMP.ConstraintRef[]
     for (idx, (fc,tc)) in enumerate(zip(f_connections, t_connections))
-        JuMP.@constraint(pm.model, p_fr[fc] == -sum(B[idx,jdx]*(va_fr[fc] - va_to[td]) for (jdx, (fd,td)) in enumerate(zip(f_connections, t_connections))))
+        push!(ohms_yt_p, JuMP.@constraint(pm.model, p_fr[fc] == -sum(B[idx,jdx]*(va_fr[fc] - va_to[td]) for (jdx, (fd,td)) in enumerate(zip(f_connections, t_connections)))))
     end
+    con(pm, nw, :ohms_yt)[f_idx] = [ohms_yt_p]
 end
 
 

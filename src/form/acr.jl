@@ -748,20 +748,22 @@ function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedACRModel, nw::Int, f_b
     vi_fr = [var(pm, nw, :vi, f_bus)[t] for t in f_connections]
     vi_to = [var(pm, nw, :vi, t_bus)[t] for t in t_connections]
 
-    JuMP.@constraint(pm.model,
+    con(pm, nw, :ohms_yt)[f_idx] = [
+        JuMP.@constraint(pm.model,
             p_fr .==  vr_fr.*(G*vr_fr-G*vr_to-B*vi_fr+B*vi_to)
                      +vi_fr.*(G*vi_fr-G*vi_to+B*vr_fr-B*vr_to)
                      # shunt
                      +vr_fr.*(G_fr*vr_fr-B_fr*vi_fr)
                      +vi_fr.*(G_fr*vi_fr+B_fr*vr_fr)
-    )
-    JuMP.@constraint(pm.model,
+        ),
+        JuMP.@constraint(pm.model,
             q_fr .== -vr_fr.*(G*vi_fr-G*vi_to+B*vr_fr-B*vr_to)
                      +vi_fr.*(G*vr_fr-G*vr_to-B*vi_fr+B*vi_to)
                      # shunt
                      -vr_fr.*(G_fr*vi_fr+B_fr*vr_fr)
                      +vi_fr.*(G_fr*vr_fr-B_fr*vi_fr)
-    )
+        )
+    ]
 end
 
 
