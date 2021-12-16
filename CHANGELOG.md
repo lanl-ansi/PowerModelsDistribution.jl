@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Fixed on-off storage variable start value
 
 ## v0.13.1
 

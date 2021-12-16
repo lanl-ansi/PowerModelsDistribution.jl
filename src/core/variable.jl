@@ -1175,7 +1175,7 @@ function variable_mc_storage_power_real_on_off(pm::AbstractUnbalancedPowerModel;
     connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
     ps = var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
         [c in connections[i]], base_name="$(nw)_ps_$(i)",
-        start = comp_start_value(ref(pm, nw, :storage, i), ["ps_start", "ps"], c, 0.0)
+        start = comp_start_value(ref(pm, nw, :storage, i), "ps_start", c, 0.0)
     ) for i in ids(pm, nw, :storage))
 
     if bounded
@@ -1197,7 +1197,7 @@ function variable_mc_storage_power_imaginary_on_off(pm::AbstractUnbalancedPowerM
     connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
     qs = var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
         [c in connections[i]], base_name="$(nw)_qs_$(i)",
-        start = comp_start_value(ref(pm, nw, :storage, i), ["qs_start", "qs"], c, 0.0)
+        start = comp_start_value(ref(pm, nw, :storage, i), "qs_start", c, 0.0)
     ) for i in ids(pm, nw, :storage))
 
     if bounded
