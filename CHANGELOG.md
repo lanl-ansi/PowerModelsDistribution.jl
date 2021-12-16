@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added linear relaxation of ampacity constraints (remove quadatric)
 - Fixed on-off storage variable start value
 
 ## v0.13.1

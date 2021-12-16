@@ -519,3 +519,138 @@ function constraint_mc_storage_thermal_limit(pm::LPUBFDiagModel, nw::Int, i::Int
 
     JuMP.@constraint(pm.model, sum(ps_sqr .+ qs_sqr) <= rating^2)
 end
+
+
+@doc raw"""
+    constraint_mc_ampacity_from(pm::AbstractUnbalancedWModels, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})
+
+ACP current limit constraint on branches from-side
+
+math```
+p_{fr}^2 + q_{fr}^2 \leq w_{fr} i_{max}^2
+```
+"""
+function constraint_mc_ampacity_from(pm::LPUBFDiagModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})
+    p_fr = [var(pm, nw, :p, f_idx)[c] for c in f_connections]
+    q_fr = [var(pm, nw, :q, f_idx)[c] for c in f_connections]
+    w_fr = [var(pm, nw, :w, f_idx[2])[c] for c in f_connections]
+
+    p_sqr_fr = [JuMP.@variable(pm.model, base_name="$(nw)_p_sqr_$(f_idx)[$(c)]") for c in f_connections]
+    q_sqr_fr = [JuMP.@variable(pm.model, base_name="$(nw)_q_sqr_$(f_idx)[$(c)]") for c in f_connections]
+
+    for (idx,c) in enumerate(f_connections)
+        if isfinite(c_rating[idx])
+            p_lb, p_ub = _IM.variable_domain(p_fr[idx])
+            q_lb, q_ub = _IM.variable_domain(q_fr[idx])
+            w_ub = _IM.variable_domain(w_fr[idx])[2]
+
+            if (!isfinite(p_lb) || !isfinite(p_ub)) && isfinite(w_ub)
+                p_ub = sum(c_rating[isfinite.(c_rating)]) * w_ub
+                p_lb = -p_ub
+            end
+            if (!isfinite(q_lb) || !isfinite(q_ub)) && isfinite(w_ub)
+                q_ub = sum(c_rating[isfinite.(c_rating)]) * w_ub
+                q_lb = -q_ub
+            end
+
+            all(isfinite(b) for b in [p_lb, p_ub]) && PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, p_fr[idx], p_sqr_fr[idx], [p_lb, p_ub], false)
+            all(isfinite(b) for b in [q_lb, q_ub]) && PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, q_fr[idx], q_sqr_fr[idx], [q_lb, q_ub], false)
+        end
+    end
+
+    con(pm, nw, :mu_cm_branch)[f_idx] = mu_cm_fr = [JuMP.@constraint(pm.model, p_sqr_fr[idx] + q_sqr_fr[idx] .<= w_fr[idx] * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :branch, f_idx[1])[:mu_cm_fr] = mu_cm_fr
+    end
+end
+
+
+@doc raw"""
+    constraint_mc_ampacity_to(pm::AbstractUnbalancedWModels, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, c_rating::Vector{<:Real})
+
+ACP current limit constraint on branches to-side
+
+math```
+p_{to}^2 + q_{to}^2 \leq w_{to} i_{max}^2
+```
+"""
+function constraint_mc_ampacity_to(pm::LPUBFDiagModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, c_rating::Vector{<:Real})
+    p_to = [var(pm, nw, :p, t_idx)[c] for c in t_connections]
+    q_to = [var(pm, nw, :q, t_idx)[c] for c in t_connections]
+    w_to = [var(pm, nw, :w, t_idx[2])[c] for c in t_connections]
+
+    p_sqr_to = [JuMP.@variable(pm.model, base_name="$(nw)_p_sqr_$(t_idx)[$(c)]") for c in t_connections]
+    q_sqr_to = [JuMP.@variable(pm.model, base_name="$(nw)_q_sqr_$(t_idx)[$(c)]") for c in t_connections]
+
+    for (idx,c) in enumerate(t_connections)
+        if isfinite(c_rating[idx])
+            p_lb, p_ub = _IM.variable_domain(p_to[idx])
+            q_lb, q_ub = _IM.variable_domain(q_to[idx])
+            w_ub = _IM.variable_domain(w_to[idx])[2]
+
+            if (!isfinite(p_lb) || !isfinite(p_ub)) && isfinite(w_ub)
+                p_ub = sum(c_rating[isfinite.(c_rating)]) * w_ub
+                p_lb = -p_ub
+            end
+            if (!isfinite(q_lb) || !isfinite(q_ub)) && isfinite(w_ub)
+                q_ub = sum(c_rating[isfinite.(c_rating)]) * w_ub
+                q_lb = -q_ub
+            end
+
+            all(isfinite(b) for b in [p_lb, p_ub]) && PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, p_to[idx], p_sqr_to[idx], [p_lb, p_ub], false)
+            all(isfinite(b) for b in [q_lb, q_ub]) && PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, q_to[idx], q_sqr_to[idx], [q_lb, q_ub], false)
+        end
+    end
+
+    con(pm, nw, :mu_cm_branch)[t_idx] = mu_cm_to = [JuMP.@constraint(pm.model, p_sqr_to[idx] + q_sqr_to[idx] .<= w_to[idx] * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :branch, t_idx[1])[:mu_cm_to] = mu_cm_to
+    end
+end
+
+
+@doc raw"""
+    constraint_mc_switch_ampacity(pm::AbstractUnbalancedWModels, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})
+
+ACP current limit constraint on switches from-side
+
+math```
+p_{fr}^2 + q_{fr}^2 \leq w_{fr} i_{max}^2
+```
+"""
+function constraint_mc_switch_ampacity(pm::LPUBFDiagModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})
+    psw_fr = [var(pm, nw, :psw, f_idx)[c] for c in f_connections]
+    qsw_fr = [var(pm, nw, :qsw, f_idx)[c] for c in f_connections]
+    w_fr = [var(pm, nw, :w, f_idx[2])[c] for c in f_connections]
+
+    psw_sqr_fr = [JuMP.@variable(pm.model, base_name="$(nw)_psw_sqr_$(f_idx)[$(c)]") for c in f_connections]
+    qsw_sqr_fr = [JuMP.@variable(pm.model, base_name="$(nw)_qsw_sqr_$(f_idx)[$(c)]") for c in f_connections]
+
+    for (idx,c) in enumerate(f_connections)
+        if isfinite(c_rating[idx])
+            p_lb, p_ub = _IM.variable_domain(psw_fr[idx])
+            q_lb, q_ub = _IM.variable_domain(qsw_fr[idx])
+            w_ub = _IM.variable_domain(w_fr[idx])[2]
+
+            if (!isfinite(p_lb) || !isfinite(p_ub)) && isfinite(w_ub)
+                p_ub = sum(c_rating[isfinite.(c_rating)]) * w_ub
+                p_lb = -p_ub
+            end
+            if (!isfinite(q_lb) || !isfinite(q_ub)) && isfinite(w_ub)
+                q_ub = sum(c_rating[isfinite.(c_rating)]) * w_ub
+                q_lb = -q_ub
+            end
+
+            all(isfinite(b) for b in [p_lb, p_ub]) && PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, psw_fr[idx], psw_sqr_fr[idx], [p_lb, p_ub], false)
+            all(isfinite(b) for b in [q_lb, q_ub]) && PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, qsw_fr[idx], qsw_sqr_fr[idx], [q_lb, q_ub], false)
+        end
+    end
+
+    con(pm, nw, :mu_cm_switch)[f_idx] = mu_cm_fr = [JuMP.@constraint(pm.model, psw_sqr_fr[idx] + qsw_sqr_fr[idx] .<= w_fr[idx] * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :switch, f_idx[1])[:mu_cm_fr] = mu_cm_fr
+    end
+end
