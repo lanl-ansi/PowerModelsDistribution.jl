@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed issue with looped edge components in ref (i.e., if f_bus==t_bus)
 - Added linear relaxation of ampacity constraints (remove quadatric)
 - Fixed on-off storage variable start value
 

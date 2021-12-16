@@ -330,7 +330,9 @@ function ref_add_core!(ref::Dict{Symbol,Any})
                 for (i, obj) in nw_ref[Symbol(type)]
                     if obj[status] != pmd_math_component_status_inactive[type]
                         push!(conns[obj["f_bus"]], ((obj["index"], obj["f_bus"], obj["t_bus"]), obj["f_connections"]))
-                        push!(conns[obj["t_bus"]], ((obj["index"], obj["t_bus"], obj["f_bus"]), obj["t_connections"]))
+                        if obj["f_bus"] != obj["t_bus"]
+                            push!(conns[obj["t_bus"]], ((obj["index"], obj["t_bus"], obj["f_bus"]), obj["t_connections"]))
+                        end
                     end
                 end
                 nw_ref[Symbol("bus_arcs_conns_$(type)")] = conns
