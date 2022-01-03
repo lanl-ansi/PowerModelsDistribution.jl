@@ -1,3 +1,5 @@
+import LinearAlgebra: diagm
+
 "items that are mapped one-to-one from engineering to math models"
 const _1to1_maps = Dict{String,Vector{String}}(
     "bus" => ["vm", "va", "vm_start", "va_start", "terminals", "phases", "neutral", "vm_pn_lb", "vm_pn_ub", "vm_pp_lb", "vm_pp_ub", "vm_ng_ub", "dss", "vuf_ub", "vm_pair_lb", "vm_pair_ub"],
@@ -229,7 +231,6 @@ function _map_eng2math(
 
     return data_math
 end
-
 
 """
 """
@@ -543,10 +544,10 @@ function _map_eng2math_switch!(data_math::Dict{String,<:Any}, data_eng::Dict{Str
 
         math_obj["f_bus"] = data_math["bus_lookup"][eng_obj["f_bus"]]
         math_obj["t_bus"] = data_math["bus_lookup"][eng_obj["t_bus"]]
-        math_obj["status"] = eng_obj["status"] == DISABLED ? 0 : 1
 
         math_obj["state"] = Int(get(eng_obj, "state", CLOSED))
         math_obj["dispatchable"] = Int(get(eng_obj, "dispatchable", YES))
+        math_obj["status"] = eng_obj["status"] == DISABLED ? 0 : 1
 
         # OPF bounds
         for (f_key, t_key) in [("cm_ub", "current_rating"), ("cm_ub_b", "c_rating_b"), ("cm_ub_c", "c_rating_c"),
@@ -637,7 +638,6 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
 
         # add capcontrol items to math model
         if haskey(eng_obj,"controls")
-            math_obj["controls"] = deepcopy(eng_obj["controls"])
             dss_obj_type = split(math_obj["controls"]["element"], "."; limit=2)[1]
             if dss_obj_type == "line"
                 elem_id = filter(x->x.second["source_id"] == math_obj["controls"]["element"], data_math["branch"])
@@ -758,10 +758,10 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
     for (name, eng_obj) in get(data_eng, "solar", Dict{Any,Dict{String,Any}}())
         math_obj = _init_math_obj("solar", name, eng_obj, length(data_math["gen"])+1; pass_props=pass_props)
 
-        connections = eng_obj["connections"]
-
         math_obj["gen_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["gen_status"] = status = Int(eng_obj["status"])
+
+        connections = eng_obj["connections"]
 
         math_obj["control_mode"] = control_mode = Int(get(eng_obj, "control_mode", FREQUENCYDROOP))
         bus_type = data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"]
@@ -946,4 +946,89 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
             "unmap_function" => "_map_math2eng_voltage_source!",
         ))
     end
+end
+
+
+
+"""
+"""
+function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngBus)
+
+end
+
+
+"""
+"""
+function convert_eng2math!(math::MathematicalDataModel, eng_obj::Eng3pBus)
+
+end
+
+
+"""
+"""
+function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngLine)
+
+end
+
+
+"""
+"""
+function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngSwitch)
+
+end
+
+
+"""
+"""
+function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngTransformer)
+
+end
+
+
+"""
+"""
+function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngAl2wTransformer)
+
+end
+
+
+"""
+"""
+function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngLoad)
+
+end
+
+
+"""
+"""
+function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngShunt)
+
+end
+
+
+"""
+"""
+function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngGenerator)
+
+end
+
+
+"""
+"""
+function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngSolar)
+
+end
+
+
+"""
+"""
+function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngStorage)
+
+end
+
+
+"""
+"""
+function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngVoltageSource)
+
 end

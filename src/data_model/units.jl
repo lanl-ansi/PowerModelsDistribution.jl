@@ -149,6 +149,98 @@ end
 
 
 """
+"""
+function discover_voltage_zones(eng::EngineeringDataModel)::Dict{Int,Set{String}}
+    unused_components = Set("$comp_type.$id" for comp_type in _eng_edge_elements[_eng_edge_elements .!= "transformer"] for id in keys(getproperty(eng, Symbol(comp_type))))
+    bus_connectors = Dict([(id,Set()) for id in keys(eng.bus)])
+    for comp_type in _eng_edge_elements[_eng_edge_elements .!= "transformer"]
+        for (id,obj) in getproperty(eng, Symbol(comp_type))
+            f_bus = string(obj["f_bus"])
+            t_bus = string(obj["t_bus"])
+            push!(bus_connectors[f_bus], ("$comp_type.$id",t_bus))
+            push!(bus_connectors[t_bus], ("$comp_type.$id",f_bus))
+        end
+    end
+
+    zones = []
+    buses = Set(keys(eng.bus))
+    while !isempty(buses)
+        stack = [pop!(buses)]
+        zone = Set{Any}()
+        while !isempty(stack)
+            bus = pop!(stack)
+            delete!(buses, bus)
+            push!(zone, bus)
+            for (id,bus_to) in bus_connectors[bus]
+                if id in unused_components && bus_to in buses
+                    delete!(unused_components, id)
+                    push!(stack, bus_to)
+                end
+            end
+        end
+        append!(zones, [zone])
+    end
+    zones = Dict{Int,Set{String}}(enumerate(zones))
+
+    return zones
+end
+
+
+"""
+"""
+function calc_voltage_bases(eng::EngineeringDataModel)::Dict{String,Union{Missing,Float64}}
+    # find zones of buses connected by lines
+    zones = discover_voltage_zones(eng)
+    bus_to_zone = Dict([(bus,zone) for (zone, buses) in zones for bus in buses])
+
+    # assign specified vbase to corresponding zones
+    zone_vbase = Dict{Int, Union{Missing,Float64}}([(zone,missing) for zone in keys(zones)])
+    for (bus,vbase) in eng.settings.vbases_default
+        if !ismissing(zone_vbase[bus_to_zone[bus]])
+            @warn "You supplied multiple voltage bases for the same zone; ignoring all but the last one."
+        end
+        zone_vbase[bus_to_zone[bus]] = vbase
+    end
+
+    # transformers form the edges between these zones
+    zone_edges = Dict{Int,Vector{Tuple{Int,Float64}}}([(zone,[]) for zone in keys(zones)])
+    for (_,transformer) in eng.transformer
+        xfmrcode = get(eng.xfmrcode, transformer.xfmrcode, missing)
+
+        vm_nom = ismissing(transformer.vm_nom) ? xfmrcode.vm_nom : transformer.vm_nom
+        configurations = ismissing(transformer.configurations) ? xfmrcode.configurations : transformer.configurations
+
+        nrw = length(transformer.bus)
+        f_zone = bus_to_zone[transformer.bus[1]]
+        f_vnom = configurations[1] == DELTA ? vm_nom[1]/sqrt(3) : vm_nom[1]
+        for w in 2:nrw
+            t_zone = bus_to_zone[transformer.bus[w]]
+            t_vnom = configurations[1] == DELTA ? vm_nom[w]/sqrt(3) : vm_nom[w]
+            tm_nom = f_vnom / t_vnom
+            push!(zone_edges[f_zone], (t_zone, 1/tm_nom))
+            push!(zone_edges[t_zone], (f_zone,   tm_nom))
+        end
+    end
+
+    # initialize the stack with all specified zones
+    stack = [zone for (zone,vbase) in zone_vbase if !ismissing(vbase)]
+    while !isempty(stack)
+        f_zone = pop!(stack)
+        for (t_zone, scale) in zone_edges[f_zone]
+            if ismissing(zone_vbase[t_zone])
+                zone_vbase[t_zone] = zone_vbase[f_zone]*scale
+                push!(stack, t_zone)
+            end
+        end
+    end
+
+    bus_vbase = Dict{String,Union{Missing,Float64}}([(bus,zone_vbase[zone]) for (bus,zone) in bus_to_zone])
+
+    return bus_vbase
+end
+
+
+"""
     calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict}
 
 Calculates voltage bases for each voltage zone for buses and branches

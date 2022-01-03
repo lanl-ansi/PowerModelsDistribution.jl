@@ -18,7 +18,7 @@ New "Line.L3" phases=3 bus1=b7.1.2.3 bus2=b9.1.2.3 linecode=300 normamps=400 eme
 New "Line._L4" phases=3 bus1=b8.1.2.3 bus2=b10.1.2.3 linecode=300 normamps=400 emergamps=600 faultrate=0.1 pctperm=20 repair=0 length=1.73 switch=y
 New line.l5 phases=3 bus1=_b2.1.2.3 bus2=b7.1.2.3 linecode=lc8
 New line.l6 phases=3 bus1=b1.1.2.3 bus2=b10.1.2.3 linecode=lc9
-new line.l7 like=L2 bus1=_b2 bus2=b10 linecode=lc10 test_param=100.0
+new line.l7 like=L2 bus1=_b2 bus2=b10 linecode=lc10 !test_param=100.0
 
 ! Loads
 New Load.ld1 phases=1 Bus1=b7.1.0  kv=0.208  status=variable model=1 conn=wye kW=3.89   pf=0.97  Vminpu=.88

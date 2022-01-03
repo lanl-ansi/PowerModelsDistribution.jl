@@ -179,3 +179,6 @@ function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true, make_
         end
     end
 end
+
+correct_network_data!(eng::EngineeringDataModel) = nothing
+correct_network_data!(math::MathematicalModel) = nothing

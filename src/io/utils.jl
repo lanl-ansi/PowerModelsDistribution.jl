@@ -67,12 +67,12 @@ const _like_exclusions = Dict{String,Vector{Regex}}(
     "line" => [r"switch"],
 )
 
-"Regexes for determining data types"
-const _dtype_regex = Dict{Regex, Type}(
-    r"^[+-]{0,1}\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*[+-]\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*[ij]$" => ComplexF64,
-    r"^[+-]{0,1}\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*$" => Float64,
-    r"^\d+$" => Int,
-)
+# "Regexes for determining data types"
+# const _dtype_regex = Dict{Regex, Type}(
+#     r"^[+-]{0,1}\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*[+-]\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*[ij]$" => ComplexF64,
+#     r"^[+-]{0,1}\d*\.{0,1}\d*[eE]{0,1}[+-]{0,1}\d*$" => Float64,
+#     r"^\d+$" => Int,
+# )
 
 
 "dss to pmd load model"
@@ -122,7 +122,7 @@ end
 
 
 "parses Reverse Polish Notation `expr`"
-function _parse_rpn(expr::AbstractString, dtype::Type=Float64)
+function _parse_rpn(::Type{T}, expr::String)::T where T
     clean_expr = strip(expr, _array_delimiters)
 
     if occursin("rollup", clean_expr) || occursin("rolldn", clean_expr) || occursin("swap", clean_expr)
@@ -145,7 +145,7 @@ function _parse_rpn(expr::AbstractString, dtype::Type=Float64)
                 if item == "pi"
                     push!(stack, pi)
                 else
-                    push!(stack, parse(dtype, item))
+                    push!(stack, parse(T, item))
                 end
             end
         catch error
@@ -166,304 +166,164 @@ function _parse_rpn(expr::AbstractString, dtype::Type=Float64)
 end
 
 
-"checks is a string is a connection by checking the values"
-function _isa_conn(expr::AbstractString)::Bool
-    if expr in ["wye", "y", "ln", "delta", "ll"]
-        return true
-    else
-        return false
-    end
-end
-
-
-"parses connection 'conn' specification reducing to wye or delta"
-function _parse_conn(conn::AbstractString)::ConnConfig
-    if conn in ["wye", "y", "ln"]
-        return WYE
-    elseif conn in ["delta", "ll"]
-        return DELTA
-    else
-        @warn "Unsupported connection $conn, defaulting to WYE"
-        return WYE
-    end
-end
-
-
-"checks if `data` is an opendss-style matrix string"
-function _isa_matrix(data::AbstractString)::Bool
-    if occursin("|", data)
-        return true
-    else
-        return false
-    end
-end
-
-
 """
-Parses a OpenDSS style triangular matrix string `data` into a two dimensional
-array of type `dtype`. Matrix strings are capped by either parenthesis or
-brackets, rows are separated by "|", and columns are separated by spaces.
+Combines transformers with 'bank' keyword into a single transformer
 """
-function _parse_matrix(dtype::Type, data::AbstractString)::Matrix{dtype}
-    rows = []
-    for line in split(strip(strip(data, _array_delimiters)), '|')
-        cols = []
-        for item in split(strip(line), r"\s*,\s*|\s+")
-            push!(cols, parse(dtype, item))
-        end
-        push!(rows, cols)
-    end
-
-    nphases = maximum([length(row) for row in rows])
-
-    if dtype == AbstractString || dtype == String
-        matrix = fill("", nphases, nphases)
-    elseif dtype == Char
-        matrix = fill(' ', nphases, nphases)
-    else
-        matrix = zeros(dtype, nphases, nphases)
-    end
-
-    if length(rows) == 1
-        for i in 1:nphases
-            matrix[i, i] = rows[1][1]
-        end
-    elseif all([length(row) for row in rows] .== [i for i in 1:nphases])
-        for (i, row) in enumerate(rows)
-            for (j, col) in enumerate(row)
-                matrix[i, j] = matrix[j, i] = col
-            end
-        end
-    elseif all([length(row) for row in rows] .== nphases)
-        for (i, row) in enumerate(rows)
-            for (j, col) in enumerate(row)
-                matrix[i, j] = col
-            end
-        end
-    end
-
-    return matrix
-end
-
-
-"checks if `data` is an opendss-style array string"
-function _isa_array(data::AbstractString)::Bool
-    clean_data = strip(data)
-    if !occursin("|", clean_data)
-        if occursin(",", clean_data) ||
-            (startswith(clean_data, "[") && endswith(clean_data, "]")) ||
-            (startswith(clean_data, "\"") && endswith(clean_data, "\"")) ||
-            (startswith(clean_data, "\'") && endswith(clean_data, "\'")) ||
-            (startswith(clean_data, "(") && endswith(clean_data, ")")) ||
-            (startswith(clean_data, "{") && endswith(clean_data, "}"))
-            return true
-        else
-            return false
-        end
-    else
-        return false
-    end
-end
-
-
-"""
-Parses a OpenDSS style array string `data` into a one dimensional array of type
-`dtype`. Array strings are capped by either brackets, single quotes, or double
-quotes, and elements are separated by spaces.
-"""
-function _parse_array(dtype::Type, data::AbstractString)::Vector{dtype}
-    if _isa_rpn(data)
-        matches = collect((m.match for m = eachmatch(Regex(string("[",join(_array_delimiters, '\\'),"]")), data, overlap=false)))
-        if length(matches) == 2
-            if dtype == String
-                return data
-            else
-                return _parse_rpn(data, dtype)
+function bank_transformers!(eng::EngineeringDataModel)
+    bankable_transformers = Dict{String,Tuple{Vector{String},Vector{EngTransformer}}}()
+    for (id, tr) in eng.transformer
+        if !isempty(tr.bank)
+            bank = tr["bank"]
+            if !haskey(bankable_transformers, bank)
+                bankable_transformers[bank] = (String[], EngTransformer[])
             end
 
-        else
-            elements = _parse_properties(data[2:end-1])
-        end
-    else
-        for delim in _array_delimiters
-            data = replace(data, delim => "")
-        end
-        elements = split(strip(data), r"\s*,\s*|\s+")
-        elements = [strip(el) for el in elements if strip(el) != ""]
-    end
-
-    if all(_isa_conn(el) for el in elements)
-        array = ConnConfig[]
-        for el in elements
-            a = _parse_conn(el)
-            push!(array, a)
-        end
-    elseif dtype == String || dtype == AbstractString || dtype == Char
-        array = String[]
-        for el in elements
-            push!(array, el)
-        end
-    else
-        array = Vector{dtype}(undef, length(elements))
-        for (i, el) in enumerate(elements)
-            if _isa_rpn(data)
-                array[i] = _parse_rpn(el, dtype)
-            else
-                array[i] = parse(dtype, el)
-            end
+            push!(bankable_transformers[bank][1], id)
+            push!(bankable_transformers[bank][2], deepcopy(tr))
         end
     end
 
-    return array
-end
+    for (bank, (ids, trs)) in bankable_transformers
+        for tr in trs
+            apply_xfmrcode!(tr, !isempty(tr.xfmrcode) ? eng.xfmrcode[tr.xfmrcode] : missing)
+        end
 
+        # across-phase properties should be the same to be eligible for banking
+        props = ["bus", "noloadloss", "xsc", "rw", "cmag", "vm_nom", "sm_nom", "polarity", "configurations"]
+        btrans = Dict{String, Any}(prop=>getproperty(trs[1], Symbol(prop)) for prop in props)
+        if !all(tr[prop]==btrans[prop] for tr in trs, prop in props)
+            @warn "Not all across-phase properties match among transfomers identified by bank='$bank', aborting attempt to bank"
+            continue
+        end
+        nrw = length(btrans["bus"])
 
-"Combines transformers with 'bank' keyword into a single transformer"
-function _bank_transformers!(data_eng::Dict{String,<:Any})
-    if haskey(data_eng, "transformer")
-        bankable_transformers = Dict()
-        for (id, tr) in data_eng["transformer"]
-            if haskey(tr, "bank")
-                bank = tr["bank"]
-                if !haskey(bankable_transformers, bank)
-                    bankable_transformers[bank] = ([], [])
+        # only attempt to bank wye-connected transformers
+        if !all(all(conf==WYE for conf in tr["configurations"]) for tr in trs)
+            @warn "Not all configurations 'wye' on transformers identified by bank='$bank', aborting attempt to bank"
+            continue
+        end
+        neutrals = [conns[end] for conns in trs[1]["connections"]]
+        # ensure all windings have the same neutral
+        if !all(all(conns[end]==neutrals[w] for (w, conns) in enumerate(tr["connections"])) for tr in trs)
+            @warn "Not all neutral phases match on transfomers identified by bank='$bank', aborting attempt to bank"
+            continue
+        end
+
+        # this will merge the per-phase properties in such a way that the
+        # f_connections will be sorted from small to large
+        f_phases_loc = Dict(hcat([[(c,(i,p)) for (p, c) in enumerate(tr["connections"][1][1:end-1])] for (i, tr) in enumerate(trs)]...))
+        locs = [f_phases_loc[x] for x in sort(collect(keys(f_phases_loc)))]
+        props_merge = ["connections", "tm_set", "tm_ub", "tm_lb", "tm_step", "tm_fix"]
+        for prop in props_merge
+            btrans[prop] = [[trs[i][prop][w][p] for (i,p) in locs] for w in 1:nrw]
+
+            # for the connections, also prefix the neutral per winding
+            if prop=="connections"
+                for w in 1:nrw
+                    push!(btrans[prop][w], neutrals[w])
                 end
-                push!(bankable_transformers[bank][1], id)
-                push!(bankable_transformers[bank][2], deepcopy(tr))
             end
         end
 
-        for (bank, (ids, trs)) in bankable_transformers
+        btrans["status"] = all(tr.status == ENABLED for tr in trs) ? ENABLED : DISABLED
+        btrans["source_id"] = "transformer.$bank"
+
+        # add regulator objects if present
+        if any(!ismissing(tr.controls) for tr in trs)
             for tr in trs
-                _apply_xfmrcode!(tr, data_eng)
-            end
-            # across-phase properties should be the same to be eligible for banking
-            props = ["bus", "noloadloss", "xsc", "rw", "cmag", "vm_nom", "sm_nom", "polarity", "configuration", "sm_ub"]
-            btrans = Dict{String, Any}(prop=>trs[1][prop] for prop in props)
-            if !all(tr[prop]==btrans[prop] for tr in trs, prop in props)
-                @warn "Not all across-phase properties match among transfomers identified by bank='$bank', aborting attempt to bank"
-                continue
-            end
-            nrw = length(btrans["bus"])
-
-            # only attempt to bank wye-connected transformers
-            if !all(all(conf==WYE for conf in tr["configuration"]) for tr in trs)
-                @warn "Not all configurations 'wye' on transformers identified by bank='$bank', aborting attempt to bank"
-                continue
-            end
-            neutrals = [conns[end] for conns in trs[1]["connections"]]
-            # ensure all windings have the same neutral
-            if !all(all(conns[end]==neutrals[w] for (w, conns) in enumerate(tr["connections"])) for tr in trs)
-                @warn "Not all neutral phases match on transfomers identified by bank='$bank', aborting attempt to bank"
-                continue
-            end
-
-            # this will merge the per-phase properties in such a way that the
-            # f_connections will be sorted from small to large
-            f_phases_loc = Dict(hcat([[(c,(i,p)) for (p, c) in enumerate(tr["connections"][1][1:end-1])] for (i, tr) in enumerate(trs)]...))
-            locs = [f_phases_loc[x] for x in sort(collect(keys(f_phases_loc)))]
-            props_merge = ["connections", "tm_set", "tm_ub", "tm_lb", "tm_step", "tm_fix"]
-            for prop in props_merge
-                btrans[prop] = [[trs[i][prop][w][p] for (i,p) in locs] for w in 1:nrw]
-
-                # for the connections, also prefix the neutral per winding
-                if prop=="connections"
-                    for w in 1:nrw
-                        push!(btrans[prop][w], neutrals[w])
-                    end
+                if !haskey(btrans, "controls") && !ismissing(tr.controls)
+                    btrans["controls"] = deepcopy(tr.controls)
+                elseif !ismissing(tr.controls)
+                    merge!(btrans["controls"], tr.controls)
                 end
             end
-
-            btrans["status"] = all(tr["status"] == ENABLED for tr in trs) ? ENABLED : DISABLED
-            btrans["source_id"] = "transformer.$bank"
-
-            # add regulator objects if present
-            if any([!isempty(get(tr,"controls", Dict{String,Any}())) for tr in trs])
-                btrans["controls"]  = Dict{String,Any}(
-                    "vreg" => [[0.0 for (i,p) in locs] for w in 1:nrw],
-                    "band" => [[0.0 for (i,p) in locs] for w in 1:nrw],
-                    "ptratio" => [[0.0 for (i,p) in locs] for w in 1:nrw],
-                    "ctprim" => [[0.0 for (i,p) in locs] for w in 1:nrw],
-                    "r" => [[0.0 for (i,p) in locs] for w in 1:nrw],
-                    "x" => [[0.0 for (i,p) in locs] for w in 1:nrw]
-                )
-            end
-            for (i,p) in locs
-                if haskey(trs[i],"controls")
-                    for w in 1:nrw
-                        c = f_phases_loc[i][1]
-                        btrans["controls"]["vreg"][w][c] = trs[i]["controls"]["vreg"][w][p]
-                        btrans["controls"]["band"][w][c] = trs[i]["controls"]["band"][w][p]
-                        btrans["controls"]["ptratio"][w][c] = trs[i]["controls"]["ptratio"][w][p]
-                        btrans["controls"]["ctprim"][w][c] = trs[i]["controls"]["ctprim"][w][p]
-                        btrans["controls"]["r"][w][c] = trs[i]["controls"]["r"][w][p]
-                        btrans["controls"]["x"][w][c] = trs[i]["controls"]["x"][w][p]
-                    end
-                end
-            end
-
-            # edit the transformer dict
-            for id in ids
-                delete!(data_eng["transformer"], id)
-            end
-            data_eng["transformer"][bank] = btrans
+        else
+            btrans["controls"] = missing
         end
+
+        # edit the transformer dict
+        for id in ids
+            delete!(eng.transformer, id)
+        end
+        eng.transformer[bank] = EngTransformer(;
+            name = bank,
+            bus = btrans["bus"],
+            connections = btrans["connections"],
+            configurations = btrans["configurations"],
+            xsc = btrans["xsc"],
+            rw = btrans["rw"],
+            cmag = btrans["cmag"],
+            noloadloss = btrans["noloadloss"],
+            # tm_nom = btrans["tm_nom"],
+            tm_ub = btrans["tm_ub"],
+            tm_lb = btrans["tm_lb"],
+            tm_set = btrans["tm_set"],
+            tm_step = btrans["tm_step"],
+            tm_fix = btrans["tm_fix"],
+            polarity = btrans["polarity"],
+            vm_nom = btrans["vm_nom"],
+            sm_nom = btrans["sm_nom"],
+            bank = "",
+            status = btrans["status"],
+            source_id = btrans["source_id"],
+            controls = btrans["controls"],
+            dss = missing, # TODO
+        )
     end
 end
 
 
-"discovers all terminals in the network"
-function _discover_terminals!(data_eng::Dict{String,<:Any})
-    terminals = Dict{String, Set{Int}}([(name, Set{Int}()) for (name,bus) in data_eng["bus"]])
+"""
+discovers all terminals in the network
+"""
+function discover_terminals!(eng::EngineeringDataModel)
+    terminals = Dict{String, Set{Int}}([(name, Set{Int}()) for (name,bus) in eng.bus])
 
-    if haskey(data_eng, "line")
-        for (_,eng_obj) in data_eng["line"]
+    for (_,eng_obj) in eng.line
+        # ignore 0 terminal
+        !all(eng_obj.f_connections .== 0) && push!(terminals[eng_obj.f_bus], setdiff(eng_obj.f_connections, [0])...)
+        !all(eng_obj.t_connections .== 0) && push!(terminals[eng_obj.t_bus], setdiff(eng_obj.t_connections, [0])...)
+    end
+
+    for (_,eng_obj) in eng.switch
+        # ignore 0 terminal
+        !all(eng_obj.f_connections .== 0) && push!(terminals[eng_obj.f_bus], setdiff(eng_obj.f_connections, [0])...)
+        !all(eng_obj.t_connections .== 0) && push!(terminals[eng_obj.t_bus], setdiff(eng_obj.t_connections, [0])...)
+    end
+
+    for (_,tr) in eng.transformer
+        for w in 1:length(tr["bus"])
             # ignore 0 terminal
-            !all(eng_obj["f_connections"] .== 0) && push!(terminals[eng_obj["f_bus"]], setdiff(eng_obj["f_connections"], [0])...)
-            !all(eng_obj["t_connections"] .== 0) && push!(terminals[eng_obj["t_bus"]], setdiff(eng_obj["t_connections"], [0])...)
+            tr.connections[w]!=[0] && push!(terminals[tr["bus"][w]], setdiff(tr.connections[w], [0])...)
         end
     end
 
-    if haskey(data_eng, "switch")
-        for (_,eng_obj) in data_eng["switch"]
-            # ignore 0 terminal
-            !all(eng_obj["f_connections"] .== 0) && push!(terminals[eng_obj["f_bus"]], setdiff(eng_obj["f_connections"], [0])...)
-            !all(eng_obj["t_connections"] .== 0) && push!(terminals[eng_obj["t_bus"]], setdiff(eng_obj["t_connections"], [0])...)
+    for comp_type in [:voltage_source, :load, :generator, :solar]
+        for (_,eng_obj) in getproperty(eng, comp_type)
+            !all(eng_obj.connections .== 0) && push!(terminals[eng_obj.bus], setdiff(eng_obj.connections, [0])...)
         end
     end
 
-    if haskey(data_eng, "transformer")
-        for (_,tr) in data_eng["transformer"]
-            for w in 1:length(tr["bus"])
-                # ignore 0 terminal
-                tr["connections"][w]!=[0] && push!(terminals[tr["bus"][w]], setdiff(tr["connections"][w], [0])...)
-            end
-        end
+    for (id, bus) in eng.bus
+        bus.terminals = sort(collect(terminals[id]))
     end
 
-    for comp_type in [x for x in ["voltage_source", "load", "generator", "solar"] if haskey(data_eng, x)]
-        for comp in values(data_eng[comp_type])
-            !all(comp["connections"] .== 0) && push!(terminals[comp["bus"]], setdiff(comp["connections"], [0])...)
-        end
-    end
+    for (_,bus) in eng.bus
+        awaiting_ground = get(eng.metadata.awaiting_ground, bus.name, Vector{Int}[])
 
-    for (id, bus) in data_eng["bus"]
-        data_eng["bus"][id]["terminals"] = sort(collect(terminals[id]))
-    end
+        if !isempty(awaiting_ground)
+            neutral = !(4 in bus.terminals) ? 4 : maximum(bus.terminals)+1
+            push!(bus.terminals, neutral)
 
-    for (id,bus) in data_eng["bus"]
-        if haskey(bus, "awaiting_ground")
-            neutral = !(4 in bus["terminals"]) ? 4 : maximum(bus["terminals"])+1
-            push!(bus["terminals"], neutral)
+            bus.grounded = [neutral]
+            bus.rg = [0.0]
+            bus.xg = [0.0]
 
-            bus["grounded"] = [neutral]
-            bus["rg"] = [0.0]
-            bus["xg"] = [0.0]
-            for i in 1:length(bus["awaiting_ground"])
-                bus["awaiting_ground"][i][bus["awaiting_ground"][i].==0] .= neutral
+            for i in 1:length(awaiting_ground)
+                eng.metadata.awaiting_ground[bus.name][i][eng.metadata.awaiting_ground[bus.name][i].==0] .= neutral
             end
 
-            delete!(bus, "awaiting_ground")
+            delete!(eng.metadata.awaiting_ground, bus.name)
         end
     end
 end
@@ -545,12 +405,6 @@ function _get_conductors_ordered(busname::AbstractString; default::Vector{Int}=I
 end
 
 
-"creates a `dss` dict inside `object` that imports all items in `prop_order` from `dss_obj`"
-function _import_all!(object::Dict{String,<:Any}, dss_obj::Dict{String,<:Any})
-    object["dss"] = Dict{String,Any}((key, dss_obj[key]) for key in dss_obj["prop_order"])
-end
-
-
 """
 Given a vector and a list of elements to find, this method will return a list
 of the positions of the elements in that vector.
@@ -568,49 +422,6 @@ function _get_idxs(vec::Vector{<:Any}, els::Vector{<:Any})::Vector{Int}
 end
 
 
-"Discovers all of the buses (not separately defined in OpenDSS), from 'lines'"
-function _discover_buses(data_dss::Dict{String,<:Any})::Set
-    buses = Set([])
-    for obj_type in _dss_node_objects
-        for (name, dss_obj) in get(data_dss, obj_type, Dict{String,Any}())
-            _apply_like!(dss_obj, data_dss, obj_type)
-            push!(buses, split(dss_obj["bus1"], '.'; limit=2)[1])
-        end
-    end
-
-    for obj_type in _dss_edge_objects
-        for (name, dss_obj) in get(data_dss, obj_type, Dict{String,Any}())
-            _apply_like!(dss_obj, data_dss, obj_type)
-            if obj_type == "transformer"
-                transformer = _create_transformer(name; _to_kwargs(dss_obj)...)
-                for bus in transformer["buses"]
-                    push!(buses, split(bus, '.'; limit=2)[1])
-                end
-            elseif obj_type == "gictransformer"
-                for key in ["bush", "busx", "busnh", "busnx"]
-                    if haskey(dss_obj, key)
-                        push!(buses, split(dss_obj[key], '.'; limit=2)[1])
-                    end
-                end
-            elseif obj_type == "vsource"
-                push!(buses, split(get(dss_obj, "bus1", "sourcebus"), '.'; limit=2)[1])
-                if haskey(dss_obj, "bus2")
-                    push!(buses, split(dss_obj["bus2"], '.'; limit=2)[1])
-                end
-            else
-                for key in ["bus1", "bus2"]
-                    if haskey(dss_obj, key)
-                        push!(buses, split(dss_obj[key], '.'; limit=2)[1])
-                    end
-                end
-            end
-        end
-    end
-
-    return buses
-end
-
-
 "shifts a vector by `shift` spots to the left"
 function _barrel_roll(x::Vector{T}, shift::Int)::Vector{T} where T
     N = length(x)
@@ -625,7 +436,7 @@ end
 
 
 "Parses busnames as defined in OpenDSS, e.g. 'primary.1.2.3.0'"
-function _parse_bus_id(busname::AbstractString)::Tuple{String,Vector{Bool}}
+function _parse_bus_id(busname::String)::Tuple{String,Vector{Bool}}
     parts = split(busname, '.'; limit=2)
     name = parts[1]
     elements = "1.2.3"
@@ -952,48 +763,5 @@ function _build_time_series_reference!(eng_obj::Dict{String,<:Any}, dss_obj::Dic
             eng_obj["time_series"][active] = defaults[time_series]
             eng_obj["time_series"][reactive] = defaults[time_series]
         end
-    end
-end
-
-
-"returns number of phases implied by a two-bus (edge) object"
-function _get_implied_nphases(bus1::AbstractString, bus2::AbstractString; default::Int=3)
-    f_conds = _get_conductors_ordered(bus1; default=collect(1:default), check_length=false)
-    t_conds = _get_conductors_ordered(bus2; default=collect(1:default), check_length=false)
-
-    if !isempty(f_conds) || !isempty(t_conds)
-        return maximum([length(f_conds), length(t_conds)])
-    else
-        return default
-    end
-end
-
-
-"returns number of phases implied by a transformer object"
-function _get_implied_nphases(buses::Vector{<:AbstractString}; default::Int=3)
-    nphases = Int[]
-    for bus in buses
-        conds = _get_conductors_ordered(bus; default=collect(1:default), check_length=false)
-        if !isempty(conds)
-            push!(nphases, length(conds))
-        end
-    end
-
-    if !isempty(nphases)
-        return maximum(nphases)
-    else
-        return default
-    end
-end
-
-
-"returns number of phases implied by a single-bus (node) object"
-function _get_implied_nphases(bus1::AbstractString; default::Int=3)
-    conds = _get_conductors_ordered(bus1; default=collect(1:default), check_length=false)
-
-    if !isempty(conds)
-        return length(conds)
-    else
-        return default
     end
 end

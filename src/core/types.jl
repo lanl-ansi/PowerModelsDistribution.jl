@@ -1,13 +1,18 @@
-"""
-    DataModel
+# """
+#     DataModel
 
-An Enum to descibe the current data model contained in the structure
-"""
-@enum(DataModel, ENGINEERING, MATHEMATICAL, DSS, MATPOWER)
-@doc "Model type for models that are in the PowerModelsDistribution [engineering representation](@ref Engineering-Data-Model)" ENGINEERING
-@doc "Model type for models that are in the [mathematical representation](@ref The-PowerModelsDistribution-Mathematical-Model)" MATHEMATICAL
-@doc "Model type for raw dss imports" DSS
-@doc "Model type for models imported via parse_file from PowerModels" MATPOWER
+# An Enum to descibe the current data model contained in the structure
+# """
+# @enum(DataModel, ENGINEERING, MATHEMATICAL, DSS, MATPOWER)
+# @doc "Model type for models that are in the PowerModelsDistribution [engineering representation](@ref Engineering-Data-Model)" ENGINEERING
+# @doc "Model type for models that are in the [mathematical representation](@ref The-PowerModelsDistribution-Mathematical-Model)" MATHEMATICAL
+# @doc "Model type for raw dss imports" DSS
+# @doc "Model type for models imported via parse_file from PowerModels" MATPOWER
+
+@enum BusType PQ PV REFERENCE
+@doc "PQ bus" PQ
+@doc "PV bus" PV
+@doc "Reference bus" REFERENCE
 
 """
     LoadModel
@@ -91,7 +96,7 @@ An Enum to describe the type of capcontrol, e.g., kvar, voltage etc.
 @doc "Capacitor control disabled" CAP_DISABLED
 
 "Collection of the built-in Enums for PowerModelsDistribution"
-const PowerModelsDistributionEnums = Union{DataModel,LoadModel,ShuntModel,SwitchState,ControlMode,ConnConfig,Dispatchable,Status,CapControlType}
+const PowerModelsDistributionEnums = Union{LoadModel,ShuntModel,SwitchState,ControlMode,ConnConfig,Dispatchable,Status,CapControlType}
 
 #================================================
     # exact non-convex models

@@ -89,6 +89,9 @@ function transform_solution(
     nws_eng_sol = Dict(k => Dict{String,Any}() for k in keys(nws_math_sol))
     solution_eng = Dict{String,Any}("nw" => nws_eng_sol)
 
+    map = ismissing(map) ? get(data_math, "map", Vector{Dict{String,Any}}()) : map
+    @assert !isempty(map) "Map is empty, cannot map solution up to engineering model"
+
     # apply unmap functions
     if ismultinetwork(data_math) && ismissing(map)
         map = get(data_math, "map", Dict{String,Any}[])
@@ -126,6 +129,7 @@ function transform_solution(
             end
         end
     end
+
 
     # cleanup empty solution dicts
     for (n,nw_eng_sol) in nws_eng_sol
@@ -323,6 +327,8 @@ end
 
 ""
 function _map_math2eng_root!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+    data_eng["per_unit"] = data_math["per_unit"]
+
     if !ismultinetwork(data_math)
         data_eng["settings"] = Dict{String,Any}("sbase" => get(get(data_math, "settings", Dict{String,Any}()), "sbase", NaN))  # in case of no solution
         data_eng["per_unit"] = get(data_math, "per_unit", true)

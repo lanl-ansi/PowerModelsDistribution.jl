@@ -681,6 +681,25 @@ function _apply_xfmrcode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:A
 end
 
 
+"applies a xfmrcode to a transformer in preparation for converting to mathematical model"
+function apply_xfmrcode!(eng_obj::EngTransformer, xfmrcode::Union{Missing,EngXfmrcode})
+    if !ismissing(xfmrcode)
+        for (k, v) in xfmrcode
+            if ismissing(getproperty(eng_obj, Symbol(k)))
+                setproperty!(eng_obj, Symbol(k), deepcopy(v))
+            elseif haskey(eng_obj, k) && k in ["vm_nom", "sm_nom", "tm_set", "rw"]
+                for (w, vw) in enumerate(eng_obj[k])
+                    if ismissing(vw)
+                        eng_obj[k][w] = deepcopy(v[w])
+                    end
+                end
+            end
+        end
+    end
+end
+
+
+
 "applies a linecode to a line in preparation for converting to mathematical model"
 function _apply_linecode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:Any})
     if haskey(eng_obj, "linecode") && haskey(data_eng, "linecode") && haskey(data_eng["linecode"], eng_obj["linecode"])

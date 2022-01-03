@@ -46,6 +46,36 @@ module PowerModelsDistribution
 
     include("core/base.jl")
     include("core/types.jl")
+
+    include("data_model/base/types.jl")
+
+    include("data_model/base.jl")
+
+    include("data_model/dss/structs.jl")
+    include("data_model/dss/node_constructors.jl")
+    include("data_model/dss/edge_constructors.jl")
+    include("data_model/dss/data_constructors.jl")
+
+    include("data_model/eng/structs.jl")
+    include("data_model/eng/node_constructors.jl")
+    include("data_model/eng/edge_constructors.jl")
+    include("data_model/eng/data_constructors.jl")
+
+    include("data_model/math/structs.jl")
+    include("data_model/math/node_constructors.jl")
+    include("data_model/math/edge_constructors.jl")
+
+    include("data_model/base/interfaces.jl")
+    include("data_model/base/parse.jl")
+    include("data_model/base/show.jl")
+    include("data_model/base/utils.jl")
+
+    include("data_model/transformations/rawdss2dss.jl")
+    include("data_model/transformations/dss2eng.jl")
+    include("data_model/transformations/eng2math.jl")
+    include("data_model/transformations/math2eng.jl")
+    include("data_model/transformations/utils.jl")
+
     include("core/data.jl")
     include("core/ref.jl")
     include("core/variable.jl")
@@ -79,20 +109,13 @@ module PowerModelsDistribution
     include("core/relaxation_scheme.jl")
 
     include("io/utils.jl")
-    include("io/dss/dss_parse.jl")
-    include("io/dss/dss_data_structs.jl")
-    include("io/dss/dss_node_structs.jl")
-    include("io/dss/dss_edge_structs.jl")
-    include("io/dss/dss_structs.jl")
-    include("io/dss/dss2eng.jl")
+    include("io/dss/constants.jl")
+    include("io/dss/parse.jl")
     include("io/json/json.jl")
     include("io/common.jl")
 
     include("data_model/utils.jl")
     include("data_model/checks.jl")
-    include("data_model/components.jl")
-    include("data_model/eng2math.jl")
-    include("data_model/math2eng.jl")
     include("data_model/multinetwork.jl")
     include("data_model/transformations.jl")
     include("data_model/units.jl")
