@@ -90,8 +90,30 @@ An Enum to describe the type of capcontrol, e.g., kvar, voltage etc.
 @doc "Capacitor control based on total reactive power (directional)" CAP_REACTIVE_POWER
 @doc "Capacitor control disabled" CAP_DISABLED
 
+
+"""
+    NodeType
+
+An Enum to describe whether a bus voltage is fixed, variable, grounded, or it is a virtual bus
+"""
+@enum NodeType FIXED=1 VARIABLE=2 GROUNDED=3 VIRTUAL=4
+@doc "Bus voltage is fixed" FIXED
+@doc "Bus voltage is variable" VARIABLE
+@doc "Bus is grounded" GROUNDED
+@doc "Bus is virtual" VIRTUAL
+
+"""
+    PFTerminationStatus
+
+An Enum to describe whether power flow is converged or hit the iteration limit
+"""
+@enum PFTerminationStatus CONVERGED=1 ITERATION_LIMIT=2
+@doc "Power flow is converged" CONVERGED
+@doc "Power flow hits iteration limit" ITERATION_LIMIT
+
+
 "Collection of the built-in Enums for PowerModelsDistribution"
-const PowerModelsDistributionEnums = Union{DataModel,LoadModel,ShuntModel,SwitchState,ControlMode,ConnConfig,Dispatchable,Status,CapControlType}
+const PowerModelsDistributionEnums = Union{DataModel,LoadModel,ShuntModel,SwitchState,ControlMode,ConnConfig,Dispatchable,Status,CapControlType,NodeType,PFTerminationStatus}
 
 #================================================
     # exact non-convex models

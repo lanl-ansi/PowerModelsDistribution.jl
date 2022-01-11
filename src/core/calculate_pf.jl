@@ -1,7 +1,3 @@
-@enum NodeType FIXED=1 VARIABLE=2 GROUNDED=3 VIRTUAL=4
-
-@enum PFTerminationStatus CONVERGED=1 ITERATION_LIMIT=2
-
 mutable struct PowerFlowData
     data_math::Dict
     ntype::Dict
@@ -25,7 +21,7 @@ function PowerFlowData(data_math, v_start)
             if bus["grounded"][i]
                 ntype[(id,t)] = GROUNDED
             else
-                if haskey(bus, "vm") # How is this defined?
+                if haskey(bus, "vm")
                     ntype[(id,t)] = FIXED
                 else
                     ntype[(id,t)] = VARIABLE
@@ -45,7 +41,6 @@ function PowerFlowData(data_math, v_start)
             if comp[comp_status_prop[comp_type]]==1 # if status is on only
                 # bus-node tuples in an an array, number of virtual nodes, primitive y matrix, compensation current
                 (bts, nr_vns, y_prim, cc) = comp_interface(comp, v_start)
-                # @show comp_type, comp, y_prim
 
                 ungr_btidx  = [ntype[bt]!=GROUNDED for bt in bts]
                 ungr_filter = [ungr_btidx..., fill(true, nr_vns)...]
@@ -66,7 +61,7 @@ function PowerFlowData(data_math, v_start)
     end
 
     for i in 1:virtual_count
-        ntype[i] = VIRTUAL          # Rahmat: ntype above had tuples as argument, here i is an integer
+        ntype[i] = VIRTUAL
     end
 
     indexed_nodes = [keys(filter(x->x.second!=GROUNDED,  ntype))...]
@@ -175,7 +170,7 @@ function compute_pf(data_math::Dict{String, Any}; v_start=missing, max_iter=1000
     return res
 end
 
-# Rahmat: where is this function called?
+
 function compute_pf(pfd::PowerFlowData; max_iter=100, stat_tol=1E-8, verbose=true)
     time = @elapsed (Uv, status, its, stat) = _compute_Uv(pfd, max_iter=max_iter, stat_tol=stat_tol)
     return build_result(pfd, Uv, status, its, time, stat)
@@ -185,11 +180,8 @@ end
 function _compute_Uv(pfd::PowerFlowData; max_iter=100, stat_tol=1E-8, verbose=true)
 
     # Number of nodes that have voltage variable
-    Nv = length(pfd.indexed_nodes)-length(pfd.fixed_nodes)   # Rahmat: How does pfd.fixed_nodes point to the fixed_nodes indexes?
+    Nv = length(pfd.indexed_nodes)-length(pfd.fixed_nodes)
 
-    # Uv0 = inv(Matrix(pfd.Yv))*(-pfd.Yf*pfd.Uf)\Yv
-    # Zv = inv(Matrix(pfd.Yv))
-    # Uv0 = pfd.Zv*(-pfd.Yf*pfd.Uf)
     Uv0 = pfd.Yv_LU\(-pfd.Yf*pfd.Uf)
     Uv = Uv0
 
@@ -205,8 +197,6 @@ function _compute_Uv(pfd::PowerFlowData; max_iter=100, stat_tol=1E-8, verbose=tr
             end
         end
 
-        # Uv_next = inv(Matrix(pfd.Yv))*(Iv.-pfd.Yf*pfd.Uf)
-        # Uv_next = pfd.Zv*(Iv.-pfd.Yf*pfd.Uf)
         Uv_next = pfd.Yv_LU\(Iv.-pfd.Yf*pfd.Uf)
 
         change = maximum(abs.(Uv .- Uv_next))
@@ -243,7 +233,6 @@ function build_solution(pfd::PowerFlowData, Uv)
     end
 
     solution["settings"] = deepcopy(pfd.data_math["settings"])
-    # solution["baseMVA"] = deepcopy(pfd.data_math["baseMVA"])
     solution["per_unit"] = deepcopy(pfd.data_math["per_unit"])
 
     return solution
@@ -267,11 +256,10 @@ function _cpf_shunt_interface(shunt, v_start)
 end
 
 function _cpf_transformer_interface(tr, v_start)
-    #What does f_ns/t_ns mean?
     f_ns = [(tr["f_bus"], t) for t in tr["f_connections"]]
     t_ns = [(tr["t_bus"], t) for t in tr["t_connections"]]
-    ts = tr["tm_set"]*tr["tm_nom"]*tr["polarity"]   # Rahmat: what is this?
-    if tr["configuration"]==WYE                     # Rahmat: is there 4-wire assumption?
+    ts = tr["tm_set"]*tr["tm_nom"]*tr["polarity"]
+    if tr["configuration"]==WYE
         npairs_fr = [(f_ns[i], f_ns[end]) for i in 1:length(f_ns)-1]
         npairs_to = [(t_ns[i], t_ns[end]) for i in 1:length(t_ns)-1]
         bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers(ts, npairs_fr, npairs_to)
@@ -316,8 +304,8 @@ function _cpf_load_interface(load, v_start; wires=4)
     conf = load["configuration"]
 
     if conf==WYE || length(v0_bt)==2
-        vd0 = v0_bt[1:end-1] .- v0_bt[end]   # Rahmat: 4-wire and 2-wire assumption?
-        if load["model"]==IMPEDANCE          # Rahmat: the constant impedance matrix is not available?
+        vd0 = v0_bt[1:end-1] .- v0_bt[end]
+        if load["model"]==IMPEDANCE
             g =  load["pd"]./load["vnom_kv"]^2
             b = -load["qd"]./load["vnom_kv"]^2
             y = g+im*b
@@ -331,7 +319,7 @@ function _cpf_load_interface(load, v_start; wires=4)
             sd0 = load["pd"]+im*load["qd"]
             c0 = conj.(sd0./vd0)
             y0 = c0./vd0
-            y_prim = [diagm(y0) -y0; -transpose(y0) sum(y0)]    # Rahmat: 4-wire and 2-wire assumption?
+            y_prim = [diagm(y0) -y0; -transpose(y0) sum(y0)]
             if load["model"]==POWER
                 cc_func = function(v_bt)
                     sd = load["pd"]+im*load["qd"]
@@ -413,7 +401,7 @@ end
 
 function _cpf_generator_interface(gen, v_start; wires=4)
     bts = [(gen["gen_bus"], t) for t in gen["connections"]]
-    wires = length(bts)      # Rahmat: updated
+    wires = length(bts)
     v0_bt = [v_start[bt] for bt in bts]
 
     conf = gen["configuration"]
@@ -452,8 +440,8 @@ function _cpf_generator_interface(gen, v_start; wires=4)
         end
     elseif conf==DELTA
         Md = [1 -1 0; 0 1 -1; -1 0 1]
-        vd0 = Md*v0_bt                  # Rahmat: double-check if v0_bt is actually WYE voltage
-        sg0 = gen["pg"]+im*gen["qg"]    # Rahmat: qq type to qg
+        vd0 = Md*v0_bt
+        sg0 = gen["pg"]+im*gen["qg"]
         sd0 = -sg0
         c0 = conj.(sd0./vd0)
         y0 = c0./vd0
@@ -483,10 +471,7 @@ const _CPF_COMPONENT_INTERFACES = Dict(
 function _bts_to_start_voltage(dm)
     v_start = Dict()
     for (i,bus) in dm["bus"]
-        # for t in bus["terminals"]
-        #     v_start[(bus["index"],t)] = bus["vr_start"][t] + im* bus["vi_start"][t]
-        # end
-        for (t, terminal) in enumerate(bus["terminals"])        # Rahmat: replaced the above since [1,2,3,5] causes problem
+        for (t, terminal) in enumerate(bus["terminals"])
             v_start[(bus["index"],terminal)] = bus["vr_start"][t] + im* bus["vi_start"][t]
         end
     end
