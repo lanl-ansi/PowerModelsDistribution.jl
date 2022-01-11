@@ -1,0 +1,12 @@
+Yprim of active circuit element: Load.load1
+
+
+G matrix (conductance), S
+
+ 0.1701323251 
+-0.1701323251  0.1701324953 
+
+jB matrix (Susceptance), S
+
+-0.08239884581 
+0.08239884581 -0.08239892821 

@@ -1,0 +1,12 @@
+Yprim of active circuit element: PVSystem.pv1
+
+
+G matrix (conductance), S
+
+-0.05208333333 
+0.05208333333 -0.05208333333 
+
+jB matrix (Susceptance), S
+
+            0 
+            0             0 

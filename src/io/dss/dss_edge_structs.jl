@@ -345,8 +345,8 @@ function _create_vsource(name::String=""; kwargs...)::Dict{String,Any}
     mvasc3 = get(kwargs, :mvasc3, 2000.0)
     mvasc1 = get(kwargs, :mvasc1, 2100.0)
 
-    isc3 = get(kwargs, :isc3, 10041.0)
-    isc1 = get(kwargs, :isc1, 10543.0)
+    isc3 = get(kwargs, :isc3, 10041.0) # 10000.0 in opendss
+    isc1 = get(kwargs, :isc1, 10543.0) # 10540.0 in opendss
 
     r1 = get(kwargs, :r1, 1.65)
     x1 = get(kwargs, :x1, 6.6)

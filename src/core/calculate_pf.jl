@@ -46,20 +46,15 @@ function PowerFlowData(data_math, v_start)
     for (comp_type, comp_interface) in _CPF_COMPONENT_INTERFACES
         for (id, comp) in data_math[comp_type]
             if comp[comp_status_prop[comp_type]]==1 # if status is on only
-                @show comp
                 # bus-node tuples in an an array, number of virtual nodes, primitive y matrix, compensation current
                 (bts, nr_vns, y_prim, cc) = comp_interface(comp, v_start)
+                # @show comp_type, comp, y_prim
 
                 ungr_btidx  = [ntype[bt]!=GROUNDED for bt in bts]
                 ungr_filter = [ungr_btidx..., fill(true, nr_vns)...]
 
                 vns = collect(virtual_count+1:virtual_count+nr_vns)
                 ns = [bts..., vns...]
-                @show bts
-                @show vns
-                @show y_prim
-                @show ungr_filter
-                
 
                 push!(ns_yprim, (ns[ungr_filter], y_prim[ungr_filter, ungr_filter]))
                 # cc == nothing is used for linear components
@@ -120,7 +115,7 @@ function get_v(pfd, Vp, n)
     end
 end
 
-function compute_pf(data_math::Dict{String, Any}; v_start=missing, max_iter=100, stat_tol=1E-8, verbose=true)
+function compute_pf(data_math::Dict{String, Any}; v_start=missing, max_iter=10000, stat_tol=1E-8, verbose=true)
     if !ismultinetwork(data_math)
         nw_dm = Dict("0"=>data_math)
     else
@@ -131,6 +126,8 @@ function compute_pf(data_math::Dict{String, Any}; v_start=missing, max_iter=100,
     time_build = Dict{String, Any}()
     time_solve = Dict{String, Any}()
     time_post = Dict{String, Any}()
+    Yf_matrix = Dict{String, Any}()
+    Yv_matrix = Dict{String, Any}()
     status = Dict{String, Any}()
     its = Dict{String, Any}()
     stat = Dict{String, Any}()
@@ -147,6 +144,9 @@ function compute_pf(data_math::Dict{String, Any}; v_start=missing, max_iter=100,
         time_solve[nw] = @elapsed (Uv, status[nw], its[nw], stat[nw]) = _compute_Uv(pfd, max_iter=max_iter, stat_tol=stat_tol)
 
         time_post[nw] = @elapsed sol[nw] = build_solution(pfd, Uv)
+
+        Yf_matrix[nw] = pfd.Yf
+        Yv_matrix[nw] = pfd.Yv_LU
     end
 
     res = Dict{String, Any}()
@@ -159,6 +159,9 @@ function compute_pf(data_math::Dict{String, Any}; v_start=missing, max_iter=100,
         res["iterations"] = its["0"]
         res["stationarity"] = stat["0"]
         res["time_total"] = time_build["0"]+time_solve["0"]+time_post["0"]
+        res["Yf"] = Yf_matrix["0"]
+        res["Yv"] = Yv_matrix["0"]
+        res["per_unit"] = data_math["per_unit"]
     else
         res["time_build"] = time_build
         res["time_solve"] = time_solve
@@ -169,6 +172,8 @@ function compute_pf(data_math::Dict{String, Any}; v_start=missing, max_iter=100,
         res["stationarity"] = stat
         res["time_total"] = sum(values(time_build))+sum(values(time_solve))+sum(values(time_post))
         res["all_converged"] = all(x==CONVERGED for (_, x) in status)
+        res["Yf"] = Yf_matrix
+        res["Yv"] = Yv_matrix
     end
 
     return res
@@ -282,7 +287,7 @@ function _cpf_transformer_interface(tr, v_start)
     return  bts, nr_vns, Y, nothing
 end
 
-function _compose_yprim_banked_ideal_transformers(ts, npairs_fr, npairs_to; ppm=1E-3)
+function _compose_yprim_banked_ideal_transformers(ts, npairs_fr, npairs_to; ppm=1)
     y_prim_ind = Dict()
 
     nph = length(ts)
@@ -412,32 +417,23 @@ end
 function _cpf_generator_interface(gen, v_start; wires=4)
     bts = [(gen["gen_bus"], t) for t in gen["connections"]]
     wires = length(bts)      # Rahmat: updated
-    @show bts
-    @show v_start
     v0_bt = [v_start[bt] for bt in bts]
 
     conf = gen["configuration"]
 
     if conf==WYE || length(v0_bt)==2
-        # this is only for four-wire
         if wires == 3
             vd0 = v0_bt
-        elseif wires==4
+        elseif wires == 4 || wires == 2
             vd0 = v0_bt[1:end-1] .- v0_bt[end]
         end
-        @show vd0
-        @show gen["pg"]
-        @show gen["qg"]
-        @show conf
         sg0 = gen["pg"]+im*gen["qg"]
         sd0 = -sg0
-        @show sd0
-        @show vd0
         c0 = conj.(sd0./vd0)
         y0 = c0./vd0
         if wires == 3
             y_prim = diagm(y0)
-        elseif wires==4
+        elseif wires == 4 || wires == 2
             y_prim = [diagm(y0) -y0; -transpose(y0) sum(y0)]
         end
         
@@ -450,7 +446,7 @@ function _cpf_generator_interface(gen, v_start; wires=4)
                 cd = conj.(sd./vd)
                 cd_bus = cd
                 return -(cd_bus .- y_prim*v_bt)
-            elseif wires==4
+            elseif wires == 4 || wires == 2
                 vd = v_bt[1:end-1].-v_bt[end]
                 cd = conj.(sd./vd)
                 cd_bus = [cd..., -sum(cd)]
@@ -460,12 +456,11 @@ function _cpf_generator_interface(gen, v_start; wires=4)
     elseif conf==DELTA
         Md = [1 -1 0; 0 1 -1; -1 0 1]
         vd0 = Md*v0_bt                  # Rahmat: double-check if v0_bt is actually WYE voltage
-        sg0 = gen["pg"]+im*gen["qq"]
+        sg0 = gen["pg"]+im*gen["qg"]    # Rahmat: qq type to qg
         sd0 = -sg0
         c0 = conj.(sd0./vd0)
         y0 = c0./vd0
         y_prim = Md'*diagm(0=>y0)*Md
-
         cc_func = function(v_bt)
             sg = gen["pg"]+im*gen["qg"]
             sd = -sg
@@ -494,6 +489,9 @@ function _bts_to_start_voltage(dm)
         for t in bus["terminals"]
             v_start[(bus["index"],t)] = bus["vr_start"][t] + im* bus["vi_start"][t]
         end
+        # for (t, terminal) in enumerate(bus["terminals"])        # Rahmat: replaced the above since [1,2,3,5] causes problem
+        #     v_start[(bus["index"],terminal)] = bus["vr_start"][t] + im* bus["vi_start"][t]
+        # end
     end
     return v_start
 end

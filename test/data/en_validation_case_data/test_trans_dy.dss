@@ -24,12 +24,15 @@ New Transformer.Transformer1 windings=2 phases=3 Buses=[X1.1.2.3 X2.2.1.3.0]
 ~ leadlag=lag
 ~ taps=[1.02 0.97]
 
-// New Reactor.Grounding phases=1 bus1=X2.4 bus2=X2.0 R=0 X=0.1
+New Reactor.Grounding phases=1 bus1=X2.4 bus2=X2.0 R=0 X=0.1
 
 New Line.Line2 bus1=X2.1.2.3.4 bus2=B2.1.2.3.4 linecode=Zabcn length=0.5 units=km
 
 ! creates unbalance at B2:
 ! vm_b2 = [0.964, 1.01, 1.00, 0.05] without other devices active
 New Load.Load1  phases=1 bus1=B2.1.4  kv=0.23  model=1 conn=wye kVA=10  pf=0.9 vminpu=0.1 vmaxpu=2
+
+Set voltagebases=[11 0.4]
+Calcvoltagebases
 
 Solve

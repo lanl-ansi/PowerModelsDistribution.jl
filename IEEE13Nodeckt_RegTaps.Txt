@@ -1,0 +1,8 @@
+
+CONTROLLED TRANSFORMER TAP SETTINGS
+
+Name            Tap      Min       Max     Step  Position
+
+reg1b         0.98750  0.90000  1.10000  0.00625     -2
+reg1c         0.90000  0.90000  1.10000  0.00625     -16
+sub           0.90000  0.90000  1.10000  0.00625     -16
