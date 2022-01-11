@@ -161,7 +161,6 @@ function compute_pf(data_math::Dict{String, Any}; v_start=missing, max_iter=1000
         res["time_total"] = time_build["0"]+time_solve["0"]+time_post["0"]
         res["Yf"] = Yf_matrix["0"]
         res["Yv"] = Yv_matrix["0"]
-        res["per_unit"] = data_math["per_unit"]
     else
         res["time_build"] = time_build
         res["time_solve"] = time_solve
@@ -246,8 +245,9 @@ function build_solution(pfd::PowerFlowData, Uv)
         solution["bus"][id]["va"] = Dict("$t"=>angle.(v[t]) for t in bus["terminals"])
     end
 
+    solution["settings"] = deepcopy(pfd.data_math["settings"])
     # solution["baseMVA"] = deepcopy(pfd.data_math["baseMVA"])
-    # solution["per_unit"] = deepcopy(pfd.data_math["per_unit"])
+    solution["per_unit"] = deepcopy(pfd.data_math["per_unit"])
 
     return solution
 end
@@ -486,12 +486,12 @@ const _CPF_COMPONENT_INTERFACES = Dict(
 function _bts_to_start_voltage(dm)
     v_start = Dict()
     for (i,bus) in dm["bus"]
-        for t in bus["terminals"]
-            v_start[(bus["index"],t)] = bus["vr_start"][t] + im* bus["vi_start"][t]
-        end
-        # for (t, terminal) in enumerate(bus["terminals"])        # Rahmat: replaced the above since [1,2,3,5] causes problem
-        #     v_start[(bus["index"],terminal)] = bus["vr_start"][t] + im* bus["vi_start"][t]
+        # for t in bus["terminals"]
+        #     v_start[(bus["index"],t)] = bus["vr_start"][t] + im* bus["vi_start"][t]
         # end
+        for (t, terminal) in enumerate(bus["terminals"])        # Rahmat: replaced the above since [1,2,3,5] causes problem
+            v_start[(bus["index"],terminal)] = bus["vr_start"][t] + im* bus["vi_start"][t]
+        end
     end
     return v_start
 end

@@ -92,7 +92,7 @@ case_file = joinpath(pwd(), "test/data/en_validation_case_data/test_load_3ph_del
 
 
 
-run_dss(open(f->read(f, String), case_file))
+# run_dss(open(f->read(f, String), case_file))
 
 ##
 eng =_PMD.parse_file(case_file)
@@ -172,4 +172,4 @@ end
 va
 # va = [(i, bus_data["va"]) for (i,bus_data) in result["solution"]["bus"]]
 
-
+_PMD.solution_make_si(result["solution"], math)
