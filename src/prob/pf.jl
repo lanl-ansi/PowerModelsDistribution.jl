@@ -241,7 +241,7 @@ Constructor for PowerFlowData struct that requires mathematical model and v_star
 v_start assigns the initialisation voltages to appropriate bus terminals.
 """
 function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
-    @assert ismath(data_math) """The model is not a mathematical model """
+    @assert ismath(data_math) "The model is not a mathematical model "
     ntype = Dict{Any, NodeType}()
     for (_, bus) in data_math["bus"]
         id = bus["index"]
@@ -261,7 +261,7 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
     cc_ns_func_pairs = []
     ns_yprim = []
     virtual_count = 0
-    comp_status_prop = Dict(x=>"status" for x in ["load", "shunt", "storage", "transformer"])
+    comp_status_prop = Dict(x=>"status" for x in ["load", "shunt", "storage", "transformer", "switch"])
     comp_status_prop["branch"] = "br_status"
     comp_status_prop["gen"]    = "gen_status"
     for (comp_type, comp_interface) in _CPF_COMPONENT_INTERFACES
@@ -371,7 +371,8 @@ function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:An
 
     for (nw, dm) in nw_dm
         if ismissing(v_start)
-            add_start_vrvi!(dm; epsilon=0)  # if epsilon is not zero, voltage initialisation is not correct which then leads to unnecessary iterations
+            # if epsilon is not zero, voltage initialisation is not correct which then leads to unnecessary iterations
+            add_start_voltage!(dm, coordinates=:rectangular, epsilon=0)
             v_start = _bts_to_start_voltage(dm)
         end
 
@@ -527,6 +528,8 @@ end
 Branch component interface outputs branch primitive Y matrix.
 """
 function _cpf_branch_interface(branch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
+    br_size = size(branch["br_r"],1)
+    @assert br_size <= 4  "Line impedance matrix should be up to 4x4, but is $(br_size)x$(br_size)"
     Ys = inv(branch["br_r"]+im*branch["br_x"])
     Yfr = branch["g_fr"]+im*branch["b_fr"]
     Yto = branch["g_to"]+im*branch["b_to"]
@@ -795,6 +798,23 @@ end
 
 
 """
+    _cpf_switch_interface(
+      switch::Dict,
+      v_start::Dict
+    )
+
+Branch component interface outputs branch primitive Y matrix.
+"""
+function _cpf_switch_interface(switch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}; small_impedance=1E-8)
+    len = length(switch["f_connections"])
+    Ys = LinearAlgebra.I(len) .* 1/small_impedance
+    y_prim = [Ys -Ys; -Ys Ys]
+    bts = [[(switch["f_bus"], t) for t in switch["f_connections"]]..., [(switch["t_bus"], t) for t in switch["t_connections"]]...]
+    return  bts, 0, y_prim, nothing
+end
+
+
+"""
 A mapping of supported component types to their functional interfaces.
 """
 const _CPF_COMPONENT_INTERFACES = Dict(
@@ -803,6 +823,7 @@ const _CPF_COMPONENT_INTERFACES = Dict(
     "branch" => _cpf_branch_interface,
     "transformer" => _cpf_transformer_interface,
     "shunt" => _cpf_shunt_interface,
+    "switch" => _cpf_switch_interface,
 )
 
 

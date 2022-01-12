@@ -15,7 +15,7 @@ data_dir = "data/en_validation_case_data"
 solution_dir = "data/en_validation_case_solutions"
 # infer cases from files defined in data dir
 cases = [x[1:end-4] for x in readdir(data_dir) if endswith(x, ".dss")]
-
+filter!(e->e≠"test_line_6w", cases)
 
 
 @testset "en pf native opendss validation" begin
@@ -38,7 +38,7 @@ cases = [x[1:end-4] for x in readdir(data_dir) if endswith(x, ".dss")]
             end
 
             sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
-            @assert res["termination_status"]==CONVERGED
+            @test res["termination_status"]==CONVERGED
 
             v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose=false)
             @test v_maxerr_pu <= 1E-6
@@ -47,3 +47,20 @@ cases = [x[1:end-4] for x in readdir(data_dir) if endswith(x, ".dss")]
     end
 end
 
+
+@testset "en pf native opendss validation for 6 wire test case" begin
+    case_path = "$data_dir/test_line_6w.dss"
+
+    data_eng = parse_file(case_path, transformations=[transform_loops!])
+    vsource_correction!(data_eng)
+
+    data_math = transform_data_model(data_eng;kron_reduce=false)
+
+    try
+        res = compute_pf(data_math)
+        @test false
+    catch Error
+        @test true
+    end
+
+end
