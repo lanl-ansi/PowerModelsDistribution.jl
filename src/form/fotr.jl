@@ -3,14 +3,14 @@
 
 
 """
-    variable_mc_bus_voltage(pm::FOTRUPowerModel; nw=nw_id_default, kwargs...)
+    variable_mc_bus_voltage(pm::FOTRUPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 
 Voltage variables are defined in rectangular coordinates similar to ACRUPowerModel.
 An initial operating point is specified for linearization similar to FBSUBFPowerModel.
 """
-function variable_mc_bus_voltage(pm::FOTRUPowerModel; nw=nw_id_default, bounded::Bool=true, kwargs...)
-    variable_mc_bus_voltage_real(pm; nw=nw, bounded=bounded, kwargs...)
-    variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, kwargs...)
+function variable_mc_bus_voltage(pm::FOTRUPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     # initial operating point for linearization (using flat-start)
     var(pm, nw)[:vr0] = Dict{Int,Vector{Float64}}()

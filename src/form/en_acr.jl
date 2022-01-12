@@ -6,16 +6,15 @@
 	function variable_mc_generator_power(
 		pm::AbstractExplicitNeutralACRModel;
 		nw::Int=nw_id_default,
-		kwargs...
 	)
 
 For ACR models with explicit neutrals,
 creates generator power variables `:pg` and `:qg`,
 and placeholder dictionaries for terminal power flows `:pg_bus` and `:qg_bus`,
 """
-function variable_mc_generator_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, kwargs...)
-    variable_mc_generator_power_real(pm; nw=nw, kwargs...)
-    variable_mc_generator_power_imaginary(pm; nw=nw, kwargs...)
+function variable_mc_generator_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_generator_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_generator_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
     var(pm, nw)[:pg_bus] = Dict{Int, Any}()
     var(pm, nw)[:qg_bus] = Dict{Int, Any}()
 end
@@ -295,15 +294,14 @@ end
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
 		report::Bool=true,
-		kwargs...
 	)
 
 For ACR models with explicit neutrals,
 creates transfomer power variables `:pt` and `:qt`, and placeholder dictionaries for transformer terminal power flows `:pt_bus` and `:qt_bus`
 """
-function variable_mc_transformer_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_transformer_power_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_transformer_power_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+function variable_mc_transformer_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_transformer_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_transformer_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     var(pm, nw)[:pt_bus] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:qt_bus] = Dict{Tuple{Int,Int,Int}, Any}()
@@ -526,15 +524,14 @@ end
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
 		report::Bool=true,
-		kwargs...
 	)
 
 For ACR models with explicit neutrals,
 creates branch power variables `:p` and `:q` and placeholder dictionaries for the terminal power flows `:p_bus` and `:q_bus`.
 """
-function variable_mc_branch_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_branch_power_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_branch_power_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+function variable_mc_branch_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_branch_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_branch_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     var(pm, nw)[:p_bus] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:q_bus] = Dict{Tuple{Int,Int,Int}, Any}()
@@ -725,15 +722,14 @@ end
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
 		report::Bool=true,
-		kwargs...
 	)
 
 For ACR models with explicit neutrals,
 creates switch power variables `:p` and `:q` and placeholder dictionaries for the terminal power flows `:ps_bus` and `:qs_bus`.
 """
-function variable_mc_switch_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_switch_power_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_switch_power_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+function variable_mc_switch_power(pm::AbstractExplicitNeutralACRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_switch_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_switch_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     var(pm, nw)[:psw_bus] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:qsw_bus] = Dict{Tuple{Int,Int,Int}, Any}()

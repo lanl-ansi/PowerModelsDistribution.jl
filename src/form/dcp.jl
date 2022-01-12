@@ -1,6 +1,6 @@
 ""
-function variable_mc_bus_voltage(pm::AbstractUnbalancedDCPModel; nw=nw_id_default, kwargs...)
-    variable_mc_bus_voltage_angle(pm; nw=nw, kwargs...)
+function variable_mc_bus_voltage(pm::AbstractUnbalancedDCPModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_angle(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -12,8 +12,8 @@ end
 
 
 ""
-function variable_mc_bus_voltage_on_off(pm::AbstractUnbalancedDCPModel; kwargs...)
-    variable_mc_bus_voltage_angle(pm; kwargs...)
+function variable_mc_bus_voltage_on_off(pm::AbstractUnbalancedDCPModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_angle(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -157,6 +157,8 @@ function variable_mc_branch_power_real(pm::AbstractUnbalancedAPLossLessModels; n
     p_expr = Dict{Any,Any}( ((l,i,j), p[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_branch_from) )
     p_expr = merge(p_expr, Dict( ((l,j,i), -1.0*p[(l,i,j)]) for (l,i,j) in ref(pm, nw, :arcs_branch_from)))
     var(pm, nw)[:p] = p_expr
+
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :pf, :pt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), p_expr)
 end
 
 

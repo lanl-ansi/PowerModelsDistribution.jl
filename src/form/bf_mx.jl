@@ -1,14 +1,13 @@
 ""
-function variable_mc_branch_current(pm::AbstractUBFModels; kwargs...)
-    constraint_mc_branch_current_series_product_hermitian(pm; kwargs...)
+function variable_mc_branch_current(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    constraint_mc_branch_current_series_product_hermitian(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
 ""
-function variable_mc_bus_voltage(pm::AbstractUBFModels; kwargs...)
-    variable_mc_bus_voltage_prod_hermitian(pm; kwargs...)
+function variable_mc_bus_voltage(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_prod_hermitian(pm; nw=nw, bounded=bounded, report=report)
 
-    nw = get(kwargs, :nw, nw_id_default)
     allbuses = Set(ids(pm, nw, :bus))
     startingbuses = Set(i for (l,i,j)  in ref(pm, nw, :arcs_branch_from))
     leafnodes = setdiff(allbuses, startingbuses)
@@ -264,9 +263,9 @@ end
 For the matrix KCL formulation, the generator needs an explicit current and
 power variable.
 """
-function variable_mc_generator_power(pm::SDPUBFKCLMXModel; kwargs...)
-    variable_mc_generator_current(pm; kwargs...)
-    variable_mc_generator_power_mx(pm; kwargs...)
+function variable_mc_generator_power(pm::SDPUBFKCLMXModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_generator_current(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_generator_power_mx(pm; nw=nw, bounded=bounded, report=report)
 end
 
 

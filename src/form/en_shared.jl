@@ -7,14 +7,13 @@
 		pm::RectangularVoltageExplicitNeutralModels;
 		nw=nw_id_default,
 		bounded::Bool=true,
-		kwargs...
 	)
 
 Creates rectangular voltage variables `:vr` and `:vi` for models with explicit neutrals
 """
-function variable_mc_bus_voltage(pm::RectangularVoltageExplicitNeutralModels; nw=nw_id_default, bounded::Bool=true, kwargs...)
-    variable_mc_bus_voltage_real(pm; nw=nw, bounded=bounded, kwargs...)
-    variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, kwargs...)
+function variable_mc_bus_voltage(pm::RectangularVoltageExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -345,10 +344,10 @@ Fixes the voltage variables at bus `i` to `vm.*exp.(im*va)`
 function constraint_mc_voltage_magnitude_fixed(pm::RectangularVoltageExplicitNeutralModels, nw::Int, i::Int, vm::Vector{<:Real}, terminals::Vector{Int}, grounded::Vector{Bool})
     vr = var(pm, nw, :vr, i)
     vi = var(pm, nw, :vi, i)
-    
+
     @assert iszero(vm[grounded]) "Infeasible model; the voltage magnitude of a grounded terminal is fixed to a non-zero value."
     idxs = findall((!).(grounded))
-    
+
     JuMP.@constraint(pm.model, [i in idxs], vr[terminals[i]].^2 + vi[terminals[i]].^2 == vm[i].^2)
 end
 
@@ -543,7 +542,7 @@ Creates load imaginary current variables `:cid` for models with explicit neutral
 function variable_mc_load_current_imaginary(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     int_dim = Dict(i => _infer_int_dim_unit(load, false) for (i,load) in ref(pm, nw, :load))
     load_ids_current = [id for (id,load) in ref(pm, nw, :load) if load["model"]==CURRENT]
-    
+
     cid = var(pm, nw)[:cid] = Dict{Int,Any}(i => JuMP.@variable(pm.model,
             [c in 1:int_dim[i]], base_name="$(nw)_cid_$(i)",
             start = comp_start_value(ref(pm, nw, :load, i), "cid_start", c, 0.0)
@@ -619,7 +618,7 @@ function variable_mc_transformer_power_real(pm::ExplicitNeutralModels; nw::Int=n
             start = comp_start_value(ref(pm, nw, :transformer, l), "pt_start", c, 0.0)
         ) for (l,i,j) in ref(pm, nw, :arcs_transformer)
     )
-    
+
     if bounded
         for (l,i,j) in ref(pm, nw, :arcs_transformer_from)
             trans = ref(pm, nw, :transformer, l)
@@ -654,7 +653,7 @@ function variable_mc_transformer_power_imaginary(pm::ExplicitNeutralModels; nw::
             start = comp_start_value(ref(pm, nw, :transformer, l), "qt_start", c, 0.0)
         ) for (l,i,j) in ref(pm, nw, :arcs_transformer)
     )
-    
+
     if bounded
         for (l,i,j) in ref(pm, nw, :arcs_transformer_from)
             trans = ref(pm, nw, :transformer, l)
@@ -693,7 +692,7 @@ end
 	)
 
 For rectangular voltage models with explicit neutrals,
-links the voltage of the from-side and to-side transformer windings 
+links the voltage of the from-side and to-side transformer windings
 for wye-wye connected transformers
 
 ```
@@ -738,7 +737,7 @@ end
 	)
 
 For rectangular voltage models with explicit neutrals,
-links the voltage of the from-side and to-side transformer windings 
+links the voltage of the from-side and to-side transformer windings
 for delta-wye connected transformers
 
 ```
@@ -927,14 +926,13 @@ end
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
 		report::Bool=true,
-		kwargs...
 	)
 
 For models with explicit neutrals,
-imposes a bound on the current magnitude per conductor 
+imposes a bound on the current magnitude per conductor
 at both ends of the branch (total current, i.e. including shunt contributions)
 """
-function constraint_mc_branch_current_limit(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function constraint_mc_branch_current_limit(pm::ExplicitNeutralModels, id::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 branch = ref(pm, nw, :branch, id)
 f_idx = (id,branch["f_bus"],branch["t_bus"])
 t_idx = (id,branch["t_bus"],branch["f_bus"])
@@ -956,7 +954,7 @@ end
 	)
 
 For models with explicit neutrals,
-creates switch real current variables `:crsw` for models with explicit neutrals. 
+creates switch real current variables `:crsw` for models with explicit neutrals.
 """
 function variable_mc_switch_current_real(pm::ExplicitNeutralModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     nconds = Dict(l => length(switch["f_connections"]) for (l,switch) in ref(pm, nw, :switch))
