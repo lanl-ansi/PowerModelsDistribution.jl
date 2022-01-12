@@ -154,7 +154,7 @@ function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:An
 
     for (nw, dm) in nw_dm
         if ismissing(v_start)
-            add_start_vrvi!(dm)
+            add_start_vrvi!(dm; epsilon=0)  # if epsilon is not zero, voltage initialisation is not correct which then leads to unnecessary iterations
             v_start = _bts_to_start_voltage(dm)
         end
 

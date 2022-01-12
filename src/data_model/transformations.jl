@@ -1808,7 +1808,7 @@ function add_start_voltage!(
     vi_default=0.0,
     vm_default=0.0,
     va_default=0.0,
-    epsilon::Number=0,
+    epsilon::Number=1E-3,
     )::Dict{String,Any}
 
     @assert data_math["data_model"]==MATHEMATICAL
