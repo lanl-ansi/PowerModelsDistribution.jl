@@ -12,8 +12,18 @@ mutable struct PowerFlowData
     Yv_LU::Any
 end
 
-function PowerFlowData(data_math, v_start)
-    # ntype: bus_id => bus_type in {neutral grounded, fixed, variable}
+"""
+    PowerFlowData(
+      data_math::Dict,
+      v_start::Dict
+    )
+
+Constructor for PowerFlowData struct that requires mathematical model and v_start.
+
+v_start assigns the initialisation voltages to appropriate bus terminals.
+"""
+function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
+    @assert ismath(data_math) """The model is not a mathematical model """
     ntype = Dict{Any, NodeType}()
     for (_, bus) in data_math["bus"]
         id = bus["index"]
@@ -38,8 +48,7 @@ function PowerFlowData(data_math, v_start)
     comp_status_prop["gen"]    = "gen_status"
     for (comp_type, comp_interface) in _CPF_COMPONENT_INTERFACES
         for (id, comp) in data_math[comp_type]
-            if comp[comp_status_prop[comp_type]]==1 # if status is on only
-                # bus-node tuples in an an array, number of virtual nodes, primitive y matrix, compensation current
+            if comp[comp_status_prop[comp_type]]==1
                 (bts, nr_vns, y_prim, cc) = comp_interface(comp, v_start)
 
                 ungr_btidx  = [ntype[bt]!=GROUNDED for bt in bts]
@@ -49,8 +58,6 @@ function PowerFlowData(data_math, v_start)
                 ns = [bts..., vns...]
 
                 push!(ns_yprim, (ns[ungr_filter], y_prim[ungr_filter, ungr_filter]))
-                # cc == nothing is used for linear components
-                # for the other components, we push the function evaluation into cc_ns_func_pairs
                 if cc != nothing
                     push!(cc_ns_func_pairs, (ns, cc))
                 end
@@ -97,7 +104,17 @@ function PowerFlowData(data_math, v_start)
     return PowerFlowData(data_math, ntype, cc_ns_func_pairs, indexed_nodes, node_to_idx, fnode_to_idx, vnode_to_idx, fixed_nodes, Uf, Yf, Yv_LU)
 end
 
-function get_v(pfd, Vp, n)
+
+"""
+    _get_v(
+      pfd::struct,
+      Vp::Vector,
+      n::Vector
+    )
+
+Calculates the voltage from PowerFlowData struct.
+"""
+function _get_v(pfd::PowerFlowData, Vp::Vector{Complex{Float64}}, n::Tuple{Int64, Int64})
     if pfd.ntype[n] == GROUNDED
         return 0.0+im*0.0
     elseif pfd.ntype[n] == FIXED
@@ -107,7 +124,18 @@ function get_v(pfd, Vp, n)
     end
 end
 
-function compute_pf(data_math::Dict{String, Any}; v_start=missing, max_iter=10000, stat_tol=1E-8, verbose=true)
+"""
+    compute_pf(
+      data_math::Dict,
+      v_start::Dict,
+      max_iter::Int,
+      stat_tol::Float,
+      verbose::Bool
+    )
+
+Computes native power flow and outputs the result dict.
+"""
+function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:Any},Missing}=missing, max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=true)
     if !ismultinetwork(data_math)
         nw_dm = Dict("0"=>data_math)
     else
@@ -170,16 +198,33 @@ function compute_pf(data_math::Dict{String, Any}; v_start=missing, max_iter=1000
     return res
 end
 
+"""
+    compute_pf(
+      pdf::PowerFlowData,
+      max_iter::Int,
+      stat_tol::Float,
+      verbose::Bool
+    )
 
-function compute_pf(pfd::PowerFlowData; max_iter=100, stat_tol=1E-8, verbose=true)
+Constructor for compute_pf that requires PowerFlowData.
+"""
+function compute_pf(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=true)
     time = @elapsed (Uv, status, its, stat) = _compute_Uv(pfd, max_iter=max_iter, stat_tol=stat_tol)
     return build_result(pfd, Uv, status, its, time, stat)
 end
 
+"""
+    _compute_Uv(
+      pfd::PowerFlowData,
+      max_iter::Int,
+      stat_tol::Float,
+      verbose::Bool
+    )
 
-function _compute_Uv(pfd::PowerFlowData; max_iter=100, stat_tol=1E-8, verbose=true)
+Computes variable voltages until convergence or reaching max_iter.
+"""
+function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=true)
 
-    # Number of nodes that have voltage variable
     Nv = length(pfd.indexed_nodes)-length(pfd.fixed_nodes)
 
     Uv0 = pfd.Yv_LU\(-pfd.Yf*pfd.Uf)
@@ -188,7 +233,7 @@ function _compute_Uv(pfd::PowerFlowData; max_iter=100, stat_tol=1E-8, verbose=tr
     for it in 1:max_iter
         Iv = zeros(Complex{Float64}, Nv)
         for (ns, cc_func) in pfd.cc_ns_func_pairs
-            Un = [get_v(pfd, Uv, n) for n in ns]
+            Un = [_get_v(pfd, Uv, n) for n in ns]
             Icc = cc_func(Un)
             for (i,n) in enumerate(ns)
                 if pfd.ntype[n]==VARIABLE
@@ -211,8 +256,20 @@ function _compute_Uv(pfd::PowerFlowData; max_iter=100, stat_tol=1E-8, verbose=tr
 end
 
 
+"""
+    build_result(
+      pfd::PowerFlowData,
+      Uv::Vector,
+      status::PFTerminationStatus,
+      its::Int,
+      time::Real,
+      stationarity::Real,
+      verbose::Bool
+    )
 
-function build_result(pfd::PowerFlowData, Uv, status::PFTerminationStatus, its::Int, time::Real, stationarity::Real; verbose=true)
+Builds the result dict from the solution dict.
+"""
+function build_result(pfd::PowerFlowData, Uv::Vector{Complex{Float64}}, status::PFTerminationStatus, its::Int, time::Real, stationarity::Real; verbose::Bool=true)
     result = Dict{String, Any}()
     result["termination_status"] = status
     result["solution"] = build_solution(pfd, Uv)
@@ -222,12 +279,20 @@ function build_result(pfd::PowerFlowData, Uv, status::PFTerminationStatus, its::
     return result
 end
 
-function build_solution(pfd::PowerFlowData, Uv)
+"""
+    build_solution(
+      pfd::PowerFlowData,
+      Uv::Vector
+    )
+
+Builds the solution dict.
+"""
+function build_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
     solution = Dict{String, Any}("bus"=>Dict{String, Any}())
     for (id, bus) in pfd.data_math["bus"]
         ind = bus["index"]
         solution["bus"][id] = Dict{String, Any}()
-        v = Dict(t=>get_v(pfd, Uv, (ind,t)) for t in bus["terminals"])
+        v = Dict(t=>_get_v(pfd, Uv, (ind,t)) for t in bus["terminals"])
         solution["bus"][id]["vm"] = Dict("$t"=>abs.(v[t]) for t in bus["terminals"])
         solution["bus"][id]["va"] = Dict("$t"=>angle.(v[t]) for t in bus["terminals"])
     end
@@ -239,8 +304,15 @@ function build_solution(pfd::PowerFlowData, Uv)
 end
 
 # COMPONENT INTERFACES
+"""
+    _cpf_branch_interface(
+      branch::Dict,
+      v_start::Dict
+    )
 
-function _cpf_branch_interface(branch, v_start)
+Branch component interface outputs branch primitive Y matrix.
+"""
+function _cpf_branch_interface(branch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
     Ys = inv(branch["br_r"]+im*branch["br_x"])
     Yfr = branch["g_fr"]+im*branch["b_fr"]
     Yto = branch["g_to"]+im*branch["b_to"]
@@ -249,13 +321,29 @@ function _cpf_branch_interface(branch, v_start)
     return  bts, 0, y_prim, nothing
 end
 
-function _cpf_shunt_interface(shunt, v_start)
+"""
+    _cpf_shunt_interface(
+      shunt::Dict,
+      v_start::Dict
+    )
+
+Shunt component interface outputs shunt primitive Y matrix.
+"""
+function _cpf_shunt_interface(shunt::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
     Y = shunt["gs"]+im*shunt["bs"]
     bts = [(shunt["shunt_bus"], t) for t in shunt["connections"]]
     return  bts, 0, Y, nothing
 end
 
-function _cpf_transformer_interface(tr, v_start)
+"""
+    _cpf_transformer_interface(
+      tr::Dict,
+      v_start::Dict
+    )
+
+Transformer component interface outputs transformer primitive Y matrix.
+"""
+function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
     f_ns = [(tr["f_bus"], t) for t in tr["f_connections"]]
     t_ns = [(tr["t_bus"], t) for t in tr["t_connections"]]
     ts = tr["tm_set"]*tr["tm_nom"]*tr["polarity"]
@@ -272,7 +360,17 @@ function _cpf_transformer_interface(tr, v_start)
     return  bts, nr_vns, Y, nothing
 end
 
-function _compose_yprim_banked_ideal_transformers(ts, npairs_fr, npairs_to; ppm=1)
+"""
+    _compose_yprim_banked_ideal_transformers(
+      ts::Vector,
+      npairs_fr::Tuple,
+      npairs_to::Tuple,
+      ppm::Float
+    )
+
+Modifies ideal transformers to avoid singularity error.
+"""
+function _compose_yprim_banked_ideal_transformers(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
     y_prim_ind = Dict()
 
     nph = length(ts)
@@ -297,9 +395,18 @@ function _compose_yprim_banked_ideal_transformers(ts, npairs_fr, npairs_to; ppm=
     return ns[1:end-nph], nph, Y
 end
 
-function _cpf_load_interface(load, v_start; wires=4)
+"""
+    _cpf_load_interface(
+      load::Dict,
+      v_start::Dict
+    )
+
+Load component interface outputs load primitive Y matrix.
+"""
+function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
     bts = [(load["load_bus"], t) for t in load["connections"]]
     v0_bt = [v_start[bt] for bt in bts]
+    wires = length(bts)
 
     conf = load["configuration"]
 
@@ -399,7 +506,15 @@ function _cpf_load_interface(load, v_start; wires=4)
     return bts, 0, y_prim, cc_func
 end
 
-function _cpf_generator_interface(gen, v_start; wires=4)
+"""
+    _cpf_generator_interface(
+      gen::Dict,
+      v_start::Dict
+    )
+
+Generator component interface outputs generator primitive Y matrix.
+"""
+function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
     bts = [(gen["gen_bus"], t) for t in gen["connections"]]
     wires = length(bts)
     v0_bt = [v_start[bt] for bt in bts]
@@ -468,7 +583,14 @@ const _CPF_COMPONENT_INTERFACES = Dict(
     "shunt" => _cpf_shunt_interface,
 )
 
-function _bts_to_start_voltage(dm)
+"""
+    _bts_to_start_voltage(
+        dm::Dict
+    )
+
+Assigns the initialisation voltages to appropriate bus terminals.
+"""
+function _bts_to_start_voltage(dm::Dict{String,<:Any})
     v_start = Dict()
     for (i,bus) in dm["bus"]
         for (t, terminal) in enumerate(bus["terminals"])

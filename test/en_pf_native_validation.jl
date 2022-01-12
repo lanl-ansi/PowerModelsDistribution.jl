@@ -26,7 +26,7 @@ cases = [x[1:end-4] for x in readdir(data_dir) if endswith(x, ".dss")]
             case_path = "$data_dir/$case.dss"
 
             # transformations = haskey(case_transformations, case) ? case_transformations[case] : [remove_all_bounds!]
-            data_eng = parse_file(case_path)
+            data_eng = parse_file(case_path, transformations=[transform_loops!])
             vsource_correction!(data_eng)
 
             data_math = transform_data_model(data_eng;kron_reduce=false)

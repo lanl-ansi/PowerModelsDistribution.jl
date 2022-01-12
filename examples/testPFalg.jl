@@ -1,5 +1,5 @@
 using Pkg
-Pkg.activate("./scripts")
+Pkg.activate("./examples")
 # Pkg.develop("./")
 using PowerModelsDistribution
 using OpenDSSDirect
@@ -44,7 +44,7 @@ case_file = joinpath(pwd(), "test/data/en_validation_case_data/test_load_3ph_del
 # run_dss(open(f->read(f, String), case_file))
 
 ##
-eng =_PMD.parse_file(case_file)
+eng =_PMD.parse_file(case_file, transformations=[transform_loops!])
 
 eng["voltage_source"]["source"]["rs"][4,4] = eng["voltage_source"]["source"]["rs"][1,1]
 eng["voltage_source"]["source"]["rs"][1:3,4] .= eng["voltage_source"]["source"]["rs"][1,2]
@@ -55,10 +55,6 @@ eng["voltage_source"]["source"]["xs"][4,1:3] .= eng["voltage_source"]["source"][
 
 
 math = transform_data_model(eng;kron_reduce=false)
-
-_PMD.add_start_vrvi!(math)
-v_start = _PMD._bts_to_start_voltage(math)
-
 result = compute_pf(math)
 
 vm = [(i, bus_data["vm"]) for (i,bus_data) in result["solution"]["bus"]]

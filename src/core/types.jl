@@ -96,7 +96,7 @@ An Enum to describe the type of capcontrol, e.g., kvar, voltage etc.
 
 An Enum to describe whether a bus voltage is fixed, variable, grounded, or it is a virtual bus
 """
-@enum NodeType FIXED=1 VARIABLE=2 GROUNDED=3 VIRTUAL=4
+@enum NodeType FIXED VARIABLE GROUNDED VIRTUAL
 @doc "Bus voltage is fixed" FIXED
 @doc "Bus voltage is variable" VARIABLE
 @doc "Bus is grounded" GROUNDED
@@ -107,7 +107,7 @@ An Enum to describe whether a bus voltage is fixed, variable, grounded, or it is
 
 An Enum to describe whether power flow is converged or hit the iteration limit
 """
-@enum PFTerminationStatus CONVERGED=1 ITERATION_LIMIT=2
+@enum PFTerminationStatus CONVERGED ITERATION_LIMIT
 @doc "Power flow is converged" CONVERGED
 @doc "Power flow hits iteration limit" ITERATION_LIMIT
 

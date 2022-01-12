@@ -22,6 +22,7 @@ module PowerModelsDistribution
     import Dates
     import LinearAlgebra
     import Statistics
+    import SparseArrays
 
     import LinearAlgebra: diagm, factorize, LU
     import Statistics: mean, std
@@ -48,7 +49,6 @@ module PowerModelsDistribution
         Logging.global_logger(_LOGGER)
     end
 
-    include("core/calculate_pf.jl")
     include("core/base.jl")
     include("core/types.jl")
     include("core/data.jl")
@@ -58,6 +58,8 @@ module PowerModelsDistribution
     include("core/constraint.jl")
     include("core/objective.jl")
     include("core/solution.jl")
+    include("core/calculate_pf.jl")
+
 
     include("form/acp.jl")
     include("form/acr.jl")
