@@ -6,6 +6,8 @@
 
 ## v0.13.3
 
+- Refactored functions to remove kwargs in many cases of constraints/variables
+- Fixed bugs in NFAU constraints/variables
 - Fixed bug where no solution would result in an error, instead of empty solution
 
 ## v0.13.2
