@@ -58,7 +58,6 @@ module PowerModelsDistribution
     include("core/constraint.jl")
     include("core/objective.jl")
     include("core/solution.jl")
-    include("core/calculate_pf.jl")
 
 
     include("form/acp.jl")
