@@ -4,6 +4,10 @@
 
 - none
 
+## v0.13.3
+
+- Fixed bug where no solution would result in an error, instead of empty solution
+
 ## v0.13.2
 
 - Fixed issue with looped edge components in ref (i.e., if f_bus==t_bus)
