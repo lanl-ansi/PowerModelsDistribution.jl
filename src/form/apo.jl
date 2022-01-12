@@ -1,10 +1,10 @@
 "apo models ignore reactive power flows"
-function variable_mc_generator_power_imaginary(pm::AbstractUnbalancedActivePowerModel; kwargs...)
+function variable_mc_generator_power_imaginary(::AbstractUnbalancedActivePowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_generator_power_imaginary_on_off(pm::AbstractUnbalancedActivePowerModel; kwargs...)
+function variable_mc_generator_power_imaginary_on_off(::AbstractUnbalancedActivePowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 end
 
 
@@ -26,37 +26,60 @@ end
 
 
 "nothing to do"
-function constraint_mc_voltage_magnitude_only(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, vm_ref::Vector{<:Real})
+function constraint_mc_voltage_magnitude_only(::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, vm_ref::Vector{<:Real})
 end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_storage_power_imaginary(pm::AbstractUnbalancedActivePowerModel; kwargs...)
+function variable_mc_storage_power_imaginary(::AbstractUnbalancedActivePowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_storage_power_imaginary_on_off(pm::AbstractUnbalancedActivePowerModel; kwargs...)
+function variable_mc_storage_power_control_imaginary(::AbstractUnbalancedActivePowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_branch_power_imaginary(pm::AbstractUnbalancedActivePowerModel; kwargs...)
+function variable_mc_storage_power_imaginary_on_off(::AbstractUnbalancedActivePowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_branch_flow_ne_reactive(pm::AbstractUnbalancedActivePowerModel; kwargs...)
+function variable_mc_branch_power_imaginary(::AbstractUnbalancedActivePowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+end
+
+
+"apo models ignore reactive power flows"
+function variable_mc_branch_flow_ne_reactive(::AbstractUnbalancedActivePowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+end
+
+
+"apo models ignore reactive power flows"
+function variable_mc_switch_power_imaginary(::AbstractUnbalancedActivePowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+end
+
+
+"no voltage variables"
+function variable_mc_oltc_transformer_tap(::AbstractUnbalancedNFAModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+end
+
+
+""
+function constraint_mc_switch_state_open(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int})
+    psw = var(pm, nw, :psw, f_idx)
+
+    JuMP.@constraint(pm.model, psw .== 0.0)
 end
 
 
 "nothing to do, these models do not have complex voltage variables"
-function variable_mc_bus_voltage(pm::AbstractUnbalancedNFAModel; nw::Int=nw_id_default, kwargs...)
+function variable_mc_bus_voltage(pm::AbstractUnbalancedNFAModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 end
 
 
 "nothing to do, these models do not have complex voltage variables"
-function variable_mc_capcontrol(pm::AbstractUnbalancedNFAModel; nw::Int=nw_id_default, kwargs...)
+function variable_mc_capcontrol(pm::AbstractUnbalancedNFAModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 end
 
 
@@ -71,7 +94,7 @@ end
 
 
 "apo models ignore reactive power flows"
-function variable_mc_transformer_power_imaginary(pm::AbstractUnbalancedActivePowerModel; nw::Int=nw_id_default, bounded=true)
+function variable_mc_transformer_power_imaginary(pm::AbstractUnbalancedActivePowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 end
 
 
@@ -139,7 +162,6 @@ function constraint_mc_network_power_balance(pm::AbstractUnbalancedAPLossLessMod
     end
 end
 
-
 "Do nothing, this model is symmetric"
 function constraint_mc_ohms_yt_to(pm::AbstractUnbalancedAPLossLessModels, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
 end
@@ -147,12 +169,12 @@ end
 ### Network Flow Approximation ###
 
 "nothing to do, no voltage angle variables"
-function constraint_mc_theta_ref(pm::NFAUPowerModel, i::Int; nw::Int=nw_id_default)
+function constraint_mc_theta_ref(pm::AbstractUnbalancedNFAModel, i::Int; nw::Int=nw_id_default)
 end
 
 
 "nothing to do, no voltage angle variables"
-function constraint_mc_ohms_yt_from(pm::NFAUPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
+function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedNFAModel, i::Int; nw::Int=nw_id_default)
 end
 
 
@@ -263,7 +285,7 @@ end
 
 ""
 function constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, connections::Vector{Int}, rating::Real)
-    ps =var(pm, nw, :ps, i)
+    ps = var(pm, nw, :ps, i)
 
     for (idx,c) in enumerate(connections)
         JuMP.has_lower_bound(ps[c]) && JuMP.lower_bound(ps[c]) < -rating && set_lower_bound(ps[c], -rating)
@@ -283,8 +305,8 @@ function constraint_mc_storage_current_limit(pm::AbstractUnbalancedActivePowerMo
 end
 
 
-""
-function constraint_mc_storage_losses(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, bus, connections::Vector{Int}, r::Real, x::Real, p_loss::Real, q_loss::Real)
+"active power only"
+function constraint_mc_storage_losses(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, bus::Int, connections::Vector{Int}, r::Real, ::Real, p_loss::Real, ::Real)
     ps = var(pm, nw, :ps, i)
     sc = var(pm, nw, :sc, i)
     sd = var(pm, nw, :sd, i)
@@ -293,6 +315,20 @@ function constraint_mc_storage_losses(pm::AbstractUnbalancedActivePowerModel, nw
         sum(ps[c] for c in connections) + (sd - sc)
         ==
         p_loss + r * sum(ps[c]^2 for (idx,c) in enumerate(connections))
+    )
+end
+
+
+"active power only, lossless model"
+function constraint_mc_storage_losses(pm::AbstractUnbalancedAPLossLessModels, nw::Int, i::Int, bus::Int, connections::Vector{Int}, r::Real, ::Real, p_loss::Real, ::Real)
+    ps = var(pm, nw, :ps, i)
+    sc = var(pm, nw, :sc, i)
+    sd = var(pm, nw, :sd, i)
+
+    JuMP.@constraint(pm.model,
+        sum(ps[c] for c in connections) + (sd - sc)
+        ==
+        0.0
     )
 end
 
@@ -314,6 +350,19 @@ function constraint_mc_generator_power(pm::AbstractUnbalancedActivePowerModel, i
 end
 
 
+# load variables
+
+"""
+Create a dictionary with values of type Any for the load.
+Depending on the load model, this can be a parameter or a NLexpression.
+These will be inserted into KCL.
+"""
+function variable_mc_load_power(pm::AbstractUnbalancedActivePowerModel; nw=nw_id_default, bounded::Bool=true, report::Bool=true)
+    var(pm, nw)[:pd] = Dict{Int, Any}()
+    var(pm, nw)[:pd_bus] = Dict{Int, Any}()
+end
+
+
 "Only support wye-connected, constant-power loads."
 function constraint_mc_load_power(pm::AbstractUnbalancedActivePowerModel, id::Int; nw::Int=nw_id_default, report::Bool=true)
     load = ref(pm, nw, :load, id)
@@ -332,20 +381,6 @@ function constraint_mc_load_power(pm::AbstractUnbalancedActivePowerModel, id::In
 end
 
 
-""
-function constraint_mc_storage_losses(pm::AbstractUnbalancedActivePowerModel, n::Int, i::Int, bus::Int, connections::Vector{Int}, r::Real, x::Real, p_loss::Real, q_loss::Real)
-    ps = var(pm, n, :ps, i)
-    sc = var(pm, n, :sc, i)
-    sd = var(pm, n, :sd, i)
-
-    JuMP.@constraint(pm.model,
-        sum(ps[c] for c in connections) + (sd - sc)
-        ==
-        p_loss + r * sum(ps[c]^2 for c in connections)
-    )
-end
-
-
 "nothing to do, no voltage variables"
 function constraint_mc_ampacity_from(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rating::Vector{Float64})::Nothing
 end
@@ -361,18 +396,6 @@ function constraint_mc_switch_ampacity(pm::AbstractUnbalancedActivePowerModel, n
 end
 
 
-"""
-    constraint_mc_branch_flow(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int})
-
-For superconducting branch flow (br_r and br_x all zeros) in active power only models
-"""
-function constraint_mc_branch_flow(pm::AbstractUnbalancedActivePowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int})
-    p_fr = [var(pm, nw, :p, f_idx)[c] for c in f_connections]
-    p_to = [var(pm, nw, :p, t_idx)[c] for c in t_connections]
-
-    if !haskey(con(pm, nw, :branch_flow), f_idx[1])
-        con(pm, nw, :branch_flow)[f_idx[1]] = [
-            JuMP.@constraint(pm.model, p_fr .+ p_to .== 0)
-        ]
-    end
+"Already handled by variable_mc_branch_power_real"
+function constraint_mc_branch_flow(pm::AbstractUnbalancedAPLossLessModels, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int})
 end
