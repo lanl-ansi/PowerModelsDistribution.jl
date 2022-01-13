@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Drop support for JuMP < v0.22
 
 ## v0.13.3
 

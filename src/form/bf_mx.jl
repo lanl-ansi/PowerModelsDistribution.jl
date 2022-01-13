@@ -632,13 +632,13 @@ function constraint_pqw(model::JuMP.Model, w::JuMP.VariableRef, p::JuMP.Variable
                 #       p/a <= w^(alpha/2)
                 # <=>   w^(alpha/2) >= p/a
                 # <=>   (w, 1, p/a) ∈ PowerCone(3)
-                JuMP.@constraint(model, [w, 1, p/a] in MathOptInterface.PowerCone(alpha/2))
+                JuMP.@constraint(model, [w, 1, p/a] in JuMP.MOI.PowerCone(alpha/2))
             # general power cone
             else # alpha>2
                 #       p/a >= w^(alpha/2)
                 # <=>   (p/a)^(2/alpha) >= w
                 # <=>   (p/a, 1, w) ∈ PowerCone(3)
-                JuMP.@constraint(model, [p/a, 1, w] in MathOptInterface.PowerCone(2/alpha))
+                JuMP.@constraint(model, [p/a, 1, w] in JuMP.MOI.PowerCone(2/alpha))
             end
         end
     end
