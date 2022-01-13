@@ -19,4 +19,7 @@ New Load.Load1  phases=1 bus1=B2.1.4  kv=0.23  model=1 conn=wye kVA=5  pf=0.9 vm
 
 New Load.Load2  phases=3 conn=delta bus1=B2.2.1.3  kv=0.4  model=1  kVA=10  pf=0.9 vminpu=0.1 vmaxpu=2
 
+Set voltagebases=[0.4]
+Calcvoltagebases
+
 Solve

@@ -66,4 +66,6 @@ include("test_cases.jl")
     include("en_opf_bounds.jl")
 
     include("en_pf_validation.jl")
+
+    include("en_pf_native_validation.jl")
 end

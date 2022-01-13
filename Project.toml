@@ -17,6 +17,7 @@ Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 LoggingExtras = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 PolyhedralRelaxations = "2e741578-48fa-11ea-2d62-b52c946f73a0"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
