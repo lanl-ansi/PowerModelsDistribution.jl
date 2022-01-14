@@ -212,7 +212,7 @@ md"""
 
 In the `ENGINEERING` data model we make heavy use of a Julia data structure called an `Enum`, or an Enumerated Type. This is a type whose values are enumerated, starting with 0. This has the benefit of being much more readable by the user.
 
-If you are familiar with JuMP, you probably are already used to Enums `TerminationStatusCode` and `ResultStatusCode`, which we import explicitly from MathOptInterface and export, for easy access by the user when using `using PowerModelsDistribution`.
+If you are familiar with JuMP, you probably are already used to Enums `TerminationStatusCode` and `ResultStatusCode`, which we import explicitly from JuMP.MOI and export, for easy access by the user when using `using PowerModelsDistribution`.
 
 For example, instead of a switch `state` having the possible values 0 or 1, instead we created an enumerated type `SwitchState`, with values `OPEN` (0) and `CLOSED` (1).
 
@@ -237,7 +237,7 @@ md"The following Enum types exist in PMD"
 PowerModelsDistributionEnums
 
 # ╔═╡ 0f73a5be-7ee3-4936-95ed-ebb1b913cf4e
-md"and the following enum values exist currently in PMD (excluding those imported from MathOptInterface):"
+md"and the following enum values exist currently in PMD (excluding those imported from JuMP.MOI):"
 
 # ╔═╡ 254a4ed3-263b-4084-b9af-c97eac2d4ab7
 [n for n in names(PowerModelsDistribution) if isa(getproperty(PowerModelsDistribution, n), Enum) && !isa(getproperty(PowerModelsDistribution, n),Union{TerminationStatusCode,ResultStatusCode})]

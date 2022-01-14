@@ -13,14 +13,14 @@ end
 
 
 """
-    variable_mc_bus_voltage(pm::FOTPUPowerModel; nw=nw_id_default, kwargs...)
+    variable_mc_bus_voltage(pm::FOTPUPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 
 Voltage variables are defined in polar coordinates similar to ACPUPowerModel.
 An initial operating point is specified for linearization.
 """
-function variable_mc_bus_voltage(pm::FOTPUPowerModel; nw=nw_id_default, kwargs...)
-    variable_mc_bus_voltage_angle(pm; nw=nw, kwargs...)
-    variable_mc_bus_voltage_magnitude_only(pm; nw=nw, kwargs...)
+function variable_mc_bus_voltage(pm::FOTPUPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_angle(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_bus_voltage_magnitude_only(pm; nw=nw, bounded=bounded, report=report)
 
     # initial operating point for linearization (using flat-start)
     var(pm, nw)[:vm0] = Dict{Int,Vector{Float64}}()  #(i => [1 1 1] for i in ids(pm, nw, :bus))

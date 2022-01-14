@@ -3,9 +3,9 @@
 # in the context of constant-power loads or generators
 
 ""
-function variable_mc_branch_current(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_branch_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_branch_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+function variable_mc_branch_current(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_branch_current_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_branch_current_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     # store expressions in rectangular power variable space
     p = Dict()
@@ -35,15 +35,15 @@ function variable_mc_branch_current(pm::AbstractUnbalancedIVRModel; nw::Int=nw_i
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :pf, :pt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), p)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :qf, :qt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), q)
 
-    variable_mc_branch_current_series_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_branch_current_series_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    variable_mc_branch_current_series_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_branch_current_series_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
 ""
-function variable_mc_transformer_current(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_transformer_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_transformer_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+function variable_mc_transformer_current(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_transformer_current_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_transformer_current_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     # store expressions in rectangular power variable space
     p = Dict()
@@ -77,9 +77,9 @@ end
 
 
 ""
-function variable_mc_switch_current(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_switch_current_real(pm; nw=nw, bounded=bounded, report=report, kwargs...)
-    variable_mc_switch_current_imaginary(pm; nw=nw, bounded=bounded, report=report, kwargs...)
+function variable_mc_switch_current(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_switch_current_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_switch_current_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     # store expressions in rectangular power variable space
     p = Dict()
@@ -113,7 +113,7 @@ end
 
 
 ""
-function variable_mc_load_current(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function variable_mc_load_current(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     var(pm, nw)[:crd] = Dict{Int, Any}()
     var(pm, nw)[:cid] = Dict{Int, Any}()
     var(pm, nw)[:crd_bus] = Dict{Int, Any}()
@@ -122,9 +122,9 @@ end
 
 
 ""
-function variable_mc_generator_current(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_generator_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_generator_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+function variable_mc_generator_current(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_generator_current_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_generator_current_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     var(pm, nw)[:crg_bus] = Dict{Int, Any}()
     var(pm, nw)[:cig_bus] = Dict{Int, Any}()
@@ -136,9 +136,9 @@ end
 
 
 ""
-function variable_mc_bus_voltage(pm::AbstractUnbalancedIVRModel; nw=nw_id_default, bounded::Bool=true, kwargs...)
-    variable_mc_bus_voltage_real(pm; nw=nw, bounded=bounded, kwargs...)
-    variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, kwargs...)
+function variable_mc_bus_voltage(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     # local infeasbility issues without proper initialization;
     # convergence issues start when the equivalent angles of the starting point

@@ -4,14 +4,13 @@
 
 """
 	function variable_mc_generator_power(
-		pm::AbstractNLExplicitNeutralIVRModel;
-		kwargs...
+		pm::AbstractNLExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true
 	)
 
 For IVR models with explicit neutrals,
 no power variables are required
 """
-function variable_mc_generator_power(pm::AbstractNLExplicitNeutralIVRModel; kwargs...)
+function variable_mc_generator_power(pm::AbstractNLExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     # do nothing
 end
 
@@ -20,16 +19,15 @@ end
 
 """
 	function variable_mc_generator_power(
-		pm::AbstractQuadraticExplicitNeutralIVRModel;
-		kwargs...
+		pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true
 	)
 
 For quadratic IVR models with explicit neutrals,
 creates generator power variables `:pg` and `:qg`
 """
-function variable_mc_generator_power(pm::AbstractQuadraticExplicitNeutralIVRModel; kwargs...)
-    variable_mc_generator_power_real(pm; kwargs...)
-    variable_mc_generator_power_imaginary(pm; kwargs...)
+function variable_mc_generator_power(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_generator_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_generator_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -311,15 +309,14 @@ end
 		pm::AbstractExplicitNeutralIVRModel;
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
-		report::Bool=true,
-		kwargs...
+		report::Bool=true
 	)
 
 For IVR models with explicit neutrals,
 creates placeholder dictionaries for the load current `:crd` and `:cid`,
 and for the terminal current flows `:crd_bus` and `:cid_bus`
 """
-function variable_mc_load_current(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function variable_mc_load_current(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     var(pm, nw)[:crd] = Dict{Int, Any}()
     var(pm, nw)[:cid] = Dict{Int, Any}()
     var(pm, nw)[:crd_bus] = Dict{Int, Any}()
@@ -352,21 +349,19 @@ end
 
 """
 	function variable_mc_load_current(
-		pm::AbstractQuadraticExplicitNeutralIVRModel;
-		nw::Int=nw_id_default,
-		kwargs...
+		pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true
 	)
 
 For quadratic IVR models with explicit neutrals,
 creates load current variables `:crd` and `:cid`,
 and placeholder dictionaries for the terminal current flows `:crd_bus` and `:cid_bus`
 """
-function variable_mc_load_current(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, kwargs...)
+function variable_mc_load_current(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     load_ids_exponential = [id for (id,load) in ref(pm, nw, :load) if load["model"]==EXPONENTIAL]
     @assert isempty(load_ids_exponential) "Exponential loads cannot be represented quadratically."
 
-    variable_mc_load_current_real(pm; nw=nw, kwargs...)
-    variable_mc_load_current_imaginary(pm; nw=nw, kwargs...)
+    variable_mc_load_current_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_load_current_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     var(pm, nw)[:crd_bus] = Dict{Int,Any}()
     var(pm, nw)[:cid_bus] = Dict{Int,Any}()
@@ -374,20 +369,18 @@ end
 
 """
 	function variable_mc_load_power(
-		pm::AbstractQuadraticExplicitNeutralIVRModel;
-		nw::Int=nw_id_default,
-		kwargs...
+		pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true
 	)
 
 For quadratic IVR models with explicit neutrals,
 creates load power variables `:pd` and `:qd`
 """
-function variable_mc_load_power(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, kwargs...)
+function variable_mc_load_power(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     load_ids_exponential = [id for (id,load) in ref(pm, nw, :load) if load["model"]==EXPONENTIAL]
     @assert isempty(load_ids_exponential) "Exponential loads cannot be represented quadratically."
 
-    variable_mc_load_power_active(pm; nw=nw, kwargs...)
-    variable_mc_load_power_reactive(pm; nw=nw, kwargs...)
+    variable_mc_load_power_active(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_load_power_reactive(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -858,16 +851,15 @@ end
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
 		report::Bool=true,
-		kwargs...
 	)
 
 For IVR models with explicit neutrals,
 create transformer current variables `:crt` and `:cit`,
 and placeholder dictionaries for the terminal current flows `:crt_bus` and `:cit_bus`
 """
-function variable_mc_transformer_current(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_transformer_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_transformer_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+function variable_mc_transformer_current(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_transformer_current_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_transformer_current_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     var(pm, nw)[:crt_bus] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:cit_bus] = Dict{Tuple{Int,Int,Int}, Any}()
@@ -882,13 +874,12 @@ end
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
 		report::Bool=true,
-		kwargs...
 	)
 
 For non-linear IVR models with explicit neutrals,
 no power variables are required.
 """
-function variable_mc_transformer_power(pm::AbstractNLExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
+function variable_mc_transformer_power(pm::AbstractNLExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     # do nothing
 end
 
@@ -901,15 +892,14 @@ end
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
 		report::Bool=true,
-		kwargs...
 	)
 
 For quadratic IVR models with explicit neutrals,
 creates transformer power variables `:pt` and `:qt`
 """
-function variable_mc_transformer_power(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_transformer_power_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_transformer_power_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+function variable_mc_transformer_power(pm::AbstractQuadraticExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_transformer_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_transformer_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -1213,8 +1203,7 @@ end
 		pm::AbstractExplicitNeutralIVRModel;
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
-		report::Bool=true,
-		kwargs...
+		report::Bool=true
 	)
 
 For IVR models with explicit neutrals,
@@ -1222,12 +1211,12 @@ creates total current variables `:cr` and `:ci`,
 series current variables `:csr` and `:csi`,
 and placeholder dictionaries for the terminal current flows `:cr_bus` and `:ci_bus`
 """
-function variable_mc_branch_current(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_branch_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_branch_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+function variable_mc_branch_current(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_branch_current_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_branch_current_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
-    variable_mc_branch_current_series_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_branch_current_series_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+    variable_mc_branch_current_series_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_branch_current_series_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     var(pm, nw)[:cr_bus] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:ci_bus] = Dict{Tuple{Int,Int,Int}, Any}()
@@ -1241,8 +1230,7 @@ end
 		pm::ReducedExplicitNeutralIVRModels;
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
-		report::Bool=true,
-		kwargs...
+		report::Bool=true
 	)
 
 For branch-reduced IVR models with explicit neutrals,
@@ -1250,9 +1238,9 @@ creates series current variables `:csr` and `:csi`,
 placeholder dictionaries for the total current `:cr` and `:ci`,
 and placeholder dictionaries for the terminal current flows `:cr_bus` and `:ci_bus`
 """
-function variable_mc_branch_current(pm::ReducedExplicitNeutralIVRModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_branch_current_series_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_branch_current_series_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+function variable_mc_branch_current(pm::ReducedExplicitNeutralIVRModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_branch_current_series_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_branch_current_series_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     var(pm, nw)[:cr] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:ci] = Dict{Tuple{Int,Int,Int}, Any}()
@@ -1497,7 +1485,7 @@ without introducing explicit power variables.
 """
 function constraint_mc_thermal_limit_from(pm::AbstractQuadraticExplicitNeutralIVRModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, rate_a::Vector{<:Real})
     if any(rate_a.<Inf)
-        warning("""
+        @warn("""
             A branch power bound cannot be represented quadratically in the default AbstractQuadraticExplicitNeutralIVRModel.
             Either extend this quadratic formulation by including explicit branch power variables, or use AbstractNLExplicitNeutralIVRModel instead.""")
     end
@@ -1629,16 +1617,15 @@ end
 		nw::Int=nw_id_default,
 		bounded::Bool=true,
 		report::Bool=true,
-		kwargs...
 	)
 
 For IVR models with explicit neutrals,
 creates switch current variables `:crs` and `:cis`,
 and placeholder dictionaries for the terminal current flows `:crsw_bus` and `:cisw_bus`
 """
-function variable_mc_switch_current(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true, kwargs...)
-    variable_mc_switch_current_real(pm, nw=nw, bounded=bounded, report=report; kwargs...)
-    variable_mc_switch_current_imaginary(pm, nw=nw, bounded=bounded, report=report; kwargs...)
+function variable_mc_switch_current(pm::AbstractExplicitNeutralIVRModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_switch_current_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_switch_current_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     var(pm, nw)[:crsw_bus] = Dict{Tuple{Int,Int,Int}, Any}()
     var(pm, nw)[:cisw_bus] = Dict{Tuple{Int,Int,Int}, Any}()

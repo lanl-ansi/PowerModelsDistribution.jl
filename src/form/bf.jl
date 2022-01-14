@@ -32,8 +32,8 @@ end
 
 
 "Create voltage variables for branch flow model"
-function variable_mc_bus_voltage_on_off(pm::LPUBFDiagModel; kwargs...)
-    variable_mc_bus_voltage_magnitude_sqr_on_off(pm; kwargs...)
+function variable_mc_bus_voltage_on_off(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_magnitude_sqr_on_off(pm; nw=nw, bounded=bounded, report=report)
 end
 
 

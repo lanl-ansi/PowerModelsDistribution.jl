@@ -9,7 +9,6 @@ module PowerModelsDistribution
 
     # Optimization Modeling Utilities
     import JuMP
-    import MathOptInterface
     import PolyhedralRelaxations
 
     import InfrastructureModels

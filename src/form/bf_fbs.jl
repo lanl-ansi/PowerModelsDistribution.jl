@@ -34,14 +34,14 @@ end
 
 
 """
-    variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw=nw_id_default, bounded::Bool=true, kwargs...)
+    variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 
 Voltage variables are defined in rectangular coordinates similar to ACRUPowerModel.
 An initial operating point is specified for linearization.
 """
-function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw=nw_id_default, bounded::Bool=true, kwargs...)
-    variable_mc_bus_voltage_real(pm; nw=nw, bounded=bounded, kwargs...)
-    variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, kwargs...)
+function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_bus_voltage_imaginary(pm; nw=nw, bounded=bounded, report=report)
 
     # initial operating point for linearization (using flat-start)
     var(pm, nw)[:vr0] = Dict{Int,Vector{Float64}}()  #(i => [cosd(0), cosd(-120), cosd(120)] for i in ids(pm, nw, :bus))
@@ -100,9 +100,9 @@ end
 
 
 "Creates variables for both `active` and `reactive` power flow at each transformer."
-function variable_mc_transformer_power(pm::FBSUBFPowerModel; kwargs...)
-    variable_mc_transformer_power_real(pm; kwargs...)
-    variable_mc_transformer_power_imaginary(pm; kwargs...)
+function variable_mc_transformer_power(pm::FBSUBFPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_transformer_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_transformer_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 

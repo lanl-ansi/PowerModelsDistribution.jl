@@ -167,9 +167,9 @@ end
 ## branch power variables
 
 "branch flow variables, delegated back to PowerModels"
-function variable_mc_branch_power(pm::AbstractUnbalancedPowerModel; kwargs...)
-    variable_mc_branch_power_real(pm; kwargs...)
-    variable_mc_branch_power_imaginary(pm; kwargs...)
+function variable_mc_branch_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_branch_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_branch_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -347,9 +347,9 @@ end
 ## transformer power variables
 
 "Creates variables for both `active` and `reactive` power flow at each transformer."
-function variable_mc_transformer_power(pm::AbstractUnbalancedPowerModel; kwargs...)
-    variable_mc_transformer_power_real(pm; kwargs...)
-    variable_mc_transformer_power_imaginary(pm; kwargs...)
+function variable_mc_transformer_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_transformer_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_transformer_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -521,9 +521,9 @@ end
 ## switch power variables
 
 ""
-function variable_mc_switch_power(pm::AbstractUnbalancedPowerModel; kwargs...)
-    variable_mc_switch_power_real(pm; kwargs...)
-    variable_mc_switch_power_imaginary(pm; kwargs...)
+function variable_mc_switch_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_switch_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_switch_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -613,9 +613,9 @@ end
 ## switch current variables
 
 ""
-function variable_mc_switch_current(pm::AbstractUnbalancedPowerModel; kwargs...)
-    variable_mc_switch_current_real(pm; kwargs...)
-    variable_mc_switch_current_imaginary(pm; kwargs...)
+function variable_mc_switch_current(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_switch_current_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_switch_current_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -779,9 +779,9 @@ end
 ## generator power variables
 
 "create variables for generators, delegate to PowerModels"
-function variable_mc_generator_power(pm::AbstractUnbalancedPowerModel; kwargs...)
-    variable_mc_generator_power_real(pm; kwargs...)
-    variable_mc_generator_power_imaginary(pm; kwargs...)
+function variable_mc_generator_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_generator_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_generator_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -847,9 +847,9 @@ end
 ### generator power on/off variables
 
 ""
-function variable_mc_generator_power_on_off(pm::AbstractUnbalancedPowerModel; kwargs...)
-    variable_mc_generator_power_real_on_off(pm; kwargs...)
-    variable_mc_generator_power_imaginary_on_off(pm; kwargs...)
+function variable_mc_generator_power_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_generator_power_real_on_off(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_generator_power_imaginary_on_off(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -1164,9 +1164,9 @@ end
 
 
 "Create variables for `active` and `reactive` storage injection"
-function variable_mc_storage_power_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, kwargs...)
-    variable_mc_storage_power_real_on_off(pm; nw=nw, kwargs...)
-    variable_mc_storage_power_imaginary_on_off(pm; nw=nw, kwargs...)
+function variable_mc_storage_power_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_storage_power_real_on_off(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_imaginary_on_off(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -1401,9 +1401,9 @@ end
 # slack power variables
 
 "generates variables for both `active` and `reactive` slack at each bus"
-function variable_mc_slack_bus_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, kwargs...)
-    variable_mc_slack_bus_power_real(pm; nw=nw, kwargs...)
-    variable_mc_slack_bus_power_imaginary(pm; nw=nw, kwargs...)
+function variable_mc_slack_bus_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, report::Bool=true)
+    variable_mc_slack_bus_power_real(pm; nw=nw, report=report)
+    variable_mc_slack_bus_power_imaginary(pm; nw=nw, report=report)
 end
 
 

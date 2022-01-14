@@ -4,7 +4,7 @@ end
 
 
 ""
-function variable_mc_branch_current(pm::AbstractLPUBFModel; kwargs...)
+function variable_mc_branch_current(pm::AbstractLPUBFModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 end
 
 
@@ -95,9 +95,9 @@ end
 
 
 "Creates variables for both `active` and `reactive` power flow at each transformer."
-function variable_mc_transformer_power(pm::LPUBFDiagModel; kwargs...)
-    variable_mc_transformer_power_real(pm; kwargs...)
-    variable_mc_transformer_power_imaginary(pm; kwargs...)
+function variable_mc_transformer_power(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_transformer_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_transformer_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -325,7 +325,7 @@ end
 
 
 "Neglects the active and reactive loss terms associated with the squared current magnitude."
-function constraint_mc_storage_losses(pm::AbstractUBFModels, i::Int; nw::Int=nw_id_default, kwargs...)
+function constraint_mc_storage_losses(pm::AbstractUBFModels, i::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     storage = ref(pm, nw, :storage, i)
 
     p_loss, q_loss = storage["p_loss"], storage["q_loss"]
