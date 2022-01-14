@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Add native power flow solver by using `compute_pf(data_math)`
 
 ## v0.14.0
 
