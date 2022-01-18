@@ -108,12 +108,12 @@ end
 
 
 """
-    variable_mc_capcontrol(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_default, relax::Bool=false)
+    variable_mc_capcontrol(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
 
 Capacitor switching variables.
 """
-function variable_mc_capcontrol(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_default, relax::Bool=false)
-    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax)
+function variable_mc_capcontrol(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
+    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax, report=report)
 end
 
 

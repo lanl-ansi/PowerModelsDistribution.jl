@@ -4,6 +4,10 @@
 
 - none
 
+## v0.14.1
+
+- Fix `variable_mc_capcontrol` keyword arguments
+
 ## v0.14.0
 
 - Drop support for JuMP < v0.22

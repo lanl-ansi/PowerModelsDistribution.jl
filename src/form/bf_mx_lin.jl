@@ -22,13 +22,13 @@ end
 
 
 """
-    variable_mc_capcontrol(pm::AbstractLPUBFModel; nw::Int=nw_id_default, relax::Bool=false)
+    variable_mc_capcontrol(pm::AbstractLPUBFModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
 
 Capacitor switching and relaxed power variables.
 """
-function variable_mc_capcontrol(pm::AbstractLPUBFModel; nw::Int=nw_id_default, relax::Bool=false)
-    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax)
-    variable_mc_capacitor_reactive_power(pm; nw=nw)
+function variable_mc_capcontrol(pm::AbstractLPUBFModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
+    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax, report=report)
+    variable_mc_capacitor_reactive_power(pm; nw=nw, report=report)
 end
 
 

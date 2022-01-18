@@ -79,7 +79,7 @@ end
 
 
 "nothing to do, these models do not have complex voltage variables"
-function variable_mc_capcontrol(pm::AbstractUnbalancedNFAModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_mc_capcontrol(pm::AbstractUnbalancedNFAModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
 end
 
 
