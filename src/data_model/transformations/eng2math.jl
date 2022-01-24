@@ -172,6 +172,29 @@ function transform_data_model(
 end
 
 
+function transform_data_model(::Type{MathematicalModel}, eng::EngineeringModel)::MathematicalDataModel
+    math = MathematicalDataModel()
+
+    for property in propertynames(eng)
+        for (id,obj) in getproperty(eng, property)
+            create_math_object!(obj, math)
+        end
+    end
+end
+
+
+function create_math_object!(obj::MathDataObject, math::MathematicalModel)
+end
+
+function create_math_object(obj::EngBus)::MathBus
+end
+
+
+function transform_data_model(::Type{MathematicalModel}, mn_eng::EngineeringMultinetworkDataModel)::MathematicalMultinetworkDataModel
+    mn_math = MathematicalMultinetworkDataModel()
+end
+
+
 "base function for converting engineering model to mathematical model"
 function _map_eng2math(
     data_eng::Dict{String,<:Any};

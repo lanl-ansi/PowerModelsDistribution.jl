@@ -60,10 +60,12 @@ module PowerModelsDistribution
     include("data_model/eng/node_constructors.jl")
     include("data_model/eng/edge_constructors.jl")
     include("data_model/eng/data_constructors.jl")
+    include("data_model/eng/checks.jl")
 
     include("data_model/math/structs.jl")
     include("data_model/math/node_constructors.jl")
     include("data_model/math/edge_constructors.jl")
+    include("data_model/math/checks.jl")
 
     include("data_model/base/interfaces.jl")
     include("data_model/base/parse.jl")
