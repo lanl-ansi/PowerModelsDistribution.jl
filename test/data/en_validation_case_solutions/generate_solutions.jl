@@ -2,9 +2,20 @@
 This script uses OpenDSSDirect to obtain voltage profiles for the validation test cases,
 and saves them as json files which are used in the unit tests so that these do not have 
 to add OpenDSSDirect as a dependency.
+
+The script assumes pwd() = test/data
+
+If the test case is a multiperiod one, the dir has to be set to the load_profile.csv dir.
 """
 
+using Pkg
+cd("test/data")
+Pkg.activate("./")
+Pkg.add("OpenDSSDirect")
+Pkg.add("JSON")
+
 import OpenDSSDirect; const ODD = OpenDSSDirect
+using JSON
 
 # relative path to data and solution folders
 data_dir = "en_validation_case_data"
@@ -53,5 +64,4 @@ for case in cases
         end
     end
 end
-
 

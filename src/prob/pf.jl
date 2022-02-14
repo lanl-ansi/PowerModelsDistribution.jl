@@ -269,7 +269,7 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
     for (comp_type, comp_interface) in _CPF_COMPONENT_INTERFACES
         for (id, comp) in data_math[comp_type]
             if comp[comp_status_prop[comp_type]]==1
-                (bts, nr_vns, y_prim, cc) = comp_interface(comp, v_start)
+                (bts, nr_vns, y_prim, cc, ccd) = comp_interface(comp, v_start)
 
                 ungr_btidx  = [ntype[bt]!=GROUNDED for bt in bts]
                 ungr_filter = [ungr_btidx..., fill(true, nr_vns)...]
@@ -278,8 +278,8 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
                 ns = [bts..., vns...]
 
                 push!(ns_yprim, (ns[ungr_filter], y_prim[ungr_filter, ungr_filter]))
-                if cc != nothing
-                    push!(cc_ns_func_pairs, (ns, cc))
+                if cc != nothing && ccd != nothing
+                    push!(cc_ns_func_pairs, (ns, cc, ccd, comp_type, id))
                 end
 
                 virtual_count += nr_vns
@@ -364,6 +364,7 @@ function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:An
     end
 
     sol = Dict{String, Any}()
+    sol["nw"] = Dict{String, Any}()
     time_build = Dict{String, Any}()
     time_solve = Dict{String, Any}()
     time_post = Dict{String, Any}()
@@ -382,7 +383,7 @@ function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:An
 
         time_solve[nw] = @elapsed (Uv, status[nw], its[nw], stat[nw]) = _compute_Uv(pfd, max_iter=max_iter, stat_tol=stat_tol)
 
-        time_post[nw] = @elapsed sol[nw] = build_solution(pfd, Uv)
+        time_post[nw] = @elapsed sol["nw"][nw] = build_solution(pfd, Uv)
     end
 
     res = Dict{String, Any}()
@@ -390,7 +391,7 @@ function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:An
         res["time_build"] = time_build["0"]
         res["time_solve"] = time_solve["0"]
         res["time_post"] = time_post["0"]
-        res["solution"] = sol["0"]
+        res["solution"] = sol["nw"]["0"]
         res["termination_status"] = status["0"]
         res["iterations"] = its["0"]
         res["stationarity"] = stat["0"]
@@ -447,7 +448,7 @@ function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E
 
     for it in 1:max_iter
         Iv = zeros(Complex{Float64}, Nv)
-        for (ns, cc_func) in pfd.cc_ns_func_pairs
+        for (ns, cc_func, ccd_func, comp_type, id) in pfd.cc_ns_func_pairs
             Un = [_get_v(pfd, Uv, n) for n in ns]
             Icc = cc_func(Un)
             for (i,n) in enumerate(ns)
@@ -504,7 +505,7 @@ end
 Builds the solution dict.
 """
 function build_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
-    solution = Dict{String, Any}("bus"=>Dict{String, Any}())
+    solution = Dict{String, Any}("bus"=>Dict{String, Any}(), "load"=>Dict{String, Any}(), "gen"=>Dict{String, Any}())
     for (id, bus) in pfd.data_math["bus"]
         ind = bus["index"]
         solution["bus"][id] = Dict{String, Any}()
@@ -512,7 +513,14 @@ function build_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
         solution["bus"][id]["vm"] = Dict("$t"=>abs.(v[t]) for t in bus["terminals"])
         solution["bus"][id]["va"] = Dict("$t"=>angle.(v[t]) for t in bus["terminals"])
     end
-
+    for (ns, cc_func, ccd_func, comp_type, id) in pfd.cc_ns_func_pairs
+        v_bt = [solution["bus"]["$busid"]["vm"]["$t"] for (busid, t) in sort(ns)]
+        if comp_type == "load"
+            solution["load"][id] = ccd_func(v_bt)
+        elseif comp_type == "gen"
+            solution["gen"][id] = ccd_func(v_bt)
+        end
+    end
     solution["settings"] = deepcopy(pfd.data_math["settings"])
     solution["per_unit"] = deepcopy(pfd.data_math["per_unit"])
 
@@ -537,7 +545,7 @@ function _cpf_branch_interface(branch::Dict{String,<:Any}, v_start::Dict{<:Any,<
     Yto = branch["g_to"]+im*branch["b_to"]
     y_prim = [(Ys.+Yfr) -Ys; -Ys (Ys.+Yto)]
     bts = [[(branch["f_bus"], t) for t in branch["f_connections"]]..., [(branch["t_bus"], t) for t in branch["t_connections"]]...]
-    return  bts, 0, y_prim, nothing
+    return  bts, 0, y_prim, nothing, nothing
 end
 
 
@@ -552,7 +560,7 @@ Shunt component interface outputs shunt primitive Y matrix.
 function _cpf_shunt_interface(shunt::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
     Y = shunt["gs"]+im*shunt["bs"]
     bts = [(shunt["shunt_bus"], t) for t in shunt["connections"]]
-    return  bts, 0, Y, nothing
+    return  bts, 0, Y, nothing, nothing
 end
 
 
@@ -578,7 +586,7 @@ function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,
         npairs_to = [(t_ns[i], t_ns[end]) for i in 1:length(t_ns)-1]
         bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers(ts, npairs_fr, npairs_to)
     end
-    return  bts, nr_vns, Y, nothing
+    return  bts, nr_vns, Y, nothing, nothing
 end
 
 
@@ -645,6 +653,9 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
                 y_prim = [diagm(y) -y; -transpose(y) sum(y)]
             end
             cc_func = nothing
+            ccd_func = function(v_bt)
+                return y_prim * v_bt
+            end
         else
             sd0 = load["pd"]+im*load["qd"]
             c0 = conj.(sd0./vd0)
@@ -658,6 +669,9 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
                     cd_bus = [cd..., -sum(cd)]
                     return -(cd_bus .- y_prim*v_bt)
                 end
+                ccd_func = function(v_bt)
+                    return y_prim * v_bt .+ cc_func(v_bt)
+                end
             elseif load["model"]==CURRENT
                 cc_func = function(v_bt)
                     vd = v_bt[1:end-1].-v_bt[end]
@@ -668,6 +682,9 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
                     cd_bus = [cd..., -sum(cd)]
                     return -(cd_bus .- y_prim*v_bt)
                 end
+                ccd_func = function(v_bt)
+                    return y_prim * v_bt .+ cc_func(v_bt)
+                end
             elseif load["model"]==EXPONENTIAL
                 cc_func = function(v_bt)
                     vd = v_bt[1:end-1].-v_bt[end]
@@ -677,6 +694,9 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
                     cd = conj.(sd./vd)
                     cd_bus = [cd..., -sum(cd)]
                     return -(cd_bus .- y_prim*v_bt)
+                end
+                ccd_func = function(v_bt)
+                    return y_prim * v_bt .+ cc_func(v_bt)
                 end
             end
         end
@@ -689,6 +709,9 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
             y = g+im*b
             y_prim = Md'*diagm(0=>y)*Md
             cc_func = nothing
+            ccd_func = function(v_bt)
+                return y_prim * v_bt
+            end
         else
             sd0 = load["pd"]+im*load["qd"]
             c0 = conj.(sd0./vd0)
@@ -702,6 +725,9 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
                     cd_bus = Md'*cd
                     return -(cd_bus .- y_prim*v_bt)
                 end
+                ccd_func = function(v_bt)
+                    return y_prim * v_bt .+ cc_func(v_bt)
+                end
             elseif load["model"]==CURRENT
                 cc_func = function(v_bt)
                     vd = Md*v_bt
@@ -711,6 +737,9 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
                     cd = conj.(sd./vd)
                     cd_bus = Md'*cd
                     return -(cd_bus .- y_prim*v_bt)
+                end
+                ccd_func = function(v_bt)
+                    return y_prim * v_bt .+ cc_func(v_bt)
                 end
             elseif load["model"]==EXPONENTIAL
                 cc_func = function(v_bt)
@@ -722,11 +751,14 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
                     cd_bus = Md'*cd
                     return -(cd_bus .- y_prim*v_bt)
                 end
+                ccd_func = function(v_bt)
+                    return y_prim * v_bt .+ cc_func(v_bt)
+                end
             end
         end
     end
 
-    return bts, 0, y_prim, cc_func
+    return bts, 0, y_prim, cc_func, ccd_func
 end
 
 
@@ -777,6 +809,10 @@ function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<
                 return -(cd_bus .- y_prim*v_bt)
             end
         end
+        ccd_func = function(v_bt)
+            return y_prim * v_bt .+ cc_func(v_bt)
+        end
+
     elseif conf==DELTA
         Md = [1 -1 0; 0 1 -1; -1 0 1]
         vd0 = Md*v0_bt
@@ -793,9 +829,12 @@ function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<
             cd_bus = Md'*cd
             return -(cd_bus .- y_prim*v_bt)
         end
+        ccd_func = function(v_bt)
+            return y_prim * v_bt .+ cc_func(v_bt)
+        end
     end
 
-    return bts, 0, y_prim, cc_func
+    return bts, 0, y_prim, cc_func, ccd_func
 end
 
 
@@ -812,7 +851,7 @@ function _cpf_switch_interface(switch::Dict{String,<:Any}, v_start::Dict{<:Any,<
     Ys = LinearAlgebra.I(len) .* 1/small_impedance
     y_prim = [Ys -Ys; -Ys Ys]
     bts = [[(switch["f_bus"], t) for t in switch["f_connections"]]..., [(switch["t_bus"], t) for t in switch["t_connections"]]...]
-    return  bts, 0, y_prim, nothing
+    return  bts, 0, y_prim, nothing, nothing
 end
 
 
