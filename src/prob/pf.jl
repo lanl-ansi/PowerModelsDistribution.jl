@@ -516,11 +516,10 @@ function build_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
     end
     for (ns, cc_func, ccd_func, comp_type, id) in pfd.cc_ns_func_pairs
         v_bt = [solution["bus"]["$busid"]["vm"]["$t"] for (busid, t) in sort(ns)]
-        if comp_type == "load"
-            solution["load"][id] = ccd_func(v_bt)
-        elseif comp_type == "gen"
-            solution["gen"][id] = ccd_func(v_bt)
-        end
+        ccd = ccd_func(v_bt)
+        solution[comp_type][id] = Dict{String, Any}()
+        solution[comp_type][id]["ccp"] = real.(ccd)
+        solution[comp_type][id]["ccq"] = real.(ccd)
     end
     solution["settings"] = deepcopy(pfd.data_math["settings"])
     solution["per_unit"] = deepcopy(pfd.data_math["per_unit"])
