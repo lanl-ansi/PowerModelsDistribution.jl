@@ -12,7 +12,7 @@
 # using Test
 
 function vsource_correction!(data_eng)
-    if haskey(data_eng, "multinetwork") && data_eng["multinetwork"]
+    if haskey(data_eng, "multinetwork")# && data_eng["multinetwork"]
         for (n,nw) in data_eng["nw"]
             nw["voltage_source"]["source"]["rs"][4,4] = nw["voltage_source"]["source"]["rs"][1,1]
             nw["voltage_source"]["source"]["rs"][1:3,4] .= nw["voltage_source"]["source"]["rs"][1,2]
@@ -116,8 +116,8 @@ end
 @testset "en pf native opendss validation for multinetwork test case" begin
     case_path = "$data_dir/opendss/case3_balanced.dss"
     case = "case3_balanced"
-    ipopt_solver = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0)
-    case3_balanced = parse_file("data/opendss/case3_balanced.dss")
+    # ipopt_solver = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0)
+    # case3_balanced = parse_file("data/opendss/case3_balanced.dss")
 
     eng_ts = make_multinetwork(case3_balanced)
     vsource_correction!(eng_ts)

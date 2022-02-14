@@ -362,7 +362,7 @@ function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:An
     else
         nw_dm = data_math["nw"]
     end
-
+    
     sol = Dict{String, Any}()
     sol["nw"] = Dict{String, Any}()
     time_build = Dict{String, Any}()
@@ -384,6 +384,7 @@ function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:An
         time_solve[nw] = @elapsed (Uv, status[nw], its[nw], stat[nw]) = _compute_Uv(pfd, max_iter=max_iter, stat_tol=stat_tol)
 
         time_post[nw] = @elapsed sol["nw"][nw] = build_solution(pfd, Uv)
+
     end
 
     res = Dict{String, Any}()
