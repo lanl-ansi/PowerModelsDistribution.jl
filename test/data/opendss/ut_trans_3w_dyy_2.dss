@@ -13,7 +13,7 @@ New Transformer.TX1 windings=3 phases=3 Buses=[1 2 3]
 ~ kVs=[11 4 0.4]
 ~ kVAs=[500 500 500]
 ~ %Rs=[1 0 3]
-~ xhl=5 xht=0 xlt=3
+~ xhl=5 xht=0.1 xlt=3
 ~ %noloadloss=5
 ~ %imag=11
 ~ leadlag=lead

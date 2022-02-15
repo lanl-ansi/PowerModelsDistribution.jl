@@ -692,7 +692,7 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
             y = g+im*b
             if wires == 3
                 y_prim = diagm(y)
-            elseif wires == 4
+            elseif wires == 4 || wires == 2
                 y_prim = [diagm(y) -y; -transpose(y) sum(y)]
             end
             c_nl_func = nothing
@@ -839,7 +839,6 @@ function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<
         c_nl_func = function(v_bt)
             sg = gen["pg"]+im*gen["qg"]
             sd = -sg
-
             if wires == 3
                 vd = v_bt
                 cd = conj.(sd./vd)

@@ -13,7 +13,7 @@ new xfmrcode.tx phases=1
 ~ kvs=[11 4]
 ~ kvas=[500 500]
 ~ xhl=5
-~ leadlag=lead
+// ~ leadlag=lead
 ~ %noloadloss=5
 ~ %imag=11
 ~ wdg=1 %r=1
@@ -24,16 +24,19 @@ new xfmrcode.tx phases=1
 New Transformer.TX1a Buses=[1.1 2.1]
 ~ xfmrcode=tx
 ~ taps=[1.05 0.95]
+~ leadlag=lead
 ~ bank=TX1
 
 New Transformer.TX1b Buses=[1.2 2.2]
 ~ xfmrcode=tx
 ~ taps=[1.02 0.97]
+~ leadlag=lead
 ~ bank=TX1
 
 New Transformer.TX1c Buses=[1.3 2.3]
 ~ xfmrcode=tx
 ~ taps=[1.10 0.90]
+~ leadlag=lead
 ~ bank=TX1
 
 ! Transmission Lines

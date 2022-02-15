@@ -1,15 +1,15 @@
 @info "running explicit neutral power flow tests with native julia power flow solver"
-# using Pkg
-# cd("test")
-# Pkg.activate("./")
+using Pkg
+cd("test")
+Pkg.activate("./")
 # Pkg.add("../#four-wire-native-pf")
 # Pkg.add("Test")
 # Pkg.add("JSON")
 # Pkg.add("Ipopt")
-# using PowerModelsDistribution
-# using JSON
-# using Ipopt
-# using Test
+using PowerModelsDistribution
+using JSON
+using Ipopt
+using Test
 
 function vsource_correction!(data_eng)
     if haskey(data_eng, "multinetwork")# && data_eng["multinetwork"]
@@ -52,8 +52,7 @@ solution_dir = "data/en_validation_case_solutions"
 cases = [x[1:end-4] for x in readdir(data_dir) if endswith(x, ".dss")]
 filter!(e->e≠"test_line_6w", cases)
 
-
-@testset "en pf native opendss validation" begin
+@testset "en pf native opendss validation four wire" begin
 
     for (case_idx,case) in enumerate(cases)
 
@@ -149,4 +148,43 @@ end
     v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd["nw"]["10"], eng_ts["nw"]["10"], data_math["nw"]["10"], verbose=false)
     @test v_maxerr_pu <= 1E-8
 
+end
+
+
+##
+# point to data and solution directory
+data_dir = "data/opendss"
+solution_dir = "data/opendss_solutions"
+# infer cases from files defined in data dir
+cases = [x[1:end-5] for x in readdir(solution_dir) if endswith(x, ".json")]
+
+@testset "en pf native opendss validation three wire" begin
+
+    for (case_idx,case) in enumerate(cases)
+
+        @testset "case $case" begin
+            case = "case3_lm_models"
+            case = "case3_delta_gens"
+            case_path = "$data_dir/$case.dss"
+
+            data_eng = parse_file(case_path, transformations=[transform_loops!])
+            vsource_correction!(data_eng)
+
+            data_math = transform_data_model(data_eng;kron_reduce=false)
+
+            res = compute_pf(data_math)
+
+            # obtain solution from dss
+            sol_dss = open("$solution_dir/$case.json", "r") do f
+                JSON.parse(f)
+            end
+
+            sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
+            @test res["termination_status"]==CONVERGED
+
+            v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose=false)
+            @test v_maxerr_pu <= 1E-8
+
+        end
+    end
 end
