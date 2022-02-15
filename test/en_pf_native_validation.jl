@@ -39,6 +39,7 @@ function multinetwork_data_math_correction!(data_math::Dict{String, Any})
     for (nw, dm) in data_math["nw"]
         dm["data_model"] = MATHEMATICAL
         dm["map"] = data_math["map"]
+        dm["bus_lookup"] = data_math["bus_lookup"]
     end
     return nothing
 end
@@ -144,7 +145,7 @@ end
     
     sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
     
-    data_math["nw"]["10"]["bus_lookup"] = data_math["bus_lookup"]["10"]
+    # data_math["nw"]["10"]["bus_lookup"] = data_math["bus_lookup"]["10"]
     v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd["nw"]["10"], eng_ts["nw"]["10"], data_math["nw"]["10"], verbose=false)
     @test v_maxerr_pu <= 1E-8
 

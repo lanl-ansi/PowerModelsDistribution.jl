@@ -269,7 +269,7 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
     for (comp_type, comp_interface) in _CPF_COMPONENT_INTERFACES
         for (id, comp) in data_math[comp_type]
             if comp[comp_status_prop[comp_type]]==1
-                (bts, nr_vns, y_prim, cc, ccd) = comp_interface(comp, v_start)
+                (bts, nr_vns, y_prim, c_nl, c_tots) = comp_interface(comp, v_start)
 
                 ungr_btidx  = [ntype[bt]!=GROUNDED for bt in bts]
                 ungr_filter = [ungr_btidx..., fill(true, nr_vns)...]
@@ -278,8 +278,8 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
                 ns = [bts..., vns...]
 
                 push!(ns_yprim, (ns[ungr_filter], y_prim[ungr_filter, ungr_filter]))
-                if cc != nothing && ccd != nothing
-                    push!(cc_ns_func_pairs, (ns, cc, ccd, comp_type, id))
+                if c_nl != nothing && c_tots != nothing
+                    push!(cc_ns_func_pairs, (ns, c_nl, c_tots, comp_type, id))
                 end
 
                 virtual_count += nr_vns
@@ -353,6 +353,15 @@ end
       stat_tol::Float,
       verbose::Bool
     )
+    abbreviations:
+    - ntype: node type (variable, fixed, grounded, virtual)
+    - bts: bus-terminals for the component
+    - ns: nodes
+    - vns: virtual nodes 
+    - nr_vns: number of virtual nodes
+    - y_prim: primitive admittance matrix for the component
+    - c_nl_func: nonlinear compensation current function handle for the component
+    - c_tots_func: total current function handle for the component
 
 Computes native power flow and outputs the result dict.
 """
@@ -449,9 +458,9 @@ function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E
 
     for it in 1:max_iter
         Iv = zeros(Complex{Float64}, Nv)
-        for (ns, cc_func, ccd_func, comp_type, id) in pfd.cc_ns_func_pairs
+        for (ns, c_nl_func, c_tots_func, comp_type, id) in pfd.cc_ns_func_pairs
             Un = [_get_v(pfd, Uv, n) for n in ns]
-            Icc = cc_func(Un)
+            Icc = c_nl_func(Un)
             for (i,n) in enumerate(ns)
                 if pfd.ntype[n]==VARIABLE
                     Iv[pfd.vnode_to_idx[n]] += Icc[i]
@@ -514,12 +523,34 @@ function build_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
         solution["bus"][id]["vm"] = Dict("$t"=>abs.(v[t]) for t in bus["terminals"])
         solution["bus"][id]["va"] = Dict("$t"=>angle.(v[t]) for t in bus["terminals"])
     end
-    for (ns, cc_func, ccd_func, comp_type, id) in pfd.cc_ns_func_pairs
+    for (ns, c_nl_func, c_tots_func, comp_type, id) in pfd.cc_ns_func_pairs
         v_bt = [solution["bus"]["$busid"]["vm"]["$t"] for (busid, t) in sort(ns)]
-        ccd = ccd_func(v_bt)
-        solution[comp_type][id] = Dict{String, Any}()
-        solution[comp_type][id]["ccp"] = real.(ccd)
-        solution[comp_type][id]["ccq"] = real.(ccd)
+        c_tots = c_tots_func(v_bt)
+        if comp_type == "gen"
+            solution[comp_type][id] = Dict{String, Any}()
+            solution[comp_type][id]["cgr"] = real.(c_tots)
+            solution[comp_type][id]["cgi"] = real.(c_tots)
+        elseif comp_type == "load"
+            solution[comp_type][id] = Dict{String, Any}()
+            solution[comp_type][id]["cdr"] = real.(c_tots)
+            solution[comp_type][id]["cdi"] = real.(c_tots)
+        elseif comp_type == "branch"
+            solution[comp_type][id] = Dict{String, Any}()
+            solution[comp_type][id]["cr"] = real.(c_tots)
+            solution[comp_type][id]["ci"] = real.(c_tots)
+        elseif comp_type == "shunt"
+            solution[comp_type][id] = Dict{String, Any}()
+            solution[comp_type][id]["cshr"] = real.(c_tots)  #TODO
+            solution[comp_type][id]["cshi"] = real.(c_tots)  #TODO
+        elseif comp_type == "switch"
+            solution[comp_type][id] = Dict{String, Any}()
+            solution[comp_type][id]["cswr"] = real.(c_tots)  #TODO
+            solution[comp_type][id]["cswi"] = real.(c_tots)  #TODO
+        elseif comp_type == "transformer"
+            solution[comp_type][id] = Dict{String, Any}()
+            solution[comp_type][id]["ctrr"] = real.(c_tots)  #TODO
+            solution[comp_type][id]["ctri"] = real.(c_tots)  #TODO
+        end
     end
     solution["settings"] = deepcopy(pfd.data_math["settings"])
     solution["per_unit"] = deepcopy(pfd.data_math["per_unit"])
@@ -545,7 +576,11 @@ function _cpf_branch_interface(branch::Dict{String,<:Any}, v_start::Dict{<:Any,<
     Yto = branch["g_to"]+im*branch["b_to"]
     y_prim = [(Ys.+Yfr) -Ys; -Ys (Ys.+Yto)]
     bts = [[(branch["f_bus"], t) for t in branch["f_connections"]]..., [(branch["t_bus"], t) for t in branch["t_connections"]]...]
-    return  bts, 0, y_prim, nothing, nothing
+    # v_bt = [v_start[bt] for bt in bts]
+    c_tots_func = function(v_bt)
+        return y_prim * v_bt
+    end
+    return  bts, 0, y_prim, nothing, c_tots_func
 end
 
 
@@ -560,7 +595,11 @@ Shunt component interface outputs shunt primitive Y matrix.
 function _cpf_shunt_interface(shunt::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
     Y = shunt["gs"]+im*shunt["bs"]
     bts = [(shunt["shunt_bus"], t) for t in shunt["connections"]]
-    return  bts, 0, Y, nothing, nothing
+    # v_bt = [v_start[bt] for bt in bts]
+    c_tots_func = function(v_bt)
+        return Y * v_bt
+    end
+    return  bts, 0, Y, nothing, c_tots_func
 end
 
 
@@ -586,7 +625,11 @@ function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,
         npairs_to = [(t_ns[i], t_ns[end]) for i in 1:length(t_ns)-1]
         bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers(ts, npairs_fr, npairs_to)
     end
-    return  bts, nr_vns, Y, nothing, nothing
+    # v_bt = [v_start[bt] for bt in bts]
+    c_tots_func = function(v_bt)
+        return Y * v_bt
+    end
+    return  bts, nr_vns, Y, nothing, c_tots_func
 end
 
 
@@ -652,8 +695,8 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
             elseif wires == 4
                 y_prim = [diagm(y) -y; -transpose(y) sum(y)]
             end
-            cc_func = nothing
-            ccd_func = function(v_bt)
+            c_nl_func = nothing
+            c_tots_func = function(v_bt)
                 return y_prim * v_bt
             end
         else
@@ -662,18 +705,18 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
             y0 = c0./vd0
             y_prim = [diagm(y0) -y0; -transpose(y0) sum(y0)]
             if load["model"]==POWER
-                cc_func = function(v_bt)
+                c_nl_func = function(v_bt)
                     sd = load["pd"]+im*load["qd"]
                     vd = v_bt[1:end-1].-v_bt[end]
                     cd = conj.(sd./vd)
                     cd_bus = [cd..., -sum(cd)]
                     return -(cd_bus .- y_prim*v_bt)
                 end
-                ccd_func = function(v_bt)
-                    return y_prim * v_bt .+ cc_func(v_bt)
+                c_tots_func = function(v_bt)
+                    return y_prim * v_bt .+ c_nl_func(v_bt)
                 end
             elseif load["model"]==CURRENT
-                cc_func = function(v_bt)
+                c_nl_func = function(v_bt)
                     vd = v_bt[1:end-1].-v_bt[end]
                     pd = load["pd"].*(abs.(vd)./load["vnom_kv"])
                     qd = load["qd"].*(abs.(vd)./load["vnom_kv"])
@@ -682,11 +725,11 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
                     cd_bus = [cd..., -sum(cd)]
                     return -(cd_bus .- y_prim*v_bt)
                 end
-                ccd_func = function(v_bt)
-                    return y_prim * v_bt .+ cc_func(v_bt)
+                c_tots_func = function(v_bt)
+                    return y_prim * v_bt .+ c_nl_func(v_bt)
                 end
             elseif load["model"]==EXPONENTIAL
-                cc_func = function(v_bt)
+                c_nl_func = function(v_bt)
                     vd = v_bt[1:end-1].-v_bt[end]
                     pd = load["pd"].*(abs.(vd)./load["vnom_kv"]).^load["alpha"]
                     qd = load["qd"].*(abs.(vd)./load["vnom_kv"]).^load["beta"]
@@ -695,8 +738,8 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
                     cd_bus = [cd..., -sum(cd)]
                     return -(cd_bus .- y_prim*v_bt)
                 end
-                ccd_func = function(v_bt)
-                    return y_prim * v_bt .+ cc_func(v_bt)
+                c_tots_func = function(v_bt)
+                    return y_prim * v_bt .+ c_nl_func(v_bt)
                 end
             end
         end
@@ -708,8 +751,8 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
             b = -load["qd"]./load["vnom_kv"]^2
             y = g+im*b
             y_prim = Md'*diagm(0=>y)*Md
-            cc_func = nothing
-            ccd_func = function(v_bt)
+            c_nl_func = nothing
+            c_tots_func = function(v_bt)
                 return y_prim * v_bt
             end
         else
@@ -718,18 +761,18 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
             y0 = c0./vd0
             y_prim = Md'*diagm(0=>y0)*Md
             if load["model"]==POWER
-                cc_func = function(v_bt)
+                c_nl_func = function(v_bt)
                     sd = load["pd"]+im*load["qd"]
                     vd = Md*v_bt
                     cd = conj.(sd./vd)
                     cd_bus = Md'*cd
                     return -(cd_bus .- y_prim*v_bt)
                 end
-                ccd_func = function(v_bt)
-                    return y_prim * v_bt .+ cc_func(v_bt)
+                c_tots_func = function(v_bt)
+                    return y_prim * v_bt .+ c_nl_func(v_bt)
                 end
             elseif load["model"]==CURRENT
-                cc_func = function(v_bt)
+                c_nl_func = function(v_bt)
                     vd = Md*v_bt
                     pd = load["pd"].*(abs.(vd)./load["vnom_kv"])
                     qd = load["qd"].*(abs.(vd)./load["vnom_kv"])
@@ -738,11 +781,11 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
                     cd_bus = Md'*cd
                     return -(cd_bus .- y_prim*v_bt)
                 end
-                ccd_func = function(v_bt)
-                    return y_prim * v_bt .+ cc_func(v_bt)
+                c_tots_func = function(v_bt)
+                    return y_prim * v_bt .+ c_nl_func(v_bt)
                 end
             elseif load["model"]==EXPONENTIAL
-                cc_func = function(v_bt)
+                c_nl_func = function(v_bt)
                     vd = Md*v_bt
                     pd = load["pd"].*(abs.(vd)./load["vnom_kv"]).^load["alpha"]
                     qd = load["qd"].*(abs.(vd)./load["vnom_kv"]).^load["beta"]
@@ -751,14 +794,14 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
                     cd_bus = Md'*cd
                     return -(cd_bus .- y_prim*v_bt)
                 end
-                ccd_func = function(v_bt)
-                    return y_prim * v_bt .+ cc_func(v_bt)
+                c_tots_func = function(v_bt)
+                    return y_prim * v_bt .+ c_nl_func(v_bt)
                 end
             end
         end
     end
 
-    return bts, 0, y_prim, cc_func, ccd_func
+    return bts, 0, y_prim, c_nl_func, c_tots_func
 end
 
 
@@ -793,7 +836,7 @@ function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<
             y_prim = [diagm(y0) -y0; -transpose(y0) sum(y0)]
         end
         
-        cc_func = function(v_bt)
+        c_nl_func = function(v_bt)
             sg = gen["pg"]+im*gen["qg"]
             sd = -sg
 
@@ -809,8 +852,8 @@ function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<
                 return -(cd_bus .- y_prim*v_bt)
             end
         end
-        ccd_func = function(v_bt)
-            return y_prim * v_bt .+ cc_func(v_bt)
+        c_tots_func = function(v_bt)
+            return y_prim * v_bt .+ c_nl_func(v_bt)
         end
 
     elseif conf==DELTA
@@ -821,7 +864,7 @@ function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<
         c0 = conj.(sd0./vd0)
         y0 = c0./vd0
         y_prim = Md'*diagm(0=>y0)*Md
-        cc_func = function(v_bt)
+        c_nl_func = function(v_bt)
             sg = gen["pg"]+im*gen["qg"]
             sd = -sg
             vd = Md*v_bt
@@ -829,12 +872,12 @@ function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<
             cd_bus = Md'*cd
             return -(cd_bus .- y_prim*v_bt)
         end
-        ccd_func = function(v_bt)
-            return y_prim * v_bt .+ cc_func(v_bt)
+        c_tots_func = function(v_bt)
+            return y_prim * v_bt .+ c_nl_func(v_bt)
         end
     end
 
-    return bts, 0, y_prim, cc_func, ccd_func
+    return bts, 0, y_prim, c_nl_func, c_tots_func
 end
 
 
@@ -851,7 +894,11 @@ function _cpf_switch_interface(switch::Dict{String,<:Any}, v_start::Dict{<:Any,<
     Ys = LinearAlgebra.I(len) .* 1/small_impedance
     y_prim = [Ys -Ys; -Ys Ys]
     bts = [[(switch["f_bus"], t) for t in switch["f_connections"]]..., [(switch["t_bus"], t) for t in switch["t_connections"]]...]
-    return  bts, 0, y_prim, nothing, nothing
+    # v0_bt = [v_start[bt] for bt in bts]
+    c_tots_func = function(v_bt)
+        return y_prim * v_bt
+    end
+    return  bts, 0, y_prim, nothing, c_tots_func
 end
 
 
