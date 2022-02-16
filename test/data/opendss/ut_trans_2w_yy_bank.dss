@@ -13,7 +13,6 @@ new xfmrcode.tx phases=1
 ~ kvs=[11 4]
 ~ kvas=[500 500]
 ~ xhl=5
-// ~ leadlag=lead
 ~ %noloadloss=5
 ~ %imag=11
 ~ wdg=1 %r=1

@@ -278,7 +278,7 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
                 ns = [bts..., vns...]
 
                 push!(ns_yprim, (ns[ungr_filter], y_prim[ungr_filter, ungr_filter]))
-                if c_nl != nothing && c_tots != nothing
+                if c_nl != nothing
                     push!(cc_ns_func_pairs, (ns, c_nl, c_tots, comp_type, id))
                 end
 
@@ -540,16 +540,16 @@ function build_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
             solution[comp_type][id]["ci"] = real.(c_tots)
         elseif comp_type == "shunt"
             solution[comp_type][id] = Dict{String, Any}()
-            solution[comp_type][id]["cshr"] = real.(c_tots)  #TODO
-            solution[comp_type][id]["cshi"] = real.(c_tots)  #TODO
+            solution[comp_type][id]["cshr"] = real.(c_tots)
+            solution[comp_type][id]["cshi"] = real.(c_tots)
         elseif comp_type == "switch"
             solution[comp_type][id] = Dict{String, Any}()
-            solution[comp_type][id]["cswr"] = real.(c_tots)  #TODO
-            solution[comp_type][id]["cswi"] = real.(c_tots)  #TODO
+            solution[comp_type][id]["cswr"] = real.(c_tots)
+            solution[comp_type][id]["cswi"] = real.(c_tots)
         elseif comp_type == "transformer"
             solution[comp_type][id] = Dict{String, Any}()
-            solution[comp_type][id]["ctrr"] = real.(c_tots)  #TODO
-            solution[comp_type][id]["ctri"] = real.(c_tots)  #TODO
+            solution[comp_type][id]["ctrr"] = real.(c_tots)
+            solution[comp_type][id]["ctri"] = real.(c_tots)
         end
     end
     solution["settings"] = deepcopy(pfd.data_math["settings"])
@@ -595,7 +595,6 @@ Shunt component interface outputs shunt primitive Y matrix.
 function _cpf_shunt_interface(shunt::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
     Y = shunt["gs"]+im*shunt["bs"]
     bts = [(shunt["shunt_bus"], t) for t in shunt["connections"]]
-    # v_bt = [v_start[bt] for bt in bts]
     c_tots_func = function(v_bt)
         return Y * v_bt
     end
@@ -625,7 +624,6 @@ function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,
         npairs_to = [(t_ns[i], t_ns[end]) for i in 1:length(t_ns)-1]
         bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers(ts, npairs_fr, npairs_to)
     end
-    # v_bt = [v_start[bt] for bt in bts]
     c_tots_func = function(v_bt)
         return Y * v_bt
     end
@@ -730,7 +728,7 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
                 end
             elseif load["model"]==EXPONENTIAL
                 c_nl_func = function(v_bt)
-                    vd = v_bt[1:end-1].-v_bt[end]
+                    vd = v_bt[1:end-1].-v_bt[end]  # Is this correct?
                     pd = load["pd"].*(abs.(vd)./load["vnom_kv"]).^load["alpha"]
                     qd = load["qd"].*(abs.(vd)./load["vnom_kv"]).^load["beta"]
                     sd = pd+im*qd
@@ -893,7 +891,6 @@ function _cpf_switch_interface(switch::Dict{String,<:Any}, v_start::Dict{<:Any,<
     Ys = LinearAlgebra.I(len) .* 1/small_impedance
     y_prim = [Ys -Ys; -Ys Ys]
     bts = [[(switch["f_bus"], t) for t in switch["f_connections"]]..., [(switch["t_bus"], t) for t in switch["t_connections"]]...]
-    # v0_bt = [v_start[bt] for bt in bts]
     c_tots_func = function(v_bt)
         return y_prim * v_bt
     end

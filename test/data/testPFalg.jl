@@ -1,7 +1,7 @@
 using Pkg
-Pkg.activate("./")
+# Pkg.activate("./")
 
-# Pkg.activate("./examples")
+Pkg.activate("./test")
 # Pkg.develop("./")
 using PowerModelsDistribution
 using OpenDSSDirect
@@ -21,9 +21,12 @@ function run_dss(filename)
 end
 
 
-###
-path = joinpath(dirname(pathof(PowerModelsDistribution)), "..")
+##
+# path = joinpath(dirname(pathof(PowerModelsDistribution)), "..")
+path = pwd()
 cd(path)
+
+case_file = joinpath(pwd(), "test/data/en_validation_case_data/test_load_3ph_wye_exp.dss")  
 
 
 ### fix the issue with these cases          transformations=[transform_loops!]      causes inexactness
@@ -38,24 +41,24 @@ cd(path)
 # case_file = joinpath(pwd(), "test/data/opendss/case3_balanced_pv.dss")                # not exact
 # case_file = joinpath(pwd(), "test/data/opendss/case3_balanced_switch.dss")            # ✓ slight difference: switch br_r and br_x are not parsed and used
 # case_file = joinpath(pwd(), "test/data/opendss/case3_balanced.dss")                   # ✓ without load_profile (ERRORED: load_profile.csv path updated)
-case_file = joinpath(pwd(), "test/data/opendss/case3_delta_gens.dss")                 # ✓
+# case_file = joinpath(pwd(), "test/data/opendss/case3_delta_gens.dss")                 # ✓
 # case_file = joinpath(pwd(), "test/data/opendss/case3_lm_1230.dss")                    # ✓  un-interesting?
 # case_file = joinpath(pwd(), "test/data/opendss/case3_lm_models.dss")                  # ✓  dss file updated
 # case_file = joinpath(pwd(), "test/data/opendss/case3_unbalanced_1phase-pv.dss")       # ✓
 # case_file = joinpath(pwd(), "test/data/opendss/case3_unbalanced_assym_swap.dss")      # ✓
-# case_file = joinpath(pwd(), "test/data/opendss/case3_unbalanced_delta_loads.dss")     # not exact:  each arm of delta load is a different load model: compute_pf does not support this
+# case_file = joinpath(pwd(), "test/data/opendss/case3_unbalanced_delta_loads.dss")     # throw error in unittest: not exact:  each arm of delta load is a different load model: compute_pf does not support this
 # case_file = joinpath(pwd(), "test/data/opendss/case3_unbalanced_missingedge.dss")     # ✓
 # case_file = joinpath(pwd(), "test/data/opendss/case3_unbalanced_switch.dss")          # ✓ slight difference:  switches with same length as lines, but impedance is not considered
 # case_file = joinpath(pwd(), "test/data/opendss/case3_unbalanced.dss")                 # ✓
 # case_file = joinpath(pwd(), "test/data/opendss/case4_phase_drop.dss")                 # ✓
 # case_file = joinpath(pwd(), "test/data/opendss/case5_phase_drop.dss")                 # ✓
 
-# case_file = joinpath(pwd(), "test/data/opendss/IEEE13_CapControl.dss")                # ? error
+# case_file = joinpath(pwd(), "test/data/opendss/IEEE13_CapControl.dss")                # ? error in opendss
 # case_file = joinpath(pwd(), "test/data/opendss/IEEE13_RegControl.dss")                # ? not exact
 # case_file = joinpath(pwd(), "test/data/opendss/IEEE13_test_controls.dss")             # ? not exact
 
 # case_file = joinpath(pwd(), "test/data/opendss/loadparser_error.dss")                 # ? error: I think errors are expected for each load in this case
-# case_file = joinpath(pwd(), "test/data/opendss/loadparser_warn_model.dss")            # ? opendss does not run
+# case_file = joinpath(pwd(), "test/data/opendss/loadparser_warn_model.dss")            # ? error in opendss
 # case_file = joinpath(pwd(), "test/data/opendss/test2_master.dss");                    # ? too many errors
 
 # case_file = joinpath(pwd(), "test/data/opendss/ut_trans_2w_dy_lag.dss")               # ✓ slight difference
@@ -64,7 +67,7 @@ case_file = joinpath(pwd(), "test/data/opendss/case3_delta_gens.dss")           
 # case_file = joinpath(pwd(), "test/data/opendss/ut_trans_2w_yy_bank.dss")              # ✓ not exact : (ERRORED: xmfr leadlag not supported --> spread into transformers leadlag 
 # case_file = joinpath(pwd(), "test/data/opendss/ut_trans_2w_yy_oltc.dss")              # ✓
 # case_file = joinpath(pwd(), "test/data/opendss/ut_trans_2w_yy.dss")                   # ✓
-case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_1.dss")                # ✓ slight difference
+# case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_1.dss")                # ✓ slight difference
 # case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_2.dss")                # ✓ slight difference: (ERRORED: Zero Reactance specified for Transformer.tx1 --> fixed: ODSS cannot handle xht=0 --> xht=0.1)
 # case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_3_loadloss.dss")       # ✓ slight difference: (ERRORED: Zero Reactance specified for Transformer.tx1 -->  fixed: xhl=0 xht=0 xlt=0 --> xhl=0.1 xht=0.1 xlt=0.1)
 # case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_3.dss")                # ✓ slight difference: (ERRORED: Zero Reactance specified for Transformer.tx1 -->  fixed: xhl=0 xht=0 xlt=0 --> xhl=0.1 xht=0.1 xlt=0.1)
@@ -74,7 +77,7 @@ case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_1.dss")          
 
 run_dss(open(f->read(f, String), case_file))
 
-###
+##
 eng =_PMD.parse_file(case_file, transformations=[transform_loops!])
 
 
