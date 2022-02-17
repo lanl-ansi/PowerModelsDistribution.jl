@@ -683,16 +683,20 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
 
     conf = load["configuration"]
 
-    if conf==WYE || length(v0_bt)==2
-        vd0 = v0_bt[1:end-1] .- v0_bt[end]
+    if conf==WYE
+        if explicit_neutral
+            vd0 = v0_bt[1:end-1] .- v0_bt[end]
+        else
+            vd0 = v0_bt
+        end
         if load["model"]==IMPEDANCE
             g =  load["pd"]./load["vnom_kv"]^2
             b = -load["qd"]./load["vnom_kv"]^2
             y = g+im*b
-            if wires == 3
-                y_prim = diagm(y)
-            elseif wires == 4 || wires == 2
+            if explicit_neutral
                 y_prim = [diagm(y) -y; -transpose(y) sum(y)]
+            else
+                y_prim = diagm(y)
             end
             c_nl_func = nothing
             c_tots_func = function(v_bt)
@@ -702,40 +706,71 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
             sd0 = load["pd"]+im*load["qd"]
             c0 = conj.(sd0./vd0)
             y0 = c0./vd0
-            y_prim = [diagm(y0) -y0; -transpose(y0) sum(y0)]
+            if explicit_neutral
+                y_prim = [diagm(y0) -y0; -transpose(y0) sum(y0)]
+            else
+                y_prim = diagm(y0)
+            end
             if load["model"]==POWER
                 c_nl_func = function(v_bt)
                     sd = load["pd"]+im*load["qd"]
-                    vd = v_bt[1:end-1].-v_bt[end]
-                    cd = conj.(sd./vd)
-                    cd_bus = [cd..., -sum(cd)]
-                    return -(cd_bus .- y_prim*v_bt)
+                    if explicit_neutral
+                        vd = v_bt[1:end-1].-v_bt[end]
+                        cd = conj.(sd./vd)
+                        cd_bus = [cd..., -sum(cd)]
+                        return -(cd_bus .- y_prim*v_bt)
+                    else
+                        vd = v_bt
+                        cd = conj.(sd./vd)
+                        cd_bus = cd
+                        return -(cd_bus .- y_prim*v_bt)
+                    end
                 end
                 c_tots_func = function(v_bt)
                     return y_prim * v_bt .+ c_nl_func(v_bt)
                 end
             elseif load["model"]==CURRENT
                 c_nl_func = function(v_bt)
-                    vd = v_bt[1:end-1].-v_bt[end]
-                    pd = load["pd"].*(abs.(vd)./load["vnom_kv"])
-                    qd = load["qd"].*(abs.(vd)./load["vnom_kv"])
-                    sd = pd+im*qd
-                    cd = conj.(sd./vd)
-                    cd_bus = [cd..., -sum(cd)]
-                    return -(cd_bus .- y_prim*v_bt)
+                    if explicit_neutral
+                        vd = v_bt[1:end-1].-v_bt[end]
+                        pd = load["pd"].*(abs.(vd)./load["vnom_kv"])
+                        qd = load["qd"].*(abs.(vd)./load["vnom_kv"])
+                        sd = pd+im*qd
+                        cd = conj.(sd./vd)
+                        cd_bus = [cd..., -sum(cd)]
+                        return -(cd_bus .- y_prim*v_bt)
+                    else
+                        vd = v_bt
+                        pd = load["pd"].*(abs.(vd)./load["vnom_kv"])
+                        qd = load["qd"].*(abs.(vd)./load["vnom_kv"])
+                        sd = pd+im*qd
+                        cd = conj.(sd./vd)
+                        cd_bus = cd
+                        return -(cd_bus .- y_prim*v_bt)
+                    end
                 end
                 c_tots_func = function(v_bt)
                     return y_prim * v_bt .+ c_nl_func(v_bt)
                 end
             elseif load["model"]==EXPONENTIAL
                 c_nl_func = function(v_bt)
-                    vd = v_bt[1:end-1].-v_bt[end]  # Is this correct?
-                    pd = load["pd"].*(abs.(vd)./load["vnom_kv"]).^load["alpha"]
-                    qd = load["qd"].*(abs.(vd)./load["vnom_kv"]).^load["beta"]
-                    sd = pd+im*qd
-                    cd = conj.(sd./vd)
-                    cd_bus = [cd..., -sum(cd)]
-                    return -(cd_bus .- y_prim*v_bt)
+                    if explicit_neutral
+                        vd = v_bt[1:end-1].-v_bt[end]
+                        pd = load["pd"].*(abs.(vd)./load["vnom_kv"]).^load["alpha"]
+                        qd = load["qd"].*(abs.(vd)./load["vnom_kv"]).^load["beta"]
+                        sd = pd+im*qd
+                        cd = conj.(sd./vd)
+                        cd_bus = [cd..., -sum(cd)]
+                        return -(cd_bus .- y_prim*v_bt)
+                    else
+                        vd = v_bt
+                        pd = load["pd"].*(abs.(vd)./load["vnom_kv"]).^load["alpha"]
+                        qd = load["qd"].*(abs.(vd)./load["vnom_kv"]).^load["beta"]
+                        sd = pd+im*qd
+                        cd = conj.(sd./vd)
+                        cd_bus = cd
+                        return -(cd_bus .- y_prim*v_bt)
+                    end
                 end
                 c_tots_func = function(v_bt)
                     return y_prim * v_bt .+ c_nl_func(v_bt)
@@ -743,7 +778,11 @@ function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any
             end
         end
     elseif conf==DELTA
-        Md = [1 -1 0; 0 1 -1; -1 0 1]
+        if length(v0_bt) == 3
+            Md = [1 -1 0; 0 1 -1; -1 0 1]
+        elseif length(v0_bt) == 2
+            Md = [1 -1]
+        end
         vd0 = Md*v0_bt
         if load["model"]==IMPEDANCE
             g =  load["pd"]./load["vnom_kv"]^2
@@ -819,35 +858,35 @@ function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<
 
     conf = gen["configuration"]
 
-    if conf==WYE || length(v0_bt)==2
-        if wires == 3
-            vd0 = v0_bt
-        elseif wires == 4 || wires == 2
+    if conf==WYE
+        if explicit_neutral
             vd0 = v0_bt[1:end-1] .- v0_bt[end]
+        else
+            vd0 = v0_bt
         end
         sg0 = gen["pg"]+im*gen["qg"]
         sd0 = -sg0
         c0 = conj.(sd0./vd0)
         y0 = c0./vd0
-        if wires == 3
-            y_prim = diagm(y0)
-        elseif wires == 4 || wires == 2
+        if explicit_neutral
             y_prim = [diagm(y0) -y0; -transpose(y0) sum(y0)]
+        else
+            y_prim = diagm(y0)
         end
         
         c_nl_func = function(v_bt)
             sg = gen["pg"]+im*gen["qg"]
             sd = -sg
-            if wires == 3
-                vd = v_bt
-                cd = conj.(sd./vd)
-                cd_bus = cd
-                return -(cd_bus .- y_prim*v_bt)
-            elseif wires == 4 || wires == 2
+            if explicit_neutral
                 vd = v_bt[1:end-1].-v_bt[end]
                 cd = conj.(sd./vd)
                 cd_bus = [cd..., -sum(cd)]
                 return -(cd_bus .- y_prim*v_bt)
+            else
+                vd = v_bt
+                cd = conj.(sd./vd)
+                cd_bus = cd
+                return -(cd_bus .- y_prim*v_bt)                
             end
         end
         c_tots_func = function(v_bt)
@@ -855,7 +894,11 @@ function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<
         end
 
     elseif conf==DELTA
-        Md = [1 -1 0; 0 1 -1; -1 0 1]
+        if length(v0_bt) == 3
+            Md = [1 -1 0; 0 1 -1; -1 0 1]
+        elseif length(v0_bt) == 2
+            Md = [1 -1]
+        end
         vd0 = Md*v0_bt
         sg0 = gen["pg"]+im*gen["qg"]
         sd0 = -sg0

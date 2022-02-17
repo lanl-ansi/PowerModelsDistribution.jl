@@ -58,14 +58,14 @@ cases_diff = setdiff(readdir(data_dir), cases.*".dss")
 for case in cases
     sol_path = "$solution_dir/$case.json"
     # only create solutions that are not present yet
-    # if !isfile(sol_path)
+    if !isfile(sol_path)
         data_path = "$data_dir/$case.dss"
         sol = get_soldss_opendssdirect(data_path, tolerance=1E-10)
         sol["dss_file"] = "$case.dss"
         open("$solution_dir/$case.json", "w") do f
             JSON.print(f, sol, 4)
         end
-    # end
+    end
 end
 
 
