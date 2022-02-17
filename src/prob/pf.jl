@@ -366,6 +366,9 @@ end
 Computes native power flow and outputs the result dict.
 """
 function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:Any},Missing}=missing, explicit_neutral::Bool=false, max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
+    br_size = size(data_math["branch"]["1"]["br_r"],1)
+    @assert br_size <= 4  "Line impedance matrix should be up to 4x4, but is $(br_size)x$(br_size)"
+    
     if !ismultinetwork(data_math)
         nw_dm = Dict("0"=>data_math)
     else
@@ -570,8 +573,6 @@ end
 Branch component interface outputs branch primitive Y matrix.
 """
 function _cpf_branch_interface(branch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
-    br_size = size(branch["br_r"],1)
-    @assert br_size <= 4  "Line impedance matrix should be up to 4x4, but is $(br_size)x$(br_size)"
     Ys = inv(branch["br_r"]+im*branch["br_x"])
     Yfr = branch["g_fr"]+im*branch["b_fr"]
     Yto = branch["g_to"]+im*branch["b_to"]
