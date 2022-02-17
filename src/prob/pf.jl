@@ -366,16 +366,25 @@ end
 Computes native power flow and outputs the result dict.
 """
 function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:Any},Missing}=missing, explicit_neutral::Bool=false, max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
-    br_size = size(data_math["branch"]["1"]["br_r"],1)
-    @assert br_size <= 4  "Line impedance matrix should be up to 4x4, but is $(br_size)x$(br_size)"
     
+    br_sizes = []
     if !ismultinetwork(data_math)
         nw_dm = Dict("0"=>data_math)
+        for (b, branch) in data_math["branch"]
+            append!(br_sizes, size(branch["br_r"],1))
+        end
     else
         nw_dm = data_math["nw"]
         @warn("The native power flow solver may not be accurate to the tolerance of 1E-6")
+        for (b, branch) in data_math["nw"]["1"]["branch"]
+            append!(br_sizes, size(branch["br_r"],1))
+        end
     end
     
+    if maximum(br_sizes) > 4
+        @warn("Line impedance matrices should be up to 4x4, but go up to $(maximum(br_sizes))x$(maximum(br_sizes))")
+    end
+
     sol = Dict{String, Any}()
     sol["nw"] = Dict{String, Any}()
     time_build = Dict{String, Any}()

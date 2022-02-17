@@ -91,6 +91,7 @@ end
 
 
 @testset "en pf native opendss validation for 6 wire test case" begin
+    # This test is to throw the warning for the >4 wire network
     case_path = "$data_dir/test_line_6w.dss"
 
     data_eng = parse_file(case_path, transformations=[transform_loops!])
@@ -98,12 +99,7 @@ end
 
     data_math = transform_data_model(data_eng;kron_reduce=false)
 
-    try
-        res = compute_pf(data_math; explicit_neutral=true)
-        @test false
-    catch Error
-        @test true
-    end
+    res = compute_pf(data_math; max_iter=1, explicit_neutral=true)
 
 end
 
