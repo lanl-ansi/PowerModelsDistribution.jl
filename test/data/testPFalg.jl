@@ -53,25 +53,23 @@ case_file = joinpath(pwd(), "test/data/en_validation_case_data/test_load_3ph_wye
 # case_file = joinpath(pwd(), "test/data/opendss/case4_phase_drop.dss")                 # ✓
 # case_file = joinpath(pwd(), "test/data/opendss/case5_phase_drop.dss")                 # ✓
 
-# case_file = joinpath(pwd(), "test/data/opendss/IEEE13_CapControl.dss")                # ? error in opendss
-# case_file = joinpath(pwd(), "test/data/opendss/IEEE13_RegControl.dss")                # ? not exact
-# case_file = joinpath(pwd(), "test/data/opendss/IEEE13_test_controls.dss")             # ? not exact
-
-# case_file = joinpath(pwd(), "test/data/opendss/loadparser_error.dss")                 # ? error: I think errors are expected for each load in this case
-# case_file = joinpath(pwd(), "test/data/opendss/loadparser_warn_model.dss")            # ? error in opendss
-# case_file = joinpath(pwd(), "test/data/opendss/test2_master.dss");                    # ? too many errors
-
 # case_file = joinpath(pwd(), "test/data/opendss/ut_trans_2w_dy_lag.dss")               # ✓ slight difference
 # case_file = joinpath(pwd(), "test/data/opendss/ut_trans_2w_dy_lead_small_series_impedance.dss")  # ✓
 # case_file = joinpath(pwd(), "test/data/opendss/ut_trans_2w_dy_lead.dss")              # ✓ slight difference
-# case_file = joinpath(pwd(), "test/data/opendss/ut_trans_2w_yy_bank.dss")              # ✓ not exact : (ERRORED: xmfr leadlag not supported --> spread into transformers leadlag 
 # case_file = joinpath(pwd(), "test/data/opendss/ut_trans_2w_yy_oltc.dss")              # ✓
 # case_file = joinpath(pwd(), "test/data/opendss/ut_trans_2w_yy.dss")                   # ✓
 # case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_1.dss")                # ✓ slight difference
-# case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_2.dss")                # ✓ slight difference: (ERRORED: Zero Reactance specified for Transformer.tx1 --> fixed: ODSS cannot handle xht=0 --> xht=0.1)
-# case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_3_loadloss.dss")       # ✓ slight difference: (ERRORED: Zero Reactance specified for Transformer.tx1 -->  fixed: xhl=0 xht=0 xlt=0 --> xhl=0.1 xht=0.1 xlt=0.1)
-# case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_3.dss")                # ✓ slight difference: (ERRORED: Zero Reactance specified for Transformer.tx1 -->  fixed: xhl=0 xht=0 xlt=0 --> xhl=0.1 xht=0.1 xlt=0.1)
-# case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_basetest.dss")         # ✓ slight difference: (ERRORED: Zero Reactance specified for Transformer.tx1 -->  fixed: xhl=0 xht=0 xlt=0 --> xhl=0.1 xht=0.1 xlt=0.1)
+
+# case_file = joinpath(pwd(), "test/data/opendss/IEEE13_CapControl.dss")                # ? error in opendss
+# case_file = joinpath(pwd(), "test/data/opendss/IEEE13_RegControl.dss")                # ? not exact
+# case_file = joinpath(pwd(), "test/data/opendss/IEEE13_test_controls.dss")             # ? not exact
+# case_file = joinpath(pwd(), "test/data/opendss/loadparser_error.dss")                 # ? error: I think errors are expected for each load in this case
+# case_file = joinpath(pwd(), "test/data/opendss/loadparser_warn_model.dss")            # ? error in opendss
+# case_file = joinpath(pwd(), "test/data/opendss/test2_master.dss");                    # ? too many errors
+# case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_2.dss")                # ✓ slight difference: (ERRORED: Zero Reactance specified for Transformer.tx1 --> fixed: ODSS cannot handle xht=0 : has to stay the same due to other unit tests
+# case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_3_loadloss.dss")       # ✓ slight difference: (ERRORED: Zero Reactance specified for Transformer.tx1 : has to stay the same due to other unit tests
+# case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_3.dss")                # ✓ slight difference: (ERRORED: Zero Reactance specified for Transformer.tx1 : has to stay the same due to other unit tests
+# case_file = joinpath(pwd(), "test/data/opendss/ut_trans_3w_dyy_basetest.dss")         # ✓ slight difference: (ERRORED: Zero Reactance specified for Transformer.tx1 : has to stay the same due to other unit tests
 # case_file = joinpath(pwd(), "test/data/opendss/virtual_sourcebus.dss")                # ✓ slight difference
 
 

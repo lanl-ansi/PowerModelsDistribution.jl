@@ -49,10 +49,9 @@ end
 
 
 cases = ["case2_diag", "case3_balanced_basefreq", "case3_balanced_cap", "case3_balanced_isc", "case3_balanced_prop-order",
-"case3_delta_gens", "case3_lm_models", "case3_unbalanced_1phase-pv", "case3_unbalanced_assym_swap", "case3_unbalanced_delta_loads", "case3_unbalanced_missingedge", 
+"case3_delta_gens", "case3_lm_models_2", "case3_unbalanced_1phase-pv", "case3_unbalanced_assym_swap", "case3_unbalanced_delta_loads", "case3_unbalanced_missingedge", 
 "case3_unbalanced", "case4_phase_drop", "case5_phase_drop", "ut_trans_2w_dy_lag", "ut_trans_2w_dy_lead_small_series_impedance", "case3_unbalanced_switch",
-"ut_trans_2w_dy_lead", "ut_trans_2w_yy_oltc", "ut_trans_2w_yy", "ut_trans_3w_dyy_1", "ut_trans_3w_dyy_2", 
-"ut_trans_3w_dyy_3_loadloss", "ut_trans_3w_dyy_3"]
+"ut_trans_2w_dy_lead", "ut_trans_2w_yy_oltc", "ut_trans_2w_yy", "ut_trans_3w_dyy_1"]
 
 cases_diff = setdiff(readdir(data_dir), cases.*".dss")
 

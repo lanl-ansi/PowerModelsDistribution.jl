@@ -242,7 +242,7 @@ Constructor for PowerFlowData struct that requires mathematical model and v_star
 
 v_start assigns the initialisation voltages to appropriate bus terminals.
 """
-function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
+function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
     @assert ismath(data_math) "The model is not a mathematical model "
     ntype = Dict{Any, NodeType}()
     for (_, bus) in data_math["bus"]
@@ -269,7 +269,7 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
     for (comp_type, comp_interface) in _CPF_COMPONENT_INTERFACES
         for (id, comp) in data_math[comp_type]
             if comp[comp_status_prop[comp_type]]==1
-                (bts, nr_vns, y_prim, c_nl, c_tots) = comp_interface(comp, v_start)
+                (bts, nr_vns, y_prim, c_nl, c_tots) = comp_interface(comp, v_start, explicit_neutral)
 
                 ungr_btidx  = [ntype[bt]!=GROUNDED for bt in bts]
                 ungr_filter = [ungr_btidx..., fill(true, nr_vns)...]
@@ -365,7 +365,7 @@ end
 
 Computes native power flow and outputs the result dict.
 """
-function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:Any},Missing}=missing, max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
+function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:Any},Missing}=missing, explicit_neutral::Bool=false, max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
     if !ismultinetwork(data_math)
         nw_dm = Dict("0"=>data_math)
     else
@@ -388,13 +388,14 @@ function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:An
             v_start = _bts_to_start_voltage(dm)
         end
 
-        time_build[nw] = @elapsed pfd = PowerFlowData(dm, v_start)
+        time_build[nw] = @elapsed pfd = PowerFlowData(dm, v_start, explicit_neutral)
 
         time_solve[nw] = @elapsed (Uv, status[nw], its[nw], stat[nw]) = _compute_Uv(pfd, max_iter=max_iter, stat_tol=stat_tol)
 
         time_post[nw] = @elapsed sol["nw"][nw] = build_solution(pfd, Uv)
 
     end
+    @show sol
 
     res = Dict{String, Any}()
     if !ismultinetwork(data_math)
@@ -568,7 +569,7 @@ end
 
 Branch component interface outputs branch primitive Y matrix.
 """
-function _cpf_branch_interface(branch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
+function _cpf_branch_interface(branch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
     br_size = size(branch["br_r"],1)
     @assert br_size <= 4  "Line impedance matrix should be up to 4x4, but is $(br_size)x$(br_size)"
     Ys = inv(branch["br_r"]+im*branch["br_x"])
@@ -592,7 +593,7 @@ end
 
 Shunt component interface outputs shunt primitive Y matrix.
 """
-function _cpf_shunt_interface(shunt::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
+function _cpf_shunt_interface(shunt::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
     Y = shunt["gs"]+im*shunt["bs"]
     bts = [(shunt["shunt_bus"], t) for t in shunt["connections"]]
     c_tots_func = function(v_bt)
@@ -610,7 +611,7 @@ end
 
 Transformer component interface outputs transformer primitive Y matrix.
 """
-function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
+function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
     f_ns = [(tr["f_bus"], t) for t in tr["f_connections"]]
     t_ns = [(tr["t_bus"], t) for t in tr["t_connections"]]
     ts = tr["tm_set"]*tr["tm_nom"]*tr["polarity"]
@@ -675,7 +676,7 @@ end
 
 Load component interface outputs load primitive Y matrix.
 """
-function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
+function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
     bts = [(load["load_bus"], t) for t in load["connections"]]
     v0_bt = [v_start[bt] for bt in bts]
     wires = length(bts)
@@ -811,7 +812,7 @@ end
 
 Generator component interface outputs generator primitive Y matrix.
 """
-function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any})
+function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
     bts = [(gen["gen_bus"], t) for t in gen["connections"]]
     wires = length(bts)
     v0_bt = [v_start[bt] for bt in bts]
@@ -886,7 +887,7 @@ end
 
 Branch component interface outputs branch primitive Y matrix.
 """
-function _cpf_switch_interface(switch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}; small_impedance=1E-8)
+function _cpf_switch_interface(switch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool; small_impedance=1E-8)
     len = length(switch["f_connections"])
     Ys = LinearAlgebra.I(len) .* 1/small_impedance
     y_prim = [Ys -Ys; -Ys Ys]
