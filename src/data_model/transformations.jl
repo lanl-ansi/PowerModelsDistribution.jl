@@ -1696,8 +1696,8 @@ function calc_start_voltage(
                 v_to = Array{Union{Complex,Missing}}([v_start[(t_bus, t)] for t in t_conns])
                 # forward propagation
                 if all((!).(ismissing.(v_fr))) && any(ismissing.(v_to))
-                    N = neutral_ids ∈ tr["t_connections"] ? length(v_fr)-1 : length(v_fr)
-                    Mpn = neutral_ids ∈ tr["t_connections"] ? [LinearAlgebra.diagm(0=>ones(N)) fill(-1.0, N, 1)] : LinearAlgebra.diagm(0=>ones(N))
+                    N = length(v_fr)-1
+                    Mpn = [LinearAlgebra.diagm(0=>ones(N)) fill(-1.0, N, 1)]
                     v_fr_pn = Mpn*v_fr
                     if all(ismissing.(v_to))
                         anchor_ind = length(v_to)
@@ -1705,7 +1705,7 @@ function calc_start_voltage(
                     else
                         (anchor_ind, anchor_val) = [(i, v) for (i, v) in enumerate(v_to) if !ismissing(v)][1]
                     end
-                    v_to_prop = neutral_ids ∈ tr["t_connections"] ? inv([Mpn; [i==anchor_ind ? 1 : 0 for i in 1:N+1]'])*[v_fr_pn./scale..., 0] : [v_fr_pn./scale...]
+                    v_to_prop = inv([Mpn; [i==anchor_ind ? 1 : 0 for i in 1:N+1]'])*[v_fr_pn./scale..., 0]
 
                     for (i,t) in enumerate(t_conns)
                         if ismissing(v_start[(t_bus,t)])
@@ -1716,8 +1716,8 @@ function calc_start_voltage(
                 end
                 # backward propagation
                 if all((!).(ismissing.(v_to))) && any(ismissing.(v_fr))
-                    N = neutral_ids ∈ tr["t_connections"] ? length(v_fr)-1 : length(v_fr)
-                    Mpn = neutral_ids ∈ tr["t_connections"] ? [LinearAlgebra.diagm(0=>ones(N)) fill(-1.0, N, 1)] : LinearAlgebra.diagm(0=>ones(N))
+                    N = length(v_fr)-1
+                    Mpn = [LinearAlgebra.diagm(0=>ones(N)) fill(-1.0, N, 1)]
                     v_to_pn = Mpn*v_to
                     if all(ismissing.(v_fr))
                         anchor_ind = length(v_fr)
@@ -1725,7 +1725,7 @@ function calc_start_voltage(
                     else
                         (anchor_ind, anchor_val) = [(i, v) for (i, v) in enumerate(v_fr) if !ismissing(v)][1]
                     end
-                    v_fr_prop = neutral_ids ∈ tr["t_connections"] ? inv([Mpn; [i==anchor_ind ? 1 : 0 for i in 1:N+1]'])*[scale.*v_to_pn..., 0] : [scale.*v_to_pn...]
+                    v_fr_prop = inv([Mpn; [i==anchor_ind ? 1 : 0 for i in 1:N+1]'])*[scale.*v_to_pn..., 0]
 
                     for (i,t) in enumerate(f_conns)
                         if ismissing(v_start[(f_bus,t)])
