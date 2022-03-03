@@ -278,9 +278,7 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
                 ns = [bts..., vns...]
 
                 push!(ns_yprim, (ns[ungr_filter], y_prim[ungr_filter, ungr_filter]))
-                if c_nl != nothing
-                    push!(cc_ns_func_pairs, (ns, c_nl, c_tots, comp_type, id))
-                end
+                push!(cc_ns_func_pairs, (ns, c_nl, c_tots, comp_type, id))
 
                 virtual_count += nr_vns
             end
@@ -397,7 +395,12 @@ function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:An
     for (nw, dm) in nw_dm
         if ismissing(v_start)
             # if epsilon is not zero, voltage initialisation is not correct which then leads to unnecessary iterations
-            add_start_voltage!(dm, coordinates=:rectangular, epsilon=0)
+            # if explicit_neutral
+                add_start_voltage!(dm, coordinates=:rectangular, epsilon=0)
+            # else
+            #     add_start_voltage_3w!(dm, coordinates=:rectangular, epsilon=0)
+            # end
+            
             v_start = _bts_to_start_voltage(dm)
         end
 
@@ -472,11 +475,13 @@ function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E
     for it in 1:max_iter
         Iv = zeros(Complex{Float64}, Nv)
         for (ns, c_nl_func, c_tots_func, comp_type, id) in pfd.cc_ns_func_pairs
-            Un = [_get_v(pfd, Uv, n) for n in ns]
-            Icc = c_nl_func(Un)
-            for (i,n) in enumerate(ns)
-                if pfd.ntype[n]==VARIABLE
-                    Iv[pfd.vnode_to_idx[n]] += Icc[i]
+            if c_nl_func != nothing
+                Un = [_get_v(pfd, Uv, n) for n in ns]
+                Icc = c_nl_func(Un)
+                for (i,n) in enumerate(ns)
+                    if pfd.ntype[n]==VARIABLE
+                        Iv[pfd.vnode_to_idx[n]] += Icc[i]
+                    end
                 end
             end
         end
@@ -528,7 +533,7 @@ end
 Builds the solution dict.
 """
 function build_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
-    solution = Dict{String, Any}("bus"=>Dict{String, Any}(), "load"=>Dict{String, Any}(), "gen"=>Dict{String, Any}())
+    solution = Dict{String, Any}("bus"=>Dict{String, Any}(), "load"=>Dict{String, Any}(), "gen"=>Dict{String, Any}(), "branch"=>Dict{String, Any}(), "shunt"=>Dict{String, Any}(), "switch"=>Dict{String, Any}(), "transformer"=>Dict{String, Any}())
     for (id, bus) in pfd.data_math["bus"]
         ind = bus["index"]
         solution["bus"][id] = Dict{String, Any}()
@@ -587,7 +592,6 @@ function _cpf_branch_interface(branch::Dict{String,<:Any}, v_start::Dict{<:Any,<
     Yto = branch["g_to"]+im*branch["b_to"]
     y_prim = [(Ys.+Yfr) -Ys; -Ys (Ys.+Yto)]
     bts = [[(branch["f_bus"], t) for t in branch["f_connections"]]..., [(branch["t_bus"], t) for t in branch["t_connections"]]...]
-    # v_bt = [v_start[bt] for bt in bts]
     c_tots_func = function(v_bt)
         return y_prim * v_bt
     end
@@ -654,7 +658,6 @@ Modifies ideal transformers to avoid singularity error.
 """
 function _compose_yprim_banked_ideal_transformers(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
     y_prim_ind = Dict()
-
     nph = length(ts)
 
     ns_fr = unique([[a for (a,b) in npairs_fr]..., [b for (a,b) in npairs_fr]...])

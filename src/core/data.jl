@@ -38,6 +38,9 @@ const pmd_math_component_status_inactive = Dict{String,Int}(
     "transformer" => 0,
 )
 
+"maps neutral conductor index"
+const neutral_ids = 4
+
 
 """
     apply_pmd!(func!::Function, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true, kwargs...)
