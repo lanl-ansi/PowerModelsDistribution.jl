@@ -266,7 +266,7 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
     comp_status_prop = Dict(x=>"status" for x in ["load", "shunt", "storage", "transformer", "switch"])
     comp_status_prop["branch"] = "br_status"
     comp_status_prop["gen"]    = "gen_status"
-    for (comp_type, comp_interface) in _CPF_COMPONENT_INTERFACES
+    for (comp_type, comp_interface) in PowerModelsDistribution._CPF_COMPONENT_INTERFACES
         for (id, comp) in data_math[comp_type]
             if comp[comp_status_prop[comp_type]]==1
                 (bts, nr_vns, y_prim, c_nl, c_tots) = comp_interface(comp, v_start, explicit_neutral)
@@ -333,6 +333,17 @@ end
 Calculates the voltage from PowerFlowData struct.
 """
 function _get_v(pfd::PowerFlowData, Vp::Vector{Complex{Float64}}, n::Tuple{Int64, Int64})
+    if pfd.ntype[n] == GROUNDED
+        return 0.0+im*0.0
+    elseif pfd.ntype[n] == FIXED
+        return pfd.Uf[pfd.fnode_to_idx[n]]
+    else
+        return Vp[pfd.vnode_to_idx[n]]
+    end
+end
+
+
+function _get_v2(pfd::PowerFlowData, Vp::Vector{Complex{Float64}}, n)
     if pfd.ntype[n] == GROUNDED
         return 0.0+im*0.0
     elseif pfd.ntype[n] == FIXED
@@ -537,12 +548,18 @@ function build_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
     for (id, bus) in pfd.data_math["bus"]
         ind = bus["index"]
         solution["bus"][id] = Dict{String, Any}()
-        v = Dict(t=>_get_v(pfd, Uv, (ind,t)) for t in bus["terminals"])
+        v = Dict(t=>PowerModelsDistribution._get_v(pfd, Uv, (ind,t)) for t in bus["terminals"])
         solution["bus"][id]["vm"] = Dict("$t"=>abs.(v[t]) for t in bus["terminals"])
         solution["bus"][id]["va"] = Dict("$t"=>angle.(v[t]) for t in bus["terminals"])
     end
+
     for (ns, c_nl_func, c_tots_func, comp_type, id) in pfd.cc_ns_func_pairs
-        v_bt = [solution["bus"]["$busid"]["vm"]["$t"] for (busid, t) in sort(ns)]
+        # v_bt = [solution["bus"]["$busid"]["vm"]["$t"] for (busid, t) in sort(ns)]
+        # v_bt = [Uv[pfd.vnode_to_idx[n]] for n in sort(ns)]
+        v_bt = [PowerModelsDistribution._get_v2(pfd, Uv, n) for n in sort(ns)]
+        @show ns
+        @show length(v_bt)
+
         c_tots = c_tots_func(v_bt)
         if comp_type == "gen"
             solution[comp_type][id] = Dict{String, Any}()
@@ -640,6 +657,7 @@ function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,
         bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers(ts, npairs_fr, npairs_to)
     end
     c_tots_func = function(v_bt)
+        @show size(Y)
         return Y * v_bt
     end
     return  bts, nr_vns, Y, nothing, c_tots_func

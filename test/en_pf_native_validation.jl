@@ -2,11 +2,11 @@
 using Pkg
 cd("test")
 Pkg.activate("./")
-# # Pkg.add("../#four-wire-add-test")
+# # Pkg.add("../#native-pf-extra-tests")
 # Pkg.add("Test")
 Pkg.add("JSON")
 Pkg.add("Ipopt")
-using PowerModelsDistribution
+using PowerModelsDistribution#native-pf-extra-tests
 using JSON
 using Ipopt
 using Test
