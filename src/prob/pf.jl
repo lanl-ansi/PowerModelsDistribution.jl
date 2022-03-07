@@ -332,18 +332,7 @@ end
 
 Calculates the voltage from PowerFlowData struct.
 """
-function _get_v(pfd::PowerFlowData, Vp::Vector{Complex{Float64}}, n::Tuple{Int64, Int64})
-    if pfd.ntype[n] == GROUNDED
-        return 0.0+im*0.0
-    elseif pfd.ntype[n] == FIXED
-        return pfd.Uf[pfd.fnode_to_idx[n]]
-    else
-        return Vp[pfd.vnode_to_idx[n]]
-    end
-end
-
-
-function _get_v2(pfd::PowerFlowData, Vp::Vector{Complex{Float64}}, n)
+function _get_v(pfd::PowerFlowData, Vp::Vector{Complex{Float64}}, n::Union{Tuple{Int64, Int64},Int64} )
     if pfd.ntype[n] == GROUNDED
         return 0.0+im*0.0
     elseif pfd.ntype[n] == FIXED
@@ -554,14 +543,13 @@ function build_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
     end
 
     for (ns, c_nl_func, c_tots_func, comp_type, id) in pfd.cc_ns_func_pairs
-        ns_tuples = [n for n in ns if typeof(n)==Tuple{Int64, Int64}]
-        ns_ints = [n for n in ns if typeof(n)==Int64]
-        # v_bt = [solution["bus"]["$busid"]["vm"]["$t"] for (busid, t) in sort(ns_tuples)]
-        v_bt = [_get_v(pfd, Uv, n) for n in sort(ns_tuples)] 
+        ns_bts = [n for n in ns if typeof(n)==Tuple{Int64, Int64}]
+        ns_vns = [n for n in ns if typeof(n)==Int64]
 
-        if !isempty(ns_ints)
-            v_bt_virtuals = [_get_v2(pfd, Uv, n) for n in sort(ns_ints)] 
-            append!(v_bt, v_bt_virtuals)
+        v_bt = [_get_v(pfd, Uv, n) for n in sort(ns_bts)] 
+        if !isempty(ns_vns)
+            v_vns = [_get_v(pfd, Uv, n) for n in sort(ns_vns)] 
+            append!(v_bt, v_vns)
         end
         
         c_tots = c_tots_func(v_bt)

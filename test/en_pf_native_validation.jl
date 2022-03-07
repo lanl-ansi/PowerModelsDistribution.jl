@@ -52,7 +52,7 @@ function conductor_correction!(data_eng)
             filter!(e->e≠neutral_ids, solar["connections"])
         end
     end
-        
+    
     # for (l, line) in nw["line"]
     #     if length(line["t_connections"]) == 4
     #         line["t_connections"] = line["t_connections"][1:3]
