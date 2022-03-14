@@ -1115,7 +1115,7 @@ function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector
     end
 
     component_lookup = Dict(i => Set{Int}([i]) for i in active_bus_ids)
-    touched = Set{Int64}()
+    touched = Set{Int}()
 
     for i in active_bus_ids
         if !(i in touched)

@@ -172,7 +172,7 @@ function calc_buspair_parameters(buses, branches)
 
     buspair_indexes = Set((branch["f_bus"], branch["t_bus"], fc, tc) for (i,branch) in branch_lookup for (fc, tc) in zip(branch["f_connections"], branch["t_connections"]))
 
-    bp_branch = Dict((bp, typemax(Int64)) for bp in buspair_indexes)
+    bp_branch = Dict((bp, typemax(Int)) for bp in buspair_indexes)
 
     bp_angmin = Dict((bp, -Inf) for bp in buspair_indexes)
     bp_angmax = Dict((bp,  Inf) for bp in buspair_indexes)
