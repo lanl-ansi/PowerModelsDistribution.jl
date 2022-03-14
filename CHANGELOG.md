@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in `create_solar` where kwargs were not being utilized [#380](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/380)
 - Fixed bug in `create_storage` where datatypes were inconsistent with documentation [#379](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/379)
 - Added check for missing `vbase` in `apply_voltage_bounds!` transformation
 - Refactored `constraint_mc_power_balance_capc(pm::LPUBFDiagModel, ...)` to be more consistent with other versions, for easier debugging

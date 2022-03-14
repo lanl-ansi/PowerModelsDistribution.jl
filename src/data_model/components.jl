@@ -718,7 +718,15 @@ function create_solar(bus::String, connections::Vector{Int};
         "configuration" => configuration,
         "status" => status
     )
-    # TODO
+
+    for (k,v) in [("pg_lb", pg_lb), ("pg_ub", pg_ub), ("qg_lb", qg_lb), ("qg_ub", qg_ub), ("pg", pg), ("qg", qg)]
+        if !ismissing(v)
+            eng_obj[k] = v
+        end
+    end
+
+    _add_unused_kwargs!(eng_obj, kwargs)
+
     return eng_obj
 end
 
