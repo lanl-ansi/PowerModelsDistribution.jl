@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added check for missing `vbase` in `apply_voltage_bounds!` transformation
 - Refactored `constraint_mc_power_balance_capc(pm::LPUBFDiagModel, ...)` to be more consistent with other versions, for easier debugging
 - Removed Cbc, Juniper from unit tests (not being utilized in tests)
 - Removed explicit field copying from `voltage_source` math2eng solution conversion (now copies all fields)
