@@ -18,7 +18,7 @@ pmd_path = joinpath(dirname(pathof(PowerModelsDistribution)), "..")
 
 ipopt_solver = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0)
 ipopt_solver_adaptive = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "mu_strategy"=>"adaptive")
-scs_solver = optimizer_with_attributes(SCS.Optimizer, "max_iters"=>20000, "eps"=>1e-5, "alpha"=>0.4, "verbose"=>0)
+scs_solver = optimizer_with_attributes(SCS.Optimizer, "verbose"=>0)
 
 include("common.jl")
 include("test_cases.jl")

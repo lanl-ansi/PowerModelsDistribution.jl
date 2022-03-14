@@ -2,6 +2,7 @@
 
 ## staged
 
+- Dropped support for SCS 0.8 in Unit tests (0.9 no longer supports `eps` option)
 - Fixed bug in `remove_all_bounds!` where an `||` was not enclosed in parentheses
 - Changed remaining instances of `Int64` to `Int` for better compatibility [#382](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/382)
 - Fixed bug in `create_solar` where kwargs were not being utilized [#380](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/380)
