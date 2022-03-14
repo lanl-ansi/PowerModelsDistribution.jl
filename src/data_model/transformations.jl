@@ -214,7 +214,7 @@ function _remove_all_bounds!(data_eng; exclude::Vector{<:String}=String["energy_
         if isa(v, Dict) && k!="settings" && !(k in exclude_asset_type)
             for (_, comp) in v
                 for field in keys(comp)
-                    if !(field in exclude) && endswith(field, "_lb") || endswith(field, "_ub")
+                    if !(field in exclude) && (endswith(field, "_lb") || endswith(field, "_ub"))
                         delete!(comp, field)
                     end
                 end

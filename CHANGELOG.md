@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in `remove_all_bounds!` where an `||` was not enclosed in parentheses
 - Changed remaining instances of `Int64` to `Int` for better compatibility [#382](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/382)
 - Fixed bug in `create_solar` where kwargs were not being utilized [#380](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/380)
 - Fixed bug in `create_storage` where datatypes were inconsistent with documentation [#379](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/379)
