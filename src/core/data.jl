@@ -677,7 +677,7 @@ Returns a valid series current magnitude bound for a branch.
 function _calc_branch_series_current_max(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})::Vector{Float64}
     ncnds = length(branch["f_connections"])
     vmin_fr = haskey(bus_fr, "vmin") ? bus_fr["vmin"][[findfirst(isequal(c), bus_fr["terminals"]) for c in branch["f_connections"]]] : fill(0.0, ncnds)
-    vmin_to = haskey(bus_to, "vmin") ? bus_fr["vmin"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]] : fill(0.0, ncnds)
+    vmin_to = haskey(bus_to, "vmin") ? bus_to["vmin"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]] : fill(0.0, ncnds)
 
     vmax_fr = haskey(bus_fr, "vmax") ? bus_fr["vmax"][[findfirst(isequal(c), bus_fr["terminals"]) for c in branch["f_connections"]]] : fill(Inf, ncnds)
     vmax_to = haskey(bus_to, "vmax") ? bus_to["vmax"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]] : fill(Inf, ncnds)

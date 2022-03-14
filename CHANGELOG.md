@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Fixed bug in `_calc_branch_series_current_max` where `vmin_to` used `bus_fr` instead of `bus_to` [#378](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/378)
 
 ## v0.14.1
 
