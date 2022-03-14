@@ -159,11 +159,7 @@ function _map_math2eng_voltage_source!(data_eng::Dict{String,<:Any}, data_math::
     for to_id in map["to"]
         math_obj = _get_math_obj(data_math, to_id)
         if startswith(to_id, "gen")
-            for property in ["pg", "qg", "pg_bus", "qg_bus"]
-                if haskey(math_obj, property)
-                    eng_obj[property] = math_obj[property]
-                end
-            end
+            merge!(eng_obj, math_obj)
         end
     end
 
