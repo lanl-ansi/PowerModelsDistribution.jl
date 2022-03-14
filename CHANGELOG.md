@@ -2,6 +2,10 @@
 
 ## staged
 
+- none
+
+## v0.14.2
+
 - Fixed failing unit test "3-bus SOCConicUBF opf_bf" for Windows
 - Updated minimum Julia requirement to v1.6 (LTS) [#382](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/382)
 - Added compat for JuMP v0.23, Ipopt v1.0, SCS v1.1, PolyhedralRelaxations v0.3.3
