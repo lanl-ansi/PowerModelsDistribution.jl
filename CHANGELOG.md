@@ -2,6 +2,7 @@
 
 ## staged
 
+- Refactored `constraint_mc_power_balance_capc(pm::LPUBFDiagModel, ...)` to be more consistent with other versions, for easier debugging
 - Removed Cbc, Juniper from unit tests (not being utilized in tests)
 - Removed explicit field copying from `voltage_source` math2eng solution conversion (now copies all fields)
 - Fixed bug in `_calc_branch_series_current_max` where `vmin_to` used `bus_fr` instead of `bus_to` [#378](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/378)

@@ -174,89 +174,86 @@ Power balance constraints with capacitor control linearized using McCormick enve
 ```
 """
 function constraint_mc_power_balance_capc(pm::LPUBFDiagModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
-    w = var(pm, nw, :w, i)
-    p   = get(var(pm, nw),      :p,   Dict()); _check_var_keys(p,   bus_arcs, "active power", "branch")
-    q   = get(var(pm, nw),      :q,   Dict()); _check_var_keys(q,   bus_arcs, "reactive power", "branch")
-    psw = get(var(pm, nw),    :psw, Dict()); _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    qsw = get(var(pm, nw),    :qsw, Dict()); _check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
-    pt  = get(var(pm, nw),     :pt,  Dict()); _check_var_keys(pt,  bus_arcs_trans, "active power", "transformer")
-    qt  = get(var(pm, nw),     :qt,  Dict()); _check_var_keys(qt,  bus_arcs_trans, "reactive power", "transformer")
-    pg  = get(var(pm, nw),     :pg,  Dict()); _check_var_keys(pg,  bus_gens, "active power", "generator")
-    qg  = get(var(pm, nw),     :qg,  Dict()); _check_var_keys(qg,  bus_gens, "reactive power", "generator")
-    ps  = get(var(pm, nw),     :ps,  Dict()); _check_var_keys(ps,  bus_storage, "active power", "storage")
-    qs  = get(var(pm, nw),     :qs,  Dict()); _check_var_keys(qs,  bus_storage, "reactive power", "storage")
-    pd  = get(var(pm, nw), :pd_bus,  Dict()); _check_var_keys(pd,  bus_loads, "active power", "load")
-    qd  = get(var(pm, nw), :qd_bus,  Dict()); _check_var_keys(qd,  bus_loads, "reactive power", "load")
+    w        = var(pm, nw, :w, i)
+    p        = get(var(pm, nw),    :p, Dict()); _check_var_keys(p, bus_arcs, "active power", "branch")
+    q        = get(var(pm, nw),    :q, Dict()); _check_var_keys(q, bus_arcs, "reactive power", "branch")
+    pg       = get(var(pm, nw),   :pg, Dict()); _check_var_keys(pg, bus_gens, "active power", "generator")
+    qg       = get(var(pm, nw),   :qg, Dict()); _check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps       = get(var(pm, nw),   :ps, Dict()); _check_var_keys(ps, bus_storage, "active power", "storage")
+    qs       = get(var(pm, nw),   :qs, Dict()); _check_var_keys(qs, bus_storage, "reactive power", "storage")
+    psw      = get(var(pm, nw),  :psw, Dict()); _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw      = get(var(pm, nw),  :qsw, Dict()); _check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt       = get(var(pm, nw),   :pt, Dict()); _check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt       = get(var(pm, nw),   :qt, Dict()); _check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+    pd       = get(var(pm, nw), :pd_bus,  Dict()); _check_var_keys(pd,  bus_loads, "active power", "load")
+    qd       = get(var(pm, nw), :qd_bus,  Dict()); _check_var_keys(qd,  bus_loads, "reactive power", "load")
+
+    uncontrolled_shunts = Tuple{Int,Vector{Int}}[]
+    controlled_shunts = Tuple{Int,Vector{Int}}[]
+
+    if !isempty(bus_shunts) && any(haskey(ref(pm, nw, :shunt, sh), "controls") for (sh, conns) in bus_shunts)
+        for (sh, conns) in bus_shunts
+            if haskey(ref(pm, nw, :shunt, sh), "controls")
+                push!(controlled_shunts, (sh,conns))
+            else
+                push!(uncontrolled_shunts, (sh, conns))
+            end
+        end
+    else
+        uncontrolled_shunts = bus_shunts
+    end
+
+    Gt, _ = _build_bus_shunt_matrices(pm, nw, terminals, bus_shunts)
+    _, Bt = _build_bus_shunt_matrices(pm, nw, terminals, uncontrolled_shunts)
 
     cstr_p = []
     cstr_q = []
 
     ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
 
-    for (idx,t) in ungrounded_terminals
+
+    for (idx, t) in ungrounded_terminals
         cp = JuMP.@constraint(pm.model,
-              sum(  p[a][t] for (a, conns) in bus_arcs if t in conns)
-            + sum(psw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
-            + sum( pt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-            - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
-            + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
-            + sum( pd[d][t] for (d, conns) in bus_loads if t in conns)
-            + sum(LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "gs"))[findfirst(isequal(t), conns)]*w[t] for (sh, conns) in bus_shunts if t in conns)
+            sum(p[a][t] for (a, conns) in bus_arcs if t in conns)
+            + sum(psw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
+            + sum(pt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
             ==
-            0.0
+            sum(pg[g][t] for (g, conns) in bus_gens if t in conns)
+            - sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
+            - sum(pd[l][t] for (l, conns) in bus_loads if t in conns)
+            - sum((w[t] * LinearAlgebra.diag(Gt')[idx]) for (sh, conns) in bus_shunts if t in conns)
         )
         push!(cstr_p, cp)
-    end
 
-    # add constraints to model capacitor switching
-    if !isempty(bus_shunts) && haskey(ref(pm, nw, :shunt, bus_shunts[1][1]), "controls")
-        constraint_capacitor_on_off(pm, nw, i, bus_shunts)
+        for (sh, sh_conns) in controlled_shunts
+            if t in sh_conns
+                cq_cap = var(pm, nw, :capacitor_reactive_power, sh)[t]
+                cap_state = var(pm, nw, :capacitor_state, sh)[t]
+                bs = LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "bs"))[findfirst(isequal(t), sh_conns)]
+                w_lb, w_ub = _IM.variable_domain(w[t])
 
-        ncnds = length(bus_shunts[1][2])
-        cq_sh = convert(Vector{JuMP.AffExpr}, JuMP.@expression(pm.model, [idx=1:ncnds], 0.0))
-        for (idx,t) in ungrounded_terminals
-            for (sh, conns) in bus_shunts
-                if t in conns
-                    cq_cap = var(pm, nw, :capacitor_reactive_power, sh)[t]
-                    cap_state = var(pm, nw, :capacitor_state, sh)[t]
-                    bs = LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "bs"))[findfirst(isequal(t), conns)]
-                    w_min = 0.9^2
-                    w_max = 1.1^2
-                    # McCormick envelope constraints
-                    JuMP.@constraint(pm.model, cq_cap ≥ bs*cap_state*w_min)
-                    JuMP.@constraint(pm.model, cq_cap ≥ bs*w[t] + bs*cap_state*w_max - bs*w_max)
-                    JuMP.@constraint(pm.model, cq_cap ≤ bs*cap_state*w_max)
-                    JuMP.@constraint(pm.model, cq_cap ≤ bs*w[t] + bs*cap_state*w_min - bs*w_min)
+                # McCormick envelope constraints
+                if isfinite(w_ub)
+                    JuMP.@constraint(pm.model, cq_cap ≥ bs*w[t] + bs*cap_state*w_ub - bs*w_ub)
+                    JuMP.@constraint(pm.model, cq_cap ≤ bs*cap_state*w_ub)
                 end
+                JuMP.@constraint(pm.model, cq_cap ≥ bs*cap_state*w_lb)
+                JuMP.@constraint(pm.model, cq_cap ≤ bs*w[t] + bs*cap_state*w_lb - bs*w_lb)
             end
-            cq = JuMP.@constraint(pm.model,
-                sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
-                + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
-                + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-                - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
-                + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
-                + sum( qd[d][t] for (d, conns) in bus_loads if t in conns)
-                - sum(var(pm, nw, :capacitor_reactive_power, bus_shunts[1][1]))
-                ==
-                0.0
-            )
-            push!(cstr_q, cq)
         end
-    else
-        for (idx,t) in ungrounded_terminals
-            cq = JuMP.@constraint(pm.model,
-                sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
-                + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
-                + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-                - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
-                + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
-                + sum( qd[d][t] for (d, conns) in bus_loads if t in conns)
-                - sum(LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "bs"))[findfirst(isequal(t), conns)]*w[t] for (sh, conns) in bus_shunts if t in conns)
-                ==
-                0.0
-            )
-            push!(cstr_q, cq)
-        end
+
+        cq = JuMP.@constraint(pm.model,
+            sum(q[a][t] for (a, conns) in bus_arcs if t in conns)
+            + sum(qsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
+            + sum(qt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
+            ==
+            sum(qg[g][t] for (g, conns) in bus_gens if t in conns)
+            - sum(qs[s][t] for (s, conns) in bus_storage if t in conns)
+            - sum(qd[l][t] for (l, conns) in bus_loads if t in conns)
+            - sum((-w[t] * LinearAlgebra.diag(Bt')[idx]) for (sh, conns) in uncontrolled_shunts if t in conns)
+            - sum(-var(pm, nw, :capacitor_reactive_power, sh)[t] for (sh, conns) in controlled_shunts if t in conns)
+        )
+        push!(cstr_q, cq)
     end
 
     con(pm, nw, :lam_kcl_r)[i] = cstr_p
