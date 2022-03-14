@@ -164,7 +164,7 @@
             @testset "3-bus SOCConicUBF opf_bf" begin
                 result = solve_mc_opf(data, SOCConicUBFPowerModel, scs_solver)
 
-                @test result["termination_status"] == OPTIMAL
+                @test result["termination_status"] == OPTIMAL || result["termination_status"] == ALMOST_OPTIMAL
 
                 @test isapprox(result["objective"], 21.17; atol = 5e-2)
             end
