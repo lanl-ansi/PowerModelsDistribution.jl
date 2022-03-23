@@ -722,7 +722,7 @@ function _map_eng2math_generator!(data_math::Dict{String,<:Any}, data_eng::Dict{
             data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = eng_obj["vg"]
-            data_math["bus"]["$(math_obj["gen_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...]
+            data_math["bus"]["$(math_obj["gen_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...][data_math["bus"]["$(math_obj["gen_bus"])"]["terminals"]]
         end
 
         for (f_key, t_key) in [("qg_lb", "qmin"), ("qg_ub", "qmax"), ("pg_lb", "pmin")]
@@ -770,7 +770,7 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
             data_math["bus"]["$(math_obj["gen_bus"])"]["vm"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmax"] = eng_obj["vg"]
             data_math["bus"]["$(math_obj["gen_bus"])"]["vmin"] = eng_obj["vg"]
-            data_math["bus"]["$(math_obj["gen_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...]
+            data_math["bus"]["$(math_obj["gen_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...][data_math["bus"]["$(math_obj["gen_bus"])"]["terminals"]]
             data_math["bus"]["$(math_obj["gen_bus"])"]["bus_type"] = 3
         end
 
@@ -830,7 +830,7 @@ function _map_eng2math_storage!(data_math::Dict{String,<:Any}, data_eng::Dict{St
         bus_type = data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"]
         data_math["bus"]["$(math_obj["storage_bus"])"]["bus_type"] = _compute_bus_type(bus_type, math_obj["status"], control_mode)
         if control_mode == Int(ISOCHRONOUS) && math_obj["status"] == 1
-            data_math["bus"]["$(math_obj["storage_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_bus"])"]) - 3)...]
+            data_math["bus"]["$(math_obj["storage_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["storage_bus"])"]) - 3)...][data_math["bus"]["$(math_obj["storage_bus"])"]["terminals"]]
         end
 
         data_math["storage"]["$(math_obj["index"])"] = math_obj
