@@ -2,6 +2,10 @@
 
 ## staged
 
+- none
+
+## v0.14.3
+
 - Fixed bug in dss parser where circuit was not being edited using the `edit` dss command
 - Fixed bug in eng2math functions where the voltage angle was being set incorrectly for generation assets that were set to isochronous control mode
 
