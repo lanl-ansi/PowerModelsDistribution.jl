@@ -1272,6 +1272,42 @@ function variable_mc_storage_current(pm::AbstractUnbalancedPowerModel; nw::Int=n
 end
 
 
+## storage network expansion variables
+
+function variable_mc_storage_ne(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
+    if relax
+        z_storage = var(pm, nw)[:z_storage] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :storage_ne)], base_name="$(nw)_z_storage",
+            lower_bound = 0,
+            upper_bound = 1,
+            start = comp_start_value(ref(pm, nw, :load, i), "z_storage_start", 1.0)
+        )
+    else
+        z_storage = var(pm, nw)[:z_storage] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :storage_ne)], base_name="$(nw)_z_storage",
+            binary = true,
+            start = comp_start_value(ref(pm, nw, :load, i), "z_storage_start", 1.0)
+        )
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage, :z_storage, ids(pm, nw, :storage_ne), z_storage)
+end
+
+
+""
+function variable_mc_storage_power_mi_on_off_ne(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=false, bounded::Bool=true, report::Bool=true)
+    variable_mc_storage_power_real_on_off_ne(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_imaginary_on_off_ne(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_control_imaginary_on_off_ne(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_current_ne(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_indicator_ne(pm; nw=nw, report=report)
+    variable_storage_energy_ne(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_charge_ne(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_discharge_ne(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_complementary_indicator_ne(pm; nw=nw, relax=relax, report=report)
+end
+
+
 # load variables
 
 """
