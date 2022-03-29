@@ -1,5 +1,5 @@
 "Multinetwork load shedding problem including storage"
-function build_mn_mc_mld_simple(pm::AbstractUnbalancedPowerModel)
+function build_mn_mc_mld_simple_ne(pm::AbstractUnbalancedPowerModel)
     network_ids = sort(collect(nw_ids(pm)))
 
     for (n, network) in nws(pm)
