@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Fixed bug/typo in `_create_storage` where `kwhstored` was derived from `:stored` instead of `Symbol("%stored")`
 
 ## v0.14.3
 
