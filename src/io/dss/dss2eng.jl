@@ -47,9 +47,10 @@ function _dss2eng_loadshape!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             @info "Loadshape '$id' contains mismatched pmult and qmult, splitting into `time_series` ids '$(id)_p' and '$(id)_q'"
             _add_eng_obj!(data_eng, "time_series", "$(id)_p", eng_obj)
 
-            eng_obj["values"] = defaults["qmult"]
+            eng_obj_qmult = deepcopy(eng_obj)
+            eng_obj_qmult["values"] = defaults["qmult"]
 
-            _add_eng_obj!(data_eng, "time_series", "$(id)_q", eng_obj)
+            _add_eng_obj!(data_eng, "time_series", "$(id)_q", eng_obj_qmult)
         else
             _add_eng_obj!(data_eng, "time_series", id, eng_obj)
         end

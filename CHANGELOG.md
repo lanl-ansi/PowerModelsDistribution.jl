@@ -3,6 +3,7 @@
 ## staged
 
 - Fixed bug/typo in `_create_storage` where `kwhstored` was derived from `:stored` instead of `Symbol("%stored")`
+- Fixed bug in function `_dss2eng_loadshape!()` where `qmult` data was overwriting `pmult` data [#386](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/386)
 
 ## v0.14.3
 
