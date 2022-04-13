@@ -1,7 +1,7 @@
 """
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}})::T where T <: DssOptions
-    options = _apply_property_pairs(DssOptions(), property_pairs)
+    options = _apply_property_pairs(T(), property_pairs)
 
     return options
 end
@@ -12,7 +12,7 @@ end
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLinecode
     raw_fields = collect(Symbol(x.first) for x in property_pairs)
 
-    linecode = _apply_property_pairs(DssLinecode(), property_pairs, dss, dss_raw)
+    linecode = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
     if :b1 ∈ raw_fields
         linecode.c1 = linecode.b1 / (2 * pi * linecode.basefreq)
@@ -76,7 +76,7 @@ end
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLoadshape
     raw_fields = collect(Symbol(x.first) for x in property_pairs)
 
-    loadshape = _apply_property_pairs(DssLoadshape(), property_pairs, dss, dss_raw)
+    loadshape = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
     if :minterval ∈ raw_fields
         interval = loadshape.minterval / 60
@@ -104,62 +104,13 @@ end
 
 """
 """
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssGrowthshape
-    growthshape = _apply_property_pairs(DssGrowthshape(), property_pairs, dss, dss_raw)
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: OpenDssDataObject
+    dataobject = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 end
 
 
 """
 """
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssXycurve
-    xycurve = _apply_property_pairs(DssXycurve(), property_pairs, dss, dss_raw)
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLinespacing
-    linespacing = _apply_property_pairs(DssLinespacing(), property_pairs, dss, dss_raw)
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLinegeometry
-    linegeometry = _apply_property_pairs(DssLinegeometry(), property_pairs, dss, dss_raw)
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssWiredata
-    wiredata = _apply_property_pairs(DssWiredata(), property_pairs, dss, dss_raw)
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssSpectrum
-    spectrum = _apply_property_pairs(DssSpectrum(), property_pairs, dss, dss_raw)
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssXfmrcode
-    xfmrcode = _apply_property_pairs(DssXfmrcode(), property_pairs, dss, dss_raw)
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssRegcontrol
-    regcontrol = _apply_property_pairs(DssRegcontrol(), property_pairs, dss, dss_raw)
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssCapcontrol
-    capcontrol = _apply_property_pairs(DssCapcontrol(), property_pairs, dss, dss_raw)
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: OpenDssControlObject
+    controlobject = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 end

@@ -3,7 +3,7 @@
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLoad
     raw_fields = collect(x.first for x in property_pairs)
 
-    load = _apply_property_pairs(DssLoad(), property_pairs, dss, dss_raw)
+    load = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
     if :kw ∈ raw_fields && :pf ∈ raw_fields
         kvar = sign(load.pf) * load.kw * sqrt(1.0 / load.pf^2 - 1.0)
@@ -33,7 +33,7 @@ end
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssStorage
     raw_fields = collect(x.first for x in property_pairs)
 
-    strg = _apply_property_pairs(DssStorage(), property_pairs, dss, dss_raw)
+    strg = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
     return strg
 end
@@ -44,7 +44,7 @@ end
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssGenerator
     raw_fields = collect(x.first for x in property_pairs)
 
-    gen = _apply_property_pairs(DssGenerator(), property_pairs, dss, dss_raw)
+    gen = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
     gen.kva = :kva ∉ raw_fields ? gen.kw * 1.2 : gen.kva
 
@@ -81,7 +81,7 @@ end
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssPvsystem
     raw_fields = collect(x.first for x in property_pairs)
 
-    pv = _apply_property_pairs(DssPvsystem(), property_pairs, dss, dss_raw)
+    pv = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
     if :kw ∈ raw_fields && :pf ∈ raw_fields
         pv.kvar = sign(pv.pf) * pv.kw * sqrt(1.0 / pv.pf^2 - 1.0)

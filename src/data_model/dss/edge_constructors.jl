@@ -3,7 +3,7 @@
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLine
     raw_fields = collect(x.first for x in property_pairs)
 
-    line = _apply_property_pairs(DssLine(), property_pairs, dss, dss_raw)
+    line = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
     if :b1 ∈ raw_fields
         line.c1 = line.b1 / (2 * pi * line.basefreq)
@@ -86,7 +86,7 @@ end
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssVsource
     raw_fields = collect(x.first for x in property_pairs)
 
-    vsource = _apply_property_pairs(DssVsource(), property_pairs, dss, dss_raw)
+    vsource = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
     rs = 0.0
     rm = 0.0
@@ -227,7 +227,7 @@ end
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssCapacitor
     raw_fields = collect(x.first for x in property_pairs)
 
-    capacitor = _apply_property_pairs(DssCapacitor(), property_pairs, dss, dss_raw)
+    capacitor = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
     capacitor.bus2 = :bus2 ∉ raw_fields ? string(split(capacitor.bus1, ".")[1],".",join(fill("0", capacitor.phases), ".")) : capacitor.bus2
 
@@ -240,7 +240,7 @@ end
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssTransformer
     raw_fields = collect(x.first for x in property_pairs)
 
-    transformer = _apply_property_pairs(DssTransformer(), property_pairs, dss, dss_raw)
+    transformer = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
     return transformer
 end
@@ -251,7 +251,7 @@ end
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssReactor
     raw_fields = collect(x.first for x in property_pairs)
 
-    reactor = _apply_property_pairs(DssReactor(), property_pairs, dss, dss_raw)
+    reactor = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
     if :basefreq ∉ raw_fields
         reactor.basefreq = dss.options.defaultbasefrequency

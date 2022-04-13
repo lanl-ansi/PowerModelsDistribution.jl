@@ -288,11 +288,8 @@ function add_controls!(eng::EngineeringDataModel, capacitor_id::String, eng_obj:
     end
 end
 
-convert_dss2eng!(::EngineeringModel, ::DssLinespacing; import_all::Bool=false) = nothing
-convert_dss2eng!(::EngineeringModel, ::DssWiredata; import_all::Bool=false) = nothing
-convert_dss2eng!(::EngineeringModel, ::DssLinegeometry; import_all::Bool=false) = nothing
-convert_dss2eng!(::EngineeringModel, ::DssXycurve; import_all::Bool=false) = nothing
-convert_dss2eng!(::EngineeringModel, ::DssSpectrum; import_all::Bool=false) = nothing
+convert_dss2eng!(::EngineeringModel, ::OpenDssDataObject; import_all::Bool=false) = nothing
+convert_dss2eng!(::EngineeringModel, ::OpenDssControlObject; import_all::Bool=false) = nothing
 
 
 """

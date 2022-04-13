@@ -477,6 +477,12 @@ end
 
 
 ""
+function _get_implied_nphases!(::Union{OpenDssControlObject,OpenDssDataObject}; default::Int=0)::Int
+    default
+end
+
+
+""
 function _get_implied_nphases!(dss_obj::DssLinecode; default::Int=dss_obj.nphases)::Int
     dss_obj.nphases = default
 end
