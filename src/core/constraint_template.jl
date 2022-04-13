@@ -932,7 +932,7 @@ Template function for storage loss constraints for network expansion storage
 function constraint_mc_storage_losses_ne(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     storage = ref(pm, nw, :storage_ne, i)
 
-    constraint_mc_storage_losses_ne(pm, nw, i, storage["storage_bus"], storage["connections"], storage["r"], storage["x"], storage["p_loss"], storage["q_loss"])
+    constraint_mc_storage_losses_ne(pm, nw, i, storage["storage_ne_bus"], storage["connections"], storage["r"], storage["x"], storage["p_loss"], storage["q_loss"])
     nothing
 end
 

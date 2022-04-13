@@ -1325,7 +1325,7 @@ function variable_mc_storage_expand_ne(pm::AbstractUnbalancedPowerModel; nw::Int
         )
     end
 
-    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage_ne, :status, ids(pm, nw, :storage_ne), z_expand_ne)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :storage_ne, :status_ne, ids(pm, nw, :storage_ne), z_expand_ne)
     
 end
 
@@ -1361,8 +1361,8 @@ function variable_mc_storage_power_real_on_off_ne(pm::AbstractUnbalancedPowerMod
         inj_lb, inj_ub = ref_calc_storage_injection_bounds(ref(pm, nw, :storage_ne), ref(pm, nw, :bus))
         for (i, strg) in ref(pm, nw, :storage_ne)
             for (idx, c) in enumerate(connections[i])
-                set_lower_bound(ps[i][c], min(inj_lb[i][idx], 0.0))
-                set_upper_bound(ps[i][c], max(inj_ub[i][idx], 0.0))
+                set_lower_bound(ps_ne[i][c], min(inj_lb[i][idx], 0.0))
+                set_upper_bound(ps_ne[i][c], max(inj_ub[i][idx], 0.0))
             end
         end
     end
@@ -1382,13 +1382,13 @@ function variable_mc_storage_power_imaginary_on_off_ne(pm::AbstractUnbalancedPow
         for (i, strg) in ref(pm, nw, :storage_ne)
             if haskey(strg, "qmin")
                 for (idx, c) in enumerate(connections[i])
-                    set_lower_bound(qs[i][c], min(strg["qmin"], 0.0))
+                    set_lower_bound(qs_ne[i][c], min(strg["qmin"], 0.0))
                 end
             end
 
             if haskey(strg, "qmax")
                 for (idx, c) in enumerate(connections[i])
-                    set_upper_bound(qs[i][c], max(strg["qmax"], 0.0))
+                    set_upper_bound(qs_ne[i][c], max(strg["qmax"], 0.0))
                 end
             end
         end
@@ -1414,11 +1414,11 @@ function variable_mc_storage_power_control_imaginary_on_off_ne(pm::AbstractUnbal
         for (i,strg) in ref(pm, nw, :storage_ne)
             if !isinf(sum(inj_lb[i])) || haskey(strg, "qmin")
                 lb = max(sum(inj_lb[i]), sum(get(strg, "qmin", -Inf)))
-                set_lower_bound(qsc[i], min(lb, 0.0))
+                set_lower_bound(qsc_ne[i], min(lb, 0.0))
             end
             if !isinf(sum(inj_ub[i])) || haskey(strg, "qmax")
                 ub = min(sum(inj_ub[i]), sum(get(strg, "qmax", Inf)))
-                set_upper_bound(qsc[i], max(ub, 0.0))
+                set_upper_bound(qsc_ne[i], max(ub, 0.0))
             end
         end
     end
@@ -1432,7 +1432,7 @@ function variable_storage_energy_ne(pm::AbstractUnbalancedPowerModel; nw::Int=nw
     se_ne = var(pm, nw)[:se_ne] = JuMP.@variable(pm.model,
         [i in ids(pm, nw, :storage_ne)], base_name="$(nw)_se_ne",
         lower_bound = 0.0,
-        start = comp_start_value(ref(pm, nw, :storage, i), ["se_start", "se", "energy"], 0.0)
+        start = comp_start_value(ref(pm, nw, :storage_ne, i), ["se_start", "se", "energy"], 0.0)
     )
 
     if bounded

@@ -90,6 +90,7 @@ function Model(model_type::DataModel=ENGINEERING; kwargs...)::Dict{String,Any}
             "shunt" => Dict{String,Any}(),
             "gen" => Dict{String,Any}(),
             "storage" => Dict{String,Any}(),
+            "storage_ne" => Dict{String,Any}(),
             "branch" => Dict{String,Any}(),
             "switch" => Dict{String,Any}(),
             "per_unit" => false,
@@ -925,6 +926,7 @@ add_shunt!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::V
 add_voltage_source!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "voltage_source", id, create_voltage_source(bus, connections; kwargs...))
 add_generator!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "generator", id, create_generator(bus, connections; kwargs...))
 add_storage!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "storage", id, create_storage(bus, connections; kwargs...))
+add_storage_ne!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "storage_ne", id, create_storage(bus, connections; kwargs...))
 add_solar!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "solar", id, create_solar(bus, connections; kwargs...))
 
 @doc "adds a load to provided ENGINEERING model, see [`create_load`](@ref create_load)" add_load!

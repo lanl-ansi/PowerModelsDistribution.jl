@@ -45,18 +45,13 @@ function build_mn_mc_mld_simple_ne(pm::AbstractUnbalancedPowerModel)
             constraint_mc_storage_losses_ne(pm, i; nw=n)
             constraint_mc_storage_thermal_limit_ne(pm, i; nw=n)
             constraint_storage_complementarity_mi_ne(pm, i; nw=n)
-            constraint_storage_indication_expand_ne(pm, i; nw=n)
-        end
-
-        for i in ids(pm, n, :storage_ne)
-            constraint_mc_storage_ne(pm, i, network_ids[1]; nw=n)
-            constraint_mc_storage_losses_ne(pm, i; nw=n)
-            constraint_mc_storage_thermal_limit_ne(pm, i; nw=n)
-            constraint_storage_complementarity_mi_ne(pm, i; nw=n)
+            constraint_storage_indicator_expand_ne(pm, i; nw=n)
 
             # TODO: Add constraints that force storage variables to zero if the expansion indicator is zero.
             # If there are multiple versions of a constraint, stick with the NFAUPowerModel.
         end
+
+
 
         for i in ids(pm, n, :branch)
             constraint_mc_ohms_yt_from(pm, i; nw=n)

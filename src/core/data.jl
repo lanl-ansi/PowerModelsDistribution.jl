@@ -1,6 +1,6 @@
 "field names that should not be multi-conductor values"
 const _conductorless = Set{String}(["index", "bus_i", "bus_type", "status", "gen_status",
-    "br_status", "gen_bus", "load_bus", "shunt_bus", "storage_bus", "f_bus", "t_bus",
+    "br_status", "gen_bus", "load_bus", "shunt_bus", "storage_bus", "storage_ne_bus", "f_bus", "t_bus",
     "transformer", "area", "zone", "base_kv", "energy", "energy_rating", "charge_rating",
     "discharge_rating", "charge_efficiency", "discharge_efficiency", "p_loss", "q_loss",
     "model", "ncost", "cost", "startup", "shutdown", "name", "source_id", "active_phases"])
@@ -21,6 +21,7 @@ const pmd_math_component_status = Dict{String,String}(
     "shunt" => "status",
     "gen" => "gen_status",
     "storage" => "status",
+    "storage_ne" => "status",
     "switch" => "status",
     "branch" => "br_status",
     "transformer" => "status",
@@ -33,6 +34,7 @@ const pmd_math_component_status_inactive = Dict{String,Int}(
     "shunt" => 0,
     "gen" => 0,
     "storage" => 0,
+    "storage_ne" => 0,
     "switch" => 0,
     "branch" => 0,
     "transformer" => 0,
@@ -1266,6 +1268,12 @@ function _check_connectivity(data::Dict{String,<:Any})
         end
     end
 
+    for (i, strg) in data["storage_ne"]
+        if !(strg["storage_ne_bus"] in bus_ids)
+            error("bus $(strg["storage_ne_bus"]) in storage unit $(i) is not defined")
+        end
+    end
+
     for (i, switch) in data["switch"]
         if !(switch["f_bus"] in bus_ids)
             error("from bus $(switch["f_bus"]) in switch $(i) is not defined")
@@ -1319,7 +1327,7 @@ function _correct_bus_types!(pm_data::Dict{String,<:Any})::Set{Int}
         end
         bus_gens = Dict{String,Vector{String}}(i => String[] for (i,bus) in pm_data["bus"] if bus["bus_i"] in island)
 
-        for type in ["gen", "storage"]
+        for type in ["gen", "storage",]
             if haskey(pm_data, type)
                 for (i,gen) in pm_data[type]
                     if gen[pmd_math_component_status[type]] != pmd_math_component_status_inactive[type] && gen["$(type)_bus"] in island
@@ -1391,6 +1399,10 @@ function _biggest_der(pm_data::Dict{String,<:Any}; island::Set{Int}=Set{Int}([bu
         @debug "there are no active DERs in the island $island"
     end
 
+    if length(filter(x->x.second["gen_bus"] in island && x.second["gen_status"] == 1, get(pm_data, "gen", Dict()))) + length(filter(x->x.second["storage_ne_bus"] in island && x.second["status"] == 1, get(pm_data, "storage_ne", Dict()))) == 0
+        @debug "there are no active DERs in the island $island"
+    end
+
     biggest_der = Dict{String,Any}()
     biggest_value = -Inf
 
@@ -1410,6 +1422,16 @@ function _biggest_der(pm_data::Dict{String,<:Any}; island::Set{Int}=Set{Int}([bu
             biggest_der["type"] = "gen"
             biggest_der["id"] = id
             biggest_der["bus"] = strg["storage_bus"]
+            biggest_value = pmax
+        end
+    end
+
+    for (id,strg) in filter(x->x.second["storage_ne_bus"] in island && x.second["status"] == 1, get(pm_data, "storage_ne", Dict()))
+        pmax = maximum(get(strg, "thermal_rating", fill(Inf, length(strg["connections"]))))
+        if pmax > biggest_value
+            biggest_der["type"] = "gen"
+            biggest_der["id"] = id
+            biggest_der["bus"] = strg["storage_ne_bus"]
             biggest_value = pmax
         end
     end

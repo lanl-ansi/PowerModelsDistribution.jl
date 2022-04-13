@@ -83,7 +83,7 @@ function _make_multiconductor!(data::Dict{String,<:Any}, conductors::Real)
         gen["configuration"] = WYE
     end
 
-    for type in ["load", "gen", "storage", "shunt"]
+    for type in ["load", "gen", "storage", "storage_ne", "shunt"]
         if haskey(data, type)
             for (_,obj) in data[type]
                 obj["connections"] = collect(1:conductors)
@@ -848,7 +848,7 @@ function _map_conductor_ids!(data_math::Dict{String,<:Any})
         end
     end
 
-    for type in ["load", "shunt", "gen", "storage"]
+    for type in ["load", "shunt", "gen", "storage", "storage_ne"]
         if haskey(data_math, type)
             for (_,obj) in data_math[type]
                 obj["connections"] = Vector{Int}([cnd_map[c] for c in obj["connections"]])

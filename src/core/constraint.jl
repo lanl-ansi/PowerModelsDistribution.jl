@@ -288,9 +288,9 @@ function constraint_storage_complementarity_mi_ne(pm::AbstractUnbalancedPowerMod
     sc = var(pm, n, :sc_ne, i)
     sd = var(pm, n, :sd_ne, i)
     sc_on = var(pm, n, :sc_on_ne, i)
-    sd_on = var(pm, n, :sd_on_en, i)
+    sd_on = var(pm, n, :sd_on_ne, i)
 
-    JuMP.@constraint(pm.model, sc_on + sd_on == 1)
+    # JuMP.@constraint(pm.model, sc_on + sd_on == 1)
     JuMP.@constraint(pm.model, sc_on*charge_ub >= sc)
     JuMP.@constraint(pm.model, sd_on*discharge_ub >= sd)
     nothing
@@ -305,7 +305,7 @@ function constraint_storage_indicator_expand_ne(pm::AbstractUnbalancedPowerModel
     y  = var(pm, n, :z_expand_ne, i)
 
     JuMP.@constraint(pm.model, z <= y)
-    JuMP.@constraint(pm.model, sc_on + sd_on <= z)
+    JuMP.@constraint(pm.model, sc_on + sd_on == z)
     
     nothing
 end

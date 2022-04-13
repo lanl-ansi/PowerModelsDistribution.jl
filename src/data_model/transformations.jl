@@ -11,6 +11,7 @@ const _loss_model_objects = Dict{String,Vector{String}}(
     "generator" => String["rs", "xs"],
     "solar" => String["rs","xs"],
     "storage" => String["rs", "xs", "pex", "qex"],
+    "storage_ne" => String["rs", "xs", "pex", "qex"],
 )
 
 
@@ -461,6 +462,13 @@ function _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{V
 
         if haskey(data_eng, "storage")
             for (_,eng_obj) in data_eng["storage"]
+                filter = eng_obj["connections"] .!= kr_neutral
+                _apply_filter!(eng_obj, ["connections"], filter)
+            end
+        end
+
+        if haskey(data_eng, "storage_ne")
+            for (_,eng_obj) in data_eng["storage_ne"]
                 filter = eng_obj["connections"] .!= kr_neutral
                 _apply_filter!(eng_obj, ["connections"], filter)
             end

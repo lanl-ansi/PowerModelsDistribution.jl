@@ -248,6 +248,18 @@ end
 
 
 ""
+function _map_math2eng_storage_ne!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
+    eng_obj = _init_unmap_eng_obj!(data_eng, "storage_ne", map)
+    math_obj = _get_math_obj(data_math, map["to"])
+
+    merge!(eng_obj, math_obj)
+
+    if !isempty(eng_obj)
+        data_eng["storage_ne"][map["from"]] = eng_obj
+    end
+end
+
+""
 function _map_math2eng_line!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "line", map)
     math_obj = _get_math_obj(data_math, map["to"])
