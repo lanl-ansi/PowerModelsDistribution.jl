@@ -954,39 +954,39 @@ end
 
 
 Base.@kwdef mutable struct DssEnergymeter <: OpenDssDataObject
-    name::String
-    element
-    terminal
-    action
-    clear
-    save
-    take
-    option
-    kwnorm
-    kwemerg
-    peakcurrent
-    zonelist
-    localonly
-    mask
-    losses
-    linelosses
-    xfmrlosses
-    seqlosses
-    var"3phaselosses"
-    vbaselosses
-    basefreq
-    enabled
-    like
+    name::String = ""
+    element::String = ""
+    terminal::Int = 1
+    action::String = ""
+    clear::Bool = false
+    save::Bool = false
+    take = missing
+    option::Vector{String} = String[]
+    kwnorm::Float64 = 0.0
+    kwemerg::Float64 = 0.0
+    peakcurrent::Vector{Float64} = Float64[400, 400, 400]
+    zonelist::Vector{String} = String[]
+    localonly::Bool = false
+    mask::Vector{Float64} = Float64[1, 1, 1]
+    losses::Bool = true
+    linelosses::Bool = true
+    xfmrlosses::Bool = true
+    seqlosses::Bool = true
+    var"3phaselosses"::Bool = true
+    vbaselosses::Bool = true
+    basefreq::Float64 = 60.0
+    enabled::Status = ENABLED
+    like::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
 
 Base.@kwdef mutable struct DssMonitor <: OpenDssControlObject
-    name::String
-    element
-    terminal
-    mode
-    action
+    name::String = ""
+    element::String = ""
+    terminal::Int = 1
+    mode::String = ""
+    action::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
@@ -1042,104 +1042,104 @@ end
 
 
 Base.@kwdef mutable struct DssRecloser <: OpenDssControlObject
-    name::String
-    monitoredobj::String
-    monitoredterm::Int
-    switchedobj::String
-    switchedterm::Int
-    numfast
-    phasefast
-    phasedelayed
-    groundfast
-    grounddelayed
-    phasetrip
-    groundtrip
-    phaseinst
-    groundinst
-    reset
-    shots
-    recloseintervals
-    delay::Float64
-    action::SwitchState
-    tdphfast
-    tdgrfast
-    tdphdelayed
-    tdgrdelayed
-    basefreq::Float64
-    enabled::Status
-    like::String
+    name::String = ""
+    monitoredobj::String = ""
+    monitoredterm::Int = 1
+    switchedobj::String = ""
+    switchedterm::Int = 1
+    numfast::Int = 1
+    phasefast::String = "a"
+    phasedelayed::String = "d"
+    groundfast::String = ""
+    grounddelayed::String = ""
+    phasetrip::Float64 = 1.0
+    groundtrip::Float64 = 1.0
+    phaseinst::Float64 = 0.0
+    groundinst::Float64 = 0.0
+    reset::Float64 = 15.0
+    shots::Int = 4
+    recloseintervals::Vector{Float64} = Float64[0.5, 2.0, 2.0]
+    delay::Float64 = 0.0
+    action::SwitchState = OPEN
+    tdphfast::Float64 = 1.0
+    tdgrfast::Float64 = 1.0
+    tdphdelayed::Float64 = 1.0
+    tdgrdelayed::Float64 = 1.0
+    basefreq::Float64 = 60.0
+    enabled::Status = ENABLED
+    like::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
 
 Base.@kwdef mutable struct DssRelay <: OpenDssControlObject
-    name::String
-    monitoredobj::String
-    monitoredterm::Int
-    switchedobj::String
-    switchedterm::Int
-    type::String
-    phasecurve::String
-    groundcurve::String
-    phasetrip
-    groundtrip
-    tdphase
-    tdground
-    phaseinst
-    groundinst
-    reset
-    shots
-    recloseintervals
-    delay::Float64
-    overvoltcurve::String
-    undervoltcurve::String
-    kvbase::Float64
-    var"47%pickup"
-    var"46baseamps"
-    var"46%pickup"
-    var"46isqt"
-    variable
-    overtrip
-    undertrip
-    breakertime
-    action
-    basefreq::Float64
-    enabled::Status
-    like::String
+    name::String = ""
+    monitoredobj::String = ""
+    monitoredterm::Int = 1
+    switchedobj::String = ""
+    switchedterm::Int = 1
+    type::String = ""
+    phasecurve::String = ""
+    groundcurve::String = ""
+    phasetrip::Float64 = 1.0
+    groundtrip::Float64 = 1.0
+    tdphase::Float64 = 1.0
+    tdground::Float64 = 1.0
+    phaseinst::Float64 = 0.0
+    groundinst::Float64 = 0.0
+    reset::Float64 = 15.0
+    shots::Int = 4
+    recloseintervals::Vector{Float64} = Float64[0.5, 2.0, 2.0]
+    delay::Float64 = 0.1
+    overvoltcurve::String = ""
+    undervoltcurve::String = ""
+    kvbase::Float64 = 0.0
+    var"47%pickup"::Float64 = 2.0
+    var"46baseamps"::Float64 = 0.0
+    var"46%pickup"::Float64 = 20.0
+    var"46isqt"::Float64 = 1.0
+    variable::String = ""
+    overtrip::Float64 = 0.0
+    undertrip::Float64 = 0.0
+    breakertime::Float64 = 0.0
+    action::SwitchState = OPEN
+    basefreq::Float64 = 60.0
+    enabled::Status = ENABLED
+    like::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
 
 Base.@kwdef mutable struct DssFuse <: OpenDssControlObject
-    name::String
-    monitoredobj::String
-    monitoredterm::Int
-    switchedobj::String
-    switchedterm::Int
-    fusecurve::String
-    ratedcurrent::Float64
-    delay::Float64
-    action::SwitchState
-    basefreq::Float64
-    enabled::Status
-    like::String
+    name::String = ""
+    monitoredobj::String = ""
+    monitoredterm::Int = 1
+    switchedobj::String = ""
+    switchedterm::Int = 1
+    fusecurve::String = ""
+    ratedcurrent::Float64 = 1.0
+    delay::Float64 = 0.0
+    action::SwitchState = OPEN
+    basefreq::Float64 = 60.0
+    enabled::Status = ENABLED
+    like::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
 
 Base.@kwdef mutable struct DssSwtcontrol <: OpenDssControlObject
-    name::String
-    action::SwitchState
-    basefreq::Float64
-    delay::Float64
-    enabled::Status
-    like::String
-    lock::Dispatchable
-    normal::SwitchState
-    reset::SwitchState
-    state::SwitchState
-    switchedobj::String
-    switchedterm::Int
+    name::String = ""
+    action::SwitchState = OPEN
+    basefreq::Float64 = 60.0
+    delay::Float64 = 0.0
+    enabled::Status = ENABLED
+    like::String = ""
+    lock::Dispatchable = YES
+    normal::SwitchState = CLOSED
+    reset::SwitchState = OPEN
+    state::SwitchState = CLOSED
+    switchedobj::String = ""
+    switchedterm::Int = 1
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
