@@ -23,8 +23,9 @@ Base.haskey(@nospecialize(h::DataModel), key::String) = (Symbol(key) ∈ [pn for
 Base.haskey(@nospecialize(h::DataModel), key::Symbol) = (key ∈ [pn for pn in propertynames(h) if !isempty(getproperty(h, pn))])
 
 Base.isempty(@nospecialize(h::DataModel)) = all(isempty(getproperty(h, pn)) for pn in propertynames(h))
+Base.isempty(@nospecialize(h::Missing)) = true
 
-Base.keytype(@nospecialize(h::DataModel)) = String
+Base.keytype(@nospecialize(::DataModel)) = String
 
 Base.valtype(@nospecialize(h::DataModel)) = typeof(h)
 
