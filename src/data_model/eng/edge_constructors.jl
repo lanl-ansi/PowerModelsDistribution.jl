@@ -129,6 +129,7 @@ function create_eng_object(::Type{T}, dss_obj::DssLine; import_all::Bool=false, 
     ncond = length(f_connections)
 
     eng_obj = T(;
+        name = dss_obj.name,
         f_bus = _parse_bus_id(dss_obj.bus1)[1],
         t_bus = _parse_bus_id(dss_obj.bus2)[1],
         length = 0.001,
