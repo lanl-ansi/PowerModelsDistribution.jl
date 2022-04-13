@@ -5,8 +5,8 @@ Base.@kwdef mutable struct DssCurrentState <: OpenDssRawModel
     active_obj_type::String = ""
     active_obj_name::String = ""
     active_obj_field::String = ""
-    current_file::FilePaths.AbstractPath = FilePaths.p""
-    base_path::FilePaths.AbstractPath = FilePaths.p"."
+    current_file::Union{Missing,FilePaths.AbstractPath} = missing
+    base_path::Union{Missing,FilePaths.AbstractPath} = missing
 end
 
 

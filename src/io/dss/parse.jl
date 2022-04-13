@@ -56,7 +56,12 @@ end
 
 ""
 function _parse_dss_obj_type_name(dss_obj_type_name::SubString)::Vector{String}
-    string.(split(replace(replace(dss_obj_type_name, "\""=>""), "\'"=>""), '.'))
+    obj_type_name = string.(split(replace(replace(dss_obj_type_name, "\""=>""), "\'"=>""), '.'))
+    if obj_type_name[1] == "circuit"
+        obj_type_name = String["vsource", "source"]
+    end
+
+    obj_type_name
 end
 
 
@@ -73,6 +78,9 @@ function _parse_dss_cmd_new!(data_dss::OpenDssRawModel, line::String, line_numbe
         dss_obj_type = "vsource"
     end
 
+    if !(dss_obj_type == data_dss.current_state.active_obj_type && dss_obj_name == data_dss.current_state.active_obj_name)
+        data_dss.current_state.active_obj_field = ""
+    end
     data_dss.current_state.active_obj_type = dss_obj_type
     data_dss.current_state.active_obj_name = dss_obj_name
 
@@ -106,17 +114,16 @@ end
 
 
 ""
-function _parse_dss_cmd_set!(data_dss::OpenDssRawModel, line::String, line_number::Int)::Nothing
+function _parse_dss_cmd_set!(data_dss::OpenDssRawModel, line::String, line_number::Int)
     for _match in eachmatch(_dss_cmd_set_regex, line)
         property_key, property_value = _parse_match_element(_match, "options")
         push!(data_dss["options"], property_key => property_value)
     end
-    nothing
 end
 
 
 ""
-function _parse_dss_cmd_edit!(data_dss::OpenDssRawModel, line::String, line_number::Int)::Nothing
+function _parse_dss_cmd_edit!(data_dss::OpenDssRawModel, line::String, line_number::Int)
     rmatches_iterator = eachmatch(_dss_cmd_new_regex, line)
 
     dss_obj_match = iterate(rmatches_iterator)[1]
@@ -127,16 +134,13 @@ function _parse_dss_cmd_edit!(data_dss::OpenDssRawModel, line::String, line_numb
     else
         @warn "Cannot find $(dss_obj_type) object $(dss_obj_name)."
     end
-    nothing
 end
 
 
 ""
-function _parse_dss_cmd_redirect!(data_dss::OpenDssRawModel, line::String, line_number::Int)::Nothing
+function _parse_dss_cmd_redirect!(data_dss::OpenDssRawModel, line::String, line_number::Int)
     file = replace(line, r"(redirect|compile)\s*"=>"")
-
-    file_path = dirname(FilePaths.Path(strip(file, ['(',')'])))
-
+    file_path = FilePaths.Path(strip(file, ['(',')']))
     current_file = data_dss.filename[end]
 
     if !(joinpath(file_path...) in data_dss.filename)
@@ -144,7 +148,6 @@ function _parse_dss_cmd_redirect!(data_dss::OpenDssRawModel, line::String, line_
         @info "Redirecting to '$(joinpath(file_path...))' on line $line_number in '$(basename(current_file))'"
         data_dss = parse_raw_dss(full_path, data_dss)
     end
-    nothing
 end
 
 
@@ -184,10 +187,10 @@ end
 
 
 ""
-function _init_dss_data(; current_file::FilePaths.AbstractPath=FilePaths.p"", current_command::String="")::OpenDssRawModel
+function _init_dss_data(; current_file::Union{Missing,FilePaths.AbstractPath}=missing, current_command::String="")::OpenDssRawModel
     data_dss = OpenDssRawDataModel()
 
-    if !isempty(current_file)
+    if !ismissing(current_file)
         push!(data_dss.filename, current_file)
         data_dss.current_state.base_path = dirname(current_file)
     end
@@ -203,7 +206,6 @@ end
 ""
 function _parse_dss_cmd_buscoords!(data_dss::OpenDssRawModel, file::String, line_number::Int)::Nothing
     file_path = split(strip(file, ['(',')']), r"[\\|\/]")
-
     full_path = joinpath(data_dss.current_state.base_path, file_path...)
 
     @info "Reading Buscoords in '$(basename(full_path))' on line $(line_number) in '$(basename(data_dss.current_state.current_file))'"
@@ -213,7 +215,6 @@ function _parse_dss_cmd_buscoords!(data_dss::OpenDssRawModel, file::String, line
             push!(data_dss.buscoordinates, bc)
         end
     end
-    nothing
 end
 
 
@@ -300,8 +301,8 @@ function parse_raw_dss(io::IO, data::OpenDssRawModel)::OpenDssRawModel
 
     push!(data.filename, file)
     data.current_state.current_file = FilePaths.Path(file)
-    if isempty(data.current_state.base_path)
-        data.current_state.base_path = dirname(file)
+    if ismissing(data.current_state.base_path)
+        data.current_state.base_path = FilePaths.Path(dirname(file))
     end
 
     for (line_number, (cmd, elements)) in enumerate(_parse_command_from_line.(_strip_lines!(_sanatize_line.(readlines(io)))))
