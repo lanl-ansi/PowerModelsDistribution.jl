@@ -207,7 +207,7 @@ end
 """
 """
 function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssLine; import_all::Bool=false)
-    eng_obj = create_eng_object(EngLine, dss_obj; import_all=import_all)
+    eng_obj = create_eng_object(dss_obj.switch ? EngSwitch : EngLine, dss_obj; import_all=import_all)
 
     if isa(eng_obj, EngSwitch)
         eng.switch[eng_obj.name] = add_bus!(eng, eng_obj)
