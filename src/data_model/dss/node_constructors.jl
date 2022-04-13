@@ -6,18 +6,18 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
     load = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
     if :kw ∈ raw_fields && :pf ∈ raw_fields
-        kvar = sign(load.pf) * load.kw * sqrt(1.0 / load.pf^2 - 1.0)
-        kva = abs(load.kw) + load.kvar^2
+        load.kvar = sign(load.pf) * load.kw * sqrt(1.0 / load.pf^2 - 1.0)
+        load.kva = abs(load.kw) + load.kvar^2
     elseif :kw ∈ raw_fields && :kvar ∈ raw_fields
-        kva = abs(load.kw) + load.kvar^2
-        if kva > 0.0
-            load.pf = load.kw / kva
+        load.kva = abs(load.kw) + load.kvar^2
+        if load.kva > 0.0
+            load.pf = load.kw / load.kva
             if load.kvar != 0.0
                 load.pf *= sign(load.kw * load.kvar)
             end
         end
     elseif :kva ∈ raw_fields && :pf ∈ raw_fields
-        load.kw = kva * abs(load.pf)
+        load.kw = load.kva * abs(load.pf)
         load.kvar = sign(load.pf) * load.kw * sqrt(1.0 / load.pf^2 - 1.0)
     elseif :pf ∈ raw_fields && load.pf != 0.88
         load.kvar = sign(load.pf) * load.kw * sqrt(1.0 / load.pf^2 - 1.0)
