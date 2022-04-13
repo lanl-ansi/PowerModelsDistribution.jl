@@ -290,6 +290,24 @@ function constraint_mc_storage_on_off(pm::AbstractUnbalancedPowerModel, nw::Int,
 end
 
 
+"""
+function constraint_mc_storage_ne_power_on_off(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int, Int})::Nothing
+    z  = var(pm, nw, :z_storage_ne, f_idx)
+    ps = var(pm, nw, :ps_ne, f_idx)
+    qs = var(pm, nw, :qs_ne, f_idx)
+    
+    ps_lb = JuMP.lower_bound(ps)
+    ps_ub = JuMP.upper_bound(ps)
+    qs_lb = JuMP.lower_bound(qs)
+    qs_ub = JuMP.upper_bound(qs)
+    
+    JuMP.@constraint(pm.model, z*ps_lb <= ps )
+    JuMP.@constraint(pm.model, ps <= z*ps_ub )
+    JuMP.@constraint(pm.model, z*qs_lb <= qs )
+    JuMP.@constraint(pm.model, qs <= z*qs_ub )
+end
+"""
+
 ""
 function constraint_mc_generator_power_wye(pm::AbstractUnbalancedPowerModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
     var(pm, nw, :pg_bus)[id] = var(pm, nw, :pg, id)

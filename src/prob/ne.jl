@@ -1,3 +1,10 @@
+"Solve multinetwork network expansion problem"
+function solve_mn_mc_mld_simple_ne(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
+    return solve_mc_model(data, model_type, solver, build_mn_mc_mld_simple_ne; multinetwork=true, kwargs...)
+end
+
+
+
 "Multinetwork load shedding problem including storage"
 function build_mn_mc_mld_simple_ne(pm::AbstractUnbalancedPowerModel)
     network_ids = sort(collect(nw_ids(pm)))
@@ -11,7 +18,6 @@ function build_mn_mc_mld_simple_ne(pm::AbstractUnbalancedPowerModel)
 
         variable_mc_load_indicator(pm; nw=n, relax=true)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
-        variable_mc_storage_ne(pm; nw=n)
         variable_mc_storage_power_mi_on_off(pm; nw=n)
         variable_mc_storage_power_mi_on_off_ne(pm; nw=n)
 
@@ -36,10 +42,17 @@ function build_mn_mc_mld_simple_ne(pm::AbstractUnbalancedPowerModel)
         end
 
         for i in ids(pm, n, :storage_ne)
+            constraint_mc_storage_losses_ne(pm, i; nw=n)
+            constraint_mc_storage_thermal_limit_ne(pm, i; nw=n)
+            constraint_storage_complementarity_mi_ne(pm, i; nw=n)
+            constraint_storage_indication_expand_ne(pm, i; nw=n)
+        end
+
+        for i in ids(pm, n, :storage_ne)
             constraint_mc_storage_ne(pm, i, network_ids[1]; nw=n)
-            constraint_mc_storage_losses(pm, i; nw=n)
-            constraint_mc_storage_thermal_limit(pm, i; nw=n)
-            constraint_storage_complementarity_mi(pm, i; nw=n)
+            constraint_mc_storage_losses_ne(pm, i; nw=n)
+            constraint_mc_storage_thermal_limit_ne(pm, i; nw=n)
+            constraint_storage_complementarity_mi_ne(pm, i; nw=n)
 
             # TODO: Add constraints that force storage variables to zero if the expansion indicator is zero.
             # If there are multiple versions of a constraint, stick with the NFAUPowerModel.
@@ -77,6 +90,18 @@ function build_mn_mc_mld_simple_ne(pm::AbstractUnbalancedPowerModel)
     for n_2 in network_ids[2:end]
         for i in ids(pm, :storage; nw=n_2)
             constraint_storage_state(pm, i, n_1, n_2)
+        end
+
+        n_1 = n_2
+    end
+
+    for i in ids(pm, :storage_ne; nw=n_1)
+        constraint_storage_state_ne(pm, i; nw=n_1)
+    end
+
+    for n_2 in network_ids[2:end]
+        for i in ids(pm, :storage_ne; nw=n_2)
+            constraint_storage_state_ne(pm, i, n_1, n_2)
         end
 
         n_1 = n_2

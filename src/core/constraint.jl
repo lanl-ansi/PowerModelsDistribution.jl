@@ -230,6 +230,16 @@ end
 
 
 ""
+function constraint_storage_state_initial_ne(pm::AbstractUnbalancedPowerModel, n::Int, i::Int, energy::Float64, charge_eff::Float64, discharge_eff::Float64, time_elapsed::Float64)::Nothing
+    sc = var(pm, n, :sc_ne, i)
+    sd = var(pm, n, :sd_ne, i)
+    se = var(pm, n, :se_ne, i)
+
+    JuMP.@constraint(pm.model, se - energy == time_elapsed*(charge_eff*sc - sd/discharge_eff))
+    nothing
+end
+
+""
 function constraint_storage_state(pm::AbstractUnbalancedPowerModel, n_1::Int, n_2::Int, i::Int, charge_eff::Float64, discharge_eff::Float64, time_elapsed::Float64)::Nothing
     sc_2 = var(pm, n_2, :sc, i)
     sd_2 = var(pm, n_2, :sd, i)
@@ -240,7 +250,16 @@ function constraint_storage_state(pm::AbstractUnbalancedPowerModel, n_1::Int, n_
     nothing
 end
 
+""
+function constraint_storage_state_ne(pm::AbstractUnbalancedPowerModel, n_1::Int, n_2::Int, i::Int, charge_eff::Float64, discharge_eff::Float64, time_elapsed::Float64)::Nothing
+    sc_2 = var(pm, n_2, :sc_ne, i)
+    sd_2 = var(pm, n_2, :sd_ne, i)
+    se_2 = var(pm, n_2, :se_ne, i)
+    se_1 = var(pm, n_1, :se_ne, i)
 
+    JuMP.@constraint(pm.model, se_2 - se_1 == time_elapsed*(charge_eff*sc_2 - sd_2/discharge_eff))
+    nothing
+end
 ""
 function constraint_storage_complementarity_nl(pm::AbstractUnbalancedPowerModel, n::Int, i::Int)
     sc = var(pm, n, :sc, i)
@@ -263,6 +282,38 @@ function constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel,
     JuMP.@constraint(pm.model, sd_on*discharge_ub >= sd)
     nothing
 end
+
+""
+function constraint_storage_complementarity_mi_ne(pm::AbstractUnbalancedPowerModel, n::Int, i::Int, charge_ub::Float64, discharge_ub::Float64)
+    sc = var(pm, n, :sc_ne, i)
+    sd = var(pm, n, :sd_ne, i)
+    sc_on = var(pm, n, :sc_on_ne, i)
+    sd_on = var(pm, n, :sd_on_en, i)
+
+    JuMP.@constraint(pm.model, sc_on + sd_on == 1)
+    JuMP.@constraint(pm.model, sc_on*charge_ub >= sc)
+    JuMP.@constraint(pm.model, sd_on*discharge_ub >= sd)
+    nothing
+end
+
+
+""
+function constraint_storage_indicator_expand_ne(pm::AbstractUnbalancedPowerModel, n::Int, i::Int)
+    sc_on = var(pm, n, :sc_on_ne, i)
+    sd_on = var(pm, n, :sd_on_ne, i)
+    z  = var(pm, n, :z_storage_ne, i)
+    y  = var(pm, n, :z_expand_ne, i)
+
+    JuMP.@constraint(pm.model, z <= y)
+    JuMP.@constraint(pm.model, sc_on + sd_on <= z)
+    
+    nothing
+end
+
+"""
+    Constraint that sum(y) == number_of_timesteps * y[1] 
+        needs to be added for multinetwork
+"""
 
 
 """

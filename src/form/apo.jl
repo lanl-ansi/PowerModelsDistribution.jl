@@ -293,7 +293,15 @@ function constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedActivePowerMo
     end
 end
 
+""
+function constraint_mc_storage_thermal_limit_ne(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, connections::Vector{Int}, rating::Real)
+    ps = var(pm, nw, :ps_ne, i)
 
+    for (idx,c) in enumerate(connections)
+        JuMP.has_lower_bound(ps[c]) && JuMP.lower_bound(ps[c]) < -rating && set_lower_bound(ps[c], -rating)
+        JuMP.has_upper_bound(ps[c]) && JuMP.upper_bound(ps[c]) >  rating && set_upper_bound(ps[c],  rating)
+    end
+end
 ""
 function constraint_mc_storage_current_limit(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, bus::Int, connections::Vector{Int}, rating::Real)
     ps = var(pm, nw, :ps, i)
@@ -332,6 +340,19 @@ function constraint_mc_storage_losses(pm::AbstractUnbalancedAPLossLessModels, nw
     )
 end
 
+
+"active power only, lossless model (network expansion)"
+function constraint_mc_storage_losses_ne(pm::AbstractUnbalancedAPLossLessModels, nw::Int, i::Int, bus::Int, connections::Vector{Int}, r::Real, ::Real, p_loss::Real, ::Real)
+    ps = var(pm, nw, :ps_ne, i)
+    sc = var(pm, nw, :sc_ne, i)
+    sd = var(pm, nw, :sd_ne, i)
+
+    JuMP.@constraint(pm.model,
+        sum(ps[c] for c in connections) + (sd - sc)
+        ==
+        0.0
+    )
+end
 
 ""
 function constraint_mc_storage_on_off(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}, charge_ub, discharge_ub)

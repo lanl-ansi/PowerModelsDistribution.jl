@@ -107,6 +107,7 @@ module PowerModelsDistribution
     include("prob/debug.jl")
     include("prob/test.jl")
     include("prob/osw.jl")
+    include("prob/ne.jl")
 
     include("core/export.jl")
 end

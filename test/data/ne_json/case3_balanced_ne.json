@@ -1,0 +1,26 @@
+{
+    "storage_ne":{
+        "s_ne1":{
+            "sm_ub": 5.0,
+            "qex":  0.0,
+            "source_id": "storage.s_ne1" , 
+            "pex":  0.0, 
+            "connections": [1, 2, 3, 4], 
+            "charge_efficiency":  100.0,
+            "discharge_ub":  5.0, 
+            "energy": 5.0, 
+            "xs": 0.0, 
+            "bus": "primary",
+            "charge_ub":  5.0,
+            "configuration": "wye", 
+            "energy_ub":  5.0, 
+            "rs":  0.0,
+            "ps":  -5.0, 
+            "qs":  -0.0, 
+            "status":  "enabled", 
+            "discharge_efficiency": 100.0, 
+            "qs_ub":  5.0,
+            "qs_lb": -5.0 
+        }
+    }
+}

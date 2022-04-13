@@ -924,6 +924,21 @@ function constraint_mc_storage_losses(pm::AbstractUnbalancedPowerModel, i::Int; 
     nothing
 end
 
+"""
+    constraint_mc_storage_losses_ne(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for storage loss constraints for network expansion storage
+"""
+function constraint_mc_storage_losses_ne(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    storage = ref(pm, nw, :storage_ne, i)
+
+    constraint_mc_storage_losses_ne(pm, nw, i, storage["storage_bus"], storage["connections"], storage["r"], storage["x"], storage["p_loss"], storage["q_loss"])
+    nothing
+end
+
+""" 
+            constraint_mc_storage_ne_power_on_off(
+"""
 
 """
     constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
@@ -935,6 +950,17 @@ function constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedPowerModel, i
     constraint_mc_storage_thermal_limit(pm, nw, i, storage["connections"], storage["thermal_rating"])
 end
 
+
+
+"""
+    constraint_mc_storage_thermal_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for storage thermal limit constraints (network expansion)
+"""
+function constraint_mc_storage_thermal_limit_ne(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+    storage = ref(pm, nw, :storage_ne, i)
+    constraint_mc_storage_thermal_limit_ne(pm, nw, i, storage["connections"], storage["thermal_rating"])
+end
 
 """
     constraint_mc_storage_current_limit(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
@@ -996,6 +1022,24 @@ function constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int; nw::
     nothing
 end
 
+"""
+    constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for storage state constraints (Network Expansion version)
+"""
+function constraint_storage_state_ne(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    storage = ref(pm, nw, :storage_ne, i)
+
+    if haskey(ref(pm, nw), :time_elapsed)
+        time_elapsed = ref(pm, nw, :time_elapsed)
+    else
+        @warn "network data should specify time_elapsed in hours, using 1.0 as a default"
+        time_elapsed = 1.0
+    end
+
+    constraint_storage_state_initial_ne(pm, nw, i, storage["energy"], storage["charge_efficiency"], storage["discharge_efficiency"], time_elapsed)
+    nothing
+end
 
 """
     constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int, nw_1::Int, nw_2::Int)::Nothing
@@ -1024,6 +1068,31 @@ end
 
 
 """
+    constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int, nw_1::Int, nw_2::Int)::Nothing
+
+Template function for storage state constraints for multinetwork problems (Network Expansion)
+"""
+function constraint_storage_state_ne(pm::AbstractUnbalancedPowerModel, i::Int, nw_1::Int, nw_2::Int)::Nothing
+    storage = ref(pm, nw_2, :storage_ne, i)
+
+    if haskey(ref(pm, nw_2), :time_elapsed)
+        time_elapsed = ref(pm, nw_2, :time_elapsed)
+    else
+        @warn "network $(nw_2) should specify time_elapsed in hours, using 1.0 as a default"
+        time_elapsed = 1.0
+    end
+
+    if haskey(ref(pm, nw_1, :storage_ne), i)
+        constraint_storage_state_ne(pm, nw_1, nw_2, i, storage["charge_efficiency"], storage["discharge_efficiency"], time_elapsed)
+    else
+        # if the storage device has status=0 in nw_1, then the stored energy variable will not exist. Initialize storage from data model instead.
+        @warn "storage component $(i) was not found in network $(nw_1) while building constraint_storage_state between networks $(nw_1) and $(nw_2). Using the energy value from the storage component in network $(nw_2) instead"
+        constraint_storage_state_initial_ne(pm, nw_2, i, storage["energy"], storage["charge_efficiency"], storage["discharge_efficiency"], time_elapsed)
+    end
+    nothing
+end
+
+"""
     constraint_storage_complementarity_nl(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
 
 Template function for nonlinear storage complementarity constraints
@@ -1046,6 +1115,30 @@ function constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel,
 
     constraint_storage_complementarity_mi(pm, nw, i, charge_ub, discharge_ub)
     nothing
+end
+
+"""
+    constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+
+Template function for mixed-integer storage complementarity constraints
+"""
+function constraint_storage_complementarity_mi_ne(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    storage = ref(pm, nw, :storage_ne, i)
+    charge_ub = storage["charge_rating"]
+    discharge_ub = storage["discharge_rating"]
+
+    constraint_storage_complementarity_mi_ne(pm, nw, i, charge_ub, discharge_ub)
+    nothing
+end
+
+""" 
+    constraint_storage_indication_expand_ne(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default
+Template function for allow energy storage indicator on only if expansion variable is on
+"""
+function constraint_storage_indicator_expand_ne(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
+    # storage = ref(pm, nw, :storage_ne, i)
+
+    constraint_storage_indicator_expand_ne(pm, nw, i)
 end
 
 
