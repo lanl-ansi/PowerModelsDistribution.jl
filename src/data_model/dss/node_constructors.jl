@@ -35,6 +35,24 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
 
     strg = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
+    if Symbol("%stored") ∈ raw_fields
+        strg.kwhstored = strg[Symbol("%stored")] / 100 * strg.kwhrated
+    elseif :kwhstored ∈ raw_fields
+        strg[Symbol("%stored")] = strg.kwhstored / strg.kwhrated * 100
+    end
+
+    if :kwrated ∈ raw_fields && :kva ∉ raw_fields
+        strg.kva = strg.kwrated
+    elseif :kva ∈ raw_fields && :kwrated ∉ raw_fields
+        strg.kwrated = strg.kva
+    end
+
+    if :pf ∈ raw_fields && :kw ∈ raw_fields
+        strg.kvar = sign(strg.pf) * strg.kw * sqrt(1 / strg.pf^2 - 1)
+    elseif :kw ∈ raw_fields && :kvar ∈ raw_fields
+        strg.pf = strg.kw == 0.0 ? 1.0 : strg.kvar / strg.kw
+    end
+
     return strg
 end
 
