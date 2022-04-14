@@ -97,5 +97,5 @@ function build_mn_mc_mld_simple_ne(pm::AbstractUnbalancedPowerModel)
         n_1 = n_2
     end
 
-    objective_min_ne_cost(pm)
+    objective_ne(pm)
 end

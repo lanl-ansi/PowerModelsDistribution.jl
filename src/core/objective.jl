@@ -164,11 +164,11 @@ end
 
 
 """
-    objective_min_ne_cost(pm::AbstractUnbalancedPowerModel)
+    objective_ne(pm::AbstractUnbalancedPowerModel)
 
 Network expansion cost minimization objective.
 """
-function objective_min_ne_cost(pm::AbstractUnbalancedPowerModel; report::Bool=true)
+function objective_ne(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     return JuMP.@objective(pm.model, Min,
         sum(
             sum( storage_ne["fixed_cost"] * var(pm, n, :z_expand_ne, i)
