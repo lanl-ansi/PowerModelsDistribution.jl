@@ -22,6 +22,7 @@ case3_balanced = parse_file("./test/data/opendss/case3_balanced_nobattery.dss")
 modifications = parse_file("./test/data/ne_json/case3_balanced_ne.json")
 modifications["storage_ne"]["s_ne1"]["configuration"] = PMD.WYE
 modifications["storage_ne"]["s_ne1"]["status"] = PMD.ENABLED
+modifications["storage_ne"]["s_ne1"]["fixed_cost"] = 1.0
 
 PMD._IM.update_data!(case3_balanced, modifications)
 
