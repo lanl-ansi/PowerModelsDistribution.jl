@@ -164,6 +164,21 @@ end
 
 
 """
+    objective_min_ne_cost(pm::AbstractUnbalancedPowerModel)
+
+Network expansion cost minimization objective.
+"""
+function objective_min_ne_cost(pm::AbstractUnbalancedPowerModel; report::Bool=true)
+    return JuMP.@objective(pm.model, Min,
+        sum(
+            sum( storage_ne["fixed_cost"] * var(pm, n, :z_expand_ne, i)
+            for (i, storage_ne) in nw_ref[:storage_ne])
+        for (n, nw_ref) in nws(pm))
+    )
+end
+
+
+"""
     objective_mc_min_fuel_cost_pwl_switch(pm::AbstractUnbalancedPowerModel)
 
 Fuel cost minimization objective with piecewise linear terms including switches
