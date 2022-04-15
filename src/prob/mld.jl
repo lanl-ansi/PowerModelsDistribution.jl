@@ -103,6 +103,7 @@ function build_mn_mc_mld_simple(pm::AbstractUnbalancedPowerModel)
         variable_mc_load_indicator(pm; nw=n, relax=true)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
         variable_mc_storage_power_mi(pm; nw=n, relax=true)
+        variable_mc_storage_power_mi_on_off_ne(pm; nw=n)
 
         constraint_mc_model_voltage(pm; nw=n)
 
@@ -122,6 +123,13 @@ function build_mn_mc_mld_simple(pm::AbstractUnbalancedPowerModel)
             constraint_mc_storage_losses(pm, i; nw=n)
             constraint_mc_storage_thermal_limit(pm, i; nw=n)
             constraint_storage_complementarity_mi(pm, i; nw=n)
+        end
+
+        for i in ids(pm, n, :storage_ne)
+            constraint_mc_storage_losses_ne(pm, i; nw=n)
+            constraint_mc_storage_thermal_limit_ne(pm, i; nw=n)
+            constraint_storage_complementarity_mi_ne(pm, i; nw=n)
+            constraint_storage_indicator_expand_ne(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :branch)
@@ -153,14 +161,22 @@ function build_mn_mc_mld_simple(pm::AbstractUnbalancedPowerModel)
         constraint_storage_state(pm, i; nw=n_1)
     end
 
+    for i in ids(pm, :storage_ne; nw=n_1)
+        constraint_storage_state_ne(pm, i; nw=n_1)
+    end
+
     for n_2 in network_ids[2:end]
         for i in ids(pm, :storage; nw=n_2)
             constraint_storage_state(pm, i, n_1, n_2)
         end
 
+        for i in ids(pm, :storage_ne; nw=n_2)
+            constraint_storage_state_ne(pm, i, n_1, n_2)
+        end
+
         n_1 = n_2
     end
-
+    
     objective_mc_min_load_setpoint_delta_simple(pm)
 end
 
@@ -247,6 +263,7 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
         variable_mc_load_indicator(pm; nw=n, relax=true)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
         variable_mc_storage_power_mi(pm; nw=n, relax=true)
+        variable_mc_storage_power_mi_on_off_ne(pm; nw=n)
 
         constraint_mc_model_current(pm; nw=n)
 
@@ -266,6 +283,13 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
             constraint_mc_storage_losses(pm, i; nw=n)
             constraint_mc_storage_thermal_limit(pm, i; nw=n)
             constraint_storage_complementarity_mi(pm, i; nw=n)
+        end
+
+        for i in ids(pm, n, :storage_ne)
+            constraint_mc_storage_losses_ne(pm, i; nw=n)
+            constraint_mc_storage_thermal_limit_ne(pm, i; nw=n)
+            constraint_storage_complementarity_mi_ne(pm, i; nw=n)
+            constraint_storage_indicator_expand_ne(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :branch)
@@ -297,9 +321,17 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
         constraint_storage_state(pm, i; nw=n_1)
     end
 
+    for i in ids(pm, :storage_ne; nw=n_1)
+        constraint_storage_state_ne(pm, i; nw=n_1)
+    end
+
     for n_2 in network_ids[2:end]
         for i in ids(pm, :storage; nw=n_2)
             constraint_storage_state(pm, i, n_1, n_2)
+        end
+
+        for i in ids(pm, :storage_ne; nw=n_2)
+            constraint_storage_state_ne(pm, i, n_1, n_2)
         end
 
         n_1 = n_2
