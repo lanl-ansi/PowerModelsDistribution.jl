@@ -301,11 +301,11 @@ end
 function constraint_storage_indicator_expand_ne(pm::AbstractUnbalancedPowerModel, n::Int, i::Int)
     sc_on = var(pm, n, :sc_on_ne, i)
     sd_on = var(pm, n, :sd_on_ne, i)
-    z  = var(pm, n, :z_storage_ne, i)
-    y  = var(pm, n, :z_expand_ne, i)
+    z_on_off = var(pm, n, :z_storage_ne, i)
+    z_constructed = var(pm, n, :z_expand_ne, i)
 
-    JuMP.@constraint(pm.model, z <= y)
-    JuMP.@constraint(pm.model, sc_on + sd_on == z)
+    JuMP.@constraint(pm.model, z_on_off <= z_constructed)
+    JuMP.@constraint(pm.model, sc_on + sd_on == z_constructed)
     
     nothing
 end

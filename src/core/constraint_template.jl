@@ -1136,9 +1136,8 @@ end
 Template function for allow energy storage indicator on only if expansion variable is on
 """
 function constraint_storage_indicator_expand_ne(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
-    # storage = ref(pm, nw, :storage_ne, i)
-
     constraint_storage_indicator_expand_ne(pm, nw, i)
+    nothing
 end
 
 

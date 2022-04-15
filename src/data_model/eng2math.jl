@@ -854,6 +854,7 @@ function _map_eng2math_storage_ne!(data_math::Dict{String,<:Any}, data_eng::Dict
 
         math_obj["energy"] = eng_obj["energy"]
         math_obj["energy_rating"] = eng_obj["energy_ub"]
+        math_obj["fixed_cost"] = eng_obj["fixed_cost"]
         math_obj["charge_rating"] = eng_obj["charge_ub"]
         math_obj["discharge_rating"] = eng_obj["discharge_ub"]
         math_obj["charge_efficiency"] = eng_obj["charge_efficiency"] / 100.0

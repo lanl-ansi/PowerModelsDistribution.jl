@@ -1278,8 +1278,8 @@ function variable_mc_storage_ne(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_
     if relax
         z_storage_ne = var(pm, nw)[:z_storage_ne] = JuMP.@variable(pm.model,
             [i in ids(pm, nw, :storage_ne)], base_name="$(nw)_z_storage_ne",
-            lower_bound = 0,
-            upper_bound = 1,
+            lower_bound = 0.0,
+            upper_bound = 1.0,
             start = comp_start_value(ref(pm, nw, :load, i), "z_storage_start", 1.0)
         )
     else
