@@ -327,6 +327,20 @@ function constraint_mc_storage_losses(pm::AbstractUnbalancedActivePowerModel, nw
 end
 
 
+"active power only (network expansion)"
+function constraint_mc_storage_losses_ne(pm::AbstractUnbalancedActivePowerModel, nw::Int, i::Int, bus::Int, connections::Vector{Int}, r::Real, ::Real, p_loss::Real, ::Real)
+    ps = var(pm, nw, :ps_ne, i)
+    sc = var(pm, nw, :sc_ne, i)
+    sd = var(pm, nw, :sd_ne, i)
+
+    JuMP.@constraint(pm.model,
+        sum(ps[c] for c in connections) + (sd - sc)
+        ==
+        p_loss + r * sum(ps[c]^2 for (idx,c) in enumerate(connections))
+    )
+end
+
+
 "active power only, lossless model"
 function constraint_mc_storage_losses(pm::AbstractUnbalancedAPLossLessModels, nw::Int, i::Int, bus::Int, connections::Vector{Int}, r::Real, ::Real, p_loss::Real, ::Real)
     ps = var(pm, nw, :ps, i)
@@ -361,7 +375,6 @@ function constraint_mc_storage_on_off(pm::AbstractUnbalancedActivePowerModel, nw
 
     JuMP.@constraint(pm.model, ps .<= pmax.*z_storage)
     JuMP.@constraint(pm.model, ps .>= pmin.*z_storage)
-
 end
 
 
