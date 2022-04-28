@@ -40,16 +40,18 @@ end
 
 
 "power balance constraint with line shunts and transformers for load shed problem, DCP formulation"
-function constraint_mc_power_balance_shed(pm::AbstractUnbalancedDCPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+function constraint_mc_power_balance_shed(pm::AbstractUnbalancedDCPModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_storage_ne::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
     p    = get(var(pm, nw), :p,      Dict()); _check_var_keys(p, bus_arcs, "active power", "branch")
     pg   = get(var(pm, nw), :pg_bus, Dict()); _check_var_keys(pg, bus_gens, "active power", "generator")
     ps   = get(var(pm, nw), :ps,     Dict()); _check_var_keys(ps, bus_storage, "active power", "storage")
+    ps_ne= get(var(pm, nw), :ps_ne,     Dict()); _check_var_keys(ps_ne, bus_storage_ne, "active power", "storage_ne")
     psw  = get(var(pm, nw), :psw,    Dict()); _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
     pt   = get(var(pm, nw), :pt,     Dict()); _check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
 
     z_demand = var(pm, nw, :z_demand)
     z_gen = haskey(var(pm, nw), :z_gen) ? var(pm, nw, :z_gen) : Dict(i => 1.0 for i in ids(pm, nw, :gen))
     z_storage = haskey(var(pm, nw), :z_storage) ? var(pm, nw, :z_storage) : Dict(i => 1.0 for i in ids(pm, nw, :storage))
+    z_storage_ne = haskey(var(pm, nw), :z_storage_ne) ? var(pm, nw, :z_storage_ne) : Dict(i => 1.0 for i in ids(pm, nw, :storage_ne))
     z_shunt  = haskey(var(pm, nw), :z_shunt) ? var(pm, nw, :z_shunt) : Dict(i => 1.0 for i in ids(pm, nw, :shunt))
 
     Gt, Bt = _build_bus_shunt_matrices(pm, nw, terminals, bus_shunts)
@@ -66,6 +68,7 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedDCPModel, nw::In
             + sum(ref(pm, nw, :load, d, "pd")[findfirst(isequal(t), conns)]*z_demand[d] for (d, conns) in bus_loads if t in conns)
             - sum(pg[g][t]*z_gen[g] for (g, conns) in bus_gens if t in conns)
             - sum(ps[s][t]*z_storage[s] for (s, conns) in bus_storage if t in conns)
+            - sum(ps_ne[s][t]*z_storage_ne[s] for (s, conns) in bus_storage_ne if t in conns)
             + sum(LinearAlgebra.diag(Gt)[idx]*z_shunt[sh] for (sh, conns) in bus_shunts if t in conns)
             == 0
         )

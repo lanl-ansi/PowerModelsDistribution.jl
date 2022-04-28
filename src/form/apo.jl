@@ -346,12 +346,17 @@ function constraint_mc_storage_losses_ne(pm::AbstractUnbalancedAPLossLessModels,
     ps = var(pm, nw, :ps_ne, i)
     sc = var(pm, nw, :sc_ne, i)
     sd = var(pm, nw, :sd_ne, i)
+    # qs = var(pm, nw, :qs_ne, i)
 
     JuMP.@constraint(pm.model,
         sum(ps[c] for c in connections) + (sd - sc)
         ==
         0.0
     )
+    # for c in connections
+    #     JuMP.@constraint(pm.model, qs[c] <= ps[c])
+    # end
+
 end
 
 ""

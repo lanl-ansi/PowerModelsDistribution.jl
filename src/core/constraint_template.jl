@@ -331,6 +331,7 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedPowerModel, i::I
     bus_arcs_trans = ref(pm, nw, :bus_arcs_conns_transformer, i)
     bus_gens = ref(pm, nw, :bus_conns_gen, i)
     bus_storage = ref(pm, nw, :bus_conns_storage, i)
+    bus_storage_ne = ref(pm, nw, :bus_conns_storage_ne, i)
     bus_loads = ref(pm, nw, :bus_conns_load, i)
     bus_shunts = ref(pm, nw, :bus_conns_shunt, i)
 
@@ -342,7 +343,7 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedPowerModel, i::I
         con(pm, nw)[:lam_kcl_i] = Dict{Int,Array{JuMP.ConstraintRef}}()
     end
 
-    constraint_mc_power_balance_shed(pm, nw, i, bus["terminals"], bus["grounded"], bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_shunts)
+    constraint_mc_power_balance_shed(pm, nw, i, bus["terminals"], bus["grounded"], bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_storage_ne, bus_loads, bus_shunts)
     nothing
 end
 

@@ -104,7 +104,9 @@ function build_mn_mc_mld_simple(pm::AbstractUnbalancedPowerModel)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
         variable_mc_storage_power_mi(pm; nw=n, relax=true)
         variable_mc_storage_power_mi_on_off_ne(pm; nw=n)
+    end
 
+    for (n, network) in nws(pm)
         constraint_mc_model_voltage(pm; nw=n)
 
         for i in ids(pm, n, :ref_buses)
@@ -177,7 +179,8 @@ function build_mn_mc_mld_simple(pm::AbstractUnbalancedPowerModel)
         n_1 = n_2
     end
     
-    objective_mc_min_load_setpoint_delta_simple(pm)
+    # objective_mc_min_load_setpoint_delta_simple(pm)
+    objective_ne(pm)
 end
 
 
@@ -264,7 +267,9 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
         variable_mc_storage_power_mi(pm; nw=n, relax=true)
         variable_mc_storage_power_mi_on_off_ne(pm; nw=n)
-
+    end
+    
+    for (n, network) in nws(pm)
         constraint_mc_model_current(pm; nw=n)
 
         for i in ids(pm, n, :ref_buses)

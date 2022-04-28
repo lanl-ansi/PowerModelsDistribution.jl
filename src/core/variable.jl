@@ -1299,7 +1299,7 @@ function variable_mc_storage_power_mi_on_off_ne(pm::AbstractUnbalancedPowerModel
     variable_mc_storage_expand_ne(pm; nw=nw, report=report)
     variable_mc_storage_power_real_on_off_ne(pm; nw=nw, bounded=bounded, report=report)
     variable_mc_storage_power_imaginary_on_off_ne(pm; nw=nw, bounded=bounded, report=report)
-    variable_mc_storage_power_control_imaginary_on_off_ne(pm; nw=nw, bounded=bounded, report=report)
+    # variable_mc_storage_power_control_imaginary_on_off_ne(pm; nw=nw, bounded=bounded, report=report)
     variable_mc_storage_current_ne(pm; nw=nw, bounded=bounded, report=report)
     variable_mc_storage_indicator_ne(pm; nw=nw, report=report)
     variable_storage_energy_ne(pm; nw=nw, bounded=bounded, report=report)
