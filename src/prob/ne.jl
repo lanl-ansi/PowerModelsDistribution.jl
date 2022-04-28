@@ -5,7 +5,7 @@ end
 
 
 "Multinetwork network expansion problem including storage"
-function build_mn_mc_mld_simple_ne(pm::Union{AbstractUBFModels,AbstractUnbalancedPowerModel})
+function build_mn_mc_mld_simple_ne(pm::AbstractUnbalancedPowerModel)
     build_mn_mc_mld_simple(pm)
     objective_ne(pm)
 end
