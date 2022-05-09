@@ -360,13 +360,27 @@ function constraint_mc_storage_losses_ne(pm::AbstractUnbalancedAPLossLessModels,
     ps = var(pm, nw, :ps_ne, i)
     sc = var(pm, nw, :sc_ne, i)
     sd = var(pm, nw, :sd_ne, i)
-    # qs = var(pm, nw, :qs_ne, i)
 
+    sc_ub = JuMP.upper_bound(sc)
+    sd_ub = JuMP.upper_bound(sd)
+
+    sc_on = var(pm, nw, :sc_on_ne, i)
+    sd_on = var(pm, nw, :sd_on_ne, i)
+    
+
+    # qs = var(pm, nw, :qs_ne, i)
+    println(sc_ub)
     JuMP.@constraint(pm.model,
         sum(ps[c] for c in connections) + (sd - sc)
         ==
         0.0
     )
+
+    for c in connections
+        JuMP.@constraint(pm.model, ps[c] <= sc_on*sc_ub)
+        JuMP.@constraint(pm.model, ps[c] >= -sd_on*sd_ub)
+    end
+
     # for c in connections
     #     JuMP.@constraint(pm.model, qs[c] <= ps[c])
     # end

@@ -468,6 +468,9 @@ function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw
         constraint_mc_ohms_yt_from(pm, nw, f_bus, t_bus, f_idx, t_idx, branch["f_connections"], branch["t_connections"], G, B, branch["g_fr"], branch["b_fr"])
     end
 end
+function constraint_fixed_load(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    constraint_fixed_load(pm, nw, i)
+end
 
 
 """

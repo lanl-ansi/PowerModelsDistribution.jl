@@ -59,16 +59,18 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedDCPModel, nw::In
     cstr_p = []
 
     ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
-
     for (idx,t) in ungrounded_terminals
         cp = JuMP.@constraint(pm.model,
               sum(p[a][t] for (a, conns) in bus_arcs if t in conns)
             + sum(psw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
             + sum(pt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
             + sum(ref(pm, nw, :load, d, "pd")[findfirst(isequal(t), conns)]*z_demand[d] for (d, conns) in bus_loads if t in conns)
-            - sum(pg[g][t]*z_gen[g] for (g, conns) in bus_gens if t in conns)
-            - sum(ps[s][t]*z_storage[s] for (s, conns) in bus_storage if t in conns)
-            - sum(ps_ne[s][t]*z_storage_ne[s] for (s, conns) in bus_storage_ne if t in conns)
+            # - sum(pg[g][t]*z_gen[g] for (g, conns) in bus_gens if t in conns)
+            # - sum(ps[s][t]*z_storage[s] for (s, conns) in bus_storage if t in conns)
+            # - sum(ps_ne[s][t]*z_storage_ne[s] for (s, conns) in bus_storage_ne if t in conns)
+            - sum(pg[g][t] for (g, conns) in bus_gens if t in conns)
+            + sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
+            + sum(ps_ne[s][t] for (s, conns) in bus_storage_ne if t in conns)
             + sum(LinearAlgebra.diag(Gt)[idx]*z_shunt[sh] for (sh, conns) in bus_shunts if t in conns)
             == 0
         )

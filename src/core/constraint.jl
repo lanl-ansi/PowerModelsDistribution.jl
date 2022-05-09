@@ -297,6 +297,13 @@ function constraint_storage_complementarity_mi_ne(pm::AbstractUnbalancedPowerMod
 end
 
 
+function constraint_fixed_load(pm::AbstractUnbalancedPowerModel, n::Int, i::Int)
+    z = var(pm, n, :z_demand, i)
+
+    JuMP.@constraint(pm.model, z == 1.0)
+    nothing
+end
+
 ""
 function constraint_storage_indicator_expand_ne(pm::AbstractUnbalancedPowerModel, n::Int, i::Int)
     sc_on = var(pm, n, :sc_on_ne, i)

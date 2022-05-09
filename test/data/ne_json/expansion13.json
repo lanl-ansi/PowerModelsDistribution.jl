@@ -1,0 +1,33 @@
+{
+
+            "storage_ne": {
+                "s_ne1": {
+                    "connections": [
+                        1,
+                        2,
+                        3,
+                        4
+                    ],
+                    "energy": 1.0,
+                    "xs": 0.0,
+                    "fixed_cost": 100.0,
+                    "bus": "645",
+                    "charge_ub": 0.1,
+                    "configuration": 0,
+                    "energy_ub": 1.75,
+                    "qs": -0.0,
+                    "status": 1,
+                    "qex": 0.0,
+                    "sm_ub": 0.5,
+                    "source_id": "storage.s_ne1",
+                    "qs_lb": -0.1,
+                    "pex": 0.0,
+                    "charge_efficiency": 98.0,
+                    "discharge_ub": 0.1,
+                    "ps": -0.1,
+                    "rs": 0.0,
+                    "discharge_efficiency": 96.0,
+                    "qs_ub": 0.1
+                }
+            }
+}

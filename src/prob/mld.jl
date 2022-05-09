@@ -121,6 +121,11 @@ function build_mn_mc_mld_simple(pm::AbstractUnbalancedPowerModel)
             constraint_mc_power_balance_shed(pm, i; nw=n)
         end
 
+        for i in ids(pm, n, :load)
+            # Constrain load variables if they are not connected to a pump.
+            constraint_fixed_load(pm, i; nw = n)
+        end
+
         for i in ids(pm, n, :storage)
             constraint_mc_storage_losses(pm, i; nw=n)
             constraint_mc_storage_thermal_limit(pm, i; nw=n)
