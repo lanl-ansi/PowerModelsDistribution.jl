@@ -2,6 +2,10 @@
 
 ## staged
 
+- none
+
+## v0.14.4
+
 - Fixed bug in `apply_voltage_bounds!` for multinetwork data
 - Added compat for JuMP v1
 - Fixed bug in `_map_eng2math` where global keys were not being propagated in multinetwork
