@@ -107,12 +107,37 @@ end
 """
     discover_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{Any}}
 
-finds voltage zones by walking through the network and analyzing the transformers
+finds voltage zones by walking through the network and analyzing the transformers, attempting to decern the type of `data_model`
 """
 function discover_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{Any}}
     @assert iseng(data_model) || ismath(data_model) "unsupported data model"
-    edge_elements = ismath(data_model) ? _math_edge_elements : _eng_edge_elements
 
+    return ismath(data_model) ? discover_math_voltage_zones(data_model) : discover_eng_voltage_zones(data_model)
+end
+
+
+"""
+    discover_math_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{Any}}
+
+finds voltage zones by walking through the network and analyzing the transformers for a MATHEMATICAL `data_model`
+"""
+discover_math_voltage_zones(data_model::Dict{String,Any})::Dict{Int,Set{Any}} = _discover_voltage_zones(data_model, _math_edge_elements)
+
+
+"""
+    discover_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{Any}}
+
+finds voltage zones by walking through the network and analyzing the transformers for a ENGINEERING `data_model`
+"""
+discover_eng_voltage_zones(data_model::Dict{String,Any})::Dict{Int,Set{Any}} = _discover_voltage_zones(data_model, _eng_edge_elements)
+
+
+"""
+    discover_voltage_zones(data_model::Dict{String,<:Any}, edge_elements::Vector{String})::Dict{Int,Set{Any}}
+
+finds voltage zones by walking through the network and analyzing the transformers
+"""
+function _discover_voltage_zones(data_model::Dict{String,<:Any}, edge_elements::Vector{String})::Dict{Int,Set{Any}}
     unused_components = Set("$comp_type.$id" for comp_type in edge_elements[edge_elements .!= "transformer"] for id in keys(get(data_model, comp_type, Dict())))
     bus_connectors = Dict([(id,Set()) for id in keys(get(data_model, "bus", Dict()))])
     for comp_type in edge_elements[edge_elements .!= "transformer"]
@@ -147,15 +172,40 @@ function discover_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{An
     return zones
 end
 
+"""
+    calc_math_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict}
+
+Calculates voltage bases for each voltage zone for buses and branches for a MATHEMATICAL `data_model`
+"""
+calc_math_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict} = _calc_voltage_bases(data_model, vbase_sources, _math_edge_elements)
+
+
+"""
+    calc_eng_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict}
+
+Calculates voltage bases for each voltage zone for buses and branches for a ENGINEERING `data_model`
+"""
+calc_eng_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict} = _calc_voltage_bases(data_model, vbase_sources, _eng_edge_elements)
+
 
 """
     calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict}
 
-Calculates voltage bases for each voltage zone for buses and branches
+Calculates voltage bases for each voltage zone for buses and branches, attempting to automatically decern the `data_model` type
 """
 function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict}
+    return ismath(data_model) ? calc_math_voltage_bases(data_model, vbase_sources) : calc_eng_voltage_bases(data_model, vbase_sources)
+end
+
+
+"""
+    _calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real}, edge_elements::Vector{String})::Tuple{Dict,Dict}
+
+Calculates voltage bases for each voltage zone for buses and branches given a list of `edge_elements`
+"""
+function _calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real}, edge_elements::Vector{String})::Tuple{Dict,Dict}
     # find zones of buses connected by lines
-    zones = discover_voltage_zones(data_model)
+    zones = _discover_voltage_zones(data_model, edge_elements)
     bus_to_zone = Dict([(bus,zone) for (zone, buses) in zones for bus in buses])
 
     # assign specified vbase to corresponding zones
@@ -214,10 +264,9 @@ function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{
         end
     end
 
-    edge_elements = ismath(data_model) ? _math_edge_elements : _eng_edge_elements
-
     bus_vbase = Dict([(bus,zone_vbase[zone]) for (bus,zone) in bus_to_zone])
     edge_vbase = Dict([("$edge_type.$id", bus_vbase["$(obj["f_bus"])"]) for edge_type in edge_elements[edge_elements .!= "transformer"] if haskey(data_model, edge_type) for (id,obj) in data_model[edge_type]])
+
     return (bus_vbase, edge_vbase)
 end
 
