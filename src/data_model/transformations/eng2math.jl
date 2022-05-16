@@ -231,7 +231,8 @@ function _map_eng2math(
                     "time_elapsed" => get(nw, "time_elapsed", 1.0),
                 ) for (n,nw) in _data_eng["nw"]
             ),
-            "multinetwork" => ismultinetwork(data_eng)
+            "multinetwork" => ismultinetwork(data_eng),
+            [k => data_eng[k] for k in global_keys if haskey(data_eng, k)]...
         )
     else
         data_math = Dict{String,Any}(

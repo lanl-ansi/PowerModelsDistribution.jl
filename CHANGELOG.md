@@ -2,6 +2,13 @@
 
 ## staged
 
+- none
+
+## v0.14.4
+
+- Fixed bug in `apply_voltage_bounds!` for multinetwork data
+- Added compat for JuMP v1
+- Fixed bug in `_map_eng2math` where global keys were not being propagated in multinetwork
 - Fixed bug/typo in `_create_storage` where `kwhstored` was derived from `:stored` instead of `Symbol("%stored")`
 - Fixed bug in function `_dss2eng_loadshape!()` where `qmult` data was overwriting `pmult` data [#386](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/386)
 
