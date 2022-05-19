@@ -104,13 +104,13 @@ end
 
 """
 """
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: OpenDssDataObject
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssDataObject
     dataobject = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 end
 
 
 """
 """
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: OpenDssControlObject
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssControlObject
     controlobject = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 end

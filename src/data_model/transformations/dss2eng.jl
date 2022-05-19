@@ -288,8 +288,8 @@ function add_controls!(eng::EngineeringDataModel, capacitor_id::String, eng_obj:
     end
 end
 
-convert_dss2eng!(::EngineeringModel, ::OpenDssDataObject; import_all::Bool=false) = nothing
-convert_dss2eng!(::EngineeringModel, ::OpenDssControlObject; import_all::Bool=false) = nothing
+convert_dss2eng!(::EngineeringModel, ::DssDataObject; import_all::Bool=false) = nothing
+convert_dss2eng!(::EngineeringModel, ::DssControlObject; import_all::Bool=false) = nothing
 
 
 """
@@ -340,7 +340,7 @@ function transform_data_model(
 end
 
 
-transform_data_model(::EngineeringModel, dss::OpenDssRawModel; kwargs...) = transform_data_model(EngineeringModel, transform_data_model(OpenDssModel, dss); kwargs...)
+transform_data_model(::EngineeringModel, dss::DssRawModel; kwargs...) = transform_data_model(EngineeringModel, transform_data_model(DssModel, dss); kwargs...)
 
 parse_file(file::String; data_model=EngineeringModel) = transform_data_model(EngineeringModel, parse_dss(file))
 parse_file(io::IO; data_model=EngineeringModel) = transform_data_model(EngineeringModel, parse_dss(io))

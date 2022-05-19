@@ -1,6 +1,6 @@
 """
 """
-function transform_data_model(::Type{OpenDssModel}, raw_dss::OpenDssRawDataModel)::OpenDssDataModel
+function transform_data_model(::Type{DssModel}, raw_dss::OpenDssRawDataModel)::OpenDssDataModel
     dss = OpenDssDataModel(;
         options = create_dss_object(DssOptions, raw_dss.options)
     )
@@ -24,9 +24,9 @@ end
 
 
 ""
-parse_dss(file::String)::OpenDssDataModel = transform_data_model(OpenDssModel, parse_raw_dss(FilePaths.Path(file)))
-parse_dss(path::FilePaths.AbstractPath)::OpenDssDataModel = transform_data_model(OpenDssModel, parse_raw_dss(path))
-parse_dss(io::IO)::OpenDssDataModel = transform_data_model(OpenDssModel, parse_raw_dss(io))
+parse_dss(file::String)::OpenDssDataModel = transform_data_model(DssModel, parse_raw_dss(FilePaths.Path(file)))
+parse_dss(path::FilePaths.AbstractPath)::OpenDssDataModel = transform_data_model(DssModel, parse_raw_dss(path))
+parse_dss(io::IO)::OpenDssDataModel = transform_data_model(DssModel, parse_raw_dss(io))
 
 
 """
@@ -465,19 +465,19 @@ end
 
 
 ""
-function _get_implied_nphases!(dss_obj::OpenDssNodeObject; default::Int=dss_obj.phases)::Int
+function _get_implied_nphases!(dss_obj::DssNodeObject; default::Int=dss_obj.phases)::Int
     dss_obj.phases = _get_implied_nphases(dss_obj.bus1; default=default)
 end
 
 
 ""
-function _get_implied_nphases!(dss_obj::OpenDssEdgeObject; default::Int=dss_obj.phases)::Int
+function _get_implied_nphases!(dss_obj::DssEdgeObject; default::Int=dss_obj.phases)::Int
     dss_obj.phases = _get_implied_nphases(dss_obj.bus1, dss_obj.bus2; default=default)
 end
 
 
 ""
-function _get_implied_nphases!(::Union{OpenDssControlObject,OpenDssDataObject}; default::Int=0)::Int
+function _get_implied_nphases!(::Union{DssControlObject,DssDataObject}; default::Int=0)::Int
     default
 end
 

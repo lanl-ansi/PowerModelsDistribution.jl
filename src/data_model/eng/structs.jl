@@ -1,3 +1,5 @@
+
+# TODO repace with schemas
 const _pmd_eng_object_names = String[
     "bus",
     "line",
@@ -13,6 +15,8 @@ const _pmd_eng_object_names = String[
     "time_series"
 ]
 
+
+abstract type Settings <: EngDataObject end
 
 """
     Settings <: EngDataObject
@@ -38,7 +42,7 @@ where the mentioned fields `vm_nom`, `pd_nom` and `qd_nom` are sample voltage an
 
 On the other hand,`vbase_default` and `sbase_default` provide default values for a 'per unit' conversion; these do not affect the interpretation of the parameters in this model, like the scale factors do. Note that `vbase_default` is a `Dict{Any,Real}`, with pairs of bus ids and voltage magnitude levels, since in per unit conversion, the voltage base can change from bus to bus. The power base is the same everywhere, and therefore `sbase_default` has a single value.
 """
-Base.@kwdef mutable struct Settings <: EngDataObject
+Base.@kwdef mutable struct SettingsObj <: Settings
     voltage_scale_factor::Float64 = 1e3
     power_scale_factor::Float64 = 1e3
     sbase_default::Float64 = 1.0
@@ -49,13 +53,18 @@ Base.@kwdef mutable struct Settings <: EngDataObject
 end
 
 
+abstract type Metadata <: EngDataObject end
+
 """
 """
-Base.@kwdef mutable struct Metadata <: EngDataObject
+Base.@kwdef mutable struct MetadataObj <: Metadata
     name::String = ""
     conductors::Set{Int} = Set{Int}()
     awaiting_ground::Dict{String,Vector{Vector{Int}}} = Dict{String,Vector{Vector{Int}}}()
 end
+
+
+abstract type EngBus <: EngNodeObject end
 
 
 @doc raw"""
@@ -98,7 +107,7 @@ Finally, we give an example of how grounding impedances should be entered. If te
 
 - `grounded=[4]`, `rg=[1]`, `xg=[2]`
 """
-Base.@kwdef mutable struct EngBus <: EngNodeObject
+Base.@kwdef mutable struct EngBusObj <: EngBus
     name::String
     terminals::Vector{Int} = Int[]
     vm_lb::Vector{Float64} = fill(0.0, length(terminals))
@@ -115,6 +124,7 @@ Base.@kwdef mutable struct EngBus <: EngNodeObject
     source_id::String = "bus.$(name)"
 end
 
+abstract type Eng3pBus <: EngNodeObject end
 
 @doc raw"""
     Eng3pBus <: EngNodeObject
@@ -142,7 +152,7 @@ Instead of defining the bounds directly, they can be specified through an associ
 | `vm_pp_ub` |         | `Real`        |       | opf    | Maximum phase-to-phase voltage magnitude for all phases       |
 | `vm_ng_ub` |         | `Real`        |       | opf    | Maximum neutral-to-ground voltage magnitude                   |
 """
-mutable struct Eng3pBus <: EngNodeObject
+mutable struct Eng3pBusObj <: Eng3pBus
     name::String
     phases::Vector{Int}
     neutral::Int
@@ -154,7 +164,7 @@ mutable struct Eng3pBus <: EngNodeObject
     source_id::String
 end
 
-
+abstract type EngLine <: EngEdgeObject end
 """
     EngLine <: EngEdgeObject
 
@@ -180,7 +190,7 @@ This is a pi-model branch. When a `linecode` is given, and any of `rs`, `xs`, `b
 | `vad_ub`        |                                   | `Vector{Real}` | degree           | opf    | Voltage angle difference upper bound                                                 |
 | `status`        | `ENABLED`                         | `Status`       |                  | always | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively |
 """
-Base.@kwdef mutable struct EngLine <: EngEdgeObject
+Base.@kwdef mutable struct EngLineObj <: EngLine
     name::String
     f_bus::String
     t_bus::String
@@ -203,7 +213,7 @@ Base.@kwdef mutable struct EngLine <: EngEdgeObject
     dss::Union{Missing,DssLine} = missing
 end
 
-
+abstract type EngSwitch <: EngEdgeObject end
 """
     EngSwitch <: EngEdgeObject
 
@@ -225,7 +235,7 @@ Switches without `rs`, `xs` or a linecode (conductance/susceptance not considere
 | `state`         | `CLOSED`                 | `SwitchState`  |       | always | `CLOSED`: closed or `OPEN`: open, to indicate state of switch                                    |
 | `status`        | `ENABLED`                | `Status`       |       | always | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively             |
 """
-Base.@kwdef mutable struct EngSwitch <: EngEdgeObject
+Base.@kwdef mutable struct EngSwitchObj <: EngSwitch
     name::String
     f_bus::String
     t_bus::String
@@ -275,7 +285,7 @@ Base.@kwdef mutable struct EngTransformerControls <: EngControlObject
     dss::Union{Missing,Vector{Vector{DssRegcontrol}}} = missing
 end
 
-
+abstract type EngAl2wTransformer <: EngEdgeObject end
 """
     EngAl2wTransformer <: EngEdgeObject
 
@@ -294,7 +304,7 @@ Special case of the Generic transformer, which is still a `transformer` object, 
 | `tm_set`        | `fill(1.0,nphases)`  | `Vector{Real}` |       | always | Set tap ratio for each phase (base=`tm_nom`), `size=nphases`                                                |
 | `tm_fix`        | `fill(true,nphases)` | `Vector{Bool}` |       | oltc   | Indicates for each phase whether the tap ratio is fixed, `size=nphases`                                     |
 """
-Base.@kwdef mutable struct EngAl2wTransformer <: EngEdgeObject
+Base.@kwdef mutable struct EngAl2wTransformerObj <: EngAl2wTransformer
     name::String
     f_bus::String
     t_bus::String
@@ -312,7 +322,7 @@ Base.@kwdef mutable struct EngAl2wTransformer <: EngEdgeObject
     source_id::String = "al2wtransformer.$(name)"
 end
 
-
+abstract type EngTransformer <: EngEdgeObject end
 """
     EngTransformer <: EngEdgeObject
 
@@ -340,7 +350,7 @@ These are n-winding (`nwinding`), n-phase (`nphase`), lossy transformers. Note t
 | `status`         | `ENABLED`                            | `Status`               |             | always | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively                                                                           |
 
 """
-Base.@kwdef mutable struct EngTransformer <: EngEdgeObject
+Base.@kwdef mutable struct EngTransformerObj <: EngTransformer
     name::String
     bus::Vector{String}
     connections::Vector{Vector{Int}}
@@ -368,7 +378,7 @@ Base.@kwdef mutable struct EngTransformer <: EngEdgeObject
     dss::Union{Missing,DssTransformer} = missing
 end
 
-
+abstract type EngLoad <: EngNodeObject end
 @doc raw"""
     EngLoad <: EngNodeObject
 
@@ -430,7 +440,7 @@ Two more model types are supported, which need additional fields and are defined
 | `qd_ci`  |         | `Real` |       | `model==ZIP` |                              |
 | `qd_cp`  |         | `Real` |       | `model==ZIP` |                              |
 """
-Base.@kwdef mutable struct EngLoad <: EngNodeObject
+Base.@kwdef mutable struct EngLoadObj <: EngLoad
     name::String
     bus::String
     connections::Vector{Int} = Int[]
@@ -450,6 +460,7 @@ Base.@kwdef mutable struct EngLoad <: EngNodeObject
 end
 
 
+abstract type EngShuntControls <: EngControlObject end
 """
     EngShuntControls <: EngControlObject
 
@@ -468,7 +479,7 @@ Special case of the shunt capacitors, which is part of the `shunt` object, and e
 | `vmin`         |         | `Vector{Real}`   | volt  | capc | Minimum voltage below which CapControl switches the capacitor on, default is `115.0` for controlled phase, `0.0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)`     |
 | `vmax`         |         | `Vector{Real}`   | volt  | capc | Maximum voltage above which CapControl switches the capacitor off, default is `126.0` for controlled phase, `0.0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)`    |
 """
-Base.@kwdef mutable struct EngShuntControls <: EngControlObject
+Base.@kwdef mutable struct EngShuntControlsObj <: EngShuntControls
     type::Vector{CapControlType}
     elements::Vector{String}
     terminals::Vector{Int}
@@ -479,10 +490,10 @@ Base.@kwdef mutable struct EngShuntControls <: EngControlObject
     ctratio::Vector{Float64} = fill(0.0, length(terminals))
     vm_lb::Vector{Float64} = fill(-Inf, length(terminals))
     vm_ub::Vector{Float64} = fill( Inf, length(terminals))
-    dss::Union{Missing,Vector{DssCapcontrol}} = missing
+    dss::Union{Missing,Vector{<:DssObject},DssObject} = missing
 end
 
-
+abstract type EngShunt <: EngNodeObject end
 """
     EngShunt <: EngNodeObject
 
@@ -498,7 +509,7 @@ end
 | `time_series`  |           | `Dict{String,Any}` |         | multinetwork | Dictionary containing time series parameters.                                                                             |
 
 """
-Base.@kwdef mutable struct EngShunt <: EngNodeObject
+Base.@kwdef mutable struct EngShuntObj <: EngShunt
     name::String
     bus::String
     connections::Vector{Int} = Int[]
@@ -510,10 +521,10 @@ Base.@kwdef mutable struct EngShunt <: EngNodeObject
     status::Status = ENABLED
     source_id::String = "shunt.$(name)"
     controls::Union{Missing,EngShuntControls} = missing
-    dss::Union{Missing,DssCapacitor,DssReactor} = missing
+    dss::Union{Missing,DssObject} = missing
 end
 
-
+abstract type EngGenerator <: EngNodeObject end
 @doc raw"""
     EngGenerator <: EngNodeObject
 
@@ -542,7 +553,7 @@ The generator cost model is currently specified by the following fields.
 | `cost_pg_model`      | `2`               | `Int`          |       | opf  | Cost model type, `1` = piecewise-linear, `2` = polynomial |
 | `cost_pg_parameters` | `[0.0, 1.0, 0.0]` | `Vector{Real}` | $/MVA | opf  | Cost model polynomial                                     |
 """
-Base.@kwdef mutable struct EngGenerator <: EngNodeObject
+Base.@kwdef mutable struct EngGeneratorObj <: EngGenerator
     name::String
     bus::String
     connections::Vector{Int} = Int[]
@@ -567,6 +578,7 @@ Base.@kwdef mutable struct EngGenerator <: EngNodeObject
 end
 
 
+abstract type EngSolar <: EngNodeObject end
 @doc raw"""
     EngSolar <: EngNodeObject
 
@@ -593,7 +605,7 @@ The cost model for a photovoltaic system currently matches that of generators.
 | `cost_pg_model`      | `2`               | `Int`          |       | opf  | Cost model type, `1` = piecewise-linear, `2` = polynomial |
 | `cost_pg_parameters` | `[0.0, 1.0, 0.0]` | `Vector{Real}` | $/MVA | opf  | Cost model polynomial                                     |
 """
-Base.@kwdef mutable struct EngSolar <: EngNodeObject
+Base.@kwdef mutable struct EngSolarObj <: EngSolar
     name::String
     bus::String
     connections::Vector{Int} = Int[]
@@ -613,7 +625,7 @@ Base.@kwdef mutable struct EngSolar <: EngNodeObject
     dss::Union{Missing,DssPvsystem} = missing
 end
 
-
+abstract type EngStorage <: EngNodeObject end
 @doc raw"""
     EngStorage <: EngNodeObject
 
@@ -645,7 +657,7 @@ A storage object is a flexible component that can represent a variety of energy 
 | `status`               | `ENABLED` | `Status`              |         | always       | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively |
 | `time_series`          |           | `Dict{String,String}` |         | multinetwork | Dictionary containing time series parameters.                                        |
 """
-Base.@kwdef mutable struct EngStorage <: EngNodeObject
+Base.@kwdef mutable struct EngStorageObj <: EngStorage
     name::String
     bus::String
     connections::Vector{Int}
@@ -672,7 +684,7 @@ Base.@kwdef mutable struct EngStorage <: EngNodeObject
     dss::Union{Missing,DssStorage} = missing
 end
 
-
+abstract type EngVoltageSource <: EngNodeObject end
 @doc raw"""
     EngVoltageSource <: EngNodeObject
 
@@ -690,7 +702,7 @@ A voltage source is a source of power at a set voltage magnitude and angle conne
 | `status`        | `ENABLED`                        | `Status`              |        | always       | `ENABLED` or `DISABLED`. Indicates if component is enabled or disabled, respectively |
 | `time_series`   |                                  | `Dict{String,String}` |        | multinetwork | Dictionary containing time series parameters.                                        |
 """
-Base.@kwdef mutable struct EngVoltageSource <: EngNodeObject
+Base.@kwdef mutable struct EngVoltageSourceObj <: EngVoltageSource
     name::String
     bus::String
     connections::Vector{Int}
@@ -710,7 +722,7 @@ Base.@kwdef mutable struct EngVoltageSource <: EngNodeObject
     dss::Union{Missing,DssVsource} = missing
 end
 
-
+abstract type EngLinecode <: EngDataObject end
 @doc raw"""
     EngLinecode <: EngDataObject
 
@@ -727,7 +739,7 @@ Linecodes are easy ways to specify properties common to multiple lines.
 | `cm_ub` |                                  | `Vector{Real}` | ampere           | opf    | maximum current per conductor, symmetrically applicable |
 | `sm_ub` |                                  | `Vector{Real}` | watt             | opf    | maximum power per conductor, symmetrically applicable   |
 """
-Base.@kwdef mutable struct EngLinecode <: EngDataObject
+Base.@kwdef mutable struct EngLinecodeObj <: EngLinecode
     name::String
     rs::Matrix{Float64}
     xs::Matrix{Float64}
@@ -741,6 +753,7 @@ Base.@kwdef mutable struct EngLinecode <: EngDataObject
     dss::Union{Missing,DssLinecode} = missing
 end
 
+abstract type EngXfmrcode <: EngDataObject end
 
 @doc raw"""
     EngXfmrcode <: EngDataObject
@@ -759,7 +772,7 @@ Transformer codes are easy ways to specify properties common to multiple transfo
 | `tm_step`        | `fill(fill(1/32,nphases),nwindings)`   | `Vector{Vector{Real}}` |       | oltc   |                                                                                                                                                 |
 | `tm_fix`         | `fill(fill(true, nphases), nwindings)` | `Vector{Vector{Bool}}` |       | always | Indicates for each winding and phase whether the tap ratio is fixed, `size=((nphases), nwindings)`                                              |
 """
-Base.@kwdef mutable struct EngXfmrcode <: EngDataObject
+Base.@kwdef mutable struct EngXfmrcodeObj <: EngXfmrcode
     name::String
     configurations::Vector{ConnConfig} = fill(WYE, 2)
     xsc::Vector{Float64} = fill(0.0, length(configurations) == 2 ? 1 : 3)
@@ -780,7 +793,7 @@ Base.@kwdef mutable struct EngXfmrcode <: EngDataObject
     dss::Union{Missing,DssXfmrcode} = missing
 end
 
-
+abstract type EngTimeSeries <: EngDataObject end
 @doc raw"""
     EngTimeSeries <: EngDataObject
 
@@ -796,7 +809,7 @@ Time series objects are used to specify time series for _e.g._ load or generatio
     | `replace` | `true`  | `Bool`         |       | always | Indicates to replace with data, instead of multiply. Will only work on non-Array data                         |
 
 """
-Base.@kwdef mutable struct EngTimeSeries <: EngDataObject
+Base.@kwdef mutable struct EngTimeSeriesObj <: EngTimeSeries
     name::String
     time::Union{Vector{String},Vector{Float64}}
     values::Vector{Float64}
@@ -815,25 +828,25 @@ Base.@kwdef struct EngineeringDataModel <: EngineeringModel
     metadata::Metadata = Metadata()
 
     # components
-    bus::Dict{String,Union{EngBus,Eng3pBus}} = Dict{String,Union{EngBus,Eng3pBus}}()
+    bus::Dict{String,<:Union{EngBus,Eng3pBus}} = Dict{String,Union{EngBus,Eng3pBus}}()
 
     # edges
-    line::Dict{String,EngLine} = Dict{String,EngLine}()
-    switch::Dict{String,EngSwitch} = Dict{String,EngSwitch}()
-    transformer::Dict{String,Union{EngTransformer,EngAl2wTransformer}} = Dict{String,Union{EngTransformer,EngAl2wTransformer}}()
+    line::Dict{String,<:EngLine} = Dict{String,EngLine}()
+    switch::Dict{String,<:EngSwitch} = Dict{String,EngSwitch}()
+    transformer::Dict{String,<:Union{EngTransformer,EngAl2wTransformer}} = Dict{String,Union{EngTransformer,EngAl2wTransformer}}()
 
     # nodes
-    load::Dict{String,EngLoad} = Dict{String,EngLoad}()
-    shunt::Dict{String,EngShunt} = Dict{String,EngShunt}()
-    generator::Dict{String,EngGenerator} = Dict{String,EngGenerator}()
-    voltage_source::Dict{String,EngVoltageSource} = Dict{String,EngVoltageSource}()
-    solar::Dict{String,EngSolar} = Dict{String,EngSolar}()
-    storage::Dict{String,EngStorage} = Dict{String,EngStorage}()
+    load::Dict{String,<:EngLoad} = Dict{String,EngLoad}()
+    shunt::Dict{String,<:EngShunt} = Dict{String,EngShunt}()
+    generator::Dict{String,<:EngGenerator} = Dict{String,EngGenerator}()
+    voltage_source::Dict{String,<:EngVoltageSource} = Dict{String,EngVoltageSource}()
+    solar::Dict{String,<:EngSolar} = Dict{String,EngSolar}()
+    storage::Dict{String,<:EngStorage} = Dict{String,EngStorage}()
 
     # data
-    linecode::Dict{String,EngLinecode} = Dict{String,EngLinecode}()
-    xfmrcode::Dict{String,EngXfmrcode} = Dict{String,EngXfmrcode}()
-    time_series::Dict{String,EngTimeSeries} = Dict{String,EngTimeSeries}()
+    linecode::Dict{String,<:EngLinecode} = Dict{String,EngLinecode}()
+    xfmrcode::Dict{String,<:EngXfmrcode} = Dict{String,EngXfmrcode}()
+    time_series::Dict{String,<:EngTimeSeries} = Dict{String,EngTimeSeries}()
 
     # additional user data
     extra::Dict{String,Any} = Dict{String,Any}()
@@ -842,10 +855,11 @@ end
 
 """
 """
-Base.@kwdef mutable struct EngineeringMultinetworkDataModel <: EngineeringModel
+Base.@kwdef mutable struct MultinetworkEngineeringDataModel <: EngineeringModel{MultinetworkDataModel}
     # global keys
     metadata::Metadata = Metadata()
 
     # multinetwork
     nw::Dict{String,EngineeringDataModel} = Dict{String,EngineeringDataModel}()
+    nw_map::Dict{String,Real} = Dict{String,Real}()
 end

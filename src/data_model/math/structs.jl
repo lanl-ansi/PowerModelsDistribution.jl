@@ -1,6 +1,8 @@
+abstract type MathBus <: MathNodeObject end
+
 """
 """
-Base.@kwdef mutable struct MathBus <: MathNodeObject
+Base.@kwdef mutable struct MathBusObj <: MathBus
     id::Int
     bus_type::BusType = PQ
     terminals::Vector{Int}
@@ -17,9 +19,12 @@ Base.@kwdef mutable struct MathBus <: MathNodeObject
 end
 
 
+abstract type MathBranch <: MathEdgeObject end
+
+
 """
 """
-Base.@kwdef mutable struct MathBranch <: MathEdgeObject
+Base.@kwdef mutable struct MathBranchObj <: MathBranch
     id::Int
     f_bus::Int
     t_bus::Int
@@ -42,9 +47,12 @@ Base.@kwdef mutable struct MathBranch <: MathEdgeObject
 end
 
 
+abstract type MathSwitch <: MathEdgeObject end
+
+
 """
 """
-Base.@kwdef mutable struct MathSwitch <: MathEdgeObject
+Base.@kwdef mutable struct MathSwitchObj <: MathSwitch
     id::Int
     f_bus::Int
     t_bus::Int
@@ -61,9 +69,11 @@ Base.@kwdef mutable struct MathSwitch <: MathEdgeObject
 end
 
 
+abstract type MathTransformer <: MathEdgeObject end
+
 """
 """
-Base.@kwdef mutable struct MathTransformer <: MathEdgeObject
+Base.@kwdef mutable struct MathTransformerObj <: MathTransformer
     id::Int
     f_bus::Int
     t_bus::Int
@@ -83,10 +93,11 @@ Base.@kwdef mutable struct MathTransformer <: MathEdgeObject
     dss::Union{Missing,DssTransformer} = missing
 end
 
+abstract type MathLoad <: MathNodeObject end
 
 """
 """
-Base.@kwdef mutable struct MathLoad <: MathNodeObject
+Base.@kwdef mutable struct MathLoadObj <: MathLoad
     id::Int
     bus::Int
     connections::Vector{Int}
@@ -103,9 +114,12 @@ Base.@kwdef mutable struct MathLoad <: MathNodeObject
 end
 
 
+abstract type MathShunt <: MathNodeObject end
+
+
 """
 """
-Base.@kwdef mutable struct MathShunt <: MathNodeObject
+Base.@kwdef mutable struct MathShuntObj <: MathShunt
     id::Int
     bus::Int
     connections::Vector{Int}
@@ -120,10 +134,11 @@ Base.@kwdef mutable struct MathShunt <: MathNodeObject
     dss::Union{Missing,DssCapacitor} = missing
 end
 
+abstract type MathGenerator <: MathNodeObject end
 
 """
 """
-Base.@kwdef mutable struct MathGenerator <: MathNodeObject
+Base.@kwdef mutable struct MathGeneratorObj <: MathGenerator
     id::Int
     bus::Int
     connections::Vector{Int}
@@ -146,9 +161,11 @@ Base.@kwdef mutable struct MathGenerator <: MathNodeObject
 end
 
 
+abstract type MathStorage <: MathNodeObject end
+
 """
 """
-Base.@kwdef mutable struct MathStorage <: MathNodeObject
+Base.@kwdef mutable struct MathStorageObj <: MathStorage
     id::Int
     bus::Int
     connections::Vector{Int}
@@ -179,29 +196,29 @@ end
 
 """
 """
-Base.@kwdef struct MathematicalDataModel <: MathematicalModel
+Base.@kwdef struct MathematicalDataModel <: MathematicalModel{SimpleDataModel}
     settings::Settings = Settings()
     metadata::Metadata = Metadata()
     bus_lookup::Dict{String,Int} = Dict{String,Int}()
 
-    bus::Dict{Int,MathBus} = Dict{Int,MathBus}()
+    bus::Dict{Int,<:MathBus} = Dict{Int,MathBus}()
 
-    branch::Dict{Int,MathBranch} = Dict{Int,MathBranch}()
-    switch::Dict{Int,MathSwitch} = Dict{Int,MathSwitch}()
-    transformer::Dict{Int,MathTransformer} = Dict{Int,MathTransformer}()
+    branch::Dict{Int,<:MathBranch} = Dict{Int,MathBranch}()
+    switch::Dict{Int,<:MathSwitch} = Dict{Int,MathSwitch}()
+    transformer::Dict{Int,<:MathTransformer} = Dict{Int,MathTransformer}()
 
-    load::Dict{Int,MathLoad} = Dict{Int,MathLoad}()
-    shunt::Dict{Int,MathShunt} = Dict{Int,MathShunt}()
-    generator::Dict{Int,MathGenerator} = Dict{Int,MathGenerator}()
-    storage::Dict{Int,MathStorage} = Dict{Int,MathStorage}()
+    load::Dict{Int,<:MathLoad} = Dict{Int,MathLoad}()
+    shunt::Dict{Int,<:MathShunt} = Dict{Int,MathShunt}()
+    generator::Dict{Int,<:MathGenerator} = Dict{Int,MathGenerator}()
+    storage::Dict{Int,<:MathStorage} = Dict{Int,MathStorage}()
 end
 
 
 """
 """
-Base.@kwdef struct MathematicalMultinetworkDataModel <: MathematicalModel
+Base.@kwdef struct MultinetworkMathematicalDataModel <: MathematicalModel{MultinetworkDataModel}
     metadata::Metadata = Metadata()
 
-    nw::Dict{Int,MathematicalDataModel} = Dict{Int,MathematicalDataModel}()
+    nw::Dict{Int,<:MathematicalModel} = Dict{Int,MathematicalModel}()
     nw_map::Dict{String,Int}
 end

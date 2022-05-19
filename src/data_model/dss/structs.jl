@@ -1,5 +1,5 @@
 
-Base.@kwdef mutable struct DssCurrentState <: OpenDssRawModel
+Base.@kwdef mutable struct DssCurrentState <: DssRawModel
     current_command::String = ""
     last_command::String = ""
     active_obj_type::String = ""
@@ -10,7 +10,7 @@ Base.@kwdef mutable struct DssCurrentState <: OpenDssRawModel
 end
 
 
-Base.@kwdef mutable struct DssOptions <: OpenDssDataObject
+Base.@kwdef mutable struct DssOptions <: DssDataObject
     var"%growth"::Float64 = 2.5
     var"%mean"::Float64 = 65.0
     var"%normal"::Float64 = 100.0
@@ -112,7 +112,7 @@ Base.@kwdef mutable struct DssOptions <: OpenDssDataObject
 end
 
 
-struct DssBuscoords <: OpenDssDataObject
+struct DssBuscoords <: DssDataObject
     bus::String
     x::Float64
     y::Float64
@@ -122,7 +122,7 @@ end
 DssSetbusxy = DssBuscoords
 
 
-Base.@kwdef struct OpenDssRawDataModel <: OpenDssRawModel
+Base.@kwdef struct OpenDssRawDataModel <: DssRawModel
     filename::Vector{String} = Vector{String}()
     current_state::DssCurrentState = DssCurrentState()
     options::Vector{Pair{String,String}} = Vector{Pair{String,String}}()
@@ -165,7 +165,7 @@ Base.@kwdef struct OpenDssRawDataModel <: OpenDssRawModel
 end
 
 
-Base.@kwdef mutable struct DssLinecode <: OpenDssDataObject
+Base.@kwdef mutable struct DssLinecode <: DssDataObject
     name::String = ""
     nphases::Int = 3
     r1::Float64 = 0.058
@@ -196,7 +196,7 @@ Base.@kwdef mutable struct DssLinecode <: OpenDssDataObject
 end
 
 
-Base.@kwdef mutable struct DssLinegeometry <: OpenDssDataObject
+Base.@kwdef mutable struct DssLinegeometry <: DssDataObject
     name::String = ""
     nconds::Int = 3
     nphases::Int = 3
@@ -219,7 +219,7 @@ Base.@kwdef mutable struct DssLinegeometry <: OpenDssDataObject
 end
 
 
-Base.@kwdef mutable struct DssLinespacing <: OpenDssDataObject
+Base.@kwdef mutable struct DssLinespacing <: DssDataObject
     name::String = ""
     nconds::Int = 3
     nphases::Int = 3
@@ -231,7 +231,7 @@ Base.@kwdef mutable struct DssLinespacing <: OpenDssDataObject
 end
 
 
-Base.@kwdef mutable struct DssLoadshape <: OpenDssDataObject
+Base.@kwdef mutable struct DssLoadshape <: DssDataObject
     name::String = ""
     npts::Int = 0
     interval::Float64 = 1.0
@@ -256,7 +256,7 @@ Base.@kwdef mutable struct DssLoadshape <: OpenDssDataObject
 end
 
 
-Base.@kwdef mutable struct DssXycurve <: OpenDssDataObject
+Base.@kwdef mutable struct DssXycurve <: DssDataObject
     name::String = ""
     npts::Int = 0
     points::Vector{Float64} = Float64[]
@@ -276,7 +276,7 @@ Base.@kwdef mutable struct DssXycurve <: OpenDssDataObject
 end
 
 
-Base.@kwdef mutable struct DssGrowthshape <: OpenDssDataObject
+Base.@kwdef mutable struct DssGrowthshape <: DssDataObject
     name::String = ""
     npts::Int = 0
     year::Vector{Float64} = Float64[]
@@ -289,7 +289,7 @@ Base.@kwdef mutable struct DssGrowthshape <: OpenDssDataObject
 end
 
 
-Base.@kwdef mutable struct DssTcc_curve <: OpenDssDataObject
+Base.@kwdef mutable struct DssTcc_curve <: DssDataObject
     name::String
     npts::Int
     c_array::Vector{Float64}
@@ -299,7 +299,7 @@ Base.@kwdef mutable struct DssTcc_curve <: OpenDssDataObject
 end
 
 
-Base.@kwdef mutable struct DssCndata <: OpenDssDataObject
+Base.@kwdef mutable struct DssCndata <: DssDataObject
     name::String
     diacable::Float64
     diains::Float64
@@ -324,7 +324,7 @@ Base.@kwdef mutable struct DssCndata <: OpenDssDataObject
 end
 
 
-Base.@kwdef mutable struct DssTsdata <: OpenDssDataObject
+Base.@kwdef mutable struct DssTsdata <: DssDataObject
     name::String
     diacable::Float64
     diains::Float64
@@ -348,7 +348,7 @@ Base.@kwdef mutable struct DssTsdata <: OpenDssDataObject
 end
 
 
-Base.@kwdef mutable struct DssWiredata <: OpenDssDataObject
+Base.@kwdef mutable struct DssWiredata <: DssDataObject
     name::String = ""
     rdc::Float64 = 0.0
     rac::Float64 = 0.0
@@ -365,7 +365,7 @@ Base.@kwdef mutable struct DssWiredata <: OpenDssDataObject
 end
 
 
-Base.@kwdef mutable struct DssXfmrcode <: OpenDssDataObject
+Base.@kwdef mutable struct DssXfmrcode <: DssDataObject
     name::String = ""
     phases::Int = 3
     windings::Int = 2
@@ -415,7 +415,7 @@ Base.@kwdef mutable struct DssXfmrcode <: OpenDssDataObject
 end
 
 
-Base.@kwdef mutable struct DssSpectrum <: OpenDssDataObject
+Base.@kwdef mutable struct DssSpectrum <: DssDataObject
     name::String = ""
     numharm::Int = 0
     harmonic::Vector{Float64} = Float64[]
@@ -427,7 +427,7 @@ Base.@kwdef mutable struct DssSpectrum <: OpenDssDataObject
 end
 
 
-Base.@kwdef mutable struct DssVsource <: OpenDssEdgeObject
+Base.@kwdef mutable struct DssVsource <: DssEdgeObject
     name::String = ""
     bus1::String = ""
     bus2::String = ""
@@ -469,7 +469,7 @@ end
 DssCircuit = DssVsource
 
 
-Base.@kwdef mutable struct DssIsource <: OpenDssNodeObject
+Base.@kwdef mutable struct DssIsource <: DssNodeObject
     name::String
     phases::Int
     bus1::String
@@ -486,7 +486,7 @@ Base.@kwdef mutable struct DssIsource <: OpenDssNodeObject
 end
 
 
-Base.@kwdef mutable struct DssFault <: OpenDssEdgeObject
+Base.@kwdef mutable struct DssFault <: DssEdgeObject
     name::String
     phases::Int
     bus1::String
@@ -509,7 +509,7 @@ Base.@kwdef mutable struct DssFault <: OpenDssEdgeObject
 end
 
 
-Base.@kwdef mutable struct DssCapacitor <: OpenDssEdgeObject
+Base.@kwdef mutable struct DssCapacitor <: DssEdgeObject
     name::String = ""
     bus1::String = ""
     bus2::String = bus1
@@ -535,7 +535,7 @@ Base.@kwdef mutable struct DssCapacitor <: OpenDssEdgeObject
 end
 
 
-Base.@kwdef mutable struct DssLine <: OpenDssEdgeObject
+Base.@kwdef mutable struct DssLine <: DssEdgeObject
     name::String = ""
     bus1::String = ""
     bus2::String = ""
@@ -578,7 +578,7 @@ Base.@kwdef mutable struct DssLine <: OpenDssEdgeObject
 end
 
 
-Base.@kwdef mutable struct DssReactor <: OpenDssEdgeObject
+Base.@kwdef mutable struct DssReactor <: DssEdgeObject
     name::String = ""
     phases::Int = 3
     bus1::String = ""
@@ -611,7 +611,7 @@ Base.@kwdef mutable struct DssReactor <: OpenDssEdgeObject
 end
 
 
-Base.@kwdef mutable struct DssTransformer <: OpenDssEdgeObject
+Base.@kwdef mutable struct DssTransformer <: DssEdgeObject
     name::String = ""
     phases::Int = 3
     windings::Int = 2
@@ -665,7 +665,7 @@ Base.@kwdef mutable struct DssTransformer <: OpenDssEdgeObject
 end
 
 
-Base.@kwdef mutable struct DssGictransformer <: OpenDssEdgeObject
+Base.@kwdef mutable struct DssGictransformer <: DssEdgeObject
     name::String
     basefreq::Float64
     bush::String
@@ -693,7 +693,7 @@ Base.@kwdef mutable struct DssGictransformer <: OpenDssEdgeObject
 end
 
 
-Base.@kwdef mutable struct DssGicline <: OpenDssEdgeObject
+Base.@kwdef mutable struct DssGicline <: DssEdgeObject
     name::String
     angle::Float64
     bus1::String
@@ -718,7 +718,7 @@ Base.@kwdef mutable struct DssGicline <: OpenDssEdgeObject
 end
 
 
-Base.@kwdef mutable struct DssLoad <: OpenDssNodeObject
+Base.@kwdef mutable struct DssLoad <: DssNodeObject
     name::String = ""
     phases::Int = 3
     bus1::String = ""
@@ -766,7 +766,7 @@ Base.@kwdef mutable struct DssLoad <: OpenDssNodeObject
 end
 
 
-Base.@kwdef mutable struct DssGenerator <: OpenDssNodeObject
+Base.@kwdef mutable struct DssGenerator <: DssNodeObject
     name::String = ""
     bus1::String = ""
     phases::Int = 3
@@ -815,7 +815,7 @@ Base.@kwdef mutable struct DssGenerator <: OpenDssNodeObject
 end
 
 
-Base.@kwdef mutable struct DssIndmach012 <: OpenDssNodeObject
+Base.@kwdef mutable struct DssIndmach012 <: DssNodeObject
     name::String
     phases::Int
     bus1::String
@@ -840,7 +840,7 @@ Base.@kwdef mutable struct DssIndmach012 <: OpenDssNodeObject
 end
 
 
-Base.@kwdef mutable struct DssStorage <: OpenDssNodeObject
+Base.@kwdef mutable struct DssStorage <: DssNodeObject
     name::String = ""
     phases::Int = 3
     bus1::String = ""
@@ -888,7 +888,7 @@ Base.@kwdef mutable struct DssStorage <: OpenDssNodeObject
 end
 
 
-Base.@kwdef mutable struct DssCapcontrol <: OpenDssControlObject
+Base.@kwdef mutable struct DssCapcontrol <: DssControlObject
     name::String = ""
     element::String = ""
     capacitor::String = ""
@@ -914,7 +914,7 @@ Base.@kwdef mutable struct DssCapcontrol <: OpenDssControlObject
 end
 
 
-Base.@kwdef mutable struct DssRegcontrol <: OpenDssControlObject
+Base.@kwdef mutable struct DssRegcontrol <: DssControlObject
     name::String = ""
     transformer::String = ""
     winding::Int = 1
@@ -953,7 +953,7 @@ Base.@kwdef mutable struct DssRegcontrol <: OpenDssControlObject
 end
 
 
-Base.@kwdef mutable struct DssEnergymeter <: OpenDssDataObject
+Base.@kwdef mutable struct DssEnergymeter <: DssDataObject
     name::String = ""
     element::String = ""
     terminal::Int = 1
@@ -981,7 +981,7 @@ Base.@kwdef mutable struct DssEnergymeter <: OpenDssDataObject
 end
 
 
-Base.@kwdef mutable struct DssMonitor <: OpenDssControlObject
+Base.@kwdef mutable struct DssMonitor <: DssControlObject
     name::String = ""
     element::String = ""
     terminal::Int = 1
@@ -991,7 +991,7 @@ Base.@kwdef mutable struct DssMonitor <: OpenDssControlObject
 end
 
 
-Base.@kwdef mutable struct DssPvsystem <: OpenDssNodeObject
+Base.@kwdef mutable struct DssPvsystem <: DssNodeObject
     name::String = ""
     phases::Int = 3
     bus1::String = ""
@@ -1041,7 +1041,7 @@ Base.@kwdef mutable struct DssPvsystem <: OpenDssNodeObject
 end
 
 
-Base.@kwdef mutable struct DssRecloser <: OpenDssControlObject
+Base.@kwdef mutable struct DssRecloser <: DssControlObject
     name::String = ""
     monitoredobj::String = ""
     monitoredterm::Int = 1
@@ -1072,7 +1072,7 @@ Base.@kwdef mutable struct DssRecloser <: OpenDssControlObject
 end
 
 
-Base.@kwdef mutable struct DssRelay <: OpenDssControlObject
+Base.@kwdef mutable struct DssRelay <: DssControlObject
     name::String = ""
     monitoredobj::String = ""
     monitoredterm::Int = 1
@@ -1110,7 +1110,7 @@ Base.@kwdef mutable struct DssRelay <: OpenDssControlObject
 end
 
 
-Base.@kwdef mutable struct DssFuse <: OpenDssControlObject
+Base.@kwdef mutable struct DssFuse <: DssControlObject
     name::String = ""
     monitoredobj::String = ""
     monitoredterm::Int = 1
@@ -1127,7 +1127,7 @@ Base.@kwdef mutable struct DssFuse <: OpenDssControlObject
 end
 
 
-Base.@kwdef mutable struct DssSwtcontrol <: OpenDssControlObject
+Base.@kwdef mutable struct DssSwtcontrol <: DssControlObject
     name::String = ""
     action::SwitchState = OPEN
     basefreq::Float64 = 60.0
@@ -1144,7 +1144,7 @@ Base.@kwdef mutable struct DssSwtcontrol <: OpenDssControlObject
 end
 
 
-Base.@kwdef struct OpenDssDataModel <: OpenDssModel
+Base.@kwdef struct OpenDssDataModel <: DssModel
     options::DssOptions = DssOptions()
     linecode::Dict{String,DssLinecode} = Dict{String,DssLinecode}()
     linegeometry::Dict{String,DssLinegeometry} = Dict{String,DssLinegeometry}()
