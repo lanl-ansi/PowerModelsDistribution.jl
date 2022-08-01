@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added automatic detection of multinetwork data to `instantiate_mc_model`
 - Converted `::Float64` types in function signatures to `::Real`
 
 ## v0.14.4
