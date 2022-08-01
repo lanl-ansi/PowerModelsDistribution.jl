@@ -2,6 +2,7 @@
 
 ## staged
 
+- Updated documentation in `make_multiconductor!` to better indicate its unsupported nature
 - Added automatic detection of multinetwork data to `instantiate_mc_model`
 - Converted `::Float64` types in function signatures to `::Real`
 
@@ -348,7 +349,7 @@
 - fix bug in `_build_eng_multinetwork`, where "dss_options" was missing from const `_pmd_eng_global_keys`
 - change enums (SwitchState and Dispatchable) for switches to Reals, was causing problems in loops of OSW problems
 - fix bug in `variable_mc_bus_voltage_magnitude_sqr` and `variable_mc_transformer_power_imaginary` where `_start` values were not being iterated over per connection
-- depreciate run_ functions in favor of solve_
+- depreciate `run_` functions in favor of `solve_`
 - add support for `relax_integrality` (InfrastructureModels ~0.5.4)
 - fix bug in `variable_mx_real` constructor where it was indexing over terminals instead of enumerates
 - added storage variables to automatic unit conversion to si units on math2eng transformation
@@ -419,7 +420,7 @@
 - Refactors Kron reduction and padding transformations out of eng2math into their own transformation functions (#287)
 - Add functionality of run_mc_mld_bf to run_mc_mld via multiple dispatch
 - Fixes inconsistency of connections on MATHEMATICAL components, in particular, virtual objects (#280)
-- Add a transformation remove_all_bounds! that removes all fields ending in _ub and _lb (#278)
+- Add a transformation remove_all_bounds! that removes all fields ending in \_ub and \_lb (#278)
 - Add missing connections for virtual generator at voltage source
 - Fix pu conversion bus voltage bounds and add parsing for vm_pair_lb and vm_pair_ub
 - Add CONTRIBUTING.md
