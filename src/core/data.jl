@@ -368,7 +368,7 @@ end
 
 
 "Calculates the tap scale factor for the non-dimensionalized equations."
-function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, bus_to::Dict{String,Any})::Float64
+function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, bus_to::Dict{String,Any})
     tm_nom = trans["tm_nom"]
 
     f_vbase = haskey(bus_fr, "vbase") ? bus_fr["vbase"] : bus_fr["base_kv"]
@@ -445,7 +445,7 @@ not. Therefore, a default lower bound is then used, specified by the keyword
 argument vdmin_eps.
 The returned bounds are for the pairs 1->2, 2->3, 3->1
 """
-function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps::Float64=0.1)::Tuple
+function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps::Real=0.1)::Tuple
     vmax = bus["vmax"]
     vmin = bus["vmin"]
     if haskey(bus, "vm_ll_max")

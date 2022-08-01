@@ -11,6 +11,19 @@
         @test isapprox(sum(result["solution"]["storage"]["s1"]["ps"]), -5.0; atol=1e-4)
     end
 
+    @testset "3-bus balanced battery acp opf - time_elapsed::Int" begin
+        case = deepcopy(case3_balanced_battery)
+        case["time_elapsed"] = 1
+
+        result = solve_mc_opf(case3_balanced_battery, ACPUPowerModel, ipopt_solver)
+
+        @test result["termination_status"] == LOCALLY_SOLVED
+
+        vbase = case3_balanced_battery["settings"]["vbases_default"]["sourcebus"]
+        @test all(isapprox.(result["solution"]["bus"]["primary"]["vm"] ./ vbase, 0.991111; atol=1e-2))
+        @test isapprox(sum(result["solution"]["storage"]["s1"]["ps"]), -5.0; atol=1e-4)
+    end
+
     @testset "3-bus balanced battery acr opf" begin
         result = solve_mc_opf(case3_balanced_battery, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 

@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Converted `::Float64` types in function signatures to `::Real`
 
 ## v0.14.4
 
