@@ -20,9 +20,12 @@ ismath(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missin
 """
     make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
 
-Hacky helper function to transform single-conductor network data, from, e.g., matpower/psse, into multi-conductor data
+**This function is not meant to be an officially supported method for creating reasonable multiconductor data sets.**
+
+**Hacky** helper function to transform single-conductor network data, from, e.g., matpower/psse, into multi-conductor data.
 """
 function make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
+    @info "This function is not meant to be an officially supported method for creating reasonable multiconductor data sets"
     if ismultinetwork(data)
         for (i,nw_data) in data["nw"]
             _make_multiconductor!(nw_data, conductors)
@@ -253,12 +256,13 @@ end
 "loss model builder for transformer decomposition"
 function _build_loss_model!(
     data_math::Dict{String,<:Any},
-    transformer_name::Any,
+    transformer_name::String,
     to_map::Vector{String},
     r_s::Vector{Float64},
     zsc::Dict{Tuple{Int,Int},Complex{Float64}},
     ysh::Complex{Float64};
-    nphases::Int=3
+    nphases::Int=3,
+    status::Int=1,
     )::Vector{Int}
 
     # precompute the minimal set of buses and lines
@@ -336,11 +340,12 @@ function _build_loss_model!(
             "bus_i" => length(data_math["bus"])+1,
             "vmin" => fill(0.0, nphases),
             "vmax" => fill(Inf, nphases),
+            "vm_pair_lb" => Tuple{Any,Any,Real}[],
+            "vm_pair_ub" => Tuple{Any,Any,Real}[],
             "terminals" => collect(1:nphases),
             "grounded" => fill(false, nphases),
             "base_kv" => 1.0,
-            "bus_type" => 1,
-            "status" => 1,
+            "bus_type" => status == 0 ? 4 : 1,
             "source_id" => "transformer.$(transformer_name)",
             "index" => length(data_math["bus"])+1,
         )
@@ -387,19 +392,20 @@ function _build_loss_model!(
             "name" => "_virtual_branch.transformer.$(transformer_name)_$(l)",
             "source_id" => "_virtual_branch.transformer.$(transformer_name)_$(l)",
             "index" => length(data_math["branch"])+1,
-            "br_status"=>1,
+            "br_status"=>status,
             "f_bus"=>bus_ids[i],
             "t_bus"=>bus_ids[j],
             "f_connections"=>collect(1:nphases),
             "t_connections"=>collect(1:nphases),
-            "br_r" => diagm(0=>fill(real(z[l]), nphases)),
-            "br_x" => diagm(0=>fill(imag(z[l]), nphases)),
-            "g_fr" => diagm(0=>fill(g_fr, nphases)),
-            "b_fr" => diagm(0=>fill(b_fr, nphases)),
-            "g_to" => diagm(0=>fill(g_to, nphases)),
-            "b_to" => diagm(0=>fill(b_to, nphases)),
+            "br_r" => LinearAlgebra.diagm(0=>fill(real(z[l]), nphases)),
+            "br_x" => LinearAlgebra.diagm(0=>fill(imag(z[l]), nphases)),
+            "g_fr" => LinearAlgebra.diagm(0=>fill(g_fr, nphases)),
+            "b_fr" => LinearAlgebra.diagm(0=>fill(b_fr, nphases)),
+            "g_to" => LinearAlgebra.diagm(0=>fill(g_to, nphases)),
+            "b_to" => LinearAlgebra.diagm(0=>fill(b_to, nphases)),
             "angmin" => fill(-10.0, nphases),
             "angmax" => fill( 10.0, nphases),
+            "c_rating_a" => fill(Inf, nphases),
             "shift" => zeros(nphases),
             "tap" => ones(nphases),
             "switch" => false,
@@ -683,7 +689,7 @@ function _apply_linecode!(eng_obj::Dict{String,<:Any}, data_eng::Dict{String,<:A
     if haskey(eng_obj, "linecode") && haskey(data_eng, "linecode") && haskey(data_eng["linecode"], eng_obj["linecode"])
         linecode = data_eng["linecode"][eng_obj["linecode"]]
 
-        for property in ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"]
+        for property in ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to", "cm_ub", "sm_ub"]
             if !haskey(eng_obj, property) && haskey(linecode, property)
                 eng_obj[property] = deepcopy(linecode[property])
             end
@@ -856,6 +862,103 @@ function _map_conductor_ids!(data_math::Dict{String,<:Any})
     for (_,bus) in data_math["bus"]
         bus["terminals"] = Vector{Int}([cnd_map[t] for t in bus["terminals"]])
     end
+end
+
+
+"""
+Returns the tightest set of pairwise voltage magnitude bounds,
+removing looser bounds which are implied by the tighter ones.
+"""
+function _get_tight_pairwise_voltage_magnitude_bounds(bus::Dict)
+    lb_pairs = Tuple{Any,Any,Real}[]
+    ub_pairs = Tuple{Any,Any,Real}[]
+
+    haskey(bus, "vm_pair_lb") && append!(lb_pairs, bus["vm_pair_lb"])
+    haskey(bus, "vm_pair_ub") && append!(ub_pairs, bus["vm_pair_ub"])
+
+    haskey(bus, "vm_pn_lb") && append!(lb_pairs, [(p, bus["neutral"], bus["vm_pn_lb"]) for p in bus["phases"]])
+    haskey(bus, "vm_pn_ub") && append!(ub_pairs, [(p, bus["neutral"], bus["vm_pn_ub"]) for p in bus["phases"]])
+
+    haskey(bus, "vm_pp_lb") && append!(lb_pairs, [(bus["phases"][i], bus["phases"][j], bus["vm_pp_lb"]) for i in 1:length(bus["phases"]) for j in i+1:length(bus["phases"])])
+    haskey(bus, "vm_pp_ub") && append!(ub_pairs, [(bus["phases"][i], bus["phases"][j], bus["vm_pp_ub"]) for i in 1:length(bus["phases"]) for j in i+1:length(bus["phases"])])
+
+    lb_pairs_tight = Tuple{Any,Any,Real}[]
+    for (c,d) in unique([(min(n,m), max(n,m)) for (n,m,bound) in lb_pairs])
+        bound = maximum([bound for (n,m,bound) in lb_pairs if (n==c&&m==d) || (n==d&&m==c)])
+        push!(lb_pairs_tight, (c, d, bound))
+    end
+
+    ub_pairs_tight = Tuple{Any,Any,Real}[]
+    for (c,d) in unique([(min(n,m), max(n,m)) for (n,m,b) in ub_pairs])
+        bound = minimum([bound for (n,m,bound) in ub_pairs if (n==c&&m==d) || (n==d&&m==c)])
+        push!(ub_pairs_tight, (c, d, bound))
+    end
+
+    return lb_pairs_tight, ub_pairs_tight
+end
+
+
+"""
+Returns the tightest set of absolute voltage magnitude bounds,
+removing looser bounds which are implied by the tighter ones.
+"""
+function _get_tight_absolute_voltage_magnitude_bounds(bus::Dict)
+    N = length(bus["terminals"])
+    vmin = haskey(bus, "vm_lb") ? bus["vm_lb"] : fill(0.0, N)
+    vmax = haskey(bus, "vm_ub") ? bus["vm_ub"] : fill(Inf, N)
+
+    if haskey(bus, "vm_ng_ub")
+        idx = findfirst(bus["terminals"].==bus["neutral"])
+        vmax[idx] = min(vmax[idx], bus["vm_ng_ub"])
+    end
+
+    return vmin, vmax
+end
+
+
+"""
+When a terminal is grounded, any pairwise bounds it occurs in
+imply an absolute bound for the other terminal in the pair.
+This method converts such pairwise bounds to absolute ones.
+"""
+function _add_implicit_absolute_bounds!(bus_math, terminals::Vector)
+    grounded_terminals = terminals[bus_math["grounded"]]
+
+    vm_pair_lb = bus_math["vm_pair_lb"]
+    vm_pair_ub = bus_math["vm_pair_ub"]
+    vmin = bus_math["vmin"]
+    vmax = bus_math["vmax"]
+
+    lb_keep_idx = []
+    for (i,(a,b,lb)) in enumerate(vm_pair_lb)
+        if a in grounded_terminals
+            b_idx = findfirst(terminals.==b)
+            vmin[b_idx] = max(vmin[b_idx],lb)
+        elseif b in grounded_terminals
+            a_idx = findfirst(terminals.==a)
+            vmin[a_idx] = max(vmin[a_idx],lb)
+        else
+            push!(lb_keep_idx, i)
+        end
+    end
+
+    ub_keep_idx = []
+    for (i,(a,b,ub)) in enumerate(vm_pair_ub)
+        if a in grounded_terminals
+            b_idx = findfirst(terminals.==b)
+            vmax[b_idx] = min(vmax[b_idx],ub)
+        elseif b in grounded_terminals
+            a_idx = findfirst(terminals.==a)
+            vmax[a_idx] = min(vmax[a_idx],ub)
+        else
+            push!(ub_keep_idx, i)
+        end
+    end
+
+    bus_math["vmin"] = vmin
+    bus_math["vmax"] = vmax
+    bus_math["vm_pair_lb"] = vm_pair_lb[lb_keep_idx]
+    bus_math["vm_pair_ub"] = vm_pair_ub[ub_keep_idx]
 end
 
 

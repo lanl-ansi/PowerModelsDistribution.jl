@@ -89,24 +89,40 @@ function transform_solution(
     nws_eng_sol = Dict(k => Dict{String,Any}() for k in keys(nws_math_sol))
     solution_eng = Dict{String,Any}("nw" => nws_eng_sol)
 
-    map = ismissing(map) ? get(data_math, "map", Vector{Dict{String,Any}}()) : map
-    @assert !isempty(map) "Map is empty, cannot map solution up to engineering model"
-
     # apply unmap functions
-    for map_item in reverse(map)
-        if map_item["unmap_function"] != "_map_math2eng_root!" && get(map_item, "apply_to_subnetworks", true)
-            for (n, nw_math_sol) in nws_math_sol
-                if haskey(map_math2eng_extensions, map_item["unmap_function"])
-                    map_math2eng_extensions[map_item["unmap_function"]](nws_eng_sol[n], nw_math_sol, map_item)
+    if ismultinetwork(data_math) && ismissing(map)
+        map = get(data_math, "map", Dict{String,Any}[])
+        @assert !isempty(map) "Map is empty, cannot map solution up to engineering model"
+
+        for (n, _map) in map
+            for map_item in reverse(_map)
+                unmap_function! = haskey(map_math2eng_extensions, map_item["unmap_function"]) ? map_math2eng_extensions[map_item["unmap_function"]] : getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))
+                if map_item["unmap_function"] != "_map_math2eng_root!" && get(map_item, "apply_to_subnetworks", true)
+                    !isempty(nws_math_sol) && unmap_function!(nws_eng_sol[n], nws_math_sol[n], map_item)
                 else
-                    getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(nws_eng_sol[n], nw_math_sol, map_item)
+                    unmap_function!(solution_eng, solution_math, map_item)
                 end
             end
-        else
-            if haskey(map_math2eng_extensions, map_item["unmap_function"])
-                map_math2eng_extensions[map_item["unmap_function"]](solution_eng, solution_math, map_item)
+        end
+    else
+        map = ismissing(map) ? get(data_math, "map", Vector{Dict{String,Any}}()) : map
+        @assert !isempty(map) "Map is empty, cannot map solution up to engineering model"
+
+        for map_item in reverse(map)
+            if map_item["unmap_function"] != "_map_math2eng_root!" && get(map_item, "apply_to_subnetworks", true)
+                for (n, nw_math_sol) in nws_math_sol
+                    if haskey(map_math2eng_extensions, map_item["unmap_function"])
+                        map_math2eng_extensions[map_item["unmap_function"]](nws_eng_sol[n], nw_math_sol, map_item)
+                    else
+                        getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(nws_eng_sol[n], nw_math_sol, map_item)
+                    end
+                end
             else
-                getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(solution_eng, solution_math, map_item)
+                if haskey(map_math2eng_extensions, map_item["unmap_function"])
+                    map_math2eng_extensions[map_item["unmap_function"]](solution_eng, solution_math, map_item)
+                else
+                    getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))(solution_eng, solution_math, map_item)
+                end
             end
         end
     end
@@ -143,11 +159,7 @@ function _map_math2eng_voltage_source!(data_eng::Dict{String,<:Any}, data_math::
     for to_id in map["to"]
         math_obj = _get_math_obj(data_math, to_id)
         if startswith(to_id, "gen")
-            for property in ["pg", "qg", "pg_bus", "qg_bus"]
-                if haskey(math_obj, property)
-                    eng_obj[property] = math_obj[property]
-                end
-            end
+            merge!(eng_obj, math_obj)
         end
     end
 
@@ -252,30 +264,28 @@ end
 function _map_math2eng_switch!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "switch", map)
 
-    prop_map = Dict{String,String}(
-        "pt" => "psw_to",
-        "qt" => "qsw_to",
-        "cr_to" => "crsw_to",
-        "ci_to" => "cisw_to",
-        "csr_fr" => "csrsw_fr",
-        "csi_fr" => "csisw_fr",
-    )
-
     if isa(map["to"], String)
         math_obj = _get_math_obj(data_math, map["to"])
         merge!(eng_obj, math_obj)
     else
-        for to_id in map["to"]
-            if startswith(to_id, "switch")
-                math_obj = _get_math_obj(data_math, to_id)
-                merge!(eng_obj, math_obj)
-            elseif startswith(to_id, "branch")
-                math_obj = _get_math_obj(data_math, to_id)
-                for k in keys(prop_map)
-                    if haskey(math_obj, k)
-                        eng_obj[prop_map[k]] = math_obj[k]
-                    end
-                end
+        switch_idx = findfirst([startswith(x, "switch") for x in map["to"]])
+        if !(switch_idx === nothing) # isnothing not allowed in Julia 1.0
+            to_id = map["to"][switch_idx]
+            math_obj = _get_math_obj(data_math, to_id)
+            # skip to-side power and current; these come from branch
+            for k in keys(math_obj)
+                eng_obj[k] = math_obj[k]
+            end
+        end
+
+        branch_idx = findfirst([startswith(x, "branch") for x in map["to"]])
+        if !(switch_idx === nothing) # isnothing not allowed in Julia 1.0
+            to_id = map["to"][branch_idx]
+            math_obj = _get_math_obj(data_math, to_id)
+            # add to-side power and current here
+            # these will overwrite the switch ones if a branch is present
+            for k in intersect(keys(math_obj), ["pt","qt","cr_to","ci_to"])
+                eng_obj[k] = math_obj[k]
             end
         end
     end
@@ -296,11 +306,11 @@ function _map_math2eng_transformer!(data_eng::Dict{String,<:Any}, data_math::Dic
 
     trans_2wa_ids = [index for (comp_type, index) in split.(map["to"], ".", limit=2) if comp_type=="transformer"]
 
-    prop_map = Dict("pf"=>"p", "qf"=>"q", "crt_fr"=>"crt", "cit_fr"=>"cit")
+    prop_map = Dict("pf"=>"p", "qf"=>"q", "cr_fr"=>"cr", "ci_fr"=>"ci", "tap"=>"tap")
     for (prop_from, prop_to) in prop_map
         if haskey(data_math, "transformer")
-            if any(haskey(data_math["transformer"][id], prop_from) for id in trans_2wa_ids)
-                eng_obj[prop_to] = [get(data_math["transformer"][id], prop_from, NaN) for id in trans_2wa_ids]
+            if any(haskey(data_math["transformer"], id) && haskey(data_math["transformer"][id], prop_from) for id in trans_2wa_ids)
+                eng_obj[prop_to] = [get(data_math["transformer"][id], prop_from, missing) for id in trans_2wa_ids]
             end
         end
     end
@@ -313,13 +323,13 @@ end
 
 ""
 function _map_math2eng_root!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
-    data_eng["per_unit"] = data_math["per_unit"]
-
     if !ismultinetwork(data_math)
-        data_eng["settings"] = get(data_math, "settings", Dict{String,Any}())  # in case of no solution
+        data_eng["settings"] = Dict{String,Any}("sbase" => get(get(data_math, "settings", Dict{String,Any}()), "sbase", NaN))  # in case of no solution
+        data_eng["per_unit"] = get(data_math, "per_unit", true)
     else
         for (n,nw) in get(data_eng, "nw", Dict{String,Any}())
             nw["settings"] = Dict{String,Any}("sbase" => data_math["nw"][n]["settings"]["sbase"])
+            nw["per_unit"] = data_math["nw"][n]["per_unit"]
         end
     end
 end

@@ -1,5 +1,3 @@
-import Base.Iterators: flatten
-
 "all node types that can help define buses"
 const _dss_node_objects = String[
     "isource", "load", "generator", "indmach012", "storage", "pvsystem"
@@ -340,7 +338,7 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
                 _apply_xfmrcode!(tr, data_eng)
             end
             # across-phase properties should be the same to be eligible for banking
-            props = ["bus", "noloadloss", "xsc", "rw", "cmag", "vm_nom", "sm_nom", "polarity", "configuration"]
+            props = ["bus", "noloadloss", "xsc", "rw", "cmag", "vm_nom", "sm_nom", "polarity", "configuration", "sm_ub"]
             btrans = Dict{String, Any}(prop=>trs[1][prop] for prop in props)
             if !all(tr[prop]==btrans[prop] for tr in trs, prop in props)
                 @warn "Not all across-phase properties match among transfomers identified by bank='$bank', aborting attempt to bank"
@@ -376,7 +374,7 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
                 end
             end
 
-            btrans["status"] = all(tr["status"] == ENABLED for tr in trs)
+            btrans["status"] = all(tr["status"] == ENABLED for tr in trs) ? ENABLED : DISABLED
             btrans["source_id"] = "transformer.$bank"
 
             # add regulator objects if present
@@ -421,16 +419,16 @@ function _discover_terminals!(data_eng::Dict{String,<:Any})
     if haskey(data_eng, "line")
         for (_,eng_obj) in data_eng["line"]
             # ignore 0 terminal
-            push!(terminals[eng_obj["f_bus"]], setdiff(eng_obj["f_connections"], [0])...)
-            push!(terminals[eng_obj["t_bus"]], setdiff(eng_obj["t_connections"], [0])...)
+            !all(eng_obj["f_connections"] .== 0) && push!(terminals[eng_obj["f_bus"]], setdiff(eng_obj["f_connections"], [0])...)
+            !all(eng_obj["t_connections"] .== 0) && push!(terminals[eng_obj["t_bus"]], setdiff(eng_obj["t_connections"], [0])...)
         end
     end
 
     if haskey(data_eng, "switch")
         for (_,eng_obj) in data_eng["switch"]
             # ignore 0 terminal
-            push!(terminals[eng_obj["f_bus"]], setdiff(eng_obj["f_connections"], [0])...)
-            push!(terminals[eng_obj["t_bus"]], setdiff(eng_obj["t_connections"], [0])...)
+            !all(eng_obj["f_connections"] .== 0) && push!(terminals[eng_obj["f_bus"]], setdiff(eng_obj["f_connections"], [0])...)
+            !all(eng_obj["t_connections"] .== 0) && push!(terminals[eng_obj["t_bus"]], setdiff(eng_obj["t_connections"], [0])...)
         end
     end
 
@@ -438,14 +436,14 @@ function _discover_terminals!(data_eng::Dict{String,<:Any})
         for (_,tr) in data_eng["transformer"]
             for w in 1:length(tr["bus"])
                 # ignore 0 terminal
-                push!(terminals[tr["bus"][w]], setdiff(tr["connections"][w], [0])...)
+                tr["connections"][w]!=[0] && push!(terminals[tr["bus"][w]], setdiff(tr["connections"][w], [0])...)
             end
         end
     end
 
     for comp_type in [x for x in ["voltage_source", "load", "generator", "solar"] if haskey(data_eng, x)]
         for comp in values(data_eng[comp_type])
-            push!(terminals[comp["bus"]], setdiff(comp["connections"], [0])...)
+            !all(comp["connections"] .== 0) && push!(terminals[comp["bus"]], setdiff(comp["connections"], [0])...)
         end
     end
 
@@ -540,9 +538,9 @@ function _get_conductors_ordered(busname::AbstractString; default::Vector{Int}=I
     end
 
     if check_length && length(default)!=length(ret)
-        # TODO Should we provide this warning?
         @info "An inconsistent number of nodes was specified on $(parts[1]); |$(parts[2])|!=$(length(default))."
     end
+
     return ret
 end
 
@@ -792,7 +790,7 @@ function _parse_obj_dtypes!(obj_type::String, object::Dict{String,Any}, dtypes::
                 end
             end
         elseif isa(v, Matrix) && eltype(v) == Any || isa(eltype(v), AbstractString)
-            _dtype = get(dtypes, k, _guess_dtype("$(join(collect(flatten(v)), " "))"))
+            _dtype = get(dtypes, k, _guess_dtype("$(join(collect(Base.Iterators.flatten(v)), " "))"))
             for i in 1:size(v)[1]
                 for j in 1:size(v)[2]
                     if isa(v[i,j], AbstractString)
@@ -909,11 +907,11 @@ end
 
 """
     _parse_dss_capcontrol_type!(type::SubString{String}, id::Any)
-    
+
 Converts dss capcontrol type to supported PowerModelsDistribution CapControlType enum.
 """
 function _parse_dss_capcontrol_type!(type::SubString{String}, id::Any)
-        
+
     if isempty([get(_dss2pmd_capcontrol_type, "$type", Dict{String,Any}())])
         @warn "$id: dss capcontrol type $type not supported. Treating as voltage control"
         type = "voltage"
@@ -954,5 +952,48 @@ function _build_time_series_reference!(eng_obj::Dict{String,<:Any}, dss_obj::Dic
             eng_obj["time_series"][active] = defaults[time_series]
             eng_obj["time_series"][reactive] = defaults[time_series]
         end
+    end
+end
+
+
+"returns number of phases implied by a two-bus (edge) object"
+function _get_implied_nphases(bus1::AbstractString, bus2::AbstractString; default::Int=3)
+    f_conds = _get_conductors_ordered(bus1; default=collect(1:default), check_length=false)
+    t_conds = _get_conductors_ordered(bus2; default=collect(1:default), check_length=false)
+
+    if !isempty(f_conds) || !isempty(t_conds)
+        return maximum([length(f_conds), length(t_conds)])
+    else
+        return default
+    end
+end
+
+
+"returns number of phases implied by a transformer object"
+function _get_implied_nphases(buses::Vector{<:AbstractString}; default::Int=3)
+    nphases = Int[]
+    for bus in buses
+        conds = _get_conductors_ordered(bus; default=collect(1:default), check_length=false)
+        if !isempty(conds)
+            push!(nphases, length(conds))
+        end
+    end
+
+    if !isempty(nphases)
+        return maximum(nphases)
+    else
+        return default
+    end
+end
+
+
+"returns number of phases implied by a single-bus (node) object"
+function _get_implied_nphases(bus1::AbstractString; default::Int=3)
+    conds = _get_conductors_ordered(bus1; default=collect(1:default), check_length=false)
+
+    if !isempty(conds)
+        return length(conds)
+    else
+        return default
     end
 end

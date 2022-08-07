@@ -9,7 +9,8 @@ function _create_line(name::String=""; kwargs...)::Dict{String,Any}
     bus1 = get(kwargs, :bus1, "")
     bus2 = get(kwargs, :bus2, "")
 
-    phases = get(kwargs, :phases, 3)
+    phases = get(kwargs, :phases, _get_implied_nphases(bus1, bus2; default=3))
+
     circuit_basefreq = get(kwargs, :circuit_basefreq, 60.0)
     basefreq = get(kwargs, :basefreq, circuit_basefreq)
 
@@ -138,7 +139,7 @@ different properties.
 function _create_capacitor(name::String=""; kwargs...)::Dict{String,Any}
     bus1 = get(kwargs, :bus1, "")
 
-    phases = get(kwargs, :phases, 3)
+    phases = get(kwargs, :phases, _get_implied_nphases(bus1, get(kwargs, :bus2, bus1); default=3))
 
     bus2 = get(kwargs, :bus2, string(split(bus1, ".")[1],".",join(fill("0", phases), ".")))
 
@@ -179,7 +180,8 @@ function _create_reactor(name::String=""; kwargs...)::Dict{String,Any}
     bus1 = get(kwargs, :bus1, "")
     bus2 = get(kwargs, :bus2, "")
 
-    phases = get(kwargs, :phases, 3)
+    phases = get(kwargs, :phases, _get_implied_nphases(bus1, bus2; default=3))
+
     kvar = get(kwargs, :kvar, 1200.0)
     kv = get(kwargs, :kv, 12.47)
     conn = get(kwargs, :conn, WYE)
@@ -238,8 +240,8 @@ function _create_reactor(name::String=""; kwargs...)::Dict{String,Any}
             lmh = l * 1e3
         end
 
-        rmatrix = diagm(0 => fill(r, phases))
-        xmatrix = diagm(0 => fill(x, phases))
+        rmatrix = LinearAlgebra.diagm(0 => fill(r, phases))
+        xmatrix = LinearAlgebra.diagm(0 => fill(x, phases))
     elseif haskey(kwargs, :rmatrix) && haskey(kwargs, :xmatrix)
         rmatrix = kwargs[:rmatrix]
         xmatrix = kwargs[:xmatrix]
@@ -277,8 +279,8 @@ function _create_reactor(name::String=""; kwargs...)::Dict{String,Any}
         x = xmatrix[1,1]
         lmh = x / (2 * pi * basefreq) * 1e3
     else
-        rmatrix = diagm(0 => fill(r, phases))
-        xmatrix = diagm(0 => fill(x, phases))
+        rmatrix = LinearAlgebra.diagm(0 => fill(r, phases))
+        xmatrix = LinearAlgebra.diagm(0 => fill(x, phases))
     end
 
     Dict{String,Any}(
@@ -323,7 +325,7 @@ OpenDSS documentation for valid fields and ways to specify the different
 properties.
 """
 function _create_vsource(name::String=""; kwargs...)::Dict{String,Any}
-    phases = get(kwargs, :phases, 3)
+    phases = get(kwargs, :phases, _get_implied_nphases(get(kwargs, :bus1, "sourcebus"), get(kwargs, :bus2, "sourcebus"); default=3))
 
     bus1 = get(kwargs, :bus1, "sourcebus.$(join(1:phases, "."))")
     bus2 = get(kwargs, :bus2, replace(bus1, r"\.\d" => ".0"))
@@ -540,7 +542,6 @@ different properties.
 """
 function _create_transformer(name::String=""; kwargs...)
     windings = isempty(name) ? 3 : get(kwargs, :windings, 2)
-    phases = get(kwargs, :phases, 3)
 
     prcnt_rs = fill(0.2, windings)
     if haskey(kwargs, Symbol("%rs"))
@@ -570,6 +571,8 @@ function _create_transformer(name::String=""; kwargs...)
             end
         end
     end
+
+    phases = get(kwargs, :phases, _get_implied_nphases(temp["buss"]; default=3))
 
     trfm = Dict{String,Any}(
         "name" => name,

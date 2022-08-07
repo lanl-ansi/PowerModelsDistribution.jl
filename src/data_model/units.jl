@@ -17,15 +17,16 @@ const dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
         "ibase"=>Vector{String}(["cr_fr", "ci_fr", "cr_to", "ci_to", "csr_fr", "csi_fr"])
     ),
     "transformer" => Dict{String,Vector{String}}(
-        "ibase_fr"=>Vector{String}(["crt_fr", "cit_fr"]),
-        "ibase_to"=>Vector{String}(["crt_to", "cit_to"])
+        "sbase"=>Vector{String}(["pf", "qf", "pt", "qt"]),
+        "ibase_fr"=>Vector{String}(["cr_fr", "ci_fr"]),
+        "ibase_to"=>Vector{String}(["cr_to", "ci_to"])
     ),
     "switch" => Dict{String,Vector{String}}(
-        "sbase" => Vector{String}(["psw_fr", "psw_to", "qsw_fr", "qsw_to"]),
-        "ibase" => Vector{String}(["crsw_fr", "cisw_fr", "crsw_to", "cisw_to"])
+        "sbase" => Vector{String}(["pf", "pt", "qf", "qt"]),
+        "ibase" => Vector{String}(["cr_fr", "ci_fr", "cr_to", "ci_to"])
     ),
     "storage" => Dict{String,Vector{String}}(
-        "sbase"=>Vector{String}(["ps", "qs", "energy", "se", "sd", "sc_on", "sd_on", "sc"]),
+        "sbase"=>Vector{String}(["ps", "qs", "energy", "se", "sd", "sc"]),
     )
 )
 
@@ -81,25 +82,21 @@ function make_per_unit!(
     data_model_type = get(data, "data_model", MATHEMATICAL)
 
     if ismath(data)
-        if !get(data, "per_unit", false)
-            if !ismultinetwork(data)
-                nw_data = Dict("0" => data)
-            else
-                nw_data = data["nw"]
-            end
-
-            for (n, nw) in nw_data
-                vbases = ismissing(vbases) ? Dict{String,Real}("$(data["bus_lookup"][id])"=>vbase for (id, vbase) in nw["settings"]["vbases_default"]) : vbases
-                sbase  = ismissing(sbase) ? nw["settings"]["sbase_default"] : sbase
-
-                nw["data_model"] = data["data_model"]
-                _make_math_per_unit!(nw, data; sbase=sbase, vbases=vbases, make_pu_extensions=make_pu_extensions)
-                if ismultinetwork(data)
-                    delete!(nw, "data_model")
-                end
-            end
+        if !ismultinetwork(data)
+            nw_data = Dict("0" => data)
         else
-            # TODO make math model si units
+            nw_data = data["nw"]
+        end
+
+        for (n, nw) in nw_data
+            vbases = ismissing(vbases) ? nw["settings"]["vbases_default"] : vbases
+            sbase  = ismissing(sbase) ? nw["settings"]["sbase_default"] : sbase
+
+            nw["data_model"] = data["data_model"]
+            !get(nw, "per_unit", false) && _make_math_per_unit!(nw, data; sbase=sbase, vbases=vbases, make_pu_extensions=make_pu_extensions)
+            if ismultinetwork(data)
+                delete!(nw, "data_model")
+            end
         end
     else
         @warn "Data model '$data_model_type' is not recognized, no per-unit transformation performed"
@@ -110,12 +107,37 @@ end
 """
     discover_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{Any}}
 
-finds voltage zones by walking through the network and analyzing the transformers
+finds voltage zones by walking through the network and analyzing the transformers, attempting to decern the type of `data_model`
 """
 function discover_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{Any}}
     @assert iseng(data_model) || ismath(data_model) "unsupported data model"
-    edge_elements = ismath(data_model) ? _math_edge_elements : _eng_edge_elements
 
+    return ismath(data_model) ? discover_math_voltage_zones(data_model) : discover_eng_voltage_zones(data_model)
+end
+
+
+"""
+    discover_math_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{Any}}
+
+finds voltage zones by walking through the network and analyzing the transformers for a MATHEMATICAL `data_model`
+"""
+discover_math_voltage_zones(data_model::Dict{String,Any})::Dict{Int,Set{Any}} = _discover_voltage_zones(data_model, _math_edge_elements)
+
+
+"""
+    discover_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{Any}}
+
+finds voltage zones by walking through the network and analyzing the transformers for a ENGINEERING `data_model`
+"""
+discover_eng_voltage_zones(data_model::Dict{String,Any})::Dict{Int,Set{Any}} = _discover_voltage_zones(data_model, _eng_edge_elements)
+
+
+"""
+    discover_voltage_zones(data_model::Dict{String,<:Any}, edge_elements::Vector{String})::Dict{Int,Set{Any}}
+
+finds voltage zones by walking through the network and analyzing the transformers
+"""
+function _discover_voltage_zones(data_model::Dict{String,<:Any}, edge_elements::Vector{String})::Dict{Int,Set{Any}}
     unused_components = Set("$comp_type.$id" for comp_type in edge_elements[edge_elements .!= "transformer"] for id in keys(get(data_model, comp_type, Dict())))
     bus_connectors = Dict([(id,Set()) for id in keys(get(data_model, "bus", Dict()))])
     for comp_type in edge_elements[edge_elements .!= "transformer"]
@@ -150,15 +172,40 @@ function discover_voltage_zones(data_model::Dict{String,<:Any})::Dict{Int,Set{An
     return zones
 end
 
+"""
+    calc_math_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict}
+
+Calculates voltage bases for each voltage zone for buses and branches for a MATHEMATICAL `data_model`
+"""
+calc_math_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict} = _calc_voltage_bases(data_model, vbase_sources, _math_edge_elements)
+
+
+"""
+    calc_eng_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict}
+
+Calculates voltage bases for each voltage zone for buses and branches for a ENGINEERING `data_model`
+"""
+calc_eng_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict} = _calc_voltage_bases(data_model, vbase_sources, _eng_edge_elements)
+
 
 """
     calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict}
 
-Calculates voltage bases for each voltage zone for buses and branches
+Calculates voltage bases for each voltage zone for buses and branches, attempting to automatically decern the `data_model` type
 """
 function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real})::Tuple{Dict,Dict}
+    return ismath(data_model) ? calc_math_voltage_bases(data_model, vbase_sources) : calc_eng_voltage_bases(data_model, vbase_sources)
+end
+
+
+"""
+    _calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real}, edge_elements::Vector{String})::Tuple{Dict,Dict}
+
+Calculates voltage bases for each voltage zone for buses and branches given a list of `edge_elements`
+"""
+function _calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{String,<:Real}, edge_elements::Vector{String})::Tuple{Dict,Dict}
     # find zones of buses connected by lines
-    zones = discover_voltage_zones(data_model)
+    zones = _discover_voltage_zones(data_model, edge_elements)
     bus_to_zone = Dict([(bus,zone) for (zone, buses) in zones for bus in buses])
 
     # assign specified vbase to corresponding zones
@@ -180,6 +227,10 @@ function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{
             push!(zone_edges[f_zone], (t_zone, 1/tm_nom))
             push!(zone_edges[t_zone], (f_zone,   tm_nom))
         else
+            if !isempty(get(transformer, "xfmrcode", ""))
+                _apply_xfmrcode!(transformer, data_model)
+            end
+
             if haskey(transformer, "f_bus")
                 f_zone = bus_to_zone["$(transformer["f_bus"])"]
                 t_zone = bus_to_zone["$(transformer["f_bus"])"]
@@ -213,10 +264,9 @@ function calc_voltage_bases(data_model::Dict{String,<:Any}, vbase_sources::Dict{
         end
     end
 
-    edge_elements = ismath(data_model) ? _math_edge_elements : _eng_edge_elements
-
     bus_vbase = Dict([(bus,zone_vbase[zone]) for (bus,zone) in bus_to_zone])
     edge_vbase = Dict([("$edge_type.$id", bus_vbase["$(obj["f_bus"])"]) for edge_type in edge_elements[edge_elements .!= "transformer"] if haskey(data_model, edge_type) for (id,obj) in data_model[edge_type]])
+
     return (bus_vbase, edge_vbase)
 end
 
@@ -307,7 +357,7 @@ function _make_math_per_unit!(
     end
 
     nw["settings"]["sbase"] = sbase
-    data_math["per_unit"] = true
+    nw["per_unit"] = true
 end
 
 
@@ -325,7 +375,9 @@ function _rebase_pu_bus!(bus::Dict{String,<:Any}, vbase::Real, sbase::Real, sbas
         _scale_props!(bus, prop_vnom, 1/vbase)
         # tupples need special treatment
         for field in ["vm_pair_ub", "vm_pair_lb"]
-            if haskey(bus, field)
+            # the empty check is needed because otherwise type specialization is lost,
+            # the type would then become Vector{Any,Any,Any}
+            if !isempty(get(bus, field, []))
                 bus[field] = [(c,d,b*1/vbase) for (c,d,b) in bus[field]]
             end
         end
@@ -364,6 +416,7 @@ end
 function _rebase_pu_branch!(branch::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
     if !haskey(branch, "vbase")
         z_old = 1
+        vbase_old = 1.0
     else
         vbase_old = branch["vbase"]
         z_old = vbase_old^2/sbase_old*voltage_scale_factor
@@ -373,10 +426,12 @@ function _rebase_pu_branch!(branch::Dict{String,<:Any}, vbase::Real, sbase::Real
     z_scale = z_old/z_new
     y_scale = 1/z_scale
     sbase_scale = sbase_old/sbase
+    ibase_scale = sbase_scale/(vbase_old/vbase)
 
     _scale_props!(branch, ["br_r", "br_x"], z_scale)
     _scale_props!(branch, ["b_fr", "g_fr", "b_to", "g_to"], y_scale)
-    _scale_props!(branch, ["c_rating_a", "c_rating_b", "c_rating_c", "rate_a", "rate_b", "rate_c"], sbase_scale)
+    _scale_props!(branch, ["c_rating_a", "c_rating_b", "c_rating_c"], ibase_scale)
+    _scale_props!(branch, ["rate_a", "rate_b", "rate_c"], sbase_scale)
 
     branch["angmin"] = deg2rad.(branch["angmin"])
     branch["angmax"] = deg2rad.(branch["angmax"])
@@ -388,9 +443,13 @@ end
 
 "per-unit conversion for switches"
 function _rebase_pu_switch!(switch::Dict{String,<:Any}, vbase::Real, sbase::Real, sbase_old::Real, voltage_scale_factor::Real)
-    sbase_scale = sbase_old / sbase
+    vbase_old = !haskey(switch, "vbase") ? 1.0 : switch["vbase"]
 
-    _scale_props!(switch, ["c_rating_a", "c_rating_b", "c_rating_c", "rate_a", "rate_b", "rate_c"], sbase_scale)
+    sbase_scale = sbase_old / sbase
+    ibase_scale = sbase_scale/(vbase_old/vbase)
+
+    _scale_props!(switch, ["current_rating", "c_rating_b", "c_rating_c"], ibase_scale)
+    _scale_props!(switch, ["thermal_rating", "rate_b", "rate_c"], sbase_scale)
 
     switch["vbase"] = vbase
 end
@@ -423,17 +482,17 @@ function _rebase_pu_shunt!(shunt::Dict{String,<:Any}, vbase::Real, sbase::Real, 
             shunt["controls"]["offsetting"] = shunt["controls"]["offsetting"]/(sbase*power_scale)
             if shunt["controls"]["voltoverride"]
                 shunt["controls"]["vmin"] = shunt["controls"]["vmin"]*shunt["controls"]["ptratio"]/(vbase*voltage_scale_factor)
-                shunt["controls"]["vmax"] = shunt["controls"]["vmax"]*shunt["controls"]["ptratio"]/(vbase*voltage_scale_factor)        
+                shunt["controls"]["vmax"] = shunt["controls"]["vmax"]*shunt["controls"]["ptratio"]/(vbase*voltage_scale_factor)
             end
         else
             for (idx,val) in enumerate(shunt["controls"]["type"])
                 if shunt["controls"]["voltoverride"][idx]
                     shunt["controls"]["vmin"][idx] = shunt["controls"]["vmin"][idx]*shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor)
-                    shunt["controls"]["vmax"][idx] = shunt["controls"]["vmax"][idx]*shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor) 
+                    shunt["controls"]["vmax"][idx] = shunt["controls"]["vmax"][idx]*shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor)
                 end
                 if val == CAP_VOLTAGE
                     shunt["controls"]["onsetting"][idx]  = shunt["controls"]["onsetting"][idx] *shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor)
-                    shunt["controls"]["offsetting"][idx] = shunt["controls"]["offsetting"][idx]*shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor) 
+                    shunt["controls"]["offsetting"][idx] = shunt["controls"]["offsetting"][idx]*shunt["controls"]["ptratio"][idx]/(vbase*voltage_scale_factor)
                 elseif val == CAP_CURRENT
                     shunt["controls"]["onsetting"][idx]  = shunt["controls"]["onsetting"][idx] *shunt["controls"]["ctratio"][idx]/(sbase*1e3)*(vbase*voltage_scale_factor)
                     shunt["controls"]["offsetting"][idx] = shunt["controls"]["offsetting"][idx]*shunt["controls"]["ctratio"][idx]/(sbase*1e3)*(vbase*voltage_scale_factor)
@@ -511,8 +570,10 @@ function _rebase_pu_transformer_2w_ideal!(transformer::Dict{String,<:Any}, f_vba
     t_vbase_old = get(transformer, "t_vbase", 1.0)
     f_vbase_scale = f_vbase_old/f_vbase_new
     t_vbase_scale = t_vbase_old/t_vbase_new
+    sbase_scale = sbase_old/sbase_new
 
     _scale(transformer, "tm_nom", f_vbase_scale/t_vbase_scale)
+    _scale(transformer, "sm_ub", sbase_scale)
 
     # save new vbase
     transformer["f_vbase"] = f_vbase_new
@@ -523,7 +584,7 @@ function _rebase_pu_transformer_2w_ideal!(transformer::Dict{String,<:Any}, f_vba
         # convert reference voltage and band from volts to per unit
         transformer["controls"]["vreg"] = transformer["controls"]["vreg"].*transformer["controls"]["ptratio"]/(f_vbase_new*voltage_scale_factor)
         transformer["controls"]["band"] = transformer["controls"]["band"].*transformer["controls"]["ptratio"]/(f_vbase_new*voltage_scale_factor)
-        # convert regulator impedance from volts to per unit 
+        # convert regulator impedance from volts to per unit
         baseZ = (f_vbase_new*voltage_scale_factor)^2/(sbase_new*1e3)
         transformer["controls"]["r"] = transformer["controls"]["r"].*transformer["controls"]["ptratio"]./transformer["controls"]["ctprim"]/baseZ
         transformer["controls"]["x"] = transformer["controls"]["x"].*transformer["controls"]["ptratio"]./transformer["controls"]["ctprim"]/baseZ
@@ -617,7 +678,7 @@ function solution_make_si(
     end
 
     for (n,nw) in nw_sol
-        if !isempty(nw)
+        if !isempty(nw) && nw["per_unit"]
             sbase = nw["settings"]["sbase"]
             for (comp_type, comp_dict) in [(x,y) for (x,y) in nw if isa(y, Dict) && x != "settings"]
                 dimensionalize_math_comp = get(dimensionalize_math, comp_type, Dict())
@@ -665,14 +726,13 @@ function solution_make_si(
                     end
                 end
             end
+            nw["per_unit"] = false
         end
 
         for make_si_func! in make_si_extensions
             make_si_func!(nw, nw_data[n], solution, math_model)
         end
     end
-
-    solution_si["per_unit"] = false
 
     return solution_si
 end

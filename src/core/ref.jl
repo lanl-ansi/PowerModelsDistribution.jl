@@ -1,6 +1,3 @@
-import LinearAlgebra: diagm
-
-
 """
     apply_pmd!(func!::Function, ref::Dict{Symbol,<:Any}, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true)
 
@@ -91,19 +88,19 @@ function _calc_mc_transformer_Tvi(pm::AbstractUnbalancedPowerModel, i::Int; nw=n
     #grounded = length(trans["configuration"])>5 && trans["configuration"][6]=='n'
     # Tw will contain transformations related to permutation and polarity
     perm_to_trans = Dict(
-        [1,2,3]=>diagm(0=>ones(Float64, 3)),
+        [1,2,3]=>LinearAlgebra.diagm(0=>ones(Float64, 3)),
         [3,1,2]=>Tbr,
         [2,3,1]=>Tbr*Tbr
     )
     Tw = perm_to_trans[perm]
     Tw = (polarity=='+') ? Tw : -Tw
-    #Tw = diagm(0=>ones(Float64, 3))
+    #Tw = LinearAlgebra.diagm(0=>ones(Float64, 3))
     vmult = 1.0 # compensate for change in LN
     if dyz==WYE
         Tv_fr = Tw
-        Tv_im = diagm(0=>ones(Float64, 3))
+        Tv_im = LinearAlgebra.diagm(0=>ones(Float64, 3))
         Ti_fr = Tw
-        Ti_im = diagm(0=>ones(Float64, 3))
+        Ti_im = LinearAlgebra.diagm(0=>ones(Float64, 3))
         # if !grounded
         #     # if not grounded, phase currents should sum to zero
         #     Ti_fr = [Ti_fr; ones(1,3)]
@@ -111,7 +108,7 @@ function _calc_mc_transformer_Tvi(pm::AbstractUnbalancedPowerModel, i::Int; nw=n
         # end
     elseif dyz==DELTA
         Tv_fr = Tdelt*Tw
-        Tv_im = diagm(0=>ones(Float64, 3))
+        Tv_im = LinearAlgebra.diagm(0=>ones(Float64, 3))
         Ti_fr = Tw
         Ti_im = Tdelt'
         vmult = sqrt(3)
@@ -175,7 +172,7 @@ function calc_buspair_parameters(buses, branches)
 
     buspair_indexes = Set((branch["f_bus"], branch["t_bus"], fc, tc) for (i,branch) in branch_lookup for (fc, tc) in zip(branch["f_connections"], branch["t_connections"]))
 
-    bp_branch = Dict((bp, typemax(Int64)) for bp in buspair_indexes)
+    bp_branch = Dict((bp, typemax(Int)) for bp in buspair_indexes)
 
     bp_angmin = Dict((bp, -Inf) for bp in buspair_indexes)
     bp_angmax = Dict((bp,  Inf) for bp in buspair_indexes)
@@ -333,7 +330,9 @@ function ref_add_core!(ref::Dict{Symbol,Any})
                 for (i, obj) in nw_ref[Symbol(type)]
                     if obj[status] != pmd_math_component_status_inactive[type]
                         push!(conns[obj["f_bus"]], ((obj["index"], obj["f_bus"], obj["t_bus"]), obj["f_connections"]))
-                        push!(conns[obj["t_bus"]], ((obj["index"], obj["t_bus"], obj["f_bus"]), obj["t_connections"]))
+                        if obj["f_bus"] != obj["t_bus"]
+                            push!(conns[obj["t_bus"]], ((obj["index"], obj["t_bus"], obj["f_bus"]), obj["t_connections"]))
+                        end
                     end
                 end
                 nw_ref[Symbol("bus_arcs_conns_$(type)")] = conns
@@ -351,7 +350,7 @@ function ref_add_core!(ref::Dict{Symbol,Any})
         nw_ref[:ref_buses] = ref_buses
 
         if length(ref_buses) > 1
-            @warn "multiple reference buses found, $(keys(ref_buses)), this can cause infeasibility if they are in the same connected component"
+            @debug "multiple reference buses found, $(keys(ref_buses)), this can cause infeasibility if they are in the same connected component"
         end
 
         ### aggregate info for pairs of connected buses ###

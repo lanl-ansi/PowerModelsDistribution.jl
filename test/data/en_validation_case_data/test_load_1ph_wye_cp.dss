@@ -1,0 +1,22 @@
+! This case is designed to test a 1-phase, wye-connected, constant-power load
+
+Clear
+
+New Circuit.Test phases=3 basekv=0.4 baseMVA=0.2 bus1=B1 MVASC1=1e8 MVASC3=1e8
+
+New Linecode.Zabcn units=km nphases=4
+~ rmatrix=(0.227217624 0.059217624 0.059217624 0.059217624 |0.059217624 0.227217624 0.059217624 0.059217624 |0.059217624 0.059217624 0.227217624 0.059217624 |0.059217624 0.059217624 0.059217624 0.227217624)
+~ xmatrix=(0.879326005 0.541069709 0.475545802 0.449141163 |0.541069709 0.879326005 0.516533439 0.475545802 |0.475545802 0.516533439 0.879326005 0.541069709 |0.449141163 0.475545802 0.541069709 0.879326005)
+~ cmatrix=(0 | 0 0 | 0 0 0 | 0 0 0 0)
+~ Rg = 0
+~ Xg = 0
+
+New Line.Line1 bus1=B1.1.2.3.0 bus2=B2.1.2.3.4 linecode=Zabcn length=1 units=km
+
+! creates unbalance at B2:
+! vm_b2 = [0.964, 1.01, 1.00, 0.05] without other devices active
+New Load.Load1  phases=1 bus1=B2.1.4  kv=0.23  model=1 conn=wye kVA=5  pf=0.9 vminpu=0.1 vmaxpu=2
+
+New Load.Load2  phases=1 conn=wye bus1=B2.1.4  kv=0.23  model=1  kVA=10  pf=0.9 vminpu=0.1 vmaxpu=2
+
+Solve

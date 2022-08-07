@@ -203,10 +203,12 @@ const _monitor_properties = String[
 ]
 
 const _pvsystem_properties = Vector{String}([
-    "phases", "bus1", "kv", "irradiance", "pmpp", "temperature", "pf",
+    "phases", "bus1", "kv", "irradiance", "pmpp", "%pmpp", "temperature", "pf",
     "conn", "kvar", "kva", "%cutin", "%cutout", "effcurve", "p-tcurve", "%r",
     "%x", "model", "vminpu", "vmaxpu", "yearly", "daily", "duty", "tyearly",
-    "tduty", "class", "usermodel", "userdata", "debugtrace", "spectrum"
+    "tduty", "class", "usermodel", "userdata", "debugtrace", "varfollowinverter",
+    "dutystart", "wattpriority", "pfpriority", "%pminnovars", "%pminkvarmax",
+    "kvarmax", "kvarmaxabs", "spectrum", "basefreq", "enabled", "like"
 ])
 
 const _recloser_properties = String[
@@ -277,8 +279,8 @@ const _dss_object_properties = Dict{String,Vector{String}}(
 
 
 "parses single column load profile files"
-function _parse_csv_file(path::AbstractString, type::AbstractString; header::Bool=false, column::Int=1, interval::Bool=false)::Union{Vector{String}, Tuple{Vector{String}, Vector{String}, Vector{String}}, Tuple{Vector{String}, Vector{String}}}
-    open(path, "r") do f
+function _parse_csv_file(path::FilePaths.AbstractPath, type::AbstractString; header::Bool=false, column::Int=1, interval::Bool=false)::Union{Vector{String}, Tuple{Vector{String}, Vector{String}, Vector{String}}, Tuple{Vector{String}, Vector{String}}}
+    open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path))), "r") do f
         lines = readlines(f)
         if header
             lines = lines[2:end]
@@ -325,8 +327,8 @@ end
 
 
 "parses sng and dbl precision loadshape binary files"
-function _parse_binary_file(path::AbstractString, precision::Type; npts::Union{Int,Nothing}=nothing, interval::Bool=false)::Union{Vector{precision}, Tuple{Vector{precision}, Vector{precision}}}
-    open(path, "r") do f
+function _parse_binary_file(path::FilePaths.AbstractPath, precision::Type; npts::Union{Int,Nothing}=nothing, interval::Bool=false)::Union{Vector{precision}, Tuple{Vector{precision}, Vector{precision}}}
+    open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path))), "r") do f
         if npts === nothing
             data = precision[]
             while true
@@ -358,7 +360,7 @@ end
 
 
 "parses csv or binary loadshape files"
-function _parse_data_file(path::AbstractString, type::AbstractString, npts::Union{Int,Nothing}; header::Bool=false, interval::Bool=false, column::Int=1)
+function _parse_data_file(path::FilePaths.AbstractPath, type::AbstractString, npts::Union{Int,Nothing}; header::Bool=false, interval::Bool=false, column::Int=1)
     if type in ["csvfile", "mult", "pqcsvfile"]
         return _parse_csv_file(path, type; header=header, column=column, interval=interval)
     elseif type in ["sngfile", "dblfile"]
@@ -368,7 +370,7 @@ end
 
 
 "parses pmult and qmult entries on loadshapes"
-function _parse_mult_parameter(mult_string::AbstractString; path::AbstractString="", npts::Union{Int,Nothing}=nothing)::String
+function _parse_mult_parameter(mult_string::AbstractString; path::FilePaths.AbstractPath=FilePaths.p".", npts::Union{Int,Nothing}=nothing)::String
     if !occursin("=", mult_string)
         return mult_string
     else
@@ -383,7 +385,7 @@ function _parse_mult_parameter(mult_string::AbstractString; path::AbstractString
         end
 
         file_key = [prop for prop in keys(props) if endswith(prop, "file")][1]
-        full_path = path == "" ? props[file_key] : join([path, props[file_key]], '/')
+        full_path = joinpath(path, props[file_key])
         type = file_key == "file" ? "mult" : file_key
 
         return "($(join(_parse_data_file(full_path, type, npts; header=get(props, "header", false), column=parse(Int, get(props, "column", "1"))), ",")))"
@@ -392,7 +394,7 @@ end
 
 
 "parses loadshape component"
-function _parse_loadshape!(current_obj::Dict{String,<:Any}; path::AbstractString="")
+function _parse_loadshape!(current_obj::Dict{String,<:Any}; path::FilePaths.AbstractPath=FilePaths.p".")
     if any(parse.(Float64, [get(current_obj, "interval", "1.0"), get(current_obj, "minterval", "60.0"), get(current_obj, "sinterval", "3600.0")]) .<= 0.0)
         interval = true
     else
@@ -405,7 +407,7 @@ function _parse_loadshape!(current_obj::Dict{String,<:Any}; path::AbstractString
         if prop in ["pmult", "qmult"]
              current_obj[prop] = _parse_mult_parameter(current_obj[prop]; path=path, npts=npts)
         elseif prop in ["csvfile", "pqcsvfile", "sngfile", "dblfile"]
-            full_path = path == "" ? current_obj[prop] : join([path, current_obj[prop]], '/')
+            full_path = joinpath(path, current_obj[prop])
             data = _parse_data_file(full_path, prop, parse(Int, get(current_obj, "npts", "1")); interval=interval, header=false)
             if prop == "pqcsvfile"
                 if interval
@@ -428,10 +430,10 @@ end
 
 
 "parse xycurve component"
-function _parse_xycurve!(current_obj::Dict{String,<:Any}; path::AbstractString="")
+function _parse_xycurve!(current_obj::Dict{String,<:Any}; path::FilePaths.AbstractPath=FilePaths.p".")
     for prop in current_obj["prop_order"]
         if prop in ["csvfile", "sngfile", "dblfile"]
-            full_path = isempty(path) ? current_obj[prop] : join([path, current_obj[prop]], '/')
+            full_path = joinpath(path, current_obj[prop])
             data = _parse_data_file(full_path, prop, nothing; interval=true, header=false)
             current_obj["xarray"], current_obj["yarray"] = data
         end
@@ -443,10 +445,10 @@ end
 
 
 "parse spectrum component"
-function _parse_spectrum!(current_obj::Dict{String,<:Any}; path::AbstractString="")
+function _parse_spectrum!(current_obj::Dict{String,<:Any}; path::FilePaths.AbstractPath=FilePaths.p".")
     for prop in current_obj["prop_order"]
         if prop == "csvfile"
-            full_path = isempty(path) ? current_obj[prop] : join([path, current_obj[prop]], '/')
+            full_path = joinpath(path, current_obj[prop])
             current_obj["harmonic"], current_obj["%mag"], current_obj["angle"] = _parse_csv_file(full_path, "pqcsvfile"; header=false, interval=true)
         end
     end
@@ -487,8 +489,8 @@ Parses a Bus Coordinate `file`, in either "dat" or "csv" formats, where in
 "dat", columns are separated by spaces, and in "csv" by commas. File expected
 to contain "bus,x,y" on each line.
 """
-function _parse_buscoords_file(file::AbstractString)::Dict{String,Any}
-    file_str = read(open(file), String)
+function _parse_buscoords_file(path::FilePaths.AbstractPath)::Dict{String,Any}
+    file_str = read(open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path)))), String)
     regex = r"[\s,\t]+"
 
     lines = _strip_lines(split(file_str, '\n'))
@@ -611,7 +613,7 @@ function _add_component!(data_dss::Dict{String,<:Any}, obj_type_name::AbstractSt
 end
 
 
-function _add_component_edits!(data_dss::Dict{String,<:Any}, obj_type_name::SubString{String}, object::Dict{String,<:Any})
+function _add_component_edits!(data_dss::Dict{String,<:Any}, obj_type_name::AbstractString, object::Dict{String,<:Any})
     obj_type = split(obj_type_name, '.'; limit=2)[1]
     if !haskey(data_dss, obj_type)
         data_dss[obj_type] = Dict{String,Any}(
@@ -668,7 +670,7 @@ Parses a `component` with `properties` into a `object`. If `object` is not
 defined, an empty dictionary will be used. Assumes that unnamed properties are
 given in order, but named properties can be given anywhere.
 """
-function _parse_component(component::AbstractString, properties::AbstractString, object::Dict{String,<:Any}=Dict{String,Any}(); path::String="")::Dict{String,Any}
+function _parse_component(component::AbstractString, properties::AbstractString, object::Dict{String,<:Any}=Dict{String,Any}(); path::FilePaths.AbstractPath=FilePaths.p".")::Dict{String,Any}
     obj_type, name = split(component, '.'; limit=2)
 
     if !haskey(object, "prop_order")
@@ -754,7 +756,7 @@ end
 Parses an already separated line given by `elements` (an array) of an OpenDSS
 file into `current_obj`. If not defined, `current_obj` is an empty dictionary.
 """
-function _parse_line(elements::Vector{String}; current_obj::Dict{String,<:Any}=Dict{String,Any}(), path::AbstractString="")::Tuple{SubString{String}, Dict{String,Any}}
+function _parse_line(elements::Vector{String}; current_obj::Dict{String,<:Any}=Dict{String,Any}(), path::FilePaths.AbstractPath=FilePaths.p".")::Tuple{SubString{String}, Dict{String,Any}}
     current_obj_type = strip(elements[2], ['\"', '\''])
     if startswith(current_obj_type, "object")
         current_obj_type = split(current_obj_type, '=')[2]
@@ -800,8 +802,9 @@ supports components and options, but not commands, e.g. "plot" or "solve".
 Will also parse files defined inside of the originating DSS file via the
 "compile", "redirect" or "buscoords" commands.
 """
-function parse_dss(filename::AbstractString)::Dict{String,Any}
-    data_dss = open(filename) do io
+function parse_dss(path::Union{AbstractString,FilePaths.AbstractPath})::Dict{String,Any}
+    path = isa(path, FilePaths.AbstractPath) ? path : FilePaths.Path(path)
+    data_dss = open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path)))) do io
         parse_dss(io)
     end
     return data_dss
@@ -818,8 +821,8 @@ Will also parse files defined inside of the originating DSS file via the
 """
 function parse_dss(io::IO)::Dict{String,Any}
     filename = isa(io, IOStream) ? match(r"^<file\s(.+)>$", io.name).captures[1] : "GenericIOBuffer"
-    current_file = split(filename, "/")[end]
-    path = join(split(filename, '/')[1:end-1], '/')
+    current_file = basename(FilePaths.Path(filename))
+    path = dirname(FilePaths.Path(filename))
     data_dss = Dict{String,Any}()
 
     data_dss["filename"] = Set{String}([string(filename)])
@@ -890,6 +893,10 @@ function parse_dss(io::IO)::Dict{String,Any}
 
             elseif cmd == "edit"
                 current_obj_type, current_obj = _parse_line([lowercase(line_element) for line_element in line_elements]; path=path)
+                if startswith(current_obj_type, "circuit")
+                    current_obj_type = "vsource.source"
+                    current_obj["name"] = "source"
+                end
 
                 _add_component_edits!(data_dss, current_obj_type, current_obj)
                 continue
@@ -903,8 +910,8 @@ function parse_dss(io::IO)::Dict{String,Any}
                 continue
 
             elseif cmd in ["buscoords", "latloncoords"]
-                file = line_elements[2]
-                full_path = path == "" ? file : join([path, file], '/')
+                file = FilePaths.Path(line_elements[2])
+                full_path = joinpath(path, file)
                 @info "Reading Buscoords in '$file' on line $real_line_num in '$current_file'"
                 data_dss["buscoords"] = _parse_buscoords_file(full_path)
 
@@ -975,8 +982,8 @@ end
 
 Parses a voltages CSV file exported from OpenDSS with the command `Export Voltages [filename.csv]`
 """
-function parse_dss_voltages_export(file::String)::Dict{String,Any}
-    open(file, "r") do io
+function parse_dss_voltages_export(path::String)::Dict{String,Any}
+    open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path))), "r") do io
         parse_dss_voltages_export(io)
     end
 end

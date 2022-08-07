@@ -1,142 +1,77 @@
 @info "running storage tests"
 
 @testset "test storage opf" begin
-    mp_data = PM.parse_file("../test/data/matpower/case5_strg.m")
-    make_multiconductor!(mp_data, 3)
-
-    @testset "5-bus storage acp opf" begin
-        result = solve_mc_opf(mp_data, ACPUPowerModel, ipopt_solver; make_si=false)
+    @testset "3-bus balanced battery acp opf" begin
+        result = solve_mc_opf(case3_balanced_battery, ACPUPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 52299.2; atol = 1e0)
 
-        @test isapprox(result["solution"]["storage"]["1"]["se"],  0.0; atol=1e0)
-        @test isapprox(result["solution"]["storage"]["2"]["se"],  0.0; atol=1e0)
-
-        @test all(isapprox.(result["solution"]["storage"]["1"]["ps"], -0.0596928; atol=1e-3))
-        @test all(isapprox.(result["solution"]["storage"]["2"]["ps"], -0.0794600; atol=1e-3))
+        vbase = case3_balanced_battery["settings"]["vbases_default"]["sourcebus"]
+        @test all(isapprox.(result["solution"]["bus"]["primary"]["vm"] ./ vbase, 0.991111; atol=1e-2))
+        @test isapprox(sum(result["solution"]["storage"]["s1"]["ps"]), -5.0; atol=1e-4)
     end
 
-    @testset "5-bus storage arc opf" begin
-        result = solve_mc_opf(mp_data, ACRUPowerModel, ipopt_solver; make_si=false)
+    @testset "3-bus balanced battery acp opf - time_elapsed::Int" begin
+        case = deepcopy(case3_balanced_battery)
+        case["time_elapsed"] = 1
+
+        result = solve_mc_opf(case3_balanced_battery, ACPUPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 52299.2; atol = 1e0)
 
-        @test isapprox(result["solution"]["storage"]["1"]["se"],  0.0; atol=1e0)
-        @test isapprox(result["solution"]["storage"]["2"]["se"],  0.0; atol=1e0)
-
-        @test all(isapprox.(result["solution"]["storage"]["1"]["ps"], -0.0596928; atol=1e-3))
-        @test all(isapprox.(result["solution"]["storage"]["2"]["ps"], -0.0794600; atol=1e-3))
+        vbase = case3_balanced_battery["settings"]["vbases_default"]["sourcebus"]
+        @test all(isapprox.(result["solution"]["bus"]["primary"]["vm"] ./ vbase, 0.991111; atol=1e-2))
+        @test isapprox(sum(result["solution"]["storage"]["s1"]["ps"]), -5.0; atol=1e-4)
     end
 
-    @testset "5-bus storage dcp opf" begin
-        result = solve_mc_opf(mp_data, DCPUPowerModel, ipopt_solver; make_si=false)
+    @testset "3-bus balanced battery acr opf" begin
+        result = solve_mc_opf(case3_balanced_battery, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 52059.6; atol = 1e0)
 
-        @test isapprox(result["solution"]["storage"]["1"]["se"],  0.0; atol = 1e0)
-        @test isapprox(result["solution"]["storage"]["2"]["se"],  0.0; atol = 1e0)
-
-        @test all(isapprox.(result["solution"]["storage"]["1"]["ps"], -0.0596443; atol=1e-3))
-        @test all(isapprox.(result["solution"]["storage"]["2"]["ps"], -0.0793700; atol=1e-3))
+        vbase = case3_balanced_battery["settings"]["vbases_default"]["sourcebus"]
+        @test all(isapprox.(result["solution"]["bus"]["primary"]["vm"] ./ vbase, 0.991111; atol=1e-2))
+        @test isapprox(sum(result["solution"]["storage"]["s1"]["ps"]), -5.0; atol=1e-4)
     end
 
-    @testset "5-bus storage lpubfdiag opf" begin
-        result = solve_mc_opf(mp_data, LPUBFDiagPowerModel, ipopt_solver; make_si=false)
+    @testset "3-bus balanced battery lpubfdiag opf" begin
+        result = solve_mc_opf(case3_balanced_battery, LPUBFDiagPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 43170.0; atol = 1e0)
-
-        @test isapprox(result["solution"]["storage"]["1"]["se"],  0.0; atol = 1e0)
-        @test isapprox(result["solution"]["storage"]["2"]["se"],  0.0; atol = 1e0)
-
-        @test all(isapprox.(result["solution"]["storage"]["1"]["ps"], -0.06; atol=1e-2))
-        @test all(isapprox.(result["solution"]["storage"]["2"]["ps"], -0.08; atol=1e-2))
+        vbase = case3_balanced_battery["settings"]["vbases_default"]["sourcebus"]
+        @test all(isapprox.(result["solution"]["bus"]["primary"]["vm"] ./ vbase, 0.991111; atol=1e-2))
+        @test isapprox(sum(result["solution"]["storage"]["s1"]["ps"]), -5.0; atol=1e-4)
     end
 
-    @testset "5-bus storage nfa opf" begin
-        result = solve_mc_opf(mp_data, NFAUPowerModel, ipopt_solver; make_si=false)
+    @testset "3-bus balanced battery nfa opf" begin
+        result = solve_mc_opf(case3_balanced_battery, NFAUPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 43169.9; atol = 1e0)
-
-        @test isapprox(result["solution"]["storage"]["1"]["se"],  0.0; atol = 1e0)
-        @test isapprox(result["solution"]["storage"]["2"]["se"],  0.0; atol = 1e0)
-
-        @test all(isapprox.(result["solution"]["storage"]["1"]["ps"], -0.0596443; atol=1e-3))
-        @test all(isapprox.(result["solution"]["storage"]["2"]["ps"], -0.0793700; atol=1e-3))
+        @test isapprox(sum(result["solution"]["storage"]["s1"]["ps"]), -5.0; atol=1e-4)
     end
 end
-
 
 @testset "test storage pf" begin
-    eng = parse_file("../test/data/opendss/case3_balanced_battery.dss")
-
     @testset "3-bus balanced battery acp pf" begin
-        result = solve_mc_pf(eng, ACPUPowerModel, ipopt_solver; make_si=false)
+        result = solve_mc_pf(case3_balanced_battery, ACPUPowerModel, ipopt_solver)
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test all(isapprox.(result["solution"]["bus"]["primary"]["vm"], 0.98697; atol=1e-5))
+
+        vbase = case3_balanced_battery["settings"]["vbases_default"]["sourcebus"]
+        @test all(isapprox.(result["solution"]["bus"]["primary"]["vm"] ./ vbase, 0.991111; atol=1e-2))
+        @test all(isapprox.(result["solution"]["bus"]["primary"]["va"], [0.03, -119.97, 120.03]; atol=1e-2))
+        @test isapprox(sum(result["solution"]["storage"]["s1"]["ps"]), -5.0; atol=1e-4)
     end
+
     @testset "3-bus balanced battery acr pf" begin
-        result = solve_mc_pf(eng, ACRUPowerModel, ipopt_solver; make_si=false)
+        result = solve_mc_pf(case3_balanced_battery, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!])
 
         @test result["termination_status"] == LOCALLY_SOLVED
-        @test all(isapprox.(calc_vm_acr(result, "primary"), 0.98697; atol=1e-5))
-    end
-    #= TODO Rewrite failing test (passes locally)
-    @testset "3-bus balanced battery lpubfdiag pf" begin
-        result = solve_mc_pf(eng, LPUBFDiagPowerModel, ipopt_solver; make_si=false)
 
-        @test result["termination_status"] == LOCALLY_SOLVED
-        @test all(isapprox.(result["solution"]["bus"]["primary"]["w"], 0.99767; atol=2e-3))
-    end
-    =#
-end
-
-@testset "test storage mld" begin
-    mp_data = PM.parse_file("../test/data/matpower/case5_mld_strg.m")
-    make_multiconductor!(mp_data, 3)
-
-    @testset "5-bus mld storage acp mld" begin
-        result = solve_mc_mld(mp_data, ACPUPowerModel, ipopt_solver)
-
-        @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 137.17; atol = 1e-2)
-
-        @test all(isapprox(gen["gen_status"], 1.0; atol=1e-6) for (_,gen) in result["solution"]["gen"])
-        @test isapprox(sum(sum(load["pd"]) for (_,load) in result["solution"]["load"]), 18.09; atol=1e-2)
-    end
-
-    @testset "5-bus mld storage acr mld" begin
-        result = solve_mc_mld(mp_data, ACRUPowerModel, ipopt_solver)
-
-        @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 137.17; atol = 1e-2)
-
-        @test all(isapprox(gen["gen_status"], 1.0; atol=1e-6) for (_,gen) in result["solution"]["gen"])
-        @test isapprox(sum(sum(load["pd"]) for (_,load) in result["solution"]["load"]), 18.09; atol=1e-2)
-    end
-
-    @testset "5-bus mld storage lpubfdiag mld" begin
-        result = solve_mc_mld(mp_data, LPUBFDiagPowerModel, ipopt_solver)
-
-        @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 136.94; atol = 1e-1)
-
-        @test all(isapprox(gen["gen_status"], 1.0; atol=1e-6) for (_,gen) in result["solution"]["gen"])
-        @test isapprox(sum(sum(load["pd"]) for (_,load) in result["solution"]["load"]), 18.11; atol=1e-2)
-    end
-
-    @testset "5-bus mld storage nfa mld" begin
-        result = solve_mc_mld(mp_data, NFAUPowerModel, ipopt_solver)
-
-        @test result["termination_status"] == LOCALLY_SOLVED
-        @test isapprox(result["objective"], 131.7; atol = 1e-1)
-
-        @test all(isapprox(gen["gen_status"], 1.0; atol=1e-6) for (_,gen) in result["solution"]["gen"])
-        @test isapprox(sum(sum(load["pd"]) for (_,load) in result["solution"]["load"]), 18.69; atol=1e-2)
+        # Test is numerically unstable (fails on only some OSes and some versions of Julia)
+        vbase = case3_balanced_battery["settings"]["vbases_default"]["sourcebus"]
+        @test all(isapprox.(result["solution"]["bus"]["primary"]["vm"] ./ vbase, 0.991111; atol=1e-2))
+        @test all(isapprox.(result["solution"]["bus"]["primary"]["va"], [0.03, -119.97, 120.03]; atol=1e-2))
+        @test isapprox(sum(result["solution"]["storage"]["s1"]["ps"]), -5.0; atol=1e-4)
     end
 end

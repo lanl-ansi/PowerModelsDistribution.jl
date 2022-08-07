@@ -5,7 +5,7 @@ const _pmd_eng_global_keys = Set{String}([
 
 "list of multinetwork keys that belong at the root level"
 const _pmd_math_global_keys = Set{String}([
-    "data_model", "per_unit", "name", "map", "bus_lookup", "dss_options"
+    "data_model", "name", "map", "bus_lookup", "dss_options"
 ])
 
 
@@ -139,7 +139,7 @@ function _make_multinetwork_eng(
         mn_data["mn_lookup"] = mn_lookup
 
         _nw = Dict{String,Any}(
-            k => v for (k,v) in data_eng if !(k in _pmd_eng_global_keys)
+            k => deepcopy(v) for (k,v) in data_eng if !(k in _pmd_eng_global_keys)
         )
         for n in sort([n for n in keys(mn_data["nw"])])
             time = mn_lookup["$n"]
@@ -165,6 +165,8 @@ function _make_multinetwork_eng(
             merge!(mn_data["nw"]["$n"], deepcopy(_nw))
         end
     end
+
+    set_time_elapsed!(mn_data, time_elapsed)
 
     return mn_data
 end
@@ -219,11 +221,18 @@ function set_time_elapsed!(data::Dict{String,<:Any}, time_elapsed::Union{Real,Ve
         @assert length(time_elapsed) == length(nw_data) "provided time_elapsed length doesn't match number of multinetwork frames"
     end
 
-    for (n,nw) in nw_data
+    for (i,n) in enumerate(sort(parse.(Int, collect(keys(nw_data)))))
+        old_time_elapsed = get(nw_data["$n"], "time_elapsed", 1.0)
         if isa(time_elapsed, Vector)
-            nw["time_elapsed"] = popfirst!(time_elapsed)
+            nw_data["$n"]["time_elapsed"] = time_elapsed[i]
+            nw_data["$n"]["time"] = sum(time_elapsed[1:i])-time_elapsed[1] # start time of frame
         else
-            nw["time_elapsed"] = time_elapsed
+            nw_data["$n"]["time_elapsed"] = time_elapsed
+            nw_data["$n"]["time"] = time_elapsed*(i-1)
+        end
+
+        if ismultinetwork(data)
+            data["mn_lookup"]["$n"] = nw_data["$n"]["time"]
         end
     end
 end

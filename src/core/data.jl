@@ -1,24 +1,21 @@
-import LinearAlgebra: Adjoint, pinv
-
-
 "field names that should not be multi-conductor values"
-const _conductorless = Set(["index", "bus_i", "bus_type", "status", "gen_status",
+const _conductorless = Set{String}(["index", "bus_i", "bus_type", "status", "gen_status",
     "br_status", "gen_bus", "load_bus", "shunt_bus", "storage_bus", "f_bus", "t_bus",
     "transformer", "area", "zone", "base_kv", "energy", "energy_rating", "charge_rating",
     "discharge_rating", "charge_efficiency", "discharge_efficiency", "p_loss", "q_loss",
     "model", "ncost", "cost", "startup", "shutdown", "name", "source_id", "active_phases"])
 
 "field names that should become multi-conductor matrix not arrays"
-const _conductor_matrix = Set(["br_r", "br_x", "b_fr", "b_to", "g_fr", "g_to", "gs", "bs"])
+const _conductor_matrix = Set{String}(["br_r", "br_x", "b_fr", "b_to", "g_fr", "g_to", "gs", "bs"])
 
 const _excluded_count_busname_patterns = Vector{Regex}([
     r"^_virtual.*",
 ])
 
-const _pmd_math_component_status_parameters = Set(["status", "gen_status", "br_status"])
+const _pmd_math_component_status_parameters = Set{String}(["status", "gen_status", "br_status"])
 
 "maps component types to status parameters"
-const pmd_math_component_status = Dict(
+const pmd_math_component_status = Dict{String,String}(
     "bus" => "bus_type",
     "load" => "status",
     "shunt" => "status",
@@ -30,7 +27,7 @@ const pmd_math_component_status = Dict(
 )
 
 "maps component types to inactive status values"
-const pmd_math_component_status_inactive = Dict(
+const pmd_math_component_status_inactive = Dict{String,Int}(
     "bus" => 4,
     "load" => 0,
     "shunt" => 0,
@@ -41,13 +38,60 @@ const pmd_math_component_status_inactive = Dict(
     "transformer" => 0,
 )
 
-"""
-    apply_pmd!(func!::Function, data::Dict{String, <:Any}; apply_to_subnetworks::Bool = true)
 
-PowerModelsDistribution wrapper for the InfrastructureModels `apply!` function, working only on data
 """
-function apply_pmd!(func!::Function, data::Dict{String, <:Any}; apply_to_subnetworks::Bool = true)
-    _IM.apply!(func!, data, pmd_it_name; apply_to_subnetworks = apply_to_subnetworks)
+    apply_pmd!(func!::Function, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true, kwargs...)
+
+Version of `apply_pmd!` that supports kwargs
+"""
+function apply_pmd!(func!::Function, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true, kwargs...)
+    data_it = _IM.ismultiinfrastructure(data) ? data["it"][pmd_it_name] : data
+
+    if ismultinetwork(data_it) && apply_to_subnetworks
+        for (nw, nw_data) in data_it["nw"]
+            func!(nw_data; kwargs...)
+        end
+    else
+        func!(data_it; kwargs...)
+    end
+end
+
+
+"""
+    apply_pmd!(func!::Function, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true, kwargs...)
+
+Version of `apply_pmd!` that supports kwargs
+"""
+function apply_pmd!(func!::Function, data1::Dict{String,<:Any}, data2::Dict{String,<:Any}; apply_to_subnetworks::Bool=true, kwargs...)
+    data1_it = _IM.ismultiinfrastructure(data1) ? data1["it"][pmd_it_name] : data1
+    data2_it = _IM.ismultiinfrastructure(data2) ? data2["it"][pmd_it_name] : data2
+
+    if ismultinetwork(data1_it) && apply_to_subnetworks
+        @assert ismultinetwork(data2_it)
+        for (nw, nw_data) in data1_it["nw"]
+            func!(nw_data, data2_it["nw"][nw]; kwargs...)
+        end
+    else
+        func!(data1_it, data2_it; kwargs...)
+    end
+end
+
+
+"""
+    apply_pmd!(func!::Function, data::Dict{String,<:Any}, args...; apply_to_subnetworks::Bool=true, kwargs...)
+
+Version of `apply_pmd!` that supports args and kwargs
+"""
+function apply_pmd!(func!::Function, data::Dict{String,<:Any}, args...; apply_to_subnetworks::Bool=true, kwargs...)
+    data_it = _IM.ismultiinfrastructure(data) ? data["it"][pmd_it_name] : data
+
+    if ismultinetwork(data_it) && apply_to_subnetworks
+        for (nw, nw_data) in data_it["nw"]
+            func!(nw_data, args...; kwargs...)
+        end
+    else
+        func!(data_it, args...; kwargs...)
+    end
 end
 
 
@@ -66,7 +110,7 @@ _sum_rm_nan(X::Vector) = sum([X[(!).(isnan.(X))]..., 0.0])
 
 
 ""
-function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, Adjoint}) where T
+function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, LinearAlgebra.Adjoint}) where T
     N, A_ncols = size(A)
     B_nrows, M = size(B)
     @assert(A_ncols==B_nrows)
@@ -74,8 +118,8 @@ function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, Adjoint}) where T
 end
 
 
-_mat_mult_rm_nan(A::Union{Matrix, Adjoint}, b::Vector) = dropdims(_mat_mult_rm_nan(A, reshape(b, length(b), 1)), dims=2)
-_mat_mult_rm_nan(a::Vector, B::Union{Matrix, Adjoint}) = _mat_mult_rm_nan(reshape(a, length(a), 1), B)
+_mat_mult_rm_nan(A::Union{Matrix, LinearAlgebra.Adjoint}, b::Vector) = dropdims(_mat_mult_rm_nan(A, reshape(b, length(b), 1)), dims=2)
+_mat_mult_rm_nan(a::Vector, B::Union{Matrix, LinearAlgebra.Adjoint}) = _mat_mult_rm_nan(reshape(a, length(a), 1), B)
 
 
 "Replaces NaN values with zeros"
@@ -103,7 +147,7 @@ end
 
 
 "rolls a 1d array left or right by idx"
-function _roll(array::Array{T, 1}, idx::Int; right=true) where T <: Number
+function _roll(array::Array{T, 1}, idx::Int; right::Bool=true) where T <: Number
     out = Array{T}(undef, size(array))
     pos = idx % length(out)
 
@@ -207,7 +251,7 @@ end
 
 Counts active ungrounded connections on edge components
 """
-function count_active_connections(data::Dict{String,<:Any})
+function count_active_connections(data::Dict{String,<:Any})::Int
     data_model = get(data, "data_model", MATHEMATICAL)
     edge_elements = data_model == MATHEMATICAL ? PowerModelsDistribution._math_edge_elements : PowerModelsDistribution._eng_edge_elements
     # bus_connections = Dict(id => [] for (id, _) in data["bus"])
@@ -270,7 +314,7 @@ end
 
 Counts active ungrounded terminals on buses
 """
-function count_active_terminals(data::Dict{String,<:Any}; count_grounded::Bool=false)
+function count_active_terminals(data::Dict{String,<:Any}; count_grounded::Bool=false)::Int
     data_model = get(data, "data_model", MATHEMATICAL)
     active_terminal_count = 0
     for (_,bus) in data["bus"]
@@ -315,7 +359,7 @@ end
 
 
 "creates a delta transformation matrix"
-function _get_delta_transformation_matrix(n_phases::Int)
+function _get_delta_transformation_matrix(n_phases::Int)::Matrix{Int}
     @assert(n_phases>2, "We only define delta transforms for three and more conductors.")
     Md = LinearAlgebra.diagm(0=>fill(1, n_phases), 1=>fill(-1, n_phases-1))
     Md[end,1] = -1
@@ -348,19 +392,22 @@ Returns a power magnitude bound for the from and to side of a transformer.
 The total current rating also implies a current bound through the
 upper bound on the voltage magnitude of the connected buses.
 """
-function _calc_transformer_power_ub_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
-    bounds_fr = []
-    bounds_to = []
-    if haskey(trans, "c_rating_a")
-        push!(bounds_fr, trans["c_rating_a"].*bus_fr["vmax"].*bus_fr["vbase"])
-        push!(bounds_to, trans["c_rating_a"].*bus_to["vmax"].*bus_to["vbase"])
-    end
-    if haskey(trans, "rate_a")
-        push!(bounds_fr, trans["rate_a"])
-        push!(bounds_to, trans["rate_a"])
-    end
+function _calc_transformer_power_ub_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})::Tuple{Vector{Float64},Vector{Float64}}
+    bounds_fr = Vector{Float64}[]
+    bounds_to = Vector{Float64}[]
 
     N = length(trans["f_connections"])
+    if haskey(trans, "sm_ub") && trans["sm_ub"] < Inf
+        push!(bounds_fr, fill(trans["sm_ub"], N))
+        push!(bounds_to, fill(trans["sm_ub"], N))
+    elseif haskey(trans, "cm_ub") && trans["cm_ub"] < Inf
+        f_connections = [findfirst(isequal(c), bus_fr["terminals"]) for c in trans["f_connections"]]
+        t_connections = [findfirst(isequal(c), bus_to["terminals"]) for c in trans["t_connections"]]
+
+        push!(bounds_fr, trans["cm_ub"].*bus_fr["vmax"][f_connections])
+        push!(bounds_to, trans["cm_ub"].*bus_to["vmax"][t_connections])
+    end
+
     return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
 end
 
@@ -370,19 +417,22 @@ Returns a current magnitude bound for the from and to side of a transformer.
 The total power rating also implies a current bound through the lower bound on
 the voltage magnitude of the connected buses.
 """
-function _calc_transformer_current_max_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
-    bounds_fr = []
-    bounds_to = []
-    if haskey(trans, "c_rating_a")
-        push!(bounds_fr, trans["c_rating_a"])
-        push!(bounds_to, trans["c_rating_a"])
-    end
-    if haskey(trans, "rate_a")
-        push!(bounds_fr, trans["rate_a"]./(bus_fr["vmax"].*bus_fr["vbase"]))
-        push!(bounds_to, trans["rate_a"]./(bus_to["vmax"].*bus_to["vbase"]))
-    end
+function _calc_transformer_current_max_frto(trans::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})::Tuple{Vector{Float64},Vector{Float64}}
+    bounds_fr = Vector{Float64}[]
+    bounds_to = Vector{Float64}[]
 
     N = length(trans["f_connections"])
+    if haskey(trans, "cm_ub") && trans["cm_ub"] < Inf
+        push!(bounds_fr, fill(trans["cm_ub"], N))
+        push!(bounds_to, fill(trans["cm_ub"], N))
+    elseif haskey(trans, "sm_ub") && trans["sm_ub"] < Inf
+        f_connections = [findfirst(isequal(c), bus_fr["terminals"]) for c in trans["f_connections"]]
+        t_connections = [findfirst(isequal(c), bus_to["terminals"]) for c in trans["t_connections"]]
+
+        push!(bounds_fr, trans["sm_ub"]./bus_fr["vmin"][f_connections])
+        push!(bounds_to, trans["sm_ub"]./bus_to["vmin"][t_connections])
+    end
+
     return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
 end
 
@@ -395,7 +445,7 @@ not. Therefore, a default lower bound is then used, specified by the keyword
 argument vdmin_eps.
 The returned bounds are for the pairs 1->2, 2->3, 3->1
 """
-function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps=0.1)
+function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps::Real=0.1)::Tuple
     vmax = bus["vmax"]
     vmin = bus["vmin"]
     if haskey(bus, "vm_ll_max")
@@ -418,7 +468,7 @@ end
 Calculates lower and upper bounds for the loads themselves (not the power
 withdrawn at the bus).
 """
-function _calc_load_pq_bounds(load::Dict{String,<:Any}, bus::Dict{String,<:Any})
+function _calc_load_pq_bounds(load::Dict{String,<:Any}, bus::Dict{String,<:Any})::Tuple
     a, alpha, b, beta = _load_expmodel_params(load, bus)
     vmin, vmax = _calc_load_vbounds(load, bus)
     # get bounds
@@ -431,7 +481,7 @@ end
 
 
 "Returns a magnitude bound for the current going through the load."
-function _calc_load_current_max(load::Dict, bus::Dict)
+function _calc_load_current_max(load::Dict{String,<:Any}, bus::Dict{String,<:Any})::Vector{Float64}
     pmin, pmax, qmin, qmax = _calc_load_pq_bounds(load, bus)
     pabsmax = max.(abs.(pmin), abs.(pmax))
     qabsmax = max.(abs.(qmin), abs.(qmax))
@@ -446,7 +496,7 @@ end
 """
 Returns magnitude bounds for the current going through the load.
 """
-function _calc_load_current_magnitude_bounds(load::Dict, bus::Dict)
+function _calc_load_current_magnitude_bounds(load::Dict{String,<:Any}, bus::Dict{String,<:Any})::Tuple
     a, alpha, b, beta = _load_expmodel_params(load, bus)
     vmin, vmax = _calc_load_vbounds(load, bus)
     cb1 = sqrt.(_nan2zero(a.^(2).*vmin.^(2*alpha.-2), a) + _nan2zero(b.^(2).*vmin.^(2*beta.-2), b))
@@ -465,7 +515,7 @@ For an exponential load it simply returns certain data model properties, whilst
 for constant_power, constant_current and constant_impedance it returns the
 equivalent exponential model parameters.
 """
-function _load_expmodel_params(load::Dict, bus::Dict)
+function _load_expmodel_params(load::Dict{String,<:Any}, bus::Dict{String,<:Any})
     pd = load["pd"]
     qd = load["qd"]
     ncnds = length(pd)
@@ -502,7 +552,7 @@ Returns the voltage magnitude bounds for the individual load elements in a
 multiphase load. These are inferred from vmin/vmax for wye loads and from
 _calc_bus_vm_ll_bounds for delta loads.
 """
-function _calc_load_vbounds(load::Dict{String,<:Any}, bus::Dict{String,<:Any})
+function _calc_load_vbounds(load::Dict{String,<:Any}, bus::Dict{String,<:Any})::Tuple{Vector{Float64},Vector{Float64}}
     terminals = bus["terminals"]
     connections = [findfirst(isequal(c), terminals) for c in load["connections"]]
 
@@ -520,7 +570,7 @@ end
 Returns a Bool, indicating whether the convex hull of the voltage-dependent
 relationship needs a cone inclusion constraint.
 """
-function _check_load_needs_cone(load::Dict)
+function _check_load_needs_cone(load::Dict{String,<:Any})::Bool
     if load["model"]==CURRENT
         return true
     elseif load["model"]==EXPONENTIAL
@@ -534,7 +584,7 @@ end
 """
 Returns a current magnitude bound for the generators.
 """
-function _calc_gen_current_max(gen::Dict{String,<:Any}, bus::Dict{String,<:Any})
+function _calc_gen_current_max(gen::Dict{String,<:Any}, bus::Dict{String,<:Any})::Vector{Float64}
     if all([haskey(gen, prop) for prop in ["pmax", "pmin", "qmax", "qmin"]]) && haskey(bus, "vmin")
         pabsmax = max.(abs.(gen["pmin"]), abs.(gen["pmax"]))
         qabsmax = max.(abs.(gen["qmin"]), abs.(gen["qmax"]))
@@ -554,17 +604,18 @@ Returns a total (shunt+series) current magnitude bound for the from and to side
 of a branch. The total power rating also implies a current bound through the
 lower bound on the voltage magnitude of the connected buses.
 """
-function _calc_branch_current_max(branch::Dict{String,<:Any}, bus::Dict{String,<:Any})
+function _calc_branch_current_max(branch::Dict{String,<:Any}, bus::Dict{String,<:Any})::Vector{Float64}
     bounds = []
 
     if haskey(branch, "c_rating_a")
         push!(bounds, branch["c_rating_a"])
-    end
-    if haskey(branch, "rate_a") && haskey(bus, "vmin")
-        push!(bounds, branch["rate_a"]./bus["vmin"][[findfirst(isequal(c), bus["terminals"]) for c in branch["f_connections"]]])
+    elseif haskey(branch, "rate_a")
+        connections = [findfirst(isequal(c), bus["terminals"]) for c in (branch["f_bus"] == bus["index"] ? branch["f_connections"] : branch["t_connections"])]
+        push!(bounds, branch["rate_a"]./bus["vmin"][connections])
     end
 
-    return min.(fill(Inf, length(branch["f_connections"])), bounds...)
+    N = length(branch["f_connections"])
+    return min.(fill(Inf, N), bounds...)
 end
 
 
@@ -573,20 +624,20 @@ Returns a total (shunt+series) current magnitude bound for the from and to side
 of a branch. The total power rating also implies a current bound through the
 lower bound on the voltage magnitude of the connected buses.
 """
-function _calc_branch_current_max_frto(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
+function _calc_branch_current_max_frto(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})::Tuple{Vector{Float64},Vector{Float64}}
     bounds_fr = []
     bounds_to = []
 
     if haskey(branch, "c_rating_a")
         push!(bounds_fr, branch["c_rating_a"])
         push!(bounds_to, branch["c_rating_a"])
-    end
-    if haskey(branch, "rate_a")
+    elseif haskey(branch, "rate_a")
         push!(bounds_fr, branch["rate_a"]./bus_fr["vmin"][[findfirst(isequal(c), bus_fr["terminals"]) for c in branch["f_connections"]]])
         push!(bounds_to, branch["rate_a"]./bus_to["vmin"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]])
     end
 
-    return min.(fill(Inf, length(branch["f_connections"])), bounds_fr...), min.(fill(Inf, length(branch["t_connections"])), bounds_to...)
+    N = length(branch["f_connections"])
+    return min.(fill(Inf, N), bounds_fr...), min.(fill(Inf, N), bounds_to...)
 end
 
 
@@ -595,21 +646,17 @@ Returns a total (shunt+series) power magnitude bound for the from and to side
 of a branch. The total current rating also implies a current bound through the
 upper bound on the voltage magnitude of the connected buses.
 """
-function _calc_branch_power_max(branch::Dict{String,<:Any}, bus::Dict{String,<:Any})
+function _calc_branch_power_max(branch::Dict{String,<:Any}, bus::Dict{String,<:Any})::Vector{Float64}
     bounds = []
 
-    terminals = bus["terminals"]
-    connections = bus["bus_i"] == branch["f_bus"] ? branch["f_connections"] : branch["t_connections"]
-    connections = [findfirst(isequal(cnd), terminals) for cnd in connections]
-
-    if haskey(bus, "vmax") && haskey(branch, "c_rating_a")
-        push!(bounds, branch["c_rating_a"] .* bus["vmax"][connections] .* bus["vbase"])
-    end
     if haskey(branch, "rate_a")
         push!(bounds, branch["rate_a"])
+    elseif haskey(branch, "c_rating_a")
+        connections = [findfirst(isequal(c), bus["terminals"]) for c in (branch["f_bus"] == bus["index"] ? branch["f_connections"] : branch["t_connections"])]
+        push!(bounds, branch["c_rating_a"] .* bus["vmax"][connections])
     end
 
-    N = length(connections)
+    N = length(branch["f_connections"])
     return min.(fill(Inf, N), bounds...)
 end
 
@@ -619,7 +666,7 @@ Returns a total (shunt+series) power magnitude bound for the from and to side
 of a branch. The total current rating also implies a current bound through the
 upper bound on the voltage magnitude of the connected buses.
 """
-function _calc_branch_power_max_frto(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
+function _calc_branch_power_max_frto(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})::Tuple{Vector{Float64},Vector{Float64}}
     return _calc_branch_power_max(branch, bus_fr), _calc_branch_power_max(branch, bus_to)
 end
 
@@ -627,10 +674,10 @@ end
 """
 Returns a valid series current magnitude bound for a branch.
 """
-function _calc_branch_series_current_max(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})
+function _calc_branch_series_current_max(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})::Vector{Float64}
     ncnds = length(branch["f_connections"])
     vmin_fr = haskey(bus_fr, "vmin") ? bus_fr["vmin"][[findfirst(isequal(c), bus_fr["terminals"]) for c in branch["f_connections"]]] : fill(0.0, ncnds)
-    vmin_to = haskey(bus_to, "vmin") ? bus_fr["vmin"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]] : fill(0.0, ncnds)
+    vmin_to = haskey(bus_to, "vmin") ? bus_to["vmin"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]] : fill(0.0, ncnds)
 
     vmax_fr = haskey(bus_fr, "vmax") ? bus_fr["vmax"][[findfirst(isequal(c), bus_fr["terminals"]) for c in branch["f_connections"]]] : fill(Inf, ncnds)
     vmax_to = haskey(bus_to, "vmax") ? bus_to["vmax"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]] : fill(Inf, ncnds)
@@ -740,7 +787,7 @@ end
 
 
 "makes a full matrix variable from a diagonal, and lower and upper triangular vectors"
-function _make_full_matrix_variable(diag, lowertriangle, uppertriangle)
+function _make_full_matrix_variable(diag::Vector{T}, lowertriangle::Vector{T}, uppertriangle::Vector{T}) where T
     #TODO clean up
     matrix = []
     if length(diag) == 3
@@ -765,20 +812,18 @@ function _make_full_matrix_variable(diag, lowertriangle, uppertriangle)
         lowertriangle[7]    lowertriangle[8]    lowertriangle[9]    lowertriangle[10]    diag[5]
         ]
     end
-    # matrix = diagm(0 => diag) + _vec2ltri!(lowertriangle) + _vec2utri!(uppertriangle)
+    # matrix = LinearAlgebra.diagm(0 => diag) + _vec2ltri!(lowertriangle) + _vec2utri!(uppertriangle)
     return matrix
 end
 
-
+# TODO refactor into several functions
 "helper to determine if expession has any Nonlinear terms"
 function _has_nl_expression(x)::Bool
     if isa(x, JuMP.NonlinearExpression)
         return true
-    elseif isa(x, Vector)
-        for i in x
-            if _has_nl_expression(i)
-                return true
-            end
+    elseif isa(x, Array)
+        if any(_has_nl_expression.(x))
+            return true
         end
     elseif isa(x, Dict)
         for i in values(x)
@@ -803,54 +848,53 @@ end
 checks that voltage angle differences are within 90 deg., if not tightens to a default of 10deg (adjustable)
 """
 function correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))
-    if ismultinetwork(data)
-        nw_data = data["nw"]
-    else
-        nw_data = Dict("0" => data)
-    end
+    @assert ismath(data)
 
-    @assert("per_unit" in keys(data) && data["per_unit"])
+    apply_pmd!(_correct_mc_voltage_angle_differences!, data, default_pad)
+end
+
+
+"""
+    _correct_mc_voltage_angle_differences!(data::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))
+
+checks that voltage angle differences are within 90 deg., if not tightens to a default of 10deg (adjustable)
+"""
+function _correct_mc_voltage_angle_differences!(nw::Dict{String,<:Any}, default_pad::Real=deg2rad(10.0))::Set{Int}
+    @assert("per_unit" in keys(nw) && nw["per_unit"])
     default_pad_deg = round(rad2deg(default_pad), digits=2)
 
     modified = Set{Int}()
 
-    for (n,nw) in nw_data
-        if ismultinetwork(data)
-            subnet = ", subnetwork $n"
-        else
-            subnet = ""
+    for (i, branch) in nw["branch"]
+        angmin = branch["angmin"]
+        angmax = branch["angmax"]
+
+        if any(angmin .<= -pi/2)
+            @warn "this code only supports angmin values in -90 deg. to 90 deg., tightening the value on branch $(i) from $(rad2deg(angmin)) to -$(default_pad_deg) deg."
+            branch["angmin"][angmin .<= -pi/2] .= -default_pad
+
+            push!(modified, branch["index"])
         end
 
-        for (i, branch) in nw["branch"]
-            angmin = branch["angmin"]
-            angmax = branch["angmax"]
+        if any(angmax .>= pi/2)
+            @warn "this code only supports angmax values in -90 deg. to 90 deg., tightening the value on branch $(i) from $(rad2deg(angmax)) to $(default_pad_deg) deg."
+            branch["angmax"][angmax .>= pi/2] .= default_pad
 
-            if any(angmin .<= -pi/2)
-                @warn "this code only supports angmin values in -90 deg. to 90 deg., tightening the value on branch $(i)$(subnet) from $(rad2deg(angmin)) to -$(default_pad_deg) deg."
-                branch["angmin"][angmin .<= -pi/2] .= -default_pad
+            push!(modified, branch["index"])
+        end
 
-                push!(modified, branch["index"])
-            end
+        if any((angmin .== 0.0) .& (angmax .== 0.0))
+            @warn "angmin and angmax values are 0, widening these values on branch $(i) to +/- $(default_pad_deg) deg."
+            branch["angmin"][(angmin .== 0.0) .& (angmax .== 0.0)] .= -default_pad
+            branch["angmax"][(angmin .== 0.0) .& (angmax .== 0.0)] .=  default_pad
 
-            if any(angmax .>= pi/2)
-                @warn "this code only supports angmax values in -90 deg. to 90 deg., tightening the value on branch $(i)$(subnet) from $(rad2deg(angmax)) to $(default_pad_deg) deg."
-                branch["angmax"][angmax .>= pi/2] .= default_pad
-
-                push!(modified, branch["index"])
-            end
-
-            if any((angmin .== 0.0) .& (angmax .== 0.0))
-                @warn "angmin and angmax values are 0, widening these values on branch $(i)$(subnet) to +/- $(default_pad_deg) deg."
-                branch["angmin"][(angmin .== 0.0) .& (angmax .== 0.0)] .= -default_pad
-                branch["angmax"][(angmin .== 0.0) .& (angmax .== 0.0)] .=  default_pad
-
-                push!(modified, branch["index"])
-            end
+            push!(modified, branch["index"])
         end
     end
 
     return modified
 end
+
 
 """
     correct_mc_thermal_limits!(data::Dict{String,<:Any})
@@ -858,41 +902,39 @@ end
 checks that each branch has non-negative thermal ratings and removes zero thermal ratings
 """
 function correct_mc_thermal_limits!(data::Dict{String,<:Any})
-    if ismultinetwork(data)
-        nw_data = data["nw"]
-    else
-        nw_data = Dict("0" => data)
-    end
+    @assert ismath(data)
 
+    apply_pmd!(_correct_mc_thermal_limits!, data)
+end
+
+
+"""
+    _correct_mc_thermal_limits!(data::Dict{String,<:Any})
+
+checks that each branch has non-negative thermal ratings and removes zero thermal ratings
+"""
+function _correct_mc_thermal_limits!(nw::Dict{String,<:Any})::Set{Int}
     modified = Set{Int}()
 
-    for (n,nw) in nw_data
-        if ismultinetwork(data)
-            subnet = ", subnetwork $n"
-        else
-            subnet = ""
-        end
+    branches = [branch for branch in values(nw["branch"])]
+    if haskey(nw, "ne_branch")
+        append!(branches, values(nw["ne_branch"]))
+    end
 
-        branches = [branch for branch in values(nw["branch"])]
-        if haskey(data, "ne_branch")
-            append!(branches, values(data["ne_branch"]))
-        end
+    for branch in branches
+        for rate_key in ["rate_a", "rate_b", "rate_c"]
+            if haskey(branch, rate_key)
+                rate_value = branch[rate_key]
 
-        for branch in branches
-            for rate_key in ["rate_a", "rate_b", "rate_c"]
-                if haskey(branch, rate_key)
-                    rate_value = branch[rate_key]
+                if any(rate_value .< 0.0)
+                    error("negative $(rate_key) value on branch $(branch["index"]), this code only supports non-negative $(rate_key) values")
+                end
 
-                    if any(rate_value .< 0.0)
-                        error("negative $(rate_key) value on branch $(branch["index"])$(subnet), this code only supports non-negative $(rate_key) values")
-                    end
+                if all(isapprox.(rate_value, 0.0))
+                    delete!(branch, rate_key)
+                    @warn "removing zero $(rate_key) limit on branch $(branch["index"])"
 
-                    if all(isapprox.(rate_value, 0.0))
-                        delete!(branch, rate_key)
-                        @warn "removing zero $(rate_key) limit on branch $(branch["index"])$(subnet)"
-
-                        push!(modified, branch["index"])
-                    end
+                    push!(modified, branch["index"])
                 end
             end
         end
@@ -926,8 +968,8 @@ end
 
 computes branch admittance matrices
 """
-function calc_branch_y(branch::Dict{String,<:Any})
-    y = pinv(branch["br_r"] + im * branch["br_x"])
+function calc_branch_y(branch::Dict{String,<:Any})::Tuple
+    y = LinearAlgebra.pinv(branch["br_r"] + im * branch["br_x"])
     g, b = real(y), imag(y)
     return g, b
 end
@@ -938,7 +980,7 @@ end
 
 computes load blocks based on switch locations
 """
-identify_load_blocks(data::Dict{String,<:Any}) = calc_connected_components(data; type="load_blocks")
+identify_load_blocks(data::Dict{String,<:Any})::Set{Set} = calc_connected_components(data; type="load_blocks")
 
 
 """
@@ -946,7 +988,7 @@ identify_load_blocks(data::Dict{String,<:Any}) = calc_connected_components(data;
 
 computes connected blocks currently in the model based on switch states
 """
-identify_blocks(data::Dict{String,<:Any}) = calc_connected_components(data; type="blocks")
+identify_blocks(data::Dict{String,<:Any})::Set{Set} = calc_connected_components(data; type="blocks")
 
 
 """
@@ -954,7 +996,7 @@ identify_blocks(data::Dict{String,<:Any}) = calc_connected_components(data; type
 
 computes component islands base only on edge and bus status
 """
-identify_islands(data::Dict{String,<:Any}) = calc_connected_components(data)
+identify_islands(data::Dict{String,<:Any})::Set{Set} = calc_connected_components(data)
 
 
 """
@@ -963,7 +1005,7 @@ identify_islands(data::Dict{String,<:Any}) = calc_connected_components(data)
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function calc_connected_components(data::Dict{String,<:Any}; edges::Union{Missing, Vector{<:String}}=missing, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set
+function calc_connected_components(data::Dict{String,<:Any}; edges::Union{Missing, Vector{String}}=missing, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set}
     pmd_data = get_pmd_data(data)
 
     if ismultinetwork(pmd_data)
@@ -984,13 +1026,13 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set
+function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set{String}}
     @assert get(data, "data_model", MATHEMATICAL) == ENGINEERING
 
-    active_bus = Dict{Any,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] == ENABLED || !check_enabled)
-    active_bus_ids = Set{Any}([i for (i,bus) in active_bus])
+    active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second["status"] == ENABLED || !check_enabled)
+    active_bus_ids = Set{String}([i for (i,bus) in active_bus])
 
-    neighbors = Dict{Any,Vector{Any}}(i => [] for i in active_bus_ids)
+    neighbors = Dict{String,Vector{String}}(i => [] for i in active_bus_ids)
     for edge_type in edges
         for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
             if edge_obj["status"] == ENABLED || !check_enabled
@@ -1034,9 +1076,7 @@ function _calc_connected_components_eng(data; edges::Vector{<:String}=_eng_edge_
         end
     end
 
-    ccs = (Set(values(component_lookup)))
-
-    return ccs
+    return Set{Set{String}}(values(component_lookup))
 end
 
 
@@ -1044,13 +1084,13 @@ end
 computes the connected components of the network graph
 returns a set of sets of bus ids, each set is a connected component
 """
-function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector{<:String}=_math_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set
+function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector{<:String}=_math_edge_elements, type::Union{Missing,String}=missing, check_enabled::Bool=true)::Set{Set{Int}}
     @assert get(data, "data_model", MATHEMATICAL) == MATHEMATICAL
 
-    active_bus = Dict{Any,Dict{String,Any}}(x for x in data["bus"] if x.second[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] || !check_enabled)
-    active_bus_ids = Set{Any}([parse(Int,i) for (i,bus) in active_bus])
+    active_bus = Dict{String,Dict{String,Any}}(x for x in data["bus"] if x.second[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] || !check_enabled)
+    active_bus_ids = Set{Int}([parse(Int,i) for (i,bus) in active_bus])
 
-    neighbors = Dict{Any,Vector{Any}}(i => [] for i in active_bus_ids)
+    neighbors = Dict{Int,Vector{Int}}(i => [] for i in active_bus_ids)
     for edge_type in edges
         for (id, edge_obj) in get(data, edge_type, Dict{Any,Dict{String,Any}}())
             if edge_obj[pmd_math_component_status[edge_type]] != pmd_math_component_status_inactive[edge_type] || !check_enabled
@@ -1075,7 +1115,7 @@ function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector
     end
 
     component_lookup = Dict(i => Set{Int}([i]) for i in active_bus_ids)
-    touched = Set{Int64}()
+    touched = Set{Int}()
 
     for i in active_bus_ids
         if !(i in touched)
@@ -1083,14 +1123,12 @@ function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector
         end
     end
 
-    ccs = (Set(values(component_lookup)))
-
-    return ccs
+    return Set{Set{Int}}(values(component_lookup))
 end
 
 
 "DFS on a graph"
-function _cc_dfs(i, neighbors, component_lookup, touched)
+function _cc_dfs(i::T, neighbors::Dict{T,Vector{T}}, component_lookup::Dict{T,Set{T}}, touched::Set{T})::Nothing where T <: Union{String,Int}
     push!(touched, i)
     for j in neighbors[i]
         if !(j in touched)
@@ -1103,6 +1141,8 @@ function _cc_dfs(i, neighbors, component_lookup, touched)
             _cc_dfs(j, neighbors, component_lookup, touched)
         end
     end
+
+    nothing
 end
 
 
@@ -1147,14 +1187,14 @@ function _correct_branch_directions!(pm_data::Dict{String,<:Any})
             branch_orginal = copy(branch)
             branch["f_bus"] = branch_orginal["t_bus"]
             branch["t_bus"] = branch_orginal["f_bus"]
-            branch["g_to"] = branch_orginal["g_fr"] .* branch_orginal["tap"]'.^2
-            branch["b_to"] = branch_orginal["b_fr"] .* branch_orginal["tap"]'.^2
-            branch["g_fr"] = branch_orginal["g_to"] ./ branch_orginal["tap"]'.^2
-            branch["b_fr"] = branch_orginal["b_to"] ./ branch_orginal["tap"]'.^2
-            branch["tap"] = 1 ./ branch_orginal["tap"]
-            branch["br_r"] = branch_orginal["br_r"] .* branch_orginal["tap"]'.^2
-            branch["br_x"] = branch_orginal["br_x"] .* branch_orginal["tap"]'.^2
-            branch["shift"] = -branch_orginal["shift"]
+            branch["f_connections"] = branch_orginal["t_connections"]
+            branch["t_connections"] = branch_orginal["f_connections"]
+            branch["g_to"] = branch_orginal["g_fr"]
+            branch["b_to"] = branch_orginal["b_fr"]
+            branch["g_fr"] = branch_orginal["g_to"]
+            branch["b_fr"] = branch_orginal["b_to"]
+            branch["br_r"] = branch_orginal["br_r"]
+            branch["br_x"] = branch_orginal["br_x"]
             branch["angmin"] = -branch_orginal["angmax"]
             branch["angmax"] = -branch_orginal["angmin"]
 
@@ -1256,6 +1296,8 @@ active connected generator.
 assumes that the network is a single connected component
 """
 function correct_bus_types!(data::Dict{String,<:Any})
+    @assert ismath(data)
+
     apply_pmd!(_correct_bus_types!, data)
 end
 
@@ -1266,67 +1308,118 @@ the primary checks are that all type 2 buses (i.e., PV) have a connected and
 active generator and there is a single type 3 bus (i.e., slack bus) with an
 active connected generator. Assumes that the network is a single connected component
 """
-function _correct_bus_types!(pm_data::Dict{String,<:Any})
-    bus_gens = Dict{String,Vector{String}}(i => String[] for (i,bus) in pm_data["bus"])
+function _correct_bus_types!(pm_data::Dict{String,<:Any})::Set{Int}
+    modified = Set{Int}()
 
-    for type in ["gen", "storage"]
-        if haskey(pm_data, type)
-            for (i,gen) in pm_data[type]
-                if gen[pmd_math_component_status[type]] != pmd_math_component_status_inactive[type]
-                    push!(bus_gens[string(gen["$(type)_bus"])], i)
+    islands = identify_islands(pm_data)
+
+    for island in islands
+        if !all(bus[pmd_math_component_status["bus"]] != pmd_math_component_status_inactive["bus"] for (_,bus) in pm_data["bus"] if bus["bus_i"] in island)
+            continue
+        end
+        bus_gens = Dict{String,Vector{String}}(i => String[] for (i,bus) in pm_data["bus"] if bus["bus_i"] in island)
+
+        for type in ["gen", "storage"]
+            if haskey(pm_data, type)
+                for (i,gen) in pm_data[type]
+                    if gen[pmd_math_component_status[type]] != pmd_math_component_status_inactive[type] && gen["$(type)_bus"] in island
+                        push!(bus_gens[string(gen["$(type)_bus"])], i)
+                    end
+                end
+            end
+        end
+
+        slack_found = false
+        for (i, bus) in filter(x->x.second["bus_i"] in island, pm_data["bus"])
+            if bus["bus_type"] == 1
+                if !isempty(bus_gens[i]) # PQ
+                    @info "active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 2"
+                    bus["bus_type"] = 2
+                    push!(modified, bus["bus_i"])
+                end
+            elseif bus["bus_type"] == 2 # PV
+                if isempty(bus_gens[i])
+                    @info "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
+                    bus["bus_type"] = 1
+                    push!(modified, bus["bus_i"])
+                end
+            elseif bus["bus_type"] == 3 # Slack
+                if !isempty(bus_gens[i])
+                    slack_found = true
+                else
+                    @info "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
+                    bus["bus_type"] = 1
+                    push!(modified, bus["bus_i"])
+                end
+            elseif bus["bus_type"] == 4 # inactive bus
+                # do nothing
+            else  # unknown bus type
+                new_bus_type = 1
+                if length(bus_gens[i]) != 0
+                    new_bus_type = 2
+                end
+                @info "bus $(bus["bus_i"]) has an unrecongized bus_type $(bus["bus_type"]), updating to bus_type $(new_bus_type)"
+                bus["bus_type"] = new_bus_type
+                push!(modified, bus["bus_i"])
+            end
+        end
+
+        if !slack_found
+            der = _biggest_der(pm_data; island=island)
+            if !isempty(der)
+                ref_bus = pm_data["bus"]["$(der["bus"])"]
+                ref_bus["bus_type"] = 3
+                push!(modified, der["bus"])
+                @info "no reference bus found, setting bus $(der["bus"]) as reference based on $(der["type"]) $(der["id"])"
+            else
+                @info "no generators found in the given network data, disabling island"
+                for bus in island
+                    pm_data["bus"]["$bus"]["bus_type"] = 4
+                    push!(modified, bus)
                 end
             end
         end
     end
 
-    slack_found = false
-    for (i, bus) in pm_data["bus"]
-        if bus["bus_type"] == 1
-            if !isempty(bus_gens[i]) # PQ
-                @warn "active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 2"
-                bus["bus_type"] = 2
-            end
-        elseif bus["bus_type"] == 2 # PV
-            if isempty(bus_gens[i])
-                @warn "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
-                bus["bus_type"] = 1
-            end
-        elseif bus["bus_type"] == 3 # Slack
-            if !isempty(bus_gens[i])
-                slack_found = true
-            else
-                @warn "no active generators found at bus $(bus["bus_i"]), updating to bus type from $(bus["bus_type"]) to 1"
-                bus["bus_type"] = 1
-            end
-        elseif bus["bus_type"] == 4 # inactive bus
-            # do nothing
-        else  # unknown bus type
-            new_bus_type = 1
-            if length(bus_gens[i]) != 0
-                new_bus_type = 2
-            end
-            @warn "bus $(bus["bus_i"]) has an unrecongized bus_type $(bus["bus_type"]), updating to bus_type $(new_bus_type)"
-            bus["bus_type"] = new_bus_type
+    return modified
+end
+
+
+"finds the largest active generation asset (gen, storage) in an island"
+function _biggest_der(pm_data::Dict{String,<:Any}; island::Set{Int}=Set{Int}([bus["bus_i"] for (_,bus) in get(pm_data, "bus", Dict())]))::Dict{String,Any}
+    if length(filter(x->x.second["gen_bus"] in island && x.second["gen_status"] == 1, get(pm_data, "gen", Dict()))) + length(filter(x->x.second["storage_bus"] in island && x.second["status"] == 1, get(pm_data, "storage", Dict()))) == 0
+        @debug "there are no active DERs in the island $island"
+    end
+
+    biggest_der = Dict{String,Any}()
+    biggest_value = -Inf
+
+    for (id,gen) in filter(x->x.second["gen_bus"] in island && x.second["gen_status"] == 1, get(pm_data, "gen", Dict()))
+        pmax = maximum(get(gen, "pmax", fill(Inf, length(gen["connections"]))))
+        if pmax > biggest_value
+            biggest_der["type"] = "gen"
+            biggest_der["id"] = id
+            biggest_der["bus"] = gen["gen_bus"]
+            biggest_value = pmax
         end
     end
 
-    if !slack_found
-        gen = _biggest_generator(pm_data["gen"])
-        if length(gen) > 0
-            gen_bus = gen["gen_bus"]
-            ref_bus = pm_data["bus"]["$(gen_bus)"]
-            ref_bus["bus_type"] = 3
-            @warn "no reference bus found, setting bus $(gen_bus) as reference based on generator $(gen["index"])"
-        else
-            error("no generators found in the given network data, correct_bus_types! requires at least one generator at the reference bus")
+    for (id,strg) in filter(x->x.second["storage_bus"] in island && x.second["status"] == 1, get(pm_data, "storage", Dict()))
+        pmax = maximum(get(strg, "thermal_rating", fill(Inf, length(strg["connections"]))))
+        if pmax > biggest_value
+            biggest_der["type"] = "gen"
+            biggest_der["id"] = id
+            biggest_der["bus"] = strg["storage_bus"]
+            biggest_value = pmax
         end
     end
 
+    return biggest_der
 end
 
 
 "find the largest active generator in a collection of generators"
-function _biggest_generator(gens::Dict)::Dict
+function _biggest_generator(gens::Dict{String,<:Any})::Dict{String,Any}
     if length(gens) == 0
         error("generator list passed to _biggest_generator was empty.  please report this bug.")
     end
@@ -1345,6 +1438,45 @@ function _biggest_generator(gens::Dict)::Dict
     end
 
     return biggest_gen
+end
+
+
+"""
+    propagate_network_topology!(data::Dict{String,Any})
+
+helper function to propagate bus status to any connected components
+"""
+function propagate_network_topology!(data::Dict{String,Any})
+    apply_pmd!(_propagate_network_topology!, data)
+end
+
+
+"""
+    _propagate_network_topology!(data::Dict{String,Any})
+
+helper function to propagate bus status to any connected components
+"""
+function _propagate_network_topology!(data::Dict{String,Any})
+    for type in ["branch", "transformer", "switch"]
+        if haskey(data, type)
+            for (_,obj) in data[type]
+                if data["bus"]["$(obj["f_bus"])"]["bus_type"] == 4 || data["bus"]["$(obj["t_bus"])"]["bus_type"] == 4
+                    obj[pmd_math_component_status[type]] = pmd_math_component_status_inactive[type]
+                end
+            end
+        end
+    end
+
+    for type in ["gen", "storage", "load", "shunt"]
+        if haskey(data, type)
+            for (_,obj) in data[type]
+                bus_id = obj["$(type)_bus"]
+                if data["bus"]["$(bus_id)"]["bus_type"] == pmd_math_component_status_inactive["bus"]
+                    obj[pmd_math_component_status[type]] = pmd_math_component_status_inactive[type]
+                end
+            end
+        end
+    end
 end
 
 
@@ -1572,4 +1704,36 @@ function _standardize_cost_terms!(components::Dict{String,<:Any}, comp_order::In
         end
     end
     return modified
+end
+
+
+"infer the internal dimension of a winding, load or generator based on the connections and the configuration"
+function _infer_int_dim(connections::Vector, configuration::ConnConfig, kron_reduced)
+    if configuration==WYE
+        if kron_reduced
+            return length(connections)
+        else
+            return length(connections)-1
+        end
+    else # DELTA
+        if length(connections)==2
+            return 1
+        elseif length(connections)==3
+            return 3
+        else
+            error("Only 1 and 3 phase delta-connections are supported.")
+        end
+    end
+end
+
+
+"infer the internal dimension for a unit, i.e. any one-port component with `connections` and `configuration` properties"
+function _infer_int_dim_unit(unit::Dict{String,<:Any}, kron_reduced)
+    return _infer_int_dim(unit["connections"], unit["configuration"], kron_reduced)
+end
+
+
+"infer the internal dimension for a transformer (only in the MATHEMATICAL data model format)"
+function _infer_int_dim_transformer(trans::Dict{String,<:Any}, kron_reduced)
+    return _infer_int_dim(trans["f_connections"], trans["configuration"], kron_reduced)
 end

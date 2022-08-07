@@ -116,7 +116,7 @@ function _create_xfmrcode(name::String=""; kwargs...)
     for wdg in [:wdg, :wdg_2, :wdg_3]
         if haskey(kwargs, wdg)
             suffix = kwargs[wdg] == 1 ? "" : "_$(kwargs[wdg])"
-            for key in [:bus, :tap, :conn, :kv, :kva, Symbol("%r"), :rneut, :xneut]
+            for key in [:tap, :conn, :kv, :kva, Symbol("%r"), :rneut, :xneut]
                 subkey = Symbol(string(key, suffix))
                 if haskey(kwargs, subkey)
                     temp[string(key, "s")][kwargs[wdg]] = kwargs[subkey]
@@ -226,6 +226,18 @@ function _create_loadshape(name::String=""; kwargs...)
     pmult = get(kwargs, :pmult, Float64[])
     qmult = get(kwargs, :qmult, pmult)
 
+    if get(kwargs, :action, "") == "normalize"
+        if !isempty(pmult)
+            max_p = maximum(pmult)
+            pmult ./= max_p == 0 ? 1 : max_p
+        end
+
+        if !isempty(qmult)
+            max_q = maximum(qmult)
+            qmult ./= max_q == 0 ? 1 : max_q
+        end
+    end
+
     npts = get(kwargs, :npts, length(pmult) == 0 && length(qmult) == 0 ? 0 : minimum(Int[length(a) for a in [pmult, qmult] if length(a) > 0]))
 
     pmult = pmult[1:npts]
@@ -242,14 +254,14 @@ function _create_loadshape(name::String=""; kwargs...)
         "pmult" => pmult,
         "qmult" => qmult,
         "hour" => hour,
-        "mean" => get(kwargs, :mean, mean(pmult)),
-        "stddev" => get(kwargs, :stddev, std(pmult)),
+        "mean" => get(kwargs, :mean, Statistics.mean(pmult)),
+        "stddev" => get(kwargs, :stddev, Statistics.std(pmult)),
         "csvfile" => get(kwargs, :csvfile, ""),
         "sngfile" => get(kwargs, :sngfile, ""),
         "dblfile" => get(kwargs, :dblfile, ""),
         "pqcsvfile" => get(kwargs, :pqcsvfile, ""),
         "action" => get(kwargs, :action, ""),
-        "useactual" => get(kwargs, :useactual, true),
+        "useactual" => get(kwargs, :useactual, false),
         "pmax" => get(kwargs, :pmax, 1.0),
         "qmax" => get(kwargs, :qmax, 1.0),
         "pbase" => get(kwargs, :pbase, 0.0),

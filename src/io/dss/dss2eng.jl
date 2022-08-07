@@ -47,9 +47,10 @@ function _dss2eng_loadshape!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             @info "Loadshape '$id' contains mismatched pmult and qmult, splitting into `time_series` ids '$(id)_p' and '$(id)_q'"
             _add_eng_obj!(data_eng, "time_series", "$(id)_p", eng_obj)
 
-            eng_obj["values"] = defaults["qmult"]
+            eng_obj_qmult = deepcopy(eng_obj)
+            eng_obj_qmult["values"] = defaults["qmult"]
 
-            _add_eng_obj!(data_eng, "time_series", "$(id)_q", eng_obj)
+            _add_eng_obj!(data_eng, "time_series", "$(id)_q", eng_obj_qmult)
         else
             _add_eng_obj!(data_eng, "time_series", id, eng_obj)
         end
@@ -200,7 +201,7 @@ function _dss2eng_capacitor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
                 "f_connections" => _get_conductors_ordered(defaults["bus1"], default=collect(1:nphases)),
                 "t_connections" => _get_conductors_ordered(defaults["bus2"], default=collect(1:nphases)),
                 "length" => 1.0,
-                "rs" => diagm(0 => fill(0.2, nphases)),
+                "rs" => LinearAlgebra.diagm(0 => fill(0.2, nphases)),
                 "xs" => zeros(nphases, nphases),
                 "g_fr" => zeros(nphases, nphases),
                 "b_fr" => zeros(nphases, nphases),
@@ -259,7 +260,7 @@ function _dss2eng_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             # TODO Check unit conversion on Gcap
             Gcap = sum(defaults["kvar"]) / (nphases * 1e3 * (defaults["kv"] / sqrt(nphases))^2)
 
-            eng_obj["bs"] = diagm(0=>fill(Gcap, nphases))
+            eng_obj["bs"] = LinearAlgebra.diagm(0=>fill(Gcap, nphases))
             eng_obj["gs"] = zeros(size(eng_obj["bs"]))
 
             if import_all
@@ -280,8 +281,8 @@ function _dss2eng_reactor!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
                 "f_connections" => _get_conductors_ordered(defaults["bus1"], default=collect(1:nphases)),
                 "t_connections" => _get_conductors_ordered(defaults["bus2"], default=collect(1:nphases)),
                 "length" => 1.0,
-                "rs" => diagm(0 => fill(0.2, nphases)),
-                "xs" => zeros(nphases, nphases),
+                "rs" => defaults["rmatrix"],
+                "xs" => defaults["xmatrix"],
                 "g_fr" => zeros(nphases, nphases),
                 "b_fr" => zeros(nphases, nphases),
                 "g_to" => zeros(nphases, nphases),
@@ -369,6 +370,7 @@ function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         eng_obj = Dict{String,Any}(
             "bus" => _parse_bus_id(defaults["bus1"])[1],
             "connections" => _get_conductors_ordered(defaults["bus1"]; default=[collect(1:phases)..., 0], pad_ground=true),
+            "configuration" => WYE,
             "source_id" => "vsource.$id",
             "status" => defaults["enabled"] ? ENABLED : DISABLED
         )
@@ -424,6 +426,8 @@ function _dss2eng_linecode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
         eng_obj["g_fr"] = fill(0.0, nphases, nphases)
         eng_obj["g_to"] = fill(0.0, nphases, nphases)
 
+        eng_obj["cm_ub"] = fill(defaults["emergamps"], nphases)
+
         if import_all
             _import_all!(eng_obj, dss_obj)
         end
@@ -458,15 +462,16 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             "length" => defaults["switch"] || _like_is_switch ? 0.001 : defaults["length"],
             "f_connections" => f_connections,
             "t_connections" => t_connections,
-            "cm_ub" => fill(defaults["normamps"], ncond),
-            "cm_ub_b" => fill(defaults["emergamps"], ncond),
-            "cm_ub_c" => fill(defaults["emergamps"], ncond),
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
             "source_id" => "line.$id"
         )
 
         if haskey(dss_obj, "linecode")
             eng_obj["linecode"] = dss_obj["linecode"]
+        end
+
+        if (haskey(dss_obj, "emergamps") && _is_after_linecode(dss_obj["prop_order"], "emergamps")) || !haskey(dss_obj, "linecode")
+            eng_obj["cm_ub"] = fill(defaults["emergamps"], ncond)
         end
 
         if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["r0", "r1", "rg", "rmatrix"]) || !haskey(dss_obj, "linecode")
@@ -528,6 +533,7 @@ function _dss2eng_xfmrcode!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             "tm_step" => Vector{Vector{Float64}}(fill(fill(1/32, nphases), nrw)),
             "vm_nom" => Vector{Float64}(defaults["kvs"]),
             "sm_nom" => Vector{Float64}(defaults["kvas"]),
+            "sm_ub" => defaults["emerghkva"],
             "configuration" => Vector{ConnConfig}(defaults["conns"]),
             "rw" => Vector{Float64}(defaults["%rs"] ./ 100),
             "noloadloss" => defaults["%noloadloss"] / 100,
@@ -646,6 +652,11 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
             end
         end
 
+        # emerghkva
+        if isempty(defaults["xfmrcode"]) || (haskey(dss_obj, "emerghkva") && _is_after_xfmrcode(dss_obj["prop_order"], "emerghkva"))
+            eng_obj["sm_ub"] = defaults["emerghkva"]
+        end
+
         # loss model (converted to SI units, referred to secondary)
         if nrw == 2
             if isempty(defaults["xfmrcode"]) || (haskey(dss_obj, "xhl") && _is_after_xfmrcode(dss_obj["prop_order"], "xhl"))
@@ -748,7 +759,7 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             "bus" => _parse_bus_id(defaults["bus1"])[1],
             "configuration" => defaults["conn"],
             "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=defaults["conn"] == WYE, default=defaults["conn"] == WYE ? [collect(1:defaults["phases"])..., 0] : nphases == 1 ? [1,0] : collect(1:nphases)),
-            "pg" => fill(defaults["kva"] / nphases, nphases),
+            "pg" => fill(min(defaults["pmpp"] * defaults["irradiance"], defaults["kva"]) / nphases, nphases),
             "qg" => fill(defaults["kvar"] / nphases, nphases),
             "vg" => fill(defaults["kv"] / sqrt(nphases), nphases),
             "pg_lb" => fill(0.0, nphases),
@@ -760,8 +771,8 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
             # "temperature" => defaults["temperature"],
             # "p-t_curve" => defaults["p-tcurve"],
             # "efficiency_curve" => defaults["effcurve"],
-            # "rs" => diagm(0 => fill(defaults["%r"] / 100., nphases)),
-            # "xs" => diagm(0 => fill(defaults["%x"] / 100., nphases)),
+            # "rs" => LinearAlgebra.diagm(0 => fill(defaults["%r"] / 100., nphases)),
+            # "xs" => LinearAlgebra.diagm(0 => fill(defaults["%x"] / 100., nphases)),
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
             "source_id" => "pvsystem.$id",
         )
@@ -799,15 +810,17 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
             "energy_ub" => defaults["kwhrated"],
             "charge_ub" => defaults["%charge"] / 100.0 * defaults["kwrated"],
             "discharge_ub" => defaults["%discharge"] / 100.0 * defaults["kwrated"],
-            "cm_ub" => fill(defaults["kva"] / nphases, nphases),
+            "sm_ub" => defaults["kva"],
             "charge_efficiency" => defaults["%effcharge"],
             "discharge_efficiency" => defaults["%effdischarge"],
-            "qs_lb" => -fill(defaults["kvar"] / nphases, nphases),
-            "qs_ub" =>  fill(defaults["kvar"] / nphases, nphases),
-            "rs" => fill(defaults["%r"] / nphases / 100.0, nphases),
-            "xs" => fill(defaults["%x"] / nphases / 100.0, nphases),
+            "qs_lb" => -defaults["kva"],  # The storage element can also produce or absorb reactive power (vars) within the kVA rating of the inverter
+            "qs_ub" =>  defaults["kva"],  # The storage element can also produce or absorb reactive power (vars) within the kVA rating of the inverter
+            "rs" => defaults["%r"] / 100.0,
+            "xs" => defaults["%x"] / 100.0,
             "pex" => defaults["%idlingkw"] ./ 100.0 .* defaults["kwrated"],
-            "qex" => defaults["%idlingkvar"] ./ 100.0 .* defaults["kvar"],
+            "qex" => defaults["%idlingkvar"] ./ 100.0 .* defaults["kwrated"], # percent of kwrated consumed as kvar
+            "ps" => -defaults["kw"],  # PMD convention is opposite from dss
+            "qs" => -defaults["kvar"],  # PMD convention is opposite from dss
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
             "source_id" => "storage.$id",
         )
@@ -816,8 +829,6 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         if 0 in eng_obj["connections"]
             _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
         end
-
-        _build_time_series_reference!(eng_obj, dss_obj, data_dss, defaults, time_series, "ps", "qs")
 
         if import_all
             _import_all!(eng_obj, dss_obj)
@@ -1023,6 +1034,7 @@ function parse_opendss(
         data_eng["settings"]["voltage_scale_factor"] = 1e3
         data_eng["settings"]["power_scale_factor"] = 1e3
         data_eng["settings"]["vbases_default"] = Dict{String,Real}()
+        defaults["basemva"] == 100.0 && @info "basemva=100 is the default value, you may want to adjust sbase_default for better convergence"
         data_eng["settings"]["sbase_default"] = defaults["basemva"] * 1e3
         data_eng["settings"]["base_frequency"] = get(get(data_dss, "options", Dict{String,Any}()), "defaultbasefreq", 60.0)
 

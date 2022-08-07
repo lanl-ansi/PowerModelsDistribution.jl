@@ -53,11 +53,14 @@ function build_mc_opf_oltc(pm::AbstractUnbalancedPowerModel)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -117,11 +120,14 @@ function build_mc_opf_oltc(pm::AbstractUBFModels)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -130,19 +136,4 @@ function build_mc_opf_oltc(pm::AbstractUBFModels)
 
     # Objective
     objective_mc_min_fuel_cost(pm)
-end
-
-# Depreciated run_ functions (remove after ~4-6 months)
-
-"depreciation warning for `run_ac_mc_opf_oltc`"
-function run_ac_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
-    @warn "run_ac_mc_opf_oltc is being depreciated in favor of solve_mc_opf_oltc(data, ACPUPowerModel, solver; kwargs...), please update your code accordingly"
-    return solve_mc_opf_oltc(data, ACPUPowerModel, solver; kwargs...)
-end
-
-
-"depreciation warning for `run_mc_opf_oltc`"
-function run_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    @warn "run_mc_opf_oltc is being depreciated in favor of solve_mc_opf_oltc, please update your code accordingly"
-    return solve_mc_opf_oltc(data, model_type, solver; kwargs...)
 end
