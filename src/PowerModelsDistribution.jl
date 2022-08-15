@@ -23,10 +23,11 @@ module PowerModelsDistribution
     import Statistics
     import SparseArrays
 
-    import LinearAlgebra: diagm, factorize, LU
+    import LinearAlgebra: diagm
     import Statistics: mean, std
     import SparseArrays: spzeros
 
+    import LinearSolve
 
 
     const _IM = InfrastructureModels
