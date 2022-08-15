@@ -27,6 +27,7 @@ module PowerModelsDistribution
     import Statistics: mean, std
     import SparseArrays: spzeros
 
+    import LinearSolve
 
 
     const _IM = InfrastructureModels

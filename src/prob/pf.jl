@@ -214,8 +214,8 @@ between successive power flow solves
 * `vnode_to_idx` -- a mapping of nodes with variable voltage (bus, terminal) to a unique value
 * `fixed_nodes` -- all indexed nodes with a known voltage reference
 * `Uf` -- vector of known voltages
-* `Yf` --  admittance matrix partition: Y[node_other_idx, node_fixed_idx]
-* `Yv_LU` -- LU factorization of admittance matrix partition: Y[node_other_idx, node_other_idx]
+* `Yf` -- admittance matrix partition: Y[node_other_idx, node_fixed_idx]
+* `Yv` -- admittance matrix partition: Y[node_other_idx, node_other_idx]
 The postfix `_idx` indicates the admittance matrix indexing convention.
 """
 mutable struct PowerFlowData
@@ -229,7 +229,7 @@ mutable struct PowerFlowData
     fixed_nodes::Vector
     Uf::Vector
     Yf::Matrix
-    Yv_LU::Any
+    Yv::Any
 end
 
 """
@@ -312,14 +312,13 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
     Uf = fill(NaN+im*NaN, length(fixed_nodes))
 
     for (i,(b,t)) in enumerate(fixed_nodes)
+        @show (b, data_math["bus"]["$b"]["terminals"], data_math["bus"]["$b"]["vm"])
         vm_t = Dict(data_math["bus"]["$b"]["terminals"].=>data_math["bus"]["$b"]["vm"])
         va_t = Dict(data_math["bus"]["$b"]["terminals"].=>data_math["bus"]["$b"]["va"])
         Uf[i] = vm_t[t]*exp(im*va_t[t])
     end
 
-    Yv_LU = factorize(Yv)
-
-    return PowerFlowData(data_math, ntype, cc_ns_func_pairs, indexed_nodes, node_to_idx, fnode_to_idx, vnode_to_idx, fixed_nodes, Uf, Yf, Yv_LU)
+    return PowerFlowData(data_math, ntype, cc_ns_func_pairs, indexed_nodes, node_to_idx, fnode_to_idx, vnode_to_idx, fixed_nodes, Uf, Yf, Yv)
 end
 
 
@@ -468,8 +467,12 @@ Returns a solution data structure in PowerModelsDistribution Dict format.
 function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
 
     Nv = length(pfd.indexed_nodes)-length(pfd.fixed_nodes)
+    
+    prob = LinearSolve.LinearProblem(pfd.Yv, -pfd.Yf*pfd.Uf)
+    linsolve = LinearSolve.init(prob, LinearSolve.KLUFactorization(;reuse_symbolic=true))
+    sol1 = LinearSolve.solve(linsolve)
+    Uv0 = sol1.u
 
-    Uv0 = pfd.Yv_LU\(-pfd.Yf*pfd.Uf)
     Uv = Uv0
 
     for it in 1:max_iter
@@ -486,7 +489,9 @@ function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E
             end
         end
 
-        Uv_next = pfd.Yv_LU\(Iv.-pfd.Yf*pfd.Uf)
+        linsolve = LinearSolve.set_b(sol1.cache, Iv.-pfd.Yf*pfd.Uf)
+        sol2 = LinearSolve.solve(linsolve, LinearSolve.KLUFactorization(;reuse_symbolic=true))
+        Uv_next = sol2.u
 
         change = maximum(abs.(Uv .- Uv_next))
         if change <= stat_tol
