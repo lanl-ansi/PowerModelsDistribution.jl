@@ -1,4 +1,6 @@
 using Pkg
+using PowerModelsDistribution
+
 Pkg.activate("./examples")
 
 using PowerModelsDistribution
@@ -7,9 +9,9 @@ const PMD = PowerModelsDistribution
 # case_path = "./test/data/opendss/ut_trans_2w_yy.dss"
 
 ### get these files from  https://github.com/sanderclaeys/DistributionTestCases.jl
-# case_path = "./examples/Sander's IEEE testcases/ieee13_pmd.dss"
-# case_path = "./examples/Sander's IEEE testcases/ieee34_pmd.dss"
-case_path = "./examples/Sander's IEEE testcases/ieee123_pmd.dss"
+case_path = "./examples/IEEE testcases Sander/ieee13_pmd.dss"
+# case_path = "./examples/IEEE testcases Sander/ieee34_pmd.dss"
+case_path = "./examples/IEEE testcases Sander/ieee123_pmd.dss"
 
 ##
 function vsource_correction!(data_eng)

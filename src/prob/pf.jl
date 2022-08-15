@@ -229,7 +229,7 @@ mutable struct PowerFlowData
     fixed_nodes::Vector
     Uf::Vector
     Yf::Matrix
-    Yv::Matrix
+    Yv::SparseArrays.SparseMatrixCSC
 end
 
 """
@@ -312,7 +312,6 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
     Uf = fill(NaN+im*NaN, length(fixed_nodes))
 
     for (i,(b,t)) in enumerate(fixed_nodes)
-        @show (b, data_math["bus"]["$b"]["terminals"], data_math["bus"]["$b"]["vm"])
         vm_t = Dict(data_math["bus"]["$b"]["terminals"].=>data_math["bus"]["$b"]["vm"])
         va_t = Dict(data_math["bus"]["$b"]["terminals"].=>data_math["bus"]["$b"]["va"])
         Uf[i] = vm_t[t]*exp(im*va_t[t])
