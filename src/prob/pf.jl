@@ -214,8 +214,8 @@ between successive power flow solves
 * `vnode_to_idx` -- a mapping of nodes with variable voltage (bus, terminal) to a unique value
 * `fixed_nodes` -- all indexed nodes with a known voltage reference
 * `Uf` -- vector of known voltages
-* `Yf` --  admittance matrix partition: Y[node_other_idx, node_fixed_idx]
-* `Yv_LU` -- LU factorization of admittance matrix partition: Y[node_other_idx, node_other_idx]
+* `Yf` -- admittance matrix partition: Y[node_other_idx, node_fixed_idx]
+* `Yv` -- admittance matrix partition: Y[node_other_idx, node_other_idx]
 The postfix `_idx` indicates the admittance matrix indexing convention.
 """
 mutable struct PowerFlowData
@@ -229,7 +229,7 @@ mutable struct PowerFlowData
     fixed_nodes::Vector
     Uf::Vector
     Yf::Matrix
-    Yv_LU::Any
+    Yv::Matrix
 end
 
 """
@@ -278,9 +278,7 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
                 ns = [bts..., vns...]
 
                 push!(ns_yprim, (ns[ungr_filter], y_prim[ungr_filter, ungr_filter]))
-                if c_nl != nothing
-                    push!(cc_ns_func_pairs, (ns, c_nl, c_tots, comp_type, id))
-                end
+                push!(cc_ns_func_pairs, (ns, c_nl, c_tots, comp_type, id))
 
                 virtual_count += nr_vns
             end
@@ -314,14 +312,13 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
     Uf = fill(NaN+im*NaN, length(fixed_nodes))
 
     for (i,(b,t)) in enumerate(fixed_nodes)
+        @show (b, data_math["bus"]["$b"]["terminals"], data_math["bus"]["$b"]["vm"])
         vm_t = Dict(data_math["bus"]["$b"]["terminals"].=>data_math["bus"]["$b"]["vm"])
         va_t = Dict(data_math["bus"]["$b"]["terminals"].=>data_math["bus"]["$b"]["va"])
         Uf[i] = vm_t[t]*exp(im*va_t[t])
     end
 
-    Yv_LU = factorize(Yv)
-
-    return PowerFlowData(data_math, ntype, cc_ns_func_pairs, indexed_nodes, node_to_idx, fnode_to_idx, vnode_to_idx, fixed_nodes, Uf, Yf, Yv_LU)
+    return PowerFlowData(data_math, ntype, cc_ns_func_pairs, indexed_nodes, node_to_idx, fnode_to_idx, vnode_to_idx, fixed_nodes, Uf, Yf, Yv)
 end
 
 
@@ -334,7 +331,7 @@ end
 
 Calculates the voltage from PowerFlowData struct.
 """
-function _get_v(pfd::PowerFlowData, Vp::Vector{Complex{Float64}}, n::Tuple{Int64, Int64})
+function _get_v(pfd::PowerFlowData, Vp::Vector{Complex{Float64}}, n::Union{Tuple{Int64, Int64},Int64} )
     if pfd.ntype[n] == GROUNDED
         return 0.0+im*0.0
     elseif pfd.ntype[n] == FIXED
@@ -397,7 +394,12 @@ function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:An
     for (nw, dm) in nw_dm
         if ismissing(v_start)
             # if epsilon is not zero, voltage initialisation is not correct which then leads to unnecessary iterations
-            add_start_voltage!(dm, coordinates=:rectangular, epsilon=0)
+            # if explicit_neutral
+                add_start_voltage!(dm, coordinates=:rectangular, epsilon=0)
+            # else
+            #     add_start_voltage_3w!(dm, coordinates=:rectangular, epsilon=0)
+            # end
+            
             v_start = _bts_to_start_voltage(dm)
         end
 
@@ -465,23 +467,31 @@ Returns a solution data structure in PowerModelsDistribution Dict format.
 function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
 
     Nv = length(pfd.indexed_nodes)-length(pfd.fixed_nodes)
+    
+    prob = LinearSolve.LinearProblem(pfd.Yv, -pfd.Yf*pfd.Uf)
+    linsolve = LinearSolve.init(prob, LinearSolve.KLUFactorization(;reuse_symbolic=true))
+    sol1 = LinearSolve.solve(linsolve)
+    Uv0 = sol1.u
 
-    Uv0 = pfd.Yv_LU\(-pfd.Yf*pfd.Uf)
     Uv = Uv0
 
     for it in 1:max_iter
         Iv = zeros(Complex{Float64}, Nv)
         for (ns, c_nl_func, c_tots_func, comp_type, id) in pfd.cc_ns_func_pairs
-            Un = [_get_v(pfd, Uv, n) for n in ns]
-            Icc = c_nl_func(Un)
-            for (i,n) in enumerate(ns)
-                if pfd.ntype[n]==VARIABLE
-                    Iv[pfd.vnode_to_idx[n]] += Icc[i]
+            if c_nl_func != nothing
+                Un = [_get_v(pfd, Uv, n) for n in ns]
+                Icc = c_nl_func(Un)
+                for (i,n) in enumerate(ns)
+                    if pfd.ntype[n]==VARIABLE
+                        Iv[pfd.vnode_to_idx[n]] += Icc[i]
+                    end
                 end
             end
         end
 
-        Uv_next = pfd.Yv_LU\(Iv.-pfd.Yf*pfd.Uf)
+        linsolve = LinearSolve.set_b(sol1.cache, Iv.-pfd.Yf*pfd.Uf)
+        sol2 = LinearSolve.solve(linsolve, LinearSolve.KLUFactorization(;reuse_symbolic=true))
+        Uv_next = sol2.u
 
         change = maximum(abs.(Uv .- Uv_next))
         if change <= stat_tol
@@ -528,7 +538,7 @@ end
 Builds the solution dict.
 """
 function build_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
-    solution = Dict{String, Any}("bus"=>Dict{String, Any}(), "load"=>Dict{String, Any}(), "gen"=>Dict{String, Any}())
+    solution = Dict{String, Any}("bus"=>Dict{String, Any}(), "load"=>Dict{String, Any}(), "gen"=>Dict{String, Any}(), "branch"=>Dict{String, Any}(), "shunt"=>Dict{String, Any}(), "switch"=>Dict{String, Any}(), "transformer"=>Dict{String, Any}())
     for (id, bus) in pfd.data_math["bus"]
         ind = bus["index"]
         solution["bus"][id] = Dict{String, Any}()
@@ -536,8 +546,17 @@ function build_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
         solution["bus"][id]["vm"] = Dict("$t"=>abs.(v[t]) for t in bus["terminals"])
         solution["bus"][id]["va"] = Dict("$t"=>angle.(v[t]) for t in bus["terminals"])
     end
+
     for (ns, c_nl_func, c_tots_func, comp_type, id) in pfd.cc_ns_func_pairs
-        v_bt = [solution["bus"]["$busid"]["vm"]["$t"] for (busid, t) in sort(ns)]
+        ns_bts = [n for n in ns if typeof(n)==Tuple{Int64, Int64}]
+        ns_vns = [n for n in ns if typeof(n)==Int64]
+
+        v_bt = [_get_v(pfd, Uv, n) for n in sort(ns_bts)] 
+        if !isempty(ns_vns)
+            v_vns = [_get_v(pfd, Uv, n) for n in sort(ns_vns)] 
+            append!(v_bt, v_vns)
+        end
+        
         c_tots = c_tots_func(v_bt)
         if comp_type == "gen"
             solution[comp_type][id] = Dict{String, Any}()
@@ -587,7 +606,6 @@ function _cpf_branch_interface(branch::Dict{String,<:Any}, v_start::Dict{<:Any,<
     Yto = branch["g_to"]+im*branch["b_to"]
     y_prim = [(Ys.+Yfr) -Ys; -Ys (Ys.+Yto)]
     bts = [[(branch["f_bus"], t) for t in branch["f_connections"]]..., [(branch["t_bus"], t) for t in branch["t_connections"]]...]
-    # v_bt = [v_start[bt] for bt in bts]
     c_tots_func = function(v_bt)
         return y_prim * v_bt
     end
@@ -654,7 +672,6 @@ Modifies ideal transformers to avoid singularity error.
 """
 function _compose_yprim_banked_ideal_transformers(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
     y_prim_ind = Dict()
-
     nph = length(ts)
 
     ns_fr = unique([[a for (a,b) in npairs_fr]..., [b for (a,b) in npairs_fr]...])

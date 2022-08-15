@@ -96,7 +96,7 @@ function instantiate_mc_model(
     model_type::Type,
     build_method::Function;
     ref_extensions::Vector{<:Function}=Function[],
-    multinetwork::Bool=false,
+    multinetwork::Bool=ismultinetwork(data),
     global_keys::Set{String}=Set{String}(),
     eng2math_extensions::Vector{<:Function}=Function[],
     eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),

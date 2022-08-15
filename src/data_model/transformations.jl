@@ -54,11 +54,11 @@ end
 
 
 """
-    adjust_small_line_impedances!(data::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
+    adjust_small_line_impedances!(data::Dict{String,<:Any}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
 
 Replaces impedances (rs, xs) on lines, linecodes, and switches lower than `min_impedance_val` with `replace_impedance_val`.
 """
-function adjust_small_line_impedances!(data::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
+function adjust_small_line_impedances!(data::Dict{String,<:Any}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
     @assert iseng(data) "wrong data model type"
 
     apply_pmd!(_adjust_small_line_impedances!, data; apply_to_subnetworks=true, min_impedance_val=min_impedance_val, replace_impedance_val=replace_impedance_val)
@@ -66,11 +66,11 @@ end
 
 
 """
-    _adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
+    _adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
 
 Replaces impedances (rs, xs) on lines, linecodes, and switches lower than `min_impedance_val` with `replace_impedance_val`.
 """
-function _adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
+function _adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
     for type in ["line", "linecode", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]
@@ -86,11 +86,11 @@ end
 
 
 """
-    adjust_small_line_admittances!(data::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
+    adjust_small_line_admittances!(data::Dict{String,<:Any}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
 
 Replaces admittances (g_fr, g_to, b_fr, b_to) on lines, linecodes, and switches lower than `min_admittance_val` with `replace_admittance_val`.
 """
-function adjust_small_line_admittances!(data::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
+function adjust_small_line_admittances!(data::Dict{String,<:Any}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
     @assert iseng(data) "wrong data model type"
 
     apply_pmd!(_adjust_small_line_admittances!, data; apply_to_subnetworks=true, min_admittance_val=min_admittance_val, replace_admittance_val=replace_admittance_val)
@@ -98,11 +98,11 @@ end
 
 
 """
-    _adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
+    _adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
 
 Replaces admittances (g_fr, g_to, b_fr, b_to) on lines, linecodes, and switches lower than `min_admittance_val` with `replace_admittance_val`.
 """
-function _adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
+function _adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
     for type in ["line", "linecode", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]
@@ -118,11 +118,11 @@ end
 
 
 """
-    adjust_small_line_lengths!(data::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
+    adjust_small_line_lengths!(data::Dict{String,<:Any}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
 
 Replaces length on lines, switches lower than `min_length_val` with `replace_length_val`.
 """
-function adjust_small_line_lengths!(data::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
+function adjust_small_line_lengths!(data::Dict{String,<:Any}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
     @assert iseng(data) "wrong data model type"
 
     apply_pmd!(_adjust_small_line_lengths!, data; apply_to_subnetworks=true, min_length_val=min_length_val, replace_length_val=replace_length_val)
@@ -130,11 +130,11 @@ end
 
 
 """
-    _adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
+    _adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
 
 Replaces length on lines, switches lower than `min_length_val` with `replace_length_val`.
 """
-function _adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
+function _adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
     for type in ["line", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]
@@ -166,15 +166,15 @@ end
 add voltage bounds to all buses based on per-unit upper (`vm_ub`) and lower (`vm_lb`), scaled by the bus's voltage based
 """
 function _apply_voltage_bounds!(data_eng::Dict{String,<:Any}; vm_lb::Union{Real,Missing}=0.9, vm_ub::Union{Real,Missing}=1.1, exclude::Vector{String}=!isempty(get(data_eng, "voltage_source", Dict())) ? String[x.second["bus"] for x in data_eng["voltage_source"]] : String[])
-    (bus_vbases, edge_vbases) = calc_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
+    (bus_vbases, _) = calc_eng_voltage_bases(data_eng, data_eng["settings"]["vbases_default"])
     for (id, bus) in filter(x->!(x.first in exclude), get(data_eng, "bus", Dict{String,Any}()))
         vbase = bus_vbases[id]
-        if !ismissing(vm_lb)
+        if !ismissing(vm_lb) && !ismissing(vbase)
             data_eng["bus"][id]["vm_lb"] = vbase .* fill(vm_lb, length(bus["terminals"]))
             data_eng["bus"][id]["vm_lb"][any.(bus["grounded"] .== t for t in bus["terminals"])] .= 0.0
         end
 
-        if !ismissing(vm_ub)
+        if !ismissing(vm_ub) && !ismissing(vbase)
             data_eng["bus"][id]["vm_ub"] = vbase .* fill(vm_ub, length(bus["terminals"]))
             data_eng["bus"][id]["vm_ub"][any.(bus["grounded"] .== t for t in bus["terminals"])] .= Inf
         end
@@ -214,7 +214,7 @@ function _remove_all_bounds!(data_eng; exclude::Vector{<:String}=String["energy_
         if isa(v, Dict) && k!="settings" && !(k in exclude_asset_type)
             for (_, comp) in v
                 for field in keys(comp)
-                    if !(field in exclude) && endswith(field, "_lb") || endswith(field, "_ub")
+                    if !(field in exclude) && (endswith(field, "_lb") || endswith(field, "_ub"))
                         delete!(comp, field)
                     end
                 end
@@ -225,11 +225,11 @@ end
 
 
 """
-    adjust_line_limits!(data::Dict{String,<:Any}, mult::Float64)
+    adjust_line_limits!(data::Dict{String,<:Any}, mult::Real)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on line objects (`line`, `linecode`, `switch`) by a multiplier `mult`
 """
-function adjust_line_limits!(data::Dict{String,<:Any}, mult::Float64)
+function adjust_line_limits!(data::Dict{String,<:Any}, mult::Real)
     @assert iseng(data) "wrong data model type"
 
     apply_pmd!(_adjust_line_limits!, data, mult; apply_to_subnetworks=true)
@@ -237,11 +237,11 @@ end
 
 
 """
-    _adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+    _adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Real)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on line objects (`line`, `linecode`, `switch`) by a multiplier `mult`
 """
-function _adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+function _adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Real)
     for type in ["linecode", "line", "switch"]
         if haskey(data_eng, type)
             for (_,obj) in data_eng[type]
@@ -287,11 +287,11 @@ end
 
 
 """
-    adjust_transformer_limits!(data::Dict{String,<:Any}, mult::Float64)
+    adjust_transformer_limits!(data::Dict{String,<:Any}, mult::Real)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on transformer objects by a multiplier `mult`
 """
-function adjust_transformer_limits!(data::Dict{String,<:Any}, mult::Float64)
+function adjust_transformer_limits!(data::Dict{String,<:Any}, mult::Real)
     @assert iseng(data) "wrong data model type"
 
     apply_pmd!(_adjust_transformer_limits!, data, mult; apply_to_subnetworks=true)
@@ -299,11 +299,11 @@ end
 
 
 """
-    _adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+    _adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Real)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on transformer objects by a multiplier `mult`
 """
-function _adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+function _adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Real)
     if haskey(data_eng, "transformer")
         for (_,obj) in data_eng["transformer"]
             if haskey(obj, "cm_ub")

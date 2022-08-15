@@ -762,7 +762,7 @@ end
 
 Capacitor (with capcontrol) relaxed power variables for AbstractLPUBFModel (using McCormick envelopes)
 """
-function variable_mc_capacitor_reactive_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default)
+function variable_mc_capacitor_reactive_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, report::Bool=false)
     cap_switch_ids = [id for (id,cap) in ref(pm, nw, :shunt) if haskey(cap,"controls")]
     cap_reactive_power = var(pm, nw)[:capacitor_reactive_power] = Dict(
         i => JuMP.@variable(
@@ -771,6 +771,8 @@ function variable_mc_capacitor_reactive_power(pm::AbstractUnbalancedPowerModel; 
             base_name="$(nw)_cap_cur_$(i)",
         ) for i in cap_switch_ids
     )
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :shunt, :capacitor_reactive_power, cap_switch_ids, cap_reactive_power)
 end
 
 

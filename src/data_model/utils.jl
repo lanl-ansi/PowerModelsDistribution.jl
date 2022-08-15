@@ -20,9 +20,12 @@ ismath(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missin
 """
     make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
 
-Hacky helper function to transform single-conductor network data, from, e.g., matpower/psse, into multi-conductor data
+**This function is not meant to be an officially supported method for creating reasonable multiconductor data sets.**
+
+**Hacky** helper function to transform single-conductor network data, from, e.g., matpower/psse, into multi-conductor data.
 """
 function make_multiconductor!(data::Dict{String,<:Any}, conductors::Int)
+    @info "This function is not meant to be an officially supported method for creating reasonable multiconductor data sets"
     if ismultinetwork(data)
         for (i,nw_data) in data["nw"]
             _make_multiconductor!(nw_data, conductors)

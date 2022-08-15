@@ -219,7 +219,7 @@ end
 
 
 ""
-function constraint_storage_state_initial(pm::AbstractUnbalancedPowerModel, n::Int, i::Int, energy::Float64, charge_eff::Float64, discharge_eff::Float64, time_elapsed::Float64)::Nothing
+function constraint_storage_state_initial(pm::AbstractUnbalancedPowerModel, n::Int, i::Int, energy::Real, charge_eff::Real, discharge_eff::Real, time_elapsed::Real)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)
     se = var(pm, n, :se, i)
@@ -230,7 +230,7 @@ end
 
 
 ""
-function constraint_storage_state(pm::AbstractUnbalancedPowerModel, n_1::Int, n_2::Int, i::Int, charge_eff::Float64, discharge_eff::Float64, time_elapsed::Float64)::Nothing
+function constraint_storage_state(pm::AbstractUnbalancedPowerModel, n_1::Int, n_2::Int, i::Int, charge_eff::Real, discharge_eff::Real, time_elapsed::Real)
     sc_2 = var(pm, n_2, :sc, i)
     sd_2 = var(pm, n_2, :sd, i)
     se_2 = var(pm, n_2, :se, i)
@@ -252,7 +252,7 @@ end
 
 
 ""
-function constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel, n::Int, i::Int, charge_ub::Float64, discharge_ub::Float64)
+function constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel, n::Int, i::Int, charge_ub::Real, discharge_ub::Real)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)
     sc_on = var(pm, n, :sc_on, i)

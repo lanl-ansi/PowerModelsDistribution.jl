@@ -3,6 +3,42 @@
 ## staged
 
 - Add native power flow solver by using `compute_pf(data_math)`
+- Updated documentation in `make_multiconductor!` to better indicate its unsupported nature
+- Added automatic detection of multinetwork data to `instantiate_mc_model`
+- Converted `::Float64` types in function signatures to `::Real`
+
+## v0.14.4
+
+- Fixed bug in `apply_voltage_bounds!` for multinetwork data
+- Added compat for JuMP v1
+- Fixed bug in `_map_eng2math` where global keys were not being propagated in multinetwork
+- Fixed bug/typo in `_create_storage` where `kwhstored` was derived from `:stored` instead of `Symbol("%stored")`
+- Fixed bug in function `_dss2eng_loadshape!()` where `qmult` data was overwriting `pmult` data [#386](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/386)
+
+## v0.14.3
+
+- Fixed bug in dss parser where circuit was not being edited using the `edit` dss command
+- Fixed bug in eng2math functions where the voltage angle was being set incorrectly for generation assets that were set to isochronous control mode
+
+## v0.14.2
+
+- Fixed failing unit test "3-bus SOCConicUBF opf_bf" for Windows
+- Updated minimum Julia requirement to v1.6 (LTS) [#382](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/382)
+- Added compat for JuMP v0.23, Ipopt v1.0, SCS v1.1, PolyhedralRelaxations v0.3.3
+- Dropped support for SCS 0.8 in Unit tests (0.9 no longer supports `eps` option)
+- Fixed bug in `remove_all_bounds!` where an `||` was not enclosed in parentheses
+- Changed remaining instances of `Int64` to `Int` for better compatibility [#382](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/382)
+- Fixed bug in `create_solar` where kwargs were not being utilized [#380](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/380)
+- Fixed bug in `create_storage` where datatypes were inconsistent with documentation [#379](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/379)
+- Added check for missing `vbase` in `apply_voltage_bounds!` transformation
+- Refactored `constraint_mc_power_balance_capc(pm::LPUBFDiagModel, ...)` to be more consistent with other versions, for easier debugging
+- Removed Cbc, Juniper from unit tests (not being utilized in tests)
+- Removed explicit field copying from `voltage_source` math2eng solution conversion (now copies all fields)
+- Fixed bug in `_calc_branch_series_current_max` where `vmin_to` used `bus_fr` instead of `bus_to` [#378](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/378)
+
+## v0.14.1
+
+- Fix `variable_mc_capcontrol` keyword arguments
 
 ## v0.14.0
 
@@ -314,7 +350,7 @@
 - fix bug in `_build_eng_multinetwork`, where "dss_options" was missing from const `_pmd_eng_global_keys`
 - change enums (SwitchState and Dispatchable) for switches to Reals, was causing problems in loops of OSW problems
 - fix bug in `variable_mc_bus_voltage_magnitude_sqr` and `variable_mc_transformer_power_imaginary` where `_start` values were not being iterated over per connection
-- depreciate run_ functions in favor of solve_
+- depreciate `run_` functions in favor of `solve_`
 - add support for `relax_integrality` (InfrastructureModels ~0.5.4)
 - fix bug in `variable_mx_real` constructor where it was indexing over terminals instead of enumerates
 - added storage variables to automatic unit conversion to si units on math2eng transformation
@@ -385,7 +421,7 @@
 - Refactors Kron reduction and padding transformations out of eng2math into their own transformation functions (#287)
 - Add functionality of run_mc_mld_bf to run_mc_mld via multiple dispatch
 - Fixes inconsistency of connections on MATHEMATICAL components, in particular, virtual objects (#280)
-- Add a transformation remove_all_bounds! that removes all fields ending in _ub and _lb (#278)
+- Add a transformation remove_all_bounds! that removes all fields ending in \_ub and \_lb (#278)
 - Add missing connections for virtual generator at voltage source
 - Fix pu conversion bus voltage bounds and add parsing for vm_pair_lb and vm_pair_ub
 - Add CONTRIBUTING.md

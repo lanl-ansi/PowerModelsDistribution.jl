@@ -69,12 +69,12 @@ end
 
 
 """
-    variable_mc_capcontrol(pm::AbstractUnbalancedACPModel; nw::Int=nw_id_default, relax::Bool=false)
+    variable_mc_capcontrol(pm::AbstractUnbalancedACPModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
 
 Capacitor switching variables.
 """
-function variable_mc_capcontrol(pm::AbstractUnbalancedACPModel; nw::Int=nw_id_default, relax::Bool=false)
-    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax)
+function variable_mc_capcontrol(pm::AbstractUnbalancedACPModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
+    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax, report=report)
 end
 
 
@@ -841,7 +841,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_bus_voltage_magnitude_vuf(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vufmax::Float64)
+function constraint_mc_bus_voltage_magnitude_vuf(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vufmax::Real)
     if !haskey(var(pm, nw_id_default), :vmpossqr)
         var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
         var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
@@ -888,7 +888,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_bus_voltage_magnitude_negative_sequence(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vmnegmax::Float64)
+function constraint_mc_bus_voltage_magnitude_negative_sequence(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vmnegmax::Real)
     if !haskey(var(pm, nw_id_default), :vmpossqr)
         var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
         var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
@@ -923,7 +923,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_bus_voltage_magnitude_positive_sequence(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vmposmax::Float64)
+function constraint_mc_bus_voltage_magnitude_positive_sequence(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vmposmax::Real)
     if !haskey(var(pm, nw_id_default), :vmpossqr)
         var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
         var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
@@ -958,7 +958,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_bus_voltage_magnitude_zero_sequence(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vmzeromax::Float64)
+function constraint_mc_bus_voltage_magnitude_zero_sequence(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vmzeromax::Real)
     if !haskey(var(pm, nw_id_default), :vmpossqr)
         var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
         var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()

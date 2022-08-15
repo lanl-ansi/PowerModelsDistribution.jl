@@ -38,6 +38,9 @@ const pmd_math_component_status_inactive = Dict{String,Int}(
     "transformer" => 0,
 )
 
+"maps neutral conductor index"
+const neutral_idx = 4
+
 
 """
     apply_pmd!(func!::Function, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true, kwargs...)
@@ -368,7 +371,7 @@ end
 
 
 "Calculates the tap scale factor for the non-dimensionalized equations."
-function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, bus_to::Dict{String,Any})::Float64
+function calculate_tm_scale(trans::Dict{String,Any}, bus_fr::Dict{String,Any}, bus_to::Dict{String,Any})
     tm_nom = trans["tm_nom"]
 
     f_vbase = haskey(bus_fr, "vbase") ? bus_fr["vbase"] : bus_fr["base_kv"]
@@ -445,7 +448,7 @@ not. Therefore, a default lower bound is then used, specified by the keyword
 argument vdmin_eps.
 The returned bounds are for the pairs 1->2, 2->3, 3->1
 """
-function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps::Float64=0.1)::Tuple
+function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps::Real=0.1)::Tuple
     vmax = bus["vmax"]
     vmin = bus["vmin"]
     if haskey(bus, "vm_ll_max")
@@ -677,7 +680,7 @@ Returns a valid series current magnitude bound for a branch.
 function _calc_branch_series_current_max(branch::Dict{String,<:Any}, bus_fr::Dict{String,<:Any}, bus_to::Dict{String,<:Any})::Vector{Float64}
     ncnds = length(branch["f_connections"])
     vmin_fr = haskey(bus_fr, "vmin") ? bus_fr["vmin"][[findfirst(isequal(c), bus_fr["terminals"]) for c in branch["f_connections"]]] : fill(0.0, ncnds)
-    vmin_to = haskey(bus_to, "vmin") ? bus_fr["vmin"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]] : fill(0.0, ncnds)
+    vmin_to = haskey(bus_to, "vmin") ? bus_to["vmin"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]] : fill(0.0, ncnds)
 
     vmax_fr = haskey(bus_fr, "vmax") ? bus_fr["vmax"][[findfirst(isequal(c), bus_fr["terminals"]) for c in branch["f_connections"]]] : fill(Inf, ncnds)
     vmax_to = haskey(bus_to, "vmax") ? bus_to["vmax"][[findfirst(isequal(c), bus_to["terminals"]) for c in branch["t_connections"]]] : fill(Inf, ncnds)
@@ -1115,7 +1118,7 @@ function _calc_connected_components_math(data::Dict{String,<:Any}; edges::Vector
     end
 
     component_lookup = Dict(i => Set{Int}([i]) for i in active_bus_ids)
-    touched = Set{Int64}()
+    touched = Set{Int}()
 
     for i in active_bus_ids
         if !(i in touched)

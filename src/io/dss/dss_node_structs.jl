@@ -281,7 +281,7 @@ function _create_storage(name::String=""; kwargs...)
         "kva" => get(kwargs, :kva, get(kwargs, :kwrated, 50.0)),
         "kvar" => get(kwargs, :kvar, sign(get(kwargs, :pf, 1.0)) * get(kwargs, :kw, 0.0) * sqrt(1.0 / get(kwargs, :pf, 1.0)^2 - 1.0)),
         "kwhrated" => get(kwargs, :kwhrated, 50.0),
-        "kwhstored" => get(kwargs, :kwhstored, get(kwargs, :kwhrated, 50.0) * get(kwargs, :stored, 100.0) / 100.0),
+        "kwhstored" => get(kwargs, :kwhstored, get(kwargs, :kwhrated, 50.0) * get(kwargs, Symbol("%stored"), 100.0) / 100.0),
         "kwrated" => get(kwargs, :kwrated, 50.0),
         "model" => get(kwargs, :model, 1),
         "pf" => get(kwargs, :pf, get(kwargs, :kw, 0.0) == 0 ? 1.0 : get(kwargs, :kvar, kwargs[:kw]) / kwargs[:kw]),

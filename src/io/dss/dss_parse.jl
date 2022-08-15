@@ -613,7 +613,7 @@ function _add_component!(data_dss::Dict{String,<:Any}, obj_type_name::AbstractSt
 end
 
 
-function _add_component_edits!(data_dss::Dict{String,<:Any}, obj_type_name::SubString{String}, object::Dict{String,<:Any})
+function _add_component_edits!(data_dss::Dict{String,<:Any}, obj_type_name::AbstractString, object::Dict{String,<:Any})
     obj_type = split(obj_type_name, '.'; limit=2)[1]
     if !haskey(data_dss, obj_type)
         data_dss[obj_type] = Dict{String,Any}(
@@ -893,6 +893,10 @@ function parse_dss(io::IO)::Dict{String,Any}
 
             elseif cmd == "edit"
                 current_obj_type, current_obj = _parse_line([lowercase(line_element) for line_element in line_elements]; path=path)
+                if startswith(current_obj_type, "circuit")
+                    current_obj_type = "vsource.source"
+                    current_obj["name"] = "source"
+                end
 
                 _add_component_edits!(data_dss, current_obj_type, current_obj)
                 continue
