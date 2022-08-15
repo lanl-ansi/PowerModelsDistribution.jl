@@ -78,3 +78,7 @@ sourcebus_voltage_vector_correction!(data_math)
 # data_math["bus"]["58"]["va"] = data_math["bus"]["58"]["va"][1:4]
 
 res = PowerModelsDistribution.compute_pf(data_math; explicit_neutral=true)
+
+
+
+## adapt the script by comparing a 4wire and 3wire testcase -> add_start_voltage!(dm, coordinates=:rectangular, epsilon=0) ???

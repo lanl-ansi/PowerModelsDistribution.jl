@@ -14,8 +14,8 @@
 
 function conductor_correction!(data_eng)
     nw = data_eng
-    if neutral_ids ∈ nw["conductor_ids"]
-        filter!(e->e≠neutral_ids, nw["conductor_ids"])
+    if neutral_idx ∈ nw["conductor_ids"]
+        filter!(e->e≠neutral_idx, nw["conductor_ids"])
     end
     
     nw["voltage_source"]["source"]["rs"] = nw["voltage_source"]["source"]["rs"][1:3,1:3]
@@ -25,31 +25,31 @@ function conductor_correction!(data_eng)
     nw["voltage_source"]["source"]["vm"] = nw["voltage_source"]["source"]["vm"][1:3]
 
     for (l, load) in nw["load"]
-        if neutral_ids ∈ load["connections"]
-            filter!(e->e≠neutral_ids, load["connections"])
+        if neutral_idx ∈ load["connections"]
+            filter!(e->e≠neutral_idx, load["connections"])
         end
     end
 
     for (b, bus) in nw["bus"]
-        if neutral_ids ∈ bus["terminals"]
-            filter!(e->e≠neutral_ids, bus["terminals"])
+        if neutral_idx ∈ bus["terminals"]
+            filter!(e->e≠neutral_idx, bus["terminals"])
         end
-        if neutral_ids ∈ bus["grounded"]
-            filter!(e->e≠neutral_ids, bus["grounded"])
+        if neutral_idx ∈ bus["grounded"]
+            filter!(e->e≠neutral_idx, bus["grounded"])
         end
     end
 
     if haskey(nw, "transformer")
         for (tx, transformer) in nw["transformer"]
             for winding in transformer["connections"]
-                filter!(e->e≠neutral_ids, winding)
+                filter!(e->e≠neutral_idx, winding)
             end
         end
     end
 
     if haskey(nw, "solar")
         for (s, solar) in nw["solar"]
-            filter!(e->e≠neutral_ids, solar["connections"])
+            filter!(e->e≠neutral_idx, solar["connections"])
         end
     end
     

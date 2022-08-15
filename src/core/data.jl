@@ -39,7 +39,7 @@ const pmd_math_component_status_inactive = Dict{String,Int}(
 )
 
 "maps neutral conductor index"
-const neutral_ids = 4
+const neutral_idx = 4
 
 
 """
