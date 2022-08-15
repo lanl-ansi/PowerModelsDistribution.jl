@@ -105,10 +105,10 @@ An Enum to describe whether a bus voltage is fixed, variable, grounded, or it is
 """
     PFTerminationStatus
 
-An Enum to describe whether power flow is converged or hit the iteration limit
+An Enum to describe whether power flow has converged or hit the iteration limit
 """
 @enum PFTerminationStatus CONVERGED ITERATION_LIMIT
-@doc "Power flow is converged" CONVERGED
+@doc "Power flow has converged" CONVERGED
 @doc "Power flow hits iteration limit" ITERATION_LIMIT
 
 
