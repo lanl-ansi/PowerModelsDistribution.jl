@@ -229,7 +229,7 @@ mutable struct PowerFlowData
     fixed_nodes::Vector
     Uf::Vector
     Yf::Matrix
-    Yv::Any
+    Yv::Matrix
 end
 
 """

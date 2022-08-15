@@ -5,6 +5,8 @@ using PowerModelsDistribution
 const PMD = PowerModelsDistribution
 
 # case_path = "./test/data/opendss/ut_trans_2w_yy.dss"
+
+### get these files from  https://github.com/sanderclaeys/DistributionTestCases.jl
 # case_path = "./examples/Sander's IEEE testcases/ieee13_pmd.dss"
 # case_path = "./examples/Sander's IEEE testcases/ieee34_pmd.dss"
 case_path = "./examples/Sander's IEEE testcases/ieee123_pmd.dss"
