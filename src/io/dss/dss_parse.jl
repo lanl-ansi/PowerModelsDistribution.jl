@@ -551,15 +551,15 @@ function _parse_properties(properties::AbstractString)::Vector{String}
         substring_out = split(string_out, "=")
         if length(substring_out) == 2 && substring_out[2] != ""
             end_equality = true
-        elseif !occursin("=", string_out) && (char == ' ' || n == num_chars)
+        elseif !occursin("=", string_out) && (isspace(char) || n == num_chars)
             end_equality = true
-        elseif occursin("=", string_out) && (char == ' ' || n == num_chars) && end_array
+        elseif occursin("=", string_out) && (isspace(char) || n == num_chars) && end_array
             end_equality = true
         else
             end_equality = false
         end
 
-        if char == ' '
+        if isspace(char)
             end_property = true
         else
             end_property = false
