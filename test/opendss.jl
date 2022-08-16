@@ -295,6 +295,13 @@
             "like" => "",
         )
     end
+
+    @testset "tabulation parse" begin
+        eng = parse_file("../test/data/opendss/case_tabulation.dss")
+
+        number_buses = 3
+        @test length(eng["bus"]) == number_buses
+    end
 end
 
 @testset "test different regcontrol configurations" begin
