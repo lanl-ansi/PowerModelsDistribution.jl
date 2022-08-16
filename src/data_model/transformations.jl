@@ -1621,7 +1621,8 @@ Calculate no-load starting values for all bus-terminals pairs.
 function calc_start_voltage(
     data_math::Dict{String,Any};
     max_iter=Inf,
-    epsilon::Number=1E-3
+    epsilon::Number=1E-3,
+    explicit_neutral=true
     )::Dict{Tuple{Int,Any},Union{Complex,Missing}}
 
     if haskey(data_math, "multinetwork")
@@ -1696,8 +1697,13 @@ function calc_start_voltage(
                 v_to = Array{Union{Complex,Missing}}([v_start[(t_bus, t)] for t in t_conns])
                 # forward propagation
                 if all((!).(ismissing.(v_fr))) && any(ismissing.(v_to))
-                    N = length(v_fr)-1
-                    Mpn = [LinearAlgebra.diagm(0=>ones(N)) fill(-1.0, N, 1)]
+                    if explicit_neutral
+                        N = length(v_fr)-1
+                        Mpn = [LinearAlgebra.diagm(0=>ones(N)) fill(-1.0, N, 1)]
+                    else
+                        N = length(v_fr)
+                        Mpn = LinearAlgebra.diagm(0=>ones(N)) 
+                    end
                     v_fr_pn = Mpn*v_fr
                     if all(ismissing.(v_to))
                         anchor_ind = length(v_to)
@@ -1705,7 +1711,11 @@ function calc_start_voltage(
                     else
                         (anchor_ind, anchor_val) = [(i, v) for (i, v) in enumerate(v_to) if !ismissing(v)][1]
                     end
-                    v_to_prop = inv([Mpn; [i==anchor_ind ? 1 : 0 for i in 1:N+1]'])*[v_fr_pn./scale..., 0]
+                    if explicit_neutral
+                        v_to_prop = inv([Mpn; [i==anchor_ind ? 1 : 0 for i in 1:N+1]'])*[v_fr_pn./scale..., 0]
+                    else
+                        v_to_prop = [v_fr_pn./scale...]
+                    end
 
                     for (i,t) in enumerate(t_conns)
                         if ismissing(v_start[(t_bus,t)])
@@ -1716,8 +1726,13 @@ function calc_start_voltage(
                 end
                 # backward propagation
                 if all((!).(ismissing.(v_to))) && any(ismissing.(v_fr))
-                    N = length(v_fr)-1
-                    Mpn = [LinearAlgebra.diagm(0=>ones(N)) fill(-1.0, N, 1)]
+                    if explicit_neutral
+                        N = length(v_fr)-1
+                        Mpn = [LinearAlgebra.diagm(0=>ones(N)) fill(-1.0, N, 1)]
+                    else
+                        N = length(v_fr)
+                        Mpn = LinearAlgebra.diagm(0=>ones(N)) 
+                    end
                     v_to_pn = Mpn*v_to
                     if all(ismissing.(v_fr))
                         anchor_ind = length(v_fr)
@@ -1725,7 +1740,11 @@ function calc_start_voltage(
                     else
                         (anchor_ind, anchor_val) = [(i, v) for (i, v) in enumerate(v_fr) if !ismissing(v)][1]
                     end
-                    v_fr_prop = inv([Mpn; [i==anchor_ind ? 1 : 0 for i in 1:N+1]'])*[scale.*v_to_pn..., 0]
+                    if explicit_neutral
+                        v_fr_prop = inv([Mpn; [i==anchor_ind ? 1 : 0 for i in 1:N+1]'])*[scale.*v_to_pn..., 0]
+                    else
+                        v_fr_prop = [scale.*v_to_pn...]
+                    end
 
                     for (i,t) in enumerate(f_conns)
                         if ismissing(v_start[(f_bus,t)])
@@ -1812,6 +1831,7 @@ function add_start_voltage!(
     vm_default=0.0,
     va_default=0.0,
     epsilon::Number=1E-3,
+    explicit_neutral=true
     )::Dict{String,Any}
 
     @assert data_math["data_model"]==MATHEMATICAL
@@ -1821,7 +1841,7 @@ function add_start_voltage!(
 
     for (nw,dm) in (is_mn ? data_math["nw"] : [("", data_math)])
         if ismissing(uniform_v_start)
-            v_start = calc_start_voltage(dm, epsilon=epsilon)
+            v_start = calc_start_voltage(dm, epsilon=epsilon, explicit_neutral=explicit_neutral)
         else
             v_start = uniform_v_start
         end

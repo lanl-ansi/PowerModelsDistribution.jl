@@ -1,15 +1,15 @@
 @info "running explicit neutral power flow tests with native julia power flow solver"
-# using Pkg
-# cd("test")
-# Pkg.activate("./")
-# # # Pkg.add("../#native-pf-extra-tests")
-# # Pkg.add("Test")
-# # Pkg.add("JSON")
-# # Pkg.add("Ipopt")
-# using PowerModelsDistribution#native-pf-extra-tests
-# using JSON
-# using Ipopt
-# using Test
+using Pkg
+cd("test")
+Pkg.activate("./")
+# Pkg.add("../#native-pf-extra-tests")
+Pkg.add("Test")
+Pkg.add("JSON")
+Pkg.add("Ipopt")
+using PowerModelsDistribution#native-pf-extra-tests
+using JSON
+using Ipopt
+using Test
 
 
 function conductor_correction!(data_eng)
@@ -75,7 +75,7 @@ function conductor_correction!(data_eng)
     # end
 end
 
-function vsource_correction!(data_eng)
+function vsource_correction_to_4w!(data_eng)
     if haskey(data_eng, "multinetwork")
         for (n,nw) in data_eng["nw"]
             nw["voltage_source"]["source"]["rs"][4,4] = nw["voltage_source"]["source"]["rs"][1,1]
@@ -127,7 +127,7 @@ filter!(e->e≠"test_load_3ph_delta_exp", cases)
             case_path = "$data_dir/$case.dss"
 
             data_eng = parse_file(case_path, transformations=[transform_loops!])
-            vsource_correction!(data_eng)
+            vsource_correction_to_4w!(data_eng)
 
             data_math = transform_data_model(data_eng;kron_reduce=false)
 
@@ -157,7 +157,7 @@ filter!(e->e≠"test_load_3ph_delta_exp", cases)
         case_path = "$data_dir/$case.dss"
 
         data_eng = parse_file(case_path, transformations=[transform_loops!])
-        vsource_correction!(data_eng)
+        vsource_correction_to_4w!(data_eng)
 
         data_math = transform_data_model(data_eng;kron_reduce=false)
 
@@ -192,7 +192,7 @@ end
     case_path = "$data_dir/test_load_3ph_wye_cp.dss"
 
     data_eng = parse_file(case_path, transformations=[transform_loops!])
-    vsource_correction!(data_eng)
+    vsource_correction_to_4w!(data_eng)
 
     data_math = transform_data_model(data_eng;kron_reduce=false)
 
@@ -206,7 +206,7 @@ end
     case_path = "$data_dir/test_line_6w.dss"
 
     data_eng = parse_file(case_path, transformations=[transform_loops!])
-    vsource_correction!(data_eng)
+    vsource_correction_to_4w!(data_eng)
 
     data_math = transform_data_model(data_eng;kron_reduce=false)
 
@@ -225,7 +225,7 @@ solution_dir = "data/opendss_solutions"
     case = "case3_balanced"
     
     eng_ts = make_multinetwork(case3_balanced)
-    vsource_correction!(eng_ts)
+    vsource_correction_to_4w!(eng_ts)
 
     ## This section is to validate that the new feature does not break multinetwork 
     result_mn = solve_mn_mc_opf(eng_ts, ACPUPowerModel, ipopt_solver)
