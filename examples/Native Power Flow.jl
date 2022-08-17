@@ -60,12 +60,13 @@ function sourcebus_voltage_vector_correction!(data_math::Dict{String, Any}; expl
     if haskey(data_math, "multinetwork")
         for (n,nw) in data_math["nw"]
             for (i, bus) in data_math["nw"]["bus"]
-                if bus["bus_type"] == 3 && length(bus["terminals"]) != length(bus["vm"])
+                if bus["bus_type"] == 3
                     if explicit_neutral
                         bus["vm"] = bus["vm"][1:length(bus["terminals"])]
                         bus["va"] = bus["va"][1:length(bus["terminals"])]
                         bus["vmin"] = bus["vmin"][1:length(bus["terminals"])]
                         bus["vmax"] = bus["vmax"][1:length(bus["terminals"])]
+                        bus["grounded"] = bus["grounded"][1:length(bus["terminals"])]
                     else
                         if neutral_idx ∈ bus["terminals"]
                             bus["terminals"] = bus["terminals"][1:end-1]
@@ -74,18 +75,20 @@ function sourcebus_voltage_vector_correction!(data_math::Dict{String, Any}; expl
                         bus["va"] = bus["va"][1:length(bus["terminals"])]
                         bus["vmin"] = bus["vmin"][1:length(bus["terminals"])]
                         bus["vmax"] = bus["vmax"][1:length(bus["terminals"])]
+                        bus["grounded"] = bus["grounded"][1:length(bus["terminals"])]
                     end
                 end
             end
         end
     else
         for (i, bus) in data_math["bus"]
-            if bus["bus_type"] == 3 && length(bus["terminals"]) != length(bus["vm"])
+            if bus["bus_type"] == 3
                 if explicit_neutral
                     bus["vm"] = bus["vm"][1:length(bus["terminals"])]
                     bus["va"] = bus["va"][1:length(bus["terminals"])]
                     bus["vmin"] = bus["vmin"][1:length(bus["terminals"])]
                     bus["vmax"] = bus["vmax"][1:length(bus["terminals"])]
+                    bus["grounded"] = bus["grounded"][1:length(bus["terminals"])]
                 else
                     if neutral_idx ∈ bus["terminals"]
                         bus["terminals"] = bus["terminals"][1:end-1]
@@ -94,6 +97,7 @@ function sourcebus_voltage_vector_correction!(data_math::Dict{String, Any}; expl
                     bus["va"] = bus["va"][1:length(bus["terminals"])]
                     bus["vmin"] = bus["vmin"][1:length(bus["terminals"])]
                     bus["vmax"] = bus["vmax"][1:length(bus["terminals"])]
+                    bus["grounded"] = bus["grounded"][1:length(bus["terminals"])]
                 end
             end
         end
@@ -104,6 +108,8 @@ end
 
 
 function update_math_model_3wire!(math)
+    data_math["conductor_ids"] = data_math["conductor_ids"][1:3]
+
     for (i,bus) in math["bus"]
         explicit_neutral = false
         if haskey(bus, "terminals") && neutral_idx ∈ bus["terminals"]
@@ -214,8 +220,8 @@ end
 
 ### get these files from  https://github.com/sanderclaeys/DistributionTestCases.jl
 # case_path = "./examples/IEEE testcases Sander/ieee13_pmd.dss"
-case_path = "./examples/IEEE testcases Sander/ieee34_pmd.dss"
-# case_path = "./examples/IEEE testcases Sander/ieee123_pmd.dss"
+# case_path = "./examples/IEEE testcases Sander/ieee34_pmd.dss"
+case_path = "./examples/IEEE testcases Sander/ieee123_pmd.dss"
 
 data_eng = parse_file(case_path, transformations=[transform_loops!, remove_all_bounds!])
 data_eng["is_kron_reduced"] = true
@@ -223,14 +229,8 @@ data_eng["settings"]["sbase_default"] = 1
 vsource_correction_to_3w!(data_eng)
 
 data_math = transform_data_model(data_eng;kron_reduce=false, phase_project=false)
-data_math["conductor_ids"] = data_math["conductor_ids"][1:3]
 sourcebus_voltage_vector_correction!(data_math, explicit_neutral=false)
 update_math_model_3wire!(data_math)
-# source_bus_id = find_source_bus_id(data_math)
-# data_math["bus"]["$source_bus_id"]["vmin"] = [1;1;1.0]
-# data_math["bus"]["$source_bus_id"]["vmax"] = [1;1;1.0]
-
-
 
 res = PowerModelsDistribution.compute_pf(data_math; explicit_neutral=false)
 
@@ -252,7 +252,7 @@ res = PowerModelsDistribution.compute_pf(data_math; explicit_neutral=true)
 
 case_path = "./test/data/opendss/ut_trans_2w_dy_lag.dss"
 data_eng = parse_file(case_path, transformations=[transform_loops!])
-vsource_correction_to_4w!(data_eng, )
+vsource_correction_to_4w!(data_eng)
 data_math = transform_data_model(data_eng;kron_reduce=false)
 res = PowerModelsDistribution.compute_pf(data_math; explicit_neutral=true)
 
@@ -269,6 +269,17 @@ res = PowerModelsDistribution.compute_pf(data_math; explicit_neutral=true)
 
 cd("../three-wire")
 data_eng = parse_file("Master.dss", transformations=[transform_loops!])
-vsource_correction_to_4w!(data_eng)
+data_eng["is_kron_reduced"] = true
+vsource_correction_to_3w!(data_eng)
 data_math = transform_data_model(data_eng;kron_reduce=false)
-res = PowerModelsDistribution.compute_pf(data_math; explicit_neutral=true)
+sourcebus_voltage_vector_correction!(data_math, explicit_neutral=false)
+update_math_model_3wire!(data_math)
+res = PowerModelsDistribution.compute_pf(data_math; explicit_neutral=false)
+
+
+##
+# accessing OpenDSSDirect for results consistency
+# validating the results are consistent with OpenDSS
+# double check what is actually happeind with the aux current and voltage variables in ideal transformers
+# fixing the unit tests
+# double checking KLU settings (default or not?) with respect to OpenDSS settings

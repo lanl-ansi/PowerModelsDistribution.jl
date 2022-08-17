@@ -312,6 +312,7 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
     Uf = fill(NaN+im*NaN, length(fixed_nodes))
 
     for (i,(b,t)) in enumerate(fixed_nodes)
+        @show b
         vm_t = Dict(data_math["bus"]["$b"]["terminals"].=>data_math["bus"]["$b"]["vm"])
         va_t = Dict(data_math["bus"]["$b"]["terminals"].=>data_math["bus"]["$b"]["va"])
         Uf[i] = vm_t[t]*exp(im*va_t[t])
@@ -645,21 +646,22 @@ function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,
     if tr["configuration"]==WYE && explicit_neutral
         npairs_fr = [(f_ns[i], f_ns[end]) for i in 1:length(f_ns)-1]
         npairs_to = [(t_ns[i], t_ns[end]) for i in 1:length(t_ns)-1]
-        bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Yy_Yd(ts, npairs_fr, npairs_to)
+        bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Yy(ts, npairs_fr, npairs_to)
     elseif tr["configuration"]==WYE && !explicit_neutral
         npairs_fr = [(f_ns[i], f_ns[i]) for i in 1:length(f_ns)]
         npairs_to = [(t_ns[i], t_ns[i]) for i in 1:length(t_ns)]
         bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Ygyg(ts, npairs_fr, npairs_to)
     elseif tr["configuration"]==DELTA && explicit_neutral
         @assert length(f_ns)==3
-        npairs_fr = [(f_ns[1], f_ns[2]), (f_ns[2], f_ns[3]), (f_ns[3], f_ns[1])]
-        npairs_to = [(t_ns[i], t_ns[end]) for i in 1:length(t_ns)-1]
-        bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Yy_Yd(ts, npairs_fr, npairs_to)
+        error("This configuration should not happen")
+        # npairs_fr = [(f_ns[1], f_ns[2]), (f_ns[2], f_ns[3]), (f_ns[3], f_ns[1])]
+        # npairs_to = [(t_ns[i], t_ns[end]) for i in 1:length(t_ns)-1]
+        # bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Yy(ts, npairs_fr, npairs_to)
     elseif tr["configuration"]==DELTA && !explicit_neutral
         @assert length(f_ns)==3
         npairs_fr = [(f_ns[1], f_ns[2]), (f_ns[2], f_ns[3]), (f_ns[3], f_ns[1])]
         npairs_to = [(t_ns[i], t_ns[i]) for i in 1:length(t_ns)]
-        bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Ygd(ts, npairs_fr, npairs_to)
+        bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Dyg(ts, npairs_fr, npairs_to)
     else
         error("Transformer " * tr["source_id"] * " configuration " * tr["configuration"] * " unknown")
     end
@@ -680,7 +682,7 @@ end
 
 Modifies ideal transformers to avoid singularity error.
 """
-function _compose_yprim_banked_ideal_transformers_Yy_Yd(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
+function _compose_yprim_banked_ideal_transformers_Yy(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
     y_prim_ind = Dict()
     nph = length(ts)
 
@@ -690,10 +692,10 @@ function _compose_yprim_banked_ideal_transformers_Yy_Yd(ts::Vector{Float64}, npa
     ns = [unique([ns_fr..., ns_to...])..., 1:nph...]
     n_to_idx = Dict(n=>idx for (idx,n) in enumerate(ns))
     Y = spzeros(Float64, length(ns), length(ns))
-
     for (i,t) in enumerate(ts)
         ns_i = [npairs_fr[i]..., npairs_to[i]..., i]
         inds = [n_to_idx[n] for n in ns_i]
+        @show inds, ns_i
         Y[inds[1:4],inds[5]] .= [1/t, -1/t, -1, 1]
         Y[inds[5],inds[1:4]] .= [1/t, -1/t, -1, 1]
         for k in 1:5
@@ -715,12 +717,12 @@ function _compose_yprim_banked_ideal_transformers_Ygyg(ts::Vector{Float64}, npai
     ns = [unique([ns_fr..., ns_to...])..., 1:nph...]
     n_to_idx = Dict(n=>idx for (idx,n) in enumerate(ns))
     Y = spzeros(Float64, length(ns), length(ns))
-
     for (i,t) in enumerate(ts)
-        ns_i = [npairs_fr[i]..., npairs_to[i]..., i]
+        ns_i = [ns_fr[i], ns_to[i], i]
         inds = [n_to_idx[n] for n in ns_i]
-        Y[inds[1:2],inds[3]] .= [1, -1/t]
-        Y[inds[3],inds[1:2]] .= [1, -1/t]
+        @show inds, ns_i
+        Y[inds[1:2],inds[3]] .= [1/t, -1]
+        Y[inds[3],inds[1:2]] .= [1/t, -1]
         for k in 1:3
             Y[k,k] += ppm*1E-6
         end
@@ -730,46 +732,22 @@ function _compose_yprim_banked_ideal_transformers_Ygyg(ts::Vector{Float64}, npai
 end
 
 
-# function _compose_yprim_banked_ideal_transformers_Yd(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
-#     y_prim_ind = Dict()
-#     nph = length(ts)
-    
-#     ns_fr = unique([[a for (a,b) in npairs_fr]..., [b for (a,b) in npairs_fr]...])
-#     ns_to = unique([[a for (a,b) in npairs_to]..., [b for (a,b) in npairs_to]...])
-
-#     ns = [unique([ns_fr..., ns_to...])..., 1:nph...]
-#     n_to_idx = Dict(n=>idx for (idx,n) in enumerate(ns))
-#     Y = spzeros(Float64, length(ns), length(ns))
-
-#     for (i,t) in enumerate(ts)
-#         ns_i = [npairs_fr[i]..., npairs_to[i]..., i]
-#         inds = [n_to_idx[n] for n in ns_i]
-#         Y[inds[1:4],inds[5]] .= [1/t, -1/t, -1, 1]
-#         Y[inds[5],inds[1:4]] .= [1/t, -1/t, -1, 1]
-#         for k in 1:5
-#             Y[k,k] += ppm*1E-6
-#         end
-#     end
-
-#     return ns[1:end-nph], nph, Y
-# end
-
-function _compose_yprim_banked_ideal_transformers_Ygd(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
+function _compose_yprim_banked_ideal_transformers_Dyg(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
     y_prim_ind = Dict()
     nph = length(ts)
     
     ns_fr = unique([[a for (a,b) in npairs_fr]..., [b for (a,b) in npairs_fr]...])
-    ns_to = unique([[a for (a,b) in npairs_to]..., [b for (a,b) in npairs_to]...])
+    ns_to = unique([[a for (a,b) in npairs_to]...])
 
     ns = [unique([ns_fr..., ns_to...])..., 1:nph...]
     n_to_idx = Dict(n=>idx for (idx,n) in enumerate(ns))
     Y = spzeros(Float64, length(ns), length(ns))
-
     for (i,t) in enumerate(ts)
-        ns_i = [npairs_fr[i]..., npairs_to[i]..., i]
+        ns_i = [npairs_fr[i]..., ns_to[i], i]
         inds = [n_to_idx[n] for n in ns_i]
-        Y[inds[1:3],inds[4]] .= [1/t, -1, 1]
-        Y[inds[4],inds[1:3]] .= [1/t, -1, 1]
+        @show ns_i, inds
+        Y[inds[1:3],inds[4]] .= [1/t, -1/t, -1]
+        Y[inds[4],inds[1:3]] .= [1/t, -1/t, -1]
         for k in 1:4
             Y[k,k] += ppm*1E-6
         end

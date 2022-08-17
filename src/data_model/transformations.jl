@@ -1773,9 +1773,15 @@ function calc_start_voltage(
                 end
                 # backward propagation
                 if all((!).(ismissing.(v_to))) && any(ismissing.(v_fr))
+                    @show v_to
+                    v_to = [v_to..., 0]
+                    @show v_to
                     v_to_p = v_to[1:end-1]; v_to_n = v_to[end]
                     M = _get_delta_transformation_matrix(length(v_fr))
                     Mp = [M[1:end-1,:]; fill(1.0, 1, length(v_fr))]
+                    @show M, Mp
+                    @show v_to, v_fr, tr
+                    @show v_to_p, v_to_n, scale
                     v_to_pn_scaled = (v_to_p.-v_to_n).*scale
                     v_fr = inv(Mp)*[v_to_pn_scaled[1:end-1]..., 0.0]
                     for (i,t) in enumerate(f_conns)
