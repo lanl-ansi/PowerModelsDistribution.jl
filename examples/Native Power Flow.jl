@@ -216,9 +216,7 @@ end
 
 
 
-## 3 wire
-
-### get these files from  https://github.com/sanderclaeys/DistributionTestCases.jl
+## 3 wire   ---  get these files from  https://github.com/sanderclaeys/DistributionTestCases.jl
 # case_path = "./examples/IEEE testcases Sander/ieee13_pmd.dss"
 # case_path = "./examples/IEEE testcases Sander/ieee34_pmd.dss"
 case_path = "./examples/IEEE testcases Sander/ieee123_pmd.dss"
@@ -236,20 +234,14 @@ res = PowerModelsDistribution.compute_pf(data_math; explicit_neutral=false)
 
 
 ## 4 wire
-
 case_path = "test/data/en_validation_case_data/test_trans_dy.dss"
-
 data_eng = parse_file(case_path, transformations=[transform_loops!, remove_all_bounds!])
 vsource_correction_to_4w!(data_eng)
-
 data_math = transform_data_model(data_eng;kron_reduce=false, phase_project=false)
-
 res = PowerModelsDistribution.compute_pf(data_math; explicit_neutral=true)
 
 
 ## adapt the script by comparing a 4wire and 3wire testcase -> add_start_voltage!(dm, coordinates=:rectangular, epsilon=0) ???
-
-
 case_path = "./test/data/opendss/ut_trans_2w_dy_lag.dss"
 data_eng = parse_file(case_path, transformations=[transform_loops!])
 vsource_correction_to_4w!(data_eng)
@@ -257,9 +249,7 @@ data_math = transform_data_model(data_eng;kron_reduce=false)
 res = PowerModelsDistribution.compute_pf(data_math; explicit_neutral=true)
 
 
-
-
-##
+## 3wire and 4wire ENWL testcases
 case_path_4w = "./examples/ENWL testcases/four-wire with explicit_neutral"
 cd(case_path_4w)
 data_eng = parse_file("Master.dss", transformations=[transform_loops!])
@@ -278,8 +268,55 @@ res = PowerModelsDistribution.compute_pf(data_math; explicit_neutral=false)
 
 
 ##
+# run the unit tests with KLU, and with original factorize
 # accessing OpenDSSDirect for results consistency
 # validating the results are consistent with OpenDSS
 # double check what is actually happeind with the aux current and voltage variables in ideal transformers
 # fixing the unit tests
 # double checking KLU settings (default or not?) with respect to OpenDSS settings
+
+
+## solution builder - > make sure load currents are in dict (phase->cr, ci) format
+
+##
+data_dir = "test/data/en_validation_case_data"
+cases = [x[1:end-4] for x in readdir(data_dir) if endswith(x, ".dss")]
+
+case = "test_load_1ph_delta_cp"
+case_path = "$data_dir/$case.dss"
+
+data_eng = parse_file(case_path, transformations=[transform_loops!])
+vsource_correction_to_4w!(data_eng)
+
+data_math = transform_data_model(data_eng;kron_reduce=false)
+
+res = compute_pf(data_math; explicit_neutral=true)
+
+##
+
+vm = [v for (i,v) in sort(res["solution"]["bus"]["1"]["vm"])]  # load bus
+va = [v for (i,v) in sort(res["solution"]["bus"]["1"]["va"])]
+v = vm .* exp.(va*im)
+
+# c2r = res["solution"]["load"]["2"]["cdr"]
+# c2i = res["solution"]["load"]["2"]["cdi"]
+# c2 = c2r .+ im*c2i
+# S2 = (v[2] - v[3]) * c2[1]'
+
+c1r = res["solution"]["load"]["1"]["cdr"]
+c1i = res["solution"]["load"]["1"]["cdi"]
+c1 = c1r .+ im*c1i
+S1 = (v[1] - v[4]) * c1[1]'
+
+
+##
+vm = [v for (i,v) in sort(res["solution"]["bus"]["3"]["vm"])]  # source bus
+va = [v for (i,v) in sort(res["solution"]["bus"]["3"]["va"])]
+v = vm .* exp.(va*im)
+
+cr_branch = res["solution"]["branch"]["2"]["cr"][1:4]
+ci_branch = res["solution"]["branch"]["2"]["ci"][1:4]
+c_banch = cr_branch .+ im*ci_branch
+
+using LinearAlgebra
+Ssource = diag(v * c_banch')
