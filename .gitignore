@@ -10,5 +10,5 @@ Manifest.toml
 
 .ipynb_checkpoints/
 
-examples/IEEE testcases Sander
-examples/ENWL testcases
+examples/native_pf_testcases
+examples/*.toml
