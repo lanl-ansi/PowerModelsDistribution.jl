@@ -229,22 +229,20 @@ mutable struct PowerFlowData
     fixed_nodes::Vector
     Uf::Vector
     Yf::Matrix
-    Yv::SparseArrays.SparseMatrixCSC
+    Yv::Any
 end
 
+# Yv::SparseArrays.SparseMatrixCSC
 
 """
     PowerFlowData(
       data_math::Dict,
-      v_start::Dict,
-      explicit_neutral::Bool
+      v_start::Dict
     )
 
 Constructor for PowerFlowData struct that requires mathematical model and v_start.
 
 v_start assigns the initialisation voltages to appropriate bus terminals.
-
-explicit_neutral indicates that the neutral conductor is explicitly modelled.
 """
 function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
     @assert ismath(data_math) "The model is not a mathematical model "
@@ -316,7 +314,6 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
     Uf = fill(NaN+im*NaN, length(fixed_nodes))
 
     for (i,(b,t)) in enumerate(fixed_nodes)
-        @show b
         vm_t = Dict(data_math["bus"]["$b"]["terminals"].=>data_math["bus"]["$b"]["vm"])
         va_t = Dict(data_math["bus"]["$b"]["terminals"].=>data_math["bus"]["$b"]["va"])
         Uf[i] = vm_t[t]*exp(im*va_t[t])
@@ -330,7 +327,7 @@ end
     _get_v(
       pfd::struct,
       Vp::Vector,
-      n::Union{Tuple, Int64}
+      n::Vector
     )
 
 Calculates the voltage from PowerFlowData struct.
@@ -350,7 +347,6 @@ end
     compute_pf(
       data_math::Dict,
       v_start::Dict,
-      explicit_neutral::Bool
       max_iter::Int,
       stat_tol::Float,
       verbose::Bool
@@ -398,13 +394,8 @@ function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:An
 
     for (nw, dm) in nw_dm
         if ismissing(v_start)
-            # if epsilon is not zero, voltage initialisation is not correct which then leads to unnecessary iterations
-            # if explicit_neutral
-                add_start_voltage!(dm, coordinates=:rectangular, epsilon=0, explicit_neutral=explicit_neutral)
-            # else
-            #     add_start_voltage_3w!(dm, coordinates=:rectangular, epsilon=0)
-            # end
-            
+            add_start_voltage!(dm, coordinates=:rectangular, epsilon=0, explicit_neutral=explicit_neutral)
+
             v_start = _bts_to_start_voltage(dm)
         end
 
@@ -472,11 +463,14 @@ Returns a solution data structure in PowerModelsDistribution Dict format.
 function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
 
     Nv = length(pfd.indexed_nodes)-length(pfd.fixed_nodes)
+
+    Yv_LU = LinearAlgebra.factorize(pfd.Yv)
+    Uv0 = Yv_LU\(-pfd.Yf*pfd.Uf)
     
-    prob = LinearSolve.LinearProblem(pfd.Yv, -pfd.Yf*pfd.Uf)
-    linsolve = LinearSolve.init(prob, LinearSolve.KLUFactorization(;reuse_symbolic=true))
-    sol1 = LinearSolve.solve(linsolve)
-    Uv0 = sol1.u
+    # prob = LinearSolve.LinearProblem(pfd.Yv, -pfd.Yf*pfd.Uf)
+    # linsolve = LinearSolve.init(prob, LinearSolve.KLUFactorization(;reuse_symbolic=true))
+    # sol1 = LinearSolve.solve(linsolve)
+    # Uv0 = sol1.u
 
     Uv = Uv0
 
@@ -494,9 +488,11 @@ function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E
             end
         end
 
-        linsolve = LinearSolve.set_b(sol1.cache, Iv.-pfd.Yf*pfd.Uf)
-        sol2 = LinearSolve.solve(linsolve, LinearSolve.KLUFactorization(;reuse_symbolic=true))
-        Uv_next = sol2.u
+        Uv_next = Yv_LU\(Iv.-pfd.Yf*pfd.Uf)
+
+        # linsolve = LinearSolve.set_b(sol1.cache, Iv.-pfd.Yf*pfd.Uf)
+        # sol2 = LinearSolve.solve(linsolve, LinearSolve.KLUFactorization(;reuse_symbolic=true))
+        # Uv_next = sol2.u
 
         change = maximum(abs.(Uv .- Uv_next))
         if change <= stat_tol
@@ -600,8 +596,7 @@ end
 """
     _cpf_branch_interface(
       branch::Dict,
-      v_start::Dict,
-      explicit_neutral::Bool
+      v_start::Dict
     )
 
 Branch component interface outputs branch primitive Y matrix.
@@ -622,8 +617,7 @@ end
 """
     _cpf_shunt_interface(
       shunt::Dict,
-      v_start::Dict,
-      explicit_neutral::Bool
+      v_start::Dict
     )
 
 Shunt component interface outputs shunt primitive Y matrix.
@@ -641,8 +635,7 @@ end
 """
     _cpf_transformer_interface(
       tr::Dict,
-      v_start::Dict,
-      explicit_neutral::Bool
+      v_start::Dict
     )
 
 Transformer component interface outputs transformer primitive Y matrix.
@@ -659,13 +652,7 @@ function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,
         npairs_fr = [(f_ns[i], f_ns[i]) for i in 1:length(f_ns)]
         npairs_to = [(t_ns[i], t_ns[i]) for i in 1:length(t_ns)]
         bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Ygyg(ts, npairs_fr, npairs_to)
-    elseif tr["configuration"]==DELTA && explicit_neutral
-        @assert length(f_ns)==3
-        error("This configuration should not happen")
-        # npairs_fr = [(f_ns[1], f_ns[2]), (f_ns[2], f_ns[3]), (f_ns[3], f_ns[1])]
-        # npairs_to = [(t_ns[i], t_ns[end]) for i in 1:length(t_ns)-1]
-        # bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Yy(ts, npairs_fr, npairs_to)
-    elseif tr["configuration"]==DELTA && !explicit_neutral
+    elseif tr["configuration"]==DELTA
         @assert length(f_ns)==3
         npairs_fr = [(f_ns[1], f_ns[2]), (f_ns[2], f_ns[3]), (f_ns[3], f_ns[1])]
         npairs_to = [(t_ns[i], t_ns[i]) for i in 1:length(t_ns)]
@@ -681,14 +668,14 @@ end
 
 
 """
-    _compose_yprim_banked_ideal_transformers_Yy(
+    _compose_yprim_banked_ideal_transformers(
       ts::Vector,
       npairs_fr::Tuple,
       npairs_to::Tuple,
       ppm::Float
     )
 
-Modifies ideal wye-wye transformers to avoid singularity error, through the ppm value, inspired by OpenDSS.
+Modifies ideal transformers to avoid singularity error.
 """
 function _compose_yprim_banked_ideal_transformers_Yy(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
     y_prim_ind = Dict()
@@ -703,7 +690,6 @@ function _compose_yprim_banked_ideal_transformers_Yy(ts::Vector{Float64}, npairs
     for (i,t) in enumerate(ts)
         ns_i = [npairs_fr[i]..., npairs_to[i]..., i]
         inds = [n_to_idx[n] for n in ns_i]
-        @show inds, ns_i
         Y[inds[1:4],inds[5]] .= [1/t, -1/t, -1, 1]
         Y[inds[5],inds[1:4]] .= [1/t, -1/t, -1, 1]
         for k in 1:5
@@ -715,16 +701,6 @@ function _compose_yprim_banked_ideal_transformers_Yy(ts::Vector{Float64}, npairs
 end
 
 
-"""
-_compose_yprim_banked_ideal_transformers_Ygyg(
-      ts::Vector,
-      npairs_fr::Tuple,
-      npairs_to::Tuple,
-      ppm::Float
-    )
-
-Modifies ideal wye_grounded-wye_grounded transformers to avoid singularity error, through the ppm value, inspired by OpenDSS.
-"""
 function _compose_yprim_banked_ideal_transformers_Ygyg(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
     y_prim_ind = Dict()
     nph = length(ts)
@@ -738,7 +714,6 @@ function _compose_yprim_banked_ideal_transformers_Ygyg(ts::Vector{Float64}, npai
     for (i,t) in enumerate(ts)
         ns_i = [ns_fr[i], ns_to[i], i]
         inds = [n_to_idx[n] for n in ns_i]
-        @show inds, ns_i
         Y[inds[1:2],inds[3]] .= [1/t, -1]
         Y[inds[3],inds[1:2]] .= [1/t, -1]
         for k in 1:3
@@ -750,16 +725,6 @@ function _compose_yprim_banked_ideal_transformers_Ygyg(ts::Vector{Float64}, npai
 end
 
 
-"""
-_compose_yprim_banked_ideal_transformers_Dyg(
-      ts::Vector,
-      npairs_fr::Tuple,
-      npairs_to::Tuple,
-      ppm::Float
-    )
-
-Modifies ideal delta-wye_grounded transformers to avoid singularity error, through the ppm value, inspired by OpenDSS.
-"""
 function _compose_yprim_banked_ideal_transformers_Dyg(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
     y_prim_ind = Dict()
     nph = length(ts)
@@ -773,7 +738,6 @@ function _compose_yprim_banked_ideal_transformers_Dyg(ts::Vector{Float64}, npair
     for (i,t) in enumerate(ts)
         ns_i = [npairs_fr[i]..., ns_to[i], i]
         inds = [n_to_idx[n] for n in ns_i]
-        @show ns_i, inds
         Y[inds[1:3],inds[4]] .= [1/t, -1/t, -1]
         Y[inds[4],inds[1:3]] .= [1/t, -1/t, -1]
         for k in 1:4
@@ -788,8 +752,7 @@ end
 """
     _cpf_load_interface(
       load::Dict,
-      v_start::Dict,
-      explicit_neutral::Bool
+      v_start::Dict
     )
 
 Load component interface outputs load primitive Y matrix.
@@ -964,8 +927,7 @@ end
 """
     _cpf_generator_interface(
       gen::Dict,
-      v_start::Dict,
-      explicit_neutral::Bool
+      v_start::Dict
     )
 
 Generator component interface outputs generator primitive Y matrix.
@@ -1044,9 +1006,7 @@ end
 """
     _cpf_switch_interface(
       switch::Dict,
-      v_start::Dict,
-      explicit_neutral::Bool,
-      small_impedance::Float
+      v_start::Dict
     )
 
 Branch component interface outputs branch primitive Y matrix.
