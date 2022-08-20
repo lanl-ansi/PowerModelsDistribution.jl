@@ -99,7 +99,6 @@ v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose
 
 
 ##
-# run the unit tests with KLU, and with original factorize
 # accessing OpenDSSDirect for results consistency
 # validating the results are consistent with OpenDSS
 # double check what is actually happeing with the aux current and voltage variables in ideal transformers
@@ -108,46 +107,3 @@ v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose
 
 
 ## solution builder - > make sure load currents are in dict (phase->cr, ci) format
-
-##
-# data_dir = "test/data/en_validation_case_data"
-# cases = [x[1:end-4] for x in readdir(data_dir) if endswith(x, ".dss")]
-
-# case = "test_load_1ph_delta_cp"
-# case_path = "$data_dir/$case.dss"
-
-# data_eng = parse_file(case_path, transformations=[transform_loops!])
-# vsource_correction_to_4w!(data_eng)
-
-# data_math = transform_data_model(data_eng;kron_reduce=false)
-
-# res = compute_pf(data_math; explicit_neutral=true)
-
-# ##
-
-# vm = [v for (i,v) in sort(res["solution"]["bus"]["1"]["vm"])]  # load bus
-# va = [v for (i,v) in sort(res["solution"]["bus"]["1"]["va"])]
-# v = vm .* exp.(va*im)
-
-# # c2r = res["solution"]["load"]["2"]["cdr"]
-# # c2i = res["solution"]["load"]["2"]["cdi"]
-# # c2 = c2r .+ im*c2i
-# # S2 = (v[2] - v[3]) * c2[1]'
-
-# c1r = res["solution"]["load"]["1"]["cdr"]
-# c1i = res["solution"]["load"]["1"]["cdi"]
-# c1 = c1r .+ im*c1i
-# S1 = (v[1] - v[4]) * c1[1]'
-
-
-# ##
-# vm = [v for (i,v) in sort(res["solution"]["bus"]["3"]["vm"])]  # source bus
-# va = [v for (i,v) in sort(res["solution"]["bus"]["3"]["va"])]
-# v = vm .* exp.(va*im)
-
-# cr_branch = res["solution"]["branch"]["2"]["cr"][1:4]
-# ci_branch = res["solution"]["branch"]["2"]["ci"][1:4]
-# c_banch = cr_branch .+ im*ci_branch
-
-# using LinearAlgebra
-# Ssource = diag(v * c_banch')
