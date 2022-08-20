@@ -229,10 +229,9 @@ mutable struct PowerFlowData
     fixed_nodes::Vector
     Uf::Vector
     Yf::Matrix
-    Yv::Any
+    Yv::SparseArrays.SparseMatrixCSC
 end
 
-# Yv::SparseArrays.SparseMatrixCSC
 
 """
     PowerFlowData(
@@ -243,6 +242,8 @@ end
 Constructor for PowerFlowData struct that requires mathematical model and v_start.
 
 v_start assigns the initialisation voltages to appropriate bus terminals.
+
+explicit_neutral indicates that the neutral conductor is explicitly modelled.
 """
 function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
     @assert ismath(data_math) "The model is not a mathematical model "
@@ -327,7 +328,7 @@ end
     _get_v(
       pfd::struct,
       Vp::Vector,
-      n::Vector
+      n::Union{Tuple, Int64}
     )
 
 Calculates the voltage from PowerFlowData struct.
@@ -347,6 +348,7 @@ end
     compute_pf(
       data_math::Dict,
       v_start::Dict,
+      explicit_neutral::Bool
       max_iter::Int,
       stat_tol::Float,
       verbose::Bool
@@ -596,7 +598,8 @@ end
 """
     _cpf_branch_interface(
       branch::Dict,
-      v_start::Dict
+      v_start::Dict,
+      explicit_neutral::Bool
     )
 
 Branch component interface outputs branch primitive Y matrix.
@@ -617,7 +620,8 @@ end
 """
     _cpf_shunt_interface(
       shunt::Dict,
-      v_start::Dict
+      v_start::Dict,
+      explicit_neutral::Bool
     )
 
 Shunt component interface outputs shunt primitive Y matrix.
@@ -635,7 +639,8 @@ end
 """
     _cpf_transformer_interface(
       tr::Dict,
-      v_start::Dict
+      v_start::Dict,
+      explicit_neutral::Bool
     )
 
 Transformer component interface outputs transformer primitive Y matrix.
@@ -668,14 +673,14 @@ end
 
 
 """
-    _compose_yprim_banked_ideal_transformers(
+    _compose_yprim_banked_ideal_transformers_Yy(
       ts::Vector,
       npairs_fr::Tuple,
       npairs_to::Tuple,
       ppm::Float
     )
 
-Modifies ideal transformers to avoid singularity error.
+Modifies ideal wye-wye transformers to avoid singularity error, through the ppm value, inspired by OpenDSS.
 """
 function _compose_yprim_banked_ideal_transformers_Yy(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
     y_prim_ind = Dict()
@@ -701,6 +706,16 @@ function _compose_yprim_banked_ideal_transformers_Yy(ts::Vector{Float64}, npairs
 end
 
 
+"""
+_compose_yprim_banked_ideal_transformers_Ygyg(
+      ts::Vector,
+      npairs_fr::Tuple,
+      npairs_to::Tuple,
+      ppm::Float
+    )
+
+Modifies ideal wye_grounded-wye_grounded transformers to avoid singularity error, through the ppm value, inspired by OpenDSS.
+"""
 function _compose_yprim_banked_ideal_transformers_Ygyg(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
     y_prim_ind = Dict()
     nph = length(ts)
@@ -725,6 +740,16 @@ function _compose_yprim_banked_ideal_transformers_Ygyg(ts::Vector{Float64}, npai
 end
 
 
+"""
+_compose_yprim_banked_ideal_transformers_Dyg(
+      ts::Vector,
+      npairs_fr::Tuple,
+      npairs_to::Tuple,
+      ppm::Float
+    )
+
+Modifies ideal delta-wye_grounded transformers to avoid singularity error, through the ppm value, inspired by OpenDSS.
+"""
 function _compose_yprim_banked_ideal_transformers_Dyg(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
     y_prim_ind = Dict()
     nph = length(ts)
@@ -752,7 +777,8 @@ end
 """
     _cpf_load_interface(
       load::Dict,
-      v_start::Dict
+      v_start::Dict,
+      explicit_neutral::Bool
     )
 
 Load component interface outputs load primitive Y matrix.
@@ -927,7 +953,8 @@ end
 """
     _cpf_generator_interface(
       gen::Dict,
-      v_start::Dict
+      v_start::Dict,
+      explicit_neutral::Bool
     )
 
 Generator component interface outputs generator primitive Y matrix.
@@ -1006,7 +1033,9 @@ end
 """
     _cpf_switch_interface(
       switch::Dict,
-      v_start::Dict
+      v_start::Dict,
+      explicit_neutral::Bool,
+      small_impedance::Float
     )
 
 Branch component interface outputs branch primitive Y matrix.

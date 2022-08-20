@@ -1,9 +1,6 @@
 using Pkg
 using PowerModelsDistribution
 
-Pkg.activate("./examples")
-
-using PowerModelsDistribution
 const PMD = PowerModelsDistribution
 
 using JSON
@@ -101,18 +98,6 @@ function vsource_correction_to_3w!(data_eng)
 end
 
 
-function multinetwork_data_math_correction!(data_math::Dict{String, Any})
-    @assert data_math["multinetwork"]
-    @assert data_math["data_model"]==MATHEMATICAL
-    for (nw, dm) in data_math["nw"]
-        dm["data_model"] = MATHEMATICAL
-        dm["map"] = data_math["map"]
-        dm["bus_lookup"] = data_math["bus_lookup"][nw]
-    end
-    return nothing
-end
-
-
 function sourcebus_voltage_vector_correction!(data_math::Dict{String, Any}; explicit_neutral=true)
     if haskey(data_math, "multinetwork")
         for (n,nw) in data_math["nw"]
@@ -174,15 +159,12 @@ function update_math_model_3wire!(math)
         end
 
         if explicit_neutral
-
             if haskey(bus, "terminals")
                 bus["terminals"] = bus["terminals"][1:end-1]
             end
-
             if haskey(bus, "grounded")
                 bus["grounded"] = bus["grounded"][1:end-1]
             end
-            
             if haskey(bus, "vmax")
                 bus["vmax"] = bus["vmax"][1:end-1]
             end
@@ -250,33 +232,24 @@ function update_math_model_3wire!(math)
         end
     end
 
-
     for (l,load) in math["load"]
         if load["configuration"] == WYE && neutral_idx ∈ load["connections"]
             load["connections"] = load["connections"][1:end-1]
         end
     end
 
-    
     return nothing
-end
-
-
-function find_source_bus_id(math)
-    for (b, bus) in math["bus"]
-        if bus["name"] == "sourcebus"
-            return parse(Int, b)
-        end
-    end
-    return error()
 end
 
 
 
 ## 3 wire   ---  get these files from  https://github.com/sanderclaeys/DistributionTestCases.jl
+data_dir = "examples/native_pf_testcases"
+solution_dir = "examples/native_pf_testcases/solutions"
+
 case = "ieee13_pmd"
-case = "ieee34_pmd"
-case = "ieee123_pmd"
+# case = "ieee34_pmd"
+# case = "ieee123_pmd"
 
 data_eng = parse_file("$data_dir/$case.dss", transformations=[transform_loops!])
 data_eng["is_kron_reduced"] = true
@@ -295,10 +268,7 @@ v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose
 
 
 
-## 3wire and 4wire ENWL testcases
-data_dir = "examples/native_pf_testcases"
-solution_dir = "examples/native_pf_testcases/solutions"
-
+## 3wire and 4wire
 case = "test_trans_dy"
 data_eng = parse_file("$data_dir/$case.dss", transformations=[transform_loops!])
 vsource_correction_to_4w!(data_eng)
@@ -311,7 +281,7 @@ end
 sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
 v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose=false, compare_math=true)
 
-
+##
 case = "test_trans_yy"
 data_eng = parse_file("$data_dir/$case.dss", transformations=[transform_loops!])
 vsource_correction_to_4w!(data_eng)
@@ -324,7 +294,7 @@ end
 sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
 v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose=false, compare_math=true)
 
-
+##
 case = "test_trans_dy_3w"
 data_eng = parse_file("$data_dir/$case.dss", transformations=[transform_loops!])
 data_eng["is_kron_reduced"] = true
@@ -341,7 +311,7 @@ end
 sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
 v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose=false, compare_math=true)
 
-
+##
 case = "test_trans_yy_3w"
 data_eng = parse_file("$data_dir/$case.dss", transformations=[transform_loops!])
 data_eng["is_kron_reduced"] = true
