@@ -150,7 +150,7 @@ end
 
 
 function update_math_model_3wire!(math)
-    data_math["conductor_ids"] = data_math["conductor_ids"][1:3]
+    math["conductor_ids"] = math["conductor_ids"][1:3]
 
     for (i,bus) in math["bus"]
         explicit_neutral = false

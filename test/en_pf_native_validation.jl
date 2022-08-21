@@ -1,5 +1,6 @@
 @info "running explicit neutral power flow tests with native julia power flow solver"
 
+
 function conductor_correction!(data_eng)
     nw = data_eng
     if neutral_idx ∈ nw["conductor_ids"]
@@ -153,7 +154,8 @@ end
 
 
 function update_math_model_3wire!(math)
-    data_math["conductor_ids"] = data_math["conductor_ids"][1:3]
+    
+    math["conductor_ids"] = math["conductor_ids"][1:3]
 
     for (i,bus) in math["bus"]
         explicit_neutral = false
@@ -337,12 +339,12 @@ filter!(e->e≠"test_trans_yy_3w", cases)
 end
 
 
-cases = ["test_trans_dy_3w", "test_trans_dy_3w"]
+cases = ["test_trans_dy_3w", "test_trans_yy_3w"]
 
 @testset "en pf native opendss validation three wire" begin
 
     for (case_idx,case) in enumerate(cases)
-
+        @show case
         @testset "case $case" begin
             case_path = "$data_dir/$case.dss"
 
@@ -350,12 +352,12 @@ cases = ["test_trans_dy_3w", "test_trans_dy_3w"]
             data_eng["is_kron_reduced"] = true
             data_eng["settings"]["sbase_default"] = 1
             vsource_correction_to_3w!(data_eng)
-
+            
             data_math = transform_data_model(data_eng;kron_reduce=false, phase_project=false)
             sourcebus_voltage_vector_correction!(data_math, explicit_neutral=false)
             update_math_model_3wire!(data_math)
 
-            res = compute_pf(data_math; explicit_neutral=true)
+            res = compute_pf(data_math; explicit_neutral=false)
 
             # obtain solution from dss
             sol_dss = open("$solution_dir/$case.json", "r") do f
