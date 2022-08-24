@@ -1,0 +1,5 @@
+Clear
+new	circuit.test	bus1=SOURCEBUS	pu=1.0
+New	Line.Line_1	bus1=SOURCEBUS	bus2=BUS_1
+New	Load.Load_1	phases=3	conn=Wye	bus1=BUS_1	kw=0.1	kvar=0.03	model=1
+solve
