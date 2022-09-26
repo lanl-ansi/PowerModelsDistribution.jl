@@ -35,7 +35,13 @@ This formulation has originally been developed by Sankur et al.
 
 - Sankur, M. D., Dobbe, R., Stewart, E., Callaway, D. S., & Arnold, D. B. (2016). A linearized power flow model for optimization in unbalanced distribution systems. [arXiv:1606.04492v2](https://arxiv.org/abs/1606.04492v2)
 
-This formulation is here cast as only considering the diagonal elements defined in `LPUBFFullModel`, which furthermore leads to the imaginary part of the lifted node voltage variable W being redundant and substituted out.
+and is here cast as only considering the diagonal elements of the linear formulation by Gan and Low:
+
+- Gan, L., & Low, S. H. (2014). Convex relaxations and linear approximation for optimal power flow in multiphase radial networks. In PSSC (pp. 1–9). Wroclaw, Poland. [doi:10.1109/PSCC.2014.7038399](https://doi.org/10.1109/PSCC.2014.7038399)
+
+This furthermore leads to the imaginary part of the lifted node voltage variable W in Gan and Low being redundant, so it is substituted out in `LPUBFDiagModel`.
+
+The full formulation from Gan and Low was supported as `LPUBFFullModel` in PowerModelsDistribution up to version 0.7. 
 
 ## [`FBSUBFPowerModel`](@ref FBSUBFPowerModel), [`FOTPUPowerModel`](@ref FOTPUPowerModel), [`FOTRUPowerModel`](@ref FOTRUPowerModel)
 
@@ -125,3 +131,69 @@ JuMP supports vectorized syntax, but not for nonlinear constraints. Therefore, c
 
 - Scalar: ACPUPowerModel, ACRUPowerModel, IVRUPowerModel, DCPUPowerModel, NFAPowerModel, FBSUBFPowerModel, FOTPUPowerModel, FOTRUPowerModel
 - Matrix: SDPUBFPowerModel, SDPUBFKCLMXPowerModel, SOCNLPUBFPowerModel, SOCConicUBFPowerModel, LPUBFDiagPowerModel
+
+# Explicit Neutral Models
+
+Explicit neutral (EN) models represent the neutral currents explicitly; unlike all the previous models, which implicitly assume they are grounded immediately where they originate.
+
+There are two broad classes of formulations: IVR ones an ACR one.
+
+## IVR
+
+`AbstractExplicitNeutralIVRModel`
+
+This abstract type groups all EN IVR formulations, and is a subtype of `AbstractUnbalancedIVRModel`.
+
+`AbstractNLExplicitNeutralIVRModel`
+
+This abstract type groups non-linear EN IVR formulations, and is a subtype of `AbstractExplicitNeutralIVRModel`.
+
+`IVRENPowerModel`
+
+This concrete type is a non-linear EN IVR formulation.
+
+`IVRReducedENPowerModel`
+
+This concrete type is a non-linear EN IVR formulation, where the branches only have series current variables (instead of also total current variables).
+
+`AbstractQuadraticExplicitNeutralIVRModel`
+
+This abstract type groups quadratic EN IVR formulations, and is a subtype of `AbstractExplicitNeutralIVRModel`.
+
+`IVRQuadraticENPowerModel`
+
+This concrete type is a quadratic EN IVR formulation.
+
+`IVRReducedQuadraticENPowerModel`
+
+This concrete type is a quadratic EN IVR formulation, where the branches only have series current variables (instead of also total current variables).
+
+## ACR
+
+`AbstractExplicitNeutralACRModel`
+
+This abstract type is a subtype of `AbstractUnbalancedACRModel`, analogous to the IVR structure.
+
+`ACRENPowerModel`
+
+This is the only concrete ACR type amongst the EN formulations.
+
+## Overview of hierarchy
+
+```
+EN-IVR (AbstractExplicitNeutralIVRModel)
+|
+|-- NL (AbstractNLExplicitNeutralIVRModel)
+|   |
+|   |-- IVRENPowerModel
+|
+|-- Quadratic (AbstractQuadraticExplicitNeutralIVRModel)
+    |
+    |-- IVRENPowerModel
+    |
+    |-- IVRReducedENPowerModel
+
+EN-ACR (AbstractExplicitNeutralIVRModel)
+|
+|-- ACRENPowerModel
+```

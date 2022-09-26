@@ -1,32 +1,42 @@
 module PowerModelsDistribution
+    # File path utilities
+    import Glob
+    import FilePaths
 
+    # File parsing utilities
     import JSON
     import CSV
 
+    # Optimization Modeling Utilities
     import JuMP
-    import MathOptInterface
+    import PolyhedralRelaxations
 
     import InfrastructureModels
 
+    # Logging Utilities
     import Logging
     import LoggingExtras
 
+    # Stdlib Imports
     import Dates
     import LinearAlgebra
+    import Statistics
 
     import LinearAlgebra: diagm
     import Statistics: mean, std
 
     const _IM = InfrastructureModels
 
+    # Explicit imports for later export
     import InfrastructureModels: optimize_model!, @im_fields, nw_id_default, ismultinetwork, update_data!
 
+    # Multi Infrastructure keys
     const _pmd_global_keys = Set(["time_series", "per_unit"])
     const pmd_it_name = "pmd"
     const pmd_it_sym = Symbol(pmd_it_name)
 
+    # Setup Logging
     include("core/logging.jl")
-
     function __init__()
         global _DEFAULT_LOGGER = Logging.current_logger()
         global _LOGGER = Logging.ConsoleLogger(; meta_formatter=PowerModelsDistribution._pmd_metafmt)
@@ -46,9 +56,11 @@ module PowerModelsDistribution
 
     include("form/acp.jl")
     include("form/acr.jl")
+    include("form/en_acr.jl")
     include("form/apo.jl")
     include("form/dcp.jl")
     include("form/ivr.jl")
+    include("form/en_ivr.jl")
     include("form/bf.jl")
     include("form/bf_mx.jl")
     include("form/bf_mx_lin.jl")
@@ -58,9 +70,12 @@ module PowerModelsDistribution
     include("form/bf_mx_soc.jl")
     include("form/bf_mx_sdp.jl")
     include("form/shared.jl")
+    include("form/en_shared.jl")
     include("form/wr.jl")
+    include("form/utils.jl")
 
     include("core/constraint_template.jl")
+    include("core/constraint_template_en.jl")
     include("core/relaxation_scheme.jl")
 
     include("io/utils.jl")
@@ -87,11 +102,11 @@ module PowerModelsDistribution
     include("prob/opf.jl")
     include("prob/opf_oltc.jl")
     include("prob/opf_capc.jl")
+    include("prob/opf_oltc_capc.jl")
     include("prob/pf.jl")
     include("prob/debug.jl")
     include("prob/test.jl")
     include("prob/osw.jl")
 
     include("core/export.jl")
-
 end

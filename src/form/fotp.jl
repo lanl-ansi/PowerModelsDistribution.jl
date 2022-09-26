@@ -13,18 +13,18 @@ end
 
 
 """
-    variable_mc_bus_voltage(pm::FOTPUPowerModel; nw=nw_id_default, kwargs...)
+    variable_mc_bus_voltage(pm::FOTPUPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 
 Voltage variables are defined in polar coordinates similar to ACPUPowerModel.
 An initial operating point is specified for linearization.
 """
-function variable_mc_bus_voltage(pm::FOTPUPowerModel; nw=nw_id_default, kwargs...)
-    variable_mc_bus_voltage_angle(pm; nw=nw, kwargs...)
-    variable_mc_bus_voltage_magnitude_only(pm; nw=nw, kwargs...)
+function variable_mc_bus_voltage(pm::FOTPUPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_angle(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_bus_voltage_magnitude_only(pm; nw=nw, bounded=bounded, report=report)
 
     # initial operating point for linearization (using flat-start)
-    vm0 = var(pm, nw)[:vm0] = Dict(i => [1 1 1] for i in ids(pm, nw, :bus))
-    va0 = var(pm, nw)[:va0] = Dict(i => [0 -2*pi/3 2*pi/3] for i in ids(pm, nw, :bus))
+    var(pm, nw)[:vm0] = Dict{Int,Vector{Float64}}()  #(i => [1 1 1] for i in ids(pm, nw, :bus))
+    var(pm, nw)[:va0] = Dict{Int,Vector{Float64}}()  #(i => [0 -2*pi/3 2*pi/3] for i in ids(pm, nw, :bus))
 
     for id in ids(pm, nw, :bus)
         busref = ref(pm, nw, :bus, id)
@@ -33,20 +33,28 @@ function variable_mc_bus_voltage(pm::FOTPUPowerModel; nw=nw_id_default, kwargs..
 
         ncnd = length(terminals)
 
-        vm = haskey(busref, "vm_start") ? busref["vm_start"] : fill(0.0, ncnd)
-        vm[.!grounded] .= 1.0
+        vm_start = fill(1.0, 3)
+        for t in 1:3
+            if t in terminals
+                vmax = busref["vmax"][findfirst(isequal(t), terminals)]
+                vm_start[t] = min(vm_start[t], vmax)
 
-        # TODO how to do this more generally
-        nph = 3
-        va = haskey(busref, "va_start") ? busref["va_start"] : [c <= nph ? _wrap_to_pi(2 * pi / nph * (1-c)) : 0.0 for c in terminals]
-
-        for (idx,t) in enumerate(terminals)
-            JuMP.set_start_value(var(pm, nw, :vm, id)[t], vm[idx])
-            JuMP.set_start_value(var(pm, nw, :va, id)[t], va[idx])
-            # update initial operating point with warm-start
-            var(pm, nw, :vm0, id)[t] = vm[idx]
-            var(pm, nw, :va0, id)[t] = va[idx]
+                vmin = busref["vmin"][findfirst(isequal(t), terminals)]
+                vm_start[t] = max(vm_start[t], vmin)
+            end
         end
+
+        default_va = [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(ncnd)...][terminals]
+
+        vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
+        va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : default_va
+
+        JuMP.set_start_value.(var(pm, nw, :vm, id), vm)
+        JuMP.set_start_value.(var(pm, nw, :va, id), va)
+
+        # TODO: update initial operating point with warm-start (causes infeasbility if not flat start)
+        var(pm, nw, :vm0)[id] = fill(1.0, ncnd)  # vm
+        var(pm, nw, :va0)[id] = default_va  # va
     end
 end
 
@@ -123,11 +131,11 @@ function constraint_mc_power_balance(pm::FOTPUPowerModel, nw::Int, i::Int, termi
                 - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
                 + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
                 + sum( pd[l][t] for (l, conns) in bus_loads if t in conns)
-                + ( Gs[idx,idx]*(vm0[t]^2+2*vm0[t]*(vm[t]-vm0[t]))
-                    +sum( Gs[idx,jdx] * vm0[t]*vm0[u] * cos(va0[t]-va0[u])
-                         +Bs[idx,jdx] * vm0[t]*vm0[u] * sin(va0[t]-va0[u])
-                         +[Gs[idx,jdx]*vm0[u]*cos(va0[t]-va0[u]) Gs[idx,jdx]*vm0[t]*cos(va0[t]-va0[u]) -Gs[idx,jdx]*vm0[t]*vm0[u]*sin(va0[t]-va0[u])  Gs[idx,jdx]*vm0[t]*vm0[u]*sin(va0[t]-va0[u])]*[vm[t]-vm0[t];vm[u]-vm0[u];va[t]-va0[t];va[u]-va0[u]]
-                         +[Bs[idx,jdx]*vm0[u]*sin(va0[t]-va0[u]) Bs[idx,jdx]*vm0[t]*sin(va0[t]-va0[u])  Bs[idx,jdx]*vm0[t]*vm0[u]*cos(va0[t]-va0[u]) -Bs[idx,jdx]*vm0[t]*vm0[u]*cos(va0[t]-va0[u])]*[vm[t]-vm0[t];vm[u]-vm0[u];va[t]-va0[t];va[u]-va0[u]]
+                + ( Gs[idx,idx]*(vm0[idx]^2+2*vm0[idx]*(vm[t]-vm0[idx]))
+                    +sum( Gs[idx,jdx] * vm0[idx]*vm0[jdx] * cos(va0[idx]-va0[jdx])
+                         +Bs[idx,jdx] * vm0[idx]*vm0[jdx] * sin(va0[idx]-va0[jdx])
+                         +[Gs[idx,jdx]*vm0[jdx]*cos(va0[idx]-va0[jdx]) Gs[idx,jdx]*vm0[idx]*cos(va0[idx]-va0[jdx]) -Gs[idx,jdx]*vm0[idx]*vm0[jdx]*sin(va0[idx]-va0[jdx])  Gs[idx,jdx]*vm0[idx]*vm0[jdx]*sin(va0[idx]-va0[jdx])]*[vm[t]-vm0[idx];vm[u]-vm0[jdx];va[t]-va0[idx];va[u]-va0[jdx]]
+                         +[Bs[idx,jdx]*vm0[jdx]*sin(va0[idx]-va0[jdx]) Bs[idx,jdx]*vm0[idx]*sin(va0[idx]-va0[jdx])  Bs[idx,jdx]*vm0[idx]*vm0[jdx]*cos(va0[idx]-va0[jdx]) -Bs[idx,jdx]*vm0[idx]*vm0[jdx]*cos(va0[idx]-va0[jdx])]*[vm[t]-vm0[idx];vm[u]-vm0[jdx];va[t]-va0[idx];va[u]-va0[jdx]]
                         for (jdx,u) in ungrounded_terminals if idx != jdx)
                 )
                 ==
@@ -142,11 +150,11 @@ function constraint_mc_power_balance(pm::FOTPUPowerModel, nw::Int, i::Int, termi
                 - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
                 + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
                 + sum( qd[l][t] for (l, conns) in bus_loads if t in conns)
-                + ( -Bs[idx,idx]*(vm0[t]^2+2*vm0[t]*(vm[t]-vm0[t]))
-                    -sum( Bs[idx,jdx] * vm0[t]*vm0[u] * cos(va0[t]-va0[u])
-                         -Gs[idx,jdx] * vm0[t]*vm0[u] * sin(va0[t]-va0[u])
-                         +[Bs[idx,jdx]*vm0[u]*cos(va0[t]-va0[u])   Bs[idx,jdx]*vm0[t]*cos(va0[t]-va0[u]) -Bs[idx,jdx]*vm0[t]*vm0[u]*sin(va0[t]-va0[u]) Bs[idx,jdx]*vm0[t]*vm0[u]*sin(va0[t]-va0[u])]*[vm[t]-vm0[t];vm[u]-vm0[u];va[t]-va0[t];va[u]-va0[u]]
-                         +[-Gs[idx,jdx]*vm0[u]*sin(va0[t]-va0[u]) -Gs[idx,jdx]*vm0[t]*sin(va0[t]-va0[u]) -Gs[idx,jdx]*vm0[t]*vm0[u]*cos(va0[t]-va0[u]) Gs[idx,jdx]*vm0[t]*vm0[u]*cos(va0[t]-va0[u])]*[vm[t]-vm0[t];vm[u]-vm0[u];va[t]-va0[t];va[u]-va0[u]]
+                + ( -Bs[idx,idx]*(vm0[idx]^2+2*vm0[idx]*(vm[t]-vm0[idx]))
+                    -sum( Bs[idx,jdx] * vm0[idx]*vm0[jdx] * cos(va0[idx]-va0[jdx])
+                         -Gs[idx,jdx] * vm0[idx]*vm0[jdx] * sin(va0[idx]-va0[jdx])
+                         +[Bs[idx,jdx]*vm0[jdx]*cos(va0[idx]-va0[jdx])   Bs[idx,jdx]*vm0[idx]*cos(va0[idx]-va0[jdx]) -Bs[idx,jdx]*vm0[idx]*vm0[jdx]*sin(va0[idx]-va0[jdx]) Bs[idx,jdx]*vm0[idx]*vm0[jdx]*sin(va0[idx]-va0[jdx])]*[vm[t]-vm0[idx];vm[u]-vm0[jdx];va[t]-va0[idx];va[u]-va0[jdx]]
+                         +[-Gs[idx,jdx]*vm0[jdx]*sin(va0[idx]-va0[jdx]) -Gs[idx,jdx]*vm0[idx]*sin(va0[idx]-va0[jdx]) -Gs[idx,jdx]*vm0[idx]*vm0[jdx]*cos(va0[idx]-va0[jdx]) Gs[idx,jdx]*vm0[idx]*vm0[jdx]*cos(va0[idx]-va0[jdx])]*[vm[t]-vm0[idx];vm[u]-vm0[jdx];va[t]-va0[idx];va[u]-va0[jdx]]
                          for (jdx,u) in ungrounded_terminals if idx != jdx)
                 )
                 ==
@@ -161,7 +169,7 @@ function constraint_mc_power_balance(pm::FOTPUPowerModel, nw::Int, i::Int, termi
                 - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
                 + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
                 + sum( pd[l][t] for (l, conns) in bus_loads if t in conns)
-                + Gs[idx,idx]*(vm0[t]^2+2*vm0[t]*(vm[t]-vm0[t]))
+                + Gs[idx,idx]*(vm0[idx]^2+2*vm0[idx]*(vm[t]-vm0[idx]))
                 ==
                 0.0
             )
@@ -174,7 +182,7 @@ function constraint_mc_power_balance(pm::FOTPUPowerModel, nw::Int, i::Int, termi
                 - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
                 + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
                 + sum( qd[l][t] for (l, conns) in bus_loads if t in conns)
-                - Bs[idx,idx]*(vm0[t]^2+2*vm0[t]*(vm[t]-vm0[t]))
+                - Bs[idx,idx]*(vm0[idx]^2+2*vm0[idx]*(vm[t]-vm0[idx]))
                 ==
                 0.0
             )
@@ -205,10 +213,10 @@ function constraint_mc_ohms_yt_from(pm::FOTPUPowerModel, nw::Int, f_bus::Int, t_
     vm_to = var(pm, nw, :vm, t_bus)
     va_fr = var(pm, nw, :va, f_bus)
     va_to = var(pm, nw, :va, t_bus)
-    vm0_fr = var(pm, nw, :vm0, f_bus)
-    vm0_to = var(pm, nw, :vm0, t_bus)
-    va0_fr = var(pm, nw, :va0, f_bus)
-    va0_to = var(pm, nw, :va0, t_bus)
+    vm0_fr = [var(pm, nw, :vm0, f_bus)[findfirst(isequal(c), ref(pm, nw, :bus, f_bus, "terminals"))] for c in f_connections]
+    vm0_to = [var(pm, nw, :vm0, t_bus)[findfirst(isequal(c), ref(pm, nw, :bus, t_bus, "terminals"))] for c in t_connections]
+    va0_fr = [var(pm, nw, :va0, f_bus)[findfirst(isequal(c), ref(pm, nw, :bus, f_bus, "terminals"))] for c in f_connections]
+    va0_to = [var(pm, nw, :va0, t_bus)[findfirst(isequal(c), ref(pm, nw, :bus, t_bus, "terminals"))] for c in t_connections]
 
     for (idx, (fc,tc)) in enumerate(zip(f_connections,t_connections))
         p_s_fr = []
@@ -217,57 +225,57 @@ function constraint_mc_ohms_yt_from(pm::FOTPUPowerModel, nw::Int, f_bus::Int, t_
         q_s_fr_dg = []
         for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections))
             if idx != jdx
-                p0_s_fr = (G[idx,jdx]+G_fr[idx,jdx])*vm0_fr[fc]*vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]) + (B[idx,jdx]+B_fr[idx,jdx])*vm0_fr[fc]*vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd])
-                q0_s_fr = (B[idx,jdx]+B_fr[idx,jdx])*vm0_fr[fc]*vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]) - (G[idx,jdx]+G_fr[idx,jdx])*vm0_fr[fc]*vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd])
+                p0_s_fr = (G[idx,jdx]+G_fr[idx,jdx])*vm0_fr[idx]*vm0_fr[jdx]*cos(va0_fr[idx]-va0_fr[jdx]) + (B[idx,jdx]+B_fr[idx,jdx])*vm0_fr[idx]*vm0_fr[jdx]*sin(va0_fr[idx]-va0_fr[jdx])
+                q0_s_fr = (B[idx,jdx]+B_fr[idx,jdx])*vm0_fr[idx]*vm0_fr[jdx]*cos(va0_fr[idx]-va0_fr[jdx]) - (G[idx,jdx]+G_fr[idx,jdx])*vm0_fr[idx]*vm0_fr[jdx]*sin(va0_fr[idx]-va0_fr[jdx])
                 push!(p_s_fr, JuMP.@expression(pm.model, p0_s_fr + (G[idx,jdx]+G_fr[idx,jdx])*(
-                 (vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fc]-vm0_fr[fc])
-                +(vm0_fr[fc]*cos(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fd]-vm0_fr[fd])
-                +(-vm0_fr[fc]*vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(va_fr[fc]-va0_fr[fc])
-                +( vm0_fr[fc]*vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(va_fr[fd]-va0_fr[fd])) + (B[idx,jdx]+B_fr[idx,jdx])*(
-                 (vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fc]-vm0_fr[fc])
-                +(vm0_fr[fc]*sin(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fd]-vm0_fr[fd])
-                +( vm0_fr[fc]*vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(va_fr[fc]-va0_fr[fc])
-                +(-vm0_fr[fc]*vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(va_fr[fd]-va0_fr[fd])))
+                 (vm0_fr[jdx]*cos(va0_fr[idx]-va0_fr[jdx]))*(vm_fr[fc]-vm0_fr[idx])
+                +(vm0_fr[idx]*cos(va0_fr[idx]-va0_fr[jdx]))*(vm_fr[fd]-vm0_fr[jdx])
+                +(-vm0_fr[idx]*vm0_fr[jdx]*sin(va0_fr[idx]-va0_fr[jdx]))*(va_fr[fc]-va0_fr[idx])
+                +( vm0_fr[idx]*vm0_fr[jdx]*sin(va0_fr[idx]-va0_fr[jdx]))*(va_fr[fd]-va0_fr[jdx])) + (B[idx,jdx]+B_fr[idx,jdx])*(
+                 (vm0_fr[jdx]*sin(va0_fr[idx]-va0_fr[jdx]))*(vm_fr[fc]-vm0_fr[idx])
+                +(vm0_fr[idx]*sin(va0_fr[idx]-va0_fr[jdx]))*(vm_fr[fd]-vm0_fr[jdx])
+                +( vm0_fr[idx]*vm0_fr[jdx]*cos(va0_fr[idx]-va0_fr[jdx]))*(va_fr[fc]-va0_fr[idx])
+                +(-vm0_fr[idx]*vm0_fr[jdx]*cos(va0_fr[idx]-va0_fr[jdx]))*(va_fr[fd]-va0_fr[jdx])))
                 )
                 push!(q_s_fr, JuMP.@expression(pm.model, q0_s_fr + (B[idx,jdx]+B_fr[idx,jdx])*(
-                    (vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fc]-vm0_fr[fc])
-                   +(vm0_fr[fc]*cos(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fd]-vm0_fr[fd])
-                   +(-vm0_fr[fc]*vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(va_fr[fc]-va0_fr[fc])
-                   +( vm0_fr[fc]*vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(va_fr[fd]-va0_fr[fd])) - (G[idx,jdx]+G_fr[idx,jdx])*(
-                    (vm0_fr[fd]*sin(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fc]-vm0_fr[fc])
-                   +(vm0_fr[fc]*sin(va0_fr[fc]-va0_fr[fd]))*(vm_fr[fd]-vm0_fr[fd])
-                   +( vm0_fr[fc]*vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(va_fr[fc]-va0_fr[fc])
-                   +(-vm0_fr[fc]*vm0_fr[fd]*cos(va0_fr[fc]-va0_fr[fd]))*(va_fr[fd]-va0_fr[fd])))
+                    (vm0_fr[jdx]*cos(va0_fr[idx]-va0_fr[jdx]))*(vm_fr[fc]-vm0_fr[idx])
+                   +(vm0_fr[idx]*cos(va0_fr[idx]-va0_fr[jdx]))*(vm_fr[fd]-vm0_fr[jdx])
+                   +(-vm0_fr[idx]*vm0_fr[jdx]*sin(va0_fr[idx]-va0_fr[jdx]))*(va_fr[fc]-va0_fr[idx])
+                   +( vm0_fr[idx]*vm0_fr[jdx]*sin(va0_fr[idx]-va0_fr[jdx]))*(va_fr[fd]-va0_fr[jdx])) - (G[idx,jdx]+G_fr[idx,jdx])*(
+                    (vm0_fr[jdx]*sin(va0_fr[idx]-va0_fr[jdx]))*(vm_fr[fc]-vm0_fr[idx])
+                   +(vm0_fr[idx]*sin(va0_fr[idx]-va0_fr[jdx]))*(vm_fr[fd]-vm0_fr[jdx])
+                   +( vm0_fr[idx]*vm0_fr[jdx]*cos(va0_fr[idx]-va0_fr[jdx]))*(va_fr[fc]-va0_fr[idx])
+                   +(-vm0_fr[idx]*vm0_fr[jdx]*cos(va0_fr[idx]-va0_fr[jdx]))*(va_fr[fd]-va0_fr[jdx])))
                    )
             end
-            p0_s_fr_dg = -G[idx,jdx]*vm0_fr[fc]*vm0_to[td]*cos(va0_fr[fc]-va0_to[td])-B[idx,jdx]*vm0_fr[fc]*vm0_to[td]*sin(va0_fr[fc]-va0_to[td])
-            q0_s_fr_dg = -B[idx,jdx]*vm0_fr[fc]*vm0_to[td]*cos(va0_fr[fc]-va0_to[td])+G[idx,jdx]*vm0_fr[fc]*vm0_to[td]*sin(va0_fr[fc]-va0_to[td])
+            p0_s_fr_dg = -G[idx,jdx]*vm0_fr[idx]*vm0_to[jdx]*cos(va0_fr[idx]-va0_to[jdx])-B[idx,jdx]*vm0_fr[idx]*vm0_to[jdx]*sin(va0_fr[idx]-va0_to[jdx])
+            q0_s_fr_dg = -B[idx,jdx]*vm0_fr[idx]*vm0_to[jdx]*cos(va0_fr[idx]-va0_to[jdx])+G[idx,jdx]*vm0_fr[idx]*vm0_to[jdx]*sin(va0_fr[idx]-va0_to[jdx])
             push!(p_s_fr_dg, JuMP.@expression(pm.model, p0_s_fr_dg - G[idx,jdx]*(
-                 (vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(vm_fr[fc]-vm0_fr[fc])
-                +(vm0_fr[fc]*cos(va0_fr[fc]-va0_to[td]))*(vm_to[td]-vm0_to[td])
-                +(-vm0_fr[fc]*vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(va_fr[fc]-va0_fr[fc])
-                +( vm0_fr[fc]*vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(va_to[td]-va0_to[td])) - B[idx,jdx]*(
-                 (vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(vm_fr[fc]-vm0_fr[fc])
-                +(vm0_fr[fc]*sin(va0_fr[fc]-va0_to[td]))*(vm_to[td]-vm0_to[td])
-                +( vm0_fr[fc]*vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(va_fr[fc]-va0_fr[fc])
-                +(-vm0_fr[fc]*vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(va_to[td]-va0_to[td])))
+                 (vm0_to[jdx]*cos(va0_fr[idx]-va0_to[jdx]))*(vm_fr[fc]-vm0_fr[idx])
+                +(vm0_fr[idx]*cos(va0_fr[idx]-va0_to[jdx]))*(vm_to[td]-vm0_to[jdx])
+                +(-vm0_fr[idx]*vm0_to[jdx]*sin(va0_fr[idx]-va0_to[jdx]))*(va_fr[fc]-va0_fr[idx])
+                +( vm0_fr[idx]*vm0_to[jdx]*sin(va0_fr[idx]-va0_to[jdx]))*(va_to[td]-va0_to[jdx])) - B[idx,jdx]*(
+                 (vm0_to[jdx]*sin(va0_fr[idx]-va0_to[jdx]))*(vm_fr[fc]-vm0_fr[idx])
+                +(vm0_fr[idx]*sin(va0_fr[idx]-va0_to[jdx]))*(vm_to[td]-vm0_to[jdx])
+                +( vm0_fr[idx]*vm0_to[jdx]*cos(va0_fr[idx]-va0_to[jdx]))*(va_fr[fc]-va0_fr[idx])
+                +(-vm0_fr[idx]*vm0_to[jdx]*cos(va0_fr[idx]-va0_to[jdx]))*(va_to[td]-va0_to[jdx])))
                 )
             push!(q_s_fr_dg, JuMP.@expression(pm.model, q0_s_fr_dg - B[idx,jdx]*(
-                    (vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(vm_fr[fc]-vm0_fr[fc])
-                   +(vm0_fr[fc]*cos(va0_fr[fc]-va0_to[td]))*(vm_to[td]-vm0_to[td])
-                   +(-vm0_fr[fc]*vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(va_fr[fc]-va0_fr[fc])
-                   +(vm0_fr[fc]*vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(va_to[td]-va0_to[td])) + G[idx,jdx]*(
-                    (vm0_to[td]*sin(va0_fr[fc]-va0_to[td]))*(vm_fr[fc]-vm0_fr[fc])
-                   +(vm0_fr[fc]*sin(va0_fr[fc]-va0_to[td]))*(vm_to[td]-vm0_to[td])
-                   +(vm0_fr[fc]*vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(va_fr[fc]-va0_fr[fc])
-                   +(-vm0_fr[fc]*vm0_to[td]*cos(va0_fr[fc]-va0_to[td]))*(va_to[td]-va0_to[td])))
+                    (vm0_to[jdx]*cos(va0_fr[idx]-va0_to[jdx]))*(vm_fr[fc]-vm0_fr[idx])
+                   +(vm0_fr[idx]*cos(va0_fr[idx]-va0_to[jdx]))*(vm_to[td]-vm0_to[jdx])
+                   +(-vm0_fr[idx]*vm0_to[jdx]*sin(va0_fr[idx]-va0_to[jdx]))*(va_fr[fc]-va0_fr[idx])
+                   +(vm0_fr[idx]*vm0_to[jdx]*sin(va0_fr[idx]-va0_to[jdx]))*(va_to[td]-va0_to[jdx])) + G[idx,jdx]*(
+                    (vm0_to[jdx]*sin(va0_fr[idx]-va0_to[jdx]))*(vm_fr[fc]-vm0_fr[idx])
+                   +(vm0_fr[idx]*sin(va0_fr[idx]-va0_to[jdx]))*(vm_to[td]-vm0_to[jdx])
+                   +(vm0_fr[idx]*vm0_to[jdx]*cos(va0_fr[idx]-va0_to[jdx]))*(va_fr[fc]-va0_fr[idx])
+                   +(-vm0_fr[idx]*vm0_to[jdx]*cos(va0_fr[idx]-va0_to[jdx]))*(va_to[td]-va0_to[jdx])))
                    )
         end
-        JuMP.@constraint(pm.model, p_fr[fc] == (G[idx,idx]+G_fr[idx,idx])*(2*vm0_fr[fc]*vm_fr[fc]-vm0_fr[fc]^2)
+        JuMP.@constraint(pm.model, p_fr[fc] == (G[idx,idx]+G_fr[idx,idx])*(2*vm0_fr[idx]*vm_fr[fc]-vm0_fr[idx]^2)
             +sum(p_s_fr[j] for j=1:length(p_s_fr)) + sum(p_s_fr_dg[j] for j=1:length(p_s_fr_dg))
         )
 
-        JuMP.@constraint(pm.model, q_fr[fc] == -(B[idx,idx]+B_fr[idx,idx])*(2*vm0_fr[fc]*vm_fr[fc]-vm0_fr[fc]^2)
+        JuMP.@constraint(pm.model, q_fr[fc] == -(B[idx,idx]+B_fr[idx,idx])*(2*vm0_fr[idx]*vm_fr[fc]-vm0_fr[idx]^2)
             -sum(q_s_fr[j] for j=1:length(q_s_fr)) - sum(q_s_fr_dg[j] for j=1:length(q_s_fr_dg))
         )
     end
@@ -297,10 +305,10 @@ function constraint_mc_transformer_power_yy(pm::FOTPUPowerModel, nw::Int, trans_
     vm_to = var(pm, nw, :vm, t_bus)
     va_fr = var(pm, nw, :va, f_bus)
     va_to = var(pm, nw, :va, t_bus)
-    vm0_fr = var(pm, nw, :vm0, f_bus)
-    vm0_to = var(pm, nw, :vm0, t_bus)
-    va0_fr = var(pm, nw, :va0, f_bus)
-    va0_to = var(pm, nw, :va0, t_bus)
+    vm0_fr = [var(pm, nw, :vm0, f_bus)[findfirst(isequal(c), ref(pm, nw, :bus, f_bus, "terminals"))] for c in f_connections]
+    vm0_to = [var(pm, nw, :vm0, t_bus)[findfirst(isequal(c), ref(pm, nw, :bus, t_bus, "terminals"))] for c in t_connections]
+    va0_fr = [var(pm, nw, :va0, f_bus)[findfirst(isequal(c), ref(pm, nw, :bus, f_bus, "terminals"))] for c in f_connections]
+    va0_to = [var(pm, nw, :va0, t_bus)[findfirst(isequal(c), ref(pm, nw, :bus, t_bus, "terminals"))] for c in t_connections]
 
     p_fr = [var(pm, nw, :pt, f_idx)[c] for c in f_connections]
     p_to = [var(pm, nw, :pt, t_idx)[c] for c in t_connections]
@@ -325,7 +333,7 @@ function constraint_mc_transformer_power_yy(pm::FOTPUPowerModel, nw::Int, trans_
                 x = transformer["controls"]["x"][idx]
 
                 # linearized voltage: vm_drop = (r⋅p+x⋅q)/vm0
-                vm_drop = JuMP.@expression(pm.model, (r*p_to[idx] + x*q_to[idx])/vm0_fr[fc])
+                vm_drop = JuMP.@expression(pm.model, (r*p_to[idx] + x*q_to[idx])/vm0_fr[idx])
 
                 # v_ref-δ ≤ vm_fr-vm_drop ≤ v_ref+δ
                 # vm_fr/1.1 ≤ vm_to ≤ vm_fr/0.9
@@ -356,10 +364,10 @@ function constraint_mc_transformer_power_dy(pm::FOTPUPowerModel, nw::Int, trans_
     vm_to = var(pm, nw, :vm, t_bus)
     va_fr = var(pm, nw, :va, f_bus)
     va_to = var(pm, nw, :va, t_bus)
-    vm0_fr = var(pm, nw, :vm0, f_bus)
-    vm0_to = var(pm, nw, :vm0, t_bus)
-    va0_fr = var(pm, nw, :va0, f_bus)
-    va0_to = var(pm, nw, :va0, t_bus)
+    vm0_fr = [var(pm, nw, :vm0, f_bus)[findfirst(isequal(c), ref(pm, nw, :bus, f_bus, "terminals"))] for c in f_connections]
+    vm0_to = [var(pm, nw, :vm0, t_bus)[findfirst(isequal(c), ref(pm, nw, :bus, t_bus, "terminals"))] for c in t_connections]
+    va0_fr = [var(pm, nw, :va0, f_bus)[findfirst(isequal(c), ref(pm, nw, :bus, f_bus, "terminals"))] for c in f_connections]
+    va0_to = [var(pm, nw, :va0, t_bus)[findfirst(isequal(c), ref(pm, nw, :bus, t_bus, "terminals"))] for c in t_connections]
 
     # construct tm as a parameter or scaled variable depending on whether it is fixed or not
     tm = [tm_fixed[idx] ? tm_set[idx] : var(pm, nw, :tap, trans_id)[fc] for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))]
@@ -374,18 +382,18 @@ function constraint_mc_transformer_power_dy(pm::FOTPUPowerModel, nw::Int, trans_
         # e.g., for nph=3: 1->3, 2->1, 3->2
         jdx = (idx-1+1)%nph+1
         fd = f_connections[jdx]
-        vd_re[idx] = JuMP.@expression(pm.model, vm0_fr[fc]*cos(va0_fr[fc])-vm0_fr[fd]*cos(va0_fr[fd])
-                                             + (vm_fr[fc]-vm0_fr[fc])*cos(va0_fr[fc]) - (va_fr[fc]-va0_fr[fc])*sin(va0_fr[fc])
-                                             - (vm_fr[fd]-vm0_fr[fd])*cos(va0_fr[fd]) + (va_fr[fd]-va0_fr[fd])*sin(va0_fr[fd])
+        vd_re[idx] = JuMP.@expression(pm.model, vm0_fr[idx]*cos(va0_fr[idx])-vm0_fr[jdx]*cos(va0_fr[jdx])
+                                             + (vm_fr[fc]-vm0_fr[idx])*cos(va0_fr[idx]) - (va_fr[fc]-va0_fr[idx])*sin(va0_fr[idx])
+                                             - (vm_fr[fd]-vm0_fr[jdx])*cos(va0_fr[jdx]) + (va_fr[fd]-va0_fr[jdx])*sin(va0_fr[jdx])
                                     )
-        vd_im[idx] = JuMP.@expression(pm.model, vm0_fr[fc]*sin(va0_fr[fc])-vm0_fr[fd]*sin(va0_fr[fd])
-                                             + (vm_fr[fc]-vm0_fr[fc])*sin(va0_fr[fc]) + (va_fr[fc]-va0_fr[fc])*cos(va0_fr[fc])
-                                             - (vm_fr[fd]-vm0_fr[fd])*sin(va0_fr[fd]) - (va_fr[fd]-va0_fr[fd])*cos(va0_fr[fd])
+        vd_im[idx] = JuMP.@expression(pm.model, vm0_fr[idx]*sin(va0_fr[idx])-vm0_fr[jdx]*sin(va0_fr[jdx])
+                                             + (vm_fr[fc]-vm0_fr[idx])*sin(va0_fr[idx]) + (va_fr[fc]-va0_fr[idx])*cos(va0_fr[idx])
+                                             - (vm_fr[fd]-vm0_fr[jdx])*sin(va0_fr[jdx]) - (va_fr[fd]-va0_fr[jdx])*cos(va0_fr[jdx])
                                     )
-        JuMP.@constraint(pm.model, vd_re[idx] == pol*tm_scale*tm[idx]*vm0_to[tc]*cos(va0_to[tc])
-                                            + (vm_to[tc]-vm0_to[tc])*cos(va0_to[tc]) - (va_to[tc]-va0_to[tc])*sin(va0_to[tc]))
-        JuMP.@constraint(pm.model, vd_im[idx] == pol*tm_scale*tm[idx]*vm0_to[tc]*sin(va0_to[tc])
-                                            + (vm_to[tc]-vm0_to[tc])*sin(va0_to[tc]) + (va_to[tc]-va0_to[tc])*cos(va0_to[tc]))
+        JuMP.@constraint(pm.model, vd_re[idx] == pol*tm_scale*tm[idx]*vm0_to[idx]*cos(va0_to[idx])
+                                            + (vm_to[tc]-vm0_to[idx])*cos(va0_to[idx]) - (va_to[tc]-va0_to[idx])*sin(va0_to[idx]))
+        JuMP.@constraint(pm.model, vd_im[idx] == pol*tm_scale*tm[idx]*vm0_to[idx]*sin(va0_to[idx])
+                                            + (vm_to[tc]-vm0_to[idx])*sin(va0_to[idx]) + (va_to[tc]-va0_to[idx])*cos(va0_to[idx]))
     end
 
     p_fr = var(pm, nw, :pt, f_idx)
@@ -397,18 +405,18 @@ function constraint_mc_transformer_power_dy(pm::FOTPUPowerModel, nw::Int, trans_
     id_im = Array{Any,1}(undef, nph)
 
     for (idx,(fc,tc)) in enumerate(zip(f_connections,t_connections))
-        id_re[idx] = JuMP.@expression(pm.model,  (p_to[tc]*cos(va0_to[tc])+q_to[tc]*sin(va0_to[tc]))/vm0_to[tc]/(tm_scale*tm[idx])/pol)
-        id_im[idx] = JuMP.@expression(pm.model, -(q_to[tc]*cos(va0_to[tc])-p_to[tc]*sin(va0_to[tc]))/vm0_to[tc]/(tm_scale*tm[idx])/pol)
+        id_re[idx] = JuMP.@expression(pm.model,  (p_to[tc]*cos(va0_to[idx])+q_to[tc]*sin(va0_to[idx]))/vm0_to[idx]/(tm_scale*tm[idx])/pol)
+        id_im[idx] = JuMP.@expression(pm.model, -(q_to[tc]*cos(va0_to[idx])-p_to[tc]*sin(va0_to[idx]))/vm0_to[idx]/(tm_scale*tm[idx])/pol)
     end
     for (idx, (fc,tc)) in enumerate(zip(f_connections,t_connections))
         jdx = (idx-1+nph-1)%nph+1
         JuMP.@constraint(pm.model, p_fr[fc] ==
-             vm0_fr[fc]*cos(va0_fr[fc])*( id_re[jdx]-id_re[idx])
-            -vm0_fr[fc]*sin(va0_fr[fc])*(-id_im[jdx]+id_im[idx])
+             vm0_fr[idx]*cos(va0_fr[idx])*( id_re[jdx]-id_re[idx])
+            -vm0_fr[idx]*sin(va0_fr[idx])*(-id_im[jdx]+id_im[idx])
         )
         JuMP.@constraint(pm.model, q_fr[fc] ==
-             vm0_fr[fc]*cos(va0_fr[fc])*(-id_im[jdx]+id_im[idx])
-            +vm0_fr[fc]*sin(va0_fr[fc])*( id_re[jdx]-id_re[idx])
+             vm0_fr[idx]*cos(va0_fr[idx])*(-id_im[jdx]+id_im[idx])
+            +vm0_fr[idx]*sin(va0_fr[idx])*( id_re[jdx]-id_re[idx])
         )
     end
 end
@@ -448,14 +456,14 @@ function constraint_mc_load_power(pm::FOTPUPowerModel, load_id::Int; nw::Int=nw_
             qd_bus = b
         elseif load["model"]==IMPEDANCE
             vm = var(pm, nw, :vm, bus_id)
-            vm0 = var(pm, nw, :vm0, bus_id)
+            vm0 = [var(pm, nw, :vm0, bus_id)[findfirst(isequal(c), bus["terminals"])] for c in connections]
 
             pd_bus = []
             qd_bus = []
 
             for (idx,c) in enumerate(connections)
-                push!(pd_bus, a[idx]*(vm0[c]^2 + 2*vm0[c]*(vm[c]-vm0[c])))
-                push!(qd_bus, b[idx]*(vm0[c]^2 + 2*vm0[c]*(vm[c]-vm0[c])))
+                push!(pd_bus, a[idx]*(vm0[idx]^2 + 2*vm0[idx]*(vm[c]-vm0[idx])))
+                push!(qd_bus, b[idx]*(vm0[idx]^2 + 2*vm0[idx]*(vm[c]-vm0[idx])))
             end
         else
             vm = var(pm, nw, :vm, bus_id)
@@ -482,8 +490,8 @@ function constraint_mc_load_power(pm::FOTPUPowerModel, load_id::Int; nw::Int=nw_
 
     # zero-order approximation
     elseif load["configuration"]==DELTA
-        vm0 = var(pm, nw, :vm0, bus_id)
-        va0 = var(pm, nw, :va0, bus_id)
+        vm0 = [var(pm, nw, :vm0, bus_id)[findfirst(isequal(c), bus["terminals"])] for c in connections]
+        va0 = [var(pm, nw, :va0, bus_id)[findfirst(isequal(c), bus["terminals"])] for c in connections]
         vr0 = vm0.*cos.(va0)
         vi0 = vm0.*sin.(va0)
 

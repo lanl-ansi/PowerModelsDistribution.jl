@@ -58,11 +58,14 @@ function _build_mc_osw(pm::AbstractUnbalancedPowerModel)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state_on_off(pm, i; relax=true)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -124,11 +127,14 @@ function _build_mc_osw(pm::AbstractUBFModels)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state_on_off(pm, i; relax=true)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -244,11 +250,14 @@ function _build_mc_osw_mi(pm::AbstractUnbalancedPowerModel)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state_on_off(pm, i; relax=false)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -259,7 +268,11 @@ function _build_mc_osw_mi(pm::AbstractUnbalancedPowerModel)
 end
 
 
-"constructor for mixed-integer branch flow osw"
+"""
+    _build_mc_osw_mi(pm::AbstractUBFModels)
+
+constructor for mixed-integer branch flow osw
+"""
 function _build_mc_osw_mi(pm::AbstractUBFModels)
     # Variables
     variable_mc_bus_voltage(pm)
@@ -310,11 +323,14 @@ function _build_mc_osw_mi(pm::AbstractUBFModels)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state_on_off(pm, i; relax=false)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -323,19 +339,4 @@ function _build_mc_osw_mi(pm::AbstractUBFModels)
 
     # Objective
     objective_mc_min_fuel_cost_switch(pm)
-end
-
-# Depreciated run_ functions (remove after ~4-6 months)
-
-"depreciation warning for `_run_mc_osw`"
-function _run_mc_osw(data::Union{Dict{String,<:Any}, String}, model_type::Type, solver; kwargs...)
-    @warn "_run_mc_osw is being depreciated in favor of _solve_mc_osw, please update your code accordingly"
-    return _solve_mc_osw(data, model_type, solver; kwargs...)
-end
-
-
-"depreciation warning for `_run_mc_osw_mi`"
-function _run_mc_osw_mi(data::Union{Dict{String,<:Any}, String}, model_type::Type, solver; kwargs...)
-    @warn "_run_mc_osw_mi is being depreciated in favor of _solve_mc_osw_mi, please update your code accordingly"
-    return _solve_mc_osw_mi(data, model_type, solver; kwargs...)
 end

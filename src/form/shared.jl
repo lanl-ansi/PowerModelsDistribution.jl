@@ -1,6 +1,3 @@
-import LinearAlgebra: diag
-
-
 "`vm[i] == vmref`"
 function constraint_mc_voltage_magnitude_only(pm::AbstractUnbalancedWModels, nw::Int, i::Int, vm_ref::Vector{<:Real})
     w = [var(pm, nw, :w, i)[t] for t in ref(pm, nw, :bus, i)["terminals"]]
@@ -70,7 +67,7 @@ function constraint_mc_power_balance_slack(pm::AbstractUnbalancedWModels, nw::In
             sum(pg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
             - sum(ref(pm, nw, :load, l, "pd")[findfirst(isequal(t), conns)] for (l, conns) in bus_loads if t in conns)
-            - sum(w[t] * diag(Gt')[idx] for (sh, conns) in bus_shunts if t in conns)
+            - sum(w[t] * LinearAlgebra.diag(Gt')[idx] for (sh, conns) in bus_shunts if t in conns)
             + p_slack[t]
         )
         push!(cstr_p, cp)
@@ -82,7 +79,7 @@ function constraint_mc_power_balance_slack(pm::AbstractUnbalancedWModels, nw::In
             sum(qg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(qs[s][t] for (s, conns) in bus_storage if t in conns)
             - sum(ref(pm, nw, :load, l, "qd")[findfirst(isequal(t), conns)] for (l, conns) in bus_loads if t in conns)
-            - sum(-w[t] * diag(Bt')[idx] for (sh, conns) in bus_shunts if t in conns)
+            - sum(-w[t] * LinearAlgebra.diag(Bt')[idx] for (sh, conns) in bus_shunts if t in conns)
             + q_slack[t]
         )
         push!(cstr_q, cq)
@@ -159,7 +156,7 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedWModels, nw::Int
             sum(pg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
             - sum(ref(pm, nw, :load, l, "pd")[findfirst(isequal(t), conns)] * z_demand[l] for (l, conns) in bus_loads if t in conns)
-            - sum(z_shunt[sh] *(w[t] * diag(Gt')[idx]) for (sh, conns) in bus_shunts if t in conns)
+            - sum(z_shunt[sh] *(w[t] * LinearAlgebra.diag(Gt')[idx]) for (sh, conns) in bus_shunts if t in conns)
         )
         push!(cstr_p, cp)
         cq = JuMP.@constraint(pm.model,
@@ -170,7 +167,7 @@ function constraint_mc_power_balance_shed(pm::AbstractUnbalancedWModels, nw::Int
             sum(qg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(qs[s][t] for (s, conns) in bus_storage if t in conns)
             - sum(ref(pm, nw, :load, l, "qd")[findfirst(isequal(t), conns)]*z_demand[l] for (l, conns) in bus_loads if t in conns)
-            - sum(z_shunt[sh] * (-w[t] * diag(Bt')[idx]) for (sh, conns) in bus_shunts if t in conns)
+            - sum(z_shunt[sh] * (-w[t] * LinearAlgebra.diag(Bt')[idx]) for (sh, conns) in bus_shunts if t in conns)
         )
         push!(cstr_q, cq)
     end
@@ -212,26 +209,26 @@ function constraint_mc_power_balance(pm::AbstractUnbalancedWModels, nw::Int, i::
 
     for (idx,t) in ungrounded_terminals
         cp = JuMP.@constraint(pm.model,
-            sum(diag(P[a])[findfirst(isequal(t), conns)] for (a, conns) in bus_arcs if t in conns)
-            + sum(diag(Psw[a_sw])[findfirst(isequal(t), conns)] for (a_sw, conns) in bus_arcs_sw if t in conns)
-            + sum(diag(Pt[a_trans])[findfirst(isequal(t), conns)] for (a_trans, conns) in bus_arcs_trans if t in conns)
+            sum(LinearAlgebra.diag(P[a])[findfirst(isequal(t), conns)] for (a, conns) in bus_arcs if t in conns)
+            + sum(LinearAlgebra.diag(Psw[a_sw])[findfirst(isequal(t), conns)] for (a_sw, conns) in bus_arcs_sw if t in conns)
+            + sum(LinearAlgebra.diag(Pt[a_trans])[findfirst(isequal(t), conns)] for (a_trans, conns) in bus_arcs_trans if t in conns)
             ==
             sum(pg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
             - sum(pd[d][t] for (d, conns) in bus_loads if t in conns)
-            - diag(Wr*Gt'+Wi*Bt')[idx]
+            - LinearAlgebra.diag(Wr*Gt'+Wi*Bt')[idx]
         )
         push!(cstr_p, cp)
 
         cq = JuMP.@constraint(pm.model,
-            sum(diag(Q[a])[findfirst(isequal(t), conns)] for (a, conns) in bus_arcs if t in conns)
-            + sum(diag(Qsw[a_sw])[findfirst(isequal(t), conns)] for (a_sw, conns) in bus_arcs_sw if t in conns)
-            + sum(diag(Qt[a_trans])[findfirst(isequal(t), conns)] for (a_trans, conns) in bus_arcs_trans if t in conns)
+            sum(LinearAlgebra.diag(Q[a])[findfirst(isequal(t), conns)] for (a, conns) in bus_arcs if t in conns)
+            + sum(LinearAlgebra.diag(Qsw[a_sw])[findfirst(isequal(t), conns)] for (a_sw, conns) in bus_arcs_sw if t in conns)
+            + sum(LinearAlgebra.diag(Qt[a_trans])[findfirst(isequal(t), conns)] for (a_trans, conns) in bus_arcs_trans if t in conns)
             ==
             sum(qg[g][t] for (g, conns) in bus_gens if t in conns)
             - sum(qs[s][t] for (s, conns) in bus_storage if t in conns)
             - sum(qd[d][t] for (d, conns) in bus_loads if t in conns)
-            - diag(-Wr*Bt'+Wi*Gt')[idx]
+            - LinearAlgebra.diag(-Wr*Bt'+Wi*Gt')[idx]
         )
         push!(cstr_q, cq)
     end
@@ -243,19 +240,6 @@ function constraint_mc_power_balance(pm::AbstractUnbalancedWModels, nw::Int, i::
         sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
         sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
     end
-end
-
-
-"Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)"
-function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedWModels, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
-    p_fr = var(pm, n, :p, f_idx)
-    q_fr = var(pm, n, :q, f_idx)
-    w_fr = var(pm, n, :w, f_bus)
-    wr   = var(pm, n, :wr, (f_bus, t_bus))
-    wi   = var(pm, n, :wi, (f_bus, t_bus))
-
-    JuMP.@constraint(pm.model, p_fr ==  (g+g_fr)/tm^2*w_fr + (-g*tr+b*ti)/tm^2*wr + (-b*tr-g*ti)/tm^2*wi )
-    JuMP.@constraint(pm.model, q_fr == -(b+b_fr)/tm^2*w_fr - (-b*tr-g*ti)/tm^2*wr + (-g*tr+b*ti)/tm^2*wi )
 end
 
 
@@ -273,9 +257,9 @@ end
 
 
 "on/off bus voltage constraint for relaxed forms"
-function constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedWModels, n::Int; kwargs...)
-    for (i, bus) in ref(pm, n, :bus)
-        constraint_mc_bus_voltage_magnitude_sqr_on_off(pm, i, nw=n)
+function constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedWModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    for (i, bus) in ref(pm, nw, :bus)
+        constraint_mc_bus_voltage_magnitude_sqr_on_off(pm, i; nw=nw)
     end
 end
 
@@ -350,7 +334,7 @@ end
 
 
 ""
-function constraint_storage_losses(pm::AbstractUnbalancedWConvexModels, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
+function constraint_mc_storage_losses(pm::AbstractUnbalancedWConvexModels, n::Int, i::Int, bus::Int, connections::Vector{Int}, r::Real, x::Real, p_loss::Real, q_loss::Real)
     w = var(pm, n, :w, bus)
     ccms = var(pm, n, :ccms, i)
     ps = var(pm, n, :ps, i)
@@ -359,19 +343,91 @@ function constraint_storage_losses(pm::AbstractUnbalancedWConvexModels, n::Int, 
     sd = var(pm, n, :sd, i)
     qsc = var(pm, n, :qsc, i)
 
-    for c in conductors
+    for c in connections
         JuMP.@constraint(pm.model, ps[c]^2 + qs[c]^2 <= w[c]*ccms[c])
     end
 
     JuMP.@constraint(pm.model,
-        sum(ps[c] for c in conductors) + (sd - sc)
+        sum(ps[c] for c in connections) + (sd - sc)
         ==
-        p_loss + sum(r[c]*ccms[c] for c in conductors)
+        p_loss + r * sum(ccms[c] for c in connections)
     )
 
     JuMP.@constraint(pm.model,
-        sum(qs[c] for c in conductors)
+        sum(qs[c] for c in connections)
         ==
-        qsc + q_loss + sum(x[c]*ccms[c] for c in conductors)
+        qsc + q_loss + x * sum(ccms[c] for c in connections)
     )
+end
+
+
+@doc raw"""
+    constraint_mc_ampacity_from(pm::AbstractUnbalancedWModels, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})::Nothing
+
+ACP current limit constraint on branches from-side
+
+math```
+p_{fr}^2 + q_{fr}^2 \leq w_{fr} i_{max}^2
+```
+"""
+function constraint_mc_ampacity_from(pm::AbstractUnbalancedWModels, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})::Nothing
+    p_fr = [var(pm, nw, :p, f_idx)[c] for c in f_connections]
+    q_fr = [var(pm, nw, :q, f_idx)[c] for c in f_connections]
+    w_fr = [var(pm, nw, :w, f_idx[2])[c] for c in f_connections]
+
+    con(pm, nw, :mu_cm_branch)[f_idx] = mu_cm_fr = [JuMP.@constraint(pm.model, p_fr[idx]^2 + q_fr[idx]^2 .<= w_fr[idx] * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :branch, f_idx[1])[:mu_cm_fr] = mu_cm_fr
+    end
+
+    nothing
+end
+
+
+@doc raw"""
+    constraint_mc_ampacity_to(pm::AbstractUnbalancedWModels, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, c_rating::Vector{<:Real})::Nothing
+
+ACP current limit constraint on branches to-side
+
+math```
+p_{to}^2 + q_{to}^2 \leq w_{to} i_{max}^2
+```
+"""
+function constraint_mc_ampacity_to(pm::AbstractUnbalancedWModels, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, c_rating::Vector{<:Real})::Nothing
+    p_to = [var(pm, nw, :p, t_idx)[c] for c in t_connections]
+    q_to = [var(pm, nw, :q, t_idx)[c] for c in t_connections]
+    w_to = [var(pm, nw, :w, t_idx[2])[c] for c in t_connections]
+
+    con(pm, nw, :mu_cm_branch)[t_idx] = mu_cm_to = [JuMP.@constraint(pm.model, p_to[idx]^2 + q_to[idx]^2 .<= w_to[idx] * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :branch, t_idx[1])[:mu_cm_to] = mu_cm_to
+    end
+
+    nothing
+end
+
+
+@doc raw"""
+    constraint_mc_switch_ampacity(pm::AbstractUnbalancedWModels, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})::Nothing
+
+ACP current limit constraint on switches from-side
+
+math```
+p_{fr}^2 + q_{fr}^2 \leq w_{fr} i_{max}^2
+```
+"""
+function constraint_mc_switch_ampacity(pm::AbstractUnbalancedWModels, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})::Nothing
+    psw_fr = [var(pm, nw, :psw, f_idx)[c] for c in f_connections]
+    qsw_fr = [var(pm, nw, :qsw, f_idx)[c] for c in f_connections]
+    w_fr = [var(pm, nw, :w, f_idx[2])[c] for c in f_connections]
+
+    con(pm, nw, :mu_cm_switch)[f_idx] = mu_cm_fr = [JuMP.@constraint(pm.model, psw_fr[idx]^2 + qsw_fr[idx]^2 .<= w_fr[idx] * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :switch, f_idx[1])[:mu_cm_fr] = mu_cm_fr
+    end
+
+    nothing
 end

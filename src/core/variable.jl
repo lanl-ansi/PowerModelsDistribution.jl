@@ -3,7 +3,7 @@
 ""
 function variable_mc_bus_voltage_angle(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
-    va_start_defaults = Dict(i => [0.0, -120.0, 120.0, fill(0.0, length(terms))...][terms] for (i, terms) in terminals)
+    va_start_defaults = Dict(i => deg2rad.([0.0, -120.0, 120.0, fill(0.0, length(terms))...][terms]) for (i, terms) in terminals)
     va = var(pm, nw)[:va] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_va_$(i)",
             start = comp_start_value(ref(pm, nw, :bus, i), ["va_start", "va"], t, va_start_defaults[i][findfirst(isequal(t), terminals[i])]),
@@ -19,7 +19,7 @@ function variable_mc_bus_voltage_magnitude_only(pm::AbstractUnbalancedPowerModel
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
     vm = var(pm, nw)[:vm] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_vm_$(i)",
-            start = comp_start_value(ref(pm, nw, :bus, i), ["vm_start", "vm", "vmin"], t, 1.0)
+            start = comp_start_value(ref(pm, nw, :bus, i), ["vm_start", "vm"], t, 1.0)
         ) for i in ids(pm, nw, :bus)
     )
 
@@ -46,7 +46,7 @@ function variable_mc_bus_voltage_real(pm::AbstractUnbalancedPowerModel; nw::Int=
 
     vr = var(pm, nw)[:vr] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_vr_$(i)",
-            start = comp_start_value(ref(pm, nw, :bus, i), "vr_start", t, 0.0)
+            start = comp_start_value(ref(pm, nw, :bus, i), "vr_start", t, 1.0)
         ) for i in ids(pm, nw, :bus)
     )
 
@@ -95,7 +95,7 @@ function variable_mc_bus_voltage_magnitude_sqr(pm::AbstractUnbalancedPowerModel;
     w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
             [t in terminals[i]], base_name="$(nw)_w_$(i)",
             lower_bound = 0.0,
-            start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, comp_start_value(ref(pm, nw, :bus, i), ["vm_start", "vm", "vmin"], t, 1.0)^2)
+            start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, comp_start_value(ref(pm, nw, :bus, i), ["vm_start", "vm"], t, 1.0)^2)
         ) for i in ids(pm, nw, :bus)
     )
 
@@ -146,17 +146,14 @@ function variable_mc_bus_voltage_magnitude_sqr_on_off(pm::AbstractUnbalancedPowe
     terminals = Dict(i => bus["terminals"] for (i,bus) in ref(pm, nw, :bus))
     w = var(pm, nw)[:w] = Dict(i => JuMP.@variable(pm.model,
         [t in terminals[i]], base_name="$(nw)_w_$(i)",
+        lower_bound = 0.0,
         start = comp_start_value(ref(pm, nw, :bus, i), "w_start", t, comp_start_value(ref(pm, nw, :bus, i), ["vm_start", "vm", "vmin"], t, 1.0)^2)
     ) for i in ids(pm, nw, :bus))
 
     if bounded
         for (i, bus) in ref(pm, nw, :bus)
             for (idx, t) in enumerate(terminals[i])
-                set_lower_bound(w[i][t], 0.0)
-
-                if haskey(bus, "vmax")
-                    set_upper_bound(w[i][t], bus["vmax"][idx]^2)
-                end
+                set_upper_bound(w[i][t], bus["vmax"][idx]^2)
             end
         end
     end
@@ -170,9 +167,9 @@ end
 ## branch power variables
 
 "branch flow variables, delegated back to PowerModels"
-function variable_mc_branch_power(pm::AbstractUnbalancedPowerModel; kwargs...)
-    variable_mc_branch_power_real(pm; kwargs...)
-    variable_mc_branch_power_imaginary(pm; kwargs...)
+function variable_mc_branch_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_branch_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_branch_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -350,9 +347,9 @@ end
 ## transformer power variables
 
 "Creates variables for both `active` and `reactive` power flow at each transformer."
-function variable_mc_transformer_power(pm::AbstractUnbalancedPowerModel; kwargs...)
-    variable_mc_transformer_power_real(pm; kwargs...)
-    variable_mc_transformer_power_imaginary(pm; kwargs...)
+function variable_mc_transformer_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_transformer_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_transformer_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -505,7 +502,7 @@ function variable_mc_oltc_transformer_tap(pm::AbstractUnbalancedPowerModel; nw::
     tap = var(pm, nw)[:tap] = Dict(i => JuMP.@variable(pm.model,
         [p in 1:length(ref(pm,nw,:transformer,i,"f_connections"))],
         base_name="$(nw)_tm_$(i)",
-        start=comp_start_value(ref(pm, nw, :transformer, i), "tm_set", p, 1.0),
+        start=comp_start_value(ref(pm, nw, :transformer, i), "tm_set", ref(pm, nw, :transformer, i, "f_connections")[p], 1.0),
     ) for i in p_oltc_ids)
 
     if bounded
@@ -524,9 +521,9 @@ end
 ## switch power variables
 
 ""
-function variable_mc_switch_power(pm::AbstractUnbalancedPowerModel; kwargs...)
-    variable_mc_switch_power_real(pm; kwargs...)
-    variable_mc_switch_power_imaginary(pm; kwargs...)
+function variable_mc_switch_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_switch_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_switch_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -568,7 +565,7 @@ function variable_mc_switch_power_real(pm::AbstractUnbalancedPowerModel; nw::Int
 
     var(pm, nw)[:psw] = psw_auxes
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :psw_fr, :psw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), psw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :pf, :pt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), psw_expr)
 end
 
 
@@ -610,15 +607,15 @@ function variable_mc_switch_power_imaginary(pm::AbstractUnbalancedPowerModel; nw
 
     var(pm, nw)[:qsw] = qsw_auxes
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qsw_fr, :qsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), qsw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qf, :qt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), qsw_expr)
 end
 
 ## switch current variables
 
 ""
-function variable_mc_switch_current(pm::AbstractUnbalancedPowerModel; kwargs...)
-    variable_mc_switch_current_real(pm; kwargs...)
-    variable_mc_switch_current_imaginary(pm; kwargs...)
+function variable_mc_switch_current(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_switch_current_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_switch_current_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -660,7 +657,7 @@ function variable_mc_switch_current_real(pm::AbstractUnbalancedPowerModel; nw::I
 
     var(pm, nw)[:crsw] = crsw_auxes
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :crsw_fr, :crsw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), crsw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :cr_fr, :cr_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), crsw_expr)
 end
 
 
@@ -702,7 +699,7 @@ function variable_mc_switch_current_imaginary(pm::AbstractUnbalancedPowerModel; 
 
     var(pm, nw)[:cisw] = cisw_auxes
 
-    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :cisw_fr, :cisw_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), cisw_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :ci_fr, :ci_to, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), cisw_expr)
 end
 
 # switch state variables
@@ -737,7 +734,7 @@ end
 
 Capacitor (with capcontrol) switch state (open/close) variables
 """
-function variable_mc_capacitor_switch_state(pm::AbstractUnbalancedPowerModel, relax::Bool; nw::Int=nw_id_default, report::Bool=true)
+function variable_mc_capacitor_switch_state(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=true, report::Bool=true)
     cap_switch_ids = [id for (id,cap) in ref(pm, nw, :shunt) if haskey(cap,"controls")]
     if relax
         cap_state = var(pm, nw)[:capacitor_state] = Dict(i => JuMP.@variable(pm.model,
@@ -765,13 +762,17 @@ end
 
 Capacitor (with capcontrol) relaxed power variables for AbstractLPUBFModel (using McCormick envelopes)
 """
-function variable_mc_capacitor_reactive_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default)
+function variable_mc_capacitor_reactive_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, report::Bool=false)
     cap_switch_ids = [id for (id,cap) in ref(pm, nw, :shunt) if haskey(cap,"controls")]
-    cap_reactive_power = var(pm, nw)[:capacitor_reactive_power] = Dict(i => JuMP.@variable(pm.model,
-    [p in ref(pm, nw, :shunt, i, "connections")],
-    base_name="$(nw)_cap_cur_$(i)"
-    ) for i in cap_switch_ids)
+    cap_reactive_power = var(pm, nw)[:capacitor_reactive_power] = Dict(
+        i => JuMP.@variable(
+            pm.model,
+            [p in ref(pm, nw, :shunt, i, "connections")],
+            base_name="$(nw)_cap_cur_$(i)",
+        ) for i in cap_switch_ids
+    )
 
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :shunt, :capacitor_reactive_power, cap_switch_ids, cap_reactive_power)
 end
 
 
@@ -780,9 +781,9 @@ end
 ## generator power variables
 
 "create variables for generators, delegate to PowerModels"
-function variable_mc_generator_power(pm::AbstractUnbalancedPowerModel; kwargs...)
-    variable_mc_generator_power_real(pm; kwargs...)
-    variable_mc_generator_power_imaginary(pm; kwargs...)
+function variable_mc_generator_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_generator_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_generator_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -791,7 +792,7 @@ function variable_mc_generator_power_real(pm::AbstractUnbalancedPowerModel; nw::
     connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
     pg = var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_pg_$(i)",
-            start = comp_start_value(ref(pm, nw, :gen, i), ["pg_start", "pg", "pmin"], c, 0.0)
+            start = comp_start_value(ref(pm, nw, :gen, i), ["pg_start", "pg"], c, 0.0)
         ) for i in ids(pm, nw, :gen)
     )
 
@@ -821,7 +822,7 @@ function variable_mc_generator_power_imaginary(pm::AbstractUnbalancedPowerModel;
     connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
     qg = var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_qg_$(i)",
-            start = comp_start_value(ref(pm, nw, :gen, i), ["qg_start", "qg", "qmin"], c, 0.0)
+            start = comp_start_value(ref(pm, nw, :gen, i), ["qg_start", "qg"], c, 0.0)
         ) for i in ids(pm, nw, :gen)
     )
 
@@ -848,9 +849,9 @@ end
 ### generator power on/off variables
 
 ""
-function variable_mc_generator_power_on_off(pm::AbstractUnbalancedPowerModel; kwargs...)
-    variable_mc_generator_power_real_on_off(pm; kwargs...)
-    variable_mc_generator_power_imaginary_on_off(pm; kwargs...)
+function variable_mc_generator_power_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_generator_power_real_on_off(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_generator_power_imaginary_on_off(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -866,13 +867,13 @@ function variable_mc_generator_power_real_on_off(pm::AbstractUnbalancedPowerMode
         for (i, gen) in ref(pm, nw, :gen)
             if haskey(gen, "pmin")
                 for (idx, c) in enumerate(connections[i])
-                    set_lower_bound(pg[i][c], gen["pmin"][idx])
+                    set_lower_bound(pg[i][c], min(gen["pmin"][idx], 0.0))
                 end
             end
 
             if haskey(gen, "pmax")
                 for (idx, c) in enumerate(connections[i])
-                    set_upper_bound(pg[i][c], gen["pmax"][idx])
+                    set_upper_bound(pg[i][c], max(gen["pmax"][idx], 0.0))
                 end
             end
         end
@@ -896,13 +897,13 @@ function variable_mc_generator_power_imaginary_on_off(pm::AbstractUnbalancedPowe
         for (i, gen) in ref(pm, nw, :gen)
             if haskey(gen, "qmin")
                 for (idx, c) in enumerate(connections[i])
-                    set_lower_bound(qg[i][c], gen["qmin"][idx])
+                    set_lower_bound(qg[i][c], min(gen["qmin"][idx], 0.0))
                 end
             end
 
             if haskey(gen, "qmax")
                 for (idx, c) in enumerate(connections[i])
-                    set_upper_bound(qg[i][c], gen["qmax"][idx])
+                    set_upper_bound(qg[i][c], max(gen["qmax"][idx], 0.0))
                 end
             end
         end
@@ -966,12 +967,12 @@ end
 function variable_storage_energy(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     se = var(pm, nw)[:se] = JuMP.@variable(pm.model,
         [i in ids(pm, nw, :storage)], base_name="$(nw)_se",
-        start = comp_start_value(ref(pm, nw, :storage, i), "se_start", 1)
+        lower_bound = 0.0,
+        start = comp_start_value(ref(pm, nw, :storage, i), ["se_start", "se", "energy"], 0.0)
     )
 
     if bounded
         for (i, storage) in ref(pm, nw, :storage)
-            set_lower_bound(se[i], 0)
             set_upper_bound(se[i], storage["energy_rating"])
         end
     end
@@ -984,12 +985,12 @@ end
 function variable_storage_charge(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     sc = var(pm, nw)[:sc] = JuMP.@variable(pm.model,
         [i in ids(pm, nw, :storage)], base_name="$(nw)_sc",
-        start = comp_start_value(ref(pm, nw, :storage, i), "sc_start", 1)
+        lower_bound = 0.0,
+        start = comp_start_value(ref(pm, nw, :storage, i), ["sc_start", "sc"], 1)
     )
 
     if bounded
         for (i, storage) in ref(pm, nw, :storage)
-            set_lower_bound(sc[i], 0)
             set_upper_bound(sc[i], storage["charge_rating"])
         end
     end
@@ -1002,12 +1003,12 @@ end
 function variable_storage_discharge(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     sd = var(pm, nw)[:sd] = JuMP.@variable(pm.model,
         [i in ids(pm, nw, :storage)], base_name="$(nw)_sd",
-        start = comp_start_value(ref(pm, nw, :storage, i), "sd_start", 1)
+        lower_bound = 0.0,
+        start = comp_start_value(ref(pm, nw, :storage, i), ["sd_start", "sd"], 0.0)
     )
 
     if bounded
         for (i, storage) in ref(pm, nw, :storage)
-            set_lower_bound(sd[i], 0)
             set_upper_bound(sd[i], storage["discharge_rating"])
         end
     end
@@ -1051,14 +1052,14 @@ end
 ## storage power variables
 
 "variables for modeling storage units, includes grid injection and internal variables"
-function variable_mc_storage_power(pm::AbstractUnbalancedPowerModel; kwargs...)
-    variable_mc_storage_power_real(pm; kwargs...)
-    variable_mc_storage_power_imaginary(pm; kwargs...)
-    variable_mc_storage_power_control_imaginary(pm; kwargs...)
-    variable_mc_storage_current(pm; kwargs...)
-    variable_storage_energy(pm; kwargs...)
-    variable_storage_charge(pm; kwargs...)
-    variable_storage_discharge(pm; kwargs...)
+function variable_mc_storage_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_storage_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_control_imaginary(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_current(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_energy(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_charge(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_discharge(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -1067,7 +1068,7 @@ function variable_mc_storage_power_real(pm::AbstractUnbalancedPowerModel; nw::In
     connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
     ps = var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_ps_$(i)",
-            start = comp_start_value(ref(pm, nw, :storage, i), ["ps_start", "ps"], c, 0.0)
+            start = comp_start_value(ref(pm, nw, :storage, i), "ps_start", c, 0.0)
         ) for i in ids(pm, nw, :storage)
     )
 
@@ -1094,7 +1095,7 @@ function variable_mc_storage_power_imaginary(pm::AbstractUnbalancedPowerModel; n
     connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
     qs = var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_qs_$(i)",
-            start = comp_start_value(ref(pm, nw, :storage, i), ["qs_start", "qs"], c, 0.0)
+            start = comp_start_value(ref(pm, nw, :storage, i), "qs_start", c, 0.0)
         ) for i in ids(pm, nw, :storage)
     )
 
@@ -1143,26 +1144,31 @@ function variable_mc_storage_power_control_imaginary(pm::AbstractUnbalancedPower
 end
 
 
-""
-function variable_mc_storage_power_mi(pm::AbstractUnbalancedPowerModel; relax::Bool=false, kwargs...)
-    variable_mc_storage_power_real(pm; kwargs...)
-    variable_mc_storage_power_imaginary(pm; kwargs...)
-    variable_mc_storage_power_control_imaginary(pm; kwargs...)
-    variable_mc_storage_current(pm; kwargs...)
-    variable_mc_storage_indicator(pm; relax=relax, kwargs...)
-    variable_storage_energy(pm; kwargs...)
-    variable_storage_charge(pm; kwargs...)
-    variable_storage_discharge(pm; kwargs...)
-    variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
+"""
+    variable_mc_storage_power_mi(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=false, bounded::Bool=true, report::Bool=true)
+
+Variables for storage power (mixed-integer if `relax==false`)
+"""
+function variable_mc_storage_power_mi(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=false, bounded::Bool=true, report::Bool=true)
+    variable_mc_storage_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_control_imaginary(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_current(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_indicator(pm; nw=nw, relax=relax, report=report)
+    variable_storage_energy(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_charge(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_discharge(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_complementary_indicator(pm; nw=nw, relax=relax, report=report)
 end
+
 
 ### storage power on/off variables
 
 
 "Create variables for `active` and `reactive` storage injection"
-function variable_mc_storage_power_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, kwargs...)
-    variable_mc_storage_power_real_on_off(pm; nw=nw, kwargs...)
-    variable_mc_storage_power_imaginary_on_off(pm; nw=nw, kwargs...)
+function variable_mc_storage_power_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_storage_power_real_on_off(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_imaginary_on_off(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -1171,15 +1177,15 @@ function variable_mc_storage_power_real_on_off(pm::AbstractUnbalancedPowerModel;
     connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
     ps = var(pm, nw)[:ps] = Dict(i => JuMP.@variable(pm.model,
         [c in connections[i]], base_name="$(nw)_ps_$(i)",
-        start = comp_start_value(ref(pm, nw, :storage, i), ["ps_start", "ps"], c, 0.0)
+        start = comp_start_value(ref(pm, nw, :storage, i), "ps_start", c, 0.0)
     ) for i in ids(pm, nw, :storage))
 
     if bounded
         inj_lb, inj_ub = ref_calc_storage_injection_bounds(ref(pm, nw, :storage), ref(pm, nw, :bus))
         for (i, strg) in ref(pm, nw, :storage)
             for (idx, c) in enumerate(connections[i])
-                set_lower_bound(ps[i][c], inj_lb[i][idx])
-                set_upper_bound(ps[i][c], inj_ub[i][idx])
+                set_lower_bound(ps[i][c], min(inj_lb[i][idx], 0.0))
+                set_upper_bound(ps[i][c], max(inj_ub[i][idx], 0.0))
             end
         end
     end
@@ -1193,20 +1199,20 @@ function variable_mc_storage_power_imaginary_on_off(pm::AbstractUnbalancedPowerM
     connections = Dict(i => strg["connections"] for (i,strg) in ref(pm, nw, :storage))
     qs = var(pm, nw)[:qs] = Dict(i => JuMP.@variable(pm.model,
         [c in connections[i]], base_name="$(nw)_qs_$(i)",
-        start = comp_start_value(ref(pm, nw, :storage, i), ["qs_start", "qs"], c, 0.0)
+        start = comp_start_value(ref(pm, nw, :storage, i), "qs_start", c, 0.0)
     ) for i in ids(pm, nw, :storage))
 
     if bounded
         for (i, strg) in ref(pm, nw, :storage)
             if haskey(strg, "qmin")
                 for (idx, c) in enumerate(connections[i])
-                    set_lower_bound(qs[i][c], strg["qmin"][idx])
+                    set_lower_bound(qs[i][c], min(strg["qmin"], 0.0))
                 end
             end
 
             if haskey(strg, "qmax")
                 for (idx, c) in enumerate(connections[i])
-                    set_upper_bound(qs[i][c], strg["qmax"][idx])
+                    set_upper_bound(qs[i][c], max(strg["qmax"], 0.0))
                 end
             end
         end
@@ -1246,15 +1252,16 @@ end
 
 
 ""
-function variable_mc_storage_power_mi_on_off(pm::AbstractUnbalancedPowerModel; relax::Bool=false, kwargs...)
-    variable_mc_storage_power_real_on_off(pm; kwargs...)
-    variable_mc_storage_power_imaginary_on_off(pm; kwargs...)
-    variable_mc_storage_current(pm; kwargs...)
-    variable_mc_storage_power_control_imaginary_on_off(pm; kwargs...)
-    variable_storage_energy(pm; kwargs...)
-    variable_storage_charge(pm; kwargs...)
-    variable_storage_discharge(pm; kwargs...)
-    variable_storage_complementary_indicator(pm; relax=relax, kwargs...)
+function variable_mc_storage_power_mi_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=false, bounded::Bool=true, report::Bool=true)
+    variable_mc_storage_power_real_on_off(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_imaginary_on_off(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_power_control_imaginary_on_off(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_current(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_storage_indicator(pm; nw=nw, report=report)
+    variable_storage_energy(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_charge(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_discharge(pm; nw=nw, bounded=bounded, report=report)
+    variable_storage_complementary_indicator(pm; nw=nw, relax=relax, report=report)
 end
 
 
@@ -1396,9 +1403,9 @@ end
 # slack power variables
 
 "generates variables for both `active` and `reactive` slack at each bus"
-function variable_mc_slack_bus_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, kwargs...)
-    variable_mc_slack_bus_power_real(pm; nw=nw, kwargs...)
-    variable_mc_slack_bus_power_imaginary(pm; nw=nw, kwargs...)
+function variable_mc_slack_bus_power(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, report::Bool=true)
+    variable_mc_slack_bus_power_real(pm; nw=nw, report=report)
+    variable_mc_slack_bus_power_imaginary(pm; nw=nw, report=report)
 end
 
 

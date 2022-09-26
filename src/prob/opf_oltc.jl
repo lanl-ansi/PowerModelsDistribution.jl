@@ -16,6 +16,7 @@ function build_mc_opf_oltc(pm::AbstractUnbalancedPowerModel)
 
     variable_mc_generator_power(pm)
     variable_mc_load_power(pm)
+    variable_mc_storage_power(pm)
 
     constraint_mc_model_voltage(pm)
 
@@ -37,6 +38,13 @@ function build_mc_opf_oltc(pm::AbstractUnbalancedPowerModel)
         constraint_mc_power_balance(pm, i)
     end
 
+    for i in ids(pm, :storage)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_nl(pm, i)
+        constraint_mc_storage_losses(pm, i)
+        constraint_mc_storage_thermal_limit(pm, i)
+    end
+
     for i in ids(pm, :branch)
         constraint_mc_ohms_yt_from(pm, i)
         constraint_mc_ohms_yt_to(pm, i)
@@ -45,11 +53,14 @@ function build_mc_opf_oltc(pm::AbstractUnbalancedPowerModel)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -69,6 +80,7 @@ function build_mc_opf_oltc(pm::AbstractUBFModels)
     variable_mc_transformer_power(pm)
     variable_mc_generator_power(pm)
     variable_mc_load_power(pm)
+    variable_mc_storage_power(pm)
 
     variable_mc_oltc_transformer_tap(pm)
 
@@ -93,6 +105,13 @@ function build_mc_opf_oltc(pm::AbstractUBFModels)
         constraint_mc_power_balance(pm, i)
     end
 
+    for i in ids(pm, :storage)
+        constraint_storage_state(pm, i)
+        constraint_storage_complementarity_nl(pm, i)
+        constraint_mc_storage_losses(pm, i)
+        constraint_mc_storage_thermal_limit(pm, i)
+    end
+
     for i in ids(pm, :branch)
         constraint_mc_power_losses(pm, i)
         constraint_mc_model_voltage_magnitude_difference(pm, i)
@@ -101,11 +120,14 @@ function build_mc_opf_oltc(pm::AbstractUBFModels)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -114,19 +136,4 @@ function build_mc_opf_oltc(pm::AbstractUBFModels)
 
     # Objective
     objective_mc_min_fuel_cost(pm)
-end
-
-# Depreciated run_ functions (remove after ~4-6 months)
-
-"depreciation warning for `run_ac_mc_opf_oltc`"
-function run_ac_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, solver; kwargs...)
-    @warn "run_ac_mc_opf_oltc is being depreciated in favor of solve_mc_opf_oltc(data, ACPUPowerModel, solver; kwargs...), please update your code accordingly"
-    return solve_mc_opf_oltc(data, ACPUPowerModel, solver; kwargs...)
-end
-
-
-"depreciation warning for `run_mc_opf_oltc`"
-function run_mc_opf_oltc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    @warn "run_mc_opf_oltc is being depreciated in favor of solve_mc_opf_oltc, please update your code accordingly"
-    return solve_mc_opf_oltc(data, model_type, solver; kwargs...)
 end

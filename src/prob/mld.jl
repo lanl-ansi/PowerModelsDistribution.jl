@@ -66,11 +66,14 @@ function build_mc_mld(pm::AbstractUnbalancedPowerModel)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -127,11 +130,14 @@ function build_mn_mc_mld_simple(pm::AbstractUnbalancedPowerModel)
             constraint_mc_voltage_angle_difference(pm, i; nw=n)
             constraint_mc_thermal_limit_from(pm, i; nw=n)
             constraint_mc_thermal_limit_to(pm, i; nw=n)
+            constraint_mc_ampacity_from(pm, i; nw=n)
+            constraint_mc_ampacity_to(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :switch)
             constraint_mc_switch_state(pm, i; nw=n)
             constraint_mc_switch_thermal_limit(pm, i; nw=n)
+            constraint_mc_switch_ampacity(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :transformer)
@@ -210,11 +216,14 @@ function build_mc_mld(pm::AbstractUBFModels)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -265,11 +274,14 @@ function build_mn_mc_mld_simple(pm::AbstractUBFModels)
             constraint_mc_voltage_angle_difference(pm, i; nw=n)
             constraint_mc_thermal_limit_from(pm, i; nw=n)
             constraint_mc_thermal_limit_to(pm, i; nw=n)
+            constraint_mc_ampacity_from(pm, i; nw=n)
+            constraint_mc_ampacity_to(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :switch)
             constraint_mc_switch_state(pm, i; nw=n)
             constraint_mc_switch_thermal_limit(pm, i; nw=n)
+            constraint_mc_switch_ampacity(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :transformer)
@@ -339,11 +351,14 @@ function build_mc_mld_bf(pm::AbstractUnbalancedPowerModel)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -404,11 +419,14 @@ function build_mc_mld_uc(pm::AbstractUnbalancedPowerModel)
 
         constraint_mc_thermal_limit_from(pm, i)
         constraint_mc_thermal_limit_to(pm, i)
+        constraint_mc_ampacity_from(pm, i)
+        constraint_mc_ampacity_to(pm, i)
     end
 
     for i in ids(pm, :switch)
         constraint_mc_switch_state(pm, i)
         constraint_mc_switch_thermal_limit(pm, i)
+        constraint_mc_switch_ampacity(pm, i)
     end
 
     for i in ids(pm, :transformer)
@@ -416,33 +434,4 @@ function build_mc_mld_uc(pm::AbstractUnbalancedPowerModel)
     end
 
     objective_mc_min_load_setpoint_delta(pm)
-end
-
-# Depreciated run_ functions (remove after ~4-6 months)
-
-"depreciation warning for `run_mc_mld`"
-function run_mc_mld(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    @warn "run_mc_mld is being depreciated in favor of solve_mc_mld, please update your code accordingly"
-    return solve_mc_mld(data, model_type, solver; kwargs...)
-end
-
-
-"depreciation warning for `run_mn_mc_mld_simple`"
-function run_mn_mc_mld_simple(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    @warn "run_mn_mc_mld_simple is being depreciated in favor of solve_mn_mc_mld_simple, please update your code accordingly"
-    return solve_mn_mc_mld_simple(data, model_type, solver; kwargs...)
-end
-
-
-"depreciation warning for `run_mc_mld_bf`"
-function run_mc_mld_bf(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    @warn "run_mc_mld_bf is being depreciated in favor of solve_mc_mld, please update your code accordingly"
-    return solve_mc_mld(data, model_type, solver; kwargs...)
-end
-
-
-"depreciation warning for `run_mc_mld_uc`"
-function run_mc_mld_uc(data::Union{Dict{String,<:Any},String}, model_type::Type, solver; kwargs...)
-    @warn "run_mc_mld_uc is being depreciated in favor of solve_mc_mld_uc, please update your code accordingly"
-    return solve_mc_mld_uc(data, model_type, solver; kwargs...)
 end

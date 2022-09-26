@@ -13,7 +13,8 @@
         make_pu::Bool=true,
         multinetwork::Bool=false,
         global_keys::Set{String}=Set{String}(),
-        kron_reduced::Bool=true,
+        kron_reduce::Bool=true,
+        phase_project::Bool=false,
         time_series::String="daily"
     )::Dict{String,Any}
 
@@ -29,7 +30,9 @@ For explanation of `import_all`, `bank_transformers`, and `time_series`, see [`p
 
 For explanation of `dss2eng_extensions`, see [`parse_opendss`](@ref parse_opendss)
 
-For explanation of `kron_reduced`, see [`apply_kron_reduction!`](@ref apply_kron_reduction!)
+For explanation of `kron_reduce`, see [`apply_kron_reduction!`](@ref apply_kron_reduction!)
+
+For explanation of `phase_project`, see [`apply_phase_projection!`](@ref apply_phase_projection!)
 
 For explanation of `multinetwork` and `global_keys`, see [`make_multinetwork`](@ref make_multinetwork) and [`transform_data_model`](@ref transform_data_model)
 
@@ -51,7 +54,8 @@ function parse_file(
     make_pu::Bool=true,
     multinetwork::Bool=false,
     global_keys::Set{String}=Set{String}(),
-    kron_reduced::Bool=true,
+    kron_reduce::Bool=true,
+    phase_project::Bool=false,
     time_series::String="daily"
     )::Dict{String,Any}
 
@@ -92,7 +96,8 @@ function parse_file(
                 pmd_data;
                 make_pu=make_pu,
                 make_pu_extensions=make_pu_extensions,
-                kron_reduced=kron_reduced,
+                kron_reduce=kron_reduce,
+                phase_project=phase_project,
                 multinetwork=multinetwork,
                 global_keys=global_keys,
                 eng2math_extensions=eng2math_extensions,
@@ -108,7 +113,8 @@ function parse_file(
             pmd_data = transform_data_model(pmd_data;
                 make_pu=make_pu,
                 make_pu_extensions=make_pu_extensions,
-                kron_reduced=kron_reduced,
+                kron_reduce=kron_reduce,
+                phase_project=phase_project,
                 multinetwork=multinetwork,
                 global_keys=global_keys,
                 eng2math_extensions=eng2math_extensions,
@@ -159,6 +165,8 @@ function correct_network_data!(data::Dict{String,Any}; make_pu::Bool=true, make_
         check_branch_loops(data)
 
         correct_bus_types!(data)
+
+        propagate_network_topology!(data)
 
         if make_pu
             make_per_unit!(data; make_pu_extensions=make_pu_extensions)

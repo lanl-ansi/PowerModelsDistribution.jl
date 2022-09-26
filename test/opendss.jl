@@ -89,7 +89,7 @@
 
         @test math["name"] == "test2"
 
-        @test length(math) == 17
+        @test length(math) == 18
         @test length(dss) == 23
 
         for (key, len) in zip(["bus", "load", "shunt", "branch", "gen", "transformer", "storage", "switch"], [34, 4, 5, 28, 5, 10, 1, 1])
@@ -169,9 +169,6 @@
                         "charge_efficiency", "discharge_efficiency", "thermal_rating", "qmin", "qmax",
                         "r", "x", "p_loss", "q_loss", "status", "source_id"]
                 @test haskey(bat, key)
-                if key in ["x", "r", "qmin", "qmax", "thermal_rating"]
-                    @test isa(bat[key], Vector)
-                end
             end
         end
 
@@ -298,6 +295,13 @@
             "like" => "",
         )
     end
+
+    @testset "tabulation parse" begin
+        eng = parse_file("../test/data/opendss/case_tabulation.dss")
+
+        number_buses = 3
+        @test length(eng["bus"]) == number_buses
+    end
 end
 
 @testset "test different regcontrol configurations" begin
@@ -308,7 +312,7 @@ end
     @test all(isequal(eng["transformer"]["reg1"]["controls"]["band"][1], [0.0, 0.0, 4.0]))
     @test all(isequal(eng["transformer"]["reg1"]["controls"]["ctprim"][1], [0.0, 0.0, 695.0]))
     @test all(isequal(eng["transformer"]["sub"]["controls"]["r"][1], [0.0, 0.0, 3.0]))
-    @test all(isequal(eng["transformer"]["sub"]["controls"]["x"][1], [0.0, 0.0, 9.0]))        
+    @test all(isequal(eng["transformer"]["sub"]["controls"]["x"][1], [0.0, 0.0, 9.0]))
 end
 
 @testset "test different capcontrol configurations" begin

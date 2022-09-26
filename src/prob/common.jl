@@ -96,7 +96,7 @@ function instantiate_mc_model(
     model_type::Type,
     build_method::Function;
     ref_extensions::Vector{<:Function}=Function[],
-    multinetwork::Bool=false,
+    multinetwork::Bool=ismultinetwork(data),
     global_keys::Set{String}=Set{String}(),
     eng2math_extensions::Vector{<:Function}=Function[],
     eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
@@ -267,18 +267,4 @@ function solve_mc_model(
         global_keys=global_keys,
         kwargs...
     )
-end
-
-
-"depreciation message for run_mc_model"
-function run_mc_model(
-    data::Union{String,Dict{String,<:Any}},
-    model_type::Type,
-    optimizer,
-    build_mc::Function;
-    kwargs...
-    )::Dict{String,Any}
-
-    @warn "run_mc_model is being depreciated in favor of solve_mc_model, please update your code accordingly"
-    return solve_mc_model(data, model_type, optimizer, build_mc; kwargs...)
 end

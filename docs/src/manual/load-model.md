@@ -40,16 +40,11 @@ $$I^\text{bus}_\mathcal{P} = I^\text{d},\;\;\;I^\text{bus}_n=-1^TI^d$$
 
 We now develop the expression for the power drawn at the bus for the phase conductors
 
-$$
-  S^\text{bus}_\mathcal{P} = (U^d+U^\text{bus}_n)\odot(I^d)^*
-      = S^d+U^\text{bus}_n S^d\oslash U^d.
-$$
+$$S^\text{bus}_\mathcal{P} = (U^d+U^\text{bus}_n)\odot(I^d)^* = S^d+U^\text{bus}_n S^d\oslash U^d.$$
 
 From conservation of power or simply the formulas above,
 
-$$
-    S^\text{bus}_n = -1^TS^\text{bus}_\mathcal{P}+1^TS^d.
-$$
+$$S^\text{bus}_n = -1^TS^\text{bus}_\mathcal{P}+1^TS^d.$$
 
 ### Grounded neutral
 
@@ -71,13 +66,8 @@ $$U^d = M^\Delta U^\text{bus},\;\;\; I^\text{bus} = \left(M^\Delta\right)^T I^d.
 
 We can related $S^\text{bus}$ to $U^\text{bus}$ and $I^d$
 
-$$
-S^\text{bus} = U^\text{bus}\odot \left(I^\text{bus}\right)^*
-             = U^\text{bus}\odot \left(M^\Delta\right)^T\left(I^d\right)^*,
-$$
+$$S^\text{bus} = U^\text{bus}\odot \left(I^\text{bus}\right)^* = U^\text{bus}\odot \left(M^\Delta\right)^T\left(I^d\right)^*,$$
 
 and using the fact that $\left(I^d\right)^*=S^d \oslash U^d$, and the expression above for $U^d$,
 
-$$
-S^\text{bus} = U^\text{bus}\left(M^\Delta\right)^T S^d \oslash M^\Delta U^\text{bus}
-$$
+$$S^\text{bus} = U^\text{bus}\left(M^\Delta\right)^T S^d \oslash M^\Delta U^\text{bus}$$

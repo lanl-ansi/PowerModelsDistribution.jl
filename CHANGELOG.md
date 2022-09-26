@@ -2,6 +2,196 @@
 
 ## staged
 
+- Updated documentation in `make_multiconductor!` to better indicate its unsupported nature
+- Added automatic detection of multinetwork data to `instantiate_mc_model`
+- Converted `::Float64` types in function signatures to `::Real`
+- Fixed bug in `parse_file` in `.dss` files with character UTF-8 0x09 (Tabulation) [#394](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/394)
+
+## v0.14.4
+
+- Fixed bug in `apply_voltage_bounds!` for multinetwork data
+- Added compat for JuMP v1
+- Fixed bug in `_map_eng2math` where global keys were not being propagated in multinetwork
+- Fixed bug/typo in `_create_storage` where `kwhstored` was derived from `:stored` instead of `Symbol("%stored")`
+- Fixed bug in function `_dss2eng_loadshape!()` where `qmult` data was overwriting `pmult` data [#386](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/386)
+
+## v0.14.3
+
+- Fixed bug in dss parser where circuit was not being edited using the `edit` dss command
+- Fixed bug in eng2math functions where the voltage angle was being set incorrectly for generation assets that were set to isochronous control mode
+
+## v0.14.2
+
+- Fixed failing unit test "3-bus SOCConicUBF opf_bf" for Windows
+- Updated minimum Julia requirement to v1.6 (LTS) [#382](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/382)
+- Added compat for JuMP v0.23, Ipopt v1.0, SCS v1.1, PolyhedralRelaxations v0.3.3
+- Dropped support for SCS 0.8 in Unit tests (0.9 no longer supports `eps` option)
+- Fixed bug in `remove_all_bounds!` where an `||` was not enclosed in parentheses
+- Changed remaining instances of `Int64` to `Int` for better compatibility [#382](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/382)
+- Fixed bug in `create_solar` where kwargs were not being utilized [#380](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/380)
+- Fixed bug in `create_storage` where datatypes were inconsistent with documentation [#379](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/379)
+- Added check for missing `vbase` in `apply_voltage_bounds!` transformation
+- Refactored `constraint_mc_power_balance_capc(pm::LPUBFDiagModel, ...)` to be more consistent with other versions, for easier debugging
+- Removed Cbc, Juniper from unit tests (not being utilized in tests)
+- Removed explicit field copying from `voltage_source` math2eng solution conversion (now copies all fields)
+- Fixed bug in `_calc_branch_series_current_max` where `vmin_to` used `bus_fr` instead of `bus_to` [#378](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/378)
+
+## v0.14.1
+
+- Fix `variable_mc_capcontrol` keyword arguments
+
+## v0.14.0
+
+- Drop support for JuMP < v0.22
+
+## v0.13.3
+
+- Refactored functions to remove kwargs in many cases of constraints/variables
+- Fixed bugs in NFAU constraints/variables
+- Fixed bug where no solution would result in an error, instead of empty solution
+
+## v0.13.2
+
+- Fixed issue with looped edge components in ref (i.e., if f_bus==t_bus)
+- Added linear relaxation of ampacity constraints (remove quadatric)
+- Fixed on-off storage variable start value
+
+## v0.13.1
+
+- Fixed `1phase-pv` unit tests
+- Adjusted `sbase_default`, and added `@info` if basemva from dss is the default value
+- Fixed storage model for powerflow validation (new test values are based directly on dss outputs)
+- Added `con(pm, nw, :ohms_yt, f_idx)` to store ohms constraints
+- Added `constraint_mc_branch_flow` for effective zero impedance branches in Bus Injection models, including `con(pm, nw, :branch_flow, i)` to store the constraints
+- Fixed broken `capcontrol` test
+- Fixed broken `storage` tests
+- Fixed `data model` unit tests
+- Updated to add InfrastructureModels v0.7
+- Fixed wrong `kvar` in `storage` dss struct
+- Updated default pg in solar object when parsing from dss to use pmpp and irradiance
+- Fixed missing `solar` in 1-to-1 maps for eng2math
+- Fixed default `vad_lb` and `vad_ub` in `create_line`
+- Fixed bug in `create_voltage_source` where the voltage angles `va` were all zero
+- Updated storage parsing to use kva instead of kvar for qs_lb and qs_ub (storage in dss is defined to be able to handle any reactive power up to the thermal limit of the inverter)
+- Fixed `make_lossless!` to adjust how switches are made lossless
+- Fixed voltage sqr variable start values
+- Fixed p/q variable start values
+- Added missing `temperature` on pvsystem
+- Added `configuration=WYE` to voltage sources
+- Fixed bug in voltage angle variable start values
+- Fixed bug with case sensitve filenames by using `Glob.glob` with `Glob.FilenameMatch`
+- Fixed bug in `constraint_mc_switch_current_limit` where voltage variables being used were wrong
+- Moved all `import` statements to root `PowerModelsDistribution`
+- Fixed bug in `_calc_transformer_current_max_frto` where `sm_ub` should have been divided by `vmin`, NOT `vmax`
+- Updates `LPUBFDiagModel` description in docs
+
+## v0.13.0
+
+- Fixed bug in `constraint_mc_theta_ref` where default va_ref was in wrong units
+- Fixed bug in call to `constraint_capacitor_on_off` where `nw` network id was not being passed
+- Refactored kwargs `kron_reduced` and `phase_projected` to be `kron_reduce` and `phase_project`, respectively
+- Added more native support for multinetwork data structures
+- Changed `"multiple references buses found"` warning to `@debug`
+- Added multinetwork versions of data model transformation functions using `apply_pmd!`
+- Added `propagate_network_topology!`, a helper function to propagate the status of buses to connected components
+- Updated Documentation on Storage data model
+- Added LPUBFDiag version of `constraint_mc_storage_thermal_limit` using PolyhedralRelaxations to relax the quadradic constraints
+- Fixed bug in reporting duals (typo in ampacity constraint functions) (#367)
+- Changed multiconductor storage model parsing from opendss to be single values (instead of creating some multiconductor values, making assumptions about split between phases)
+- Fixed `vm`, `va` variable starts in `ACRU` and `ACPU` forms
+- Fixed boundless `LPUBFDiagModel` `constraint_mc_transformer_power_yy` with controls
+- Fixed `ACPUPowerModel` `vm`,`va` variable starts
+- Updated `FOTPU`, `FOTRU` and `FBS` models for consistency with other formulations
+- Fixed bug in `make_lossless!`
+- Updated `correct_bus_types!` to be knowledgable about islands in the network data
+- Changed `warning` to `@warn`
+- Added storage to `solve_mc_opf_oltc_capc` problems
+- Fixed bug in parsing of `null` values from JSON
+- Changed `cm_ub` on storage parsing to `sm_ub` to be consistent with what the parsed value actually is
+- Fixed bug in `cm_ub` parsing on lines
+- Updated `constraint_mc_transformer_power_yy(pm::LPUBFDiagModel)` to be truly LP
+- Updated `ACRUPowerModel` voltage start value computation
+- Fixed bug in `dimensionalize_math`, where `sc_on`, and `sd_on` were included under storage (non-dimensional values should not be scaled)
+- Removed `sm_ub_b`, `cm_ub_b`, `sm_ub_c`, `cm_ub_c` from kron reduction (fields no longer exist)
+- Updated `make_lossless!` to make the model truly lossless, by including all line parameters
+- Added `adjust_transformer_limits!` to multiple transformer variable bounds
+- Added transformations `adjust_small_line_impedances!`, `adjust_small_line_admittances!`, `adjust_small_line_lengths!`, to help prune bad eng-model data
+- Fixed `set_time_elapsed!` multinetwork function to update `"time"` and `"mn_lookup"`
+- Added `"status"` to transformer decomposition functions
+- Updated `eng2math` functions to have consistent usage of `"status"` from eng model
+- Updated `variable_mc_storage_power_mi` to have explicit kwargs
+- Updated `on_off` variable functions to ensure zeros are included in variable bounds
+- Changed `"multiple reference buses found"` warning to `@info`
+- Added LP version of `constraint_storage_complementarity_nl`
+- Added PolyhedralRelaxations.jl as a dependency for relaxing quadratic and bivariate constraints
+- Fixed voltage warm start in `FBSUBFModel` form
+- Added functions necessary for `capc` and `oltc` in NFAUPowerModel
+- Fixed bug in `FBSUBFModel` formulation, where transformer variables were being created in their matrix form
+- Fixed bug in parsing of dss generator objects, which didn't take into account `pf`
+- Fixed `oltc` in `LPUBFDiagPowerModel`, which was previously a `@NLconstraint` to now use `@constraint`
+- Fixed bug in `constraint_mc_power_balance_capc::AbstractUnbalancedACPModel`, where `@smart_constraint` was failing due to missing variable
+- Fixed bug in `start` values for tap variables
+- Refactored `_calc_branch_power_max` and `_calc_branch_current_max` to be more robust
+- Added `solve_mc_opf_oltc_capc` problem, which includes both `solve_mc_opf_oltc` and `solve_mc_opf_capc` features
+- Added kwarg to `apply_voltage_bounds!` to exclude some buses
+- Added `adjust_line_limits!` transformation function
+- Added support for parsing `sm_ub` from dss to transformers (comes from `emerghkva`)
+- Fixed bug in `capc` problems where switches were not considered as a control element for capacitors
+- Fixed bug in `_create_xfmrcode` where `:bus` was included in iteration
+- Added missing `constraint_mc_ampacity_from` and `constraint_mc_ampacity_to` constraints in `opf_oltc` problems
+- Fixed bug in `NFAUPowerModel` formulation, where `variable_mc_transformer_power_real` was incorrectly setting up transformer power variables
+- Fixed bug in `calc_voltage_bases` where if a transformer configuration was in xfmrcode, the function would error
+- Added data transformations `remove_line_limits!` and `remove_transformer_limits!`, to remove current/power bounds on lines, linecodes, switches, and transformers
+- Fixed bug in `linecode` objects where `cm_ub` or `sm_ub` were not being passed correctly to lines
+- Added capability to infer number of phases from supported dss objects
+- Fixed bug in `calc_connected_components` where function signature was incorrect
+
+## v0.12.0
+
+- Fixed issue of missing `va` on reference buses which have been selected automatically
+- Fixed PVSystem fields and defaults based on latest version
+- Added support for `action=normalize` on dss LoadShapes
+- Fixed bug in dss LoadShape where `useactual=yes` was the default, whereas `useactual=no` is the real default
+- Removed remaining PowerModels files / dependency from unit tests
+- Changed `sbase_default` to `1.0` by default, because often with default solver settings, constraints were ignored for being far too small
+- Changed to use emergamps from dss for `cm_ub` on lines by default (higher limit)
+- Fixed bug in transformer math2eng conversion where `tap` was not carried to the solution
+- Fixed wrong index in `constraint_mc_theta_ref` for ACRUPowerModel
+- Fixed Type collections; AbstractUBFModels do not necessarily have to have `w` variables, so these are explicity spelled out now
+- Added ampacity (current limit) constraints for branches and switches, which better reflect standard input data: `constraint_mc_ampacity_from` and `constraint_mc_ampacity_to` for branches, and `constraint_mc_switch_ampacity` for switches
+- Fixed bug in `bank_transformers!` function where `status` field was not being set correctly
+- Updated switch thermal constraints to store the constraints in `con(pm, nw, :mu_sm_switch, f_idx)`
+- Removed extraneous thermal limit constraints from power flow problem formulations
+- Fixed the function signature for `variable_mc_capacitor_switch_state` and `variable_mc_capcontrol` to match conventions
+- Removed depreciated `run_` functions, which were replaced in with `solve_` functions in v0.10.2
+- Fixed bug in `make_multinetwork!` where inferred time_elapsed was not being used
+- Fixed bug in `make_multinetwork!` for cases where `replace=false` was used where we needed a `deepcopy`
+- Added explicit neutral formulations
+- Fix bug in `constraint_mc_switch_thermal_limit` where switch property name contained a typo
+- Fix bug in `constraint_mc_thermal_limit_from` where `Inf` values in `rate_a` would lead to an error
+- Fix bug in `correct_branch_directions!` where `f_connections` and `t_connections` were not being swapped
+- Fix bug in `_rebase_pu_branch!` where current ratings were being non-dimensionalized with the power base instead of the current base, and added non-dimensionalization for power ratings
+- Fix bug in `_rebase_pu_switch!` where current ratings were being non-dimensionalized with the power base instead of the current base, and added non-dimensionalization for power ratings
+- The qualifier `t` was removed from the transformer solution properties, i.e. `crt`->`cr`, to be consistent with solution naming conventions where these qualifiers are omitted as they are contained in a transformer component dictionary, unlike the variables
+
+## v0.11.10
+
+- Fixed bug in eng2math conversion of buses, where the status was not correctly parsed, so `DISABLED` buses were not getting set to `bus_type = 4`
+
+## v0.11.9
+
+- Fixed bug in `apply_kron_reduction!` where not all transformers were getting kron reduced
+- Fixed typos in documentation
+
+## v0.11.8
+
+- Fixed bug in LPUBFDiagModel transformer variables
+- Removed phase projection of only wye-connected transformers (left over), phase projection of delta components remains for now
+- Updated time_series to affect upper real and reactive power bounds on solar objects in dss2eng parse
+- Fixed bug in dss pvsystem struct where `temperature`, `pmpp`, and `irradiance` were the wrong type (`Int` instead of `Float64`)
+- Fixed bug in dss node structs, where daily was the wrong type (should be `String`, not `Vector{Float64}`)
+- Fixed bug in `_calc_branch_power_max` where `c_rating_b` was being used
+- Add support for storage to OPF_OLTC
 - Add wye-connected CapControl for ACP, ACR, LinDist3Flow, FBS and FOT formulations
 
 ## v0.11.7
@@ -160,7 +350,7 @@
 - fix bug in `_build_eng_multinetwork`, where "dss_options" was missing from const `_pmd_eng_global_keys`
 - change enums (SwitchState and Dispatchable) for switches to Reals, was causing problems in loops of OSW problems
 - fix bug in `variable_mc_bus_voltage_magnitude_sqr` and `variable_mc_transformer_power_imaginary` where `_start` values were not being iterated over per connection
-- depreciate run_ functions in favor of solve_
+- depreciate `run_` functions in favor of `solve_`
 - add support for `relax_integrality` (InfrastructureModels ~0.5.4)
 - fix bug in `variable_mx_real` constructor where it was indexing over terminals instead of enumerates
 - added storage variables to automatic unit conversion to si units on math2eng transformation
@@ -231,7 +421,7 @@
 - Refactors Kron reduction and padding transformations out of eng2math into their own transformation functions (#287)
 - Add functionality of run_mc_mld_bf to run_mc_mld via multiple dispatch
 - Fixes inconsistency of connections on MATHEMATICAL components, in particular, virtual objects (#280)
-- Add a transformation remove_all_bounds! that removes all fields ending in _ub and _lb (#278)
+- Add a transformation remove_all_bounds! that removes all fields ending in \_ub and \_lb (#278)
 - Add missing connections for virtual generator at voltage source
 - Fix pu conversion bus voltage bounds and add parsing for vm_pair_lb and vm_pair_ub
 - Add CONTRIBUTING.md

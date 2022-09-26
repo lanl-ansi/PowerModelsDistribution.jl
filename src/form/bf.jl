@@ -32,8 +32,8 @@ end
 
 
 "Create voltage variables for branch flow model"
-function variable_mc_bus_voltage_on_off(pm::LPUBFDiagModel; kwargs...)
-    variable_mc_bus_voltage_magnitude_sqr_on_off(pm; kwargs...)
+function variable_mc_bus_voltage_on_off(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_magnitude_sqr_on_off(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -56,12 +56,18 @@ function constraint_mc_transformer_power_yy(pm::LPUBFDiagModel, nw::Int, trans_i
     w_fr = var(pm, nw, :w)[f_bus]
     w_to = var(pm, nw, :w)[t_bus]
 
+    tmsqr = [tm_fixed[i] ? tm[i]^2 : JuMP.@variable(pm.model, base_name="$(nw)_tmsqr_$(trans_id)_$(f_connections[i])", start=JuMP.start_value(tm[i])^2, lower_bound=JuMP.has_lower_bound(tm[i]) ? JuMP.lower_bound(tm[i])^2 : 0.9^2, upper_bound=JuMP.has_upper_bound(tm[i]) ? JuMP.upper_bound(tm[i])^2 : 1.1^2) for i in 1:length(tm)]
+
     for (idx, (fc, tc)) in enumerate(zip(f_connections, t_connections))
         if tm_fixed[idx]
             JuMP.@constraint(pm.model, w_fr[fc] == (pol*tm_scale*tm[idx])^2*w_to[tc])
         else
-            # TODO: linearize constraints for transformer taps without regcontrol, tap variable not required in regcontrol formulation
-            JuMP.@NLconstraint(pm.model, w_fr[fc] == (pol*tm_scale*tm[idx])^2*w_to[tc])
+            PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, tm[idx], tmsqr[idx], [JuMP.has_lower_bound(tm[idx]) ? JuMP.lower_bound(tm[idx]) : 0.9, JuMP.has_upper_bound(tm[idx]) ? JuMP.upper_bound(tm[idx]) : 1.1], false)
+
+            tmsqr_w_to = JuMP.@variable(pm.model, base_name="$(nw)_tmsqr_w_to_$(trans_id)_$(t_bus)_$(tc)")
+            PolyhedralRelaxations.construct_bilinear_relaxation!(pm.model, tmsqr[idx], w_to[tc], tmsqr_w_to, [JuMP.lower_bound(tmsqr[idx]), JuMP.upper_bound(tmsqr[idx])], [JuMP.has_lower_bound(w_to[tc]) ? JuMP.lower_bound(w_to[tc]) : 0.9^2, JuMP.has_upper_bound(w_to[tc]) ? JuMP.upper_bound(w_to[tc]) : 1.1^2])
+
+            JuMP.@constraint(pm.model, w_fr[fc] == (pol*tm_scale)^2*tmsqr_w_to)
 
             # with regcontrol
             if haskey(transformer,"controls")
@@ -132,7 +138,7 @@ end
 
 
 "Neglects the active and reactive loss terms associated with the squared current magnitude."
-function constraint_storage_losses(pm::AbstractUBFAModel, n::Int, i, bus, r, x, p_loss, q_loss; conductors=[1])
+function constraint_mc_storage_losses(pm::AbstractUBFAModel, n::Int, i::Int, bus::Int, connections::Vector{Int}, r::Real, x::Real, p_loss::Real, q_loss::Real)
     ps = var(pm, n, :ps, i)
     qs = var(pm, n, :qs, i)
     sc = var(pm, n, :sc, i)
@@ -140,13 +146,13 @@ function constraint_storage_losses(pm::AbstractUBFAModel, n::Int, i, bus, r, x, 
     qsc = var(pm, n, :qsc, i)
 
     JuMP.@constraint(pm.model,
-        sum(ps[c] for c in conductors) + (sd - sc)
+        sum(ps[c] for c in connections) + (sd - sc)
         ==
         p_loss
     )
 
     JuMP.@constraint(pm.model,
-        sum(qs[c] for c in conductors)
+        sum(qs[c] for c in connections)
         ==
         qsc + q_loss
     )
