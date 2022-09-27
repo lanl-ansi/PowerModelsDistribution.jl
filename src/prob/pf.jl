@@ -263,6 +263,10 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
         end
     end
 
+    vbases = Dict(i => v*data_math["settings"]["voltage_scale_factor"] for (i, v) in data_math["settings"]["vbases_default"])
+    sbase  = data_math["settings"]["sbase_default"]  * data_math["settings"]["power_scale_factor"]
+    bus_vbase, line_vbase = calc_voltage_bases(data_math, vbases)
+
     cc_ns_func_pairs = []
     ns_yprim = []
     virtual_count = 0
@@ -272,7 +276,8 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
     for (comp_type, comp_interface) in _CPF_COMPONENT_INTERFACES
         for (id, comp) in data_math[comp_type]
             if comp[comp_status_prop[comp_type]]==1
-                (bts, nr_vns, y_prim, c_nl, c_tots) = comp_interface(comp, v_start, explicit_neutral)
+
+                (bts, nr_vns, y_prim, c_nl, c_tots) = comp_interface(comp, v_start, explicit_neutral, line_vbase, sbase)
 
                 ungr_btidx  = [ntype[bt]!=GROUNDED for bt in bts]
                 ungr_filter = [ungr_btidx..., fill(true, nr_vns)...]
@@ -297,16 +302,17 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
 
     N = length(indexed_nodes)
     Y = spzeros(Complex{Float64}, N, N)
-    for (ns, y_prim) in ns_yprim
-        inds = [node_to_idx[n] for n in ns]
-        Y[inds,inds] .+= y_prim
-    end
 
     node_fixed_idx = [i for i in 1:N if ntype[indexed_nodes[i]]==FIXED]
     node_other_idx = setdiff(1:N, node_fixed_idx)
 
     fnode_to_idx = Dict(node=>idx for (idx,node) in enumerate(indexed_nodes[node_fixed_idx]))
     vnode_to_idx = Dict(node=>idx for (idx,node) in enumerate(indexed_nodes[node_other_idx]))
+
+    for (ns, y_prim) in ns_yprim
+        inds = [node_to_idx[n] for n in ns]
+        Y[inds,inds] .+= y_prim
+    end
 
     Yf = Y[node_other_idx, node_fixed_idx]
     Yv = Y[node_other_idx, node_other_idx]
@@ -397,7 +403,6 @@ function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:An
     for (nw, dm) in nw_dm
         if ismissing(v_start)
             add_start_voltage!(dm, coordinates=:rectangular, epsilon=0, explicit_neutral=explicit_neutral)
-
             v_start = _bts_to_start_voltage(dm)
         end
 
@@ -463,16 +468,16 @@ matrix of the network data using the fixed-point current injection method.
 Returns a solution data structure in PowerModelsDistribution Dict format.
 """
 function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
-
+    
     Nv = length(pfd.indexed_nodes)-length(pfd.fixed_nodes)
 
-    Yv_LU = LinearAlgebra.factorize(pfd.Yv)
-    Uv0 = Yv_LU\(-pfd.Yf*pfd.Uf)
-    
-    # prob = LinearSolve.LinearProblem(pfd.Yv, -pfd.Yf*pfd.Uf)
-    # linsolve = LinearSolve.init(prob, LinearSolve.KLUFactorization(;reuse_symbolic=true))
-    # sol1 = LinearSolve.solve(linsolve)
-    # Uv0 = sol1.u
+    # Yv_LU = LinearAlgebra.factorize(pfd.Yv)
+    # Uv0 = Yv_LU\(-pfd.Yf*pfd.Uf)
+
+    prob = LinearSolve.LinearProblem(pfd.Yv, -pfd.Yf*pfd.Uf.+1e-6)
+    linsolve = LinearSolve.init(prob, LinearSolve.KLUFactorization(;reuse_symbolic=true))
+    sol1 = LinearSolve.solve(linsolve)
+    Uv0 = sol1.u
 
     Uv = Uv0
 
@@ -490,11 +495,12 @@ function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E
             end
         end
 
-        Uv_next = Yv_LU\(Iv.-pfd.Yf*pfd.Uf)
+        # Uv_next = Yv_LU\(Iv.-pfd.Yf*pfd.Uf)
 
-        # linsolve = LinearSolve.set_b(sol1.cache, Iv.-pfd.Yf*pfd.Uf)
-        # sol2 = LinearSolve.solve(linsolve, LinearSolve.KLUFactorization(;reuse_symbolic=true))
-        # Uv_next = sol2.u
+        prob = LinearSolve.LinearProblem(pfd.Yv, Iv.-pfd.Yf*pfd.Uf)
+        linsolve = LinearSolve.init(prob, LinearSolve.KLUFactorization(;reuse_symbolic=true))
+        sol2 = LinearSolve.solve(linsolve)
+        Uv_next = sol2.u
 
         change = maximum(abs.(Uv .- Uv_next))
         if change <= stat_tol
@@ -599,15 +605,22 @@ end
     _cpf_branch_interface(
       branch::Dict,
       v_start::Dict,
-      explicit_neutral::Bool
+      explicit_neutral::Bool,
+      line_vbase::Dict,
+      sbase::Float
     )
 
 Branch component interface outputs branch primitive Y matrix.
 """
-function _cpf_branch_interface(branch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
+function _cpf_branch_interface(branch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Float64)
     Ys = inv(branch["br_r"]+im*branch["br_x"])
     Yfr = branch["g_fr"]+im*branch["b_fr"]
     Yto = branch["g_to"]+im*branch["b_to"]
+
+    # vbase = line_vbase["branch.$(branch["index"])"]
+    # zbase = (vbase)^2 / sbase
+    # ppm = im * 4.2e-8 * (2*pi*50)/zbase * 0
+
     y_prim = [(Ys.+Yfr) -Ys; -Ys (Ys.+Yto)]
     bts = [[(branch["f_bus"], t) for t in branch["f_connections"]]..., [(branch["t_bus"], t) for t in branch["t_connections"]]...]
     c_tots_func = function(v_bt)
@@ -621,12 +634,14 @@ end
     _cpf_shunt_interface(
       shunt::Dict,
       v_start::Dict,
-      explicit_neutral::Bool
+      explicit_neutral::Bool,
+      line_vbase::Dict,
+      sbase::Float
     )
 
 Shunt component interface outputs shunt primitive Y matrix.
 """
-function _cpf_shunt_interface(shunt::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
+function _cpf_shunt_interface(shunt::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Float64)
     Y = shunt["gs"]+im*shunt["bs"]
     bts = [(shunt["shunt_bus"], t) for t in shunt["connections"]]
     c_tots_func = function(v_bt)
@@ -640,28 +655,36 @@ end
     _cpf_transformer_interface(
       tr::Dict,
       v_start::Dict,
-      explicit_neutral::Bool
+      explicit_neutral::Bool,
+      line_vbase::Dict,
+      sbase::Float
     )
 
 Transformer component interface outputs transformer primitive Y matrix.
 """
-function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
+function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Float64)
     f_ns = [(tr["f_bus"], t) for t in tr["f_connections"]]
     t_ns = [(tr["t_bus"], t) for t in tr["t_connections"]]
     ts = tr["tm_set"]*tr["tm_nom"]*tr["polarity"]
+
+    vbase = tr["f_vbase"] * 1000
+    sbase = tr["sm_ub"] * 1000
+    zbase = vbase^2 / sbase / length(tr["t_connections"])
+    ppm = -1e-6 / zbase / 2
+
     if tr["configuration"]==WYE && explicit_neutral
         npairs_fr = [(f_ns[i], f_ns[end]) for i in 1:length(f_ns)-1]
         npairs_to = [(t_ns[i], t_ns[end]) for i in 1:length(t_ns)-1]
-        bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Yy(ts, npairs_fr, npairs_to)
+        bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Yy(ts, npairs_fr, npairs_to, ppm)
     elseif tr["configuration"]==WYE && !explicit_neutral
         npairs_fr = [(f_ns[i], f_ns[i]) for i in 1:length(f_ns)]
         npairs_to = [(t_ns[i], t_ns[i]) for i in 1:length(t_ns)]
-        bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Ygyg(ts, npairs_fr, npairs_to)
+        bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Ygyg(ts, npairs_fr, npairs_to, ppm)
     elseif tr["configuration"]==DELTA
         @assert length(f_ns)==3
         npairs_fr = [(f_ns[1], f_ns[2]), (f_ns[2], f_ns[3]), (f_ns[3], f_ns[1])]
         npairs_to = [(t_ns[i], t_ns[i]) for i in 1:length(t_ns)]
-        bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Dyg(ts, npairs_fr, npairs_to)
+        bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Dyg(ts, npairs_fr, npairs_to, ppm)
     else
         error("Transformer " * tr["source_id"] * " configuration " * tr["configuration"] * " unknown")
     end
@@ -682,7 +705,7 @@ end
 
 Modifies ideal wye-wye transformers to avoid singularity error, through the ppm value, inspired by OpenDSS.
 """
-function _compose_yprim_banked_ideal_transformers_Yy(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
+function _compose_yprim_banked_ideal_transformers_Yy(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, ppm)
     y_prim_ind = Dict()
     nph = length(ts)
 
@@ -697,9 +720,9 @@ function _compose_yprim_banked_ideal_transformers_Yy(ts::Vector{Float64}, npairs
         inds = [n_to_idx[n] for n in ns_i]
         Y[inds[1:4],inds[5]] .= [1/t, -1/t, -1, 1]
         Y[inds[5],inds[1:4]] .= [1/t, -1/t, -1, 1]
-        for k in 1:5
-            Y[k,k] += ppm*1E-6
-        end
+        # for k in 1:5
+        #     Y[k,k] += ppm
+        # end
     end
 
     return ns[1:end-nph], nph, Y
@@ -716,7 +739,7 @@ _compose_yprim_banked_ideal_transformers_Ygyg(
 
 Modifies ideal wye_grounded-wye_grounded transformers to avoid singularity error, through the ppm value, inspired by OpenDSS.
 """
-function _compose_yprim_banked_ideal_transformers_Ygyg(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
+function _compose_yprim_banked_ideal_transformers_Ygyg(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, ppm)
     y_prim_ind = Dict()
     nph = length(ts)
     
@@ -731,9 +754,9 @@ function _compose_yprim_banked_ideal_transformers_Ygyg(ts::Vector{Float64}, npai
         inds = [n_to_idx[n] for n in ns_i]
         Y[inds[1:2],inds[3]] .= [1/t, -1]
         Y[inds[3],inds[1:2]] .= [1/t, -1]
-        for k in 1:3
-            Y[k,k] += ppm*1E-6
-        end
+        # for k in 1:3
+        #     Y[k,k] += ppm
+        # end
     end
 
     return ns[1:end-nph], nph, Y
@@ -750,7 +773,7 @@ _compose_yprim_banked_ideal_transformers_Dyg(
 
 Modifies ideal delta-wye_grounded transformers to avoid singularity error, through the ppm value, inspired by OpenDSS.
 """
-function _compose_yprim_banked_ideal_transformers_Dyg(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}; ppm=1)
+function _compose_yprim_banked_ideal_transformers_Dyg(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, ppm)
     y_prim_ind = Dict()
     nph = length(ts)
     
@@ -766,7 +789,7 @@ function _compose_yprim_banked_ideal_transformers_Dyg(ts::Vector{Float64}, npair
         Y[inds[1:3],inds[4]] .= [1/t, -1/t, -1]
         Y[inds[4],inds[1:3]] .= [1/t, -1/t, -1]
         for k in 1:4
-            Y[k,k] += ppm*1E-6
+            Y[k,k] += ppm
         end
     end
 
@@ -778,12 +801,14 @@ end
     _cpf_load_interface(
       load::Dict,
       v_start::Dict,
-      explicit_neutral::Bool
+      explicit_neutral::Bool,
+      line_vbase::Dict,
+      sbase::Float
     )
 
 Load component interface outputs load primitive Y matrix.
 """
-function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
+function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Float64)
     bts = [(load["load_bus"], t) for t in load["connections"]]
     v0_bt = [v_start[bt] for bt in bts]
     wires = length(bts)
@@ -954,12 +979,14 @@ end
     _cpf_generator_interface(
       gen::Dict,
       v_start::Dict,
-      explicit_neutral::Bool
+      explicit_neutral::Bool,
+      line_vbase::Dict,
+      sbase::Float
     )
 
 Generator component interface outputs generator primitive Y matrix.
 """
-function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
+function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Float64)
     bts = [(gen["gen_bus"], t) for t in gen["connections"]]
     wires = length(bts)
     v0_bt = [v_start[bt] for bt in bts]
@@ -1035,15 +1062,33 @@ end
       switch::Dict,
       v_start::Dict,
       explicit_neutral::Bool,
-      small_impedance::Float
+      line_vbase::Dict,
+      sbase::Float
     )
 
 Branch component interface outputs branch primitive Y matrix.
 """
-function _cpf_switch_interface(switch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool; small_impedance=1E-8)
+function _cpf_switch_interface(switch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase)
+    vbase = line_vbase["switch.$(switch["index"])"]
+    zbase = (vbase)^2 / sbase
+
+    r1 = 1.0 / zbase
+    x1 = 1.0 / zbase
+    r0 = 1.0 / zbase
+    x0 = 1.0 / zbase
+    c1 = 1.1 * 1.0e-9 * zbase
+    c0 = 1.0 * 1.0e-9 * zbase
+
     len = length(switch["f_connections"])
-    Ys = LinearAlgebra.I(len) .* 1/small_impedance
-    y_prim = [Ys -Ys; -Ys Ys]
+    z1 = r1 + im * x1
+    z0 = r0 + im * x0
+    Zabc = [2*z1+z0 z0-z1 z0-z1 z0-z1 ; z0-z1 2*z1+z0 z0-z1 z0-z1 ; z0-z1 z0-z1 2*z1+z0 z0-z1 ; z0-z1 z0-z1 z0-z1 2*z1+z0] * 1/3 * 0.001
+    Cabc = [2*c1+c0 c0-c1 c0-c1 c0-c1 ; c0-c1 2*c1+c0 c0-c1 c0-c1 ; c0-c1 c0-c1 2*c1+c0 c0-c1 ; c0-c1 c0-c1 c0-c1 2*c1+c0] * 1/3 * 0.001
+    Ys = inv(Zabc)
+    Ysh = im * Cabc * 2 * pi * 60
+
+    y_prim = [Ys[1:len,1:len].+Ysh[1:len,1:len]  -Ys[1:len,1:len] ; -Ys[1:len,1:len]  Ys[1:len,1:len].+Ysh[1:len,1:len]]
+
     bts = [[(switch["f_bus"], t) for t in switch["f_connections"]]..., [(switch["t_bus"], t) for t in switch["t_connections"]]...]
     c_tots_func = function(v_bt)
         return y_prim * v_bt

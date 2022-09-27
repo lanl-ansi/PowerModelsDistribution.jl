@@ -65,42 +65,42 @@ function conductor_correction!(data_eng)
 end
 
 
-function vsource_correction_to_4w!(data_eng)
-    if haskey(data_eng, "multinetwork")
-        for (n,nw) in data_eng["nw"]
-            nw["voltage_source"]["source"]["rs"][4,4] = nw["voltage_source"]["source"]["rs"][1,1]
-            nw["voltage_source"]["source"]["rs"][1:3,4] .= nw["voltage_source"]["source"]["rs"][1,2]
-            nw["voltage_source"]["source"]["rs"][4,1:3] .= nw["voltage_source"]["source"]["rs"][1,2]
-            nw["voltage_source"]["source"]["xs"][4,4] = nw["voltage_source"]["source"]["xs"][1,1]
-            nw["voltage_source"]["source"]["xs"][1:3,4] .= nw["voltage_source"]["source"]["xs"][1,2]
-            nw["voltage_source"]["source"]["xs"][4,1:3] .= nw["voltage_source"]["source"]["xs"][1,2]
+function vsource_correction!(data_eng; explicit_neutral=true)
+    if explicit_neutral
+        if haskey(data_eng, "multinetwork")
+            for (n,nw) in data_eng["nw"]
+                nw["voltage_source"]["source"]["rs"][4,4] = nw["voltage_source"]["source"]["rs"][1,1]
+                nw["voltage_source"]["source"]["rs"][1:3,4] .= nw["voltage_source"]["source"]["rs"][1,2]
+                nw["voltage_source"]["source"]["rs"][4,1:3] .= nw["voltage_source"]["source"]["rs"][1,2]
+                nw["voltage_source"]["source"]["xs"][4,4] = nw["voltage_source"]["source"]["xs"][1,1]
+                nw["voltage_source"]["source"]["xs"][1:3,4] .= nw["voltage_source"]["source"]["xs"][1,2]
+                nw["voltage_source"]["source"]["xs"][4,1:3] .= nw["voltage_source"]["source"]["xs"][1,2]
+            end
+        else
+            data_eng["voltage_source"]["source"]["rs"][4,4] = data_eng["voltage_source"]["source"]["rs"][1,1]
+            data_eng["voltage_source"]["source"]["rs"][1:3,4] .= data_eng["voltage_source"]["source"]["rs"][1,2]
+            data_eng["voltage_source"]["source"]["rs"][4,1:3] .= data_eng["voltage_source"]["source"]["rs"][1,2]
+            data_eng["voltage_source"]["source"]["xs"][4,4] = data_eng["voltage_source"]["source"]["xs"][1,1]
+            data_eng["voltage_source"]["source"]["xs"][1:3,4] .= data_eng["voltage_source"]["source"]["xs"][1,2]
+            data_eng["voltage_source"]["source"]["xs"][4,1:3] .= data_eng["voltage_source"]["source"]["xs"][1,2]        
         end
     else
-        data_eng["voltage_source"]["source"]["rs"][4,4] = data_eng["voltage_source"]["source"]["rs"][1,1]
-        data_eng["voltage_source"]["source"]["rs"][1:3,4] .= data_eng["voltage_source"]["source"]["rs"][1,2]
-        data_eng["voltage_source"]["source"]["rs"][4,1:3] .= data_eng["voltage_source"]["source"]["rs"][1,2]
-        data_eng["voltage_source"]["source"]["xs"][4,4] = data_eng["voltage_source"]["source"]["xs"][1,1]
-        data_eng["voltage_source"]["source"]["xs"][1:3,4] .= data_eng["voltage_source"]["source"]["xs"][1,2]
-        data_eng["voltage_source"]["source"]["xs"][4,1:3] .= data_eng["voltage_source"]["source"]["xs"][1,2]        
+        if haskey(data_eng, "multinetwork")
+            for (n,nw) in data_eng["nw"]
+                nw["voltage_source"]["source"]["rs"] = nw["voltage_source"]["source"]["rs"][1:3,1:3]
+                nw["voltage_source"]["source"]["xs"] = nw["voltage_source"]["source"]["xs"][1:3,1:3]
+                nw["voltage_source"]["source"]["connections"] = nw["voltage_source"]["source"]["connections"][1:3]
+            end
+        else
+            data_eng["voltage_source"]["source"]["rs"] = data_eng["voltage_source"]["source"]["rs"][1:3,1:3]
+            data_eng["voltage_source"]["source"]["xs"] = data_eng["voltage_source"]["source"]["xs"][1:3,1:3]
+            data_eng["voltage_source"]["source"]["connections"] = data_eng["voltage_source"]["source"]["connections"][1:3]
+        end
     end
     return nothing
 end
 
 
-function vsource_correction_to_3w!(data_eng)
-    if haskey(data_eng, "multinetwork")
-        for (n,nw) in data_eng["nw"]
-            nw["voltage_source"]["source"]["rs"] = nw["voltage_source"]["source"]["rs"][1:3,1:3]
-            nw["voltage_source"]["source"]["xs"] = nw["voltage_source"]["source"]["xs"][1:3,1:3]
-            nw["voltage_source"]["source"]["connections"] = nw["voltage_source"]["source"]["connections"][1:3]
-        end
-    else
-        data_eng["voltage_source"]["source"]["rs"] = data_eng["voltage_source"]["source"]["rs"][1:3,1:3]
-        data_eng["voltage_source"]["source"]["xs"] = data_eng["voltage_source"]["source"]["xs"][1:3,1:3]
-        data_eng["voltage_source"]["source"]["connections"] = data_eng["voltage_source"]["source"]["connections"][1:3]
-    end
-    return nothing
-end
 
 
 function sourcebus_voltage_vector_correction!(data_math::Dict{String, Any}; explicit_neutral=true)
@@ -278,7 +278,7 @@ filter!(e->e≠"test_trans_yy_3w", cases)
             case_path = "$data_dir/$case.dss"
 
             data_eng = parse_file(case_path, transformations=[transform_loops!])
-            vsource_correction_to_4w!(data_eng)
+            vsource_correction!(data_eng; explicit_neutral=true)
 
             data_math = transform_data_model(data_eng;kron_reduce=false)
 
@@ -293,11 +293,7 @@ filter!(e->e≠"test_trans_yy_3w", cases)
             @test res["termination_status"]==CONVERGED
 
             v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose=false, compare_math=true)
-            if occursin("switch", case)
-                @test v_maxerr_pu <= 1E-4
-            else
-                @test v_maxerr_pu <= 2E-6
-            end
+            @test v_maxerr_pu <= 1E-6
 
         end
     end
@@ -308,7 +304,7 @@ filter!(e->e≠"test_trans_yy_3w", cases)
         case_path = "$data_dir/$case.dss"
 
         data_eng = parse_file(case_path, transformations=[transform_loops!])
-        vsource_correction_to_4w!(data_eng)
+        vsource_correction!(data_eng; explicit_neutral=true)
 
         data_math = transform_data_model(data_eng;kron_reduce=false)
 
@@ -344,14 +340,13 @@ cases = ["test_trans_dy_3w", "test_trans_yy_3w"]
 @testset "en pf native opendss validation three wire" begin
 
     for (case_idx,case) in enumerate(cases)
-        @show case
         @testset "case $case" begin
             case_path = "$data_dir/$case.dss"
 
             data_eng = parse_file(case_path, transformations=[transform_loops!])
             data_eng["is_kron_reduced"] = true
             data_eng["settings"]["sbase_default"] = 1
-            vsource_correction_to_3w!(data_eng)
+            vsource_correction!(data_eng; explicit_neutral=false)
             
             data_math = transform_data_model(data_eng;kron_reduce=false, phase_project=false)
             sourcebus_voltage_vector_correction!(data_math, explicit_neutral=false)
@@ -378,7 +373,7 @@ end
     case_path = "$data_dir/test_load_3ph_wye_cp.dss"
 
     data_eng = parse_file(case_path, transformations=[transform_loops!])
-    vsource_correction_to_4w!(data_eng)
+    vsource_correction!(data_eng; explicit_neutral=true)
 
     data_math = transform_data_model(data_eng;kron_reduce=false)
 
@@ -392,7 +387,7 @@ end
     case_path = "$data_dir/test_line_6w.dss"
 
     data_eng = parse_file(case_path, transformations=[transform_loops!])
-    vsource_correction_to_4w!(data_eng)
+    vsource_correction!(data_eng; explicit_neutral=true)
 
     data_math = transform_data_model(data_eng;kron_reduce=false)
 
@@ -411,7 +406,7 @@ solution_dir = "data/opendss_solutions"
     case = "case3_balanced"
     
     eng_ts = make_multinetwork(case3_balanced)
-    vsource_correction_to_4w!(eng_ts)
+    vsource_correction!(eng_ts; explicit_neutral=true)
 
     ## This section is to validate that the new feature does not break multinetwork 
     result_mn = solve_mn_mc_opf(eng_ts, ACPUPowerModel, ipopt_solver)
