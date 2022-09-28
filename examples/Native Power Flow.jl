@@ -383,7 +383,6 @@ v_maxerr_pu_s = [v_maxerr_pu_s4w, v_maxerr_pu_s3w, v_maxerr_pu_s1w]
 ### 3wire - 3 winding 1 phase -> wye-wye-wye
 case = "ut_trans_3w_yyy_1"
 data_eng, data_math, res, v_maxerr_pu_t3wyyy = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
-@show v_maxerr_pu
 
 ### 3wire - 3 winding 3 phase -> delta-wye-wye
 case = "ut_trans_3w_dyy_1"

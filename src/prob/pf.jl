@@ -297,7 +297,7 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
         ntype[i] = VIRTUAL
     end
 
-    indexed_nodes = [keys(filter(x->x.second!=GROUNDED,  ntype))...]
+    indexed_nodes = [i for (i, v) in ntype if v!=GROUNDED]
     node_to_idx = Dict(bt=>i for (i, bt) in enumerate(indexed_nodes))
 
     N = length(indexed_nodes)
