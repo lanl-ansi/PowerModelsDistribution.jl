@@ -22,7 +22,6 @@ module PowerModelsDistribution
     import LinearAlgebra
     import Statistics
     import SparseArrays
-    import LinearSolve
 
     import LinearAlgebra: diagm, factorize
     import Statistics: mean, std

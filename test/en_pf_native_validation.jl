@@ -282,7 +282,7 @@ filter!(e->e≠"test_trans_yy_3w", cases)
 
             data_math = transform_data_model(data_eng;kron_reduce=false)
 
-            res = compute_pf(data_math; explicit_neutral=true)
+            res = compute_mc_pf(data_math; explicit_neutral=true)
 
             # obtain solution from dss
             sol_dss = open("$solution_dir/$case.json", "r") do f
@@ -298,8 +298,8 @@ filter!(e->e≠"test_trans_yy_3w", cases)
         end
     end
 
-    @testset "compute_pf and solution" begin
-        # testing compute_pf(pfd)
+    @testset "compute_mc_pf and solution" begin
+        # testing compute_mc_pf(pfd)
         case = "test_load_3ph_wye_cp"
         case_path = "$data_dir/$case.dss"
 
@@ -314,7 +314,7 @@ filter!(e->e≠"test_trans_yy_3w", cases)
         explicit_neutral = true
         pfd = PowerFlowData(data_math, v_start, explicit_neutral)
 
-        res = compute_pf(pfd)
+        res = compute_mc_pf(pfd)
 
         sol_dss = open("$solution_dir/$case.json", "r") do f
             JSON.parse(f)
@@ -352,7 +352,7 @@ cases = ["test_trans_dy_3w", "test_trans_yy_3w"]
             sourcebus_voltage_vector_correction!(data_math, explicit_neutral=false)
             update_math_model_3wire!(data_math)
 
-            res = compute_pf(data_math; explicit_neutral=false)
+            res = compute_mc_pf(data_math; explicit_neutral=false)
 
             # obtain solution from dss
             sol_dss = open("$solution_dir/$case.json", "r") do f
@@ -377,7 +377,7 @@ end
 
     data_math = transform_data_model(data_eng;kron_reduce=false)
 
-    res = compute_pf(data_math; max_iter=5, explicit_neutral=true)
+    res = compute_mc_pf(data_math; max_iter=5, explicit_neutral=true)
     @test res["termination_status"] == ITERATION_LIMIT
 end
 
@@ -391,7 +391,7 @@ end
 
     data_math = transform_data_model(data_eng;kron_reduce=false)
 
-    res = compute_pf(data_math; max_iter=1, explicit_neutral=true)
+    res = compute_mc_pf(data_math; max_iter=1, explicit_neutral=true)
 end
 
 
@@ -420,7 +420,7 @@ solution_dir = "data/opendss_solutions"
     data_math = transform_data_model(eng_ts;kron_reduce=false)
     multinetwork_data_math_correction!(data_math)
 
-    res = compute_pf(data_math; explicit_neutral=true)
+    res = compute_mc_pf(data_math; explicit_neutral=true)
     @test res["termination_status"]["10"]==CONVERGED
 
     sol_dss = open("$solution_dir/$case.json", "r") do f
@@ -454,7 +454,7 @@ filter!(e->e≠"case3_unbalanced_delta_loads", cases)
 
             data_math = transform_data_model(data_eng;kron_reduce=false)
 
-            res = compute_pf(data_math; explicit_neutral=false)
+            res = compute_mc_pf(data_math; explicit_neutral=false)
 
             # obtain solution from dss
             sol_dss = open("$solution_dir/$case.json", "r") do f

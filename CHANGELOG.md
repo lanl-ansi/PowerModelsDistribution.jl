@@ -2,7 +2,7 @@
 
 ## staged
 
-- Add native power flow solver by using `compute_pf(data_math)`
+- Add native power flow solver by using `compute_mc_pf(data_math)`
 - Updated documentation in `make_multiconductor!` to better indicate its unsupported nature
 - Added automatic detection of multinetwork data to `instantiate_mc_model`
 - Converted `::Float64` types in function signatures to `::Real`

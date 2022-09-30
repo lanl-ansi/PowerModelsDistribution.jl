@@ -14,6 +14,7 @@ between successive power flow solves
 * `Uf` -- vector of known voltages
 * `Yf` -- admittance matrix partition: Y[node_other_idx, node_fixed_idx]
 * `Yv` -- admittance matrix partition: Y[node_other_idx, node_other_idx]
+* `Y0` -- admittance matrix of the network (similar to primitive admittance matrix without gen and load primitive admittances)
 The postfix `_idx` indicates the admittance matrix indexing convention.
 """
 mutable struct PowerFlowData
@@ -28,6 +29,7 @@ mutable struct PowerFlowData
     Uf::Vector
     Yf::Matrix
     Yv::SparseArrays.SparseMatrixCSC
+    Y0::SparseArrays.SparseMatrixCSC
 end
 
 
@@ -83,7 +85,7 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
                 vns = collect(virtual_count+1:virtual_count+nr_vns)
                 ns = [bts..., vns...]
 
-                push!(ns_yprim, (ns[ungr_filter], y_prim[ungr_filter, ungr_filter]))
+                push!(ns_yprim, (ns[ungr_filter], y_prim[ungr_filter, ungr_filter], comp_type))
                 push!(cc_ns_func_pairs, (ns, c_nl, c_tots, comp_type, id))
 
                 virtual_count += nr_vns
@@ -101,15 +103,25 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
     N = length(indexed_nodes)
     Y = spzeros(Complex{Float64}, N, N)
 
+    # indexed_nodes_Y0 = [i for (i, v) in ntype if v!=GROUNDED]
+    # node_to_idx = Dict(bt=>i for (i, bt) in enumerate(indexed_nodes))
+    # N0 = length([comp_type for (ns, y_prim, comp_type) in ns_yprim if (comp_type!="gen" && comp_type!="load")])
+    Y0 = spzeros(Complex{Float64}, N, N)
+
     node_fixed_idx = [i for i in 1:N if ntype[indexed_nodes[i]]==FIXED]
     node_other_idx = setdiff(1:N, node_fixed_idx)
 
     fnode_to_idx = Dict(node=>idx for (idx,node) in enumerate(indexed_nodes[node_fixed_idx]))
     vnode_to_idx = Dict(node=>idx for (idx,node) in enumerate(indexed_nodes[node_other_idx]))
 
-    for (ns, y_prim) in ns_yprim
+    for (ns, y_prim, comp_type) in ns_yprim
         inds = [node_to_idx[n] for n in ns]
         Y[inds,inds] .+= y_prim
+
+        if (comp_type!="gen" && comp_type!="load")
+            inds0 = [node_to_idx[n] for n in ns]
+            Y0[inds0,inds0] .+= y_prim
+        end
     end
 
     Yf = Y[node_other_idx, node_fixed_idx]
@@ -124,7 +136,34 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
         Uf[i] = vm_t[t]*exp(im*va_t[t])
     end
 
-    return PowerFlowData(data_math, ntype, cc_ns_func_pairs, indexed_nodes, node_to_idx, fnode_to_idx, vnode_to_idx, fixed_nodes, Uf, Yf, Yv)
+    return PowerFlowData(data_math, ntype, cc_ns_func_pairs, indexed_nodes, node_to_idx, fnode_to_idx, vnode_to_idx, fixed_nodes, Uf, Yf, Yv, Y0)
+end
+
+
+"""
+    calc_admittance_matrix(
+      data_math::Dict,
+      v_start::Dict,
+      explicit_neutral::Bool
+    )
+
+Calculates the admittance matrix from PowerFlowData struct.
+"""
+function calc_admittance_matrix(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:Any},Missing}=missing, explicit_neutral::Bool=false)
+    if !ismultinetwork(data_math)
+        nw_dm = Dict("0"=>data_math)
+    else
+        nw_dm = data_math["nw"]
+    end
+    for (nw, dm) in nw_dm
+        if ismissing(v_start)
+            add_start_voltage!(dm, coordinates=:rectangular, epsilon=0, explicit_neutral=explicit_neutral)
+            v_start = _bts_to_start_voltage(dm)
+        end
+
+        pfd = PowerFlowData(dm, v_start, explicit_neutral)
+        return pfd.Y0
+    end
 end
 
 
@@ -149,7 +188,7 @@ end
 
 
 """
-    compute_pf(
+    compute_mc_pf(
       data_math::Dict,
       v_start::Dict,
       explicit_neutral::Bool
@@ -169,7 +208,7 @@ end
 
 Computes native power flow and outputs the result dict.
 """
-function compute_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:Any},Missing}=missing, explicit_neutral::Bool=false, max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
+function compute_mc_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:Any},Missing}=missing, explicit_neutral::Bool=false, max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
     br_sizes = []
     if !ismultinetwork(data_math)
         nw_dm = Dict("0"=>data_math)
@@ -238,7 +277,7 @@ end
 
 
 """
-    compute_pf(
+    compute_mc_pf(
       pdf::PowerFlowData,
       max_iter::Int,
       stat_tol::Float,
@@ -247,7 +286,7 @@ end
 
 Computes native power flow and requires PowerFlowData.
 """
-function compute_pf(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
+function compute_mc_pf(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
     time = @elapsed (Uv, status, its, stat) = _compute_Uv(pfd, max_iter=max_iter, stat_tol=stat_tol)
     return build_result(pfd, Uv, status, its, time, stat)
 end

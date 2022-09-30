@@ -270,13 +270,13 @@ end
 
 
 
-function solve_compute_pf(dss_file, solution_file; explicit_neutral=true)
+function solve_compute_mc_pf(dss_file, solution_file; explicit_neutral=true, max_iter=100)
     if explicit_neutral
         data_eng = parse_file(dss_file, transformations=[transform_loops!])
         vsource_correction!(data_eng, explicit_neutral=true)
 
         data_math = transform_data_model(data_eng;kron_reduce=false)
-        res = compute_pf(data_math; explicit_neutral=true)
+        res = compute_mc_pf(data_math; explicit_neutral=true, max_iter=max_iter)
     else
         data_eng = parse_file(dss_file, transformations=[transform_loops!]);
         data_eng["is_kron_reduced"] = true
@@ -286,7 +286,7 @@ function solve_compute_pf(dss_file, solution_file; explicit_neutral=true)
         data_math = transform_data_model(data_eng;kron_reduce=false, phase_project=false);
         sourcebus_voltage_vector_correction!(data_math, explicit_neutral=false);
         update_math_model_3wire!(data_math);
-        res = compute_pf(data_math; explicit_neutral=false)
+        res = compute_mc_pf(data_math; explicit_neutral=false, max_iter=max_iter)
     end
 
     # obtain solution from dss
@@ -308,19 +308,19 @@ end
 ## ############## Generators ##############
 ### 1-phase PV generator - Delta
 case = "test_gen_1ph_delta"
-data_eng, data_math, res, v_maxerr_pu_g1d = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_g1d = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 ### 1-phase PV generator - Wye
 case = "test_gen_1ph_wye"
-data_eng, data_math, res, v_maxerr_pu_g1y = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_g1y = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 ### 3-phase PV generator - Delta
 case = "test_gen_3ph_delta"
-data_eng, data_math, res, v_maxerr_pu_g3d = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_g3d = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 ### 3-phase PV generator - Wye
 case = "test_gen_3ph_wye"
-data_eng, data_math, res, v_maxerr_pu_g3y = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_g3y = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 v_maxerr_pu_g = [v_maxerr_pu_g1d, v_maxerr_pu_g1y, v_maxerr_pu_g3d, v_maxerr_pu_g3y]
 @show v_maxerr_pu_g
@@ -329,35 +329,35 @@ v_maxerr_pu_g = [v_maxerr_pu_g1d, v_maxerr_pu_g1y, v_maxerr_pu_g3d, v_maxerr_pu_
 ## ############## Loads ##############
 ### 1-phase load - Delta - Constant P
 case = "test_load_1ph_delta_cp"
-data_eng, data_math, res, v_maxerr_pu_l1dcp = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_l1dcp = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 ### 1-phase load - Wye - Constant P
 case = "test_load_1ph_wye_cp"
-data_eng, data_math, res, v_maxerr_pu_l1ycp = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_l1ycp = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 ### 3-phase load - Delta - Constant Z
 case = "test_load_3ph_delta_cz"
-data_eng, data_math, res, v_maxerr_pu_l3dcz = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_l3dcz = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 ### 3-phase load - Delta - Constant I
 case = "test_load_3ph_delta_ci"
-data_eng, data_math, res, v_maxerr_pu_l3dci = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_l3dci = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 ### 3-phase load - Delta - Constant P
 case = "test_load_3ph_delta_cp"
-data_eng, data_math, res, v_maxerr_pu_l3dcp = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_l3dcp = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 ### 3-phase load - Wye - Constant Z
 case = "test_load_3ph_wye_cz"
-data_eng, data_math, res, v_maxerr_pu_l3ycz = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_l3ycz = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 ### 3-phase load - Wye - Constant I
 case = "test_load_3ph_wye_ci"
-data_eng, data_math, res, v_maxerr_pu_l3yci = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_l3yci = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 ### 3-phase load - Wye - Constant P
 case = "test_load_3ph_wye_cp"
-data_eng, data_math, res, v_maxerr_pu_l3ycp = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_l3ycp = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 v_maxerr_pu_l = [v_maxerr_pu_l1dcp, v_maxerr_pu_l1ycp, v_maxerr_pu_l3dcz, v_maxerr_pu_l3dci, v_maxerr_pu_l3dcp, v_maxerr_pu_l3ycz, v_maxerr_pu_l3yci, v_maxerr_pu_l3ycp]
 @show v_maxerr_pu_l
@@ -366,15 +366,15 @@ v_maxerr_pu_l = [v_maxerr_pu_l1dcp, v_maxerr_pu_l1ycp, v_maxerr_pu_l3dcz, v_maxe
 ## ############## SWITCH ##############
 ### 4wire - switch
 case = "test_switch"
-data_eng, data_math, res, v_maxerr_pu_s4w = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_s4w = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 ### 3wire - switch
 case = "test_switch_3w"
-data_eng, data_math, res, v_maxerr_pu_s3w = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
+data_eng, data_math, res, v_maxerr_pu_s3w = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
 
 ### 1wire - switch
 case = "test_switch_1w"
-data_eng, data_math, res, v_maxerr_pu_s1w = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
+data_eng, data_math, res, v_maxerr_pu_s1w = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
 
 v_maxerr_pu_s = [v_maxerr_pu_s4w, v_maxerr_pu_s3w, v_maxerr_pu_s1w]
 @show v_maxerr_pu_s
@@ -382,40 +382,40 @@ v_maxerr_pu_s = [v_maxerr_pu_s4w, v_maxerr_pu_s3w, v_maxerr_pu_s1w]
 ## ############## TRANSFORMER ##############
 ### 3wire - 3 winding 1 phase -> wye-wye-wye
 case = "ut_trans_3w_yyy_1"
-data_eng, data_math, res, v_maxerr_pu_t3wyyy = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
+data_eng, data_math, res, v_maxerr_pu_t3wyyy = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
 
 ### 3wire - 3 winding 3 phase -> delta-wye-wye
 case = "ut_trans_3w_dyy_1"
-data_eng, data_math, res, v_maxerr_pu_t3wdyy = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
+data_eng, data_math, res, v_maxerr_pu_t3wdyy = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
 
 ### 3wire - 2 winding -> delta-wye
 case = "test_trans_dy_3w"
-data_eng, data_math, res, v_maxerr_pu_t3wdy = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
+data_eng, data_math, res, v_maxerr_pu_t3wdy = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
 
 ### 3wire - 2 winding -> wye-wye
 case = "test_trans_yy_3w"
-data_eng, data_math, res, v_maxerr_pu_t3wyy = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
+data_eng, data_math, res, v_maxerr_pu_t3wyy = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
 
 ### 4wire - 2 winding -> delta-wye
 case = "test_trans_dy"
-data_eng, data_math, res, v_maxerr_pu_t4wdy = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_t4wdy = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 ### 4wire - 2 winding -> wye-wye
 case = "test_trans_yy"
-data_eng, data_math, res, v_maxerr_pu_t4wyy = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_t4wyy = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
 v_maxerr_pu_t = [v_maxerr_pu_t3wyyy, v_maxerr_pu_t3wdyy, v_maxerr_pu_t3wdy, v_maxerr_pu_t3wyy, v_maxerr_pu_t4wdy, v_maxerr_pu_t4wyy]
 @show v_maxerr_pu_t
 
 ## ############## 3 wire IEEE test cases  ##############  get these files from  https://github.com/sanderclaeys/DistributionTestCases.jl
 case = "ieee13_pmd"
-data_eng, data_math, res, v_maxerr_pu_IEEE13 = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
+data_eng, data_math, res, v_maxerr_pu_IEEE13 = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
 
 case = "ieee34_pmd"
-data_eng, data_math, res, v_maxerr_pu_IEEE34 = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
+data_eng, data_math, res, v_maxerr_pu_IEEE34 = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
 
 case = "ieee123_pmd"
-data_eng, data_math, res, v_maxerr_pu_IEEE123 = solve_compute_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
+data_eng, data_math, res, v_maxerr_pu_IEEE123 = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
 
 v_maxerr_pu_IEEE = [v_maxerr_pu_IEEE13, v_maxerr_pu_IEEE34, v_maxerr_pu_IEEE123]
 @show v_maxerr_pu_IEEE
@@ -424,7 +424,7 @@ v_maxerr_pu_IEEE = [v_maxerr_pu_IEEE13, v_maxerr_pu_IEEE34, v_maxerr_pu_IEEE123]
 egrid_data_dir = "/Users/hei06j/Documents/repositories/remote/PowerModelsDistribution.jl/examples/native_pf_testcases/Industrial"
 egrid_solution_file = "../solutions/egrid_GreensBoro.json"
 cd(egrid_data_dir)
-data_eng, data_math, res, v_maxerr_pu = solve_compute_pf("master.dss", egrid_solution_file; explicit_neutral=false);
+data_eng, data_math, res, v_maxerr_pu = solve_compute_mc_pf("master.dss", egrid_solution_file; explicit_neutral=false, max_iter=1000);
 @show v_maxerr_pu
 cd("../../../")
 
@@ -433,7 +433,7 @@ cd("../../../")
 egrid_data_dir = "/Users/hei06j/Documents/repositories/remote/PowerModelsDistribution.jl/examples/native_pf_testcases/EgridData - SantaFe/urban-suburban/uhs0_1247/uhs0_1247--udt4776"
 egrid_solution_file = "../../../../solutions/egrid_SantaFe.json"
 cd(egrid_data_dir)
-data_eng, data_math, res, v_maxerr_pu = solve_compute_pf("Master.dss", egrid_solution_file; explicit_neutral=false);
+data_eng, data_math, res, v_maxerr_pu = solve_compute_mc_pf("Master.dss", egrid_solution_file; explicit_neutral=false, max_iter=1000);
 @show v_maxerr_pu
 cd("../../../../../../")
 
