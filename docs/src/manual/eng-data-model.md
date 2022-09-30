@@ -317,18 +317,14 @@ Two more model types are supported, which need additional fields and are defined
 
 #### `model == ZIP`
 
+ZIP load models are split into `IMPEDANCE`, `CURRENT`, `POWER` models.
+
 - `(pd[i]/pd_nom) = pd_cz[i]*(v[i]/vm_nom)^2 + pd_ci[i]*(v[i]/vm_nom) + pd_cp[i]`
 - `(qd[i]/qd_nom) = qd_cz[i]*(v[i]/vm_nom)^2 + qd_ci[i]*(v[i]/vm_nom) + qd_cp[i]`
 
-| Name     | Default | Type   | Units | Used         | Description                  |
-| -------- | ------- | ------ | ----- | ------------ | ---------------------------- |
-| `vm_nom` |         | `Real` | volt  | `model==ZIP` | Nominal voltage (multiplier) |
-| `pd_cz`  |         | `Real` |       | `model==ZIP` |                              |
-| `pd_ci`  |         | `Real` |       | `model==ZIP` |                              |
-| `pd_cp`  |         | `Real` |       | `model==ZIP` |                              |
-| `qd_cz`  |         | `Real` |       | `model==ZIP` |                              |
-| `qd_ci`  |         | `Real` |       | `model==ZIP` |                              |
-| `qd_cp`  |         | `Real` |       | `model==ZIP` |                              |
+| Name     | Default | Type           | Units | Used         | Description                                                                                                                                                                                                             |
+| -------- | ------- | ------         | ----- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `zipv`   |         | `Vector{Real}` |       | `model==ZIP` | First 3 are ZIP weighting factors for active power (`pd_cz,pd_ci,pd_cp`), next 3 are ZIP weighting factors for reactive power (`qd_cz,qd_ci,qd_cp`), last 1 is cut-off voltage in p.u. of base kV; load is 0 below this cut-off |
 
 ### Generators (`generator`)
 
