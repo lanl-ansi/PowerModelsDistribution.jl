@@ -426,7 +426,8 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
                 JuMP.@constraint(pm.model, Xdi[:,idx] .== 0)
             end
         end
-
+        pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, connections)
+        qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, connections)
         var(pm, nw, :pd_bus)[load_id] = pd_bus
         var(pm, nw, :qd_bus)[load_id] = qd_bus
         var(pm, nw, :pd)[load_id] = pd
@@ -439,21 +440,21 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
         elseif load["model"]==IMPEDANCE
             w = var(pm, nw, :w)[bus_id][[c for c in connections]]
             for (idx,c) in enumerate(connections)
-                JuMP.@constraint(pm.model, pd[idx]==3*a[idx]*w[idx])
-                JuMP.@constraint(pm.model, qd[idx]==3*b[idx]*w[idx])
+                JuMP.@constraint(pm.model, pd[idx]==3*a[idx]*w[c])
+                JuMP.@constraint(pm.model, qd[idx]==3*b[idx]*w[c])
             end
         else
             w = var(pm, nw, :w)[bus_id][[c for c in connections]]
             for (idx,c) in enumerate(connections)
-                JuMP.@constraint(pm.model, pd[idx]==sqrt(3)/2*a[idx]*(w[idx]+1))
-                JuMP.@constraint(pm.model, qd[idx]==sqrt(3)/2*b[idx]*(w[idx]+1))
+                JuMP.@constraint(pm.model, pd[idx]==sqrt(3)/2*a[idx]*(w[c]+1))
+                JuMP.@constraint(pm.model, qd[idx]==sqrt(3)/2*b[idx]*(w[c]+1))
             end
         end
 
         ## reporting; for delta these are not available as saved variables!
         if report
-            sol(pm, nw, :load, load_id)[:pd] = pd
-            sol(pm, nw, :load, load_id)[:qd] = qd
+            sol(pm, nw, :load, load_id)[:pd] = JuMP.Containers.DenseAxisArray(pd, connections)
+            sol(pm, nw, :load, load_id)[:qd] = JuMP.Containers.DenseAxisArray(pd, connections)
             sol(pm, nw, :load, load_id)[:pd_bus] = pd_bus
             sol(pm, nw, :load, load_id)[:qd_bus] = qd_bus
         end

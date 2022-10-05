@@ -7,8 +7,8 @@
         vbase = case3_lm_1230["settings"]["vbases_default"]["sourcebus"]
         @test isapprox(vm(result, "loadbus") ./ vbase, [0.999993, 0.999992, 0.999993]; atol=1E-5)
         # single-phase delta loads
-        @test isapprox(pd(result, "d1ph23"), [0.0, 286.6, 113.4], atol=1E-1)
-        @test isapprox(qd(result, "d1ph23"), [0.0, 34.5, 265.5], atol=1E-1)
+        @test isapprox(pd(result, "d1ph23"), [286.6, 113.4, 0.0], atol=1E-1)
+        @test isapprox(qd(result, "d1ph23"), [34.5, 265.5, 0.0], atol=1E-1)
         # single-phase wye loads
         @test isapprox(pd(result, "y1ph2"), [400.0], atol=1E-1)
         @test isapprox(qd(result, "y1ph2"), [300.0], atol=1E-1)
