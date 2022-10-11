@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added ZIP load model
 - Updated documentation in `make_multiconductor!` to better indicate its unsupported nature
 - Added automatic detection of multinetwork data to `instantiate_mc_model`
 - Converted `::Float64` types in function signatures to `::Real`
