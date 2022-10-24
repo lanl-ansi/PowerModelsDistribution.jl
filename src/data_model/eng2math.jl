@@ -683,24 +683,53 @@ end
 "converts engineering load components into mathematical load components"
 function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
     for (name, eng_obj) in get(data_eng, "load", Dict{Any,Dict{String,Any}}())
-        math_obj = _init_math_obj("load", name, eng_obj, length(data_math["load"])+1; pass_props=pass_props)
+        if eng_obj["model"]==ZIP
+            to_map = String[]
+            for (idx,l) in enumerate([IMPEDANCE, CURRENT, POWER])
+                math_obj = Dict{String,Any}(
+                    "model" => l,
+                    "connections" => eng_obj["connections"],
+                    "configuration" => eng_obj["configuration"],
+                    "name" => "$(name)_$l",
+                    "status" => eng_obj["status"] == ENABLED ? 1 : 0,
+                    "qd" => eng_obj["qd_nom"]*eng_obj["zipv"][3+idx],
+                    "vnom_kv" => eng_obj["vm_nom"],
+                    "source_id" => eng_obj["source_id"],
+                    "load_bus" => data_math["bus_lookup"][eng_obj["bus"]],
+                    "dispatchable" => eng_obj["dispatchable"] == NO ? 0 : 1,
+                    "index" => length(data_math["load"])+1,
+                    "pd" => eng_obj["pd_nom"]*eng_obj["zipv"][idx],
+                ) 
+               
+                data_math["load"]["$(math_obj["index"])"] = math_obj
 
-        connections = eng_obj["connections"]
+                push!(to_map, "load.$(math_obj["index"])")
+            end
+            push!(data_math["map"], Dict{String,Any}(
+                "from" => name,
+                "to" => to_map,
+                "unmap_function" => "_map_math2eng_load!",
+            ))
+        else
+            math_obj = _init_math_obj("load", name, eng_obj, length(data_math["load"])+1; pass_props=pass_props)
 
-        math_obj["load_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
+            connections = eng_obj["connections"]
 
-        math_obj["pd"] = eng_obj["pd_nom"]
-        math_obj["qd"] = eng_obj["qd_nom"]
+            math_obj["load_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
 
-        math_obj["vnom_kv"] = eng_obj["vm_nom"]
+            math_obj["pd"] = eng_obj["pd_nom"]
+            math_obj["qd"] = eng_obj["qd_nom"]
 
-        data_math["load"]["$(math_obj["index"])"] = math_obj
+            math_obj["vnom_kv"] = eng_obj["vm_nom"]
+    
+            data_math["load"]["$(math_obj["index"])"] = math_obj
 
-        push!(data_math["map"], Dict{String,Any}(
-            "from" => name,
-            "to" => "load.$(math_obj["index"])",
-            "unmap_function" => "_map_math2eng_load!",
-        ))
+            push!(data_math["map"], Dict{String,Any}(
+                "from" => name,
+                "to" => "load.$(math_obj["index"])",
+                "unmap_function" => "_map_math2eng_load!",
+            ))
+        end
    end
 end
 

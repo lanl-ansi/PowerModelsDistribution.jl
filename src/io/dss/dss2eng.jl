@@ -121,6 +121,11 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         eng_obj["pd_nom"] = fill(defaults["kw"]/nphases, nphases)
         eng_obj["qd_nom"] = fill(defaults["kvar"]/nphases, nphases)
 
+        # if ZIP load, include weighting factors and cut-off voltage
+        if eng_obj["model"]==ZIP
+            eng_obj["zipv"] = collect(dss_obj["zipv"]) 
+        end
+
         _build_time_series_reference!(eng_obj, dss_obj, data_dss, defaults, time_series, "pd_nom", "qd_nom")
 
         if import_all
