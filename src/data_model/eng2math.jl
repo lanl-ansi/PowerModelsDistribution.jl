@@ -481,7 +481,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
             z_sc = Dict([(key, im*x_sc[i]) for (i,key) in enumerate([(i,j) for i in 1:nrw for j in i+1:nrw])])
 
             dims = length(eng_obj["tm_set"][1])
-            transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh; nphases=dims, status=Int(eng_obj["status"] == ENABLED))
+            transformer_t_bus_w = _build_loss_model!(data_math, name, to_map, r_s, z_sc, y_sh,eng_obj["connections"][1]; nphases=dims, status=Int(eng_obj["status"] == ENABLED))
 
             for w in 1:nrw
                 # 2-WINDING TRANSFORMER
@@ -494,7 +494,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                     "t_bus"         => transformer_t_bus_w[w],
                     "tm_nom"        => tm_nom,
                     "f_connections" => eng_obj["connections"][w],
-                    "t_connections" => get(data_math, "is_kron_reduced", false) ? collect(1:dims) : collect(1:dims+1),
+                    "t_connections" => get(data_math, "is_kron_reduced", false) ? eng_obj["connections"][w] : collect(1:dims+1),
                     "configuration" => eng_obj["configuration"][w],
                     "polarity"      => eng_obj["polarity"][w],
                     "tm_set"        => eng_obj["tm_set"][w],
