@@ -200,6 +200,238 @@ function constraint_mc_power_balance(pm::FOTPUPowerModel, nw::Int, i::Int, termi
 end
 
 
+@doc raw"""
+    constraint_mc_power_balance_capc(pm::FOTPUPowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+
+Power balance constraints with capacitor control with shunt current calculated using initial operating point.
+
+```math
+\begin{align}
+    & B_s = b_s ⋅ z,~~ cq_{sh} = B_s ⋅ v, \\
+    & B_s \cdot v_m^t \cdot v_m^u \cdot \cos(v_a^t-v_a^u) \Rightarrow B_{s0} \cdot v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) + 
+\begin{bmatrix} 
+B_{s0} \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) \\
+B_{s0} \cdot v_{m0}^t \cdot \cos(v_{a0}^t-v_{a0}^u) \\
+-B_{s0} \cdot v_{m0}^t \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u) \\
+B_{s0} \cdot v_{m0}^t \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u) \\
+v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) 
+\end{bmatrix}^\top 
+\begin{bmatrix} 
+v_m^t-v_{m0}^t \\
+v_m^u-v_{m0}^u \\
+v_a^t-v_{a0}^t \\
+v_a^u-v_{a0}^u \\
+B_{s} -B_{s0}
+\end{bmatrix} \\
+& B_s \cdot v_m^t \cdot v_m^u \cdot \sin(v_a^t-v_a^u) \Rightarrow B_{s0} \cdot v_{m0}^t \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u) + 
+\begin{bmatrix} 
+ B_{s0} \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u) \\
+ B_{s0} \cdot v_{m0}^t \cdot \sin(v_{a0}^t-v_{a0}^u) \\
+ B_{s0} \cdot v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) \\
+ -B_{s0} \cdot v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) \\
+ v_{m0}^t \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u)
+\end{bmatrix}^\top 
+\begin{bmatrix} 
+v_m^t-v_{m0}^t \\
+v_m^u-v_{m0}^u \\
+v_a^t-v_{a0}^t \\
+v_a^u-v_{a0}^u \\
+B_{s} -B_{s0}
+\end{bmatrix} 
+
+\end{align}
+```
+"""
+function constraint_mc_power_balance_capc(pm::FOTPUPowerModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
+    vm   = var(pm, nw, :vm, i)
+    va   = var(pm, nw, :va, i)
+    vm0   = var(pm, nw, :vm0, i)
+    va0   = var(pm, nw, :va0, i)
+    p    = get(var(pm, nw),      :p, Dict()); _check_var_keys(  p, bus_arcs, "active power", "branch")
+    q    = get(var(pm, nw),      :q, Dict()); _check_var_keys(  q, bus_arcs, "reactive power", "branch")
+    pg   = get(var(pm, nw), :pg_bus, Dict()); _check_var_keys( pg, bus_gens, "active power", "generator")
+    qg   = get(var(pm, nw), :qg_bus, Dict()); _check_var_keys( qg, bus_gens, "reactive power", "generator")
+    ps   = get(var(pm, nw),     :ps, Dict()); _check_var_keys( ps, bus_storage, "active power", "storage")
+    qs   = get(var(pm, nw),     :qs, Dict()); _check_var_keys( qs, bus_storage, "reactive power", "storage")
+    psw  = get(var(pm, nw),    :psw, Dict()); _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw  = get(var(pm, nw),    :qsw, Dict()); _check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt   = get(var(pm, nw),     :pt, Dict()); _check_var_keys( pt, bus_arcs_trans, "active power", "transformer")
+    qt   = get(var(pm, nw),     :qt, Dict()); _check_var_keys( qt, bus_arcs_trans, "reactive power", "transformer")
+    pd   = get(var(pm, nw), :pd_bus, Dict()); _check_var_keys( pd, bus_loads, "active power", "load")
+    qd   = get(var(pm, nw), :qd_bus, Dict()); _check_var_keys( pd, bus_loads, "reactive power", "load")
+
+    # calculate Gs, Bs
+    ncnds = length(terminals)
+    Gs = fill(0.0, ncnds, ncnds)
+    Bs0 = fill(0.0, ncnds, ncnds)
+    Bs = convert(Matrix{JuMP.AffExpr}, JuMP.@expression(pm.model, [idx=1:ncnds, jdx=1:ncnds], 0.0))
+    for (val, connections) in bus_shunts
+        shunt = ref(pm,nw,:shunt,val)
+        for (idx,c) in enumerate(connections)
+            cap_state = haskey(shunt,"controls") ? var(pm, nw, :capacitor_state, val)[c] : 1.0
+            for (jdx,d) in enumerate(connections)
+                Gs[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] += shunt["gs"][idx,jdx]
+                Bs0[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] += shunt["bs"][idx,jdx]
+                Bs[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] = JuMP.@expression(pm.model, Bs[findfirst(isequal(c), terminals),findfirst(isequal(d), terminals)] + shunt["bs"][idx,jdx]*cap_state)
+            end
+        end
+    end
+    
+    cstr_p = []
+    cstr_q = []
+    ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
+
+    # add constraints to model capacitor switching
+    if !isempty(bus_shunts) && haskey(ref(pm, nw, :shunt, bus_shunts[1][1]), "controls")
+        constraint_capacitor_on_off(pm, nw, i, bus_shunts)
+
+        for (idx,t) in ungrounded_terminals
+            if any(Bs[idx,jdx] != 0 for (jdx, u) in ungrounded_terminals if idx != jdx) || any(Gs[idx,jdx] != 0 for (jdx, u) in ungrounded_terminals if idx != jdx)
+                cp = JuMP.@constraint(pm.model,
+                    sum(  p[a][t] for (a, conns) in bus_arcs if t in conns)
+                    + sum(psw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
+                    + sum( pt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
+                    - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
+                    + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
+                    + sum( pd[l][t] for (l, conns) in bus_loads if t in conns)
+                    + ( Gs[idx,idx]*(vm0[idx]^2+2*vm0[idx]*(vm[t]-vm0[idx]))
+                        +sum( Gs[idx,jdx] * vm0[idx]*vm0[jdx] * cos(va0[idx]-va0[jdx])
+                            +Bs0[idx,jdx] * vm0[idx]*vm0[jdx] * sin(va0[idx]-va0[jdx])
+                            +[Gs[idx,jdx]*vm0[jdx]*cos(va0[idx]-va0[jdx]) Gs[idx,jdx]*vm0[idx]*cos(va0[idx]-va0[jdx]) -Gs[idx,jdx]*vm0[idx]*vm0[jdx]*sin(va0[idx]-va0[jdx])  Gs[idx,jdx]*vm0[idx]*vm0[jdx]*sin(va0[idx]-va0[jdx])]*[vm[t]-vm0[idx];vm[u]-vm0[jdx];va[t]-va0[idx];va[u]-va0[jdx]]
+                            +[Bs0[idx,jdx]*vm0[jdx]*sin(va0[idx]-va0[jdx]) Bs0[idx,jdx]*vm0[idx]*sin(va0[idx]-va0[jdx])  Bs0[idx,jdx]*vm0[idx]*vm0[jdx]*cos(va0[idx]-va0[jdx]) -Bs0[idx,jdx]*vm0[idx]*vm0[jdx]*cos(va0[idx]-va0[jdx]) vm0[t]*vm0[u]*sin(va0[t]-va0[u])]*[vm[t]-vm0[idx];vm[u]-vm0[jdx];va[t]-va0[idx];va[u]-va0[jdx];Bs[idx,jdx]-Bs0[idx,jdx]]
+                            for (jdx,u) in ungrounded_terminals if idx != jdx)
+                    )
+                    ==
+                    0.0
+                )
+                push!(cstr_p, cp)
+
+                cq = JuMP.@constraint(pm.model,
+                    sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
+                    + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
+                    + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
+                    - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
+                    + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
+                    + sum( qd[l][t] for (l, conns) in bus_loads if t in conns)
+                    + ( -Bs0[idx,idx]*vm0[idx]^2 - Bs0[idx,idx]*2*vm0[idx]*(vm[t]-vm0[idx]) - vm0[idx]^2*(Bs[idx,idx]-Bs0[idx,idx])
+                        -sum( Bs0[idx,jdx] * vm0[idx]*vm0[jdx] * cos(va0[idx]-va0[jdx])
+                            -Gs[idx,jdx] * vm0[idx]*vm0[jdx] * sin(va0[idx]-va0[jdx])
+                            +[Bs0[idx,jdx]*vm0[jdx]*cos(va0[idx]-va0[jdx])   Bs0[idx,jdx]*vm0[idx]*cos(va0[idx]-va0[jdx]) -Bs0[idx,jdx]*vm0[idx]*vm0[jdx]*sin(va0[idx]-va0[jdx]) Bs0[idx,jdx]*vm0[idx]*vm0[jdx]*sin(va0[idx]-va0[jdx]) vm0[t]*vm0[u]*cos(va0[t]-va0[u])]*[vm[t]-vm0[idx];vm[u]-vm0[jdx];va[t]-va0[idx];va[u]-va0[jdx];Bs[idx,jdx]-Bs0[idx,jdx]]
+                            +[-Gs[idx,jdx]*vm0[jdx]*sin(va0[idx]-va0[jdx]) -Gs[idx,jdx]*vm0[idx]*sin(va0[idx]-va0[jdx]) -Gs[idx,jdx]*vm0[idx]*vm0[jdx]*cos(va0[idx]-va0[jdx]) Gs[idx,jdx]*vm0[idx]*vm0[jdx]*cos(va0[idx]-va0[jdx])]*[vm[t]-vm0[idx];vm[u]-vm0[jdx];va[t]-va0[idx];va[u]-va0[jdx]]
+                            for (jdx,u) in ungrounded_terminals if idx != jdx)
+                    )
+                    ==
+                    0.0
+                )
+                push!(cstr_q, cq)
+            else
+                cp = JuMP.@constraint(pm.model,
+                    sum(  p[a][t] for (a, conns) in bus_arcs if t in conns)
+                    + sum(psw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
+                    + sum( pt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
+                    - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
+                    + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
+                    + sum( pd[l][t] for (l, conns) in bus_loads if t in conns)
+                    + Gs[idx,idx]*(vm0[idx]^2+2*vm0[idx]*(vm[t]-vm0[idx]))
+                    ==
+                    0.0
+                )
+                push!(cstr_p, cp)
+
+                cq = JuMP.@constraint(pm.model,
+                    sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
+                    + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
+                    + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
+                    - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
+                    + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
+                    + sum( qd[l][t] for (l, conns) in bus_loads if t in conns)
+                    - Bs[idx,idx]*(vm0[idx]^2+2*vm0[idx]*(vm[t]-vm0[idx]))
+                    ==
+                    0.0
+                )
+                push!(cstr_q, cq)
+            end
+        end
+    else
+        for (idx,t) in ungrounded_terminals
+            if any(Bs[idx,jdx] != 0 for (jdx, u) in ungrounded_terminals if idx != jdx) || any(Gs[idx,jdx] != 0 for (jdx, u) in ungrounded_terminals if idx != jdx)
+                cp = JuMP.@constraint(pm.model,
+                    sum(  p[a][t] for (a, conns) in bus_arcs if t in conns)
+                    + sum(psw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
+                    + sum( pt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
+                    - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
+                    + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
+                    + sum( pd[l][t] for (l, conns) in bus_loads if t in conns)
+                    + ( Gs[idx,idx]*(vm0[idx]^2+2*vm0[idx]*(vm[t]-vm0[idx]))
+                        +sum( Gs[idx,jdx] * vm0[idx]*vm0[jdx] * cos(va0[idx]-va0[jdx])
+                            +Bs[idx,jdx] * vm0[idx]*vm0[jdx] * sin(va0[idx]-va0[jdx])
+                            +[Gs[idx,jdx]*vm0[jdx]*cos(va0[idx]-va0[jdx]) Gs[idx,jdx]*vm0[idx]*cos(va0[idx]-va0[jdx]) -Gs[idx,jdx]*vm0[idx]*vm0[jdx]*sin(va0[idx]-va0[jdx])  Gs[idx,jdx]*vm0[idx]*vm0[jdx]*sin(va0[idx]-va0[jdx])]*[vm[t]-vm0[idx];vm[u]-vm0[jdx];va[t]-va0[idx];va[u]-va0[jdx]]
+                            +[Bs[idx,jdx]*vm0[jdx]*sin(va0[idx]-va0[jdx]) Bs[idx,jdx]*vm0[idx]*sin(va0[idx]-va0[jdx])  Bs[idx,jdx]*vm0[idx]*vm0[jdx]*cos(va0[idx]-va0[jdx]) -Bs[idx,jdx]*vm0[idx]*vm0[jdx]*cos(va0[idx]-va0[jdx])]*[vm[t]-vm0[idx];vm[u]-vm0[jdx];va[t]-va0[idx];va[u]-va0[jdx]]
+                            for (jdx,u) in ungrounded_terminals if idx != jdx)
+                    )
+                    ==
+                    0.0
+                )
+                push!(cstr_p, cp)
+
+                cq = JuMP.@constraint(pm.model,
+                    sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
+                    + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
+                    + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
+                    - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
+                    + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
+                    + sum( qd[l][t] for (l, conns) in bus_loads if t in conns)
+                    + ( -Bs[idx,idx]*(vm0[idx]^2+2*vm0[idx]*(vm[t]-vm0[idx]))
+                        -sum( Bs[idx,jdx] * vm0[idx]*vm0[jdx] * cos(va0[idx]-va0[jdx])
+                            -Gs[idx,jdx] * vm0[idx]*vm0[jdx] * sin(va0[idx]-va0[jdx])
+                            +[Bs[idx,jdx]*vm0[jdx]*cos(va0[idx]-va0[jdx])   Bs[idx,jdx]*vm0[idx]*cos(va0[idx]-va0[jdx]) -Bs[idx,jdx]*vm0[idx]*vm0[jdx]*sin(va0[idx]-va0[jdx]) Bs[idx,jdx]*vm0[idx]*vm0[jdx]*sin(va0[idx]-va0[jdx])]*[vm[t]-vm0[idx];vm[u]-vm0[jdx];va[t]-va0[idx];va[u]-va0[jdx]]
+                            +[-Gs[idx,jdx]*vm0[jdx]*sin(va0[idx]-va0[jdx]) -Gs[idx,jdx]*vm0[idx]*sin(va0[idx]-va0[jdx]) -Gs[idx,jdx]*vm0[idx]*vm0[jdx]*cos(va0[idx]-va0[jdx]) Gs[idx,jdx]*vm0[idx]*vm0[jdx]*cos(va0[idx]-va0[jdx])]*[vm[t]-vm0[idx];vm[u]-vm0[jdx];va[t]-va0[idx];va[u]-va0[jdx]]
+                            for (jdx,u) in ungrounded_terminals if idx != jdx)
+                    )
+                    ==
+                    0.0
+                )
+                push!(cstr_q, cq)
+            else
+                cp = JuMP.@constraint(pm.model,
+                    sum(  p[a][t] for (a, conns) in bus_arcs if t in conns)
+                    + sum(psw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
+                    + sum( pt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
+                    - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
+                    + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
+                    + sum( pd[l][t] for (l, conns) in bus_loads if t in conns)
+                    + Gs[idx,idx]*(vm0[idx]^2+2*vm0[idx]*(vm[t]-vm0[idx]))
+                    ==
+                    0.0
+                )
+                push!(cstr_p, cp)
+
+                cq = JuMP.@constraint(pm.model,
+                    sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
+                    + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
+                    + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
+                    - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
+                    + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
+                    + sum( qd[l][t] for (l, conns) in bus_loads if t in conns)
+                    - Bs[idx,idx]*(vm0[idx]^2+2*vm0[idx]*(vm[t]-vm0[idx]))
+                    ==
+                    0.0
+                )
+                push!(cstr_q, cq)
+            end
+        end
+    end
+
+    con(pm, nw, :lam_kcl_r)[i] = cstr_p
+    con(pm, nw, :lam_kcl_i)[i] = cstr_q
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :bus, i)[:lam_kcl_r] = cstr_p
+        sol(pm, nw, :bus, i)[:lam_kcl_i] = cstr_q
+    end
+end
+
+
 """
     constraint_mc_ohms_yt_from(pm::FOTPUPowerModel, nw::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, G::Matrix{<:Real}, B::Matrix{<:Real}, G_fr::Matrix{<:Real}, B_fr::Matrix{<:Real})
 

@@ -191,16 +191,6 @@ function variable_mc_bus_voltage(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_d
 end
 
 
-"""
-    variable_mc_capcontrol(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
-
-Capacitor switching variables.
-"""
-function variable_mc_capcontrol(pm::AbstractUnbalancedIVRModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
-    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax, report=report)
-end
-
-
 "Defines how current distributes over series and shunt impedances of a pi-model branch"
 function constraint_mc_current_from(pm::AbstractUnbalancedIVRModel, nw::Int, f_bus::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, g_sh_fr::Matrix{<:Real}, b_sh_fr::Matrix{<:Real})
     vr_fr = [var(pm, nw, :vr, f_bus)[c] for c in f_connections]
