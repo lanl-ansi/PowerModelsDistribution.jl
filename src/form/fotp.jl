@@ -722,25 +722,34 @@ function constraint_mc_load_power(pm::FOTPUPowerModel, load_id::Int; nw::Int=nw_
 
     # zero-order approximation
     elseif load["configuration"]==DELTA
-        vm0 = [var(pm, nw, :vm0, bus_id)[findfirst(isequal(c), bus["terminals"])] for c in connections]
-        va0 = [var(pm, nw, :va0, bus_id)[findfirst(isequal(c), bus["terminals"])] for c in connections]
+        vm0 = var(pm, nw, :vm0, bus_id)
+        va0 = var(pm, nw, :va0, bus_id)
         vr0 = vm0.*cos.(va0)
         vi0 = vm0.*sin.(va0)
+        nph = length(a)
 
-        nph = length(connections)
-        prev = Dict(i=>(i+nph-2)%nph+1 for i in 1:nph)
-        next = Dict(i=>i%nph+1 for i in 1:nph)
+        prev = Dict(c=>connections[(idx+nph-2)%nph+1] for (idx,c) in enumerate(connections))
+        next = Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))    
 
-        vrd0 = [vr0[i]-vr0[next[i]] for i in 1:nph]
-        vid0 = [vi0[i]-vi0[next[i]] for i in 1:nph]
+        vrd0 = [vr0[idx]-vr0[next[idx]] for (idx, c) in enumerate(connections)]
+        vid0 = [vi0[idx]-vi0[next[idx]] for (idx, c) in enumerate(connections)]
+        
+        crd0 = Array{Any,1}(undef, nph)
+        cid0 = Array{Any,1}(undef, nph)
+        for (idx, c) in enumerate(connections)
+            crd0[c] = a[idx]*vrd0[c]*(vrd0[c]^2+vid0[c]^2)^(alpha[idx]/2-1)+b[idx]*vid0[c]*(vrd0[c]^2+vid0[c]^2)^(beta[idx]/2 -1)
+            cid0[c] = a[idx]*vid0[c]*(vrd0[c]^2+vid0[c]^2)^(alpha[idx]/2-1)-b[idx]*vrd0[c]*(vrd0[c]^2+vid0[c]^2)^(beta[idx]/2 -1)
+        end
 
-        crd0 = [a[i]*vrd0[i]*(vrd0[i]^2+vid0[i]^2)^(alpha[i]/2-1)+b[i]*vid0[i]*(vrd0[i]^2+vid0[i]^2)^(beta[i]/2 -1) for i in 1:nph]
-        cid0 = [a[i]*vid0[i]*(vrd0[i]^2+vid0[i]^2)^(alpha[i]/2-1)-b[i]*vrd0[i]*(vrd0[i]^2+vid0[i]^2)^(beta[i]/2 -1) for i in 1:nph]
-        crd0_bus = [crd0[i]-crd0[prev[i]] for i in 1:nph]
-        cid0_bus = [cid0[i]-cid0[prev[i]] for i in 1:nph]
+        crd0_bus = [crd0[idx]-crd0[prev[idx]] for (idx, c) in enumerate(connections)]
+        cid0_bus = [cid0[idx]-cid0[prev[idx]] for (idx, c) in enumerate(connections)]
 
-        pd_bus = [ vr0[i]*crd0_bus[i]+vi0[i]*cid0_bus[i] for i in 1:nph]
-        qd_bus = [-vr0[i]*cid0_bus[i]+vi0[i]*crd0_bus[i] for i in 1:nph]
+        pd_bus = [ vr0[c]*crd0_bus[c]+vi0[c]*cid0_bus[c] for (idx, c) in enumerate(connections)]
+        qd_bus = [-vr0[c]*cid0_bus[c]+vi0[c]*crd0_bus[c] for (idx, c) in enumerate(connections)]
+
+        pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, connections)
+        qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, connections)
+
         var(pm, nw, :pd_bus)[load_id] = pd_bus
         var(pm, nw, :qd_bus)[load_id] = qd_bus
 
@@ -748,9 +757,12 @@ function constraint_mc_load_power(pm::FOTPUPowerModel, load_id::Int; nw::Int=nw_
             sol(pm, nw, :load, load_id)[:pd_bus] = pd_bus
             sol(pm, nw, :load, load_id)[:qd_bus] = qd_bus
 
-            pd = JuMP.@expression(pm.model, [i in 1:nph], a[i]*(vrd0[i]^2+vid0[i]^2)^(alpha[i]/2) )
-            qd = JuMP.@expression(pm.model, [i in 1:nph], b[i]*(vrd0[i]^2+vid0[i]^2)^(beta[i]/2) )
-
+            pd = []
+            qd = []
+            for (idx,c) in enumerate(connections)
+                push!(pd, JuMP.@expression(pm.model, a[idx]*(vrd0[c]^2+vid0[c]^2)^(alpha[idx]/2) ))
+                push!(qd, JuMP.@expression(pm.model, b[idx]*(vrd0[c]^2+vid0[c]^2)^(beta[idx]/2)  ))
+            end
             sol(pm, nw, :load, load_id)[:pd] = pd
             sol(pm, nw, :load, load_id)[:qd] = qd
         end
