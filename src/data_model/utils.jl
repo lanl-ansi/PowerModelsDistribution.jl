@@ -536,7 +536,7 @@ function _pad_properties_delta!(object::Dict{String,<:Any}, properties::Vector{S
             merge!(tmp, Dict((k[2], k[1])=>sign*v for (k,v) in tmp))
             get_val(x,y) = haskey(tmp, (x,y)) ? tmp[(x,y)] : 0.0
 
-            object[property] = [get_val(phases[1], phases[2]), get_val(phases[2], phases[3]), get_val(phases[3], phases[1])]
+            object[property] = val_length==1 ? [get_val(connections[1], connections[2]), 0.0,0.0] : [get_val(phases[1], phases[2]), get_val(phases[2], phases[3]), get_val(phases[3], phases[1])]
         end
     end
 end
