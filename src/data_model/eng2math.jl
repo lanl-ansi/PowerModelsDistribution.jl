@@ -494,7 +494,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                     "t_bus"         => transformer_t_bus_w[w],
                     "tm_nom"        => tm_nom,
                     "f_connections" => eng_obj["connections"][w],
-                    "t_connections" => get(data_math, "is_kron_reduced", false) ? eng_obj["connections"][w] : collect(1:dims+1),
+                    "t_connections" => get(data_math, "is_kron_reduced", false) ? eng_obj["connections"][1] : collect(1:dims+1),
                     "configuration" => eng_obj["configuration"][w],
                     "polarity"      => eng_obj["polarity"][w],
                     "tm_set"        => eng_obj["tm_set"][w],

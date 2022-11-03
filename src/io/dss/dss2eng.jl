@@ -726,6 +726,9 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
                         eng_obj["connections"][w] = _barrel_roll(eng_obj["connections"][w], -1)
                     end
                 end
+                if w==3 && eng_obj["connections"][2][2]==0 && eng_obj["connections"][3][1]==0 # center-tap transformers
+                    eng_obj["polarity"][w] = -1
+                end
             end
 
             if 0 in eng_obj["connections"][w]

@@ -32,7 +32,15 @@ function variable_mc_bus_voltage(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_d
             end
 
             vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
-            va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [deg2rad.([0, -120, 120])..., zeros(length(terminals))...][terminals]
+            if busref["vbase"] == 0.12 # different angle initializations for center-tap transformer secondary nodes
+                txfr_bus_id = [data["t_bus"] for (idx,data) in ref(pm, nw, :transformer) if data["f_bus"] == busref["index"]][1]
+                txfr_bus = ref(pm, nw, :bus, txfr_bus_id)
+                terminals = txfr_bus["terminals"]
+                default_va = [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals][1]
+                va = [default_va, _wrap_to_pi(default_va+pi)]
+            else
+                va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [deg2rad.([0, -120, 120])..., zeros(length(terminals))...][terminals]
+            end
 
             vr = vm .* cos.(va)
             vi = vm .* sin.(va)
