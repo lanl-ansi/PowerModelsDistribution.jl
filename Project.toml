@@ -5,7 +5,9 @@ repo = "https://github.com/lanl-ansi/PowerModelsDistribution.jl.git"
 version = "0.14.3"
 
 [deps]
+CPLEX = "a076750e-1247-5638-91d2-ce28b192dca0"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 FilePaths = "8fc22ac5-c921-52a6-82fd-178b2807b824"
 Glob = "c27321d9-0574-5035-807b-f59d2c89b15c"
@@ -18,6 +20,7 @@ Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 LoggingExtras = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 PolyhedralRelaxations = "2e741578-48fa-11ea-2d62-b52c946f73a0"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+Xpress = "9e70acf3-d6c9-5be6-b5bd-4e2c73e3e054"
 
 [compat]
 CSV = "0.8.5, 0.9, 0.10"

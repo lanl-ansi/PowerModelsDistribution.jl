@@ -261,6 +261,28 @@ function constraint_storage_state_ne(pm::AbstractUnbalancedPowerModel, n_1::Int,
     nothing
 end
 ""
+
+""
+function constraint_storage_round_trip(pm::AbstractUnbalancedPowerModel, n_1::Int, n_2::Int, i::Int, time_elapsed::Float64)::Nothing
+    se_2 = var(pm, n_2, :se, i)
+    se_1 = var(pm, n_1, :se, i)
+
+    JuMP.@constraint(pm.model, se_2 >= se_1 )
+    nothing
+end
+""
+
+
+""
+function constraint_storage_round_trip_ne(pm::AbstractUnbalancedPowerModel, n_1::Int, n_2::Int, i::Int, time_elapsed::Float64)::Nothing
+    se_2 = var(pm, n_2, :se_ne, i)
+    se_1 = var(pm, n_1, :se_ne, i)
+
+    JuMP.@constraint(pm.model, se_2 >= se_1 )
+    nothing
+end
+""
+
 function constraint_storage_complementarity_nl(pm::AbstractUnbalancedPowerModel, n::Int, i::Int)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)

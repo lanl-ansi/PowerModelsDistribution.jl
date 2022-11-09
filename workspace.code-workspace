@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../PowerWaterModels.jl"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"julia.environmentPath": "/Users/azamzam/dev/Julia/power-water-expansion/PowerModelsDistribution.jl"
+	}
+}

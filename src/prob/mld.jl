@@ -161,7 +161,7 @@ function build_mn_mc_mld_simple(pm::AbstractUnbalancedPowerModel)
     end
 
     network_ids = sort(collect(nw_ids(pm)))
-
+    n_0 = network_ids[1]
     n_1 = network_ids[1]
 
     for i in ids(pm, :storage; nw=n_1)
@@ -182,6 +182,14 @@ function build_mn_mc_mld_simple(pm::AbstractUnbalancedPowerModel)
         end
 
         n_1 = n_2
+    end
+
+    for i in ids(pm, :storage, nw=n_0)
+        constraint_round_trip_storage(pm, i, n_0, n_1)
+    end
+
+    for i in ids(pm, :storage_ne, nw=n_0)
+        constraint_round_trip_storage_ne(pm, i, n_0, n_1)
     end
     
     # objective_mc_min_load_setpoint_delta_simple(pm)

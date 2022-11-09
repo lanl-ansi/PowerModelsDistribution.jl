@@ -1072,6 +1072,55 @@ end
 
 
 """
+    constraint_round_trip_storage(pm::AbstractUnbalancedPowerModel, i::Int, nw_1::Int, nw_2::Int)::Nothing
+
+Template function for storage round trip constraint
+"""
+function constraint_round_trip_storage(pm::AbstractUnbalancedPowerModel, i::Int, nw_1::Int, nw_2::Int)::Nothing
+    storage = ref(pm, nw_2, :storage, i)
+
+    if haskey(ref(pm, nw_2), :time_elapsed)
+        time_elapsed = ref(pm, nw_2, :time_elapsed)
+    else
+        @warn "network $(nw_2) should specify time_elapsed in hours, using 1.0 as a default"
+        time_elapsed = 1.0
+    end
+
+    if haskey(ref(pm, nw_1, :storage), i)
+        constraint_storage_round_trip(pm, nw_1, nw_2, i, time_elapsed)
+    else
+        # if the storage device has status=0 in nw_1, then the stored energy variable will not exist. Initialize storage from data model instead.
+        @warn "storage component $(i) was not found in network $(nw_1) while building constraint_storage_state between networks $(nw_1) and $(nw_2). Using the energy value from the storage component in network $(nw_2) instead"
+    end
+    nothing
+end
+
+
+"""
+    constraint_round_trip_storage_ne(pm::AbstractUnbalancedPowerModel, i::Int, nw_1::Int, nw_2::Int)::Nothing
+
+Template function for storage_ne round trip constraint
+"""
+function constraint_round_trip_storage_ne(pm::AbstractUnbalancedPowerModel, i::Int, nw_1::Int, nw_2::Int)::Nothing
+    storage_ne = ref(pm, nw_2, :storage_ne, i)
+
+    if haskey(ref(pm, nw_2), :time_elapsed)
+        time_elapsed = ref(pm, nw_2, :time_elapsed)
+    else
+        @warn "network $(nw_2) should specify time_elapsed in hours, using 1.0 as a default"
+        time_elapsed = 1.0
+    end
+
+    if haskey(ref(pm, nw_1, :storage_ne), i)
+        constraint_storage_round_trip_ne(pm, nw_1, nw_2, i, time_elapsed)
+    else
+        # if the storage device has status=0 in nw_1, then the stored energy variable will not exist. Initialize storage from data model instead.
+        @warn "storage component $(i) was not found in network $(nw_1) while building constraint_storage_state between networks $(nw_1) and $(nw_2). Using the energy value from the storage component in network $(nw_2) instead"
+    end
+    nothing
+end
+
+"""
     constraint_storage_state(pm::AbstractUnbalancedPowerModel, i::Int, nw_1::Int, nw_2::Int)::Nothing
 
 Template function for storage state constraints for multinetwork problems (Network Expansion)
