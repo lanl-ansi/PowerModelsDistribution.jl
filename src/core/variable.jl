@@ -730,6 +730,16 @@ end
 
 
 """
+    variable_mc_capcontrol(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
+
+Capacitor switching variables.
+"""
+function variable_mc_capcontrol(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
+    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax, report=report)
+end
+
+
+"""
     variable_mc_capacitor_switch_state(pm::AbstractUnbalancedPowerModel, relax::Bool; nw::Int=nw_id_default, report::Bool=true)
 
 Capacitor (with capcontrol) switch state (open/close) variables
