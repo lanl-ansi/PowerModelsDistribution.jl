@@ -115,16 +115,6 @@ function variable_mc_bus_voltage_on_off(pm::AbstractUnbalancedACRModel; nw::Int=
 end
 
 
-"""
-    variable_mc_capcontrol(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
-
-Capacitor switching variables.
-"""
-function variable_mc_capcontrol(pm::AbstractUnbalancedACRModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
-    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax, report=report)
-end
-
-
 ""
 function constraint_mc_switch_state_closed(pm::AbstractUnbalancedACRModel, nw::Int, f_bus::Int, t_bus::Int, f_connections::Vector{Int}, t_connections::Vector{Int})
     vr_fr = var(pm, nw, :vr, f_bus)

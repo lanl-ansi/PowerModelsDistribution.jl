@@ -67,16 +67,6 @@ end
 
 
 """
-    variable_mc_capcontrol(pm::FOTRUPowerModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
-
-Capacitor switching variables.
-"""
-function variable_mc_capcontrol(pm::FOTRUPowerModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
-    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax, report=report)
-end
-
-
-"""
     constraint_mc_voltage_magnitude_bounds(pm::FOTRUPowerModel, nw::Int, i::Int, vmin::Vector{<:Real}, vmax::Vector{<:Real})
 
 Linearized voltage magnitude limits similar to FBSUBFPowerModel.

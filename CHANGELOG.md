@@ -2,6 +2,7 @@
 
 ## staged
 
+- Add wye-connected CapControl for IVR and FOT (polar) formulations
 - Fixed indexing issue for single-phase delta load models in linear formulations (LinDist3Flow, FOTP, FOTR, FBS)
 - Added ZIP load model
 - Updated documentation in `make_multiconductor!` to better indicate its unsupported nature
