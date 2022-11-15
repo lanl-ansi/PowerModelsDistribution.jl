@@ -30,6 +30,7 @@ function variable_mc_bus_voltage(pm::FOTPUPowerModel; nw::Int=nw_id_default, bou
         busref = ref(pm, nw, :bus, id)
         terminals = busref["terminals"]
         grounded = busref["grounded"]
+        is_triplex = haskey(busref, "triplex_connection")
 
         ncnd = length(terminals)
 
@@ -44,16 +45,14 @@ function variable_mc_bus_voltage(pm::FOTPUPowerModel; nw::Int=nw_id_default, bou
             end
         end
 
+        default_va = [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
         vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
-        if busref["vbase"] == 0.12
-            txfr_bus_id = [data["t_bus"] for (idx,data) in ref(pm, nw, :transformer) if data["f_bus"] == busref["index"]][1]
-            new_busref = ref(pm, nw, :bus, txfr_bus_id)
-            terminals = new_busref["terminals"]
-            default_va = [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals][1]
+        if is_triplex # different angle initializations for center-tap transformer secondary nodes
+            terminal = busref["triplex_connection"]
+            default_va = deg2rad.([0, -120, 120])[terminal]
             va = [default_va, _wrap_to_pi(default_va+pi)]
         else
-            default_va = [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
-            va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : default_va
+            va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [deg2rad.([0, -120, 120])..., zeros(length(terminals))...][terminals]
         end
         
         JuMP.set_start_value.(var(pm, nw, :vm, id), vm)
@@ -61,7 +60,7 @@ function variable_mc_bus_voltage(pm::FOTPUPowerModel; nw::Int=nw_id_default, bou
 
         # TODO: update initial operating point with warm-start (causes infeasbility if not flat start)
         var(pm, nw, :vm0)[id] = fill(1.0, ncnd)  # vm
-        var(pm, nw, :va0)[id] = busref["vbase"] == 0.12 ? va : default_va  # va
+        var(pm, nw, :va0)[id] = is_triplex ? va : default_va  # va
     end
 end
 

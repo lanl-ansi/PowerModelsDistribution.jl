@@ -728,6 +728,10 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
                 end
                 if w==3 && eng_obj["connections"][2][2]==0 && eng_obj["connections"][3][1]==0 # center-tap transformers
                     eng_obj["polarity"][w] = -1
+                    data_eng["bus"][eng_obj["bus"][w]]["triplex_connection"] = eng_obj["connections"][1][1]
+                    for bus_idx in ([data["t_bus"] for (idx,data) in data_eng["line"] if data["f_bus"] == eng_obj["bus"][w]])
+                        data_eng["bus"][bus_idx]["triplex_connection"] = eng_obj["connections"][1][1]
+                    end
                 end
             end
 

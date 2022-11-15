@@ -51,7 +51,8 @@ function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw::Int=nw_id_default, bo
         busref = ref(pm, nw, :bus, id)
         terminals = busref["terminals"]
         grounded = busref["grounded"]
-
+        is_triplex = haskey(busref, "triplex_connection")
+        
         ncnd = length(terminals)
 
         vm_start = fill(1.0, 3)
@@ -65,16 +66,14 @@ function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw::Int=nw_id_default, bo
             end
         end
 
+        default_va = [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
         vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
-        if busref["vbase"] == 0.12 # different angle initializations for center-tap transformer secondary nodes
-            txfr_bus_id = [data["t_bus"] for (idx,data) in ref(pm, nw, :transformer) if data["f_bus"] == busref["index"]][1]
-            txfr_bus = ref(pm, nw, :bus, txfr_bus_id)
-            terminals = txfr_bus["terminals"]
-            default_va = [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals][1]
+        if is_triplex # different angle initializations for center-tap transformer secondary nodes
+            terminal = busref["triplex_connection"]
+            default_va = deg2rad.([0, -120, 120])[terminal]
             va = [default_va, _wrap_to_pi(default_va+pi)]
         else
-            default_va = [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
-            va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : default_va
+            va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [deg2rad.([0, -120, 120])..., zeros(length(terminals))...][terminals]
         end
         
         vr = vm.*cos.(va)
@@ -84,8 +83,8 @@ function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw::Int=nw_id_default, bo
         JuMP.set_start_value.(var(pm, nw, :vi, id), vi)
 
         # update initial operating point with warm-start (causes infeasbility if not flat start)
-        var(pm, nw, :vr0)[id] = busref["vbase"] == 0.12 ? vr : fill(1.0, ncnd) .* cos.(default_va) # vr
-        var(pm, nw, :vi0)[id] = busref["vbase"] == 0.12 ? vi : fill(1.0, ncnd) .* sin.(default_va) # vi
+        var(pm, nw, :vr0)[id] = is_triplex ? vr : fill(1.0, ncnd) .* cos.(default_va) # vr
+        var(pm, nw, :vi0)[id] = is_triplex ? vi : fill(1.0, ncnd) .* sin.(default_va) # vi
     end
     # apply bounds if bounded
     if bounded

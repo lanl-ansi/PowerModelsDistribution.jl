@@ -341,6 +341,9 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{String
         if haskey(eng_obj, "va")
             math_obj["va"] = eng_obj["va"]
         end
+        if haskey(eng_obj, "triplex_connection")
+            math_obj["triplex_connection"] = eng_obj["triplex_connection"]
+        end
 
         math_obj["vmin"], math_obj["vmax"] = _get_tight_absolute_voltage_magnitude_bounds(eng_obj)
         math_obj["vm_pair_lb"], math_obj["vm_pair_ub"] = _get_tight_pairwise_voltage_magnitude_bounds(eng_obj)
