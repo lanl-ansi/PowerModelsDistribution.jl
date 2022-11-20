@@ -2,9 +2,13 @@
 
 ## staged
 
+- Add wye-connected CapControl for IVR and FOT (polar) formulations
+- Fixed indexing issue for single-phase delta load models in linear formulations (LinDist3Flow, FOTP, FOTR, FBS)
+- Added ZIP load model
 - Updated documentation in `make_multiconductor!` to better indicate its unsupported nature
 - Added automatic detection of multinetwork data to `instantiate_mc_model`
 - Converted `::Float64` types in function signatures to `::Real`
+- Fixed bug in `parse_file` in `.dss` files with character UTF-8 0x09 (Tabulation) [#394](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/394)
 
 ## v0.14.4
 

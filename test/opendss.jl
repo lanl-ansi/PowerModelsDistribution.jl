@@ -37,7 +37,7 @@
     end
 
     @testset "opendss parse load model warnings" begin
-        @test_logs (:warn, "d1phm3: dss load model 3 not supported. Treating as constant POWER model") (:warn, "d1phm6: dss load model 6 identical to model 1 in current feature set. Treating as constant POWER model") (:warn, "d1phm7: dss load model 7 not supported. Treating as constant POWER model") (:warn,"d1phm8: dss load model 8 not supported. Treating as constant POWER model") (:warn, "d1phm4: dss load model 4 not supported. Treating as constant POWER model") match_mode=:any parse_file("../test/data/opendss/loadparser_warn_model.dss")
+        @test_logs (:warn, "d1phm3: dss load model 3 not supported. Treating as constant POWER model") (:warn, "d1phm6: dss load model 6 identical to model 1 in current feature set. Treating as constant POWER model") (:warn, "d1phm7: dss load model 7 not supported. Treating as constant POWER model") (:warn, "d1phm4: dss load model 4 not supported. Treating as constant POWER model") match_mode=:any parse_file("../test/data/opendss/loadparser_warn_model.dss")
     end
 
     @testset "opendss parse spectrum objects" begin
@@ -294,6 +294,13 @@
             "enabled" => true,
             "like" => "",
         )
+    end
+
+    @testset "tabulation parse" begin
+        eng = parse_file("../test/data/opendss/case_tabulation.dss")
+
+        number_buses = 3
+        @test length(eng["bus"]) == number_buses
     end
 end
 

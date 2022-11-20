@@ -396,6 +396,26 @@ end
 
 
 """
+    constraint_mc_current_balance_capc(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for KCL constraints in current-voltage variable space with capacitor control variables.
+"""
+function constraint_mc_current_balance_capc(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    bus = ref(pm, nw, :bus, i)
+    bus_arcs = ref(pm, nw, :bus_arcs_conns_branch, i)
+    bus_arcs_sw = ref(pm, nw, :bus_arcs_conns_switch, i)
+    bus_arcs_trans = ref(pm, nw, :bus_arcs_conns_transformer, i)
+    bus_gens = ref(pm, nw, :bus_conns_gen, i)
+    bus_storage = ref(pm, nw, :bus_conns_storage, i)
+    bus_loads = ref(pm, nw, :bus_conns_load, i)
+    bus_shunts = ref(pm, nw, :bus_conns_shunt, i)
+
+    constraint_mc_current_balance_capc(pm, nw, i, bus["terminals"], bus["grounded"], bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_shunts)
+    nothing
+end
+
+
+"""
     constraint_mc_network_power_balance(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
 
 Template function for constraints that ensures that power generation and demand are balanced in OBF problem

@@ -23,6 +23,7 @@ case3_unbalanced_switch = parse_file("../test/data/opendss/case3_unbalanced_swit
 # 3-bus load models
 case3_lm_1230 = parse_file("../test/data/opendss/case3_lm_1230.dss")
 case3_lm_models = parse_file("../test/data/opendss/case3_lm_models.dss")
+case3_unbalanced_ZIPloads = parse_file("../test/data/opendss/case3_unbalanced_ZIPloads.dss")
 
 # 3-bus delta generators
 case3_delta_gens = parse_file("../test/data/opendss/case3_delta_gens.dss")

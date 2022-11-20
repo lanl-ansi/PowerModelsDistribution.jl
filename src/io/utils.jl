@@ -893,7 +893,7 @@ end
 function _parse_dss_load_model!(eng_obj::Dict{String,<:Any}, id::Any)
     model = eng_obj["model"]
 
-    if model in [3, 4, 7, 8]
+    if model in [3, 4, 7]
         @warn "$id: dss load model $model not supported. Treating as constant POWER model"
         model = 1
     elseif model == 6
