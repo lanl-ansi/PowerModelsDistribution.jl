@@ -89,16 +89,6 @@ function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw::Int=nw_id_default, bo
 end
 
 
-"""
-    variable_mc_capcontrol(pm::FBSUBFPowerModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
-
-Capacitor switching variables.
-"""
-function variable_mc_capcontrol(pm::FBSUBFPowerModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
-    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax, report=report)
-end
-
-
 "Creates variables for both `active` and `reactive` power flow at each transformer."
 function variable_mc_transformer_power(pm::FBSUBFPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     variable_mc_transformer_power_real(pm; nw=nw, bounded=bounded, report=report)
