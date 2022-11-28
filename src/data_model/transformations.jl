@@ -701,7 +701,7 @@ function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
 
     if haskey(data_eng, "load")
         for (_,eng_obj) in data_eng["load"]
-            if eng_obj["configuration"] == DELTA
+            if eng_obj["configuration"] == DELTA && !haskey(data_eng["bus"]["$(eng_obj["bus"])"],"triplex_connection")
                 _pad_properties_delta!(eng_obj, ["pd_nom", "qd_nom"], eng_obj["connections"], all_conductors)
                 _pad_connections!(eng_obj, "connections", all_conductors)
                 bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? _pad_connections!(bus_terminals, eng_obj["bus"], eng_obj["connections"]) : eng_obj["connections"]
@@ -721,7 +721,7 @@ function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
 
     if haskey(data_eng, "solar")
         for (_,eng_obj) in data_eng["solar"]
-            if eng_obj["configuration"]==DELTA
+            if eng_obj["configuration"]==DELTA && !haskey(data_eng["bus"]["$(eng_obj["bus"])"],"triplex_connection")
                 _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
                 _pad_connections!(eng_obj, "connections", all_conductors)
                 bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? _pad_connections!(bus_terminals, eng_obj["bus"], eng_obj["connections"]) : eng_obj["connections"]

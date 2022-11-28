@@ -1136,20 +1136,21 @@ function constraint_mc_load_power_delta(pm::AbstractUnbalancedACPModel, nw::Int,
     va = var(pm, nw, :va, bus_id)
 
     nph = length(a)
-
+    is_triplex = haskey(ref(pm, nw, :bus, bus_id),"triplex_connection")
+    conn = is_triplex ? connections[1] : connections
     prev = Dict(c=>connections[(idx+nph-2)%nph+1] for (idx,c) in enumerate(connections))
-    next = Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
-
+    next = is_triplex ? connections[2] : Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
+    
     vrd = Dict()
     vid = Dict()
-    for (idx, c) in enumerate(connections)
+    for (idx, c) in enumerate(conn)
         vrd[c] = JuMP.@NLexpression(pm.model, vm[c]*cos(va[c])-vm[next[c]]*cos(va[next[c]]))
         vid[c] = JuMP.@NLexpression(pm.model, vm[c]*sin(va[c])-vm[next[c]]*sin(va[next[c]]))
     end
 
     crd = Dict()
     cid = Dict()
-    for (idx, c) in enumerate(connections)
+    for (idx, c) in enumerate(conn)
         crd[c] = JuMP.@NLexpression(pm.model,
              a[idx]*vrd[c]*(vrd[c]^2+vid[c]^2)^(alpha[idx]/2-1)
             +b[idx]*vid[c]*(vrd[c]^2+vid[c]^2)^(beta[idx]/2 -1)
@@ -1163,8 +1164,13 @@ function constraint_mc_load_power_delta(pm::AbstractUnbalancedACPModel, nw::Int,
     crd_bus = Dict()
     cid_bus = Dict()
     for (idx, c) in enumerate(connections)
-        crd_bus[c] = JuMP.@NLexpression(pm.model, crd[c]-crd[prev[c]])
-        cid_bus[c] = JuMP.@NLexpression(pm.model, cid[c]-cid[prev[c]])
+        if is_triplex
+            crd_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*crd[1])
+            cid_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*cid[1])
+        else
+            crd_bus[c] = JuMP.@NLexpression(pm.model, crd[c]-crd[prev[c]])
+            cid_bus[c] = JuMP.@NLexpression(pm.model, cid[c]-cid[prev[c]])
+        end
     end
 
     pd_bus = Vector{JuMP.NonlinearExpression}([])
@@ -1186,7 +1192,7 @@ function constraint_mc_load_power_delta(pm::AbstractUnbalancedACPModel, nw::Int,
 
         pd = []
         qd = []
-        for (idx,c) in enumerate(connections)
+        for (idx,c) in enumerate(conn)
             push!(pd, JuMP.@NLexpression(pm.model, a[idx]*(vrd[c]^2+vid[c]^2)^(alpha[idx]/2) ))
             push!(qd, JuMP.@NLexpression(pm.model, b[idx]*(vrd[c]^2+vid[c]^2)^(beta[idx]/2)  ))
         end
@@ -1204,19 +1210,21 @@ function constraint_mc_generator_power_delta(pm::AbstractUnbalancedACPModel, nw:
     qg = var(pm, nw, :qg, id)
 
     nph = length(connections)
+    is_triplex = haskey(ref(pm, nw, :bus, bus_id),"triplex_connection")
+    conn = is_triplex ? connections[1] : connections
     prev = Dict(c=>connections[(idx+nph-2)%nph+1] for (idx,c) in enumerate(connections))
-    next = Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
+    next = is_triplex ? connections[2] : Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
 
     vrg = Dict()
     vig = Dict()
-    for c in connections
+    for c in conn
         vrg[c] = JuMP.@NLexpression(pm.model, vm[c]*cos(va[c])-vm[next[c]]*cos(va[next[c]]))
         vig[c] = JuMP.@NLexpression(pm.model, vm[c]*sin(va[c])-vm[next[c]]*sin(va[next[c]]))
     end
 
     crg = Dict()
     cig = Dict()
-    for c in connections
+    for c in conn
         crg[c] = JuMP.@NLexpression(pm.model, (pg[c]*vrg[c]+qg[c]*vig[c])/(vrg[c]^2+vig[c]^2) )
         cig[c] = JuMP.@NLexpression(pm.model, (pg[c]*vig[c]-qg[c]*vrg[c])/(vrg[c]^2+vig[c]^2) )
     end
@@ -1224,8 +1232,13 @@ function constraint_mc_generator_power_delta(pm::AbstractUnbalancedACPModel, nw:
     crg_bus = Dict()
     cig_bus = Dict()
     for c in connections
-        crg_bus[c] = JuMP.@NLexpression(pm.model, crg[c]-crg[prev[c]])
-        cig_bus[c] = JuMP.@NLexpression(pm.model, cig[c]-cig[prev[c]])
+        if is_triplex
+            crg_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*crg[1])
+            cig_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*cig[1])
+        else
+            crg_bus[c] = JuMP.@NLexpression(pm.model, crg[c]-crg[prev[c]])
+            cig_bus[c] = JuMP.@NLexpression(pm.model, cig[c]-cig[prev[c]])
+        end
     end
 
     pg_bus = Vector{JuMP.NonlinearExpression}([])
