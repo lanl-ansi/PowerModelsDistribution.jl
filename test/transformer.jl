@@ -239,4 +239,21 @@
             @test all(isapprox.(result["solution"]["transformer"]["reg1"]["tap"][2], [1.01535, 1.04071, 1.04210]; atol=3e-2))
         end
     end
+
+    @testset "transformer SOC relaxations" begin
+        @testset "2w_yy" begin
+            result = solve_mc_opf(ut_trans_2w_yy_bank, SOCNLPUBFPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test norm(result["solution"]["bus"]["3"]["vm"]-[0.82944, 0.86067, 0.72315], Inf) <= 2E-2
+        end
+
+        @testset "2w_dy_lead" begin
+            result = solve_mc_opf(ut_trans_2w_dy_lead, SOCConicUBFPowerModel, scs_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test norm(result["solution"]["bus"]["3"]["vm"]-[0.87391, 0.86054, 0.85485], Inf) <= 3.2E-2
+        end
+
+        @testset "3w_dyy_1" begin
+            result = solve_mc_opf(ut_trans_3w_dyy_1, SOCConicUBFPowerModel, scs_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test norm(result["solution"]["bus"]["3"]["vm"]-[0.93875, 0.90226, 0.90453], Inf) <= 6.1E-2
+        end
+    end
 end
