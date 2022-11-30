@@ -1,0 +1,27 @@
+! This case is designed to test a switch
+
+Clear
+
+New Circuit.Test phases=3 basekv=0.4 bus1=B1 MVASC1=1e8 MVASC3=1e8
+
+New Linecode.Z units=km nphases=1
+~ rmatrix=(0.227217624)
+~ xmatrix=(0.879326005)
+~ cmatrix=(0)
+~ Rg = 0
+~ Xg = 0
+
+New Line.Line1 bus1=B1.1 bus2=X1.1 linecode=Z length=0.5 units=km
+New Line.Switch bus1=X1.1 bus2=X2.2 length=1E-3 switch=y units=km
+
+! creates unbalance at B2:
+! vm_b2 = [0.964, 1.01, 1.00, 0.05] without other devices active
+New Load.Load1  phases=1 bus1=X2.2  kv=0.23  model=1 conn=wye kVA=5  pf=0.9 vminpu=0.1 vmaxpu=2
+
+Set voltagebases=[0.4]
+Calcvoltagebases
+
+// Export YPrims
+
+
+Solve

@@ -1,68 +1,76 @@
-using Pkg
-using PowerModelsDistribution
-const PMD = PowerModelsDistribution
+### A Pluto.jl notebook ###
+# v0.19.16
 
-using JSON
+using Markdown
+using InteractiveUtils
 
-data_dir = "examples/native_pf_testcases"
-solution_dir = "examples/native_pf_testcases/solutions"
-
-###
-function compare_sol_dss_pmd(sol_dss::Dict{String,Any}, sol_pmd::Dict{String,Any}, data_eng::Dict{String,Any}, data_math::Dict{String,Any}; compare_math=false, verbose=true, floating_buses=[], skip_buses=[], v_err_print_tol=1E-6)
-    max_v_err_pu = 0.0
-
-    # voltage base for ENGINEERING buses in [V]
-    vbase = Dict(id=>data_math["bus"]["$ind"]["vbase"]*data_math["settings"]["voltage_scale_factor"] for (id,ind) in data_math["bus_lookup"])
-
-    buses_intersected = intersect(keys(sol_dss["bus"]), keys(sol_pmd["bus"]))
-    for id in setdiff(buses_intersected, skip_buses)
-        pmd_bus = sol_pmd["bus"][id]
-        dss_bus = sol_dss["bus"][id]
-
-        terminals = data_eng["bus"][id]["terminals"]
-        if compare_math
-            ts = [t for t in string.(terminals) if haskey(dss_bus["vm"], t)]
-            v_dss = [dss_bus["vm"][t]*exp(im*dss_bus["va"][t]) for t in ts]
-            # convert to V instead of usual kV
-            v_pmd = [pmd_bus["vm"][t]*exp(im*deg2rad(pmd_bus["va"][t]))*data_eng["settings"]["voltage_scale_factor"] for t in ts]
-        else
-            ts = [t for t in terminals if haskey(dss_bus["vm"], t)]
-            v_dss = [dss_bus["vm"][t]*exp(im*dss_bus["va"][t]) for t in ts]
-            # convert to V instead of usual kV
-            v_pmd = [(pmd_bus["vr"][idx]+im*pmd_bus["vi"][idx])*data_eng["settings"]["voltage_scale_factor"] for (idx,t) in enumerate(ts)]
-        end
-        
-        # convert to pu
-        v_dss_pu = v_dss/vbase[id]
-        v_pmd_pu = v_pmd/vbase[id]
-
-        # convert to diffs if floating
-        N = length(v_dss)
-        if id in floating_buses && N>1
-            v_dss_pu = [v_dss_pu[i]-v_dss_pu[j] for i in 1:N for j in i:N if i!=j]/vbase[id]
-            v_pmd_pu = [v_pmd_pu[i]-v_pmd_pu[j] for i in 1:N for j in i:N if i!=j]/vbase[id]
-            labels = ["$(ts[i])-$(ts[j])" for i in 1:N for j in i:N if i!=j]
-        else
-            labels = string.(ts)
-        end
-
-        for i in 1:length(v_pmd_pu)
-            v_err_pu = abs.(v_dss_pu[i]-v_pmd_pu[i]); max_v_err_pu = max(max_v_err_pu, v_err_pu)
-
-            if v_err_pu>v_err_print_tol && verbose
-                println("terminal $id.$(labels[i])")
-                println("\t |U| dss: $(abs(v_dss_pu[i]))")
-                println("\t     pmd: $(abs(v_pmd_pu[i]))")
-                println("\t  ∠U dss:  $(angle(v_dss_pu[i]))")
-                println("\t     pmd:  $(angle(v_pmd_pu[i]))")
-            end
-        end
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
     end
-
-    return max_v_err_pu
 end
 
+# ╔═╡ 3da55c61-2439-4282-91ff-af8c794872e4
+begin
+	import Pkg
+	Pkg.activate("./native_pf_testcases")
+	# Pkg.activate(mktempdir())
+	Pkg.instantiate()
+	Pkg.add(url="https://github.com/hei06j/PowerModelsDistribution.jl.git#four-wire-native-pf")
+	Pkg.add("PlutoUI")
+	Pkg.add("JSON")
+	
+	Pkg.status()
 
+	using PowerModelsDistribution, PlutoUI, JSON
+	const PMD = PowerModelsDistribution	
+end
+
+# ╔═╡ e12e9ffa-1d5e-11ec-0ef4-435a3b4ee5d5
+md"""
+# Native Power Flow Solver
+
+PowerModelsDistribution.jl (PMD) uses a fixed point iteration current injection method to solve power flow, similar to OpenDSS built-in solver.
+
+This notebook illustrates accuracy of this embedded native power flow solver across diverse networks with and without an explicit neutral (EN) conductor representation. It will go through the full workflow, consisting of
+- importing OpenDSS network data (and applying transformations as needed);
+- updating network data;
+- optimizing the model and inspecting the results;
+
+"""
+
+
+# ╔═╡ 95a94c06-3652-4fde-b496-087fb2d25948
+md"""
+## Importing Network Data and Inspecting Power Flow Results
+
+We illustrate the native power flow accuracy by choosing from the list of networks below, each with different network elements, number of conductors, and configurations:
+"""
+
+# ╔═╡ 9cfb3edd-af18-4cf7-8310-0bfeb3d81826
+md"""
+## Updating network data
+
+The network data need to be updated based on representation of the the explicit neitral conductor.
+
+### Voltage source
+
+Voltage source impedance matrix size should be compatible with whether or not the neutral conductor is explicitly represented or not. 
+
+### Source bus 
+
+The vector sizes in source bus data should also be compatible with whether or not the neutral conductor is explicitly represented or not. 
+
+### Other network elements
+
+Vector and matrix sizes of other elements should also be compatible with whether or not the neutral conductor is explicitly represented or not. 
+"""
+
+# ╔═╡ b343dd2b-5624-4836-b12f-357b29025772
 function vsource_correction!(data_eng; explicit_neutral=true)
     if explicit_neutral
         if haskey(data_eng, "multinetwork")
@@ -98,7 +106,7 @@ function vsource_correction!(data_eng; explicit_neutral=true)
     return nothing
 end
 
-
+# ╔═╡ ce0d2924-94c6-484e-9d0a-c805e8a5d5df
 function sourcebus_voltage_vector_correction!(data_math::Dict{String, Any}; explicit_neutral=true)
     if haskey(data_math, "multinetwork")
         for (n,nw) in data_math["nw"]
@@ -148,8 +156,7 @@ function sourcebus_voltage_vector_correction!(data_math::Dict{String, Any}; expl
     return nothing
 end
 
-
-
+# ╔═╡ 8fa26a09-0352-45e8-bc31-c5e442a56cc2
 function update_math_model_3wire!(math)
     math["conductor_ids"] = math["conductor_ids"][1:3]
 
@@ -268,172 +275,119 @@ function update_math_model_3wire!(math)
     return nothing
 end
 
+# ╔═╡ 179a598f-2efc-4e7f-9287-1dbc9a68cf4f
+md"""
+## Optimizing the Model and Inspecting the Results
 
+The updated network model is then solved and the results are compared with OpenDSS solutions to illustrate the native power solver accuracy.
+"""
 
-function solve_compute_mc_pf(dss_file, solution_file; explicit_neutral=true, max_iter=100)
-    if explicit_neutral
-        data_eng = parse_file(dss_file, transformations=[transform_loops!])
-        vsource_correction!(data_eng, explicit_neutral=true)
+# ╔═╡ c35141d1-df28-4260-aef6-a5a7e50149c5
+begin
+	function solve_compute_mc_pf(dss_file, solution_file; explicit_neutral=true, max_iter=100)
+	    if explicit_neutral
+	        data_eng = PMD.parse_file(dss_file, transformations=[transform_loops!])
+	        vsource_correction!(data_eng, explicit_neutral=true)
+	
+	        data_math = PMD.transform_data_model(data_eng;kron_reduce=false)
+	        res = PMD.compute_mc_pf(data_math; explicit_neutral=true, max_iter=max_iter)
+	    else
+	        data_eng = PMD.parse_file(dss_file, transformations=[transform_loops!]);
+	        data_eng["is_kron_reduced"] = true
+	        data_eng["settings"]["sbase_default"] = 1
+	        vsource_correction!(data_eng, explicit_neutral=false)
+	
+	        data_math = PMD.transform_data_model(data_eng;kron_reduce=false, phase_project=false);
+	        sourcebus_voltage_vector_correction!(data_math, explicit_neutral=false);
+	        update_math_model_3wire!(data_math);
+	        res = PMD.compute_mc_pf(data_math; explicit_neutral=false, max_iter=max_iter)
+	    end
+	
+	    # obtain solution from dss
+	    sol_dss = open(solution_file, "r") do f
+	        JSON.parse(f)
+	    end
+	    sol_pmd = PMD.transform_solution(res["solution"], data_math, make_si=true);
+	
+	    v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose=false, compare_math=true)
+	
+	    return data_eng, data_math, res, v_maxerr_pu
+	end
+end
 
-        data_math = transform_data_model(data_eng;kron_reduce=false)
-        res = compute_mc_pf(data_math; explicit_neutral=true, max_iter=max_iter)
+# ╔═╡ 987398ad-4a31-47f7-af20-4f2efe7eb36f
+begin
+    pmd_path = joinpath(dirname(pathof(PowerModelsDistribution)), "..")
+	@bind case PlutoUI.Select([
+			"test_gen_1ph_delta" => "single phase EN network with delta generator",
+			"test_gen_1ph_wye" => "single phase EN network with wye generator",
+			"test_gen_3ph_delta" => "three phase EN network with delta generator",
+			"test_gen_3ph_wye" => "three phase EN network with wye generator",
+			"test_load_1ph_delta_cp" => "single phase EN network with delta constant power load",
+			"test_load_1ph_wye_cp" => "single phase EN network with wye constant power load",
+			"test_load_3ph_delta_cz" => "three phase EN network with delta constant impedance load",
+			"test_load_3ph_delta_ci" => "three phase EN network with delta constant current load",
+            "test_load_3ph_delta_cp" => "three phase EN network with delta constant power load",
+			"test_load_3ph_wye_cz" => "three phase EN network with wye constant impedance load",
+            "test_load_3ph_wye_ci" => "three phase EN network with wye constant current load",
+            "test_load_3ph_wye_cp" => "three phase EN network with wye constant power load",
+            "test_switch" => "three wire network with switch",
+			"test_switch_3w" => "three wire network with switch",
+			"test_switch_1w" => "single wire network with switch",
+			"ut_trans_3w_yyy_1" => "three wire network with three winding (yyy) transformer",
+			"ut_trans_3w_dyy_1" => "three wire network with three winding (dyy) transformer",
+			"test_trans_dy_3w" => "three wire network with two winding (dy) transformer",
+			"test_trans_yy_3w" => "three wire network with two winding (yy) transformer",
+            "test_trans_dy" => "four wire network with two winding (dy) transformer",
+			"test_trans_yy" => "four wire network with two winding (dy) transformer",
+		])
+    
+    case_path = joinpath(pmd_path, "test/data/en_validation_case_data/$case.dss")
+    solution_path = joinpath(pmd_path, "test/data/en_validation_case_solutions/$case.json")
+
+    if case ∈ ["test_switch_3w", "test_switch_1w", "ut_trans_3w_yyy_1", "ut_trans_3w_dyy_1", "test_trans_dy_3w", "test_trans_yy_3w"]
+        explicit_neutral = false
     else
-        data_eng = parse_file(dss_file, transformations=[transform_loops!]);
-        data_eng["is_kron_reduced"] = true
-        data_eng["settings"]["sbase_default"] = 1
-        vsource_correction!(data_eng, explicit_neutral=false)
-
-        data_math = transform_data_model(data_eng;kron_reduce=false, phase_project=false);
-        sourcebus_voltage_vector_correction!(data_math, explicit_neutral=false);
-        update_math_model_3wire!(data_math);
-        res = compute_mc_pf(data_math; explicit_neutral=false, max_iter=max_iter)
+        explicit_neutral = true
     end
 
-    # obtain solution from dss
-    sol_dss = open(solution_file, "r") do f
-        JSON.parse(f)
-    end
-    sol_pmd = transform_solution(res["solution"], data_math, make_si=true);
-
-    if occursin("ieee123_pmd", dss_file)
-        delete!(sol_pmd["bus"], "87")
-    end
-
-    v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose=false, compare_math=true)
-
-    return data_eng, data_math, res, v_maxerr_pu
+    data_eng, data_math, res, v_maxerr_pu = solve_compute_mc_pf(case_path, solution_path; explicit_neutral=explicit_neutral);
+    
+    @show v_maxerr_pu
 end
 
 
-## ############## Generators ##############
-### 1-phase PV generator - Delta
-case = "test_gen_1ph_delta"
-data_eng, data_math, res, v_maxerr_pu_g1d = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
 
-### 1-phase PV generator - Wye
-case = "test_gen_1ph_wye"
-data_eng, data_math, res, v_maxerr_pu_g1y = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+# ╔═╡ b5d99973-ea63-41dc-90c8-a744104437fe
+md"""
+### Larger networks
 
-### 3-phase PV generator - Delta
-case = "test_gen_3ph_delta"
-data_eng, data_math, res, v_maxerr_pu_g3d = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+The native power flow solver is also tested on larger networks 
 
-### 3-phase PV generator - Wye
-case = "test_gen_3ph_wye"
-data_eng, data_math, res, v_maxerr_pu_g3y = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+- IEEE 13, IEEE 34, IEEE 123 (https://github.com/sanderclaeys/DistributionTestCases.jl)
 
-v_maxerr_pu_g = [v_maxerr_pu_g1d, v_maxerr_pu_g1y, v_maxerr_pu_g3d, v_maxerr_pu_g3y]
-@show v_maxerr_pu_g
+- Egrid GreensBoro and SantaFe networks (https://egriddata.org/dataset/greensboro-synthetic-network, https://egriddata.org/dataset/santa-fe-synthetic-network)
 
+The table below shows the maximum per unit voltage error for the tested networks:
 
-## ############## Loads ##############
-### 1-phase load - Delta - Constant P
-case = "test_load_1ph_delta_cp"
-data_eng, data_math, res, v_maxerr_pu_l1dcp = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+| `Network`                                     | `maximum voltage error pu`|
+| --------------------------------------------  | ------------------------  |
+| "IEEE 13 three wire network"                  |  3.765097382122667e-6     |
+| "IEEE 34 three wire network"                  |  6.801818003195945e-8     |
+| "IEEE 123 three wire network"                 |  4.044977697179336e-8     |
+| "Egrid GreensBoro Industrial"                 |  0.0018373325064614753    |
+| "Egrid SantaFe Urban/Suberban uhs0 1"         |  0.00011703535416486209   |
+"""
 
-### 1-phase load - Wye - Constant P
-case = "test_load_1ph_wye_cp"
-data_eng, data_math, res, v_maxerr_pu_l1ycp = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
-
-### 3-phase load - Delta - Constant Z
-case = "test_load_3ph_delta_cz"
-data_eng, data_math, res, v_maxerr_pu_l3dcz = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
-
-### 3-phase load - Delta - Constant I
-case = "test_load_3ph_delta_ci"
-data_eng, data_math, res, v_maxerr_pu_l3dci = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
-
-### 3-phase load - Delta - Constant P
-case = "test_load_3ph_delta_cp"
-data_eng, data_math, res, v_maxerr_pu_l3dcp = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
-
-### 3-phase load - Wye - Constant Z
-case = "test_load_3ph_wye_cz"
-data_eng, data_math, res, v_maxerr_pu_l3ycz = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
-
-### 3-phase load - Wye - Constant I
-case = "test_load_3ph_wye_ci"
-data_eng, data_math, res, v_maxerr_pu_l3yci = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
-
-### 3-phase load - Wye - Constant P
-case = "test_load_3ph_wye_cp"
-data_eng, data_math, res, v_maxerr_pu_l3ycp = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
-
-v_maxerr_pu_l = [v_maxerr_pu_l1dcp, v_maxerr_pu_l1ycp, v_maxerr_pu_l3dcz, v_maxerr_pu_l3dci, v_maxerr_pu_l3dcp, v_maxerr_pu_l3ycz, v_maxerr_pu_l3yci, v_maxerr_pu_l3ycp]
-@show v_maxerr_pu_l
-
-
-## ############## SWITCH ##############
-### 4wire - switch
-case = "test_switch"
-data_eng, data_math, res, v_maxerr_pu_s4w = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
-
-### 3wire - switch
-case = "test_switch_3w"
-data_eng, data_math, res, v_maxerr_pu_s3w = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
-
-### 1wire - switch
-case = "test_switch_1w"
-data_eng, data_math, res, v_maxerr_pu_s1w = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
-
-v_maxerr_pu_s = [v_maxerr_pu_s4w, v_maxerr_pu_s3w, v_maxerr_pu_s1w]
-@show v_maxerr_pu_s
-
-## ############## TRANSFORMER ##############
-### 3wire - 3 winding 1 phase -> wye-wye-wye
-case = "ut_trans_3w_yyy_1"
-data_eng, data_math, res, v_maxerr_pu_t3wyyy = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
-
-### 3wire - 3 winding 3 phase -> delta-wye-wye
-case = "ut_trans_3w_dyy_1"
-data_eng, data_math, res, v_maxerr_pu_t3wdyy = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
-
-### 3wire - 2 winding -> delta-wye
-case = "test_trans_dy_3w"
-data_eng, data_math, res, v_maxerr_pu_t3wdy = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
-
-### 3wire - 2 winding -> wye-wye
-case = "test_trans_yy_3w"
-data_eng, data_math, res, v_maxerr_pu_t3wyy = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
-
-### 4wire - 2 winding -> delta-wye
-case = "test_trans_dy"
-data_eng, data_math, res, v_maxerr_pu_t4wdy = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
-
-### 4wire - 2 winding -> wye-wye
-case = "test_trans_yy"
-data_eng, data_math, res, v_maxerr_pu_t4wyy = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
-
-v_maxerr_pu_t = [v_maxerr_pu_t3wyyy, v_maxerr_pu_t3wdyy, v_maxerr_pu_t3wdy, v_maxerr_pu_t3wyy, v_maxerr_pu_t4wdy, v_maxerr_pu_t4wyy]
-@show v_maxerr_pu_t
-
-## ############## 3 wire IEEE test cases  ##############  get these files from  https://github.com/sanderclaeys/DistributionTestCases.jl
-case = "ieee13_pmd"
-data_eng, data_math, res, v_maxerr_pu_IEEE13 = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
-
-case = "ieee34_pmd"
-data_eng, data_math, res, v_maxerr_pu_IEEE34 = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
-
-case = "ieee123_pmd"
-data_eng, data_math, res, v_maxerr_pu_IEEE123 = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
-
-v_maxerr_pu_IEEE = [v_maxerr_pu_IEEE13, v_maxerr_pu_IEEE34, v_maxerr_pu_IEEE123]
-@show v_maxerr_pu_IEEE
-
-## ############## Egrid - Greensboro ##############
-egrid_data_dir = "/Users/hei06j/Documents/repositories/remote/PowerModelsDistribution.jl/examples/native_pf_testcases/Industrial"
-egrid_solution_file = "../solutions/egrid_GreensBoro.json"
-cd(egrid_data_dir)
-data_eng, data_math, res, v_maxerr_pu = solve_compute_mc_pf("master.dss", egrid_solution_file; explicit_neutral=false, max_iter=1000);
-@show v_maxerr_pu
-cd("../../../")
-
-
-## ############## Egrid - SantaFe ##############
-egrid_data_dir = "/Users/hei06j/Documents/repositories/remote/PowerModelsDistribution.jl/examples/native_pf_testcases/EgridData - SantaFe/urban-suburban/uhs0_1247/uhs0_1247--udt4776"
-egrid_solution_file = "../../../../solutions/egrid_SantaFe.json"
-cd(egrid_data_dir)
-data_eng, data_math, res, v_maxerr_pu = solve_compute_mc_pf("Master.dss", egrid_solution_file; explicit_neutral=false, max_iter=1000);
-@show v_maxerr_pu
-cd("../../../../../../")
-
+# ╔═╡ Cell order:
+# ╠═3da55c61-2439-4282-91ff-af8c794872e4
+# ╟─e12e9ffa-1d5e-11ec-0ef4-435a3b4ee5d5
+# ╟─95a94c06-3652-4fde-b496-087fb2d25948
+# ╟─9cfb3edd-af18-4cf7-8310-0bfeb3d81826
+# ╟─b343dd2b-5624-4836-b12f-357b29025772
+# ╟─ce0d2924-94c6-484e-9d0a-c805e8a5d5df
+# ╟─8fa26a09-0352-45e8-bc31-c5e442a56cc2
+# ╟─179a598f-2efc-4e7f-9287-1dbc9a68cf4f
+# ╟─c35141d1-df28-4260-aef6-a5a7e50149c5
+# ╟─987398ad-4a31-47f7-af20-4f2efe7eb36f
+# ╟─b5d99973-ea63-41dc-90c8-a744104437fe
