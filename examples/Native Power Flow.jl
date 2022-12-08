@@ -407,7 +407,7 @@ begin
 			"test_load_3ph_wye_cz" => "three phase EN network with wye constant impedance load",
             "test_load_3ph_wye_ci" => "three phase EN network with wye constant current load",
             "test_load_3ph_wye_cp" => "three phase EN network with wye constant power load",
-            "test_switch" => "three wire network with switch",
+            "test_switch" => "four wire network with switch",
 			"test_switch_3w" => "three wire network with switch",
 			"test_switch_1w" => "single wire network with switch",
 			"ut_trans_3w_yyy_1" => "three wire network with three winding (yyy) transformer",
@@ -415,7 +415,7 @@ begin
 			"test_trans_dy_3w" => "three wire network with two winding (dy) transformer",
 			"test_trans_yy_3w" => "three wire network with two winding (yy) transformer",
             "test_trans_dy" => "four wire network with two winding (dy) transformer",
-			"test_trans_yy" => "four wire network with two winding (dy) transformer",
+			"test_trans_yy" => "four wire network with two winding (yy) transformer",
 		])
 end
 
@@ -436,7 +436,8 @@ begin
 	
     data_eng, data_math, res, v_maxerr_pu = solve_compute_mc_pf(case_path, solution1; explicit_neutral=explicit_neutral);
     
-	"maximum voltage error p.u is $v_maxerr_pu"
+	"maximum voltage error p.u is $v_maxerr_pu, total time is $(res["time_total"])"
+	
 end
 
 # ╔═╡ b5d99973-ea63-41dc-90c8-a744104437fe
@@ -492,10 +493,10 @@ begin
 	else
 		case_large = joinpath(notebook_path, "network.dss")
 		solution = joinpath(solution_path, "$case1.json");
-		_, _, _, v_maxerr_pu1 = solve_compute_mc_pf(case_large, solution; explicit_neutral=false);
+		_, _, res1, v_maxerr_pu1 = solve_compute_mc_pf(case_large, solution; explicit_neutral=false);
 	end
 	
-	"maximum voltage error p.u is $v_maxerr_pu1"
+	"maximum voltage error p.u is $v_maxerr_pu1, total time is $(res1["time_total"])"
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
