@@ -341,9 +341,6 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{String
         if haskey(eng_obj, "va")
             math_obj["va"] = eng_obj["va"]
         end
-        if haskey(eng_obj, "triplex_connection")
-            math_obj["triplex_connection"] = eng_obj["triplex_connection"]
-        end
 
         math_obj["vmin"], math_obj["vmax"] = _get_tight_absolute_voltage_magnitude_bounds(eng_obj)
         math_obj["vm_pair_lb"], math_obj["vm_pair_ub"] = _get_tight_pairwise_voltage_magnitude_bounds(eng_obj)
@@ -527,6 +524,23 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                         "x" => eng_obj["controls"]["x"][w],
                     )
                     data_math["transformer"]["$(transformer_2wa_obj["index"])"]["controls"] = reg_obj
+                end
+                if w==3 && eng_obj["polarity"][w] == -1 # identify and mark all secondary-side nodes as triplex by adding va_start
+                    default_va = deg2rad.([0, -120, 120])[eng_obj["connections"][1][1]]
+                    data_math["bus"]["$(transformer_2wa_obj["f_bus"])"]["va_start"] = haskey(data_eng["bus"][eng_obj["bus"][w]],"va_start") ? data_eng["bus"][eng_obj["bus"][w]]["va_start"] : [default_va, _wrap_to_pi(default_va+pi)] 
+                    idx = 0
+                    bus_ids = [] 
+                    t_bus = haskey(data_eng, "line") ? [data["t_bus"] for (_,data) in data_eng["line"] if data["f_bus"] == eng_obj["bus"][w]] : []
+                    while length(t_bus)>0 || idx<length(bus_ids)
+                        for bus_idx in t_bus
+                            bus_id = data_math["bus_lookup"]["$bus_idx"]
+                            push!(bus_ids, bus_id)
+                            default_va = deg2rad.([0, -120, 120])[eng_obj["connections"][1][1]]
+                            data_math["bus"]["$bus_id"]["va_start"] = haskey(data_eng["bus"]["$bus_idx"],"va_start") ? data_eng["bus"]["$bus_idx"]["va_start"] : [default_va, _wrap_to_pi(default_va+pi)]
+                        end
+                        idx += 1
+                        t_bus = [data["t_bus"] for (_,data) in data_eng["line"] if data["f_bus"] == bus_ids[idx]]
+                    end
                 end
 
                 push!(to_map, "transformer.$(transformer_2wa_obj["index"])")
@@ -813,7 +827,7 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
             end
         end
 
-        N = _infer_int_dim_unit(eng_obj, false)
+        N = eng_obj["configuration"]==DELTA && length(eng_obj["connections"])==1 ? 1 : _infer_int_dim_unit(eng_obj, false)
         for (fr_k, to_k, def) in [("pg_lb", "pmin", -Inf), ("pg_ub", "pmax", Inf), ("qg_lb", "qmin", -Inf), ("qg_ub", "qmax", Inf)]
             math_obj[to_k] = haskey(eng_obj, fr_k) ? eng_obj[fr_k] : fill(def, N)
         end

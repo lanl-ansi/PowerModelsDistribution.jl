@@ -30,7 +30,6 @@ function variable_mc_bus_voltage(pm::FOTPUPowerModel; nw::Int=nw_id_default, bou
         busref = ref(pm, nw, :bus, id)
         terminals = busref["terminals"]
         grounded = busref["grounded"]
-        is_triplex = haskey(busref, "triplex_connection")
 
         ncnd = length(terminals)
 
@@ -47,20 +46,14 @@ function variable_mc_bus_voltage(pm::FOTPUPowerModel; nw::Int=nw_id_default, bou
 
         default_va = [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
         vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
-        if is_triplex # different angle initializations for center-tap transformer secondary nodes
-            terminal = busref["triplex_connection"]
-            default_va = deg2rad.([0, -120, 120])[terminal]
-            va = [default_va, _wrap_to_pi(default_va+pi)]
-        else
-            va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [deg2rad.([0, -120, 120])..., zeros(length(terminals))...][terminals]
-        end
-        
+        va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [deg2rad.([0, -120, 120])..., zeros(length(terminals))...][terminals]
+
         JuMP.set_start_value.(var(pm, nw, :vm, id), vm)
         JuMP.set_start_value.(var(pm, nw, :va, id), va)
 
         # TODO: update initial operating point with warm-start (causes infeasbility if not flat start)
         var(pm, nw, :vm0)[id] = fill(1.0, ncnd)  # vm
-        var(pm, nw, :va0)[id] = is_triplex ? va : default_va  # va
+        var(pm, nw, :va0)[id] = haskey(busref, "va_start") ? va : default_va  # va
     end
 end
 

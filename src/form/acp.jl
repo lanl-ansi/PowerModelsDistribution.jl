@@ -25,13 +25,7 @@ function variable_mc_bus_voltage(pm::AbstractUnbalancedACPModel; nw=nw_id_defaul
         end
 
         vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
-        if haskey(busref, "triplex_connection") # different angle initializations for center-tap transformer secondary nodes
-            terminal = busref["triplex_connection"]
-            default_va = deg2rad.([0, -120, 120])[terminal]
-            va = [default_va, _wrap_to_pi(default_va+pi)]
-        else
-            va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [deg2rad.([0, -120, 120])..., zeros(length(terminals))...][terminals]
-        end
+        va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [deg2rad.([0, -120, 120])..., zeros(length(terminals))...][terminals]
 
         for (idx,t) in enumerate(terminals)
             JuMP.set_start_value(var(pm, nw, :vm, id)[t], vm[idx])
@@ -1134,23 +1128,23 @@ end
 function constraint_mc_load_power_delta(pm::AbstractUnbalancedACPModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
     vm = var(pm, nw, :vm, bus_id)
     va = var(pm, nw, :va, bus_id)
-
+    
     nph = length(a)
-    is_triplex = haskey(ref(pm, nw, :bus, bus_id),"triplex_connection")
-    conn = is_triplex ? connections[1] : connections
-    prev = Dict(c=>connections[(idx+nph-2)%nph+1] for (idx,c) in enumerate(connections))
-    next = is_triplex ? connections[2] : Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
+    is_triplex = nph < 3
+    conn_bus = is_triplex ? ref(pm, nw, :bus, bus_id)["terminals"] : connections
+    prev = Dict(c=>conn_bus[(idx+nph-2)%nph+1] for (idx,c) in enumerate(conn_bus))
+    next = is_triplex ? conn_bus[2] : Dict(c=>conn_bus[idx%nph+1] for (idx,c) in enumerate(conn_bus))
     
     vrd = Dict()
     vid = Dict()
-    for (idx, c) in enumerate(conn)
+    for (idx, c) in enumerate(connections)
         vrd[c] = JuMP.@NLexpression(pm.model, vm[c]*cos(va[c])-vm[next[c]]*cos(va[next[c]]))
         vid[c] = JuMP.@NLexpression(pm.model, vm[c]*sin(va[c])-vm[next[c]]*sin(va[next[c]]))
     end
 
     crd = Dict()
     cid = Dict()
-    for (idx, c) in enumerate(conn)
+    for (idx, c) in enumerate(connections)
         crd[c] = JuMP.@NLexpression(pm.model,
              a[idx]*vrd[c]*(vrd[c]^2+vid[c]^2)^(alpha[idx]/2-1)
             +b[idx]*vid[c]*(vrd[c]^2+vid[c]^2)^(beta[idx]/2 -1)
@@ -1163,7 +1157,7 @@ function constraint_mc_load_power_delta(pm::AbstractUnbalancedACPModel, nw::Int,
 
     crd_bus = Dict()
     cid_bus = Dict()
-    for (idx, c) in enumerate(connections)
+    for (idx, c) in enumerate(conn_bus)
         if is_triplex
             crd_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*crd[1])
             cid_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*cid[1])
@@ -1175,13 +1169,13 @@ function constraint_mc_load_power_delta(pm::AbstractUnbalancedACPModel, nw::Int,
 
     pd_bus = Vector{JuMP.NonlinearExpression}([])
     qd_bus = Vector{JuMP.NonlinearExpression}([])
-    for (idx,c) in enumerate(connections)
+    for (idx,c) in enumerate(conn_bus)
         push!(pd_bus, JuMP.@NLexpression(pm.model,  vm[c]*cos(va[c])*crd_bus[c]+vm[c]*sin(va[c])*cid_bus[c]))
         push!(qd_bus, JuMP.@NLexpression(pm.model, -vm[c]*cos(va[c])*cid_bus[c]+vm[c]*sin(va[c])*crd_bus[c]))
     end
 
-    pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, connections)
-    qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, connections)
+    pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, conn_bus)
+    qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, conn_bus)
 
     var(pm, nw, :pd_bus)[id] = pd_bus
     var(pm, nw, :qd_bus)[id] = qd_bus
@@ -1192,7 +1186,7 @@ function constraint_mc_load_power_delta(pm::AbstractUnbalancedACPModel, nw::Int,
 
         pd = []
         qd = []
-        for (idx,c) in enumerate(conn)
+        for (idx,c) in enumerate(connections)
             push!(pd, JuMP.@NLexpression(pm.model, a[idx]*(vrd[c]^2+vid[c]^2)^(alpha[idx]/2) ))
             push!(qd, JuMP.@NLexpression(pm.model, b[idx]*(vrd[c]^2+vid[c]^2)^(beta[idx]/2)  ))
         end
@@ -1210,28 +1204,28 @@ function constraint_mc_generator_power_delta(pm::AbstractUnbalancedACPModel, nw:
     qg = var(pm, nw, :qg, id)
 
     nph = length(connections)
-    is_triplex = haskey(ref(pm, nw, :bus, bus_id),"triplex_connection")
-    conn = is_triplex ? connections[1] : connections
-    prev = Dict(c=>connections[(idx+nph-2)%nph+1] for (idx,c) in enumerate(connections))
-    next = is_triplex ? connections[2] : Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
+    is_triplex = nph < 3
+    conn_bus = is_triplex ? ref(pm, nw, :bus, bus_id)["terminals"] : connections
+    prev = Dict(c=>conn_bus[(idx+nph-2)%nph+1] for (idx,c) in enumerate(conn_bus))
+    next = is_triplex ? conn_bus[2] : Dict(c=>conn_bus[idx%nph+1] for (idx,c) in enumerate(conn_bus))
 
     vrg = Dict()
     vig = Dict()
-    for c in conn
+    for c in connections
         vrg[c] = JuMP.@NLexpression(pm.model, vm[c]*cos(va[c])-vm[next[c]]*cos(va[next[c]]))
         vig[c] = JuMP.@NLexpression(pm.model, vm[c]*sin(va[c])-vm[next[c]]*sin(va[next[c]]))
     end
 
     crg = Dict()
     cig = Dict()
-    for c in conn
+    for c in connections
         crg[c] = JuMP.@NLexpression(pm.model, (pg[c]*vrg[c]+qg[c]*vig[c])/(vrg[c]^2+vig[c]^2) )
         cig[c] = JuMP.@NLexpression(pm.model, (pg[c]*vig[c]-qg[c]*vrg[c])/(vrg[c]^2+vig[c]^2) )
     end
 
     crg_bus = Dict()
     cig_bus = Dict()
-    for c in connections
+    for c in conn_bus
         if is_triplex
             crg_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*crg[1])
             cig_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*cig[1])
@@ -1243,12 +1237,12 @@ function constraint_mc_generator_power_delta(pm::AbstractUnbalancedACPModel, nw:
 
     pg_bus = Vector{JuMP.NonlinearExpression}([])
     qg_bus = Vector{JuMP.NonlinearExpression}([])
-    for c in connections
+    for c in conn_bus
         push!(pg_bus, JuMP.@NLexpression(pm.model,  vm[c]*cos(va[c])*crg_bus[c]+vm[c]*sin(va[c])*cig_bus[c]))
         push!(qg_bus, JuMP.@NLexpression(pm.model, -vm[c]*cos(va[c])*cig_bus[c]+vm[c]*sin(va[c])*crg_bus[c]))
     end
-    pd_bus = JuMP.Containers.DenseAxisArray(pg_bus, connections)
-    qd_bus = JuMP.Containers.DenseAxisArray(qg_bus, connections)
+    pd_bus = JuMP.Containers.DenseAxisArray(pg_bus, conn_bus)
+    qd_bus = JuMP.Containers.DenseAxisArray(qg_bus, conn_bus)
 
     var(pm, nw, :pg_bus)[id] = pg_bus
     var(pm, nw, :qg_bus)[id] = qg_bus

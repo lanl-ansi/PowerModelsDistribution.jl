@@ -37,24 +37,25 @@ New Transformer.xfmr_3 phases=1 windings=3 wdg=1 bus=node_1.3 kv=7.2 kva=100.0 %
 ! Regulators
 New RegControl.reg_1 transformer=trans_reg_1 winding=2 delay=30.0 band=144.0 vreg=7500.0
 
-! 240-V devices across terminals .1 to .2
+! 240V devices across terminals .1 to .2
 New Load.L1 bus1=tm_1.1.2 model=1 kW=20 phases=1 kV=0.24 pf=1 
 New PVSystem.PV1 bus1=tm_1.1.2 kVA=10 phases=1 kV=0.24 pf=1 
 
 ! 120V devices as separate elements
 New Load.L2a bus1=tm_2.1 model=1 kW=12 phases=1 kV=0.12 pf=1
-New PVSystem.PV2a bus1=tm_2.1 kVA=5 phases=1 kV=0.12 pf=1
+New PVSystem.PV2a bus1=tm_2.1 kVA=6 phases=1 kV=0.12 pf=1
 
 New Load.L2b bus1=tm_2.2 model=1 kW=8 phases=1 kV=0.12 pf=1
-New PVSystem.PV2b bus1=tm_2.2 kVA=3 phases=1 kV=0.12 pf=1
+New PVSystem.PV2b bus1=tm_2.2 kVA=4 phases=1 kV=0.12 pf=1
 
 ! 120V devices as single element
-New Load.L3  bus1=tm_3.1.2 model=1 kva=15 phases=2 kV=0.208 pf=1
-New PVSystem.PV3 bus1=tm_3.1.2 kva=5 phases=2 kV=0.208 pf=1
+New Load.L3  bus1=tm_3.1.2 model=1 kva=20 phases=2 kV=0.208 pf=1
+New PVSystem.PV3 bus1=tm_3.1.2 kva=10 phases=2 kV=0.208 pf=1
 New Storage.S3 bus1=tm_3.1.2 kwrated=1 kwhrated=1 %stored=100 phases=2 kV=0.208
 
 set voltagebases=[230, 12.47, 0.208] 
 calcvoltagebases
+Set Controlmode=OFF
 
 solve
 

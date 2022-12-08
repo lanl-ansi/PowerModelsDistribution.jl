@@ -96,9 +96,7 @@ P_g == P_g^{setpoint}
 ```
 """
 function constraint_mc_gen_power_setpoint_real(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, pg::Vector{<:Real})::Nothing
-    gen = ref(pm, nw, :gen, i)
-    pg_var = haskey(ref(pm, nw, :bus, gen["gen_bus"]),"triplex_connection") && gen["configuration"] == DELTA ? var(pm, nw, :pg, i) : [var(pm, nw, :pg, i)[c] for c in gen["connections"]]
-
+    pg_var = [var(pm, nw, :pg, i)[c] for c in ref(pm, nw, :gen, i)["connections"]]
     JuMP.@constraint(pm.model, pg_var .== pg)
 
     nothing

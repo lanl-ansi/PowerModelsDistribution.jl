@@ -80,7 +80,7 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
 
         nphases = defaults["phases"]
         bus = _parse_bus_id(defaults["bus1"])[1]
-        conf = haskey(data_eng["bus"]["$bus"],"triplex_connection") && dss_obj["phases"] == 1 && dss_obj["kv"] == 0.24 ? DELTA : defaults["conn"] # TODO: better generalization 
+        conf = nphases == 1 && dss_obj["kv"] == 0.24 ? DELTA : defaults["conn"] # TODO: better generalization 
 
         if conf==DELTA
             @assert(nphases in [1, 3], "$id: only 1 and 3-phase delta loads are supported!")
@@ -107,7 +107,7 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         _parse_dss_load_model!(eng_obj, id)
 
         # if the ground is used directly, register load
-        if 0 in connections || haskey(data_eng["bus"]["$(eng_obj["bus"])"],"triplex_connection")
+        if 0 in connections
             _register_awaiting_ground!(data_eng["bus"][bus], connections)
         end
 
@@ -728,14 +728,6 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
                 end
                 if w==3 && eng_obj["connections"][2][2]==0 && eng_obj["connections"][3][1]==0 # center-tap transformers
                     eng_obj["polarity"][w] = -1
-                    data_eng["bus"][eng_obj["bus"][w]]["triplex_connection"] = eng_obj["connections"][1][1]
-                    # add triplex connection to all downstream nodes, TODO: generalize to find all nodes from transformer secondary to leaf node
-                    for bus_idx in ([data["t_bus"] for (idx,data) in data_eng["line"] if data["f_bus"] == eng_obj["bus"][w]])  
-                        data_eng["bus"][bus_idx]["triplex_connection"] = eng_obj["connections"][1][1]
-                        for leaf_bus_idx in ([leaf_data["t_bus"] for (leaf_idx,leaf_data) in data_eng["line"] if leaf_data["f_bus"] == bus_idx])
-                            data_eng["bus"][leaf_bus_idx]["triplex_connection"] = eng_obj["connections"][1][1]
-                        end
-                    end
                 end
             end
 
@@ -771,12 +763,12 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
 
         nphases = defaults["phases"]
         bus = _parse_bus_id(defaults["bus1"])[1]
-        conf = haskey(data_eng["bus"]["$bus"],"triplex_connection") && dss_obj["phases"] == 1 && dss_obj["kv"] == 0.24 ? DELTA : defaults["conn"] # TODO: better generalization 
+        conf = nphases == 1 && dss_obj["kv"] == 0.24 ? DELTA : defaults["conn"] # TODO: better generalization 
 
         eng_obj = Dict{String,Any}(
             "bus" => bus,
             "configuration" => conf,
-            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=defaults["conn"] == WYE, default=defaults["conn"] == WYE ? [collect(1:defaults["phases"])..., 0] : nphases == 1 ? [1,0] : collect(1:nphases)),
+            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=conf == WYE, default=conf == WYE ? [collect(1:defaults["phases"])..., 0] : nphases == 1 ? [1,0] : collect(1:nphases)),
             "pg" => fill(min(defaults["pmpp"] * defaults["irradiance"], defaults["kva"]) / nphases, nphases),
             "qg" => fill(defaults["kvar"] / nphases, nphases),
             "vg" => fill(defaults["kv"] / sqrt(nphases), nphases),
@@ -796,7 +788,7 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
         )
 
         # if the ground is used directly, register load
-        if 0 in eng_obj["connections"] || haskey(data_eng["bus"]["$(eng_obj["bus"])"],"triplex_connection")
+        if 0 in eng_obj["connections"]
             _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
         end
 
@@ -819,13 +811,11 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         defaults = _apply_ordered_properties(_create_storage(id; _to_kwargs(dss_obj)...), dss_obj)
 
         nphases = defaults["phases"]
-        bus = _parse_bus_id(defaults["bus1"])[1]
-        conf = haskey(data_eng["bus"]["$bus"],"triplex_connection") && dss_obj["phases"] == 1 && dss_obj["kv"] == 0.24 ? DELTA : WYE # TODO: better generalization 
 
         eng_obj = Dict{String,Any}(
-            "bus" => bus,
+            "bus" => _parse_bus_id(defaults["bus1"])[1],
             "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=true, default=[collect(1:defaults["phases"])..., 0]),
-            "configuration" => conf,
+            "configuration" => WYE,
             "energy" => defaults["kwhstored"],
             "energy_ub" => defaults["kwhrated"],
             "charge_ub" => defaults["%charge"] / 100.0 * defaults["kwrated"],
@@ -846,7 +836,7 @@ function _dss2eng_storage!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         )
 
         # if the ground is used directly, register load
-        if 0 in eng_obj["connections"] || haskey(data_eng["bus"]["$(eng_obj["bus"])"],"triplex_connection")
+        if 0 in eng_obj["connections"]
             _register_awaiting_ground!(data_eng["bus"][eng_obj["bus"]], eng_obj["connections"])
         end
 

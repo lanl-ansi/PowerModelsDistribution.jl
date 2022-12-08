@@ -799,11 +799,7 @@ end
 
 ""
 function variable_mc_generator_power_real(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    connections = Dict()
-    for (i,gen) in ref(pm, nw, :gen)
-        connections[i] = haskey(ref(pm, nw, :bus, gen["gen_bus"]),"triplex_connection") && gen["configuration"] == DELTA ? [1] : gen["connections"]
-    end
-
+    connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
     pg = var(pm, nw)[:pg] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_pg_$(i)",
             start = comp_start_value(ref(pm, nw, :gen, i), ["pg_start", "pg"], c, 0.0)
@@ -833,11 +829,7 @@ end
 
 ""
 function variable_mc_generator_power_imaginary(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    connections = Dict()
-    for (i,gen) in ref(pm, nw, :gen)
-        connections[i] = haskey(ref(pm, nw, :bus, gen["gen_bus"]),"triplex_connection") && gen["configuration"] == DELTA ? [1] : gen["connections"]
-    end
-    
+    connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
     qg = var(pm, nw)[:qg] = Dict(i => JuMP.@variable(pm.model,
             [c in connections[i]], base_name="$(nw)_qg_$(i)",
             start = comp_start_value(ref(pm, nw, :gen, i), ["qg_start", "qg"], c, 0.0)

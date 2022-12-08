@@ -59,12 +59,6 @@
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.92092, 0.91012, 0.90059], Inf) <= 1.5E-5
             @test norm(result["solution"]["bus"]["3"]["va"]-[-30.0, -150.4, 89.8], Inf) <= 0.1
         end
-
-        @testset "3w transformer acp pf center-tap" begin
-            result = solve_mc_opf(trans_3w_center_tap, ACPUPowerModel, ipopt_solver; make_si=false)
-            @test norm(result["solution"]["bus"]["sourcebus"]["vm"]-[1.05, 1.05, 1.05], Inf) <= 1.5E-5
-            @test norm(result["solution"]["bus"]["sourcebus"]["va"]-[0.0, -120.0, 120.0], Inf) <= 1E-3
-        end
     end
 
     @testset "2w transformer ac pf yy - banked transformers" begin
@@ -251,8 +245,8 @@
             
             sbase = trans_3w_center_tap["settings"]["sbase_default"]
 
-            @test all(isapprox.(result["solution"]["load"]["l1"]["pd_bus"]*sbase, [10.0, 10.0]; atol=1.5E-3))
-            @test all(isapprox.(result["solution"]["solar"]["pv3"]["pg_bus"]*sbase, [2.5, 2.5]; atol=1.5E-3))
+            @test all(isapprox.(result["solution"]["load"]["l1"]["pd_bus"]*sbase, [10.0, 10.0]; atol=3E-2))
+            @test all(isapprox.(result["solution"]["solar"]["pv3"]["pg_bus"]*sbase, [5.0, 5.0]; atol=1.5E-3))
             @test all(isapprox.(result["solution"]["bus"]["tn_1"]["va"], [0.0, 180.0]; atol=0.1))
             @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
             @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
