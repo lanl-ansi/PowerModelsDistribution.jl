@@ -53,7 +53,7 @@ function variable_mc_bus_voltage(pm::FOTPUPowerModel; nw::Int=nw_id_default, bou
 
         # TODO: update initial operating point with warm-start (causes infeasbility if not flat start)
         var(pm, nw, :vm0)[id] = fill(1.0, ncnd)  # vm
-        var(pm, nw, :va0)[id] = haskey(busref, "va_start") ? va : default_va  # va
+        var(pm, nw, :va0)[id] = get(busref, "va_start", default_va)  # va
     end
 end
 
@@ -207,36 +207,36 @@ Power balance constraints with capacitor control with shunt current calculated u
 ```math
 \begin{align}
     & B_s = b_s ⋅ z,~~ cq_{sh} = B_s ⋅ v, \\
-    & B_s \cdot v_m^t \cdot v_m^u \cdot \cos(v_a^t-v_a^u) \Rightarrow B_{s0} \cdot v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) + 
-\begin{bmatrix} 
+    & B_s \cdot v_m^t \cdot v_m^u \cdot \cos(v_a^t-v_a^u) \Rightarrow B_{s0} \cdot v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) +
+\begin{bmatrix}
 B_{s0} \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) \\
 B_{s0} \cdot v_{m0}^t \cdot \cos(v_{a0}^t-v_{a0}^u) \\
 -B_{s0} \cdot v_{m0}^t \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u) \\
 B_{s0} \cdot v_{m0}^t \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u) \\
-v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) 
-\end{bmatrix}^\top 
-\begin{bmatrix} 
+v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u)
+\end{bmatrix}^\top
+\begin{bmatrix}
 v_m^t-v_{m0}^t \\
 v_m^u-v_{m0}^u \\
 v_a^t-v_{a0}^t \\
 v_a^u-v_{a0}^u \\
 B_{s} -B_{s0}
 \end{bmatrix} \\
-& B_s \cdot v_m^t \cdot v_m^u \cdot \sin(v_a^t-v_a^u) \Rightarrow B_{s0} \cdot v_{m0}^t \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u) + 
-\begin{bmatrix} 
+& B_s \cdot v_m^t \cdot v_m^u \cdot \sin(v_a^t-v_a^u) \Rightarrow B_{s0} \cdot v_{m0}^t \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u) +
+\begin{bmatrix}
  B_{s0} \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u) \\
  B_{s0} \cdot v_{m0}^t \cdot \sin(v_{a0}^t-v_{a0}^u) \\
  B_{s0} \cdot v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) \\
  -B_{s0} \cdot v_{m0}^t \cdot v_{m0}^u \cdot \cos(v_{a0}^t-v_{a0}^u) \\
  v_{m0}^t \cdot v_{m0}^u \cdot \sin(v_{a0}^t-v_{a0}^u)
-\end{bmatrix}^\top 
-\begin{bmatrix} 
+\end{bmatrix}^\top
+\begin{bmatrix}
 v_m^t-v_{m0}^t \\
 v_m^u-v_{m0}^u \\
 v_a^t-v_{a0}^t \\
 v_a^u-v_{a0}^u \\
 B_{s} -B_{s0}
-\end{bmatrix} 
+\end{bmatrix}
 
 \end{align}
 ```
@@ -275,7 +275,7 @@ function constraint_mc_power_balance_capc(pm::FOTPUPowerModel, nw::Int, i::Int, 
             end
         end
     end
-    
+
     cstr_p = []
     cstr_q = []
     ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
@@ -728,11 +728,11 @@ function constraint_mc_load_power(pm::FOTPUPowerModel, load_id::Int; nw::Int=nw_
         nph = length(a)
 
         prev = Dict(c=>connections[(idx+nph-2)%nph+1] for (idx,c) in enumerate(connections))
-        next = Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))    
+        next = Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
 
         vrd0 = [vr0[idx]-vr0[next[idx]] for (idx, c) in enumerate(connections)]
         vid0 = [vi0[idx]-vi0[next[idx]] for (idx, c) in enumerate(connections)]
-        
+
         crd0 = Array{Any,1}(undef, nph)
         cid0 = Array{Any,1}(undef, nph)
         for (idx, c) in enumerate(connections)

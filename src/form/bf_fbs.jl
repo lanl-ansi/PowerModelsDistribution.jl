@@ -51,7 +51,7 @@ function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw::Int=nw_id_default, bo
         busref = ref(pm, nw, :bus, id)
         terminals = busref["terminals"]
         grounded = busref["grounded"]
-        
+
         ncnd = length(terminals)
 
         vm_start = fill(1.0, 3)
@@ -68,7 +68,7 @@ function variable_mc_bus_voltage(pm::FBSUBFPowerModel; nw::Int=nw_id_default, bo
         default_va = [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
         vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
         va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : default_va
-        
+
         vr = vm.*cos.(va)
         vi = vm.*sin.(va)
 
@@ -596,7 +596,7 @@ function constraint_mc_load_power(pm::FBSUBFPowerModel, load_id::Int; nw::Int=nw
             crd0[c] = a[idx]*vrd0[c]*(vrd0[c]^2+vid0[c]^2)^(alpha[idx]/2-1)+b[idx]*vid0[c]*(vrd0[c]^2+vid0[c]^2)^(beta[idx]/2 -1)
             cid0[c] = a[idx]*vid0[c]*(vrd0[c]^2+vid0[c]^2)^(alpha[idx]/2-1)-b[idx]*vrd0[c]*(vrd0[c]^2+vid0[c]^2)^(beta[idx]/2 -1)
         end
-        
+
         crd0_bus = [crd0[idx]-crd0[prev[idx]] for (idx, c) in enumerate(connections)]
         cid0_bus = [cid0[idx]-cid0[prev[idx]] for (idx, c) in enumerate(connections)]
 

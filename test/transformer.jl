@@ -242,11 +242,37 @@
         @testset "3w transformer acp opf center-tap" begin
             result = solve_mc_opf(trans_3w_center_tap, ACPUPowerModel, ipopt_solver; make_si=false)
             @test result["termination_status"] == LOCALLY_SOLVED
-            
+
             sbase = trans_3w_center_tap["settings"]["sbase_default"]
 
             @test all(isapprox.(result["solution"]["load"]["l1"]["pd_bus"]*sbase, [10.0, 10.0]; atol=3E-2))
-            @test all(isapprox.(result["solution"]["solar"]["pv3"]["pg_bus"]*sbase, [5.0, 5.0]; atol=1.5E-3))
+            @test all(isapprox.(result["solution"]["solar"]["pv3"]["pg"]*sbase, [5.0, 5.0]; atol=1.5E-3))
+            @test all(isapprox.(result["solution"]["bus"]["tn_1"]["va"], [0.0, 180.0]; atol=0.1))
+            @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
+            @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
+        end
+
+        @testset "3w transformer acr opf center-tap" begin
+            result = solve_mc_opf(trans_3w_center_tap, ACRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
+
+            sbase = trans_3w_center_tap["settings"]["sbase_default"]
+
+            @test all(isapprox.(result["solution"]["load"]["l1"]["pd_bus"]*sbase, [10.0, 10.0]; atol=3E-2))
+            @test all(isapprox.(result["solution"]["solar"]["pv3"]["pg"]*sbase, [5.0, 5.0]; atol=1.5E-3))
+            @test all(isapprox.(result["solution"]["bus"]["tn_1"]["va"], [0.0, 180.0]; atol=0.1))
+            @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
+            @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))
+        end
+
+        @testset "3w transformer ivr opf center-tap" begin
+            result = solve_mc_opf(trans_3w_center_tap, IVRUPowerModel, ipopt_solver; solution_processors=[sol_data_model!], make_si=false)
+            @test result["termination_status"] == LOCALLY_SOLVED
+
+            sbase = trans_3w_center_tap["settings"]["sbase_default"]
+
+            @test all(isapprox.(result["solution"]["load"]["l1"]["pd_bus"]*sbase, [10.0, 10.0]; atol=3E-2))
+            @test all(isapprox.(result["solution"]["solar"]["pv3"]["pg"]*sbase, [5.0, 5.0]; atol=1.5E-3))
             @test all(isapprox.(result["solution"]["bus"]["tn_1"]["va"], [0.0, 180.0]; atol=0.1))
             @test all(isapprox.(result["solution"]["bus"]["tm_2"]["va"], [-120.1, 59.9]; atol=0.1))
             @test all(isapprox.(result["solution"]["bus"]["tn_6"]["va"], [119.9, -60.1]; atol=0.1))

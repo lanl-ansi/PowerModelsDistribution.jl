@@ -45,7 +45,7 @@ function variable_mc_bus_voltage(pm::FOTRUPowerModel; nw::Int=nw_id_default, bou
 
         # TODO: update initial operating point with warm-start (causes infeasbility if not flat start)
         var(pm, nw, :vr0)[id] = haskey(busref, "va_start") ? vr : fill(1.0, ncnd) .* cos.(default_va) # vr
-        var(pm, nw, :vi0)[id] = haskey(busref, "va_start") == 0.12 ? vi : fill(1.0, ncnd) .* sin.(default_va) # vi
+        var(pm, nw, :vi0)[id] = haskey(busref, "va_start") ? vi : fill(1.0, ncnd) .* sin.(default_va) # vi
     end
 
     # apply bounds if bounded
@@ -525,7 +525,7 @@ function constraint_mc_load_power(pm::FOTRUPowerModel, load_id::Int; nw::Int=nw_
             crd0[c] = a[idx]*vrd0[c]*(vrd0[c]^2+vid0[c]^2)^(alpha[idx]/2-1)+b[idx]*vid0[c]*(vrd0[c]^2+vid0[c]^2)^(beta[idx]/2 -1)
             cid0[c] = a[idx]*vid0[c]*(vrd0[c]^2+vid0[c]^2)^(alpha[idx]/2-1)-b[idx]*vrd0[c]*(vrd0[c]^2+vid0[c]^2)^(beta[idx]/2 -1)
         end
-        
+
         crd0_bus = [crd0[idx]-crd0[prev[idx]] for (idx, c) in enumerate(connections)]
         cid0_bus = [cid0[idx]-cid0[prev[idx]] for (idx, c) in enumerate(connections)]
 

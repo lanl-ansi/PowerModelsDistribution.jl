@@ -525,11 +525,11 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                     )
                     data_math["transformer"]["$(transformer_2wa_obj["index"])"]["controls"] = reg_obj
                 end
-                if w==3 && eng_obj["polarity"][w] == -1 # identify and mark all secondary-side nodes as triplex by adding va_start
+                if w==3 && eng_obj["polarity"][w]==-1 # identify center-tapped transformer and mark all secondary-side nodes as triplex by adding va_start
                     default_va = deg2rad.([0, -120, 120])[eng_obj["connections"][1][1]]
-                    data_math["bus"]["$(transformer_2wa_obj["f_bus"])"]["va_start"] = haskey(data_eng["bus"][eng_obj["bus"][w]],"va_start") ? data_eng["bus"][eng_obj["bus"][w]]["va_start"] : [default_va, _wrap_to_pi(default_va+pi)] 
+                    data_math["bus"]["$(transformer_2wa_obj["f_bus"])"]["va_start"] = haskey(data_eng["bus"][eng_obj["bus"][w]],"va_start") ? data_eng["bus"][eng_obj["bus"][w]]["va_start"] : [default_va, _wrap_to_pi(default_va+pi)]
                     idx = 0
-                    bus_ids = [] 
+                    bus_ids = []
                     t_bus = haskey(data_eng, "line") ? [data["t_bus"] for (_,data) in data_eng["line"] if data["f_bus"] == eng_obj["bus"][w]] : []
                     while length(t_bus)>0 || idx<length(bus_ids)
                         for bus_idx in t_bus
@@ -716,8 +716,8 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{Strin
                     "dispatchable" => eng_obj["dispatchable"] == NO ? 0 : 1,
                     "index" => length(data_math["load"])+1,
                     "pd" => eng_obj["pd_nom"]*eng_obj["zipv"][idx],
-                ) 
-               
+                )
+
                 data_math["load"]["$(math_obj["index"])"] = math_obj
 
                 push!(to_map, "load.$(math_obj["index"])")
@@ -738,7 +738,7 @@ function _map_eng2math_load!(data_math::Dict{String,<:Any}, data_eng::Dict{Strin
             math_obj["qd"] = eng_obj["qd_nom"]
 
             math_obj["vnom_kv"] = eng_obj["vm_nom"]
-    
+
             data_math["load"]["$(math_obj["index"])"] = math_obj
 
             push!(data_math["map"], Dict{String,Any}(
@@ -827,7 +827,7 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
             end
         end
 
-        N = eng_obj["configuration"]==DELTA && length(eng_obj["connections"])==1 ? 1 : _infer_int_dim_unit(eng_obj, false)
+        N = eng_obj["configuration"]==DELTA && length(eng_obj["connections"])==1 ? 1 : _infer_int_dim_unit(eng_obj, false) # if solar is delta-connected to triplex node, N can be equal to 1
         for (fr_k, to_k, def) in [("pg_lb", "pmin", -Inf), ("pg_ub", "pmax", Inf), ("qg_lb", "qmin", -Inf), ("qg_ub", "qmax", Inf)]
             math_obj[to_k] = haskey(eng_obj, fr_k) ? eng_obj[fr_k] : fill(def, N)
         end

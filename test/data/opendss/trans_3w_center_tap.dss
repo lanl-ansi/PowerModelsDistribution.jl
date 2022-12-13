@@ -51,7 +51,6 @@ New PVSystem.PV2b bus1=tm_2.2 kVA=4 phases=1 kV=0.12 pf=1
 ! 120V devices as single element
 New Load.L3  bus1=tm_3.1.2 model=1 kva=20 phases=2 kV=0.208 pf=1
 New PVSystem.PV3 bus1=tm_3.1.2 kva=10 phases=2 kV=0.208 pf=1
-New Storage.S3 bus1=tm_3.1.2 kwrated=1 kwhrated=1 %stored=100 phases=2 kV=0.208
 
 set voltagebases=[230, 12.47, 0.208] 
 calcvoltagebases

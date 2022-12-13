@@ -1128,13 +1128,14 @@ end
 function constraint_mc_load_power_delta(pm::AbstractUnbalancedACPModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, a::Vector{<:Real}, alpha::Vector{<:Real}, b::Vector{<:Real}, beta::Vector{<:Real}; report::Bool=true)
     vm = var(pm, nw, :vm, bus_id)
     va = var(pm, nw, :va, bus_id)
-    
+
     nph = length(a)
     is_triplex = nph < 3
     conn_bus = is_triplex ? ref(pm, nw, :bus, bus_id)["terminals"] : connections
+
     prev = Dict(c=>conn_bus[(idx+nph-2)%nph+1] for (idx,c) in enumerate(conn_bus))
     next = is_triplex ? conn_bus[2] : Dict(c=>conn_bus[idx%nph+1] for (idx,c) in enumerate(conn_bus))
-    
+
     vrd = Dict()
     vid = Dict()
     for (idx, c) in enumerate(connections)
@@ -1206,6 +1207,7 @@ function constraint_mc_generator_power_delta(pm::AbstractUnbalancedACPModel, nw:
     nph = length(connections)
     is_triplex = nph < 3
     conn_bus = is_triplex ? ref(pm, nw, :bus, bus_id)["terminals"] : connections
+
     prev = Dict(c=>conn_bus[(idx+nph-2)%nph+1] for (idx,c) in enumerate(conn_bus))
     next = is_triplex ? conn_bus[2] : Dict(c=>conn_bus[idx%nph+1] for (idx,c) in enumerate(conn_bus))
 
@@ -1241,8 +1243,8 @@ function constraint_mc_generator_power_delta(pm::AbstractUnbalancedACPModel, nw:
         push!(pg_bus, JuMP.@NLexpression(pm.model,  vm[c]*cos(va[c])*crg_bus[c]+vm[c]*sin(va[c])*cig_bus[c]))
         push!(qg_bus, JuMP.@NLexpression(pm.model, -vm[c]*cos(va[c])*cig_bus[c]+vm[c]*sin(va[c])*crg_bus[c]))
     end
-    pd_bus = JuMP.Containers.DenseAxisArray(pg_bus, conn_bus)
-    qd_bus = JuMP.Containers.DenseAxisArray(qg_bus, conn_bus)
+    pg_bus = JuMP.Containers.DenseAxisArray(pg_bus, conn_bus)
+    qg_bus = JuMP.Containers.DenseAxisArray(qg_bus, conn_bus)
 
     var(pm, nw, :pg_bus)[id] = pg_bus
     var(pm, nw, :qg_bus)[id] = qg_bus

@@ -702,7 +702,7 @@ function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
     if haskey(data_eng, "load")
         for (_,eng_obj) in data_eng["load"]
             if eng_obj["configuration"] == DELTA
-                if eng_obj["connections"]==[1, 2] && eng_obj["vm_nom"]==0.24 # TODO: better generalization
+                if eng_obj["connections"]==[1, 2] && eng_obj["vm_nom"]==0.24 # check if load is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
                     bus_terminals[eng_obj["bus"]] = eng_obj["connections"] = [1]
                 else
                     _pad_properties_delta!(eng_obj, ["pd_nom", "qd_nom"], eng_obj["connections"], all_conductors)
@@ -726,7 +726,7 @@ function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
     if haskey(data_eng, "solar")
         for (_,eng_obj) in data_eng["solar"]
             if eng_obj["configuration"]==DELTA
-                if eng_obj["connections"]==[1, 2] && eng_obj["vg"][1]==0.24 # TODO: better generalization
+                if eng_obj["connections"]==[1, 2] && eng_obj["vg"][1]==0.24 # check if solar is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
                     bus_terminals[eng_obj["bus"]] = eng_obj["connections"] = [1]
                 else
                     _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)

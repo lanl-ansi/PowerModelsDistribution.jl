@@ -80,7 +80,7 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
 
         nphases = defaults["phases"]
         bus = _parse_bus_id(defaults["bus1"])[1]
-        conf = nphases == 1 && dss_obj["kv"] == 0.24 ? DELTA : defaults["conn"] # TODO: better generalization 
+        conf = nphases==1 && dss_obj["kv"]==0.24 ? DELTA : defaults["conn"] # check if load is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
 
         if conf==DELTA
             @assert(nphases in [1, 3], "$id: only 1 and 3-phase delta loads are supported!")
@@ -123,7 +123,7 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
 
         # if ZIP load, include weighting factors and cut-off voltage
         if eng_obj["model"]==ZIP
-            eng_obj["zipv"] = collect(dss_obj["zipv"]) 
+            eng_obj["zipv"] = collect(dss_obj["zipv"])
         end
 
         _build_time_series_reference!(eng_obj, dss_obj, data_dss, defaults, time_series, "pd_nom", "qd_nom")
@@ -763,7 +763,7 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
 
         nphases = defaults["phases"]
         bus = _parse_bus_id(defaults["bus1"])[1]
-        conf = nphases == 1 && dss_obj["kv"] == 0.24 ? DELTA : defaults["conn"] # TODO: better generalization 
+        conf = nphases==1 && dss_obj["kv"]==0.24 ? DELTA : defaults["conn"] # check if load is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
 
         eng_obj = Dict{String,Any}(
             "bus" => bus,

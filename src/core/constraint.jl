@@ -97,6 +97,7 @@ P_g == P_g^{setpoint}
 """
 function constraint_mc_gen_power_setpoint_real(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, pg::Vector{<:Real})::Nothing
     pg_var = [var(pm, nw, :pg, i)[c] for c in ref(pm, nw, :gen, i)["connections"]]
+
     JuMP.@constraint(pm.model, pg_var .== pg)
 
     nothing

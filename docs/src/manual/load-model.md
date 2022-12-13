@@ -60,7 +60,11 @@ Firstly, define the three-phase delta transformation matrix
 
 $$M^\Delta_3 = \begin{bmatrix}\;\;\;1 & -1 & \;\;0\\ \;\;\;0 & \;\;\;1 & -1\\ -1 & \;\;\;0 & \;\;\;1\end{bmatrix},$$
 
-which can be extended to more phases in a straight-forward manner. Now,
+which can be extended to more phases in a straight-forward manner. For loads connected between split-phase terminals of triplex nodes (usually located on the secondary side of center-tapped transformers), we define a single-phase delta transformation matrix
+
+$$M^\Delta_1 = \begin{bmatrix} 1 & -1 \end{bmatrix}.$$
+
+Now,
 
 $$U^d = M^\Delta U^\text{bus},\;\;\; I^\text{bus} = \left(M^\Delta\right)^T I^d.$$
 
