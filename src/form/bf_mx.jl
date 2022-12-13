@@ -379,6 +379,21 @@ function variable_mc_load_power(pm::AbstractUBFModels; nw=nw_id_default)
 end
 
 
+
+"""
+The variable creation for generators in branch flow model.
+Delta generators always need an auxilary power variable (X) similar to delta loads.
+Wye generators however, don't need any variables.
+"""
+function variable_mc_generator_power(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_generator_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_generator_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
+    # create auxilary variables for delta generators
+    gen_del_ids = [id for (id, gen) in ref(pm, nw, :gen) if gen["configuration"]==DELTA]
+    variable_mc_generator_power_delta_aux(pm, gen_del_ids; nw=nw)
+end
+
+
 """
 The variable creation for the loads is rather complicated because Expressions
 are used wherever possible instead of explicit variables.
@@ -496,6 +511,37 @@ end
 
 
 """
+Creates power matrix variable X for delta-connected generators similar to delta loads.
+"""
+function variable_mc_generator_power_delta_aux(pm::AbstractUBFModels, gen_ids::Vector{Int}; nw::Int=nw_id_default, eps::Real=0.1, bounded::Bool=true, report::Bool=true)
+    @assert(bounded)
+    connections = Dict{Int,Vector{Int}}(id => gen["connections"] for (id,gen) in ref(pm, nw, :gen))
+    conn_bus = Dict{Int,Vector{Int}}()
+    for (i,gen) in ref(pm, nw, :gen)
+        conn_bus[i] = length(gen["connections"])<3 && gen["configuration"] == DELTA ? ref(pm, nw, :bus, gen["gen_bus"])["terminals"] : connections[i]
+    end
+
+    # calculate bounds
+    bound = Dict{eltype(gen_ids), Matrix{Real}}()
+    for id in gen_ids
+        gen = ref(pm, nw, :gen, id)
+        bus_id = gen["gen_bus"]
+        bus = ref(pm, nw, :bus, bus_id)
+        cmax = _calc_gen_current_max(gen, bus)
+        bound[id] = bus["vmax"][[findfirst(isequal(c), bus["terminals"]) for c in conn_bus[id]]]*cmax'
+    end
+    # create matrix variables
+    (Xgr,Xgi) = variable_mx_complex(pm.model, gen_ids, conn_bus, connections; symm_bound=bound, name="Xg", prefix="$nw")
+    # save references
+    var(pm, nw)[:Xgr] = Xgr
+    var(pm, nw)[:Xgi] = Xgi
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :Xgr, gen_ids, Xgr)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :Xgi, gen_ids, Xgi)
+end
+
+
+"""
 Creates power matrix variable X for delta windings; this defines both the
 wye-side power Sy and the delta-side power Sd through the lin. transformations
 Sy = X.Td, Sd = Td.X with Td=[1 -1 0; 0 1 -1; -1 0 1]
@@ -515,6 +561,11 @@ See upcoming paper for discussion of bounds. [reference added when accepted]
 function variable_mc_load_power_delta_aux(pm::AbstractUBFModels, load_ids::Vector{Int}; nw::Int=nw_id_default, eps::Real=0.1, bounded::Bool=true, report::Bool=true)
     @assert(bounded)
     connections = Dict{Int,Vector{Int}}(id => load["connections"] for (id,load) in ref(pm, nw, :load))
+    conn_bus = Dict{Int,Vector{Int}}()
+    for (i,load) in ref(pm, nw, :load)
+        conn_bus[i] = length(load["connections"])<3 && load["configuration"] == DELTA ? ref(pm, nw, :bus, load["load_bus"])["terminals"] : connections[i]
+    end
+
     # calculate bounds
     bound = Dict{eltype(load_ids), Matrix{Real}}()
     for id in load_ids
@@ -522,10 +573,10 @@ function variable_mc_load_power_delta_aux(pm::AbstractUBFModels, load_ids::Vecto
         bus_id = load["load_bus"]
         bus = ref(pm, nw, :bus, bus_id)
         cmax = _calc_load_current_max(load, bus)
-        bound[id] = bus["vmax"][[findfirst(isequal(c), bus["terminals"]) for c in connections[id]]]*cmax'
+        bound[id] = bus["vmax"][[findfirst(isequal(c), bus["terminals"]) for c in conn_bus[id]]]*cmax'
     end
     # create matrix variables
-    (Xdr,Xdi) = variable_mx_complex(pm.model, load_ids, connections, connections; symm_bound=bound, name="Xd", prefix="$nw")
+    (Xdr,Xdi) = variable_mx_complex(pm.model, load_ids, conn_bus, connections; symm_bound=bound, name="Xd", prefix="$nw")
     # save references
     var(pm, nw)[:Xdr] = Xdr
     var(pm, nw)[:Xdi] = Xdi

@@ -713,6 +713,7 @@ function constraint_mc_load_power(pm::FOTPUPowerModel, load_id::Int; nw::Int=nw_
             sol(pm, nw, :load, load_id)[:pd] = pd_bus
             sol(pm, nw, :load, load_id)[:qd] = qd_bus
         end
+
         pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, connections)
         qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, connections)
 
@@ -725,10 +726,13 @@ function constraint_mc_load_power(pm::FOTPUPowerModel, load_id::Int; nw::Int=nw_
         va0 = var(pm, nw, :va0, bus_id)
         vr0 = vm0.*cos.(va0)
         vi0 = vm0.*sin.(va0)
-        nph = length(a)
 
-        prev = Dict(c=>connections[(idx+nph-2)%nph+1] for (idx,c) in enumerate(connections))
-        next = Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
+        nph = length(a)
+        is_triplex = nph < 3
+        conn_bus = is_triplex ? ref(pm, nw, :bus, bus_id)["terminals"] : connections
+
+        prev = Dict(c=>conn_bus[(idx+nph-2)%nph+1] for (idx,c) in enumerate(conn_bus))
+        next = is_triplex ? conn_bus[2] : Dict(c=>conn_bus[idx%nph+1] for (idx,c) in enumerate(conn_bus))
 
         vrd0 = [vr0[idx]-vr0[next[idx]] for (idx, c) in enumerate(connections)]
         vid0 = [vi0[idx]-vi0[next[idx]] for (idx, c) in enumerate(connections)]
@@ -740,14 +744,14 @@ function constraint_mc_load_power(pm::FOTPUPowerModel, load_id::Int; nw::Int=nw_
             cid0[c] = a[idx]*vid0[c]*(vrd0[c]^2+vid0[c]^2)^(alpha[idx]/2-1)-b[idx]*vrd0[c]*(vrd0[c]^2+vid0[c]^2)^(beta[idx]/2 -1)
         end
 
-        crd0_bus = [crd0[idx]-crd0[prev[idx]] for (idx, c) in enumerate(connections)]
-        cid0_bus = [cid0[idx]-cid0[prev[idx]] for (idx, c) in enumerate(connections)]
+        crd0_bus = is_triplex ? [(-1.0)^(c-1)*crd0[1] for (idx, c) in enumerate(conn_bus)] : [crd0[idx]-crd0[prev[idx]] for (idx, c) in enumerate(conn_bus)]
+        cid0_bus = is_triplex ? [(-1.0)^(c-1)*cid0[1] for (idx, c) in enumerate(conn_bus)] : [cid0[idx]-cid0[prev[idx]] for (idx, c) in enumerate(conn_bus)]
 
-        pd_bus = [ vr0[c]*crd0_bus[c]+vi0[c]*cid0_bus[c] for (idx, c) in enumerate(connections)]
-        qd_bus = [-vr0[c]*cid0_bus[c]+vi0[c]*crd0_bus[c] for (idx, c) in enumerate(connections)]
+        pd_bus = [ vr0[c]*crd0_bus[c]+vi0[c]*cid0_bus[c] for (idx,c) in enumerate(conn_bus)]
+        qd_bus = [-vr0[c]*cid0_bus[c]+vi0[c]*crd0_bus[c] for (idx,c) in enumerate(conn_bus)]
 
-        pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, connections)
-        qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, connections)
+        pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, conn_bus)
+        qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, conn_bus)
 
         var(pm, nw, :pd_bus)[load_id] = pd_bus
         var(pm, nw, :qd_bus)[load_id] = qd_bus
@@ -765,5 +769,66 @@ function constraint_mc_load_power(pm::FOTPUPowerModel, load_id::Int; nw::Int=nw_
             sol(pm, nw, :load, load_id)[:pd] = pd
             sol(pm, nw, :load, load_id)[:qd] = qd
         end
+    end
+end
+
+"""
+    constraint_mc_generator_power_delta(pm::FOTPUPowerModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+
+Adds constraints for delta-connected generators similar to delta-connected loads (zero-order approximation).
+"""
+function constraint_mc_generator_power_delta(pm::FOTPUPowerModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+    vm0 = var(pm, nw, :vm0, bus_id)
+    va0 = var(pm, nw, :va0, bus_id)
+    vr0 = vm0.*cos.(va0)
+    vi0 = vm0.*sin.(va0)
+    pg = var(pm, nw, :pg, id)
+    qg = var(pm, nw, :qg, id)
+
+    nph = length(connections)
+    is_triplex = nph < 3
+    conn_bus = is_triplex ? ref(pm, nw, :bus, bus_id)["terminals"] : connections
+
+    prev = Dict(c=>conn_bus[(idx+nph-2)%nph+1] for (idx,c) in enumerate(conn_bus))
+    next = is_triplex ? conn_bus[2] : Dict(c=>conn_bus[idx%nph+1] for (idx,c) in enumerate(conn_bus))
+
+    vrg0 = [vr0[idx]-vr0[next[idx]] for (idx, c) in enumerate(connections)]
+    vig0 = [vi0[idx]-vi0[next[idx]] for (idx, c) in enumerate(connections)]
+
+    crg = Dict() # Re(s/v)  = (p*vr+q*vi)/|v|^2
+    cig = Dict() # Im(s/v) = -(q*vr-p*vi)/|v|^2
+    for c in connections
+        crg[c] = JuMP.@expression(pm.model, (pg[c]*vrg0[c]+qg[c]*vig0[c])/(vrg0[c]^2+vig0[c]^2) )
+        cig[c] = JuMP.@expression(pm.model, (pg[c]*vig0[c]-qg[c]*vrg0[c])/(vrg0[c]^2+vig0[c]^2) )
+    end
+
+    crg_bus = Dict()
+    cig_bus = Dict()
+    for c in conn_bus
+        if is_triplex
+            crg_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*crg[1])
+            cig_bus[c] = JuMP.@expression(pm.model, (-1.0)^(c-1)*cig[1])
+        else
+            crg_bus[c] = JuMP.@NLexpression(pm.model, crg[c]-crg[prev[c]])
+            cig_bus[c] = JuMP.@NLexpression(pm.model, cig[c]-cig[prev[c]])
+        end
+    end
+
+    pg_bus = []
+    qg_bus = []
+    for c in conn_bus
+        push!(pg_bus, JuMP.@expression(pm.model,  vr0[c]*crg_bus[c]+vi0[c]*cig_bus[c]))
+        push!(qg_bus, JuMP.@expression(pm.model, -vr0[c]*cig_bus[c]+vi0[c]*crg_bus[c]))
+    end
+
+    pg_bus = JuMP.Containers.DenseAxisArray(pg_bus, conn_bus)
+    qg_bus = JuMP.Containers.DenseAxisArray(qg_bus, conn_bus)
+
+    var(pm, nw, :pg_bus)[id] = pg_bus
+    var(pm, nw, :qg_bus)[id] = qg_bus
+
+    if report
+        sol(pm, nw, :gen, id)[:pg_bus] = pg_bus
+        sol(pm, nw, :gen, id)[:qg_bus] = qg_bus
     end
 end

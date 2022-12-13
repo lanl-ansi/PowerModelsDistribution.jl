@@ -700,7 +700,6 @@ function constraint_mc_load_power_delta(pm::IVRUPowerModel, nw::Int, id::Int, bu
     if report
         pd_bus = JuMP.@NLexpression(pm.model, [c in conn_bus],  vr[c]*crd_bus[c]+vi[c]*cid_bus[c])
         qd_bus = JuMP.@NLexpression(pm.model, [c in conn_bus], -vr[c]*cid_bus[c]+vi[c]*crd_bus[c])
-
         sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         sol(pm, nw, :load, id)[:qd_bus] = qd_bus
 
@@ -806,11 +805,11 @@ function constraint_mc_generator_power_delta(pm::IVRUPowerModel, nw::Int, id::In
         end
     end
 
-    pg_bus = Dict()
-    qg_bus = Dict()
+    pg_bus = Vector{JuMP.NonlinearExpression}([])
+    qg_bus = Vector{JuMP.NonlinearExpression}([])
     for (idx,c) in enumerate(conn_bus)
-        pg_bus[c] = JuMP.@NLexpression(pm.model,  vr[c]*crg_bus[c]+vi[c]*cig_bus[c])
-        qg_bus[c] = JuMP.@NLexpression(pm.model, -vr[c]*cig_bus[c]+vi[c]*crg_bus[c])
+        push!(pg_bus, JuMP.@NLexpression(pm.model,  vr[c]*crg_bus[c]+vi[c]*cig_bus[c]))
+        push!(qg_bus, JuMP.@NLexpression(pm.model, -vr[c]*cig_bus[c]+vi[c]*crg_bus[c]))
     end
 
     var(pm, nw, :crg_bus)[id] = JuMP.Containers.DenseAxisArray(crg_bus, conn_bus)
@@ -823,8 +822,8 @@ function constraint_mc_generator_power_delta(pm::IVRUPowerModel, nw::Int, id::In
         sol(pm, nw, :gen, id)[:cig_bus] = JuMP.Containers.DenseAxisArray(cig_bus, conn_bus)
         sol(pm, nw, :gen, id)[:pg] = JuMP.Containers.DenseAxisArray(pg, connections)
         sol(pm, nw, :gen, id)[:qg] = JuMP.Containers.DenseAxisArray(qg, connections)
-        sol(pm, nw, :gen, id)[:pg_bus] = pg_bus
-        sol(pm, nw, :gen, id)[:qg_bus] = qg_bus
+        sol(pm, nw, :gen, id)[:pg_bus] = JuMP.Containers.DenseAxisArray(pg_bus, conn_bus)
+        sol(pm, nw, :gen, id)[:qg_bus] = JuMP.Containers.DenseAxisArray(qg_bus, conn_bus)
     end
 end
 

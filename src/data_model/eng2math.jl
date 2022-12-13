@@ -526,8 +526,8 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                     data_math["transformer"]["$(transformer_2wa_obj["index"])"]["controls"] = reg_obj
                 end
                 if w==3 && eng_obj["polarity"][w]==-1 # identify center-tapped transformer and mark all secondary-side nodes as triplex by adding va_start
-                    default_va = deg2rad.([0, -120, 120])[eng_obj["connections"][1][1]]
-                    data_math["bus"]["$(transformer_2wa_obj["f_bus"])"]["va_start"] = haskey(data_eng["bus"][eng_obj["bus"][w]],"va_start") ? data_eng["bus"][eng_obj["bus"][w]]["va_start"] : [default_va, _wrap_to_pi(default_va+pi)]
+                    default_va = [0, -120, 120][eng_obj["connections"][1][1]]
+                    data_math["bus"]["$(transformer_2wa_obj["f_bus"])"]["va_start"] = haskey(data_eng["bus"][eng_obj["bus"][w]],"va_start") ? data_eng["bus"][eng_obj["bus"][w]]["va_start"] : [default_va, (default_va+180)]
                     idx = 0
                     bus_ids = []
                     t_bus = haskey(data_eng, "line") ? [data["t_bus"] for (_,data) in data_eng["line"] if data["f_bus"] == eng_obj["bus"][w]] : []
@@ -535,11 +535,11 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                         for bus_idx in t_bus
                             bus_id = data_math["bus_lookup"]["$bus_idx"]
                             push!(bus_ids, bus_id)
-                            default_va = deg2rad.([0, -120, 120])[eng_obj["connections"][1][1]]
-                            data_math["bus"]["$bus_id"]["va_start"] = haskey(data_eng["bus"]["$bus_idx"],"va_start") ? data_eng["bus"]["$bus_idx"]["va_start"] : [default_va, _wrap_to_pi(default_va+pi)]
+                            default_va = [0, -120, 120][eng_obj["connections"][1][1]]
+                            data_math["bus"]["$bus_id"]["va_start"] = haskey(data_eng["bus"]["$bus_idx"],"va_start") ? data_eng["bus"]["$bus_idx"]["va_start"] : [default_va, (default_va+180)]
                         end
                         idx += 1
-                        t_bus = [data["t_bus"] for (_,data) in data_eng["line"] if data["f_bus"] == bus_ids[idx]]
+                        t_bus = [data["t_bus"] for (_,data) in data_eng["line"] if data["f_bus"] == data_math["bus"]["$(bus_ids[idx])"]["name"]]
                     end
                 end
 

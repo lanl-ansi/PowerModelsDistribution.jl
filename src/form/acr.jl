@@ -937,6 +937,7 @@ function constraint_mc_generator_power_delta(pm::AbstractUnbalancedACRModel, nw:
         push!(pg_bus, JuMP.@NLexpression(pm.model,  vr[c]*crg_bus[c]+vi[c]*cig_bus[c]))
         push!(qg_bus, JuMP.@NLexpression(pm.model, -vr[c]*cig_bus[c]+vi[c]*crg_bus[c]))
     end
+
     pg_bus = JuMP.Containers.DenseAxisArray(pg_bus, conn_bus)
     qg_bus = JuMP.Containers.DenseAxisArray(qg_bus, conn_bus)
 
