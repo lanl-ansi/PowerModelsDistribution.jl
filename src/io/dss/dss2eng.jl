@@ -321,6 +321,7 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
         defaults = _apply_ordered_properties(_create_generator(id; _to_kwargs(dss_obj)...), dss_obj)
 
         nphases = defaults["phases"]
+        conf = nphases==1 && dss_obj["kv"]==0.24 ? DELTA : WYE # check if generator is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
 
         eng_obj = Dict{String,Any}(
             "phases" => nphases,
@@ -334,7 +335,7 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             "pg_lb" => fill(0.0, nphases),
             "pg_ub" => fill(defaults["kw"] / nphases, nphases),
             "control_mode" => FREQUENCYDROOP,
-            "configuration" => WYE,
+            "configuration" => conf,
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
             "source_id" => "generator.$id"
         )
@@ -763,7 +764,7 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
 
         nphases = defaults["phases"]
         bus = _parse_bus_id(defaults["bus1"])[1]
-        conf = nphases==1 && dss_obj["kv"]==0.24 ? DELTA : defaults["conn"] # check if load is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
+        conf = nphases==1 && dss_obj["kv"]==0.24 ? DELTA : defaults["conn"] # check if solar is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
 
         eng_obj = Dict{String,Any}(
             "bus" => bus,

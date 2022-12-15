@@ -464,10 +464,19 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
 end
 
 
-"""
+@doc raw"""
     constraint_mc_generator_power_delta(pm::LPUBFDiagModel, nw::Int, gen_id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
 
-Delta-connected generators similar to delta load model
+Adds constraints for delta-connected generators similar to delta-connected loads (using auxilary variable X).
+
+```math
+\begin{align}
+&\text{Three-phase delta transformation matrix: }  T^\Delta = \begin{bmatrix}\;\;\;1 & -1 & \;\;0\\ \;\;\;0 & \;\;\;1 & -1\\ -1 & \;\;\;0 & \;\;\;1\end{bmatrix} \\
+&\text{Single-phase delta transformation matrix (triple nodes): }  T^\Delta = \begin{bmatrix}\;1 & -1 \end{bmatrix} \\
+&\text{Line-neutral generation power: }  S_{bus} = diag(T^\Delta X_g) \\
+&\text{Line-line generation power: }  S^\Delta = diag(X_g T^\Delta)
+\end{align}
+```
 """
 function constraint_mc_generator_power_delta(pm::LPUBFDiagModel, nw::Int, gen_id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
     pg = var(pm, nw, :pg, gen_id)

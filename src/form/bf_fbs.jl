@@ -780,10 +780,22 @@ function constraint_mc_transformer_power_dy(pm::FBSUBFPowerModel, nw::Int, trans
 end
 
 
-"""
+@doc raw"""
     constraint_mc_generator_power_delta(pm::FBSUBFPowerModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
 
 Adds constraints for delta-connected generators similar to delta-connected loads (zero-order approximation).
+
+```math
+\begin{align}
+&\text{Initial line-neutral voltage: }   V_0 = V_{r0} +j V_{i0}\\
+&\text{Three-phase delta transformation matrix: }  M^\Delta = \begin{bmatrix}\;\;\;1 & -1 & \;\;0\\ \;\;\;0 & \;\;\;1 & -1\\ -1 & \;\;\;0 & \;\;\;1\end{bmatrix} \\
+&\text{Single-phase delta transformation matrix (triple nodes): }  M^\Delta = \begin{bmatrix}\;1 & -1 \end{bmatrix} \\
+&\text{Initial line-line voltage: }  V_0^\Delta = M^\Delta V_0 \\
+&\text{Line-line current: }  (I^\Delta)^* = S^\Delta \oslash V_0^\Delta \\
+&\text{Line-neutral current: }  I_{bus} = (M^\Delta)^T I^\Delta \\
+&\text{Bus generation power: }  S_{bus} = V_0 \oslash I_{bus}^*
+\end{align}
+```
 """
 function constraint_mc_generator_power_delta(pm::FBSUBFPowerModel, nw::Int, id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
     vr0 = var(pm, nw, :vr0, bus_id)

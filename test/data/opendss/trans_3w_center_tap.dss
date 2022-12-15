@@ -39,7 +39,8 @@ New RegControl.reg_1 transformer=trans_reg_1 winding=2 delay=30.0 band=144.0 vre
 
 ! 240V devices across terminals .1 to .2
 New Load.L1 bus1=tm_1.1.2 model=1 kW=20 phases=1 kV=0.24 pf=1 
-New PVSystem.PV1 bus1=tm_1.1.2 kVA=10 phases=1 kV=0.24 pf=1 
+New Generator.G1 bus1=tm_1.1.2 kVA=7 phases=1 kV=0.24 pf=1 model=1
+New PVSystem.PV1 bus1=tm_1.1.2 kVA=3 phases=1 kV=0.24 pf=1 
 
 ! 120V devices as separate elements
 New Load.L2a bus1=tm_2.1 model=1 kW=12 phases=1 kV=0.12 pf=1

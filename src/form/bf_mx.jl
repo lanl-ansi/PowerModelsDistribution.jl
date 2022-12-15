@@ -381,6 +381,8 @@ end
 
 
 """
+    variable_mc_generator_power(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+
 The variable creation for generators in branch flow model.
 Delta generators always need an auxilary power variable (X) similar to delta loads.
 Wye generators however, don't need any variables.
@@ -511,6 +513,8 @@ end
 
 
 """
+    variable_mc_generator_power_delta_aux(pm::AbstractUBFModels, gen_ids::Vector{Int}; nw::Int=nw_id_default, eps::Real=0.1, bounded::Bool=true, report::Bool=true)
+
 Creates power matrix variable X for delta-connected generators similar to delta loads.
 """
 function variable_mc_generator_power_delta_aux(pm::AbstractUBFModels, gen_ids::Vector{Int}; nw::Int=nw_id_default, eps::Real=0.1, bounded::Bool=true, report::Bool=true)

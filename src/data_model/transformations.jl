@@ -716,9 +716,13 @@ function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
     if haskey(data_eng, "generator")
         for (_,eng_obj) in data_eng["generator"]
             if eng_obj["configuration"]==DELTA
-                _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
-                _pad_connections!(eng_obj, "connections", all_conductors)
-                bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? _pad_connections!(bus_terminals, eng_obj["bus"], eng_obj["connections"]) : eng_obj["connections"]
+                if eng_obj["connections"]==[1, 2] && eng_obj["vg"][1]==0.24 # check if generator is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
+                    bus_terminals[eng_obj["bus"]] = eng_obj["connections"] = [1]
+                else
+                    _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
+                    _pad_connections!(eng_obj, "connections", all_conductors)
+                    bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? _pad_connections!(bus_terminals, eng_obj["bus"], eng_obj["connections"]) : eng_obj["connections"]
+                end
             end
         end
     end
