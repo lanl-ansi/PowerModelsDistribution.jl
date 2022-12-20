@@ -79,14 +79,14 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         defaults = _apply_ordered_properties(_create_load(id; _to_kwargs(dss_obj)...), dss_obj)
 
         nphases = defaults["phases"]
-        conf = defaults["conn"]
+        bus = _parse_bus_id(defaults["bus1"])[1]
+        conf = nphases==1 && dss_obj["kv"]==0.24 ? DELTA : defaults["conn"] # check if load is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
 
         if conf==DELTA
             @assert(nphases in [1, 3], "$id: only 1 and 3-phase delta loads are supported!")
         end
 
         # connections
-        bus = _parse_bus_id(defaults["bus1"])[1]
         connections_default = conf==WYE ? [collect(1:nphases)..., 0] : nphases==1 ? [1,2] : [1,2,3]
         connections = _get_conductors_ordered(defaults["bus1"], default=connections_default, pad_ground=(conf==WYE))
 
@@ -123,7 +123,7 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
 
         # if ZIP load, include weighting factors and cut-off voltage
         if eng_obj["model"]==ZIP
-            eng_obj["zipv"] = collect(dss_obj["zipv"]) 
+            eng_obj["zipv"] = collect(dss_obj["zipv"])
         end
 
         _build_time_series_reference!(eng_obj, dss_obj, data_dss, defaults, time_series, "pd_nom", "qd_nom")
@@ -321,6 +321,7 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
         defaults = _apply_ordered_properties(_create_generator(id; _to_kwargs(dss_obj)...), dss_obj)
 
         nphases = defaults["phases"]
+        conf = nphases==1 && dss_obj["kv"]==0.24 ? DELTA : WYE # check if generator is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
 
         eng_obj = Dict{String,Any}(
             "phases" => nphases,
@@ -334,7 +335,7 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             "pg_lb" => fill(0.0, nphases),
             "pg_ub" => fill(defaults["kw"] / nphases, nphases),
             "control_mode" => FREQUENCYDROOP,
-            "configuration" => WYE,
+            "configuration" => conf,
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
             "source_id" => "generator.$id"
         )
@@ -726,6 +727,9 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
                         eng_obj["connections"][w] = _barrel_roll(eng_obj["connections"][w], -1)
                     end
                 end
+                if w==3 && eng_obj["connections"][2][2]==0 && eng_obj["connections"][3][1]==0 # center-tap transformers
+                    eng_obj["polarity"][w] = -1
+                end
             end
 
             if 0 in eng_obj["connections"][w]
@@ -759,11 +763,13 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
         # TODO pick parameters for solar objects
 
         nphases = defaults["phases"]
+        bus = _parse_bus_id(defaults["bus1"])[1]
+        conf = nphases==1 && dss_obj["kv"]==0.24 ? DELTA : defaults["conn"] # check if solar is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
 
         eng_obj = Dict{String,Any}(
-            "bus" => _parse_bus_id(defaults["bus1"])[1],
-            "configuration" => defaults["conn"],
-            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=defaults["conn"] == WYE, default=defaults["conn"] == WYE ? [collect(1:defaults["phases"])..., 0] : nphases == 1 ? [1,0] : collect(1:nphases)),
+            "bus" => bus,
+            "configuration" => conf,
+            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=conf == WYE, default=conf == WYE ? [collect(1:defaults["phases"])..., 0] : nphases == 1 ? [1,0] : collect(1:nphases)),
             "pg" => fill(min(defaults["pmpp"] * defaults["irradiance"], defaults["kva"]) / nphases, nphases),
             "qg" => fill(defaults["kvar"] / nphases, nphases),
             "vg" => fill(defaults["kv"] / sqrt(nphases), nphases),
