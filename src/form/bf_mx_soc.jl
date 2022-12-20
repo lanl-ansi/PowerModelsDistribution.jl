@@ -99,9 +99,8 @@ Constraints to model a two-winding, wye-wye connected transformer.
 
 ```math
 \begin{align}
-    & {W}_{fr} = {T}_{m}{T}_{m}^{H} {W}_{to}      \\
-    & {s}_{fr} + {s}_{to} = 0 \\
-    & \sum_{j=1}^3 S_{fr}^{ij} = 0, ~\sum_{j=1}^3 S_{to}^{ij} = 0, ~\forall i \in \{1,2,3\}
+    & {W}_{fr} = {T}_{m}{T}_{m}^{H} {W}_{to}  \\
+    & {s}_{fr} + {s}_{to} = 0
 \end{align}
 ```
 """
@@ -114,16 +113,21 @@ function constraint_mc_transformer_power_yy(pm::SOCUBFModels, nw::Int, trans_id:
     Wi_fr = var(pm, nw, :Wi, f_bus)
     Wi_to = var(pm, nw, :Wi, t_bus)
 
-    P_fr = var(pm, nw, :Pt, f_idx)
-    P_to = var(pm, nw, :Pt, t_idx)
-    Q_fr = var(pm, nw, :Qt, f_idx)
-    Q_to = var(pm, nw, :Qt, t_idx)
     p_fr = [var(pm, nw, :pt, f_idx)[c] for c in f_connections]
     p_to = [var(pm, nw, :pt, t_idx)[c] for c in t_connections]
     q_fr = [var(pm, nw, :qt, f_idx)[c] for c in f_connections]
     q_to = [var(pm, nw, :qt, t_idx)[c] for c in t_connections]
 
     for (f_idx,fc) in enumerate(f_connections)
+        if haskey(transformer,"controls")  # regcontrol settings
+            w_fr = var(pm, nw, :w)[f_bus]
+            w_to = var(pm, nw, :w)[t_bus]
+            v_ref = transformer["controls"]["vreg"][f_idx]
+            δ = transformer["controls"]["band"][f_idx]
+            r = transformer["controls"]["r"][f_idx]
+            x = transformer["controls"]["x"][f_idx]
+        end
+
         for (t_idx,tc) in enumerate(t_connections)
             if tm_fixed[t_idx]
                 JuMP.@constraint(pm.model, Wr_fr[fc,tc] == (pol*tm_scale)^2*tm[f_idx]*tm[t_idx]*Wr_to[fc,tc])
@@ -152,20 +156,6 @@ function constraint_mc_transformer_power_yy(pm::SOCUBFModels, nw::Int, trans_id:
                 end
             end
         end
-        if haskey(transformer,"controls")  # regcontrol settings
-            w_fr = var(pm, nw, :w)[f_bus]
-            w_to = var(pm, nw, :w)[t_bus]
-            v_ref = transformer["controls"]["vreg"][f_idx]
-            δ = transformer["controls"]["band"][f_idx]
-            r = transformer["controls"]["r"][f_idx]
-            x = transformer["controls"]["x"][f_idx]
-        end
-
-        # conservation of current
-        JuMP.@constraint(pm.model, sum(P_fr[f_idx,:]) == 0)
-        JuMP.@constraint(pm.model, sum(Q_fr[f_idx,:]) == 0)
-        JuMP.@constraint(pm.model, sum(P_to[f_idx,:]) == 0)
-        JuMP.@constraint(pm.model, sum(Q_to[f_idx,:]) == 0)
     end
 
     JuMP.@constraint(pm.model, p_fr + p_to .== 0)
@@ -192,10 +182,6 @@ Constraints to model a two-winding, delta-wye connected transformer.
 ```
 """
 function constraint_mc_transformer_power_dy(pm::SOCUBFModels, nw::Int, trans_id::Int, f_bus::Int, t_bus::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int}, pol::Int, tm_set::Vector{<:Real}, tm_fixed::Vector{Bool}, tm_scale::Real)
-    transformer = ref(pm, nw, :transformer, trans_id)
-    bus_id = transformer["f_bus"]
-    bus = ref(pm, nw, :bus, bus_id)
-
     nph = length(tm_set)
     @assert length(f_connections) == length(t_connections) && nph == 3 "only phases == 3 dy transformers are currently supported"
     next = Dict(c=>f_connections[idx%nph+1] for (idx,c) in enumerate(f_connections))
@@ -212,12 +198,8 @@ function constraint_mc_transformer_power_dy(pm::SOCUBFModels, nw::Int, trans_id:
     CCti = var(pm, nw, :CCti, trans_id)
 
     P_fr = var(pm, nw, :Pt, f_idx)
-    P_to = var(pm, nw, :Pt, t_idx)
     Q_fr = var(pm, nw, :Qt, f_idx)
-    Q_to = var(pm, nw, :Qt, t_idx)
-    p_fr = [var(pm, nw, :pt, f_idx)[c] for c in f_connections]
     p_to = [var(pm, nw, :pt, t_idx)[c] for c in t_connections]
-    q_fr = [var(pm, nw, :qt, f_idx)[c] for c in f_connections]
     q_to = [var(pm, nw, :qt, t_idx)[c] for c in t_connections]
 
     for (f_idx,fc) in enumerate(f_connections)
@@ -225,12 +207,6 @@ function constraint_mc_transformer_power_dy(pm::SOCUBFModels, nw::Int, trans_id:
             JuMP.@constraint(pm.model, Wr_fr[fc,tc]-Wr_fr[fc,next[tc]]-Wr_fr[next[fc],tc]+Wr_fr[next[fc],next[tc]] == (pol*tm_scale)^2*tm[f_idx]*tm[t_idx]*Wr_to[fc,tc])
             JuMP.@constraint(pm.model, Wi_fr[fc,tc]-Wi_fr[fc,next[tc]]-Wi_fr[next[fc],tc]+Wi_fr[next[fc],next[tc]] == (pol*tm_scale)^2*tm[f_idx]*tm[t_idx]*Wi_to[fc,tc])
         end
-
-        # conservation of current
-        JuMP.@constraint(pm.model, sum(P_fr[f_idx,:]) == 0)
-        JuMP.@constraint(pm.model, sum(Q_fr[f_idx,:]) == 0)
-        JuMP.@constraint(pm.model, sum(P_to[f_idx,:]) == 0)
-        JuMP.@constraint(pm.model, sum(Q_to[f_idx,:]) == 0)
     end
 
     Tt = [1 -1 0; 0 1 -1; -1 0 1]  # TODO
