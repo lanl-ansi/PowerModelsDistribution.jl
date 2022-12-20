@@ -448,16 +448,18 @@ The returned bounds are for the pairs 1->2, 2->3, 3->1
 function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps::Real=0.1)::Tuple
     vmax = bus["vmax"]
     vmin = bus["vmin"]
+    is_triplex = length(bus["terminals"]) < 3
     if haskey(bus, "vm_ll_max")
         vdmax = bus["vm_ll_max"]
     else
         # implied valid upper bound
-        vdmax = _mat_mult_rm_nan([1 1 0; 0 1 1; 1 0 1], vmax)
+        Td = is_triplex ? [1 1] : [1 1 0; 0 1 1; 1 0 1]
+        vdmax = _mat_mult_rm_nan(Td, vmax)
     end
     if haskey(bus, "vm_ll_min")
         vdmin = bus["vm_ll_min"]
     else
-        vdmin = fill(0.0, length(vmin))
+        vdmin = is_triplex ? [0.0] : fill(0.0, length(vmin))
     end
 
     return (vdmin, vdmax)
