@@ -330,7 +330,7 @@ function _map_eng2math_bus!(data_math::Dict{String,<:Any}, data_eng::Dict{String
                 "shunt_bus" => math_obj["bus_i"],
                 "connections" => sh_connections,
                 "gs" => real.(sh_y),
-                "bs" => real.(sh_y),
+                "bs" => imag.(sh_y),
             )
             push!(to_sh, "shunt.$sh_index")
         end
