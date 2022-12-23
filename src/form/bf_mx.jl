@@ -141,9 +141,12 @@ end
 function variable_mc_transformer_power(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     transformer_arcs = Vector{Tuple{Int,Int,Int}}(ref(pm, nw, :arcs_transformer))
     connections = Dict{Tuple{Int,Int,Int},Vector{Int}}((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_transformer) for ((l,i,j), connections) in entry)
+    tf_del_ids = [id for (id, transformer) in ref(pm, nw, :transformer) if transformer["configuration"]==DELTA] # ids for delta configurations
 
     if bounded
         bound = Dict{eltype(transformer_arcs), Matrix{Real}}()
+        bound_del = Dict{eltype(tf_del_ids), Matrix{Real}}()
+        cmax_del = Dict{eltype(tf_del_ids), Vector{Real}}()
         for (tr, transformer) in ref(pm, nw, :transformer)
             bus_fr = ref(pm, nw, :bus, transformer["f_bus"])
             bus_to = ref(pm, nw, :bus, transformer["t_bus"])
@@ -161,6 +164,11 @@ function variable_mc_transformer_power(pm::AbstractUBFModels; nw::Int=nw_id_defa
             for (idx, (fc,tc)) in enumerate(zip(transformer["f_connections"], transformer["t_connections"]))
                 bound[tuple_fr][idx,idx] = smax_fr[idx]
                 bound[tuple_to][idx,idx] = smax_to[idx]
+            end
+
+            if transformer["configuration"]==DELTA
+                bound_del[tr] = bound[tuple_fr]
+                cmax_del[tr] = cmax_fr
             end
         end
         # create matrix variables
@@ -180,6 +188,24 @@ function variable_mc_transformer_power(pm::AbstractUBFModels; nw::Int=nw_id_defa
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :Qf, :Qt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), Qt)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :pf, :pt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), pt)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :qf, :qt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), qt)
+
+    # create auxilary matrix variables for transformers with delta configuration
+    if !isempty(tf_del_ids)
+        conn_del = Dict{Int,Vector{Int}}(id => transformer["f_connections"] for (id,transformer) in ref(pm, nw, :transformer))
+        (Xtr,Xti) = variable_mx_complex(pm.model, tf_del_ids, conn_del, conn_del; symm_bound=bound_del, name="Xt", prefix="$nw")
+        (CCtr, CCti) = variable_mx_hermitian(pm.model, tf_del_ids, conn_del; sqrt_upper_bound=cmax_del, name="CCt", prefix="$nw")
+        # save references
+        var(pm, nw)[:Xtr] = Xtr
+        var(pm, nw)[:Xti] = Xti
+        var(pm, nw)[:CCtr] = CCtr
+        var(pm, nw)[:CCti] = CCti
+
+        report && _IM.sol_component_value(pm, pmd_it_sym, nw, :transformer, :Xtr, tf_del_ids, Xtr)
+        report && _IM.sol_component_value(pm, pmd_it_sym, nw, :transformer, :Xti, tf_del_ids, Xti)
+        report && _IM.sol_component_value(pm, pmd_it_sym, nw, :transformer, :CCtr, tf_del_ids, CCtr)
+        report && _IM.sol_component_value(pm, pmd_it_sym, nw, :transformer, :CCti, tf_del_ids, CCti)
+    end
+
 end
 
 
