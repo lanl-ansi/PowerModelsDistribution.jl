@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in `_map_eng2math_bus!()` regarding calculation of shunt element susceptance parameter
 - Added SOC transformer relaxations
 - Fixed bugs in center-tap transformer modeling
 - Add wye-connected CapControl for IVR and FOT (polar) formulations
