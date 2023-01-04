@@ -1331,7 +1331,7 @@ function get_defined_buses(data_eng::Dict{String,Any}; comp_types=pmd_eng_asset_
                 buses = [comp["f_bus"], comp["t_bus"]]
             elseif haskey(comp, "bus")
                 # works for a vector of buses and a single bus as a string
-                buses = isa(comp["bus"], String) ? [comp["bus"]] : comp["bus"]
+                buses = isa(comp["bus"], Vector) ? comp["bus"] : [comp["bus"]]
             else
                 buses = []
             end
