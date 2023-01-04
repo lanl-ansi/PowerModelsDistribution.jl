@@ -795,37 +795,37 @@ end
 
 
 """
-    parse_dss(filename::String)::Dict{String,Any}
+    parse_dss(filename::String; data_dss::Union{Missing,Dict{String,Any}}=missing)::Dict{String,Any}
 
 Parses a OpenDSS file given by `filename` into a Dict{Array{Dict}}. Only
 supports components and options, but not commands, e.g. "plot" or "solve".
 Will also parse files defined inside of the originating DSS file via the
 "compile", "redirect" or "buscoords" commands.
 """
-function parse_dss(path::Union{AbstractString,FilePaths.AbstractPath})::Dict{String,Any}
+function parse_dss(path::Union{AbstractString,FilePaths.AbstractPath}; data_dss::Union{Missing,Dict{String,Any}}=missing)::Dict{String,Any}
     path = isa(path, FilePaths.AbstractPath) ? path : FilePaths.Path(path)
     data_dss = open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path)))) do io
-        parse_dss(io)
+        parse_dss(io; data_dss=data_dss)
     end
     return data_dss
 end
 
 
 """
-    parse_dss(io::IO)::Dict{String,Any}
+    parse_dss(io::IO; data_dss::Union{Missing,Dict{String,Any}}=missing)::Dict{String,Any}
 
 Parses a OpenDSS file aleady in IO into a Dict{Array{Dict}}. Only
 supports components and options, but not commands, e.g. "plot" or "solve".
 Will also parse files defined inside of the originating DSS file via the
 "compile", "redirect" or "buscoords" commands.
 """
-function parse_dss(io::IO)::Dict{String,Any}
+function parse_dss(io::IO; data_dss::Union{Missing,Dict{String,Any}}=missing)::Dict{String,Any}
     filename = isa(io, IOStream) ? match(r"^<file\s(.+)>$", io.name).captures[1] : "GenericIOBuffer"
     current_file = basename(FilePaths.Path(filename))
     path = dirname(FilePaths.Path(filename))
-    data_dss = Dict{String,Any}()
+    data_dss = ismissing(data_dss) ? Dict{String,Any}() : data_dss
 
-    data_dss["filename"] = Set{String}([string(filename)])
+    data_dss["filename"] = haskey(data_dss, "filename") ? union(data_dss["filename"], Set{String}([string(filename)])) : Set{String}([string(filename)])
 
     current_obj = Dict{String,Any}()
     current_obj_type = ""
@@ -871,7 +871,7 @@ function parse_dss(io::IO)::Dict{String,Any}
                 if !(joinpath(file_path...) in data_dss["filename"])
                     full_path = joinpath(path, file_path...)
                     @info "Redirecting to '$(joinpath(file_path...))' on line $real_line_num in '$current_file'"
-                    _merge_dss!(data_dss, parse_dss(full_path))
+                    data_dss = parse_dss(full_path; data_dss=data_dss)
                 end
 
                 continue
@@ -949,11 +949,8 @@ function parse_dss(io::IO)::Dict{String,Any}
                         if property_name in ["wdg", "bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
                             property_name = join(filter(p->!isempty(p), [property_name, wdg]), "_")
                         end
-
-                        _assign_property!(data_dss, obj_type, obj_name, property_name, property_value)
-                    else
-                        _assign_property!(data_dss, obj_type, obj_name, property_name, property_value)
                     end
+                    _assign_property!(data_dss, obj_type, obj_name, property_name, property_value)
                 end
             else
                 @warn "Command '$cmd' on line $real_line_num in '$current_file' is not recognized, skipping."

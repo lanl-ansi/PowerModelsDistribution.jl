@@ -64,6 +64,10 @@
         @test all(eng["transformer"]["t5"]["rw"] .== [0.0074, 0.0076])
     end
 
+    @testset "dss assign property in different file" begin
+        @test eng["storage"]["s1"]["bus"] == "_b2"
+    end
+
     @testset "subdirectory parsing" begin
         @test haskey(eng["linecode"], "lc7")
     end

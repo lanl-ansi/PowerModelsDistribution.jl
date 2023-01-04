@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in dss parser where properties assigned via `assign_property!` would fail if the object they applied to was not created in the same file [#397](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/397)
 - Fixed bug in `get_defined_buses` to check if `"bus"` property is a `Vector` instead of checking if it is a `String` [#416](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/416)
 - Fixed bug in `_map_eng2math_bus!()` regarding calculation of shunt element susceptance parameter
 - Added SOC transformer relaxations
