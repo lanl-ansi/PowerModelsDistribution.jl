@@ -109,8 +109,8 @@ end
 _sum_rm_nan(X::Vector) = sum([X[(!).(isnan.(X))]..., 0.0])
 
 
-""
-function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, LinearAlgebra.Adjoint}) where T
+"matrix multiplication removing NaN values"
+function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, LinearAlgebra.Adjoint})
     N, A_ncols = size(A)
     B_nrows, M = size(B)
     @assert(A_ncols==B_nrows)
