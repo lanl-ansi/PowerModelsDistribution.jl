@@ -480,15 +480,33 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             eng_obj["cm_ub"] = fill(defaults["emergamps"], ncond)
         end
 
-        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["r0", "r1", "rg", "rmatrix"]) || !haskey(dss_obj, "linecode")
+        from_geometry = haskey(dss_obj, "geometry") && _is_after_linecode(dss_obj["prop_order"], "geometry")
+        from_spacing = haskey(dss_obj, "wires") && _is_after_linecode(dss_obj["prop_order"], "wires")
+        from_cncables = haskey(dss_obj, "cndata") && _is_after_linecode(dss_obj["prop_order"], "cncables")
+        from_tscables = haskey(dss_obj, "tsdata") && _is_after_linecode(dss_obj["prop_order"], "tscables")
+        if from_geometry || from_spacing || from_cncables || from_tscables
+            z, y = calculate_line_constants(data_dss, defaults)
+
+            rs, xs = real(z), imag(z)
+            g, b = real(y), imag(y)
+
+            eng_obj["rs"] = rs
+            eng_obj["xs"] = xs
+            eng_obj["b_fr"] = b ./ 2.0
+            eng_obj["b_to"] = b ./ 2.0
+            eng_obj["g_fr"] = g ./ 2.0
+            eng_obj["g_to"] = g ./ 2.0
+        end
+
+        if any(haskey(dss_obj, key) && (_is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], key, "geometry")) for key in ["r0", "r1", "rg", "rmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
             eng_obj["rs"] = reshape(defaults["rmatrix"], nphases, nphases)
         end
 
-        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["x0", "x1", "xg", "xmatrix"]) || !haskey(dss_obj, "linecode")
+        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], key, "geometry") for key in ["x0", "x1", "xg", "xmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
             eng_obj["xs"] = reshape(defaults["xmatrix"], nphases, nphases)
         end
 
-        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["b0", "b1", "c0", "c1", "cmatrix"]) || !haskey(dss_obj, "linecode")
+        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], key, "geometry") for key in ["b0", "b1", "c0", "c1", "cmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
             eng_obj["b_fr"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
             eng_obj["b_to"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
             eng_obj["g_fr"] = fill(0.0, nphases, nphases)
@@ -857,7 +875,7 @@ function _dss2eng_regcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{Strin
          defaults = _apply_ordered_properties(_create_regcontrol(id; _to_kwargs(dss_obj)...), dss_obj)
 
         nrw = get(data_dss["transformer"]["$(dss_obj["transformer"])"],"windings",2)
-        nphases = data_dss["transformer"]["$(dss_obj["transformer"])"]["phases"]
+        nphases = get(data_dss["transformer"]["$(dss_obj["transformer"])"], "phases", 3)
 
         eng_obj = Dict{String,Any}(
             "vreg" => [[w == defaults["winding"] && p == defaults["ptphase"] ? defaults["vreg"] : 0.0 for p in 1:nphases] for w in 1:nrw],
@@ -911,6 +929,9 @@ function _dss2eng_capcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{Strin
                 eng_obj["onsetting"] = [p == defaults["ctphase"] ? defaults["onsetting"] : 0.0 for p in 1:nphases]
                 eng_obj["offsetting"] = [p == defaults["ctphase"] ? defaults["offsetting"] : 0.0 for p in 1:nphases]
                 eng_obj["ctratio"] = [p == defaults["ctphase"] ? defaults["ctratio"] : 0.0 for p in 1:nphases]
+            elseif type == CAP_TIME
+                eng_obj["type"] = type
+                eng_obj["terminal"] =  defaults["terminal"]
             end
 
             if defaults["voltoverride"]
@@ -941,6 +962,11 @@ function _dss2eng_capcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{Strin
                 eng_obj["offsetting"][defaults["ctphase"]] = defaults["offsetting"]
                 eng_obj["ctratio"][defaults["ptphase"]] = defaults["ctratio"]
             end
+            if type == CAP_TIME
+                eng_obj["type"] = type
+                eng_obj["terminal"] = defaults["terminal"]
+            end
+
             if defaults["voltoverride"]
                 eng_obj["voltoverride"][defaults["ptphase"]] = defaults["voltoverride"]
                 eng_obj["ptratio"][defaults["ptphase"]] = defaults["ptratio"]

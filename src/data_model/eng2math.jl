@@ -677,6 +677,14 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
                         "t_bus" => data_math["switch"][elem_id]["t_bus"]
                     )
                 end
+            elseif dss_obj_type == "capacitor"
+                elem_id = first(filter(x->x.second["source_id"] == replace(math_obj["controls"]["element"], "capacitor"=>"shunt"), data_math["shunt"])).first
+                math_obj["controls"]["element"] = Dict{String,Any}(
+                    "type" => "shunt",
+                    "index" => data_math["shunt"][elem_id]["index"],
+                    "f_bus" => data_math["shunt"][elem_id]["shunt_bus"],
+                    "t_bus" => data_math["shunt"][elem_id]["shunt_bus"]
+                )
             else
                 elem_id = first(filter(x->x.second["source_id"] == math_obj["controls"]["element"], data_math["transformer"])).first
                 math_obj["controls"]["element"] = Dict{String,Any}(
