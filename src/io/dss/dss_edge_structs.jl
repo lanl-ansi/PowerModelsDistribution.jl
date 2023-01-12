@@ -42,20 +42,20 @@ function _create_line(name::String=""; kwargs...)::Dict{String,Any}
         end
     end
 
-    Zs = (complex(r1, x1) * 2.0 + complex(r0, x0)) / 3.0
-    Zm = (complex(r0, x0) - complex(r1, x1)) / 3.0
+    zs = (complex(r1, x1) * 2.0 + complex(r0, x0)) / 3.0
+    zm = (complex(r0, x0) - complex(r1, x1)) / 3.0
 
-    Ys = (complex(0.0, 2 * pi * basefreq * c1) * 2.0 + complex(0.0, 2 * pi * basefreq * c0)) / 3.0
-    Ym = (complex(0.0, 2 * pi * basefreq * c0) - complex(0.0, 2 * pi * basefreq * c1)) / 3.0
+    ys = (complex(0.0, 2 * pi * basefreq * c1) * 2.0 + complex(0.0, 2 * pi * basefreq * c0)) / 3.0
+    ym = (complex(0.0, 2 * pi * basefreq * c0) - complex(0.0, 2 * pi * basefreq * c1)) / 3.0
 
     Z  = Matrix{Complex{Float64}}(undef, phases, phases)
     Yc = Matrix{Complex{Float64}}(undef, phases, phases)
     for i in 1:phases
-        Z[i,i] = Zs
-        Yc[i,i] = Ys
+        Z[i,i] = zs
+        Yc[i,i] = ys
         for j in 1:i-1
-            Z[i,j] = Z[j,i] = Zm
-            Yc[i,j] = Yc[j,i] = Ym
+            Z[i,j] = Z[j,i] = zm
+            Yc[i,j] = Yc[j,i] = ym
         end
     end
 
@@ -455,13 +455,13 @@ function _create_vsource(name::String=""; kwargs...)::Dict{String,Any}
 
     Z = zeros(Complex{Float64}, phases, phases)
     if r1 == r2 && x1 == x2
-        Zs = complex(rs, xs)
-        Zm = complex(rm, xm)
+        zs = complex(rs, xs)
+        zm = complex(rm, xm)
 
         for i in 1:phases
-            Z[i,i] = Zs
+            Z[i,i] = zs
             for j in 1:i-1
-                Z[i, j] = Z[j, i] = Zm
+                Z[i, j] = Z[j, i] = zm
             end
         end
     else
@@ -525,6 +525,10 @@ function _create_vsource(name::String=""; kwargs...)::Dict{String,Any}
         # Derived Properties
         "rmatrix" => real(Z),
         "xmatrix" => imag(Z),
+        "rs" => rs,
+        "xs" => xs,
+        "rm" => rm,
+        "xm" => xm,
         "vmag" => Vmag,
         "like" => get(kwargs, :like, "")
     )

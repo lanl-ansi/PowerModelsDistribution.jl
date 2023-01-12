@@ -383,17 +383,13 @@ function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
 
         # some values require addition of neutral by default
         n_conductors = length(eng_obj["connections"])
-        eng_obj["rs"] = zeros(n_conductors, n_conductors)
-        eng_obj["rs"][1:phases, 1:phases] = defaults["rmatrix"]
-        eng_obj["rs"][1:n_conductors, n_conductors] = defaults["rmatrix"][1:phases, phases]
-        eng_obj["rs"][n_conductors, 1:n_conductors] = defaults["rmatrix"][phases, 1:phases]
-        eng_obj["rs"][n_conductors, n_conductors] = defaults["rmatrix"][phases, phases]
+        rs = ones(n_conductors, n_conductors) * defaults["rm"]
+        LinearAlgebra.diag(rs) .= defaults["rs"]
+        eng_obj["rs"] = rs
 
-        eng_obj["xs"] = zeros(n_conductors, n_conductors)
-        eng_obj["xs"][1:phases, 1:phases] = defaults["xmatrix"]
-        eng_obj["xs"][1:n_conductors, n_conductors] = defaults["xmatrix"][1:phases, phases]
-        eng_obj["xs"][n_conductors, 1:n_conductors] = defaults["xmatrix"][phases, 1:phases]
-        eng_obj["xs"][n_conductors, n_conductors] = defaults["xmatrix"][phases, phases]
+        xs = ones(n_conductors, n_conductors) * defaults["xm"]
+        LinearAlgebra.diag(xs) .= defaults["xs"]
+        eng_obj["xs"] = xs
 
         eng_obj["vm"] = zeros(n_conductors)
         eng_obj["vm"][1:phases] = vm
