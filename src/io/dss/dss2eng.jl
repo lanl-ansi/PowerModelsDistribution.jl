@@ -384,11 +384,11 @@ function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
         # some values require addition of neutral by default
         n_conductors = length(eng_obj["connections"])
         rs = ones(n_conductors, n_conductors) * defaults["rm"]
-        LinearAlgebra.diag(rs) .= defaults["rs"]
+        rs[LinearAlgebra.diagind(rs)] .= defaults["rs"]
         eng_obj["rs"] = rs
 
         xs = ones(n_conductors, n_conductors) * defaults["xm"]
-        LinearAlgebra.diag(xs) .= defaults["xs"]
+        xs[LinearAlgebra.diagind(xs)] .= defaults["xs"]
         eng_obj["xs"] = xs
 
         eng_obj["vm"] = zeros(n_conductors)
