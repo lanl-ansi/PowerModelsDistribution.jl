@@ -169,5 +169,56 @@
                 @test isapprox(result["objective"], 21.17; atol = 5e-2)
             end
         end
+
+        @testset "test ubf relaxations with with switches" begin
+            data = deepcopy(case3_balanced_switch)
+            make_lossless!(data; exclude=["line", "linecode"])
+            remove_line_limits!(data)
+            apply_voltage_bounds!(data; vm_lb=0.9, vm_ub=1.1)
+
+            data["settings"]["sbase_default"] = 1.0
+
+            data["generator"] = Dict{String,Any}(
+                "1" => Dict{String,Any}(
+                    "bus" => "primary",
+                    "connections" => [1, 2, 3, 4],
+                    "cost_pg_parameters" => [0.0, 1200.0, 0.0],
+                    "qg_lb" => fill(0.0, 3),
+                    "qg_ub" => fill(0.0, 3),
+                    "pg_ub" => fill(10, 3),
+                    "pg_lb" => fill(0, 3),
+                    "configuration" => WYE,
+                    "status" => ENABLED
+                )
+            )
+
+            merge!(data["voltage_source"]["source"], Dict{String,Any}(
+                "cost_pg_parameters" => [0.0, 1000.0, 0.0],
+                "pg_lb" => fill(  0.0, 3),
+                "pg_ub" => fill( 10.0, 3),
+                "qg_lb" => fill(-10.0, 3),
+                "qg_ub" => fill( 10.0, 3),
+            ))
+
+            for (_,line) in data["line"]
+                line["sm_ub"] = fill(10.0, 3)
+            end
+
+            @testset "test SOCNLPUBF opf with switches" begin
+                result = solve_mc_opf(data, SOCNLPUBFPowerModel, ipopt_solver)
+
+                @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
+                @test all(isapprox.(result["solution"]["switch"]["ohline"]["pf"], [6.0, 6.0, 6.0]; atol=1e-1))
+                @test isapprox(result["objective"], 18.1824; atol=2e-1)
+            end
+
+            @testset "test SOCConicUBF opf with switches" begin
+                result = solve_mc_opf(data, SOCConicUBFPowerModel, scs_solver)
+
+                @test result["termination_status"] == OPTIMAL || result["termination_status"] == ALMOST_OPTIMAL
+                @test all(isapprox.(result["solution"]["switch"]["ohline"]["pf"], [6.0, 6.0, 6.0]; atol=1e-1))
+                @test isapprox(result["objective"], 18.1824; atol=2e-1)
+            end
+        end
     end
 end
