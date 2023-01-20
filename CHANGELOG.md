@@ -7,6 +7,8 @@
 - Changed message that line is "being treated as superconducting" from `@info` to `@debug`
 - Added support for WireData, LineGeometry, LineSpacing, TSData, and CNData dss objects
 - Fixed bug in dss parser where when properties were assigned via `assign_property!`, the `prop_order` was not updated
+- Updated CI workflows to used Nodejs v16 scripts
+- Added UBF matrix power variables for switches [#423](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/423)
 
 ## v0.14.5
 

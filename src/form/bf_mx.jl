@@ -137,6 +137,70 @@ function variable_mc_branch_power(pm::AbstractUBFModels; nw::Int=nw_id_default, 
 end
 
 
+"matrix power variables for switches"
+function variable_mc_switch_power(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    # calculate S bound
+    switch_arcs = Vector{Tuple{Int,Int,Int}}(ref(pm, nw, :arcs_switch))
+    connections = Dict{Tuple{Int,Int,Int},Vector{Int}}((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_switch) for ((l,i,j), connections) in entry)
+
+    if bounded
+        bound = Dict{eltype(switch_arcs), Matrix{Real}}()
+        for (l, switch) in ref(pm, nw, :switch)
+            bus_fr = ref(pm, nw, :bus, switch["f_bus"])
+            bus_to = ref(pm, nw, :bus, switch["t_bus"])
+
+            smax_fr = _calc_branch_power_max(switch, bus_fr)
+            smax_to = _calc_branch_power_max(switch, bus_to)
+            cmax_fr, cmax_to = _calc_branch_current_max_frto(switch, bus_fr, bus_to)
+
+            tuple_fr = (l, bus_fr["index"], bus_to["index"])
+            tuple_to = (l, bus_to["index"], bus_fr["index"])
+
+            bound[tuple_fr] = bus_fr["vmax"][[findfirst(isequal(c), bus_fr["terminals"]) for c in switch["f_connections"]]].*cmax_fr'
+            bound[tuple_to] = bus_to["vmax"][[findfirst(isequal(c), bus_to["terminals"]) for c in switch["t_connections"]]].*cmax_to'
+
+            for (idx, (fc,tc)) in enumerate(zip(switch["f_connections"], switch["t_connections"]))
+                bound[tuple_fr][idx,idx] = smax_fr[idx]
+                bound[tuple_to][idx,idx] = smax_to[idx]
+            end
+        end
+        # create matrix variables
+        (P,Q) = variable_mx_complex(pm.model, switch_arcs, connections, connections; symm_bound=bound, name=("Psw", "Qsw"), prefix="$nw")
+    else
+        (P,Q) = variable_mx_complex(pm.model, switch_arcs, connections, connections; name=("Psw", "Qsw"), prefix="$nw")
+    end
+
+    # this explicit type erasure is necessary
+    P_expr = merge(
+        Dict{Any,Any}( (l,i,j) => P[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from) ),
+        Dict( (l,j,i) => -1.0.*P[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from))
+    )
+    Q_expr = merge(
+        Dict{Any,Any}( (l,i,j) => Q[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from) ),
+        Dict( (l,j,i) => -1.0*Q[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from))
+    )
+
+    # This is needed to get around error: "unexpected affine expression in nlconstraint"
+    (P_aux,Q_aux) = variable_mx_complex(pm.model, switch_arcs, connections, connections; name=("Psw_aux", "Qsw_aux"), prefix="$nw")
+    for (l,i,j) in switch_arcs
+        JuMP.@constraint(pm.model, P_expr[(l,i,j)] .== P_aux[(l,i,j)])
+        JuMP.@constraint(pm.model, Q_expr[(l,i,j)] .== Q_aux[(l,i,j)])
+    end
+
+    # save reference
+    var(pm, nw)[:Psw] = P_aux
+    var(pm, nw)[:Qsw] = Q_aux
+
+    var(pm, nw)[:psw] = Dict([(id,LinearAlgebra.diag(P_aux[id])) for id in switch_arcs])
+    var(pm, nw)[:qsw] = Dict([(id,LinearAlgebra.diag(Q_aux[id])) for id in switch_arcs])
+
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :Pf, :Pt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), P_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :Qf, :Qt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), Q_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :pf, :pt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), Dict([(id,LinearAlgebra.diag(P_expr[id])) for id in switch_arcs]))
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qf, :qt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), Dict([(id,LinearAlgebra.diag(Q_expr[id])) for id in switch_arcs]))
+end
+
+
 "defines matrix transformer power variables for the unbalanced branch flow models"
 function variable_mc_transformer_power(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     transformer_arcs = Vector{Tuple{Int,Int,Int}}(ref(pm, nw, :arcs_transformer))
