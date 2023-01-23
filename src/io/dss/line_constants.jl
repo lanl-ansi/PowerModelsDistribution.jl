@@ -277,9 +277,8 @@ function calculate_line_constants(
 
                     if i <= nphases
                         jj = j+nconds
-                        D_ij = sqrt((x[i]-x[j])^2+(y[i]-y[j])^2)
 
-                        Z_ijg = 1im * ω*μ₀/2π*log(1 / D_ij)
+                        Z_ijg = 1im * ω*μ₀/2π*log(1/D_ij)
 
                         Z[ii,jj] = Z[jj,ii] = Z_ijg + Z_ije
                     end
@@ -287,7 +286,7 @@ function calculate_line_constants(
             end
 
             if i <= nphases
-                r_cn = 0.5 * (d_cable[i]-d_strand[i])
+                r_cn = (d_cable[i]-d_strand[i])/2
                 if i == j
                     D_ij = r_cn
                 else
@@ -396,15 +395,15 @@ function calculate_line_constants(
                     Z[i,i] = Z_ic + Z_ig + Z_ije
 
                     if i <= nphases
-                        gmr_ts = 1/2 * (d_shield[i] - t_tape[i])
+                        gmr_ts = (d_shield[i] - t_tape[i])/2
 
-                        Z_ic_ss = 0.3183 * ρₜₛ / (d_shield[i] * t_tape[i] * sqrt(50 / (100-lap_tape[i])))
-                        Z_ig_ss = 1im * ω*μ₀/2π*log(1/gmr_ts)
+                        Z_ic_ss = (1+0im) * 0.3183 * ρₜₛ / (d_shield[i] * t_tape[i] * sqrt(50 / (100-lap_tape[i])))
+                        Z_ig_ss = (0+1im) * ω*μ₀/2π*log(1/gmr_ts)
 
                         Z[ii,ii] = Z_ic_ss + Z_ig_ss + Z_ije_ss
                     end
                 else
-                    Z_ijg = 1im * ω*μ₀/2π*log(1/D_ij)
+                    Z_ijg = (0+1im) * ω*μ₀/2π*log(1/D_ij)
 
                     Z[i,j] = Z[j,i] = Z_ijg + Z_ije
 
@@ -412,7 +411,7 @@ function calculate_line_constants(
                         jj = j+nconds
                         D_ij = sqrt((x[i]-x[j])^2+(y[i]-y[j])^2)
 
-                        Z_ijg = 1im * ω*μ₀/2π*log(1 / D_ij)
+                        Z_ijg = (0+1im) * ω*μ₀/2π*log(1 / D_ij)
 
                         Z[ii,jj] = Z[jj,ii] = Z_ijg + Z_ije
                     end
@@ -421,10 +420,10 @@ function calculate_line_constants(
 
             if i <= nphases
                 if i == j
-                    D_ij = 1/2 * (d_shield[i] - t_tape[i])
+                    D_ij = (d_shield[i] - t_tape[i])/2
                 end
 
-                Z_ijg = 1im * ω*μ₀/2π*log(1/D_ij)
+                Z_ijg = (0+1im) * ω*μ₀/2π*log(1/D_ij)
 
                 Z[ii,j] = Z[j,ii] = Z_ijg + Z_ije
             end
