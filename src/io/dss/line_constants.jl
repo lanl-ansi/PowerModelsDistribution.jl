@@ -636,7 +636,7 @@ function calc_internal_impedance(R_ac::Real, R_dc::Real, earth_model::String, ω
     elseif earth_model == "deri"
         δ = sqrt(R_dc*(ω/2π)*μ₀)
         m = (1+1im)*sqrt(ω/2π*μ₀/R_dc)
-        Z_int = (1+1im) * (abs(m) > 35 ? (1+1im) : SpecialFunctions.besselj0(m) / SpecialFunctions.besselj1(m)) * δ / 2
+        Z_int = (1+1im) * (abs(m) > 35 ? (1+0im) : SpecialFunctions.besseli(0,m) / SpecialFunctions.besseli(1,m)) * δ / 2
     else
         error("earth model $(earth_model) not recognized")
     end
