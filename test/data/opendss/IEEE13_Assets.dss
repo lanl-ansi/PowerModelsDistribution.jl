@@ -52,9 +52,9 @@ new WireData.ACSR_4/0    NormAmps=340 DIAM=0.563  GMRac=0.09768  Rdc=0.112121212
 new WireData.ACSR_1/0    NormAmps=230 DIAM=0.398  GMRac=0.05352  Rdc=0.212121212   Runits=kft Radunits=in gmrunits=in
 new WireData.CU_1/0 NormAmps=100 DIAM=0.368  GMRac=0.13356 Rac=0.607 Runits=mi Radunits=in gmrunits=in
 new TSData.TS_1/0   NormAmps=165 DIAM=0.368  GMRac=0.13320 Rac=0.97  Runits=mi Radunits=in gmrunits=in
-~                   EpsR=2.3 Ins=0.220 DiaIns=0.82 DiaCable=1.06 DiaShield=0.88 TapeLayer=0.005 TapeLap=20
+~                   EpsR=2.3 InsLayer=0.220 DiaIns=0.82 DiaCable=1.06 DiaShield=0.88 TapeLayer=0.005 TapeLap=20
 new CNData.CN_250   NormAmps=260 DIAM=0.567  GMRac=0.20520 Rac=0.41  Runits=mi Radunits=in gmrunits=in
-~                   EpsR=2.3 Ins=0.220 DiaIns=1.06 DiaCable=1.29 k=13 DiaStrand=0.0641 GmrStrand=0.02496 Rstrand=14.8722
+~                   EpsR=2.3 InsLayer=0.220 DiaIns=1.06 DiaCable=1.29 k=13 DiaStrand=0.0641 GmrStrand=0.02496 Rstrand=14.8722
 
 new LineSpacing.500 nconds=4 nphases=3 units=ft x=[-4 -1 3 0] h=[28 28 28 24]
 new LineSpacing.505 nconds=3 nphases=2 units=ft x=[-4 3 0] h=[28 28 24]
