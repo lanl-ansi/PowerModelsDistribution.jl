@@ -599,7 +599,7 @@ function _create_cndata(name::String=""; kwargs...)::Dict{String,Any}
             gmrac = kwargs[:gmrac]
             gmrunits = get(kwargs, :gmrunits, "none")
         end
-    elseif haskey(kwargs, :gmrac) && !haskey(kwargs, :diag) && !haskey(kwargs, :radius)
+    elseif haskey(kwargs, :gmrac) && !haskey(kwargs, :diam) && !haskey(kwargs, :radius)
         radius = kwargs[:gmrac] / 0.7788
         diam = 2 * kwargs[:radius]
         radunits = get(kwargs, :gmrunits, "none")
