@@ -474,7 +474,7 @@ function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw
     t_idx = (i, t_bus, f_bus)
 
     if all(all(isapprox.(branch[k], 0.0)) for k in ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to"])
-        @info "branch $(branch["source_id"]) being treated as superconducting (effective zero impedance)"
+        @debug "branch $(branch["source_id"]) being treated as superconducting (effective zero impedance)"
         if !haskey(con(pm, nw), :branch_flow)
             con(pm, nw)[:branch_flow] = Dict{Int,Vector{Vector{<:JuMP.ConstraintRef}}}()
         end
@@ -502,7 +502,7 @@ function constraint_mc_ohms_yt_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::
     t_idx = (i, t_bus, f_bus)
 
     if all(all(isapprox.(branch[k], 0.0)) for k in ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to"])
-        @info "branch $(branch["source_id"]) being treated as superconducting (effective zero impedance)"
+        @debug "branch $(branch["source_id"]) being treated as superconducting (effective zero impedance)"
         if !haskey(con(pm, nw), :branch_flow)
             con(pm, nw)[:branch_flow] = Dict{Int,Vector{Vector{<:JuMP.ConstraintRef}}}()
         end
