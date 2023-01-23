@@ -263,7 +263,7 @@ function calculate_line_constants(
 
                     if i <= nphases
                         r_cn = 1/2*(d_cable[i]-d_strand[i])
-                        gmr_cn = (gmr_strand[i]*n_strand[i]*(r_cn^(n_strand[i])))^(1 / n_strand[i])
+                        gmr_cn = (gmr_strand[i]*n_strand[i]*(r_cn^(n_strand[i]-1)))^(1 / n_strand[i])
 
                         Z_ic_ss = R_strand[i] / n_strand[i]
                         Z_ig_ss = 1im * ω*μ₀/2π*log(1/gmr_cn)
