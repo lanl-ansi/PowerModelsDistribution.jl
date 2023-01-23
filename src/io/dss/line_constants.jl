@@ -244,7 +244,7 @@ function calculate_line_constants(
     N = nconds + nphases
 
     Z = zeros(ComplexF64, N, N)
-    P = zeros(ComplexF64, nphases, nphases)
+    Y = zeros(ComplexF64, nphases, nphases)
 
     for i in 1:nconds
         ii = i+nconds
@@ -302,17 +302,17 @@ function calculate_line_constants(
         end
 
         if i <= nphases
-            r_outer = 1/2 * d_ins[i]
+            r_outer = d_ins[i]/2
             r_inner = r_outer - t_ins[i]
-            P[i,i] = 1im * 2π * ε₀ * ε_ins[i] * ω / log(r_outer / r_inner)
+            Y[i,i] = 1im * 2π * ε₀ * ε_ins[i] * ω / log(r_outer / r_inner)
         end
     end
 
     Z = _kron(Z, nconds)
 
-    Y = LinearAlgebra.pinv(P) ./ ω .* 1e9
+    C = Y .* 1e9 ./ ω
 
-    return Z, Y
+    return Z, C
 end
 
 
@@ -378,7 +378,7 @@ function calculate_line_constants(
 
     N = nconds + nphases
     Z = zeros(Complex, N, N)
-    P = zeros(Complex, nphases, nphases)
+    Y = zeros(Complex, nphases, nphases)
 
     for i in 1:nconds
         ii = i+nconds
@@ -431,17 +431,17 @@ function calculate_line_constants(
         end
 
         if i <= nphases
-            r_outer = 1/2 * d_ins[i]
+            r_outer = d_ins[i]/2
             r_inner = r_outer - t_ins[i]
-            P[i,i] = 1im * 2π * ε₀ * ε_ins[i] * ω / log(r_outer / r_inner)
+            Y[i,i] = (0+1im) * 2π * ε₀ * ε_ins[i] * ω / log(r_outer / r_inner)
         end
     end
 
     Z = _kron(Z, nconds)
 
-    Y = LinearAlgebra.pinv(P) ./ ω .* 1e9
+    C = Y .* 1e9 ./ ω
 
-    return Z, Y
+    return Z, C
 end
 
 
@@ -536,9 +536,9 @@ function calculate_line_constants(
         end
     end
 
-    Y = LinearAlgebra.pinv(P) ./ ω .* 1e9
+    C = LinearAlgebra.pinv(P) .* 1e9 ./ ω
 
-    return Z, Y
+    return Z, C
 end
 
 
