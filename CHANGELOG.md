@@ -2,6 +2,7 @@
 
 ## staged
 
+- Added compat for SpecialFunctions
 - Added support for computing line constants from WireData, LineGeometry, LineSpacing, TSData and CNData
 - Added Julia library SpecialFunctions for `besselj0` implementation
 - Changed message that line is "being treated as superconducting" from `@info` to `@debug`
