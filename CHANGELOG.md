@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Fixed bug in `_calc_bus_vm_ll_bounds` where default min `vdmin_eps` was not being used, leading to invalid `Inf` bounds
 
 ## v0.14.6
 

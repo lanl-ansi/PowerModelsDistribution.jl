@@ -459,7 +459,7 @@ function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps::Real=0.1)::Tuple
     if haskey(bus, "vm_ll_min")
         vdmin = bus["vm_ll_min"]
     else
-        vdmin = is_triplex ? [0.0] : fill(0.0, length(vmin))
+        vdmin = is_triplex ? [vdmin_eps] : fill(vdmin_eps, length(vmin))
     end
 
     return (vdmin, vdmax)
