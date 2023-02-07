@@ -362,5 +362,16 @@
             result = solve_mc_opf(ut_trans_3w_dyy_1, SOCConicUBFPowerModel, scs_solver; solution_processors=[sol_data_model!], make_si=false)
             @test norm(result["solution"]["bus"]["3"]["vm"]-[0.93180, 0.88827, 0.88581], Inf) <= 7.2E-2
         end
+
+        @testset "3w_center_tap" begin
+            apply_voltage_bounds!(trans_3w_center_tap; vm_lb=0.95, vm_ub=1.05)
+            result = solve_mc_opf(trans_3w_center_tap, SOCConicUBFPowerModel, scs_solver; solution_processors=[sol_data_model!], make_si=false)
+
+            sbase = trans_3w_center_tap["settings"]["sbase_default"]
+
+            @test all(isapprox.(result["solution"]["load"]["l2a"]["pd"]*sbase, 12.0; atol=1E-5))
+            @test all(isapprox.(result["solution"]["load"]["l3"]["pd"]*sbase, [10.0, 10.0]; atol=1E-5))
+            @test all(isapprox.(result["solution"]["bus"]["tn_1"]["vm"], [1.045, 1.05]; atol=5E-3))
+        end
     end
 end

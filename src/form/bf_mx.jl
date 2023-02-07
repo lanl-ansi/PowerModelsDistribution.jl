@@ -50,7 +50,7 @@ function variable_mc_bus_voltage_prod_hermitian(pm::AbstractUBFModels; nw::Int=n
     var(pm, nw)[:Wr] = Wr
     var(pm, nw)[:Wi] = Wi
     # maintain compatibility
-    var(pm, nw)[:w] = Dict{Int, Any}([(id, LinearAlgebra.diag(Wr[id])) for id in bus_ids])
+    var(pm, nw)[:w] = Dict(id => JuMP.Containers.DenseAxisArray(LinearAlgebra.diag(Wr[id]), terminals[id]) for id in bus_ids)
 
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :Wr, ids(pm, nw, :bus), Wr)
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :Wi, ids(pm, nw, :bus), Wi)
@@ -129,8 +129,8 @@ function variable_mc_branch_power(pm::AbstractUBFModels; nw::Int=nw_id_default, 
     var(pm, nw)[:P] = P
     var(pm, nw)[:Q] = Q
 
-    var(pm, nw)[:p] = Dict([(id,LinearAlgebra.diag(P[id])) for id in branch_arcs])
-    var(pm, nw)[:q] = Dict([(id,LinearAlgebra.diag(Q[id])) for id in branch_arcs])
+    var(pm, nw)[:p] = Dict(id => JuMP.Containers.DenseAxisArray(LinearAlgebra.diag(P[id]), connections[id]) for id in branch_arcs)
+    var(pm, nw)[:q] = Dict(id => JuMP.Containers.DenseAxisArray(LinearAlgebra.diag(Q[id]), connections[id]) for id in branch_arcs)
 
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :Pf, :Pt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), P)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :Qf, :Qt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), Q)
@@ -191,8 +191,8 @@ function variable_mc_switch_power(pm::AbstractUBFModels; nw::Int=nw_id_default, 
     var(pm, nw)[:Psw] = P_aux
     var(pm, nw)[:Qsw] = Q_aux
 
-    var(pm, nw)[:psw] = Dict([(id,LinearAlgebra.diag(P_aux[id])) for id in switch_arcs])
-    var(pm, nw)[:qsw] = Dict([(id,LinearAlgebra.diag(Q_aux[id])) for id in switch_arcs])
+    var(pm, nw)[:psw] = Dict(id => JuMP.Containers.DenseAxisArray(LinearAlgebra.diag(P_aux[id]), connections[id]) for id in switch_arcs)
+    var(pm, nw)[:qsw] = Dict(id => JuMP.Containers.DenseAxisArray(LinearAlgebra.diag(Q_aux[id]), connections[id]) for id in switch_arcs)
 
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :Pf, :Pt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), P_expr)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :Qf, :Qt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), Q_expr)
@@ -245,8 +245,8 @@ function variable_mc_transformer_power(pm::AbstractUBFModels; nw::Int=nw_id_defa
     var(pm, nw)[:Pt] = Pt
     var(pm, nw)[:Qt] = Qt
 
-    var(pm, nw)[:pt] = pt = Dict([(id,LinearAlgebra.diag(Pt[id])) for id in transformer_arcs])
-    var(pm, nw)[:qt] = qt = Dict([(id,LinearAlgebra.diag(Qt[id])) for id in transformer_arcs])
+    var(pm, nw)[:pt] = pt = Dict(id => JuMP.Containers.DenseAxisArray(LinearAlgebra.diag(Pt[id]), connections[id]) for id in transformer_arcs)
+    var(pm, nw)[:qt] = qt = Dict(id => JuMP.Containers.DenseAxisArray(LinearAlgebra.diag(Qt[id]), connections[id]) for id in transformer_arcs)
 
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :Pf, :Pt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), Pt)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :Qf, :Qt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), Qt)
@@ -841,14 +841,16 @@ function constraint_mc_load_power(pm::AbstractUBFModels, load_id::Int; nw::Int=n
             sol(pm, nw, :load, load_id)[:qd_bus] = var(pm, nw, :qd_bus)[load_id]
         end
     elseif load["configuration"]==DELTA
+        is_triplex = length(connections)<3
+        conn_bus = is_triplex ? bus["terminals"] : connections
         # link Wy, CCd and X
-        Wr = var(pm, nw, :Wr, bus_id)[[findfirst(isequal(c), terminals) for c in connections],[findfirst(isequal(c), terminals) for c in connections]]
-        Wi = var(pm, nw, :Wi, bus_id)[[findfirst(isequal(c), terminals) for c in connections],[findfirst(isequal(c), terminals) for c in connections]]
+        Wr = var(pm, nw, :Wr, bus_id)[[findfirst(isequal(c), terminals) for c in conn_bus],[findfirst(isequal(c), terminals) for c in conn_bus]]
+        Wi = var(pm, nw, :Wi, bus_id)[[findfirst(isequal(c), terminals) for c in conn_bus],[findfirst(isequal(c), terminals) for c in conn_bus]]
         CCdr = var(pm, nw, :CCdr, load_id)
         CCdi = var(pm, nw, :CCdi, load_id)
         Xdr = var(pm, nw, :Xdr, load_id)
         Xdi = var(pm, nw, :Xdi, load_id)
-        Td = [1 -1 0; 0 1 -1; -1 0 1]  # TODO
+        Td = is_triplex ? [1 -1] : [1 -1 0; 0 1 -1; -1 0 1]  # TODO
         constraint_SWL_psd(pm.model, Xdr, Xdi, Wr, Wi, CCdr, CCdi)
         # define pd/qd and pd_bus/qd_bus as affine transformations of X
         pd_bus = LinearAlgebra.diag(Xdr*Td)
@@ -856,6 +858,8 @@ function constraint_mc_load_power(pm::AbstractUBFModels, load_id::Int; nw::Int=n
         pd = LinearAlgebra.diag(Td*Xdr)
         qd = LinearAlgebra.diag(Td*Xdi)
 
+        pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, conn_bus)
+        qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, conn_bus)
         var(pm, nw, :pd_bus)[load_id] = pd_bus
         var(pm, nw, :qd_bus)[load_id] = qd_bus
         var(pm, nw, :pd)[load_id] = pd

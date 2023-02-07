@@ -22,6 +22,17 @@ end
 
 
 """
+    variable_mc_switch_power(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+
+Switch power variables.
+"""
+function variable_mc_switch_power(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_switch_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_switch_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
+end
+
+
+"""
     variable_mc_capcontrol(pm::AbstractLPUBFModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
 
 Capacitor switching and relaxed power variables.

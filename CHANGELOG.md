@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug with SOC and LinDist3Flow formulations where diagonal entries of matrix variables were defined with type `Vector{JuMP.VariableRef}` (no information about connections) instead of `JuMP.Containers.DenseAxisArray`, leading to errors when single- or two-phase nodes were present in network
 - Fixed bug in `_calc_bus_vm_ll_bounds` where default min `vdmin_eps` was not being used, leading to invalid `Inf` bounds
 
 ## v0.14.6
