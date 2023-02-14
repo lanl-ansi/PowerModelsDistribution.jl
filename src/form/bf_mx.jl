@@ -860,6 +860,8 @@ function constraint_mc_load_power(pm::AbstractUBFModels, load_id::Int; nw::Int=n
 
         pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, conn_bus)
         qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, conn_bus)
+        pd = JuMP.Containers.DenseAxisArray(pd, connections)
+        qd = JuMP.Containers.DenseAxisArray(qd, connections)
         var(pm, nw, :pd_bus)[load_id] = pd_bus
         var(pm, nw, :qd_bus)[load_id] = qd_bus
         var(pm, nw, :pd)[load_id] = pd
