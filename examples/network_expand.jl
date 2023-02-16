@@ -14,14 +14,15 @@ const PMD = PowerModelsDistribution
 # Pkg.add("CPLEX")
 # Pkg.build("CPLEX")
 
-using CPLEX
+# using CPLEX
 
-cplex_solver = optimizer_with_attributes(() -> CPLEX.Optimizer())
-xpress_solver = optimizer_with_attributes(() -> Xpress.Optimizer(DEFAULTALG=2, PRESOLVE=0, logfile = "output.log"))
+# cplex_solver = optimizer_with_attributes(() -> CPLEX.Optimizer())
 
 
-network_file = "test/data/opendss/IEEE13_CDPSM.dss";
-expansion_file = "test/data/ne_json/expansion13.json"
+# network_file = "test/data/opendss/IEEE13_CDPSM.dss"
+network_file = "test/data/opendss/case3_balanced_pv.dss"
+# expansion_file = "test/data/ne_json/expansion13.json"
+expansion_file = "test/data/ne_json/case3_balanced_ne.json"
 
 data = parse_file(network_file)
 expand_mods = parse_file(expansion_file)
@@ -30,9 +31,10 @@ PMD._IM.update_data!(data, expand_mods)
 
 pm_type = NFAUPowerModel
 
-pm = instantiate_mc_model(data, pm_type, build_mn_mc_mld_simple)
+pm = instantiate_mc_model(data, pm_type, build_mn_mc_mld_simple_ne)
 expand_cost = objective_ne(pm)
 JuMP.@constraint(pm.model, expand_cost <= 1000)
 objective_mc_min_fuel_cost(pm)
 
-res = optimize_model!(pm, optimizer=cplex_solver)
+xpress_solver = optimizer_with_attributes(() -> Xpress.Optimizer(DEFAULTALG=2, PRESOLVE=0, logfile = "output.log"))
+res = optimize_model!(pm, optimizer=xpress_solver)

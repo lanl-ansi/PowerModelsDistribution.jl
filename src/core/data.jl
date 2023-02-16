@@ -1,6 +1,6 @@
 "field names that should not be multi-conductor values"
 const _conductorless = Set{String}(["index", "bus_i", "bus_type", "status", "gen_status",
-    "br_status", "gen_bus", "load_bus", "shunt_bus", "storage_bus", "storage_ne_bus", "f_bus", "t_bus",
+    "br_status", "gen_bus", "gen_ne_bus", "load_bus", "shunt_bus", "storage_bus", "storage_ne_bus", "f_bus", "t_bus",
     "transformer", "area", "zone", "base_kv", "energy", "energy_rating", "charge_rating",
     "discharge_rating", "charge_efficiency", "discharge_efficiency", "p_loss", "q_loss",
     "model", "ncost", "cost", "startup", "shutdown", "name", "source_id", "active_phases"])
@@ -25,6 +25,7 @@ const pmd_math_component_status = Dict{String,String}(
     "switch" => "status",
     "branch" => "br_status",
     "transformer" => "status",
+    "gen_ne" => "gen_ne_status",
 )
 
 "maps component types to inactive status values"
@@ -38,6 +39,7 @@ const pmd_math_component_status_inactive = Dict{String,Int}(
     "switch" => 0,
     "branch" => 0,
     "transformer" => 0,
+    "gen_ne" => 0,
 )
 
 
@@ -1327,7 +1329,7 @@ function _correct_bus_types!(pm_data::Dict{String,<:Any})::Set{Int}
         end
         bus_gens = Dict{String,Vector{String}}(i => String[] for (i,bus) in pm_data["bus"] if bus["bus_i"] in island)
 
-        for type in ["gen", "storage",]
+        for type in ["gen", "storage","storage_ne", "gen_ne"]
             if haskey(pm_data, type)
                 for (i,gen) in pm_data[type]
                     if gen[pmd_math_component_status[type]] != pmd_math_component_status_inactive[type] && gen["$(type)_bus"] in island
@@ -1751,6 +1753,11 @@ end
 
 "infer the internal dimension for a unit, i.e. any one-port component with `connections` and `configuration` properties"
 function _infer_int_dim_unit(unit::Dict{String,<:Any}, kron_reduced)
+    if unit["configuration"] == 0
+        unit["configuration"] = WYE
+    elseif unit["configuration"] == 1
+        unit["configuration"] = DELTA
+    end
     return _infer_int_dim(unit["connections"], unit["configuration"], kron_reduced)
 end
 

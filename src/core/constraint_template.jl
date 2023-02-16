@@ -845,6 +845,24 @@ function constraint_mc_generator_power(pm::AbstractUnbalancedPowerModel, id::Int
 end
 
 
+function constraint_mc_generator_power_ne(pm::AbstractUnbalancedPowerModel, id::Int; nw::Int=nw_id_default, report::Bool=true, bounded::Bool=true)::Nothing
+    generator = ref(pm, nw, :gen_ne, id)
+    bus = ref(pm, nw,:bus_ne, generator["gen_ne_bus"])
+
+    N = length(generator["connections"])
+    pmin = get(generator, "pmin", fill(-Inf, N))
+    pmax = get(generator, "pmax", fill( Inf, N))
+    qmin = get(generator, "qmin", fill(-Inf, N))
+    qmax = get(generator, "qmax", fill( Inf, N))
+
+    if get(generator, "configuration", WYE) == WYE
+        constraint_mc_generator_power_wye(pm, nw, id, bus["index"], generator["connections"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
+    else
+        constraint_mc_generator_power_delta(pm, nw, id, bus["index"], generator["connections"], pmin, pmax, qmin, qmax; report=report, bounded=bounded)
+    end
+    nothing
+end
+
 """
     constraint_mc_gen_power_setpoint_real(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
 

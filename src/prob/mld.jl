@@ -98,12 +98,14 @@ function build_mn_mc_mld_simple(pm::AbstractUnbalancedPowerModel)
         variable_mc_switch_power(pm; nw=n)
         variable_mc_transformer_power(pm; nw=n)
         variable_mc_generator_power(pm; nw=n)
+        variable_mc_generator_power_ne(pm; nw=n)
         variable_mc_bus_voltage(pm; nw=n)
 
         variable_mc_load_indicator(pm; nw=n, relax=true)
         variable_mc_shunt_indicator(pm; nw=n, relax=true)
         variable_mc_storage_power_mi(pm; nw=n, relax=true)
         variable_mc_storage_power_mi_on_off_ne(pm; nw=n)
+        variable_mc_generator_indicator_ne(pm; nw=n, relax=false)
     end
 
     for (n, network) in nws(pm)
@@ -115,6 +117,10 @@ function build_mn_mc_mld_simple(pm::AbstractUnbalancedPowerModel)
 
         for i in ids(pm, n, :gen)
             constraint_mc_generator_power(pm, i; nw=n)
+        end
+
+        for i in ids(pm, n, :gen_ne)
+            constraint_mc_generator_power_ne(pm, i; nw=n)
         end
 
         for i in ids(pm, n, :bus)

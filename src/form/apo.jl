@@ -402,6 +402,51 @@ function constraint_mc_generator_power(pm::AbstractUnbalancedActivePowerModel, i
     var(pm, nw, :pg_bus)[id] = var(pm, nw, :pg, id)
 end
 
+"Only support wye-connected generators."
+function constraint_mc_generator_power_ne(pm::AbstractUnbalancedActivePowerModel, id::Int; nw::Int=nw_id_default, report::Bool=true)
+    var(pm, nw, :pg_ne_bus)[id] = var(pm, nw, :pg_ne, id)
+
+    gen = ref(pm, nw, :gen_ne, id)
+    connections = gen["connections"]
+
+    pg = var(pm, nw, :pg_ne, id)
+    qg = var(pm, nw, :qg_ne, id)
+    z_gen_ne = var(pm, nw, :z_gen_ne, id)
+
+    
+    if haskey(gen, "pmax")
+        for (idx, c) in enumerate(connections)
+            JuMP.@constraint(pm.model, pg[c] <= gen["pmax"][idx]*z_gen_ne)
+        end
+    else
+        JuMP.@constraint(pm.model, pg[c] <= 10^5*z_gen_ne)
+    end
+
+    if haskey(gen, "qmax")
+        for (idx, c) in enumerate(connections)
+            JuMP.@constraint(pm.model, qg[c] <= gen["qmax"][idx]*z_gen_ne)
+        end
+    else
+        JuMP.@constraint(pm.model, qg[c] <= 10^5*z_gen_ne)
+    end
+
+    if haskey(gen, "pmin")
+        for (idx, c) in enumerate(connections)
+            JuMP.@constraint(pm.model, pg[c] >= gen["pmin"][idx]*z_gen_ne)
+        end
+    else
+        JuMP.@constraint(pm.model, pg[c] >= -10^5*z_gen_ne)
+    end
+
+    if haskey(gen, "qmin")
+        for (idx, c) in enumerate(connections)
+            JuMP.@constraint(pm.model, qg[c] >= gen["qmin"][idx]*z_gen_ne)
+        end
+    else
+        JuMP.@constraint(pm.model, qg[c] >= -10^5*z_gen_ne)
+    end
+
+end
 
 # load variables
 

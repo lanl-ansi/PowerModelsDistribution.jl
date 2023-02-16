@@ -787,6 +787,31 @@ function variable_mc_generator_power(pm::AbstractUnbalancedPowerModel; nw::Int=n
 end
 
 
+"create variables for network exapnsion generators, delegate to PowerModels"
+function variable_mc_generator_power_ne(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_generator_power_real_ne(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_generator_power_imaginary_ne(pm; nw=nw, bounded=bounded, report=report)
+end
+
+function variable_mc_generator_indicator_ne(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, relax::Bool=true, report::Bool=true)
+    if !relax
+        z_gen_ne = var(pm, nw)[:z_gen_ne] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :gen_ne)], base_name="$(nw)_z_gen_ne",
+            binary = true,
+            start = comp_start_value(ref(pm, nw, :gen_ne, i), "z_gen_ne_start", 1.0)
+        )
+    else
+        z_gen_ne = var(pm, nw)[:z_gen_ne] = JuMP.@variable(pm.model,
+            [i in ids(pm, nw, :gen_ne)], base_name="$(nw)_z_gen_ne",
+            lower_bound = 0,
+            upper_bound = 1,
+            start = comp_start_value(ref(pm, nw, :gen_ne, i), "z_gen_ne_start", 1.0)
+        )
+    end
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen_ne, :gen_ne_status, ids(pm, nw, :gen_ne), z_gen_ne) 
+end
+
 ""
 function variable_mc_generator_power_real(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     connections = Dict(i => gen["connections"] for (i,gen) in ref(pm, nw, :gen))
@@ -814,6 +839,34 @@ function variable_mc_generator_power_real(pm::AbstractUnbalancedPowerModel; nw::
     var(pm, nw)[:pg_bus] = Dict{Int, Any}()
 
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :pg, ids(pm, nw, :gen), pg)
+end
+
+function variable_mc_generator_power_real_ne(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    connections = Dict(i => gen_ne["connections"] for (i,gen_ne) in ref(pm, nw, :gen_ne))
+    pg_ne = var(pm, nw)[:pg_ne] = Dict(i => JuMP.@variable(pm.model,
+            [c in connections[i]], base_name="$(nw)_pg_ne_$(i)",
+            start = comp_start_value(ref(pm, nw, :gen_ne, i), ["pg_start", "pg"], c, 0.0)
+        ) for i in ids(pm, nw, :gen_ne)
+    )
+
+    # if bounded
+    #     for (i,gen_ne) in ref(pm, nw, :gen_ne)
+    #         if haskey(gen_ne, "pmin")
+    #             for (idx,c) in enumerate(connections[i])
+    #                 set_lower_bound(pg_ne[i][c], gen_ne["pmin"][idx])
+    #             end
+    #         end
+    #         if haskey(gen_ne, "pmax")
+    #             for (idx,c) in enumerate(connections[i])
+    #                 set_upper_bound(pg_ne[i][c], gen_ne["pmax"][idx])
+    #             end
+    #         end
+    #     end
+    # end
+
+    var(pm, nw)[:pg_ne_bus] = Dict{Int, Any}()
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen_ne, :pg_ne, ids(pm, nw, :gen_ne), pg_ne)
 end
 
 
@@ -844,6 +897,35 @@ function variable_mc_generator_power_imaginary(pm::AbstractUnbalancedPowerModel;
     var(pm, nw)[:qg_bus] = Dict{Int, Any}()
 
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :qg, ids(pm, nw, :gen), qg)
+end
+
+""
+function variable_mc_generator_power_imaginary_ne(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    connections = Dict(i => gen_ne["connections"] for (i,gen_ne) in ref(pm, nw, :gen_ne))
+    qg_ne = var(pm, nw)[:qg_ne] = Dict(i => JuMP.@variable(pm.model,
+            [c in connections[i]], base_name="$(nw)_qg_ne_$(i)",
+            start = comp_start_value(ref(pm, nw, :gen_ne, i), ["qg_start", "qg"], c, 0.0)
+        ) for i in ids(pm, nw, :gen_ne)
+    )
+
+    # if bounded
+    #     for (i, gen_ne) in ref(pm, nw, :gen_ne)
+    #         if haskey(gen_ne, "qmin")
+    #             for (idx,c) in enumerate(connections[i])
+    #                 set_lower_bound(qg_ne[i][c], gen_ne["qmin"][idx])
+    #             end
+    #         end
+    #         if haskey(gen_ne, "qmax")
+    #             for (idx,c) in enumerate(connections[i])
+    #                 set_upper_bound(qg_ne[i][c], gen_ne["qmax"][idx])
+    #             end
+    #         end
+    #     end
+    # end
+
+    var(pm, nw)[:qg_ne_bus] = Dict{Int, Any}()
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen_ne, :qg_ne, ids(pm, nw, :gen_ne), qg_ne)
 end
 
 ### generator power on/off variables

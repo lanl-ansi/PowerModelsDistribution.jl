@@ -848,7 +848,7 @@ function _map_conductor_ids!(data_math::Dict{String,<:Any})
         end
     end
 
-    for type in ["load", "shunt", "gen", "storage", "storage_ne"]
+    for type in ["load", "shunt", "storage", "storage_ne", "gen"]
         if haskey(data_math, type)
             for (_,obj) in data_math[type]
                 obj["connections"] = Vector{Int}([cnd_map[c] for c in obj["connections"]])

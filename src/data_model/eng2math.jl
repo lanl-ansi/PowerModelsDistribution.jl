@@ -8,6 +8,7 @@ const _1to1_maps = Dict{String,Vector{String}}(
     "load" => ["model", "configuration", "connections", "dispatchable", "status", "dss"],
     "generator" => ["configuration", "connections", "dss"],
     "solar" => ["configuration", "connections", "dss"],
+    "solar_ne" => ["configuration", "connections", "dss"],
     "storage" => ["status", "energy", "configuration", "connections", "dss"],
     "storage_ne" => ["status", "energy", "configuration", "connections", "dss"],
     "voltage_source" => ["configuration", "connections", "dss"],
@@ -15,7 +16,7 @@ const _1to1_maps = Dict{String,Vector{String}}(
 
 "list of nodal type elements in the engineering model"
 const _eng_node_elements = String[
-    "load", "shunt", "generator", "solar", "storage", "storage_ne", "voltage_source"
+    "load", "shunt", "generator", "solar", "solar_ne", "storage", "storage_ne", "voltage_source"
 ]
 
 "list of edge type elements in the engineering model"
@@ -30,7 +31,7 @@ const pmd_eng_asset_types = String[
 
 "list of nodal type elements in the engineering model"
 const _math_node_elements = String[
-    "load", "shunt", "gen", "storage", "storage_ne"
+    "load", "shunt", "gen", "storage", "storage_ne", "gen_ne"
 ]
 
 "list of edge type elements in the engineering model"
@@ -797,6 +798,54 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
             "from" => name,
             "to" => "gen.$(math_obj["index"])",
             "unmap_function" => "_map_math2eng_solar!",
+        ))
+    end
+end
+
+"converts engineering solar components into mathematical generators"
+function _map_eng2math_solar_ne!(data_math::Dict{String,<:Any}, data_eng::Dict{String,<:Any}; pass_props::Vector{String}=String[])
+    for (name, eng_obj) in get(data_eng, "solar_ne", Dict{Any,Dict{String,Any}}())
+        math_obj = _init_math_obj("solar_ne", name, eng_obj, length(data_math["gen_ne"])+1; pass_props=pass_props)
+
+        connections = eng_obj["connections"]
+
+        math_obj["gen_ne_bus"] = data_math["bus_lookup"][eng_obj["bus"]]
+        math_obj["gen_ne_status"] = status = Int(eng_obj["status"])
+        math_obj["fixed_cost"] = eng_obj["fixed_cost"]
+
+        math_obj["control_mode"] = control_mode = Int(get(eng_obj, "control_mode", FREQUENCYDROOP))
+        bus_type = data_math["bus"]["$(math_obj["gen_ne_bus"])"]["bus_type"]
+        data_math["bus"]["$(math_obj["gen_ne_bus"])"]["bus_type"] = _compute_bus_type(bus_type, status, control_mode)
+        if control_mode == Int(ISOCHRONOUS) && status == 1
+            data_math["bus"]["$(math_obj["gen_ne_bus"])"]["vm"] = eng_obj["vg"]
+            data_math["bus"]["$(math_obj["gen_ne_bus"])"]["vmax"] = eng_obj["vg"]
+            data_math["bus"]["$(math_obj["gen_ne_bus"])"]["vmin"] = eng_obj["vg"]
+            data_math["bus"]["$(math_obj["gen_ne_bus"])"]["va"] = [0.0, -120, 120, zeros(length(data_math["bus"]["$(math_obj["gen_ne_bus"])"]) - 3)...][data_math["bus"]["$(math_obj["gen_ne_bus"])"]["terminals"]]
+            data_math["bus"]["$(math_obj["gen_ne_bus"])"]["bus_type"] = 3
+        end
+
+        for (fr_k, to_k) in [("vg", "vg")]
+            if haskey(eng_obj, fr_k)
+                math_obj[to_k] = eng_obj[fr_k]
+            end
+        end
+
+        N = _infer_int_dim_unit(eng_obj, false)
+        for (fr_k, to_k, def) in [("pg_lb", "pmin", -Inf), ("pg_ub", "pmax", Inf), ("qg_lb", "qmin", -Inf), ("qg_ub", "qmax", Inf)]
+            math_obj[to_k] = haskey(eng_obj, fr_k) ? eng_obj[fr_k] : fill(def, N)
+        end
+
+        math_obj["pg"] = get(eng_obj, "pg", fill(0.0, N))
+        math_obj["qg"] = get(eng_obj, "qg", fill(0.0, N))
+
+        _add_gen_cost_model!(math_obj, eng_obj)
+
+        data_math["gen_ne"]["$(math_obj["index"])"] = math_obj
+
+        push!(data_math["map"], Dict{String,Any}(
+            "from" => name,
+            "to" => "gen_ne.$(math_obj["index"])",
+            "unmap_function" => "_map_math2eng_solar_ne!",
         ))
     end
 end

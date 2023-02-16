@@ -173,6 +173,10 @@ function objective_ne(pm::AbstractUnbalancedPowerModel; report::Bool=true)
         sum(
             sum( storage_ne["fixed_cost"] * var(pm, n, :z_expand_ne, i)
             for (i, storage_ne) in nw_ref[:storage_ne])
+        for (n, nw_ref) in nws(pm)) +
+        sum(
+            sum( gen_ne["fixed_cost"] * var(pm, n, :z_gen_ne, i)
+            for (i, gen_ne) in nw_ref[:gen_ne])
         for (n, nw_ref) in nws(pm))
     )
 end

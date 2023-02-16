@@ -1,26 +1,53 @@
 {
-    "storage_ne":{
-        "s_ne1":{
-            "sm_ub": 5.0,
-            "qex":  0.0,
-            "source_id": "storage.s_ne1" , 
-            "pex":  0.0, 
-            "connections": [1, 2, 3, 4], 
-            "charge_efficiency":  100.0,
-            "discharge_ub":  5.0, 
-            "energy": 5.0, 
-            "xs": 0.0, 
-            "bus": "primary",
-            "charge_ub":  5.0,
-            "configuration": "wye", 
-            "energy_ub":  5.0, 
-            "rs":  0.0,
-            "ps":  -5.0, 
-            "qs":  -0.0, 
-            "status":  "enabled", 
-            "discharge_efficiency": 100.0, 
-            "qs_ub":  5.0,
-            "qs_lb": -5.0 
+    "storage_ne": {
+        "s_ne1": {
+            "connections": [
+                1,
+                2,
+                3,
+                4
+            ],
+            "energy": 1.0,
+            "xs": 0.0,
+            "fixed_cost": 100.0,
+            "bus": "loadbus",
+            "charge_ub": 0.1,
+            "configuration": 0,
+            "energy_ub": 1.75,
+            "qs": -0.0,
+            "status": 1,
+            "qex": 0.0,
+            "sm_ub": 0.5,
+            "source_id": "storage.s_ne1",
+            "qs_lb": -0.1,
+            "pex": 0.0,
+            "charge_efficiency": 98.0,
+            "discharge_ub": 0.1,
+            "ps": -0.1,
+            "rs": 0.0,
+            "discharge_efficiency": 96.0,
+            "qs_ub": 0.1
+        }
+    },
+    
+    "solar_ne": {
+        "pv1": {
+            "connections": [
+                1,
+                2,
+                3
+            ],
+            "bus": "loadbus",
+            "configuration": 0,
+            "pg_lb": [0.00, 0.00, 0.00],
+            "pg_ub": [0.00, 0.00, 0.00],
+            "qg_lb": [0.00, 0.00, 0.00],
+            "qg_ub": [0.00, 0.00, 0.00],
+            "pg": [0.0, 0.0, 0.0],
+            "qg": [0.0, 0.0, 0.0],
+            "status": 1,
+            "time_series": [],
+            "fixed_cost": 100
         }
     }
 }

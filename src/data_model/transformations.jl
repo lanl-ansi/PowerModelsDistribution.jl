@@ -460,6 +460,17 @@ function _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{V
             end
         end
 
+        if haskey(data_eng, "solar_ne")
+            for (_,eng_obj) in data_eng["solar_ne"]
+                if eng_obj["configuration"]==WYE
+                    @assert eng_obj["connections"][end] == kr_neutral "for wye-connected solar, to kron reduce the connections list should end with a neutral"
+
+                    filter = eng_obj["connections"] .!= kr_neutral
+                    _apply_filter!(eng_obj, ["connections"], filter)
+                end
+            end
+        end
+
         if haskey(data_eng, "storage")
             for (_,eng_obj) in data_eng["storage"]
                 filter = eng_obj["connections"] .!= kr_neutral
@@ -629,6 +640,18 @@ function _apply_phase_projection!(data_eng::Dict{String,<:Any})
         end
     end
 
+    if haskey(data_eng, "solar_ne")
+        for (_,eng_obj) in data_eng["solar_ne"]
+            if eng_obj["configuration"]==WYE
+                _pad_properties!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
+            else
+                _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
+            end
+
+            _pad_connections!(eng_obj, "connections", all_conductors)
+        end
+    end
+
     if haskey(data_eng, "storage")
         for (_,eng_obj) in data_eng["storage"]
             _pad_properties!(eng_obj, ["cm_ub", "qs_lb", "qs_ub", "rs", "xs", "ps", "qs"], eng_obj["connections"], all_conductors)
@@ -729,6 +752,16 @@ function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
 
     if haskey(data_eng, "solar")
         for (_,eng_obj) in data_eng["solar"]
+            if eng_obj["configuration"]==DELTA
+                _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
+                _pad_connections!(eng_obj, "connections", all_conductors)
+                bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? _pad_connections!(bus_terminals, eng_obj["bus"], eng_obj["connections"]) : eng_obj["connections"]
+            end
+        end
+    end
+
+    if haskey(data_eng, "solar_ne")
+        for (_,eng_obj) in data_eng["solar_ne"]
             if eng_obj["configuration"]==DELTA
                 _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
                 _pad_connections!(eng_obj, "connections", all_conductors)

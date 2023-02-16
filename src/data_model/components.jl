@@ -928,6 +928,7 @@ add_generator!(data_eng::Dict{String,<:Any}, id::String, bus::String, connection
 add_storage!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "storage", id, create_storage(bus, connections; kwargs...))
 add_storage_ne!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "storage_ne", id, create_storage(bus, connections; kwargs...))
 add_solar!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "solar", id, create_solar(bus, connections; kwargs...))
+add_solar_ne!(data_eng::Dict{String,<:Any}, id::String, bus::String, connections::Vector{Int}; kwargs...) = add_object!(data_eng, "solar_ne", id, create_solar(bus, connections; kwargs...))
 
 @doc "adds a load to provided ENGINEERING model, see [`create_load`](@ref create_load)" add_load!
 @doc "adds a shunt to provided ENGINEERING model, see [`create_shunt`](@ref create_shunt)" add_shunt!
