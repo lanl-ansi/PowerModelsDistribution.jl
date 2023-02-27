@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Fixed bug in dss parser that did not recognize `//` as token for inline comments
 
 ## v0.14.7
 

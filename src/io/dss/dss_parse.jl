@@ -787,7 +787,7 @@ end
 
 "Strips comments, defined by '!' from the ends of lines"
 function _strip_comments(line::AbstractString)::String
-    return strip(split(line, r"\s*!")[1], ['\r', '\n'])
+    return strip(split(line, r"(\s*(?:\/\/|!))")[1], ['\r', '\n'])
 end
 
 
