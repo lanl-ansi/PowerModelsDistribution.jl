@@ -41,65 +41,7 @@ function conductor_correction!(data_eng)
             filter!(e->e≠neutral_idx, solar["connections"])
         end
     end
-    
-    # for (l, line) in nw["line"]
-    #     if length(line["t_connections"]) == 4
-    #         line["t_connections"] = line["t_connections"][1:3]
-    #     end
-    #     if length(line["f_connections"]) == 4
-    #         line["f_connections"] = line["f_connections"][1:3]
-    #     end
-    # end
-
-    # for (lc, linecode) in nw["linecode"]
-    #     if size(linecode["rs"])[1] = 4
-    #         for (arg, mat) in linecode
-    #             if arg !="cm_ub"
-    #                 linecode[arg] = mat[1:3,1:3]
-    #             else
-    #                 linecode[arg] = mat[1:3]
-    #             end
-    #         end
-    #     end 
-    # end
 end
-
-
-function vsource_correction!(data_eng; explicit_neutral=true)
-    if explicit_neutral
-        if haskey(data_eng, "multinetwork")
-            for (n,nw) in data_eng["nw"]
-                nw["voltage_source"]["source"]["rs"][4,4] = nw["voltage_source"]["source"]["rs"][1,1]
-                nw["voltage_source"]["source"]["rs"][1:3,4] .= nw["voltage_source"]["source"]["rs"][1,2]
-                nw["voltage_source"]["source"]["rs"][4,1:3] .= nw["voltage_source"]["source"]["rs"][1,2]
-                nw["voltage_source"]["source"]["xs"][4,4] = nw["voltage_source"]["source"]["xs"][1,1]
-                nw["voltage_source"]["source"]["xs"][1:3,4] .= nw["voltage_source"]["source"]["xs"][1,2]
-                nw["voltage_source"]["source"]["xs"][4,1:3] .= nw["voltage_source"]["source"]["xs"][1,2]
-            end
-        else
-            data_eng["voltage_source"]["source"]["rs"][4,4] = data_eng["voltage_source"]["source"]["rs"][1,1]
-            data_eng["voltage_source"]["source"]["rs"][1:3,4] .= data_eng["voltage_source"]["source"]["rs"][1,2]
-            data_eng["voltage_source"]["source"]["rs"][4,1:3] .= data_eng["voltage_source"]["source"]["rs"][1,2]
-            data_eng["voltage_source"]["source"]["xs"][4,4] = data_eng["voltage_source"]["source"]["xs"][1,1]
-            data_eng["voltage_source"]["source"]["xs"][1:3,4] .= data_eng["voltage_source"]["source"]["xs"][1,2]
-            data_eng["voltage_source"]["source"]["xs"][4,1:3] .= data_eng["voltage_source"]["source"]["xs"][1,2]        
-        end
-    else
-        if haskey(data_eng, "multinetwork")
-            for (n,nw) in data_eng["nw"]
-                nw["voltage_source"]["source"]["rs"] = nw["voltage_source"]["source"]["rs"][1:3,1:3]
-                nw["voltage_source"]["source"]["xs"] = nw["voltage_source"]["source"]["xs"][1:3,1:3]
-                nw["voltage_source"]["source"]["connections"] = nw["voltage_source"]["source"]["connections"][1:3]
-            end
-        else
-            data_eng["voltage_source"]["source"]["rs"] = data_eng["voltage_source"]["source"]["rs"][1:3,1:3]
-            data_eng["voltage_source"]["source"]["xs"] = data_eng["voltage_source"]["source"]["xs"][1:3,1:3]
-            data_eng["voltage_source"]["source"]["connections"] = data_eng["voltage_source"]["source"]["connections"][1:3]
-        end
-    end
-    return nothing
-end
-
 
 
 
@@ -154,7 +96,6 @@ end
 
 
 function update_math_model_3wire!(math)
-    
     math["conductor_ids"] = math["conductor_ids"][1:3]
 
     for (i,bus) in math["bus"]
@@ -164,17 +105,22 @@ function update_math_model_3wire!(math)
         end
 
         if explicit_neutral
+            idx = findall(x->x==neutral_idx, bus["terminals"])
             if haskey(bus, "terminals")
-                bus["terminals"] = bus["terminals"][1:end-1]
+                deleteat!(bus["terminals"], bus["terminals"].==bus["terminals"][idx])
+                # bus["terminals"] = bus["terminals"][1:end-1]
             end
             if haskey(bus, "grounded")
-                bus["grounded"] = bus["grounded"][1:end-1]
+                deleteat!(bus["grounded"], bus["grounded"].==bus["grounded"][idx])
+                # bus["grounded"] = bus["grounded"][1:end-1]
             end
             if haskey(bus, "vmax")
-                bus["vmax"] = bus["vmax"][1:end-1]
+                deleteat!(bus["vmax"], bus["vmax"].==bus["vmax"][idx])
+                # bus["vmax"] = bus["vmax"][1:end-1]
             end
             if haskey(bus, "vmin")
-                bus["vmin"] = bus["vmin"][1:end-1]
+                deleteat!(bus["vmin"], bus["vmin"].==bus["vmin"][idx])
+                # bus["vmin"] = bus["vmin"][1:end-1]
             end
             bus["vmin"] = 0.9 * ones(length(bus["terminals"]))
             bus["vmax"] = 1.1 * ones(length(bus["terminals"]))
@@ -185,11 +131,13 @@ function update_math_model_3wire!(math)
         explicit_neutral = false
         if haskey(branch, "t_connections") && neutral_idx ∈ branch["t_connections"]
             explicit_neutral = true
-            branch["t_connections"] = branch["t_connections"][1:end-1]
+            deleteat!(branch["t_connections"], branch["t_connections"] .== neutral_idx)
+            # branch["t_connections"] = branch["t_connections"][1:end-1]
         end
         if haskey(branch, "f_connections") && neutral_idx ∈ branch["f_connections"]
             explicit_neutral = true
-            branch["f_connections"] = branch["f_connections"][1:end-1]
+            deleteat!(branch["f_connections"], branch["f_connections"] .== neutral_idx)
+            # branch["f_connections"] = branch["f_connections"][1:end-1]
         end
         if haskey(branch, "br_r") && explicit_neutral
             branch["br_r"] = branch["br_r"][1:end-1,1:end-1]
@@ -216,10 +164,20 @@ function update_math_model_3wire!(math)
 
     for (t,transformer) in math["transformer"]
         if haskey(transformer, "t_connections") && neutral_idx ∈ transformer["t_connections"]
-            transformer["t_connections"] = transformer["t_connections"][1:end-1]
+            if transformer["t_connections"][end] !== neutral_idx
+                transformer["polarity"] = -1
+                deleteat!(transformer["t_connections"], transformer["t_connections"] .== neutral_idx)
+            else
+                transformer["t_connections"] = transformer["t_connections"][1:end-1]
+            end
         end
         if haskey(transformer, "f_connections") && neutral_idx ∈ transformer["f_connections"]
-            transformer["f_connections"] = transformer["f_connections"][1:end-1]
+            if transformer["f_connections"][end] !== neutral_idx
+                transformer["polarity"] = -1
+                deleteat!(transformer["f_connections"], transformer["f_connections"] .== neutral_idx)
+            else
+                transformer["f_connections"] = transformer["f_connections"][1:end-1]
+            end
         end
     end
 
@@ -269,6 +227,8 @@ filter!(e->e≠"test_load_3ph_wye_exp", cases)
 filter!(e->e≠"test_load_3ph_delta_exp", cases)
 filter!(e->e≠"test_trans_dy_3w", cases)
 filter!(e->e≠"test_trans_yy_3w", cases)
+filter!(e->e≠"ut_trans_3w_dyy_1", cases)
+filter!(e->e≠"ut_trans_3w_yyy_1", cases)
 
 @testset "en pf native opendss validation four wire" begin
 
@@ -278,7 +238,6 @@ filter!(e->e≠"test_trans_yy_3w", cases)
             case_path = "$data_dir/$case.dss"
 
             data_eng = parse_file(case_path, transformations=[transform_loops!])
-            vsource_correction!(data_eng; explicit_neutral=true)
 
             data_math = transform_data_model(data_eng;kron_reduce=false)
 
@@ -304,7 +263,6 @@ filter!(e->e≠"test_trans_yy_3w", cases)
         case_path = "$data_dir/$case.dss"
 
         data_eng = parse_file(case_path, transformations=[transform_loops!])
-        vsource_correction!(data_eng; explicit_neutral=true)
 
         data_math = transform_data_model(data_eng;kron_reduce=false)
 
@@ -335,7 +293,7 @@ filter!(e->e≠"test_trans_yy_3w", cases)
 end
 
 
-cases = ["test_trans_dy_3w", "test_trans_yy_3w"]
+cases = ["test_trans_dy_3w", "test_trans_yy_3w", "ut_trans_3w_dyy_1", "ut_trans_3w_yyy_1"]
 
 @testset "en pf native opendss validation three wire" begin
 
@@ -346,7 +304,6 @@ cases = ["test_trans_dy_3w", "test_trans_yy_3w"]
             data_eng = parse_file(case_path, transformations=[transform_loops!])
             data_eng["is_kron_reduced"] = true
             data_eng["settings"]["sbase_default"] = 1
-            vsource_correction!(data_eng; explicit_neutral=false)
             
             data_math = transform_data_model(data_eng;kron_reduce=false, phase_project=false)
             sourcebus_voltage_vector_correction!(data_math, explicit_neutral=false)
@@ -373,7 +330,6 @@ end
     case_path = "$data_dir/test_load_3ph_wye_cp.dss"
 
     data_eng = parse_file(case_path, transformations=[transform_loops!])
-    vsource_correction!(data_eng; explicit_neutral=true)
 
     data_math = transform_data_model(data_eng;kron_reduce=false)
 
@@ -387,7 +343,6 @@ end
     case_path = "$data_dir/test_line_6w.dss"
 
     data_eng = parse_file(case_path, transformations=[transform_loops!])
-    vsource_correction!(data_eng; explicit_neutral=true)
 
     data_math = transform_data_model(data_eng;kron_reduce=false)
 
@@ -406,7 +361,6 @@ solution_dir = "data/opendss_solutions"
     case = "case3_balanced"
     
     eng_ts = make_multinetwork(case3_balanced)
-    vsource_correction!(eng_ts; explicit_neutral=true)
 
     ## This section is to validate that the new feature does not break multinetwork 
     result_mn = solve_mn_mc_opf(eng_ts, ACPUPowerModel, ipopt_solver)
@@ -439,7 +393,6 @@ end
 # infer cases from files defined in data dir
 cases = [x[1:end-5] for x in readdir(solution_dir) if endswith(x, ".json")]
 filter!(e->e≠"case3_unbalanced_delta_loads", cases)
-# filter!(e->e≠["ut_trans_2w_dy_lag" "ut_trans_2w_dy_lead_small_series_impedance" "ut_trans_2w_dy_lead" "ut_trans_2w_yy_oltc" "ut_trans_2w_yy" "ut_trans_3w_dyy_1"], cases)
 
 @testset "en pf native opendss validation three wire" begin
 

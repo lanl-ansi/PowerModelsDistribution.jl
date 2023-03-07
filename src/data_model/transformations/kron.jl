@@ -1,5 +1,5 @@
 """
-apply_kron_reduction!(data::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
+    apply_kron_reduction!(data::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
 
 Applies a Kron Reduction to the network, reducing out the `kr_neutral`, leaving only the `kr_phases`
 """
@@ -11,127 +11,127 @@ end
 
 
 """
-_apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
+    _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
 
 Applies a Kron Reduction to the network, reducing out the `kr_neutral`, leaving only the `kr_phases`
 """
 function _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
-if !get(data_eng, "is_kron_reduced", false)
-    if haskey(data_eng, "bus")
-        for (id,eng_obj) in data_eng["bus"]
-            filter = eng_obj["terminals"] .!= kr_neutral
-            terminals_kr = eng_obj["terminals"][filter]
+    if !get(data_eng, "is_kron_reduced", false)
+        if haskey(data_eng, "bus")
+            for (id,eng_obj) in data_eng["bus"]
+                filter = eng_obj["terminals"] .!= kr_neutral
+                terminals_kr = eng_obj["terminals"][filter]
 
-            @assert all(t in kr_phases for t in terminals_kr) "bus $id has terminals $(eng_obj["terminals"]), outside of $kr_phases, cannot be kron reduced"
+                @assert all(t in kr_phases for t in terminals_kr) "bus $id has terminals $(eng_obj["terminals"]), outside of $kr_phases, cannot be kron reduced"
 
-            _apply_filter!(eng_obj, ["vm", "va", "vm_lb", "vm_ub", "vm_start", "va_start"], filter)
-            eng_obj["terminals"] = terminals_kr
+                _apply_filter!(eng_obj, ["vm", "va", "vm_lb", "vm_ub", "vm_start", "va_start"], filter)
+                eng_obj["terminals"] = terminals_kr
 
-            gr_filter = eng_obj["grounded"] .!= kr_neutral
-            _apply_filter!(eng_obj, ["grounded", "rg", "xg"], gr_filter)
+                gr_filter = eng_obj["grounded"] .!= kr_neutral
+                _apply_filter!(eng_obj, ["grounded", "rg", "xg"], gr_filter)
+            end
         end
-    end
 
-    if haskey(data_eng, "line")
-        for (_,eng_obj) in data_eng["line"]
-            @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
-
-            _apply_linecode!(eng_obj, data_eng)
-
-            filter = _kron_reduce_branch!(eng_obj, ["rs", "xs"], ["g_fr", "b_fr", "g_to", "b_to"], eng_obj["f_connections"], kr_neutral)
-            _apply_filter!(eng_obj, ["vad_lb", "vad_ub", "cm_ub", "sm_ub", "f_connections", "t_connections"], filter)
-        end
-    end
-
-    if haskey(data_eng, "transformer")
-        for (id, eng_obj) in data_eng["transformer"]
-            _apply_xfmrcode!(eng_obj, data_eng)
-
-            if haskey(eng_obj, "f_connections")
+        if haskey(data_eng, "line")
+            for (_,eng_obj) in data_eng["line"]
                 @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
 
-                filter = eng_obj["f_connections"] .!= kr_neutral
-                _apply_filter!(eng_obj, ["f_connections", "t_connections"], filter)
-            else
-                for (w, connections) in enumerate(eng_obj["connections"])
-                    filter = connections .!= kr_neutral
-                    _apply_filter!(eng_obj, ["connections"], w, filter)
+                _apply_linecode!(eng_obj, data_eng)
+
+                filter = _kron_reduce_branch!(eng_obj, ["rs", "xs"], ["g_fr", "b_fr", "g_to", "b_to"], eng_obj["f_connections"], kr_neutral)
+                _apply_filter!(eng_obj, ["vad_lb", "vad_ub", "cm_ub", "sm_ub", "f_connections", "t_connections"], filter)
+            end
+        end
+
+        if haskey(data_eng, "transformer")
+            for (id, eng_obj) in data_eng["transformer"]
+                _apply_xfmrcode!(eng_obj, data_eng)
+
+                if haskey(eng_obj, "f_connections")
+                    @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
+
+                    filter = eng_obj["f_connections"] .!= kr_neutral
+                    _apply_filter!(eng_obj, ["f_connections", "t_connections"], filter)
+                else
+                    for (w, connections) in enumerate(eng_obj["connections"])
+                        filter = connections .!= kr_neutral
+                        _apply_filter!(eng_obj, ["connections"], w, filter)
+                    end
                 end
             end
         end
-    end
 
-    if haskey(data_eng, "switch")
-        for (_,eng_obj) in data_eng["switch"]
-            @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
+        if haskey(data_eng, "switch")
+            for (_,eng_obj) in data_eng["switch"]
+                @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
 
-            _apply_linecode!(eng_obj, data_eng)
+                _apply_linecode!(eng_obj, data_eng)
 
-            filter = _kron_reduce_branch!(eng_obj, Vector{String}([k for k in ["rs", "xs"] if haskey(eng_obj, k)]), String[], eng_obj["f_connections"], kr_neutral)
-            _apply_filter!(eng_obj, ["vad_lb", "vad_ub", "cm_ub", "sm_ub", "f_connections", "t_connections"], filter)
+                filter = _kron_reduce_branch!(eng_obj, Vector{String}([k for k in ["rs", "xs"] if haskey(eng_obj, k)]), String[], eng_obj["f_connections"], kr_neutral)
+                _apply_filter!(eng_obj, ["vad_lb", "vad_ub", "cm_ub", "sm_ub", "f_connections", "t_connections"], filter)
+            end
         end
-    end
 
-    if haskey(data_eng, "shunt")
-        for (_,eng_obj) in data_eng["shunt"]
-            filter = _kron_reduce_branch!(eng_obj, String[], ["gs", "bs"], eng_obj["connections"], kr_neutral)
-            _apply_filter!(eng_obj, ["connections"], filter)
+        if haskey(data_eng, "shunt")
+            for (_,eng_obj) in data_eng["shunt"]
+                filter = _kron_reduce_branch!(eng_obj, String[], ["gs", "bs"], eng_obj["connections"], kr_neutral)
+                _apply_filter!(eng_obj, ["connections"], filter)
+            end
         end
-    end
 
-    if haskey(data_eng, "load")
-        for (_,eng_obj) in data_eng["load"]
-            if eng_obj["configuration"]==WYE
-                @assert eng_obj["connections"][end] == kr_neutral "for wye-connected loads, to kron reduce the connections list should end with a neutral"
+        if haskey(data_eng, "load")
+            for (_,eng_obj) in data_eng["load"]
+                if eng_obj["configuration"]==WYE
+                    @assert eng_obj["connections"][end] == kr_neutral "for wye-connected loads, to kron reduce the connections list should end with a neutral"
 
+                    filter = eng_obj["connections"] .!= kr_neutral
+                    _apply_filter!(eng_obj, ["connections"], filter)
+                end
+            end
+        end
+
+        if haskey(data_eng, "generator")
+            for (_,eng_obj) in data_eng["generator"]
+                if eng_obj["configuration"]==WYE
+                    @assert eng_obj["connections"][end] == kr_neutral "for wye-connected generators, to kron reduce the connections list should end with a neutral"
+
+                    filter = eng_obj["connections"] .!= kr_neutral
+                    _apply_filter!(eng_obj, ["connections"], filter)
+                end
+            end
+        end
+
+        if haskey(data_eng, "solar")
+            for (_,eng_obj) in data_eng["solar"]
+                if eng_obj["configuration"]==WYE
+                    @assert eng_obj["connections"][end] == kr_neutral "for wye-connected solar, to kron reduce the connections list should end with a neutral"
+
+                    filter = eng_obj["connections"] .!= kr_neutral
+                    _apply_filter!(eng_obj, ["connections"], filter)
+                end
+            end
+        end
+
+        if haskey(data_eng, "storage")
+            for (_,eng_obj) in data_eng["storage"]
                 filter = eng_obj["connections"] .!= kr_neutral
                 _apply_filter!(eng_obj, ["connections"], filter)
             end
         end
-    end
 
-    if haskey(data_eng, "generator")
-        for (_,eng_obj) in data_eng["generator"]
-            if eng_obj["configuration"]==WYE
-                @assert eng_obj["connections"][end] == kr_neutral "for wye-connected generators, to kron reduce the connections list should end with a neutral"
-
+        if haskey(data_eng, "voltage_source")
+            for (_,eng_obj) in data_eng["voltage_source"]
                 filter = eng_obj["connections"] .!= kr_neutral
-                _apply_filter!(eng_obj, ["connections"], filter)
+                _apply_filter!(eng_obj, ["vm", "va", "vm_lb", "vm_ub", "rs", "xs", "connections"], filter)
             end
         end
+
+        delete!(data_eng, "linecode")  # kron reduction moves linecode properties directly to lines
+        delete!(data_eng, "xfmrcode")  # kron reduction moves xfmrcode properties directly to transformers
+
+        find_conductor_ids!(data_eng)
+        data_eng["is_kron_reduced"] = true
     end
-
-    if haskey(data_eng, "solar")
-        for (_,eng_obj) in data_eng["solar"]
-            if eng_obj["configuration"]==WYE
-                @assert eng_obj["connections"][end] == kr_neutral "for wye-connected solar, to kron reduce the connections list should end with a neutral"
-
-                filter = eng_obj["connections"] .!= kr_neutral
-                _apply_filter!(eng_obj, ["connections"], filter)
-            end
-        end
-    end
-
-    if haskey(data_eng, "storage")
-        for (_,eng_obj) in data_eng["storage"]
-            filter = eng_obj["connections"] .!= kr_neutral
-            _apply_filter!(eng_obj, ["connections"], filter)
-        end
-    end
-
-    if haskey(data_eng, "voltage_source")
-        for (_,eng_obj) in data_eng["voltage_source"]
-            filter = eng_obj["connections"] .!= kr_neutral
-            _apply_filter!(eng_obj, ["vm", "va", "vm_lb", "vm_ub", "rs", "xs", "connections"], filter)
-        end
-    end
-
-    delete!(data_eng, "linecode")  # kron reduction moves linecode properties directly to lines
-    delete!(data_eng, "xfmrcode")  # kron reduction moves xfmrcode properties directly to transformers
-
-    find_conductor_ids!(data_eng)
-    data_eng["is_kron_reduced"] = true
-end
 end
 
 
@@ -284,4 +284,3 @@ function _kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})::Dict{Strin
 
     return data_eng
 end
-

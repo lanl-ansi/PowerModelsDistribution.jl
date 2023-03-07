@@ -63,42 +63,6 @@ function compare_sol_dss_pmd(sol_dss::Dict{String,Any}, sol_pmd::Dict{String,Any
 end
 
 
-function vsource_correction!(data_eng; explicit_neutral=true)
-    if explicit_neutral
-        if haskey(data_eng, "multinetwork")
-            for (n,nw) in data_eng["nw"]
-                nw["voltage_source"]["source"]["rs"][4,4] = nw["voltage_source"]["source"]["rs"][1,1]
-                nw["voltage_source"]["source"]["rs"][1:3,4] .= nw["voltage_source"]["source"]["rs"][1,2]
-                nw["voltage_source"]["source"]["rs"][4,1:3] .= nw["voltage_source"]["source"]["rs"][1,2]
-                nw["voltage_source"]["source"]["xs"][4,4] = nw["voltage_source"]["source"]["xs"][1,1]
-                nw["voltage_source"]["source"]["xs"][1:3,4] .= nw["voltage_source"]["source"]["xs"][1,2]
-                nw["voltage_source"]["source"]["xs"][4,1:3] .= nw["voltage_source"]["source"]["xs"][1,2]
-            end
-        else
-            data_eng["voltage_source"]["source"]["rs"][4,4] = data_eng["voltage_source"]["source"]["rs"][1,1]
-            data_eng["voltage_source"]["source"]["rs"][1:3,4] .= data_eng["voltage_source"]["source"]["rs"][1,2]
-            data_eng["voltage_source"]["source"]["rs"][4,1:3] .= data_eng["voltage_source"]["source"]["rs"][1,2]
-            data_eng["voltage_source"]["source"]["xs"][4,4] = data_eng["voltage_source"]["source"]["xs"][1,1]
-            data_eng["voltage_source"]["source"]["xs"][1:3,4] .= data_eng["voltage_source"]["source"]["xs"][1,2]
-            data_eng["voltage_source"]["source"]["xs"][4,1:3] .= data_eng["voltage_source"]["source"]["xs"][1,2]        
-        end
-    else
-        if haskey(data_eng, "multinetwork")
-            for (n,nw) in data_eng["nw"]
-                nw["voltage_source"]["source"]["rs"] = nw["voltage_source"]["source"]["rs"][1:3,1:3]
-                nw["voltage_source"]["source"]["xs"] = nw["voltage_source"]["source"]["xs"][1:3,1:3]
-                nw["voltage_source"]["source"]["connections"] = nw["voltage_source"]["source"]["connections"][1:3]
-            end
-        else
-            data_eng["voltage_source"]["source"]["rs"] = data_eng["voltage_source"]["source"]["rs"][1:3,1:3]
-            data_eng["voltage_source"]["source"]["xs"] = data_eng["voltage_source"]["source"]["xs"][1:3,1:3]
-            data_eng["voltage_source"]["source"]["connections"] = data_eng["voltage_source"]["source"]["connections"][1:3]
-        end
-    end
-    return nothing
-end
-
-
 function sourcebus_voltage_vector_correction!(data_math::Dict{String, Any}; explicit_neutral=true)
     if haskey(data_math, "multinetwork")
         for (n,nw) in data_math["nw"]
@@ -238,23 +202,15 @@ function update_math_model_3wire!(math)
 
     for (g,gen) in math["gen"]
         if neutral_idx in gen["connections"]
-            idx = findall(x->x==neutral_idx, gen["connections"])
-            deleteat!(gen["connections"], gen["connections"].==gen["connections"][idx])
-            deleteat!(gen["vg"], gen["vg"].==gen["vg"][idx])
-            deleteat!(gen["pg"], gen["pg"].==gen["pg"][idx])
-            deleteat!(gen["qg"], gen["qg"].==gen["qg"][idx])
-            deleteat!(gen["pmax"], gen["pmax"].==gen["pmax"][idx])
-            deleteat!(gen["pmin"], gen["pmin"].==gen["pmin"][idx])
-            deleteat!(gen["qmax"], gen["qmax"].==gen["qmax"][idx])
-            deleteat!(gen["qmin"], gen["qmin"].==gen["qmin"][idx])
-            # gen["connections"] = gen["connections"][1:end-1]
-            # gen["vg"] = gen["vg"][1:end-1]
-            # gen["pg"] = gen["pg"][1:end-1]
-            # gen["qg"] = gen["qg"][1:end-1]
-            # gen["pmax"] = gen["pmax"][1:end-1]
-            # gen["pmin"] = gen["pmin"][1:end-1]
-            # gen["qmax"] = gen["qmax"][1:end-1]
-            # gen["qmin"] = gen["qmin"][1:end-1]
+            # idx = findall(x->x==neutral_idx, gen["connections"])
+            gen["connections"] = gen["connections"][1:end-1]
+            gen["vg"] = gen["vg"][1:end-1]
+            gen["pg"] = gen["pg"][1:end-1]
+            gen["qg"] = gen["qg"][1:end-1]
+            gen["pmax"] = gen["pmax"][1:end-1]
+            gen["pmin"] = gen["pmin"][1:end-1]
+            gen["qmax"] = gen["qmax"][1:end-1]
+            gen["qmin"] = gen["qmin"][1:end-1]
             gen["cost"] = 1000 .* gen["cost"]
         end
     end
@@ -273,17 +229,15 @@ end
 function solve_compute_mc_pf(dss_file, solution_file; explicit_neutral=true, max_iter=100)
     if explicit_neutral
         data_eng = parse_file(dss_file, transformations=[transform_loops!])
-        vsource_correction!(data_eng, explicit_neutral=true)
 
-        data_math = transform_data_model(data_eng;kron_reduce=false)
+        data_math = transform_data_model(data_eng; kron_reduce=false)
         res = compute_mc_pf(data_math; explicit_neutral=true, max_iter=max_iter)
     else
         data_eng = parse_file(dss_file, transformations=[transform_loops!]);
         data_eng["is_kron_reduced"] = true
         data_eng["settings"]["sbase_default"] = 1
-        vsource_correction!(data_eng, explicit_neutral=false)
 
-        data_math = transform_data_model(data_eng;kron_reduce=false, phase_project=false);
+        data_math = transform_data_model(data_eng; kron_reduce=false, phase_project=false);
         sourcebus_voltage_vector_correction!(data_math, explicit_neutral=false);
         update_math_model_3wire!(data_math);
         res = compute_mc_pf(data_math; explicit_neutral=false, max_iter=max_iter)
@@ -320,7 +274,7 @@ data_eng, data_math, res, v_maxerr_pu_g3d = solve_compute_mc_pf("$data_dir/$case
 
 ### 3-phase PV generator - Wye
 case = "test_gen_3ph_wye"
-data_eng, data_math, res, v_maxerr_pu_g3y = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true);
+data_eng, data_math, res, v_maxerr_pu_g3y = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=true)
 
 names_gen = ["test_gen_1ph_delta", "test_gen_1ph_wye", "test_gen_3ph_delta", "test_gen_3ph_wye"]
 v_maxerr_pu_g = [v_maxerr_pu_g1d, v_maxerr_pu_g1y, v_maxerr_pu_g3d, v_maxerr_pu_g3y]
@@ -387,7 +341,7 @@ v_maxerr_pu_s = [v_maxerr_pu_s4w, v_maxerr_pu_s3w, v_maxerr_pu_s1w]
 ## ############## TRANSFORMER ##############
 ### 3wire - 3 winding 1 phase -> wye-wye-wye
 case = "ut_trans_3w_yyy_1"
-data_eng, data_math, res, v_maxerr_pu_t3wyyy = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false);
+data_eng, data_math, res, v_maxerr_pu_t3wyyy = solve_compute_mc_pf("$data_dir/$case.dss", "$solution_dir/$case.json"; explicit_neutral=false)
 
 ### 3wire - 3 winding 3 phase -> delta-wye-wye
 case = "ut_trans_3w_dyy_1"
