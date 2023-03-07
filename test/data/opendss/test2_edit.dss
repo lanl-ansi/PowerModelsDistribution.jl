@@ -1,1 +1,3 @@
 edit transformer.t5 wdg=2 %r=0.76 wdg=1 %r=0.74
+
+storage.s1.bus1 = _b2

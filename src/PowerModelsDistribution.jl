@@ -13,6 +13,8 @@ module PowerModelsDistribution
 
     import InfrastructureModels
 
+    import SpecialFunctions
+
     # Logging Utilities
     import Logging
     import LoggingExtras
@@ -83,6 +85,7 @@ module PowerModelsDistribution
     include("core/relaxation_scheme.jl")
 
     include("io/utils.jl")
+    include("io/dss/line_constants.jl")
     include("io/dss/dss_parse.jl")
     include("io/dss/dss_data_structs.jl")
     include("io/dss/dss_node_structs.jl")

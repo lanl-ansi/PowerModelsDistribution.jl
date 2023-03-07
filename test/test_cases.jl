@@ -12,6 +12,7 @@ case3_balanced_pv = parse_file("../test/data/opendss/case3_balanced_pv.dss")
 case3_unbalanced_1phase_pv = parse_file("../test/data/opendss/case3_unbalanced_1phase-pv.dss")
 case3_blanced_basefreq = parse_file("../test/data/opendss/case3_balanced_basefreq.dss")
 case3_balanced_battery = parse_file("../test/data/opendss/case3_balanced_battery.dss")
+case3_balanced_switch = parse_file("../test/data/opendss/case3_balanced_switch.dss")
 
 # 3-bus unbalanced
 case3_unbalanced = parse_file("../test/data/opendss/case3_unbalanced.dss")
@@ -23,6 +24,7 @@ case3_unbalanced_switch = parse_file("../test/data/opendss/case3_unbalanced_swit
 # 3-bus load models
 case3_lm_1230 = parse_file("../test/data/opendss/case3_lm_1230.dss")
 case3_lm_models = parse_file("../test/data/opendss/case3_lm_models.dss")
+case3_unbalanced_ZIPloads = parse_file("../test/data/opendss/case3_unbalanced_ZIPloads.dss")
 
 # 3-bus delta generators
 case3_delta_gens = parse_file("../test/data/opendss/case3_delta_gens.dss")
@@ -47,6 +49,7 @@ ut_trans_3w_dyy_1 = parse_file("../test/data/opendss/ut_trans_3w_dyy_1.dss")
 ut_trans_3w_dyy_2 = parse_file("../test/data/opendss/ut_trans_3w_dyy_2.dss")
 ut_trans_3w_dyy_3 = parse_file("../test/data/opendss/ut_trans_3w_dyy_3.dss")
 ut_trans_3w_dyy_3_loadloss = parse_file("../test/data/opendss/ut_trans_3w_dyy_3_loadloss.dss")
+trans_3w_center_tap = parse_file("../test/data/opendss/trans_3w_center_tap.dss")
 
 # IEEE13
 IEEE13_RegControl = parse_file("../test/data/opendss/IEEE13_RegControl.dss"; transformations=[remove_line_limits!, remove_transformer_limits!])

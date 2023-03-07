@@ -3,9 +3,40 @@
 ## staged
 
 - Add native power flow solver by using `compute_mc_pf(data_math)`
+- Fixed bug in dss parser that did not recognize `//` as token for inline comments
+
+## v0.14.7
+
+- Added loads/generator models (240V devices) connected between two secondary terminals of center-tapped transformers for SOC formulation
+- Fixed bug with SOC and LinDist3Flow formulations where diagonal entries of matrix variables were defined with type `Vector{JuMP.VariableRef}` (no information about connections) instead of `JuMP.Containers.DenseAxisArray`, leading to errors when single- or two-phase nodes were present in network
+- Fixed bug in `_calc_bus_vm_ll_bounds` where default min `vdmin_eps` was not being used, leading to invalid `Inf` bounds
+
+## v0.14.6
+
+- Fixed voltage_source impedance matrices, which were populating impedances outside of `1:nphases` with zeros instead of the defined mutual and self impedances [#422](https://github.com/lanl-ansi/PowerModelsDistribution.jl/pull/422) [#376](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/376)
+- Added compat for SpecialFunctions
+- Added support for computing line constants from WireData, LineGeometry, LineSpacing, TSData and CNData
+- Added Julia library SpecialFunctions for `besselj0` implementation
+- Changed message that line is "being treated as superconducting" from `@info` to `@debug`
+- Added support for WireData, LineGeometry, LineSpacing, TSData, and CNData dss objects
+- Fixed bug in dss parser where when properties were assigned via `assign_property!`, the `prop_order` was not updated
+- Updated CI workflows to used Nodejs v16 scripts
+- Added UBF matrix power variables for switches [#423](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/423)
+
+## v0.14.5
+
+- Fixed bug in dss parser where properties assigned via `assign_property!` would fail if the object they applied to was not created in the same file [#397](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/397)
+- Fixed bug in `get_defined_buses` to check if `"bus"` property is a `Vector` instead of checking if it is a `String` [#416](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/416)
+- Fixed bug in `_map_eng2math_bus!()` regarding calculation of shunt element susceptance parameter
+- Added SOC transformer relaxations
+- Fixed bugs in center-tap transformer modeling
+- Add wye-connected CapControl for IVR and FOT (polar) formulations
+- Fixed indexing issue for single-phase delta load models in linear formulations (LinDist3Flow, FOTP, FOTR, FBS)
+- Added ZIP load model
 - Updated documentation in `make_multiconductor!` to better indicate its unsupported nature
 - Added automatic detection of multinetwork data to `instantiate_mc_model`
 - Converted `::Float64` types in function signatures to `::Real`
+- Fixed bug in `parse_file` in `.dss` files with character UTF-8 0x09 (Tabulation) [#394](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/394)
 
 ## v0.14.4
 

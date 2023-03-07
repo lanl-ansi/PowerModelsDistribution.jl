@@ -260,7 +260,8 @@ function _build_loss_model!(
     to_map::Vector{String},
     r_s::Vector{Float64},
     zsc::Dict{Tuple{Int,Int},Complex{Float64}},
-    ysh::Complex{Float64};
+    ysh::Complex{Float64},
+    connections::Vector{Int};
     nphases::Int=3,
     status::Int=1,
     )::Vector{Int}
@@ -342,7 +343,7 @@ function _build_loss_model!(
             "vmax" => fill(Inf, nphases),
             "vm_pair_lb" => Tuple{Any,Any,Real}[],
             "vm_pair_ub" => Tuple{Any,Any,Real}[],
-            "terminals" => collect(1:nphases),
+            "terminals" => connections[collect(1:nphases)],
             "grounded" => fill(false, nphases),
             "base_kv" => 1.0,
             "bus_type" => status == 0 ? 4 : 1,
@@ -395,8 +396,8 @@ function _build_loss_model!(
             "br_status"=>status,
             "f_bus"=>bus_ids[i],
             "t_bus"=>bus_ids[j],
-            "f_connections"=>collect(1:nphases),
-            "t_connections"=>collect(1:nphases),
+            "f_connections"=>data_math["bus"]["$(bus_ids[i])"]["terminals"][collect(1:nphases)],
+            "t_connections"=>data_math["bus"]["$(bus_ids[j])"]["terminals"][collect(1:nphases)],
             "br_r" => LinearAlgebra.diagm(0=>fill(real(z[l]), nphases)),
             "br_x" => LinearAlgebra.diagm(0=>fill(imag(z[l]), nphases)),
             "g_fr" => LinearAlgebra.diagm(0=>fill(g_fr, nphases)),
@@ -535,7 +536,7 @@ function _pad_properties_delta!(object::Dict{String,<:Any}, properties::Vector{S
             merge!(tmp, Dict((k[2], k[1])=>sign*v for (k,v) in tmp))
             get_val(x,y) = haskey(tmp, (x,y)) ? tmp[(x,y)] : 0.0
 
-            object[property] = [get_val(phases[1], phases[2]), get_val(phases[2], phases[3]), get_val(phases[3], phases[1])]
+            object[property] = val_length==1 ? [get_val(connections[1], connections[2]), 0.0,0.0] : [get_val(phases[1], phases[2]), get_val(phases[2], phases[3]), get_val(phases[3], phases[1])]
         end
     end
 end
