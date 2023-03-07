@@ -1076,12 +1076,12 @@ uuid = "2dfb63ee-cc39-5dd5-95bd-886bf059d720"
 version = "1.4.2"
 
 [[deps.PowerModelsDistribution]]
-deps = ["CSV", "Dates", "FilePaths", "Glob", "InfrastructureModels", "JSON", "JuMP", "LinearAlgebra", "LinearSolve", "Logging", "LoggingExtras", "Pluto", "PolyhedralRelaxations", "SparseArrays", "Statistics"]
-git-tree-sha1 = "a653f0ab6c0296ffcc6bdc691a7b3285e4cc35f7"
-repo-rev = "9a15b79c42591e9d8a5c6fa5dd2f614b95d1d32a"
+deps = ["CSV", "Dates", "FilePaths", "Glob", "InfrastructureModels", "JSON", "JuMP", "LinearAlgebra", "LinearSolve", "Logging", "LoggingExtras", "Pluto", "PolyhedralRelaxations", "SparseArrays", "SpecialFunctions", "Statistics"]
+git-tree-sha1 = "9dcb895e5d56b1093cc61b3c87826b996efecc81"
+repo-rev = "four-wire-native-pf"
 repo-url = "https://github.com/hei06j/PowerModelsDistribution.jl.git"
 uuid = "d7431456-977f-11e9-2de3-97ff7677985e"
-version = "0.14.4"
+version = "0.14.7"
 
 [[deps.PrecompileSignatures]]
 git-tree-sha1 = "18ef344185f25ee9d51d80e179f8dad33dc48eb1"
