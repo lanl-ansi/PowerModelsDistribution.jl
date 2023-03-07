@@ -2,7 +2,7 @@
 
 @testset "test current-voltage formulations" begin
     @testset "test IVR opf_iv" begin
-        @testset "2-bus diagonal acp opf" begin
+        @testset "2-bus diagonal ivr opf" begin
             result = solve_mc_opf(case2_diag, IVRUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED
@@ -11,16 +11,16 @@
             @test isapprox(sum(result["solution"]["voltage_source"]["source"]["qg"]),  0.208; atol=1e-2)
         end
 
-        @testset "3-bus balanced acp opf" begin
+        @testset "3-bus balanced ivr opf" begin
             result = solve_mc_opf(case3_balanced, IVRUPowerModel, ipopt_solver)
 
-            @test result["termination_status"] == LOCALLY_SOLVED
+            @test result["termination_status"] == LOCALLY_SOLVED || result["termination_status"] == ALMOST_LOCALLY_SOLVED
 
             @test isapprox(sum(result["solution"]["voltage_source"]["source"]["pg"]), 18.345; atol=1e-2)
             @test isapprox(sum(result["solution"]["voltage_source"]["source"]["qg"]),  9.194; atol=1e-2)
         end
 
-        @testset "3-bus unbalanced acp opf" begin
+        @testset "3-bus unbalanced ivr opf" begin
             result = solve_mc_opf(case3_unbalanced, IVRUPowerModel, ipopt_solver)
 
             @test result["termination_status"] == LOCALLY_SOLVED

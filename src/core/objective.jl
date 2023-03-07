@@ -113,13 +113,13 @@ end
 
 Standard fuel cost minimization objective
 """
-function objective_mc_min_fuel_cost(pm::AbstractUnbalancedPowerModel; kwargs...)
+function objective_mc_min_fuel_cost(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     model = check_gen_cost_models(pm)
 
     if model == 1
-        return objective_mc_min_fuel_cost_pwl(pm; kwargs...)
+        return objective_mc_min_fuel_cost_pwl(pm; report=report)
     elseif model == 2
-        return objective_mc_min_fuel_cost_polynomial(pm; kwargs...)
+        return objective_mc_min_fuel_cost_polynomial(pm; report=report)
     else
         error("Only cost models of types 1 and 2 are supported at this time, given cost model type of $(model)")
     end
@@ -132,13 +132,13 @@ end
 
 Standard fuel cost minimization objective including switches
 """
-function objective_mc_min_fuel_cost_switch(pm::AbstractUnbalancedPowerModel; kwargs...)
+function objective_mc_min_fuel_cost_switch(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     model = check_gen_cost_models(pm)
 
     if model == 1
-        return objective_mc_min_fuel_cost_pwl_switch(pm; kwargs...)
+        return objective_mc_min_fuel_cost_pwl_switch(pm; report=report)
     elseif model == 2
-        return objective_mc_min_fuel_cost_polynomial_switch(pm; kwargs...)
+        return objective_mc_min_fuel_cost_polynomial_switch(pm; report=report)
     else
         error("Only cost models of types 1 and 2 are supported at this time, given cost model type of $(model)")
     end
@@ -152,8 +152,8 @@ end
 
 Fuel cost minimization objective with piecewise linear terms
 """
-function objective_mc_min_fuel_cost_pwl(pm::AbstractUnbalancedPowerModel; kwargs...)
-    objective_mc_variable_pg_cost(pm; kwargs...)
+function objective_mc_min_fuel_cost_pwl(pm::AbstractUnbalancedPowerModel; report::Bool=true)
+    objective_mc_variable_pg_cost(pm; report=report)
 
     return JuMP.@objective(pm.model, Min,
         sum(
@@ -168,8 +168,8 @@ end
 
 Fuel cost minimization objective with piecewise linear terms including switches
 """
-function objective_mc_min_fuel_cost_pwl_switch(pm::AbstractUnbalancedPowerModel; kwargs...)
-    objective_mc_variable_pg_cost(pm; kwargs...)
+function objective_mc_min_fuel_cost_pwl_switch(pm::AbstractUnbalancedPowerModel; report::Bool=true)
+    objective_mc_variable_pg_cost(pm; report=report)
 
     return JuMP.@objective(pm.model, Min,
         sum(
@@ -219,13 +219,13 @@ end
 
 Fuel cost minimization objective for polynomial terms
 """
-function objective_mc_min_fuel_cost_polynomial(pm::AbstractUnbalancedPowerModel; kwargs...)
+function objective_mc_min_fuel_cost_polynomial(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     order = calc_max_cost_index(pm.data)-1
 
     if order <= 2
-        return _objective_mc_min_fuel_cost_polynomial_linquad(pm; kwargs...)
+        return _objective_mc_min_fuel_cost_polynomial_linquad(pm; report=report)
     else
-        return _objective_mc_min_fuel_cost_polynomial_nl(pm; kwargs...)
+        return _objective_mc_min_fuel_cost_polynomial_nl(pm; report=report)
     end
 end
 
@@ -235,13 +235,13 @@ end
 
 Fuel cost minimization objective for polynomial terms including switches
 """
-function objective_mc_min_fuel_cost_polynomial_switch(pm::AbstractUnbalancedPowerModel; kwargs...)
+function objective_mc_min_fuel_cost_polynomial_switch(pm::AbstractUnbalancedPowerModel; report::Bool=true)
     order = calc_max_cost_index(pm.data)-1
 
     if order <= 2
-        return _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm; kwargs...)
+        return _objective_mc_min_fuel_cost_polynomial_linquad_switch(pm; report=report)
     else
-        return _objective_mc_min_fuel_cost_polynomial_nl_switch(pm; kwargs...)
+        return _objective_mc_min_fuel_cost_polynomial_nl_switch(pm; report=report)
     end
 end
 
@@ -281,7 +281,7 @@ function _objective_mc_min_fuel_cost_polynomial_linquad(pm::AbstractUnbalancedPo
                 #to avoid function calls inside of @NLconstraint:
                 pg = var(pm, n, :pg, i)
                 pg = isa(pg, JuMP.Containers.DenseAxisArray) ? pg.data : pg
-                
+
                 int_dim = length(pg)
                 if length(gen["cost"]) == 1
                     gen_cost[(n,i)] = gen["cost"][1]
@@ -399,7 +399,7 @@ end
 
 
 ""
-function _objective_mc_min_fuel_cost_polynomial_nl_switch(pm::AbstractUnbalancedPowerModel)
+function _objective_mc_min_fuel_cost_polynomial_nl_switch(pm::AbstractUnbalancedPowerModel; report::Bool=report)
     gen_cost = Dict()
     for (n, nw_ref) in nws(pm)
         for (i,gen) in nw_ref[:gen]
@@ -435,7 +435,7 @@ end
 
 adds pg_cost variables and constraints for the IVR formulation
 """
-function objective_variable_pg_cost(pm::AbstractUnbalancedIVRModel)
+function objective_variable_pg_cost(pm::AbstractUnbalancedIVRModel; report::Bool=report)
     for (n, nw_ref) in nws(pm)
         gen_lines = calc_cost_pwl_lines(nw_ref[:gen])
 

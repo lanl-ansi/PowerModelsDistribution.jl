@@ -244,19 +244,6 @@ end
 
 
 "Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)"
-function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedWModels, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, tm)
-    p_fr = var(pm, n, :p, f_idx)
-    q_fr = var(pm, n, :q, f_idx)
-    w_fr = var(pm, n, :w, f_bus)
-    wr   = var(pm, n, :wr, (f_bus, t_bus))
-    wi   = var(pm, n, :wi, (f_bus, t_bus))
-
-    JuMP.@constraint(pm.model, p_fr ==  (g+g_fr)/tm^2*w_fr + (-g*tr+b*ti)/tm^2*wr + (-b*tr-g*ti)/tm^2*wi )
-    JuMP.@constraint(pm.model, q_fr == -(b+b_fr)/tm^2*w_fr - (-b*tr-g*ti)/tm^2*wr + (-g*tr+b*ti)/tm^2*wi )
-end
-
-
-"Creates Ohms constraints (yt post fix indicates that Y and T values are in rectangular form)"
 function constraint_mc_ohms_yt_to(pm::AbstractUnbalancedWModels, n::Int, c::Int, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, tm)
     q_to = var(pm, n, :q, t_idx)
     p_to = var(pm, n, :p, t_idx)
@@ -270,9 +257,9 @@ end
 
 
 "on/off bus voltage constraint for relaxed forms"
-function constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedWModels, n::Int; kwargs...)
-    for (i, bus) in ref(pm, n, :bus)
-        constraint_mc_bus_voltage_magnitude_sqr_on_off(pm, i, nw=n)
+function constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedWModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    for (i, bus) in ref(pm, nw, :bus)
+        constraint_mc_bus_voltage_magnitude_sqr_on_off(pm, i; nw=nw)
     end
 end
 

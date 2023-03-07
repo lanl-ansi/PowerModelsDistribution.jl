@@ -104,6 +104,22 @@ function constraint_mc_gen_power_setpoint_real(pm::AbstractUnbalancedPowerModel,
 end
 
 
+@doc raw"""
+    constraint_mc_storage_power_setpoint_real(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, ps::Real)::Nothing
+
+Generic storage real power setpoint constraint
+
+```math
+P_s == P_s^{setpoint}
+```
+"""
+function constraint_mc_storage_power_setpoint_real(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, ps::Real)
+    ps_var = [var(pm, nw, :ps, i)[c] for c in ref(pm, nw, :storage, i)["connections"]]
+
+    JuMP.@constraint(pm.model, sum(ps_var) == ps)
+end
+
+
 "on/off constraint for generators"
 function constraint_mc_gen_power_on_off(pm::AbstractUnbalancedPowerModel, nw::Int, i::Int, connections::Vector{<:Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real})
     pg = var(pm, nw, :pg, i)
@@ -203,7 +219,7 @@ end
 
 
 ""
-function constraint_storage_state_initial(pm::AbstractUnbalancedPowerModel, n::Int, i::Int, energy::Float64, charge_eff::Float64, discharge_eff::Float64, time_elapsed::Float64)::Nothing
+function constraint_storage_state_initial(pm::AbstractUnbalancedPowerModel, n::Int, i::Int, energy::Real, charge_eff::Real, discharge_eff::Real, time_elapsed::Real)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)
     se = var(pm, n, :se, i)
@@ -214,7 +230,7 @@ end
 
 
 ""
-function constraint_storage_state(pm::AbstractUnbalancedPowerModel, n_1::Int, n_2::Int, i::Int, charge_eff::Float64, discharge_eff::Float64, time_elapsed::Float64)::Nothing
+function constraint_storage_state(pm::AbstractUnbalancedPowerModel, n_1::Int, n_2::Int, i::Int, charge_eff::Real, discharge_eff::Real, time_elapsed::Real)
     sc_2 = var(pm, n_2, :sc, i)
     sd_2 = var(pm, n_2, :sd, i)
     se_2 = var(pm, n_2, :se, i)
@@ -236,7 +252,7 @@ end
 
 
 ""
-function constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel, n::Int, i::Int, charge_ub::Float64, discharge_ub::Float64)
+function constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel, n::Int, i::Int, charge_ub::Real, discharge_ub::Real)
     sc = var(pm, n, :sc, i)
     sd = var(pm, n, :sd, i)
     sc_on = var(pm, n, :sc_on, i)
@@ -246,4 +262,25 @@ function constraint_storage_complementarity_mi(pm::AbstractUnbalancedPowerModel,
     JuMP.@constraint(pm.model, sc_on*charge_ub >= sc)
     JuMP.@constraint(pm.model, sd_on*discharge_ub >= sd)
     nothing
+end
+
+
+"""
+    constraint_mc_branch_flow(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int})
+
+For superconducting branch flow (br_r and br_x all zeros)
+"""
+function constraint_mc_branch_flow(pm::AbstractUnbalancedPowerModel, nw::Int, f_idx::Tuple{Int,Int,Int}, t_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, t_connections::Vector{Int})
+    p_fr = [var(pm, nw, :p, f_idx)[c] for c in f_connections]
+    p_to = [var(pm, nw, :p, t_idx)[c] for c in t_connections]
+
+    q_fr = [var(pm, nw, :q, f_idx)[c] for c in f_connections]
+    q_to = [var(pm, nw, :q, t_idx)[c] for c in t_connections]
+
+    if !haskey(con(pm, nw, :branch_flow), f_idx[1])
+        con(pm, nw, :branch_flow)[f_idx[1]] = [
+            JuMP.@constraint(pm.model, p_fr .+ p_to .== 0),
+            JuMP.@constraint(pm.model, q_fr .+ q_to .== 0)
+        ]
+    end
 end

@@ -215,8 +215,8 @@ function create_line(f_bus::String, t_bus::String, f_connections::Vector{Int}, t
         "status" => status,
         "f_connections" => f_connections,
         "t_connections" => t_connections,
-        "vad_lb" => !ismissing(vad_lb) ? vad_lb : fill(-60.0, n_conductors),
-        "vad_ub" => !ismissing(vad_lb) ? vad_lb : fill( 60.0, n_conductors),
+        "vad_lb" => !ismissing(vad_lb) ? vad_lb : fill(-5.0, n_conductors),
+        "vad_ub" => !ismissing(vad_lb) ? vad_lb : fill( 5.0, n_conductors),
         "length" => length,
     )
 
@@ -718,35 +718,41 @@ function create_solar(bus::String, connections::Vector{Int};
         "configuration" => configuration,
         "status" => status
     )
-    # TODO
+
+    for (k,v) in [("pg_lb", pg_lb), ("pg_ub", pg_ub), ("qg_lb", qg_lb), ("qg_ub", qg_ub), ("pg", pg), ("qg", qg)]
+        if !ismissing(v)
+            eng_obj[k] = v
+        end
+    end
+
+    _add_unused_kwargs!(eng_obj, kwargs)
+
     return eng_obj
 end
 
 
 """
     create_storage(
-        bus::String,
-        connections::Vector{Int};
         configuration::ConnConfig=WYE,
         energy::Real=0.0,
         energy_ub::Real=0.0,
         charge_ub::Real=0.0,
         discharge_ub::Real=0.0,
-        sm_ub::Union{Vector{<:Real},Missing}=missing,
-        cm_ub::Union{Vector{<:Real},Missing}=missing,
-        charge_efficiency::Real=0.9,
-        discharge_efficiency::Real=0.9,
-        qs_lb::Union{Vector{<:Real},Missing}=missing,
-        qs_ub::Union{Vector{<:Real},Missing}=missing,
-        rs::Union{Vector{<:Real},Missing}=missing,
-        xs::Union{Vector{<:Real},Missing}=missing,
+        sm_ub::Union{Real,Missing}=missing,
+        cm_ub::Union{Real,Missing}=missing,
+        charge_efficiency::Real=1.0,
+        discharge_efficiency::Real=1.0,
+        qs_lb::Union{Real,Missing}=missing,
+        qs_ub::Union{Real,Missing}=missing,
+        rs::Real=0.0,
+        xs::Real=0.0,
         pex::Real=0.0,
         qex::Real=0.0,
-        ps::Union{Vector{<:Real},Missing}=missing,
-        qs::Union{Vector{<:Real},Missing}=missing,
+        ps::Union{Real,Vector{<:Real},Missing}=missing,
+        qs::Union{Real,Vector{<:Real},Missing}=missing,
         status::Status=ENABLED,
         kwargs...
-    )::Dict{String,Any}
+        )::Dict{String,Any}
 
 creates energy storage object with some defaults
 """
@@ -756,18 +762,18 @@ function create_storage(bus::String, connections::Vector{Int};
     energy_ub::Real=0.0,
     charge_ub::Real=0.0,
     discharge_ub::Real=0.0,
-    sm_ub::Union{Vector{<:Real},Missing}=missing,
-    cm_ub::Union{Vector{<:Real},Missing}=missing,
-    charge_efficiency::Real=0.9,
-    discharge_efficiency::Real=0.9,
-    qs_lb::Union{Vector{<:Real},Missing}=missing,
-    qs_ub::Union{Vector{<:Real},Missing}=missing,
-    rs::Union{Vector{<:Real},Missing}=missing,
-    xs::Union{Vector{<:Real},Missing}=missing,
+    sm_ub::Union{Real,Missing}=missing,
+    cm_ub::Union{Real,Missing}=missing,
+    charge_efficiency::Real=1.0,
+    discharge_efficiency::Real=1.0,
+    qs_lb::Union{Real,Missing}=missing,
+    qs_ub::Union{Real,Missing}=missing,
+    rs::Real=0.0,
+    xs::Real=0.0,
     pex::Real=0.0,
     qex::Real=0.0,
-    ps::Union{Vector{<:Real},Missing}=missing,
-    qs::Union{Vector{<:Real},Missing}=missing,
+    ps::Union{Real,Vector{<:Real},Missing}=missing,
+    qs::Union{Real,Vector{<:Real},Missing}=missing,
     status::Status=ENABLED,
     kwargs...
         )::Dict{String,Any}
@@ -784,12 +790,20 @@ function create_storage(bus::String, connections::Vector{Int};
         "discharge_ub" => discharge_ub,
         "charge_efficiency" => charge_efficiency,
         "discharge_efficiency" => discharge_efficiency,
+        "rs" => rs,
+        "xs" => xs,
         "pex" => pex,
         "qex" => qex,
         "status" => status
     )
 
-    # TODO
+    for (k,v) in [("sm_ub", sm_ub), ("cm_ub", cm_ub), ("qs_lb", qs_lb), ("qs_ub", qs_ub), ("ps", ps), ("qs", qs)]
+        if !ismissing(v)
+            eng_obj[k] = v
+        end
+    end
+
+    _add_unused_kwargs!(eng_obj, kwargs)
 
     return eng_obj
 end
@@ -832,8 +846,8 @@ function create_voltage_source(bus::String, connections::Vector{Int};
         "connections" => connections,
         "configuration" => configuration,
         "vm" => !ismissing(vm) ? vm : ones(n_conductors),
-        "va" => !ismissing(va) ? va : zeros(n_conductors),
-        "status" => get(kwargs, :status, ENABLED),
+        "va" => !ismissing(va) ? va : [[0., -120., 120.]..., zeros(n_conductors)...][connections],
+        "status" => status,
     )
 
     for (k,v) in [("rs", rs), ("xs", xs), ("vm_lb", vm_lb), ("vm_ub", vm_ub)]

@@ -106,15 +106,13 @@ function constraint_mc_voltage_magnitude_bounds(pm::AbstractUnbalancedPowerModel
 end
 
 ## Voltage on/off constraints
-
-# TODO fixed function kwargs
 """
-    constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, kwargs...)::Nothing
+    constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default)::Nothing
 
 Template function for on/off constraint for bus voltages"
 """
-function constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default, kwargs...)::Nothing
-    constraint_mc_bus_voltage_on_off(pm, nw; kwargs...)
+function constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedPowerModel; nw::Int=nw_id_default)::Nothing
+    constraint_mc_bus_voltage_on_off(pm, nw)
     nothing
 end
 
@@ -398,6 +396,26 @@ end
 
 
 """
+    constraint_mc_current_balance_capc(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for KCL constraints in current-voltage variable space with capacitor control variables.
+"""
+function constraint_mc_current_balance_capc(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    bus = ref(pm, nw, :bus, i)
+    bus_arcs = ref(pm, nw, :bus_arcs_conns_branch, i)
+    bus_arcs_sw = ref(pm, nw, :bus_arcs_conns_switch, i)
+    bus_arcs_trans = ref(pm, nw, :bus_arcs_conns_transformer, i)
+    bus_gens = ref(pm, nw, :bus_conns_gen, i)
+    bus_storage = ref(pm, nw, :bus_conns_storage, i)
+    bus_loads = ref(pm, nw, :bus_conns_load, i)
+    bus_shunts = ref(pm, nw, :bus_conns_shunt, i)
+
+    constraint_mc_current_balance_capc(pm, nw, i, bus["terminals"], bus["grounded"], bus_arcs, bus_arcs_sw, bus_arcs_trans, bus_gens, bus_storage, bus_loads, bus_shunts)
+    nothing
+end
+
+
+"""
     constraint_mc_network_power_balance(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
 
 Template function for constraints that ensures that power generation and demand are balanced in OBF problem
@@ -444,40 +462,58 @@ end
 # Branch constraints
 
 """
-    constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
 
 Template function for ohms constraint for branches on the from-side
 """
-function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
 
-    G, B = calc_branch_y(branch)
-
-    constraint_mc_ohms_yt_from(pm, nw, f_bus, t_bus, f_idx, t_idx, branch["f_connections"], branch["t_connections"], G, B, branch["g_fr"], branch["b_fr"])
-    nothing
+    if all(all(isapprox.(branch[k], 0.0)) for k in ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to"])
+        @debug "branch $(branch["source_id"]) being treated as superconducting (effective zero impedance)"
+        if !haskey(con(pm, nw), :branch_flow)
+            con(pm, nw)[:branch_flow] = Dict{Int,Vector{Vector{<:JuMP.ConstraintRef}}}()
+        end
+        constraint_mc_branch_flow(pm, nw, f_idx, t_idx, branch["f_connections"], branch["t_connections"])
+    else
+        if !haskey(con(pm, nw), :ohms_yt_from)
+            con(pm, nw)[:ohms_yt] = Dict{Tuple{Int,Int,Int},Vector{Vector{<:JuMP.ConstraintRef}}}()
+        end
+        G, B = calc_branch_y(branch)
+        constraint_mc_ohms_yt_from(pm, nw, f_bus, t_bus, f_idx, t_idx, branch["f_connections"], branch["t_connections"], G, B, branch["g_fr"], branch["b_fr"])
+    end
 end
 
 
 """
-    constraint_mc_ohms_yt_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    constraint_mc_ohms_yt_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
 
 Template function for ohms constraint for branches on the to-side
 """
-function constraint_mc_ohms_yt_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+function constraint_mc_ohms_yt_to(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)
     branch = ref(pm, nw, :branch, i)
     f_bus = branch["f_bus"]
     t_bus = branch["t_bus"]
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
 
-    G, B = calc_branch_y(branch)
-
-    constraint_mc_ohms_yt_to(pm, nw, f_bus, t_bus, f_idx, t_idx, branch["f_connections"], branch["t_connections"], G, B, branch["g_to"], branch["b_to"])
-    nothing
+    if all(all(isapprox.(branch[k], 0.0)) for k in ["br_r", "br_x", "g_fr", "g_to", "b_fr", "b_to"])
+        @debug "branch $(branch["source_id"]) being treated as superconducting (effective zero impedance)"
+        if !haskey(con(pm, nw), :branch_flow)
+            con(pm, nw)[:branch_flow] = Dict{Int,Vector{Vector{<:JuMP.ConstraintRef}}}()
+        end
+        constraint_mc_branch_flow(pm, nw, f_idx, t_idx, branch["f_connections"], branch["t_connections"])
+    else
+        if !haskey(con(pm, nw), :ohms_yt_to)
+            con(pm, nw)[:ohms_yt] = Dict{Tuple{Int,Int,Int},Vector{Vector{<:JuMP.ConstraintRef}}}()
+        end
+        G, B = calc_branch_y(branch)
+        constraint_mc_ohms_yt_to(pm, nw, f_bus, t_bus, f_idx, t_idx, branch["f_connections"], branch["t_connections"], G, B, branch["g_to"], branch["b_to"])
+    end
 end
 
 
@@ -833,6 +869,18 @@ Template function for generator active power setpoint constraint, for power flow
 function constraint_mc_gen_power_setpoint_real(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
     pg_set = ref(pm, nw, :gen, i)["pg"]
     constraint_mc_gen_power_setpoint_real(pm, nw, i, pg_set)
+    nothing
+end
+
+
+"""
+    constraint_mc_storage_power_setpoint_real(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+
+Template function for storage active power setpoint constraint, for power flow problems
+"""
+function constraint_mc_storage_power_setpoint_real(pm::AbstractUnbalancedPowerModel, i::Int; nw::Int=nw_id_default)::Nothing
+    ps_set = ref(pm, nw, :storage, i)["ps"]
+    constraint_mc_storage_power_setpoint_real(pm, nw, i, ps_set)
     nothing
 end
 

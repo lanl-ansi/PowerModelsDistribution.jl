@@ -1,7 +1,7 @@
 ""
-function variable_mc_bus_voltage(pm::AbstractUnbalancedACPModel; nw=nw_id_default, kwargs...)
-    variable_mc_bus_voltage_angle(pm; nw=nw, kwargs...)
-    variable_mc_bus_voltage_magnitude_only(pm; nw=nw, kwargs...)
+function variable_mc_bus_voltage(pm::AbstractUnbalancedACPModel; nw=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_angle(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_bus_voltage_magnitude_only(pm; nw=nw, bounded=bounded, report=report)
 
     # This is needed for delta loads, where division occurs by the difference
     # of voltage phasors. If the voltage phasors at one bus are initialized
@@ -25,7 +25,7 @@ function variable_mc_bus_voltage(pm::AbstractUnbalancedACPModel; nw=nw_id_defaul
         end
 
         vm = haskey(busref, "vm_start") ? busref["vm_start"] : haskey(busref, "vm") ? busref["vm"] : [vm_start..., fill(0.0, ncnd)...][terminals]
-        va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [[_wrap_to_pi(2 * pi / 3 * (1-t)) for t in 1:3]..., zeros(length(terminals))...][terminals]
+        va = haskey(busref, "va_start") ? busref["va_start"] : haskey(busref, "va") ? busref["va"] : [deg2rad.([0, -120, 120])..., zeros(length(terminals))...][terminals]
 
         for (idx,t) in enumerate(terminals)
             JuMP.set_start_value(var(pm, nw, :vm, id)[t], vm[idx])
@@ -36,9 +36,9 @@ end
 
 
 ""
-function variable_mc_bus_voltage_on_off(pm::AbstractUnbalancedACPModel; nw::Int=nw_id_default, kwargs...)
-    variable_mc_bus_voltage_angle(pm; nw=nw, kwargs...)
-    variable_mc_bus_voltage_magnitude_on_off(pm; nw=nw, kwargs...)
+function variable_mc_bus_voltage_on_off(pm::AbstractUnbalancedACPModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_angle(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_bus_voltage_magnitude_on_off(pm; nw=nw, bounded=bounded, report=report)
 
     for id in ids(pm, nw, :bus)
         busref = ref(pm, nw, :bus, id)
@@ -65,16 +65,6 @@ function variable_mc_bus_voltage_on_off(pm::AbstractUnbalancedACPModel; nw::Int=
             JuMP.set_start_value(var(pm, nw, :va, id)[t], va[idx])
         end
     end
-end
-
-
-"""
-    variable_mc_capcontrol(pm::AbstractUnbalancedACPModel; nw::Int=nw_id_default, relax::Bool=false)
-
-Capacitor switching variables.
-"""
-function variable_mc_capcontrol(pm::AbstractUnbalancedACPModel; nw::Int=nw_id_default, relax::Bool=false)
-    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax)
 end
 
 
@@ -677,8 +667,10 @@ function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedACPModel, nw::Int, f_b
     va_fr = var(pm, nw, :va, f_bus)
     va_to = var(pm, nw, :va, t_bus)
 
+    ohms_yt_p = JuMP.ConstraintRef[]
+    ohms_yt_q = JuMP.ConstraintRef[]
     for (idx, (fc,tc)) in enumerate(zip(f_connections,t_connections))
-        JuMP.@NLconstraint(pm.model, p_fr[fc] == (G[idx,idx]+G_fr[idx,idx])*vm_fr[fc]^2
+        push!(ohms_yt_p, JuMP.@NLconstraint(pm.model, p_fr[fc] == (G[idx,idx]+G_fr[idx,idx])*vm_fr[fc]^2
             +sum( (G[idx,jdx]+G_fr[idx,jdx]) * vm_fr[fc]*vm_fr[fd]*cos(va_fr[fc]-va_fr[fd])
                  +(B[idx,jdx]+B_fr[idx,jdx]) * vm_fr[fc]*vm_fr[fd]*sin(va_fr[fc]-va_fr[fd])
                 for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections)) if idx != jdx)
@@ -686,16 +678,19 @@ function constraint_mc_ohms_yt_from(pm::AbstractUnbalancedACPModel, nw::Int, f_b
                   -B[idx,jdx]*vm_fr[fc]*vm_to[td]*sin(va_fr[fc]-va_to[td])
                 for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections)))
             )
+        )
 
-        JuMP.@NLconstraint(pm.model, q_fr[fc] == -(B[idx,idx]+B_fr[idx,idx])*vm_fr[fc]^2
+        push!(ohms_yt_q, JuMP.@NLconstraint(pm.model, q_fr[fc] == -(B[idx,idx]+B_fr[idx,idx])*vm_fr[fc]^2
             -sum( (B[idx,jdx]+B_fr[idx,jdx])*vm_fr[fc]*vm_fr[fd]*cos(va_fr[fc]-va_fr[fd])
                  -(G[idx,jdx]+G_fr[idx,jdx])*vm_fr[fc]*vm_fr[fd]*sin(va_fr[fc]-va_fr[fd])
                 for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections)) if idx != jdx)
             -sum(-B[idx,jdx]*vm_fr[fc]*vm_to[td]*cos(va_fr[fc]-va_to[td])
                  +G[idx,jdx]*vm_fr[fc]*vm_to[td]*sin(va_fr[fc]-va_to[td])
                 for (jdx, (fd,td)) in enumerate(zip(f_connections,t_connections)))
+            )
         )
     end
+    con(pm, nw, :ohms_yt)[f_idx] = [ohms_yt_p, ohms_yt_q]
 end
 
 
@@ -836,7 +831,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_bus_voltage_magnitude_vuf(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vufmax::Float64)
+function constraint_mc_bus_voltage_magnitude_vuf(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vufmax::Real)
     if !haskey(var(pm, nw_id_default), :vmpossqr)
         var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
         var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
@@ -883,7 +878,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_bus_voltage_magnitude_negative_sequence(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vmnegmax::Float64)
+function constraint_mc_bus_voltage_magnitude_negative_sequence(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vmnegmax::Real)
     if !haskey(var(pm, nw_id_default), :vmpossqr)
         var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
         var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
@@ -918,7 +913,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_bus_voltage_magnitude_positive_sequence(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vmposmax::Float64)
+function constraint_mc_bus_voltage_magnitude_positive_sequence(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vmposmax::Real)
     if !haskey(var(pm, nw_id_default), :vmpossqr)
         var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
         var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
@@ -953,7 +948,7 @@ vuf = |U-|/|U+|
 |U-| <= vufmax*|U+|
 |U-|^2 <= vufmax^2*|U+|^2
 """
-function constraint_mc_bus_voltage_magnitude_zero_sequence(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vmzeromax::Float64)
+function constraint_mc_bus_voltage_magnitude_zero_sequence(pm::AbstractUnbalancedACPModel, nw::Int, bus_id::Int, vmzeromax::Real)
     if !haskey(var(pm, nw_id_default), :vmpossqr)
         var(pm, nw_id_default)[:vmpossqr] = Dict{Int, Any}()
         var(pm, nw_id_default)[:vmnegsqr] = Dict{Int, Any}()
@@ -1048,7 +1043,7 @@ end
 
 
 "bus voltage on/off constraint for load shed problem"
-function constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedACPModel; nw::Int=nw_id_default, kwargs...)
+function constraint_mc_bus_voltage_on_off(pm::AbstractUnbalancedACPModel; nw::Int=nw_id_default)
     for (i,bus) in ref(pm, nw, :bus)
         constraint_mc_bus_voltage_magnitude_on_off(pm, i; nw=nw)
     end
@@ -1084,7 +1079,7 @@ function constraint_mc_load_power_wye(pm::AbstractUnbalancedACPModel, nw::Int, i
     va = var(pm, nw, :va, bus_id)
 
     # if constant power load
-    if all(alpha.==0) && all(beta.==0)
+    if ref(pm, nw, :load, id, "model") == POWER
         pd_bus = a
         qd_bus = b
     else
@@ -1135,9 +1130,11 @@ function constraint_mc_load_power_delta(pm::AbstractUnbalancedACPModel, nw::Int,
     va = var(pm, nw, :va, bus_id)
 
     nph = length(a)
+    is_triplex = nph < 3
+    conn_bus = is_triplex ? ref(pm, nw, :bus, bus_id)["terminals"] : connections
 
-    prev = Dict(c=>connections[(idx+nph-2)%nph+1] for (idx,c) in enumerate(connections))
-    next = Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
+    prev = Dict(c=>conn_bus[(idx+nph-2)%nph+1] for (idx,c) in enumerate(conn_bus))
+    next = is_triplex ? conn_bus[2] : Dict(c=>conn_bus[idx%nph+1] for (idx,c) in enumerate(conn_bus))
 
     vrd = Dict()
     vid = Dict()
@@ -1161,20 +1158,25 @@ function constraint_mc_load_power_delta(pm::AbstractUnbalancedACPModel, nw::Int,
 
     crd_bus = Dict()
     cid_bus = Dict()
-    for (idx, c) in enumerate(connections)
-        crd_bus[c] = JuMP.@NLexpression(pm.model, crd[c]-crd[prev[c]])
-        cid_bus[c] = JuMP.@NLexpression(pm.model, cid[c]-cid[prev[c]])
+    for (idx, c) in enumerate(conn_bus)
+        if is_triplex
+            crd_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*crd[1])
+            cid_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*cid[1])
+        else
+            crd_bus[c] = JuMP.@NLexpression(pm.model, crd[c]-crd[prev[c]])
+            cid_bus[c] = JuMP.@NLexpression(pm.model, cid[c]-cid[prev[c]])
+        end
     end
 
     pd_bus = Vector{JuMP.NonlinearExpression}([])
     qd_bus = Vector{JuMP.NonlinearExpression}([])
-    for (idx,c) in enumerate(connections)
+    for (idx,c) in enumerate(conn_bus)
         push!(pd_bus, JuMP.@NLexpression(pm.model,  vm[c]*cos(va[c])*crd_bus[c]+vm[c]*sin(va[c])*cid_bus[c]))
         push!(qd_bus, JuMP.@NLexpression(pm.model, -vm[c]*cos(va[c])*cid_bus[c]+vm[c]*sin(va[c])*crd_bus[c]))
     end
 
-    pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, connections)
-    qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, connections)
+    pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, conn_bus)
+    qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, conn_bus)
 
     var(pm, nw, :pd_bus)[id] = pd_bus
     var(pm, nw, :qd_bus)[id] = qd_bus
@@ -1203,8 +1205,11 @@ function constraint_mc_generator_power_delta(pm::AbstractUnbalancedACPModel, nw:
     qg = var(pm, nw, :qg, id)
 
     nph = length(connections)
-    prev = Dict(c=>connections[(idx+nph-2)%nph+1] for (idx,c) in enumerate(connections))
-    next = Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
+    is_triplex = nph < 3
+    conn_bus = is_triplex ? ref(pm, nw, :bus, bus_id)["terminals"] : connections
+
+    prev = Dict(c=>conn_bus[(idx+nph-2)%nph+1] for (idx,c) in enumerate(conn_bus))
+    next = is_triplex ? conn_bus[2] : Dict(c=>conn_bus[idx%nph+1] for (idx,c) in enumerate(conn_bus))
 
     vrg = Dict()
     vig = Dict()
@@ -1222,19 +1227,24 @@ function constraint_mc_generator_power_delta(pm::AbstractUnbalancedACPModel, nw:
 
     crg_bus = Dict()
     cig_bus = Dict()
-    for c in connections
-        crg_bus[c] = JuMP.@NLexpression(pm.model, crg[c]-crg[prev[c]])
-        cig_bus[c] = JuMP.@NLexpression(pm.model, cig[c]-cig[prev[c]])
+    for c in conn_bus
+        if is_triplex
+            crg_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*crg[1])
+            cig_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*cig[1])
+        else
+            crg_bus[c] = JuMP.@NLexpression(pm.model, crg[c]-crg[prev[c]])
+            cig_bus[c] = JuMP.@NLexpression(pm.model, cig[c]-cig[prev[c]])
+        end
     end
 
     pg_bus = Vector{JuMP.NonlinearExpression}([])
     qg_bus = Vector{JuMP.NonlinearExpression}([])
-    for c in connections
+    for c in conn_bus
         push!(pg_bus, JuMP.@NLexpression(pm.model,  vm[c]*cos(va[c])*crg_bus[c]+vm[c]*sin(va[c])*cig_bus[c]))
         push!(qg_bus, JuMP.@NLexpression(pm.model, -vm[c]*cos(va[c])*cig_bus[c]+vm[c]*sin(va[c])*crg_bus[c]))
     end
-    pd_bus = JuMP.Containers.DenseAxisArray(pg_bus, connections)
-    qd_bus = JuMP.Containers.DenseAxisArray(qg_bus, connections)
+    pg_bus = JuMP.Containers.DenseAxisArray(pg_bus, conn_bus)
+    qg_bus = JuMP.Containers.DenseAxisArray(qg_bus, conn_bus)
 
     var(pm, nw, :pg_bus)[id] = pg_bus
     var(pm, nw, :qg_bus)[id] = qg_bus

@@ -209,10 +209,14 @@
         @test result["termination_status"] == LOCALLY_SOLVED
 
         @test isapprox(sum(result["solution"]["voltage_source"]["source"]["pg"]), 18.38728; atol=1e-2)
-        @test isapprox(sum(result["solution"]["voltage_source"]["source"]["qg"]),  7.28903; atol=1e-2)
+        @test isapprox(sum(result["solution"]["voltage_source"]["source"]["qg"]),  9.21713; atol=1e-2)
 
         @test all(isapprox(sum(result["solution"]["solar"]["pv1"]["pg"]), 1.9947; atol=1e-2))
-        @test all(isapprox(sum(result["solution"]["solar"]["pv1"]["qg"]), 1.9259; atol=1e-2))
+        @test all(isapprox(sum(result["solution"]["solar"]["pv1"]["qg"]), 0.0; atol=1e-2))
+
+        vbase = case3_unbalanced_1phase_pv["settings"]["vbases_default"]["sourcebus"]
+        @test all(isapprox(result["solution"]["bus"]["primary"]["vm"] ./ vbase, [0.990984, 0.991149, 0.991134]; atol=1e-3))
+        @test all(isapprox(result["solution"]["bus"]["primary"]["va"], [-0.03, -120.03, 119.97]; atol=1e-2))
     end
 
     @testset "3-bus balanced capacitor acp opf" begin

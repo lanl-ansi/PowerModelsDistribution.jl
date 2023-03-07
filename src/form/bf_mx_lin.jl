@@ -4,31 +4,42 @@ end
 
 
 ""
-function variable_mc_branch_current(pm::AbstractLPUBFModel; kwargs...)
+function variable_mc_branch_current(pm::AbstractLPUBFModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
 end
 
 
 ""
-function variable_mc_bus_voltage(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true)
-    variable_mc_bus_voltage_magnitude_sqr(pm, nw=nw)
+function variable_mc_bus_voltage(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_bus_voltage_magnitude_sqr(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
 ""
 function variable_mc_branch_power(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
-    variable_mc_branch_power_real(pm, nw=nw, bounded=bounded)
-    variable_mc_branch_power_imaginary(pm, nw=nw, bounded=bounded)
+    variable_mc_branch_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_branch_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
 """
-    variable_mc_capcontrol(pm::AbstractLPUBFModel; nw::Int=nw_id_default, relax::Bool=false)
+    variable_mc_switch_power(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+
+Switch power variables.
+"""
+function variable_mc_switch_power(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_switch_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_switch_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
+end
+
+
+"""
+    variable_mc_capcontrol(pm::AbstractLPUBFModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
 
 Capacitor switching and relaxed power variables.
 """
-function variable_mc_capcontrol(pm::AbstractLPUBFModel; nw::Int=nw_id_default, relax::Bool=false)
-    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax)
-    variable_mc_capacitor_reactive_power(pm; nw=nw)
+function variable_mc_capcontrol(pm::AbstractLPUBFModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
+    variable_mc_capacitor_switch_state(pm; nw=nw, relax=relax, report=report)
+    variable_mc_capacitor_reactive_power(pm; nw=nw, report=report)
 end
 
 
@@ -95,9 +106,9 @@ end
 
 
 "Creates variables for both `active` and `reactive` power flow at each transformer."
-function variable_mc_transformer_power(pm::LPUBFDiagModel; kwargs...)
-    variable_mc_transformer_power_real(pm; kwargs...)
-    variable_mc_transformer_power_imaginary(pm; kwargs...)
+function variable_mc_transformer_power(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_transformer_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_transformer_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
 end
 
 
@@ -174,89 +185,86 @@ Power balance constraints with capacitor control linearized using McCormick enve
 ```
 """
 function constraint_mc_power_balance_capc(pm::LPUBFDiagModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
-    w = var(pm, nw, :w, i)
-    p   = get(var(pm, nw),      :p,   Dict()); _check_var_keys(p,   bus_arcs, "active power", "branch")
-    q   = get(var(pm, nw),      :q,   Dict()); _check_var_keys(q,   bus_arcs, "reactive power", "branch")
-    psw = get(var(pm, nw),    :psw, Dict()); _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
-    qsw = get(var(pm, nw),    :qsw, Dict()); _check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
-    pt  = get(var(pm, nw),     :pt,  Dict()); _check_var_keys(pt,  bus_arcs_trans, "active power", "transformer")
-    qt  = get(var(pm, nw),     :qt,  Dict()); _check_var_keys(qt,  bus_arcs_trans, "reactive power", "transformer")
-    pg  = get(var(pm, nw),     :pg,  Dict()); _check_var_keys(pg,  bus_gens, "active power", "generator")
-    qg  = get(var(pm, nw),     :qg,  Dict()); _check_var_keys(qg,  bus_gens, "reactive power", "generator")
-    ps  = get(var(pm, nw),     :ps,  Dict()); _check_var_keys(ps,  bus_storage, "active power", "storage")
-    qs  = get(var(pm, nw),     :qs,  Dict()); _check_var_keys(qs,  bus_storage, "reactive power", "storage")
-    pd  = get(var(pm, nw), :pd_bus,  Dict()); _check_var_keys(pd,  bus_loads, "active power", "load")
-    qd  = get(var(pm, nw), :qd_bus,  Dict()); _check_var_keys(qd,  bus_loads, "reactive power", "load")
+    w        = var(pm, nw, :w, i)
+    p        = get(var(pm, nw),    :p, Dict()); _check_var_keys(p, bus_arcs, "active power", "branch")
+    q        = get(var(pm, nw),    :q, Dict()); _check_var_keys(q, bus_arcs, "reactive power", "branch")
+    pg       = get(var(pm, nw),   :pg, Dict()); _check_var_keys(pg, bus_gens, "active power", "generator")
+    qg       = get(var(pm, nw),   :qg, Dict()); _check_var_keys(qg, bus_gens, "reactive power", "generator")
+    ps       = get(var(pm, nw),   :ps, Dict()); _check_var_keys(ps, bus_storage, "active power", "storage")
+    qs       = get(var(pm, nw),   :qs, Dict()); _check_var_keys(qs, bus_storage, "reactive power", "storage")
+    psw      = get(var(pm, nw),  :psw, Dict()); _check_var_keys(psw, bus_arcs_sw, "active power", "switch")
+    qsw      = get(var(pm, nw),  :qsw, Dict()); _check_var_keys(qsw, bus_arcs_sw, "reactive power", "switch")
+    pt       = get(var(pm, nw),   :pt, Dict()); _check_var_keys(pt, bus_arcs_trans, "active power", "transformer")
+    qt       = get(var(pm, nw),   :qt, Dict()); _check_var_keys(qt, bus_arcs_trans, "reactive power", "transformer")
+    pd       = get(var(pm, nw), :pd_bus,  Dict()); _check_var_keys(pd,  bus_loads, "active power", "load")
+    qd       = get(var(pm, nw), :qd_bus,  Dict()); _check_var_keys(qd,  bus_loads, "reactive power", "load")
+
+    uncontrolled_shunts = Tuple{Int,Vector{Int}}[]
+    controlled_shunts = Tuple{Int,Vector{Int}}[]
+
+    if !isempty(bus_shunts) && any(haskey(ref(pm, nw, :shunt, sh), "controls") for (sh, conns) in bus_shunts)
+        for (sh, conns) in bus_shunts
+            if haskey(ref(pm, nw, :shunt, sh), "controls")
+                push!(controlled_shunts, (sh,conns))
+            else
+                push!(uncontrolled_shunts, (sh, conns))
+            end
+        end
+    else
+        uncontrolled_shunts = bus_shunts
+    end
+
+    Gt, _ = _build_bus_shunt_matrices(pm, nw, terminals, bus_shunts)
+    _, Bt = _build_bus_shunt_matrices(pm, nw, terminals, uncontrolled_shunts)
 
     cstr_p = []
     cstr_q = []
 
     ungrounded_terminals = [(idx,t) for (idx,t) in enumerate(terminals) if !grounded[idx]]
 
-    for (idx,t) in ungrounded_terminals
+
+    for (idx, t) in ungrounded_terminals
         cp = JuMP.@constraint(pm.model,
-              sum(  p[a][t] for (a, conns) in bus_arcs if t in conns)
-            + sum(psw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
-            + sum( pt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-            - sum( pg[g][t] for (g, conns) in bus_gens if t in conns)
-            + sum( ps[s][t] for (s, conns) in bus_storage if t in conns)
-            + sum( pd[d][t] for (d, conns) in bus_loads if t in conns)
-            + sum(LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "gs"))[findfirst(isequal(t), conns)]*w[t] for (sh, conns) in bus_shunts if t in conns)
+            sum(p[a][t] for (a, conns) in bus_arcs if t in conns)
+            + sum(psw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
+            + sum(pt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
             ==
-            0.0
+            sum(pg[g][t] for (g, conns) in bus_gens if t in conns)
+            - sum(ps[s][t] for (s, conns) in bus_storage if t in conns)
+            - sum(pd[l][t] for (l, conns) in bus_loads if t in conns)
+            - sum((w[t] * LinearAlgebra.diag(Gt')[idx]) for (sh, conns) in bus_shunts if t in conns)
         )
         push!(cstr_p, cp)
-    end
 
-    # add constraints to model capacitor switching
-    if !isempty(bus_shunts) && haskey(ref(pm, nw, :shunt, bus_shunts[1][1]), "controls")
-        constraint_capacitor_on_off(pm, nw, i, bus_shunts)
+        for (sh, sh_conns) in controlled_shunts
+            if t in sh_conns
+                cq_cap = var(pm, nw, :capacitor_reactive_power, sh)[t]
+                cap_state = var(pm, nw, :capacitor_state, sh)[t]
+                bs = LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "bs"))[findfirst(isequal(t), sh_conns)]
+                w_lb, w_ub = _IM.variable_domain(w[t])
 
-        ncnds = length(bus_shunts[1][2])
-        cq_sh = convert(Vector{JuMP.AffExpr}, JuMP.@expression(pm.model, [idx=1:ncnds], 0.0))
-        for (idx,t) in ungrounded_terminals
-            for (sh, conns) in bus_shunts
-                if t in conns
-                    cq_cap = var(pm, nw, :capacitor_reactive_power, sh)[t]
-                    cap_state = var(pm, nw, :capacitor_state, sh)[t]
-                    bs = LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "bs"))[findfirst(isequal(t), conns)]
-                    w_min = 0.9^2
-                    w_max = 1.1^2
-                    # McCormick envelope constraints
-                    JuMP.@constraint(pm.model, cq_cap ≥ bs*cap_state*w_min)
-                    JuMP.@constraint(pm.model, cq_cap ≥ bs*w[t] + bs*cap_state*w_max - bs*w_max)
-                    JuMP.@constraint(pm.model, cq_cap ≤ bs*cap_state*w_max)
-                    JuMP.@constraint(pm.model, cq_cap ≤ bs*w[t] + bs*cap_state*w_min - bs*w_min)
+                # McCormick envelope constraints
+                if isfinite(w_ub)
+                    JuMP.@constraint(pm.model, cq_cap ≥ bs*w[t] + bs*cap_state*w_ub - bs*w_ub)
+                    JuMP.@constraint(pm.model, cq_cap ≤ bs*cap_state*w_ub)
                 end
+                JuMP.@constraint(pm.model, cq_cap ≥ bs*cap_state*w_lb)
+                JuMP.@constraint(pm.model, cq_cap ≤ bs*w[t] + bs*cap_state*w_lb - bs*w_lb)
             end
-            cq = JuMP.@constraint(pm.model,
-                sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
-                + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
-                + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-                - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
-                + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
-                + sum( qd[d][t] for (d, conns) in bus_loads if t in conns)
-                - sum(var(pm, nw, :capacitor_reactive_power, bus_shunts[1][1]))
-                ==
-                0.0
-            )
-            push!(cstr_q, cq)
         end
-    else
-        for (idx,t) in ungrounded_terminals
-            cq = JuMP.@constraint(pm.model,
-                sum(  q[a][t] for (a, conns) in bus_arcs if t in conns)
-                + sum(qsw[a][t] for (a, conns) in bus_arcs_sw if t in conns)
-                + sum( qt[a][t] for (a, conns) in bus_arcs_trans if t in conns)
-                - sum( qg[g][t] for (g, conns) in bus_gens if t in conns)
-                + sum( qs[s][t] for (s, conns) in bus_storage if t in conns)
-                + sum( qd[d][t] for (d, conns) in bus_loads if t in conns)
-                - sum(LinearAlgebra.diag(ref(pm, nw, :shunt, sh, "bs"))[findfirst(isequal(t), conns)]*w[t] for (sh, conns) in bus_shunts if t in conns)
-                ==
-                0.0
-            )
-            push!(cstr_q, cq)
-        end
+
+        cq = JuMP.@constraint(pm.model,
+            sum(q[a][t] for (a, conns) in bus_arcs if t in conns)
+            + sum(qsw[a_sw][t] for (a_sw, conns) in bus_arcs_sw if t in conns)
+            + sum(qt[a_trans][t] for (a_trans, conns) in bus_arcs_trans if t in conns)
+            ==
+            sum(qg[g][t] for (g, conns) in bus_gens if t in conns)
+            - sum(qs[s][t] for (s, conns) in bus_storage if t in conns)
+            - sum(qd[l][t] for (l, conns) in bus_loads if t in conns)
+            - sum((-w[t] * LinearAlgebra.diag(Bt')[idx]) for (sh, conns) in uncontrolled_shunts if t in conns)
+            - sum(-var(pm, nw, :capacitor_reactive_power, sh)[t] for (sh, conns) in controlled_shunts if t in conns)
+        )
+        push!(cstr_q, cq)
     end
 
     con(pm, nw, :lam_kcl_r)[i] = cstr_p
@@ -325,7 +333,7 @@ end
 
 
 "Neglects the active and reactive loss terms associated with the squared current magnitude."
-function constraint_mc_storage_losses(pm::AbstractUBFModels, i::Int; nw::Int=nw_id_default, kwargs...)
+function constraint_mc_storage_losses(pm::AbstractUBFModels, i::Int; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     storage = ref(pm, nw, :storage, i)
 
     p_loss, q_loss = storage["p_loss"], storage["q_loss"]
@@ -416,7 +424,9 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
     elseif load["configuration"]==DELTA
         Xdr = var(pm, nw, :Xdr, load_id)
         Xdi = var(pm, nw, :Xdi, load_id)
-        Td = [1 -1 0; 0 1 -1; -1 0 1]  # TODO
+        is_triplex = length(connections)<3
+        conn_bus = is_triplex ? bus["terminals"] : connections
+        Td = is_triplex ? [1 -1] : [1 -1 0; 0 1 -1; -1 0 1]  # TODO
         # define pd/qd and pd_bus/qd_bus as affine transformations of X
         pd_bus = LinearAlgebra.diag(Xdr*Td)
         qd_bus = LinearAlgebra.diag(Xdi*Td)
@@ -429,7 +439,8 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
                 JuMP.@constraint(pm.model, Xdi[:,idx] .== 0)
             end
         end
-
+        pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, conn_bus)
+        qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, conn_bus)
         var(pm, nw, :pd_bus)[load_id] = pd_bus
         var(pm, nw, :qd_bus)[load_id] = qd_bus
         var(pm, nw, :pd)[load_id] = pd
@@ -440,26 +451,72 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
                 JuMP.@constraint(pm.model, qd[idx]==qd0[idx])
             end
         elseif load["model"]==IMPEDANCE
-            w = var(pm, nw, :w)[bus_id][[c for c in connections]]
+            w = var(pm, nw, :w)[bus_id]
             for (idx,c) in enumerate(connections)
-                JuMP.@constraint(pm.model, pd[idx]==3*a[idx]*w[idx])
-                JuMP.@constraint(pm.model, qd[idx]==3*b[idx]*w[idx])
+                JuMP.@constraint(pm.model, pd[idx]==3*a[idx]*w[c])
+                JuMP.@constraint(pm.model, qd[idx]==3*b[idx]*w[c])
             end
         else
-            w = var(pm, nw, :w)[bus_id][[c for c in connections]]
+            w = var(pm, nw, :w)[bus_id]
             for (idx,c) in enumerate(connections)
-                JuMP.@constraint(pm.model, pd[idx]==sqrt(3)/2*a[idx]*(w[idx]+1))
-                JuMP.@constraint(pm.model, qd[idx]==sqrt(3)/2*b[idx]*(w[idx]+1))
+                JuMP.@constraint(pm.model, pd[idx]==sqrt(3)/2*a[idx]*(w[c]+1))
+                JuMP.@constraint(pm.model, qd[idx]==sqrt(3)/2*b[idx]*(w[c]+1))
             end
         end
 
         ## reporting; for delta these are not available as saved variables!
         if report
-            sol(pm, nw, :load, load_id)[:pd] = pd
-            sol(pm, nw, :load, load_id)[:qd] = qd
+            sol(pm, nw, :load, load_id)[:pd] = JuMP.Containers.DenseAxisArray(pd, connections)
+            sol(pm, nw, :load, load_id)[:qd] = JuMP.Containers.DenseAxisArray(qd, connections)
             sol(pm, nw, :load, load_id)[:pd_bus] = pd_bus
             sol(pm, nw, :load, load_id)[:qd_bus] = qd_bus
         end
+    end
+end
+
+
+@doc raw"""
+    constraint_mc_generator_power_delta(pm::LPUBFDiagModel, nw::Int, gen_id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+
+Adds constraints for delta-connected generators similar to delta-connected loads (using auxilary variable X).
+
+```math
+\begin{align}
+&\text{Three-phase delta transformation matrix: }  T^\Delta = \begin{bmatrix}\;\;\;1 & -1 & \;\;0\\ \;\;\;0 & \;\;\;1 & -1\\ -1 & \;\;\;0 & \;\;\;1\end{bmatrix} \\
+&\text{Single-phase delta transformation matrix (triple nodes): }  T^\Delta = \begin{bmatrix}\;1 & -1 \end{bmatrix} \\
+&\text{Line-neutral generation power: }  S_{bus} = diag(T^\Delta X_g) \\
+&\text{Line-line generation power: }  S^\Delta = diag(X_g T^\Delta)
+\end{align}
+```
+"""
+function constraint_mc_generator_power_delta(pm::LPUBFDiagModel, nw::Int, gen_id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+    pg = var(pm, nw, :pg, gen_id)
+    qg = var(pm, nw, :qg, gen_id)
+    Xgr = var(pm, nw, :Xgr, gen_id)
+    Xgi = var(pm, nw, :Xgi, gen_id)
+    gen = ref(pm, nw, :gen, gen_id)
+    bus_id = gen["gen_bus"]
+    bus = ref(pm, nw, :bus, bus_id)
+
+    nph = length(pmin)
+    is_triplex = length(connections)<3
+    conn_bus = is_triplex ? bus["terminals"] : connections
+
+    Tg = is_triplex ? [1 -1] : [1 -1 0; 0 1 -1; -1 0 1]  # TODO
+    # define pg/qg and pg_bus/qg_bus as affine transformations of X
+    JuMP.@constraint(pm.model, pg .== LinearAlgebra.diag(Tg*Xgr))
+    JuMP.@constraint(pm.model, qg .== LinearAlgebra.diag(Tg*Xgi))
+
+    pg_bus = LinearAlgebra.diag(Xgr*Tg)
+    qg_bus = LinearAlgebra.diag(Xgi*Tg)
+    pg_bus = JuMP.Containers.DenseAxisArray(pg_bus, conn_bus)
+    qg_bus = JuMP.Containers.DenseAxisArray(qg_bus, conn_bus)
+    var(pm, nw, :pg_bus)[gen_id] = pg_bus
+    var(pm, nw, :qg_bus)[gen_id] = qg_bus
+
+    if report
+        sol(pm, nw, :gen, gen_id)[:pg_bus] = pg_bus
+        sol(pm, nw, :gen, gen_id)[:qg_bus] = qg_bus
     end
 end
 
@@ -518,4 +575,139 @@ function constraint_mc_storage_thermal_limit(pm::LPUBFDiagModel, nw::Int, i::Int
     end
 
     JuMP.@constraint(pm.model, sum(ps_sqr .+ qs_sqr) <= rating^2)
+end
+
+
+@doc raw"""
+    constraint_mc_ampacity_from(pm::AbstractUnbalancedWModels, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})
+
+ACP current limit constraint on branches from-side
+
+math```
+p_{fr}^2 + q_{fr}^2 \leq w_{fr} i_{max}^2
+```
+"""
+function constraint_mc_ampacity_from(pm::LPUBFDiagModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})
+    p_fr = [var(pm, nw, :p, f_idx)[c] for c in f_connections]
+    q_fr = [var(pm, nw, :q, f_idx)[c] for c in f_connections]
+    w_fr = [var(pm, nw, :w, f_idx[2])[c] for c in f_connections]
+
+    p_sqr_fr = [JuMP.@variable(pm.model, base_name="$(nw)_p_sqr_$(f_idx)[$(c)]") for c in f_connections]
+    q_sqr_fr = [JuMP.@variable(pm.model, base_name="$(nw)_q_sqr_$(f_idx)[$(c)]") for c in f_connections]
+
+    for (idx,c) in enumerate(f_connections)
+        if isfinite(c_rating[idx])
+            p_lb, p_ub = _IM.variable_domain(p_fr[idx])
+            q_lb, q_ub = _IM.variable_domain(q_fr[idx])
+            w_ub = _IM.variable_domain(w_fr[idx])[2]
+
+            if (!isfinite(p_lb) || !isfinite(p_ub)) && isfinite(w_ub)
+                p_ub = sum(c_rating[isfinite.(c_rating)]) * w_ub
+                p_lb = -p_ub
+            end
+            if (!isfinite(q_lb) || !isfinite(q_ub)) && isfinite(w_ub)
+                q_ub = sum(c_rating[isfinite.(c_rating)]) * w_ub
+                q_lb = -q_ub
+            end
+
+            all(isfinite(b) for b in [p_lb, p_ub]) && PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, p_fr[idx], p_sqr_fr[idx], [p_lb, p_ub], false)
+            all(isfinite(b) for b in [q_lb, q_ub]) && PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, q_fr[idx], q_sqr_fr[idx], [q_lb, q_ub], false)
+        end
+    end
+
+    con(pm, nw, :mu_cm_branch)[f_idx] = mu_cm_fr = [JuMP.@constraint(pm.model, p_sqr_fr[idx] + q_sqr_fr[idx] .<= w_fr[idx] * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :branch, f_idx[1])[:mu_cm_fr] = mu_cm_fr
+    end
+end
+
+
+@doc raw"""
+    constraint_mc_ampacity_to(pm::AbstractUnbalancedWModels, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, c_rating::Vector{<:Real})
+
+ACP current limit constraint on branches to-side
+
+math```
+p_{to}^2 + q_{to}^2 \leq w_{to} i_{max}^2
+```
+"""
+function constraint_mc_ampacity_to(pm::LPUBFDiagModel, nw::Int, t_idx::Tuple{Int,Int,Int}, t_connections::Vector{Int}, c_rating::Vector{<:Real})
+    p_to = [var(pm, nw, :p, t_idx)[c] for c in t_connections]
+    q_to = [var(pm, nw, :q, t_idx)[c] for c in t_connections]
+    w_to = [var(pm, nw, :w, t_idx[2])[c] for c in t_connections]
+
+    p_sqr_to = [JuMP.@variable(pm.model, base_name="$(nw)_p_sqr_$(t_idx)[$(c)]") for c in t_connections]
+    q_sqr_to = [JuMP.@variable(pm.model, base_name="$(nw)_q_sqr_$(t_idx)[$(c)]") for c in t_connections]
+
+    for (idx,c) in enumerate(t_connections)
+        if isfinite(c_rating[idx])
+            p_lb, p_ub = _IM.variable_domain(p_to[idx])
+            q_lb, q_ub = _IM.variable_domain(q_to[idx])
+            w_ub = _IM.variable_domain(w_to[idx])[2]
+
+            if (!isfinite(p_lb) || !isfinite(p_ub)) && isfinite(w_ub)
+                p_ub = sum(c_rating[isfinite.(c_rating)]) * w_ub
+                p_lb = -p_ub
+            end
+            if (!isfinite(q_lb) || !isfinite(q_ub)) && isfinite(w_ub)
+                q_ub = sum(c_rating[isfinite.(c_rating)]) * w_ub
+                q_lb = -q_ub
+            end
+
+            all(isfinite(b) for b in [p_lb, p_ub]) && PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, p_to[idx], p_sqr_to[idx], [p_lb, p_ub], false)
+            all(isfinite(b) for b in [q_lb, q_ub]) && PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, q_to[idx], q_sqr_to[idx], [q_lb, q_ub], false)
+        end
+    end
+
+    con(pm, nw, :mu_cm_branch)[t_idx] = mu_cm_to = [JuMP.@constraint(pm.model, p_sqr_to[idx] + q_sqr_to[idx] .<= w_to[idx] * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :branch, t_idx[1])[:mu_cm_to] = mu_cm_to
+    end
+end
+
+
+@doc raw"""
+    constraint_mc_switch_ampacity(pm::AbstractUnbalancedWModels, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})
+
+ACP current limit constraint on switches from-side
+
+math```
+p_{fr}^2 + q_{fr}^2 \leq w_{fr} i_{max}^2
+```
+"""
+function constraint_mc_switch_ampacity(pm::LPUBFDiagModel, nw::Int, f_idx::Tuple{Int,Int,Int}, f_connections::Vector{Int}, c_rating::Vector{<:Real})
+    psw_fr = [var(pm, nw, :psw, f_idx)[c] for c in f_connections]
+    qsw_fr = [var(pm, nw, :qsw, f_idx)[c] for c in f_connections]
+    w_fr = [var(pm, nw, :w, f_idx[2])[c] for c in f_connections]
+
+    psw_sqr_fr = [JuMP.@variable(pm.model, base_name="$(nw)_psw_sqr_$(f_idx)[$(c)]") for c in f_connections]
+    qsw_sqr_fr = [JuMP.@variable(pm.model, base_name="$(nw)_qsw_sqr_$(f_idx)[$(c)]") for c in f_connections]
+
+    for (idx,c) in enumerate(f_connections)
+        if isfinite(c_rating[idx])
+            p_lb, p_ub = _IM.variable_domain(psw_fr[idx])
+            q_lb, q_ub = _IM.variable_domain(qsw_fr[idx])
+            w_ub = _IM.variable_domain(w_fr[idx])[2]
+
+            if (!isfinite(p_lb) || !isfinite(p_ub)) && isfinite(w_ub)
+                p_ub = sum(c_rating[isfinite.(c_rating)]) * w_ub
+                p_lb = -p_ub
+            end
+            if (!isfinite(q_lb) || !isfinite(q_ub)) && isfinite(w_ub)
+                q_ub = sum(c_rating[isfinite.(c_rating)]) * w_ub
+                q_lb = -q_ub
+            end
+
+            all(isfinite(b) for b in [p_lb, p_ub]) && PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, psw_fr[idx], psw_sqr_fr[idx], [p_lb, p_ub], false)
+            all(isfinite(b) for b in [q_lb, q_ub]) && PolyhedralRelaxations.construct_univariate_relaxation!(pm.model, x->x^2, qsw_fr[idx], qsw_sqr_fr[idx], [q_lb, q_ub], false)
+        end
+    end
+
+    con(pm, nw, :mu_cm_switch)[f_idx] = mu_cm_fr = [JuMP.@constraint(pm.model, psw_sqr_fr[idx] + qsw_sqr_fr[idx] .<= w_fr[idx] * c_rating[idx]^2) for idx in findall(c_rating .< Inf)]
+
+    if _IM.report_duals(pm)
+        sol(pm, nw, :switch, f_idx[1])[:mu_cm_fr] = mu_cm_fr
+    end
 end

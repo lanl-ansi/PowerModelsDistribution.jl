@@ -98,7 +98,7 @@ function transform_solution(
             for map_item in reverse(_map)
                 unmap_function! = haskey(map_math2eng_extensions, map_item["unmap_function"]) ? map_math2eng_extensions[map_item["unmap_function"]] : getfield(PowerModelsDistribution, Symbol(map_item["unmap_function"]))
                 if map_item["unmap_function"] != "_map_math2eng_root!" && get(map_item, "apply_to_subnetworks", true)
-                    unmap_function!(nws_eng_sol[n], nws_math_sol[n], map_item)
+                    !isempty(nws_math_sol) && unmap_function!(nws_eng_sol[n], nws_math_sol[n], map_item)
                 else
                     unmap_function!(solution_eng, solution_math, map_item)
                 end
@@ -159,11 +159,7 @@ function _map_math2eng_voltage_source!(data_eng::Dict{String,<:Any}, data_math::
     for to_id in map["to"]
         math_obj = _get_math_obj(data_math, to_id)
         if startswith(to_id, "gen")
-            for property in ["pg", "qg", "pg_bus", "qg_bus"]
-                if haskey(math_obj, property)
-                    eng_obj[property] = math_obj[property]
-                end
-            end
+            merge!(eng_obj, math_obj)
         end
     end
 
@@ -189,7 +185,17 @@ end
 ""
 function _map_math2eng_load!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "load", map)
-    math_obj = _get_math_obj(data_math, map["to"])
+    if length(map["to"]) == 3    # If ZIP loads, combine individual components
+        load_ids = [index for (comp_type, index) in split.(map["to"], ".", limit=2)]
+        math_obj = Dict{String,Any}(
+            "qd" => sum(data_math["load"]["$id"]["qd"] for id in load_ids),
+            "pd" => sum(data_math["load"]["$id"]["pd"] for id in load_ids),
+            "qd_bus" => sum(data_math["load"]["$id"]["qd_bus"] for id in load_ids),
+            "pd_bus" => sum(data_math["load"]["$id"]["pd_bus"] for id in load_ids),
+        ) 
+    else
+        math_obj = _get_math_obj(data_math, map["to"])
+    end
 
     merge!(eng_obj, math_obj)
 
@@ -328,8 +334,8 @@ end
 ""
 function _map_math2eng_root!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     if !ismultinetwork(data_math)
-        data_eng["settings"] = Dict{String,Any}("sbase" => get(get(data_math, "settings", Dict{String,Any}), "sbase", NaN))  # in case of no solution
-        data_eng["per_unit"] = data_math["per_unit"]
+        data_eng["settings"] = Dict{String,Any}("sbase" => get(get(data_math, "settings", Dict{String,Any}()), "sbase", NaN))  # in case of no solution
+        data_eng["per_unit"] = get(data_math, "per_unit", true)
     else
         for (n,nw) in get(data_eng, "nw", Dict{String,Any}())
             nw["settings"] = Dict{String,Any}("sbase" => data_math["nw"][n]["settings"]["sbase"])

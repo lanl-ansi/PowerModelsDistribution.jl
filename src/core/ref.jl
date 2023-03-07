@@ -172,7 +172,7 @@ function calc_buspair_parameters(buses, branches)
 
     buspair_indexes = Set((branch["f_bus"], branch["t_bus"], fc, tc) for (i,branch) in branch_lookup for (fc, tc) in zip(branch["f_connections"], branch["t_connections"]))
 
-    bp_branch = Dict((bp, typemax(Int64)) for bp in buspair_indexes)
+    bp_branch = Dict((bp, typemax(Int)) for bp in buspair_indexes)
 
     bp_angmin = Dict((bp, -Inf) for bp in buspair_indexes)
     bp_angmax = Dict((bp,  Inf) for bp in buspair_indexes)
@@ -330,7 +330,9 @@ function ref_add_core!(ref::Dict{Symbol,Any})
                 for (i, obj) in nw_ref[Symbol(type)]
                     if obj[status] != pmd_math_component_status_inactive[type]
                         push!(conns[obj["f_bus"]], ((obj["index"], obj["f_bus"], obj["t_bus"]), obj["f_connections"]))
-                        push!(conns[obj["t_bus"]], ((obj["index"], obj["t_bus"], obj["f_bus"]), obj["t_connections"]))
+                        if obj["f_bus"] != obj["t_bus"]
+                            push!(conns[obj["t_bus"]], ((obj["index"], obj["t_bus"], obj["f_bus"]), obj["t_connections"]))
+                        end
                     end
                 end
                 nw_ref[Symbol("bus_arcs_conns_$(type)")] = conns

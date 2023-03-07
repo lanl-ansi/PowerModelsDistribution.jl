@@ -36,15 +36,14 @@
 
         add_load!(eng2, "tload", "loadbus2", [1,2,3,4]; pd_nom=[5, 5, 5], qd_nom=[1, 1, 1])
 
-        add_generator!(eng2, "secondary", "loadbus2", [1,2,3,4]; cost_pg_parameters=[0.0, 1.2, 0])
+        add_generator!(eng2, "secondary", "loadbus2", [1,2,3,4]; cost_pg_parameters=[0.0, 1.2, 0], pg_ub=[2.5, 2.5, 2.5, 0.0], pg_lb=zeros(4), qg_lb=[-2.5, -2.5, -2.5, 0], qg_ub=[2.5, 2.5, 2.5, 0])
 
-        add_shunt!(eng2, "cap", "loadbus2", [1,2,3,4]; bs=LinearAlgebra.diagm(0=>fill(1, 3)))
+        add_shunt!(eng2, "cap", "loadbus2", [1,2,3,4]; bs=LinearAlgebra.diagm(0=>fill(0.1, 3)))
 
-        # TODO this test is unstable with Julia 1.5, need to change the data model to fix it
-        # result2 = solve_mc_opf(eng2, ACRUPowerModel, ipopt_solver)
+        result2 = solve_mc_opf(eng2, ACRUPowerModel, ipopt_solver)
 
-        # @test result2["termination_status"] == LOCALLY_SOLVED
-        # @test isapprox(result2["objective"], -83.3003; atol=0.2)
+        @test result2["termination_status"] == LOCALLY_SOLVED
+        @test isapprox(result2["objective"], 0.03; atol=0.2)
     end
 
     @testset "engineering model transformations" begin
