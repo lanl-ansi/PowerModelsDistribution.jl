@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in LPUBFDiagModel `constraint_mc_load_power` where the format of the constraint would lead to infeasibilities
 - Fixed bug in dss parser that did not recognize `//` as token for inline comments
 
 ## v0.14.7
