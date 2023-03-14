@@ -403,14 +403,12 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
         # in this case, :pd has a JuMP variable
         else
             w = var(pm, nw, :w)[bus_id][[c for c in connections]]
-            pd = Vector{JuMP.AffExpr}([])
-            qd = Vector{JuMP.AffExpr}([])
+            pd = var(pm, nw, :pd, load_id)
+            qd = var(pm, nw, :qd, load_id)
             for (idx,c) in enumerate(connections)
-                push!(pd, JuMP.@expression(pm.model, 1/2*a[idx]*(w[c]+1)))
-                push!(qd, JuMP.@expression(pm.model, 1/2*b[idx]*(w[c]+1)))
+                JuMP.@constraint(pm.model, pd[c] == 1/2*a[idx]*(w[c]+1))
+                JuMP.@constraint(pm.model, qd[c] == 1/2*b[idx]*(w[c]+1))
             end
-            var(pm, nw, :pd)[load_id] = JuMP.Containers.DenseAxisArray(pd, connections)
-            var(pm, nw, :qd)[load_id] = JuMP.Containers.DenseAxisArray(qd, connections)
         end
         # :pd_bus is identical to :pd now
         var(pm, nw, :pd_bus)[load_id] = var(pm, nw, :pd)[load_id]
