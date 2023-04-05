@@ -2,6 +2,7 @@
 
 ## staged
 
+- Fixed bug in `_map_eng2math_voltage_source!` where `pg` and `qg` were getting set to zero instead trying to `get` them from the `eng_obj` first
 - Fixed bug in LPUBFDiagModel `constraint_mc_load_power` where the format of the constraint would lead to infeasibilities
 - Fixed bug in dss parser that did not recognize `//` as token for inline comments
 
