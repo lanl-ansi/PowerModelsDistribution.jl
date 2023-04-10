@@ -911,8 +911,8 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
         math_obj["gen_bus"] = gen_bus = data_math["bus_lookup"][eng_obj["bus"]]
         math_obj["connections"] = eng_obj["connections"]
         math_obj["gen_status"] = status = Int(eng_obj["status"])
-        math_obj["pg"] = fill(0.0, nphases)
-        math_obj["qg"] = fill(0.0, nphases)
+        math_obj["pg"] = get(eng_obj, "pg", fill(0.0, nphases))
+        math_obj["qg"] = get(eng_obj, "qg", fill(0.0, nphases))
         math_obj["vg"] = eng_obj["vm"]
         math_obj["pmin"] = get(eng_obj, "pg_lb", fill(-Inf, nphases))
         math_obj["pmax"] = get(eng_obj, "pg_ub", fill( Inf, nphases))

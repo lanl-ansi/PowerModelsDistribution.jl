@@ -3,6 +3,12 @@
 ## staged
 
 - Add native power flow solver by using `compute_mc_pf(data_math)`
+- Fixed bug in `build_mc_pf` where `constraint_mc_storage_power_setpoint_real` was being applied to all storage objects, and not just ones on PV buses
+
+## v0.14.8
+
+- Fixed bug in `_map_eng2math_voltage_source!` where `pg` and `qg` were getting set to zero instead trying to `get` them from the `eng_obj` first
+- Fixed bug in LPUBFDiagModel `constraint_mc_load_power` where the format of the constraint would lead to infeasibilities
 - Fixed bug in dss parser that did not recognize `//` as token for inline comments
 
 ## v0.14.7

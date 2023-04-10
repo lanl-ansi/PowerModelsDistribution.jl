@@ -16,3 +16,5 @@ examples/network1
 examples/network.dss
 examples/*.toml
 examples/Native Power Flow - script.jl
+
+debug/
