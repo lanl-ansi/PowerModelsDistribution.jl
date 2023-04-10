@@ -9,7 +9,7 @@ const _loss_model_objects = Dict{String,Vector{String}}(
     "transformer" => String["rw", "xsc", "cmag", "noloadloss"],
     "voltage_source" => String["rs", "xs"],
     "generator" => String["rs", "xs"],
-    "solar" => String["rs","xs"],
+    "solar" => String["rs", "xs"],
     "storage" => String["rs", "xs", "pex", "qex"],
 )
 
@@ -76,7 +76,7 @@ function _apply_phase_projection!(data_eng::Dict{String,<:Any})
     all_conductors = _get_complete_conductor_set(data_eng)
 
     if haskey(data_eng, "bus")
-        for (_,eng_obj) in data_eng["bus"]
+        for (_, eng_obj) in data_eng["bus"]
             if !haskey(eng_obj, "vm_lb")
                 eng_obj["vm_lb"] = fill(0.0, length(eng_obj["terminals"]))
             end
@@ -92,7 +92,7 @@ function _apply_phase_projection!(data_eng::Dict{String,<:Any})
     end
 
     if haskey(data_eng, "line")
-        for (_,eng_obj) in data_eng["line"]
+        for (_, eng_obj) in data_eng["line"]
             _apply_linecode!(eng_obj, data_eng)
 
             _pad_properties!(eng_obj, ["rs", "xs", "g_fr", "g_to", "b_fr", "b_to"], eng_obj["f_connections"], all_conductors)
@@ -110,7 +110,7 @@ function _apply_phase_projection!(data_eng::Dict{String,<:Any})
     end
 
     if haskey(data_eng, "transformer")
-        for (_,eng_obj) in data_eng["transformer"]
+        for (_, eng_obj) in data_eng["transformer"]
             _apply_xfmrcode!(eng_obj, data_eng)
 
             if haskey(eng_obj, "f_connections")
@@ -131,7 +131,7 @@ function _apply_phase_projection!(data_eng::Dict{String,<:Any})
     end
 
     if haskey(data_eng, "switch")
-        for (_,eng_obj) in data_eng["switch"]
+        for (_, eng_obj) in data_eng["switch"]
             _apply_linecode!(eng_obj, data_eng)
 
             _pad_properties!(eng_obj, ["rs", "xs"], eng_obj["f_connections"], all_conductors)
@@ -149,7 +149,7 @@ function _apply_phase_projection!(data_eng::Dict{String,<:Any})
     end
 
     if haskey(data_eng, "shunt")
-        for (_,eng_obj) in data_eng["shunt"]
+        for (_, eng_obj) in data_eng["shunt"]
             _pad_properties!(eng_obj, ["gs", "bs"], eng_obj["connections"], all_conductors)
 
             _pad_connections!(eng_obj, "connections", all_conductors)
@@ -157,7 +157,7 @@ function _apply_phase_projection!(data_eng::Dict{String,<:Any})
     end
 
     if haskey(data_eng, "load")
-        for (_,eng_obj) in data_eng["load"]
+        for (_, eng_obj) in data_eng["load"]
             if eng_obj["configuration"] == WYE
                 _pad_properties!(eng_obj, ["pd_nom", "qd_nom"], eng_obj["connections"], all_conductors)
             else
@@ -169,8 +169,8 @@ function _apply_phase_projection!(data_eng::Dict{String,<:Any})
     end
 
     if haskey(data_eng, "generator")
-        for (_,eng_obj) in data_eng["generator"]
-            if eng_obj["configuration"]==WYE
+        for (_, eng_obj) in data_eng["generator"]
+            if eng_obj["configuration"] == WYE
                 _pad_properties!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
             else
                 _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
@@ -181,8 +181,8 @@ function _apply_phase_projection!(data_eng::Dict{String,<:Any})
     end
 
     if haskey(data_eng, "solar")
-        for (_,eng_obj) in data_eng["solar"]
-            if eng_obj["configuration"]==WYE
+        for (_, eng_obj) in data_eng["solar"]
+            if eng_obj["configuration"] == WYE
                 _pad_properties!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
             else
                 _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
@@ -193,7 +193,7 @@ function _apply_phase_projection!(data_eng::Dict{String,<:Any})
     end
 
     if haskey(data_eng, "storage")
-        for (_,eng_obj) in data_eng["storage"]
+        for (_, eng_obj) in data_eng["storage"]
             _pad_properties!(eng_obj, ["cm_ub", "qs_lb", "qs_ub", "rs", "xs", "ps", "qs"], eng_obj["connections"], all_conductors)
 
             _pad_connections!(eng_obj, "connections", all_conductors)
@@ -201,7 +201,7 @@ function _apply_phase_projection!(data_eng::Dict{String,<:Any})
     end
 
     if haskey(data_eng, "voltage_source")
-        for (_,eng_obj) in data_eng["voltage_source"]
+        for (_, eng_obj) in data_eng["voltage_source"]
             _pad_properties!(eng_obj, ["pg", "qg", "pg_lb", "pg_ub", "qg_lb", "qg_ub", "vm", "va"], eng_obj["connections"], all_conductors)
 
             _pad_connections!(eng_obj, "connections", all_conductors)
@@ -239,7 +239,7 @@ function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
     all_conductors = _get_complete_conductor_set(data_eng)
 
     if haskey(data_eng, "transformer")
-        for (_,eng_obj) in data_eng["transformer"]
+        for (_, eng_obj) in data_eng["transformer"]
             _apply_xfmrcode!(eng_obj, data_eng)
 
             if haskey(eng_obj, "f_connections")
@@ -271,9 +271,9 @@ function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
     end
 
     if haskey(data_eng, "load")
-        for (_,eng_obj) in data_eng["load"]
+        for (_, eng_obj) in data_eng["load"]
             if eng_obj["configuration"] == DELTA
-                if eng_obj["connections"]==[1, 2] && eng_obj["vm_nom"]==0.24 # check if load is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
+                if eng_obj["connections"] == [1, 2] && eng_obj["vm_nom"] == 0.24 # check if load is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
                     bus_terminals[eng_obj["bus"]] = eng_obj["connections"] = [1]
                 else
                     _pad_properties_delta!(eng_obj, ["pd_nom", "qd_nom"], eng_obj["connections"], all_conductors)
@@ -285,9 +285,9 @@ function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
     end
 
     if haskey(data_eng, "generator")
-        for (_,eng_obj) in data_eng["generator"]
-            if eng_obj["configuration"]==DELTA
-                if eng_obj["connections"]==[1, 2] && eng_obj["vg"][1]==0.24 # check if generator is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
+        for (_, eng_obj) in data_eng["generator"]
+            if eng_obj["configuration"] == DELTA
+                if eng_obj["connections"] == [1, 2] && eng_obj["vg"][1] == 0.24 # check if generator is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
                     bus_terminals[eng_obj["bus"]] = eng_obj["connections"] = [1]
                 else
                     _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
@@ -299,9 +299,9 @@ function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
     end
 
     if haskey(data_eng, "solar")
-        for (_,eng_obj) in data_eng["solar"]
-            if eng_obj["configuration"]==DELTA
-                if eng_obj["connections"]==[1, 2] && eng_obj["vg"][1]==0.24 # check if solar is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
+        for (_, eng_obj) in data_eng["solar"]
+            if eng_obj["configuration"] == DELTA
+                if eng_obj["connections"] == [1, 2] && eng_obj["vg"][1] == 0.24 # check if solar is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
                     bus_terminals[eng_obj["bus"]] = eng_obj["connections"] = [1]
                 else
                     _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
@@ -320,7 +320,7 @@ end
 
 "helper function to update the terminals on projected buses"
 function _update_bus_terminal_projections!(data_eng::Dict{String,<:Any}, bus_terminals::Dict{String,<:Vector{Int}})
-    for (id,terminals) in bus_terminals
+    for (id, terminals) in bus_terminals
         eng_obj = data_eng["bus"][id]
 
         if !haskey(eng_obj, "vm_lb")
@@ -352,17 +352,17 @@ _is_multiport_component(comp::Dict{String,Any})::Bool = haskey(comp, "bus") && i
 
 "Obtain impedance parameters, directly or from linecode."
 function _get_line_impedance_parameters(data_eng::Dict{String,Any}, line::Dict{String,Any})
-    @assert data_eng["data_model"]==ENGINEERING
+    @assert data_eng["data_model"] == ENGINEERING
 
     if haskey(line, "rs")
-        z_s = line["rs"].+im*line["xs"]
-        y_fr = line["g_fr"].+im*line["b_fr"]
-        y_to = line["g_to"].+im*line["b_to"]
+        z_s = line["rs"] .+ im * line["xs"]
+        y_fr = line["g_fr"] .+ im * line["b_fr"]
+        y_to = line["g_to"] .+ im * line["b_to"]
     else
         lc = data_eng["linecode"][line["linecode"]]
-        z_s = (lc["rs"].+im*lc["xs"])*line["length"]
-        y_fr = (lc["g_fr"].+im*lc["b_fr"])*line["length"]
-        y_to = (lc["g_to"].+im*lc["b_to"])*line["length"]
+        z_s = (lc["rs"] .+ im * lc["xs"]) * line["length"]
+        y_fr = (lc["g_fr"] .+ im * lc["b_fr"]) * line["length"]
+        y_to = (lc["g_to"] .+ im * lc["b_to"]) * line["length"]
     end
 
     return z_s, y_fr, y_to
@@ -371,11 +371,11 @@ end
 
 "Create an equivalent shunt for a line which connects to a single bus."
 function _loop_line_to_shunt(data_eng::Dict{String,Any}, line_id::AbstractString)
-    @assert data_eng["data_model"]==ENGINEERING
+    @assert data_eng["data_model"] == ENGINEERING
 
     # only possible when the line is a 'loop' with respect to its bus
     line = data_eng["line"][line_id]
-    @assert line["f_bus"]==line["t_bus"]
+    @assert line["f_bus"] == line["t_bus"]
 
     # obtain impedance parameters, directly or from linecode
     z_s, y_fr, y_to = _get_line_impedance_parameters(data_eng, line)
@@ -387,11 +387,11 @@ function _loop_line_to_shunt(data_eng::Dict{String,Any}, line_id::AbstractString
 
     # simplify to a unique set of of connections and equivalent addmittance
     conns_unique = unique(conns)
-    M = [conns[i]==conns_unique[j] ? 1 : 0 for i in 1:length(conns), j in 1:length(conns_unique)]
-    Yb_unique = M'*Yb*M
+    M = [conns[i] == conns_unique[j] ? 1 : 0 for i in eachindex(conns), j in eachindex(conns_unique)]
+    Yb_unique = M' * Yb * M
 
     # build shunt dict
-    shunt =  Dict{String, Any}(
+    shunt = Dict{String,Any}(
         "status" => line["status"],
         "dispatchable" => NO,
         "bus" => line["f_bus"],
@@ -409,16 +409,16 @@ end
 
 "Merge a terminal into another for a specified bus, i.e. as if they are short-ciruited."
 function _merge_terminals!(data_eng::Dict{String,Any}, bus_id::String, t_fr, t_to)
-    @assert data_eng["data_model"]==ENGINEERING
+    @assert data_eng["data_model"] == ENGINEERING
 
     bus = data_eng["bus"][bus_id]
     old_terminals = bus["terminals"]
     # exclude t_fr from the bus terminals
-    merged_terminals = bus["terminals"] = [x for x in old_terminals if x!=t_fr]
+    merged_terminals = bus["terminals"] = [x for x in old_terminals if x != t_fr]
     # find position of merged terminals in old terminal vector
-    old_idxs = Dict(t=>findall(t.==old_terminals) for t in merged_terminals)
+    old_idxs = Dict(t => findall(t .== old_terminals) for t in merged_terminals)
     # assign idxs of t_fr to idxs of t_to
-    append!(old_idxs[t_to], findall(t_fr.==old_terminals))
+    append!(old_idxs[t_to], findall(t_fr .== old_terminals))
 
 
     # resolve 'vmin' and 'vmax' properties
@@ -432,9 +432,9 @@ function _merge_terminals!(data_eng::Dict{String,Any}, bus_id::String, t_fr, t_t
     # resolve properties which should be the same for the merged terminals
     for prop in ["vm", "va", "vr_start", "vi_start", "vm_start", "va_start"]
         if haskey(bus, prop)
-            vals = bus[prop][old_idx[t_to]]
-            @assert vals.==vals[1] "Cannot merge bus property $prop because the merged terminals differ."
-            bus[prop] = [bus[prop][findfirst(old_terminals.==t)] for t in merged_terminals]
+            vals = bus[prop][old_idxs[t_to]]
+            @assert vals .== vals[1] "Cannot merge bus property $prop because the merged terminals differ."
+            bus[prop] = [bus[prop][findfirst(old_terminals .== t)] for t in merged_terminals]
         end
     end
 
@@ -442,11 +442,11 @@ function _merge_terminals!(data_eng::Dict{String,Any}, bus_id::String, t_fr, t_t
     if haskey(bus, "grounded")
         grounded = bus["grounded"]
         if t_fr in grounded
-            idxs_fr = findall(grounded.==t_fr)
-            idxs_to = findall(grounded.==t_to)
+            idxs_fr = findall(grounded .== t_fr)
+            idxs_to = findall(grounded .== t_to)
             idxs = [idxs_fr..., idxs_to...]
-            zgs = [bus["rg"][i]+im*bus["xg"][i] for i in idxs]
-            zg = any(iszero.(zgs)) ? im*0.0 : 1/sum(1/x for x in zgs)
+            zgs = [bus["rg"][i] + im * bus["xg"][i] for i in idxs]
+            zg = any(iszero.(zgs)) ? im * 0.0 : 1 / sum(1 / x for x in zgs)
 
             idxs_other = setdiff(1:length(grounded), idxs)
             bus["grounded"] = [grounded[idxs_other]..., t_to]
@@ -459,23 +459,23 @@ function _merge_terminals!(data_eng::Dict{String,Any}, bus_id::String, t_fr, t_t
 
     # update connection properties to reflect the merge
     for type in setdiff(intersect(pmd_eng_asset_types, keys(data_eng)), ["bus"])
-        for (_,comp) in data_eng[type]
+        for (_, comp) in data_eng[type]
             # one-port components
-            if _is_oneport_component(comp) && comp["bus"]==bus_id
-                comp["connections"] = [t==t_fr ? t_to : t for t in comp["connections"]]
-            # two-port components
+            if _is_oneport_component(comp) && comp["bus"] == bus_id
+                comp["connections"] = [t == t_fr ? t_to : t for t in comp["connections"]]
+                # two-port components
             elseif _is_twoport_component(comp)
-                if comp["f_bus"]==bus_id
-                    comp["f_connections"] = [t==t_fr ? t_to : t for t in comp["f_connections"]]
+                if comp["f_bus"] == bus_id
+                    comp["f_connections"] = [t == t_fr ? t_to : t for t in comp["f_connections"]]
                 end
-                if comp["t_bus"]==bus_id
-                    comp["t_connections"] = [t==t_fr ? t_to : t for t in comp["t_connections"]]
+                if comp["t_bus"] == bus_id
+                    comp["t_connections"] = [t == t_fr ? t_to : t for t in comp["t_connections"]]
                 end
-            # multi-port components
+                # multi-port components
             elseif _is_multiport_component(comp)
-                for (w,bus_w) in enumerate(comp["bus"])
-                    if bus_w==bus_id
-                        comp["connections"][w] = [t==t_fr ? t_to : t for t in comp["connections"][w]]
+                for (w, bus_w) in enumerate(comp["bus"])
+                    if bus_w == bus_id
+                        comp["connections"][w] = [t == t_fr ? t_to : t for t in comp["connections"][w]]
                     end
                 end
             end
@@ -501,7 +501,7 @@ function transform_loops!(
     data::Dict{String,Any};
     zero_series_impedance_threshold::Real=1E-8,
     shunt_id_prefix::AbstractString="line_loop"
-    )::Dict{String,Any}
+)::Dict{String,Any}
 
     @assert iseng(data) "wrong data model type"
 
@@ -526,23 +526,23 @@ function _transform_loops!(
     data_eng::Dict{String,Any};
     zero_series_impedance_threshold::Real=1E-8,
     shunt_id_prefix::AbstractString="line_loop"
-    )::Dict{String,Any}
+)::Dict{String,Any}
 
-    for (id,line) in get(data_eng, "line", Dict())
-        if line["f_bus"]==line["t_bus"]
+    for (id, line) in get(data_eng, "line", Dict())
+        if line["f_bus"] == line["t_bus"]
             # obtain impedance parameters, directly or from linecode
             z_s, y_fr, y_to = _get_line_impedance_parameters(data_eng, line)
 
             # remove short-circuit line and merge terminals
-            if all(iszero.(y_fr)) && all(iszero.(y_to)) && all(abs.(z_s).<=zero_series_impedance_threshold)
+            if all(iszero.(y_fr)) && all(iszero.(y_to)) && all(abs.(z_s) .<= zero_series_impedance_threshold)
                 for (t_fr, t_to) in zip(line["f_connections"], line["t_connections"])
                     _merge_terminals!(data_eng, line["f_bus"], sort([t_fr, t_to], rev=true)...)
                 end
-            # convert line to a shunt
+                # convert line to a shunt
             else
                 shunt = _loop_line_to_shunt(data_eng, id)
                 if !haskey(data_eng, "shunt")
-                    data_eng["shunt"] = Dict{String, Any}()
+                    data_eng["shunt"] = Dict{String,Any}()
                 end
                 data_eng["shunt"]["$shunt_id_prefix.$id"] = shunt
             end
@@ -579,15 +579,15 @@ function _remove_unconnected_terminals!(data_eng::Dict{String,Any})::Dict{String
     # find all connected bts (a 'bt' is a bus-terminal pair)
     connected_bts = []
     for type in setdiff(intersect(pmd_eng_asset_types, keys(data_eng)), ["bus"])
-        for (id,comp) in data_eng[type]
+        for (id, comp) in data_eng[type]
             if _is_oneport_component(comp)
-                connected_bts = append!(connected_bts, [(comp["bus"],t) for t in comp["connections"]])
+                connected_bts = append!(connected_bts, [(comp["bus"], t) for t in comp["connections"]])
             elseif _is_twoport_component(comp)
-                connected_bts = append!(connected_bts, [(comp["f_bus"],t) for t in comp["f_connections"]])
-                connected_bts = append!(connected_bts, [(comp["t_bus"],t) for t in comp["t_connections"]])
+                connected_bts = append!(connected_bts, [(comp["f_bus"], t) for t in comp["f_connections"]])
+                connected_bts = append!(connected_bts, [(comp["t_bus"], t) for t in comp["t_connections"]])
             elseif _is_multiport_component(comp)
-                for (b_w,conns_w) in zip(comp["bus"], comp["connections"])
-                    connected_bts = append!(connected_bts, [(b_w,t) for t in conns_w])
+                for (b_w, conns_w) in zip(comp["bus"], comp["connections"])
+                    connected_bts = append!(connected_bts, [(b_w, t) for t in conns_w])
                 end
             end
         end
@@ -595,13 +595,13 @@ function _remove_unconnected_terminals!(data_eng::Dict{String,Any})::Dict{String
     connected_bts = unique(connected_bts)
 
     # remove all unconnected bts
-    bts = [(b,t) for (b,bus) in data_eng["bus"] for t in bus["terminals"]]
-    for (b,t) in setdiff(bts, connected_bts)
+    bts = [(b, t) for (b, bus) in data_eng["bus"] for t in bus["terminals"]]
+    for (b, t) in setdiff(bts, connected_bts)
         bus = data_eng["bus"][b]
-        keep_ts_order = (!).(bus["terminals"].==t)
+        keep_ts_order = (!).(bus["terminals"] .== t)
         _apply_filter!(bus, ["terminals", "vm", "va", "vmin", "vmax"], keep_ts_order)
         if t in bus["grounded"]
-            keep_gr_order = (!).(bus["grounded"].==t)
+            keep_gr_order = (!).(bus["grounded"] .== t)
             _apply_filter!(bus, ["grounded", "rg", "xg"], keep_gr_order)
         end
         #TODO other bounds
@@ -630,9 +630,9 @@ reduce_lines(data_eng::Dict{String,Any}) = reduce_lines!(deepcopy(data_eng))
 
 "Reverse the direction of a line."
 function _line_reverse!(line::Dict{String,Any})
-    prop_pairs = [("f_bus", "t_bus"), ("f_connections", "t_connections"), ("g_fr", "g_to"), ("b_fr","b_to")]
+    prop_pairs = [("f_bus", "t_bus"), ("f_connections", "t_connections"), ("g_fr", "g_to"), ("b_fr", "b_to")]
 
-    for (x,y) in prop_pairs
+    for (x, y) in prop_pairs
         if haskey(line, x)
             tmp = line[x]
             line[x] = line[y]
@@ -649,11 +649,11 @@ Returns a unique list of all buses specified in the data model.
 The argument 'comp_types' specifies which component types are searched to build the list.
 """
 function get_defined_buses(data_eng::Dict{String,Any}; comp_types=pmd_eng_asset_types)::Vector{String}
-    @assert data_eng["data_model"]==ENGINEERING
+    @assert data_eng["data_model"] == ENGINEERING
 
     buses_exclude = Vector{String}()
     for comp_type in intersect(comp_types, keys(data_eng))
-        for (id,comp) in data_eng[comp_type]
+        for (id, comp) in data_eng[comp_type]
             if haskey(comp, "f_bus")
                 buses = [comp["f_bus"], comp["t_bus"]]
             elseif haskey(comp, "bus")
@@ -677,7 +677,7 @@ Deletes trailing lines,
 i.e. lines connected to a bus with no other connected components and which is not grounded.
 """
 function delete_trailing_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
-    @assert data_eng["data_model"]==ENGINEERING
+    @assert data_eng["data_model"] == ENGINEERING
 
     # exclude buses that appear in components other than lines
     comp_types_exclude = setdiff(pmd_eng_asset_types, ["line"])
@@ -685,8 +685,8 @@ function delete_trailing_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
 
     # build auxiliary variables
     line_has_shunt = Dict()
-    bus_lines = Dict(k=>[] for k in keys(data_eng["bus"]))
-    for (id,line) in data_eng["line"]
+    bus_lines = Dict(k => [] for k in keys(data_eng["bus"]))
+    for (id, line) in data_eng["line"]
         _, y_fr, y_to = _get_line_impedance_parameters(data_eng, line)
         line_has_shunt[id] = !iszero(y_fr) || !iszero(y_to)
         push!(bus_lines[line["f_bus"]], id)
@@ -694,11 +694,11 @@ function delete_trailing_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
     end
 
     # eligible buses connect to a single line, and that line should have zero addmittance to ground
-    eligible_buses = [bus_id for (bus_id,line_ids) in bus_lines if length(line_ids)==1 && !line_has_shunt[line_ids[1]]]
+    eligible_buses = [bus_id for (bus_id, line_ids) in bus_lines if length(line_ids) == 1 && !line_has_shunt[line_ids[1]]]
     # exclude buses that connect to a component other than lines
     eligible_buses = setdiff(eligible_buses, buses_exclude)
     # exclude buses that are grounded
-    grounded_buses = [bus_id for (bus_id,bus) in data_eng["bus"] if !isempty(bus["grounded"])]
+    grounded_buses = [bus_id for (bus_id, bus) in data_eng["bus"] if !isempty(bus["grounded"])]
     eligible_buses = setdiff(eligible_buses, grounded_buses)
 
     # remove trailing lines and buses
@@ -709,14 +709,14 @@ function delete_trailing_lines!(data_eng::Dict{String,Any})::Dict{String,Any}
             line = data_eng["line"][line_id]
 
             delete!(data_eng["line"], line_id)
-            delete!(data_eng["bus"],  bus_id)
+            delete!(data_eng["bus"], bus_id)
 
-            other_end_bus = line["f_bus"]==bus_id ? line["t_bus"] : line["f_bus"]
+            other_end_bus = line["f_bus"] == bus_id ? line["t_bus"] : line["f_bus"]
             bus_lines[other_end_bus] = setdiff(bus_lines[other_end_bus], [line_id])
-            delete!(bus_lines,  bus_id)
+            delete!(bus_lines, bus_id)
         end
 
-        eligible_buses = [bus_id for (bus_id, line_ids) in bus_lines if length(line_ids)==1 && !(bus_id in buses_exclude) && !line_has_shunt[line_ids[1]]]
+        eligible_buses = [bus_id for (bus_id, line_ids) in bus_lines if length(line_ids) == 1 && !(bus_id in buses_exclude) && !line_has_shunt[line_ids[1]]]
     end
 
     return data_eng
@@ -725,7 +725,7 @@ end
 
 "Join lines which are connected in series, and of which the intermediate bus is ungrounded and does not connect to any other components."
 function join_lines!(data_eng::Dict{String,Any})
-    @assert data_eng["data_model"]==ENGINEERING
+    @assert data_eng["data_model"] == ENGINEERING
 
     # a bus is eligible for reduction if it only appears in exactly two lines
     buses_all = collect(keys(data_eng["bus"]))
@@ -734,18 +734,18 @@ function join_lines!(data_eng::Dict{String,Any})
     comp_types_exclude = setdiff(pmd_eng_asset_types, ["line"])
     buses_exclude = get_defined_buses(data_eng, comp_types=comp_types_exclude)
     # exclude buses that are grounded
-    grounded_buses = [bus_id for (bus_id,bus) in data_eng["bus"] if !isempty(bus["grounded"])]
+    grounded_buses = [bus_id for (bus_id, bus) in data_eng["bus"] if !isempty(bus["grounded"])]
     buses_exclude = union(buses_exclude, grounded_buses)
 
     # per bus, list all inbound or outbound lines
-    bus_lines = Dict(bus=>[] for bus in buses_all)
-    for (id,line) in data_eng["line"]
+    bus_lines = Dict(bus => [] for bus in buses_all)
+    for (id, line) in data_eng["line"]
         push!(bus_lines[line["f_bus"]], id)
         push!(bus_lines[line["t_bus"]], id)
     end
 
     # exclude all buses that do not have exactly two lines connected to it
-    buses_exclude = union(buses_exclude, [bus for (bus,lines) in bus_lines if length(lines)!=2])
+    buses_exclude = union(buses_exclude, [bus for (bus, lines) in bus_lines if length(lines) != 2])
 
     # now loop over remaining buses
     candidates = setdiff(buses_all, buses_exclude)
@@ -756,16 +756,16 @@ function join_lines!(data_eng::Dict{String,Any})
 
         # reverse lines if needed to get the order
         # (x)--fr-line1-to--(bus)--to-line2-fr--(x)
-        if line1["f_bus"]==bus
+        if line1["f_bus"] == bus
             _line_reverse!(line1)
         end
-        if line2["f_bus"]==bus
+        if line2["f_bus"] == bus
             _line_reverse!(line2)
         end
 
         reducable = true
-        reducable = reducable && line1["linecode"]==line2["linecode"]
-        reducable = reducable && all(line1["t_connections"].==line2["t_connections"])
+        reducable = reducable && line1["linecode"] == line2["linecode"]
+        reducable = reducable && all(line1["t_connections"] .== line2["t_connections"])
         if reducable
 
             line1["length"] += line2["length"]

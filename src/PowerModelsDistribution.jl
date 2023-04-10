@@ -101,7 +101,7 @@ module PowerModelsDistribution
     include("data_model/eng2math.jl")
     include("data_model/math2eng.jl")
     include("data_model/multinetwork.jl")
-    include("data_model/transformations/transformations.jl")
+    include("data_model/transformations/misc.jl")
     include("data_model/transformations/bounds.jl")
     include("data_model/transformations/kron.jl")
     include("data_model/transformations/initialization.jl")
