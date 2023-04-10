@@ -16,16 +16,9 @@ end
 
 # ╔═╡ 3da55c61-2439-4282-91ff-af8c794872e4
 begin
-	# import Pkg
-	# Pkg.activate("./testcases")
-	# Pkg.add(url="https://github.com/hei06j/PowerModelsDistribution.jl.git#four-wire-native-pf")
-	# Pkg.add("PlutoUI")
-	# Pkg.add("JSON")
-	
-	# Pkg.status()
-
-	using PowerModelsDistribution, PlutoUI, JSON
-	const PMD = PowerModelsDistribution	
+    using PlutoUI
+    import JSON
+    import PowerModelsDistribution as PMD
 end
 
 # ╔═╡ 1faefc14-e9f3-4728-98b8-55b75b79b350
@@ -78,18 +71,18 @@ md"""
 
 The network data need to be updated based on representation of the the explicit neitral conductor.
 
-### Source bus 
+### Source bus
 
-The vector sizes in source bus data should be compatible with whether or not the neutral conductor is explicitly represented or not. 
+The vector sizes in source bus data should be compatible with whether or not the neutral conductor is explicitly represented or not.
 
 ### Other network elements
 
-Vector and matrix sizes of other elements should also be compatible with whether or not the neutral conductor is explicitly represented or not. 
+Vector and matrix sizes of other elements should also be compatible with whether or not the neutral conductor is explicitly represented or not.
 """
 
 
 # ╔═╡ ce0d2924-94c6-484e-9d0a-c805e8a5d5df
-function sourcebus_voltage_vector_correction!(data_math::Dict{String, Any}; explicit_neutral=true)
+function sourcebus_voltage_vector_correction!(data_math::Dict{String,<:Any}; explicit_neutral::Bool=true)
     if haskey(data_math, "multinetwork")
         for (n,nw) in data_math["nw"]
             for (i, bus) in data_math["nw"]["bus"]
@@ -101,7 +94,7 @@ function sourcebus_voltage_vector_correction!(data_math::Dict{String, Any}; expl
                         bus["vmax"] = bus["vmax"][1:length(bus["terminals"])]
                         bus["grounded"] = bus["grounded"][1:length(bus["terminals"])]
                     else
-                        if neutral_idx ∈ bus["terminals"]
+                        if PMD.neutral_idx ∈ bus["terminals"]
                             bus["terminals"] = bus["terminals"][1:end-1]
                         end
                         bus["vm"] = bus["vm"][1:length(bus["terminals"])]
@@ -123,7 +116,7 @@ function sourcebus_voltage_vector_correction!(data_math::Dict{String, Any}; expl
                     bus["vmax"] = bus["vmax"][1:length(bus["terminals"])]
                     bus["grounded"] = bus["grounded"][1:length(bus["terminals"])]
                 else
-                    if neutral_idx ∈ bus["terminals"]
+                    if PMD.neutral_idx ∈ bus["terminals"]
                         bus["terminals"] = bus["terminals"][1:end-1]
                     end
                     bus["vm"] = bus["vm"][1:length(bus["terminals"])]
@@ -145,12 +138,12 @@ function update_math_model_3wire!(math)
 
     for (i,bus) in math["bus"]
         explicit_neutral = false
-        if haskey(bus, "terminals") && neutral_idx ∈ bus["terminals"]
+        if haskey(bus, "terminals") && PMD.neutral_idx ∈ bus["terminals"]
             explicit_neutral = true
         end
 
         if explicit_neutral
-            idx = findall(x->x==neutral_idx, bus["terminals"])
+            idx = findall(x->x==PMD.neutral_idx, bus["terminals"])
             if haskey(bus, "terminals")
                 deleteat!(bus["terminals"], bus["terminals"].==bus["terminals"][idx])
                 # bus["terminals"] = bus["terminals"][1:end-1]
@@ -174,14 +167,14 @@ function update_math_model_3wire!(math)
 
     for (l,branch) in math["branch"]
         explicit_neutral = false
-        if haskey(branch, "t_connections") && neutral_idx ∈ branch["t_connections"]
+        if haskey(branch, "t_connections") && PMD.neutral_idx ∈ branch["t_connections"]
             explicit_neutral = true
-            deleteat!(branch["t_connections"], branch["t_connections"] .== neutral_idx)
+            deleteat!(branch["t_connections"], branch["t_connections"] .== PMD.neutral_idx)
             # branch["t_connections"] = branch["t_connections"][1:end-1]
         end
-        if haskey(branch, "f_connections") && neutral_idx ∈ branch["f_connections"]
+        if haskey(branch, "f_connections") && PMD.neutral_idx ∈ branch["f_connections"]
             explicit_neutral = true
-            deleteat!(branch["f_connections"], branch["f_connections"] .== neutral_idx)
+            deleteat!(branch["f_connections"], branch["f_connections"] .== PMD.neutral_idx)
             # branch["f_connections"] = branch["f_connections"][1:end-1]
         end
         if haskey(branch, "br_r") && explicit_neutral
@@ -208,18 +201,18 @@ function update_math_model_3wire!(math)
     end
 
     for (t,transformer) in math["transformer"]
-        if haskey(transformer, "t_connections") && neutral_idx ∈ transformer["t_connections"]
-            if transformer["t_connections"][end] !== neutral_idx
+        if haskey(transformer, "t_connections") && PMD.neutral_idx ∈ transformer["t_connections"]
+            if transformer["t_connections"][end] !== PMD.neutral_idx
                 transformer["polarity"] = -1
-                deleteat!(transformer["t_connections"], transformer["t_connections"] .== neutral_idx)
+                deleteat!(transformer["t_connections"], transformer["t_connections"] .== PMD.neutral_idx)
             else
                 transformer["t_connections"] = transformer["t_connections"][1:end-1]
             end
         end
-        if haskey(transformer, "f_connections") && neutral_idx ∈ transformer["f_connections"]
-            if transformer["f_connections"][end] !== neutral_idx
+        if haskey(transformer, "f_connections") && PMD.neutral_idx ∈ transformer["f_connections"]
+            if transformer["f_connections"][end] !== PMD.neutral_idx
                 transformer["polarity"] = -1
-                deleteat!(transformer["f_connections"], transformer["f_connections"] .== neutral_idx)
+                deleteat!(transformer["f_connections"], transformer["f_connections"] .== PMD.neutral_idx)
             else
                 transformer["f_connections"] = transformer["f_connections"][1:end-1]
             end
@@ -227,7 +220,7 @@ function update_math_model_3wire!(math)
     end
 
     for (g,gen) in math["gen"]
-        if neutral_idx in gen["connections"]
+        if PMD.neutral_idx in gen["connections"]
             gen["connections"] = gen["connections"][1:end-1]
             gen["vg"] = gen["vg"][1:end-1]
             gen["pg"] = gen["pg"][1:end-1]
@@ -241,7 +234,7 @@ function update_math_model_3wire!(math)
     end
 
     for (l,load) in math["load"]
-        if load["configuration"] == WYE && neutral_idx ∈ load["connections"]
+        if load["configuration"] == WYE && PMD.neutral_idx ∈ load["connections"]
             load["connections"] = load["connections"][1:end-1]
         end
     end
@@ -258,7 +251,7 @@ The updated network model is then solved and the results are compared with OpenD
 """
 
 # ╔═╡ 0aedaa8d-ab6e-4255-8535-ad6ae3ab4ecd
-function compare_sol_dss_pmd(sol_dss::Dict{String,Any}, sol_pmd::Dict{String,Any}, data_eng::Dict{String,Any}, data_math::Dict{String,Any}; compare_math=false, verbose=true, floating_buses=[], skip_buses=[], v_err_print_tol=1E-6)
+function compare_sol_dss_pmd(sol_dss::Dict{String,<:Any}, sol_pmd::Dict{String,<:Any}, data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}; compare_math=false, verbose=true, floating_buses=[], skip_buses=[], v_err_print_tol=1E-6)
     max_v_err_pu = 0.0
 
     # voltage base for ENGINEERING buses in [V]
@@ -281,7 +274,7 @@ function compare_sol_dss_pmd(sol_dss::Dict{String,Any}, sol_pmd::Dict{String,Any
             # convert to V instead of usual kV
             v_pmd = [(pmd_bus["vr"][idx]+im*pmd_bus["vi"][idx])*data_eng["settings"]["voltage_scale_factor"] for (idx,t) in enumerate(ts)]
         end
-        
+
         # convert to pu
         v_dss_pu = v_dss/vbase[id]
         v_pmd_pu = v_pmd/vbase[id]
@@ -296,7 +289,7 @@ function compare_sol_dss_pmd(sol_dss::Dict{String,Any}, sol_pmd::Dict{String,Any
             labels = string.(ts)
         end
 
-        for i in 1:length(v_pmd_pu)
+        for i in eachindex(v_pmd_pu)
             v_err_pu = abs.(v_dss_pu[i]-v_pmd_pu[i]); max_v_err_pu = max(max_v_err_pu, v_err_pu)
 
             if v_err_pu>v_err_print_tol && verbose
@@ -318,28 +311,28 @@ begin
 	function solve_compute_mc_pf(dss_file, solution_file; explicit_neutral=true, max_iter=100)
 	    if explicit_neutral
 	        data_eng = PMD.parse_file(dss_file, transformations=[transform_loops!])
-	
+
 	        data_math = PMD.transform_data_model(data_eng;kron_reduce=false)
 	        res = PMD.compute_mc_pf(data_math; explicit_neutral=true, max_iter=max_iter)
 	    else
 	        data_eng = PMD.parse_file(dss_file, transformations=[transform_loops!]);
 	        data_eng["is_kron_reduced"] = true
 	        data_eng["settings"]["sbase_default"] = 1
-	
+
 	        data_math = PMD.transform_data_model(data_eng;kron_reduce=false, phase_project=false);
 	        sourcebus_voltage_vector_correction!(data_math, explicit_neutral=false);
 	        update_math_model_3wire!(data_math);
 	        res = PMD.compute_mc_pf(data_math; explicit_neutral=false, max_iter=max_iter)
 	    end
-	
+
 	    # obtain solution from dss
 	    sol_dss = open(solution_file, "r") do f
 	        JSON.parse(f)
 	    end
 	    sol_pmd = PMD.transform_solution(res["solution"], data_math, make_si=true);
-	
+
 	    v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose=false, compare_math=true)
-	
+
 	    return data_eng, data_math, res, v_maxerr_pu
 	end
 end
@@ -372,10 +365,9 @@ begin
 end
 
 
-
 # ╔═╡ b322c8f7-b761-44bf-ae18-afe8842c7b78
 begin
-	pmd_path = joinpath(dirname(pathof(PowerModelsDistribution)), "..");
+	pmd_path = joinpath(dirname(pathof(PMD)), "..");
 	case_path = joinpath(pmd_path, "test/data/en_validation_case_data/$case.dss");
     solution_path = joinpath(pmd_path, "test/data/en_validation_case_solutions");
 	solution1 = joinpath(solution_path, "$case.json");
@@ -385,11 +377,11 @@ begin
     else
         explicit_neutral = true
     end
-	
+
     data_eng, data_math, res, v_maxerr_pu = solve_compute_mc_pf(case_path, solution1; explicit_neutral=explicit_neutral);
-    
+
 	"maximum voltage error p.u is $v_maxerr_pu, total time is $(res["time_total"])"
-	
+
 end
 
 # ╔═╡ b5d99973-ea63-41dc-90c8-a744104437fe
@@ -405,7 +397,6 @@ To interactively test the larger networks, the reader is encouraged to download 
   - IEEE 34  (34 buses, 51 branches and switches, 4 transformers)
   - IEEE 123 (123 buses, 126 branches and switches, 3 transformers)
 
-
 - Egrid networks:
   - Egrid GreensBoro Industrial network (8460+ buses, 7750+ branches and switches, 1620+ transformers) (https://egriddata.org/dataset/greensboro-synthetic-network)
   - Egrid SantaFe uhs0_1247/uhs0_1247--udt4776 network (3280+ buses, 2860+ branches and switches, 485 transformers) (https://egriddata.org/dataset/santa-fe-synthetic-network)
@@ -418,38 +409,8 @@ The table below shows the maximum per unit voltage error for the tested networks
 | "IEEE 34 three wire network"                  |  6.801818003195945e-8     |
 | "IEEE 123 three wire network"                 |  4.044977697179336e-8     |
 | "Egrid GreensBoro Industrial network"         |  0.0018373325064614753    |
-| "Egrid SantaFe/urban-suburban/uhs0_1247/uhs0_1247--udt4776 network" |  0.00011818425933292976   | 
+| "Egrid SantaFe/urban-suburban/uhs0_1247/uhs0_1247--udt4776 network" |  0.00011818425933292976   |
 """
-
-# ╔═╡ fc69c7e8-d7f5-447a-9025-b710609f83c8
-begin
-	@bind case1 Select([
-			"ieee13_pmd" => "IEEE 13  (13 buses, 13 branches and switches, 2 transformers)",
-			"ieee34_pmd" => "IEEE 34  (34 buses, 51 branches and switches, 4 transformers)",
-			"ieee123_pmd" => "IEEE 123 (123 buses, 126 branches and switches, 3 transformers)",
-			"egrid_GreensBoro" => "Egrid GreensBoro (8460+ buses, 7750+ branches and switches, 1620+ transformers)",
-			"egrid_SantaFe" => "Egrid SantaFe (3280+ buses, 2860+ branches and switches, 485 transformers)",
-		])
-end
-
-# ╔═╡ e45d7a3f-1d1f-42b8-ad1c-0ee9ceb3e119
-begin
-	notebook_path = pwd()
-	# # solution_path = joinpath(pmd_path, "test/data/en_validation_case_solutions")
-	if case1 == "egrid_GreensBoro" || case1 == "egrid_SantaFe"
-		cd("$notebook_path/network")
-		case_large = joinpath(notebook_path, "network/master.dss")
-		solution = joinpath(solution_path, "$case1.json");
-		_, _, res1, v_maxerr_pu1 = solve_compute_mc_pf(case_large, solution; explicit_neutral=false);
-		cd(notebook_path)
-	else
-		case_large = joinpath(notebook_path, "network.dss")
-		solution = joinpath(solution_path, "$case1.json");
-		_, _, res1, v_maxerr_pu1 = solve_compute_mc_pf(case_large, solution; explicit_neutral=false);
-	end
-	
-	"maximum voltage error p.u is $v_maxerr_pu1, total time is $(res1["time_total"]), $(res1["time_build"]), $(res1["time_solve"]), $(res1["time_post"])"
-end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -463,8 +424,9 @@ PowerModelsDistribution = "d7431456-977f-11e9-2de3-97ff7677985e"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.7.1"
+julia_version = "1.8.5"
 manifest_format = "2.0"
+project_hash = "f10ac91f634c15a1aacb073c5bb55d30e461c778"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -480,6 +442,7 @@ version = "3.6.1"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
+version = "1.1.1"
 
 [[deps.ArrayInterface]]
 deps = ["Adapt", "LinearAlgebra", "Requires", "SnoopPrecompile", "SparseArrays", "SuiteSparse"]
@@ -590,6 +553,7 @@ version = "4.6.1"
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
+version = "1.0.1+0"
 
 [[deps.Configurations]]
 deps = ["ExproniconLite", "OrderedCollections", "TOML"]
@@ -652,8 +616,9 @@ uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 version = "0.9.3"
 
 [[deps.Downloads]]
-deps = ["ArgTools", "LibCURL", "NetworkOptions"]
+deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
+version = "1.6.0"
 
 [[deps.EnumX]]
 git-tree-sha1 = "bdb1942cd4c45e3c678fd11569d5cccd80976237"
@@ -876,10 +841,12 @@ version = "0.15.1"
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
 uuid = "b27032c2-a3e7-50c8-80cd-2d36dbcbfd21"
+version = "0.6.3"
 
 [[deps.LibCURL_jll]]
 deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll", "Zlib_jll", "nghttp2_jll"]
 uuid = "deac9b47-8bc7-5906-a0fe-35ac56dc84c0"
+version = "7.84.0+0"
 
 [[deps.LibGit2]]
 deps = ["Base64", "NetworkOptions", "Printf", "SHA"]
@@ -888,6 +855,7 @@ uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
 [[deps.LibSSH2_jll]]
 deps = ["Artifacts", "Libdl", "MbedTLS_jll"]
 uuid = "29816b5a-b9ab-546f-933c-edad1886dfa8"
+version = "1.10.2+0"
 
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
@@ -958,6 +926,7 @@ version = "1.1.7"
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
+version = "2.28.0+0"
 
 [[deps.Memento]]
 deps = ["Dates", "Distributed", "Requires", "Serialization", "Sockets", "Test", "UUIDs"]
@@ -970,6 +939,7 @@ uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
+version = "2022.2.1"
 
 [[deps.MsgPack]]
 deps = ["Serialization"]
@@ -991,6 +961,7 @@ version = "1.0.2"
 
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
+version = "1.2.0"
 
 [[deps.OffsetArrays]]
 deps = ["Adapt"]
@@ -1001,10 +972,12 @@ version = "1.12.9"
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
+version = "0.3.20+0"
 
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
+version = "0.8.1+0"
 
 [[deps.OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
@@ -1038,6 +1011,7 @@ version = "2.5.8"
 [[deps.Pkg]]
 deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+version = "1.8.0"
 
 [[deps.Pluto]]
 deps = ["Base64", "Configurations", "Dates", "Distributed", "FileWatching", "FuzzyCompletions", "HTTP", "HypertextLiteral", "InteractiveUtils", "Logging", "MIMEs", "Markdown", "MsgPack", "Pkg", "PrecompileSignatures", "REPL", "RegistryInstances", "RelocatableFolders", "SnoopPrecompile", "Sockets", "TOML", "Tables", "URIs", "UUIDs"]
@@ -1159,6 +1133,7 @@ version = "0.5.5"
 
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
+version = "0.7.0"
 
 [[deps.SIMDTypes]]
 git-tree-sha1 = "330289636fb8107c5f32088d2741e9fd7a061a5c"
@@ -1274,6 +1249,7 @@ uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 [[deps.SuiteSparse_jll]]
 deps = ["Artifacts", "Libdl", "Pkg", "libblastrampoline_jll"]
 uuid = "bea87d4a-7f5b-5778-9afe-8cc45184846c"
+version = "5.10.1+0"
 
 [[deps.SymbolicIndexingInterface]]
 deps = ["DocStringExtensions"]
@@ -1284,6 +1260,7 @@ version = "0.2.2"
 [[deps.TOML]]
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+version = "1.0.0"
 
 [[deps.TableTraits]]
 deps = ["IteratorInterfaceExtensions"]
@@ -1300,6 +1277,7 @@ version = "1.10.0"
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
+version = "1.10.1"
 
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
@@ -1371,6 +1349,7 @@ version = "1.6.1"
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
+version = "1.2.12+3"
 
 [[deps.ZygoteRules]]
 deps = ["MacroTools"]
@@ -1381,14 +1360,17 @@ version = "0.2.2"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl", "OpenBLAS_jll"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
+version = "5.1.1+0"
 
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
+version = "1.48.0+0"
 
 [[deps.p7zip_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
+version = "17.4.0+0"
 """
 
 # ╔═╡ Cell order:
@@ -1406,7 +1388,5 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─987398ad-4a31-47f7-af20-4f2efe7eb36f
 # ╟─b322c8f7-b761-44bf-ae18-afe8842c7b78
 # ╟─b5d99973-ea63-41dc-90c8-a744104437fe
-# ╟─fc69c7e8-d7f5-447a-9025-b710609f83c8
-# ╠═e45d7a3f-1d1f-42b8-ad1c-0ee9ceb3e119
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
