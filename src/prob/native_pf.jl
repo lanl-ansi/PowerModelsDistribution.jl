@@ -5,7 +5,7 @@ the primary use of this data structure is to prevent re-allocation of memory
 between successive power flow solves
 * `data_math` -- a PowerModelsDistribution mathematical data dictionary
 * `ntype` -- node type: @enum NodeType
-* `cc_ns_func_pairs` -- a mapping of nodes to compensation current evaluation functions 
+* `cc_ns_func_pairs` -- a mapping of nodes to compensation current evaluation functions
 * `indexed_nodes` -- all nodes in the network that are not grounded
 * `node_to_idx` -- a mapping of all nodes (bus, terminal) to a unique value
 * `fnode_to_idx` -- a mapping of nodes with fixed voltage (bus, terminal) to a unique value
@@ -47,39 +47,39 @@ explicit_neutral indicates that the neutral conductor is explicitly modelled.
 """
 function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool)
     @assert ismath(data_math) "The model is not a mathematical model "
-    ntype = Dict{Any, NodeType}()
+    ntype = Dict{Any,NodeType}()
     for (_, bus) in data_math["bus"]
         id = bus["index"]
-        for (i,t) in enumerate(bus["terminals"])
+        for (i, t) in enumerate(bus["terminals"])
             if bus["grounded"][i]
-                ntype[(id,t)] = GROUNDED
+                ntype[(id, t)] = GROUNDED
             else
                 if haskey(bus, "vm")
-                    ntype[(id,t)] = FIXED
+                    ntype[(id, t)] = FIXED
                 else
-                    ntype[(id,t)] = VARIABLE
+                    ntype[(id, t)] = VARIABLE
                 end
             end
         end
     end
 
-    vbases = Dict(i => v*data_math["settings"]["voltage_scale_factor"] for (i, v) in data_math["settings"]["vbases_default"])
-    sbase  = data_math["settings"]["sbase_default"]  * data_math["settings"]["power_scale_factor"]
+    vbases = Dict(i => v * data_math["settings"]["voltage_scale_factor"] for (i, v) in data_math["settings"]["vbases_default"])
+    sbase = data_math["settings"]["sbase_default"] * data_math["settings"]["power_scale_factor"]
     bus_vbase, line_vbase = calc_voltage_bases(data_math, vbases)
 
     cc_ns_func_pairs = []
     ns_yprim = []
     virtual_count = 0
-    comp_status_prop = Dict(x=>"status" for x in ["load", "shunt", "storage", "transformer", "switch"])
+    comp_status_prop = Dict(x => "status" for x in ["load", "shunt", "storage", "transformer", "switch"])
     comp_status_prop["branch"] = "br_status"
-    comp_status_prop["gen"]    = "gen_status"
+    comp_status_prop["gen"] = "gen_status"
     for (comp_type, comp_interface) in _CPF_COMPONENT_INTERFACES
         for (id, comp) in data_math[comp_type]
-            if comp[comp_status_prop[comp_type]]==1
+            if comp[comp_status_prop[comp_type]] == 1
 
                 (bts, nr_vns, y_prim, c_nl, c_tots) = comp_interface(comp, v_start, explicit_neutral, line_vbase, sbase)
 
-                ungr_btidx  = [ntype[bt]!=GROUNDED for bt in bts]
+                ungr_btidx = [ntype[bt] != GROUNDED for bt in bts]
                 ungr_filter = [ungr_btidx..., fill(true, nr_vns)...]
 
                 vns = collect(virtual_count+1:virtual_count+nr_vns)
@@ -97,8 +97,8 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
         ntype[i] = VIRTUAL
     end
 
-    indexed_nodes = [i for (i, v) in ntype if v!=GROUNDED]
-    node_to_idx = Dict(bt=>i for (i, bt) in enumerate(indexed_nodes))
+    indexed_nodes = [i for (i, v) in ntype if v != GROUNDED]
+    node_to_idx = Dict(bt => i for (i, bt) in enumerate(indexed_nodes))
 
     N = length(indexed_nodes)
     Y = spzeros(Complex{Float64}, N, N)
@@ -108,32 +108,32 @@ function PowerFlowData(data_math::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}
     # N0 = length([comp_type for (ns, y_prim, comp_type) in ns_yprim if (comp_type!="gen" && comp_type!="load")])
     Y0 = spzeros(Complex{Float64}, N, N)
 
-    node_fixed_idx = [i for i in 1:N if ntype[indexed_nodes[i]]==FIXED]
+    node_fixed_idx = [i for i in 1:N if ntype[indexed_nodes[i]] == FIXED]
     node_other_idx = setdiff(1:N, node_fixed_idx)
 
-    fnode_to_idx = Dict(node=>idx for (idx,node) in enumerate(indexed_nodes[node_fixed_idx]))
-    vnode_to_idx = Dict(node=>idx for (idx,node) in enumerate(indexed_nodes[node_other_idx]))
+    fnode_to_idx = Dict(node => idx for (idx, node) in enumerate(indexed_nodes[node_fixed_idx]))
+    vnode_to_idx = Dict(node => idx for (idx, node) in enumerate(indexed_nodes[node_other_idx]))
 
     for (ns, y_prim, comp_type) in ns_yprim
         inds = [node_to_idx[n] for n in ns]
-        Y[inds,inds] .+= y_prim
+        Y[inds, inds] .+= y_prim
 
-        if (comp_type!="gen" && comp_type!="load")
+        if (comp_type != "gen" && comp_type != "load")
             inds0 = [node_to_idx[n] for n in ns]
-            Y0[inds0,inds0] .+= y_prim
+            Y0[inds0, inds0] .+= y_prim
         end
     end
 
     Yf = Y[node_other_idx, node_fixed_idx]
     Yv = Y[node_other_idx, node_other_idx]
 
-    fixed_nodes = [indexed_nodes[i] for i in 1:N if ntype[indexed_nodes[i]]==FIXED]
-    Uf = fill(NaN+im*NaN, length(fixed_nodes))
+    fixed_nodes = [indexed_nodes[i] for i in 1:N if ntype[indexed_nodes[i]] == FIXED]
+    Uf = fill(NaN + im * NaN, length(fixed_nodes))
 
-    for (i,(b,t)) in enumerate(fixed_nodes)
-        vm_t = Dict(data_math["bus"]["$b"]["terminals"].=>data_math["bus"]["$b"]["vm"])
-        va_t = Dict(data_math["bus"]["$b"]["terminals"].=>data_math["bus"]["$b"]["va"])
-        Uf[i] = vm_t[t]*exp(im*va_t[t])
+    for (i, (b, t)) in enumerate(fixed_nodes)
+        vm_t = Dict(data_math["bus"]["$b"]["terminals"] .=> data_math["bus"]["$b"]["vm"])
+        va_t = Dict(data_math["bus"]["$b"]["terminals"] .=> data_math["bus"]["$b"]["va"])
+        Uf[i] = vm_t[t] * exp(im * va_t[t])
     end
 
     return PowerFlowData(data_math, ntype, cc_ns_func_pairs, indexed_nodes, node_to_idx, fnode_to_idx, vnode_to_idx, fixed_nodes, Uf, Yf, Yv, Y0)
@@ -149,9 +149,9 @@ end
 
 Calculates the admittance matrix from PowerFlowData struct.
 """
-function calc_admittance_matrix(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:Any},Missing}=missing, explicit_neutral::Bool=false)
+function calc_admittance_matrix(data_math::Dict{String,<:Any}; v_start::Union{Dict{<:Any,<:Any},Missing}=missing, explicit_neutral::Bool=false)
     if !ismultinetwork(data_math)
-        nw_dm = Dict("0"=>data_math)
+        nw_dm = Dict("0" => data_math)
     else
         nw_dm = data_math["nw"]
     end
@@ -171,14 +171,14 @@ end
     _get_v(
       pfd::struct,
       Vp::Vector,
-      n::Union{Tuple, Int64}
+      n::Union{Tuple, Int}
     )
 
 Calculates the voltage from PowerFlowData struct.
 """
-function _get_v(pfd::PowerFlowData, Vp::Vector{Complex{Float64}}, n::Union{Tuple{Int64, Int64},Int64} )
+function _get_v(pfd::PowerFlowData, Vp::Vector{Complex{Float64}}, n::Union{Tuple{Int,Int},Int})
     if pfd.ntype[n] == GROUNDED
-        return 0.0+im*0.0
+        return 0.0 + im * 0.0
     elseif pfd.ntype[n] == FIXED
         return pfd.Uf[pfd.fnode_to_idx[n]]
     else
@@ -200,7 +200,7 @@ end
     - ntype: node type (variable, fixed, grounded, virtual)
     - bts: bus-terminals for the component
     - ns: nodes
-    - vns: virtual nodes 
+    - vns: virtual nodes
     - nr_vns: number of virtual nodes
     - y_prim: primitive admittance matrix for the component
     - c_nl_func: nonlinear compensation current function handle for the component
@@ -208,33 +208,33 @@ end
 
 Computes native power flow and outputs the result dict.
 """
-function compute_mc_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<:Any},Missing}=missing, explicit_neutral::Bool=false, max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
+function compute_mc_pf(data_math::Dict{String,<:Any}; v_start::Union{Dict{<:Any,<:Any},Missing}=missing, explicit_neutral::Bool=false, max_iter::Int=100, stat_tol::Real=1E-8, verbose::Bool=false)
     br_sizes = []
     if !ismultinetwork(data_math)
-        nw_dm = Dict("0"=>data_math)
+        nw_dm = Dict("0" => data_math)
         for (b, branch) in data_math["branch"]
-            append!(br_sizes, size(branch["br_r"],1))
+            append!(br_sizes, size(branch["br_r"], 1))
         end
     else
         nw_dm = data_math["nw"]
         @warn("The native power flow solver may not be accurate to the tolerance of 1E-6")
         for (b, branch) in data_math["nw"]["1"]["branch"]
-            append!(br_sizes, size(branch["br_r"],1))
+            append!(br_sizes, size(branch["br_r"], 1))
         end
     end
-    
+
     if maximum(br_sizes) > 4
         @warn("Line impedance matrices should be up to 4x4, but go up to $(maximum(br_sizes))x$(maximum(br_sizes))")
     end
 
-    sol = Dict{String, Any}()
-    sol["nw"] = Dict{String, Any}()
-    time_build = Dict{String, Any}()
-    time_solve = Dict{String, Any}()
-    time_post = Dict{String, Any}()
-    status = Dict{String, Any}()
-    its = Dict{String, Any}()
-    stat = Dict{String, Any}()
+    sol = Dict{String,Any}()
+    sol["nw"] = Dict{String,Any}()
+    time_build = Dict{String,Any}()
+    time_solve = Dict{String,Any}()
+    time_post = Dict{String,Any}()
+    status = Dict{String,Any}()
+    its = Dict{String,Any}()
+    stat = Dict{String,Any}()
 
     for (nw, dm) in nw_dm
         if ismissing(v_start)
@@ -250,7 +250,7 @@ function compute_mc_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<
 
     end
 
-    res = Dict{String, Any}()
+    res = Dict{String,Any}()
     if !ismultinetwork(data_math)
         res["time_build"] = time_build["0"]
         res["time_solve"] = time_solve["0"]
@@ -259,7 +259,7 @@ function compute_mc_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<
         res["termination_status"] = status["0"]
         res["iterations"] = its["0"]
         res["stationarity"] = stat["0"]
-        res["time_total"] = time_build["0"]+time_solve["0"]+time_post["0"]
+        res["time_total"] = time_build["0"] + time_solve["0"] + time_post["0"]
     else
         res["time_build"] = time_build
         res["time_solve"] = time_solve
@@ -268,8 +268,8 @@ function compute_mc_pf(data_math::Dict{String, Any}; v_start::Union{Dict{<:Any,<
         res["termination_status"] = status
         res["iterations"] = its
         res["stationarity"] = stat
-        res["time_total"] = sum(values(time_build))+sum(values(time_solve))+sum(values(time_post))
-        res["all_converged"] = all(x==CONVERGED for (_, x) in status)
+        res["time_total"] = sum(values(time_build)) + sum(values(time_solve)) + sum(values(time_post))
+        res["all_converged"] = all(x == CONVERGED for (_, x) in status)
     end
 
     return res
@@ -286,7 +286,7 @@ end
 
 Computes native power flow and requires PowerFlowData.
 """
-function compute_mc_pf(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
+function compute_mc_pf(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Real=1E-8, verbose::Bool=false)
     time = @elapsed (Uv, status, its, stat) = _compute_Uv(pfd, max_iter=max_iter, stat_tol=stat_tol)
     return build_result(pfd, Uv, status, its, time, stat)
 end
@@ -300,15 +300,15 @@ end
       verbose::Bool
     )
 Computes a nonlinear AC power flow in rectangular coordinates based on the admittance
-matrix of the network data using the fixed-point current injection method.  
+matrix of the network data using the fixed-point current injection method.
 Returns a solution data structure in PowerModelsDistribution Dict format.
 """
-function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E-8, verbose::Bool=false)
-    
-    Nv = length(pfd.indexed_nodes)-length(pfd.fixed_nodes)
+function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Real=1E-8, verbose::Bool=false)
+
+    Nv = length(pfd.indexed_nodes) - length(pfd.fixed_nodes)
 
     Yv_LU = LinearAlgebra.factorize(pfd.Yv)
-    Uv0 = Yv_LU\(-pfd.Yf*pfd.Uf)
+    Uv0 = Yv_LU \ (-pfd.Yf * pfd.Uf)
     Uv = Uv0
 
     for it in 1:max_iter
@@ -317,20 +317,20 @@ function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Float64=1E
             if c_nl_func != nothing
                 Un = [_get_v(pfd, Uv, n) for n in ns]
                 Icc = c_nl_func(Un)
-                for (i,n) in enumerate(ns)
-                    if pfd.ntype[n]==VARIABLE
+                for (i, n) in enumerate(ns)
+                    if pfd.ntype[n] == VARIABLE
                         Iv[pfd.vnode_to_idx[n]] += Icc[i]
                     end
                 end
             end
         end
 
-        Uv_next = Yv_LU\(Iv.-pfd.Yf*pfd.Uf)
+        Uv_next = Yv_LU \ (Iv .- pfd.Yf * pfd.Uf)
 
         change = maximum(abs.(Uv .- Uv_next))
         if change <= stat_tol
             return (Uv_next, CONVERGED, it, change)
-        elseif it==max_iter
+        elseif it == max_iter
             return (Uv_next, ITERATION_LIMIT, it, change)
         end
 
@@ -353,7 +353,7 @@ end
 Builds the result dict from the solution dict.
 """
 function build_result(pfd::PowerFlowData, Uv::Vector{Complex{Float64}}, status::PFTerminationStatus, its::Int, time::Real, stationarity::Real; verbose::Bool=false)
-    result = Dict{String, Any}()
+    result = Dict{String,Any}()
     result["termination_status"] = status
     result["solution"] = build_solution(pfd, Uv)
     result["solve_time"] = time
@@ -372,48 +372,48 @@ end
 Builds the solution dict.
 """
 function build_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
-    solution = Dict{String, Any}("bus"=>Dict{String, Any}(), "load"=>Dict{String, Any}(), "gen"=>Dict{String, Any}(), "branch"=>Dict{String, Any}(), "shunt"=>Dict{String, Any}(), "switch"=>Dict{String, Any}(), "transformer"=>Dict{String, Any}())
+    solution = Dict{String,Any}("bus" => Dict{String,Any}(), "load" => Dict{String,Any}(), "gen" => Dict{String,Any}(), "branch" => Dict{String,Any}(), "shunt" => Dict{String,Any}(), "switch" => Dict{String,Any}(), "transformer" => Dict{String,Any}())
     for (id, bus) in pfd.data_math["bus"]
         ind = bus["index"]
-        solution["bus"][id] = Dict{String, Any}()
-        v = Dict(t=>_get_v(pfd, Uv, (ind,t)) for t in bus["terminals"])
-        solution["bus"][id]["vm"] = Dict("$t"=>abs.(v[t]) for t in bus["terminals"])
-        solution["bus"][id]["va"] = Dict("$t"=>angle.(v[t]) for t in bus["terminals"])
+        solution["bus"][id] = Dict{String,Any}()
+        v = Dict(t => _get_v(pfd, Uv, (ind, t)) for t in bus["terminals"])
+        solution["bus"][id]["vm"] = Dict("$t" => abs.(v[t]) for t in bus["terminals"])
+        solution["bus"][id]["va"] = Dict("$t" => angle.(v[t]) for t in bus["terminals"])
     end
 
     for (ns, c_nl_func, c_tots_func, comp_type, id) in pfd.cc_ns_func_pairs
-        ns_bts = [n for n in ns if typeof(n)==Tuple{Int64, Int64}]
-        ns_vns = [n for n in ns if typeof(n)==Int64]
+        ns_bts = [n for n in ns if typeof(n) == Tuple{Int,Int}]
+        ns_vns = [n for n in ns if typeof(n) == Int]
 
-        v_bt = [_get_v(pfd, Uv, n) for n in sort(ns_bts)] 
+        v_bt = [_get_v(pfd, Uv, n) for n in sort(ns_bts)]
         if !isempty(ns_vns)
-            v_vns = [_get_v(pfd, Uv, n) for n in sort(ns_vns)] 
+            v_vns = [_get_v(pfd, Uv, n) for n in sort(ns_vns)]
             append!(v_bt, v_vns)
         end
-        
+
         c_tots = c_tots_func(v_bt)
         if comp_type == "gen"
-            solution[comp_type][id] = Dict{String, Any}()
+            solution[comp_type][id] = Dict{String,Any}()
             solution[comp_type][id]["cgr"] = real.(c_tots)
             solution[comp_type][id]["cgi"] = real.(c_tots)
         elseif comp_type == "load"
-            solution[comp_type][id] = Dict{String, Any}()
+            solution[comp_type][id] = Dict{String,Any}()
             solution[comp_type][id]["cdr"] = real.(c_tots)
             solution[comp_type][id]["cdi"] = real.(c_tots)
         elseif comp_type == "branch"
-            solution[comp_type][id] = Dict{String, Any}()
+            solution[comp_type][id] = Dict{String,Any}()
             solution[comp_type][id]["cr"] = real.(c_tots)
             solution[comp_type][id]["ci"] = real.(c_tots)
         elseif comp_type == "shunt"
-            solution[comp_type][id] = Dict{String, Any}()
+            solution[comp_type][id] = Dict{String,Any}()
             solution[comp_type][id]["cshr"] = real.(c_tots)
             solution[comp_type][id]["cshi"] = real.(c_tots)
         elseif comp_type == "switch"
-            solution[comp_type][id] = Dict{String, Any}()
+            solution[comp_type][id] = Dict{String,Any}()
             solution[comp_type][id]["cswr"] = real.(c_tots)
             solution[comp_type][id]["cswi"] = real.(c_tots)
         elseif comp_type == "transformer"
-            solution[comp_type][id] = Dict{String, Any}()
+            solution[comp_type][id] = Dict{String,Any}()
             solution[comp_type][id]["ctrr"] = real.(c_tots)
             solution[comp_type][id]["ctri"] = real.(c_tots)
         end
@@ -437,17 +437,17 @@ end
 
 Branch component interface outputs branch primitive Y matrix.
 """
-function _cpf_branch_interface(branch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Float64)
-    Ys = inv(branch["br_r"]+im*branch["br_x"])
-    Yfr = branch["g_fr"]+im*branch["b_fr"]
-    Yto = branch["g_to"]+im*branch["b_to"]
+function _cpf_branch_interface(branch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Real)
+    Ys = inv(branch["br_r"] + im * branch["br_x"])
+    Yfr = branch["g_fr"] + im * branch["b_fr"]
+    Yto = branch["g_to"] + im * branch["b_to"]
 
     y_prim = [(Ys.+Yfr) -Ys; -Ys (Ys.+Yto)]
     bts = [[(branch["f_bus"], t) for t in branch["f_connections"]]..., [(branch["t_bus"], t) for t in branch["t_connections"]]...]
-    c_tots_func = function(v_bt)
+    c_tots_func = function (v_bt)
         return y_prim * v_bt
     end
-    return  bts, 0, y_prim, nothing, c_tots_func
+    return bts, 0, y_prim, nothing, c_tots_func
 end
 
 
@@ -462,13 +462,13 @@ end
 
 Shunt component interface outputs shunt primitive Y matrix.
 """
-function _cpf_shunt_interface(shunt::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Float64)
-    Y = shunt["gs"]+im*shunt["bs"]
+function _cpf_shunt_interface(shunt::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Real)
+    Y = shunt["gs"] + im * shunt["bs"]
     bts = [(shunt["shunt_bus"], t) for t in shunt["connections"]]
-    c_tots_func = function(v_bt)
+    c_tots_func = function (v_bt)
         return Y * v_bt
     end
-    return  bts, 0, Y, nothing, c_tots_func
+    return bts, 0, Y, nothing, c_tots_func
 end
 
 
@@ -483,36 +483,36 @@ end
 
 Transformer component interface outputs transformer primitive Y matrix.
 """
-function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Float64)
+function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Real)
     f_ns = [(tr["f_bus"], t) for t in tr["f_connections"]]
     t_ns = [(tr["t_bus"], t) for t in tr["t_connections"]]
-    ts = tr["tm_set"]*tr["tm_nom"]*tr["polarity"]
+    ts = tr["tm_set"] * tr["tm_nom"] * tr["polarity"]
 
     vbase = tr["f_vbase"] * 1000
     sbase = tr["sm_ub"] * 1000
     zbase = vbase^2 / sbase / length(tr["t_connections"])
     ppm = -1e-6 / zbase / 2
 
-    if tr["configuration"]==WYE && explicit_neutral
+    if tr["configuration"] == WYE && explicit_neutral
         npairs_fr = [(f_ns[i], f_ns[end]) for i in 1:length(f_ns)-1]
         npairs_to = [(t_ns[i], t_ns[end]) for i in 1:length(t_ns)-1]
         bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Yy(ts, npairs_fr, npairs_to, ppm)
-    elseif tr["configuration"]==WYE && !explicit_neutral
+    elseif tr["configuration"] == WYE && !explicit_neutral
         npairs_fr = [(f_ns[i], f_ns[i]) for i in 1:length(f_ns)]
         npairs_to = [(t_ns[i], t_ns[i]) for i in 1:length(t_ns)]
         bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Ygyg(ts, npairs_fr, npairs_to, ppm)
-    elseif tr["configuration"]==DELTA
-        @assert length(f_ns)==3
+    elseif tr["configuration"] == DELTA
+        @assert length(f_ns) == 3
         npairs_fr = [(f_ns[1], f_ns[2]), (f_ns[2], f_ns[3]), (f_ns[3], f_ns[1])]
         npairs_to = [(t_ns[i], t_ns[i]) for i in 1:length(t_ns)]
         bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Dyg(ts, npairs_fr, npairs_to, ppm)
     else
         error("Transformer " * tr["source_id"] * " configuration " * tr["configuration"] * " unknown")
     end
-    c_tots_func = function(v_bt)
+    c_tots_func = function (v_bt)
         return Y * v_bt
     end
-    return  bts, nr_vns, Y, nothing, c_tots_func
+    return bts, nr_vns, Y, nothing, c_tots_func
 end
 
 
@@ -526,21 +526,21 @@ end
 
 Modifies ideal wye-wye transformers to avoid singularity error, through the ppm value, inspired by OpenDSS.
 """
-function _compose_yprim_banked_ideal_transformers_Yy(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, ppm)
+function _compose_yprim_banked_ideal_transformers_Yy(ts::Vector{<:Real}, npairs_fr::Vector{Tuple{Tuple{Int,Int},Tuple{Int,Int}}}, npairs_to::Vector{Tuple{Tuple{Int,Int},Tuple{Int,Int}}}, ppm)
     y_prim_ind = Dict()
     nph = length(ts)
 
-    ns_fr = unique([[a for (a,b) in npairs_fr]..., [b for (a,b) in npairs_fr]...])
-    ns_to = unique([[a for (a,b) in npairs_to]..., [b for (a,b) in npairs_to]...])
+    ns_fr = unique([[a for (a, b) in npairs_fr]..., [b for (a, b) in npairs_fr]...])
+    ns_to = unique([[a for (a, b) in npairs_to]..., [b for (a, b) in npairs_to]...])
 
     ns = [unique([ns_fr..., ns_to...])..., 1:nph...]
-    n_to_idx = Dict(n=>idx for (idx,n) in enumerate(ns))
+    n_to_idx = Dict(n => idx for (idx, n) in enumerate(ns))
     Y = spzeros(Float64, length(ns), length(ns))
-    for (i,t) in enumerate(ts)
+    for (i, t) in enumerate(ts)
         ns_i = [npairs_fr[i]..., npairs_to[i]..., i]
         inds = [n_to_idx[n] for n in ns_i]
-        Y[inds[1:4],inds[5]] .= [1/t, -1/t, -1, 1]
-        Y[inds[5],inds[1:4]] .= [1/t, -1/t, -1, 1]
+        Y[inds[1:4], inds[5]] .= [1 / t, -1 / t, -1, 1]
+        Y[inds[5], inds[1:4]] .= [1 / t, -1 / t, -1, 1]
     end
 
     return ns[1:end-nph], nph, Y
@@ -557,21 +557,21 @@ _compose_yprim_banked_ideal_transformers_Ygyg(
 
 Modifies ideal wye_grounded-wye_grounded transformers to avoid singularity error, through the ppm value, inspired by OpenDSS.
 """
-function _compose_yprim_banked_ideal_transformers_Ygyg(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, ppm)
+function _compose_yprim_banked_ideal_transformers_Ygyg(ts::Vector{<:Real}, npairs_fr::Vector{Tuple{Tuple{Int,Int},Tuple{Int,Int}}}, npairs_to::Vector{Tuple{Tuple{Int,Int},Tuple{Int,Int}}}, ppm)
     y_prim_ind = Dict()
     nph = length(ts)
-    
-    ns_fr = unique([[a for (a,b) in npairs_fr]...])
-    ns_to = unique([[a for (a,b) in npairs_to]...])
+
+    ns_fr = unique([[a for (a, b) in npairs_fr]...])
+    ns_to = unique([[a for (a, b) in npairs_to]...])
 
     ns = [unique([ns_fr..., ns_to...])..., 1:nph...]
-    n_to_idx = Dict(n=>idx for (idx,n) in enumerate(ns))
+    n_to_idx = Dict(n => idx for (idx, n) in enumerate(ns))
     Y = spzeros(Float64, length(ns), length(ns))
-    for (i,t) in enumerate(ts)
+    for (i, t) in enumerate(ts)
         ns_i = [ns_fr[i], ns_to[i], i]
         inds = [n_to_idx[n] for n in ns_i]
-        Y[inds[1:2],inds[3]] .= [1/t, -1]
-        Y[inds[3],inds[1:2]] .= [1/t, -1]
+        Y[inds[1:2], inds[3]] .= [1 / t, -1]
+        Y[inds[3], inds[1:2]] .= [1 / t, -1]
     end
 
     return ns[1:end-nph], nph, Y
@@ -588,23 +588,23 @@ _compose_yprim_banked_ideal_transformers_Dyg(
 
 Modifies ideal delta-wye_grounded transformers to avoid singularity error, through the ppm value, inspired by OpenDSS.
 """
-function _compose_yprim_banked_ideal_transformers_Dyg(ts::Vector{Float64}, npairs_fr::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, npairs_to::Vector{Tuple{Tuple{Int64, Int64}, Tuple{Int64, Int64}}}, ppm)
+function _compose_yprim_banked_ideal_transformers_Dyg(ts::Vector{<:Real}, npairs_fr::Vector{Tuple{Tuple{Int,Int},Tuple{Int,Int}}}, npairs_to::Vector{Tuple{Tuple{Int,Int},Tuple{Int,Int}}}, ppm)
     y_prim_ind = Dict()
     nph = length(ts)
-    
-    ns_fr = unique([[a for (a,b) in npairs_fr]..., [b for (a,b) in npairs_fr]...])
-    ns_to = unique([[a for (a,b) in npairs_to]...])
+
+    ns_fr = unique([[a for (a, b) in npairs_fr]..., [b for (a, b) in npairs_fr]...])
+    ns_to = unique([[a for (a, b) in npairs_to]...])
 
     ns = [unique([ns_fr..., ns_to...])..., 1:nph...]
-    n_to_idx = Dict(n=>idx for (idx,n) in enumerate(ns))
+    n_to_idx = Dict(n => idx for (idx, n) in enumerate(ns))
     Y = spzeros(Float64, length(ns), length(ns))
-    for (i,t) in enumerate(ts)
+    for (i, t) in enumerate(ts)
         ns_i = [npairs_fr[i]..., ns_to[i], i]
         inds = [n_to_idx[n] for n in ns_i]
-        Y[inds[1:3],inds[4]] .= [1/t, -1/t, -1]
-        Y[inds[4],inds[1:3]] .= [1/t, -1/t, -1]
+        Y[inds[1:3], inds[4]] .= [1 / t, -1 / t, -1]
+        Y[inds[4], inds[1:3]] .= [1 / t, -1 / t, -1]
         for k in 1:4
-            Y[k,k] += ppm
+            Y[k, k] += ppm
         end
     end
 
@@ -623,163 +623,163 @@ end
 
 Load component interface outputs load primitive Y matrix.
 """
-function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Float64)
+function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Real)
     bts = [(load["load_bus"], t) for t in load["connections"]]
     v0_bt = [v_start[bt] for bt in bts]
     wires = length(bts)
 
     conf = load["configuration"]
 
-    if conf==WYE
+    if conf == WYE
         if explicit_neutral
             vd0 = v0_bt[1:end-1] .- v0_bt[end]
         else
             vd0 = v0_bt
         end
-        if load["model"]==IMPEDANCE
-            g =  load["pd"]./load["vnom_kv"]^2
-            b = -load["qd"]./load["vnom_kv"]^2
-            y = g+im*b
+        if load["model"] == IMPEDANCE
+            g = load["pd"] ./ load["vnom_kv"]^2
+            b = -load["qd"] ./ load["vnom_kv"]^2
+            y = g + im * b
             if explicit_neutral
                 y_prim = [diagm(y) -y; -transpose(y) sum(y)]
             else
                 y_prim = diagm(y)
             end
             c_nl_func = nothing
-            c_tots_func = function(v_bt)
+            c_tots_func = function (v_bt)
                 return y_prim * v_bt
             end
         else
-            sd0 = load["pd"]+im*load["qd"]
-            c0 = conj.(sd0./vd0)
-            y0 = c0./vd0
+            sd0 = load["pd"] + im * load["qd"]
+            c0 = conj.(sd0 ./ vd0)
+            y0 = c0 ./ vd0
             if explicit_neutral
                 y_prim = [diagm(y0) -y0; -transpose(y0) sum(y0)]
             else
                 y_prim = diagm(y0)
             end
-            if load["model"]==POWER
-                c_nl_func = function(v_bt)
-                    sd = load["pd"]+im*load["qd"]
+            if load["model"] == POWER
+                c_nl_func = function (v_bt)
+                    sd = load["pd"] + im * load["qd"]
                     if explicit_neutral
-                        vd = v_bt[1:end-1].-v_bt[end]
-                        cd = conj.(sd./vd)
+                        vd = v_bt[1:end-1] .- v_bt[end]
+                        cd = conj.(sd ./ vd)
                         cd_bus = [cd..., -sum(cd)]
-                        return -(cd_bus .- y_prim*v_bt)
+                        return -(cd_bus .- y_prim * v_bt)
                     else
                         vd = v_bt
-                        cd = conj.(sd./vd)
+                        cd = conj.(sd ./ vd)
                         cd_bus = cd
-                        return -(cd_bus .- y_prim*v_bt)
+                        return -(cd_bus .- y_prim * v_bt)
                     end
                 end
-                c_tots_func = function(v_bt)
+                c_tots_func = function (v_bt)
                     return y_prim * v_bt .+ c_nl_func(v_bt)
                 end
-            elseif load["model"]==CURRENT
-                c_nl_func = function(v_bt)
+            elseif load["model"] == CURRENT
+                c_nl_func = function (v_bt)
                     if explicit_neutral
-                        vd = v_bt[1:end-1].-v_bt[end]
-                        pd = load["pd"].*(abs.(vd)./load["vnom_kv"])
-                        qd = load["qd"].*(abs.(vd)./load["vnom_kv"])
-                        sd = pd+im*qd
-                        cd = conj.(sd./vd)
+                        vd = v_bt[1:end-1] .- v_bt[end]
+                        pd = load["pd"] .* (abs.(vd) ./ load["vnom_kv"])
+                        qd = load["qd"] .* (abs.(vd) ./ load["vnom_kv"])
+                        sd = pd + im * qd
+                        cd = conj.(sd ./ vd)
                         cd_bus = [cd..., -sum(cd)]
-                        return -(cd_bus .- y_prim*v_bt)
+                        return -(cd_bus .- y_prim * v_bt)
                     else
                         vd = v_bt
-                        pd = load["pd"].*(abs.(vd)./load["vnom_kv"])
-                        qd = load["qd"].*(abs.(vd)./load["vnom_kv"])
-                        sd = pd+im*qd
-                        cd = conj.(sd./vd)
+                        pd = load["pd"] .* (abs.(vd) ./ load["vnom_kv"])
+                        qd = load["qd"] .* (abs.(vd) ./ load["vnom_kv"])
+                        sd = pd + im * qd
+                        cd = conj.(sd ./ vd)
                         cd_bus = cd
-                        return -(cd_bus .- y_prim*v_bt)
+                        return -(cd_bus .- y_prim * v_bt)
                     end
                 end
-                c_tots_func = function(v_bt)
+                c_tots_func = function (v_bt)
                     return y_prim * v_bt .+ c_nl_func(v_bt)
                 end
-            elseif load["model"]==EXPONENTIAL
-                c_nl_func = function(v_bt)
+            elseif load["model"] == EXPONENTIAL
+                c_nl_func = function (v_bt)
                     if explicit_neutral
-                        vd = v_bt[1:end-1].-v_bt[end]
-                        pd = load["pd"].*(abs.(vd)./load["vnom_kv"]).^load["alpha"]
-                        qd = load["qd"].*(abs.(vd)./load["vnom_kv"]).^load["beta"]
-                        sd = pd+im*qd
-                        cd = conj.(sd./vd)
+                        vd = v_bt[1:end-1] .- v_bt[end]
+                        pd = load["pd"] .* (abs.(vd) ./ load["vnom_kv"]) .^ load["alpha"]
+                        qd = load["qd"] .* (abs.(vd) ./ load["vnom_kv"]) .^ load["beta"]
+                        sd = pd + im * qd
+                        cd = conj.(sd ./ vd)
                         cd_bus = [cd..., -sum(cd)]
-                        return -(cd_bus .- y_prim*v_bt)
+                        return -(cd_bus .- y_prim * v_bt)
                     else
                         vd = v_bt
-                        pd = load["pd"].*(abs.(vd)./load["vnom_kv"]).^load["alpha"]
-                        qd = load["qd"].*(abs.(vd)./load["vnom_kv"]).^load["beta"]
-                        sd = pd+im*qd
-                        cd = conj.(sd./vd)
+                        pd = load["pd"] .* (abs.(vd) ./ load["vnom_kv"]) .^ load["alpha"]
+                        qd = load["qd"] .* (abs.(vd) ./ load["vnom_kv"]) .^ load["beta"]
+                        sd = pd + im * qd
+                        cd = conj.(sd ./ vd)
                         cd_bus = cd
-                        return -(cd_bus .- y_prim*v_bt)
+                        return -(cd_bus .- y_prim * v_bt)
                     end
                 end
-                c_tots_func = function(v_bt)
+                c_tots_func = function (v_bt)
                     return y_prim * v_bt .+ c_nl_func(v_bt)
                 end
             end
         end
-    elseif conf==DELTA
+    elseif conf == DELTA
         if length(v0_bt) == 3
             Md = [1 -1 0; 0 1 -1; -1 0 1]
         elseif length(v0_bt) == 2
             Md = [1 -1]
         end
-        vd0 = Md*v0_bt
-        if load["model"]==IMPEDANCE
-            g =  load["pd"]./load["vnom_kv"]^2
-            b = -load["qd"]./load["vnom_kv"]^2
-            y = g+im*b
-            y_prim = Md'*diagm(0=>y)*Md
+        vd0 = Md * v0_bt
+        if load["model"] == IMPEDANCE
+            g = load["pd"] ./ load["vnom_kv"]^2
+            b = -load["qd"] ./ load["vnom_kv"]^2
+            y = g + im * b
+            y_prim = Md' * diagm(0 => y) * Md
             c_nl_func = nothing
-            c_tots_func = function(v_bt)
+            c_tots_func = function (v_bt)
                 return y_prim * v_bt
             end
         else
-            sd0 = load["pd"]+im*load["qd"]
-            c0 = conj.(sd0./vd0)
-            y0 = c0./vd0
-            y_prim = Md'*diagm(0=>y0)*Md
-            if load["model"]==POWER
-                c_nl_func = function(v_bt)
-                    sd = load["pd"]+im*load["qd"]
-                    vd = Md*v_bt
-                    cd = conj.(sd./vd)
-                    cd_bus = Md'*cd
-                    return -(cd_bus .- y_prim*v_bt)
+            sd0 = load["pd"] + im * load["qd"]
+            c0 = conj.(sd0 ./ vd0)
+            y0 = c0 ./ vd0
+            y_prim = Md' * diagm(0 => y0) * Md
+            if load["model"] == POWER
+                c_nl_func = function (v_bt)
+                    sd = load["pd"] + im * load["qd"]
+                    vd = Md * v_bt
+                    cd = conj.(sd ./ vd)
+                    cd_bus = Md' * cd
+                    return -(cd_bus .- y_prim * v_bt)
                 end
-                c_tots_func = function(v_bt)
+                c_tots_func = function (v_bt)
                     return y_prim * v_bt .+ c_nl_func(v_bt)
                 end
-            elseif load["model"]==CURRENT
-                c_nl_func = function(v_bt)
-                    vd = Md*v_bt
-                    pd = load["pd"].*(abs.(vd)./load["vnom_kv"])
-                    qd = load["qd"].*(abs.(vd)./load["vnom_kv"])
-                    sd = pd+im*qd
-                    cd = conj.(sd./vd)
-                    cd_bus = Md'*cd
-                    return -(cd_bus .- y_prim*v_bt)
+            elseif load["model"] == CURRENT
+                c_nl_func = function (v_bt)
+                    vd = Md * v_bt
+                    pd = load["pd"] .* (abs.(vd) ./ load["vnom_kv"])
+                    qd = load["qd"] .* (abs.(vd) ./ load["vnom_kv"])
+                    sd = pd + im * qd
+                    cd = conj.(sd ./ vd)
+                    cd_bus = Md' * cd
+                    return -(cd_bus .- y_prim * v_bt)
                 end
-                c_tots_func = function(v_bt)
+                c_tots_func = function (v_bt)
                     return y_prim * v_bt .+ c_nl_func(v_bt)
                 end
-            elseif load["model"]==EXPONENTIAL
-                c_nl_func = function(v_bt)
-                    vd = Md*v_bt
-                    pd = load["pd"].*(abs.(vd)./load["vnom_kv"]).^load["alpha"]
-                    qd = load["qd"].*(abs.(vd)./load["vnom_kv"]).^load["beta"]
-                    sd = pd+im*qd
-                    cd = conj.(sd./vd)
-                    cd_bus = Md'*cd
-                    return -(cd_bus .- y_prim*v_bt)
+            elseif load["model"] == EXPONENTIAL
+                c_nl_func = function (v_bt)
+                    vd = Md * v_bt
+                    pd = load["pd"] .* (abs.(vd) ./ load["vnom_kv"]) .^ load["alpha"]
+                    qd = load["qd"] .* (abs.(vd) ./ load["vnom_kv"]) .^ load["beta"]
+                    sd = pd + im * qd
+                    cd = conj.(sd ./ vd)
+                    cd_bus = Md' * cd
+                    return -(cd_bus .- y_prim * v_bt)
                 end
-                c_tots_func = function(v_bt)
+                c_tots_func = function (v_bt)
                     return y_prim * v_bt .+ c_nl_func(v_bt)
                 end
             end
@@ -801,69 +801,69 @@ end
 
 Generator component interface outputs generator primitive Y matrix.
 """
-function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Float64)
+function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Real)
     bts = [(gen["gen_bus"], t) for t in gen["connections"]]
     wires = length(bts)
     v0_bt = [v_start[bt] for bt in bts]
 
     conf = gen["configuration"]
 
-    if conf==WYE
+    if conf == WYE
         if explicit_neutral
             vd0 = v0_bt[1:end-1] .- v0_bt[end]
         else
             vd0 = v0_bt
         end
-        sg0 = gen["pg"]+im*gen["qg"]
+        sg0 = gen["pg"] + im * gen["qg"]
         sd0 = -sg0
-        c0 = conj.(sd0./vd0)
-        y0 = c0./vd0
+        c0 = conj.(sd0 ./ vd0)
+        y0 = c0 ./ vd0
         if explicit_neutral
             y_prim = [diagm(y0) -y0; -transpose(y0) sum(y0)]
         else
             y_prim = diagm(y0)
         end
-        
-        c_nl_func = function(v_bt)
-            sg = gen["pg"]+im*gen["qg"]
+
+        c_nl_func = function (v_bt)
+            sg = gen["pg"] + im * gen["qg"]
             sd = -sg
             if explicit_neutral
-                vd = v_bt[1:end-1].-v_bt[end]
-                cd = conj.(sd./vd)
+                vd = v_bt[1:end-1] .- v_bt[end]
+                cd = conj.(sd ./ vd)
                 cd_bus = [cd..., -sum(cd)]
-                return -(cd_bus .- y_prim*v_bt)
+                return -(cd_bus .- y_prim * v_bt)
             else
                 vd = v_bt
-                cd = conj.(sd./vd)
+                cd = conj.(sd ./ vd)
                 cd_bus = cd
-                return -(cd_bus .- y_prim*v_bt)                
+                return -(cd_bus .- y_prim * v_bt)
             end
         end
-        c_tots_func = function(v_bt)
+        c_tots_func = function (v_bt)
             return y_prim * v_bt .+ c_nl_func(v_bt)
         end
 
-    elseif conf==DELTA
+    elseif conf == DELTA
         if length(v0_bt) == 3
             Md = [1 -1 0; 0 1 -1; -1 0 1]
         elseif length(v0_bt) == 2
             Md = [1 -1]
         end
-        vd0 = Md*v0_bt
-        sg0 = gen["pg"]+im*gen["qg"]
+        vd0 = Md * v0_bt
+        sg0 = gen["pg"] + im * gen["qg"]
         sd0 = -sg0
-        c0 = conj.(sd0./vd0)
-        y0 = c0./vd0
-        y_prim = Md'*diagm(0=>y0)*Md
-        c_nl_func = function(v_bt)
-            sg = gen["pg"]+im*gen["qg"]
+        c0 = conj.(sd0 ./ vd0)
+        y0 = c0 ./ vd0
+        y_prim = Md' * diagm(0 => y0) * Md
+        c_nl_func = function (v_bt)
+            sg = gen["pg"] + im * gen["qg"]
             sd = -sg
-            vd = Md*v_bt
-            cd = conj.(sd./vd)
-            cd_bus = Md'*cd
-            return -(cd_bus .- y_prim*v_bt)
+            vd = Md * v_bt
+            cd = conj.(sd ./ vd)
+            cd_bus = Md' * cd
+            return -(cd_bus .- y_prim * v_bt)
         end
-        c_tots_func = function(v_bt)
+        c_tots_func = function (v_bt)
             return y_prim * v_bt .+ c_nl_func(v_bt)
         end
     end
@@ -883,7 +883,7 @@ end
 
 Branch component interface outputs branch primitive Y matrix.
 """
-function _cpf_switch_interface(switch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase)
+function _cpf_switch_interface(switch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Real)
     vbase = line_vbase["switch.$(switch["index"])"]
     zbase = (vbase)^2 / sbase
 
@@ -897,18 +897,18 @@ function _cpf_switch_interface(switch::Dict{String,<:Any}, v_start::Dict{<:Any,<
     len = length(switch["f_connections"])
     z1 = r1 + im * x1
     z0 = r0 + im * x0
-    Zabc = [2*z1+z0 z0-z1 z0-z1 z0-z1 ; z0-z1 2*z1+z0 z0-z1 z0-z1 ; z0-z1 z0-z1 2*z1+z0 z0-z1 ; z0-z1 z0-z1 z0-z1 2*z1+z0] * 1/3 * 0.001
-    Cabc = [2*c1+c0 c0-c1 c0-c1 c0-c1 ; c0-c1 2*c1+c0 c0-c1 c0-c1 ; c0-c1 c0-c1 2*c1+c0 c0-c1 ; c0-c1 c0-c1 c0-c1 2*c1+c0] * 1/3 * 0.001
+    Zabc = [2*z1+z0 z0-z1 z0-z1 z0-z1; z0-z1 2*z1+z0 z0-z1 z0-z1; z0-z1 z0-z1 2*z1+z0 z0-z1; z0-z1 z0-z1 z0-z1 2*z1+z0] * 1 / 3 * 0.001
+    Cabc = [2*c1+c0 c0-c1 c0-c1 c0-c1; c0-c1 2*c1+c0 c0-c1 c0-c1; c0-c1 c0-c1 2*c1+c0 c0-c1; c0-c1 c0-c1 c0-c1 2*c1+c0] * 1 / 3 * 0.001
     Ys = inv(Zabc)
     Ysh = im * Cabc * 2 * pi * 60
 
-    y_prim = [Ys[1:len,1:len].+Ysh[1:len,1:len]  -Ys[1:len,1:len] ; -Ys[1:len,1:len]  Ys[1:len,1:len].+Ysh[1:len,1:len]]
+    y_prim = [Ys[1:len, 1:len].+Ysh[1:len, 1:len] -Ys[1:len, 1:len]; -Ys[1:len, 1:len] Ys[1:len, 1:len].+Ysh[1:len, 1:len]]
 
     bts = [[(switch["f_bus"], t) for t in switch["f_connections"]]..., [(switch["t_bus"], t) for t in switch["t_connections"]]...]
-    c_tots_func = function(v_bt)
+    c_tots_func = function (v_bt)
         return y_prim * v_bt
     end
-    return  bts, 0, y_prim, nothing, c_tots_func
+    return bts, 0, y_prim, nothing, c_tots_func
 end
 
 
@@ -916,8 +916,8 @@ end
 A mapping of supported component types to their functional interfaces.
 """
 const _CPF_COMPONENT_INTERFACES = Dict(
-    "load"   => _cpf_load_interface,
-    "gen"   => _cpf_generator_interface,
+    "load" => _cpf_load_interface,
+    "gen" => _cpf_generator_interface,
     "branch" => _cpf_branch_interface,
     "transformer" => _cpf_transformer_interface,
     "shunt" => _cpf_shunt_interface,
@@ -934,9 +934,9 @@ Assigns the initialisation voltages to appropriate bus terminals.
 """
 function _bts_to_start_voltage(dm::Dict{String,<:Any})
     v_start = Dict()
-    for (i,bus) in dm["bus"]
+    for (i, bus) in dm["bus"]
         for (t, terminal) in enumerate(bus["terminals"])
-            v_start[(bus["index"],terminal)] = bus["vr_start"][t] + im* bus["vi_start"][t]
+            v_start[(bus["index"], terminal)] = bus["vr_start"][t] + im * bus["vi_start"][t]
         end
     end
     return v_start
