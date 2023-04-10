@@ -2,7 +2,7 @@
 
 ## staged
 
-- none
+- Fixed bug in `build_mc_pf` where `constraint_mc_storage_power_setpoint_real` was being applied to all storage objects, and not just ones on PV buses
 
 ## v0.14.8
 
