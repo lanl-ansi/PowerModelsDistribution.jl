@@ -3,7 +3,7 @@
 
 Applies a Kron Reduction to the network, reducing out the `kr_neutral`, leaving only the `kr_phases`
 """
-function apply_kron_reduction!(data::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
+function apply_kron_reduction!(data::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1, 2, 3], kr_neutral::Union{Int,String}=4)
     @assert iseng(data) "wrong data model type"
 
     apply_pmd!(_apply_kron_reduction!, data; apply_to_subnetworks=true, kr_phases=kr_phases, kr_neutral=kr_neutral)
@@ -15,10 +15,10 @@ end
 
 Applies a Kron Reduction to the network, reducing out the `kr_neutral`, leaving only the `kr_phases`
 """
-function _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1,2,3], kr_neutral::Union{Int,String}=4)
+function _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{Vector{Int},Vector{String}}=[1, 2, 3], kr_neutral::Union{Int,String}=4)
     if !get(data_eng, "is_kron_reduced", false)
         if haskey(data_eng, "bus")
-            for (id,eng_obj) in data_eng["bus"]
+            for (id, eng_obj) in data_eng["bus"]
                 filter = eng_obj["terminals"] .!= kr_neutral
                 terminals_kr = eng_obj["terminals"][filter]
 
@@ -33,8 +33,8 @@ function _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{V
         end
 
         if haskey(data_eng, "line")
-            for (_,eng_obj) in data_eng["line"]
-                @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
+            for (_, eng_obj) in data_eng["line"]
+                @assert all(eng_obj["f_connections"] .== eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
 
                 _apply_linecode!(eng_obj, data_eng)
 
@@ -48,7 +48,7 @@ function _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{V
                 _apply_xfmrcode!(eng_obj, data_eng)
 
                 if haskey(eng_obj, "f_connections")
-                    @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
+                    @assert all(eng_obj["f_connections"] .== eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
 
                     filter = eng_obj["f_connections"] .!= kr_neutral
                     _apply_filter!(eng_obj, ["f_connections", "t_connections"], filter)
@@ -62,8 +62,8 @@ function _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{V
         end
 
         if haskey(data_eng, "switch")
-            for (_,eng_obj) in data_eng["switch"]
-                @assert all(eng_obj["f_connections"].==eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
+            for (_, eng_obj) in data_eng["switch"]
+                @assert all(eng_obj["f_connections"] .== eng_obj["t_connections"]) "Kron reduction is only supported if f_connections == t_connections"
 
                 _apply_linecode!(eng_obj, data_eng)
 
@@ -73,15 +73,15 @@ function _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{V
         end
 
         if haskey(data_eng, "shunt")
-            for (_,eng_obj) in data_eng["shunt"]
+            for (_, eng_obj) in data_eng["shunt"]
                 filter = _kron_reduce_branch!(eng_obj, String[], ["gs", "bs"], eng_obj["connections"], kr_neutral)
                 _apply_filter!(eng_obj, ["connections"], filter)
             end
         end
 
         if haskey(data_eng, "load")
-            for (_,eng_obj) in data_eng["load"]
-                if eng_obj["configuration"]==WYE
+            for (_, eng_obj) in data_eng["load"]
+                if eng_obj["configuration"] == WYE
                     @assert eng_obj["connections"][end] == kr_neutral "for wye-connected loads, to kron reduce the connections list should end with a neutral"
 
                     filter = eng_obj["connections"] .!= kr_neutral
@@ -91,8 +91,8 @@ function _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{V
         end
 
         if haskey(data_eng, "generator")
-            for (_,eng_obj) in data_eng["generator"]
-                if eng_obj["configuration"]==WYE
+            for (_, eng_obj) in data_eng["generator"]
+                if eng_obj["configuration"] == WYE
                     @assert eng_obj["connections"][end] == kr_neutral "for wye-connected generators, to kron reduce the connections list should end with a neutral"
 
                     filter = eng_obj["connections"] .!= kr_neutral
@@ -102,8 +102,8 @@ function _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{V
         end
 
         if haskey(data_eng, "solar")
-            for (_,eng_obj) in data_eng["solar"]
-                if eng_obj["configuration"]==WYE
+            for (_, eng_obj) in data_eng["solar"]
+                if eng_obj["configuration"] == WYE
                     @assert eng_obj["connections"][end] == kr_neutral "for wye-connected solar, to kron reduce the connections list should end with a neutral"
 
                     filter = eng_obj["connections"] .!= kr_neutral
@@ -113,14 +113,14 @@ function _apply_kron_reduction!(data_eng::Dict{String,<:Any}; kr_phases::Union{V
         end
 
         if haskey(data_eng, "storage")
-            for (_,eng_obj) in data_eng["storage"]
+            for (_, eng_obj) in data_eng["storage"]
                 filter = eng_obj["connections"] .!= kr_neutral
                 _apply_filter!(eng_obj, ["connections"], filter)
             end
         end
 
         if haskey(data_eng, "voltage_source")
-            for (_,eng_obj) in data_eng["voltage_source"]
+            for (_, eng_obj) in data_eng["voltage_source"]
                 filter = eng_obj["connections"] .!= kr_neutral
                 _apply_filter!(eng_obj, ["vm", "va", "vm_lb", "vm_ub", "rs", "xs", "connections"], filter)
             end
@@ -142,7 +142,7 @@ function _kron_reduce_series_impedance(Z::Matrix, neutral_conductors::Vector{Int
     # phase conductor idxs (complement)
     P = setdiff(1:size(Z)[1], N)
 
-    Zkr = Z[P,P] - Z[P,N]*inv(Z[N,N])*Z[N,P]
+    Zkr = Z[P, P] - Z[P, N] * inv(Z[N, N]) * Z[N, P]
 
     return Zkr
 end
@@ -153,7 +153,7 @@ function _kron_reduce_shunt_addmittance(Y::Matrix, neutral_conductors::Vector{In
     # phase conductor idxs (complement)
     P = setdiff(1:size(Y)[1], neutral_conductors)
 
-    Ykr = Y[P,P]
+    Ykr = Y[P, P]
 
     return Ykr
 end
@@ -161,9 +161,9 @@ end
 
 "Kron-reduce specified neutral conductors of a linecode."
 function _kron_reduce_linecode!(l, neutral_conductors::Vector{Int})
-    z_s = _kron_reduce_series_impedance(l["rs"].+im*l["xs"], neutral_conductors)
-    y_fr = _kron_reduce_shunt_addmittance(l["g_fr"].+im*l["b_fr"], neutral_conductors)
-    y_to = _kron_reduce_shunt_addmittance(l["g_to"].+im*l["b_to"], neutral_conductors)
+    z_s = _kron_reduce_series_impedance(l["rs"] .+ im * l["xs"], neutral_conductors)
+    y_fr = _kron_reduce_shunt_addmittance(l["g_fr"] .+ im * l["b_fr"], neutral_conductors)
+    y_to = _kron_reduce_shunt_addmittance(l["g_to"] .+ im * l["b_to"], neutral_conductors)
     l["rs"] = real.(z_s)
     l["xs"] = imag.(z_s)
     l["g_fr"] = real.(y_fr)
@@ -204,16 +204,16 @@ function _kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})::Dict{Strin
     nbts = _infer_neutral_terminals(data_eng)
 
     # Kron-reduce each line if eligible
-    for (id,line) in get(data_eng, "line", Dict())
-        doubly_grounded = [(line["f_bus"],t_fr) in nbts && (line["t_bus"],t_to) in nbts for (t_fr, t_to) in zip(line["f_connections"], line["t_connections"])]
+    for (id, line) in get(data_eng, "line", Dict())
+        doubly_grounded = [(line["f_bus"], t_fr) in nbts && (line["t_bus"], t_to) in nbts for (t_fr, t_to) in zip(line["f_connections"], line["t_connections"])]
         if any(doubly_grounded)
             keep = (!).(doubly_grounded)
             neutral_conductors = findall(doubly_grounded)
             _apply_filter!(line, ["f_connections", "t_connections", "cm_ub", "cm_ub_b", "cm_ub_c"], keep)
             if haskey(line, "linecode")
-                suffix = "_kr_"*join(findall(doubly_grounded), ".")
+                suffix = "_kr_" * join(findall(doubly_grounded), ".")
                 lc_orig_id = line["linecode"]
-                lc_kr_id = lc_orig_id*suffix
+                lc_kr_id = lc_orig_id * suffix
                 @assert !(lc_kr_id in orig_lc_ids) "Kron-reduced linecode naming clashes with original linecode names."
                 line["linecode"] = lc_kr_id
                 if !haskey(data_eng["linecode"], lc_kr_id)
@@ -230,26 +230,26 @@ function _kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})::Dict{Strin
     end
 
     # Kron-reduce each shunt if eligible
-    for (id,shunt) in get(data_eng, "shunt", Dict())
-        cond_is_neutral = [(shunt["bus"],t) in nbts for t in shunt["connections"]]
+    for (id, shunt) in get(data_eng, "shunt", Dict())
+        cond_is_neutral = [(shunt["bus"], t) in nbts for t in shunt["connections"]]
         cond_keep = (!).(cond_is_neutral)
         _apply_filter!(shunt, ["connections"], cond_keep)
-        Ys = _kron_reduce_shunt_addmittance(shunt["gs"].+im*shunt["bs"], findall(cond_is_neutral))
+        Ys = _kron_reduce_shunt_addmittance(shunt["gs"] .+ im * shunt["bs"], findall(cond_is_neutral))
         shunt["gs"] = real.(Ys)
         shunt["bs"] = imag.(Ys)
     end
 
     # Kron-reduce each switch if eligible
-    for (id,switch) in get(data_eng, "switch", Dict())
-        doubly_grounded = [(switch["f_bus"],t_fr) in nbts && (switch["t_bus"],t_to) in nbts for (t_fr, t_to) in zip(switch["f_connections"], switch["t_connections"])]
+    for (id, switch) in get(data_eng, "switch", Dict())
+        doubly_grounded = [(switch["f_bus"], t_fr) in nbts && (switch["t_bus"], t_to) in nbts for (t_fr, t_to) in zip(switch["f_connections"], switch["t_connections"])]
         if any(doubly_grounded)
             keep = (!).(doubly_grounded)
             neutral_conductors = findall(doubly_grounded)
             _apply_filter!(switch, ["f_connections", "t_connections", "cm_ub", "cm_ub_b", "cm_ub_c"], keep)
             if haskey(switch, "linecode")
-                suffix = "_kr_"*join(findall(doubly_grounded), ".")
+                suffix = "_kr_" * join(findall(doubly_grounded), ".")
                 lc_orig_id = switch["linecode"]
-                lc_kr_id = lc_orig_id*suffix
+                lc_kr_id = lc_orig_id * suffix
                 @assert !(lc_kr_id in orig_lc_ids) "Kron-reduced linecode naming clashes with original linecode names."
                 line["linecode"] = lc_kr_id
                 if !haskey(data_eng["linecode"], lc_kr_id)
@@ -257,7 +257,7 @@ function _kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})::Dict{Strin
                 end
             end
             if haskey(switch, "rs")
-                Zs = _kron_reduce_series_impedance(switch["rs"].+im*switch["xs"], findall(doubly_grounded))
+                Zs = _kron_reduce_series_impedance(switch["rs"] .+ im * switch["xs"], findall(doubly_grounded))
                 switch["rs"] = real.(Zs)
                 switch["xs"] = imag.(Zs)
             end
@@ -268,10 +268,10 @@ function _kron_reduce_implicit_neutrals!(data_eng::Dict{String,Any})::Dict{Strin
     remove_unconnected_terminals!(data_eng)
 
     # ground remaining neutral terminals
-    remaining_bts = [(b, t) for (b,bus) in data_eng["bus"] for t in bus["terminals"]]
-    for (b,t) in intersect(nbts, remaining_bts)
+    remaining_bts = [(b, t) for (b, bus) in data_eng["bus"] for t in bus["terminals"]]
+    for (b, t) in intersect(nbts, remaining_bts)
         bus = data_eng["bus"][b]
-        perfectly_grounded = bus["grounded"][iszero.(bus["rg"].+im*bus["xg"])]
+        perfectly_grounded = bus["grounded"][iszero.(bus["rg"] .+ im * bus["xg"])]
         if !(t in perfectly_grounded)
             push!(bus["grounded"], t)
             push!(bus["rg"], 0.0)

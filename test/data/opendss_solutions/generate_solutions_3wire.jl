@@ -7,11 +7,11 @@ Pkg.activate("./")
 
 """
 This script uses OpenDSSDirect to obtain voltage profiles for the validation test cases,
-and saves them as json files which are used in the unit tests so that these do not have 
+and saves them as json files which are used in the unit tests so that these do not have
 to add OpenDSSDirect as a dependency.
 """
 
-import OpenDSSDirect; const ODD = OpenDSSDirect
+import OpenDSSDirect as ODD;
 using JSON
 
 # relative path to data and solution folders
@@ -29,15 +29,15 @@ function get_soldss_opendssdirect(dss_path::AbstractString; tolerance=missing)
         ODD.Solution.Solve()
     end
 
-    sol_dss = Dict{String, Any}()
+    sol_dss = Dict{String,Any}()
     # buses
-    sol_dss["bus"] = Dict{String, Any}()
+    sol_dss["bus"] = Dict{String,Any}()
     bnames = ODD.Circuit.AllBusNames()
     for bname in bnames
         ODD.Circuit.SetActiveBus(bname)
-        sol_dss["bus"][bname] = Dict("vm"=>Dict{Int, Float64}(), "va"=>Dict{Int, Float64}())
+        sol_dss["bus"][bname] = Dict("vm" => Dict{Int,Float64}(), "va" => Dict{Int,Float64}())
         v = ODD.Bus.Voltages()
-        for (i,c) in enumerate(ODD.Bus.Nodes())
+        for (i, c) in enumerate(ODD.Bus.Nodes())
             sol_dss["bus"][bname]["vm"][c] = abs(v[i])
             sol_dss["bus"][bname]["va"][c] = angle(v[i])
         end
@@ -48,12 +48,31 @@ function get_soldss_opendssdirect(dss_path::AbstractString; tolerance=missing)
 end
 
 
-cases = ["case2_diag", "case3_balanced_basefreq", "case3_balanced_cap", "case3_balanced_isc", "case3_balanced_prop-order",
-"case3_delta_gens", "case3_lm_models_2", "case3_unbalanced_1phase-pv", "case3_unbalanced_assym_swap", "case3_unbalanced_delta_loads", "case3_unbalanced_missingedge", 
-"case3_unbalanced", "case4_phase_drop", "case5_phase_drop", "ut_trans_2w_dy_lag", "ut_trans_2w_dy_lead_small_series_impedance", "case3_unbalanced_switch",
-"ut_trans_2w_dy_lead", "ut_trans_2w_yy_oltc", "ut_trans_2w_yy", "ut_trans_3w_dyy_1"]
+cases = [
+    "case2_diag",
+    "case3_balanced_basefreq",
+    "case3_balanced_cap",
+    "case3_balanced_isc",
+    "case3_balanced_prop-order",
+    "case3_delta_gens",
+    "case3_lm_models_2",
+    "case3_unbalanced_1phase-pv",
+    "case3_unbalanced_assym_swap",
+    "case3_unbalanced_delta_loads",
+    "case3_unbalanced_missingedge",
+    "case3_unbalanced",
+    "case4_phase_drop",
+    "case5_phase_drop",
+    "ut_trans_2w_dy_lag",
+    "ut_trans_2w_dy_lead_small_series_impedance",
+    "case3_unbalanced_switch",
+    "ut_trans_2w_dy_lead",
+    "ut_trans_2w_yy_oltc",
+    "ut_trans_2w_yy",
+    "ut_trans_3w_dyy_1"
+]
 
-cases_diff = setdiff(readdir(data_dir), cases.*".dss")
+cases_diff = setdiff(readdir(data_dir), cases .* ".dss")
 
 for case in cases
     sol_path = "$solution_dir/$case.json"
