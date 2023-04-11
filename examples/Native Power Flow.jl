@@ -251,7 +251,7 @@ The updated network model is then solved and the results are compared with OpenD
 """
 
 # ╔═╡ 0aedaa8d-ab6e-4255-8535-ad6ae3ab4ecd
-function compare_sol_dss_pmd(sol_dss::Dict{String,<:Any}, sol_pmd::Dict{String,<:Any}, data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}; compare_math=false, verbose=true, floating_buses=[], skip_buses=[], v_err_print_tol=1E-6)
+function compare_sol_dss_pmd(sol_dss::Dict{String,<:Any}, sol_pmd::Dict{String,<:Any}, data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}; compare_math::Bool=false, verbose::Bool=true, floating_buses::Vector=[], skip_buses::Vector=[], v_err_print_tol::Real=1E-6)
     max_v_err_pu = 0.0
 
     # voltage base for ENGINEERING buses in [V]
@@ -264,13 +264,13 @@ function compare_sol_dss_pmd(sol_dss::Dict{String,<:Any}, sol_pmd::Dict{String,<
 
         terminals = data_eng["bus"][id]["terminals"]
         if compare_math
-            ts = [t for t in string.(terminals) if haskey(dss_bus["vm"], t)]
-            v_dss = [dss_bus["vm"][t]*exp(im*dss_bus["va"][t]) for t in ts]
+            ts = filter(x->haskey(dss_bus["vm"], "$x"), terminals)
+            v_dss = [dss_bus["vm"]["$t"]*exp(im*dss_bus["va"]["$t"]) for t in ts]
             # convert to V instead of usual kV
-            v_pmd = [pmd_bus["vm"][t]*exp(im*deg2rad(pmd_bus["va"][t]))*data_eng["settings"]["voltage_scale_factor"] for t in ts]
+            v_pmd = [pmd_bus["vm"][idx]*exp(im*deg2rad(pmd_bus["va"][idx]))*data_eng["settings"]["voltage_scale_factor"] for (idx,t) in enumerate(ts)]
         else
-            ts = [t for t in terminals if haskey(dss_bus["vm"], t)]
-            v_dss = [dss_bus["vm"][t]*exp(im*dss_bus["va"][t]) for t in ts]
+            ts = filter(x->haskey(dss_bus["vm"], x), terminals)
+            v_dss = [dss_bus["vm"]["$t"]*exp(im*dss_bus["va"]["$t"]) for t in ts]
             # convert to V instead of usual kV
             v_pmd = [(pmd_bus["vr"][idx]+im*pmd_bus["vi"][idx])*data_eng["settings"]["voltage_scale_factor"] for (idx,t) in enumerate(ts)]
         end

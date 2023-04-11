@@ -479,8 +479,8 @@ function build_pf_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
         ind = bus["index"]
         solution["bus"][id] = Dict{String,Any}()
         v = Dict(t => _get_v(pfd, Uv, (ind, t)) for t in bus["terminals"])
-        solution["bus"][id]["vm"] = Dict("$t" => abs.(v[t]) for t in bus["terminals"])
-        solution["bus"][id]["va"] = Dict("$t" => angle.(v[t]) for t in bus["terminals"])
+        solution["bus"][id]["vm"] = [abs.(v[t]) for t in bus["terminals"]]
+        solution["bus"][id]["va"] = [angle.(v[t]) for t in bus["terminals"]]
     end
 
     for (ns, c_nl_func, c_tots_func, comp_type, id) in pfd.cc_ns_func_pairs
