@@ -596,17 +596,17 @@ function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,
     ppm = -1e-6 / zbase / 2
 
     if tr["configuration"] == WYE && explicit_neutral
-        npairs_fr = [(f_ns[i], f_ns[end]) for i in 1:length(f_ns)-1]
-        npairs_to = [(t_ns[i], t_ns[end]) for i in 1:length(t_ns)-1]
+        npairs_fr = [(f_ns[i], f_ns[end]) for i in eachindex(f_ns[1:end-1])]
+        npairs_to = [(t_ns[i], t_ns[end]) for i in eachindex(t_ns[1:end-1])]
         bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Yy(ts, npairs_fr, npairs_to, ppm)
     elseif tr["configuration"] == WYE && !explicit_neutral
-        npairs_fr = [(f_ns[i], f_ns[i]) for i in 1:length(f_ns)]
-        npairs_to = [(t_ns[i], t_ns[i]) for i in 1:length(t_ns)]
+        npairs_fr = [(f_ns[i], f_ns[i]) for i in eachindex(f_ns)]
+        npairs_to = [(t_ns[i], t_ns[i]) for i in eachindex(t_ns)]
         bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Ygyg(ts, npairs_fr, npairs_to, ppm)
     elseif tr["configuration"] == DELTA
         @assert length(f_ns) == 3
         npairs_fr = [(f_ns[1], f_ns[2]), (f_ns[2], f_ns[3]), (f_ns[3], f_ns[1])]
-        npairs_to = [(t_ns[i], t_ns[i]) for i in 1:length(t_ns)]
+        npairs_to = [(t_ns[i], t_ns[i]) for i in eachindex(t_ns)]
         bts, nr_vns, Y = _compose_yprim_banked_ideal_transformers_Dyg(ts, npairs_fr, npairs_to, ppm)
     else
         error("Transformer " * tr["source_id"] * " configuration " * tr["configuration"] * " unknown")
