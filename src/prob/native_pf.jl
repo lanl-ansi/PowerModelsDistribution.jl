@@ -496,28 +496,28 @@ function build_pf_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
         c_tots = c_tots_func(v_bt)
         if comp_type == "gen"
             solution[comp_type][id] = Dict{String,Any}()
-            solution[comp_type][id]["cgr"] = real.(c_tots)
-            solution[comp_type][id]["cgi"] = real.(c_tots)
+            solution[comp_type][id]["crg"] = real.(c_tots)
+            solution[comp_type][id]["cig"] = imag.(c_tots)
         elseif comp_type == "load"
             solution[comp_type][id] = Dict{String,Any}()
-            solution[comp_type][id]["cdr"] = real.(c_tots)
-            solution[comp_type][id]["cdi"] = real.(c_tots)
+            solution[comp_type][id]["crd"] = real.(c_tots)
+            solution[comp_type][id]["cid"] = imag.(c_tots)
         elseif comp_type == "branch"
             solution[comp_type][id] = Dict{String,Any}()
             solution[comp_type][id]["cr"] = real.(c_tots)
-            solution[comp_type][id]["ci"] = real.(c_tots)
+            solution[comp_type][id]["ci"] = imag.(c_tots)
         elseif comp_type == "shunt"
             solution[comp_type][id] = Dict{String,Any}()
-            solution[comp_type][id]["cshr"] = real.(c_tots)
-            solution[comp_type][id]["cshi"] = real.(c_tots)
+            solution[comp_type][id]["crsh"] = real.(c_tots)
+            solution[comp_type][id]["cish"] = imag.(c_tots)
         elseif comp_type == "switch"
             solution[comp_type][id] = Dict{String,Any}()
-            solution[comp_type][id]["cswr"] = real.(c_tots)
-            solution[comp_type][id]["cswi"] = real.(c_tots)
+            solution[comp_type][id]["crsw"] = real.(c_tots)
+            solution[comp_type][id]["cisw"] = imag.(c_tots)
         elseif comp_type == "transformer"
             solution[comp_type][id] = Dict{String,Any}()
-            solution[comp_type][id]["ctrr"] = real.(c_tots)
-            solution[comp_type][id]["ctri"] = real.(c_tots)
+            solution[comp_type][id]["cr_fr"] = real.(c_tots)
+            solution[comp_type][id]["ci_fr"] = imag.(c_tots)
         end
     end
     solution["settings"] = deepcopy(pfd.data_math["settings"])
