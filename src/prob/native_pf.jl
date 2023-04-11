@@ -189,26 +189,128 @@ end
 
 """
     compute_mc_pf(
-      data_math::Dict,
-      v_start::Dict,
-      explicit_neutral::Bool
-      max_iter::Int,
-      stat_tol::Float,
-      verbose::Bool
-    )
-    abbreviations:
-    - ntype: node type (variable, fixed, grounded, virtual)
-    - bts: bus-terminals for the component
-    - ns: nodes
-    - vns: virtual nodes
-    - nr_vns: number of virtual nodes
-    - y_prim: primitive admittance matrix for the component
-    - c_nl_func: nonlinear compensation current function handle for the component
-    - c_tots_func: total current function handle for the component
+        data::Dict{String,<:Any};
+        explicit_neutral::Bool=false,
+        max_iter::Int=100,
+        v_start::Union{Dict{<:Any,<:Any},Missing}=missing,
+        stat_tol::Real=1e-8,
+        verbose::Bool=false,
+        kron_reduce::Bool=true,
+        phase_project::Bool=false,
+        multinetwork::Bool=false,
+        global_keys::Set{String}=Set{String}(),
+        eng2math_extensions::Vector{<:Function}=Function[],
+        eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
+        make_pu_extensions::Vector{<:Function}=Function[],
+        map_math2eng_extensions::Dict{String,<:Function}=Dict{String,Function}(),
+        make_si::Bool=!get(data, "per_unit", false),
+        make_si_extensions::Vector{<:Function}=Function[],
+        dimensionalize_math_extensions::Dict{String,Dict{String,Vector{String}}}=Dict{String,Dict{String,Vector{String}}}(),
+    )::Dict{String,Any}
+
+Takes data in either the ENGINEERING or MATHEMATICAL model, a model type (_e.g._, [`ACRUPowerModel`](@ref ACRUPowerModel)),
+and model builder function (_e.g._, [`build_mc_opf`](@ref build_mc_opf)), and returns a solution in the original data model
+defined by `data`.
+
+If `make_si` is false, data will remain in per-unit.
+
+For an explanation of `multinetwork` and `global_keys`, see [`make_multinetwork`](@ref make_multinetwork)
+
+For an explanation of `eng2math_extensions` and `eng2math_passthrough`, see [`transform_data_model`](@ref transform_data_model)
+
+For an explanation of `make_pu_extensions`, see [`make_per_unit!`](@ref make_per_unit!)
+
+For an explanation of `ref_extensions`, see [`instantiate_mc_model`](@ref instantiate_mc_model)
+
+For an explanation of `map_math2eng_extensions`, `make_si`, `make_si_extensions`, and `dimensionalize_math_extensions`, see [`solution_make_si`](@ref solution_make_si)
+"""
+function compute_mc_pf(
+    data::Dict{String,<:Any};
+    explicit_neutral::Bool=false,
+    max_iter::Int=100,
+    v_start::Union{Dict{<:Any,<:Any},Missing}=missing,
+    stat_tol::Real=1e-8,
+    verbose::Bool=false,
+    kron_reduce::Bool=true,
+    phase_project::Bool=false,
+    multinetwork::Bool=false,
+    global_keys::Set{String}=Set{String}(),
+    eng2math_extensions::Vector{<:Function}=Function[],
+    eng2math_passthrough::Dict{String,<:Vector{<:String}}=Dict{String,Vector{String}}(),
+    make_pu_extensions::Vector{<:Function}=Function[],
+    map_math2eng_extensions::Dict{String,<:Function}=Dict{String,Function}(),
+    make_si::Bool=!get(data, "per_unit", false),
+    make_si_extensions::Vector{<:Function}=Function[],
+    dimensionalize_math_extensions::Dict{String,Dict{String,Vector{String}}}=Dict{String,Dict{String,Vector{String}}}(),
+)::Dict{String,Any}
+
+    if iseng(data)
+        data_math = transform_data_model(
+            data;
+            multinetwork=multinetwork,
+            eng2math_extensions=eng2math_extensions,
+            eng2math_passthrough=eng2math_passthrough,
+            make_pu_extensions=make_pu_extensions,
+            global_keys=global_keys,
+            phase_project=phase_project,
+            kron_reduce=kron_reduce
+        )
+
+        # sourcebus_voltage_vector_correction!(data_math, explicit_neutral=false);
+        # update_math_model_3wire!(data_math);
+
+        result = _compute_mc_pf(data_math; v_start=v_start, explicit_neutral=explicit_neutral, max_iter=max_iter, stat_tol=stat_tol, verbose=verbose)
+
+        result["solution"] = transform_solution(
+            result["solution"],
+            data_math;
+            map_math2eng_extensions=map_math2eng_extensions,
+            make_si=make_si,
+            make_si_extensions=make_si_extensions,
+            dimensionalize_math_extensions=dimensionalize_math_extensions
+        )
+    elseif ismath(data)
+        result = _compute_mc_pf(data; v_start=v_start, explicit_neutral=explicit_neutral, max_iter=max_iter, stat_tol=stat_tol, verbose=verbose)
+    else
+        error("unrecognized data model format '$(get(data, "data_model", missing))'")
+    end
+
+    return result
+end
+
+
+"""
+    _compute_mc_pf(
+        data_math::Dict{String,<:Any};
+        v_start::Union{Dict{<:Any,<:Any},Missing}=missing,
+        explicit_neutral::Bool=false,
+        max_iter::Int=100,
+        stat_tol::Real=1E-8,
+        verbose::Bool=false
+    )::Dict{String,Any}
 
 Computes native power flow and outputs the result dict.
+
+## Abbreviations:
+- ntype: node type (variable, fixed, grounded, virtual)
+- bts: bus-terminals for the component
+- ns: nodes
+- vns: virtual nodes
+- nr_vns: number of virtual nodes
+- y_prim: primitive admittance matrix for the component
+- c_nl_func: nonlinear compensation current function handle for the component
+- c_tots_func: total current function handle for the component
+
 """
-function compute_mc_pf(data_math::Dict{String,<:Any}; v_start::Union{Dict{<:Any,<:Any},Missing}=missing, explicit_neutral::Bool=false, max_iter::Int=100, stat_tol::Real=1E-8, verbose::Bool=false)
+function _compute_mc_pf(
+    data_math::Dict{String,<:Any};
+    v_start::Union{Dict{<:Any,<:Any},Missing}=missing,
+    explicit_neutral::Bool=false,
+    max_iter::Int=100,
+    stat_tol::Real=1E-8,
+    verbose::Bool=false
+)::Dict{String,Any}
+
     br_sizes = []
     if !ismultinetwork(data_math)
         nw_dm = Dict("0" => data_math)
@@ -277,7 +379,7 @@ end
 
 
 """
-    compute_mc_pf(
+    _compute_mc_pf(
       pdf::PowerFlowData,
       max_iter::Int,
       stat_tol::Float,
@@ -286,7 +388,7 @@ end
 
 Computes native power flow and requires PowerFlowData.
 """
-function compute_mc_pf(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Real=1E-8, verbose::Bool=false)
+function _compute_mc_pf(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Real=1E-8, verbose::Bool=false)
     time = @elapsed (Uv, status, its, stat) = _compute_Uv(pfd, max_iter=max_iter, stat_tol=stat_tol)
     return build_pf_result(pfd, Uv, status, its, time, stat)
 end
