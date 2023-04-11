@@ -246,7 +246,7 @@ function compute_mc_pf(data_math::Dict{String,<:Any}; v_start::Union{Dict{<:Any,
 
         time_solve[nw] = @elapsed (Uv, status[nw], its[nw], stat[nw]) = _compute_Uv(pfd, max_iter=max_iter, stat_tol=stat_tol)
 
-        time_post[nw] = @elapsed sol["nw"][nw] = build_solution(pfd, Uv)
+        time_post[nw] = @elapsed sol["nw"][nw] = build_pf_solution(pfd, Uv)
 
     end
 
@@ -355,7 +355,7 @@ Builds the result dict from the solution dict.
 function build_pf_result(pfd::PowerFlowData, Uv::Vector{Complex{Float64}}, status::PFTerminationStatus, its::Int, time::Real, stationarity::Real; verbose::Bool=false)
     result = Dict{String,Any}()
     result["termination_status"] = status
-    result["solution"] = build_solution(pfd, Uv)
+    result["solution"] = build_pf_solution(pfd, Uv)
     result["solve_time"] = time
     result["iterations"] = its
     result["stationarity"] = stationarity
@@ -364,15 +364,15 @@ end
 
 
 """
-    build_solution(
+    build_pf_solution(
       pfd::PowerFlowData,
       Uv::Vector
     )
 
 Builds the solution dict.
 """
-function build_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
-    solution = Dict{String,Any}("bus" => Dict{String,Any}(), "load" => Dict{String,Any}(), "gen" => Dict{String,Any}(), "branch" => Dict{String,Any}(), "shunt" => Dict{String,Any}(), "switch" => Dict{String,Any}(), "transformer" => Dict{String,Any}())
+function build_pf_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
+    solution = Dict{String,Any}(t => Dict{String,Any}() for t in pmd_math_asset_types)
     for (id, bus) in pfd.data_math["bus"]
         ind = bus["index"]
         solution["bus"][id] = Dict{String,Any}()
