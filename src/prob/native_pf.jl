@@ -416,7 +416,7 @@ function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Real=1E-8,
     for it in 1:max_iter
         Iv = zeros(Complex{Float64}, Nv)
         for (ns, c_nl_func, c_tots_func, comp_type, id) in pfd.cc_ns_func_pairs
-            if c_nl_func != nothing
+            if c_nl_func !== nothing
                 Un = [_get_v(pfd, Uv, n) for n in ns]
                 Icc = c_nl_func(Un)
                 for (i, n) in enumerate(ns)
