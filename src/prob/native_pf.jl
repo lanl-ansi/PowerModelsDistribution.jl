@@ -379,7 +379,7 @@ end
 
 
 """
-    _compute_mc_pf(
+    compute_mc_pf(
       pdf::PowerFlowData,
       max_iter::Int,
       stat_tol::Float,
@@ -388,7 +388,7 @@ end
 
 Computes native power flow and requires PowerFlowData.
 """
-function _compute_mc_pf(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Real=1E-8, verbose::Bool=false)
+function compute_mc_pf(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Real=1E-8, verbose::Bool=false)
     time = @elapsed (Uv, status, its, stat) = _compute_Uv(pfd, max_iter=max_iter, stat_tol=stat_tol)
     return build_pf_result(pfd, Uv, status, its, time, stat)
 end
