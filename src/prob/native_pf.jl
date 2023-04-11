@@ -288,7 +288,7 @@ Computes native power flow and requires PowerFlowData.
 """
 function compute_mc_pf(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Real=1E-8, verbose::Bool=false)
     time = @elapsed (Uv, status, its, stat) = _compute_Uv(pfd, max_iter=max_iter, stat_tol=stat_tol)
-    return build_result(pfd, Uv, status, its, time, stat)
+    return build_pf_result(pfd, Uv, status, its, time, stat)
 end
 
 
@@ -340,7 +340,7 @@ end
 
 
 """
-    build_result(
+    build_pf_result(
       pfd::PowerFlowData,
       Uv::Vector,
       status::PFTerminationStatus,
@@ -352,7 +352,7 @@ end
 
 Builds the result dict from the solution dict.
 """
-function build_result(pfd::PowerFlowData, Uv::Vector{Complex{Float64}}, status::PFTerminationStatus, its::Int, time::Real, stationarity::Real; verbose::Bool=false)
+function build_pf_result(pfd::PowerFlowData, Uv::Vector{Complex{Float64}}, status::PFTerminationStatus, its::Int, time::Real, stationarity::Real; verbose::Bool=false)
     result = Dict{String,Any}()
     result["termination_status"] = status
     result["solution"] = build_solution(pfd, Uv)
