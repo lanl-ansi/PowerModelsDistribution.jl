@@ -190,8 +190,8 @@ function create_math_object(obj::EngBus)::MathBus
 end
 
 
-function transform_data_model(::Type{MathematicalModel}, mn_eng::EngineeringMultinetworkDataModel)::MathematicalMultinetworkDataModel
-    mn_math = MathematicalMultinetworkDataModel()
+function transform_data_model(::Type{MathematicalModel}, mn_eng::MultinetworkEngineeringDataModel)::MultinetworkMathematicalDataModel
+    mn_math = MultinetworkMathematicalDataModel()
 end
 
 

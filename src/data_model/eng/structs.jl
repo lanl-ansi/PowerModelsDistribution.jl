@@ -823,7 +823,7 @@ end
 
 """
 """
-Base.@kwdef struct EngineeringDataModel <: EngineeringModel
+Base.@kwdef struct EngineeringDataModel <: EngineeringModel{SubnetworkModel}
     # metadata
     settings::Settings = Settings()
     metadata::Metadata = Metadata()
@@ -856,7 +856,7 @@ end
 
 """
 """
-Base.@kwdef mutable struct MultinetworkEngineeringDataModel <: EngineeringModel{MultinetworkDataModel}
+Base.@kwdef mutable struct MultinetworkEngineeringDataModel <: EngineeringModel{MultinetworkModel}
     # global keys
     metadata::Metadata = Metadata()
 

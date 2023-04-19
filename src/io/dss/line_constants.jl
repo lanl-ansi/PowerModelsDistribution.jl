@@ -9,19 +9,16 @@ const ρₜₛ = 2.3718e-8
 
 
 "gets line geometry data for line, including applying line spacing if specified"
-function _get_geometry_data(data_dss::OpenDssDataModel, geometry_id::String)::Dict{String,Any}
-    geom_obj = data_dss["linegeometry"][geometry_id]
-    _apply_like!(geom_obj, data_dss, "linegeometry")
+function _get_geometry_data(data_dss::OpenDssDataModel, geometry_id::String)::DssLinegeometry
+    geometry = get(data_dss.linegeometry, geometry_id, DssLinegeometry(geometry_id))
 
-    geometry = _apply_ordered_properties(_create_linegeometry(geometry_id; _to_kwargs(geom_obj)...), geom_obj)
+    if !isempty(geometry.spacing) && !ismissing(get(data_dss.linespacing, geometry.spacing, missing))
+        spacing = _get_spacing_data(data_dss, geometry.spacing)
 
-    if !isempty(get(geometry, "spacing", "")) && !isempty(get(get(data_dss,"linespacing",Dict()), string(geometry["spacing"]), Dict()))
-        spacing = _get_spacing_data(data_dss, string(geometry["spacing"]))
+        @assert geometry.nconds == spacing.nconds "Nconds on linegeometry.$(geometry_id) doesn't match nconds on linespacing.$(geometry.spacing)"
 
-        @assert geometry["nconds"] == spacing["nconds"] "Nconds on linegeometry.$(geometry_id) doesn't match nconds on linespacing.$(geometry["spacing"])"
-
-        geometry["fx"] = spacing["fx"]
-        geometry["fh"] = spacing["fh"]
+        geometry.fx = spacing.fx
+        geometry.fh = spacing.fh
     end
 
     return geometry
@@ -29,44 +26,35 @@ end
 
 
 "get line spacing data for line or line geometry"
-function _get_spacing_data(data_dss::OpenDssDataModel, spacing_id::String)
-    spacing_obj = data_dss["linespacing"][spacing_id]
-    _apply_like!(spacing_obj, data_dss, "linespacing")
-
-    return _apply_ordered_properties(_create_linespacing(spacing_id; _to_kwargs(spacing_obj)...), spacing_obj)
+function _get_spacing_data(data_dss::OpenDssDataModel, spacing_id::String)::DssLinespacing
+    return get(data_dss.linespacing, spacing_id, DssLinespacing(spacing_id))
 end
 
 
 "gets overhead wire data for line geometry"
-function _get_wire_data(data_dss::OpenDssDataModel, wires::Vector{String})::Dict{String,Any}
-    wiredata = Dict{String,Any}(id => get(get(data_dss,"wiredata",Dict()), id, Dict{String,Any}()) for id in filter(x->!isempty(x), wires))
-    @assert !isempty(wiredata) && all(!isempty(wd) for (_,wd) in wiredata) "Some wiredata is missing, cannot continue"
+function _get_wire_data(data_dss::OpenDssDataModel, wires::Vector{String})::Dict{String,DssWiredata}
+    wiredata = Dict{String,Any}(id => get(data_dss.wiredata, id, missing) for id in filter(x->!isempty(x), wires))
+    @assert !isempty(wiredata) && all(!ismissing(wd) for (_,wd) in wiredata) "Some wiredata is missing, cannot continue"
 
-    return Dict{String,Any}(
-        id => _apply_ordered_properties(_create_wiredata(id; _to_kwargs(wd)...), wd) for (id,wd) in wiredata
-    )
+    return wiredata
 end
 
 
 "gets concentric neutral cable data for line geometry"
-function _get_cncable_data(data_dss::OpenDssDataModel, cncables::Vector{String})::Dict{String,Any}
-    cncabledata = Dict{String,Any}(id => get(get(data_dss,"cndata",Dict()), id, Dict{String,Any}()) for id in filter(x->!isempty(x), cncables))
-    @assert !isempty(cncabledata) && all(!isempty(cncd) for (_,cncd) in cncabledata) "Some cndata is missing, cannot continue"
+function _get_cncable_data(data_dss::OpenDssDataModel, cncables::Vector{String})::Dict{String,DssCndata}
+    cncabledata = Dict{String,Any}(id => get(data_dss.cndata, id, missing) for id in filter(x->!isempty(x), cncables))
+    @assert !isempty(cncabledata) && all(!ismissing(cncd) for (_,cncd) in cncabledata) "Some cndata is missing, cannot continue"
 
-    return Dict{String,Any}(
-        id => _apply_ordered_properties(_create_cndata(id; _to_kwargs(cncd)...), cncd) for (id,cncd) in cncabledata
-    )
+    return cncabledata
 end
 
 
 "gets tape shielded cable data for line geometry"
-function _get_tscable_data(data_dss::OpenDssDataModel, tscables::Vector{String})::Dict{String,Any}
-    tscabledata = Dict{String,Any}(id => get(get(data_dss,"tsdata",Dict()), id, Dict{String,Any}()) for id in filter(x->!isempty(x), tscables))
-    @assert !isempty(tscabledata) && all(!isempty(tscd) for (_,tscd) in tscabledata) "Some tsdata is missing, cannot continue"
+function _get_tscable_data(data_dss::OpenDssDataModel, tscables::Vector{String})::Dict{String,DssTsdata}
+    tscabledata = Dict{String,Any}(id => get(get(data_dss,"tsdata",Dict()), id, missing) for id in filter(x->!isempty(x), tscables))
+    @assert !isempty(tscabledata) && all(!ismissing(tscd) for (_,tscd) in tscabledata) "Some tsdata is missing, cannot continue"
 
-    return Dict{String,Any}(
-        id => _apply_ordered_properties(_create_tsdata(id; _to_kwargs(tscd)...), tscd) for (id,tscd) in tscabledata
-    )
+    return tscabledata
 end
 
 
@@ -75,77 +63,77 @@ end
 
 Calculates line impedance and shunt admittance matrices for lines with line geometry, line spacing, wiredata, cncable, and/or tscable properties.
 """
-function calculate_line_constants(data_dss::OpenDssDataModel, line_defaults::Dict{String,<:Any})::Tuple{Matrix{Complex},Matrix{Complex}}
-    geometry = !isempty(line_defaults["geometry"]) ? _get_geometry_data(data_dss, string(line_defaults["geometry"])) : missing
+function calculate_line_constants(data_dss::OpenDssDataModel, line_defaults::DssLine)::Tuple{Matrix{Complex},Matrix{Complex}}
+    geometry = !isempty(line_defaults.geometry) ? _get_geometry_data(data_dss, string(line_defaults.geometry)) : missing
 
-    cncables = !ismissing(geometry) && !isempty(geometry["cncables"]) ? filter(x->!isempty(x), geometry["cncables"]) : !isempty(line_defaults["cncables"]) ? filter(x->!isempty(x), line_defaults["cncables"]) : missing
+    cncables = !ismissing(geometry) && !isempty(geometry.cncables) ? filter(x->!isempty(x), geometry.cncables) : !isempty(line_defaults.cncables) ? filter(x->!isempty(x), line_defaults.cncables) : missing
     ncncables = !ismissing(cncables) ? length(cncables) : missing
     cndata = !ismissing(cncables) ? _get_cncable_data(data_dss, cncables) : missing
 
-    tscables = !ismissing(geometry) && !isempty(geometry["tscables"]) ? filter(x->!isempty(x), geometry["tscables"]) : !isempty(line_defaults["tscables"]) ? filter(x->!isempty(x), line_defaults["tscables"]) : missing
+    tscables = !ismissing(geometry) && !isempty(geometry.tscables) ? filter(x->!isempty(x), geometry.tscables) : !isempty(line_defaults.tscables) ? filter(x->!isempty(x), line_defaults.tscables) : missing
     ntscables = !ismissing(tscables) ? length(tscables) : missing
     tsdata = !ismissing(tscables) ? _get_tscable_data(data_dss, tscables) : missing
 
-    spacing = !isempty(line_defaults["spacing"]) ? _get_spacing_data(data_dss, string(line_defaults["spacing"])) : missing
+    spacing = !isempty(line_defaults.spacing) ? _get_spacing_data(data_dss, string(line_defaults.spacing)) : missing
 
-    wires = !ismissing(geometry) && !isempty(geometry["wires"]) ? filter(x->!isempty(x), geometry["wires"]) : !isempty(line_defaults["wires"]) ? filter(x->!isempty(x), line_defaults["wires"]) : missing
+    wires = !ismissing(geometry) && !isempty(geometry.wires) ? filter(x->!isempty(x), geometry.wires) : !isempty(line_defaults.wires) ? filter(x->!isempty(x), line_defaults.wires) : missing
     nwires = !ismissing(wires) ? length(wires) : missing
     wiredata = !ismissing(wires) ? _get_wire_data(data_dss, wires) : missing
 
-    @assert count(.!(ismissing.([wires, cncables, tscables]))) > 0 "No wire, tscable, or cncable data is defined on line.$(line_defaults["name"])"
+    @assert count(.!(ismissing.([wires, cncables, tscables]))) > 0 "No wire, tscable, or cncable data is defined on line.$(line_defaults.name)"
 
-    ω = 2π * get(line_defaults, "basefreq", get(get(data_dss, "options", Dict()), "defaultbasefreq", 60.0))
-    ω₀ = 2π * get(get(data_dss, "options", Dict()), "defaultbasefreq", 60.0)
+    ω = 2π * line_defaults.basefreq
+    ω₀ = 2π * data_dss.options.defaultbasefrequency
 
-    x = !ismissing(geometry) ? geometry["fx"] : !ismissing(spacing) ? spacing["fx"] : missing
-    y = !ismissing(geometry) ? geometry["fh"] : !ismissing(spacing) ? spacing["fh"] : missing
+    x = !ismissing(geometry) ? geometry.fx : !ismissing(spacing) ? spacing.fx : missing
+    y = !ismissing(geometry) ? geometry.fh : !ismissing(spacing) ? spacing.fh : missing
 
-    gmr = !ismissing(wiredata) ? [wiredata[wire]["gmrac"] for wire in wires] : missing
-    capradius = !ismissing(wiredata) ? [wiredata[wire]["capradius"] for wire in wires] : missing
+    gmr = !ismissing(wiredata) ? [wiredata[wire].gmrac for wire in wires] : missing
+    capradius = !ismissing(wiredata) ? [wiredata[wire].capradius for wire in wires] : missing
 
-    rac = !ismissing(wiredata) ? [wiredata[wire]["rac"] for wire in wires] : missing
-    rdc = !ismissing(wiredata) ? [wiredata[wire]["rdc"] for wire in wires] : missing
+    rac = !ismissing(wiredata) ? [wiredata[wire].rac for wire in wires] : missing
+    rdc = !ismissing(wiredata) ? [wiredata[wire].rdc for wire in wires] : missing
 
-    nphases = !ismissing(geometry) ? geometry["nphases"] : !ismissing(spacing) ? spacing["nphases"] : line_defaults["phases"]
-    nconds = !ismissing(geometry) ? geometry["nconds"] : !ismissing(spacing) ? spacing["nconds"] : nphases
+    nphases = !ismissing(geometry) ? geometry.nphases : !ismissing(spacing) ? spacing.nphases : line_defaults.phases
+    nconds = !ismissing(geometry) ? geometry.nconds : !ismissing(spacing) ? spacing.nconds : nphases
 
-    rac = !ismissing(cndata) ? [cndata[cable]["rac"] for cable in cncables] : rac
-    rdc = !ismissing(cndata) ? [cndata[cable]["rdc"] for cable in cncables] : rdc
-    gmr = !ismissing(cndata) ? [cndata[cable]["gmrac"] for cable in cncables] : gmr
+    rac = !ismissing(cndata) ? [cndata[cable].rac for cable in cncables] : rac
+    rdc = !ismissing(cndata) ? [cndata[cable].rdc for cable in cncables] : rdc
+    gmr = !ismissing(cndata) ? [cndata[cable].gmrac for cable in cncables] : gmr
 
-    rstrand = !ismissing(cndata) ? [cndata[cable]["rstrand"] for cable in cncables] : missing
-    kstrand = !ismissing(cndata) ? [cndata[cable]["k"] for cable in cncables] : missing
-    diacable = !ismissing(cndata) ? [cndata[cable]["diacable"] for cable in cncables] : missing
-    diastrand = !ismissing(cndata) ? [cndata[cable]["diastrand"] for cable in cncables] : missing
-    gmrstrand = !ismissing(cndata) ? [cndata[cable]["gmrstrand"] for cable in cncables] : missing
-    epsr = !ismissing(cndata) ? [cndata[cable]["epsr"] for cable in cncables] : missing
-    diains = !ismissing(cndata) ? [cndata[cable]["diains"] for cable in cncables] : missing
-    inslayer = !ismissing(cndata) ? [cndata[cable]["inslayer"] for cable in cncables] : missing
+    rstrand = !ismissing(cndata) ? [cndata[cable].rstrand for cable in cncables] : missing
+    kstrand = !ismissing(cndata) ? [cndata[cable].k for cable in cncables] : missing
+    diacable = !ismissing(cndata) ? [cndata[cable].diacable for cable in cncables] : missing
+    diastrand = !ismissing(cndata) ? [cndata[cable].diastrand for cable in cncables] : missing
+    gmrstrand = !ismissing(cndata) ? [cndata[cable].gmrstrand for cable in cncables] : missing
+    epsr = !ismissing(cndata) ? [cndata[cable].epsr for cable in cncables] : missing
+    diains = !ismissing(cndata) ? [cndata[cable].diains for cable in cncables] : missing
+    inslayer = !ismissing(cndata) ? [cndata[cable].inslayer for cable in cncables] : missing
 
-    rac = !ismissing(tsdata) ? [tsdata[cable]["rac"] for cable in tscables] : rac
-    rdc = !ismissing(tsdata) ? [tsdata[cable]["rdc"] for cable in tscables] : rdc
-    gmr = !ismissing(tsdata) ? [tsdata[cable]["gmrac"] for cable in tscables] : gmr
+    rac = !ismissing(tsdata) ? [tsdata[cable].rac for cable in tscables] : rac
+    rdc = !ismissing(tsdata) ? [tsdata[cable].rdc for cable in tscables] : rdc
+    gmr = !ismissing(tsdata) ? [tsdata[cable].gmrac for cable in tscables] : gmr
 
     if count(.!(ismissing.([wires, cncables, tscables]))) > 1
-        @assert sum(filter(x->!ismissing(x), [nwires, ncncables, ntscables])) == nconds "not enough wire/cable data for specified conductors on line.$(line_defaults["name"])"
-        push!(rac, [wiredata[wire]["rac"] for wire in wires]...)
-        push!(rdc, [wiredata[wire]["rdc"] for wire in wires]...)
-        push!(gmr, [wiredata[wire]["gmrac"] for wire in wires]...)
+        @assert sum(filter(x->!ismissing(x), [nwires, ncncables, ntscables])) == nconds "not enough wire/cable data for specified conductors on line.$(line_defaults.name)"
+        push!(rac, [wiredata[wire].rac for wire in wires]...)
+        push!(rdc, [wiredata[wire].rdc for wire in wires]...)
+        push!(gmr, [wiredata[wire].gmrac for wire in wires]...)
     end
 
-    diashield = !ismissing(tsdata) ? [tsdata[cable]["diashield"] for cable in tscables] : missing
-    tapelayer = !ismissing(tsdata) ? [tsdata[cable]["tapelayer"] for cable in tscables] : missing
-    tapelap = !ismissing(tsdata) ? [tsdata[cable]["tapelap"] for cable in tscables] : missing
+    diashield = !ismissing(tsdata) ? [tsdata[cable].diashield for cable in tscables] : missing
+    tapelayer = !ismissing(tsdata) ? [tsdata[cable].tapelayer for cable in tscables] : missing
+    tapelap = !ismissing(tsdata) ? [tsdata[cable].tapelap for cable in tscables] : missing
 
-    epsr = !ismissing(tsdata) ? [tsdata[cable]["epsr"] for cable in tscables] : epsr
-    diains = !ismissing(tsdata) ? [tsdata[cable]["diains"] for cable in tscables] : diains
-    inslayer = !ismissing(tsdata) ? [tsdata[cable]["inslayer"] for cable in tscables] : inslayer
+    epsr = !ismissing(tsdata) ? [tsdata[cable].epsr for cable in tscables] : epsr
+    diains = !ismissing(tsdata) ? [tsdata[cable].diains for cable in tscables] : diains
+    inslayer = !ismissing(tsdata) ? [tsdata[cable].inslayer for cable in tscables] : inslayer
 
-    reduce = !ismissing(geometry) ? geometry["reduce"] : !ismissing(spacing) ? (line_defaults["phases"] == spacing["nconds"] ? false : true) : missing
+    reduce = !ismissing(geometry) ? geometry.reduce : !ismissing(spacing) ? (line_defaults.phases == spacing.nconds ? false : true) : missing
 
-    earth_model = !isempty(line_defaults["earthmodel"]) ? line_defaults["earthmodel"] : get(get(data_dss, "options", Dict()), "earthmodel", "deri")
+    earth_model = !isempty(line_defaults.earthmodel) ? line_defaults.earthmodel : data_dss.options.earthmodel
 
-    rho = line_defaults["rho"]
+    rho = line_defaults.rho
 
     Z, Y =  calculate_line_constants(
         x,

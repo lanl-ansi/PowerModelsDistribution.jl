@@ -1,5 +1,5 @@
 
-function Base.show(io::IO, t::DataModel)
+function Base.show(io::IO, t::InfrastructureDataModel)
     recur_io = IOContext(io, :SHOWN_SET => t,
                              :typeinfo => eltype(t))
 
@@ -22,7 +22,7 @@ function Base.show(io::IO, t::DataModel)
 end
 
 
-function Base.show(io::IO, ::MIME"text/plain", t::DataModel)
+function Base.show(io::IO, ::MIME"text/plain", t::InfrastructureDataModel)
     isempty(t) && return show(io, t)
     # show more descriptively, with one line per key/value pair
     recur_io = IOContext(io, :SHOWN_SET => t)
@@ -88,13 +88,13 @@ function Base.show(io::IO, ::MIME"text/plain", t::DataModel)
     end
 end
 
-_show(io::IO, t::DataModel) = Base.show(io, t)
-_show(io::IO, m::MIME"text/plain", t::DataModel) = Base.show(io, m, t)
+_show(io::IO, t::InfrastructureDataModel) = Base.show(io, t)
+_show(io::IO, m::MIME"text/plain", t::InfrastructureDataModel) = Base.show(io, m, t)
 
-# precompile(_show, (IO,MIME"text/plain",OpenDssDataModel,))
-# precompile(_show, (IO,MIME"text/plain",OpenDssRawDataModel,))
-# precompile(_show, (IO,MIME"text/plain",EngineeringDataModel,))
+# precompile(_show, (IO,MIME"text/plain",OpenDssInfrastructureDataModel,))
+# precompile(_show, (IO,MIME"text/plain",OpenDssRawInfrastructureDataModel,))
+# precompile(_show, (IO,MIME"text/plain",EngineeringInfrastructureDataModel,))
 
-# precompile(_show, (IO,OpenDssDataModel,))
-# precompile(_show, (IO,OpenDssRawDataModel,))
-# precompile(_show, (IO,EngineeringDataModel,))
+# precompile(_show, (IO,OpenDssInfrastructureDataModel,))
+# precompile(_show, (IO,OpenDssRawInfrastructureDataModel,))
+# precompile(_show, (IO,EngineeringInfrastructureDataModel,))

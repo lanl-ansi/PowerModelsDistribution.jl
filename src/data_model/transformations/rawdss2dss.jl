@@ -31,7 +31,7 @@ parse_dss(io::IO)::OpenDssDataModel = transform_data_model(DssModel, parse_raw_d
 
 """
 """
-function Base.setproperty!(@nospecialize(dss_obj::OpenDssObject), property_name::String, property_value::String, data_type::Type)
+function Base.setproperty!(@nospecialize(dss_obj::DssObject), property_name::String, property_value::String, data_type::Type)
     property_value = data_type == Bool && property_value ∈ ["y", "n", "yes", "no", "true", "false"] ? startswith(property_value, "y") || startswith(property_value, "t") ? "true" : "false" : property_value
     setproperty!(dss_obj, Symbol(property_name), _isa_rpn(property_value) ? _parse_rpn(data_type, property_value) : parse(data_type, property_value))
 end
@@ -53,7 +53,7 @@ end
 
 """
 """
-function _apply_property_pairs(@nospecialize(dss_obj::T), property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: OpenDssObject
+function _apply_property_pairs(@nospecialize(dss_obj::T), property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssObject
     obj_type = Symbol(lowercase(string(T)[4:end]))
     for (pn, v) in filter(x->x.first != "__path__", property_pairs)
         pn = _infer_partial_property_name(pn, dss_obj)
@@ -435,7 +435,7 @@ end
 
 """
 """
-function _parse_file_inside_mult!(@nospecialize(dss_obj::OpenDssObject), __path__::String, pn::String, v::String)
+function _parse_file_inside_mult!(@nospecialize(dss_obj::DssObject), __path__::String, pn::String, v::String)
     _property_pairs = Pair{String,String}[]
     for _match in eachmatch(_dss_cmd_new_regex, v)
         push!(_property_pairs, _parse_match_element(_match, "",))
@@ -465,7 +465,7 @@ end
 
 """
 """
-function _parse_file_inside_shape_ref!(@nospecialize(dss_obj::OpenDssObject), dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel, __path__::String, pn::String, v::String)::Nothing
+function _parse_file_inside_shape_ref!(@nospecialize(dss_obj::DssObject), dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel, __path__::String, pn::String, v::String)::Nothing
     _property_pairs = Pair{String,String}[]
     for _match in eachmatch(_dss_cmd_new_regex, v)
         push!(_property_pairs, _parse_match_element(_match, "",))

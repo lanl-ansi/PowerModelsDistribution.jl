@@ -6,7 +6,6 @@ version = "0.14.8"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 FilePaths = "8fc22ac5-c921-52a6-82fd-178b2807b824"
 Glob = "c27321d9-0574-5035-807b-f59d2c89b15c"
@@ -17,7 +16,6 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 LoggingExtras = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 PolyhedralRelaxations = "2e741578-48fa-11ea-2d62-b52c946f73a0"
-Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 

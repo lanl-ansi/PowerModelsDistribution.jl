@@ -41,7 +41,8 @@ function _get_implied_nphases(bus1::AbstractString; default::Int=3)::Int
 end
 
 
-function _infer_partial_property_name(pn::AbstractString, dss_obj::T)::String where T <: OpenDssObject
+""
+function _infer_partial_property_name(pn::AbstractString, dss_obj::T)::String where T <: DssObject
     try
         pn = _dss_short_prop_names_map[typeof(dss_obj)][pn]
     catch KeyError

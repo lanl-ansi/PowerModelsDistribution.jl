@@ -306,7 +306,7 @@ function transform_data_model(
     eng = EngineeringDataModel()
 
     for (_, dss_objects) in dss
-        if !isa(dss_objects, OpenDssObject)
+        if !isa(dss_objects, DssObject)
             for (_, dss_obj) in dss_objects
                 if isa(dss_obj, DssTimeSeriesObjects)
                     convert_dss2eng!(eng, dss_obj; import_all=import_all, time_series=time_series)

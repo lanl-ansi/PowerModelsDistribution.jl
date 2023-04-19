@@ -1,16 +1,16 @@
 ""
-Base.getindex(@nospecialize(s::DataModel), k::String) = getproperty(s, Symbol(k))
-Base.getindex(@nospecialize(s::DataModel), k::Symbol) = getproperty(s, k)
+Base.getindex(@nospecialize(s::InfrastructureDataModel), k::String) = getproperty(s, Symbol(k))
+Base.getindex(@nospecialize(s::InfrastructureDataModel), k::Symbol) = getproperty(s, k)
 
-Base.setindex!(@nospecialize(s::T), v::U, k::String) where {U, T <: Union{OpenDssObject, EngObject, MathObject} } = setproperty!(s, Symbol(k), v)
-Base.setindex!(@nospecialize(s::T), v::U, k::Symbol) where {U, T <: Union{OpenDssObject, EngObject, MathObject} } = setproperty!(s, k, v)
+Base.setindex!(@nospecialize(s::T), v::U, k::String) where {U, T <: Union{DssObject, EngObject, MathObject} } = setproperty!(s, Symbol(k), v)
+Base.setindex!(@nospecialize(s::T), v::U, k::Symbol) where {U, T <: Union{DssObject, EngObject, MathObject} } = setproperty!(s, k, v)
 
 Base.zero(::Type{String})::String = ""
 Base.zero(::Type{Char})::Char = ' '
 Base.zero(::Type{ConnConfig})::ConnConfig = WYE
 Base.zero(::Type{SwitchState})::SwitchState = OPEN
 
-Base.@propagate_inbounds function Base.iterate(@nospecialize(itr::DataModel), i::Int=1)
+Base.@propagate_inbounds function Base.iterate(@nospecialize(itr::InfrastructureDataModel), i::Int=1)
     pn = propertynames(itr)
     i > length(pn) && return nothing
 
@@ -19,22 +19,22 @@ Base.@propagate_inbounds function Base.iterate(@nospecialize(itr::DataModel), i:
 end
 
 
-Base.haskey(@nospecialize(h::DataModel), key::String) = (Symbol(key) ∈ [pn for pn in propertynames(h) if !isempty(getproperty(h, pn))])
-Base.haskey(@nospecialize(h::DataModel), key::Symbol) = (key ∈ [pn for pn in propertynames(h) if !isempty(getproperty(h, pn))])
+Base.haskey(@nospecialize(h::InfrastructureDataModel), key::String) = (Symbol(key) ∈ [pn for pn in propertynames(h) if !isempty(getproperty(h, pn))])
+Base.haskey(@nospecialize(h::InfrastructureDataModel), key::Symbol) = (key ∈ [pn for pn in propertynames(h) if !isempty(getproperty(h, pn))])
 
-Base.isempty(@nospecialize(h::DataModel)) = all(isempty(getproperty(h, pn)) for pn in propertynames(h))
+Base.isempty(@nospecialize(h::InfrastructureDataModel)) = all(isempty(getproperty(h, pn)) for pn in propertynames(h))
 Base.isempty(@nospecialize(h::Missing)) = true
 
-Base.keytype(@nospecialize(::DataModel)) = String
+Base.keytype(@nospecialize(::InfrastructureDataModel)) = String
 
-Base.valtype(@nospecialize(h::DataModel)) = typeof(h)
+Base.valtype(@nospecialize(h::InfrastructureDataModel)) = typeof(h)
 
-Base.eltype(@nospecialize(h::DataModel)) = typeof(h)
+Base.eltype(@nospecialize(h::InfrastructureDataModel)) = typeof(h)
 
-Base.length(@nospecialize(X::T)) where T <: DataModel = length(propertynames(X))
+Base.length(@nospecialize(X::T)) where T <: InfrastructureDataModel = length(propertynames(X))
 
 
-function Base.summary(io::IO, @nospecialize(t::DataModel))
+function Base.summary(io::IO, @nospecialize(t::InfrastructureDataModel))
     Base.showarg(io, t, true)
     if Base.IteratorSize(t) isa Base.HasLength
         n = length(t)
@@ -102,7 +102,7 @@ end
 
 """
 """
-function Base.merge!(@nospecialize(x::T), @nospecialize(y::T)) where T <: OpenDssObject
+function Base.merge!(@nospecialize(x::T), @nospecialize(y::T)) where T <: DssObject
     for pn in propertynames(y)
         if pn ∉ [:switch, :name, :enabled]  # global exclusions for applying "like"
             setproperty!(x, pn, getproperty(y, pn))
