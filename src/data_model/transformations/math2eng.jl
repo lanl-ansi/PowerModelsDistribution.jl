@@ -189,7 +189,17 @@ end
 ""
 function _map_math2eng_load!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "load", map)
-    math_obj = _get_math_obj(data_math, map["to"])
+    if length(map["to"]) == 3    # If ZIP loads, combine individual components
+        load_ids = [index for (comp_type, index) in split.(map["to"], ".", limit=2)]
+        math_obj = Dict{String,Any}(
+            "qd" => sum(data_math["load"]["$id"]["qd"] for id in load_ids),
+            "pd" => sum(data_math["load"]["$id"]["pd"] for id in load_ids),
+            "qd_bus" => sum(data_math["load"]["$id"]["qd_bus"] for id in load_ids),
+            "pd_bus" => sum(data_math["load"]["$id"]["pd_bus"] for id in load_ids),
+        ) 
+    else
+        math_obj = _get_math_obj(data_math, map["to"])
+    end
 
     merge!(eng_obj, math_obj)
 

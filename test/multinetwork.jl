@@ -8,6 +8,13 @@
         @test result_mn["termination_status"] == LOCALLY_SOLVED
     end
 
+    @testset "3-bus balanced multinetwork instantiate_mc_model - autodetect multinetwork" begin
+        eng_ts = make_multinetwork(case3_balanced)
+        pm_mn = instantiate_mc_model(eng_ts, ACPUPowerModel, build_mn_mc_opf)
+
+        @test ismultinetwork(pm_mn)
+    end
+
     @testset "apply_voltage_bounds! to multinetworks" begin
         mn_eng = make_multinetwork(case3_balanced)
 

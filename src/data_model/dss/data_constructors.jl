@@ -114,3 +114,311 @@ end
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssControlObject
     controlobject = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 end
+
+
+"""
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssGrowthshape
+    growthshape = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+end
+
+
+"""
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssXycurve
+    raw_fields = collect(Symbol(x.first) for x in property_pairs)
+
+    xycurve = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+
+    if :points ∈ raw_fields
+        xarray = Float64[]
+        yarray = Float64[]
+
+        i = 1
+        for point in xycurve.points
+            if i % 2 == 1
+                push!(xarray, point)
+            else
+                push!(yarray, point)
+            end
+            i += 1
+        end
+    else
+        xarray = getproperty(xycurve, :xarray, Float64[])
+        yarray = getproperty(xycurve, :yarray, Float64[])
+    end
+
+    npts = min(length(xarray), length(yarray))
+
+    points = Float64[]
+    for (x, y) in zip(xarray, yarray)
+        push!(points, x)
+        push!(points, y)
+    end
+
+    xycurve.npts = npts
+    xycurve.points = points
+    xycurve.xarray = xarray
+    xycurve.yarray = yarray
+
+    return xycurve
+end
+
+
+"""
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssSpectrum
+    spectrum = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+end
+
+
+"""
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssCapcontrol
+    capcontrol = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+end
+
+
+"""
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssRegcontrol
+    regcontrol = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+end
+
+
+"""
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssLinegeometry
+    linegeometry = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+end
+
+
+"""
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssWiredata
+    raw_fields = collect(Symbol(x.first) for x in property_pairs)
+
+    wiredata = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+
+    if :diam ∈ raw_fields || :radius ∈ raw_fields
+        radunits = wiredata.radunits
+        if :diam ∈ raw_fields
+            diam = wiredata.diam
+            radius = wiredata.diam / 2
+        elseif :radius ∈ raw_fields
+            radius = wiredata.radius
+            diam = 2 * wiredata.radius
+        end
+
+        if :gmrac ∉ raw_fields
+            gmrac = 0.7788 * wiredata.radius
+            gmrunits = wiredata.radunits
+        else
+            gmrac = wiredata.gmrac
+            gmrunits = wiredata.gmrunits
+        end
+    elseif :gmrac ∈ raw_fields && :diag ∉ raw_fields && :radius ∉ raw_fields
+        radius = wiredata.gmrac / 0.7788
+        diam = 2 * wiredata.radius
+        radunits = wiredata.gmrunits
+        gmrac = wiredata.gmrac
+        gmrunits = radunits
+    else
+        radius = 1
+        diam = 2
+        gmrac = 0.7788
+        radunits = "none"
+        gmrunits = "none"
+    end
+
+    rdc = :rdc ∈ raw_fields ? wiredata.rdc : :rac ∈ raw_fields ? wiredata.rac : 0.0
+    rac = :rac ∈ raw_fields ? wiredata.rac : :rdc ∈ raw_fields ? wiredata.rdc : 0.0
+
+    capradius = :capradius ∈ raw_fields ? wiredata.capradius : radius
+
+    normamps = :normamps ∈ raw_fields ? wiredata.normamps : :emergamps ∈ raw_fields ? wiredata.emergamps / 1.5 : 400.0
+    emergamps = :emergamps ∈ raw_fields ? wiredata.emergamps : :normamps ∈ raw_fields ? wiredata.normamps * 1.5 : 600.0
+
+    wiredata.rdc = rdc / _convert_to_meters[wiredata.runits]
+    wiredata.rac = rac / _convert_to_meters[wiredata.runits]
+    wiredata.runits = "m"
+
+    wiredata.gmrac = gmrac * _convert_to_meters[gmrunits]
+    wiredata.gmrunits = "m"
+
+    wiredata.radius = radius * _convert_to_meters[radunits]
+    wiredata.capradius = capradius * _convert_to_meters[radunits]
+    wiredata.diam = diam * _convert_to_meters[radunits]
+    wiredata.radunits = "m"
+
+    wiredata.normamps = normamps
+    wiredata.emergamps = emergamps
+
+    return wiredata
+end
+
+
+"""
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssLinespacing
+    linespacing = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+
+    linespacing.x = linespacing.x .* _convert_to_meters[linespacing.units]
+    linespacing.h = linespacing.h .* _convert_to_meters[linespacing.units]
+    linespacing.units = "m"
+
+    linespacing.fx = linespacing.x .* _convert_to_meters[linespacing.units]
+    linespacing.fh = linespacing.h .* _convert_to_meters[linespacing.units]
+    linespacing.funits = "m"
+
+    return linespacing
+end
+
+
+"""
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssCndata
+    raw_fields = collect(Symbol(x.first) for x in property_pairs)
+
+    cndata = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+
+    if :diam ∈ raw_fields || :radius ∈ raw_fields
+        radunits = cndata.radunits
+        if :diam ∈ raw_fields
+            diam = cndata.diam
+            radius = cndata.diam / 2
+        elseif :radius ∈ raw_fields
+            radius = cndata.radius
+            diam = 2 * cndata.radius
+        end
+
+        if !:gmrac ∈ raw_fields
+            gmrac = 0.7788 * cndata.radius
+            gmrunits = cndata.radunits
+        else
+            gmrac = cndata.gmrac
+            gmrunits = cndata.gmrunits
+        end
+    elseif :gmrac ∈ raw_fields && :diam ∉ raw_fields && :radius ∉ raw_fields
+        radius = cndata.gmrac / 0.7788
+        diam = 2 * cndata.radius
+        radunits = cndata.gmrunits
+        gmrac = cndata.gmrac
+        gmrunits = radunits
+    else
+        radius = 1.0
+        diam = 2.0
+        gmrac = 0.7788
+        radunits = "none"
+        gmrunits = "none"
+    end
+
+    if :diastrand ∈ raw_fields && :gmrstrand ∉ raw_fields
+        diastrand = cndata.diastrand
+        gmrstrand = diastrand / 2 * 0.7788
+    elseif :gmrstrand ∈ raw_fields && :diastrand ∉ raw_fields
+        gmrstrand = cndata.gmrstrand
+        diastrand = gmrstrand / 0.7788 * 2
+    elseif :diastrand ∈ raw_fields && :gmrstrand ∈ raw_fields
+        diastrand = cndata.diastrand
+        gmrstrand = cndata.gmrstrand
+    else
+        diastrand = 2.0
+        gmrstrand = 0.7788
+    end
+
+    rac = :rac ∈ raw_fields ? cndata.rac : :rdc ∈ raw_fields ? cndata.rdc * 1.02 : 1.02
+    rdc = :rdc ∈ raw_fields ? cndata.rdc : :rac ∈ raw_fields ? cndata.rac / 1.02 : 1.0
+
+    normamps = :normamps ∈ raw_fields ? cndata.normamps : :emergamps ∈ raw_fields ? cndata.emergamps / 1.5 : 400.0
+    emergamps = :emergamps ∈ raw_fields ? cndata.emergamps : :normamps ∈ raw_fields ? cndata.normamps * 1.5 : 600.0
+
+    cndata.diacable = cndata.diacable * _convert_to_meters[radunits]
+    cndata.diains = cndata.diains * _convert_to_meters[radunits]
+    cndata.diam = diam * _convert_to_meters[radunits]
+    cndata.diastrand = diastrand * _convert_to_meters[radunits]
+    cndata.inslayer = cndata.inslayer * _convert_to_meters[radunits]
+    cndata.radius = radius * _convert_to_meters[radunits]
+    cndata.radunits = "m"
+
+    cndata.gmrac = gmrac * _convert_to_meters[gmrunits]
+    cndata.gmrstrand = gmrstrand * _convert_to_meters[gmrunits]
+    cndata.gmrunits = "m"
+
+    cndata.rac = rac / _convert_to_meters[cndata.runits]
+    cndata.rdc = rdc / _convert_to_meters[cndata.runits]
+    cndata.rstrand = cndata.rstrand / _convert_to_meters[cndata.runits]
+    cndata.runits = "m"
+
+    cndata.normamps = normamps
+    cndata.emergamps = emergamps
+
+    return cndata
+end
+
+
+"""
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssTsdata
+    raw_fields = collect(Symbol(x.first) for x in property_pairs)
+
+    tsdata = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+
+    if :diam ∈ raw_fields || :radius ∈ raw_fields
+        radunits = tsdata.radunits
+        if :diam ∈ raw_fields
+            diam = tsdata.diam
+            radius = tsdata.diam / 2
+        elseif :radius ∈ raw_fields
+            radius = tsdata.radius
+            diam = 2 * tsdata.radius
+        end
+
+        if :gmrac ∉ raw_fields
+            gmrac = 0.7788 * tsdata.radius
+            gmrunits = tsdata.radunits
+        else
+            gmrac = tsdata.gmrac
+            gmrunits = tsdata.gmrunits
+        end
+    elseif :gmrac ∈ raw_fields && :diag ∉ raw_fields && :radius ∉ raw_fields
+        radius = tsdata.gmrac / 0.7788
+        diam = 2 * tsdata.radius
+        radunits = tsdata.gmrunits
+        gmrac = tsdata.gmrac
+        gmrunits = radunits
+    else
+        radius = 1.0
+        diam = 2.0
+        gmrac = 0.7788
+        radunits = "none"
+        gmrunits = "none"
+    end
+
+    rac = :rac ∈ raw_fields ? tsdata.rac : :rdc ∈ raw_fields ? tsdata.rdc * 1.02 : 1.02
+    rdc = :rdc ∈ raw_fields ? tsdata.rdc : :rac ∈ raw_fields ? tsdata.rac / 1.02 : 1.0
+
+    normamps = :normamps ∈ raw_fields ? tsdata.normamps : :emergamps ∈ raw_fields ? tsdata.emergamps / 1.5 : 400.0
+    emergamps = :emergamps ∈ raw_fields ? tsdata.emergamps : :normamps ∈ raw_fields ? tsdata.normamps * 1.5 : 600.0
+
+    tsdata.diacable = tsdata.diacable * _convert_to_meters[radunits]
+    tsdata.diains = tsdata.diains * _convert_to_meters[radunits]
+    tsdata.diam = diam * _convert_to_meters[radunits]
+    tsdata.diashield = tsdata.diashield * _convert_to_meters[radunits]
+    tsdata.inslayer = tsdata.inslayer * _convert_to_meters[radunits]
+    tsdata.tapelayer = tsdata.tapelayer * _convert_to_meters[radunits]
+    tsdata.radunits = "m"
+
+    tsdata.gmrac = gmrac * _convert_to_meters[gmrunits]
+    tsdata.gmrunits = "m"
+
+    tsdata.rac = rac / _convert_to_meters[tsdata.runits]
+    tsdata.rdc = rdc / _convert_to_meters[tsdata.runits]
+    tsdata.runits = "m"
+
+    tsdata.normamps = normamps
+    tsdata.emergamps = emergamps
+
+    return tsdata
+end
+

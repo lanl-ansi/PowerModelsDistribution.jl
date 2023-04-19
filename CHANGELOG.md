@@ -2,7 +2,46 @@
 
 ## staged
 
-- none
+- Fixed bug in `build_mc_pf` where `constraint_mc_storage_power_setpoint_real` was being applied to all storage objects, and not just ones on PV buses
+
+## v0.14.8
+
+- Fixed bug in `_map_eng2math_voltage_source!` where `pg` and `qg` were getting set to zero instead trying to `get` them from the `eng_obj` first
+- Fixed bug in LPUBFDiagModel `constraint_mc_load_power` where the format of the constraint would lead to infeasibilities
+- Fixed bug in dss parser that did not recognize `//` as token for inline comments
+
+## v0.14.7
+
+- Added loads/generator models (240V devices) connected between two secondary terminals of center-tapped transformers for SOC formulation
+- Fixed bug with SOC and LinDist3Flow formulations where diagonal entries of matrix variables were defined with type `Vector{JuMP.VariableRef}` (no information about connections) instead of `JuMP.Containers.DenseAxisArray`, leading to errors when single- or two-phase nodes were present in network
+- Fixed bug in `_calc_bus_vm_ll_bounds` where default min `vdmin_eps` was not being used, leading to invalid `Inf` bounds
+
+## v0.14.6
+
+- Fixed voltage_source impedance matrices, which were populating impedances outside of `1:nphases` with zeros instead of the defined mutual and self impedances [#422](https://github.com/lanl-ansi/PowerModelsDistribution.jl/pull/422) [#376](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/376)
+- Added compat for SpecialFunctions
+- Added support for computing line constants from WireData, LineGeometry, LineSpacing, TSData and CNData
+- Added Julia library SpecialFunctions for `besselj0` implementation
+- Changed message that line is "being treated as superconducting" from `@info` to `@debug`
+- Added support for WireData, LineGeometry, LineSpacing, TSData, and CNData dss objects
+- Fixed bug in dss parser where when properties were assigned via `assign_property!`, the `prop_order` was not updated
+- Updated CI workflows to used Nodejs v16 scripts
+- Added UBF matrix power variables for switches [#423](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/423)
+
+## v0.14.5
+
+- Fixed bug in dss parser where properties assigned via `assign_property!` would fail if the object they applied to was not created in the same file [#397](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/397)
+- Fixed bug in `get_defined_buses` to check if `"bus"` property is a `Vector` instead of checking if it is a `String` [#416](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/416)
+- Fixed bug in `_map_eng2math_bus!()` regarding calculation of shunt element susceptance parameter
+- Added SOC transformer relaxations
+- Fixed bugs in center-tap transformer modeling
+- Add wye-connected CapControl for IVR and FOT (polar) formulations
+- Fixed indexing issue for single-phase delta load models in linear formulations (LinDist3Flow, FOTP, FOTR, FBS)
+- Added ZIP load model
+- Updated documentation in `make_multiconductor!` to better indicate its unsupported nature
+- Added automatic detection of multinetwork data to `instantiate_mc_model`
+- Converted `::Float64` types in function signatures to `::Real`
+- Fixed bug in `parse_file` in `.dss` files with character UTF-8 0x09 (Tabulation) [#394](https://github.com/lanl-ansi/PowerModelsDistribution.jl/issues/394)
 
 ## v0.14.4
 
@@ -347,7 +386,7 @@
 - fix bug in `_build_eng_multinetwork`, where "dss_options" was missing from const `_pmd_eng_global_keys`
 - change enums (SwitchState and Dispatchable) for switches to Reals, was causing problems in loops of OSW problems
 - fix bug in `variable_mc_bus_voltage_magnitude_sqr` and `variable_mc_transformer_power_imaginary` where `_start` values were not being iterated over per connection
-- depreciate run_ functions in favor of solve_
+- depreciate `run_` functions in favor of `solve_`
 - add support for `relax_integrality` (InfrastructureModels ~0.5.4)
 - fix bug in `variable_mx_real` constructor where it was indexing over terminals instead of enumerates
 - added storage variables to automatic unit conversion to si units on math2eng transformation
@@ -418,7 +457,7 @@
 - Refactors Kron reduction and padding transformations out of eng2math into their own transformation functions (#287)
 - Add functionality of run_mc_mld_bf to run_mc_mld via multiple dispatch
 - Fixes inconsistency of connections on MATHEMATICAL components, in particular, virtual objects (#280)
-- Add a transformation remove_all_bounds! that removes all fields ending in _ub and _lb (#278)
+- Add a transformation remove_all_bounds! that removes all fields ending in \_ub and \_lb (#278)
 - Add missing connections for virtual generator at voltage source
 - Fix pu conversion bus voltage bounds and add parsing for vm_pair_lb and vm_pair_ub
 - Add CONTRIBUTING.md

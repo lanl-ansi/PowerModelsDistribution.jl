@@ -54,11 +54,11 @@ end
 
 
 """
-    adjust_small_line_impedances!(data::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
+    adjust_small_line_impedances!(data::Dict{String,<:Any}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
 
 Replaces impedances (rs, xs) on lines, linecodes, and switches lower than `min_impedance_val` with `replace_impedance_val`.
 """
-function adjust_small_line_impedances!(data::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
+function adjust_small_line_impedances!(data::Dict{String,<:Any}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
     @assert iseng(data) "wrong data model type"
 
     apply_pmd!(_adjust_small_line_impedances!, data; apply_to_subnetworks=true, min_impedance_val=min_impedance_val, replace_impedance_val=replace_impedance_val)
@@ -66,11 +66,11 @@ end
 
 
 """
-    _adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
+    _adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
 
 Replaces impedances (rs, xs) on lines, linecodes, and switches lower than `min_impedance_val` with `replace_impedance_val`.
 """
-function _adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Float64=1e-2, replace_impedance_val::Float64=0.0)
+function _adjust_small_line_impedances!(data_eng::Dict{String,<:Any}; min_impedance_val::Real=1e-2, replace_impedance_val::Real=0.0)
     for type in ["line", "linecode", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]
@@ -86,11 +86,11 @@ end
 
 
 """
-    adjust_small_line_admittances!(data::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
+    adjust_small_line_admittances!(data::Dict{String,<:Any}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
 
 Replaces admittances (g_fr, g_to, b_fr, b_to) on lines, linecodes, and switches lower than `min_admittance_val` with `replace_admittance_val`.
 """
-function adjust_small_line_admittances!(data::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
+function adjust_small_line_admittances!(data::Dict{String,<:Any}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
     @assert iseng(data) "wrong data model type"
 
     apply_pmd!(_adjust_small_line_admittances!, data; apply_to_subnetworks=true, min_admittance_val=min_admittance_val, replace_admittance_val=replace_admittance_val)
@@ -98,11 +98,11 @@ end
 
 
 """
-    _adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
+    _adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
 
 Replaces admittances (g_fr, g_to, b_fr, b_to) on lines, linecodes, and switches lower than `min_admittance_val` with `replace_admittance_val`.
 """
-function _adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Float64=1e-2, replace_admittance_val::Float64=0.0)
+function _adjust_small_line_admittances!(data_eng::Dict{String,<:Any}; min_admittance_val::Real=1e-2, replace_admittance_val::Real=0.0)
     for type in ["line", "linecode", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]
@@ -118,11 +118,11 @@ end
 
 
 """
-    adjust_small_line_lengths!(data::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
+    adjust_small_line_lengths!(data::Dict{String,<:Any}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
 
 Replaces length on lines, switches lower than `min_length_val` with `replace_length_val`.
 """
-function adjust_small_line_lengths!(data::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
+function adjust_small_line_lengths!(data::Dict{String,<:Any}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
     @assert iseng(data) "wrong data model type"
 
     apply_pmd!(_adjust_small_line_lengths!, data; apply_to_subnetworks=true, min_length_val=min_length_val, replace_length_val=replace_length_val)
@@ -130,11 +130,11 @@ end
 
 
 """
-    _adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
+    _adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
 
 Replaces length on lines, switches lower than `min_length_val` with `replace_length_val`.
 """
-function _adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Float64=25.0, replace_length_val::Float64=0.0)
+function _adjust_small_line_lengths!(data_eng::Dict{String,<:Any}; min_length_val::Real=25.0, replace_length_val::Real=0.0)
     for type in ["line", "switch"]
         if haskey(data_eng, type)
             for (id,obj) in data_eng[type]
@@ -225,11 +225,11 @@ end
 
 
 """
-    adjust_line_limits!(data::Dict{String,<:Any}, mult::Float64)
+    adjust_line_limits!(data::Dict{String,<:Any}, mult::Real)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on line objects (`line`, `linecode`, `switch`) by a multiplier `mult`
 """
-function adjust_line_limits!(data::Dict{String,<:Any}, mult::Float64)
+function adjust_line_limits!(data::Dict{String,<:Any}, mult::Real)
     @assert iseng(data) "wrong data model type"
 
     apply_pmd!(_adjust_line_limits!, data, mult; apply_to_subnetworks=true)
@@ -237,11 +237,11 @@ end
 
 
 """
-    _adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+    _adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Real)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on line objects (`line`, `linecode`, `switch`) by a multiplier `mult`
 """
-function _adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+function _adjust_line_limits!(data_eng::Dict{String,<:Any}, mult::Real)
     for type in ["linecode", "line", "switch"]
         if haskey(data_eng, type)
             for (_,obj) in data_eng[type]
@@ -287,11 +287,11 @@ end
 
 
 """
-    adjust_transformer_limits!(data::Dict{String,<:Any}, mult::Float64)
+    adjust_transformer_limits!(data::Dict{String,<:Any}, mult::Real)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on transformer objects by a multiplier `mult`
 """
-function adjust_transformer_limits!(data::Dict{String,<:Any}, mult::Float64)
+function adjust_transformer_limits!(data::Dict{String,<:Any}, mult::Real)
     @assert iseng(data) "wrong data model type"
 
     apply_pmd!(_adjust_transformer_limits!, data, mult; apply_to_subnetworks=true)
@@ -299,11 +299,11 @@ end
 
 
 """
-    _adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+    _adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Real)
 
 Multiplies limits (`sm_ub` and/or `cm_ub`) on transformer objects by a multiplier `mult`
 """
-function _adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Float64)
+function _adjust_transformer_limits!(data_eng::Dict{String,<:Any}, mult::Real)
     if haskey(data_eng, "transformer")
         for (_,obj) in data_eng["transformer"]
             if haskey(obj, "cm_ub")
@@ -702,9 +702,13 @@ function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
     if haskey(data_eng, "load")
         for (_,eng_obj) in data_eng["load"]
             if eng_obj["configuration"] == DELTA
-                _pad_properties_delta!(eng_obj, ["pd_nom", "qd_nom"], eng_obj["connections"], all_conductors)
-                _pad_connections!(eng_obj, "connections", all_conductors)
-                bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? _pad_connections!(bus_terminals, eng_obj["bus"], eng_obj["connections"]) : eng_obj["connections"]
+                if eng_obj["connections"]==[1, 2] && eng_obj["vm_nom"]==0.24 # check if load is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
+                    bus_terminals[eng_obj["bus"]] = eng_obj["connections"] = [1]
+                else
+                    _pad_properties_delta!(eng_obj, ["pd_nom", "qd_nom"], eng_obj["connections"], all_conductors)
+                    _pad_connections!(eng_obj, "connections", all_conductors)
+                    bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? _pad_connections!(bus_terminals, eng_obj["bus"], eng_obj["connections"]) : eng_obj["connections"]
+                end
             end
         end
     end
@@ -712,9 +716,13 @@ function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
     if haskey(data_eng, "generator")
         for (_,eng_obj) in data_eng["generator"]
             if eng_obj["configuration"]==DELTA
-                _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
-                _pad_connections!(eng_obj, "connections", all_conductors)
-                bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? _pad_connections!(bus_terminals, eng_obj["bus"], eng_obj["connections"]) : eng_obj["connections"]
+                if eng_obj["connections"]==[1, 2] && eng_obj["vg"][1]==0.24 # check if generator is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
+                    bus_terminals[eng_obj["bus"]] = eng_obj["connections"] = [1]
+                else
+                    _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
+                    _pad_connections!(eng_obj, "connections", all_conductors)
+                    bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? _pad_connections!(bus_terminals, eng_obj["bus"], eng_obj["connections"]) : eng_obj["connections"]
+                end
             end
         end
     end
@@ -722,9 +730,13 @@ function _apply_phase_projection_delta!(data_eng::Dict{String,<:Any})
     if haskey(data_eng, "solar")
         for (_,eng_obj) in data_eng["solar"]
             if eng_obj["configuration"]==DELTA
-                _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
-                _pad_connections!(eng_obj, "connections", all_conductors)
-                bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? _pad_connections!(bus_terminals, eng_obj["bus"], eng_obj["connections"]) : eng_obj["connections"]
+                if eng_obj["connections"]==[1, 2] && eng_obj["vg"][1]==0.24 # check if solar is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
+                    bus_terminals[eng_obj["bus"]] = eng_obj["connections"] = [1]
+                else
+                    _pad_properties_delta!(eng_obj, ["pg", "qg", "vg", "pg_lb", "pg_ub", "qg_lb", "qg_ub"], eng_obj["connections"], all_conductors)
+                    _pad_connections!(eng_obj, "connections", all_conductors)
+                    bus_terminals[eng_obj["bus"]] = haskey(bus_terminals, eng_obj["bus"]) ? _pad_connections!(bus_terminals, eng_obj["bus"], eng_obj["connections"]) : eng_obj["connections"]
+                end
             end
         end
     end
@@ -1319,7 +1331,7 @@ function get_defined_buses(data_eng::Dict{String,Any}; comp_types=pmd_eng_asset_
                 buses = [comp["f_bus"], comp["t_bus"]]
             elseif haskey(comp, "bus")
                 # works for a vector of buses and a single bus as a string
-                buses = isa(comp["bus"], String) ? [comp["bus"]] : comp["bus"]
+                buses = isa(comp["bus"], Vector) ? comp["bus"] : [comp["bus"]]
             else
                 buses = []
             end

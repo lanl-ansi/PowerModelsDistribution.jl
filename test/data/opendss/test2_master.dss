@@ -4,7 +4,7 @@ Clear
 new object=Circuit.TEST2
 
 ! Test circuit properties
-edit object=vsource.source pu=1.1  r1=0.001  x1=0.01  r0=0.001  x0=0.01  basekv=115  angle=30 bus1=testsource
+edit object=vsource.source pu=1.1  r1=0.001  x1=0.01  r0=0.001  x0=0.01  basekv=115  angle=30 bus1=testsource // test comment strip type double-slash
 
 Redirect subdir/test2_Linecodes.dss
 Redirect test2_Linecodes.dss
@@ -87,7 +87,7 @@ new linespacing.test_spacing
 new wiredata.wire1
 new wiredata.wire2
 
-new line.l9 bus1=b10 bus2=b11 spacing=test_spacing wires=['wire1', 'wire2'] length=10
+new line.l9 bus1=b10 bus2=b11 spacing=test_spacing wires=['wire1', 'wire2', 'wire1', 'wire2'] length=10
 
 new storage.s1 bus1=b1
 new pvsystem.solar1 bus1=b1

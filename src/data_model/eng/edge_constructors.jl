@@ -66,7 +66,7 @@ end
 
 """
 """
-function create_eng_object(::Type{T}, dss_obj::DssLine; import_all::Bool=false, cm_ub::String="emergency")::T where T <: EngLine
+function create_eng_object(::Type{T}, dss_obj::DssLine; import_all::Bool=false, cm_ub::String="emergency", dss::Union{Missing,OpenDssDataModel}=missing)::T where T <: EngLine
     @assert cm_ub in ["emergency", "normal"] "Unrecognized cm_ub '$cm_ub'. Must be either 'emergency' or 'normal'"
 
     cm_ub = cm_ub == "emergency" ? "emergamps" : "normamps"
@@ -91,19 +91,38 @@ function create_eng_object(::Type{T}, dss_obj::DssLine; import_all::Bool=false, 
         dss = import_all ? dss_obj : missing,
     )
 
-    if isempty(eng_obj.linecode) || _is_after(dss_obj.raw_dss, cm_ub, "linecode")
+    if isempty(eng_obj.linecode) || _is_after(dss_obj.raw_dss, "cm_ub", "linecode")
         eng_obj.cm_ub = fill(dss_obj[cm_ub], ncond)
     end
 
-    if isempty(eng_obj.linecode) || any(_is_after(dss_obj.raw_dss, prop, "linecode") for prop in ["r0", "r1", "rg", "rmatrix"])
+    from_geometry = !isempty(dss_obj.geometry) && _is_after(dss_obj.raw_dss, "geometry", "linecode")
+    from_spacing = !isempty(dss_obj.wires) && _is_after(dss_obj.raw_dss, "wires", "linecode")
+    from_cncables = !isempty(dss_obj.cncables) && _is_after(dss_obj.raw_dss, "cncables", "linecode")
+    from_tscables = !isempty(dss_obj.tscables) && _is_after(dss_obj.raw_dss, "tscables", "linecode")
+    if from_geometry || from_spacing || from_cncables || from_tscables
+        z, y = calculate_line_constants(dss, dss_obj)
+
+        rs, xs = real(z), imag(z)
+        g, b = real(y), imag(y)
+
+        eng_obj.rs = rs
+        eng_obj.xs = xs
+        eng_obj.b_fr = b ./ 2.0
+        eng_obj.b_to = b ./ 2.0
+        eng_obj.g_fr = g ./ 2.0
+        eng_obj.g_to = g ./ 2.0
+    end
+
+
+    if any(!isempty(getproperty(dss_obj, Symbol(key))) && (_is_after(dss_obj.raw_dss, key, "linecode") && _is_after(dss_obj.raw_dss, key, "geometry")) for key in ["r0", "r1", "rg", "rmatrix"]) || (isempty(dss_obj.linecode) && isempty(dss_obj.geometry) && isempty(dss_obj.wires))
         eng_obj.rs = dss_obj.rmatrix
     end
 
-    if isempty(eng_obj.linecode) || any(_is_after(dss_obj.raw_dss, prop, "linecode") for prop in ["x0", "x1", "xg", "xmatrix"])
+    if any(!isempty(getproperty(dss_obj, Symbol(key))) && (_is_after(dss_obj.raw_dss, key, "linecode") && _is_after(dss_obj.raw_dss, key, "geometry")) for key in ["x0", "x1", "xg", "xmatrix"]) || (isempty(dss_obj.linecode) && isempty(dss_obj.geometry) && isempty(dss_obj.wires))
         eng_obj.xs = dss_obj.xmatrix
     end
 
-    if isempty(eng_obj.linecode) || any(_is_after(dss_obj.raw_dss, prop, "linecode") for prop in ["b0", "b1", "c0", "c1", "cmatrix"])
+    if any(!isempty(getproperty(dss_obj, Symbol(key))) && (_is_after(dss_obj.raw_dss, key, "linecode") && _is_after(dss_obj.raw_dss, key, "geometry")) for key in ["b0", "b1", "c0", "c1", "cmatrix"]) || (isempty(dss_obj.linecode) && isempty(dss_obj.geometry) && isempty(dss_obj.wires))
         eng_obj.b_fr = dss_obj.cmatrix ./ 2.0
         eng_obj.b_to = dss_obj.cmatrix ./ 2.0
         eng_obj.g_fr = zeros(Float64, ncond, ncond)
@@ -313,6 +332,9 @@ function create_eng_object(::Type{T}, dss_obj::DssTransformer; import_all::Bool=
                     eng_obj["polarity"][w] = -1
                     eng_obj["connections"][w] = _barrel_roll(eng_obj["connections"][w], -1)
                 end
+            end
+            if w==3 && eng_obj["connections"][2][2]==0 && eng_obj["connections"][3][1]==0 # center-tap transformers
+                eng_obj["polarity"][w] = -1
             end
         end
     end

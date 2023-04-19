@@ -209,11 +209,15 @@ Base.@kwdef mutable struct DssLinegeometry <: DssDataObject
     emergamps::Float64 = 600.0
     reduce::Bool = false
     spacing::String = ""
-    wires::Vector{String} = zeros(String, nconds)
+    wires::Vector{String} = String[]
     cncable::String = ""
     tscable::String = ""
-    cncables::Vector{String} = zeros(String, nconds)
-    tscables::Vector{String} = zeros(String, nconds)
+    cncables::Vector{String} = String[]
+    tscables::Vector{String} = String[]
+    fconds::Vector{Int} = collect(1:nconds)
+    xs::Vector{Float64} = rand(nconds).*1e-100
+    hs::Vector{Float64} = rand(nconds).*1e-100
+    unitss::Vector{String} = fill("none", nconds)
     like::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
@@ -223,9 +227,12 @@ Base.@kwdef mutable struct DssLinespacing <: DssDataObject
     name::String = ""
     nconds::Int = 3
     nphases::Int = 3
-    x::Vector{Float64} = zeros(Float64, nconds)
-    h::Vector{Float64} = zeros(Float64, nconds)
-    units::String = "none"
+    x::Vector{Float64} = rand(nconds).*1e-100
+    h::Vector{Float64} = rand(nconds).*1e-100
+    units::String = "ft"
+    fx::Vector{Float64} = rand(nconds).*1e-100
+    fh::Vector{Float64} = rand(nconds).*1e-100
+    funits::Vector{String} = fill("ft", nconds)
     like::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
@@ -290,60 +297,60 @@ end
 
 
 Base.@kwdef mutable struct DssTcc_curve <: DssDataObject
-    name::String
-    npts::Int
-    c_array::Vector{Float64}
-    t_array::Vector{Float64}
-    like::String
+    name::String = ""
+    npts::Int = 0
+    c_array::Vector{Float64} = Float64[]
+    t_array::Vector{Float64} = Float64[]
+    like::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
 
 Base.@kwdef mutable struct DssCndata <: DssDataObject
-    name::String
-    diacable::Float64
-    diains::Float64
-    diam::Float64
-    diastrand::Float64
-    emergamps::Float64
-    epsr::Float64
-    gmrac::Float64
-    gmrstrand::Float64
-    gmrunits::String
-    inslayer
-    k
-    like::String
-    normamps::Float64
-    rac::Float64
-    radius::Float64
-    radunits::String
-    rdc::Float64
-    rstrand::Float64
-    runits::String
+    name::String = ""
+    diacable::Float64 = 0.0
+    diains::Float64 = 0.0
+    diam::Float64 = 2.0
+    diastrand::Float64 = 2.0
+    emergamps::Float64 = 600.0
+    epsr::Float64 = 2.3
+    gmrac::Float64 = 0.7788
+    gmrstrand::Float64 = 0.7788
+    gmrunits::String = "none"
+    inslayer::Float64 = 0.0
+    k::Int = 2
+    like::String = ""
+    normamps::Float64 = 400.0
+    rac::Float64 = 1.02
+    radius::Float64 = 1.0
+    radunits::String = "none"
+    rdc::Float64 = 1.0
+    rstrand::Float64 = 0.0
+    runits::String = "none"
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
 
 Base.@kwdef mutable struct DssTsdata <: DssDataObject
-    name::String
-    diacable::Float64
-    diains::Float64
-    diam::Float64
-    diashield::Float64
-    emergamps::Float64
-    epsr::Float64
-    gmrac::Float64
-    gmrunits::String
-    inslayer::Float64
-    like::String
-    normamps::Float64
-    rac::Float64
-    radius::Float64
-    radunits::String
-    rdc::Float64
-    runits::Float64
-    taplap::Float64
-    taplayer::Float64
+    name::String = ""
+    diacable::Float64 = 0.0
+    diains::Float64 = 0.0
+    diam::Float64 = 2.0
+    diashield::Float64 = 0.0
+    emergamps::Float64 = 600.0
+    epsr::Float64 = 2.3
+    gmrac::Float64 = 0.7788
+    gmrunits::String = "none"
+    inslayer::Float64 = 0.0
+    like::String = ""
+    normamps::Float64 = 400.0
+    rac::Float64 = 1.02
+    radius::Float64 = 1.0
+    radunits::String = "none"
+    rdc::Float64 = 1.0
+    runits::String = "none"
+    tapelap::Float64 = 20.0
+    tapelayer::Float64 = 0.0
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
@@ -461,6 +468,10 @@ Base.@kwdef mutable struct DssVsource <: DssEdgeObject
     enabled::Status = ENABLED
     rmatrix::Matrix{Float64} = zeros(Float64, phases, phases)
     xmatrix::Matrix{Float64} = zeros(Float64, phases, phases)
+    r_self::Float64 = 1.73333
+    r_mutual::Float64 = 0.0833
+    x_self::Float64 = 6.35667
+    x_mutual::Float64 = -0.03
     vmag::Float64 = 0.0
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end

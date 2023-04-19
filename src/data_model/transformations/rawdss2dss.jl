@@ -232,6 +232,49 @@ end
 
 """
 """
+function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLinegeometry
+    obj_type = :linegeometry
+    pn_map = Dict{Symbol,Symbol}(:wire => :wires, :cncable => :cncables, :tscable => :tscables, :cond => :fconds, :x => :xs, :h => :hs, :units => :unitss)
+
+    nconds_pair = filter(x->x.first=="nconds", property_pairs)
+    nconds = isempty(nconds_pair) ? 3 : parse(Int, first(nconds_pair).second)
+    for (pn_fr, pn_to) in pn_map
+        setproperty!(dss_obj, pn_to, fill(getproperty(dss_obj, pn_fr), nconds))
+    end
+
+    _cond = 1
+    for (pn, v) in filter(x->x.first != "__path__", property_pairs)
+        if pn == "like"
+            if v in keys(getproperty(dss, obj_type))
+                like_dss_obj = getproperty(dss, obj_type)[v]
+            elseif v in keys(getproperty(dss_raw, obj_type))
+                like_dss_obj = create_dss_object(T, getproperty(dss_raw, obj_type)[v], dss, dss_raw)
+            else
+                @warn "$(obj_type).$(v) does not exist, can't apply 'like' on $(obj_type).$(getproperty(dss_obj, :name))"
+                continue
+            end
+            merge!(dss_obj, like_dss_obj)
+        elseif pn == "cond"
+            _cond = parse(Int, v)
+        elseif pn ∈ ["wire", "cncable", "tscable", "x", "h", "units"]
+            dtype = fieldtype(DssLinegeometry, Symbol(pn))
+            getproperty(dss_obj, pn_map[Symbol(pn)])[_cond] = _isa_rpn(v) ? _parse_rpn(dtype, v) : parse(dtype, v)
+        end
+        setproperty!(dss_obj, pn, v, fieldtype(typeof(dss_obj), Symbol(pn)))
+    end
+
+    for k in [:wires, :tscables, :cncables]
+        if all(isempty(v) for v in getproperty(dss_obj, k))
+            setproperty!(dss_obj, k, String[])
+        end
+    end
+
+    return dss_obj
+end
+
+
+"""
+"""
 function _parse_csvfile(path::String; header::Bool=false, interval::Bool=false, npts::Union{Int,Missing}=missing)::NTuple{4, Vector{Float64}}
     hour = Float64[]
     mult = Float64[]

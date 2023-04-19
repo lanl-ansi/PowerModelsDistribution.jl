@@ -67,6 +67,26 @@ function _sol_data_model_w!(solution::Dict{String,<:Any})
                     end
                     delete!(bus, "w")
                 end
+                if haskey(bus, "Wr")
+                    w = LinearAlgebra.diag(bus["Wr"])
+                    if any(w .< 0) # e.g., as allowed by constraint violation settings
+                        bus["vm"] = zeros(length(w))
+                        bus["vm"][w .>= 0.0] .= sqrt.(w[w .>= 0.0])
+                    else
+                        bus["vm"] = sqrt.(w)
+                        if length(w) == 3
+                            t = [-1 1 0; -1 0 1; 0 -1 1]
+                            va = LinearAlgebra.pinv(t)*[atan(bus["Wi"][2,1], bus["Wr"][2,1]);
+                                                        atan(bus["Wi"][3,1], bus["Wr"][3,1]);
+                                                        atan(bus["Wi"][3,2], bus["Wr"][3,2])]
+                            bus["va"] = [va[findmin(abs.(va .- 0))[2]],
+                                         va[findmin(abs.(va .+ 2*pi/3))[2]],
+                                         va[findmin(abs.(va .- 2*pi/3))[2]]] # TODO: better way to get angles in order
+                        end
+                    end
+                    delete!(bus, "Wr")
+                    delete!(bus, "Wi")
+                end
             end
         end
     end

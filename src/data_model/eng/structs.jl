@@ -449,6 +449,7 @@ Base.@kwdef mutable struct EngLoadObj <: EngLoad
     pd_nom::Vector{Float64} = fill(0.0, length(connections))
     qd_nom::Vector{Float64} = fill(0.0, length(connections))
     vm_nom::Union{Missing,Float64} = missing
+    zipv::Union{Missing,Vector{Float64}} = missing
     dispatchable::Dispatchable = NO
     status::Status = ENABLED
     source_id::String = "load.$(name)"

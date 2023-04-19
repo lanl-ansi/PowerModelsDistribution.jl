@@ -23,7 +23,7 @@ everything lowercase, changing `~` or `m` to `more`, and stripping comments
 """
 function _sanatize_line(line::String)::String
     # strip comments, spaces, make lowercase
-    string(lowercase(replace(replace(strip(split(strip(line), r"\s*!")[1], ['\r', '\n']), r"^[~m]\s+"=>"more "), r"\s*=\s*"=>"=")))
+    string(lowercase(replace(replace(strip(split(strip(line), r"(\s*(?:\/\/|!))")[1], ['\r', '\n']), r"^[~m]\s+"=>"more "), r"\s*=\s*"=>"=")))
 end
 
 

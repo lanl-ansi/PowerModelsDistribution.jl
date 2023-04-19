@@ -29,7 +29,8 @@ const _dss_supported_components = String[
     "line", "linecode", "load", "generator", "capacitor", "reactor",
     "transformer", "pvsystem", "storage", "loadshape", "options",
     "xfmrcode", "vsource", "xycurve", "spectrum", "capcontrol",
-    "regcontrol",
+    "regcontrol", "linegeometry", "wiredata", "linespacing",
+    "cndata", "tsdata"
 ]
 
 "two number operators for reverse polish notation"
@@ -91,6 +92,7 @@ const _dss2pmd_capcontrol_type = Dict{String,CapControlType}(
     "current" => CAP_CURRENT,
     "voltage" => CAP_VOLTAGE,
     ""=> CAP_DISABLED,
+    "time"=>CAP_TIME,
 )
 
 
@@ -704,7 +706,7 @@ end
 function _parse_dss_load_model!(eng_obj::Dict{String,<:Any}, id::Any)
     model = eng_obj["model"]
 
-    if model in [3, 4, 7, 8]
+    if model in [3, 4, 7]
         @warn "$id: dss load model $model not supported. Treating as constant POWER model"
         model = 1
     elseif model == 6

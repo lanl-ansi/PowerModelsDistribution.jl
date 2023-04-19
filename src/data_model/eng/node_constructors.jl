@@ -14,15 +14,16 @@ Note that in the current feature set, fixed therefore equals constant
 8: ZIP (Not yet supported)
 """
 function create_eng_object(::Type{T}, dss_obj::DssLoad; import_all::Bool=false, time_series::String="daily")::T where T <: EngLoad
-    nphases = dss_obj["phases"]
-    conf = dss_obj["conn"]
+    bus, _ = _parse_bus_id(dss_obj.bus1)
+
+    nphases = dss_obj.phases
+    conf = nphases==1 && dss_obj.kv==0.24 ? DELTA : dss_obj.conn # check if load is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
 
     if conf == DELTA
         @assert nphases in [1, 3] "$(dss_obj.name): only 1 and 3-phase delta loads are supported!"
     end
 
     # connections
-    bus, _ = _parse_bus_id(dss_obj.bus1)
     connections_default = conf == WYE ? [collect(1:nphases)..., 0] : nphases==1 ? [1,2] : [1,2,3]
     connections = _get_conductors_ordered(dss_obj.bus1, default=connections_default, pad_ground=(conf==WYE))
 
@@ -32,6 +33,8 @@ function create_eng_object(::Type{T}, dss_obj::DssLoad; import_all::Bool=false, 
     if conf==WYE && nphases in [2, 3]
         kv = kv/sqrt(3)
     end
+
+    zipv = dss_obj.model == ZIP ? collect(dss_obj.zipv) : missing
 
     T(;
         name = dss_obj.name,
@@ -45,6 +48,7 @@ function create_eng_object(::Type{T}, dss_obj::DssLoad; import_all::Bool=false, 
         vm_nom = kv,
         pd_nom = fill(dss_obj.kw/nphases, nphases),
         qd_nom = fill(dss_obj.kvar/nphases, nphases),
+        zipv = zipv,
         time_series = Dict{String,String}(
             "pd_nom" => getproperty(dss_obj, Symbol(time_series)),
             "qd_nom" => getproperty(dss_obj, Symbol(time_series)),
@@ -140,6 +144,8 @@ end
 function create_eng_object(::Type{T}, dss_obj::DssGenerator; import_all::Bool=false, time_series::String="daily")::T where T <: EngGenerator
     nphases = dss_obj.phases
 
+    conf = nphases==1 && dss_obj.kv==0.24 ? DELTA : WYE # check if generator is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
+
     T(;
         name = dss_obj.name,
         connections = _get_conductors_ordered(dss_obj.bus1, pad_ground=dss_obj.conn == WYE, default=dss_obj.conn == WYE ? [collect(1:dss_obj.phases)..., 0] : nphases == 1 ? [1,0] : collect(1:nphases)),
@@ -152,7 +158,7 @@ function create_eng_object(::Type{T}, dss_obj::DssGenerator; import_all::Bool=fa
         pg_lb = fill(0.0, nphases),
         pg_ub = fill(dss_obj.kw / nphases, nphases),
         control_mode = FREQUENCYDROOP,
-        configuration = WYE,
+        configuration = conf,
         status = dss_obj.enabled,
         cost_pg_model = 2,
         cost_pg_parameters = [0.0, 1.0, 0.0],
@@ -200,8 +206,12 @@ function create_eng_object(::Type{T}, dss_obj::DssVsource; import_all::Bool=fals
     )
 
     # some values require addition of neutral by default
-    eng_obj.rs[1:phases, 1:phases] .= dss_obj.rmatrix
-    eng_obj.xs[1:phases, 1:phases] .= dss_obj.xmatrix
+    eng_obj.rs = fill(dss_obj.r_mutual, n_conductors, n_conductors)
+    eng_obj.rs[LinearAlgebra.diagind(eng_obj.rs)] .= dss_obj.r_self
+
+    eng_obj.xs = fill(dss_obj.x_mutual, n_conductors, n_conductors)
+    eng_obj.xs[LinearAlgebra.diagind(eng_obj.xs)] .= dss_obj.x_self
+
     eng_obj.vm[1:phases] .= vm
     eng_obj.va[1:phases] .= va
 
@@ -216,11 +226,13 @@ function create_eng_object(::Type{T}, dss_obj::DssPvsystem; import_all::Bool=fal
 
     nphases = dss_obj.phases
 
+    conf = nphases==1 && dss_obj.kv==0.24 ? DELTA : dss_obj.conn # check if solar is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
+
     T(;
         name = dss_obj.name,
         bus = _parse_bus_id(dss_obj.bus1)[1],
-        configuration = dss_obj.conn,
-        connections = _get_conductors_ordered(dss_obj.bus1, pad_ground=dss_obj.conn == WYE, default=dss_obj.conn == WYE ? [collect(1:dss_obj.phases)..., 0] : nphases == 1 ? [1,0] : collect(1:nphases)),
+        configuration = conf,
+        connections = _get_conductors_ordered(dss_obj.bus1, pad_ground=conf == WYE, default=conf == WYE ? [collect(1:dss_obj.phases)..., 0] : nphases == 1 ? [1,0] : collect(1:nphases)),
         pg = fill(min(dss_obj.pmpp * dss_obj.irradiance, dss_obj.kva) / nphases, nphases),
         qg = fill(dss_obj.kvar / nphases, nphases),
         vg = fill(dss_obj.kv / sqrt(nphases), nphases),

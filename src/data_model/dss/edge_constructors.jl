@@ -99,7 +99,7 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
     x2 = vsource.x1
 
     Zbase = vsource.basekv^2 / vsource.basemva
-    ∈
+
     if (:mvasc3 ∈ raw_fields || :mvasc1 ∈ raw_fields) || (:isc3 ∈ raw_fields || :isc1 ∈ raw_fields)
         if :mvasc3 ∈ raw_fields || :mvasc1 ∈ raw_fields
             vsource.isc3 = :mvasc3 ∈ raw_fields ? vsource.mvasc3 * 1e3 / (vsource.basekv * sqrt(3.0)) : vsource.isc3
@@ -217,6 +217,11 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
 
     vsource.rmatrix = real(Z)
     vsource.xmatrix = imag(Z)
+
+    vsource.r_self = rs
+    vsource.r_mutual = rm
+    vsource.x_self = xs
+    vsource.x_mutual = xm
 
     return vsource
 end
