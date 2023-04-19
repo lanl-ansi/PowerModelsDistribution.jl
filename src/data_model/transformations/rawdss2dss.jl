@@ -42,6 +42,11 @@ end
 function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,String}})::T where T <: DssOptions
     for (pn, v) in filter(x->x.first != "__path__", property_pairs)
         pn = _infer_partial_property_name(pn, dss_obj)
+        if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
+            @warn "$(T) has no field `$(pn)`, skipping..."
+            continue
+        end
+
         setproperty!(dss_obj, pn, v, fieldtype(typeof(dss_obj), Symbol(pn)))
     end
 
@@ -57,6 +62,10 @@ function _apply_property_pairs(@nospecialize(dss_obj::T), property_pairs::Vector
     obj_type = Symbol(lowercase(string(T)[4:end]))
     for (pn, v) in filter(x->x.first != "__path__", property_pairs)
         pn = _infer_partial_property_name(pn, dss_obj)
+        if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
+            @warn "$(T) has no field `$(pn)`, skipping..."
+            continue
+        end
         if pn == "like"
             if v in keys(getproperty(dss, obj_type))
                 like_dss_obj = getproperty(dss, obj_type)[v]
@@ -89,6 +98,11 @@ function _apply_property_pairs(@nospecialize(dss_obj::T), property_pairs::Vector
 
     for (pn, v) in property_pairs
         pn = _infer_partial_property_name(pn, dss_obj)
+        if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
+            @warn "$(T) has no field `$(pn)`, skipping..."
+            continue
+        end
+
         if pn == "__path__"
             __path__ = v
         end
@@ -159,6 +173,11 @@ function _apply_property_pairs(@nospecialize(dss_obj::T), property_pairs::Vector
 
     for (pn, v) in property_pairs
         pn = _infer_partial_property_name(pn, dss_obj)
+        if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
+            @warn "$(T) has no field `$(pn)`, skipping..."
+            continue
+        end
+
         if pn == "__path__"
             __path__ = v
         end
@@ -205,6 +224,11 @@ function _apply_property_pairs(@nospecialize(dss_obj::T), property_pairs::Vector
 
     _wdg = 1
     for (pn, v) in filter(x->x.first != "__path__", property_pairs)
+        if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
+            @warn "$(T) has no field `$(pn)`, skipping..."
+            continue
+        end
+
         if pn == "like"
             if v in keys(getproperty(dss, obj_type))
                 like_dss_obj = getproperty(dss, obj_type)[v]
@@ -244,6 +268,11 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
 
     _cond = 1
     for (pn, v) in filter(x->x.first != "__path__", property_pairs)
+        if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
+            @warn "$(T) has no field `$(pn)`, skipping..."
+            continue
+        end
+
         if pn == "like"
             if v in keys(getproperty(dss, obj_type))
                 like_dss_obj = getproperty(dss, obj_type)[v]
@@ -268,6 +297,9 @@ function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,St
             setproperty!(dss_obj, k, String[])
         end
     end
+
+    setproperty!(dss_obj, :fx, getproperty(dss_obj, :xs))
+    setproperty!(dss_obj, :fh, getproperty(dss_obj, :hs))
 
     return dss_obj
 end

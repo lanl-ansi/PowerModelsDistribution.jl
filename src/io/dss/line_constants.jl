@@ -10,7 +10,7 @@ const ρₜₛ = 2.3718e-8
 
 "gets line geometry data for line, including applying line spacing if specified"
 function _get_geometry_data(data_dss::OpenDssDataModel, geometry_id::String)::DssLinegeometry
-    geometry = get(data_dss.linegeometry, geometry_id, DssLinegeometry(geometry_id))
+    geometry = get(data_dss.linegeometry, geometry_id, DssLinegeometry(name=geometry_id))
 
     if !isempty(geometry.spacing) && !ismissing(get(data_dss.linespacing, geometry.spacing, missing))
         spacing = _get_spacing_data(data_dss, geometry.spacing)
@@ -27,7 +27,7 @@ end
 
 "get line spacing data for line or line geometry"
 function _get_spacing_data(data_dss::OpenDssDataModel, spacing_id::String)::DssLinespacing
-    return get(data_dss.linespacing, spacing_id, DssLinespacing(spacing_id))
+    return get(data_dss.linespacing, spacing_id, DssLinespacing(name=spacing_id))
 end
 
 
@@ -51,12 +51,14 @@ end
 
 "gets tape shielded cable data for line geometry"
 function _get_tscable_data(data_dss::OpenDssDataModel, tscables::Vector{String})::Dict{String,DssTsdata}
-    tscabledata = Dict{String,Any}(id => get(get(data_dss,"tsdata",Dict()), id, missing) for id in filter(x->!isempty(x), tscables))
+    tscabledata = Dict{String,Any}(id => get(data_dss.tsdata, id, missing) for id in filter(x->!isempty(x), tscables))
     @assert !isempty(tscabledata) && all(!ismissing(tscd) for (_,tscd) in tscabledata) "Some tsdata is missing, cannot continue"
 
     return tscabledata
 end
 
+
+calculate_line_constants(::Missing, ::DssLine) = @info "Dss model missing"
 
 """
     calculate_line_constants(data_dss::Dict{String,<:Any}, line_defaults::Dict{String,<:Any})::Tuple{Matrix{Complex},Matrix{Complex}}

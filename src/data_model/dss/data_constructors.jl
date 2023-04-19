@@ -267,9 +267,9 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
     linespacing.h = linespacing.h .* _convert_to_meters[linespacing.units]
     linespacing.units = "m"
 
-    linespacing.fx = linespacing.x .* _convert_to_meters[linespacing.units]
-    linespacing.fh = linespacing.h .* _convert_to_meters[linespacing.units]
-    linespacing.funits = "m"
+    linespacing.fx = linespacing.x
+    linespacing.fh = linespacing.h
+    linespacing.funits = fill("m", linespacing.nconds)
 
     return linespacing
 end
@@ -292,7 +292,7 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
             diam = 2 * cndata.radius
         end
 
-        if !:gmrac ∈ raw_fields
+        if :gmrac ∉ raw_fields
             gmrac = 0.7788 * cndata.radius
             gmrunits = cndata.radunits
         else

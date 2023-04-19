@@ -1,13 +1,13 @@
-# """
-#     DataModel
+"""
+    DataModel
 
-# An Enum to descibe the current data model contained in the structure
-# """
-# @enum(DataModel, ENGINEERING, MATHEMATICAL, DSS, MATPOWER)
-# @doc "Model type for models that are in the PowerModelsDistribution [engineering representation](@ref Engineering-Data-Model)" ENGINEERING
-# @doc "Model type for models that are in the [mathematical representation](@ref The-PowerModelsDistribution-Mathematical-Model)" MATHEMATICAL
-# @doc "Model type for raw dss imports" DSS
-# @doc "Model type for models imported via parse_file from PowerModels" MATPOWER
+An Enum to descibe the current data model contained in the structure
+"""
+@enum(DataModel, ENGINEERING, MATHEMATICAL, DSS, MATPOWER)
+@doc "Model type for models that are in the PowerModelsDistribution [engineering representation](@ref Engineering-Data-Model)" ENGINEERING
+@doc "Model type for models that are in the [mathematical representation](@ref The-PowerModelsDistribution-Mathematical-Model)" MATHEMATICAL
+@doc "Model type for raw dss imports" DSS
+@doc "Model type for models imported via parse_file from PowerModels" MATPOWER
 
 @enum BusType PQ PV REFERENCE
 @doc "PQ bus" PQ

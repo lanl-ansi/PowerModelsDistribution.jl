@@ -1,6 +1,6 @@
 """
 """
-function create_eng_object(::Type{T}, dss_obj::DssLoadshape; import_all::Bool=false)::NTuple{2,T} where T <: EngTimeSeries
+function create_eng_object(::Type{T}, dss_obj::DssLoadshape; import_all::Bool=false)::NTuple{2,T} where T <: EngTimeSeriesObj
     eng_obj_p = T(;
         name = "$(dss_obj.name)_p",
         time = dss_obj.hour,
@@ -27,7 +27,7 @@ end
 
 """
 """
-function create_eng_object(::Type{T}, dss_obj::DssLinecode; import_all::Bool=false)::T where T <: EngLinecode
+function create_eng_object(::Type{T}, dss_obj::DssLinecode; import_all::Bool=false)::T where T <: EngLinecodeObj
     nphases = dss_obj.nphases
 
     T(;
@@ -47,7 +47,7 @@ end
 
 """
 """
-function create_eng_object(::Type{T}, dss_obj::DssXfmrcode; import_all::Bool=false)::T where T <: EngXfmrcode
+function create_eng_object(::Type{T}, dss_obj::DssXfmrcode; import_all::Bool=false)::T where T <: EngXfmrcodeObj
     nphases = dss_obj.phases
     nrw = dss_obj.windings
 
@@ -75,7 +75,7 @@ end
 
 """
 """
-function create_eng_object(::Type{T}, dss_obj::DssRegcontrol; import_all::Bool=false)::T where T <: EngTransformerControls
+function create_eng_object(::Type{T}, dss_obj::DssRegcontrol; import_all::Bool=false)::T where T <: EngTransformerControlsObj
     T(;
         windings = Int[dss_obj.winding],
         terminals = Vector{Int}[Int[dss_obj.ptphase]],
@@ -92,7 +92,7 @@ end
 
 """
 """
-function create_eng_object(::Type{T}, dss_obj::DssCapcontrol; import_all::Bool=false)::T where T <: EngShuntControls
+function create_eng_object(::Type{T}, dss_obj::DssCapcontrol; import_all::Bool=false)::T where T <: EngShuntControlsObj
     eng_obj = T(;
         type = CapControlType[dss_obj.type],
         elements = String[dss_obj.element],

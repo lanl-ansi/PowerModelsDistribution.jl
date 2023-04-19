@@ -191,7 +191,7 @@ function create_eng_object(::Type{T}, dss_obj::DssVsource; import_all::Bool=fals
         dss_obj.bus1 = "sourcebus"
     end
 
-    eng_obj = EngVoltageSource(;
+    eng_obj = T(;
         name = dss_obj.name,
         bus = _parse_bus_id(dss_obj.bus1)[1],
         connections = connections,

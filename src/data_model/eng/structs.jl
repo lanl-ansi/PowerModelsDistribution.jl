@@ -259,6 +259,7 @@ Base.@kwdef mutable struct EngSwitchObj <: EngSwitch
 end
 
 
+abstract type EngTransformerControls <: EngControlObject end
 """
     EngTransformerControls <: EngControlObject
 
@@ -273,7 +274,7 @@ Special case of the Generic transformer, which is part of the `transformer` obje
 | `r`       |         | `Vector{Vector{Real}}` | volt  | oltc | Resistance setting on line drop compensator, default value is `0.0` for both controlled winding and winding without regulator control, `size=((nphases),nwindings)`        |
 | `x`       |         | `Vector{Vector{Real}}` | volt  | oltc | Reactance setting on line drop compensator, default value is `0.0` for both controlled winding and winding without regulator control, `size=((nphases),nwindings)`         |
 """
-Base.@kwdef mutable struct EngTransformerControls <: EngControlObject
+Base.@kwdef mutable struct EngTransformerControlsObj <: EngTransformerControls
     windings::Vector{Int}
     terminals::Vector{Vector{Int}}
     vreg::Vector{Vector{Float64}} = Vector{Float64}[fill(0.0, length(terminals[w])) for w in 1:length(windings)]
@@ -825,8 +826,8 @@ end
 """
 Base.@kwdef struct EngineeringDataModel <: EngineeringModel{SubnetworkModel}
     # metadata
-    settings::Settings = Settings()
-    metadata::Metadata = Metadata()
+    settings::Settings = SettingsObj()
+    metadata::Metadata = MetadataObj()
 
     # components
     bus::Dict{String,<:Union{EngBus,Eng3pBus}} = Dict{String,Union{EngBus,Eng3pBus}}()
@@ -858,7 +859,7 @@ end
 """
 Base.@kwdef mutable struct MultinetworkEngineeringDataModel <: EngineeringModel{MultinetworkModel}
     # global keys
-    metadata::Metadata = Metadata()
+    metadata::Metadata = MetadataObj()
 
     # multinetwork
     nw::Dict{String,EngineeringDataModel} = Dict{String,EngineeringDataModel}()

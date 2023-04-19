@@ -35,6 +35,7 @@ abstract type MathEdgeObject <: MathObject end
 abstract type MathDataObject <: MathObject end
 abstract type MathControlObject <: MathObject end
 
+
 """
 """
 macro extend(base, name, fields)

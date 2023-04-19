@@ -1,5 +1,5 @@
-
-function Base.show(io::IO, t::InfrastructureDataModel)
+""
+function Base.show(io::IO, t::Union{InfrastructureDataModel,GenericInfrastructureObject})
     recur_io = IOContext(io, :SHOWN_SET => t,
                              :typeinfo => eltype(t))
 
@@ -22,7 +22,8 @@ function Base.show(io::IO, t::InfrastructureDataModel)
 end
 
 
-function Base.show(io::IO, ::MIME"text/plain", t::InfrastructureDataModel)
+""
+function Base.show(io::IO, ::MIME"text/plain", t::Union{InfrastructureDataModel,GenericInfrastructureObject})
     isempty(t) && return show(io, t)
     # show more descriptively, with one line per key/value pair
     recur_io = IOContext(io, :SHOWN_SET => t)
@@ -72,7 +73,7 @@ function Base.show(io::IO, ::MIME"text/plain", t::InfrastructureDataModel)
         end
 
         if limit
-            key = rpad(Base._truncate_at_width_or_chars(ks[i], keylen, "\r\n"), keylen)
+            key = rpad(Base._truncate_at_width_or_chars(false, ks[i], keylen, false, "\r\n"), keylen)
         else
             key = sprint(show, k, context=recur_io_k, sizehint=0)
         end
@@ -80,7 +81,7 @@ function Base.show(io::IO, ::MIME"text/plain", t::InfrastructureDataModel)
         print(io, " => ")
 
         if limit
-            val = Base._truncate_at_width_or_chars(vs[i], cols - keylen, "\r\n")
+            val = Base._truncate_at_width_or_chars(false, vs[i], cols - keylen, false, "\r\n")
             print(io, val)
         else
             show(recur_io_v, v)
@@ -88,8 +89,8 @@ function Base.show(io::IO, ::MIME"text/plain", t::InfrastructureDataModel)
     end
 end
 
-_show(io::IO, t::InfrastructureDataModel) = Base.show(io, t)
-_show(io::IO, m::MIME"text/plain", t::InfrastructureDataModel) = Base.show(io, m, t)
+_show(io::IO, t::Union{InfrastructureDataModel,GenericInfrastructureObject}) = Base.show(io, t)
+_show(io::IO, m::MIME"text/plain", t::Union{InfrastructureDataModel,GenericInfrastructureObject}) = Base.show(io, m, t)
 
 # precompile(_show, (IO,MIME"text/plain",OpenDssInfrastructureDataModel,))
 # precompile(_show, (IO,MIME"text/plain",OpenDssRawInfrastructureDataModel,))

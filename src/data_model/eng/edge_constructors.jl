@@ -135,7 +135,7 @@ end
 
 """
 """
-function create_eng_object(::Type{T}, dss_obj::DssLine; import_all::Bool=false, cm_ub::String="emergency")::T where T <: EngSwitch
+function create_eng_object(::Type{T}, dss_obj::DssLine; import_all::Bool=false, cm_ub::String="emergency", dss::Union{Missing,OpenDssDataModel}=missing)::T where T <: EngSwitch
     @assert cm_ub in ["emergency", "normal"] "Unrecognized cm_ub '$cm_ub'. Must be either 'emergency' or 'normal'"
 
     cm_ub = cm_ub == "emergency" ? "emergamps" : "normamps"

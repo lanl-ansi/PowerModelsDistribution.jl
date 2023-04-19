@@ -172,14 +172,42 @@ function transform_data_model(
 end
 
 
-function transform_data_model(::Type{MathematicalModel}, eng::EngineeringModel)::MathematicalDataModel
-    math = MathematicalDataModel()
+function transform_data_model(::Type{MathematicalModel}, eng::EngineeringModel; kwargs...)
+    # math = MathematicalDataModel()
 
-    for property in propertynames(eng)
-        for (id,obj) in getproperty(eng, property)
-            create_math_object!(obj, math)
+    eng_data = filter(x->!isempty(x.second), _convert_model_to_dict(eng))
+    eng_data["data_model"] = ENGINEERING
+
+    @warn "" eng_data
+
+    return eng_data
+    transform_data_model(eng_data; kwargs...)
+end
+
+function _convert_model_to_dict(data::Union{InfrastructureDataModel,GenericInfrastructureObject})::Dict{String,Any}
+    out = Dict{String,Any}(
+    )
+
+    for property in propertynames(data)
+        item = getproperty(data, property)
+
+        if isa(item, Dict)
+            out["$property"] = Dict{String,Any}()
+            for (id, obj) in item
+                if isa(obj, GenericInfrastructureObject)
+                    out["$property"]["$id"] = _convert_model_to_dict(obj)
+                else
+                    out["$property"]["$id"] = obj
+                end
+            end
+        elseif isa(item, GenericInfrastructureObject)
+            out["$property"] = _convert_model_to_dict(item)
+        else
+            out["$property"] = item
         end
     end
+
+    return filter(x->!ismissing(x.second), out)
 end
 
 

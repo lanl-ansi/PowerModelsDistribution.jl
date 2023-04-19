@@ -68,6 +68,8 @@ function Base.parse(::Type{T}, model::String)::T where T <: CapControlType
         return CAP_CURRENT
     elseif model == "voltage"
         return CAP_VOLTAGE
+    elseif model == "time"
+        return CAP_TIME
     else
         @warn "cap control type '$(model)' unrecognized, returning CAP_DISABLED"
 

@@ -217,6 +217,8 @@ Base.@kwdef mutable struct DssLinegeometry <: DssDataObject
     fconds::Vector{Int} = collect(1:nconds)
     xs::Vector{Float64} = rand(nconds).*1e-100
     hs::Vector{Float64} = rand(nconds).*1e-100
+    fx::Vector{Float64} = xs
+    fh::Vector{Float64} = hs
     unitss::Vector{String} = fill("none", nconds)
     like::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
@@ -230,8 +232,8 @@ Base.@kwdef mutable struct DssLinespacing <: DssDataObject
     x::Vector{Float64} = rand(nconds).*1e-100
     h::Vector{Float64} = rand(nconds).*1e-100
     units::String = "ft"
-    fx::Vector{Float64} = rand(nconds).*1e-100
-    fh::Vector{Float64} = rand(nconds).*1e-100
+    fx::Vector{Float64} = x
+    fh::Vector{Float64} = h
     funits::Vector{String} = fill("ft", nconds)
     like::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
@@ -367,6 +369,7 @@ Base.@kwdef mutable struct DssWiredata <: DssDataObject
     normamps::Float64 = 400.0
     emergamps::Float64 = 600.0
     diam::Float64 = 2.0
+    capradius::Float64 = 1.0
     like::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end

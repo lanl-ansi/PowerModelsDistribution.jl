@@ -247,7 +247,7 @@ function bank_transformers!(eng::EngineeringDataModel)
         for id in ids
             delete!(eng.transformer, id)
         end
-        eng.transformer[bank] = EngTransformer(;
+        eng.transformer[bank] = EngTransformerObj(;
             name = bank,
             bus = btrans["bus"],
             connections = btrans["connections"],

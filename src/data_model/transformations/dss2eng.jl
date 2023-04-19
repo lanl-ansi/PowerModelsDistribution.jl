@@ -29,7 +29,7 @@ end
 """
 function add_bus!(eng::EngineeringDataModel, eng_obj::T)::T where T <: EngNodeObject
     if !haskey(eng.bus, eng_obj.bus)
-        eng.bus[eng_obj.bus] = EngBus(;
+        eng.bus[eng_obj.bus] = EngBusObj(;
             name = eng_obj.bus,
             terminals = eng_obj.connections,
         )
@@ -49,7 +49,7 @@ end
 """
 function add_bus!(eng::EngineeringDataModel, eng_obj::T)::T where T <: EngEdgeObject
     if !haskey(eng.bus, eng_obj.f_bus)
-        eng.bus[eng_obj.f_bus] = EngBus(;
+        eng.bus[eng_obj.f_bus] = EngBusObj(;
             name = eng_obj.f_bus,
             terminals = eng_obj.f_connections,
         )
@@ -62,7 +62,7 @@ function add_bus!(eng::EngineeringDataModel, eng_obj::T)::T where T <: EngEdgeOb
     end
 
     if !haskey(eng.bus, eng_obj.t_bus)
-        eng.bus[eng_obj.t_bus] = EngBus(;
+        eng.bus[eng_obj.t_bus] = EngBusObj(;
             name = eng_obj.t_bus,
             terminals = eng_obj.t_connections,
         )
@@ -83,7 +83,7 @@ end
 function add_bus!(eng::EngineeringDataModel, eng_obj::T)::T where T <: EngTransformer
     for (w, bus_id) in enumerate(eng_obj.bus)
         if !haskey(eng.bus, bus_id)
-            eng.bus[bus_id] = EngBus(;
+            eng.bus[bus_id] = EngBusObj(;
                 name = bus_id,
                 terminals = eng_obj.connections[w],
             )
@@ -130,7 +130,7 @@ end
 """
 """
 function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssLoadshape; import_all::Bool=false)
-    eng_obj_p, eng_obj_q = create_eng_object(EngTimeSeries, dss_obj; import_all=import_all)
+    eng_obj_p, eng_obj_q = create_eng_object(EngTimeSeriesObj, dss_obj; import_all=import_all)
 
     if eng_obj_p.values == eng_obj_q.values
         eng_obj_p.name = "$(dss_obj.name)"
@@ -146,7 +146,7 @@ end
 """
 """
 function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssLoad; import_all::Bool=false, time_series::String="daily")
-    eng.load[dss_obj.name] = add_bus!(eng, create_eng_object(EngLoad, dss_obj; import_all=import_all, time_series=time_series))
+    eng.load[dss_obj.name] = add_bus!(eng, create_eng_object(EngLoadObj, dss_obj; import_all=import_all, time_series=time_series))
 end
 
 
@@ -157,10 +157,10 @@ function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssCapacitor; impo
     bus2_name = _parse_bus_id(dss_obj.bus2)[1]
 
     if bus1_name == bus2_name
-        eng.shunt[dss_obj.name] = add_bus!(eng, create_eng_object(EngShunt, dss_obj; import_all=import_all))
+        eng.shunt[dss_obj.name] = add_bus!(eng, create_eng_object(EngShuntObj, dss_obj; import_all=import_all))
     else
         @info "capacitors as constant impedance elements is not supported, treating capacitor.$(dss_obj.name) like line"
-        eng.line[dss_obj.name] = add_bus!(eng, create_eng_object(EngLine, dss_obj; import_all=import_all))
+        eng.line[dss_obj.name] = add_bus!(eng, create_eng_object(EngLineObj, dss_obj; import_all=import_all))
     end
 end
 
@@ -169,10 +169,10 @@ end
 """
 function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssReactor; import_all::Bool=false)
     if isempty(dss_obj.bus2)
-        eng.shunt[dss_obj.name] = add_bus!(eng, create_eng_object(EngShunt, dss_obj; import_all=import_all))
+        eng.shunt[dss_obj.name] = add_bus!(eng, create_eng_object(EngShuntObj, dss_obj; import_all=import_all))
     else
         @info "reactors as constant impedance elements is not explicitly supported, treating reactor.$(dss_obj.name) like line"
-        eng.line[dss_obj.name] = add_bus!(eng, create_eng_object(EngLine, dss_obj; import_all=import_all))
+        eng.line[dss_obj.name] = add_bus!(eng, create_eng_object(EngLineObj, dss_obj; import_all=import_all))
     end
 end
 
@@ -180,14 +180,14 @@ end
 """
 """
 function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssGenerator; import_all::Bool=false, time_series::String="daily")
-    eng.generator[dss_obj.name] = add_bus!(eng, create_eng_object(EngGenerator, dss_obj; import_all=import_all, time_series=time_series))
+    eng.generator[dss_obj.name] = add_bus!(eng, create_eng_object(EngGeneratorObj, dss_obj; import_all=import_all, time_series=time_series))
 end
 
 
 """
 """
 function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssVsource; import_all::Bool=false)
-    eng.voltage_source[dss_obj.name] = add_bus!(eng, create_eng_object(EngVoltageSource, dss_obj; import_all=import_all))
+    eng.voltage_source[dss_obj.name] = add_bus!(eng, create_eng_object(EngVoltageSourceObj, dss_obj; import_all=import_all))
 
     if dss_obj.name == "source"
         eng.settings.sbase_default = dss_obj.basemva
@@ -200,14 +200,14 @@ end
 """
 """
 function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssLinecode; import_all::Bool=false)
-    eng.linecode[dss_obj.name] = create_eng_object(EngLinecode, dss_obj; import_all=import_all)
+    eng.linecode[dss_obj.name] = create_eng_object(EngLinecodeObj, dss_obj; import_all=import_all)
 end
 
 
 """
 """
-function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssLine; import_all::Bool=false)
-    eng_obj = create_eng_object(dss_obj.switch ? EngSwitch : EngLine, dss_obj; import_all=import_all)
+function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssLine; import_all::Bool=false, dss::Union{Missing,OpenDssDataModel}=missing)
+    eng_obj = create_eng_object(dss_obj.switch ? EngSwitchObj : EngLineObj, dss_obj; import_all=import_all, dss=dss)
 
     if isa(eng_obj, EngSwitch)
         eng.switch[eng_obj.name] = add_bus!(eng, eng_obj)
@@ -220,35 +220,35 @@ end
 """
 """
 function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssXfmrcode; import_all::Bool=false)
-    eng.xfmrcode[dss_obj.name] = create_eng_object(EngXfmrcode, dss_obj; import_all=import_all)
+    eng.xfmrcode[dss_obj.name] = create_eng_object(EngXfmrcodeObj, dss_obj; import_all=import_all)
 end
 
 
 """
 """
 function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssTransformer; import_all::Bool=false, dss::Union{Missing,OpenDssDataModel}=missing)
-    eng.transformer[dss_obj.name] = add_bus!(eng, create_eng_object(EngTransformer, dss_obj; import_all=import_all, dss=dss))
+    eng.transformer[dss_obj.name] = add_bus!(eng, create_eng_object(EngTransformerObj, dss_obj; import_all=import_all, dss=dss))
 end
 
 
 """
 """
 function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssPvsystem; import_all::Bool=false, time_series::String="daily")
-    eng.solar[dss_obj.name] = add_bus!(eng, create_eng_object(EngSolar, dss_obj; import_all=import_all, time_series=time_series))
+    eng.solar[dss_obj.name] = add_bus!(eng, create_eng_object(EngSolarObj, dss_obj; import_all=import_all, time_series=time_series))
 end
 
 
 """
 """
 function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssStorage; import_all::Bool=false, time_series::String="daily")
-    eng.storage[dss_obj.name] = add_bus!(eng, create_eng_object(EngStorage, dss_obj; import_all=import_all, time_series=time_series))
+    eng.storage[dss_obj.name] = add_bus!(eng, create_eng_object(EngStorageObj, dss_obj; import_all=import_all, time_series=time_series))
 end
 
 
 """
 """
 function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssRegcontrol; import_all::Bool=false)
-    add_controls!(eng, dss_obj.transformer, create_eng_object(EngTransformerControls, dss_obj; import_all=import_all))
+    add_controls!(eng, dss_obj.transformer, create_eng_object(EngTransformerControlsObj, dss_obj; import_all=import_all))
 end
 
 
@@ -270,7 +270,7 @@ end
 """
 """
 function convert_dss2eng!(eng::EngineeringDataModel, dss_obj::DssCapcontrol; import_all::Bool=false)
-    add_controls!(eng, dss_obj.capacitor, create_eng_object(EngShuntControls, dss_obj; import_all=import_all))
+    add_controls!(eng, dss_obj.capacitor, create_eng_object(EngShuntControlsObj, dss_obj; import_all=import_all))
 end
 
 
@@ -310,7 +310,7 @@ function transform_data_model(
             for (_, dss_obj) in dss_objects
                 if isa(dss_obj, DssTimeSeriesObjects)
                     convert_dss2eng!(eng, dss_obj; import_all=import_all, time_series=time_series)
-                elseif isa(dss_obj, DssTransformer)
+                elseif isa(dss_obj, DssTransformer) || isa(dss_obj, DssLine)
                     convert_dss2eng!(eng, dss_obj; import_all=import_all, dss=dss)
                 else
                     convert_dss2eng!(eng, dss_obj; import_all=import_all)

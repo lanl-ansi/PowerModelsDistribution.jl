@@ -197,8 +197,8 @@ end
 """
 """
 Base.@kwdef struct MathematicalDataModel <: MathematicalModel{SubnetworkModel}
-    settings::Settings = Settings()
-    metadata::Metadata = Metadata()
+    settings::Settings = SettingsObj()
+    metadata::Metadata = MetadataObj()
     bus_lookup::Dict{String,Int} = Dict{String,Int}()
 
     bus::Dict{Int,<:MathBus} = Dict{Int,MathBus}()
@@ -217,7 +217,7 @@ end
 """
 """
 Base.@kwdef struct MultinetworkMathematicalDataModel <: MathematicalModel{MultinetworkModel}
-    metadata::Metadata = Metadata()
+    metadata::Metadata = MetadataObj()
 
     nw::Dict{Int,<:MathematicalModel} = Dict{Int,MathematicalModel}()
     nw_map::Dict{String,Int}
