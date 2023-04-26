@@ -3,6 +3,7 @@
 ## staged
 
 - Fixed bug in `build_mc_pf` where `constraint_mc_storage_power_setpoint_real` was being applied to all storage objects, and not just ones on PV buses
+- Fixed implementation of polynomial nonlinear (nl) costs above quadratic in `objective.jl`
 
 ## v0.14.8
 
