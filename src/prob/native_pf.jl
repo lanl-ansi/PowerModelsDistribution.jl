@@ -518,6 +518,10 @@ function build_pf_solution(pfd::PowerFlowData, Uv::Vector{Complex{Float64}})
             solution[comp_type][id] = Dict{String,Any}()
             solution[comp_type][id]["cr_fr"] = real.(c_tots)
             solution[comp_type][id]["ci_fr"] = imag.(c_tots)
+        elseif comp_type == "storage"
+            solution[comp_type][id] = Dict{String,Any}()
+            solution[comp_type][id]["crs"] = real.(c_tots)
+            solution[comp_type][id]["cis"] = imag.(c_tots)
         end
     end
     solution["settings"] = deepcopy(pfd.data_math["settings"])
@@ -893,6 +897,85 @@ end
 
 
 """
+    _cpf_storage_interface(
+      storage::Dict,
+      v_start::Dict,
+      explicit_neutral::Bool,
+      line_vbase::Dict,
+      sbase::Float
+    )
+
+Storage component interface outputs storage primitive Y matrix.
+"""
+function _cpf_storage_interface(storage::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Real)
+    bts = [(storage["storage_bus"], t) for t in storage["connections"]]
+    v0_bt = [v_start[bt] for bt in bts]
+    wires = length(bts)
+
+    conf = storage["configuration"]
+
+    if conf == WYE
+        if explicit_neutral
+            vd0 = v0_bt[1:end-1] .- v0_bt[end]
+        else
+            vd0 = v0_bt
+        end
+        nphases = length(vd0)
+        ss0 = (storage["ps"] + im * storage["qs"])/nphases
+        c0 = conj.(ss0 ./ vd0)
+        y0 = c0 ./ vd0
+        if explicit_neutral
+            y_prim = [diagm(y0) -y0; -transpose(y0) sum(y0)]
+        else
+            y_prim = diagm(y0)
+        end
+        c_nl_func = function (v_bt)
+            ss = (storage["ps"] + im * storage["qs"])/nphases
+            if explicit_neutral
+                vd = v_bt[1:end-1] .- v_bt[end]
+                cd = conj.(ss ./ vd)
+                cd_bus = [cd..., -sum(cd)]
+                return -(cd_bus .- y_prim * v_bt)
+            else
+                vd = v_bt
+                cd = conj.(ss ./ vd)
+                cd_bus = cd
+                return -(cd_bus .- y_prim * v_bt)
+            end
+        end
+        c_tots_func = function (v_bt)
+            return y_prim * v_bt .+ c_nl_func(v_bt)
+        end
+    elseif conf == DELTA
+        if length(v0_bt) == 3
+            Md = [1 -1 0; 0 1 -1; -1 0 1]
+        elseif length(v0_bt) == 2
+            Md = [1 -1]
+        end
+        vd0 = Md * v0_bt
+
+        nphases = length(vd0)
+        ss0 = (storage["ps"] + im * storage["qs"])/nphases
+        c0 = conj.(ss0 ./ vd0)
+        y0 = c0 ./ vd0
+        y_prim = Md' * diagm(0 => y0) * Md
+        c_nl_func = function (v_bt)
+            ss = (storage["pd"] + im * storage["qd"])/nphases
+            vd = Md * v_bt
+            cd = conj.(ss ./ vd)
+            cd_bus = Md' * cd
+            return -(cd_bus .- y_prim * v_bt)
+        end
+        c_tots_func = function (v_bt)
+            return y_prim * v_bt .+ c_nl_func(v_bt)
+        end
+    end
+
+    return bts, 0, y_prim, c_nl_func, c_tots_func
+end
+
+
+"""
     _cpf_generator_interface(
       gen::Dict,
       v_start::Dict,
@@ -1024,6 +1107,7 @@ const _CPF_COMPONENT_INTERFACES = Dict(
     "transformer" => _cpf_transformer_interface,
     "shunt" => _cpf_shunt_interface,
     "switch" => _cpf_switch_interface,
+    "storage" => _cpf_storage_interface,
 )
 
 

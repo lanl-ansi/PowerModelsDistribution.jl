@@ -201,6 +201,12 @@ function update_math_model_3wire!(math)
         end
     end
 
+    for (s, storage) in math["storage"]
+        if storage["configuration"] == WYE && neutral_idx ∈ storage["connections"]
+            storage["connections"] = storage["connections"][1:end-1]
+        end
+    end
+
     return nothing
 end
 
@@ -229,6 +235,9 @@ filter!(e -> e ≠ "test_trans_dy_3w", cases)
 filter!(e -> e ≠ "test_trans_yy_3w", cases)
 filter!(e -> e ≠ "ut_trans_3w_dyy_1", cases)
 filter!(e -> e ≠ "ut_trans_3w_yyy_1", cases)
+filter!(e -> e ≠ "case3_balanced_battery_1ph", cases)
+filter!(e -> e ≠ "case3_balanced_battery_3ph", cases)
+
 
 @testset "en pf native opendss validation four wire" begin
 
@@ -293,7 +302,7 @@ filter!(e -> e ≠ "ut_trans_3w_yyy_1", cases)
 end
 
 
-cases = ["test_trans_dy_3w", "test_trans_yy_3w", "ut_trans_3w_dyy_1", "ut_trans_3w_yyy_1"]
+cases = ["test_trans_dy_3w", "test_trans_yy_3w", "ut_trans_3w_dyy_1", "ut_trans_3w_yyy_1", "case3_balanced_battery_1ph", "case3_balanced_battery_3ph"]
 
 @testset "en pf native opendss validation three wire" begin
 

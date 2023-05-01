@@ -10,6 +10,9 @@ cases = [x[1:end-4] for x in readdir(data_dir) if endswith(x, ".dss")]
 filter!(e->e≠"test_trans_yy", cases)
 filter!(e->e≠"test_trans_dy_3w", cases)
 filter!(e->e≠"test_trans_yy_3w", cases)
+filter!(e -> e ≠ "case3_balanced_battery_1ph", cases)
+filter!(e -> e ≠ "case3_balanced_battery_3ph", cases)
+filter!(e -> e ≠ "case3_balanced_battery_3ph_EN", cases)
 # list required transformations per case
 case_transformations = Dict(
     "test_gen_3ph_wye" => [remove_all_bounds!, pv1_correction!],
