@@ -218,12 +218,27 @@ function calc_buspair_parameters(buses, branches)
 end
 
 
+function find_conductor_ids!(data::EngineeringModel)
+    conductor_ids = []
+
+    for (_,bus) in get(data, "bus", Dict())
+        for t in get(bus, "terminals", [])
+            if !(t in conductor_ids)
+                push!(conductor_ids, t)
+            end
+        end
+    end
+
+    data.metadata.conductors = [c for c in sort(conductor_ids)]
+end
+
+
 """
     find_conductor_ids!(data::Dict{String,Any})
 
 Finds all conductor ids and puts a list of them under "conductor_ids" at the root level
 """
-function find_conductor_ids!(data::Dict{String,<:Any})
+function find_conductor_ids!(data::Dict{String,Any})
     conductor_ids = []
 
     for (_,bus) in get(data, "bus", Dict())

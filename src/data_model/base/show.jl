@@ -1,5 +1,5 @@
 ""
-function Base.show(io::IO, t::Union{InfrastructureDataModel,GenericInfrastructureObject})
+function Base.show(@nospecialize(io::IO), @nospecialize(t::T)) where T <: Union{InfrastructureModel,InfrastructureObject}
     recur_io = IOContext(io, :SHOWN_SET => t,
                              :typeinfo => eltype(t))
 
@@ -23,7 +23,7 @@ end
 
 
 ""
-function Base.show(io::IO, ::MIME"text/plain", t::Union{InfrastructureDataModel,GenericInfrastructureObject})
+function Base.show(@nospecialize(io::IO), ::MIME"text/plain", @nospecialize(t::T)) where T <: Union{InfrastructureModel,InfrastructureObject}
     isempty(t) && return show(io, t)
     # show more descriptively, with one line per key/value pair
     recur_io = IOContext(io, :SHOWN_SET => t)
@@ -73,7 +73,11 @@ function Base.show(io::IO, ::MIME"text/plain", t::Union{InfrastructureDataModel,
         end
 
         if limit
-            key = rpad(Base._truncate_at_width_or_chars(false, ks[i], keylen, false, "\r\n"), keylen)
+            if Base.VERSION >= v"1.9.0-rc3"
+                key = rpad(Base._truncate_at_width_or_chars(false, ks[i], keylen, false, "\r\n"), keylen)
+            else
+                key = rpad(Base._truncate_at_width_or_chars(ks[i], keylen), keylen)
+            end
         else
             key = sprint(show, k, context=recur_io_k, sizehint=0)
         end
@@ -81,7 +85,11 @@ function Base.show(io::IO, ::MIME"text/plain", t::Union{InfrastructureDataModel,
         print(io, " => ")
 
         if limit
-            val = Base._truncate_at_width_or_chars(false, vs[i], cols - keylen, false, "\r\n")
+            if Base.VERSION >= v"1.9-rc3"
+                val = Base._truncate_at_width_or_chars(false, vs[i], cols - keylen, false, "\r\n")
+            else
+                val = Base._truncate_at_width_or_chars(vs[i], cols-keylen)
+            end
             print(io, val)
         else
             show(recur_io_v, v)
@@ -89,13 +97,5 @@ function Base.show(io::IO, ::MIME"text/plain", t::Union{InfrastructureDataModel,
     end
 end
 
-_show(io::IO, t::Union{InfrastructureDataModel,GenericInfrastructureObject}) = Base.show(io, t)
-_show(io::IO, m::MIME"text/plain", t::Union{InfrastructureDataModel,GenericInfrastructureObject}) = Base.show(io, m, t)
-
-# precompile(_show, (IO,MIME"text/plain",OpenDssInfrastructureDataModel,))
-# precompile(_show, (IO,MIME"text/plain",OpenDssRawInfrastructureDataModel,))
-# precompile(_show, (IO,MIME"text/plain",EngineeringInfrastructureDataModel,))
-
-# precompile(_show, (IO,OpenDssInfrastructureDataModel,))
-# precompile(_show, (IO,OpenDssRawInfrastructureDataModel,))
-# precompile(_show, (IO,EngineeringInfrastructureDataModel,))
+_show(@nospecialize(io::IO), @nospecialize(t::T)) where T <: Union{InfrastructureModel,InfrastructureObject} = Base.show(io, t)
+_show(@nospecialize(io::IO), m::MIME"text/plain", @nospecialize(t::T)) where T <: Union{InfrastructureModel,InfrastructureObject} = Base.show(io, m, t)

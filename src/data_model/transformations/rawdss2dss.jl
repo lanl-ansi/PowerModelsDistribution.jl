@@ -11,9 +11,7 @@ function transform_data_model(::Type{DssModel}, raw_dss::OpenDssRawDataModel)::O
                 getproperty(dss, Symbol(pn))[name] = create_dss_object(valtype(fieldtype(typeof(dss), Symbol(pn))), property_pairs, dss, raw_dss)
             end
         elseif pn == "buscoordinates"
-            for buscoords in property
-                getproperty(dss, Symbol(pn))[buscoords.bus] = buscoords
-            end
+            setproperty!(dss, Symbol(pn), Dict{String,DssBuscoords}(buscoords.bus => buscoords for buscoords in property))
         elseif !isempty(property) && pn ∉ ["current_state", "filename", "options"]
             @info "missing parser for '$pn'"
         end
@@ -58,8 +56,10 @@ end
 
 """
 """
-function _apply_property_pairs(@nospecialize(dss_obj::T), property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssObject
-    obj_type = Symbol(lowercase(string(T)[4:end]))
+function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssObject
+    raw_fields = _get_raw_fields(property_pairs)
+
+    obj_type = Symbol(lowercase(replace(replace(string(T), "Dss"=>""), "PowerModelsDistribution."=>"")))
     for (pn, v) in filter(x->x.first != "__path__", property_pairs)
         pn = _infer_partial_property_name(pn, dss_obj)
         if Symbol(pn) ∉ propertynames(dss_obj) && pn != "__path__"
@@ -82,7 +82,7 @@ function _apply_property_pairs(@nospecialize(dss_obj::T), property_pairs::Vector
 
     dss_obj.raw_dss = filter(x->x.first != "__path__", property_pairs)
 
-    _get_implied_nphases!(dss_obj)
+    :phases ∉ raw_fields && _get_implied_nphases!(dss_obj)
 
     return dss_obj
 end
@@ -90,8 +90,8 @@ end
 
 """
 """
-function _apply_property_pairs(@nospecialize(dss_obj::T), property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssMultObjects
-    obj_type = Symbol(lowercase(string(T)[4:end]))
+function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssMultObjects
+    obj_type = Symbol(lowercase(replace(replace(string(T), "Dss"=>""), "PowerModelsDistribution."=>"")))
 
     interval_leq_zero = false
     __path__ = ""
@@ -159,15 +159,14 @@ function _apply_property_pairs(@nospecialize(dss_obj::T), property_pairs::Vector
 
     dss_obj.raw_dss = filter(x->x.first != "__path__", property_pairs)
 
-
     return dss_obj
 end
 
 
 """
 """
-function _apply_property_pairs(@nospecialize(dss_obj::T), property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssTimeSeriesObjects
-    obj_type = Symbol(lowercase(string(T)[4:end]))
+function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssTimeSeriesObjects
+    obj_type = Symbol(lowercase(replace(replace(string(T), "Dss"=>""), "PowerModelsDistribution."=>"")))
 
     __path__ = ""
 
@@ -211,7 +210,9 @@ end
 
 """
 """
-function _apply_property_pairs(@nospecialize(dss_obj::T), property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: Union{DssTransformer,DssXfmrcode}
+function _apply_property_pairs(dss_obj::T, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: Union{DssTransformer,DssXfmrcode}
+    raw_fields = _get_raw_fields(property_pairs)
+
     obj_type = :transformer
     pn_map = Dict{Symbol,Symbol}(:bus=>:buses, :tap=>:taps, :conn=>:conns, :kv=>:kvs, :kva=>:kvas, Symbol("%r")=>Symbol("%rs"))
     pn_map = T <: DssXfmrcode ? filter(x->x.first!=:bus,pn_map) : pn_map
@@ -248,7 +249,7 @@ function _apply_property_pairs(@nospecialize(dss_obj::T), property_pairs::Vector
         setproperty!(dss_obj, pn, v, fieldtype(typeof(dss_obj), Symbol(pn)))
     end
 
-    _get_implied_nphases!(dss_obj)
+    :phases ∉ raw_fields && _get_implied_nphases!(dss_obj)
 
     return dss_obj
 end
@@ -308,23 +309,16 @@ end
 """
 """
 function _parse_csvfile(path::String; header::Bool=false, interval::Bool=false, npts::Union{Int,Missing}=missing)::NTuple{4, Vector{Float64}}
-    hour = Float64[]
-    mult = Float64[]
+    d = open(path, "r") do io
+        parse.(Float64, mapreduce(permutedims, vcat, split.(readlines(io)[(header ? 2 : 1):end], r",")))
+    end
 
-    open(path, "r") do io
-        lines = readlines(io)
-        if header
-            lines = lines[2:end]
-        end
-        if interval
-            for line in lines
-                d = split(line, ",")
-                push!(hour, parse(Float64, strip(string(d[1]))))
-                push!(mult, parse(Float64, strip(string(d[2]))))
-            end
-        else
-            push!(mult, parse.(Float64, Vector{String}([strip(split(line, ",")[1]) for line in lines]))...)
-        end
+    if interval
+        hour = d[:,1]
+        mult = d[:,2]
+    else
+        hour = Float64[]
+        mult = d[:,1]
     end
 
     return (hour, mult, mult, mult)
@@ -334,30 +328,18 @@ end
 """
 """
 function _parse_pqcsvfile(path::String; header::Bool=false, interval::Bool=false, npts::Union{Int,Missing}=missing)::NTuple{4, Vector{Float64}}
-    hour = Float64[]
-    pmult = Float64[]
-    qmult = Float64[]
+    d = open(path, "r") do io
+        parse.(Float64, mapreduce(permutedims, vcat, split.(readlines(io)[(header ? 2 : 1):end], r",")))
+    end
 
-    open(path, "r") do io
-        lines = readlines(io)
-        if header
-            lines = lines[2:end]
-        end
-
-        if interval
-            for line in lines
-                d = split(line, ",")
-                push!(hour, parse(Float64, strip(string(d[1]))))
-                push!(pmult, parse(Float64, strip(string(d[2]))))
-                push!(qmult, parse(Float64, strip(string(d[3]))))
-            end
-        else
-            for line in lines
-                d = split(line, ",")
-                push!(pmult, parse(Float64, strip(string(d[1]))))
-                push!(qmult, parse(Float64, strip(string(d[2]))))
-            end
-        end
+    if interval
+        hour = d[:,1]
+        pmult = d[:,2]
+        qmult = d[:,3]
+    else
+        hour = Float64[]
+        pmult = d[:,1]
+        qmult = d[:,2]
     end
 
     return hour, pmult, pmult, qmult
@@ -467,61 +449,62 @@ end
 
 """
 """
-function _parse_file_inside_mult!(@nospecialize(dss_obj::DssObject), __path__::String, pn::String, v::String)
+function _parse_file_inside_mult!(dss_obj::DssObject, __path__::String, pn::String, v::String)::Vector{Float64}
     _property_pairs = Pair{String,String}[]
     for _match in eachmatch(_dss_cmd_new_regex, v)
         push!(_property_pairs, _parse_match_element(_match, "",))
     end
-    _properties = Dict{String,Any}(_property_pairs)
+    raw_fields = _get_raw_fields(_property_pairs)
+    _properties = Dict{String,String}(_property_pairs)
 
-    _properties["col"] = parse(Int, get(_properties, "col", "1"))
-
+    col = parse(Int, get(_properties, "col", "1"))
     _header = get(_properties, "header", "false")
-    _properties["header"] = parse(Bool, startswith(_header, "y") || startswith(_header, "t") ? "true" : "false")
+    header = parse(Bool, startswith(_header, "y") || startswith(_header, "t") ? "true" : "false")
+    interval = :pqcsvfile ∈ raw_fields ? col > 2 : col > 1
+    col = col + (interval ? 0 : 1)
 
-    if haskey(_properties, "csvfile")
-        setproperty!(dss_obj, Symbol(pn), _parse_csvfile(joinpath(__path__, _properties["csvfile"]); interval=_properties["col"] > 1, header=_properties["header"])[_properties["col"]])
-    elseif haskey(_properties, "file")
-        setproperty!(dss_obj, Symbol(pn), _parse_csvfile(joinpath(__path__, _properties["file"]); interval=_properties["col"] > 1, header=_properties["header"])[_properties["col"]])
-    elseif haskey(_properties, "pqcsvfile")
-        setproperty!(dss_obj, Symbol(pn), _parse_pqcsvfile(joinpath(__path__, _properties["pqcsvfile"]); interval=_properties["col"] > 2, header=_properties["header"])[_properties["col"]])
-    elseif haskey(_properties, "sngfile")
-        setproperty!(dss_obj, Symbol(pn), _parse_sngfile(joinpath(__path__, _properties["sngfile"]); interval=_properties["col"] > 1, header=_properties["header"])[_properties["col"]])
-    elseif haskey(_properties, "dblfile")
-        setproperty!(dss_obj, Symbol(pn), _parse_dblfile(joinpath(__path__, _properties["dblfile"]); interval=_properties["col"] > 1, header=_properties["header"])[_properties["col"]])
+    if :csvfile ∈ raw_fields
+        setproperty!(dss_obj, Symbol(pn), _parse_csvfile(joinpath(__path__, _properties["csvfile"]); interval=interval, header=header)[col])
+    elseif :file ∈ raw_fields
+        setproperty!(dss_obj, Symbol(pn), _parse_csvfile(joinpath(__path__, _properties["file"]); interval=interval, header=header)[col])
+    elseif :pqcsvfile ∈ raw_fields
+        setproperty!(dss_obj, Symbol(pn), _parse_pqcsvfile(joinpath(__path__, _properties["pqcsvfile"]); interval=interval, header=header)[col])
+    elseif :sngfile ∈ raw_fields
+        setproperty!(dss_obj, Symbol(pn), _parse_sngfile(joinpath(__path__, _properties["sngfile"]); interval=interval, header=header)[col])
+    elseif :dblfile ∈ raw_fields
+        setproperty!(dss_obj, Symbol(pn), _parse_dblfile(joinpath(__path__, _properties["dblfile"]); interval=interval, header=header)[col])
     end
-
-    return nothing
 end
 
 
 """
 """
-function _parse_file_inside_shape_ref!(@nospecialize(dss_obj::DssObject), dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel, __path__::String, pn::String, v::String)::Nothing
+function _parse_file_inside_shape_ref!(dss_obj::DssObject, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel, __path__::String, pn::String, v::String)::Vector{Float64}
     _property_pairs = Pair{String,String}[]
     for _match in eachmatch(_dss_cmd_new_regex, v)
         push!(_property_pairs, _parse_match_element(_match, "",))
     end
-    _properties = Dict{String,Any}(_property_pairs)
+    raw_fields = _get_raw_fields(_property_pairs)
+    _properties = Dict{String,String}(_property_pairs)
 
-    _properties["col"] = parse(Int, get(_properties, "col", "1"))
-
+    col = parse(Int, get(_properties, "col", "1"))
     _header = get(_properties, "header", "false")
-    _properties["header"] = parse(Bool, startswith(_header, "y") || startswith(_header, "t") ? "true" : "false")
+    header = parse(Bool, startswith(_header, "y") || startswith(_header, "t") ? "true" : "false")
+    interval = :pqcsvfile ∈ raw_fields ? col > 2 : col > 1
+    col = col + (interval ? 0 : 1)
 
     data = Float64[]
-    if haskey(_properties, "csvfile")
-        push!(data, _parse_csvfile(joinpath(__path__, _properties["csvfile"]); interval=_properties["col"] > 1, header=_properties["header"])[_properties["col"]])
-    elseif haskey(_properties, "file")
-        push!(data, _parse_csvfile(joinpath(__path__, _properties["file"]); interval=_properties["col"] > 1, header=_properties["header"])[_properties["col"]])
-    elseif haskey(_properties, "pqcsvfile")
-        push!(data, _parse_pqcsvfile(joinpath(__path__, _properties["pqcsvfile"]); interval=_properties["col"] > 2, header=_properties["header"])[_properties["col"]])
-    elseif haskey(_properties, "sngfile")
-        push!(data, _parse_sngfile(joinpath(__path__, _properties["sngfile"]); interval=_properties["col"] > 1, header=_properties["header"])[_properties["col"]])
-    elseif haskey(_properties, "dblfile")
-        push!(data, _parse_dblfile(joinpath(__path__, _properties["dblfile"]); interval=_properties["col"] > 1, header=_properties["header"])[_properties["col"]])
+    if :csvfile ∈ raw_fields
+        push!(data, Symbol(pn), _parse_csvfile(joinpath(__path__, _properties["csvfile"]); interval=interval, header=header)[col])
+    elseif :file ∈ raw_fields
+        push!(data, Symbol(pn), _parse_csvfile(joinpath(__path__, _properties["file"]); interval=interval, header=header)[col])
+    elseif :pqcsvfile ∈ raw_fields
+        push!(data, Symbol(pn), _parse_pqcsvfile(joinpath(__path__, _properties["pqcsvfile"]); interval=interval, header=header)[col])
+    elseif :sngfile ∈ raw_fields
+        push!(data, Symbol(pn), _parse_sngfile(joinpath(__path__, _properties["sngfile"]); interval=interval, header=header)[col])
+    elseif :dblfile ∈ raw_fields
+        push!(data, Symbol(pn), _parse_dblfile(joinpath(__path__, _properties["dblfile"]); interval=interval, header=header)[col])
     end
-
     loadshape = create_dss_object(
         DssLoadshape,
         [
@@ -532,10 +515,9 @@ function _parse_file_inside_shape_ref!(@nospecialize(dss_obj::DssObject), dss::O
         dss_raw,
     )
 
-    dss.loadshape[loadshape.name] = loadshape
     setproperty!(dss_obj, Symbol(pn), loadshape.name)
 
-    return nothing
+    dss.loadshape[loadshape.name] = loadshape
 end
 
 
@@ -572,4 +554,10 @@ end
 ""
 function _get_implied_nphases!(dss_obj::DssXfmrcode; default::Int=dss_obj.phases)::Int
     dss_obj.phases = default
+end
+
+
+""
+function _get_implied_nphases!(dss_obj::DssGictransformer; default::Int=dss_obj.phases)::Int
+    dss_obj.phases = _get_implied_nphases(dss_obj.bush, dss_obj.busx; default=default)
 end

@@ -76,3 +76,37 @@ function _fill_vector!(vector::Vector{T}, elements::Vector{String})::Nothing whe
 
     nothing
 end
+
+
+""
+function _convert_model_to_dict(data::Union{InfrastructureModel,InfrastructureObject})::Dict{String,Any}
+    out = Dict{String,Any}(
+    )
+
+    for property in propertynames(data)
+        item = getproperty(data, property)
+
+        if isa(item, Dict)
+            out["$property"] = Dict{String,Any}()
+            for (id, obj) in item
+                if isa(obj, InfrastructureObject)
+                    out["$property"]["$id"] = _convert_model_to_dict(obj)
+                else
+                    out["$property"]["$id"] = obj
+                end
+            end
+        elseif isa(item, InfrastructureObject)
+            out["$property"] = _convert_model_to_dict(item)
+        else
+            out["$property"] = item
+        end
+    end
+
+    return filter(x->!ismissing(x.second), out)
+end
+
+
+""
+function _get_raw_fields(property_pairs::Vector{Pair{String,String}})::Vector{Symbol}
+    collect(Symbol(x.first) for x in property_pairs)
+end

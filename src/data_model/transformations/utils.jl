@@ -59,3 +59,35 @@ function _parse_dss_pairs(property_pairs::Vector{Pair{String,String}}, dss_obj_t
 
     Dict{Symbol,Any}(Symbol(k) => parse(dtypes[k], v) for (k,v) in property_pairs)
 end
+
+
+""
+function _correct_ptphase!(controller::EngTransformerControls, transformer::EngTransformer)
+    controller["terminals"][1][1] = transformer["connections"][1][1]
+end
+
+
+"""
+"""
+function apply_linecode!(line::EngLine, linecode::EngLinecode)::EngLine
+    for pn in [:rs, :xs, :g_fr, :g_to, :b_fr, :b_to, :cm_ub, :sm_ub]
+        if ismissing(line[pn]) && !ismissing(linecode[pn])
+            line[pn] = linecode[pn]
+        end
+    end
+
+    return line
+end
+
+
+"""
+"""
+function apply_linecodes!(eng::EngineeringModel{T})::EngineeringModel{T} where T <: NetworkModel
+    for line in eng.line
+        if !ismissing(line.linecode)
+            apply_linecode!(line, eng.linecode[line.linecode])
+        end
+    end
+
+    return eng
+end

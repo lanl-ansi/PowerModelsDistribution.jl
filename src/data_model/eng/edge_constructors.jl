@@ -1,7 +1,37 @@
 """
 """
+function create_eng_object(::Type{T}, dss_obj::DssEdgeObject; import_all::Bool=false)::T where T <: UnsupportedEngEdgeObject
+    bus1, _ = _parse_bus_id(dss_obj.bus1)
+    bus2, _ = _parse_bus_id(dss_obj.bus2)
+
+    T(;
+        f_bus = bus1,
+        t_bus = bus2,
+        f_connections=_get_conductors_ordered(dss_obj.bus1, default=collect(1:dss_obj.phases)),
+        t_connections=_get_conductors_ordered(dss_obj.bus2, default=collect(1:dss_obj.phases)),
+    )
+end
+
+
+"""
+"""
+function create_eng_object(::Type{T}, dss_obj::DssGictransformer; import_all::Bool=false)::T where T <: UnsupportedEngEdgeObject
+    bus1, _ = _parse_bus_id(dss_obj.bush)
+    bus2, _ = _parse_bus_id(dss_obj.busx)
+
+    T(;
+        f_bus = bus1,
+        t_bus = bus2,
+        f_connections=_get_conductors_ordered(dss_obj.bush, default=collect(1:dss_obj.phases)),
+        t_connections=_get_conductors_ordered(dss_obj.busx, default=collect(1:dss_obj.phases)),
+    )
+end
+
+
+"""
+"""
 function create_eng_object(::Type{T}, dss_obj::DssCapacitor; import_all::Bool=false)::T where T <: EngLine
-    @info "treating capacitor.$(dss_obj) like line"
+    @info "treating capacitor.$(dss_obj.name) like line"
 
     nphases = dss_obj.phases
     conn = dss_obj.conn
@@ -19,6 +49,7 @@ function create_eng_object(::Type{T}, dss_obj::DssCapacitor; import_all::Bool=fa
     bus2, _ = _parse_bus_id(dss_obj.bus2)
 
     T(;
+        name = dss_obj.name,
         f_bus = bus1,
         t_bus = bus2,
         f_connections=_get_conductors_ordered(dss_obj.bus1, default=collect(1:nphases)),
@@ -40,7 +71,7 @@ end
 """
 """
 function create_eng_object(::Type{T}, dss_obj::DssReactor; import_all::Bool=false)::T where T <: EngLine
-    @warn "treating reactor.$(dss_obj.name) like line"
+    @info "treating reactor.$(dss_obj.name) like line"
 
     nphases = dss_obj.phases
 
@@ -192,7 +223,6 @@ function create_eng_object(::Type{T}, dss_obj::DssTransformer; import_all::Bool=
 
     sm_ub = sm_ub == "emergency" ? "emerghkva" : "normhkva"
 
-
     if !isempty(dss_obj.xfmrcode) && !ismissing(dss)
         xfmrcode = dss.xfmrcode[dss_obj.xfmrcode]
 
@@ -279,7 +309,7 @@ function create_eng_object(::Type{T}, dss_obj::DssTransformer; import_all::Bool=
         for (w, key) in enumerate(["xhl", "xht", "xlt"])
             if isempty(dss_obj.xfmrcode) || _is_after(dss_obj.raw_dss, key, "xfmrcode")
                 if !haskey(eng_obj, "xsc")
-                    eng_obj["xsc"] = Vector{Float64}(NaN, 3)
+                    eng_obj["xsc"] = Vector{Union{Float64,Missing}}(missing, 3)
                 end
                 eng_obj["xsc"][w] = dss_obj[key] / 100
             end

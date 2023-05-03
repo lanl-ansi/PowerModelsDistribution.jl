@@ -7,7 +7,8 @@ _missing2false(a::Union{Missing,Bool}) = ismissing(a) ? false : a
 Helper function to check is data is ENGINEERING model
 """
 iseng(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == ENGINEERING)
-
+iseng(data::InfrastructureModel) = false
+iseng(data::EngineeringModel) = true
 
 """
     ismath(data::Dict{String,Any})
@@ -15,6 +16,8 @@ iseng(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing
 Helper function to check if data is MATHEMATICAL model
 """
 ismath(data::Dict{String,<:Any}) = _missing2false(get(data, "data_model", missing) == MATHEMATICAL)
+ismath(data::InfrastructureModel) = false
+ismath(data::MathematicalModel) = true
 
 
 """
@@ -112,47 +115,47 @@ end
 
 
 
-"initializes the base math object of any type, and copies any one-to-one mappings"
-function _init_math_obj(obj_type::String, eng_id::Any, eng_obj::Dict{String,<:Any}, index::Int; pass_props::Vector{String}=String[])::Dict{String,Any}
-    math_obj = Dict{String,Any}(
-        "name" => "$eng_id",
-        "source_id" => "$obj_type.$eng_id"
-    )
+# "initializes the base math object of any type, and copies any one-to-one mappings"
+# function _init_math_obj(obj_type::String, eng_id::Any, eng_obj::Dict{String,<:Any}, index::Int; pass_props::Vector{String}=String[])::Dict{String,Any}
+#     math_obj = Dict{String,Any}(
+#         "name" => "$eng_id",
+#         "source_id" => "$obj_type.$eng_id"
+#     )
 
-    for key in [get(_1to1_maps, obj_type, String[]); pass_props]
-        if haskey(eng_obj, key)
-            if key in ["status", "dispatchable"]
-                math_obj[key] = Int(eng_obj[key])
-            else
-                math_obj[key] = eng_obj[key]
-            end
-        end
-    end
+#     for key in [get(_1to1_maps, obj_type, String[]); pass_props]
+#         if haskey(eng_obj, key)
+#             if key in ["status", "dispatchable"]
+#                 math_obj[key] = Int(eng_obj[key])
+#             else
+#                 math_obj[key] = eng_obj[key]
+#             end
+#         end
+#     end
 
-    math_obj["index"] = index
+#     math_obj["index"] = index
 
-    return math_obj
-end
-
-
-"initializes the base components that are expected by powermodelsdistribution in the mathematical model"
-function _init_base_components!(data_math::Dict{String,<:Any})
-    for key in pmd_math_asset_types
-        if !haskey(data_math, key)
-            data_math[key] = Dict{String,Any}()
-        end
-    end
-end
+#     return math_obj
+# end
 
 
-"Initializes the lookup table"
-function _init_lookup!(data_math::Dict{String,<:Any})
-    for key in keys(_1to1_maps)
-        if !haskey(data_math["lookup"], key)
-            data_math["lookup"][key] = Dict{Any,Int}()
-        end
-    end
-end
+# "initializes the base components that are expected by powermodelsdistribution in the mathematical model"
+# function _init_base_components!(data_math::Dict{String,<:Any})
+#     for key in pmd_math_asset_types
+#         if !haskey(data_math, key)
+#             data_math[key] = Dict{String,Any}()
+#         end
+#     end
+# end
+
+
+# "Initializes the lookup table"
+# function _init_lookup!(data_math::Dict{String,<:Any})
+#     for key in keys(_1to1_maps)
+#         if !haskey(data_math["lookup"], key)
+#             data_math["lookup"][key] = Dict{Any,Int}()
+#         end
+#     end
+# end
 
 
 "function for applying a scale to a paramter"
@@ -254,17 +257,18 @@ end
 
 
 "loss model builder for transformer decomposition"
-function _build_loss_model!(
-    data_math::Dict{String,<:Any},
+function build_loss_model(
+    # data_math::Dict{String,<:Any},
     transformer_name::String,
-    to_map::Vector{String},
+    # to_map::Vector{String},
     r_s::Vector{Float64},
     zsc::Dict{Tuple{Int,Int},Complex{Float64}},
     ysh::Complex{Float64},
     connections::Vector{Int};
     nphases::Int=3,
     status::Int=1,
-    )::Vector{Int}
+    kron_reduced::Bool=false,
+    )::Tuple{Vector{MathBus},Vector{MathBranch}}
 
     # precompute the minimal set of buses and lines
     N = length(r_s)
@@ -334,45 +338,38 @@ function _build_loss_model!(
         end
     end
 
-    bus_ids = Dict{Int,Int}()
+    bus_objs = MathBus[]
     for bus in buses
-        bus_obj = Dict{String,Any}(
-            "name" => "_virtual_bus.transformer.$(transformer_name)_$(bus)",
-            "bus_i" => length(data_math["bus"])+1,
-            "vmin" => fill(0.0, nphases),
-            "vmax" => fill(Inf, nphases),
-            "vm_pair_lb" => Tuple{Any,Any,Real}[],
-            "vm_pair_ub" => Tuple{Any,Any,Real}[],
-            "terminals" => connections[collect(1:nphases)],
-            "grounded" => fill(false, nphases),
-            "base_kv" => 1.0,
-            "bus_type" => status == 0 ? 4 : 1,
-            "source_id" => "transformer.$(transformer_name)",
-            "index" => length(data_math["bus"])+1,
+        bus_obj = MathBusObj(;
+            # name = "_virtual_bus.transformer.$(transformer_name)_$(bus)",
+            index = bus,
+            bus_i = bus,
+            terminals = connections[collect(1:nphases)],
+            grounded = fill(false, nphases),
+            base_kv = 1.0,
+            bus_type = status == 0 ? 4 : 1,
+            source_id = "_virtual_bus.transformer.$(transformer_name)_$(bus)",
         )
 
-        if !get(data_math, "is_kron_reduced", false)
+        if !kron_reduced
             if bus in tr_t_bus
-                bus_obj["terminals"] = collect(1:nphases+1)
-                bus_obj["vmin"] = fill(0.0, nphases+1)
-                bus_obj["vmax"] = fill(Inf, nphases+1)
-                bus_obj["grounded"] = [fill(false, nphases)..., true]
-                bus_obj["rg"] = [0.0]
-                bus_obj["xg"] = [0.0]
+                bus_obj.terminals = collect(1:nphases+1)
+                bus_obj.vmin = fill(0.0, nphases+1)
+                bus_obj.vmax = fill(Inf, nphases+1)
+                bus_obj.grounded = [fill(false, nphases)..., true]
+                bus_obj.rg = [0.0]
+                bus_obj.xg = [0.0]
             else
-                bus_obj["terminals"] = collect(1:nphases)
-                bus_obj["vmin"] = fill(0.0, nphases)
-                bus_obj["vmax"] = fill(Inf, nphases)
+                bus_obj.terminals = collect(1:nphases)
+                bus_obj.vmin = fill(0.0, nphases)
+                bus_obj.vmax = fill(Inf, nphases)
             end
         end
 
-        data_math["bus"]["$(bus_obj["index"])"] = bus_obj
-
-        bus_ids[bus] = bus_obj["bus_i"]
-
-        push!(to_map, "bus.$(bus_obj["index"])")
+        push!(bus_objs, bus_obj)
     end
 
+    branch_objs = MathBranch[]
     for (l,(i,j)) in lines
         # merge the shunts into the shunts of the pi model of the line
         g_fr = b_fr = g_to = b_to = 0
@@ -389,36 +386,29 @@ function _build_loss_model!(
             delete!(shunts, j)
         end
 
-        branch_obj = Dict{String,Any}(
-            "name" => "_virtual_branch.transformer.$(transformer_name)_$(l)",
-            "source_id" => "_virtual_branch.transformer.$(transformer_name)_$(l)",
-            "index" => length(data_math["branch"])+1,
-            "br_status"=>status,
-            "f_bus"=>bus_ids[i],
-            "t_bus"=>bus_ids[j],
-            "f_connections"=>data_math["bus"]["$(bus_ids[i])"]["terminals"][collect(1:nphases)],
-            "t_connections"=>data_math["bus"]["$(bus_ids[j])"]["terminals"][collect(1:nphases)],
-            "br_r" => LinearAlgebra.diagm(0=>fill(real(z[l]), nphases)),
-            "br_x" => LinearAlgebra.diagm(0=>fill(imag(z[l]), nphases)),
-            "g_fr" => LinearAlgebra.diagm(0=>fill(g_fr, nphases)),
-            "b_fr" => LinearAlgebra.diagm(0=>fill(b_fr, nphases)),
-            "g_to" => LinearAlgebra.diagm(0=>fill(g_to, nphases)),
-            "b_to" => LinearAlgebra.diagm(0=>fill(b_to, nphases)),
-            "angmin" => fill(-10.0, nphases),
-            "angmax" => fill( 10.0, nphases),
-            "c_rating_a" => fill(Inf, nphases),
-            "shift" => zeros(nphases),
-            "tap" => ones(nphases),
-            "switch" => false,
-            "transformer" => false,
+        branch_obj = MathBranch(;
+            # name = "_virtual_branch.transformer.$(transformer_name)_$(l)",
+            source_id = "_virtual_branch.transformer.$(transformer_name)_$(l)",
+            index = l,
+            br_status =status,
+            f_bus =i,
+            t_bus =j,
+            f_connections = bus_objs[i].terminals[collect(1:nphases)],
+            t_connections = bus_objs[j].terminals[collect(1:nphases)],
+            br_r = LinearAlgebra.diagm(0=>fill(real(z[l]), nphases)),
+            br_x = LinearAlgebra.diagm(0=>fill(imag(z[l]), nphases)),
+            g_fr = LinearAlgebra.diagm(0=>fill(g_fr, nphases)),
+            b_fr = LinearAlgebra.diagm(0=>fill(b_fr, nphases)),
+            g_to = LinearAlgebra.diagm(0=>fill(g_to, nphases)),
+            b_to = LinearAlgebra.diagm(0=>fill(b_to, nphases)),
+            angmin = fill(-10.0, nphases),
+            angmax = fill( 10.0, nphases),
         )
 
-        data_math["branch"]["$(branch_obj["index"])"] = branch_obj
-
-        push!(to_map, "branch.$(branch_obj["index"])")
+        push!(branch_objs, branch_obj)
     end
 
-    return Vector{Int}([bus_ids[bus] for bus in tr_t_bus])
+    return (buses, branch_objs)
 end
 
 

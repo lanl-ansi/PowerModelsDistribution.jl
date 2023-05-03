@@ -1,7 +1,22 @@
+
+"""
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssObject
+    _apply_property_pairs(T(), property_pairs, dss, dss_raw)
+end
+
+
+"""
+"""
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}})::T where T <: DssOptions
+    _apply_property_pairs(T(), property_pairs)
+end
+
+
 """
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLine
-    raw_fields = collect(x.first for x in property_pairs)
+    raw_fields = _get_raw_fields(property_pairs)
 
     line = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
@@ -84,7 +99,9 @@ end
 """
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssVsource
-    raw_fields = collect(x.first for x in property_pairs)
+    raw_fields = _get_raw_fields(property_pairs)
+
+    isempty(filter(x->x.first=="bus1", property_pairs)) && push!(property_pairs, "bus1"=>"sourcebus")
 
     vsource = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
@@ -230,7 +247,7 @@ end
 """
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssCapacitor
-    raw_fields = collect(x.first for x in property_pairs)
+    raw_fields = _get_raw_fields(property_pairs)
 
     capacitor = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
@@ -242,19 +259,8 @@ end
 
 """
 """
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssTransformer
-    raw_fields = collect(x.first for x in property_pairs)
-
-    transformer = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
-
-    return transformer
-end
-
-
-"""
-"""
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssReactor
-    raw_fields = collect(x.first for x in property_pairs)
+    raw_fields = _get_raw_fields(property_pairs)
 
     reactor = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 

@@ -142,6 +142,7 @@ function transform_data_model(
     make_pu::Bool=true,
     make_pu_extensions::Vector{<:Function}=Function[],
     correct_network_data::Bool=true,
+    kwargs...
     )::Dict{String,Any}
 
     current_data_model = get(data, "data_model", MATHEMATICAL)
@@ -172,44 +173,37 @@ function transform_data_model(
 end
 
 
-function transform_data_model(::Type{MathematicalModel}, eng::EngineeringModel; kwargs...)
-    # math = MathematicalDataModel()
+# """
+# """
+# function transform_data_model(::Type{MathematicalModel{NetworkModel}}, eng::EngineeringModel{NetworkModel}; kwargs...)
+#     eng_data = filter(x->!isempty(x.second), _convert_model_to_dict(eng))
+#     eng_data["data_model"] = ENGINEERING
 
-    eng_data = filter(x->!isempty(x.second), _convert_model_to_dict(eng))
-    eng_data["data_model"] = ENGINEERING
+#     transform_data_model(eng_data; kwargs...)
+# end
 
-    @warn "" eng_data
 
-    return eng_data
-    transform_data_model(eng_data; kwargs...)
-end
+"""
+"""
+function transform_data_model(::Type{MathematicalModel{NetworkModel}}, eng::EngineeringModel{NetworkModel}; kwargs...)
+    math = MathematicalDataModel()
 
-function _convert_model_to_dict(data::Union{InfrastructureDataModel,GenericInfrastructureObject})::Dict{String,Any}
-    out = Dict{String,Any}(
-    )
-
-    for property in propertynames(data)
-        item = getproperty(data, property)
-
-        if isa(item, Dict)
-            out["$property"] = Dict{String,Any}()
-            for (id, obj) in item
-                if isa(obj, GenericInfrastructureObject)
-                    out["$property"]["$id"] = _convert_model_to_dict(obj)
-                else
-                    out["$property"]["$id"] = obj
-                end
+    for (_, eng_objects) in eng
+        if !isa(eng_objects, EngObject)
+            for (_, eng_obj) in eng_objects
+                convert_eng2math!(math, eng_obj; eng=eng)
             end
-        elseif isa(item, GenericInfrastructureObject)
-            out["$property"] = _convert_model_to_dict(item)
         else
-            out["$property"] = item
+            convert_eng2math!(math, eng_objects; eng=eng)
         end
     end
 
-    return filter(x->!ismissing(x.second), out)
+    return math
 end
 
+transform_data_model(t::Type{MathematicalModel{NetworkModel}}, dss::DssRawModel; kwargs...) = transform_data_model(t, transform_data_model(DssModel, dss); kwargs...)
+transform_data_model(t::Type{MathematicalModel{NetworkModel}}, dss::DssModel; kwargs...) = transform_data_model(t, transform_data_model(EngineeringModel{NetworkModel}, dss); kwargs...)
+transform_data_model(eng::EngineeringModel{T}; kwargs...) where T = transform_data_model(MathematicalModel{T}, eng; kwargs...)
 
 function create_math_object!(obj::MathDataObject, math::MathematicalModel)
 end
@@ -218,7 +212,7 @@ function create_math_object(obj::EngBus)::MathBus
 end
 
 
-function transform_data_model(::Type{MathematicalModel}, mn_eng::MultinetworkEngineeringDataModel)::MultinetworkMathematicalDataModel
+function transform_data_model(::Type{MathematicalModel}, mn_eng::EngineeringMultinetworkDataModel)::MultinetworkMathematicalDataModel
     mn_math = MultinetworkMathematicalDataModel()
 end
 
@@ -538,7 +532,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
             for w in 1:nrw
                 # 2-WINDING TRANSFORMER
                 # make virtual bus and mark it for reduction
-                tm_nom = eng_obj["configuration"][w]==DELTA ? eng_obj["vm_nom"][w]*sqrt(3) : eng_obj["vm_nom"][w]
+                tm_nom = eng_obj["configurations"][w]==DELTA ? eng_obj["vm_nom"][w]*sqrt(3) : eng_obj["vm_nom"][w]
                 transformer_2wa_obj = Dict{String,Any}(
                     "name"          => "_virtual_transformer.$name.$w",
                     "source_id"     => "_virtual_transformer.$(eng_obj["source_id"]).$w",
@@ -547,7 +541,7 @@ function _map_eng2math_transformer!(data_math::Dict{String,<:Any}, data_eng::Dic
                     "tm_nom"        => tm_nom,
                     "f_connections" => eng_obj["connections"][w],
                     "t_connections" => get(data_math, "is_kron_reduced", false) ? eng_obj["connections"][1] : collect(1:dims+1),
-                    "configuration" => eng_obj["configuration"][w],
+                    "configuration" => eng_obj["configurations"][w],
                     "polarity"      => eng_obj["polarity"][w],
                     "tm_set"        => eng_obj["tm_set"][w],
                     "tm_fix"        => eng_obj["tm_fix"][w],
@@ -707,6 +701,13 @@ function _map_eng2math_shunt!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
 
         # add capcontrol items to math model
         if haskey(eng_obj,"controls")
+            math_obj["controls"] = deepcopy(eng_obj["controls"])
+            if haskey(math_obj["controls"], "vm_lb")
+                math_obj["controls"]["vmin"] = pop!(math_obj["controls"], "vm_lb")
+            end
+            if haskey(math_obj["controls"], "vm_ub")
+                math_obj["controls"]["vmax"] = pop!(math_obj["controls"], "vm_ub")
+            end
             dss_obj_type = split(math_obj["controls"]["element"], "."; limit=2)[1]
             if dss_obj_type == "line"
                 elem_id = filter(x->x.second["source_id"] == math_obj["controls"]["element"], data_math["branch"])
@@ -1055,86 +1056,5 @@ function _map_eng2math_voltage_source!(data_math::Dict{String,<:Any}, data_eng::
 end
 
 
-
-"""
-"""
-function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngBus)
-
-end
-
-
-"""
-"""
-function convert_eng2math!(math::MathematicalDataModel, eng_obj::Eng3pBus)
-
-end
-
-
-"""
-"""
-function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngLine)
-
-end
-
-
-"""
-"""
-function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngSwitch)
-
-end
-
-
-"""
-"""
-function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngTransformer)
-
-end
-
-
-"""
-"""
-function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngAl2wTransformer)
-
-end
-
-
-"""
-"""
-function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngLoad)
-
-end
-
-
-"""
-"""
-function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngShunt)
-
-end
-
-
-"""
-"""
-function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngGenerator)
-
-end
-
-
-"""
-"""
-function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngSolar)
-
-end
-
-
-"""
-"""
-function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngStorage)
-
-end
-
-
-"""
-"""
-function convert_eng2math!(math::MathematicalDataModel, eng_obj::EngVoltageSource)
-
+function convert_eng2math!(math, eng_obj; eng=missing)
 end

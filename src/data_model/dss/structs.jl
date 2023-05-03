@@ -480,45 +480,85 @@ Base.@kwdef mutable struct DssVsource <: DssEdgeObject
 end
 
 
-DssCircuit = DssVsource
+Base.@kwdef mutable struct DssCircuit <: DssDataObject
+    name::String = ""
+    bus1::String = ""
+    bus2::String = ""
+    basekv::Float64 = 115.0
+    pu::Float64 = 1.0
+    angle::Float64 = 0.0
+    frequency::Float64 = 60.0
+    phases::Int = 3
+    mvasc3::Float64 = 2000.0
+    mvasc1::Float64 = 2100.0
+    x1r1::Float64 = 4.0
+    x0r0::Float64 = 3.0
+    isc3::Float64 = 10041.0
+    isc1::Float64 = 10543.0
+    r1::Float64 = 1.65
+    x1::Float64 = 6.6
+    r0::Float64 = 1.9
+    x0::Float64 = 5.7
+    scantype::String = "pos"
+    sequence::String = "pos"
+    spectrum::String = "defaultvsource"
+    z1::Vector{Float64} = Float64[r1, x1]
+    z2::Vector{Float64} = Float64[r1, x1]
+    z0::Vector{Float64} = Float64[r0, x0]
+    puz1::Vector{Float64} = Float64[0.0, 0.0]
+    puz2::Vector{Float64} = puz1
+    puz0::Vector{Float64} = puz1
+    basemva::Float64 = 100.0
+    basefreq::Float64 = 60.0
+    like::String = ""
+    enabled::Status = ENABLED
+    rmatrix::Matrix{Float64} = zeros(Float64, phases, phases)
+    xmatrix::Matrix{Float64} = zeros(Float64, phases, phases)
+    r_self::Float64 = 1.73333
+    r_mutual::Float64 = 0.0833
+    x_self::Float64 = 6.35667
+    x_mutual::Float64 = -0.03
+    vmag::Float64 = 0.0
+    raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
+end
 
 
 Base.@kwdef mutable struct DssIsource <: DssNodeObject
-    name::String
-    phases::Int
-    bus1::String
-    amps::Float64
-    angle::Float64
-    frequency::Float64
-    scantype::String
-    sequence
-    spectrum::String
-    basefreq::Float64
-    enabled::Status
-    like::String
+    name::String = ""
+    phases::Int = 3
+    bus1::String = ""
+    amps::Float64 = 0.0
+    angle::Float64 = 0.0
+    frequency::Float64 = 60.0
+    scantype::String = "pos"
+    sequence::String = "pos"
+    spectrum::String = "default"
+    basefreq::Float64 = 60.0
+    enabled::Status = ENABLED
+    like::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
 
 Base.@kwdef mutable struct DssFault <: DssEdgeObject
-    name::String
-    phases::Int
-    bus1::String
-    bus2::String
-    r::Float64
-    gmatrix::Matrix{Float64}
-    minamps::Float64
-    ontime::Bool
-    pctperm::Float64
-    temporary::Bool
-    var"%stddev"::Float64
-    normamps::Float64
-    emergamps::Float64
-    basefreq::Float64
-    faultrate::Float64
-    repair::Float64
-    enabled::Status
-    like::String
+    name::String = ""
+    phases::Int = 1
+    bus1::String = ""
+    bus2::String = ""
+    r::Float64 = 0.0001
+    gmatrix::Matrix{Float64} = zeros(Float64, phases, phases)
+    minamps::Float64 = 5.0
+    ontime::Float64 = 0.0
+    pctperm::Float64 = 0.0
+    temporary::Bool = false
+    var"%stddev"::Float64 = 0.0
+    normamps::Float64 = 0.0
+    emergamps::Float64 = 0.0
+    basefreq::Float64 = 60.0
+    faultrate::Float64 = 0.0
+    repair::Float64 = 0.0
+    enabled::Status = ENABLED
+    like::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
@@ -610,6 +650,8 @@ Base.@kwdef mutable struct DssReactor <: DssEdgeObject
     z1::Vector{Float64} = Float64[r, x]
     z2::Vector{Float64} = Float64[0.0, 0.0]
     z0::Vector{Float64} = Float64[0.0, 0.0]
+    gmatrix::Matrix{Float64} = zeros(Float64, phases, phases)
+    bmatrix::Matrix{Float64} = zeros(Float64, phases, phases)
     rcurve::String = ""
     lcurve::String = ""
     lmh::Float64 = x / (2 * pi * 60.0) * 1e3
@@ -619,6 +661,7 @@ Base.@kwdef mutable struct DssReactor <: DssEdgeObject
     faultrate::Float64 = 0.1
     pctperm::Float64 = 20.0
     basefreq::Float64 = 60.0
+    l::Float64 = x / 2π / basefreq
     enabled::Status = ENABLED
     like::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
@@ -680,54 +723,54 @@ end
 
 
 Base.@kwdef mutable struct DssGictransformer <: DssEdgeObject
-    name::String
-    basefreq::Float64
-    bush::String
-    busnh::String
-    busnx::String
-    busx::String
-    emergamps::Float64
-    enabled::Status
-    phases::Int
-    r1::Float64
-    r2::Float64
-    type::String
-    mva::String
-    kvll1::Float64
-    kvll2::Float64
-    var"%r1"::Float64
-    var"%r2"::Float64
-    k::Float64
-    varcurve::String
-    like::String
-    normamps::Float64
-    pctperm::Float64
-    repair::Float64
+    name::String = ""
+    basefreq::Float64 = 60.0
+    bush::String = ""
+    busnh::String = "$bush.0.0.0"
+    busx::String = ""
+    busnx::String = "$busx.0.0.0"
+    emergamps::Float64 = 0.0
+    enabled::Status = ENABLED
+    phases::Int = 3
+    r1::Float64 = 5.0
+    r2::Float64 = 0.38088
+    type::String = "gsu"
+    mva::Float64 = 100.0
+    kvll1::Float64 = 500.0
+    kvll2::Float64 = 138.0
+    var"%r1"::Float64 = 0.2
+    var"%r2"::Float64 = 0.2
+    k::Float64 = 2.2
+    varcurve::String = ""
+    like::String = ""
+    normamps::Float64 = 0.0
+    pctperm::Float64 = 0.0
+    repair::Float64 = 0.0
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
 
 Base.@kwdef mutable struct DssGicline <: DssEdgeObject
-    name::String
-    angle::Float64
-    bus1::String
-    bus2::String
-    c
-    ee
-    en
-    frequency::Float64
-    lat1::Float64
-    lat2::Float64
-    lon1::Float64
-    lon2::Float64
-    phases::Int
-    r::Float64
-    volts::Float64
-    x::Float64
-    like::String
-    basefreq::Float64
-    enabled::Status
-    spectrum::String
+    name::String = ""
+    angle::Float64 = 0.0
+    bus1::String = ""
+    bus2::String = ""
+    c::Float64 = 0.0
+    ee::Float64 = 1.0
+    en::Float64 = 1.0
+    frequency::Float64 = 0.1
+    lat1::Float64 = 33.613499
+    lat2::Float64 = 33.547885
+    lon1::Float64 = -87.373673
+    lon2::Float64 = -86.074605
+    phases::Int = 3
+    r::Float64 = 1.0
+    volts::Float64 = 113.32316
+    x::Float64 = 0.0
+    like::String = ""
+    basefreq::Float64 = 60.0
+    enabled::Status = ENABLED
+    spectrum::String = ""
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
@@ -830,26 +873,32 @@ end
 
 
 Base.@kwdef mutable struct DssIndmach012 <: DssNodeObject
-    name::String
-    phases::Int
-    bus1::String
-    kv::Float64
-    kw::Float64
-    pf::Float64
-    conn::ConnConfig
-    kva::Float64
-    h::Float64
-    d::Float64
-    purs
-    puxs
-    purr
-    puxr
-    slip
-    maxslip
-    slipoption
-    spectrum::String
-    enabled::Status
-    like::String
+    name::String = ""
+    phases::Int = 3
+    bus1::String = ""
+    kv::Float64 = 12.47
+    kw::Float64 = 1000.0
+    pf::Float64 = 1.0
+    conn::ConnConfig = DELTA
+    kva::Float64 = 1200.0
+    h::Float64 = 1.0
+    d::Float64 = 1.0
+    purs::Float64 = 0.0053
+    puxs::Float64 = 0.106
+    purr::Float64 = 0.007
+    puxr::Float64 = 0.12
+    puxm::Float64 = 4.0
+    slip::Float64 = 0.007
+    maxslip::Float64 = 0.1
+    slipoption::String = "variable"
+    spectrum::String = ""
+    enabled::Status = ENABLED
+    like::String = ""
+    daily::String = ""
+    yearly::String = ""
+    duty::String = ""
+    debugtrace::Bool = false
+    basefreq::Float64 = 60.0
     raw_dss::Vector{Pair{String,String}} = Pair{String,String}[]
 end
 
@@ -1016,6 +1065,7 @@ Base.@kwdef mutable struct DssPvsystem <: DssNodeObject
     temperature::Float64 = 25.0
     pf::Float64 = 1.0
     conn::ConnConfig = WYE
+    kw::Float64 = 0.0
     kvar::Float64 = 0.0
     kva::Float64 = 500.0
     var"%cutin"::Float64 = 20.0
@@ -1158,8 +1208,9 @@ Base.@kwdef mutable struct DssSwtcontrol <: DssControlObject
 end
 
 
-Base.@kwdef struct OpenDssDataModel <: DssModel
+Base.@kwdef mutable struct OpenDssDataModel <: DssModel
     options::DssOptions = DssOptions()
+    circuit::Dict{String,DssCircuit} = Dict{String,DssCircuit}()
     linecode::Dict{String,DssLinecode} = Dict{String,DssLinecode}()
     linegeometry::Dict{String,DssLinegeometry} = Dict{String,DssLinegeometry}()
     linespacing::Dict{String,DssLinespacing} = Dict{String,DssLinespacing}()
@@ -1235,4 +1286,7 @@ end
 
 
 ""
-const _dss_short_prop_names_map = _generate_short_property_names()
+const _dss_short_prop_names_map::Dict{Type,Dict{String,String}} = _generate_short_property_names()
+
+""
+# create_dss_object(::Type{T}, ::Vector{Pair{String,String}}, ::DistributionModel, ::DistributionModel) where T = throw(ErrorException("Creating a DssObject of type $(typeof(T)) is not supported)"))

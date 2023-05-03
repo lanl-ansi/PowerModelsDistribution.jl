@@ -55,11 +55,11 @@ end
 
 
 ""
-function _parse_dss_obj_type_name(dss_obj_type_name::SubString)::Vector{String}
+function _parse_dss_obj_type_name(dss_obj_type_name::AbstractString)::Vector{String}
     obj_type_name = string.(split(replace(replace(dss_obj_type_name, "\""=>""), "\'"=>""), '.'))
-    if obj_type_name[1] == "circuit"
-        obj_type_name = String["vsource", "source"]
-    end
+    # if obj_type_name[1] == "circuit"
+    #     obj_type_name = String["vsource", "source"]
+    # end
 
     obj_type_name
 end
@@ -67,6 +67,9 @@ end
 
 ""
 function _parse_dss_cmd_new!(data_dss::DssRawModel, line::String, line_number::Int)::Nothing
+    orig_dss_obj_name = missing
+    orig_dss_obj_type = missing
+
     rmatches_iterator = eachmatch(_dss_cmd_new_regex, line)
 
     dss_obj_match = iterate(rmatches_iterator)[1]
@@ -74,6 +77,9 @@ function _parse_dss_cmd_new!(data_dss::DssRawModel, line::String, line_number::I
     dss_obj_type, dss_obj_name = _parse_dss_obj_type_name(dss_obj_match.captures[3])
 
     if dss_obj_type == "circuit"
+        orig_dss_obj_name = dss_obj_name
+        orig_dss_obj_type = dss_obj_type
+
         dss_obj_name = "source"
         dss_obj_type = "vsource"
     end
@@ -85,19 +91,23 @@ function _parse_dss_cmd_new!(data_dss::DssRawModel, line::String, line_number::I
     data_dss.current_state.active_obj_name = dss_obj_name
 
     if !haskey(data_dss[dss_obj_type], dss_obj_name)
-        data_dss[dss_obj_type][dss_obj_name] = Vector{Pair{String,Any}}(["name"=>dss_obj_name])
+        data_dss[dss_obj_type][dss_obj_name] = Pair{String,String}["name"=>dss_obj_name]
+    end
+    if !ismissing(orig_dss_obj_type) && !haskey(data_dss[orig_dss_obj_type], orig_dss_obj_name)
+        data_dss[orig_dss_obj_type][orig_dss_obj_name] = Pair{String,String}["name"=>orig_dss_obj_name]
     end
 
     push!(data_dss[dss_obj_type][dss_obj_name], "__path__" => dirname(data_dss.current_state.current_file))
+    !ismissing(orig_dss_obj_type) && push!(data_dss[dss_obj_type][dss_obj_name], "__path__" => dirname(data_dss.current_state.current_file))
 
     for (i, _match) in enumerate(rmatches_iterator)
         if i > 1
             property_key, property_value = _parse_match_element(_match, dss_obj_type; prev_k=data_dss.current_state.active_obj_field)
             data_dss.current_state.active_obj_field = property_key
             push!(data_dss[dss_obj_type][dss_obj_name], property_key => property_value)
+            !ismissing(orig_dss_obj_type) && push!(data_dss[dss_obj_type][dss_obj_name], property_key => property_value)
         end
     end
-    nothing
 end
 
 
@@ -109,12 +119,11 @@ function _parse_dss_cmd_more!(data_dss::DssRawModel, line::String, line_number::
 
         push!(getproperty(data_dss, Symbol(data_dss.current_state.active_obj_type))[data_dss.current_state.active_obj_name], property_key => strip(property_value))
     end
-    nothing
 end
 
 
 ""
-function _parse_dss_cmd_set!(data_dss::DssRawModel, line::String, line_number::Int)
+function _parse_dss_cmd_set!(data_dss::DssRawModel, line::String, line_number::Int)::Nothing
     for _match in eachmatch(_dss_cmd_set_regex, line)
         property_key, property_value = _parse_match_element(_match, "options")
         push!(data_dss["options"], property_key => property_value)
@@ -123,7 +132,7 @@ end
 
 
 ""
-function _parse_dss_cmd_edit!(data_dss::DssRawModel, line::String, line_number::Int)
+function _parse_dss_cmd_edit!(data_dss::DssRawModel, line::String, line_number::Int)::Nothing
     rmatches_iterator = eachmatch(_dss_cmd_new_regex, line)
 
     dss_obj_match = iterate(rmatches_iterator)[1]
@@ -138,7 +147,7 @@ end
 
 
 ""
-function _parse_dss_cmd_redirect!(data_dss::DssRawModel, line::String, line_number::Int)
+function _parse_dss_cmd_redirect!(data_dss::DssRawModel, line::String, line_number::Int)::Union{Nothing,DssRawModel}
     file = replace(line, r"(redirect|compile)\s*"=>"")
     file_path = FilePaths.Path(strip(file, ['(',')']))
     current_file = data_dss.filename[end]
@@ -152,7 +161,7 @@ end
 
 
 ""
-_parse_dss_cmd_compile!(data_dss::DssRawModel, line::String, line_number::Int)::Nothing = _parse_dss_cmd_redirect!(data_dss, line, line_number)
+_parse_dss_cmd_compile!(data_dss::DssRawModel, line::String, line_number::Int) = _parse_dss_cmd_redirect!(data_dss, line, line_number)
 
 
 ""
@@ -178,11 +187,9 @@ end
 
 
 ""
-function _parse_dss_cmd_clear!(data_dss::DssRawModel, line::String, line_number::Int)::Nothing
+function _parse_dss_cmd_clear!(data_dss::DssRawModel, line::String, line_number::Int)::DssRawModel
     @info "Circuit has been reset with the 'clear' on line $(line_number) in '$(basename(data_dss.current_state.current_file))'"
     data_dss = _init_dss_data(; current_file=data_dss.current_state.current_file)
-
-    nothing
 end
 
 
@@ -209,7 +216,7 @@ function _parse_dss_cmd_buscoords!(data_dss::DssRawModel, file::String, line_num
     full_path = joinpath(data_dss.current_state.base_path, file_path...)
 
     @info "Reading Buscoords in '$(basename(full_path))' on line $(line_number) in '$(basename(data_dss.current_state.current_file))'"
-    open(first(Glob.glob([Glob.FilenameMatch(basename(full_path), "i")], dirname(full_path))), "r") do io
+    open(first(Glob.glob([Glob.FilenameMatch(basename(full_path), "i")], string(dirname(full_path)))), "r") do io
         buscoords = _parse_dss_cmd_buscoords(io)
         for bc in buscoords
             push!(data_dss.buscoordinates, bc)
@@ -231,11 +238,11 @@ end
 
 
 ""
-_parse_dss_cmd_latloncoords!(data_dss::DssRawModel, file::String, line_number::Int)::Nothing = _parse_dss_cmd_buscoords!(data_dss, file, line_number)
+_parse_dss_cmd_latloncoords!(data_dss::DssRawModel, file::String, line_number::Int)::Vector{DssBuscoords} = _parse_dss_cmd_buscoords!(data_dss, file, line_number)
 
 
 ""
-function _parse_dss_cmd_setbusxy!(data_dss::DssRawModel, line::String, line_number::Int)::Nothing
+function _parse_dss_cmd_setbusxy!(data_dss::DssRawModel, line::String, line_number::Int)::Vector{DssBuscoords}
     properties = Dict{String,String}()
     for _match in eachmatch(_dss_cmd_new_regex, line)
         property_key, property_value = _parse_match_element(_match, "setbusxy"; prev_k=data_dss.current_state.active_obj_field)
@@ -244,8 +251,6 @@ function _parse_dss_cmd_setbusxy!(data_dss::DssRawModel, line::String, line_numb
     end
 
     push!(data_dss.buscoordinates, DssBuscoords([k ∈ ["x", "y"] ? parse(Float64, properties[k]) : properties[k] for k in ["bus", "x", "y"]]...))
-
-    nothing
 end
 
 ""
@@ -278,14 +283,14 @@ Will also parse files defined inside of the originating DSS file via the
 "compile", "redirect" or "buscoords" commands.
 """
 function parse_raw_dss(path::FilePaths.AbstractPath, data::DssRawModel)::DssRawModel
-    open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path)))) do io
+    open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], string(dirname(path))))) do io
         parse_raw_dss(io, data)
     end
 end
 
 
 ""
-parse_raw_dss(io::IO, data::Missing=missing)::DssRawModel = parse_raw_dss(io, DssRawModel())
+parse_raw_dss(io::IO, data::Missing=missing)::DssRawModel = parse_raw_dss(io, OpenDssRawDataModel())
 
 
 """

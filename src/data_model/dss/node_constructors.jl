@@ -1,7 +1,7 @@
 """
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLoad
-    raw_fields = collect(x.first for x in property_pairs)
+    raw_fields = _get_raw_fields(property_pairs)
 
     load = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
@@ -31,7 +31,7 @@ end
 """
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssStorage
-    raw_fields = collect(x.first for x in property_pairs)
+    raw_fields = _get_raw_fields(property_pairs)
 
     strg = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
@@ -60,7 +60,7 @@ end
 """
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssGenerator
-    raw_fields = collect(x.first for x in property_pairs)
+    raw_fields = _get_raw_fields(property_pairs)
 
     gen = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
@@ -97,7 +97,7 @@ end
 """
 """
 function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssPvsystem
-    raw_fields = collect(x.first for x in property_pairs)
+    raw_fields = _get_raw_fields(property_pairs)
 
     pv = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 

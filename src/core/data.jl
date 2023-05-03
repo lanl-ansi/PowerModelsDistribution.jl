@@ -39,6 +39,21 @@ const pmd_math_component_status_inactive = Dict{String,Int}(
 )
 
 
+""
+apply_pmd!(func!::Function, data::InfrastructureModel{T}; apply_to_subnetworks::Bool=false, kwargs...) where T <: NetworkModel = func!(data; kwargs...)
+
+
+""
+function apply_pmd!(func!::Function, data::DistributionModel{T}; apply_to_subnetworks::Bool=false, kwargs...) where T <: MultinetworkModel
+    if apply_to_subnetworks
+        for (nw, nw_data) in data.nw
+            func!(nw_data; kwargs...)
+        end
+    else
+        func!(data; kwargs...)
+    end
+end
+
 """
     apply_pmd!(func!::Function, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true, kwargs...)
 
@@ -246,6 +261,187 @@ function count_nodes(data::Dict{String,<:Any})::Int
     return n_nodes
 end
 
+
+"""
+    count_nodes(data::Dict{String,<:Any})::Int
+
+Counts number of nodes in network
+"""
+function count_nodes(data::EngineeringModel{NetworkModel})::Int
+    n_nodes = 0
+
+    for (name, bus) in data["bus"]
+        if all(!occursin(pattern, name) for pattern in [_excluded_count_busname_patterns...])
+            n_nodes += length([n for n in bus["terminals"] if !(n in get(bus, "grounded", []))])
+        end
+    end
+
+    return n_nodes
+end
+
+
+"""
+    count_nodes(data::Dict{String,<:Any})::Int
+
+Counts number of nodes in network
+"""
+function count_nodes(data::DssModel)::Int
+    n_nodes = 0
+
+    all_nodes = Dict()
+    for root_prop in propertynames(data)
+        for (id, object) in getproperty(data, root_prop)
+            if isa(object, DssTransformer)
+                for busname in values(object["buses"])
+                    name, nodes = _parse_bus_id(busname)
+
+                    if !isempty(name)
+                        if !haskey(all_nodes, name)
+                            all_nodes[name] = Set([])
+                        end
+
+                        for (n, node) in enumerate(nodes[1:3])
+                            if node
+                                push!(all_nodes[name], n)
+                            end
+                        end
+                    end
+                end
+            elseif isa(object, DssNodeObject) || isa(object, DssEdgeObject)
+                for prop in propertynames(object)
+                    if startswith("$prop", "bus") && "$prop" != "buses"
+                        name, nodes = _parse_bus_id(getproperty(object, prop))
+                        if !isempty(name)
+                            if !haskey(all_nodes, name)
+                                all_nodes[name] = Set([])
+                            end
+
+                            for (n, node) in enumerate(nodes[1:3])
+                                if node
+                                    push!(all_nodes[name], n)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    for (name, phases) in all_nodes
+        n_nodes += length(phases)
+    end
+
+    return n_nodes
+end
+
+
+"""
+    count_nodes(data::Dict{String,<:Any})::Int
+
+Counts number of nodes in network
+"""
+function count_nodes(data::MathematicalModel{NetworkModel})::Int
+    n_nodes = 0
+
+    for (name, bus) in data["bus"]
+        name = bus["name"]
+
+        if all(!occursin(pattern, name) for pattern in [_excluded_count_busname_patterns...])
+            if get(data, "is_projected", false)
+                n_nodes += count(i->i>0, get(bus, "vmax", []))
+            else
+                n_nodes += length(bus["terminals"][.!get(bus, "grounded", zeros(length(bus["terminals"])))])
+            end
+        end
+    end
+
+    return n_nodes
+end
+
+
+"""
+    count_active_connections(data::)
+
+Counts active ungrounded connections on edge components
+"""
+function count_active_connections(data::MathematicalModel{NetworkModel})::Int
+    edge_elements = _math_edge_elements
+    active_connections = 0
+
+    for edge_type in edge_elements
+        for (_, component) in get(data, edge_type, Dict())
+            counted_connections = Set([])
+            for (bus, connections) in [(component["f_bus"], component["f_connections"]), (component["t_bus"], component["t_connections"])]
+                for (i, terminal) in enumerate(connections)
+                    if !(terminal in counted_connections)
+                        if edge_type == "transformer"
+                            if get(data, "is_kron_reduced", false) || component["configuration"] == DELTA || (component["configuration"] == WYE && terminal != connections[end])
+                                push!(counted_connections, terminal)
+                                active_connections += 1
+                            end
+                        elseif !get(data["bus"]["$bus"]["grounded"], i, false)
+                            if get(data, "is_projected", false) && get(data["bus"]["$bus"]["vmax"], i, Inf) > 0
+                                push!(counted_connections, terminal)
+                                active_connections += 1
+                            else
+                                push!(counted_connections, terminal)
+                                active_connections += 1
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return active_connections
+end
+
+
+"""
+    count_active_connections(data::Dict{String,<:Any})
+
+Counts active ungrounded connections on edge components
+"""
+function count_active_connections(data::EngineeringModel{NetworkModel})::Int
+    edge_elements = _eng_edge_elements
+    active_connections = 0
+
+    for edge_type in edge_elements
+        for (_, component) in get(data, edge_type, Dict())
+            counted_connections = Set([])
+            if edge_type == "transformer" && !haskey(component, "f_connections")
+                for (wdg, connections) in enumerate(component["connections"])
+                    for terminal in connections
+                        if !(terminal in counted_connections)
+                            if !(terminal in data["bus"][component["bus"][wdg]]["grounded"])
+                                push!(counted_connections, terminal)
+                                active_connections += 1
+                            end
+                        end
+                    end
+                end
+            else
+                for (bus, connections) in [(component["f_bus"], component["f_connections"]), (component["t_bus"], component["t_connections"])]
+                    for (i, terminal) in enumerate(connections)
+                        if !(terminal in counted_connections)
+                            if edge_type == "transformer" && (get(data, "is_kron_reduced", false) || (component["configuration"] == WYE && terminal != connections[end]))
+                                push!(counted_connections, terminal)
+                                active_connections += 1
+                            elseif !(terminal in data["bus"][bus]["grounded"])
+                                push!(counted_connections, terminal)
+                                active_connections += 1
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return active_connections
+end
+
+
 """
     count_active_connections(data::Dict{String,<:Any})
 
@@ -306,6 +502,60 @@ function count_active_connections(data::Dict{String,<:Any})::Int
         end
     end
     return active_connections
+end
+
+
+"""
+    count_active_terminals(data::MathematicalModel{NetworkModel}; count_grounded::Bool=false)
+
+Counts active ungrounded terminals on buses
+"""
+function count_active_terminals(data::MathematicalModel{NetworkModel}; count_grounded::Bool=false)::Int
+    active_terminal_count = 0
+    for (_,bus) in data["bus"]
+        counted_terminals = []
+        for (i, terminal) in enumerate(bus["terminals"])
+            if !(terminal in counted_terminals)
+                if count_grounded
+                    push!(counted_terminals, terminal)
+                    active_terminal_count += 1
+                else
+                    if !get(bus["grounded"], i, false)
+                        push!(counted_terminals, terminal)
+                        active_terminal_count += 1
+                    end
+                end
+            end
+        end
+    end
+    return active_terminal_count
+end
+
+
+"""
+    count_active_terminals(data::EngineeringModel{NetworkModel}; count_grounded::Bool=false)
+
+Counts active ungrounded terminals on buses
+"""
+function count_active_terminals(data::EngineeringModel{NetworkModel}; count_grounded::Bool=false)::Int
+    active_terminal_count = 0
+    for (_,bus) in data["bus"]
+        counted_terminals = []
+        for (i, terminal) in enumerate(bus["terminals"])
+            if !(terminal in counted_terminals)
+                if count_grounded
+                    push!(counted_terminals, terminal)
+                    active_terminal_count += 1
+                else
+                    if !(terminal in bus["grounded"])
+                        push!(counted_terminals, terminal)
+                        active_terminal_count += 1
+                    end
+                end
+            end
+        end
+    end
+    return active_terminal_count
 end
 
 

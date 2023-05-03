@@ -1,16 +1,18 @@
-""
-Base.getindex(@nospecialize(s::Union{InfrastructureDataModel,GenericInfrastructureObject}), k::String) = getproperty(s, Symbol(k))
-Base.getindex(@nospecialize(s::Union{InfrastructureDataModel,GenericInfrastructureObject}), k::Symbol) = getproperty(s, k)
+Base.get(@nospecialize(data::T), k::String, @nospecialize(v::Any)) where T <: Union{InfrastructureModel,InfrastructureObject} = hasproperty(data, Symbol(k)) ? getproperty(data, Symbol(k)) : v
 
-Base.setindex!(@nospecialize(s::T), v::U, k::String) where {U, T <: Union{DssObject, EngObject, MathObject} } = setproperty!(s, Symbol(k), v)
-Base.setindex!(@nospecialize(s::T), v::U, k::Symbol) where {U, T <: Union{DssObject, EngObject, MathObject} } = setproperty!(s, k, v)
+""
+Base.getindex(@nospecialize(s::T), k::String) where T <: Union{InfrastructureModel,InfrastructureObject} = getproperty(s, Symbol(k))
+Base.getindex(@nospecialize(s::T), k::Symbol) where T <: Union{InfrastructureModel,InfrastructureObject} = getproperty(s, k)
+
+Base.setindex!(@nospecialize(s::T), v::U, k::String) where {U, T <: Union{InfrastructureModel,InfrastructureObject} } = setproperty!(s, Symbol(k), v)
+Base.setindex!(@nospecialize(s::T), v::U, k::Symbol) where {U, T <: Union{InfrastructureModel,InfrastructureObject} } = setproperty!(s, k, v)
 
 Base.zero(::Type{String})::String = ""
 Base.zero(::Type{Char})::Char = ' '
 Base.zero(::Type{ConnConfig})::ConnConfig = WYE
 Base.zero(::Type{SwitchState})::SwitchState = OPEN
 
-Base.@propagate_inbounds function Base.iterate(@nospecialize(itr::Union{InfrastructureDataModel,GenericInfrastructureObject}), i::Int=1)
+Base.@propagate_inbounds function Base.iterate(@nospecialize(itr::T), i::Int=1) where T <: Union{InfrastructureModel,InfrastructureObject}
     pn = propertynames(itr)
     i > length(pn) && return nothing
 
@@ -18,24 +20,24 @@ Base.@propagate_inbounds function Base.iterate(@nospecialize(itr::Union{Infrastr
     i <= length(pn) ? (Base.@inbounds Pair{String, typeof(val)}(string(pn[i]), val), i+1) : nothing
 end
 
-Base.haskey(@nospecialize(h::Union{InfrastructureDataModel,GenericInfrastructureObject}), key::String) = (Symbol(key) ∈ [pn for pn in propertynames(h) if !isempty(getproperty(h, pn))])
-Base.haskey(@nospecialize(h::Union{InfrastructureDataModel,GenericInfrastructureObject}), key::Symbol) = (key ∈ [pn for pn in propertynames(h) if !isempty(getproperty(h, pn))])
+Base.haskey(@nospecialize(h::T), key::String) where T <: Union{InfrastructureModel,InfrastructureObject} = (Symbol(key) ∈ [pn for pn in propertynames(h) if !isempty(getproperty(h, pn))])
+Base.haskey(@nospecialize(h::T), key::Symbol) where T <: Union{InfrastructureModel,InfrastructureObject} = (key ∈ [pn for pn in propertynames(h) if !isempty(getproperty(h, pn))])
 
-Base.isempty(@nospecialize(h::Union{InfrastructureDataModel,GenericInfrastructureObject})) = all(isempty(getproperty(h, pn)) for pn in propertynames(h))
+Base.isempty(@nospecialize(h::T)) where T <: Union{InfrastructureModel,InfrastructureObject} = all(isempty(getproperty(h, pn)) for pn in propertynames(h))
 Base.isempty(@nospecialize(h::Missing)) = true
 Base.isempty(::Status) = false
 
-Base.keytype(@nospecialize(::InfrastructureDataModel)) = String
-Base.keytype(@nospecialize(::GenericInfrastructureObject)) = String
+Base.keytype(@nospecialize(::InfrastructureModel)) = String
+Base.keytype(@nospecialize(::InfrastructureObject)) = String
 
-Base.valtype(@nospecialize(h::Union{InfrastructureDataModel,GenericInfrastructureObject})) = typeof(h)
+Base.valtype(@nospecialize(h::T)) where T <: Union{InfrastructureModel,InfrastructureObject} = typeof(h)
 
-Base.eltype(@nospecialize(h::Union{InfrastructureDataModel,GenericInfrastructureObject})) = typeof(h)
+Base.eltype(@nospecialize(h::T)) where T <: Union{InfrastructureModel,InfrastructureObject} = typeof(h)
 
-Base.length(@nospecialize(X::T)) where T <: Union{InfrastructureDataModel,GenericInfrastructureObject} = length(propertynames(X))
+Base.length(@nospecialize(X::T)) where T <: Union{InfrastructureModel,InfrastructureObject} = length(propertynames(X))
 
 
-function Base.summary(io::IO, @nospecialize(t::Union{InfrastructureDataModel,GenericInfrastructureObject}))
+function Base.summary(@nospecialize(io::IO), @nospecialize(t::T)) where T <: Union{InfrastructureModel,InfrastructureObject}
     Base.showarg(io, t, true)
     if Base.IteratorSize(t) isa Base.HasLength
         n = length(t)
@@ -66,7 +68,7 @@ function Base.merge!(a::EngTransformerControls, b::EngTransformerControls)
     for (w, wdg) in enumerate(b.windings)
         if wdg ∉ a.windings
             for (pn, prop) in a
-                if pn == "dss" && !ismissing(b.dss)
+                if pn != "dss" || (pn == "dss" && !ismissing(b.dss))
                     push!(prop, getproperty(b, Symbol(pn))[w])
                 end
             end
@@ -110,3 +112,17 @@ function Base.merge!(@nospecialize(x::T), @nospecialize(y::T)) where T <: DssObj
         end
     end
 end
+
+
+""
+Base.getproperty(@nospecialize(x::Any), k::String) = getproperty(x, Symbol(k))
+
+""
+Base.setproperty!(@nospecialize(x::Any), k::String, @nospecialize(v::Any)) = setproperty!(x, Symbol(k), v)
+
+""
+Base.keys(@nospecialize(x::T)) where T <: Union{InfrastructureObject,InfrastructureModel} = string.(collect(propertynames(x)))
+
+Base.delete!(@nospecialize(x::T), k::String) where T <: InfrastructureObject = delete!(x, Symbol(k))
+
+Base.delete!(@nospecialize(x::T), k::Symbol) where T <: InfrastructureObject = setproperty!(x, k, missing)

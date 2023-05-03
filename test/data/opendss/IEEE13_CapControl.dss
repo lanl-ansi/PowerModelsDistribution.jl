@@ -35,7 +35,7 @@ New Transformer.Reg2 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666]
 New Transformer.Reg3 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666]
 ~ Buses=[650.3 RG60.3] kVs=[2.4  2.4] %LoadLoss=0.01
 ~ %rs=[0 0] ! correct default here
- 
+
 
 !LINE CODES
 
@@ -72,8 +72,8 @@ New linecode.mtx607 nphases=1 BaseFreq=60
 ~ units=mi
 
 !LOAD DEFINITIONS
-New Load.645 Bus1=645.2   Phases=1 Conn=Wye  Model=1 kV=2.4  kW=170  kvar=125 
-New Load.646 Bus1=646.3   Phases=1 Conn=Wye  Model=1 kV=2.4  kW=230  kvar=132 
+New Load.645 Bus1=645.2   Phases=1 Conn=Wye  Model=1 kV=2.4  kW=170  kvar=125
+New Load.646 Bus1=646.3   Phases=1 Conn=Wye  Model=1 kV=2.4  kW=230  kvar=132
 
 !CAPACITOR DEFINITIONS
 New Capacitor.c1 Bus1=646.3 phases=1 kVAR=100 kV=2.4
@@ -85,9 +85,9 @@ New Line.650632    Phases=3 Bus1=RG60.1.2.3   Bus2=632.1.2.3  LineCode=mtx601 Le
 New Line.632645    Phases=2 Bus1=632.2.3      Bus2=645.2.3    LineCode=mtx603 Length=500  units=ft  normamps=8000 emergamps=8000
 New Line.645646    Phases=2 Bus1=645.2.3      Bus2=646.2.3    LineCode=mtx603 Length=300  units=ft  normamps=8000 emergamps=8000
 
-New CapControl.c1_ctrl Capacitor=c1 element=Line.645646  terminal=1 type=kvar ptratio=1 ctratio=1 ONsetting=70 OFFsetting=50 VoltOverride=Y Vmin=2540 Vmax=2650 
-New CapControl.c2_ctrl Capacitor=c2 element=Line.650632  ptphase=2 terminal=1 type=voltage ptratio=1 ctratio=1 ONsetting=2550 OFFsetting=2600 VoltOverride=N  
-New CapControl.c3_ctrl Capacitor=c2 element=Line.650632  ptphase=3 terminal=2 type=voltage ptratio=1 ctratio=1 ONsetting=2500 OFFsetting=2540 VoltOverride=N 
+New CapControl.c1_ctrl Capacitor=c1 element=Line.645646  terminal=1 type=kvar ptratio=1 ctratio=1 ONsetting=70 OFFsetting=50 VoltOverride=Y Vmin=2540 Vmax=2650
+New CapControl.c2_ctrl Capacitor=c2 element=Line.650632  ptphase=2 terminal=1 type=voltage ptratio=1 ctratio=1 ONsetting=2550 OFFsetting=2600 VoltOverride=N
+New CapControl.c3_ctrl Capacitor=c2 element=Line.650632  ptphase=3 terminal=2 type=voltage ptratio=1 ctratio=1 ONsetting=2500 OFFsetting=2540 VoltOverride=N
 
 Set Voltagebases=[115, 4.16, .48]
 Set MaxControlIter=50

@@ -1,11 +1,3 @@
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}})::T where T <: DssOptions
-    options = _apply_property_pairs(T(), property_pairs)
-
-    return options
-end
-
 
 """
 """
@@ -79,24 +71,36 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
     loadshape = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
     if :minterval ∈ raw_fields
-        interval = loadshape.minterval / 60
+        loadshape.interval = loadshape.minterval / 60
+        loadshape.sinterval = loadshape.minterval * 60
     elseif :sinterval ∈ raw_fields
-        interval = loadshape.sinterval / 60 / 60
+        loadshape.interval = loadshape.sinterval / 60 / 60
+        loadshape.minterval = loadshape.sinterval / 60
     else
-        interval = loadshape.interval
+        loadshape.interval = loadshape.interval
+        loadshape.minterval = loadshape.interval * 60
+        loadshape.sinterval = loadshape.interval * 60 * 60
     end
 
-    # pmult = loadshape.pmult
-    loadshape.qmult = :qmult ∉ raw_fields ? loadshape.pmult : loadshape.qmult
+    # loadshape.qmult = :qmult ∉ raw_fields ? loadshape.pmult : loadshape.qmult
 
-    # TODO
     npts = :npts ∈ raw_fields ? loadshape.npts : length(loadshape.pmult)
-    # npts = get(kwargs, :npts, length(pmult) == 0 && length(qmult) == 0 ? 0 : minimum(Int[length(a) for a in [pmult, qmult] if length(a) > 0]))
+    npts = length(loadshape.pmult) == 0 && length(loadshape.qmult) == 0 ? 0 : minimum(Int[length(a) for a in [loadshape.pmult, loadshape.qmult] if length(a) > 0])
+    loadshape.npts = npts
 
-    # loadshape.pmult = loadshape.pmult[1:npts]
-    # loadshape.qmult = loadshape.qmult[1:npts]
+    if isempty(loadshape.hour)
+        loadshape.hour = Float64[i*loadshape.interval for i in 0:(loadshape.npts-1)]
+    end
+    # if !isempty(loadshape.pmult)
+    #     loadshape.pmult = loadshape.pmult[1:npts]
+    # end
+    # if !isempty(loadshape.qmult)
+    #     loadshape.qmult = loadshape.qmult[1:npts]
+    # end
 
-    # loadshape.hour = loadshape.hour[1:npts]
+    # if !isempty(loadshape.hour)
+    #     loadshape.hour = loadshape.hour[1:npts]
+    # end
 
     return loadshape
 end
@@ -104,28 +108,7 @@ end
 
 """
 """
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssDataObject
-    dataobject = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssControlObject
-    controlobject = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssGrowthshape
-    growthshape = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssXycurve
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssXycurve
     raw_fields = collect(Symbol(x.first) for x in property_pairs)
 
     xycurve = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
@@ -144,8 +127,8 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
             i += 1
         end
     else
-        xarray = getproperty(xycurve, :xarray, Float64[])
-        yarray = getproperty(xycurve, :yarray, Float64[])
+        xarray = xycurve.xarray
+        yarray = xycurve.yarray
     end
 
     npts = min(length(xarray), length(yarray))
@@ -167,35 +150,7 @@ end
 
 """
 """
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssSpectrum
-    spectrum = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssCapcontrol
-    capcontrol = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssRegcontrol
-    regcontrol = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssLinegeometry
-    linegeometry = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
-end
-
-
-"""
-"""
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssWiredata
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssWiredata
     raw_fields = collect(Symbol(x.first) for x in property_pairs)
 
     wiredata = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
@@ -260,7 +215,7 @@ end
 
 """
 """
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssLinespacing
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssLinespacing
     linespacing = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
 
     linespacing.x = linespacing.x .* _convert_to_meters[linespacing.units]
@@ -277,7 +232,7 @@ end
 
 """
 """
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssCndata
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssCndata
     raw_fields = collect(Symbol(x.first) for x in property_pairs)
 
     cndata = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
@@ -359,7 +314,7 @@ end
 
 """
 """
-function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel) where T <: DssTsdata
+function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}}, dss::OpenDssDataModel, dss_raw::OpenDssRawDataModel)::T where T <: DssTsdata
     raw_fields = collect(Symbol(x.first) for x in property_pairs)
 
     tsdata = _apply_property_pairs(T(), property_pairs, dss, dss_raw)
@@ -421,4 +376,3 @@ function create_dss_object(::Type{T}, property_pairs::Vector{Pair{String,String}
 
     return tsdata
 end
-

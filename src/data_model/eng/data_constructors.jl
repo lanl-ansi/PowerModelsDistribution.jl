@@ -93,10 +93,49 @@ end
 """
 """
 function create_eng_object(::Type{T}, dss_obj::DssCapcontrol; import_all::Bool=false)::T where T <: EngShuntControlsObj
+    type = dss_obj.type
+    nphases = 3 # TODO
+
+    if type == CAP_REACTIVE_POWER
+        type = CapControlType[type]
+        terminal = Int[dss_obj.terminal]
+        onsetting = Float64[dss_obj.onsetting]
+        offsetting = Float64[dss_obj.offsetting]
+        ptratio = Float64[dss_obj.ptratio]
+        ctratio = Float64[dss_obj.ctratio]
+    elseif type == CAP_VOLTAGE
+        type = CapControlType[p == dss_obj.ptphase ? type : CAP_DISABLED for p in 1:nphases]
+        terminal = Int[p == dss_obj.ptphase ? dss_obj.terminal : 0 for p in 1:nphases]
+        onsetting = Float64[p == dss_obj.ptphase ? dss_obj.onsetting : 0.0 for p in 1:nphases]
+        offsetting = Float64[p == dss_obj.ptphase ? dss_obj.offsetting : 0.0 for p in 1:nphases]
+        ptratio = Float64[p == dss_obj.ptphase ? dss_obj.ptratio : 0.0 for p in 1:nphases]
+        ctratio = Float64[p == dss_obj.ctphase ? dss_obj.ctratio : 0.0 for p in 1:nphases]
+    elseif type == CAP_CURRENT
+        type = CapControlType[p == dss_obj.ctphase ? type : CAP_DISABLED for p in 1:nphases]
+        terminal = Int[p == dss_obj.ctphase ? dss_obj.terminal : 0 for p in 1:nphases]
+        onsetting = Float64[p == dss_obj.ctphase ? dss_obj.onsetting : 0.0 for p in 1:nphases]
+        offsetting = Float64[p == dss_obj.ctphase ? dss_obj.offsetting : 0.0 for p in 1:nphases]
+        ptratio = Float64[p == dss_obj.ptphase ? dss_obj.ptratio : 0.0 for p in 1:nphases]
+        ctratio = Float64[p == dss_obj.ctphase ? dss_obj.ctratio : 0.0 for p in 1:nphases]
+    elseif type == CAP_TIME
+        type = CapControlType[type]
+        terminal = Int[dss_obj.terminal]
+        onsetting = Float64[dss_obj.onsetting]
+        offsetting = Float64[dss_obj.offsetting]
+        ptratio = Float64[dss_obj.ptratio]
+        ctratio = Float64[dss_obj.ctratio]
+    end
+
+    if dss_obj.voltoverride
+        vmin = type == CAP_REACTIVE_POWER ? dss_obj.vmin : [p == dss_obj.ptphase ? dss_obj.vmin : 0.0 for p in 1:nphases]
+        vmax = type == CAP_REACTIVE_POWER ? dss_obj.vmax : [p == dss_obj.ptphase ? dss_obj.vmax : 0.0 for p in 1:nphases]
+        ptratio = type == CAP_REACTIVE_POWER ? dss_obj.ptratio : [p == dss_obj.ptphase ? dss_obj.ptratio : 0.0 for p in 1:nphases]
+    end
+
     eng_obj = T(;
         type = CapControlType[dss_obj.type],
-        elements = String[dss_obj.element],
-        terminals = Int[dss_obj.terminal],
+        element = dss_obj.element,
+        terminal = Int[dss_obj.terminal],
         onsetting = Float64[dss_obj.onsetting],
         offsetting = Float64[dss_obj.offsetting],
         voltoverride = Float64[dss_obj.voltoverride],

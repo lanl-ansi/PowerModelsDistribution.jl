@@ -1,4 +1,16 @@
 """
+"""
+function create_eng_object(::Type{T}, dss_obj::DssNodeObject; import_all::Bool=false)::T where T <: UnsupportedEngNodeObject
+    bus1, _ = _parse_bus_id(dss_obj.bus1)
+
+    T(;
+        bus = bus1,
+        connections=_get_conductors_ordered(dss_obj.bus1, default=collect(1:dss_obj.phases)),
+    )
+end
+
+
+"""
 Creates EngLoad objects
 
 Constant can still be scaled by other settings, fixed cannot

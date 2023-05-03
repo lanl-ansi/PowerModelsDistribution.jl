@@ -45,10 +45,10 @@ end
 function Base.parse(::Type{T}, model::String)::T where T <: LoadModel
     model = parse(Int, model)
     if model ∈ [3, 4, 7, 8]
-        @warn "dss load model '$model' not supported; treating as constant POWER model"
+        @warn "dss load model $model not supported; treating as constant POWER model"
         model = 1
     elseif model == 6
-        @warn "dss load model '$model' identical to model '1' in current feature set; treating as constant POWER model"
+        @warn "dss load model $model identical to model 1 in current feature set; treating as constant POWER model"
         model = 1
     end
 

@@ -59,7 +59,7 @@ abstract type Metadata <: EngDataObject end
 """
 Base.@kwdef mutable struct MetadataObj <: Metadata
     name::String = ""
-    conductors::Set{Int} = Set{Int}()
+    conductors::Vector{Int} = Int[]
     awaiting_ground::Dict{String,Vector{Vector{Int}}} = Dict{String,Vector{Vector{Int}}}()
 end
 
@@ -110,10 +110,10 @@ Finally, we give an example of how grounding impedances should be entered. If te
 Base.@kwdef mutable struct EngBusObj <: EngBus
     name::String
     terminals::Vector{Int} = Int[]
-    vm_lb::Vector{Float64} = fill(0.0, length(terminals))
-    vm_ub::Vector{Float64} = fill(Inf, length(terminals))
-    vm_pair_ub::Vector{NTuple{3,Float64}} = NTuple{3,Float64}[]
-    vm_pair_lb::Vector{NTuple{3,Float64}} = NTuple{3,Float64}[]
+    vm_lb::Union{Missing,Vector{Float64}} = missing
+    vm_ub::Union{Missing,Vector{Float64}} = missing
+    vm_pair_ub::Union{Missing,Vector{NTuple{3,Float64}}} = missing
+    vm_pair_lb::Union{Missing,Vector{NTuple{3,Float64}}} = missing
     grounded::Vector{Int} = Int[]
     rg::Vector{Float64} = Float64[]
     xg::Vector{Float64} = Float64[]
@@ -152,15 +152,15 @@ Instead of defining the bounds directly, they can be specified through an associ
 | `vm_pp_ub` |         | `Real`        |       | opf    | Maximum phase-to-phase voltage magnitude for all phases       |
 | `vm_ng_ub` |         | `Real`        |       | opf    | Maximum neutral-to-ground voltage magnitude                   |
 """
-mutable struct Eng3pBusObj <: Eng3pBus
+Base.@kwdef mutable struct Eng3pBusObj <: Eng3pBus
     name::String
     phases::Vector{Int}
-    neutral::Int
-    vm_pn_lb::Float64
-    vm_pn_ub::Float64
-    vm_pp_lb::Float64
-    vm_pp_ub::Float64
-    vm_ng_ub::Float64
+    neutral::Int = 4
+    vm_pn_lb::Union{Missing,Float64} = missing
+    vm_pn_ub::Union{Missing,Float64} = missing
+    vm_pp_lb::Union{Missing,Float64} = missing
+    vm_pp_ub::Union{Missing,Float64} = missing
+    vm_ng_ub::Union{Missing,Float64} = missing
     source_id::String
 end
 
@@ -206,11 +206,11 @@ Base.@kwdef mutable struct EngLineObj <: EngLine
     length::Float64 = 1.0
     cm_ub::Union{Missing,Vector{Float64}} = isempty(linecode) ? fill(Inf, Base.length(f_connections)) : missing
     sm_ub::Union{Missing,Vector{Float64}} = isempty(linecode) ? fill(Inf, Base.length(f_connections)) : missing
-    vad_lb::Vector{Float64} = fill(-5.0, Base.length(f_connections))
-    vad_ub::Vector{Float64} = fill(5.0, Base.length(f_connections))
+    vad_lb::Union{Missing,Vector{Float64}} = fill(-5.0, Base.length(f_connections))
+    vad_ub::Union{Missing,Vector{Float64}} = fill(5.0, Base.length(f_connections))
     status::Status = ENABLED
     source_id::String = "line.$(name)"
-    dss::Union{Missing,DssLine} = missing
+    dss::Union{Missing,DssLine,DssCapacitor,DssReactor} = missing
 end
 
 abstract type EngSwitch <: EngEdgeObject end
@@ -313,12 +313,12 @@ Base.@kwdef mutable struct EngAl2wTransformerObj <: EngAl2wTransformer
     t_connections::Vector{Int}
     configuration::ConnConfig = WYE
     tm_nom::Float64 = 1.0
-    tm_ub::Vector{Float64} = fill( Inf, length(f_connections))
-    tm_lb::Vector{Float64} = fill(-Inf, length(f_connections))
+    tm_ub::Union{Missing,Vector{Float64}} = fill( Inf, length(f_connections))
+    tm_lb::Union{Missing,Vector{Float64}} = fill(-Inf, length(f_connections))
     tm_set::Vector{Float64} = fill(1.0, length(f_connections))
     tm_fix::Vector{Bool} = fill(true, length(f_connections))
-    sm_ub::Float64 = Inf
-    cm_ub::Float64 = Inf
+    sm_ub::Union{Missing,Float64} = Inf
+    cm_ub::Union{Missing,Float64} = Inf
     status::Status = ENABLED
     source_id::String = "al2wtransformer.$(name)"
 end
@@ -357,7 +357,7 @@ Base.@kwdef mutable struct EngTransformerObj <: EngTransformer
     connections::Vector{Vector{Int}}
     configurations::Union{Missing,Vector{ConnConfig}} = fill(WYE, length(bus))
     xfmrcode::String = ""
-    xsc::Union{Missing,Vector{Float64}} = fill(0.0, length(bus) == 2 ? 1 : 3)
+    xsc::Union{Missing,Vector{Union{Missing,Float64}}} = fill(0.0, length(bus) == 2 ? 1 : 3)
     rw::Union{Missing,Vector{Float64}} = fill(0.0, length(bus))
     cmag::Union{Missing,Float64} = 0.0
     noloadloss::Union{Missing,Float64} = 0.0
@@ -370,8 +370,8 @@ Base.@kwdef mutable struct EngTransformerObj <: EngTransformer
     polarity::Vector{Int} = fill(1, length(bus))
     vm_nom::Union{Missing,Vector{Float64}} = missing
     sm_nom::Union{Missing,Vector{Float64}} = missing
-    sm_ub::Float64 = Inf
-    cm_ub::Float64 = Inf
+    sm_ub::Union{Missing,Float64} = Inf
+    cm_ub::Union{Missing,Float64} = Inf
     bank::String = ""
     status::Status = ENABLED
     source_id::String = "transformer.$(name)"
@@ -472,7 +472,7 @@ Special case of the shunt capacitors, which is part of the `shunt` object, and e
 | -------------- | ------- | ---------------- | ----- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `type`         |         | `Vector{String}` |       | capc | Control type, default is `current` for controlled phase, ``for uncontrolled phase,`size=1`for`kvar`type, otherwise`size=(nphases)`                                                                |
 | `element`      |         | `String`         |       | capc | `source_id` of element (typically line or transformer) to which CapControl is connected                                                                                                           |
-| `terminals`    |         | `Vector{Int}`    |       | capc | Number of the terminal of circuit element to which CapControl is connected, default is `1` for controlled phase, `0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)` |
+| `terminal`     |         | `Vector{Int}`    |       | capc | Number of the terminal of circuit element to which CapControl is connected, default is `1` for controlled phase, `0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)` |
 | `onsetting`    |         | `Vector{Real}`   |       | capc | Value at which the CapControl switches the capacitor on, default is `300.0` for controlled phase, `0.0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)`              |
 | `offsetting`   |         | `Vector{Real}`   |       | capc | Value at which the CapControl switches the capacitor off, default is `200.0` for controlled phase, `0.0` for uncontrolled phase, `size=1` for `kvar` type, otherwise `size=(nphases)`             |
 | `voltoverride` |         | `Vector{Bool}`   |       | capc | Indicate whether voltage over ride is enabled, default is `false` for both controlled and uncontrolled phases, `size=1` for `kvar` type, otherwise `size=(nphases)`                               |
@@ -483,15 +483,15 @@ Special case of the shunt capacitors, which is part of the `shunt` object, and e
 """
 Base.@kwdef mutable struct EngShuntControlsObj <: EngShuntControls
     type::Vector{CapControlType}
-    elements::Vector{String}
-    terminals::Vector{Int}
-    onsetting::Vector{Float64} = fill(0.0, length(terminals))
-    offsetting::Vector{Float64} = fill(0.0, length(terminals))
-    voltoverride::Vector{Float64} = fill(0.0, length(terminals))
-    ptratio::Vector{Float64} = fill(0.0, length(terminals))
-    ctratio::Vector{Float64} = fill(0.0, length(terminals))
-    vm_lb::Vector{Float64} = fill(-Inf, length(terminals))
-    vm_ub::Vector{Float64} = fill( Inf, length(terminals))
+    element::String
+    terminal::Vector{Int}
+    onsetting::Vector{Float64} = fill(0.0, length(terminal))
+    offsetting::Vector{Float64} = fill(0.0, length(terminal))
+    voltoverride::Vector{Bool} = fill(false, length(terminal))
+    ptratio::Vector{Float64} = fill(0.0, length(terminal))
+    ctratio::Vector{Float64} = fill(0.0, length(terminal))
+    vm_lb::Union{Missing,Vector{Float64}} = fill(-Inf, length(terminal))
+    vm_ub::Union{Missing,Vector{Float64}} = fill( Inf, length(terminal))
     dss::Union{Missing,Vector{<:DssObject},DssObject} = missing
 end
 
@@ -561,10 +561,10 @@ Base.@kwdef mutable struct EngGeneratorObj <: EngGenerator
     connections::Vector{Int} = Int[]
     configuration::ConnConfig = WYE
     vg::Union{Missing,Vector{Float64}} = missing
-    pg_lb::Vector{Float64} = fill(-Inf, length(connections))
-    pg_ub::Vector{Float64} = fill( Inf, length(connections))
-    qg_lb::Vector{Float64} = fill(-Inf, length(connections))
-    qg_ub::Vector{Float64} = fill( Inf, length(connections))
+    pg_lb::Union{Missing,Vector{Float64}} = fill(-Inf, length(connections))
+    pg_ub::Union{Missing,Vector{Float64}} = fill( Inf, length(connections))
+    qg_lb::Union{Missing,Vector{Float64}} = fill(-Inf, length(connections))
+    qg_ub::Union{Missing,Vector{Float64}} = fill( Inf, length(connections))
     pg::Vector{Float64} = fill(0.0, length(connections))
     qg::Vector{Float64} = fill(0.0, length(connections))
     control_mode::ControlMode = FREQUENCYDROOP
@@ -613,10 +613,10 @@ Base.@kwdef mutable struct EngSolarObj <: EngSolar
     connections::Vector{Int} = Int[]
     configuration::ConnConfig = WYE
     vg::Union{Missing,Vector{Float64}} = missing
-    pg_lb::Vector{Float64} = fill(0.0, length(connections))
-    pg_ub::Vector{Float64} = fill(0.0, length(connections))
-    qg_lb::Vector{Float64} = fill(0.0, length(connections))
-    qg_ub::Vector{Float64} = fill(0.0, length(connections))
+    pg_lb::Union{Missing,Vector{Float64}} = fill(-Inf, length(connections))
+    pg_ub::Union{Missing,Vector{Float64}} = fill(Inf, length(connections))
+    qg_lb::Union{Missing,Vector{Float64}} = fill(-Inf, length(connections))
+    qg_ub::Union{Missing,Vector{Float64}} = fill(Inf, length(connections))
     pg::Vector{Float64} = fill(0.0, length(connections))
     qg::Vector{Float64} = fill(0.0, length(connections))
     cost_pg_model::Int = 2
@@ -665,15 +665,15 @@ Base.@kwdef mutable struct EngStorageObj <: EngStorage
     connections::Vector{Int}
     configuration::ConnConfig = WYE
     energy::Float64 = 0.0
-    energy_ub::Float64 = 0.0
-    charge_ub::Float64 = 0.0
+    energy_ub::Union{Missing,Float64} = 0.0
+    charge_ub::Union{Missing,Float64} = 0.0
     discharge_ub::Float64 = 0.0
-    sm_ub::Float64 = Inf
-    cm_ub::Float64 = Inf
+    sm_ub::Union{Missing,Float64} = Inf
+    cm_ub::Union{Missing,Float64} = Inf
     charge_efficiency::Float64 = 1.0
     discharge_efficiency::Float64 = 1.0
-    qs_ub::Float64 = 0.0
-    qs_lb::Float64 = 0.0
+    qs_ub::Union{Missing,Float64} = 0.0
+    qs_lb::Union{Missing,Float64} = 0.0
     rs::Float64 = 0.0
     xs::Float64 = 0.0
     pex::Float64 = 0.0
@@ -749,8 +749,8 @@ Base.@kwdef mutable struct EngLinecodeObj <: EngLinecode
     b_fr::Matrix{Float64} = fill(0.0, size(rs))
     g_to::Matrix{Float64} = fill(0.0, size(rs))
     b_to::Matrix{Float64} = fill(0.0, size(rs))
-    cm_ub::Vector{Float64} = fill(Inf, size(rs)[1])
-    sm_ub::Vector{Float64} = fill(Inf, size(rs)[1])
+    cm_ub::Union{Missing,Vector{Float64}} = fill(Inf, size(rs)[1])
+    sm_ub::Union{Missing,Vector{Float64}} = fill(Inf, size(rs)[1])
     source_id::String = "linecode.$(name)"
     dss::Union{Missing,DssLinecode} = missing
 end
@@ -783,14 +783,14 @@ Base.@kwdef mutable struct EngXfmrcodeObj <: EngXfmrcode
     cmag::Float64 = 0.0
     tm_nom::Union{Missing,Vector{Float64}} = fill(1.0, length(configurations))
     tm_fix::Vector{Vector{Bool}} = fill(fill(true, 3), 2)
-    tm_ub::Vector{Vector{Float64}} = fill(fill( Inf, length(tm_fix[1])), length(configurations))
-    tm_lb::Vector{Vector{Float64}} = fill(fill(-Inf, length(tm_fix[1])), length(configurations))
+    tm_ub::Union{Missing,Vector{Vector{Float64}}} = fill(fill( Inf, length(tm_fix[1])), length(configurations))
+    tm_lb::Union{Missing,Vector{Vector{Float64}}} = fill(fill(-Inf, length(tm_fix[1])), length(configurations))
     tm_set::Vector{Vector{Float64}} = fill(fill( Inf, length(tm_fix[1])), length(configurations))
     tm_step::Vector{Vector{Float64}} = fill(fill(1/32, length(tm_fix[1])), length(configurations))
     vm_nom::Vector{Float64} = fill(12.47, length(configurations))
     sm_nom::Vector{Float64} = fill(10.0, length(configurations))
-    sm_ub::Float64 = Inf
-    cm_ub::Float64 = Inf
+    sm_ub::Union{Missing,Float64} = Inf
+    cm_ub::Union{Missing,Float64} = Inf
     source_id::String = "xfmrcode.$(name)"
     dss::Union{Missing,DssXfmrcode} = missing
 end
@@ -824,7 +824,7 @@ end
 
 """
 """
-Base.@kwdef struct EngineeringDataModel <: EngineeringModel{SubnetworkModel}
+Base.@kwdef struct EngineeringDataModel <: EngineeringModel{NetworkModel}
     # metadata
     settings::Settings = SettingsObj()
     metadata::Metadata = MetadataObj()
@@ -857,11 +857,27 @@ end
 
 """
 """
-Base.@kwdef mutable struct MultinetworkEngineeringDataModel <: EngineeringModel{MultinetworkModel}
+Base.@kwdef mutable struct EngineeringMultinetworkDataModel <: EngineeringModel{MultinetworkModel}
     # global keys
     metadata::Metadata = MetadataObj()
 
     # multinetwork
     nw::Dict{String,EngineeringDataModel} = Dict{String,EngineeringDataModel}()
     nw_map::Dict{String,Real} = Dict{String,Real}()
+end
+
+
+""
+Base.@kwdef mutable struct UnsupportedEngEdgeObject <: EngEdgeObject
+    f_bus::String = ""
+    t_bus::String = ""
+    f_connections::Vector{Int} = Int[]
+    t_connections::Vector{Int} = Int[]
+end
+
+
+""
+Base.@kwdef mutable struct UnsupportedEngNodeObject <: EngNodeObject
+    bus::String = ""
+    connections::Vector{Int} = Int[]
 end
