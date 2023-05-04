@@ -921,7 +921,7 @@ function _cpf_storage_interface(storage::Dict{String,<:Any}, v_start::Dict{<:Any
             vd0 = v0_bt
         end
         nphases = length(vd0)
-        ss0 = (storage["ps"] + im * storage["qs"])/nphases
+        ss0 = (storage["ps"] + im * storage["qs"]) / nphases
         c0 = conj.(ss0 ./ vd0)
         y0 = c0 ./ vd0
         if explicit_neutral
@@ -930,7 +930,7 @@ function _cpf_storage_interface(storage::Dict{String,<:Any}, v_start::Dict{<:Any
             y_prim = diagm(y0)
         end
         c_nl_func = function (v_bt)
-            ss = (storage["ps"] + im * storage["qs"])/nphases
+            ss = (storage["ps"] + im * storage["qs"]) / nphases
             if explicit_neutral
                 vd = v_bt[1:end-1] .- v_bt[end]
                 cd = conj.(ss ./ vd)
@@ -955,12 +955,12 @@ function _cpf_storage_interface(storage::Dict{String,<:Any}, v_start::Dict{<:Any
         vd0 = Md * v0_bt
 
         nphases = length(vd0)
-        ss0 = (storage["ps"] + im * storage["qs"])/nphases
+        ss0 = (storage["ps"] + im * storage["qs"]) / nphases
         c0 = conj.(ss0 ./ vd0)
         y0 = c0 ./ vd0
         y_prim = Md' * diagm(0 => y0) * Md
         c_nl_func = function (v_bt)
-            ss = (storage["pd"] + im * storage["qd"])/nphases
+            ss = (storage["ps"] + im * storage["qs"]) / nphases
             vd = Md * v_bt
             cd = conj.(ss ./ vd)
             cd_bus = Md' * cd
