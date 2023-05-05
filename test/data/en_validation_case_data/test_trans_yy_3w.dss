@@ -1,0 +1,19 @@
+Clear
+Set DefaultBaseFreq=50
+New Circuit.3wire_pn BasekV=11 pu=1.00 ISC3=100000 ISC1=100000
+
+New Transformer.TR1 Buses=[SourceBus.1.2.3 1.1.2.3.0] phases=3 Conns=[Wye Wye] kVs=[11 0.4] kVAs=[800 800] XHL=1
+
+New LineCode.LC nphases=3 Units=km
+~ Rmatrix=(1.049097 0.525131 0.523967 | 0.525131 1.050262 0.525131 | 0.5239669999999998 0.5251309999999999 1.049097)
+~ Xmatrix=(0.13924199999999987 0.09383799999999987 0.04540899999999992 | 0.09383799999999987 0.18767999999999985 0.09384399999999993 | 0.04540899999999992 0.09384399999999993 0.13925699999999996)
+~ Cmatrix=(0.0 0.0 0.0 | 0.0 0.0 0.0 | 0.0 0.0 0.0)
+
+New Line.LINE1 Bus1=1.1.2.3 Bus2=2.1.2.3 phases=3 Linecode=LC Length=1.098 Units=m
+
+New Load.LOAD1 Phases=1 Bus1=2.1 kV=0.23 kW=1.968  PF=0.95
+
+Set voltagebases=[11 0.4]
+Calcvoltagebases
+
+Solve

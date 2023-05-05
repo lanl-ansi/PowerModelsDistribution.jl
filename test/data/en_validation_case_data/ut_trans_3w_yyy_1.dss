@@ -1,0 +1,37 @@
+clear
+
+! Base Frequency
+Set DefaultBaseFrequency=50
+
+! New Circuit
+New circuit.ut_trans
+~ BasekV=12.47 BaseMVA=0.1 pu=1.0  ISC3=99999 ISC1=99999
+
+// New Transformer.Transformer1 phases=1 windings=3 
+// ~ %loadloss=0.798816 %Noloadloss=0.472 normhkva=27.5 
+// ~ wdg=1 conn=wye bus=1.2   Kv=7.19956  kva=25.0 EmergHKVA=37.5 %r=0.266272 
+// ~ wdg=2 conn=wye bus=2.1.0 Kv=0.120089 kva=25.0 EmergHKVA=37.5 %r=0.532544 
+// ~ wdg=3 conn=wye bus=3.0.2 Kv=0.120089 kva=25.0 EmergHKVA=37.5 %r=0.532544 
+// ~ XHL=2.4 XLT=2.4 XHT=1.6
+
+New Transformer.Transformer1 phases=1 windings=3 %loadloss=0.798816 %Noloadloss=0.472 normhkva=27.5 wdg=1 conn=wye bus=1.3  Kv=7.19956 kva=25.0 EmergHKVA=37.5 %r=0.266272 wdg=2 conn=wye bus=2.1.0 Kv=0.120089 kva=25.0 EmergHKVA=37.5 %r=0.532544 wdg=3 conn=wye bus=3.0.2 Kv=0.120089 kva=25.0 EmergHKVA=37.5 %r=0.532544 XHL=2.4 XLT=2.4 XHT=1.6
+// New Transformer.Transformer1 phases=1 windings=3 %loadloss=0.798816 %Noloadloss=0.472 normhkva=27.5 wdg=1 conn=wye bus=1.2  Kv=7.19956 kva=25.0 EmergHKVA=37.5 %r=0.266272 wdg=2 conn=wye bus=2.1.0 Kv=0.120089 kva=25.0 EmergHKVA=37.5 %r=0.532544 wdg=3 conn=wye bus=3.0.2 Kv=0.120089 kva=25.0 EmergHKVA=37.5 %r=0.532544 XHL=2.4 XLT=2.4 XHT=1.6
+
+
+! Transmission Lines
+New Line.LINE1 Bus1=SourceBus Bus2=1 phases=3 X1=3 R1=6
+
+! Loads
+New Load.LOAD7 Phases=1 Bus1=1.3 kV=7.19956 kW=20 kvar=1 vminpu=0.8 vmaxpu=1.2
+New Load.LOAD1 Phases=1 Bus1=2.1 kV=0.120089 kW=20 kvar=1 vminpu=0.8 vmaxpu=1.2
+New Load.LOAD5 Phases=1 Bus1=3.2 kV=0.120089 kW=20 kvar=1 vminpu=0.8 vmaxpu=1.2
+
+! Set Voltage Bases
+Set voltagebases=[12.47 0.208 0.208]
+Calcvoltagebases
+
+Export YPrims
+Export Y
+
+! Solve network
+solve

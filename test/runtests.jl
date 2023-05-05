@@ -63,5 +63,7 @@ include("test_cases.jl")
 
     include("en_pf_validation.jl")
 
+    include("en_pf_native_validation.jl")
+
     include("line_constants.jl")
 end
