@@ -371,7 +371,7 @@ function _compute_mc_pf(
         res["iterations"] = its
         res["stationarity"] = stat
         res["time_total"] = sum(values(time_build)) + sum(values(time_solve)) + sum(values(time_post))
-        res["all_converged"] = all(x == CONVERGED for (_, x) in status)
+        res["all_converged"] = all(x == PF_CONVERGED for (_, x) in status)
     end
 
     return res
@@ -431,9 +431,9 @@ function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Real=1E-8,
 
         change = maximum(abs.(Uv .- Uv_next))
         if change <= stat_tol
-            return (Uv_next, CONVERGED, it, change)
+            return (Uv_next, PF_CONVERGED, it, change)
         elseif it == max_iter
-            return (Uv_next, ITERATION_LIMIT, it, change)
+            return (Uv_next, PF_ITERATION_LIMIT, it, change)
         end
 
         Uv = Uv_next

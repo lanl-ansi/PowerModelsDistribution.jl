@@ -258,7 +258,7 @@ filter!(e -> e ≠ "case3_balanced_battery_3ph", cases)
             end
 
             sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
-            @test res["termination_status"] == CONVERGED
+            @test res["termination_status"] == PF_CONVERGED
 
             v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose=false, compare_math=true)
             @test v_maxerr_pu <= 1E-6
@@ -326,7 +326,7 @@ cases = ["test_trans_dy_3w", "test_trans_yy_3w", "ut_trans_3w_dyy_1", "ut_trans_
             end
 
             sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
-            @test res["termination_status"] == CONVERGED
+            @test res["termination_status"] == PF_CONVERGED
 
             v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose=false, compare_math=true)
             @test v_maxerr_pu <= 1E-6
@@ -343,7 +343,7 @@ end
     data_math = transform_data_model(data_eng; kron_reduce=false)
 
     res = compute_mc_pf(data_math; max_iter=5, explicit_neutral=true)
-    @test res["termination_status"] == ITERATION_LIMIT
+    @test res["termination_status"] == PF_ITERATION_LIMIT
 end
 
 
@@ -384,7 +384,7 @@ solution_dir = "data/opendss_solutions"
     multinetwork_data_math_correction!(data_math)
 
     res = compute_mc_pf(data_math; explicit_neutral=true)
-    @test res["termination_status"]["10"] == CONVERGED
+    @test res["termination_status"]["10"] == PF_CONVERGED
 
     sol_dss = open("$solution_dir/$case.json", "r") do f
         JSON.parse(f)
@@ -422,7 +422,7 @@ filter!(e -> e ≠ "case3_unbalanced_delta_loads", cases)
             end
 
             sol_pmd = transform_solution(res["solution"], data_math, make_si=true)
-            @test res["termination_status"] == CONVERGED
+            @test res["termination_status"] == PF_CONVERGED
 
             v_maxerr_pu = compare_sol_dss_pmd(sol_dss, sol_pmd, data_eng, data_math, verbose=false, compare_math=true)
             if occursin("switch", case)
