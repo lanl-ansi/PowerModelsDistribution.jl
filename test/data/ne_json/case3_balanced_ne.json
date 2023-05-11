@@ -40,13 +40,15 @@
             "bus": "loadbus",
             "configuration": 0,
             "pg_lb": [0.00, 0.00, 0.00],
-            "pg_ub": [0.00, 0.00, 0.00],
+            "pg_ub": [0.5, 0.40, 0.50],
             "qg_lb": [0.00, 0.00, 0.00],
-            "qg_ub": [0.00, 0.00, 0.00],
+            "qg_ub": [0.25, 0.2, 0.25],
             "pg": [0.0, 0.0, 0.0],
             "qg": [0.0, 0.0, 0.0],
             "status": 1,
-            "time_series": [],
+            "time_series": {
+                "pg_ub": "pv_ts",
+                "qg_ub": "pv_ts"},
             "fixed_cost": 100
         }
     }
