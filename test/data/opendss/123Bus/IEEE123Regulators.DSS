@@ -1,0 +1,18 @@
+!DEFINE TRANSFORMERS FOR REGULATORS
+! Have to assume basically zero impedance regulators to match the test case
+new transformer.reg2a phases=1          windings=2   bank=reg2     buses=[9.1     9r.1]   conns=[wye wye]       kvs=[2.402 2.402] kvas=[2000 2000] XHL=.01 %LoadLoss=0.00001 ppm=0.0 
+new transformer.reg3a phases=1          windings=2   bank=reg3     buses=[25.1   25r.1]   conns=[wye wye]       kvs=[2.402 2.402] kvas=[2000 2000] XHL=.01 %LoadLoss=0.00001 ppm=0.0 
+new transformer.reg4a phases=1          windings=2   bank=reg4     buses=[160.1 160r.1]   conns=[wye wye]       kvs=[2.402 2.402] kvas=[2000 2000] XHL=.01 %LoadLoss=0.00001 ppm=0.0 
+new transformer.reg3c like=reg3a                     bank=reg3     buses=[25.3   25r.3]      ppm=0.0 
+new transformer.reg4b like=reg4a                     bank=reg4     buses=[160.2 160r.2]      ppm=0.0 
+new transformer.reg4c like=reg4a                     bank=reg4     buses=[160.3 160r.3]      ppm=0.0 
+
+! POINT REGULATOR CONTROLS TO REGULATOR TRANSFORMER AND SET PARAMETERS
+new regcontrol.creg2a               transformer=reg2a winding=2         vreg=120     band=2  ptratio=20 ctprim=50  R=0.4   X=0.4  
+new regcontrol.creg3a               transformer=reg3a winding=2         vreg=120     band=1  ptratio=20 ctprim=50  R=0.4   X=0.4  
+new regcontrol.creg3c like=creg3a   transformer=reg3c 
+new regcontrol.creg4a               transformer=reg4a winding=2         vreg=124     band=2  ptratio=20 ctprim=300 R=0.6   X=1.3  
+new regcontrol.creg4b like=creg4a   transformer=reg4b                                                              R=1.4   X=2.6   
+new regcontrol.creg4c like=creg4a   transformer=reg4c                                                              R=0.2   X=1.4   
+
+! NOTE: WHEN LIKE= IS USED, IT IS NECESSARY TO SPECIFY ONLY THOSE PROPERTIES THAT ARE DIFFERENT

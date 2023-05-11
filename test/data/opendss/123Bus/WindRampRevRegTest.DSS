@@ -1,0 +1,59 @@
+Compile (IEEE123Master.dss)
+
+RegControl.creg1a.maxtapchange=1  Delay=15  !Allow only one tap change per solution. This one moves first
+RegControl.creg2a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg3a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg3c.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4b.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4c.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+
+Set MaxControlIter=30
+
+! Solve executes the solution for the present solution mode, which is "snapshot".
+
+New energymeter.M1 Line.sw1 1
+
+solve
+
+! 1000-sec Wind output at 1 s interval
+New Loadshape.WindRamp npts=1000 Interval=(1 3600 /) mult=(file=Windoutput.txt)
+
+New Monitor.4a  Transformer.reg4a  2  mode=2
+New Monitor.4b  Transformer.reg4b  2  mode=2
+New Monitor.4c  Transformer.reg4c  2  mode=2
+New Monitor.P4a  Transformer.reg4a  2  mode=1 ppolar=no
+New Monitor.P4b  Transformer.reg4b  2  mode=1 ppolar=no
+New Monitor.P4c  Transformer.reg4c  2  mode=1 ppolar=no
+
+solve
+
+! define the generator
+New Generator.2MWGen   Bus1=450 kV=4.16  kW=2300  PF=1  Duty=WindRamp 
+
+! Solve and let regulators settle out with generator on line
+Solve
+regcontrol.creg4a.reversible=yes  revneutral=yes !  debug=yes
+regcontrol.creg4b.reversible=yes  revneutral=yes
+regcontrol.creg4c.reversible=yes  revneutral=yes
+
+! Run 1000-point dutycycle
+Solve mode=dutycycle number=1000 stepsize=1s
+
+
+
+Plot monitor object= 4a channels=(1 )
+Plot monitor object= p4a channels=(1 )
+Plot monitor object= 4b channels=(1 )
+Plot monitor object= 4c channels=(1 )
+
+Plot monitor object= p4b channels=(1 )
+Plot monitor object= p4c channels=(1 )
+
+
+
+solve
+
+Plot monitor object= 4a channels=(1 )
+Plot monitor object= p4a channels=(1 )
+

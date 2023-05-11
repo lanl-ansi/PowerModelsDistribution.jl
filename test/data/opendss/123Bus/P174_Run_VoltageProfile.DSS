@@ -1,0 +1,29 @@
+// Script for Voltage Profile Plots.
+
+!*** first compile the IEEE 123 bus test case and solve it ***
+Compile (IEEE123Master.dss)
+
+New Energymeter.m1 Line.l115 1
+
+RegControl.creg1a.maxtapchange=1  Delay=15  !Allow only one tap change per solution. This one moves first
+RegControl.creg2a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg3a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg3c.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4b.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4c.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+
+Set MaxControlIter=30
+
+! Solve executes the solution for the present solution mode, which is "snapshot".
+
+solve
+
+// 100% load level
+Plot Profile Phases=primary
+
+// 40% load level
+Set Loadmult=0.40
+Solve
+Plot Profile Phases=primary
+

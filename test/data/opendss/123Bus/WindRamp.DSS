@@ -1,0 +1,39 @@
+!*** first compile the IEEE 123 bus test case and solve it ***
+
+Compile (IEEE123Master.dss)
+
+RegControl.creg1a.maxtapchange=1  Delay=15  !Allow only one tap change per solution. This one moves first
+RegControl.creg2a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg3a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg3c.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4b.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4c.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+
+Set MaxControlIter=30
+
+! Solve executes the solution for the present solution mode, which is "snapshot".
+
+New energymeter.M1 Line.sw1 1
+
+solve
+
+! 2500-sec Wind output screen
+New Loadshape.WindRamp npts=2500 Interval=(1 3600 /) mult=(file=Windoutput.txt)
+
+! define the generator
+New Generator.2MWGen   Bus1=450 kV=4.16  kW=2000  PF=1  Duty=WindRamp 
+
+! Solve and let regulators settle out with generator on line
+Solve
+
+! Put Monitor in Line L99 to capture voltages and currents
+New Monitor.Mon1 Element=Line.L99 Terminal=1
+
+! Run 2500-point dutycycle
+Solve mode=dutycycle number=2500 stepsize=1s
+
+! Plot Monitor Results
+Plot Monitor object=Mon1  Channels=(1,3,5) Bases=[2400, 2400, 2400]
+
+

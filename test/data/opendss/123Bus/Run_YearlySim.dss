@@ -1,0 +1,53 @@
+// Example yearly simulation script demonstrated for the training workshop at Georgia Tech
+// Nov 16, 2011
+
+// define base 123-bus test feeder circuit
+// Change the path for the actual location of the 123Bus Folder
+Compile "IEEE123Master.dss"
+
+solve
+
+Buscoords buscoords.dat
+
+// Define a yearly loadshape  "loadshape1"
+// Change the path for the actual location of the example loadshape file
+Redirect  "C:\Users\prdu001\OpenDSS\Distrib\Examples\Loadshapes\LoadShape1.DSS"
+
+// New command added by McDermott in 2011
+// Uses PERL syntax to do global changes on items of the same class
+batchedit load..*  yearly=loadshape1     !---- changes all loads
+
+// add an energymeter at the head of the feeder
+New Energymeter.Feeder Line.L115 1
+
+solve 
+
+// put a monitor on a regulator to watch taps
+New Monitor.taps transformer.reg1a 2 mode=2
+New monitor.timesteps vsource.source 1 mode=5
+
+// -----------------YEARLY SIMULATION WITH DEMAND INTERVAL METERING -----------------------------------------
+
+Set CaseName=16Nov2011
+set mode=yearly 
+
+Set overloadreport=true  ! TURN OVERLOAD REPORT ON
+Set voltexcept=true
+set demand=true
+set DIVerbose=true
+
+Set Year=1 Number= 720
+solve 
+closedi   !  don't forget to close the meter file !!
+
+// -------------------------END YEARLY SIMULATION -----------------------------------------
+
+// Demand interval file for the energy meter
+// This file will be created under the active data folder using
+// the name of the circuit (or CaseName) and DI_YR_n where n=year
+Fileedit ".\16Nov2011\DI_yr_1\feeder.CSV"     !!  Opens the file in the default editor
+
+Show monitor taps
+Plot  monitor object= taps channels=(1 ) 
+
+Plot type=zone object=feeder quantity=power max=2000

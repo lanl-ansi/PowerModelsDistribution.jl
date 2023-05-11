@@ -208,7 +208,8 @@ function _map_eng2math(
                     "time_elapsed" => get(nw, "time_elapsed", 1.0),
                 ) for (n,nw) in _data_eng["nw"]
             ),
-            "multinetwork" => ismultinetwork(data_eng)
+            "multinetwork" => ismultinetwork(data_eng),
+            "interval_len" => get(_data_eng, "interval_len", length(_data_eng["nw"]))
         )
     else
         data_math = Dict{String,Any}(
@@ -792,6 +793,10 @@ function _map_eng2math_solar!(data_math::Dict{String,<:Any}, data_eng::Dict{Stri
 
         _add_gen_cost_model!(math_obj, eng_obj)
 
+        math_obj["cost"][1] = 0.0
+        if haskey(eng_obj, "vulnerable")
+            math_obj["vulnerable"] = eng_obj["vulnerable"]
+        end
         data_math["gen"]["$(math_obj["index"])"] = math_obj
 
         push!(data_math["map"], Dict{String,Any}(

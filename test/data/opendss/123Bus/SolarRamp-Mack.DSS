@@ -1,0 +1,63 @@
+!*** first compile the IEEE 123 bus test case and solve it ***
+Compile (C:\opendss\IEEETestCases\123Bus\IEEE123Master.dss)
+
+RegControl.creg1a.maxtapchange=1  Delay=15  !Allow only one tap change per solution. This one moves first
+RegControl.creg2a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg3a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg3c.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4b.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4c.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+
+Set MaxControlIter=30
+
+! Solve executes the solution for the present solution mode, which is "snapshot".
+
+solve
+Buscoords Buscoords.dat   ! load in bus coordinates
+
+! 4321 intervals, 5-sec PV ramp data
+New Loadshape.SolarRamp npts=4321 Interval=(5 3600 /) mult=(file=pv5sdata1.csv) action=normalize
+
+! define the generator
+New Generator.2MWGen   Bus1=450 kV=4.16  kW=2000  PF=1  Duty=SolarRamp 
+
+! Solve and let regulators settle out with generator on line
+Solve
+
+! Put Monitor in Line L99 to capture voltages and currents
+New Monitor.Mon1 Element=Line.L99 Terminal=1
+New Monitor.Reg1 Element=Transformer.reg4b terminal=2 mode=2     ! Capture taps
+
+! Run 4300-point dutycycle
+Solve mode=dutycycle number=4300 stepsize=5s
+
+! Plot Monitor Results
+Plot Monitor object=Mon1  Channels=(1,3,5) Bases=[2400, 2400, 2400]
+Plot Monitor object=Mon1  Channels=(1) Bases=[2400]
+Plot Monitor object=Reg1  Channels=(1) 
+
+
+
+
+
+
+
+
+
+
+
+!**** NOW ADD SOME STORAGE WITH A DISPATCH CURVE
+
+! 300-sec storage ramp 
+New Loadshape.StorageRamp npts=300 Interval=(1 3600 /) mult=(file=StorageRamp.csv)
+New storage.2MWStorage Bus1=450 kV=4.16 Duty=storageramp  kwrated=2000 kWhRated= 500 dischargetrigger=.9
+
+! Run 300-point dutycycle
+Solve mode=dutycycle number=300 stepsize=1s
+
+! Plot Monitor Results
+Plot Monitor object=Mon1  Channels=(1,3,5) Bases=[2400, 2400, 2400]
+
+plot circuit Power max=2000 y y C1=$00FF0000
+plot circuit Power max=2000 n n C1=$00FF0000

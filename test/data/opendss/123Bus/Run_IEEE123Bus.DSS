@@ -1,0 +1,113 @@
+! Annotated "Run" file for the IEEE 123 Bus Test Case
+!
+
+! This file contains two DSS scripts for executing the IEEE 123-bus test case.
+
+! The first script lets the DSS compute the regulator taps, which are generally one off from the 
+! presently posted solution. The second script uses the tap values determined by Kersting. This is done by
+! setting the taps on the transformers representing the regulators and then inhibiting the regulator control
+
+! The circuit definition is controlled by a "master" file, which invokes other files. This is but one 
+! logical way to oganize your files. You are free to choose another scheme of your choosing.
+
+! =================================================================
+! 1st Script
+! =================================================================
+
+
+Compile (IEEE123Master.dss)
+
+! 'Compile' differs from "redirect" in that it changes the default directory 
+! to the one in which the referenced file is located.
+! 'Redirect' returns to the directory from which it was invoked.
+
+! After compiling, the next series of script commands modify to the regulator control definitions to
+! limit the maximum tap change to 1 per solution control iteration. In most cases, this will 
+! allow the standard DSS solution algorithm to better represent an actual control.
+! Note the time delay is also chnaged. This forces the regulator at the head of the feeder to move first.
+
+RegControl.creg1a.maxtapchange=1  Delay=15  !Allow only one tap change per solution. This one moves first
+RegControl.creg2a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg3a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg3c.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4b.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4c.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+
+! The default maximum control iterations is 10. With so many regulators each moving only one tap at a time,
+! this is insufficient for the 123-bus test case, which will need 15 control iterations for the initial solution.
+! Therefore, the 'MaxControlIter' option is set to 30 to be safe.
+
+Set MaxControlIter=30
+
+! Solve executes the solution for the present solution mode, which is "snapshot".
+
+New EnergyMeter.Feeder Line.L115 1
+
+solve
+Buscoords Buscoords.dat   ! load in bus coordinates
+
+! Show some selected results
+
+Plot Profile
+plot profile phases=all
+
+Show Voltage LN Nodes     ! this shows the voltages by node, Line-to-Neutral voltage.
+Show Currents Elements    ! this produces a report of the currents, element-by-element.
+Show Powers kva Elements  ! This produces a report of the powers, in kVA, element-by-element
+Show taps                 ! shows the present regulator taps
+
+Redirect CircuitplottingScripts.DSS
+
+! =================================================================
+! 2nd Script
+! =================================================================
+
+! This script give results closer to the posted results by forcing 
+! the regulators to the same tap as the solution posted
+
+Compile (IEEE123Master.dss)
+
+! set regulators on same tap as Kersting computes
+! (uses RPN inline math feature of OpenDSS)
+! Transformer taps are expressed in per unit
+
+Transformer.reg1a.wdg=2 Tap=(0.00625  7  * 1 +)   ! Tap 7
+Transformer.reg2a.wdg=2 Tap=(0.00625 -1 * 1 +)    ! Tap -1
+Transformer.reg3a.wdg=2 Tap=(0.00625  0  * 1 +)   ! Tap 0
+Transformer.reg3c.wdg=2 Tap=(0.00625 -1 * 1 +)    ! Tap -1
+Transformer.reg4a.wdg=2 Tap=(0.00625  8 * 1 +)    ! Tap 8
+Transformer.reg4b.wdg=2 Tap=(0.00625  1 * 1 +)    ! Tap 1
+Transformer.reg4c.wdg=2 Tap=(0.00625  5 * 1 +)    ! Tap 5
+
+! Lock the regulators so they don't move
+! Another way of doing this is to Set ControlMode=OFF
+
+RegControl.creg1a.maxtapchange=0  !Fixed at present tap
+RegControl.creg2a.maxtapchange=0  !Fixed at present tap
+RegControl.creg3a.maxtapchange=0  !Fixed at present tap
+RegControl.creg4a.maxtapchange=0  !Fixed at present tap
+RegControl.creg3c.maxtapchange=0  !Fixed at present tap
+RegControl.creg4b.maxtapchange=0  !Fixed at present tap
+RegControl.creg4c.maxtapchange=0  !Fixed at present tap
+
+! No need to revise the MaxControlIter option in this case;
+! there will be only one control iteration
+
+New EnergyMeter.Feeder Line.L115 1
+
+solve
+Buscoords Buscoords.dat   ! load in bus coordinates
+
+! Show some selected results
+
+Plot Profile
+
+Show Voltage LN Nodes
+Show Currents Elements
+Show Powers kva Elements
+Show taps  
+
+
+help
+plot Loadshape Object=default

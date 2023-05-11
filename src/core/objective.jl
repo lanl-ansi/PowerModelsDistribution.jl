@@ -128,6 +128,42 @@ end
 
 
 """
+    objective_mc_min_fuel_cost_curtailment(pm::AbstractUnbalancedPowerModel)
+Minimize fuel cost and renewables curtailment 
+"""
+function objective_mc_min_fuel_cost_curtailment(pm::AbstractUnbalancedPowerModel, alpha = 100; report::Bool=true)
+    model = check_gen_cost_models(pm)
+
+    if model == 1
+        obj = objective_mc_min_fuel_cost_pwl(pm; report=report)
+    elseif model == 2
+        obj = objective_mc_min_fuel_cost_polynomial(pm; report=report)
+    else
+        error("Only cost models of types 1 and 2 are supported at this time, given cost model type of $(model)")
+    end
+    # Adding cost term for curtailment
+    curtailment_cost = 0.0
+    for (n, nw_ref) in nws(pm)
+        for (i,gen) in nw_ref[:gen]
+            if gen["control_mode"] == 0
+                pg = var(pm, n, :pg, i)
+                solar = ref(pm, n, :gen, i)
+                for pg_ph in pg
+                    pg_max = JuMP.upper_bound(pg_ph)
+                    if solar["vulnerable"] == 1
+                        curtailment_cost += alpha*10 * (pg_max - pg_ph)^2
+                    else
+                        curtailment_cost += alpha/10 * (pg_max - pg_ph)^2
+                    end
+                end
+            end
+        end
+    end
+
+    return JuMP.@objective(pm.model, Min, obj+curtailment_cost)
+end
+
+"""
     objective_mc_min_fuel_cost_switch(pm::AbstractUnbalancedPowerModel)
 
 Standard fuel cost minimization objective including switches

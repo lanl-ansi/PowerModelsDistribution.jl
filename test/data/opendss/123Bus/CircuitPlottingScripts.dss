@@ -1,0 +1,25 @@
+!------------------------------------------------------------------------------
+!--------------------Typical Circuit plots    -----------------
+!------------------------------------------------------------------------------
+! Labels and Dots are on
+
+plot circuit Power  max=1000 dots=n labels=n C1=$00FF0000  1ph=3  ! Max Thickness is at 1000 kW
+plot circuit Losses max=10      dots=y labels=n C1=$00FF0000    ! losses per unit length
+
+!------------------------------------------------------------------------------
+!--------------------Voltage Plot Example--------------------------------------
+!------------------------------------------------------------------------------
+! These settings make a more interesting voltage plot since the voltages are generally OK for this case
+! Voltages above    1.02 will be BLUE
+! Voltages between 1.0 and 1.02 will be GREEN
+! Voltages below     1.0 will be RED
+! These are the default colors for the voltage plot
+
+set markTransformers=yes
+Set normvminpu=1.02
+Set emergvminpu=1.0
+plot circuit voltage dots=y labels=n  
+
+
+plot daisy Power Max=2000 dots=n labels=n subs=n C1= $00C5AC23 ! $00FF0000
+help

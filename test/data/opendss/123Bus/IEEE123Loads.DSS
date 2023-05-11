@@ -1,0 +1,100 @@
+!
+! LOAD DEFINITIONS
+!
+! Note that 1-phase loads have a voltage rating = to actual voltage across terminals
+! This could be either 2.4kV for Wye connectoin or 4.16 kV for Delta or Line-Line connection.
+! 3-phase loads are rated Line-Line (as are 2-phase loads, but there are none in this case).
+! Only the balanced 3-phase loads are declared as 3-phase; unbalanced 3-phase loads are declared
+! as three 1-phase loads.
+
+New Load.S1a   Bus1=1.1    Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S2b   Bus1=2.2    Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S4c   Bus1=4.3    Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S5c   Bus1=5.3    Phases=1 Conn=Wye   Model=5 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S6c   Bus1=6.3    Phases=1 Conn=Wye   Model=2 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S7a   Bus1=7.1    Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S9a   Bus1=9.1    Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S10a  Bus1=10.1   Phases=1 Conn=Wye   Model=5 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S11a  Bus1=11.1   Phases=1 Conn=Wye   Model=2 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S12b  Bus1=12.2   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S16c  Bus1=16.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S17c  Bus1=17.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S19a  Bus1=19.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S20a  Bus1=20.1   Phases=1 Conn=Wye   Model=5 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S22b  Bus1=22.2   Phases=1 Conn=Wye   Model=2 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S24c  Bus1=24.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S28a  Bus1=28.1   Phases=1 Conn=Wye   Model=5 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S29a  Bus1=29.1   Phases=1 Conn=Wye   Model=2 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S30c  Bus1=30.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S31c  Bus1=31.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S32c  Bus1=32.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S33a  Bus1=33.1   Phases=1 Conn=Wye   Model=5 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S34c  Bus1=34.3   Phases=1 Conn=Wye   Model=2 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S35a  Bus1=35.1.2 Phases=1 Conn=Delta Model=1 kV=4.160 kW=40.0  kvar=20.0  
+New Load.S37a  Bus1=37.1   Phases=1 Conn=Wye   Model=2 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S38b  Bus1=38.2   Phases=1 Conn=Wye   Model=5 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S39b  Bus1=39.2   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S41c  Bus1=41.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S42a  Bus1=42.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S43b  Bus1=43.2   Phases=1 Conn=Wye   Model=2 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S45a  Bus1=45.1   Phases=1 Conn=Wye   Model=5 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S46a  Bus1=46.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S47   Bus1=47     Phases=3 Conn=Wye   Model=5 kV=4.160 kW=105.0 kvar=75.0  
+New Load.S48   Bus1=48     Phases=3 Conn=Wye   Model=2 kV=4.160 kW=210.0 kVAR=150.0 
+New Load.S49a  Bus1=49.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=35.0  kvar=25.0  
+New Load.S49b  Bus1=49.2   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=70.0  kvar=50.0  
+New Load.S49c  Bus1=49.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=35.0  kvar=20.0  ! used to be 25 in on-line document
+New Load.S50c  Bus1=50.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S51a  Bus1=51.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S52a  Bus1=52.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S53a  Bus1=53.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S55a  Bus1=55.1   Phases=1 Conn=Wye   Model=2 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S56b  Bus1=56.2   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S58b  Bus1=58.2   Phases=1 Conn=Wye   Model=5 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S59b  Bus1=59.2   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S60a  Bus1=60.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S62c  Bus1=62.3   Phases=1 Conn=Wye   Model=2 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S63a  Bus1=63.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S64b  Bus1=64.2   Phases=1 Conn=Wye   Model=5 kV=2.4   kW=75.0  kvar=35.0  
+New Load.S65a  Bus1=65.1.2 Phases=1 Conn=Delta Model=2 kV=4.160 kW=35.0  kvar=25.0  
+New Load.S65b  Bus1=65.2.3 Phases=1 Conn=Delta Model=2 kV=4.160 kW=35.0  kvar=25.0  
+New Load.S65c  Bus1=65.3.1 Phases=1 Conn=Delta Model=2 kV=4.160 kW=70.0  kvar=50.0  
+New Load.S66c  Bus1=66.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=75.0  kvar=35.0  
+New Load.S68a  Bus1=68.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S69a  Bus1=69.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S70a  Bus1=70.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S71a  Bus1=71.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S73c  Bus1=73.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S74c  Bus1=74.3   Phases=1 Conn=Wye   Model=2 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S75c  Bus1=75.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S76a  Bus1=76.1.2 Phases=1 Conn=Delta Model=5 kV=4.160 kW=105.0 kvar=80.0  
+New Load.S76b  Bus1=76.2.3 Phases=1 Conn=Delta Model=5 kV=4.160 kW=70.0  kvar=50.0  
+New Load.S76c  Bus1=76.3.1 Phases=1 Conn=Delta Model=5 kV=4.160 kW=70.0  kvar=50.0  
+New Load.S77b  Bus1=77.2   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S79a  Bus1=79.1   Phases=1 Conn=Wye   Model=2 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S80b  Bus1=80.2   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S82a  Bus1=82.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S83c  Bus1=83.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S84c  Bus1=84.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S85c  Bus1=85.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S86b  Bus1=86.2   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S87b  Bus1=87.2   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S88a  Bus1=88.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S90b  Bus1=90.2   Phases=1 Conn=Wye   Model=5 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S92c  Bus1=92.3   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S94a  Bus1=94.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S95b  Bus1=95.2   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S96b  Bus1=96.2   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S98a  Bus1=98.1   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S99b  Bus1=99.2   Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S100c Bus1=100.3  Phases=1 Conn=Wye   Model=2 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S102c Bus1=102.3  Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S103c Bus1=103.3  Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S104c Bus1=104.3  Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S106b Bus1=106.2  Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S107b Bus1=107.2  Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S109a Bus1=109.1  Phases=1 Conn=Wye   Model=1 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S111a Bus1=111.1  Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S112a Bus1=112.1  Phases=1 Conn=Wye   Model=5 kV=2.4   kW=20.0  kvar=10.0  
+New Load.S113a Bus1=113.1  Phases=1 Conn=Wye   Model=2 kV=2.4   kW=40.0  kvar=20.0  
+New Load.S114a Bus1=114.1  Phases=1 Conn=Wye   Model=1 kV=2.4   kW=20.0  kvar=10.0  

@@ -388,16 +388,18 @@ function _bank_transformers!(data_eng::Dict{String,<:Any})
                     "x" => [[0.0 for (i,p) in locs] for w in 1:nrw]
                 )
             end
-            for (i,p) in locs
-                if haskey(trs[i],"controls")
+            for i in keys(f_phases_loc)
+                c = f_phases_loc[i][1]
+                p = f_phases_loc[i][2]
+                if haskey(trs[c],"controls")
                     for w in 1:nrw
-                        c = f_phases_loc[i][1]
-                        btrans["controls"]["vreg"][w][c] = trs[i]["controls"]["vreg"][w][p]
-                        btrans["controls"]["band"][w][c] = trs[i]["controls"]["band"][w][p]
-                        btrans["controls"]["ptratio"][w][c] = trs[i]["controls"]["ptratio"][w][p]
-                        btrans["controls"]["ctprim"][w][c] = trs[i]["controls"]["ctprim"][w][p]
-                        btrans["controls"]["r"][w][c] = trs[i]["controls"]["r"][w][p]
-                        btrans["controls"]["x"][w][c] = trs[i]["controls"]["x"][w][p]
+                        # c = f_phases_loc[i][1]
+                        btrans["controls"]["vreg"][w][c] = trs[c]["controls"]["vreg"][w][p]
+                        btrans["controls"]["band"][w][c] = trs[c]["controls"]["band"][w][p]
+                        btrans["controls"]["ptratio"][w][c] = trs[c]["controls"]["ptratio"][w][p]
+                        btrans["controls"]["ctprim"][w][c] = trs[c]["controls"]["ctprim"][w][p]
+                        btrans["controls"]["r"][w][c] = trs[c]["controls"]["r"][w][p]
+                        btrans["controls"]["x"][w][c] = trs[c]["controls"]["x"][w][p]
                     end
                 end
             end

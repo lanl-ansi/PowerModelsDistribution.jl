@@ -1,0 +1,51 @@
+! simple reverse mode regulator test
+! puts enough DG on the IEEE 123 test case to force reverse flow
+! regulators see reverse power go to neutral
+
+Compile (IEEE123Master.dss)
+
+RegControl.creg1a.maxtapchange=1  Delay=15  !Allow only one tap change per solution. This one moves first
+RegControl.creg2a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg3a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4a.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg3c.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4b.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+RegControl.creg4c.maxtapchange=1  Delay=30  !Allow only one tap change per solution
+
+Set MaxControlIter=30
+
+! Solve executes the solution for the present solution mode, which is "snapshot".
+
+New energymeter.M1 Line.sw1 1
+
+solve
+
+New Monitor.4a  Transformer.reg4a  2  mode=2
+New Monitor.4b  Transformer.reg4b  2  mode=2
+New Monitor.4c  Transformer.reg4c  2  mode=2
+New Monitor.P4a  Transformer.reg4a  2  mode=1 ppolar=no
+New Monitor.P4b  Transformer.reg4b  2  mode=1 ppolar=no
+New Monitor.P4c  Transformer.reg4c  2  mode=1 ppolar=no
+
+Redirect SetDailyLoadshape.DSS
+
+solve
+
+solve Mode=daily
+! define the generator
+New Generator.2MWGen   Bus1=450 kV=4.16  kW=1400  PF=1  
+solve
+
+regcontrol.creg4a.reversible=yes  revneutral=yes
+regcontrol.creg4b.reversible=yes  revneutral=yes
+regcontrol.creg4c.reversible=yes  revneutral=yes
+
+solve
+
+Show monitor 4a
+Show taps 
+Show Powers kva Elements
+Export monitors 4a
+Plot monitor object= 4a channels=(1 )
+Export monitors p4a
+Plot monitor object= p4a channels=(1 )

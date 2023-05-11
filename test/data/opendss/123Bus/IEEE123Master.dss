@@ -1,0 +1,264 @@
+! Annotated Master file for the IEEE 123-bus test case.
+!
+! This file is meant to be invoked from the Compile command in the "Run_IEEE123Bus.DSS"  file.
+! 
+! Note: DSS commands, property names, etc., are NOT case sensitive. Capitalize as you please.
+! You should always do a "Clear" before making a new circuit:
+
+Clear
+
+! INSTANTIATE A NEW CIRCUIT AND DEFINE A STIFF 4160V SOURCE
+! The new circuit is called "ieee123"
+! This creates a Vsource object connected to "sourcebus". This is now the active circuit element, so
+! you can simply continue to edit its property value. 
+! The basekV is redefined to 4.16 kV. The bus name is changed to "150" to match one of the buses in the test feeder.
+! The source is set for 1.0 per unit and the Short circuit impedance is set to a small value (0.0001 ohms)
+! The ~ is just shorthad for "more" for the New or Edit commands
+
+New object=circuit.ieee123
+~ basekv=4.16 Bus1=150 pu=1.00 R1=0 X1=0.0001 R0=0 X0=0.0001
+
+! 3-PHASE GANGED REGULATOR AT HEAD OF FEEDER (KERSTING ASSUMES NO IMPEDANCE IN THE REGULATOR)
+! the first line defines the 3-phase transformer to be controlled by the regulator control.
+! The 2nd line defines the properties of the regulator control according to the test case
+
+new transformer.reg1a phases=3 windings=2 buses=[150 150r] conns=[wye wye] kvs=[4.16 4.16] kvas=[5000 5000] XHL=.001 %LoadLoss=0.00001 ppm=0.0
+new regcontrol.creg1a transformer=reg1a winding=2 vreg=120 band=2 ptratio=20 ctprim=700 R=3 X=7.5
+
+! REDIRECT INPUT STREAM TO FILE CONTAINING DEFINITIONS OF LINECODES
+! This file defines the line impedances is a similar manner to the description in the test case.
+
+Redirect        IEEELinecodes.DSS
+
+! LINE DEFINITIONS
+! Lines are defined by referring to a "linecode" that contains the impedances per unit length
+! So the only properties required are the LineCode name and Length.  Units are assumed to match the definition
+! since no units property is defined in either the Linecodes file or this file.
+! Note that it is not necessary to explicitly specify the node connections for the 3-phase lines
+! unless they are not ".1.2.3". However, they are spelled out here for clarity.
+! The DSS assumes .1.2.3.0.0 ... for connections of 3 or more phases.
+! Likewise, .1 is not necessary for 1-phase lines connected to phase 1. However, if it is connected
+! to any other phase, it must be specified. For completeness, everything is spelled out here.
+!
+! Note that it is recommended that the "units=" property be used here and in the Linecode definition as well
+! to avoid confusion in the future
+
+! *** Original *** New Line.L115   Phases=3 Bus1=149.1.2.3  Bus2=1.1.2.3    LineCode=1    Length=0.4
+! Since the default is 3-phase, the definition of this line can be simpler:
+
+New Line.L115            Bus1=149        Bus2=1          LineCode=1    Length=0.4
+
+New Line.L1     Phases=1 Bus1=1.2        Bus2=2.2        LineCode=10   Length=0.175
+New Line.L2     Phases=1 Bus1=1.3        Bus2=3.3        LineCode=11   Length=0.25
+New Line.L3     Phases=3 Bus1=1.1.2.3    Bus2=7.1.2.3    LineCode=1    Length=0.3
+New Line.L4     Phases=1 Bus1=3.3        Bus2=4.3        LineCode=11   Length=0.2
+New Line.L5     Phases=1 Bus1=3.3        Bus2=5.3        LineCode=11   Length=0.325
+New Line.L6     Phases=1 Bus1=5.3        Bus2=6.3        LineCode=11   Length=0.25
+New Line.L7     Phases=3 Bus1=7.1.2.3    Bus2=8.1.2.3    LineCode=1    Length=0.2
+New Line.L8     Phases=1 Bus1=8.2        Bus2=12.2       LineCode=10   Length=0.225
+New Line.L9     Phases=1 Bus1=8.1        Bus2=9.1        LineCode=9    Length=0.225
+New Line.L10    Phases=3 Bus1=8.1.2.3    Bus2=13.1.2.3   LineCode=1    Length=0.3
+New Line.L11    Phases=1 Bus1=9r.1       Bus2=14.1       LineCode=9    Length=0.425
+New Line.L12    Phases=1 Bus1=13.3       Bus2=34.3       LineCode=11   Length=0.15
+New Line.L13    Phases=3 Bus1=13.1.2.3   Bus2=18.1.2.3   LineCode=2    Length=0.825
+New Line.L14    Phases=1 Bus1=14.1       Bus2=11.1       LineCode=9    Length=0.25
+New Line.L15    Phases=1 Bus1=14.1       Bus2=10.1       LineCode=9    Length=0.25
+New Line.L16    Phases=1 Bus1=15.3       Bus2=16.3       LineCode=11   Length=0.375
+New Line.L17    Phases=1 Bus1=15.3       Bus2=17.3       LineCode=11   Length=0.35
+New Line.L18    Phases=1 Bus1=18.1       Bus2=19.1       LineCode=9    Length=0.25
+New Line.L19    Phases=3 Bus1=18.1.2.3   Bus2=21.1.2.3   LineCode=2    Length=0.3
+New Line.L20    Phases=1 Bus1=19.1       Bus2=20.1       LineCode=9    Length=0.325
+New Line.L21    Phases=1 Bus1=21.2       Bus2=22.2       LineCode=10   Length=0.525
+New Line.L22    Phases=3 Bus1=21.1.2.3   Bus2=23.1.2.3   LineCode=2    Length=0.25
+New Line.L23    Phases=1 Bus1=23.3       Bus2=24.3       LineCode=11   Length=0.55
+New Line.L24    Phases=3 Bus1=23.1.2.3   Bus2=25.1.2.3   LineCode=2    Length=0.275
+New Line.L25    Phases=2 Bus1=25r.1.3    Bus2=26.1.3     LineCode=7    Length=0.35
+New Line.L26    Phases=3 Bus1=25.1.2.3   Bus2=28.1.2.3   LineCode=2    Length=0.2
+New Line.L27    Phases=2 Bus1=26.1.3     Bus2=27.1.3     LineCode=7    Length=0.275
+New Line.L28    Phases=1 Bus1=26.3       Bus2=31.3       LineCode=11   Length=0.225
+New Line.L29    Phases=1 Bus1=27.1       Bus2=33.1       LineCode=9    Length=0.5
+New Line.L30    Phases=3 Bus1=28.1.2.3   Bus2=29.1.2.3   LineCode=2    Length=0.3
+New Line.L31    Phases=3 Bus1=29.1.2.3   Bus2=30.1.2.3   LineCode=2    Length=0.35
+New Line.L32    Phases=3 Bus1=30.1.2.3   Bus2=250.1.2.3  LineCode=2    Length=0.2
+New Line.L33    Phases=1 Bus1=31.3       Bus2=32.3       LineCode=11   Length=0.3
+New Line.L34    Phases=1 Bus1=34.3       Bus2=15.3       LineCode=11   Length=0.1
+New Line.L35    Phases=2 Bus1=35.1.2     Bus2=36.1.2     LineCode=8    Length=0.65
+New Line.L36    Phases=3 Bus1=35.1.2.3   Bus2=40.1.2.3   LineCode=1    Length=0.25
+New Line.L37    Phases=1 Bus1=36.1       Bus2=37.1       LineCode=9    Length=0.3
+New Line.L38    Phases=1 Bus1=36.2       Bus2=38.2       LineCode=10   Length=0.25
+New Line.L39    Phases=1 Bus1=38.2       Bus2=39.2       LineCode=10   Length=0.325
+New Line.L40    Phases=1 Bus1=40.3       Bus2=41.3       LineCode=11   Length=0.325
+New Line.L41    Phases=3 Bus1=40.1.2.3   Bus2=42.1.2.3   LineCode=1    Length=0.25
+New Line.L42    Phases=1 Bus1=42.2       Bus2=43.2       LineCode=10   Length=0.5
+New Line.L43    Phases=3 Bus1=42.1.2.3   Bus2=44.1.2.3   LineCode=1    Length=0.2
+New Line.L44    Phases=1 Bus1=44.1       Bus2=45.1       LineCode=9    Length=0.2
+New Line.L45    Phases=3 Bus1=44.1.2.3   Bus2=47.1.2.3   LineCode=1    Length=0.25
+New Line.L46    Phases=1 Bus1=45.1       Bus2=46.1       LineCode=9    Length=0.3
+New Line.L47    Phases=3 Bus1=47.1.2.3   Bus2=48.1.2.3   LineCode=4    Length=0.15
+New Line.L48    Phases=3 Bus1=47.1.2.3   Bus2=49.1.2.3   LineCode=4    Length=0.25
+New Line.L49    Phases=3 Bus1=49.1.2.3   Bus2=50.1.2.3   LineCode=4    Length=0.25
+New Line.L50    Phases=3 Bus1=50.1.2.3   Bus2=51.1.2.3   LineCode=4    Length=0.25
+New Line.L51    Phases=3 Bus1=51.1.2.3   Bus2=151.1.2.3  LineCode=4    Length=0.5
+New Line.L52    Phases=3 Bus1=52.1.2.3   Bus2=53.1.2.3   LineCode=1    Length=0.2
+New Line.L53    Phases=3 Bus1=53.1.2.3   Bus2=54.1.2.3   LineCode=1    Length=0.125
+New Line.L54    Phases=3 Bus1=54.1.2.3   Bus2=55.1.2.3   LineCode=1    Length=0.275
+New Line.L55    Phases=3 Bus1=54.1.2.3   Bus2=57.1.2.3   LineCode=3    Length=0.35
+New Line.L56    Phases=3 Bus1=55.1.2.3   Bus2=56.1.2.3   LineCode=1    Length=0.275
+New Line.L57    Phases=1 Bus1=57.2       Bus2=58.2       LineCode=10   Length=0.25
+New Line.L58    Phases=3 Bus1=57.1.2.3   Bus2=60.1.2.3   LineCode=3    Length=0.75
+New Line.L59    Phases=1 Bus1=58.2       Bus2=59.2       LineCode=10   Length=0.25
+New Line.L60    Phases=3 Bus1=60.1.2.3   Bus2=61.1.2.3   LineCode=5    Length=0.55
+New Line.L61    Phases=3 Bus1=60.1.2.3   Bus2=62.1.2.3   LineCode=12   Length=0.25
+New Line.L62    Phases=3 Bus1=62.1.2.3   Bus2=63.1.2.3   LineCode=12   Length=0.175
+New Line.L63    Phases=3 Bus1=63.1.2.3   Bus2=64.1.2.3   LineCode=12   Length=0.35
+New Line.L64    Phases=3 Bus1=64.1.2.3   Bus2=65.1.2.3   LineCode=12   Length=0.425
+New Line.L65    Phases=3 Bus1=65.1.2.3   Bus2=66.1.2.3   LineCode=12   Length=0.325
+New Line.L66    Phases=1 Bus1=67.1       Bus2=68.1       LineCode=9    Length=0.2
+New Line.L67    Phases=3 Bus1=67.1.2.3   Bus2=72.1.2.3   LineCode=3    Length=0.275
+New Line.L68    Phases=3 Bus1=67.1.2.3   Bus2=97.1.2.3   LineCode=3    Length=0.25
+New Line.L69    Phases=1 Bus1=68.1       Bus2=69.1       LineCode=9    Length=0.275
+New Line.L70    Phases=1 Bus1=69.1       Bus2=70.1       LineCode=9    Length=0.325
+New Line.L71    Phases=1 Bus1=70.1       Bus2=71.1       LineCode=9    Length=0.275
+New Line.L72    Phases=1 Bus1=72.3       Bus2=73.3       LineCode=11   Length=0.275
+New Line.L73    Phases=3 Bus1=72.1.2.3   Bus2=76.1.2.3   LineCode=3    Length=0.2
+New Line.L74    Phases=1 Bus1=73.3       Bus2=74.3       LineCode=11   Length=0.35
+New Line.L75    Phases=1 Bus1=74.3       Bus2=75.3       LineCode=11   Length=0.4
+New Line.L76    Phases=3 Bus1=76.1.2.3   Bus2=77.1.2.3   LineCode=6    Length=0.4
+New Line.L77    Phases=3 Bus1=76.1.2.3   Bus2=86.1.2.3   LineCode=3    Length=0.7
+New Line.L78    Phases=3 Bus1=77.1.2.3   Bus2=78.1.2.3   LineCode=6    Length=0.1
+New Line.L79    Phases=3 Bus1=78.1.2.3   Bus2=79.1.2.3   LineCode=6    Length=0.225
+New Line.L80    Phases=3 Bus1=78.1.2.3   Bus2=80.1.2.3   LineCode=6    Length=0.475
+New Line.L81    Phases=3 Bus1=80.1.2.3   Bus2=81.1.2.3   LineCode=6    Length=0.175
+New Line.L82    Phases=3 Bus1=81.1.2.3   Bus2=82.1.2.3   LineCode=6    Length=0.25
+New Line.L83    Phases=1 Bus1=81.3       Bus2=84.3       LineCode=11   Length=0.675
+New Line.L84    Phases=3 Bus1=82.1.2.3   Bus2=83.1.2.3   LineCode=6    Length=0.25
+New Line.L85    Phases=1 Bus1=84.3       Bus2=85.3       LineCode=11   Length=0.475
+New Line.L86    Phases=3 Bus1=86.1.2.3   Bus2=87.1.2.3   LineCode=6    Length=0.45
+New Line.L87    Phases=1 Bus1=87.1       Bus2=88.1       LineCode=9    Length=0.175
+New Line.L88    Phases=3 Bus1=87.1.2.3   Bus2=89.1.2.3   LineCode=6    Length=0.275
+New Line.L89    Phases=1 Bus1=89.2       Bus2=90.2       LineCode=10   Length=0.25
+New Line.L90    Phases=3 Bus1=89.1.2.3   Bus2=91.1.2.3   LineCode=6    Length=0.225
+New Line.L91    Phases=1 Bus1=91.3       Bus2=92.3       LineCode=11   Length=0.3
+New Line.L92    Phases=3 Bus1=91.1.2.3   Bus2=93.1.2.3   LineCode=6    Length=0.225
+New Line.L93    Phases=1 Bus1=93.1       Bus2=94.1       LineCode=9    Length=0.275
+New Line.L94    Phases=3 Bus1=93.1.2.3   Bus2=95.1.2.3   LineCode=6    Length=0.3
+New Line.L95    Phases=1 Bus1=95.2       Bus2=96.2       LineCode=10   Length=0.2
+New Line.L96    Phases=3 Bus1=97.1.2.3   Bus2=98.1.2.3   LineCode=3    Length=0.275
+New Line.L97    Phases=3 Bus1=98.1.2.3   Bus2=99.1.2.3   LineCode=3    Length=0.55
+New Line.L98    Phases=3 Bus1=99.1.2.3   Bus2=100.1.2.3  LineCode=3    Length=0.3
+New Line.L99    Phases=3 Bus1=100.1.2.3  Bus2=450.1.2.3  LineCode=3    Length=0.8
+New Line.L118   Phases=3 Bus1=197.1.2.3  Bus2=101.1.2.3  LineCode=3    Length=0.25
+New Line.L100   Phases=1 Bus1=101.3      Bus2=102.3      LineCode=11   Length=0.225
+New Line.L101   Phases=3 Bus1=101.1.2.3  Bus2=105.1.2.3  LineCode=3    Length=0.275
+New Line.L102   Phases=1 Bus1=102.3      Bus2=103.3      LineCode=11   Length=0.325
+New Line.L103   Phases=1 Bus1=103.3      Bus2=104.3      LineCode=11   Length=0.7
+New Line.L104   Phases=1 Bus1=105.2      Bus2=106.2      LineCode=10   Length=0.225
+New Line.L105   Phases=3 Bus1=105.1.2.3  Bus2=108.1.2.3  LineCode=3    Length=0.325
+New Line.L106   Phases=1 Bus1=106.2      Bus2=107.2      LineCode=10   Length=0.575
+New Line.L107   Phases=1 Bus1=108.1      Bus2=109.1      LineCode=9    Length=0.45
+New Line.L108   Phases=3 Bus1=108.1.2.3  Bus2=300.1.2.3  LineCode=3    Length=1
+New Line.L109   Phases=1 Bus1=109.1      Bus2=110.1      LineCode=9    Length=0.3
+New Line.L110   Phases=1 Bus1=110.1      Bus2=111.1      LineCode=9    Length=0.575
+New Line.L111   Phases=1 Bus1=110.1      Bus2=112.1      LineCode=9    Length=0.125
+New Line.L112   Phases=1 Bus1=112.1      Bus2=113.1      LineCode=9    Length=0.525
+New Line.L113   Phases=1 Bus1=113.1      Bus2=114.1      LineCode=9    Length=0.325
+New Line.L114   Phases=3 Bus1=135.1.2.3  Bus2=35.1.2.3   LineCode=4    Length=0.375
+New Line.L116   Phases=3 Bus1=152.1.2.3  Bus2=52.1.2.3   LineCode=1    Length=0.4
+New Line.L117   Phases=3 Bus1=160r.1.2.3 Bus2=67.1.2.3   LineCode=6    Length=0.35
+
+
+! NORMALLY CLOSED SWITCHES ARE DEFINED AS SHORT LINES
+! Could also be defned by setting the Switch=Yes property
+
+New Line.Sw1    phases=3  Bus1=150r   Bus2=149    r1=1e-3 r0=1e-3 x1=0.000 x0=0.000 c1=0.000 c0=0.000 Length=0.001
+New Line.Sw2    phases=3  Bus1=13     Bus2=152    r1=1e-3 r0=1e-3 x1=0.000 x0=0.000 c1=0.000 c0=0.000 Length=0.001
+New Line.Sw3    phases=3  Bus1=18     Bus2=135    r1=1e-3 r0=1e-3 x1=0.000 x0=0.000 c1=0.000 c0=0.000 Length=0.001
+New Line.Sw4    phases=3  Bus1=60     Bus2=160    r1=1e-3 r0=1e-3 x1=0.000 x0=0.000 c1=0.000 c0=0.000 Length=0.001
+New Line.Sw5    phases=3  Bus1=97     Bus2=197    r1=1e-3 r0=1e-3 x1=0.000 x0=0.000 c1=0.000 c0=0.000 Length=0.001
+New Line.Sw6    phases=3  Bus1=61     Bus2=61s    r1=1e-3 r0=1e-3 x1=0.000 x0=0.000 c1=0.000 c0=0.000 Length=0.001
+
+! NORMALLY OPEN SWITCHES; DEFINED AS SHORT LINE TO OPEN BUS SO WE CAN SEE OPEN POINT VOLTAGES. 
+! COULD ALSO BE DEFINED AS DISABLED OR THE TERMINCAL COULD BE OPENED AFTER BEING DEFINED
+
+New Line.Sw7    phases=3  Bus1=151    Bus2=300_OPEN   r1=1e-3 r0=1e-3  x1=0.000 x0=0.000 c1=0.000 c0=0.000 Length=0.001
+New Line.Sw8    phases=1  Bus1=54.1   Bus2=94_OPEN.1  r1=1e-3 r0=1e-3  x1=0.000 x0=0.000 c1=0.000 c0=0.000 Length=0.001
+
+! LOAD TRANSFORMER AT 61s/610
+! This is a 150 kVA Delta-Delta stepdown from 4160V to 480V.
+
+New Transformer.XFM1  Phases=3   Windings=2 Xhl=2.72
+~ wdg=1 bus=61s       conn=Delta kv=4.16    kva=150    %r=0.635
+~ wdg=2 bus=610       conn=Delta kv=0.48    kva=150    %r=0.635
+
+! CAPACITORS
+! Capacitors are 2-terminal devices. The 2nd terminal (Bus2=...) defaults to all phases
+! connected to ground (Node 0). Thus, it need not be specified if a Y-connected or L-N connected
+! capacitor is desired
+
+New Capacitor.C83       Bus1=83      Phases=3     kVAR=600     kV=4.16
+New Capacitor.C88a      Bus1=88.1    Phases=1     kVAR=50      kV=2.402
+New Capacitor.C90b      Bus1=90.2    Phases=1     kVAR=50      kV=2.402
+New Capacitor.C92c      Bus1=92.3    Phases=1     kVAR=50      kV=2.402
+
+!PV Systems -- Add PV units to the distribution feeder
+// P-T curve is per unit of rated Pmpp vs temperature
+// This one is for a Pmpp stated at 25 deg
+New XYCurve.MyPvsT npts=4  xarray=[0  25  75  100]  yarray=[1.2 1.0 0.8  0.6] 
+
+// efficiency curve is per unit eff vs per unit power
+New XYCurve.MyEff npts=4  xarray=[.1  .2  .4  1.0]  yarray=[.86  .9  .93  .97]  
+
+
+// pv definition
+New PVSystem.PV1 phases=1 bus1=3.3 kV=2.4  kVA=910  irrad=1  Pmpp=450 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT 
+New PVSystem.PV2 phases=3 bus1=13.1.2.3 kV=2.4  kVA=620 irrad=1  Pmpp=300 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT 
+New PVSystem.PV3 phases=3 bus1=18.1.2.3 kV=2.4  kVA=730  irrad=1  Pmpp=350 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT
+New PVSystem.PV4 phases=3 bus1=25.1.2.3 kV=2.4  kVA=440  irrad=1  Pmpp=200 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT
+New PVSystem.PV5 phases=3 bus1=60.1.2.3 kV=2.4  kVA=350  irrad=1  Pmpp=150 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT
+New PVSystem.PV6 phases=3 bus1=76.1.2.3 kV=2.4  kVA=860  irrad=1  Pmpp=400 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT
+New PVSystem.PV7 phases=3 bus1=97.1.2.3 kV=2.4  kVA=970  irrad=1  Pmpp=450 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT
+New PVSystem.PV8 phases=3 bus1=101.1.2.3 kV=2.4  kVA=0  irrad=1  Pmpp=450 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT
+New PVSystem.PV9 phases=1 bus1=11.1 kV=2.4  kVA=815  irrad=1  Pmpp=400 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT 
+New PVSystem.PV10 phases=1 bus1=33.1 kV=2.4  kVA=725  irrad=1  Pmpp=350 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT 
+New PVSystem.PV11 phases=1 bus1=37.1 kV=2.4  kVA=735  irrad=1  Pmpp=350 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT
+New PVSystem.PV12 phases=1 bus1=46.1 kV=2.4  kVA=1545  irrad=1  Pmpp=750 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT
+New PVSystem.PV13 phases=3 bus1=83.1.2.3 kV=2.4  kVA=0 irrad=1  Pmpp=150 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT
+New PVSystem.PV14 phases=1 bus1=96.2 kV=2.4  kVA=565 irrad=1  Pmpp=250 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT
+New PVSystem.PV15 phases=1 bus1=114.1 kV=2.4  kVA=575  irrad=1  Pmpp=275
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT
+New PVSystem.PV16 phases=3 bus1=151.1.2.3 kV=2.4  kVA=785  irrad=1  Pmpp=350 
+~ temperature=40 PF=0.9  effcurve=Myeff  P-TCurve=MyPvsT
+
+
+!REGULATORS - REDIRECT TO DEFINITIONS FILE
+! This file contains definitions for the remainder of regulators on the feeder:
+
+Redirect IEEE123Regulators.DSS
+
+! SPOT LOADS -- REDIRECT INPUT STREAM TO LOAD DEFINITIONS FILE
+
+Redirect IEEE123Loads.DSS
+
+! All devices in the test feeder are now defined.
+!
+! Many of the voltages are reported in per unit, so it is important to establish the base voltages at each bus so
+! that we can compare with the result with greater ease.
+! We will let the DSS compute the voltage bases by doing a zero-load power flow.
+! There are only two voltage bases in the problem: 4160V and 480V. These must be expressed in kV
+
+Set VoltageBases = [4.16, 0.48]    ! ARRAY OF VOLTAGES IN KV
+CalcVoltageBases  ! PERFORMS ZERO LOAD POWER FLOW TO ESTIMATE VOLTAGE BASES
