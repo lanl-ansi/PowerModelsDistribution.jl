@@ -212,6 +212,11 @@ Takes data in either the ENGINEERING or MATHEMATICAL model, a model type (_e.g._
 and model builder function (_e.g._, [`build_mc_opf`](@ref build_mc_opf)), and returns a solution in the original data model
 defined by `data`.
 
+Technical description of the native power flow can be found at https://arxiv.org/abs/2305.04405 where implementation fo the 
+fixed-point current injection algorithm, inspired by the existing open-source implementation in OpenDSS. 
+The current injection method is commonly conceived as a system of nonlinear equalities solved by Newton’s method. 
+However, the fixed point iteration variant commonly outperforms most methods, while supporting meshed topologies from the ground up
+
 If `make_si` is false, data will remain in per-unit.
 
 For an explanation of `multinetwork` and `global_keys`, see [`make_multinetwork`](@ref make_multinetwork)
@@ -289,7 +294,7 @@ end
         verbose::Bool=false
     )::Dict{String,Any}
 
-Computes native power flow and outputs the result dict.
+Computes native power flow and outputs the result dict (See https://arxiv.org/abs/2305.04405).
 
 ## Abbreviations:
 - ntype: node type (variable, fixed, grounded, virtual)
@@ -386,7 +391,7 @@ end
       verbose::Bool
     )
 
-Computes native power flow and requires PowerFlowData.
+Computes native power flow and requires PowerFlowData (See https://arxiv.org/abs/2305.04405).
 """
 function compute_mc_pf(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Real=1E-8, verbose::Bool=false)
     time = @elapsed (Uv, status, its, stat) = _compute_Uv(pfd, max_iter=max_iter, stat_tol=stat_tol)
@@ -402,7 +407,7 @@ end
       verbose::Bool
     )
 Computes a nonlinear AC power flow in rectangular coordinates based on the admittance
-matrix of the network data using the fixed-point current injection method.
+matrix of the network data using the fixed-point current injection method (See https://arxiv.org/abs/2305.04405).
 Returns a solution data structure in PowerModelsDistribution Dict format.
 """
 function _compute_Uv(pfd::PowerFlowData; max_iter::Int=100, stat_tol::Real=1E-8, verbose::Bool=false)
@@ -541,7 +546,7 @@ end
       sbase::Float
     )
 
-Branch component interface outputs branch primitive Y matrix.
+Branch component interface outputs branch primitive Y matrix (See https://arxiv.org/abs/2305.04405 Section 4.1).
 """
 function _cpf_branch_interface(branch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Real)
     Ys = inv(branch["br_r"] + im * branch["br_x"])
@@ -566,7 +571,7 @@ end
       sbase::Float
     )
 
-Shunt component interface outputs shunt primitive Y matrix.
+Shunt component interface outputs shunt primitive Y matrix (See https://arxiv.org/abs/2305.04405 Section 4.2).
 """
 function _cpf_shunt_interface(shunt::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Real)
     Y = shunt["gs"] + im * shunt["bs"]
@@ -587,7 +592,7 @@ end
       sbase::Float
     )
 
-Transformer component interface outputs transformer primitive Y matrix.
+Transformer component interface outputs transformer primitive Y matrix (See https://arxiv.org/abs/2305.04405 Section 4.3).
 """
 function _cpf_transformer_interface(tr::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Real)
     f_ns = [(tr["f_bus"], t) for t in tr["f_connections"]]
@@ -727,7 +732,7 @@ end
       sbase::Float
     )
 
-Load component interface outputs load primitive Y matrix.
+Load component interface outputs load primitive Y matrix (See https://arxiv.org/abs/2305.04405 Sections 4.4 and 4.5).
 """
 function _cpf_load_interface(load::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Real)
     bts = [(load["load_bus"], t) for t in load["connections"]]
@@ -905,7 +910,7 @@ end
       sbase::Float
     )
 
-Storage component interface outputs storage primitive Y matrix.
+Storage component interface outputs storage primitive Y matrix (See https://arxiv.org/abs/2305.04405 Section 4.4 and 4.5).
 """
 function _cpf_storage_interface(storage::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Real)
     bts = [(storage["storage_bus"], t) for t in storage["connections"]]
@@ -984,7 +989,7 @@ end
       sbase::Float
     )
 
-Generator component interface outputs generator primitive Y matrix.
+Generator component interface outputs generator primitive Y matrix (See https://arxiv.org/abs/2305.04405 Section 4.4 and 4.5).
 """
 function _cpf_generator_interface(gen::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Real)
     bts = [(gen["gen_bus"], t) for t in gen["connections"]]
@@ -1066,7 +1071,7 @@ end
       sbase::Float
     )
 
-Branch component interface outputs branch primitive Y matrix.
+Branch component interface outputs branch primitive Y matrix  (See https://arxiv.org/abs/2305.04405 Section 4.2).
 """
 function _cpf_switch_interface(switch::Dict{String,<:Any}, v_start::Dict{<:Any,<:Any}, explicit_neutral::Bool, line_vbase::Dict{String,<:Any}, sbase::Real)
     vbase = line_vbase["switch.$(switch["index"])"]
