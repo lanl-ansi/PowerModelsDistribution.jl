@@ -50,7 +50,7 @@ function variable_mc_bus_voltage_prod_hermitian(pm::AbstractUBFModels; nw::Int=n
     var(pm, nw)[:Wr] = Wr
     var(pm, nw)[:Wi] = Wi
     # maintain compatibility
-    var(pm, nw)[:w] = Dict{Int, Any}([(id, LinearAlgebra.diag(Wr[id])) for id in bus_ids])
+    var(pm, nw)[:w] = Dict(id => JuMP.Containers.DenseAxisArray(LinearAlgebra.diag(Wr[id]), terminals[id]) for id in bus_ids)
 
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :Wr, ids(pm, nw, :bus), Wr)
     report && _IM.sol_component_value(pm, pmd_it_sym, nw, :bus, :Wi, ids(pm, nw, :bus), Wi)
@@ -129,11 +129,75 @@ function variable_mc_branch_power(pm::AbstractUBFModels; nw::Int=nw_id_default, 
     var(pm, nw)[:P] = P
     var(pm, nw)[:Q] = Q
 
-    var(pm, nw)[:p] = Dict([(id,LinearAlgebra.diag(P[id])) for id in branch_arcs])
-    var(pm, nw)[:q] = Dict([(id,LinearAlgebra.diag(Q[id])) for id in branch_arcs])
+    var(pm, nw)[:p] = Dict(id => JuMP.Containers.DenseAxisArray(LinearAlgebra.diag(P[id]), connections[id]) for id in branch_arcs)
+    var(pm, nw)[:q] = Dict(id => JuMP.Containers.DenseAxisArray(LinearAlgebra.diag(Q[id]), connections[id]) for id in branch_arcs)
 
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :Pf, :Pt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), P)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :branch, :Qf, :Qt, ref(pm, nw, :arcs_branch_from), ref(pm, nw, :arcs_branch_to), Q)
+end
+
+
+"matrix power variables for switches"
+function variable_mc_switch_power(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    # calculate S bound
+    switch_arcs = Vector{Tuple{Int,Int,Int}}(ref(pm, nw, :arcs_switch))
+    connections = Dict{Tuple{Int,Int,Int},Vector{Int}}((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_switch) for ((l,i,j), connections) in entry)
+
+    if bounded
+        bound = Dict{eltype(switch_arcs), Matrix{Real}}()
+        for (l, switch) in ref(pm, nw, :switch)
+            bus_fr = ref(pm, nw, :bus, switch["f_bus"])
+            bus_to = ref(pm, nw, :bus, switch["t_bus"])
+
+            smax_fr = _calc_branch_power_max(switch, bus_fr)
+            smax_to = _calc_branch_power_max(switch, bus_to)
+            cmax_fr, cmax_to = _calc_branch_current_max_frto(switch, bus_fr, bus_to)
+
+            tuple_fr = (l, bus_fr["index"], bus_to["index"])
+            tuple_to = (l, bus_to["index"], bus_fr["index"])
+
+            bound[tuple_fr] = bus_fr["vmax"][[findfirst(isequal(c), bus_fr["terminals"]) for c in switch["f_connections"]]].*cmax_fr'
+            bound[tuple_to] = bus_to["vmax"][[findfirst(isequal(c), bus_to["terminals"]) for c in switch["t_connections"]]].*cmax_to'
+
+            for (idx, (fc,tc)) in enumerate(zip(switch["f_connections"], switch["t_connections"]))
+                bound[tuple_fr][idx,idx] = smax_fr[idx]
+                bound[tuple_to][idx,idx] = smax_to[idx]
+            end
+        end
+        # create matrix variables
+        (P,Q) = variable_mx_complex(pm.model, switch_arcs, connections, connections; symm_bound=bound, name=("Psw", "Qsw"), prefix="$nw")
+    else
+        (P,Q) = variable_mx_complex(pm.model, switch_arcs, connections, connections; name=("Psw", "Qsw"), prefix="$nw")
+    end
+
+    # this explicit type erasure is necessary
+    P_expr = merge(
+        Dict{Any,Any}( (l,i,j) => P[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from) ),
+        Dict( (l,j,i) => -1.0.*P[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from))
+    )
+    Q_expr = merge(
+        Dict{Any,Any}( (l,i,j) => Q[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from) ),
+        Dict( (l,j,i) => -1.0*Q[(l,i,j)] for (l,i,j) in ref(pm, nw, :arcs_switch_from))
+    )
+
+    # This is needed to get around error: "unexpected affine expression in nlconstraint"
+    (P_aux,Q_aux) = variable_mx_complex(pm.model, switch_arcs, connections, connections; name=("Psw_aux", "Qsw_aux"), prefix="$nw")
+    for (l,i,j) in switch_arcs
+        JuMP.@constraint(pm.model, P_expr[(l,i,j)] .== P_aux[(l,i,j)])
+        JuMP.@constraint(pm.model, Q_expr[(l,i,j)] .== Q_aux[(l,i,j)])
+    end
+
+    # save reference
+    var(pm, nw)[:Psw] = P_aux
+    var(pm, nw)[:Qsw] = Q_aux
+
+    var(pm, nw)[:psw] = Dict(id => JuMP.Containers.DenseAxisArray(LinearAlgebra.diag(P_aux[id]), connections[id]) for id in switch_arcs)
+    var(pm, nw)[:qsw] = Dict(id => JuMP.Containers.DenseAxisArray(LinearAlgebra.diag(Q_aux[id]), connections[id]) for id in switch_arcs)
+
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :Pf, :Pt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), P_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :Qf, :Qt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), Q_expr)
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :pf, :pt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), Dict([(id,LinearAlgebra.diag(P_expr[id])) for id in switch_arcs]))
+    report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :switch, :qf, :qt, ref(pm, nw, :arcs_switch_from), ref(pm, nw, :arcs_switch_to), Dict([(id,LinearAlgebra.diag(Q_expr[id])) for id in switch_arcs]))
 end
 
 
@@ -141,9 +205,12 @@ end
 function variable_mc_transformer_power(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
     transformer_arcs = Vector{Tuple{Int,Int,Int}}(ref(pm, nw, :arcs_transformer))
     connections = Dict{Tuple{Int,Int,Int},Vector{Int}}((l,i,j) => connections for (bus,entry) in ref(pm, nw, :bus_arcs_conns_transformer) for ((l,i,j), connections) in entry)
+    tf_del_ids = [id for (id, transformer) in ref(pm, nw, :transformer) if transformer["configuration"]==DELTA] # ids for delta configurations
 
     if bounded
         bound = Dict{eltype(transformer_arcs), Matrix{Real}}()
+        bound_del = Dict{eltype(tf_del_ids), Matrix{Real}}()
+        cmax_del = Dict{eltype(tf_del_ids), Vector{Real}}()
         for (tr, transformer) in ref(pm, nw, :transformer)
             bus_fr = ref(pm, nw, :bus, transformer["f_bus"])
             bus_to = ref(pm, nw, :bus, transformer["t_bus"])
@@ -162,6 +229,11 @@ function variable_mc_transformer_power(pm::AbstractUBFModels; nw::Int=nw_id_defa
                 bound[tuple_fr][idx,idx] = smax_fr[idx]
                 bound[tuple_to][idx,idx] = smax_to[idx]
             end
+
+            if transformer["configuration"]==DELTA
+                bound_del[tr] = bound[tuple_fr]
+                cmax_del[tr] = cmax_fr
+            end
         end
         # create matrix variables
         (Pt,Qt) = variable_mx_complex(pm.model, transformer_arcs, connections, connections; symm_bound=bound, name=("Pt", "Qt"), prefix="$nw")
@@ -173,13 +245,31 @@ function variable_mc_transformer_power(pm::AbstractUBFModels; nw::Int=nw_id_defa
     var(pm, nw)[:Pt] = Pt
     var(pm, nw)[:Qt] = Qt
 
-    var(pm, nw)[:pt] = pt = Dict([(id,LinearAlgebra.diag(Pt[id])) for id in transformer_arcs])
-    var(pm, nw)[:qt] = qt = Dict([(id,LinearAlgebra.diag(Qt[id])) for id in transformer_arcs])
+    var(pm, nw)[:pt] = pt = Dict(id => JuMP.Containers.DenseAxisArray(LinearAlgebra.diag(Pt[id]), connections[id]) for id in transformer_arcs)
+    var(pm, nw)[:qt] = qt = Dict(id => JuMP.Containers.DenseAxisArray(LinearAlgebra.diag(Qt[id]), connections[id]) for id in transformer_arcs)
 
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :Pf, :Pt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), Pt)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :Qf, :Qt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), Qt)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :pf, :pt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), pt)
     report && _IM.sol_component_value_edge(pm, pmd_it_sym, nw, :transformer, :qf, :qt, ref(pm, nw, :arcs_transformer_from), ref(pm, nw, :arcs_transformer_to), qt)
+
+    # create auxilary matrix variables for transformers with delta configuration
+    if !isempty(tf_del_ids)
+        conn_del = Dict{Int,Vector{Int}}(id => transformer["f_connections"] for (id,transformer) in ref(pm, nw, :transformer))
+        (Xtr,Xti) = variable_mx_complex(pm.model, tf_del_ids, conn_del, conn_del; symm_bound=bound_del, name="Xt", prefix="$nw")
+        (CCtr, CCti) = variable_mx_hermitian(pm.model, tf_del_ids, conn_del; sqrt_upper_bound=cmax_del, name="CCt", prefix="$nw")
+        # save references
+        var(pm, nw)[:Xtr] = Xtr
+        var(pm, nw)[:Xti] = Xti
+        var(pm, nw)[:CCtr] = CCtr
+        var(pm, nw)[:CCti] = CCti
+
+        report && _IM.sol_component_value(pm, pmd_it_sym, nw, :transformer, :Xtr, tf_del_ids, Xtr)
+        report && _IM.sol_component_value(pm, pmd_it_sym, nw, :transformer, :Xti, tf_del_ids, Xti)
+        report && _IM.sol_component_value(pm, pmd_it_sym, nw, :transformer, :CCtr, tf_del_ids, CCtr)
+        report && _IM.sol_component_value(pm, pmd_it_sym, nw, :transformer, :CCti, tf_del_ids, CCti)
+    end
+
 end
 
 
@@ -379,6 +469,23 @@ function variable_mc_load_power(pm::AbstractUBFModels; nw=nw_id_default)
 end
 
 
+
+"""
+    variable_mc_generator_power(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+
+The variable creation for generators in branch flow model.
+Delta generators always need an auxilary power variable (X) similar to delta loads.
+Wye generators however, don't need any variables.
+"""
+function variable_mc_generator_power(pm::AbstractUBFModels; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_generator_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_generator_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
+    # create auxilary variables for delta generators
+    gen_del_ids = [id for (id, gen) in ref(pm, nw, :gen) if gen["configuration"]==DELTA]
+    variable_mc_generator_power_delta_aux(pm, gen_del_ids; nw=nw)
+end
+
+
 """
 The variable creation for the loads is rather complicated because Expressions
 are used wherever possible instead of explicit variables.
@@ -496,6 +603,39 @@ end
 
 
 """
+    variable_mc_generator_power_delta_aux(pm::AbstractUBFModels, gen_ids::Vector{Int}; nw::Int=nw_id_default, eps::Real=0.1, bounded::Bool=true, report::Bool=true)
+
+Creates power matrix variable X for delta-connected generators similar to delta loads.
+"""
+function variable_mc_generator_power_delta_aux(pm::AbstractUBFModels, gen_ids::Vector{Int}; nw::Int=nw_id_default, eps::Real=0.1, bounded::Bool=true, report::Bool=true)
+    @assert(bounded)
+    connections = Dict{Int,Vector{Int}}(id => gen["connections"] for (id,gen) in ref(pm, nw, :gen))
+    conn_bus = Dict{Int,Vector{Int}}()
+    for (i,gen) in ref(pm, nw, :gen)
+        conn_bus[i] = length(gen["connections"])<3 && gen["configuration"] == DELTA ? ref(pm, nw, :bus, gen["gen_bus"])["terminals"] : connections[i]
+    end
+
+    # calculate bounds
+    bound = Dict{eltype(gen_ids), Matrix{Real}}()
+    for id in gen_ids
+        gen = ref(pm, nw, :gen, id)
+        bus_id = gen["gen_bus"]
+        bus = ref(pm, nw, :bus, bus_id)
+        cmax = _calc_gen_current_max(gen, bus)
+        bound[id] = bus["vmax"][[findfirst(isequal(c), bus["terminals"]) for c in conn_bus[id]]]*cmax'
+    end
+    # create matrix variables
+    (Xgr,Xgi) = variable_mx_complex(pm.model, gen_ids, conn_bus, connections; symm_bound=bound, name="Xg", prefix="$nw")
+    # save references
+    var(pm, nw)[:Xgr] = Xgr
+    var(pm, nw)[:Xgi] = Xgi
+
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :Xgr, gen_ids, Xgr)
+    report && _IM.sol_component_value(pm, pmd_it_sym, nw, :gen, :Xgi, gen_ids, Xgi)
+end
+
+
+"""
 Creates power matrix variable X for delta windings; this defines both the
 wye-side power Sy and the delta-side power Sd through the lin. transformations
 Sy = X.Td, Sd = Td.X with Td=[1 -1 0; 0 1 -1; -1 0 1]
@@ -515,6 +655,11 @@ See upcoming paper for discussion of bounds. [reference added when accepted]
 function variable_mc_load_power_delta_aux(pm::AbstractUBFModels, load_ids::Vector{Int}; nw::Int=nw_id_default, eps::Real=0.1, bounded::Bool=true, report::Bool=true)
     @assert(bounded)
     connections = Dict{Int,Vector{Int}}(id => load["connections"] for (id,load) in ref(pm, nw, :load))
+    conn_bus = Dict{Int,Vector{Int}}()
+    for (i,load) in ref(pm, nw, :load)
+        conn_bus[i] = length(load["connections"])<3 && load["configuration"] == DELTA ? ref(pm, nw, :bus, load["load_bus"])["terminals"] : connections[i]
+    end
+
     # calculate bounds
     bound = Dict{eltype(load_ids), Matrix{Real}}()
     for id in load_ids
@@ -522,10 +667,10 @@ function variable_mc_load_power_delta_aux(pm::AbstractUBFModels, load_ids::Vecto
         bus_id = load["load_bus"]
         bus = ref(pm, nw, :bus, bus_id)
         cmax = _calc_load_current_max(load, bus)
-        bound[id] = bus["vmax"][[findfirst(isequal(c), bus["terminals"]) for c in connections[id]]]*cmax'
+        bound[id] = bus["vmax"][[findfirst(isequal(c), bus["terminals"]) for c in conn_bus[id]]]*cmax'
     end
     # create matrix variables
-    (Xdr,Xdi) = variable_mx_complex(pm.model, load_ids, connections, connections; symm_bound=bound, name="Xd", prefix="$nw")
+    (Xdr,Xdi) = variable_mx_complex(pm.model, load_ids, conn_bus, connections; symm_bound=bound, name="Xd", prefix="$nw")
     # save references
     var(pm, nw)[:Xdr] = Xdr
     var(pm, nw)[:Xdi] = Xdi
@@ -696,14 +841,16 @@ function constraint_mc_load_power(pm::AbstractUBFModels, load_id::Int; nw::Int=n
             sol(pm, nw, :load, load_id)[:qd_bus] = var(pm, nw, :qd_bus)[load_id]
         end
     elseif load["configuration"]==DELTA
+        is_triplex = length(connections)<3
+        conn_bus = is_triplex ? bus["terminals"] : connections
         # link Wy, CCd and X
-        Wr = var(pm, nw, :Wr, bus_id)[[findfirst(isequal(c), terminals) for c in connections],[findfirst(isequal(c), terminals) for c in connections]]
-        Wi = var(pm, nw, :Wi, bus_id)[[findfirst(isequal(c), terminals) for c in connections],[findfirst(isequal(c), terminals) for c in connections]]
+        Wr = var(pm, nw, :Wr, bus_id)[[findfirst(isequal(c), terminals) for c in conn_bus],[findfirst(isequal(c), terminals) for c in conn_bus]]
+        Wi = var(pm, nw, :Wi, bus_id)[[findfirst(isequal(c), terminals) for c in conn_bus],[findfirst(isequal(c), terminals) for c in conn_bus]]
         CCdr = var(pm, nw, :CCdr, load_id)
         CCdi = var(pm, nw, :CCdi, load_id)
         Xdr = var(pm, nw, :Xdr, load_id)
         Xdi = var(pm, nw, :Xdi, load_id)
-        Td = [1 -1 0; 0 1 -1; -1 0 1]  # TODO
+        Td = is_triplex ? [1 -1] : [1 -1 0; 0 1 -1; -1 0 1]  # TODO
         constraint_SWL_psd(pm.model, Xdr, Xdi, Wr, Wi, CCdr, CCdi)
         # define pd/qd and pd_bus/qd_bus as affine transformations of X
         pd_bus = LinearAlgebra.diag(Xdr*Td)
@@ -711,6 +858,10 @@ function constraint_mc_load_power(pm::AbstractUBFModels, load_id::Int; nw::Int=n
         pd = LinearAlgebra.diag(Td*Xdr)
         qd = LinearAlgebra.diag(Td*Xdi)
 
+        pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, conn_bus)
+        qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, conn_bus)
+        pd = JuMP.Containers.DenseAxisArray(pd, connections)
+        qd = JuMP.Containers.DenseAxisArray(qd, connections)
         var(pm, nw, :pd_bus)[load_id] = pd_bus
         var(pm, nw, :qd_bus)[load_id] = qd_bus
         var(pm, nw, :pd)[load_id] = pd

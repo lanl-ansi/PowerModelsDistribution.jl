@@ -38,6 +38,9 @@ const pmd_math_component_status_inactive = Dict{String,Int}(
     "transformer" => 0,
 )
 
+"maps neutral conductor index"
+const neutral_idx = 4
+
 
 """
     apply_pmd!(func!::Function, data::Dict{String,<:Any}; apply_to_subnetworks::Bool=true, kwargs...)
@@ -109,8 +112,8 @@ end
 _sum_rm_nan(X::Vector) = sum([X[(!).(isnan.(X))]..., 0.0])
 
 
-""
-function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, LinearAlgebra.Adjoint}) where T
+"matrix multiplication removing NaN values"
+function _mat_mult_rm_nan(A::Matrix, B::Union{Matrix, LinearAlgebra.Adjoint})
     N, A_ncols = size(A)
     B_nrows, M = size(B)
     @assert(A_ncols==B_nrows)
@@ -448,16 +451,18 @@ The returned bounds are for the pairs 1->2, 2->3, 3->1
 function _calc_bus_vm_ll_bounds(bus::Dict; vdmin_eps::Real=0.1)::Tuple
     vmax = bus["vmax"]
     vmin = bus["vmin"]
+    is_triplex = length(bus["terminals"]) < 3
     if haskey(bus, "vm_ll_max")
         vdmax = bus["vm_ll_max"]
     else
         # implied valid upper bound
-        vdmax = _mat_mult_rm_nan([1 1 0; 0 1 1; 1 0 1], vmax)
+        Td = is_triplex ? [1 1] : [1 1 0; 0 1 1; 1 0 1]
+        vdmax = _mat_mult_rm_nan(Td, vmax)
     end
     if haskey(bus, "vm_ll_min")
         vdmin = bus["vm_ll_min"]
     else
-        vdmin = fill(0.0, length(vmin))
+        vdmin = is_triplex ? [vdmin_eps] : fill(vdmin_eps, length(vmin))
     end
 
     return (vdmin, vdmax)

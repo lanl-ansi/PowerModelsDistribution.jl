@@ -29,7 +29,8 @@ const _dss_supported_components = String[
     "line", "linecode", "load", "generator", "capacitor", "reactor",
     "transformer", "pvsystem", "storage", "loadshape", "options",
     "xfmrcode", "vsource", "xycurve", "spectrum", "capcontrol",
-    "regcontrol",
+    "regcontrol", "linegeometry", "wiredata", "linespacing",
+    "cndata", "tsdata"
 ]
 
 "two number operators for reverse polish notation"
@@ -91,6 +92,7 @@ const _dss2pmd_capcontrol_type = Dict{String,CapControlType}(
     "current" => CAP_CURRENT,
     "voltage" => CAP_VOLTAGE,
     ""=> CAP_DISABLED,
+    "time"=>CAP_TIME,
 )
 
 

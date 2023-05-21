@@ -64,6 +64,10 @@
         @test all(eng["transformer"]["t5"]["rw"] .== [0.0074, 0.0076])
     end
 
+    @testset "dss assign property in different file" begin
+        @test eng["storage"]["s1"]["bus"] == "_b2"
+    end
+
     @testset "subdirectory parsing" begin
         @test haskey(eng["linecode"], "lc7")
     end
@@ -156,7 +160,7 @@
     @testset "opendss parse line parsing wires - spacing properties" begin
         dss_data = parse_dss("../test/data/opendss/test2_master.dss")
 
-        @test isa(dss_data["line"]["l9"]["wires"], Vector{String}) && all(dss_data["line"]["l9"]["wires"] .== ["wire1", "wire2"])
+        @test isa(dss_data["line"]["l9"]["wires"], Vector{String}) && all(dss_data["line"]["l9"]["wires"] .== ["wire1", "wire2", "wire1", "wire2"])
         @test dss_data["line"]["l9"]["spacing"] == "test_spacing"
         @test haskey(dss_data, "wiredata") && (haskey(dss_data["wiredata"], "wire1") && haskey(dss_data["wiredata"], "wire2"))
         @test haskey(dss_data, "linespacing") && haskey(dss_data["linespacing"], "test_spacing")

@@ -311,7 +311,7 @@ end
 @doc raw"""
     constraint_mc_current_balance_capc(pm::AbstractUnbalancedIVRModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
 
-Current balance constraints with capacitor control.   
+Current balance constraints with capacitor control.
 """
 function constraint_mc_current_balance_capc(pm::AbstractUnbalancedIVRModel, nw::Int, i::Int, terminals::Vector{Int}, grounded::Vector{Bool}, bus_arcs::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_sw::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_arcs_trans::Vector{Tuple{Tuple{Int,Int,Int},Vector{Int}}}, bus_gens::Vector{Tuple{Int,Vector{Int}}}, bus_storage::Vector{Tuple{Int,Vector{Int}}}, bus_loads::Vector{Tuple{Int,Vector{Int}}}, bus_shunts::Vector{Tuple{Int,Vector{Int}}})
     vr = var(pm, nw, :vr, i)
@@ -663,9 +663,12 @@ function constraint_mc_load_power_delta(pm::IVRUPowerModel, nw::Int, id::Int, bu
     vr = var(pm, nw, :vr, bus_id)
     vi = var(pm, nw, :vi, bus_id)
 
-    nph = length(connections)
+    nph = length(a)
+    is_triplex = nph < 3
+    conn_bus = is_triplex ? ref(pm, nw, :bus, bus_id)["terminals"] : connections
+
     prev = Dict(i=>(i+nph-2)%nph+1 for i in 1:nph)
-    next = Dict(i=>i%nph+1 for i in 1:nph)
+    next = is_triplex ? conn_bus[2] : Dict(i=>i%nph+1 for i in 1:nph)
 
     vrd = JuMP.@NLexpression(pm.model, [i in 1:nph], vr[i]-vr[next[i]])
     vid = JuMP.@NLexpression(pm.model, [i in 1:nph], vi[i]-vi[next[i]])
@@ -679,16 +682,24 @@ function constraint_mc_load_power_delta(pm::IVRUPowerModel, nw::Int, id::Int, bu
        -b[i]*vrd[i]*(vrd[i]^2+vid[i]^2)^(beta[i]/2 -1)
     )
 
-    crd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], crd[i]-crd[prev[i]])
-    cid_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], cid[i]-cid[prev[i]])
+    crd_bus = Dict()
+    cid_bus = Dict()
+    for (idx, c) in enumerate(conn_bus)
+        if is_triplex
+            crd_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*crd[1])
+            cid_bus[c] = JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*cid[1])
+        else
+            crd_bus[c] = JuMP.@NLexpression(pm.model, crd[c]-crd[prev[c]])
+            cid_bus[c] = JuMP.@NLexpression(pm.model, cid[c]-cid[prev[c]])
+        end
+    end
 
     var(pm, nw, :crd_bus)[id] = crd_bus
     var(pm, nw, :cid_bus)[id] = cid_bus
 
     if report
-        pd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph],  vr[i]*crd_bus[i]+vi[i]*cid_bus[i])
-        qd_bus = JuMP.@NLexpression(pm.model, [i in 1:nph], -vr[i]*cid_bus[i]+vi[i]*crd_bus[i])
-
+        pd_bus = JuMP.@NLexpression(pm.model, [c in conn_bus],  vr[c]*crd_bus[c]+vi[c]*cid_bus[c])
+        qd_bus = JuMP.@NLexpression(pm.model, [c in conn_bus], -vr[c]*cid_bus[c]+vi[c]*crd_bus[c])
         sol(pm, nw, :load, id)[:pd_bus] = pd_bus
         sol(pm, nw, :load, id)[:qd_bus] = qd_bus
 
@@ -755,9 +766,11 @@ function constraint_mc_generator_power_delta(pm::IVRUPowerModel, nw::Int, id::In
     cig = var(pm, nw, :cig, id)
 
     nph = length(pmin)
+    is_triplex = nph < 3
+    conn_bus = is_triplex ? ref(pm, nw, :bus, bus_id)["terminals"] : connections
 
     prev = Dict(c=>connections[(idx+nph-2)%nph+1] for (idx,c) in enumerate(connections))
-    next = Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(connections))
+    next = is_triplex ? conn_bus[2] : Dict(c=>connections[idx%nph+1] for (idx,c) in enumerate(conn_bus))
 
     vrg = Dict()
     vig = Dict()
@@ -782,21 +795,35 @@ function constraint_mc_generator_power_delta(pm::IVRUPowerModel, nw::Int, id::In
 
     crg_bus = Vector{JuMP.NonlinearExpression}([])
     cig_bus = Vector{JuMP.NonlinearExpression}([])
-    for c in connections
-        push!(crg_bus, JuMP.@NLexpression(pm.model, crg[c]-crg[prev[c]]))
-        push!(cig_bus, JuMP.@NLexpression(pm.model, cig[c]-cig[prev[c]]))
+    for c in conn_bus
+        if is_triplex
+            push!(crg_bus, JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*crg[1]))
+            push!(cig_bus, JuMP.@NLexpression(pm.model, (-1.0)^(c-1)*cig[1]))
+        else
+            push!(crg_bus, JuMP.@NLexpression(pm.model, crg[c]-crg[prev[c]]))
+            push!(cig_bus, JuMP.@NLexpression(pm.model, cig[c]-cig[prev[c]]))
+        end
     end
 
-    var(pm, nw, :crg_bus)[id] = JuMP.Containers.DenseAxisArray(crg_bus, connections)
-    var(pm, nw, :cig_bus)[id] = JuMP.Containers.DenseAxisArray(cig_bus, connections)
+    pg_bus = Vector{JuMP.NonlinearExpression}([])
+    qg_bus = Vector{JuMP.NonlinearExpression}([])
+    for (idx,c) in enumerate(conn_bus)
+        push!(pg_bus, JuMP.@NLexpression(pm.model,  vr[c]*crg_bus[c]+vi[c]*cig_bus[c]))
+        push!(qg_bus, JuMP.@NLexpression(pm.model, -vr[c]*cig_bus[c]+vi[c]*crg_bus[c]))
+    end
+
+    var(pm, nw, :crg_bus)[id] = JuMP.Containers.DenseAxisArray(crg_bus, conn_bus)
+    var(pm, nw, :cig_bus)[id] = JuMP.Containers.DenseAxisArray(cig_bus, conn_bus)
     var(pm, nw, :pg)[id] = JuMP.Containers.DenseAxisArray(pg, connections)
     var(pm, nw, :qg)[id] = JuMP.Containers.DenseAxisArray(qg, connections)
 
     if report
-        sol(pm, nw, :gen, id)[:crg_bus] = JuMP.Containers.DenseAxisArray(crg_bus, connections)
-        sol(pm, nw, :gen, id)[:cig_bus] = JuMP.Containers.DenseAxisArray(cig_bus, connections)
+        sol(pm, nw, :gen, id)[:crg_bus] = JuMP.Containers.DenseAxisArray(crg_bus, conn_bus)
+        sol(pm, nw, :gen, id)[:cig_bus] = JuMP.Containers.DenseAxisArray(cig_bus, conn_bus)
         sol(pm, nw, :gen, id)[:pg] = JuMP.Containers.DenseAxisArray(pg, connections)
         sol(pm, nw, :gen, id)[:qg] = JuMP.Containers.DenseAxisArray(qg, connections)
+        sol(pm, nw, :gen, id)[:pg_bus] = JuMP.Containers.DenseAxisArray(pg_bus, conn_bus)
+        sol(pm, nw, :gen, id)[:qg_bus] = JuMP.Containers.DenseAxisArray(qg_bus, conn_bus)
     end
 end
 

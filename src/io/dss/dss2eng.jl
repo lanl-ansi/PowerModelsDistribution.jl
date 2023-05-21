@@ -79,14 +79,14 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
         defaults = _apply_ordered_properties(_create_load(id; _to_kwargs(dss_obj)...), dss_obj)
 
         nphases = defaults["phases"]
-        conf = defaults["conn"]
+        bus = _parse_bus_id(defaults["bus1"])[1]
+        conf = nphases==1 && dss_obj["kv"]==0.24 ? DELTA : defaults["conn"] # check if load is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
 
         if conf==DELTA
             @assert(nphases in [1, 3], "$id: only 1 and 3-phase delta loads are supported!")
         end
 
         # connections
-        bus = _parse_bus_id(defaults["bus1"])[1]
         connections_default = conf==WYE ? [collect(1:nphases)..., 0] : nphases==1 ? [1,2] : [1,2,3]
         connections = _get_conductors_ordered(defaults["bus1"], default=connections_default, pad_ground=(conf==WYE))
 
@@ -123,7 +123,7 @@ function _dss2eng_load!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
 
         # if ZIP load, include weighting factors and cut-off voltage
         if eng_obj["model"]==ZIP
-            eng_obj["zipv"] = collect(dss_obj["zipv"]) 
+            eng_obj["zipv"] = collect(dss_obj["zipv"])
         end
 
         _build_time_series_reference!(eng_obj, dss_obj, data_dss, defaults, time_series, "pd_nom", "qd_nom")
@@ -321,6 +321,7 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
         defaults = _apply_ordered_properties(_create_generator(id; _to_kwargs(dss_obj)...), dss_obj)
 
         nphases = defaults["phases"]
+        conf = nphases==1 && dss_obj["kv"]==0.24 ? DELTA : WYE # check if generator is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
 
         eng_obj = Dict{String,Any}(
             "phases" => nphases,
@@ -334,7 +335,7 @@ function _dss2eng_generator!(data_eng::Dict{String,<:Any}, data_dss::Dict{String
             "pg_lb" => fill(0.0, nphases),
             "pg_ub" => fill(defaults["kw"] / nphases, nphases),
             "control_mode" => FREQUENCYDROOP,
-            "configuration" => WYE,
+            "configuration" => conf,
             "status" => defaults["enabled"] ? ENABLED : DISABLED,
             "source_id" => "generator.$id"
         )
@@ -382,11 +383,11 @@ function _dss2eng_vsource!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<
 
         # some values require addition of neutral by default
         n_conductors = length(eng_obj["connections"])
-        eng_obj["rs"] = zeros(n_conductors, n_conductors)
-        eng_obj["rs"][1:phases, 1:phases] = defaults["rmatrix"]
+        eng_obj["rs"] = fill(defaults["r_mutual"], n_conductors, n_conductors)
+        eng_obj["rs"][LinearAlgebra.diagind(eng_obj["rs"])] .= defaults["r_self"]
 
-        eng_obj["xs"] = zeros(n_conductors, n_conductors)
-        eng_obj["xs"][1:phases, 1:phases] = defaults["xmatrix"]
+        eng_obj["xs"] = fill(defaults["x_mutual"], n_conductors, n_conductors)
+        eng_obj["xs"][LinearAlgebra.diagind(eng_obj["xs"])] .= defaults["x_self"]
 
         eng_obj["vm"] = zeros(n_conductors)
         eng_obj["vm"][1:phases] = vm
@@ -479,15 +480,33 @@ function _dss2eng_line!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,<:An
             eng_obj["cm_ub"] = fill(defaults["emergamps"], ncond)
         end
 
-        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["r0", "r1", "rg", "rmatrix"]) || !haskey(dss_obj, "linecode")
+        from_geometry = haskey(dss_obj, "geometry") && _is_after_linecode(dss_obj["prop_order"], "geometry")
+        from_spacing = haskey(dss_obj, "wires") && _is_after_linecode(dss_obj["prop_order"], "wires")
+        from_cncables = haskey(dss_obj, "cndata") && _is_after_linecode(dss_obj["prop_order"], "cncables")
+        from_tscables = haskey(dss_obj, "tsdata") && _is_after_linecode(dss_obj["prop_order"], "tscables")
+        if from_geometry || from_spacing || from_cncables || from_tscables
+            z, y = calculate_line_constants(data_dss, defaults)
+
+            rs, xs = real(z), imag(z)
+            g, b = real(y), imag(y)
+
+            eng_obj["rs"] = rs
+            eng_obj["xs"] = xs
+            eng_obj["b_fr"] = b ./ 2.0
+            eng_obj["b_to"] = b ./ 2.0
+            eng_obj["g_fr"] = g ./ 2.0
+            eng_obj["g_to"] = g ./ 2.0
+        end
+
+        if any(haskey(dss_obj, key) && (_is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], key, "geometry")) for key in ["r0", "r1", "rg", "rmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
             eng_obj["rs"] = reshape(defaults["rmatrix"], nphases, nphases)
         end
 
-        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["x0", "x1", "xg", "xmatrix"]) || !haskey(dss_obj, "linecode")
+        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], key, "geometry") for key in ["x0", "x1", "xg", "xmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
             eng_obj["xs"] = reshape(defaults["xmatrix"], nphases, nphases)
         end
 
-        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) for key in ["b0", "b1", "c0", "c1", "cmatrix"]) || !haskey(dss_obj, "linecode")
+        if any(haskey(dss_obj, key) && _is_after_linecode(dss_obj["prop_order"], key) && _is_after(dss_obj["prop_order"], key, "geometry") for key in ["b0", "b1", "c0", "c1", "cmatrix"]) || (!haskey(dss_obj, "linecode") && !haskey(dss_obj, "geometry") && !haskey(dss_obj, "wires"))
             eng_obj["b_fr"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
             eng_obj["b_to"] = reshape(defaults["cmatrix"], nphases, nphases) ./ 2.0
             eng_obj["g_fr"] = fill(0.0, nphases, nphases)
@@ -726,6 +745,9 @@ function _dss2eng_transformer!(data_eng::Dict{String,<:Any}, data_dss::Dict{Stri
                         eng_obj["connections"][w] = _barrel_roll(eng_obj["connections"][w], -1)
                     end
                 end
+                if w==3 && eng_obj["connections"][2][2]==0 && eng_obj["connections"][3][1]==0 # center-tap transformers
+                    eng_obj["polarity"][w] = -1
+                end
             end
 
             if 0 in eng_obj["connections"][w]
@@ -759,11 +781,13 @@ function _dss2eng_pvsystem!(data_eng::Dict{String,<:Any}, data_dss::Dict{String,
         # TODO pick parameters for solar objects
 
         nphases = defaults["phases"]
+        bus = _parse_bus_id(defaults["bus1"])[1]
+        conf = nphases==1 && dss_obj["kv"]==0.24 ? DELTA : defaults["conn"] # check if solar is connected between split-phase terminals of triplex node (nominal line-line voltage=240V), TODO: better generalization
 
         eng_obj = Dict{String,Any}(
-            "bus" => _parse_bus_id(defaults["bus1"])[1],
-            "configuration" => defaults["conn"],
-            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=defaults["conn"] == WYE, default=defaults["conn"] == WYE ? [collect(1:defaults["phases"])..., 0] : nphases == 1 ? [1,0] : collect(1:nphases)),
+            "bus" => bus,
+            "configuration" => conf,
+            "connections" => _get_conductors_ordered(defaults["bus1"], pad_ground=conf == WYE, default=conf == WYE ? [collect(1:defaults["phases"])..., 0] : nphases == 1 ? [1,0] : collect(1:nphases)),
             "pg" => fill(min(defaults["pmpp"] * defaults["irradiance"], defaults["kva"]) / nphases, nphases),
             "qg" => fill(defaults["kvar"] / nphases, nphases),
             "vg" => fill(defaults["kv"] / sqrt(nphases), nphases),
@@ -851,7 +875,7 @@ function _dss2eng_regcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{Strin
          defaults = _apply_ordered_properties(_create_regcontrol(id; _to_kwargs(dss_obj)...), dss_obj)
 
         nrw = get(data_dss["transformer"]["$(dss_obj["transformer"])"],"windings",2)
-        nphases = data_dss["transformer"]["$(dss_obj["transformer"])"]["phases"]
+        nphases = get(data_dss["transformer"]["$(dss_obj["transformer"])"], "phases", 3)
 
         eng_obj = Dict{String,Any}(
             "vreg" => [[w == defaults["winding"] && p == defaults["ptphase"] ? defaults["vreg"] : 0.0 for p in 1:nphases] for w in 1:nrw],
@@ -905,6 +929,9 @@ function _dss2eng_capcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{Strin
                 eng_obj["onsetting"] = [p == defaults["ctphase"] ? defaults["onsetting"] : 0.0 for p in 1:nphases]
                 eng_obj["offsetting"] = [p == defaults["ctphase"] ? defaults["offsetting"] : 0.0 for p in 1:nphases]
                 eng_obj["ctratio"] = [p == defaults["ctphase"] ? defaults["ctratio"] : 0.0 for p in 1:nphases]
+            elseif type == CAP_TIME
+                eng_obj["type"] = type
+                eng_obj["terminal"] =  defaults["terminal"]
             end
 
             if defaults["voltoverride"]
@@ -935,6 +962,11 @@ function _dss2eng_capcontrol!(data_eng::Dict{String,<:Any}, data_dss::Dict{Strin
                 eng_obj["offsetting"][defaults["ctphase"]] = defaults["offsetting"]
                 eng_obj["ctratio"][defaults["ptphase"]] = defaults["ctratio"]
             end
+            if type == CAP_TIME
+                eng_obj["type"] = type
+                eng_obj["terminal"] = defaults["terminal"]
+            end
+
             if defaults["voltoverride"]
                 eng_obj["voltoverride"][defaults["ptphase"]] = defaults["voltoverride"]
                 eng_obj["ptratio"][defaults["ptphase"]] = defaults["ptratio"]

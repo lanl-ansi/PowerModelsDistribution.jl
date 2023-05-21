@@ -19,4 +19,8 @@ New Reactor.Grounding phases=1 bus1=B1.4 bus2=B1.0 R=0.5 X=0.5
 ! vm_b2 = [0.964, 1.01, 1.00, 0.05] without other devices active
 New Load.Load1  phases=1 bus1=B2.1.4  kv=0.23  model=1 conn=wye kVA=5  pf=0.9 vminpu=0.1 vmaxpu=2
 
+
+Set voltagebases=[0.4]
+Calcvoltagebases
+
 Solve

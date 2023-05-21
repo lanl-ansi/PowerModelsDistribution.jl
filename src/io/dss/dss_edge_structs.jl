@@ -525,6 +525,10 @@ function _create_vsource(name::String=""; kwargs...)::Dict{String,Any}
         # Derived Properties
         "rmatrix" => real(Z),
         "xmatrix" => imag(Z),
+        "r_self" => rs,
+        "r_mutual" => rm,
+        "x_self" => xs,
+        "x_mutual" => xm,
         "vmag" => Vmag,
         "like" => get(kwargs, :like, "")
     )

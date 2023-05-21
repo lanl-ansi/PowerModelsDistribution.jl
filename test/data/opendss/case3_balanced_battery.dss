@@ -42,7 +42,7 @@ Calcvoltagebases
 new monitor.PQ storage.s1 ppolar=no mode=3
 
 set mode=daily
-set stepsize=1hr
+set stepsize=1h
 set number=2
 
 Solve

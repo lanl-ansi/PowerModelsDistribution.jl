@@ -2,7 +2,7 @@
 
 Clear
 
-New Circuit.Test phases=3 basekv=0.4 baseMVA=0.2 bus1=B1 MVASC1=1e8 MVASC3=1e8
+New Circuit.Test phases=3 basekv=0.4 baseMVA=0.2 bus1=B1 MVASC1=1e6 MVASC3=1e6
 
 New Linecode.Zabcn units=km nphases=4
 ~ rmatrix=(0.227217624 0.059217624 0.059217624 0.059217624 |0.059217624 0.227217624 0.059217624 0.059217624 |0.059217624 0.059217624 0.227217624 0.059217624 |0.059217624 0.059217624 0.059217624 0.227217624)
@@ -20,5 +20,8 @@ New Load.Load1  phases=1 bus1=B2.1.4  kv=0.23  model=1 conn=wye kVA=5  pf=0.9 vm
 ! this will be converted to a generator in the data model transformation
 ! do not change to anything besides PF=1.0; weird OpenDSS behavior
 New PVSystem.PV1 phases=3 conn=wye bus1=B2.2.1.3.4 kv=0.4 kva=25 pf=1.0
+
+Set voltagebases=[0.4]
+Calcvoltagebases
 
 Solve

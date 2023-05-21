@@ -22,6 +22,17 @@ end
 
 
 """
+    variable_mc_switch_power(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+
+Switch power variables.
+"""
+function variable_mc_switch_power(pm::LPUBFDiagModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    variable_mc_switch_power_real(pm; nw=nw, bounded=bounded, report=report)
+    variable_mc_switch_power_imaginary(pm; nw=nw, bounded=bounded, report=report)
+end
+
+
+"""
     variable_mc_capcontrol(pm::AbstractLPUBFModel; nw::Int=nw_id_default, relax::Bool=false, report::Bool=true)
 
 Capacitor switching and relaxed power variables.
@@ -392,11 +403,11 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
         # in this case, :pd has a JuMP variable
         else
             w = var(pm, nw, :w)[bus_id][[c for c in connections]]
-            pd = var(pm, nw, :pd)[load_id]
-            qd = var(pm, nw, :qd)[load_id]
+            pd = var(pm, nw, :pd, load_id)
+            qd = var(pm, nw, :qd, load_id)
             for (idx,c) in enumerate(connections)
-                JuMP.@constraint(pm.model, pd[c]==1/2*a[idx]*(w[c]+1))
-                JuMP.@constraint(pm.model, qd[c]==1/2*b[idx]*(w[c]+1))
+                JuMP.@constraint(pm.model, pd[c] == 1/2*a[idx]*(w[c]+1))
+                JuMP.@constraint(pm.model, qd[c] == 1/2*b[idx]*(w[c]+1))
             end
         end
         # :pd_bus is identical to :pd now
@@ -413,7 +424,9 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
     elseif load["configuration"]==DELTA
         Xdr = var(pm, nw, :Xdr, load_id)
         Xdi = var(pm, nw, :Xdi, load_id)
-        Td = [1 -1 0; 0 1 -1; -1 0 1]  # TODO
+        is_triplex = length(connections)<3
+        conn_bus = is_triplex ? bus["terminals"] : connections
+        Td = is_triplex ? [1 -1] : [1 -1 0; 0 1 -1; -1 0 1]  # TODO
         # define pd/qd and pd_bus/qd_bus as affine transformations of X
         pd_bus = LinearAlgebra.diag(Xdr*Td)
         qd_bus = LinearAlgebra.diag(Xdi*Td)
@@ -426,10 +439,9 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
                 JuMP.@constraint(pm.model, Xdi[:,idx] .== 0)
             end
         end
-        pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, connections)
-        qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, connections)
-        var(pm, nw, :pd_bus)[load_id] = pd_bus
-        var(pm, nw, :qd_bus)[load_id] = qd_bus
+
+        var(pm, nw, :pd_bus)[load_id] = pd_bus = JuMP.Containers.DenseAxisArray(pd_bus, conn_bus)
+        var(pm, nw, :qd_bus)[load_id] = qd_bus = JuMP.Containers.DenseAxisArray(qd_bus, conn_bus)
         var(pm, nw, :pd)[load_id] = pd
         var(pm, nw, :qd)[load_id] = qd
         if load["model"]==POWER
@@ -458,6 +470,52 @@ function constraint_mc_load_power(pm::LPUBFDiagModel, load_id::Int; nw::Int=nw_i
             sol(pm, nw, :load, load_id)[:pd_bus] = pd_bus
             sol(pm, nw, :load, load_id)[:qd_bus] = qd_bus
         end
+    end
+end
+
+
+@doc raw"""
+    constraint_mc_generator_power_delta(pm::LPUBFDiagModel, nw::Int, gen_id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+
+Adds constraints for delta-connected generators similar to delta-connected loads (using auxilary variable X).
+
+```math
+\begin{align}
+&\text{Three-phase delta transformation matrix: }  T^\Delta = \begin{bmatrix}\;\;\;1 & -1 & \;\;0\\ \;\;\;0 & \;\;\;1 & -1\\ -1 & \;\;\;0 & \;\;\;1\end{bmatrix} \\
+&\text{Single-phase delta transformation matrix (triple nodes): }  T^\Delta = \begin{bmatrix}\;1 & -1 \end{bmatrix} \\
+&\text{Line-neutral generation power: }  S_{bus} = diag(T^\Delta X_g) \\
+&\text{Line-line generation power: }  S^\Delta = diag(X_g T^\Delta)
+\end{align}
+```
+"""
+function constraint_mc_generator_power_delta(pm::LPUBFDiagModel, nw::Int, gen_id::Int, bus_id::Int, connections::Vector{Int}, pmin::Vector{<:Real}, pmax::Vector{<:Real}, qmin::Vector{<:Real}, qmax::Vector{<:Real}; report::Bool=true, bounded::Bool=true)
+    pg = var(pm, nw, :pg, gen_id)
+    qg = var(pm, nw, :qg, gen_id)
+    Xgr = var(pm, nw, :Xgr, gen_id)
+    Xgi = var(pm, nw, :Xgi, gen_id)
+    gen = ref(pm, nw, :gen, gen_id)
+    bus_id = gen["gen_bus"]
+    bus = ref(pm, nw, :bus, bus_id)
+
+    nph = length(pmin)
+    is_triplex = length(connections)<3
+    conn_bus = is_triplex ? bus["terminals"] : connections
+
+    Tg = is_triplex ? [1 -1] : [1 -1 0; 0 1 -1; -1 0 1]  # TODO
+    # define pg/qg and pg_bus/qg_bus as affine transformations of X
+    JuMP.@constraint(pm.model, pg .== LinearAlgebra.diag(Tg*Xgr))
+    JuMP.@constraint(pm.model, qg .== LinearAlgebra.diag(Tg*Xgi))
+
+    pg_bus = LinearAlgebra.diag(Xgr*Tg)
+    qg_bus = LinearAlgebra.diag(Xgi*Tg)
+    pg_bus = JuMP.Containers.DenseAxisArray(pg_bus, conn_bus)
+    qg_bus = JuMP.Containers.DenseAxisArray(qg_bus, conn_bus)
+    var(pm, nw, :pg_bus)[gen_id] = pg_bus
+    var(pm, nw, :qg_bus)[gen_id] = qg_bus
+
+    if report
+        sol(pm, nw, :gen, gen_id)[:pg_bus] = pg_bus
+        sol(pm, nw, :gen, gen_id)[:qg_bus] = qg_bus
     end
 end
 

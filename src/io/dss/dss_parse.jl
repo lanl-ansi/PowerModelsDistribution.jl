@@ -278,6 +278,12 @@ const _dss_object_properties = Dict{String,Vector{String}}(
 )
 
 
+const _wdg_keys = Dict{String,Tuple{String,Vector{String}}}(
+    "transformer" => ("wdg", ["wdg", "bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]),
+    "linegeometry" => ("cond", ["cond", "wire", "cncable", "tscable", "x", "h", "units"])
+)
+
+
 "parses single column load profile files"
 function _parse_csv_file(path::FilePaths.AbstractPath, type::AbstractString; header::Bool=false, column::Int=1, interval::Bool=false)::Union{Vector{String}, Tuple{Vector{String}, Vector{String}, Vector{String}}, Tuple{Vector{String}, Vector{String}}}
     open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path))), "r") do f
@@ -637,21 +643,25 @@ the `key` and `value` of the property. If a property of the same name already
 exists inside `object`, the original value is converted to an array, and the
 new value is appended to the end.
 """
-function _add_property(object::Dict{String,<:Any}, key::SubString{String}, value::Any)::Dict{String,Any}
+function _add_property(object::Dict{String,<:Any}, key::SubString{String}, value::Any; object_type::AbstractString="")::Dict{String,Any}
     if !haskey(object, "prop_order")
         object["prop_order"] = Vector{String}(["name"])
     end
 
-    current_wdg = key == "wdg" ? value == "1" ? "" : "$value" : any(occursin("wdg", prop) for prop in object["prop_order"]) ? replace(split(filter(x->occursin("wdg", x), object["prop_order"])[end], "_")[end], "wdg"=>"") : ""
-
-    if key in ["wdg", "bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
-        key = join(filter(p->!isempty(p), [key, current_wdg]), "_")
+    if haskey(_wdg_keys, object_type)
+        wdg_key, dup_keys = _wdg_keys[object_type]
+        current_wdg = key == wdg_key ? value == "1" ? "" : "$value" : any(occursin(wdg_key, prop) for prop in object["prop_order"]) ? replace(split(filter(x->occursin(wdg_key, x), object["prop_order"])[end], "_")[end], wdg_key=>"") : ""
+        if key in dup_keys
+            key = join(filter(p->!isempty(p), [key, current_wdg]), "_")
+        end
     end
 
     if haskey(object, lowercase(key))
-        rmatch = match(r"_(\d+)$", key)
-        if typeof(rmatch) != Nothing
-            end_num = parse(Int, rmatch.captures[1]) + 1
+        obj_keys = [k for k in keys(object) if startswith(k, key)]
+        rmatches = [match(r"_(\d+)$", k) for k in obj_keys]
+        ds = [parse(Int, rmatch.captures[1]) for rmatch in rmatches if typeof(rmatch) != Nothing]
+        if length(ds) > 0
+            end_num = maximum(ds) + 1
             key = replace(key, r"_(\d+)$" => "_$end_num")
         else
             key = string(key, "_2")
@@ -722,7 +732,7 @@ function _parse_component(component::AbstractString, properties::AbstractString,
             value = _parse_mult_parameter(value; path=path)
         end
 
-        _add_property(object, key, value)
+        _add_property(object, key, value; object_type=obj_type)
     end
 
     return object
@@ -777,7 +787,7 @@ end
 
 "Strips comments, defined by '!' from the ends of lines"
 function _strip_comments(line::AbstractString)::String
-    return strip(split(line, r"\s*!")[1], ['\r', '\n'])
+    return strip(split(line, r"(\s*(?:\/\/|!))")[1], ['\r', '\n'])
 end
 
 
@@ -788,6 +798,7 @@ of type `obj_type` named `obj_name` in `data_dss`.
 function _assign_property!(data_dss::Dict{String,<:Any}, obj_type::AbstractString, obj_name::AbstractString, property_name::AbstractString, property_value::Any)
     if haskey(data_dss, obj_type) && haskey(data_dss[obj_type], obj_name)
         data_dss[obj_type][obj_name][property_name] = property_value
+        push!(data_dss[obj_type][obj_name]["prop_order"], property_name)
     else
         @warn "Cannot find $obj_type object $obj_name."
     end
@@ -795,37 +806,37 @@ end
 
 
 """
-    parse_dss(filename::String)::Dict{String,Any}
+    parse_dss(filename::String; data_dss::Union{Missing,Dict{String,Any}}=missing)::Dict{String,Any}
 
 Parses a OpenDSS file given by `filename` into a Dict{Array{Dict}}. Only
 supports components and options, but not commands, e.g. "plot" or "solve".
 Will also parse files defined inside of the originating DSS file via the
 "compile", "redirect" or "buscoords" commands.
 """
-function parse_dss(path::Union{AbstractString,FilePaths.AbstractPath})::Dict{String,Any}
+function parse_dss(path::Union{AbstractString,FilePaths.AbstractPath}; data_dss::Union{Missing,Dict{String,Any}}=missing)::Dict{String,Any}
     path = isa(path, FilePaths.AbstractPath) ? path : FilePaths.Path(path)
     data_dss = open(first(Glob.glob([Glob.FilenameMatch(basename(path), "i")], dirname(path)))) do io
-        parse_dss(io)
+        parse_dss(io; data_dss=data_dss)
     end
     return data_dss
 end
 
 
 """
-    parse_dss(io::IO)::Dict{String,Any}
+    parse_dss(io::IO; data_dss::Union{Missing,Dict{String,Any}}=missing)::Dict{String,Any}
 
 Parses a OpenDSS file aleady in IO into a Dict{Array{Dict}}. Only
 supports components and options, but not commands, e.g. "plot" or "solve".
 Will also parse files defined inside of the originating DSS file via the
 "compile", "redirect" or "buscoords" commands.
 """
-function parse_dss(io::IO)::Dict{String,Any}
+function parse_dss(io::IO; data_dss::Union{Missing,Dict{String,Any}}=missing)::Dict{String,Any}
     filename = isa(io, IOStream) ? match(r"^<file\s(.+)>$", io.name).captures[1] : "GenericIOBuffer"
     current_file = basename(FilePaths.Path(filename))
     path = dirname(FilePaths.Path(filename))
-    data_dss = Dict{String,Any}()
+    data_dss = ismissing(data_dss) ? Dict{String,Any}() : data_dss
 
-    data_dss["filename"] = Set{String}([string(filename)])
+    data_dss["filename"] = haskey(data_dss, "filename") ? union(data_dss["filename"], Set{String}([string(filename)])) : Set{String}([string(filename)])
 
     current_obj = Dict{String,Any}()
     current_obj_type = ""
@@ -871,7 +882,7 @@ function parse_dss(io::IO)::Dict{String,Any}
                 if !(joinpath(file_path...) in data_dss["filename"])
                     full_path = joinpath(path, file_path...)
                     @info "Redirecting to '$(joinpath(file_path...))' on line $real_line_num in '$current_file'"
-                    _merge_dss!(data_dss, parse_dss(full_path))
+                    data_dss = parse_dss(full_path; data_dss=data_dss)
                 end
 
                 continue
@@ -949,11 +960,8 @@ function parse_dss(io::IO)::Dict{String,Any}
                         if property_name in ["wdg", "bus", "conn", "kv", "kva", "tap", "%r", "rneut", "xneut"]
                             property_name = join(filter(p->!isempty(p), [property_name, wdg]), "_")
                         end
-
-                        _assign_property!(data_dss, obj_type, obj_name, property_name, property_value)
-                    else
-                        _assign_property!(data_dss, obj_type, obj_name, property_name, property_value)
                     end
+                    _assign_property!(data_dss, obj_type, obj_name, property_name, property_value)
                 end
             else
                 @warn "Command '$cmd' on line $real_line_num in '$current_file' is not recognized, skipping."

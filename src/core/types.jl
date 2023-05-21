@@ -84,14 +84,37 @@ An Enum to describe whether an object is enabled or disabled
 
 An Enum to describe the type of capcontrol, e.g., kvar, voltage etc.
 """
-@enum CapControlType CAP_CURRENT CAP_VOLTAGE CAP_REACTIVE_POWER CAP_DISABLED
+@enum CapControlType CAP_CURRENT CAP_VOLTAGE CAP_REACTIVE_POWER CAP_DISABLED CAP_TIME
 @doc "Capacitor control based on current" CAP_CURRENT
 @doc "Capacitor control based on voltage" CAP_VOLTAGE
 @doc "Capacitor control based on total reactive power (directional)" CAP_REACTIVE_POWER
 @doc "Capacitor control disabled" CAP_DISABLED
+@doc "Capacitor control based on time" CAP_TIME
+
+
+"""
+    NodeType
+
+An Enum to describe whether a bus voltage is fixed, variable, grounded, or it is a virtual bus
+"""
+@enum NodeType FIXED VARIABLE GROUNDED VIRTUAL
+@doc "Bus voltage is fixed" FIXED
+@doc "Bus voltage is variable" VARIABLE
+@doc "Bus is grounded" GROUNDED
+@doc "Bus is virtual" VIRTUAL
+
+"""
+    PFTerminationStatus
+
+An Enum to describe whether power flow has converged or hit the iteration limit
+"""
+@enum PFTerminationStatus PF_CONVERGED PF_ITERATION_LIMIT
+@doc "Power flow has converged" PF_CONVERGED
+@doc "Power flow hits iteration limit" PF_ITERATION_LIMIT
+
 
 "Collection of the built-in Enums for PowerModelsDistribution"
-const PowerModelsDistributionEnums = Union{DataModel,LoadModel,ShuntModel,SwitchState,ControlMode,ConnConfig,Dispatchable,Status,CapControlType}
+const PowerModelsDistributionEnums = Union{DataModel,LoadModel,ShuntModel,SwitchState,ControlMode,ConnConfig,Dispatchable,Status,CapControlType,NodeType,PFTerminationStatus}
 
 #================================================
     # exact non-convex models

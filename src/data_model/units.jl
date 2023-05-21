@@ -27,7 +27,10 @@ const dimensionalize_math = Dict{String,Dict{String,Vector{String}}}(
     ),
     "storage" => Dict{String,Vector{String}}(
         "sbase"=>Vector{String}(["ps", "qs", "energy", "se", "sd", "sc"]),
-    )
+    ),
+    "shunt" => Dict{String,Vector{String}}(
+        "ibase" => Vector{String}(["crsh", "cish"])
+    ),
 )
 
 
@@ -484,6 +487,8 @@ function _rebase_pu_shunt!(shunt::Dict{String,<:Any}, vbase::Real, sbase::Real, 
                 shunt["controls"]["vmin"] = shunt["controls"]["vmin"]*shunt["controls"]["ptratio"]/(vbase*voltage_scale_factor)
                 shunt["controls"]["vmax"] = shunt["controls"]["vmax"]*shunt["controls"]["ptratio"]/(vbase*voltage_scale_factor)
             end
+        elseif shunt["controls"]["type"] == CAP_TIME
+            # do nothing
         else
             for (idx,val) in enumerate(shunt["controls"]["type"])
                 if shunt["controls"]["voltoverride"][idx]
