@@ -1,6 +1,6 @@
 # Power Flow Computations
 
-The typical goal of PowerModelsDistribution is to build a JuMP model that is used to solve ditribution power network optimization problems. The JuMP model abstraction enables PowerModelsDistribution to have state-of-the-art performance on a wide range of problem formulations. That said, for the specific case of power flow computations, in some specific applications performance gains can be had by avoiding the JuMP model abstraction and solving the problem more directly. To that end, PowerModelsDistribution includes Julia-native solvers for AC power flow in rectangular voltage coordinates. This section provides an overview of the different power flow options that are available in PowerModelsDistribution and under what circumstances they may be beneficial.
+The typical goal of PowerModelsDistribution is to build a JuMP model that is used to solve distribution power network optimization problems. The JuMP model abstraction enables PowerModelsDistribution to have state-of-the-art performance on a wide range of problem formulations. That said, for the specific case of power flow computations, in some specific applications performance gains can be had by avoiding the JuMP model abstraction and solving the problem more directly. To that end, PowerModelsDistribution includes Julia-native solvers for AC power flow in rectangular voltage coordinates. This section provides an overview of the different power flow options that are available in PowerModelsDistribution and under what circumstances they may be beneficial.
 
 ## Generic Power Flow
 
@@ -67,12 +67,12 @@ The table below reports the accuracy of the native power flow with respect to Op
 
 ### Input arguments
 
-`compute_mc_pf` receieves input arguments as follows,
+`compute_mc_pf` receives input arguments as follows,
 
-- `data_math` - network data in MATHEMAICAL format
-- `explicit_neutral` - a boolean input indication wether or not the nuetral is explicitly modelled
+- `data_math` - network data in MATHEMATICAL format
+- `explicit_neutral` - a boolean input indication wether or not the neutral is explicitly modelled
 - `v_start` - warm start if different from in-built initialization algorithm
-- `max_iter` - maximum itertions
+- `max_iter` - maximum iterations
 - `stat_tol` - statistical tolerance
 
 ### Outputs
@@ -94,8 +94,8 @@ The table below reports the accuracy of the native power flow with respect to Op
 - starting from the math dictionary means that transformer decomposition is already done, which is different from what OpenDSS does
 - we calculate the primitive admittance matrix in p.u. whereas OpenDSS algorithm works with actual units
 - no load model relaxation is performed
-- inpspired by OpenDSS, we add small ppm values to certain component primitive admittance values to avoid singularity issues
-- inpspired by OpenDSS, switch primitive admittance has specific values
+- inspired by OpenDSS, we add small ppm values to certain component primitive admittance values to avoid singularity issues
+- inspired by OpenDSS, switch primitive admittance has specific values
 
 ## Network Admittance Matrix
 
