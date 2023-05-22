@@ -118,7 +118,7 @@
 - Added missing `temperature` on pvsystem
 - Added `configuration=WYE` to voltage sources
 - Fixed bug in voltage angle variable start values
-- Fixed bug with case sensitve filenames by using `Glob.glob` with `Glob.FilenameMatch`
+- Fixed bug with case sensitive filenames by using `Glob.glob` with `Glob.FilenameMatch`
 - Fixed bug in `constraint_mc_switch_current_limit` where voltage variables being used were wrong
 - Moved all `import` statements to root `PowerModelsDistribution`
 - Fixed bug in `_calc_transformer_current_max_frto` where `sm_ub` should have been divided by `vmin`, NOT `vmax`
@@ -134,7 +134,7 @@
 - Added multinetwork versions of data model transformation functions using `apply_pmd!`
 - Added `propagate_network_topology!`, a helper function to propagate the status of buses to connected components
 - Updated Documentation on Storage data model
-- Added LPUBFDiag version of `constraint_mc_storage_thermal_limit` using PolyhedralRelaxations to relax the quadradic constraints
+- Added LPUBFDiag version of `constraint_mc_storage_thermal_limit` using PolyhedralRelaxations to relax the quadratic constraints
 - Fixed bug in reporting duals (typo in ampacity constraint functions) (#367)
 - Changed multiconductor storage model parsing from opendss to be single values (instead of creating some multiconductor values, making assumptions about split between phases)
 - Fixed `vm`, `va` variable starts in `ACRU` and `ACPU` forms

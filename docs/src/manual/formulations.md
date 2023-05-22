@@ -51,7 +51,7 @@ The linear FBS and FOT formulations as described in:
 
 # Unbalanced Network Formulation Type Hierarchy
 
-PowerModelsDistribution has a rich model type hierarchy similiar to PowerModels. At the top of the type hierarchy we can distinguish between conic, active power only, and branch flow models:
+PowerModelsDistribution has a rich model type hierarchy similar to PowerModels. At the top of the type hierarchy we can distinguish between conic, active power only, and branch flow models:
 
 ```julia
 abstract type AbstractUnbalancedConicModel <: AbstractPowerModel end
