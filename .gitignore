@@ -10,4 +10,11 @@ Manifest.toml
 
 .ipynb_checkpoints/
 
+examples/native_pf_testcases
+examples/network
+examples/network1
+examples/network.dss
+examples/*.toml
+examples/Native Power Flow - script.jl
+
 debug/

@@ -76,7 +76,7 @@ end
         # IVRReducedQuadraticENPowerModel does not implement sm_ub
 
         # ACRENPowerModel
-        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel)
+        sol_pmd = calc_sol_pmd(data_math, ACRENPowerModel; optimizer=optimizer_with_attributes(Ipopt.Optimizer, "mu_strategy"=>"adaptive", "sb"=>"yes", "print_level"=>0))
         s_to = sol_pmd["line"]["line1"]["pt"]+im*sol_pmd["line"]["line1"]["qt"]
         @test all(isapprox.(abs.(s_to[1:3]), sm_ub[1:3], rtol=0.005))
     end

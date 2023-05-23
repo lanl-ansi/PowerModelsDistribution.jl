@@ -62,8 +62,8 @@ function transform_solution(
     convert_rad2deg::Bool=true,
     map_math2eng_extensions::Dict{String,<:Function}=Dict{String,Function}(),
     make_si_extensions::Vector{<:Function}=Function[],
-    dimensionalize_math_extensions::Dict{String,<:Dict{String,<:Vector{<:String}}}=Dict{String,Dict{String,Vector{String}}}(),
-    )::Dict{String,Any}
+    dimensionalize_math_extensions::Dict{String,<:Dict{String,<:Vector{<:String}}}=Dict{String,Dict{String,Vector{String}}}()
+)::Dict{String,Any}
 
     @assert ismath(data_math) "cannot be converted to an engineering model"
 
@@ -75,7 +75,7 @@ function transform_solution(
         mult_sbase=make_si,
         convert_rad2deg=convert_rad2deg,
         make_si_extensions=make_si_extensions,
-        dimensionalize_math_extensions=dimensionalize_math_extensions,
+        dimensionalize_math_extensions=dimensionalize_math_extensions
     )
 
     if ismultinetwork(data_math)
@@ -132,8 +132,8 @@ function transform_solution(
 
 
     # cleanup empty solution dicts
-    for (n,nw_eng_sol) in nws_eng_sol
-        for (k,v) in nw_eng_sol
+    for (n, nw_eng_sol) in nws_eng_sol
+        for (k, v) in nw_eng_sol
             if isempty(v)
                 delete!(nw_eng_sol, k)
             end
@@ -196,7 +196,7 @@ function _map_math2eng_load!(data_eng::Dict{String,<:Any}, data_math::Dict{Strin
             "pd" => sum(data_math["load"]["$id"]["pd"] for id in load_ids),
             "qd_bus" => sum(data_math["load"]["$id"]["qd_bus"] for id in load_ids),
             "pd_bus" => sum(data_math["load"]["$id"]["pd_bus"] for id in load_ids),
-        ) 
+        )
     else
         math_obj = _get_math_obj(data_math, map["to"])
     end
@@ -298,7 +298,7 @@ function _map_math2eng_switch!(data_eng::Dict{String,<:Any}, data_math::Dict{Str
             math_obj = _get_math_obj(data_math, to_id)
             # add to-side power and current here
             # these will overwrite the switch ones if a branch is present
-            for k in intersect(keys(math_obj), ["pt","qt","cr_to","ci_to"])
+            for k in intersect(keys(math_obj), ["pt", "qt", "cr_to", "ci_to"])
                 eng_obj[k] = math_obj[k]
             end
         end
@@ -318,9 +318,9 @@ end
 function _map_math2eng_transformer!(data_eng::Dict{String,<:Any}, data_math::Dict{String,<:Any}, map::Dict{String,<:Any})
     eng_obj = _init_unmap_eng_obj!(data_eng, "transformer", map)
 
-    trans_2wa_ids = [index for (comp_type, index) in split.(map["to"], ".", limit=2) if comp_type=="transformer"]
+    trans_2wa_ids = [index for (comp_type, index) in split.(map["to"], ".", limit=2) if comp_type == "transformer"]
 
-    prop_map = Dict("pf"=>"p", "qf"=>"q", "cr_fr"=>"cr", "ci_fr"=>"ci", "tap"=>"tap")
+    prop_map = Dict("pf" => "p", "qf" => "q", "cr_fr" => "cr", "ci_fr" => "ci", "tap" => "tap")
     for (prop_from, prop_to) in prop_map
         if haskey(data_math, "transformer")
             if any(haskey(data_math["transformer"], id) && haskey(data_math["transformer"][id], prop_from) for id in trans_2wa_ids)
@@ -343,7 +343,7 @@ function _map_math2eng_root!(data_eng::Dict{String,<:Any}, data_math::Dict{Strin
         data_eng["settings"] = Dict{String,Any}("sbase" => get(get(data_math, "settings", Dict{String,Any}()), "sbase", NaN))  # in case of no solution
         data_eng["per_unit"] = get(data_math, "per_unit", true)
     else
-        for (n,nw) in get(data_eng, "nw", Dict{String,Any}())
+        for (n, nw) in get(data_eng, "nw", Dict{String,Any}())
             nw["settings"] = Dict{String,Any}("sbase" => data_math["nw"][n]["settings"]["sbase"])
             nw["per_unit"] = data_math["nw"][n]["per_unit"]
         end
